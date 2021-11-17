@@ -1,4 +1,4 @@
-pub fn op_codes() -> [(OpCode, AccessMode, u8, ExtraCycle); 256] {
+pub fn instruction_templates() -> [InstructionTemplate; 256] {
     use OpCode::*;
     use AccessMode::*;
     use ExtraCycle::*;
@@ -41,14 +41,36 @@ pub fn op_codes() -> [(OpCode, AccessMode, u8, ExtraCycle); 256] {
 /*+1f*/ [(SLO,AbX,7,No), (RLA,AbX,7,No), (SRE,AbX,7,No), (RRA,AbX,7,No), (AHX,AbY,5,No), (LAX,AbY,4,PB), (DCP,AbX,7,No), (ISC,AbX,7,No)],
     ];
 
-    let mut result = [jam; 256];
+    let mut result = [InstructionTemplate::from_tuple(0x2, jam); 256];
     for i in 0..codes.len() {
         for j in 0..codes[0].len() {
-            result[8 * j + i] = codes[i][j];
+            let index = 8 * j + i;
+            result[index] = InstructionTemplate::from_tuple(index as u8, codes[i][j]);
         }
     }
 
     result
+}
+
+#[derive(Clone, Copy)]
+pub struct InstructionTemplate {
+    value: u8,
+    op_code: OpCode,
+    access_mode: AccessMode,
+    cycle_count: CycleCount,
+    extra_cycle: ExtraCycle,
+}
+
+impl InstructionTemplate {
+    fn from_tuple(value: u8, tuple: (OpCode, AccessMode, u8, ExtraCycle)) -> InstructionTemplate {
+        InstructionTemplate {
+            value,
+            op_code: tuple.0,
+            access_mode: tuple.1,
+            cycle_count: CycleCount::new(tuple.2).unwrap(),
+            extra_cycle: tuple.3,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -153,6 +175,37 @@ pub enum AccessMode {
     Ind,
     IzX,
     IzY,
+}
+
+#[derive(Clone, Copy)]
+pub enum CycleCount {
+    Zero,
+    One,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
+    Eight,
+}
+
+impl CycleCount {
+    fn new(value: u8) -> Result<CycleCount, String> {
+        use CycleCount::*;
+        Ok(match value {
+            0 => Zero,
+            1 => One,
+            2 => Two,
+            3 => Three,
+            4 => Four,
+            5 => Five,
+            6 => Six,
+            7 => Seven,
+            8 => Eight,
+            _ => return Err(format!("CycleCount can't exceed 8 but was {}.", value)),
+        })
+    }
 }
 
 #[derive(Clone, Copy)]

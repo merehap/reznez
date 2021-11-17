@@ -7,7 +7,6 @@ pub struct Cpu {
     program_counter: u16,
     stack_pointer: u8,
     status: Status,
-
     memory: Memory,
 }
 
@@ -22,7 +21,6 @@ impl Cpu {
             program_counter: 0,
             stack_pointer: 0xFD,
             status: Status::startup(),
-
             memory: Memory::startup(),
         }
     }
