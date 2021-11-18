@@ -1,3 +1,4 @@
+#[derive(Clone, Copy)]
 pub struct Address(u16);
 
 impl Address {
@@ -13,8 +14,28 @@ impl Address {
         Address(value)
     }
 
+    pub fn from_low_high(low: u8, high: u8) -> Address {
+        Address::new(((high as u16) << 8) + (low as u16))
+    }
+
+    pub fn zero_page(low: u8) -> Address {
+        Address::new(low as u16)
+    }
+
     pub fn to_raw(&self) -> u16 {
         self.0
+    }
+
+    pub fn advance(&self, value: u8) -> Address {
+        let mut result = *self;
+        result.0 = result.0.wrapping_add(value as u16);
+        result
+    }
+
+    pub fn offset(&self, value: i8) -> Address {
+        let mut result = *self;
+        result.0 = (result.0 as i32).wrapping_add(value as i32) as u16;
+        result
     }
 
     pub fn get_type(&self) -> AddressType {

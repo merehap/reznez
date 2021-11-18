@@ -1,4 +1,13 @@
-pub fn instruction_templates() -> [InstructionTemplate; 256] {
+use lazy_static::lazy_static;
+
+use crate::address::Address;
+use crate::memory::Memory;
+
+lazy_static! {
+    pub static ref INSTRUCTION_TEMPLATES: [InstructionTemplate; 256] = instruction_templates();
+}
+
+fn instruction_templates() -> [InstructionTemplate; 256] {
     use OpCode::*;
     use AccessMode::*;
     use ExtraCycle::*;
@@ -52,6 +61,66 @@ pub fn instruction_templates() -> [InstructionTemplate; 256] {
     result
 }
 
+pub enum Instruction {
+    // No argument
+    Implicit(OpCode),
+    // Value argument
+    Value(OpCode, u8),
+    // Rel and Ind.
+    FlowControl(OpCode, Address),
+}
+
+impl Instruction {
+    pub fn from_memory(
+        program_counter: Address,
+        x_index: u8,
+        y_index: u8,
+        mem: Memory,
+    ) -> Result<Instruction, String> {
+
+        let template = INSTRUCTION_TEMPLATES[mem[program_counter] as usize];
+        let op_code = template.op_code;
+        let low = mem[program_counter.offset(1)];
+        let high = mem[program_counter.offset(2)];
+
+        use AccessMode::*;
+        use Instruction::*;
+        Ok(match template.access_mode {
+            Imp | Acc => Implicit(op_code),
+            Imm => Value(op_code, low),
+            ZP  => Value(op_code, mem[Address::zero_page(low)]),
+            ZPX => Value(op_code, mem[Address::zero_page(low.wrapping_add(x_index))]),
+            ZPY => Value(op_code, mem[Address::zero_page(low.wrapping_add(y_index))]),
+            IzX => {
+                let low = low.wrapping_add(x_index);
+                let address = Address::from_low_high(
+                    mem[Address::zero_page(low.wrapping_add(1))],
+                    mem[Address::zero_page(low)],
+                );
+                Value(op_code, mem[address])
+            },
+            IzY => {
+                let address = Address::from_low_high(
+                    mem[Address::zero_page(low.wrapping_add(1))],
+                    mem[Address::zero_page(low)],
+                );
+                Value(op_code, mem[address.advance(y_index)])
+            },
+
+            Abs => Value(op_code, mem[Address::from_low_high(low, high)]),
+            AbX => Value(op_code, mem[Address::from_low_high(low, high).advance(x_index)]),
+            AbY => Value(op_code, mem[Address::from_low_high(low, high).advance(y_index)]),
+
+            Rel => FlowControl(op_code, program_counter.offset(low as i8)),
+            Ind => {
+                let first = Address::from_low_high(low, high);
+                let second = Address::from_low_high(low.wrapping_add(1), high);
+                FlowControl(op_code, Address::from_low_high(mem[first], mem[second]))
+            }
+        })
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct InstructionTemplate {
     value: u8,
@@ -73,7 +142,7 @@ impl InstructionTemplate {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum OpCode {
     // Logical/Arithmetic
     ORA,
@@ -160,7 +229,7 @@ pub enum OpCode {
     JAM,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum AccessMode {
     Imp,
     Acc,
