@@ -38,6 +38,10 @@ impl Address {
         result
     }
 
+    pub fn page(&self) -> u8 {
+        (self.0 >> 8) as u8
+    }
+
     pub fn get_type(&self) -> AddressType {
         use AddressType::*;
         match self.0 {

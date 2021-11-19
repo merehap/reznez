@@ -31,6 +31,7 @@ impl Cpu {
         self.status.interrupts_disabled = true;
         // TODO: APU resets?
     }
+
 }
 
 pub struct Status {
