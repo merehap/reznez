@@ -6,5 +6,6 @@ mod op_code;
 use crate::cpu::Cpu;
 
 fn main() {
-    let _cpu = Cpu::startup();
+    let mut cpu = Cpu::startup();
+    cpu.step();
 }

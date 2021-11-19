@@ -1,4 +1,5 @@
 use crate::address::Address;
+use crate::op_code::{Instruction, OpCode, Argument};
 use crate::memory::Memory;
 
 pub struct Cpu {
@@ -32,6 +33,102 @@ impl Cpu {
         // TODO: APU resets?
     }
 
+    pub fn step(&mut self) {
+        let instruction = Instruction::from_memory(
+            self.program_counter,
+            self.accumulator,
+            self.x_index,
+            self.y_index,
+            &self.memory,
+        );
+
+        let op_code = instruction.template.op_code;
+
+        match instruction.argument {
+            Argument::None =>
+                self.execute_no_argument_op_code(op_code),
+            Argument::Value(value) =>
+                self.execute_value_argument_op_code(op_code, value),
+            Argument::FlowControl(address) =>
+                self.execute_flow_control_op_code(op_code, address),
+        }
+    }
+
+    fn execute_no_argument_op_code(&mut self, op_code: OpCode) {
+        use OpCode::*;
+        match op_code {
+            DEX => unimplemented!(),
+            DEY => unimplemented!(),
+            TAX => unimplemented!(),
+            TAY => unimplemented!(),
+            TSX => unimplemented!(),
+            TXS => unimplemented!(),
+            PHA => unimplemented!(),
+            PLP => unimplemented!(),
+            PHP => unimplemented!(),
+            BRK => unimplemented!(),
+            RTI => unimplemented!(),
+            RTS => unimplemented!(),
+            CLC => unimplemented!(),
+            SEC => unimplemented!(),
+            CLD => unimplemented!(),
+            SED => unimplemented!(),
+            CLI => unimplemented!(),
+            SEI => unimplemented!(),
+            CLV => unimplemented!(),
+            NOP => unimplemented!(),
+            JAM => panic!("JAM instruction encountered!"),
+            _ => unreachable!("OpCode {:?} must take no arguments.", op_code),
+        }
+    }
+
+    fn execute_value_argument_op_code(&mut self, op_code: OpCode, value: u8) {
+        use OpCode::*;
+        match op_code {
+            ORA => unimplemented!(),
+            AND => unimplemented!(),
+            EOR => unimplemented!(),
+            ADC => unimplemented!(),
+            SBC => unimplemented!(),
+            CMP => unimplemented!(),
+            CPX => unimplemented!(),
+            CPY => unimplemented!(),
+            DEC => unimplemented!(),
+            INC => unimplemented!(),
+            ASL => unimplemented!(),
+            ROL => unimplemented!(),
+            LSR => unimplemented!(),
+            LDA => unimplemented!(),
+            STA => unimplemented!(),
+            LDX => unimplemented!(),
+            STX => unimplemented!(),
+            LDY => unimplemented!(),
+            STY => unimplemented!(),
+            TXA => unimplemented!(),
+            TYA => unimplemented!(),
+            PLA => unimplemented!(),
+            BIT => unimplemented!(),
+            _ => unreachable!("OpCode {:?} must take a value argument.", op_code),
+        }
+    }
+
+    fn execute_flow_control_op_code(&mut self, op_code: OpCode, address: Address) {
+        use OpCode::*;
+        match op_code {
+            BPL => unimplemented!(),
+            BMI => unimplemented!(),
+            BVC => unimplemented!(),
+            BVS => unimplemented!(),
+            BCC => unimplemented!(),
+            BCS => unimplemented!(),
+            BNE => unimplemented!(),
+            BEQ => unimplemented!(),
+            JSR => unimplemented!(),
+            JMP => unimplemented!(),
+            BPL => unimplemented!(),
+            _ => unreachable!("OpCode {:?} must take an address argument.", op_code),
+        }
+    }
 }
 
 pub struct Status {

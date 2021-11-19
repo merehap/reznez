@@ -73,8 +73,8 @@ impl Instruction {
         accumulator: u8,
         x_index: u8,
         y_index: u8,
-        mem: Memory,
-    ) -> Result<Instruction, String> {
+        mem: &Memory,
+    ) -> Instruction {
 
         let template = INSTRUCTION_TEMPLATES[mem[program_counter] as usize];
         let low = mem[program_counter.offset(1)];
@@ -130,16 +130,16 @@ impl Instruction {
             },
             Ind => {
                 let first = Address::from_low_high(low, high);
-                let second = Address::from_low_high(low.wrapping_add(1), high);
+                let second = first.advance(1);
                 FlowControl(Address::from_low_high(mem[first], mem[second]))
             },
         };
 
-        Ok(Instruction {
+        Instruction {
             template,
             argument,
             page_boundary_crossed,
-        })
+        }
     }
 }
 
