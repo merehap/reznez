@@ -47,7 +47,7 @@ impl Cpu {
             Argument::Immediate(value) =>
                 self.execute_immediate_op_code(op_code, value),
             Argument::Address(address) => {
-                let _branch_taken = self.execute_address_op_code(op_code, address);
+                let _jump_address = self.execute_address_op_code(op_code, address);
             },
         }
     }
@@ -129,8 +129,8 @@ impl Cpu {
         }
     }
 
-    fn execute_address_op_code(&mut self, op_code: OpCode, address: Address) -> bool {
-        let mut branch_taken = false;
+    fn execute_address_op_code(&mut self, op_code: OpCode, address: Address) -> Option<Address> {
+        let mut jump_address = None;
 
         use OpCode::*;
         match op_code {
@@ -148,21 +148,20 @@ impl Cpu {
             STY => self.memory[address] = self.y_index,
             DEC => self.memory[address] = self.nz(self.memory[address].wrapping_sub(1)),
             INC => self.memory[address] = self.nz(self.memory[address].wrapping_add(1)),
-            BPL => unimplemented!(),
-            BMI => unimplemented!(),
-            BVC => unimplemented!(),
-            BVS => unimplemented!(),
-            BCC => unimplemented!(),
-            BCS => unimplemented!(),
-            BNE => unimplemented!(),
-            BEQ => unimplemented!(),
+            BPL => if !self.status.negative {jump_address = Some(address)},
+            BMI => if self.status.negative {jump_address = Some(address)},
+            BVC => if !self.status.overflow {jump_address = Some(address)},
+            BVS => if self.status.overflow {jump_address = Some(address)},
+            BCC => if !self.status.carry {jump_address = Some(address)},
+            BCS => if self.status.carry {jump_address = Some(address)},
+            BNE => if !self.status.zero {jump_address = Some(address)},
+            BEQ => if self.status.zero {jump_address = Some(address)},
             JSR => unimplemented!(),
             JMP => unimplemented!(),
-            BPL => unimplemented!(),
             _ => unreachable!("OpCode {:?} must take an address argument.", op_code),
         }
 
-        branch_taken
+        jump_address
     }
 
     fn ora(&mut self, value: u8) -> u8 {
