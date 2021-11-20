@@ -1,3 +1,5 @@
+#![feature(destructuring_assignment)]
+
 mod address;
 mod cpu;
 mod memory;

@@ -7,7 +7,6 @@ pub struct Cpu {
     x_index: u8,
     y_index: u8,
     program_counter: Address,
-    stack_pointer: u8,
     status: Status,
     memory: Memory,
 }
@@ -21,7 +20,6 @@ impl Cpu {
             y_index: 0,
             // TODO: Verify this value.
             program_counter: Address::new(0),
-            stack_pointer: 0xFD,
             status: Status::startup(),
             memory: Memory::startup(),
         }
@@ -61,13 +59,13 @@ impl Cpu {
             DEY => self.y_index = self.nz(self.y_index.wrapping_sub(1)),
             TAX => self.x_index = self.nz(self.accumulator),
             TAY => self.y_index = self.nz(self.accumulator),
-            TSX => self.x_index = self.nz(self.stack_pointer),
+            TSX => self.x_index = self.nz(self.memory.stack_pointer),
             TXA => self.accumulator = self.nz(self.x_index),
-            TXS => self.stack_pointer = self.x_index,
-            PLA => unimplemented!(),
-            PHA => unimplemented!(),
-            PLP => unimplemented!(),
-            PHP => unimplemented!(),
+            TXS => self.memory.stack_pointer = self.x_index,
+            PHA => self.memory.push(self.accumulator),
+            PHP => self.memory.push(self.status.to_byte()),
+            PLA => self.accumulator = self.memory.pop(),
+            PLP => self.status = Status::from_byte(self.memory.pop()),
             BRK => unimplemented!(),
             RTI => unimplemented!(),
             RTS => unimplemented!(),
@@ -250,7 +248,35 @@ impl Status {
         }
     }
 
-    pub fn to_string(&self) -> String {
+    fn from_byte(value: u8) -> Status {
+        let mut status = Status::startup();
+        [ status.negative
+        , status.overflow
+        , _
+        , _
+        , status.decimal
+        , status.interrupts_disabled
+        , status.zero
+        , status.carry,
+        ] = unpack_bools(value);
+
+        status
+    }
+
+    fn to_byte(&self) -> u8 {
+        pack_bools([
+            self.negative,
+            self.overflow,
+            false,
+            false,
+            self.decimal,
+            self.interrupts_disabled,
+            self.zero,
+            self.carry,
+        ])
+    }
+
+    fn to_string(&self) -> String {
         format!(
             "{}{}bb{}{}{}{}",
             if self.negative {'N'} else {'n'},
@@ -261,4 +287,25 @@ impl Status {
             if self.carry {'C'} else {'c'},
         )
     }
+}
+
+fn pack_bools(bools: [bool; 8]) -> u8 {
+    let mut result = 0;
+    for i in 0..8 {
+        if bools[7 - i as usize] {
+            result += 1 << i;
+        }
+    }
+
+    result
+}
+
+fn unpack_bools(value: u8) -> [bool; 8] {
+    let mut bools = [false; 8];
+
+    for i in 0..8 {
+        bools[i] = (value & 0b1000_0000) != 0;
+    }
+
+    bools
 }
