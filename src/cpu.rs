@@ -18,7 +18,6 @@ impl Cpu {
             accumulator: 0,
             x_index: 0,
             y_index: 0,
-            // TODO: Verify this value.
             program_counter: Address::new(0),
             status: Status::startup(),
             memory: Memory::startup(),
@@ -96,30 +95,11 @@ impl Cpu {
             CMP => self.cmp(value),
             CPX => self.cpx(value),
             CPY => self.cpy(value),
-            ASL => {
-                self.status.carry = (value >> 7) == 1;
-                self.accumulator = self.nz(value << 1);
-            },
-            ROL => {
-                let old_carry = self.status.carry;
-                self.status.carry = (value >> 7) == 1;
-                self.accumulator = value << 1;
-                if old_carry {
-                    self.accumulator |= 1;
-                }
-            },
-            LSR => {
-                self.status.carry = (value & 1) == 1;
-                self.accumulator = self.nz(value >> 1);
-            },
-            ROR => {
-                let old_carry = self.status.carry;
-                self.status.carry = (value & 1) == 1;
-                self.accumulator = value >> 1;
-                if old_carry {
-                    self.accumulator |= 0b1000_0000;
-                }
-            },
+            ASL => self.accumulator = self.asl(self.accumulator),
+            ROL => self.accumulator = self.rol(self.accumulator),
+            LSR => self.accumulator = self.lsr(self.accumulator),
+            ROR => self.accumulator = self.ror(self.accumulator),
+
             LDA => self.accumulator = self.nz(value),
             LDX => self.x_index = self.nz(value),
             LDY => self.y_index = self.nz(value),
@@ -147,6 +127,11 @@ impl Cpu {
             CMP => self.cmp(self.memory[address]),
             CPX => self.cpx(self.memory[address]),
             CPY => self.cpy(self.memory[address]),
+
+            ASL => self.memory[address] = self.asl(self.memory[address]),
+            ROL => self.memory[address] = self.rol(self.memory[address]),
+            LSR => self.memory[address] = self.lsr(self.memory[address]),
+            ROR => self.memory[address] = self.ror(self.memory[address]),
 
             STA => self.memory[address] = self.accumulator,
             STX => self.memory[address] = self.x_index,
@@ -221,6 +206,38 @@ impl Cpu {
     fn cpy(&mut self, value: u8) {
         self.nz(self.x_index.wrapping_sub(value));
         self.status.carry = self.y_index >= value;
+    }
+
+    fn asl(&mut self, value: u8) -> u8 {
+        self.status.carry = (value >> 7) == 1;
+        self.nz(value << 1)
+    }
+
+    fn rol(&mut self, value: u8) -> u8 {
+        let old_carry = self.status.carry;
+        self.status.carry = (value >> 7) == 1;
+        let mut result = value << 1;
+        if old_carry {
+            result |= 1;
+        }
+
+        result
+    }
+
+    fn ror(&mut self, value: u8) -> u8 {
+        let old_carry = self.status.carry;
+        self.status.carry = (value & 1) == 1;
+        let mut result = value >> 1;
+        if old_carry {
+            result |= 0b1000_0000;
+        }
+
+        result
+    }
+
+    fn lsr(&mut self, value: u8) -> u8 {
+        self.status.carry = (value & 1) == 1;
+        self.nz(value >> 1)
     }
 
     fn nz(&mut self, value: u8) -> u8 {
