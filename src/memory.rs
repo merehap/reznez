@@ -24,6 +24,12 @@ impl Memory {
         self.stack_pointer -= 1;
     }
 
+    pub fn push_address(&mut self, address: Address) {
+        let (low, high) = address.to_low_high();
+        self.push(low);
+        self.push(high);
+    }
+
     pub fn pop(&mut self) -> u8 {
         if self.stack_pointer == 0xFF {
             panic!("Cannot pop from an empty stack.");
@@ -31,6 +37,12 @@ impl Memory {
 
         self.stack_pointer += 1;
         self.memory[self.stack_pointer as usize + 0x100]
+    }
+
+    pub fn pop_address(&mut self) -> Address {
+        let high = self.pop();
+        let low = self.pop();
+        Address::from_low_high(low, high)
     }
 }
 

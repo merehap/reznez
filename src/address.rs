@@ -26,6 +26,10 @@ impl Address {
         self.0
     }
 
+    pub fn to_low_high(&self) -> (u8, u8) {
+        (self.0 as u8, (self.0 >> 8) as u8)
+    }
+
     pub fn advance(&self, value: u8) -> Address {
         let mut result = *self;
         result.0 = result.0.wrapping_add(value as u16);

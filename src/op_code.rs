@@ -138,6 +138,10 @@ impl Instruction {
             page_boundary_crossed,
         }
     }
+
+    pub fn length(&self) -> u8 {
+        self.template.access_mode.instruction_length()
+    }
 }
 
 pub enum Argument {

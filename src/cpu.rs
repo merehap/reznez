@@ -39,6 +39,8 @@ impl Cpu {
             &self.memory,
         );
 
+        self.program_counter = self.program_counter.advance(instruction.length());
+
         let op_code = instruction.template.op_code;
 
         match instruction.argument {
@@ -68,7 +70,7 @@ impl Cpu {
             PLP => self.status = Status::from_byte(self.memory.pop()),
             BRK => unimplemented!(),
             RTI => unimplemented!(),
-            RTS => unimplemented!(),
+            RTS => self.program_counter = self.memory.pop_address().advance(1),
             CLC => self.status.carry = false,
             SEC => self.status.carry = true,
             CLD => self.status.decimal = false,
@@ -106,7 +108,10 @@ impl Cpu {
                     self.accumulator |= 1;
                 }
             },
-            LSR => unimplemented!(),
+            LSR => {
+                self.status.carry = (value & 1) == 1;
+                self.accumulator = self.nz(value >> 1);
+            },
             ROR => {
                 let old_carry = self.status.carry;
                 self.status.carry = (value & 1) == 1;
@@ -156,8 +161,12 @@ impl Cpu {
             BCS => if self.status.carry {jump_address = Some(address)},
             BNE => if !self.status.zero {jump_address = Some(address)},
             BEQ => if self.status.zero {jump_address = Some(address)},
-            JSR => unimplemented!(),
-            JMP => unimplemented!(),
+            JSR => {
+                // Push the address one previous for some reason.
+                self.memory.push_address(self.program_counter.offset(-1));
+                jump_address = Some(address);
+            },
+            JMP => jump_address = Some(address),
             _ => unreachable!("OpCode {:?} must take an address argument.", op_code),
         }
 
