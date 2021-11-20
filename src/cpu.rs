@@ -48,7 +48,9 @@ impl Cpu {
             Argument::Immediate(value) =>
                 self.execute_immediate_op_code(op_code, value),
             Argument::Address(address) => {
-                let _jump_address = self.execute_address_op_code(op_code, address);
+                if let Some(jump_address) = self.execute_address_op_code(op_code, address) {
+                    self.program_counter = jump_address;
+                }
             },
         }
     }
@@ -178,9 +180,10 @@ impl Cpu {
             (carry as u16);
         self.status.carry = result > 0xFF;
         let result = self.nz(result as u8);
+        // If the inputs have the same sign, set overflow if the output doesn't.
         self.status.overflow =
-            (is_pos(self.accumulator) == is_pos(value)) &&
-            (is_pos(self.accumulator) == is_pos(result));
+            (is_neg(self.accumulator) == is_neg(value)) &&
+            (is_neg(self.accumulator) != is_neg(result));
         result
     }
 
@@ -241,14 +244,14 @@ impl Cpu {
     }
 
     fn nz(&mut self, value: u8) -> u8 {
-        self.status.negative = (value as i8) < 0;
+        self.status.negative = is_neg(value);
         self.status.zero = value == 0;
         value
     }
 }
 
-fn is_pos(value: u8) -> bool {
-    (value >> 7) == 0
+fn is_neg(value: u8) -> bool {
+    (value >> 7) == 1
 }
 
 pub struct Status {
