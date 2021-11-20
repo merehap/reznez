@@ -25,7 +25,7 @@ fn instruction_templates() -> [InstructionTemplate; 256] {
 /*+07*/ [(SLO,ZP ,5,No), (RLA,ZP ,5,No), (SRE,ZP ,5,No), (RRA,ZP ,5,No), (SAX,ZP ,3,No), (LAX,ZP ,3,No), (DCP,ZP ,5,No), (ISC,ZP ,5,No)],
 /*+08*/ [(PHP,Imp,3,No), (PLP,Imp,4,No), (PHA,Imp,3,No), (PLA,Imp,4,No), (DEY,Imp,2,No), (TAY,Imp,2,No), (INY,Imp,2,No), (INX,Imp,2,No)],
 /*+09*/ [(ORA,Imm,2,No), (AND,Imm,2,No), (EOR,Imm,2,No), (ADC,Imm,2,No), (NOP,Imm,2,No), (LDA,Imm,2,No), (CMP,Imm,2,No), (SBC,Imm,2,No)],
-/*+0a*/ [(ASL,Acc,2,No), (ROL,Acc,2,No), (LSR,Acc,2,No), (ROR,Acc,2,No), (TXA,Imp,2,No), (TAX,Imp,2,No), (DEX,Imp,2,No), (NOP,Imp,2,No)],
+/*+0a*/ [(ASL,Imm,2,No), (ROL,Imm,2,No), (LSR,Imm,2,No), (ROR,Imm,2,No), (TXA,Imp,2,No), (TAX,Imp,2,No), (DEX,Imp,2,No), (NOP,Imp,2,No)],
 /*+0b*/ [(ANC,Imm,2,No), (ANC,Imm,2,No), (ALR,Imm,2,No), (ARR,Imm,2,No), (XAA,Imm,2,No), (LAX,Imm,2,No), (AXS,Imm,2,No), (SBC,Imm,2,No)],
 /*+0c*/ [(NOP,Abs,4,No), (BIT,Abs,4,No), (JMP,Abs,3,No), (JMP,Ind,5,No), (STY,Abs,4,No), (LDY,Abs,4,No), (CPY,Abs,4,No), (CPX,Abs,4,No)],
 /*+0d*/ [(ORA,Abs,4,No), (AND,Abs,4,No), (EOR,Abs,4,No), (ADC,Abs,4,No), (STA,Abs,4,No), (LDA,Abs,4,No), (CMP,Abs,4,No), (SBC,Abs,4,No)],
@@ -70,7 +70,6 @@ pub struct Instruction {
 impl Instruction {
     pub fn from_memory(
         program_counter: Address,
-        accumulator: u8,
         x_index: u8,
         y_index: u8,
         mem: &Memory,
@@ -83,21 +82,19 @@ impl Instruction {
         let mut page_boundary_crossed = false;
 
         use AccessMode::*;
-        use Argument::*;
         let argument = match template.access_mode {
-            Imp => None,
-            Acc => Value(accumulator),
-            Imm => Value(low),
-            ZP  => Value(mem[Address::zero_page(low)]),
-            ZPX => Value(mem[Address::zero_page(low.wrapping_add(x_index))]),
-            ZPY => Value(mem[Address::zero_page(low.wrapping_add(y_index))]),
+            Imp => Argument::Implicit,
+            Imm => Argument::Immediate(low),
+            ZP  => Argument::Address(Address::zero_page(low)),
+            ZPX => Argument::Address(Address::zero_page(low.wrapping_add(x_index))),
+            ZPY => Argument::Address(Address::zero_page(low.wrapping_add(y_index))),
             IzX => {
                 let low = low.wrapping_add(x_index);
                 let address = Address::from_low_high(
                     mem[Address::zero_page(low.wrapping_add(1))],
                     mem[Address::zero_page(low)],
                 );
-                Value(mem[address])
+                Argument::Address(address)
             },
             IzY => {
                 let start_address = Address::from_low_high(
@@ -106,32 +103,32 @@ impl Instruction {
                 );
                 let address = start_address.advance(y_index);
                 page_boundary_crossed = start_address.page() != address.page();
-                Value(mem[address])
+                Argument::Address(address)
             },
 
-            Abs => Value(mem[Address::from_low_high(low, high)]),
+            Abs => Argument::Address(Address::from_low_high(low, high)),
             AbX => {
                 let start_address = Address::from_low_high(low, high);
                 let address = start_address.advance(x_index);
                 page_boundary_crossed = start_address.page() != address.page();
-                Value(mem[address])
+                Argument::Address(address)
             },
             AbY => {
                 let start_address = Address::from_low_high(low, high);
                 let address = start_address.advance(y_index);
                 page_boundary_crossed = start_address.page() != address.page();
-                Value(mem[address])
+                Argument::Address(address)
             },
 
             Rel => {
                 let address = program_counter.offset(low as i8);
                 page_boundary_crossed = program_counter.page() != address.page();
-                FlowControl(address)
+                Argument::Address(address)
             },
             Ind => {
                 let first = Address::from_low_high(low, high);
                 let second = first.advance(1);
-                FlowControl(Address::from_low_high(mem[first], mem[second]))
+                Argument::Address(Address::from_low_high(mem[first], mem[second]))
             },
         };
 
@@ -144,12 +141,9 @@ impl Instruction {
 }
 
 pub enum Argument {
-    // No argument (Imp)
-    None,
-    // Value argument
-    Value(u8),
-    // Rel and Ind.
-    FlowControl(Address),
+    Implicit,
+    Immediate(u8),
+    Address(Address),
 }
 
 #[derive(Clone, Copy)]
@@ -263,7 +257,6 @@ pub enum OpCode {
 #[derive(Clone, Copy, Debug)]
 pub enum AccessMode {
     Imp,
-    Acc,
     Imm,
     ZP,
     ZPX,
@@ -281,7 +274,7 @@ impl AccessMode {
     pub fn instruction_length(&self) -> u8 {
         use AccessMode::*;
         match *self {
-            Imp | Acc => 1,
+            Imp => 1,
             Imm | ZP | ZPX | ZPY | Rel | IzX | IzY => 2,
             Abs | AbX | AbY | Ind => 3,
         }
