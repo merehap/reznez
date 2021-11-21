@@ -84,6 +84,9 @@ impl INes {
         }
 
         let title = rom[rom_index..].to_vec();
+        if !(title.is_empty() || title.len() == 127 || title.len() == 128) {
+            panic!("Title must be empty or 127 or 128 bytes, but was {} bytes.", title.len());
+        }
 
         Ok(INes {
             mapper_number,
