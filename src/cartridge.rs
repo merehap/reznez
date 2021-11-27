@@ -101,6 +101,36 @@ impl INes {
             title,
         })
     }
+
+    pub fn mapper_number(&self) -> u8 {
+        self.mapper_number
+    }
+    
+    pub fn prg_rom(&self) -> Vec<u8> {
+        let mut result = Vec::new();
+        for chunk in self.prg_rom.iter() {
+            result.append(&mut chunk.to_vec());
+        }
+
+        result
+    }
+
+    pub fn prg_rom_chunk_count(&self) -> u8 {
+        self.prg_rom.len() as u8
+    }
+
+    pub fn chr_rom(&self) -> Vec<u8> {
+        let mut result = Vec::new();
+        for chunk in self.chr_rom.iter() {
+            result.append(&mut chunk.to_vec());
+        }
+
+        result
+    }
+
+    pub fn chr_rom_chunk_count(&self) -> u8 {
+        self.chr_rom.len() as u8
+    }
 }
 
 enum NameTableMirroring {

@@ -1,6 +1,12 @@
 use crate::address::Address;
+use crate::cartridge::INes;
 use crate::op_code::{Instruction, OpCode, Argument};
+use crate::mapper::mapper0::Mapper0;
 use crate::memory::Memory;
+
+const NMI_VECTOR: Address = Address::new(0xFFFA);
+const RESET_VECTOR: Address = Address::new(0xFFFC);
+const IRQ_VECTOR: Address = Address::new(0xFFFE);
 
 pub struct Cpu {
     accumulator: u8,
@@ -13,14 +19,26 @@ pub struct Cpu {
 
 impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
-    pub fn startup() -> Cpu {
+    pub fn startup(ines: INes) -> Cpu {
+        if ines.mapper_number() != 0 {
+            panic!("Only mapper 0 is currently supported.");
+        }
+
+        let mut memory = Memory::startup();
+
+        let mapper = Mapper0::new();
+        mapper.map(ines, &mut memory);
+
+        let program_counter = memory.address_from_vector(RESET_VECTOR);
+        println!("Starting execution at PC=0x{:4X}", program_counter.to_raw());
+
         Cpu {
             accumulator: 0,
             x_index: 0,
             y_index: 0,
-            program_counter: Address::new(0),
+            program_counter,
             status: Status::startup(),
-            memory: Memory::startup(),
+            memory,
         }
     }
 
@@ -37,6 +55,8 @@ impl Cpu {
             self.y_index,
             &self.memory,
         );
+
+        println!("Instruction: {:?}", instruction);
 
         self.program_counter = self.program_counter.advance(instruction.length());
 
@@ -107,11 +127,6 @@ impl Cpu {
             LDY => self.y_index = self.nz(value),
             TXA => self.accumulator = self.nz(value),
             TYA => self.accumulator = self.nz(value),
-            BIT => {
-                self.status.negative = value & 0b1000_0000 != 0;
-                self.status.overflow = value & 0b0100_0000 != 0;
-                self.status.zero = value & self.accumulator == 0;
-            },
             _ => unreachable!("OpCode {:?} must take a value argument.", op_code),
         }
     }
@@ -140,6 +155,14 @@ impl Cpu {
             STY => self.memory[address] = self.y_index,
             DEC => self.memory[address] = self.nz(self.memory[address].wrapping_sub(1)),
             INC => self.memory[address] = self.nz(self.memory[address].wrapping_add(1)),
+
+            BIT => {
+                let value = self.memory[address];
+                self.status.negative = value & 0b1000_0000 != 0;
+                self.status.overflow = value & 0b0100_0000 != 0;
+                self.status.zero = value & self.accumulator == 0;
+            },
+
             BPL => if !self.status.negative {jump_address = Some(address)},
             BMI => if self.status.negative {jump_address = Some(address)},
             BVC => if !self.status.overflow {jump_address = Some(address)},

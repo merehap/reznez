@@ -1,8 +1,8 @@
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Address(u16);
 
 impl Address {
-    pub fn new(mut value: u16) -> Address {
+    pub const fn new(mut value: u16) -> Address {
         if value < 0x2000 {
             // Map RAM mirrors to the true RAM range.
             value %= 0x2000;
@@ -40,6 +40,11 @@ impl Address {
         let mut result = *self;
         result.0 = (result.0 as i32).wrapping_add(value as i32) as u16;
         result
+    }
+
+    pub fn inc(&mut self) -> Address {
+        self.0 = self.0.wrapping_add(1);
+        *self
     }
 
     pub fn page(&self) -> u8 {

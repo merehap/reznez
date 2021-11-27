@@ -44,6 +44,10 @@ impl Memory {
         let low = self.pop();
         Address::from_low_high(low, high)
     }
+
+    pub fn address_from_vector(&self, mut vector: Address) -> Address {
+        Address::from_low_high(self[vector], self[vector.inc()])
+    }
 }
 
 impl Index<Address> for Memory {
@@ -59,4 +63,3 @@ impl IndexMut<Address> for Memory {
         &mut self.memory[address.to_raw() as usize]
     }
 }
-

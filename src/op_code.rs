@@ -51,16 +51,16 @@ fn instruction_templates() -> [InstructionTemplate; 256] {
     ];
 
     let mut result = [InstructionTemplate::from_tuple(0x2, jam); 256];
-    for i in 0..codes.len() {
-        for j in 0..codes[0].len() {
-            let index = 8 * j + i;
-            result[index] = InstructionTemplate::from_tuple(index as u8, codes[i][j]);
-        }
+    for index in 0..256 {
+        let i = index % 0x20;
+        let j = index / 0x20;
+        result[index] = InstructionTemplate::from_tuple(index as u8, codes[i][j]);
     }
 
     result
 }
 
+#[derive(Debug)]
 pub struct Instruction {
     pub template: InstructionTemplate,
     pub argument: Argument,
@@ -144,13 +144,14 @@ impl Instruction {
     }
 }
 
+#[derive(Debug)]
 pub enum Argument {
     Implicit,
     Immediate(u8),
     Address(Address),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct InstructionTemplate {
     pub code_point: u8,
     pub op_code: OpCode,
@@ -285,7 +286,7 @@ impl AccessMode {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum CycleCount {
     Zero,
     One,
@@ -316,7 +317,7 @@ impl CycleCount {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum ExtraCycle {
     No,
     PB,
