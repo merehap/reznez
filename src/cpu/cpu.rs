@@ -1,9 +1,9 @@
-use crate::address::Address;
 use crate::cartridge::INes;
-use crate::op_code::{Instruction, OpCode, Argument};
+use crate::cpu::address::Address;
+use crate::cpu::instruction::{Instruction, OpCode, Argument};
+use crate::cpu::memory::Memory;
+use crate::cpu::status::Status;
 use crate::mapper::mapper0::Mapper0;
-use crate::memory::Memory;
-use crate::status::Status;
 
 const NMI_VECTOR: Address = Address::new(0xFFFA);
 const RESET_VECTOR: Address = Address::new(0xFFFC);

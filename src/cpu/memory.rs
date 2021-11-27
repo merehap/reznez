@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use crate::address::Address;
+use crate::cpu::address::Address;
 
 pub struct Memory {
     pub stack_pointer: u8,

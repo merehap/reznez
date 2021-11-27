@@ -1,10 +1,10 @@
 use lazy_static::lazy_static;
 
-use crate::address::Address;
-use crate::memory::Memory;
+use crate::cpu::address::Address;
+use crate::cpu::memory::Memory;
 
 lazy_static! {
-    pub static ref INSTRUCTION_TEMPLATES: [InstructionTemplate; 256] = instruction_templates();
+    static ref INSTRUCTION_TEMPLATES: [InstructionTemplate; 256] = instruction_templates();
 }
 
 fn instruction_templates() -> [InstructionTemplate; 256] {

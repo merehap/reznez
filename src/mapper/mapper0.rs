@@ -1,6 +1,6 @@
-use crate::address::Address;
 use crate::cartridge::INes;
-use crate::memory::Memory;
+use crate::cpu::address::Address;
+use crate::cpu::memory::Memory;
 
 pub struct Mapper0 {
 

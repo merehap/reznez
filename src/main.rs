@@ -1,20 +1,16 @@
 #![feature(destructuring_assignment)]
 #![allow(dead_code)]
 
-mod address;
 mod cartridge;
 mod cpu;
 mod mapper;
-mod memory;
-mod op_code;
-mod status;
 mod util;
 
 use std::io::Read;
 use std::fs::File;
 
 use crate::cartridge::INes;
-use crate::cpu::Cpu;
+use crate::cpu::cpu::Cpu;
 
 fn main() {
     let mut rom = Vec::new();
