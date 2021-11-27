@@ -3,6 +3,7 @@ use crate::cartridge::INes;
 use crate::op_code::{Instruction, OpCode, Argument};
 use crate::mapper::mapper0::Mapper0;
 use crate::memory::Memory;
+use crate::status::Status;
 
 const NMI_VECTOR: Address = Address::new(0xFFFA);
 const RESET_VECTOR: Address = Address::new(0xFFFC);
@@ -275,88 +276,4 @@ impl Cpu {
 
 fn is_neg(value: u8) -> bool {
     (value >> 7) == 1
-}
-
-pub struct Status {
-    negative: bool,
-    overflow: bool,
-    decimal: bool,
-    interrupts_disabled: bool,
-    zero: bool,
-    carry: bool,
-}
-
-impl Status {
-    fn startup() -> Status {
-        Status {
-            negative: false,
-            // https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
-            overflow: true,
-            decimal: false,
-            interrupts_disabled: true,
-            zero: false,
-            carry: false,
-        }
-    }
-
-    fn from_byte(value: u8) -> Status {
-        let mut status = Status::startup();
-        [ status.negative
-        , status.overflow
-        , _
-        , _
-        , status.decimal
-        , status.interrupts_disabled
-        , status.zero
-        , status.carry,
-        ] = unpack_bools(value);
-
-        status
-    }
-
-    fn to_byte(&self) -> u8 {
-        pack_bools([
-            self.negative,
-            self.overflow,
-            false,
-            false,
-            self.decimal,
-            self.interrupts_disabled,
-            self.zero,
-            self.carry,
-        ])
-    }
-
-    fn to_string(&self) -> String {
-        format!(
-            "{}{}bb{}{}{}{}",
-            if self.negative {'N'} else {'n'},
-            if self.overflow {'V'} else {'v'},
-            if self.decimal {'D'} else {'d'},
-            if self.interrupts_disabled {'I'} else {'i'},
-            if self.zero {'Z'} else {'z'},
-            if self.carry {'C'} else {'c'},
-        )
-    }
-}
-
-fn pack_bools(bools: [bool; 8]) -> u8 {
-    let mut result = 0;
-    for i in 0..8 {
-        if bools[7 - i as usize] {
-            result += 1 << i;
-        }
-    }
-
-    result
-}
-
-fn unpack_bools(value: u8) -> [bool; 8] {
-    let mut bools = [false; 8];
-
-    for i in 0..8 {
-        bools[i] = (value & 0b1000_0000) != 0;
-    }
-
-    bools
 }

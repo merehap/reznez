@@ -7,6 +7,8 @@ mod cpu;
 mod mapper;
 mod memory;
 mod op_code;
+mod status;
+mod util;
 
 use std::io::Read;
 use std::fs::File;
