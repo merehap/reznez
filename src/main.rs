@@ -26,7 +26,7 @@ fn main() {
     let ines = INes::load(&rom).unwrap();
     let mut cpu = Cpu::startup(ines);
 
-    for _ in 0..10000 {
+    for _ in 0..10 {
         cpu.step();
     }
 }

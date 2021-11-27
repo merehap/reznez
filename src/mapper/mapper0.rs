@@ -12,7 +12,6 @@ impl Mapper0 {
     }
 
     pub fn map(&self, ines: INes, memory: &mut Memory) -> Result<(), String> {
-        let mut address = Address::new(0x8000);
         let high_source_index = match ines.prg_rom_chunk_count() {
             1 => /* Nrom128 */ 0,
             2 => /* Nrom256 */ 0x4000,

@@ -28,7 +28,8 @@ impl Cpu {
         let mut memory = Memory::startup();
 
         let mapper = Mapper0::new();
-        mapper.map(ines, &mut memory);
+        mapper.map(ines, &mut memory)
+            .expect("Failed to copy cartridge ROM into CPU memory.");
 
         let program_counter = memory.address_from_vector(RESET_VECTOR);
         println!("Starting execution at PC=0x{:4X}", program_counter.to_raw());
