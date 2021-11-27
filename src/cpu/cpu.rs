@@ -1,9 +1,7 @@
-use crate::cartridge::INes;
 use crate::cpu::address::Address;
 use crate::cpu::instruction::{Instruction, OpCode, Argument};
 use crate::cpu::memory::Memory;
 use crate::cpu::status::Status;
-use crate::mapper::mapper0::Mapper0;
 
 const NMI_VECTOR: Address = Address::new(0xFFFA);
 const RESET_VECTOR: Address = Address::new(0xFFFC);
@@ -20,17 +18,7 @@ pub struct Cpu {
 
 impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
-    pub fn startup(ines: INes) -> Cpu {
-        if ines.mapper_number() != 0 {
-            panic!("Only mapper 0 is currently supported.");
-        }
-
-        let mut memory = Memory::startup();
-
-        let mapper = Mapper0::new();
-        mapper.map(ines, &mut memory)
-            .expect("Failed to copy cartridge ROM into CPU memory.");
-
+    pub fn startup(memory: Memory) -> Cpu {
         let program_counter = memory.address_from_vector(RESET_VECTOR);
         println!("Starting execution at PC=0x{:4X}", program_counter.to_raw());
 

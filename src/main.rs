@@ -4,13 +4,14 @@
 mod cartridge;
 mod cpu;
 mod mapper;
+mod nes;
 mod util;
 
 use std::io::Read;
 use std::fs::File;
 
 use crate::cartridge::INes;
-use crate::cpu::cpu::Cpu;
+use crate::nes::Nes;
 
 fn main() {
     let mut rom = Vec::new();
@@ -20,9 +21,9 @@ fn main() {
         .unwrap();
 
     let ines = INes::load(&rom).unwrap();
-    let mut cpu = Cpu::startup(ines);
+    let mut nes = Nes::startup(ines);
 
     for _ in 0..10 {
-        cpu.step();
+        nes.step();
     }
 }
