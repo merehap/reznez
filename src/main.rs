@@ -18,7 +18,7 @@ use crate::cpu::Cpu;
 
 fn main() {
     let mut rom = Vec::new();
-    File::open("roms/thwaite.nes")
+    File::open("roms/nestest.nes")
         .unwrap()
         .read_to_end(&mut rom)
         .unwrap();

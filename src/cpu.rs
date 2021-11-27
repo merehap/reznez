@@ -158,6 +158,10 @@ impl Cpu {
             DEC => self.memory[address] = self.nz(self.memory[address].wrapping_sub(1)),
             INC => self.memory[address] = self.nz(self.memory[address].wrapping_add(1)),
 
+            LDA => self.accumulator = self.nz(self.memory[address]),
+            LDX => self.x_index = self.nz(self.memory[address]),
+            LDY => self.y_index = self.nz(self.memory[address]),
+
             BIT => {
                 let value = self.memory[address];
                 self.status.negative = value & 0b1000_0000 != 0;
@@ -179,6 +183,31 @@ impl Cpu {
                 jump_address = Some(address);
             },
             JMP => jump_address = Some(address),
+
+
+            // Undocumented op codes.
+            SLO => unimplemented!(),
+            RLA => unimplemented!(),
+            SRE => unimplemented!(),
+            RRA => unimplemented!(),
+            SAX => unimplemented!(),
+            LAX => unimplemented!(),
+            DCP => unimplemented!(),
+            ISC => {
+                self.memory[address] = self.memory[address].wrapping_add(1);
+                self.accumulator = self.sbc(self.memory[address]);
+            },
+            ANC => unimplemented!(),
+            ALR => unimplemented!(),
+            ARR => unimplemented!(),
+            XAA => unimplemented!(),
+            AXS => unimplemented!(),
+            AHX => unimplemented!(),
+            SHY => unimplemented!(),
+            SHX => unimplemented!(),
+            TAS => unimplemented!(),
+            LAS => unimplemented!(),
+
             _ => unreachable!("OpCode {:?} must take an address argument.", op_code),
         }
 
