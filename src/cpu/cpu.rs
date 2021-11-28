@@ -133,7 +133,14 @@ impl Cpu {
                 self.nz(self.accumulator);
             },
             PLP => self.status = Status::from_byte(self.memory.pop()),
-            BRK => unimplemented!(),
+            BRK => {
+                // Not sure why we need to increment here.
+                self.program_counter.inc();
+                self.memory.push_address(self.program_counter);
+                self.memory.push(self.status.to_byte());
+                self.status.interrupts_disabled = true;
+                self.program_counter = self.memory.address_from_vector(IRQ_VECTOR);
+            },
             RTI => {
                 self.status = Status::from_byte(self.memory.pop());
                 self.program_counter = self.memory.pop_address();
