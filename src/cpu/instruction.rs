@@ -91,6 +91,31 @@ impl Instruction {
             ZP  => Argument::Address(Address::zero_page(low)),
             ZPX => Argument::Address(Address::zero_page(low.wrapping_add(x_index))),
             ZPY => Argument::Address(Address::zero_page(low.wrapping_add(y_index))),
+            Abs => Argument::Address(Address::from_low_high(low, high)),
+            AbX => {
+                let start_address = Address::from_low_high(low, high);
+                let address = start_address.advance(x_index);
+                page_boundary_crossed = start_address.page() != address.page();
+                Argument::Address(address)
+            },
+            AbY => {
+                let start_address = Address::from_low_high(low, high);
+                let address = start_address.advance(y_index);
+                page_boundary_crossed = start_address.page() != address.page();
+                Argument::Address(address)
+            },
+            Rel => {
+                let address = program_counter
+                    .offset(low as i8)
+                    .advance(template.access_mode.instruction_length());
+                page_boundary_crossed = program_counter.page() != address.page();
+                Argument::Address(address)
+            },
+            Ind => {
+                let first = Address::from_low_high(low, high);
+                let second = first.advance(1);
+                Argument::Address(Address::from_low_high(mem[first], mem[second]))
+            },
             IzX => {
                 let low = low.wrapping_add(x_index);
                 let address = Address::from_low_high(
@@ -107,33 +132,6 @@ impl Instruction {
                 let address = start_address.advance(y_index);
                 page_boundary_crossed = start_address.page() != address.page();
                 Argument::Address(address)
-            },
-
-            Abs => Argument::Address(Address::from_low_high(low, high)),
-            AbX => {
-                let start_address = Address::from_low_high(low, high);
-                let address = start_address.advance(x_index);
-                page_boundary_crossed = start_address.page() != address.page();
-                Argument::Address(address)
-            },
-            AbY => {
-                let start_address = Address::from_low_high(low, high);
-                let address = start_address.advance(y_index);
-                page_boundary_crossed = start_address.page() != address.page();
-                Argument::Address(address)
-            },
-
-            Rel => {
-                let address = program_counter
-                    .offset(low as i8)
-                    .advance(template.access_mode.instruction_length());
-                page_boundary_crossed = program_counter.page() != address.page();
-                Argument::Address(address)
-            },
-            Ind => {
-                let first = Address::from_low_high(low, high);
-                let second = first.advance(1);
-                Argument::Address(Address::from_low_high(mem[first], mem[second]))
             },
         };
 

@@ -26,8 +26,8 @@ impl Memory {
 
     pub fn push_address(&mut self, address: Address) {
         let (low, high) = address.to_low_high();
-        self.push(low);
         self.push(high);
+        self.push(low);
     }
 
     pub fn pop(&mut self) -> u8 {
@@ -40,8 +40,8 @@ impl Memory {
     }
 
     pub fn pop_address(&mut self) -> Address {
-        let high = self.pop();
         let low = self.pop();
+        let high = self.pop();
         Address::from_low_high(low, high)
     }
 

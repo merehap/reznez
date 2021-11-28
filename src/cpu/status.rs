@@ -43,7 +43,7 @@ impl Status {
             self.negative,
             self.overflow,
             true,
-            false,
+            true,
             self.decimal,
             self.interrupts_disabled,
             self.zero,
@@ -101,6 +101,11 @@ mod tests {
     }
 
     #[test]
+    fn all_set_to_byte() {
+        assert_eq!(ALL_SET.to_byte(), 0b1111_1111);
+    }
+
+    #[test]
     fn all_set_round_trip() {
         assert_eq!(Status::from_byte(ALL_SET.to_byte()), ALL_SET);
     }
@@ -108,6 +113,11 @@ mod tests {
     #[test]
     fn none_set_to_string() {
         assert_eq!(NONE_SET.to_string(), "________");
+    }
+
+    #[test]
+    fn none_set_to_byte() {
+        assert_eq!(NONE_SET.to_byte(), 0b0011_0000);
     }
 
     #[test]
@@ -123,5 +133,10 @@ mod tests {
     #[test]
     fn mixed_set_round_trip() {
         assert_eq!(Status::from_byte(MIXED_SET.to_byte()), MIXED_SET);
+    }
+
+    #[test]
+    fn mixed_set_to_byte() {
+        assert_eq!(MIXED_SET.to_byte(), 0b1011_1001);
     }
 }

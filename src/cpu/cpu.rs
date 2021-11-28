@@ -116,16 +116,22 @@ impl Cpu {
     fn execute_implicit_op_code(&mut self, op_code: OpCode) {
         use OpCode::*;
         match op_code {
+            INX => self.x_index = self.nz(self.x_index.wrapping_add(1)),
+            INY => self.y_index = self.nz(self.y_index.wrapping_add(1)),
             DEX => self.x_index = self.nz(self.x_index.wrapping_sub(1)),
             DEY => self.y_index = self.nz(self.y_index.wrapping_sub(1)),
             TAX => self.x_index = self.nz(self.accumulator),
             TAY => self.y_index = self.nz(self.accumulator),
             TSX => self.x_index = self.nz(self.memory.stack_pointer),
-            TXA => self.accumulator = self.nz(self.x_index),
             TXS => self.memory.stack_pointer = self.x_index,
+            TXA => self.accumulator = self.nz(self.x_index),
+            TYA => self.accumulator = self.nz(self.y_index),
             PHA => self.memory.push(self.accumulator),
             PHP => self.memory.push(self.status.to_byte()),
-            PLA => self.accumulator = self.memory.pop(),
+            PLA => {
+                self.accumulator = self.memory.pop();
+                self.nz(self.accumulator);
+            },
             PLP => self.status = Status::from_byte(self.memory.pop()),
             BRK => unimplemented!(),
             RTI => unimplemented!(),
@@ -163,8 +169,6 @@ impl Cpu {
             LDA => self.accumulator = self.nz(value),
             LDX => self.x_index = self.nz(value),
             LDY => self.y_index = self.nz(value),
-            TXA => self.accumulator = self.nz(value),
-            TYA => self.accumulator = self.nz(value),
             _ => unreachable!("OpCode {:?} must take a value argument.", op_code),
         }
     }
@@ -282,7 +286,7 @@ impl Cpu {
         // Convert u8s to possibly negative values before widening them.
         let result = (self.accumulator as i8) as i16 - (value as i8) as i16 - carry;
         self.status.overflow = result < -128 || result > 127;
-        // TODO: Is carry supposed to be set? The spec says so.
+        self.status.carry = !is_neg(result as u8);
         self.nz(result as u8)
     }
 
@@ -297,7 +301,7 @@ impl Cpu {
     }
 
     fn cpy(&mut self, value: u8) {
-        self.nz(self.x_index.wrapping_sub(value));
+        self.nz(self.y_index.wrapping_sub(value));
         self.status.carry = self.y_index >= value;
     }
 
