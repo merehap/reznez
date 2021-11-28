@@ -4,7 +4,7 @@
 mod cartridge;
 mod cpu;
 mod mapper;
-mod nes;
+pub mod nes;
 mod util;
 
 use std::io::Read;

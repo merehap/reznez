@@ -1,5 +1,6 @@
 use crate::util;
 
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Status {
     pub negative: bool,
     pub overflow: bool,
@@ -12,9 +13,9 @@ pub struct Status {
 impl Status {
     pub fn startup() -> Status {
         Status {
-            negative: false,
             // https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
-            overflow: true,
+            negative: false,
+            overflow: false,
             decimal: false,
             interrupts_disabled: true,
             zero: false,
@@ -41,7 +42,7 @@ impl Status {
         util::pack_bools([
             self.negative,
             self.overflow,
-            false,
+            true,
             false,
             self.decimal,
             self.interrupts_disabled,
@@ -52,13 +53,75 @@ impl Status {
 
     pub fn to_string(&self) -> String {
         format!(
-            "{}{}bb{}{}{}{}",
-            if self.negative {'N'} else {'n'},
-            if self.overflow {'V'} else {'v'},
-            if self.decimal {'D'} else {'d'},
-            if self.interrupts_disabled {'I'} else {'i'},
-            if self.zero {'Z'} else {'z'},
-            if self.carry {'C'} else {'c'},
+            "{}{}__{}{}{}{}",
+            if self.negative {'N'} else {'_'},
+            if self.overflow {'V'} else {'_'},
+            if self.decimal {'D'} else {'_'},
+            if self.interrupts_disabled {'I'} else {'_'},
+            if self.zero {'Z'} else {'_'},
+            if self.carry {'C'} else {'_'},
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ALL_SET: Status = Status {
+        negative: true,
+        overflow: true,
+        decimal: true,
+        interrupts_disabled: true,
+        zero: true,
+        carry: true,
+    };
+
+    const NONE_SET: Status = Status {
+        negative: false,
+        overflow: false,
+        decimal: false,
+        interrupts_disabled: false,
+        zero: false,
+        carry: false,
+    };
+
+    const MIXED_SET: Status = Status {
+        negative: true,
+        overflow: false,
+        decimal: true,
+        interrupts_disabled: false,
+        zero: false,
+        carry: true,
+    };
+
+    #[test]
+    fn all_set_to_string() {
+        assert_eq!(ALL_SET.to_string(), "NV__DIZC");
+    }
+
+    #[test]
+    fn all_set_round_trip() {
+        assert_eq!(Status::from_byte(ALL_SET.to_byte()), ALL_SET);
+    }
+
+    #[test]
+    fn none_set_to_string() {
+        assert_eq!(NONE_SET.to_string(), "________");
+    }
+
+    #[test]
+    fn none_set_round_trip() {
+        assert_eq!(Status::from_byte(NONE_SET.to_byte()), NONE_SET);
+    }
+
+    #[test]
+    fn mixed_set_to_string() {
+        assert_eq!(MIXED_SET.to_string(), "N___D__C");
+    }
+
+    #[test]
+    fn mixed_set_round_trip() {
+        assert_eq!(Status::from_byte(MIXED_SET.to_byte()), MIXED_SET);
     }
 }

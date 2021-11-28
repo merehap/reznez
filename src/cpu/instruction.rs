@@ -1,4 +1,7 @@
+use std::fmt;
+
 use lazy_static::lazy_static;
+use strum_macros::EnumString;
 
 use crate::cpu::address::Address;
 use crate::cpu::memory::Memory;
@@ -121,7 +124,9 @@ impl Instruction {
             },
 
             Rel => {
-                let address = program_counter.offset(low as i8);
+                let address = program_counter
+                    .offset(low as i8)
+                    .advance(template.access_mode.instruction_length());
                 page_boundary_crossed = program_counter.page() != address.page();
                 Argument::Address(address)
             },
@@ -144,11 +149,35 @@ impl Instruction {
     }
 }
 
+impl fmt::Display for Instruction {
+    fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
+        let mut access_mode = format!("{:?}", self.template.access_mode);
+        if access_mode.len() == 2 {
+            access_mode.push(' ');
+        }
+
+        write!(f, "0x{:02X} ({:?} {} Cycles:{:?}+{:?}) Arg:{:5} PB:{}",
+            self.template.code_point, self.template.op_code, access_mode,
+            self.template.cycle_count as usize, self.template.extra_cycle,
+            self.argument, self.page_boundary_crossed)
+    }
+}
+
 #[derive(Debug)]
 pub enum Argument {
     Implicit,
     Immediate(u8),
     Address(Address),
+}
+
+impl fmt::Display for Argument {
+    fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
+        match self {
+            Argument::Implicit => write!(f, "None "),
+            Argument::Immediate(value) => write!(f, "#{:02X}  ", value),
+            Argument::Address(address) => write!(f, "{}", address.to_string()),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -172,7 +201,7 @@ impl InstructionTemplate {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, EnumString)]
 pub enum OpCode {
     // Logical/Arithmetic
     ORA,
@@ -194,7 +223,7 @@ pub enum OpCode {
     LSR,
     ROR,
 
-    // Move
+    /* Move */
     LDA,
     STA,
     LDX,
@@ -207,12 +236,16 @@ pub enum OpCode {
     TYA,
     TSX,
     TXS,
+    // Pull accumulator from stack.
     PLA,
+    // Push accumulator to stack.
     PHA,
+    // Pull status from stack.
     PLP,
+    // Push status from stack.
     PHP,
 
-    // Jump/Flag
+    /* Jump/Flag */
     BPL,
     BMI,
     BVC,

@@ -20,8 +20,11 @@ impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
     pub fn startup(memory: Memory) -> Cpu {
         let program_counter = memory.address_from_vector(RESET_VECTOR);
-        println!("Starting execution at PC=0x{:4X}", program_counter.to_raw());
+        Cpu::with_program_counter(memory, program_counter)
+    }
 
+    pub fn with_program_counter(memory: Memory, program_counter: Address) -> Cpu {
+        println!("Starting execution at PC=0x{:4X}", program_counter.to_raw());
         Cpu {
             accumulator: 0,
             x_index: 0,
@@ -38,7 +41,7 @@ impl Cpu {
         // TODO: APU resets?
     }
 
-    pub fn step(&mut self) {
+    pub fn step(&mut self) -> Instruction {
         let instruction = Instruction::from_memory(
             self.program_counter,
             self.x_index,
@@ -46,7 +49,7 @@ impl Cpu {
             &self.memory,
         );
 
-        println!("Instruction: {:?}", instruction);
+        println!("{} | {}", self.state_string(), instruction);
 
         self.program_counter = self.program_counter.advance(instruction.length());
 
@@ -63,6 +66,51 @@ impl Cpu {
                 }
             },
         }
+
+        instruction
+    }
+
+    pub fn state_string(&self) -> String {
+        let nesting = "";
+        format!("{:010} PC:{}, A:0x{:02X}, X:0x{:02X}, Y:0x{:02X}, P:0x{:02X}, S:0x{:02X}, {} {}",
+            self.cycle(),
+            self.program_counter,
+            self.accumulator,
+            self.x_index,
+            self.y_index,
+            self.status.to_byte(),
+            self.stack_pointer(),
+            self.status.to_string(),
+            nesting,
+        )
+    }
+
+    pub fn accumulator(&self) -> u8 {
+        self.accumulator
+    }
+
+    pub fn x_index(&self) -> u8 {
+        self.x_index
+    }
+
+    pub fn y_index(&self) -> u8 {
+        self.y_index
+    }
+
+    pub fn program_counter(&self) -> Address {
+        self.program_counter
+    }
+
+    pub fn status(&self) -> Status {
+        self.status
+    }
+
+    pub fn stack_pointer(&self) -> u8 {
+        self.memory.stack_pointer
+    }
+
+    pub fn cycle(&self) -> u64 {
+        0
     }
 
     fn execute_implicit_op_code(&mut self, op_code: OpCode) {

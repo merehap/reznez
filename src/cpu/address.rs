@@ -1,4 +1,6 @@
-#[derive(Clone, Copy, Debug)]
+use std::fmt;
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Address(u16);
 
 impl Address {
@@ -67,6 +69,12 @@ impl Address {
                 self.0,
                 ),
         }
+    }
+}
+
+impl fmt::Display for Address {
+    fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
+        write!(f, "${:04X}", self.0)
     }
 }
 
