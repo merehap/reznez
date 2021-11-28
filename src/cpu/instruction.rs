@@ -28,7 +28,7 @@ fn instruction_templates() -> [InstructionTemplate; 256] {
 /*+07*/ [(SLO,ZP ,5,No), (RLA,ZP ,5,No), (SRE,ZP ,5,No), (RRA,ZP ,5,No), (SAX,ZP ,3,No), (LAX,ZP ,3,No), (DCP,ZP ,5,No), (ISC,ZP ,5,No)],
 /*+08*/ [(PHP,Imp,3,No), (PLP,Imp,4,No), (PHA,Imp,3,No), (PLA,Imp,4,No), (DEY,Imp,2,No), (TAY,Imp,2,No), (INY,Imp,2,No), (INX,Imp,2,No)],
 /*+09*/ [(ORA,Imm,2,No), (AND,Imm,2,No), (EOR,Imm,2,No), (ADC,Imm,2,No), (NOP,Imm,2,No), (LDA,Imm,2,No), (CMP,Imm,2,No), (SBC,Imm,2,No)],
-/*+0a*/ [(ASL,Imm,2,No), (ROL,Imm,2,No), (LSR,Imm,2,No), (ROR,Imm,2,No), (TXA,Imp,2,No), (TAX,Imp,2,No), (DEX,Imp,2,No), (NOP,Imp,2,No)],
+/*+0a*/ [(ASL,Imp,2,No), (ROL,Imp,2,No), (LSR,Imp,2,No), (ROR,Imp,2,No), (TXA,Imp,2,No), (TAX,Imp,2,No), (DEX,Imp,2,No), (NOP,Imp,2,No)],
 /*+0b*/ [(ANC,Imm,2,No), (ANC,Imm,2,No), (ALR,Imm,2,No), (ARR,Imm,2,No), (XAA,Imm,2,No), (LAX,Imm,2,No), (AXS,Imm,2,No), (SBC,Imm,2,No)],
 /*+0c*/ [(NOP,Abs,4,No), (BIT,Abs,4,No), (JMP,Abs,3,No), (JMP,Ind,5,No), (STY,Abs,4,No), (LDY,Abs,4,No), (CPY,Abs,4,No), (CPX,Abs,4,No)],
 /*+0d*/ [(ORA,Abs,4,No), (AND,Abs,4,No), (EOR,Abs,4,No), (ADC,Abs,4,No), (STA,Abs,4,No), (LDA,Abs,4,No), (CMP,Abs,4,No), (SBC,Abs,4,No)],
@@ -119,15 +119,15 @@ impl Instruction {
             IzX => {
                 let low = low.wrapping_add(x_index);
                 let address = Address::from_low_high(
-                    mem[Address::zero_page(low.wrapping_add(1))],
                     mem[Address::zero_page(low)],
+                    mem[Address::zero_page(low.wrapping_add(1))],
                 );
                 Argument::Address(address)
             },
             IzY => {
                 let start_address = Address::from_low_high(
-                    mem[Address::zero_page(low.wrapping_add(1))],
                     mem[Address::zero_page(low)],
+                    mem[Address::zero_page(low.wrapping_add(1))],
                 );
                 let address = start_address.advance(y_index);
                 page_boundary_crossed = start_address.page() != address.page();

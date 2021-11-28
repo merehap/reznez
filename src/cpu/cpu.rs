@@ -134,7 +134,10 @@ impl Cpu {
             },
             PLP => self.status = Status::from_byte(self.memory.pop()),
             BRK => unimplemented!(),
-            RTI => unimplemented!(),
+            RTI => {
+                self.status = Status::from_byte(self.memory.pop());
+                self.program_counter = self.memory.pop_address();
+            },
             RTS => self.program_counter = self.memory.pop_address().advance(1),
             CLC => self.status.carry = false,
             SEC => self.status.carry = true,
@@ -143,6 +146,12 @@ impl Cpu {
             CLI => self.status.interrupts_disabled = false,
             SEI => self.status.interrupts_disabled = true,
             CLV => self.status.overflow = false,
+
+            ASL => self.accumulator = self.asl(self.accumulator),
+            ROL => self.accumulator = self.rol(self.accumulator),
+            LSR => self.accumulator = self.lsr(self.accumulator),
+            ROR => self.accumulator = self.ror(self.accumulator),
+
             NOP => {},
 
             JAM => panic!("JAM instruction encountered!"),
@@ -161,10 +170,6 @@ impl Cpu {
             CMP => self.cmp(value),
             CPX => self.cpx(value),
             CPY => self.cpy(value),
-            ASL => self.accumulator = self.asl(self.accumulator),
-            ROL => self.accumulator = self.rol(self.accumulator),
-            LSR => self.accumulator = self.lsr(self.accumulator),
-            ROR => self.accumulator = self.ror(self.accumulator),
 
             LDA => self.accumulator = self.nz(value),
             LDX => self.x_index = self.nz(value),
@@ -178,11 +183,11 @@ impl Cpu {
 
         use OpCode::*;
         match op_code {
-            ORA => self.memory[address] = self.ora(self.memory[address]),
-            AND => self.memory[address] = self.and(self.memory[address]),
-            EOR => self.memory[address] = self.eor(self.memory[address]),
-            ADC => self.memory[address] = self.adc(self.memory[address]),
-            SBC => self.memory[address] = self.sbc(self.memory[address]),
+            ORA => self.accumulator = self.ora(self.memory[address]),
+            AND => self.accumulator = self.and(self.memory[address]),
+            EOR => self.accumulator = self.eor(self.memory[address]),
+            ADC => self.accumulator = self.adc(self.memory[address]),
+            SBC => self.accumulator = self.sbc(self.memory[address]),
             CMP => self.cmp(self.memory[address]),
             CPX => self.cpx(self.memory[address]),
             CPY => self.cpy(self.memory[address]),
@@ -318,7 +323,7 @@ impl Cpu {
             result |= 1;
         }
 
-        result
+        self.nz(result)
     }
 
     fn ror(&mut self, value: u8) -> u8 {
@@ -329,7 +334,7 @@ impl Cpu {
             result |= 0b1000_0000;
         }
 
-        result
+        self.nz(result)
     }
 
     fn lsr(&mut self, value: u8) -> u8 {
