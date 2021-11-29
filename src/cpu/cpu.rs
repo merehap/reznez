@@ -43,6 +43,8 @@ impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
     pub fn reset(&mut self) {
         self.status.interrupts_disabled = true;
+        self.program_counter = self.memory.address_from_vector(RESET_VECTOR);
+        self.cycle = 7;
         // TODO: APU resets?
     }
 
@@ -108,29 +110,13 @@ impl Cpu {
                 self.execute_implicit_op_code(op_code),
             Argument::Immediate(value) =>
                 self.execute_immediate_op_code(op_code, value),
-            Argument::Address(address) => {
-                if let (Some(jump_address), branch_taken, branch_crossed_page_boundary) =
-                        self.execute_address_op_code(op_code, address) {
-
-                    self.program_counter = jump_address;
-                    if branch_taken {
-                        println!("Branch taken, cycle added.");
-                        self.cycle += 1;
-                    }
-
-                    if branch_crossed_page_boundary {
-                        println!("Branch crossed page boundary, 'Oops' cycle added.");
-                        self.cycle += 1;
-                    }
-                }
-            },
+            Argument::Address(address) =>
+                self.execute_address_op_code(
+                    op_code, address, instruction.should_add_oops_cycle()),
         }
 
+        // Extra cycles are added in execute_address_op_code()
         self.cycle += instruction.template.cycle_count as u64;
-        if instruction.should_add_oops_cycle() {
-            println!("'Oops' cycle added.");
-            self.cycle += 1;
-        }
 
         instruction
     }
@@ -185,7 +171,7 @@ impl Cpu {
             NOP => {},
 
             JAM => panic!("JAM instruction encountered!"),
-            _ => unreachable!("OpCode {:?} must take no arguments.", op_code),
+            _ => unreachable!("{:?} is not an Implicit OpCode.", op_code),
         }
     }
 
@@ -211,7 +197,7 @@ impl Cpu {
             // A NOP that takes an argument, but ignores it.
             NOP => {},
 
-            _ => unreachable!("OpCode {:?} must take a value argument.", op_code),
+            _ => unreachable!("{:?} is not an Immediate OpCode.", op_code),
         }
     }
 
@@ -219,12 +205,14 @@ impl Cpu {
         &mut self,
         op_code: OpCode,
         address: Address,
-    ) -> (Option<Address>, bool, bool) {
+        should_add_oops_cycle: bool,
+    ) {
+        if should_add_oops_cycle {
+            println!("'Oops' cycle added.");
+            self.cycle += 1;
+        }
 
-        let mut jump_address = None;
-        let mut branch_taken = false;
         let value = self.memory[address];
-
         use OpCode::*;
         match op_code {
             ORA => self.accumulator = self.ora(value),
@@ -235,14 +223,14 @@ impl Cpu {
                 self.accumulator = self.subtract_from_accumulator(value);
                 self.status.carry = !self.status.negative;
             },
-            CMP => self.cmp(value),
-            CPX => self.cpx(value),
-            CPY => self.cpy(value),
-
             ASL => self.memory[address] = self.asl(value),
             ROL => self.memory[address] = self.rol(value),
             LSR => self.memory[address] = self.lsr(value),
             ROR => self.memory[address] = self.ror(value),
+
+            CMP => self.cmp(value),
+            CPX => self.cpx(value),
+            CPY => self.cpy(value),
 
             STA => self.memory[address] = self.accumulator,
             STX => self.memory[address] = self.x_index,
@@ -260,21 +248,20 @@ impl Cpu {
                 self.status.zero = value & self.accumulator == 0;
             },
 
-            BPL => if !self.status.negative {branch_taken = true},
-            BMI => if self.status.negative {branch_taken = true},
-            BVC => if !self.status.overflow {branch_taken = true},
-            BVS => if self.status.overflow {branch_taken = true},
-            BCC => if !self.status.carry {branch_taken = true},
-            BCS => if self.status.carry {branch_taken = true},
-            BNE => if !self.status.zero {branch_taken = true},
-            BEQ => if self.status.zero {branch_taken = true},
+            BPL => if !self.status.negative {self.take_branch(address)},
+            BMI => if self.status.negative {self.take_branch(address)},
+            BVC => if !self.status.overflow {self.take_branch(address)},
+            BVS => if self.status.overflow {self.take_branch(address)},
+            BCC => if !self.status.carry {self.take_branch(address)},
+            BCS => if self.status.carry {self.take_branch(address)},
+            BNE => if !self.status.zero {self.take_branch(address)},
+            BEQ => if self.status.zero {self.take_branch(address)},
             JSR => {
                 // Push the address one previous for some reason.
                 self.memory.push_address(self.program_counter.offset(-1));
-                jump_address = Some(address);
+                self.program_counter = address;
             },
-            JMP => jump_address = Some(address),
-
+            JMP => self.program_counter = address,
 
             // Undocumented op codes.
             SLO => {
@@ -327,17 +314,8 @@ impl Cpu {
             TAS => unimplemented!(),
             LAS => unimplemented!(),
 
-            _ => unreachable!("OpCode {:?} must take an address argument.", op_code),
+            _ => unreachable!("{:?} is not an Address OpCode.", op_code),
         }
-
-        let mut branch_crossed_page_boundary = false;
-        if branch_taken {
-            println!("Branch taken! PC: {}, Jump: {}", self.program_counter, address);
-            jump_address = Some(address);
-            branch_crossed_page_boundary = self.program_counter.page() != address.page();
-        }
-
-        (jump_address, branch_taken, branch_crossed_page_boundary)
     }
 
     fn ora(&mut self, value: u8) -> u8 {
@@ -427,6 +405,18 @@ impl Cpu {
         self.status.negative = is_neg(value);
         self.status.zero = value == 0;
         value
+    }
+
+    fn take_branch(&mut self, destination: Address) {
+        println!("Branch taken, cycle added.");
+        self.cycle += 1;
+
+        if self.program_counter.page() != destination.page() {
+            println!("Branch crossed page boundary, 'Oops' cycle added.");
+            self.cycle += 1;
+        }
+
+        self.program_counter = destination;
     }
 }
 
