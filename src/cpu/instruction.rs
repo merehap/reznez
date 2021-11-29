@@ -63,7 +63,7 @@ fn instruction_templates() -> [InstructionTemplate; 256] {
     result
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Instruction {
     pub template: InstructionTemplate,
     pub argument: Argument,
@@ -86,34 +86,47 @@ impl Instruction {
 
         use AccessMode::*;
         let argument = match template.access_mode {
-            Imp => Argument::Implicit,
-            Imm => Argument::Immediate(low),
-            ZP  => Argument::Address(Address::zero_page(low)),
-            ZPX => Argument::Address(Address::zero_page(low.wrapping_add(x_index))),
-            ZPY => Argument::Address(Address::zero_page(low.wrapping_add(y_index))),
-            Abs => Argument::Address(Address::from_low_high(low, high)),
+            Imp => Argument::Imp,
+            Imm => Argument::Imm(low),
+            ZP => {
+                let address = Address::zero_page(low);
+                Argument::Addr(address, mem[address])
+            },
+            ZPX => {
+                let address = Address::zero_page(low.wrapping_add(x_index));
+                Argument::Addr(address, mem[address])
+            },
+            ZPY => {
+                let address = Address::zero_page(low.wrapping_add(y_index));
+                Argument::Addr(address, mem[address])
+            },
+            Abs => {
+                let address = Address::from_low_high(low, high);
+                Argument::Addr(address, mem[address])
+            },
             AbX => {
                 let start_address = Address::from_low_high(low, high);
                 let address = start_address.advance(x_index);
                 page_boundary_crossed = start_address.page() != address.page();
-                Argument::Address(address)
+                Argument::Addr(address, mem[address])
             },
             AbY => {
                 let start_address = Address::from_low_high(low, high);
                 let address = start_address.advance(y_index);
                 page_boundary_crossed = start_address.page() != address.page();
-                Argument::Address(address)
+                Argument::Addr(address, mem[address])
             },
             Rel => {
                 let address = program_counter
                     .offset(low as i8)
                     .advance(template.access_mode.instruction_length());
-                Argument::Address(address)
+                Argument::Addr(address, mem[address])
             },
             Ind => {
                 let first = Address::from_low_high(low, high);
                 let second = Address::from_low_high(low.wrapping_add(1), high);
-                Argument::Address(Address::from_low_high(mem[first], mem[second]))
+                let address = Address::from_low_high(mem[first], mem[second]);
+                Argument::Addr(address, mem[address])
             },
             IzX => {
                 let low = low.wrapping_add(x_index);
@@ -121,7 +134,7 @@ impl Instruction {
                     mem[Address::zero_page(low)],
                     mem[Address::zero_page(low.wrapping_add(1))],
                 );
-                Argument::Address(address)
+                Argument::Addr(address, mem[address])
             },
             IzY => {
                 let start_address = Address::from_low_high(
@@ -131,7 +144,7 @@ impl Instruction {
                 // TODO: Should this wrap around just the current page?
                 let address = start_address.advance(y_index);
                 page_boundary_crossed = start_address.page() != address.page();
-                Argument::Address(address)
+                Argument::Addr(address, mem[address])
             },
         };
 
@@ -165,19 +178,19 @@ impl fmt::Display for Instruction {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum Argument {
-    Implicit,
-    Immediate(u8),
-    Address(Address),
+    Imp,
+    Imm(u8),
+    Addr(Address, u8),
 }
 
 impl fmt::Display for Argument {
     fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
         match self {
-            Argument::Implicit => write!(f, "No   "),
-            Argument::Immediate(value) => write!(f, "#{:02X}  ", value),
-            Argument::Address(address) => write!(f, "{}", address.to_string()),
+            Argument::Imp => write!(f, "No   "),
+            Argument::Imm(value) => write!(f, "#{:02X}  ", value),
+            Argument::Addr(address, _) => write!(f, "{}", address.to_string()),
         }
     }
 }

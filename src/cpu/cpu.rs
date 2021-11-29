@@ -100,61 +100,48 @@ impl Cpu {
         );
 
         println!("{} | {}", self.state_string(), instruction);
-
-        self.program_counter = self.program_counter.advance(instruction.length());
-
-        let op_code = instruction.template.op_code;
-
-        match instruction.argument {
-            Argument::Implicit =>
-                self.execute_implicit_op_code(op_code),
-            Argument::Immediate(value) =>
-                self.execute_immediate_op_code(op_code, value),
-            Argument::Address(address) =>
-                self.execute_address_op_code(
-                    op_code, address, instruction.should_add_oops_cycle()),
-        }
-
-        // Extra cycles are added in execute_address_op_code()
-        self.cycle += instruction.template.cycle_count as u64;
-
+        self.execute_instruction(instruction);
         instruction
     }
 
-    fn execute_implicit_op_code(&mut self, op_code: OpCode) {
+    fn execute_instruction(&mut self, instruction: Instruction) {
+        self.program_counter = self.program_counter.advance(instruction.length());
+
+        // Branching op codes add additional cycles beyond these.
+        self.cycle += instruction.template.cycle_count as u64;
+        if instruction.should_add_oops_cycle() {
+            println!("'Oops' cycle added.");
+            self.cycle += 1;
+        }
+
         use OpCode::*;
-        match op_code {
-            INX => self.x_index = self.nz(self.x_index.wrapping_add(1)),
-            INY => self.y_index = self.nz(self.y_index.wrapping_add(1)),
-            DEX => self.x_index = self.nz(self.x_index.wrapping_sub(1)),
-            DEY => self.y_index = self.nz(self.y_index.wrapping_sub(1)),
-            TAX => self.x_index = self.nz(self.accumulator),
-            TAY => self.y_index = self.nz(self.accumulator),
-            TSX => self.x_index = self.nz(self.memory.stack_pointer),
-            TXS => self.memory.stack_pointer = self.x_index,
-            TXA => self.accumulator = self.nz(self.x_index),
-            TYA => self.accumulator = self.nz(self.y_index),
-            PHA => self.memory.push(self.accumulator),
-            PHP => self.memory.push(self.status.to_byte()),
-            PLA => {
+        use Argument::*;
+        match (instruction.template.op_code, instruction.argument) {
+            (INX, Imp) => self.x_index = self.nz(self.x_index.wrapping_add(1)),
+            (INY, Imp) => self.y_index = self.nz(self.y_index.wrapping_add(1)),
+            (DEX, Imp) => self.x_index = self.nz(self.x_index.wrapping_sub(1)),
+            (DEY, Imp) => self.y_index = self.nz(self.y_index.wrapping_sub(1)),
+            (TAX, Imp) => self.x_index = self.nz(self.accumulator),
+            (TAY, Imp) => self.y_index = self.nz(self.accumulator),
+            (TSX, Imp) => self.x_index = self.nz(self.memory.stack_pointer),
+            (TXS, Imp) => self.memory.stack_pointer = self.x_index,
+            (TXA, Imp) => self.accumulator = self.nz(self.x_index),
+            (TYA, Imp) => self.accumulator = self.nz(self.y_index),
+            (PHA, Imp) => self.memory.push(self.accumulator),
+            (PHP, Imp) => self.memory.push(self.status.to_byte()),
+            (PLA, Imp) => {
                 self.accumulator = self.memory.pop();
                 self.nz(self.accumulator);
             },
-            PLP => self.status = Status::from_byte(self.memory.pop()),
-            CLC => self.status.carry = false,
-            SEC => self.status.carry = true,
-            CLD => self.status.decimal = false,
-            SED => self.status.decimal = true,
-            CLI => self.status.interrupts_disabled = false,
-            SEI => self.status.interrupts_disabled = true,
-            CLV => self.status.overflow = false,
-
-            ASL => self.accumulator = self.asl(self.accumulator),
-            ROL => self.accumulator = self.rol(self.accumulator),
-            LSR => self.accumulator = self.lsr(self.accumulator),
-            ROR => self.accumulator = self.ror(self.accumulator),
-
-            BRK => {
+            (PLP, Imp) => self.status = Status::from_byte(self.memory.pop()),
+            (CLC, Imp) => self.status.carry = false,
+            (SEC, Imp) => self.status.carry = true,
+            (CLD, Imp) => self.status.decimal = false,
+            (SED, Imp) => self.status.decimal = true,
+            (CLI, Imp) => self.status.interrupts_disabled = false,
+            (SEI, Imp) => self.status.interrupts_disabled = true,
+            (CLV, Imp) => self.status.overflow = false,
+            (BRK, Imp) => {
                 // Not sure why we need to increment here.
                 self.program_counter.inc();
                 self.memory.push_address(self.program_counter);
@@ -162,172 +149,114 @@ impl Cpu {
                 self.status.interrupts_disabled = true;
                 self.program_counter = self.memory.address_from_vector(IRQ_VECTOR);
             },
-            RTI => {
+            (RTI, Imp) => {
                 self.status = Status::from_byte(self.memory.pop());
                 self.program_counter = self.memory.pop_address();
             },
-            RTS => self.program_counter = self.memory.pop_address().advance(1),
+            (RTS, Imp) => self.program_counter = self.memory.pop_address().advance(1),
 
-            NOP => {},
-
-            JAM => panic!("JAM instruction encountered!"),
-            _ => unreachable!("{:?} is not an Implicit OpCode.", op_code),
-        }
-    }
-
-    fn execute_immediate_op_code(&mut self, op_code: OpCode, value: u8) {
-        use OpCode::*;
-        match op_code {
-            ORA => self.accumulator = self.ora(value),
-            AND => self.accumulator = self.and(value),
-            EOR => self.accumulator = self.eor(value),
-            ADC => self.accumulator = self.adc(value),
-            SBC => {
-                self.accumulator = self.subtract_from_accumulator(value);
-                self.status.carry = !self.status.negative;
-            },
-            CMP => self.cmp(value),
-            CPX => self.cpx(value),
-            CPY => self.cpy(value),
-
-            LDA => self.accumulator = self.nz(value),
-            LDX => self.x_index = self.nz(value),
-            LDY => self.y_index = self.nz(value),
-
-            // A NOP that takes an argument, but ignores it.
-            NOP => {},
-
-            _ => unreachable!("{:?} is not an Immediate OpCode.", op_code),
-        }
-    }
-
-    fn execute_address_op_code(
-        &mut self,
-        op_code: OpCode,
-        address: Address,
-        should_add_oops_cycle: bool,
-    ) {
-        if should_add_oops_cycle {
-            println!("'Oops' cycle added.");
-            self.cycle += 1;
-        }
-
-        let value = self.memory[address];
-        use OpCode::*;
-        match op_code {
-            ORA => self.accumulator = self.ora(value),
-            AND => self.accumulator = self.and(value),
-            EOR => self.accumulator = self.eor(value),
-            ADC => self.accumulator = self.adc(value),
-            SBC => {
-                self.accumulator = self.subtract_from_accumulator(value);
-                self.status.carry = !self.status.negative;
-            },
-            ASL => self.memory[address] = self.asl(value),
-            ROL => self.memory[address] = self.rol(value),
-            LSR => self.memory[address] = self.lsr(value),
-            ROR => self.memory[address] = self.ror(value),
-
-            CMP => self.cmp(value),
-            CPX => self.cpx(value),
-            CPY => self.cpy(value),
-
-            STA => self.memory[address] = self.accumulator,
-            STX => self.memory[address] = self.x_index,
-            STY => self.memory[address] = self.y_index,
-            DEC => self.memory[address] = self.nz(value.wrapping_sub(1)),
-            INC => self.memory[address] = self.nz(value.wrapping_add(1)),
-
-            LDA => self.accumulator = self.nz(value),
-            LDX => self.x_index = self.nz(value),
-            LDY => self.y_index = self.nz(value),
-
-            BIT => {
-                self.status.negative = value & 0b1000_0000 != 0;
-                self.status.overflow = value & 0b0100_0000 != 0;
-                self.status.zero = value & self.accumulator == 0;
-            },
-
-            BPL => if !self.status.negative {self.take_branch(address)},
-            BMI => if self.status.negative {self.take_branch(address)},
-            BVC => if !self.status.overflow {self.take_branch(address)},
-            BVS => if self.status.overflow {self.take_branch(address)},
-            BCC => if !self.status.carry {self.take_branch(address)},
-            BCS => if self.status.carry {self.take_branch(address)},
-            BNE => if !self.status.zero {self.take_branch(address)},
-            BEQ => if self.status.zero {self.take_branch(address)},
-            JSR => {
+            (STA, Addr(addr, _)) => self.memory[addr] = self.accumulator,
+            (STX, Addr(addr, _)) => self.memory[addr] = self.x_index,
+            (STY, Addr(addr, _)) => self.memory[addr] = self.y_index,
+            (DEC, Addr(addr, _)) => self.memory[addr] = self.nz(self.memory[addr].wrapping_sub(1)),
+            (INC, Addr(addr, _)) => self.memory[addr] = self.nz(self.memory[addr].wrapping_add(1)),
+            (BPL, Addr(addr, _)) => if !self.status.negative {self.take_branch(addr)},
+            (BMI, Addr(addr, _)) => if self.status.negative {self.take_branch(addr)},
+            (BVC, Addr(addr, _)) => if !self.status.overflow {self.take_branch(addr)},
+            (BVS, Addr(addr, _)) => if self.status.overflow {self.take_branch(addr)},
+            (BCC, Addr(addr, _)) => if !self.status.carry {self.take_branch(addr)},
+            (BCS, Addr(addr, _)) => if self.status.carry {self.take_branch(addr)},
+            (BNE, Addr(addr, _)) => if !self.status.zero {self.take_branch(addr)},
+            (BEQ, Addr(addr, _)) => if self.status.zero {self.take_branch(addr)},
+            (JSR, Addr(addr, _)) => {
                 // Push the address one previous for some reason.
                 self.memory.push_address(self.program_counter.offset(-1));
-                self.program_counter = address;
+                self.program_counter = addr;
             },
-            JMP => self.program_counter = address,
+            (JMP, Addr(addr, _)) => self.program_counter = addr,
+
+            (BIT, Addr(_, val)) => {
+                self.status.negative = val & 0b1000_0000 != 0;
+                self.status.overflow = val & 0b0100_0000 != 0;
+                self.status.zero = val & self.accumulator == 0;
+            },
+
+            (LDA, Imm(val) | Addr(_, val)) => self.accumulator = self.nz(val),
+            (LDX, Imm(val) | Addr(_, val)) => self.x_index = self.nz(val),
+            (LDY, Imm(val) | Addr(_, val)) => self.y_index = self.nz(val),
+            (CMP, Imm(val) | Addr(_, val)) => self.cmp(val),
+            (CPX, Imm(val) | Addr(_, val)) => self.cpx(val),
+            (CPY, Imm(val) | Addr(_, val)) => self.cpy(val),
+            (ORA, Imm(val) | Addr(_, val)) => self.accumulator = self.nz(self.accumulator | val),
+            (AND, Imm(val) | Addr(_, val)) => self.accumulator = self.nz(self.accumulator & val),
+            (EOR, Imm(val) | Addr(_, val)) => self.accumulator = self.nz(self.accumulator ^ val),
+            (ADC, Imm(val) | Addr(_, val)) => self.accumulator = self.adc(val),
+            (SBC, Imm(val) | Addr(_, val)) => {
+                self.accumulator = self.subtract_from_accumulator(val);
+                self.status.carry = !self.status.negative;
+            },
+
+            (ASL, Imp)           => self.accumulator  = self.asl(self.accumulator),
+            (ASL, Addr(addr, _)) => self.memory[addr] = self.asl(self.memory[addr]),
+            (ROL, Imp)           => self.accumulator  = self.rol(self.accumulator),
+            (ROL, Addr(addr, _)) => self.memory[addr] = self.rol(self.memory[addr]),
+            (LSR, Imp)           => self.accumulator  = self.lsr(self.accumulator),
+            (LSR, Addr(addr, _)) => self.memory[addr] = self.lsr(self.memory[addr]),
+            (ROR, Imp)           => self.accumulator  = self.ror(self.accumulator),
+            (ROR, Addr(addr, _)) => self.memory[addr] = self.ror(self.memory[addr]),
 
             // Undocumented op codes.
-            SLO => {
-                self.memory[address] = self.asl(value);
-                self.accumulator |= self.memory[address];
+            (SLO, Addr(addr, _)) => {
+                self.memory[addr] = self.asl(self.memory[addr]);
+                self.accumulator |= self.memory[addr];
                 self.nz(self.accumulator);
             },
-            RLA => {
-                self.memory[address] = self.rol(value);
-                self.accumulator &= self.memory[address];
+            (RLA, Addr(addr, _)) => {
+                self.memory[addr] = self.rol(self.memory[addr]);
+                self.accumulator &= self.memory[addr];
                 self.nz(self.accumulator);
             },
-            SRE => {
-                self.memory[address] = self.lsr(value);
-                self.accumulator ^= self.memory[address];
+            (SRE, Addr(addr, _)) => {
+                self.memory[addr] = self.lsr(self.memory[addr]);
+                self.accumulator ^= self.memory[addr];
                 self.nz(self.accumulator);
             },
-            RRA => {
-                self.memory[address] = self.ror(value);
-                self.accumulator = self.adc(self.memory[address]);
+            (RRA, Addr(addr, _)) => {
+                self.memory[addr] = self.ror(self.memory[addr]);
+                self.accumulator = self.adc(self.memory[addr]);
                 self.nz(self.accumulator);
             },
-            SAX => self.memory[address] = self.accumulator & self.x_index,
-            LAX => {
-                self.accumulator = value;
-                self.x_index = value;
-                self.nz(value);
+            (SAX, Addr(addr, _)) => self.memory[addr] = self.accumulator & self.x_index,
+            (LAX, Addr(addr, _)) => {
+                self.accumulator = self.memory[addr];
+                self.x_index = self.memory[addr];
+                self.nz(self.memory[addr]);
             },
-            DCP => {
-                self.memory[address] = value.wrapping_sub(1);
-                self.cmp(self.memory[address]);
+            (DCP, Addr(addr, _)) => {
+                self.memory[addr] = self.memory[addr].wrapping_sub(1);
+                self.cmp(self.memory[addr]);
             },
-            ISC => {
-                self.memory[address] = value.wrapping_add(1);
-                self.accumulator = self.subtract_from_accumulator(self.memory[address]);
+            (ISC, Addr(addr, _)) => {
+                self.memory[addr] = self.memory[addr].wrapping_add(1);
+                self.accumulator = self.subtract_from_accumulator(self.memory[addr]);
             },
-
-            // A NOP that takes an address, but ignores it.
-            NOP => {},
 
             // Mostly unstable codes.
-            ANC => unimplemented!(),
-            ALR => unimplemented!(),
-            ARR => unimplemented!(),
-            XAA => unimplemented!(),
-            AXS => unimplemented!(),
-            AHX => unimplemented!(),
-            SHY => unimplemented!(),
-            SHX => unimplemented!(),
-            TAS => unimplemented!(),
-            LAS => unimplemented!(),
+            (ANC, _) => unimplemented!(),
+            (ALR, _) => unimplemented!(),
+            (ARR, _) => unimplemented!(),
+            (XAA, _) => unimplemented!(),
+            (AXS, _) => unimplemented!(),
+            (AHX, _) => unimplemented!(),
+            (SHY, _) => unimplemented!(),
+            (SHX, _) => unimplemented!(),
+            (TAS, _) => unimplemented!(),
+            (LAS, _) => unimplemented!(),
 
-            _ => unreachable!("{:?} is not an Address OpCode.", op_code),
+            (NOP, _) => {},
+            (JAM, _) => panic!("JAM instruction encountered!"),
+            (op_code, arg) => unreachable!("Argument type {:?} is invalid for the {:?} opcode.", arg, op_code),
         }
-    }
-
-    fn ora(&mut self, value: u8) -> u8 {
-        self.nz(self.accumulator | value)
-    }
-
-    fn and(&mut self, value: u8) -> u8 {
-        self.nz(self.accumulator & value)
-    }
-
-    fn eor(&mut self, value: u8) -> u8 {
-        self.nz(self.accumulator ^ value)
     }
 
     fn adc(&mut self, value: u8) -> u8 {
