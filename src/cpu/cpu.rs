@@ -173,7 +173,10 @@ impl Cpu {
             AND => self.accumulator = self.and(value),
             EOR => self.accumulator = self.eor(value),
             ADC => self.accumulator = self.adc(value),
-            SBC => self.accumulator = self.sbc(value),
+            SBC => {
+                self.accumulator = self.subtract_from_accumulator(value);
+                self.status.carry = !self.status.negative;
+            },
             CMP => self.cmp(value),
             CPX => self.cpx(value),
             CPY => self.cpy(value),
@@ -191,35 +194,38 @@ impl Cpu {
 
     fn execute_address_op_code(&mut self, op_code: OpCode, address: Address) -> Option<Address> {
         let mut jump_address = None;
+        let value = self.memory[address];
 
         use OpCode::*;
         match op_code {
-            ORA => self.accumulator = self.ora(self.memory[address]),
-            AND => self.accumulator = self.and(self.memory[address]),
-            EOR => self.accumulator = self.eor(self.memory[address]),
-            ADC => self.accumulator = self.adc(self.memory[address]),
-            SBC => self.accumulator = self.sbc(self.memory[address]),
-            CMP => self.cmp(self.memory[address]),
-            CPX => self.cpx(self.memory[address]),
-            CPY => self.cpy(self.memory[address]),
+            ORA => self.accumulator = self.ora(value),
+            AND => self.accumulator = self.and(value),
+            EOR => self.accumulator = self.eor(value),
+            ADC => self.accumulator = self.adc(value),
+            SBC => {
+                self.accumulator = self.subtract_from_accumulator(value);
+                self.status.carry = !self.status.negative;
+            },
+            CMP => self.cmp(value),
+            CPX => self.cpx(value),
+            CPY => self.cpy(value),
 
-            ASL => self.memory[address] = self.asl(self.memory[address]),
-            ROL => self.memory[address] = self.rol(self.memory[address]),
-            LSR => self.memory[address] = self.lsr(self.memory[address]),
-            ROR => self.memory[address] = self.ror(self.memory[address]),
+            ASL => self.memory[address] = self.asl(value),
+            ROL => self.memory[address] = self.rol(value),
+            LSR => self.memory[address] = self.lsr(value),
+            ROR => self.memory[address] = self.ror(value),
 
             STA => self.memory[address] = self.accumulator,
             STX => self.memory[address] = self.x_index,
             STY => self.memory[address] = self.y_index,
-            DEC => self.memory[address] = self.nz(self.memory[address].wrapping_sub(1)),
-            INC => self.memory[address] = self.nz(self.memory[address].wrapping_add(1)),
+            DEC => self.memory[address] = self.nz(value.wrapping_sub(1)),
+            INC => self.memory[address] = self.nz(value.wrapping_add(1)),
 
-            LDA => self.accumulator = self.nz(self.memory[address]),
-            LDX => self.x_index = self.nz(self.memory[address]),
-            LDY => self.y_index = self.nz(self.memory[address]),
+            LDA => self.accumulator = self.nz(value),
+            LDX => self.x_index = self.nz(value),
+            LDY => self.y_index = self.nz(value),
 
             BIT => {
-                let value = self.memory[address];
                 self.status.negative = value & 0b1000_0000 != 0;
                 self.status.overflow = value & 0b0100_0000 != 0;
                 self.status.zero = value & self.accumulator == 0;
@@ -242,17 +248,45 @@ impl Cpu {
 
 
             // Undocumented op codes.
-            SLO => unimplemented!(),
-            RLA => unimplemented!(),
-            SRE => unimplemented!(),
-            RRA => unimplemented!(),
-            SAX => unimplemented!(),
-            LAX => unimplemented!(),
-            DCP => unimplemented!(),
-            ISC => {
-                self.memory[address] = self.memory[address].wrapping_add(1);
-                self.accumulator = self.sbc(self.memory[address]);
+            SLO => {
+                self.memory[address] = self.asl(value);
+                self.accumulator |= self.memory[address];
+                self.nz(self.accumulator);
             },
+            RLA => {
+                self.memory[address] = self.rol(value);
+                self.accumulator &= self.memory[address];
+                self.nz(self.accumulator);
+            },
+            SRE => {
+                self.memory[address] = self.lsr(value);
+                self.accumulator ^= self.memory[address];
+                self.nz(self.accumulator);
+            },
+            RRA => {
+                self.memory[address] = self.ror(value);
+                self.accumulator = self.adc(self.memory[address]);
+                self.nz(self.accumulator);
+            },
+            SAX => self.memory[address] = self.accumulator & self.x_index,
+            LAX => {
+                self.accumulator = value;
+                self.x_index = value;
+                self.nz(value);
+            },
+            DCP => {
+                self.memory[address] = value.wrapping_sub(1);
+                self.cmp(self.memory[address]);
+            },
+            ISC => {
+                self.memory[address] = value.wrapping_add(1);
+                self.accumulator = self.subtract_from_accumulator(self.memory[address]);
+            },
+
+            // A NOP that takes an address, but ignores it.
+            NOP => {},
+
+            // Mostly unstable codes.
             ANC => unimplemented!(),
             ALR => unimplemented!(),
             ARR => unimplemented!(),
@@ -263,9 +297,6 @@ impl Cpu {
             SHX => unimplemented!(),
             TAS => unimplemented!(),
             LAS => unimplemented!(),
-
-            // A NOP that takes an address, but ignores it.
-            NOP => {},
 
             _ => unreachable!("OpCode {:?} must take an address argument.", op_code),
         }
@@ -300,12 +331,12 @@ impl Cpu {
         result
     }
 
-    fn sbc(&mut self, value: u8) -> u8 {
+    fn subtract_from_accumulator(&mut self, value: u8) -> u8 {
         let carry = if self.status.carry {0} else {1};
         // Convert u8s to possibly negative values before widening them.
         let result = (self.accumulator as i8) as i16 - (value as i8) as i16 - carry;
         self.status.overflow = result < -128 || result > 127;
-        self.status.carry = !is_neg(result as u8);
+        //self.status.carry = !is_neg(result as u8);
         self.nz(result as u8)
     }
 

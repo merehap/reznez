@@ -73,10 +73,16 @@ struct State {
 
 impl State {
     fn from_text(line: String) -> State {
+        let mut raw_op_code = &line[16..19];
+        // nestest uses a diffent moniker for ISC.
+        if raw_op_code == "ISB" {
+            raw_op_code = "ISC";
+        }
+
         State {
             program_counter: Address::new(u16::from_str_radix(&line[0..4], 16).unwrap()),
             code_point: u8::from_str_radix(&line[6..8], 16).unwrap(),
-            op_code: OpCode::from_str(&line[16..19]).unwrap(),
+            op_code: OpCode::from_str(raw_op_code).unwrap(),
             a: u8::from_str_radix(&line[50..52], 16).unwrap(),
             x: u8::from_str_radix(&line[55..57], 16).unwrap(),
             y: u8::from_str_radix(&line[60..62], 16).unwrap(),
