@@ -14,6 +14,8 @@ pub struct Cpu {
     program_counter: Address,
     status: Status,
     memory: Memory,
+
+    cycle: u64,
 }
 
 impl Cpu {
@@ -32,6 +34,9 @@ impl Cpu {
             program_counter,
             status: Status::startup(),
             memory,
+
+            // Unclear why this is the case.
+            cycle: 7,
         }
     }
 
@@ -41,39 +46,10 @@ impl Cpu {
         // TODO: APU resets?
     }
 
-    pub fn step(&mut self) -> Instruction {
-        let instruction = Instruction::from_memory(
-            self.program_counter,
-            self.x_index,
-            self.y_index,
-            &self.memory,
-        );
-
-        println!("{} | {}", self.state_string(), instruction);
-
-        self.program_counter = self.program_counter.advance(instruction.length());
-
-        let op_code = instruction.template.op_code;
-
-        match instruction.argument {
-            Argument::Implicit =>
-                self.execute_implicit_op_code(op_code),
-            Argument::Immediate(value) =>
-                self.execute_immediate_op_code(op_code, value),
-            Argument::Address(address) => {
-                if let Some(jump_address) = self.execute_address_op_code(op_code, address) {
-                    self.program_counter = jump_address;
-                }
-            },
-        }
-
-        instruction
-    }
-
     pub fn state_string(&self) -> String {
         let nesting = "";
         format!("{:010} PC:{}, A:0x{:02X}, X:0x{:02X}, Y:0x{:02X}, P:0x{:02X}, S:0x{:02X}, {} {}",
-            self.cycle(),
+            self.cycle,
             self.program_counter,
             self.accumulator,
             self.x_index,
@@ -110,7 +86,52 @@ impl Cpu {
     }
 
     pub fn cycle(&self) -> u64 {
-        0
+        self.cycle
+    }
+
+    pub fn step(&mut self) -> Instruction {
+        let instruction = Instruction::from_memory(
+            self.program_counter,
+            self.x_index,
+            self.y_index,
+            &self.memory,
+        );
+
+        println!("{} | {}", self.state_string(), instruction);
+
+        self.program_counter = self.program_counter.advance(instruction.length());
+
+        let op_code = instruction.template.op_code;
+
+        match instruction.argument {
+            Argument::Implicit =>
+                self.execute_implicit_op_code(op_code),
+            Argument::Immediate(value) =>
+                self.execute_immediate_op_code(op_code, value),
+            Argument::Address(address) => {
+                if let (Some(jump_address), branch_taken, branch_crossed_page_boundary) =
+                        self.execute_address_op_code(op_code, address) {
+                    self.program_counter = jump_address;
+                    if branch_taken {
+                        println!("Branch taken, cycle added.");
+                        self.cycle += 1;
+                    }
+
+                    if branch_crossed_page_boundary {
+                        println!("Branch crossed page boundary, cycle added.");
+                        self.cycle += 1;
+                    }
+                }
+            },
+        }
+
+        self.cycle += instruction.template.cycle_count as u64;
+        if instruction.should_add_oops_cycle() {
+            println!("'Oops' cycle added.");
+            self.cycle += 1;
+        }
+
+        instruction
     }
 
     fn execute_implicit_op_code(&mut self, op_code: OpCode) {
@@ -192,8 +213,14 @@ impl Cpu {
         }
     }
 
-    fn execute_address_op_code(&mut self, op_code: OpCode, address: Address) -> Option<Address> {
+    fn execute_address_op_code(
+        &mut self,
+        op_code: OpCode,
+        address: Address,
+    ) -> (Option<Address>, bool, bool) {
+
         let mut jump_address = None;
+        let mut branch_taken = false;
         let value = self.memory[address];
 
         use OpCode::*;
@@ -231,14 +258,14 @@ impl Cpu {
                 self.status.zero = value & self.accumulator == 0;
             },
 
-            BPL => if !self.status.negative {jump_address = Some(address)},
-            BMI => if self.status.negative {jump_address = Some(address)},
-            BVC => if !self.status.overflow {jump_address = Some(address)},
-            BVS => if self.status.overflow {jump_address = Some(address)},
-            BCC => if !self.status.carry {jump_address = Some(address)},
-            BCS => if self.status.carry {jump_address = Some(address)},
-            BNE => if !self.status.zero {jump_address = Some(address)},
-            BEQ => if self.status.zero {jump_address = Some(address)},
+            BPL => if !self.status.negative {branch_taken = true},
+            BMI => if self.status.negative {branch_taken = true},
+            BVC => if !self.status.overflow {branch_taken = true},
+            BVS => if self.status.overflow {branch_taken = true},
+            BCC => if !self.status.carry {branch_taken = true},
+            BCS => if self.status.carry {branch_taken = true},
+            BNE => if !self.status.zero {branch_taken = true},
+            BEQ => if self.status.zero {branch_taken = true},
             JSR => {
                 // Push the address one previous for some reason.
                 self.memory.push_address(self.program_counter.offset(-1));
@@ -301,7 +328,14 @@ impl Cpu {
             _ => unreachable!("OpCode {:?} must take an address argument.", op_code),
         }
 
-        jump_address
+        let mut branch_crossed_page_boundary = false;
+        if branch_taken {
+            println!("Branch taken! PC: {}, Jump: {}", self.program_counter, address);
+            jump_address = Some(address);
+            branch_crossed_page_boundary = self.program_counter.page() != address.page();
+        }
+
+        (jump_address, branch_taken, branch_crossed_page_boundary)
     }
 
     fn ora(&mut self, value: u8) -> u8 {

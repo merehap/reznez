@@ -108,7 +108,6 @@ impl Instruction {
                 let address = program_counter
                     .offset(low as i8)
                     .advance(template.access_mode.instruction_length());
-                page_boundary_crossed = program_counter.page() != address.page();
                 Argument::Address(address)
             },
             Ind => {
@@ -141,6 +140,10 @@ impl Instruction {
             argument,
             page_boundary_crossed,
         }
+    }
+
+    pub fn should_add_oops_cycle(&self) -> bool {
+        self.template.extra_cycle == ExtraCycle::PB && self.page_boundary_crossed
     }
 
     pub fn length(&self) -> u8 {
@@ -349,7 +352,7 @@ impl CycleCount {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum ExtraCycle {
     No,
     PB,

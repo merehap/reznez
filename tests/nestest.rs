@@ -12,7 +12,7 @@ use resnes::cpu::status::Status;
 use resnes::nes::Nes;
 
 #[test]
-fn test() {
+fn nestest() {
     let f = File::open("testdata/nestest_expected").expect("Test data not found!");
     let mut expected_states = BufReader::new(f)
         .lines()
@@ -48,6 +48,7 @@ fn test() {
                 y,
                 p,
                 s,
+                c,
             };
 
             if state != expected_state {
@@ -69,6 +70,7 @@ struct State {
     y: u8,
     p: Status,
     s: u8,
+    c: u64,
 }
 
 impl State {
@@ -88,7 +90,7 @@ impl State {
             y: u8::from_str_radix(&line[60..62], 16).unwrap(),
             p: Status::from_byte(u8::from_str_radix(&line[65..67], 16).unwrap()),
             s: u8::from_str_radix(&line[71..73], 16).unwrap(),
-            //c: u64::from_str_radix(&line[90..], 10).unwrap(),
+            c: u64::from_str_radix(&line[90..], 10).unwrap(),
         }
     }
 }
@@ -97,6 +99,6 @@ impl fmt::Display for State {
     fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
         write!(f, "State {{PC:{}, CodePoint:0x{:02X}, OpCode:{:?}, A:0x{:02X}, X:0x{:02X}, Y:0x{:02X}, P:{} (0x{:2X}), S:0x{:02X}, C:{:05}}}",
                self.program_counter, self.code_point, self.op_code, self.a,
-               self.x, self.y, self.p.to_string(), self.p.to_byte(), self.s, 0)
+               self.x, self.y, self.p.to_string(), self.p.to_byte(), self.s, self.c)
     }
 }
