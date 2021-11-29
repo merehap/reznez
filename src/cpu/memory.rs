@@ -45,6 +45,10 @@ impl Memory {
         Address::from_low_high(low, high)
     }
 
+    pub fn stack(&self) -> &[u8] {
+        &self.memory[self.stack_pointer as usize + 0x101..0x200]
+    }
+
     pub fn address_from_vector(&self, mut vector: Address) -> Address {
         Address::from_low_high(self[vector], self[vector.inc()])
     }

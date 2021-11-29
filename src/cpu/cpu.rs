@@ -181,6 +181,10 @@ impl Cpu {
             LDA => self.accumulator = self.nz(value),
             LDX => self.x_index = self.nz(value),
             LDY => self.y_index = self.nz(value),
+
+            // A NOP that takes an argument, but ignores it.
+            NOP => {},
+
             _ => unreachable!("OpCode {:?} must take a value argument.", op_code),
         }
     }
@@ -259,6 +263,9 @@ impl Cpu {
             SHX => unimplemented!(),
             TAS => unimplemented!(),
             LAS => unimplemented!(),
+
+            // A NOP that takes an address, but ignores it.
+            NOP => {},
 
             _ => unreachable!("OpCode {:?} must take an address argument.", op_code),
         }

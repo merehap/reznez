@@ -113,7 +113,7 @@ impl Instruction {
             },
             Ind => {
                 let first = Address::from_low_high(low, high);
-                let second = first.advance(1);
+                let second = Address::from_low_high(low.wrapping_add(1), high);
                 Argument::Address(Address::from_low_high(mem[first], mem[second]))
             },
             IzX => {
@@ -129,6 +129,7 @@ impl Instruction {
                     mem[Address::zero_page(low)],
                     mem[Address::zero_page(low.wrapping_add(1))],
                 );
+                // TODO: Should this wrap around just the current page?
                 let address = start_address.advance(y_index);
                 page_boundary_crossed = start_address.page() != address.page();
                 Argument::Address(address)
@@ -171,7 +172,7 @@ pub enum Argument {
 impl fmt::Display for Argument {
     fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
         match self {
-            Argument::Implicit => write!(f, "None "),
+            Argument::Implicit => write!(f, "No   "),
             Argument::Immediate(value) => write!(f, "#{:02X}  ", value),
             Argument::Address(address) => write!(f, "{}", address.to_string()),
         }
