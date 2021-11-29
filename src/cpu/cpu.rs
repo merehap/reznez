@@ -111,6 +111,7 @@ impl Cpu {
             Argument::Address(address) => {
                 if let (Some(jump_address), branch_taken, branch_crossed_page_boundary) =
                         self.execute_address_op_code(op_code, address) {
+
                     self.program_counter = jump_address;
                     if branch_taken {
                         println!("Branch taken, cycle added.");
@@ -118,7 +119,7 @@ impl Cpu {
                     }
 
                     if branch_crossed_page_boundary {
-                        println!("Branch crossed page boundary, cycle added.");
+                        println!("Branch crossed page boundary, 'Oops' cycle added.");
                         self.cycle += 1;
                     }
                 }
@@ -154,6 +155,19 @@ impl Cpu {
                 self.nz(self.accumulator);
             },
             PLP => self.status = Status::from_byte(self.memory.pop()),
+            CLC => self.status.carry = false,
+            SEC => self.status.carry = true,
+            CLD => self.status.decimal = false,
+            SED => self.status.decimal = true,
+            CLI => self.status.interrupts_disabled = false,
+            SEI => self.status.interrupts_disabled = true,
+            CLV => self.status.overflow = false,
+
+            ASL => self.accumulator = self.asl(self.accumulator),
+            ROL => self.accumulator = self.rol(self.accumulator),
+            LSR => self.accumulator = self.lsr(self.accumulator),
+            ROR => self.accumulator = self.ror(self.accumulator),
+
             BRK => {
                 // Not sure why we need to increment here.
                 self.program_counter.inc();
@@ -167,18 +181,6 @@ impl Cpu {
                 self.program_counter = self.memory.pop_address();
             },
             RTS => self.program_counter = self.memory.pop_address().advance(1),
-            CLC => self.status.carry = false,
-            SEC => self.status.carry = true,
-            CLD => self.status.decimal = false,
-            SED => self.status.decimal = true,
-            CLI => self.status.interrupts_disabled = false,
-            SEI => self.status.interrupts_disabled = true,
-            CLV => self.status.overflow = false,
-
-            ASL => self.accumulator = self.asl(self.accumulator),
-            ROL => self.accumulator = self.rol(self.accumulator),
-            LSR => self.accumulator = self.lsr(self.accumulator),
-            ROR => self.accumulator = self.ror(self.accumulator),
 
             NOP => {},
 
