@@ -15,6 +15,7 @@ pub struct Cpu {
     status: Status,
     memory: Memory,
 
+    current_instruction_remaining_cycles: u8,
     cycle: u64,
 }
 
@@ -35,6 +36,7 @@ impl Cpu {
             status: Status::startup(),
             memory,
 
+            current_instruction_remaining_cycles: 0,
             // Unclear why this is the case.
             cycle: 7,
         }
@@ -91,27 +93,35 @@ impl Cpu {
         self.cycle
     }
 
-    pub fn step(&mut self) -> Instruction {
+    pub fn step(&mut self) -> Option<Instruction> {
+        self.cycle += 1;
+
+        if self.current_instruction_remaining_cycles != 0 {
+            self.current_instruction_remaining_cycles -= 1;
+            return None;
+        }
+
         let instruction = Instruction::from_memory(
             self.program_counter,
             self.x_index,
             self.y_index,
             &self.memory,
         );
-
         println!("{} | {}", self.state_string(), instruction);
-        self.execute_instruction(instruction);
-        instruction
+
+        let cycle_count = self.execute_instruction(instruction);
+        self.current_instruction_remaining_cycles = cycle_count - 1;
+
+        Some(instruction)
     }
 
-    fn execute_instruction(&mut self, instruction: Instruction) {
+    fn execute_instruction(&mut self, instruction: Instruction) -> u8 {
         self.program_counter = self.program_counter.advance(instruction.length());
 
-        // Branching op codes add additional cycles beyond these.
-        self.cycle += instruction.template.cycle_count as u64;
+        let mut cycle_count = instruction.template.cycle_count as u8;
         if instruction.should_add_oops_cycle() {
             println!("'Oops' cycle added.");
-            self.cycle += 1;
+            cycle_count += 1;
         }
 
         use OpCode::*;
@@ -160,14 +170,14 @@ impl Cpu {
             (STY, Addr(addr, _)) => self.memory[addr] = self.y_index,
             (DEC, Addr(addr, _)) => self.memory[addr] = self.nz(self.memory[addr].wrapping_sub(1)),
             (INC, Addr(addr, _)) => self.memory[addr] = self.nz(self.memory[addr].wrapping_add(1)),
-            (BPL, Addr(addr, _)) => if !self.status.negative {self.take_branch(addr)},
-            (BMI, Addr(addr, _)) => if self.status.negative {self.take_branch(addr)},
-            (BVC, Addr(addr, _)) => if !self.status.overflow {self.take_branch(addr)},
-            (BVS, Addr(addr, _)) => if self.status.overflow {self.take_branch(addr)},
-            (BCC, Addr(addr, _)) => if !self.status.carry {self.take_branch(addr)},
-            (BCS, Addr(addr, _)) => if self.status.carry {self.take_branch(addr)},
-            (BNE, Addr(addr, _)) => if !self.status.zero {self.take_branch(addr)},
-            (BEQ, Addr(addr, _)) => if self.status.zero {self.take_branch(addr)},
+            (BPL, Addr(addr, _)) => if !self.status.negative {cycle_count += self.take_branch(addr);},
+            (BMI, Addr(addr, _)) => if self.status.negative {cycle_count += self.take_branch(addr);},
+            (BVC, Addr(addr, _)) => if !self.status.overflow {cycle_count += self.take_branch(addr);},
+            (BVS, Addr(addr, _)) => if self.status.overflow {cycle_count += self.take_branch(addr);},
+            (BCC, Addr(addr, _)) => if !self.status.carry {cycle_count += self.take_branch(addr);},
+            (BCS, Addr(addr, _)) => if self.status.carry {cycle_count += self.take_branch(addr);},
+            (BNE, Addr(addr, _)) => if !self.status.zero {cycle_count += self.take_branch(addr);},
+            (BEQ, Addr(addr, _)) => if self.status.zero {cycle_count += self.take_branch(addr);},
             (JSR, Addr(addr, _)) => {
                 // Push the address one previous for some reason.
                 self.memory.push_address(self.program_counter.offset(-1));
@@ -257,6 +267,8 @@ impl Cpu {
             (JAM, _) => panic!("JAM instruction encountered!"),
             (op_code, arg) => unreachable!("Argument type {:?} is invalid for the {:?} opcode.", arg, op_code),
         }
+
+        cycle_count as u8
     }
 
     fn adc(&mut self, value: u8) -> u8 {
@@ -336,16 +348,18 @@ impl Cpu {
         value
     }
 
-    fn take_branch(&mut self, destination: Address) {
+    fn take_branch(&mut self, destination: Address) -> u8 {
         println!("Branch taken, cycle added.");
-        self.cycle += 1;
+        let mut cycle_count = 1;
 
         if self.program_counter.page() != destination.page() {
             println!("Branch crossed page boundary, 'Oops' cycle added.");
-            self.cycle += 1;
+            cycle_count += 1;
         }
 
         self.program_counter = destination;
+
+        cycle_count
     }
 }
 

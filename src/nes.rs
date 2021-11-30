@@ -36,7 +36,7 @@ impl Nes {
         memory
     }
 
-    pub fn step(&mut self) -> Instruction {
+    pub fn step(&mut self) -> Option<Instruction> {
         self.cpu.step()
     }
 

@@ -37,26 +37,28 @@ fn nestest() {
         let c = nes.cpu().cycle();
         //let ppu_cycle = nes.ppu().cycle();
         //let ppu_frame = nes.ppu().frame();
-        let instruction = nes.step();
-        if let Some(expected_state) = expected_states.next() {
-            let state = State {
-                program_counter,
-                code_point: instruction.template.code_point,
-                op_code: instruction.template.op_code,
-                a,
-                x,
-                y,
-                p,
-                s,
-                c,
-            };
+        if let Some(instruction) = nes.step() {
+            if let Some(expected_state) = expected_states.next() {
+                let state = State {
+                    program_counter,
+                    code_point: instruction.template.code_point,
+                    op_code: instruction.template.op_code,
+                    a,
+                    x,
+                    y,
+                    p,
+                    s,
+                    c,
+                };
 
-            if state != expected_state {
-                panic!("State diverged from expected state!\nExpected:\n{}\nActual:\n{}", expected_state, state);
+                if state != expected_state {
+                    panic!("State diverged from expected state!\nExpected:\n{}\nActual:\n{}", expected_state, state);
+                }
+            } else {
+                break;
             }
-        } else {
-            break;
         }
+
     }
 }
 
