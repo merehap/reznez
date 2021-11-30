@@ -54,10 +54,10 @@ fn instruction_templates() -> [InstructionTemplate; 256] {
     ];
 
     let mut result = [InstructionTemplate::from_tuple(0x2, jam); 256];
-    for index in 0..256 {
+    for (index, template) in result.iter_mut().enumerate() {
         let i = index % 0x20;
         let j = index / 0x20;
-        result[index] = InstructionTemplate::from_tuple(index as u8, codes[i][j]);
+        *template = InstructionTemplate::from_tuple(index as u8, codes[i][j]);
     }
 
     result
@@ -190,7 +190,7 @@ impl fmt::Display for Argument {
         match self {
             Argument::Imp => write!(f, "No   "),
             Argument::Imm(value) => write!(f, "#{:02X}  ", value),
-            Argument::Addr(address, _) => write!(f, "{}", address.to_string()),
+            Argument::Addr(address, _) => write!(f, "{}", address),
         }
     }
 }
@@ -216,6 +216,7 @@ impl InstructionTemplate {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(PartialEq, Eq, Clone, Copy, Debug, EnumString)]
 pub enum OpCode {
     // Logical/Arithmetic
@@ -307,6 +308,7 @@ pub enum OpCode {
     JAM,
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Copy, Debug)]
 pub enum AccessMode {
     Imp,

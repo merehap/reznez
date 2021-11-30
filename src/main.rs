@@ -1,5 +1,6 @@
 #![feature(destructuring_assignment)]
 #![allow(dead_code)]
+#![allow(clippy::module_inception)]
 
 mod cartridge;
 mod cpu;

@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::util;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -38,7 +40,7 @@ impl Status {
         status
     }
 
-    pub fn to_byte(&self) -> u8 {
+    pub fn to_byte(self) -> u8 {
         util::pack_bools([
             self.negative,
             self.overflow,
@@ -50,9 +52,11 @@ impl Status {
             self.carry,
         ])
     }
+}
 
-    pub fn to_string(&self) -> String {
-        format!(
+impl fmt::Display for Status {
+    fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
+        write!(f,
             "{}{}__{}{}{}{}",
             if self.negative {'N'} else {'_'},
             if self.overflow {'V'} else {'_'},

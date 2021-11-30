@@ -1,4 +1,4 @@
-const INES_HEADER_CONSTANT: &'static [u8] = &[0x4E, 0x45, 0x53, 0x1A];
+const INES_HEADER_CONSTANT: &[u8] = &[0x4E, 0x45, 0x53, 0x1A];
 const PRG_ROM_CHUNK_LENGTH: usize = 0x4000;
 const CHR_ROM_CHUNK_LENGTH: usize = 0x2000;
 
@@ -40,6 +40,7 @@ impl INes {
         let play_choice_enabled   = rom[7] & 0b0000_0010 != 0;
         let vs_unisystem_enabled  = rom[7] & 0b0000_0001 != 0;
 
+        #[allow(clippy::needless_range_loop)]
         for i in 8..15 {
             if rom[i] != 0 {
                 panic!("Unexpected high header field set! [{}]={:X}", i, rom[i]);
@@ -146,7 +147,7 @@ struct INes2 {
 enum ConsoleType {
     Nes,
     VsUnisystem,
-    PlayChoice10(PlayChoice),
+    PlayChoice10(Box<PlayChoice>),
     Extended,
 }
 

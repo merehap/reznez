@@ -60,7 +60,7 @@ impl Cpu {
             self.y_index,
             self.status.to_byte(),
             self.stack_pointer(),
-            self.status.to_string(),
+            self.status,
             nesting,
         )
     }

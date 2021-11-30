@@ -24,11 +24,11 @@ impl Address {
         Address::new(low as u16)
     }
 
-    pub fn to_raw(&self) -> u16 {
+    pub fn to_raw(self) -> u16 {
         self.0
     }
 
-    pub fn to_low_high(&self) -> (u8, u8) {
+    pub fn to_low_high(self) -> (u8, u8) {
         (self.0 as u8, (self.0 >> 8) as u8)
     }
 
