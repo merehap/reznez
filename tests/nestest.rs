@@ -1,15 +1,15 @@
-extern crate resnes;
+extern crate reznez;
 
 use std::fmt;
 use std::io::{Read, BufRead, BufReader};
 use std::fs::File;
 use std::str::FromStr;
 
-use resnes::cartridge::INes;
-use resnes::cpu::address::Address;
-use resnes::cpu::instruction::OpCode;
-use resnes::cpu::status::Status;
-use resnes::nes::Nes;
+use reznez::cartridge::INes;
+use reznez::cpu::address::Address;
+use reznez::cpu::instruction::OpCode;
+use reznez::cpu::status::Status;
+use reznez::nes::Nes;
 
 #[test]
 fn nestest() {
