@@ -1,3 +1,4 @@
+#![feature(array_chunks)]
 #![feature(destructuring_assignment)]
 #![allow(dead_code)]
 #![allow(clippy::module_inception)]
