@@ -13,7 +13,7 @@ pub struct Cpu {
     y_index: u8,
     program_counter: Address,
     status: Status,
-    memory: Memory,
+    pub memory: Memory,
 
     current_instruction_remaining_cycles: u8,
     cycle: u64,

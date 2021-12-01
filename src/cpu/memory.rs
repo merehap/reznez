@@ -52,6 +52,11 @@ impl Memory {
     pub fn address_from_vector(&self, mut vector: Address) -> Address {
         Address::from_low_high(self[vector], self[vector.inc()])
     }
+
+    pub fn slice(&self, start_address: Address, length: u16) -> &[u8] {
+        let start_address = start_address.to_raw() as usize;
+        &self.memory[start_address..start_address + length as usize]
+    }
 }
 
 impl Index<Address> for Memory {
