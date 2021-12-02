@@ -5,11 +5,13 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
+use crate::nes::Nes;
+
 const WIDTH: u32 = 320;
 const HEIGHT: u32 = 240;
 const BOX_SIZE: i16 = 64;
 
-pub fn gui() -> Result<(), Error> {
+pub fn gui(nes: Nes) -> Result<(), Error> {
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
     let window = {
@@ -27,7 +29,7 @@ pub fn gui() -> Result<(), Error> {
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
         Pixels::new(WIDTH, HEIGHT, surface_texture)?
     };
-    let mut world = World::new();
+    let mut world = World::new(nes);
 
     event_loop.run(move |event, _, control_flow| {
         // Draw the current frame
@@ -64,6 +66,7 @@ pub fn gui() -> Result<(), Error> {
 }
 
 struct World {
+    nes: Nes,
     box_x: i16,
     box_y: i16,
     velocity_x: i16,
@@ -71,8 +74,9 @@ struct World {
 }
 
 impl World {
-    fn new() -> Self {
+    fn new(nes: Nes) -> Self {
         Self {
+            nes,
             box_x: 24,
             box_y: 16,
             velocity_x: 1,
@@ -81,6 +85,8 @@ impl World {
     }
 
     fn update(&mut self) {
+        self.nes.step();
+
         if self.box_x <= 0 || self.box_x + BOX_SIZE > WIDTH as i16 {
             self.velocity_x *= -1;
         }

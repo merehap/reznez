@@ -28,9 +28,5 @@ fn main() {
     let ines = INes::load(&rom).unwrap();
     let mut nes = Nes::startup(ines);
 
-    for _ in 0..10 {
-        nes.step();
-    }
-
-    gui::gui().unwrap();
+    gui::gui(nes).unwrap();
 }
