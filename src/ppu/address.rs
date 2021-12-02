@@ -3,9 +3,9 @@ const MAX_ADDRESS: u16 = 0x4000;
 pub struct Address(u16);
 
 impl Address {
-    pub fn from_u16(mut value: u16) -> Result<Address, String> {
+    pub const fn from_u16(mut value: u16) -> Option<Address> {
         if value >= MAX_ADDRESS {
-            return Err(format!("PPU Addresses must be under {:X}", MAX_ADDRESS));
+            return None;
         }
 
         // Map the name table mirrors.
@@ -18,7 +18,7 @@ impl Address {
             value = 0x3F00 + value % 0x20;
         }
 
-        Ok(Address(value))
+        Some(Address(value))
     }
 
     pub fn to_u16(&self) -> u16 {

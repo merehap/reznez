@@ -12,6 +12,11 @@ impl Memory {
             memory: [0; 0x4000],
         }
     }
+
+    pub fn slice(&self, start_address: Address, length: u16) -> &[u8] {
+        let start_address = start_address.to_u16() as usize;
+        &self.memory[start_address..start_address + length as usize]
+    }
 }
 
 impl Index<Address> for Memory {

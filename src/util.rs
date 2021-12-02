@@ -19,6 +19,18 @@ pub fn unpack_bools(value: u8) -> [bool; 8] {
     bools
 }
 
+pub fn get_bit(byte: u8, index: usize) -> bool {
+    (byte >> (7 - index as u8)) != 0
+}
+
+pub fn reset_bit(byte: &mut u8, index: usize) {
+    *byte &= !(1 << (7 - index))
+}
+
+pub fn set_bit(byte: &mut u8, index: usize) {
+    *byte |= 1 << (7 - index)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

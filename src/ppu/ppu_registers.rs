@@ -1,3 +1,5 @@
+use crate::util::get_bit;
+
 pub struct PpuRegisters<'a> {
     regs: &'a [u8; 8],
     oam_dma: &'a u8,
@@ -120,18 +122,6 @@ impl <'a> PpuRegisters<'a> {
     pub fn oam_dma(&self) -> u8 {
         *self.oam_dma
     }
-}
-
-fn get_bit(byte: u8, index: usize) -> bool {
-    (byte >> (7 - index as u8)) != 0
-}
-
-fn reset_bit(byte: &mut u8, index: usize) {
-    *byte &= !(1 << (7 - index))
-}
-
-fn set_bit(byte: &mut u8, index: usize) {
-    *byte |= 1 << (7 - index)
 }
 
 pub enum VBlankNmi {

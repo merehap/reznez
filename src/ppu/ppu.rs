@@ -1,6 +1,11 @@
+use crate::ppu::address::Address;
 use crate::ppu::memory::Memory;
 use crate::ppu::oam::Oam;
+use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::ppu_registers::PpuRegisters;
+
+const PATTERN_TABLE_START: Address = Address::from_u16(0).unwrap();
+const PATTERN_TABLE_SIZE: u16 = 0x2000;
 
 pub struct Ppu {
     memory: Memory,
@@ -17,5 +22,10 @@ impl Ppu {
 
     pub fn step(&mut self, _ppu_registers: PpuRegisters<'_>) {
 
+    }
+
+    fn pattern_table(&self) -> PatternTable {
+        let slice = self.memory.slice(PATTERN_TABLE_START, PATTERN_TABLE_SIZE);
+        PatternTable::new(slice.try_into().unwrap())
     }
 }
