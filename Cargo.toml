@@ -6,6 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+env_logger = "0.9"
+log = "0.4"
 lazy_static = "1.4.0"
+pixels = "0.8.0"
 strum = "0.23.0"
 strum_macros = "0.23.1"
+winit = "0.25.0"
+winit_input_helper = "0.10"

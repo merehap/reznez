@@ -6,6 +6,7 @@
 
 mod cartridge;
 mod cpu;
+mod gui;
 mod ppu;
 mod mapper;
 pub mod nes;
@@ -30,4 +31,6 @@ fn main() {
     for _ in 0..10 {
         nes.step();
     }
+
+    gui::gui().unwrap();
 }
