@@ -1,12 +1,10 @@
 use crate::ppu::tile::Tile;
 
-pub struct PatternTable<'a> {
-    raw: &'a [u8; 0x2000],
-}
+pub struct PatternTable<'a>(&'a [u8; 0x2000]);
 
 impl <'a> PatternTable<'a> {
     pub fn new(raw: &'a [u8; 0x2000]) -> PatternTable<'a> {
-        PatternTable {raw}
+        PatternTable(raw)
     }
 
     pub fn tile_at(&'a self, side: PatternTableSide, tile_number: u8) -> Tile<'a> {
@@ -17,7 +15,7 @@ impl <'a> PatternTable<'a> {
 
         start_index += 16 * (tile_number as usize);
 
-        Tile::new((&self.raw[start_index..start_index + 16]).try_into().unwrap())
+        Tile::new((&self.0[start_index..start_index + 16]).try_into().unwrap())
     }
 }
 

@@ -1,6 +1,7 @@
 pub mod address;
 pub mod oam;
 pub mod memory;
+pub mod name_table;
 pub mod pattern_table;
 pub mod ppu;
 pub mod ppu_registers;
