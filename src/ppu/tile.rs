@@ -1,3 +1,4 @@
+use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::util::get_bit;
 
 pub struct Tile<'a> {
@@ -9,21 +10,14 @@ impl <'a> Tile<'a> {
         Tile {bytes}
     }
 
-    pub fn pixel_at(&self, column: usize, row: usize) -> Pixel {
+    pub fn palette_index_at(&self, column: usize, row: usize) -> Option<PaletteIndex> {
         let low_bit = get_bit(self.bytes[row], column);
         let high_bit = get_bit(self.bytes[row + 8], column);
         match (low_bit, high_bit) {
-            (false, false) => Pixel::Transparent,
-            (true , false) => Pixel::One,
-            (false, true ) => Pixel::Two,
-            (true , true ) => Pixel::Three,
+            (false, false) => None,
+            (true , false) => Some(PaletteIndex::One),
+            (false, true ) => Some(PaletteIndex::Two),
+            (true , true ) => Some(PaletteIndex::Three),
         }
     }
-}
-
-pub enum Pixel {
-    Transparent,
-    One,
-    Two,
-    Three,
 }

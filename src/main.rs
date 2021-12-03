@@ -26,7 +26,7 @@ fn main() {
         .unwrap();
 
     let ines = INes::load(&rom).unwrap();
-    let mut nes = Nes::startup(ines);
+    let nes = Nes::startup(ines);
 
     gui::gui(nes).unwrap();
 }
