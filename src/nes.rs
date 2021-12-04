@@ -9,6 +9,10 @@ use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu_registers::PpuRegisters;
 use crate::mapper::mapper0::Mapper0;
 
+const PPU_REGISTERS_START_ADDRESS: Address = Address::new(0x2000);
+const PPU_REGISTER_COUNT: u16 = 8;
+const OAM_DMA_ADDRESS: Address = Address::new(0x4014);
+
 pub struct Nes {
     cpu: Cpu,
     ppu: Ppu,
@@ -40,12 +44,12 @@ impl Nes {
         }
 
         let regs = &self.cpu.memory
-            .slice(Address::new(0x2000), 8)
+            .slice(PPU_REGISTERS_START_ADDRESS, PPU_REGISTER_COUNT)
             .try_into()
             .unwrap();
         let ppu_registers = PpuRegisters::from_mem(
             regs,
-            &self.cpu.memory[Address::new(0x4014)],
+            &self.cpu.memory[OAM_DMA_ADDRESS],
         );
         self.ppu.step(ppu_registers);
 
