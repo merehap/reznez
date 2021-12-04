@@ -6,6 +6,7 @@ use std::fs::File;
 use std::str::FromStr;
 
 use reznez::cartridge::INes;
+use reznez::config::Config;
 use reznez::cpu::address::Address;
 use reznez::cpu::instruction::OpCode;
 use reznez::cpu::status::Status;
@@ -18,14 +19,11 @@ fn nestest() {
         .lines()
         .map(|line| State::from_text(line.unwrap()));
 
-    let mut rom = Vec::new();
-    File::open("roms/nestest.nes")
-        .unwrap()
-        .read_to_end(&mut rom)
-        .unwrap();
-
-    let ines = INes::load(&rom).unwrap();
-    let mut nes = Nes::with_program_counter(ines, Address::new(0xC000));
+    let config = Config::default(
+        Path::new("roms/nestest.nes"),
+        Address::new(0xC000),
+    );
+    let mut nes = Nes::new(config);
 
     loop {
         let program_counter = nes.cpu().program_counter();

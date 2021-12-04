@@ -5,6 +5,7 @@
 #![allow(clippy::module_inception)]
 
 pub mod cartridge;
+pub mod config;
 pub mod cpu;
 mod ppu;
 mod mapper;

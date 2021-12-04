@@ -5,6 +5,7 @@
 #![allow(clippy::module_inception)]
 
 mod cartridge;
+mod config;
 mod cpu;
 mod gui;
 mod ppu;
@@ -12,21 +13,13 @@ mod mapper;
 pub mod nes;
 mod util;
 
-use std::io::Read;
-use std::fs::File;
+use std::path::Path;
 
-use crate::cartridge::INes;
+use crate::config::Config;
 use crate::nes::Nes;
 
 fn main() {
-    let mut rom = Vec::new();
-    File::open("roms/nestest.nes")
-        .unwrap()
-        .read_to_end(&mut rom)
-        .unwrap();
-
-    let ines = INes::load(&rom).unwrap();
-    let nes = Nes::startup(ines);
-
+    let config = Config::default(Path::new("roms/nestest.nes"));
+    let nes = Nes::new(config);
     gui::gui(nes).unwrap();
 }

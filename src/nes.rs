@@ -1,9 +1,11 @@
 use crate::cartridge::INes;
+use crate::config::Config;
 use crate::cpu::address::Address;
 use crate::cpu::cpu::Cpu;
 use crate::cpu::instruction::Instruction;
 use crate::cpu::memory::Memory;
 use crate::ppu::ppu::Ppu;
+use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu_registers::PpuRegisters;
 use crate::mapper::mapper0::Mapper0;
 
@@ -11,27 +13,19 @@ pub struct Nes {
     cpu: Cpu,
     ppu: Ppu,
     cycle: u64,
+    system_palette: SystemPalette,
 }
 
 impl Nes {
-    pub fn startup(ines: INes) -> Nes {
+    pub fn new(config: Config) -> Nes {
         Nes {
-            cpu: Cpu::startup(Nes::initialize_memory(ines)),
+            cpu: Cpu::new(
+                Nes::initialize_memory(config.ines().clone()),
+                config.program_counter_source(),
+            ),
             ppu: Ppu::startup(),
             cycle: 0,
-        }
-    }
-
-    pub fn with_program_counter(ines: INes, program_counter: Address) -> Nes {
-        let cpu = Cpu::with_program_counter(
-            Nes::initialize_memory(ines),
-            program_counter,
-        );
-
-        Nes {
-            cpu,
-            ppu: Ppu::startup(),
-            cycle: 0,
+            system_palette: config.system_palette().clone(),
         }
     }
 

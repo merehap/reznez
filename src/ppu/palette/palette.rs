@@ -7,7 +7,7 @@ pub struct Palette([Color; 3]);
 
 impl Palette {
     pub fn new(raw: [u8; 3]) -> Palette {
-        Palette(raw.map(Color::new))
+        Palette(raw.map(|byte| Color::from_u8(byte).unwrap()))
     }
 }
 

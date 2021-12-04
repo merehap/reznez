@@ -10,7 +10,7 @@ impl <'a> PaletteTable<'a> {
     }
 
     pub fn universal_background_color(&self) -> Color {
-        Color::new(self.0[0])
+        Color::from_u8(self.0[0]).unwrap()
     }
 
     pub fn background_palette(&self, number: PaletteTableIndex) -> Palette {

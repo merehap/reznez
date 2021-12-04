@@ -21,13 +21,14 @@ pub struct Cpu {
 
 impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
-    pub fn startup(memory: Memory) -> Cpu {
-        let program_counter = memory.address_from_vector(RESET_VECTOR);
-        Cpu::with_program_counter(memory, program_counter)
-    }
+    pub fn new(memory: Memory, program_counter_source: ProgramCounterSource) -> Cpu {
+        use ProgramCounterSource::*;
+        let program_counter = match program_counter_source {
+            ResetVector => memory.address_from_vector(RESET_VECTOR),
+            Override(address) => address,
+        };
 
-    pub fn with_program_counter(memory: Memory, program_counter: Address) -> Cpu {
-        println!("Starting execution at PC=0x{:4X}", program_counter.to_raw());
+        println!("Starting execution at PC={}", program_counter);
         Cpu {
             accumulator: 0,
             x_index: 0,
@@ -365,4 +366,10 @@ impl Cpu {
 
 fn is_neg(value: u8) -> bool {
     (value >> 7) == 1
+}
+
+#[derive(Clone, Copy)]
+pub enum ProgramCounterSource {
+    ResetVector,
+    Override(Address),
 }

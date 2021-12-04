@@ -1,45 +1,32 @@
+use enum_iterator::IntoEnumIterator;
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
+
+#[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct Color {
     hue: Hue,
     brightness: Brightness,
 }
 
 impl Color {
-    pub fn new(value: u8) -> Color {
-        assert!(value & 0b1100_0000 == 0);
-
-        use Hue::*;
-        let hue = match value & 0b0000_1111 {
-            0x0 => Gray,
-            0x1 => Azure,
-            0x2 => Blue,
-            0x3 => Violet,
-            0x4 => Magenta,
-            0x5 => Rose,
-            0x6 => Maroon,
-            0x7 => Orange,
-            0x8 => Olive,
-            0x9 => Chartreuse,
-            0xA => Green,
-            0xB => Spring,
-            0xC => Cyan,
-            0xD => DarkGray,
-            0xE => Black,
-            0xF => ExtraBlack,
-            _ => unreachable!(),
-        };
-
-        let brightness = match (value & 0b0011_0000) >> 4 {
-            0 => Brightness::Minimum,
-            1 => Brightness::Low,
-            2 => Brightness::High,
-            3 => Brightness::Maximum,
-            _ => unreachable!(),
-        };
-
+    pub fn new(hue: Hue, brightness: Brightness) -> Color {
         Color {hue, brightness}
+    }
+
+    pub fn from_u8(value: u8) -> Result<Color, String> {
+        if value & 0b1100_0000 == 0 {
+            Ok(Color {
+                hue: FromPrimitive::from_u8(value & 0b0000_1111).unwrap(),
+                brightness: FromPrimitive::from_u8((value & 0b0011_0000) >> 4).unwrap(),
+            })
+        } else {
+            Err("The top two bits for a color should not be set.".to_string())
+        }
     }
 }
 
+#[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, FromPrimitive,
+         IntoEnumIterator)]
 pub enum Hue {
     Gray,
     Azure,
@@ -59,6 +46,8 @@ pub enum Hue {
     ExtraBlack,
 }
 
+#[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, FromPrimitive,
+         IntoEnumIterator)]
 pub enum Brightness {
     Minimum,
     Low,
