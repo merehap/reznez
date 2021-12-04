@@ -24,6 +24,18 @@ impl TileNumber {
     pub fn to_usize(self) -> usize {
         self.0 as usize
     }
+
+    pub fn attribute_column(self) -> u16 {
+        (self.0 % 32) / 4
+    }
+
+    pub fn attribute_row(self) -> u16 {
+        (self.0 / 30) / 4
+    }
+
+    pub fn attribute_index(self) -> usize {
+        (8 * self.attribute_row() + self.attribute_column()) as usize
+    }
 }
 
 pub struct TileNumberIterator {

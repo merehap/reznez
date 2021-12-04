@@ -41,8 +41,8 @@ impl Ppu {
 
     pub fn step(&mut self, regs: PpuRegisters<'_>) {
         if self.clock.cycle() == 0 {
-            for row_in_tile in 0..8 {
-                for tile_number in TileNumber::iter() {
+            for tile_number in TileNumber::iter() {
+                for row_in_tile in 0..8 {
                     let name_table_number = regs.name_table_number() as usize;
                     let (tile_index, _palette_table_indexes) =
                         self.name_tables()[name_table_number].tile_entry_at(tile_number);
@@ -51,6 +51,7 @@ impl Ppu {
                         tile_index,
                         row_in_tile,
                         );
+                    
                 }
             }
         }
