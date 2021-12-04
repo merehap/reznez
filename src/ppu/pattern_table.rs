@@ -1,3 +1,4 @@
+use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::tile::Tile;
 
 pub struct PatternTable<'a>(&'a [u8; 0x2000]);
@@ -16,6 +17,16 @@ impl <'a> PatternTable<'a> {
         start_index += 16 * (tile_number as usize);
 
         Tile::new((&self.0[start_index..start_index + 16]).try_into().unwrap())
+    }
+
+    pub fn tile_sliver_at(
+        &'a self,
+        side: PatternTableSide,
+        tile_number: u8,
+        row_in_tile: usize,
+        ) -> [Option<PaletteIndex>; 8] {
+
+        self.tile_at(side, tile_number).sliver_at(row_in_tile)
     }
 }
 

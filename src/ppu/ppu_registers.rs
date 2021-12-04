@@ -1,3 +1,4 @@
+use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::get_bit;
 
 pub struct PpuRegisters<'a> {
@@ -22,19 +23,19 @@ impl <'a> PpuRegisters<'a> {
         if get_bit(self.regs[0], 2) {SpriteSize::Wide} else {SpriteSize::Normal}
     }
 
-    pub fn background_table(&self) -> BackgroundTableSide {
+    pub fn background_table_side(&self) -> PatternTableSide {
         if get_bit(self.regs[0], 3) {
-            BackgroundTableSide::Right
+            PatternTableSide::Right
         } else {
-            BackgroundTableSide::Left
+            PatternTableSide::Left
         }
     }
 
-    pub fn sprite_table(&self) -> SpriteTableSide {
+    pub fn sprite_table_side(&self) -> PatternTableSide {
         if get_bit(self.regs[0], 4) {
-            SpriteTableSide::Right
+            PatternTableSide::Right
         } else {
-            SpriteTableSide::Left
+            PatternTableSide::Left
         }
     }
 
@@ -137,16 +138,6 @@ pub enum ExtPinRole {
 pub enum SpriteSize {
     Normal,
     Wide,
-}
-
-pub enum BackgroundTableSide {
-    Left,
-    Right,
-}
-
-pub enum SpriteTableSide {
-    Left,
-    Right,
 }
 
 pub enum VramAddressIncrement {
