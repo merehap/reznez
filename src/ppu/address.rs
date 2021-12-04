@@ -1,5 +1,6 @@
 const MAX_ADDRESS: u16 = 0x4000;
 
+#[derive(Clone, Copy, Debug)]
 pub struct Address(u16);
 
 impl Address {
@@ -19,6 +20,12 @@ impl Address {
         }
 
         Some(Address(value))
+    }
+
+    pub const fn advance(&self, value: u16) -> Address {
+        let mut result = *self;
+        result.0 = result.0.wrapping_add(value);
+        result
     }
 
     pub fn to_u16(&self) -> u16 {

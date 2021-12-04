@@ -1,6 +1,7 @@
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::tile_number::TileNumber;
 
+#[derive(Debug)]
 pub struct NameTable<'a>(&'a [u8; 0x400]);
 
 impl <'a> NameTable<'a> {

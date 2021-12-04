@@ -12,6 +12,13 @@ const PATTERN_TABLE_SIZE: u16 = 0x2000;
 
 const NAME_TABLE_START: Address = Address::from_u16(0x2000).unwrap();
 const NAME_TABLE_SIZE: u16 = 0x400;
+const NAME_TABLE_INDEXES: [Address; 4] =
+    [
+        NAME_TABLE_START.advance(0 * NAME_TABLE_SIZE),
+        NAME_TABLE_START.advance(1 * NAME_TABLE_SIZE),
+        NAME_TABLE_START.advance(2 * NAME_TABLE_SIZE),
+        NAME_TABLE_START.advance(3 * NAME_TABLE_SIZE),
+    ];
 
 const PALETTE_TABLE_START: Address = Address::from_u16(0x3F00).unwrap();
 const PALETTE_TABLE_SIZE: u16 = 0x20;
@@ -44,9 +51,11 @@ impl Ppu {
         PatternTable::new(slice.try_into().unwrap())
     }
 
-    fn first_name_table(&self) -> NameTable {
-        let slice = self.memory.slice(NAME_TABLE_START, NAME_TABLE_SIZE);
-        NameTable::new(slice.try_into().unwrap())
+    fn name_tables(&self) -> [NameTable; 4] {
+        NAME_TABLE_INDEXES.map(|index| {
+            let slice = self.memory.slice(index, NAME_TABLE_SIZE);
+            NameTable::new(slice.try_into().unwrap())
+        })
     }
 
     fn palette_table(&self) -> PaletteTable {
