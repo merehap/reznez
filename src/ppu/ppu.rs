@@ -5,6 +5,7 @@ use crate::ppu::name_table::NameTable;
 use crate::ppu::oam::Oam;
 use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::palette::palette_table::PaletteTable;
+use crate::ppu::tile_number::TileNumber;
 use crate::ppu::ppu_registers::PpuRegisters;
 
 const PATTERN_TABLE_START: Address = Address::from_u16(0).unwrap();
@@ -38,9 +39,13 @@ impl Ppu {
         }
     }
 
-    pub fn step(&mut self, _ppu_registers: PpuRegisters<'_>) {
+    pub fn step(&mut self, registers: PpuRegisters<'_>) {
         if self.clock.cycle() == 0 {
-
+            for tile_number in TileNumber::iter() {
+                let name_table_number = registers.name_table_number() as usize;
+                let (_tile, _palette_table_indexes) =
+                    self.name_tables()[name_table_number].tile_entry_at(tile_number);
+            }
         }
 
         self.clock.tick();
