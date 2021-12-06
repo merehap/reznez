@@ -1,3 +1,4 @@
+use crate::ppu::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::get_bit;
 
@@ -143,11 +144,4 @@ pub enum SpriteSize {
 pub enum VramAddressIncrement {
     Right,
     Down,
-}
-
-pub enum NameTableNumber {
-    Zero,
-    One,
-    Two,
-    Three,
 }

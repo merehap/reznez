@@ -1,6 +1,26 @@
 use std::ops::{Index, IndexMut};
 
 use crate::ppu::address::Address;
+use crate::ppu::name_table::NameTable;
+use crate::ppu::name_table_number::NameTableNumber;
+use crate::ppu::pattern_table::PatternTable;
+use crate::ppu::palette::palette_table::PaletteTable;
+
+const PATTERN_TABLE_START: Address = Address::from_u16(0).unwrap();
+const PATTERN_TABLE_SIZE: u16 = 0x2000;
+
+const NAME_TABLE_START: Address = Address::from_u16(0x2000).unwrap();
+const NAME_TABLE_SIZE: u16 = 0x400;
+const NAME_TABLE_INDEXES: [Address; 4] =
+    [
+        NAME_TABLE_START.advance(0 * NAME_TABLE_SIZE),
+        NAME_TABLE_START.advance(1 * NAME_TABLE_SIZE),
+        NAME_TABLE_START.advance(2 * NAME_TABLE_SIZE),
+        NAME_TABLE_START.advance(3 * NAME_TABLE_SIZE),
+    ];
+
+const PALETTE_TABLE_START: Address = Address::from_u16(0x3F00).unwrap();
+const PALETTE_TABLE_SIZE: u16 = 0x20;
 
 pub struct Memory {
     memory: [u8; 0x4000],
@@ -13,7 +33,23 @@ impl Memory {
         }
     }
 
-    pub fn slice(&self, start_address: Address, length: u16) -> &[u8] {
+    pub fn pattern_table(&self) -> PatternTable {
+        let raw = self.slice(PATTERN_TABLE_START, PATTERN_TABLE_SIZE);
+        PatternTable::new(raw.try_into().unwrap())
+    }
+
+    pub fn name_table(&self, number: NameTableNumber) -> NameTable {
+        let index = NAME_TABLE_INDEXES[number as usize];
+        let raw = self.slice(index, NAME_TABLE_SIZE);
+        NameTable::new(raw.try_into().unwrap())
+    }
+
+    pub fn palette_table(&self) -> PaletteTable {
+        let raw = self.slice(PALETTE_TABLE_START, PALETTE_TABLE_SIZE);
+        PaletteTable::new(raw.try_into().unwrap())
+    }
+
+    fn slice(&self, start_address: Address, length: u16) -> &[u8] {
         let start_address = start_address.to_u16() as usize;
         &self.memory[start_address..start_address + length as usize]
     }
