@@ -1,3 +1,4 @@
+#[derive(Clone, Copy, Debug)]
 pub enum PaletteTableIndex {
     Zero,
     One,

@@ -44,14 +44,14 @@ impl Ppu {
             for tile_number in TileNumber::iter() {
                 for row_in_tile in 0..8 {
                     let name_table_number = regs.name_table_number() as usize;
-                    let (tile_index, _palette_table_indexes) =
+                    let (tile_index, _palette_table_index) =
                         self.name_tables()[name_table_number].tile_entry_at(tile_number);
                     let _tile_sliver = self.pattern_table().tile_sliver_at(
                         regs.background_table_side(),
                         tile_index,
                         row_in_tile,
                         );
-                    
+
                 }
             }
         }

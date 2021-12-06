@@ -28,7 +28,6 @@ impl SystemPalette {
 
         for (i, line) in lines.iter().enumerate() {
             let brightness = FromPrimitive::from_usize(i).unwrap();
-            println!("Line: {}", line);
             SystemPalette::parse_line(&mut result, brightness, line)?;
         }
     
