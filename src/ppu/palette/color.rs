@@ -2,14 +2,16 @@ use enum_iterator::IntoEnumIterator;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
-#[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct Color {
     hue: Hue,
     brightness: Brightness,
 }
 
 impl Color {
-    pub fn new(hue: Hue, brightness: Brightness) -> Color {
+    pub const BLACK: Color = Color::new(Hue::Black, Brightness::Minimum);
+
+    pub const fn new(hue: Hue, brightness: Brightness) -> Color {
         Color {hue, brightness}
     }
 
@@ -25,8 +27,8 @@ impl Color {
     }
 }
 
-#[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, FromPrimitive,
-         IntoEnumIterator)]
+#[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug,
+         FromPrimitive, IntoEnumIterator)]
 pub enum Hue {
     Gray,
     Azure,
@@ -46,8 +48,8 @@ pub enum Hue {
     ExtraBlack,
 }
 
-#[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, FromPrimitive,
-         IntoEnumIterator)]
+#[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug,
+         FromPrimitive, IntoEnumIterator)]
 pub enum Brightness {
     Minimum,
     Low,

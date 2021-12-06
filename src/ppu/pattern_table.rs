@@ -23,7 +23,7 @@ impl <'a> PatternTable<'a> {
         &'a self,
         side: PatternTableSide,
         tile_number: u8,
-        row_in_tile: usize,
+        row_in_tile: u8,
         ) -> [Option<PaletteIndex>; 8] {
 
         self.tile_at(side, tile_number).sliver_at(row_in_tile)

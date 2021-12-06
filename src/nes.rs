@@ -5,7 +5,6 @@ use crate::cpu::cpu::Cpu;
 use crate::cpu::instruction::Instruction;
 use crate::cpu::memory::Memory;
 use crate::ppu::ppu::Ppu;
-use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu_registers::PpuRegisters;
 use crate::mapper::mapper0::Mapper0;
 
@@ -17,7 +16,6 @@ pub struct Nes {
     cpu: Cpu,
     ppu: Ppu,
     cycle: u64,
-    system_palette: SystemPalette,
 }
 
 impl Nes {
@@ -27,14 +25,17 @@ impl Nes {
                 Nes::initialize_memory(config.ines().clone()),
                 config.program_counter_source(),
             ),
-            ppu: Ppu::startup(),
+            ppu: Ppu::new(config.system_palette().clone()),
             cycle: 0,
-            system_palette: config.system_palette().clone(),
         }
     }
 
     pub fn cpu(&self) -> &Cpu {
        &self.cpu
+    }
+
+    pub fn ppu(&self) -> &Ppu {
+        &self.ppu
     }
 
     pub fn step(&mut self) -> Option<Instruction> {

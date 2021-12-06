@@ -10,14 +10,16 @@ impl <'a> Tile<'a> {
         Tile {bytes}
     }
 
-    pub fn sliver_at(&self, row_in_tile: usize) -> [Option<PaletteIndex>; 8] {
+    pub fn sliver_at(&self, row_in_tile: u8) -> [Option<PaletteIndex>; 8] {
         let sliver: Vec<_> = (0..8)
             .map(|column| self.palette_index_at(column, row_in_tile))
             .collect();
         sliver.try_into().unwrap()
     }
 
-    pub fn palette_index_at(&self, column: usize, row: usize) -> Option<PaletteIndex> {
+    pub fn palette_index_at(&self, column: u8, row: u8) -> Option<PaletteIndex> {
+        let column = column as usize;
+        let row = row as usize;
         let low_bit = get_bit(self.bytes[row], column);
         let high_bit = get_bit(self.bytes[row + 8], column);
         match (low_bit, high_bit) {
