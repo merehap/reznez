@@ -10,12 +10,11 @@ impl Oam {
     }
 
     pub fn sprites(&self) -> [Sprite; 64] {
-        // Ugh, should just give up and use transmute.
-        self.0.array_chunks::<4>()
-            .map(|chunk| Sprite::from_u32(u32::from_be_bytes(*chunk)))
-            .collect::<Vec<_>>()
-            .try_into()
-            .unwrap()
+        let mut iter = self.0.array_chunks::<4>();
+        [(); 64].map(|_| {
+            let raw = u32::from_be_bytes(*iter.next().unwrap());
+            Sprite::from_u32(raw)
+        })
     }
 }
 

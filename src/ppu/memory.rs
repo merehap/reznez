@@ -6,6 +6,8 @@ use crate::ppu::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::palette::palette_table::PaletteTable;
 
+const MEMORY_SIZE: usize = 0x4000;
+
 const PATTERN_TABLE_START: Address = Address::from_u16(0).unwrap();
 const PATTERN_TABLE_SIZE: u16 = 0x2000;
 
@@ -23,13 +25,13 @@ const PALETTE_TABLE_START: Address = Address::from_u16(0x3F00).unwrap();
 const PALETTE_TABLE_SIZE: u16 = 0x20;
 
 pub struct Memory {
-    memory: [u8; 0x4000],
+    memory: [u8; MEMORY_SIZE],
 }
 
 impl Memory {
     pub fn new() -> Memory {
         Memory {
-            memory: [0; 0x4000],
+            memory: [0; MEMORY_SIZE],
         }
     }
 
