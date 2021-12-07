@@ -32,6 +32,10 @@ impl Ppu {
         }
     }
 
+    pub fn clock(&self) -> &Clock {
+        &self.clock
+    }
+
     pub fn screen(&self) -> &Screen {
         &self.screen
     }

@@ -1,13 +1,13 @@
 use crate::ppu::palette::rgb::Rgb;
 
-const WIDTH: usize = 256;
-const HEIGHT: usize = 240;
-
-pub struct Screen([[Rgb; WIDTH]; HEIGHT]);
+pub struct Screen([[Rgb; Screen::WIDTH]; Screen::HEIGHT]);
 
 impl Screen {
+    pub const WIDTH: usize = 256;
+    pub const HEIGHT: usize = 240;
+
     pub fn new() -> Screen {
-        Screen([[Rgb::BLACK; WIDTH]; HEIGHT])
+        Screen([[Rgb::BLACK; Screen::WIDTH]; Screen::HEIGHT])
     }
 
     pub fn pixel(&self, column: u8, row: u8) -> Rgb {

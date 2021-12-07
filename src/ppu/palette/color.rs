@@ -9,8 +9,6 @@ pub struct Color {
 }
 
 impl Color {
-    pub const BLACK: Color = Color::new(Hue::Black, Brightness::Minimum);
-
     pub const fn new(hue: Hue, brightness: Brightness) -> Color {
         Color {hue, brightness}
     }

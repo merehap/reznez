@@ -21,5 +21,5 @@ use crate::nes::Nes;
 fn main() {
     let config = Config::default(Path::new("roms/nestest.nes"));
     let nes = Nes::new(config);
-    gui::gui(nes).unwrap();
+    gui::gui(nes);
 }
