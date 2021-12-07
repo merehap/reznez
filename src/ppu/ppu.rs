@@ -6,10 +6,10 @@ use crate::ppu::oam::Oam;
 use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_index::PaletteIndex;
-use crate::ppu::palette::screen::Screen;
 use crate::ppu::palette::system_palette::SystemPalette;
-use crate::ppu::tile_number::TileNumber;
 use crate::ppu::ppu_registers::PpuRegisters;
+use crate::ppu::screen::Screen;
+use crate::ppu::tile_number::TileNumber;
 
 pub struct Ppu {
     memory: Memory,

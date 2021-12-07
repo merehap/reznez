@@ -4,5 +4,4 @@ pub mod palette_index;
 pub mod palette_table;
 pub mod palette_table_index;
 pub mod rgb;
-pub mod screen;
 pub mod system_palette;

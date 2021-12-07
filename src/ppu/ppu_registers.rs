@@ -20,8 +20,8 @@ impl <'a> PpuRegisters<'a> {
         if get_bit(self.regs[0], 1) {ExtPinRole::Write} else {ExtPinRole::Read}
     }
 
-    pub fn large_sprites(&self) -> SpriteSize {
-        if get_bit(self.regs[0], 2) {SpriteSize::Wide} else {SpriteSize::Normal}
+    pub fn sprites_size(&self) -> SpriteWidth {
+        if get_bit(self.regs[0], 2) {SpriteWidth::Wide} else {SpriteWidth::Normal}
     }
 
     pub fn background_table_side(&self) -> PatternTableSide {
@@ -136,9 +136,9 @@ pub enum ExtPinRole {
     Write,
 }
 
-pub enum SpriteSize {
-    Normal,
-    Wide,
+pub enum SpriteWidth {
+    Normal = 8,
+    Wide = 16,
 }
 
 pub enum VramAddressIncrement {

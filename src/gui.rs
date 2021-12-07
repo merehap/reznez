@@ -1,7 +1,7 @@
 use minifb::{Key, Window, WindowOptions, Scale};
 
 use crate::nes::Nes;
-use crate::ppu::palette::screen::Screen;
+use crate::ppu::screen::Screen;
 
 pub fn gui(mut nes: Nes) {
     let mut window_options = WindowOptions::default();
