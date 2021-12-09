@@ -2,9 +2,7 @@ use crate::cartridge::INes;
 use crate::cpu::address::Address;
 use crate::cpu::memory::Memory;
 
-pub struct Mapper0 {
-
-}
+pub struct Mapper0;
 
 impl Mapper0 {
     pub fn new() -> Mapper0 {
@@ -26,9 +24,9 @@ impl Mapper0 {
         let mut low_address = Address::new(0x8000);
         let mut high_address = Address::new(0xC000);
         for i in 0..0x4000 {
-            memory[low_address] = prg_rom[i];
+            memory.write(low_address, prg_rom[i]);
             // Copy high ROM (for NROM256) or mirror low ROM (for NROM128).
-            memory[high_address] = prg_rom[high_source_index + i];
+            memory.write(high_address, prg_rom[high_source_index + i]);
             low_address.inc();
             high_address.inc();
         }

@@ -1,18 +1,54 @@
-use std::ops::{Index, IndexMut};
+use std::collections::BTreeSet;
 
 use crate::cpu::address::Address;
+use crate::cpu::port_access::{PortAccess, AccessMode};
+
+const NMI_VECTOR: Address = Address::new(0xFFFA);
+const RESET_VECTOR: Address = Address::new(0xFFFC);
+const IRQ_VECTOR: Address = Address::new(0xFFFE);
 
 pub struct Memory {
     pub stack_pointer: u8,
     memory: [u8; 0x10000],
+    read_ports: BTreeSet<Address>,
+    write_ports: BTreeSet<Address>,
+    latch: Option<PortAccess>,
 }
 
 impl Memory {
-    pub fn startup() -> Memory {
+    pub fn new(read_ports: BTreeSet<Address>, write_ports: BTreeSet<Address>) -> Memory {
         Memory {
             stack_pointer: 0xFD,
             memory: [0; 0x10000],
+            read_ports,
+            write_ports,
+            latch: None,
         }
+    }
+
+    pub fn read(&mut self, address: Address) -> u8 {
+        let value = self.memory[address.to_raw() as usize];
+        if self.read_ports.contains(&address) {
+            self.latch = Some(PortAccess {
+                address,
+                value,
+                access_mode: AccessMode::Read,
+            });
+        }
+
+        value
+    }
+
+    pub fn write(&mut self, address: Address, value: u8) {
+        if self.write_ports.contains(&address) {
+            self.latch = Some(PortAccess {
+                address,
+                value,
+                access_mode: AccessMode::Write,
+            });
+        }
+
+        self.memory[address.to_raw() as usize] = value;
     }
 
     pub fn push(&mut self, value: u8) {
@@ -45,30 +81,40 @@ impl Memory {
         Address::from_low_high(low, high)
     }
 
-    pub fn stack(&self) -> &[u8] {
-        &self.memory[self.stack_pointer as usize + 0x101..0x200]
+    pub fn latch(&self) -> Option<PortAccess> {
+        self.latch
     }
 
-    pub fn address_from_vector(&self, mut vector: Address) -> Address {
-        Address::from_low_high(self[vector], self[vector.inc()])
+    pub fn reset_latch(&mut self) {
+        self.latch = None;
+    }
+
+    pub fn stack(&self) -> &[u8] {
+        &self.memory[self.stack_pointer as usize + 0x101..0x200]
     }
 
     pub fn slice(&self, start_address: Address, length: u16) -> &[u8] {
         let start_address = start_address.to_raw() as usize;
         &self.memory[start_address..start_address + length as usize]
     }
-}
 
-impl Index<Address> for Memory {
-    type Output = u8;
-
-    fn index(&self, address: Address) -> &Self::Output {
-        &self.memory[address.to_raw() as usize]
+    pub fn nmi_vector(&self) -> Address {
+        self.address_from_vector(NMI_VECTOR)
     }
-}
 
-impl IndexMut<Address> for Memory {
-    fn index_mut(&mut self, address: Address) -> &mut Self::Output {
-        &mut self.memory[address.to_raw() as usize]
+    pub fn reset_vector(&self) -> Address {
+        self.address_from_vector(RESET_VECTOR)
     }
+
+    pub fn irq_vector(&self) -> Address {
+        self.address_from_vector(IRQ_VECTOR)
+    }
+
+    fn address_from_vector(&self, mut vector: Address) -> Address {
+        Address::from_low_high(
+            self.memory[vector.to_raw() as usize],
+            self.memory[vector.inc().to_raw() as usize],
+            )
+    }
+
 }

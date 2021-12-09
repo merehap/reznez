@@ -7,13 +7,19 @@ use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::system_palette::SystemPalette;
-use crate::ppu::ppu_registers::PpuRegisters;
+use crate::ppu::registers::ctrl::Ctrl;
+use crate::ppu::registers::mask::Mask;
+use crate::ppu::registers::status::Status;
 use crate::ppu::screen::Screen;
 use crate::ppu::tile_number::TileNumber;
 
 pub struct Ppu {
     memory: Memory,
     oam: Oam,
+    ctrl: Ctrl,
+    mask: Mask,
+    status: Status,
+
     clock: Clock,
 
     screen: Screen,
@@ -25,6 +31,10 @@ impl Ppu {
         Ppu {
             memory: Memory::new(),
             oam: Oam::new(),
+            ctrl: Ctrl::new(),
+            mask: Mask::new(),
+            status: Status::new(),
+
             clock: Clock::new(),
 
             screen: Screen::new(),
@@ -40,18 +50,18 @@ impl Ppu {
         &self.screen
     }
 
-    pub fn step(&mut self, regs: PpuRegisters<'_>) {
+    pub fn step(&mut self) {
         if self.clock.cycle() == 0 {
             for tile_number in TileNumber::iter() {
                 for row_in_tile in 0..8 {
-                    let name_table_number = regs.name_table_number();
+                    let name_table_number = self.ctrl.name_table_number();
                     let (tile_index, palette_table_index) =
                         self.name_table(name_table_number).tile_entry_at(tile_number);
                     let palette =
                         self.palette_table().background_palette(palette_table_index);
                     let tile_sliver: [Option<PaletteIndex>; 8] =
                         self.pattern_table().tile_sliver_at(
-                            regs.background_table_side(),
+                            self.ctrl.background_table_side(),
                             tile_index,
                             row_in_tile,
                             );

@@ -3,10 +3,6 @@ use crate::cpu::instruction::{Instruction, OpCode, Argument};
 use crate::cpu::memory::Memory;
 use crate::cpu::status::Status;
 
-const NMI_VECTOR: Address = Address::new(0xFFFA);
-const RESET_VECTOR: Address = Address::new(0xFFFC);
-const IRQ_VECTOR: Address = Address::new(0xFFFE);
-
 pub struct Cpu {
     accumulator: u8,
     x_index: u8,
@@ -24,7 +20,7 @@ impl Cpu {
     pub fn new(memory: Memory, program_counter_source: ProgramCounterSource) -> Cpu {
         use ProgramCounterSource::*;
         let program_counter = match program_counter_source {
-            ResetVector => memory.address_from_vector(RESET_VECTOR),
+            ResetVector => memory.reset_vector(),
             Override(address) => address,
         };
 
@@ -46,7 +42,7 @@ impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
     pub fn reset(&mut self) {
         self.status.interrupts_disabled = true;
-        self.program_counter = self.memory.address_from_vector(RESET_VECTOR);
+        self.program_counter = self.memory.reset_vector();
         self.cycle = 7;
         // TODO: APU resets?
     }
@@ -96,6 +92,7 @@ impl Cpu {
 
     pub fn step(&mut self) -> Option<Instruction> {
         self.cycle += 1;
+        self.memory.reset_latch();
 
         if self.current_instruction_remaining_cycles != 0 {
             self.current_instruction_remaining_cycles -= 1;
@@ -106,7 +103,7 @@ impl Cpu {
             self.program_counter,
             self.x_index,
             self.y_index,
-            &self.memory,
+            &mut self.memory,
         );
         println!("{} | {}", self.state_string(), instruction);
 
@@ -158,7 +155,7 @@ impl Cpu {
                 self.memory.push_address(self.program_counter);
                 self.memory.push(self.status.to_byte());
                 self.status.interrupts_disabled = true;
-                self.program_counter = self.memory.address_from_vector(IRQ_VECTOR);
+                self.program_counter = self.memory.irq_vector();
             },
             (RTI, Imp) => {
                 self.status = Status::from_byte(self.memory.pop());
@@ -166,11 +163,19 @@ impl Cpu {
             },
             (RTS, Imp) => self.program_counter = self.memory.pop_address().advance(1),
 
-            (STA, Addr(addr, _)) => self.memory[addr] = self.accumulator,
-            (STX, Addr(addr, _)) => self.memory[addr] = self.x_index,
-            (STY, Addr(addr, _)) => self.memory[addr] = self.y_index,
-            (DEC, Addr(addr, _)) => self.memory[addr] = self.nz(self.memory[addr].wrapping_sub(1)),
-            (INC, Addr(addr, _)) => self.memory[addr] = self.nz(self.memory[addr].wrapping_add(1)),
+            (STA, Addr(addr, _)) => self.memory.write(addr, self.accumulator),
+            (STX, Addr(addr, _)) => self.memory.write(addr, self.x_index),
+            (STY, Addr(addr, _)) => self.memory.write(addr, self.y_index),
+            (DEC, Addr(addr, _)) => {
+                let value = self.memory.read(addr).wrapping_sub(1);
+                self.memory.write(addr, value);
+                self.nz(value);
+            },
+            (INC, Addr(addr, _)) => {
+                let value = self.memory.read(addr).wrapping_add(1);
+                self.memory.write(addr, value);
+                self.nz(value);
+            },
             (BPL, Addr(addr, _)) => if !self.status.negative {cycle_count += self.take_branch(addr);},
             (BMI, Addr(addr, _)) => if self.status.negative {cycle_count += self.take_branch(addr);},
             (BVC, Addr(addr, _)) => if !self.status.overflow {cycle_count += self.take_branch(addr);},
@@ -207,49 +212,76 @@ impl Cpu {
                 self.status.carry = !self.status.negative;
             },
 
-            (ASL, Imp)           => self.accumulator  = self.asl(self.accumulator),
-            (ASL, Addr(addr, _)) => self.memory[addr] = self.asl(self.memory[addr]),
-            (ROL, Imp)           => self.accumulator  = self.rol(self.accumulator),
-            (ROL, Addr(addr, _)) => self.memory[addr] = self.rol(self.memory[addr]),
-            (LSR, Imp)           => self.accumulator  = self.lsr(self.accumulator),
-            (LSR, Addr(addr, _)) => self.memory[addr] = self.lsr(self.memory[addr]),
-            (ROR, Imp)           => self.accumulator  = self.ror(self.accumulator),
-            (ROR, Addr(addr, _)) => self.memory[addr] = self.ror(self.memory[addr]),
+            (ASL, Imp)           => self.accumulator = self.asl(self.accumulator),
+            (ASL, Addr(addr, _)) => {
+                let value = self.memory.read(addr);
+                let value = self.asl(value);
+                self.memory.write(addr, value);
+            },
+            (ROL, Imp)           => self.accumulator = self.rol(self.accumulator),
+            (ROL, Addr(addr, _)) => {
+                let value = self.memory.read(addr);
+                let value = self.rol(value);
+                self.memory.write(addr, value);
+            },
+            (LSR, Imp)           => self.accumulator = self.lsr(self.accumulator),
+            (LSR, Addr(addr, _)) => {
+                let value = self.memory.read(addr);
+                let value = self.lsr(value);
+                self.memory.write(addr, value);
+            },
+            (ROR, Imp)           => self.accumulator = self.ror(self.accumulator),
+            (ROR, Addr(addr, _)) => {
+                let value = self.memory.read(addr);
+                let value = self.ror(value);
+                self.memory.write(addr, value);
+            },
 
             // Undocumented op codes.
             (SLO, Addr(addr, _)) => {
-                self.memory[addr] = self.asl(self.memory[addr]);
-                self.accumulator |= self.memory[addr];
+                let value = self.memory.read(addr);
+                let value = self.asl(value);
+                self.memory.write(addr, value);
+                self.accumulator |= value;
                 self.nz(self.accumulator);
             },
             (RLA, Addr(addr, _)) => {
-                self.memory[addr] = self.rol(self.memory[addr]);
-                self.accumulator &= self.memory[addr];
+                let value = self.memory.read(addr);
+                let value = self.rol(value);
+                self.memory.write(addr, value);
+                self.accumulator &= value;
                 self.nz(self.accumulator);
             },
             (SRE, Addr(addr, _)) => {
-                self.memory[addr] = self.lsr(self.memory[addr]);
-                self.accumulator ^= self.memory[addr];
+                let value = self.memory.read(addr);
+                let value = self.lsr(value);
+                self.memory.write(addr, value);
+                self.accumulator ^= value;
                 self.nz(self.accumulator);
             },
             (RRA, Addr(addr, _)) => {
-                self.memory[addr] = self.ror(self.memory[addr]);
-                self.accumulator = self.adc(self.memory[addr]);
+                let value = self.memory.read(addr);
+                let value = self.ror(value);
+                self.memory.write(addr, value);
+                self.accumulator = self.adc(value);
                 self.nz(self.accumulator);
             },
-            (SAX, Addr(addr, _)) => self.memory[addr] = self.accumulator & self.x_index,
+            (SAX, Addr(addr, _)) => self.memory.write(addr, self.accumulator & self.x_index),
             (LAX, Addr(addr, _)) => {
-                self.accumulator = self.memory[addr];
-                self.x_index = self.memory[addr];
-                self.nz(self.memory[addr]);
+                let value = self.memory.read(addr);
+                self.accumulator = value;
+                self.x_index = value;
+                self.nz(value);
             },
             (DCP, Addr(addr, _)) => {
-                self.memory[addr] = self.memory[addr].wrapping_sub(1);
-                self.cmp(self.memory[addr]);
+                let value = self.memory.read(addr).wrapping_sub(1);
+                self.memory.write(addr, value);
+                self.cmp(value);
             },
             (ISC, Addr(addr, _)) => {
-                self.memory[addr] = self.memory[addr].wrapping_add(1);
-                self.accumulator = self.subtract_from_accumulator(self.memory[addr]);
+                let value = self.memory.read(addr).wrapping_add(1);
+                self.memory.write(addr, value);
+                self.accumulator = self.subtract_from_accumulator(value);
             },
 
             // Mostly unstable codes.

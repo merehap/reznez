@@ -30,6 +30,7 @@ impl <'a> PatternTable<'a> {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum PatternTableSide {
     Left,
     Right,

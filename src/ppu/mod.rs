@@ -7,7 +7,7 @@ pub mod oam;
 pub mod palette;
 pub mod pattern_table;
 pub mod ppu;
-pub mod ppu_registers;
+pub mod registers;
 pub mod screen;
 pub mod sprite;
 pub mod tile;
