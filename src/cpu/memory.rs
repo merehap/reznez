@@ -51,7 +51,7 @@ impl Memory {
         self.memory[address.to_raw() as usize] = value;
     }
 
-    pub fn push(&mut self, value: u8) {
+    pub fn push_to_stack(&mut self, value: u8) {
         if self.stack_pointer == 0 {
             panic!("Cannot push to a full stack.");
         }
@@ -60,13 +60,13 @@ impl Memory {
         self.stack_pointer -= 1;
     }
 
-    pub fn push_address(&mut self, address: Address) {
+    pub fn push_address_to_stack(&mut self, address: Address) {
         let (low, high) = address.to_low_high();
-        self.push(high);
-        self.push(low);
+        self.push_to_stack(high);
+        self.push_to_stack(low);
     }
 
-    pub fn pop(&mut self) -> u8 {
+    pub fn pop_from_stack(&mut self) -> u8 {
         if self.stack_pointer == 0xFF {
             panic!("Cannot pop from an empty stack.");
         }
@@ -75,9 +75,9 @@ impl Memory {
         self.memory[self.stack_pointer as usize + 0x100]
     }
 
-    pub fn pop_address(&mut self) -> Address {
-        let low = self.pop();
-        let high = self.pop();
+    pub fn pop_address_from_stack(&mut self) -> Address {
+        let low = self.pop_from_stack();
+        let high = self.pop_from_stack();
         Address::from_low_high(low, high)
     }
 

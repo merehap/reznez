@@ -135,13 +135,13 @@ impl Cpu {
             (TXS, Imp) => self.memory.stack_pointer = self.x_index,
             (TXA, Imp) => self.accumulator = self.nz(self.x_index),
             (TYA, Imp) => self.accumulator = self.nz(self.y_index),
-            (PHA, Imp) => self.memory.push(self.accumulator),
-            (PHP, Imp) => self.memory.push(self.status.to_byte()),
+            (PHA, Imp) => self.memory.push_to_stack(self.accumulator),
+            (PHP, Imp) => self.memory.push_to_stack(self.status.to_byte()),
             (PLA, Imp) => {
-                self.accumulator = self.memory.pop();
+                self.accumulator = self.memory.pop_from_stack();
                 self.nz(self.accumulator);
             },
-            (PLP, Imp) => self.status = Status::from_byte(self.memory.pop()),
+            (PLP, Imp) => self.status = Status::from_byte(self.memory.pop_from_stack()),
             (CLC, Imp) => self.status.carry = false,
             (SEC, Imp) => self.status.carry = true,
             (CLD, Imp) => self.status.decimal = false,
@@ -152,16 +152,16 @@ impl Cpu {
             (BRK, Imp) => {
                 // Not sure why we need to increment here.
                 self.program_counter.inc();
-                self.memory.push_address(self.program_counter);
-                self.memory.push(self.status.to_byte());
+                self.memory.push_address_to_stack(self.program_counter);
+                self.memory.push_to_stack(self.status.to_byte());
                 self.status.interrupts_disabled = true;
                 self.program_counter = self.memory.irq_vector();
             },
             (RTI, Imp) => {
-                self.status = Status::from_byte(self.memory.pop());
-                self.program_counter = self.memory.pop_address();
+                self.status = Status::from_byte(self.memory.pop_from_stack());
+                self.program_counter = self.memory.pop_address_from_stack();
             },
-            (RTS, Imp) => self.program_counter = self.memory.pop_address().advance(1),
+            (RTS, Imp) => self.program_counter = self.memory.pop_address_from_stack().advance(1),
 
             (STA, Addr(addr, _)) => self.memory.write(addr, self.accumulator),
             (STX, Addr(addr, _)) => self.memory.write(addr, self.x_index),
@@ -186,7 +186,7 @@ impl Cpu {
             (BEQ, Addr(addr, _)) => if self.status.zero {cycle_count += self.take_branch(addr);},
             (JSR, Addr(addr, _)) => {
                 // Push the address one previous for some reason.
-                self.memory.push_address(self.program_counter.offset(-1));
+                self.memory.push_address_to_stack(self.program_counter.offset(-1));
                 self.program_counter = addr;
             },
             (JMP, Addr(addr, _)) => self.program_counter = addr,
@@ -212,25 +212,25 @@ impl Cpu {
                 self.status.carry = !self.status.negative;
             },
 
-            (ASL, Imp)           => self.accumulator = self.asl(self.accumulator),
+            (ASL, Imp) => self.accumulator = self.asl(self.accumulator),
             (ASL, Addr(addr, _)) => {
                 let value = self.memory.read(addr);
                 let value = self.asl(value);
                 self.memory.write(addr, value);
             },
-            (ROL, Imp)           => self.accumulator = self.rol(self.accumulator),
+            (ROL, Imp) => self.accumulator = self.rol(self.accumulator),
             (ROL, Addr(addr, _)) => {
                 let value = self.memory.read(addr);
                 let value = self.rol(value);
                 self.memory.write(addr, value);
             },
-            (LSR, Imp)           => self.accumulator = self.lsr(self.accumulator),
+            (LSR, Imp) => self.accumulator = self.lsr(self.accumulator),
             (LSR, Addr(addr, _)) => {
                 let value = self.memory.read(addr);
                 let value = self.lsr(value);
                 self.memory.write(addr, value);
             },
-            (ROR, Imp)           => self.accumulator = self.ror(self.accumulator),
+            (ROR, Imp) => self.accumulator = self.ror(self.accumulator),
             (ROR, Addr(addr, _)) => {
                 let value = self.memory.read(addr);
                 let value = self.ror(value);
