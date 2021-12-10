@@ -7,18 +7,19 @@ use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::system_palette::SystemPalette;
-use crate::ppu::registers::ctrl::Ctrl;
-use crate::ppu::registers::mask::Mask;
-use crate::ppu::registers::status::Status;
+use crate::ppu::register::ctrl::Ctrl;
+use crate::ppu::register::mask::Mask;
 use crate::ppu::screen::Screen;
 use crate::ppu::tile_number::TileNumber;
+
+const FIRST_VBLANK_FRAME: u64 = 3 * 27384;
+const SECOND_VBLANK_FRAME: u64 = 3 * 57165;
 
 pub struct Ppu {
     memory: Memory,
     oam: Oam,
     ctrl: Ctrl,
     mask: Mask,
-    status: Status,
 
     clock: Clock,
 
@@ -33,7 +34,6 @@ impl Ppu {
             oam: Oam::new(),
             ctrl: Ctrl::new(),
             mask: Mask::new(),
-            status: Status::new(),
 
             clock: Clock::new(),
 
@@ -50,7 +50,25 @@ impl Ppu {
         &self.screen
     }
 
-    pub fn step(&mut self) {
+    pub fn set_ctrl(&mut self, ctrl: Ctrl) {
+        self.ctrl = ctrl;
+    }
+
+    pub fn set_mask(&mut self, mask: Mask) {
+        self.mask = mask;
+    }
+
+    pub fn step(&mut self) -> StepEvents {
+        let frame_started = self.clock().is_start_of_frame();
+        match self.clock().frame() {
+            FIRST_VBLANK_FRAME | SECOND_VBLANK_FRAME if frame_started =>
+                return StepEvents::vblank_started(),
+            frame if frame < SECOND_VBLANK_FRAME =>
+                return StepEvents::no_events(),
+            // The PPU has warmed up, proceed with rendering.
+            _ => {},
+        }
+
         if self.clock.cycle() == 0 {
             for tile_number in TileNumber::iter() {
                 for row_in_tile in 0..8 {
@@ -79,6 +97,7 @@ impl Ppu {
         }
 
         self.clock.tick();
+        StepEvents::no_events()
     }
 
     fn pattern_table(&self) -> PatternTable {
@@ -91,5 +110,23 @@ impl Ppu {
 
     fn palette_table(&self) -> PaletteTable {
         self.memory.palette_table()
+    }
+}
+
+pub struct StepEvents {
+    vblank_started: bool,
+}
+
+impl StepEvents {
+    pub fn no_events() -> StepEvents {
+        StepEvents {
+            vblank_started: false,
+        }
+    }
+
+    pub fn vblank_started() -> StepEvents {
+        StepEvents {
+            vblank_started: true,
+        }
     }
 }

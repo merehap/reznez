@@ -41,4 +41,8 @@ impl Clock {
             },
         }
     }
+
+    pub fn is_start_of_frame(&self) -> bool {
+        self.scanline == 0 && self.cycle == 0
+    }
 }
