@@ -81,7 +81,7 @@ impl Ppu {
     }
 
     pub fn step(&mut self) -> StepEvents {
-        self.clock.tick();
+        self.clock.tick(self.rendering_enabled());
 
         let frame_started = self.clock().is_start_of_frame();
         if frame_started {
@@ -136,6 +136,10 @@ impl Ppu {
 
     fn palette_table(&self) -> PaletteTable {
         self.memory.palette_table()
+    }
+
+    fn rendering_enabled(&self) -> bool {
+        self.mask.sprites_enabled() || self.mask.background_enabled()
     }
 }
 
