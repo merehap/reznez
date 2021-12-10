@@ -72,7 +72,10 @@ impl Nes {
             }
         }
 
-        self.ppu.step();
+        let step_events = self.ppu.step();
+        if step_events.vblank_started() {
+            self.set_vblank();
+        }
 
         self.cycle += 1;
 
@@ -107,27 +110,31 @@ impl Nes {
             (PPUCTRL, Write) => self.ppu.set_ctrl(Ctrl::from_u8(value)),
             (PPUMASK, Write) => self.ppu.set_mask(Mask::from_u8(value)),
             (OAMADDR, Write) => unimplemented!(),
-            (PPUSCROLL, Write) => unimplemented!(),
-            (PPUADDR, Write) => unimplemented!(),
+            (PPUSCROLL, Write) => println!("PPUSCROLL was written to (not supported)."),
+            (PPUADDR, Write) => self.ppu.write_partial_vram_address(value),
             (OAM_DMA, Write) => unimplemented!(),
 
             // TODO: Reading the status register will clear bit 7 mentioned
             // above and also the address latch used by PPUSCROLL and PPUADDR.
-            (PPUSTATUS, Read) => {
-                let status = self.cpu.memory.read(PPUSTATUS);
-                self.cpu.memory.write(PPUSTATUS, status & 0b0111_1111);
-            },
+            (PPUSTATUS, Read) => self.clear_vblank(),
             // PPUSTATUS is read-only.
             (PPUSTATUS, Write) => {},
             (OAMDATA, Read) => unimplemented!(),
             (OAMDATA, Write) => unimplemented!(),
             (PPUDATA, Read) => unimplemented!(),
-            (PPUDATA, Write) => unimplemented!(),
-
-            // Write-only registers don't do anything when read.
-            (PPUCTRL|PPUMASK|OAMADDR|PPUSCROLL|PPUADDR|OAM_DMA, Read) => {},
+            (PPUDATA, Write) => self.ppu.write_vram(value),
 
             (_, _) => unreachable!(),
         }
+    }
+
+    fn set_vblank(&mut self) {
+        let status = self.cpu.memory.read(PPUSTATUS);
+        self.cpu.memory.write(PPUSTATUS, status | 0b1000_0000);
+    }
+
+    fn clear_vblank(&mut self) {
+        let status = self.cpu.memory.read(PPUSTATUS);
+        self.cpu.memory.write(PPUSTATUS, status & 0b0111_1111);
     }
 }

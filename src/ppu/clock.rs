@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Clock {
     frame: u64,
     scanline: u16,
@@ -25,6 +26,14 @@ impl Clock {
         self.cycle
     }
 
+    pub fn total_cycles(&self) -> u64 {
+        261 * 340 * self.frame + 340 * self.scanline as u64 + self.cycle as u64
+    }
+
+    pub fn is_start_of_frame(&self) -> bool {
+        self.scanline == 0 && self.cycle == 0
+    }
+
     pub fn tick(&mut self) {
         match (self.scanline, self.cycle) {
             (261, 340) => {
@@ -40,9 +49,5 @@ impl Clock {
                 self.cycle += 1;
             },
         }
-    }
-
-    pub fn is_start_of_frame(&self) -> bool {
-        self.scanline == 0 && self.cycle == 0
     }
 }

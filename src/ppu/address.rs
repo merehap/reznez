@@ -1,12 +1,13 @@
-const MAX_ADDRESS: u16 = 0x4000;
+const MAX_ADDRESS: u16 = 0x3FFF;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Address(u16);
 
 impl Address {
-    pub const fn from_u16(mut value: u16) -> Option<Address> {
-        if value >= MAX_ADDRESS {
-            return None;
+    pub const fn from_u16(mut value: u16) -> Address {
+        if value > MAX_ADDRESS {
+            // https://wiki.nesdev.org/w/index.php?title=PPU_registers#PPUADDR
+            value &= MAX_ADDRESS;
         }
 
         // Map the name table mirrors.
@@ -19,13 +20,11 @@ impl Address {
             value = 0x3F00 + value % 0x20;
         }
 
-        Some(Address(value))
+        Address(value)
     }
 
-    pub const fn advance(&self, value: u16) -> Address {
-        let mut result = *self;
-        result.0 = result.0.wrapping_add(value);
-        result
+    pub const fn advance(&self, value: u8) -> Address {
+        Address::from_u16(self.0 + value as u16)
     }
 
     pub fn to_u16(&self) -> u16 {

@@ -8,20 +8,20 @@ use crate::ppu::palette::palette_table::PaletteTable;
 
 const MEMORY_SIZE: usize = 0x4000;
 
-const PATTERN_TABLE_START: Address = Address::from_u16(0).unwrap();
+const PATTERN_TABLE_START: Address = Address::from_u16(0);
 const PATTERN_TABLE_SIZE: u16 = 0x2000;
 
-const NAME_TABLE_START: Address = Address::from_u16(0x2000).unwrap();
+const NAME_TABLE_START: u16 = 0x2000;
 const NAME_TABLE_SIZE: u16 = 0x400;
 const NAME_TABLE_INDEXES: [Address; 4] =
     [
-        NAME_TABLE_START.advance(0 * NAME_TABLE_SIZE),
-        NAME_TABLE_START.advance(1 * NAME_TABLE_SIZE),
-        NAME_TABLE_START.advance(2 * NAME_TABLE_SIZE),
-        NAME_TABLE_START.advance(3 * NAME_TABLE_SIZE),
+        Address::from_u16(NAME_TABLE_START + 0 * NAME_TABLE_SIZE),
+        Address::from_u16(NAME_TABLE_START + 1 * NAME_TABLE_SIZE),
+        Address::from_u16(NAME_TABLE_START + 2 * NAME_TABLE_SIZE),
+        Address::from_u16(NAME_TABLE_START + 3 * NAME_TABLE_SIZE),
     ];
 
-const PALETTE_TABLE_START: Address = Address::from_u16(0x3F00).unwrap();
+const PALETTE_TABLE_START: Address = Address::from_u16(0x3F00);
 const PALETTE_TABLE_SIZE: u16 = 0x20;
 
 pub struct Memory {

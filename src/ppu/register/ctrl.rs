@@ -123,6 +123,6 @@ pub enum SpriteWidth {
 
 #[derive(Clone, Copy)]
 pub enum VramAddressIncrement {
-    Right,
-    Down,
+    Right = 1,
+    Down = 32,
 }

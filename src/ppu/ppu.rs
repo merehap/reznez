@@ -1,3 +1,4 @@
+use crate::ppu::address::Address;
 use crate::ppu::clock::Clock;
 use crate::ppu::memory::Memory;
 use crate::ppu::name_table::NameTable;
@@ -12,8 +13,8 @@ use crate::ppu::register::mask::Mask;
 use crate::ppu::screen::Screen;
 use crate::ppu::tile_number::TileNumber;
 
-const FIRST_VBLANK_FRAME: u64 = 3 * 27384;
-const SECOND_VBLANK_FRAME: u64 = 3 * 57165;
+const FIRST_VBLANK_CYCLE: u64 = 3 * 27384;
+const SECOND_VBLANK_CYCLE: u64 = 3 * 57165;
 
 pub struct Ppu {
     memory: Memory,
@@ -25,6 +26,9 @@ pub struct Ppu {
 
     screen: Screen,
     system_palette: SystemPalette,
+
+    vram_address: Address,
+    next_vram_upper_byte: Option<u8>,
 }
 
 impl Ppu {
@@ -39,6 +43,9 @@ impl Ppu {
 
             screen: Screen::new(),
             system_palette,
+
+            vram_address: Address::from_u16(0),
+            next_vram_upper_byte: None,
         }
     }
 
@@ -58,12 +65,32 @@ impl Ppu {
         self.mask = mask;
     }
 
+    pub fn write_vram(&mut self, value: u8) {
+        self.memory[self.vram_address] = value;
+        let increment = self.ctrl.vram_address_increment() as u8;
+        self.vram_address = self.vram_address.advance(increment);
+    }
+
+    pub fn write_partial_vram_address(&mut self, value: u8) {
+        if let Some(upper) = self.next_vram_upper_byte {
+            self.vram_address = Address::from_u16(((upper as u16) << 8) + value as u16);
+            self.next_vram_upper_byte = None;
+        } else {
+            self.next_vram_upper_byte = Some(value);
+        }
+    }
+
     pub fn step(&mut self) -> StepEvents {
+        self.clock.tick();
+
         let frame_started = self.clock().is_start_of_frame();
-        match self.clock().frame() {
-            FIRST_VBLANK_FRAME | SECOND_VBLANK_FRAME if frame_started =>
-                return StepEvents::vblank_started(),
-            frame if frame < SECOND_VBLANK_FRAME =>
+        if frame_started {
+            println!("PPU Cycle: {}, Frame: {}", self.clock().total_cycles(), self.clock().frame());
+        }
+        match self.clock().total_cycles() {
+            FIRST_VBLANK_CYCLE | SECOND_VBLANK_CYCLE =>
+                return StepEvents::start_vblank(),
+            frame if frame < SECOND_VBLANK_CYCLE =>
                 return StepEvents::no_events(),
             // The PPU has warmed up, proceed with rendering.
             _ => {},
@@ -96,7 +123,6 @@ impl Ppu {
             }
         }
 
-        self.clock.tick();
         StepEvents::no_events()
     }
 
@@ -124,9 +150,14 @@ impl StepEvents {
         }
     }
 
-    pub fn vblank_started() -> StepEvents {
+    pub fn start_vblank() -> StepEvents {
+        println!("Starting VBlank.");
         StepEvents {
             vblank_started: true,
         }
+    }
+
+    pub fn vblank_started(&self) -> bool {
+        self.vblank_started
     }
 }
