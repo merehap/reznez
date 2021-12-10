@@ -8,6 +8,7 @@ pub struct INes {
     mapper_number: u8,
     name_table_mirroring: NameTableMirroring,
     has_persistent_memory: bool,
+    ripper_name: String,
     ines2: Option<INes2>,
 
     trainer: Option<[u8; 512]>,
@@ -41,12 +42,9 @@ impl INes {
         let play_choice_enabled   = rom[7] & 0b0000_0010 != 0;
         let vs_unisystem_enabled  = rom[7] & 0b0000_0001 != 0;
 
-        #[allow(clippy::needless_range_loop)]
-        for i in 8..15 {
-            if rom[i] != 0 {
-                panic!("Unexpected high header field set! [{}]={:X}", i, rom[i]);
-            }
-        }
+        let ripper_name = std::str::from_utf8(&rom[8..15])
+            .map_err(|err| err.to_string())?
+            .to_string();
 
         if trainer_enabled {
             unimplemented!("Trainer isn't implemented yet.");
@@ -94,6 +92,7 @@ impl INes {
             mapper_number,
             name_table_mirroring,
             has_persistent_memory,
+            ripper_name,
             ines2: None,
 
             trainer: None,
