@@ -2,6 +2,7 @@ use std::ops::{Index, IndexMut};
 
 use crate::ppu::address::Address;
 use crate::ppu::name_table::NameTable;
+use crate::ppu::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::palette::palette_table::PaletteTable;
@@ -26,12 +27,14 @@ const PALETTE_TABLE_SIZE: u16 = 0x20;
 
 pub struct Memory {
     memory: [u8; MEMORY_SIZE],
+    name_table_mirroring: NameTableMirroring,
 }
 
 impl Memory {
-    pub fn new() -> Memory {
+    pub fn new(name_table_mirroring: NameTableMirroring) -> Memory {
         Memory {
             memory: [0; MEMORY_SIZE],
+            name_table_mirroring,
         }
     }
 
@@ -52,8 +55,23 @@ impl Memory {
     }
 
     fn slice(&self, start_address: Address, length: u16) -> &[u8] {
-        let start_address = start_address.to_u16() as usize;
+        let start_address =
+            self.map_if_name_table_address(start_address).to_u16() as usize;
         &self.memory[start_address..start_address + length as usize]
+    }
+
+    fn map_if_name_table_address(&self, address: Address) -> Address {
+        // No modification if it's not a name table address.
+        if address < Address::from_u16(0x2000) || address >= Address::from_u16(0x3F00) {
+            return address;
+        }
+
+        use NameTableMirroring::*;
+        match self.name_table_mirroring {
+            Horizontal => Address::from_u16(address.to_u16() & 0b1111_0111_1111_1111),
+            Vertical   => Address::from_u16(address.to_u16() & 0b1111_1011_1111_1111),
+            FourScreen => unimplemented!("FourScreen isn't supported yet."),
+        }
     }
 }
 
@@ -61,12 +79,69 @@ impl Index<Address> for Memory {
     type Output = u8;
 
     fn index(&self, address: Address) -> &Self::Output {
-        &self.memory[address.to_u16() as usize]
+        &self.memory[self.map_if_name_table_address(address).to_u16() as usize]
     }
 }
 
 impl IndexMut<Address> for Memory {
     fn index_mut(&mut self, address: Address) -> &mut Self::Output {
-        &mut self.memory[address.to_u16() as usize]
+        &mut self.memory[self.map_if_name_table_address(address).to_u16() as usize]
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::ppu::address::Address;
+    use crate::ppu::name_table_mirroring::NameTableMirroring;
+
+    #[test]
+    fn horizontal_mirror_mapping_low() {
+        let memory = Memory::new(NameTableMirroring::Horizontal);
+        let result = memory.map_if_name_table_address(Address::from_u16(0x2C00));
+        assert_eq!(result, Address::from_u16(0x2400));
+    }
+
+    #[test]
+    fn horizontal_mirror_mapping_high() {
+        let memory = Memory::new(NameTableMirroring::Horizontal);
+        let result = memory.map_if_name_table_address(Address::from_u16(0x2FFF));
+        assert_eq!(result, Address::from_u16(0x27FF));
+    }
+
+    #[test]
+    fn vertical_mirror_mapping_low() {
+        let memory = Memory::new(NameTableMirroring::Vertical);
+        let result = memory.map_if_name_table_address(Address::from_u16(0x2C00));
+        assert_eq!(result, Address::from_u16(0x2800));
+    }
+
+    #[test]
+    fn vertical_mirror_mapping_high() {
+        let memory = Memory::new(NameTableMirroring::Vertical);
+        let result = memory.map_if_name_table_address(Address::from_u16(0x2FFF));
+        assert_eq!(result, Address::from_u16(0x2BFF));
+    }
+
+    #[test]
+    fn no_mapping_for_non_name_table_address_low() {
+        let memory = Memory::new(NameTableMirroring::Horizontal);
+        let result = memory.map_if_name_table_address(Address::from_u16(0x1FFF));
+        assert_eq!(result, Address::from_u16(0x1FFF));
+
+        let memory = Memory::new(NameTableMirroring::Vertical);
+        let result = memory.map_if_name_table_address(Address::from_u16(0x1FFF));
+        assert_eq!(result, Address::from_u16(0x1FFF));
+    }
+
+    #[test]
+    fn no_mapping_for_palette_index() {
+        let memory = Memory::new(NameTableMirroring::Horizontal);
+        let result = memory.map_if_name_table_address(Address::from_u16(0x3F00));
+        assert_eq!(result, Address::from_u16(0x3F00));
+
+        let memory = Memory::new(NameTableMirroring::Vertical);
+        let result = memory.map_if_name_table_address(Address::from_u16(0x3F00));
+        assert_eq!(result, Address::from_u16(0x3F00));
     }
 }

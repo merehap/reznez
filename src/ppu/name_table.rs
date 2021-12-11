@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::tile_number::TileNumber;
 
@@ -25,6 +27,17 @@ impl <'a> NameTable<'a> {
             self.attribute_table.palette_table_index(tile_number);
 
         (tile_entry, palette_table_index)
+    }
+}
+
+impl fmt::Display for NameTable<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Nametable!")?;
+        for tile_number in TileNumber::iter() {
+            write!(f, "#{:X} ", self.tile_entry_at(tile_number).0)?;
+        }
+
+        Ok(())
     }
 }
 

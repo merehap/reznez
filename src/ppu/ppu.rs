@@ -40,7 +40,7 @@ impl Ppu {
         ) -> Ppu {
 
         Ppu {
-            memory: Memory::new(),
+            memory: Memory::new(name_table_mirroring),
             oam: Oam::new(),
             ctrl: Ctrl::new(),
             mask: Mask::new(),
@@ -73,6 +73,7 @@ impl Ppu {
     }
 
     pub fn write_vram(&mut self, value: u8) {
+        println!("VRAM Address: {}", self.vram_address);
         self.memory[self.vram_address] = value;
         let increment = self.ctrl.vram_address_increment() as u8;
         self.vram_address = self.vram_address.advance(increment);
@@ -115,13 +116,13 @@ impl Ppu {
     }
 
     fn render(&mut self) {
+        let name_table_number = self.ctrl.name_table_number();
+        println!("{}", self.name_table(name_table_number));
+
         for tile_number in TileNumber::iter() {
             for row_in_tile in 0..8 {
-                let name_table_number =
-                    self.name_table_mirroring.map_number(self.ctrl.name_table_number());
                 let (tile_index, palette_table_index) =
-                    self.name_table(name_table_number)
-                        .tile_entry_at(tile_number);
+                    self.name_table(name_table_number).tile_entry_at(tile_number);
                 let palette =
                     self.palette_table().background_palette(palette_table_index);
                 let tile_sliver: [Option<PaletteIndex>; 8] =

@@ -19,6 +19,7 @@ pub fn gui(mut nes: Nes) {
         nes.step();
 
         if nes.ppu().clock().scanline() == 0 && nes.ppu().clock().cycle() == 0 {
+            println!("Rendering!");
             let mut pixels = Vec::new();
             for row in 0..Screen::HEIGHT {
                 for column in 0..Screen::WIDTH {

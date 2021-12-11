@@ -1,6 +1,8 @@
+use std::fmt;
+
 const MAX_ADDRESS: u16 = 0x3FFF;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub struct Address(u16);
 
 impl Address {
@@ -29,5 +31,11 @@ impl Address {
 
     pub fn to_u16(&self) -> u16 {
         self.0
+    }
+}
+
+impl fmt::Display for Address {
+    fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
+        write!(f, "${:04X}", self.0)
     }
 }
