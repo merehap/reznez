@@ -2,6 +2,7 @@ use crate::ppu::address::Address;
 use crate::ppu::clock::Clock;
 use crate::ppu::memory::Memory;
 use crate::ppu::name_table::NameTable;
+use crate::ppu::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table_number::NameTableNumber;
 use crate::ppu::oam::Oam;
 use crate::ppu::pattern_table::PatternTable;
@@ -21,6 +22,7 @@ pub struct Ppu {
     oam: Oam,
     ctrl: Ctrl,
     mask: Mask,
+    name_table_mirroring: NameTableMirroring,
 
     clock: Clock,
 
@@ -32,12 +34,17 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    pub fn new(system_palette: SystemPalette) -> Ppu {
+    pub fn new(
+        name_table_mirroring: NameTableMirroring,
+        system_palette: SystemPalette,
+        ) -> Ppu {
+
         Ppu {
             memory: Memory::new(),
             oam: Oam::new(),
             ctrl: Ctrl::new(),
             mask: Mask::new(),
+            name_table_mirroring,
 
             clock: Clock::new(),
 
@@ -81,49 +88,59 @@ impl Ppu {
     }
 
     pub fn step(&mut self) -> StepEvents {
-        self.clock.tick(self.rendering_enabled());
-
         let frame_started = self.clock().is_start_of_frame();
         if frame_started {
             println!("PPU Cycle: {}, Frame: {}", self.clock().total_cycles(), self.clock().frame());
         }
-        match self.clock().total_cycles() {
-            FIRST_VBLANK_CYCLE | SECOND_VBLANK_CYCLE =>
-                return StepEvents::start_vblank(),
-            frame if frame < SECOND_VBLANK_CYCLE =>
-                return StepEvents::no_events(),
-            // The PPU has warmed up, proceed with rendering.
-            _ => {},
+
+        let total_cycles = self.clock().total_cycles();
+        let step_event;
+        if total_cycles == FIRST_VBLANK_CYCLE || total_cycles == SECOND_VBLANK_CYCLE {
+            step_event = StepEvents::start_vblank()
+        } else if total_cycles < SECOND_VBLANK_CYCLE {
+            step_event = StepEvents::no_events()
+        } else if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
+            step_event = StepEvents::start_vblank();
+        } else if self.clock.scanline() == 261 && self.clock.cycle() == 1 {
+            step_event = StepEvents::stop_vblank();
+        } else if self.clock.cycle() == 0 {
+            self.render();
+            step_event = StepEvents::no_events();
+        } else {
+            step_event = StepEvents::no_events();
         }
 
-        if self.clock.cycle() == 0 {
-            for tile_number in TileNumber::iter() {
-                for row_in_tile in 0..8 {
-                    let name_table_number = self.ctrl.name_table_number();
-                    let (tile_index, palette_table_index) =
-                        self.name_table(name_table_number).tile_entry_at(tile_number);
-                    let palette =
-                        self.palette_table().background_palette(palette_table_index);
-                    let tile_sliver: [Option<PaletteIndex>; 8] =
-                        self.pattern_table().tile_sliver_at(
-                            self.ctrl.background_table_side(),
-                            tile_index,
-                            row_in_tile,
-                            );
-                    let pixel_row = 8 * tile_number.row() + row_in_tile;
-                    for (column_in_tile, palette_index) in tile_sliver.iter().enumerate() {
-                        let pixel_column =
-                            8 * tile_number.column() + column_in_tile as u8;
-                        if let Some(palette_index) = palette_index {
-                            let rgb = self.system_palette.lookup_rgb(palette[*palette_index]);
-                            self.screen.set_pixel(pixel_column, pixel_row, rgb);
-                        }
+        self.clock.tick(self.rendering_enabled());
+        step_event
+    }
+
+    fn render(&mut self) {
+        for tile_number in TileNumber::iter() {
+            for row_in_tile in 0..8 {
+                let name_table_number =
+                    self.name_table_mirroring.map_number(self.ctrl.name_table_number());
+                let (tile_index, palette_table_index) =
+                    self.name_table(name_table_number)
+                        .tile_entry_at(tile_number);
+                let palette =
+                    self.palette_table().background_palette(palette_table_index);
+                let tile_sliver: [Option<PaletteIndex>; 8] =
+                    self.pattern_table().tile_sliver_at(
+                        self.ctrl.background_table_side(),
+                        tile_index,
+                        row_in_tile,
+                        );
+                let pixel_row = 8 * tile_number.row() + row_in_tile;
+                for (column_in_tile, palette_index) in tile_sliver.iter().enumerate() {
+                    let pixel_column =
+                        8 * tile_number.column() + column_in_tile as u8;
+                    if let Some(palette_index) = palette_index {
+                        let rgb = self.system_palette.lookup_rgb(palette[*palette_index]);
+                        self.screen.set_pixel(pixel_column, pixel_row, rgb);
                     }
                 }
             }
         }
-
-        StepEvents::no_events()
     }
 
     fn pattern_table(&self) -> PatternTable {
@@ -144,24 +161,38 @@ impl Ppu {
 }
 
 pub struct StepEvents {
-    vblank_started: bool,
+    vblank_status: VBlankStatus,
 }
 
 impl StepEvents {
     pub fn no_events() -> StepEvents {
         StepEvents {
-            vblank_started: false,
+            vblank_status: VBlankStatus::None,
         }
     }
 
     pub fn start_vblank() -> StepEvents {
         println!("Starting VBlank.");
         StepEvents {
-            vblank_started: true,
+            vblank_status: VBlankStatus::Started,
         }
     }
 
-    pub fn vblank_started(&self) -> bool {
-        self.vblank_started
+    pub fn stop_vblank() -> StepEvents {
+        println!("Starting VBlank.");
+        StepEvents {
+            vblank_status: VBlankStatus::Stopped,
+        }
     }
+
+    pub fn vblank_status(&self) -> VBlankStatus {
+        self.vblank_status
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum VBlankStatus {
+    None,
+    Started,
+    Stopped,
 }

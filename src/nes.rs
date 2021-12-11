@@ -7,7 +7,7 @@ use crate::cpu::cpu::Cpu;
 use crate::cpu::instruction::Instruction;
 use crate::cpu::memory::Memory;
 use crate::cpu::port_access::{PortAccess, AccessMode};
-use crate::ppu::ppu::Ppu;
+use crate::ppu::ppu::{Ppu, VBlankStatus};
 use crate::ppu::register::ctrl::Ctrl;
 use crate::ppu::register::mask::Mask;
 use crate::mapper::mapper0::Mapper0;
@@ -49,8 +49,11 @@ impl Nes {
             cpu: Cpu::new(
                 Nes::initialize_memory(config.ines().clone()),
                 config.program_counter_source(),
-            ),
-            ppu: Ppu::new(config.system_palette().clone()),
+                ),
+            ppu: Ppu::new(
+                config.ines().name_table_mirroring(),
+                config.system_palette().clone(),
+                ),
             cycle: 0,
         }
     }
@@ -73,8 +76,10 @@ impl Nes {
         }
 
         let step_events = self.ppu.step();
-        if step_events.vblank_started() {
-            self.set_vblank();
+        match step_events.vblank_status() {
+            VBlankStatus::Started => self.set_vblank(),
+            VBlankStatus::Stopped => self.clear_vblank(),
+            _ => {},
         }
 
         self.cycle += 1;
@@ -129,11 +134,13 @@ impl Nes {
     }
 
     fn set_vblank(&mut self) {
+        println!("VBlank set.");
         let status = self.cpu.memory.read(PPUSTATUS);
         self.cpu.memory.write(PPUSTATUS, status | 0b1000_0000);
     }
 
     fn clear_vblank(&mut self) {
+        println!("VBlank cleared.");
         let status = self.cpu.memory.read(PPUSTATUS);
         self.cpu.memory.write(PPUSTATUS, status & 0b0111_1111);
     }

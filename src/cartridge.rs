@@ -1,3 +1,5 @@
+use crate::ppu::name_table_mirroring::NameTableMirroring;
+
 const INES_HEADER_CONSTANT: &[u8] = &[0x4E, 0x45, 0x53, 0x1A];
 const PRG_ROM_CHUNK_LENGTH: usize = 0x4000;
 const CHR_ROM_CHUNK_LENGTH: usize = 0x2000;
@@ -106,6 +108,10 @@ impl INes {
     pub fn mapper_number(&self) -> u8 {
         self.mapper_number
     }
+
+    pub fn name_table_mirroring(&self) -> NameTableMirroring {
+        self.name_table_mirroring
+    }
     
     pub fn prg_rom(&self) -> Vec<u8> {
         let mut result = Vec::new();
@@ -132,13 +138,6 @@ impl INes {
     pub fn chr_rom_chunk_count(&self) -> u8 {
         self.chr_rom.len() as u8
     }
-}
-
-#[derive(Clone)]
-enum NameTableMirroring {
-    Vertical,
-    Horizontal,
-    FourScreen,
 }
 
 #[derive(Clone)]
