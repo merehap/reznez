@@ -15,12 +15,14 @@ pub struct Config {
 
 impl Config {
     pub fn default(rom_path: &Path) -> Config {
+        println!("Loading ROM '{}'.", rom_path.display());
         let mut rom = Vec::new();
         File::open(rom_path)
             .unwrap()
             .read_to_end(&mut rom)
             .unwrap();
         let ines = INes::load(&rom).unwrap();
+        println!("ROM loaded.\n{:?}", ines);
 
         let system_palette = SystemPalette::parse(include_str!("../palettes/2C02.pal"))
             .unwrap();

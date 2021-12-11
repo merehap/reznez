@@ -68,8 +68,8 @@ impl Memory {
 
         use NameTableMirroring::*;
         match self.name_table_mirroring {
-            Horizontal => Address::from_u16(address.to_u16() & 0b1111_0111_1111_1111),
-            Vertical   => Address::from_u16(address.to_u16() & 0b1111_1011_1111_1111),
+            Horizontal => Address::from_u16(address.to_u16() & 0b1111_1011_1111_1111),
+            Vertical   => Address::from_u16(address.to_u16() & 0b1111_0111_1111_1111),
             FourScreen => unimplemented!("FourScreen isn't supported yet."),
         }
     }
@@ -99,28 +99,28 @@ mod test {
     fn horizontal_mirror_mapping_low() {
         let memory = Memory::new(NameTableMirroring::Horizontal);
         let result = memory.map_if_name_table_address(Address::from_u16(0x2C00));
-        assert_eq!(result, Address::from_u16(0x2400));
+        assert_eq!(result, Address::from_u16(0x2800));
     }
 
     #[test]
     fn horizontal_mirror_mapping_high() {
         let memory = Memory::new(NameTableMirroring::Horizontal);
         let result = memory.map_if_name_table_address(Address::from_u16(0x2FFF));
-        assert_eq!(result, Address::from_u16(0x27FF));
+        assert_eq!(result, Address::from_u16(0x2BFF));
     }
 
     #[test]
     fn vertical_mirror_mapping_low() {
         let memory = Memory::new(NameTableMirroring::Vertical);
         let result = memory.map_if_name_table_address(Address::from_u16(0x2C00));
-        assert_eq!(result, Address::from_u16(0x2800));
+        assert_eq!(result, Address::from_u16(0x2400));
     }
 
     #[test]
     fn vertical_mirror_mapping_high() {
         let memory = Memory::new(NameTableMirroring::Vertical);
         let result = memory.map_if_name_table_address(Address::from_u16(0x2FFF));
-        assert_eq!(result, Address::from_u16(0x2BFF));
+        assert_eq!(result, Address::from_u16(0x27FF));
     }
 
     #[test]

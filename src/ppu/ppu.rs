@@ -65,15 +65,17 @@ impl Ppu {
     }
 
     pub fn set_ctrl(&mut self, ctrl: Ctrl) {
+        println!("Setting PPUCTRL: {:?}", ctrl);
         self.ctrl = ctrl;
     }
 
     pub fn set_mask(&mut self, mask: Mask) {
+        println!("Setting PPUMASK: {:?}", mask);
         self.mask = mask;
     }
 
     pub fn write_vram(&mut self, value: u8) {
-        println!("VRAM Address: {}", self.vram_address);
+        println!("Writing to VRAM Address: [{}]={}", self.vram_address, value);
         self.memory[self.vram_address] = value;
         let increment = self.ctrl.vram_address_increment() as u8;
         self.vram_address = self.vram_address.advance(increment);
@@ -117,7 +119,7 @@ impl Ppu {
 
     fn render(&mut self) {
         let name_table_number = self.ctrl.name_table_number();
-        println!("{}", self.name_table(name_table_number));
+        println!("Nametable #{:?}: {}", name_table_number, self.name_table(name_table_number));
 
         for tile_number in TileNumber::iter() {
             for row_in_tile in 0..8 {

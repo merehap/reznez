@@ -5,7 +5,7 @@ const PRG_ROM_CHUNK_LENGTH: usize = 0x4000;
 const CHR_ROM_CHUNK_LENGTH: usize = 0x2000;
 
 // See https://wiki.nesdev.org/w/index.php?title=INES
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct INes {
     mapper_number: u8,
     name_table_mirroring: NameTableMirroring,
@@ -140,12 +140,12 @@ impl INes {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct INes2 {
 
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum ConsoleType {
     Nes,
     VsUnisystem,
@@ -153,7 +153,7 @@ enum ConsoleType {
     Extended,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct PlayChoice {
     inst_rom: [u8; 8192],
     prom_data: [u8; 16],

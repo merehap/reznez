@@ -2,7 +2,7 @@ use crate::ppu::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::get_bit;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Ctrl {
     vblank_nmi: VBlankNmi,
     ext_pin_role: ExtPinRole,
@@ -103,25 +103,25 @@ impl Ctrl {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum VBlankNmi {
     Off,
     On,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum ExtPinRole {
     Read,
     Write,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum SpriteWidth {
     Normal = 8,
     Wide = 16,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum VramAddressIncrement {
     Right = 1,
     Down = 32,

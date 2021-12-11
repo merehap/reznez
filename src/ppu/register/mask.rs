@@ -1,6 +1,6 @@
 use crate::util::get_bit;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Mask {
     emphasize_blue: bool,
     emphasize_green: bool,
