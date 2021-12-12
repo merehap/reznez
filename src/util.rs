@@ -20,15 +20,16 @@ pub fn unpack_bools(value: u8) -> [bool; 8] {
 }
 
 pub fn get_bit(byte: u8, index: usize) -> bool {
-    (byte >> (7 - index as u8)) != 0
+    let mask = 1 << (7 - index) as u8;
+    byte & mask != 0
 }
 
-pub fn reset_bit(byte: &mut u8, index: usize) {
-    *byte &= !(1 << (7 - index))
+pub fn clear_bit(byte: u8, index: usize) -> u8 {
+    byte & !(1 << (7 - index))
 }
 
-pub fn set_bit(byte: &mut u8, index: usize) {
-    *byte |= 1 << (7 - index)
+pub fn set_bit(byte: u8, index: usize) -> u8 {
+    byte & (1 << (7 - index))
 }
 
 #[cfg(test)]
@@ -63,5 +64,25 @@ mod tests {
     #[test]
     fn unpack_mixture() {
         assert_eq!(unpack_bools(0xDA), [true, true, false, true, true, false, true, false]);
+    }
+
+    #[test]
+    fn get_bit_0_true() {
+        assert_eq!(get_bit(0b10100110, 0), true);
+    }
+
+    #[test]
+    fn get_bit_7_false() {
+        assert_eq!(get_bit(0b10100110, 7), false);
+    }
+
+    #[test]
+    fn clear_bit_clears() {
+        assert_eq!(clear_bit(0b10100110, 5), 0b10100010);
+    }
+
+    #[test]
+    fn clear_already_cleared_bit() {
+        assert_eq!(clear_bit(0b10100110, 4), 0b10100110);
     }
 }

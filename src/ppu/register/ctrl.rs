@@ -60,9 +60,9 @@ impl Ctrl {
                 },
             vram_address_increment:
                 if get_bit(value, 5) {
-                    VramAddressIncrement::Right
-                } else {
                     VramAddressIncrement::Down
+                } else {
+                    VramAddressIncrement::Right
                 },
             name_table_number:
                 match (get_bit(value, 6), get_bit(value, 7)) {

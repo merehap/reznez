@@ -22,7 +22,7 @@ impl Config {
             .read_to_end(&mut rom)
             .unwrap();
         let ines = INes::load(&rom).unwrap();
-        println!("ROM loaded.\n{:?}", ines);
+        println!("ROM loaded.\n{}", ines);
 
         let system_palette = SystemPalette::parse(include_str!("../palettes/2C02.pal"))
             .unwrap();

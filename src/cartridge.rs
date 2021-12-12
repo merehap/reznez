@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::ppu::name_table_mirroring::NameTableMirroring;
 
 const INES_HEADER_CONSTANT: &[u8] = &[0x4E, 0x45, 0x53, 0x1A];
@@ -17,7 +19,7 @@ pub struct INes {
     prg_rom: Vec<[u8; PRG_ROM_CHUNK_LENGTH]>,
     chr_rom: Vec<[u8; CHR_ROM_CHUNK_LENGTH]>,
     console_type: ConsoleType,
-    title: Vec<u8>,
+    title: String,
 }
 
 impl INes {
@@ -89,6 +91,11 @@ impl INes {
         if !(title.is_empty() || title.len() == 127 || title.len() == 128) {
             panic!("Title must be empty or 127 or 128 bytes, but was {} bytes.", title.len());
         }
+        let title = std::str::from_utf8(&title)
+            .map_err(|err| err.to_string())?
+            .chars()
+            .take_while(|&c| c != '\u{0}')
+            .collect();
 
         Ok(INes {
             mapper_number,
@@ -137,6 +144,24 @@ impl INes {
 
     pub fn chr_rom_chunk_count(&self) -> u8 {
         self.chr_rom.len() as u8
+    }
+}
+
+impl fmt::Display for INes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Mapper: {}", self.mapper_number)?;
+        writeln!(f, "Nametable mirroring: {:?}", self.name_table_mirroring)?;
+        writeln!(f, "Persistent memory: {}", self.has_persistent_memory)?;
+        writeln!(f, "Ripper: {}", self.ripper_name)?;
+        writeln!(f, "iNES2 present: {}", self.ines2.is_some())?;
+
+        writeln!(f, "Trainer present: {}", self.trainer.is_some())?;
+        writeln!(f, "PRG ROM chunk count: {}", self.prg_rom.len())?;
+        writeln!(f, "CHR ROM chunk count: {}", self.chr_rom.len())?;
+        writeln!(f, "Console type: {:?}", self.console_type)?;
+        writeln!(f, "Title: {:?}", self.title)?;
+
+        Ok(())
     }
 }
 
