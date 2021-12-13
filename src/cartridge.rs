@@ -171,7 +171,7 @@ struct INes2 {
 }
 
 #[derive(Clone, Debug)]
-enum ConsoleType {
+pub enum ConsoleType {
     Nes,
     VsUnisystem,
     PlayChoice10(Box<PlayChoice>),
@@ -179,8 +179,30 @@ enum ConsoleType {
 }
 
 #[derive(Clone, Debug)]
-struct PlayChoice {
+pub struct PlayChoice {
     inst_rom: [u8; 8192],
     prom_data: [u8; 16],
     prom_counter_out: [u8; 16],
+}
+
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    pub fn sample_ines() -> INes {
+        INes {
+            mapper_number: 0,
+            name_table_mirroring: NameTableMirroring::Horizontal,
+            has_persistent_memory: false,
+            ripper_name: "Test Ripper".to_string(),
+            ines2: None,
+
+            trainer: None,
+            prg_rom: vec![[0xEA; PRG_ROM_CHUNK_LENGTH]],
+            chr_rom: Vec::new(),
+            console_type: ConsoleType::Nes,
+            title: "Test ROM".to_string(),
+        }
+    }
 }

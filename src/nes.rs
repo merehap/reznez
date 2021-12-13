@@ -7,8 +7,8 @@ use crate::cpu::cpu::Cpu;
 use crate::cpu::instruction::Instruction;
 use crate::cpu::memory::Memory;
 use crate::cpu::port_access::{PortAccess, AccessMode};
-use crate::ppu::ppu::{Ppu, VBlankStatus};
-use crate::ppu::register::ctrl::Ctrl;
+use crate::ppu::ppu::{Ppu, VBlankEvent};
+use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
 use crate::mapper::mapper0::Mapper0;
 
@@ -76,10 +76,14 @@ impl Nes {
         }
 
         let step_events = self.ppu.step();
-        match step_events.vblank_status() {
-            VBlankStatus::Started => self.set_vblank(),
-            VBlankStatus::Stopped => self.clear_vblank(),
-            _ => {},
+        match step_events.vblank_event() {
+            VBlankEvent::Started => self.set_vblank(),
+            VBlankEvent::Stopped => self.clear_vblank(),
+            VBlankEvent::None => {},
+        }
+
+        if step_events.nmi_trigger() {
+            self.schedule_nmi_if_enabled();
         }
 
         self.cycle += 1;
@@ -112,7 +116,15 @@ impl Nes {
 
         use AccessMode::*;
         match (port_access.address, port_access.access_mode) {
-            (PPUCTRL, Write) => self.ppu.set_ctrl(Ctrl::from_u8(value)),
+            (PPUCTRL, Write) => {
+                let old_vblank_nmi = self.ppu.ctrl().vblank_nmi();
+                let ctrl = Ctrl::from_u8(value);
+                self.ppu.set_ctrl(ctrl);
+                // A second NMI can only be scheduled if VBlankNmi was toggled.
+                if old_vblank_nmi == VBlankNmi::Off {
+                    self.schedule_nmi_if_enabled();
+                }
+            },
             (PPUMASK, Write) => self.ppu.set_mask(Mask::from_u8(value)),
             (OAMADDR, Write) => unimplemented!(),
             (PPUSCROLL, Write) => println!("PPUSCROLL was written to (not supported)."),
@@ -143,5 +155,124 @@ impl Nes {
         println!("VBlank cleared.");
         let status = self.cpu.memory.read(PPUSTATUS);
         self.cpu.memory.write(PPUSTATUS, status & 0b0111_1111);
+    }
+
+    fn schedule_nmi_if_enabled(&mut self) {
+        if self.ppu.nmi_enabled() {
+            // Execute an extra NMI beyond the vblank-start NMI.
+            self.cpu.schedule_nmi();
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::cpu::cpu::ProgramCounterSource;
+    use crate::ppu::palette::system_palette::SystemPalette;
+
+    use crate::cartridge::tests::sample_ines;
+
+    use super::*;
+
+    #[test]
+    fn nmi_enabled_upon_vblank() {
+        let mut nes = sample_nes();
+        nes.ppu.set_ctrl(Ctrl::from_u8(0b1000_0000));
+        step_until_vblank_nmi_enabled(&mut nes);
+        assert!(nes.cpu.nmi_pending());
+    }
+
+    #[test]
+    fn second_nmi_fails_without_ctrl_toggle() {
+        let mut nes = sample_nes();
+        nes.ppu.set_ctrl(Ctrl::from_u8(0b1000_0000));
+        step_until_vblank_nmi_enabled(&mut nes);
+        assert!(nes.cpu.nmi_pending());
+
+        while nes.step().is_none() {}
+        nes.step();
+
+        assert!(
+            !nes.cpu.nmi_pending(),
+            "nmi_pending should have been cleared after one instruction."
+            );
+
+        // Disable vblank_nmi.
+        write_ppuctrl_through_opcode_injection(&mut nes, 0b0000_0000);
+
+        assert!(
+            !nes.cpu.nmi_pending(),
+            "A second NMI should not have been allowed without toggling CTRL.0 .",
+            );
+    }
+
+    #[test]
+    fn second_nmi_succeeds_after_ctrl_toggle() {
+        let mut nes = sample_nes();
+        nes.ppu.set_ctrl(Ctrl::from_u8(0b1000_0000));
+        step_until_vblank_nmi_enabled(&mut nes);
+        assert!(nes.cpu.nmi_pending());
+
+        while nes.step().is_none() {}
+        nes.step();
+
+        assert!(
+            !nes.cpu.nmi_pending(),
+            "nmi_pending should have been cleared after one instruction."
+            );
+
+        // Disable vblank_nmi.
+        write_ppuctrl_through_opcode_injection(&mut nes, 0b0000_0000);
+        // Enable vblank_nmi.
+        write_ppuctrl_through_opcode_injection(&mut nes, 0b1000_0000);
+
+        assert!(
+            nes.cpu.nmi_pending(),
+            "A second NMI should have been allowed after toggling CTRL.0 .",
+            );
+    }
+
+    fn sample_nes() -> Nes {
+        let ines = sample_ines();
+        let name_table_mirroring = ines.name_table_mirroring();
+        let system_palette =
+            SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
+
+        Nes {
+            cpu: Cpu::new(
+                Nes::initialize_memory(ines),
+                ProgramCounterSource::Override(Address::new(0x2000)),
+                ),
+            ppu: Ppu::new(name_table_mirroring, system_palette),
+            cycle: 0,
+        }
+    }
+
+    fn step_until_vblank_nmi_enabled(nes: &mut Nes) {
+        while !nes.ppu.nmi_enabled() {
+            assert!(!nes.cpu.nmi_pending(), "NMI must not be pending before one is scheduled.");
+            nes.step();
+            if nes.ppu.clock().total_cycles() > 200_000 {
+                panic!("It took too long for the PPU to enable NMI.");
+            }
+        }
+    }
+
+    fn write_ppuctrl_through_opcode_injection(nes: &mut Nes, ctrl: u8) {
+        // STA: Store to the accumulator.
+        nes.cpu.memory.write(nes.cpu.program_counter().advance(0), 0xA9);
+        // Store VBLANK_NMI DISABLED to the accumulator.
+        nes.cpu.memory.write(nes.cpu.program_counter().advance(1), ctrl);
+
+        // LDA: Load the accumulator into a memory location.
+        nes.cpu.memory.write(nes.cpu.program_counter().advance(2), 0x8D);
+        // Low byte of PPUCTRL, the address to be set.
+        nes.cpu.memory.write(nes.cpu.program_counter().advance(3), 0x00);
+        // High byte of PPUCTRL, the address to be set.
+        nes.cpu.memory.write(nes.cpu.program_counter().advance(4), 0x20);
+
+        // Execute the two op codes we just injected.
+        while nes.step().is_none() {}
+        while nes.step().is_none() {}
     }
 }

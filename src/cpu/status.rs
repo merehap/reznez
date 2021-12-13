@@ -40,12 +40,38 @@ impl Status {
         status
     }
 
-    pub fn to_byte(self) -> u8 {
+    pub fn to_register_byte(self) -> u8 {
+        util::pack_bools([
+            self.negative,
+            self.overflow,
+            false,
+            false,
+            self.decimal,
+            self.interrupts_disabled,
+            self.zero,
+            self.carry,
+        ])
+    }
+
+    pub fn to_instruction_byte(self) -> u8 {
         util::pack_bools([
             self.negative,
             self.overflow,
             true,
             true,
+            self.decimal,
+            self.interrupts_disabled,
+            self.zero,
+            self.carry,
+        ])
+    }
+
+    pub fn to_interrupt_byte(self) -> u8 {
+        util::pack_bools([
+            self.negative,
+            self.overflow,
+            true,
+            false,
             self.decimal,
             self.interrupts_disabled,
             self.zero,
@@ -106,12 +132,12 @@ mod tests {
 
     #[test]
     fn all_set_to_byte() {
-        assert_eq!(ALL_SET.to_byte(), 0b1111_1111);
+        assert_eq!(ALL_SET.to_instruction_byte(), 0b1111_1111);
     }
 
     #[test]
     fn all_set_round_trip() {
-        assert_eq!(Status::from_byte(ALL_SET.to_byte()), ALL_SET);
+        assert_eq!(Status::from_byte(ALL_SET.to_instruction_byte()), ALL_SET);
     }
 
     #[test]
@@ -121,12 +147,12 @@ mod tests {
 
     #[test]
     fn none_set_to_byte() {
-        assert_eq!(NONE_SET.to_byte(), 0b0011_0000);
+        assert_eq!(NONE_SET.to_instruction_byte(), 0b0011_0000);
     }
 
     #[test]
     fn none_set_round_trip() {
-        assert_eq!(Status::from_byte(NONE_SET.to_byte()), NONE_SET);
+        assert_eq!(Status::from_byte(NONE_SET.to_instruction_byte()), NONE_SET);
     }
 
     #[test]
@@ -136,11 +162,11 @@ mod tests {
 
     #[test]
     fn mixed_set_round_trip() {
-        assert_eq!(Status::from_byte(MIXED_SET.to_byte()), MIXED_SET);
+        assert_eq!(Status::from_byte(MIXED_SET.to_instruction_byte()), MIXED_SET);
     }
 
     #[test]
     fn mixed_set_to_byte() {
-        assert_eq!(MIXED_SET.to_byte(), 0b1011_1001);
+        assert_eq!(MIXED_SET.to_instruction_byte(), 0b1011_1001);
     }
 }

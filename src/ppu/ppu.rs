@@ -9,7 +9,7 @@ use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::system_palette::SystemPalette;
-use crate::ppu::register::ctrl::Ctrl;
+use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
 use crate::ppu::screen::Screen;
 use crate::ppu::tile_number::TileNumber;
@@ -29,6 +29,7 @@ pub struct Ppu {
     screen: Screen,
     system_palette: SystemPalette,
 
+    is_nmi_period: bool,
     vram_address: Address,
     next_vram_upper_byte: Option<u8>,
 }
@@ -51,6 +52,7 @@ impl Ppu {
             screen: Screen::new(),
             system_palette,
 
+            is_nmi_period: false,
             vram_address: Address::from_u16(0),
             next_vram_upper_byte: None,
         }
@@ -62,6 +64,10 @@ impl Ppu {
 
     pub fn screen(&self) -> &Screen {
         &self.screen
+    }
+
+    pub fn ctrl(&self) -> Ctrl {
+        self.ctrl
     }
 
     pub fn set_ctrl(&mut self, ctrl: Ctrl) {
@@ -90,21 +96,32 @@ impl Ppu {
         }
     }
 
+    pub fn nmi_enabled(&self) -> bool {
+        self.is_nmi_period && self.ctrl.vblank_nmi() == VBlankNmi::On
+    }
+
     pub fn step(&mut self) -> StepEvents {
         let frame_started = self.clock().is_start_of_frame();
         if frame_started {
-            println!("PPU Cycle: {}, Frame: {}", self.clock().total_cycles(), self.clock().frame());
+            println!(
+                "PPU Cycle: {}, Frame: {}",
+                self.clock().total_cycles(),
+                self.clock().frame(),
+                );
         }
 
         let total_cycles = self.clock().total_cycles();
         let step_event;
+        // TODO: Fix the first and second vblank cycles to not be special-cased if possible.
         if total_cycles == FIRST_VBLANK_CYCLE || total_cycles == SECOND_VBLANK_CYCLE {
             step_event = StepEvents::start_vblank()
         } else if total_cycles < SECOND_VBLANK_CYCLE {
             step_event = StepEvents::no_events()
         } else if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
+            self.is_nmi_period = true;
             step_event = StepEvents::start_vblank();
         } else if self.clock.scanline() == 261 && self.clock.cycle() == 1 {
+            self.is_nmi_period = false;
             step_event = StepEvents::stop_vblank();
         } else if self.clock.cycle() == 0 {
             self.render();
@@ -164,37 +181,50 @@ impl Ppu {
 }
 
 pub struct StepEvents {
-    vblank_status: VBlankStatus,
+    vblank_event: VBlankEvent,
+    nmi_trigger: bool,
 }
 
 impl StepEvents {
     pub fn no_events() -> StepEvents {
         StepEvents {
-            vblank_status: VBlankStatus::None,
+            vblank_event: VBlankEvent::None,
+            nmi_trigger: false,
         }
     }
 
     pub fn start_vblank() -> StepEvents {
-        println!("Starting VBlank.");
         StepEvents {
-            vblank_status: VBlankStatus::Started,
+            vblank_event: VBlankEvent::Started,
+            nmi_trigger: true,
         }
     }
 
     pub fn stop_vblank() -> StepEvents {
-        println!("Starting VBlank.");
         StepEvents {
-            vblank_status: VBlankStatus::Stopped,
+            vblank_event: VBlankEvent::Stopped,
+            nmi_trigger: false,
         }
     }
 
-    pub fn vblank_status(&self) -> VBlankStatus {
-        self.vblank_status
+    pub fn vblank_event(&self) -> VBlankEvent {
+        self.vblank_event
+    }
+
+    pub fn nmi_trigger(&self) -> bool {
+        self.nmi_trigger
     }
 }
 
 #[derive(Clone, Copy)]
-pub enum VBlankStatus {
+pub enum VBlankEvent {
+    None,
+    Started,
+    Stopped,
+}
+
+#[derive(Clone, Copy)]
+pub enum NmiEvent {
     None,
     Started,
     Stopped,

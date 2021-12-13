@@ -17,7 +17,7 @@ fn instruction_templates() -> [InstructionTemplate; 256] {
 
     let jam = (JAM, Imp, 0, No);
     let codes: [[(OpCode, AccessMode, u8, ExtraCycle); 8]; 32] = [
-        /*00*/           /*20*/          /*40*/          /*60*/          /*80*/          /*a0*/          /*c0*/          /*e0*/
+        /*00*/           /*20*/          /*40*/          /*60*/          /*80*/          /*A0*/          /*C0*/          /*e0*/
 /*+00*/ [(BRK,Imp,7,No), (JSR,Abs,6,No), (RTI,Imp,6,No), (RTS,Imp,6,No), (NOP,Imm,2,No), (LDY,Imm,2,No), (CPY,Imm,2,No), (CPX,Imm,2,No)],
 /*+01*/ [(ORA,IzX,6,No), (AND,IzX,6,No), (EOR,IzX,6,No), (ADC,IzX,6,No), (STA,IzX,6,No), (LDA,IzX,6,No), (CMP,IzX,6,No), (SBC,IzX,6,No)],
 /*+02*/ [jam           , jam           , jam           , jam           , jam           , (LDX,Imm,2,No), jam           , jam           ],
@@ -28,12 +28,12 @@ fn instruction_templates() -> [InstructionTemplate; 256] {
 /*+07*/ [(SLO,ZP ,5,No), (RLA,ZP ,5,No), (SRE,ZP ,5,No), (RRA,ZP ,5,No), (SAX,ZP ,3,No), (LAX,ZP ,3,No), (DCP,ZP ,5,No), (ISC,ZP ,5,No)],
 /*+08*/ [(PHP,Imp,3,No), (PLP,Imp,4,No), (PHA,Imp,3,No), (PLA,Imp,4,No), (DEY,Imp,2,No), (TAY,Imp,2,No), (INY,Imp,2,No), (INX,Imp,2,No)],
 /*+09*/ [(ORA,Imm,2,No), (AND,Imm,2,No), (EOR,Imm,2,No), (ADC,Imm,2,No), (NOP,Imm,2,No), (LDA,Imm,2,No), (CMP,Imm,2,No), (SBC,Imm,2,No)],
-/*+0a*/ [(ASL,Imp,2,No), (ROL,Imp,2,No), (LSR,Imp,2,No), (ROR,Imp,2,No), (TXA,Imp,2,No), (TAX,Imp,2,No), (DEX,Imp,2,No), (NOP,Imp,2,No)],
-/*+0b*/ [(ANC,Imm,2,No), (ANC,Imm,2,No), (ALR,Imm,2,No), (ARR,Imm,2,No), (XAA,Imm,2,No), (LAX,Imm,2,No), (AXS,Imm,2,No), (SBC,Imm,2,No)],
-/*+0c*/ [(NOP,Abs,4,No), (BIT,Abs,4,No), (JMP,Abs,3,No), (JMP,Ind,5,No), (STY,Abs,4,No), (LDY,Abs,4,No), (CPY,Abs,4,No), (CPX,Abs,4,No)],
-/*+0d*/ [(ORA,Abs,4,No), (AND,Abs,4,No), (EOR,Abs,4,No), (ADC,Abs,4,No), (STA,Abs,4,No), (LDA,Abs,4,No), (CMP,Abs,4,No), (SBC,Abs,4,No)],
-/*+0e*/ [(ASL,Abs,6,No), (ROL,Abs,6,No), (LSR,Abs,6,No), (ROR,Abs,6,No), (STX,Abs,4,No), (LDX,Abs,4,No), (DEC,Abs,6,No), (INC,Abs,6,No)],
-/*+0f*/ [(SLO,Abs,6,No), (RLA,Abs,6,No), (SRE,Abs,6,No), (RRA,Abs,6,No), (SAX,Abs,4,No), (LAX,Abs,4,No), (DCP,Abs,6,No), (ISC,Abs,6,No)],
+/*+0A*/ [(ASL,Imp,2,No), (ROL,Imp,2,No), (LSR,Imp,2,No), (ROR,Imp,2,No), (TXA,Imp,2,No), (TAX,Imp,2,No), (DEX,Imp,2,No), (NOP,Imp,2,No)],
+/*+0B*/ [(ANC,Imm,2,No), (ANC,Imm,2,No), (ALR,Imm,2,No), (ARR,Imm,2,No), (XAA,Imm,2,No), (LAX,Imm,2,No), (AXS,Imm,2,No), (SBC,Imm,2,No)],
+/*+0C*/ [(NOP,Abs,4,No), (BIT,Abs,4,No), (JMP,Abs,3,No), (JMP,Ind,5,No), (STY,Abs,4,No), (LDY,Abs,4,No), (CPY,Abs,4,No), (CPX,Abs,4,No)],
+/*+0D*/ [(ORA,Abs,4,No), (AND,Abs,4,No), (EOR,Abs,4,No), (ADC,Abs,4,No), (STA,Abs,4,No), (LDA,Abs,4,No), (CMP,Abs,4,No), (SBC,Abs,4,No)],
+/*+0E*/ [(ASL,Abs,6,No), (ROL,Abs,6,No), (LSR,Abs,6,No), (ROR,Abs,6,No), (STX,Abs,4,No), (LDX,Abs,4,No), (DEC,Abs,6,No), (INC,Abs,6,No)],
+/*+0F*/ [(SLO,Abs,6,No), (RLA,Abs,6,No), (SRE,Abs,6,No), (RRA,Abs,6,No), (SAX,Abs,4,No), (LAX,Abs,4,No), (DCP,Abs,6,No), (ISC,Abs,6,No)],
 
 /*+10*/ [(BPL,Rel,2,PB), (BMI,Rel,2,PB), (BVC,Rel,2,PB), (BVS,Rel,2,PB), (BCC,Rel,2,PB), (BCS,Rel,2,PB), (BNE,Rel,2,PB), (BEQ,Rel,2,PB)],
 /*+11*/ [(ORA,IzY,5,PB), (AND,IzY,5,PB), (EOR,IzY,5,PB), (ADC,IzY,5,PB), (STA,IzY,6,No), (LDA,IzY,5,PB), (CMP,IzY,5,PB), (SBC,IzY,5,PB)],
@@ -45,12 +45,12 @@ fn instruction_templates() -> [InstructionTemplate; 256] {
 /*+17*/ [(SLO,ZPX,6,No), (RLA,ZPX,6,No), (SRE,ZPX,6,No), (RRA,ZPX,6,No), (SAX,ZPY,4,No), (LAX,ZPY,4,No), (DCP,ZPX,6,No), (ISC,ZPX,6,No)],
 /*+18*/ [(CLC,Imp,2,No), (SEC,Imp,2,No), (CLI,Imp,2,No), (SEI,Imp,2,No), (TYA,Imp,2,No), (CLV,Imp,2,No), (CLD,Imp,2,No), (SED,Imp,2,No)],
 /*+19*/ [(ORA,AbY,4,PB), (AND,AbY,4,PB), (EOR,AbY,4,PB), (ADC,AbY,4,PB), (STA,AbY,5,No), (LDA,AbY,4,PB), (CMP,AbY,4,PB), (SBC,AbY,4,PB)],
-/*+1a*/ [(NOP,Imp,2,No), (NOP,Imp,2,No), (NOP,Imp,2,No), (NOP,Imp,2,No), (TXS,Imp,2,No), (TSX,Imp,2,No), (NOP,Imp,2,No), (NOP,Imp,2,No)],
-/*+1b*/ [(SLO,AbY,7,No), (RLA,AbY,7,No), (SRE,AbY,7,No), (RRA,AbY,7,No), (TAS,AbY,5,No), (LAS,AbY,4,PB), (DCP,AbY,7,No), (ISC,AbY,7,No)],
-/*+1c*/ [(NOP,AbX,4,PB), (NOP,AbX,4,PB), (NOP,AbX,4,PB), (NOP,AbX,4,PB), (SHY,AbX,5,No), (LDY,AbX,4,PB), (NOP,AbX,4,PB), (NOP,AbX,4,PB)],
-/*+1d*/ [(ORA,AbX,4,PB), (AND,AbX,4,PB), (EOR,AbX,4,PB), (ADC,AbX,4,PB), (STA,AbX,5,No), (LDA,AbX,4,PB), (CMP,AbX,4,PB), (SBC,AbX,4,PB)],
-/*+1e*/ [(ASL,AbX,7,No), (ROL,AbX,7,No), (LSR,AbX,7,No), (ROR,AbX,7,No), (SHX,AbY,5,No), (LDX,AbY,4,PB), (DEC,AbX,7,No), (INC,AbX,7,No)],
-/*+1f*/ [(SLO,AbX,7,No), (RLA,AbX,7,No), (SRE,AbX,7,No), (RRA,AbX,7,No), (AHX,AbY,5,No), (LAX,AbY,4,PB), (DCP,AbX,7,No), (ISC,AbX,7,No)],
+/*+1A*/ [(NOP,Imp,2,No), (NOP,Imp,2,No), (NOP,Imp,2,No), (NOP,Imp,2,No), (TXS,Imp,2,No), (TSX,Imp,2,No), (NOP,Imp,2,No), (NOP,Imp,2,No)],
+/*+1B*/ [(SLO,AbY,7,No), (RLA,AbY,7,No), (SRE,AbY,7,No), (RRA,AbY,7,No), (TAS,AbY,5,No), (LAS,AbY,4,PB), (DCP,AbY,7,No), (ISC,AbY,7,No)],
+/*+1C*/ [(NOP,AbX,4,PB), (NOP,AbX,4,PB), (NOP,AbX,4,PB), (NOP,AbX,4,PB), (SHY,AbX,5,No), (LDY,AbX,4,PB), (NOP,AbX,4,PB), (NOP,AbX,4,PB)],
+/*+1D*/ [(ORA,AbX,4,PB), (AND,AbX,4,PB), (EOR,AbX,4,PB), (ADC,AbX,4,PB), (STA,AbX,5,No), (LDA,AbX,4,PB), (CMP,AbX,4,PB), (SBC,AbX,4,PB)],
+/*+1E*/ [(ASL,AbX,7,No), (ROL,AbX,7,No), (LSR,AbX,7,No), (ROR,AbX,7,No), (SHX,AbY,5,No), (LDX,AbY,4,PB), (DEC,AbX,7,No), (INC,AbX,7,No)],
+/*+1F*/ [(SLO,AbX,7,No), (RLA,AbX,7,No), (SRE,AbX,7,No), (RRA,AbX,7,No), (AHX,AbY,5,No), (LAX,AbY,4,PB), (DCP,AbX,7,No), (ISC,AbX,7,No)],
     ];
 
     let mut result = [InstructionTemplate::from_tuple(0x2, jam); 256];

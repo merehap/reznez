@@ -11,6 +11,7 @@ pub struct Cpu {
     status: Status,
     pub memory: Memory,
 
+    nmi_pending: bool,
     current_instruction_remaining_cycles: u8,
     cycle: u64,
 }
@@ -33,6 +34,7 @@ impl Cpu {
             status: Status::startup(),
             memory,
 
+            nmi_pending: false,
             current_instruction_remaining_cycles: 0,
             // Unclear why this is the case.
             cycle: 7,
@@ -55,7 +57,7 @@ impl Cpu {
             self.accumulator,
             self.x_index,
             self.y_index,
-            self.status.to_byte(),
+            self.status.to_register_byte(),
             self.stack_pointer(),
             self.status,
             nesting,
@@ -90,6 +92,14 @@ impl Cpu {
         self.cycle
     }
 
+    pub fn nmi_pending(&self) -> bool {
+        self.nmi_pending
+    }
+
+    pub fn schedule_nmi(&mut self) {
+        self.nmi_pending = true;
+    }
+
     pub fn step(&mut self) -> Option<Instruction> {
         self.cycle += 1;
         self.memory.reset_latch();
@@ -97,6 +107,11 @@ impl Cpu {
         if self.current_instruction_remaining_cycles != 0 {
             self.current_instruction_remaining_cycles -= 1;
             return None;
+        }
+
+        if self.nmi_pending {
+            self.nmi();
+            self.nmi_pending = false;
         }
 
         let instruction = Instruction::from_memory(
@@ -136,7 +151,7 @@ impl Cpu {
             (TXA, Imp) => self.accumulator = self.nz(self.x_index),
             (TYA, Imp) => self.accumulator = self.nz(self.y_index),
             (PHA, Imp) => self.memory.push_to_stack(self.accumulator),
-            (PHP, Imp) => self.memory.push_to_stack(self.status.to_byte()),
+            (PHP, Imp) => self.memory.push_to_stack(self.status.to_instruction_byte()),
             (PLA, Imp) => {
                 self.accumulator = self.memory.pop_from_stack();
                 self.nz(self.accumulator);
@@ -153,7 +168,7 @@ impl Cpu {
                 // Not sure why we need to increment here.
                 self.program_counter.inc();
                 self.memory.push_address_to_stack(self.program_counter);
-                self.memory.push_to_stack(self.status.to_byte());
+                self.memory.push_to_stack(self.status.to_instruction_byte());
                 self.status.interrupts_disabled = true;
                 self.program_counter = self.memory.irq_vector();
             },
@@ -393,6 +408,14 @@ impl Cpu {
         self.program_counter = destination;
 
         cycle_count
+    }
+
+    // TODO: Account for how many cycles an NMI takes.
+    fn nmi(&mut self) {
+        println!("Executing NMI.");
+        self.memory.push_address_to_stack(self.program_counter);
+        self.memory.push_to_stack(self.status.to_interrupt_byte());
+        self.program_counter = self.memory.nmi_vector();
     }
 }
 
