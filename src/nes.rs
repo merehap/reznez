@@ -126,20 +126,23 @@ impl Nes {
                 }
             },
             (PPUMASK, Write) => self.ppu.set_mask(Mask::from_u8(value)),
-            (OAMADDR, Write) => unimplemented!(),
-            (PPUSCROLL, Write) => println!("PPUSCROLL was written to (not supported)."),
-            (PPUADDR, Write) => self.ppu.write_partial_vram_address(value),
-            (OAM_DMA, Write) => unimplemented!(),
 
             // TODO: Reading the status register will clear bit 7 mentioned
             // above and also the address latch used by PPUSCROLL and PPUADDR.
             (PPUSTATUS, Read) => self.clear_vblank(),
             // PPUSTATUS is read-only.
             (PPUSTATUS, Write) => {},
+
+            (OAMADDR, Write) => unimplemented!(),
             (OAMDATA, Read) => unimplemented!(),
             (OAMDATA, Write) => unimplemented!(),
+            (OAM_DMA, Write) => unimplemented!(),
+
+            (PPUADDR, Write) => self.ppu.write_partial_vram_address(value),
             (PPUDATA, Read) => unimplemented!(),
             (PPUDATA, Write) => self.ppu.write_vram(value),
+
+            (PPUSCROLL, Write) => println!("PPUSCROLL was written to (not supported)."),
 
             (_, _) => unreachable!(),
         }
