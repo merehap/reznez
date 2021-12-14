@@ -2,6 +2,7 @@ use crate::cpu::address::Address;
 use crate::cpu::instruction::{Instruction, OpCode, Argument};
 use crate::cpu::memory::Memory;
 use crate::cpu::status::Status;
+use crate::cpu::dma_transfer::{DmaTransfer, DmaTransferState};
 
 pub struct Cpu {
     accumulator: u8,
@@ -12,6 +13,8 @@ pub struct Cpu {
     pub memory: Memory,
 
     nmi_pending: bool,
+    dma_transfer: DmaTransfer,
+
     current_instruction_remaining_cycles: u8,
     cycle: u64,
 }
@@ -35,6 +38,8 @@ impl Cpu {
             memory,
 
             nmi_pending: false,
+            dma_transfer: DmaTransfer::inactive(),
+
             current_instruction_remaining_cycles: 0,
             // Unclear why this is the case.
             cycle: 7,
@@ -100,13 +105,27 @@ impl Cpu {
         self.nmi_pending = true;
     }
 
-    pub fn step(&mut self) -> Option<Instruction> {
+    pub fn initiate_dma_transfer(&mut self, memory_page: u8, size: u16) {
+        self.dma_transfer = DmaTransfer::new(memory_page, size, self.cycle);
+    }
+
+    pub fn step(&mut self) -> StepResult {
         self.cycle += 1;
         self.memory.reset_latch();
 
+        // Normal CPU operation is suspended while the DMA transfer completes.
+        match self.dma_transfer.next() {
+            DmaTransferState::Finished =>
+                {/* No transfer in progress. Continue to normal CPU step.*/},
+            DmaTransferState::Write(address) =>
+                return StepResult::DmaWrite(self.memory.read(address)),
+            _ =>
+                return StepResult::Nop,
+        }
+
         if self.current_instruction_remaining_cycles != 0 {
             self.current_instruction_remaining_cycles -= 1;
-            return None;
+            return StepResult::Nop;
         }
 
         if self.nmi_pending {
@@ -125,7 +144,7 @@ impl Cpu {
         let cycle_count = self.execute_instruction(instruction);
         self.current_instruction_remaining_cycles = cycle_count - 1;
 
-        Some(instruction)
+        StepResult::InstructionComplete(instruction)
     }
 
     fn execute_instruction(&mut self, instruction: Instruction) -> u8 {
@@ -427,4 +446,10 @@ fn is_neg(value: u8) -> bool {
 pub enum ProgramCounterSource {
     ResetVector,
     Override(Address),
+}
+
+pub enum StepResult {
+    Nop,
+    InstructionComplete(Instruction),
+    DmaWrite(u8),
 }

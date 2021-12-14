@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use crate::cartridge::INes;
 use crate::config::Config;
 use crate::cpu::address::Address;
-use crate::cpu::cpu::Cpu;
+use crate::cpu::cpu::{Cpu, StepResult};
 use crate::cpu::instruction::Instruction;
 use crate::cpu::memory::Memory;
 use crate::cpu::port_access::{PortAccess, AccessMode};
@@ -69,9 +69,14 @@ impl Nes {
     pub fn step(&mut self) -> Option<Instruction> {
         let mut instruction = None;
         if self.cycle % 3 == 2 {
-            instruction = self.cpu.step();
+            match self.cpu.step() {
+                StepResult::Nop => {},
+                StepResult::InstructionComplete(inst) => instruction = Some(inst),
+                StepResult::DmaWrite(value) => {println!("Writing {} to OAM.", value); self.ppu.write_oam(value)},
+            }
+
             if let Some(port_access) = self.cpu.memory.latch() {
-                self.update_ppu_registers(port_access);
+                self.execute_port_action(port_access);
             }
         }
 
@@ -111,7 +116,7 @@ impl Nes {
     // TODO: Reading PPUSTATUS within two cycles of the start of vertical
     // blank will return 0 in bit 7 but clear the latch anyway, causing NMI
     // to not occur that frame.
-    fn update_ppu_registers(&mut self, port_access: PortAccess) {
+    fn execute_port_action(&mut self, port_access: PortAccess) {
         let value = port_access.value;
 
         use AccessMode::*;
@@ -130,13 +135,16 @@ impl Nes {
             // TODO: Reading the status register will clear bit 7 mentioned
             // above and also the address latch used by PPUSCROLL and PPUADDR.
             (PPUSTATUS, Read) => self.clear_vblank(),
-            // PPUSTATUS is read-only.
-            (PPUSTATUS, Write) => {},
+            (PPUSTATUS, Write) => {/* PPUSTATUS is read-only. */},
 
-            (OAMADDR, Write) => unimplemented!(),
+            (OAMADDR, Write) => self.ppu.set_oam_address(value),
             (OAMDATA, Read) => unimplemented!(),
             (OAMDATA, Write) => unimplemented!(),
-            (OAM_DMA, Write) => unimplemented!(),
+            (OAM_DMA, Write) =>
+                self.cpu.initiate_dma_transfer(
+                    value,
+                    256 - self.ppu.oam_address() as u16,
+                    ),
 
             (PPUADDR, Write) => self.ppu.write_partial_vram_address(value),
             (PPUDATA, Read) => unimplemented!(),

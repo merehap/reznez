@@ -34,7 +34,7 @@ impl fmt::Display for NameTable<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Nametable!")?;
         for tile_number in TileNumber::iter() {
-            write!(f, "#{:X} ", self.tile_entry_at(tile_number).0)?;
+            write!(f, "#{:02X} ", self.tile_entry_at(tile_number).0)?;
         }
 
         Ok(())

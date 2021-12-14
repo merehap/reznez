@@ -52,12 +52,12 @@ impl Memory {
     }
 
     pub fn push_to_stack(&mut self, value: u8) {
-        if self.stack_pointer == 0 {
-            panic!("Cannot push to a full stack.");
+        if self.stack_pointer == 0x00 {
+            println!("Pushing to full stack.");
         }
 
         self.memory[self.stack_pointer as usize + 0x100] = value;
-        self.stack_pointer -= 1;
+        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
     }
 
     pub fn push_address_to_stack(&mut self, address: Address) {
@@ -68,10 +68,10 @@ impl Memory {
 
     pub fn pop_from_stack(&mut self) -> u8 {
         if self.stack_pointer == 0xFF {
-            panic!("Cannot pop from an empty stack.");
+            println!("Popping from empty stack.");
         }
 
-        self.stack_pointer += 1;
+        self.stack_pointer = self.stack_pointer.wrapping_add(1);
         self.memory[self.stack_pointer as usize + 0x100]
     }
 
