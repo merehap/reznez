@@ -68,7 +68,7 @@ impl Nes {
             match self.cpu.step() {
                 StepResult::Nop => {},
                 StepResult::InstructionComplete(inst) => instruction = Some(inst),
-                StepResult::DmaWrite(value) => {println!("Writing {} to OAM.", value); self.ppu.write_oam(value)},
+                StepResult::DmaWrite(value) => self.ppu.write_oam(value),
             }
 
             if let Some(port_access) = self.cpu.memory.latch() {

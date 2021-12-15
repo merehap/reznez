@@ -149,6 +149,8 @@ impl Ppu {
         //println!("Pattern Table:");
         //println!("{}", self.pattern_table());
 
+        let universal_background_color = self.palette_table().universal_background_color();
+
         for tile_number in TileNumber::iter() {
             for row_in_tile in 0..8 {
                 let (tile_index, palette_table_index) =
@@ -165,10 +167,14 @@ impl Ppu {
                 for (column_in_tile, palette_index) in tile_sliver.iter().enumerate() {
                     let pixel_column =
                         8 * tile_number.column() + column_in_tile as u8;
-                    if let Some(palette_index) = palette_index {
-                        let rgb = self.system_palette.lookup_rgb(palette[*palette_index]);
-                        self.screen.set_pixel(pixel_column, pixel_row, rgb);
-                    }
+                    let color = if let Some(palette_index) = palette_index {
+                        palette[*palette_index]
+                    } else {
+                        universal_background_color
+                    };
+
+                    let rgb = self.system_palette.lookup_rgb(color);
+                    self.screen.set_pixel(pixel_column, pixel_row, rgb);
                 }
             }
         }
