@@ -2,7 +2,6 @@ use crate::ppu::address::Address;
 use crate::ppu::clock::Clock;
 use crate::ppu::memory::Memory;
 use crate::ppu::name_table::NameTable;
-use crate::ppu::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table_number::NameTableNumber;
 use crate::ppu::oam::Oam;
 use crate::ppu::pattern_table::PatternTable;
@@ -22,7 +21,6 @@ pub struct Ppu {
     oam: Oam,
     ctrl: Ctrl,
     mask: Mask,
-    name_table_mirroring: NameTableMirroring,
 
     clock: Clock,
 
@@ -36,17 +34,12 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    pub fn new(
-        name_table_mirroring: NameTableMirroring,
-        system_palette: SystemPalette,
-        ) -> Ppu {
-
+    pub fn new(memory: Memory, system_palette: SystemPalette) -> Ppu {
         Ppu {
-            memory: Memory::new(name_table_mirroring),
+            memory,
             oam: Oam::new(),
             ctrl: Ctrl::new(),
             mask: Mask::new(),
-            name_table_mirroring,
 
             clock: Clock::new(),
 
@@ -152,7 +145,9 @@ impl Ppu {
 
     fn render(&mut self) {
         let name_table_number = self.ctrl.name_table_number();
-        println!("Nametable #{:?}: {}", name_table_number, self.name_table(name_table_number));
+        //println!("Nametable #{:?}: {}", name_table_number, self.name_table(name_table_number));
+        println!("Pattern Table:");
+        println!("{}", self.pattern_table());
 
         for tile_number in TileNumber::iter() {
             for row_in_tile in 0..8 {

@@ -29,6 +29,11 @@ impl Address {
         Address::from_u16(self.0 + value as u16)
     }
 
+    pub fn inc(&mut self) -> Address {
+        self.0 = self.0.wrapping_add(1);
+        *self
+    }
+
     pub fn to_u16(&self) -> u16 {
         self.0
     }

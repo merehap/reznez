@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::tile::Tile;
 
@@ -27,6 +29,40 @@ impl <'a> PatternTable<'a> {
         ) -> [Option<PaletteIndex>; 8] {
 
         self.tile_at(side, tile_index).sliver_at(row_in_tile)
+    }
+}
+
+impl fmt::Display for PatternTable<'_> {
+    fn fmt(&self, f: &'_ mut fmt::Formatter) -> fmt::Result {
+        for row in 0..16 {
+            for column in 0..16 {
+                for side in [PatternTableSide::Left, PatternTableSide::Right] {
+                    for row_in_tile in 0..8 {
+                        let tile_index = 16 * row + column;
+                        let sliver = self.tile_sliver_at(side, tile_index, row_in_tile);
+                        for pixel in sliver {
+                            let c = if let Some(pixel) = pixel {
+                                char::from_digit(pixel as u32, 10).unwrap()
+                            } else {
+                                '-'
+                            };
+
+                            write!(f, "{}", c)?;
+                        }
+
+                        write!(f, " ")?;
+                    }
+
+                    write!(f, "  ")?;
+                }
+
+                writeln!(f)?;
+            }
+
+            writeln!(f)?;
+        }
+
+        Ok(())
     }
 }
 

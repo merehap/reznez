@@ -5,9 +5,10 @@ use crate::config::Config;
 use crate::cpu::address::Address;
 use crate::cpu::cpu::{Cpu, StepResult};
 use crate::cpu::instruction::Instruction;
-use crate::cpu::memory::Memory;
+use crate::cpu::memory::Memory as CpuMem;
 use crate::cpu::port_access::{PortAccess, AccessMode};
 use crate::ppu::ppu::{Ppu, VBlankEvent};
+use crate::ppu::memory::Memory as PpuMem;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
 use crate::mapper::mapper0::Mapper0;
@@ -45,15 +46,10 @@ pub struct Nes {
 
 impl Nes {
     pub fn new(config: Config) -> Nes {
+        let (cpu_mem, ppu_mem) = Nes::initialize_memory(config.ines().clone());
         Nes {
-            cpu: Cpu::new(
-                Nes::initialize_memory(config.ines().clone()),
-                config.program_counter_source(),
-                ),
-            ppu: Ppu::new(
-                config.ines().name_table_mirroring(),
-                config.system_palette().clone(),
-                ),
+            cpu: Cpu::new(cpu_mem, config.program_counter_source()),
+            ppu: Ppu::new(ppu_mem, config.system_palette().clone()),
             cycle: 0,
         }
     }
@@ -96,21 +92,23 @@ impl Nes {
         instruction
     }
 
-    fn initialize_memory(ines: INes) -> Memory {
+    fn initialize_memory(ines: INes) -> (CpuMem, PpuMem) {
         if ines.mapper_number() != 0 {
             unimplemented!("Only mapper 0 is currently supported.");
         }
 
-        let mut memory = Memory::new(
+        let mut cpu_mem = CpuMem::new(
             BTreeSet::from(CPU_READ_PORTS),
             BTreeSet::from(CPU_WRITE_PORTS),
             );
 
+        let mut ppu_mem = PpuMem::new(ines.name_table_mirroring());
+
         let mapper = Mapper0::new();
-        mapper.map(ines, &mut memory)
+        mapper.map(ines, &mut cpu_mem, &mut ppu_mem)
             .expect("Failed to copy cartridge ROM into CPU memory.");
 
-        memory
+        (cpu_mem, ppu_mem)
     }
 
     // TODO: Reading PPUSTATUS within two cycles of the start of vertical
@@ -249,12 +247,13 @@ mod tests {
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
 
+        let (cpu_mem, ppu_mem) = Nes::initialize_memory(ines);
         Nes {
             cpu: Cpu::new(
-                Nes::initialize_memory(ines),
+                cpu_mem,
                 ProgramCounterSource::Override(Address::new(0x2000)),
                 ),
-            ppu: Ppu::new(name_table_mirroring, system_palette),
+            ppu: Ppu::new(ppu_mem, system_palette),
             cycle: 0,
         }
     }
