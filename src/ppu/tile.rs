@@ -11,10 +11,16 @@ impl <'a> Tile<'a> {
     }
 
     pub fn sliver_at(&self, row_in_tile: u8) -> [Option<PaletteIndex>; 8] {
-        let sliver: Vec<_> = (0..8)
-            .map(|column| self.palette_index_at(column, row_in_tile))
-            .collect();
-        sliver.try_into().unwrap()
+        [
+            self.palette_index_at(0, row_in_tile),
+            self.palette_index_at(1, row_in_tile),
+            self.palette_index_at(2, row_in_tile),
+            self.palette_index_at(3, row_in_tile),
+            self.palette_index_at(4, row_in_tile),
+            self.palette_index_at(5, row_in_tile),
+            self.palette_index_at(6, row_in_tile),
+            self.palette_index_at(7, row_in_tile),
+        ]
     }
 
     pub fn palette_index_at(&self, column: u8, row: u8) -> Option<PaletteIndex> {

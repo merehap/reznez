@@ -243,7 +243,6 @@ mod tests {
 
     fn sample_nes() -> Nes {
         let ines = sample_ines();
-        let name_table_mirroring = ines.name_table_mirroring();
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
 

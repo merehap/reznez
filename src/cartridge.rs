@@ -200,7 +200,7 @@ pub mod tests {
 
             trainer: None,
             prg_rom: vec![[0xEA; PRG_ROM_CHUNK_LENGTH]],
-            chr_rom: Vec::new(),
+            chr_rom: vec![[0x00; CHR_ROM_CHUNK_LENGTH]],
             console_type: ConsoleType::Nes,
             title: "Test ROM".to_string(),
         }

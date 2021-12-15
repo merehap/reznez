@@ -146,8 +146,8 @@ impl Ppu {
     fn render(&mut self) {
         let name_table_number = self.ctrl.name_table_number();
         //println!("Nametable #{:?}: {}", name_table_number, self.name_table(name_table_number));
-        println!("Pattern Table:");
-        println!("{}", self.pattern_table());
+        //println!("Pattern Table:");
+        //println!("{}", self.pattern_table());
 
         for tile_number in TileNumber::iter() {
             for row_in_tile in 0..8 {
