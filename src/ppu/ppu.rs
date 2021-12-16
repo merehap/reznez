@@ -25,7 +25,6 @@ pub struct Ppu {
     clock: Clock,
 
     screen: Screen,
-    system_palette: SystemPalette,
 
     is_nmi_period: bool,
     vram_address: Address,
@@ -34,7 +33,7 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    pub fn new(memory: Memory, system_palette: SystemPalette) -> Ppu {
+    pub fn new(memory: Memory) -> Ppu {
         Ppu {
             memory,
             oam: Oam::new(),
@@ -44,7 +43,6 @@ impl Ppu {
             clock: Clock::new(),
 
             screen: Screen::new(),
-            system_palette,
 
             is_nmi_period: false,
             vram_address: Address::from_u16(0),
@@ -149,14 +147,15 @@ impl Ppu {
         //println!("Pattern Table:");
         //println!("{}", self.pattern_table());
 
-        let universal_background_color = self.palette_table().universal_background_color();
+        let palette_table = self.memory.palette_table();
+        let universal_background_rgb = palette_table.universal_background_rgb();
 
         for tile_number in TileNumber::iter() {
             for row_in_tile in 0..8 {
                 let (tile_index, palette_table_index) =
                     self.name_table(name_table_number).tile_entry_at(tile_number);
                 let palette =
-                    self.palette_table().background_palette(palette_table_index);
+                    palette_table.background_palette(palette_table_index);
                 let tile_sliver: [Option<PaletteIndex>; 8] =
                     self.pattern_table().tile_sliver_at(
                         self.ctrl.background_table_side(),
@@ -167,13 +166,12 @@ impl Ppu {
                 for (column_in_tile, palette_index) in tile_sliver.iter().enumerate() {
                     let pixel_column =
                         8 * tile_number.column() + column_in_tile as u8;
-                    let color = if let Some(palette_index) = palette_index {
+                    let rgb = if let Some(palette_index) = palette_index {
                         palette[*palette_index]
                     } else {
-                        universal_background_color
+                        palette_table.universal_background_rgb()
                     };
 
-                    let rgb = self.system_palette.lookup_rgb(color);
                     self.screen.set_pixel(pixel_column, pixel_row, rgb);
                 }
             }
@@ -186,10 +184,6 @@ impl Ppu {
 
     fn name_table(&self, number: NameTableNumber) -> NameTable {
         self.memory.name_table(number)
-    }
-
-    fn palette_table(&self) -> PaletteTable {
-        self.memory.palette_table()
     }
 
     fn rendering_enabled(&self) -> bool {

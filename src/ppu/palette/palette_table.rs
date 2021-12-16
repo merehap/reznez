@@ -1,25 +1,52 @@
 use crate::ppu::palette::color::Color;
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
+use crate::ppu::palette::rgb::Rgb;
+use crate::ppu::palette::system_palette::SystemPalette;
 
-pub struct PaletteTable<'a>(&'a [u8; 0x20]);
+pub struct PaletteTable {
+    universal_background_rgb: Rgb,
+    background_palettes: [Palette; 3],
+    sprite_palettes: [Palette; 3],
+}
 
-impl <'a> PaletteTable<'a> {
-    pub fn new(raw: &'a [u8; 0x20]) -> PaletteTable<'a> {
-        PaletteTable(raw)
+impl PaletteTable {
+    pub fn new(raw: &[u8; 0x20], system_palette: &SystemPalette) -> PaletteTable {
+        let rgb = |raw_color: u8| -> Rgb {
+            let color = Color::from_u8(raw_color).unwrap();
+            system_palette.lookup_rgb(color)
+        };
+
+        let background_palettes =
+            [
+                Palette::new([rgb(raw[0x01]), rgb(raw[0x02]), rgb(raw[0x03])]),
+                Palette::new([rgb(raw[0x05]), rgb(raw[0x06]), rgb(raw[0x07])]),
+                Palette::new([rgb(raw[0x09]), rgb(raw[0x0A]), rgb(raw[0x0B])]),
+            ];
+        let sprite_palettes =
+            [
+                Palette::new([rgb(raw[0x11]), rgb(raw[0x12]), rgb(raw[0x13])]),
+                Palette::new([rgb(raw[0x15]), rgb(raw[0x16]), rgb(raw[0x17])]),
+                Palette::new([rgb(raw[0x19]), rgb(raw[0x1A]), rgb(raw[0x1B])]),
+            ];
+
+        PaletteTable {
+            universal_background_rgb: rgb(raw[0x00]),
+            background_palettes,
+            sprite_palettes,
+        }
     }
 
-    pub fn universal_background_color(&self) -> Color {
-        Color::from_u8(self.0[0]).unwrap()
+    pub fn universal_background_rgb(&self) -> Rgb {
+        self.universal_background_rgb
     }
 
     pub fn background_palette(&self, number: PaletteTableIndex) -> Palette {
-        let start = 4 * (number as usize) + 1;
-        Palette::new((&self.0[start..start + 3]).try_into().unwrap())
+        self.background_palettes[number as usize]
     }
 
     pub fn sprite_palette(&self, number: PaletteTableIndex) -> Palette {
-        let start = 4 * (number as usize) + 0x11;
-        Palette::new((&self.0[start..start + 3]).try_into().unwrap())
+        self.sprite_palettes[number as usize]
     }
+
 }

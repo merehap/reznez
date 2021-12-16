@@ -6,6 +6,7 @@ use crate::ppu::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::palette::palette_table::PaletteTable;
+use crate::ppu::palette::system_palette::SystemPalette;
 
 const MEMORY_SIZE: usize = 0x4000;
 
@@ -28,13 +29,19 @@ const PALETTE_TABLE_SIZE: u16 = 0x20;
 pub struct Memory {
     memory: [u8; MEMORY_SIZE],
     name_table_mirroring: NameTableMirroring,
+    system_palette: SystemPalette,
 }
 
 impl Memory {
-    pub fn new(name_table_mirroring: NameTableMirroring) -> Memory {
+    pub fn new(
+        name_table_mirroring: NameTableMirroring,
+        system_palette: SystemPalette,
+        ) -> Memory {
+
         Memory {
             memory: [0; MEMORY_SIZE],
             name_table_mirroring,
+            system_palette,
         }
     }
 
@@ -51,7 +58,7 @@ impl Memory {
 
     pub fn palette_table(&self) -> PaletteTable {
         let raw = self.slice(PALETTE_TABLE_START, PALETTE_TABLE_SIZE);
-        PaletteTable::new(raw.try_into().unwrap())
+        PaletteTable::new(raw.try_into().unwrap(), &self.system_palette)
     }
 
     fn slice(&self, start_address: Address, length: u16) -> &[u8] {

@@ -7,6 +7,7 @@ use crate::cpu::cpu::{Cpu, StepResult};
 use crate::cpu::instruction::Instruction;
 use crate::cpu::memory::Memory as CpuMem;
 use crate::cpu::port_access::{PortAccess, AccessMode};
+use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu::{Ppu, VBlankEvent};
 use crate::ppu::memory::Memory as PpuMem;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
@@ -46,10 +47,14 @@ pub struct Nes {
 
 impl Nes {
     pub fn new(config: Config) -> Nes {
-        let (cpu_mem, ppu_mem) = Nes::initialize_memory(config.ines().clone());
+        let (cpu_mem, ppu_mem) = Nes::initialize_memory(
+            config.ines().clone(),
+            config.system_palette().clone(),
+            );
+
         Nes {
             cpu: Cpu::new(cpu_mem, config.program_counter_source()),
-            ppu: Ppu::new(ppu_mem, config.system_palette().clone()),
+            ppu: Ppu::new(ppu_mem),
             cycle: 0,
         }
     }
@@ -92,7 +97,7 @@ impl Nes {
         instruction
     }
 
-    fn initialize_memory(ines: INes) -> (CpuMem, PpuMem) {
+    fn initialize_memory(ines: INes, system_palette: SystemPalette) -> (CpuMem, PpuMem) {
         if ines.mapper_number() != 0 {
             unimplemented!("Only mapper 0 is currently supported.");
         }
@@ -102,7 +107,7 @@ impl Nes {
             BTreeSet::from(CPU_WRITE_PORTS),
             );
 
-        let mut ppu_mem = PpuMem::new(ines.name_table_mirroring());
+        let mut ppu_mem = PpuMem::new(ines.name_table_mirroring(), system_palette);
 
         let mapper = Mapper0::new();
         mapper.map(ines, &mut cpu_mem, &mut ppu_mem)
