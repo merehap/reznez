@@ -1,7 +1,6 @@
 use std::fmt;
 
 use crate::ppu::palette::palette_index::PaletteIndex;
-use crate::ppu::tile::Tile;
 use crate::util::get_bit;
 
 pub struct PatternTable<'a>(&'a [u8; 0x2000]);

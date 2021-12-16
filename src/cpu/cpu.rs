@@ -139,7 +139,7 @@ impl Cpu {
             self.y_index,
             &mut self.memory,
         );
-        println!("{} | {}", self.state_string(), instruction);
+        //println!("{} | {}", self.state_string(), instruction);
 
         let cycle_count = self.execute_instruction(instruction);
         self.current_instruction_remaining_cycles = cycle_count - 1;

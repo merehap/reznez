@@ -16,7 +16,7 @@ pub fn gui(mut nes: Nes) {
         panic!("{}", e);
     });
 
-    let mut totalwatch = Stopwatch::start_new();
+    let totalwatch = Stopwatch::start_new();
     let mut framewatch = Stopwatch::start_new();
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
