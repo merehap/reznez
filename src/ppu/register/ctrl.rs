@@ -42,7 +42,8 @@ impl Ctrl {
                 },
             sprite_width:
                 if get_bit(value, 2) {
-                    SpriteWidth::Wide
+                    unimplemented!("Wide sprites are not supported yet.");
+                    //SpriteWidth::Wide
                 } else {
                     SpriteWidth::Normal
                 },

@@ -1,3 +1,4 @@
+use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::util::get_bit;
 
 #[derive(Clone, Copy, Debug)]
@@ -8,14 +9,22 @@ pub struct Sprite {
     flip_vertically: bool,
     flip_horizontally: bool,
     priority: Priority,
-    palette_low: bool,
-    palette_high: bool,
+    palette_table_index: PaletteTableIndex,
 }
 
 impl Sprite {
     pub fn from_u32(value: u32) -> Sprite {
         let [y_coordinate, tile_number, attribute, x_coordinate] =
             value.to_be_bytes();
+
+        let palette_table_index =
+            match (get_bit(attribute, 6), get_bit(attribute, 7)) {
+                (false, false) => PaletteTableIndex::Zero,
+                (true , false) => PaletteTableIndex::One,
+                (false, true ) => PaletteTableIndex::Two,
+                (true , true ) => PaletteTableIndex::Three,
+            };
+
         Sprite {
             x_coordinate,
             y_coordinate,
@@ -23,8 +32,7 @@ impl Sprite {
             flip_vertically:   get_bit(attribute, 0),
             flip_horizontally: get_bit(attribute, 1),
             priority:          get_bit(attribute, 2).into(),
-            palette_low:       get_bit(attribute, 6),
-            palette_high:      get_bit(attribute, 7),
+            palette_table_index,
         }
     }
 
@@ -52,12 +60,8 @@ impl Sprite {
         self.priority
     }
 
-    pub fn palette_low(self) -> bool {
-        self.palette_low
-    }
-
-    pub fn palette_high(self) -> bool {
-        self.palette_high
+    pub fn palette_table_index(self) -> PaletteTableIndex {
+        self.palette_table_index
     }
 }
 

@@ -119,8 +119,9 @@ impl Ppu {
         } else if self.clock.scanline() == 261 && self.clock.cycle() == 1 {
             self.is_nmi_period = false;
             step_event = StepEvents::stop_vblank();
-        } else if self.clock.cycle() == 0 {
-            self.render(screen);
+        } else if self.clock.cycle() == 1 {
+            self.render_background(screen);
+            self.render_sprites(screen);
             step_event = StepEvents::no_events();
         } else {
             step_event = StepEvents::no_events();
@@ -130,7 +131,7 @@ impl Ppu {
         step_event
     }
 
-    fn render(&mut self, screen: &mut Screen) {
+    fn render_background(&mut self, screen: &mut Screen) {
         let name_table_number = self.ctrl.name_table_number();
         let background_table_side = self.ctrl.background_table_side();
         let palette_table = self.memory.palette_table();
@@ -140,7 +141,7 @@ impl Ppu {
                 self.name_table(name_table_number).tile_entry_at(tile_number);
             let pixel_column = 8 * tile_number.column();
             let start_row = 8 * tile_number.row();
-            for row_in_tile in 0u8..8 {
+            for row_in_tile in 0..8 {
                 self.pattern_table().render_tile_sliver(
                     background_table_side,
                     tile_index,
@@ -149,6 +150,39 @@ impl Ppu {
                     universal_background_rgb,
                     screen.tile_sliver(pixel_column, start_row + row_in_tile),
                     );
+            }
+        }
+    }
+
+    fn render_sprites(&mut self, screen: &mut Screen) {
+        let palette_table = self.memory.palette_table();
+        let hack_bg =
+            self.memory.palette_table().universal_background_rgb();
+        let sprite_table_side = self.ctrl.sprite_table_side();
+        for sprite in self.oam.sprites() {
+            let x = sprite.x_coordinate();
+            let y = sprite.y_coordinate();
+            let tile_index = 32 * x + y;
+            let palette_table_index = sprite.palette_table_index();
+            for column_in_tile in 0..8 {
+                if x as u16 + column_in_tile as u16 >= 256 {
+                    break;
+                }
+
+                for row_in_tile in 0..8 {
+                    if y + row_in_tile >= 240 {
+                        break;
+                    }
+
+                    self.pattern_table().render_tile_sliver(
+                        sprite_table_side,
+                        tile_index,
+                        row_in_tile as usize,
+                        palette_table.sprite_palette(palette_table_index),
+                        hack_bg,
+                        screen.tile_sliver(x + column_in_tile, y + row_in_tile),
+                        );
+                }
             }
         }
     }
