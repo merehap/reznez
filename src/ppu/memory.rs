@@ -45,17 +45,20 @@ impl Memory {
         }
     }
 
+    #[inline]
     pub fn pattern_table(&self) -> PatternTable {
         let raw = self.slice(PATTERN_TABLE_START, PATTERN_TABLE_SIZE);
         PatternTable::new(raw.try_into().unwrap())
     }
 
+    #[inline]
     pub fn name_table(&self, number: NameTableNumber) -> NameTable {
         let index = NAME_TABLE_INDEXES[number as usize];
         let raw = self.slice(index, NAME_TABLE_SIZE);
         NameTable::new(raw.try_into().unwrap())
     }
 
+    #[inline]
     pub fn palette_table(&self) -> PaletteTable {
         let raw = self.slice(PALETTE_TABLE_START, PALETTE_TABLE_SIZE);
         PaletteTable::new(raw.try_into().unwrap(), &self.system_palette)

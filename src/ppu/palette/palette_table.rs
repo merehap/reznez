@@ -39,14 +39,17 @@ impl PaletteTable {
         }
     }
 
+    #[inline]
     pub fn universal_background_rgb(&self) -> Rgb {
         self.universal_background_rgb
     }
 
+    #[inline]
     pub fn background_palette(&self, number: PaletteTableIndex) -> Palette {
         self.background_palettes[number as usize]
     }
 
+    #[inline]
     pub fn sprite_palette(&self, number: PaletteTableIndex) -> Palette {
         self.sprite_palettes[number as usize]
     }

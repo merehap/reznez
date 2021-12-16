@@ -25,10 +25,12 @@ impl TileNumber {
         self.0 as usize
     }
 
+    #[inline]
     pub fn column(self) -> u8 {
         (self.0 % 32).try_into().unwrap()
     }
 
+    #[inline]
     pub fn row(self) -> u8 {
         (self.0 / 32).try_into().unwrap()
     }

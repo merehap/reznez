@@ -32,7 +32,7 @@ pub fn gui(mut nes: Nes) {
                 1000.0 / framewatch.elapsed_ms() as f64,
                 1000.0 / totalwatch.elapsed_ms() as f64 * frame as f64,
                 );
-            if frame == 100 {
+            if frame == 500 {
                 std::process::exit(0);
             }
 

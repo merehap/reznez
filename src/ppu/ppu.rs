@@ -132,46 +132,33 @@ impl Ppu {
 
     fn render(&mut self, screen: &mut Screen) {
         let name_table_number = self.ctrl.name_table_number();
+        let background_table_side = self.ctrl.background_table_side();
         let palette_table = self.memory.palette_table();
         let universal_background_rgb = palette_table.universal_background_rgb();
         for tile_number in TileNumber::iter() {
-            for row_in_tile in 0..8 {
-                let (tile_index, palette_table_index) =
-                    self.name_table(name_table_number).tile_entry_at(tile_number);
-                let pixel_column = 8 * tile_number.column();
-                let pixel_row = 8 * tile_number.row() + row_in_tile as u8;
+            let (tile_index, palette_table_index) =
+                self.name_table(name_table_number).tile_entry_at(tile_number);
+            let pixel_column = 8 * tile_number.column();
+            let start_row = 8 * tile_number.row();
+            for row_in_tile in 0u8..8 {
                 self.pattern_table().render_tile_sliver(
-                    self.ctrl.background_table_side(),
+                    background_table_side,
                     tile_index,
-                    row_in_tile,
+                    row_in_tile as usize,
                     palette_table.background_palette(palette_table_index),
                     universal_background_rgb,
-                    screen.tile_sliver(pixel_column, pixel_row),
+                    screen.tile_sliver(pixel_column, start_row + row_in_tile),
                     );
-                /*
-                let palette =
-                    palette_table.background_palette(palette_table_index);
-                let pixel_row = 8 * tile_number.row() + row_in_tile as u8;
-                for (column_in_tile, palette_index) in tile_sliver.iter().enumerate() {
-                    let pixel_column =
-                        8 * tile_number.column() + column_in_tile as u8;
-                    let rgb = if let Some(palette_index) = palette_index {
-                        palette[*palette_index]
-                    } else {
-                        palette_table.universal_background_rgb()
-                    };
-
-                    self.screen.set_pixel(pixel_column, pixel_row, rgb);
-                }
-                */
             }
         }
     }
 
+    #[inline]
     fn pattern_table(&self) -> PatternTable {
         self.memory.pattern_table()
     }
 
+    #[inline]
     fn name_table(&self, number: NameTableNumber) -> NameTable {
         self.memory.name_table(number)
     }
