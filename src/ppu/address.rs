@@ -34,7 +34,7 @@ impl Address {
         *self
     }
 
-    pub fn to_u16(&self) -> u16 {
+    pub fn to_u16(self) -> u16 {
         self.0
     }
 }

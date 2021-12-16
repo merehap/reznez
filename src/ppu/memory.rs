@@ -15,6 +15,8 @@ const PATTERN_TABLE_SIZE: u16 = 0x2000;
 
 const NAME_TABLE_START: u16 = 0x2000;
 const NAME_TABLE_SIZE: u16 = 0x400;
+#[allow(clippy::erasing_op)]
+#[allow(clippy::identity_op)]
 const NAME_TABLE_INDEXES: [Address; 4] =
     [
         Address::from_u16(NAME_TABLE_START + 0 * NAME_TABLE_SIZE),

@@ -30,8 +30,6 @@ impl <'a> PatternTable<'a> {
         let low_byte = self.0[low_index];
         let high_byte = self.0[high_index];
 
-        //let pixel_row = 8 * tile_number.row() + row_in_tile as u8;
-
         for (column_in_tile, rgb) in &mut tile_sliver.iter_mut().enumerate() {
             let low_bit = get_bit(low_byte, column_in_tile);
             let high_bit = get_bit(high_byte, column_in_tile);
@@ -41,11 +39,6 @@ impl <'a> PatternTable<'a> {
                 (false, true ) => palette[PaletteIndex::Two],
                 (true , true ) => palette[PaletteIndex::Three],
             };
-
-            /*
-            let pixel_column =
-                8 * tile_number.column() + column_in_tile as u8;
-            */
         }
     }
 }

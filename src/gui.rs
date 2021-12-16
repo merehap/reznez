@@ -5,8 +5,7 @@ use crate::nes::Nes;
 use crate::ppu::screen::Screen;
 
 pub fn gui(mut nes: Nes) {
-    let mut window_options = WindowOptions::default();
-    window_options.scale = Scale::X4;
+    let window_options = WindowOptions {scale: Scale::X4, ..Default::default()};
     let mut window = Window::new(
         "Test - ESC to exit",
         Screen::WIDTH,

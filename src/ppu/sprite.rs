@@ -67,9 +67,9 @@ pub enum Priority {
     Behind,
 }
 
-impl Into<Priority> for bool {
-    fn into(self) -> Priority {
-        if self {
+impl From<bool> for Priority {
+    fn from(value: bool) -> Self {
+        if value {
             Priority::InFront
         } else {
             Priority::Behind

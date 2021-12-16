@@ -33,7 +33,7 @@ impl DmaTransfer {
 
     // TODO: Determine if the full 513/514 cycles must occur even if we
     // aren't transfering the maximum amount of OAM (256 bytes).
-    pub fn next(&mut self) -> DmaTransferState {
+    pub fn step(&mut self) -> DmaTransferState {
         let current_state = self.next_state;
 
         use DmaTransferState::*;

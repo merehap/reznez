@@ -3,7 +3,7 @@
 #![feature(destructuring_assignment)]
 #![allow(dead_code)]
 #![allow(clippy::module_inception)]
-
+#![allow(clippy::new_without_default)]
 
 mod cartridge;
 mod config;

@@ -114,7 +114,7 @@ impl Cpu {
         self.memory.reset_latch();
 
         // Normal CPU operation is suspended while the DMA transfer completes.
-        match self.dma_transfer.next() {
+        match self.dma_transfer.step() {
             DmaTransferState::Finished =>
                 {/* No transfer in progress. Continue to normal CPU step.*/},
             DmaTransferState::Write(address) =>

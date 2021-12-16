@@ -48,8 +48,8 @@ impl Mapper0 {
 
         let chr_rom = ines.chr_rom();
         let mut address = PpuAddress::from_u16(0);
-        for i in 0..0x2000 {
-            ppu_mem[address] = chr_rom[i];
+        for &byte in chr_rom.iter().take(0x2000) {
+            ppu_mem[address] = byte;
             address.inc();
         }
 
