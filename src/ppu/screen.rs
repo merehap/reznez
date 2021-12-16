@@ -14,7 +14,11 @@ impl Screen {
         self.0[row as usize][column as usize]
     }
 
-    pub fn set_pixel(&mut self, column: u8, row: u8, rgb: Rgb) {
-        self.0[row as usize][column as usize] = rgb;
+    pub fn tile_sliver(&mut self, column: u8, row: u8) -> &mut [Rgb; 8] {
+        let row = &mut self.0[row as usize];
+        let column = &mut row[column as usize..column as usize + 8];
+        column
+            .try_into()
+            .unwrap()
     }
 }

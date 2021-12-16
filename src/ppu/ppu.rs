@@ -5,7 +5,6 @@ use crate::ppu::name_table::NameTable;
 use crate::ppu::name_table_number::NameTableNumber;
 use crate::ppu::oam::Oam;
 use crate::ppu::pattern_table::PatternTable;
-use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
 use crate::ppu::screen::Screen;
@@ -21,8 +20,6 @@ pub struct Ppu {
     mask: Mask,
 
     clock: Clock,
-
-    screen: Screen,
 
     is_nmi_period: bool,
     vram_address: Address,
@@ -40,8 +37,6 @@ impl Ppu {
 
             clock: Clock::new(),
 
-            screen: Screen::new(),
-
             is_nmi_period: false,
             vram_address: Address::from_u16(0),
             next_vram_upper_byte: None,
@@ -51,10 +46,6 @@ impl Ppu {
 
     pub fn clock(&self) -> &Clock {
         &self.clock
-    }
-
-    pub fn screen(&self) -> &Screen {
-        &self.screen
     }
 
     pub fn ctrl(&self) -> Ctrl {
@@ -105,7 +96,7 @@ impl Ppu {
         self.is_nmi_period && self.ctrl.vblank_nmi() == VBlankNmi::On
     }
 
-    pub fn step(&mut self) -> StepEvents {
+    pub fn step(&mut self, screen: &mut Screen) -> StepEvents {
         let frame_started = self.clock().is_start_of_frame();
         if frame_started {
             println!(
@@ -129,7 +120,7 @@ impl Ppu {
             self.is_nmi_period = false;
             step_event = StepEvents::stop_vblank();
         } else if self.clock.cycle() == 0 {
-            self.render();
+            self.render(screen);
             step_event = StepEvents::no_events();
         } else {
             step_event = StepEvents::no_events();
@@ -139,21 +130,27 @@ impl Ppu {
         step_event
     }
 
-    fn render(&mut self) {
+    fn render(&mut self, screen: &mut Screen) {
         let name_table_number = self.ctrl.name_table_number();
         let palette_table = self.memory.palette_table();
+        let universal_background_rgb = palette_table.universal_background_rgb();
         for tile_number in TileNumber::iter() {
             for row_in_tile in 0..8 {
                 let (tile_index, palette_table_index) =
                     self.name_table(name_table_number).tile_entry_at(tile_number);
+                let pixel_column = 8 * tile_number.column();
+                let pixel_row = 8 * tile_number.row() + row_in_tile as u8;
+                self.pattern_table().render_tile_sliver(
+                    self.ctrl.background_table_side(),
+                    tile_index,
+                    row_in_tile,
+                    palette_table.background_palette(palette_table_index),
+                    universal_background_rgb,
+                    screen.tile_sliver(pixel_column, pixel_row),
+                    );
+                /*
                 let palette =
                     palette_table.background_palette(palette_table_index);
-                let tile_sliver: [Option<PaletteIndex>; 8] =
-                    self.pattern_table().tile_sliver_at(
-                        self.ctrl.background_table_side(),
-                        tile_index,
-                        row_in_tile,
-                        );
                 let pixel_row = 8 * tile_number.row() + row_in_tile as u8;
                 for (column_in_tile, palette_index) in tile_sliver.iter().enumerate() {
                     let pixel_column =
@@ -166,6 +163,7 @@ impl Ppu {
 
                     self.screen.set_pixel(pixel_column, pixel_row, rgb);
                 }
+                */
             }
         }
     }

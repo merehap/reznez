@@ -12,6 +12,7 @@ use crate::ppu::ppu::{Ppu, VBlankEvent};
 use crate::ppu::memory::Memory as PpuMem;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
+use crate::ppu::screen::Screen;
 use crate::mapper::mapper0::Mapper0;
 
 const PPUCTRL:   Address = Address::new(0x2000);
@@ -67,7 +68,7 @@ impl Nes {
         &self.ppu
     }
 
-    pub fn step(&mut self) -> Option<Instruction> {
+    pub fn step(&mut self, screen: &mut Screen) -> Option<Instruction> {
         let mut instruction = None;
         if self.cycle % 3 == 2 {
             match self.cpu.step() {
@@ -81,7 +82,7 @@ impl Nes {
             }
         }
 
-        let step_events = self.ppu.step();
+        let step_events = self.ppu.step(screen);
         match step_events.vblank_event() {
             VBlankEvent::Started => self.set_vblank(),
             VBlankEvent::Stopped => self.clear_vblank(),
