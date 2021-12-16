@@ -19,6 +19,7 @@ pub fn unpack_bools(value: u8) -> [bool; 8] {
     bools
 }
 
+#[inline]
 pub fn get_bit(byte: u8, index: usize) -> bool {
     let mask = 1 << (7 - index) as u8;
     byte & mask != 0
