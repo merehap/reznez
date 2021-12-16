@@ -5,9 +5,7 @@ use crate::ppu::name_table::NameTable;
 use crate::ppu::name_table_number::NameTableNumber;
 use crate::ppu::oam::Oam;
 use crate::ppu::pattern_table::PatternTable;
-use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_index::PaletteIndex;
-use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
 use crate::ppu::screen::Screen;
@@ -143,13 +141,7 @@ impl Ppu {
 
     fn render(&mut self) {
         let name_table_number = self.ctrl.name_table_number();
-        //println!("Nametable #{:?}: {}", name_table_number, self.name_table(name_table_number));
-        //println!("Pattern Table:");
-        //println!("{}", self.pattern_table());
-
         let palette_table = self.memory.palette_table();
-        let universal_background_rgb = palette_table.universal_background_rgb();
-
         for tile_number in TileNumber::iter() {
             for row_in_tile in 0..8 {
                 let (tile_index, palette_table_index) =

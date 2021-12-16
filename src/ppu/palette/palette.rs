@@ -1,6 +1,5 @@
 use std::ops::Index;
 
-use crate::ppu::palette::color::Color;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::rgb::Rgb;
 
