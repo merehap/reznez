@@ -21,6 +21,7 @@ impl <'a> PatternTable<'a> {
         Tile::new((&self.0[start_index..start_index + 16]).try_into().unwrap())
     }
 
+    #[inline]
     pub fn tile_sliver_at(
         &'a self,
         side: PatternTableSide,

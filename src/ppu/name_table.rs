@@ -21,6 +21,7 @@ impl <'a> NameTable<'a> {
         }
     }
 
+    #[inline]
     pub fn tile_entry_at(&self, tile_number: TileNumber) -> (u8, PaletteTableIndex) {
         let tile_entry = self.tiles[tile_number.to_usize()];
         let palette_table_index =
@@ -45,6 +46,7 @@ impl fmt::Display for NameTable<'_> {
 struct AttributeTable<'a>(&'a [u8; NAME_TABLE_SIZE - ATTRIBUTE_START_INDEX]);
 
 impl <'a> AttributeTable<'a> {
+    #[inline]
     fn palette_table_index(&self, tile_number: TileNumber) -> PaletteTableIndex {
         let attribute_index = 8 * (tile_number.row() / 4) + (tile_number.column() / 4);
         let attribute = self.0[attribute_index as usize];

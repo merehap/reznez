@@ -10,6 +10,7 @@ impl <'a> Tile<'a> {
         Tile {bytes}
     }
 
+    #[inline]
     pub fn sliver_at(&self, row_in_tile: u8) -> [Option<PaletteIndex>; 8] {
         [
             self.palette_index_at(0, row_in_tile),
@@ -23,6 +24,7 @@ impl <'a> Tile<'a> {
         ]
     }
 
+    #[inline]
     pub fn palette_index_at(&self, column: u8, row: u8) -> Option<PaletteIndex> {
         let column = column as usize;
         let row = row as usize;
