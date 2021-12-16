@@ -1,4 +1,5 @@
 use minifb::{Key, Window, WindowOptions, Scale};
+use stopwatch::Stopwatch;
 
 use crate::nes::Nes;
 use crate::ppu::screen::Screen;
@@ -15,11 +16,22 @@ pub fn gui(mut nes: Nes) {
         panic!("{}", e);
     });
 
+    let mut totalwatch = Stopwatch::start_new();
+    let mut framewatch = Stopwatch::start_new();
+
     while window.is_open() && !window.is_key_down(Key::Escape) {
         nes.step();
 
-        if nes.ppu().clock().scanline() == 0 && nes.ppu().clock().cycle() == 0 {
-            println!("Rendering!");
+        if nes.ppu().clock().scanline() == 1 && nes.ppu().clock().cycle() == 0 {
+            let frame = nes.ppu().clock().frame();
+            println!(
+                "Frame: {}, Rate: {}, Average: {}",
+                nes.ppu().clock().frame(),
+                1000.0 / framewatch.elapsed_ms() as f64,
+                1000.0 / totalwatch.elapsed_ms() as f64 * frame as f64,
+                );
+            framewatch = Stopwatch::start_new();
+
             let mut pixels = Vec::new();
             for row in 0..Screen::HEIGHT {
                 for column in 0..Screen::WIDTH {
@@ -35,7 +47,6 @@ pub fn gui(mut nes: Nes) {
             window
                 .update_with_buffer(&pixels, Screen::WIDTH, Screen::HEIGHT)
                 .unwrap();
-
         }
     }
 }

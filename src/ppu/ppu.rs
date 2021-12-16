@@ -154,7 +154,7 @@ impl Ppu {
                         tile_index,
                         row_in_tile,
                         );
-                let pixel_row = 8 * tile_number.row() + row_in_tile;
+                let pixel_row = 8 * tile_number.row() + row_in_tile as u8;
                 for (column_in_tile, palette_index) in tile_sliver.iter().enumerate() {
                     let pixel_column =
                         8 * tile_number.column() + column_in_tile as u8;
