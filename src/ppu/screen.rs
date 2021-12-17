@@ -1,25 +1,76 @@
 use crate::ppu::palette::rgb::Rgb;
+use crate::ppu::palette::rgbt::Rgbt;
+use crate::ppu::sprite::Priority;
 
-pub struct Screen([[Rgb; Screen::WIDTH]; Screen::HEIGHT]);
+type SpriteSliver = ([Rgbt; 8], Priority);
+
+pub struct Screen {
+    buffer: [[Rgbt; Screen::WIDTH]; Screen::HEIGHT],
+    sprite_buffer: [[SpriteSliver; Screen::WIDTH / 8]; Screen::HEIGHT],
+    universal_background_rgb: Rgb,
+}
 
 impl Screen {
     pub const WIDTH: usize = 256;
     pub const HEIGHT: usize = 240;
 
     pub fn new() -> Screen {
-        Screen([[Rgb::BLACK; Screen::WIDTH]; Screen::HEIGHT])
+        Screen {
+            buffer: [[Rgbt::Transparent; Screen::WIDTH]; Screen::HEIGHT],
+            sprite_buffer: new_sprite_buffer(),
+            universal_background_rgb: Rgb::BLACK,
+        }
     }
 
     pub fn pixel(&self, column: u8, row: u8) -> Rgb {
-        self.0[row as usize][column as usize]
+        let row = row as usize;
+        let column = column as usize;
+        let background_pixel = self.buffer[row][column];
+        let (sprite_sliver, sprite_priority) = self.sprite_buffer[row][column / 8];
+        let sprite_pixel = sprite_sliver[column % 8];
+
+        use Rgbt::*;
+        match (background_pixel, sprite_pixel, sprite_priority) {
+            (Transparent, Transparent, _) => self.universal_background_rgb,
+            (Transparent, Opaque(rgb), _) => rgb,
+            (Opaque(rgb), Transparent, _) => rgb,
+            (Opaque(_)  , Opaque(rgb), Priority::InFront) => rgb,
+            (Opaque(rgb), Opaque(_  ), Priority::Behind) => rgb,
+        }
+    }
+
+    pub fn set_universal_background_rgb(&mut self, rgb: Rgb) {
+        self.universal_background_rgb = rgb;
+    }
+
+    pub fn clear_sprite_buffer(&mut self) {
+        self.sprite_buffer = new_sprite_buffer();
     }
 
     #[inline]
-    pub fn tile_sliver(&mut self, column: u8, row: u8) -> &mut [Rgb; 8] {
-        let row = &mut self.0[row as usize];
-        let column = &mut row[column as usize..column as usize + 8];
-        column
+    pub fn background_tile_sliver(&mut self, column: u8, row: u8) -> &mut [Rgbt; 8] {
+        let row_slice = &mut self.buffer[row as usize];
+        let column_slice = &mut row_slice[column as usize..column as usize + 8];
+        column_slice
             .try_into()
             .unwrap()
     }
+
+    #[inline]
+    pub fn sprites_tile_sliver(
+        &mut self,
+        column: u8,
+        row: u8,
+        ) -> &mut ([Rgbt; 8], Priority) {
+
+        let row_slice = &mut self.sprite_buffer[row as usize];
+        let sprite_sliver = &mut row_slice[(column / 8) as usize];
+        sprite_sliver
+            .try_into()
+            .unwrap()
+    }
+}
+
+fn new_sprite_buffer() -> [[SpriteSliver; Screen::WIDTH / 8]; Screen::HEIGHT] {
+    [[([Rgbt::Transparent; 8], Priority::Behind); Screen::WIDTH / 8]; Screen::HEIGHT]
 }

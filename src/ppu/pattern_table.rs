@@ -2,7 +2,7 @@
 
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::palette_index::PaletteIndex;
-use crate::ppu::palette::rgb::Rgb;
+use crate::ppu::palette::rgbt::Rgbt;
 use crate::util::get_bit;
 
 pub struct PatternTable<'a>(&'a [u8; 0x2000]);
@@ -19,8 +19,7 @@ impl <'a> PatternTable<'a> {
         tile_index: u8,
         row_in_tile: usize,
         palette: Palette,
-        universal_background_rgb: Rgb,
-        tile_sliver: &mut [Rgb; 8],
+        tile_sliver: &mut [Rgbt; 8],
         ) {
 
         let index = side as usize + 16 * (tile_index as usize);
@@ -30,14 +29,14 @@ impl <'a> PatternTable<'a> {
         let low_byte = self.0[low_index];
         let high_byte = self.0[high_index];
 
-        for (column_in_tile, rgb) in &mut tile_sliver.iter_mut().enumerate() {
+        for (column_in_tile, rgbt) in &mut tile_sliver.iter_mut().enumerate() {
             let low_bit = get_bit(low_byte, column_in_tile);
             let high_bit = get_bit(high_byte, column_in_tile);
-            *rgb = match (low_bit, high_bit) {
-                (false, false) => universal_background_rgb,
-                (true , false) => palette[PaletteIndex::One],
-                (false, true ) => palette[PaletteIndex::Two],
-                (true , true ) => palette[PaletteIndex::Three],
+            *rgbt = match (low_bit, high_bit) {
+                (false, false) => Rgbt::Transparent,
+                (true , false) => Rgbt::Opaque(palette[PaletteIndex::One]),
+                (false, true ) => Rgbt::Opaque(palette[PaletteIndex::Two]),
+                (true , true ) => Rgbt::Opaque(palette[PaletteIndex::Three]),
             };
         }
     }

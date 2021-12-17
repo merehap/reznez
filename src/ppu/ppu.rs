@@ -132,10 +132,11 @@ impl Ppu {
     }
 
     fn render_background(&mut self, screen: &mut Screen) {
+        let palette_table = self.memory.palette_table();
+        screen.set_universal_background_rgb(palette_table.universal_background_rgb());
+
         let name_table_number = self.ctrl.name_table_number();
         let background_table_side = self.ctrl.background_table_side();
-        let palette_table = self.memory.palette_table();
-        let universal_background_rgb = palette_table.universal_background_rgb();
         for tile_number in TileNumber::iter() {
             let (tile_index, palette_table_index) =
                 self.name_table(name_table_number).tile_entry_at(tile_number);
@@ -147,42 +148,38 @@ impl Ppu {
                     tile_index,
                     row_in_tile as usize,
                     palette_table.background_palette(palette_table_index),
-                    universal_background_rgb,
-                    screen.tile_sliver(pixel_column, start_row + row_in_tile),
+                    screen.background_tile_sliver(pixel_column, start_row + row_in_tile),
                     );
             }
         }
     }
 
     fn render_sprites(&mut self, screen: &mut Screen) {
+        screen.clear_sprite_buffer();
+
         let palette_table = self.memory.palette_table();
-        let hack_bg =
-            self.memory.palette_table().universal_background_rgb();
         let sprite_table_side = self.ctrl.sprite_table_side();
         for sprite in self.oam.sprites() {
             let x = sprite.x_coordinate();
             let y = sprite.y_coordinate();
             let tile_index = 32 * x + y;
             let palette_table_index = sprite.palette_table_index();
-            for column_in_tile in 0..8 {
-                if x as u16 + column_in_tile as u16 >= 256 {
+
+            for row_in_tile in 0..8 {
+                if y + row_in_tile >= 240 {
                     break;
                 }
 
-                for row_in_tile in 0..8 {
-                    if y + row_in_tile >= 240 {
-                        break;
-                    }
+                let mut sliver = screen.sprites_tile_sliver(x, y + row_in_tile);
+                sliver.1 = sprite.priority();
 
-                    self.pattern_table().render_tile_sliver(
-                        sprite_table_side,
-                        tile_index,
-                        row_in_tile as usize,
-                        palette_table.sprite_palette(palette_table_index),
-                        hack_bg,
-                        screen.tile_sliver(x + column_in_tile, y + row_in_tile),
-                        );
-                }
+                self.pattern_table().render_tile_sliver(
+                    sprite_table_side,
+                    tile_index,
+                    row_in_tile as usize,
+                    palette_table.sprite_palette(palette_table_index),
+                    &mut sliver.0,
+                    );
             }
         }
     }
