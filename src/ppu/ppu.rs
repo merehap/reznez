@@ -1,14 +1,13 @@
 use crate::ppu::address::Address;
 use crate::ppu::clock::Clock;
 use crate::ppu::memory::Memory;
-use crate::ppu::name_table::NameTable;
+use crate::ppu::name_table::{NameTable, BackgroundTileIndex};
 use crate::ppu::name_table_number::NameTableNumber;
 use crate::ppu::oam::Oam;
 use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
 use crate::ppu::screen::Screen;
-use crate::ppu::tile_number::TileNumber;
 
 const FIRST_VBLANK_CYCLE: u64 = 3 * 27384;
 const SECOND_VBLANK_CYCLE: u64 = 3 * 57165;
@@ -137,11 +136,11 @@ impl Ppu {
 
         let name_table_number = self.ctrl.name_table_number();
         let background_table_side = self.ctrl.background_table_side();
-        for tile_number in TileNumber::iter() {
+        for background_tile_index in BackgroundTileIndex::iter() {
             let (pattern_index, palette_table_index) =
-                self.name_table(name_table_number).tile_entry_at(tile_number);
-            let pixel_column = 8 * tile_number.column();
-            let start_row = 8 * tile_number.row();
+                self.name_table(name_table_number).tile_entry_at(background_tile_index);
+            let pixel_column = 8 * background_tile_index.column();
+            let start_row = 8 * background_tile_index.row();
             for row_in_tile in 0..8 {
                 self.pattern_table().render_tile_sliver(
                     background_table_side,

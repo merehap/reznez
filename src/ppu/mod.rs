@@ -12,4 +12,3 @@ pub mod register;
 pub mod screen;
 pub mod sprite;
 pub mod tile;
-pub mod tile_number;

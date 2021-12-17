@@ -2,7 +2,6 @@ use std::fmt;
 
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::pattern_table::PatternIndex;
-use crate::ppu::tile_number::TileNumber;
 
 const NAME_TABLE_SIZE: usize = 0x400;
 const ATTRIBUTE_START_INDEX: usize = 0x3C0;
@@ -25,12 +24,13 @@ impl <'a> NameTable<'a> {
     #[inline]
     pub fn tile_entry_at(
         &self,
-        tile_number: TileNumber,
+        background_tile_index: BackgroundTileIndex,
         ) -> (PatternIndex, PaletteTableIndex) {
 
-        let pattern_index = PatternIndex::new(self.tiles[tile_number.to_usize()]);
+        let pattern_index =
+            PatternIndex::new(self.tiles[background_tile_index.to_usize()]);
         let palette_table_index =
-            self.attribute_table.palette_table_index(tile_number);
+            self.attribute_table.palette_table_index(background_tile_index);
 
         (pattern_index, palette_table_index)
     }
@@ -39,8 +39,8 @@ impl <'a> NameTable<'a> {
 impl fmt::Display for NameTable<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Nametable!")?;
-        for tile_number in TileNumber::iter() {
-            write!(f, "#{:02X} ", self.tile_entry_at(tile_number).0.to_usize())?;
+        for index in BackgroundTileIndex::iter() {
+            write!(f, "#{:02X} ", self.tile_entry_at(index).0.to_usize())?;
         }
 
         Ok(())
@@ -52,7 +52,7 @@ struct AttributeTable<'a>(&'a [u8; NAME_TABLE_SIZE - ATTRIBUTE_START_INDEX]);
 
 impl <'a> AttributeTable<'a> {
     #[inline]
-    fn palette_table_index(&self, tile_number: TileNumber) -> PaletteTableIndex {
+    fn palette_table_index(&self, tile_number: BackgroundTileIndex) -> PaletteTableIndex {
         let attribute_index = 8 * (tile_number.row() / 4) + (tile_number.column() / 4);
         let attribute = self.0[attribute_index as usize];
         let palette_table_indexes = PaletteTableIndex::unpack_byte(attribute);
@@ -60,5 +60,61 @@ impl <'a> AttributeTable<'a> {
             if tile_number.row()    % 2 == 0 {2} else {0} +
             if tile_number.column() % 2 == 0 {1} else {0};
         palette_table_indexes[index_selection]
+    }
+}
+
+const COLUMN_COUNT: u16 = 32;
+const ROW_COUNT: u16 = 30;
+const MAX_INDEX: u16 = COLUMN_COUNT * ROW_COUNT - 1;
+
+#[derive(Clone, Copy)]
+pub struct BackgroundTileIndex(u16);
+
+impl BackgroundTileIndex {
+    pub fn from_u16(number: u16) -> Result<BackgroundTileIndex, String> {
+        if number > MAX_INDEX {
+            return Err(format!(
+                "Background tile index must not be greater than {}.",
+                MAX_INDEX,
+            ));
+        }
+
+        Ok(BackgroundTileIndex(number))
+    }
+
+    pub fn iter() -> BackgroundTileIndexIterator {
+        BackgroundTileIndexIterator {index: BackgroundTileIndex(0)}
+    }
+
+    pub fn to_usize(self) -> usize {
+        self.0 as usize
+    }
+
+    #[inline]
+    pub fn column(self) -> u8 {
+        (self.0 % 32).try_into().unwrap()
+    }
+
+    #[inline]
+    pub fn row(self) -> u8 {
+        (self.0 / 32).try_into().unwrap()
+    }
+}
+
+pub struct BackgroundTileIndexIterator {
+    index: BackgroundTileIndex,
+}
+
+impl Iterator for BackgroundTileIndexIterator {
+    type Item = BackgroundTileIndex;
+
+    fn next(&mut self) -> Option<BackgroundTileIndex> {
+        if self.index.0 > MAX_INDEX {
+            return None;
+        }
+
+        let result = self.index;
+        self.index.0 += 1;
+        Some(result)
     }
 }
