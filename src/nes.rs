@@ -184,6 +184,7 @@ impl Nes {
 mod tests {
     use crate::cpu::cpu::ProgramCounterSource;
     use crate::ppu::palette::system_palette::SystemPalette;
+    use crate::ppu::screen::Screen;
 
     use crate::cartridge::tests::sample_ines;
 
@@ -204,8 +205,9 @@ mod tests {
         step_until_vblank_nmi_enabled(&mut nes);
         assert!(nes.cpu.nmi_pending());
 
-        while nes.step().is_none() {}
-        nes.step();
+        let mut screen = Screen::new();
+        while nes.step(&mut screen).is_none() {}
+        nes.step(&mut screen);
 
         assert!(
             !nes.cpu.nmi_pending(),
@@ -228,8 +230,9 @@ mod tests {
         step_until_vblank_nmi_enabled(&mut nes);
         assert!(nes.cpu.nmi_pending());
 
-        while nes.step().is_none() {}
-        nes.step();
+        let mut screen = Screen::new();
+        while nes.step(&mut screen).is_none() {}
+        nes.step(&mut screen);
 
         assert!(
             !nes.cpu.nmi_pending(),
@@ -252,21 +255,22 @@ mod tests {
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
 
-        let (cpu_mem, ppu_mem) = Nes::initialize_memory(ines);
+        let (cpu_mem, ppu_mem) = Nes::initialize_memory(ines, system_palette);
         Nes {
             cpu: Cpu::new(
                 cpu_mem,
                 ProgramCounterSource::Override(Address::new(0x2000)),
                 ),
-            ppu: Ppu::new(ppu_mem, system_palette),
+            ppu: Ppu::new(ppu_mem),
             cycle: 0,
         }
     }
 
     fn step_until_vblank_nmi_enabled(nes: &mut Nes) {
+        let mut screen = Screen::new();
         while !nes.ppu.nmi_enabled() {
             assert!(!nes.cpu.nmi_pending(), "NMI must not be pending before one is scheduled.");
-            nes.step();
+            nes.step(&mut screen);
             if nes.ppu.clock().total_cycles() > 200_000 {
                 panic!("It took too long for the PPU to enable NMI.");
             }
@@ -287,7 +291,8 @@ mod tests {
         nes.cpu.memory.write(nes.cpu.program_counter().advance(4), 0x20);
 
         // Execute the two op codes we just injected.
-        while nes.step().is_none() {}
-        while nes.step().is_none() {}
+        let mut screen = Screen::new();
+        while nes.step(&mut screen).is_none() {}
+        while nes.step(&mut screen).is_none() {}
     }
 }

@@ -109,51 +109,56 @@ mod test {
 
     #[test]
     fn horizontal_mirror_mapping_low() {
-        let memory = Memory::new(NameTableMirroring::Horizontal);
+        let memory = Memory::new(NameTableMirroring::Horizontal, system_palette());
         let result = memory.map_if_name_table_address(Address::from_u16(0x2C00));
         assert_eq!(result, Address::from_u16(0x2800));
     }
 
     #[test]
     fn horizontal_mirror_mapping_high() {
-        let memory = Memory::new(NameTableMirroring::Horizontal);
+        let memory = Memory::new(NameTableMirroring::Horizontal, system_palette());
         let result = memory.map_if_name_table_address(Address::from_u16(0x2FFF));
         assert_eq!(result, Address::from_u16(0x2BFF));
     }
 
     #[test]
     fn vertical_mirror_mapping_low() {
-        let memory = Memory::new(NameTableMirroring::Vertical);
+        let memory = Memory::new(NameTableMirroring::Vertical, system_palette());
         let result = memory.map_if_name_table_address(Address::from_u16(0x2C00));
         assert_eq!(result, Address::from_u16(0x2400));
     }
 
     #[test]
     fn vertical_mirror_mapping_high() {
-        let memory = Memory::new(NameTableMirroring::Vertical);
+        let memory = Memory::new(NameTableMirroring::Vertical, system_palette());
         let result = memory.map_if_name_table_address(Address::from_u16(0x2FFF));
         assert_eq!(result, Address::from_u16(0x27FF));
     }
 
     #[test]
     fn no_mapping_for_non_name_table_address_low() {
-        let memory = Memory::new(NameTableMirroring::Horizontal);
+        let memory = Memory::new(NameTableMirroring::Horizontal, system_palette());
         let result = memory.map_if_name_table_address(Address::from_u16(0x1FFF));
         assert_eq!(result, Address::from_u16(0x1FFF));
 
-        let memory = Memory::new(NameTableMirroring::Vertical);
+        let memory = Memory::new(NameTableMirroring::Vertical, system_palette());
         let result = memory.map_if_name_table_address(Address::from_u16(0x1FFF));
         assert_eq!(result, Address::from_u16(0x1FFF));
     }
 
     #[test]
     fn no_mapping_for_palette_index() {
-        let memory = Memory::new(NameTableMirroring::Horizontal);
+        let memory = Memory::new(NameTableMirroring::Horizontal, system_palette());
         let result = memory.map_if_name_table_address(Address::from_u16(0x3F00));
         assert_eq!(result, Address::from_u16(0x3F00));
 
-        let memory = Memory::new(NameTableMirroring::Vertical);
+        let memory = Memory::new(NameTableMirroring::Vertical, system_palette());
         let result = memory.map_if_name_table_address(Address::from_u16(0x3F00));
         assert_eq!(result, Address::from_u16(0x3F00));
+    }
+
+    fn system_palette() -> SystemPalette {
+         SystemPalette::parse(include_str!("../../palettes/2C02.pal"))
+            .unwrap()
     }
 }

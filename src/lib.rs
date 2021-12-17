@@ -8,7 +8,7 @@
 pub mod cartridge;
 pub mod config;
 pub mod cpu;
-mod ppu;
+pub mod ppu;
 mod mapper;
 pub mod nes;
 mod util;
