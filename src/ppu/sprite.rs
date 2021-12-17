@@ -1,11 +1,12 @@
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
+use crate::ppu::pattern_table::PatternIndex;
 use crate::util::get_bit;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Sprite {
     x_coordinate: u8,
     y_coordinate: u8,
-    tile_number: u8,
+    pattern_index: PatternIndex,
     flip_vertically: bool,
     flip_horizontally: bool,
     priority: Priority,
@@ -14,7 +15,7 @@ pub struct Sprite {
 
 impl Sprite {
     pub fn from_u32(value: u32) -> Sprite {
-        let [y_coordinate, tile_number, attribute, x_coordinate] =
+        let [y_coordinate, raw_pattern_index, attribute, x_coordinate] =
             value.to_be_bytes();
 
         let palette_table_index =
@@ -28,7 +29,7 @@ impl Sprite {
         Sprite {
             x_coordinate,
             y_coordinate,
-            tile_number,
+            pattern_index: PatternIndex::new(raw_pattern_index),
             flip_vertically:   get_bit(attribute, 0),
             flip_horizontally: get_bit(attribute, 1),
             priority:          get_bit(attribute, 2).into(),
@@ -44,8 +45,9 @@ impl Sprite {
         self.y_coordinate
     }
 
-    pub fn tile_number(self) -> u8 {
-        self.tile_number
+    #[inline]
+    pub fn pattern_index(self) -> PatternIndex {
+        self.pattern_index
     }
 
     pub fn flip_vertically(self) -> bool {

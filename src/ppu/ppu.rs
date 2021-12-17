@@ -138,14 +138,14 @@ impl Ppu {
         let name_table_number = self.ctrl.name_table_number();
         let background_table_side = self.ctrl.background_table_side();
         for tile_number in TileNumber::iter() {
-            let (tile_index, palette_table_index) =
+            let (pattern_index, palette_table_index) =
                 self.name_table(name_table_number).tile_entry_at(tile_number);
             let pixel_column = 8 * tile_number.column();
             let start_row = 8 * tile_number.row();
             for row_in_tile in 0..8 {
                 self.pattern_table().render_tile_sliver(
                     background_table_side,
-                    tile_index,
+                    pattern_index,
                     row_in_tile as usize,
                     palette_table.background_palette(palette_table_index),
                     screen.background_tile_sliver(pixel_column, start_row + row_in_tile),
@@ -162,7 +162,6 @@ impl Ppu {
         for sprite in self.oam.sprites() {
             let x = sprite.x_coordinate();
             let y = sprite.y_coordinate();
-            let tile_index = 32 * x + y;
             let palette_table_index = sprite.palette_table_index();
 
             for row_in_tile in 0..8 {
@@ -175,7 +174,7 @@ impl Ppu {
 
                 self.pattern_table().render_tile_sliver(
                     sprite_table_side,
-                    tile_index,
+                    sprite.pattern_index(),
                     row_in_tile as usize,
                     palette_table.sprite_palette(palette_table_index),
                     &mut sliver.0,

@@ -16,13 +16,13 @@ impl <'a> PatternTable<'a> {
     pub fn render_tile_sliver(
         &'a self,
         side: PatternTableSide,
-        tile_index: u8,
+        pattern_index: PatternIndex,
         row_in_tile: usize,
         palette: Palette,
         tile_sliver: &mut [Rgbt; 8],
         ) {
 
-        let index = side as usize + 16 * (tile_index as usize);
+        let index = side as usize + 16 * pattern_index.to_usize();
         let low_index = index + row_in_tile;
         let high_index = low_index + 8;
 
@@ -82,4 +82,18 @@ impl fmt::Display for PatternTable<'_> {
 pub enum PatternTableSide {
     Left  = 0x0000,
     Right = 0x1000,
+}
+
+
+#[derive(Clone, Copy, Debug)]
+pub struct PatternIndex(u8);
+
+impl PatternIndex {
+    pub fn new(value: u8) -> PatternIndex {
+        PatternIndex(value)
+    }
+
+    pub fn to_usize(self) -> usize {
+        self.0 as usize
+    }
 }

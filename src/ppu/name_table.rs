@@ -1,6 +1,7 @@
 use std::fmt;
 
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
+use crate::ppu::pattern_table::PatternIndex;
 use crate::ppu::tile_number::TileNumber;
 
 const NAME_TABLE_SIZE: usize = 0x400;
@@ -22,12 +23,16 @@ impl <'a> NameTable<'a> {
     }
 
     #[inline]
-    pub fn tile_entry_at(&self, tile_number: TileNumber) -> (u8, PaletteTableIndex) {
-        let tile_entry = self.tiles[tile_number.to_usize()];
+    pub fn tile_entry_at(
+        &self,
+        tile_number: TileNumber,
+        ) -> (PatternIndex, PaletteTableIndex) {
+
+        let pattern_index = PatternIndex::new(self.tiles[tile_number.to_usize()]);
         let palette_table_index =
             self.attribute_table.palette_table_index(tile_number);
 
-        (tile_entry, palette_table_index)
+        (pattern_index, palette_table_index)
     }
 }
 
@@ -35,7 +40,7 @@ impl fmt::Display for NameTable<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Nametable!")?;
         for tile_number in TileNumber::iter() {
-            write!(f, "#{:02X} ", self.tile_entry_at(tile_number).0)?;
+            write!(f, "#{:02X} ", self.tile_entry_at(tile_number).0.to_usize())?;
         }
 
         Ok(())
