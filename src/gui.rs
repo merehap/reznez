@@ -23,7 +23,7 @@ pub fn gui(mut nes: Nes) {
     while window.is_open() && !window.is_key_down(Key::Escape) {
         nes.step(&mut screen);
 
-        if nes.ppu().clock().scanline() == 1 && nes.ppu().clock().cycle() == 0 {
+        if nes.ppu().clock().scanline() == 1 && nes.ppu().clock().cycle() == 1 {
             let frame = nes.ppu().clock().frame();
             println!(
                 "Frame: {}, Rate: {}, Average: {}",
