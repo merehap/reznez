@@ -146,6 +146,7 @@ impl Ppu {
                     background_table_side,
                     pattern_index,
                     row_in_tile as usize,
+                    false,
                     palette_table.background_palette(palette_table_index),
                     screen.background_tile_sliver(pixel_column, start_row + row_in_tile),
                     );
@@ -168,13 +169,21 @@ impl Ppu {
                     break;
                 }
 
-                let mut sliver = screen.sprites_tile_sliver(x, y + row_in_tile);
+                let y =
+                    if sprite.flip_vertically() {
+                        y + 7 - row_in_tile
+                    } else {
+                        y + row_in_tile
+                    };
+
+                let mut sliver = screen.sprites_tile_sliver(x, y);
                 sliver.1 = sprite.priority();
 
                 self.pattern_table().render_tile_sliver(
                     sprite_table_side,
                     sprite.pattern_index(),
                     row_in_tile as usize,
+                    sprite.flip_horizontally(),
                     palette_table.sprite_palette(palette_table_index),
                     &mut sliver.0,
                     );

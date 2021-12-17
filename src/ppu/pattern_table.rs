@@ -18,6 +18,7 @@ impl <'a> PatternTable<'a> {
         side: PatternTableSide,
         pattern_index: PatternIndex,
         row_in_tile: usize,
+        flip: bool,
         palette: Palette,
         tile_sliver: &mut [Rgbt; 8],
         ) {
@@ -29,7 +30,11 @@ impl <'a> PatternTable<'a> {
         let low_byte = self.0[low_index];
         let high_byte = self.0[high_index];
 
-        for (column_in_tile, rgbt) in &mut tile_sliver.iter_mut().enumerate() {
+        for (mut column_in_tile, rgbt) in &mut tile_sliver.iter_mut().enumerate() {
+            if flip {
+                column_in_tile = 7 - column_in_tile;
+            }
+
             let low_bit = get_bit(low_byte, column_in_tile);
             let high_bit = get_bit(high_byte, column_in_tile);
             *rgbt = match (low_bit, high_bit) {
