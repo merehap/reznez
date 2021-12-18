@@ -416,11 +416,11 @@ impl Cpu {
     }
 
     fn take_branch(&mut self, destination: Address) -> u8 {
-        println!("Branch taken, cycle added.");
+        //println!("Branch taken, cycle added.");
         let mut cycle_count = 1;
 
         if self.program_counter.page() != destination.page() {
-            println!("Branch crossed page boundary, 'Oops' cycle added.");
+            //println!("Branch crossed page boundary, 'Oops' cycle added.");
             cycle_count += 1;
         }
 
