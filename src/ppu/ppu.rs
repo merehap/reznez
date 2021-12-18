@@ -4,6 +4,7 @@ use crate::ppu::memory::Memory;
 use crate::ppu::name_table::{NameTable, BackgroundTileIndex};
 use crate::ppu::name_table_number::NameTableNumber;
 use crate::ppu::oam::Oam;
+use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
@@ -45,6 +46,20 @@ impl Ppu {
 
     pub fn clock(&self) -> &Clock {
         &self.clock
+    }
+
+    #[inline]
+    pub fn pattern_table(&self) -> PatternTable {
+        self.memory.pattern_table()
+    }
+
+    #[inline]
+    pub fn name_table(&self, number: NameTableNumber) -> NameTable {
+        self.memory.name_table(number)
+    }
+
+    pub fn palette_table(&self) -> PaletteTable {
+        self.memory.palette_table()
     }
 
     pub fn ctrl(&self) -> Ctrl {
@@ -194,16 +209,6 @@ impl Ppu {
                     );
             }
         }
-    }
-
-    #[inline]
-    fn pattern_table(&self) -> PatternTable {
-        self.memory.pattern_table()
-    }
-
-    #[inline]
-    fn name_table(&self, number: NameTableNumber) -> NameTable {
-        self.memory.name_table(number)
     }
 
     fn rendering_enabled(&self) -> bool {

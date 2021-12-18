@@ -6,7 +6,8 @@ pub struct Rgb {
 }
 
 impl Rgb {
-    pub const BLACK: Rgb = Rgb::new(0x0, 0x0, 0x0);
+    pub const BLACK: Rgb = Rgb::new(0x00, 0x00, 0x00);
+    pub const WHITE: Rgb = Rgb::new(0xFF, 0xFF, 0xFF);
 
     pub const fn new(red: u8, green: u8, blue: u8) -> Rgb {
         Rgb {red, green, blue}

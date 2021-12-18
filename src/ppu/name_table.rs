@@ -40,7 +40,11 @@ impl fmt::Display for NameTable<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Nametable!")?;
         for index in BackgroundTileIndex::iter() {
-            write!(f, "#{:02X} ", self.tile_entry_at(index).0.to_usize())?;
+            write!(f, "{:02X} ", self.tile_entry_at(index).0.to_usize())?;
+
+            if index.to_usize() % 32 == 31 {
+                writeln!(f)?;
+            }
         }
 
         Ok(())
@@ -66,6 +70,21 @@ impl <'a> AttributeTable<'a> {
             if background_tile_index.row()    / 2 % 2 == 0 {2} else {0} +
             if background_tile_index.column() / 2 % 2 == 0 {1} else {0};
         palette_table_indexes[index_selection]
+    }
+}
+
+impl fmt::Display for AttributeTable<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Attribute Table!")?;
+        for index in BackgroundTileIndex::iter() {
+            write!(f, "{} ", self.palette_table_index(index) as usize)?;
+
+            if index.to_usize() % 32 == 31 {
+                writeln!(f)?;
+            }
+        }
+
+        Ok(())
     }
 }
 

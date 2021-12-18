@@ -53,4 +53,12 @@ impl PaletteTable {
     pub fn sprite_palette(&self, number: PaletteTableIndex) -> Palette {
         self.sprite_palettes[number as usize]
     }
+
+    pub fn background_palettes(&self) -> [Palette; 4] {
+        self.background_palettes
+    }
+
+    pub fn sprite_palettes(&self) -> [Palette; 4] {
+        self.sprite_palettes
+    }
 }

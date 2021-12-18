@@ -1,4 +1,6 @@
-#[derive(Clone, Copy, Debug)]
+use enum_iterator::IntoEnumIterator;
+
+#[derive(Clone, Copy, Debug, IntoEnumIterator)]
 pub enum PaletteTableIndex {
     Zero,
     One,
@@ -9,9 +11,13 @@ pub enum PaletteTableIndex {
 impl PaletteTableIndex {
     pub fn unpack_byte(value: u8) -> [PaletteTableIndex; 4] {
         [
+            // Bottom right.
             PaletteTableIndex::from_low_bits(value >> 6),
+            // Bottom left.
             PaletteTableIndex::from_low_bits(value >> 4),
+            // Top right.
             PaletteTableIndex::from_low_bits(value >> 2),
+            // Top left.
             PaletteTableIndex::from_low_bits(value),
         ]
     }

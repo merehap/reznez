@@ -10,6 +10,10 @@ impl Palette {
     pub fn new(raw: [Rgb; 3]) -> Palette {
         Palette(raw)
     }
+
+    pub fn rgbs(self) -> [Rgb; 3] {
+        self.0
+    }
 }
 
 impl Index<PaletteIndex> for Palette {
