@@ -44,7 +44,7 @@ impl DmaTransfer {
                 Read,
             Read =>
                 Write(self.current_address),
-            Write(_) if self.remaining_byte_count == 0 =>
+            Write(_) if self.remaining_byte_count <= 1 =>
                 Finished,
             Write(_) => {
                 self.current_address.inc();
