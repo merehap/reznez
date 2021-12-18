@@ -63,8 +63,8 @@ impl <'a> AttributeTable<'a> {
         let attribute = self.0[attribute_index as usize];
         let palette_table_indexes = PaletteTableIndex::unpack_byte(attribute);
         let index_selection =
-            if background_tile_index.row()    % 2 == 0 {2} else {0} +
-            if background_tile_index.column() % 2 == 0 {1} else {0};
+            if background_tile_index.row()    / 2 % 2 == 0 {2} else {0} +
+            if background_tile_index.column() / 2 % 2 == 0 {1} else {0};
         palette_table_indexes[index_selection]
     }
 }
