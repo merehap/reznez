@@ -119,8 +119,13 @@ impl Ppu {
             self.is_nmi_period = false;
             step_event = StepEvents::stop_vblank();
         } else if self.clock.scanline() == 1 && self.clock.cycle() == 1 {
-            self.render_background(screen);
-            self.render_sprites(screen);
+            if self.mask.background_enabled() {
+                self.render_background(screen);
+            }
+
+            if self.mask.sprites_enabled() {
+                self.render_sprites(screen);
+            }
             step_event = StepEvents::no_events();
         } else {
             step_event = StepEvents::no_events();
