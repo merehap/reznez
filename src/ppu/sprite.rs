@@ -21,8 +21,8 @@ impl Sprite {
         let palette_table_index =
             match (get_bit(attribute, 6), get_bit(attribute, 7)) {
                 (false, false) => PaletteTableIndex::Zero,
-                (true , false) => PaletteTableIndex::One,
-                (false, true ) => PaletteTableIndex::Two,
+                (false, true ) => PaletteTableIndex::One,
+                (true , false) => PaletteTableIndex::Two,
                 (true , true ) => PaletteTableIndex::Three,
             };
 
