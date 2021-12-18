@@ -52,13 +52,19 @@ struct AttributeTable<'a>(&'a [u8; NAME_TABLE_SIZE - ATTRIBUTE_START_INDEX]);
 
 impl <'a> AttributeTable<'a> {
     #[inline]
-    fn palette_table_index(&self, tile_number: BackgroundTileIndex) -> PaletteTableIndex {
-        let attribute_index = 8 * (tile_number.row() / 4) + (tile_number.column() / 4);
+    fn palette_table_index(
+        &self,
+        background_tile_index: BackgroundTileIndex,
+        ) -> PaletteTableIndex {
+
+        let attribute_index =
+            8 * (background_tile_index.row() / 4) +
+            (background_tile_index.column() / 4);
         let attribute = self.0[attribute_index as usize];
         let palette_table_indexes = PaletteTableIndex::unpack_byte(attribute);
         let index_selection =
-            if tile_number.row()    % 2 == 0 {2} else {0} +
-            if tile_number.column() % 2 == 0 {1} else {0};
+            if background_tile_index.row()    % 2 == 0 {2} else {0} +
+            if background_tile_index.column() % 2 == 0 {1} else {0};
         palette_table_indexes[index_selection]
     }
 }
