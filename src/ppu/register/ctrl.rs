@@ -1,4 +1,4 @@
-use crate::ppu::name_table_number::NameTableNumber;
+use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::get_bit;
 

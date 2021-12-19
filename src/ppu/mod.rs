@@ -2,8 +2,6 @@ pub mod address;
 pub mod clock;
 pub mod memory;
 pub mod name_table;
-pub mod name_table_mirroring;
-mod name_table_number;
 pub mod oam;
 pub mod palette;
 pub mod pattern_table;

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::ppu::name_table_mirroring::NameTableMirroring;
+use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 
 const INES_HEADER_CONSTANT: &[u8] = &[0x4E, 0x45, 0x53, 0x1A];
 const PRG_ROM_CHUNK_LENGTH: usize = 0x4000;

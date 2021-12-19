@@ -1,9 +1,9 @@
 use std::ops::{Index, IndexMut};
 
 use crate::ppu::address::Address;
-use crate::ppu::name_table::NameTable;
-use crate::ppu::name_table_mirroring::NameTableMirroring;
-use crate::ppu::name_table_number::NameTableNumber;
+use crate::ppu::name_table::name_table::NameTable;
+use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
+use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
@@ -105,7 +105,7 @@ impl IndexMut<Address> for Memory {
 mod test {
     use super::*;
     use crate::ppu::address::Address;
-    use crate::ppu::name_table_mirroring::NameTableMirroring;
+    use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 
     #[test]
     fn horizontal_mirror_mapping_low() {
