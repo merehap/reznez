@@ -74,7 +74,7 @@ impl Memory {
 
     fn map_if_name_table_address(&self, address: Address) -> Address {
         // No modification if it's not a name table address.
-        if address < Address::from_u16(0x2000) || address >= Address::from_u16(0x3F00) {
+        if address < NAME_TABLE_INDEXES[0] || address >= PALETTE_TABLE_START {
             return address;
         }
 
