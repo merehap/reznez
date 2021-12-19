@@ -1,7 +1,8 @@
 use crate::ppu::address::Address;
 use crate::ppu::clock::Clock;
 use crate::ppu::memory::Memory;
-use crate::ppu::name_table::name_table::{NameTable, BackgroundTileIndex};
+use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
+use crate::ppu::name_table::name_table::NameTable;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::oam::Oam;
 use crate::ppu::palette::palette_table::PaletteTable;
