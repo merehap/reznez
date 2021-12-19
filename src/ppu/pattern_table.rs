@@ -89,7 +89,6 @@ pub enum PatternTableSide {
     Right = 0x1000,
 }
 
-
 #[derive(Clone, Copy, Debug)]
 pub struct PatternIndex(u8);
 

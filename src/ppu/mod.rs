@@ -9,4 +9,3 @@ pub mod ppu;
 pub mod register;
 pub mod screen;
 pub mod sprite;
-pub mod tile;
