@@ -37,7 +37,7 @@ pub fn gui(mut nes: Nes) {
             println!(
                 "Frame: {}, Rate: {}, Average: {}",
                 nes.ppu().clock().frame(),
-                1000.0 / framewatch.elapsed_ms() as f64,
+                1_000_000_000.0 / framewatch.elapsed().as_nanos() as f64,
                 1000.0 / totalwatch.elapsed_ms() as f64 * frame as f64,
                 );
 
