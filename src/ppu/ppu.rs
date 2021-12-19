@@ -1,3 +1,7 @@
+use std::ops::Add;
+use std::time::{Duration, SystemTime};
+use std::thread;
+
 use crate::ppu::address::Address;
 use crate::ppu::clock::Clock;
 use crate::ppu::memory::Memory;
@@ -14,6 +18,10 @@ use crate::ppu::screen::Screen;
 const FIRST_VBLANK_CYCLE: u64 = 3 * 27384;
 const SECOND_VBLANK_CYCLE: u64 = 3 * 57165;
 
+const NTSC_FRAME_RATE: f64 = 60.0988;
+const NTSC_TIME_PER_FRAME: Duration =
+    Duration::from_nanos((1_000_000_000.0 / NTSC_FRAME_RATE) as u64);
+
 pub struct Ppu {
     memory: Memory,
     oam: Oam,
@@ -21,6 +29,7 @@ pub struct Ppu {
     mask: Mask,
 
     clock: Clock,
+    frame_end_time: SystemTime,
 
     is_nmi_period: bool,
     vram_address: Address,
@@ -37,6 +46,7 @@ impl Ppu {
             mask: Mask::new(),
 
             clock: Clock::new(),
+            frame_end_time: SystemTime::now(),
 
             is_nmi_period: false,
             vram_address: Address::from_u16(0),
@@ -112,8 +122,9 @@ impl Ppu {
     }
 
     pub fn step(&mut self, screen: &mut Screen) -> StepEvents {
-        let frame_started = self.clock().is_start_of_frame();
+        let frame_started = self.clock().is_first_cycle_of_frame();
         if frame_started {
+            self.frame_end_time = SystemTime::now().add(NTSC_TIME_PER_FRAME);
             println!(
                 "PPU Cycle: {}, Frame: {}",
                 self.clock().total_cycles(),
@@ -145,6 +156,13 @@ impl Ppu {
             step_event = StepEvents::no_events();
         } else {
             step_event = StepEvents::no_events();
+        }
+
+        let frame_ended = self.clock().is_last_cycle_of_frame();
+        if frame_ended {
+            if let Ok(duration) = self.frame_end_time.duration_since(SystemTime::now()) {
+                thread::sleep(duration)
+            }
         }
 
         self.clock.tick(self.rendering_enabled());
