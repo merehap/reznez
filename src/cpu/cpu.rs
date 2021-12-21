@@ -332,7 +332,12 @@ impl Cpu {
 
             (NOP, _) => {},
             (JAM, _) => panic!("JAM instruction encountered!"),
-            (op_code, arg) => unreachable!("Argument type {:?} is invalid for the {:?} opcode.", arg, op_code),
+            (op_code, arg) =>
+                unreachable!(
+                    "Argument type {:?} is invalid for the {:?} opcode.",
+                    arg,
+                    op_code,
+                    ),
         }
 
         cycle_count as u8

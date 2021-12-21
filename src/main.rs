@@ -7,6 +7,7 @@
 
 mod cartridge;
 mod config;
+mod controller;
 mod cpu;
 mod gui;
 mod ppu;

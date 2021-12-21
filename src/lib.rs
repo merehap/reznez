@@ -7,6 +7,7 @@
 
 pub mod cartridge;
 pub mod config;
+pub mod controller;
 pub mod cpu;
 pub mod ppu;
 mod mapper;

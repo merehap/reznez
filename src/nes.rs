@@ -2,6 +2,7 @@ use std::collections::BTreeSet;
 
 use crate::cartridge::INes;
 use crate::config::Config;
+use crate::controller::joypad::Joypad;
 use crate::cpu::address::Address;
 use crate::cpu::cpu::{Cpu, StepResult};
 use crate::cpu::instruction::Instruction;
@@ -15,19 +16,29 @@ use crate::ppu::register::mask::Mask;
 use crate::ppu::screen::Screen;
 use crate::mapper::mapper0::Mapper0;
 
-const PPUCTRL:   Address = Address::new(0x2000);
-const PPUMASK:   Address = Address::new(0x2001);
-const PPUSTATUS: Address = Address::new(0x2002);
-const OAMADDR:   Address = Address::new(0x2003);
-const OAMDATA:   Address = Address::new(0x2004);
-const PPUSCROLL: Address = Address::new(0x2005);
-const PPUADDR:   Address = Address::new(0x2006);
-const PPUDATA:   Address = Address::new(0x2007);
-const OAM_DMA:   Address = Address::new(0x4014);
+const PPUCTRL:    Address = Address::new(0x2000);
+const PPUMASK:    Address = Address::new(0x2001);
+const PPUSTATUS:  Address = Address::new(0x2002);
+const OAMADDR:    Address = Address::new(0x2003);
+const OAMDATA:    Address = Address::new(0x2004);
+const PPUSCROLL:  Address = Address::new(0x2005);
+const PPUADDR:    Address = Address::new(0x2006);
+const PPUDATA:    Address = Address::new(0x2007);
+const OAM_DMA:    Address = Address::new(0x4014);
 
-const CPU_READ_PORTS: [Address; 3] = [PPUSTATUS, OAMDATA, PPUDATA];
+const JOYSTICK_1_PORT: Address = Address::new(0x4016);
+const JOYSTICK_2: Address = Address::new(0x4017);
+
+const CPU_READ_PORTS: [Address; 4] = [
+    PPUSTATUS,
+    OAMDATA,
+    PPUDATA,
+
+    JOYSTICK_1_PORT,
+];
+
 // All ports are write ports, even the "read-only" PPUSTATUS.
-const CPU_WRITE_PORTS: [Address; 9] =
+const CPU_WRITE_PORTS: [Address; 10] =
     [
         PPUCTRL,
         PPUMASK,
@@ -38,11 +49,14 @@ const CPU_WRITE_PORTS: [Address; 9] =
         PPUADDR,
         PPUDATA,
         OAM_DMA,
+
+        JOYSTICK_1_PORT,
     ];
 
 pub struct Nes {
     cpu: Cpu,
     ppu: Ppu,
+    pub joypad_1: Joypad,
     cycle: u64,
 }
 
@@ -56,6 +70,7 @@ impl Nes {
         Nes {
             cpu: Cpu::new(cpu_mem, config.program_counter_source()),
             ppu: Ppu::new(ppu_mem),
+            joypad_1: Joypad::new(),
             cycle: 0,
         }
     }
@@ -66,6 +81,10 @@ impl Nes {
 
     pub fn ppu(&self) -> &Ppu {
         &self.ppu
+    }
+
+    pub fn cycle(&self) -> u64 {
+        self.cycle
     }
 
     pub fn step(&mut self, screen: &mut Screen) -> Option<Instruction> {
@@ -155,6 +174,25 @@ impl Nes {
             (PPUDATA, Write) => self.ppu.write_vram(value),
 
             (PPUSCROLL, Write) => println!("PPUSCROLL was written to (not supported)."),
+
+            (JOYSTICK_1_PORT, Read) => {
+                // Now that the ROM has read a button status, write the next one.
+                let status = self.joypad_1.selected_button_status() as u8;
+                println!("Program read JOYSTICK_1_PORT: {}", status);
+                self.cpu.memory.write(
+                    JOYSTICK_1_PORT,
+                    status,
+                    );
+            },
+            (JOYSTICK_1_PORT, Write) => {
+                if value & 1 == 1 {
+                    println!("JOYSTICK_1_PORT: Turning strobe on.");
+                    self.joypad_1.strobe_on();
+                } else {
+                    println!("JOYSTICK_1_PORT: Turning strobe off.");
+                    self.joypad_1.strobe_off();
+                }
+            },
 
             (_, _) => unreachable!(),
         }
