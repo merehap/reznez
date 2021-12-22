@@ -23,15 +23,17 @@ impl Joypad {
 
     pub fn selected_button_status(&mut self) -> ButtonStatus {
         if let Some(selected_button) = self.selected_button {
-            let status = self.button_statuses[selected_button];
-            if self.strobe_mode == StrobeMode::Off {
-                self.selected_button = selected_button.next();
-            }
-
-            status
+            self.button_statuses[selected_button]
         } else {
             // After every button has been cycled through, always return Pressed.
             ButtonStatus::Pressed
+        }
+    }
+
+    pub fn select_next_button(&mut self) {
+        if self.strobe_mode == StrobeMode::Off {
+            self.selected_button =
+                self.selected_button.map(Button::next).flatten();
         }
     }
 
@@ -81,7 +83,7 @@ impl Button {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct ButtonStatuses([ButtonStatus; 8]);
 
 impl ButtonStatuses {
@@ -104,7 +106,7 @@ impl IndexMut<Button> for ButtonStatuses {
 }
 
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum ButtonStatus {
     Unpressed,
     Pressed,

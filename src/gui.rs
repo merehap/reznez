@@ -1,19 +1,14 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
 use lazy_static::lazy_static;
-use log::error;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
 use sdl2::pixels::PixelFormatEnum;
-use sdl2::EventPump;
 
 use stopwatch::Stopwatch;
 
 use crate::controller::joypad::Button;
 use crate::nes::Nes;
-use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::screen::Screen;
 
@@ -22,9 +17,9 @@ const DEBUG_SCREEN_HEIGHT: usize = 20;
 lazy_static! {
     static ref BUTTON_MAPPINGS: HashMap<Keycode, Button> = {
         let mut mappings = HashMap::new();
-        mappings.insert(Keycode::A,      Button::A);
-        mappings.insert(Keycode::S,      Button::B);
-        mappings.insert(Keycode::Space,  Button::Select);
+        mappings.insert(Keycode::Space,  Button::A);
+        mappings.insert(Keycode::F,      Button::B);
+        mappings.insert(Keycode::RShift, Button::Select);
         mappings.insert(Keycode::Return, Button::Start);
         mappings.insert(Keycode::Up,     Button::Up);
         mappings.insert(Keycode::Down,   Button::Down);
@@ -38,7 +33,7 @@ pub fn gui(mut nes: Nes) {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem
-        .window("Tile viewer", (256.0 * 3.0) as u32, (240.0 * 3.0) as u32)
+        .window("REZNEZ", (256.0 * 3.0) as u32, (240.0 * 3.0) as u32)
         .position_centered()
         .build()
         .unwrap();
@@ -53,10 +48,12 @@ pub fn gui(mut nes: Nes) {
         .unwrap();
 
     let mut screen = Screen::new();
-    let mut totalwatch = Stopwatch::start_new();
+    let totalwatch = Stopwatch::start_new();
     let mut framewatch = Stopwatch::start_new();
+    /*
     let palette_screen =
         DebugScreen::<{Screen::WIDTH}, DEBUG_SCREEN_HEIGHT>::new(Rgb::WHITE);
+        */
 
     let mut pixels = [0; 4 * Screen::WIDTH * Screen::HEIGHT];
 

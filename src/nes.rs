@@ -112,6 +112,9 @@ impl Nes {
             self.schedule_nmi_if_enabled();
         }
 
+        let status = self.joypad_1.selected_button_status() as u8;
+        self.cpu.memory.write(JOYSTICK_1_PORT, status);
+
         self.cycle += 1;
 
         instruction
@@ -176,13 +179,9 @@ impl Nes {
             (PPUSCROLL, Write) => println!("PPUSCROLL was written to (not supported)."),
 
             (JOYSTICK_1_PORT, Read) => {
-                // Now that the ROM has read a button status, write the next one.
-                let status = self.joypad_1.selected_button_status() as u8;
-                println!("Program read JOYSTICK_1_PORT: {}", status);
-                self.cpu.memory.write(
-                    JOYSTICK_1_PORT,
-                    status,
-                    );
+                println!("Program read JOYSTICK_1_PORT");
+                // Now that the ROM has read a button status, advance to the next one.
+                self.joypad_1.select_next_button();
             },
             (JOYSTICK_1_PORT, Write) => {
                 if value & 1 == 1 {
