@@ -19,22 +19,20 @@ use crate::ppu::screen::Screen;
 
 const DEBUG_SCREEN_HEIGHT: usize = 20;
 
-/*
 lazy_static! {
-    static ref BUTTON_MAPPINGS: HashMap<Key, Button> = {
+    static ref BUTTON_MAPPINGS: HashMap<Keycode, Button> = {
         let mut mappings = HashMap::new();
-        mappings.insert(Key::from_char('a'),      Button::A);
-        mappings.insert(Key::from_char('s'),      Button::B);
-        mappings.insert(Key::from_char('z'),  Button::Select);
-        mappings.insert(Key::Enter, Button::Start);
-        mappings.insert(Key::Up,     Button::Up);
-        mappings.insert(Key::Down,   Button::Down);
-        mappings.insert(Key::Left,   Button::Left);
-        mappings.insert(Key::Right,  Button::Right);
+        mappings.insert(Keycode::A,      Button::A);
+        mappings.insert(Keycode::S,      Button::B);
+        mappings.insert(Keycode::Space,  Button::Select);
+        mappings.insert(Keycode::Return, Button::Start);
+        mappings.insert(Keycode::Up,     Button::Up);
+        mappings.insert(Keycode::Down,   Button::Down);
+        mappings.insert(Keycode::Left,   Button::Left);
+        mappings.insert(Keycode::Right,  Button::Right);
         mappings
     };
 }
-*/
 
 pub fn gui(mut nes: Nes) {
     let sdl_context = sdl2::init().unwrap();
@@ -127,54 +125,30 @@ pub fn gui(mut nes: Nes) {
             canvas.copy(&texture, None, None).unwrap();
 
             canvas.present();
-        }
 
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. } | Event::KeyDown {
-                  keycode: Some(Keycode::Escape),
-                  ..
-                } => std::process::exit(0),
-                _ => { /* do nothing */ }
+            for event in event_pump.poll_iter() {
+                match event {
+                    Event::Quit { .. } |
+                    Event::KeyDown {
+                        keycode: Some(Keycode::Escape),
+                        ..
+                    } => std::process::exit(0),
+                    Event::KeyDown {keycode: Some(code), ..} => {
+                        if let Some(&button) = BUTTON_MAPPINGS.get(&code) {
+                            nes.joypad_1.press_button(button);
+                        }
+                    },
+                    Event::KeyUp {keycode: Some(code), ..} => {
+                        if let Some(&button) = BUTTON_MAPPINGS.get(&code) {
+                            nes.joypad_1.release_button(button);
+                        }
+                    },
+                    _ => { /* do nothing */ }
+                }
             }
         }
     }
 }
-
-struct World {
-    nes: Arc<Mutex<Nes>>,
-
-    screen: Screen,
-    totalwatch: Stopwatch,
-    framewatch: Stopwatch,
-    palette_screen: DebugScreen::<{Screen::WIDTH}, DEBUG_SCREEN_HEIGHT>,
-
-}
-
-impl World {
-    fn new(nes: Arc<Mutex<Nes>>) -> Self {
-        Self {
-            nes,
-            screen: Screen::new(),
-            totalwatch: Stopwatch::start_new(),
-            framewatch: Stopwatch::start_new(),
-            palette_screen:
-                DebugScreen::<{Screen::WIDTH}, DEBUG_SCREEN_HEIGHT>::new(Rgb::WHITE),
-        }
-    }
-
-    fn update(&mut self) -> bool {
-        self.nes.lock().unwrap().step(&mut self.screen);
-
-        let should_redraw = self.nes.lock().unwrap().ppu().clock().is_first_cycle_of_frame();
-        should_redraw
-    }
-
-    fn draw(&mut self, pixels: &mut [u8]) {
-        let nes = self.nes.lock().unwrap();
-    }
-}
-
 
 pub struct DebugScreen<const WIDTH: usize, const HEIGHT: usize> {
     buffer: [[Rgb; WIDTH]; HEIGHT],
