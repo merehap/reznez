@@ -15,7 +15,7 @@ use crate::ppu::screen::Screen;
 const DEBUG_SCREEN_HEIGHT: usize = 20;
 
 lazy_static! {
-    static ref BUTTON_MAPPINGS: HashMap<Keycode, Button> = {
+    static ref JOY_1_BUTTON_MAPPINGS: HashMap<Keycode, Button> = {
         let mut mappings = HashMap::new();
         mappings.insert(Keycode::Space,  Button::A);
         mappings.insert(Keycode::F,      Button::B);
@@ -25,6 +25,19 @@ lazy_static! {
         mappings.insert(Keycode::Down,   Button::Down);
         mappings.insert(Keycode::Left,   Button::Left);
         mappings.insert(Keycode::Right,  Button::Right);
+        mappings
+    };
+
+    static ref JOY_2_BUTTON_MAPPINGS: HashMap<Keycode, Button> = {
+        let mut mappings = HashMap::new();
+        mappings.insert(Keycode::Kp0,     Button::A);
+        mappings.insert(Keycode::KpEnter, Button::B);
+        mappings.insert(Keycode::KpMinus, Button::Select);
+        mappings.insert(Keycode::KpPlus,  Button::Start);
+        mappings.insert(Keycode::Kp8,     Button::Up);
+        mappings.insert(Keycode::Kp5,     Button::Down);
+        mappings.insert(Keycode::Kp4,     Button::Left);
+        mappings.insert(Keycode::Kp6,     Button::Right);
         mappings
     };
 }
@@ -131,13 +144,17 @@ pub fn gui(mut nes: Nes) {
                         ..
                     } => std::process::exit(0),
                     Event::KeyDown {keycode: Some(code), ..} => {
-                        if let Some(&button) = BUTTON_MAPPINGS.get(&code) {
+                        if let Some(&button) = JOY_1_BUTTON_MAPPINGS.get(&code) {
                             nes.joypad_1.press_button(button);
+                        } else if let Some(&button) = JOY_2_BUTTON_MAPPINGS.get(&code) {
+                            nes.joypad_2.press_button(button);
                         }
                     },
                     Event::KeyUp {keycode: Some(code), ..} => {
-                        if let Some(&button) = BUTTON_MAPPINGS.get(&code) {
+                        if let Some(&button) = JOY_1_BUTTON_MAPPINGS.get(&code) {
                             nes.joypad_1.release_button(button);
+                        } else if let Some(&button) = JOY_2_BUTTON_MAPPINGS.get(&code) {
+                            nes.joypad_2.release_button(button);
                         }
                     },
                     _ => { /* do nothing */ }

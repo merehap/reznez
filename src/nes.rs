@@ -27,14 +27,15 @@ const PPUDATA:    Address = Address::new(0x2007);
 const OAM_DMA:    Address = Address::new(0x4014);
 
 const JOYSTICK_1_PORT: Address = Address::new(0x4016);
-const JOYSTICK_2: Address = Address::new(0x4017);
+const JOYSTICK_2_PORT: Address = Address::new(0x4017);
 
-const CPU_READ_PORTS: [Address; 4] = [
+const CPU_READ_PORTS: [Address; 5] = [
     PPUSTATUS,
     OAMDATA,
     PPUDATA,
 
     JOYSTICK_1_PORT,
+    JOYSTICK_2_PORT,
 ];
 
 // All ports are write ports, even the "read-only" PPUSTATUS.
@@ -57,6 +58,7 @@ pub struct Nes {
     cpu: Cpu,
     ppu: Ppu,
     pub joypad_1: Joypad,
+    pub joypad_2: Joypad,
     cycle: u64,
 }
 
@@ -71,6 +73,7 @@ impl Nes {
             cpu: Cpu::new(cpu_mem, config.program_counter_source()),
             ppu: Ppu::new(ppu_mem),
             joypad_1: Joypad::new(),
+            joypad_2: Joypad::new(),
             cycle: 0,
         }
     }
@@ -114,6 +117,8 @@ impl Nes {
 
         let status = self.joypad_1.selected_button_status() as u8;
         self.cpu.memory.write(JOYSTICK_1_PORT, status);
+        let status = self.joypad_2.selected_button_status() as u8;
+        self.cpu.memory.write(JOYSTICK_2_PORT, status);
 
         self.cycle += 1;
 
@@ -179,17 +184,20 @@ impl Nes {
             (PPUSCROLL, Write) => println!("PPUSCROLL was written to (not supported)."),
 
             (JOYSTICK_1_PORT, Read) => {
-                println!("Program read JOYSTICK_1_PORT");
                 // Now that the ROM has read a button status, advance to the next one.
                 self.joypad_1.select_next_button();
             },
+            (JOYSTICK_2_PORT, Read) => {
+                // Now that the ROM has read a button status, advance to the next one.
+                self.joypad_2.select_next_button();
+            },
             (JOYSTICK_1_PORT, Write) => {
                 if value & 1 == 1 {
-                    println!("JOYSTICK_1_PORT: Turning strobe on.");
                     self.joypad_1.strobe_on();
+                    self.joypad_2.strobe_on();
                 } else {
-                    println!("JOYSTICK_1_PORT: Turning strobe off.");
                     self.joypad_1.strobe_off();
+                    self.joypad_2.strobe_off();
                 }
             },
 
