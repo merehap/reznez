@@ -7,12 +7,10 @@ edition = "2021"
 
 [dependencies]
 enum-iterator = "0.6"
-fltk = { version = "1.2", features = ["raw-window-handle", "no-images", "no-pango"] }
 lazy_static = "1.4.0"
 log = "0.4"
 num-derive = "0.2"
 num-traits = "0.2"
-pixels = "0.8"
 strum = "0.23.0"
 strum_macros = "0.23.1"
 
@@ -21,3 +19,6 @@ stopwatch = "0.0.7"
 [profile.release]
 debug = true
 
+[dependencies.sdl2]
+version = "0.35.1"
+features = ["raw-window-handle"]
