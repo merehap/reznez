@@ -26,7 +26,6 @@ pub struct Ppu {
     memory: Memory,
     oam: Oam,
     ctrl: Ctrl,
-    mask: Mask,
 
     clock: Clock,
     frame_end_time: SystemTime,
@@ -43,7 +42,6 @@ impl Ppu {
             memory,
             oam: Oam::new(),
             ctrl: Ctrl::new(),
-            mask: Mask::new(),
 
             clock: Clock::new(),
             frame_end_time: SystemTime::now(),
@@ -82,11 +80,6 @@ impl Ppu {
         self.ctrl = ctrl;
     }
 
-    pub fn set_mask(&mut self, mask: Mask) {
-        println!("Setting PPUMASK: {:?}", mask);
-        self.mask = mask;
-    }
-
     pub fn oam_address(&self) -> u8 {
         self.oam_address
     }
@@ -121,7 +114,7 @@ impl Ppu {
         self.is_nmi_period && self.ctrl.vblank_nmi() == VBlankNmi::On
     }
 
-    pub fn step(&mut self, screen: &mut Screen) -> StepEvents {
+    pub fn step(&mut self, mask: Mask, screen: &mut Screen) -> StepEvents {
         let frame_started = self.clock().is_first_cycle_of_frame();
         if frame_started {
             self.frame_end_time = SystemTime::now().add(NTSC_TIME_PER_FRAME);
@@ -146,11 +139,11 @@ impl Ppu {
             self.is_nmi_period = false;
             step_event = StepEvents::stop_vblank();
         } else if self.clock.scanline() == 1 && self.clock.cycle() == 1 {
-            if self.mask.background_enabled() {
+            if mask.background_enabled() {
                 self.render_background(screen);
             }
 
-            if self.mask.sprites_enabled() {
+            if mask.sprites_enabled() {
                 self.render_sprites(screen);
             }
             step_event = StepEvents::no_events();
@@ -165,7 +158,7 @@ impl Ppu {
             }
         }
 
-        self.clock.tick(self.rendering_enabled());
+        self.clock.tick(self.rendering_enabled(mask));
         step_event
     }
 
@@ -230,8 +223,8 @@ impl Ppu {
         }
     }
 
-    fn rendering_enabled(&self) -> bool {
-        self.mask.sprites_enabled() || self.mask.background_enabled()
+    fn rendering_enabled(&self, mask: Mask) -> bool {
+        mask.sprites_enabled() || mask.background_enabled()
     }
 }
 

@@ -51,6 +51,14 @@ impl Memory {
         self.memory[address.to_raw() as usize] = value;
     }
 
+    pub fn bus_access(&self, address: Address) -> &u8 {
+        &self.memory[address.to_raw() as usize]
+    }
+
+    pub fn bus_access_mut(&mut self, address: Address) -> &mut u8 {
+        &mut self.memory[address.to_raw() as usize]
+    }
+
     pub fn push_to_stack(&mut self, value: u8) {
         if self.stack_pointer == 0x00 {
             println!("Pushing to full stack.");

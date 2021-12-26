@@ -104,7 +104,7 @@ impl Nes {
             }
         }
 
-        let step_events = self.ppu.step(screen);
+        let step_events = self.ppu.step(self.ppu_mask(), screen);
         match step_events.vblank_event() {
             VBlankEvent::Started => self.set_vblank(),
             VBlankEvent::Stopped => self.clear_vblank(),
@@ -161,7 +161,7 @@ impl Nes {
                     self.schedule_nmi_if_enabled();
                 }
             },
-            (PPUMASK, Write) => self.ppu.set_mask(Mask::from_u8(value)),
+            (PPUMASK, Write) => {},
 
             // TODO: Reading the status register will clear bit 7 mentioned
             // above and also the address latch used by PPUSCROLL and PPUADDR.
@@ -223,6 +223,10 @@ impl Nes {
             // Execute an extra NMI beyond the vblank-start NMI.
             self.cpu.schedule_nmi();
         }
+    }
+
+    fn ppu_mask(&self) -> Mask {
+        Mask::from_u8(*self.cpu.memory.bus_access(PPUMASK))
     }
 }
 
