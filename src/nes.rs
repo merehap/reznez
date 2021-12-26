@@ -312,6 +312,8 @@ mod tests {
                 ProgramCounterSource::Override(Address::new(0x2000)),
                 ),
             ppu: Ppu::new(ppu_mem),
+            joypad_1: Joypad::new(),
+            joypad_2: Joypad::new(),
             cycle: 0,
         }
     }
