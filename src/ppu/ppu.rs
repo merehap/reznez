@@ -34,7 +34,6 @@ pub struct Ppu {
     is_nmi_period: bool,
     vram_address: Address,
     next_vram_upper_byte: Option<u8>,
-    oam_address: u8,
 }
 
 impl Ppu {
@@ -51,7 +50,6 @@ impl Ppu {
             is_nmi_period: false,
             vram_address: Address::from_u16(0),
             next_vram_upper_byte: None,
-            oam_address: 0,
         }
     }
 
@@ -77,18 +75,8 @@ impl Ppu {
         self.memory.palette_table()
     }
 
-    pub fn oam_address(&self) -> u8 {
-        self.oam_address
-    }
-
-    pub fn set_oam_address(&mut self, value: u8) {
-        self.oam_address = value;
-    }
-
-    pub fn write_oam(&mut self, value: u8) {
-        self.oam[self.oam_address] = value;
-        // TODO: Verify that wrapping is the correct behavior.
-        self.oam_address = self.oam_address.wrapping_add(1);
+    pub fn write_oam(&mut self, oam_address: u8, value: u8) {
+        self.oam[oam_address] = value;
     }
 
     pub fn write_vram(&mut self, ctrl: Ctrl, value: u8) {

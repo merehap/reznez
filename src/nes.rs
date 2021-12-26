@@ -99,7 +99,7 @@ impl Nes {
             match self.cpu.step() {
                 StepResult::Nop => {},
                 StepResult::InstructionComplete(inst) => instruction = Some(inst),
-                StepResult::DmaWrite(value) => self.ppu.write_oam(value),
+                StepResult::DmaWrite(value) => self.write_oam(value),
             }
 
             if let Some(port_access) = self.cpu.memory.latch() {
@@ -167,14 +167,14 @@ impl Nes {
             (PPUSTATUS, Read) => self.ppu.stop_vblank(),
             (PPUSTATUS, Write) => {/* PPUSTATUS is read-only. */},
 
-            (OAMADDR, Write) => self.ppu.set_oam_address(value),
+            (OAMADDR, Write) => {},
             (OAMDATA, Read) => unimplemented!(),
             (OAMDATA, Write) => unimplemented!(),
             (OAM_DMA, Write) =>
                 self.cpu.initiate_dma_transfer(
                     value,
-                    256 - self.ppu.oam_address() as u16,
-                    ),
+                    256 - self.oam_address() as u16,
+                ),
 
             (PPUADDR, Write) => self.ppu.write_partial_vram_address(value),
             (PPUDATA, Read) => unimplemented!(),
@@ -216,18 +216,24 @@ impl Nes {
         Ctrl::from_u8(*self.cpu.memory.bus_access(PPUCTRL))
     }
 
-    fn modify_ppu_ctrl(&mut self, f: fn(Ctrl) -> Ctrl) {
-        let ctrl = Ctrl::from_u8(*self.cpu.memory.bus_access(PPUCTRL));
-        let ctrl = f(ctrl);
-        *self.cpu.memory.bus_access_mut(PPUCTRL) = f(ctrl).to_u8();
-    }
-
     fn ppu_mask(&self) -> Mask {
         Mask::from_u8(*self.cpu.memory.bus_access(PPUMASK))
     }
 
     fn write_ppu_status_to_cpu(&mut self, status: Status) {
         *self.cpu.memory.bus_access_mut(PPUSTATUS) = status.to_u8();
+    }
+
+    fn oam_address(&self) -> u8 {
+        *self.cpu.memory.bus_access(OAMADDR)
+    }
+
+    fn write_oam(&mut self, value: u8) {
+        let oamaddr = *self.cpu.memory.bus_access(OAMADDR);
+        self.ppu.write_oam(oamaddr, value);
+        // Advance to next sprite byte to write.
+        // TODO: Verify that wrapping is the correct behavior.
+        *self.cpu.memory.bus_access_mut(OAMADDR) = oamaddr.wrapping_add(1);
     }
 }
 
@@ -319,8 +325,11 @@ mod tests {
     }
 
     fn step_until_vblank_nmi_enabled(nes: &mut Nes) {
+        let mut ctrl = Ctrl::from_u8(*nes.cpu.memory.bus_access(PPUCTRL));
+        ctrl.vblank_nmi = VBlankNmi::On;
+        *nes.cpu.memory.bus_access_mut(PPUCTRL) = ctrl.to_u8();
+
         let mut screen = Screen::new();
-        nes.modify_ppu_ctrl(Ctrl::vblank_nmi_on);
         while !nes.ppu.nmi_enabled(nes.ppu_ctrl()) {
             assert!(!nes.cpu.nmi_pending(), "NMI must not be pending before one is scheduled.");
             nes.step(&mut screen);
