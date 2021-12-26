@@ -13,6 +13,7 @@ use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
+use crate::ppu::register::status::Status;
 use crate::ppu::screen::Screen;
 
 const FIRST_VBLANK_CYCLE: u64 = 3 * 27384;
@@ -25,6 +26,7 @@ const NTSC_TIME_PER_FRAME: Duration =
 pub struct Ppu {
     memory: Memory,
     oam: Oam,
+    status: Status,
 
     clock: Clock,
     frame_end_time: SystemTime,
@@ -40,6 +42,7 @@ impl Ppu {
         Ppu {
             memory,
             oam: Oam::new(),
+            status: Status::new(),
 
             clock: Clock::new(),
             frame_end_time: SystemTime::now(),
@@ -49,6 +52,10 @@ impl Ppu {
             next_vram_upper_byte: None,
             oam_address: 0,
         }
+    }
+
+    pub fn status(&self) -> Status {
+        self.status
     }
 
     pub fn clock(&self) -> &Clock {
@@ -118,15 +125,17 @@ impl Ppu {
         let step_event;
         // TODO: Fix the first and second vblank cycles to not be special-cased if possible.
         if total_cycles == FIRST_VBLANK_CYCLE || total_cycles == SECOND_VBLANK_CYCLE {
-            step_event = StepEvents::start_vblank()
+            step_event = StepEvents::start_vblank(self.status)
         } else if total_cycles < SECOND_VBLANK_CYCLE {
-            step_event = StepEvents::no_events()
+            step_event = StepEvents::no_events(self.status)
         } else if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
             self.is_nmi_period = true;
-            step_event = StepEvents::start_vblank();
+            self.status.start_vblank();
+            step_event = StepEvents::start_vblank(self.status);
         } else if self.clock.scanline() == 261 && self.clock.cycle() == 1 {
             self.is_nmi_period = false;
-            step_event = StepEvents::stop_vblank();
+            self.status.stop_vblank();
+            step_event = StepEvents::stop_vblank(self.status);
         } else if self.clock.scanline() == 1 && self.clock.cycle() == 1 {
             if mask.background_enabled() {
                 self.render_background(ctrl, screen);
@@ -135,9 +144,9 @@ impl Ppu {
             if mask.sprites_enabled() {
                 self.render_sprites(ctrl, screen);
             }
-            step_event = StepEvents::no_events();
+            step_event = StepEvents::no_events(self.status);
         } else {
-            step_event = StepEvents::no_events();
+            step_event = StepEvents::no_events(self.status);
         }
 
         let frame_ended = self.clock().is_last_cycle_of_frame();
@@ -212,50 +221,47 @@ impl Ppu {
         }
     }
 
+    pub fn stop_vblank(&mut self) {
+        self.status.stop_vblank();
+    }
+
     fn rendering_enabled(&self, mask: Mask) -> bool {
         mask.sprites_enabled() || mask.background_enabled()
     }
 }
 
 pub struct StepEvents {
-    vblank_event: VBlankEvent,
+    status: Status,
     nmi_trigger: bool,
 }
 
 impl StepEvents {
-    pub fn no_events() -> StepEvents {
+    pub fn no_events(status: Status) -> StepEvents {
         StepEvents {
-            vblank_event: VBlankEvent::None,
+            status,
             nmi_trigger: false,
         }
     }
 
-    pub fn start_vblank() -> StepEvents {
+    pub fn start_vblank(status: Status) -> StepEvents {
         StepEvents {
-            vblank_event: VBlankEvent::Started,
+            status,
             nmi_trigger: true,
         }
     }
 
-    pub fn stop_vblank() -> StepEvents {
+    pub fn stop_vblank(status: Status) -> StepEvents {
         StepEvents {
-            vblank_event: VBlankEvent::Stopped,
+            status,
             nmi_trigger: false,
         }
     }
 
-    pub fn vblank_event(&self) -> VBlankEvent {
-        self.vblank_event
+    pub fn status(&self) -> Status {
+        self.status
     }
 
     pub fn nmi_trigger(&self) -> bool {
         self.nmi_trigger
     }
-}
-
-#[derive(Clone, Copy)]
-pub enum VBlankEvent {
-    None,
-    Started,
-    Stopped,
 }

@@ -9,10 +9,11 @@ use crate::cpu::instruction::Instruction;
 use crate::cpu::memory::Memory as CpuMem;
 use crate::cpu::port_access::{PortAccess, AccessMode};
 use crate::ppu::palette::system_palette::SystemPalette;
-use crate::ppu::ppu::{Ppu, VBlankEvent};
+use crate::ppu::ppu::Ppu;
 use crate::ppu::memory::Memory as PpuMem;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
+use crate::ppu::register::status::Status;
 use crate::ppu::screen::Screen;
 use crate::mapper::mapper0::Mapper0;
 
@@ -107,11 +108,7 @@ impl Nes {
         }
 
         let step_events = self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), screen);
-        match step_events.vblank_event() {
-            VBlankEvent::Started => self.set_vblank(),
-            VBlankEvent::Stopped => self.clear_vblank(),
-            VBlankEvent::None => {},
-        }
+        self.write_ppu_status_to_cpu(step_events.status());
 
         if step_events.nmi_trigger() {
             self.schedule_nmi_if_enabled();
@@ -167,7 +164,7 @@ impl Nes {
 
             // TODO: Reading the status register will clear bit 7 mentioned
             // above and also the address latch used by PPUSCROLL and PPUADDR.
-            (PPUSTATUS, Read) => self.clear_vblank(),
+            (PPUSTATUS, Read) => self.ppu.stop_vblank(),
             (PPUSTATUS, Write) => {/* PPUSTATUS is read-only. */},
 
             (OAMADDR, Write) => self.ppu.set_oam_address(value),
@@ -207,18 +204,6 @@ impl Nes {
         }
     }
 
-    fn set_vblank(&mut self) {
-        println!("VBlank set.");
-        let status = self.cpu.memory.read(PPUSTATUS);
-        self.cpu.memory.write(PPUSTATUS, status | 0b1000_0000);
-    }
-
-    fn clear_vblank(&mut self) {
-        println!("VBlank cleared.");
-        let status = self.cpu.memory.read(PPUSTATUS);
-        self.cpu.memory.write(PPUSTATUS, status & 0b0111_1111);
-    }
-
     fn schedule_nmi_if_enabled(&mut self) {
         if self.ppu.nmi_enabled(self.ppu_ctrl()) {
             println!("Scheduling NMI.");
@@ -239,6 +224,10 @@ impl Nes {
 
     fn ppu_mask(&self) -> Mask {
         Mask::from_u8(*self.cpu.memory.bus_access(PPUMASK))
+    }
+
+    fn write_ppu_status_to_cpu(&mut self, status: Status) {
+        *self.cpu.memory.bus_access_mut(PPUSTATUS) = status.to_u8();
     }
 }
 

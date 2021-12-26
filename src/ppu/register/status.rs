@@ -1,3 +1,4 @@
+use crate::util;
 use crate::util::get_bit;
 
 #[derive(Clone, Copy)]
@@ -29,8 +30,31 @@ impl Status {
         }
     }
 
+    pub fn to_u8(&self) -> u8 {
+        util::pack_bools(
+            [
+                self.vblank_active,
+                self.sprite0_hit,
+                self.sprite_overflow,
+                false,
+                false,
+                false,
+                false,
+                false,
+            ]
+        )
+    }
+
     pub fn vblank_active(self) -> bool {
         self.vblank_active
+    }
+
+    pub fn stop_vblank(&mut self) {
+        self.vblank_active = false;
+    }
+
+    pub fn start_vblank(&mut self) {
+        self.vblank_active = true;
     }
 
     pub fn sprite0_hit(self) -> bool {
