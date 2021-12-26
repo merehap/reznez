@@ -25,7 +25,6 @@ const NTSC_TIME_PER_FRAME: Duration =
 pub struct Ppu {
     memory: Memory,
     oam: Oam,
-    ctrl: Ctrl,
 
     clock: Clock,
     frame_end_time: SystemTime,
@@ -41,7 +40,6 @@ impl Ppu {
         Ppu {
             memory,
             oam: Oam::new(),
-            ctrl: Ctrl::new(),
 
             clock: Clock::new(),
             frame_end_time: SystemTime::now(),
@@ -71,15 +69,6 @@ impl Ppu {
         self.memory.palette_table()
     }
 
-    pub fn ctrl(&self) -> Ctrl {
-        self.ctrl
-    }
-
-    pub fn set_ctrl(&mut self, ctrl: Ctrl) {
-        println!("Setting PPUCTRL: {:?}", ctrl);
-        self.ctrl = ctrl;
-    }
-
     pub fn oam_address(&self) -> u8 {
         self.oam_address
     }
@@ -94,10 +83,10 @@ impl Ppu {
         self.oam_address = self.oam_address.wrapping_add(1);
     }
 
-    pub fn write_vram(&mut self, value: u8) {
+    pub fn write_vram(&mut self, ctrl: Ctrl, value: u8) {
         println!("Writing to VRAM Address: [{}]={}", self.vram_address, value);
         self.memory[self.vram_address] = value;
-        let increment = self.ctrl.vram_address_increment() as u8;
+        let increment = ctrl.vram_address_increment() as u8;
         self.vram_address = self.vram_address.advance(increment);
     }
 
@@ -110,11 +99,11 @@ impl Ppu {
         }
     }
 
-    pub fn nmi_enabled(&self) -> bool {
-        self.is_nmi_period && self.ctrl.vblank_nmi() == VBlankNmi::On
+    pub fn nmi_enabled(&self, ctrl: Ctrl) -> bool {
+        self.is_nmi_period && ctrl.vblank_nmi() == VBlankNmi::On
     }
 
-    pub fn step(&mut self, mask: Mask, screen: &mut Screen) -> StepEvents {
+    pub fn step(&mut self, ctrl: Ctrl, mask: Mask, screen: &mut Screen) -> StepEvents {
         let frame_started = self.clock().is_first_cycle_of_frame();
         if frame_started {
             self.frame_end_time = SystemTime::now().add(NTSC_TIME_PER_FRAME);
@@ -140,11 +129,11 @@ impl Ppu {
             step_event = StepEvents::stop_vblank();
         } else if self.clock.scanline() == 1 && self.clock.cycle() == 1 {
             if mask.background_enabled() {
-                self.render_background(screen);
+                self.render_background(ctrl, screen);
             }
 
             if mask.sprites_enabled() {
-                self.render_sprites(screen);
+                self.render_sprites(ctrl, screen);
             }
             step_event = StepEvents::no_events();
         } else {
@@ -162,12 +151,12 @@ impl Ppu {
         step_event
     }
 
-    fn render_background(&mut self, screen: &mut Screen) {
+    fn render_background(&mut self, ctrl: Ctrl, screen: &mut Screen) {
         let palette_table = self.memory.palette_table();
         screen.set_universal_background_rgb(palette_table.universal_background_rgb());
 
-        let name_table_number = self.ctrl.name_table_number();
-        let background_table_side = self.ctrl.background_table_side();
+        let name_table_number = ctrl.name_table_number();
+        let background_table_side = ctrl.background_table_side();
         for background_tile_index in BackgroundTileIndex::iter() {
             let (pattern_index, palette_table_index) =
                 self.name_table(name_table_number).tile_entry_at(background_tile_index);
@@ -186,11 +175,11 @@ impl Ppu {
         }
     }
 
-    fn render_sprites(&mut self, screen: &mut Screen) {
+    fn render_sprites(&mut self, ctrl: Ctrl, screen: &mut Screen) {
         screen.clear_sprite_buffer();
 
         let palette_table = self.memory.palette_table();
-        let sprite_table_side = self.ctrl.sprite_table_side();
+        let sprite_table_side = ctrl.sprite_table_side();
         for sprite in self.oam.sprites() {
             let x = sprite.x_coordinate();
             let y = sprite.y_coordinate();

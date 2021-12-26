@@ -104,7 +104,7 @@ impl Nes {
             }
         }
 
-        let step_events = self.ppu.step(self.ppu_mask(), screen);
+        let step_events = self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), screen);
         match step_events.vblank_event() {
             VBlankEvent::Started => self.set_vblank(),
             VBlankEvent::Stopped => self.clear_vblank(),
@@ -153,6 +153,7 @@ impl Nes {
         use AccessMode::*;
         match (port_access.address, port_access.access_mode) {
             (PPUCTRL, Write) => {
+                /*
                 let old_vblank_nmi = self.ppu.ctrl().vblank_nmi();
                 let ctrl = Ctrl::from_u8(value);
                 self.ppu.set_ctrl(ctrl);
@@ -160,6 +161,7 @@ impl Nes {
                 if old_vblank_nmi == VBlankNmi::Off {
                     self.schedule_nmi_if_enabled();
                 }
+                */
             },
             (PPUMASK, Write) => {},
 
@@ -179,7 +181,7 @@ impl Nes {
 
             (PPUADDR, Write) => self.ppu.write_partial_vram_address(value),
             (PPUDATA, Read) => unimplemented!(),
-            (PPUDATA, Write) => self.ppu.write_vram(value),
+            (PPUDATA, Write) => self.ppu.write_vram(self.ppu_ctrl(), value),
 
             (PPUSCROLL, Write) => println!("PPUSCROLL was written to (not supported)."),
 
@@ -218,11 +220,21 @@ impl Nes {
     }
 
     fn schedule_nmi_if_enabled(&mut self) {
-        if self.ppu.nmi_enabled() {
+        if self.ppu.nmi_enabled(self.ppu_ctrl()) {
             println!("Scheduling NMI.");
             // Execute an extra NMI beyond the vblank-start NMI.
             self.cpu.schedule_nmi();
         }
+    }
+
+    fn ppu_ctrl(&self) -> Ctrl {
+        Ctrl::from_u8(*self.cpu.memory.bus_access(PPUCTRL))
+    }
+
+    fn modify_ppuctrl(&mut self, f: fn(Ctrl) -> Ctrl) {
+        let ctrl = Ctrl::from_u8(*self.cpu.memory.bus_access(PPUCTRL));
+        let ctrl = f(ctrl);
+        *self.cpu.memory.bus_access_mut(PPUCTRL) = f(ctrl).to_u8();
     }
 
     fn ppu_mask(&self) -> Mask {
