@@ -47,6 +47,7 @@ impl Ppu {
             clock: Clock::new(),
             frame_end_time: SystemTime::now(),
 
+            // TODO: Is this the same as vblank_active?
             is_nmi_period: false,
             vram_address: Address::from_u16(0),
             next_vram_upper_byte: None,
@@ -93,7 +94,7 @@ impl Ppu {
     pub fn write_vram(&mut self, ctrl: Ctrl, value: u8) {
         println!("Writing to VRAM Address: [{}]={}", self.vram_address, value);
         self.memory[self.vram_address] = value;
-        let increment = ctrl.vram_address_increment() as u8;
+        let increment = ctrl.vram_address_increment as u8;
         self.vram_address = self.vram_address.advance(increment);
     }
 
@@ -107,7 +108,7 @@ impl Ppu {
     }
 
     pub fn nmi_enabled(&self, ctrl: Ctrl) -> bool {
-        self.is_nmi_period && ctrl.vblank_nmi() == VBlankNmi::On
+        self.is_nmi_period && ctrl.vblank_nmi == VBlankNmi::On
     }
 
     pub fn step(&mut self, ctrl: Ctrl, mask: Mask, screen: &mut Screen) -> StepEvents {
@@ -130,18 +131,18 @@ impl Ppu {
             step_event = StepEvents::no_events(self.status)
         } else if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
             self.is_nmi_period = true;
-            self.status.start_vblank();
+            self.status.vblank_active = true;
             step_event = StepEvents::start_vblank(self.status);
         } else if self.clock.scanline() == 261 && self.clock.cycle() == 1 {
             self.is_nmi_period = false;
-            self.status.stop_vblank();
+            self.status.vblank_active = false;
             step_event = StepEvents::stop_vblank(self.status);
         } else if self.clock.scanline() == 1 && self.clock.cycle() == 1 {
-            if mask.background_enabled() {
+            if mask.background_enabled {
                 self.render_background(ctrl, screen);
             }
 
-            if mask.sprites_enabled() {
+            if mask.sprites_enabled {
                 self.render_sprites(ctrl, screen);
             }
             step_event = StepEvents::no_events(self.status);
@@ -164,8 +165,8 @@ impl Ppu {
         let palette_table = self.memory.palette_table();
         screen.set_universal_background_rgb(palette_table.universal_background_rgb());
 
-        let name_table_number = ctrl.name_table_number();
-        let background_table_side = ctrl.background_table_side();
+        let name_table_number = ctrl.name_table_number;
+        let background_table_side = ctrl.background_table_side;
         for background_tile_index in BackgroundTileIndex::iter() {
             let (pattern_index, palette_table_index) =
                 self.name_table(name_table_number).tile_entry_at(background_tile_index);
@@ -188,7 +189,7 @@ impl Ppu {
         screen.clear_sprite_buffer();
 
         let palette_table = self.memory.palette_table();
-        let sprite_table_side = ctrl.sprite_table_side();
+        let sprite_table_side = ctrl.sprite_table_side;
         for sprite in self.oam.sprites() {
             let x = sprite.x_coordinate();
             let y = sprite.y_coordinate();
@@ -222,11 +223,11 @@ impl Ppu {
     }
 
     pub fn stop_vblank(&mut self) {
-        self.status.stop_vblank();
+        self.status.vblank_active = false;
     }
 
     fn rendering_enabled(&self, mask: Mask) -> bool {
-        mask.sprites_enabled() || mask.background_enabled()
+        mask.sprites_enabled || mask.background_enabled
     }
 }
 

@@ -2,14 +2,14 @@ use crate::util::get_bit;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Mask {
-    emphasize_blue: bool,
-    emphasize_green: bool,
-    emphasize_red: bool,
-    sprites_enabled: bool,
-    background_enabled: bool,
-    left_column_sprites_enabled: bool,
-    left_column_background_enabled: bool,
-    greyscale_enabled: bool,
+    pub emphasize_blue: bool,
+    pub emphasize_green: bool,
+    pub emphasize_red: bool,
+    pub sprites_enabled: bool,
+    pub background_enabled: bool,
+    pub left_column_sprites_enabled: bool,
+    pub left_column_background_enabled: bool,
+    pub greyscale_enabled: bool,
 }
 
 impl Mask {
@@ -37,37 +37,5 @@ impl Mask {
             left_column_background_enabled: get_bit(value, 6),
             greyscale_enabled:              get_bit(value, 7),
         }
-    }
-
-    pub fn emphasize_blue(self) -> bool {
-        self.emphasize_blue
-    }
-
-    pub fn emphasize_green(self) -> bool {
-        self.emphasize_green
-    }
-
-    pub fn emphasize_red(self) -> bool {
-        self.emphasize_red
-    }
-
-    pub fn sprites_enabled(self) -> bool {
-        self.sprites_enabled
-    }
-
-    pub fn background_enabled(self) -> bool {
-        self.background_enabled
-    }
-
-    pub fn left_column_sprites_enabled(self) -> bool {
-        self.left_column_sprites_enabled
-    }
-
-    pub fn left_column_background_enabled(self) -> bool {
-        self.left_column_background_enabled
-    }
-
-    pub fn greyscale_enabled(self) -> bool {
-        self.greyscale_enabled
     }
 }

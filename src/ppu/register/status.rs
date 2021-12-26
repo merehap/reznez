@@ -3,9 +3,9 @@ use crate::util::get_bit;
 
 #[derive(Clone, Copy)]
 pub struct Status {
-    vblank_active: bool,
-    sprite0_hit: bool,
-    sprite_overflow: bool,
+    pub vblank_active: bool,
+    pub sprite0_hit: bool,
+    pub sprite_overflow: bool,
 }
 
 impl Status {
@@ -43,25 +43,5 @@ impl Status {
                 false,
             ]
         )
-    }
-
-    pub fn vblank_active(self) -> bool {
-        self.vblank_active
-    }
-
-    pub fn stop_vblank(&mut self) {
-        self.vblank_active = false;
-    }
-
-    pub fn start_vblank(&mut self) {
-        self.vblank_active = true;
-    }
-
-    pub fn sprite0_hit(self) -> bool {
-        self.sprite0_hit
-    }
-
-    pub fn sprite_overflow(self) -> bool {
-        self.sprite_overflow
     }
 }

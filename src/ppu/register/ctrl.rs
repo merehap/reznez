@@ -5,13 +5,13 @@ use crate::util::get_bit;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Ctrl {
-    vblank_nmi: VBlankNmi,
-    ext_pin_role: ExtPinRole,
-    sprite_width: SpriteWidth,
-    background_table_side: PatternTableSide,
-    sprite_table_side: PatternTableSide,
-    vram_address_increment: VramAddressIncrement,
-    name_table_number: NameTableNumber,
+    pub vblank_nmi: VBlankNmi,
+    pub ext_pin_role: ExtPinRole,
+    pub sprite_width: SpriteWidth,
+    pub background_table_side: PatternTableSide,
+    pub sprite_table_side: PatternTableSide,
+    pub vram_address_increment: VramAddressIncrement,
+    pub name_table_number: NameTableNumber,
 }
 
 impl Ctrl {
@@ -89,44 +89,6 @@ impl Ctrl {
                 self.name_table_number as u8 & 0b0000_0001 != 0,
             ]
         )
-    }
-
-    pub fn vblank_nmi(self) -> VBlankNmi {
-        self.vblank_nmi
-    }
-
-    pub fn vblank_nmi_on(mut self) -> Ctrl {
-        self.vblank_nmi = VBlankNmi::On;
-        self
-    }
-
-    pub fn vblank_nmi_off(mut self) -> Ctrl {
-        self.vblank_nmi = VBlankNmi::On;
-        self
-    }
-
-    pub fn ext_pin_role(self) -> ExtPinRole {
-        self.ext_pin_role
-    }
-
-    pub fn sprite_width(self) -> SpriteWidth {
-        self.sprite_width
-    }
-
-    pub fn background_table_side(self) -> PatternTableSide {
-        self.background_table_side
-    }
-
-    pub fn sprite_table_side(self) -> PatternTableSide {
-        self.sprite_table_side
-    }
-
-    pub fn vram_address_increment(self) -> VramAddressIncrement {
-        self.vram_address_increment
-    }
-
-    pub fn name_table_number(self) -> NameTableNumber {
-        self.name_table_number
     }
 }
 

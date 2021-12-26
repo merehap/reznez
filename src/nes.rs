@@ -152,7 +152,7 @@ impl Nes {
         use AccessMode::*;
         match (port_access.address, port_access.access_mode) {
             (PPUCTRL, Write) => {
-                let new_vblank_nmi = self.ppu_ctrl().vblank_nmi();
+                let new_vblank_nmi = self.ppu_ctrl().vblank_nmi;
                  // A second NMI can only be scheduled if VBlankNmi was toggled.
                 if self.old_vblank_nmi == VBlankNmi::Off && new_vblank_nmi == VBlankNmi::On {
                     self.schedule_nmi_if_enabled();
