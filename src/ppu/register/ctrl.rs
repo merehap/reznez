@@ -95,6 +95,16 @@ impl Ctrl {
         self.vblank_nmi
     }
 
+    pub fn vblank_nmi_on(mut self) -> Ctrl {
+        self.vblank_nmi = VBlankNmi::On;
+        self
+    }
+
+    pub fn vblank_nmi_off(mut self) -> Ctrl {
+        self.vblank_nmi = VBlankNmi::On;
+        self
+    }
+
     pub fn ext_pin_role(self) -> ExtPinRole {
         self.ext_pin_role
     }

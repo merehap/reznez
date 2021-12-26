@@ -59,6 +59,7 @@ pub struct Nes {
     ppu: Ppu,
     pub joypad_1: Joypad,
     pub joypad_2: Joypad,
+    old_vblank_nmi: VBlankNmi,
     cycle: u64,
 }
 
@@ -74,6 +75,7 @@ impl Nes {
             ppu: Ppu::new(ppu_mem),
             joypad_1: Joypad::new(),
             joypad_2: Joypad::new(),
+            old_vblank_nmi: VBlankNmi::Off,
             cycle: 0,
         }
     }
@@ -153,15 +155,13 @@ impl Nes {
         use AccessMode::*;
         match (port_access.address, port_access.access_mode) {
             (PPUCTRL, Write) => {
-                /*
-                let old_vblank_nmi = self.ppu.ctrl().vblank_nmi();
-                let ctrl = Ctrl::from_u8(value);
-                self.ppu.set_ctrl(ctrl);
-                // A second NMI can only be scheduled if VBlankNmi was toggled.
-                if old_vblank_nmi == VBlankNmi::Off {
+                let new_vblank_nmi = self.ppu_ctrl().vblank_nmi();
+                 // A second NMI can only be scheduled if VBlankNmi was toggled.
+                if self.old_vblank_nmi == VBlankNmi::Off && new_vblank_nmi == VBlankNmi::On {
                     self.schedule_nmi_if_enabled();
                 }
-                */
+
+                self.old_vblank_nmi = new_vblank_nmi;
             },
             (PPUMASK, Write) => {},
 
@@ -231,7 +231,7 @@ impl Nes {
         Ctrl::from_u8(*self.cpu.memory.bus_access(PPUCTRL))
     }
 
-    fn modify_ppuctrl(&mut self, f: fn(Ctrl) -> Ctrl) {
+    fn modify_ppu_ctrl(&mut self, f: fn(Ctrl) -> Ctrl) {
         let ctrl = Ctrl::from_u8(*self.cpu.memory.bus_access(PPUCTRL));
         let ctrl = f(ctrl);
         *self.cpu.memory.bus_access_mut(PPUCTRL) = f(ctrl).to_u8();
@@ -246,6 +246,7 @@ impl Nes {
 mod tests {
     use crate::cpu::cpu::ProgramCounterSource;
     use crate::ppu::palette::system_palette::SystemPalette;
+    use crate::ppu::register::ctrl::Ctrl;
     use crate::ppu::screen::Screen;
 
     use crate::cartridge::tests::sample_ines;
@@ -255,7 +256,6 @@ mod tests {
     #[test]
     fn nmi_enabled_upon_vblank() {
         let mut nes = sample_nes();
-        nes.ppu.set_ctrl(Ctrl::from_u8(0b1000_0000));
         step_until_vblank_nmi_enabled(&mut nes);
         assert!(nes.cpu.nmi_pending());
     }
@@ -263,7 +263,6 @@ mod tests {
     #[test]
     fn second_nmi_fails_without_ctrl_toggle() {
         let mut nes = sample_nes();
-        nes.ppu.set_ctrl(Ctrl::from_u8(0b1000_0000));
         step_until_vblank_nmi_enabled(&mut nes);
         assert!(nes.cpu.nmi_pending());
 
@@ -288,7 +287,6 @@ mod tests {
     #[test]
     fn second_nmi_succeeds_after_ctrl_toggle() {
         let mut nes = sample_nes();
-        nes.ppu.set_ctrl(Ctrl::from_u8(0b1000_0000));
         step_until_vblank_nmi_enabled(&mut nes);
         assert!(nes.cpu.nmi_pending());
 
@@ -321,18 +319,20 @@ mod tests {
         Nes {
             cpu: Cpu::new(
                 cpu_mem,
-                ProgramCounterSource::Override(Address::new(0x2000)),
+                ProgramCounterSource::Override(Address::new(0x0)),
                 ),
             ppu: Ppu::new(ppu_mem),
             joypad_1: Joypad::new(),
             joypad_2: Joypad::new(),
+            old_vblank_nmi: VBlankNmi::Off,
             cycle: 0,
         }
     }
 
     fn step_until_vblank_nmi_enabled(nes: &mut Nes) {
         let mut screen = Screen::new();
-        while !nes.ppu.nmi_enabled() {
+        nes.modify_ppu_ctrl(Ctrl::vblank_nmi_on);
+        while !nes.ppu.nmi_enabled(nes.ppu_ctrl()) {
             assert!(!nes.cpu.nmi_pending(), "NMI must not be pending before one is scheduled.");
             nes.step(&mut screen);
             if nes.ppu.clock().total_cycles() > 200_000 {
