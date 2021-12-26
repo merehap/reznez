@@ -83,7 +83,7 @@ impl fmt::Display for PatternTable<'_> {
 }
 */
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum PatternTableSide {
     Left  = 0x0000,
     Right = 0x1000,

@@ -1,8 +1,9 @@
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTableSide;
+use crate::util;
 use crate::util::get_bit;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Ctrl {
     vblank_nmi: VBlankNmi,
     ext_pin_role: ExtPinRole,
@@ -42,7 +43,7 @@ impl Ctrl {
                 },
             sprite_width:
                 if get_bit(value, 2) {
-                    unimplemented!("Wide sprites are not supported yet.");
+                    todo!("Wide sprites are not supported yet.");
                     //SpriteWidth::Wide
                 } else {
                     SpriteWidth::Normal
@@ -73,6 +74,21 @@ impl Ctrl {
                     (true , true ) => NameTableNumber::Three,
                 },
         }
+    }
+
+    pub fn to_u8(self) -> u8 {
+        util::pack_bools(
+            [
+                self.vblank_nmi == VBlankNmi::On,
+                self.ext_pin_role == ExtPinRole::Write,
+                self.sprite_width == SpriteWidth::Wide,
+                self.background_table_side == PatternTableSide::Right,
+                self.sprite_table_side == PatternTableSide::Right,
+                self.vram_address_increment == VramAddressIncrement::Down,
+                self.name_table_number as u8 & 0b0000_0010 != 0,
+                self.name_table_number as u8 & 0b0000_0001 != 0,
+            ]
+        )
     }
 
     pub fn vblank_nmi(self) -> VBlankNmi {
@@ -110,20 +126,41 @@ pub enum VBlankNmi {
     On,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum ExtPinRole {
     Read,
     Write,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum SpriteWidth {
     Normal = 8,
     Wide = 16,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum VramAddressIncrement {
     Right = 1,
     Down = 32,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn roundtrip() {
+        for i in 0..=255 {
+            // Wide sprites not supported yet so zero-out that bit.
+            let i = i & 0b1101_1111;
+            assert_eq!(i, Ctrl::from_u8(i).to_u8());
+        }
+    }
+
+    #[test]
+    fn roundtrip_new() {
+        let ctrl = Ctrl::new();
+        assert_eq!(ctrl.to_u8(), 0);
+        assert_eq!(ctrl, Ctrl::from_u8(ctrl.to_u8()));
+    }
 }
