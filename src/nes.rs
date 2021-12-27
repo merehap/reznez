@@ -8,13 +8,13 @@ use crate::cpu::cpu::{Cpu, StepResult};
 use crate::cpu::instruction::Instruction;
 use crate::cpu::memory::Memory as CpuMem;
 use crate::cpu::port_access::{PortAccess, AccessMode};
+use crate::ppu::frame::Frame;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::memory::Memory as PpuMem;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
 use crate::ppu::register::status::Status;
-use crate::ppu::screen::Screen;
 use crate::mapper::mapper0::Mapper0;
 
 const PPUCTRL:    Address = Address::new(0x2000);
@@ -93,7 +93,7 @@ impl Nes {
         self.cycle
     }
 
-    pub fn step(&mut self, screen: &mut Screen) -> Option<Instruction> {
+    pub fn step(&mut self, frame: &mut Frame) -> Option<Instruction> {
         let mut instruction = None;
         if self.cycle % 3 == 2 {
             match self.cpu.step() {
@@ -107,7 +107,7 @@ impl Nes {
             }
         }
 
-        let step_events = self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), screen);
+        let step_events = self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), frame);
         self.write_ppu_status_to_cpu(step_events.status());
 
         if step_events.nmi_trigger() {
@@ -242,7 +242,7 @@ mod tests {
     use crate::cpu::cpu::ProgramCounterSource;
     use crate::ppu::palette::system_palette::SystemPalette;
     use crate::ppu::register::ctrl::Ctrl;
-    use crate::ppu::screen::Screen;
+    use crate::ppu::frame::Frame;
 
     use crate::cartridge::tests::sample_ines;
 
@@ -261,9 +261,9 @@ mod tests {
         step_until_vblank_nmi_enabled(&mut nes);
         assert!(nes.cpu.nmi_pending());
 
-        let mut screen = Screen::new();
-        while nes.step(&mut screen).is_none() {}
-        nes.step(&mut screen);
+        let mut frame = Frame::new();
+        while nes.step(&mut frame).is_none() {}
+        nes.step(&mut frame);
 
         assert!(
             !nes.cpu.nmi_pending(),
@@ -285,9 +285,9 @@ mod tests {
         step_until_vblank_nmi_enabled(&mut nes);
         assert!(nes.cpu.nmi_pending());
 
-        let mut screen = Screen::new();
-        while nes.step(&mut screen).is_none() {}
-        nes.step(&mut screen);
+        let mut frame = Frame::new();
+        while nes.step(&mut frame).is_none() {}
+        nes.step(&mut frame);
 
         assert!(
             !nes.cpu.nmi_pending(),
@@ -329,10 +329,10 @@ mod tests {
         ctrl.vblank_nmi = VBlankNmi::On;
         *nes.cpu.memory.bus_access_mut(PPUCTRL) = ctrl.to_u8();
 
-        let mut screen = Screen::new();
+        let mut frame = Frame::new();
         while !nes.ppu.nmi_enabled(nes.ppu_ctrl()) {
             assert!(!nes.cpu.nmi_pending(), "NMI must not be pending before one is scheduled.");
-            nes.step(&mut screen);
+            nes.step(&mut frame);
             if nes.ppu.clock().total_cycles() > 200_000 {
                 panic!("It took too long for the PPU to enable NMI.");
             }
@@ -353,8 +353,8 @@ mod tests {
         nes.cpu.memory.write(nes.cpu.program_counter().advance(4), 0x20);
 
         // Execute the two op codes we just injected.
-        let mut screen = Screen::new();
-        while nes.step(&mut screen).is_none() {}
-        while nes.step(&mut screen).is_none() {}
+        let mut frame = Frame::new();
+        while nes.step(&mut frame).is_none() {}
+        while nes.step(&mut frame).is_none() {}
     }
 }

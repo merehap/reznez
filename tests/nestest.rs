@@ -11,7 +11,7 @@ use reznez::cpu::address::Address;
 use reznez::cpu::instruction::OpCode;
 use reznez::cpu::status::Status;
 use reznez::nes::Nes;
-use reznez::ppu::screen::Screen;
+use reznez::ppu::frame::Frame;
 
 #[test]
 fn nestest() {
@@ -26,7 +26,7 @@ fn nestest() {
     );
     let mut nes = Nes::new(config);
 
-    let mut screen = Screen::new();
+    let mut frame = Frame::new();
     loop {
         let program_counter = nes.cpu().program_counter();
         let a = nes.cpu().accumulator();
@@ -37,7 +37,7 @@ fn nestest() {
         let c = nes.cpu().cycle();
         //let ppu_cycle = nes.ppu().cycle();
         //let ppu_frame = nes.ppu().frame();
-        if let Some(instruction) = nes.step(&mut screen) {
+        if let Some(instruction) = nes.step(&mut frame) {
             if let Some(expected_state) = expected_states.next() {
                 let state = State {
                     program_counter,

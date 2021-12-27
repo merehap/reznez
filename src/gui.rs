@@ -10,7 +10,7 @@ use stopwatch::Stopwatch;
 use crate::controller::joypad::Button;
 use crate::nes::Nes;
 use crate::ppu::palette::rgb::Rgb;
-use crate::ppu::screen::Screen;
+use crate::ppu::frame::Frame;
 
 const DEBUG_SCREEN_HEIGHT: usize = 20;
 
@@ -60,7 +60,7 @@ pub fn gui(mut nes: Nes) {
         .create_texture_target(PixelFormatEnum::RGB24, 256, 240)
         .unwrap();
 
-    let mut screen = Screen::new();
+    let mut frame = Frame::new();
     let totalwatch = Stopwatch::start_new();
     let mut framewatch = Stopwatch::start_new();
     /*
@@ -68,18 +68,18 @@ pub fn gui(mut nes: Nes) {
         DebugScreen::<{Screen::WIDTH}, DEBUG_SCREEN_HEIGHT>::new(Rgb::WHITE);
         */
 
-    let mut pixels = [0; 4 * Screen::WIDTH * Screen::HEIGHT];
+    let mut pixels = [0; 4 * Frame::WIDTH * Frame::HEIGHT];
 
     loop {
-        nes.step(&mut screen);
+        nes.step(&mut frame);
         let should_redraw = nes.ppu().clock().is_first_cycle_of_frame();
         if should_redraw {
-            let frame = nes.ppu().clock().frame();
+            let frame_index = nes.ppu().clock().frame();
             println!(
                 "Frame: {}, Rate: {}, Average: {}",
-                frame,
+                frame_index,
                 1_000_000_000.0 / framewatch.elapsed().as_nanos() as f64,
-                1000.0 / totalwatch.elapsed_ms() as f64 * frame as f64,
+                1000.0 / totalwatch.elapsed_ms() as f64 * frame_index as f64,
                 );
 
             framewatch = Stopwatch::start_new();
@@ -92,9 +92,9 @@ pub fn gui(mut nes: Nes) {
                 rgb_count += 1;
             };
 
-            for row in 0..Screen::HEIGHT {
-                for column in 0..Screen::WIDTH {
-                    let pixel = screen.pixel(column as u8, row as u8);
+            for row in 0..Frame::HEIGHT {
+                for column in 0..Frame::WIDTH {
+                    let pixel = frame.pixel(column as u8, row as u8);
                     set_next_pixel(pixel);
                 }
             }

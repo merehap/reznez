@@ -4,19 +4,19 @@ use crate::ppu::sprite::Priority;
 
 type SpriteSliver = ([Rgbt; 8], Priority);
 
-pub struct Screen {
-    buffer: [[Rgbt; Screen::WIDTH]; Screen::HEIGHT],
-    sprite_buffer: [[SpriteSliver; Screen::WIDTH / 8]; Screen::HEIGHT],
+pub struct Frame {
+    buffer: [[Rgbt; Frame::WIDTH]; Frame::HEIGHT],
+    sprite_buffer: [[SpriteSliver; Frame::WIDTH / 8]; Frame::HEIGHT],
     universal_background_rgb: Rgb,
 }
 
-impl Screen {
+impl Frame {
     pub const WIDTH: usize = 256;
     pub const HEIGHT: usize = 240;
 
-    pub fn new() -> Screen {
-        Screen {
-            buffer: [[Rgbt::Transparent; Screen::WIDTH]; Screen::HEIGHT],
+    pub fn new() -> Frame {
+        Frame {
+            buffer: [[Rgbt::Transparent; Frame::WIDTH]; Frame::HEIGHT],
             sprite_buffer: new_sprite_buffer(),
             universal_background_rgb: Rgb::BLACK,
         }
@@ -71,6 +71,6 @@ impl Screen {
     }
 }
 
-fn new_sprite_buffer() -> [[SpriteSliver; Screen::WIDTH / 8]; Screen::HEIGHT] {
-    [[([Rgbt::Transparent; 8], Priority::Behind); Screen::WIDTH / 8]; Screen::HEIGHT]
+fn new_sprite_buffer() -> [[SpriteSliver; Frame::WIDTH / 8]; Frame::HEIGHT] {
+    [[([Rgbt::Transparent; 8], Priority::Behind); Frame::WIDTH / 8]; Frame::HEIGHT]
 }

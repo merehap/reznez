@@ -14,7 +14,7 @@ use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
 use crate::ppu::register::status::Status;
-use crate::ppu::screen::Screen;
+use crate::ppu::frame::Frame;
 
 const FIRST_VBLANK_CYCLE: u64 = 3 * 27384;
 const SECOND_VBLANK_CYCLE: u64 = 3 * 57165;
@@ -99,7 +99,7 @@ impl Ppu {
         self.is_nmi_period && ctrl.vblank_nmi == VBlankNmi::On
     }
 
-    pub fn step(&mut self, ctrl: Ctrl, mask: Mask, screen: &mut Screen) -> StepEvents {
+    pub fn step(&mut self, ctrl: Ctrl, mask: Mask, frame: &mut Frame) -> StepEvents {
         let frame_started = self.clock().is_first_cycle_of_frame();
         if frame_started {
             self.frame_end_time = SystemTime::now().add(NTSC_TIME_PER_FRAME);
@@ -127,11 +127,11 @@ impl Ppu {
             step_event = StepEvents::stop_vblank(self.status);
         } else if self.clock.scanline() == 1 && self.clock.cycle() == 1 {
             if mask.background_enabled {
-                self.render_background(ctrl, screen);
+                self.render_background(ctrl, frame);
             }
 
             if mask.sprites_enabled {
-                self.render_sprites(ctrl, screen);
+                self.render_sprites(ctrl, frame);
             }
             step_event = StepEvents::no_events(self.status);
         } else {
@@ -149,9 +149,9 @@ impl Ppu {
         step_event
     }
 
-    fn render_background(&mut self, ctrl: Ctrl, screen: &mut Screen) {
+    fn render_background(&mut self, ctrl: Ctrl, frame: &mut Frame) {
         let palette_table = self.memory.palette_table();
-        screen.set_universal_background_rgb(palette_table.universal_background_rgb());
+        frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
         let name_table_number = ctrl.name_table_number;
         let background_table_side = ctrl.background_table_side;
@@ -167,14 +167,14 @@ impl Ppu {
                     row_in_tile as usize,
                     false,
                     palette_table.background_palette(palette_table_index),
-                    screen.background_tile_sliver(pixel_column, start_row + row_in_tile),
+                    frame.background_tile_sliver(pixel_column, start_row + row_in_tile),
                     );
             }
         }
     }
 
-    fn render_sprites(&mut self, ctrl: Ctrl, screen: &mut Screen) {
-        screen.clear_sprite_buffer();
+    fn render_sprites(&mut self, ctrl: Ctrl, frame: &mut Frame) {
+        frame.clear_sprite_buffer();
 
         let palette_table = self.memory.palette_table();
         let sprite_table_side = ctrl.sprite_table_side;
@@ -195,7 +195,7 @@ impl Ppu {
                         y + row_in_tile
                     };
 
-                let mut sliver = screen.sprites_tile_sliver(x, y);
+                let mut sliver = frame.sprites_tile_sliver(x, y);
                 sliver.1 = sprite.priority();
 
                 self.pattern_table().render_tile_sliver(
