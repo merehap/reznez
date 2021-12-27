@@ -1,5 +1,7 @@
 use std::collections::BTreeSet;
 
+use stopwatch::Stopwatch;
+
 use crate::cartridge::INes;
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
@@ -8,14 +10,14 @@ use crate::cpu::cpu::{Cpu, StepResult};
 use crate::cpu::instruction::Instruction;
 use crate::cpu::memory::Memory as CpuMem;
 use crate::cpu::port_access::{PortAccess, AccessMode};
-use crate::ppu::frame::Frame;
+use crate::gui::sdl_gui::SdlGui;
+use crate::mapper::mapper0::Mapper0;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::memory::Memory as PpuMem;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
 use crate::ppu::register::status::Status;
-use crate::mapper::mapper0::Mapper0;
 
 const PPUCTRL:    Address = Address::new(0x2000);
 const PPUMASK:    Address = Address::new(0x2001);
@@ -62,6 +64,9 @@ pub struct Nes {
     pub joypad_2: Joypad,
     old_vblank_nmi: VBlankNmi,
     cycle: u64,
+
+    total_watch: Stopwatch,
+    frame_watch: Stopwatch,
 }
 
 impl Nes {
@@ -78,6 +83,9 @@ impl Nes {
             joypad_2: Joypad::new(),
             old_vblank_nmi: VBlankNmi::Off,
             cycle: 0,
+
+            total_watch: Stopwatch::start_new(),
+            frame_watch: Stopwatch::start_new(),
         }
     }
 
@@ -93,7 +101,35 @@ impl Nes {
         self.cycle
     }
 
-    pub fn step(&mut self, frame: &mut Frame) -> Option<Instruction> {
+    pub fn step(&mut self, gui: &mut SdlGui) -> Option<Instruction> {
+        let should_redraw = self.ppu().clock().is_first_cycle_of_frame();
+        if should_redraw {
+            let events = gui.events();
+            if events.should_quit {
+                std::process::exit(0);
+            }
+
+            for (button, status) in events.joypad_1_button_statuses {
+                self.joypad_1.set_button_status(button, status);
+            }
+
+            for (button, status) in events.joypad_2_button_statuses {
+                self.joypad_2.set_button_status(button, status);
+            }
+
+            let frame_index = self.ppu().clock().frame();
+            println!(
+                "Frame: {}, Rate: {}, Average: {}",
+                frame_index,
+                1_000_000_000.0 / self.frame_watch.elapsed().as_nanos() as f64,
+                1000.0 / self.total_watch.elapsed_ms() as f64 * frame_index as f64,
+            );
+
+            self.frame_watch = Stopwatch::start_new();
+
+            gui.display_frame();
+        }
+
         let mut instruction = None;
         if self.cycle % 3 == 2 {
             match self.cpu.step() {
@@ -107,7 +143,7 @@ impl Nes {
             }
         }
 
-        let step_events = self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), frame);
+        let step_events = self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), gui.frame_mut());
         self.write_ppu_status_to_cpu(step_events.status());
 
         if step_events.nmi_trigger() {

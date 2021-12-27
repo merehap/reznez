@@ -18,10 +18,14 @@ mod util;
 use std::path::Path;
 
 use crate::config::Config;
+use crate::gui::sdl_gui::SdlGui;
 use crate::nes::Nes;
 
 fn main() {
     let config = Config::default(Path::new("roms/Donkey Kong.nes"));
-    let nes = Nes::new(config);
-    gui::gui(nes);
+    let mut nes = Nes::new(config);
+    let mut gui = SdlGui::initialize();
+    loop {
+        nes.step(&mut gui);
+    }
 }

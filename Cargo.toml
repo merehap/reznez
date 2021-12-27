@@ -21,4 +21,4 @@ debug = true
 
 [dependencies.sdl2]
 version = "0.35.1"
-features = ["raw-window-handle"]
+features = ["unsafe_textures"]

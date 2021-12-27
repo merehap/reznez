@@ -46,12 +46,8 @@ impl Joypad {
         self.strobe_mode = StrobeMode::Off;
     }
 
-    pub fn press_button(&mut self, button: Button) {
-        self.button_statuses[button] = ButtonStatus::Pressed;
-    }
-
-    pub fn release_button(&mut self, button: Button) {
-        self.button_statuses[button] = ButtonStatus::Unpressed;
+    pub fn set_button_status(&mut self, button: Button, status: ButtonStatus) {
+        self.button_statuses[button] = status;
     }
 }
 
@@ -61,7 +57,7 @@ pub enum StrobeMode {
     On,
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug, FromPrimitive, IntoEnumIterator)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, IntoEnumIterator)]
 pub enum Button {
     A,
     B,

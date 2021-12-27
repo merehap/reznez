@@ -141,7 +141,7 @@ impl Ppu {
         let frame_ended = self.clock().is_last_cycle_of_frame();
         if frame_ended {
             if let Ok(duration) = self.frame_end_time.duration_since(SystemTime::now()) {
-                thread::sleep(duration)
+                thread::sleep(duration);
             }
         }
 

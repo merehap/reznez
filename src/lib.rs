@@ -9,6 +9,7 @@ pub mod cartridge;
 pub mod config;
 pub mod controller;
 pub mod cpu;
+pub mod gui;
 pub mod ppu;
 mod mapper;
 pub mod nes;
