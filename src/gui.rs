@@ -74,6 +74,31 @@ pub fn gui(mut nes: Nes) {
         nes.step(&mut frame);
         let should_redraw = nes.ppu().clock().is_first_cycle_of_frame();
         if should_redraw {
+            for event in event_pump.poll_iter() {
+                match event {
+                    Event::Quit { .. } |
+                    Event::KeyDown {
+                        keycode: Some(Keycode::Escape),
+                        ..
+                    } => std::process::exit(0),
+                    Event::KeyDown {keycode: Some(code), ..} => {
+                        if let Some(&button) = JOY_1_BUTTON_MAPPINGS.get(&code) {
+                            nes.joypad_1.press_button(button);
+                        } else if let Some(&button) = JOY_2_BUTTON_MAPPINGS.get(&code) {
+                            nes.joypad_2.press_button(button);
+                        }
+                    },
+                    Event::KeyUp {keycode: Some(code), ..} => {
+                        if let Some(&button) = JOY_1_BUTTON_MAPPINGS.get(&code) {
+                            nes.joypad_1.release_button(button);
+                        } else if let Some(&button) = JOY_2_BUTTON_MAPPINGS.get(&code) {
+                            nes.joypad_2.release_button(button);
+                        }
+                    },
+                    _ => { /* do nothing */ }
+                }
+            }
+
             let frame_index = nes.ppu().clock().frame();
             println!(
                 "Frame: {}, Rate: {}, Average: {}",
@@ -135,31 +160,6 @@ pub fn gui(mut nes: Nes) {
             canvas.copy(&texture, None, None).unwrap();
 
             canvas.present();
-
-            for event in event_pump.poll_iter() {
-                match event {
-                    Event::Quit { .. } |
-                    Event::KeyDown {
-                        keycode: Some(Keycode::Escape),
-                        ..
-                    } => std::process::exit(0),
-                    Event::KeyDown {keycode: Some(code), ..} => {
-                        if let Some(&button) = JOY_1_BUTTON_MAPPINGS.get(&code) {
-                            nes.joypad_1.press_button(button);
-                        } else if let Some(&button) = JOY_2_BUTTON_MAPPINGS.get(&code) {
-                            nes.joypad_2.press_button(button);
-                        }
-                    },
-                    Event::KeyUp {keycode: Some(code), ..} => {
-                        if let Some(&button) = JOY_1_BUTTON_MAPPINGS.get(&code) {
-                            nes.joypad_1.release_button(button);
-                        } else if let Some(&button) = JOY_2_BUTTON_MAPPINGS.get(&code) {
-                            nes.joypad_2.release_button(button);
-                        }
-                    },
-                    _ => { /* do nothing */ }
-                }
-            }
         }
     }
 }
