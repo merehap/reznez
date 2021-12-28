@@ -79,7 +79,6 @@ impl Ppu {
     }
 
     pub fn write_vram(&mut self, ctrl: Ctrl, value: u8) {
-        println!("Writing to VRAM Address: [{}]={}", self.vram_address, value);
         self.memory[self.vram_address] = value;
         let increment = ctrl.vram_address_increment as u8;
         self.vram_address = self.vram_address.advance(increment);
