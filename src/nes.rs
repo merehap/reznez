@@ -101,7 +101,6 @@ impl Nes {
 
     pub fn step_frame(&mut self, gui: &mut SdlGui) {
         let start_time = SystemTime::now();
-        println!("Start time: {:?}", start_time);
         let intended_frame_end_time = start_time.add(NTSC_TIME_PER_FRAME);
 
         let events = gui.events();

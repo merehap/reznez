@@ -15,6 +15,7 @@ mod mapper;
 pub mod nes;
 mod util;
 
+use std::env;
 use std::path::Path;
 
 use crate::config::Config;
@@ -22,7 +23,8 @@ use crate::gui::sdl_gui::SdlGui;
 use crate::nes::Nes;
 
 fn main() {
-    let config = Config::default(Path::new("roms/Balloon Fight.nes"));
+    let args: Vec<String> = env::args().collect();
+    let config = Config::default(Path::new(&args[1]));
     let mut nes = Nes::new(config);
     let mut gui = SdlGui::initialize();
     loop {
