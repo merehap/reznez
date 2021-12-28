@@ -30,7 +30,7 @@ impl Status {
         }
     }
 
-    pub fn to_u8(&self) -> u8 {
+    pub fn to_u8(self) -> u8 {
         util::pack_bools(
             [
                 self.vblank_active,

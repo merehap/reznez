@@ -64,10 +64,7 @@ impl Frame {
         ) -> &mut ([Rgbt; 8], Priority) {
 
         let row_slice = &mut self.sprite_buffer[row as usize];
-        let sprite_sliver = &mut row_slice[(column / 8) as usize];
-        sprite_sliver
-            .try_into()
-            .unwrap()
+        &mut row_slice[(column / 8) as usize]
     }
 }
 
