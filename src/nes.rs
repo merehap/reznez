@@ -141,7 +141,7 @@ impl Nes {
 
     pub fn step(&mut self, frame: &mut Frame) -> Option<Instruction> {
         let mut instruction = None;
-        if self.cycle % 3 == 2 {
+        if self.cycle % 3 == 0 {
             match self.cpu.step() {
                 StepResult::Nop => {},
                 StepResult::InstructionComplete(inst) => instruction = Some(inst),

@@ -34,9 +34,10 @@ fn nestest() {
         let y = nes.cpu().y_index();
         let p = nes.cpu().status();
         let s = nes.cpu().stack_pointer();
+        let ppu_cycle = nes.ppu().clock().cycle();
+        let ppu_scanline = nes.ppu().clock().scanline();
         let c = nes.cpu().cycle();
-        //let ppu_cycle = nes.ppu().cycle();
-        //let ppu_frame = nes.ppu().frame();
+
         if let Some(instruction) = nes.step(&mut frame) {
             if let Some(expected_state) = expected_states.next() {
                 let state = State {
@@ -48,6 +49,8 @@ fn nestest() {
                     y,
                     p,
                     s,
+                    ppu_cycle,
+                    ppu_scanline,
                     c,
                 };
 
@@ -72,6 +75,8 @@ struct State {
     y: u8,
     p: Status,
     s: u8,
+    ppu_cycle: u16,
+    ppu_scanline: u16,
     c: u64,
 }
 
@@ -92,6 +97,8 @@ impl State {
             y: u8::from_str_radix(&line[60..62], 16).unwrap(),
             p: Status::from_byte(u8::from_str_radix(&line[65..67], 16).unwrap()),
             s: u8::from_str_radix(&line[71..73], 16).unwrap(),
+            ppu_cycle: u16::from_str_radix(&line[78..81].trim(), 10).unwrap(),
+            ppu_scanline: u16::from_str_radix(&line[82..85].trim(), 10).unwrap(),
             c: u64::from_str_radix(&line[90..], 10).unwrap(),
         }
     }
@@ -99,8 +106,8 @@ impl State {
 
 impl fmt::Display for State {
     fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
-        write!(f, "State {{PC:{}, CodePoint:0x{:02X}, OpCode:{:?}, A:0x{:02X}, X:0x{:02X}, Y:0x{:02X}, P:{} (0x{:2X}), S:0x{:02X}, C:{:05}}}",
+        write!(f, "State {{PC:{}, CodePoint:0x{:02X}, OpCode:{:?}, A:0x{:02X}, X:0x{:02X}, Y:0x{:02X}, P:{} (0x{:2X}), S:0x{:02X}, C:{:05}, PPUC:{:03}, PPUS:{:03}}}",
                self.program_counter, self.code_point, self.op_code, self.a,
-               self.x, self.y, self.p.to_string(), self.p.to_instruction_byte(), self.s, self.c)
+               self.x, self.y, self.p.to_string(), self.p.to_instruction_byte(), self.s, self.c, self.ppu_cycle, self.ppu_scanline)
     }
 }

@@ -105,7 +105,7 @@ impl Ppu {
                 "PPU Cycle: {}, Frame: {}",
                 self.clock().total_cycles(),
                 self.clock().frame(),
-                );
+            );
         }
 
         let total_cycles = self.clock().total_cycles();
