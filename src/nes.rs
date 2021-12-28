@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
-
-use stopwatch::Stopwatch;
+use std::ops::Add;
+use std::time::{Duration, SystemTime};
 
 use crate::cartridge::INes;
 use crate::config::Config;
@@ -12,6 +12,7 @@ use crate::cpu::memory::Memory as CpuMem;
 use crate::cpu::port_access::{PortAccess, AccessMode};
 use crate::gui::sdl_gui::SdlGui;
 use crate::mapper::mapper0::Mapper0;
+use crate::ppu::frame::Frame;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::memory::Memory as PpuMem;
@@ -19,15 +20,19 @@ use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
 use crate::ppu::register::status::Status;
 
-const PPUCTRL:    Address = Address::new(0x2000);
-const PPUMASK:    Address = Address::new(0x2001);
-const PPUSTATUS:  Address = Address::new(0x2002);
-const OAMADDR:    Address = Address::new(0x2003);
-const OAMDATA:    Address = Address::new(0x2004);
-const PPUSCROLL:  Address = Address::new(0x2005);
-const PPUADDR:    Address = Address::new(0x2006);
-const PPUDATA:    Address = Address::new(0x2007);
-const OAM_DMA:    Address = Address::new(0x4014);
+const NTSC_FRAME_RATE: f64 = 60.0988;
+const NTSC_TIME_PER_FRAME: Duration =
+    Duration::from_nanos((1_000_000_000.0 / NTSC_FRAME_RATE) as u64);
+
+const PPUCTRL:   Address = Address::new(0x2000);
+const PPUMASK:   Address = Address::new(0x2001);
+const PPUSTATUS: Address = Address::new(0x2002);
+const OAMADDR:   Address = Address::new(0x2003);
+const OAMDATA:   Address = Address::new(0x2004);
+const PPUSCROLL: Address = Address::new(0x2005);
+const PPUADDR:   Address = Address::new(0x2006);
+const PPUDATA:   Address = Address::new(0x2007);
+const OAM_DMA:   Address = Address::new(0x4014);
 
 const JOYSTICK_1_PORT: Address = Address::new(0x4016);
 const JOYSTICK_2_PORT: Address = Address::new(0x4017);
@@ -64,9 +69,6 @@ pub struct Nes {
     pub joypad_2: Joypad,
     old_vblank_nmi: VBlankNmi,
     cycle: u64,
-
-    total_watch: Stopwatch,
-    frame_watch: Stopwatch,
 }
 
 impl Nes {
@@ -83,9 +85,6 @@ impl Nes {
             joypad_2: Joypad::new(),
             old_vblank_nmi: VBlankNmi::Off,
             cycle: 0,
-
-            total_watch: Stopwatch::start_new(),
-            frame_watch: Stopwatch::start_new(),
         }
     }
 
@@ -101,35 +100,48 @@ impl Nes {
         self.cycle
     }
 
-    pub fn step(&mut self, gui: &mut SdlGui) -> Option<Instruction> {
-        let should_redraw = self.ppu().clock().is_first_cycle_of_frame();
-        if should_redraw {
-            let events = gui.events();
-            if events.should_quit {
-                std::process::exit(0);
-            }
+    pub fn step_frame(&mut self, gui: &mut SdlGui) {
+        let start_time = SystemTime::now();
+        println!("Start time: {:?}", start_time);
+        let intended_frame_end_time = start_time.add(NTSC_TIME_PER_FRAME);
 
-            for (button, status) in events.joypad_1_button_statuses {
-                self.joypad_1.set_button_status(button, status);
-            }
-
-            for (button, status) in events.joypad_2_button_statuses {
-                self.joypad_2.set_button_status(button, status);
-            }
-
-            let frame_index = self.ppu().clock().frame();
-            println!(
-                "Frame: {}, Rate: {}, Average: {}",
-                frame_index,
-                1_000_000_000.0 / self.frame_watch.elapsed().as_nanos() as f64,
-                1000.0 / self.total_watch.elapsed_ms() as f64 * frame_index as f64,
-            );
-
-            self.frame_watch = Stopwatch::start_new();
-
-            gui.display_frame();
+        let events = gui.events();
+        if events.should_quit {
+            std::process::exit(0);
         }
 
+        for (button, status) in events.joypad_1_button_statuses {
+            self.joypad_1.set_button_status(button, status);
+        }
+
+        for (button, status) in events.joypad_2_button_statuses {
+            self.joypad_2.set_button_status(button, status);
+        }
+
+        loop {
+            let is_last_cycle = self.ppu().clock().is_last_cycle_of_frame();
+            self.step(gui.frame_mut());
+            if is_last_cycle {
+                break;
+            }
+        }
+
+        gui.display_frame();
+        let frame_index = self.ppu().clock().frame();
+        println!("Frame: {}", frame_index - 1);
+
+        let end_time = SystemTime::now();
+        if let Ok(duration) = intended_frame_end_time.duration_since(end_time) {
+            std::thread::sleep(duration);
+        }
+
+        let end_time = SystemTime::now();
+        if let Ok(duration) = end_time.duration_since(start_time) {
+            println!("Framerate: {}", 1_000_000_000.0 / duration.as_nanos() as f64);
+        }
+    }
+
+    pub fn step(&mut self, frame: &mut Frame) -> Option<Instruction> {
         let mut instruction = None;
         if self.cycle % 3 == 2 {
             match self.cpu.step() {
@@ -143,7 +155,7 @@ impl Nes {
             }
         }
 
-        let step_events = self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), gui.frame_mut());
+        let step_events = self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), frame);
         self.write_ppu_status_to_cpu(step_events.status());
 
         if step_events.nmi_trigger() {

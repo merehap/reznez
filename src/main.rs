@@ -26,6 +26,6 @@ fn main() {
     let mut nes = Nes::new(config);
     let mut gui = SdlGui::initialize();
     loop {
-        nes.step(&mut gui);
+        nes.step_frame(&mut gui);
     }
 }
