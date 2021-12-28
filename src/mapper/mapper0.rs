@@ -18,9 +18,9 @@ impl Mapper0 {
         ppu_mem: &mut PpuMem,
         ) -> Result<(), String> {
 
-        if ines.chr_rom_chunk_count() != 1 {
+        if ines.chr_rom_chunk_count() > 1 {
             return Err(format!(
-                    "CHR ROM size must be 8K for mapper 0, but was {}K",
+                    "CHR ROM size must be 0K or 8K for mapper 0, but was {}K",
                     8 * ines.chr_rom_chunk_count()
                     ));
         }
