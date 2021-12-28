@@ -21,7 +21,7 @@ fn nestest() {
         .map(|line| State::from_text(line.unwrap()));
 
     let config = Config::with_override_program_counter(
-        Path::new("roms/nestest.nes"),
+        Path::new("testroms/nestest.nes"),
         Address::new(0xC000),
     );
     let mut nes = Nes::new(config);
