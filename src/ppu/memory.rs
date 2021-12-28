@@ -25,7 +25,7 @@ const NAME_TABLE_INDEXES: [Address; 4] =
         Address::from_u16(NAME_TABLE_START + 3 * NAME_TABLE_SIZE),
     ];
 
-const PALETTE_TABLE_START: Address = Address::from_u16(0x3F00);
+pub const PALETTE_TABLE_START: Address = Address::from_u16(0x3F00);
 const PALETTE_TABLE_SIZE: u16 = 0x20;
 
 pub struct Memory {

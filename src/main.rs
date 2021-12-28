@@ -22,7 +22,7 @@ use crate::gui::sdl_gui::SdlGui;
 use crate::nes::Nes;
 
 fn main() {
-    let config = Config::default(Path::new("roms/Donkey Kong.nes"));
+    let config = Config::default(Path::new("roms/Balloon Fight.nes"));
     let mut nes = Nes::new(config);
     let mut gui = SdlGui::initialize();
     loop {

@@ -18,7 +18,6 @@ use crate::ppu::ppu::Ppu;
 use crate::ppu::memory::Memory as PpuMem;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
-use crate::ppu::register::status::Status;
 
 const NTSC_FRAME_RATE: f64 = 60.0988;
 const NTSC_TIME_PER_FRAME: Duration =
@@ -155,10 +154,12 @@ impl Nes {
             }
         }
 
-        let step_events = self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), frame);
-        self.write_ppu_status_to_cpu(step_events.status());
+        let step_result = self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), frame);
+        *self.cpu.memory.bus_access_mut(PPUSTATUS) = step_result.status().to_u8();
+        *self.cpu.memory.bus_access_mut(PPUDATA) = step_result.vram_data();
 
-        if step_events.nmi_trigger() {
+
+        if step_result.nmi_trigger() {
             self.schedule_nmi_if_enabled();
         }
 
@@ -225,7 +226,7 @@ impl Nes {
                 ),
 
             (PPUADDR, Write) => self.ppu.write_partial_vram_address(value),
-            (PPUDATA, Read) => unimplemented!(),
+            (PPUDATA, Read) => self.ppu.update_vram_data(self.ppu_ctrl()),
             (PPUDATA, Write) => self.ppu.write_vram(self.ppu_ctrl(), value),
 
             (PPUSCROLL, Write) => println!("PPUSCROLL was written to (not supported)."),
@@ -266,10 +267,6 @@ impl Nes {
 
     fn ppu_mask(&self) -> Mask {
         Mask::from_u8(*self.cpu.memory.bus_access(PPUMASK))
-    }
-
-    fn write_ppu_status_to_cpu(&mut self, status: Status) {
-        *self.cpu.memory.bus_access_mut(PPUSTATUS) = status.to_u8();
     }
 
     fn oam_address(&self) -> u8 {
