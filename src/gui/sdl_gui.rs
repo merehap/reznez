@@ -86,7 +86,7 @@ impl Gui for SdlGui {
     }
 
     #[inline]
-    fn events(&mut self) -> Events {
+    fn events(&mut self, _frame_index: u64) -> Events {
         let mut should_quit = false;
         let mut joypad_1_button_statuses = BTreeMap::new();
         let mut joypad_2_button_statuses = BTreeMap::new();
@@ -132,7 +132,7 @@ impl Gui for SdlGui {
     }
 
     #[allow(clippy::identity_op)]
-    fn display_frame(&mut self) {
+    fn display_frame(&mut self, _frame_index: u64) {
         /*
         let mut rgb_count = 0;
         let mut set_next_pixel = |rgb: Rgb| {

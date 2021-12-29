@@ -100,10 +100,11 @@ impl Nes {
     }
 
     pub fn step_frame(&mut self, gui: &mut dyn Gui) {
+        let frame_index = self.ppu().clock().frame();
         let start_time = SystemTime::now();
         let intended_frame_end_time = start_time.add(NTSC_TIME_PER_FRAME);
 
-        let events = gui.events();
+        let events = gui.events(frame_index);
         if events.should_quit {
             std::process::exit(0);
         }
@@ -124,9 +125,8 @@ impl Nes {
             }
         }
 
-        gui.display_frame();
-        let frame_index = self.ppu().clock().frame();
-        println!("Frame: {}", frame_index - 1);
+        gui.display_frame(frame_index);
+        println!("Frame: {}", frame_index);
 
         let end_time = SystemTime::now();
         if let Ok(duration) = intended_frame_end_time.duration_since(end_time) {
