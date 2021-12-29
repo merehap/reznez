@@ -68,6 +68,10 @@ impl Ppu {
         self.memory.palette_table()
     }
 
+    pub fn read_oam(&mut self, oam_address: u8) -> u8 {
+        self.oam[oam_address]
+    }
+
     pub fn write_oam(&mut self, oam_address: u8, value: u8) {
         self.oam[oam_address] = value;
     }

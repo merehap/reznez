@@ -154,9 +154,9 @@ impl Nes {
         }
 
         let step_result = self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), frame);
+        *self.cpu.memory.bus_access_mut(OAMADDR) = self.ppu.read_oam(self.oam_address());
         *self.cpu.memory.bus_access_mut(PPUSTATUS) = step_result.status().to_u8();
         *self.cpu.memory.bus_access_mut(PPUDATA) = step_result.vram_data();
-
 
         if step_result.nmi_trigger() {
             self.schedule_nmi_if_enabled();
@@ -216,8 +216,8 @@ impl Nes {
             (PPUSTATUS, Write) => {/* PPUSTATUS is read-only. */},
 
             (OAMADDR, Write) => {},
-            (OAMDATA, Read) => unimplemented!(),
-            (OAMDATA, Write) => unimplemented!(),
+            (OAMDATA, Read) => {},
+            (OAMDATA, Write) => self.write_oam(value),
             (OAM_DMA, Write) =>
                 self.cpu.initiate_dma_transfer(
                     value,
