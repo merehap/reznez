@@ -10,6 +10,7 @@ use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
 
 use crate::controller::joypad::{Button, ButtonStatus};
+use crate::gui::gui::{Gui, Events};
 use crate::ppu::frame::Frame;
 
 const DEBUG_SCREEN_HEIGHT: usize = 20;
@@ -51,8 +52,8 @@ pub struct SdlGui {
     pixels: [u8; 4 * Frame::WIDTH * Frame::HEIGHT],
 }
 
-impl SdlGui {
-    pub fn initialize() -> SdlGui {
+impl Gui for SdlGui {
+    fn initialize() -> SdlGui {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
         let window = video_subsystem
@@ -85,7 +86,7 @@ impl SdlGui {
     }
 
     #[inline]
-    pub fn events(&mut self) -> Events {
+    fn events(&mut self) -> Events {
         let mut should_quit = false;
         let mut joypad_1_button_statuses = BTreeMap::new();
         let mut joypad_2_button_statuses = BTreeMap::new();
@@ -126,12 +127,12 @@ impl SdlGui {
         }
     }
 
-    pub fn frame_mut(&mut self) -> &mut Frame {
+    fn frame_mut(&mut self) -> &mut Frame {
         &mut self.frame
     }
 
     #[allow(clippy::identity_op)]
-    pub fn display_frame(&mut self) {
+    fn display_frame(&mut self) {
         /*
         let mut rgb_count = 0;
         let mut set_next_pixel = |rgb: Rgb| {
@@ -190,10 +191,4 @@ impl SdlGui {
 
         self.canvas.present();
     }
-}
-
-pub struct Events {
-    pub should_quit: bool,
-    pub joypad_1_button_statuses: BTreeMap<Button, ButtonStatus>,
-    pub joypad_2_button_statuses: BTreeMap<Button, ButtonStatus>,
 }

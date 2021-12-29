@@ -10,7 +10,7 @@ use crate::cpu::cpu::{Cpu, StepResult};
 use crate::cpu::instruction::Instruction;
 use crate::cpu::memory::Memory as CpuMem;
 use crate::cpu::port_access::{PortAccess, AccessMode};
-use crate::gui::sdl_gui::SdlGui;
+use crate::gui::gui::Gui;
 use crate::mapper::mapper0::Mapper0;
 use crate::ppu::frame::Frame;
 use crate::ppu::palette::system_palette::SystemPalette;
@@ -99,7 +99,7 @@ impl Nes {
         self.cycle
     }
 
-    pub fn step_frame(&mut self, gui: &mut SdlGui) {
+    pub fn step_frame(&mut self, gui: &mut dyn Gui) {
         let start_time = SystemTime::now();
         let intended_frame_end_time = start_time.add(NTSC_TIME_PER_FRAME);
 

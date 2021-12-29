@@ -19,6 +19,7 @@ use std::env;
 use std::path::Path;
 
 use crate::config::Config;
+use crate::gui::gui::Gui;
 use crate::gui::sdl_gui::SdlGui;
 use crate::nes::Nes;
 
