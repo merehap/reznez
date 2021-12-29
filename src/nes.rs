@@ -199,6 +199,9 @@ impl Nes {
 
         use AccessMode::*;
         match (port_access.address, port_access.access_mode) {
+            (PPUMASK | PPUSTATUS | OAMADDR, Write) => {},
+            (OAMDATA, Read) => {},
+
             (PPUCTRL, Write) => {
                 let new_vblank_nmi = self.ppu_ctrl().vblank_nmi;
                  // A second NMI can only be scheduled if VBlankNmi was toggled.
@@ -208,36 +211,21 @@ impl Nes {
 
                 self.old_vblank_nmi = new_vblank_nmi;
             },
-            (PPUMASK, Write) => {},
 
             // TODO: Reading the status register will clear bit 7 mentioned
             // above and also the address latch used by PPUSCROLL and PPUADDR.
             (PPUSTATUS, Read) => self.ppu.stop_vblank(),
-            (PPUSTATUS, Write) => {/* PPUSTATUS is read-only. */},
-
-            (OAMADDR, Write) => {},
-            (OAMDATA, Read) => {},
             (OAMDATA, Write) => self.write_oam(value),
             (OAM_DMA, Write) =>
-                self.cpu.initiate_dma_transfer(
-                    value,
-                    256 - self.oam_address() as u16,
-                ),
-
+                self.cpu.initiate_dma_transfer(value, 256 - self.oam_address() as u16),
             (PPUADDR, Write) => self.ppu.write_partial_vram_address(value),
             (PPUDATA, Read) => self.ppu.update_vram_data(self.ppu_ctrl()),
             (PPUDATA, Write) => self.ppu.write_vram(self.ppu_ctrl(), value),
-
             (PPUSCROLL, Write) => println!("PPUSCROLL was written to (not supported)."),
 
-            (JOYSTICK_1_PORT, Read) => {
-                // Now that the ROM has read a button status, advance to the next one.
-                self.joypad_1.select_next_button();
-            },
-            (JOYSTICK_2_PORT, Read) => {
-                // Now that the ROM has read a button status, advance to the next one.
-                self.joypad_2.select_next_button();
-            },
+            // Now that the ROM has read a button status, advance to the next status.
+            (JOYSTICK_1_PORT, Read) => self.joypad_1.select_next_button(),
+            (JOYSTICK_2_PORT, Read) => self.joypad_2.select_next_button(),
             (JOYSTICK_1_PORT, Write) => {
                 if value & 1 == 1 {
                     self.joypad_1.strobe_on();
