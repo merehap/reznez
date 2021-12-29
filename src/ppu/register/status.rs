@@ -1,5 +1,4 @@
-use crate::util;
-use crate::util::get_bit;
+use crate::util::bit_util::{get_bit, pack_bools};
 
 #[derive(Clone, Copy)]
 pub struct Status {
@@ -31,7 +30,7 @@ impl Status {
     }
 
     pub fn to_u8(self) -> u8 {
-        util::pack_bools(
+        pack_bools(
             [
                 self.vblank_active,
                 self.sprite0_hit,

@@ -1,7 +1,6 @@
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTableSide;
-use crate::util;
-use crate::util::get_bit;
+use crate::util::bit_util::{get_bit, pack_bools};
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Ctrl {
@@ -77,7 +76,7 @@ impl Ctrl {
     }
 
     pub fn to_u8(self) -> u8 {
-        util::pack_bools(
+        pack_bools(
             [
                 self.vblank_nmi == VBlankNmi::On,
                 self.ext_pin_role == ExtPinRole::Write,

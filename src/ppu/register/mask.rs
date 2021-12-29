@@ -1,4 +1,4 @@
-use crate::util::get_bit;
+use crate::util::bit_util::get_bit;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Mask {

@@ -3,7 +3,7 @@
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::util::get_bit;
+use crate::util::bit_util::get_bit;
 
 pub struct PatternTable<'a>(&'a [u8; 0x2000]);
 

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::util;
+use crate::util::bit_util::{pack_bools, unpack_bools};
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Status {
@@ -35,13 +35,13 @@ impl Status {
         , status.interrupts_disabled
         , status.zero
         , status.carry,
-        ] = util::unpack_bools(value);
+        ] = unpack_bools(value);
 
         status
     }
 
     pub fn to_register_byte(self) -> u8 {
-        util::pack_bools([
+        pack_bools([
             self.negative,
             self.overflow,
             false,
@@ -54,7 +54,7 @@ impl Status {
     }
 
     pub fn to_instruction_byte(self) -> u8 {
-        util::pack_bools([
+        pack_bools([
             self.negative,
             self.overflow,
             true,
@@ -67,7 +67,7 @@ impl Status {
     }
 
     pub fn to_interrupt_byte(self) -> u8 {
-        util::pack_bools([
+        pack_bools([
             self.negative,
             self.overflow,
             true,
