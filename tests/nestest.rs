@@ -3,7 +3,7 @@ extern crate reznez;
 use std::fmt;
 use std::io::{BufRead, BufReader};
 use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use reznez::config::{Config, Opt, GuiType};
@@ -24,6 +24,7 @@ fn nestest() {
     let opt = Opt {
         rom_path: PathBuf::from("tests/roms/nestest.nes"),
         gui: GuiType::NoGui,
+        stop_frame: None,
         override_program_counter: Some(Address::new(0xC000)),
     };
 

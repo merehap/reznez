@@ -86,7 +86,7 @@ impl Gui for SdlGui {
     }
 
     #[inline]
-    fn events(&mut self, _frame_index: u64) -> Events {
+    fn events(&mut self) -> Events {
         let mut should_quit = false;
         let mut joypad_1_button_statuses = BTreeMap::new();
         let mut joypad_2_button_statuses = BTreeMap::new();

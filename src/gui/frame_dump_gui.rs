@@ -26,9 +26,9 @@ impl Gui for FrameDumpGui {
     }
 
     #[inline]
-    fn events(&mut self, frame_index: u64) -> Events {
+    fn events(&mut self) -> Events {
         Events {
-            should_quit: frame_index == 200,
+            should_quit: false,
             joypad_1_button_statuses: BTreeMap::new(),
             joypad_2_button_statuses: BTreeMap::new(),
         }

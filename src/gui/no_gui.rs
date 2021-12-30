@@ -15,7 +15,7 @@ impl Gui for NoGui {
     }
 
     #[inline]
-    fn events(&mut self, _frame_index: u64) -> Events {
+    fn events(&mut self) -> Events {
         Events {
             should_quit: false,
             joypad_1_button_statuses: BTreeMap::new(),

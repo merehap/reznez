@@ -17,6 +17,7 @@ use crate::ppu::palette::system_palette::SystemPalette;
 pub struct Config {
     ines: INes,
     system_palette: SystemPalette,
+    stop_frame: Option<u64>,
     program_counter_source: ProgramCounterSource,
 }
 
@@ -43,7 +44,12 @@ impl Config {
                 ProgramCounterSource::ResetVector
             };
 
-        Config {ines, system_palette, program_counter_source}
+        Config {
+            ines,
+            system_palette,
+            stop_frame: opt.stop_frame,
+            program_counter_source,
+        }
     }
 
     pub fn ines(&self) -> &INes {
@@ -56,6 +62,10 @@ impl Config {
 
     pub fn program_counter_source(&self) -> ProgramCounterSource {
         self.program_counter_source
+    }
+
+    pub fn stop_frame(&self) -> Option<u64> {
+        self.stop_frame
     }
 
     pub fn gui(opt: &Opt) -> Box<dyn Gui> {
@@ -75,6 +85,9 @@ pub struct Opt {
 
     #[structopt(short, long, default_value = "sdl")]
     pub gui: GuiType,
+
+    #[structopt(name = "stopframe", long)]
+    pub stop_frame: Option<u64>,
 
     pub override_program_counter: Option<Address>,
 }

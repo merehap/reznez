@@ -68,6 +68,8 @@ pub struct Nes {
     pub joypad_2: Joypad,
     old_vblank_nmi: VBlankNmi,
     cycle: u64,
+
+    stop_frame: Option<u64>,
 }
 
 impl Nes {
@@ -84,6 +86,8 @@ impl Nes {
             joypad_2: Joypad::new(),
             old_vblank_nmi: VBlankNmi::Off,
             cycle: 0,
+
+            stop_frame: config.stop_frame(),
         }
     }
 
@@ -104,8 +108,8 @@ impl Nes {
         let start_time = SystemTime::now();
         let intended_frame_end_time = start_time.add(NTSC_TIME_PER_FRAME);
 
-        let events = gui.events(frame_index);
-        if events.should_quit {
+        let events = gui.events();
+        if events.should_quit || Some(frame_index - 1) == self.stop_frame {
             std::process::exit(0);
         }
 
@@ -353,6 +357,8 @@ mod tests {
             joypad_2: Joypad::new(),
             old_vblank_nmi: VBlankNmi::Off,
             cycle: 0,
+
+            stop_frame: None,
         }
     }
 
