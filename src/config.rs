@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use structopt::StructOpt;
 
@@ -60,10 +61,9 @@ impl Config {
     }
 
     pub fn gui(opt: &Opt) -> Box<dyn Gui> {
-        match opt.gui.as_str() {
-            "sdl" => Box::new(SdlGui::initialize()) as Box<dyn Gui>,
-            "framedump" => Box::new(FrameDumpGui::initialize()) as Box<dyn Gui>,
-            _ => panic!("Invalid GUI specified: '{}'", opt.gui),
+        match opt.gui {
+            GuiType::Sdl => Box::new(SdlGui::initialize()) as Box<dyn Gui>,
+            GuiType::FrameDump => Box::new(FrameDumpGui::initialize()) as Box<dyn Gui>,
         }
     }
 }
@@ -71,9 +71,37 @@ impl Config {
 #[derive(Debug, StructOpt)]
 #[structopt(name = "REZNEZ", about = "The ultra-accurate NES emulator.")]
 pub struct Opt {
-    #[structopt(short, long, default_value = "sdl")]
-    gui: String,
-
     #[structopt(name = "ROM", parse(from_os_str))]
     rom_path: PathBuf,
+
+    #[structopt(short, long, default_value = "sdl")]
+    gui: GuiType,
 }
+
+//#[derive(Debug, enum_utils::FromStr)]
+#[derive(Debug)]
+//#[enumeration(case_insensitive)]
+enum GuiType {
+    Sdl,
+    FrameDump,
+}
+
+impl FromStr for GuiType {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<GuiType, String> {
+        match value {
+            "sdl" => Ok(GuiType::Sdl),
+            "framedump" => Ok(GuiType::FrameDump),
+            _ => Err(format!("Invalid gui type: {}", value)),
+        }
+    }
+}
+
+/*
+impl fmt::Display for GuiType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+*/
