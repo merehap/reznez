@@ -15,40 +15,18 @@ mod mapper;
 pub mod nes;
 mod util;
 
-use std::env;
-use std::path::{Path, PathBuf};
-
 use structopt::StructOpt;
 
-use crate::config::Config;
-use crate::gui::gui::Gui;
-use crate::gui::frame_dump_gui::FrameDumpGui;
-use crate::gui::sdl_gui::SdlGui;
+use crate::config::{Config, Opt};
 use crate::nes::Nes;
 
 fn main() {
     let opt = Opt::from_args();
-    println!("{:?}", opt);
-
-    let config = Config::default(Path::new(&opt.rom_path));
+    let config = Config::default(&opt);
+    let mut gui = Config::gui(&opt);
     let mut nes = Nes::new(config);
-    let mut gui = match opt.gui.as_str() {
-        "sdl" => Box::new(SdlGui::initialize()) as Box<dyn Gui>,
-        "framedump" => Box::new(FrameDumpGui::initialize()) as Box<dyn Gui>,
-        _ => panic!("Invalid GUI specified: '{}'", opt.gui),
-    };
 
     loop {
         nes.step_frame(&mut *gui);
     }
-}
-
-#[derive(Debug, StructOpt)]
-#[structopt(name = "REZNEZ", about = "The ultra-accurate NES emulator.")]
-struct Opt {
-    #[structopt(short, long, default_value = "sdl")]
-    gui: String,
-
-    #[structopt(name = "ROM", parse(from_os_str))]
-    rom_path: PathBuf,
 }
