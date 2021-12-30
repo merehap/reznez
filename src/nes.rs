@@ -18,10 +18,7 @@ use crate::ppu::memory::Memory as PpuMem;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
 use crate::ppu::render::frame::Frame;
-
-const NTSC_FRAME_RATE: f64 = 60.0988;
-const NTSC_TIME_PER_FRAME: Duration =
-    Duration::from_nanos((1_000_000_000.0 / NTSC_FRAME_RATE) as u64);
+use crate::ppu::render::frame_rate::TargetFrameRate;
 
 const PPUCTRL:   Address = Address::new(0x2000);
 const PPUMASK:   Address = Address::new(0x2001);
@@ -69,25 +66,27 @@ pub struct Nes {
     old_vblank_nmi: VBlankNmi,
     cycle: u64,
 
+    target_frame_rate: TargetFrameRate,
     stop_frame: Option<u64>,
 }
 
 impl Nes {
     pub fn new(config: Config) -> Nes {
         let (cpu_mem, ppu_mem) = Nes::initialize_memory(
-            config.ines().clone(),
-            config.system_palette().clone(),
+            config.ines.clone(),
+            config.system_palette.clone(),
             );
 
         Nes {
-            cpu: Cpu::new(cpu_mem, config.program_counter_source()),
+            cpu: Cpu::new(cpu_mem, config.program_counter_source),
             ppu: Ppu::new(ppu_mem),
             joypad_1: Joypad::new(),
             joypad_2: Joypad::new(),
             old_vblank_nmi: VBlankNmi::Off,
             cycle: 0,
 
-            stop_frame: config.stop_frame(),
+            target_frame_rate: config.target_frame_rate,
+            stop_frame: config.stop_frame,
         }
     }
 
@@ -106,10 +105,10 @@ impl Nes {
     pub fn step_frame(&mut self, gui: &mut dyn Gui) {
         let frame_index = self.ppu().clock().frame();
         let start_time = SystemTime::now();
-        let intended_frame_end_time = start_time.add(NTSC_TIME_PER_FRAME);
+        let intended_frame_end_time = start_time.add(self.frame_duration());
 
         let events = gui.events();
-        if events.should_quit || Some(frame_index - 1) == self.stop_frame {
+        if events.should_quit || Some(frame_index) == self.stop_frame {
             std::process::exit(0);
         }
 
@@ -270,6 +269,13 @@ impl Nes {
         // Advance to next sprite byte to write.
         // TODO: Verify that wrapping is the correct behavior.
         *self.cpu.memory.bus_access_mut(OAMADDR) = oamaddr.wrapping_add(1);
+    }
+
+    fn frame_duration(&self) -> Duration {
+        match self.target_frame_rate {
+            TargetFrameRate::Value(frame_rate) => frame_rate.to_frame_duration(),
+            TargetFrameRate::Unbounded => Duration::ZERO,
+        }
     }
 }
 

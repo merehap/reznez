@@ -13,12 +13,14 @@ use crate::gui::no_gui::NoGui;
 use crate::gui::frame_dump_gui::FrameDumpGui;
 use crate::gui::sdl_gui::SdlGui;
 use crate::ppu::palette::system_palette::SystemPalette;
+use crate::ppu::render::frame_rate::TargetFrameRate;
 
 pub struct Config {
-    ines: INes,
-    system_palette: SystemPalette,
-    stop_frame: Option<u64>,
-    program_counter_source: ProgramCounterSource,
+    pub ines: INes,
+    pub system_palette: SystemPalette,
+    pub target_frame_rate: TargetFrameRate,
+    pub stop_frame: Option<u64>,
+    pub program_counter_source: ProgramCounterSource,
 }
 
 impl Config {
@@ -47,25 +49,10 @@ impl Config {
         Config {
             ines,
             system_palette,
+            target_frame_rate: opt.target_frame_rate,
             stop_frame: opt.stop_frame,
             program_counter_source,
         }
-    }
-
-    pub fn ines(&self) -> &INes {
-        &self.ines
-    }
-
-    pub fn system_palette(&self) -> &SystemPalette {
-        &self.system_palette
-    }
-
-    pub fn program_counter_source(&self) -> ProgramCounterSource {
-        self.program_counter_source
-    }
-
-    pub fn stop_frame(&self) -> Option<u64> {
-        self.stop_frame
     }
 
     pub fn gui(opt: &Opt) -> Box<dyn Gui> {
@@ -85,6 +72,9 @@ pub struct Opt {
 
     #[structopt(short, long, default_value = "sdl")]
     pub gui: GuiType,
+
+    #[structopt(name = "targetframerate", long, default_value = "ntsc")]
+    pub target_frame_rate: TargetFrameRate,
 
     #[structopt(name = "stopframe", long)]
     pub stop_frame: Option<u64>,
