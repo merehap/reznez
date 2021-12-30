@@ -22,7 +22,7 @@ use crate::nes::Nes;
 
 fn main() {
     let opt = Opt::from_args();
-    let config = Config::default(&opt);
+    let config = Config::new(&opt);
     let mut gui = Config::gui(&opt);
     let mut nes = Nes::new(config);
 

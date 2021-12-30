@@ -3,10 +3,10 @@ extern crate reznez;
 use std::fmt;
 use std::io::{BufRead, BufReader};
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use reznez::config::Config;
+use reznez::config::{Config, Opt, GuiType};
 use reznez::cpu::address::Address;
 use reznez::cpu::instruction::OpCode;
 use reznez::cpu::status::Status;
@@ -21,10 +21,13 @@ fn nestest() {
         .lines()
         .map(|line| State::from_text(line.unwrap()));
 
-    let config = Config::with_override_program_counter(
-        Path::new("tests/roms/nestest.nes"),
-        Address::new(0xC000),
-    );
+    let opt = Opt {
+        rom_path: PathBuf::from("tests/roms/nestest.nes"),
+        gui: GuiType::NoGui,
+        override_program_counter: Some(Address::new(0xC000)),
+    };
+
+    let config = Config::new(&opt);
     let mut nes = Nes::new(config);
 
     let mut frame = Frame::new();

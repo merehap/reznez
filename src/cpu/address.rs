@@ -1,4 +1,5 @@
 use std::fmt;
+use std::str::FromStr;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub struct Address(u16);
@@ -75,6 +76,16 @@ impl Address {
 impl fmt::Display for Address {
     fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
         write!(f, "${:04X}", self.0)
+    }
+}
+
+impl FromStr for Address {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Address, String> {
+        let raw = u16::from_str(value)
+            .map_err(|err| err.to_string())?;
+        Ok(Address(raw))
     }
 }
 
