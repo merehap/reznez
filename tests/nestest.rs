@@ -15,13 +15,14 @@ use reznez::ppu::render::frame::Frame;
 
 #[test]
 fn nestest() {
-    let f = File::open("testdata/nestest_expected").expect("Test data not found!");
+    let f = File::open("tests/data/nestest_expected")
+        .expect("Test data not found!");
     let mut expected_states = BufReader::new(f)
         .lines()
         .map(|line| State::from_text(line.unwrap()));
 
     let config = Config::with_override_program_counter(
-        Path::new("testroms/nestest.nes"),
+        Path::new("tests/roms/nestest.nes"),
         Address::new(0xC000),
     );
     let mut nes = Nes::new(config);
