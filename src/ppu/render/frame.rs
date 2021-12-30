@@ -1,5 +1,6 @@
 use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::palette::rgbt::Rgbt;
+use crate::ppu::render::ppm::Ppm;
 use crate::ppu::sprite::Priority;
 
 type SpriteSliver = ([Rgbt; 8], Priority);
@@ -37,6 +38,25 @@ impl Frame {
             (Opaque(_)  , Opaque(rgb), Priority::InFront) => rgb,
             (Opaque(rgb), Opaque(_  ), Priority::Behind) => rgb,
         }
+    }
+
+    pub fn all_pixel_data(&self) -> [u8; 3 * Frame::WIDTH * Frame::HEIGHT] {
+        let mut data = [0; 3 * Frame::WIDTH * Frame::HEIGHT];
+        for row in 0..Frame::HEIGHT {
+            for column in 0..Frame::WIDTH {
+                let index = 3 * (row * Frame::WIDTH + column);
+                let pixel = self.pixel(column as u8, row as u8);
+                data[index]     = pixel.red();
+                data[index + 1] = pixel.green();
+                data[index + 2] = pixel.blue();
+            }
+        }
+
+        data
+    }
+
+    pub fn to_ppm(&self) -> Ppm {
+        Ppm::new(self.all_pixel_data())
     }
 
     pub fn set_universal_background_rgb(&mut self, rgb: Rgb) {

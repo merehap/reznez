@@ -12,12 +12,12 @@ use crate::cpu::memory::Memory as CpuMem;
 use crate::cpu::port_access::{PortAccess, AccessMode};
 use crate::gui::gui::Gui;
 use crate::mapper::mapper0::Mapper0;
-use crate::ppu::frame::Frame;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::memory::Memory as PpuMem;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
+use crate::ppu::render::frame::Frame;
 
 const NTSC_FRAME_RATE: f64 = 60.0988;
 const NTSC_TIME_PER_FRAME: Duration =

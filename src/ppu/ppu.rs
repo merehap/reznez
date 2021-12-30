@@ -11,7 +11,7 @@ use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
 use crate::ppu::register::status::Status;
-use crate::ppu::frame::Frame;
+use crate::ppu::render::frame::Frame;
 
 const FIRST_VBLANK_CYCLE: u64 = 3 * 27384;
 const SECOND_VBLANK_CYCLE: u64 = 3 * 57165;

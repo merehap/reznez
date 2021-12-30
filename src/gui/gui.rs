@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::controller::joypad::{Button, ButtonStatus};
-use crate::ppu::frame::Frame;
+use crate::ppu::render::frame::Frame;
 
 pub trait Gui {
     fn initialize() -> Self where Self: Sized;

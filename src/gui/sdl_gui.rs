@@ -11,7 +11,7 @@ use sdl2::video::Window;
 
 use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::gui::{Gui, Events};
-use crate::ppu::frame::Frame;
+use crate::ppu::render::frame::Frame;
 
 const DEBUG_SCREEN_HEIGHT: usize = 20;
 
