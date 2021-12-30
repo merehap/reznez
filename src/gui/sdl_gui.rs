@@ -49,7 +49,7 @@ pub struct SdlGui {
     canvas: Canvas<Window>,
     texture: Texture,
     frame: Frame,
-    pixels: [u8; 4 * Frame::WIDTH * Frame::HEIGHT],
+    pixels: [u8; 3 * Frame::WIDTH * Frame::HEIGHT],
 }
 
 impl Gui for SdlGui {
@@ -81,7 +81,7 @@ impl Gui for SdlGui {
             canvas,
             texture,
             frame: Frame::new(),
-            pixels: [0; 4 * Frame::WIDTH * Frame::HEIGHT],
+            pixels: [0; 3 * Frame::WIDTH * Frame::HEIGHT],
         }
     }
 
@@ -133,26 +133,7 @@ impl Gui for SdlGui {
 
     #[allow(clippy::identity_op)]
     fn display_frame(&mut self, _frame_index: u64) {
-        /*
-        let mut rgb_count = 0;
-        let mut set_next_pixel = |rgb: Rgb| {
-            self.pixels[3 * rgb_count + 0] = rgb.red();
-            self.pixels[3 * rgb_count + 1] = rgb.green();
-            self.pixels[3 * rgb_count + 2] = rgb.blue();
-            rgb_count += 1;
-        };
-        */
-
-        let mut rgb_count = 0;
-        for row in 0..Frame::HEIGHT {
-            for column in 0..Frame::WIDTH {
-                let pixel = self.frame.pixel(column as u8, row as u8);
-                self.pixels[3 * rgb_count + 0] = pixel.red();
-                self.pixels[3 * rgb_count + 1] = pixel.green();
-                self.pixels[3 * rgb_count + 2] = pixel.blue();
-                rgb_count += 1;
-            }
-        }
+        self.pixels = self.frame.write_all_pixel_data(self.pixels);
 
         /*
         let palette_table = nes.ppu().palette_table();

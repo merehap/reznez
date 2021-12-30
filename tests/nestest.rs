@@ -11,7 +11,7 @@ use reznez::cpu::address::Address;
 use reznez::cpu::instruction::OpCode;
 use reznez::cpu::status::Status;
 use reznez::nes::Nes;
-use reznez::ppu::frame::Frame;
+use reznez::ppu::render::frame::Frame;
 
 #[test]
 fn nestest() {

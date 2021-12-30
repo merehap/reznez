@@ -20,6 +20,7 @@ use std::path::Path;
 
 use crate::config::Config;
 use crate::gui::gui::Gui;
+use crate::gui::frame_dump_gui::FrameDumpGui;
 use crate::gui::sdl_gui::SdlGui;
 use crate::nes::Nes;
 
@@ -27,7 +28,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let config = Config::default(Path::new(&args[1]));
     let mut nes = Nes::new(config);
-    let mut gui = SdlGui::initialize();
+    let mut gui = FrameDumpGui::initialize();
     loop {
         nes.step_frame(&mut gui);
     }

@@ -38,3 +38,22 @@ impl Ppm {
         bytes
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn roundtrip() {
+        let mut data = [0; Ppm::DATA_SIZE];
+        for i in 0..data.len() {
+            data[i] = (i % 256) as u8;
+        }
+
+        let ppm = Ppm::new(data.clone());
+        let bytes = &ppm.to_bytes();
+        assert_eq!(&bytes[Ppm::METADATA.len()..], &data);
+        let ppm = Ppm::from_bytes(bytes).unwrap();
+        let bytes = &ppm.to_bytes();
+        assert_eq!(&bytes[Ppm::METADATA.len()..], &data);
+    }
+}

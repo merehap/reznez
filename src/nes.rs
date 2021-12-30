@@ -274,7 +274,7 @@ mod tests {
     use crate::cpu::cpu::ProgramCounterSource;
     use crate::ppu::palette::system_palette::SystemPalette;
     use crate::ppu::register::ctrl::Ctrl;
-    use crate::ppu::frame::Frame;
+    use crate::ppu::render::frame::Frame;
 
     use crate::cartridge::tests::sample_ines;
 

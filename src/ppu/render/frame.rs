@@ -40,8 +40,10 @@ impl Frame {
         }
     }
 
-    pub fn all_pixel_data(&self) -> [u8; 3 * Frame::WIDTH * Frame::HEIGHT] {
-        let mut data = [0; 3 * Frame::WIDTH * Frame::HEIGHT];
+    pub fn write_all_pixel_data(
+        &self,
+        mut data: [u8; 3 * Frame::WIDTH * Frame::HEIGHT],
+    ) -> [u8; 3 * Frame::WIDTH * Frame::HEIGHT] {
         for row in 0..Frame::HEIGHT {
             for column in 0..Frame::WIDTH {
                 let index = 3 * (row * Frame::WIDTH + column);
@@ -56,7 +58,9 @@ impl Frame {
     }
 
     pub fn to_ppm(&self) -> Ppm {
-        Ppm::new(self.all_pixel_data())
+        let mut data = [0; 3 * Frame::WIDTH * Frame::HEIGHT];
+        data = self.write_all_pixel_data(data);
+        Ppm::new(data)
     }
 
     pub fn set_universal_background_rgb(&mut self, rgb: Rgb) {
