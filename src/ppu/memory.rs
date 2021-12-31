@@ -29,7 +29,7 @@ pub const PALETTE_TABLE_START: Address = Address::from_u16(0x3F00);
 const PALETTE_TABLE_SIZE: u16 = 0x20;
 
 pub struct Memory {
-    memory: [u8; MEMORY_SIZE],
+    memory: Vec<u8>,
     name_table_mirroring: NameTableMirroring,
     system_palette: SystemPalette,
 }
@@ -41,7 +41,7 @@ impl Memory {
         ) -> Memory {
 
         Memory {
-            memory: [0; MEMORY_SIZE],
+            memory: vec![0; MEMORY_SIZE],
             name_table_mirroring,
             system_palette,
         }
@@ -97,7 +97,8 @@ impl Index<Address> for Memory {
 
 impl IndexMut<Address> for Memory {
     fn index_mut(&mut self, address: Address) -> &mut Self::Output {
-        &mut self.memory[self.map_if_name_table_address(address).to_u16() as usize]
+        let index = self.map_if_name_table_address(address).to_u16() as usize;
+        &mut self.memory[index]
     }
 }
 

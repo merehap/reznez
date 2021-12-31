@@ -16,8 +16,8 @@ pub struct INes {
     ines2: Option<INes2>,
 
     trainer: Option<[u8; 512]>,
-    prg_rom: Vec<[u8; PRG_ROM_CHUNK_LENGTH]>,
-    chr_rom: Vec<[u8; CHR_ROM_CHUNK_LENGTH]>,
+    prg_rom: Vec<u8>,
+    chr_rom: Vec<u8>,
     console_type: ConsoleType,
     title: String,
 }
@@ -32,8 +32,8 @@ impl INes {
             ));
         }
 
-        let prg_rom_chunk_count = rom[4];
-        let chr_rom_chunk_count = rom[5];
+        let prg_rom_chunk_count = rom[4] as usize;
+        let chr_rom_chunk_count = rom[5] as usize;
 
         let lower_mapper_number   = rom[6] & 0b1111_0000;
         let four_screen           = rom[6] & 0b0000_1000 != 0;
@@ -75,17 +75,13 @@ impl INes {
 
         let mut rom_index = 0x10;
 
-        let mut prg_rom = Vec::new();
-        for _ in 0..prg_rom_chunk_count {
-            prg_rom.push(rom[rom_index..rom_index + PRG_ROM_CHUNK_LENGTH].try_into().unwrap());
-            rom_index += PRG_ROM_CHUNK_LENGTH;
-        }
+        let next_rom_index = rom_index + prg_rom_chunk_count * PRG_ROM_CHUNK_LENGTH;
+        let prg_rom = rom[rom_index..next_rom_index].to_vec();
+        rom_index = next_rom_index;
 
-        let mut chr_rom = Vec::new();
-        for _ in 0..chr_rom_chunk_count {
-            chr_rom.push(rom[rom_index..rom_index + CHR_ROM_CHUNK_LENGTH].try_into().unwrap());
-            rom_index += CHR_ROM_CHUNK_LENGTH;
-        }
+        let next_rom_index = rom_index + chr_rom_chunk_count * CHR_ROM_CHUNK_LENGTH;
+        let chr_rom = rom[rom_index..next_rom_index].to_vec();
+        rom_index = next_rom_index;
 
         let title = rom[rom_index..].to_vec();
         if !(title.is_empty() || title.len() == 127 || title.len() == 128) {
@@ -120,30 +116,20 @@ impl INes {
         self.name_table_mirroring
     }
     
-    pub fn prg_rom(&self) -> Vec<u8> {
-        let mut result = Vec::new();
-        for chunk in self.prg_rom.iter() {
-            result.append(&mut chunk.to_vec());
-        }
-
-        result
+    pub fn prg_rom(&self) -> &[u8] {
+        &self.prg_rom
     }
 
     pub fn prg_rom_chunk_count(&self) -> u8 {
-        self.prg_rom.len() as u8
+        (self.prg_rom.len() / PRG_ROM_CHUNK_LENGTH) as u8
     }
 
-    pub fn chr_rom(&self) -> Vec<u8> {
-        let mut result = Vec::new();
-        for chunk in self.chr_rom.iter() {
-            result.append(&mut chunk.to_vec());
-        }
-
-        result
+    pub fn chr_rom(&self) -> &[u8] {
+        &self.chr_rom
     }
 
     pub fn chr_rom_chunk_count(&self) -> u8 {
-        self.chr_rom.len() as u8
+        (self.chr_rom.len() / CHR_ROM_CHUNK_LENGTH) as u8
     }
 }
 
@@ -156,8 +142,8 @@ impl fmt::Display for INes {
         writeln!(f, "iNES2 present: {}", self.ines2.is_some())?;
 
         writeln!(f, "Trainer present: {}", self.trainer.is_some())?;
-        writeln!(f, "PRG ROM chunk count: {}", self.prg_rom.len())?;
-        writeln!(f, "CHR ROM chunk count: {}", self.chr_rom.len())?;
+        writeln!(f, "PRG ROM chunk count: {}", self.prg_rom_chunk_count())?;
+        writeln!(f, "CHR ROM chunk count: {}", self.chr_rom_chunk_count())?;
         writeln!(f, "Console type: {:?}", self.console_type)?;
         writeln!(f, "Title: {:?}", self.title)?;
 
@@ -199,8 +185,8 @@ pub mod tests {
             ines2: None,
 
             trainer: None,
-            prg_rom: vec![[0xEA; PRG_ROM_CHUNK_LENGTH]],
-            chr_rom: vec![[0x00; CHR_ROM_CHUNK_LENGTH]],
+            prg_rom: vec![0xEA; PRG_ROM_CHUNK_LENGTH],
+            chr_rom: vec![0x00; CHR_ROM_CHUNK_LENGTH],
             console_type: ConsoleType::Nes,
             title: "Test ROM".to_string(),
         }

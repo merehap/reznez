@@ -12,6 +12,7 @@ use reznez::cpu::instruction::OpCode;
 use reznez::cpu::status::Status;
 use reznez::nes::Nes;
 use reznez::ppu::render::frame::Frame;
+use reznez::ppu::render::frame_rate::TargetFrameRate;
 
 #[test]
 fn nestest() {
@@ -25,6 +26,7 @@ fn nestest() {
         rom_path: PathBuf::from("tests/roms/nestest.nes"),
         gui: GuiType::NoGui,
         stop_frame: None,
+        target_frame_rate: TargetFrameRate::Unbounded,
         override_program_counter: Some(Address::new(0xC000)),
     };
 

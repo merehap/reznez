@@ -1,13 +1,15 @@
-// Portable PixMap binary file format.
+use std::hash::Hash;
+// Portable PixMap binary (P6 not P3) file format.
+#[derive(PartialEq, Eq, Hash)]
 pub struct Ppm {
-    data: [u8; Ppm::DATA_SIZE],
+    data: Vec<u8>,
 }
 
 impl Ppm {
     const METADATA: &'static [u8] = b"P6\n256 240\n255\n";
     const DATA_SIZE: usize = 3 * 256 * 240;
 
-    pub fn new(data: [u8; Ppm::DATA_SIZE]) -> Ppm {
+    pub fn new(data: Vec<u8>) -> Ppm {
         Ppm {data}
     }
 
@@ -19,16 +21,16 @@ impl Ppm {
             ));
         }
 
-        let data = &raw[Ppm::METADATA.len()..];
-        if let Ok(data) = data.try_into() {
-            Ok(Ppm {data})
-        } else {
-            Err(format!(
+        let data = raw[Ppm::METADATA.len()..].to_vec();
+        if data.len() != Ppm::DATA_SIZE {
+            return Err(format!(
                 "Expected PPM data length to be {} but was {}.",
                 Ppm::DATA_SIZE,
                 data.len(),
             ))
         }
+
+        Ok(Ppm {data})
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -44,9 +46,9 @@ mod tests {
     use super::*;
     #[test]
     fn roundtrip() {
-        let mut data = [0; Ppm::DATA_SIZE];
-        for i in 0..data.len() {
-            data[i] = (i % 256) as u8;
+        let mut data = Vec::with_capacity(Ppm::DATA_SIZE);
+        for i in 0..Ppm::DATA_SIZE {
+            data.push((i % 256) as u8);
         }
 
         let ppm = Ppm::new(data.clone());

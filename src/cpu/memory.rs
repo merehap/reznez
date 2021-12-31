@@ -9,7 +9,7 @@ const IRQ_VECTOR: Address = Address::new(0xFFFE);
 
 pub struct Memory {
     pub stack_pointer: u8,
-    memory: [u8; 0x10000],
+    memory: Vec<u8>,
     read_ports: BTreeSet<Address>,
     write_ports: BTreeSet<Address>,
     latch: Option<PortAccess>,
@@ -19,7 +19,7 @@ impl Memory {
     pub fn new(read_ports: BTreeSet<Address>, write_ports: BTreeSet<Address>) -> Memory {
         Memory {
             stack_pointer: 0xFD,
-            memory: [0; 0x10000],
+            memory: vec![0; 0x10000],
             read_ports,
             write_ports,
             latch: None,

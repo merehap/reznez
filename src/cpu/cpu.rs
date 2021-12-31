@@ -152,7 +152,7 @@ impl Cpu {
 
         let mut cycle_count = instruction.template.cycle_count as u8;
         if instruction.should_add_oops_cycle() {
-            println!("'Oops' cycle added.");
+            //println!("'Oops' cycle added.");
             cycle_count += 1;
         }
 

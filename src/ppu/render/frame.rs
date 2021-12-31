@@ -60,7 +60,7 @@ impl Frame {
     pub fn to_ppm(&self) -> Ppm {
         let mut data = [0; 3 * Frame::WIDTH * Frame::HEIGHT];
         data = self.write_all_pixel_data(data);
-        Ppm::new(data)
+        Ppm::new(data.to_vec())
     }
 
     pub fn set_universal_background_rgb(&mut self, rgb: Rgb) {

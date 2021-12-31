@@ -13,4 +13,4 @@ pub mod gui;
 pub mod ppu;
 mod mapper;
 pub mod nes;
-mod util;
+pub mod util;

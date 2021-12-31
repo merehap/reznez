@@ -108,9 +108,6 @@ impl Nes {
         let intended_frame_end_time = start_time.add(self.frame_duration());
 
         let events = gui.events();
-        if events.should_quit || Some(frame_index) == self.stop_frame {
-            std::process::exit(0);
-        }
 
         for (button, status) in events.joypad_1_button_statuses {
             self.joypad_1.set_button_status(button, status);
@@ -139,6 +136,10 @@ impl Nes {
         let end_time = SystemTime::now();
         if let Ok(duration) = end_time.duration_since(start_time) {
             println!("Framerate: {}", 1_000_000_000.0 / duration.as_nanos() as f64);
+        }
+
+        if events.should_quit || Some(frame_index) == self.stop_frame {
+            std::process::exit(0);
         }
     }
 
@@ -285,6 +286,7 @@ mod tests {
     use crate::ppu::palette::system_palette::SystemPalette;
     use crate::ppu::register::ctrl::Ctrl;
     use crate::ppu::render::frame::Frame;
+    use crate::ppu::render::frame_rate::TargetFrameRate;
 
     use crate::cartridge::tests::sample_ines;
 
@@ -364,6 +366,7 @@ mod tests {
             old_vblank_nmi: VBlankNmi::Off,
             cycle: 0,
 
+            target_frame_rate: TargetFrameRate::Unbounded,
             stop_frame: None,
         }
     }
