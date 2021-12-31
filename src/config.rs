@@ -3,6 +3,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
+use log::info;
 use structopt::StructOpt;
 
 use crate::cartridge::INes;
@@ -27,14 +28,14 @@ impl Config {
     pub fn new(opt: &Opt) -> Config {
         let rom_path = Path::new(&opt.rom_path);
 
-        println!("Loading ROM '{}'.", rom_path.display());
+        info!("Loading ROM '{}'.", rom_path.display());
         let mut rom = Vec::new();
         File::open(rom_path)
             .unwrap()
             .read_to_end(&mut rom)
             .unwrap();
         let ines = INes::load(&rom).unwrap();
-        println!("ROM loaded.\n{}", ines);
+        info!("ROM loaded.\n{}", ines);
 
         let system_palette = SystemPalette::parse(include_str!("../palettes/2C02.pal"))
             .unwrap();
@@ -78,6 +79,9 @@ pub struct Opt {
 
     #[structopt(name = "stopframe", long)]
     pub stop_frame: Option<u64>,
+
+    #[structopt(name = "logcpu", long)]
+    pub log_cpu: bool,
 
     pub override_program_counter: Option<Address>,
 }

@@ -2,6 +2,8 @@ use std::collections::BTreeSet;
 use std::ops::Add;
 use std::time::{Duration, SystemTime};
 
+use log::{info, warn};
+
 use crate::cartridge::INes;
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
@@ -126,7 +128,7 @@ impl Nes {
         }
 
         gui.display_frame(frame_index);
-        println!("Frame: {}", frame_index);
+        info!("Frame: {}", frame_index);
 
         let end_time = SystemTime::now();
         if let Ok(duration) = intended_frame_end_time.duration_since(end_time) {
@@ -135,7 +137,7 @@ impl Nes {
 
         let end_time = SystemTime::now();
         if let Ok(duration) = end_time.duration_since(start_time) {
-            println!("Framerate: {}", 1_000_000_000.0 / duration.as_nanos() as f64);
+            info!("Framerate: {}", 1_000_000_000.0 / duration.as_nanos() as f64);
         }
 
         if events.should_quit || Some(frame_index) == self.stop_frame {
@@ -225,7 +227,7 @@ impl Nes {
             (PPUADDR, Write) => self.ppu.write_partial_vram_address(value),
             (PPUDATA, Read) => self.ppu.update_vram_data(self.ppu_ctrl()),
             (PPUDATA, Write) => self.ppu.write_vram(self.ppu_ctrl(), value),
-            (PPUSCROLL, Write) => println!("PPUSCROLL was written to (not supported)."),
+            (PPUSCROLL, Write) => warn!("PPUSCROLL was written to (not supported)."),
 
             // Now that the ROM has read a button status, advance to the next status.
             (JOYSTICK_1_PORT, Read) => self.joypad_1.select_next_button(),
@@ -246,7 +248,7 @@ impl Nes {
 
     fn schedule_nmi_if_enabled(&mut self) {
         if self.ppu.nmi_enabled(self.ppu_ctrl()) {
-            println!("Scheduling NMI.");
+            info!("Scheduling NMI.");
             // Execute an extra NMI beyond the vblank-start NMI.
             self.cpu.schedule_nmi();
         }

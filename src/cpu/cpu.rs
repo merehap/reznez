@@ -1,3 +1,5 @@
+use log::info;
+
 use crate::cpu::address::Address;
 use crate::cpu::instruction::{Instruction, OpCode, Argument};
 use crate::cpu::memory::Memory;
@@ -28,7 +30,7 @@ impl Cpu {
             Override(address) => address,
         };
 
-        println!("Starting execution at PC={}", program_counter);
+        info!("Starting execution at PC={}", program_counter);
         Cpu {
             accumulator: 0,
             x_index: 0,
@@ -139,7 +141,7 @@ impl Cpu {
             self.y_index,
             &mut self.memory,
         );
-        //println!("{} | {}", self.state_string(), instruction);
+        info!(target: "cpu", "{} | {}", self.state_string(), instruction);
 
         let cycle_count = self.execute_instruction(instruction);
         self.current_instruction_remaining_cycles = cycle_count - 1;
@@ -152,7 +154,7 @@ impl Cpu {
 
         let mut cycle_count = instruction.template.cycle_count as u8;
         if instruction.should_add_oops_cycle() {
-            //println!("'Oops' cycle added.");
+            info!(target: "cpu", "'Oops' cycle added.");
             cycle_count += 1;
         }
 
@@ -210,14 +212,22 @@ impl Cpu {
                 self.memory.write(addr, value);
                 self.nz(value);
             },
-            (BPL, Addr(addr, _)) => if !self.status.negative {cycle_count += self.take_branch(addr);},
-            (BMI, Addr(addr, _)) => if self.status.negative {cycle_count += self.take_branch(addr);},
-            (BVC, Addr(addr, _)) => if !self.status.overflow {cycle_count += self.take_branch(addr);},
-            (BVS, Addr(addr, _)) => if self.status.overflow {cycle_count += self.take_branch(addr);},
-            (BCC, Addr(addr, _)) => if !self.status.carry {cycle_count += self.take_branch(addr);},
-            (BCS, Addr(addr, _)) => if self.status.carry {cycle_count += self.take_branch(addr);},
-            (BNE, Addr(addr, _)) => if !self.status.zero {cycle_count += self.take_branch(addr);},
-            (BEQ, Addr(addr, _)) => if self.status.zero {cycle_count += self.take_branch(addr);},
+            (BPL, Addr(addr, _)) =>
+                if !self.status.negative {cycle_count += self.take_branch(addr);},
+            (BMI, Addr(addr, _)) =>
+                if self.status.negative {cycle_count += self.take_branch(addr);},
+            (BVC, Addr(addr, _)) =>
+                if !self.status.overflow {cycle_count += self.take_branch(addr);},
+            (BVS, Addr(addr, _)) =>
+                if self.status.overflow {cycle_count += self.take_branch(addr);},
+            (BCC, Addr(addr, _)) =>
+                if !self.status.carry {cycle_count += self.take_branch(addr);},
+            (BCS, Addr(addr, _)) =>
+                if self.status.carry {cycle_count += self.take_branch(addr);},
+            (BNE, Addr(addr, _)) =>
+                if !self.status.zero {cycle_count += self.take_branch(addr);},
+            (BEQ, Addr(addr, _)) =>
+                if self.status.zero {cycle_count += self.take_branch(addr);},
             (JSR, Addr(addr, _)) => {
                 // Push the address one previous for some reason.
                 self.memory.push_address_to_stack(self.program_counter.offset(-1));
@@ -421,11 +431,11 @@ impl Cpu {
     }
 
     fn take_branch(&mut self, destination: Address) -> u8 {
-        //println!("Branch taken, cycle added.");
+        info!(target: "cpu", "Branch taken, cycle added.");
         let mut cycle_count = 1;
 
         if self.program_counter.page() != destination.page() {
-            //println!("Branch crossed page boundary, 'Oops' cycle added.");
+            info!(target: "cpu", "Branch crossed page boundary, 'Oops' cycle added.");
             cycle_count += 1;
         }
 
@@ -436,7 +446,7 @@ impl Cpu {
 
     // TODO: Account for how many cycles an NMI takes.
     fn nmi(&mut self) {
-        println!("Executing NMI.");
+        info!(target: "cpu", "Executing NMI.");
         self.memory.push_address_to_stack(self.program_counter);
         self.memory.push_to_stack(self.status.to_interrupt_byte());
         self.program_counter = self.memory.nmi_vector();

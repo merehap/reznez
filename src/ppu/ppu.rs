@@ -1,3 +1,5 @@
+use log::info;
+
 use crate::ppu::address::Address;
 use crate::ppu::clock::Clock;
 use crate::ppu::memory;
@@ -104,7 +106,7 @@ impl Ppu {
     pub fn step(&mut self, ctrl: Ctrl, mask: Mask, frame: &mut Frame) -> StepResult {
         let frame_started = self.clock().is_first_cycle_of_frame();
         if frame_started {
-            println!(
+            info!(
                 "PPU Cycle: {}, Frame: {}",
                 self.clock().total_cycles(),
                 self.clock().frame(),

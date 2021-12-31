@@ -19,9 +19,12 @@ use structopt::StructOpt;
 
 use crate::config::{Config, Opt};
 use crate::nes::Nes;
+use crate::util::logger;
+use crate::util::logger::Logger;
 
 fn main() {
     let opt = Opt::from_args();
+    logger::init(Logger {log_cpu: opt.log_cpu}).unwrap();
     let config = Config::new(&opt);
     let mut gui = Config::gui(&opt);
     let mut nes = Nes::new(config);

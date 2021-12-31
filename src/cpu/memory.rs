@@ -1,5 +1,7 @@
 use std::collections::BTreeSet;
 
+use log::info;
+
 use crate::cpu::address::Address;
 use crate::cpu::port_access::{PortAccess, AccessMode};
 
@@ -61,7 +63,7 @@ impl Memory {
 
     pub fn push_to_stack(&mut self, value: u8) {
         if self.stack_pointer == 0x00 {
-            println!("Pushing to full stack.");
+            info!("Pushing to full stack.");
         }
 
         self.memory[self.stack_pointer as usize + 0x100] = value;
@@ -76,7 +78,7 @@ impl Memory {
 
     pub fn pop_from_stack(&mut self) -> u8 {
         if self.stack_pointer == 0xFF {
-            println!("Popping from empty stack.");
+            info!("Popping from empty stack.");
         }
 
         self.stack_pointer = self.stack_pointer.wrapping_add(1);
