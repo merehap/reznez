@@ -17,7 +17,7 @@ fn instruction_templates() -> [InstructionTemplate; 256] {
 
     let jam = (JAM, Imp, 0, No);
     let codes: [[(OpCode, AccessMode, u8, ExtraCycle); 8]; 32] = [
-        /*00*/           /*20*/          /*40*/          /*60*/          /*80*/          /*A0*/          /*C0*/          /*e0*/
+        /*00*/           /*20*/          /*40*/          /*60*/          /*80*/          /*A0*/          /*C0*/          /*E0*/
 /*+00*/ [(BRK,Imp,7,No), (JSR,Abs,6,No), (RTI,Imp,6,No), (RTS,Imp,6,No), (NOP,Imm,2,No), (LDY,Imm,2,No), (CPY,Imm,2,No), (CPX,Imm,2,No)],
 /*+01*/ [(ORA,IzX,6,No), (AND,IzX,6,No), (EOR,IzX,6,No), (ADC,IzX,6,No), (STA,IzX,6,No), (LDA,IzX,6,No), (CMP,IzX,6,No), (SBC,IzX,6,No)],
 /*+02*/ [jam           , jam           , jam           , jam           , jam           , (LDX,Imm,2,No), jam           , jam           ],
@@ -171,10 +171,10 @@ impl fmt::Display for Instruction {
             access_mode.push(' ');
         }
 
-        write!(f, "0x{:02X} ({:?} {} Cycles:{:?}+{:?}) Arg:{:5} PB:{}",
+        write!(f, "0x{:02X} ({:?} {} Cycles:{:?}+{:?}) PB:{:5} Arg:{:5}",
             self.template.code_point, self.template.op_code, access_mode,
             self.template.cycle_count as usize, self.template.extra_cycle,
-            self.argument, self.page_boundary_crossed)
+            self.page_boundary_crossed, self.argument)
     }
 }
 
@@ -190,7 +190,7 @@ impl fmt::Display for Argument {
         match self {
             Argument::Imp => write!(f, "No   "),
             Argument::Imm(value) => write!(f, "#{:02X}  ", value),
-            Argument::Addr(address, _) => write!(f, "{}", address),
+            Argument::Addr(address, value) => write!(f, "[{}]=#{:02X}", address, value),
         }
     }
 }
