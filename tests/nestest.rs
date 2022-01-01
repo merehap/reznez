@@ -28,6 +28,7 @@ fn nestest() {
         stop_frame: None,
         target_frame_rate: TargetFrameRate::Unbounded,
         override_program_counter: Some(Address::new(0xC000)),
+        log_cpu: false,
     };
 
     let config = Config::new(&opt);
