@@ -285,7 +285,7 @@ pub enum OpCode {
     CLV,
     NOP,
 
-    // Illegal
+    // Undocumented.
     SLO,
     RLA,
     SRE,
@@ -300,7 +300,9 @@ pub enum OpCode {
     XAA,
     AXS,
     AHX,
+    // SYA
     SHY,
+    // SXA
     SHX,
     TAS,
     LAS,

@@ -332,10 +332,18 @@ impl Cpu {
             (XAA, _) => unimplemented!(),
             (AXS, _) => unimplemented!(),
             (AHX, _) => unimplemented!(),
-            (SHY, Addr(addr, _)) =>
-                self.memory.write(addr, self.y_index & addr.to_low_high().1),
-            (SHX, Addr(addr, _)) =>
-                self.memory.write(addr, self.x_index & addr.to_low_high().1),
+            (SHY, Addr(addr, _)) => {
+                let (low, high) = addr.to_low_high();
+                let value = self.y_index & high.wrapping_add(1);
+                let addr = Address::from_low_high(low, high & self.y_index);
+                self.memory.write(addr, value);
+            },
+            (SHX, Addr(addr, _)) => {
+                let (low, high) = addr.to_low_high();
+                let value = self.x_index & high.wrapping_add(1);
+                let addr = Address::from_low_high(low, high & self.x_index);
+                self.memory.write(addr, value);
+            },
             (TAS, _) => unimplemented!(),
             (LAS, _) => unimplemented!(),
 
@@ -418,6 +426,7 @@ impl Cpu {
         self.nz(value >> 1)
     }
 
+    // Set or unset the negative (N) and zero (Z) fields based upon "value".
     fn nz(&mut self, value: u8) -> u8 {
         self.status.negative = is_neg(value);
         self.status.zero = value == 0;
