@@ -332,8 +332,10 @@ impl Cpu {
             (XAA, _) => unimplemented!(),
             (AXS, _) => unimplemented!(),
             (AHX, _) => unimplemented!(),
-            (SHY, _) => unimplemented!(),
-            (SHX, _) => unimplemented!(),
+            (SHY, Addr(addr, _)) =>
+                self.memory.write(addr, self.y_index & addr.to_low_high().1),
+            (SHX, Addr(addr, _)) =>
+                self.memory.write(addr, self.x_index & addr.to_low_high().1),
             (TAS, _) => unimplemented!(),
             (LAS, _) => unimplemented!(),
 
