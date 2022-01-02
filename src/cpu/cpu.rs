@@ -251,10 +251,7 @@ impl Cpu {
             (AND, Imm(val) | Addr(_, val)) => self.accumulator = self.nz(self.accumulator & val),
             (EOR, Imm(val) | Addr(_, val)) => self.accumulator = self.nz(self.accumulator ^ val),
             (ADC, Imm(val) | Addr(_, val)) => self.accumulator = self.adc(val),
-            (SBC, Imm(val) | Addr(_, val)) => {
-                self.accumulator = self.subtract_from_accumulator(val);
-                self.status.carry = !self.status.negative;
-            },
+            (SBC, Imm(val) | Addr(_, val)) => self.accumulator = self.sbc(val),
 
             (ASL, Imp) => self.accumulator = self.asl(self.accumulator),
             (ASL, Addr(addr, _)) => {
@@ -325,7 +322,7 @@ impl Cpu {
             (ISC, Addr(addr, _)) => {
                 let value = self.memory.read(addr).wrapping_add(1);
                 self.memory.write(addr, value);
-                self.accumulator = self.subtract_from_accumulator(value);
+                self.accumulator = self.sbc(value);
             },
 
             // Mostly unstable codes.
@@ -368,13 +365,8 @@ impl Cpu {
         result
     }
 
-    fn subtract_from_accumulator(&mut self, value: u8) -> u8 {
-        let carry = if self.status.carry {0} else {1};
-        // Convert u8s to possibly negative values before widening them.
-        let result = (self.accumulator as i8) as i16 - (value as i8) as i16 - carry;
-        self.status.overflow = result < -128 || result > 127;
-        //self.status.carry = !is_neg(result as u8);
-        self.nz(result as u8)
+    fn sbc(&mut self, value: u8) -> u8 {
+        self.adc(value ^ 0xFF)
     }
 
     fn cmp(&mut self, value: u8) {

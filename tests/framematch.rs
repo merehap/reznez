@@ -66,16 +66,15 @@ fn framematch() {
         }
     }
 
-
     for FrameHashData {rom_name, mut nes, frame_hashes} in frame_hash_data {
         let mut gui = Box::new(NoGui::initialize()) as Box<dyn Gui>;
         println!("FRAMEMATCH TEST: TESTING EXPECTED FRAMES FOR {}.", rom_name);
         let max_frame_index = frame_hashes.keys().last().unwrap();
-        for frame_index in 0..*max_frame_index {
+        for frame_index in 0..=*max_frame_index {
             nes.step_frame(&mut *gui);
             if let Some(expected_hash) = frame_hashes.get(&frame_index) {
                 println!(
-                    "CHECKING ACTUAL HASH VS EXPECTED HASH FOR FRAME {}.",
+                    "\tCHECKING ACTUAL HASH VS EXPECTED HASH FOR FRAME {}.",
                     frame_index,
                 );
                 let actual_ppm = &gui.frame_mut().to_ppm();
