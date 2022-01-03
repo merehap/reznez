@@ -338,8 +338,10 @@ impl Cpu {
                 self.accumulator = self.ror(self.accumulator);
             },
             (XAA, _) => unimplemented!(),
-            (AXS, Imm(val)) =>
-                self.x_index = (self.accumulator & self.x_index).wrapping_sub(val),
+            (AXS, Imm(val)) => {
+                self.status.carry = self.accumulator & self.x_index >= val;
+                self.x_index = self.nz((self.accumulator & self.x_index).wrapping_sub(val));
+            },
             (AHX, _) => unimplemented!(),
             (SHY, Addr(addr, _)) => {
                 let (low, high) = addr.to_low_high();
