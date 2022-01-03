@@ -294,15 +294,16 @@ pub enum OpCode {
     LAX,
     DCP,
     ISC,
+    // a.k.a. AAC
     ANC,
     ALR,
     ARR,
     XAA,
     AXS,
     AHX,
-    // SYA
+    // a.k.a. SYA
     SHY,
-    // SXA
+    // a.k.a. SXA
     SHX,
     TAS,
     LAS,

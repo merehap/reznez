@@ -252,6 +252,11 @@ impl Cpu {
             (EOR, Imm(val) | Addr(_, val)) => self.accumulator = self.nz(self.accumulator ^ val),
             (ADC, Imm(val) | Addr(_, val)) => self.accumulator = self.adc(val),
             (SBC, Imm(val) | Addr(_, val)) => self.accumulator = self.sbc(val),
+            (LAX, Imm(val) | Addr(_, val)) => {
+                self.accumulator = val;
+                self.x_index = val;
+                self.nz(val);
+            },
 
             (ASL, Imp) => self.accumulator = self.asl(self.accumulator),
             (ASL, Addr(addr, _)) => {
@@ -308,12 +313,6 @@ impl Cpu {
                 self.nz(self.accumulator);
             },
             (SAX, Addr(addr, _)) => self.memory.write(addr, self.accumulator & self.x_index),
-            (LAX, Addr(addr, _)) => {
-                let value = self.memory.read(addr);
-                self.accumulator = value;
-                self.x_index = value;
-                self.nz(value);
-            },
             (DCP, Addr(addr, _)) => {
                 let value = self.memory.read(addr).wrapping_sub(1);
                 self.memory.write(addr, value);
@@ -326,11 +325,21 @@ impl Cpu {
             },
 
             // Mostly unstable codes.
-            (ANC, _) => unimplemented!(),
-            (ALR, _) => unimplemented!(),
-            (ARR, _) => unimplemented!(),
+            (ANC, Imm(val)) => {
+                self.accumulator = self.nz(self.accumulator & val);
+                self.status.carry = self.status.negative;
+            },
+            (ALR, Imm(val)) => {
+                self.accumulator = self.nz(self.accumulator & val);
+                self.accumulator = self.lsr(self.accumulator);
+            },
+            (ARR, Imm(val)) => {
+                self.accumulator = self.nz(self.accumulator & val);
+                self.accumulator = self.ror(self.accumulator);
+            },
             (XAA, _) => unimplemented!(),
-            (AXS, _) => unimplemented!(),
+            (AXS, Imm(val)) =>
+                self.x_index = (self.accumulator & self.x_index).wrapping_sub(val),
             (AHX, _) => unimplemented!(),
             (SHY, Addr(addr, _)) => {
                 let (low, high) = addr.to_low_high();
