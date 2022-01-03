@@ -7,9 +7,12 @@ use crate::cpu::status::Status;
 use crate::cpu::dma_transfer::{DmaTransfer, DmaTransferState};
 
 pub struct Cpu {
-    accumulator: u8,
-    x_index: u8,
-    y_index: u8,
+    // Accumulator
+    a: u8,
+    // X Index
+    x: u8,
+    // Y Index
+    y: u8,
     program_counter: Address,
     status: Status,
     pub memory: Memory,
@@ -32,9 +35,9 @@ impl Cpu {
 
         info!("Starting execution at PC={}", program_counter);
         Cpu {
-            accumulator: 0,
-            x_index: 0,
-            y_index: 0,
+            a: 0,
+            x: 0,
+            y: 0,
             program_counter,
             status: Status::startup(),
             memory,
@@ -61,9 +64,9 @@ impl Cpu {
         format!("{:010} PC:{}, A:0x{:02X}, X:0x{:02X}, Y:0x{:02X}, P:0x{:02X}, S:0x{:02X}, {} {}",
             self.cycle,
             self.program_counter,
-            self.accumulator,
-            self.x_index,
-            self.y_index,
+            self.a,
+            self.x,
+            self.y,
             self.status.to_register_byte(),
             self.stack_pointer(),
             self.status,
@@ -72,15 +75,15 @@ impl Cpu {
     }
 
     pub fn accumulator(&self) -> u8 {
-        self.accumulator
+        self.a
     }
 
     pub fn x_index(&self) -> u8 {
-        self.x_index
+        self.x
     }
 
     pub fn y_index(&self) -> u8 {
-        self.y_index
+        self.y
     }
 
     pub fn program_counter(&self) -> Address {
@@ -137,8 +140,8 @@ impl Cpu {
 
         let instruction = Instruction::from_memory(
             self.program_counter,
-            self.x_index,
-            self.y_index,
+            self.x,
+            self.y,
             &mut self.memory,
         );
         info!(target: "cpu", "{} | {}", self.state_string(), instruction);
@@ -161,21 +164,21 @@ impl Cpu {
         use OpCode::*;
         use Argument::*;
         match (instruction.template.op_code, instruction.argument) {
-            (INX, Imp) => self.x_index = self.nz(self.x_index.wrapping_add(1)),
-            (INY, Imp) => self.y_index = self.nz(self.y_index.wrapping_add(1)),
-            (DEX, Imp) => self.x_index = self.nz(self.x_index.wrapping_sub(1)),
-            (DEY, Imp) => self.y_index = self.nz(self.y_index.wrapping_sub(1)),
-            (TAX, Imp) => self.x_index = self.nz(self.accumulator),
-            (TAY, Imp) => self.y_index = self.nz(self.accumulator),
-            (TSX, Imp) => self.x_index = self.nz(self.memory.stack_pointer),
-            (TXS, Imp) => self.memory.stack_pointer = self.x_index,
-            (TXA, Imp) => self.accumulator = self.nz(self.x_index),
-            (TYA, Imp) => self.accumulator = self.nz(self.y_index),
-            (PHA, Imp) => self.memory.push_to_stack(self.accumulator),
+            (INX, Imp) => self.x = self.nz(self.x.wrapping_add(1)),
+            (INY, Imp) => self.y = self.nz(self.y.wrapping_add(1)),
+            (DEX, Imp) => self.x = self.nz(self.x.wrapping_sub(1)),
+            (DEY, Imp) => self.y = self.nz(self.y.wrapping_sub(1)),
+            (TAX, Imp) => self.x = self.nz(self.a),
+            (TAY, Imp) => self.y = self.nz(self.a),
+            (TSX, Imp) => self.x = self.nz(self.memory.stack_pointer),
+            (TXS, Imp) => self.memory.stack_pointer = self.x,
+            (TXA, Imp) => self.a = self.nz(self.x),
+            (TYA, Imp) => self.a = self.nz(self.y),
+            (PHA, Imp) => self.memory.push_to_stack(self.a),
             (PHP, Imp) => self.memory.push_to_stack(self.status.to_instruction_byte()),
             (PLA, Imp) => {
-                self.accumulator = self.memory.pop_from_stack();
-                self.nz(self.accumulator);
+                self.a = self.memory.pop_from_stack();
+                self.nz(self.a);
             },
             (PLP, Imp) => self.status = Status::from_byte(self.memory.pop_from_stack()),
             (CLC, Imp) => self.status.carry = false,
@@ -199,9 +202,9 @@ impl Cpu {
             },
             (RTS, Imp) => self.program_counter = self.memory.pop_address_from_stack().advance(1),
 
-            (STA, Addr(addr, _)) => self.memory.write(addr, self.accumulator),
-            (STX, Addr(addr, _)) => self.memory.write(addr, self.x_index),
-            (STY, Addr(addr, _)) => self.memory.write(addr, self.y_index),
+            (STA, Addr(addr, _)) => self.memory.write(addr, self.a),
+            (STX, Addr(addr, _)) => self.memory.write(addr, self.x),
+            (STY, Addr(addr, _)) => self.memory.write(addr, self.y),
             (DEC, Addr(addr, _)) => {
                 let value = self.memory.read(addr).wrapping_sub(1);
                 self.memory.write(addr, value);
@@ -238,45 +241,45 @@ impl Cpu {
             (BIT, Addr(_, val)) => {
                 self.status.negative = val & 0b1000_0000 != 0;
                 self.status.overflow = val & 0b0100_0000 != 0;
-                self.status.zero = val & self.accumulator == 0;
+                self.status.zero = val & self.a == 0;
             },
 
-            (LDA, Imm(val) | Addr(_, val)) => self.accumulator = self.nz(val),
-            (LDX, Imm(val) | Addr(_, val)) => self.x_index = self.nz(val),
-            (LDY, Imm(val) | Addr(_, val)) => self.y_index = self.nz(val),
+            (LDA, Imm(val) | Addr(_, val)) => self.a = self.nz(val),
+            (LDX, Imm(val) | Addr(_, val)) => self.x = self.nz(val),
+            (LDY, Imm(val) | Addr(_, val)) => self.y = self.nz(val),
             (CMP, Imm(val) | Addr(_, val)) => self.cmp(val),
             (CPX, Imm(val) | Addr(_, val)) => self.cpx(val),
             (CPY, Imm(val) | Addr(_, val)) => self.cpy(val),
-            (ORA, Imm(val) | Addr(_, val)) => self.accumulator = self.nz(self.accumulator | val),
-            (AND, Imm(val) | Addr(_, val)) => self.accumulator = self.nz(self.accumulator & val),
-            (EOR, Imm(val) | Addr(_, val)) => self.accumulator = self.nz(self.accumulator ^ val),
-            (ADC, Imm(val) | Addr(_, val)) => self.accumulator = self.adc(val),
-            (SBC, Imm(val) | Addr(_, val)) => self.accumulator = self.sbc(val),
+            (ORA, Imm(val) | Addr(_, val)) => self.a = self.nz(self.a | val),
+            (AND, Imm(val) | Addr(_, val)) => self.a = self.nz(self.a & val),
+            (EOR, Imm(val) | Addr(_, val)) => self.a = self.nz(self.a ^ val),
+            (ADC, Imm(val) | Addr(_, val)) => self.a = self.adc(val),
+            (SBC, Imm(val) | Addr(_, val)) => self.a = self.sbc(val),
             (LAX, Imm(val) | Addr(_, val)) => {
-                self.accumulator = val;
-                self.x_index = val;
+                self.a = val;
+                self.x = val;
                 self.nz(val);
             },
 
-            (ASL, Imp) => self.accumulator = self.asl(self.accumulator),
+            (ASL, Imp) => self.a = self.asl(self.a),
             (ASL, Addr(addr, _)) => {
                 let value = self.memory.read(addr);
                 let value = self.asl(value);
                 self.memory.write(addr, value);
             },
-            (ROL, Imp) => self.accumulator = self.rol(self.accumulator),
+            (ROL, Imp) => self.a = self.rol(self.a),
             (ROL, Addr(addr, _)) => {
                 let value = self.memory.read(addr);
                 let value = self.rol(value);
                 self.memory.write(addr, value);
             },
-            (LSR, Imp) => self.accumulator = self.lsr(self.accumulator),
+            (LSR, Imp) => self.a = self.lsr(self.a),
             (LSR, Addr(addr, _)) => {
                 let value = self.memory.read(addr);
                 let value = self.lsr(value);
                 self.memory.write(addr, value);
             },
-            (ROR, Imp) => self.accumulator = self.ror(self.accumulator),
+            (ROR, Imp) => self.a = self.ror(self.a),
             (ROR, Addr(addr, _)) => {
                 let value = self.memory.read(addr);
                 let value = self.ror(value);
@@ -288,31 +291,31 @@ impl Cpu {
                 let value = self.memory.read(addr);
                 let value = self.asl(value);
                 self.memory.write(addr, value);
-                self.accumulator |= value;
-                self.nz(self.accumulator);
+                self.a |= value;
+                self.nz(self.a);
             },
             (RLA, Addr(addr, _)) => {
                 let value = self.memory.read(addr);
                 let value = self.rol(value);
                 self.memory.write(addr, value);
-                self.accumulator &= value;
-                self.nz(self.accumulator);
+                self.a &= value;
+                self.nz(self.a);
             },
             (SRE, Addr(addr, _)) => {
                 let value = self.memory.read(addr);
                 let value = self.lsr(value);
                 self.memory.write(addr, value);
-                self.accumulator ^= value;
-                self.nz(self.accumulator);
+                self.a ^= value;
+                self.nz(self.a);
             },
             (RRA, Addr(addr, _)) => {
                 let value = self.memory.read(addr);
                 let value = self.ror(value);
                 self.memory.write(addr, value);
-                self.accumulator = self.adc(value);
-                self.nz(self.accumulator);
+                self.a = self.adc(value);
+                self.nz(self.a);
             },
-            (SAX, Addr(addr, _)) => self.memory.write(addr, self.accumulator & self.x_index),
+            (SAX, Addr(addr, _)) => self.memory.write(addr, self.a & self.x),
             (DCP, Addr(addr, _)) => {
                 let value = self.memory.read(addr).wrapping_sub(1);
                 self.memory.write(addr, value);
@@ -321,43 +324,42 @@ impl Cpu {
             (ISC, Addr(addr, _)) => {
                 let value = self.memory.read(addr).wrapping_add(1);
                 self.memory.write(addr, value);
-                self.accumulator = self.sbc(value);
+                self.a = self.sbc(value);
             },
 
-            // Mostly unstable codes.
             (ANC, Imm(val)) => {
-                self.accumulator = self.nz(self.accumulator & val);
+                self.a = self.nz(self.a & val);
                 self.status.carry = self.status.negative;
             },
             (ALR, Imm(val)) => {
-                self.accumulator = self.nz(self.accumulator & val);
-                self.accumulator = self.lsr(self.accumulator);
+                self.a = self.nz(self.a & val);
+                self.a = self.lsr(self.a);
             },
             (ARR, Imm(val)) => {
                 // TODO: What a mess.
-                let value = (self.accumulator & val) >> 1;
-                self.accumulator = self.nz(value | if self.status.carry {0x80} else {0x00});
-                self.status.carry = self.accumulator & 0x40 != 0;
+                let value = (self.a & val) >> 1;
+                self.a = self.nz(value | if self.status.carry {0x80} else {0x00});
+                self.status.carry = self.a & 0x40 != 0;
                 self.status.overflow =
                     ((if self.status.carry {0x01} else {0x00}) ^
-                    ((self.accumulator >> 5) & 0x01)) != 0;
+                    ((self.a >> 5) & 0x01)) != 0;
             },
             (XAA, _) => unimplemented!(),
             (AXS, Imm(val)) => {
-                self.status.carry = self.accumulator & self.x_index >= val;
-                self.x_index = self.nz((self.accumulator & self.x_index).wrapping_sub(val));
+                self.status.carry = self.a & self.x >= val;
+                self.x = self.nz((self.a & self.x).wrapping_sub(val));
             },
             (AHX, _) => unimplemented!(),
             (SHY, Addr(addr, _)) => {
                 let (low, high) = addr.to_low_high();
-                let value = self.y_index & high.wrapping_add(1);
-                let addr = Address::from_low_high(low, high & self.y_index);
+                let value = self.y & high.wrapping_add(1);
+                let addr = Address::from_low_high(low, high & self.y);
                 self.memory.write(addr, value);
             },
             (SHX, Addr(addr, _)) => {
                 let (low, high) = addr.to_low_high();
-                let value = self.x_index & high.wrapping_add(1);
-                let addr = Address::from_low_high(low, high & self.x_index);
+                let value = self.x & high.wrapping_add(1);
+                let addr = Address::from_low_high(low, high & self.x);
                 self.memory.write(addr, value);
             },
             (TAS, _) => unimplemented!(),
@@ -379,15 +381,15 @@ impl Cpu {
     fn adc(&mut self, value: u8) -> u8 {
         let carry = if self.status.carry {1} else {0};
         let result =
-            (self.accumulator as u16) +
+            (self.a as u16) +
             (value as u16) +
             (carry as u16);
         self.status.carry = result > 0xFF;
         let result = self.nz(result as u8);
         // If the inputs have the same sign, set overflow if the output doesn't.
         self.status.overflow =
-            (is_neg(self.accumulator) == is_neg(value)) &&
-            (is_neg(self.accumulator) != is_neg(result));
+            (is_neg(self.a) == is_neg(value)) &&
+            (is_neg(self.a) != is_neg(result));
         result
     }
 
@@ -396,18 +398,18 @@ impl Cpu {
     }
 
     fn cmp(&mut self, value: u8) {
-        self.nz(self.accumulator.wrapping_sub(value));
-        self.status.carry = self.accumulator >= value;
+        self.nz(self.a.wrapping_sub(value));
+        self.status.carry = self.a >= value;
     }
 
     fn cpx(&mut self, value: u8) {
-        self.nz(self.x_index.wrapping_sub(value));
-        self.status.carry = self.x_index >= value;
+        self.nz(self.x.wrapping_sub(value));
+        self.status.carry = self.x >= value;
     }
 
     fn cpy(&mut self, value: u8) {
-        self.nz(self.y_index.wrapping_sub(value));
-        self.status.carry = self.y_index >= value;
+        self.nz(self.y.wrapping_sub(value));
+        self.status.carry = self.y >= value;
     }
 
     fn asl(&mut self, value: u8) -> u8 {
