@@ -171,7 +171,7 @@ impl fmt::Display for Instruction {
             access_mode.push(' ');
         }
 
-        write!(f, "0x{:02X} ({:?} {} Cycles:{:?}+{:?}) PB:{:5} Arg:{:5}",
+        write!(f, "{:02X} ({:?} {} Cycles:{:?}+{:?}) PB:{:5} Arg:{:5}",
             self.template.code_point, self.template.op_code, access_mode,
             self.template.cycle_count as usize, self.template.extra_cycle,
             self.page_boundary_crossed, self.argument)

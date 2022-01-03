@@ -61,7 +61,7 @@ impl Cpu {
 
     pub fn state_string(&self) -> String {
         let nesting = "";
-        format!("{:010} PC:{}, A:0x{:02X}, X:0x{:02X}, Y:0x{:02X}, P:0x{:02X}, S:0x{:02X}, {} {}",
+        format!("{:010} PC:{}, A:{:02X}, X:{:02X}, Y:{:02X}, P:{:02X}, S:{:02X}, {} {}",
             self.cycle,
             self.program_counter,
             self.a,
