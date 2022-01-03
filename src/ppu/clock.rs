@@ -41,6 +41,7 @@ impl Clock {
         self.scanline == 0 && self.cycle == first_cycle_of_scanline
     }
 
+    #[inline]
     pub fn is_last_cycle_of_frame(&self) -> bool {
         self.scanline == 261 && self.cycle == 340
     }
