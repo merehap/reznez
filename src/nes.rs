@@ -1,4 +1,3 @@
-use std::collections::BTreeSet;
 use std::ops::Add;
 use std::time::{Duration, SystemTime};
 
@@ -7,10 +6,10 @@ use log::{info, warn};
 use crate::cartridge::INes;
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
-use crate::cpu::address::Address;
 use crate::cpu::cpu::{Cpu, StepResult};
 use crate::cpu::instruction::Instruction;
 use crate::cpu::memory::Memory as CpuMem;
+use crate::cpu::memory::*;
 use crate::cpu::port_access::{PortAccess, AccessMode};
 use crate::gui::gui::Gui;
 use crate::mapper::mapper0::Mapper0;
@@ -21,44 +20,6 @@ use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::render::frame_rate::TargetFrameRate;
-
-const PPUCTRL:   Address = Address::new(0x2000);
-const PPUMASK:   Address = Address::new(0x2001);
-const PPUSTATUS: Address = Address::new(0x2002);
-const OAMADDR:   Address = Address::new(0x2003);
-const OAMDATA:   Address = Address::new(0x2004);
-const PPUSCROLL: Address = Address::new(0x2005);
-const PPUADDR:   Address = Address::new(0x2006);
-const PPUDATA:   Address = Address::new(0x2007);
-const OAM_DMA:   Address = Address::new(0x4014);
-
-const JOYSTICK_1_PORT: Address = Address::new(0x4016);
-const JOYSTICK_2_PORT: Address = Address::new(0x4017);
-
-const CPU_READ_PORTS: [Address; 5] = [
-    PPUSTATUS,
-    OAMDATA,
-    PPUDATA,
-
-    JOYSTICK_1_PORT,
-    JOYSTICK_2_PORT,
-];
-
-// All ports are write ports, even the "read-only" PPUSTATUS.
-const CPU_WRITE_PORTS: [Address; 10] =
-    [
-        PPUCTRL,
-        PPUMASK,
-        PPUSTATUS,
-        OAMADDR,
-        OAMDATA,
-        PPUSCROLL,
-        PPUADDR,
-        PPUDATA,
-        OAM_DMA,
-
-        JOYSTICK_1_PORT,
-    ];
 
 pub struct Nes {
     cpu: Cpu,
@@ -183,10 +144,7 @@ impl Nes {
             unimplemented!("Only mapper 0 is currently supported.");
         }
 
-        let mut cpu_mem = CpuMem::new(
-            BTreeSet::from(CPU_READ_PORTS),
-            BTreeSet::from(CPU_WRITE_PORTS),
-            );
+        let mut cpu_mem = CpuMem::new();
 
         let mut ppu_mem = PpuMem::new(ines.name_table_mirroring(), system_palette);
 
@@ -284,6 +242,7 @@ impl Nes {
 
 #[cfg(test)]
 mod tests {
+    use crate::cpu::address::Address;
     use crate::cpu::cpu::ProgramCounterSource;
     use crate::ppu::palette::system_palette::SystemPalette;
     use crate::ppu::register::ctrl::Ctrl;

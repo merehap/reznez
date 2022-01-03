@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use lazy_static::lazy_static;
 use sdl2::EventPump;
 use sdl2::event::Event;
+//use sdl2::gfx::framerate::FPSManager;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::render::{Canvas, Texture};
@@ -74,7 +75,8 @@ impl Gui for SdlGui {
         let palette_screen =
             DebugScreen::<{Screen::WIDTH}, DEBUG_SCREEN_HEIGHT>::new(Rgb::WHITE);
             */
-
+        // TODO: Figure out how to enable this. Currently get a linking error for feature gfx.
+        //FPSManager::new().set_framerate(100_000);
         SdlGui {
             event_pump: sdl_context.event_pump().unwrap(),
 
@@ -131,7 +133,6 @@ impl Gui for SdlGui {
         &mut self.frame
     }
 
-    #[allow(clippy::identity_op)]
     fn display_frame(&mut self, _frame_index: u64) {
         self.pixels = self.frame.write_all_pixel_data(self.pixels);
 

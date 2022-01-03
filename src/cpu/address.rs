@@ -1,7 +1,8 @@
 use std::fmt;
 use std::str::FromStr;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
+#[repr(transparent)]
 pub struct Address(u16);
 
 impl Address {

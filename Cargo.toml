@@ -20,6 +20,7 @@ debug = true
 
 [dependencies.sdl2]
 version = "0.35.1"
+default-features = false
 features = ["unsafe_textures"]
 
 [dependencies.log]

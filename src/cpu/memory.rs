@@ -1,5 +1,3 @@
-use std::collections::BTreeSet;
-
 use log::info;
 
 use crate::cpu::address::Address;
@@ -9,28 +7,45 @@ const NMI_VECTOR: Address = Address::new(0xFFFA);
 const RESET_VECTOR: Address = Address::new(0xFFFC);
 const IRQ_VECTOR: Address = Address::new(0xFFFE);
 
+// FIXME: Ports should be configurable, not hard-coded here,
+// but I can't find any data structure that is efficient enough.
+pub const PPUCTRL:   Address = Address::new(0x2000);
+pub const PPUMASK:   Address = Address::new(0x2001);
+pub const PPUSTATUS: Address = Address::new(0x2002);
+pub const OAMADDR:   Address = Address::new(0x2003);
+pub const OAMDATA:   Address = Address::new(0x2004);
+pub const PPUSCROLL: Address = Address::new(0x2005);
+pub const PPUADDR:   Address = Address::new(0x2006);
+pub const PPUDATA:   Address = Address::new(0x2007);
+pub const OAM_DMA:   Address = Address::new(0x4014);
+
+pub const JOYSTICK_1_PORT: Address = Address::new(0x4016);
+pub const JOYSTICK_2_PORT: Address = Address::new(0x4017);
+
 pub struct Memory {
     pub stack_pointer: u8,
     memory: Vec<u8>,
-    read_ports: BTreeSet<Address>,
-    write_ports: BTreeSet<Address>,
     latch: Option<PortAccess>,
 }
 
 impl Memory {
-    pub fn new(read_ports: BTreeSet<Address>, write_ports: BTreeSet<Address>) -> Memory {
+    pub fn new() -> Memory {
         Memory {
             stack_pointer: 0xFD,
             memory: vec![0; 0x10000],
-            read_ports,
-            write_ports,
             latch: None,
         }
     }
 
+    #[inline]
     pub fn read(&mut self, address: Address) -> u8 {
         let value = self.memory[address.to_raw() as usize];
-        if self.read_ports.contains(&address) {
+        if address == PPUSTATUS ||
+            address == OAMDATA ||
+            address == PPUDATA ||
+            address == JOYSTICK_1_PORT ||
+            address == JOYSTICK_2_PORT {
+
             self.latch = Some(PortAccess {
                 address,
                 value,
@@ -41,8 +56,19 @@ impl Memory {
         value
     }
 
+    #[inline]
     pub fn write(&mut self, address: Address, value: u8) {
-        if self.write_ports.contains(&address) {
+        if address == PPUCTRL ||
+            address == PPUMASK ||
+            address == PPUSTATUS ||
+            address == OAMADDR ||
+            address == OAMDATA ||
+            address == PPUSCROLL ||
+            address == PPUADDR ||
+            address == PPUDATA ||
+            address == OAM_DMA ||
+            address == JOYSTICK_1_PORT {
+
             self.latch = Some(PortAccess {
                 address,
                 value,
@@ -126,5 +152,4 @@ impl Memory {
             self.memory[vector.inc().to_raw() as usize],
             )
     }
-
 }
