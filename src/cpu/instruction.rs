@@ -20,7 +20,7 @@ fn instruction_templates() -> [InstructionTemplate; 256] {
         /*00*/           /*20*/          /*40*/          /*60*/          /*80*/          /*A0*/          /*C0*/          /*E0*/
 /*+00*/ [(BRK,Imp,7,No), (JSR,Abs,6,No), (RTI,Imp,6,No), (RTS,Imp,6,No), (NOP,Imm,2,No), (LDY,Imm,2,No), (CPY,Imm,2,No), (CPX,Imm,2,No)],
 /*+01*/ [(ORA,IzX,6,No), (AND,IzX,6,No), (EOR,IzX,6,No), (ADC,IzX,6,No), (STA,IzX,6,No), (LDA,IzX,6,No), (CMP,IzX,6,No), (SBC,IzX,6,No)],
-/*+02*/ [jam           , jam           , jam           , jam           , jam           , (LDX,Imm,2,No), jam           , jam           ],
+/*+02*/ [jam           , jam           , jam           , jam           , (NOP,Imm,2,No), (LDX,Imm,2,No), (NOP,Imm,2,No), (NOP,Imm,2,No)],
 /*+03*/ [(SLO,IzX,8,No), (RLA,IzX,8,No), (SRE,IzX,8,No), (RRA,IzX,8,No), (SAX,IzX,6,No), (LAX,IzX,6,No), (DCP,IzX,8,No), (ISC,IzX,8,No)],
 /*+04*/ [(NOP,ZP ,3,No), (BIT,ZP ,3,No), (NOP,ZP ,3,No), (NOP,ZP ,3,No), (STY,ZP ,3,No), (LDY,ZP ,3,No), (CPY,ZP ,3,No), (CPX,ZP ,3,No)],
 /*+05*/ [(ORA,ZP ,3,No), (AND,ZP ,3,No), (EOR,ZP ,3,No), (ADC,ZP ,3,No), (STA,ZP ,3,No), (LDA,ZP ,3,No), (CMP,ZP ,3,No), (SBC,ZP ,3,No)],
