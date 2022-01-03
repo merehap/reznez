@@ -334,8 +334,13 @@ impl Cpu {
                 self.accumulator = self.lsr(self.accumulator);
             },
             (ARR, Imm(val)) => {
-                self.accumulator = self.nz(self.accumulator & val);
-                self.accumulator = self.ror(self.accumulator);
+                // TODO: What a mess.
+                let value = (self.accumulator & val) >> 1;
+                self.accumulator = self.nz(value | if self.status.carry {0x80} else {0x00});
+                self.status.carry = self.accumulator & 0x40 != 0;
+                self.status.overflow =
+                    ((if self.status.carry {0x01} else {0x00}) ^
+                    ((self.accumulator >> 5) & 0x01)) != 0;
             },
             (XAA, _) => unimplemented!(),
             (AXS, Imm(val)) => {
