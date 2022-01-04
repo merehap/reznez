@@ -9,6 +9,7 @@ pub struct Frame {
     buffer: [[Rgbt; Frame::WIDTH]; Frame::HEIGHT],
     sprite_buffer: [[SpriteSliver; Frame::WIDTH / 8]; Frame::HEIGHT],
     universal_background_rgb: Rgb,
+    sprite0_hit: bool,
 }
 
 impl Frame {
@@ -20,6 +21,7 @@ impl Frame {
             buffer: [[Rgbt::Transparent; Frame::WIDTH]; Frame::HEIGHT],
             sprite_buffer: new_sprite_buffer(),
             universal_background_rgb: Rgb::BLACK,
+            sprite0_hit: false,
         }
     }
 
@@ -98,7 +100,16 @@ impl Frame {
         column_in_tile: usize,
         rgbt: Rgbt,
     ) {
+        let background_pixel = self.background_tile_sliver(column, row)[column_in_tile];
+        if background_pixel.is_transparent() && rgbt.is_transparent() {
+            self.sprite0_hit = true;
+        }
+
         self.sprite_buffer[row as usize][(column / 8) as usize].0[column_in_tile] = rgbt;
+    }
+
+    pub fn sprite0_hit(&self) -> bool {
+        self.sprite0_hit
     }
 }
 

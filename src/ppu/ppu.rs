@@ -135,6 +135,10 @@ impl Ppu {
 
             if mask.sprites_enabled {
                 self.render_sprites(ctrl, frame);
+                if frame.sprite0_hit() {
+                    println!("Sprite 0 Hit!");
+                    self.status.sprite0_hit = true;
+                }
             }
         }
 
