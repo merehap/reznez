@@ -83,6 +83,7 @@ impl Nes {
         loop {
             let is_last_cycle = self.ppu().clock().is_last_cycle_of_frame();
             self.step(gui.frame_mut());
+
             if is_last_cycle {
                 break;
             }

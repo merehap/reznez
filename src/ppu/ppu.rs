@@ -1,5 +1,3 @@
-use log::info;
-
 use crate::ppu::address::Address;
 use crate::ppu::clock::Clock;
 use crate::ppu::memory;
@@ -104,15 +102,6 @@ impl Ppu {
     }
 
     pub fn step(&mut self, ctrl: Ctrl, mask: Mask, frame: &mut Frame) -> StepResult {
-        let frame_started = self.clock().is_first_cycle_of_frame();
-        if frame_started {
-            info!(
-                "PPU Cycle: {}, Frame: {}",
-                self.clock().total_cycles(),
-                self.clock().frame(),
-            );
-        }
-
         let total_cycles = self.clock().total_cycles();
         let mut step_result = StepResult {
             status: self.status,
@@ -138,6 +127,7 @@ impl Ppu {
         } else if self.clock.scanline() == 261 && self.clock.cycle() == 1 {
             self.is_nmi_period = false;
             self.status.vblank_active = false;
+            self.status.sprite0_hit = false;
         } else if self.clock.scanline() == 1 && self.clock.cycle() == 1 {
             if mask.background_enabled {
                 self.render_background(ctrl, frame);
@@ -164,14 +154,13 @@ impl Ppu {
             let pixel_column = 8 * background_tile_index.column();
             let start_row = 8 * background_tile_index.row();
             for row_in_tile in 0..8 {
-                self.pattern_table().render_tile_sliver(
+                self.pattern_table().render_background_tile_sliver(
                     background_table_side,
                     pattern_index,
                     row_in_tile as usize,
-                    false,
                     palette_table.background_palette(palette_table_index),
                     frame.background_tile_sliver(pixel_column, start_row + row_in_tile),
-                    );
+                );
             }
         }
     }
@@ -198,17 +187,15 @@ impl Ppu {
                         y + row_in_tile
                     };
 
-                let mut sliver = frame.sprites_tile_sliver(x, y);
-                sliver.1 = sprite.priority();
-
-                self.pattern_table().render_tile_sliver(
+                self.pattern_table().render_sprite_tile_sliver(
                     sprite_table_side,
-                    sprite.pattern_index(),
+                    sprite,
                     row_in_tile as usize,
-                    sprite.flip_horizontally(),
                     palette_table.sprite_palette(palette_table_index),
-                    &mut sliver.0,
-                    );
+                    frame,
+                    x,
+                    y,
+                );
             }
         }
     }

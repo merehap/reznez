@@ -3,6 +3,8 @@
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::rgbt::Rgbt;
+use crate::ppu::render::frame::Frame;
+use crate::ppu::sprite::Sprite;
 use crate::util::bit_util::get_bit;
 
 pub struct PatternTable<'a>(&'a [u8; 0x2000]);
@@ -13,15 +15,49 @@ impl <'a> PatternTable<'a> {
     }
 
     #[inline]
-    pub fn render_tile_sliver(
+    pub fn render_background_tile_sliver(
         &'a self,
         side: PatternTableSide,
         pattern_index: PatternIndex,
         row_in_tile: usize,
-        flip: bool,
         palette: Palette,
         tile_sliver: &mut [Rgbt; 8],
-        ) {
+    ) {
+        let index = side as usize + 16 * pattern_index.to_usize();
+        let low_index = index + row_in_tile;
+        let high_index = low_index + 8;
+
+        let low_byte = self.0[low_index];
+        let high_byte = self.0[high_index];
+
+        for (column_in_tile, rgbt) in &mut tile_sliver.iter_mut().enumerate() {
+            let low_bit = get_bit(low_byte, column_in_tile);
+            let high_bit = get_bit(high_byte, column_in_tile);
+            *rgbt = match (low_bit, high_bit) {
+                (false, false) => Rgbt::Transparent,
+                (true , false) => Rgbt::Opaque(palette[PaletteIndex::One]),
+                (false, true ) => Rgbt::Opaque(palette[PaletteIndex::Two]),
+                (true , true ) => Rgbt::Opaque(palette[PaletteIndex::Three]),
+            };
+        }
+    }
+
+    #[inline]
+    pub fn render_sprite_tile_sliver(
+        &'a self,
+        side: PatternTableSide,
+        sprite: Sprite,
+        row_in_tile: usize,
+        palette: Palette,
+        frame: &mut Frame,
+        x: u8,
+        y: u8,
+    ) {
+        let pattern_index = sprite.pattern_index();
+        let flip = sprite.flip_horizontally();
+
+        let tile_sliver = &mut frame.sprites_tile_sliver(x, y);
+        tile_sliver.1 = sprite.priority();
 
         let index = side as usize + 16 * pattern_index.to_usize();
         let low_index = index + row_in_tile;
@@ -30,7 +66,8 @@ impl <'a> PatternTable<'a> {
         let low_byte = self.0[low_index];
         let high_byte = self.0[high_index];
 
-        for (mut column_in_tile, rgbt) in &mut tile_sliver.iter_mut().enumerate() {
+        //for column_in_tile in 0..8 {
+        for (mut column_in_tile, rgbt) in &mut tile_sliver.0.iter_mut().enumerate() {
             if flip {
                 column_in_tile = 7 - column_in_tile;
             }
