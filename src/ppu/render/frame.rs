@@ -81,14 +81,24 @@ impl Frame {
     }
 
     #[inline]
-    pub fn sprites_tile_sliver(
+    pub fn set_tile_sliver_priority(
         &mut self,
         column: u8,
         row: u8,
-        ) -> &mut ([Rgbt; 8], Priority) {
+        priority: Priority,
+    ) {
+        self.sprite_buffer[row as usize][(column / 8) as usize].1 = priority;
+    }
 
-        let row_slice = &mut self.sprite_buffer[row as usize];
-        &mut row_slice[(column / 8) as usize]
+    #[inline]
+    pub fn set_sprite_pixel(
+        &mut self,
+        column: u8,
+        row: u8,
+        column_in_tile: usize,
+        rgbt: Rgbt,
+    ) {
+        self.sprite_buffer[row as usize][(column / 8) as usize].0[column_in_tile] = rgbt;
     }
 }
 

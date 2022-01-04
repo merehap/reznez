@@ -190,11 +190,11 @@ impl Ppu {
                 self.pattern_table().render_sprite_tile_sliver(
                     sprite_table_side,
                     sprite,
-                    row_in_tile as usize,
                     palette_table.sprite_palette(palette_table_index),
                     frame,
                     x,
                     y,
+                    row_in_tile as usize,
                 );
             }
         }
