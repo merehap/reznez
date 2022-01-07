@@ -84,9 +84,9 @@ impl INes {
         rom_index = next_rom_index;
 
         let title = rom[rom_index..].to_vec();
-        if !(title.is_empty() || title.len() == 127 || title.len() == 128) {
-            panic!("Title must be empty or 127 or 128 bytes, but was {} bytes.", title.len());
-        }
+        let title_length_is_proper = title.is_empty() || title.len() == 127 || title.len() == 128;
+        assert!(title_length_is_proper, "Title must be empty or 127 or 128 bytes, but was {} bytes.", title.len());
+
         let title = std::str::from_utf8(&title)
             .map_err(|err| err.to_string())?
             .chars()

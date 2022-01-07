@@ -35,7 +35,7 @@ impl Ppm {
 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(Ppm::METADATA.len() + Ppm::DATA_SIZE);
-        bytes.extend_from_slice(&Ppm::METADATA);
+        bytes.extend_from_slice(Ppm::METADATA);
         bytes.extend_from_slice(&self.data);
         bytes
     }

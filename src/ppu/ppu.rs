@@ -90,7 +90,7 @@ impl Ppu {
 
     pub fn write_partial_vram_address(&mut self, value: u8) {
         if let Some(upper) = self.next_vram_upper_byte {
-            self.vram_address = Address::from_u16(((upper as u16) << 8) + value as u16);
+            self.vram_address = Address::from_u16((u16::from(upper) << 8) + u16::from(value));
             self.next_vram_upper_byte = None;
         } else {
             self.next_vram_upper_byte = Some(value);
@@ -175,20 +175,20 @@ impl Ppu {
         let palette_table = self.memory.palette_table();
         let sprite_table_side = ctrl.sprite_table_side;
         for sprite in self.oam.sprites() {
-            let x = sprite.x_coordinate();
-            let y = sprite.y_coordinate();
+            let column = sprite.x_coordinate();
+            let row = sprite.y_coordinate();
             let palette_table_index = sprite.palette_table_index();
 
             for row_in_tile in 0..8 {
-                if y + row_in_tile >= 240 {
+                if row + row_in_tile >= 240 {
                     break;
                 }
 
-                let y =
+                let row =
                     if sprite.flip_vertically() {
-                        y + 7 - row_in_tile
+                        row + 7 - row_in_tile
                     } else {
-                        y + row_in_tile
+                        row + row_in_tile
                     };
 
                 self.pattern_table().render_sprite_tile_sliver(
@@ -196,8 +196,8 @@ impl Ppu {
                     sprite,
                     palette_table.sprite_palette(palette_table_index),
                     frame,
-                    x,
-                    y,
+                    column,
+                    row,
                     row_in_tile as usize,
                 );
             }
@@ -237,15 +237,15 @@ impl StepResult {
         }
     }
 
-    pub fn status(&self) -> Status {
+    pub fn status(self) -> Status {
         self.status
     }
 
-    pub fn vram_data(&self) -> u8 {
+    pub fn vram_data(self) -> u8 {
         self.vram_data
     }
 
-    pub fn nmi_trigger(&self) -> bool {
+    pub fn nmi_trigger(self) -> bool {
         self.nmi_trigger
     }
 }

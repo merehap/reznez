@@ -25,7 +25,7 @@ impl Address {
         Address(value)
     }
 
-    pub const fn advance(&self, value: u8) -> Address {
+    pub const fn advance(self, value: u8) -> Address {
         Address::from_u16(self.0 + value as u16)
     }
 

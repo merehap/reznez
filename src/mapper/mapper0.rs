@@ -13,7 +13,7 @@ impl Mapper0 {
 
     pub fn map(
         &self,
-        ines: INes,
+        ines: &INes,
         cpu_mem: &mut CpuMem,
         ppu_mem: &mut PpuMem,
         ) -> Result<(), String> {
@@ -30,7 +30,7 @@ impl Mapper0 {
             2 => /* Nrom256 */ 0x4000,
             c => return Err(format!(
                      "PRG ROM size must be 16K or 32K for mapper 0, but was {}K",
-                     16 * (c as u16),
+                     16 * u16::from(c),
                  )),
         };
 

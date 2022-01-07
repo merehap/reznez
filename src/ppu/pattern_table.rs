@@ -42,6 +42,8 @@ impl <'a> PatternTable<'a> {
         }
     }
 
+    // No obvious way to reduce the number of parameters.
+    #[allow(clippy::too_many_arguments)]
     #[inline]
     pub fn render_sprite_tile_sliver(
         &self,

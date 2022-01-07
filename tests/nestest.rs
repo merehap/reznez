@@ -32,7 +32,7 @@ fn nestest() {
     };
 
     let config = Config::new(&opt);
-    let mut nes = Nes::new(config);
+    let mut nes = Nes::new(&config);
 
     let mut frame = Frame::new();
     loop {

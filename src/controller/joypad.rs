@@ -32,8 +32,7 @@ impl Joypad {
 
     pub fn select_next_button(&mut self) {
         if self.strobe_mode == StrobeMode::Off {
-            self.selected_button =
-                self.selected_button.map(Button::next).flatten();
+            self.selected_button = self.selected_button.and_then(Button::next);
         }
     }
 

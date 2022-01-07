@@ -34,9 +34,9 @@ pub struct Nes {
 }
 
 impl Nes {
-    pub fn new(config: Config) -> Nes {
+    pub fn new(config: &Config) -> Nes {
         let (cpu_mem, ppu_mem) = Nes::initialize_memory(
-            config.ines.clone(),
+            &config.ines,
             config.system_palette.clone(),
             );
 
@@ -140,7 +140,7 @@ impl Nes {
         instruction
     }
 
-    fn initialize_memory(ines: INes, system_palette: SystemPalette) -> (CpuMem, PpuMem) {
+    fn initialize_memory(ines: &INes, system_palette: SystemPalette) -> (CpuMem, PpuMem) {
         if ines.mapper_number() != 0 {
             unimplemented!("Only mapper 0 is currently supported.");
         }
@@ -162,7 +162,7 @@ impl Nes {
     fn execute_port_action(&mut self, port_access: PortAccess) {
         let value = port_access.value;
 
-        use AccessMode::*;
+        use AccessMode::{Read, Write};
         match (port_access.address, port_access.access_mode) {
             (PPUMASK | PPUSTATUS | OAMADDR, Write) => {},
             (OAMDATA, Read) => {},
@@ -182,7 +182,7 @@ impl Nes {
             (PPUSTATUS, Read) => self.ppu.stop_vblank(),
             (OAMDATA, Write) => self.write_oam(value),
             (OAM_DMA, Write) =>
-                self.cpu.initiate_dma_transfer(value, 256 - self.oam_address() as u16),
+                self.cpu.initiate_dma_transfer(value, 256 - u16::from(self.oam_address())),
             (PPUADDR, Write) => self.ppu.write_partial_vram_address(value),
             (PPUDATA, Read) => self.ppu.update_vram_data(self.ppu_ctrl()),
             (PPUDATA, Write) => self.ppu.write_vram(self.ppu_ctrl(), value),
@@ -316,7 +316,7 @@ mod tests {
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
 
-        let (cpu_mem, ppu_mem) = Nes::initialize_memory(ines, system_palette);
+        let (cpu_mem, ppu_mem) = Nes::initialize_memory(&ines, system_palette);
         Nes {
             cpu: Cpu::new(
                 cpu_mem,

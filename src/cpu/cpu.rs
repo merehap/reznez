@@ -384,10 +384,7 @@ impl Cpu {
 
     fn adc(&mut self, value: u8) -> u8 {
         let carry = if self.status.carry {1} else {0};
-        let result =
-            (self.a as u16) +
-            (value as u16) +
-            (carry as u16);
+        let result = (u16::from(self.a)) + (u16::from(value)) + carry;
         self.status.carry = result > 0xFF;
         let result = self.nz(result as u8);
         // If the inputs have the same sign, set overflow if the output doesn't.

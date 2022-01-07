@@ -19,11 +19,11 @@ impl Address {
     }
 
     pub fn from_low_high(low: u8, high: u8) -> Address {
-        Address::new(((high as u16) << 8) + (low as u16))
+        Address::new(((u16::from(high)) << 8) + (u16::from(low)))
     }
 
     pub fn zero_page(low: u8) -> Address {
-        Address::new(low as u16)
+        Address::new(u16::from(low))
     }
 
     pub fn to_raw(self) -> u16 {
@@ -34,16 +34,12 @@ impl Address {
         (self.0 as u8, (self.0 >> 8) as u8)
     }
 
-    pub fn advance(&self, value: u8) -> Address {
-        let mut result = *self;
-        result.0 = result.0.wrapping_add(value as u16);
-        result
+    pub fn advance(self, value: u8) -> Address {
+        Address::new(self.0.wrapping_add(u16::from(value)))
     }
 
-    pub fn offset(&self, value: i8) -> Address {
-        let mut result = *self;
-        result.0 = (result.0 as i32).wrapping_add(value as i32) as u16;
-        result
+    pub fn offset(self, value: i8) -> Address {
+        Address::new((i32::from(self.0)).wrapping_add(i32::from(value)) as u16)
     }
 
     pub fn inc(&mut self) -> Address {
@@ -51,11 +47,11 @@ impl Address {
         *self
     }
 
-    pub fn page(&self) -> u8 {
+    pub fn page(self) -> u8 {
         (self.0 >> 8) as u8
     }
 
-    pub fn get_type(&self) -> AddressType {
+    pub fn get_type(self) -> AddressType {
         use AddressType::*;
         match self.0 {
             0x0000..=0x07FF => InternalRAM,

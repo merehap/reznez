@@ -6,7 +6,7 @@ use std::fs::File;
 use crate::gui::gui::{Gui, Events};
 use crate::ppu::render::frame::Frame;
 
-const FRAME_DUMP_DIRECTORY: &'static str = "frame_dump";
+const FRAME_DUMP_DIRECTORY: &str = "frame_dump";
 
 pub struct FrameDumpGui {
     frame: Frame,
@@ -15,9 +15,7 @@ pub struct FrameDumpGui {
 impl Gui for FrameDumpGui {
     fn initialize() -> FrameDumpGui {
         if let Err(err) = fs::create_dir(FRAME_DUMP_DIRECTORY) {
-            if err.kind() != ErrorKind::AlreadyExists {
-                panic!("{}", err);
-            }
+            assert!(err.kind() != ErrorKind::AlreadyExists, "{:?}", err.kind());
         }
         
         FrameDumpGui {

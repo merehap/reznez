@@ -329,9 +329,9 @@ pub enum AccessMode {
 }
 
 impl AccessMode {
-    pub fn instruction_length(&self) -> u8 {
+    pub fn instruction_length(self) -> u8 {
         use AccessMode::*;
-        match *self {
+        match self {
             Imp => 1,
             Imm | ZP | ZPX | ZPY | Rel | IzX | IzY => 2,
             Abs | AbX | AbY | Ind => 3,

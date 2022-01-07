@@ -32,7 +32,7 @@ impl Frame {
         let (sprite_sliver, sprite_priority) = self.sprite_buffer[row][column / 8];
         let sprite_pixel = sprite_sliver[column % 8];
 
-        use Rgbt::*;
+        use Rgbt::{Transparent, Opaque};
         match (background_pixel, sprite_pixel, sprite_priority) {
             (Transparent, Transparent, _) => self.universal_background_rgb,
             (Transparent, Opaque(rgb), _) => rgb,

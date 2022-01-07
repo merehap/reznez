@@ -61,7 +61,7 @@ fn framematch() {
                 log_cpu: false,
             };
 
-            let nes = Nes::new(Config::new(&opt));
+            let nes = Nes::new(&Config::new(&opt));
             frame_hash_data.push(FrameHashData {rom_name, nes, frame_hashes});
         }
     }

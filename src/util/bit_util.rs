@@ -1,7 +1,7 @@
 pub fn pack_bools(bools: [bool; 8]) -> u8 {
     let mut result = 0;
     for i in 0..8 {
-        if bools[7 - i as usize] {
+        if bools[7 - i] {
             result += 1 << i;
         }
     }
@@ -21,15 +21,18 @@ pub fn unpack_bools(value: u8) -> [bool; 8] {
 
 #[inline]
 pub fn get_bit(byte: u8, index: usize) -> bool {
+    assert!(index < 8);
     let mask = 0b1000_0000 >> index as u8;
     byte & mask != 0
 }
 
 pub fn clear_bit(byte: u8, index: usize) -> u8 {
+    assert!(index < 8);
     byte & !(1 << (7 - index))
 }
 
 pub fn set_bit(byte: u8, index: usize) -> u8 {
+    assert!(index < 8);
     byte & (1 << (7 - index))
 }
 

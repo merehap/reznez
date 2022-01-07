@@ -27,7 +27,7 @@ fn main() {
     logger::init(Logger {log_cpu: opt.log_cpu}).unwrap();
     let config = Config::new(&opt);
     let mut gui = Config::gui(&opt);
-    let mut nes = Nes::new(config);
+    let mut nes = Nes::new(&config);
 
     loop {
         nes.step_frame(&mut *gui);
