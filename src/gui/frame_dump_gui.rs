@@ -15,7 +15,7 @@ pub struct FrameDumpGui {
 impl Gui for FrameDumpGui {
     fn initialize() -> FrameDumpGui {
         if let Err(err) = fs::create_dir(FRAME_DUMP_DIRECTORY) {
-            assert!(err.kind() != ErrorKind::AlreadyExists, "{:?}", err.kind());
+            assert!(err.kind() == ErrorKind::AlreadyExists, "{:?}", err.kind());
         }
         
         FrameDumpGui {
