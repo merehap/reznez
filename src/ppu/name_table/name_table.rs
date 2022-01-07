@@ -27,7 +27,7 @@ impl <'a> NameTable<'a> {
     pub fn tile_entry_at(
         &self,
         background_tile_index: BackgroundTileIndex,
-        ) -> (PatternIndex, PaletteTableIndex) {
+    ) -> (PatternIndex, PaletteTableIndex) {
 
         let pattern_index =
             PatternIndex::new(self.tiles[background_tile_index.to_usize()]);

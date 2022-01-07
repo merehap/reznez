@@ -17,6 +17,18 @@ impl BackgroundTileIndex {
         Ok(BackgroundTileIndex(number))
     }
 
+    pub fn from_column_row(column: u8, row: u8) -> Result<BackgroundTileIndex, String> {
+        let column = column as u16;
+        let row = row as u16;
+        if column >= COLUMN_COUNT {
+            Err(format!("Column must be less than {}.", COLUMN_COUNT))
+        } else if row >= ROW_COUNT {
+            Err(format!("Row must be less than {}.", ROW_COUNT))
+        } else {
+            Ok(BackgroundTileIndex::from_u16(row * COLUMN_COUNT + column)?)
+        }
+    }
+
     pub fn iter() -> BackgroundTileIndexIterator {
         BackgroundTileIndexIterator {index: BackgroundTileIndex(0)}
     }
