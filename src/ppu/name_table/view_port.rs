@@ -85,13 +85,13 @@ impl <'a> ViewPort<'a> {
     }
 }
 
-struct ScrollInfo<'a> {
+pub struct ScrollInfo<'a> {
     other_name_table: NameTable<'a>,
     direction: Direction,
     offset: NonZeroU8,
 }
 
-enum Direction {
+pub enum Direction {
     Right,
     Down,
 }

@@ -3,8 +3,8 @@ use crate::ppu::clock::Clock;
 use crate::ppu::memory;
 use crate::ppu::memory::Memory;
 use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
-use crate::ppu::name_table::name_table::NameTable;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
+use crate::ppu::name_table::view_port::ViewPort;
 use crate::ppu::oam::Oam;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::pattern_table::PatternTable;
@@ -60,8 +60,9 @@ impl Ppu {
     }
 
     #[inline]
-    pub fn name_table(&self, number: NameTableNumber) -> NameTable {
-        self.memory.name_table(number)
+    pub fn view_port(&self, number: NameTableNumber) -> ViewPort {
+        let base_name_table = self.memory.name_table(number);
+        ViewPort::base_name_table_only(base_name_table)
     }
 
     pub fn palette_table(&self) -> PaletteTable {
@@ -154,7 +155,7 @@ impl Ppu {
         let background_table_side = ctrl.background_table_side;
         for background_tile_index in BackgroundTileIndex::iter() {
             let (pattern_index, palette_table_index) =
-                self.name_table(name_table_number).tile_entry_at(background_tile_index);
+                self.view_port(name_table_number).tile_entry_at(background_tile_index);
             let pixel_column = 8 * background_tile_index.column();
             let start_row = 8 * background_tile_index.row();
             for row_in_tile in 0..8 {
