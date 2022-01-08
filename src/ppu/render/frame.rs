@@ -101,9 +101,10 @@ impl Frame {
         row: u8,
         column_in_sprite: usize,
         rgbt: Rgbt,
+        is_sprite_0: bool,
     ) {
         let background_pixel = self.buffer[row as usize][column as usize + column_in_sprite];
-        if background_pixel.is_transparent() && rgbt.is_transparent() {
+        if is_sprite_0 && background_pixel.is_transparent() && rgbt.is_transparent() {
             self.sprite0_hit = true;
         }
 

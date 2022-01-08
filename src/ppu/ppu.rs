@@ -220,7 +220,10 @@ impl Ppu {
 
         let palette_table = self.memory.palette_table();
         let sprite_table_side = ctrl.sprite_table_side;
-        for sprite in self.oam.sprites() {
+        let sprites = self.oam.sprites();
+        for i in 0..sprites.len() {
+            let sprite = sprites[i];
+            let is_sprite_0 = i == 0;
             let column = sprite.x_coordinate();
             let row = sprite.y_coordinate();
             let palette_table_index = sprite.palette_table_index();
@@ -240,6 +243,7 @@ impl Ppu {
                 self.pattern_table().render_sprite_sliver(
                     sprite_table_side,
                     sprite,
+                    is_sprite_0,
                     palette_table.sprite_palette(palette_table_index),
                     frame,
                     column,
