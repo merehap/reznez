@@ -38,13 +38,18 @@ impl Memory {
     pub fn new(
         name_table_mirroring: NameTableMirroring,
         system_palette: SystemPalette,
-        ) -> Memory {
+    ) -> Memory {
 
         Memory {
             memory: vec![0; MEMORY_SIZE],
             name_table_mirroring,
             system_palette,
         }
+    }
+
+    #[inline]
+    pub fn name_table_mirroring(&self) -> NameTableMirroring {
+        self.name_table_mirroring
     }
 
     #[inline]

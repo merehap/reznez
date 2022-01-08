@@ -75,8 +75,10 @@ impl Frame {
 
     #[inline]
     pub fn background_tile_sliver(&mut self, column: u8, row: u8) -> &mut [Rgbt; 8] {
-        let row_slice = &mut self.buffer[row as usize];
-        let column_slice = &mut row_slice[column as usize..column as usize + 8];
+        assert_eq!(column % 8, 0);
+
+        let buffer_row = &mut self.buffer[row as usize];
+        let column_slice = &mut buffer_row[column as usize..column as usize + 8];
         column_slice
             .try_into()
             .unwrap()
@@ -97,15 +99,15 @@ impl Frame {
         &mut self,
         column: u8,
         row: u8,
-        column_in_tile: usize,
+        column_in_sprite: usize,
         rgbt: Rgbt,
     ) {
-        let background_pixel = self.background_tile_sliver(column, row)[column_in_tile];
+        let background_pixel = self.buffer[row as usize][column as usize + column_in_sprite];
         if background_pixel.is_transparent() && rgbt.is_transparent() {
             self.sprite0_hit = true;
         }
 
-        self.sprite_buffer[row as usize][(column / 8) as usize].0[column_in_tile] = rgbt;
+        self.sprite_buffer[row as usize][(column / 8) as usize].0[column_in_sprite] = rgbt;
     }
 
     pub fn sprite0_hit(&self) -> bool {

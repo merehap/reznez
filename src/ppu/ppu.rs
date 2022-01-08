@@ -1,3 +1,5 @@
+use std::num::NonZeroU8;
+
 use crate::ppu::address::Address;
 use crate::ppu::clock::Clock;
 use crate::ppu::memory;
@@ -8,6 +10,7 @@ use crate::ppu::name_table::view_port::ViewPort;
 use crate::ppu::oam::Oam;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::pattern_table::PatternTable;
+use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
 use crate::ppu::register::status::Status;
@@ -27,6 +30,10 @@ pub struct Ppu {
     vram_address: Address,
     next_vram_upper_byte: Option<u8>,
     vram_data: u8,
+
+    pending_x_scroll_offset: Option<u8>,
+    x_scroll_offset: u8,
+    y_scroll_offset: u8,
 }
 
 impl Ppu {
@@ -43,6 +50,9 @@ impl Ppu {
             vram_address: Address::from_u16(0),
             next_vram_upper_byte: None,
             vram_data: 0,
+            pending_x_scroll_offset: None,
+            x_scroll_offset: 0,
+            y_scroll_offset: 0,
         }
     }
 
@@ -60,9 +70,30 @@ impl Ppu {
     }
 
     #[inline]
-    pub fn view_port(&self, number: NameTableNumber) -> ViewPort {
+    pub fn view_port(
+        &self,
+        number: NameTableNumber,
+        mirroring: NameTableMirroring,
+    ) -> ViewPort {
+
         let base_name_table = self.memory.name_table(number);
-        ViewPort::base_name_table_only(base_name_table)
+        use NameTableMirroring::*;
+        match (mirroring, NonZeroU8::new(self.x_scroll_offset), NonZeroU8::new(self.y_scroll_offset)) {
+            (Horizontal, _, Some(y_scroll_offset)) =>
+                ViewPort::vertical(
+                    base_name_table,
+                    self.memory.name_table(number.next_vertical()),
+                    y_scroll_offset,
+                ),
+            (Vertical, Some(x_scroll_offset), _) =>
+                ViewPort::horizontal(
+                    base_name_table,
+                    self.memory.name_table(number.next_horizontal()),
+                    x_scroll_offset,
+                ),
+            (FourScreen, _, _) => todo!(),
+            _ => ViewPort::base_name_table_only(base_name_table),
+        }
     }
 
     pub fn palette_table(&self) -> PaletteTable {
@@ -98,6 +129,18 @@ impl Ppu {
         }
     }
 
+    pub fn write_scroll_dimension(&mut self, dimension: u8) {
+        if let Some(x_scroll_offset) = self.pending_x_scroll_offset {
+            self.x_scroll_offset = x_scroll_offset;
+            self.y_scroll_offset = dimension;
+            println!("Writing Y Scroll: {}", dimension);
+            self.pending_x_scroll_offset = None;
+        } else {
+            println!("Writing X Scroll: {}", dimension);
+            self.pending_x_scroll_offset = Some(dimension);
+        }
+    }
+
     pub fn nmi_enabled(&self, ctrl: Ctrl) -> bool {
         self.is_nmi_period && ctrl.vblank_nmi == VBlankNmi::On
     }
@@ -110,7 +153,7 @@ impl Ppu {
             nmi_trigger: false,
         };
 
-        // When reading palette data, read the current data pointed to
+        // When reading palette data only, read the current data pointed to
         // by self.vram_address, not what was previously pointed to.
         if self.vram_address >= memory::PALETTE_TABLE_START {
             step_result.vram_data = self.memory[self.vram_address];
@@ -152,10 +195,12 @@ impl Ppu {
         frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
         let name_table_number = ctrl.name_table_number;
+        let name_table_mirroring = self.memory.name_table_mirroring();
         let background_table_side = ctrl.background_table_side;
         for background_tile_index in BackgroundTileIndex::iter() {
             let (pattern_index, palette_table_index) =
-                self.view_port(name_table_number).tile_entry_at(background_tile_index);
+                self.view_port(name_table_number, name_table_mirroring)
+                    .tile_entry_at(background_tile_index);
             let pixel_column = 8 * background_tile_index.column();
             let start_row = 8 * background_tile_index.row();
             for row_in_tile in 0..8 {
@@ -180,26 +225,26 @@ impl Ppu {
             let row = sprite.y_coordinate();
             let palette_table_index = sprite.palette_table_index();
 
-            for row_in_tile in 0..8 {
-                if row + row_in_tile >= 240 {
+            for row_in_sprite in 0..8 {
+                if row + row_in_sprite >= 240 {
                     break;
                 }
 
                 let row =
                     if sprite.flip_vertically() {
-                        row + 7 - row_in_tile
+                        row + 7 - row_in_sprite
                     } else {
-                        row + row_in_tile
+                        row + row_in_sprite
                     };
 
-                self.pattern_table().render_sprite_tile_sliver(
+                self.pattern_table().render_sprite_sliver(
                     sprite_table_side,
                     sprite,
                     palette_table.sprite_palette(palette_table_index),
                     frame,
                     column,
                     row,
-                    row_in_tile as usize,
+                    row_in_sprite as usize,
                 );
             }
         }

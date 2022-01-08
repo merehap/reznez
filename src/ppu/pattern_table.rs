@@ -45,7 +45,7 @@ impl <'a> PatternTable<'a> {
     // No obvious way to reduce the number of parameters.
     #[allow(clippy::too_many_arguments)]
     #[inline]
-    pub fn render_sprite_tile_sliver(
+    pub fn render_sprite_sliver(
         &self,
         side: PatternTableSide,
         sprite: Sprite,
@@ -53,35 +53,39 @@ impl <'a> PatternTable<'a> {
         frame: &mut Frame,
         column: u8,
         row: u8,
-        row_in_tile: usize,
+        row_in_sprite: usize,
     ) {
         frame.set_tile_sliver_priority(column, row, sprite.priority());
 
         let pattern_index = sprite.pattern_index();
         let index = side as usize + 16 * pattern_index.to_usize();
-        let low_index = index + row_in_tile;
+        let low_index = index + row_in_sprite;
         let high_index = low_index + 8;
 
         let low_byte = self.0[low_index];
         let high_byte = self.0[high_index];
 
         let flip = sprite.flip_horizontally();
-        for column_in_tile in 0..8 {
-            let low_bit = get_bit(low_byte, column_in_tile);
-            let high_bit = get_bit(high_byte, column_in_tile);
+        for column_in_sprite in 0..8 {
+            let low_bit = get_bit(low_byte, column_in_sprite);
+            let high_bit = get_bit(high_byte, column_in_sprite);
             let rgbt = match (low_bit, high_bit) {
                 (false, false) => Rgbt::Transparent,
                 (true , false) => Rgbt::Opaque(palette[PaletteIndex::One]),
                 (false, true ) => Rgbt::Opaque(palette[PaletteIndex::Two]),
                 (true , true ) => Rgbt::Opaque(palette[PaletteIndex::Three]),
             };
-            let column_in_tile =
+            let column_in_sprite =
                 if flip {
-                    7 - column_in_tile
+                    7 - column_in_sprite
                 } else {
-                    column_in_tile
+                    column_in_sprite
                 };
-            frame.set_sprite_pixel(column, row, column_in_tile, rgbt);
+            if column as usize + column_in_sprite as usize >= Frame::WIDTH {
+                break;
+            }
+
+            frame.set_sprite_pixel(column, row, column_in_sprite, rgbt);
         }
     }
 }
