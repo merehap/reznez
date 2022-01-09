@@ -190,11 +190,16 @@ impl Ppu {
 
             if mask.sprites_enabled {
                 self.render_sprites(ctrl, frame);
-                if frame.sprite0_hit() {
-                    println!("Sprite 0 Hit!");
-                    self.status.sprite0_hit = true;
-                }
             }
+        }
+
+        // TODO: Sprite 0 hit needs lots more work.
+        if self.clock.scanline() == self.oam.sprites()[0].y_coordinate() as u16 &&
+            self.clock.cycle() == 340 &&
+            self.clock.cycle() > self.oam.sprites()[0].x_coordinate() as u16 &&
+            mask.sprites_enabled && mask.background_enabled {
+
+            self.status.sprite0_hit = true;
         }
 
         self.clock.tick(self.rendering_enabled(mask));
@@ -212,6 +217,16 @@ impl Ppu {
             &self.pattern_table(),
             background_table_side,
             &palette_table,
+            -(self.x_scroll_offset as i16),
+            -(self.y_scroll_offset as i16),
+            frame,
+        );
+        self.name_table(name_table_number.next_horizontal()).render(
+            &self.pattern_table(),
+            background_table_side,
+            &palette_table,
+            -(self.x_scroll_offset as i16) + 256,
+            -(self.y_scroll_offset as i16),
             frame,
         );
         /*

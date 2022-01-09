@@ -69,6 +69,10 @@ impl Frame {
         self.universal_background_rgb = rgb;
     }
 
+    pub fn clear_background_buffer(&mut self) {
+        self.buffer = [[Rgbt::Transparent; Frame::WIDTH]; Frame::HEIGHT];
+    }
+
     pub fn clear_sprite_buffer(&mut self) {
         self.sprite_buffer = new_sprite_buffer();
     }

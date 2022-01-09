@@ -31,6 +31,8 @@ impl <'a> NameTable<'a> {
         pattern_table: &PatternTable,
         pattern_table_side: PatternTableSide,
         palette_table: &PaletteTable,
+        x_offset: i16,
+        y_offset: i16,
         frame: &mut Frame,
     ) {
         let mut tile_sliver = [Rgbt::Transparent; 8];
@@ -41,16 +43,20 @@ impl <'a> NameTable<'a> {
                 pattern_table.render_tile_sliver(
                     pattern_table_side,
                     pattern_index,
-                    row_in_tile,
+                    row_in_tile as usize,
                     palette_table.background_palette(palette_table_index),
                     &mut tile_sliver,
                 );
 
                 for column_in_tile in 0..8 {
-                    let row = 8 * background_tile_index.row() + row_in_tile as u8;
-                    let column = 8 * background_tile_index.column() as usize + column_in_tile;
-                    frame.background_row(row)[column] =
-                        tile_sliver[column_in_tile];
+                    let column = 8 * background_tile_index.column() as i16 + column_in_tile;
+                    let column: Result<u8, _> = (column + x_offset).try_into();
+                    let row = 8 * background_tile_index.row() as i16 + row_in_tile;
+                    let row: Result<u8, _>  = (row + y_offset).try_into();
+                    if let (Ok(column), Ok(row)) = (column, row) {
+                        frame.background_row(row)[column as usize] =
+                            tile_sliver[column_in_tile as usize];
+                    }
                 }
             }
         }
