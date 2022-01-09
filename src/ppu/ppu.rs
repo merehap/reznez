@@ -2,13 +2,11 @@ use crate::ppu::address::Address;
 use crate::ppu::clock::Clock;
 use crate::ppu::memory;
 use crate::ppu::memory::Memory;
-use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
+use crate::ppu::name_table::name_table::NameTable;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
-use crate::ppu::name_table::view_port::ViewPort;
 use crate::ppu::oam::Oam;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::pattern_table::PatternTable;
-use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
 use crate::ppu::register::mask::Mask;
 use crate::ppu::register::status::Status;
@@ -68,6 +66,12 @@ impl Ppu {
     }
 
     #[inline]
+    pub fn name_table(&self, number: NameTableNumber) -> NameTable {
+        self.memory.name_table(number)
+    }
+
+    /*
+    #[inline]
     pub fn view_port(
         &self,
         number: NameTableNumber,
@@ -101,6 +105,7 @@ impl Ppu {
         }
         */
     }
+*/
 
     pub fn palette_table(&self) -> PaletteTable {
         self.memory.palette_table()
@@ -201,8 +206,15 @@ impl Ppu {
         frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
         let name_table_number = ctrl.name_table_number;
-        let name_table_mirroring = self.memory.name_table_mirroring();
+        let _name_table_mirroring = self.memory.name_table_mirroring();
         let background_table_side = ctrl.background_table_side;
+        self.name_table(name_table_number).render(
+            &self.pattern_table(),
+            background_table_side,
+            &palette_table,
+            frame,
+        );
+        /*
         for background_tile_index in BackgroundTileIndex::iter() {
             let (pattern_index, palette_table_index) =
                 self.view_port(name_table_number, name_table_mirroring)
@@ -220,6 +232,7 @@ impl Ppu {
                 );
             }
         }
+        */
     }
 
     fn render_sprites(&mut self, ctrl: Ctrl, frame: &mut Frame) {

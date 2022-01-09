@@ -17,14 +17,13 @@ impl <'a> PatternTable<'a> {
     }
 
     #[inline]
-    pub fn render_background_tile_sliver(
+    pub fn render_tile_sliver(
         &'a self,
         side: PatternTableSide,
         pattern_index: PatternIndex,
-        column_start_index: u8,
         row_in_tile: usize,
         palette: Palette,
-        frame_row: &mut [Rgbt; Frame::WIDTH],
+        tile_sliver: &mut [Rgbt; 8],
     ) {
         let index = side as usize + PATTERN_SIZE * pattern_index.to_usize();
         let low_index = index + row_in_tile;
@@ -33,10 +32,10 @@ impl <'a> PatternTable<'a> {
         let low_byte = self.0[low_index];
         let high_byte = self.0[high_index];
 
-        for column_in_tile in 0..8 {
+        for (column_in_tile, pixel) in tile_sliver.iter_mut().enumerate() {
             let low_bit = get_bit(low_byte, column_in_tile);
             let high_bit = get_bit(high_byte, column_in_tile);
-            frame_row[column_start_index as usize + column_in_tile] =
+            *pixel =
                 match (low_bit, high_bit) {
                     (false, false) => Rgbt::Transparent,
                     (true , false) => Rgbt::Opaque(palette[PaletteIndex::One]),

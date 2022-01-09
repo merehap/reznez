@@ -208,7 +208,6 @@ impl Nes {
     fn schedule_nmi_if_enabled(&mut self) {
         if self.ppu.nmi_enabled(self.ppu_ctrl()) {
             info!("Scheduling NMI.");
-            // Execute an extra NMI beyond the vblank-start NMI.
             self.cpu.schedule_nmi();
         }
     }

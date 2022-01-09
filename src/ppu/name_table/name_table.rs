@@ -2,8 +2,11 @@ use std::fmt;
 
 use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
 use crate::ppu::name_table::attribute_table::AttributeTable;
+use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
-use crate::ppu::pattern_table::PatternIndex;
+use crate::ppu::palette::rgbt::Rgbt;
+use crate::ppu::pattern_table::{PatternTable, PatternTableSide, PatternIndex};
+use crate::ppu::render::frame::Frame;
 
 const NAME_TABLE_SIZE: usize = 0x400;
 const ATTRIBUTE_START_INDEX: usize = 0x3C0;
@@ -23,8 +26,38 @@ impl <'a> NameTable<'a> {
         }
     }
 
+    pub fn render(
+        &self,
+        pattern_table: &PatternTable,
+        pattern_table_side: PatternTableSide,
+        palette_table: &PaletteTable,
+        frame: &mut Frame,
+    ) {
+        let mut tile_sliver = [Rgbt::Transparent; 8];
+        for background_tile_index in BackgroundTileIndex::iter() {
+            let (pattern_index, palette_table_index) =
+                self.tile_entry_at(background_tile_index);
+            for row_in_tile in 0..8 {
+                pattern_table.render_tile_sliver(
+                    pattern_table_side,
+                    pattern_index,
+                    row_in_tile,
+                    palette_table.background_palette(palette_table_index),
+                    &mut tile_sliver,
+                );
+
+                for column_in_tile in 0..8 {
+                    let row = 8 * background_tile_index.row() + row_in_tile as u8;
+                    let column = 8 * background_tile_index.column() as usize + column_in_tile;
+                    frame.background_row(row)[column] =
+                        tile_sliver[column_in_tile];
+                }
+            }
+        }
+    }
+
     #[inline]
-    pub fn tile_entry_at(
+    fn tile_entry_at(
         &self,
         background_tile_index: BackgroundTileIndex,
     ) -> (PatternIndex, PaletteTableIndex) {
