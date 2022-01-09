@@ -1,5 +1,3 @@
-use std::num::NonZeroU8;
-
 use crate::ppu::address::Address;
 use crate::ppu::clock::Clock;
 use crate::ppu::memory;
@@ -73,10 +71,17 @@ impl Ppu {
     pub fn view_port(
         &self,
         number: NameTableNumber,
-        mirroring: NameTableMirroring,
+        _mirroring: NameTableMirroring,
     ) -> ViewPort {
 
         let base_name_table = self.memory.name_table(number);
+        ViewPort::horizontal(
+            base_name_table,
+            self.memory.name_table(number.next_horizontal()),
+            self.x_scroll_offset,
+        )
+            /*
+
         use NameTableMirroring::*;
         match (mirroring, NonZeroU8::new(self.x_scroll_offset), NonZeroU8::new(self.y_scroll_offset)) {
             (Horizontal, _, Some(y_scroll_offset)) =>
@@ -94,6 +99,7 @@ impl Ppu {
             (FourScreen, _, _) => todo!(),
             _ => ViewPort::base_name_table_only(base_name_table),
         }
+        */
     }
 
     pub fn palette_table(&self) -> PaletteTable {
@@ -207,9 +213,10 @@ impl Ppu {
                 self.pattern_table().render_background_tile_sliver(
                     background_table_side,
                     pattern_index,
+                    pixel_column,
                     row_in_tile as usize,
                     palette_table.background_palette(palette_table_index),
-                    frame.background_tile_sliver(pixel_column, start_row + row_in_tile),
+                    frame.background_row(start_row + row_in_tile),
                 );
             }
         }

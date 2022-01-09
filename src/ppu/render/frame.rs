@@ -74,14 +74,8 @@ impl Frame {
     }
 
     #[inline]
-    pub fn background_tile_sliver(&mut self, column: u8, row: u8) -> &mut [Rgbt; 8] {
-        assert_eq!(column % 8, 0);
-
-        let buffer_row = &mut self.buffer[row as usize];
-        let column_slice = &mut buffer_row[column as usize..column as usize + 8];
-        column_slice
-            .try_into()
-            .unwrap()
+    pub fn background_row(&mut self, row: u8) -> &mut [Rgbt; Frame::WIDTH] {
+        &mut self.buffer[row as usize]
     }
 
     #[inline]

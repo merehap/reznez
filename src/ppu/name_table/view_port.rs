@@ -1,5 +1,3 @@
-use std::num::NonZeroU8;
-
 use crate::ppu::name_table::name_table::NameTable;
 use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
@@ -23,7 +21,7 @@ impl <'a> ViewPort<'a> {
     pub fn horizontal(
         base_name_table: NameTable<'a>,
         right_name_table: NameTable<'a>,
-        scroll_offset: NonZeroU8,
+        scroll_offset: u8,
     ) -> ViewPort<'a> {
 
         let scroll_info = ScrollInfo {
@@ -41,12 +39,12 @@ impl <'a> ViewPort<'a> {
     #[inline]
     pub fn vertical(
         base_name_table: NameTable<'a>,
-        right_name_table: NameTable<'a>,
-        scroll_offset: NonZeroU8,
+        bottom_name_table: NameTable<'a>,
+        scroll_offset: u8,
     ) -> ViewPort<'a> {
 
         let scroll_info = ScrollInfo {
-            other_name_table: right_name_table,
+            other_name_table: bottom_name_table,
             direction: Direction::Down,
             offset: scroll_offset,
         };
@@ -63,32 +61,47 @@ impl <'a> ViewPort<'a> {
         background_tile_index: BackgroundTileIndex,
     ) -> (PatternIndex, PaletteTableIndex) {
 
-        let column = background_tile_index.column();
+        self.base_name_table.tile_entry_at(background_tile_index)
+            /*
+        let column = background_tile_index.column() + 16;
         let row = background_tile_index.row();
+        if let Ok(index) = BackgroundTileIndex::from_column_row(column, row) {
+            self.base_name_table.tile_entry_at(index)
+        } else {
+            self.base_name_table.tile_entry_at(BackgroundTileIndex::from_column_row(0, 0).unwrap())
+        }
+        */
 
+        /*
         if let Some(ScrollInfo {other_name_table, direction, offset}) = &self.scroll_info {
-            let offset = offset.get();
-
             use Direction::{Right, Down};
             let (name_table, column, row) =
-                match (direction, column < offset, row < offset) {
-                    (Right, false, _    ) => (&self.base_name_table, column - offset, row         ),
-                    (Right, true , _    ) => (other_name_table    , offset - column, row         ),
-                    (Down , _    , false) => (&self.base_name_table, column         , row - offset),
-                    (Down , _    , true ) => (other_name_table    , column         , offset - row),
+                match direction {
+                    Right if 8 * column >= *offset => {
+                        (&self.base_name_table, column + offset / 8, row)
+                    },
+                    Right => {
+                        (other_name_table     , column - (255 - offset / 8), row)
+                    },
+                    Down if row >= *offset =>
+                        (&self.base_name_table, column, row + offset),
+                    Down =>
+                        (other_name_table     , column, offset - row),
                 };
             let index = BackgroundTileIndex::from_column_row(column, row).unwrap();
+            println!("Column, Row: {}, {}", column, row);
             name_table.tile_entry_at(index)
         } else {
             self.base_name_table.tile_entry_at(background_tile_index)
         }
+        */
     }
 }
 
 pub struct ScrollInfo<'a> {
     other_name_table: NameTable<'a>,
     direction: Direction,
-    offset: NonZeroU8,
+    offset: u8,
 }
 
 pub enum Direction {
