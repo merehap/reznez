@@ -179,7 +179,10 @@ impl Nes {
 
             // TODO: Reading the status register will clear bit 7 mentioned
             // above and also the address latch used by PPUSCROLL and PPUADDR.
-            (PPUSTATUS, Read) => self.ppu.stop_vblank(),
+            (PPUSTATUS, Read) => {
+                self.ppu.stop_vblank();
+                self.ppu.reset_address_latch();
+            },
             (OAMDATA, Write) => self.write_oam(value),
             (OAM_DMA, Write) =>
                 self.cpu.initiate_dma_transfer(value, 256 - u16::from(self.oam_address())),

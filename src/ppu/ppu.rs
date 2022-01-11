@@ -152,6 +152,11 @@ impl Ppu {
         }
     }
 
+    pub fn reset_address_latch(&mut self) {
+        self.next_vram_upper_byte = None;
+        self.pending_x_scroll_offset = None;
+    }
+
     pub fn nmi_enabled(&self, ctrl: Ctrl) -> bool {
         self.is_nmi_period && ctrl.vblank_nmi == VBlankNmi::On
     }
