@@ -3,7 +3,7 @@ use std::ops::Index;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::rgb::Rgb;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Palette([Rgb; 3]);
 
 impl Palette {

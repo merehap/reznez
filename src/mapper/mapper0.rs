@@ -1,7 +1,6 @@
 use crate::cartridge::INes;
 use crate::cpu::address::Address as CpuAddress;
 use crate::cpu::memory::Memory as CpuMem;
-use crate::ppu::address::Address as PpuAddress;
 use crate::ppu::memory::Memory as PpuMem;
 
 pub struct Mapper0;
@@ -46,11 +45,8 @@ impl Mapper0 {
             high_address.inc();
         }
 
-        let chr_rom = ines.chr_rom();
-        let mut address = PpuAddress::from_u16(0);
-        for &byte in chr_rom.iter().take(0x2000) {
-            ppu_mem[address] = byte;
-            address.inc();
+        if !ines.chr_rom().is_empty() {
+            ppu_mem.load_chr(ines.chr_rom()[0x0..0x2000].try_into().unwrap());
         }
 
         Ok(())

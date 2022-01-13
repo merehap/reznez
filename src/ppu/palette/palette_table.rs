@@ -4,6 +4,7 @@ use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::palette::system_palette::SystemPalette;
 
+#[derive(Debug)]
 pub struct PaletteTable {
     universal_background_rgb: Rgb,
     background_palettes: [Palette; 4],

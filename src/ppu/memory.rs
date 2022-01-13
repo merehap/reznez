@@ -47,6 +47,12 @@ impl Memory {
         }
     }
 
+    pub fn load_chr(&mut self, raw: &[u8; 0x2000]) {
+        for (i, byte) in raw.iter().enumerate() {
+            self.memory[i] = *byte;
+        }
+    }
+
     #[inline]
     pub fn name_table_mirroring(&self) -> NameTableMirroring {
         self.name_table_mirroring
@@ -71,6 +77,7 @@ impl Memory {
         PaletteTable::new(raw.try_into().unwrap(), &self.system_palette)
     }
 
+    // CAUTION: This ignores memory mirroring (other than for start_address).
     fn slice(&self, start_address: Address, length: u16) -> &[u8] {
         let start_address =
             self.map_if_name_table_address(start_address).to_u16() as usize;
