@@ -111,8 +111,8 @@ impl Cpu {
         self.nmi_pending = true;
     }
 
-    pub fn initiate_dma_transfer(&mut self, memory_page: u8, size: u16) {
-        self.dma_transfer = DmaTransfer::new(memory_page, size, self.cycle);
+    pub fn initiate_dma_transfer(&mut self, memory_page: u8, oam_start_address: u8) {
+        self.dma_transfer = DmaTransfer::new(memory_page, oam_start_address, self.cycle);
     }
 
     pub fn step(&mut self) -> StepResult {
@@ -123,8 +123,8 @@ impl Cpu {
         match self.dma_transfer.step() {
             DmaTransferState::Finished =>
                 {/* No transfer in progress. Continue to normal CPU step.*/},
-            DmaTransferState::Write(address) =>
-                return StepResult::DmaWrite(self.memory.read(address)),
+            DmaTransferState::Write(cpu_address, oam_address) =>
+                return StepResult::DmaWrite(oam_address, self.memory.read(cpu_address)),
             _ =>
                 return StepResult::Nop,
         }
@@ -488,5 +488,5 @@ pub enum ProgramCounterSource {
 pub enum StepResult {
     Nop,
     InstructionComplete(Instruction),
-    DmaWrite(u8),
+    DmaWrite(u8, u8),
 }

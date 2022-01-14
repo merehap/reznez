@@ -38,7 +38,7 @@ impl Nes {
         let (cpu_mem, ppu_mem) = Nes::initialize_memory(
             &config.ines,
             config.system_palette.clone(),
-            );
+        );
 
         Nes {
             cpu: Cpu::new(cpu_mem, config.program_counter_source),
@@ -113,7 +113,8 @@ impl Nes {
             match self.cpu.step() {
                 StepResult::Nop => {},
                 StepResult::InstructionComplete(inst) => instruction = Some(inst),
-                StepResult::DmaWrite(value) => self.write_oam(value),
+                StepResult::DmaWrite(oamaddr, value) =>
+                    self.ppu.write_oam(oamaddr, value),
             }
 
             if let Some(port_access) = self.cpu.memory.latch() {
@@ -185,7 +186,7 @@ impl Nes {
             },
             (OAMDATA, Write) => self.write_oam(value),
             (OAM_DMA, Write) =>
-                self.cpu.initiate_dma_transfer(value, 256 - u16::from(self.oam_address())),
+                self.cpu.initiate_dma_transfer(value, self.oam_address()),
             (PPUADDR, Write) => self.ppu.write_partial_vram_address(value),
             (PPUDATA, Read) => self.ppu.update_vram_data(self.ppu_ctrl()),
             (PPUDATA, Write) => self.ppu.write_vram(self.ppu_ctrl(), value),
