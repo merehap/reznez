@@ -190,10 +190,7 @@ impl Nes {
             (PPUADDR, Write) => self.ppu.write_partial_vram_address(value),
             (PPUDATA, Read) => self.ppu.update_vram_data(self.ppu_ctrl()),
             (PPUDATA, Write) => self.ppu.write_vram(self.ppu_ctrl(), value),
-            (PPUSCROLL, Write) => {
-                println!("Base nametable: {:?}", self.ppu_ctrl().name_table_number);
-                self.ppu.write_scroll_dimension(value);
-            },
+            (PPUSCROLL, Write) => self.ppu.write_scroll_dimension(value),
 
             // Now that the ROM has read a button status, advance to the next status.
             (JOYSTICK_1_PORT, Read) => self.joypad_1.select_next_button(),

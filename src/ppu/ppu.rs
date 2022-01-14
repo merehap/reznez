@@ -144,10 +144,8 @@ impl Ppu {
         if let Some(x_scroll_offset) = self.address_latch {
             self.x_scroll_offset = x_scroll_offset;
             self.y_scroll_offset = dimension;
-            println!("Writing Y Scroll: {}", dimension);
             self.address_latch = None;
         } else {
-            println!("Writing X Scroll: {}", dimension);
             self.address_latch = Some(dimension);
         }
     }

@@ -43,7 +43,6 @@ fn framematch() {
                 if let Some(frame_index) = frame_index {
                     let ppm = Ppm::from_bytes(&fs::read(ppm_path).unwrap()).unwrap();
                     let hash = calculate_hash(&ppm);
-                    println!("{} hash {}: {}", rom_name, frame_index, hash);
                     frame_hashes.insert(frame_index, hash);
                 }
             }
@@ -66,20 +65,23 @@ fn framematch() {
         }
     }
 
+    let mut failed = false;
     for FrameHashData {rom_name, mut nes, frame_hashes} in frame_hash_data {
         let mut gui = Box::new(NoGui::initialize()) as Box<dyn Gui>;
-        println!("FRAMEMATCH TEST: TESTING EXPECTED FRAMES FOR {}.", rom_name);
+        println!("FRAMEMATCH TEST: testing against expected frames for {}.", rom_name);
         let max_frame_index = frame_hashes.keys().last().unwrap();
         for frame_index in 0..=*max_frame_index {
             nes.step_frame(&mut *gui);
             if let Some(expected_hash) = frame_hashes.get(&frame_index) {
                 println!(
-                    "\tCHECKING ACTUAL HASH VS EXPECTED HASH FOR FRAME {}.",
+                    "\tChecking actual hash vs expected hash for frame {}.",
                     frame_index,
                 );
                 let actual_ppm = &gui.frame_mut().to_ppm();
                 let actual_hash = calculate_hash(&actual_ppm);
                 if actual_hash != *expected_hash {
+                    failed = true;
+
                     let actual_ppm_path = format!(
                         "{}_actual_frame_{:03}.ppm",
                         rom_name,
@@ -89,17 +91,18 @@ fn framematch() {
                         actual_ppm_path.clone(),
                         gui.frame_mut().to_ppm().to_bytes(),
                     ).unwrap();
-                    panic!(
-                        "Actual hash {} didn't match expected hash {}. See {}.",
+                    println!(
+                        "\t\tActual hash {} didn't match expected hash {}. See {}.",
                         actual_hash,
                         expected_hash,
                         actual_ppm_path,
                     );
                 }
-                assert_eq!(*expected_hash, actual_hash);
             }
         }
     }
+
+    assert!(!failed);
 }
 
 struct FrameHashData {
