@@ -23,11 +23,10 @@ pub struct Ppu {
     clock: Clock,
 
     is_nmi_period: bool,
+    address_latch: Option<u8>,
     vram_address: Address,
-    next_vram_upper_byte: Option<u8>,
     vram_data: u8,
 
-    pending_x_scroll_offset: Option<u8>,
     x_scroll_offset: u8,
     y_scroll_offset: u8,
 }
@@ -43,10 +42,11 @@ impl Ppu {
 
             // TODO: Is this the same as vblank_active?
             is_nmi_period: false,
+            address_latch: None,
+
             vram_address: Address::from_u16(0),
-            next_vram_upper_byte: None,
             vram_data: 0,
-            pending_x_scroll_offset: None,
+
             x_scroll_offset: 0,
             y_scroll_offset: 0,
         }
@@ -132,29 +132,28 @@ impl Ppu {
     }
 
     pub fn write_partial_vram_address(&mut self, value: u8) {
-        if let Some(upper) = self.next_vram_upper_byte {
+        if let Some(upper) = self.address_latch {
             self.vram_address = Address::from_u16((u16::from(upper) << 8) + u16::from(value));
-            self.next_vram_upper_byte = None;
+            self.address_latch = None;
         } else {
-            self.next_vram_upper_byte = Some(value);
+            self.address_latch = Some(value);
         }
     }
 
     pub fn write_scroll_dimension(&mut self, dimension: u8) {
-        if let Some(x_scroll_offset) = self.pending_x_scroll_offset {
+        if let Some(x_scroll_offset) = self.address_latch {
             self.x_scroll_offset = x_scroll_offset;
             self.y_scroll_offset = dimension;
             println!("Writing Y Scroll: {}", dimension);
-            self.pending_x_scroll_offset = None;
+            self.address_latch = None;
         } else {
             println!("Writing X Scroll: {}", dimension);
-            self.pending_x_scroll_offset = Some(dimension);
+            self.address_latch = Some(dimension);
         }
     }
 
     pub fn reset_address_latch(&mut self) {
-        self.next_vram_upper_byte = None;
-        self.pending_x_scroll_offset = None;
+        self.address_latch = None;
     }
 
     pub fn nmi_enabled(&self, ctrl: Ctrl) -> bool {
@@ -234,25 +233,6 @@ impl Ppu {
             -(self.y_scroll_offset as i16),
             frame,
         );
-        /*
-        for background_tile_index in BackgroundTileIndex::iter() {
-            let (pattern_index, palette_table_index) =
-                self.view_port(name_table_number, name_table_mirroring)
-                    .tile_entry_at(background_tile_index);
-            let pixel_column = 8 * background_tile_index.column();
-            let start_row = 8 * background_tile_index.row();
-            for row_in_tile in 0..8 {
-                self.pattern_table().render_background_tile_sliver(
-                    background_table_side,
-                    pattern_index,
-                    pixel_column,
-                    row_in_tile as usize,
-                    palette_table.background_palette(palette_table_index),
-                    frame.background_row(start_row + row_in_tile),
-                );
-            }
-        }
-        */
     }
 
     fn render_sprites(&mut self, ctrl: Ctrl, frame: &mut Frame) {
