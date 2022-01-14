@@ -14,12 +14,10 @@ impl DmaTransfer {
         oam_start_address: u8,
         current_cycle: u64,
     ) -> DmaTransfer {
-        let size = 256 - u16::from(oam_start_address);
-
         DmaTransfer {
             current_cpu_address: Address::from_low_high(0, page),
             current_oam_address: oam_start_address,
-            remaining_byte_count: size,
+            remaining_byte_count: 256,
             should_fix_cycle_alignment: current_cycle % 2 == 1,
             next_state: DmaTransferState::WaitOnPreviousWrite,
         }
@@ -35,8 +33,6 @@ impl DmaTransfer {
         }
     }
 
-    // TODO: Determine if the full 513/514 cycles must occur even if we
-    // aren't transfering the maximum amount of OAM (256 bytes).
     pub fn step(&mut self) -> DmaTransferState {
         let current_state = self.next_state;
 
