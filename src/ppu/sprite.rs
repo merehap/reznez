@@ -14,6 +14,7 @@ pub struct Sprite {
 }
 
 impl Sprite {
+    #[inline]
     pub fn from_u32(value: u32) -> Sprite {
         let [y_coordinate, raw_pattern_index, attribute, x_coordinate] =
             value.to_be_bytes();

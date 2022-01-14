@@ -195,10 +195,11 @@ impl Ppu {
             }
         }
 
+        let sprite_0 = self.oam.sprite_0();
         // TODO: Sprite 0 hit needs lots more work.
-        if self.clock.scanline() == self.oam.sprites()[0].y_coordinate() as u16 &&
+        if self.clock.scanline() == sprite_0.y_coordinate() as u16 &&
             self.clock.cycle() == 340 &&
-            self.clock.cycle() > self.oam.sprites()[0].x_coordinate() as u16 &&
+            self.clock.cycle() > sprite_0.x_coordinate() as u16 &&
             mask.sprites_enabled && mask.background_enabled {
 
             self.status.sprite0_hit = true;
