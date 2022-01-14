@@ -76,9 +76,9 @@ pub enum Priority {
 impl From<bool> for Priority {
     fn from(value: bool) -> Self {
         if value {
-            Priority::InFront
-        } else {
             Priority::Behind
+        } else {
+            Priority::InFront
         }
     }
 }
