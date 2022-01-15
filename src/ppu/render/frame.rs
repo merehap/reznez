@@ -106,7 +106,11 @@ impl Frame {
             self.sprite0_hit = true;
         }
 
-        self.sprite_buffer[row as usize][(column / 8) as usize].0[column_in_sprite] = rgbt;
+        let row = row as usize;
+        let column = column as usize / 8;
+        if rgbt.is_opaque() {
+            self.sprite_buffer[row][column].0[column_in_sprite] = rgbt;
+        }
     }
 
     pub fn sprite0_hit(&self) -> bool {
