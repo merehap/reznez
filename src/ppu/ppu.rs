@@ -240,7 +240,8 @@ impl Ppu {
         let palette_table = self.memory.palette_table();
         let sprite_table_side = ctrl.sprite_table_side;
         let sprites = self.oam.sprites();
-        for i in 0..sprites.len() {
+        // Lower index sprites are drawn on top of higher index sprites.
+        for i in (0..sprites.len()).rev() {
             let sprite = sprites[i];
             let is_sprite_0 = i == 0;
             let column = sprite.x_coordinate();
