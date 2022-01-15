@@ -29,6 +29,7 @@ fn framematch() {
 
     let mut frame_hash_data = Vec::new();
     for frame_directory in frame_directories {
+        println!("Frame directory: {}", frame_directory.as_path().display());
         let mut rom_path_vec: Vec<_> = frame_directory.into_iter().collect();
         rom_path_vec[1] = OsStr::new("roms");
         let mut rom_path: PathBuf = rom_path_vec.into_iter().collect();
@@ -41,7 +42,7 @@ fn framematch() {
         let mut frame_hashes = BTreeMap::new();
         for ppm_entry in fs::read_dir(frame_directory.clone()).unwrap() {
             let ppm_path = ppm_entry.unwrap().path();
-            println!("PPM Path: {}", ppm_path.to_str().unwrap());
+            println!("\tPPM Path: {}", ppm_path.to_str().unwrap());
             let ppm_file_name = ppm_path.file_name().unwrap().to_str().unwrap();
             let frame_index = sscanf::scanf!(ppm_file_name, "frame{}.ppm", u16);
 
