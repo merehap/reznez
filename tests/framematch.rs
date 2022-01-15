@@ -1,11 +1,13 @@
 extern crate reznez;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
+use std::ffi::OsStr;
 use std::fs;
 use std::fs::File;
 use std::path::PathBuf;
 
 use sscanf;
+use walkdir::WalkDir;
 
 use reznez::config::{Config, Opt, GuiType};
 use reznez::gui::gui::Gui;
@@ -18,51 +20,54 @@ use reznez::util::hash_util::calculate_hash;
 #[test]
 fn framematch() {
     println!("FRAMEMATCH TEST: LOADING EXPECTED_FRAMES PPMS AND ROMS.");
+    let frame_directories: BTreeSet<_> = WalkDir::new("tests/expected_frames")
+        .into_iter()
+        .map(|entry| entry.unwrap().path().to_path_buf())
+        .filter(|path| path.extension() == Some(OsStr::new("ppm")))
+        .map(|path| path.parent().unwrap().to_path_buf())
+        .collect();
+
     let mut frame_hash_data = Vec::new();
-    for entry in fs::read_dir("tests/expected_frames").unwrap() {
-        let frame_directory = entry.unwrap().path();
-        if frame_directory.is_dir() {
-            let rom_name: String = frame_directory
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string();
-            let rom_path = PathBuf::from(format!("tests/roms/{}.nes", rom_name.clone()));
-            if File::open(rom_path.clone()).is_err() {
-                continue;
-            }
-
-            let mut frame_hashes = BTreeMap::new();
-            for ppm_entry in fs::read_dir(frame_directory).unwrap() {
-                let ppm_path = ppm_entry.unwrap().path();
-                println!("PPM Path: {}", ppm_path.to_str().unwrap());
-                let ppm_file_name = ppm_path.file_name().unwrap().to_str().unwrap();
-                let frame_index = sscanf::scanf!(ppm_file_name, "frame{}.ppm", u16);
-
-                if let Some(frame_index) = frame_index {
-                    let ppm = Ppm::from_bytes(&fs::read(ppm_path).unwrap()).unwrap();
-                    let hash = calculate_hash(&ppm);
-                    frame_hashes.insert(frame_index, hash);
-                }
-            }
-
-            if frame_hashes.is_empty() {
-                continue;
-            }
-
-            let opt = Opt {
-                rom_path,
-                gui: GuiType::NoGui,
-                stop_frame: None,
-                target_frame_rate: TargetFrameRate::Unbounded,
-                override_program_counter: None,
-                log_cpu: false,
-            };
-
-            let nes = Nes::new(&Config::new(&opt));
-            frame_hash_data.push(FrameHashData {rom_name, nes, frame_hashes});
+    for frame_directory in frame_directories {
+        let mut rom_path_vec: Vec<_> = frame_directory.into_iter().collect();
+        rom_path_vec[1] = OsStr::new("roms");
+        let mut rom_path: PathBuf = rom_path_vec.into_iter().collect();
+        rom_path.set_extension("nes");
+        if File::open(rom_path.clone()).is_err() {
+            // Some ROMs aren't committed due to copyright.
+            continue;
         }
+
+        let mut frame_hashes = BTreeMap::new();
+        for ppm_entry in fs::read_dir(frame_directory.clone()).unwrap() {
+            let ppm_path = ppm_entry.unwrap().path();
+            println!("PPM Path: {}", ppm_path.to_str().unwrap());
+            let ppm_file_name = ppm_path.file_name().unwrap().to_str().unwrap();
+            let frame_index = sscanf::scanf!(ppm_file_name, "frame{}.ppm", u16);
+
+            if let Some(frame_index) = frame_index {
+                let ppm = Ppm::from_bytes(&fs::read(ppm_path).unwrap()).unwrap();
+                let hash = calculate_hash(&ppm);
+                frame_hashes.insert(frame_index, hash);
+            }
+        }
+
+        if frame_hashes.is_empty() {
+            continue;
+        }
+
+        let opt = Opt {
+            rom_path,
+            gui: GuiType::NoGui,
+            stop_frame: None,
+            target_frame_rate: TargetFrameRate::Unbounded,
+            override_program_counter: None,
+            log_cpu: false,
+        };
+
+        let nes = Nes::new(&Config::new(&opt));
+        let rom_name = frame_directory.file_stem().unwrap().to_str().unwrap().to_string();
+        frame_hash_data.push(FrameHashData {rom_name, nes, frame_hashes});
     }
 
     let mut failed = false;
