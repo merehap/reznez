@@ -22,7 +22,6 @@ pub struct Ppu {
 
     clock: Clock,
 
-    is_nmi_period: bool,
     address_latch: Option<u8>,
     vram_address: Address,
     vram_data: u8,
@@ -40,8 +39,6 @@ impl Ppu {
 
             clock: Clock::new(),
 
-            // TODO: Is this the same as vblank_active?
-            is_nmi_period: false,
             address_latch: None,
 
             vram_address: Address::from_u16(0),
@@ -69,43 +66,6 @@ impl Ppu {
     pub fn name_table(&self, number: NameTableNumber) -> NameTable {
         self.memory.name_table(number)
     }
-
-    /*
-    #[inline]
-    pub fn view_port(
-        &self,
-        number: NameTableNumber,
-        _mirroring: NameTableMirroring,
-    ) -> ViewPort {
-
-        let base_name_table = self.memory.name_table(number);
-        ViewPort::horizontal(
-            base_name_table,
-            self.memory.name_table(number.next_horizontal()),
-            self.x_scroll_offset,
-        )
-            /*
-
-        use NameTableMirroring::*;
-        match (mirroring, NonZeroU8::new(self.x_scroll_offset), NonZeroU8::new(self.y_scroll_offset)) {
-            (Horizontal, _, Some(y_scroll_offset)) =>
-                ViewPort::vertical(
-                    base_name_table,
-                    self.memory.name_table(number.next_vertical()),
-                    y_scroll_offset,
-                ),
-            (Vertical, Some(x_scroll_offset), _) =>
-                ViewPort::horizontal(
-                    base_name_table,
-                    self.memory.name_table(number.next_horizontal()),
-                    x_scroll_offset,
-                ),
-            (FourScreen, _, _) => todo!(),
-            _ => ViewPort::base_name_table_only(base_name_table),
-        }
-        */
-    }
-*/
 
     pub fn palette_table(&self) -> PaletteTable {
         self.memory.palette_table()
@@ -155,7 +115,7 @@ impl Ppu {
     }
 
     pub fn nmi_enabled(&self, ctrl: Ctrl) -> bool {
-        self.is_nmi_period && ctrl.vblank_nmi == VBlankNmi::On
+        self.status.vblank_active && ctrl.vblank_nmi == VBlankNmi::On
     }
 
     pub fn step(&mut self, ctrl: Ctrl, mask: Mask, frame: &mut Frame) -> StepResult {
@@ -178,11 +138,9 @@ impl Ppu {
         } else if total_cycles < SECOND_VBLANK_CYCLE {
             // Do nothing.
         } else if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
-            self.is_nmi_period = true;
             self.status.vblank_active = true;
             step_result.nmi_trigger = true;
         } else if self.clock.scanline() == 261 && self.clock.cycle() == 1 {
-            self.is_nmi_period = false;
             self.status.vblank_active = false;
             self.status.sprite0_hit = false;
         } else if self.clock.scanline() == 1 && self.clock.cycle() == 1 {
@@ -275,7 +233,7 @@ impl Ppu {
     }
 
     pub fn stop_vblank(&mut self) {
-        self.status.vblank_active = false;
+        //self.status.vblank_active = false;
     }
 
     fn rendering_enabled(&self, mask: Mask) -> bool {
