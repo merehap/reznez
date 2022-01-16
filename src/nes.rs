@@ -1,7 +1,7 @@
 use std::ops::Add;
 use std::time::{Duration, SystemTime};
 
-use log::info;
+use log::{info, warn};
 
 use crate::cartridge::INes;
 use crate::config::Config;
@@ -100,6 +100,8 @@ impl Nes {
         let end_time = SystemTime::now();
         if let Ok(duration) = end_time.duration_since(start_time) {
             info!("Framerate: {}", 1_000_000_000.0 / duration.as_nanos() as f64);
+        } else {
+            warn!("Unknown framerate. System clock went backwards.");
         }
 
         if events.should_quit || Some(frame_index) == self.stop_frame {
@@ -122,12 +124,13 @@ impl Nes {
             }
         }
 
-        let step_result = self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), frame);
+        // TODO: Why do we need to access PPUSTATUS before Ppu.step()?
+        *self.cpu.memory.bus_access_mut(PPUSTATUS) = self.ppu.status().to_u8();
+        self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), frame);
         *self.cpu.memory.bus_access_mut(OAMDATA) = self.ppu.read_oam(self.oam_address());
-        *self.cpu.memory.bus_access_mut(PPUSTATUS) = step_result.status().to_u8();
-        *self.cpu.memory.bus_access_mut(PPUDATA) = step_result.vram_data();
+        *self.cpu.memory.bus_access_mut(PPUDATA) = self.ppu.vram_data();
 
-        if step_result.nmi_trigger() {
+        if self.ppu.vblank_just_started() {
             self.schedule_nmi_if_allowed();
         }
 
@@ -147,7 +150,6 @@ impl Nes {
         }
 
         let mut cpu_mem = CpuMem::new();
-
         let mut ppu_mem = PpuMem::new(ines.name_table_mirroring(), system_palette);
 
         let mapper = Mapper0::new();

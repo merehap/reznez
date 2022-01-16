@@ -1,6 +1,6 @@
 use crate::ppu::address::Address;
 use crate::ppu::clock::Clock;
-use crate::ppu::memory;
+use crate::ppu;
 use crate::ppu::memory::Memory;
 use crate::ppu::name_table::name_table::NameTable;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
@@ -28,6 +28,8 @@ pub struct Ppu {
 
     x_scroll_offset: u8,
     y_scroll_offset: u8,
+
+    vblank_just_started: bool,
 }
 
 impl Ppu {
@@ -46,6 +48,8 @@ impl Ppu {
 
             x_scroll_offset: 0,
             y_scroll_offset: 0,
+
+            vblank_just_started: false,
         }
     }
 
@@ -77,6 +81,16 @@ impl Ppu {
 
     pub fn write_oam(&mut self, oam_address: u8, value: u8) {
         self.oam[oam_address] = value;
+    }
+
+    pub fn vram_data(&self) -> u8 {
+        // When reading palette data only, read the current data pointed to
+        // by self.vram_address, not what was previously pointed to.
+        if self.vram_address >= ppu::memory::PALETTE_TABLE_START {
+            self.memory[self.vram_address]
+        } else {
+            self.vram_data
+        }
     }
 
     pub fn update_vram_data(&mut self, ctrl: Ctrl) {
@@ -118,28 +132,28 @@ impl Ppu {
         self.status.vblank_active && ctrl.nmi_enabled
     }
 
-    pub fn step(&mut self, ctrl: Ctrl, mask: Mask, frame: &mut Frame) -> StepResult {
-        let total_cycles = self.clock().total_cycles();
-        let mut step_result = StepResult {
-            status: self.status,
-            vram_data: self.vram_data,
-            nmi_trigger: false,
-        };
+    pub fn vblank_just_started(&self) -> bool {
+        self.vblank_just_started
+    }
 
-        // When reading palette data only, read the current data pointed to
-        // by self.vram_address, not what was previously pointed to.
-        if self.vram_address >= memory::PALETTE_TABLE_START {
-            step_result.vram_data = self.memory[self.vram_address];
-        }
+    pub fn stop_vblank(&mut self) {
+        self.status.vblank_active = false;
+    }
+
+    pub fn step(&mut self, ctrl: Ctrl, mask: Mask, frame: &mut Frame) {
+        let total_cycles = self.clock().total_cycles();
+        self.vblank_just_started = false;
 
         // TODO: Fix the first and second vblank cycles to not be special-cased if possible.
         if total_cycles == FIRST_VBLANK_CYCLE || total_cycles == SECOND_VBLANK_CYCLE {
-            step_result.nmi_trigger = true;
+            // TODO: Why don't we have the following enabled here?
+            // self.status.vblank_active = true;
+            self.vblank_just_started = true;
         } else if total_cycles < SECOND_VBLANK_CYCLE {
             // Do nothing.
         } else if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
             self.status.vblank_active = true;
-            step_result.nmi_trigger = true;
+            self.vblank_just_started = true;
         } else if self.clock.scanline() == 261 && self.clock.cycle() == 1 {
             self.status.vblank_active = false;
             self.status.sprite0_hit = false;
@@ -164,7 +178,6 @@ impl Ppu {
         }
 
         self.clock.tick(self.rendering_enabled(mask));
-        step_result
     }
 
     fn render_background(&mut self, ctrl: Ctrl, frame: &mut Frame) {
@@ -232,48 +245,7 @@ impl Ppu {
         }
     }
 
-    pub fn stop_vblank(&mut self) {
-        self.status.vblank_active = false;
-    }
-
     fn rendering_enabled(&self, mask: Mask) -> bool {
         mask.sprites_enabled || mask.background_enabled
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct StepResult {
-    status: Status,
-    vram_data: u8,
-    nmi_trigger: bool,
-}
-
-impl StepResult {
-    pub fn normal(status: Status, vram_data: u8) -> StepResult {
-        StepResult {
-            status,
-            nmi_trigger: false,
-            vram_data,
-        }
-    }
-
-    pub fn trigger_nmi(status: Status, vram_data: u8) -> StepResult {
-        StepResult {
-            status,
-            nmi_trigger: true,
-            vram_data,
-        }
-    }
-
-    pub fn status(self) -> Status {
-        self.status
-    }
-
-    pub fn vram_data(self) -> u8 {
-        self.vram_data
-    }
-
-    pub fn nmi_trigger(self) -> bool {
-        self.nmi_trigger
     }
 }

@@ -71,6 +71,8 @@ fn framematch() {
         frame_hash_data.push(FrameHashData {rom_name, nes, frame_hashes});
     }
 
+    println!();
+
     let mut failed = false;
     for FrameHashData {rom_name, mut nes, frame_hashes} in frame_hash_data {
         let mut gui = Box::new(NoGui::initialize()) as Box<dyn Gui>;
