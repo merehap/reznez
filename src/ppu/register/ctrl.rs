@@ -4,7 +4,7 @@ use crate::util::bit_util::{get_bit, pack_bools};
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Ctrl {
-    pub vblank_nmi: VBlankNmi,
+    pub nmi_enabled: bool,
     pub ext_pin_role: ExtPinRole,
     pub sprite_width: SpriteWidth,
     pub background_table_side: PatternTableSide,
@@ -16,7 +16,7 @@ pub struct Ctrl {
 impl Ctrl {
     pub fn new() -> Ctrl {
         Ctrl {
-            vblank_nmi: VBlankNmi::Off,
+            nmi_enabled: false,
             ext_pin_role: ExtPinRole::Read,
             sprite_width: SpriteWidth::Normal,
             background_table_side: PatternTableSide::Left,
@@ -28,12 +28,7 @@ impl Ctrl {
 
     pub fn from_u8(value: u8) -> Ctrl {
         Ctrl {
-            vblank_nmi:
-                if get_bit(value, 0) {
-                    VBlankNmi::On
-                } else {
-                    VBlankNmi::Off
-                },
+            nmi_enabled: get_bit(value, 0),
             ext_pin_role:
                 if get_bit(value, 1) {
                     ExtPinRole::Write
@@ -78,7 +73,7 @@ impl Ctrl {
     pub fn to_u8(self) -> u8 {
         pack_bools(
             [
-                self.vblank_nmi == VBlankNmi::On,
+                self.nmi_enabled,
                 self.ext_pin_role == ExtPinRole::Write,
                 self.sprite_width == SpriteWidth::Wide,
                 self.background_table_side == PatternTableSide::Right,
@@ -89,12 +84,6 @@ impl Ctrl {
             ]
         )
     }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum VBlankNmi {
-    Off,
-    On,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

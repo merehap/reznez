@@ -16,7 +16,7 @@ use crate::mapper::mapper0::Mapper0;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::memory::Memory as PpuMem;
-use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
+use crate::ppu::register::ctrl::Ctrl;
 use crate::ppu::register::mask::Mask;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::render::frame_rate::TargetFrameRate;
@@ -26,7 +26,7 @@ pub struct Nes {
     ppu: Ppu,
     pub joypad_1: Joypad,
     pub joypad_2: Joypad,
-    old_vblank_nmi: VBlankNmi,
+    nmi_was_enabled: bool,
     cycle: u64,
 
     target_frame_rate: TargetFrameRate,
@@ -45,7 +45,7 @@ impl Nes {
             ppu: Ppu::new(ppu_mem),
             joypad_1: Joypad::new(),
             joypad_2: Joypad::new(),
-            old_vblank_nmi: VBlankNmi::Off,
+            nmi_was_enabled: false,
             cycle: 0,
 
             target_frame_rate: config.target_frame_rate,
@@ -128,7 +128,7 @@ impl Nes {
         *self.cpu.memory.bus_access_mut(PPUDATA) = step_result.vram_data();
 
         if step_result.nmi_trigger() {
-            self.schedule_nmi_if_enabled();
+            self.schedule_nmi_if_allowed();
         }
 
         let status = self.joypad_1.selected_button_status() as u8;
@@ -169,13 +169,13 @@ impl Nes {
             (OAMDATA, Read) => {},
 
             (PPUCTRL, Write) => {
-                let new_vblank_nmi = self.ppu_ctrl().vblank_nmi;
-                 // A second NMI can only be scheduled if VBlankNmi was toggled.
-                if self.old_vblank_nmi == VBlankNmi::Off && new_vblank_nmi == VBlankNmi::On {
-                    self.schedule_nmi_if_enabled();
+                // A second NMI can only be scheduled if VBlankNmi was
+                // disabled last cycle.
+                if !self.nmi_was_enabled {
+                    self.schedule_nmi_if_allowed();
                 }
 
-                self.old_vblank_nmi = new_vblank_nmi;
+                self.nmi_was_enabled = self.ppu_ctrl().nmi_enabled;
             },
 
             // TODO: Reading the status register will clear bit 7 mentioned
@@ -209,8 +209,8 @@ impl Nes {
         }
     }
 
-    fn schedule_nmi_if_enabled(&mut self) {
-        if self.ppu.nmi_enabled(self.ppu_ctrl()) {
+    fn schedule_nmi_if_allowed(&mut self) {
+        if self.ppu.can_generate_nmi(self.ppu_ctrl()) {
             info!("Scheduling NMI.");
             self.cpu.schedule_nmi();
         }
@@ -277,7 +277,7 @@ mod tests {
         assert!(
             !nes.cpu.nmi_pending(),
             "nmi_pending should have been cleared after one instruction."
-            );
+        );
 
         // Disable vblank_nmi.
         write_ppuctrl_through_opcode_injection(&mut nes, 0b0000_0000);
@@ -285,7 +285,7 @@ mod tests {
         assert!(
             !nes.cpu.nmi_pending(),
             "A second NMI should not have been allowed without toggling CTRL.0 .",
-            );
+        );
     }
 
     #[test]
@@ -301,7 +301,7 @@ mod tests {
         assert!(
             !nes.cpu.nmi_pending(),
             "nmi_pending should have been cleared after one instruction."
-            );
+        );
 
         // Disable vblank_nmi.
         write_ppuctrl_through_opcode_injection(&mut nes, 0b0000_0000);
@@ -311,7 +311,7 @@ mod tests {
         assert!(
             nes.cpu.nmi_pending(),
             "A second NMI should have been allowed after toggling CTRL.0 .",
-            );
+        );
     }
 
     fn sample_nes() -> Nes {
@@ -328,7 +328,7 @@ mod tests {
             ppu: Ppu::new(ppu_mem),
             joypad_1: Joypad::new(),
             joypad_2: Joypad::new(),
-            old_vblank_nmi: VBlankNmi::Off,
+            nmi_was_enabled: false,
             cycle: 0,
 
             target_frame_rate: TargetFrameRate::Unbounded,
@@ -338,11 +338,11 @@ mod tests {
 
     fn step_until_vblank_nmi_enabled(nes: &mut Nes) {
         let mut ctrl = Ctrl::from_u8(*nes.cpu.memory.bus_access(PPUCTRL));
-        ctrl.vblank_nmi = VBlankNmi::On;
+        ctrl.nmi_enabled = true;
         *nes.cpu.memory.bus_access_mut(PPUCTRL) = ctrl.to_u8();
 
         let mut frame = Frame::new();
-        while !nes.ppu.nmi_enabled(nes.ppu_ctrl()) {
+        while !nes.ppu.can_generate_nmi(nes.ppu_ctrl()) {
             assert!(!nes.cpu.nmi_pending(), "NMI must not be pending before one is scheduled.");
             nes.step(&mut frame);
             if nes.ppu.clock().total_cycles() > 200_000 {

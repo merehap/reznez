@@ -7,7 +7,7 @@ use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::oam::Oam;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::pattern_table::PatternTable;
-use crate::ppu::register::ctrl::{Ctrl, VBlankNmi};
+use crate::ppu::register::ctrl::Ctrl;
 use crate::ppu::register::mask::Mask;
 use crate::ppu::register::status::Status;
 use crate::ppu::render::frame::Frame;
@@ -114,8 +114,8 @@ impl Ppu {
         self.address_latch = None;
     }
 
-    pub fn nmi_enabled(&self, ctrl: Ctrl) -> bool {
-        self.status.vblank_active && ctrl.vblank_nmi == VBlankNmi::On
+    pub fn can_generate_nmi(&self, ctrl: Ctrl) -> bool {
+        self.status.vblank_active && ctrl.nmi_enabled
     }
 
     pub fn step(&mut self, ctrl: Ctrl, mask: Mask, frame: &mut Frame) -> StepResult {
@@ -233,7 +233,7 @@ impl Ppu {
     }
 
     pub fn stop_vblank(&mut self) {
-        //self.status.vblank_active = false;
+        self.status.vblank_active = false;
     }
 
     fn rendering_enabled(&self, mask: Mask) -> bool {

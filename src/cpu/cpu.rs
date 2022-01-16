@@ -134,11 +134,6 @@ impl Cpu {
             return StepResult::Nop;
         }
 
-        if self.nmi_pending {
-            self.nmi();
-            self.nmi_pending = false;
-        }
-
         let instruction = Instruction::from_memory(
             self.program_counter,
             self.x,
@@ -152,6 +147,11 @@ impl Cpu {
 
         let cycle_count = self.execute_instruction(instruction);
         self.current_instruction_remaining_cycles = cycle_count - 1;
+
+        if self.nmi_pending {
+            self.nmi();
+            self.nmi_pending = false;
+        }
 
         StepResult::InstructionComplete(instruction)
     }
