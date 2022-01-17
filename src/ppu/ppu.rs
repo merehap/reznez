@@ -30,6 +30,7 @@ pub struct Ppu {
     y_scroll_offset: u8,
 
     vblank_just_started: bool,
+    suppress_vblank_active: bool,
 }
 
 impl Ppu {
@@ -50,6 +51,7 @@ impl Ppu {
             y_scroll_offset: 0,
 
             vblank_just_started: false,
+            suppress_vblank_active: false,
         }
     }
 
@@ -138,6 +140,10 @@ impl Ppu {
 
     pub fn stop_vblank(&mut self) {
         self.status.vblank_active = false;
+        // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
+        if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
+            self.suppress_vblank_active = true;
+        }
     }
 
     pub fn step(&mut self, ctrl: Ctrl, mask: Mask, frame: &mut Frame) {
@@ -147,12 +153,17 @@ impl Ppu {
         // TODO: Fix the first and second vblank cycles to not be special-cased if possible.
         if total_cycles == FIRST_VBLANK_CYCLE || total_cycles == SECOND_VBLANK_CYCLE {
             // TODO: Why don't we have the following enabled here?
+            // Maybe just need to have "= false" to end it too.
             // self.status.vblank_active = true;
             self.vblank_just_started = true;
         } else if total_cycles < SECOND_VBLANK_CYCLE {
             // Do nothing.
         } else if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
-            self.status.vblank_active = true;
+            if !self.suppress_vblank_active {
+                self.status.vblank_active = true;
+            }
+
+            self.suppress_vblank_active = false;
             self.vblank_just_started = true;
         } else if self.clock.scanline() == 261 && self.clock.cycle() == 1 {
             self.status.vblank_active = false;

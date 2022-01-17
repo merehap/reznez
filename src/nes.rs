@@ -124,9 +124,9 @@ impl Nes {
             }
         }
 
+        self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), frame);
         // TODO: Why do we need to access PPUSTATUS before Ppu.step()?
         *self.cpu.memory.bus_access_mut(PPUSTATUS) = self.ppu.status().to_u8();
-        self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), frame);
         *self.cpu.memory.bus_access_mut(OAMDATA) = self.ppu.read_oam(self.oam_address());
         *self.cpu.memory.bus_access_mut(PPUDATA) = self.ppu.vram_data();
 
