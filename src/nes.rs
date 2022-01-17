@@ -3,7 +3,7 @@ use std::time::{Duration, SystemTime};
 
 use log::{info, warn};
 
-use crate::cartridge::INes;
+use crate::cartridge::Cartridge;
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::{Cpu, StepResult};
@@ -36,7 +36,7 @@ pub struct Nes {
 impl Nes {
     pub fn new(config: &Config) -> Nes {
         let (cpu_mem, ppu_mem) = Nes::initialize_memory(
-            &config.ines,
+            &config.cartridge,
             config.system_palette.clone(),
         );
 
@@ -143,16 +143,16 @@ impl Nes {
         instruction
     }
 
-    fn initialize_memory(ines: &INes, system_palette: SystemPalette) -> (CpuMem, PpuMem) {
-        if ines.mapper_number() != 0 {
+    fn initialize_memory(cartridge: &Cartridge, system_palette: SystemPalette) -> (CpuMem, PpuMem) {
+        if cartridge.mapper_number() != 0 {
             unimplemented!("Only mapper 0 is currently supported.");
         }
 
         let mut cpu_mem = CpuMem::new();
-        let mut ppu_mem = PpuMem::new(ines.name_table_mirroring(), system_palette);
+        let mut ppu_mem = PpuMem::new(cartridge.name_table_mirroring(), system_palette);
 
         let mapper = Mapper0::new();
-        mapper.map(ines, &mut cpu_mem, &mut ppu_mem)
+        mapper.map(cartridge, &mut cpu_mem, &mut ppu_mem)
             .expect("Failed to copy cartridge ROM into CPU memory.");
 
         (cpu_mem, ppu_mem)
@@ -254,7 +254,7 @@ mod tests {
     use crate::ppu::render::frame::Frame;
     use crate::ppu::render::frame_rate::TargetFrameRate;
 
-    use crate::cartridge::tests::sample_ines;
+    use crate::cartridge::tests::sample_cartridge;
 
     use super::*;
 
@@ -316,7 +316,7 @@ mod tests {
     }
 
     fn sample_nes() -> Nes {
-        let ines = sample_ines();
+        let ines = sample_cartridge();
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
 

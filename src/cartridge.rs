@@ -8,7 +8,7 @@ const CHR_ROM_CHUNK_LENGTH: usize = 0x2000;
 
 // See https://wiki.nesdev.org/w/index.php?title=INES
 #[derive(Clone, Debug)]
-pub struct INes {
+pub struct Cartridge {
     mapper_number: u8,
     name_table_mirroring: NameTableMirroring,
     has_persistent_memory: bool,
@@ -22,8 +22,8 @@ pub struct INes {
     title: String,
 }
 
-impl INes {
-    pub fn load(rom: &[u8]) -> Result<INes, String> {
+impl Cartridge {
+    pub fn load(rom: &[u8]) -> Result<Cartridge, String> {
         if &rom[0..4] != INES_HEADER_CONSTANT {
             return Err(format!(
                 "Cannot load non-iNES ROM. Found {:?} but need {:?}.",
@@ -93,7 +93,7 @@ impl INes {
             .take_while(|&c| c != '\u{0}')
             .collect();
 
-        Ok(INes {
+        Ok(Cartridge {
             mapper_number,
             name_table_mirroring,
             has_persistent_memory,
@@ -133,7 +133,7 @@ impl INes {
     }
 }
 
-impl fmt::Display for INes {
+impl fmt::Display for Cartridge {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Mapper: {}", self.mapper_number)?;
         writeln!(f, "Nametable mirroring: {:?}", self.name_table_mirroring)?;
@@ -176,8 +176,8 @@ pub struct PlayChoice {
 pub mod tests {
     use super::*;
 
-    pub fn sample_ines() -> INes {
-        INes {
+    pub fn sample_cartridge() -> Cartridge {
+        Cartridge {
             mapper_number: 0,
             name_table_mirroring: NameTableMirroring::Horizontal,
             has_persistent_memory: false,

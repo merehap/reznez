@@ -1,4 +1,4 @@
-use crate::cartridge::INes;
+use crate::cartridge::Cartridge;
 use crate::cpu::address::Address as CpuAddress;
 use crate::cpu::memory::Memory as CpuMem;
 use crate::ppu::memory::Memory as PpuMem;
@@ -12,19 +12,19 @@ impl Mapper0 {
 
     pub fn map(
         &self,
-        ines: &INes,
+        cartridge: &Cartridge,
         cpu_mem: &mut CpuMem,
         ppu_mem: &mut PpuMem,
-        ) -> Result<(), String> {
+    ) -> Result<(), String> {
 
-        if ines.chr_rom_chunk_count() > 1 {
+        if cartridge.chr_rom_chunk_count() > 1 {
             return Err(format!(
                     "CHR ROM size must be 0K or 8K for mapper 0, but was {}K",
-                    8 * ines.chr_rom_chunk_count()
-                    ));
+                    8 * cartridge.chr_rom_chunk_count()
+                   ));
         }
 
-        let high_source_index = match ines.prg_rom_chunk_count() {
+        let high_source_index = match cartridge.prg_rom_chunk_count() {
             1 => /* Nrom128 */ 0,
             2 => /* Nrom256 */ 0x4000,
             c => return Err(format!(
@@ -33,7 +33,7 @@ impl Mapper0 {
                  )),
         };
 
-        let prg_rom = ines.prg_rom();
+        let prg_rom = cartridge.prg_rom();
 
         let mut low_address = CpuAddress::new(0x8000);
         let mut high_address = CpuAddress::new(0xC000);
@@ -45,8 +45,8 @@ impl Mapper0 {
             high_address.inc();
         }
 
-        if !ines.chr_rom().is_empty() {
-            ppu_mem.load_chr(ines.chr_rom()[0x0..0x2000].try_into().unwrap());
+        if !cartridge.chr_rom().is_empty() {
+            ppu_mem.load_chr(cartridge.chr_rom()[0x0..0x2000].try_into().unwrap());
         }
 
         Ok(())

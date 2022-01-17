@@ -6,7 +6,7 @@ use std::str::FromStr;
 use log::info;
 use structopt::StructOpt;
 
-use crate::cartridge::INes;
+use crate::cartridge::Cartridge;
 use crate::cpu::address::Address;
 use crate::cpu::cpu::ProgramCounterSource;
 use crate::gui::gui::Gui;
@@ -17,7 +17,7 @@ use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::render::frame_rate::TargetFrameRate;
 
 pub struct Config {
-    pub ines: INes,
+    pub cartridge: Cartridge,
     pub system_palette: SystemPalette,
     pub target_frame_rate: TargetFrameRate,
     pub stop_frame: Option<u64>,
@@ -34,8 +34,8 @@ impl Config {
             .unwrap()
             .read_to_end(&mut rom)
             .unwrap();
-        let ines = INes::load(&rom).unwrap();
-        info!("ROM loaded.\n{}", ines);
+        let cartridge = Cartridge::load(&rom).unwrap();
+        info!("ROM loaded.\n{}", cartridge);
 
         let system_palette = SystemPalette::parse(include_str!("../palettes/2C02.pal"))
             .unwrap();
@@ -48,7 +48,7 @@ impl Config {
             };
 
         Config {
-            ines,
+            cartridge,
             system_palette,
             target_frame_rate: opt.target_frame_rate,
             stop_frame: opt.stop_frame,
