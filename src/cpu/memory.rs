@@ -2,6 +2,7 @@ use log::info;
 
 use crate::cpu::address::Address;
 use crate::cpu::port_access::{PortAccess, AccessMode};
+use crate::util::memory_mappings::MemoryMappings;
 
 const NMI_VECTOR: Address = Address::new(0xFFFA);
 const RESET_VECTOR: Address = Address::new(0xFFFC);
@@ -25,6 +26,7 @@ pub const JOYSTICK_2_PORT: Address = Address::new(0x4017);
 pub struct Memory {
     pub stack_pointer: u8,
     memory: Vec<u8>,
+    mappings: MemoryMappings,
     latch: Option<PortAccess>,
 }
 
@@ -33,6 +35,7 @@ impl Memory {
         Memory {
             stack_pointer: 0xFD,
             memory: vec![0; 0x10000],
+            mappings: MemoryMappings::new(),
             latch: None,
         }
     }

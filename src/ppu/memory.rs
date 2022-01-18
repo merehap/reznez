@@ -7,6 +7,7 @@ use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
+use crate::util::memory_mappings::MemoryMappings;
 
 const MEMORY_SIZE: usize = 0x4000;
 
@@ -30,6 +31,7 @@ const PALETTE_TABLE_SIZE: u16 = 0x20;
 
 pub struct Memory {
     memory: Vec<u8>,
+    mappings: MemoryMappings,
     name_table_mirroring: NameTableMirroring,
     system_palette: SystemPalette,
 }
@@ -42,6 +44,7 @@ impl Memory {
 
         Memory {
             memory: vec![0; MEMORY_SIZE],
+            mappings: MemoryMappings::new(),
             name_table_mirroring,
             system_palette,
         }
