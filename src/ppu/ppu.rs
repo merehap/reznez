@@ -2,11 +2,7 @@ use crate::ppu::address::Address;
 use crate::ppu::clock::Clock;
 use crate::ppu;
 use crate::ppu::memory::Memory;
-use crate::ppu::name_table::name_table::NameTable;
-use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::oam::Oam;
-use crate::ppu::palette::palette_table::PaletteTable;
-use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::register::ctrl::Ctrl;
 use crate::ppu::register::mask::Mask;
 use crate::ppu::register::status::Status;
@@ -61,20 +57,6 @@ impl Ppu {
 
     pub fn clock(&self) -> &Clock {
         &self.clock
-    }
-
-    #[inline]
-    pub fn pattern_table(&self) -> PatternTable {
-        self.memory.pattern_table()
-    }
-
-    #[inline]
-    pub fn name_table(&self, number: NameTableNumber) -> NameTable {
-        self.memory.name_table(number)
-    }
-
-    pub fn palette_table(&self) -> PaletteTable {
-        self.memory.palette_table()
     }
 
     pub fn read_oam(&mut self, oam_address: u8) -> u8 {
@@ -198,16 +180,16 @@ impl Ppu {
         let name_table_number = ctrl.name_table_number;
         let _name_table_mirroring = self.memory.name_table_mirroring();
         let background_table_side = ctrl.background_table_side;
-        self.name_table(name_table_number).render(
-            &self.pattern_table(),
+        self.memory.name_table(name_table_number).render(
+            &self.memory.pattern_table(),
             background_table_side,
             &palette_table,
             -(self.x_scroll_offset as i16),
             -(self.y_scroll_offset as i16),
             frame,
         );
-        self.name_table(name_table_number.next_horizontal()).render(
-            &self.pattern_table(),
+        self.memory.name_table(name_table_number.next_horizontal()).render(
+            &self.memory.pattern_table(),
             background_table_side,
             &palette_table,
             -(self.x_scroll_offset as i16) + 256,
@@ -242,7 +224,7 @@ impl Ppu {
                         row + row_in_sprite
                     };
 
-                self.pattern_table().render_sprite_sliver(
+                self.memory.pattern_table().render_sprite_sliver(
                     sprite_table_side,
                     sprite,
                     is_sprite_0,

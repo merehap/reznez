@@ -26,7 +26,7 @@ pub struct Nes {
     ppu: Ppu,
     pub joypad_1: Joypad,
     pub joypad_2: Joypad,
-    nmi_was_enabled: bool,
+    nmi_was_enabled_last_cycle: bool,
     cycle: u64,
 
     target_frame_rate: TargetFrameRate,
@@ -35,7 +35,7 @@ pub struct Nes {
 
 impl Nes {
     pub fn new(config: &Config) -> Nes {
-        let (cpu_mem, ppu_mem) = Nes::initialize_memory(
+        let (cpu_mem, ppu_mem) = Nes::map_memory(
             &config.cartridge,
             config.system_palette.clone(),
         );
@@ -45,7 +45,7 @@ impl Nes {
             ppu: Ppu::new(ppu_mem),
             joypad_1: Joypad::new(),
             joypad_2: Joypad::new(),
-            nmi_was_enabled: false,
+            nmi_was_enabled_last_cycle: false,
             cycle: 0,
 
             target_frame_rate: config.target_frame_rate,
@@ -89,8 +89,8 @@ impl Nes {
             }
         }
 
+        info!("Displaying frame {}.", frame_index);
         gui.display_frame(frame_index);
-        info!("Frame: {}", frame_index);
 
         let end_time = SystemTime::now();
         if let Ok(duration) = intended_frame_end_time.duration_since(end_time) {
@@ -143,11 +143,7 @@ impl Nes {
         instruction
     }
 
-    fn initialize_memory(cartridge: &Cartridge, system_palette: SystemPalette) -> (CpuMem, PpuMem) {
-        if cartridge.mapper_number() != 0 {
-            unimplemented!("Only mapper 0 is currently supported.");
-        }
-
+    fn map_memory(cartridge: &Cartridge, system_palette: SystemPalette) -> (CpuMem, PpuMem) {
         let mut cpu_mem = CpuMem::new();
         let mut ppu_mem = PpuMem::new(cartridge.name_table_mirroring(), system_palette);
 
@@ -170,13 +166,12 @@ impl Nes {
             (OAMDATA, Read) => {},
 
             (PPUCTRL, Write) => {
-                // A second NMI can only be scheduled if VBlankNmi was
-                // disabled last cycle.
-                if !self.nmi_was_enabled {
+                if !self.nmi_was_enabled_last_cycle {
+                    // Attempt to trigger the second (or higher) NMI of this frame.
                     self.schedule_nmi_if_allowed();
                 }
 
-                self.nmi_was_enabled = self.ppu_ctrl().nmi_enabled;
+                self.nmi_was_enabled_last_cycle = self.ppu_ctrl().nmi_enabled;
             },
 
             // TODO: Reading the status register will clear bit 7 mentioned
@@ -233,7 +228,6 @@ impl Nes {
         let oamaddr = *self.cpu.memory.bus_access(OAMADDR);
         self.ppu.write_oam(oamaddr, value);
         // Advance to next sprite byte to write.
-        // TODO: Verify that wrapping is the correct behavior.
         *self.cpu.memory.bus_access_mut(OAMADDR) = oamaddr.wrapping_add(1);
     }
 
@@ -320,7 +314,7 @@ mod tests {
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
 
-        let (cpu_mem, ppu_mem) = Nes::initialize_memory(&ines, system_palette);
+        let (cpu_mem, ppu_mem) = Nes::map_memory(&ines, system_palette);
         Nes {
             cpu: Cpu::new(
                 cpu_mem,
@@ -329,7 +323,7 @@ mod tests {
             ppu: Ppu::new(ppu_mem),
             joypad_1: Joypad::new(),
             joypad_2: Joypad::new(),
-            nmi_was_enabled: false,
+            nmi_was_enabled_last_cycle: false,
             cycle: 0,
 
             target_frame_rate: TargetFrameRate::Unbounded,
