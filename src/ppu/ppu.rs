@@ -7,6 +7,7 @@ use crate::ppu::register::ctrl::Ctrl;
 use crate::ppu::register::mask::Mask;
 use crate::ppu::register::status::Status;
 use crate::ppu::render::frame::Frame;
+use crate::util::mapped_array::MemoryMappings;
 
 const FIRST_VBLANK_CYCLE: u64 = 3 * 27384;
 const SECOND_VBLANK_CYCLE: u64 = 3 * 57165;
@@ -126,6 +127,10 @@ impl Ppu {
         if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
             self.suppress_vblank_active = true;
         }
+    }
+
+    pub fn set_memory_mappings(&mut self, mappings: MemoryMappings) {
+        self.memory.set_memory_mappings(mappings);
     }
 
     pub fn step(&mut self, ctrl: Ctrl, mask: Mask, frame: &mut Frame) {

@@ -3,7 +3,6 @@ use std::time::{Duration, SystemTime};
 
 use log::{info, warn};
 
-use crate::cartridge::Cartridge;
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::{Cpu, StepResult};
@@ -13,7 +12,6 @@ use crate::cpu::memory::*;
 use crate::cpu::port_access::{PortAccess, AccessMode};
 use crate::gui::gui::Gui;
 use crate::mapper::mapper0::{Mapper0, Mappings};
-use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::memory::Memory as PpuMem;
 use crate::ppu::register::ctrl::Ctrl;
@@ -26,6 +24,7 @@ pub struct Nes {
     ppu: Ppu,
     pub joypad_1: Joypad,
     pub joypad_2: Joypad,
+    mapper: Mapper0,
     nmi_was_enabled_last_cycle: bool,
     cycle: u64,
 
@@ -35,16 +34,23 @@ pub struct Nes {
 
 impl Nes {
     pub fn new(config: Config) -> Nes {
-        let (cpu_mem, ppu_mem) = Nes::map_memory(
-            config.cartridge,
-            config.system_palette.clone(),
+        let mut cpu_mem = CpuMem::new();
+        let mut ppu_mem = PpuMem::new(
+            config.cartridge.name_table_mirroring(),
+            config.system_palette,
         );
+
+        let mapper = Mapper0::new(config.cartridge).unwrap();
+        let Mappings {cpu_mappings, ppu_mappings} = mapper.current_mappings(&cpu_mem);
+        cpu_mem.set_memory_mappings(cpu_mappings);
+        ppu_mem.set_memory_mappings(ppu_mappings);
 
         Nes {
             cpu: Cpu::new(cpu_mem, config.program_counter_source),
             ppu: Ppu::new(ppu_mem),
             joypad_1: Joypad::new(),
             joypad_2: Joypad::new(),
+            mapper,
             nmi_was_enabled_last_cycle: false,
             cycle: 0,
 
@@ -119,6 +125,11 @@ impl Nes {
                     self.ppu.write_oam(oamaddr, value),
             }
 
+            let Mappings {cpu_mappings, ppu_mappings} =
+                self.mapper.current_mappings(&self.cpu.memory);
+            self.cpu.memory.set_memory_mappings(cpu_mappings);
+            self.ppu.set_memory_mappings(ppu_mappings);
+
             if let Some(port_access) = self.cpu.memory.latch() {
                 self.execute_port_action(port_access);
             }
@@ -141,18 +152,6 @@ impl Nes {
         self.cycle += 1;
 
         instruction
-    }
-
-    fn map_memory(cartridge: Cartridge, system_palette: SystemPalette) -> (CpuMem, PpuMem) {
-        let mut cpu_mem = CpuMem::new();
-        let mut ppu_mem = PpuMem::new(cartridge.name_table_mirroring(), system_palette);
-
-        let mapper = Mapper0::new(cartridge).unwrap();
-        let Mappings {cpu_mappings, ppu_mappings} = mapper.current_mappings(&cpu_mem);
-        cpu_mem.set_memory_mappings(cpu_mappings);
-        ppu_mem.set_memory_mappings(ppu_mappings);
-
-        (cpu_mem, ppu_mem)
     }
 
     // TODO: Reading PPUSTATUS within two cycles of the start of vertical
@@ -288,7 +287,6 @@ mod tests {
     #[test]
     fn second_nmi_succeeds_after_ctrl_toggle() {
         let mut nes = sample_nes();
-        nes.cpu.memory.set_memory_mappings(MemoryMappings::new());
         step_until_vblank_nmi_enabled(&mut nes);
         assert!(nes.cpu.nmi_pending());
 
@@ -317,7 +315,8 @@ mod tests {
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
 
-        let (cpu_mem, ppu_mem) = Nes::map_memory(cartridge, system_palette);
+        let cpu_mem = CpuMem::new();
+        let ppu_mem = PpuMem::new(cartridge.name_table_mirroring(), system_palette);
         Nes {
             cpu: Cpu::new(
                 cpu_mem,
@@ -326,6 +325,7 @@ mod tests {
             ppu: Ppu::new(ppu_mem),
             joypad_1: Joypad::new(),
             joypad_2: Joypad::new(),
+            mapper: Mapper0::new(cartridge).unwrap(),
             nmi_was_enabled_last_cycle: false,
             cycle: 0,
 
@@ -364,7 +364,11 @@ mod tests {
 
         // Execute the two op codes we just injected.
         let mut frame = Frame::new();
-        while nes.step(&mut frame).is_none() {}
-        while nes.step(&mut frame).is_none() {}
+        while nes.step(&mut frame).is_none() {
+            nes.cpu.memory.set_memory_mappings(MemoryMappings::new());
+        }
+        while nes.step(&mut frame).is_none() {
+            nes.cpu.memory.set_memory_mappings(MemoryMappings::new());
+        }
     }
 }
