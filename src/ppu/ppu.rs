@@ -71,20 +71,20 @@ impl Ppu {
         // When reading palette data only, read the current data pointed to
         // by self.vram_address, not what was previously pointed to.
         if self.vram_address >= ppu::memory::PALETTE_TABLE_START {
-            self.memory[self.vram_address]
+            self.memory.read(self.vram_address)
         } else {
             self.vram_data
         }
     }
 
     pub fn update_vram_data(&mut self, ctrl: Ctrl) {
-        self.vram_data = self.memory[self.vram_address];
+        self.vram_data = self.memory.read(self.vram_address);
         let increment = ctrl.vram_address_increment as u8;
         self.vram_address = self.vram_address.advance(increment);
     }
 
     pub fn write_vram(&mut self, ctrl: Ctrl, value: u8) {
-        self.memory[self.vram_address] = value;
+        self.memory.write(self.vram_address, value);
         let increment = ctrl.vram_address_increment as u8;
         self.vram_address = self.vram_address.advance(increment);
     }

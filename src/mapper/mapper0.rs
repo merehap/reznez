@@ -1,54 +1,56 @@
 use crate::cartridge::Cartridge;
-use crate::cpu::address::Address as CpuAddress;
 use crate::cpu::memory::Memory as CpuMem;
-use crate::ppu::memory::Memory as PpuMem;
+use crate::util::mapped_array::MemoryMappings;
 
-pub struct Mapper0;
+pub struct Mapper0 {
+    cartridge: Cartridge,
+    mappings: Mappings,
+}
 
 impl Mapper0 {
-    pub fn new() -> Mapper0 {
-        Mapper0 {}
-    }
-
-    pub fn map(
-        &self,
-        cartridge: &Cartridge,
-        cpu_mem: &mut CpuMem,
-        ppu_mem: &mut PpuMem,
-    ) -> Result<(), String> {
-
-        if cartridge.chr_rom_chunk_count() > 1 {
-            return Err(format!(
-                    "CHR ROM size must be 0K or 8K for mapper 0, but was {}K",
-                    8 * cartridge.chr_rom_chunk_count()
-                   ));
-        }
-
-        let high_source_index = match cartridge.prg_rom_chunk_count() {
-            1 => /* Nrom128 */ 0,
-            2 => /* Nrom256 */ 0x4000,
+    pub fn new(cartridge: Cartridge) -> Result<Mapper0, String> {
+        let prg_rom = cartridge.prg_rom();
+        let mut cpu_mappings = MemoryMappings::new();
+        match cartridge.prg_rom_chunk_count() {
+            /* Nrom128 - Mirrored mappings. */
+            1 => {
+                cpu_mappings.add_mapping(prg_rom[0x0..0x4000].into(), 0x8000)?;
+                cpu_mappings.add_mapping(prg_rom[0x0..0x4000].into(), 0xC000)?;
+            },
+            /* Nrom256 - A single long mapping. */
+            2 => {
+                cpu_mappings.add_mapping(prg_rom[0x0..0x8000].into(), 0x8000)?;
+            },
             c => return Err(format!(
                      "PRG ROM size must be 16K or 32K for mapper 0, but was {}K",
                      16 * u16::from(c),
                  )),
         };
 
-        let prg_rom = cartridge.prg_rom();
-
-        let mut low_address = CpuAddress::new(0x8000);
-        let mut high_address = CpuAddress::new(0xC000);
-        for i in 0..0x4000 {
-            cpu_mem.write(low_address, prg_rom[i]);
-            // Copy high ROM (for NROM256) or mirror low ROM (for NROM128).
-            cpu_mem.write(high_address, prg_rom[high_source_index + i]);
-            low_address.inc();
-            high_address.inc();
+        if cartridge.chr_rom_chunk_count() > 1 {
+            return Err(format!(
+                "CHR ROM size must be 0K or 8K for mapper 0, but was {}K",
+                8 * cartridge.chr_rom_chunk_count()
+            ));
         }
 
-        if !cartridge.chr_rom().is_empty() {
-            ppu_mem.load_chr(cartridge.chr_rom()[0x0..0x2000].try_into().unwrap());
+        let chr_rom = cartridge.chr_rom();
+        let mut ppu_mappings = MemoryMappings::new();
+        if !chr_rom.is_empty() {
+            ppu_mappings.add_mapping(chr_rom[0x0..0x2000].into(), 0x0)?;
         }
 
-        Ok(())
+        let mappings = Mappings {cpu_mappings, ppu_mappings};
+        Ok(Mapper0 {cartridge, mappings})
     }
+
+    pub fn current_mappings(&self, _: &CpuMem) -> Mappings {
+        self.mappings.clone()
+    }
+}
+
+#[derive(Clone)]
+pub struct Mappings {
+    pub cpu_mappings: MemoryMappings,
+    pub ppu_mappings: MemoryMappings,
 }

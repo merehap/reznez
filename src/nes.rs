@@ -12,7 +12,7 @@ use crate::cpu::memory::Memory as CpuMem;
 use crate::cpu::memory::*;
 use crate::cpu::port_access::{PortAccess, AccessMode};
 use crate::gui::gui::Gui;
-use crate::mapper::mapper0::Mapper0;
+use crate::mapper::mapper0::{Mapper0, Mappings};
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::memory::Memory as PpuMem;
@@ -34,9 +34,9 @@ pub struct Nes {
 }
 
 impl Nes {
-    pub fn new(config: &Config) -> Nes {
+    pub fn new(config: Config) -> Nes {
         let (cpu_mem, ppu_mem) = Nes::map_memory(
-            &config.cartridge,
+            config.cartridge,
             config.system_palette.clone(),
         );
 
@@ -125,9 +125,9 @@ impl Nes {
         }
 
         self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), frame);
-        *self.cpu.memory.bus_access_mut(PPUSTATUS) = self.ppu.status().to_u8();
-        *self.cpu.memory.bus_access_mut(OAMDATA) = self.ppu.read_oam(self.oam_address());
-        *self.cpu.memory.bus_access_mut(PPUDATA) = self.ppu.vram_data();
+        self.cpu.memory.bus_access_write(PPUSTATUS, self.ppu.status().to_u8());
+        self.cpu.memory.bus_access_write(OAMDATA, self.ppu.read_oam(self.oam_address()));
+        self.cpu.memory.bus_access_write(PPUDATA, self.ppu.vram_data());
 
         if self.ppu.vblank_just_started() {
             self.schedule_nmi_if_allowed();
@@ -143,13 +143,14 @@ impl Nes {
         instruction
     }
 
-    fn map_memory(cartridge: &Cartridge, system_palette: SystemPalette) -> (CpuMem, PpuMem) {
+    fn map_memory(cartridge: Cartridge, system_palette: SystemPalette) -> (CpuMem, PpuMem) {
         let mut cpu_mem = CpuMem::new();
         let mut ppu_mem = PpuMem::new(cartridge.name_table_mirroring(), system_palette);
 
-        let mapper = Mapper0::new();
-        mapper.map(cartridge, &mut cpu_mem, &mut ppu_mem)
-            .expect("Failed to copy cartridge ROM into CPU memory.");
+        let mapper = Mapper0::new(cartridge).unwrap();
+        let Mappings {cpu_mappings, ppu_mappings} = mapper.current_mappings(&cpu_mem);
+        cpu_mem.set_memory_mappings(cpu_mappings);
+        ppu_mem.set_memory_mappings(ppu_mappings);
 
         (cpu_mem, ppu_mem)
     }
@@ -213,22 +214,22 @@ impl Nes {
     }
 
     fn ppu_ctrl(&self) -> Ctrl {
-        Ctrl::from_u8(*self.cpu.memory.bus_access(PPUCTRL))
+        Ctrl::from_u8(self.cpu.memory.bus_access_read(PPUCTRL))
     }
 
     fn ppu_mask(&self) -> Mask {
-        Mask::from_u8(*self.cpu.memory.bus_access(PPUMASK))
+        Mask::from_u8(self.cpu.memory.bus_access_read(PPUMASK))
     }
 
     fn oam_address(&self) -> u8 {
-        *self.cpu.memory.bus_access(OAMADDR)
+        self.cpu.memory.bus_access_read(OAMADDR)
     }
 
     fn write_oam(&mut self, value: u8) {
-        let oamaddr = *self.cpu.memory.bus_access(OAMADDR);
+        let oamaddr = self.cpu.memory.bus_access_read(OAMADDR);
         self.ppu.write_oam(oamaddr, value);
         // Advance to next sprite byte to write.
-        *self.cpu.memory.bus_access_mut(OAMADDR) = oamaddr.wrapping_add(1);
+        self.cpu.memory.bus_access_write(OAMADDR, oamaddr.wrapping_add(1));
     }
 
     fn frame_duration(&self) -> Duration {
@@ -247,6 +248,7 @@ mod tests {
     use crate::ppu::register::ctrl::Ctrl;
     use crate::ppu::render::frame::Frame;
     use crate::ppu::render::frame_rate::TargetFrameRate;
+    use crate::util::mapped_array::MemoryMappings;
 
     use crate::cartridge::tests::sample_cartridge;
 
@@ -286,6 +288,7 @@ mod tests {
     #[test]
     fn second_nmi_succeeds_after_ctrl_toggle() {
         let mut nes = sample_nes();
+        nes.cpu.memory.set_memory_mappings(MemoryMappings::new());
         step_until_vblank_nmi_enabled(&mut nes);
         assert!(nes.cpu.nmi_pending());
 
@@ -310,11 +313,11 @@ mod tests {
     }
 
     fn sample_nes() -> Nes {
-        let ines = sample_cartridge();
+        let cartridge = sample_cartridge();
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
 
-        let (cpu_mem, ppu_mem) = Nes::map_memory(&ines, system_palette);
+        let (cpu_mem, ppu_mem) = Nes::map_memory(cartridge, system_palette);
         Nes {
             cpu: Cpu::new(
                 cpu_mem,
@@ -332,9 +335,9 @@ mod tests {
     }
 
     fn step_until_vblank_nmi_enabled(nes: &mut Nes) {
-        let mut ctrl = Ctrl::from_u8(*nes.cpu.memory.bus_access(PPUCTRL));
+        let mut ctrl = Ctrl::from_u8(nes.cpu.memory.bus_access_read(PPUCTRL));
         ctrl.nmi_enabled = true;
-        *nes.cpu.memory.bus_access_mut(PPUCTRL) = ctrl.to_u8();
+        nes.cpu.memory.bus_access_write(PPUCTRL, ctrl.to_u8());
 
         let mut frame = Frame::new();
         while !nes.ppu.can_generate_nmi(nes.ppu_ctrl()) {

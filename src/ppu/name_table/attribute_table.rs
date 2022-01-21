@@ -2,14 +2,15 @@ use std::fmt;
 
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
+use crate::util::mapped_array::MappedSlice;
 
 const ATTRIBUTE_TABLE_SIZE: usize = 64;
 
 #[derive(Debug)]
-pub struct AttributeTable<'a>(&'a [u8; ATTRIBUTE_TABLE_SIZE]);
+pub struct AttributeTable<'a>(MappedSlice<'a, ATTRIBUTE_TABLE_SIZE>);
 
 impl <'a> AttributeTable<'a> {
-    pub fn new(raw: &'a [u8; ATTRIBUTE_TABLE_SIZE]) -> AttributeTable<'a> {
+    pub fn new(raw: MappedSlice<'a, ATTRIBUTE_TABLE_SIZE>) -> AttributeTable<'a> {
         AttributeTable(raw)
     }
 
@@ -17,7 +18,7 @@ impl <'a> AttributeTable<'a> {
     pub fn palette_table_index(
         &self,
         background_tile_index: BackgroundTileIndex,
-        ) -> PaletteTableIndex {
+    ) -> PaletteTableIndex {
 
         let attribute_index =
             8 * (background_tile_index.row() / 4) +
