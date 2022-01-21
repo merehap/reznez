@@ -11,7 +11,8 @@ use crate::cpu::memory::Memory as CpuMem;
 use crate::cpu::memory::*;
 use crate::cpu::port_access::{PortAccess, AccessMode};
 use crate::gui::gui::Gui;
-use crate::mapper::mapper0::{Mapper0, Mappings};
+use crate::mapper::mapper::{Mapper, Mappings};
+use crate::mapper::mapper0::Mapper0;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::memory::Memory as PpuMem;
 use crate::ppu::register::ctrl::Ctrl;
@@ -24,7 +25,7 @@ pub struct Nes {
     ppu: Ppu,
     pub joypad_1: Joypad,
     pub joypad_2: Joypad,
-    mapper: Mapper0,
+    mapper: Box<dyn Mapper>,
     nmi_was_enabled_last_cycle: bool,
     cycle: u64,
 
@@ -40,7 +41,12 @@ impl Nes {
             config.system_palette,
         );
 
-        let mapper = Mapper0::new(config.cartridge).unwrap();
+        let mapper =
+            match config.cartridge.mapper_number() {
+                0 => Box::new(Mapper0::new(config.cartridge).unwrap()),
+                _ => todo!(),
+            };
+
         let Mappings {cpu_mappings, ppu_mappings} = mapper.current_mappings(&cpu_mem);
         cpu_mem.set_memory_mappings(cpu_mappings);
         ppu_mem.set_memory_mappings(ppu_mappings);
@@ -325,7 +331,7 @@ mod tests {
             ppu: Ppu::new(ppu_mem),
             joypad_1: Joypad::new(),
             joypad_2: Joypad::new(),
-            mapper: Mapper0::new(cartridge).unwrap(),
+            mapper: Box::new(Mapper0::new(cartridge).unwrap()),
             nmi_was_enabled_last_cycle: false,
             cycle: 0,
 
@@ -365,9 +371,11 @@ mod tests {
         // Execute the two op codes we just injected.
         let mut frame = Frame::new();
         while nes.step(&mut frame).is_none() {
+            // Avoid writing to readonly memory by removing all memory mappings.
             nes.cpu.memory.set_memory_mappings(MemoryMappings::new());
         }
         while nes.step(&mut frame).is_none() {
+            // Avoid writing to readonly memory by removing all memory mappings.
             nes.cpu.memory.set_memory_mappings(MemoryMappings::new());
         }
     }

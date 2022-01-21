@@ -1,5 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::cpu::memory::Memory as CpuMem;
+use crate::mapper::mapper::{Mapper, Mappings};
 use crate::util::mapped_array::MemoryMappings;
 
 pub struct Mapper0 {
@@ -43,14 +44,10 @@ impl Mapper0 {
         let mappings = Mappings {cpu_mappings, ppu_mappings};
         Ok(Mapper0 {cartridge, mappings})
     }
-
-    pub fn current_mappings(&self, _: &CpuMem) -> Mappings {
-        self.mappings.clone()
-    }
 }
 
-#[derive(Clone)]
-pub struct Mappings {
-    pub cpu_mappings: MemoryMappings,
-    pub ppu_mappings: MemoryMappings,
+impl Mapper for Mapper0 {
+    fn current_mappings(&self, _: &CpuMem) -> Mappings {
+        self.mappings.clone()
+    }
 }
