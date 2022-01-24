@@ -156,6 +156,7 @@ struct INes2 {
 
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub enum ConsoleType {
     Nes,
@@ -164,6 +165,7 @@ pub enum ConsoleType {
     Extended,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct PlayChoice {
     inst_rom: [u8; 8192],

@@ -14,7 +14,7 @@ use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::gui::{Gui, Events};
 use crate::ppu::render::frame::Frame;
 
-const DEBUG_SCREEN_HEIGHT: usize = 20;
+//const DEBUG_SCREEN_HEIGHT: usize = 20;
 
 lazy_static! {
     static ref JOY_1_BUTTON_MAPPINGS: HashMap<Keycode, Button> = {

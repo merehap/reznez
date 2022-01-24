@@ -6,29 +6,6 @@ const MAX_INDEX: u16 = COLUMN_COUNT * ROW_COUNT - 1;
 pub struct BackgroundTileIndex(u16);
 
 impl BackgroundTileIndex {
-    pub fn from_u16(number: u16) -> Result<BackgroundTileIndex, String> {
-        if number > MAX_INDEX {
-            return Err(format!(
-                "Background tile index must not be greater than {}.",
-                MAX_INDEX,
-            ));
-        }
-
-        Ok(BackgroundTileIndex(number))
-    }
-
-    pub fn from_column_row(column: u8, row: u8) -> Result<BackgroundTileIndex, String> {
-        let column = column as u16;
-        let row = row as u16;
-        if column >= COLUMN_COUNT {
-            Err(format!("Column must be less than {}.", COLUMN_COUNT))
-        } else if row >= ROW_COUNT {
-            Err(format!("Row must be less than {}.", ROW_COUNT))
-        } else {
-            Ok(BackgroundTileIndex::from_u16(row * COLUMN_COUNT + column)?)
-        }
-    }
-
     pub fn iter() -> BackgroundTileIndexIterator {
         BackgroundTileIndexIterator {index: BackgroundTileIndex(0)}
     }

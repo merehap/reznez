@@ -3,9 +3,6 @@ use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 
 const MEMORY_SIZE: usize = 0x4000;
 
-const PATTERN_TABLE_START: Address = Address::from_u16(0);
-const PATTERN_TABLE_SIZE: u16 = 0x2000;
-
 const NAME_TABLE_START: u16 = 0x2000;
 const NAME_TABLE_SIZE: u16 = 0x400;
 #[allow(clippy::erasing_op)]
@@ -19,7 +16,6 @@ const NAME_TABLE_INDEXES: [Address; 4] =
     ];
 
 pub const PALETTE_TABLE_START: Address = Address::from_u16(0x3F00);
-const PALETTE_TABLE_SIZE: u16 = 0x20;
 
 pub struct Memory {
     memory: [u8; MEMORY_SIZE],
@@ -48,33 +44,6 @@ impl Memory {
     pub fn name_table_mirroring(&self) -> NameTableMirroring {
         self.name_table_mirroring
     }
-
-    /*
-    #[inline]
-    pub fn pattern_table(&self) -> PatternTable {
-        let raw = self.slice(
-            PATTERN_TABLE_START,
-            PATTERN_TABLE_START.advance(PATTERN_TABLE_SIZE - 1),
-        );
-        PatternTable::new(raw.try_into().unwrap())
-    }
-
-    #[inline]
-    pub fn name_table(&self, number: NameTableNumber) -> NameTable {
-        let index = NAME_TABLE_INDEXES[number as usize];
-        let raw = self.slice(index, index.advance(NAME_TABLE_SIZE - 1));
-        NameTable::new(raw.try_into().unwrap())
-    }
-
-    #[inline]
-    pub fn palette_table(&self) -> PaletteTable {
-        let raw = self.slice(
-            PALETTE_TABLE_START,
-            PALETTE_TABLE_START.advance(PALETTE_TABLE_SIZE - 1)
-        );
-        PaletteTable::new(raw.try_into().unwrap(), &self.system_palette)
-    }
-    */
 
     fn map_if_name_table_address(&self, address: Address) -> Address {
         // No modification if it's not a name table address.

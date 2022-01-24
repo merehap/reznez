@@ -26,11 +26,13 @@ pub fn get_bit(byte: u8, index: usize) -> bool {
     byte & mask != 0
 }
 
+#[allow(dead_code)]
 pub fn clear_bit(byte: u8, index: usize) -> u8 {
     assert!(index < 8);
     byte & !(1 << (7 - index))
 }
 
+#[allow(dead_code)]
 pub fn set_bit(byte: u8, index: usize) -> u8 {
     assert!(index < 8);
     byte & (1 << (7 - index))
