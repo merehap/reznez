@@ -1,4 +1,4 @@
-use crate::mapper::mapper::Memory;
+use crate::memory::memory::Memory;
 use crate::ppu::address::Address;
 use crate::ppu::clock::Clock;
 use crate::ppu;

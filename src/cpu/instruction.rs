@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use strum_macros::EnumString;
 
 use crate::cpu::address::Address;
-use crate::mapper::mapper::Memory;
+use crate::memory::memory::Memory;
 
 lazy_static! {
     static ref INSTRUCTION_TEMPLATES: [InstructionTemplate; 256] = instruction_templates();

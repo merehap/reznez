@@ -5,7 +5,7 @@ use crate::cpu::address::Address;
 use crate::cpu::instruction::{Instruction, OpCode, Argument};
 use crate::cpu::status::Status;
 use crate::cpu::dma_transfer::{DmaTransfer, DmaTransferState};
-use crate::mapper::mapper::Memory;
+use crate::memory::memory::Memory;
 
 pub struct Cpu {
     // Accumulator

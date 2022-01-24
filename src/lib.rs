@@ -11,6 +11,6 @@ pub mod controller;
 pub mod cpu;
 pub mod gui;
 pub mod ppu;
-mod mapper;
+pub mod memory;
 pub mod nes;
 pub mod util;

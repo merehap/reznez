@@ -1,7 +1,7 @@
 use crate::cartridge::Cartridge;
 use crate::cpu::address::Address as CpuAddress;
 use crate::cpu::memory::Memory as CpuMemory;
-use crate::mapper::mapper::Mapper;
+use crate::memory::mapper::Mapper;
 use crate::ppu::address::Address as PpuAddress;
 use crate::ppu::memory::Memory as PpuMemory;
 
