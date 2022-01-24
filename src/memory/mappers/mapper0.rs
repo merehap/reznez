@@ -83,9 +83,10 @@ impl Mapper for Mapper0 {
         let index = address.to_usize();
         match address.to_u16() {
             0x0000..=0x1FFF => self.chr_rom[index],
+            0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C => palette_ram[index % 0x20 - 0x10],
             0x3F00..=0x3FFF => palette_ram[index % 0x20],
             // Address is out of normal range so mirror down and try again.
-            0x4000..=0xFFFF => self.ppu_read(ppu_ram, address.reduce()),
+            0x4000..=0xFFFF => unreachable!(),
             _ => vram.read(address),
         }
     }
@@ -98,10 +99,9 @@ impl Mapper for Mapper0 {
         let index = address.to_usize();
         match address.to_u16() {
             0x0000..=0x1FFF => self.chr_rom[index] = value,
+            0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C => palette_ram[index % 0x20 - 0x10] = value,
             0x3F00..=0x3FFF => palette_ram[index % 0x20] = value,
-            // Address is out of normal range so mirror down and try again.
-            0x4000..=0xFFFF =>
-                self.ppu_write(ppu_ram, address.reduce(), value),
+            0x4000..=0xFFFF => unreachable!(),
             _ => vram.write(address, value),
         }
     }
