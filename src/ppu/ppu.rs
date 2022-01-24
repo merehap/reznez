@@ -1,7 +1,6 @@
-use crate::memory::memory::Memory;
-use crate::ppu::address::Address;
+use crate::memory::memory::{Memory, PALETTE_TABLE_START};
+use crate::memory::ppu_address::PpuAddress;
 use crate::ppu::clock::Clock;
-use crate::ppu;
 use crate::ppu::oam::Oam;
 use crate::ppu::register::ctrl::Ctrl;
 use crate::ppu::register::mask::Mask;
@@ -18,7 +17,7 @@ pub struct Ppu {
     clock: Clock,
 
     address_latch: Option<u8>,
-    vram_address: Address,
+    vram_address: PpuAddress,
     vram_data: u8,
 
     x_scroll_offset: u8,
@@ -38,7 +37,7 @@ impl Ppu {
 
             address_latch: None,
 
-            vram_address: Address::from_u16(0),
+            vram_address: PpuAddress::from_u16(0),
             vram_data: 0,
 
             x_scroll_offset: 0,
@@ -68,7 +67,7 @@ impl Ppu {
     pub fn vram_data(&self, memory: &Memory) -> u8 {
         // When reading palette data only, read the current data pointed to
         // by self.vram_address, not what was previously pointed to.
-        if self.vram_address >= ppu::memory::PALETTE_TABLE_START {
+        if self.vram_address >= PALETTE_TABLE_START {
             memory.ppu_read(self.vram_address)
         } else {
             self.vram_data
@@ -89,7 +88,7 @@ impl Ppu {
 
     pub fn write_partial_vram_address(&mut self, value: u8) {
         if let Some(upper) = self.address_latch {
-            self.vram_address = Address::from_u16((u16::from(upper) << 8) + u16::from(value));
+            self.vram_address = PpuAddress::from_u16((u16::from(upper) << 8) + u16::from(value));
             self.address_latch = None;
         } else {
             self.address_latch = Some(value);

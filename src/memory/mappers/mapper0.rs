@@ -2,8 +2,8 @@ use crate::cartridge::Cartridge;
 use crate::cpu::address::Address as CpuAddress;
 use crate::cpu::memory::Memory as CpuMemory;
 use crate::memory::mapper::Mapper;
-use crate::ppu::address::Address as PpuAddress;
-use crate::ppu::memory::Memory as PpuMemory;
+use crate::memory::ppu_address::PpuAddress;
+use crate::memory::vram::Vram;
 
 const PRG_ROM_START: CpuAddress = CpuAddress::new(0x8000);
 const CHR_ROM_END: PpuAddress = PpuAddress::from_u16(0x2000);
@@ -74,18 +74,18 @@ impl Mapper for Mapper0 {
     }
 
     #[inline]
-    fn ppu_read(&self, memory: &PpuMemory, address: PpuAddress) -> u8 {
+    fn ppu_read(&self, vram: &Vram, address: PpuAddress) -> u8 {
         if let Some(ref chr_rom) = self.chr_rom {
             if address < CHR_ROM_END {
                 return chr_rom[address.to_usize()];
             }
         }
 
-        memory.read(address)
+        vram.read(address)
     }
 
     #[inline]
-    fn ppu_write(&mut self, memory: &mut PpuMemory, address: PpuAddress, value: u8) {
+    fn ppu_write(&mut self, vram: &mut Vram, address: PpuAddress, value: u8) {
         // For some reason CHR ROM can be written to.
         if let Some(ref mut chr_rom) = self.chr_rom {
             if address < CHR_ROM_END {
@@ -94,7 +94,7 @@ impl Mapper for Mapper0 {
             }
         }
 
-        memory.write(address, value);
+        vram.write(address, value);
     }
 
     /*
@@ -115,7 +115,7 @@ impl Mapper for Mapper0 {
 
     fn ppu_slice<'a>(
         &'a self,
-        memory: &'a PpuMemory,
+        vram: &'a Vram,
         start_address: PpuAddress,
         end_address: PpuAddress,
     ) -> &'a [u8] {
@@ -126,6 +126,6 @@ impl Mapper for Mapper0 {
             }
         }
 
-        memory.slice(start_address, end_address)
+        vram.slice(start_address, end_address)
     }
 }

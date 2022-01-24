@@ -1,15 +1,15 @@
 use std::fmt;
 
 #[derive(Eq, PartialOrd, Ord, Clone, Copy, Debug)]
-pub struct Address(u16);
+pub struct PpuAddress(u16);
 
-impl Address {
-    pub const fn from_u16(value: u16) -> Address {
-        Address(value)
+impl PpuAddress {
+    pub const fn from_u16(value: u16) -> PpuAddress {
+        PpuAddress(value)
     }
 
-    pub const fn advance(self, offset: u16) -> Address {
-        Address::from_u16(self.0.wrapping_add(offset))
+    pub const fn advance(self, offset: u16) -> PpuAddress {
+        PpuAddress::from_u16(self.0.wrapping_add(offset))
     }
 
     pub fn to_u16(self) -> u16 {
@@ -35,13 +35,13 @@ impl Address {
     }
 }
 
-impl PartialEq for Address {
-    fn eq(&self, rhs: &Address) -> bool {
+impl PartialEq for PpuAddress {
+    fn eq(&self, rhs: &PpuAddress) -> bool {
         self.to_u16() == rhs.to_u16()
     }
 }
 
-impl fmt::Display for Address {
+impl fmt::Display for PpuAddress {
     fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
         write!(f, "${:04X}", self.0)
     }
