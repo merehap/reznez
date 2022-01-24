@@ -7,23 +7,22 @@ use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide, PatternIndex};
 use crate::ppu::render::frame::Frame;
-use crate::util::mapped_array::MappedSlice;
 
 const NAME_TABLE_SIZE: usize = 0x400;
 const ATTRIBUTE_START_INDEX: usize = 0x3C0;
 
 #[derive(Debug)]
 pub struct NameTable<'a> {
-    tiles: MappedSlice<'a, ATTRIBUTE_START_INDEX>,
+    tiles: &'a [u8; ATTRIBUTE_START_INDEX],
     attribute_table: AttributeTable<'a>,
 }
 
 impl <'a> NameTable<'a> {
-    pub fn new(raw: MappedSlice<'a, NAME_TABLE_SIZE>) -> NameTable<'a> {
+    pub fn new(raw: &'a [u8; NAME_TABLE_SIZE]) -> NameTable<'a> {
         NameTable {
-            tiles: raw.slice::<ATTRIBUTE_START_INDEX>(0),
+            tiles: (&raw[0..ATTRIBUTE_START_INDEX]).try_into().unwrap(),
             attribute_table:
-                AttributeTable::new(raw.slice::<64>(ATTRIBUTE_START_INDEX)),
+                AttributeTable::new((&raw[ATTRIBUTE_START_INDEX..]).try_into().unwrap()),
         }
     }
 

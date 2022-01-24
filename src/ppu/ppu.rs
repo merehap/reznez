@@ -1,19 +1,17 @@
+use crate::mapper::mapper::Memory;
 use crate::ppu::address::Address;
 use crate::ppu::clock::Clock;
 use crate::ppu;
-use crate::ppu::memory::Memory;
 use crate::ppu::oam::Oam;
 use crate::ppu::register::ctrl::Ctrl;
 use crate::ppu::register::mask::Mask;
 use crate::ppu::register::status::Status;
 use crate::ppu::render::frame::Frame;
-use crate::util::mapped_array::MemoryMappings;
 
 const FIRST_VBLANK_CYCLE: u64 = 3 * 27384;
 const SECOND_VBLANK_CYCLE: u64 = 3 * 57165;
 
 pub struct Ppu {
-    memory: Memory,
     oam: Oam,
     status: Status,
 
@@ -31,9 +29,8 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    pub fn new(memory: Memory) -> Ppu {
+    pub fn new() -> Ppu {
         Ppu {
-            memory,
             oam: Oam::new(),
             status: Status::new(),
 
@@ -68,25 +65,25 @@ impl Ppu {
         self.oam[oam_address] = value;
     }
 
-    pub fn vram_data(&self) -> u8 {
+    pub fn vram_data(&self, memory: &Memory) -> u8 {
         // When reading palette data only, read the current data pointed to
         // by self.vram_address, not what was previously pointed to.
         if self.vram_address >= ppu::memory::PALETTE_TABLE_START {
-            self.memory.read(self.vram_address)
+            memory.ppu_read(self.vram_address)
         } else {
             self.vram_data
         }
     }
 
-    pub fn update_vram_data(&mut self, ctrl: Ctrl) {
-        self.vram_data = self.memory.read(self.vram_address);
-        let increment = ctrl.vram_address_increment as u8;
+    pub fn update_vram_data(&mut self, memory: &Memory, ctrl: Ctrl) {
+        self.vram_data = memory.ppu_read(self.vram_address);
+        let increment = ctrl.vram_address_increment as u16;
         self.vram_address = self.vram_address.advance(increment);
     }
 
-    pub fn write_vram(&mut self, ctrl: Ctrl, value: u8) {
-        self.memory.write(self.vram_address, value);
-        let increment = ctrl.vram_address_increment as u8;
+    pub fn write_vram(&mut self, memory: &mut Memory, ctrl: Ctrl, value: u8) {
+        memory.ppu_write(self.vram_address, value);
+        let increment = ctrl.vram_address_increment as u16;
         self.vram_address = self.vram_address.advance(increment);
     }
 
@@ -129,11 +126,7 @@ impl Ppu {
         }
     }
 
-    pub fn set_memory_mappings(&mut self, mappings: MemoryMappings) {
-        self.memory.set_memory_mappings(mappings);
-    }
-
-    pub fn step(&mut self, ctrl: Ctrl, mask: Mask, frame: &mut Frame) {
+    pub fn step(&mut self, memory: &Memory, ctrl: Ctrl, mask: Mask, frame: &mut Frame) {
         let total_cycles = self.clock().total_cycles();
         self.vblank_just_started = false;
 
@@ -157,11 +150,11 @@ impl Ppu {
             self.status.sprite0_hit = false;
         } else if self.clock.scanline() == 1 && self.clock.cycle() == 1 {
             if mask.background_enabled {
-                self.render_background(ctrl, frame);
+                self.render_background(&memory, ctrl, frame);
             }
 
             if mask.sprites_enabled {
-                self.render_sprites(ctrl, frame);
+                self.render_sprites(&memory, ctrl, frame);
             }
         }
 
@@ -178,23 +171,23 @@ impl Ppu {
         self.clock.tick(self.rendering_enabled(mask));
     }
 
-    fn render_background(&mut self, ctrl: Ctrl, frame: &mut Frame) {
-        let palette_table = self.memory.palette_table();
+    fn render_background(&mut self, memory: &Memory, ctrl: Ctrl, frame: &mut Frame) {
+        let palette_table = memory.palette_table();
         frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
         let name_table_number = ctrl.name_table_number;
-        let _name_table_mirroring = self.memory.name_table_mirroring();
+        //let _name_table_mirroring = memory.name_table_mirroring();
         let background_table_side = ctrl.background_table_side;
-        self.memory.name_table(name_table_number).render(
-            &self.memory.pattern_table(),
+        memory.name_table(name_table_number).render(
+            &memory.pattern_table(),
             background_table_side,
             &palette_table,
             -(self.x_scroll_offset as i16),
             -(self.y_scroll_offset as i16),
             frame,
         );
-        self.memory.name_table(name_table_number.next_horizontal()).render(
-            &self.memory.pattern_table(),
+        memory.name_table(name_table_number.next_horizontal()).render(
+            &memory.pattern_table(),
             background_table_side,
             &palette_table,
             -(self.x_scroll_offset as i16) + 256,
@@ -203,10 +196,10 @@ impl Ppu {
         );
     }
 
-    fn render_sprites(&mut self, ctrl: Ctrl, frame: &mut Frame) {
+    fn render_sprites(&mut self, memory: &Memory, ctrl: Ctrl, frame: &mut Frame) {
         frame.clear_sprite_buffer();
 
-        let palette_table = self.memory.palette_table();
+        let palette_table = memory.palette_table();
         let sprite_table_side = ctrl.sprite_table_side;
         let sprites = self.oam.sprites();
         // Lower index sprites are drawn on top of higher index sprites.
@@ -229,7 +222,7 @@ impl Ppu {
                         row + row_in_sprite
                     };
 
-                self.memory.pattern_table().render_sprite_sliver(
+                memory.pattern_table().render_sprite_sliver(
                     sprite_table_side,
                     sprite,
                     is_sprite_0,

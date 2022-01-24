@@ -8,8 +8,8 @@ impl Address {
         Address(value)
     }
 
-    pub const fn advance(self, offset: u8) -> Address {
-        Address::from_u16(self.0 + offset as u16)
+    pub const fn advance(self, offset: u16) -> Address {
+        Address::from_u16(self.0.wrapping_add(offset))
     }
 
     pub fn to_u16(self) -> u16 {
@@ -28,6 +28,10 @@ impl Address {
             // Mirrors of lower memory (0x0000 through 0x3FFF).
             0x4000..=0xFFFF => value & 0x3FFF,
         }
+    }
+
+    pub fn to_usize(self) -> usize {
+        usize::from(self.to_u16())
     }
 }
 

@@ -41,7 +41,7 @@ fn nestest() {
         let x = nes.cpu().x_index();
         let y = nes.cpu().y_index();
         let p = nes.cpu().status();
-        let s = nes.cpu().stack_pointer();
+        let s = nes.stack_pointer();
         let ppu_cycle = nes.ppu().clock().cycle();
         let ppu_scanline = nes.ppu().clock().scanline();
         let c = nes.cpu().cycle();

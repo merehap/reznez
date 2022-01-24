@@ -6,15 +6,13 @@ use log::{info, warn};
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::{Cpu, StepResult};
-use crate::cpu::instruction::Instruction;
-use crate::cpu::memory::Memory as CpuMem;
 use crate::cpu::memory::*;
+use crate::cpu::instruction::Instruction;
 use crate::cpu::port_access::{PortAccess, AccessMode};
 use crate::gui::gui::Gui;
-use crate::mapper::mapper::{Mapper, Mappings};
+use crate::mapper::mapper::Memory;
 use crate::mapper::mapper0::Mapper0;
 use crate::ppu::ppu::Ppu;
-use crate::ppu::memory::Memory as PpuMem;
 use crate::ppu::register::ctrl::Ctrl;
 use crate::ppu::register::mask::Mask;
 use crate::ppu::render::frame::Frame;
@@ -23,9 +21,10 @@ use crate::ppu::render::frame_rate::TargetFrameRate;
 pub struct Nes {
     cpu: Cpu,
     ppu: Ppu,
+    memory: Memory,
+
     pub joypad_1: Joypad,
     pub joypad_2: Joypad,
-    mapper: Box<dyn Mapper>,
     nmi_was_enabled_last_cycle: bool,
     cycle: u64,
 
@@ -35,28 +34,21 @@ pub struct Nes {
 
 impl Nes {
     pub fn new(config: Config) -> Nes {
-        let mut cpu_mem = CpuMem::new();
-        let mut ppu_mem = PpuMem::new(
-            config.cartridge.name_table_mirroring(),
-            config.system_palette,
-        );
-
+        let name_table_mirroring = config.cartridge.name_table_mirroring();
         let mapper =
             match config.cartridge.mapper_number() {
                 0 => Box::new(Mapper0::new(config.cartridge).unwrap()),
                 _ => todo!(),
             };
-
-        let Mappings {cpu_mappings, ppu_mappings} = mapper.current_mappings(&cpu_mem);
-        cpu_mem.set_memory_mappings(cpu_mappings);
-        ppu_mem.set_memory_mappings(ppu_mappings);
+        let mut memory = Memory::new(mapper, name_table_mirroring, config.system_palette);
 
         Nes {
-            cpu: Cpu::new(cpu_mem, config.program_counter_source),
-            ppu: Ppu::new(ppu_mem),
+            cpu: Cpu::new(&mut memory, config.program_counter_source),
+            ppu: Ppu::new(),
+            memory,
+
             joypad_1: Joypad::new(),
             joypad_2: Joypad::new(),
-            mapper,
             nmi_was_enabled_last_cycle: false,
             cycle: 0,
 
@@ -75,6 +67,10 @@ impl Nes {
 
     pub fn cycle(&self) -> u64 {
         self.cycle
+    }
+
+    pub fn stack_pointer(&self) -> u8 {
+        self.memory.cpu_memory().stack_pointer
     }
 
     pub fn step_frame(&mut self, gui: &mut dyn Gui) {
@@ -124,36 +120,33 @@ impl Nes {
     pub fn step(&mut self, frame: &mut Frame) -> Option<Instruction> {
         let mut instruction = None;
         if self.cycle % 3 == 0 {
-            match self.cpu.step() {
+            match self.cpu.step(&mut self.memory) {
                 StepResult::Nop => {},
                 StepResult::InstructionComplete(inst) => instruction = Some(inst),
                 StepResult::DmaWrite(oamaddr, value) =>
                     self.ppu.write_oam(oamaddr, value),
             }
 
-            let Mappings {cpu_mappings, ppu_mappings} =
-                self.mapper.current_mappings(&self.cpu.memory);
-            self.cpu.memory.set_memory_mappings(cpu_mappings);
-            self.ppu.set_memory_mappings(ppu_mappings);
-
-            if let Some(port_access) = self.cpu.memory.latch() {
+            if let Some(port_access) = self.memory.cpu_memory().latch() {
                 self.execute_port_action(port_access);
             }
         }
 
-        self.ppu.step(self.ppu_ctrl(), self.ppu_mask(), frame);
-        self.cpu.memory.bus_access_write(PPUSTATUS, self.ppu.status().to_u8());
-        self.cpu.memory.bus_access_write(OAMDATA, self.ppu.read_oam(self.oam_address()));
-        self.cpu.memory.bus_access_write(PPUDATA, self.ppu.vram_data());
+        self.ppu.step(&self.memory, self.ppu_ctrl(), self.ppu_mask(), frame);
+        self.memory.cpu_memory_mut().bus_access_write(PPUSTATUS, self.ppu.status().to_u8());
+        let oam_byte = self.ppu.read_oam(self.oam_address());
+        self.memory.cpu_memory_mut().bus_access_write(OAMDATA, oam_byte);
+        let vram_data = self.ppu.vram_data(&self.memory);
+        self.memory.cpu_memory_mut().bus_access_write(PPUDATA, vram_data);
 
         if self.ppu.vblank_just_started() {
             self.schedule_nmi_if_allowed();
         }
 
         let status = self.joypad_1.selected_button_status() as u8;
-        self.cpu.memory.write(JOYSTICK_1_PORT, status);
+        self.memory.cpu_memory_mut().write(JOYSTICK_1_PORT, status);
         let status = self.joypad_2.selected_button_status() as u8;
-        self.cpu.memory.write(JOYSTICK_2_PORT, status);
+        self.memory.cpu_memory_mut().write(JOYSTICK_2_PORT, status);
 
         self.cycle += 1;
 
@@ -165,6 +158,7 @@ impl Nes {
     // to not occur that frame.
     fn execute_port_action(&mut self, port_access: PortAccess) {
         let value = port_access.value;
+        let ppu_ctrl = self.ppu_ctrl();
 
         use AccessMode::{Read, Write};
         match (port_access.address, port_access.access_mode) {
@@ -190,8 +184,8 @@ impl Nes {
             (OAM_DMA, Write) =>
                 self.cpu.initiate_dma_transfer(value, self.oam_address()),
             (PPUADDR, Write) => self.ppu.write_partial_vram_address(value),
-            (PPUDATA, Read) => self.ppu.update_vram_data(self.ppu_ctrl()),
-            (PPUDATA, Write) => self.ppu.write_vram(self.ppu_ctrl(), value),
+            (PPUDATA, Read) => self.ppu.update_vram_data(&mut self.memory, ppu_ctrl),
+            (PPUDATA, Write) => self.ppu.write_vram(&mut self.memory, ppu_ctrl, value),
             (PPUSCROLL, Write) => self.ppu.write_scroll_dimension(value),
 
             // Now that the ROM has read a button status, advance to the next status.
@@ -219,22 +213,22 @@ impl Nes {
     }
 
     fn ppu_ctrl(&self) -> Ctrl {
-        Ctrl::from_u8(self.cpu.memory.bus_access_read(PPUCTRL))
+        Ctrl::from_u8(self.memory.cpu_memory().bus_access_read(PPUCTRL))
     }
 
     fn ppu_mask(&self) -> Mask {
-        Mask::from_u8(self.cpu.memory.bus_access_read(PPUMASK))
+        Mask::from_u8(self.memory.cpu_memory().bus_access_read(PPUMASK))
     }
 
     fn oam_address(&self) -> u8 {
-        self.cpu.memory.bus_access_read(OAMADDR)
+        self.memory.cpu_memory().bus_access_read(OAMADDR)
     }
 
     fn write_oam(&mut self, value: u8) {
-        let oamaddr = self.cpu.memory.bus_access_read(OAMADDR);
+        let oamaddr = self.memory.cpu_memory().bus_access_read(OAMADDR);
         self.ppu.write_oam(oamaddr, value);
         // Advance to next sprite byte to write.
-        self.cpu.memory.bus_access_write(OAMADDR, oamaddr.wrapping_add(1));
+        self.memory.cpu_memory_mut().bus_access_write(OAMADDR, oamaddr.wrapping_add(1));
     }
 
     fn frame_duration(&self) -> Duration {
@@ -249,11 +243,11 @@ impl Nes {
 mod tests {
     use crate::cpu::address::Address;
     use crate::cpu::cpu::ProgramCounterSource;
+    use crate::mapper::mapper::Memory;
     use crate::ppu::palette::system_palette::SystemPalette;
     use crate::ppu::register::ctrl::Ctrl;
     use crate::ppu::render::frame::Frame;
     use crate::ppu::render::frame_rate::TargetFrameRate;
-    use crate::util::mapped_array::MemoryMappings;
 
     use crate::cartridge::tests::sample_cartridge;
 
@@ -318,20 +312,22 @@ mod tests {
 
     fn sample_nes() -> Nes {
         let cartridge = sample_cartridge();
+        let name_table_mirroring = cartridge.name_table_mirroring();
+        let mapper = Box::new(Mapper0::new(cartridge).unwrap());
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
+        let mut memory = Memory::new(mapper, name_table_mirroring, system_palette);
+        // Write NOPs to where the RESET_VECTOR starts the program.
+        for i in 0x0200..0x0800 {
+            memory.cpu_write(Address::new(i), 0xEA);
+        }
 
-        let cpu_mem = CpuMem::new();
-        let ppu_mem = PpuMem::new(cartridge.name_table_mirroring(), system_palette);
         Nes {
-            cpu: Cpu::new(
-                cpu_mem,
-                ProgramCounterSource::Override(Address::new(0x0)),
-                ),
-            ppu: Ppu::new(ppu_mem),
+            cpu: Cpu::new(&mut memory, ProgramCounterSource::Override(Address::new(0x0000))),
+            ppu: Ppu::new(),
+            memory,
             joypad_1: Joypad::new(),
             joypad_2: Joypad::new(),
-            mapper: Box::new(Mapper0::new(cartridge).unwrap()),
             nmi_was_enabled_last_cycle: false,
             cycle: 0,
 
@@ -341,13 +337,14 @@ mod tests {
     }
 
     fn step_until_vblank_nmi_enabled(nes: &mut Nes) {
-        let mut ctrl = Ctrl::from_u8(nes.cpu.memory.bus_access_read(PPUCTRL));
+        let mut ctrl = Ctrl::from_u8(nes.memory.cpu_memory().bus_access_read(PPUCTRL));
         ctrl.nmi_enabled = true;
-        nes.cpu.memory.bus_access_write(PPUCTRL, ctrl.to_u8());
+        nes.memory.cpu_memory_mut().bus_access_write(PPUCTRL, ctrl.to_u8());
 
         let mut frame = Frame::new();
         while !nes.ppu.can_generate_nmi(nes.ppu_ctrl()) {
             assert!(!nes.cpu.nmi_pending(), "NMI must not be pending before one is scheduled.");
+            println!("PC: {}", nes.cpu().program_counter());
             nes.step(&mut frame);
             if nes.ppu.clock().total_cycles() > 200_000 {
                 panic!("It took too long for the PPU to enable NMI.");
@@ -356,27 +353,22 @@ mod tests {
     }
 
     fn write_ppuctrl_through_opcode_injection(nes: &mut Nes, ctrl: u8) {
+        println!("Injection PC: {}", nes.cpu.program_counter());
         // STA: Store to the accumulator.
-        nes.cpu.memory.write(nes.cpu.program_counter().advance(0), 0xA9);
+        nes.memory.cpu_memory_mut().write(nes.cpu.program_counter().advance(0), 0xA9);
         // Store VBLANK_NMI DISABLED to the accumulator.
-        nes.cpu.memory.write(nes.cpu.program_counter().advance(1), ctrl);
+        nes.memory.cpu_memory_mut().write(nes.cpu.program_counter().advance(1), ctrl);
 
         // LDA: Load the accumulator into a memory location.
-        nes.cpu.memory.write(nes.cpu.program_counter().advance(2), 0x8D);
+        nes.memory.cpu_memory_mut().write(nes.cpu.program_counter().advance(2), 0x8D);
         // Low byte of PPUCTRL, the address to be set.
-        nes.cpu.memory.write(nes.cpu.program_counter().advance(3), 0x00);
+        nes.memory.cpu_memory_mut().write(nes.cpu.program_counter().advance(3), 0x00);
         // High byte of PPUCTRL, the address to be set.
-        nes.cpu.memory.write(nes.cpu.program_counter().advance(4), 0x20);
+        nes.memory.cpu_memory_mut().write(nes.cpu.program_counter().advance(4), 0x20);
 
         // Execute the two op codes we just injected.
         let mut frame = Frame::new();
-        while nes.step(&mut frame).is_none() {
-            // Avoid writing to readonly memory by removing all memory mappings.
-            nes.cpu.memory.set_memory_mappings(MemoryMappings::new());
-        }
-        while nes.step(&mut frame).is_none() {
-            // Avoid writing to readonly memory by removing all memory mappings.
-            nes.cpu.memory.set_memory_mappings(MemoryMappings::new());
-        }
+        while nes.step(&mut frame).is_none() {}
+        while nes.step(&mut frame).is_none() {}
     }
 }

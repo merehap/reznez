@@ -177,6 +177,17 @@ pub mod tests {
     use super::*;
 
     pub fn sample_cartridge() -> Cartridge {
+        let mut prg_rom = vec![0xEA; PRG_ROM_CHUNK_LENGTH];
+        let len = prg_rom.len();
+        // Overwrite the NMI/RESET/IRQ Vectors so they doesn't point to ROM.
+        // This allows injection of custom instructions for testing.
+        prg_rom[len - 6] = 0x00;
+        prg_rom[len - 5] = 0x02;
+        prg_rom[len - 4] = 0x00;
+        prg_rom[len - 3] = 0x02;
+        prg_rom[len - 2] = 0x00;
+        prg_rom[len - 1] = 0x02;
+
         Cartridge {
             mapper_number: 0,
             name_table_mirroring: NameTableMirroring::Horizontal,
@@ -185,7 +196,7 @@ pub mod tests {
             ines2: None,
 
             trainer: None,
-            prg_rom: vec![0xEA; PRG_ROM_CHUNK_LENGTH],
+            prg_rom,
             chr_rom: vec![0x00; CHR_ROM_CHUNK_LENGTH],
             console_type: ConsoleType::Nes,
             title: "Test ROM".to_string(),

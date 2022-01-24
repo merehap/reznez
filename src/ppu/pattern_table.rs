@@ -6,14 +6,13 @@ use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::Sprite;
 use crate::util::bit_util::get_bit;
-use crate::util::mapped_array::MappedSlice;
 
 const PATTERN_SIZE: usize = 16;
 
-pub struct PatternTable<'a>(MappedSlice<'a, 0x2000>);
+pub struct PatternTable<'a>(&'a [u8; 0x2000]);
 
 impl <'a> PatternTable<'a> {
-    pub fn new(raw: MappedSlice<'a, 0x2000>) -> PatternTable<'a> {
+    pub fn new(raw: &'a [u8; 0x2000]) -> PatternTable<'a> {
         PatternTable(raw)
     }
 

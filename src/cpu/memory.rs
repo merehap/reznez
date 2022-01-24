@@ -2,11 +2,10 @@ use log::info;
 
 use crate::cpu::address::Address;
 use crate::cpu::port_access::{PortAccess, AccessMode};
-use crate::util::mapped_array::{MappedArray, MemoryMappings};
 
-const NMI_VECTOR: Address = Address::new(0xFFFA);
-const RESET_VECTOR: Address = Address::new(0xFFFC);
-const IRQ_VECTOR: Address = Address::new(0xFFFE);
+pub const NMI_VECTOR: Address = Address::new(0xFFFA);
+pub const RESET_VECTOR: Address = Address::new(0xFFFC);
+pub const IRQ_VECTOR: Address = Address::new(0xFFFE);
 
 // FIXME: Ports should be configurable, not hard-coded here,
 // but I can't find any data structure that is efficient enough.
@@ -25,7 +24,7 @@ pub const JOYSTICK_2_PORT: Address = Address::new(0x4017);
 
 pub struct Memory {
     pub stack_pointer: u8,
-    memory: MappedArray<0x10000>,
+    memory: Box<[u8; 0x10000]>,
     latch: Option<PortAccess>,
 }
 
@@ -33,7 +32,7 @@ impl Memory {
     pub fn new() -> Memory {
         Memory {
             stack_pointer: 0xFD,
-            memory: MappedArray::new(),
+            memory: Box::new([0; 0x10000]),
             latch: None,
         }
     }
@@ -41,7 +40,7 @@ impl Memory {
     #[inline]
     pub fn read(&mut self, address: Address) -> u8 {
         let raw_address = address.to_raw() as usize;
-        let value = self.memory.read_byte(raw_address);
+        let value = self.memory[raw_address];
         if address == PPUSTATUS ||
             address == OAMDATA ||
             address == PPUDATA ||
@@ -79,17 +78,17 @@ impl Memory {
             });
         }
 
-        self.memory.write_byte(raw_address, value);
+        self.memory[raw_address] = value;
     }
 
     #[inline]
     pub fn bus_access_read(&self, address: Address) -> u8 {
-        self.memory.read_byte(address.to_raw() as usize)
+        self.memory[address.to_raw() as usize]
     }
 
     #[inline]
     pub fn bus_access_write(&mut self, address: Address, value: u8) {
-        self.memory.write_byte(address.to_raw() as usize, value);
+        self.memory[address.to_raw() as usize] = value;
     }
 
     pub fn push_to_stack(&mut self, value: u8) {
@@ -97,7 +96,7 @@ impl Memory {
             info!("Pushing to full stack.");
         }
 
-        self.memory.write_byte(self.stack_pointer as usize + 0x100, value);
+        self.memory[self.stack_pointer as usize + 0x100] = value;
         self.stack_pointer = self.stack_pointer.wrapping_sub(1);
     }
 
@@ -113,7 +112,7 @@ impl Memory {
         }
 
         self.stack_pointer = self.stack_pointer.wrapping_add(1);
-        self.memory.read_byte(self.stack_pointer as usize + 0x100)
+        self.memory[self.stack_pointer as usize + 0x100]
     }
 
     pub fn pop_address_from_stack(&mut self) -> Address {
@@ -131,29 +130,6 @@ impl Memory {
     }
 
     pub fn stack(&self) -> &[u8] {
-        self.memory.unmapped_slice(self.stack_pointer as usize + 0x101, 0x200).unwrap()
-    }
-
-    pub fn nmi_vector(&self) -> Address {
-        self.address_from_vector(NMI_VECTOR)
-    }
-
-    pub fn reset_vector(&self) -> Address {
-        self.address_from_vector(RESET_VECTOR)
-    }
-
-    pub fn irq_vector(&self) -> Address {
-        self.address_from_vector(IRQ_VECTOR)
-    }
-
-    pub fn set_memory_mappings(&mut self, mappings: MemoryMappings) {
-        self.memory.set_mappings(mappings);
-    }
-
-    fn address_from_vector(&self, mut vector: Address) -> Address {
-        Address::from_low_high(
-            self.memory.read_byte(vector.to_raw() as usize),
-            self.memory.read_byte(vector.inc().to_raw() as usize),
-        )
+        &self.memory[self.stack_pointer as usize + 0x101..0x200]
     }
 }

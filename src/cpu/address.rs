@@ -30,6 +30,10 @@ impl Address {
         self.0
     }
 
+    pub fn to_usize(self) -> usize {
+        usize::from(self.0)
+    }
+
     pub fn to_low_high(self) -> (u8, u8) {
         (self.0 as u8, (self.0 >> 8) as u8)
     }

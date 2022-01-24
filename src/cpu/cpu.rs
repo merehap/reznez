@@ -3,9 +3,9 @@ use log::Level::Info;
 
 use crate::cpu::address::Address;
 use crate::cpu::instruction::{Instruction, OpCode, Argument};
-use crate::cpu::memory::Memory;
 use crate::cpu::status::Status;
 use crate::cpu::dma_transfer::{DmaTransfer, DmaTransferState};
+use crate::mapper::mapper::Memory;
 
 pub struct Cpu {
     // Accumulator
@@ -16,7 +16,6 @@ pub struct Cpu {
     y: u8,
     program_counter: Address,
     status: Status,
-    pub memory: Memory,
 
     nmi_pending: bool,
     dma_transfer: DmaTransfer,
@@ -27,7 +26,7 @@ pub struct Cpu {
 
 impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
-    pub fn new(memory: Memory, program_counter_source: ProgramCounterSource) -> Cpu {
+    pub fn new(memory: &mut Memory, program_counter_source: ProgramCounterSource) -> Cpu {
         use ProgramCounterSource::*;
         let program_counter = match program_counter_source {
             ResetVector => memory.reset_vector(),
@@ -41,7 +40,6 @@ impl Cpu {
             y: 0,
             program_counter,
             status: Status::startup(),
-            memory,
 
             nmi_pending: false,
             dma_transfer: DmaTransfer::inactive(),
@@ -53,14 +51,14 @@ impl Cpu {
     }
 
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self, memory: &mut Memory) {
         self.status.interrupts_disabled = true;
-        self.program_counter = self.memory.reset_vector();
+        self.program_counter = memory.reset_vector();
         self.cycle = 7;
         // TODO: APU resets?
     }
 
-    pub fn state_string(&self) -> String {
+    pub fn state_string(&self, memory: &Memory) -> String {
         let nesting = "";
         format!("{:010} PC:{}, A:{:02X}, X:{:02X}, Y:{:02X}, P:{:02X}, S:{:02X}, {} {}",
             self.cycle,
@@ -69,7 +67,7 @@ impl Cpu {
             self.x,
             self.y,
             self.status.to_register_byte(),
-            self.stack_pointer(),
+            memory.cpu_memory().stack_pointer,
             self.status,
             nesting,
         )
@@ -95,10 +93,6 @@ impl Cpu {
         self.status
     }
 
-    pub fn stack_pointer(&self) -> u8 {
-        self.memory.stack_pointer
-    }
-
     pub fn cycle(&self) -> u64 {
         self.cycle
     }
@@ -115,16 +109,16 @@ impl Cpu {
         self.dma_transfer = DmaTransfer::new(memory_page, oam_start_address, self.cycle);
     }
 
-    pub fn step(&mut self) -> StepResult {
+    pub fn step(&mut self, memory: &mut Memory) -> StepResult {
         self.cycle += 1;
-        self.memory.reset_latch();
+        memory.cpu_memory_mut().reset_latch();
 
         // Normal CPU operation is suspended while the DMA transfer completes.
         match self.dma_transfer.step() {
             DmaTransferState::Finished =>
                 {/* No transfer in progress. Continue to normal CPU step.*/},
             DmaTransferState::Write(cpu_address, oam_address) =>
-                return StepResult::DmaWrite(oam_address, self.memory.read(cpu_address)),
+                return StepResult::DmaWrite(oam_address, memory.cpu_read(cpu_address)),
             _ =>
                 return StepResult::Nop,
         }
@@ -138,25 +132,25 @@ impl Cpu {
             self.program_counter,
             self.x,
             self.y,
-            &mut self.memory,
+            memory,
         );
 
         if log_enabled!(target: "cpu", Info) {
-            info!(target: "cpu", "{} | {}", self.state_string(), instruction);
+            info!(target: "cpu", "{} | {}", self.state_string(memory), instruction);
         }
 
-        let cycle_count = self.execute_instruction(instruction);
+        let cycle_count = self.execute_instruction(memory, instruction);
         self.current_instruction_remaining_cycles = cycle_count - 1;
 
         if self.nmi_pending {
-            self.nmi();
+            self.nmi(memory);
             self.nmi_pending = false;
         }
 
         StepResult::InstructionComplete(instruction)
     }
 
-    fn execute_instruction(&mut self, instruction: Instruction) -> u8 {
+    fn execute_instruction(&mut self, memory: &mut Memory, instruction: Instruction) -> u8 {
         self.program_counter = self.program_counter.advance(instruction.length());
 
         let mut cycle_count = instruction.template.cycle_count as u8;
@@ -174,17 +168,17 @@ impl Cpu {
             (DEY, Imp) => self.y = self.nz(self.y.wrapping_sub(1)),
             (TAX, Imp) => self.x = self.nz(self.a),
             (TAY, Imp) => self.y = self.nz(self.a),
-            (TSX, Imp) => self.x = self.nz(self.memory.stack_pointer),
-            (TXS, Imp) => self.memory.stack_pointer = self.x,
+            (TSX, Imp) => self.x = self.nz(memory.cpu_memory().stack_pointer),
+            (TXS, Imp) => memory.cpu_memory_mut().stack_pointer = self.x,
             (TXA, Imp) => self.a = self.nz(self.x),
             (TYA, Imp) => self.a = self.nz(self.y),
-            (PHA, Imp) => self.memory.push_to_stack(self.a),
-            (PHP, Imp) => self.memory.push_to_stack(self.status.to_instruction_byte()),
+            (PHA, Imp) => memory.cpu_memory_mut().push_to_stack(self.a),
+            (PHP, Imp) => memory.cpu_memory_mut().push_to_stack(self.status.to_instruction_byte()),
             (PLA, Imp) => {
-                self.a = self.memory.pop_from_stack();
+                self.a = memory.cpu_memory_mut().pop_from_stack();
                 self.nz(self.a);
             },
-            (PLP, Imp) => self.status = Status::from_byte(self.memory.pop_from_stack()),
+            (PLP, Imp) => self.status = Status::from_byte(memory.cpu_memory_mut().pop_from_stack()),
             (CLC, Imp) => self.status.carry = false,
             (SEC, Imp) => self.status.carry = true,
             (CLD, Imp) => self.status.decimal = false,
@@ -195,28 +189,28 @@ impl Cpu {
             (BRK, Imp) => {
                 // Not sure why we need to increment here.
                 self.program_counter.inc();
-                self.memory.push_address_to_stack(self.program_counter);
-                self.memory.push_to_stack(self.status.to_instruction_byte());
+                memory.cpu_memory_mut().push_address_to_stack(self.program_counter);
+                memory.cpu_memory_mut().push_to_stack(self.status.to_instruction_byte());
                 self.status.interrupts_disabled = true;
-                self.program_counter = self.memory.irq_vector();
+                self.program_counter = memory.irq_vector();
             },
             (RTI, Imp) => {
-                self.status = Status::from_byte(self.memory.pop_from_stack());
-                self.program_counter = self.memory.pop_address_from_stack();
+                self.status = Status::from_byte(memory.cpu_memory_mut().pop_from_stack());
+                self.program_counter = memory.cpu_memory_mut().pop_address_from_stack();
             },
-            (RTS, Imp) => self.program_counter = self.memory.pop_address_from_stack().advance(1),
+            (RTS, Imp) => self.program_counter = memory.cpu_memory_mut().pop_address_from_stack().advance(1),
 
-            (STA, Addr(addr, _)) => self.memory.write(addr, self.a),
-            (STX, Addr(addr, _)) => self.memory.write(addr, self.x),
-            (STY, Addr(addr, _)) => self.memory.write(addr, self.y),
+            (STA, Addr(addr, _)) => memory.cpu_write(addr, self.a),
+            (STX, Addr(addr, _)) => memory.cpu_write(addr, self.x),
+            (STY, Addr(addr, _)) => memory.cpu_write(addr, self.y),
             (DEC, Addr(addr, _)) => {
-                let value = self.memory.read(addr).wrapping_sub(1);
-                self.memory.write(addr, value);
+                let value = memory.cpu_read(addr).wrapping_sub(1);
+                memory.cpu_write(addr, value);
                 self.nz(value);
             },
             (INC, Addr(addr, _)) => {
-                let value = self.memory.read(addr).wrapping_add(1);
-                self.memory.write(addr, value);
+                let value = memory.cpu_read(addr).wrapping_add(1);
+                memory.cpu_write(addr, value);
                 self.nz(value);
             },
             (BPL, Addr(addr, _)) =>
@@ -237,7 +231,7 @@ impl Cpu {
                 if self.status.zero {cycle_count += self.take_branch(addr);},
             (JSR, Addr(addr, _)) => {
                 // Push the address one previous for some reason.
-                self.memory.push_address_to_stack(self.program_counter.offset(-1));
+                memory.cpu_memory_mut().push_address_to_stack(self.program_counter.offset(-1));
                 self.program_counter = addr;
             },
             (JMP, Addr(addr, _)) => self.program_counter = addr,
@@ -267,67 +261,67 @@ impl Cpu {
 
             (ASL, Imp) => self.a = self.asl(self.a),
             (ASL, Addr(addr, _)) => {
-                let value = self.memory.read(addr);
+                let value = memory.cpu_read(addr);
                 let value = self.asl(value);
-                self.memory.write(addr, value);
+                memory.cpu_write(addr, value);
             },
             (ROL, Imp) => self.a = self.rol(self.a),
             (ROL, Addr(addr, _)) => {
-                let value = self.memory.read(addr);
+                let value = memory.cpu_read(addr);
                 let value = self.rol(value);
-                self.memory.write(addr, value);
+                memory.cpu_write(addr, value);
             },
             (LSR, Imp) => self.a = self.lsr(self.a),
             (LSR, Addr(addr, _)) => {
-                let value = self.memory.read(addr);
+                let value = memory.cpu_read(addr);
                 let value = self.lsr(value);
-                self.memory.write(addr, value);
+                memory.cpu_write(addr, value);
             },
             (ROR, Imp) => self.a = self.ror(self.a),
             (ROR, Addr(addr, _)) => {
-                let value = self.memory.read(addr);
+                let value = memory.cpu_read(addr);
                 let value = self.ror(value);
-                self.memory.write(addr, value);
+                memory.cpu_write(addr, value);
             },
 
             // Undocumented op codes.
             (SLO, Addr(addr, _)) => {
-                let value = self.memory.read(addr);
+                let value = memory.cpu_read(addr);
                 let value = self.asl(value);
-                self.memory.write(addr, value);
+                memory.cpu_write(addr, value);
                 self.a |= value;
                 self.nz(self.a);
             },
             (RLA, Addr(addr, _)) => {
-                let value = self.memory.read(addr);
+                let value = memory.cpu_read(addr);
                 let value = self.rol(value);
-                self.memory.write(addr, value);
+                memory.cpu_write(addr, value);
                 self.a &= value;
                 self.nz(self.a);
             },
             (SRE, Addr(addr, _)) => {
-                let value = self.memory.read(addr);
+                let value = memory.cpu_read(addr);
                 let value = self.lsr(value);
-                self.memory.write(addr, value);
+                memory.cpu_write(addr, value);
                 self.a ^= value;
                 self.nz(self.a);
             },
             (RRA, Addr(addr, _)) => {
-                let value = self.memory.read(addr);
+                let value = memory.cpu_read(addr);
                 let value = self.ror(value);
-                self.memory.write(addr, value);
+                memory.cpu_write(addr, value);
                 self.a = self.adc(value);
                 self.nz(self.a);
             },
-            (SAX, Addr(addr, _)) => self.memory.write(addr, self.a & self.x),
+            (SAX, Addr(addr, _)) => memory.cpu_write(addr, self.a & self.x),
             (DCP, Addr(addr, _)) => {
-                let value = self.memory.read(addr).wrapping_sub(1);
-                self.memory.write(addr, value);
+                let value = memory.cpu_read(addr).wrapping_sub(1);
+                memory.cpu_write(addr, value);
                 self.cmp(value);
             },
             (ISC, Addr(addr, _)) => {
-                let value = self.memory.read(addr).wrapping_add(1);
-                self.memory.write(addr, value);
+                let value = memory.cpu_read(addr).wrapping_add(1);
+                memory.cpu_write(addr, value);
                 self.a = self.sbc(value);
             },
 
@@ -358,13 +352,13 @@ impl Cpu {
                 let (low, high) = addr.to_low_high();
                 let value = self.y & high.wrapping_add(1);
                 let addr = Address::from_low_high(low, high & self.y);
-                self.memory.write(addr, value);
+                memory.cpu_write(addr, value);
             },
             (SHX, Addr(addr, _)) => {
                 let (low, high) = addr.to_low_high();
                 let value = self.x & high.wrapping_add(1);
                 let addr = Address::from_low_high(low, high & self.x);
-                self.memory.write(addr, value);
+                memory.cpu_write(addr, value);
             },
             (TAS, _) => unimplemented!(),
             (LAS, _) => unimplemented!(),
@@ -467,11 +461,11 @@ impl Cpu {
     }
 
     // TODO: Account for how many cycles an NMI takes.
-    fn nmi(&mut self) {
+    fn nmi(&mut self, memory: &mut Memory) {
         info!(target: "cpu", "Executing NMI.");
-        self.memory.push_address_to_stack(self.program_counter);
-        self.memory.push_to_stack(self.status.to_interrupt_byte());
-        self.program_counter = self.memory.nmi_vector();
+        memory.cpu_memory_mut().push_address_to_stack(self.program_counter);
+        memory.cpu_memory_mut().push_to_stack(self.status.to_interrupt_byte());
+        self.program_counter = memory.nmi_vector();
     }
 }
 
