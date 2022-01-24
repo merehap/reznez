@@ -6,13 +6,12 @@ use log::{info, warn};
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::{Cpu, StepResult};
-//use crate::cpu::memory::{PPUCTRL, PPUMASK, PPUSTATUS, OAMADDR, OAMDATA, PPUDATA, OAMDMA, JOYSTICK_1_PORT, JOYSTICK_2_PORT};
 use crate::cpu::memory::*;
 use crate::cpu::instruction::Instruction;
 use crate::cpu::port_access::{PortAccess, AccessMode};
 use crate::gui::gui::Gui;
 use crate::memory::memory::Memory;
-use crate::memory::mapper0::Mapper0;
+use crate::memory::mappers::mapper0::Mapper0;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::register::ctrl::Ctrl;
 use crate::ppu::register::mask::Mask;
@@ -244,7 +243,7 @@ impl Nes {
 mod tests {
     use crate::cpu::address::Address;
     use crate::cpu::cpu::ProgramCounterSource;
-    use crate::mapper::mapper::Memory;
+    use crate::memory::memory::Memory;
     use crate::ppu::palette::system_palette::SystemPalette;
     use crate::ppu::register::ctrl::Ctrl;
     use crate::ppu::render::frame::Frame;
