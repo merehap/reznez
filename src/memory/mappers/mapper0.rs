@@ -3,6 +3,7 @@ use crate::cpu::address::Address as CpuAddress;
 use crate::cpu::memory::Memory as CpuMemory;
 use crate::memory::mapper::Mapper;
 use crate::memory::ppu_address::PpuAddress;
+use crate::memory::ppu_ram::PpuRam;
 use crate::memory::vram::Vram;
 
 const PRG_ROM_START: CpuAddress = CpuAddress::new(0x8000);
@@ -10,7 +11,7 @@ const CHR_ROM_END: PpuAddress = PpuAddress::from_u16(0x2000);
 
 pub struct Mapper0 {
     prg_rom: Box<[u8; 0x8000]>,
-    chr_rom: Option<Box<[u8; 0x2000]>>,
+    chr_rom: Box<[u8; 0x2000]>,
 }
 
 impl Mapper0 {
@@ -45,9 +46,10 @@ impl Mapper0 {
 
         let chr_rom =
             if cartridge.chr_rom().is_empty() {
-                None
+                // Provide empty CHR ROM if the cartridge doesn't provide any.
+                Box::new([0; 0x2000])
             } else {
-                Some(Box::new(cartridge.chr_rom()[0x0..0x2000].try_into().unwrap()))
+                Box::new(cartridge.chr_rom()[0x0..0x2000].try_into().unwrap())
             };
 
         Ok(Mapper0 {prg_rom, chr_rom})
@@ -74,27 +76,34 @@ impl Mapper for Mapper0 {
     }
 
     #[inline]
-    fn ppu_read(&self, vram: &Vram, address: PpuAddress) -> u8 {
-        if let Some(ref chr_rom) = self.chr_rom {
-            if address < CHR_ROM_END {
-                return chr_rom[address.to_usize()];
-            }
-        }
+    fn ppu_read(&self, ppu_ram: &PpuRam, address: PpuAddress) -> u8 {
+        let palette_ram = &ppu_ram.palette_ram;
+        let vram = &ppu_ram.vram;
 
-        vram.read(address)
+        let index = address.to_usize();
+        match address.to_u16() {
+            0x0000..=0x1FFF => self.chr_rom[index],
+            0x3F00..=0x3FFF => palette_ram[index % 0x20],
+            // Address is out of normal range so mirror down and try again.
+            0x4000..=0xFFFF => self.ppu_read(ppu_ram, address.reduce()),
+            _ => vram.read(address),
+        }
     }
 
     #[inline]
-    fn ppu_write(&mut self, vram: &mut Vram, address: PpuAddress, value: u8) {
-        // For some reason CHR ROM can be written to.
-        if let Some(ref mut chr_rom) = self.chr_rom {
-            if address < CHR_ROM_END {
-                chr_rom[address.to_usize()] = value;
-                return;
-            }
-        }
+    fn ppu_write(&mut self, ppu_ram: &mut PpuRam, address: PpuAddress, value: u8) {
+        let palette_ram = &mut ppu_ram.palette_ram;
+        let vram = &mut ppu_ram.vram;
 
-        vram.write(address, value);
+        let index = address.to_usize();
+        match address.to_u16() {
+            0x0000..=0x1FFF => self.chr_rom[index] = value,
+            0x3F00..=0x3FFF => palette_ram[index % 0x20] = value,
+            // Address is out of normal range so mirror down and try again.
+            0x4000..=0xFFFF =>
+                self.ppu_write(ppu_ram, address.reduce(), value),
+            _ => vram.write(address, value),
+        }
     }
 
     /*
@@ -120,12 +129,10 @@ impl Mapper for Mapper0 {
         end_address: PpuAddress,
     ) -> &'a [u8] {
 
-        if let Some(ref chr_rom) = self.chr_rom {
-            if start_address < CHR_ROM_END && end_address < CHR_ROM_END {
-                return &chr_rom[start_address.to_usize()..end_address.to_usize() + 1];
-            }
+        if start_address < CHR_ROM_END && end_address < CHR_ROM_END {
+            &self.chr_rom[start_address.to_usize()..end_address.to_usize() + 1]
+        } else {
+            vram.slice(start_address, end_address)
         }
-
-        vram.slice(start_address, end_address)
     }
 }

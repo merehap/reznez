@@ -19,14 +19,14 @@ pub const PALETTE_TABLE_START: PpuAddress = PpuAddress::from_u16(0x3F00);
 
 // VRAM/CIRAM
 pub struct Vram {
-    ram: [u8; MEMORY_SIZE],
+    ram: Box<[u8; MEMORY_SIZE]>,
     name_table_mirroring: NameTableMirroring,
 }
 
 impl Vram {
     pub fn new(name_table_mirroring: NameTableMirroring) -> Vram {
         Vram {
-            ram: [0; MEMORY_SIZE],
+            ram: Box::new([0; MEMORY_SIZE]),
             name_table_mirroring,
         }
     }

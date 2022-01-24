@@ -4,6 +4,7 @@ use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::palette::system_palette::SystemPalette;
 
+// TODO: Support https://wiki.nesdev.org/w/index.php?title=PPU_palettes#The_background_palette_hack
 #[derive(Debug)]
 pub struct PaletteTable {
     universal_background_rgb: Rgb,

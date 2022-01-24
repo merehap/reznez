@@ -12,6 +12,11 @@ impl PpuAddress {
         PpuAddress::from_u16(self.0.wrapping_add(offset))
     }
 
+    pub fn reduce(mut self) -> PpuAddress {
+        self.0 &= 0x3FFF;
+        self
+    }
+
     pub fn to_u16(self) -> u16 {
         let value = self.0;
         match value {

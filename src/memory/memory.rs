@@ -5,7 +5,7 @@ use crate::cpu::memory::Memory as CpuMemory;
 use crate::memory::mapper::Mapper;
 
 use crate::memory::ppu_address::PpuAddress;
-use crate::memory::vram::Vram;
+use crate::memory::ppu_ram::PpuRam;
 use crate::ppu::name_table::name_table::NameTable;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
@@ -29,12 +29,11 @@ const NAME_TABLE_INDEXES: [PpuAddress; 4] =
     ];
 
 pub const PALETTE_TABLE_START: PpuAddress = PpuAddress::from_u16(0x3F00);
-const PALETTE_TABLE_SIZE: u16 = 0x20;
 
 pub struct Memory {
     mapper: Box<dyn Mapper>,
     cpu_memory: CpuMemory,
-    vram: Vram,
+    ppu_ram: PpuRam,
     system_palette: SystemPalette,
 }
 
@@ -48,7 +47,7 @@ impl Memory {
         Memory {
             mapper,
             cpu_memory: CpuMemory::new(),
-            vram: Vram::new(name_table_mirroring),
+            ppu_ram: PpuRam::new(name_table_mirroring),
             system_palette,
         }
     }
@@ -65,12 +64,12 @@ impl Memory {
 
     #[inline]
     pub fn ppu_read(&self, address: PpuAddress) -> u8 {
-        self.mapper.ppu_read(&self.vram, address)
+        self.mapper.ppu_read(&self.ppu_ram, address)
     }
 
     #[inline]
     pub fn ppu_write(&mut self, address: PpuAddress, value: u8) {
-        self.mapper.ppu_write(&mut self.vram, address, value)
+        self.mapper.ppu_write(&mut self.ppu_ram, address, value)
     }
 
     #[inline]
@@ -105,7 +104,7 @@ impl Memory {
     #[inline]
     pub fn pattern_table(&self) -> PatternTable {
         let raw = self.mapper.ppu_slice(
-            &self.vram,
+            &self.ppu_ram.vram,
             PATTERN_TABLE_START,
             PATTERN_TABLE_START.advance(PATTERN_TABLE_SIZE - 1),
         );
@@ -116,7 +115,7 @@ impl Memory {
     pub fn name_table(&self, number: NameTableNumber) -> NameTable {
         let index = NAME_TABLE_INDEXES[number as usize];
         let raw = self.mapper.ppu_slice(
-            &self.vram,
+            &self.ppu_ram.vram,
             index,
             index.advance(NAME_TABLE_SIZE - 1),
         );
@@ -125,11 +124,6 @@ impl Memory {
 
     #[inline]
     pub fn palette_table(&self) -> PaletteTable {
-        let raw = self.mapper.ppu_slice(
-            &self.vram,
-            PALETTE_TABLE_START,
-            PALETTE_TABLE_START.advance(PALETTE_TABLE_SIZE - 1)
-        );
-        PaletteTable::new(raw.try_into().unwrap(), &self.system_palette)
+        PaletteTable::new(self.ppu_ram.palette_ram.to_slice(), &self.system_palette)
     }
 }
