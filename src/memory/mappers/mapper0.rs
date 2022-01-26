@@ -75,28 +75,22 @@ impl Mapper for Mapper0 {
 
     #[inline]
     fn ppu_read(&self, ppu_ram: &PpuRam, address: PpuAddress) -> u8 {
-        let palette_ram = &ppu_ram.palette_ram;
-
         let index = address.to_usize();
         match address.to_u16() {
             0x0000..=0x1FFF => self.chr_rom[index],
-            0x2000..=0x3EFF => *self.name_table_byte(&ppu_ram, address),
-            0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C => palette_ram[index % 0x20 - 0x10],
-            0x3F00..=0x3FFF => palette_ram[index % 0x20],
+            0x2000..=0x3EFF => self.name_table_byte(&ppu_ram, address),
+            0x3F00..=0x3FFF => self.palette_table_byte(&ppu_ram.palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
         }
     }
 
     #[inline]
     fn ppu_write(&mut self, ppu_ram: &mut PpuRam, address: PpuAddress, value: u8) {
-        let palette_ram = &mut ppu_ram.palette_ram;
-
         let index = address.to_usize();
         match address.to_u16() {
             0x0000..=0x1FFF => self.chr_rom[index] = value,
             0x2000..=0x3EFF => *self.name_table_byte_mut(ppu_ram, address) = value,
-            0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C => palette_ram[index % 0x20 - 0x10] = value,
-            0x3F00..=0x3FFF => palette_ram[index % 0x20] = value,
+            0x3F00..=0x3FFF => *self.palette_table_byte_mut(&mut ppu_ram.palette_ram, address) = value,
             0x4000..=0xFFFF => unreachable!(),
         }
     }

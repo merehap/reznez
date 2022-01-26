@@ -4,8 +4,9 @@ use crate::cpu::address::Address as CpuAddress;
 use crate::cpu::memory::Memory as CpuMemory;
 use crate::memory::ppu_ram::PpuRam;
 use crate::memory::ppu_address::PpuAddress;
-use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
+use crate::memory::palette_ram::PaletteRam;
 use crate::memory::vram::VramSide;
+use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 
 pub const PATTERN_TABLE_SIZE: usize = 0x2000;
@@ -39,15 +40,23 @@ pub trait Mapper {
     }
 
     #[inline]
-    fn name_table_byte<'a>(&'a self, ppu_ram: &'a PpuRam, address: PpuAddress) -> &'a u8 {
+    fn name_table_byte(&self, ppu_ram: &PpuRam, address: PpuAddress) -> u8 {
         let (name_table_number, index) = address_to_name_table_index(address);
-        &self.raw_name_table(ppu_ram, name_table_number)[index]
+        self.raw_name_table(ppu_ram, name_table_number)[index]
     }
 
     #[inline]
     fn name_table_byte_mut<'a>(&'a mut self, ppu_ram: &'a mut PpuRam, address: PpuAddress) -> &'a mut u8 {
         let (name_table_number, index) = address_to_name_table_index(address);
         &mut self.raw_name_table_mut(ppu_ram, name_table_number)[index]
+    }
+
+    fn palette_table_byte(&self, palette_ram: &PaletteRam, address: PpuAddress) -> u8 {
+        palette_ram[address_to_palette_ram_index(address)]
+    }
+
+    fn palette_table_byte_mut<'a>(&self, palette_ram: &'a mut PaletteRam, address: PpuAddress) -> &'a mut u8 {
+        &mut palette_ram[address_to_palette_ram_index(address)]
     }
 }
 
@@ -91,4 +100,19 @@ fn vram_side(
         (Three, _         ) => VramSide::Right,
         (_    , FourScreen) => todo!("FourScreen isn't supported yet."),
     }
+}
+
+fn address_to_palette_ram_index(address: PpuAddress) -> usize {
+    const PALETTE_TABLE_START: usize = 0x3F00;
+    const HIGH_ADDRESS_START : usize = 0x4000;
+
+    let mut address = address.to_usize();
+    assert!(address >= PALETTE_TABLE_START);
+    assert!(address < HIGH_ADDRESS_START);
+
+    if matches!(address, 0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C) {
+        address -= 0x10;
+    }
+
+    address % 0x20
 }
