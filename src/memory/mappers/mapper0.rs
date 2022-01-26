@@ -1,13 +1,11 @@
 use crate::cartridge::Cartridge;
 use crate::cpu::address::Address as CpuAddress;
 use crate::cpu::memory::Memory as CpuMemory;
-use crate::memory::mapper::Mapper;
+use crate::memory::mapper::*;
 use crate::memory::ppu_address::PpuAddress;
 use crate::memory::ppu_ram::PpuRam;
-use crate::memory::vram::Vram;
 
 const PRG_ROM_START: CpuAddress = CpuAddress::new(0x8000);
-const CHR_ROM_END: PpuAddress = PpuAddress::from_u16(0x2000);
 
 pub struct Mapper0 {
     prg_rom: Box<[u8; 0x8000]>,
@@ -78,61 +76,36 @@ impl Mapper for Mapper0 {
     #[inline]
     fn ppu_read(&self, ppu_ram: &PpuRam, address: PpuAddress) -> u8 {
         let palette_ram = &ppu_ram.palette_ram;
-        let vram = &ppu_ram.vram;
 
         let index = address.to_usize();
         match address.to_u16() {
             0x0000..=0x1FFF => self.chr_rom[index],
+            0x2000..=0x3EFF => *self.name_table_byte(&ppu_ram, address),
             0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C => palette_ram[index % 0x20 - 0x10],
             0x3F00..=0x3FFF => palette_ram[index % 0x20],
-            // Address is out of normal range so mirror down and try again.
             0x4000..=0xFFFF => unreachable!(),
-            _ => vram.read(address),
         }
     }
 
     #[inline]
     fn ppu_write(&mut self, ppu_ram: &mut PpuRam, address: PpuAddress, value: u8) {
         let palette_ram = &mut ppu_ram.palette_ram;
-        let vram = &mut ppu_ram.vram;
 
         let index = address.to_usize();
         match address.to_u16() {
             0x0000..=0x1FFF => self.chr_rom[index] = value,
+            0x2000..=0x3EFF => *self.name_table_byte_mut(ppu_ram, address) = value,
             0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C => palette_ram[index % 0x20 - 0x10] = value,
             0x3F00..=0x3FFF => palette_ram[index % 0x20] = value,
             0x4000..=0xFFFF => unreachable!(),
-            _ => vram.write(address, value),
         }
     }
 
-    /*
-    fn cpu_slice<'a>(
-        &'a self,
-        memory: &'a CpuMemory,
-        start_address: CpuAddress,
-        end_address: CpuAddress,
-    ) -> &'a [u8]
-
-        if start_address >= PRG_ROM_START && end_address > PRG_ROM_START {
-            &self.prg_rom[start_address.to_usize()..end_address.to_usize() + 1]
-        } else {
-            memory.slice(start_address, end_address)
-        }
+    fn raw_pattern_table(&self) -> &[u8; PATTERN_TABLE_SIZE] {
+        self.chr_rom.as_ref()
     }
-    */
 
-    fn ppu_slice<'a>(
-        &'a self,
-        vram: &'a Vram,
-        start_address: PpuAddress,
-        end_address: PpuAddress,
-    ) -> &'a [u8] {
-
-        if start_address < CHR_ROM_END && end_address < CHR_ROM_END {
-            &self.chr_rom[start_address.to_usize()..end_address.to_usize() + 1]
-        } else {
-            vram.slice(start_address, end_address)
-        }
+    fn raw_pattern_table_mut(&mut self) -> &mut [u8; PATTERN_TABLE_SIZE] {
+        self.chr_rom.as_mut()
     }
 }

@@ -13,20 +13,8 @@ use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::pattern_table::PatternTable;
 
-const PATTERN_TABLE_START: PpuAddress = PpuAddress::from_u16(0);
-const PATTERN_TABLE_SIZE: u16 = 0x2000;
-
-const NAME_TABLE_START: u16 = 0x2000;
-const NAME_TABLE_SIZE: u16 = 0x400;
 #[allow(clippy::erasing_op)]
 #[allow(clippy::identity_op)]
-const NAME_TABLE_INDEXES: [PpuAddress; 4] =
-    [
-        PpuAddress::from_u16(NAME_TABLE_START + 0 * NAME_TABLE_SIZE),
-        PpuAddress::from_u16(NAME_TABLE_START + 1 * NAME_TABLE_SIZE),
-        PpuAddress::from_u16(NAME_TABLE_START + 2 * NAME_TABLE_SIZE),
-        PpuAddress::from_u16(NAME_TABLE_START + 3 * NAME_TABLE_SIZE),
-    ];
 
 pub const PALETTE_TABLE_START: PpuAddress = PpuAddress::from_u16(0x3F00);
 
@@ -103,23 +91,12 @@ impl Memory {
 
     #[inline]
     pub fn pattern_table(&self) -> PatternTable {
-        let raw = self.mapper.ppu_slice(
-            &self.ppu_ram.vram,
-            PATTERN_TABLE_START,
-            PATTERN_TABLE_START.advance(PATTERN_TABLE_SIZE - 1),
-        );
-        PatternTable::new(raw.try_into().unwrap())
+        PatternTable::new(self.mapper.raw_pattern_table())
     }
 
     #[inline]
     pub fn name_table(&self, number: NameTableNumber) -> NameTable {
-        let index = NAME_TABLE_INDEXES[number as usize];
-        let raw = self.mapper.ppu_slice(
-            &self.ppu_ram.vram,
-            index,
-            index.advance(NAME_TABLE_SIZE - 1),
-        );
-        NameTable::new(raw.try_into().unwrap())
+        NameTable::new(self.mapper.raw_name_table(&self.ppu_ram, number))
     }
 
     #[inline]
