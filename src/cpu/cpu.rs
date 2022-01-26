@@ -67,7 +67,7 @@ impl Cpu {
             self.x,
             self.y,
             self.status.to_register_byte(),
-            memory.cpu_memory().stack_pointer,
+            memory.stack_pointer(),
             self.status,
             nesting,
         )
@@ -168,17 +168,17 @@ impl Cpu {
             (DEY, Imp) => self.y = self.nz(self.y.wrapping_sub(1)),
             (TAX, Imp) => self.x = self.nz(self.a),
             (TAY, Imp) => self.y = self.nz(self.a),
-            (TSX, Imp) => self.x = self.nz(memory.cpu_memory().stack_pointer),
-            (TXS, Imp) => memory.cpu_memory_mut().stack_pointer = self.x,
+            (TSX, Imp) => self.x = self.nz(memory.stack_pointer()),
+            (TXS, Imp) => *memory.stack_pointer_mut() = self.x,
             (TXA, Imp) => self.a = self.nz(self.x),
             (TYA, Imp) => self.a = self.nz(self.y),
-            (PHA, Imp) => memory.cpu_memory_mut().push_to_stack(self.a),
-            (PHP, Imp) => memory.cpu_memory_mut().push_to_stack(self.status.to_instruction_byte()),
+            (PHA, Imp) => memory.stack().push(self.a),
+            (PHP, Imp) => memory.stack().push(self.status.to_instruction_byte()),
             (PLA, Imp) => {
-                self.a = memory.cpu_memory_mut().pop_from_stack();
+                self.a = memory.stack().pop();
                 self.nz(self.a);
             },
-            (PLP, Imp) => self.status = Status::from_byte(memory.cpu_memory_mut().pop_from_stack()),
+            (PLP, Imp) => self.status = Status::from_byte(memory.stack().pop()),
             (CLC, Imp) => self.status.carry = false,
             (SEC, Imp) => self.status.carry = true,
             (CLD, Imp) => self.status.decimal = false,
@@ -189,16 +189,16 @@ impl Cpu {
             (BRK, Imp) => {
                 // Not sure why we need to increment here.
                 self.program_counter.inc();
-                memory.cpu_memory_mut().push_address_to_stack(self.program_counter);
-                memory.cpu_memory_mut().push_to_stack(self.status.to_instruction_byte());
+                memory.stack().push_address(self.program_counter);
+                memory.stack().push(self.status.to_instruction_byte());
                 self.status.interrupts_disabled = true;
                 self.program_counter = memory.irq_vector();
             },
             (RTI, Imp) => {
-                self.status = Status::from_byte(memory.cpu_memory_mut().pop_from_stack());
-                self.program_counter = memory.cpu_memory_mut().pop_address_from_stack();
+                self.status = Status::from_byte(memory.stack().pop());
+                self.program_counter = memory.stack().pop_address();
             },
-            (RTS, Imp) => self.program_counter = memory.cpu_memory_mut().pop_address_from_stack().advance(1),
+            (RTS, Imp) => self.program_counter = memory.stack().pop_address().advance(1),
 
             (STA, Addr(addr, _)) => memory.cpu_write(addr, self.a),
             (STX, Addr(addr, _)) => memory.cpu_write(addr, self.x),
@@ -231,7 +231,7 @@ impl Cpu {
                 if self.status.zero {cycle_count += self.take_branch(addr);},
             (JSR, Addr(addr, _)) => {
                 // Push the address one previous for some reason.
-                memory.cpu_memory_mut().push_address_to_stack(self.program_counter.offset(-1));
+                memory.stack().push_address(self.program_counter.offset(-1));
                 self.program_counter = addr;
             },
             (JMP, Addr(addr, _)) => self.program_counter = addr,
@@ -463,8 +463,8 @@ impl Cpu {
     // TODO: Account for how many cycles an NMI takes.
     fn nmi(&mut self, memory: &mut Memory) {
         info!(target: "cpu", "Executing NMI.");
-        memory.cpu_memory_mut().push_address_to_stack(self.program_counter);
-        memory.cpu_memory_mut().push_to_stack(self.status.to_interrupt_byte());
+        memory.stack().push_address(self.program_counter);
+        memory.stack().push(self.status.to_interrupt_byte());
         self.program_counter = memory.nmi_vector();
     }
 }

@@ -70,7 +70,7 @@ impl Nes {
     }
 
     pub fn stack_pointer(&self) -> u8 {
-        self.memory.cpu_memory().stack_pointer
+        self.memory.stack_pointer()
     }
 
     pub fn step_frame(&mut self, gui: &mut dyn Gui) {

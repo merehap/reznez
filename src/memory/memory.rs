@@ -3,9 +3,9 @@ use crate::cpu::memory::{NMI_VECTOR, RESET_VECTOR, IRQ_VECTOR};
 use crate::cpu::memory::Memory as CpuMemory;
 
 use crate::memory::mapper::Mapper;
-
 use crate::memory::ppu_address::PpuAddress;
 use crate::memory::ppu_ram::PpuRam;
+use crate::memory::stack::Stack;
 use crate::ppu::name_table::name_table::NameTable;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
@@ -70,6 +70,21 @@ impl Memory {
         &mut self.cpu_memory
     }
 
+    #[inline]
+    pub fn stack(&mut self) -> Stack {
+        self.cpu_memory.stack()
+    }
+
+    #[inline]
+    pub fn stack_pointer(&self) -> u8 {
+        self.cpu_memory.stack_pointer
+    }
+
+    #[inline]
+    pub fn stack_pointer_mut(&mut self) -> &mut u8 {
+        &mut self.cpu_memory.stack_pointer
+    }
+
     pub fn nmi_vector(&mut self) -> CpuAddress {
         self.address_from_vector(NMI_VECTOR)
     }
@@ -80,13 +95,6 @@ impl Memory {
 
     pub fn irq_vector(&mut self) -> CpuAddress {
         self.address_from_vector(IRQ_VECTOR)
-    }
-
-    fn address_from_vector(&mut self, mut vector: CpuAddress) -> CpuAddress {
-        CpuAddress::from_low_high(
-            self.cpu_read(vector),
-            self.cpu_read(vector.inc()),
-        )
     }
 
     #[inline]
@@ -102,5 +110,12 @@ impl Memory {
     #[inline]
     pub fn palette_table(&self) -> PaletteTable {
         PaletteTable::new(self.ppu_ram.palette_ram.to_slice(), &self.system_palette)
+    }
+
+    fn address_from_vector(&mut self, mut vector: CpuAddress) -> CpuAddress {
+        CpuAddress::from_low_high(
+            self.cpu_read(vector),
+            self.cpu_read(vector.inc()),
+        )
     }
 }

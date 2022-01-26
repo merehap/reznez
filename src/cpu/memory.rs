@@ -1,7 +1,6 @@
-use log::info;
-
 use crate::cpu::address::Address;
 use crate::cpu::port_access::{PortAccess, AccessMode};
+use crate::memory::stack::Stack;
 
 pub const NMI_VECTOR: Address = Address::new(0xFFFA);
 pub const RESET_VECTOR: Address = Address::new(0xFFFC);
@@ -91,36 +90,6 @@ impl Memory {
         self.memory[address.to_raw() as usize] = value;
     }
 
-    pub fn push_to_stack(&mut self, value: u8) {
-        if self.stack_pointer == 0x00 {
-            info!("Pushing to full stack.");
-        }
-
-        self.memory[self.stack_pointer as usize + 0x100] = value;
-        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
-    }
-
-    pub fn push_address_to_stack(&mut self, address: Address) {
-        let (low, high) = address.to_low_high();
-        self.push_to_stack(high);
-        self.push_to_stack(low);
-    }
-
-    pub fn pop_from_stack(&mut self) -> u8 {
-        if self.stack_pointer == 0xFF {
-            info!("Popping from empty stack.");
-        }
-
-        self.stack_pointer = self.stack_pointer.wrapping_add(1);
-        self.memory[self.stack_pointer as usize + 0x100]
-    }
-
-    pub fn pop_address_from_stack(&mut self) -> Address {
-        let low = self.pop_from_stack();
-        let high = self.pop_from_stack();
-        Address::from_low_high(low, high)
-    }
-
     pub fn latch(&self) -> Option<PortAccess> {
         self.latch
     }
@@ -129,7 +98,11 @@ impl Memory {
         self.latch = None;
     }
 
-    pub fn stack(&self) -> &[u8] {
-        &self.memory[self.stack_pointer as usize + 0x101..0x200]
+    pub fn stack(&mut self) -> Stack {
+        Stack::new((&mut self.memory[0x100..0x200]).try_into().unwrap(), &mut self.stack_pointer)
+    }
+
+    pub fn to_slice(&mut self) -> &mut [u8; 0x10000] {
+        self.memory.as_mut()
     }
 }
