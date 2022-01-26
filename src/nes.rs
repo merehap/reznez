@@ -144,9 +144,9 @@ impl Nes {
         }
 
         let status = self.joypad_1.selected_button_status() as u8;
-        self.memory.cpu_memory_mut().write(JOYSTICK_1_PORT, status);
+        self.memory.cpu_memory_mut().bus_access_write(JOYSTICK_1_PORT, status);
         let status = self.joypad_2.selected_button_status() as u8;
-        self.memory.cpu_memory_mut().write(JOYSTICK_2_PORT, status);
+        self.memory.cpu_memory_mut().bus_access_write(JOYSTICK_2_PORT, status);
 
         self.cycle += 1;
 
