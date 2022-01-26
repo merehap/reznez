@@ -1,6 +1,7 @@
 use crate::cpu::address::Address as CpuAddress;
 use crate::cpu::memory::{NMI_VECTOR, RESET_VECTOR, IRQ_VECTOR};
 use crate::cpu::memory::Memory as CpuMemory;
+use crate::cpu::port_access::PortAccess;
 
 use crate::memory::mapper::Mapper;
 use crate::memory::ppu_address::PpuAddress;
@@ -83,6 +84,10 @@ impl Memory {
     #[inline]
     pub fn stack_pointer_mut(&mut self) -> &mut u8 {
         &mut self.cpu_memory.stack_pointer
+    }
+
+    pub fn latch(&self) -> Option<PortAccess> {
+        self.cpu_memory.latch()
     }
 
     pub fn reset_cpu_latch(&mut self) {

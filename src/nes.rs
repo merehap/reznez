@@ -127,7 +127,7 @@ impl Nes {
                     self.ppu.write_oam(oamaddr, value),
             }
 
-            if let Some(port_access) = self.memory.cpu_memory().latch() {
+            if let Some(port_access) = self.memory.latch() {
                 self.execute_port_action(port_access);
             }
         }
