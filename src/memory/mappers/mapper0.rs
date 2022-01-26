@@ -2,8 +2,6 @@ use crate::cartridge::Cartridge;
 use crate::cpu::address::Address as CpuAddress;
 use crate::cpu::memory::Memory as CpuMemory;
 use crate::memory::mapper::*;
-use crate::memory::ppu_address::PpuAddress;
-use crate::memory::ppu_ram::PpuRam;
 
 const PRG_ROM_START: CpuAddress = CpuAddress::new(0x8000);
 
@@ -70,26 +68,6 @@ impl Mapper for Mapper0 {
             memory.write(address, value);
         } else {
             println!("ROM CPU write ignored ({}).", address);
-        }
-    }
-
-    #[inline]
-    fn ppu_read(&self, ppu_ram: &PpuRam, address: PpuAddress) -> u8 {
-        match address.to_u16() {
-            0x0000..=0x1FFF => self.pattern_table_byte(address),
-            0x2000..=0x3EFF => self.name_table_byte(ppu_ram, address),
-            0x3F00..=0x3FFF => self.palette_table_byte(&ppu_ram.palette_ram, address),
-            0x4000..=0xFFFF => unreachable!(),
-        }
-    }
-
-    #[inline]
-    fn ppu_write(&mut self, ppu_ram: &mut PpuRam, address: PpuAddress, value: u8) {
-        match address.to_u16() {
-            0x0000..=0x1FFF => *self.pattern_table_byte_mut(address) = value,
-            0x2000..=0x3EFF => *self.name_table_byte_mut(ppu_ram, address) = value,
-            0x3F00..=0x3FFF => *self.palette_table_byte_mut(&mut ppu_ram.palette_ram, address) = value,
-            0x4000..=0xFFFF => unreachable!(),
         }
     }
 

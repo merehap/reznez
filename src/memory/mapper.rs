@@ -15,8 +15,27 @@ pub const NAME_TABLE_SIZE: usize = 0x400;
 pub trait Mapper {
     fn cpu_read(&self, memory: &mut CpuMemory, address: CpuAddress) -> u8;
     fn cpu_write(&self, memory: &mut CpuMemory, address: CpuAddress, value: u8);
-    fn ppu_read(&self, ram: &PpuRam, address: PpuAddress) -> u8;
-    fn ppu_write(&mut self, ram: &mut PpuRam, address: PpuAddress, value: u8);
+
+    #[inline]
+    fn ppu_read(&self, ppu_ram: &PpuRam, address: PpuAddress) -> u8 {
+        match address.to_u16() {
+            0x0000..=0x1FFF => self.pattern_table_byte(address),
+            0x2000..=0x3EFF => self.name_table_byte(ppu_ram, address),
+            0x3F00..=0x3FFF => self.palette_table_byte(&ppu_ram.palette_ram, address),
+            0x4000..=0xFFFF => unreachable!(),
+        }
+    }
+
+    #[inline]
+    fn ppu_write(&mut self, ppu_ram: &mut PpuRam, address: PpuAddress, value: u8) {
+        match address.to_u16() {
+            0x0000..=0x1FFF => *self.pattern_table_byte_mut(address) = value,
+            0x2000..=0x3EFF => *self.name_table_byte_mut(ppu_ram, address) = value,
+            0x3F00..=0x3FFF => *self.palette_table_byte_mut(&mut ppu_ram.palette_ram, address) = value,
+            0x4000..=0xFFFF => unreachable!(),
+        }
+    }
+
 
     fn raw_pattern_table(&self) -> &[u8; PATTERN_TABLE_SIZE];
     fn raw_pattern_table_mut(&mut self) -> &mut [u8; PATTERN_TABLE_SIZE];
