@@ -85,6 +85,10 @@ impl Memory {
         &mut self.cpu_memory.stack_pointer
     }
 
+    pub fn reset_cpu_latch(&mut self) {
+        self.cpu_memory.reset_latch()
+    }
+
     pub fn nmi_vector(&mut self) -> CpuAddress {
         self.address_from_vector(NMI_VECTOR)
     }

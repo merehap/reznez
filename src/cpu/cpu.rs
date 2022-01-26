@@ -111,7 +111,7 @@ impl Cpu {
 
     pub fn step(&mut self, memory: &mut Memory) -> StepResult {
         self.cycle += 1;
-        memory.cpu_memory_mut().reset_latch();
+        memory.reset_cpu_latch();
 
         // Normal CPU operation is suspended while the DMA transfer completes.
         match self.dma_transfer.step() {
