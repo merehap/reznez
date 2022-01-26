@@ -40,6 +40,16 @@ pub trait Mapper {
     }
 
     #[inline]
+    fn pattern_table_byte(&self, address: PpuAddress) -> u8 {
+        self.raw_pattern_table()[address.to_usize()]
+    }
+
+    #[inline]
+    fn pattern_table_byte_mut(&mut self, address: PpuAddress) -> &mut u8 {
+        &mut self.raw_pattern_table_mut()[address.to_usize()]
+    }
+
+    #[inline]
     fn name_table_byte(&self, ppu_ram: &PpuRam, address: PpuAddress) -> u8 {
         let (name_table_number, index) = address_to_name_table_index(address);
         self.raw_name_table(ppu_ram, name_table_number)[index]
@@ -51,10 +61,12 @@ pub trait Mapper {
         &mut self.raw_name_table_mut(ppu_ram, name_table_number)[index]
     }
 
+    #[inline]
     fn palette_table_byte(&self, palette_ram: &PaletteRam, address: PpuAddress) -> u8 {
         palette_ram[address_to_palette_ram_index(address)]
     }
 
+    #[inline]
     fn palette_table_byte_mut<'a>(&self, palette_ram: &'a mut PaletteRam, address: PpuAddress) -> &'a mut u8 {
         &mut palette_ram[address_to_palette_ram_index(address)]
     }

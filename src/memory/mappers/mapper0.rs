@@ -75,10 +75,9 @@ impl Mapper for Mapper0 {
 
     #[inline]
     fn ppu_read(&self, ppu_ram: &PpuRam, address: PpuAddress) -> u8 {
-        let index = address.to_usize();
         match address.to_u16() {
-            0x0000..=0x1FFF => self.chr_rom[index],
-            0x2000..=0x3EFF => self.name_table_byte(&ppu_ram, address),
+            0x0000..=0x1FFF => self.pattern_table_byte(address),
+            0x2000..=0x3EFF => self.name_table_byte(ppu_ram, address),
             0x3F00..=0x3FFF => self.palette_table_byte(&ppu_ram.palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
         }
@@ -86,9 +85,8 @@ impl Mapper for Mapper0 {
 
     #[inline]
     fn ppu_write(&mut self, ppu_ram: &mut PpuRam, address: PpuAddress, value: u8) {
-        let index = address.to_usize();
         match address.to_u16() {
-            0x0000..=0x1FFF => self.chr_rom[index] = value,
+            0x0000..=0x1FFF => *self.pattern_table_byte_mut(address) = value,
             0x2000..=0x3EFF => *self.name_table_byte_mut(ppu_ram, address) = value,
             0x3F00..=0x3FFF => *self.palette_table_byte_mut(&mut ppu_ram.palette_ram, address) = value,
             0x4000..=0xFFFF => unreachable!(),
