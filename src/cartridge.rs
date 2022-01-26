@@ -16,8 +16,8 @@ pub struct Cartridge {
     ines2: Option<INes2>,
 
     trainer: Option<[u8; 512]>,
-    prg_rom: Vec<u8>,
-    chr_rom: Vec<u8>,
+    prg_rom: Vec<Box<[u8; 0x4000]>>,
+    chr_rom: Vec<Box<[u8; 0x2000]>>,
     console_type: ConsoleType,
     title: String,
 }
@@ -75,13 +75,17 @@ impl Cartridge {
 
         let mut rom_index = 0x10;
 
-        let next_rom_index = rom_index + prg_rom_chunk_count * PRG_ROM_CHUNK_LENGTH;
-        let prg_rom = rom[rom_index..next_rom_index].to_vec();
-        rom_index = next_rom_index;
+        let mut prg_rom = Vec::new();
+        for _ in 0..prg_rom_chunk_count {
+            prg_rom.push(Box::new(rom[rom_index..rom_index + PRG_ROM_CHUNK_LENGTH].try_into().unwrap()));
+            rom_index += PRG_ROM_CHUNK_LENGTH;
+        }
 
-        let next_rom_index = rom_index + chr_rom_chunk_count * CHR_ROM_CHUNK_LENGTH;
-        let chr_rom = rom[rom_index..next_rom_index].to_vec();
-        rom_index = next_rom_index;
+        let mut chr_rom = Vec::new();
+        for _ in 0..chr_rom_chunk_count {
+            chr_rom.push(Box::new(rom[rom_index..rom_index + CHR_ROM_CHUNK_LENGTH].try_into().unwrap()));
+            rom_index += CHR_ROM_CHUNK_LENGTH;
+        }
 
         let title = rom[rom_index..].to_vec();
         let title_length_is_proper = title.is_empty() || title.len() == 127 || title.len() == 128;
@@ -116,20 +120,30 @@ impl Cartridge {
         self.name_table_mirroring
     }
     
-    pub fn prg_rom(&self) -> &[u8] {
-        &self.prg_rom
+    pub fn prg_rom(&self) -> Vec<u8> {
+        let mut result = Vec::new();
+        for chunk in &mut self.prg_rom.clone() {
+            result.extend_from_slice(&mut **chunk);
+        }
+
+        result
     }
 
     pub fn prg_rom_chunk_count(&self) -> u8 {
-        (self.prg_rom.len() / PRG_ROM_CHUNK_LENGTH) as u8
+        self.prg_rom.len() as u8
     }
 
-    pub fn chr_rom(&self) -> &[u8] {
-        &self.chr_rom
+    pub fn chr_rom(&self) -> Vec<u8> {
+        let mut result = Vec::new();
+        for chunk in &mut self.chr_rom.clone() {
+            result.extend_from_slice(&mut **chunk);
+        }
+
+        result
     }
 
     pub fn chr_rom_chunk_count(&self) -> u8 {
-        (self.chr_rom.len() / CHR_ROM_CHUNK_LENGTH) as u8
+        self.chr_rom.len() as u8
     }
 }
 
@@ -179,16 +193,16 @@ pub mod tests {
     use super::*;
 
     pub fn sample_cartridge() -> Cartridge {
-        let mut prg_rom = vec![0xEA; PRG_ROM_CHUNK_LENGTH];
-        let len = prg_rom.len();
+        let mut prg_rom = vec![Box::new([0xEA; PRG_ROM_CHUNK_LENGTH])];
+        let len = prg_rom[0].len();
         // Overwrite the NMI/RESET/IRQ Vectors so they doesn't point to ROM.
         // This allows injection of custom instructions for testing.
-        prg_rom[len - 6] = 0x00;
-        prg_rom[len - 5] = 0x02;
-        prg_rom[len - 4] = 0x00;
-        prg_rom[len - 3] = 0x02;
-        prg_rom[len - 2] = 0x00;
-        prg_rom[len - 1] = 0x02;
+        prg_rom[0][len - 6] = 0x00;
+        prg_rom[0][len - 5] = 0x02;
+        prg_rom[0][len - 4] = 0x00;
+        prg_rom[0][len - 3] = 0x02;
+        prg_rom[0][len - 2] = 0x00;
+        prg_rom[0][len - 1] = 0x02;
 
         Cartridge {
             mapper_number: 0,
@@ -199,7 +213,7 @@ pub mod tests {
 
             trainer: None,
             prg_rom,
-            chr_rom: vec![0x00; CHR_ROM_CHUNK_LENGTH],
+            chr_rom: vec![Box::new([0x00; CHR_ROM_CHUNK_LENGTH])],
             console_type: ConsoleType::Nes,
             title: "Test ROM".to_string(),
         }

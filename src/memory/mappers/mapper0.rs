@@ -4,6 +4,7 @@ use crate::cpu::memory::Memory as CpuMemory;
 use crate::memory::mapper::*;
 
 const PRG_ROM_START: CpuAddress = CpuAddress::new(0x8000);
+const PRG_ROM_SIZE: usize = 0x8000;
 
 pub struct Mapper0 {
     prg_rom: Box<[u8; 0x8000]>,
@@ -12,7 +13,7 @@ pub struct Mapper0 {
 
 impl Mapper0 {
     pub fn new(cartridge: Cartridge) -> Result<Mapper0, String> {
-        let mut prg_rom = Box::new([0; 0x8000]);
+        let mut prg_rom = Box::new([0; PRG_ROM_SIZE]);
         match cartridge.prg_rom_chunk_count() {
             /* Nrom128 - Mirrored mappings. */
             1 => {
