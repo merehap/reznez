@@ -2,19 +2,10 @@ use std::fmt;
 use std::str::FromStr;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
-#[repr(transparent)]
 pub struct CpuAddress(u16);
 
 impl CpuAddress {
-    pub const fn new(mut value: u16) -> CpuAddress {
-        if value < 0x2000 {
-            // Map RAM mirrors to the true RAM range.
-            value %= 0x2000;
-        } else if value >= 0x2000 && value < 0x4000 {
-            // Map PPU register mirrors to the true PPU register range.
-            value = (value % 0x8) + 0x2000;
-        }
-
+    pub const fn new(value: u16) -> CpuAddress {
         CpuAddress(value)
     }
 
@@ -54,24 +45,6 @@ impl CpuAddress {
     pub fn page(self) -> u8 {
         (self.0 >> 8) as u8
     }
-
-    pub fn get_type(self) -> AddressType {
-        use AddressType::*;
-        match self.0 {
-            0x0000..=0x07FF => InternalRAM,
-            // Internal RAM mirrors omitted here.
-            0x2000..=0x2007 => PpuRegister,
-            // PPU register mirrors omitted here.
-            0x4000..=0x4017 => ApuRegister,
-            0x4018..=0x401F => DisabledApuRegister,
-            0x4020..=0xFFF9 => Cartridge,
-            0xFFFA..=0xFFFF => InterruptVector,
-            _ => unreachable!(
-                "Value '{}' should not be possible for an CpuAddress.",
-                self.0,
-                ),
-        }
-    }
 }
 
 impl fmt::Display for CpuAddress {
@@ -88,13 +61,4 @@ impl FromStr for CpuAddress {
             .map_err(|err| err.to_string())?;
         Ok(CpuAddress(raw))
     }
-}
-
-pub enum AddressType {
-    InternalRAM,
-    PpuRegister,
-    ApuRegister,
-    DisabledApuRegister,
-    Cartridge,
-    InterruptVector,
 }

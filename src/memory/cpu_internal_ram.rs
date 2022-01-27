@@ -1,3 +1,5 @@
+use std::ops::{Index, IndexMut};
+
 use crate::memory::cpu_address::CpuAddress;
 use crate::memory::stack::Stack;
 
@@ -20,40 +22,43 @@ pub const OAM_DMA:   CpuAddress = CpuAddress::new(0x4014);
 pub const JOYSTICK_1_PORT: CpuAddress = CpuAddress::new(0x4016);
 pub const JOYSTICK_2_PORT: CpuAddress = CpuAddress::new(0x4017);
 
+const RAM_SIZE: usize = 0x2000;
+const STACK_START: usize = 0x100;
+const STACK_END: usize = 0x1FF;
+
+const STARTUP_STACK_POINTER: u8 = 0xFD;
+
 pub struct CpuInternalRam {
     pub stack_pointer: u8,
-    memory: Box<[u8; 0x10000]>,
+    memory: Box<[u8; RAM_SIZE]>,
 }
 
 impl CpuInternalRam {
     pub fn new() -> CpuInternalRam {
         CpuInternalRam {
-            stack_pointer: 0xFD,
-            memory: Box::new([0; 0x10000]),
+            stack_pointer: STARTUP_STACK_POINTER,
+            memory: Box::new([0; RAM_SIZE]),
         }
     }
 
-    #[inline]
-    pub fn read(&self, address: CpuAddress) -> u8 {
-        self.memory[address.to_usize()]
-    }
-
-    #[inline]
-    pub fn write(&mut self, address: CpuAddress, value: u8) {
-        self.memory[address.to_usize()] = value;
-    }
-
-    #[inline]
-    pub fn bus_access_read(&self, address: CpuAddress) -> u8 {
-        self.memory[address.to_raw() as usize]
-    }
-
-    #[inline]
-    pub fn bus_access_write(&mut self, address: CpuAddress, value: u8) {
-        self.memory[address.to_raw() as usize] = value;
-    }
-
     pub fn stack(&mut self) -> Stack {
-        Stack::new((&mut self.memory[0x100..0x200]).try_into().unwrap(), &mut self.stack_pointer)
+        Stack::new(
+            (&mut self.memory[STACK_START..=STACK_END]).try_into().unwrap(),
+            &mut self.stack_pointer,
+        )
+    }
+}
+
+impl Index<usize> for CpuInternalRam {
+    type Output = u8;
+
+    fn index(&self, idx: usize) -> &u8 {
+        &self.memory[idx]
+    }
+}
+
+impl IndexMut<usize> for CpuInternalRam {
+    fn index_mut(&mut self, idx: usize) -> &mut u8 {
+        &mut self.memory[idx]
     }
 }
