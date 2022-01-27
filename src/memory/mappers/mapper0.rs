@@ -1,6 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::cpu::address::Address as CpuAddress;
-use crate::cpu::cpu_internal_ram::CpuInternalRam;
+use crate::memory::cpu_internal_ram::CpuInternalRam;
 use crate::memory::mapper::*;
 
 const PRG_ROM_START: CpuAddress = CpuAddress::new(0x8000);

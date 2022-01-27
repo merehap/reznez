@@ -1,7 +1,7 @@
 use crate::cpu::address::Address as CpuAddress;
-use crate::cpu::cpu_internal_ram::{CpuInternalRam, NMI_VECTOR, RESET_VECTOR, IRQ_VECTOR};
 use crate::cpu::port_access::PortAccess;
 
+use crate::memory::cpu_internal_ram::{CpuInternalRam, NMI_VECTOR, RESET_VECTOR, IRQ_VECTOR};
 use crate::memory::mapper::Mapper;
 use crate::memory::ppu_address::PpuAddress;
 use crate::memory::ppu_internal_ram::PpuInternalRam;
