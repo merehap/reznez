@@ -14,8 +14,49 @@ pub const PATTERN_TABLE_SIZE: usize = 0x2000;
 pub const NAME_TABLE_SIZE: usize = 0x400;
 
 pub trait Mapper {
-    fn cpu_read(&self, memory: &CpuInternalRam, ports: &mut Ports, address: CpuAddress) -> u8;
-    fn cpu_write(&self, memory: &mut CpuInternalRam, ports: &mut Ports, address: CpuAddress, value: u8);
+    fn prg_rom(&self) -> &[u8; 0x8000];
+
+    fn raw_pattern_table(&self) -> &[u8; PATTERN_TABLE_SIZE];
+    fn raw_pattern_table_mut(&mut self) -> &mut [u8; PATTERN_TABLE_SIZE];
+
+    #[inline]
+    fn cpu_read(
+        &self,
+        cpu_internal_ram: &CpuInternalRam,
+        ports: &mut Ports,
+        address: CpuAddress,
+    ) -> u8 {
+        match address.to_raw() {
+            0x0000..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF],
+            0x2000..=0x2007 => ports.get(address),
+            0x2008..=0x3FFF => ports.get(CpuAddress::new(0x2000 + address.to_raw() % 8)),
+            0x4000..=0x4013 | 0x4015 => {/* APU */ 0},
+            0x4014 | 0x4016 | 0x4017 => ports.get(address),
+            0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
+            0x4020..=0x7FFF => {println!("Read from non-ROM cartridge space."); 0},
+            0x8000..=0xFFFF => self.prg_rom()[address.to_usize() - 0x8000],
+        }
+    }
+
+    #[inline]
+    fn cpu_write(
+        &self,
+        cpu_internal_ram: &mut CpuInternalRam,
+        ports: &mut Ports,
+        address: CpuAddress,
+        value: u8,
+    ) {
+        match address.to_raw() {
+            0x0000..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF] = value,
+            0x2000..=0x2007 => ports.set(address, value),
+            0x2008..=0x3FFF => ports.set(CpuAddress::new(0x2000 + address.to_raw() % 8), value),
+            0x4000..=0x4013 | 0x4015 => {/* APU */},
+            0x4014 | 0x4016..=0x4017 => ports.set(address, value),
+            0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
+            0x4020..=0x7FFF => println!("Ignored writes to non-ROM cartridge space."),
+            0x8000..=0xFFFF => println!("ROM CPU write ignored ({}).", address),
+        }
+    }
 
     #[inline]
     fn ppu_read(&self, ppu_internal_ram: &PpuInternalRam, address: PpuAddress) -> u8 {
@@ -36,9 +77,6 @@ pub trait Mapper {
             0x4000..=0xFFFF => unreachable!(),
         }
     }
-
-    fn raw_pattern_table(&self) -> &[u8; PATTERN_TABLE_SIZE];
-    fn raw_pattern_table_mut(&mut self) -> &mut [u8; PATTERN_TABLE_SIZE];
 
     #[inline]
     fn raw_name_table<'a>(
