@@ -1,3 +1,4 @@
+pub mod cpu_address;
 pub mod cpu_internal_ram;
 pub mod mapper;
 pub mod mappers;

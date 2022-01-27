@@ -1,7 +1,7 @@
-use crate::cpu::address::Address;
+use crate::memory::cpu_address::CpuAddress;
 
 pub struct DmaTransfer {
-    current_cpu_address: Address,
+    current_cpu_address: CpuAddress,
     current_oam_address: u8,
     remaining_byte_count: u16,
     should_fix_cycle_alignment: bool,
@@ -15,7 +15,7 @@ impl DmaTransfer {
         current_cycle: u64,
     ) -> DmaTransfer {
         DmaTransfer {
-            current_cpu_address: Address::from_low_high(0, page),
+            current_cpu_address: CpuAddress::from_low_high(0, page),
             current_oam_address: oam_start_address,
             remaining_byte_count: 256,
             should_fix_cycle_alignment: current_cycle % 2 == 1,
@@ -25,7 +25,7 @@ impl DmaTransfer {
 
     pub fn inactive() -> DmaTransfer {
         DmaTransfer {
-            current_cpu_address: Address::new(0),
+            current_cpu_address: CpuAddress::new(0),
             current_oam_address: 0,
             remaining_byte_count: 0,
             should_fix_cycle_alignment: false,
@@ -64,6 +64,6 @@ pub enum DmaTransferState {
     WaitOnPreviousWrite,
     AlignToEven,
     Read,
-    Write(Address, u8),
+    Write(CpuAddress, u8),
     Finished,
 }

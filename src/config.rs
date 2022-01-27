@@ -7,12 +7,12 @@ use log::info;
 use structopt::StructOpt;
 
 use crate::cartridge::Cartridge;
-use crate::cpu::address::Address;
 use crate::cpu::cpu::ProgramCounterSource;
 use crate::gui::gui::Gui;
 use crate::gui::no_gui::NoGui;
 use crate::gui::frame_dump_gui::FrameDumpGui;
 use crate::gui::sdl_gui::SdlGui;
+use crate::memory::cpu_address::CpuAddress;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::render::frame_rate::TargetFrameRate;
 
@@ -83,7 +83,7 @@ pub struct Opt {
     #[structopt(name = "logcpu", long)]
     pub log_cpu: bool,
 
-    pub override_program_counter: Option<Address>,
+    pub override_program_counter: Option<CpuAddress>,
 }
 
 #[derive(Debug)]

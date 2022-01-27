@@ -1,6 +1,6 @@
 use log::info;
 
-use crate::cpu::address::Address;
+use crate::memory::cpu_address::CpuAddress;
 
 pub struct Stack<'a> {
     raw: &'a mut [u8; 0x100],
@@ -21,7 +21,7 @@ impl <'a> Stack<'a> {
         *self.pointer = self.pointer.wrapping_sub(1);
     }
 
-    pub fn push_address(&mut self, address: Address) {
+    pub fn push_address(&mut self, address: CpuAddress) {
         let (low, high) = address.to_low_high();
         self.push(high);
         self.push(low);
@@ -36,9 +36,9 @@ impl <'a> Stack<'a> {
         self.raw[*self.pointer as usize]
     }
 
-    pub fn pop_address(&mut self) -> Address {
+    pub fn pop_address(&mut self) -> CpuAddress {
         let low = self.pop();
         let high = self.pop();
-        Address::from_low_high(low, high)
+        CpuAddress::from_low_high(low, high)
     }
 }

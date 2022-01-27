@@ -7,9 +7,9 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use reznez::config::{Config, Opt, GuiType};
-use reznez::cpu::address::Address;
 use reznez::cpu::instruction::OpCode;
 use reznez::cpu::status::Status;
+use reznez::memory::cpu_address::CpuAddress;
 use reznez::nes::Nes;
 use reznez::ppu::render::frame::Frame;
 use reznez::ppu::render::frame_rate::TargetFrameRate;
@@ -27,7 +27,7 @@ fn nestest() {
         gui: GuiType::NoGui,
         stop_frame: None,
         target_frame_rate: TargetFrameRate::Unbounded,
-        override_program_counter: Some(Address::new(0xC000)),
+        override_program_counter: Some(CpuAddress::new(0xC000)),
         log_cpu: true,
     };
 
@@ -75,7 +75,7 @@ fn nestest() {
 
 #[derive(PartialEq, Eq, Debug)]
 struct State {
-    program_counter: Address,
+    program_counter: CpuAddress,
     code_point: u8,
     op_code: OpCode,
     a: u8,
@@ -97,7 +97,7 @@ impl State {
         }
 
         State {
-            program_counter: Address::new(u16::from_str_radix(&line[0..4], 16).unwrap()),
+            program_counter: CpuAddress::new(u16::from_str_radix(&line[0..4], 16).unwrap()),
             code_point: u8::from_str_radix(&line[6..8], 16).unwrap(),
             op_code: OpCode::from_str(raw_op_code).unwrap(),
             a: u8::from_str_radix(&line[50..52], 16).unwrap(),

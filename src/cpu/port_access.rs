@@ -1,8 +1,8 @@
-use crate::cpu::address::Address;
+use crate::memory::cpu_address::CpuAddress;
 
 #[derive(Clone, Copy)]
 pub struct PortAccess {
-    pub address: Address,
+    pub address: CpuAddress,
     pub value: u8,
     pub access_mode: AccessMode,
 }

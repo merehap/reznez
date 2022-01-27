@@ -1,6 +1,6 @@
 use num_traits::FromPrimitive;
 
-use crate::cpu::address::Address as CpuAddress;
+use crate::memory::cpu_address::CpuAddress;
 use crate::memory::cpu_internal_ram::CpuInternalRam;
 use crate::memory::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu_address::PpuAddress;

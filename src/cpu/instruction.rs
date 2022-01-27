@@ -3,7 +3,7 @@ use std::fmt;
 use lazy_static::lazy_static;
 use strum_macros::EnumString;
 
-use crate::cpu::address::Address;
+use crate::memory::cpu_address::CpuAddress;
 use crate::memory::memory::Memory;
 
 lazy_static! {
@@ -72,7 +72,7 @@ pub struct Instruction {
 
 impl Instruction {
     pub fn from_memory(
-        program_counter: Address,
+        program_counter: CpuAddress,
         x_index: u8,
         y_index: u8,
         mem: &mut Memory,
@@ -89,29 +89,29 @@ impl Instruction {
             Imp => Argument::Imp,
             Imm => Argument::Imm(low),
             ZP => {
-                let address = Address::zero_page(low);
+                let address = CpuAddress::zero_page(low);
                 Argument::Addr(address, mem.cpu_read(address))
             },
             ZPX => {
-                let address = Address::zero_page(low.wrapping_add(x_index));
+                let address = CpuAddress::zero_page(low.wrapping_add(x_index));
                 Argument::Addr(address, mem.cpu_read(address))
             },
             ZPY => {
-                let address = Address::zero_page(low.wrapping_add(y_index));
+                let address = CpuAddress::zero_page(low.wrapping_add(y_index));
                 Argument::Addr(address, mem.cpu_read(address))
             },
             Abs => {
-                let address = Address::from_low_high(low, high);
+                let address = CpuAddress::from_low_high(low, high);
                 Argument::Addr(address, mem.cpu_read(address))
             },
             AbX => {
-                let start_address = Address::from_low_high(low, high);
+                let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(x_index);
                 page_boundary_crossed = start_address.page() != address.page();
                 Argument::Addr(address, mem.cpu_read(address))
             },
             AbY => {
-                let start_address = Address::from_low_high(low, high);
+                let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(y_index);
                 page_boundary_crossed = start_address.page() != address.page();
                 Argument::Addr(address, mem.cpu_read(address))
@@ -123,23 +123,23 @@ impl Instruction {
                 Argument::Addr(address, mem.cpu_read(address))
             },
             Ind => {
-                let first = Address::from_low_high(low, high);
-                let second = Address::from_low_high(low.wrapping_add(1), high);
-                let address = Address::from_low_high(mem.cpu_read(first), mem.cpu_read(second));
+                let first = CpuAddress::from_low_high(low, high);
+                let second = CpuAddress::from_low_high(low.wrapping_add(1), high);
+                let address = CpuAddress::from_low_high(mem.cpu_read(first), mem.cpu_read(second));
                 Argument::Addr(address, mem.cpu_read(address))
             },
             IzX => {
                 let low = low.wrapping_add(x_index);
-                let address = Address::from_low_high(
-                    mem.cpu_read(Address::zero_page(low)),
-                    mem.cpu_read(Address::zero_page(low.wrapping_add(1))),
+                let address = CpuAddress::from_low_high(
+                    mem.cpu_read(CpuAddress::zero_page(low)),
+                    mem.cpu_read(CpuAddress::zero_page(low.wrapping_add(1))),
                 );
                 Argument::Addr(address, mem.cpu_read(address))
             },
             IzY => {
-                let start_address = Address::from_low_high(
-                    mem.cpu_read(Address::zero_page(low)),
-                    mem.cpu_read(Address::zero_page(low.wrapping_add(1))),
+                let start_address = CpuAddress::from_low_high(
+                    mem.cpu_read(CpuAddress::zero_page(low)),
+                    mem.cpu_read(CpuAddress::zero_page(low.wrapping_add(1))),
                 );
                 // TODO: Should this wrap around just the current page?
                 let address = start_address.advance(y_index);
@@ -182,7 +182,7 @@ impl fmt::Display for Instruction {
 pub enum Argument {
     Imp,
     Imm(u8),
-    Addr(Address, u8),
+    Addr(CpuAddress, u8),
 }
 
 impl fmt::Display for Argument {

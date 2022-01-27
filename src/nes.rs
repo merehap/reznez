@@ -241,7 +241,7 @@ impl Nes {
 
 #[cfg(test)]
 mod tests {
-    use crate::cpu::address::Address;
+    use crate::memory::cpu_address::CpuAddress;
     use crate::cpu::cpu::ProgramCounterSource;
     use crate::memory::memory::Memory;
     use crate::ppu::palette::system_palette::SystemPalette;
@@ -319,11 +319,11 @@ mod tests {
         let mut memory = Memory::new(mapper, name_table_mirroring, system_palette);
         // Write NOPs to where the RESET_VECTOR starts the program.
         for i in 0x0200..0x0800 {
-            memory.cpu_write(Address::new(i), 0xEA);
+            memory.cpu_write(CpuAddress::new(i), 0xEA);
         }
 
         Nes {
-            cpu: Cpu::new(&mut memory, ProgramCounterSource::Override(Address::new(0x0000))),
+            cpu: Cpu::new(&mut memory, ProgramCounterSource::Override(CpuAddress::new(0x0000))),
             ppu: Ppu::new(),
             memory,
             joypad_1: Joypad::new(),

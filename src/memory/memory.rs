@@ -1,4 +1,4 @@
-use crate::cpu::address::Address as CpuAddress;
+use crate::memory::cpu_address::CpuAddress;
 use crate::cpu::port_access::PortAccess;
 
 use crate::memory::cpu_internal_ram::{CpuInternalRam, NMI_VECTOR, RESET_VECTOR, IRQ_VECTOR};

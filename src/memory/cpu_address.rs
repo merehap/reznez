@@ -3,10 +3,10 @@ use std::str::FromStr;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
 #[repr(transparent)]
-pub struct Address(u16);
+pub struct CpuAddress(u16);
 
-impl Address {
-    pub const fn new(mut value: u16) -> Address {
+impl CpuAddress {
+    pub const fn new(mut value: u16) -> CpuAddress {
         if value < 0x2000 {
             // Map RAM mirrors to the true RAM range.
             value %= 0x2000;
@@ -15,15 +15,15 @@ impl Address {
             value = (value % 0x8) + 0x2000;
         }
 
-        Address(value)
+        CpuAddress(value)
     }
 
-    pub fn from_low_high(low: u8, high: u8) -> Address {
-        Address::new(((u16::from(high)) << 8) + (u16::from(low)))
+    pub fn from_low_high(low: u8, high: u8) -> CpuAddress {
+        CpuAddress::new(((u16::from(high)) << 8) + (u16::from(low)))
     }
 
-    pub fn zero_page(low: u8) -> Address {
-        Address::new(u16::from(low))
+    pub fn zero_page(low: u8) -> CpuAddress {
+        CpuAddress::new(u16::from(low))
     }
 
     pub fn to_raw(self) -> u16 {
@@ -38,15 +38,15 @@ impl Address {
         (self.0 as u8, (self.0 >> 8) as u8)
     }
 
-    pub fn advance(self, value: u8) -> Address {
-        Address::new(self.0.wrapping_add(u16::from(value)))
+    pub fn advance(self, value: u8) -> CpuAddress {
+        CpuAddress::new(self.0.wrapping_add(u16::from(value)))
     }
 
-    pub fn offset(self, value: i8) -> Address {
-        Address::new((i32::from(self.0)).wrapping_add(i32::from(value)) as u16)
+    pub fn offset(self, value: i8) -> CpuAddress {
+        CpuAddress::new((i32::from(self.0)).wrapping_add(i32::from(value)) as u16)
     }
 
-    pub fn inc(&mut self) -> Address {
+    pub fn inc(&mut self) -> CpuAddress {
         self.0 = self.0.wrapping_add(1);
         *self
     }
@@ -67,26 +67,26 @@ impl Address {
             0x4020..=0xFFF9 => Cartridge,
             0xFFFA..=0xFFFF => InterruptVector,
             _ => unreachable!(
-                "Value '{}' should not be possible for an Address.",
+                "Value '{}' should not be possible for an CpuAddress.",
                 self.0,
                 ),
         }
     }
 }
 
-impl fmt::Display for Address {
+impl fmt::Display for CpuAddress {
     fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
         write!(f, "${:04X}", self.0)
     }
 }
 
-impl FromStr for Address {
+impl FromStr for CpuAddress {
     type Err = String;
 
-    fn from_str(value: &str) -> Result<Address, String> {
+    fn from_str(value: &str) -> Result<CpuAddress, String> {
         let raw = u16::from_str(value)
             .map_err(|err| err.to_string())?;
-        Ok(Address(raw))
+        Ok(CpuAddress(raw))
     }
 }
 

@@ -1,10 +1,10 @@
 use log::{info, log_enabled};
 use log::Level::Info;
 
-use crate::cpu::address::Address;
 use crate::cpu::instruction::{Instruction, OpCode, Argument};
 use crate::cpu::status::Status;
 use crate::cpu::dma_transfer::{DmaTransfer, DmaTransferState};
+use crate::memory::cpu_address::CpuAddress;
 use crate::memory::memory::Memory;
 
 pub struct Cpu {
@@ -14,7 +14,7 @@ pub struct Cpu {
     x: u8,
     // Y Index
     y: u8,
-    program_counter: Address,
+    program_counter: CpuAddress,
     status: Status,
 
     nmi_pending: bool,
@@ -85,7 +85,7 @@ impl Cpu {
         self.y
     }
 
-    pub fn program_counter(&self) -> Address {
+    pub fn program_counter(&self) -> CpuAddress {
         self.program_counter
     }
 
@@ -351,13 +351,13 @@ impl Cpu {
             (SHY, Addr(addr, _)) => {
                 let (low, high) = addr.to_low_high();
                 let value = self.y & high.wrapping_add(1);
-                let addr = Address::from_low_high(low, high & self.y);
+                let addr = CpuAddress::from_low_high(low, high & self.y);
                 memory.cpu_write(addr, value);
             },
             (SHX, Addr(addr, _)) => {
                 let (low, high) = addr.to_low_high();
                 let value = self.x & high.wrapping_add(1);
-                let addr = Address::from_low_high(low, high & self.x);
+                let addr = CpuAddress::from_low_high(low, high & self.x);
                 memory.cpu_write(addr, value);
             },
             (TAS, _) => unimplemented!(),
@@ -446,7 +446,7 @@ impl Cpu {
         value
     }
 
-    fn take_branch(&mut self, destination: Address) -> u8 {
+    fn take_branch(&mut self, destination: CpuAddress) -> u8 {
         info!(target: "cpu", "Branch taken, cycle added.");
         let mut cycle_count = 1;
 
@@ -476,7 +476,7 @@ fn is_neg(value: u8) -> bool {
 #[derive(Clone, Copy)]
 pub enum ProgramCounterSource {
     ResetVector,
-    Override(Address),
+    Override(CpuAddress),
 }
 
 pub enum StepResult {
