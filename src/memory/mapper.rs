@@ -2,7 +2,7 @@ use num_traits::FromPrimitive;
 
 use crate::cpu::address::Address as CpuAddress;
 use crate::cpu::memory::Memory as CpuMemory;
-use crate::memory::ppu_ram::PpuRam;
+use crate::memory::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu_address::PpuAddress;
 use crate::memory::palette_ram::PaletteRam;
 use crate::memory::vram::VramSide;
@@ -17,25 +17,24 @@ pub trait Mapper {
     fn cpu_write(&self, memory: &mut CpuMemory, address: CpuAddress, value: u8);
 
     #[inline]
-    fn ppu_read(&self, ppu_ram: &PpuRam, address: PpuAddress) -> u8 {
+    fn ppu_read(&self, ppu_internal_ram: &PpuInternalRam, address: PpuAddress) -> u8 {
         match address.to_u16() {
             0x0000..=0x1FFF => self.pattern_table_byte(address),
-            0x2000..=0x3EFF => self.name_table_byte(ppu_ram, address),
-            0x3F00..=0x3FFF => self.palette_table_byte(&ppu_ram.palette_ram, address),
+            0x2000..=0x3EFF => self.name_table_byte(ppu_internal_ram, address),
+            0x3F00..=0x3FFF => self.palette_table_byte(&ppu_internal_ram.palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
         }
     }
 
     #[inline]
-    fn ppu_write(&mut self, ppu_ram: &mut PpuRam, address: PpuAddress, value: u8) {
+    fn ppu_write(&mut self, ppu_internal_ram: &mut PpuInternalRam, address: PpuAddress, value: u8) {
         match address.to_u16() {
             0x0000..=0x1FFF => *self.pattern_table_byte_mut(address) = value,
-            0x2000..=0x3EFF => *self.name_table_byte_mut(ppu_ram, address) = value,
-            0x3F00..=0x3FFF => *self.palette_table_byte_mut(&mut ppu_ram.palette_ram, address) = value,
+            0x2000..=0x3EFF => *self.name_table_byte_mut(ppu_internal_ram, address) = value,
+            0x3F00..=0x3FFF => *self.palette_table_byte_mut(&mut ppu_internal_ram.palette_ram, address) = value,
             0x4000..=0xFFFF => unreachable!(),
         }
     }
-
 
     fn raw_pattern_table(&self) -> &[u8; PATTERN_TABLE_SIZE];
     fn raw_pattern_table_mut(&mut self) -> &mut [u8; PATTERN_TABLE_SIZE];
@@ -43,19 +42,19 @@ pub trait Mapper {
     #[inline]
     fn raw_name_table<'a>(
         &'a self,
-        ppu_ram: &'a PpuRam,
+        ppu_internal_ram: &'a PpuInternalRam,
         number: NameTableNumber,
     ) -> &'a [u8; NAME_TABLE_SIZE] {
-        (&ppu_ram.vram).side(vram_side(number, ppu_ram.name_table_mirroring))
+        (&ppu_internal_ram.vram).side(vram_side(number, ppu_internal_ram.name_table_mirroring))
     }
 
     #[inline]
     fn raw_name_table_mut<'a>(
         &'a mut self,
-        ppu_ram: &'a mut PpuRam,
+        ppu_internal_ram: &'a mut PpuInternalRam,
         number: NameTableNumber,
     ) -> &'a mut [u8; NAME_TABLE_SIZE] {
-        (&mut ppu_ram.vram).side_mut(vram_side(number, ppu_ram.name_table_mirroring))
+        (&mut ppu_internal_ram.vram).side_mut(vram_side(number, ppu_internal_ram.name_table_mirroring))
     }
 
     #[inline]
@@ -69,15 +68,15 @@ pub trait Mapper {
     }
 
     #[inline]
-    fn name_table_byte(&self, ppu_ram: &PpuRam, address: PpuAddress) -> u8 {
+    fn name_table_byte(&self, ppu_internal_ram: &PpuInternalRam, address: PpuAddress) -> u8 {
         let (name_table_number, index) = address_to_name_table_index(address);
-        self.raw_name_table(ppu_ram, name_table_number)[index]
+        self.raw_name_table(ppu_internal_ram, name_table_number)[index]
     }
 
     #[inline]
-    fn name_table_byte_mut<'a>(&'a mut self, ppu_ram: &'a mut PpuRam, address: PpuAddress) -> &'a mut u8 {
+    fn name_table_byte_mut<'a>(&'a mut self, ppu_internal_ram: &'a mut PpuInternalRam, address: PpuAddress) -> &'a mut u8 {
         let (name_table_number, index) = address_to_name_table_index(address);
-        &mut self.raw_name_table_mut(ppu_ram, name_table_number)[index]
+        &mut self.raw_name_table_mut(ppu_internal_ram, name_table_number)[index]
     }
 
     #[inline]

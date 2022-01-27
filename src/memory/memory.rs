@@ -5,7 +5,7 @@ use crate::cpu::port_access::PortAccess;
 
 use crate::memory::mapper::Mapper;
 use crate::memory::ppu_address::PpuAddress;
-use crate::memory::ppu_ram::PpuRam;
+use crate::memory::ppu_internal_ram::PpuInternalRam;
 use crate::memory::stack::Stack;
 use crate::ppu::name_table::name_table::NameTable;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
@@ -22,7 +22,7 @@ pub const PALETTE_TABLE_START: PpuAddress = PpuAddress::from_u16(0x3F00);
 pub struct Memory {
     mapper: Box<dyn Mapper>,
     cpu_memory: CpuMemory,
-    ppu_ram: PpuRam,
+    ppu_internal_ram: PpuInternalRam,
     system_palette: SystemPalette,
 }
 
@@ -36,7 +36,7 @@ impl Memory {
         Memory {
             mapper,
             cpu_memory: CpuMemory::new(),
-            ppu_ram: PpuRam::new(name_table_mirroring),
+            ppu_internal_ram: PpuInternalRam::new(name_table_mirroring),
             system_palette,
         }
     }
@@ -53,12 +53,12 @@ impl Memory {
 
     #[inline]
     pub fn ppu_read(&self, address: PpuAddress) -> u8 {
-        self.mapper.ppu_read(&self.ppu_ram, address)
+        self.mapper.ppu_read(&self.ppu_internal_ram, address)
     }
 
     #[inline]
     pub fn ppu_write(&mut self, address: PpuAddress, value: u8) {
-        self.mapper.ppu_write(&mut self.ppu_ram, address, value)
+        self.mapper.ppu_write(&mut self.ppu_internal_ram, address, value)
     }
 
     #[inline]
@@ -113,12 +113,12 @@ impl Memory {
 
     #[inline]
     pub fn name_table(&self, number: NameTableNumber) -> NameTable {
-        NameTable::new(self.mapper.raw_name_table(&self.ppu_ram, number))
+        NameTable::new(self.mapper.raw_name_table(&self.ppu_internal_ram, number))
     }
 
     #[inline]
     pub fn palette_table(&self) -> PaletteTable {
-        PaletteTable::new(self.ppu_ram.palette_ram.to_slice(), &self.system_palette)
+        PaletteTable::new(self.ppu_internal_ram.palette_ram.to_slice(), &self.system_palette)
     }
 
     fn address_from_vector(&mut self, mut vector: CpuAddress) -> CpuAddress {

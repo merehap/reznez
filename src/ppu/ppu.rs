@@ -200,6 +200,8 @@ impl Ppu {
 
         let palette_table = memory.palette_table();
         let sprite_table_side = ctrl.sprite_table_side;
+        // FIXME: No more sprites will be found once the end of OAM is reached,
+        // effectively hiding any sprites before OAM[OAMADDR].
         let sprites = self.oam.sprites();
         // Lower index sprites are drawn on top of higher index sprites.
         for i in (0..sprites.len()).rev() {
