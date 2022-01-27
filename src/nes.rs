@@ -6,7 +6,7 @@ use log::{info, warn};
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::{Cpu, StepResult};
-use crate::cpu::memory::*;
+use crate::cpu::cpu_internal_ram::*;
 use crate::cpu::instruction::Instruction;
 use crate::cpu::port_access::{PortAccess, AccessMode};
 use crate::gui::gui::Gui;

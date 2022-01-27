@@ -1,7 +1,7 @@
 use num_traits::FromPrimitive;
 
 use crate::cpu::address::Address as CpuAddress;
-use crate::cpu::memory::Memory as CpuMemory;
+use crate::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu_address::PpuAddress;
 use crate::memory::palette_ram::PaletteRam;
@@ -13,8 +13,8 @@ pub const PATTERN_TABLE_SIZE: usize = 0x2000;
 pub const NAME_TABLE_SIZE: usize = 0x400;
 
 pub trait Mapper {
-    fn cpu_read(&self, memory: &mut CpuMemory, address: CpuAddress) -> u8;
-    fn cpu_write(&self, memory: &mut CpuMemory, address: CpuAddress, value: u8);
+    fn cpu_read(&self, memory: &mut CpuInternalRam, address: CpuAddress) -> u8;
+    fn cpu_write(&self, memory: &mut CpuInternalRam, address: CpuAddress, value: u8);
 
     #[inline]
     fn ppu_read(&self, ppu_internal_ram: &PpuInternalRam, address: PpuAddress) -> u8 {

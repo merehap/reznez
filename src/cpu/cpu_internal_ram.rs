@@ -21,15 +21,15 @@ pub const OAM_DMA:   Address = Address::new(0x4014);
 pub const JOYSTICK_1_PORT: Address = Address::new(0x4016);
 pub const JOYSTICK_2_PORT: Address = Address::new(0x4017);
 
-pub struct Memory {
+pub struct CpuInternalRam {
     pub stack_pointer: u8,
     memory: Box<[u8; 0x10000]>,
     latch: Option<PortAccess>,
 }
 
-impl Memory {
-    pub fn new() -> Memory {
-        Memory {
+impl CpuInternalRam {
+    pub fn new() -> CpuInternalRam {
+        CpuInternalRam {
             stack_pointer: 0xFD,
             memory: Box::new([0; 0x10000]),
             latch: None,

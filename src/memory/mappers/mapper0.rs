@@ -1,6 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::cpu::address::Address as CpuAddress;
-use crate::cpu::memory::Memory as CpuMemory;
+use crate::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::mapper::*;
 
 const PRG_ROM_START: CpuAddress = CpuAddress::new(0x8000);
@@ -55,7 +55,7 @@ impl Mapper0 {
 
 impl Mapper for Mapper0 {
     #[inline]
-    fn cpu_read(&self, memory: &mut CpuMemory, address: CpuAddress) -> u8 {
+    fn cpu_read(&self, memory: &mut CpuInternalRam, address: CpuAddress) -> u8 {
         if address < PRG_ROM_START {
             memory.read(address)
         } else {
@@ -64,7 +64,7 @@ impl Mapper for Mapper0 {
     }
 
     #[inline]
-    fn cpu_write(&self, memory: &mut CpuMemory, address: CpuAddress, value: u8) {
+    fn cpu_write(&self, memory: &mut CpuInternalRam, address: CpuAddress, value: u8) {
         if address < PRG_ROM_START {
             memory.write(address, value);
         } else {

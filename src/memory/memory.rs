@@ -1,6 +1,5 @@
 use crate::cpu::address::Address as CpuAddress;
-use crate::cpu::memory::{NMI_VECTOR, RESET_VECTOR, IRQ_VECTOR};
-use crate::cpu::memory::Memory as CpuMemory;
+use crate::cpu::cpu_internal_ram::{CpuInternalRam, NMI_VECTOR, RESET_VECTOR, IRQ_VECTOR};
 use crate::cpu::port_access::PortAccess;
 
 use crate::memory::mapper::Mapper;
@@ -21,7 +20,7 @@ pub const PALETTE_TABLE_START: PpuAddress = PpuAddress::from_u16(0x3F00);
 
 pub struct Memory {
     mapper: Box<dyn Mapper>,
-    cpu_memory: CpuMemory,
+    cpu_memory: CpuInternalRam,
     ppu_internal_ram: PpuInternalRam,
     system_palette: SystemPalette,
 }
@@ -35,7 +34,7 @@ impl Memory {
 
         Memory {
             mapper,
-            cpu_memory: CpuMemory::new(),
+            cpu_memory: CpuInternalRam::new(),
             ppu_internal_ram: PpuInternalRam::new(name_table_mirroring),
             system_palette,
         }
@@ -62,12 +61,12 @@ impl Memory {
     }
 
     #[inline]
-    pub fn cpu_memory(&self) -> &CpuMemory {
+    pub fn cpu_memory(&self) -> &CpuInternalRam {
         &self.cpu_memory
     }
 
     #[inline]
-    pub fn cpu_memory_mut(&mut self) -> &mut CpuMemory {
+    pub fn cpu_memory_mut(&mut self) -> &mut CpuInternalRam {
         &mut self.cpu_memory
     }
 
