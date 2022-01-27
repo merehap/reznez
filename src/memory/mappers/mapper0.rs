@@ -11,39 +11,34 @@ pub struct Mapper0 {
 impl Mapper0 {
     pub fn new(cartridge: Cartridge) -> Result<Mapper0, String> {
         let mut prg_rom = Box::new([0; PRG_ROM_SIZE]);
-        match cartridge.prg_rom_chunk_count() {
+        let prg_rom_chunks = cartridge.prg_rom_chunks();
+        match prg_rom_chunks.len() {
             /* Nrom128 - Mirrored mappings. */
             1 => {
-                for (i, byte) in cartridge.prg_rom().iter().enumerate().take(0x4000) {
-                    prg_rom[i] = *byte;
-                    prg_rom[i + 0x4000] = *byte;
-                }
+                prg_rom[0x0000..=0x3FFF].copy_from_slice(prg_rom_chunks[0].as_ref());
+                prg_rom[0x4000..=0x7FFF].copy_from_slice(prg_rom_chunks[0].as_ref());
             },
             /* Nrom256 - A single long mapping. */
             2 => {
-                for (i, byte) in cartridge.prg_rom().iter().enumerate().take(0x8000) {
-                    prg_rom[i] = *byte;
-                }
+                prg_rom[0x0000..=0x3FFF].copy_from_slice(prg_rom_chunks[0].as_ref());
+                prg_rom[0x4000..=0x7FFF].copy_from_slice(prg_rom_chunks[1].as_ref());
             },
             c => return Err(format!(
                      "PRG ROM size must be 16K or 32K for mapper 0, but was {}K",
-                     16 * u16::from(c),
+                     16 * c,
                  )),
         }
 
-        if cartridge.chr_rom_chunk_count() > 1 {
-            return Err(format!(
-                "CHR ROM size must be 0K or 8K for mapper 0, but was {}K",
-                8 * cartridge.chr_rom_chunk_count()
-            ));
-        }
-
+        let chr_rom_chunks = cartridge.chr_rom_chunks();
         let chr_rom =
-            if cartridge.chr_rom().is_empty() {
+            match chr_rom_chunks.len() {
                 // Provide empty CHR ROM if the cartridge doesn't provide any.
-                Box::new([0; 0x2000])
-            } else {
-                Box::new(cartridge.chr_rom()[0x0..0x2000].try_into().unwrap())
+                0 => Box::new([0; 0x2000]),
+                1 => chr_rom_chunks[0].clone(),
+                n => return Err(format!(
+                         "CHR ROM size must be 0K or 8K for mapper 0, but was {}K",
+                         8 * n
+                     )),
             };
 
         Ok(Mapper0 {prg_rom, chr_rom})

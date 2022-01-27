@@ -16,8 +16,8 @@ pub struct Cartridge {
     ines2: Option<INes2>,
 
     trainer: Option<[u8; 512]>,
-    prg_rom: Vec<Box<[u8; 0x4000]>>,
-    chr_rom: Vec<Box<[u8; 0x2000]>>,
+    prg_rom_chunks: Vec<Box<[u8; 0x4000]>>,
+    chr_rom_chunks: Vec<Box<[u8; 0x2000]>>,
     console_type: ConsoleType,
     title: String,
 }
@@ -75,15 +75,15 @@ impl Cartridge {
 
         let mut rom_index = 0x10;
 
-        let mut prg_rom = Vec::new();
+        let mut prg_rom_chunks = Vec::new();
         for _ in 0..prg_rom_chunk_count {
-            prg_rom.push(Box::new(rom[rom_index..rom_index + PRG_ROM_CHUNK_LENGTH].try_into().unwrap()));
+            prg_rom_chunks.push(Box::new(rom[rom_index..rom_index + PRG_ROM_CHUNK_LENGTH].try_into().unwrap()));
             rom_index += PRG_ROM_CHUNK_LENGTH;
         }
 
-        let mut chr_rom = Vec::new();
+        let mut chr_rom_chunks = Vec::new();
         for _ in 0..chr_rom_chunk_count {
-            chr_rom.push(Box::new(rom[rom_index..rom_index + CHR_ROM_CHUNK_LENGTH].try_into().unwrap()));
+            chr_rom_chunks.push(Box::new(rom[rom_index..rom_index + CHR_ROM_CHUNK_LENGTH].try_into().unwrap()));
             rom_index += CHR_ROM_CHUNK_LENGTH;
         }
 
@@ -105,8 +105,8 @@ impl Cartridge {
             ines2: None,
 
             trainer: None,
-            prg_rom,
-            chr_rom,
+            prg_rom_chunks,
+            chr_rom_chunks,
             console_type: ConsoleType::Nes,
             title,
         })
@@ -120,30 +120,12 @@ impl Cartridge {
         self.name_table_mirroring
     }
     
-    pub fn prg_rom(&self) -> Vec<u8> {
-        let mut result = Vec::new();
-        for chunk in &mut self.prg_rom.clone() {
-            result.extend_from_slice(&mut **chunk);
-        }
-
-        result
+    pub fn prg_rom_chunks(&self) -> &[Box<[u8; 0x4000]>] {
+        &self.prg_rom_chunks
     }
 
-    pub fn prg_rom_chunk_count(&self) -> u8 {
-        self.prg_rom.len() as u8
-    }
-
-    pub fn chr_rom(&self) -> Vec<u8> {
-        let mut result = Vec::new();
-        for chunk in &mut self.chr_rom.clone() {
-            result.extend_from_slice(&mut **chunk);
-        }
-
-        result
-    }
-
-    pub fn chr_rom_chunk_count(&self) -> u8 {
-        self.chr_rom.len() as u8
+    pub fn chr_rom_chunks(&self) -> &[Box<[u8; 0x2000]>] {
+        &self.chr_rom_chunks
     }
 }
 
@@ -156,8 +138,8 @@ impl fmt::Display for Cartridge {
         writeln!(f, "iNES2 present: {}", self.ines2.is_some())?;
 
         writeln!(f, "Trainer present: {}", self.trainer.is_some())?;
-        writeln!(f, "PRG ROM chunk count: {}", self.prg_rom_chunk_count())?;
-        writeln!(f, "CHR ROM chunk count: {}", self.chr_rom_chunk_count())?;
+        writeln!(f, "PRG ROM chunk count: {}", self.prg_rom_chunks.len())?;
+        writeln!(f, "CHR ROM chunk count: {}", self.chr_rom_chunks.len())?;
         writeln!(f, "Console type: {:?}", self.console_type)?;
         writeln!(f, "Title: {:?}", self.title)?;
 
@@ -193,16 +175,16 @@ pub mod tests {
     use super::*;
 
     pub fn sample_cartridge() -> Cartridge {
-        let mut prg_rom = vec![Box::new([0xEA; PRG_ROM_CHUNK_LENGTH])];
-        let len = prg_rom[0].len();
+        let mut prg_rom_chunks = vec![Box::new([0xEA; PRG_ROM_CHUNK_LENGTH])];
+        let len = prg_rom_chunks[0].len();
         // Overwrite the NMI/RESET/IRQ Vectors so they doesn't point to ROM.
         // This allows injection of custom instructions for testing.
-        prg_rom[0][len - 6] = 0x00;
-        prg_rom[0][len - 5] = 0x02;
-        prg_rom[0][len - 4] = 0x00;
-        prg_rom[0][len - 3] = 0x02;
-        prg_rom[0][len - 2] = 0x00;
-        prg_rom[0][len - 1] = 0x02;
+        prg_rom_chunks[0][len - 6] = 0x00;
+        prg_rom_chunks[0][len - 5] = 0x02;
+        prg_rom_chunks[0][len - 4] = 0x00;
+        prg_rom_chunks[0][len - 3] = 0x02;
+        prg_rom_chunks[0][len - 2] = 0x00;
+        prg_rom_chunks[0][len - 1] = 0x02;
 
         Cartridge {
             mapper_number: 0,
@@ -212,8 +194,8 @@ pub mod tests {
             ines2: None,
 
             trainer: None,
-            prg_rom,
-            chr_rom: vec![Box::new([0x00; CHR_ROM_CHUNK_LENGTH])],
+            prg_rom_chunks,
+            chr_rom_chunks: vec![Box::new([0x00; CHR_ROM_CHUNK_LENGTH])],
             console_type: ConsoleType::Nes,
             title: "Test ROM".to_string(),
         }
