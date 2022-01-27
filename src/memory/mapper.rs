@@ -5,6 +5,7 @@ use crate::memory::cpu_internal_ram::CpuInternalRam;
 use crate::memory::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu_address::PpuAddress;
 use crate::memory::palette_ram::PaletteRam;
+use crate::memory::ports::Ports;
 use crate::memory::vram::VramSide;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
@@ -13,8 +14,8 @@ pub const PATTERN_TABLE_SIZE: usize = 0x2000;
 pub const NAME_TABLE_SIZE: usize = 0x400;
 
 pub trait Mapper {
-    fn cpu_read(&self, memory: &mut CpuInternalRam, address: CpuAddress) -> u8;
-    fn cpu_write(&self, memory: &mut CpuInternalRam, address: CpuAddress, value: u8);
+    fn cpu_read(&self, memory: &CpuInternalRam, ports: &mut Ports, address: CpuAddress) -> u8;
+    fn cpu_write(&self, memory: &mut CpuInternalRam, ports: &mut Ports, address: CpuAddress, value: u8);
 
     #[inline]
     fn ppu_read(&self, ppu_internal_ram: &PpuInternalRam, address: PpuAddress) -> u8 {

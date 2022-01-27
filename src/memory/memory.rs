@@ -1,8 +1,9 @@
 use crate::memory::cpu_address::CpuAddress;
-use crate::cpu::port_access::PortAccess;
 
 use crate::memory::cpu_internal_ram::{CpuInternalRam, NMI_VECTOR, RESET_VECTOR, IRQ_VECTOR};
 use crate::memory::mapper::Mapper;
+use crate::memory::port_access::PortAccess;
+use crate::memory::ports::Ports;
 use crate::memory::ppu_address::PpuAddress;
 use crate::memory::ppu_internal_ram::PpuInternalRam;
 use crate::memory::stack::Stack;
@@ -20,9 +21,10 @@ pub const PALETTE_TABLE_START: PpuAddress = PpuAddress::from_u16(0x3F00);
 
 pub struct Memory {
     mapper: Box<dyn Mapper>,
-    cpu_memory: CpuInternalRam,
+    cpu_internal_ram: CpuInternalRam,
     ppu_internal_ram: PpuInternalRam,
     system_palette: SystemPalette,
+    ports: Ports,
 }
 
 impl Memory {
@@ -34,20 +36,21 @@ impl Memory {
 
         Memory {
             mapper,
-            cpu_memory: CpuInternalRam::new(),
+            cpu_internal_ram: CpuInternalRam::new(),
             ppu_internal_ram: PpuInternalRam::new(name_table_mirroring),
             system_palette,
+            ports: Ports::new(),
         }
     }
 
     #[inline]
     pub fn cpu_read(&mut self, address: CpuAddress) -> u8 {
-        self.mapper.cpu_read(&mut self.cpu_memory, address)
+        self.mapper.cpu_read(&self.cpu_internal_ram, &mut self.ports, address)
     }
 
     #[inline]
     pub fn cpu_write(&mut self, address: CpuAddress, value: u8) {
-        self.mapper.cpu_write(&mut self.cpu_memory, address, value)
+        self.mapper.cpu_write(&mut self.cpu_internal_ram, &mut self.ports, address, value)
     }
 
     #[inline]
@@ -61,36 +64,36 @@ impl Memory {
     }
 
     #[inline]
-    pub fn cpu_memory(&self) -> &CpuInternalRam {
-        &self.cpu_memory
+    pub fn ports(&self) -> &Ports {
+        &self.ports
     }
 
     #[inline]
-    pub fn cpu_memory_mut(&mut self) -> &mut CpuInternalRam {
-        &mut self.cpu_memory
+    pub fn ports_mut(&mut self) -> &mut Ports {
+        &mut self.ports
     }
 
     #[inline]
     pub fn stack(&mut self) -> Stack {
-        self.cpu_memory.stack()
+        self.cpu_internal_ram.stack()
     }
 
     #[inline]
     pub fn stack_pointer(&self) -> u8 {
-        self.cpu_memory.stack_pointer
+        self.cpu_internal_ram.stack_pointer
     }
 
     #[inline]
     pub fn stack_pointer_mut(&mut self) -> &mut u8 {
-        &mut self.cpu_memory.stack_pointer
+        &mut self.cpu_internal_ram.stack_pointer
     }
 
     pub fn latch(&self) -> Option<PortAccess> {
-        self.cpu_memory.latch()
+        self.ports.latch()
     }
 
     pub fn reset_cpu_latch(&mut self) {
-        self.cpu_memory.reset_latch()
+        self.ports.reset_latch()
     }
 
     pub fn nmi_vector(&mut self) -> CpuAddress {

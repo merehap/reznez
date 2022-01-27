@@ -4,6 +4,8 @@ pub mod mapper;
 pub mod mappers;
 pub mod memory;
 mod palette_ram;
+pub mod port_access;
+mod ports;
 pub mod ppu_address;
 mod ppu_internal_ram;
 pub mod stack;

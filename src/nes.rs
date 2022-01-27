@@ -7,11 +7,11 @@ use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::{Cpu, StepResult};
 use crate::cpu::instruction::Instruction;
-use crate::cpu::port_access::{PortAccess, AccessMode};
 use crate::gui::gui::Gui;
 use crate::memory::cpu_internal_ram::*;
 use crate::memory::memory::Memory;
 use crate::memory::mappers::mapper0::Mapper0;
+use crate::memory::port_access::{PortAccess, AccessMode};
 use crate::ppu::ppu::Ppu;
 use crate::ppu::register::ctrl::Ctrl;
 use crate::ppu::register::mask::Mask;
@@ -133,20 +133,20 @@ impl Nes {
         }
 
         self.ppu.step(&self.memory, self.ppu_ctrl(), self.ppu_mask(), frame);
-        self.memory.cpu_memory_mut().bus_access_write(PPUSTATUS, self.ppu.status().to_u8());
+        self.memory.ports_mut().bus_access_write(PPUSTATUS, self.ppu.status().to_u8());
         let oam_byte = self.ppu.read_oam(self.oam_address());
-        self.memory.cpu_memory_mut().bus_access_write(OAMDATA, oam_byte);
+        self.memory.ports_mut().bus_access_write(OAMDATA, oam_byte);
         let vram_data = self.ppu.vram_data(&self.memory);
-        self.memory.cpu_memory_mut().bus_access_write(PPUDATA, vram_data);
+        self.memory.ports_mut().bus_access_write(PPUDATA, vram_data);
 
         if self.ppu.vblank_just_started() {
             self.schedule_nmi_if_allowed();
         }
 
         let status = self.joypad_1.selected_button_status() as u8;
-        self.memory.cpu_memory_mut().bus_access_write(JOYSTICK_1_PORT, status);
+        self.memory.ports_mut().bus_access_write(JOYSTICK_1_PORT, status);
         let status = self.joypad_2.selected_button_status() as u8;
-        self.memory.cpu_memory_mut().bus_access_write(JOYSTICK_2_PORT, status);
+        self.memory.ports_mut().bus_access_write(JOYSTICK_2_PORT, status);
 
         self.cycle += 1;
 
@@ -207,28 +207,27 @@ impl Nes {
 
     fn schedule_nmi_if_allowed(&mut self) {
         if self.ppu.can_generate_nmi(self.ppu_ctrl()) {
-            info!("Scheduling NMI.");
             self.cpu.schedule_nmi();
         }
     }
 
     fn ppu_ctrl(&self) -> Ctrl {
-        Ctrl::from_u8(self.memory.cpu_memory().bus_access_read(PPUCTRL))
+        Ctrl::from_u8(self.memory.ports().bus_access_read(PPUCTRL))
     }
 
     fn ppu_mask(&self) -> Mask {
-        Mask::from_u8(self.memory.cpu_memory().bus_access_read(PPUMASK))
+        Mask::from_u8(self.memory.ports().bus_access_read(PPUMASK))
     }
 
     fn oam_address(&self) -> u8 {
-        self.memory.cpu_memory().bus_access_read(OAMADDR)
+        self.memory.ports().bus_access_read(OAMADDR)
     }
 
     fn write_oam(&mut self, value: u8) {
-        let oamaddr = self.memory.cpu_memory().bus_access_read(OAMADDR);
+        let oamaddr = self.memory.ports().bus_access_read(OAMADDR);
         self.ppu.write_oam(oamaddr, value);
         // Advance to next sprite byte to write.
-        self.memory.cpu_memory_mut().bus_access_write(OAMADDR, oamaddr.wrapping_add(1));
+        self.memory.ports_mut().bus_access_write(OAMADDR, oamaddr.wrapping_add(1));
     }
 
     fn frame_duration(&self) -> Duration {
@@ -337,14 +336,13 @@ mod tests {
     }
 
     fn step_until_vblank_nmi_enabled(nes: &mut Nes) {
-        let mut ctrl = Ctrl::from_u8(nes.memory.cpu_memory().bus_access_read(PPUCTRL));
+        let mut ctrl = Ctrl::from_u8(nes.memory.ports().bus_access_read(PPUCTRL));
         ctrl.nmi_enabled = true;
-        nes.memory.cpu_memory_mut().bus_access_write(PPUCTRL, ctrl.to_u8());
+        nes.memory.ports_mut().bus_access_write(PPUCTRL, ctrl.to_u8());
 
         let mut frame = Frame::new();
         while !nes.ppu.can_generate_nmi(nes.ppu_ctrl()) {
             assert!(!nes.cpu.nmi_pending(), "NMI must not be pending before one is scheduled.");
-            println!("PC: {}", nes.cpu().program_counter());
             nes.step(&mut frame);
             if nes.ppu.clock().total_cycles() > 200_000 {
                 panic!("It took too long for the PPU to enable NMI.");
@@ -353,18 +351,17 @@ mod tests {
     }
 
     fn write_ppuctrl_through_opcode_injection(nes: &mut Nes, ctrl: u8) {
-        println!("Injection PC: {}", nes.cpu.program_counter());
         // STA: Store to the accumulator.
-        nes.memory.cpu_memory_mut().write(nes.cpu.program_counter().advance(0), 0xA9);
+        nes.memory.cpu_write(nes.cpu.program_counter().advance(0), 0xA9);
         // Store VBLANK_NMI DISABLED to the accumulator.
-        nes.memory.cpu_memory_mut().write(nes.cpu.program_counter().advance(1), ctrl);
+        nes.memory.cpu_write(nes.cpu.program_counter().advance(1), ctrl);
 
         // LDA: Load the accumulator into a memory location.
-        nes.memory.cpu_memory_mut().write(nes.cpu.program_counter().advance(2), 0x8D);
+        nes.memory.cpu_write(nes.cpu.program_counter().advance(2), 0x8D);
         // Low byte of PPUCTRL, the address to be set.
-        nes.memory.cpu_memory_mut().write(nes.cpu.program_counter().advance(3), 0x00);
+        nes.memory.cpu_write(nes.cpu.program_counter().advance(3), 0x00);
         // High byte of PPUCTRL, the address to be set.
-        nes.memory.cpu_memory_mut().write(nes.cpu.program_counter().advance(4), 0x20);
+        nes.memory.cpu_write(nes.cpu.program_counter().advance(4), 0x20);
 
         // Execute the two op codes we just injected.
         let mut frame = Frame::new();

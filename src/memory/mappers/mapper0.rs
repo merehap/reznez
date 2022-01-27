@@ -2,8 +2,8 @@ use crate::cartridge::Cartridge;
 use crate::memory::cpu_address::CpuAddress;
 use crate::memory::cpu_internal_ram::CpuInternalRam;
 use crate::memory::mapper::*;
+use crate::memory::ports::Ports;
 
-const PRG_ROM_START: CpuAddress = CpuAddress::new(0x8000);
 const PRG_ROM_SIZE: usize = 0x8000;
 
 pub struct Mapper0 {
@@ -55,20 +55,20 @@ impl Mapper0 {
 
 impl Mapper for Mapper0 {
     #[inline]
-    fn cpu_read(&self, memory: &mut CpuInternalRam, address: CpuAddress) -> u8 {
-        if address < PRG_ROM_START {
-            memory.read(address)
-        } else {
-            self.prg_rom[address.to_usize() - PRG_ROM_START.to_usize()]
+    fn cpu_read(&self, memory: &CpuInternalRam, ports: &mut Ports, address: CpuAddress) -> u8 {
+        match address.to_raw() {
+            0x2000..=0x2007 | 0x4014 | 0x4016 | 0x4017 => ports.get(address),
+            0x0000..=0x7FFF => memory.read(address),
+            0x8000..=0xFFFF => self.prg_rom[address.to_usize() - 0x8000],
         }
     }
 
     #[inline]
-    fn cpu_write(&self, memory: &mut CpuInternalRam, address: CpuAddress, value: u8) {
-        if address < PRG_ROM_START {
-            memory.write(address, value);
-        } else {
-            println!("ROM CPU write ignored ({}).", address);
+    fn cpu_write(&self, memory: &mut CpuInternalRam, ports: &mut Ports, address: CpuAddress, value: u8) {
+        match address.to_raw() {
+            0x2000..=0x2007 | 0x4014 | 0x4016 | 0x4017 => ports.set(address, value),
+            0x0000..=0x7FFF => memory.write(address, value),
+            0x8000..=0xFFFF => println!("ROM CPU write ignored ({}).", address),
         }
     }
 
