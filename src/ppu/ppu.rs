@@ -212,16 +212,18 @@ impl Ppu {
             let palette_table_index = sprite.palette_table_index();
 
             for row_in_sprite in 0..8 {
-                if row + row_in_sprite >= 240 {
-                    break;
-                }
-
                 let row =
                     if sprite.flip_vertically() {
                         row + 7 - row_in_sprite
                     } else {
                         row + row_in_sprite
                     };
+
+                if row >= 240 {
+                    // FIXME: The part of vertically flipped sprites that is
+                    // off the screen should still be rendered.
+                    break;
+                }
 
                 memory.pattern_table().render_sprite_sliver(
                     sprite_table_side,
