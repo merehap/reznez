@@ -64,7 +64,7 @@ impl Mapper for Mapper3 {
         self.selected_bank as u8
     }
 
-    fn write_prg_ram(&mut self, _: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, _: CpuAddress, value: u8) {
         println!("Switching to bank {}.", value);
         self.selected_bank = Bank::from_u8(value);
     }

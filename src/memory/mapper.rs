@@ -29,12 +29,8 @@ pub trait Mapper {
         0
     }
 
-    fn write_prg_ram(&mut self, address: CpuAddress, value: u8) {
-        println!(
-            "PRG RAM doesn't exist for this mapper. Write [{}]={} ignored.",
-            address,
-            value,
-        );
+    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+        println!("Write [{}]={} (cartridge space) ignored.", address, value);
     }
 
     #[inline]
@@ -71,8 +67,7 @@ pub trait Mapper {
             0x4000..=0x4013 | 0x4015 => {/* APU */},
             0x4014 | 0x4016..=0x4017 => ports.set(address, value),
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
-            0x4020..=0x7FFF => self.write_prg_ram(address, value),
-            0x8000..=0xFFFF => println!("ROM CPU write ignored ({}).", address),
+            0x4020..=0xFFFF => self.write_to_cartridge_space(address, value),
         }
     }
 
