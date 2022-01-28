@@ -74,8 +74,8 @@ pub trait Mapper {
     #[inline]
     fn ppu_read(&self, ppu_internal_ram: &PpuInternalRam, address: PpuAddress) -> u8 {
         match address.to_u16() {
-            0x0000..=0x1FFF => self.pattern_table_byte(address),
-            0x2000..=0x3EFF => self.name_table_byte(ppu_internal_ram, address),
+            0x0000..=0x1FFF => self.read_pattern_table_byte(address),
+            0x2000..=0x3EFF => self.read_name_table_byte(ppu_internal_ram, address),
             0x3F00..=0x3FFF => self.read_palette_table_byte(&ppu_internal_ram.palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
         }
@@ -84,8 +84,8 @@ pub trait Mapper {
     #[inline]
     fn ppu_write(&mut self, ppu_internal_ram: &mut PpuInternalRam, address: PpuAddress, value: u8) {
         match address.to_u16() {
-            0x0000..=0x1FFF => *self.pattern_table_byte_mut(address) = value,
-            0x2000..=0x3EFF => *self.name_table_byte_mut(ppu_internal_ram, address) = value,
+            0x0000..=0x1FFF => self.write_pattern_table_byte(address, value),
+            0x2000..=0x3EFF => self.write_name_table_byte(ppu_internal_ram, address, value),
             0x3F00..=0x3FFF => self.write_palette_table_byte(&mut ppu_internal_ram.palette_ram, address, value),
             0x4000..=0xFFFF => unreachable!(),
         }
@@ -112,17 +112,17 @@ pub trait Mapper {
     }
 
     #[inline]
-    fn pattern_table_byte(&self, address: PpuAddress) -> u8 {
+    fn read_pattern_table_byte(&self, address: PpuAddress) -> u8 {
         self.raw_pattern_table()[address.to_usize()]
     }
 
     #[inline]
-    fn pattern_table_byte_mut(&mut self, address: PpuAddress) -> &mut u8 {
-        &mut self.raw_pattern_table_mut()[address.to_usize()]
+    fn write_pattern_table_byte(&mut self, address: PpuAddress, value: u8) {
+        self.raw_pattern_table_mut()[address.to_usize()] = value;
     }
 
     #[inline]
-    fn name_table_byte(
+    fn read_name_table_byte(
         &self,
         ppu_internal_ram: &PpuInternalRam,
         address: PpuAddress,
@@ -132,14 +132,14 @@ pub trait Mapper {
     }
 
     #[inline]
-    fn name_table_byte_mut<'a>(
-        &'a mut self,
-        ppu_internal_ram: &'a mut PpuInternalRam,
+    fn write_name_table_byte(
+        &mut self,
+        ppu_internal_ram: &mut PpuInternalRam,
         address: PpuAddress,
-    ) -> &'a mut u8 {
-
+        value: u8,
+    ) {
         let (name_table_number, index) = address_to_name_table_index(address);
-        &mut self.raw_name_table_mut(ppu_internal_ram, name_table_number)[index]
+        self.raw_name_table_mut(ppu_internal_ram, name_table_number)[index] = value;
     }
 
     #[inline]
