@@ -29,8 +29,8 @@ mod tests {
     #[test]
     fn blank_first_bits() {
         let mut palette_ram = PaletteRam::new();
-        assert_eq!(palette_ram.read(42), 0b0000_0000);
-        palette_ram.write(42, 0b1110_1010);
-        assert_eq!(palette_ram.read(42), 0b0010_1010);
+        assert_eq!(palette_ram.read(12), 0b0000_0000);
+        palette_ram.write(12, 0b1110_1010);
+        assert_eq!(palette_ram.read(12), 0b0010_1010);
     }
 }
