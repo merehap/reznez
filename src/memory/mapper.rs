@@ -76,7 +76,7 @@ pub trait Mapper {
         match address.to_u16() {
             0x0000..=0x1FFF => self.pattern_table_byte(address),
             0x2000..=0x3EFF => self.name_table_byte(ppu_internal_ram, address),
-            0x3F00..=0x3FFF => self.palette_table_byte(&ppu_internal_ram.palette_ram, address),
+            0x3F00..=0x3FFF => self.read_palette_table_byte(&ppu_internal_ram.palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
         }
     }
@@ -86,7 +86,7 @@ pub trait Mapper {
         match address.to_u16() {
             0x0000..=0x1FFF => *self.pattern_table_byte_mut(address) = value,
             0x2000..=0x3EFF => *self.name_table_byte_mut(ppu_internal_ram, address) = value,
-            0x3F00..=0x3FFF => *self.palette_table_byte_mut(&mut ppu_internal_ram.palette_ram, address) = value,
+            0x3F00..=0x3FFF => self.write_palette_table_byte(&mut ppu_internal_ram.palette_ram, address, value),
             0x4000..=0xFFFF => unreachable!(),
         }
     }
@@ -143,21 +143,22 @@ pub trait Mapper {
     }
 
     #[inline]
-    fn palette_table_byte(
+    fn read_palette_table_byte(
         &self,
         palette_ram: &PaletteRam,
         address: PpuAddress,
     ) -> u8 {
-        palette_ram[address_to_palette_ram_index(address)]
+        palette_ram.read(address_to_palette_ram_index(address))
     }
 
     #[inline]
-    fn palette_table_byte_mut<'a>(
+    fn write_palette_table_byte(
         &self,
-        palette_ram: &'a mut PaletteRam,
+        palette_ram: &mut PaletteRam,
         address: PpuAddress,
-    ) -> &'a mut u8 {
-        &mut palette_ram[address_to_palette_ram_index(address)]
+        value: u8,
+    ) {
+        palette_ram.write(address_to_palette_ram_index(address), value);
     }
 }
 

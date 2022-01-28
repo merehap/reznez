@@ -1,6 +1,7 @@
 use crate::cartridge::Cartridge;
 use crate::memory::mapper::*;
 
+// NROM
 pub struct Mapper0 {
     prg_rom: Box<[u8; 0x8000]>,
     chr_rom: Box<[u8; 0x2000]>,

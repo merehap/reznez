@@ -14,14 +14,12 @@ impl Color {
     }
 
     pub fn from_u8(value: u8) -> Result<Color, String> {
-        if value & 0b1100_0000 == 0 {
-            Ok(Color {
-                hue: FromPrimitive::from_u8(value & 0b0000_1111).unwrap(),
-                brightness: FromPrimitive::from_u8((value & 0b0011_0000) >> 4).unwrap(),
-            })
-        } else {
-            Err("The top two bits for a color should not be set.".to_string())
-        }
+        debug_assert_eq!(value & 0b1100_0000, 0, "First two bits must be 0.");
+
+        Ok(Color {
+            hue: FromPrimitive::from_u8(value & 0b0000_1111).unwrap(),
+            brightness: FromPrimitive::from_u8((value & 0b0011_0000) >> 4).unwrap(),
+        })
     }
 }
 

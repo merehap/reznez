@@ -3,6 +3,7 @@ use crate::memory::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
 use crate::util::bit_util::get_bit;
 
+// CNROM
 pub struct Mapper3 {
     prg_rom: Box<[u8; 0x8000]>,
     chr_rom_banks: [Box<[u8; 0x2000]>; 4],
