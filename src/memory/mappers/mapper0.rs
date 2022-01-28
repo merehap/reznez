@@ -21,7 +21,8 @@ impl Mapper0 {
             c => return Err(format!(
                      "PRG ROM size must be 16K or 32K for this mapper, but was {}K",
                      16 * c,
-                 )), }
+                 )),
+        }
 
         let chr_rom_chunks = cartridge.chr_rom_chunks();
         let chr_rom =
