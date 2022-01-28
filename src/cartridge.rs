@@ -124,8 +124,26 @@ impl Cartridge {
         &self.prg_rom_chunks
     }
 
+    pub fn prg_rom(&self) -> Vec<u8> {
+        let mut result = Vec::new();
+        for chunk in &self.prg_rom_chunks {
+            result.extend_from_slice(chunk.as_ref());
+        }
+
+        result
+    }
+
     pub fn chr_rom_chunks(&self) -> &[Box<[u8; 0x2000]>] {
         &self.chr_rom_chunks
+    }
+
+    pub fn chr_rom(&self) -> Vec<u8> {
+        let mut result = Vec::new();
+        for chunk in &self.chr_rom_chunks {
+            result.extend_from_slice(chunk.as_ref());
+        }
+
+        result
     }
 }
 

@@ -10,6 +10,8 @@ use crate::memory::vram::VramSide;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 
+pub const PRG_ROM_SIZE: usize = 0x8000;
+
 pub const PATTERN_TABLE_SIZE: usize = 0x2000;
 pub const NAME_TABLE_SIZE: usize = 0x400;
 
@@ -18,6 +20,22 @@ pub trait Mapper {
 
     fn raw_pattern_table(&self) -> &[u8; PATTERN_TABLE_SIZE];
     fn raw_pattern_table_mut(&mut self) -> &mut [u8; PATTERN_TABLE_SIZE];
+
+    fn read_prg_ram(&self, address: CpuAddress) -> u8 {
+        println!(
+            "PRG RAM doesn't exist for this mapper. [{}]=0 .",
+            address,
+        );
+        0
+    }
+
+    fn write_prg_ram(&mut self, address: CpuAddress, value: u8) {
+        println!(
+            "PRG RAM doesn't exist for this mapper. Write [{}]={} ignored.",
+            address,
+            value,
+        );
+    }
 
     #[inline]
     fn cpu_read(
@@ -33,14 +51,14 @@ pub trait Mapper {
             0x4000..=0x4013 | 0x4015 => {/* APU */ 0},
             0x4014 | 0x4016 | 0x4017 => ports.get(address),
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
-            0x4020..=0x7FFF => {println!("Read from non-ROM cartridge space."); 0},
+            0x4020..=0x7FFF => self.read_prg_ram(address),
             0x8000..=0xFFFF => self.prg_rom()[address.to_usize() - 0x8000],
         }
     }
 
     #[inline]
     fn cpu_write(
-        &self,
+        &mut self,
         cpu_internal_ram: &mut CpuInternalRam,
         ports: &mut Ports,
         address: CpuAddress,
@@ -53,7 +71,7 @@ pub trait Mapper {
             0x4000..=0x4013 | 0x4015 => {/* APU */},
             0x4014 | 0x4016..=0x4017 => ports.set(address, value),
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
-            0x4020..=0x7FFF => println!("Ignored writes to non-ROM cartridge space."),
+            0x4020..=0x7FFF => self.write_prg_ram(address, value),
             0x8000..=0xFFFF => println!("ROM CPU write ignored ({}).", address),
         }
     }
@@ -84,7 +102,8 @@ pub trait Mapper {
         ppu_internal_ram: &'a PpuInternalRam,
         number: NameTableNumber,
     ) -> &'a [u8; NAME_TABLE_SIZE] {
-        (&ppu_internal_ram.vram).side(vram_side(number, ppu_internal_ram.name_table_mirroring))
+        let side = vram_side(number, ppu_internal_ram.name_table_mirroring);
+        (&ppu_internal_ram.vram).side(side)
     }
 
     #[inline]
@@ -93,7 +112,8 @@ pub trait Mapper {
         ppu_internal_ram: &'a mut PpuInternalRam,
         number: NameTableNumber,
     ) -> &'a mut [u8; NAME_TABLE_SIZE] {
-        (&mut ppu_internal_ram.vram).side_mut(vram_side(number, ppu_internal_ram.name_table_mirroring))
+        let side = vram_side(number, ppu_internal_ram.name_table_mirroring);
+        (&mut ppu_internal_ram.vram).side_mut(side)
     }
 
     #[inline]
@@ -107,24 +127,41 @@ pub trait Mapper {
     }
 
     #[inline]
-    fn name_table_byte(&self, ppu_internal_ram: &PpuInternalRam, address: PpuAddress) -> u8 {
+    fn name_table_byte(
+        &self,
+        ppu_internal_ram: &PpuInternalRam,
+        address: PpuAddress,
+    ) -> u8 {
         let (name_table_number, index) = address_to_name_table_index(address);
         self.raw_name_table(ppu_internal_ram, name_table_number)[index]
     }
 
     #[inline]
-    fn name_table_byte_mut<'a>(&'a mut self, ppu_internal_ram: &'a mut PpuInternalRam, address: PpuAddress) -> &'a mut u8 {
+    fn name_table_byte_mut<'a>(
+        &'a mut self,
+        ppu_internal_ram: &'a mut PpuInternalRam,
+        address: PpuAddress,
+    ) -> &'a mut u8 {
+
         let (name_table_number, index) = address_to_name_table_index(address);
         &mut self.raw_name_table_mut(ppu_internal_ram, name_table_number)[index]
     }
 
     #[inline]
-    fn palette_table_byte(&self, palette_ram: &PaletteRam, address: PpuAddress) -> u8 {
+    fn palette_table_byte(
+        &self,
+        palette_ram: &PaletteRam,
+        address: PpuAddress,
+    ) -> u8 {
         palette_ram[address_to_palette_ram_index(address)]
     }
 
     #[inline]
-    fn palette_table_byte_mut<'a>(&self, palette_ram: &'a mut PaletteRam, address: PpuAddress) -> &'a mut u8 {
+    fn palette_table_byte_mut<'a>(
+        &self,
+        palette_ram: &'a mut PaletteRam,
+        address: PpuAddress,
+    ) -> &'a mut u8 {
         &mut palette_ram[address_to_palette_ram_index(address)]
     }
 }

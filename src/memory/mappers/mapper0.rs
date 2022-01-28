@@ -1,8 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::memory::mapper::*;
 
-const PRG_ROM_SIZE: usize = 0x8000;
-
 pub struct Mapper0 {
     prg_rom: Box<[u8; 0x8000]>,
     chr_rom: Box<[u8; 0x2000]>,
@@ -19,15 +17,11 @@ impl Mapper0 {
                 prg_rom[0x4000..=0x7FFF].copy_from_slice(prg_rom_chunks[0].as_ref());
             },
             /* Nrom256 - A single long mapping. */
-            2 => {
-                prg_rom[0x0000..=0x3FFF].copy_from_slice(prg_rom_chunks[0].as_ref());
-                prg_rom[0x4000..=0x7FFF].copy_from_slice(prg_rom_chunks[1].as_ref());
-            },
+            2 => prg_rom.copy_from_slice(&cartridge.prg_rom()),
             c => return Err(format!(
-                     "PRG ROM size must be 16K or 32K for mapper 0, but was {}K",
+                     "PRG ROM size must be 16K or 32K for this mapper, but was {}K",
                      16 * c,
-                 )),
-        }
+                 )), }
 
         let chr_rom_chunks = cartridge.chr_rom_chunks();
         let chr_rom =

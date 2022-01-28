@@ -10,7 +10,9 @@ use crate::cpu::instruction::Instruction;
 use crate::gui::gui::Gui;
 use crate::memory::cpu_internal_ram::*;
 use crate::memory::memory::Memory;
+use crate::memory::mapper::Mapper;
 use crate::memory::mappers::mapper0::Mapper0;
+use crate::memory::mappers::mapper3::Mapper3;
 use crate::memory::port_access::{PortAccess, AccessMode};
 use crate::ppu::ppu::Ppu;
 use crate::ppu::register::ctrl::Ctrl;
@@ -37,7 +39,8 @@ impl Nes {
         let name_table_mirroring = config.cartridge.name_table_mirroring();
         let mapper =
             match config.cartridge.mapper_number() {
-                0 => Box::new(Mapper0::new(config.cartridge).unwrap()),
+                0 => Box::new(Mapper0::new(config.cartridge).unwrap()) as Box<dyn Mapper>,
+                3 => Box::new(Mapper3::new(config.cartridge).unwrap()),
                 _ => todo!(),
             };
         let mut memory = Memory::new(mapper, name_table_mirroring, config.system_palette);
