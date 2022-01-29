@@ -7,25 +7,25 @@ use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::Sprite;
 use crate::util::bit_util::get_bit;
 
+const PATTERN_TABLE_SIZE: usize = 0x1000;
 const PATTERN_SIZE: usize = 16;
 
-pub struct PatternTable<'a>(&'a [u8; 0x2000]);
+pub struct PatternTable<'a>(&'a [u8; PATTERN_TABLE_SIZE]);
 
 impl <'a> PatternTable<'a> {
-    pub fn new(raw: &'a [u8; 0x2000]) -> PatternTable<'a> {
+    pub fn new(raw: &'a [u8; PATTERN_TABLE_SIZE]) -> PatternTable<'a> {
         PatternTable(raw)
     }
 
     #[inline]
     pub fn render_tile_sliver(
         &'a self,
-        side: PatternTableSide,
         pattern_index: PatternIndex,
         row_in_tile: usize,
         palette: Palette,
         tile_sliver: &mut [Rgbt; 8],
     ) {
-        let index = side as usize + PATTERN_SIZE * pattern_index.to_usize();
+        let index = PATTERN_SIZE * pattern_index.to_usize();
         let low_index = index + row_in_tile;
         let high_index = low_index + 8;
 
@@ -50,7 +50,6 @@ impl <'a> PatternTable<'a> {
     #[inline]
     pub fn render_sprite_sliver(
         &self,
-        side: PatternTableSide,
         sprite: Sprite,
         is_sprite_0: bool,
         palette: Palette,
@@ -62,7 +61,7 @@ impl <'a> PatternTable<'a> {
         frame.set_tile_sliver_priority(column, row, sprite.priority());
 
         let pattern_index = sprite.pattern_index();
-        let index = side as usize + 16 * pattern_index.to_usize();
+        let index = 16 * pattern_index.to_usize();
         let low_index = index + row_in_sprite;
         let high_index = low_index + 8;
 
@@ -132,8 +131,26 @@ impl fmt::Display for PatternTable<'_> {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum PatternTableSide {
-    Left  = 0x0000,
-    Right = 0x1000,
+    Left,
+    Right,
+}
+
+impl PatternTableSide {
+    pub fn from_index(index: usize) -> PatternTableSide {
+        assert!(index < 2 * PATTERN_TABLE_SIZE);
+        if index / PATTERN_TABLE_SIZE == 0 {
+            PatternTableSide::Left
+        } else {
+            PatternTableSide::Right
+        }
+    }
+
+    pub fn to_start_end(self) -> (usize, usize) {
+        match self {
+            PatternTableSide::Left  => (0x0000, PATTERN_TABLE_SIZE),
+            PatternTableSide::Right => (PATTERN_TABLE_SIZE, 2 * PATTERN_TABLE_SIZE),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]

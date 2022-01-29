@@ -9,17 +9,25 @@ use crate::memory::ports::Ports;
 use crate::memory::vram::VramSide;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
+use crate::ppu::pattern_table::PatternTableSide;
 
 pub const PRG_ROM_SIZE: usize = 0x8000;
 
-pub const PATTERN_TABLE_SIZE: usize = 0x2000;
+pub const PATTERN_TABLE_SIZE: usize = 0x1000;
 pub const NAME_TABLE_SIZE: usize = 0x400;
 
 pub trait Mapper {
     fn prg_rom(&self) -> &[u8; 0x8000];
 
-    fn raw_pattern_table(&self) -> &[u8; PATTERN_TABLE_SIZE];
-    fn raw_pattern_table_mut(&mut self) -> &mut [u8; PATTERN_TABLE_SIZE];
+    fn raw_pattern_table(
+        &self,
+        side: PatternTableSide,
+    ) -> &[u8; PATTERN_TABLE_SIZE];
+
+    fn raw_pattern_table_mut(
+        &mut self,
+        side: PatternTableSide,
+    ) -> &mut [u8; PATTERN_TABLE_SIZE];
 
     fn read_prg_ram(&self, address: CpuAddress) -> u8 {
         println!(
@@ -113,12 +121,14 @@ pub trait Mapper {
 
     #[inline]
     fn read_pattern_table_byte(&self, address: PpuAddress) -> u8 {
-        self.raw_pattern_table()[address.to_usize()]
+        let (side, index) = address_to_pattern_table_index(address);
+        self.raw_pattern_table(side)[index]
     }
 
     #[inline]
     fn write_pattern_table_byte(&mut self, address: PpuAddress, value: u8) {
-        self.raw_pattern_table_mut()[address.to_usize()] = value;
+        let (side, index) = address_to_pattern_table_index(address);
+        self.raw_pattern_table_mut(side)[index] = value;
     }
 
     #[inline]
@@ -163,6 +173,14 @@ pub trait Mapper {
 }
 
 #[inline]
+fn address_to_pattern_table_index(address: PpuAddress) -> (PatternTableSide, usize) {
+    let mut index = address.to_usize();
+    let side = PatternTableSide::from_index(index);
+    index %= PATTERN_TABLE_SIZE;
+    (side, index)
+}
+
+#[inline]
 fn address_to_name_table_index(address: PpuAddress) -> (NameTableNumber, usize) {
     const NAME_TABLE_START:    usize = 0x2000;
     const MIRROR_START:        usize = 0x3000;
@@ -185,6 +203,21 @@ fn address_to_name_table_index(address: PpuAddress) -> (NameTableNumber, usize) 
     (name_table_number, index)
 }
 
+fn address_to_palette_ram_index(address: PpuAddress) -> usize {
+    const PALETTE_TABLE_START: usize = 0x3F00;
+    const HIGH_ADDRESS_START : usize = 0x4000;
+
+    let mut address = address.to_usize();
+    assert!(address >= PALETTE_TABLE_START);
+    assert!(address < HIGH_ADDRESS_START);
+
+    if matches!(address, 0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C) {
+        address -= 0x10;
+    }
+
+    address % 0x20
+}
+
 #[inline]
 fn vram_side(
     name_table_number: NameTableNumber,
@@ -202,19 +235,4 @@ fn vram_side(
         (Three, _         ) => VramSide::Right,
         (_    , FourScreen) => todo!("FourScreen isn't supported yet."),
     }
-}
-
-fn address_to_palette_ram_index(address: PpuAddress) -> usize {
-    const PALETTE_TABLE_START: usize = 0x3F00;
-    const HIGH_ADDRESS_START : usize = 0x4000;
-
-    let mut address = address.to_usize();
-    assert!(address >= PALETTE_TABLE_START);
-    assert!(address < HIGH_ADDRESS_START);
-
-    if matches!(address, 0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C) {
-        address -= 0x10;
-    }
-
-    address % 0x20
 }

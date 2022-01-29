@@ -5,7 +5,7 @@ use crate::ppu::name_table::attribute_table::AttributeTable;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pattern_table::{PatternTable, PatternTableSide, PatternIndex};
+use crate::ppu::pattern_table::{PatternTable, PatternIndex};
 use crate::ppu::render::frame::Frame;
 
 const NAME_TABLE_SIZE: usize = 0x400;
@@ -29,7 +29,6 @@ impl <'a> NameTable<'a> {
     pub fn render(
         &self,
         pattern_table: &PatternTable,
-        pattern_table_side: PatternTableSide,
         palette_table: &PaletteTable,
         x_offset: i16,
         y_offset: i16,
@@ -41,7 +40,6 @@ impl <'a> NameTable<'a> {
                 self.tile_entry_at(background_tile_index);
             for row_in_tile in 0..8 {
                 pattern_table.render_tile_sliver(
-                    pattern_table_side,
                     pattern_index,
                     row_in_tile as usize,
                     palette_table.background_palette(palette_table_index),

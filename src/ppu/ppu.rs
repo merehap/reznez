@@ -178,16 +178,14 @@ impl Ppu {
         //let _name_table_mirroring = memory.name_table_mirroring();
         let background_table_side = ctrl.background_table_side;
         memory.name_table(name_table_number).render(
-            &memory.pattern_table(),
-            background_table_side,
+            &memory.pattern_table(background_table_side),
             &palette_table,
             -(self.x_scroll_offset as i16),
             -(self.y_scroll_offset as i16),
             frame,
         );
         memory.name_table(name_table_number.next_horizontal()).render(
-            &memory.pattern_table(),
-            background_table_side,
+            &memory.pattern_table(background_table_side),
             &palette_table,
             -(self.x_scroll_offset as i16) + 256,
             -(self.y_scroll_offset as i16),
@@ -225,8 +223,7 @@ impl Ppu {
                     break;
                 }
 
-                memory.pattern_table().render_sprite_sliver(
-                    sprite_table_side,
+                memory.pattern_table(sprite_table_side).render_sprite_sliver(
                     sprite,
                     is_sprite_0,
                     palette_table.sprite_palette(palette_table_index),

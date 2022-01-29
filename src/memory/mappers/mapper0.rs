@@ -1,5 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::memory::mapper::*;
+use crate::ppu::pattern_table::PatternTableSide;
 
 // NROM
 pub struct Mapper0 {
@@ -46,11 +47,21 @@ impl Mapper for Mapper0 {
         self.prg_rom.as_ref()
     }
 
-    fn raw_pattern_table(&self) -> &[u8; PATTERN_TABLE_SIZE] {
-        self.chr_rom.as_ref()
+    fn raw_pattern_table(
+        &self,
+        side: PatternTableSide,
+    ) -> &[u8; PATTERN_TABLE_SIZE] {
+
+        let (start, end) = side.to_start_end();
+        (&self.chr_rom[start..end]).try_into().unwrap()
     }
 
-    fn raw_pattern_table_mut(&mut self) -> &mut [u8; PATTERN_TABLE_SIZE] {
-        self.chr_rom.as_mut()
+    fn raw_pattern_table_mut(
+        &mut self,
+        side: PatternTableSide,
+    ) -> &mut [u8; PATTERN_TABLE_SIZE] {
+
+        let (start, end) = side.to_start_end();
+        (&mut self.chr_rom[start..end]).try_into().unwrap()
     }
 }

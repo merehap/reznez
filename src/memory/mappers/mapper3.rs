@@ -1,13 +1,14 @@
 use crate::cartridge::Cartridge;
 use crate::memory::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
+use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::bit_util::get_bit;
 
 // CNROM
 pub struct Mapper3 {
     prg_rom: Box<[u8; 0x8000]>,
     chr_rom_banks: [Box<[u8; 0x2000]>; 4],
-    selected_bank: Bank,
+    selected_chr_bank: ChrBankId,
 }
 
 impl Mapper3 {
@@ -43,7 +44,7 @@ impl Mapper3 {
         Ok(Mapper3 {
             prg_rom,
             chr_rom_banks,
-            selected_bank: Bank::Zero,
+            selected_chr_bank: ChrBankId::Zero,
         })
     }
 }
@@ -53,39 +54,51 @@ impl Mapper for Mapper3 {
         self.prg_rom.as_ref()
     }
 
-    fn raw_pattern_table(&self) -> &[u8; PATTERN_TABLE_SIZE] {
-        &self.chr_rom_banks[self.selected_bank as usize]
+    fn raw_pattern_table(
+        &self,
+        side: PatternTableSide,
+    ) -> &[u8; PATTERN_TABLE_SIZE] {
+
+        let (start, end) = side.to_start_end();
+        (&self.chr_rom_banks[self.selected_chr_bank as usize][start..end])
+            .try_into().unwrap()
     }
 
-    fn raw_pattern_table_mut(&mut self) -> &mut [u8; PATTERN_TABLE_SIZE] {
-        &mut self.chr_rom_banks[self.selected_bank as usize]
+    fn raw_pattern_table_mut(
+        &mut self,
+        side: PatternTableSide,
+    ) -> &mut [u8; PATTERN_TABLE_SIZE] {
+
+        let (start, end) = side.to_start_end();
+        (&mut self.chr_rom_banks[self.selected_chr_bank as usize][start..end])
+            .try_into().unwrap()
     }
 
     fn read_prg_ram(&self, _: CpuAddress) -> u8 {
-        self.selected_bank as u8
+        self.selected_chr_bank as u8
     }
 
     fn write_to_cartridge_space(&mut self, _: CpuAddress, value: u8) {
         println!("Switching to bank {}.", value);
-        self.selected_bank = Bank::from_u8(value);
+        self.selected_chr_bank = ChrBankId::from_u8(value);
     }
 }
 
 #[derive(Clone, Copy)]
-enum Bank {
+enum ChrBankId {
     Zero,
     One,
     Two,
     Three,
 }
 
-impl Bank {
-    pub fn from_u8(value: u8) -> Bank {
+impl ChrBankId {
+    pub fn from_u8(value: u8) -> ChrBankId {
         match (get_bit(value, 6), get_bit(value, 7)) {
-            (false, false) => Bank::Zero,
-            (false, true ) => Bank::One,
-            (true , false) => Bank::Two,
-            (true , true ) => Bank::Three,
+            (false, false) => ChrBankId::Zero,
+            (false, true ) => ChrBankId::One,
+            (true , false) => ChrBankId::Two,
+            (true , true ) => ChrBankId::Three,
         }
     }
 }

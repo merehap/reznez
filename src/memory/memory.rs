@@ -12,10 +12,7 @@ use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
-use crate::ppu::pattern_table::PatternTable;
-
-#[allow(clippy::erasing_op)]
-#[allow(clippy::identity_op)]
+use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 
 pub const PALETTE_TABLE_START: PpuAddress = PpuAddress::from_u16(0x3F00);
 
@@ -109,8 +106,8 @@ impl Memory {
     }
 
     #[inline]
-    pub fn pattern_table(&self) -> PatternTable {
-        PatternTable::new(self.mapper.raw_pattern_table())
+    pub fn pattern_table(&self, side: PatternTableSide) -> PatternTable {
+        PatternTable::new(self.mapper.raw_pattern_table(side))
     }
 
     #[inline]
