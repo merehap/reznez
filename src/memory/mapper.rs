@@ -10,9 +10,11 @@ use crate::memory::vram::VramSide;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTableSide;
+use crate::util::mapped_array::{MappedArray, MappedArrayMut};
 
 pub const PRG_ROM_SIZE: usize = 0x8000;
 
+pub const CHR_ROM_SIZE: usize = 0x2000;
 pub const PATTERN_TABLE_SIZE: usize = 0x1000;
 pub const NAME_TABLE_SIZE: usize = 0x400;
 
@@ -22,12 +24,12 @@ pub trait Mapper {
     fn raw_pattern_table(
         &self,
         side: PatternTableSide,
-    ) -> &[u8; PATTERN_TABLE_SIZE];
+    ) -> MappedArray<'_, 4>;
 
     fn raw_pattern_table_mut(
         &mut self,
         side: PatternTableSide,
-    ) -> &mut [u8; PATTERN_TABLE_SIZE];
+    ) -> MappedArrayMut<'_, 4>;
 
     fn read_prg_ram(&self, address: CpuAddress) -> u8 {
         println!(

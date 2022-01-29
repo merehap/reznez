@@ -1,19 +1,18 @@
-//use std::fmt;
-
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::Sprite;
 use crate::util::bit_util::get_bit;
+use crate::util::mapped_array::MappedArray;
 
 const PATTERN_TABLE_SIZE: usize = 0x1000;
 const PATTERN_SIZE: usize = 16;
 
-pub struct PatternTable<'a>(&'a [u8; PATTERN_TABLE_SIZE]);
+pub struct PatternTable<'a>(MappedArray<'a, 4>);
 
 impl <'a> PatternTable<'a> {
-    pub fn new(raw: &'a [u8; PATTERN_TABLE_SIZE]) -> PatternTable<'a> {
+    pub fn new(raw: MappedArray<'a, 4>) -> PatternTable<'a> {
         PatternTable(raw)
     }
 

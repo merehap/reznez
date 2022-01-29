@@ -1,11 +1,12 @@
 use crate::cartridge::Cartridge;
 use crate::memory::mapper::*;
 use crate::ppu::pattern_table::PatternTableSide;
+use crate::util::mapped_array::{MappedArray, MappedArrayMut};
 
 // NROM
 pub struct Mapper0 {
     prg_rom: Box<[u8; 0x8000]>,
-    chr_rom: Box<[u8; 0x2000]>,
+    chr_rom: Box<[u8; CHR_ROM_SIZE]>,
 }
 
 impl Mapper0 {
@@ -47,21 +48,13 @@ impl Mapper for Mapper0 {
         self.prg_rom.as_ref()
     }
 
-    fn raw_pattern_table(
-        &self,
-        side: PatternTableSide,
-    ) -> &[u8; PATTERN_TABLE_SIZE] {
-
+    fn raw_pattern_table(&self, side: PatternTableSide) -> MappedArray<'_, 4> {
         let (start, end) = side.to_start_end();
-        (&self.chr_rom[start..end]).try_into().unwrap()
+        MappedArray::new::<PATTERN_TABLE_SIZE>((&self.chr_rom[start..end]).try_into().unwrap())
     }
 
-    fn raw_pattern_table_mut(
-        &mut self,
-        side: PatternTableSide,
-    ) -> &mut [u8; PATTERN_TABLE_SIZE] {
-
+    fn raw_pattern_table_mut(&mut self, side: PatternTableSide) -> MappedArrayMut<'_, 4> {
         let (start, end) = side.to_start_end();
-        (&mut self.chr_rom[start..end]).try_into().unwrap()
+        MappedArrayMut::new::<PATTERN_TABLE_SIZE>((&mut self.chr_rom[start..end]).try_into().unwrap())
     }
 }

@@ -3,6 +3,7 @@ use crate::memory::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::bit_util::get_bit;
+use crate::util::mapped_array::{MappedArray, MappedArrayMut};
 
 // CNROM
 pub struct Mapper3 {
@@ -54,24 +55,16 @@ impl Mapper for Mapper3 {
         self.prg_rom.as_ref()
     }
 
-    fn raw_pattern_table(
-        &self,
-        side: PatternTableSide,
-    ) -> &[u8; PATTERN_TABLE_SIZE] {
-
+    fn raw_pattern_table(&self, side: PatternTableSide) -> MappedArray<'_, 4> {
+        let bank = self.chr_rom_banks[self.selected_chr_bank as usize].as_ref();
         let (start, end) = side.to_start_end();
-        (&self.chr_rom_banks[self.selected_chr_bank as usize][start..end])
-            .try_into().unwrap()
+        MappedArray::new::<PATTERN_TABLE_SIZE>((&bank[start..end]).try_into().unwrap())
     }
 
-    fn raw_pattern_table_mut(
-        &mut self,
-        side: PatternTableSide,
-    ) -> &mut [u8; PATTERN_TABLE_SIZE] {
-
+    fn raw_pattern_table_mut(&mut self, side: PatternTableSide) -> MappedArrayMut<'_, 4> {
+        let bank = self.chr_rom_banks[self.selected_chr_bank as usize].as_mut();
         let (start, end) = side.to_start_end();
-        (&mut self.chr_rom_banks[self.selected_chr_bank as usize][start..end])
-            .try_into().unwrap()
+        MappedArrayMut::new::<PATTERN_TABLE_SIZE>((&mut bank[start..end]).try_into().unwrap())
     }
 
     fn read_prg_ram(&self, _: CpuAddress) -> u8 {
