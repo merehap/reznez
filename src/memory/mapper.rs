@@ -19,7 +19,7 @@ pub const PATTERN_TABLE_SIZE: usize = 0x1000;
 pub const NAME_TABLE_SIZE: usize = 0x400;
 
 pub trait Mapper {
-    fn prg_rom(&self) -> &[u8; 0x8000];
+    fn prg_rom(&self) -> MappedArray<'_, 32>;
 
     fn raw_pattern_table(
         &self,

@@ -51,8 +51,8 @@ impl Mapper3 {
 }
 
 impl Mapper for Mapper3 {
-    fn prg_rom(&self) -> &[u8; 0x8000] {
-        self.prg_rom.as_ref()
+    fn prg_rom(&self) -> MappedArray<'_, 32> {
+        MappedArray::new(self.prg_rom.as_ref())
     }
 
     fn raw_pattern_table(&self, side: PatternTableSide) -> MappedArray<'_, 4> {
