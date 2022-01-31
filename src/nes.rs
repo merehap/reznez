@@ -37,7 +37,6 @@ pub struct Nes {
 
 impl Nes {
     pub fn new(config: Config) -> Nes {
-        let name_table_mirroring = config.cartridge.name_table_mirroring();
         let mapper =
             match config.cartridge.mapper_number() {
                 0 => Box::new(Mapper0::new(config.cartridge).unwrap()) as Box<dyn Mapper>,
@@ -45,7 +44,7 @@ impl Nes {
                 3 => Box::new(Mapper3::new(config.cartridge).unwrap()),
                 _ => todo!(),
             };
-        let mut memory = Memory::new(mapper, name_table_mirroring, config.system_palette);
+        let mut memory = Memory::new(mapper, config.system_palette);
 
         Nes {
             cpu: Cpu::new(&mut memory, config.program_counter_source),
@@ -316,11 +315,10 @@ mod tests {
 
     fn sample_nes() -> Nes {
         let cartridge = sample_cartridge();
-        let name_table_mirroring = cartridge.name_table_mirroring();
         let mapper = Box::new(Mapper0::new(cartridge).unwrap());
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
-        let mut memory = Memory::new(mapper, name_table_mirroring, system_palette);
+        let mut memory = Memory::new(mapper, system_palette);
         // Write NOPs to where the RESET_VECTOR starts the program.
         for i in 0x0200..0x0800 {
             memory.cpu_write(CpuAddress::new(i), 0xEA);

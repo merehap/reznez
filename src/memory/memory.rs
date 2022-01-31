@@ -8,7 +8,6 @@ use crate::memory::ppu_address::PpuAddress;
 use crate::memory::ppu_internal_ram::PpuInternalRam;
 use crate::memory::stack::Stack;
 use crate::ppu::name_table::name_table::NameTable;
-use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
@@ -25,16 +24,11 @@ pub struct Memory {
 }
 
 impl Memory {
-    pub fn new(
-        mapper: Box<dyn Mapper>,
-        name_table_mirroring: NameTableMirroring,
-        system_palette: SystemPalette,
-    ) -> Memory {
-
+    pub fn new(mapper: Box<dyn Mapper>, system_palette: SystemPalette) -> Memory {
         Memory {
             mapper,
             cpu_internal_ram: CpuInternalRam::new(),
-            ppu_internal_ram: PpuInternalRam::new(name_table_mirroring),
+            ppu_internal_ram: PpuInternalRam::new(),
             system_palette,
             ports: Ports::new(),
         }

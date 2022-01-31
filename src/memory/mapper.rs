@@ -19,6 +19,7 @@ pub const PATTERN_TABLE_SIZE: usize = 0x1000;
 pub const NAME_TABLE_SIZE: usize = 0x400;
 
 pub trait Mapper {
+    fn name_table_mirroring(&self) -> NameTableMirroring;
     fn prg_rom(&self) -> MappedArray<'_, 32>;
 
     fn raw_pattern_table(
@@ -107,7 +108,7 @@ pub trait Mapper {
         ppu_internal_ram: &'a PpuInternalRam,
         number: NameTableNumber,
     ) -> &'a [u8; NAME_TABLE_SIZE] {
-        let side = vram_side(number, ppu_internal_ram.name_table_mirroring);
+        let side = vram_side(number, self.name_table_mirroring());
         (&ppu_internal_ram.vram).side(side)
     }
 
@@ -117,7 +118,7 @@ pub trait Mapper {
         ppu_internal_ram: &'a mut PpuInternalRam,
         number: NameTableNumber,
     ) -> &'a mut [u8; NAME_TABLE_SIZE] {
-        let side = vram_side(number, ppu_internal_ram.name_table_mirroring);
+        let side = vram_side(number, self.name_table_mirroring());
         (&mut ppu_internal_ram.vram).side_mut(side)
     }
 
@@ -236,5 +237,7 @@ fn vram_side(
         (Two  , Vertical  ) => VramSide::Left,
         (Three, _         ) => VramSide::Right,
         (_    , FourScreen) => todo!("FourScreen isn't supported yet."),
+        (_    , OneScreenLowerBank) => todo!("OneScreen isn't supported yet."),
+        (_    , OneScreenUpperBank) => todo!("OneScreen isn't supported yet."),
     }
 }

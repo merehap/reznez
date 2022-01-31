@@ -3,6 +3,7 @@ use arr_macro::arr;
 use crate::cartridge::Cartridge;
 use crate::memory::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
+use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::bit_util::get_bit;
 use crate::util::mapped_array::{MappedArray, MappedArrayMut};
@@ -12,6 +13,7 @@ pub struct Mapper3 {
     prg_rom: Box<[u8; 0x8000]>,
     chr_rom_banks: [Box<[u8; 0x2000]>; 4],
     selected_chr_bank: ChrBankId,
+    name_table_mirroring: NameTableMirroring,
 }
 
 impl Mapper3 {
@@ -41,15 +43,21 @@ impl Mapper3 {
         let mut chunk_iter = cartridge.chr_rom_chunks().into_iter();
         let chr_rom_banks = arr![chunk_iter.next().unwrap().clone(); 4];
 
+        let name_table_mirroring = cartridge.name_table_mirroring();
         Ok(Mapper3 {
             prg_rom,
             chr_rom_banks,
             selected_chr_bank: ChrBankId::Zero,
+            name_table_mirroring,
         })
     }
 }
 
 impl Mapper for Mapper3 {
+    fn name_table_mirroring(&self) -> NameTableMirroring {
+        self.name_table_mirroring
+    }
+
     fn prg_rom(&self) -> MappedArray<'_, 32> {
         MappedArray::new(self.prg_rom.as_ref())
     }

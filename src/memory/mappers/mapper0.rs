@@ -1,5 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::memory::mapper::*;
+use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::mapped_array::{MappedArray, MappedArrayMut};
 
@@ -7,6 +8,7 @@ use crate::util::mapped_array::{MappedArray, MappedArrayMut};
 pub struct Mapper0 {
     prg_rom: Box<[u8; 0x8000]>,
     chr_rom: Box<[u8; CHR_ROM_SIZE]>,
+    name_table_mirroring: NameTableMirroring,
 }
 
 impl Mapper0 {
@@ -39,11 +41,16 @@ impl Mapper0 {
                      )),
             };
 
-        Ok(Mapper0 {prg_rom, chr_rom})
+        let name_table_mirroring = cartridge.name_table_mirroring();
+        Ok(Mapper0 {prg_rom, chr_rom, name_table_mirroring})
     }
 }
 
 impl Mapper for Mapper0 {
+    fn name_table_mirroring(&self) -> NameTableMirroring {
+        self.name_table_mirroring
+    }
+
     fn prg_rom(&self) -> MappedArray<'_, 32> {
         MappedArray::new(self.prg_rom.as_ref())
     }

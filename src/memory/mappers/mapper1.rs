@@ -3,6 +3,7 @@ use arr_macro::arr;
 use crate::cartridge::Cartridge;
 use crate::memory::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
+use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::bit_util::get_bit;
 use crate::util::mapped_array::{MappedArray, MappedArrayMut};
@@ -66,6 +67,10 @@ impl Mapper1 {
 }
 
 impl Mapper for Mapper1 {
+    fn name_table_mirroring(&self) -> NameTableMirroring {
+        self.control.mirroring
+    }
+
     fn prg_rom(&self) -> MappedArray<'_, 32> {
         let selected_bank = self.selected_prg_bank;
         let (first_index, second_index) =
@@ -149,7 +154,7 @@ impl Mapper for Mapper1 {
 struct Control {
     chr_bank_mode: ChrBankMode,
     prg_bank_mode: PrgBankMode,
-    mirroring: Mirroring,
+    mirroring: NameTableMirroring,
 }
 
 impl Control {
@@ -169,10 +174,10 @@ impl Control {
                 },
             mirroring:
                 match (get_bit(value, 6), get_bit(value, 7)) {
-                    (false, false) => Mirroring::LowerBankOneScreen,
-                    (false, true ) => Mirroring::UpperBankOneScreen,
-                    (true , false) => Mirroring::Vertical,
-                    (true , true ) => Mirroring::Horizontal,
+                    (false, false) => NameTableMirroring::OneScreenLowerBank,
+                    (false, true ) => NameTableMirroring::OneScreenUpperBank,
+                    (true , false) => NameTableMirroring::Vertical,
+                    (true , true ) => NameTableMirroring::Horizontal,
                 },
         }
     }
@@ -189,12 +194,4 @@ enum PrgBankMode {
     Large,
     FixedFirst,
     FixedLast,
-}
-
-#[derive(Debug)]
-enum Mirroring {
-    LowerBankOneScreen,
-    UpperBankOneScreen,
-    Vertical,
-    Horizontal,
 }

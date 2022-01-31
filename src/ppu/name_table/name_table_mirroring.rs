@@ -3,4 +3,6 @@ pub enum NameTableMirroring {
     Vertical,
     Horizontal,
     FourScreen,
+    OneScreenLowerBank,
+    OneScreenUpperBank,
 }

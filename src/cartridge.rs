@@ -83,6 +83,7 @@ impl Cartridge {
 
         let mut chr_rom_chunks = Vec::new();
         for _ in 0..chr_rom_chunk_count {
+            //FIXME: Yoshi.nes panics with OutOfRange here.
             chr_rom_chunks.push(Box::new(rom[rom_index..rom_index + CHR_ROM_CHUNK_LENGTH].try_into().unwrap()));
             rom_index += CHR_ROM_CHUNK_LENGTH;
         }
