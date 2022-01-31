@@ -1,3 +1,5 @@
+use arr_macro::arr;
+
 use crate::cartridge::Cartridge;
 use crate::memory::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
@@ -36,11 +38,8 @@ impl Mapper3 {
             ));
         }
 
-        let bank = Box::new([0; 0x2000]);
-        let mut chr_rom_banks = [bank.clone(), bank.clone(), bank.clone(), bank];
-        for i in 0..chr_chunk_count {
-            chr_rom_banks[i] = cartridge.chr_rom_chunks()[i].clone();
-        }
+        let mut chunk_iter = cartridge.chr_rom_chunks().into_iter();
+        let chr_rom_banks = arr![chunk_iter.next().unwrap().clone(); 4];
 
         Ok(Mapper3 {
             prg_rom,

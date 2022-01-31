@@ -12,6 +12,7 @@ use crate::memory::cpu_internal_ram::*;
 use crate::memory::memory::Memory;
 use crate::memory::mapper::Mapper;
 use crate::memory::mappers::mapper0::Mapper0;
+use crate::memory::mappers::mapper1::Mapper1;
 use crate::memory::mappers::mapper3::Mapper3;
 use crate::memory::port_access::{PortAccess, AccessMode};
 use crate::ppu::ppu::Ppu;
@@ -40,6 +41,7 @@ impl Nes {
         let mapper =
             match config.cartridge.mapper_number() {
                 0 => Box::new(Mapper0::new(config.cartridge).unwrap()) as Box<dyn Mapper>,
+                1 => Box::new(Mapper1::new(config.cartridge).unwrap()),
                 3 => Box::new(Mapper3::new(config.cartridge).unwrap()),
                 _ => todo!(),
             };

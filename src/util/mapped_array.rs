@@ -18,15 +18,43 @@ impl <'a, const CHUNK_COUNT: usize> MappedArray<'a, CHUNK_COUNT> {
         bytes: &'a [u8; LEN],
     ) -> MappedArray<'a, CHUNK_COUNT> {
         assert_eq!(LEN, CHUNK_COUNT * CHUNK_LEN,
-            "LEN == CHUNK_COUNT * CHUNK_LEN was false. {} != {} * {}",
+            "LEN == CHUNK_COUNT * CHUNK_LEN must be true but {} != {} * {}",
             LEN, CHUNK_COUNT, CHUNK_LEN,
         );
 
-        let mut chunks_iter = bytes.array_chunks::<CHUNK_LEN>();
         let mut chunks = [DUMMY_CHUNK; CHUNK_COUNT];
+
+        let mut chunks_iter = bytes.array_chunks::<CHUNK_LEN>();
         for i in 0..chunks.len() {
             chunks[i] = chunks_iter.next().unwrap();
         }
+
+        MappedArray(chunks)
+    }
+
+    pub fn from_halves<const LEN: usize>(
+        first_half: &'a [u8; LEN],
+        second_half: &'a [u8; LEN],
+    ) -> MappedArray<'a, CHUNK_COUNT> {
+        assert_eq!(2 * LEN, CHUNK_COUNT * CHUNK_LEN,
+            "2 * LEN == CHUNK_COUNT * CHUNK_LEN must be true but {} != {} * {}",
+            2 * LEN, CHUNK_COUNT, CHUNK_LEN,
+        );
+
+        let mut chunks = [DUMMY_CHUNK; CHUNK_COUNT];
+
+        let mut index = 0;
+        for chunk in first_half.array_chunks::<CHUNK_LEN>() {
+            chunks[index] = chunk;
+            index += 1;
+        }
+
+        for chunk in second_half.array_chunks::<CHUNK_LEN>() {
+            chunks[index] = chunk;
+            index += 1;
+        }
+
+        assert_eq!(index, chunks.len());
 
         MappedArray(chunks)
     }

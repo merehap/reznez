@@ -137,6 +137,16 @@ impl Cartridge {
         &self.chr_rom_chunks
     }
 
+    pub fn chr_rom_half_chunks(&self) -> Vec<Box<[u8; 0x1000]>> {
+        let mut half_chunks = Vec::new();
+        for chunk in &self.chr_rom_chunks {
+            half_chunks.push(Box::new(chunk[0x0000..0x1000].try_into().unwrap()));
+            half_chunks.push(Box::new(chunk[0x1000..0x2000].try_into().unwrap()));
+        }
+
+        half_chunks
+    }
+
     pub fn chr_rom(&self) -> Vec<u8> {
         let mut result = Vec::new();
         for chunk in &self.chr_rom_chunks {
