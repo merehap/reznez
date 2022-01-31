@@ -6,26 +6,23 @@ use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::bit_util::get_bit;
-use crate::util::mapped_array::{MappedArray, MappedArrayMut};
+use crate::util::mapped_array::MappedArray;
 
 // CNROM
 pub struct Mapper3 {
-    prg_rom: Box<[u8; 0x8000]>,
-    chr_rom_banks: [Box<[u8; 0x2000]>; 4],
+    prg_rom: MappedArray<32>,
+    raw_pattern_tables: [[MappedArray<4>; 2]; 4],
     selected_chr_bank: ChrBankId,
     name_table_mirroring: NameTableMirroring,
 }
 
 impl Mapper3 {
     pub fn new(cartridge: Cartridge) -> Result<Mapper3, String> {
-        let mut prg_rom = Box::new([0; PRG_ROM_SIZE]);
         let prg_rom_chunks = cartridge.prg_rom_chunks();
+        let prg_rom;
         match prg_rom_chunks.len() {
-            1 => {
-                prg_rom[0x0000..=0x3FFF].copy_from_slice(prg_rom_chunks[0].as_ref());
-                prg_rom[0x4000..=0x7FFF].copy_from_slice(prg_rom_chunks[0].as_ref());
-            },
-            2 => prg_rom.copy_from_slice(&cartridge.prg_rom()),
+            1 => prg_rom = MappedArray::<32>::mirror_half(*prg_rom_chunks[0]),
+            2 => prg_rom = MappedArray::<32>::new::<0x8000>(cartridge.prg_rom().try_into().unwrap()),
             c => return Err(format!(
                      "PRG ROM size must be 16K or 32K for this mapper, but was {}K",
                      16 * c,
@@ -41,12 +38,11 @@ impl Mapper3 {
         }
 
         let mut chunk_iter = cartridge.chr_rom_chunks().into_iter();
-        let chr_rom_banks = arr![chunk_iter.next().unwrap().clone(); 4];
-
+        let raw_pattern_tables = arr![split_chr_chunk(**chunk_iter.next().unwrap()); 4];
         let name_table_mirroring = cartridge.name_table_mirroring();
         Ok(Mapper3 {
             prg_rom,
-            chr_rom_banks,
+            raw_pattern_tables,
             selected_chr_bank: ChrBankId::Zero,
             name_table_mirroring,
         })
@@ -58,20 +54,12 @@ impl Mapper for Mapper3 {
         self.name_table_mirroring
     }
 
-    fn prg_rom(&self) -> MappedArray<'_, 32> {
-        MappedArray::new(self.prg_rom.as_ref())
+    fn prg_rom(&self) -> &MappedArray<32> {
+        &self.prg_rom
     }
 
-    fn raw_pattern_table(&self, side: PatternTableSide) -> MappedArray<'_, 4> {
-        let bank = self.chr_rom_banks[self.selected_chr_bank as usize].as_ref();
-        let (start, end) = side.to_start_end();
-        MappedArray::new::<PATTERN_TABLE_SIZE>((&bank[start..end]).try_into().unwrap())
-    }
-
-    fn raw_pattern_table_mut(&mut self, side: PatternTableSide) -> MappedArrayMut<'_, 4> {
-        let bank = self.chr_rom_banks[self.selected_chr_bank as usize].as_mut();
-        let (start, end) = side.to_start_end();
-        MappedArrayMut::new::<PATTERN_TABLE_SIZE>((&mut bank[start..end]).try_into().unwrap())
+    fn raw_pattern_table(&self, side: PatternTableSide) -> &MappedArray<4> {
+        &self.raw_pattern_tables[self.selected_chr_bank as usize][side as usize]
     }
 
     fn read_prg_ram(&self, _: CpuAddress) -> u8 {

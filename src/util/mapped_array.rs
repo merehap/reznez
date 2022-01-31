@@ -1,101 +1,111 @@
-use std::ops::{Index, IndexMut};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 // One KibiByte.
 const CHUNK_LEN: usize = 0x400;
-const DUMMY_CHUNK: &'static [u8; CHUNK_LEN] = &[0; CHUNK_LEN];
 
-pub struct MappedArray<'a, const CHUNK_COUNT: usize>(
-    [&'a [u8; CHUNK_LEN]; CHUNK_COUNT]
-);
+pub struct MappedArray<const CHUNK_COUNT: usize>([Chunk; CHUNK_COUNT]);
 
-impl <'a, const CHUNK_COUNT: usize> MappedArray<'a, CHUNK_COUNT> {
-    // PERFORMANCE: Array allocation here is a bottleneck.
-    // If there are no mappers that use under 8KiB PRG bank sizes,
-    // then it probably makes sense to make CHUNK_LEN a const generic.
-    // Some perf can be gained once consts can be used in macros:
-    // https://github.com/rust-lang/rust/issues/52393
-    pub fn new<const LEN: usize>(
-        bytes: &'a [u8; LEN],
-    ) -> MappedArray<'a, CHUNK_COUNT> {
+impl <const CHUNK_COUNT: usize> MappedArray<CHUNK_COUNT> {
+    pub fn empty() -> MappedArray<CHUNK_COUNT> {
+        let mut chunks = Vec::new();
+        for _ in 0..CHUNK_COUNT {
+            chunks.push(Chunk::empty());
+        }
+
+        MappedArray(chunks.try_into().unwrap())
+    }
+
+    pub fn new<const LEN: usize>(backing: [u8; LEN]) -> MappedArray<CHUNK_COUNT> {
+        let mut array = MappedArray::empty();
+        array.update(Rc::new(RefCell::new(backing)));
+        array
+    }
+
+    pub fn mirror_half<const LEN: usize>(half: [u8; LEN]) -> MappedArray<32> {
+        let half = Rc::new(RefCell::new(half));
+        let mut array = MappedArray::empty();
+        array.update_from_halves(half.clone(), half);
+        array
+    }
+
+    pub fn from_halves<const LEN: usize>(
+        first_half: [u8; LEN],
+        second_half: [u8; LEN],
+    ) -> MappedArray<32> {
+        let mut array = MappedArray::empty();
+        array.update_from_halves(
+            Rc::new(RefCell::new(first_half)),
+            Rc::new(RefCell::new(second_half)),
+        );
+        array
+    }
+
+    pub fn update<const LEN: usize>(&mut self, backing: Rc<RefCell<[u8; LEN]>>) {
         assert_eq!(LEN, CHUNK_COUNT * CHUNK_LEN,
             "LEN == CHUNK_COUNT * CHUNK_LEN must be true but {} != {} * {}",
             LEN, CHUNK_COUNT, CHUNK_LEN,
         );
 
-        let mut chunks = [DUMMY_CHUNK; CHUNK_COUNT];
-
-        let mut chunks_iter = bytes.array_chunks::<CHUNK_LEN>();
-        for i in 0..chunks.len() {
-            chunks[i] = chunks_iter.next().unwrap();
+        for (i, chunk) in self.0.iter_mut().enumerate() {
+            *chunk = Chunk::new(backing.clone(), i * CHUNK_LEN);
         }
-
-        MappedArray(chunks)
     }
 
-    pub fn from_halves<const LEN: usize>(
-        first_half: &'a [u8; LEN],
-        second_half: &'a [u8; LEN],
-    ) -> MappedArray<'a, CHUNK_COUNT> {
+    pub fn update_from_halves<const LEN: usize>(
+        &mut self,
+        first_half: Rc<RefCell<[u8; LEN]>>,
+        second_half: Rc<RefCell<[u8; LEN]>>,
+    ) {
         assert_eq!(2 * LEN, CHUNK_COUNT * CHUNK_LEN,
             "2 * LEN == CHUNK_COUNT * CHUNK_LEN must be true but {} != {} * {}",
             2 * LEN, CHUNK_COUNT, CHUNK_LEN,
         );
 
-        let mut chunks = [DUMMY_CHUNK; CHUNK_COUNT];
-
-        let mut index = 0;
-        for chunk in first_half.array_chunks::<CHUNK_LEN>() {
-            chunks[index] = chunk;
-            index += 1;
+        let half_count = CHUNK_COUNT / 2;
+        for i in 0..half_count {
+            self.0[i] = Chunk::new(first_half.clone(), i * CHUNK_LEN);
         }
 
-        for chunk in second_half.array_chunks::<CHUNK_LEN>() {
-            chunks[index] = chunk;
-            index += 1;
+        for i in 0..half_count {
+            self.0[i + half_count] = Chunk::new(second_half.clone(), i * CHUNK_LEN);
         }
+    }
 
-        assert_eq!(index, chunks.len());
+    pub fn read(&self, index: usize) -> u8 {
+        self.0[index / CHUNK_LEN].read(index % CHUNK_LEN)
+    }
 
-        MappedArray(chunks)
+    pub fn write(&self, index: usize, value: u8) {
+        self.0[index / CHUNK_LEN].write(index % CHUNK_LEN, value);
     }
 }
 
-impl <const CHUNK_COUNT: usize> Index<usize> for MappedArray<'_, CHUNK_COUNT> {
-    type Output = u8;
-
-    fn index(&self, idx: usize) -> &u8 {
-        &self.0[idx / CHUNK_LEN][idx % CHUNK_LEN]
-    }
+#[derive(Clone, Debug)]
+struct Chunk {
+    backing: Rc<RefCell<[u8]>>,
+    start_index: usize,
 }
 
-pub struct MappedArrayMut<'a, const CHUNK_COUNT: usize>(
-    [&'a mut [u8; CHUNK_LEN]; CHUNK_COUNT]
-);
-
-impl <'a, const CHUNK_COUNT: usize> MappedArrayMut<'a, CHUNK_COUNT> {
-    pub fn new<const LEN: usize>(
-        bytes: &'a mut [u8; LEN],
-    ) -> MappedArrayMut<'a, CHUNK_COUNT> {
-        assert_eq!(LEN, CHUNK_COUNT * CHUNK_LEN,
-            "LEN == CHUNK_COUNT * CHUNK_LEN was false. {} != {} * {}",
-            LEN, CHUNK_COUNT, CHUNK_LEN,
-        );
-
-        let chunks: Vec<&mut [u8; CHUNK_LEN]> = bytes.array_chunks_mut().collect();
-        MappedArrayMut(chunks.try_into().unwrap())
+impl Chunk {
+    pub fn empty() -> Chunk {
+        Chunk {
+            backing: Rc::new(RefCell::new([0; CHUNK_LEN])),
+            start_index: 0,
+        }
     }
-}
 
-impl <const CHUNK_COUNT: usize> Index<usize> for MappedArrayMut<'_, CHUNK_COUNT> {
-    type Output = u8;
+    pub fn new(backing: Rc<RefCell<[u8]>>, start_index: usize) -> Chunk {
+        assert!(backing.borrow().len() >= CHUNK_LEN);
 
-    fn index(&self, idx: usize) -> &u8 {
-        &self.0[idx / CHUNK_LEN][idx % CHUNK_LEN]
+        Chunk {backing, start_index}
     }
-}
 
-impl <const CHUNK_COUNT: usize> IndexMut<usize> for MappedArrayMut<'_, CHUNK_COUNT> {
-    fn index_mut(&mut self, idx: usize) -> &mut u8 {
-        &mut self.0[idx / CHUNK_LEN][idx % CHUNK_LEN]
+    fn read(&self, index: usize) -> u8 {
+        self.backing.borrow()[self.start_index + index]
+    }
+
+    fn write(&self, index: usize, value: u8) {
+        self.backing.borrow_mut()[self.start_index + index] = value;
     }
 }

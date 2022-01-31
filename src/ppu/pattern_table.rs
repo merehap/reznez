@@ -9,16 +9,16 @@ use crate::util::mapped_array::MappedArray;
 const PATTERN_TABLE_SIZE: usize = 0x1000;
 const PATTERN_SIZE: usize = 16;
 
-pub struct PatternTable<'a>(MappedArray<'a, 4>);
+pub struct PatternTable<'a>(&'a MappedArray<4>);
 
 impl <'a> PatternTable<'a> {
-    pub fn new(raw: MappedArray<'a, 4>) -> PatternTable<'a> {
+    pub fn new(raw: &MappedArray<4>) -> PatternTable {
         PatternTable(raw)
     }
 
     #[inline]
     pub fn render_tile_sliver(
-        &'a self,
+        &self,
         pattern_index: PatternIndex,
         row_in_tile: usize,
         palette: Palette,
@@ -28,8 +28,8 @@ impl <'a> PatternTable<'a> {
         let low_index = index + row_in_tile;
         let high_index = low_index + 8;
 
-        let low_byte = self.0[low_index];
-        let high_byte = self.0[high_index];
+        let low_byte = self.0.read(low_index);
+        let high_byte = self.0.read(high_index);
 
         for (column_in_tile, pixel) in tile_sliver.iter_mut().enumerate() {
             let low_bit = get_bit(low_byte, column_in_tile);
@@ -64,8 +64,8 @@ impl <'a> PatternTable<'a> {
         let low_index = index + row_in_sprite;
         let high_index = low_index + 8;
 
-        let low_byte = self.0[low_index];
-        let high_byte = self.0[high_index];
+        let low_byte = self.0.read(low_index);
+        let high_byte = self.0.read(high_index);
 
         let flip = sprite.flip_horizontally();
         for column_in_sprite in 0..8 {

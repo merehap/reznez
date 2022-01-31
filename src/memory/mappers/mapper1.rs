@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use arr_macro::arr;
 
 use crate::cartridge::Cartridge;
@@ -6,10 +9,9 @@ use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::bit_util::get_bit;
-use crate::util::mapped_array::{MappedArray, MappedArrayMut};
+use crate::util::mapped_array::MappedArray;
 
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
-const EMPTY_CHR_BANK: [u8; 0x1000] = [0; 0x1000];
 const EMPTY_PRG_BANK: [u8; 0x4000] = [0; 0x4000];
 
 // SxROM (MMC1)
@@ -21,19 +23,31 @@ pub struct Mapper1 {
     selected_prg_bank: u8,
 
     // 32 4KiB banks or 16 8KiB banks.
-    chr_banks: [Box<[u8; 0x1000]>; 32],
+    raw_pattern_tables: [MappedArray<4>; 32],
     // 16 16KiB banks or 8 32KiB banks.
-    prg_banks: [Box<[u8; 0x4000]>; 16],
+    prg_banks: [Rc<RefCell<[u8; 0x4000]>>; 16],
+    prg_rom: MappedArray<32>,
     last_prg_bank_index: u8,
 }
 
 impl Mapper1 {
     pub fn new(cartridge: Cartridge) -> Result<Mapper1, String> {
         let mut chr_chunk_iter = cartridge.chr_rom_half_chunks().into_iter();
-        let chr_banks = arr![chr_chunk_iter.next().unwrap_or(Box::new(EMPTY_CHR_BANK)).clone(); 32];
+        let raw_pattern_tables =
+            arr![
+                chr_chunk_iter
+                    .next()
+                    .map(|chunk| MappedArray::new(*chunk.clone()))
+                    .unwrap_or(MappedArray::empty())
+            ; 32];
 
         let mut prg_chunk_iter = cartridge.prg_rom_chunks().into_iter();
-        let prg_banks = arr![prg_chunk_iter.next().unwrap_or(&Box::new(EMPTY_PRG_BANK)).clone(); 16];
+        let prg_banks = arr![Rc::new(RefCell::new(*prg_chunk_iter.next().unwrap_or(&Box::new(EMPTY_PRG_BANK)).clone())); 16];
+        let mut prg_rom = MappedArray::empty();
+        prg_rom.update_from_halves(
+            prg_banks[0].clone(),
+            prg_banks[1].clone(),
+        );
 
         Ok(Mapper1 {
             shift: EMPTY_SHIFT_REGISTER,
@@ -42,8 +56,9 @@ impl Mapper1 {
             selected_chr_bank1: 0,
             selected_prg_bank: 0,
 
-            chr_banks,
+            raw_pattern_tables,
             prg_banks,
+            prg_rom,
             last_prg_bank_index: (cartridge.prg_rom_chunks().len() - 1) as u8,
         })
     }
@@ -64,6 +79,18 @@ impl Mapper1 {
                 (self.selected_chr_bank0, self.selected_chr_bank1),
         }
     }
+
+    fn prg_bank_indexes(&self) -> (u8, u8) {
+        let selected_bank = self.selected_prg_bank;
+        match self.control.prg_bank_mode {
+            PrgBankMode::Large => {
+                let first_index = selected_bank & 0b0000_1110;
+                (first_index, first_index + 1)
+            },
+            PrgBankMode::FixedFirst => (0, selected_bank),
+            PrgBankMode::FixedLast => (selected_bank, self.last_prg_bank_index),
+        }
+    }
 }
 
 impl Mapper for Mapper1 {
@@ -71,50 +98,22 @@ impl Mapper for Mapper1 {
         self.control.mirroring
     }
 
-    fn prg_rom(&self) -> MappedArray<'_, 32> {
-        let selected_bank = self.selected_prg_bank;
-        let (first_index, second_index) =
-            match self.control.prg_bank_mode {
-                PrgBankMode::Large => {
-                    let first_index = selected_bank & 0b0000_1110;
-                    (first_index, first_index + 1)
-                },
-                PrgBankMode::FixedFirst => (0, selected_bank),
-                PrgBankMode::FixedLast => (selected_bank, self.last_prg_bank_index),
-            };
-
-        MappedArray::from_halves(
-            self.prg_banks[first_index as usize].as_ref(),
-            self.prg_banks[second_index as usize].as_ref(),
-        )
+    fn prg_rom(&self) -> &MappedArray<32> {
+        &self.prg_rom
     }
 
     #[inline]
     fn raw_pattern_table(
         &self,
         side: PatternTableSide,
-    ) -> MappedArray<'_, 4> {
-        let (selected_bank0, selected_bank1) = self.chr_bank_indexes(); 
+    ) -> &MappedArray<4> {
+        let (selected_bank0, selected_bank1) = self.chr_bank_indexes();
 
         match side {
             PatternTableSide::Left =>
-                MappedArray::new(self.chr_banks[selected_bank0 as usize].as_ref()),
+                &self.raw_pattern_tables[selected_bank0 as usize],
             PatternTableSide::Right =>
-                MappedArray::new(self.chr_banks[selected_bank1 as usize].as_ref()),
-        }
-    }
-
-    #[inline]
-    fn raw_pattern_table_mut(
-        &mut self,
-        side: PatternTableSide,
-    ) -> MappedArrayMut<'_, 4> {
-        let (selected_bank0, selected_bank1) = self.chr_bank_indexes(); 
-        match side {
-            PatternTableSide::Left =>
-                MappedArrayMut::new(self.chr_banks[selected_bank0 as usize].as_mut()),
-            PatternTableSide::Right =>
-                MappedArrayMut::new(self.chr_banks[selected_bank1 as usize].as_mut()),
+                &self.raw_pattern_tables[selected_bank1 as usize],
         }
     }
 
@@ -147,6 +146,12 @@ impl Mapper for Mapper1 {
         if get_bit(self.selected_prg_bank, 3) {
             todo!("Bypassing PRG fixed bank logic not supported.");
         }
+
+        let (first_index, second_index) = self.prg_bank_indexes();
+        self.prg_rom.update_from_halves(
+            self.prg_banks[first_index as usize].clone(),
+            self.prg_banks[second_index as usize].clone(),
+        );
     }
 }
 

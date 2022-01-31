@@ -10,27 +10,20 @@ use crate::memory::vram::VramSide;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTableSide;
-use crate::util::mapped_array::{MappedArray, MappedArrayMut};
+use crate::util::mapped_array::MappedArray;
 
-pub const PRG_ROM_SIZE: usize = 0x8000;
 
-pub const CHR_ROM_SIZE: usize = 0x2000;
 pub const PATTERN_TABLE_SIZE: usize = 0x1000;
 pub const NAME_TABLE_SIZE: usize = 0x400;
 
 pub trait Mapper {
     fn name_table_mirroring(&self) -> NameTableMirroring;
-    fn prg_rom(&self) -> MappedArray<'_, 32>;
+    fn prg_rom(&self) -> &MappedArray<32>;
 
     fn raw_pattern_table(
         &self,
         side: PatternTableSide,
-    ) -> MappedArray<'_, 4>;
-
-    fn raw_pattern_table_mut(
-        &mut self,
-        side: PatternTableSide,
-    ) -> MappedArrayMut<'_, 4>;
+    ) -> &MappedArray<4>;
 
     fn read_prg_ram(&self, address: CpuAddress) -> u8 {
         println!(
@@ -59,7 +52,7 @@ pub trait Mapper {
             0x4014 | 0x4016 | 0x4017 => ports.get(address),
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
             0x4020..=0x7FFF => self.read_prg_ram(address),
-            0x8000..=0xFFFF => self.prg_rom()[address.to_usize() - 0x8000],
+            0x8000..=0xFFFF => self.prg_rom().read(address.to_usize() - 0x8000),
         }
     }
 
@@ -125,13 +118,13 @@ pub trait Mapper {
     #[inline]
     fn read_pattern_table_byte(&self, address: PpuAddress) -> u8 {
         let (side, index) = address_to_pattern_table_index(address);
-        self.raw_pattern_table(side)[index]
+        self.raw_pattern_table(side).read(index)
     }
 
     #[inline]
     fn write_pattern_table_byte(&mut self, address: PpuAddress, value: u8) {
         let (side, index) = address_to_pattern_table_index(address);
-        self.raw_pattern_table_mut(side)[index] = value;
+        self.raw_pattern_table(side).write(index, value);
     }
 
     #[inline]
@@ -173,6 +166,13 @@ pub trait Mapper {
     ) {
         palette_ram.write(address_to_palette_ram_index(address), value);
     }
+}
+
+pub fn split_chr_chunk(chunk: [u8; 0x2000]) -> [MappedArray<4>; 2] {
+    [
+        MappedArray::<4>::new::<0x1000>(chunk[0x0000..0x1000].try_into().unwrap()),
+        MappedArray::<4>::new::<0x1000>(chunk[0x1000..0x2000].try_into().unwrap()),
+    ]
 }
 
 #[inline]
