@@ -237,7 +237,7 @@ fn vram_side(
         (Two  , Vertical  ) => VramSide::Left,
         (Three, _         ) => VramSide::Right,
         (_    , FourScreen) => todo!("FourScreen isn't supported yet."),
-        (_    , OneScreenLowerBank) => todo!("OneScreen isn't supported yet."),
-        (_    , OneScreenUpperBank) => todo!("OneScreen isn't supported yet."),
+        (_    , OneScreenLeftBank) => VramSide::Left,
+        (_    , OneScreenRightBank) => VramSide::Right,
     }
 }

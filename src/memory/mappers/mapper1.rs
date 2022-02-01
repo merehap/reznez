@@ -44,14 +44,15 @@ impl Mapper1 {
         let mut prg_chunk_iter = cartridge.prg_rom_chunks().into_iter();
         let prg_banks = arr![Rc::new(RefCell::new(*prg_chunk_iter.next().unwrap_or(&Box::new(EMPTY_PRG_BANK)).clone())); 16];
         let mut prg_rom = MappedArray::empty();
+        let last_prg_bank_index =  (cartridge.prg_rom_chunks().len() - 1) as u8;
         prg_rom.update_from_halves(
             prg_banks[0].clone(),
-            prg_banks[1].clone(),
+            prg_banks[usize::from(last_prg_bank_index)].clone(),
         );
 
         Ok(Mapper1 {
             shift: EMPTY_SHIFT_REGISTER,
-            control: Control::from_u8(0),
+            control: Control::new(),
             selected_chr_bank0: 0,
             selected_chr_bank1: 0,
             selected_prg_bank: 0,
@@ -59,7 +60,7 @@ impl Mapper1 {
             raw_pattern_tables,
             prg_banks,
             prg_rom,
-            last_prg_bank_index: (cartridge.prg_rom_chunks().len() - 1) as u8,
+            last_prg_bank_index,
         })
     }
 
@@ -163,6 +164,14 @@ struct Control {
 }
 
 impl Control {
+    fn new() -> Control {
+        Control {
+            chr_bank_mode: ChrBankMode::Large,
+            prg_bank_mode: PrgBankMode::FixedLast,
+            mirroring: NameTableMirroring::OneScreenRightBank,
+        }
+    }
+
     fn from_u8(value: u8) -> Control {
         Control {
             chr_bank_mode:
@@ -179,8 +188,8 @@ impl Control {
                 },
             mirroring:
                 match (get_bit(value, 6), get_bit(value, 7)) {
-                    (false, false) => NameTableMirroring::OneScreenLowerBank,
-                    (false, true ) => NameTableMirroring::OneScreenUpperBank,
+                    (false, false) => NameTableMirroring::OneScreenRightBank,
+                    (false, true ) => NameTableMirroring::OneScreenLeftBank,
                     (true , false) => NameTableMirroring::Vertical,
                     (true , true ) => NameTableMirroring::Horizontal,
                 },
