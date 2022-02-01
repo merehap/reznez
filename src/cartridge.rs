@@ -46,9 +46,11 @@ impl Cartridge {
         let play_choice_enabled   = rom[7] & 0b0000_0010 != 0;
         let vs_unisystem_enabled  = rom[7] & 0b0000_0001 != 0;
 
-        let ripper_name = std::str::from_utf8(&rom[8..15])
+        let ripper_name: String = std::str::from_utf8(&rom[8..15])
             .map_err(|err| err.to_string())?
-            .to_string();
+            .chars()
+            .map(|c| if c.is_ascii_graphic() {c} else {'~'})
+            .collect();
 
         if trainer_enabled {
             unimplemented!("Trainer isn't implemented yet.");
