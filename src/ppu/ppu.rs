@@ -2,9 +2,9 @@ use crate::memory::memory::{Memory, PALETTE_TABLE_START};
 use crate::memory::ppu_address::PpuAddress;
 use crate::ppu::clock::Clock;
 use crate::ppu::oam::Oam;
-use crate::ppu::register::ctrl::Ctrl;
-use crate::ppu::register::mask::Mask;
-use crate::ppu::register::status::Status;
+use crate::ppu::registers::ctrl::Ctrl;
+use crate::ppu::registers::mask::Mask;
+use crate::ppu::registers::status::Status;
 use crate::ppu::render::frame::Frame;
 
 const FIRST_VBLANK_CYCLE: u64 = 3 * 27384;

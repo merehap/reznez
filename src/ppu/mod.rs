@@ -4,6 +4,6 @@ pub mod oam;
 pub mod palette;
 pub mod pattern_table;
 pub mod ppu;
-pub mod register;
+pub mod registers;
 pub mod render;
 pub mod sprite;
