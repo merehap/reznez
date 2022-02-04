@@ -64,48 +64,8 @@ impl Ppu {
         self.registers.borrow().oam_addr
     }
 
-    fn write_oam(&mut self, value: u8) {
-        let oam_addr = self.registers.borrow().oam_addr;
-        self.oam[oam_addr] = value;
-        // Advance to next sprite byte to write.
-        self.registers.borrow_mut().oam_addr = oam_addr.wrapping_add(1);
-    }
-
     pub fn overwrite_oam(&mut self, oam_address: u8, value: u8) {
         self.oam[oam_address] = value;
-    }
-
-    pub fn update_vram_data(&mut self, memory: &Memory) {
-        // FIXME: https://wiki.nesdev.org/w/index.php?title=PPU_registers#The_PPUDATA_read_buffer_.28post-fetch.29
-        self.vram_data = memory.ppu_read(self.vram_address);
-
-        let increment = self.registers.borrow().ctrl.vram_address_increment as u16;
-        self.vram_address = self.vram_address.advance(increment);
-    }
-
-    pub fn write_vram(&mut self, memory: &mut Memory, value: u8) {
-        memory.ppu_write(self.vram_address, value);
-        let increment = self.registers.borrow().ctrl.vram_address_increment as u16;
-        self.vram_address = self.vram_address.advance(increment);
-    }
-
-    pub fn write_partial_vram_address(&mut self, value: u8) {
-        if let Some(upper) = self.address_latch {
-            self.vram_address = PpuAddress::from_u16((u16::from(upper) << 8) + u16::from(value));
-            self.address_latch = None;
-        } else {
-            self.address_latch = Some(value);
-        }
-    }
-
-    pub fn write_scroll_dimension(&mut self, dimension: u8) {
-        if let Some(x_scroll_offset) = self.address_latch {
-            self.x_scroll_offset = x_scroll_offset;
-            self.y_scroll_offset = dimension;
-            self.address_latch = None;
-        } else {
-            self.address_latch = Some(dimension);
-        }
     }
 
     pub fn reset_address_latch(&mut self) {
@@ -114,18 +74,6 @@ impl Ppu {
 
     pub fn should_generate_nmi(&self) -> bool {
         self.should_generate_nmi
-    }
-
-    fn can_generate_nmi(&self) -> bool {
-        self.registers.borrow().status.vblank_active && self.registers.borrow().ctrl.nmi_enabled
-    }
-
-    pub fn stop_vblank(&mut self) {
-        self.registers.borrow_mut().status.vblank_active = false;
-        // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
-        if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
-            self.suppress_vblank_active = true;
-        }
     }
 
     pub fn step(&mut self, memory: &mut Memory, frame: &mut Frame) {
@@ -302,5 +250,57 @@ impl Ppu {
 
     fn rendering_enabled(&self) -> bool {
         self.registers.borrow().mask.sprites_enabled || self.registers.borrow().mask.background_enabled
+    }
+
+    fn can_generate_nmi(&self) -> bool {
+        self.registers.borrow().status.vblank_active && self.registers.borrow().ctrl.nmi_enabled
+    }
+
+    fn write_oam(&mut self, value: u8) {
+        let oam_addr = self.registers.borrow().oam_addr;
+        self.oam[oam_addr] = value;
+        // Advance to next sprite byte to write.
+        self.registers.borrow_mut().oam_addr = oam_addr.wrapping_add(1);
+    }
+
+    fn update_vram_data(&mut self, memory: &Memory) {
+        // FIXME: https://wiki.nesdev.org/w/index.php?title=PPU_registers#The_PPUDATA_read_buffer_.28post-fetch.29
+        self.vram_data = memory.ppu_read(self.vram_address);
+
+        let increment = self.registers.borrow().ctrl.vram_address_increment as u16;
+        self.vram_address = self.vram_address.advance(increment);
+    }
+
+    fn write_vram(&mut self, memory: &mut Memory, value: u8) {
+        memory.ppu_write(self.vram_address, value);
+        let increment = self.registers.borrow().ctrl.vram_address_increment as u16;
+        self.vram_address = self.vram_address.advance(increment);
+    }
+
+    fn write_partial_vram_address(&mut self, value: u8) {
+        if let Some(upper) = self.address_latch {
+            self.vram_address = PpuAddress::from_u16((u16::from(upper) << 8) + u16::from(value));
+            self.address_latch = None;
+        } else {
+            self.address_latch = Some(value);
+        }
+    }
+
+    fn write_scroll_dimension(&mut self, dimension: u8) {
+        if let Some(x_scroll_offset) = self.address_latch {
+            self.x_scroll_offset = x_scroll_offset;
+            self.y_scroll_offset = dimension;
+            self.address_latch = None;
+        } else {
+            self.address_latch = Some(dimension);
+        }
+    }
+
+    fn stop_vblank(&mut self) {
+        self.registers.borrow_mut().status.vblank_active = false;
+        // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
+        if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
+            self.suppress_vblank_active = true;
+        }
     }
 }
