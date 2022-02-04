@@ -70,6 +70,7 @@ impl Ctrl {
         }
     }
 
+    #[allow(dead_code)]
     pub fn to_u8(self) -> u8 {
         pack_bools(
             [

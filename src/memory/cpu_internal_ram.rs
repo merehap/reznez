@@ -7,16 +7,6 @@ pub const NMI_VECTOR: CpuAddress = CpuAddress::new(0xFFFA);
 pub const RESET_VECTOR: CpuAddress = CpuAddress::new(0xFFFC);
 pub const IRQ_VECTOR: CpuAddress = CpuAddress::new(0xFFFE);
 
-// FIXME: Ports should be configurable, not hard-coded here,
-// but I can't find any data structure that is efficient enough.
-pub const PPUCTRL:   CpuAddress = CpuAddress::new(0x2000);
-pub const PPUMASK:   CpuAddress = CpuAddress::new(0x2001);
-pub const PPUSTATUS: CpuAddress = CpuAddress::new(0x2002);
-pub const OAMADDR:   CpuAddress = CpuAddress::new(0x2003);
-pub const OAMDATA:   CpuAddress = CpuAddress::new(0x2004);
-pub const PPUSCROLL: CpuAddress = CpuAddress::new(0x2005);
-pub const PPUADDR:   CpuAddress = CpuAddress::new(0x2006);
-pub const PPUDATA:   CpuAddress = CpuAddress::new(0x2007);
 pub const OAM_DMA:   CpuAddress = CpuAddress::new(0x4014);
 
 pub const JOYSTICK_1_PORT: CpuAddress = CpuAddress::new(0x4016);

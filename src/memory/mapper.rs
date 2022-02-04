@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use num_traits::FromPrimitive;
 
 use crate::memory::cpu_address::CpuAddress;
@@ -10,6 +13,7 @@ use crate::memory::vram::VramSide;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTableSide;
+use crate::ppu::ppu_registers::PpuRegisters;
 use crate::util::mapped_array::MappedArray;
 
 
@@ -42,12 +46,12 @@ pub trait Mapper {
         &self,
         cpu_internal_ram: &CpuInternalRam,
         ports: &mut Ports,
+        ppu_registers: &Rc<RefCell<PpuRegisters>>,
         address: CpuAddress,
     ) -> u8 {
         match address.to_raw() {
             0x0000..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF],
-            0x2000..=0x2007 => ports.get(address),
-            0x2008..=0x3FFF => ports.get(CpuAddress::new(0x2000 + address.to_raw() % 8)),
+            0x2000..=0x3FFF => ppu_registers.borrow_mut().read(FromPrimitive::from_usize(address.to_usize() % 8).unwrap()),
             0x4000..=0x4013 | 0x4015 => {/* APU */ 0},
             0x4014 | 0x4016 | 0x4017 => ports.get(address),
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
@@ -61,13 +65,13 @@ pub trait Mapper {
         &mut self,
         cpu_internal_ram: &mut CpuInternalRam,
         ports: &mut Ports,
+        ppu_registers: &Rc<RefCell<PpuRegisters>>,
         address: CpuAddress,
         value: u8,
     ) {
         match address.to_raw() {
             0x0000..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF] = value,
-            0x2000..=0x2007 => ports.set(address, value),
-            0x2008..=0x3FFF => ports.set(CpuAddress::new(0x2000 + address.to_raw() % 8), value),
+            0x2000..=0x3FFF => ppu_registers.borrow_mut().write(FromPrimitive::from_usize(address.to_usize() % 8).unwrap(), value),
             0x4000..=0x4013 | 0x4015 => {/* APU */},
             0x4014 | 0x4016..=0x4017 => ports.set(address, value),
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),

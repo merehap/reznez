@@ -1,5 +1,7 @@
-use crate::memory::cpu_address::CpuAddress;
+use std::cell::RefCell;
+use std::rc::Rc;
 
+use crate::memory::cpu_address::CpuAddress;
 use crate::memory::cpu_internal_ram::{CpuInternalRam, NMI_VECTOR, RESET_VECTOR, IRQ_VECTOR};
 use crate::memory::mapper::Mapper;
 use crate::memory::port_access::PortAccess;
@@ -12,6 +14,7 @@ use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
+use crate::ppu::ppu_registers::PpuRegisters;
 
 pub const PALETTE_TABLE_START: PpuAddress = PpuAddress::from_u16(0x3F00);
 
@@ -19,29 +22,35 @@ pub struct Memory {
     mapper: Box<dyn Mapper>,
     cpu_internal_ram: CpuInternalRam,
     ppu_internal_ram: PpuInternalRam,
-    system_palette: SystemPalette,
     ports: Ports,
+    ppu_registers: Rc<RefCell<PpuRegisters>>,
+    system_palette: SystemPalette,
 }
 
 impl Memory {
-    pub fn new(mapper: Box<dyn Mapper>, system_palette: SystemPalette) -> Memory {
+    pub fn new(
+        mapper: Box<dyn Mapper>,
+        ppu_registers: Rc<RefCell<PpuRegisters>>,
+        system_palette: SystemPalette,
+    ) -> Memory {
         Memory {
             mapper,
             cpu_internal_ram: CpuInternalRam::new(),
             ppu_internal_ram: PpuInternalRam::new(),
             system_palette,
             ports: Ports::new(),
+            ppu_registers,
         }
     }
 
     #[inline]
     pub fn cpu_read(&mut self, address: CpuAddress) -> u8 {
-        self.mapper.cpu_read(&self.cpu_internal_ram, &mut self.ports, address)
+        self.mapper.cpu_read(&self.cpu_internal_ram, &mut self.ports, &self.ppu_registers, address)
     }
 
     #[inline]
     pub fn cpu_write(&mut self, address: CpuAddress, value: u8) {
-        self.mapper.cpu_write(&mut self.cpu_internal_ram, &mut self.ports, address, value)
+        self.mapper.cpu_write(&mut self.cpu_internal_ram, &mut self.ports, &self.ppu_registers, address, value)
     }
 
     #[inline]
@@ -84,7 +93,7 @@ impl Memory {
     }
 
     pub fn reset_cpu_latch(&mut self) {
-        self.ports.reset_latch()
+        self.ports.reset_latch();
     }
 
     pub fn nmi_vector(&mut self) -> CpuAddress {

@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::ops::Add;
+use std::rc::Rc;
 use std::time::{Duration, SystemTime};
 
 use log::{info, warn};
@@ -16,8 +18,7 @@ use crate::memory::mappers::mapper1::Mapper1;
 use crate::memory::mappers::mapper3::Mapper3;
 use crate::memory::port_access::{PortAccess, AccessMode};
 use crate::ppu::ppu::Ppu;
-use crate::ppu::registers::ctrl::Ctrl;
-use crate::ppu::registers::mask::Mask;
+use crate::ppu::ppu_registers::PpuRegisters;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::render::frame_rate::TargetFrameRate;
 
@@ -28,7 +29,6 @@ pub struct Nes {
 
     pub joypad_1: Joypad,
     pub joypad_2: Joypad,
-    nmi_was_enabled_last_cycle: bool,
     cycle: u64,
 
     target_frame_rate: TargetFrameRate,
@@ -44,16 +44,17 @@ impl Nes {
                 3 => Box::new(Mapper3::new(config.cartridge).unwrap()),
                 _ => todo!(),
             };
-        let mut memory = Memory::new(mapper, config.system_palette);
+
+        let ppu_registers = Rc::new(RefCell::new(PpuRegisters::new()));
+        let mut memory = Memory::new(mapper, ppu_registers.clone(), config.system_palette);
 
         Nes {
             cpu: Cpu::new(&mut memory, config.program_counter_source),
-            ppu: Ppu::new(),
+            ppu: Ppu::new(ppu_registers),
             memory,
 
             joypad_1: Joypad::new(),
             joypad_2: Joypad::new(),
-            nmi_was_enabled_last_cycle: false,
             cycle: 0,
 
             target_frame_rate: config.target_frame_rate,
@@ -128,7 +129,7 @@ impl Nes {
                 StepResult::Nop => {},
                 StepResult::InstructionComplete(inst) => instruction = Some(inst),
                 StepResult::DmaWrite(oamaddr, value) =>
-                    self.ppu.write_oam(oamaddr, value),
+                    self.ppu.overwrite_oam(oamaddr, value),
             }
 
             if let Some(port_access) = self.memory.latch() {
@@ -136,15 +137,10 @@ impl Nes {
             }
         }
 
-        self.ppu.step(&self.memory, self.ppu_ctrl(), self.ppu_mask(), frame);
-        self.memory.ports_mut().bus_access_write(PPUSTATUS, self.ppu.status().to_u8());
-        let oam_byte = self.ppu.read_oam(self.oam_address());
-        self.memory.ports_mut().bus_access_write(OAMDATA, oam_byte);
-        let vram_data = self.ppu.vram_data(&self.memory);
-        self.memory.ports_mut().bus_access_write(PPUDATA, vram_data);
+        self.ppu.step(&mut self.memory, frame);
 
-        if self.ppu.vblank_just_started() {
-            self.schedule_nmi_if_allowed();
+        if self.ppu.should_generate_nmi() {
+            self.cpu.schedule_nmi();
         }
 
         let status = self.joypad_1.selected_button_status() as u8;
@@ -157,40 +153,13 @@ impl Nes {
         instruction
     }
 
-    // TODO: Reading PPUSTATUS within two cycles of the start of vertical
-    // blank will return 0 in bit 7 but clear the latch anyway, causing NMI
-    // to not occur that frame.
     fn execute_port_action(&mut self, port_access: PortAccess) {
         let value = port_access.value;
-        let ppu_ctrl = self.ppu_ctrl();
 
         use AccessMode::{Read, Write};
         match (port_access.address, port_access.access_mode) {
-            (PPUMASK | PPUSTATUS | OAMADDR, Write) => {},
-            (OAMDATA, Read) => {},
-
-            (PPUCTRL, Write) => {
-                if !self.nmi_was_enabled_last_cycle {
-                    // Attempt to trigger the second (or higher) NMI of this frame.
-                    self.schedule_nmi_if_allowed();
-                }
-
-                self.nmi_was_enabled_last_cycle = self.ppu_ctrl().nmi_enabled;
-            },
-
-            // TODO: Reading the status register will clear bit 7 mentioned
-            // above and also the address latch used by PPUSCROLL and PPUADDR.
-            (PPUSTATUS, Read) => {
-                self.ppu.stop_vblank();
-                self.ppu.reset_address_latch();
-            },
-            (OAMDATA, Write) => self.write_oam(value),
             (OAM_DMA, Write) =>
-                self.cpu.initiate_dma_transfer(value, self.oam_address()),
-            (PPUADDR, Write) => self.ppu.write_partial_vram_address(value),
-            (PPUDATA, Read) => self.ppu.update_vram_data(&mut self.memory, ppu_ctrl),
-            (PPUDATA, Write) => self.ppu.write_vram(&mut self.memory, ppu_ctrl, value),
-            (PPUSCROLL, Write) => self.ppu.write_scroll_dimension(value),
+                self.cpu.initiate_dma_transfer(value, self.ppu.oam_address()),
 
             // Now that the ROM has read a button status, advance to the next status.
             (JOYSTICK_1_PORT, Read) => self.joypad_1.select_next_button(),
@@ -207,31 +176,6 @@ impl Nes {
 
             (_, _) => unreachable!(),
         }
-    }
-
-    fn schedule_nmi_if_allowed(&mut self) {
-        if self.ppu.can_generate_nmi(self.ppu_ctrl()) {
-            self.cpu.schedule_nmi();
-        }
-    }
-
-    fn ppu_ctrl(&self) -> Ctrl {
-        Ctrl::from_u8(self.memory.ports().bus_access_read(PPUCTRL))
-    }
-
-    fn ppu_mask(&self) -> Mask {
-        Mask::from_u8(self.memory.ports().bus_access_read(PPUMASK))
-    }
-
-    fn oam_address(&self) -> u8 {
-        self.memory.ports().bus_access_read(OAMADDR)
-    }
-
-    fn write_oam(&mut self, value: u8) {
-        let oamaddr = self.memory.ports().bus_access_read(OAMADDR);
-        self.ppu.write_oam(oamaddr, value);
-        // Advance to next sprite byte to write.
-        self.memory.ports_mut().bus_access_write(OAMADDR, oamaddr.wrapping_add(1));
     }
 
     fn frame_duration(&self) -> Duration {
@@ -318,7 +262,8 @@ mod tests {
         let mapper = Box::new(Mapper0::new(cartridge).unwrap());
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
-        let mut memory = Memory::new(mapper, system_palette);
+        let ppu_registers = Rc::new(RefCell::new(PpuRegisters::new()));
+        let mut memory = Memory::new(mapper, ppu_registers.clone(), system_palette);
         // Write NOPs to where the RESET_VECTOR starts the program.
         for i in 0x0200..0x0800 {
             memory.cpu_write(CpuAddress::new(i), 0xEA);
@@ -326,11 +271,10 @@ mod tests {
 
         Nes {
             cpu: Cpu::new(&mut memory, ProgramCounterSource::Override(CpuAddress::new(0x0000))),
-            ppu: Ppu::new(),
+            ppu: Ppu::new(ppu_registers),
             memory,
             joypad_1: Joypad::new(),
             joypad_2: Joypad::new(),
-            nmi_was_enabled_last_cycle: false,
             cycle: 0,
 
             target_frame_rate: TargetFrameRate::Unbounded,
@@ -339,18 +283,20 @@ mod tests {
     }
 
     fn step_until_vblank_nmi_enabled(nes: &mut Nes) {
-        let mut ctrl = Ctrl::from_u8(nes.memory.ports().bus_access_read(PPUCTRL));
+        let mut ctrl = Ctrl::new();
         ctrl.nmi_enabled = true;
-        nes.memory.ports_mut().bus_access_write(PPUCTRL, ctrl.to_u8());
+        nes.memory.cpu_write(CpuAddress::new(0x2000), ctrl.to_u8());
 
         let mut frame = Frame::new();
-        while !nes.ppu.can_generate_nmi(nes.ppu_ctrl()) {
+        while !nes.ppu.should_generate_nmi() {
             assert!(!nes.cpu.nmi_pending(), "NMI must not be pending before one is scheduled.");
             nes.step(&mut frame);
             if nes.ppu.clock().total_cycles() > 200_000 {
                 panic!("It took too long for the PPU to enable NMI.");
             }
         }
+
+        println!("Should generate NMI");
     }
 
     fn write_ppuctrl_through_opcode_injection(nes: &mut Nes, ctrl: u8) {
