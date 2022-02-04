@@ -12,6 +12,11 @@ impl PpuAddress {
         PpuAddress::from_u16(self.0.wrapping_add(offset))
     }
 
+    pub const fn subtract(self, offset: u16) -> PpuAddress {
+        PpuAddress::from_u16(self.0.wrapping_sub(offset))
+    }
+
+    // FIXME: Move this mirroring to creation time.
     pub fn to_u16(self) -> u16 {
         let value = self.0;
         match value {

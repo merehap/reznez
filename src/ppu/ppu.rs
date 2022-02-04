@@ -264,8 +264,15 @@ impl Ppu {
     }
 
     fn update_vram_data(&mut self, memory: &Memory) {
-        // FIXME: https://wiki.nesdev.org/w/index.php?title=PPU_registers#The_PPUDATA_read_buffer_.28post-fetch.29
-        self.vram_data = memory.ppu_read(self.vram_address);
+        let vram_data_source =
+            if self.vram_address >= PALETTE_TABLE_START {
+                // Even though palette ram isn't mirrored down, its vram data is.
+                // https://forums.nesdev.org/viewtopic.php?t=18627
+                self.vram_address.subtract(0x1000)
+            } else {
+                self.vram_address
+            };
+        self.vram_data = memory.ppu_read(vram_data_source);
 
         let increment = self.registers.borrow().ctrl.vram_address_increment as u16;
         self.vram_address = self.vram_address.advance(increment);
