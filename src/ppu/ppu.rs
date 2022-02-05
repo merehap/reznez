@@ -106,6 +106,7 @@ impl Ppu {
                 self.should_generate_nmi = true;
             }
         } else if self.clock.scanline() == 261 && self.clock.cycle() == 1 {
+            println!("NMI Clearing VBlank");
             self.registers.borrow_mut().status.vblank_active = false;
             self.registers.borrow_mut().status.sprite0_hit = false;
         } else if self.clock.scanline() == 1 && self.clock.cycle() == 1 {

@@ -40,28 +40,31 @@ impl PpuRegisters {
         use RegisterType::*;
         let value =
             match register_type {
-                Ctrl => {/* TODO: Open bus behavior here. */ 0},
-                Mask => {/* TODO: Open bus behavior here. */ 0},
+                Ctrl => None,
+                Mask => None,
                 Status => {
                     // TODO: Open bus behavior here for the unused bits.
-                    self.status.to_u8()
+                    Some(self.status.to_u8())
                 },
-                OamAddr => {/* TODO: Open bus behavior here. */ 0},
-                OamData => self.oam_data,
-                Scroll => {/* TODO: Open bus behavior here. */ 0},
-                PpuAddr => {/* TODO: Open bus behavior here. */ 0},
-                PpuData => self.ppu_data,
+                OamAddr => None,
+                OamData => Some(self.oam_data),
+                Scroll => None,
+                PpuAddr => None,
+                PpuData => Some(self.ppu_data),
             };
 
-        self.latch = Some(
-            DataLatch {
-                register_type,
-                value,
-                access_mode: AccessMode::Read,
-            }
-        );
+        if let Some(value) = value {
+            self.latch = Some(
+                DataLatch {
+                    register_type,
+                    value,
+                    access_mode: AccessMode::Read,
+                }
+            );
+        }
 
-        value
+        /* TODO: Open bus behavior here. */
+        value.unwrap_or(0)
     }
 
     pub fn write(&mut self, register_type: RegisterType, value: u8) {
