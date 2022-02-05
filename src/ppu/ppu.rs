@@ -5,8 +5,8 @@ use crate::memory::memory::{Memory, PALETTE_TABLE_START};
 use crate::memory::ppu_address::PpuAddress;
 use crate::ppu::clock::Clock;
 use crate::ppu::oam::Oam;
+use crate::ppu::ppu_registers::{PpuRegisters, RegisterType, LatchAccess, AccessMode};
 use crate::ppu::registers::status::Status;
-use crate::ppu::ppu_registers::{PpuRegisters, RegisterType, AccessMode};
 use crate::ppu::render::frame::Frame;
 
 const FIRST_VBLANK_CYCLE: u64 = 3 * 27384;
@@ -80,7 +80,10 @@ impl Ppu {
         let total_cycles = self.clock().total_cycles();
         self.should_generate_nmi = false;
 
-        self.process_latch(memory);
+        let latch_access = self.registers.borrow_mut().consume_latch_access();
+        if let Some(latch_access) = latch_access {
+            self.process_latch_access(memory, latch_access);
+        }
 
         // TODO: Fix the first and second vblank cycles to not be special-cased if possible.
         if total_cycles == FIRST_VBLANK_CYCLE || total_cycles == SECOND_VBLANK_CYCLE {
@@ -102,7 +105,6 @@ impl Ppu {
                 self.should_generate_nmi = true;
             }
         } else if self.clock.scanline() == 261 && self.clock.cycle() == 1 {
-            println!("NMI Clearing VBlank");
             self.registers.borrow_mut().status.vblank_active = false;
             self.registers.borrow_mut().status.sprite0_hit = false;
         } else if self.clock.scanline() == 1 && self.clock.cycle() == 1 {
@@ -113,6 +115,8 @@ impl Ppu {
             if self.registers.borrow().mask.sprites_enabled {
                 self.render_sprites(&memory, frame);
             }
+
+            self.registers.borrow_mut().maybe_decay_latch();
         }
 
         let sprite_0 = self.oam.sprite_0();
@@ -141,14 +145,8 @@ impl Ppu {
         self.clock.tick(self.rendering_enabled());
     }
 
-    fn process_latch(&mut self, memory: &mut Memory) {
-        let latch_access =
-            match self.registers.borrow().latch_access {
-                None => return,
-                Some(access) => access,
-            };
-
-        let value = self.registers.borrow().latch;
+    fn process_latch_access(&mut self, memory: &mut Memory, latch_access: LatchAccess) {
+        let value = self.registers.borrow().latch();
 
         use RegisterType::*;
         use AccessMode::*;
@@ -183,8 +181,6 @@ impl Ppu {
                     latch_access.register_type,
                 ),
         }
-
-        self.registers.borrow_mut().latch_access = None;
     }
 
     fn render_background(&mut self, memory: &Memory, frame: &mut Frame) {
