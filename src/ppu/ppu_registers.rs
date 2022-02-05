@@ -17,7 +17,8 @@ pub struct PpuRegisters {
     pub(super) ppu_addr: u8,
     pub(super) ppu_data: u8,
 
-    pub(super) latch: Option<DataLatch>,
+    pub(super) latch: u8,
+    pub(super) latch_access: Option<LatchAccess>,
 }
 
 impl PpuRegisters {
@@ -32,7 +33,8 @@ impl PpuRegisters {
             ppu_addr: 0,
             ppu_data: 0,
 
-            latch: None,
+            latch: 0,
+            latch_access: None,
         }
     }
 
@@ -54,10 +56,10 @@ impl PpuRegisters {
             };
 
         if let Some(value) = value {
-            self.latch = Some(
-                DataLatch {
+            self.latch = value;
+            self.latch_access = Some(
+                LatchAccess {
                     register_type,
-                    value,
                     access_mode: AccessMode::Read,
                 }
             );
@@ -68,10 +70,10 @@ impl PpuRegisters {
     }
 
     pub fn write(&mut self, register_type: RegisterType, value: u8) {
-        self.latch = Some(
-            DataLatch {
+        self.latch = value;
+        self.latch_access = Some(
+            LatchAccess {
                 register_type,
-                value,
                 access_mode: AccessMode::Write,
             }
         );
@@ -88,14 +90,6 @@ impl PpuRegisters {
             PpuData => self.ppu_data = value,
         }
     }
-
-    pub fn latch(&self) -> Option<DataLatch> {
-        self.latch
-    }
-
-    pub fn reset_latch(&mut self) {
-        self.latch = None;
-    }
 }
 
 #[derive(Clone, Copy, Debug, FromPrimitive)]
@@ -111,9 +105,8 @@ pub enum RegisterType {
 }
 
 #[derive(Clone, Copy)]
-pub struct DataLatch {
+pub struct LatchAccess {
     pub(super) register_type: RegisterType,
-    pub(super) value: u8,
     pub(super) access_mode: AccessMode,
 }
 

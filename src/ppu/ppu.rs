@@ -6,7 +6,7 @@ use crate::memory::ppu_address::PpuAddress;
 use crate::ppu::clock::Clock;
 use crate::ppu::oam::Oam;
 use crate::ppu::registers::status::Status;
-use crate::ppu::ppu_registers::{PpuRegisters, RegisterType, DataLatch, AccessMode};
+use crate::ppu::ppu_registers::{PpuRegisters, RegisterType, AccessMode};
 use crate::ppu::render::frame::Frame;
 
 const FIRST_VBLANK_CYCLE: u64 = 3 * 27384;
@@ -80,11 +80,7 @@ impl Ppu {
         let total_cycles = self.clock().total_cycles();
         self.should_generate_nmi = false;
 
-        let latch = self.registers.borrow().latch().clone();
-        if let Some(latch) = latch {
-            self.process_latch(memory, latch);
-            self.registers.borrow_mut().reset_latch();
-        }
+        self.process_latch(memory);
 
         // TODO: Fix the first and second vblank cycles to not be special-cased if possible.
         if total_cycles == FIRST_VBLANK_CYCLE || total_cycles == SECOND_VBLANK_CYCLE {
@@ -145,12 +141,18 @@ impl Ppu {
         self.clock.tick(self.rendering_enabled());
     }
 
-    fn process_latch(&mut self, memory: &mut Memory, latch: DataLatch) {
-        let value = latch.value;
+    fn process_latch(&mut self, memory: &mut Memory) {
+        let latch_access =
+            match self.registers.borrow().latch_access {
+                None => return,
+                Some(access) => access,
+            };
+
+        let value = self.registers.borrow().latch;
 
         use RegisterType::*;
         use AccessMode::*;
-        match (latch.register_type, latch.access_mode) {
+        match (latch_access.register_type, latch_access.access_mode) {
             (OamData, Read) => {},
             (Mask | Status | OamAddr, Write) => {},
 
@@ -178,9 +180,11 @@ impl Ppu {
             (Ctrl | Mask | OamAddr | Scroll | PpuAddr, Read) =>
                 unreachable!(
                     "The data latch should not be filled by a read to {:?}.",
-                    latch.register_type,
+                    latch_access.register_type,
                 ),
         }
+
+        self.registers.borrow_mut().latch_access = None;
     }
 
     fn render_background(&mut self, memory: &Memory, frame: &mut Frame) {
