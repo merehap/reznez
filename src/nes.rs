@@ -18,7 +18,7 @@ use crate::memory::mappers::mapper1::Mapper1;
 use crate::memory::mappers::mapper3::Mapper3;
 use crate::memory::port_access::{PortAccess, AccessMode};
 use crate::ppu::ppu::Ppu;
-use crate::ppu::ppu_registers::PpuRegisters;
+use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::render::frame_rate::TargetFrameRate;
 
@@ -192,7 +192,7 @@ mod tests {
     use crate::cpu::cpu::ProgramCounterSource;
     use crate::memory::memory::Memory;
     use crate::ppu::palette::system_palette::SystemPalette;
-    use crate::ppu::registers::ctrl::Ctrl;
+    use crate::ppu::register::registers::ctrl::Ctrl;
     use crate::ppu::render::frame::Frame;
     use crate::ppu::render::frame_rate::TargetFrameRate;
 

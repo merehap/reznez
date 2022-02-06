@@ -13,7 +13,7 @@ use crate::memory::vram::VramSide;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTableSide;
-use crate::ppu::ppu_registers::PpuRegisters;
+use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::util::mapped_array::MappedArray;
 
 

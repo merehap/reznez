@@ -1,21 +1,21 @@
 use num_derive::FromPrimitive;
 
 use crate::ppu::clock::MAX_SCANLINE;
-use crate::ppu::registers::ctrl;
-use crate::ppu::registers::ctrl::Ctrl;
-use crate::ppu::registers::mask;
-use crate::ppu::registers::mask::Mask;
-use crate::ppu::registers::status::Status;
+use crate::ppu::register::registers::ctrl;
+use crate::ppu::register::registers::ctrl::Ctrl;
+use crate::ppu::register::registers::mask;
+use crate::ppu::register::registers::mask::Mask;
+use crate::ppu::register::registers::status::Status;
 
 pub struct PpuRegisters {
-    pub(super) ctrl: Ctrl,
-    pub(super) mask: Mask,
-    pub(super) status: Status,
-    pub(super) oam_addr: u8,
-    pub(super) oam_data: u8,
-    pub(super) scroll: u8,
-    pub(super) ppu_addr: u8,
-    pub(super) ppu_data: u8,
+    pub(in crate::ppu) ctrl: Ctrl,
+    pub(in crate::ppu) mask: Mask,
+    pub(in crate::ppu) status: Status,
+    pub(in crate::ppu) oam_addr: u8,
+    pub(in crate::ppu) oam_data: u8,
+    pub(in crate::ppu) scroll: u8,
+    pub(in crate::ppu) ppu_addr: u8,
+    pub(in crate::ppu) ppu_data: u8,
 
     latch: u8,
     latch_access: Option<LatchAccess>,
@@ -44,12 +44,12 @@ impl PpuRegisters {
         }
     }
 
-    pub(super) fn latch(&self) -> u8 {
+    pub(in crate::ppu) fn latch(&self) -> u8 {
         self.latch
     }
 
     #[inline]
-    pub(super) fn consume_latch_access(&mut self) -> Option<LatchAccess> {
+    pub(in crate::ppu) fn consume_latch_access(&mut self) -> Option<LatchAccess> {
         let result = self.latch_access;
         self.latch_access = None;
         result
@@ -121,7 +121,7 @@ impl PpuRegisters {
         }
     }
 
-    pub fn maybe_decay_latch(&mut self) {
+    pub(in crate::ppu) fn maybe_decay_latch(&mut self) {
         let l = &mut self.latch;
         maybe_decay_latch_internal(
             l, &mut self.scanlines_until_decay, 0b0000_0000);
@@ -161,8 +161,8 @@ pub enum RegisterType {
 
 #[derive(Clone, Copy)]
 pub struct LatchAccess {
-    pub(super) register_type: RegisterType,
-    pub(super) access_mode: AccessMode,
+    pub(in crate::ppu) register_type: RegisterType,
+    pub(in crate::ppu) access_mode: AccessMode,
 }
 
 #[derive(Clone, Copy)]

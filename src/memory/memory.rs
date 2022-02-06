@@ -14,7 +14,7 @@ use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
-use crate::ppu::ppu_registers::PpuRegisters;
+use crate::ppu::register::ppu_registers::PpuRegisters;
 
 pub const PALETTE_TABLE_START: PpuAddress = PpuAddress::from_u16(0x3F00);
 
