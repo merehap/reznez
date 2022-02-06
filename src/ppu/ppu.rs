@@ -7,6 +7,7 @@ use crate::ppu::clock::Clock;
 use crate::ppu::oam::Oam;
 use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
+use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::register::registers::status::Status;
 use crate::ppu::render::frame::Frame;
 
@@ -136,14 +137,16 @@ impl Ppu {
         let oam_data = self.oam[self.registers.borrow().oam_addr];
         self.registers.borrow_mut().oam_data = oam_data;
 
+        let is_palette_data = self.vram_address >= PALETTE_TABLE_START;
         // When reading palette data only, read the current data pointed to
         // by self.vram_address, not what was previously pointed to.
-        self.registers.borrow_mut().ppu_data =
-            if self.vram_address >= PALETTE_TABLE_START {
+        let value = 
+            if is_palette_data {
                 memory.ppu_read(self.vram_address)
             } else {
                 self.vram_data
             };
+        self.registers.borrow_mut().ppu_data = PpuData {value, is_palette_data};
 
         self.clock.tick(self.rendering_enabled());
     }

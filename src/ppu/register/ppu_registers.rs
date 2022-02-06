@@ -4,6 +4,8 @@ use crate::ppu::register::registers::ctrl;
 use crate::ppu::register::registers::ctrl::Ctrl;
 use crate::ppu::register::registers::mask;
 use crate::ppu::register::registers::mask::Mask;
+use crate::ppu::register::registers::ppu_data;
+use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::register::registers::status::Status;
 
 pub struct PpuRegisters {
@@ -14,7 +16,7 @@ pub struct PpuRegisters {
     pub(in crate::ppu) oam_data: u8,
     pub(in crate::ppu) scroll: u8,
     pub(in crate::ppu) ppu_addr: u8,
-    pub(in crate::ppu) ppu_data: u8,
+    pub(in crate::ppu) ppu_data: PpuData,
 
     latch: PpuRegisterLatch,
     latch_access: Option<LatchAccess>,
@@ -30,7 +32,7 @@ impl PpuRegisters {
             oam_data: 0,
             scroll: 0,
             ppu_addr: 0,
-            ppu_data: 0,
+            ppu_data: PpuData {value: 0, is_palette_data: false},
 
             latch: PpuRegisterLatch::new(),
             latch_access: None,
@@ -60,7 +62,9 @@ impl PpuRegisters {
                 // Retain the open bus values for the unused bits of Status.
                 Status => Some(self.status.to_u8() | (self.latch.value() & 0b0001_1111)),
                 OamData => Some(self.oam_data),
-                PpuData => Some(self.ppu_data),
+                PpuData if self.ppu_data.is_palette_data =>
+                    Some(self.ppu_data.value | (self.latch.value() & 0b1100_0000)),
+                PpuData => Some(self.ppu_data.value),
             };
 
         // If a readable register is read from, update the latch.
@@ -97,7 +101,11 @@ impl PpuRegisters {
             OamData => self.oam_data = register_value,
             Scroll => self.scroll = register_value,
             PpuAddr => self.ppu_addr = register_value,
-            PpuData => self.ppu_data = register_value,
+            PpuData => self.ppu_data =
+                ppu_data::PpuData {
+                    value: register_value,
+                    is_palette_data: false,
+                },
         }
     }
 }
