@@ -1,3 +1,6 @@
+pub const MAX_SCANLINE: u16 = 261;
+pub const MAX_CYCLE: u16 = 340;
+
 #[derive(Debug)]
 pub struct Clock {
     frame: u64,
@@ -43,7 +46,7 @@ impl Clock {
 
     #[inline]
     pub fn is_last_cycle_of_frame(&self) -> bool {
-        self.scanline == 261 && self.cycle == 340
+        self.scanline == MAX_SCANLINE && self.cycle == MAX_CYCLE
     }
 
     pub fn tick(&mut self, skip_odd_frame_cycle: bool) {
@@ -51,7 +54,7 @@ impl Clock {
         self.skipped_cycle = false;
 
         match (self.scanline, self.cycle) {
-            (261, 340) => {
+            (MAX_SCANLINE, MAX_CYCLE) => {
                 self.frame += 1;
                 self.scanline = 0;
                 if skip_odd_frame_cycle && self.frame % 2 == 1 {
@@ -61,7 +64,7 @@ impl Clock {
                     self.cycle = 0;
                 }
             },
-            (_, 340) => {
+            (_, MAX_CYCLE) => {
                 self.scanline += 1;
                 self.cycle = 0;
             },

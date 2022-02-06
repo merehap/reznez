@@ -80,12 +80,16 @@ impl Ppu {
         let total_cycles = self.clock().total_cycles();
         self.should_generate_nmi = false;
 
+        if self.clock.cycle() == 1 {
+            self.registers.borrow_mut().maybe_decay_latch();
+        }
+
         let latch_access = self.registers.borrow_mut().consume_latch_access();
         if let Some(latch_access) = latch_access {
             self.process_latch_access(memory, latch_access);
         }
 
-        // TODO: Fix the first and second vblank cycles to not be special-cased if possible.
+        // TODO: Fix the first two vblank cycles to not be special-cased if possible.
         if total_cycles == FIRST_VBLANK_CYCLE || total_cycles == SECOND_VBLANK_CYCLE {
             // TODO: Why don't we have the following enabled here?
             // Maybe just need to have "= false" to end it too.
@@ -115,8 +119,6 @@ impl Ppu {
             if self.registers.borrow().mask.sprites_enabled {
                 self.render_sprites(&memory, frame);
             }
-
-            self.registers.borrow_mut().maybe_decay_latch();
         }
 
         let sprite_0 = self.oam.sprite_0();
@@ -250,11 +252,13 @@ impl Ppu {
     }
 
     fn rendering_enabled(&self) -> bool {
-        self.registers.borrow().mask.sprites_enabled || self.registers.borrow().mask.background_enabled
+        self.registers.borrow().mask.sprites_enabled ||
+            self.registers.borrow().mask.background_enabled
     }
 
     fn can_generate_nmi(&self) -> bool {
-        self.registers.borrow().status.vblank_active && self.registers.borrow().ctrl.nmi_enabled
+        self.registers.borrow().status.vblank_active &&
+            self.registers.borrow().ctrl.nmi_enabled
     }
 
     fn write_oam(&mut self, value: u8) {

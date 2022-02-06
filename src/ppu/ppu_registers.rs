@@ -1,12 +1,12 @@
 use num_derive::FromPrimitive;
 
+use crate::ppu::clock::MAX_SCANLINE;
 use crate::ppu::registers::ctrl;
 use crate::ppu::registers::ctrl::Ctrl;
 use crate::ppu::registers::mask;
 use crate::ppu::registers::mask::Mask;
 use crate::ppu::registers::status::Status;
 
-// Manually set to be equal to the number of RegisterTypes.
 pub struct PpuRegisters {
     pub(super) ctrl: Ctrl,
     pub(super) mask: Mask,
@@ -20,7 +20,8 @@ pub struct PpuRegisters {
     latch: u8,
     latch_access: Option<LatchAccess>,
 
-    frames_until_decay: Option<u8>,
+    scanlines_until_decay: Option<u16>,
+    scanlines_until_unused_status_bits_decay: Option<u16>,
 }
 
 impl PpuRegisters {
@@ -38,7 +39,8 @@ impl PpuRegisters {
             latch: 0,
             latch_access: None,
 
-            frames_until_decay: None,
+            scanlines_until_decay: None,
+            scanlines_until_unused_status_bits_decay: None,
         }
     }
 
@@ -46,6 +48,7 @@ impl PpuRegisters {
         self.latch
     }
 
+    #[inline]
     pub(super) fn consume_latch_access(&mut self) -> Option<LatchAccess> {
         let result = self.latch_access;
         self.latch_access = None;
@@ -74,8 +77,17 @@ impl PpuRegisters {
                 }
             );
 
+            self.scanlines_until_unused_status_bits_decay =
+                if register_type == Status {
+                    // The unused status bits remain on the old decay schedule.
+                    self.scanlines_until_decay
+                } else {
+                    // All bit decays are now in sync, so stop tracking this.
+                    None
+                };
+
             // At least one frame should occur before the latch decays to zero.
-            self.frames_until_decay = Some(2);
+            self.scanlines_until_decay = Some(MAX_SCANLINE);
         }
 
         // Reads to write-only registers return the latch (open bus behavior).
@@ -91,8 +103,10 @@ impl PpuRegisters {
             }
         );
 
-        // At least one frame should occur before the latch decays to zero.
-        self.frames_until_decay = Some(2);
+        // About one frame should occur before the latch decays to zero.
+        self.scanlines_until_decay = Some(MAX_SCANLINE);
+        // All bit decays are now in sync, so stop tracking this.
+        self.scanlines_until_unused_status_bits_decay = None;
 
         use RegisterType::*;
         match register_type {
@@ -108,18 +122,32 @@ impl PpuRegisters {
     }
 
     pub fn maybe_decay_latch(&mut self) {
-        match self.frames_until_decay {
-            None => {/* The latch has already decayed. */},
-            Some(0) => {
-                self.latch = 0b0000_0000;
-                self.frames_until_decay = None;
-            },
-            Some(frames) => self.frames_until_decay = Some(frames - 1),
-        }
+        let l = &mut self.latch;
+        maybe_decay_latch_internal(
+            l, &mut self.scanlines_until_decay, 0b0000_0000);
+        maybe_decay_latch_internal(
+            l, &mut self.scanlines_until_unused_status_bits_decay, 0b1110_0000);
     }
 }
 
-#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[inline]
+fn maybe_decay_latch_internal(
+    latch: &mut u8,
+    scanlines_remaining: &mut Option<u16>,
+    mask: u8,
+) {
+    match *scanlines_remaining {
+        None => {/* The bits have already decayed. */},
+        Some(0) => {
+            // Decay the latch and halt the decay process.
+            *latch &= mask;
+            *scanlines_remaining = None;
+        },
+        Some(scanlines) => *scanlines_remaining = Some(scanlines - 1),
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug, FromPrimitive)]
 pub enum RegisterType {
     Ctrl,
     Mask,
