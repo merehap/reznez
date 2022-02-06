@@ -6,6 +6,7 @@ use crate::memory::ppu_address::PpuAddress;
 use crate::ppu::clock::Clock;
 use crate::ppu::oam::Oam;
 use crate::ppu::register::ppu_registers::*;
+use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::status::Status;
 use crate::ppu::render::frame::Frame;
 
@@ -148,7 +149,7 @@ impl Ppu {
     }
 
     fn process_latch_access(&mut self, memory: &mut Memory, latch_access: LatchAccess) {
-        let value = self.registers.borrow().latch();
+        let value = self.registers.borrow().latch_value();
 
         use RegisterType::*;
         use AccessMode::*;

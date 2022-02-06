@@ -1,6 +1,5 @@
-use num_derive::FromPrimitive;
-
-use crate::ppu::clock::MAX_SCANLINE;
+use crate::ppu::register::ppu_register_latch::PpuRegisterLatch;
+use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ctrl;
 use crate::ppu::register::registers::ctrl::Ctrl;
 use crate::ppu::register::registers::mask;
@@ -17,11 +16,8 @@ pub struct PpuRegisters {
     pub(in crate::ppu) ppu_addr: u8,
     pub(in crate::ppu) ppu_data: u8,
 
-    latch: u8,
+    latch: PpuRegisterLatch,
     latch_access: Option<LatchAccess>,
-
-    scanlines_until_decay: Option<u16>,
-    scanlines_until_unused_status_bits_decay: Option<u16>,
 }
 
 impl PpuRegisters {
@@ -36,19 +32,19 @@ impl PpuRegisters {
             ppu_addr: 0,
             ppu_data: 0,
 
-            latch: 0,
+            latch: PpuRegisterLatch::new(),
             latch_access: None,
-
-            scanlines_until_decay: None,
-            scanlines_until_unused_status_bits_decay: None,
         }
     }
 
-    pub(in crate::ppu) fn latch(&self) -> u8 {
-        self.latch
+    pub(in crate::ppu) fn latch_value(&self) -> u8 {
+        self.latch.value()
     }
 
-    #[inline]
+    pub(in crate::ppu) fn maybe_decay_latch(&mut self) {
+        self.latch.maybe_decay();
+    }
+
     pub(in crate::ppu) fn consume_latch_access(&mut self) -> Option<LatchAccess> {
         let result = self.latch_access;
         self.latch_access = None;
@@ -57,19 +53,18 @@ impl PpuRegisters {
 
     pub fn read(&mut self, register_type: RegisterType) -> u8 {
         use RegisterType::*;
-        let value =
+        let register_value =
             match register_type {
                 // Write-only registers.
                 Ctrl | Mask | OamAddr | Scroll | PpuAddr => None,
                 // Retain the open bus values for the unused bits of Status.
-                Status => Some(self.status.to_u8() | (self.latch & 0b0001_1111)),
+                Status => Some(self.status.to_u8() | (self.latch.value() & 0b0001_1111)),
                 OamData => Some(self.oam_data),
                 PpuData => Some(self.ppu_data),
             };
 
         // If a readable register is read from, update the latch.
-        if let Some(value) = value {
-            self.latch = value;
+        if let Some(register_value) = register_value {
             self.latch_access = Some(
                 LatchAccess {
                     register_type,
@@ -77,25 +72,14 @@ impl PpuRegisters {
                 }
             );
 
-            self.scanlines_until_unused_status_bits_decay =
-                if register_type == Status {
-                    // The unused status bits remain on the old decay schedule.
-                    self.scanlines_until_decay
-                } else {
-                    // All bit decays are now in sync, so stop tracking this.
-                    None
-                };
-
-            // At least one frame should occur before the latch decays to zero.
-            self.scanlines_until_decay = Some(MAX_SCANLINE);
+            self.latch.update_from_read(register_type, register_value);
         }
 
         // Reads to write-only registers return the latch (open bus behavior).
-        value.unwrap_or(self.latch)
+        register_value.unwrap_or(self.latch.value())
     }
 
-    pub fn write(&mut self, register_type: RegisterType, value: u8) {
-        self.latch = value;
+    pub fn write(&mut self, register_type: RegisterType, register_value: u8) {
         self.latch_access = Some(
             LatchAccess {
                 register_type,
@@ -103,66 +87,26 @@ impl PpuRegisters {
             }
         );
 
-        // About one frame should occur before the latch decays to zero.
-        self.scanlines_until_decay = Some(MAX_SCANLINE);
-        // All bit decays are now in sync, so stop tracking this.
-        self.scanlines_until_unused_status_bits_decay = None;
+        self.latch.update_from_write(register_value);
 
         use RegisterType::*;
         match register_type {
-            Ctrl => self.ctrl = ctrl::Ctrl::from_u8(value),
-            Mask => self.mask = mask::Mask::from_u8(value),
+            Ctrl => self.ctrl = ctrl::Ctrl::from_u8(register_value),
+            Mask => self.mask = mask::Mask::from_u8(register_value),
             Status => {/* Read-only. */},
-            OamAddr => self.oam_addr = value,
-            OamData => self.oam_data = value,
-            Scroll => self.scroll = value,
-            PpuAddr => self.ppu_addr = value,
-            PpuData => self.ppu_data = value,
+            OamAddr => self.oam_addr = register_value,
+            OamData => self.oam_data = register_value,
+            Scroll => self.scroll = register_value,
+            PpuAddr => self.ppu_addr = register_value,
+            PpuData => self.ppu_data = register_value,
         }
     }
-
-    pub(in crate::ppu) fn maybe_decay_latch(&mut self) {
-        let l = &mut self.latch;
-        maybe_decay_latch_internal(
-            l, &mut self.scanlines_until_decay, 0b0000_0000);
-        maybe_decay_latch_internal(
-            l, &mut self.scanlines_until_unused_status_bits_decay, 0b1110_0000);
-    }
-}
-
-#[inline]
-fn maybe_decay_latch_internal(
-    latch: &mut u8,
-    scanlines_remaining: &mut Option<u16>,
-    mask: u8,
-) {
-    match *scanlines_remaining {
-        None => {/* The bits have already decayed. */},
-        Some(0) => {
-            // Decay the latch and halt the decay process.
-            *latch &= mask;
-            *scanlines_remaining = None;
-        },
-        Some(scanlines) => *scanlines_remaining = Some(scanlines - 1),
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug, FromPrimitive)]
-pub enum RegisterType {
-    Ctrl,
-    Mask,
-    Status,
-    OamAddr,
-    OamData,
-    Scroll,
-    PpuAddr,
-    PpuData,
 }
 
 #[derive(Clone, Copy)]
 pub struct LatchAccess {
-    pub(in crate::ppu) register_type: RegisterType,
-    pub(in crate::ppu) access_mode: AccessMode,
+    pub register_type: RegisterType,
+    pub access_mode: AccessMode,
 }
 
 #[derive(Clone, Copy)]
