@@ -37,11 +37,11 @@ impl Mapper1 {
             arr![
                 chr_chunk_iter
                     .next()
-                    .map(|chunk| MappedArray::new(*chunk.clone()))
+                    .map(|chunk| MappedArray::new(chunk.clone()))
                     .unwrap_or(MappedArray::empty())
             ; 32];
 
-        let mut prg_chunk_iter = cartridge.prg_rom_chunks().into_iter();
+        let mut prg_chunk_iter = cartridge.prg_rom_chunks().iter();
         let prg_banks = arr![Rc::new(RefCell::new(*prg_chunk_iter.next().unwrap_or(&Box::new(EMPTY_PRG_BANK)).clone())); 16];
         let mut prg_rom = MappedArray::empty();
         let last_prg_bank_index =  (cartridge.prg_rom_chunks().len() - 1) as u8;

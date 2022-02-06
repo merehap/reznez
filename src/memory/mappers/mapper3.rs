@@ -37,7 +37,7 @@ impl Mapper3 {
             ));
         }
 
-        let mut chunk_iter = cartridge.chr_rom_chunks().into_iter();
+        let mut chunk_iter = cartridge.chr_rom_chunks().iter();
         let raw_pattern_tables = arr![split_chr_chunk(**chunk_iter.next().unwrap()); 4];
         let name_table_mirroring = cartridge.name_table_mirroring();
         Ok(Mapper3 {

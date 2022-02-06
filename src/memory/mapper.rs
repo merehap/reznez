@@ -14,8 +14,8 @@ use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::register::ppu_registers::PpuRegisters;
+use crate::ppu::register::register_type::RegisterType;
 use crate::util::mapped_array::MappedArray;
-
 
 pub const PATTERN_TABLE_SIZE: usize = 0x1000;
 pub const NAME_TABLE_SIZE: usize = 0x400;
@@ -51,7 +51,7 @@ pub trait Mapper {
     ) -> u8 {
         match address.to_raw() {
             0x0000..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF],
-            0x2000..=0x3FFF => ppu_registers.borrow_mut().read(FromPrimitive::from_usize(address.to_usize() % 8).unwrap()),
+            0x2000..=0x3FFF => ppu_registers.borrow_mut().read(address_to_ppu_register_type(address)),
             0x4000..=0x4013 | 0x4015 => {/* APU */ 0},
             0x4014 | 0x4016 | 0x4017 => ports.get(address),
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
@@ -71,7 +71,7 @@ pub trait Mapper {
     ) {
         match address.to_raw() {
             0x0000..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF] = value,
-            0x2000..=0x3FFF => ppu_registers.borrow_mut().write(FromPrimitive::from_usize(address.to_usize() % 8).unwrap(), value),
+            0x2000..=0x3FFF => ppu_registers.borrow_mut().write(address_to_ppu_register_type(address), value),
             0x4000..=0x4013 | 0x4015 => {/* APU */},
             0x4014 | 0x4016..=0x4017 => ports.set(address, value),
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
@@ -177,6 +177,11 @@ pub fn split_chr_chunk(chunk: [u8; 0x2000]) -> [MappedArray<4>; 2] {
         MappedArray::<4>::new::<0x1000>(chunk[0x0000..0x1000].try_into().unwrap()),
         MappedArray::<4>::new::<0x1000>(chunk[0x1000..0x2000].try_into().unwrap()),
     ]
+}
+
+#[inline]
+fn address_to_ppu_register_type(address: CpuAddress) -> RegisterType {
+    FromPrimitive::from_usize(address.to_usize() % 8).unwrap()
 }
 
 #[inline]

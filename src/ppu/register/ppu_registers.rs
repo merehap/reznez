@@ -75,8 +75,7 @@ impl PpuRegisters {
             self.latch.update_from_read(register_type, register_value);
         }
 
-        // Reads to write-only registers return the latch (open bus behavior).
-        register_value.unwrap_or(self.latch.value())
+        self.latch.value()
     }
 
     pub fn write(&mut self, register_type: RegisterType, register_value: u8) {

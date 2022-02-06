@@ -114,11 +114,11 @@ impl Ppu {
             self.registers.borrow_mut().status.sprite0_hit = false;
         } else if self.clock.scanline() == 1 && self.clock.cycle() == 1 {
             if self.registers.borrow().mask.background_enabled {
-                self.render_background(&memory, frame);
+                self.render_background(memory, frame);
             }
 
             if self.registers.borrow().mask.sprites_enabled {
-                self.render_sprites(&memory, frame);
+                self.render_sprites(memory, frame);
             }
         }
 
