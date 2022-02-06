@@ -1,6 +1,6 @@
-use std::ops::{Index, IndexMut};
-
 use crate::ppu::sprite::Sprite;
+
+const ATTRIBUTE_BYTE_INDEX: u8 = 2;
 
 pub struct Oam([u8; 256]);
 
@@ -20,18 +20,19 @@ impl Oam {
     pub fn sprite_0(&self) -> Sprite {
         Sprite::from_u32(u32::from_be_bytes(self.0[0..4].try_into().unwrap()))
     }
-}
 
-impl Index<u8> for Oam {
-    type Output = u8;
-
-    fn index(&self, index: u8) -> &u8 {
-        &self.0[index as usize]
+    pub fn read(&self, index: u8) -> u8 {
+        self.0[index as usize]
     }
-}
 
-impl IndexMut<u8> for Oam {
-    fn index_mut(&mut self, index: u8) -> &mut u8 {
-        &mut self.0[index as usize]
+    pub fn write(&mut self, index: u8, value: u8) {
+        // The three unimplemented attribute bits should never be set.
+        let value =
+            if index % 4 == ATTRIBUTE_BYTE_INDEX {
+                value & 0b1110_0011
+            } else {
+                value
+            };
+        self.0[index as usize] = value;
     }
 }

@@ -67,7 +67,7 @@ impl Ppu {
     }
 
     pub fn overwrite_oam(&mut self, oam_address: u8, value: u8) {
-        self.oam[oam_address] = value;
+        self.oam.write(oam_address, value);
     }
 
     pub fn reset_address_latch(&mut self) {
@@ -134,7 +134,7 @@ impl Ppu {
             self.registers.borrow_mut().status.sprite0_hit = true;
         }
 
-        let oam_data = self.oam[self.registers.borrow().oam_addr];
+        let oam_data = self.oam.read(self.registers.borrow().oam_addr);
         self.registers.borrow_mut().oam_data = oam_data;
 
         let is_palette_data = self.vram_address >= PALETTE_TABLE_START;
@@ -267,7 +267,7 @@ impl Ppu {
 
     fn write_oam(&mut self, value: u8) {
         let oam_addr = self.registers.borrow().oam_addr;
-        self.oam[oam_addr] = value;
+        self.oam.write(oam_addr, value);
         // Advance to next sprite byte to write.
         self.registers.borrow_mut().oam_addr = oam_addr.wrapping_add(1);
     }
