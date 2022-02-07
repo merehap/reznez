@@ -6,6 +6,7 @@ use crate::cpu::status::Status;
 use crate::cpu::dma_transfer::{DmaTransfer, DmaTransferState};
 use crate::memory::cpu_address::CpuAddress;
 use crate::memory::memory::Memory;
+use crate::memory::ports::DmaPort;
 
 pub struct Cpu {
     // Accumulator
@@ -18,6 +19,7 @@ pub struct Cpu {
     status: Status,
 
     nmi_pending: bool,
+    dma_port: DmaPort,
     dma_transfer: DmaTransfer,
 
     current_instruction_remaining_cycles: u8,
@@ -42,6 +44,7 @@ impl Cpu {
             status: Status::startup(),
 
             nmi_pending: false,
+            dma_port: memory.ports().dma.clone(),
             dma_transfer: DmaTransfer::inactive(),
 
             current_instruction_remaining_cycles: 0,
@@ -105,13 +108,12 @@ impl Cpu {
         self.nmi_pending = true;
     }
 
-    pub fn initiate_dma_transfer(&mut self, memory_page: u8) {
-        self.dma_transfer = DmaTransfer::new(memory_page, self.cycle);
-    }
-
     pub fn step(&mut self, memory: &mut Memory) -> StepResult {
+        if let Some(dma_page) = self.dma_port.take_page() {
+            self.dma_transfer = DmaTransfer::new(dma_page, self.cycle);
+        }
+
         self.cycle += 1;
-        memory.reset_cpu_latch();
 
         let bytes_written = self.dma_transfer.bytes_written();
         // Normal CPU operation is suspended while the DMA transfer completes.

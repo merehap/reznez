@@ -12,6 +12,6 @@ pub trait Gui {
 
 pub struct Events {
     pub should_quit: bool,
-    pub joypad_1_button_statuses: BTreeMap<Button, ButtonStatus>,
-    pub joypad_2_button_statuses: BTreeMap<Button, ButtonStatus>,
+    pub joypad1_button_statuses: BTreeMap<Button, ButtonStatus>,
+    pub joypad2_button_statuses: BTreeMap<Button, ButtonStatus>,
 }

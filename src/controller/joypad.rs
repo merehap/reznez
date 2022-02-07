@@ -21,19 +21,21 @@ impl Joypad {
         }
     }
 
-    pub fn selected_button_status(&mut self) -> ButtonStatus {
-        if let Some(selected_button) = self.selected_button {
-            self.button_statuses[selected_button]
-        } else {
-            // After every button has been cycled through, always return Pressed.
-            ButtonStatus::Pressed
-        }
-    }
+    pub fn next_status(&mut self) -> ButtonStatus {
+        let status =
+            if let Some(selected_button) = self.selected_button {
+                self.button_statuses[selected_button]
+            } else {
+                // After every button has been cycled through, always return Pressed.
+                ButtonStatus::Pressed
+            };
 
-    pub fn select_next_button(&mut self) {
         if self.strobe_mode == StrobeMode::Off {
+            // Advance to the next button for the next read.
             self.selected_button = self.selected_button.and_then(Button::next);
         }
+
+        status
     }
 
     pub fn strobe_on(&mut self) {

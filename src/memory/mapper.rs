@@ -52,8 +52,11 @@ pub trait Mapper {
         match address.to_raw() {
             0x0000..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF],
             0x2000..=0x3FFF => ppu_registers.borrow_mut().read(address_to_ppu_register_type(address)),
-            0x4000..=0x4013 | 0x4015 => {/* APU */ 0},
-            0x4014 | 0x4016 | 0x4017 => ports.get(address),
+            0x4000..=0x4013 => {/* APU */ 0},
+            0x4014          => {/* OAM DMA is write-only. */ 0},
+            0x4015          => {/* APU */ 0},
+            0x4016          => ports.joypad1.borrow_mut().next_status() as u8,
+            0x4017          => ports.joypad2.borrow_mut().next_status() as u8,
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
             0x4020..=0x7FFF => self.read_prg_ram(address),
             0x8000..=0xFFFF => self.prg_rom().read(address.to_usize() - 0x8000),
@@ -72,8 +75,11 @@ pub trait Mapper {
         match address.to_raw() {
             0x0000..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF] = value,
             0x2000..=0x3FFF => ppu_registers.borrow_mut().write(address_to_ppu_register_type(address), value),
-            0x4000..=0x4013 | 0x4015 => {/* APU */},
-            0x4014 | 0x4016..=0x4017 => ports.set(address, value),
+            0x4000..=0x4013 => {/* APU */},
+            0x4014          => ports.dma.set_page(value),
+            0x4015          => {/* APU */},
+            0x4016          => ports.change_strobe(value),
+            0x4017          => {/* Do nothing? */},
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
             0x4020..=0xFFFF => self.write_to_cartridge_space(address, value),
         }

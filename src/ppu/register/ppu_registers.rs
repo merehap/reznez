@@ -47,10 +47,8 @@ impl PpuRegisters {
         self.latch.maybe_decay();
     }
 
-    pub(in crate::ppu) fn consume_latch_access(&mut self) -> Option<LatchAccess> {
-        let result = self.latch_access;
-        self.latch_access = None;
-        result
+    pub(in crate::ppu) fn take_latch_access(&mut self) -> Option<LatchAccess> {
+        self.latch_access.take()
     }
 
     pub fn read(&mut self, register_type: RegisterType) -> u8 {

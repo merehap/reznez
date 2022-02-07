@@ -4,7 +4,6 @@ use std::rc::Rc;
 use crate::memory::cpu_address::CpuAddress;
 use crate::memory::cpu_internal_ram::{CpuInternalRam, NMI_VECTOR, RESET_VECTOR, IRQ_VECTOR};
 use crate::memory::mapper::Mapper;
-use crate::memory::port_access::PortAccess;
 use crate::memory::ports::Ports;
 use crate::memory::ppu_address::PpuAddress;
 use crate::memory::ppu_internal_ram::PpuInternalRam;
@@ -30,6 +29,7 @@ pub struct Memory {
 impl Memory {
     pub fn new(
         mapper: Box<dyn Mapper>,
+        ports: Ports,
         ppu_registers: Rc<RefCell<PpuRegisters>>,
         system_palette: SystemPalette,
     ) -> Memory {
@@ -37,20 +37,31 @@ impl Memory {
             mapper,
             cpu_internal_ram: CpuInternalRam::new(),
             ppu_internal_ram: PpuInternalRam::new(),
-            system_palette,
-            ports: Ports::new(),
+            ports,
             ppu_registers,
+            system_palette,
         }
     }
 
     #[inline]
     pub fn cpu_read(&mut self, address: CpuAddress) -> u8 {
-        self.mapper.cpu_read(&self.cpu_internal_ram, &mut self.ports, &self.ppu_registers, address)
+        self.mapper.cpu_read(
+            &self.cpu_internal_ram,
+            &mut self.ports,
+            &self.ppu_registers,
+            address,
+        )
     }
 
     #[inline]
     pub fn cpu_write(&mut self, address: CpuAddress, value: u8) {
-        self.mapper.cpu_write(&mut self.cpu_internal_ram, &mut self.ports, &self.ppu_registers, address, value)
+        self.mapper.cpu_write(
+            &mut self.cpu_internal_ram,
+            &mut self.ports,
+            &self.ppu_registers,
+            address,
+            value,
+        )
     }
 
     #[inline]
@@ -86,14 +97,6 @@ impl Memory {
     #[inline]
     pub fn stack_pointer_mut(&mut self) -> &mut u8 {
         &mut self.cpu_internal_ram.stack_pointer
-    }
-
-    pub fn latch(&self) -> Option<PortAccess> {
-        self.ports.latch()
-    }
-
-    pub fn reset_cpu_latch(&mut self) {
-        self.ports.reset_latch();
     }
 
     pub fn nmi_vector(&mut self) -> CpuAddress {

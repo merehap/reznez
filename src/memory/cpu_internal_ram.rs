@@ -7,11 +7,6 @@ pub const NMI_VECTOR: CpuAddress = CpuAddress::new(0xFFFA);
 pub const RESET_VECTOR: CpuAddress = CpuAddress::new(0xFFFC);
 pub const IRQ_VECTOR: CpuAddress = CpuAddress::new(0xFFFE);
 
-pub const OAM_DMA:   CpuAddress = CpuAddress::new(0x4014);
-
-pub const JOYSTICK_1_PORT: CpuAddress = CpuAddress::new(0x4016);
-pub const JOYSTICK_2_PORT: CpuAddress = CpuAddress::new(0x4017);
-
 const RAM_SIZE: usize = 0x2000;
 const STACK_START: usize = 0x100;
 const STACK_END: usize = 0x1FF;

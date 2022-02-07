@@ -83,7 +83,7 @@ impl Ppu {
             self.registers.borrow_mut().maybe_decay_latch();
         }
 
-        let latch_access = self.registers.borrow_mut().consume_latch_access();
+        let latch_access = self.registers.borrow_mut().take_latch_access();
         if let Some(latch_access) = latch_access {
             self.process_latch_access(memory, latch_access);
         }
@@ -186,6 +186,7 @@ impl Ppu {
         }
     }
 
+    // FIXME: Stop rendering off-screen pixels.
     fn render_background(&mut self, memory: &Memory, frame: &mut Frame) {
         let palette_table = memory.palette_table();
         frame.set_universal_background_rgb(palette_table.universal_background_rgb());

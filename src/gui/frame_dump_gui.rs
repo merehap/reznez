@@ -27,8 +27,8 @@ impl Gui for FrameDumpGui {
     fn events(&mut self) -> Events {
         Events {
             should_quit: false,
-            joypad_1_button_statuses: BTreeMap::new(),
-            joypad_2_button_statuses: BTreeMap::new(),
+            joypad1_button_statuses: BTreeMap::new(),
+            joypad2_button_statuses: BTreeMap::new(),
         }
     }
 

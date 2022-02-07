@@ -90,8 +90,8 @@ impl Gui for SdlGui {
     #[inline]
     fn events(&mut self) -> Events {
         let mut should_quit = false;
-        let mut joypad_1_button_statuses = BTreeMap::new();
-        let mut joypad_2_button_statuses = BTreeMap::new();
+        let mut joypad1_button_statuses = BTreeMap::new();
+        let mut joypad2_button_statuses = BTreeMap::new();
 
         for event in self.event_pump.poll_iter() {
             match event {
@@ -102,20 +102,20 @@ impl Gui for SdlGui {
                 } => should_quit = true,
                 Event::KeyDown {keycode: Some(code), ..} => {
                     if let Some(&button) = JOY_1_BUTTON_MAPPINGS.get(&code) {
-                        joypad_1_button_statuses.insert(button, ButtonStatus::Pressed);
+                        joypad1_button_statuses.insert(button, ButtonStatus::Pressed);
                     }
 
                     if let Some(&button) = JOY_2_BUTTON_MAPPINGS.get(&code) {
-                        joypad_2_button_statuses.insert(button, ButtonStatus::Pressed);
+                        joypad2_button_statuses.insert(button, ButtonStatus::Pressed);
                     }
                 },
                 Event::KeyUp {keycode: Some(code), ..} => {
                     if let Some(&button) = JOY_1_BUTTON_MAPPINGS.get(&code) {
-                        joypad_1_button_statuses.insert(button, ButtonStatus::Unpressed);
+                        joypad1_button_statuses.insert(button, ButtonStatus::Unpressed);
                     }
 
                     if let Some(&button) = JOY_2_BUTTON_MAPPINGS.get(&code) {
-                        joypad_2_button_statuses.insert(button, ButtonStatus::Unpressed);
+                        joypad2_button_statuses.insert(button, ButtonStatus::Unpressed);
                     }
                 },
                 _ => { /* Do nothing. */ }
@@ -124,8 +124,8 @@ impl Gui for SdlGui {
 
         Events {
             should_quit,
-            joypad_1_button_statuses,
-            joypad_2_button_statuses,
+            joypad1_button_statuses,
+            joypad2_button_statuses,
         }
     }
 

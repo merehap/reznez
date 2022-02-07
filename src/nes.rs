@@ -10,13 +10,12 @@ use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::{Cpu, StepResult};
 use crate::cpu::instruction::Instruction;
 use crate::gui::gui::Gui;
-use crate::memory::cpu_internal_ram::*;
 use crate::memory::memory::Memory;
 use crate::memory::mapper::Mapper;
 use crate::memory::mappers::mapper0::Mapper0;
 use crate::memory::mappers::mapper1::Mapper1;
 use crate::memory::mappers::mapper3::Mapper3;
-use crate::memory::port_access::{PortAccess, AccessMode};
+use crate::memory::ports::Ports;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::render::frame::Frame;
@@ -27,8 +26,8 @@ pub struct Nes {
     ppu: Ppu,
     memory: Memory,
 
-    pub joypad_1: Joypad,
-    pub joypad_2: Joypad,
+    joypad1: Rc<RefCell<Joypad>>,
+    joypad2: Rc<RefCell<Joypad>>,
     cycle: u64,
 
     target_frame_rate: TargetFrameRate,
@@ -46,15 +45,19 @@ impl Nes {
             };
 
         let ppu_registers = Rc::new(RefCell::new(PpuRegisters::new()));
-        let mut memory = Memory::new(mapper, ppu_registers.clone(), config.system_palette);
+        let joypad1 = Rc::new(RefCell::new(Joypad::new()));
+        let joypad2 = Rc::new(RefCell::new(Joypad::new()));
+        let ports = Ports::new(joypad1.clone(), joypad2.clone());
+        let mut memory =
+            Memory::new(mapper, ports, ppu_registers.clone(), config.system_palette);
 
         Nes {
             cpu: Cpu::new(&mut memory, config.program_counter_source),
             ppu: Ppu::new(ppu_registers),
             memory,
 
-            joypad_1: Joypad::new(),
-            joypad_2: Joypad::new(),
+            joypad1,
+            joypad2,
             cycle: 0,
 
             target_frame_rate: config.target_frame_rate,
@@ -85,12 +88,12 @@ impl Nes {
 
         let events = gui.events();
 
-        for (button, status) in events.joypad_1_button_statuses {
-            self.joypad_1.set_button_status(button, status);
+        for (button, status) in events.joypad1_button_statuses {
+            self.joypad1.borrow_mut().set_button_status(button, status);
         }
 
-        for (button, status) in events.joypad_2_button_statuses {
-            self.joypad_2.set_button_status(button, status);
+        for (button, status) in events.joypad2_button_statuses {
+            self.joypad2.borrow_mut().set_button_status(button, status);
         }
 
         loop {
@@ -131,10 +134,6 @@ impl Nes {
                 StepResult::DmaWrite {bytes_written, current_byte: value} =>
                     self.ppu.write_oam_at_offset(bytes_written, value),
             }
-
-            if let Some(port_access) = self.memory.latch() {
-                self.execute_port_action(port_access);
-            }
         }
 
         self.ppu.step(&mut self.memory, frame);
@@ -143,38 +142,9 @@ impl Nes {
             self.cpu.schedule_nmi();
         }
 
-        let status = self.joypad_1.selected_button_status() as u8;
-        self.memory.ports_mut().bus_access_write(JOYSTICK_1_PORT, status);
-        let status = self.joypad_2.selected_button_status() as u8;
-        self.memory.ports_mut().bus_access_write(JOYSTICK_2_PORT, status);
-
         self.cycle += 1;
 
         instruction
-    }
-
-    fn execute_port_action(&mut self, port_access: PortAccess) {
-        let value = port_access.value;
-
-        use AccessMode::{Read, Write};
-        match (port_access.address, port_access.access_mode) {
-            (OAM_DMA, Write) => self.cpu.initiate_dma_transfer(value),
-
-            // Now that the ROM has read a button status, advance to the next status.
-            (JOYSTICK_1_PORT, Read) => self.joypad_1.select_next_button(),
-            (JOYSTICK_2_PORT, Read) => self.joypad_2.select_next_button(),
-            (JOYSTICK_1_PORT, Write) => {
-                if value & 1 == 1 {
-                    self.joypad_1.strobe_on();
-                    self.joypad_2.strobe_on();
-                } else {
-                    self.joypad_1.strobe_off();
-                    self.joypad_2.strobe_off();
-                }
-            },
-
-            (_, _) => unreachable!(),
-        }
     }
 
     fn frame_duration(&self) -> Duration {
@@ -261,8 +231,11 @@ mod tests {
         let mapper = Box::new(Mapper0::new(cartridge).unwrap());
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
+        let joypad1 = Rc::new(RefCell::new(Joypad::new()));
+        let joypad2 = Rc::new(RefCell::new(Joypad::new()));
+        let ports = Ports::new(joypad1.clone(), joypad2.clone());
         let ppu_registers = Rc::new(RefCell::new(PpuRegisters::new()));
-        let mut memory = Memory::new(mapper, ppu_registers.clone(), system_palette);
+        let mut memory = Memory::new(mapper, ports, ppu_registers.clone(), system_palette);
         // Write NOPs to where the RESET_VECTOR starts the program.
         for i in 0x0200..0x0800 {
             memory.cpu_write(CpuAddress::new(i), 0xEA);
@@ -272,8 +245,8 @@ mod tests {
             cpu: Cpu::new(&mut memory, ProgramCounterSource::Override(CpuAddress::new(0x0000))),
             ppu: Ppu::new(ppu_registers),
             memory,
-            joypad_1: Joypad::new(),
-            joypad_2: Joypad::new(),
+            joypad1,
+            joypad2,
             cycle: 0,
 
             target_frame_rate: TargetFrameRate::Unbounded,
