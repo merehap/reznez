@@ -45,6 +45,10 @@ impl CpuAddress {
     pub fn page(self) -> u8 {
         (self.0 >> 8) as u8
     }
+
+    pub fn index_within_page(self) -> u8 {
+        self.0 as u8
+    }
 }
 
 impl fmt::Display for CpuAddress {

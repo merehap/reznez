@@ -2,7 +2,6 @@ use crate::memory::cpu_address::CpuAddress;
 
 pub struct DmaTransfer {
     current_cpu_address: CpuAddress,
-    current_oam_address: u8,
     remaining_byte_count: u16,
     should_fix_cycle_alignment: bool,
     next_state: DmaTransferState,
@@ -11,12 +10,10 @@ pub struct DmaTransfer {
 impl DmaTransfer {
     pub fn new(
         page: u8,
-        oam_start_address: u8,
         current_cycle: u64,
     ) -> DmaTransfer {
         DmaTransfer {
             current_cpu_address: CpuAddress::from_low_high(0, page),
-            current_oam_address: oam_start_address,
             remaining_byte_count: 256,
             should_fix_cycle_alignment: current_cycle % 2 == 1,
             next_state: DmaTransferState::WaitOnPreviousWrite,
@@ -26,11 +23,15 @@ impl DmaTransfer {
     pub fn inactive() -> DmaTransfer {
         DmaTransfer {
             current_cpu_address: CpuAddress::new(0),
-            current_oam_address: 0,
             remaining_byte_count: 0,
             should_fix_cycle_alignment: false,
             next_state: DmaTransferState::Finished,
         }
+    }
+
+    pub fn bytes_written(&self) -> u8 {
+        // The transfer always begins on the first index of a page.
+        self.current_cpu_address.index_within_page()
     }
 
     pub fn step(&mut self) -> DmaTransferState {
@@ -43,12 +44,11 @@ impl DmaTransfer {
             WaitOnPreviousWrite | AlignToEven =>
                 Read,
             Read =>
-                Write(self.current_cpu_address, self.current_oam_address),
-            Write(_, _) if self.remaining_byte_count <= 1 =>
+                Write(self.current_cpu_address),
+            Write(_) if self.remaining_byte_count <= 1 =>
                 Finished,
-            Write(_, _) => {
+            Write(_) => {
                 self.current_cpu_address.inc();
-                self.current_oam_address = self.current_oam_address.wrapping_add(1);
                 self.remaining_byte_count -= 1;
                 Read
             },
@@ -64,6 +64,6 @@ pub enum DmaTransferState {
     WaitOnPreviousWrite,
     AlignToEven,
     Read,
-    Write(CpuAddress, u8),
+    Write(CpuAddress),
     Finished,
 }

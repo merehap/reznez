@@ -62,11 +62,8 @@ impl Ppu {
         &self.clock
     }
 
-    pub fn oam_address(&self) -> u8 {
-        self.registers.borrow().oam_addr
-    }
-
-    pub fn overwrite_oam(&mut self, oam_address: u8, value: u8) {
+    pub fn write_oam_at_offset(&mut self, offset: u8, value: u8) {
+        let oam_address = self.registers.borrow().oam_addr.wrapping_add(offset);
         self.oam.write(oam_address, value);
     }
 

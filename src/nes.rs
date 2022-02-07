@@ -128,8 +128,8 @@ impl Nes {
             match self.cpu.step(&mut self.memory) {
                 StepResult::Nop => {},
                 StepResult::InstructionComplete(inst) => instruction = Some(inst),
-                StepResult::DmaWrite(oamaddr, value) =>
-                    self.ppu.overwrite_oam(oamaddr, value),
+                StepResult::DmaWrite {bytes_written, current_byte: value} =>
+                    self.ppu.write_oam_at_offset(bytes_written, value),
             }
 
             if let Some(port_access) = self.memory.latch() {
@@ -158,8 +158,7 @@ impl Nes {
 
         use AccessMode::{Read, Write};
         match (port_access.address, port_access.access_mode) {
-            (OAM_DMA, Write) =>
-                self.cpu.initiate_dma_transfer(value, self.ppu.oam_address()),
+            (OAM_DMA, Write) => self.cpu.initiate_dma_transfer(value),
 
             // Now that the ROM has read a button status, advance to the next status.
             (JOYSTICK_1_PORT, Read) => self.joypad_1.select_next_button(),
