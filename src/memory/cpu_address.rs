@@ -49,6 +49,10 @@ impl CpuAddress {
     pub fn index_within_page(self) -> u8 {
         self.0 as u8
     }
+
+    pub fn is_end_of_page(self) -> bool {
+        self.index_within_page() == 0xFF
+    }
 }
 
 impl fmt::Display for CpuAddress {

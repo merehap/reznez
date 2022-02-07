@@ -2,19 +2,14 @@ use crate::memory::cpu_address::CpuAddress;
 
 pub struct DmaTransfer {
     current_cpu_address: CpuAddress,
-    remaining_byte_count: u16,
     should_fix_cycle_alignment: bool,
     next_state: DmaTransferState,
 }
 
 impl DmaTransfer {
-    pub fn new(
-        page: u8,
-        current_cycle: u64,
-    ) -> DmaTransfer {
+    pub fn new(page: u8, current_cycle: u64) -> DmaTransfer {
         DmaTransfer {
             current_cpu_address: CpuAddress::from_low_high(0, page),
-            remaining_byte_count: 256,
             should_fix_cycle_alignment: current_cycle % 2 == 1,
             next_state: DmaTransferState::WaitOnPreviousWrite,
         }
@@ -23,7 +18,6 @@ impl DmaTransfer {
     pub fn inactive() -> DmaTransfer {
         DmaTransfer {
             current_cpu_address: CpuAddress::new(0),
-            remaining_byte_count: 0,
             should_fix_cycle_alignment: false,
             next_state: DmaTransferState::Finished,
         }
@@ -39,19 +33,11 @@ impl DmaTransfer {
 
         use DmaTransferState::*;
         self.next_state = match current_state {
-            WaitOnPreviousWrite if self.should_fix_cycle_alignment =>
-                AlignToEven,
-            WaitOnPreviousWrite | AlignToEven =>
-                Read,
-            Read =>
-                Write(self.current_cpu_address),
-            Write(_) if self.remaining_byte_count <= 1 =>
-                Finished,
-            Write(_) => {
-                self.current_cpu_address.inc();
-                self.remaining_byte_count -= 1;
-                Read
-            },
+            WaitOnPreviousWrite if self.should_fix_cycle_alignment => AlignToEven,
+            WaitOnPreviousWrite | AlignToEven => Read,
+            Read => Write(self.current_cpu_address),
+            Write(_) if self.current_cpu_address.is_end_of_page() => Finished,
+            Write(_) => {self.current_cpu_address.inc(); Read},
             Finished => Finished,
         };
 
