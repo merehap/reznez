@@ -27,7 +27,6 @@ pub struct Ppu {
     x_scroll_offset: u8,
     y_scroll_offset: u8,
 
-    should_generate_nmi: bool,
     suppress_vblank_active: bool,
     nmi_was_enabled_last_cycle: bool,
 }
@@ -48,7 +47,6 @@ impl Ppu {
             x_scroll_offset: 0,
             y_scroll_offset: 0,
 
-            should_generate_nmi: false,
             suppress_vblank_active: false,
             nmi_was_enabled_last_cycle: false,
         }
@@ -71,21 +69,17 @@ impl Ppu {
         self.address_latch = None;
     }
 
-    pub fn should_generate_nmi(&self) -> bool {
-        self.should_generate_nmi
-    }
-
-    pub fn step(&mut self, memory: &mut Memory, frame: &mut Frame) {
+    pub fn step(&mut self, memory: &mut Memory, frame: &mut Frame) -> StepResult {
         let total_cycles = self.clock().total_cycles();
-        self.should_generate_nmi = false;
 
         if self.clock.cycle() == 1 {
             self.registers.borrow_mut().maybe_decay_latch();
         }
 
         let latch_access = self.registers.borrow_mut().take_latch_access();
+        let mut should_generate_nmi = false;
         if let Some(latch_access) = latch_access {
-            self.process_latch_access(memory, latch_access);
+            should_generate_nmi = self.process_latch_access(memory, latch_access);
         }
 
         // TODO: Fix the first two vblank cycles to not be special-cased if possible.
@@ -94,7 +88,7 @@ impl Ppu {
             // Maybe just need to have "= false" to end it too.
             // self.status.vblank_active = true;
             if self.can_generate_nmi() {
-                self.should_generate_nmi = true;
+                should_generate_nmi = true;
             }
         } else if total_cycles < SECOND_VBLANK_CYCLE {
             // Do nothing.
@@ -105,7 +99,7 @@ impl Ppu {
 
             self.suppress_vblank_active = false;
             if self.can_generate_nmi() {
-                self.should_generate_nmi = true;
+                should_generate_nmi = true;
             }
         } else if self.clock.scanline() == 261 && self.clock.cycle() == 1 {
             self.registers.borrow_mut().status.vblank_active = false;
@@ -145,11 +139,19 @@ impl Ppu {
             };
         self.registers.borrow_mut().ppu_data = PpuData {value, is_palette_data};
 
+        let is_last_cycle_of_frame = self.clock.is_last_cycle_of_frame();
         self.clock.tick(self.rendering_enabled());
+
+        StepResult {is_last_cycle_of_frame, should_generate_nmi}
     }
 
-    fn process_latch_access(&mut self, memory: &mut Memory, latch_access: LatchAccess) {
+    fn process_latch_access(
+        &mut self,
+        memory: &mut Memory,
+        latch_access: LatchAccess,
+    ) -> bool {
         let value = self.registers.borrow().latch_value();
+        let mut should_generate_nmi = false;
 
         use RegisterType::*;
         use AccessMode::*;
@@ -161,7 +163,7 @@ impl Ppu {
                 if !self.nmi_was_enabled_last_cycle {
                     // Attempt to trigger the second (or higher) NMI of this frame.
                     if self.can_generate_nmi() {
-                        self.should_generate_nmi = true;
+                        should_generate_nmi = true;
                     }
                 }
 
@@ -184,6 +186,8 @@ impl Ppu {
                     latch_access.register_type,
                 ),
         }
+
+        should_generate_nmi
     }
 
     // FIXME: Stop rendering off-screen pixels.
@@ -317,4 +321,9 @@ impl Ppu {
             self.suppress_vblank_active = true;
         }
     }
+}
+
+pub struct StepResult {
+    pub is_last_cycle_of_frame: bool,
+    pub should_generate_nmi: bool,
 }

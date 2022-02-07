@@ -46,7 +46,7 @@ fn nestest() {
         let ppu_scanline = nes.ppu().clock().scanline();
         let c = nes.cpu().cycle();
 
-        if let Some(instruction) = nes.step(&mut frame) {
+        if let Some(instruction) = nes.step(&mut frame).instruction {
             if let Some(expected_state) = expected_states.next() {
                 let state = State {
                     program_counter,

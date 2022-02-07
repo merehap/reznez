@@ -7,7 +7,7 @@ use log::{info, warn};
 
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
-use crate::cpu::cpu::{Cpu, StepResult};
+use crate::cpu::cpu::Cpu;
 use crate::cpu::instruction::Instruction;
 use crate::gui::gui::Gui;
 use crate::memory::memory::Memory;
@@ -97,10 +97,8 @@ impl Nes {
         }
 
         loop {
-            let is_last_cycle = self.ppu().clock().is_last_cycle_of_frame();
-            self.step(gui.frame_mut());
-
-            if is_last_cycle {
+            let step_result = self.step(gui.frame_mut());
+            if step_result.is_last_cycle_of_frame {
                 break;
             }
         }
@@ -125,9 +123,10 @@ impl Nes {
         }
     }
 
-    pub fn step(&mut self, frame: &mut Frame) -> Option<Instruction> {
+    pub fn step(&mut self, frame: &mut Frame) -> StepResult {
         let mut instruction = None;
         if self.cycle % 3 == 0 {
+            use crate::cpu::cpu::StepResult;
             match self.cpu.step(&mut self.memory) {
                 StepResult::Nop => {},
                 StepResult::InstructionComplete(inst) => instruction = Some(inst),
@@ -136,15 +135,19 @@ impl Nes {
             }
         }
 
-        self.ppu.step(&mut self.memory, frame);
+        let ppu_result = self.ppu.step(&mut self.memory, frame);
 
-        if self.ppu.should_generate_nmi() {
+        if ppu_result.should_generate_nmi {
             self.cpu.schedule_nmi();
         }
 
         self.cycle += 1;
 
-        instruction
+        StepResult {
+            instruction,
+            is_last_cycle_of_frame: ppu_result.is_last_cycle_of_frame,
+            nmi_scheduled: ppu_result.should_generate_nmi,
+        }
     }
 
     fn frame_duration(&self) -> Duration {
@@ -153,6 +156,12 @@ impl Nes {
             TargetFrameRate::Unbounded => Duration::ZERO,
         }
     }
+}
+
+pub struct StepResult {
+    pub instruction: Option<Instruction>,
+    pub is_last_cycle_of_frame: bool,
+    pub nmi_scheduled: bool,
 }
 
 #[cfg(test)]
@@ -183,7 +192,7 @@ mod tests {
         assert!(nes.cpu.nmi_pending());
 
         let mut frame = Frame::new();
-        while nes.step(&mut frame).is_none() {}
+        while nes.step(&mut frame).instruction.is_none() {}
         nes.step(&mut frame);
 
         assert!(
@@ -207,7 +216,7 @@ mod tests {
         assert!(nes.cpu.nmi_pending());
 
         let mut frame = Frame::new();
-        while nes.step(&mut frame).is_none() {}
+        while nes.step(&mut frame).instruction.is_none() {}
         nes.step(&mut frame);
 
         assert!(
@@ -260,9 +269,13 @@ mod tests {
         nes.memory.cpu_write(CpuAddress::new(0x2000), ctrl.to_u8());
 
         let mut frame = Frame::new();
-        while !nes.ppu.should_generate_nmi() {
+        loop {
             assert!(!nes.cpu.nmi_pending(), "NMI must not be pending before one is scheduled.");
-            nes.step(&mut frame);
+            let nmi_scheduled = nes.step(&mut frame).nmi_scheduled;
+            if nmi_scheduled {
+                break;
+            }
+
             if nes.ppu.clock().total_cycles() > 200_000 {
                 panic!("It took too long for the PPU to enable NMI.");
             }
@@ -286,7 +299,7 @@ mod tests {
 
         // Execute the two op codes we just injected.
         let mut frame = Frame::new();
-        while nes.step(&mut frame).is_none() {}
-        while nes.step(&mut frame).is_none() {}
+        while nes.step(&mut frame).instruction.is_none() {}
+        while nes.step(&mut frame).instruction.is_none() {}
     }
 }
