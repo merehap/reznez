@@ -7,6 +7,7 @@ use crate::ppu::clock::Clock;
 use crate::ppu::oam::Oam;
 use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
+use crate::ppu::register::registers::ctrl::SpriteHeight;
 use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::register::registers::status::Status;
 use crate::ppu::render::frame::Frame;
@@ -220,7 +221,7 @@ impl Ppu {
         let sprite_table_side = self.registers.borrow().sprite_table_side();
         let pattern_table = memory.pattern_table(sprite_table_side);
         let palette_table = memory.palette_table();
-        let _sprite_height = self.registers.borrow().sprite_height();
+        let sprite_height = self.registers.borrow().sprite_height();
 
         // FIXME: No more sprites will be found once the end of OAM is reached,
         // effectively hiding any sprites before OAM[OAMADDR].
@@ -228,7 +229,14 @@ impl Ppu {
         // Lower index sprites are drawn on top of higher index sprites.
         for i in (0..sprites.len()).rev() {
             let is_sprite0 = i == 0;
-            sprites[i].render(&pattern_table, &palette_table, is_sprite0, frame);
+            if sprite_height == SpriteHeight::Normal {
+                sprites[i].render_normal_height(&pattern_table, &palette_table, is_sprite0, frame);
+            } else {
+                let sprite = sprites[i];
+                let pattern_table =
+                    memory.pattern_table(sprite.tall_sprite_pattern_table_side());
+                sprite.render_tall(&pattern_table, &palette_table, is_sprite0, frame);
+            }
         }
     }
 

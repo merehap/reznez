@@ -159,7 +159,11 @@ impl PatternIndex {
     pub fn new(value: u8) -> PatternIndex {
         PatternIndex(value)
     }
-
+    pub fn to_tall_indexes(self) -> (PatternIndex, PatternIndex) {
+        let first  = self.0 & 0b1111_1110;
+        let second = self.0 | 0b0000_0001;
+        (PatternIndex(first), PatternIndex(second))
+    }
     pub fn into_wide_index(mut self) -> PatternIndex {
         self.0 &= 0b1111_1110;
         self

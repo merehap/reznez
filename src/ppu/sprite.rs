@@ -54,15 +54,12 @@ impl Sprite {
     }
 
     #[inline]
-    pub fn tall_sprite_info(self) -> (PatternIndex, PatternTableSide) {
-        let tall_pattern_index = self.pattern_index.into_wide_index();
-        let tall_pattern_table_side =
-            if self.pattern_index.to_u8() & 1 == 0 {
-                PatternTableSide::Left
-            } else {
-                PatternTableSide::Right
-            };
-        (tall_pattern_index, tall_pattern_table_side)
+    pub fn tall_sprite_pattern_table_side(self) -> PatternTableSide {
+        if self.pattern_index.to_u8() & 1 == 0 {
+            PatternTableSide::Left
+        } else {
+            PatternTableSide::Right
+        }
     }
 
     pub fn flip_vertically(self) -> bool {
@@ -81,16 +78,40 @@ impl Sprite {
         self.palette_table_index
     }
 
-    pub fn render(
+    pub fn render_normal_height(
         self,
         pattern_table: &PatternTable,
         palette_table: &PaletteTable,
         is_sprite0: bool,
         frame: &mut Frame,
     ) {
+        self.render(pattern_table, self.pattern_index, palette_table, is_sprite0, 0, frame);
+    }
+
+    pub fn render_tall(
+        self,
+        pattern_table: &PatternTable,
+        palette_table: &PaletteTable,
+        is_sprite0: bool,
+        frame: &mut Frame,
+    ) {
+        let (first_index, second_index) = self.pattern_index.to_tall_indexes();
+        self.render(pattern_table, first_index, palette_table, is_sprite0, 0, frame);
+        self.render(pattern_table, second_index, palette_table, is_sprite0, 1, frame);
+    }
+
+    fn render(
+        self,
+        pattern_table: &PatternTable,
+        pattern_index: PatternIndex,
+        palette_table: &PaletteTable,
+        is_sprite0: bool,
+        row_offset: u8,
+        frame: &mut Frame,
+    ) {
         let column = self.x_coordinate();
-        let row = self.y_coordinate();
-        let sprite_palette = palette_table.sprite_palette(self.palette_table_index());
+        let row = self.y_coordinate() + row_offset;
+        let sprite_palette = palette_table.sprite_palette(self.palette_table_index);
 
         for row_in_sprite in 0..8 {
             let row =
@@ -108,7 +129,7 @@ impl Sprite {
 
             pattern_table.render_sprite_sliver(
                 self,
-                self.pattern_index,
+                pattern_index,
                 is_sprite0,
                 sprite_palette,
                 frame,
