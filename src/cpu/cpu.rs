@@ -108,30 +108,28 @@ impl Cpu {
         self.nmi_pending = true;
     }
 
-    pub fn step(&mut self, memory: &mut Memory) -> StepResult {
+    pub fn step(&mut self, memory: &mut Memory) -> Option<Instruction> {
         if let Some(dma_page) = self.dma_port.take_page() {
             self.dma_transfer = DmaTransfer::new(dma_page, self.cycle);
         }
 
         self.cycle += 1;
 
-        let bytes_written = self.dma_transfer.bytes_written();
         // Normal CPU operation is suspended while the DMA transfer completes.
         match self.dma_transfer.step() {
             DmaTransferState::Finished =>
                 {/* No transfer in progress. Continue to normal CPU step.*/},
-            DmaTransferState::Write(cpu_address) =>
-                return StepResult::DmaWrite {
-                    bytes_written,
-                    current_byte: memory.cpu_read(cpu_address),
-                },
-            _ =>
-                return StepResult::Nop,
+            DmaTransferState::Write(cpu_address) => {
+                let value = memory.cpu_read(cpu_address);
+                memory.cpu_write(CpuAddress::new(0x2004), value);
+                return None;
+            },
+            _ => return None,
         }
 
         if self.current_instruction_remaining_cycles != 0 {
             self.current_instruction_remaining_cycles -= 1;
-            return StepResult::Nop;
+            return None;
         }
 
         let instruction = Instruction::from_memory(
@@ -153,7 +151,7 @@ impl Cpu {
             self.nmi_pending = false;
         }
 
-        StepResult::InstructionComplete(instruction)
+        Some(instruction)
     }
 
     fn execute_instruction(&mut self, memory: &mut Memory, instruction: Instruction) -> u8 {
@@ -483,10 +481,4 @@ fn is_neg(value: u8) -> bool {
 pub enum ProgramCounterSource {
     ResetVector,
     Override(CpuAddress),
-}
-
-pub enum StepResult {
-    Nop,
-    InstructionComplete(Instruction),
-    DmaWrite {bytes_written: u8, current_byte: u8},
 }

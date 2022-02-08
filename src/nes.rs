@@ -126,13 +126,7 @@ impl Nes {
     pub fn step(&mut self, frame: &mut Frame) -> StepResult {
         let mut instruction = None;
         if self.cycle % 3 == 0 {
-            use crate::cpu::cpu::StepResult;
-            match self.cpu.step(&mut self.memory) {
-                StepResult::Nop => {},
-                StepResult::InstructionComplete(inst) => instruction = Some(inst),
-                StepResult::DmaWrite {bytes_written, current_byte: value} =>
-                    self.ppu.write_oam_at_offset(bytes_written, value),
-            }
+            instruction = self.cpu.step(&mut self.memory);
         }
 
         let ppu_result = self.ppu.step(&mut self.memory, frame);

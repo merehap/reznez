@@ -23,11 +23,6 @@ impl DmaTransfer {
         }
     }
 
-    pub fn bytes_written(&self) -> u8 {
-        // The transfer always begins on the first index of a page.
-        self.current_cpu_address.index_within_page()
-    }
-
     pub fn step(&mut self) -> DmaTransferState {
         let current_state = self.next_state;
 
