@@ -38,7 +38,7 @@ impl PartialEq for PpuAddress {
 }
 
 impl fmt::Display for PpuAddress {
-    fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "${:04X}", self.0)
     }
 }

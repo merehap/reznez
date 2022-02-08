@@ -165,7 +165,7 @@ impl Instruction {
 }
 
 impl fmt::Display for Instruction {
-    fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         let mut access_mode = format!("{:?}", self.template.access_mode);
         if access_mode.len() == 2 {
             access_mode.push(' ');
@@ -186,7 +186,7 @@ pub enum Argument {
 }
 
 impl fmt::Display for Argument {
-    fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Argument::Imp => write!(f, "No   "),
             Argument::Imm(value) => write!(f, "#{:02X}  ", value),
