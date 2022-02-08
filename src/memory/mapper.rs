@@ -232,11 +232,13 @@ fn address_to_palette_ram_index(address: PpuAddress) -> usize {
     assert!(address >= PALETTE_TABLE_START);
     assert!(address < HIGH_ADDRESS_START);
 
-    if matches!(address, 0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C) {
+    // Mirror address down.
+    address %= 0x20;
+    if matches!(address, 0x10 | 0x14 | 0x18 | 0x1C) {
         address -= 0x10;
     }
 
-    address % 0x20
+    address
 }
 
 #[inline]
