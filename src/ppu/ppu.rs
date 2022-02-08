@@ -100,7 +100,7 @@ impl Ppu {
         } else if self.clock.scanline() == 261 && self.clock.cycle() == 1 {
             self.registers.borrow_mut().stop_vblank();
             self.registers.borrow_mut().clear_sprite0_hit();
-        } else if self.clock.scanline() == 1 && self.clock.cycle() == 1 {
+        } else if self.clock.scanline() == 1 && self.clock.cycle() == 65 {
             if self.registers.borrow().mask.background_enabled {
                 self.render_background(memory, frame);
             }
