@@ -217,47 +217,18 @@ impl Ppu {
     fn render_sprites(&mut self, memory: &Memory, frame: &mut Frame) {
         frame.clear_sprite_buffer();
 
+        let sprite_table_side = self.registers.borrow().sprite_table_side();
+        let pattern_table = memory.pattern_table(sprite_table_side);
         let palette_table = memory.palette_table();
-        let mut sprite_table_side = self.registers.borrow().sprite_table_side();
-        let sprite_height = self.registers.borrow().sprite_height();
+        let _sprite_height = self.registers.borrow().sprite_height();
 
         // FIXME: No more sprites will be found once the end of OAM is reached,
         // effectively hiding any sprites before OAM[OAMADDR].
         let sprites = self.oam.sprites();
         // Lower index sprites are drawn on top of higher index sprites.
         for i in (0..sprites.len()).rev() {
-            let sprite = sprites[i];
             let is_sprite0 = i == 0;
-            let column = sprite.x_coordinate();
-            let row = sprite.y_coordinate();
-            let pattern_index = sprite.pattern_index();
-            let palette_table_index = sprite.palette_table_index();
-
-            for row_in_sprite in 0..8 {
-                let row =
-                    if sprite.flip_vertically() {
-                        row + 7 - row_in_sprite
-                    } else {
-                        row + row_in_sprite
-                    };
-
-                if row >= 240 {
-                    // FIXME: The part of vertically flipped sprites that is
-                    // off the screen should still be rendered.
-                    break;
-                }
-
-                memory.pattern_table(sprite_table_side).render_sprite_sliver(
-                    sprite,
-                    pattern_index,
-                    is_sprite0,
-                    palette_table.sprite_palette(palette_table_index),
-                    frame,
-                    column,
-                    row,
-                    row_in_sprite as usize,
-                );
-            }
+            sprites[i].render(&pattern_table, &palette_table, is_sprite0, frame);
         }
     }
 

@@ -1,5 +1,7 @@
+use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
-use crate::ppu::pattern_table::{PatternIndex, PatternTableSide};
+use crate::ppu::pattern_table::{PatternTable, PatternIndex, PatternTableSide};
+use crate::ppu::render::frame::Frame;
 use crate::util::bit_util::get_bit;
 
 #[derive(Clone, Copy, Debug)]
@@ -77,6 +79,44 @@ impl Sprite {
 
     pub fn palette_table_index(self) -> PaletteTableIndex {
         self.palette_table_index
+    }
+
+    pub fn render(
+        self,
+        pattern_table: &PatternTable,
+        palette_table: &PaletteTable,
+        is_sprite0: bool,
+        frame: &mut Frame,
+    ) {
+        let column = self.x_coordinate();
+        let row = self.y_coordinate();
+        let sprite_palette = palette_table.sprite_palette(self.palette_table_index());
+
+        for row_in_sprite in 0..8 {
+            let row =
+                if self.flip_vertically {
+                    row + 7 - row_in_sprite
+                } else {
+                    row + row_in_sprite
+                };
+
+            if row >= 240 {
+                // FIXME: The part of vertically flipped sprites that is
+                // off the screen should still be rendered.
+                break;
+            }
+
+            pattern_table.render_sprite_sliver(
+                self,
+                self.pattern_index,
+                is_sprite0,
+                sprite_palette,
+                frame,
+                column,
+                row,
+                row_in_sprite as usize,
+            );
+        }
     }
 }
 
