@@ -58,6 +58,11 @@ impl Mapper for Mapper3 {
         &self.prg_rom
     }
 
+    #[inline]
+    fn is_chr_writable(&self) -> bool {
+        false
+    }
+
     fn raw_pattern_table(&self, side: PatternTableSide) -> &MappedArray<4> {
         &self.raw_pattern_tables[self.selected_chr_bank as usize][side as usize]
     }

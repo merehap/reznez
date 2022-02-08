@@ -54,6 +54,11 @@ impl Mapper for Mapper0 {
     }
 
     #[inline]
+    fn is_chr_writable(&self) -> bool {
+        true
+    }
+
+    #[inline]
     fn raw_pattern_table(&self, side: PatternTableSide) -> &MappedArray<4> {
         &self.raw_pattern_tables[side as usize]
     }

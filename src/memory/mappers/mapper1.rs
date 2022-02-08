@@ -103,6 +103,12 @@ impl Mapper for Mapper1 {
         &self.prg_rom
     }
 
+    // TODO: Verify if this is always true.
+    #[inline]
+    fn is_chr_writable(&self) -> bool {
+        true
+    }
+
     #[inline]
     fn raw_pattern_table(
         &self,

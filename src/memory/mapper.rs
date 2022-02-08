@@ -23,6 +23,7 @@ pub const NAME_TABLE_SIZE: usize = 0x400;
 pub trait Mapper {
     fn name_table_mirroring(&self) -> NameTableMirroring;
     fn prg_rom(&self) -> &MappedArray<32>;
+    fn is_chr_writable(&self) -> bool;
 
     fn raw_pattern_table(
         &self,
@@ -133,8 +134,10 @@ pub trait Mapper {
 
     #[inline]
     fn write_pattern_table_byte(&mut self, address: PpuAddress, value: u8) {
-        let (side, index) = address_to_pattern_table_index(address);
-        self.raw_pattern_table(side).write(index, value);
+        if self.is_chr_writable() {
+            let (side, index) = address_to_pattern_table_index(address);
+            self.raw_pattern_table(side).write(index, value);
+        }
     }
 
     #[inline]
