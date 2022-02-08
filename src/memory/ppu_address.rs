@@ -5,7 +5,7 @@ pub struct PpuAddress(u16);
 
 impl PpuAddress {
     pub const fn from_u16(value: u16) -> PpuAddress {
-        PpuAddress(value)
+        PpuAddress(value & 0x3FFF)
     }
 
     pub const fn advance(self, offset: u16) -> PpuAddress {
@@ -16,14 +16,8 @@ impl PpuAddress {
         PpuAddress::from_u16(self.0.wrapping_sub(offset))
     }
 
-    // FIXME: Move this mirroring to creation time.
     pub fn to_u16(self) -> u16 {
-        let value = self.0;
-        match value {
-            // Mirrors of lower memory (0x0000 through 0x3FFF).
-            0x4000..=0xFFFF => value & 0x3FFF,
-            _ => value,
-        }
+        self.0
     }
 
     pub fn to_usize(self) -> usize {
