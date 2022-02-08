@@ -6,7 +6,7 @@ use crate::util::bit_util::{get_bit, pack_bools};
 pub struct Ctrl {
     pub nmi_enabled: bool,
     pub ext_pin_role: ExtPinRole,
-    pub sprite_width: SpriteWidth,
+    pub sprite_height: SpriteHeight,
     pub background_table_side: PatternTableSide,
     pub sprite_table_side: PatternTableSide,
     pub vram_address_increment: VramAddressIncrement,
@@ -18,7 +18,7 @@ impl Ctrl {
         Ctrl {
             nmi_enabled: false,
             ext_pin_role: ExtPinRole::Read,
-            sprite_width: SpriteWidth::Normal,
+            sprite_height: SpriteHeight::Normal,
             background_table_side: PatternTableSide::Left,
             sprite_table_side: PatternTableSide::Left,
             vram_address_increment: VramAddressIncrement::Right,
@@ -35,12 +35,11 @@ impl Ctrl {
                 } else {
                     ExtPinRole::Read
                 },
-            sprite_width:
+            sprite_height:
                 if get_bit(value, 2) {
-                    todo!("Wide sprites are not supported yet.");
-                    //SpriteWidth::Wide
+                    SpriteHeight::Tall
                 } else {
-                    SpriteWidth::Normal
+                    SpriteHeight::Normal
                 },
             background_table_side:
                 if get_bit(value, 3) {
@@ -76,7 +75,7 @@ impl Ctrl {
             [
                 self.nmi_enabled,
                 self.ext_pin_role == ExtPinRole::Write,
-                self.sprite_width == SpriteWidth::Wide,
+                self.sprite_height == SpriteHeight::Tall,
                 self.background_table_side == PatternTableSide::Right,
                 self.sprite_table_side == PatternTableSide::Right,
                 self.vram_address_increment == VramAddressIncrement::Down,
@@ -94,9 +93,9 @@ pub enum ExtPinRole {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum SpriteWidth {
+pub enum SpriteHeight {
     Normal = 8,
-    Wide = 16,
+    Tall = 16,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

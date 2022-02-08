@@ -114,7 +114,7 @@ impl Ppu {
             }
         }
 
-        let sprite0 = self.oam.sprite_0();
+        let sprite0 = self.oam.sprite0();
         // TODO: Sprite 0 hit needs lots more work.
         if self.clock.scanline() == sprite0.y_coordinate() as u16 &&
             self.clock.cycle() == 340 &&
@@ -218,16 +218,19 @@ impl Ppu {
         frame.clear_sprite_buffer();
 
         let palette_table = memory.palette_table();
-        let sprite_table_side = self.registers.borrow().sprite_table_side();
+        let mut sprite_table_side = self.registers.borrow().sprite_table_side();
+        let sprite_height = self.registers.borrow().sprite_height();
+
         // FIXME: No more sprites will be found once the end of OAM is reached,
         // effectively hiding any sprites before OAM[OAMADDR].
         let sprites = self.oam.sprites();
         // Lower index sprites are drawn on top of higher index sprites.
         for i in (0..sprites.len()).rev() {
             let sprite = sprites[i];
-            let is_sprite_0 = i == 0;
+            let is_sprite0 = i == 0;
             let column = sprite.x_coordinate();
             let row = sprite.y_coordinate();
+            let pattern_index = sprite.pattern_index();
             let palette_table_index = sprite.palette_table_index();
 
             for row_in_sprite in 0..8 {
@@ -246,7 +249,8 @@ impl Ppu {
 
                 memory.pattern_table(sprite_table_side).render_sprite_sliver(
                     sprite,
-                    is_sprite_0,
+                    pattern_index,
+                    is_sprite0,
                     palette_table.sprite_palette(palette_table_index),
                     frame,
                     column,

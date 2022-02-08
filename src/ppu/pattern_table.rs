@@ -50,6 +50,7 @@ impl <'a> PatternTable<'a> {
     pub fn render_sprite_sliver(
         &self,
         sprite: Sprite,
+        pattern_index: PatternIndex,
         is_sprite_0: bool,
         palette: Palette,
         frame: &mut Frame,
@@ -59,7 +60,6 @@ impl <'a> PatternTable<'a> {
     ) {
         frame.set_tile_sliver_priority(column, row, sprite.priority());
 
-        let pattern_index = sprite.pattern_index();
         let index = 16 * pattern_index.to_usize();
         let low_index = index + row_in_sprite;
         let high_index = low_index + 8;
@@ -160,7 +160,16 @@ impl PatternIndex {
         PatternIndex(value)
     }
 
+    pub fn into_wide_index(mut self) -> PatternIndex {
+        self.0 &= 0b1111_1110;
+        self
+    }
+
+    pub fn to_u8(self) -> u8 {
+        u8::from(self.0)
+    }
+
     pub fn to_usize(self) -> usize {
-        self.0 as usize
+        usize::from(self.0)
     }
 }

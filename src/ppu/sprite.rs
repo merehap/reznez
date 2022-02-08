@@ -1,5 +1,5 @@
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
-use crate::ppu::pattern_table::PatternIndex;
+use crate::ppu::pattern_table::{PatternIndex, PatternTableSide};
 use crate::util::bit_util::get_bit;
 
 #[derive(Clone, Copy, Debug)]
@@ -49,6 +49,18 @@ impl Sprite {
     #[inline]
     pub fn pattern_index(self) -> PatternIndex {
         self.pattern_index
+    }
+
+    #[inline]
+    pub fn tall_sprite_info(self) -> (PatternIndex, PatternTableSide) {
+        let tall_pattern_index = self.pattern_index.into_wide_index();
+        let tall_pattern_table_side =
+            if self.pattern_index.to_u8() & 1 == 0 {
+                PatternTableSide::Left
+            } else {
+                PatternTableSide::Right
+            };
+        (tall_pattern_index, tall_pattern_table_side)
     }
 
     pub fn flip_vertically(self) -> bool {
