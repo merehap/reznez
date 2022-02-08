@@ -1,7 +1,9 @@
+use crate::ppu::name_table::name_table_number::NameTableNumber;
+use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::register::ppu_register_latch::PpuRegisterLatch;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ctrl;
-use crate::ppu::register::registers::ctrl::Ctrl;
+use crate::ppu::register::registers::ctrl::{Ctrl, VramAddressIncrement};
 use crate::ppu::register::registers::mask;
 use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::register::registers::ppu_data;
@@ -37,6 +39,54 @@ impl PpuRegisters {
             latch: PpuRegisterLatch::new(),
             latch_access: None,
         }
+    }
+
+    pub(in crate::ppu) fn nmi_enabled(&self) -> bool {
+        self.ctrl.nmi_enabled
+    }
+
+    pub(in crate::ppu) fn name_table_number(&self) -> NameTableNumber {
+        self.ctrl.name_table_number
+    }
+
+    pub(in crate::ppu) fn background_table_side(&self) -> PatternTableSide {
+        self.ctrl.background_table_side
+    }
+
+    pub(in crate::ppu) fn sprite_table_side(&self) -> PatternTableSide {
+        self.ctrl.sprite_table_side
+    }
+
+    pub(in crate::ppu) fn vram_address_increment(&self) -> VramAddressIncrement {
+        self.ctrl.vram_address_increment
+    }
+
+    pub(in crate::ppu) fn background_enabled(&self) -> bool {
+        self.mask.background_enabled
+    }
+
+    pub(in crate::ppu) fn sprites_enabled(&self) -> bool {
+        self.mask.sprites_enabled
+    }
+
+    pub(in crate::ppu) fn vblank_active(&self) -> bool {
+        self.status.vblank_active
+    }
+
+    pub(in crate::ppu) fn start_vblank(&mut self) {
+        self.status.vblank_active = true;
+    }
+
+    pub(in crate::ppu) fn stop_vblank(&mut self) {
+        self.status.vblank_active = false;
+    }
+
+    pub(in crate::ppu) fn set_sprite0_hit(&mut self) {
+        self.status.sprite0_hit = true;
+    }
+
+    pub(in crate::ppu) fn clear_sprite0_hit(&mut self) {
+        self.status.sprite0_hit = false;
     }
 
     pub(in crate::ppu) fn latch_value(&self) -> u8 {

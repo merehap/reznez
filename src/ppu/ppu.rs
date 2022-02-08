@@ -94,7 +94,7 @@ impl Ppu {
             // Do nothing.
         } else if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
             if !self.suppress_vblank_active {
-                self.registers.borrow_mut().status.vblank_active = true;
+                self.registers.borrow_mut().start_vblank();
             }
 
             self.suppress_vblank_active = false;
@@ -102,27 +102,27 @@ impl Ppu {
                 should_generate_nmi = true;
             }
         } else if self.clock.scanline() == 261 && self.clock.cycle() == 1 {
-            self.registers.borrow_mut().status.vblank_active = false;
-            self.registers.borrow_mut().status.sprite0_hit = false;
+            self.registers.borrow_mut().stop_vblank();
+            self.registers.borrow_mut().clear_sprite0_hit();
         } else if self.clock.scanline() == 1 && self.clock.cycle() == 1 {
             if self.registers.borrow().mask.background_enabled {
                 self.render_background(memory, frame);
             }
 
-            if self.registers.borrow().mask.sprites_enabled {
+            if self.registers.borrow().sprites_enabled() {
                 self.render_sprites(memory, frame);
             }
         }
 
-        let sprite_0 = self.oam.sprite_0();
+        let sprite0 = self.oam.sprite_0();
         // TODO: Sprite 0 hit needs lots more work.
-        if self.clock.scanline() == sprite_0.y_coordinate() as u16 &&
+        if self.clock.scanline() == sprite0.y_coordinate() as u16 &&
             self.clock.cycle() == 340 &&
-            self.clock.cycle() > sprite_0.x_coordinate() as u16 &&
-            self.registers.borrow().mask.sprites_enabled &&
-            self.registers.borrow().mask.background_enabled {
+            self.clock.cycle() > sprite0.x_coordinate() as u16 &&
+            self.registers.borrow().sprites_enabled() &&
+            self.registers.borrow().background_enabled() {
 
-            self.registers.borrow_mut().status.sprite0_hit = true;
+            self.registers.borrow_mut().set_sprite0_hit();
         }
 
         let oam_data = self.oam.read(self.registers.borrow().oam_addr);
@@ -167,7 +167,7 @@ impl Ppu {
                     }
                 }
 
-                self.nmi_was_enabled_last_cycle = self.registers.borrow().ctrl.nmi_enabled;
+                self.nmi_was_enabled_last_cycle = self.registers.borrow().nmi_enabled();
             },
 
             (Status, Read) => {
@@ -195,9 +195,9 @@ impl Ppu {
         let palette_table = memory.palette_table();
         frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
-        let name_table_number = self.registers.borrow().ctrl.name_table_number;
+        let name_table_number = self.registers.borrow().name_table_number();
         //let _name_table_mirroring = memory.name_table_mirroring();
-        let background_table_side = self.registers.borrow().ctrl.background_table_side;
+        let background_table_side = self.registers.borrow().background_table_side();
         memory.name_table(name_table_number).render(
             &memory.pattern_table(background_table_side),
             &palette_table,
@@ -218,7 +218,7 @@ impl Ppu {
         frame.clear_sprite_buffer();
 
         let palette_table = memory.palette_table();
-        let sprite_table_side = self.registers.borrow().ctrl.sprite_table_side;
+        let sprite_table_side = self.registers.borrow().sprite_table_side();
         // FIXME: No more sprites will be found once the end of OAM is reached,
         // effectively hiding any sprites before OAM[OAMADDR].
         let sprites = self.oam.sprites();
@@ -258,13 +258,13 @@ impl Ppu {
     }
 
     fn rendering_enabled(&self) -> bool {
-        self.registers.borrow().mask.sprites_enabled ||
-            self.registers.borrow().mask.background_enabled
+        self.registers.borrow().sprites_enabled() ||
+            self.registers.borrow().background_enabled()
     }
 
     fn can_generate_nmi(&self) -> bool {
-        self.registers.borrow().status.vblank_active &&
-            self.registers.borrow().ctrl.nmi_enabled
+        self.registers.borrow().vblank_active() &&
+            self.registers.borrow().nmi_enabled()
     }
 
     fn write_oam(&mut self, value: u8) {
@@ -285,13 +285,13 @@ impl Ppu {
             };
         self.vram_data = memory.ppu_read(vram_data_source);
 
-        let increment = self.registers.borrow().ctrl.vram_address_increment as u16;
+        let increment = self.registers.borrow().vram_address_increment() as u16;
         self.vram_address = self.vram_address.advance(increment);
     }
 
     fn write_vram(&mut self, memory: &mut Memory, value: u8) {
         memory.ppu_write(self.vram_address, value);
-        let increment = self.registers.borrow().ctrl.vram_address_increment as u16;
+        let increment = self.registers.borrow().vram_address_increment() as u16;
         self.vram_address = self.vram_address.advance(increment);
     }
 
