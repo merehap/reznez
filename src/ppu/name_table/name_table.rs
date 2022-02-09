@@ -49,9 +49,9 @@ impl <'a> NameTable<'a> {
                 for column_in_tile in 0..8 {
                     let column = 8 * background_tile_index.column() as i16 + column_in_tile;
                     let column: Result<u8, _> = (column + x_offset).try_into();
-                    let row = 8 * background_tile_index.row() as i16 + row_in_tile;
-                    let row = ((row + y_offset).rem_euclid(256) as u8) % 240;
                     if let Ok(column) = column {
+                        let row = 8 * background_tile_index.row() as i16 + row_in_tile;
+                        let row = ((row + y_offset).rem_euclid(256) as u8) % 240;
                         frame.background_row(row)[column as usize] =
                             tile_sliver[column_in_tile as usize];
                     }

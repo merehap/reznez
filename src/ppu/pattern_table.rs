@@ -71,12 +71,13 @@ impl <'a> PatternTable<'a> {
         for column_in_sprite in 0..8 {
             let low_bit = get_bit(low_byte, column_in_sprite);
             let high_bit = get_bit(high_byte, column_in_sprite);
-            let rgbt = match (low_bit, high_bit) {
-                (false, false) => Rgbt::Transparent,
-                (true , false) => Rgbt::Opaque(palette[PaletteIndex::One]),
-                (false, true ) => Rgbt::Opaque(palette[PaletteIndex::Two]),
-                (true , true ) => Rgbt::Opaque(palette[PaletteIndex::Three]),
-            };
+            let rgbt =
+                match (low_bit, high_bit) {
+                    (false, false) => Rgbt::Transparent,
+                    (true , false) => Rgbt::Opaque(palette[PaletteIndex::One]),
+                    (false, true ) => Rgbt::Opaque(palette[PaletteIndex::Two]),
+                    (true , true ) => Rgbt::Opaque(palette[PaletteIndex::Three]),
+                };
             let column_in_sprite =
                 if flip {
                     7 - column_in_sprite
@@ -91,42 +92,6 @@ impl <'a> PatternTable<'a> {
         }
     }
 }
-
-/*
-impl fmt::Display for PatternTable<'_> {
-    fn fmt(&self, f: &'_ mut fmt::Formatter) -> fmt::Result {
-        for row in 0..16 {
-            for column in 0..16 {
-                for side in [PatternTableSide::Left, PatternTableSide::Right] {
-                    for row_in_tile in 0..8 {
-                        let tile_index = 16 * row + column;
-                        let sliver = self.tile_sliver_at(side, tile_index, row_in_tile);
-                        for pixel in sliver {
-                            let c = if let Some(pixel) = pixel {
-                                char::from_digit(pixel as u32, 10).unwrap()
-                            } else {
-                                '-'
-                            };
-
-                            write!(f, "{}", c)?;
-                        }
-
-                        write!(f, " ")?;
-                    }
-
-                    write!(f, "  ")?;
-                }
-
-                writeln!(f)?;
-            }
-
-            writeln!(f)?;
-        }
-
-        Ok(())
-    }
-}
-*/
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum PatternTableSide {
