@@ -283,12 +283,12 @@ impl Ppu {
     }
 
     fn write_scroll_dimension(&mut self, dimension: u8) {
-        if let Some(x_scroll_offset) = self.address_latch {
-            self.x_scroll_offset = x_scroll_offset;
-            self.y_scroll_offset = dimension;
+        if self.address_latch.is_some() {
             self.address_latch = None;
+            self.y_scroll_offset = dimension;
         } else {
             self.address_latch = Some(dimension);
+            self.x_scroll_offset = dimension;
         }
     }
 
