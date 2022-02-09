@@ -78,9 +78,9 @@ impl Instruction {
         mem: &mut CpuMemory,
     ) -> Instruction {
 
-        let template = INSTRUCTION_TEMPLATES[mem.cpu_read(program_counter) as usize];
-        let low = mem.cpu_read(program_counter.offset(1));
-        let high = mem.cpu_read(program_counter.offset(2));
+        let template = INSTRUCTION_TEMPLATES[mem.read(program_counter) as usize];
+        let low = mem.read(program_counter.offset(1));
+        let high = mem.read(program_counter.offset(2));
 
         let mut page_boundary_crossed = false;
 
@@ -90,61 +90,61 @@ impl Instruction {
             Imm => Argument::Imm(low),
             ZP => {
                 let address = CpuAddress::zero_page(low);
-                Argument::Addr(address, mem.cpu_read(address))
+                Argument::Addr(address, mem.read(address))
             },
             ZPX => {
                 let address = CpuAddress::zero_page(low.wrapping_add(x_index));
-                Argument::Addr(address, mem.cpu_read(address))
+                Argument::Addr(address, mem.read(address))
             },
             ZPY => {
                 let address = CpuAddress::zero_page(low.wrapping_add(y_index));
-                Argument::Addr(address, mem.cpu_read(address))
+                Argument::Addr(address, mem.read(address))
             },
             Abs => {
                 let address = CpuAddress::from_low_high(low, high);
-                Argument::Addr(address, mem.cpu_read(address))
+                Argument::Addr(address, mem.read(address))
             },
             AbX => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(x_index);
                 page_boundary_crossed = start_address.page() != address.page();
-                Argument::Addr(address, mem.cpu_read(address))
+                Argument::Addr(address, mem.read(address))
             },
             AbY => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(y_index);
                 page_boundary_crossed = start_address.page() != address.page();
-                Argument::Addr(address, mem.cpu_read(address))
+                Argument::Addr(address, mem.read(address))
             },
             Rel => {
                 let address = program_counter
                     .offset(low as i8)
                     .advance(template.access_mode.instruction_length());
-                Argument::Addr(address, mem.cpu_read(address))
+                Argument::Addr(address, mem.read(address))
             },
             Ind => {
                 let first = CpuAddress::from_low_high(low, high);
                 let second = CpuAddress::from_low_high(low.wrapping_add(1), high);
-                let address = CpuAddress::from_low_high(mem.cpu_read(first), mem.cpu_read(second));
-                Argument::Addr(address, mem.cpu_read(address))
+                let address = CpuAddress::from_low_high(mem.read(first), mem.read(second));
+                Argument::Addr(address, mem.read(address))
             },
             IzX => {
                 let low = low.wrapping_add(x_index);
                 let address = CpuAddress::from_low_high(
-                    mem.cpu_read(CpuAddress::zero_page(low)),
-                    mem.cpu_read(CpuAddress::zero_page(low.wrapping_add(1))),
+                    mem.read(CpuAddress::zero_page(low)),
+                    mem.read(CpuAddress::zero_page(low.wrapping_add(1))),
                 );
-                Argument::Addr(address, mem.cpu_read(address))
+                Argument::Addr(address, mem.read(address))
             },
             IzY => {
                 let start_address = CpuAddress::from_low_high(
-                    mem.cpu_read(CpuAddress::zero_page(low)),
-                    mem.cpu_read(CpuAddress::zero_page(low.wrapping_add(1))),
+                    mem.read(CpuAddress::zero_page(low)),
+                    mem.read(CpuAddress::zero_page(low.wrapping_add(1))),
                 );
                 // TODO: Should this wrap around just the current page?
                 let address = start_address.advance(y_index);
                 page_boundary_crossed = start_address.page() != address.page();
-                Argument::Addr(address, mem.cpu_read(address))
+                Argument::Addr(address, mem.read(address))
             },
         };
 

@@ -58,7 +58,7 @@ pub struct CpuMemory<'a> {
 
 impl <'a> CpuMemory<'a> {
     #[inline]
-    pub fn cpu_read(&mut self, address: CpuAddress) -> u8 {
+    pub fn read(&mut self, address: CpuAddress) -> u8 {
         self.memory.mapper.cpu_read(
             &self.memory.cpu_internal_ram,
             &mut self.memory.ports,
@@ -68,7 +68,7 @@ impl <'a> CpuMemory<'a> {
     }
 
     #[inline]
-    pub fn cpu_write(&mut self, address: CpuAddress, value: u8) {
+    pub fn write(&mut self, address: CpuAddress, value: u8) {
         self.memory.mapper.cpu_write(
             &mut self.memory.cpu_internal_ram,
             &mut self.memory.ports,
@@ -111,8 +111,8 @@ impl <'a> CpuMemory<'a> {
 
     fn address_from_vector(&mut self, mut vector: CpuAddress) -> CpuAddress {
         CpuAddress::from_low_high(
-            self.cpu_read(vector),
-            self.cpu_read(vector.inc()),
+            self.read(vector),
+            self.read(vector.inc()),
         )
     }
 }
@@ -123,22 +123,22 @@ pub struct PpuMemory<'a> {
 
 impl <'a> PpuMemory<'a> {
     #[inline]
-    pub fn ppu_read(&self, address: PpuAddress) -> u8 {
+    pub fn read(&self, address: PpuAddress) -> u8 {
         self.memory.mapper.ppu_read(&self.memory.ppu_internal_ram, address)
     }
 
     #[inline]
-    pub fn ppu_write(&mut self, address: PpuAddress, value: u8) {
+    pub fn write(&mut self, address: PpuAddress, value: u8) {
         self.memory.mapper.ppu_write(&mut self.memory.ppu_internal_ram, address, value)
     }
 
     #[inline]
-    pub fn ppu_registers(&self) -> &PpuRegisters {
+    pub fn registers(&self) -> &PpuRegisters {
         &self.memory.ppu_registers
     }
 
     #[inline]
-    pub fn ppu_registers_mut(&mut self) -> &mut PpuRegisters {
+    pub fn registers_mut(&mut self) -> &mut PpuRegisters {
         &mut self.memory.ppu_registers
     }
 

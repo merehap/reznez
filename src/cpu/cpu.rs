@@ -120,8 +120,8 @@ impl Cpu {
             DmaTransferState::Finished =>
                 {/* No transfer in progress. Continue to normal CPU step.*/},
             DmaTransferState::Write(cpu_address) => {
-                let value = memory.cpu_read(cpu_address);
-                memory.cpu_write(CpuAddress::new(0x2004), value);
+                let value = memory.read(cpu_address);
+                memory.write(CpuAddress::new(0x2004), value);
                 return None;
             },
             _ => return None,
@@ -204,17 +204,17 @@ impl Cpu {
             },
             (RTS, Imp) => self.program_counter = memory.stack().pop_address().advance(1),
 
-            (STA, Addr(addr, _)) => memory.cpu_write(addr, self.a),
-            (STX, Addr(addr, _)) => memory.cpu_write(addr, self.x),
-            (STY, Addr(addr, _)) => memory.cpu_write(addr, self.y),
+            (STA, Addr(addr, _)) => memory.write(addr, self.a),
+            (STX, Addr(addr, _)) => memory.write(addr, self.x),
+            (STY, Addr(addr, _)) => memory.write(addr, self.y),
             (DEC, Addr(addr, _)) => {
-                let value = memory.cpu_read(addr).wrapping_sub(1);
-                memory.cpu_write(addr, value);
+                let value = memory.read(addr).wrapping_sub(1);
+                memory.write(addr, value);
                 self.nz(value);
             },
             (INC, Addr(addr, _)) => {
-                let value = memory.cpu_read(addr).wrapping_add(1);
-                memory.cpu_write(addr, value);
+                let value = memory.read(addr).wrapping_add(1);
+                memory.write(addr, value);
                 self.nz(value);
             },
             (BPL, Addr(addr, _)) =>
@@ -265,67 +265,67 @@ impl Cpu {
 
             (ASL, Imp) => self.a = self.asl(self.a),
             (ASL, Addr(addr, _)) => {
-                let value = memory.cpu_read(addr);
+                let value = memory.read(addr);
                 let value = self.asl(value);
-                memory.cpu_write(addr, value);
+                memory.write(addr, value);
             },
             (ROL, Imp) => self.a = self.rol(self.a),
             (ROL, Addr(addr, _)) => {
-                let value = memory.cpu_read(addr);
+                let value = memory.read(addr);
                 let value = self.rol(value);
-                memory.cpu_write(addr, value);
+                memory.write(addr, value);
             },
             (LSR, Imp) => self.a = self.lsr(self.a),
             (LSR, Addr(addr, _)) => {
-                let value = memory.cpu_read(addr);
+                let value = memory.read(addr);
                 let value = self.lsr(value);
-                memory.cpu_write(addr, value);
+                memory.write(addr, value);
             },
             (ROR, Imp) => self.a = self.ror(self.a),
             (ROR, Addr(addr, _)) => {
-                let value = memory.cpu_read(addr);
+                let value = memory.read(addr);
                 let value = self.ror(value);
-                memory.cpu_write(addr, value);
+                memory.write(addr, value);
             },
 
             // Undocumented op codes.
             (SLO, Addr(addr, _)) => {
-                let value = memory.cpu_read(addr);
+                let value = memory.read(addr);
                 let value = self.asl(value);
-                memory.cpu_write(addr, value);
+                memory.write(addr, value);
                 self.a |= value;
                 self.nz(self.a);
             },
             (RLA, Addr(addr, _)) => {
-                let value = memory.cpu_read(addr);
+                let value = memory.read(addr);
                 let value = self.rol(value);
-                memory.cpu_write(addr, value);
+                memory.write(addr, value);
                 self.a &= value;
                 self.nz(self.a);
             },
             (SRE, Addr(addr, _)) => {
-                let value = memory.cpu_read(addr);
+                let value = memory.read(addr);
                 let value = self.lsr(value);
-                memory.cpu_write(addr, value);
+                memory.write(addr, value);
                 self.a ^= value;
                 self.nz(self.a);
             },
             (RRA, Addr(addr, _)) => {
-                let value = memory.cpu_read(addr);
+                let value = memory.read(addr);
                 let value = self.ror(value);
-                memory.cpu_write(addr, value);
+                memory.write(addr, value);
                 self.a = self.adc(value);
                 self.nz(self.a);
             },
-            (SAX, Addr(addr, _)) => memory.cpu_write(addr, self.a & self.x),
+            (SAX, Addr(addr, _)) => memory.write(addr, self.a & self.x),
             (DCP, Addr(addr, _)) => {
-                let value = memory.cpu_read(addr).wrapping_sub(1);
-                memory.cpu_write(addr, value);
+                let value = memory.read(addr).wrapping_sub(1);
+                memory.write(addr, value);
                 self.cmp(value);
             },
             (ISC, Addr(addr, _)) => {
-                let value = memory.cpu_read(addr).wrapping_add(1);
-                memory.cpu_write(addr, value);
+                let value = memory.read(addr).wrapping_add(1);
+                memory.write(addr, value);
                 self.a = self.sbc(value);
             },
 
@@ -356,13 +356,13 @@ impl Cpu {
                 let (low, high) = addr.to_low_high();
                 let value = self.y & high.wrapping_add(1);
                 let addr = CpuAddress::from_low_high(low, high & self.y);
-                memory.cpu_write(addr, value);
+                memory.write(addr, value);
             },
             (SHX, Addr(addr, _)) => {
                 let (low, high) = addr.to_low_high();
                 let value = self.x & high.wrapping_add(1);
                 let addr = CpuAddress::from_low_high(low, high & self.x);
-                memory.cpu_write(addr, value);
+                memory.write(addr, value);
             },
             (TAS, _) => unimplemented!(),
             (LAS, _) => unimplemented!(),

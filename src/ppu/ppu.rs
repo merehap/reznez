@@ -55,10 +55,10 @@ impl Ppu {
         let total_cycles = self.clock().total_cycles();
 
         if self.clock.cycle() == 1 {
-            mem.ppu_registers_mut().maybe_decay_latch();
+            mem.registers_mut().maybe_decay_latch();
         }
 
-        let latch_access = mem.ppu_registers_mut().take_latch_access();
+        let latch_access = mem.registers_mut().take_latch_access();
         let mut should_generate_nmi = false;
         if let Some(latch_access) = latch_access {
             should_generate_nmi = self.process_latch_access(mem, latch_access);
@@ -69,29 +69,29 @@ impl Ppu {
             // TODO: Why don't we have the following enabled here?
             // Maybe just need to have "= false" to end it too.
             // self.status.vblank_active = true;
-            if mem.ppu_registers().can_generate_nmi() {
+            if mem.registers().can_generate_nmi() {
                 should_generate_nmi = true;
             }
         } else if total_cycles < SECOND_VBLANK_CYCLE {
             // Do nothing.
         } else if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
             if !self.suppress_vblank_active {
-                mem.ppu_registers_mut().start_vblank();
+                mem.registers_mut().start_vblank();
             }
 
             self.suppress_vblank_active = false;
-            if mem.ppu_registers().can_generate_nmi() {
+            if mem.registers().can_generate_nmi() {
                 should_generate_nmi = true;
             }
         } else if self.clock.scanline() == 261 && self.clock.cycle() == 1 {
-            mem.ppu_registers_mut().stop_vblank();
-            mem.ppu_registers_mut().clear_sprite0_hit();
+            mem.registers_mut().stop_vblank();
+            mem.registers_mut().clear_sprite0_hit();
         } else if self.clock.scanline() == 1 && self.clock.cycle() == 65 {
-            if mem.ppu_registers().mask.background_enabled {
+            if mem.registers().mask.background_enabled {
                 self.render_background(mem, frame);
             }
 
-            if mem.ppu_registers().sprites_enabled() {
+            if mem.registers().sprites_enabled() {
                 self.render_sprites(mem, frame);
             }
         }
@@ -101,28 +101,28 @@ impl Ppu {
         if self.clock.scanline() == sprite0.y_coordinate() as u16 &&
             self.clock.cycle() == 340 &&
             self.clock.cycle() > sprite0.x_coordinate() as u16 &&
-            mem.ppu_registers().sprites_enabled() &&
-            mem.ppu_registers().background_enabled() {
+            mem.registers().sprites_enabled() &&
+            mem.registers().background_enabled() {
 
-            mem.ppu_registers_mut().set_sprite0_hit();
+            mem.registers_mut().set_sprite0_hit();
         }
 
-        let oam_data = self.oam.read(mem.ppu_registers().oam_addr);
-        mem.ppu_registers_mut().oam_data = oam_data;
+        let oam_data = self.oam.read(mem.registers().oam_addr);
+        mem.registers_mut().oam_data = oam_data;
 
         let is_palette_data = self.vram_address >= PALETTE_TABLE_START;
         // When reading palette data only, read the current data pointed to
         // by self.vram_address, not what was previously pointed to.
         let value = 
             if is_palette_data {
-                mem.ppu_read(self.vram_address)
+                mem.read(self.vram_address)
             } else {
                 self.vram_data
             };
-        mem.ppu_registers_mut().ppu_data = PpuData {value, is_palette_data};
+        mem.registers_mut().ppu_data = PpuData {value, is_palette_data};
 
         let is_last_cycle_of_frame = self.clock.is_last_cycle_of_frame();
-        self.clock.tick(mem.ppu_registers().rendering_enabled());
+        self.clock.tick(mem.registers().rendering_enabled());
 
         StepResult {is_last_cycle_of_frame, should_generate_nmi}
     }
@@ -130,7 +130,7 @@ impl Ppu {
     fn process_latch_access(
         &mut self, mem: &mut PpuMemory, latch_access: LatchAccess,
     ) -> bool {
-        let value = mem.ppu_registers().latch_value();
+        let value = mem.registers().latch_value();
         let mut should_generate_nmi = false;
 
         use RegisterType::*;
@@ -142,19 +142,19 @@ impl Ppu {
             (Ctrl, Write) => {
                 if !self.nmi_was_enabled_last_cycle {
                     // Attempt to trigger the second (or higher) NMI of this frame.
-                    if mem.ppu_registers().can_generate_nmi() {
+                    if mem.registers().can_generate_nmi() {
                         should_generate_nmi = true;
                     }
                 }
 
-                self.nmi_was_enabled_last_cycle = mem.ppu_registers().nmi_enabled();
+                self.nmi_was_enabled_last_cycle = mem.registers().nmi_enabled();
             },
 
             (Status, Read) => {
-                self.stop_vblank(mem.ppu_registers_mut());
+                self.stop_vblank(mem.registers_mut());
                 self.address_latch = None;
             },
-            (OamData, Write) => self.write_oam(mem.ppu_registers_mut(), value),
+            (OamData, Write) => self.write_oam(mem.registers_mut(), value),
             (PpuAddr, Write) => self.write_partial_vram_address(value),
             (PpuData, Read) => self.update_vram_data(mem),
             (PpuData, Write) => self.write_vram(mem, value),
@@ -175,9 +175,9 @@ impl Ppu {
         let palette_table = mem.palette_table();
         frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
-        let name_table_number = mem.ppu_registers().name_table_number();
+        let name_table_number = mem.registers().name_table_number();
         //let _name_table_mirroring = mem.name_table_mirroring();
-        let background_table_side = mem.ppu_registers().background_table_side();
+        let background_table_side = mem.registers().background_table_side();
         mem.name_table(name_table_number).render(
             &mem.pattern_table(background_table_side),
             &palette_table,
@@ -197,10 +197,10 @@ impl Ppu {
     fn render_sprites(&mut self, mem: &PpuMemory, frame: &mut Frame) {
         frame.clear_sprite_buffer();
 
-        let sprite_table_side = mem.ppu_registers().sprite_table_side();
+        let sprite_table_side = mem.registers().sprite_table_side();
         let pattern_table = mem.pattern_table(sprite_table_side);
         let palette_table = mem.palette_table();
-        let sprite_height = mem.ppu_registers().sprite_height();
+        let sprite_height = mem.registers().sprite_height();
 
         // FIXME: No more sprites will be found once the end of OAM is reached,
         // effectively hiding any sprites before OAM[OAMADDR].
@@ -235,15 +235,15 @@ impl Ppu {
             } else {
                 self.vram_address
             };
-        self.vram_data = mem.ppu_read(vram_data_source);
+        self.vram_data = mem.read(vram_data_source);
 
-        let increment = mem.ppu_registers().vram_address_increment() as u16;
+        let increment = mem.registers().vram_address_increment() as u16;
         self.vram_address = self.vram_address.advance(increment);
     }
 
     fn write_vram(&mut self, mem: &mut PpuMemory, value: u8) {
-        mem.ppu_write(self.vram_address, value);
-        let increment = mem.ppu_registers().vram_address_increment() as u16;
+        mem.write(self.vram_address, value);
+        let increment = mem.registers().vram_address_increment() as u16;
         self.vram_address = self.vram_address.advance(increment);
     }
 
