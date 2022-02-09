@@ -170,7 +170,7 @@ impl PatternIndex {
     }
 
     pub fn to_u8(self) -> u8 {
-        u8::from(self.0)
+        self.0
     }
 
     pub fn to_usize(self) -> usize {

@@ -17,7 +17,6 @@ use crate::memory::mappers::mapper1::Mapper1;
 use crate::memory::mappers::mapper3::Mapper3;
 use crate::memory::ports::Ports;
 use crate::ppu::ppu::Ppu;
-use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::render::frame_rate::TargetFrameRate;
 
@@ -44,16 +43,14 @@ impl Nes {
                 _ => todo!(),
             };
 
-        let ppu_registers = Rc::new(RefCell::new(PpuRegisters::new()));
         let joypad1 = Rc::new(RefCell::new(Joypad::new()));
         let joypad2 = Rc::new(RefCell::new(Joypad::new()));
         let ports = Ports::new(joypad1.clone(), joypad2.clone());
-        let mut memory =
-            Memory::new(mapper, ports, ppu_registers.clone(), config.system_palette);
+        let mut memory = Memory::new(mapper, ports, config.system_palette);
 
         Nes {
             cpu: Cpu::new(&mut memory, config.program_counter_source),
-            ppu: Ppu::new(ppu_registers),
+            ppu: Ppu::new(),
             memory,
 
             joypad1,
@@ -237,8 +234,7 @@ mod tests {
         let joypad1 = Rc::new(RefCell::new(Joypad::new()));
         let joypad2 = Rc::new(RefCell::new(Joypad::new()));
         let ports = Ports::new(joypad1.clone(), joypad2.clone());
-        let ppu_registers = Rc::new(RefCell::new(PpuRegisters::new()));
-        let mut memory = Memory::new(mapper, ports, ppu_registers.clone(), system_palette);
+        let mut memory = Memory::new(mapper, ports, system_palette);
         // Write NOPs to where the RESET_VECTOR starts the program.
         for i in 0x0200..0x0800 {
             memory.cpu_write(CpuAddress::new(i), 0xEA);
@@ -246,7 +242,7 @@ mod tests {
 
         Nes {
             cpu: Cpu::new(&mut memory, ProgramCounterSource::Override(CpuAddress::new(0x0000))),
-            ppu: Ppu::new(ppu_registers),
+            ppu: Ppu::new(),
             memory,
             joypad1,
             joypad2,

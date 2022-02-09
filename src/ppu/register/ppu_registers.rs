@@ -73,10 +73,6 @@ impl PpuRegisters {
         self.mask.sprites_enabled
     }
 
-    pub(in crate::ppu) fn vblank_active(&self) -> bool {
-        self.status.vblank_active
-    }
-
     pub(in crate::ppu) fn start_vblank(&mut self) {
         self.status.vblank_active = true;
     }
@@ -103,6 +99,14 @@ impl PpuRegisters {
 
     pub(in crate::ppu) fn take_latch_access(&mut self) -> Option<LatchAccess> {
         self.latch_access.take()
+    }
+
+    pub fn rendering_enabled(&self) -> bool {
+        self.mask.sprites_enabled || self.mask.background_enabled
+    }
+
+    pub fn can_generate_nmi(&self) -> bool {
+        self.status.vblank_active && self.ctrl.nmi_enabled
     }
 
     pub fn read(&mut self, register_type: RegisterType) -> u8 {

@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use crate::memory::cpu_address::CpuAddress;
 use crate::memory::cpu_internal_ram::{CpuInternalRam, NMI_VECTOR, RESET_VECTOR, IRQ_VECTOR};
 use crate::memory::mapper::Mapper;
@@ -22,7 +19,7 @@ pub struct Memory {
     cpu_internal_ram: CpuInternalRam,
     ppu_internal_ram: PpuInternalRam,
     ports: Ports,
-    ppu_registers: Rc<RefCell<PpuRegisters>>,
+    ppu_registers: PpuRegisters,
     system_palette: SystemPalette,
 }
 
@@ -30,7 +27,6 @@ impl Memory {
     pub fn new(
         mapper: Box<dyn Mapper>,
         ports: Ports,
-        ppu_registers: Rc<RefCell<PpuRegisters>>,
         system_palette: SystemPalette,
     ) -> Memory {
         Memory {
@@ -38,7 +34,7 @@ impl Memory {
             cpu_internal_ram: CpuInternalRam::new(),
             ppu_internal_ram: PpuInternalRam::new(),
             ports,
-            ppu_registers,
+            ppu_registers: PpuRegisters::new(),
             system_palette,
         }
     }
@@ -48,7 +44,7 @@ impl Memory {
         self.mapper.cpu_read(
             &self.cpu_internal_ram,
             &mut self.ports,
-            &self.ppu_registers,
+            &mut self.ppu_registers,
             address,
         )
     }
@@ -58,7 +54,7 @@ impl Memory {
         self.mapper.cpu_write(
             &mut self.cpu_internal_ram,
             &mut self.ports,
-            &self.ppu_registers,
+            &mut self.ppu_registers,
             address,
             value,
         )
@@ -82,6 +78,16 @@ impl Memory {
     #[inline]
     pub fn ports_mut(&mut self) -> &mut Ports {
         &mut self.ports
+    }
+
+    #[inline]
+    pub fn ppu_registers(&self) -> &PpuRegisters {
+        &self.ppu_registers
+    }
+
+    #[inline]
+    pub fn ppu_registers_mut(&mut self) -> &mut PpuRegisters {
+        &mut self.ppu_registers
     }
 
     #[inline]

@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use num_traits::FromPrimitive;
 
 use crate::memory::cpu_address::CpuAddress;
@@ -47,12 +44,12 @@ pub trait Mapper {
         &self,
         cpu_internal_ram: &CpuInternalRam,
         ports: &mut Ports,
-        ppu_registers: &Rc<RefCell<PpuRegisters>>,
+        ppu_registers: &mut PpuRegisters,
         address: CpuAddress,
     ) -> u8 {
         match address.to_raw() {
             0x0000..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF],
-            0x2000..=0x3FFF => ppu_registers.borrow_mut().read(address_to_ppu_register_type(address)),
+            0x2000..=0x3FFF => ppu_registers.read(address_to_ppu_register_type(address)),
             0x4000..=0x4013 => {/* APU */ 0},
             0x4014          => {/* OAM DMA is write-only. */ 0},
             0x4015          => {/* APU */ 0},
@@ -69,13 +66,13 @@ pub trait Mapper {
         &mut self,
         cpu_internal_ram: &mut CpuInternalRam,
         ports: &mut Ports,
-        ppu_registers: &Rc<RefCell<PpuRegisters>>,
+        ppu_registers: &mut PpuRegisters,
         address: CpuAddress,
         value: u8,
     ) {
         match address.to_raw() {
             0x0000..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF] = value,
-            0x2000..=0x3FFF => ppu_registers.borrow_mut().write(address_to_ppu_register_type(address), value),
+            0x2000..=0x3FFF => ppu_registers.write(address_to_ppu_register_type(address), value),
             0x4000..=0x4013 => {/* APU */},
             0x4014          => ports.dma.set_page(value),
             0x4015          => {/* APU */},
