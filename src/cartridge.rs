@@ -202,10 +202,10 @@ pub struct PlayChoice {
 
 
 #[cfg(test)]
-pub mod tests {
+pub mod test_data {
     use super::*;
 
-    pub fn sample_cartridge() -> Cartridge {
+    pub fn cartridge() -> Cartridge {
         let mut prg_rom_chunks = vec![Box::new([0xEA; PRG_ROM_CHUNK_LENGTH])];
         let len = prg_rom_chunks[0].len();
         // Overwrite the NMI/RESET/IRQ Vectors so they doesn't point to ROM.

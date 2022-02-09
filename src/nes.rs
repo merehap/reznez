@@ -165,7 +165,7 @@ mod tests {
     use crate::ppu::render::frame::Frame;
     use crate::ppu::render::frame_rate::TargetFrameRate;
 
-    use crate::cartridge::tests::sample_cartridge;
+    use crate::cartridge::test_data;
 
     use super::*;
 
@@ -227,8 +227,7 @@ mod tests {
     }
 
     fn sample_nes() -> Nes {
-        let cartridge = sample_cartridge();
-        let mapper = Box::new(Mapper0::new(cartridge).unwrap());
+        let mapper = Box::new(Mapper0::new(test_data::cartridge()).unwrap());
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
         let joypad1 = Rc::new(RefCell::new(Joypad::new()));
