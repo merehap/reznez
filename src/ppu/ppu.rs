@@ -1,4 +1,4 @@
-use crate::memory::memory::{Memory, PALETTE_TABLE_START};
+use crate::memory::memory::{PpuMemory, PALETTE_TABLE_START};
 use crate::memory::ppu_address::PpuAddress;
 use crate::ppu::clock::Clock;
 use crate::ppu::oam::Oam;
@@ -47,21 +47,11 @@ impl Ppu {
         }
     }
 
-    /*
-    pub fn status(&self) -> Status {
-        mem.ppu_registers().status
-    }
-    */
-
     pub fn clock(&self) -> &Clock {
         &self.clock
     }
 
-    pub fn reset_address_latch(&mut self) {
-        self.address_latch = None;
-    }
-
-    pub fn step(&mut self, mem: &mut Memory, frame: &mut Frame) -> StepResult {
+    pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) -> StepResult {
         let total_cycles = self.clock().total_cycles();
 
         if self.clock.cycle() == 1 {
@@ -138,7 +128,7 @@ impl Ppu {
     }
 
     fn process_latch_access(
-        &mut self, mem: &mut Memory, latch_access: LatchAccess,
+        &mut self, mem: &mut PpuMemory, latch_access: LatchAccess,
     ) -> bool {
         let value = mem.ppu_registers().latch_value();
         let mut should_generate_nmi = false;
@@ -162,7 +152,7 @@ impl Ppu {
 
             (Status, Read) => {
                 self.stop_vblank(mem.ppu_registers_mut());
-                self.reset_address_latch();
+                self.address_latch = None;
             },
             (OamData, Write) => self.write_oam(mem.ppu_registers_mut(), value),
             (PpuAddr, Write) => self.write_partial_vram_address(value),
@@ -181,7 +171,7 @@ impl Ppu {
     }
 
     // FIXME: Stop rendering off-screen pixels.
-    fn render_background(&mut self, mem: &Memory, frame: &mut Frame) {
+    fn render_background(&mut self, mem: &PpuMemory, frame: &mut Frame) {
         let palette_table = mem.palette_table();
         frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
@@ -204,7 +194,7 @@ impl Ppu {
         );
     }
 
-    fn render_sprites(&mut self, mem: &Memory, frame: &mut Frame) {
+    fn render_sprites(&mut self, mem: &PpuMemory, frame: &mut Frame) {
         frame.clear_sprite_buffer();
 
         let sprite_table_side = mem.ppu_registers().sprite_table_side();
@@ -236,7 +226,7 @@ impl Ppu {
         regs.oam_addr = oam_addr.wrapping_add(1);
     }
 
-    fn update_vram_data(&mut self, mem: &Memory) {
+    fn update_vram_data(&mut self, mem: &PpuMemory) {
         let vram_data_source =
             if self.vram_address >= PALETTE_TABLE_START {
                 // Even though palette ram isn't mirrored down, its vram data is.
@@ -251,7 +241,7 @@ impl Ppu {
         self.vram_address = self.vram_address.advance(increment);
     }
 
-    fn write_vram(&mut self, mem: &mut Memory, value: u8) {
+    fn write_vram(&mut self, mem: &mut PpuMemory, value: u8) {
         mem.ppu_write(self.vram_address, value);
         let increment = mem.ppu_registers().vram_address_increment() as u16;
         self.vram_address = self.vram_address.advance(increment);

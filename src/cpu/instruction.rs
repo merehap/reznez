@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use strum_macros::EnumString;
 
 use crate::memory::cpu_address::CpuAddress;
-use crate::memory::memory::Memory;
+use crate::memory::memory::CpuMemory;
 
 lazy_static! {
     static ref INSTRUCTION_TEMPLATES: [InstructionTemplate; 256] = instruction_templates();
@@ -75,7 +75,7 @@ impl Instruction {
         program_counter: CpuAddress,
         x_index: u8,
         y_index: u8,
-        mem: &mut Memory,
+        mem: &mut CpuMemory,
     ) -> Instruction {
 
         let template = INSTRUCTION_TEMPLATES[mem.cpu_read(program_counter) as usize];

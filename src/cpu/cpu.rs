@@ -5,7 +5,7 @@ use crate::cpu::instruction::{Instruction, OpCode, Argument};
 use crate::cpu::status::Status;
 use crate::cpu::dma_transfer::{DmaTransfer, DmaTransferState};
 use crate::memory::cpu_address::CpuAddress;
-use crate::memory::memory::Memory;
+use crate::memory::memory::CpuMemory;
 use crate::memory::ports::DmaPort;
 
 pub struct Cpu {
@@ -28,7 +28,7 @@ pub struct Cpu {
 
 impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
-    pub fn new(memory: &mut Memory, program_counter_source: ProgramCounterSource) -> Cpu {
+    pub fn new(memory: &mut CpuMemory, program_counter_source: ProgramCounterSource) -> Cpu {
         use ProgramCounterSource::*;
         let program_counter = match program_counter_source {
             ResetVector => memory.reset_vector(),
@@ -54,14 +54,14 @@ impl Cpu {
     }
 
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
-    pub fn reset(&mut self, memory: &mut Memory) {
+    pub fn reset(&mut self, memory: &mut CpuMemory) {
         self.status.interrupts_disabled = true;
         self.program_counter = memory.reset_vector();
         self.cycle = 7;
         // TODO: APU resets?
     }
 
-    pub fn state_string(&self, memory: &Memory) -> String {
+    pub fn state_string(&self, memory: &CpuMemory) -> String {
         let nesting = "";
         format!("{:010} PC:{}, A:{:02X}, X:{:02X}, Y:{:02X}, P:{:02X}, S:{:02X}, {} {}",
             self.cycle,
@@ -108,7 +108,7 @@ impl Cpu {
         self.nmi_pending = true;
     }
 
-    pub fn step(&mut self, memory: &mut Memory) -> Option<Instruction> {
+    pub fn step(&mut self, memory: &mut CpuMemory) -> Option<Instruction> {
         if let Some(dma_page) = self.dma_port.take_page() {
             self.dma_transfer = DmaTransfer::new(dma_page, self.cycle);
         }
@@ -154,7 +154,7 @@ impl Cpu {
         Some(instruction)
     }
 
-    fn execute_instruction(&mut self, memory: &mut Memory, instruction: Instruction) -> u8 {
+    fn execute_instruction(&mut self, memory: &mut CpuMemory, instruction: Instruction) -> u8 {
         self.program_counter = self.program_counter.advance(instruction.length());
 
         let mut cycle_count = instruction.template.cycle_count as u8;
@@ -465,7 +465,7 @@ impl Cpu {
     }
 
     // TODO: Account for how many cycles an NMI takes.
-    fn nmi(&mut self, memory: &mut Memory) {
+    fn nmi(&mut self, memory: &mut CpuMemory) {
         info!(target: "cpu", "Executing NMI.");
         memory.stack().push_address(self.program_counter);
         memory.stack().push(self.status.to_interrupt_byte());

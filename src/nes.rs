@@ -49,7 +49,7 @@ impl Nes {
         let mut memory = Memory::new(mapper, ports, config.system_palette);
 
         Nes {
-            cpu: Cpu::new(&mut memory, config.program_counter_source),
+            cpu: Cpu::new(&mut memory.as_cpu_memory(), config.program_counter_source),
             ppu: Ppu::new(),
             memory,
 
@@ -123,10 +123,10 @@ impl Nes {
     pub fn step(&mut self, frame: &mut Frame) -> StepResult {
         let mut instruction = None;
         if self.cycle % 3 == 0 {
-            instruction = self.cpu.step(&mut self.memory);
+            instruction = self.cpu.step(&mut self.memory.as_cpu_memory());
         }
 
-        let ppu_result = self.ppu.step(&mut self.memory, frame);
+        let ppu_result = self.ppu.step(&mut self.memory.as_ppu_memory(), frame);
 
         if ppu_result.should_generate_nmi {
             self.cpu.schedule_nmi();
@@ -236,11 +236,11 @@ mod tests {
         let mut memory = Memory::new(mapper, ports, system_palette);
         // Write NOPs to where the RESET_VECTOR starts the program.
         for i in 0x0200..0x0800 {
-            memory.cpu_write(CpuAddress::new(i), 0xEA);
+            memory.as_cpu_memory().cpu_write(CpuAddress::new(i), 0xEA);
         }
 
         Nes {
-            cpu: Cpu::new(&mut memory, ProgramCounterSource::Override(CpuAddress::new(0x0000))),
+            cpu: Cpu::new(&mut memory.as_cpu_memory(), ProgramCounterSource::Override(CpuAddress::new(0x0000))),
             ppu: Ppu::new(),
             memory,
             joypad1,
@@ -255,7 +255,7 @@ mod tests {
     fn step_until_vblank_nmi_enabled(nes: &mut Nes) {
         let mut ctrl = Ctrl::new();
         ctrl.nmi_enabled = true;
-        nes.memory.cpu_write(CpuAddress::new(0x2000), ctrl.to_u8());
+        nes.memory.as_cpu_memory().cpu_write(CpuAddress::new(0x2000), ctrl.to_u8());
 
         let mut frame = Frame::new();
         loop {
@@ -274,17 +274,18 @@ mod tests {
     }
 
     fn write_ppuctrl_through_opcode_injection(nes: &mut Nes, ctrl: u8) {
+        let mut memory = nes.memory.as_cpu_memory();
         // STA: Store to the accumulator.
-        nes.memory.cpu_write(nes.cpu.program_counter().advance(0), 0xA9);
+        memory.cpu_write(nes.cpu.program_counter().advance(0), 0xA9);
         // Store VBLANK_NMI DISABLED to the accumulator.
-        nes.memory.cpu_write(nes.cpu.program_counter().advance(1), ctrl);
+        memory.cpu_write(nes.cpu.program_counter().advance(1), ctrl);
 
         // LDA: Load the accumulator into a memory location.
-        nes.memory.cpu_write(nes.cpu.program_counter().advance(2), 0x8D);
+        memory.cpu_write(nes.cpu.program_counter().advance(2), 0x8D);
         // Low byte of PPUCTRL, the address to be set.
-        nes.memory.cpu_write(nes.cpu.program_counter().advance(3), 0x00);
+        memory.cpu_write(nes.cpu.program_counter().advance(3), 0x00);
         // High byte of PPUCTRL, the address to be set.
-        nes.memory.cpu_write(nes.cpu.program_counter().advance(4), 0x20);
+        memory.cpu_write(nes.cpu.program_counter().advance(4), 0x20);
 
         // Execute the two op codes we just injected.
         let mut frame = Frame::new();
