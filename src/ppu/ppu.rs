@@ -16,10 +16,10 @@ pub struct Ppu {
 
     clock: Clock,
 
-    address_latch: Option<u8>,
+    write_toggle: WriteToggle,
+
     vram_address: PpuAddress,
     temp_vram_address: u16,
-    fine_x_scroll: u8,
     vram_data: u8,
 
     x_scroll_offset: u8,
@@ -36,11 +36,10 @@ impl Ppu {
 
             clock: Clock::new(),
 
-            address_latch: None,
+            write_toggle: WriteToggle::FirstByte,
 
             vram_address: PpuAddress::from_u16(0),
             temp_vram_address: 0,
-            fine_x_scroll: 0,
             vram_data: 0,
 
             x_scroll_offset: 0,
@@ -158,7 +157,7 @@ impl Ppu {
 
             (Status, Read) => {
                 self.stop_vblank(mem.registers_mut());
-                self.address_latch = None;
+                self.write_toggle = WriteToggle::FirstByte;
             },
             (OamData, Write) => self.write_oam(mem.registers_mut(), value),
             (PpuAddr, Write) => self.write_partial_vram_address(value),
@@ -254,32 +253,37 @@ impl Ppu {
     }
 
     fn write_partial_vram_address(&mut self, value: u8) {
-        if let Some(_) = self.address_latch {
-            self.temp_vram_address &= 0b0111_1111_0000_0000;
-            self.temp_vram_address |= value as u16;
-            self.vram_address = PpuAddress::from_u16(self.temp_vram_address);
-            self.address_latch = None;
-        } else {
-            self.temp_vram_address &= 0b0000_0000_1111_1111;
-            self.temp_vram_address |= ((value & 0b0011_1111) as u16) << 8;
-            self.address_latch = Some(value);
+        match self.write_toggle {
+            WriteToggle::FirstByte => {
+                self.temp_vram_address &= 0b0000_0000_1111_1111;
+                self.temp_vram_address |= ((value & 0b0011_1111) as u16) << 8;
+            },
+            WriteToggle::SecondByte => {
+                self.temp_vram_address &= 0b0111_1111_0000_0000;
+                self.temp_vram_address |= value as u16;
+                self.vram_address = PpuAddress::from_u16(self.temp_vram_address);
+            }
         }
+
+        self.write_toggle.toggle();
     }
 
     fn write_scroll_dimension(&mut self, dimension: u8) {
-        if self.address_latch.is_some() {
-            self.temp_vram_address &= 0b0000_1100_0001_1111;
-            self.temp_vram_address |= ((dimension as u16) >> 3) << 5;
-            self.temp_vram_address |= (dimension as u16 & 0b0000_0111) << 12;
-            self.address_latch = None;
-            self.y_scroll_offset = dimension;
-        } else {
-            self.fine_x_scroll = dimension & 0b0000_0111;
-            self.temp_vram_address &= 0b1111_1111_1110_0000;
-            self.temp_vram_address |= (dimension >> 3) as u16;
-            self.address_latch = Some(dimension);
-            self.x_scroll_offset = dimension;
+        match self.write_toggle {
+            WriteToggle::FirstByte => {
+                self.temp_vram_address &= 0b1111_1111_1110_0000;
+                self.temp_vram_address |= (dimension >> 3) as u16;
+                self.x_scroll_offset = dimension;
+            },
+            WriteToggle::SecondByte => {
+                self.temp_vram_address &= 0b0000_1100_0001_1111;
+                self.temp_vram_address |= ((dimension as u16) >> 3) << 5;
+                self.temp_vram_address |= (dimension as u16 & 0b0000_0111) << 12;
+                self.y_scroll_offset = dimension;
+            }
         }
+
+        self.write_toggle.toggle();
     }
 
     fn stop_vblank(&mut self, regs: &mut PpuRegisters) {
@@ -294,6 +298,21 @@ impl Ppu {
 pub struct StepResult {
     pub is_last_cycle_of_frame: bool,
     pub should_generate_nmi: bool,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+enum WriteToggle {
+    FirstByte,
+    SecondByte,
+}
+
+impl WriteToggle {
+    fn toggle(&mut self) {
+        match self {
+            WriteToggle::FirstByte => *self = WriteToggle::SecondByte,
+            WriteToggle::SecondByte => *self = WriteToggle::FirstByte,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -317,9 +336,9 @@ mod tests {
         let mut ppu_mem = mem.as_ppu_memory();
         let mut frame = Frame::new();
 
-        assert_eq!(ppu.address_latch, None);
+        assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         ppu.step(&mut ppu_mem, &mut frame);
-        assert_eq!(ppu.address_latch, None);
+        assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
 
         for i in 0x0000..0xFFFF {
             let value = ppu_mem.read(PpuAddress::from_u16(i));
@@ -338,7 +357,7 @@ mod tests {
         let high_half = 0b1110_1100;
         mem.as_cpu_memory().write(CPU_PPU_ADDR, high_half);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
-        assert_eq!(ppu.address_latch, Some(high_half));
+        assert_eq!(ppu.write_toggle, WriteToggle::SecondByte);
         assert_eq!(ppu.vram_address, PPU_ZERO);
         assert_eq!(ppu.temp_vram_address, 0b0010_1100_1111_1111);
         assert_eq!(ppu.x_scroll_offset, 0);
@@ -347,7 +366,7 @@ mod tests {
         let low_half = 0b1010_1010;
         mem.as_cpu_memory().write(CPU_PPU_ADDR, low_half);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
-        assert_eq!(ppu.address_latch, None);
+        assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(ppu.temp_vram_address, 0b0010_1100_1010_1010);
         assert_eq!(ppu.vram_address, PpuAddress::from_u16(0b0010_1100_1010_1010));
         assert_eq!(ppu.x_scroll_offset, 0);
@@ -374,7 +393,7 @@ mod tests {
 
         mem.as_cpu_memory().write(CPU_CTRL, 0b1111_1101);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
-        assert_eq!(ppu.address_latch, None);
+        assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(ppu.temp_vram_address, 0b0111_0111_1111_1111);
         assert_eq!(ppu.vram_address, PPU_ZERO);
         assert_eq!(ppu.x_scroll_offset, 0);
@@ -383,7 +402,7 @@ mod tests {
         let x_scroll = 0b1100_1100;
         mem.as_cpu_memory().write(CPU_SCROLL, x_scroll);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
-        assert_eq!(ppu.address_latch, Some(x_scroll));
+        assert_eq!(ppu.write_toggle, WriteToggle::SecondByte);
         assert_eq!(ppu.temp_vram_address, 0b0111_0111_1111_1001);
         assert_eq!(ppu.vram_address, PPU_ZERO);
         assert_eq!(ppu.x_scroll_offset, x_scroll);
@@ -392,7 +411,7 @@ mod tests {
         let y_scroll = 0b1010_1010;
         mem.as_cpu_memory().write(CPU_SCROLL, y_scroll);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
-        assert_eq!(ppu.address_latch, None);
+        assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(ppu.temp_vram_address, 0b0010_0110_1011_1001);
         assert_eq!(ppu.vram_address, PPU_ZERO);
         assert_eq!(ppu.x_scroll_offset, x_scroll);
@@ -400,7 +419,7 @@ mod tests {
 
         mem.as_cpu_memory().write(CPU_CTRL, 0b0000_0010);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
-        assert_eq!(ppu.address_latch, None);
+        assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(ppu.temp_vram_address, 0b0010_1010_1011_1001);
         assert_eq!(ppu.vram_address, PPU_ZERO);
         assert_eq!(ppu.x_scroll_offset, x_scroll);
@@ -418,20 +437,20 @@ mod tests {
         let high_half = 0b1110_1101;
         mem.as_cpu_memory().write(CPU_PPU_ADDR, high_half);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
-        assert_eq!(ppu.address_latch, Some(high_half));
+        assert_eq!(ppu.write_toggle, WriteToggle::SecondByte);
         assert_eq!(ppu.temp_vram_address, 0b0010_1101_1111_1111);
         assert_eq!(ppu.vram_address, PPU_ZERO);
 
         mem.as_cpu_memory().write(CPU_CTRL, 0b1111_1100);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
-        assert_eq!(ppu.address_latch, Some(high_half));
+        assert_eq!(ppu.write_toggle, WriteToggle::SecondByte);
         assert_eq!(ppu.temp_vram_address, 0b0010_0001_1111_1111);
         assert_eq!(ppu.vram_address, PPU_ZERO);
 
         let low_half = 0b1010_1010;
         mem.as_cpu_memory().write(CPU_PPU_ADDR, low_half);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
-        assert_eq!(ppu.address_latch, None);
+        assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(ppu.temp_vram_address, 0b0010_0001_1010_1010);
         assert_eq!(ppu.vram_address, PpuAddress::from_u16(0b0010_0001_1010_1010), "Bad VRAM (not temp)");
         assert_eq!(ppu.x_scroll_offset, 0);
@@ -453,7 +472,7 @@ mod tests {
         let x_scroll = 0b1111_1111;
         mem.as_cpu_memory().write(CPU_SCROLL, x_scroll);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
-        assert_eq!(ppu.address_latch, Some(x_scroll));
+        assert_eq!(ppu.write_toggle, WriteToggle::SecondByte);
         println!("{:016b} vs {:016b}", ppu.temp_vram_address, 0b0111_0111_1111_1111);
         assert_eq!(ppu.temp_vram_address, 0b0000_0111_1111_1111);
         assert_eq!(ppu.vram_address, PPU_ZERO);
@@ -463,7 +482,7 @@ mod tests {
         let low_half = 0b1010_1010;
         mem.as_cpu_memory().write(CPU_PPU_ADDR, low_half);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
-        assert_eq!(ppu.address_latch, None);
+        assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(ppu.temp_vram_address, 0b0000_0111_1010_1010);
         assert_eq!(ppu.vram_address, PpuAddress::from_u16(0b0000_0111_1010_1010));
         assert_eq!(ppu.x_scroll_offset, x_scroll);
