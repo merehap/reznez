@@ -1,5 +1,3 @@
-use arr_macro::arr;
-
 use crate::cartridge::Cartridge;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
@@ -7,6 +5,8 @@ use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::bit_util::get_bit;
 use crate::util::mapped_array::MappedArray;
+
+const EMPTY_CHR_CHUNK: [u8; 0x2000] = [0; 0x2000];
 
 // CNROM
 pub struct Mapper3 {
@@ -38,7 +38,13 @@ impl Mapper3 {
         }
 
         let mut chunk_iter = cartridge.chr_rom_chunks().iter();
-        let raw_pattern_tables = arr![split_chr_chunk(**chunk_iter.next().unwrap()); 4];
+        let raw_pattern_tables =
+            [
+                split_chr_chunk(**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
+                split_chr_chunk(**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
+                split_chr_chunk(**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
+                split_chr_chunk(**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
+            ];
         let name_table_mirroring = cartridge.name_table_mirroring();
         Ok(Mapper3 {
             prg_rom,
