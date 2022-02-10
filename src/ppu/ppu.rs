@@ -234,14 +234,13 @@ impl Ppu {
     }
 
     fn update_pending_data_then_advance(&mut self, mem: &PpuMemory) {
-        let data_source =
-            if self.current_address >= PALETTE_TABLE_START {
-                // Even though palette ram isn't mirrored down, its data address is.
-                // https://forums.nesdev.org/viewtopic.php?t=18627
-                self.current_address.subtract(0x1000)
-            } else {
-                self.current_address
-            };
+        let mut data_source = self.current_address;
+        if data_source >= PALETTE_TABLE_START {
+            // Even though palette ram isn't mirrored down, its data address is.
+            // https://forums.nesdev.org/viewtopic.php?t=18627
+            data_source = data_source.subtract(0x1000)
+        }
+
         self.pending_data = mem.read(data_source);
 
         let increment = mem.registers().current_address_increment() as u16;
@@ -270,18 +269,24 @@ impl Ppu {
         self.write_toggle.toggle();
     }
 
+    /*
+     * 0123456789ABCDEF: bit pos.
+     *            01234  $SCROLL#1
+     *  567--01234-----  $SCROLL#2
+     *     67----------  $CTRL
+     */
     fn write_scroll_dimension(&mut self, dimension: u8) {
         match self.write_toggle {
             WriteToggle::FirstByte => {
-                self.next_address &= 0b0111_1111_1110_0000;
-                self.next_address |= (dimension >> 3) as u16;
                 self.x_scroll_offset = dimension;
+                self.next_address &= 0b0111_1111_1110_0000;
+                self.next_address |= (self.x_scroll_offset >> 3) as u16;
             },
             WriteToggle::SecondByte => {
-                self.next_address &= 0b0000_1100_0001_1111;
-                self.next_address |= ((dimension as u16) >> 3) << 5;
-                self.next_address |= (dimension as u16 & 0b0000_0111) << 12;
                 self.y_scroll_offset = dimension;
+                self.next_address &= 0b0000_1100_0001_1111;
+                self.next_address |= (self.y_scroll_offset as u16 >> 3) << 5;
+                self.next_address |= (self.y_scroll_offset as u16 & 0b0000_0111) << 12;
             }
         }
 
