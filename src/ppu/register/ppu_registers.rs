@@ -3,7 +3,7 @@ use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::register::ppu_register_latch::PpuRegisterLatch;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ctrl;
-use crate::ppu::register::registers::ctrl::{Ctrl, SpriteHeight, VramAddressIncrement};
+use crate::ppu::register::registers::ctrl::{Ctrl, SpriteHeight, AddressIncrement};
 use crate::ppu::register::registers::mask;
 use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::register::registers::ppu_data;
@@ -61,8 +61,8 @@ impl PpuRegisters {
         self.ctrl.sprite_table_side
     }
 
-    pub(in crate::ppu) fn vram_address_increment(&self) -> VramAddressIncrement {
-        self.ctrl.vram_address_increment
+    pub(in crate::ppu) fn current_address_increment(&self) -> AddressIncrement {
+        self.ctrl.current_address_increment
     }
 
     pub(in crate::ppu) fn background_enabled(&self) -> bool {

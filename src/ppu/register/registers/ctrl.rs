@@ -9,7 +9,7 @@ pub struct Ctrl {
     pub sprite_height: SpriteHeight,
     pub background_table_side: PatternTableSide,
     pub sprite_table_side: PatternTableSide,
-    pub vram_address_increment: VramAddressIncrement,
+    pub current_address_increment: AddressIncrement,
     pub name_table_number: NameTableNumber,
 }
 
@@ -21,7 +21,7 @@ impl Ctrl {
             sprite_height: SpriteHeight::Normal,
             background_table_side: PatternTableSide::Left,
             sprite_table_side: PatternTableSide::Left,
-            vram_address_increment: VramAddressIncrement::Right,
+            current_address_increment: AddressIncrement::Right,
             name_table_number: NameTableNumber::Zero,
         }
     }
@@ -53,11 +53,11 @@ impl Ctrl {
                 } else {
                     PatternTableSide::Left
                 },
-            vram_address_increment:
+            current_address_increment:
                 if get_bit(value, 5) {
-                    VramAddressIncrement::Down
+                    AddressIncrement::Down
                 } else {
-                    VramAddressIncrement::Right
+                    AddressIncrement::Right
                 },
             name_table_number:
                 match (get_bit(value, 6), get_bit(value, 7)) {
@@ -78,7 +78,7 @@ impl Ctrl {
                 self.sprite_height == SpriteHeight::Tall,
                 self.background_table_side == PatternTableSide::Right,
                 self.sprite_table_side == PatternTableSide::Right,
-                self.vram_address_increment == VramAddressIncrement::Down,
+                self.current_address_increment == AddressIncrement::Down,
                 self.name_table_number as u8 & 0b0000_0010 != 0,
                 self.name_table_number as u8 & 0b0000_0001 != 0,
             ]
@@ -99,7 +99,7 @@ pub enum SpriteHeight {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum VramAddressIncrement {
+pub enum AddressIncrement {
     Right = 1,
     Down = 32,
 }
