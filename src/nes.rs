@@ -160,7 +160,7 @@ mod tests {
     use crate::memory::cpu_address::CpuAddress;
     use crate::cpu::cpu::ProgramCounterSource;
     use crate::memory::memory::Memory;
-    use crate::ppu::palette::system_palette::SystemPalette;
+    use crate::ppu::palette::system_palette;
     use crate::ppu::register::registers::ctrl::Ctrl;
     use crate::ppu::render::frame::Frame;
     use crate::ppu::render::frame_rate::TargetFrameRate;
@@ -228,8 +228,7 @@ mod tests {
 
     fn sample_nes() -> Nes {
         let mapper = Box::new(Mapper0::new(test_data::cartridge()).unwrap());
-        let system_palette =
-            SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
+        let system_palette = system_palette::test_data::system_palette();
         let joypad1 = Rc::new(RefCell::new(Joypad::new()));
         let joypad2 = Rc::new(RefCell::new(Joypad::new()));
         let ports = Ports::new(joypad1.clone(), joypad2.clone());

@@ -47,3 +47,14 @@ impl DmaPort {
         self.page.borrow_mut().take()
     }
 }
+
+#[cfg(test)]
+pub mod test_data {
+    use super::*;
+
+    pub fn ports() -> Ports {
+        let joypad1 = Rc::new(RefCell::new(Joypad::new()));
+        let joypad2 = Rc::new(RefCell::new(Joypad::new()));
+        Ports::new(joypad1, joypad2)
+    }
+}
