@@ -3,7 +3,7 @@ use std::fmt;
 use lazy_static::lazy_static;
 use strum_macros::EnumString;
 
-use crate::memory::cpu_address::CpuAddress;
+use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::memory::CpuMemory;
 
 lazy_static! {

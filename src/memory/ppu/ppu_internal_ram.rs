@@ -1,5 +1,5 @@
-use crate::memory::palette_ram::PaletteRam;
-use crate::memory::vram::Vram;
+use crate::memory::ppu::palette_ram::PaletteRam;
+use crate::memory::ppu::vram::Vram;
 
 pub struct PpuInternalRam {
     pub vram: Vram,

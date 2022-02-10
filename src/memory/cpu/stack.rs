@@ -1,6 +1,6 @@
 use log::info;
 
-use crate::memory::cpu_address::CpuAddress;
+use crate::memory::cpu::cpu_address::CpuAddress;
 
 pub struct Stack<'a> {
     raw: &'a mut [u8; 0x100],

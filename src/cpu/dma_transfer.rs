@@ -1,4 +1,4 @@
-use crate::memory::cpu_address::CpuAddress;
+use crate::memory::cpu::cpu_address::CpuAddress;
 
 pub struct DmaTransfer {
     current_cpu_address: CpuAddress,

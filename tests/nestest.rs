@@ -9,7 +9,7 @@ use std::str::FromStr;
 use reznez::config::{Config, Opt, GuiType};
 use reznez::cpu::instruction::OpCode;
 use reznez::cpu::status::Status;
-use reznez::memory::cpu_address::CpuAddress;
+use reznez::memory::cpu::cpu_address::CpuAddress;
 use reznez::nes::Nes;
 use reznez::ppu::render::frame::Frame;
 use reznez::ppu::render::frame_rate::TargetFrameRate;

@@ -1,7 +1,7 @@
 use std::ops::{Index, IndexMut};
 
-use crate::memory::cpu_address::CpuAddress;
-use crate::memory::stack::Stack;
+use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::cpu::stack::Stack;
 
 pub const NMI_VECTOR: CpuAddress = CpuAddress::new(0xFFFA);
 pub const RESET_VECTOR: CpuAddress = CpuAddress::new(0xFFFC);

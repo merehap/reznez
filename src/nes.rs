@@ -10,12 +10,12 @@ use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::Cpu;
 use crate::cpu::instruction::Instruction;
 use crate::gui::gui::Gui;
+use crate::memory::cpu::ports::Ports;
 use crate::memory::memory::Memory;
 use crate::memory::mapper::Mapper;
 use crate::memory::mappers::mapper0::Mapper0;
 use crate::memory::mappers::mapper1::Mapper1;
 use crate::memory::mappers::mapper3::Mapper3;
-use crate::memory::ports::Ports;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::render::frame_rate::TargetFrameRate;
@@ -157,8 +157,8 @@ pub struct StepResult {
 
 #[cfg(test)]
 mod tests {
-    use crate::memory::cpu_address::CpuAddress;
     use crate::cpu::cpu::ProgramCounterSource;
+    use crate::memory::cpu::cpu_address::CpuAddress;
     use crate::memory::memory::Memory;
     use crate::ppu::palette::system_palette;
     use crate::ppu::register::registers::ctrl::Ctrl;

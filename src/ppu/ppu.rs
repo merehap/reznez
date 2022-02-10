@@ -1,5 +1,5 @@
 use crate::memory::memory::{PpuMemory, PALETTE_TABLE_START};
-use crate::memory::ppu_address::PpuAddress;
+use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::clock::Clock;
 use crate::ppu::oam::Oam;
 use crate::ppu::register::ppu_registers::*;
@@ -324,8 +324,8 @@ impl WriteToggle {
 
 #[cfg(test)]
 mod tests {
+    use crate::memory::cpu::cpu_address::CpuAddress;
     use crate::memory::memory;
-    use crate::memory::cpu_address::CpuAddress;
 
     use super::*;
 

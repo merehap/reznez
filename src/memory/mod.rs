@@ -1,11 +1,6 @@
-pub mod cpu_address;
-pub mod cpu_internal_ram;
-pub mod mapper;
+pub mod cpu;
 pub mod mappers;
+pub mod ppu;
+
+pub mod mapper;
 pub mod memory;
-mod palette_ram;
-pub mod ports;
-pub mod ppu_address;
-mod ppu_internal_ram;
-pub mod stack;
-mod vram;

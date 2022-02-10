@@ -12,7 +12,7 @@ use crate::gui::gui::Gui;
 use crate::gui::no_gui::NoGui;
 use crate::gui::frame_dump_gui::FrameDumpGui;
 use crate::gui::sdl_gui::SdlGui;
-use crate::memory::cpu_address::CpuAddress;
+use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::render::frame_rate::TargetFrameRate;
 

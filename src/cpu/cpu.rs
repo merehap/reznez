@@ -4,9 +4,9 @@ use log::Level::Info;
 use crate::cpu::instruction::{Instruction, OpCode, Argument};
 use crate::cpu::status::Status;
 use crate::cpu::dma_transfer::{DmaTransfer, DmaTransferState};
-use crate::memory::cpu_address::CpuAddress;
+use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::cpu::ports::DmaPort;
 use crate::memory::memory::CpuMemory;
-use crate::memory::ports::DmaPort;
 
 pub struct Cpu {
     // Accumulator

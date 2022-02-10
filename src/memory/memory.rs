@@ -1,10 +1,10 @@
-use crate::memory::cpu_address::CpuAddress;
-use crate::memory::cpu_internal_ram::{CpuInternalRam, NMI_VECTOR, RESET_VECTOR, IRQ_VECTOR};
+use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::cpu::cpu_internal_ram::{CpuInternalRam, NMI_VECTOR, RESET_VECTOR, IRQ_VECTOR};
+use crate::memory::cpu::ports::Ports;
+use crate::memory::cpu::stack::Stack;
 use crate::memory::mapper::Mapper;
-use crate::memory::ports::Ports;
-use crate::memory::ppu_address::PpuAddress;
-use crate::memory::ppu_internal_ram::PpuInternalRam;
-use crate::memory::stack::Stack;
+use crate::memory::ppu::ppu_address::PpuAddress;
+use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::ppu::name_table::name_table::NameTable;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::palette::palette_table::PaletteTable;
@@ -161,8 +161,8 @@ impl <'a> PpuMemory<'a> {
 #[cfg(test)]
 pub mod test_data {
     use crate::cartridge;
+    use crate::memory::cpu::ports;
     use crate::memory::mappers::mapper0::Mapper0;
-    use crate::memory::ports;
     use crate::ppu::palette::system_palette;
 
     use super::*;

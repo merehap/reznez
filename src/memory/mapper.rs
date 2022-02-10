@@ -1,12 +1,12 @@
 use num_traits::FromPrimitive;
 
-use crate::memory::cpu_address::CpuAddress;
-use crate::memory::cpu_internal_ram::CpuInternalRam;
-use crate::memory::ppu_internal_ram::PpuInternalRam;
-use crate::memory::ppu_address::PpuAddress;
-use crate::memory::palette_ram::PaletteRam;
-use crate::memory::ports::Ports;
-use crate::memory::vram::VramSide;
+use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
+use crate::memory::cpu::ports::Ports;
+use crate::memory::ppu::palette_ram::PaletteRam;
+use crate::memory::ppu::ppu_address::PpuAddress;
+use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
+use crate::memory::ppu::vram::VramSide;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTableSide;

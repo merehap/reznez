@@ -1,7 +1,7 @@
 use arr_macro::arr;
 
 use crate::cartridge::Cartridge;
-use crate::memory::cpu_address::CpuAddress;
+use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
