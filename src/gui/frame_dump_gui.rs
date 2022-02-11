@@ -12,8 +12,8 @@ pub struct FrameDumpGui {
     frame: Frame,
 }
 
-impl Gui for FrameDumpGui {
-    fn initialize() -> FrameDumpGui {
+impl FrameDumpGui {
+    pub fn new() -> FrameDumpGui {
         if let Err(err) = fs::create_dir(FRAME_DUMP_DIRECTORY) {
             assert!(err.kind() == ErrorKind::AlreadyExists, "{:?}", err.kind());
         }
@@ -22,7 +22,9 @@ impl Gui for FrameDumpGui {
             frame: Frame::new(),
         }
     }
+}
 
+impl Gui for FrameDumpGui {
     #[inline]
     fn events(&mut self) -> Events {
         Events {

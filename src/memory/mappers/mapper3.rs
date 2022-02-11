@@ -78,7 +78,7 @@ impl Mapper for Mapper3 {
     }
 
     fn write_to_cartridge_space(&mut self, _: CpuAddress, value: u8) {
-        println!("Switching to bank {}.", value);
+        println!("Switching to bank {} ({}).", value % 4, value);
         self.selected_chr_bank = ChrBankId::from_u8(value);
     }
 }

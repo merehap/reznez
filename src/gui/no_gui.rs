@@ -7,13 +7,15 @@ pub struct NoGui {
     frame: Frame,
 }
 
-impl Gui for NoGui {
-    fn initialize() -> NoGui {
+impl NoGui {
+    pub fn new() -> NoGui {
         NoGui {
             frame: Frame::new(),
         }
     }
+}
 
+impl Gui for NoGui {
     #[inline]
     fn events(&mut self) -> Events {
         Events {

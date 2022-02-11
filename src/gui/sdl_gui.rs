@@ -53,8 +53,8 @@ pub struct SdlGui {
     pixels: [u8; 3 * Frame::WIDTH * Frame::HEIGHT],
 }
 
-impl Gui for SdlGui {
-    fn initialize() -> SdlGui {
+impl SdlGui {
+    pub fn new() -> SdlGui {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
         let window = video_subsystem
@@ -86,7 +86,9 @@ impl Gui for SdlGui {
             pixels: [0; 3 * Frame::WIDTH * Frame::HEIGHT],
         }
     }
+}
 
+impl Gui for SdlGui {
     #[inline]
     fn events(&mut self) -> Events {
         let mut should_quit = false;

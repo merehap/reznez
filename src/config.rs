@@ -58,9 +58,9 @@ impl Config {
 
     pub fn gui(opt: &Opt) -> Box<dyn Gui> {
         match opt.gui {
-            GuiType::NoGui => Box::new(NoGui::initialize()) as Box<dyn Gui>,
-            GuiType::Sdl => Box::new(SdlGui::initialize()) as Box<dyn Gui>,
-            GuiType::FrameDump => Box::new(FrameDumpGui::initialize()) as Box<dyn Gui>,
+            GuiType::NoGui => Box::new(NoGui::new()) as Box<dyn Gui>,
+            GuiType::Sdl => Box::new(SdlGui::new()),
+            GuiType::FrameDump => Box::new(FrameDumpGui::new()),
         }
     }
 }
