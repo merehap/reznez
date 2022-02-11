@@ -90,43 +90,43 @@ impl Instruction {
             Imm => Argument::Imm(low),
             ZP => {
                 let address = CpuAddress::zero_page(low);
-                Argument::Addr(address, mem.read(address))
+                Argument::Addr(address)
             },
             ZPX => {
                 let address = CpuAddress::zero_page(low.wrapping_add(x_index));
-                Argument::Addr(address, mem.read(address))
+                Argument::Addr(address)
             },
             ZPY => {
                 let address = CpuAddress::zero_page(low.wrapping_add(y_index));
-                Argument::Addr(address, mem.read(address))
+                Argument::Addr(address)
             },
             Abs => {
                 let address = CpuAddress::from_low_high(low, high);
-                Argument::Addr(address, mem.read(address))
+                Argument::Addr(address)
             },
             AbX => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(x_index);
                 page_boundary_crossed = start_address.page() != address.page();
-                Argument::Addr(address, mem.read(address))
+                Argument::Addr(address)
             },
             AbY => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(y_index);
                 page_boundary_crossed = start_address.page() != address.page();
-                Argument::Addr(address, mem.read(address))
+                Argument::Addr(address)
             },
             Rel => {
                 let address = program_counter
                     .offset(low as i8)
                     .advance(template.access_mode.instruction_length());
-                Argument::Addr(address, mem.read(address))
+                Argument::Addr(address)
             },
             Ind => {
                 let first = CpuAddress::from_low_high(low, high);
                 let second = CpuAddress::from_low_high(low.wrapping_add(1), high);
                 let address = CpuAddress::from_low_high(mem.read(first), mem.read(second));
-                Argument::Addr(address, mem.read(address))
+                Argument::Addr(address)
             },
             IzX => {
                 let low = low.wrapping_add(x_index);
@@ -134,7 +134,7 @@ impl Instruction {
                     mem.read(CpuAddress::zero_page(low)),
                     mem.read(CpuAddress::zero_page(low.wrapping_add(1))),
                 );
-                Argument::Addr(address, mem.read(address))
+                Argument::Addr(address)
             },
             IzY => {
                 let start_address = CpuAddress::from_low_high(
@@ -144,7 +144,7 @@ impl Instruction {
                 // TODO: Should this wrap around just the current page?
                 let address = start_address.advance(y_index);
                 page_boundary_crossed = start_address.page() != address.page();
-                Argument::Addr(address, mem.read(address))
+                Argument::Addr(address)
             },
         };
 
@@ -182,7 +182,7 @@ impl fmt::Display for Instruction {
 pub enum Argument {
     Imp,
     Imm(u8),
-    Addr(CpuAddress, u8),
+    Addr(CpuAddress),
 }
 
 impl fmt::Display for Argument {
@@ -190,7 +190,7 @@ impl fmt::Display for Argument {
         match self {
             Argument::Imp => write!(f, "No   "),
             Argument::Imm(value) => write!(f, "#{:02X}  ", value),
-            Argument::Addr(address, value) => write!(f, "[{}]=#{:02X}", address, value),
+            Argument::Addr(address) => write!(f, "[{}]", address),
         }
     }
 }

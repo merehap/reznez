@@ -204,126 +204,146 @@ impl Cpu {
             },
             (RTS, Imp) => self.program_counter = memory.stack().pop_address().advance(1),
 
-            (STA, Addr(addr, _)) => memory.write(addr, self.a),
-            (STX, Addr(addr, _)) => memory.write(addr, self.x),
-            (STY, Addr(addr, _)) => memory.write(addr, self.y),
-            (DEC, Addr(addr, _)) => {
+            (STA, Addr(addr)) => memory.write(addr, self.a),
+            (STX, Addr(addr)) => memory.write(addr, self.x),
+            (STY, Addr(addr)) => memory.write(addr, self.y),
+            (DEC, Addr(addr)) => {
                 let value = memory.read(addr).wrapping_sub(1);
                 memory.write(addr, value);
                 self.nz(value);
             },
-            (INC, Addr(addr, _)) => {
+            (INC, Addr(addr)) => {
                 let value = memory.read(addr).wrapping_add(1);
                 memory.write(addr, value);
                 self.nz(value);
             },
-            (BPL, Addr(addr, _)) =>
+            (BPL, Addr(addr)) =>
                 if !self.status.negative {cycle_count += self.take_branch(addr);},
-            (BMI, Addr(addr, _)) =>
+            (BMI, Addr(addr)) =>
                 if self.status.negative {cycle_count += self.take_branch(addr);},
-            (BVC, Addr(addr, _)) =>
+            (BVC, Addr(addr)) =>
                 if !self.status.overflow {cycle_count += self.take_branch(addr);},
-            (BVS, Addr(addr, _)) =>
+            (BVS, Addr(addr)) =>
                 if self.status.overflow {cycle_count += self.take_branch(addr);},
-            (BCC, Addr(addr, _)) =>
+            (BCC, Addr(addr)) =>
                 if !self.status.carry {cycle_count += self.take_branch(addr);},
-            (BCS, Addr(addr, _)) =>
+            (BCS, Addr(addr)) =>
                 if self.status.carry {cycle_count += self.take_branch(addr);},
-            (BNE, Addr(addr, _)) =>
+            (BNE, Addr(addr)) =>
                 if !self.status.zero {cycle_count += self.take_branch(addr);},
-            (BEQ, Addr(addr, _)) =>
+            (BEQ, Addr(addr)) =>
                 if self.status.zero {cycle_count += self.take_branch(addr);},
-            (JSR, Addr(addr, _)) => {
+            (JSR, Addr(addr)) => {
                 // Push the address one previous for some reason.
                 memory.stack().push_address(self.program_counter.offset(-1));
                 self.program_counter = addr;
             },
-            (JMP, Addr(addr, _)) => self.program_counter = addr,
+            (JMP, Addr(addr)) => self.program_counter = addr,
 
-            (BIT, Addr(_, val)) => {
+            (BIT, Addr(addr)) => {
+                let val = memory.read(addr);
                 self.status.negative = val & 0b1000_0000 != 0;
                 self.status.overflow = val & 0b0100_0000 != 0;
                 self.status.zero = val & self.a == 0;
             },
 
-            (LDA, Imm(val) | Addr(_, val)) => self.a = self.nz(val),
-            (LDX, Imm(val) | Addr(_, val)) => self.x = self.nz(val),
-            (LDY, Imm(val) | Addr(_, val)) => self.y = self.nz(val),
-            (CMP, Imm(val) | Addr(_, val)) => self.cmp(val),
-            (CPX, Imm(val) | Addr(_, val)) => self.cpx(val),
-            (CPY, Imm(val) | Addr(_, val)) => self.cpy(val),
-            (ORA, Imm(val) | Addr(_, val)) => self.a = self.nz(self.a | val),
-            (AND, Imm(val) | Addr(_, val)) => self.a = self.nz(self.a & val),
-            (EOR, Imm(val) | Addr(_, val)) => self.a = self.nz(self.a ^ val),
-            (ADC, Imm(val) | Addr(_, val)) => self.a = self.adc(val),
-            (SBC, Imm(val) | Addr(_, val)) => self.a = self.sbc(val),
-            (LAX, Imm(val) | Addr(_, val)) => {
+            (LDA, Imm(val)) => self.a = self.nz(val),
+            (LDX, Imm(val)) => self.x = self.nz(val),
+            (LDY, Imm(val)) => self.y = self.nz(val),
+            (CMP, Imm(val)) => self.cmp(val),
+            (CPX, Imm(val)) => self.cpx(val),
+            (CPY, Imm(val)) => self.cpy(val),
+            (ORA, Imm(val)) => self.a = self.nz(self.a | val),
+            (AND, Imm(val)) => self.a = self.nz(self.a & val),
+            (EOR, Imm(val)) => self.a = self.nz(self.a ^ val),
+            (ADC, Imm(val)) => self.a = self.adc(val),
+            (SBC, Imm(val)) => self.a = self.sbc(val),
+
+            (LDA, Addr(addr)) => {let val = memory.read(addr); self.a = self.nz(val)},
+            (LDX, Addr(addr)) => {let val = memory.read(addr); self.x = self.nz(val)},
+            (LDY, Addr(addr)) => {let val = memory.read(addr); self.y = self.nz(val)},
+            (CMP, Addr(addr)) => {let val = memory.read(addr); self.cmp(val)},
+            (CPX, Addr(addr)) => {let val = memory.read(addr); self.cpx(val)},
+            (CPY, Addr(addr)) => {let val = memory.read(addr); self.cpy(val)},
+            (ORA, Addr(addr)) => {let val = memory.read(addr); self.a = self.nz(self.a | val)},
+            (AND, Addr(addr)) => {let val = memory.read(addr); self.a = self.nz(self.a & val)},
+            (EOR, Addr(addr)) => {let val = memory.read(addr); self.a = self.nz(self.a ^ val)},
+            (ADC, Addr(addr)) => {let val = memory.read(addr); self.a = self.adc(val)},
+            (SBC, Addr(addr)) => {let val = memory.read(addr); self.a = self.sbc(val)},
+
+            (LAX, Imm(val)) => {
+                self.a = val;
+                self.x = val;
+                self.nz(val);
+            },
+            (LAX, Addr(addr)) => {
+                let val = memory.read(addr);
                 self.a = val;
                 self.x = val;
                 self.nz(val);
             },
 
             (ASL, Imp) => self.a = self.asl(self.a),
-            (ASL, Addr(addr, _)) => {
+            (ASL, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.asl(value);
                 memory.write(addr, value);
             },
             (ROL, Imp) => self.a = self.rol(self.a),
-            (ROL, Addr(addr, _)) => {
+            (ROL, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.rol(value);
                 memory.write(addr, value);
             },
             (LSR, Imp) => self.a = self.lsr(self.a),
-            (LSR, Addr(addr, _)) => {
+            (LSR, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.lsr(value);
                 memory.write(addr, value);
             },
             (ROR, Imp) => self.a = self.ror(self.a),
-            (ROR, Addr(addr, _)) => {
+            (ROR, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.ror(value);
                 memory.write(addr, value);
             },
 
             // Undocumented op codes.
-            (SLO, Addr(addr, _)) => {
+            (SLO, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.asl(value);
                 memory.write(addr, value);
                 self.a |= value;
                 self.nz(self.a);
             },
-            (RLA, Addr(addr, _)) => {
+            (RLA, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.rol(value);
                 memory.write(addr, value);
                 self.a &= value;
                 self.nz(self.a);
             },
-            (SRE, Addr(addr, _)) => {
+            (SRE, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.lsr(value);
                 memory.write(addr, value);
                 self.a ^= value;
                 self.nz(self.a);
             },
-            (RRA, Addr(addr, _)) => {
+            (RRA, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.ror(value);
                 memory.write(addr, value);
                 self.a = self.adc(value);
                 self.nz(self.a);
             },
-            (SAX, Addr(addr, _)) => memory.write(addr, self.a & self.x),
-            (DCP, Addr(addr, _)) => {
+            (SAX, Addr(addr)) => memory.write(addr, self.a & self.x),
+            (DCP, Addr(addr)) => {
                 let value = memory.read(addr).wrapping_sub(1);
                 memory.write(addr, value);
                 self.cmp(value);
             },
-            (ISC, Addr(addr, _)) => {
+            (ISC, Addr(addr)) => {
                 let value = memory.read(addr).wrapping_add(1);
                 memory.write(addr, value);
                 self.a = self.sbc(value);
@@ -352,13 +372,13 @@ impl Cpu {
                 self.x = self.nz((self.a & self.x).wrapping_sub(val));
             },
             (AHX, _) => unimplemented!(),
-            (SHY, Addr(addr, _)) => {
+            (SHY, Addr(addr)) => {
                 let (low, high) = addr.to_low_high();
                 let value = self.y & high.wrapping_add(1);
                 let addr = CpuAddress::from_low_high(low, high & self.y);
                 memory.write(addr, value);
             },
-            (SHX, Addr(addr, _)) => {
+            (SHX, Addr(addr)) => {
                 let (low, high) = addr.to_low_high();
                 let value = self.x & high.wrapping_add(1);
                 let addr = CpuAddress::from_low_high(low, high & self.x);
