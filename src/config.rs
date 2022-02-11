@@ -57,11 +57,17 @@ impl Config {
     }
 
     pub fn gui(opt: &Opt) -> Box<dyn Gui> {
-        match opt.gui {
-            GuiType::NoGui => Box::new(NoGui::new()) as Box<dyn Gui>,
-            GuiType::Sdl => Box::new(SdlGui::new()),
-            GuiType::FrameDump => Box::new(FrameDumpGui::new()),
+        let mut gui =
+            match opt.gui {
+                GuiType::NoGui => Box::new(NoGui::new()) as Box<dyn Gui>,
+                GuiType::Sdl => Box::new(SdlGui::new()),
+            };
+
+        if opt.frame_dump {
+            gui = Box::new(FrameDumpGui::new(gui));
         }
+
+        gui
     }
 }
 
@@ -83,6 +89,9 @@ pub struct Opt {
     #[structopt(name = "logcpu", long)]
     pub log_cpu: bool,
 
+    #[structopt(name = "framedump", long)]
+    pub frame_dump: bool,
+
     pub override_program_counter: Option<CpuAddress>,
 }
 
@@ -90,7 +99,6 @@ pub struct Opt {
 pub enum GuiType {
     NoGui,
     Sdl,
-    FrameDump,
 }
 
 impl FromStr for GuiType {
@@ -100,7 +108,6 @@ impl FromStr for GuiType {
         match value.to_lowercase().as_str() {
             "nogui" => Ok(GuiType::NoGui),
             "sdl" => Ok(GuiType::Sdl),
-            "framedump" => Ok(GuiType::FrameDump),
             _ => Err(format!("Invalid gui type: {}", value)),
         }
     }
