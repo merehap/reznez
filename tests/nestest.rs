@@ -29,6 +29,7 @@ fn nestest() {
         target_frame_rate: TargetFrameRate::Unbounded,
         override_program_counter: Some(CpuAddress::new(0xC000)),
         log_cpu: true,
+        frame_dump: false,
     };
 
     let config = Config::new(&opt);

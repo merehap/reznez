@@ -64,6 +64,7 @@ fn framematch() {
             target_frame_rate: TargetFrameRate::Unbounded,
             override_program_counter: None,
             log_cpu: false,
+            frame_dump: false,
         };
 
         let nes = Nes::new(Config::new(&opt));
@@ -75,7 +76,7 @@ fn framematch() {
 
     let mut failed = false;
     for FrameHashData {rom_name, mut nes, frame_hashes} in frame_hash_data {
-        let mut gui = Box::new(NoGui::initialize()) as Box<dyn Gui>;
+        let mut gui = Box::new(NoGui::new()) as Box<dyn Gui>;
         println!("FRAMEMATCH TEST: testing against expected frames for {} .", rom_name);
         let max_frame_index = frame_hashes.keys().last().unwrap();
         for frame_index in 0..=*max_frame_index {
