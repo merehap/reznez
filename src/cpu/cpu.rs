@@ -1,5 +1,4 @@
-use log::{info, log_enabled};
-use log::Level::Info;
+use log::info;
 
 use crate::cpu::instruction::{Instruction, OpCode, Argument};
 use crate::cpu::status::Status;
@@ -138,10 +137,6 @@ impl Cpu {
             self.y,
             memory,
         );
-
-        if log_enabled!(target: "cpu", Info) {
-            info!(target: "cpu", "{} | {}", self.state_string(memory), instruction);
-        }
 
         let cycle_count = self.execute_instruction(memory, instruction);
         self.current_instruction_remaining_cycles = cycle_count - 1;

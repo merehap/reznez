@@ -3,7 +3,8 @@ use std::ops::Add;
 use std::rc::Rc;
 use std::time::{Duration, SystemTime};
 
-use log::{info, warn};
+use log::{info, warn, log_enabled};
+use log::Level::Info;
 
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
@@ -124,6 +125,16 @@ impl Nes {
         let mut instruction = None;
         if self.cycle % 3 == 0 {
             instruction = self.cpu.step(&mut self.memory.as_cpu_memory());
+            if let Some(instruction) = instruction {
+                if log_enabled!(target: "cpu", Info) {
+                    info!(
+                        target: "cpu",
+                        "{} | {}",
+                        self.cpu.state_string(&self.memory.as_cpu_memory()),
+                        instruction,
+                    );
+                }
+            }
         }
 
         let ppu_result = self.ppu.step(&mut self.memory.as_ppu_memory(), frame);
