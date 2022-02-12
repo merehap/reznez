@@ -56,7 +56,7 @@ impl CpuAddress {
 }
 
 impl fmt::Display for CpuAddress {
-    fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "${:04X}", self.0)
     }
 }
