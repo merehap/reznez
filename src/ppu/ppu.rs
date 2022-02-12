@@ -8,9 +8,6 @@ use crate::ppu::register::registers::ctrl::SpriteHeight;
 use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::render::frame::Frame;
 
-const FIRST_VBLANK_CYCLE: u64 = 3 * 27384;
-const SECOND_VBLANK_CYCLE: u64 = 3 * 57165;
-
 pub struct Ppu {
     oam: Oam,
 
@@ -57,8 +54,6 @@ impl Ppu {
     }
 
     pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) -> StepResult {
-        let total_cycles = self.clock().total_cycles();
-
         if self.clock.cycle() == 1 {
             mem.registers_mut().maybe_decay_latch();
         }
@@ -69,17 +64,7 @@ impl Ppu {
             should_generate_nmi = self.process_latch_access(mem, latch_access);
         }
 
-        // TODO: Fix the first two vblank cycles to not be special-cased if possible.
-        if total_cycles == FIRST_VBLANK_CYCLE || total_cycles == SECOND_VBLANK_CYCLE {
-            // TODO: Why don't we have the following enabled here?
-            // Maybe just need to have "= false" to end it too.
-            // self.status.vblank_active = true;
-            if mem.registers().can_generate_nmi() {
-                should_generate_nmi = true;
-            }
-        } else if total_cycles < SECOND_VBLANK_CYCLE {
-            // Do nothing.
-        } else if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
+        if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
             if !self.suppress_vblank_active {
                 mem.registers_mut().start_vblank();
             }
