@@ -28,15 +28,12 @@ pub trait Mapper {
     ) -> &MappedArray<4>;
 
     fn read_prg_ram(&self, address: CpuAddress) -> u8 {
-        println!(
-            "PRG RAM doesn't exist for this mapper. [{}]=0 .",
-            address,
-        );
+        // PRG RAM is not supported by default.
         0
     }
 
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
-        println!("Write [{}]={} (cartridge space) ignored.", address, value);
+        // Writes to cartridge space (including PRG RAM) are not supported by default.
     }
 
     #[inline]

@@ -17,7 +17,7 @@ pub struct Cpu {
     program_counter: CpuAddress,
     status: Status,
 
-    nmi_pending: bool,
+    nmi_pending: Option<u8>,
     dma_port: DmaPort,
     dma_transfer: DmaTransfer,
 
@@ -42,7 +42,7 @@ impl Cpu {
             program_counter,
             status: Status::startup(),
 
-            nmi_pending: false,
+            nmi_pending: None,
             dma_port: memory.ports().dma.clone(),
             dma_transfer: DmaTransfer::inactive(),
 
@@ -100,11 +100,11 @@ impl Cpu {
     }
 
     pub fn nmi_pending(&self) -> bool {
-        self.nmi_pending
+        self.nmi_pending != None
     }
 
     pub fn schedule_nmi(&mut self) {
-        self.nmi_pending = true;
+        self.nmi_pending = Some(1);
     }
 
     pub fn step(&mut self, memory: &mut CpuMemory) -> Option<Instruction> {
@@ -131,6 +131,16 @@ impl Cpu {
             return None;
         }
 
+        match self.nmi_pending {
+            None => {/* Do nothing. */},
+            Some(0) => {
+                self.nmi(memory);
+                self.nmi_pending = None;
+            },
+            Some(1) => self.nmi_pending = Some(0),
+            _ => unreachable!(),
+        }
+
         let instruction = Instruction::from_memory(
             self.program_counter,
             self.x,
@@ -140,11 +150,6 @@ impl Cpu {
 
         let cycle_count = self.execute_instruction(memory, instruction);
         self.current_instruction_remaining_cycles = cycle_count - 1;
-
-        if self.nmi_pending {
-            self.nmi(memory);
-            self.nmi_pending = false;
-        }
 
         Some(instruction)
     }
@@ -522,35 +527,34 @@ mod tests {
         // Execute first cycle of the first instruction.
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFD, mem.stack_pointer());
+        assert_eq!(reset_vector.advance(1), cpu.program_counter());
 
         cpu.schedule_nmi();
         assert_eq!(0xFD, mem.stack_pointer());
+        assert_eq!(reset_vector.advance(1), cpu.program_counter());
 
         // Execute final cycle of the first instruction.
         cpu.step(&mut mem.as_cpu_memory());
-        // NMI is still pending.
         assert_eq!(0xFD, mem.stack_pointer());
+        assert_eq!(reset_vector.advance(1), cpu.program_counter());
 
         // Execute first cycle of the second instruction.
         cpu.step(&mut mem.as_cpu_memory());
-        assert_eq!(0xFA, mem.stack_pointer());
-        //assert_eq!(reset_vector.advance(3), cpu.program_counter());
-        assert_eq!(nmi_vector, cpu.program_counter());
+        assert_eq!(0xFD, mem.stack_pointer());
+        assert_eq!(reset_vector.advance(2), cpu.program_counter());
 
-        /*
         // Execute final cycle of the second instruction.
         cpu.step(&mut mem.as_cpu_memory());
-        // NMI begins at the end of the last instruction.
-        assert_eq!(0xFA, mem.stack_pointer());
-        assert_eq!(nmi_vector, cpu.program_counter());
-        */
+        assert_eq!(0xFD, mem.stack_pointer());
+        assert_eq!(reset_vector.advance(2), cpu.program_counter());
 
         // Execute the first cycle of the NMI subroutine.
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFA, mem.stack_pointer());
-        assert_eq!(nmi_vector, cpu.program_counter());
+        assert_eq!(nmi_vector.advance(1), cpu.program_counter());
     }
 
+    #[test]
     fn nmi_after_instruction() {
         let nmi_vector = CpuAddress::new(0xC000);
         let reset_vector = CpuAddress::new(0x8000);
@@ -566,35 +570,31 @@ mod tests {
         // Execute first cycle of the first instruction.
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFD, mem.stack_pointer());
+        assert_eq!(reset_vector.advance(1), cpu.program_counter());
 
         // Execute final cycle of the first instruction.
         cpu.step(&mut mem.as_cpu_memory());
-        // NMI is still pending.
         assert_eq!(0xFD, mem.stack_pointer());
+        assert_eq!(reset_vector.advance(1), cpu.program_counter());
 
         cpu.schedule_nmi();
         assert_eq!(0xFD, mem.stack_pointer());
+        assert_eq!(reset_vector.advance(1), cpu.program_counter());
 
-        println!("PC before: {}", cpu.program_counter());
         // Execute first cycle of the second instruction.
         cpu.step(&mut mem.as_cpu_memory());
-        assert_eq!(0xFA, mem.stack_pointer());
-        println!("PC after: {}", cpu.program_counter());
-        //assert_eq!(reset_vector.advance(3), cpu.program_counter());
-        assert_eq!(nmi_vector, cpu.program_counter());
+        assert_eq!(0xFD, mem.stack_pointer());
+        assert_eq!(reset_vector.advance(2), cpu.program_counter());
 
-        /*
         // Execute final cycle of the second instruction.
         cpu.step(&mut mem.as_cpu_memory());
-        // NMI begins at the end of the last instruction.
-        assert_eq!(0xFA, mem.stack_pointer());
-        assert_eq!(nmi_vector, cpu.program_counter());
-        */
+        assert_eq!(0xFD, mem.stack_pointer());
+        assert_eq!(reset_vector.advance(2), cpu.program_counter());
 
         // Execute the first cycle of the NMI subroutine.
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFA, mem.stack_pointer());
-        assert_eq!(nmi_vector, cpu.program_counter());
+        assert_eq!(nmi_vector.advance(1), cpu.program_counter());
     }
 
     #[test]
