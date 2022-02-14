@@ -203,6 +203,8 @@ pub struct PlayChoice {
 
 #[cfg(test)]
 pub mod test_data {
+    use crate::memory::cpu::cpu_address::CpuAddress;
+
     use super::*;
 
     pub fn cartridge() -> Cartridge {
@@ -226,6 +228,47 @@ pub mod test_data {
 
             trainer: None,
             prg_rom_chunks,
+            chr_rom_chunks: vec![Box::new([0x00; CHR_ROM_CHUNK_LENGTH])],
+            console_type: ConsoleType::Nes,
+            title: "Test ROM".to_string(),
+        }
+    }
+
+    pub fn cartridge_with_prg_rom(
+        prg_rom_chunks: [Vec<u8>; 2],
+        nmi_vector: CpuAddress,
+        reset_vector: CpuAddress,
+        irq_vector: CpuAddress,
+    ) -> Cartridge {
+
+        // Filled with NOPs.
+        let mut prg_chunks = [Box::new([0xEA; PRG_ROM_CHUNK_LENGTH]), Box::new([0xEA; PRG_ROM_CHUNK_LENGTH])];
+        for chunk_index in 0..2 {
+            for i in 0..prg_rom_chunks[chunk_index].len() {
+                prg_chunks[chunk_index][i] = prg_rom_chunks[chunk_index][i];
+            }
+        }
+
+        let len = prg_chunks[1].len();
+        let (low, high) = nmi_vector.to_low_high();
+        prg_chunks[1][len - 6] = low;
+        prg_chunks[1][len - 5] = high;
+        let (low, high) = reset_vector.to_low_high();
+        prg_chunks[1][len - 4] = low;
+        prg_chunks[1][len - 3] = high;
+        let (low, high) = irq_vector.to_low_high();
+        prg_chunks[1][len - 2] = low;
+        prg_chunks[1][len - 1] = high;
+
+        Cartridge {
+            mapper_number: 0,
+            name_table_mirroring: NameTableMirroring::Horizontal,
+            has_persistent_memory: false,
+            ripper_name: "Test Ripper".to_string(),
+            ines2: None,
+
+            trainer: None,
+            prg_rom_chunks: prg_chunks.to_vec(),
             chr_rom_chunks: vec![Box::new([0x00; CHR_ROM_CHUNK_LENGTH])],
             console_type: ConsoleType::Nes,
             title: "Test ROM".to_string(),

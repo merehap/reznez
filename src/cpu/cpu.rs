@@ -497,3 +497,132 @@ pub enum ProgramCounterSource {
     ResetVector,
     Override(CpuAddress),
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::cartridge;
+    use crate::memory::memory;
+    use crate::memory::memory::Memory;
+
+    use super::*;
+
+    #[test]
+    fn nmi_during_instruction() {
+        let nmi_vector = CpuAddress::new(0xC000);
+        let reset_vector = CpuAddress::new(0x8000);
+        let mut mem = memory_with_nop_cartridge(nmi_vector, reset_vector);
+        let mut cpu = Cpu::new(
+            &mut mem.as_cpu_memory(),
+            ProgramCounterSource::ResetVector,
+        );
+
+        // No instruction loaded yet.
+        assert_eq!(0xFD, mem.stack_pointer());
+
+        // Execute first cycle of the first instruction.
+        cpu.step(&mut mem.as_cpu_memory());
+        assert_eq!(0xFD, mem.stack_pointer());
+
+        cpu.schedule_nmi();
+        assert_eq!(0xFD, mem.stack_pointer());
+
+        // Execute final cycle of the first instruction.
+        cpu.step(&mut mem.as_cpu_memory());
+        // NMI is still pending.
+        assert_eq!(0xFD, mem.stack_pointer());
+
+        // Execute first cycle of the second instruction.
+        cpu.step(&mut mem.as_cpu_memory());
+        assert_eq!(0xFA, mem.stack_pointer());
+        //assert_eq!(reset_vector.advance(3), cpu.program_counter());
+        assert_eq!(nmi_vector, cpu.program_counter());
+
+        /*
+        // Execute final cycle of the second instruction.
+        cpu.step(&mut mem.as_cpu_memory());
+        // NMI begins at the end of the last instruction.
+        assert_eq!(0xFA, mem.stack_pointer());
+        assert_eq!(nmi_vector, cpu.program_counter());
+        */
+
+        // Execute the first cycle of the NMI subroutine.
+        cpu.step(&mut mem.as_cpu_memory());
+        assert_eq!(0xFA, mem.stack_pointer());
+        assert_eq!(nmi_vector, cpu.program_counter());
+    }
+
+    fn nmi_after_instruction() {
+        let nmi_vector = CpuAddress::new(0xC000);
+        let reset_vector = CpuAddress::new(0x8000);
+        let mut mem = memory_with_nop_cartridge(nmi_vector, reset_vector);
+        let mut cpu = Cpu::new(
+            &mut mem.as_cpu_memory(),
+            ProgramCounterSource::ResetVector,
+        );
+
+        // No instruction loaded yet.
+        assert_eq!(0xFD, mem.stack_pointer());
+
+        // Execute first cycle of the first instruction.
+        cpu.step(&mut mem.as_cpu_memory());
+        assert_eq!(0xFD, mem.stack_pointer());
+
+        // Execute final cycle of the first instruction.
+        cpu.step(&mut mem.as_cpu_memory());
+        // NMI is still pending.
+        assert_eq!(0xFD, mem.stack_pointer());
+
+        cpu.schedule_nmi();
+        assert_eq!(0xFD, mem.stack_pointer());
+
+        println!("PC before: {}", cpu.program_counter());
+        // Execute first cycle of the second instruction.
+        cpu.step(&mut mem.as_cpu_memory());
+        assert_eq!(0xFA, mem.stack_pointer());
+        println!("PC after: {}", cpu.program_counter());
+        //assert_eq!(reset_vector.advance(3), cpu.program_counter());
+        assert_eq!(nmi_vector, cpu.program_counter());
+
+        /*
+        // Execute final cycle of the second instruction.
+        cpu.step(&mut mem.as_cpu_memory());
+        // NMI begins at the end of the last instruction.
+        assert_eq!(0xFA, mem.stack_pointer());
+        assert_eq!(nmi_vector, cpu.program_counter());
+        */
+
+        // Execute the first cycle of the NMI subroutine.
+        cpu.step(&mut mem.as_cpu_memory());
+        assert_eq!(0xFA, mem.stack_pointer());
+        assert_eq!(nmi_vector, cpu.program_counter());
+    }
+
+    #[test]
+    fn nmi_scheduled_before_branching() {
+    }
+
+    #[test]
+    fn nmi_scheduled_before_oops() {
+    }
+
+    #[test]
+    fn nmi_scheduled_before_branching_oops() {
+    }
+
+    fn memory_with_nop_cartridge(
+        nmi_vector: CpuAddress,
+        reset_vector: CpuAddress,
+    ) -> Memory {
+
+        let irq_vector = CpuAddress::new(0xF000);
+        // Providing no data results in a program filled with NOPs (0xEA).
+        let cartridge = cartridge::test_data::cartridge_with_prg_rom(
+            [Vec::new(), Vec::new()],
+            nmi_vector,
+            reset_vector,
+            irq_vector,
+        );
+
+        memory::test_data::memory_with_cartridge(cartridge)
+    }
+}
