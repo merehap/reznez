@@ -27,12 +27,12 @@ pub trait Mapper {
         side: PatternTableSide,
     ) -> &MappedArray<4>;
 
-    fn read_prg_ram(&self, address: CpuAddress) -> u8 {
+    fn read_prg_ram(&self, _address: CpuAddress) -> u8 {
         // PRG RAM is not supported by default.
         0
     }
 
-    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, _address: CpuAddress, _value: u8) {
         // Writes to cartridge space (including PRG RAM) are not supported by default.
     }
 

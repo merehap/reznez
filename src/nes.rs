@@ -218,7 +218,7 @@ pub struct StepResult {
 
 #[cfg(test)]
 mod tests {
-    use crate::cpu::cpu::ProgramCounterSource;
+    use crate::cpu::cpu::{ProgramCounterSource, NmiSchedulingStatus};
     use crate::memory::cpu::cpu_address::CpuAddress;
     use crate::memory::memory::Memory;
     use crate::ppu::palette::system_palette;
@@ -234,9 +234,10 @@ mod tests {
     fn nmi_enabled_upon_vblank() {
         let mut nes = sample_nes();
         step_until_vblank_nmi_enabled(&mut nes);
-        assert!(nes.cpu.nmi_pending());
+        assert!(nes.cpu.nmi_scheduling_status() != NmiSchedulingStatus::Unscheduled);
     }
 
+    /*
     //#[test]
     fn second_nmi_fails_without_ctrl_toggle() {
         let mut nes = sample_nes();
@@ -260,7 +261,9 @@ mod tests {
             "A second NMI should not have been allowed without toggling CTRL.0 .",
         );
     }
+    */
 
+    /*
     //#[test]
     fn second_nmi_succeeds_after_ctrl_toggle() {
         let mut nes = sample_nes();
@@ -286,6 +289,7 @@ mod tests {
             "A second NMI should have been allowed after toggling CTRL.0 .",
         );
     }
+    */
 
     fn sample_nes() -> Nes {
         let mapper = Box::new(Mapper0::new(test_data::cartridge()).unwrap());
@@ -319,7 +323,11 @@ mod tests {
 
         let mut frame = Frame::new();
         loop {
-            assert!(!nes.cpu.nmi_pending(), "NMI must not be pending before one is scheduled.");
+            assert_eq!(
+                NmiSchedulingStatus::Unscheduled,
+                nes.cpu.nmi_scheduling_status(),
+                "NMI must not be pending before one is scheduled.",
+            );
             let nmi_scheduled = nes.step(&mut frame).nmi_scheduled;
             if nmi_scheduled {
                 break;

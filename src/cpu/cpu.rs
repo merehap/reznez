@@ -17,7 +17,7 @@ pub struct Cpu {
     program_counter: CpuAddress,
     status: Status,
 
-    nmi_pending: Option<u8>,
+    nmi_scheduling_status: NmiSchedulingStatus,
     dma_port: DmaPort,
     dma_transfer: DmaTransfer,
 
@@ -42,7 +42,7 @@ impl Cpu {
             program_counter,
             status: Status::startup(),
 
-            nmi_pending: None,
+            nmi_scheduling_status: NmiSchedulingStatus::Unscheduled,
             dma_port: memory.ports().dma.clone(),
             dma_transfer: DmaTransfer::inactive(),
 
@@ -99,12 +99,12 @@ impl Cpu {
         self.cycle
     }
 
-    pub fn nmi_pending(&self) -> bool {
-        self.nmi_pending != None
+    pub fn nmi_scheduling_status(&self) -> NmiSchedulingStatus {
+        self.nmi_scheduling_status
     }
 
     pub fn schedule_nmi(&mut self) {
-        self.nmi_pending = Some(1);
+        self.nmi_scheduling_status = NmiSchedulingStatus::AfterNextInstruction;
     }
 
     pub fn step(&mut self, memory: &mut CpuMemory) -> Option<Instruction> {
@@ -131,14 +131,15 @@ impl Cpu {
             return None;
         }
 
-        match self.nmi_pending {
-            None => {/* Do nothing. */},
-            Some(0) => {
+        use NmiSchedulingStatus::*;
+        match self.nmi_scheduling_status {
+            Unscheduled => {/* Do nothing. */},
+            AfterCurrentInstruction => {
                 self.nmi(memory);
-                self.nmi_pending = None;
+                self.nmi_scheduling_status = Unscheduled;
             },
-            Some(1) => self.nmi_pending = Some(0),
-            _ => unreachable!(),
+            AfterNextInstruction =>
+                self.nmi_scheduling_status = AfterCurrentInstruction,
         }
 
         let instruction = Instruction::from_memory(
@@ -501,6 +502,13 @@ fn is_neg(value: u8) -> bool {
 pub enum ProgramCounterSource {
     ResetVector,
     Override(CpuAddress),
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum NmiSchedulingStatus {
+    Unscheduled,
+    AfterCurrentInstruction,
+    AfterNextInstruction,
 }
 
 #[cfg(test)]
