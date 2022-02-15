@@ -39,8 +39,10 @@ impl CycleActionQueue {
     }
 
     pub fn enqueue_nmi(&mut self) {
-        self.queue.push_back(CycleAction::Nop);
-        self.queue.push_back(CycleAction::Nop);
+        for _ in 0..6 {
+            self.queue.push_back(CycleAction::Nop);
+        }
+
         self.queue.push_back(CycleAction::Nmi);
     }
 

@@ -543,11 +543,13 @@ mod tests {
         assert_eq!(0xFD, mem.stack_pointer());
         assert_eq!(reset_vector.advance(2), cpu.program_counter());
 
-        // Execute the three cycles of the NMI subroutine.
-        cpu.step(&mut mem.as_cpu_memory());
-        assert_eq!(reset_vector.advance(2), cpu.program_counter());
-        cpu.step(&mut mem.as_cpu_memory());
-        assert_eq!(reset_vector.advance(2), cpu.program_counter());
+
+        // Execute the seven cycles of the NMI subroutine.
+        for _ in 0..6 {
+            cpu.step(&mut mem.as_cpu_memory());
+            assert_eq!(reset_vector.advance(2), cpu.program_counter());
+        }
+
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFA, mem.stack_pointer());
         assert_eq!(nmi_vector, cpu.program_counter());
@@ -590,11 +592,12 @@ mod tests {
         assert_eq!(0xFD, mem.stack_pointer());
         assert_eq!(reset_vector.advance(2), cpu.program_counter());
 
-        // Execute the three cycles of the NMI subroutine.
-        cpu.step(&mut mem.as_cpu_memory());
-        assert_eq!(reset_vector.advance(2), cpu.program_counter());
-        cpu.step(&mut mem.as_cpu_memory());
-        assert_eq!(reset_vector.advance(2), cpu.program_counter());
+        // Execute the seven cycles of the NMI subroutine.
+        for _ in 0..6 {
+            cpu.step(&mut mem.as_cpu_memory());
+            assert_eq!(reset_vector.advance(2), cpu.program_counter());
+        }
+
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFA, mem.stack_pointer());
         assert_eq!(nmi_vector, cpu.program_counter());
