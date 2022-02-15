@@ -121,69 +121,14 @@ impl Nes {
         }
     }
 
-    #[inline(always)]
-    fn log_state(&self, instruction: Instruction) {
-        if log_enabled!(target: "cpu", Info) {
-            /*
-            info!(
-                target: "cpu",
-                "{:010} PC:{}, A:{:02X} X:{:02X} Y:{:02X} P:{:02X} S:{:02X} {} | {instruction}",
-                self.cpu.cycle(),
-                self.cpu.program_counter(),
-                self.cpu.accumulator(),
-                self.cpu.x_index(),
-                self.cpu.y_index(),
-                self.cpu.status().to_register_byte(),
-                self.memory.stack_pointer(),
-                self.cpu.status(),
-            );
-            */
-            let argument =
-                match instruction.argument {
-                    Argument::Imp => /* Unused. */ 0,
-                    Argument::Imm(value) => value as u16,
-                    Argument::Addr(address) => address.to_raw(),
-                };
-            use AccessMode::*;
-            let formatted_argument =
-                match instruction.template.access_mode {
-                    Imp => "".to_string(),
-                    Imm => format!("#${:02X}", argument),
-                    ZP  => format!("${:02X}", argument),
-                    ZPX => format!("${:02X},X @", argument),
-                    ZPY => format!("(${:02X}),Y", argument),
-                    Abs => format!("${:04X}", argument),
-                    AbX => format!("${:04X},X", argument),
-                    AbY => format!("${:04X},Y", argument),
-                    Rel => format!("${:04X}", argument),
-                    Ind => format!("${:04X}", argument),
-                    IzX => format!("${:04X},X", argument),
-                    IzY => format!("${:04X},Y", argument),
-                };
-
-            info!(
-                "{:04X} {:?} {:8}A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{:<3} SL:{:<3} CPU Cycle:{}",
-                self.cpu.program_counter().to_raw(),
-                instruction.template.op_code,
-                formatted_argument,
-                self.cpu.accumulator(),
-                self.cpu.x_index(),
-                self.cpu.y_index(),
-                self.cpu.status().to_register_byte(),
-                self.memory.stack_pointer(),
-                self.ppu.clock().cycle(),
-                self.ppu.clock().scanline(),
-                self.cpu.cycle(),
-            );
-        }
-    }
-
     pub fn step(&mut self, frame: &mut Frame) -> StepResult {
         let mut instruction = None;
         if self.cycle % 3 == 2 {
             instruction = self.cpu.step(&mut self.memory.as_cpu_memory());
             if let Some(instruction) = instruction {
-                self.log_state(instruction);
+                if log_enabled!(target: "cpu", Info) {
+                    self.log_state(instruction);
+                }
             }
         }
 
@@ -200,6 +145,61 @@ impl Nes {
             is_last_cycle_of_frame: ppu_result.is_last_cycle_of_frame,
             nmi_scheduled: ppu_result.should_generate_nmi,
         }
+    }
+
+    #[inline(always)]
+    fn log_state(&self, instruction: Instruction) {
+        /*
+        info!(
+            target: "cpu",
+            "{:010} PC:{}, A:{:02X} X:{:02X} Y:{:02X} P:{:02X} S:{:02X} {} | {instruction}",
+            self.cpu.cycle(),
+            self.cpu.program_counter(),
+            self.cpu.accumulator(),
+            self.cpu.x_index(),
+            self.cpu.y_index(),
+            self.cpu.status().to_register_byte(),
+            self.memory.stack_pointer(),
+            self.cpu.status(),
+        );
+        */
+        let argument =
+            match instruction.argument {
+                Argument::Imp => /* Unused. */ 0,
+                Argument::Imm(value) => value as u16,
+                Argument::Addr(address) => address.to_raw(),
+            };
+        use AccessMode::*;
+        let formatted_argument =
+            match instruction.template.access_mode {
+                Imp => "".to_string(),
+                Imm => format!("#${:02X}", argument),
+                ZP  => format!("${:02X}", argument),
+                ZPX => format!("${:02X},X @", argument),
+                ZPY => format!("(${:02X}),Y", argument),
+                Abs => format!("${:04X}", argument),
+                AbX => format!("${:04X},X", argument),
+                AbY => format!("${:04X},Y", argument),
+                Rel => format!("${:04X}", argument),
+                Ind => format!("${:04X}", argument),
+                IzX => format!("${:04X},X", argument),
+                IzY => format!("${:04X},Y", argument),
+            };
+
+        info!(
+            "{:04X} {:?} {:8}A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{:<3} SL:{:<3} CPU Cycle:{}",
+            self.cpu.program_counter().to_raw(),
+            instruction.template.op_code,
+            formatted_argument,
+            self.cpu.accumulator(),
+            self.cpu.x_index(),
+            self.cpu.y_index(),
+            self.cpu.status().to_register_byte(),
+            self.memory.stack_pointer(),
+            self.ppu.clock().cycle(),
+            self.ppu.clock().scanline(),
+            self.cpu.cycle(),
+        );
     }
 
     fn frame_duration(&self) -> Duration {
