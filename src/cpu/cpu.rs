@@ -19,7 +19,8 @@ pub struct Cpu {
     status: Status,
 
     cycle_action_queue: CycleActionQueue,
-    nmi_scheduling_status: NmiSchedulingStatus,
+    nmi_pending: bool,
+
     dma_port: DmaPort,
 
     cycle: u64,
@@ -43,7 +44,7 @@ impl Cpu {
             status: Status::startup(),
 
             cycle_action_queue: CycleActionQueue::new(),
-            nmi_scheduling_status: NmiSchedulingStatus::Unscheduled,
+            nmi_pending: false,
             dma_port: memory.ports().dma.clone(),
 
             // Unclear why this is the case, but nestest must be obeyed.
@@ -56,7 +57,7 @@ impl Cpu {
         self.status.interrupts_disabled = true;
         self.program_counter = memory.reset_vector();
         self.cycle_action_queue = CycleActionQueue::new();
-        self.nmi_scheduling_status = NmiSchedulingStatus::Unscheduled;
+        self.nmi_pending = false;
         self.cycle = 7;
         // TODO: APU resets?
     }
@@ -100,12 +101,12 @@ impl Cpu {
         self.cycle
     }
 
-    pub fn nmi_scheduling_status(&self) -> NmiSchedulingStatus {
-        self.nmi_scheduling_status
+    pub fn nmi_pending(&self) -> bool {
+        self.nmi_pending
     }
 
     pub fn schedule_nmi(&mut self) {
-        self.nmi_scheduling_status = NmiSchedulingStatus::AfterNextInstruction;
+        self.nmi_pending = true;
     }
 
     pub fn step(&mut self, memory: &mut CpuMemory) -> Option<Instruction> {
@@ -116,25 +117,15 @@ impl Cpu {
         self.cycle += 1;
 
         if self.cycle_action_queue.is_empty() {
-            use NmiSchedulingStatus::*;
-            match self.nmi_scheduling_status {
-                Unscheduled => {/* Do nothing. */},
-                AfterCurrentInstruction => {
-                    self.cycle_action_queue.enqueue_nmi();
-                    //println!("NMI enqueued. {} remaining in queue.",  self.cycle_action_queue.len());
-                    self.nmi_scheduling_status = Unscheduled;
-                },
-                AfterNextInstruction =>
-                    self.nmi_scheduling_status = AfterCurrentInstruction,
-            }
-
-            if self.cycle_action_queue.is_empty() {
-                self.cycle_action_queue.enqueue_instruction(Instruction::from_memory(
-                    self.program_counter,
-                    self.x,
-                    self.y,
-                    memory,
-                ));
+            self.cycle_action_queue.enqueue_instruction(Instruction::from_memory(
+                self.program_counter,
+                self.x,
+                self.y,
+                memory,
+            ));
+            if self.nmi_pending {
+                self.cycle_action_queue.enqueue_nmi();
+                self.nmi_pending = false;
             }
         }
 
@@ -143,11 +134,12 @@ impl Cpu {
             CycleAction::Instruction(instr) => {
                 let (branch_taken, oops) = self.execute_instruction(memory, instr);
                 if branch_taken || oops {
+                    self.cycle_action_queue.skip_to_front(
+                        CycleAction::InstructionReturn(instr));
                     if branch_taken && oops {
-                        self.cycle_action_queue.enqueue_nop();
+                        self.cycle_action_queue.skip_to_front(CycleAction::Nop);
                     }
 
-                    self.cycle_action_queue.enqueue_instruction_return(instr);
                 } else {
                     instruction = Some(instr);
                 }
@@ -519,13 +511,6 @@ fn is_neg(value: u8) -> bool {
 pub enum ProgramCounterSource {
     ResetVector,
     Override(CpuAddress),
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum NmiSchedulingStatus {
-    Unscheduled,
-    AfterCurrentInstruction,
-    AfterNextInstruction,
 }
 
 #[cfg(test)]

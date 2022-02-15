@@ -26,8 +26,8 @@ impl CycleActionQueue {
         self.queue.pop_front()
     }
 
-    pub fn enqueue_nop(&mut self) {
-        self.queue.push_back(CycleAction::Nop);
+    pub fn skip_to_front(&mut self, action: CycleAction) {
+        self.queue.push_front(action);
     }
 
     pub fn enqueue_instruction(&mut self, instruction: Instruction) {
@@ -36,10 +36,6 @@ impl CycleActionQueue {
         }
 
         self.queue.push_back(CycleAction::Instruction(instruction));
-    }
-
-    pub fn enqueue_instruction_return(&mut self, instruction: Instruction) {
-        self.queue.push_back(CycleAction::InstructionReturn(instruction));
     }
 
     pub fn enqueue_nmi(&mut self) {

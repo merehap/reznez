@@ -234,7 +234,7 @@ mod tests {
     fn nmi_enabled_upon_vblank() {
         let mut nes = sample_nes();
         step_until_vblank_nmi_enabled(&mut nes);
-        assert!(nes.cpu.nmi_scheduling_status() != NmiSchedulingStatus::Unscheduled);
+        assert!(nes.cpu.nmi_pending());
     }
 
     /*
@@ -323,9 +323,7 @@ mod tests {
 
         let mut frame = Frame::new();
         loop {
-            assert_eq!(
-                NmiSchedulingStatus::Unscheduled,
-                nes.cpu.nmi_scheduling_status(),
+            assert!(!nes.cpu.nmi_pending(),
                 "NMI must not be pending before one is scheduled.",
             );
             let nmi_scheduled = nes.step(&mut frame).nmi_scheduled;
