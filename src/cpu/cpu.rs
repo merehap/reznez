@@ -62,21 +62,6 @@ impl Cpu {
         // TODO: APU resets?
     }
 
-    pub fn state_string(&self, memory: &CpuMemory) -> String {
-        let nesting = "";
-        format!("{:010} PC:{}, A:{:02X}, X:{:02X}, Y:{:02X}, P:{:02X}, S:{:02X}, {} {}",
-            self.cycle,
-            self.program_counter,
-            self.a,
-            self.x,
-            self.y,
-            self.status.to_register_byte(),
-            memory.stack_pointer(),
-            self.status,
-            nesting,
-        )
-    }
-
     pub fn accumulator(&self) -> u8 {
         self.a
     }
