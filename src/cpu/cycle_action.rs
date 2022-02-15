@@ -6,8 +6,8 @@ pub enum CycleAction {
     Nop,
     Instruction(Instruction),
     InstructionReturn(Instruction),
-    DmaTransfer(DmaTransferState),
     Nmi,
+    DmaTransfer(DmaTransferState),
 }
 
 #[derive(Clone, Copy, Debug)]

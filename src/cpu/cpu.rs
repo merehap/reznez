@@ -155,17 +155,17 @@ impl Cpu {
             CycleAction::InstructionReturn(instr) => {
                 instruction = Some(instr);
             }
-            CycleAction::DmaTransfer(DmaTransferState::Write(cpu_address)) => {
-                let value = memory.read(cpu_address);
-                memory.write(CpuAddress::new(0x2004), value);
-            },
             CycleAction::Nmi => {
                 info!(target: "cpu", "Executing NMI.");
                 memory.stack().push_address(self.program_counter);
                 memory.stack().push(self.status.to_interrupt_byte());
                 self.program_counter = memory.nmi_vector();
             },
-            CycleAction::Nop | CycleAction::DmaTransfer(_) => {/* Do nothing. */},
+            CycleAction::DmaTransfer(DmaTransferState::Write(cpu_address)) => {
+                let value = memory.read(cpu_address);
+                memory.write(CpuAddress::new(0x2004), value);
+            },
+            CycleAction::DmaTransfer(_) | CycleAction::Nop => {/* Do nothing. */},
         }
 
         instruction

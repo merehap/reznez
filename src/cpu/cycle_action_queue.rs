@@ -42,6 +42,12 @@ impl CycleActionQueue {
         self.queue.push_back(CycleAction::InstructionReturn(instruction));
     }
 
+    pub fn enqueue_nmi(&mut self) {
+        self.queue.push_back(CycleAction::Nop);
+        self.queue.push_back(CycleAction::Nop);
+        self.queue.push_back(CycleAction::Nmi);
+    }
+
     pub fn enqueue_dma_transfer(&mut self, page: u8, current_cycle: u64) {
         let is_odd_cycle = current_cycle % 2 == 1;
         let mut current_cpu_address = CpuAddress::from_low_high(0, page);
@@ -57,12 +63,6 @@ impl CycleActionQueue {
             self.enqueue_dma_transfer_state(Write(current_cpu_address));
             current_cpu_address.inc();
         }
-    }
-
-    pub fn enqueue_nmi(&mut self) {
-        self.queue.push_back(CycleAction::Nop);
-        self.queue.push_back(CycleAction::Nop);
-        self.queue.push_back(CycleAction::Nmi);
     }
 
     fn enqueue_dma_transfer_state(&mut self, state: DmaTransferState) {
