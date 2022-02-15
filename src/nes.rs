@@ -218,7 +218,7 @@ pub struct StepResult {
 
 #[cfg(test)]
 mod tests {
-    use crate::cpu::cpu::{ProgramCounterSource, NmiSchedulingStatus};
+    use crate::cpu::cpu::ProgramCounterSource;
     use crate::memory::cpu::cpu_address::CpuAddress;
     use crate::memory::memory::Memory;
     use crate::ppu::palette::system_palette;
@@ -237,8 +237,7 @@ mod tests {
         assert!(nes.cpu.nmi_pending());
     }
 
-    /*
-    //#[test]
+    #[test]
     fn second_nmi_fails_without_ctrl_toggle() {
         let mut nes = sample_nes();
         step_until_vblank_nmi_enabled(&mut nes);
@@ -246,25 +245,21 @@ mod tests {
 
         let mut frame = Frame::new();
         while nes.step(&mut frame).instruction.is_none() {}
-        nes.step(&mut frame);
+        while nes.step(&mut frame).instruction.is_none() {}
 
+        // Disable vblank_nmi.
         assert!(
             !nes.cpu.nmi_pending(),
             "nmi_pending should have been cleared after one instruction."
         );
-
-        // Disable vblank_nmi.
-        write_ppuctrl_through_opcode_injection(&mut nes, 0b0000_0000);
 
         assert!(
             !nes.cpu.nmi_pending(),
             "A second NMI should not have been allowed without toggling CTRL.0 .",
         );
     }
-    */
 
-    /*
-    //#[test]
+    #[test]
     fn second_nmi_succeeds_after_ctrl_toggle() {
         let mut nes = sample_nes();
         step_until_vblank_nmi_enabled(&mut nes);
@@ -272,24 +267,26 @@ mod tests {
 
         let mut frame = Frame::new();
         while nes.step(&mut frame).instruction.is_none() {}
-        nes.step(&mut frame);
+        while nes.step(&mut frame).instruction.is_none() {}
 
         assert!(
             !nes.cpu.nmi_pending(),
             "nmi_pending should have been cleared after one instruction."
         );
 
+        let ppu_ctrl = CpuAddress::new(0x2000);
         // Disable vblank_nmi.
-        write_ppuctrl_through_opcode_injection(&mut nes, 0b0000_0000);
+        nes.memory.as_cpu_memory().write(ppu_ctrl, 0b0000_0000);
+        nes.step(&mut frame);
         // Enable vblank_nmi.
-        write_ppuctrl_through_opcode_injection(&mut nes, 0b1000_0000);
+        nes.memory.as_cpu_memory().write(ppu_ctrl, 0b1000_0000);
+        nes.step(&mut frame);
 
         assert!(
             nes.cpu.nmi_pending(),
             "A second NMI should have been allowed after toggling CTRL.0 .",
         );
     }
-    */
 
     fn sample_nes() -> Nes {
         let mapper = Box::new(Mapper0::new(test_data::cartridge()).unwrap());
@@ -337,25 +334,5 @@ mod tests {
         }
 
         println!("Should generate NMI");
-    }
-
-    fn write_ppuctrl_through_opcode_injection(nes: &mut Nes, ctrl: u8) {
-        let mut memory = nes.memory.as_cpu_memory();
-        // STA: Store to the accumulator.
-        memory.write(nes.cpu.program_counter().advance(0), 0xA9);
-        // Store VBLANK_NMI DISABLED to the accumulator.
-        memory.write(nes.cpu.program_counter().advance(1), ctrl);
-
-        // LDA: Load the accumulator into a memory location.
-        memory.write(nes.cpu.program_counter().advance(2), 0x8D);
-        // Low byte of PPUCTRL, the address to be set.
-        memory.write(nes.cpu.program_counter().advance(3), 0x00);
-        // High byte of PPUCTRL, the address to be set.
-        memory.write(nes.cpu.program_counter().advance(4), 0x20);
-
-        // Execute the two op codes we just injected.
-        let mut frame = Frame::new();
-        while nes.step(&mut frame).instruction.is_none() {}
-        while nes.step(&mut frame).instruction.is_none() {}
     }
 }
