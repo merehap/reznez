@@ -99,8 +99,6 @@ impl Cpu {
             self.cycle_action_queue.enqueue_dma_transfer(dma_page, self.cycle);
         }
 
-        self.cycle += 1;
-
         if self.cycle_action_queue.is_empty() {
             self.cycle_action_queue.enqueue_instruction(Instruction::from_memory(
                 self.program_counter,
@@ -144,6 +142,8 @@ impl Cpu {
             },
             CycleAction::DmaTransfer(_) | CycleAction::Nop => {/* Do nothing. */},
         }
+
+        self.cycle += 1;
 
         instruction
     }
