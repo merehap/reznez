@@ -120,19 +120,22 @@ impl Cpu {
             match self.nmi_scheduling_status {
                 Unscheduled => {/* Do nothing. */},
                 AfterCurrentInstruction => {
-                    self.nmi(memory);
+                    self.cycle_action_queue.enqueue_nmi();
+                    //println!("NMI enqueued. {} remaining in queue.",  self.cycle_action_queue.len());
                     self.nmi_scheduling_status = Unscheduled;
                 },
                 AfterNextInstruction =>
                     self.nmi_scheduling_status = AfterCurrentInstruction,
             }
 
-            self.cycle_action_queue.enqueue_instruction(Instruction::from_memory(
-                self.program_counter,
-                self.x,
-                self.y,
-                memory,
-            ));
+            if self.cycle_action_queue.is_empty() {
+                self.cycle_action_queue.enqueue_instruction(Instruction::from_memory(
+                    self.program_counter,
+                    self.x,
+                    self.y,
+                    memory,
+                ));
+            }
         }
 
         let mut instruction = None;
@@ -155,6 +158,12 @@ impl Cpu {
             CycleAction::DmaTransfer(DmaTransferState::Write(cpu_address)) => {
                 let value = memory.read(cpu_address);
                 memory.write(CpuAddress::new(0x2004), value);
+            },
+            CycleAction::Nmi => {
+                info!(target: "cpu", "Executing NMI.");
+                memory.stack().push_address(self.program_counter);
+                memory.stack().push(self.status.to_interrupt_byte());
+                self.program_counter = memory.nmi_vector();
             },
             CycleAction::Nop | CycleAction::DmaTransfer(_) => {/* Do nothing. */},
         }
@@ -500,14 +509,6 @@ impl Cpu {
 
         (take_branch, oops)
     }
-
-    // TODO: Account for how many cycles an NMI takes.
-    fn nmi(&mut self, memory: &mut CpuMemory) {
-        info!(target: "cpu", "Executing NMI.");
-        memory.stack().push_address(self.program_counter);
-        memory.stack().push(self.status.to_interrupt_byte());
-        self.program_counter = memory.nmi_vector();
-    }
 }
 
 fn is_neg(value: u8) -> bool {
@@ -572,7 +573,11 @@ mod tests {
         assert_eq!(0xFD, mem.stack_pointer());
         assert_eq!(reset_vector.advance(2), cpu.program_counter());
 
-        // Execute the first cycle of the NMI subroutine.
+        // Execute the three cycles of the NMI subroutine.
+        cpu.step(&mut mem.as_cpu_memory());
+        assert_eq!(reset_vector.advance(2), cpu.program_counter());
+        cpu.step(&mut mem.as_cpu_memory());
+        assert_eq!(reset_vector.advance(2), cpu.program_counter());
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFA, mem.stack_pointer());
         assert_eq!(nmi_vector, cpu.program_counter());
@@ -615,7 +620,11 @@ mod tests {
         assert_eq!(0xFD, mem.stack_pointer());
         assert_eq!(reset_vector.advance(2), cpu.program_counter());
 
-        // Execute the first cycle of the NMI subroutine.
+        // Execute the three cycles of the NMI subroutine.
+        cpu.step(&mut mem.as_cpu_memory());
+        assert_eq!(reset_vector.advance(2), cpu.program_counter());
+        cpu.step(&mut mem.as_cpu_memory());
+        assert_eq!(reset_vector.advance(2), cpu.program_counter());
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFA, mem.stack_pointer());
         assert_eq!(nmi_vector, cpu.program_counter());
