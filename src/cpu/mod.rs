@@ -1,4 +1,5 @@
 pub mod cpu;
-pub mod dma_transfer;
+mod cycle_action;
+mod cycle_action_queue;
 pub mod instruction;
 pub mod status;

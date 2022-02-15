@@ -13,6 +13,8 @@ use reznez::memory::cpu::cpu_address::CpuAddress;
 use reznez::nes::Nes;
 use reznez::ppu::render::frame::Frame;
 use reznez::ppu::render::frame_rate::TargetFrameRate;
+use reznez::util::logger;
+use reznez::util::logger::Logger;
 
 #[test]
 fn nestest() {
@@ -32,6 +34,8 @@ fn nestest() {
         frame_dump: false,
     };
 
+    logger::init(Logger {log_cpu: opt.log_cpu}).unwrap();
+
     let config = Config::new(&opt);
     let mut nes = Nes::new(config);
 
@@ -47,30 +51,37 @@ fn nestest() {
         let ppu_scanline = nes.ppu().clock().scanline();
         let c = nes.cpu().cycle();
 
-        if let Some(instruction) = nes.step(&mut frame).instruction {
-            if let Some(expected_state) = expected_states.next() {
-                let state = State {
-                    program_counter,
-                    code_point: instruction.template.code_point,
-                    op_code: instruction.template.op_code,
-                    a,
-                    x,
-                    y,
-                    p,
-                    s,
-                    ppu_cycle,
-                    ppu_scanline,
-                    c,
-                };
-
-                if state != expected_state {
-                    panic!("State diverged from expected state!\nExpected:\n{}\nActual:\n{}", expected_state, state);
+        if let Some(expected_state) = expected_states.next() {
+            let instruction;
+            loop {
+                //println!("PPU CYCLE: {}", nes.ppu().clock().cycle());
+                if let Some(instr) = nes.step(&mut frame).instruction {
+                    //println!("INSTR complete. CPU CYCLE: {}", nes.cpu().cycle());
+                    instruction = instr;
+                    break;
                 }
-            } else {
-                break;
             }
-        }
 
+            let state = State {
+                program_counter,
+                code_point: instruction.template.code_point,
+                op_code: instruction.template.op_code,
+                a,
+                x,
+                y,
+                p,
+                s,
+                ppu_cycle,
+                ppu_scanline,
+                c,
+            };
+
+            if state != expected_state {
+                panic!("State diverged from expected state!\nExpected:\n{}\nActual:\n{}", expected_state, state);
+            }
+        } else {
+            break;
+        }
     }
 }
 

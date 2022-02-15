@@ -1,8 +1,9 @@
 use log::info;
 
+use crate::cpu::cycle_action::{CycleAction, DmaTransferState};
+use crate::cpu::cycle_action_queue::CycleActionQueue;
 use crate::cpu::instruction::{Instruction, OpCode, Argument};
 use crate::cpu::status::Status;
-use crate::cpu::dma_transfer::{DmaTransfer, DmaTransferState};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::ports::DmaPort;
 use crate::memory::memory::CpuMemory;
@@ -17,11 +18,10 @@ pub struct Cpu {
     program_counter: CpuAddress,
     status: Status,
 
+    cycle_action_queue: CycleActionQueue,
     nmi_scheduling_status: NmiSchedulingStatus,
     dma_port: DmaPort,
-    dma_transfer: DmaTransfer,
 
-    current_instruction_remaining_cycles: u8,
     cycle: u64,
 }
 
@@ -42,12 +42,11 @@ impl Cpu {
             program_counter,
             status: Status::startup(),
 
+            cycle_action_queue: CycleActionQueue::new(),
             nmi_scheduling_status: NmiSchedulingStatus::Unscheduled,
             dma_port: memory.ports().dma.clone(),
-            dma_transfer: DmaTransfer::inactive(),
 
-            current_instruction_remaining_cycles: 0,
-            // Unclear why this is the case.
+            // Unclear why this is the case, but nestest must be obeyed.
             cycle: 7,
         }
     }
@@ -56,6 +55,8 @@ impl Cpu {
     pub fn reset(&mut self, memory: &mut CpuMemory) {
         self.status.interrupts_disabled = true;
         self.program_counter = memory.reset_vector();
+        self.cycle_action_queue = CycleActionQueue::new();
+        self.nmi_scheduling_status = NmiSchedulingStatus::Unscheduled;
         self.cycle = 7;
         // TODO: APU resets?
     }
@@ -109,59 +110,71 @@ impl Cpu {
 
     pub fn step(&mut self, memory: &mut CpuMemory) -> Option<Instruction> {
         if let Some(dma_page) = self.dma_port.take_page() {
-            self.dma_transfer = DmaTransfer::new(dma_page, self.cycle);
+            self.cycle_action_queue.enqueue_dma_transfer(dma_page, self.cycle);
         }
 
         self.cycle += 1;
 
-        // Normal CPU operation is suspended while the DMA transfer completes.
-        match self.dma_transfer.step() {
-            DmaTransferState::Finished =>
-                {/* No transfer in progress. Continue to normal CPU step.*/},
-            DmaTransferState::Write(cpu_address) => {
+        if self.cycle_action_queue.is_empty() {
+            use NmiSchedulingStatus::*;
+            match self.nmi_scheduling_status {
+                Unscheduled => {/* Do nothing. */},
+                AfterCurrentInstruction => {
+                    self.nmi(memory);
+                    self.nmi_scheduling_status = Unscheduled;
+                },
+                AfterNextInstruction =>
+                    self.nmi_scheduling_status = AfterCurrentInstruction,
+            }
+
+            self.cycle_action_queue.enqueue_instruction(Instruction::from_memory(
+                self.program_counter,
+                self.x,
+                self.y,
+                memory,
+            ));
+        }
+
+        let mut instruction = None;
+        match self.cycle_action_queue.dequeue().expect("Ran out of CycleActions!") {
+            CycleAction::Instruction(instr) => {
+                let (branch_taken, oops) = self.execute_instruction(memory, instr);
+                if branch_taken || oops {
+                    if branch_taken && oops {
+                        self.cycle_action_queue.enqueue_nop();
+                    }
+
+                    self.cycle_action_queue.enqueue_instruction_return(instr);
+                } else {
+                    instruction = Some(instr);
+                }
+            },
+            CycleAction::InstructionReturn(instr) => {
+                instruction = Some(instr);
+            }
+            CycleAction::DmaTransfer(DmaTransferState::Write(cpu_address)) => {
                 let value = memory.read(cpu_address);
                 memory.write(CpuAddress::new(0x2004), value);
-                return None;
             },
-            _ => return None,
+            CycleAction::Nop | CycleAction::DmaTransfer(_) => {/* Do nothing. */},
         }
 
-        if self.current_instruction_remaining_cycles != 0 {
-            self.current_instruction_remaining_cycles -= 1;
-            return None;
-        }
-
-        use NmiSchedulingStatus::*;
-        match self.nmi_scheduling_status {
-            Unscheduled => {/* Do nothing. */},
-            AfterCurrentInstruction => {
-                self.nmi(memory);
-                self.nmi_scheduling_status = Unscheduled;
-            },
-            AfterNextInstruction =>
-                self.nmi_scheduling_status = AfterCurrentInstruction,
-        }
-
-        let instruction = Instruction::from_memory(
-            self.program_counter,
-            self.x,
-            self.y,
-            memory,
-        );
-
-        let cycle_count = self.execute_instruction(memory, instruction);
-        self.current_instruction_remaining_cycles = cycle_count - 1;
-
-        Some(instruction)
+        instruction
     }
 
-    fn execute_instruction(&mut self, memory: &mut CpuMemory, instruction: Instruction) -> u8 {
+    fn execute_instruction(
+        &mut self,
+        memory: &mut CpuMemory,
+        instruction: Instruction,
+    ) -> (bool, bool) {
+
         self.program_counter = self.program_counter.advance(instruction.length());
 
-        let mut cycle_count = instruction.template.cycle_count as u8;
+        let mut branch_taken = false;
+        let mut oops = false;
         if instruction.should_add_oops_cycle() {
             info!(target: "cpu", "'Oops' cycle added.");
-            cycle_count += 1;
+            oops = true;
         }
 
         use OpCode::*;
@@ -219,21 +232,21 @@ impl Cpu {
                 self.nz(value);
             },
             (BPL, Addr(addr)) =>
-                if !self.status.negative {cycle_count += self.take_branch(addr);},
+                (branch_taken, oops) = self.maybe_branch(!self.status.negative, addr),
             (BMI, Addr(addr)) =>
-                if self.status.negative {cycle_count += self.take_branch(addr);},
+                (branch_taken, oops) = self.maybe_branch(self.status.negative, addr),
             (BVC, Addr(addr)) =>
-                if !self.status.overflow {cycle_count += self.take_branch(addr);},
+                (branch_taken, oops) = self.maybe_branch(!self.status.overflow, addr),
             (BVS, Addr(addr)) =>
-                if self.status.overflow {cycle_count += self.take_branch(addr);},
+                (branch_taken, oops) = self.maybe_branch(self.status.overflow, addr),
             (BCC, Addr(addr)) =>
-                if !self.status.carry {cycle_count += self.take_branch(addr);},
+                (branch_taken, oops) = self.maybe_branch(!self.status.carry, addr),
             (BCS, Addr(addr)) =>
-                if self.status.carry {cycle_count += self.take_branch(addr);},
+                (branch_taken, oops) = self.maybe_branch(self.status.carry, addr),
             (BNE, Addr(addr)) =>
-                if !self.status.zero {cycle_count += self.take_branch(addr);},
+                (branch_taken, oops) = self.maybe_branch(!self.status.zero, addr),
             (BEQ, Addr(addr)) =>
-                if self.status.zero {cycle_count += self.take_branch(addr);},
+                (branch_taken, oops) = self.maybe_branch(self.status.zero, addr),
             (JSR, Addr(addr)) => {
                 // Push the address one previous for some reason.
                 memory.stack().push_address(self.program_counter.offset(-1));
@@ -398,7 +411,7 @@ impl Cpu {
                     ),
         }
 
-        cycle_count as u8
+        (branch_taken, oops)
     }
 
     fn adc(&mut self, value: u8) -> u8 {
@@ -471,18 +484,21 @@ impl Cpu {
         value
     }
 
-    fn take_branch(&mut self, destination: CpuAddress) -> u8 {
-        info!(target: "cpu", "Branch taken, cycle added.");
-        let mut cycle_count = 1;
+    fn maybe_branch(&mut self, take_branch: bool, destination: CpuAddress) -> (bool, bool) {
+        if !take_branch {
+            return (false, false);
+        }
 
-        if self.program_counter.page() != destination.page() {
+        info!(target: "cpu", "Branch taken, cycle added.");
+
+        let oops = self.program_counter.page() != destination.page();
+        if oops {
             info!(target: "cpu", "Branch crossed page boundary, 'Oops' cycle added.");
-            cycle_count += 1;
         }
 
         self.program_counter = destination;
 
-        cycle_count
+        (take_branch, oops)
     }
 
     // TODO: Account for how many cycles an NMI takes.
@@ -535,11 +551,11 @@ mod tests {
         // Execute first cycle of the first instruction.
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFD, mem.stack_pointer());
-        assert_eq!(reset_vector.advance(1), cpu.program_counter());
+        assert_eq!(reset_vector, cpu.program_counter());
 
         cpu.schedule_nmi();
         assert_eq!(0xFD, mem.stack_pointer());
-        assert_eq!(reset_vector.advance(1), cpu.program_counter());
+        assert_eq!(reset_vector, cpu.program_counter());
 
         // Execute final cycle of the first instruction.
         cpu.step(&mut mem.as_cpu_memory());
@@ -549,7 +565,7 @@ mod tests {
         // Execute first cycle of the second instruction.
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFD, mem.stack_pointer());
-        assert_eq!(reset_vector.advance(2), cpu.program_counter());
+        assert_eq!(reset_vector.advance(1), cpu.program_counter());
 
         // Execute final cycle of the second instruction.
         cpu.step(&mut mem.as_cpu_memory());
@@ -559,7 +575,7 @@ mod tests {
         // Execute the first cycle of the NMI subroutine.
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFA, mem.stack_pointer());
-        assert_eq!(nmi_vector.advance(1), cpu.program_counter());
+        assert_eq!(nmi_vector, cpu.program_counter());
     }
 
     #[test]
@@ -578,7 +594,7 @@ mod tests {
         // Execute first cycle of the first instruction.
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFD, mem.stack_pointer());
-        assert_eq!(reset_vector.advance(1), cpu.program_counter());
+        assert_eq!(reset_vector, cpu.program_counter());
 
         // Execute final cycle of the first instruction.
         cpu.step(&mut mem.as_cpu_memory());
@@ -592,7 +608,7 @@ mod tests {
         // Execute first cycle of the second instruction.
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFD, mem.stack_pointer());
-        assert_eq!(reset_vector.advance(2), cpu.program_counter());
+        assert_eq!(reset_vector.advance(1), cpu.program_counter());
 
         // Execute final cycle of the second instruction.
         cpu.step(&mut mem.as_cpu_memory());
@@ -602,7 +618,7 @@ mod tests {
         // Execute the first cycle of the NMI subroutine.
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFA, mem.stack_pointer());
-        assert_eq!(nmi_vector.advance(1), cpu.program_counter());
+        assert_eq!(nmi_vector, cpu.program_counter());
     }
 
     #[test]

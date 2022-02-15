@@ -180,7 +180,7 @@ impl Nes {
 
     pub fn step(&mut self, frame: &mut Frame) -> StepResult {
         let mut instruction = None;
-        if self.cycle % 3 == 0 {
+        if self.cycle % 3 == 2 {
             instruction = self.cpu.step(&mut self.memory.as_cpu_memory());
             if let Some(instruction) = instruction {
                 self.log_state(instruction);
