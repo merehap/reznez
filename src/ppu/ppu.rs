@@ -143,7 +143,12 @@ impl Ppu {
             },
 
             (Status, Read) => {
-                self.stop_vblank(mem.registers_mut());
+                mem.registers_mut().stop_vblank();
+                // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
+                if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
+                    self.suppress_vblank_active = true;
+                }
+
                 self.write_toggle = WriteToggle::FirstByte;
             },
             (OamData, Write) => self.write_oam(mem.registers_mut(), value),
@@ -276,14 +281,6 @@ impl Ppu {
         }
 
         self.write_toggle.toggle();
-    }
-
-    fn stop_vblank(&mut self, regs: &mut PpuRegisters) {
-        regs.status.vblank_active = false;
-        // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
-        if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
-            self.suppress_vblank_active = true;
-        }
     }
 }
 

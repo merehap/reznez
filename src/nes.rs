@@ -133,7 +133,6 @@ impl Nes {
         }
 
         let ppu_result = self.ppu.step(&mut self.memory.as_ppu_memory(), frame);
-
         if ppu_result.should_generate_nmi {
             self.cpu.schedule_nmi();
         }
