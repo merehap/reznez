@@ -64,26 +64,31 @@ impl Ppu {
             should_generate_nmi = self.process_latch_access(mem, latch_access);
         }
 
-        if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
-            if !self.suppress_vblank_active {
-                mem.registers_mut().start_vblank();
-            }
+        match (self.clock.scanline(), self.clock.cycle()) {
+            (241, 1) => {
+                if !self.suppress_vblank_active {
+                    mem.registers_mut().start_vblank();
+                }
 
-            self.suppress_vblank_active = false;
-            if mem.registers().can_generate_nmi() {
-                should_generate_nmi = true;
-            }
-        } else if self.clock.scanline() == 261 && self.clock.cycle() == 1 {
-            mem.registers_mut().stop_vblank();
-            mem.registers_mut().clear_sprite0_hit();
-        } else if self.clock.scanline() == 1 && self.clock.cycle() == 65 {
-            if mem.registers().mask.background_enabled {
-                self.render_background(mem, frame);
-            }
+                self.suppress_vblank_active = false;
+                if mem.registers().can_generate_nmi() {
+                    should_generate_nmi = true;
+                }
+            },
+            (261, 1) => {
+                mem.registers_mut().stop_vblank();
+                mem.registers_mut().clear_sprite0_hit();
+            },
+            (1, 65) => {
+                if mem.registers().mask.background_enabled {
+                    self.render_background(mem, frame);
+                }
 
-            if mem.registers().sprites_enabled() {
-                self.render_sprites(mem, frame);
-            }
+                if mem.registers().sprites_enabled() {
+                    self.render_sprites(mem, frame);
+                }
+            },
+            (_, _) => {/* Do nothing. */},
         }
 
         let sprite0 = self.oam.sprite0();
@@ -260,7 +265,7 @@ impl Ppu {
     }
 
     /*
-     * 0123456789ABCDEF: bit pos.
+     * 0123456789ABCDEF: next_address
      *            01234  $SCROLL#1
      *  567--01234-----  $SCROLL#2
      *     67----------  $CTRL
