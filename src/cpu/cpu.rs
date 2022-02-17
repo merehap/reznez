@@ -48,6 +48,7 @@ impl Cpu {
             dma_port: memory.ports().dma.clone(),
 
             // Unclear why this is the case, but nestest must be obeyed.
+            // https://github.com/SourMesen/Mesen/blob/master/Core/CPU.cpp#L154
             cycle: 7,
         }
     }
