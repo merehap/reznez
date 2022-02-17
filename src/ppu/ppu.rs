@@ -71,6 +71,8 @@ impl Ppu {
                 }
 
                 self.suppress_vblank_active = false;
+            },
+            (241, 3) => {
                 if mem.registers().can_generate_nmi() {
                     should_generate_nmi = true;
                 }
