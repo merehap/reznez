@@ -59,9 +59,9 @@ impl Ppu {
         }
 
         let latch_access = mem.registers_mut().take_latch_access();
-        let mut should_generate_nmi = false;
+        let mut maybe_generate = false;
         if let Some(latch_access) = latch_access {
-            should_generate_nmi = self.process_latch_access(mem, latch_access);
+            maybe_generate = self.process_latch_access(mem, latch_access);
         }
 
         match (self.clock.scanline(), self.clock.cycle()) {
@@ -74,10 +74,11 @@ impl Ppu {
             },
             (241, 3) => {
                 if mem.registers().can_generate_nmi() {
-                    should_generate_nmi = true;
+                    maybe_generate = true;
                 }
             },
             (261, 1) => {
+                println!("Clearing NMI");
                 mem.registers_mut().stop_vblank();
                 mem.registers_mut().clear_sprite0_hit();
             },
@@ -120,6 +121,11 @@ impl Ppu {
 
         let is_last_cycle_of_frame = self.clock.is_last_cycle_of_frame();
         self.clock.tick(mem.registers().rendering_enabled());
+
+        let mut should_generate_nmi = false;
+        if maybe_generate && mem.registers().can_generate_nmi() {
+            should_generate_nmi = true;
+        }
 
         StepResult {is_last_cycle_of_frame, should_generate_nmi}
     }
