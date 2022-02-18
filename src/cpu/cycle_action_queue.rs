@@ -7,6 +7,7 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 // More than enough space for a DMA transfer (513 cycles) plus an instruction.
 const CAPACITY: usize = 1000;
 
+#[derive(Debug)]
 pub struct CycleActionQueue {
     queue: VecDeque<CycleAction>,
 }

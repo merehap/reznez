@@ -73,8 +73,8 @@ impl Mapper for Mapper3 {
         &self.raw_pattern_tables[self.selected_chr_bank as usize][side as usize]
     }
 
-    fn write_to_cartridge_space(&mut self, cpu_address: CpuAddress, value: u8) {
-        println!("Switching to bank {} ({}). Address: {}.", value % 4, value, cpu_address);
+    fn write_to_cartridge_space(&mut self, _cpu_address: CpuAddress, value: u8) {
+        //println!("Switching to bank {} ({}). Address: {}.", value % 4, value, cpu_address);
         self.selected_chr_bank = ChrBankId::from_u8(value);
     }
 }

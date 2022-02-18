@@ -82,7 +82,7 @@ impl Ppu {
                 mem.registers_mut().clear_sprite0_hit();
             },
             (1, 65) => {
-                if mem.registers().mask.background_enabled {
+                if mem.registers().background_enabled() {
                     self.render_background(mem, frame);
                 }
 
