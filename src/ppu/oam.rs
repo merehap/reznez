@@ -1,3 +1,6 @@
+use crate::memory::memory::PpuMemory;
+use crate::ppu::register::registers::ctrl::SpriteHeight;
+use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::Sprite;
 
 const ATTRIBUTE_BYTE_INDEX: u8 = 2;
@@ -9,7 +12,7 @@ impl Oam {
         Oam([0; 256])
     }
 
-    pub fn sprites(&self) -> [Sprite; 64] {
+    fn sprites(&self) -> [Sprite; 64] {
         let mut iter = self.0.array_chunks::<4>();
         [(); 64].map(|_| {
             let raw = u32::from_be_bytes(*iter.next().unwrap());
@@ -34,5 +37,30 @@ impl Oam {
                 value
             };
         self.0[index as usize] = value;
+    }
+
+    pub fn render_sprites(&self, mem: &PpuMemory, frame: &mut Frame) {
+        frame.clear_sprite_buffer();
+
+        let sprite_table_side = mem.registers().sprite_table_side();
+        let pattern_table = mem.pattern_table(sprite_table_side);
+        let palette_table = mem.palette_table();
+        let sprite_height = mem.registers().sprite_height();
+
+        // FIXME: No more sprites will be found once the end of OAM is reached,
+        // effectively hiding any sprites before OAM[OAMADDR].
+        let sprites = self.sprites();
+        // Lower index sprites are drawn on top of higher index sprites.
+        for i in (0..sprites.len()).rev() {
+            let is_sprite0 = i == 0;
+            if sprite_height == SpriteHeight::Normal {
+                sprites[i].render_normal_height(&pattern_table, &palette_table, is_sprite0, frame);
+            } else {
+                let sprite = sprites[i];
+                let pattern_table =
+                    mem.pattern_table(sprite.tall_sprite_pattern_table_side());
+                sprite.render_tall(&pattern_table, &palette_table, is_sprite0, frame);
+            }
+        }
     }
 }
