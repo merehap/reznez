@@ -78,50 +78,19 @@ impl Ppu {
                 mem.registers_mut().stop_vblank();
                 mem.registers_mut().clear_sprite0_hit();
             },
-            (1, 65) => {
-                if mem.registers().background_enabled() {
-                    self.render_background(mem, frame);
-                }
-
-                if mem.registers().sprites_enabled() {
-                    self.render_sprites(mem, frame);
-                }
-            },
+            (1, 65) => self.maybe_render_frame(mem, frame),
             (_, _) => {/* Do nothing. */},
         }
 
-        let sprite0 = self.oam.sprite0();
-        // TODO: Sprite 0 hit needs lots more work.
-        if self.clock.scanline() == sprite0.y_coordinate() as u16 &&
-            self.clock.cycle() == 340 &&
-            self.clock.cycle() > sprite0.x_coordinate() as u16 &&
-            mem.registers().sprites_enabled() &&
-            mem.registers().background_enabled() {
+        self.maybe_set_sprite0_hit(mem);
 
-            mem.registers_mut().set_sprite0_hit();
-        }
-
-        let oam_data = self.oam.read(mem.registers().oam_addr);
-        mem.registers_mut().oam_data = oam_data;
-
-        let is_palette_data = self.current_address >= PALETTE_TABLE_START;
-        // When reading palette data only, read the current data pointed to
-        // by self.current_address, not what was previously pointed to.
-        let value = 
-            if is_palette_data {
-                mem.read(self.current_address)
-            } else {
-                self.pending_data
-            };
-        mem.registers_mut().ppu_data = PpuData {value, is_palette_data};
+        self.update_oam_data(mem.registers_mut());
+        self.update_ppu_data(mem);
 
         let is_last_cycle_of_frame = self.clock.is_last_cycle_of_frame();
         self.clock.tick(mem.registers().rendering_enabled());
-
-        let mut should_generate_nmi = false;
-        if maybe_generate_nmi && mem.registers().can_generate_nmi() {
-            should_generate_nmi = true;
-        }
+        let should_generate_nmi =
+            maybe_generate_nmi && mem.registers().can_generate_nmi();
 
         StepResult {is_last_cycle_of_frame, should_generate_nmi}
     }
@@ -174,6 +143,16 @@ impl Ppu {
         maybe_generate_nmi
     }
 
+    fn maybe_render_frame(&mut self, mem: &PpuMemory, frame: &mut Frame) {
+        if mem.registers().background_enabled() {
+            self.render_background(mem, frame);
+        }
+
+        if mem.registers().sprites_enabled() {
+            self.render_sprites(mem, frame);
+        }
+    }
+
     // FIXME: Stop rendering off-screen pixels.
     fn render_background(&mut self, mem: &PpuMemory, frame: &mut Frame) {
         let palette_table = mem.palette_table();
@@ -221,6 +200,37 @@ impl Ppu {
                 sprite.render_tall(&pattern_table, &palette_table, is_sprite0, frame);
             }
         }
+    }
+
+    fn maybe_set_sprite0_hit(&self, mem: &mut PpuMemory) {
+        let sprite0 = self.oam.sprite0();
+        // TODO: Sprite 0 hit needs lots more work.
+        if self.clock.scanline() == sprite0.y_coordinate() as u16 &&
+            self.clock.cycle() == 340 &&
+            self.clock.cycle() > sprite0.x_coordinate() as u16 &&
+            mem.registers().sprites_enabled() &&
+            mem.registers().background_enabled() {
+
+            mem.registers_mut().set_sprite0_hit();
+        }
+    }
+
+    fn update_oam_data(&self, regs: &mut PpuRegisters) {
+        let oam_data = self.oam.read(regs.oam_addr);
+        regs.oam_data = oam_data;
+    }
+
+    fn update_ppu_data(&self, mem: &mut PpuMemory) {
+        let is_palette_data = self.current_address >= PALETTE_TABLE_START;
+        // When reading palette data only, read the current data pointed to
+        // by self.current_address, not what was previously pointed to.
+        let value =
+            if is_palette_data {
+                mem.read(self.current_address)
+            } else {
+                self.pending_data
+            };
+        mem.registers_mut().ppu_data = PpuData {value, is_palette_data};
     }
 
     fn write_oam(&mut self, regs: &mut PpuRegisters, value: u8) {
