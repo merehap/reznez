@@ -59,9 +59,9 @@ impl Ppu {
         }
 
         let latch_access = mem.registers_mut().take_latch_access();
-        let mut maybe_generate = false;
+        let mut maybe_generate_nmi = false;
         if let Some(latch_access) = latch_access {
-            maybe_generate = self.process_latch_access(mem, latch_access);
+            maybe_generate_nmi = self.process_latch_access(mem, latch_access);
         }
 
         match (self.clock.scanline(), self.clock.cycle()) {
@@ -72,11 +72,7 @@ impl Ppu {
 
                 self.suppress_vblank_active = false;
             },
-            (241, 3) => {
-                if mem.registers().can_generate_nmi() {
-                    maybe_generate = true;
-                }
-            },
+            (241, 3) => maybe_generate_nmi = true,
             (261, 1) => {
                 println!("Clearing NMI");
                 mem.registers_mut().stop_vblank();
@@ -123,7 +119,7 @@ impl Ppu {
         self.clock.tick(mem.registers().rendering_enabled());
 
         let mut should_generate_nmi = false;
-        if maybe_generate && mem.registers().can_generate_nmi() {
+        if maybe_generate_nmi && mem.registers().can_generate_nmi() {
             should_generate_nmi = true;
         }
 
@@ -134,7 +130,7 @@ impl Ppu {
         &mut self, mem: &mut PpuMemory, latch_access: LatchAccess,
     ) -> bool {
         let value = mem.registers().latch_value();
-        let mut should_generate_nmi = false;
+        let mut maybe_generate_nmi = false;
 
         use RegisterType::*;
         use AccessMode::*;
@@ -147,9 +143,7 @@ impl Ppu {
                 self.next_address |= (value as u16 & 0b0000_0011) << 10;
                 if !self.nmi_was_enabled_last_cycle {
                     // Attempt to trigger the second (or higher) NMI of this frame.
-                    if mem.registers().can_generate_nmi() {
-                        should_generate_nmi = true;
-                    }
+                    maybe_generate_nmi = true;
                 }
 
                 self.nmi_was_enabled_last_cycle = mem.registers().nmi_enabled();
@@ -177,7 +171,7 @@ impl Ppu {
                 ),
         }
 
-        should_generate_nmi
+        maybe_generate_nmi
     }
 
     // FIXME: Stop rendering off-screen pixels.
