@@ -81,7 +81,6 @@ impl Ppu {
             },
             (241, 3) => maybe_generate_nmi = true,
             (261, 1) => {
-                println!("Clearing NMI");
                 mem.regs_mut().stop_vblank();
                 mem.regs_mut().clear_sprite0_hit();
             },

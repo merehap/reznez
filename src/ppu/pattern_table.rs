@@ -51,7 +51,6 @@ impl <'a> PatternTable<'a> {
         &self,
         sprite: Sprite,
         pattern_index: PatternIndex,
-        is_sprite_0: bool,
         palette: Palette,
         frame: &mut Frame,
         column: u8,
@@ -88,7 +87,7 @@ impl <'a> PatternTable<'a> {
                 break;
             }
 
-            frame.set_sprite_pixel(column, row, column_in_sprite, rgbt, is_sprite_0);
+            frame.set_sprite_pixel(column, row, column_in_sprite, rgbt);
         }
     }
 }

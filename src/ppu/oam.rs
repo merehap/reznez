@@ -52,14 +52,13 @@ impl Oam {
         let sprites = self.sprites();
         // Lower index sprites are drawn on top of higher index sprites.
         for i in (0..sprites.len()).rev() {
-            let is_sprite0 = i == 0;
             if sprite_height == SpriteHeight::Normal {
-                sprites[i].render_normal_height(&pattern_table, &palette_table, is_sprite0, frame);
+                sprites[i].render_normal_height(&pattern_table, &palette_table, frame);
             } else {
                 let sprite = sprites[i];
                 let pattern_table =
                     mem.pattern_table(sprite.tall_sprite_pattern_table_side());
-                sprite.render_tall(&pattern_table, &palette_table, is_sprite0, frame);
+                sprite.render_tall(&pattern_table, &palette_table, frame);
             }
         }
     }
