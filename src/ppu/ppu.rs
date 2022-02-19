@@ -73,6 +73,8 @@ impl Ppu {
 
         match (self.clock.scanline(), self.clock.cycle()) {
             (0, 1) => self.maybe_render_frame(mem),
+            (scanline, cycle) if scanline < 240 && cycle > 0 && cycle <= 256 =>
+                self.maybe_set_sprite0_hit(mem),
             (241, 1) => {
                 if !self.suppress_vblank_active {
                     mem.regs_mut().start_vblank();
@@ -88,7 +90,6 @@ impl Ppu {
             (_, _) => {/* Do nothing. */},
         }
 
-        self.maybe_set_sprite0_hit(mem);
         self.update_oam_data(mem.regs_mut());
         self.update_ppu_data(mem);
 
@@ -184,10 +185,9 @@ impl Ppu {
 
     fn maybe_set_sprite0_hit(&self, mem: &mut PpuMemory) {
         let sprite0 = self.oam.sprite0();
-        // TODO: Sprite 0 hit needs lots more work.
-        if self.clock.scanline() == sprite0.y_coordinate() as u16 &&
-            self.clock.cycle() == 340 &&
-            self.clock.cycle() > sprite0.x_coordinate() as u16 &&
+        if self.clock.scanline() >= sprite0.y_coordinate() as u16 &&
+            self.clock.scanline() < sprite0.y_coordinate() as u16 + 8 &&
+            self.clock.cycle() - 1 == sprite0.x_coordinate() as u16 &&
             mem.regs().sprites_enabled() &&
             mem.regs().background_enabled() {
 

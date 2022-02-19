@@ -23,7 +23,7 @@ impl Frame {
         }
     }
 
-    pub fn pixel(&self, column: u8, row: u8) -> Rgb {
+    pub fn pixel(&self, column: u8, row: u8) -> (Rgb, SpriteHit) {
         let row = row as usize;
         let column = column as usize;
         let background_pixel = self.buffer[row][column];
@@ -31,37 +31,14 @@ impl Frame {
         let sprite_pixel = sprite_sliver[column % 8];
 
         use Rgbt::{Transparent, Opaque};
+        use SpriteHit::{Hit, Miss};
         match (background_pixel, sprite_pixel, sprite_priority) {
-            (Transparent, Transparent, _) => self.universal_background_rgb,
-            (Transparent, Opaque(rgb), _) => rgb,
-            (Opaque(rgb), Transparent, _) => rgb,
-            (Opaque(_)  , Opaque(rgb), Priority::InFront) => rgb,
-            (Opaque(rgb), Opaque(_  ), Priority::Behind) => rgb,
+            (Transparent, Transparent, _) => (self.universal_background_rgb, Miss),
+            (Transparent, Opaque(rgb), _) => (rgb, Miss),
+            (Opaque(rgb), Transparent, _) => (rgb, Miss),
+            (Opaque(_)  , Opaque(rgb), Priority::InFront) => (rgb, Hit),
+            (Opaque(rgb), Opaque(_  ), Priority::Behind) => (rgb, Hit),
         }
-    }
-
-    pub fn write_all_pixel_data(
-        &self,
-        mut data: [u8; 3 * Frame::WIDTH * Frame::HEIGHT],
-    ) -> [u8; 3 * Frame::WIDTH * Frame::HEIGHT] {
-
-        for row in 0..Frame::HEIGHT {
-            for column in 0..Frame::WIDTH {
-                let index = 3 * (row * Frame::WIDTH + column);
-                let pixel = self.pixel(column as u8, row as u8);
-                data[index]     = pixel.red();
-                data[index + 1] = pixel.green();
-                data[index + 2] = pixel.blue();
-            }
-        }
-
-        data
-    }
-
-    pub fn to_ppm(&self) -> Ppm {
-        let mut data = [0; 3 * Frame::WIDTH * Frame::HEIGHT];
-        data = self.write_all_pixel_data(data);
-        Ppm::new(data.to_vec())
     }
 
     pub fn set_universal_background_rgb(&mut self, rgb: Rgb) {
@@ -104,6 +81,42 @@ impl Frame {
         if rgbt.is_opaque() {
             self.sprite_buffer[row][column].0[column_in_sprite] = rgbt;
         }
+    }
+
+    pub fn write_all_pixel_data(
+        &self,
+        mut data: [u8; 3 * Frame::WIDTH * Frame::HEIGHT],
+    ) -> [u8; 3 * Frame::WIDTH * Frame::HEIGHT] {
+
+        for row in 0..Frame::HEIGHT {
+            for column in 0..Frame::WIDTH {
+                let index = 3 * (row * Frame::WIDTH + column);
+                let (pixel, _) = self.pixel(column as u8, row as u8);
+                data[index]     = pixel.red();
+                data[index + 1] = pixel.green();
+                data[index + 2] = pixel.blue();
+            }
+        }
+
+        data
+    }
+
+    pub fn to_ppm(&self) -> Ppm {
+        let mut data = [0; 3 * Frame::WIDTH * Frame::HEIGHT];
+        data = self.write_all_pixel_data(data);
+        Ppm::new(data.to_vec())
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum SpriteHit {
+    Hit,
+    Miss,
+}
+
+impl SpriteHit {
+    pub fn hit(self) -> bool {
+        matches!(self, SpriteHit::Hit)
     }
 }
 
