@@ -133,12 +133,12 @@ impl <'a> PpuMemory<'a> {
     }
 
     #[inline]
-    pub fn registers(&self) -> &PpuRegisters {
+    pub fn regs(&self) -> &PpuRegisters {
         &self.memory.ppu_registers
     }
 
     #[inline]
-    pub fn registers_mut(&mut self) -> &mut PpuRegisters {
+    pub fn regs_mut(&mut self) -> &mut PpuRegisters {
         &mut self.memory.ppu_registers
     }
 

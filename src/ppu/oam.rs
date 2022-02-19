@@ -42,10 +42,10 @@ impl Oam {
     pub fn render_sprites(&self, mem: &PpuMemory, frame: &mut Frame) {
         frame.clear_sprite_buffer();
 
-        let sprite_table_side = mem.registers().sprite_table_side();
+        let sprite_table_side = mem.regs().sprite_table_side();
         let pattern_table = mem.pattern_table(sprite_table_side);
         let palette_table = mem.palette_table();
-        let sprite_height = mem.registers().sprite_height();
+        let sprite_height = mem.regs().sprite_height();
 
         // FIXME: No more sprites will be found once the end of OAM is reached,
         // effectively hiding any sprites before OAM[OAMADDR].

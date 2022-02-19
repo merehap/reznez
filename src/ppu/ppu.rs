@@ -54,10 +54,10 @@ impl Ppu {
 
     pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) -> StepResult {
         if self.clock.cycle() == 1 {
-            mem.registers_mut().maybe_decay_latch();
+            mem.regs_mut().maybe_decay_latch();
         }
 
-        let latch_access = mem.registers_mut().take_latch_access();
+        let latch_access = mem.regs_mut().take_latch_access();
         let mut maybe_generate_nmi = false;
         if let Some(latch_access) = latch_access {
             maybe_generate_nmi = self.process_latch_access(mem, latch_access);
@@ -66,7 +66,7 @@ impl Ppu {
         match (self.clock.scanline(), self.clock.cycle()) {
             (241, 1) => {
                 if !self.suppress_vblank_active {
-                    mem.registers_mut().start_vblank();
+                    mem.regs_mut().start_vblank();
                 }
 
                 self.suppress_vblank_active = false;
@@ -74,22 +74,21 @@ impl Ppu {
             (241, 3) => maybe_generate_nmi = true,
             (261, 1) => {
                 println!("Clearing NMI");
-                mem.registers_mut().stop_vblank();
-                mem.registers_mut().clear_sprite0_hit();
+                mem.regs_mut().stop_vblank();
+                mem.regs_mut().clear_sprite0_hit();
             },
             (1, 65) => self.maybe_render_frame(mem, frame),
             (_, _) => {/* Do nothing. */},
         }
 
         self.maybe_set_sprite0_hit(mem);
-
-        self.update_oam_data(mem.registers_mut());
+        self.update_oam_data(mem.regs_mut());
         self.update_ppu_data(mem);
 
         let is_last_cycle_of_frame = self.clock.is_last_cycle_of_frame();
-        self.clock.tick(mem.registers().rendering_enabled());
+        self.clock.tick(mem.regs().background_enabled());
         let should_generate_nmi =
-            maybe_generate_nmi && mem.registers().can_generate_nmi();
+            maybe_generate_nmi && mem.regs().can_generate_nmi();
 
         StepResult {is_last_cycle_of_frame, should_generate_nmi}
     }
@@ -97,7 +96,7 @@ impl Ppu {
     fn process_latch_access(
         &mut self, mem: &mut PpuMemory, latch_access: LatchAccess,
     ) -> bool {
-        let value = mem.registers().latch_value();
+        let value = mem.regs().latch_value();
         let mut maybe_generate_nmi = false;
 
         use RegisterType::*;
@@ -114,11 +113,11 @@ impl Ppu {
                     maybe_generate_nmi = true;
                 }
 
-                self.nmi_was_enabled_last_cycle = mem.registers().nmi_enabled();
+                self.nmi_was_enabled_last_cycle = mem.regs().nmi_enabled();
             },
 
             (Status, Read) => {
-                mem.registers_mut().stop_vblank();
+                mem.regs_mut().stop_vblank();
                 // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
                 if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
                     self.suppress_vblank_active = true;
@@ -126,7 +125,7 @@ impl Ppu {
 
                 self.write_toggle = WriteToggle::FirstByte;
             },
-            (OamData, Write) => self.write_oam(mem.registers_mut(), value),
+            (OamData, Write) => self.write_oam(mem.regs_mut(), value),
             (PpuAddr, Write) => self.partially_prepare_next_address(value),
             (PpuData, Read) => self.update_pending_data_then_advance(mem),
             (PpuData, Write) => self.write_then_advance(mem, value),
@@ -143,11 +142,11 @@ impl Ppu {
     }
 
     fn maybe_render_frame(&mut self, mem: &PpuMemory, frame: &mut Frame) {
-        if mem.registers().background_enabled() {
+        if mem.regs().background_enabled() {
             self.render_background(mem, frame);
         }
 
-        if mem.registers().sprites_enabled() {
+        if mem.regs().sprites_enabled() {
             self.oam.render_sprites(mem, frame);
         }
     }
@@ -157,9 +156,9 @@ impl Ppu {
         let palette_table = mem.palette_table();
         frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
-        let name_table_number = mem.registers().name_table_number();
+        let name_table_number = mem.regs().name_table_number();
         //let _name_table_mirroring = mem.name_table_mirroring();
-        let background_table_side = mem.registers().background_table_side();
+        let background_table_side = mem.regs().background_table_side();
         mem.name_table(name_table_number).render(
             &mem.pattern_table(background_table_side),
             &palette_table,
@@ -182,10 +181,10 @@ impl Ppu {
         if self.clock.scanline() == sprite0.y_coordinate() as u16 &&
             self.clock.cycle() == 340 &&
             self.clock.cycle() > sprite0.x_coordinate() as u16 &&
-            mem.registers().sprites_enabled() &&
-            mem.registers().background_enabled() {
+            mem.regs().sprites_enabled() &&
+            mem.regs().background_enabled() {
 
-            mem.registers_mut().set_sprite0_hit();
+            mem.regs_mut().set_sprite0_hit();
         }
     }
 
@@ -204,7 +203,7 @@ impl Ppu {
             } else {
                 self.pending_data
             };
-        mem.registers_mut().ppu_data = PpuData {value, is_palette_data};
+        mem.regs_mut().ppu_data = PpuData {value, is_palette_data};
     }
 
     fn write_oam(&mut self, regs: &mut PpuRegisters, value: u8) {
@@ -224,13 +223,13 @@ impl Ppu {
 
         self.pending_data = mem.read(data_source);
 
-        let increment = mem.registers().current_address_increment() as u16;
+        let increment = mem.regs().current_address_increment() as u16;
         self.current_address = self.current_address.advance(increment);
     }
 
     fn write_then_advance(&mut self, mem: &mut PpuMemory, value: u8) {
         mem.write(self.current_address, value);
-        let increment = mem.registers().current_address_increment() as u16;
+        let increment = mem.regs().current_address_increment() as u16;
         self.current_address = self.current_address.advance(increment);
     }
 
@@ -288,10 +287,12 @@ enum WriteToggle {
 
 impl WriteToggle {
     fn toggle(&mut self) {
-        match self {
-            WriteToggle::FirstByte => *self = WriteToggle::SecondByte,
-            WriteToggle::SecondByte => *self = WriteToggle::FirstByte,
-        }
+        use WriteToggle::*;
+        *self =
+            match self {
+                FirstByte => SecondByte,
+                SecondByte => FirstByte,
+            };
     }
 }
 
