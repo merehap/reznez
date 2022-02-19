@@ -184,12 +184,18 @@ impl Ppu {
     }
 
     fn maybe_set_sprite0_hit(&self, mem: &mut PpuMemory) {
+        let x = self.clock.cycle() - 1;
+        let y = self.clock.scanline();
         let sprite0 = self.oam.sprite0();
-        if self.clock.scanline() >= sprite0.y_coordinate() as u16 &&
-            self.clock.scanline() < sprite0.y_coordinate() as u16 + 8 &&
-            self.clock.cycle() - 1 == sprite0.x_coordinate() as u16 &&
+        if y >= sprite0.y_coordinate() as u16 &&
+            y < sprite0.y_coordinate() as u16 + 8 &&
+            y < 240 &&
+            x >= sprite0.x_coordinate() as u16 &&
+            x < sprite0.x_coordinate() as u16 + 8 &&
+            x < 256 &&
             mem.regs().sprites_enabled() &&
-            mem.regs().background_enabled() {
+            mem.regs().background_enabled() &&
+            self.frame.pixel(x as u8, y as u8).1.hit() {
 
             mem.regs_mut().set_sprite0_hit();
         }
