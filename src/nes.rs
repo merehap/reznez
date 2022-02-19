@@ -18,7 +18,6 @@ use crate::memory::mappers::mapper0::Mapper0;
 use crate::memory::mappers::mapper1::Mapper1;
 use crate::memory::mappers::mapper3::Mapper3;
 use crate::ppu::ppu::Ppu;
-use crate::ppu::render::frame::Frame;
 use crate::ppu::render::frame_rate::TargetFrameRate;
 
 pub struct Nes {
@@ -95,14 +94,14 @@ impl Nes {
         }
 
         loop {
-            let step_result = self.step(gui.frame_mut());
+            let step_result = self.step();
             if step_result.is_last_cycle_of_frame {
                 break;
             }
         }
 
         info!("Displaying frame {}.", frame_index);
-        gui.display_frame(frame_index);
+        gui.display_frame(self.ppu.frame(), frame_index);
 
         let end_time = SystemTime::now();
         if let Ok(duration) = intended_frame_end_time.duration_since(end_time) {
@@ -121,7 +120,7 @@ impl Nes {
         }
     }
 
-    pub fn step(&mut self, frame: &mut Frame) -> StepResult {
+    pub fn step(&mut self) -> StepResult {
         let mut instruction = None;
         if self.cycle % 3 == 2 {
             instruction = self.cpu.step(&mut self.memory.as_cpu_memory());
@@ -132,7 +131,7 @@ impl Nes {
             }
         }
 
-        let ppu_result = self.ppu.step(&mut self.memory.as_ppu_memory(), frame);
+        let ppu_result = self.ppu.step(&mut self.memory.as_ppu_memory());
         if ppu_result.should_generate_nmi {
             self.cpu.schedule_nmi();
         }
@@ -222,7 +221,6 @@ mod tests {
     use crate::memory::memory::Memory;
     use crate::ppu::palette::system_palette;
     use crate::ppu::register::registers::ctrl::Ctrl;
-    use crate::ppu::render::frame::Frame;
     use crate::ppu::render::frame_rate::TargetFrameRate;
 
     use crate::cartridge::test_data;
@@ -242,9 +240,8 @@ mod tests {
         step_until_vblank_nmi_enabled(&mut nes);
         assert!(nes.cpu.nmi_pending());
 
-        let mut frame = Frame::new();
-        while nes.step(&mut frame).instruction.is_none() {}
-        while nes.step(&mut frame).instruction.is_none() {}
+        while nes.step().instruction.is_none() {}
+        while nes.step().instruction.is_none() {}
 
         // Disable vblank_nmi.
         assert!(
@@ -264,9 +261,8 @@ mod tests {
         step_until_vblank_nmi_enabled(&mut nes);
         assert!(nes.cpu.nmi_pending());
 
-        let mut frame = Frame::new();
-        while nes.step(&mut frame).instruction.is_none() {}
-        while nes.step(&mut frame).instruction.is_none() {}
+        while nes.step().instruction.is_none() {}
+        while nes.step().instruction.is_none() {}
 
         assert!(
             !nes.cpu.nmi_pending(),
@@ -276,10 +272,10 @@ mod tests {
         let ppu_ctrl = CpuAddress::new(0x2000);
         // Disable vblank_nmi.
         nes.memory.as_cpu_memory().write(ppu_ctrl, 0b0000_0000);
-        nes.step(&mut frame);
+        nes.step();
         // Enable vblank_nmi.
         nes.memory.as_cpu_memory().write(ppu_ctrl, 0b1000_0000);
-        nes.step(&mut frame);
+        nes.step();
 
         assert!(
             nes.cpu.nmi_pending(),
@@ -317,12 +313,11 @@ mod tests {
         ctrl.nmi_enabled = true;
         nes.memory.as_cpu_memory().write(CpuAddress::new(0x2000), ctrl.to_u8());
 
-        let mut frame = Frame::new();
         loop {
             assert!(!nes.cpu.nmi_pending(),
                 "NMI must not be pending before one is scheduled.",
             );
-            let nmi_scheduled = nes.step(&mut frame).nmi_scheduled;
+            let nmi_scheduled = nes.step().nmi_scheduled;
             if nmi_scheduled {
                 break;
             }

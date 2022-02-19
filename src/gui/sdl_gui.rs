@@ -49,7 +49,6 @@ pub struct SdlGui {
 
     canvas: Canvas<Window>,
     texture: Texture,
-    frame: Frame,
     pixels: [u8; 3 * Frame::WIDTH * Frame::HEIGHT],
 }
 
@@ -82,7 +81,6 @@ impl SdlGui {
 
             canvas,
             texture,
-            frame: Frame::new(),
             pixels: [0; 3 * Frame::WIDTH * Frame::HEIGHT],
         }
     }
@@ -131,12 +129,8 @@ impl Gui for SdlGui {
         }
     }
 
-    fn frame_mut(&mut self) -> &mut Frame {
-        &mut self.frame
-    }
-
-    fn display_frame(&mut self, _frame_index: u64) {
-        self.pixels = self.frame.write_all_pixel_data(self.pixels);
+    fn display_frame(&mut self, frame: &Frame, _frame_index: u64) {
+        self.pixels = frame.write_all_pixel_data(self.pixels);
 
         /*
         let palette_table = nes.ppu().palette_table();

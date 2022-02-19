@@ -27,19 +27,15 @@ impl Gui for FrameDumpGui {
         self.inner.events()
     }
 
-    fn frame_mut(&mut self) -> &mut Frame {
-        self.inner.frame_mut()
-    }
-
-    fn display_frame(&mut self, frame_index: u64) {
+    fn display_frame(&mut self, frame: &Frame, frame_index: u64) {
         let file_name = format!(
             "{}/frame{:03}.ppm",
             FRAME_DUMP_DIRECTORY,
             frame_index,
         );
         let mut file = File::create(file_name).unwrap();
-        file.write_all(&self.frame_mut().to_ppm().to_bytes()).unwrap();
+        file.write_all(&frame.to_ppm().to_bytes()).unwrap();
 
-        self.inner.display_frame(frame_index);
+        self.inner.display_frame(frame, frame_index);
     }
 }

@@ -3,15 +3,11 @@ use std::collections::BTreeMap;
 use crate::gui::gui::{Gui, Events};
 use crate::ppu::render::frame::Frame;
 
-pub struct NoGui {
-    frame: Frame,
-}
+pub struct NoGui;
 
 impl NoGui {
     pub fn new() -> NoGui {
-        NoGui {
-            frame: Frame::new(),
-        }
+        NoGui
     }
 }
 
@@ -25,11 +21,7 @@ impl Gui for NoGui {
         }
     }
 
-    fn frame_mut(&mut self) -> &mut Frame {
-        &mut self.frame
-    }
-
-    fn display_frame(&mut self, _frame_index: u64) {
+    fn display_frame(&mut self, _: &Frame, _frame_index: u64) {
         // Do nothing.
     }
 }
