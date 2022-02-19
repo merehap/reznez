@@ -120,7 +120,7 @@ impl Sprite {
 
             if row >= 240 {
                 // FIXME: The part of vertically flipped sprites that is
-                // off the screen should still be rendered.
+                // on the screen should still be rendered.
                 break;
             }
 

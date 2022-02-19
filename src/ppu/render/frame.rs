@@ -44,6 +44,7 @@ impl Frame {
         &self,
         mut data: [u8; 3 * Frame::WIDTH * Frame::HEIGHT],
     ) -> [u8; 3 * Frame::WIDTH * Frame::HEIGHT] {
+
         for row in 0..Frame::HEIGHT {
             for column in 0..Frame::WIDTH {
                 let index = 3 * (row * Frame::WIDTH + column);
@@ -98,13 +99,6 @@ impl Frame {
         column_in_sprite: usize,
         rgbt: Rgbt,
     ) {
-        //let background_pixel = self.buffer[row as usize][column as usize + column_in_sprite];
-        /*
-        if is_sprite_0 && background_pixel.is_transparent() && rgbt.is_transparent() {
-            self.sprite0_hit = true;
-        }
-        */
-
         let row = row as usize;
         let column = column as usize / 8;
         if rgbt.is_opaque() {

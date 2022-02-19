@@ -72,6 +72,7 @@ impl Ppu {
         }
 
         match (self.clock.scanline(), self.clock.cycle()) {
+            (0, 1) => self.maybe_render_frame(mem),
             (241, 1) => {
                 if !self.suppress_vblank_active {
                     mem.regs_mut().start_vblank();
@@ -84,7 +85,6 @@ impl Ppu {
                 mem.regs_mut().stop_vblank();
                 mem.regs_mut().clear_sprite0_hit();
             },
-            (1, 65) => self.maybe_render_frame(mem),
             (_, _) => {/* Do nothing. */},
         }
 
