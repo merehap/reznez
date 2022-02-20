@@ -56,9 +56,8 @@ impl <'a> PatternTable<'a> {
         column: u8,
         row: u8,
         row_in_sprite: usize,
+        is_sprite_0: bool,
     ) {
-        frame.set_tile_sliver_priority(column, row, sprite.priority());
-
         let index = 16 * pattern_index.to_usize();
         let low_index = index + row_in_sprite;
         let high_index = low_index + 8;
@@ -70,12 +69,12 @@ impl <'a> PatternTable<'a> {
         for column_in_sprite in 0..8 {
             let low_bit = get_bit(low_byte, column_in_sprite);
             let high_bit = get_bit(high_byte, column_in_sprite);
-            let rgbt =
+            let rgb =
                 match (low_bit, high_bit) {
-                    (false, false) => Rgbt::Transparent,
-                    (true , false) => Rgbt::Opaque(palette[PaletteIndex::One]),
-                    (false, true ) => Rgbt::Opaque(palette[PaletteIndex::Two]),
-                    (true , true ) => Rgbt::Opaque(palette[PaletteIndex::Three]),
+                    (false, false) => /* Transparent. */ continue,
+                    (true , false) => palette[PaletteIndex::One],
+                    (false, true ) => palette[PaletteIndex::Two],
+                    (true , true ) => palette[PaletteIndex::Three],
                 };
             let column_in_sprite =
                 if flip {
@@ -83,11 +82,13 @@ impl <'a> PatternTable<'a> {
                 } else {
                     column_in_sprite
                 };
-            if column as usize + column_in_sprite as usize >= Frame::WIDTH {
+            let column = column as usize + column_in_sprite;
+            if column >= Frame::WIDTH {
+                // FIXME: Change to continue.
                 break;
             }
 
-            frame.set_sprite_pixel(column, row, column_in_sprite, rgbt);
+            frame.set_sprite_pixel(column as u8, row, rgb, sprite.priority(), is_sprite_0);
         }
     }
 }

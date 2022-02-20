@@ -3,11 +3,9 @@ use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::render::ppm::Ppm;
 use crate::ppu::sprite::Priority;
 
-type SpriteSliver = ([Rgbt; 8], Priority);
-
 pub struct Frame {
-    buffer: [[Rgbt; Frame::WIDTH]; Frame::HEIGHT],
-    sprite_buffer: [[SpriteSliver; Frame::WIDTH / 8]; Frame::HEIGHT],
+    buffer: Box<[[Rgbt; Frame::WIDTH]; Frame::HEIGHT]>,
+    sprite_buffer: Box<[[(Rgbt, Priority, bool); Frame::WIDTH]; Frame::HEIGHT]>,
     universal_background_rgb: Rgb,
 }
 
@@ -17,27 +15,29 @@ impl Frame {
 
     pub fn new() -> Frame {
         Frame {
-            buffer: [[Rgbt::Transparent; Frame::WIDTH]; Frame::HEIGHT],
-            sprite_buffer: new_sprite_buffer(),
+            buffer: Box::new([[Rgbt::Transparent; Frame::WIDTH]; Frame::HEIGHT]),
+            sprite_buffer: Box::new([[(Rgbt::Transparent, Priority::Behind, false); Frame::WIDTH]; Frame::HEIGHT]),
             universal_background_rgb: Rgb::BLACK,
         }
     }
 
-    pub fn pixel(&self, column: u8, row: u8) -> (Rgb, SpriteHit) {
+    pub fn pixel(&self, column: u8, row: u8) -> (Rgb, Sprite0Hit) {
         let row = row as usize;
         let column = column as usize;
         let background_pixel = self.buffer[row][column];
-        let (sprite_sliver, sprite_priority) = self.sprite_buffer[row][column / 8];
-        let sprite_pixel = sprite_sliver[column % 8];
+        let (sprite_pixel, sprite_priority, is_sprite_0) =
+            self.sprite_buffer[row][column];
+
+        use Sprite0Hit::{Hit, Miss};
+        let sprite_0_hit = if is_sprite_0 {Hit} else {Miss};
 
         use Rgbt::{Transparent, Opaque};
-        use SpriteHit::{Hit, Miss};
         match (background_pixel, sprite_pixel, sprite_priority) {
             (Transparent, Transparent, _) => (self.universal_background_rgb, Miss),
             (Transparent, Opaque(rgb), _) => (rgb, Miss),
             (Opaque(rgb), Transparent, _) => (rgb, Miss),
-            (Opaque(_)  , Opaque(rgb), Priority::InFront) => (rgb, Hit),
-            (Opaque(rgb), Opaque(_  ), Priority::Behind) => (rgb, Hit),
+            (Opaque(_)  , Opaque(rgb), Priority::InFront) => (rgb, sprite_0_hit),
+            (Opaque(rgb), Opaque(_  ), Priority::Behind) => (rgb, sprite_0_hit),
         }
     }
 
@@ -46,11 +46,11 @@ impl Frame {
     }
 
     pub fn clear_background_buffer(&mut self) {
-        self.buffer = [[Rgbt::Transparent; Frame::WIDTH]; Frame::HEIGHT];
+        self.buffer = Box::new([[Rgbt::Transparent; Frame::WIDTH]; Frame::HEIGHT]);
     }
 
     pub fn clear_sprite_buffer(&mut self) {
-        self.sprite_buffer = new_sprite_buffer();
+        self.sprite_buffer = Box::new([[(Rgbt::Transparent, Priority::Behind, false); Frame::WIDTH]; Frame::HEIGHT]);
     }
 
     #[inline]
@@ -59,28 +59,17 @@ impl Frame {
     }
 
     #[inline]
-    pub fn set_tile_sliver_priority(
-        &mut self,
-        column: u8,
-        row: u8,
-        priority: Priority,
-    ) {
-        self.sprite_buffer[row as usize][(column / 8) as usize].1 = priority;
-    }
-
-    #[inline]
     pub fn set_sprite_pixel(
         &mut self,
         column: u8,
         row: u8,
-        column_in_sprite: usize,
-        rgbt: Rgbt,
+        rgb: Rgb,
+        priority: Priority,
+        is_sprite_0: bool,
     ) {
         let row = row as usize;
-        let column = column as usize / 8;
-        if rgbt.is_opaque() {
-            self.sprite_buffer[row][column].0[column_in_sprite] = rgbt;
-        }
+        let column = column as usize;
+        self.sprite_buffer[row][column] = (Rgbt::Opaque(rgb), priority, is_sprite_0);
     }
 
     pub fn write_all_pixel_data(
@@ -109,17 +98,13 @@ impl Frame {
 }
 
 #[derive(Clone, Copy)]
-pub enum SpriteHit {
+pub enum Sprite0Hit {
     Hit,
     Miss,
 }
 
-impl SpriteHit {
+impl Sprite0Hit {
     pub fn hit(self) -> bool {
-        matches!(self, SpriteHit::Hit)
+        matches!(self, Sprite0Hit::Hit)
     }
-}
-
-fn new_sprite_buffer() -> [[SpriteSliver; Frame::WIDTH / 8]; Frame::HEIGHT] {
-    [[([Rgbt::Transparent; 8], Priority::Behind); Frame::WIDTH / 8]; Frame::HEIGHT]
 }

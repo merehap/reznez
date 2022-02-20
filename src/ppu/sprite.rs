@@ -82,20 +82,22 @@ impl Sprite {
         self,
         pattern_table: &PatternTable,
         palette_table: &PaletteTable,
+        is_sprite_0: bool,
         frame: &mut Frame,
     ) {
-        self.render(pattern_table, self.pattern_index, palette_table, 0, frame);
+        self.render(pattern_table, self.pattern_index, palette_table, 0, is_sprite_0, frame);
     }
 
     pub fn render_tall(
         self,
         pattern_table: &PatternTable,
         palette_table: &PaletteTable,
+        is_sprite_0: bool,
         frame: &mut Frame,
     ) {
         let (first_index, second_index) = self.pattern_index.to_tall_indexes();
-        self.render(pattern_table, first_index, palette_table, 0, frame);
-        self.render(pattern_table, second_index, palette_table, 1, frame);
+        self.render(pattern_table, first_index, palette_table, 0, is_sprite_0, frame);
+        self.render(pattern_table, second_index, palette_table, 1, is_sprite_0, frame);
     }
 
     fn render(
@@ -104,6 +106,7 @@ impl Sprite {
         pattern_index: PatternIndex,
         palette_table: &PaletteTable,
         row_offset: u8,
+        is_sprite_0: bool,
         frame: &mut Frame,
     ) {
         let column = self.x_coordinate();
@@ -132,6 +135,7 @@ impl Sprite {
                 column,
                 row,
                 row_in_sprite as usize,
+                is_sprite_0,
             );
         }
     }

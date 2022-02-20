@@ -1,6 +1,6 @@
 use crate::ppu::palette::rgb::Rgb;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Rgbt {
     Transparent,
     Opaque(Rgb),

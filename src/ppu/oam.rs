@@ -5,6 +5,8 @@ use crate::ppu::sprite::Sprite;
 
 const ATTRIBUTE_BYTE_INDEX: u8 = 2;
 
+// TODO: OAM should decay:
+// https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Dynamic_RAM_decay
 pub struct Oam([u8; 256]);
 
 impl Oam {
@@ -52,13 +54,14 @@ impl Oam {
         let sprites = self.sprites();
         // Lower index sprites are drawn on top of higher index sprites.
         for i in (0..sprites.len()).rev() {
+            let is_sprite_0 = i == 0;
             if sprite_height == SpriteHeight::Normal {
-                sprites[i].render_normal_height(&pattern_table, &palette_table, frame);
+                sprites[i].render_normal_height(&pattern_table, &palette_table, is_sprite_0, frame);
             } else {
                 let sprite = sprites[i];
                 let pattern_table =
                     mem.pattern_table(sprite.tall_sprite_pattern_table_side());
-                sprite.render_tall(&pattern_table, &palette_table, frame);
+                sprite.render_tall(&pattern_table, &palette_table, is_sprite_0, frame);
             }
         }
     }
