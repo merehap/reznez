@@ -1,3 +1,5 @@
+use enum_iterator::IntoEnumIterator;
+
 const COLUMN_COUNT: u16 = 32;
 const ROW_COUNT: u16 = 30;
 const MAX_INDEX: u16 = COLUMN_COUNT * ROW_COUNT - 1;
@@ -15,13 +17,13 @@ impl BackgroundTileIndex {
     }
 
     #[inline]
-    pub fn column(self) -> u8 {
-        (self.0 % 32).try_into().unwrap()
+    pub fn tile_column(self) -> TileColumn {
+        TileColumn::try_from_u8((self.0 % 32) as u8).unwrap()
     }
 
     #[inline]
-    pub fn row(self) -> u8 {
-        (self.0 / 32).try_into().unwrap()
+    pub fn tile_row(self) -> TileRow {
+        TileRow::try_from_u8((self.0 / 32) as u8).unwrap()
     }
 }
 
@@ -41,4 +43,138 @@ impl Iterator for BackgroundTileIndexIterator {
         self.index.0 += 1;
         Some(result)
     }
+}
+
+#[derive(Clone, Copy)]
+pub struct TileColumn(u8);
+
+impl TileColumn {
+    const MAX: u8 = 31;
+
+    fn try_from_u8(tile_column: u8) -> Option<TileColumn> {
+        if tile_column <= TileColumn::MAX {
+            Some(TileColumn(tile_column))
+        } else {
+            None
+        }
+    }
+
+    pub fn to_pixel_column(self, column_in_tile: ColumnInTile) -> PixelColumn {
+        // Unwrap always succeeds since 248 + 7 == 255.
+        self.pixel_column().add_column_in_tile(column_in_tile).unwrap()
+    }
+
+    pub fn to_u8(self) -> u8 {
+        self.0
+    }
+
+    fn pixel_column(self) -> PixelColumn {
+        PixelColumn::new(8 * self.0)
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct TileRow(u8);
+
+impl TileRow {
+    const MAX: u8 = 29;
+
+    fn try_from_u8(tile_row: u8) -> Option<TileRow> {
+        if tile_row <= TileRow::MAX {
+            Some(TileRow(tile_row))
+        } else {
+            None
+        }
+    }
+
+    pub fn to_pixel_row(self, row_in_tile: RowInTile) -> PixelRow {
+        // Unwrap always succeeds since 232 + 7 == 239.
+        self.pixel_row().add_row_in_tile(row_in_tile).unwrap()
+    }
+
+    pub fn to_u8(self) -> u8 {
+        self.0
+    }
+
+    fn pixel_row(self) -> PixelRow {
+        PixelRow::try_from_u8(8 * self.0).unwrap()
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct PixelColumn(u8);
+
+impl PixelColumn {
+    pub fn offset(self, offset: i16) -> Option<PixelColumn> {
+        (self.0 as i16 + offset)
+            .try_into()
+            .ok()
+            .map(|pc| PixelColumn(pc))
+    }
+
+    pub fn to_usize(self) -> usize {
+        self.0 as usize
+    }
+
+    fn new(pixel_column: u8) -> PixelColumn {
+        PixelColumn(pixel_column)
+    }
+
+    fn add_column_in_tile(self, column_in_tile: ColumnInTile) -> Option<PixelColumn> {
+        let value = self.0.checked_add(column_in_tile as u8)?;
+        Some(PixelColumn::new(value))
+    }
+}
+
+pub struct PixelRow(u8);
+
+impl PixelRow {
+    const MAX: u8 = 239;
+
+    pub fn offset(self, offset: i16) -> PixelRow {
+        // TODO: Is this a problem for Super Mario Bros?
+        PixelRow::try_from_u8(((self.0 as i16 + offset).rem_euclid(256) as u8) % 240)
+            .unwrap()
+    }
+
+    pub fn to_u8(self) -> u8 {
+        self.0
+    }
+
+    fn try_from_u8(pixel_row: u8) -> Option<PixelRow> {
+        if pixel_row <= PixelRow::MAX {
+            Some(PixelRow(pixel_row))
+        } else {
+            None
+        }
+    }
+
+    fn add_row_in_tile(self, row_in_tile: RowInTile) -> Option<PixelRow> {
+        let value = self.0.checked_add(row_in_tile as u8)?;
+        PixelRow::try_from_u8(value)
+    }
+}
+
+#[derive(Clone, Copy, IntoEnumIterator)]
+pub enum ColumnInTile {
+    Zero,
+    One,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
+}
+
+#[derive(Clone, Copy, IntoEnumIterator)]
+pub enum RowInTile {
+    Zero,
+    One,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
 }

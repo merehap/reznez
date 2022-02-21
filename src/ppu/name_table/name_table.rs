@@ -1,6 +1,8 @@
 use std::fmt;
 
-use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
+use enum_iterator::IntoEnumIterator;
+
+use crate::ppu::name_table::background_tile_index::{BackgroundTileIndex, ColumnInTile, RowInTile};
 use crate::ppu::name_table::attribute_table::AttributeTable;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
@@ -38,7 +40,7 @@ impl <'a> NameTable<'a> {
         for background_tile_index in BackgroundTileIndex::iter() {
             let (pattern_index, palette_table_index) =
                 self.tile_entry_at(background_tile_index);
-            for row_in_tile in 0..8 {
+            for row_in_tile in RowInTile::into_enum_iter() {
                 pattern_table.render_tile_sliver(
                     pattern_index,
                     row_in_tile as usize,
@@ -46,13 +48,17 @@ impl <'a> NameTable<'a> {
                     &mut tile_sliver,
                 );
 
-                for column_in_tile in 0..8 {
-                    let column = 8 * background_tile_index.column() as i16 + column_in_tile;
-                    let column: Result<u8, _> = (column + x_offset).try_into();
-                    if let Ok(column) = column {
-                        let row = 8 * background_tile_index.row() as i16 + row_in_tile;
-                        let row = ((row + y_offset).rem_euclid(256) as u8) % 240;
-                        frame.background_row(row)[column as usize] =
+                for column_in_tile in ColumnInTile::into_enum_iter() {
+                    let maybe_pixel_column = background_tile_index
+                        .tile_column()
+                        .to_pixel_column(column_in_tile)
+                        .offset(x_offset);
+                    if let Some(pixel_column) = maybe_pixel_column {
+                        let pixel_row = background_tile_index
+                            .tile_row()
+                            .to_pixel_row(row_in_tile)
+                            .offset(y_offset);
+                        frame.background_row(pixel_row.to_u8())[pixel_column.to_usize()] =
                             tile_sliver[column_in_tile as usize];
                     }
                 }

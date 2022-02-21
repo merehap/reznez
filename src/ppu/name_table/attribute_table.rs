@@ -19,14 +19,18 @@ impl <'a> AttributeTable<'a> {
         background_tile_index: BackgroundTileIndex,
     ) -> PaletteTableIndex {
 
+        // TODO: This should all be calculations within BackgroundTileIndex.
+        let tile_column = background_tile_index.tile_column().to_u8();
+        let tile_row = background_tile_index.tile_row().to_u8();
+
         let attribute_index =
-            8 * (background_tile_index.row() / 4) +
-            (background_tile_index.column() / 4);
+            8 * (tile_row / 4) +
+            (tile_column / 4);
         let attribute = self.0[attribute_index as usize];
         let palette_table_indexes = PaletteTableIndex::unpack_byte(attribute);
         let index_selection =
-            if background_tile_index.row()    / 2 % 2 == 0 {2} else {0} +
-            if background_tile_index.column() / 2 % 2 == 0 {1} else {0};
+            if tile_row    / 2 % 2 == 0 {2} else {0} +
+            if tile_column / 2 % 2 == 0 {1} else {0};
         palette_table_indexes[index_selection]
     }
 }
