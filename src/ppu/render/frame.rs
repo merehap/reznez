@@ -1,3 +1,4 @@
+use crate::ppu::pixel_index::{PixelIndex, PixelColumn, PixelRow};
 use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::render::ppm::Ppm;
@@ -21,12 +22,10 @@ impl Frame {
         }
     }
 
-    pub fn pixel(&self, column: u8, row: u8) -> (Rgb, Sprite0Hit) {
-        let row = row as usize;
-        let column = column as usize;
-        let background_pixel = self.buffer[row][column];
+    pub fn pixel(&self, column: PixelColumn, row: PixelRow) -> (Rgb, Sprite0Hit) {
+        let background_pixel = self.buffer[row.to_usize()][column.to_usize()];
         let (sprite_pixel, sprite_priority, is_sprite_0) =
-            self.sprite_buffer[row][column];
+            self.sprite_buffer[row.to_usize()][column.to_usize()];
 
         use Sprite0Hit::{Hit, Miss};
         let sprite_0_hit = if is_sprite_0 {Hit} else {Miss};
@@ -61,30 +60,29 @@ impl Frame {
     #[inline]
     pub fn set_sprite_pixel(
         &mut self,
-        column: u8,
-        row: u8,
+        column: PixelColumn,
+        row: PixelRow,
         rgb: Rgb,
         priority: Priority,
         is_sprite_0: bool,
     ) {
-        let row = row as usize;
-        let column = column as usize;
-        self.sprite_buffer[row][column] = (Rgbt::Opaque(rgb), priority, is_sprite_0);
+        self.sprite_buffer[row.to_usize()][column.to_usize()] =
+            (Rgbt::Opaque(rgb), priority, is_sprite_0);
     }
 
     pub fn write_all_pixel_data(
         &self,
-        mut data: [u8; 3 * Frame::WIDTH * Frame::HEIGHT],
-    ) -> [u8; 3 * Frame::WIDTH * Frame::HEIGHT] {
+        mut data: [u8; 3 * PixelIndex::PIXEL_COUNT],
+    ) -> [u8; 3 * PixelIndex::PIXEL_COUNT] {
 
-        for row in 0..Frame::HEIGHT {
-            for column in 0..Frame::WIDTH {
-                let index = 3 * (row * Frame::WIDTH + column);
-                let (pixel, _) = self.pixel(column as u8, row as u8);
-                data[index]     = pixel.red();
-                data[index + 1] = pixel.green();
-                data[index + 2] = pixel.blue();
-            }
+        for pixel_index in PixelIndex::iter() {
+            let (column, row) = pixel_index.to_column_row();
+            let (pixel, _) = self.pixel(column, row);
+
+            let index = 3 * pixel_index.to_usize();
+            data[index]     = pixel.red();
+            data[index + 1] = pixel.green();
+            data[index + 2] = pixel.blue();
         }
 
         data

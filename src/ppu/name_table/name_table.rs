@@ -2,8 +2,7 @@ use std::fmt;
 
 use enum_iterator::IntoEnumIterator;
 
-use crate::ppu::pixel_column::ColumnInTile;
-use crate::ppu::pixel_row::RowInTile;
+use crate::ppu::pixel_index::{ColumnInTile, RowInTile};
 use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
 use crate::ppu::name_table::attribute_table::AttributeTable;
 use crate::ppu::palette::palette_table::PaletteTable;
@@ -59,7 +58,7 @@ impl <'a> NameTable<'a> {
                         let pixel_row = background_tile_index
                             .tile_row()
                             .to_pixel_row(row_in_tile)
-                            .offset(y_offset);
+                            .wrapping_offset(y_offset);
                         frame.background_row(pixel_row.to_u8())[pixel_column.to_usize()] =
                             tile_sliver[column_in_tile as usize];
                     }

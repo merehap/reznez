@@ -1,5 +1,6 @@
 use crate::memory::memory::{PpuMemory, PALETTE_TABLE_START};
 use crate::memory::ppu::ppu_address::PpuAddress;
+use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::clock::Clock;
 use crate::ppu::oam::Oam;
 use crate::ppu::register::ppu_registers::*;
@@ -184,20 +185,17 @@ impl Ppu {
     }
 
     fn maybe_set_sprite0_hit(&self, mem: &mut PpuMemory) {
-        let x = self.clock.cycle() - 1;
-        let y = self.clock.scanline();
-        let sprite0 = self.oam.sprite0();
-        if y >= sprite0.y_coordinate() as u16 &&
-            y < sprite0.y_coordinate() as u16 + 8 &&
-            y < 240 &&
-            x >= sprite0.x_coordinate() as u16 &&
-            x < sprite0.x_coordinate() as u16 + 8 &&
-            x < 256 &&
-            mem.regs().sprites_enabled() &&
-            mem.regs().background_enabled() &&
-            self.frame.pixel(x as u8, y as u8).1.hit() {
+        let maybe_x = PixelColumn::try_from_u16(self.clock.cycle() - 1);
+        let maybe_y = PixelRow::try_from_u16(self.clock.scanline());
 
-            mem.regs_mut().set_sprite0_hit();
+        if let (Some(x), Some(y)) = (maybe_x, maybe_y) {
+            if self.oam.sprite0().is_in_bounds(x, y) &&
+                mem.regs().sprites_enabled() &&
+                mem.regs().background_enabled() &&
+                self.frame.pixel(x, y).1.hit() {
+
+                mem.regs_mut().set_sprite0_hit();
+            }
         }
     }
 

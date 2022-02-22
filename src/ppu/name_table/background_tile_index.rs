@@ -1,5 +1,4 @@
-use crate::ppu::pixel_column::{PixelColumn, ColumnInTile};
-use crate::ppu::pixel_row::{PixelRow, RowInTile};
+use crate::ppu::pixel_index::{PixelColumn, ColumnInTile, PixelRow, RowInTile};
 
 const COLUMN_COUNT: u16 = 32;
 const ROW_COUNT: u16 = 30;

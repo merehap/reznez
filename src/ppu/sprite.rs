@@ -1,3 +1,6 @@
+use enum_iterator::IntoEnumIterator;
+
+use crate::ppu::pixel_index::{PixelColumn, PixelRow, RowInTile};
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::pattern_table::{PatternTable, PatternIndex, PatternTableSide};
@@ -6,7 +9,8 @@ use crate::util::bit_util::get_bit;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Sprite {
-    x_coordinate: u8,
+    x_coordinate: PixelColumn,
+    // Sprites with invalid y_coordinates won't be rendered, but must be kept.
     y_coordinate: u8,
     pattern_index: PatternIndex,
     flip_vertically: bool,
@@ -30,7 +34,7 @@ impl Sprite {
             };
 
         Sprite {
-            x_coordinate,
+            x_coordinate: PixelColumn::new(x_coordinate),
             y_coordinate,
             pattern_index: PatternIndex::new(raw_pattern_index),
             flip_vertically:   get_bit(attribute, 0),
@@ -40,12 +44,12 @@ impl Sprite {
         }
     }
 
-    pub fn x_coordinate(self) -> u8 {
+    pub fn x_coordinate(self) -> PixelColumn {
         self.x_coordinate
     }
 
-    pub fn y_coordinate(self) -> u8 {
-        self.y_coordinate
+    pub fn y_coordinate(self) -> Option<PixelRow> {
+        PixelRow::try_from_u8(self.y_coordinate)
     }
 
     #[inline]
@@ -78,6 +82,13 @@ impl Sprite {
         self.palette_table_index
     }
 
+    pub fn is_in_bounds(self, x: PixelColumn, y: PixelRow) -> bool {
+        x >= self.x_coordinate &&
+            y.to_u8() >= self.y_coordinate &&
+            x.to_usize() < self.x_coordinate.to_usize() + 8 &&
+            y.to_usize() < self.y_coordinate as usize + 8
+    }
+
     pub fn render_normal_height(
         self,
         pattern_table: &PatternTable,
@@ -97,7 +108,7 @@ impl Sprite {
     ) {
         let (first_index, second_index) = self.pattern_index.to_tall_indexes();
         self.render(pattern_table, first_index, palette_table, 0, is_sprite_0, frame);
-        self.render(pattern_table, second_index, palette_table, 1, is_sprite_0, frame);
+        self.render(pattern_table, second_index, palette_table, 8, is_sprite_0, frame);
     }
 
     fn render(
@@ -105,38 +116,46 @@ impl Sprite {
         pattern_table: &PatternTable,
         pattern_index: PatternIndex,
         palette_table: &PaletteTable,
-        row_offset: u8,
+        tall_sprite_offset: u8,
         is_sprite_0: bool,
         frame: &mut Frame,
     ) {
-        let column = self.x_coordinate();
-        let row = self.y_coordinate() + row_offset;
-        let sprite_palette = palette_table.sprite_palette(self.palette_table_index);
+        let maybe_row = PixelRow::try_from_u8(self.y_coordinate)
+            .map(|row| row.offset(tall_sprite_offset as i16))
+            .flatten();
+        let row;
+        if let Some(r) = maybe_row {
+            row = r;
+        } else {
+            return;
+        }
 
-        for row_in_sprite in 0..8 {
-            let row =
+        let column = self.x_coordinate;
+        let sprite_palette = palette_table.sprite_palette(self.palette_table_index);
+        for row_in_sprite in RowInTile::into_enum_iter() {
+            let maybe_row =
                 if self.flip_vertically {
-                    row + 7 - row_in_sprite
+                    row.add_flipped_row_in_tile(row_in_sprite)
                 } else {
-                    row + row_in_sprite
+                    row.add_row_in_tile(row_in_sprite)
                 };
 
-            if row >= 240 {
+            if let Some(row) = maybe_row {
+                pattern_table.render_sprite_sliver(
+                    self,
+                    pattern_index,
+                    sprite_palette,
+                    frame,
+                    column,
+                    row,
+                    row_in_sprite,
+                    is_sprite_0,
+                );
+            } else {
                 // FIXME: The part of vertically flipped sprites that is
                 // on the screen should still be rendered.
                 break;
             }
-
-            pattern_table.render_sprite_sliver(
-                self,
-                pattern_index,
-                sprite_palette,
-                frame,
-                column,
-                row,
-                row_in_sprite as usize,
-                is_sprite_0,
-            );
         }
     }
 }

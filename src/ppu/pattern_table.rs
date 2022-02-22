@@ -1,3 +1,6 @@
+use enum_iterator::IntoEnumIterator;
+
+use crate::ppu::pixel_index::{PixelColumn, PixelRow, ColumnInTile, RowInTile};
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::rgbt::Rgbt;
@@ -53,22 +56,22 @@ impl <'a> PatternTable<'a> {
         pattern_index: PatternIndex,
         palette: Palette,
         frame: &mut Frame,
-        column: u8,
-        row: u8,
-        row_in_sprite: usize,
+        column: PixelColumn,
+        row: PixelRow,
+        row_in_sprite: RowInTile,
         is_sprite_0: bool,
     ) {
         let index = 16 * pattern_index.to_usize();
-        let low_index = index + row_in_sprite;
+        let low_index = index + row_in_sprite as usize;
         let high_index = low_index + 8;
 
         let low_byte = self.0.read(low_index);
         let high_byte = self.0.read(high_index);
 
         let flip = sprite.flip_horizontally();
-        for column_in_sprite in 0..8 {
-            let low_bit = get_bit(low_byte, column_in_sprite);
-            let high_bit = get_bit(high_byte, column_in_sprite);
+        for column_in_sprite in ColumnInTile::into_enum_iter() {
+            let low_bit = get_bit(low_byte, column_in_sprite as usize);
+            let high_bit = get_bit(high_byte, column_in_sprite as usize);
             let rgb =
                 match (low_bit, high_bit) {
                     (false, false) => /* Transparent. */ continue,
@@ -76,19 +79,18 @@ impl <'a> PatternTable<'a> {
                     (false, true ) => palette[PaletteIndex::Two],
                     (true , true ) => palette[PaletteIndex::Three],
                 };
-            let column_in_sprite =
+            let maybe_column =
                 if flip {
-                    7 - column_in_sprite
+                    column.add_flipped_column_in_tile(column_in_sprite)
                 } else {
-                    column_in_sprite
+                    column.add_column_in_tile(column_in_sprite)
                 };
-            let column = column as usize + column_in_sprite;
-            if column >= Frame::WIDTH {
-                // FIXME: Change to continue.
+            if let Some(column) = maybe_column {
+                frame.set_sprite_pixel(column, row, rgb, sprite.priority(), is_sprite_0);
+            } else {
+                // FIXME: Continue the loop instead.
                 break;
             }
-
-            frame.set_sprite_pixel(column as u8, row, rgb, sprite.priority(), is_sprite_0);
         }
     }
 }
@@ -124,11 +126,13 @@ impl PatternIndex {
     pub fn new(value: u8) -> PatternIndex {
         PatternIndex(value)
     }
+
     pub fn to_tall_indexes(self) -> (PatternIndex, PatternIndex) {
         let first  = self.0 & 0b1111_1110;
         let second = self.0 | 0b0000_0001;
         (PatternIndex(first), PatternIndex(second))
     }
+
     pub fn into_wide_index(mut self) -> PatternIndex {
         self.0 &= 0b1111_1110;
         self

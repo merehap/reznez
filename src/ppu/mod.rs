@@ -8,5 +8,4 @@ pub mod register;
 pub mod render;
 pub mod sprite;
 
-mod pixel_column;
-mod pixel_row;
+mod pixel_index;
