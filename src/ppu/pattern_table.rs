@@ -86,9 +86,6 @@ impl <'a> PatternTable<'a> {
 
             if let Some(column) = column.add_column_in_tile(column_in_sprite) {
                 frame.set_sprite_pixel(column, row, rgb, sprite.priority(), is_sprite_0);
-            } else {
-                // FIXME: Continue the loop instead.
-                break;
             }
         }
     }

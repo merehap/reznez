@@ -148,10 +148,6 @@ impl Sprite {
                     row_in_sprite,
                     is_sprite_0,
                 );
-            } else {
-                // FIXME: The part of vertically flipped sprites that is
-                // on the screen should still be rendered.
-                break;
             }
         }
     }
