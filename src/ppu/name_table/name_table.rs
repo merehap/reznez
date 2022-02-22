@@ -2,7 +2,9 @@ use std::fmt;
 
 use enum_iterator::IntoEnumIterator;
 
-use crate::ppu::name_table::background_tile_index::{BackgroundTileIndex, ColumnInTile, RowInTile};
+use crate::ppu::pixel_column::ColumnInTile;
+use crate::ppu::pixel_row::RowInTile;
+use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
 use crate::ppu::name_table::attribute_table::AttributeTable;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
