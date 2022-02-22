@@ -190,12 +190,12 @@ impl Ppu {
         let maybe_y = PixelRow::try_from_u16(self.clock.scanline());
 
         if let (Some(x), Some(y)) = (maybe_x, maybe_y) {
-            if self.oam.sprite0().is_in_bounds(x, y) &&
-                mem.regs().sprites_enabled() &&
-                mem.regs().background_enabled() &&
-                self.frame.pixel(x, y).1.hit() {
+            if mem.regs().sprites_enabled() && mem.regs().background_enabled() {
+                if self.oam.sprite0().is_in_bounds(mem.regs().sprite_height(), x, y) &&
+                    self.frame.pixel(x, y).1.hit() {
 
-                mem.regs_mut().set_sprite0_hit();
+                    mem.regs_mut().set_sprite0_hit();
+                }
             }
         }
     }
