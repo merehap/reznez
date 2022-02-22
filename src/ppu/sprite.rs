@@ -44,19 +44,6 @@ impl Sprite {
         }
     }
 
-    pub fn x_coordinate(self) -> PixelColumn {
-        self.x_coordinate
-    }
-
-    pub fn y_coordinate(self) -> Option<PixelRow> {
-        PixelRow::try_from_u8(self.y_coordinate)
-    }
-
-    #[inline]
-    pub fn pattern_index(self) -> PatternIndex {
-        self.pattern_index
-    }
-
     #[inline]
     pub fn tall_sprite_pattern_table_side(self) -> PatternTableSide {
         if self.pattern_index.to_u8() & 1 == 0 {
@@ -66,20 +53,12 @@ impl Sprite {
         }
     }
 
-    pub fn flip_vertically(self) -> bool {
-        self.flip_vertically
-    }
-
     pub fn flip_horizontally(self) -> bool {
         self.flip_horizontally
     }
 
     pub fn priority(self) -> Priority {
         self.priority
-    }
-
-    pub fn palette_table_index(self) -> PaletteTableIndex {
-        self.palette_table_index
     }
 
     pub fn is_in_bounds(self, x: PixelColumn, y: PixelRow) -> bool {
