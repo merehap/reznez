@@ -69,7 +69,7 @@ impl <'a> PatternTable<'a> {
         let high_byte = self.0.read(high_index);
 
         let flip = sprite.flip_horizontally();
-        for column_in_sprite in ColumnInTile::into_enum_iter() {
+        for mut column_in_sprite in ColumnInTile::into_enum_iter() {
             let low_bit = get_bit(low_byte, column_in_sprite as usize);
             let high_bit = get_bit(high_byte, column_in_sprite as usize);
             let rgb =
@@ -79,13 +79,12 @@ impl <'a> PatternTable<'a> {
                     (false, true ) => palette[PaletteIndex::Two],
                     (true , true ) => palette[PaletteIndex::Three],
                 };
-            let maybe_column =
-                if flip {
-                    column.add_flipped_column_in_tile(column_in_sprite)
-                } else {
-                    column.add_column_in_tile(column_in_sprite)
-                };
-            if let Some(column) = maybe_column {
+
+            if flip {
+                column_in_sprite = column_in_sprite.flip();
+            }
+
+            if let Some(column) = column.add_column_in_tile(column_in_sprite) {
                 frame.set_sprite_pixel(column, row, rgb, sprite.priority(), is_sprite_0);
             } else {
                 // FIXME: Continue the loop instead.

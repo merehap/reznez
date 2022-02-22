@@ -1,4 +1,6 @@
 use enum_iterator::IntoEnumIterator;
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 
 #[derive(Clone, Copy)]
 pub struct PixelIndex(usize);
@@ -57,15 +59,6 @@ impl PixelColumn {
         Some(PixelColumn::new(value))
     }
 
-    pub fn add_flipped_column_in_tile(
-        self,
-        column_in_tile: ColumnInTile,
-    ) -> Option<PixelColumn> {
-
-        let value = self.0.checked_add(7 - (column_in_tile as u8))?;
-        Some(PixelColumn::new(value))
-    }
-
     pub fn offset(self, offset: i16) -> Option<PixelColumn> {
         (self.0 as i16 + offset)
             .try_into()
@@ -105,11 +98,6 @@ impl PixelRow {
         PixelRow::try_from_u8(value)
     }
 
-    pub fn add_flipped_row_in_tile(self, row_in_tile: RowInTile) -> Option<PixelRow> {
-        let value = self.0.checked_add(7 - (row_in_tile as u8))?;
-        PixelRow::try_from_u8(value)
-    }
-
     pub fn offset(self, offset: i16) -> Option<PixelRow> {
         let row = (self.0 as i16 + offset).rem_euclid(256) as u8;
         PixelRow::try_from_u8(row % PixelRow::ROW_COUNT as u8)
@@ -131,7 +119,7 @@ impl PixelRow {
     }
 }
 
-#[derive(Clone, Copy, IntoEnumIterator)]
+#[derive(Clone, Copy, FromPrimitive, IntoEnumIterator)]
 pub enum ColumnInTile {
     Zero,
     One,
@@ -143,7 +131,13 @@ pub enum ColumnInTile {
     Seven,
 }
 
-#[derive(Clone, Copy, IntoEnumIterator)]
+impl ColumnInTile {
+    pub fn flip(self) -> ColumnInTile {
+        FromPrimitive::from_u8(7 - (self as u8)).unwrap()
+    }
+}
+
+#[derive(Clone, Copy, FromPrimitive, IntoEnumIterator)]
 pub enum RowInTile {
     Zero,
     One,
@@ -153,4 +147,10 @@ pub enum RowInTile {
     Five,
     Six,
     Seven,
+}
+
+impl RowInTile {
+    pub fn flip(self) -> RowInTile {
+        FromPrimitive::from_u8(7 - (self as u8)).unwrap()
+    }
 }
