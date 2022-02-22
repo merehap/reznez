@@ -10,8 +10,7 @@ use crate::util::bit_util::get_bit;
 #[derive(Clone, Copy, Debug)]
 pub struct Sprite {
     x_coordinate: PixelColumn,
-    // Sprites with invalid y_coordinates won't be rendered, but must be kept.
-    y_coordinate: u8,
+    y_coordinate: SpriteY,
     pattern_index: PatternIndex,
     flip_vertically: bool,
     flip_horizontally: bool,
@@ -35,7 +34,7 @@ impl Sprite {
 
         Sprite {
             x_coordinate: PixelColumn::new(x_coordinate),
-            y_coordinate,
+            y_coordinate: SpriteY(y_coordinate),
             pattern_index: PatternIndex::new(raw_pattern_index),
             flip_vertically:   get_bit(attribute, 0),
             flip_horizontally: get_bit(attribute, 1),
@@ -62,10 +61,18 @@ impl Sprite {
     }
 
     pub fn is_in_bounds(self, x: PixelColumn, y: PixelRow) -> bool {
+        let y_coordinate =
+            if let Some(y_coordinate) = self.y_coordinate.to_pixel_row() {
+                y_coordinate.to_usize()
+            } else {
+                // Bounds checks don't make sense if the sprite is off the screen.
+                return false;
+            };
+
         x >= self.x_coordinate &&
-            y.to_u8() >= self.y_coordinate &&
             x.to_usize() < self.x_coordinate.to_usize() + 8 &&
-            y.to_usize() < self.y_coordinate as usize + 8
+            y.to_usize() >= y_coordinate &&
+            y.to_usize() < y_coordinate + 8
     }
 
     pub fn render_normal_height(
@@ -99,7 +106,7 @@ impl Sprite {
         is_sprite_0: bool,
         frame: &mut Frame,
     ) {
-        let maybe_row = PixelRow::try_from_u8(self.y_coordinate)
+        let maybe_row = self.y_coordinate.to_pixel_row()
             .map(|row| row.offset(tall_sprite_offset as i16))
             .flatten();
         let row;
@@ -129,6 +136,19 @@ impl Sprite {
                 );
             }
         }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SpriteY(u8);
+
+impl SpriteY {
+    pub fn to_pixel_row(self) -> Option<PixelRow> {
+        // Rendering of sprites is delayed by one scanline so the sprite ends
+        // up rendered one scanline lower than would be expected.
+        // Sprites with y >= 239 are valid but can't be rendered.
+        // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Byte_0
+        PixelRow::try_from_u8((self.0 as u16 + 1).try_into().ok()?)
     }
 }
 
