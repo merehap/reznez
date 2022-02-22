@@ -22,10 +22,6 @@ impl Oam {
         })
     }
 
-    pub fn sprite0(&self) -> Sprite {
-        Sprite::from_u32(u32::from_be_bytes(self.0[0..4].try_into().unwrap()))
-    }
-
     pub fn read(&self, index: u8) -> u8 {
         self.0[index as usize]
     }

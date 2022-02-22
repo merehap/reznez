@@ -4,7 +4,6 @@ use crate::ppu::pixel_index::{PixelColumn, PixelRow, RowInTile};
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::pattern_table::{PatternTable, PatternIndex, PatternTableSide};
-use crate::ppu::register::registers::ctrl::SpriteHeight;
 use crate::ppu::render::frame::Frame;
 use crate::util::bit_util::get_bit;
 
@@ -59,21 +58,6 @@ impl Sprite {
 
     pub fn priority(self) -> Priority {
         self.priority
-    }
-
-    pub fn is_in_bounds(self, height: SpriteHeight, x: PixelColumn, y: PixelRow) -> bool {
-        let y_coordinate =
-            if let Some(y_coordinate) = self.y_coordinate.to_pixel_row() {
-                y_coordinate.to_usize()
-            } else {
-                // Bounds checks don't make sense if the sprite is off the screen.
-                return false;
-            };
-
-        x >= self.x_coordinate &&
-            x.to_usize() < self.x_coordinate.to_usize() + 8 &&
-            y.to_usize() >= y_coordinate &&
-            y.to_usize() < y_coordinate + (height as usize)
     }
 
     pub fn render_normal_height(
