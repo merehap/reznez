@@ -45,8 +45,9 @@ pub struct PixelColumn(u8);
 
 impl PixelColumn {
     pub const COLUMN_COUNT: usize = 256;
+    pub const MAX: PixelColumn = PixelColumn::new(255);
 
-    pub fn new(pixel_column: u8) -> PixelColumn {
+    pub const fn new(pixel_column: u8) -> PixelColumn {
         PixelColumn(pixel_column)
     }
 

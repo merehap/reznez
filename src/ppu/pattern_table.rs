@@ -129,11 +129,6 @@ impl PatternIndex {
         (PatternIndex(first), PatternIndex(second))
     }
 
-    pub fn into_wide_index(mut self) -> PatternIndex {
-        self.0 &= 0b1111_1110;
-        self
-    }
-
     pub fn to_u8(self) -> u8 {
         self.0
     }

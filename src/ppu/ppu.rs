@@ -184,6 +184,7 @@ impl Ppu {
         );
     }
 
+    // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
     fn maybe_set_sprite0_hit(&self, mem: &mut PpuMemory) {
         let maybe_x = PixelColumn::try_from_u16(self.clock.cycle() - 1);
         let maybe_y = PixelRow::try_from_u16(self.clock.scanline());

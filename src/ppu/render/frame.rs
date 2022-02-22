@@ -30,13 +30,17 @@ impl Frame {
         use Sprite0Hit::{Hit, Miss};
         let sprite_0_hit = if is_sprite_0 {Hit} else {Miss};
 
+        // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
         use Rgbt::{Transparent, Opaque};
-        match (background_pixel, sprite_pixel, sprite_priority) {
-            (Transparent, Transparent, _) => (self.universal_background_rgb, Miss),
-            (Transparent, Opaque(rgb), _) => (rgb, Miss),
-            (Opaque(rgb), Transparent, _) => (rgb, Miss),
-            (Opaque(_)  , Opaque(rgb), Priority::InFront) => (rgb, sprite_0_hit),
-            (Opaque(rgb), Opaque(_  ), Priority::Behind) => (rgb, sprite_0_hit),
+        use Priority::{InFront, Behind};
+        match (background_pixel, sprite_pixel, sprite_priority, column) {
+            (Transparent, Transparent, _, _) => (self.universal_background_rgb, Miss),
+            (Transparent, Opaque(rgb), _, _) => (rgb, Miss),
+            (Opaque(rgb), Transparent, _, _) => (rgb, Miss),
+            (Opaque(_)  , Opaque(rgb), InFront, PixelColumn::MAX) => (rgb, Miss),
+            (Opaque(rgb), Opaque(_)  , Behind , PixelColumn::MAX) => (rgb, Miss),
+            (Opaque(_)  , Opaque(rgb), InFront, _) => (rgb, sprite_0_hit),
+            (Opaque(rgb), Opaque(_  ), Behind , _) => (rgb, sprite_0_hit),
         }
     }
 
