@@ -5,27 +5,24 @@ use crate::ppu::render::ppm::Ppm;
 use crate::ppu::sprite::Priority;
 
 pub struct Frame {
-    buffer: Box<[[Rgbt; Frame::WIDTH]; Frame::HEIGHT]>,
-    sprite_buffer: Box<[[(Rgbt, Priority, bool); Frame::WIDTH]; Frame::HEIGHT]>,
+    buffer: FrameBuffer<Rgbt>,
+    sprite_buffer: FrameBuffer<(Rgbt, Priority, bool)>,
     universal_background_rgb: Rgb,
 }
 
 impl Frame {
-    pub const WIDTH: usize = 256;
-    pub const HEIGHT: usize = 240;
-
     pub fn new() -> Frame {
         Frame {
-            buffer: Box::new([[Rgbt::Transparent; Frame::WIDTH]; Frame::HEIGHT]),
-            sprite_buffer: Box::new([[(Rgbt::Transparent, Priority::Behind, false); Frame::WIDTH]; Frame::HEIGHT]),
+            buffer: FrameBuffer::filled(Rgbt::Transparent),
+            sprite_buffer: FrameBuffer::filled((Rgbt::Transparent, Priority::Behind, false)),
             universal_background_rgb: Rgb::BLACK,
         }
     }
 
     pub fn pixel(&self, column: PixelColumn, row: PixelRow) -> (Rgb, Sprite0Hit) {
-        let background_pixel = self.buffer[row.to_usize()][column.to_usize()];
+        let background_pixel = self.buffer.0[row.to_usize()][column.to_usize()];
         let (sprite_pixel, sprite_priority, is_sprite_0) =
-            self.sprite_buffer[row.to_usize()][column.to_usize()];
+            self.sprite_buffer.0[row.to_usize()][column.to_usize()];
 
         use Sprite0Hit::{Hit, Miss};
         let sprite_0_hit = if is_sprite_0 {Hit} else {Miss};
@@ -49,16 +46,16 @@ impl Frame {
     }
 
     pub fn clear_background_buffer(&mut self) {
-        self.buffer = Box::new([[Rgbt::Transparent; Frame::WIDTH]; Frame::HEIGHT]);
+        self.buffer.fill(Rgbt::Transparent);
     }
 
     pub fn clear_sprite_buffer(&mut self) {
-        self.sprite_buffer = Box::new([[(Rgbt::Transparent, Priority::Behind, false); Frame::WIDTH]; Frame::HEIGHT]);
+        self.sprite_buffer.fill((Rgbt::Transparent, Priority::Behind, false));
     }
 
     #[inline]
-    pub fn background_row(&mut self, row: u8) -> &mut [Rgbt; Frame::WIDTH] {
-        &mut self.buffer[row as usize]
+    pub fn background_row(&mut self, row: u8) -> &mut [Rgbt; PixelColumn::COLUMN_COUNT] {
+        &mut self.buffer.0[row as usize]
     }
 
     #[inline]
@@ -70,7 +67,7 @@ impl Frame {
         priority: Priority,
         is_sprite_0: bool,
     ) {
-        self.sprite_buffer[row.to_usize()][column.to_usize()] =
+        self.sprite_buffer.0[row.to_usize()][column.to_usize()] =
             (Rgbt::Opaque(rgb), priority, is_sprite_0);
     }
 
@@ -93,7 +90,7 @@ impl Frame {
     }
 
     pub fn to_ppm(&self) -> Ppm {
-        let mut data = [0; 3 * Frame::WIDTH * Frame::HEIGHT];
+        let mut data = [0; 3 * PixelIndex::PIXEL_COUNT];
         data = self.write_all_pixel_data(data);
         Ppm::new(data.to_vec())
     }
@@ -108,5 +105,17 @@ pub enum Sprite0Hit {
 impl Sprite0Hit {
     pub fn hit(self) -> bool {
         matches!(self, Sprite0Hit::Hit)
+    }
+}
+
+struct FrameBuffer<T>(Box<[[T; PixelColumn::COLUMN_COUNT]; PixelRow::ROW_COUNT]>);
+
+impl <T: Copy> FrameBuffer<T> {
+    fn filled(value: T) -> FrameBuffer<T> {
+        FrameBuffer(Box::new([[value; PixelColumn::COLUMN_COUNT]; PixelRow::ROW_COUNT]))
+    }
+
+    fn fill(&mut self, value: T) {
+        self.0 = Box::new([[value; PixelColumn::COLUMN_COUNT]; PixelRow::ROW_COUNT]);
     }
 }

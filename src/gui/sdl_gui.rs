@@ -10,6 +10,7 @@ use sdl2::pixels::PixelFormatEnum;
 use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
 
+use crate::ppu::pixel_index::{PixelIndex, PixelColumn, PixelRow};
 use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::gui::{Gui, Events};
 use crate::ppu::render::frame::Frame;
@@ -49,7 +50,7 @@ pub struct SdlGui {
 
     canvas: Canvas<Window>,
     texture: Texture,
-    pixels: [u8; 3 * Frame::WIDTH * Frame::HEIGHT],
+    pixels: [u8; 3 * PixelIndex::PIXEL_COUNT],
 }
 
 impl SdlGui {
@@ -57,7 +58,7 @@ impl SdlGui {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
         let window = video_subsystem
-            .window("REZNEZ", (256.0 * 3.0) as u32, (240.0 * 3.0) as u32)
+            .window("REZNEZ", (PixelColumn::COLUMN_COUNT * 3) as u32, (PixelRow::ROW_COUNT * 3) as u32)
             .position_centered()
             .build()
             .unwrap();
@@ -67,7 +68,7 @@ impl SdlGui {
 
         let texture_creator = canvas.texture_creator();
         let texture = texture_creator
-            .create_texture_target(PixelFormatEnum::RGB24, 256, 240)
+            .create_texture_target(PixelFormatEnum::RGB24, PixelColumn::COLUMN_COUNT as u32, PixelRow::ROW_COUNT as u32)
             .unwrap();
 
         /*
@@ -81,7 +82,7 @@ impl SdlGui {
 
             canvas,
             texture,
-            pixels: [0; 3 * Frame::WIDTH * Frame::HEIGHT],
+            pixels: [0; 3 * PixelIndex::PIXEL_COUNT],
         }
     }
 }
