@@ -120,11 +120,11 @@ impl Sprite {
         let column = self.x_coordinate;
         let sprite_palette = palette_table.sprite_palette(self.palette_table_index);
         for mut row_in_sprite in RowInTile::into_enum_iter() {
-            if self.flip_vertically {
-                row_in_sprite = row_in_sprite.flip();
-            }
-
             if let Some(row) = row.add_row_in_tile(row_in_sprite) {
+                if self.flip_vertically {
+                    row_in_sprite = row_in_sprite.flip();
+                }
+
                 pattern_table.render_sprite_sliver(
                     self,
                     pattern_index,
