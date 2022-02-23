@@ -8,6 +8,8 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::ports::DmaPort;
 use crate::memory::memory::CpuMemory;
 
+const OAM_DATA_ADDRESS: CpuAddress = CpuAddress::new(0x2004);
+
 pub struct Cpu {
     // Accumulator
     a: u8,
@@ -22,6 +24,7 @@ pub struct Cpu {
     nmi_pending: bool,
 
     dma_port: DmaPort,
+    next_dma_byte_to_write: Option<u8>,
 
     cycle: u64,
 }
@@ -46,6 +49,7 @@ impl Cpu {
             cycle_action_queue: CycleActionQueue::new(),
             nmi_pending: false,
             dma_port: memory.ports().dma.clone(),
+            next_dma_byte_to_write: None,
 
             // Unclear why this is the case, but nestest must be obeyed.
             // https://github.com/SourMesen/Mesen/blob/master/Core/CPU.cpp#L154
@@ -141,9 +145,12 @@ impl Cpu {
                 memory.stack().push(self.status.to_interrupt_byte());
                 self.program_counter = memory.nmi_vector();
             },
-            CycleAction::DmaTransfer(DmaTransferState::Write(cpu_address)) => {
-                let value = memory.read(cpu_address);
-                memory.write(CpuAddress::new(0x2004), value);
+            CycleAction::DmaTransfer(DmaTransferState::Read(cpu_address)) => {
+                self.next_dma_byte_to_write = Some(memory.read(cpu_address));
+            },
+            CycleAction::DmaTransfer(DmaTransferState::Write) => {
+                memory.write(OAM_DATA_ADDRESS, self.next_dma_byte_to_write.unwrap());
+                self.next_dma_byte_to_write = None;
             },
             CycleAction::DmaTransfer(_) | CycleAction::Nop => {/* Do nothing. */},
         }

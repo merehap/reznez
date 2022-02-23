@@ -14,6 +14,6 @@ pub enum CycleAction {
 pub enum DmaTransferState {
     WaitOnPreviousWrite,
     AlignToEven,
-    Read,
-    Write(CpuAddress),
+    Read(CpuAddress),
+    Write,
 }

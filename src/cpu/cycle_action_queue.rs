@@ -58,8 +58,8 @@ impl CycleActionQueue {
         }
 
         for _ in 0..256 {
-            self.enqueue_dma_transfer_state(Read);
-            self.enqueue_dma_transfer_state(Write(current_cpu_address));
+            self.enqueue_dma_transfer_state(Read(current_cpu_address));
+            self.enqueue_dma_transfer_state(Write);
             current_cpu_address.inc();
         }
     }
