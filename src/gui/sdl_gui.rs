@@ -13,6 +13,7 @@ use sdl2::video::Window;
 use crate::ppu::pixel_index::{PixelIndex, PixelColumn, PixelRow};
 use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::gui::{Gui, Events};
+use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::render::frame::Frame;
 
 //const DEBUG_SCREEN_HEIGHT: usize = 20;
@@ -130,8 +131,8 @@ impl Gui for SdlGui {
         }
     }
 
-    fn display_frame(&mut self, frame: &Frame, _frame_index: u64) {
-        self.pixels = frame.write_all_pixel_data(self.pixels);
+    fn display_frame(&mut self, frame: &Frame, mask: Mask, _frame_index: u64) {
+        self.pixels = frame.write_all_pixel_data(mask, self.pixels);
 
         /*
         let palette_table = nes.ppu().palette_table();

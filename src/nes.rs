@@ -70,6 +70,10 @@ impl Nes {
         &self.ppu
     }
 
+    pub fn memory_mut(&mut self) -> &mut Memory {
+        &mut self.memory
+    }
+
     pub fn cycle(&self) -> u64 {
         self.cycle
     }
@@ -101,7 +105,7 @@ impl Nes {
         }
 
         info!("Displaying frame {}.", frame_index);
-        gui.display_frame(self.ppu.frame(), frame_index);
+        gui.display_frame(self.ppu.frame(), self.memory.as_ppu_memory().regs().mask, frame_index);
 
         let end_time = SystemTime::now();
         if let Ok(duration) = intended_frame_end_time.duration_since(end_time) {

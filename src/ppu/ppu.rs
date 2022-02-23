@@ -192,7 +192,7 @@ impl Ppu {
         if let (Some(x), Some(y)) = (maybe_x, maybe_y) {
             if mem.regs().sprites_enabled() &&
                 mem.regs().background_enabled() &&
-                self.frame.pixel(x, y).1.hit() {
+                self.frame.pixel(mem.regs().mask, x, y).1.hit() {
 
                 mem.regs_mut().set_sprite0_hit();
             }

@@ -12,7 +12,7 @@ use crate::ppu::register::registers::status::Status;
 
 pub struct PpuRegisters {
     pub(in crate::ppu) ctrl: Ctrl,
-    pub(in crate::ppu) mask: Mask,
+    pub mask: Mask,
     pub(in crate::ppu) status: Status,
     pub(in crate::ppu) oam_addr: u8,
     pub(in crate::ppu) oam_data: u8,

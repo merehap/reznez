@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::gui::gui::{Gui, Events};
+use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::render::frame::Frame;
 
 pub struct NoGui;
@@ -21,7 +22,7 @@ impl Gui for NoGui {
         }
     }
 
-    fn display_frame(&mut self, _: &Frame, _frame_index: u64) {
+    fn display_frame(&mut self, _: &Frame, _: Mask, _frame_index: u64) {
         // Do nothing.
     }
 }

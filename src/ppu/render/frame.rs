@@ -1,6 +1,7 @@
 use crate::ppu::pixel_index::{PixelIndex, PixelColumn, PixelRow};
 use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::palette::rgbt::Rgbt;
+use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::render::ppm::Ppm;
 use crate::ppu::sprite::Priority;
 
@@ -19,16 +20,23 @@ impl Frame {
         }
     }
 
-    pub fn pixel(&self, column: PixelColumn, row: PixelRow) -> (Rgb, Sprite0Hit) {
-        let background_pixel = self.buffer.0[row.to_usize()][column.to_usize()];
-        let (sprite_pixel, sprite_priority, is_sprite_0) =
+    pub fn pixel(&self, mask: Mask, column: PixelColumn, row: PixelRow) -> (Rgb, Sprite0Hit) {
+        use Rgbt::{Transparent, Opaque};
+        let mut background_pixel = self.buffer.0[row.to_usize()][column.to_usize()];
+        if !mask.left_background_columns_enabled && column.to_usize() < 8 {
+            background_pixel = Transparent;
+        }
+
+        let (mut sprite_pixel, sprite_priority, is_sprite_0) =
             self.sprite_buffer.0[row.to_usize()][column.to_usize()];
+        if !mask.left_sprite_columns_enabled && column.to_usize() < 8 {
+            sprite_pixel = Transparent;
+        }
 
         use Sprite0Hit::{Hit, Miss};
         let sprite_0_hit = if is_sprite_0 {Hit} else {Miss};
 
         // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
-        use Rgbt::{Transparent, Opaque};
         use Priority::{InFront, Behind};
         match (background_pixel, sprite_pixel, sprite_priority, column) {
             (Transparent, Transparent, _, _) => (self.universal_background_rgb, Miss),
@@ -73,12 +81,13 @@ impl Frame {
 
     pub fn write_all_pixel_data(
         &self,
+        mask: Mask,
         mut data: [u8; 3 * PixelIndex::PIXEL_COUNT],
     ) -> [u8; 3 * PixelIndex::PIXEL_COUNT] {
 
         for pixel_index in PixelIndex::iter() {
             let (column, row) = pixel_index.to_column_row();
-            let (pixel, _) = self.pixel(column, row);
+            let (pixel, _) = self.pixel(mask, column, row);
 
             let index = 3 * pixel_index.to_usize();
             data[index]     = pixel.red();
@@ -89,9 +98,9 @@ impl Frame {
         data
     }
 
-    pub fn to_ppm(&self) -> Ppm {
+    pub fn to_ppm(&self, mask: Mask) -> Ppm {
         let mut data = [0; 3 * PixelIndex::PIXEL_COUNT];
-        data = self.write_all_pixel_data(data);
+        data = self.write_all_pixel_data(mask, data);
         Ppm::new(data.to_vec())
     }
 }

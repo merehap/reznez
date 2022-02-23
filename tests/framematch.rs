@@ -86,7 +86,8 @@ fn framematch() {
                     "\tChecking actual hash vs expected hash for frame {}.",
                     frame_index,
                 );
-                let actual_ppm = &nes.ppu().frame().to_ppm();
+                let mask = nes.memory_mut().as_ppu_memory().regs().mask;
+                let actual_ppm = &nes.ppu().frame().to_ppm(mask);
                 let actual_hash = calculate_hash(&actual_ppm);
                 if actual_hash != *expected_hash {
                     failed = true;
@@ -98,7 +99,7 @@ fn framematch() {
                     );
                     fs::write(
                         actual_ppm_path.clone(),
-                        nes.ppu().frame().to_ppm().to_bytes(),
+                        actual_ppm.to_bytes(),
                     ).unwrap();
                     println!(
                         "\t\tActual hash {} didn't match expected hash {} . See {} .",

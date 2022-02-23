@@ -3,9 +3,10 @@ use std::fs;
 use std::fs::File;
 
 use crate::gui::gui::{Gui, Events};
+use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::render::frame::Frame;
 
-const FRAME_DUMP_DIRECTORY: &str = "frame_dump";
+const FRAME_DUMP_DIRECTORY: &str = "framedump";
 
 pub struct FrameDumpGui {
     inner: Box<dyn Gui>,
@@ -27,15 +28,15 @@ impl Gui for FrameDumpGui {
         self.inner.events()
     }
 
-    fn display_frame(&mut self, frame: &Frame, frame_index: u64) {
+    fn display_frame(&mut self, frame: &Frame, mask: Mask, frame_index: u64) {
         let file_name = format!(
             "{}/frame{:03}.ppm",
             FRAME_DUMP_DIRECTORY,
             frame_index,
         );
         let mut file = File::create(file_name).unwrap();
-        file.write_all(&frame.to_ppm().to_bytes()).unwrap();
+        file.write_all(&frame.to_ppm(mask).to_bytes()).unwrap();
 
-        self.inner.display_frame(frame, frame_index);
+        self.inner.display_frame(frame, mask, frame_index);
     }
 }
