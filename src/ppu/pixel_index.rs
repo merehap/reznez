@@ -47,6 +47,10 @@ impl PixelColumn {
     pub const COLUMN_COUNT: usize = 256;
     pub const MAX: PixelColumn = PixelColumn::new(255);
 
+    pub fn iter() -> PixelColumnIterator {
+        PixelColumnIterator(0)
+    }
+
     pub const fn new(pixel_column: u8) -> PixelColumn {
         PixelColumn(pixel_column)
     }
@@ -76,11 +80,24 @@ impl PixelColumn {
     }
 }
 
+pub struct PixelColumnIterator(u16);
+
+impl Iterator for PixelColumnIterator {
+    type Item = PixelColumn;
+
+    fn next(&mut self) -> Option<PixelColumn> {
+        let result = PixelColumn::try_from_u16(self.0);
+        self.0 += 1;
+        result
+    }
+}
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub struct PixelRow(u8);
 
 impl PixelRow {
     pub const ROW_COUNT: usize = 240;
+    pub const MAX: PixelRow = PixelRow(PixelRow::ROW_COUNT as u8 - 1);
 
     pub fn iter() -> PixelRowIterator {
         PixelRowIterator(0)
@@ -113,6 +130,21 @@ impl PixelRow {
         // FIXME: This feels wrong, but some tests render nothing without wrapping.
         PixelRow::try_from_u8(row % PixelRow::ROW_COUNT as u8)
             .unwrap()
+    }
+
+    pub fn difference(self, other: PixelRow) -> Option<u8> {
+        self.to_u8().checked_sub(other.to_u8())
+    }
+
+    /*
+    pub fn saturating_add(self, other: u8) -> PixelRow {
+        let value = (self.0 as u16) + (other as u16);
+        PixelRow::try_from_u16(value).unwrap_or(PixelRow::MAX)
+    }
+    */
+
+    pub fn row_in_tile(self, offset: PixelRow) -> Option<RowInTile> {
+        FromPrimitive::from_u8(offset.to_u8() - offset.to_u8())
     }
 
     pub fn to_u8(self) -> u8 {

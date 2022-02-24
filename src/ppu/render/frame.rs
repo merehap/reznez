@@ -57,8 +57,11 @@ impl Frame {
         self.buffer.fill(Rgbt::Transparent);
     }
 
-    pub fn clear_sprite_buffer(&mut self) {
-        self.sprite_buffer.fill((Rgbt::Transparent, Priority::Behind, false));
+    pub fn clear_sprite_line(&mut self, row: PixelRow) {
+        for column in PixelColumn::iter() {
+            self.sprite_buffer.0[row.to_usize()][column.to_usize()] =
+                (Rgbt::Transparent, Priority::Behind, false);
+        }
     }
 
     #[inline]

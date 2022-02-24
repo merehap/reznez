@@ -1,6 +1,7 @@
 use crate::memory::memory::PpuMemory;
 use crate::ppu::register::registers::ctrl::SpriteHeight;
 use crate::ppu::render::frame::Frame;
+use crate::ppu::pixel_index::PixelRow;
 use crate::ppu::sprite::Sprite;
 
 const ATTRIBUTE_BYTE_INDEX: u8 = 2;
@@ -38,7 +39,13 @@ impl Oam {
     }
 
     pub fn render_sprites(&self, mem: &PpuMemory, frame: &mut Frame) {
-        frame.clear_sprite_buffer();
+        for pixel_row in PixelRow::iter() {
+            self.render_scanline(pixel_row, mem, frame);
+        }
+    }
+
+    pub fn render_scanline(&self, pixel_row: PixelRow, mem: &PpuMemory, frame: &mut Frame) {
+        frame.clear_sprite_line(pixel_row);
 
         let sprite_table_side = mem.regs().sprite_table_side();
         let pattern_table = mem.pattern_table(sprite_table_side);
@@ -52,12 +59,12 @@ impl Oam {
         for i in (0..sprites.len()).rev() {
             let is_sprite_0 = i == 0;
             if sprite_height == SpriteHeight::Normal {
-                sprites[i].render_normal_height(&pattern_table, &palette_table, is_sprite_0, frame);
+                sprites[i].render_sliver(pixel_row, sprite_height, &pattern_table, &palette_table, is_sprite_0, frame);
             } else {
                 let sprite = sprites[i];
                 let pattern_table =
                     mem.pattern_table(sprite.tall_sprite_pattern_table_side());
-                sprite.render_tall(&pattern_table, &palette_table, is_sprite_0, frame);
+                sprite.render_sliver(pixel_row, sprite_height, &pattern_table, &palette_table, is_sprite_0, frame);
             }
         }
     }

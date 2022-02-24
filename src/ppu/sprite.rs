@@ -1,9 +1,11 @@
-use enum_iterator::IntoEnumIterator;
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 
 use crate::ppu::pixel_index::{PixelColumn, PixelRow, RowInTile};
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::pattern_table::{PatternTable, PatternIndex, PatternTableSide};
+use crate::ppu::register::registers::ctrl::SpriteHeight;
 use crate::ppu::render::frame::Frame;
 use crate::util::bit_util::get_bit;
 
@@ -60,66 +62,63 @@ impl Sprite {
         self.priority
     }
 
-    pub fn render_normal_height(
+    pub fn row_in_sprite(
         self,
-        pattern_table: &PatternTable,
-        palette_table: &PaletteTable,
-        is_sprite_0: bool,
-        frame: &mut Frame,
-    ) {
-        self.render(pattern_table, self.pattern_index, palette_table, 0, is_sprite_0, frame);
-    }
+        sprite_height: SpriteHeight,
+        pixel_row: PixelRow,
+    ) -> Option<(SpriteHalf, RowInTile)> {
 
-    pub fn render_tall(
-        self,
-        pattern_table: &PatternTable,
-        palette_table: &PaletteTable,
-        is_sprite_0: bool,
-        frame: &mut Frame,
-    ) {
-        let (first_index, second_index) = self.pattern_index.to_tall_indexes();
-        self.render(pattern_table, first_index, palette_table, 0, is_sprite_0, frame);
-        self.render(pattern_table, second_index, palette_table, 8, is_sprite_0, frame);
-    }
-
-    fn render(
-        self,
-        pattern_table: &PatternTable,
-        pattern_index: PatternIndex,
-        palette_table: &PaletteTable,
-        tall_sprite_offset: u8,
-        is_sprite_0: bool,
-        frame: &mut Frame,
-    ) {
-        let maybe_row = self.y_coordinate.to_pixel_row()
-            .map(|row| row.offset(tall_sprite_offset as i16))
-            .flatten();
-        let row;
-        if let Some(r) = maybe_row {
-            row = r;
-        } else {
-            return;
+        if let Some(sprite_top_row) = self.y_coordinate.to_pixel_row() {
+            if let Some(offset) = pixel_row.difference(sprite_top_row) {
+                let row_in_sprite = FromPrimitive::from_u8(offset % 8).unwrap();
+                let result =
+                    match (offset / 8, sprite_height) {
+                        (0,                  _) => Some((SpriteHalf::Upper, row_in_sprite)),
+                        (1, SpriteHeight::Tall) => Some((SpriteHalf::Lower, row_in_sprite)),
+                        (_,                  _) => None,
+                    };
+                return result;
+            }
         }
 
-        let column = self.x_coordinate;
-        let sprite_palette = palette_table.sprite_palette(self.palette_table_index);
-        for mut row_in_sprite in RowInTile::into_enum_iter() {
-            if let Some(row) = row.add_row_in_tile(row_in_sprite) {
-                if self.flip_vertically {
-                    row_in_sprite = row_in_sprite.flip();
-                }
+        None
+    }
 
-                pattern_table.render_sprite_sliver(
-                    self,
-                    pattern_index,
-                    sprite_palette,
-                    frame,
-                    column,
-                    row,
-                    row_in_sprite,
-                    is_sprite_0,
-                );
+    pub fn render_sliver(
+        self,
+        pixel_row: PixelRow,
+        sprite_height: SpriteHeight,
+        pattern_table: &PatternTable,
+        palette_table: &PaletteTable,
+        is_sprite_0: bool,
+        frame: &mut Frame,
+    ) {
+        let sprite_palette = palette_table.sprite_palette(self.palette_table_index);
+
+        if let Some((sprite_half, mut row_in_sprite)) =
+            self.row_in_sprite(sprite_height, pixel_row) {
+
+            if self.flip_vertically {
+                row_in_sprite = row_in_sprite.flip();
             }
+
+            let pattern_index =
+                match (sprite_height, sprite_half) {
+                    (SpriteHeight::Normal, SpriteHalf::Upper) => self.pattern_index,
+                    (SpriteHeight::Normal, SpriteHalf::Lower) => unreachable!(),
+                    (SpriteHeight::Tall  , SpriteHalf::Upper) => self.pattern_index.to_tall_indexes().0,
+                    (SpriteHeight::Tall  , SpriteHalf::Lower) => self.pattern_index.to_tall_indexes().1,
+                };
+            pattern_table.render_sprite_sliver(
+                self,
+                pattern_index,
+                sprite_palette,
+                frame,
+                self.x_coordinate,
+                pixel_row,
+                row_in_sprite,
+                is_sprite_0,
+            );
         }
     }
 }
@@ -135,6 +134,12 @@ impl SpriteY {
         // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Byte_0
         PixelRow::try_from_u8((self.0 as u16 + 1).try_into().ok()?)
     }
+}
+
+#[derive(FromPrimitive)]
+pub enum SpriteHalf {
+    Upper,
+    Lower,
 }
 
 #[derive(Clone, Copy, Debug)]
