@@ -1,9 +1,10 @@
 use std::fmt;
 
 use enum_iterator::IntoEnumIterator;
+use num_traits::FromPrimitive;
 
-use crate::ppu::pixel_index::{ColumnInTile, RowInTile};
-use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
+use crate::ppu::pixel_index::{PixelRow, ColumnInTile};
+use crate::ppu::name_table::background_tile_index::{BackgroundTileIndex, TileColumn, TileRow};
 use crate::ppu::name_table::attribute_table::AttributeTable;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
@@ -37,31 +38,50 @@ impl <'a> NameTable<'a> {
         y_offset: i16,
         frame: &mut Frame,
     ) {
+        for pixel_row in PixelRow::iter() {
+            self.render_scanline(
+                pixel_row,
+                pattern_table,
+                palette_table,
+                x_offset,
+                y_offset,
+                frame,
+            );
+        }
+    }
+
+    pub fn render_scanline(
+        &self,
+        pixel_row: PixelRow,
+        pattern_table: &PatternTable,
+        palette_table: &PaletteTable,
+        x_offset: i16,
+        y_offset: i16,
+        frame: &mut Frame,
+    ) {
+        let (tile_row, row_in_tile) = TileRow::from_pixel_row(pixel_row);
         let mut tile_sliver = [Rgbt::Transparent; 8];
-        for background_tile_index in BackgroundTileIndex::iter() {
+        for tile_column in TileColumn::iter() {
+            let background_tile_index =
+                BackgroundTileIndex::from_column_row(tile_column, tile_row);
             let (pattern_index, palette_table_index) =
                 self.tile_entry_at(background_tile_index);
-            for row_in_tile in RowInTile::into_enum_iter() {
-                pattern_table.render_tile_sliver(
-                    pattern_index,
-                    row_in_tile as usize,
-                    palette_table.background_palette(palette_table_index),
-                    &mut tile_sliver,
-                );
+            pattern_table.render_background_tile_sliver(
+                pattern_index,
+                row_in_tile,
+                palette_table.background_palette(palette_table_index),
+                &mut tile_sliver,
+            );
 
-                for column_in_tile in ColumnInTile::into_enum_iter() {
-                    let maybe_pixel_column = background_tile_index
-                        .tile_column()
-                        .to_pixel_column(column_in_tile)
-                        .offset(x_offset);
-                    if let Some(pixel_column) = maybe_pixel_column {
-                        let pixel_row = background_tile_index
-                            .tile_row()
-                            .to_pixel_row(row_in_tile)
-                            .wrapping_offset(y_offset);
-                        frame.background_row(pixel_row.to_u8())[pixel_column.to_usize()] =
-                            tile_sliver[column_in_tile as usize];
-                    }
+            for column_in_tile in ColumnInTile::into_enum_iter() {
+                let maybe_pixel_column = background_tile_index
+                    .tile_column()
+                    .to_pixel_column(column_in_tile)
+                    .offset(x_offset);
+                if let Some(pixel_column) = maybe_pixel_column {
+                    let pixel_row = pixel_row.wrapping_offset(y_offset);
+                    frame.background_row(pixel_row.to_u8())[pixel_column.to_usize()] =
+                        tile_sliver[column_in_tile as usize];
                 }
             }
         }

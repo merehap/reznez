@@ -20,15 +20,15 @@ impl <'a> PatternTable<'a> {
     }
 
     #[inline]
-    pub fn render_tile_sliver(
+    pub fn render_background_tile_sliver(
         &self,
         pattern_index: PatternIndex,
-        row_in_tile: usize,
+        row_in_background_tile: RowInTile,
         palette: Palette,
         tile_sliver: &mut [Rgbt; 8],
     ) {
         let index = PATTERN_SIZE * pattern_index.to_usize();
-        let low_index = index + row_in_tile;
+        let low_index = index + row_in_background_tile as usize;
         let high_index = low_index + 8;
 
         let low_byte = self.0.read(low_index);

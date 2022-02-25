@@ -82,6 +82,10 @@ pub struct PixelRow(u8);
 impl PixelRow {
     pub const ROW_COUNT: usize = 240;
 
+    pub fn iter() -> PixelRowIterator {
+        PixelRowIterator(0)
+    }
+
     pub fn try_from_u8(pixel_row: u8) -> Option<PixelRow> {
         if usize::from(pixel_row) < PixelRow::ROW_COUNT {
             Some(PixelRow(pixel_row))
@@ -117,6 +121,18 @@ impl PixelRow {
 
     pub fn to_usize(self) -> usize {
         usize::from(self.0)
+    }
+}
+
+pub struct PixelRowIterator(u8);
+
+impl Iterator for PixelRowIterator {
+    type Item = PixelRow;
+
+    fn next(&mut self) -> Option<PixelRow> {
+        let result = PixelRow::try_from_u8(self.0);
+        self.0 += 1;
+        result
     }
 }
 
