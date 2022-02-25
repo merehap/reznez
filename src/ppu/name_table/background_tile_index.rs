@@ -120,20 +120,11 @@ impl TileRow {
         }
     }
 
-    pub fn to_pixel_row(self, row_in_tile: RowInTile) -> PixelRow {
-        // Unwrap always succeeds since 232 + 7 == 239.
-        self.pixel_row().add_row_in_tile(row_in_tile).unwrap()
-    }
-
     pub fn to_u8(self) -> u8 {
         self.0
     }
 
     pub fn to_usize(self) -> usize {
         usize::from(self.0)
-    }
-
-    fn pixel_row(self) -> PixelRow {
-        PixelRow::try_from_u8(8 * self.0).unwrap()
     }
 }

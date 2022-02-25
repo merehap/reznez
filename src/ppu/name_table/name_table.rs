@@ -1,7 +1,6 @@
 use std::fmt;
 
 use enum_iterator::IntoEnumIterator;
-use num_traits::FromPrimitive;
 
 use crate::ppu::pixel_index::{PixelRow, ColumnInTile};
 use crate::ppu::name_table::background_tile_index::{BackgroundTileIndex, TileColumn, TileRow};

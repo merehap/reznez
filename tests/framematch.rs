@@ -112,6 +112,7 @@ fn framematch() {
         }
     }
 
+    panic!();
     assert!(!failed);
 }
 
