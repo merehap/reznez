@@ -38,12 +38,6 @@ impl Oam {
         self.0[index as usize] = value;
     }
 
-    pub fn render_sprites(&self, mem: &PpuMemory, frame: &mut Frame) {
-        for pixel_row in PixelRow::iter() {
-            self.render_scanline(pixel_row, mem, frame);
-        }
-    }
-
     pub fn render_scanline(&self, pixel_row: PixelRow, mem: &PpuMemory, frame: &mut Frame) {
         frame.clear_sprite_line(pixel_row);
 

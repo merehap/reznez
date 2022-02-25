@@ -30,26 +30,6 @@ impl <'a> NameTable<'a> {
         }
     }
 
-    pub fn render(
-        &self,
-        pattern_table: &PatternTable,
-        palette_table: &PaletteTable,
-        x_offset: i16,
-        y_offset: i16,
-        frame: &mut Frame,
-    ) {
-        for pixel_row in PixelRow::iter() {
-            self.render_scanline(
-                pixel_row,
-                pattern_table,
-                palette_table,
-                x_offset,
-                y_offset,
-                frame,
-            );
-        }
-    }
-
     pub fn render_scanline(
         &self,
         pixel_row: PixelRow,

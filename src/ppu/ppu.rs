@@ -73,8 +73,9 @@ impl Ppu {
         }
 
         match (self.clock.scanline(), self.clock.cycle()) {
-            (0, 1) => self.maybe_render_frame(mem),
-            (scanline, cycle) if scanline < 240 && cycle > 0 && cycle <= 256 =>
+            (scanline, 0) if let Some(pixel_row) = PixelRow::try_from_u16(scanline) =>
+                self.maybe_render_scanline(pixel_row, mem),
+            (scanline, cycle) if scanline < 240 && cycle <= 256 =>
                 self.maybe_set_sprite0_hit(mem),
             (241, 1) => {
                 if !self.suppress_vblank_active {
@@ -150,32 +151,34 @@ impl Ppu {
         maybe_generate_nmi
     }
 
-    fn maybe_render_frame(&mut self, mem: &PpuMemory) {
+    fn maybe_render_scanline(&mut self, pixel_row: PixelRow, mem: &PpuMemory) {
         if mem.regs().background_enabled() {
-            self.render_background(mem);
+            self.render_background_scanline(pixel_row, mem);
         }
 
         if mem.regs().sprites_enabled() {
-            self.oam.render_sprites(mem, &mut self.frame);
+            self.oam.render_scanline(pixel_row, mem, &mut self.frame);
         }
     }
 
     // FIXME: Stop rendering off-screen pixels.
-    fn render_background(&mut self, mem: &PpuMemory) {
+    fn render_background_scanline(&mut self, pixel_row: PixelRow, mem: &PpuMemory) {
         let palette_table = mem.palette_table();
         self.frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
         let name_table_number = mem.regs().name_table_number();
         //let _name_table_mirroring = mem.name_table_mirroring();
         let background_table_side = mem.regs().background_table_side();
-        mem.name_table(name_table_number).render(
+        mem.name_table(name_table_number).render_scanline(
+            pixel_row,
             &mem.pattern_table(background_table_side),
             &palette_table,
             -(self.x_scroll_offset as i16),
             -(self.y_scroll_offset as i16),
             &mut self.frame,
         );
-        mem.name_table(name_table_number.next_horizontal()).render(
+        mem.name_table(name_table_number.next_horizontal()).render_scanline(
+            pixel_row,
             &mem.pattern_table(background_table_side),
             &palette_table,
             -(self.x_scroll_offset as i16) + 256,

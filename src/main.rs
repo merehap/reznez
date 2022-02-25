@@ -1,6 +1,7 @@
 #![feature(array_chunks)]
 #![feature(slice_as_chunks)]
 #![feature(const_option)]
+#![feature(if_let_guard)]
 #![allow(clippy::module_inception)]
 #![allow(clippy::new_without_default)]
 
