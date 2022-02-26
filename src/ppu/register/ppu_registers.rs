@@ -1,4 +1,3 @@
-use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::register::ppu_register_latch::PpuRegisterLatch;
 use crate::ppu::register::register_type::RegisterType;
@@ -47,10 +46,6 @@ impl PpuRegisters {
 
     pub(in crate::ppu) fn sprite_height(&self) -> SpriteHeight {
         self.ctrl.sprite_height
-    }
-
-    pub(in crate::ppu) fn name_table_number(&self) -> NameTableNumber {
-        self.ctrl.name_table_number
     }
 
     pub(in crate::ppu) fn background_table_side(&self) -> PatternTableSide {
