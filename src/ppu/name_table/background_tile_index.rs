@@ -1,53 +1,48 @@
+use itertools::Itertools;
+use itertools::structs::Product;
 use num_traits::FromPrimitive;
 
 use crate::ppu::pixel_index::{PixelColumn, ColumnInTile, PixelRow, RowInTile};
 
-const COLUMN_COUNT: u16 = 32;
-const ROW_COUNT: u16 = 30;
-const MAX_INDEX: u16 = COLUMN_COUNT * ROW_COUNT - 1;
-
 #[derive(Clone, Copy)]
-pub struct BackgroundTileIndex(u16);
+pub struct BackgroundTileIndex {
+    column: TileColumn,
+    row: TileRow,
+}
 
 impl BackgroundTileIndex {
     pub fn iter() -> BackgroundTileIndexIterator {
-        BackgroundTileIndexIterator {index: BackgroundTileIndex(0)}
+        BackgroundTileIndexIterator(
+            TileRow::iter().cartesian_product(TileColumn::iter())
+        )
     }
 
     pub fn from_column_row(column: TileColumn, row: TileRow) -> BackgroundTileIndex {
-        BackgroundTileIndex((TileColumn::COLUMN_COUNT * row.to_usize() + column.to_usize()) as u16)
+        BackgroundTileIndex {column, row}
     }
 
     pub fn to_usize(self) -> usize {
-        self.0 as usize
+        TileColumn::COLUMN_COUNT * self.row.to_usize() + self.column.to_usize()
     }
 
     #[inline]
     pub fn tile_column(self) -> TileColumn {
-        TileColumn::try_from_u8((self.0 % 32) as u8).unwrap()
+        self.column
     }
 
     #[inline]
     pub fn tile_row(self) -> TileRow {
-        TileRow::try_from_u8((self.0 / 32) as u8).unwrap()
+        self.row
     }
 }
 
-pub struct BackgroundTileIndexIterator {
-    index: BackgroundTileIndex,
-}
+pub struct BackgroundTileIndexIterator(Product<TileRowIterator, TileColumnIterator>);
 
 impl Iterator for BackgroundTileIndexIterator {
     type Item = BackgroundTileIndex;
 
     fn next(&mut self) -> Option<BackgroundTileIndex> {
-        if self.index.0 > MAX_INDEX {
-            return None;
-        }
-
-        let result = self.index;
-        self.index.0 += 1;
-        Some(result)
+        self.0.next().map(|(row, column)| BackgroundTileIndex {column, row})
     }
 }
 
@@ -56,18 +51,10 @@ pub struct TileColumn(u8);
 
 impl TileColumn {
     const COLUMN_COUNT: usize = 32;
-    const MAX: u8 = 31;
+    //const MAX: TileColumn = TileColumn(31);
 
     pub fn iter() -> TileColumnIterator {
         TileColumnIterator(0)
-    }
-
-    fn try_from_u8(tile_column: u8) -> Option<TileColumn> {
-        if tile_column <= TileColumn::MAX {
-            Some(TileColumn(tile_column))
-        } else {
-            None
-        }
     }
 
     pub fn to_pixel_column(self, column_in_tile: ColumnInTile) -> PixelColumn {
@@ -83,11 +70,20 @@ impl TileColumn {
         usize::from(self.0)
     }
 
+    fn try_from_u8(tile_column: u8) -> Option<TileColumn> {
+        if usize::from(tile_column) < TileColumn::COLUMN_COUNT {
+            Some(TileColumn(tile_column))
+        } else {
+            None
+        }
+    }
+
     fn pixel_column(self) -> PixelColumn {
         PixelColumn::new(8 * self.0)
     }
 }
 
+#[derive(Clone)]
 pub struct TileColumnIterator(u8);
 
 impl Iterator for TileColumnIterator {
@@ -104,20 +100,17 @@ impl Iterator for TileColumnIterator {
 pub struct TileRow(u8);
 
 impl TileRow {
-    const MAX: u8 = 29;
+    const ROW_COUNT: u8 = 30;
+    //const MAX: TileRow = TileRow(29);
+
+    pub fn iter() -> TileRowIterator {
+        TileRowIterator(0)
+    }
 
     pub fn from_pixel_row(pixel_row: PixelRow) -> (TileRow, RowInTile) {
         let tile_row = TileRow(pixel_row.to_u8() / 8);
         let row_in_tile = FromPrimitive::from_u8(pixel_row.to_u8() % 8).unwrap();
         (tile_row, row_in_tile)
-    }
-
-    fn try_from_u8(tile_row: u8) -> Option<TileRow> {
-        if tile_row <= TileRow::MAX {
-            Some(TileRow(tile_row))
-        } else {
-            None
-        }
     }
 
     pub fn to_u8(self) -> u8 {
@@ -126,5 +119,26 @@ impl TileRow {
 
     pub fn to_usize(self) -> usize {
         usize::from(self.0)
+    }
+
+    fn try_from_u8(tile_row: u8) -> Option<TileRow> {
+        if tile_row < TileRow::ROW_COUNT {
+            Some(TileRow(tile_row))
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct TileRowIterator(u8);
+
+impl Iterator for TileRowIterator {
+    type Item = TileRow;
+
+    fn next(&mut self) -> Option<TileRow> {
+        let result = TileRow::try_from_u8(self.0);
+        self.0 += 1;
+        result
     }
 }
