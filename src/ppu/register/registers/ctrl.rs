@@ -59,13 +59,7 @@ impl Ctrl {
                 } else {
                     AddressIncrement::Right
                 },
-            name_table_number:
-                match (get_bit(value, 6), get_bit(value, 7)) {
-                    (false, false) => NameTableNumber::Zero,
-                    (false, true ) => NameTableNumber::One,
-                    (true , false) => NameTableNumber::Two,
-                    (true , true ) => NameTableNumber::Three,
-                },
+            name_table_number: NameTableNumber::from_last_two_bits(value),
         }
     }
 
