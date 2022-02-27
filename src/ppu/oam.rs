@@ -42,7 +42,7 @@ impl Oam {
         frame.clear_sprite_line(pixel_row);
 
         let sprite_table_side = mem.regs().sprite_table_side();
-        let pattern_table = mem.pattern_table(sprite_table_side);
+        let mut pattern_table = mem.pattern_table(sprite_table_side);
         let palette_table = mem.palette_table();
         let sprite_height = mem.regs().sprite_height();
 
@@ -52,14 +52,13 @@ impl Oam {
         // Lower index sprites are drawn on top of higher index sprites.
         for i in (0..sprites.len()).rev() {
             let is_sprite_0 = i == 0;
-            if sprite_height == SpriteHeight::Normal {
-                sprites[i].render_sliver(pixel_row, sprite_height, &pattern_table, &palette_table, is_sprite_0, frame);
-            } else {
-                let sprite = sprites[i];
-                let pattern_table =
+            let sprite = sprites[i];
+            if sprite_height == SpriteHeight::Tall {
+                pattern_table =
                     mem.pattern_table(sprite.tall_sprite_pattern_table_side());
-                sprite.render_sliver(pixel_row, sprite_height, &pattern_table, &palette_table, is_sprite_0, frame);
             }
+
+            sprite.render_sliver(pixel_row, sprite_height, &pattern_table, &palette_table, is_sprite_0, frame);
         }
     }
 }
