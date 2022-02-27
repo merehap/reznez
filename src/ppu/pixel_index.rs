@@ -68,7 +68,7 @@ impl PixelColumn {
         (self.0 as i16 + offset)
             .try_into()
             .ok()
-            .map(|pc| PixelColumn(pc))
+            .map(PixelColumn)
     }
 
     pub fn is_in_left_margin(self) -> bool {

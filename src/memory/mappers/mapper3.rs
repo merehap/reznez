@@ -19,15 +19,15 @@ pub struct Mapper3 {
 impl Mapper3 {
     pub fn new(cartridge: Cartridge) -> Result<Mapper3, String> {
         let prg_rom_chunks = cartridge.prg_rom_chunks();
-        let prg_rom;
-        match prg_rom_chunks.len() {
-            1 => prg_rom = MappedArray::<32>::mirror_half(*prg_rom_chunks[0]),
-            2 => prg_rom = MappedArray::<32>::new::<0x8000>(cartridge.prg_rom().try_into().unwrap()),
-            c => return Err(format!(
-                     "PRG ROM size must be 16K or 32K for this mapper, but was {}K",
-                     16 * c,
-                 )),
-        }
+        let prg_rom =
+            match prg_rom_chunks.len() {
+                1 => MappedArray::<32>::mirror_half(*prg_rom_chunks[0]),
+                2 => MappedArray::<32>::new::<0x8000>(cartridge.prg_rom().try_into().unwrap()),
+                c => return Err(format!(
+                         "PRG ROM size must be 16K or 32K for this mapper, but was {}K",
+                         16 * c,
+                     )),
+            };
 
         let chr_chunk_count = cartridge.chr_rom_chunks().len();
         if chr_chunk_count > 4 {

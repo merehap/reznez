@@ -1,3 +1,6 @@
+// Clippy bug.
+#![allow(clippy::needless_borrow)]
+
 use std::ops::{Index, IndexMut};
 
 use crate::memory::cpu::cpu_address::CpuAddress;

@@ -107,7 +107,7 @@ pub trait Mapper {
         number: NameTableNumber,
     ) -> &'a [u8; NAME_TABLE_SIZE] {
         let side = vram_side(number, self.name_table_mirroring());
-        (&ppu_internal_ram.vram).side(side)
+        ppu_internal_ram.vram.side(side)
     }
 
     #[inline]
@@ -117,7 +117,7 @@ pub trait Mapper {
         number: NameTableNumber,
     ) -> &'a mut [u8; NAME_TABLE_SIZE] {
         let side = vram_side(number, self.name_table_mirroring());
-        (&mut ppu_internal_ram.vram).side_mut(side)
+        ppu_internal_ram.vram.side_mut(side)
     }
 
     #[inline]

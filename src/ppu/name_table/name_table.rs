@@ -23,9 +23,9 @@ pub struct NameTable<'a> {
 impl <'a> NameTable<'a> {
     pub fn new(raw: &'a [u8; NAME_TABLE_SIZE]) -> NameTable<'a> {
         NameTable {
-            tiles: (&raw[0..ATTRIBUTE_START_INDEX]).try_into().unwrap(),
+            tiles: raw[0..ATTRIBUTE_START_INDEX].try_into().unwrap(),
             attribute_table:
-                AttributeTable::new((&raw[ATTRIBUTE_START_INDEX..]).try_into().unwrap()),
+                AttributeTable::new(raw[ATTRIBUTE_START_INDEX..].try_into().unwrap()),
         }
     }
 

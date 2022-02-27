@@ -233,7 +233,7 @@ impl Ppu {
     }
 
     fn update_pending_data_then_advance_current_address(&mut self, mem: &PpuMemory) {
-        let mut data_source = self.current_address.clone();
+        let mut data_source = self.current_address;
         if data_source >= PALETTE_TABLE_START {
             // Even though palette ram isn't mirrored down, its data address is.
             // https://forums.nesdev.org/viewtopic.php?t=18627
