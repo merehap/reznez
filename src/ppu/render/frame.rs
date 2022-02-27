@@ -1,3 +1,5 @@
+use std::ops::{Index, IndexMut};
+
 use crate::ppu::pixel_index::{PixelIndex, PixelColumn, PixelRow};
 use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::palette::rgbt::Rgbt;
@@ -22,14 +24,14 @@ impl Frame {
 
     pub fn pixel(&self, mask: Mask, column: PixelColumn, row: PixelRow) -> (Rgb, Sprite0Hit) {
         use Rgbt::{Transparent, Opaque};
-        let mut background_pixel = self.buffer.0[row.to_usize()][column.to_usize()];
-        if !mask.left_background_columns_enabled && column.to_usize() < 8 {
+        let mut background_pixel = self.buffer[(column, row)];
+        if !mask.left_background_columns_enabled && column.is_in_left_margin() {
             background_pixel = Transparent;
         }
 
         let (mut sprite_pixel, sprite_priority, is_sprite_0) =
-            self.sprite_buffer.0[row.to_usize()][column.to_usize()];
-        if !mask.left_sprite_columns_enabled && column.to_usize() < 8 {
+            self.sprite_buffer[(column, row)];
+        if !mask.left_sprite_columns_enabled && column.is_in_left_margin() {
             sprite_pixel = Transparent;
         }
 
@@ -53,20 +55,21 @@ impl Frame {
         self.universal_background_rgb = rgb;
     }
 
-    pub fn clear_background_buffer(&mut self) {
-        self.buffer.fill(Rgbt::Transparent);
-    }
-
     pub fn clear_sprite_line(&mut self, row: PixelRow) {
         for column in PixelColumn::iter() {
-            self.sprite_buffer.0[row.to_usize()][column.to_usize()] =
+            self.sprite_buffer[(column, row)] =
                 (Rgbt::Transparent, Priority::Behind, false);
         }
     }
 
     #[inline]
-    pub fn background_row(&mut self, row: u8) -> &mut [Rgbt; PixelColumn::COLUMN_COUNT] {
-        &mut self.buffer.0[row as usize]
+    pub fn set_background_pixel(
+        &mut self,
+        pixel_column: PixelColumn,
+        pixel_row: PixelRow,
+        rgbt: Rgbt,
+    ) {
+        self.buffer[(pixel_column, pixel_row)] = rgbt;
     }
 
     #[inline]
@@ -78,7 +81,7 @@ impl Frame {
         priority: Priority,
         is_sprite_0: bool,
     ) {
-        self.sprite_buffer.0[row.to_usize()][column.to_usize()] =
+        self.sprite_buffer[(column, row)] =
             (Rgbt::Opaque(rgb), priority, is_sprite_0);
     }
 
@@ -126,8 +129,18 @@ impl <T: Copy> FrameBuffer<T> {
     fn filled(value: T) -> FrameBuffer<T> {
         FrameBuffer(Box::new([[value; PixelColumn::COLUMN_COUNT]; PixelRow::ROW_COUNT]))
     }
+}
 
-    fn fill(&mut self, value: T) {
-        self.0 = Box::new([[value; PixelColumn::COLUMN_COUNT]; PixelRow::ROW_COUNT]);
+impl <T> Index<(PixelColumn, PixelRow)> for FrameBuffer<T> {
+    type Output = T;
+
+    fn index(&self, (column, row): (PixelColumn, PixelRow)) -> &T {
+        &self.0[row.to_usize()][column.to_usize()]
+    }
+}
+
+impl <T> IndexMut<(PixelColumn, PixelRow)> for FrameBuffer<T> {
+    fn index_mut(&mut self, (column, row): (PixelColumn, PixelRow)) -> &mut T {
+        &mut self.0[row.to_usize()][column.to_usize()]
     }
 }

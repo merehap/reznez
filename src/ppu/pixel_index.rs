@@ -71,6 +71,10 @@ impl PixelColumn {
             .map(|pc| PixelColumn(pc))
     }
 
+    pub fn is_in_left_margin(self) -> bool {
+        self.0 < 8
+    }
+
     pub fn to_u8(self) -> u8 {
         self.0
     }
@@ -135,13 +139,6 @@ impl PixelRow {
     pub fn difference(self, other: PixelRow) -> Option<u8> {
         self.to_u8().checked_sub(other.to_u8())
     }
-
-    /*
-    pub fn saturating_add(self, other: u8) -> PixelRow {
-        let value = (self.0 as u16) + (other as u16);
-        PixelRow::try_from_u16(value).unwrap_or(PixelRow::MAX)
-    }
-    */
 
     pub fn row_in_tile(self, offset: PixelRow) -> Option<RowInTile> {
         FromPrimitive::from_u8(offset.to_u8() - offset.to_u8())

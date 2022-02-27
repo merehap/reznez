@@ -59,8 +59,11 @@ impl <'a> NameTable<'a> {
                     .offset(x_offset);
                 if let Some(pixel_column) = maybe_pixel_column {
                     let pixel_row = pixel_row.wrapping_offset(y_offset);
-                    frame.background_row(pixel_row.to_u8())[pixel_column.to_usize()] =
-                        tile_sliver[column_in_tile as usize];
+                    frame.set_background_pixel(
+                        pixel_column,
+                        pixel_row,
+                        tile_sliver[column_in_tile as usize],
+                    );
                 }
             }
         }
