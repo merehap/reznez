@@ -10,7 +10,7 @@ use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::Cpu;
 use crate::cpu::instruction::{Instruction, Argument, AccessMode};
-use crate::gui::gui::Gui;
+use crate::gui::gui::{Gui, Events};
 use crate::memory::cpu::ports::Ports;
 use crate::memory::memory::Memory;
 use crate::memory::mapper::Mapper;
@@ -87,15 +87,7 @@ impl Nes {
         let start_time = SystemTime::now();
         let intended_frame_end_time = start_time.add(self.frame_duration());
 
-        let events = gui.events();
-
-        for (button, status) in events.joypad1_button_statuses {
-            self.joypad1.borrow_mut().set_button_status(button, status);
-        }
-
-        for (button, status) in events.joypad2_button_statuses {
-            self.joypad2.borrow_mut().set_button_status(button, status);
-        }
+        let events = self.process_gui_events(gui);
 
         loop {
             let step_result = self.step();
@@ -106,22 +98,7 @@ impl Nes {
 
         gui.display_frame(self.ppu.frame(), self.memory.as_ppu_memory().regs().mask, frame_index);
 
-        let end_time = SystemTime::now();
-        if let Ok(duration) = intended_frame_end_time.duration_since(end_time) {
-            std::thread::sleep(duration);
-        }
-
-        let end_time = SystemTime::now();
-        if let Ok(duration) = end_time.duration_since(start_time) {
-            info!(
-                "Frame {} rendered. Framerate: {}",
-                frame_index,
-                1_000_000_000.0 / duration.as_nanos() as f64,
-            );
-        } else {
-            warn!("Unknown framerate. System clock went backwards.");
-        }
-
+        self.end_frame(frame_index, start_time, intended_frame_end_time);
         if events.should_quit || Some(frame_index) == self.stop_frame {
             std::process::exit(0);
         }
@@ -149,6 +126,40 @@ impl Nes {
             instruction,
             is_last_cycle_of_frame: ppu_result.is_last_cycle_of_frame,
             nmi_scheduled: ppu_result.should_generate_nmi,
+        }
+    }
+
+    #[inline(always)]
+    fn process_gui_events(&mut self, gui: &mut dyn Gui) -> Events {
+        let events = gui.events();
+
+        for (button, status) in &events.joypad1_button_statuses {
+            self.joypad1.borrow_mut().set_button_status(*button, *status);
+        }
+
+        for (button, status) in &events.joypad2_button_statuses {
+            self.joypad2.borrow_mut().set_button_status(*button, *status);
+        }
+
+        events
+    }
+
+    #[inline(always)]
+    fn end_frame(&self, frame_index: u64, start_time: SystemTime, intended_frame_end_time: SystemTime) {
+        let end_time = SystemTime::now();
+        if let Ok(duration) = intended_frame_end_time.duration_since(end_time) {
+            std::thread::sleep(duration);
+        }
+
+        let end_time = SystemTime::now();
+        if let Ok(duration) = end_time.duration_since(start_time) {
+            info!(
+                "Frame {} rendered. Framerate: {}",
+                frame_index,
+                1_000_000_000.0 / duration.as_nanos() as f64,
+            );
+        } else {
+            warn!("Unknown framerate. System clock went backwards.");
         }
     }
 
