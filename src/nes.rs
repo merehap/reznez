@@ -104,7 +104,6 @@ impl Nes {
             }
         }
 
-        info!("Displaying frame {}.", frame_index);
         gui.display_frame(self.ppu.frame(), self.memory.as_ppu_memory().regs().mask, frame_index);
 
         let end_time = SystemTime::now();
@@ -114,7 +113,11 @@ impl Nes {
 
         let end_time = SystemTime::now();
         if let Ok(duration) = end_time.duration_since(start_time) {
-            info!("Framerate: {}", 1_000_000_000.0 / duration.as_nanos() as f64);
+            info!(
+                "Frame {} rendered. Framerate: {}",
+                frame_index,
+                1_000_000_000.0 / duration.as_nanos() as f64,
+            );
         } else {
             warn!("Unknown framerate. System clock went backwards.");
         }
