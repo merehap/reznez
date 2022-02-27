@@ -178,16 +178,16 @@ impl Ppu {
             pixel_row,
             &mem.pattern_table(background_table_side),
             &palette_table,
-            -(self.next_address.x_scroll() as i16),
-            -(self.next_address.y_scroll() as i16),
+            -i16::from(self.next_address.x_scroll()),
+            -i16::from(self.next_address.y_scroll()),
             &mut self.frame,
         );
         mem.name_table(name_table_number.next_horizontal()).render_scanline(
             pixel_row,
             &mem.pattern_table(background_table_side),
             &palette_table,
-            -(self.next_address.x_scroll() as i16) + 256,
-            -(self.next_address.y_scroll() as i16),
+            -i16::from(self.next_address.x_scroll()) + 256,
+            -i16::from(self.next_address.y_scroll()),
             &mut self.frame,
         );
     }

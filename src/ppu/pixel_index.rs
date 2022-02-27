@@ -65,7 +65,7 @@ impl PixelColumn {
     }
 
     pub fn offset(self, offset: i16) -> Option<PixelColumn> {
-        (self.0 as i16 + offset)
+        (i16::from(self.0) + offset)
             .try_into()
             .ok()
             .map(PixelColumn)
@@ -125,12 +125,12 @@ impl PixelRow {
     }
 
     pub fn offset(self, offset: i16) -> Option<PixelRow> {
-        let row = (self.0 as i16 + offset).rem_euclid(256) as u8;
+        let row = (i16::from(self.0) + offset).rem_euclid(256) as u8;
         PixelRow::try_from_u8(row % PixelRow::ROW_COUNT as u8)
     }
 
     pub fn wrapping_offset(self, offset: i16) -> PixelRow {
-        let row = (self.0 as i16 + offset).rem_euclid(256) as u8;
+        let row = (i16::from(self.0) + offset).rem_euclid(256) as u8;
         // FIXME: This feels wrong, but some tests render nothing without wrapping.
         PixelRow::try_from_u8(row % PixelRow::ROW_COUNT as u8)
             .unwrap()
@@ -138,10 +138,6 @@ impl PixelRow {
 
     pub fn difference(self, other: PixelRow) -> Option<u8> {
         self.to_u8().checked_sub(other.to_u8())
-    }
-
-    pub fn row_in_tile(self, offset: PixelRow) -> Option<RowInTile> {
-        FromPrimitive::from_u8(offset.to_u8() - offset.to_u8())
     }
 
     pub fn to_u8(self) -> u8 {

@@ -75,30 +75,30 @@ impl PpuAddress {
 
     pub fn set_name_table_number(&mut self, value: u8) {
         self.address &= !NAME_TABLE_MASK;
-        self.address |= (value as u16 & 0b0000_0011) << 10;
+        self.address |= (u16::from(value) & 0b0000_0011) << 10;
     }
 
     pub fn set_x_scroll(&mut self, value: u8) {
         self.fine_x_scroll = FineXScroll(value & FINE_X_MASK);
 
         self.address &= !COARSE_X_MASK;
-        self.address |= (value as u16) >> 3
+        self.address |= u16::from(value) >> 3;
     }
 
     pub fn set_y_scroll(&mut self, value: u8) {
         self.address &= !Y_MASK;
-        self.address |= (value as u16 & 0b1111_1000) << 2;
-        self.address |= (value as u16 & 0b0000_0111) << 12;
+        self.address |= (u16::from(value) & 0b1111_1000) << 2;
+        self.address |= (u16::from(value) & 0b0000_0111) << 12;
     }
 
     pub fn set_high_byte(&mut self, value: u8) {
         self.address &= !HIGH_BYTE_MASK;
-        self.address |= (value as u16 & 0b0011_1111) << 8;
+        self.address |= (u16::from(value) & 0b0011_1111) << 8;
     }
 
     pub fn set_low_byte(&mut self, value: u8) {
         self.address &= !LOW_BYTE_MASK;
-        self.address |= value as u16;
+        self.address |= u16::from(value);
     }
 
     pub fn to_u16(self) -> u16 {

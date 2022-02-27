@@ -37,9 +37,9 @@ impl Nes {
     pub fn new(config: Config) -> Nes {
         let mapper =
             match config.cartridge.mapper_number() {
-                0 => Box::new(Mapper0::new(config.cartridge).unwrap()) as Box<dyn Mapper>,
-                1 => Box::new(Mapper1::new(config.cartridge).unwrap()),
-                3 => Box::new(Mapper3::new(config.cartridge).unwrap()),
+                0 => Box::new(Mapper0::new(&config.cartridge).unwrap()) as Box<dyn Mapper>,
+                1 => Box::new(Mapper1::new(&config.cartridge)),
+                3 => Box::new(Mapper3::new(&config.cartridge).unwrap()),
                 _ => todo!(),
             };
 
@@ -98,7 +98,7 @@ impl Nes {
 
         gui.display_frame(self.ppu.frame(), self.memory.as_ppu_memory().regs().mask, frame_index);
 
-        self.end_frame(frame_index, start_time, intended_frame_end_time);
+        Nes::end_frame(frame_index, start_time, intended_frame_end_time);
         if events.should_quit || Some(frame_index) == self.stop_frame {
             std::process::exit(0);
         }
@@ -129,7 +129,7 @@ impl Nes {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     fn process_gui_events(&mut self, gui: &mut dyn Gui) -> Events {
         let events = gui.events();
 
@@ -144,8 +144,8 @@ impl Nes {
         events
     }
 
-    #[inline(always)]
-    fn end_frame(&self, frame_index: u64, start_time: SystemTime, intended_frame_end_time: SystemTime) {
+    #[inline]
+    fn end_frame(frame_index: u64, start_time: SystemTime, intended_frame_end_time: SystemTime) {
         let end_time = SystemTime::now();
         if let Ok(duration) = intended_frame_end_time.duration_since(end_time) {
             std::thread::sleep(duration);
@@ -163,7 +163,7 @@ impl Nes {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     fn log_state(&self, instruction: Instruction) {
         /*
         info!(
@@ -182,7 +182,7 @@ impl Nes {
         let argument =
             match instruction.argument {
                 Argument::Imp => /* Unused. */ 0,
-                Argument::Imm(value) => value as u16,
+                Argument::Imm(value) => u16::from(value),
                 Argument::Addr(address) => address.to_raw(),
             };
         use AccessMode::*;
@@ -302,7 +302,7 @@ mod tests {
     }
 
     fn sample_nes() -> Nes {
-        let mapper = Box::new(Mapper0::new(test_data::cartridge()).unwrap());
+        let mapper = Box::new(Mapper0::new(&test_data::cartridge()).unwrap());
         let system_palette = system_palette::test_data::system_palette();
         let joypad1 = Rc::new(RefCell::new(Joypad::new()));
         let joypad2 = Rc::new(RefCell::new(Joypad::new()));

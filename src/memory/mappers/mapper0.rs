@@ -12,7 +12,7 @@ pub struct Mapper0 {
 }
 
 impl Mapper0 {
-    pub fn new(cartridge: Cartridge) -> Result<Mapper0, String> {
+    pub fn new(cartridge: &Cartridge) -> Result<Mapper0, String> {
         let prg_rom_chunks = cartridge.prg_rom_chunks();
         let prg_rom =
             match prg_rom_chunks.len() {
@@ -31,7 +31,7 @@ impl Mapper0 {
             match chr_rom_chunks.len() {
                 // Provide empty CHR ROM if the cartridge doesn't provide any.
                 0 => [MappedArray::<4>::empty(), MappedArray::<4>::empty()],
-                1 => split_chr_chunk(*chr_rom_chunks[0]),
+                1 => split_chr_chunk(&*chr_rom_chunks[0]),
                 n => return Err(format!(
                          "CHR ROM size must be 0K or 8K for mapper 0, but was {}K",
                          8 * n

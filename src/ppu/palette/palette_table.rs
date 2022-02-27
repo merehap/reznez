@@ -15,8 +15,7 @@ pub struct PaletteTable {
 impl PaletteTable {
     pub fn new(raw: &[u8; 0x20], system_palette: &SystemPalette) -> PaletteTable {
         let rgb = |raw_color: u8| -> Rgb {
-            let color = Color::from_u8(raw_color).unwrap();
-            system_palette.lookup_rgb(color)
+            system_palette.lookup_rgb(Color::from_u8(raw_color))
         };
 
         let background_palettes =

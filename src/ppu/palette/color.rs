@@ -13,13 +13,13 @@ impl Color {
         Color {hue, brightness}
     }
 
-    pub fn from_u8(value: u8) -> Result<Color, String> {
+    pub fn from_u8(value: u8) -> Color {
         debug_assert_eq!(value & 0b1100_0000, 0, "First two bits must be 0.");
 
-        Ok(Color {
+        Color {
             hue: FromPrimitive::from_u8(value & 0b0000_1111).unwrap(),
             brightness: FromPrimitive::from_u8((value & 0b0011_0000) >> 4).unwrap(),
-        })
+        }
     }
 }
 

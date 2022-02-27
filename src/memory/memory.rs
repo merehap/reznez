@@ -75,7 +75,7 @@ impl <'a> CpuMemory<'a> {
             &mut self.memory.ppu_registers,
             address,
             value,
-        )
+        );
     }
 
     pub fn ports(&self) -> &Ports {
@@ -129,7 +129,7 @@ impl <'a> PpuMemory<'a> {
 
     #[inline]
     pub fn write(&mut self, address: PpuAddress, value: u8) {
-        self.memory.mapper.ppu_write(&mut self.memory.ppu_internal_ram, address, value)
+        self.memory.mapper.ppu_write(&mut self.memory.ppu_internal_ram, address, value);
     }
 
     #[inline]
@@ -170,13 +170,13 @@ pub mod test_data {
 
     pub fn memory() -> Memory {
         Memory::new(
-            Box::new(Mapper0::new(cartridge::test_data::cartridge()).unwrap()),
+            Box::new(Mapper0::new(&cartridge::test_data::cartridge()).unwrap()),
             ports::test_data::ports(),
             system_palette::test_data::system_palette(),
         )
     }
 
-    pub fn memory_with_cartridge(cartridge: Cartridge) -> Memory {
+    pub fn memory_with_cartridge(cartridge: &Cartridge) -> Memory {
         let mapper = Box::new(Mapper0::new(cartridge).unwrap());
         Memory::new(
             mapper,

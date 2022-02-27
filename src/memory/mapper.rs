@@ -175,7 +175,7 @@ pub trait Mapper {
     }
 }
 
-pub fn split_chr_chunk(chunk: [u8; 0x2000]) -> [MappedArray<4>; 2] {
+pub fn split_chr_chunk(chunk: &[u8; 0x2000]) -> [MappedArray<4>; 2] {
     [
         MappedArray::<4>::new::<0x1000>(chunk[0x0000..0x1000].try_into().unwrap()),
         MappedArray::<4>::new::<0x1000>(chunk[0x1000..0x2000].try_into().unwrap()),

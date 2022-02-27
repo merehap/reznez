@@ -31,7 +31,7 @@ pub struct Mapper1 {
 }
 
 impl Mapper1 {
-    pub fn new(cartridge: Cartridge) -> Result<Mapper1, String> {
+    pub fn new(cartridge: &Cartridge) -> Mapper1 {
         let mut chr_chunk_iter = cartridge.chr_rom_half_chunks().into_iter();
         let raw_pattern_tables =
             arr![
@@ -46,11 +46,11 @@ impl Mapper1 {
         let mut prg_rom = MappedArray::empty();
         let last_prg_bank_index =  (cartridge.prg_rom_chunks().len() - 1) as u8;
         prg_rom.update_from_halves(
-            prg_banks[0].clone(),
-            prg_banks[usize::from(last_prg_bank_index)].clone(),
+            &prg_banks[0],
+            &prg_banks[usize::from(last_prg_bank_index)],
         );
 
-        Ok(Mapper1 {
+        Mapper1 {
             shift: EMPTY_SHIFT_REGISTER,
             control: Control::new(),
             selected_chr_bank0: 0,
@@ -61,7 +61,7 @@ impl Mapper1 {
             prg_banks,
             prg_rom,
             last_prg_bank_index,
-        })
+        }
     }
 
     pub fn state_string(&self) -> String {
@@ -133,7 +133,7 @@ impl Mapper for Mapper1 {
         let is_last_shift = get_bit(self.shift, 7);
 
         self.shift >>= 1;
-        self.shift |= (get_bit(value, 7) as u8) << 4;
+        self.shift |= u8::from(get_bit(value, 7)) << 4;
 
         if is_last_shift {
             match address.to_raw() {
@@ -156,8 +156,8 @@ impl Mapper for Mapper1 {
 
         let (first_index, second_index) = self.prg_bank_indexes();
         self.prg_rom.update_from_halves(
-            self.prg_banks[first_index as usize].clone(),
-            self.prg_banks[second_index as usize].clone(),
+            &self.prg_banks[first_index as usize],
+            &self.prg_banks[second_index as usize],
         );
     }
 }

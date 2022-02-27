@@ -18,14 +18,14 @@ impl <const CHUNK_COUNT: usize> MappedArray<CHUNK_COUNT> {
 
     pub fn new<const LEN: usize>(backing: [u8; LEN]) -> MappedArray<CHUNK_COUNT> {
         let mut array = MappedArray::empty();
-        array.update(Rc::new(RefCell::new(backing)));
+        array.update(&Rc::new(RefCell::new(backing)));
         array
     }
 
     pub fn mirror_half<const LEN: usize>(half: [u8; LEN]) -> MappedArray<32> {
         let half = Rc::new(RefCell::new(half));
         let mut array = MappedArray::empty();
-        array.update_from_halves(half.clone(), half);
+        array.update_from_halves(&half, &half);
         array
     }
 
@@ -35,13 +35,13 @@ impl <const CHUNK_COUNT: usize> MappedArray<CHUNK_COUNT> {
     ) -> MappedArray<32> {
         let mut array = MappedArray::empty();
         array.update_from_halves(
-            Rc::new(RefCell::new(first_half)),
-            Rc::new(RefCell::new(second_half)),
+            &Rc::new(RefCell::new(first_half)),
+            &Rc::new(RefCell::new(second_half)),
         );
         array
     }
 
-    pub fn update<const LEN: usize>(&mut self, backing: Rc<RefCell<[u8; LEN]>>) {
+    pub fn update<const LEN: usize>(&mut self, backing: &Rc<RefCell<[u8; LEN]>>) {
         assert_eq!(LEN, CHUNK_COUNT * CHUNK_LEN,
             "LEN == CHUNK_COUNT * CHUNK_LEN must be true but {} != {} * {}",
             LEN, CHUNK_COUNT, CHUNK_LEN,
@@ -54,8 +54,8 @@ impl <const CHUNK_COUNT: usize> MappedArray<CHUNK_COUNT> {
 
     pub fn update_from_halves<const LEN: usize>(
         &mut self,
-        first_half: Rc<RefCell<[u8; LEN]>>,
-        second_half: Rc<RefCell<[u8; LEN]>>,
+        first_half: &Rc<RefCell<[u8; LEN]>>,
+        second_half: &Rc<RefCell<[u8; LEN]>>,
     ) {
         assert_eq!(2 * LEN, CHUNK_COUNT * CHUNK_LEN,
             "2 * LEN == CHUNK_COUNT * CHUNK_LEN must be true but {} != {} * {}",

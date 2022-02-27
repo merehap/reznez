@@ -643,6 +643,6 @@ mod tests {
             irq_vector,
         );
 
-        memory::test_data::memory_with_cartridge(cartridge)
+        memory::test_data::memory_with_cartridge(&cartridge)
     }
 }

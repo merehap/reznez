@@ -17,7 +17,7 @@ pub struct Mapper3 {
 }
 
 impl Mapper3 {
-    pub fn new(cartridge: Cartridge) -> Result<Mapper3, String> {
+    pub fn new(cartridge: &Cartridge) -> Result<Mapper3, String> {
         let prg_rom_chunks = cartridge.prg_rom_chunks();
         let prg_rom =
             match prg_rom_chunks.len() {
@@ -40,10 +40,10 @@ impl Mapper3 {
         let mut chunk_iter = cartridge.chr_rom_chunks().iter();
         let raw_pattern_tables =
             [
-                split_chr_chunk(**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
-                split_chr_chunk(**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
-                split_chr_chunk(**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
-                split_chr_chunk(**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
+                split_chr_chunk(&**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
+                split_chr_chunk(&**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
+                split_chr_chunk(&**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
+                split_chr_chunk(&**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
             ];
         let name_table_mirroring = cartridge.name_table_mirroring();
         Ok(Mapper3 {
