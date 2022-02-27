@@ -41,7 +41,7 @@ impl fmt::Display for AttributeTable<'_> {
         for index in BackgroundTileIndex::iter() {
             write!(f, "{} ", self.palette_table_index(index) as usize)?;
 
-            if index.to_usize() % 32 == 31 {
+            if index.tile_column().is_max() {
                 writeln!(f)?;
             }
         }

@@ -42,7 +42,7 @@ impl <'a> NameTable<'a> {
         let mut tile_sliver = [Rgbt::Transparent; 8];
         for tile_column in TileColumn::iter() {
             let background_tile_index =
-                BackgroundTileIndex::from_column_row(tile_column, tile_row);
+                BackgroundTileIndex::from_tile_column_row(tile_column, tile_row);
             let (pattern_index, palette_table_index) =
                 self.tile_entry_at(background_tile_index);
             pattern_table.render_background_tile_sliver(
@@ -87,7 +87,7 @@ impl fmt::Display for NameTable<'_> {
         for index in BackgroundTileIndex::iter() {
             write!(f, "{:02X} ", self.tile_entry_at(index).0.to_usize())?;
 
-            if index.to_usize() % 32 == 31 {
+            if index.tile_column().is_max() {
                 writeln!(f)?;
             }
         }

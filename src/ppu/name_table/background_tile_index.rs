@@ -17,7 +17,7 @@ impl BackgroundTileIndex {
         )
     }
 
-    pub fn from_column_row(column: TileColumn, row: TileRow) -> BackgroundTileIndex {
+    pub fn from_tile_column_row(column: TileColumn, row: TileRow) -> BackgroundTileIndex {
         BackgroundTileIndex {column, row}
     }
 
@@ -46,12 +46,12 @@ impl Iterator for BackgroundTileIndexIterator {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub struct TileColumn(u8);
 
 impl TileColumn {
     const COLUMN_COUNT: usize = 32;
-    //const MAX: TileColumn = TileColumn(31);
+    const MAX: TileColumn = TileColumn(31);
 
     pub fn iter() -> TileColumnIterator {
         TileColumnIterator(0)
@@ -68,6 +68,10 @@ impl TileColumn {
 
     pub fn to_usize(self) -> usize {
         usize::from(self.0)
+    }
+
+    pub fn is_max(self) -> bool {
+        self == TileColumn::MAX
     }
 
     fn try_from_u8(tile_column: u8) -> Option<TileColumn> {
@@ -96,7 +100,7 @@ impl Iterator for TileColumnIterator {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub struct TileRow(u8);
 
 impl TileRow {
