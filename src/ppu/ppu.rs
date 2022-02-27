@@ -141,9 +141,9 @@ impl Ppu {
                 self.write_toggle = WriteToggle::FirstByte;
             },
             (OamData, Write) => self.write_oam(mem.regs_mut(), value),
-            (PpuAddr, Write) => self.partially_prepare_next_address(value),
-            (PpuData, Read) => self.update_pending_data_then_advance(mem),
-            (PpuData, Write) => self.write_then_advance(mem, value),
+            (PpuAddr, Write) => self.write_byte_to_next_address(value),
+            (PpuData, Read) => self.update_pending_data_then_advance_current_address(mem),
+            (PpuData, Write) => self.write_then_advance_current_address(mem, value),
             (Scroll, Write) => self.write_scroll_dimension(value),
 
             (Ctrl | Mask | OamAddr | Scroll | PpuAddr, Read) =>
@@ -232,7 +232,7 @@ impl Ppu {
         regs.oam_addr = oam_addr.wrapping_add(1);
     }
 
-    fn update_pending_data_then_advance(&mut self, mem: &PpuMemory) {
+    fn update_pending_data_then_advance_current_address(&mut self, mem: &PpuMemory) {
         let mut data_source = self.current_address.clone();
         if data_source >= PALETTE_TABLE_START {
             // Even though palette ram isn't mirrored down, its data address is.
@@ -246,13 +246,13 @@ impl Ppu {
         self.current_address.advance(increment);
     }
 
-    fn write_then_advance(&mut self, mem: &mut PpuMemory, value: u8) {
+    fn write_then_advance_current_address(&mut self, mem: &mut PpuMemory, value: u8) {
         mem.write(self.current_address, value);
         let increment = mem.regs().current_address_increment() as u16;
         self.current_address.advance(increment);
     }
 
-    fn partially_prepare_next_address(&mut self, value: u8) {
+    fn write_byte_to_next_address(&mut self, value: u8) {
         match self.write_toggle {
             WriteToggle::FirstByte => self.next_address.set_high_byte(value),
             WriteToggle::SecondByte => {
