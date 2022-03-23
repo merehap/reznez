@@ -104,6 +104,22 @@ impl Frame {
         data
     }
 
+    pub fn update_pixel_data(
+        &self,
+        mask: Mask,
+        data: &mut [u8; 3 * PixelIndex::PIXEL_COUNT],
+    ) {
+        for pixel_index in PixelIndex::iter() {
+            let (column, row) = pixel_index.to_column_row();
+            let (pixel, _) = self.pixel(mask, column, row);
+
+            let index = 3 * pixel_index.to_usize();
+            data[index]     = pixel.red();
+            data[index + 1] = pixel.green();
+            data[index + 2] = pixel.blue();
+        }
+    }
+
     pub fn to_ppm(&self, mask: Mask) -> Ppm {
         let mut data = [0; 3 * PixelIndex::PIXEL_COUNT];
         data = self.write_all_pixel_data(mask, data);
