@@ -22,6 +22,7 @@ pub struct Config {
     pub system_palette: SystemPalette,
     pub target_frame_rate: TargetFrameRate,
     pub stop_frame: Option<u64>,
+    pub frame_dump: bool,
     pub program_counter_source: ProgramCounterSource,
 }
 
@@ -53,25 +54,17 @@ impl Config {
             system_palette,
             target_frame_rate: opt.target_frame_rate,
             stop_frame: opt.stop_frame,
+            frame_dump: opt.frame_dump,
             program_counter_source,
         }
     }
 
     pub fn gui(opt: &Opt) -> Box<dyn Gui> {
-        let gui =
-            match opt.gui {
-                GuiType::NoGui => Box::new(NoGui::new()) as Box<dyn Gui>,
-                GuiType::Bevy => Box::new(BevyGui::new()),
-                GuiType::Sdl => Box::new(SdlGui::new()),
-            };
-
-        /*
-        if opt.frame_dump {
-            gui = Box::new(FrameDumpGui::new(gui));
+        match opt.gui {
+            GuiType::NoGui => Box::new(NoGui::new()) as Box<dyn Gui>,
+            GuiType::Bevy => Box::new(BevyGui::new()),
+            GuiType::Sdl => Box::new(SdlGui::new()),
         }
-        */
-
-        gui
     }
 }
 

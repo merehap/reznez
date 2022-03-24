@@ -1,4 +1,7 @@
 use std::collections::BTreeMap;
+use std::io::{Write, ErrorKind};
+use std::fs;
+use std::fs::File;
 use std::ops::Add;
 use std::time::{Duration, SystemTime};
 
@@ -10,6 +13,8 @@ use crate::nes::Nes;
 use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::render::frame_rate::TargetFrameRate;
+
+const FRAME_DUMP_DIRECTORY: &str = "framedump";
 
 pub trait Gui {
     fn run(&mut self, nes: Nes, config: Config);
@@ -28,10 +33,28 @@ pub fn execute_frame<F>(nes: &mut Nes, config: &Config, events: Events, display_
     let mask = nes.memory_mut().as_ppu_memory().regs().mask;
     display_frame(&nes.ppu().frame(), mask, frame_index);
 
+    if config.frame_dump {
+        dump_frame(&nes.ppu().frame(), mask, frame_index);
+    }
+
     end_frame(frame_index, start_time, intended_frame_end_time);
+
     if events.should_quit || Some(frame_index) == config.stop_frame {
         std::process::exit(0);
     }
+}
+
+fn dump_frame(frame: &Frame, mask: Mask, frame_index: u64) {
+    if let Err(err) = fs::create_dir(FRAME_DUMP_DIRECTORY) {
+        assert!(err.kind() == ErrorKind::AlreadyExists, "{:?}", err.kind());
+    }
+    let file_name = format!(
+        "{}/frame{:03}.ppm",
+        FRAME_DUMP_DIRECTORY,
+        frame_index,
+    );
+    let mut file = File::create(file_name).unwrap();
+    file.write_all(&frame.to_ppm(mask).to_bytes()).unwrap();
 }
 
 #[inline]
