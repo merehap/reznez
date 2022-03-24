@@ -120,6 +120,29 @@ impl Frame {
         }
     }
 
+    pub fn copy_to_rgba_buffer(
+        &self,
+        mask: Mask,
+        buffer: &mut [u8; 4 * PixelIndex::PIXEL_COUNT],
+    ) {
+        for pixel_index in PixelIndex::iter() {
+            let (column, row) = pixel_index.to_column_row();
+            let (pixel, _) = self.pixel(mask, column, row);
+
+            let index = 4 * pixel_index.to_usize();
+            // FIXME: Remove this.
+            if index >= buffer.len() {
+                return;
+            }
+
+            buffer[index]     = pixel.red();
+            buffer[index + 1] = pixel.green();
+            buffer[index + 2] = pixel.blue();
+            // No transparency.
+            buffer[index + 3] = 0xFF;
+        }
+    }
+
     pub fn to_ppm(&self, mask: Mask) -> Ppm {
         let mut data = [0; 3 * PixelIndex::PIXEL_COUNT];
         data = self.write_all_pixel_data(mask, data);

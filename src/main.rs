@@ -29,8 +29,6 @@ use crate::util::logger;
 use crate::util::logger::Logger;
 use crate::ppu::render::frame_rate::TargetFrameRate;
 
-use crate::ppu::pixel_index::PixelIndex;
-
 /*
 fn main() {
     let opt = Opt::from_args();
@@ -50,8 +48,6 @@ fn main() {
     logger::init(Logger {log_cpu: opt.log_cpu}).unwrap();
     let config = Config::new(&opt);
     let nes = Nes::new(&config);
-    let pixels = [0; 3 * PixelIndex::PIXEL_COUNT];
-
     App::new()
         .insert_resource(PixelsOptions {
             width: 256,
@@ -59,7 +55,6 @@ fn main() {
         })
         .insert_non_send_resource(config)
         .insert_non_send_resource(nes)
-        .insert_resource(pixels)
         // Default plugins, minus logging.
         .add_plugin(bevy::core::CorePlugin)
         .add_plugin(bevy::diagnostic::DiagnosticsPlugin)
@@ -86,21 +81,7 @@ fn main_system(
 
     let frame = pixels.pixels.get_frame();
 
-    let mut pixels = [0; 3 * PixelIndex::PIXEL_COUNT];
-    nes.ppu().frame().update_pixel_data(mask, &mut pixels);
-    let mut i = 0;
-    for pixel in pixels.iter() {
-        if i >= frame.len() {
-            return;
-        }
-
-        frame[i] = *pixel;
-        i += 1;
-        if i % 4 == 3 {
-            frame[i] = 0xFF;
-            i += 1;
-        }
-    }
+    nes.ppu().frame().copy_to_rgba_buffer(mask, frame.try_into().unwrap());
 }
 
 fn step_frame(nes: &mut NonSendMut<Nes>, config: NonSend<Config>) {
