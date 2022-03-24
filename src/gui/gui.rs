@@ -13,11 +13,9 @@ use crate::ppu::render::frame_rate::TargetFrameRate;
 
 pub trait Gui {
     fn run(&mut self, nes: Nes, config: Config);
-    fn events(&mut self) -> Events;
-    //fn display_frame(&mut self, frame: &Frame, mask: Mask, frame_index: u64);
 }
 
-pub fn execute_frame<F>(nes: &mut Nes, config: &Config, display_frame: F)
+pub fn execute_frame<F>(nes: &mut Nes, config: &Config, events: Events, display_frame: F)
     where F: FnOnce(&Frame, Mask, u64) {
 
     let frame_index = nes.ppu().clock().frame();
@@ -25,7 +23,6 @@ pub fn execute_frame<F>(nes: &mut Nes, config: &Config, display_frame: F)
     let target_frame_rate = config.target_frame_rate;
     let intended_frame_end_time = start_time.add(frame_duration(target_frame_rate));
 
-    let events = Events::none();
     nes.process_gui_events(&events);
     nes.step_frame();
     let mask = nes.memory_mut().as_ppu_memory().regs().mask;
