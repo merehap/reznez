@@ -1,5 +1,5 @@
 pub mod bevy_gui;
 //pub mod frame_dump_gui;
 pub mod gui;
-//pub mod no_gui;
+pub mod no_gui;
 //pub mod sdl_gui;

@@ -1,8 +1,6 @@
-use std::collections::BTreeMap;
-
-use crate::gui::gui::{Gui, Events};
-use crate::ppu::register::registers::mask::Mask;
-use crate::ppu::render::frame::Frame;
+use crate::config::Config;
+use crate::gui::gui::Gui;
+use crate::nes::Nes;
 
 pub struct NoGui;
 
@@ -13,16 +11,9 @@ impl NoGui {
 }
 
 impl Gui for NoGui {
-    #[inline]
-    fn events(&mut self) -> Events {
-        Events {
-            should_quit: false,
-            joypad1_button_statuses: BTreeMap::new(),
-            joypad2_button_statuses: BTreeMap::new(),
+    fn run(&mut self, mut nes: Nes, _config: Config) {
+        loop {
+            nes.step_frame();
         }
-    }
-
-    fn display_frame(&mut self, _: &Frame, _: Mask, _frame_index: u64) {
-        // Do nothing.
     }
 }

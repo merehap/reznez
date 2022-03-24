@@ -10,7 +10,7 @@ use crate::cartridge::Cartridge;
 use crate::cpu::cpu::ProgramCounterSource;
 use crate::gui::bevy_gui::BevyGui;
 use crate::gui::gui::Gui;
-//use crate::gui::no_gui::NoGui;
+use crate::gui::no_gui::NoGui;
 //use crate::gui::frame_dump_gui::FrameDumpGui;
 //use crate::gui::sdl_gui::SdlGui;
 use crate::memory::cpu::cpu_address::CpuAddress;
@@ -60,11 +60,9 @@ impl Config {
     pub fn gui(opt: &Opt) -> Box<dyn Gui> {
         let gui =
             match opt.gui {
-                /*
                 GuiType::NoGui => Box::new(NoGui::new()) as Box<dyn Gui>,
-                GuiType::Sdl => Box::new(SdlGui::new()),
-                */
-                _ => Box::new(BevyGui::new()),
+                GuiType::Bevy => Box::new(BevyGui::new()),
+                GuiType::Sdl => panic!(),
             };
 
         /*
@@ -83,7 +81,7 @@ pub struct Opt {
     #[structopt(name = "ROM", parse(from_os_str))]
     pub rom_path: PathBuf,
 
-    #[structopt(short, long, default_value = "sdl")]
+    #[structopt(short, long, default_value = "bevy")]
     pub gui: GuiType,
 
     #[structopt(name = "targetframerate", long, default_value = "ntsc")]
@@ -104,6 +102,7 @@ pub struct Opt {
 #[derive(Debug)]
 pub enum GuiType {
     NoGui,
+    Bevy,
     Sdl,
 }
 
@@ -113,6 +112,7 @@ impl FromStr for GuiType {
     fn from_str(value: &str) -> Result<GuiType, String> {
         match value.to_lowercase().as_str() {
             "nogui" => Ok(GuiType::NoGui),
+            "bevy" => Ok(GuiType::Bevy),
             "sdl" => Ok(GuiType::Sdl),
             _ => Err(format!("Invalid gui type: {}", value)),
         }
