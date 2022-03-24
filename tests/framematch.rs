@@ -10,8 +10,6 @@ use sscanf;
 use walkdir::WalkDir;
 
 use reznez::config::{Config, Opt, GuiType};
-use reznez::gui::gui::Gui;
-use reznez::gui::no_gui::NoGui;
 use reznez::nes::Nes;
 use reznez::ppu::render::frame_rate::TargetFrameRate;
 use reznez::ppu::render::ppm::Ppm;

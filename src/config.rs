@@ -8,10 +8,11 @@ use structopt::StructOpt;
 
 use crate::cartridge::Cartridge;
 use crate::cpu::cpu::ProgramCounterSource;
+use crate::gui::bevy_gui::BevyGui;
 use crate::gui::gui::Gui;
-use crate::gui::no_gui::NoGui;
-use crate::gui::frame_dump_gui::FrameDumpGui;
-use crate::gui::sdl_gui::SdlGui;
+//use crate::gui::no_gui::NoGui;
+//use crate::gui::frame_dump_gui::FrameDumpGui;
+//use crate::gui::sdl_gui::SdlGui;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::render::frame_rate::TargetFrameRate;
@@ -57,15 +58,20 @@ impl Config {
     }
 
     pub fn gui(opt: &Opt) -> Box<dyn Gui> {
-        let mut gui =
+        let gui =
             match opt.gui {
+                /*
                 GuiType::NoGui => Box::new(NoGui::new()) as Box<dyn Gui>,
                 GuiType::Sdl => Box::new(SdlGui::new()),
+                */
+                _ => Box::new(BevyGui::new()),
             };
 
+        /*
         if opt.frame_dump {
             gui = Box::new(FrameDumpGui::new(gui));
         }
+        */
 
         gui
     }
