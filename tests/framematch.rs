@@ -67,7 +67,7 @@ fn framematch() {
             frame_dump: false,
         };
 
-        let nes = Nes::new(Config::new(&opt));
+        let nes = Nes::new(&Config::new(&opt));
         let rom_name = frame_directory.file_stem().unwrap().to_str().unwrap().to_string();
         frame_hash_data.push(FrameHashData {rom_name, nes, frame_hashes});
     }
@@ -76,11 +76,10 @@ fn framematch() {
 
     let mut failed = false;
     for FrameHashData {rom_name, mut nes, frame_hashes} in frame_hash_data {
-        let mut gui = Box::new(NoGui::new()) as Box<dyn Gui>;
         println!("FRAMEMATCH TEST: testing against expected frames for {} .", rom_name);
         let max_frame_index = frame_hashes.keys().last().unwrap();
         for frame_index in 0..=*max_frame_index {
-            nes.step_frame(&mut *gui);
+            nes.step_frame();
             if let Some(expected_hash) = frame_hashes.get(&frame_index) {
                 println!(
                     "\tChecking actual hash vs expected hash for frame {}.",

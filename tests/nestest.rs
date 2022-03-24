@@ -36,7 +36,7 @@ fn nestest() {
     logger::init(Logger {log_cpu: opt.log_cpu}).unwrap();
 
     let config = Config::new(&opt);
-    let mut nes = Nes::new(config);
+    let mut nes = Nes::new(&config);
 
     loop {
         let program_counter = nes.cpu().program_counter();

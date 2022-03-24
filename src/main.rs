@@ -15,18 +15,21 @@ mod memory;
 pub mod nes;
 mod util;
 
+use std::ops::Add;
+use std::time::{Duration, SystemTime};
+
 use bevy::prelude::*;
 use bevy_pixels::prelude::*;
 use structopt::StructOpt;
 
 use crate::config::{Config, Opt};
+use crate::gui::gui::Events;
 use crate::nes::Nes;
 use crate::util::logger;
 use crate::util::logger::Logger;
+use crate::ppu::render::frame_rate::TargetFrameRate;
 
 use crate::ppu::pixel_index::PixelIndex;
-
-use crate::gui::no_gui::NoGui;
 
 /*
 fn main() {
@@ -46,7 +49,7 @@ fn main() {
     let opt = Opt::from_args();
     logger::init(Logger {log_cpu: opt.log_cpu}).unwrap();
     let config = Config::new(&opt);
-    let nes = Nes::new(config);
+    let nes = Nes::new(&config);
     let pixels = [0; 3 * PixelIndex::PIXEL_COUNT];
 
     App::new()
@@ -54,6 +57,7 @@ fn main() {
             width: 256,
             height: 240,
         })
+        .insert_non_send_resource(config)
         .insert_non_send_resource(nes)
         .insert_resource(pixels)
         // Default plugins, minus logging.
@@ -73,9 +77,10 @@ fn main() {
 
 fn main_system(
     mut nes: NonSendMut<Nes>,
+    config: NonSend<Config>,
     mut pixels: ResMut<PixelsResource>,
 ) {
-    nes.step_frame(&mut NoGui::new());
+    step_frame(&mut nes, config);
 
     let mask = nes.memory_mut().as_ppu_memory().regs().mask;
 
@@ -95,5 +100,47 @@ fn main_system(
             frame[i] = 0xFF;
             i += 1;
         }
+    }
+}
+
+fn step_frame(nes: &mut NonSendMut<Nes>, config: NonSend<Config>) {
+    let frame_index = nes.ppu().clock().frame();
+    let start_time = SystemTime::now();
+    let target_frame_rate: TargetFrameRate = config.target_frame_rate;
+    let intended_frame_end_time = start_time.add(frame_duration(target_frame_rate));
+
+    let events = Events::none();
+    nes.process_gui_events(&events);
+    nes.step_frame();
+
+    end_frame(frame_index, start_time, intended_frame_end_time);
+    if events.should_quit || Some(frame_index) == config.stop_frame {
+        std::process::exit(0);
+    }
+}
+
+#[inline]
+fn end_frame(frame_index: u64, start_time: SystemTime, intended_frame_end_time: SystemTime) {
+    let end_time = SystemTime::now();
+    if let Ok(duration) = intended_frame_end_time.duration_since(end_time) {
+        std::thread::sleep(duration);
+    }
+
+    let end_time = SystemTime::now();
+    if let Ok(duration) = end_time.duration_since(start_time) {
+        info!(
+            "Frame {} rendered. Framerate: {}",
+            frame_index,
+            1_000_000_000.0 / duration.as_nanos() as f64,
+        );
+    } else {
+        warn!("Unknown framerate. System clock went backwards.");
+    }
+}
+
+fn frame_duration(target_frame_rate: TargetFrameRate) -> Duration {
+    match target_frame_rate {
+        TargetFrameRate::Value(frame_rate) => frame_rate.to_frame_duration(),
+        TargetFrameRate::Unbounded => Duration::ZERO,
     }
 }

@@ -1,16 +1,14 @@
 use std::cell::RefCell;
-use std::ops::Add;
 use std::rc::Rc;
-use std::time::{Duration, SystemTime};
 
-use log::{info, warn, log_enabled};
+use log::{info, log_enabled};
 use log::Level::Info;
 
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::Cpu;
 use crate::cpu::instruction::{Instruction, Argument, AccessMode};
-use crate::gui::gui::{Gui, Events};
+use crate::gui::gui::Events;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::memory::Memory;
 use crate::memory::mapper::Mapper;
@@ -18,7 +16,6 @@ use crate::memory::mappers::mapper0::Mapper0;
 use crate::memory::mappers::mapper1::Mapper1;
 use crate::memory::mappers::mapper3::Mapper3;
 use crate::ppu::ppu::Ppu;
-use crate::ppu::render::frame_rate::TargetFrameRate;
 
 pub struct Nes {
     cpu: Cpu,
@@ -29,12 +26,10 @@ pub struct Nes {
     joypad2: Rc<RefCell<Joypad>>,
     cycle: u64,
 
-    target_frame_rate: TargetFrameRate,
-    stop_frame: Option<u64>,
 }
 
 impl Nes {
-    pub fn new(config: Config) -> Nes {
+    pub fn new(config: &Config) -> Nes {
         let mapper =
             match config.cartridge.mapper_number() {
                 0 => Box::new(Mapper0::new(&config.cartridge).unwrap()) as Box<dyn Mapper>,
@@ -46,7 +41,7 @@ impl Nes {
         let joypad1 = Rc::new(RefCell::new(Joypad::new()));
         let joypad2 = Rc::new(RefCell::new(Joypad::new()));
         let ports = Ports::new(joypad1.clone(), joypad2.clone());
-        let mut memory = Memory::new(mapper, ports, config.system_palette);
+        let mut memory = Memory::new(mapper, ports, config.system_palette.clone());
 
         Nes {
             cpu: Cpu::new(&mut memory.as_cpu_memory(), config.program_counter_source),
@@ -56,9 +51,6 @@ impl Nes {
             joypad1,
             joypad2,
             cycle: 0,
-
-            target_frame_rate: config.target_frame_rate,
-            stop_frame: config.stop_frame,
         }
     }
 
@@ -82,25 +74,12 @@ impl Nes {
         self.memory.stack_pointer()
     }
 
-    pub fn step_frame(&mut self, gui: &mut dyn Gui) {
-        let frame_index = self.ppu().clock().frame();
-        let start_time = SystemTime::now();
-        let intended_frame_end_time = start_time.add(self.frame_duration());
-
-        let events = self.process_gui_events(gui);
-
+    pub fn step_frame(&mut self) {
         loop {
             let step_result = self.step();
             if step_result.is_last_cycle_of_frame {
                 break;
             }
-        }
-
-        gui.display_frame(self.ppu.frame(), self.memory.as_ppu_memory().regs().mask, frame_index);
-
-        Nes::end_frame(frame_index, start_time, intended_frame_end_time);
-        if events.should_quit || Some(frame_index) == self.stop_frame {
-            std::process::exit(0);
         }
     }
 
@@ -130,36 +109,13 @@ impl Nes {
     }
 
     #[inline]
-    fn process_gui_events(&mut self, gui: &mut dyn Gui) -> Events {
-        let events = gui.events();
-
+    pub fn process_gui_events(&mut self, events: &Events) {
         for (button, status) in &events.joypad1_button_statuses {
             self.joypad1.borrow_mut().set_button_status(*button, *status);
         }
 
         for (button, status) in &events.joypad2_button_statuses {
             self.joypad2.borrow_mut().set_button_status(*button, *status);
-        }
-
-        events
-    }
-
-    #[inline]
-    fn end_frame(frame_index: u64, start_time: SystemTime, intended_frame_end_time: SystemTime) {
-        let end_time = SystemTime::now();
-        if let Ok(duration) = intended_frame_end_time.duration_since(end_time) {
-            std::thread::sleep(duration);
-        }
-
-        let end_time = SystemTime::now();
-        if let Ok(duration) = end_time.duration_since(start_time) {
-            info!(
-                "Frame {} rendered. Framerate: {}",
-                frame_index,
-                1_000_000_000.0 / duration.as_nanos() as f64,
-            );
-        } else {
-            warn!("Unknown framerate. System clock went backwards.");
         }
     }
 
@@ -217,13 +173,6 @@ impl Nes {
             self.cpu.cycle(),
         );
     }
-
-    fn frame_duration(&self) -> Duration {
-        match self.target_frame_rate {
-            TargetFrameRate::Value(frame_rate) => frame_rate.to_frame_duration(),
-            TargetFrameRate::Unbounded => Duration::ZERO,
-        }
-    }
 }
 
 pub struct StepResult {
@@ -239,7 +188,6 @@ mod tests {
     use crate::memory::memory::Memory;
     use crate::ppu::palette::system_palette;
     use crate::ppu::register::registers::ctrl::Ctrl;
-    use crate::ppu::render::frame_rate::TargetFrameRate;
 
     use crate::cartridge::test_data;
 
@@ -320,9 +268,6 @@ mod tests {
             joypad1,
             joypad2,
             cycle: 0,
-
-            target_frame_rate: TargetFrameRate::Unbounded,
-            stop_frame: None,
         }
     }
 

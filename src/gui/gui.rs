@@ -14,3 +14,13 @@ pub struct Events {
     pub joypad1_button_statuses: BTreeMap<Button, ButtonStatus>,
     pub joypad2_button_statuses: BTreeMap<Button, ButtonStatus>,
 }
+
+impl Events {
+    pub fn none() -> Events {
+        Events {
+            should_quit: false,
+            joypad1_button_statuses: BTreeMap::new(),
+            joypad2_button_statuses: BTreeMap::new(),
+        }
+    }
+}
