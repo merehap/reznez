@@ -59,13 +59,18 @@ fn dump_frame(frame: &Frame, mask: Mask, frame_index: u64) {
 
 #[inline]
 fn end_frame(frame_index: u64, start_time: SystemTime, intended_frame_end_time: SystemTime) {
-    let end_time = SystemTime::now();
-    if let Ok(duration) = intended_frame_end_time.duration_since(end_time) {
-        std::thread::sleep(duration);
+    let mut current_time;
+    loop {
+        current_time = SystemTime::now();
+        if intended_frame_end_time.duration_since(current_time).is_ok() {
+            break;
+        }
+
+        // TODO: We can get more accurate by skipping the yield_now when we get close.
+        std::thread::yield_now();
     }
 
-    let end_time = SystemTime::now();
-    if let Ok(duration) = end_time.duration_since(start_time) {
+    if let Ok(duration) = current_time.duration_since(start_time) {
         info!(
             "Frame {} rendered. Framerate: {}",
             frame_index,
