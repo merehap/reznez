@@ -4,19 +4,17 @@ use std::collections::HashMap;
 use lazy_static::lazy_static;
 use sdl2::EventPump;
 use sdl2::event::Event;
-//use sdl2::gfx::framerate::FPSManager;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
 
+use crate::config::Config;
 use crate::ppu::pixel_index::{PixelIndex, PixelColumn, PixelRow};
 use crate::controller::joypad::{Button, ButtonStatus};
-use crate::gui::gui::{Gui, Events};
-use crate::ppu::register::registers::mask::Mask;
+use crate::gui::gui::{execute_frame, Gui, Events};
+use crate::nes::Nes;
 use crate::ppu::render::frame::Frame;
-
-//const DEBUG_SCREEN_HEIGHT: usize = 20;
 
 lazy_static! {
     static ref JOY_1_BUTTON_MAPPINGS: HashMap<Keycode, Button> = {
@@ -72,12 +70,6 @@ impl SdlGui {
             .create_texture_target(PixelFormatEnum::RGB24, PixelColumn::COLUMN_COUNT as u32, PixelRow::ROW_COUNT as u32)
             .unwrap();
 
-        /*
-        let palette_screen =
-            DebugScreen::<{Screen::WIDTH}, DEBUG_SCREEN_HEIGHT>::new(Rgb::WHITE);
-            */
-        // TODO: Figure out how to enable this. Currently get a linking error for feature gfx.
-        //FPSManager::new().set_framerate(100_000);
         SdlGui {
             event_pump: sdl_context.event_pump().unwrap(),
 
@@ -86,9 +78,7 @@ impl SdlGui {
             pixels: [0; 3 * PixelIndex::PIXEL_COUNT],
         }
     }
-}
 
-impl Gui for SdlGui {
     #[inline]
     fn events(&mut self) -> Events {
         let mut should_quit = false;
@@ -130,45 +120,19 @@ impl Gui for SdlGui {
             joypad2_button_statuses,
         }
     }
+}
 
-    fn display_frame(&mut self, frame: &Frame, mask: Mask, _frame_index: u64) {
-        self.pixels = frame.write_all_pixel_data(mask, self.pixels);
-
-        /*
-        let palette_table = nes.ppu().palette_table();
-
-        let mut add_palettes_to_screen =
-            |palettes: [Palette; 4], vertical_offset: usize| -> () {
-                for (index, palette) in palettes.iter().enumerate() {
-                    for (color_column, rgb) in palette.rgbs().iter().enumerate() {
-                        for pixel_column in 0..8 {
-                            let pixel_column = 40 * index as usize + 10 * color_column + pixel_column;
-                            for pixel_row in 0..8 {
-                                let pixel_row = pixel_row + vertical_offset;
-                                palette_screen.set_pixel(pixel_column, pixel_row, *rgb);
-                            }
-                        }
-                    }
-                }
+impl Gui for SdlGui {
+    fn run(&mut self, mut nes: Nes, config: Config) {
+        loop {
+            let events = self.events();
+            let display_frame = |frame: &Frame, mask, _frame_index| {
+                self.pixels = frame.write_all_pixel_data(mask, self.pixels);
+                self.texture.update(None, &self.pixels, 256 * 3).unwrap();
+                self.canvas.copy(&self.texture, None, None).unwrap();
+                self.canvas.present();
             };
-            */
-
-        //add_palettes_to_screen(palette_table.background_palettes(), 0);
-        //add_palettes_to_screen(palette_table.sprite_palettes(), 10);
-
-        /*
-        for row in 0..palette_screen.height() {
-            for column in 0..palette_screen.width() {
-                let pixel = palette_screen.pixel(column, row);
-                set_next_pixel(pixel);
-            }
+            execute_frame(&mut nes, &config, events, display_frame);
         }
-        */
-
-        self.texture.update(None, &self.pixels, 256 * 3).unwrap();
-
-        self.canvas.copy(&self.texture, None, None).unwrap();
-
-        self.canvas.present();
     }
 }
