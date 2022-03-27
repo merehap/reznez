@@ -11,7 +11,7 @@ use crate::cpu::cpu::ProgramCounterSource;
 use crate::gui::bevy_gui::BevyGui;
 use crate::gui::gui::Gui;
 use crate::gui::no_gui::NoGui;
-//use crate::gui::frame_dump_gui::FrameDumpGui;
+use crate::gui::egui_gui::EguiGui;
 use crate::gui::sdl_gui::SdlGui;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::ppu::palette::system_palette::SystemPalette;
@@ -63,6 +63,7 @@ impl Config {
         match opt.gui {
             GuiType::NoGui => Box::new(NoGui::new()) as Box<dyn Gui>,
             GuiType::Bevy => Box::new(BevyGui::new()),
+            GuiType::Egui => Box::new(EguiGui::new()),
             GuiType::Sdl => Box::new(SdlGui::new()),
         }
     }
@@ -74,7 +75,7 @@ pub struct Opt {
     #[structopt(name = "ROM", parse(from_os_str))]
     pub rom_path: PathBuf,
 
-    #[structopt(short, long, default_value = "bevy")]
+    #[structopt(short, long, default_value = "egui")]
     pub gui: GuiType,
 
     #[structopt(name = "targetframerate", long, default_value = "ntsc")]
@@ -96,6 +97,7 @@ pub struct Opt {
 pub enum GuiType {
     NoGui,
     Bevy,
+    Egui,
     Sdl,
 }
 
@@ -106,6 +108,7 @@ impl FromStr for GuiType {
         match value.to_lowercase().as_str() {
             "nogui" => Ok(GuiType::NoGui),
             "bevy" => Ok(GuiType::Bevy),
+            "egui" => Ok(GuiType::Egui),
             "sdl" => Ok(GuiType::Sdl),
             _ => Err(format!("Invalid gui type: {}", value)),
         }

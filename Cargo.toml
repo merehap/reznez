@@ -21,6 +21,15 @@ walkdir = "2.3.2"
 bevy = { version = "0.6.1", default_features = false}
 bevy_pixels = "0.4"
 
+egui = "0.17"
+egui_wgpu_backend = "0.17"
+egui-winit = { version = "0.17", default-features = false, features = ["links"] }
+
+pixels = "0.9"
+
+winit = "0.26"
+winit_input_helper = "0.11"
+
 [profile.release]
 debug = true
 
