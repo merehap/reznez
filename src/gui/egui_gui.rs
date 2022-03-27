@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use log::error;
 use pixels::{Pixels, SurfaceTexture};
@@ -10,46 +10,44 @@ use winit_input_helper::WinitInputHelper;
 
 use egui::{ClippedMesh, Context, TexturesDelta};
 use egui_wgpu_backend::{BackendError, RenderPass, ScreenDescriptor};
+use lazy_static::lazy_static;
 use pixels::{wgpu, PixelsContext};
 use winit::window::Window;
 
 use crate::config::Config;
+use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::gui::{execute_frame, Gui, Events};
 use crate::nes::Nes;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 
-/*
-use std::collections::{BTreeMap, HashMap};
-use lazy_static::lazy_static;
 lazy_static! {
-    static ref JOY_1_BUTTON_MAPPINGS: HashMap<KeyCode, Button> = {
+    static ref JOY_1_BUTTON_MAPPINGS: HashMap<VirtualKeyCode, Button> = {
         let mut mappings = HashMap::new();
-        mappings.insert(KeyCode::Space,  Button::A);
-        mappings.insert(KeyCode::F,      Button::B);
-        mappings.insert(KeyCode::RShift, Button::Select);
-        mappings.insert(KeyCode::Return, Button::Start);
-        mappings.insert(KeyCode::Up,     Button::Up);
-        mappings.insert(KeyCode::Down,   Button::Down);
-        mappings.insert(KeyCode::Left,   Button::Left);
-        mappings.insert(KeyCode::Right,  Button::Right);
+        mappings.insert(VirtualKeyCode::Space,  Button::A);
+        mappings.insert(VirtualKeyCode::F,      Button::B);
+        mappings.insert(VirtualKeyCode::RShift, Button::Select);
+        mappings.insert(VirtualKeyCode::Return, Button::Start);
+        mappings.insert(VirtualKeyCode::Up,     Button::Up);
+        mappings.insert(VirtualKeyCode::Down,   Button::Down);
+        mappings.insert(VirtualKeyCode::Left,   Button::Left);
+        mappings.insert(VirtualKeyCode::Right,  Button::Right);
         mappings
     };
 
-    static ref JOY_2_BUTTON_MAPPINGS: HashMap<KeyCode, Button> = {
+    static ref JOY_2_BUTTON_MAPPINGS: HashMap<VirtualKeyCode, Button> = {
         let mut mappings = HashMap::new();
-        mappings.insert(KeyCode::Numpad0,        Button::A);
-        mappings.insert(KeyCode::NumpadEnter,    Button::B);
-        mappings.insert(KeyCode::NumpadSubtract, Button::Select);
-        mappings.insert(KeyCode::NumpadAdd,      Button::Start);
-        mappings.insert(KeyCode::Numpad8,        Button::Up);
-        mappings.insert(KeyCode::Numpad5,        Button::Down);
-        mappings.insert(KeyCode::Numpad4,        Button::Left);
-        mappings.insert(KeyCode::Numpad6,        Button::Right);
+        mappings.insert(VirtualKeyCode::Numpad0,        Button::A);
+        mappings.insert(VirtualKeyCode::NumpadEnter,    Button::B);
+        mappings.insert(VirtualKeyCode::NumpadSubtract, Button::Select);
+        mappings.insert(VirtualKeyCode::NumpadAdd,      Button::Start);
+        mappings.insert(VirtualKeyCode::Numpad8,        Button::Up);
+        mappings.insert(VirtualKeyCode::Numpad5,        Button::Down);
+        mappings.insert(VirtualKeyCode::Numpad4,        Button::Left);
+        mappings.insert(VirtualKeyCode::Numpad6,        Button::Right);
         mappings
     };
 }
-*/
 
 pub struct EguiGui;
 
@@ -93,15 +91,12 @@ impl Gui for EguiGui {
         };
 
         event_loop.run(move |event, _, control_flow| {
-            // Handle input events
             if input.update(&event) {
-                // Close events
                 if input.key_pressed(VirtualKeyCode::Escape) || input.quit() {
                     *control_flow = ControlFlow::Exit;
                     return;
                 }
 
-                // Update internal state and request a redraw
                 window.request_redraw();
             }
 
@@ -110,7 +105,7 @@ impl Gui for EguiGui {
                     egui.handle_event(&event);
                 }
                 Event::RedrawRequested(_) => {
-                    let events = events();
+                    let events = events(&input);
                     let display_frame = |frame: &Frame, mask, _frame_index| {
                         frame.copy_to_rgba_buffer(mask, pixels.get_frame().try_into().unwrap());
                     };
@@ -136,11 +131,28 @@ impl Gui for EguiGui {
     }
 }
 
-fn events() -> Events {
-    let joypad1_button_statuses = BTreeMap::new();
-    let joypad2_button_statuses = BTreeMap::new();
+fn events(input: &WinitInputHelper) -> Events {
+    let mut joypad1_button_statuses = BTreeMap::new();
+    let mut joypad2_button_statuses = BTreeMap::new();
+
+    for (&key, &button) in JOY_1_BUTTON_MAPPINGS.iter() {
+        if input.key_pressed(key) {
+            joypad1_button_statuses.insert(button, ButtonStatus::Pressed);
+        } else if input.key_released(key) {
+            joypad1_button_statuses.insert(button, ButtonStatus::Unpressed);
+        };
+    }
+
+    for (&key, &button) in JOY_2_BUTTON_MAPPINGS.iter() {
+        if input.key_pressed(key) {
+            joypad2_button_statuses.insert(button, ButtonStatus::Pressed);
+        } else if input.key_released(key) {
+            joypad2_button_statuses.insert(button, ButtonStatus::Unpressed);
+        };
+    }
 
     Events {
+        // Quit-handling is done by winit.
         should_quit: false,
         joypad1_button_statuses,
         joypad2_button_statuses,
@@ -149,7 +161,6 @@ fn events() -> Events {
 
 /// Manages all state required for rendering egui over `Pixels`.
 struct Egui {
-    // State for egui.
     egui_ctx: Context,
     egui_state: egui_winit::State,
     screen_descriptor: ScreenDescriptor,
@@ -159,12 +170,6 @@ struct Egui {
 
     // State for the GUI
     gui: App,
-}
-
-/// Example application state. A real application will need a lot more state than this.
-struct App {
-    /// Only show the egui window when true.
-    window_open: bool,
 }
 
 impl Egui {
@@ -239,6 +244,11 @@ impl Egui {
         let textures = std::mem::take(&mut self.textures);
         self.rpass.remove_textures(textures)
     }
+}
+
+struct App {
+    /// Only show the egui window when true.
+    window_open: bool,
 }
 
 impl App {
