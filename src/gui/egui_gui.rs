@@ -21,6 +21,8 @@ use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::render::frame::{Frame, DebugBuffer};
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 
+const TOP_MENU_BAR_HEIGHT: usize = 24;
+
 lazy_static! {
     static ref JOY_1_BUTTON_MAPPINGS: HashMap<VirtualKeyCode, Button> = {
         let mut mappings = HashMap::new();
@@ -74,7 +76,7 @@ impl Gui for EguiGui {
         let name_table_window = EguiWindow::from_event_loop(
             &event_loop,
             517,
-            485,
+            485 + TOP_MENU_BAR_HEIGHT,
             1,
             "Name Tables",
             Box::new(NameTablePreRender::new()),
@@ -289,7 +291,7 @@ impl PreRender for PrimaryPreRender {
 
 struct NameTablePreRender {
     frame: Frame,
-    buffer: DebugBuffer<517, 485>,
+    buffer: DebugBuffer<517, {485 + TOP_MENU_BAR_HEIGHT}>,
 }
 
 impl NameTablePreRender {
@@ -310,16 +312,16 @@ impl PreRender for NameTablePreRender {
 
         mem.name_table(NameTableNumber::Zero)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
-        self.buffer.place_frame(0, 0, &self.frame);
+        self.buffer.place_frame(0, TOP_MENU_BAR_HEIGHT, &self.frame);
         mem.name_table(NameTableNumber::One)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
-        self.buffer.place_frame(261, 0, &self.frame);
+        self.buffer.place_frame(261, TOP_MENU_BAR_HEIGHT, &self.frame);
         mem.name_table(NameTableNumber::Two)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
-        self.buffer.place_frame(0, 245, &self.frame);
+        self.buffer.place_frame(0, 245 + TOP_MENU_BAR_HEIGHT, &self.frame);
         mem.name_table(NameTableNumber::Three)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
-        self.buffer.place_frame(261, 245, &self.frame);
+        self.buffer.place_frame(261, 245 + TOP_MENU_BAR_HEIGHT, &self.frame);
         self.buffer.copy_to_rgba_buffer(pixels.get_frame().try_into().unwrap());
     }
 }
