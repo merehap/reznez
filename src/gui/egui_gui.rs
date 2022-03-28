@@ -17,8 +17,10 @@ use crate::config::Config;
 use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::gui::{execute_frame, Gui, Events};
 use crate::nes::Nes;
-use crate::ppu::render::frame::Frame;
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
+use crate::ppu::register::registers::mask::Mask;
+use crate::ppu::render::frame::Frame;
+use crate::ppu::name_table::name_table_number::NameTableNumber;
 
 lazy_static! {
     static ref JOY_1_BUTTON_MAPPINGS: HashMap<VirtualKeyCode, Button> = {
@@ -70,9 +72,18 @@ impl Gui for EguiGui {
             "REZNEZ",
             Box::new(PrimaryPreRender),
         );
+        let name_table_window = EguiWindow::from_event_loop(
+            &event_loop,
+            PixelColumn::COLUMN_COUNT,
+            PixelRow::ROW_COUNT,
+            2,
+            "Name Tables",
+            Box::new(NameTablePreRender::new()),
+        );
 
         let mut windows = BTreeMap::new();
         windows.insert(primary_window.window.id(), primary_window);
+        windows.insert(name_table_window.window.id(), name_table_window);
 
         event_loop.run(move |event, _, control_flow| {
             if world.input.update(&event) {
@@ -263,17 +274,40 @@ struct World {
 }
 
 trait PreRender {
-    fn pre_render(&self, world: &mut World, pixels: &mut Pixels);
+    fn pre_render(&mut self, world: &mut World, pixels: &mut Pixels);
 }
 
 struct PrimaryPreRender;
 
 impl PreRender for PrimaryPreRender {
-    fn pre_render(&self, world: &mut World, pixels: &mut Pixels) {
+    fn pre_render(&mut self, world: &mut World, pixels: &mut Pixels) {
         let display_frame = |frame: &Frame, mask, _frame_index| {
             frame.copy_to_rgba_buffer(mask, pixels.get_frame().try_into().unwrap());
         };
         execute_frame(&mut world.nes, &world.config, events(&world.input), display_frame);
+    }
+}
+
+struct NameTablePreRender {
+    frame: Frame,
+}
+
+impl NameTablePreRender {
+    fn new() -> NameTablePreRender {
+        NameTablePreRender {frame: Frame::new()}
+    }
+}
+
+impl PreRender for NameTablePreRender {
+    fn pre_render(&mut self, world: &mut World, pixels: &mut Pixels) {
+        let mem = world
+            .nes
+            .memory_mut()
+            .as_ppu_memory();
+
+        mem.name_table(NameTableNumber::Zero)
+            .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
+        self.frame.copy_to_rgba_buffer(Mask::new(), pixels.get_frame().try_into().unwrap());
     }
 }
 

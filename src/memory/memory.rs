@@ -148,6 +148,16 @@ impl <'a> PpuMemory<'a> {
     }
 
     #[inline]
+    pub fn background_pattern_table(&self) -> PatternTable {
+        PatternTable::new(self.memory.mapper.raw_pattern_table(self.regs().background_table_side()))
+    }
+
+    #[inline]
+    pub fn sprite_pattern_table(&self) -> PatternTable {
+        PatternTable::new(self.memory.mapper.raw_pattern_table(self.regs().sprite_table_side()))
+    }
+
+    #[inline]
     pub fn name_table(&self, number: NameTableNumber) -> NameTable {
         NameTable::new(self.memory.mapper.raw_name_table(&self.memory.ppu_internal_ram, number))
     }

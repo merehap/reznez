@@ -48,11 +48,11 @@ impl PpuRegisters {
         self.ctrl.sprite_height
     }
 
-    pub(in crate::ppu) fn background_table_side(&self) -> PatternTableSide {
+    pub fn background_table_side(&self) -> PatternTableSide {
         self.ctrl.background_table_side
     }
 
-    pub(in crate::ppu) fn sprite_table_side(&self) -> PatternTableSide {
+    pub fn sprite_table_side(&self) -> PatternTableSide {
         self.ctrl.sprite_table_side
     }
 
