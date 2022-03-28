@@ -7,7 +7,6 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
-
 use egui::{ClippedMesh, Context, TexturesDelta};
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
 use lazy_static::lazy_static;
@@ -17,9 +16,9 @@ use crate::config::Config;
 use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::gui::{execute_frame, Gui, Events};
 use crate::nes::Nes;
+use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
-use crate::ppu::register::registers::mask::Mask;
-use crate::ppu::render::frame::Frame;
+use crate::ppu::render::frame::{Frame, DebugBuffer};
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 
 lazy_static! {
@@ -290,11 +289,15 @@ impl PreRender for PrimaryPreRender {
 
 struct NameTablePreRender {
     frame: Frame,
+    buffer: DebugBuffer<256, 240>,
 }
 
 impl NameTablePreRender {
     fn new() -> NameTablePreRender {
-        NameTablePreRender {frame: Frame::new()}
+        NameTablePreRender {
+            frame: Frame::new(),
+            buffer: DebugBuffer::filled(Rgb::WHITE),
+        }
     }
 }
 
@@ -307,7 +310,8 @@ impl PreRender for NameTablePreRender {
 
         mem.name_table(NameTableNumber::Zero)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
-        self.frame.copy_to_rgba_buffer(Mask::new(), pixels.get_frame().try_into().unwrap());
+        self.buffer.place_frame(0, 0, &self.frame);
+        self.buffer.copy_to_rgba_buffer(pixels.get_frame().try_into().unwrap());
     }
 }
 

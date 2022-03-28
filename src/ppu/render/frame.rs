@@ -130,11 +130,6 @@ impl Frame {
             let (pixel, _) = self.pixel(mask, column, row);
 
             let index = 4 * pixel_index.to_usize();
-            // FIXME: Remove this.
-            if index >= buffer.len() {
-                return;
-            }
-
             buffer[index]     = pixel.red();
             buffer[index + 1] = pixel.green();
             buffer[index + 2] = pixel.blue();
@@ -181,5 +176,50 @@ impl <T> Index<(PixelColumn, PixelRow)> for FrameBuffer<T> {
 impl <T> IndexMut<(PixelColumn, PixelRow)> for FrameBuffer<T> {
     fn index_mut(&mut self, (column, row): (PixelColumn, PixelRow)) -> &mut T {
         &mut self.0[row.to_usize()][column.to_usize()]
+    }
+}
+
+pub struct DebugBuffer<const WIDTH: usize, const HEIGHT: usize>(Box<[[Rgb; WIDTH]; HEIGHT]>);
+
+impl <const WIDTH: usize, const HEIGHT: usize> DebugBuffer<WIDTH, HEIGHT> {
+    pub fn filled(value: Rgb) -> DebugBuffer<WIDTH, HEIGHT> {
+        DebugBuffer(Box::new([[value; WIDTH]; HEIGHT]))
+    }
+
+    pub fn place_frame(&mut self, left_column: usize, top_row: usize, frame: &Frame) {
+        let mask = Mask::new();
+        for pixel_index in PixelIndex::iter() {
+            let (column, row) = pixel_index.to_column_row();
+            let (pixel, _) = frame.pixel(mask, column, row);
+            self[(left_column + column.to_usize(), top_row + row.to_usize())] = pixel;
+        }
+    }
+
+    pub fn copy_to_rgba_buffer(&self, buffer: &mut [u8]) {
+        for row in 0..HEIGHT {
+            for column in 0..WIDTH {
+                let index = 4 * (WIDTH * row + column);
+                let pixel = self[(column, row)];
+                buffer[index]     = pixel.red();
+                buffer[index + 1] = pixel.green();
+                buffer[index + 2] = pixel.blue();
+                // No transparency.
+                buffer[index + 3] = 0xFF;
+            }
+        }
+    }
+}
+
+impl <const WIDTH: usize, const HEIGHT: usize> Index<(usize, usize)> for DebugBuffer<WIDTH, HEIGHT> {
+    type Output = Rgb;
+
+    fn index(&self, (column, row): (usize, usize)) -> &Rgb {
+        &self.0[row][column]
+    }
+}
+
+impl <const WIDTH: usize, const HEIGHT: usize> IndexMut<(usize, usize)> for DebugBuffer<WIDTH, HEIGHT> {
+    fn index_mut(&mut self, (column, row): (usize, usize)) -> &mut Rgb {
+        &mut self.0[row][column]
     }
 }
