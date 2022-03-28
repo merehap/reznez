@@ -27,7 +27,7 @@ impl PpuRegisters {
     pub fn new() -> PpuRegisters {
         PpuRegisters {
             ctrl: Ctrl::new(),
-            mask: Mask::new(),
+            mask: Mask::all_disabled(),
             status: Status::new(),
             oam_addr: 0,
             oam_data: 0,

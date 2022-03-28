@@ -13,7 +13,7 @@ pub struct Mask {
 }
 
 impl Mask {
-    pub fn new() -> Mask {
+    pub fn all_disabled() -> Mask {
         Mask {
             emphasize_blue: false,
             emphasize_green: false,
@@ -24,6 +24,13 @@ impl Mask {
             left_background_columns_enabled: false,
             greyscale_enabled: false,
         }
+    }
+
+    pub fn full_screen_enabled() -> Mask {
+        let mut mask = Mask::all_disabled();
+        mask.left_sprite_columns_enabled = true;
+        mask.left_background_columns_enabled = true;
+        mask
     }
 
     pub fn from_u8(value: u8) -> Mask {

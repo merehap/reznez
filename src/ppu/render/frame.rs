@@ -187,7 +187,7 @@ impl <const WIDTH: usize, const HEIGHT: usize> DebugBuffer<WIDTH, HEIGHT> {
     }
 
     pub fn place_frame(&mut self, left_column: usize, top_row: usize, frame: &Frame) {
-        let mask = Mask::new();
+        let mask = Mask::full_screen_enabled();
         for pixel_index in PixelIndex::iter() {
             let (column, row) = pixel_index.to_column_row();
             let (pixel, _) = frame.pixel(mask, column, row);
