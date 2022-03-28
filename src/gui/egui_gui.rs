@@ -73,9 +73,9 @@ impl Gui for EguiGui {
         );
         let name_table_window = EguiWindow::from_event_loop(
             &event_loop,
-            PixelColumn::COLUMN_COUNT,
-            PixelRow::ROW_COUNT,
-            2,
+            600,
+            500,
+            1,
             "Name Tables",
             Box::new(NameTablePreRender::new()),
         );
@@ -289,7 +289,7 @@ impl PreRender for PrimaryPreRender {
 
 struct NameTablePreRender {
     frame: Frame,
-    buffer: DebugBuffer<256, 240>,
+    buffer: DebugBuffer<600, 500>,
 }
 
 impl NameTablePreRender {
@@ -311,6 +311,15 @@ impl PreRender for NameTablePreRender {
         mem.name_table(NameTableNumber::Zero)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(0, 0, &self.frame);
+        mem.name_table(NameTableNumber::One)
+            .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
+        self.buffer.place_frame(300, 0, &self.frame);
+        mem.name_table(NameTableNumber::Two)
+            .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
+        self.buffer.place_frame(0, 250, &self.frame);
+        mem.name_table(NameTableNumber::Three)
+            .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
+        self.buffer.place_frame(300, 250, &self.frame);
         self.buffer.copy_to_rgba_buffer(pixels.get_frame().try_into().unwrap());
     }
 }
