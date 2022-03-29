@@ -317,6 +317,7 @@ impl PreRender for NameTablePreRender {
             .memory_mut()
             .as_ppu_memory();
 
+        self.frame.set_universal_background_rgb(mem.palette_table().universal_background_rgb());
         mem.name_table(NameTableNumber::Zero)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(0, TOP_MENU_BAR_HEIGHT, &self.frame);
