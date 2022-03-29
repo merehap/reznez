@@ -67,16 +67,12 @@ impl Gui for EguiGui {
         let event_loop = EventLoop::new();
         let primary_window = EguiWindow::from_event_loop(
             &event_loop,
-            PixelColumn::COLUMN_COUNT,
-            PixelRow::ROW_COUNT,
             3,
             "REZNEZ",
             Box::new(PrimaryPreRender),
         );
         let name_table_window = EguiWindow::from_event_loop(
             &event_loop,
-            517,
-            485 + TOP_MENU_BAR_HEIGHT,
             1,
             "Name Tables",
             Box::new(NameTablePreRender::new()),
@@ -138,16 +134,14 @@ struct EguiWindow {
 impl EguiWindow {
     fn from_event_loop(
         event_loop: &EventLoop<()>,
-        width: usize,
-        height: usize,
         scale_factor: u64,
         title: &str,
         pre_render: Box<dyn PreRender>,
     ) -> Self {
         let window = {
             let size = LogicalSize::new(
-                scale_factor as f64 * width as f64,
-                scale_factor as f64 * height as f64,
+                scale_factor as f64 * pre_render.width() as f64,
+                scale_factor as f64 * pre_render.height() as f64,
             );
             WindowBuilder::new()
                 .with_title(title)
@@ -162,8 +156,8 @@ impl EguiWindow {
         let scale_factor = window.scale_factor() as f32;
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
         let pixels = Pixels::new(
-            width as u32,
-            height as u32,
+            pre_render.width() as u32,
+            pre_render.height() as u32,
             surface_texture,
         ).unwrap();
 
@@ -276,6 +270,8 @@ struct World {
 
 trait PreRender {
     fn pre_render(&mut self, world: &mut World, pixels: &mut Pixels);
+    fn width(&self) -> usize;
+    fn height(&self) -> usize;
 }
 
 struct PrimaryPreRender;
@@ -287,14 +283,25 @@ impl PreRender for PrimaryPreRender {
         };
         execute_frame(&mut world.nes, &world.config, events(&world.input), display_frame);
     }
+
+    fn width(&self) -> usize {
+        PixelColumn::COLUMN_COUNT
+    }
+
+    fn height(&self) -> usize {
+        PixelRow::ROW_COUNT
+    }
 }
 
 struct NameTablePreRender {
     frame: Frame,
-    buffer: DebugBuffer<517, {485 + TOP_MENU_BAR_HEIGHT}>,
+    buffer: DebugBuffer<{NameTablePreRender::WIDTH}, {NameTablePreRender::HEIGHT}>,
 }
 
 impl NameTablePreRender {
+    const WIDTH: usize = 517;
+    const HEIGHT: usize = 485 + TOP_MENU_BAR_HEIGHT;
+
     fn new() -> NameTablePreRender {
         NameTablePreRender {
             frame: Frame::new(),
@@ -323,6 +330,14 @@ impl PreRender for NameTablePreRender {
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(261, 245 + TOP_MENU_BAR_HEIGHT, &self.frame);
         self.buffer.copy_to_rgba_buffer(pixels.get_frame().try_into().unwrap());
+    }
+
+    fn width(&self) -> usize {
+        NameTablePreRender::WIDTH
+    }
+
+    fn height(&self) -> usize {
+        NameTablePreRender::HEIGHT
     }
 }
 
