@@ -19,6 +19,19 @@ impl <'a> PatternTable<'a> {
         PatternTable(raw)
     }
 
+    // Used for debug windows only.
+    pub fn render_background_tile(
+        &self,
+        pattern_index: PatternIndex,
+        palette: Palette,
+        tile: &mut Tile,
+    ) {
+        for row_in_tile in RowInTile::into_enum_iter() {
+            self.render_background_tile_sliver(
+                pattern_index, row_in_tile, palette, &mut tile.0[row_in_tile as usize])
+        }
+    }
+
     #[inline]
     pub fn render_background_tile_sliver(
         &self,
@@ -135,5 +148,13 @@ impl PatternIndex {
 
     pub fn to_usize(self) -> usize {
         usize::from(self.0)
+    }
+}
+
+pub struct Tile(pub [[Rgbt; 8]; 8]);
+
+impl Tile {
+    pub fn new() -> Tile {
+        Tile([[Rgbt::Transparent; 8]; 8])
     }
 }

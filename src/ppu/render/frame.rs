@@ -1,8 +1,11 @@
 use std::ops::{Index, IndexMut};
 
-use crate::ppu::pixel_index::{PixelIndex, PixelColumn, PixelRow};
+use enum_iterator::IntoEnumIterator;
+
+use crate::ppu::pixel_index::{PixelIndex, PixelColumn, ColumnInTile, PixelRow, RowInTile};
 use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::palette::rgbt::Rgbt;
+use crate::ppu::pattern_table::Tile;
 use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::render::ppm::Ppm;
 use crate::ppu::sprite::Priority;
@@ -192,6 +195,18 @@ impl <const WIDTH: usize, const HEIGHT: usize> DebugBuffer<WIDTH, HEIGHT> {
             let (column, row) = pixel_index.to_column_row();
             let (pixel, _) = frame.pixel(mask, column, row);
             self[(left_column + column.to_usize(), top_row + row.to_usize())] = pixel;
+        }
+    }
+
+    pub fn place_tile(&mut self, left_column: usize, top_row: usize, tile: &Tile) {
+        for row_in_tile in RowInTile::into_enum_iter() {
+            for column_in_tile in ColumnInTile::into_enum_iter() {
+                let column_in_tile = column_in_tile as usize;
+                let row_in_tile = row_in_tile as usize;
+                if let Rgbt::Opaque(rgb) = tile.0[row_in_tile][column_in_tile] {
+                    self[(left_column + column_in_tile, top_row + row_in_tile)] = rgb;
+                }
+            }
         }
     }
 

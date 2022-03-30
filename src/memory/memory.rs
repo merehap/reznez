@@ -149,12 +149,12 @@ impl <'a> PpuMemory<'a> {
 
     #[inline]
     pub fn background_pattern_table(&self) -> PatternTable {
-        PatternTable::new(self.memory.mapper.raw_pattern_table(self.regs().background_table_side()))
+        self.pattern_table(self.regs().background_table_side())
     }
 
     #[inline]
     pub fn sprite_pattern_table(&self) -> PatternTable {
-        PatternTable::new(self.memory.mapper.raw_pattern_table(self.regs().sprite_table_side()))
+        self.pattern_table(self.regs().sprite_table_side())
     }
 
     #[inline]

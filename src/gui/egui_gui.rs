@@ -16,7 +16,9 @@ use crate::config::Config;
 use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::gui::{execute_frame, Gui, Events};
 use crate::nes::Nes;
+use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgb::Rgb;
+use crate::ppu::pattern_table::{PatternIndex, Tile, PatternTableSide};
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::render::frame::{Frame, DebugBuffer};
 use crate::ppu::name_table::name_table_number::NameTableNumber;
@@ -77,10 +79,17 @@ impl Gui for EguiGui {
             "Name Tables",
             Box::new(NameTablePreRender::new()),
         );
+        let pattern_table_window = EguiWindow::from_event_loop(
+            &event_loop,
+            3,
+            "Pattern Tables",
+            Box::new(PatternTablePreRender::new()),
+        );
 
         let mut windows = BTreeMap::new();
         windows.insert(primary_window.window.id(), primary_window);
         windows.insert(name_table_window.window.id(), name_table_window);
+        windows.insert(pattern_table_window.window.id(), pattern_table_window);
 
         event_loop.run(move |event, _, control_flow| {
             if world.input.update(&event) {
@@ -339,6 +348,59 @@ impl PreRender for NameTablePreRender {
 
     fn height(&self) -> usize {
         NameTablePreRender::HEIGHT
+    }
+}
+
+struct PatternTablePreRender {
+    tile: Tile,
+    buffer: DebugBuffer<{PatternTablePreRender::WIDTH}, {PatternTablePreRender::HEIGHT}>,
+}
+
+impl PatternTablePreRender {
+    const WIDTH: usize = 2 * (8 + 1) * 16 + 10;
+    const HEIGHT: usize = (8 + 1) * 16;
+
+    fn new() -> PatternTablePreRender {
+        PatternTablePreRender {
+            tile: Tile::new(),
+            buffer: DebugBuffer::filled(Rgb::WHITE),
+        }
+    }
+}
+
+impl PreRender for PatternTablePreRender {
+    fn pre_render(&mut self, world: &mut World, pixels: &mut Pixels) {
+        let mem = world
+            .nes
+            .memory_mut()
+            .as_ppu_memory();
+
+        let mut offset = 0;
+        for side in [PatternTableSide::Left, PatternTableSide::Right] {
+            for index in 0..=255 {
+                let palette = if mem.regs().sprite_table_side() == side {
+                    mem.palette_table().sprite_palette(PaletteTableIndex::Zero)
+                } else {
+                    mem.palette_table().background_palette(PaletteTableIndex::Zero)
+                };
+
+                mem.pattern_table(side).render_background_tile(
+                    PatternIndex::new(index), palette, &mut self.tile);
+                self.buffer.place_tile(offset + 9 * (index as usize % 16), 9 * (index as usize / 16), &self.tile);
+            }
+
+            offset += 9 * 16 + 10;
+        }
+
+        self.buffer.copy_to_rgba_buffer(pixels.get_frame().try_into().unwrap());
+    }
+
+    fn width(&self) -> usize {
+        PatternTablePreRender::WIDTH
+    }
+
+    fn height(&self) -> usize {
+        PatternTablePreRender::HEIGHT
     }
 }
 
