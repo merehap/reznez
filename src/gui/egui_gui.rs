@@ -358,7 +358,7 @@ struct PatternTablePreRender {
 
 impl PatternTablePreRender {
     const WIDTH: usize = 2 * (8 + 1) * 16 + 10;
-    const HEIGHT: usize = (8 + 1) * 16;
+    const HEIGHT: usize = (8 + 1) * 16 + TOP_MENU_BAR_HEIGHT / 3;
 
     fn new() -> PatternTablePreRender {
         PatternTablePreRender {
@@ -386,10 +386,14 @@ impl PreRender for PatternTablePreRender {
 
                 mem.pattern_table(side).render_background_tile(
                     PatternIndex::new(index), palette, &mut self.tile);
-                self.buffer.place_tile(offset + 9 * (index as usize % 16), 9 * (index as usize / 16), &self.tile);
+                self.buffer.place_tile(
+                    (8 + 1) * (index as usize % 16) + offset,
+                    (8 + 1) * (index as usize / 16) + TOP_MENU_BAR_HEIGHT / 3,
+                    &self.tile,
+                );
             }
 
-            offset += 9 * 16 + 10;
+            offset += (8 + 1) * 16 + 10;
         }
 
         self.buffer.copy_to_rgba_buffer(pixels.get_frame().try_into().unwrap());
