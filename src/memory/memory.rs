@@ -6,6 +6,7 @@ use crate::memory::mapper::Mapper;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::ppu::name_table::name_table::NameTable;
+use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_number::NameTableNumber;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
@@ -141,6 +142,11 @@ impl <'a> PpuMemory<'a> {
     pub fn regs_mut(&mut self) -> &mut PpuRegisters {
         &mut self.memory.ppu_registers
     }
+
+    pub fn name_table_mirroring(&self) -> NameTableMirroring {
+        self.memory.mapper.name_table_mirroring()
+    }
+
 
     #[inline]
     pub fn pattern_table(&self, side: PatternTableSide) -> PatternTable {
