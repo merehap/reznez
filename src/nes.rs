@@ -16,16 +16,17 @@ use crate::memory::mappers::mapper0::Mapper0;
 use crate::memory::mappers::mapper1::Mapper1;
 use crate::memory::mappers::mapper3::Mapper3;
 use crate::ppu::ppu::Ppu;
+use crate::ppu::render::frame::Frame;
 
 pub struct Nes {
     cpu: Cpu,
     ppu: Ppu,
     memory: Memory,
+    frame: Frame,
 
     joypad1: Rc<RefCell<Joypad>>,
     joypad2: Rc<RefCell<Joypad>>,
     cycle: u64,
-
 }
 
 impl Nes {
@@ -47,6 +48,7 @@ impl Nes {
             cpu: Cpu::new(&mut memory.as_cpu_memory(), config.program_counter_source),
             ppu: Ppu::new(),
             memory,
+            frame: Frame::new(),
 
             joypad1,
             joypad2,
@@ -64,6 +66,14 @@ impl Nes {
 
     pub fn memory_mut(&mut self) -> &mut Memory {
         &mut self.memory
+    }
+
+    pub fn ppu_and_memory_mut(&mut self) -> (&Ppu, &mut Memory) {
+        (&self.ppu, &mut self.memory)
+    }
+
+    pub fn frame(&self) -> &Frame {
+        &self.frame
     }
 
     pub fn cycle(&self) -> u64 {
@@ -94,7 +104,7 @@ impl Nes {
             }
         }
 
-        let ppu_result = self.ppu.step(&mut self.memory.as_ppu_memory());
+        let ppu_result = self.ppu.step(&mut self.memory.as_ppu_memory(), &mut self.frame);
         if ppu_result.should_generate_nmi {
             self.cpu.schedule_nmi();
         }
@@ -265,6 +275,7 @@ mod tests {
             cpu: Cpu::new(&mut memory.as_cpu_memory(), ProgramCounterSource::Override(CpuAddress::new(0x0000))),
             ppu: Ppu::new(),
             memory,
+            frame: Frame::new(),
             joypad1,
             joypad2,
             cycle: 0,

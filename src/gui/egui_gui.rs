@@ -73,6 +73,12 @@ impl Gui for EguiGui {
             "REZNEZ",
             Box::new(PrimaryPreRender),
         );
+        let layers_window = EguiWindow::from_event_loop(
+            &event_loop,
+            1,
+            "Layers",
+            Box::new(LayersPreRender::new()),
+        );
         let name_table_window = EguiWindow::from_event_loop(
             &event_loop,
             1,
@@ -88,6 +94,7 @@ impl Gui for EguiGui {
 
         let mut windows = BTreeMap::new();
         windows.insert(primary_window.window.id(), primary_window);
+        windows.insert(layers_window.window.id(), layers_window);
         windows.insert(name_table_window.window.id(), name_table_window);
         windows.insert(pattern_table_window.window.id(), pattern_table_window);
 
@@ -299,6 +306,51 @@ impl PreRender for PrimaryPreRender {
 
     fn height(&self) -> usize {
         PixelRow::ROW_COUNT
+    }
+}
+
+struct LayersPreRender {
+    frame: Frame,
+    buffer: DebugBuffer<{LayersPreRender::WIDTH}, {LayersPreRender::HEIGHT}>,
+}
+
+impl LayersPreRender {
+    const WIDTH: usize = 517;
+    const HEIGHT: usize = 485 + TOP_MENU_BAR_HEIGHT;
+
+    fn new() -> LayersPreRender {
+        LayersPreRender {
+            frame: Frame::new(),
+            buffer: DebugBuffer::filled(Rgb::WHITE),
+        }
+    }
+}
+
+impl PreRender for LayersPreRender {
+    fn pre_render(&mut self, world: &mut World, pixels: &mut Pixels) {
+        self.buffer.place_frame(0, TOP_MENU_BAR_HEIGHT, world.nes.frame());
+        self.buffer.place_frame(261, TOP_MENU_BAR_HEIGHT, &world.nes.frame().to_background_only());
+
+        let (ppu, mem) = world.nes.ppu_and_memory_mut();
+        let mem = mem.as_ppu_memory();
+
+        self.frame.clear();
+        ppu.oam().only_front_sprites().render(&mem, &mut self.frame);
+        self.buffer.place_frame(0, 245 + TOP_MENU_BAR_HEIGHT, &self.frame);
+
+        self.frame.clear();
+        ppu.oam().only_back_sprites().render(&mem, &mut self.frame);
+        self.buffer.place_frame(261, 245 + TOP_MENU_BAR_HEIGHT, &self.frame);
+
+        self.buffer.copy_to_rgba_buffer(pixels.get_frame().try_into().unwrap());
+    }
+
+    fn width(&self) -> usize {
+        LayersPreRender::WIDTH
+    }
+
+    fn height(&self) -> usize {
+        LayersPreRender::HEIGHT
     }
 }
 

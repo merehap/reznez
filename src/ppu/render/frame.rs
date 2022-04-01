@@ -10,6 +10,7 @@ use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::render::ppm::Ppm;
 use crate::ppu::sprite::Priority;
 
+#[derive(Clone)]
 pub struct Frame {
     buffer: FrameBuffer<Rgbt>,
     sprite_buffer: FrameBuffer<(Rgbt, Priority, bool)>,
@@ -23,6 +24,14 @@ impl Frame {
             sprite_buffer: FrameBuffer::filled((Rgbt::Transparent, Priority::Behind, false)),
             universal_background_rgb: Rgb::BLACK,
         }
+    }
+
+    // Only used for debug windows.
+    pub fn to_background_only(&self) -> Frame {
+        let mut frame = self.clone();
+        frame.sprite_buffer = FrameBuffer::filled((Rgbt::Transparent, Priority::Behind, false));
+        frame.universal_background_rgb = Rgb::BLACK;
+        frame
     }
 
     pub fn pixel(&self, mask: Mask, column: PixelColumn, row: PixelRow) -> (Rgb, Sprite0Hit) {
@@ -56,6 +65,12 @@ impl Frame {
 
     pub fn set_universal_background_rgb(&mut self, rgb: Rgb) {
         self.universal_background_rgb = rgb;
+    }
+
+    pub fn clear(&mut self) {
+        self.buffer = FrameBuffer::filled(Rgbt::Transparent);
+        self.sprite_buffer = FrameBuffer::filled((Rgbt::Transparent, Priority::Behind, false));
+        self.universal_background_rgb = Rgb::BLACK;
     }
 
     pub fn clear_sprite_line(&mut self, row: PixelRow) {
@@ -160,6 +175,7 @@ impl Sprite0Hit {
     }
 }
 
+#[derive(Clone)]
 struct FrameBuffer<T>(Box<[[T; PixelColumn::COLUMN_COUNT]; PixelRow::ROW_COUNT]>);
 
 impl <T: Copy> FrameBuffer<T> {

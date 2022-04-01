@@ -2,17 +2,42 @@ use crate::memory::memory::PpuMemory;
 use crate::ppu::register::registers::ctrl::SpriteHeight;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::pixel_index::PixelRow;
-use crate::ppu::sprite::Sprite;
+use crate::ppu::sprite::{Sprite, Priority};
 
 const ATTRIBUTE_BYTE_INDEX: u8 = 2;
 
 // TODO: OAM should decay:
 // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Dynamic_RAM_decay
+#[derive(Clone)]
 pub struct Oam([u8; 256]);
 
 impl Oam {
     pub fn new() -> Oam {
         Oam([0; 256])
+    }
+
+    pub fn only_front_sprites(&self) -> Oam {
+        let mut result = self.clone();
+        for chunk in result.0.array_chunks_mut::<4>() {
+            let sprite = Sprite::from_u32(u32::from_be_bytes(*chunk));
+            if sprite.priority() == Priority::Behind {
+                *chunk = [0xFF, 0, 0, 0];
+            }
+        }
+
+        result
+    }
+
+    pub fn only_back_sprites(&self) -> Oam {
+        let mut result = self.clone();
+        for chunk in result.0.array_chunks_mut::<4>() {
+            let sprite = Sprite::from_u32(u32::from_be_bytes(*chunk));
+            if sprite.priority() == Priority::InFront {
+                *chunk = [0xFF, 0, 0, 0];
+            }
+        }
+
+        result
     }
 
     fn sprites(&self) -> [Sprite; 64] {
@@ -36,6 +61,13 @@ impl Oam {
                 value
             };
         self.0[index as usize] = value;
+    }
+
+    // For debug windows only.
+    pub fn render(&self, mem: &PpuMemory, frame: &mut Frame) {
+        for pixel_row in PixelRow::iter() {
+            self.render_scanline(pixel_row, mem, frame);
+        }
     }
 
     pub fn render_scanline(&self, pixel_row: PixelRow, mem: &PpuMemory, frame: &mut Frame) {

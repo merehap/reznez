@@ -142,7 +142,7 @@ pub enum SpriteHalf {
     Lower,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Priority {
     InFront,
     Behind,

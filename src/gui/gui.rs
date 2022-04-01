@@ -31,10 +31,10 @@ pub fn execute_frame<F>(nes: &mut Nes, config: &Config, events: Events, display_
     nes.process_gui_events(&events);
     nes.step_frame();
     let mask = nes.memory_mut().as_ppu_memory().regs().mask;
-    display_frame(&nes.ppu().frame(), mask, frame_index);
+    display_frame(&nes.frame(), mask, frame_index);
 
     if config.frame_dump {
-        dump_frame(&nes.ppu().frame(), mask, frame_index);
+        dump_frame(&nes.frame(), mask, frame_index);
     }
 
     end_frame(frame_index, start_time, intended_frame_end_time);
