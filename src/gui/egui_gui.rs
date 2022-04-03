@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use log::error;
 use pixels::{Pixels, SurfaceTexture};
-use winit::dpi::LogicalSize;
+use winit::dpi::{LogicalSize, Position, PhysicalPosition};
 use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
@@ -71,24 +71,28 @@ impl Gui for EguiGui {
             &event_loop,
             3,
             "REZNEZ",
+            Some(Position::Physical(PhysicalPosition {x: 50, y: 50})),
             Box::new(PrimaryPreRender),
         );
         let layers_window = EguiWindow::from_event_loop(
             &event_loop,
             1,
             "Layers",
+            Some(Position::Physical(PhysicalPosition {x: 850, y: 50})),
             Box::new(LayersPreRender::new()),
         );
         let name_table_window = EguiWindow::from_event_loop(
             &event_loop,
             1,
             "Name Tables",
+            Some(Position::Physical(PhysicalPosition {x: 1400, y: 50})),
             Box::new(NameTablePreRender::new()),
         );
         let pattern_table_window = EguiWindow::from_event_loop(
             &event_loop,
             3,
             "Pattern Tables",
+            Some(Position::Physical(PhysicalPosition {x: 850, y: 660})),
             Box::new(PatternTablePreRender::new()),
         );
 
@@ -152,6 +156,7 @@ impl EguiWindow {
         event_loop: &EventLoop<()>,
         scale_factor: u64,
         title: &str,
+        initial_position: Option<Position>,
         pre_render: Box<dyn PreRender>,
     ) -> Self {
         let window = {
@@ -159,13 +164,17 @@ impl EguiWindow {
                 scale_factor as f64 * pre_render.width() as f64,
                 scale_factor as f64 * pre_render.height() as f64,
             );
-            WindowBuilder::new()
+            let mut builder = WindowBuilder::new()
                 .with_title(title)
                 .with_inner_size(size)
                 .with_min_inner_size(size)
-                .with_resizable(false)
-                .build(event_loop)
-                .unwrap()
+                .with_resizable(false);
+
+            if let Some(initial_position) = initial_position {
+                builder = builder.with_position(initial_position);
+            }
+
+            builder.build(event_loop).unwrap()
         };
 
         let window_size = window.inner_size();
