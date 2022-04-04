@@ -64,8 +64,14 @@ impl PixelColumn {
         Some(PixelColumn::new(value))
     }
 
+    // FIXME: Seems like this function is infallible? Remove Option?
     pub fn offset(self, offset: i16) -> Option<PixelColumn> {
-        (i16::from(self.0) + offset)
+        let mut column: i16 = i16::from(self.0) + offset;
+        if column < 0 {
+            column += 256;
+        }
+
+        column
             .try_into()
             .ok()
             .map(PixelColumn)
@@ -125,11 +131,6 @@ impl PixelRow {
     }
 
     pub fn offset(self, offset: i16) -> Option<PixelRow> {
-        let row = (i16::from(self.0) + offset).rem_euclid(256) as u8;
-        PixelRow::try_from_u8(row % PixelRow::ROW_COUNT as u8)
-    }
-
-    pub fn wrapping_offset(self, offset: i16) -> Option<PixelRow> {
         let mut row: i16 = i16::from(self.0) + offset;
         if row < 0 {
             row += 256;

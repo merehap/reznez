@@ -69,7 +69,7 @@ impl <'a> NameTable<'a> {
                     .to_pixel_column(column_in_tile)
                     .offset(x_offset);
                 if let Some(pixel_column) = maybe_pixel_column {
-                    if let Some(pixel_row) = pixel_row.wrapping_offset(y_offset) {
+                    if let Some(pixel_row) = pixel_row.offset(y_offset) {
                         frame.set_background_pixel(
                             pixel_column,
                             pixel_row,
