@@ -129,11 +129,17 @@ impl PixelRow {
         PixelRow::try_from_u8(row % PixelRow::ROW_COUNT as u8)
     }
 
-    pub fn wrapping_offset(self, offset: i16) -> PixelRow {
-        let row = (i16::from(self.0) + offset).rem_euclid(256) as u8;
-        // FIXME: This feels wrong, but some tests render nothing without wrapping.
-        PixelRow::try_from_u8(row % PixelRow::ROW_COUNT as u8)
-            .unwrap()
+    pub fn wrapping_offset(self, offset: i16) -> Option<PixelRow> {
+        let mut row: i16 = i16::from(self.0) + offset;
+        if row < 0 {
+            row += 256;
+        }
+
+        if row >= 240 {
+            None
+        } else {
+            Some(PixelRow::try_from_u8(row as u8).unwrap())
+        }
     }
 
     pub fn difference(self, other: PixelRow) -> Option<u8> {

@@ -175,17 +175,15 @@ impl Ppu {
             frame,
         );
         match mem.name_table_mirroring() {
-            NameTableMirroring::Horizontal => {},
-            /*
+            NameTableMirroring::Horizontal =>
                 mem.name_table(name_table_number.next_vertical()).render_scanline(
                     pixel_row,
                     &mem.pattern_table(background_table_side),
                     &palette_table,
                     -i16::from(self.next_address.x_scroll()),
-                    -i16::from(self.next_address.y_scroll()) + 256,
+                    -i16::from(self.next_address.y_scroll()) + 240,
                     frame,
                 ),
-            */
             NameTableMirroring::Vertical =>
                 mem.name_table(name_table_number.next_horizontal()).render_scanline(
                     pixel_row,
