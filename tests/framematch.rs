@@ -63,6 +63,7 @@ fn framematch() {
             override_program_counter: None,
             log_cpu: false,
             frame_dump: false,
+            analysis: false,
         };
 
         let nes = Nes::new(&Config::new(&opt));

@@ -31,6 +31,7 @@ fn nestest() {
         override_program_counter: Some(CpuAddress::new(0xC000)),
         log_cpu: true,
         frame_dump: false,
+        analysis: false,
     };
 
     logger::init(Logger {log_cpu: opt.log_cpu}).unwrap();

@@ -90,6 +90,9 @@ pub struct Opt {
     #[structopt(name = "framedump", long)]
     pub frame_dump: bool,
 
+    #[structopt(long)]
+    pub analysis: bool,
+
     pub override_program_counter: Option<CpuAddress>,
 }
 

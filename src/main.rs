@@ -5,6 +5,7 @@
 #![allow(clippy::module_inception)]
 #![allow(clippy::new_without_default)]
 
+mod analysis;
 mod cartridge;
 mod config;
 mod controller;
@@ -25,9 +26,13 @@ use crate::util::logger::Logger;
 fn main() {
     let opt = Opt::from_args();
     logger::init(Logger {log_cpu: opt.log_cpu}).unwrap();
-    let config = Config::new(&opt);
-    let mut gui = Config::gui(&opt);
-    let nes = Nes::new(&config);
+    if opt.analysis {
+        analysis::cartridge_db::analyze(&opt.rom_path);
+    } else {
+        let config = Config::new(&opt);
+        let mut gui = Config::gui(&opt);
+        let nes = Nes::new(&config);
 
-    gui.run(nes, config);
+        gui.run(nes, config);
+    }
 }
