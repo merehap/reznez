@@ -121,6 +121,10 @@ impl Cartridge {
         })
     }
 
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
     pub fn mapper_number(&self) -> u8 {
         self.mapper_number
     }
@@ -226,6 +230,7 @@ pub mod test_data {
         prg_rom_chunks[0][len - 1] = 0x02;
 
         Cartridge {
+            name: "Test".to_string(),
             mapper_number: 0,
             name_table_mirroring: NameTableMirroring::Horizontal,
             has_persistent_memory: false,
@@ -267,6 +272,8 @@ pub mod test_data {
         prg_chunks[1][len - 1] = high;
 
         Cartridge {
+            name: "Test".to_string(),
+
             mapper_number: 0,
             name_table_mirroring: NameTableMirroring::Horizontal,
             has_persistent_memory: false,
