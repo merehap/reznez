@@ -9,6 +9,8 @@ const CHR_ROM_CHUNK_LENGTH: usize = 0x2000;
 // See https://wiki.nesdev.org/w/index.php?title=INES
 #[derive(Clone, Debug)]
 pub struct Cartridge {
+    name: String,
+
     mapper_number: u8,
     name_table_mirroring: NameTableMirroring,
     has_persistent_memory: bool,
@@ -23,7 +25,7 @@ pub struct Cartridge {
 }
 
 impl Cartridge {
-    pub fn load(rom: &[u8]) -> Result<Cartridge, String> {
+    pub fn load(name: String, rom: &[u8]) -> Result<Cartridge, String> {
         if &rom[0..4] != INES_HEADER_CONSTANT {
             return Err(format!(
                 "Cannot load non-iNES ROM. Found {:?} but need {:?}.",
@@ -103,6 +105,8 @@ impl Cartridge {
             .collect();
 
         Ok(Cartridge {
+            name,
+
             mapper_number,
             name_table_mirroring,
             has_persistent_memory,

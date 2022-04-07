@@ -36,7 +36,8 @@ impl Config {
             .unwrap()
             .read_to_end(&mut rom)
             .unwrap();
-        let cartridge = Cartridge::load(&rom).unwrap();
+        let file_name = rom_path.file_name().unwrap().to_str().unwrap().to_string();
+        let cartridge = Cartridge::load(file_name, &rom).unwrap();
         info!("ROM loaded.\n{}", cartridge);
 
         let system_palette = SystemPalette::parse(include_str!("../palettes/2C02.pal"))
