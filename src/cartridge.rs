@@ -1,5 +1,7 @@
 use std::fmt;
 
+use log::error;
+
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 
 const INES_HEADER_CONSTANT: &[u8] = &[0x4E, 0x45, 0x53, 0x1A];
@@ -55,19 +57,19 @@ impl Cartridge {
             .collect();
 
         if trainer_enabled {
-            unimplemented!("Trainer isn't implemented yet.");
+            return Err("Trainer isn't implemented yet.".to_string());
         }
 
         if ines2_present {
-            unimplemented!("iNES2 isn't implemented yet.");
+            return Err("iNES2 isn't implemented yet.".to_string());
         }
 
         if play_choice_enabled {
-            unimplemented!("PlayChoice isn't implemented yet.");
+            return Err("PlayChoice isn't implemented yet.".to_string());
         }
 
         if vs_unisystem_enabled {
-            unimplemented!("VS Unisystem isn't implemented yet.");
+            return Err("VS Unisystem isn't implemented yet.".to_string());
         }
 
         let mapper_number = upper_mapper_number | (lower_mapper_number >> 4);
@@ -81,15 +83,32 @@ impl Cartridge {
 
         let mut prg_rom_chunks = Vec::new();
         for _ in 0..prg_rom_chunk_count {
-            prg_rom_chunks.push(Box::new(rom[rom_index..rom_index + PRG_ROM_CHUNK_LENGTH].try_into().unwrap()));
-            rom_index += PRG_ROM_CHUNK_LENGTH;
+            if let Some(chunk) = rom.get(rom_index..rom_index + PRG_ROM_CHUNK_LENGTH) {
+                prg_rom_chunks.push(Box::new(chunk.try_into().unwrap()));
+                rom_index += PRG_ROM_CHUNK_LENGTH;
+            } else {
+                error!("ROM {} claimed to have {} PRG chunks, but only had {}.",
+                    name,
+                    prg_rom_chunk_count,
+                    prg_rom_chunks.len(),
+                );
+                break;
+            }
         }
 
         let mut chr_rom_chunks = Vec::new();
         for _ in 0..chr_rom_chunk_count {
-            //FIXME: Yoshi.nes panics with OutOfRange here.
-            chr_rom_chunks.push(Box::new(rom[rom_index..rom_index + CHR_ROM_CHUNK_LENGTH].try_into().unwrap()));
-            rom_index += CHR_ROM_CHUNK_LENGTH;
+            if let Some(chunk) = rom.get(rom_index..rom_index + CHR_ROM_CHUNK_LENGTH) {
+                chr_rom_chunks.push(Box::new(chunk.try_into().unwrap()));
+                rom_index += CHR_ROM_CHUNK_LENGTH;
+            } else {
+                error!("ROM {} claimed to have {} CHR chunks, but only had {}.",
+                    name,
+                    chr_rom_chunk_count,
+                    chr_rom_chunks.len(),
+                );
+                break;
+            }
         }
 
         let title = rom[rom_index..].to_vec();
