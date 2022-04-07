@@ -1,4 +1,4 @@
-use crate::ppu::name_table::name_table_number::NameTableNumber;
+use crate::ppu::name_table::name_table_position::NameTablePosition;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::bit_util::{get_bit, pack_bools};
 
@@ -10,7 +10,7 @@ pub struct Ctrl {
     pub background_table_side: PatternTableSide,
     pub sprite_table_side: PatternTableSide,
     pub current_address_increment: AddressIncrement,
-    pub name_table_number: NameTableNumber,
+    pub name_table_number: NameTablePosition,
 }
 
 impl Ctrl {
@@ -22,7 +22,7 @@ impl Ctrl {
             background_table_side: PatternTableSide::Left,
             sprite_table_side: PatternTableSide::Left,
             current_address_increment: AddressIncrement::Right,
-            name_table_number: NameTableNumber::Zero,
+            name_table_number: NameTablePosition::TopLeft,
         }
     }
 
@@ -59,7 +59,7 @@ impl Ctrl {
                 } else {
                     AddressIncrement::Right
                 },
-            name_table_number: NameTableNumber::from_last_two_bits(value),
+            name_table_number: NameTablePosition::from_last_two_bits(value),
         }
     }
 

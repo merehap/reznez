@@ -21,7 +21,7 @@ use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::pattern_table::{PatternIndex, Tile, PatternTableSide};
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::render::frame::{Frame, DebugBuffer};
-use crate::ppu::name_table::name_table_number::NameTableNumber;
+use crate::ppu::name_table::name_table_position::NameTablePosition;
 
 const TOP_MENU_BAR_HEIGHT: usize = 24;
 
@@ -388,16 +388,16 @@ impl PreRender for NameTablePreRender {
             .as_ppu_memory();
 
         self.frame.set_universal_background_rgb(mem.palette_table().universal_background_rgb());
-        mem.name_table(NameTableNumber::Zero)
+        mem.name_table(NameTablePosition::TopLeft)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(0, TOP_MENU_BAR_HEIGHT, &self.frame);
-        mem.name_table(NameTableNumber::One)
+        mem.name_table(NameTablePosition::TopRight)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(261, TOP_MENU_BAR_HEIGHT, &self.frame);
-        mem.name_table(NameTableNumber::Two)
+        mem.name_table(NameTablePosition::BottomLeft)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(0, 245 + TOP_MENU_BAR_HEIGHT, &self.frame);
-        mem.name_table(NameTableNumber::Three)
+        mem.name_table(NameTablePosition::BottomRight)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(261, 245 + TOP_MENU_BAR_HEIGHT, &self.frame);
         self.buffer.copy_to_rgba_buffer(pixels.get_frame().try_into().unwrap());

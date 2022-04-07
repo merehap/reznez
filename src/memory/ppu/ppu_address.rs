@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::ppu::name_table::name_table_number::NameTableNumber;
+use crate::ppu::name_table::name_table_position::NameTablePosition;
 
 const HIGH_BYTE_MASK: u16 = 0b0111_1111_0000_0000;
 const LOW_BYTE_MASK:  u16 = 0b0000_0000_1111_1111;
@@ -47,8 +47,8 @@ impl PpuAddress {
         }
     }
 
-    pub fn name_table_number(self) -> NameTableNumber {
-        NameTableNumber::from_last_two_bits((self.address >> 10) as u8)
+    pub fn name_table_number(self) -> NameTablePosition {
+        NameTablePosition::from_last_two_bits((self.address >> 10) as u8)
     }
 
     /*

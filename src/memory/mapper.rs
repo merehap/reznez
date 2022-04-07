@@ -8,7 +8,7 @@ use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu::vram::VramSide;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
-use crate::ppu::name_table::name_table_number::NameTableNumber;
+use crate::ppu::name_table::name_table_position::NameTablePosition;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::register::register_type::RegisterType;
@@ -104,7 +104,7 @@ pub trait Mapper {
     fn raw_name_table<'a>(
         &'a self,
         ppu_internal_ram: &'a PpuInternalRam,
-        number: NameTableNumber,
+        number: NameTablePosition,
     ) -> &'a [u8; NAME_TABLE_SIZE] {
         let side = vram_side(number, self.name_table_mirroring());
         ppu_internal_ram.vram.side(side)
@@ -114,7 +114,7 @@ pub trait Mapper {
     fn raw_name_table_mut<'a>(
         &'a mut self,
         ppu_internal_ram: &'a mut PpuInternalRam,
-        number: NameTableNumber,
+        number: NameTablePosition,
     ) -> &'a mut [u8; NAME_TABLE_SIZE] {
         let side = vram_side(number, self.name_table_mirroring());
         ppu_internal_ram.vram.side_mut(side)
@@ -196,7 +196,7 @@ fn address_to_pattern_table_index(address: PpuAddress) -> (PatternTableSide, usi
 }
 
 #[inline]
-fn address_to_name_table_index(address: PpuAddress) -> (NameTableNumber, usize) {
+fn address_to_name_table_index(address: PpuAddress) -> (NameTablePosition, usize) {
     const NAME_TABLE_START:    usize = 0x2000;
     const MIRROR_START:        usize = 0x3000;
     const PALETTE_TABLE_START: usize = 0x3F00;
@@ -213,7 +213,7 @@ fn address_to_name_table_index(address: PpuAddress) -> (NameTableNumber, usize) 
     let index = index - NAME_TABLE_START;
 
     let name_table_number =
-        NameTableNumber::from_usize(index / NAME_TABLE_SIZE).unwrap();
+        NameTablePosition::from_usize(index / NAME_TABLE_SIZE).unwrap();
     let index = index % NAME_TABLE_SIZE;
     (name_table_number, index)
 }
@@ -237,21 +237,21 @@ fn address_to_palette_ram_index(address: PpuAddress) -> usize {
 
 #[inline]
 fn vram_side(
-    name_table_number: NameTableNumber,
+    name_table_position: NameTablePosition,
     mirroring: NameTableMirroring,
 ) -> VramSide {
 
-    use NameTableNumber::*;
+    use NameTablePosition::*;
     use NameTableMirroring::*;
-    match (name_table_number, mirroring) {
-        (Zero , _         ) => VramSide::Left,
-        (One  , Horizontal) => VramSide::Left,
-        (Two  , Horizontal) => VramSide::Right,
-        (One  , Vertical  ) => VramSide::Right,
-        (Two  , Vertical  ) => VramSide::Left,
-        (Three, _         ) => VramSide::Right,
-        (_    , FourScreen) => todo!("FourScreen isn't supported yet."),
-        (_    , OneScreenLeftBank) => VramSide::Left,
-        (_    , OneScreenRightBank) => VramSide::Right,
+    match (name_table_position, mirroring) {
+        (TopLeft    , _         ) => VramSide::Left,
+        (TopRight   , Horizontal) => VramSide::Left,
+        (BottomLeft , Horizontal) => VramSide::Right,
+        (TopRight   , Vertical  ) => VramSide::Right,
+        (BottomLeft , Vertical  ) => VramSide::Left,
+        (BottomRight, _         ) => VramSide::Right,
+        (_          , FourScreen) => todo!("FourScreen isn't supported yet."),
+        (_          , OneScreenLeftBank) => VramSide::Left,
+        (_          , OneScreenRightBank) => VramSide::Right,
     }
 }
