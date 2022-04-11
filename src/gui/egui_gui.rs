@@ -339,20 +339,62 @@ impl StatusWidgets {
 
 impl EguiWidgets for StatusWidgets {
     fn ui(&mut self, ctx: &Context, world: &World) {
+        let nes = &world.nes;
+        let clock = nes.ppu().clock();
+        let ppu_regs = nes.memory().ppu_regs();
+
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::Grid::new("my_grid")
                 .num_columns(2)
                 .spacing([40.0, 4.0])
                 .striped(true)
                 .show(ui, |ui| {
+                    ui.label("Frame");
+                    ui.label(format!("{:?}", clock.frame()));
+                    ui.end_row();
+                    /*
+                    ui.label("Scanline");
+                    ui.label(format!("{:?}", clock.scanline()));
+                    ui.end_row();
+                    ui.label("PPU Cycle");
+                    ui.label(format!("{:?}", clock.cycle()));
+                    ui.end_row();
+                    ui.label("CPU Cycle");
+                    ui.label(format!("{:?}", nes.cpu().cycle()));
+                    ui.end_row();
+                    */
+                    ui.label("NMI Enabled");
+                    ui.label(format!("{}", ppu_regs.nmi_enabled()));
+                    ui.end_row();
+                    ui.label("Sprite Height");
+                    ui.label(format!("{:?}", ppu_regs.sprite_height()));
+                    ui.end_row();
+                    ui.label("Background");
+                    ui.label(format!("Enabled: {}, Pattern Table: {:?} side",
+                        ppu_regs.background_enabled(),
+                        ppu_regs.background_table_side(),
+                    ));
+                    ui.end_row();
+                    ui.label("Sprites");
+                    ui.label(format!("Enabled: {}, Pattern Table: {:?} side",
+                        ppu_regs.sprites_enabled(),
+                        ppu_regs.sprite_table_side(),
+                    ));
+                    ui.end_row();
+                    ui.label("");
+                    ui.label(format!(""));
+                    ui.end_row();
+                    ui.label("Mapper");
+                    ui.label(format!("{:?}", nes.cartridge().mapper_number()));
+                    ui.end_row();
                     ui.label("Name Table Mirroring");
-                    ui.label(format!("{:?}", world.nes.memory().mapper().name_table_mirroring()));
+                    ui.label(format!("{:?}", nes.memory().mapper().name_table_mirroring()));
                     ui.end_row();
                     ui.label("PRG ROM banks");
-                    ui.label(&world.nes.memory().mapper().prg_rom_bank_string());
+                    ui.label(&nes.memory().mapper().prg_rom_bank_string());
                     ui.end_row();
                     ui.label("CHR ROM banks");
-                    ui.label(&world.nes.memory().mapper().chr_rom_bank_string());
+                    ui.label(&nes.memory().mapper().chr_rom_bank_string());
                 });
         });
     }
@@ -543,8 +585,8 @@ impl PreRender for PatternTablePreRender {
 struct StatusPreRender;
 
 impl StatusPreRender {
-    const WIDTH: usize = 2 * (8 + 1) * 16 + 10;
-    const HEIGHT: usize = (8 + 1) * 16 + TOP_MENU_BAR_HEIGHT / 3;
+    const WIDTH: usize = 500;
+    const HEIGHT: usize = 500;
 
     fn new() -> StatusPreRender {
         StatusPreRender

@@ -9,6 +9,7 @@ use crate::ppu::register::registers::ppu_data;
 use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::register::registers::status::Status;
 
+#[derive(Clone)]
 pub struct PpuRegisters {
     pub(in crate::ppu) ctrl: Ctrl,
     pub mask: Mask,
@@ -40,11 +41,11 @@ impl PpuRegisters {
         }
     }
 
-    pub(in crate::ppu) fn nmi_enabled(&self) -> bool {
+    pub fn nmi_enabled(&self) -> bool {
         self.ctrl.nmi_enabled
     }
 
-    pub(in crate::ppu) fn sprite_height(&self) -> SpriteHeight {
+    pub fn sprite_height(&self) -> SpriteHeight {
         self.ctrl.sprite_height
     }
 
@@ -60,11 +61,11 @@ impl PpuRegisters {
         self.ctrl.current_address_increment
     }
 
-    pub(in crate::ppu) fn background_enabled(&self) -> bool {
+    pub fn background_enabled(&self) -> bool {
         self.mask.background_enabled
     }
 
-    pub(in crate::ppu) fn sprites_enabled(&self) -> bool {
+    pub fn sprites_enabled(&self) -> bool {
         self.mask.sprites_enabled
     }
 

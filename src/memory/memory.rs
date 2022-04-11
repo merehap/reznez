@@ -55,6 +55,11 @@ impl Memory {
     pub fn stack_pointer(&self) -> u8 {
         self.cpu_internal_ram.stack_pointer
     }
+
+    #[inline]
+    pub fn ppu_regs(&self) -> &PpuRegisters {
+        &self.ppu_registers
+    }
 }
 
 pub struct CpuMemory<'a> {

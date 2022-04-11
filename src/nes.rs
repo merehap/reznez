@@ -4,6 +4,7 @@ use std::rc::Rc;
 use log::{info, log_enabled};
 use log::Level::Info;
 
+use crate::cartridge::Cartridge;
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::Cpu;
@@ -22,6 +23,7 @@ pub struct Nes {
     cpu: Cpu,
     ppu: Ppu,
     memory: Memory,
+    cartridge: Cartridge,
     frame: Frame,
 
     joypad1: Rc<RefCell<Joypad>>,
@@ -48,6 +50,7 @@ impl Nes {
             cpu: Cpu::new(&mut memory.as_cpu_memory(), config.program_counter_source),
             ppu: Ppu::new(),
             memory,
+            cartridge: config.cartridge.clone(),
             frame: Frame::new(),
 
             joypad1,
@@ -74,6 +77,10 @@ impl Nes {
 
     pub fn ppu_and_memory_mut(&mut self) -> (&Ppu, &mut Memory) {
         (&self.ppu, &mut self.memory)
+    }
+
+    pub fn cartridge(&self) -> &Cartridge {
+        &self.cartridge
     }
 
     pub fn frame(&self) -> &Frame {
