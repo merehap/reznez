@@ -1,5 +1,3 @@
-use log::error;
-
 use crate::memory::memory::{PpuMemory, PALETTE_TABLE_START};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};

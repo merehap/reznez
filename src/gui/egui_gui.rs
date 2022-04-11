@@ -115,6 +115,7 @@ impl Gui for EguiGui {
         windows.insert(pattern_table_window.window.id(), pattern_table_window);
         windows.insert(status_window.window.id(), status_window);
 
+        let mut pause = false;
         event_loop.run(move |event, _, control_flow| {
             if world.input.update(&event) {
                 if world.input.key_pressed(VirtualKeyCode::Escape) || world.input.quit() {
@@ -122,8 +123,14 @@ impl Gui for EguiGui {
                     return;
                 }
 
-                for (_id, window) in windows.iter() {
-                    window.window.request_redraw();
+                if world.input.key_pressed(VirtualKeyCode::Pause) || world.input.key_pressed(VirtualKeyCode::P) {
+                    pause = !pause;
+                }
+
+                if !pause {
+                    for (_id, window) in windows.iter() {
+                        window.window.request_redraw();
+                    }
                 }
             }
 
