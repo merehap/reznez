@@ -52,6 +52,14 @@ impl Ppu {
         &self.clock
     }
 
+    pub fn x_scroll(&self) -> u8 {
+        self.next_address.x_scroll()
+    }
+
+    pub fn y_scroll(&self) -> u8 {
+        self.next_address.y_scroll()
+    }
+
     pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) -> StepResult {
         if self.clock.cycle() == 1 {
             mem.regs_mut().maybe_decay_latch();

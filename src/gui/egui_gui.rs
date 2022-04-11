@@ -370,6 +370,12 @@ impl EguiWidgets for StatusWidgets {
                     ui.label(format!("{:?}", nes.cpu().cycle()));
                     ui.end_row();
                     */
+                    ui.label("X Scroll");
+                    ui.label(format!("{}", nes.ppu().x_scroll()));
+                    ui.end_row();
+                    ui.label("Y Scroll");
+                    ui.label(format!("{}", nes.ppu().y_scroll()));
+                    ui.end_row();
                     ui.label("NMI Enabled");
                     ui.label(format!("{}", ppu_regs.nmi_enabled()));
                     ui.end_row();
