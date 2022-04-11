@@ -48,6 +48,10 @@ impl Memory {
         PpuMemory {memory: self}
     }
 
+    pub fn mapper(&self) -> &Box<dyn Mapper> {
+        &self.mapper
+    }
+
     pub fn stack_pointer(&self) -> u8 {
         self.cpu_internal_ram.stack_pointer
     }

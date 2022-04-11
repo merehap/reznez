@@ -21,6 +21,8 @@ pub trait Mapper {
     fn name_table_mirroring(&self) -> NameTableMirroring;
     fn prg_rom(&self) -> &MappedArray<32>;
     fn is_chr_writable(&self) -> bool;
+    fn prg_rom_bank_string(&self) -> String;
+    fn chr_rom_bank_string(&self) -> String;
 
     fn raw_pattern_table(
         &self,

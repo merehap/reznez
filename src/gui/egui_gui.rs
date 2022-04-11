@@ -72,6 +72,7 @@ impl Gui for EguiGui {
             3,
             "REZNEZ",
             Some(Position::Physical(PhysicalPosition {x: 50, y: 50})),
+            Box::new(PrimaryWidgets::new()),
             Box::new(PrimaryPreRender),
         );
         let layers_window = EguiWindow::from_event_loop(
@@ -79,6 +80,7 @@ impl Gui for EguiGui {
             1,
             "Layers",
             Some(Position::Physical(PhysicalPosition {x: 850, y: 50})),
+            Box::new(NoWidgets),
             Box::new(LayersPreRender::new()),
         );
         let name_table_window = EguiWindow::from_event_loop(
@@ -86,6 +88,7 @@ impl Gui for EguiGui {
             1,
             "Name Tables",
             Some(Position::Physical(PhysicalPosition {x: 1400, y: 50})),
+            Box::new(NoWidgets),
             Box::new(NameTablePreRender::new()),
         );
         let pattern_table_window = EguiWindow::from_event_loop(
@@ -93,7 +96,16 @@ impl Gui for EguiGui {
             3,
             "Pattern Tables",
             Some(Position::Physical(PhysicalPosition {x: 850, y: 660})),
+            Box::new(NoWidgets),
             Box::new(PatternTablePreRender::new()),
+        );
+        let status_window = EguiWindow::from_event_loop(
+            &event_loop,
+            1,
+            "Status",
+            Some(Position::Physical(PhysicalPosition {x: 50, y: 50})),
+            Box::new(StatusWidgets::new()),
+            Box::new(StatusPreRender::new()),
         );
 
         let mut windows = BTreeMap::new();
@@ -101,6 +113,7 @@ impl Gui for EguiGui {
         windows.insert(layers_window.window.id(), layers_window);
         windows.insert(name_table_window.window.id(), name_table_window);
         windows.insert(pattern_table_window.window.id(), pattern_table_window);
+        windows.insert(status_window.window.id(), status_window);
 
         event_loop.run(move |event, _, control_flow| {
             if world.input.update(&event) {
@@ -145,7 +158,7 @@ struct EguiWindow {
     textures: TexturesDelta,
 
     // State for the GUI
-    app: App,
+    widgets: Box<dyn EguiWidgets>,
     window: Window,
     pixels: Pixels,
     pre_render: Box<dyn PreRender>,
@@ -157,6 +170,7 @@ impl EguiWindow {
         scale_factor: u64,
         title: &str,
         initial_position: Option<Position>,
+        widgets: Box<dyn EguiWidgets>,
         pre_render: Box<dyn PreRender>,
     ) -> Self {
         let window = {
@@ -186,10 +200,27 @@ impl EguiWindow {
             surface_texture,
         ).unwrap();
 
-        EguiWindow::new(window_size.width, window_size.height, scale_factor, window, pixels, pre_render)
+        EguiWindow::new(
+            window_size.width,
+            window_size.height,
+            scale_factor,
+            widgets,
+            window,
+            pixels,
+            pre_render,
+        )
     }
 
-    fn new(width: u32, height: u32, scale_factor: f32, window: Window, pixels: pixels::Pixels, pre_render: Box<dyn PreRender>) -> Self {
+    fn new(
+        width: u32,
+        height: u32,
+        scale_factor: f32,
+        widgets: Box<dyn EguiWidgets>,
+        window: Window,
+        pixels: pixels::Pixels,
+        pre_render: Box<dyn PreRender>,
+    ) -> Self {
+
         let max_texture_size = pixels.device().limits().max_texture_dimension_2d as usize;
 
         let egui_ctx = Context::default();
@@ -201,7 +232,6 @@ impl EguiWindow {
         };
         let rpass = RenderPass::new(pixels.device(), pixels.render_texture_format(), 1);
         let textures = TexturesDelta::default();
-        let app = App::new();
 
         Self {
             egui_ctx,
@@ -210,7 +240,7 @@ impl EguiWindow {
             rpass,
             paint_jobs: Vec::new(),
             textures,
-            app,
+            widgets,
             window,
             pixels,
             pre_render,
@@ -228,7 +258,7 @@ impl EguiWindow {
         // Run the egui frame and create all paint jobs to prepare for rendering.
         let raw_input = self.egui_state.take_egui_input(&self.window);
         let output = self.egui_ctx.run(raw_input, |egui_ctx| {
-            self.app.ui(egui_ctx);
+            self.widgets.ui(egui_ctx, world);
         });
 
         self.textures.append(output.textures_delta);
@@ -263,17 +293,29 @@ impl EguiWindow {
     }
 }
 
-struct App {
+trait EguiWidgets {
+    fn ui(&mut self, ctx: &Context, world: &World);
+}
+
+struct NoWidgets;
+
+impl EguiWidgets for NoWidgets {
+    fn ui(&mut self, _ctx: &Context, _world: &World) {}
+}
+
+struct PrimaryWidgets {
     /// Only show the egui window when true.
     window_open: bool,
 }
 
-impl App {
+impl PrimaryWidgets {
     fn new() -> Self {
         Self {window_open: false}
     }
+}
 
-    fn ui(&mut self, ctx: &Context) {
+impl EguiWidgets for PrimaryWidgets {
+    fn ui(&mut self, ctx: &Context, _world: &World) {
         egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("File", |ui| {
@@ -283,6 +325,35 @@ impl App {
                     }
                 })
             });
+        });
+    }
+}
+
+struct StatusWidgets {}
+
+impl StatusWidgets {
+    pub fn new() -> StatusWidgets {
+        StatusWidgets {}
+    }
+}
+
+impl EguiWidgets for StatusWidgets {
+    fn ui(&mut self, ctx: &Context, world: &World) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            egui::Grid::new("my_grid")
+                .num_columns(2)
+                .spacing([40.0, 4.0])
+                .striped(true)
+                .show(ui, |ui| {
+                    ui.label("Name Table Mirroring");
+                    ui.label(format!("{:?}", world.nes.memory().mapper().name_table_mirroring()));
+                    ui.end_row();
+                    ui.label("PRG ROM banks");
+                    ui.label(&world.nes.memory().mapper().prg_rom_bank_string());
+                    ui.end_row();
+                    ui.label("CHR ROM banks");
+                    ui.label(&world.nes.memory().mapper().chr_rom_bank_string());
+                });
         });
     }
 }
@@ -466,6 +537,31 @@ impl PreRender for PatternTablePreRender {
 
     fn height(&self) -> usize {
         PatternTablePreRender::HEIGHT
+    }
+}
+
+struct StatusPreRender;
+
+impl StatusPreRender {
+    const WIDTH: usize = 2 * (8 + 1) * 16 + 10;
+    const HEIGHT: usize = (8 + 1) * 16 + TOP_MENU_BAR_HEIGHT / 3;
+
+    fn new() -> StatusPreRender {
+        StatusPreRender
+    }
+}
+
+impl PreRender for StatusPreRender {
+    fn pre_render(&mut self, _world: &mut World, _pixels: &mut Pixels) {
+        // Do nothing yet.
+    }
+
+    fn width(&self) -> usize {
+        StatusPreRender::WIDTH
+    }
+
+    fn height(&self) -> usize {
+        StatusPreRender::HEIGHT
     }
 }
 

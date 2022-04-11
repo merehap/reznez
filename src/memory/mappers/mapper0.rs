@@ -62,4 +62,12 @@ impl Mapper for Mapper0 {
     fn raw_pattern_table(&self, side: PatternTableSide) -> &MappedArray<4> {
         &self.raw_pattern_tables[side as usize]
     }
+
+    fn prg_rom_bank_string(&self) -> String {
+        "(Fixed)".to_string()
+    }
+
+    fn chr_rom_bank_string(&self) -> String {
+        "(Fixed)".to_string()
+    }
 }

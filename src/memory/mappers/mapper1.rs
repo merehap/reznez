@@ -160,6 +160,20 @@ impl Mapper for Mapper1 {
             &self.prg_banks[second_index as usize],
         );
     }
+
+    fn prg_rom_bank_string(&self) -> String {
+        let (first_index, second_index) = self.prg_bank_indexes();
+        format!("{} and {} [16, 16 KiB banks, mode: {:?}]",
+            first_index, second_index, self.control.prg_bank_mode,
+        )
+    }
+
+    fn chr_rom_bank_string(&self) -> String {
+        let (selected_bank0, selected_bank1) = self.chr_bank_indexes();
+        format!("{} and {} [32, 4 KiB banks, mode: {:?}]",
+            selected_bank0, selected_bank1, self.control.chr_bank_mode,
+        )
+    }
 }
 
 #[derive(Debug)]

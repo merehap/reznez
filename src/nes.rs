@@ -64,6 +64,10 @@ impl Nes {
         &self.ppu
     }
 
+    pub fn memory(&self) -> &Memory {
+        &self.memory
+    }
+
     pub fn memory_mut(&mut self) -> &mut Memory {
         &mut self.memory
     }
