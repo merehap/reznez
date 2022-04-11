@@ -1,3 +1,5 @@
+use log::error;
+
 use crate::memory::memory::{PpuMemory, PALETTE_TABLE_START};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
@@ -193,7 +195,9 @@ impl Ppu {
                     0,
                     frame,
                 ),
-            m => println!("{:?} NameTableMirroring is not supported yet.", m),
+            NameTableMirroring::OneScreenLeftBank | NameTableMirroring::OneScreenRightBank =>
+                {/* TODO: Not sure how to support scrolling for OneScreen.*/},
+            m => todo!("{:?} NameTableMirroring is not supported yet.", m),
         }
     }
 
