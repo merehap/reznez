@@ -204,6 +204,7 @@ pub struct StepResult {
 
 #[cfg(test)]
 mod tests {
+    use crate::cartridge;
     use crate::cpu::cpu::ProgramCounterSource;
     use crate::memory::cpu::cpu_address::CpuAddress;
     use crate::memory::memory::Memory;
@@ -282,10 +283,13 @@ mod tests {
             memory.as_cpu_memory().write(CpuAddress::new(i), 0xEA);
         }
 
+        let cartridge = cartridge::test_data::cartridge();
+
         Nes {
             cpu: Cpu::new(&mut memory.as_cpu_memory(), ProgramCounterSource::Override(CpuAddress::new(0x0000))),
             ppu: Ppu::new(),
             memory,
+            cartridge,
             frame: Frame::new(),
             joypad1,
             joypad2,
