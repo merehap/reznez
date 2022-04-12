@@ -65,9 +65,11 @@ impl Mapper1 {
     }
 
     pub fn state_string(&self) -> String {
-        format!("Shift: 0b{:05b}, Control: {:?}, CB0: {}, CB1: {}, PB: {}",
-            self.shift, self.control, self.selected_chr_bank0,
-            self.selected_chr_bank1, self.selected_prg_bank)
+        let (chr_index_0, chr_index_1) = self.chr_bank_indexes();
+        format!("Shift: 0b{:05b}, Control: {:?}, CHR Indexes: {},{} (Bank registers: {},{}), PB: {}",
+            self.shift, self.control,
+            chr_index_0, chr_index_1, self.selected_chr_bank0, self.selected_chr_bank1,
+            self.selected_prg_bank)
     }
 
     fn chr_bank_indexes(&self) -> (u8, u8) {
@@ -205,9 +207,9 @@ impl Control {
         Control {
             chr_bank_mode:
                 if get_bit(value, 3) {
-                    ChrBankMode::Large
-                } else {
                     ChrBankMode::TwoSmall
+                } else {
+                    ChrBankMode::Large
                 },
             prg_bank_mode:
                 match (get_bit(value, 4), get_bit(value, 5)) {
