@@ -4,7 +4,7 @@ use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::bit_util::get_bit;
-use crate::util::mapped_array::MappedArray;
+use crate::util::mapped_array::{MappedArray, Chunk};
 
 const EMPTY_CHR_CHUNK: [u8; 0x2000] = [0; 0x2000];
 
@@ -71,6 +71,19 @@ impl Mapper for Mapper3 {
 
     fn raw_pattern_table(&self, side: PatternTableSide) -> &MappedArray<4> {
         &self.raw_pattern_tables[self.selected_chr_bank as usize][side as usize]
+    }
+
+    fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>> {
+        vec![
+            self.raw_pattern_tables[0][PatternTableSide::Left as usize].to_chunks().to_vec(),
+            self.raw_pattern_tables[0][PatternTableSide::Right as usize].to_chunks().to_vec(),
+            self.raw_pattern_tables[1][PatternTableSide::Left as usize].to_chunks().to_vec(),
+            self.raw_pattern_tables[1][PatternTableSide::Right as usize].to_chunks().to_vec(),
+            self.raw_pattern_tables[2][PatternTableSide::Left as usize].to_chunks().to_vec(),
+            self.raw_pattern_tables[2][PatternTableSide::Right as usize].to_chunks().to_vec(),
+            self.raw_pattern_tables[3][PatternTableSide::Left as usize].to_chunks().to_vec(),
+            self.raw_pattern_tables[3][PatternTableSide::Right as usize].to_chunks().to_vec(),
+        ]
     }
 
     fn write_to_cartridge_space(&mut self, _cpu_address: CpuAddress, value: u8) {

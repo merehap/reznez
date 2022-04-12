@@ -41,6 +41,10 @@ impl <const CHUNK_COUNT: usize> MappedArray<CHUNK_COUNT> {
         array
     }
 
+    pub fn from_chunks(chunks: [Chunk; CHUNK_COUNT]) -> MappedArray<CHUNK_COUNT> {
+        MappedArray(chunks)
+    }
+
     pub fn update<const LEN: usize>(&mut self, backing: &Rc<RefCell<[u8; LEN]>>) {
         assert_eq!(LEN, CHUNK_COUNT * CHUNK_LEN,
             "LEN == CHUNK_COUNT * CHUNK_LEN must be true but {} != {} * {}",
@@ -79,10 +83,15 @@ impl <const CHUNK_COUNT: usize> MappedArray<CHUNK_COUNT> {
     pub fn write(&self, index: usize, value: u8) {
         self.0[index / CHUNK_LEN].write(index % CHUNK_LEN, value);
     }
+
+    pub fn to_chunks(&self) -> &[Chunk; CHUNK_COUNT] {
+        &self.0
+    }
 }
 
+// 1 KiB
 #[derive(Clone, Debug)]
-struct Chunk {
+pub struct Chunk {
     backing: Rc<RefCell<[u8]>>,
     start_index: usize,
 }

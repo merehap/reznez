@@ -18,10 +18,11 @@ use crate::gui::gui::{execute_frame, Gui, Events};
 use crate::nes::Nes;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgb::Rgb;
-use crate::ppu::pattern_table::{PatternIndex, Tile, PatternTableSide};
+use crate::ppu::pattern_table::{PatternTable, PatternIndex, Tile, PatternTableSide};
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::render::frame::{Frame, DebugBuffer};
 use crate::ppu::name_table::name_table_position::NameTablePosition;
+use crate::util::mapped_array::MappedArray;
 
 const TOP_MENU_BAR_HEIGHT: usize = 24;
 
@@ -99,11 +100,19 @@ impl Gui for EguiGui {
             Box::new(NoWidgets),
             Box::new(PatternTablePreRender::new()),
         );
+        let chr_banks_window = EguiWindow::from_event_loop(
+            &event_loop,
+            2,
+            "CHR Banks",
+            Some(Position::Physical(PhysicalPosition {x: 50, y: 50})),
+            Box::new(NoWidgets),
+            Box::new(ChrBanksPreRender::new()),
+        );
         let status_window = EguiWindow::from_event_loop(
             &event_loop,
             1,
             "Status",
-            Some(Position::Physical(PhysicalPosition {x: 50, y: 50})),
+            Some(Position::Physical(PhysicalPosition {x: 50, y: 660})),
             Box::new(StatusWidgets::new()),
             Box::new(StatusPreRender::new()),
         );
@@ -113,6 +122,7 @@ impl Gui for EguiGui {
         windows.insert(layers_window.window.id(), layers_window);
         windows.insert(name_table_window.window.id(), name_table_window);
         windows.insert(pattern_table_window.window.id(), pattern_table_window);
+        windows.insert(chr_banks_window.window.id(), chr_banks_window);
         windows.insert(status_window.window.id(), status_window);
 
         let mut pause = false;
@@ -564,13 +574,12 @@ impl PreRender for PatternTablePreRender {
 
         let mut offset = 0;
         for side in [PatternTableSide::Left, PatternTableSide::Right] {
+            let palette = if mem.regs().sprite_table_side() == side {
+                mem.palette_table().sprite_palette(PaletteTableIndex::Zero)
+            } else {
+                mem.palette_table().background_palette(PaletteTableIndex::Zero)
+            };
             for index in 0..=255 {
-                let palette = if mem.regs().sprite_table_side() == side {
-                    mem.palette_table().sprite_palette(PaletteTableIndex::Zero)
-                } else {
-                    mem.palette_table().background_palette(PaletteTableIndex::Zero)
-                };
-
                 mem.pattern_table(side).render_background_tile(
                     PatternIndex::new(index), palette, &mut self.tile);
                 self.buffer.place_tile(
@@ -594,6 +603,88 @@ impl PreRender for PatternTablePreRender {
         PatternTablePreRender::HEIGHT
     }
 }
+
+struct ChrBanksPreRender {
+    tile: Tile,
+    buffer: DebugBuffer<{ChrBanksPreRender::WIDTH}, {ChrBanksPreRender::HEIGHT}>,
+}
+
+impl ChrBanksPreRender {
+    const WIDTH: usize = (8 + 1) * 256;
+    const HEIGHT: usize = (8 + 1) * 32;
+
+    fn new() -> ChrBanksPreRender {
+        ChrBanksPreRender {
+            tile: Tile::new(),
+            buffer: DebugBuffer::filled(Rgb::WHITE),
+        }
+    }
+}
+
+impl PreRender for ChrBanksPreRender {
+    fn pre_render(&mut self, world: &mut World, pixels: &mut Pixels) {
+        let palette = world
+            .nes
+            .memory_mut()
+            .as_ppu_memory()
+            .palette_table()
+            .sprite_palette(PaletteTableIndex::Zero);
+        let chunks = world.nes.memory().mapper().chr_bank_chunks();
+        if chunks.is_empty() {
+            return;
+        }
+
+        assert_eq!(chunks[0].len(), 4);
+
+        let mut y_offset = 0;
+        for raw_pattern_table in chunks {
+            let mut x_offset = 0;
+            let raw_pattern_table: MappedArray<4> = MappedArray::from_chunks(raw_pattern_table.try_into().unwrap());
+            let pattern_table = PatternTable::new(&raw_pattern_table);
+            for index in 0..=255 {
+                pattern_table.render_background_tile(
+                    PatternIndex::new(index), palette, &mut self.tile);
+                self.buffer.place_tile(x_offset, y_offset, &self.tile);
+                x_offset += 9;
+            }
+
+            y_offset += 9;
+        }
+
+        // TODO: Add ability to switch between the normal display and the following one.
+        /*
+        let odd_offset = 9 * chunks.len() / 2 + 10;
+        let mut y_offset = 0;
+        for (i, raw_pattern_table) in chunks.into_iter().enumerate() {
+            let mut x_offset = 0;
+            let odd_offset = if i % 2 == 0 {0} else {odd_offset};
+            let raw_pattern_table: MappedArray<4> = MappedArray::from_chunks(raw_pattern_table.try_into().unwrap());
+            let pattern_table = PatternTable::new(&raw_pattern_table);
+            for index in 0..=255 {
+                pattern_table.render_background_tile(
+                    PatternIndex::new(index), palette, &mut self.tile);
+                self.buffer.place_tile(x_offset, y_offset + odd_offset, &self.tile);
+                x_offset += 9;
+            }
+
+            if i % 2 == 0 {
+                y_offset += 9;
+            }
+        }
+        */
+
+        self.buffer.copy_to_rgba_buffer(pixels.get_frame().try_into().unwrap());
+    }
+
+    fn width(&self) -> usize {
+        ChrBanksPreRender::WIDTH
+    }
+
+    fn height(&self) -> usize {
+        ChrBanksPreRender::HEIGHT
+    }
+}
+
 
 struct StatusPreRender;
 

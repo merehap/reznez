@@ -12,7 +12,7 @@ use crate::ppu::name_table::name_table_position::NameTablePosition;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::register::register_type::RegisterType;
-use crate::util::mapped_array::MappedArray;
+use crate::util::mapped_array::{MappedArray, Chunk};
 
 pub const PATTERN_TABLE_SIZE: usize = 0x1000;
 pub const NAME_TABLE_SIZE: usize = 0x400;
@@ -23,11 +23,8 @@ pub trait Mapper {
     fn is_chr_writable(&self) -> bool;
     fn prg_rom_bank_string(&self) -> String;
     fn chr_rom_bank_string(&self) -> String;
-
-    fn raw_pattern_table(
-        &self,
-        side: PatternTableSide,
-    ) -> &MappedArray<4>;
+    fn raw_pattern_table(&self, side: PatternTableSide) -> &MappedArray<4>;
+    fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>>;
 
     fn read_prg_ram(&self, _address: CpuAddress) -> u8 {
         // PRG RAM is not supported by default.

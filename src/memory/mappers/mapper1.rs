@@ -9,7 +9,7 @@ use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::bit_util::get_bit;
-use crate::util::mapped_array::MappedArray;
+use crate::util::mapped_array::{MappedArray, Chunk};
 
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
 const EMPTY_PRG_BANK: [u8; 0x4000] = [0; 0x4000];
@@ -122,6 +122,15 @@ impl Mapper for Mapper1 {
             PatternTableSide::Right =>
                 &self.raw_pattern_tables[selected_bank1 as usize],
         }
+    }
+
+    fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>> {
+        let mut chunks = Vec::with_capacity(32);
+        for raw_pattern_table in &self.raw_pattern_tables {
+            chunks.push(raw_pattern_table.to_chunks().to_vec());
+        }
+
+        chunks
     }
 
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {

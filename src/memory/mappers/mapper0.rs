@@ -2,7 +2,7 @@ use crate::cartridge::Cartridge;
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
-use crate::util::mapped_array::MappedArray;
+use crate::util::mapped_array::{MappedArray, Chunk};
 
 // NROM
 pub struct Mapper0 {
@@ -61,6 +61,10 @@ impl Mapper for Mapper0 {
     #[inline]
     fn raw_pattern_table(&self, side: PatternTableSide) -> &MappedArray<4> {
         &self.raw_pattern_tables[side as usize]
+    }
+
+    fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>> {
+        Vec::new()
     }
 
     fn prg_rom_bank_string(&self) -> String {
