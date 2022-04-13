@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, HashMap};
 use log::error;
 use pixels::{Pixels, SurfaceTexture};
 use winit::dpi::{LogicalSize, Position, PhysicalPosition};
-use winit::event::{Event, VirtualKeyCode};
+use winit::event::{Event, VirtualKeyCode, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
@@ -117,6 +117,8 @@ impl Gui for EguiGui {
             Box::new(StatusPreRender::new()),
         );
 
+        let primary_window_id = primary_window.window.id();
+
         let mut windows = BTreeMap::new();
         windows.insert(primary_window.window.id(), primary_window);
         windows.insert(layers_window.window.id(), layers_window);
@@ -128,7 +130,7 @@ impl Gui for EguiGui {
         let mut pause = false;
         event_loop.run(move |event, _, control_flow| {
             if world.input.update(&event) {
-                if world.input.key_pressed(VirtualKeyCode::Escape) || world.input.quit() {
+                if world.input.key_pressed(VirtualKeyCode::Escape) {
                     *control_flow = ControlFlow::Exit;
                     return;
                 }
@@ -146,8 +148,21 @@ impl Gui for EguiGui {
 
             match event {
                 Event::WindowEvent {event, window_id} => {
-                    let window = windows.get_mut(&window_id).unwrap();
-                    window.handle_event(&event);
+                    match event {
+                        WindowEvent::CloseRequested => {
+                            println!("REMOVING: {:?}", window_id);
+                            windows.remove(&window_id);
+                            if window_id == primary_window_id {
+                                *control_flow = ControlFlow::Exit;
+                            }
+                        },
+                        _ => {
+                            if let Some(window) = windows.get_mut(&window_id) {
+                                println!("Window event for {:?}: {:?}", window_id, event);
+                                window.handle_event(&event);
+                            }
+                        },
+                    }
                 }
                 Event::RedrawRequested(window_id) => {
                     let window = windows.get_mut(&window_id).unwrap();
@@ -335,7 +350,7 @@ impl EguiWidgets for PrimaryWidgets {
     fn ui(&mut self, ctx: &Context, _world: &World) {
         egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
-                ui.menu_button("File", |ui| {
+                ui.menu_button("View", |ui| {
                     if ui.button("About...").clicked() {
                         self.window_open = true;
                         ui.close_menu();
