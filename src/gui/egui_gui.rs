@@ -73,48 +73,42 @@ impl Gui for EguiGui {
             3,
             "REZNEZ",
             Some(Position::Physical(PhysicalPosition {x: 50, y: 50})),
-            Box::new(PrimaryWidgets::new()),
-            Box::new(PrimaryPreRender),
+            Box::new(PrimaryRenderer::new()),
         );
         let layers_window = EguiWindow::from_event_loop(
             &event_loop,
             1,
             "Layers",
             Some(Position::Physical(PhysicalPosition {x: 850, y: 50})),
-            Box::new(NoWidgets),
-            Box::new(LayersPreRender::new()),
+            Box::new(LayersRenderer::new()),
         );
         let name_table_window = EguiWindow::from_event_loop(
             &event_loop,
             1,
             "Name Tables",
             Some(Position::Physical(PhysicalPosition {x: 1400, y: 50})),
-            Box::new(NoWidgets),
-            Box::new(NameTablePreRender::new()),
+            Box::new(NameTableRenderer::new()),
         );
         let pattern_table_window = EguiWindow::from_event_loop(
             &event_loop,
             3,
             "Pattern Tables",
             Some(Position::Physical(PhysicalPosition {x: 850, y: 660})),
-            Box::new(NoWidgets),
-            Box::new(PatternTablePreRender::new()),
+            Box::new(PatternTableRenderer::new()),
         );
         let chr_banks_window = EguiWindow::from_event_loop(
             &event_loop,
             2,
             "CHR Banks",
             Some(Position::Physical(PhysicalPosition {x: 50, y: 50})),
-            Box::new(NoWidgets),
-            Box::new(ChrBanksPreRender::new()),
+            Box::new(ChrBanksRenderer::new()),
         );
         let status_window = EguiWindow::from_event_loop(
             &event_loop,
             1,
             "Status",
             Some(Position::Physical(PhysicalPosition {x: 50, y: 660})),
-            Box::new(StatusWidgets::new()),
-            Box::new(StatusPreRender::new()),
+            Box::new(StatusRenderer::new()),
         );
 
         let primary_window_id = primary_window.window.id();
@@ -150,7 +144,6 @@ impl Gui for EguiGui {
                 Event::WindowEvent {event, window_id} => {
                     match event {
                         WindowEvent::CloseRequested => {
-                            println!("REMOVING: {:?}", window_id);
                             windows.remove(&window_id);
                             if window_id == primary_window_id {
                                 *control_flow = ControlFlow::Exit;
@@ -190,10 +183,9 @@ struct EguiWindow {
     textures: TexturesDelta,
 
     // State for the GUI
-    widgets: Box<dyn EguiWidgets>,
     window: Window,
     pixels: Pixels,
-    pre_render: Box<dyn PreRender>,
+    renderer: Box<dyn Renderer>,
 }
 
 impl EguiWindow {
@@ -202,13 +194,12 @@ impl EguiWindow {
         scale_factor: u64,
         title: &str,
         initial_position: Option<Position>,
-        widgets: Box<dyn EguiWidgets>,
-        pre_render: Box<dyn PreRender>,
+        renderer: Box<dyn Renderer>,
     ) -> Self {
         let window = {
             let size = LogicalSize::new(
-                scale_factor as f64 * pre_render.width() as f64,
-                scale_factor as f64 * pre_render.height() as f64,
+                scale_factor as f64 * renderer.width() as f64,
+                scale_factor as f64 * renderer.height() as f64,
             );
             let mut builder = WindowBuilder::new()
                 .with_title(title)
@@ -227,8 +218,8 @@ impl EguiWindow {
         let scale_factor = window.scale_factor() as f32;
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
         let pixels = Pixels::new(
-            pre_render.width() as u32,
-            pre_render.height() as u32,
+            renderer.width() as u32,
+            renderer.height() as u32,
             surface_texture,
         ).unwrap();
 
@@ -236,10 +227,9 @@ impl EguiWindow {
             window_size.width,
             window_size.height,
             scale_factor,
-            widgets,
             window,
             pixels,
-            pre_render,
+            renderer,
         )
     }
 
@@ -247,10 +237,9 @@ impl EguiWindow {
         width: u32,
         height: u32,
         scale_factor: f32,
-        widgets: Box<dyn EguiWidgets>,
         window: Window,
         pixels: pixels::Pixels,
-        pre_render: Box<dyn PreRender>,
+        renderer: Box<dyn Renderer>,
     ) -> Self {
 
         let max_texture_size = pixels.device().limits().max_texture_dimension_2d as usize;
@@ -272,10 +261,9 @@ impl EguiWindow {
             rpass,
             paint_jobs: Vec::new(),
             textures,
-            widgets,
             window,
             pixels,
-            pre_render,
+            renderer,
         }
     }
 
@@ -285,12 +273,12 @@ impl EguiWindow {
     }
 
     fn draw(&mut self, world: &mut World) -> Result<(), String> {
-        self.pre_render.pre_render(world, &mut self.pixels);
+        self.renderer.render(world, &mut self.pixels);
 
         // Run the egui frame and create all paint jobs to prepare for rendering.
         let raw_input = self.egui_state.take_egui_input(&self.window);
         let output = self.egui_ctx.run(raw_input, |egui_ctx| {
-            self.widgets.ui(egui_ctx, world);
+            self.renderer.ui(egui_ctx, world);
         });
 
         self.textures.append(output.textures_delta);
@@ -325,51 +313,66 @@ impl EguiWindow {
     }
 }
 
-trait EguiWidgets {
+struct World {
+    nes: Nes,
+    config: Config,
+    input: WinitInputHelper,
+}
+
+trait Renderer {
     fn ui(&mut self, ctx: &Context, world: &World);
+    fn render(&mut self, world: &mut World, pixels: &mut Pixels);
+    fn width(&self) -> usize;
+    fn height(&self) -> usize;
 }
 
-struct NoWidgets;
+struct PrimaryRenderer {}
 
-impl EguiWidgets for NoWidgets {
-    fn ui(&mut self, _ctx: &Context, _world: &World) {}
+impl PrimaryRenderer {
+    fn new() -> Self {PrimaryRenderer {}}
 }
 
-struct PrimaryWidgets {
-    /// Only show the egui window when true.
-    window_open: bool,
-}
-
-impl PrimaryWidgets {
-    fn new() -> Self {
-        Self {window_open: false}
-    }
-}
-
-impl EguiWidgets for PrimaryWidgets {
+impl Renderer for PrimaryRenderer {
     fn ui(&mut self, ctx: &Context, _world: &World) {
         egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
-                ui.menu_button("View", |ui| {
-                    if ui.button("About...").clicked() {
-                        self.window_open = true;
+                ui.menu_button("Debug Windows", |ui| {
+                    if ui.button("Status").clicked() {
                         ui.close_menu();
                     }
                 })
             });
         });
     }
-}
 
-struct StatusWidgets {}
+    fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
+        let display_frame = |frame: &Frame, mask, _frame_index| {
+            frame.copy_to_rgba_buffer(mask, pixels.get_frame().try_into().unwrap());
+        };
+        execute_frame(&mut world.nes, &world.config, events(&world.input), display_frame);
+    }
 
-impl StatusWidgets {
-    pub fn new() -> StatusWidgets {
-        StatusWidgets {}
+    fn width(&self) -> usize {
+        PixelColumn::COLUMN_COUNT
+    }
+
+    fn height(&self) -> usize {
+        PixelRow::ROW_COUNT
     }
 }
 
-impl EguiWidgets for StatusWidgets {
+struct StatusRenderer {}
+
+impl StatusRenderer {
+    const WIDTH: usize = 500;
+    const HEIGHT: usize = 500;
+
+    pub fn new() -> StatusRenderer {
+        StatusRenderer {}
+    }
+}
+
+impl Renderer for StatusRenderer {
     fn ui(&mut self, ctx: &Context, world: &World) {
         let nes = &world.nes;
         let clock = nes.ppu().clock();
@@ -436,58 +439,41 @@ impl EguiWidgets for StatusWidgets {
                 });
         });
     }
-}
 
-struct World {
-    nes: Nes,
-    config: Config,
-    input: WinitInputHelper,
-}
-
-trait PreRender {
-    fn pre_render(&mut self, world: &mut World, pixels: &mut Pixels);
-    fn width(&self) -> usize;
-    fn height(&self) -> usize;
-}
-
-struct PrimaryPreRender;
-
-impl PreRender for PrimaryPreRender {
-    fn pre_render(&mut self, world: &mut World, pixels: &mut Pixels) {
-        let display_frame = |frame: &Frame, mask, _frame_index| {
-            frame.copy_to_rgba_buffer(mask, pixels.get_frame().try_into().unwrap());
-        };
-        execute_frame(&mut world.nes, &world.config, events(&world.input), display_frame);
+    fn render(&mut self, _world: &mut World, _pixels: &mut Pixels) {
+        // Do nothing yet.
     }
 
     fn width(&self) -> usize {
-        PixelColumn::COLUMN_COUNT
+        StatusRenderer::WIDTH
     }
 
     fn height(&self) -> usize {
-        PixelRow::ROW_COUNT
+        StatusRenderer::HEIGHT
     }
 }
 
-struct LayersPreRender {
+struct LayersRenderer {
     frame: Frame,
-    buffer: DebugBuffer<{LayersPreRender::WIDTH}, {LayersPreRender::HEIGHT}>,
+    buffer: DebugBuffer<{LayersRenderer::WIDTH}, {LayersRenderer::HEIGHT}>,
 }
 
-impl LayersPreRender {
+impl LayersRenderer {
     const WIDTH: usize = 517;
     const HEIGHT: usize = 485 + TOP_MENU_BAR_HEIGHT;
 
-    fn new() -> LayersPreRender {
-        LayersPreRender {
+    fn new() -> LayersRenderer {
+        LayersRenderer {
             frame: Frame::new(),
             buffer: DebugBuffer::filled(Rgb::WHITE),
         }
     }
 }
 
-impl PreRender for LayersPreRender {
-    fn pre_render(&mut self, world: &mut World, pixels: &mut Pixels) {
+impl Renderer for LayersRenderer {
+    fn ui(&mut self, _ctx: &Context, _world: &World) {}
+
+    fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         self.buffer.place_frame(0, TOP_MENU_BAR_HEIGHT, world.nes.frame());
         self.buffer.place_frame(261, TOP_MENU_BAR_HEIGHT, &world.nes.frame().to_background_only());
 
@@ -506,33 +492,35 @@ impl PreRender for LayersPreRender {
     }
 
     fn width(&self) -> usize {
-        LayersPreRender::WIDTH
+        LayersRenderer::WIDTH
     }
 
     fn height(&self) -> usize {
-        LayersPreRender::HEIGHT
+        LayersRenderer::HEIGHT
     }
 }
 
-struct NameTablePreRender {
+struct NameTableRenderer {
     frame: Frame,
-    buffer: DebugBuffer<{NameTablePreRender::WIDTH}, {NameTablePreRender::HEIGHT}>,
+    buffer: DebugBuffer<{NameTableRenderer::WIDTH}, {NameTableRenderer::HEIGHT}>,
 }
 
-impl NameTablePreRender {
+impl NameTableRenderer {
     const WIDTH: usize = 517;
     const HEIGHT: usize = 485 + TOP_MENU_BAR_HEIGHT;
 
-    fn new() -> NameTablePreRender {
-        NameTablePreRender {
+    fn new() -> NameTableRenderer {
+        NameTableRenderer {
             frame: Frame::new(),
             buffer: DebugBuffer::filled(Rgb::WHITE),
         }
     }
 }
 
-impl PreRender for NameTablePreRender {
-    fn pre_render(&mut self, world: &mut World, pixels: &mut Pixels) {
+impl Renderer for NameTableRenderer {
+    fn ui(&mut self, _ctx: &Context, _world: &World) {}
+
+    fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         let mem = world
             .nes
             .memory_mut()
@@ -555,33 +543,35 @@ impl PreRender for NameTablePreRender {
     }
 
     fn width(&self) -> usize {
-        NameTablePreRender::WIDTH
+        NameTableRenderer::WIDTH
     }
 
     fn height(&self) -> usize {
-        NameTablePreRender::HEIGHT
+        NameTableRenderer::HEIGHT
     }
 }
 
-struct PatternTablePreRender {
+struct PatternTableRenderer {
     tile: Tile,
-    buffer: DebugBuffer<{PatternTablePreRender::WIDTH}, {PatternTablePreRender::HEIGHT}>,
+    buffer: DebugBuffer<{PatternTableRenderer::WIDTH}, {PatternTableRenderer::HEIGHT}>,
 }
 
-impl PatternTablePreRender {
+impl PatternTableRenderer {
     const WIDTH: usize = 2 * (8 + 1) * 16 + 10;
     const HEIGHT: usize = (8 + 1) * 16 + TOP_MENU_BAR_HEIGHT / 3;
 
-    fn new() -> PatternTablePreRender {
-        PatternTablePreRender {
+    fn new() -> PatternTableRenderer {
+        PatternTableRenderer {
             tile: Tile::new(),
             buffer: DebugBuffer::filled(Rgb::WHITE),
         }
     }
 }
 
-impl PreRender for PatternTablePreRender {
-    fn pre_render(&mut self, world: &mut World, pixels: &mut Pixels) {
+impl Renderer for PatternTableRenderer {
+    fn ui(&mut self, _ctx: &Context, _world: &World) {}
+
+    fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         let mem = world
             .nes
             .memory_mut()
@@ -611,33 +601,35 @@ impl PreRender for PatternTablePreRender {
     }
 
     fn width(&self) -> usize {
-        PatternTablePreRender::WIDTH
+        PatternTableRenderer::WIDTH
     }
 
     fn height(&self) -> usize {
-        PatternTablePreRender::HEIGHT
+        PatternTableRenderer::HEIGHT
     }
 }
 
-struct ChrBanksPreRender {
+struct ChrBanksRenderer {
     tile: Tile,
-    buffer: DebugBuffer<{ChrBanksPreRender::WIDTH}, {ChrBanksPreRender::HEIGHT}>,
+    buffer: DebugBuffer<{ChrBanksRenderer::WIDTH}, {ChrBanksRenderer::HEIGHT}>,
 }
 
-impl ChrBanksPreRender {
+impl ChrBanksRenderer {
     const WIDTH: usize = (8 + 1) * 256;
     const HEIGHT: usize = (8 + 1) * 32;
 
-    fn new() -> ChrBanksPreRender {
-        ChrBanksPreRender {
+    fn new() -> ChrBanksRenderer {
+        ChrBanksRenderer {
             tile: Tile::new(),
             buffer: DebugBuffer::filled(Rgb::WHITE),
         }
     }
 }
 
-impl PreRender for ChrBanksPreRender {
-    fn pre_render(&mut self, world: &mut World, pixels: &mut Pixels) {
+impl Renderer for ChrBanksRenderer {
+    fn ui(&mut self, _ctx: &Context, _world: &World) {}
+
+    fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         let palette = world
             .nes
             .memory_mut()
@@ -692,37 +684,11 @@ impl PreRender for ChrBanksPreRender {
     }
 
     fn width(&self) -> usize {
-        ChrBanksPreRender::WIDTH
+        ChrBanksRenderer::WIDTH
     }
 
     fn height(&self) -> usize {
-        ChrBanksPreRender::HEIGHT
-    }
-}
-
-
-struct StatusPreRender;
-
-impl StatusPreRender {
-    const WIDTH: usize = 500;
-    const HEIGHT: usize = 500;
-
-    fn new() -> StatusPreRender {
-        StatusPreRender
-    }
-}
-
-impl PreRender for StatusPreRender {
-    fn pre_render(&mut self, _world: &mut World, _pixels: &mut Pixels) {
-        // Do nothing yet.
-    }
-
-    fn width(&self) -> usize {
-        StatusPreRender::WIDTH
-    }
-
-    fn height(&self) -> usize {
-        StatusPreRender::HEIGHT
+        ChrBanksRenderer::HEIGHT
     }
 }
 
