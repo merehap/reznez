@@ -4,7 +4,7 @@ use log::error;
 use pixels::{Pixels, SurfaceTexture};
 use winit::dpi::{LogicalSize, Position, PhysicalPosition};
 use winit::event::{Event, VirtualKeyCode, WindowEvent};
-use winit::event_loop::{ControlFlow, EventLoop};
+use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
 use winit::window::{WindowBuilder, WindowId};
 use winit_input_helper::WinitInputHelper;
 use egui::{ClippedMesh, Context, TexturesDelta};
@@ -69,45 +69,9 @@ impl Gui for EguiGui {
         let event_loop = EventLoop::new();
 
         let mut window_manager = WindowManager::new(&event_loop, Box::new(PrimaryRenderer::new()));
-        window_manager.create_window_from_renderer(
-            &event_loop,
-            Box::new(PrimaryRenderer::new()),
-            Position::Physical(PhysicalPosition {x: 50, y: 50}),
-            3,
-        );
-        window_manager.create_window_from_renderer(
-            &event_loop,
-            Box::new(StatusRenderer::new()),
-            Position::Physical(PhysicalPosition {x: 50, y: 660}),
-            2,
-        );
-        window_manager.create_window_from_renderer(
-            &event_loop,
-            Box::new(LayersRenderer::new()),
-            Position::Physical(PhysicalPosition {x: 850, y: 50}),
-            1,
-        );
-        window_manager.create_window_from_renderer(
-            &event_loop,
-            Box::new(NameTableRenderer::new()),
-            Position::Physical(PhysicalPosition {x: 1400, y: 50}),
-            1,
-        );
-        window_manager.create_window_from_renderer(
-            &event_loop,
-            Box::new(PatternTableRenderer::new()),
-            Position::Physical(PhysicalPosition {x: 850, y: 660}),
-            3,
-        );
-        window_manager.create_window_from_renderer(
-            &event_loop,
-            Box::new(ChrBanksRenderer::new()),
-            Position::Physical(PhysicalPosition {x: 50, y: 50}),
-            2,
-        );
 
         let mut pause = false;
-        event_loop.run(move |event, _, control_flow| {
+        event_loop.run(move |event, event_loop_window_target, control_flow| {
             if world.input.update(&event) {
                 if world.input.key_pressed(VirtualKeyCode::Escape) {
                     *control_flow = ControlFlow::Exit;
@@ -141,12 +105,15 @@ impl Gui for EguiGui {
                 }
                 Event::RedrawRequested(window_id) => {
                     let window = window_manager.window_mut(&window_id).unwrap();
-                    let render_result = window.draw(&mut world);
-                    if render_result
-                        .map_err(|e| error!("pixels.render() failed: {}", e))
-                        .is_err()
-                    {
-                        *control_flow = ControlFlow::Exit;
+                    match window.draw(&mut world) {
+                        Ok(Some((renderer, position, scale))) =>
+                            window_manager.create_window_from_renderer(
+                                event_loop_window_target, renderer, position, scale),
+                        Ok(None) => {},
+                        Err(e) => {
+                            error!("pixels.render() failed: {}", e);
+                            *control_flow = ControlFlow::Exit;
+                        },
                     }
                 }
                 _ => (),
@@ -172,7 +139,7 @@ struct EguiWindow {
 
 impl EguiWindow {
     fn from_event_loop(
-        event_loop: &EventLoop<()>,
+        event_loop: &EventLoopWindowTarget<()>,
         scale_factor: u64,
         initial_position: Position,
         renderer: Box<dyn Renderer>,
@@ -250,13 +217,14 @@ impl EguiWindow {
         self.egui_state.on_event(&self.egui_ctx, event);
     }
 
-    fn draw(&mut self, world: &mut World) -> Result<(), String> {
+    fn draw(&mut self, world: &mut World) -> Result<Option<(Box<dyn Renderer>, Position, u64)>, String> {
         self.renderer.render(world, &mut self.pixels);
 
         // Run the egui frame and create all paint jobs to prepare for rendering.
         let raw_input = self.egui_state.take_egui_input(&self.window);
+        let mut result = None;
         let output = self.egui_ctx.run(raw_input, |egui_ctx| {
-            self.renderer.ui(egui_ctx, world);
+            result = self.renderer.ui(egui_ctx, world);
         });
 
         self.textures.append(output.textures_delta);
@@ -287,7 +255,9 @@ impl EguiWindow {
             // Cleanup
             let textures = std::mem::take(&mut self.textures);
             Ok(self.rpass.remove_textures(textures).map_err(|err| err.to_string())?)
-        }).map_err(|err| err.to_string())
+        }).map_err(|err| err.to_string())?;
+
+        Ok(result)
     }
 }
 
@@ -304,7 +274,7 @@ struct WindowManager {
 }
 
 impl WindowManager {
-    pub fn new(event_loop: &EventLoop<()>, primary_renderer: Box<dyn Renderer>) -> WindowManager {
+    pub fn new(event_loop: &EventLoopWindowTarget<()>, primary_renderer: Box<dyn Renderer>) -> WindowManager {
         let name = primary_renderer.name();
         let primary_window = EguiWindow::from_event_loop(
             &event_loop,
@@ -324,7 +294,7 @@ impl WindowManager {
 
     pub fn create_window_from_renderer(
         &mut self,
-        event_loop: &EventLoop<()>,
+        event_loop: &EventLoopWindowTarget<()>,
         renderer: Box<dyn Renderer>,
         position: Position,
         scale: u64,
@@ -369,7 +339,7 @@ impl WindowManager {
 
 trait Renderer {
     fn name(&self) -> String;
-    fn ui(&mut self, ctx: &Context, world: &World);
+    fn ui(&mut self, ctx: &Context, world: &World) -> Option<(Box<dyn Renderer>, Position, u64)>;
     fn render(&mut self, world: &mut World, pixels: &mut Pixels);
     fn width(&self) -> usize;
     fn height(&self) -> usize;
@@ -386,16 +356,56 @@ impl Renderer for PrimaryRenderer {
         "REZNEZ".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, _world: &World) {
+    fn ui(&mut self, ctx: &Context, _world: &World) -> Option<(Box<dyn Renderer>, Position, u64)> {
+        let mut result = None;
         egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("Debug Windows", |ui| {
                     if ui.button("Status").clicked() {
                         ui.close_menu();
+                        result = Some((
+                            Box::new(StatusRenderer {}) as Box<dyn Renderer>,
+                            Position::Physical(PhysicalPosition {x: 50, y: 660}),
+                            2,
+                        ));
+                    }
+                    if ui.button("Layers").clicked() {
+                        ui.close_menu();
+                        result = Some((
+                            Box::new(LayersRenderer::new()),
+                            Position::Physical(PhysicalPosition {x: 850, y: 50}),
+                            1,
+                        ));
+                    }
+                    if ui.button("Name Tables").clicked() {
+                        ui.close_menu();
+                        result = Some((
+                            Box::new(NameTableRenderer::new()),
+                            Position::Physical(PhysicalPosition {x: 1400, y: 50}),
+                            1,
+                        ));
+                    }
+                    if ui.button("Pattern Tables").clicked() {
+                        ui.close_menu();
+                        result = Some((
+                            Box::new(PatternTableRenderer::new()),
+                            Position::Physical(PhysicalPosition {x: 850, y: 660}),
+                            3,
+                        ));
+                    }
+                    if ui.button("CHR Banks").clicked() {
+                        ui.close_menu();
+                        result = Some((
+                            Box::new(ChrBanksRenderer::new()),
+                            Position::Physical(PhysicalPosition {x: 50, y: 50}),
+                            2,
+                        ));
                     }
                 })
             });
         });
+
+        result
     }
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
@@ -430,7 +440,7 @@ impl Renderer for StatusRenderer {
         "Status".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, world: &World) {
+    fn ui(&mut self, ctx: &Context, world: &World) -> Option<(Box<dyn Renderer>, Position, u64)> {
         let nes = &world.nes;
         let clock = nes.ppu().clock();
         let ppu_regs = nes.memory().ppu_regs();
@@ -495,6 +505,8 @@ impl Renderer for StatusRenderer {
                     ui.label(&nes.memory().mapper().chr_rom_bank_string());
                 });
         });
+
+        None
     }
 
     fn render(&mut self, _world: &mut World, _pixels: &mut Pixels) {
@@ -532,7 +544,7 @@ impl Renderer for LayersRenderer {
         "Layers".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &World) {}
+    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<(Box<dyn Renderer>, Position, u64)> {None}
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         self.buffer.place_frame(0, TOP_MENU_BAR_HEIGHT, world.nes.frame());
@@ -583,7 +595,7 @@ impl Renderer for NameTableRenderer {
         "Name Tables".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &World) {}
+    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<(Box<dyn Renderer>, Position, u64)> {None}
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         let mem = world
@@ -638,7 +650,7 @@ impl Renderer for PatternTableRenderer {
         "Pattern Table".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &World) {}
+    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<(Box<dyn Renderer>, Position, u64)> {None}
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         let mem = world
@@ -700,7 +712,7 @@ impl Renderer for ChrBanksRenderer {
         "CHR Banks".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &World) {}
+    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<(Box<dyn Renderer>, Position, u64)> {None}
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         let palette = world
