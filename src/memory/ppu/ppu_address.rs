@@ -47,7 +47,7 @@ impl PpuAddress {
         }
     }
 
-    pub fn name_table_number(self) -> NameTablePosition {
+    pub fn name_table_position(self) -> NameTablePosition {
         NameTablePosition::from_last_two_bits((self.address >> 10) as u8)
     }
 
@@ -73,7 +73,7 @@ impl PpuAddress {
         (coarse_y | fine_y) as u8
     }
 
-    pub fn set_name_table_number(&mut self, value: u8) {
+    pub fn set_name_table_position(&mut self, value: u8) {
         self.address &= !NAME_TABLE_MASK;
         self.address |= (u16::from(value) & 0b0000_0011) << 10;
     }

@@ -3,6 +3,7 @@ use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
+use crate::ppu::name_table::name_table_position::NameTablePosition;
 use crate::ppu::oam::Oam;
 use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
@@ -50,6 +51,10 @@ impl Ppu {
 
     pub fn clock(&self) -> &Clock {
         &self.clock
+    }
+
+    pub fn active_name_table_position(&self) -> NameTablePosition {
+        self.next_address.name_table_position()
     }
 
     pub fn x_scroll(&self) -> u8 {
@@ -123,7 +128,7 @@ impl Ppu {
             (Mask | Status | OamAddr, Write) => {},
 
             (Ctrl, Write) => {
-                self.next_address.set_name_table_number(value);
+                self.next_address.set_name_table_position(value);
                 if !self.nmi_was_enabled_last_cycle {
                     // Attempt to trigger the second (or higher) NMI of this frame.
                     maybe_generate_nmi = true;
@@ -172,9 +177,9 @@ impl Ppu {
         let palette_table = mem.palette_table();
         frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
-        let name_table_number = self.next_address.name_table_number();
+        let name_table_position = self.next_address.name_table_position();
         let background_table_side = mem.regs().background_table_side();
-        mem.name_table(name_table_number).render_scanline(
+        mem.name_table(name_table_position).render_scanline(
             pixel_row,
             &mem.pattern_table(background_table_side),
             &palette_table,
@@ -184,7 +189,7 @@ impl Ppu {
         );
         match mem.name_table_mirroring() {
             NameTableMirroring::Horizontal =>
-                mem.name_table(name_table_number.next_vertical()).render_scanline(
+                mem.name_table(name_table_position.next_vertical()).render_scanline(
                     pixel_row,
                     &mem.pattern_table(background_table_side),
                     &palette_table,
@@ -193,7 +198,7 @@ impl Ppu {
                     frame,
                 ),
             NameTableMirroring::Vertical =>
-                mem.name_table(name_table_number.next_horizontal()).render_scanline(
+                mem.name_table(name_table_position.next_horizontal()).render_scanline(
                     pixel_row,
                     &mem.pattern_table(background_table_side),
                     &palette_table,

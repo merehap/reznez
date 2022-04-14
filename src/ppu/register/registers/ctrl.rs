@@ -10,7 +10,7 @@ pub struct Ctrl {
     pub background_table_side: PatternTableSide,
     pub sprite_table_side: PatternTableSide,
     pub current_address_increment: AddressIncrement,
-    pub name_table_number: NameTablePosition,
+    pub base_name_table_position: NameTablePosition,
 }
 
 impl Ctrl {
@@ -22,7 +22,7 @@ impl Ctrl {
             background_table_side: PatternTableSide::Left,
             sprite_table_side: PatternTableSide::Left,
             current_address_increment: AddressIncrement::Right,
-            name_table_number: NameTablePosition::TopLeft,
+            base_name_table_position: NameTablePosition::TopLeft,
         }
     }
 
@@ -59,7 +59,7 @@ impl Ctrl {
                 } else {
                     AddressIncrement::Right
                 },
-            name_table_number: NameTablePosition::from_last_two_bits(value),
+            base_name_table_position: NameTablePosition::from_last_two_bits(value),
         }
     }
 
@@ -73,8 +73,8 @@ impl Ctrl {
                 self.background_table_side == PatternTableSide::Right,
                 self.sprite_table_side == PatternTableSide::Right,
                 self.current_address_increment == AddressIncrement::Down,
-                self.name_table_number as u8 & 0b0000_0010 != 0,
-                self.name_table_number as u8 & 0b0000_0001 != 0,
+                self.base_name_table_position as u8 & 0b0000_0010 != 0,
+                self.base_name_table_position as u8 & 0b0000_0001 != 0,
             ]
         )
     }

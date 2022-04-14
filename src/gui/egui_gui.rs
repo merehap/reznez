@@ -477,6 +477,12 @@ impl Renderer for StatusRenderer {
                     ui.label("Sprite Height");
                     ui.label(format!("{:?}", ppu_regs.sprite_height()));
                     ui.end_row();
+                    ui.label("Base Name Table");
+                    ui.label(format!("{:?}", ppu_regs.base_name_table_position()));
+                    ui.end_row();
+                    ui.label("Active Name Table");
+                    ui.label(format!("{:?}", nes.ppu().active_name_table_position()));
+                    ui.end_row();
                     ui.label("Background");
                     ui.label(format!("Enabled: {}, Pattern Table: {:?} side",
                         ppu_regs.background_enabled(),
