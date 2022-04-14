@@ -364,7 +364,7 @@ impl Renderer for PrimaryRenderer {
                     if ui.button("Status").clicked() {
                         ui.close_menu();
                         result = Some((
-                            Box::new(StatusRenderer {}) as Box<dyn Renderer>,
+                            Box::new(StatusRenderer::new()) as Box<dyn Renderer>,
                             Position::Physical(PhysicalPosition {x: 50, y: 660}),
                             2,
                         ));

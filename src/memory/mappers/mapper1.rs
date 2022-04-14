@@ -64,14 +64,6 @@ impl Mapper1 {
         }
     }
 
-    pub fn state_string(&self) -> String {
-        let (chr_index_0, chr_index_1) = self.chr_bank_indexes();
-        format!("Shift: 0b{:05b}, Control: {:?}, CHR Indexes: {},{} (Bank registers: {},{}), PB: {}",
-            self.shift, self.control,
-            chr_index_0, chr_index_1, self.selected_chr_bank0, self.selected_chr_bank1,
-            self.selected_prg_bank)
-    }
-
     fn chr_bank_indexes(&self) -> (u8, u8) {
         match self.control.chr_bank_mode {
             ChrBankMode::Large => {
@@ -158,8 +150,6 @@ impl Mapper for Mapper1 {
 
             self.shift = EMPTY_SHIFT_REGISTER;
         }
-
-        println!("{}", self.state_string());
 
         if get_bit(self.selected_prg_bank, 3) {
             todo!("Bypassing PRG fixed bank logic not supported.");
