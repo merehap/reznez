@@ -1,11 +1,11 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use log::error;
 use pixels::{Pixels, SurfaceTexture};
 use winit::dpi::{LogicalSize, Position, PhysicalPosition};
 use winit::event::{Event, VirtualKeyCode, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
-use winit::window::WindowBuilder;
+use winit::window::{WindowBuilder, WindowId};
 use winit_input_helper::WinitInputHelper;
 use egui::{ClippedMesh, Context, TexturesDelta};
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
@@ -66,60 +66,45 @@ impl Gui for EguiGui {
     fn run(&mut self, nes: Nes, config: Config) {
         let input = WinitInputHelper::new();
         let mut world = World {nes, config, input};
-
         let event_loop = EventLoop::new();
-        let primary_window = EguiWindow::from_event_loop(
+
+        let mut window_manager = WindowManager::new(&event_loop, Box::new(PrimaryRenderer::new()));
+        window_manager.create_window_from_renderer(
             &event_loop,
-            3,
-            "REZNEZ",
-            Some(Position::Physical(PhysicalPosition {x: 50, y: 50})),
             Box::new(PrimaryRenderer::new()),
-        );
-        let layers_window = EguiWindow::from_event_loop(
-            &event_loop,
-            1,
-            "Layers",
-            Some(Position::Physical(PhysicalPosition {x: 850, y: 50})),
-            Box::new(LayersRenderer::new()),
-        );
-        let name_table_window = EguiWindow::from_event_loop(
-            &event_loop,
-            1,
-            "Name Tables",
-            Some(Position::Physical(PhysicalPosition {x: 1400, y: 50})),
-            Box::new(NameTableRenderer::new()),
-        );
-        let pattern_table_window = EguiWindow::from_event_loop(
-            &event_loop,
+            Position::Physical(PhysicalPosition {x: 50, y: 50}),
             3,
-            "Pattern Tables",
-            Some(Position::Physical(PhysicalPosition {x: 850, y: 660})),
-            Box::new(PatternTableRenderer::new()),
         );
-        let chr_banks_window = EguiWindow::from_event_loop(
+        window_manager.create_window_from_renderer(
             &event_loop,
-            2,
-            "CHR Banks",
-            Some(Position::Physical(PhysicalPosition {x: 50, y: 50})),
-            Box::new(ChrBanksRenderer::new()),
-        );
-        let status_window = EguiWindow::from_event_loop(
-            &event_loop,
-            1,
-            "Status",
-            Some(Position::Physical(PhysicalPosition {x: 50, y: 660})),
             Box::new(StatusRenderer::new()),
+            Position::Physical(PhysicalPosition {x: 50, y: 660}),
+            2,
         );
-
-        let primary_window_id = primary_window.window.id();
-
-        let mut windows = BTreeMap::new();
-        windows.insert(primary_window.window.id(), primary_window);
-        windows.insert(layers_window.window.id(), layers_window);
-        windows.insert(name_table_window.window.id(), name_table_window);
-        windows.insert(pattern_table_window.window.id(), pattern_table_window);
-        windows.insert(chr_banks_window.window.id(), chr_banks_window);
-        windows.insert(status_window.window.id(), status_window);
+        window_manager.create_window_from_renderer(
+            &event_loop,
+            Box::new(LayersRenderer::new()),
+            Position::Physical(PhysicalPosition {x: 850, y: 50}),
+            1,
+        );
+        window_manager.create_window_from_renderer(
+            &event_loop,
+            Box::new(NameTableRenderer::new()),
+            Position::Physical(PhysicalPosition {x: 1400, y: 50}),
+            1,
+        );
+        window_manager.create_window_from_renderer(
+            &event_loop,
+            Box::new(PatternTableRenderer::new()),
+            Position::Physical(PhysicalPosition {x: 850, y: 660}),
+            3,
+        );
+        window_manager.create_window_from_renderer(
+            &event_loop,
+            Box::new(ChrBanksRenderer::new()),
+            Position::Physical(PhysicalPosition {x: 50, y: 50}),
+            2,
+        );
 
         let mut pause = false;
         event_loop.run(move |event, _, control_flow| {
@@ -134,9 +119,7 @@ impl Gui for EguiGui {
                 }
 
                 if !pause {
-                    for (_id, window) in windows.iter() {
-                        window.window.request_redraw();
-                    }
+                    window_manager.request_redraws();
                 }
             }
 
@@ -144,21 +127,20 @@ impl Gui for EguiGui {
                 Event::WindowEvent {event, window_id} => {
                     match event {
                         WindowEvent::CloseRequested => {
-                            windows.remove(&window_id);
-                            if window_id == primary_window_id {
+                            let primary_removed = window_manager.remove_window(&window_id);
+                            if primary_removed {
                                 *control_flow = ControlFlow::Exit;
                             }
                         },
                         _ => {
-                            if let Some(window) = windows.get_mut(&window_id) {
-                                println!("Window event for {:?}: {:?}", window_id, event);
+                            if let Some(window) = window_manager.window_mut(&window_id) {
                                 window.handle_event(&event);
                             }
                         },
                     }
                 }
                 Event::RedrawRequested(window_id) => {
-                    let window = windows.get_mut(&window_id).unwrap();
+                    let window = window_manager.window_mut(&window_id).unwrap();
                     let render_result = window.draw(&mut world);
                     if render_result
                         .map_err(|e| error!("pixels.render() failed: {}", e))
@@ -192,8 +174,7 @@ impl EguiWindow {
     fn from_event_loop(
         event_loop: &EventLoop<()>,
         scale_factor: u64,
-        title: &str,
-        initial_position: Option<Position>,
+        initial_position: Position,
         renderer: Box<dyn Renderer>,
     ) -> Self {
         let window = {
@@ -201,17 +182,14 @@ impl EguiWindow {
                 scale_factor as f64 * renderer.width() as f64,
                 scale_factor as f64 * renderer.height() as f64,
             );
-            let mut builder = WindowBuilder::new()
-                .with_title(title)
+            WindowBuilder::new()
+                .with_title(renderer.name())
                 .with_inner_size(size)
                 .with_min_inner_size(size)
-                .with_resizable(false);
-
-            if let Some(initial_position) = initial_position {
-                builder = builder.with_position(initial_position);
-            }
-
-            builder.build(event_loop).unwrap()
+                .with_resizable(false)
+                .with_position(initial_position)
+                .build(event_loop)
+                .unwrap()
         };
 
         let window_size = window.inner_size();
@@ -319,7 +297,78 @@ struct World {
     input: WinitInputHelper,
 }
 
+struct WindowManager {
+    primary_window_id: WindowId,
+    windows_by_id: BTreeMap<WindowId, (String, EguiWindow)>,
+    window_names: BTreeSet<String>,
+}
+
+impl WindowManager {
+    pub fn new(event_loop: &EventLoop<()>, primary_renderer: Box<dyn Renderer>) -> WindowManager {
+        let name = primary_renderer.name();
+        let primary_window = EguiWindow::from_event_loop(
+            &event_loop,
+            3,
+            Position::Physical(PhysicalPosition {x: 50, y: 50}),
+            primary_renderer,
+        );
+        let mut manager = WindowManager {
+            primary_window_id: primary_window.window.id(),
+            windows_by_id: BTreeMap::new(),
+            window_names: BTreeSet::new(),
+        };
+        manager.window_names.insert(name.clone());
+        manager.windows_by_id.insert(primary_window.window.id(), (name, primary_window));
+        manager
+    }
+
+    pub fn create_window_from_renderer(
+        &mut self,
+        event_loop: &EventLoop<()>,
+        renderer: Box<dyn Renderer>,
+        position: Position,
+        scale: u64,
+    ) {
+        let name = renderer.name();
+        if self.window_names.contains(&name) {
+            return;
+        }
+
+        self.window_names.insert(name.clone());
+
+        let window = EguiWindow::from_event_loop(
+            event_loop,
+            scale,
+            position,
+            renderer,
+        );
+        self.windows_by_id.insert(window.window.id(), (name, window));
+    }
+
+    pub fn remove_window(&mut self, window_id: &WindowId) -> bool {
+        let primary_removed = *window_id == self.primary_window_id;
+        if let Some((name, _)) = self.windows_by_id.remove(&window_id) {
+            self.window_names.remove(&name);
+        }
+
+        primary_removed
+    }
+
+    pub fn request_redraws(&self) {
+        for (_id, window) in self.windows_by_id.values() {
+            window.window.request_redraw();
+        }
+    }
+
+    pub fn window_mut(&mut self, window_id: &WindowId) -> Option<&mut EguiWindow> {
+        self.windows_by_id
+            .get_mut(window_id)
+            .map(|(_, window)| window)
+    }
+}
+
 trait Renderer {
+    fn name(&self) -> String;
     fn ui(&mut self, ctx: &Context, world: &World);
     fn render(&mut self, world: &mut World, pixels: &mut Pixels);
     fn width(&self) -> usize;
@@ -333,6 +382,10 @@ impl PrimaryRenderer {
 }
 
 impl Renderer for PrimaryRenderer {
+    fn name(&self) -> String {
+        "REZNEZ".to_string()
+    }
+
     fn ui(&mut self, ctx: &Context, _world: &World) {
         egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
@@ -373,6 +426,10 @@ impl StatusRenderer {
 }
 
 impl Renderer for StatusRenderer {
+    fn name(&self) -> String {
+        "Status".to_string()
+    }
+
     fn ui(&mut self, ctx: &Context, world: &World) {
         let nes = &world.nes;
         let clock = nes.ppu().clock();
@@ -471,6 +528,10 @@ impl LayersRenderer {
 }
 
 impl Renderer for LayersRenderer {
+    fn name(&self) -> String {
+        "Layers".to_string()
+    }
+
     fn ui(&mut self, _ctx: &Context, _world: &World) {}
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
@@ -518,6 +579,10 @@ impl NameTableRenderer {
 }
 
 impl Renderer for NameTableRenderer {
+    fn name(&self) -> String {
+        "Name Tables".to_string()
+    }
+
     fn ui(&mut self, _ctx: &Context, _world: &World) {}
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
@@ -569,6 +634,10 @@ impl PatternTableRenderer {
 }
 
 impl Renderer for PatternTableRenderer {
+    fn name(&self) -> String {
+        "Pattern Table".to_string()
+    }
+
     fn ui(&mut self, _ctx: &Context, _world: &World) {}
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
@@ -627,6 +696,10 @@ impl ChrBanksRenderer {
 }
 
 impl Renderer for ChrBanksRenderer {
+    fn name(&self) -> String {
+        "CHR Banks".to_string()
+    }
+
     fn ui(&mut self, _ctx: &Context, _world: &World) {}
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
