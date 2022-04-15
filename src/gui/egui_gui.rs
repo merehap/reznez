@@ -427,8 +427,8 @@ impl Renderer for PrimaryRenderer {
 struct StatusRenderer {}
 
 impl StatusRenderer {
-    const WIDTH: usize = 500;
-    const HEIGHT: usize = 500;
+    const WIDTH: usize = 300;
+    const HEIGHT: usize = 300;
 
     pub fn new() -> StatusRenderer {
         StatusRenderer {}
@@ -585,8 +585,8 @@ struct NameTableRenderer {
 }
 
 impl NameTableRenderer {
-    const WIDTH: usize = 517;
-    const HEIGHT: usize = 485 + TOP_MENU_BAR_HEIGHT;
+    const WIDTH: usize = 2 * 256 + 2;
+    const HEIGHT: usize = 2 * 240 + 2;
 
     fn new() -> NameTableRenderer {
         NameTableRenderer {
@@ -604,24 +604,39 @@ impl Renderer for NameTableRenderer {
     fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<(Box<dyn Renderer>, Position, u64)> {None}
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
+        let x = usize::from(world.nes.ppu().x_scroll());
+        let y = usize::from(world.nes.ppu().y_scroll());
         let mem = world
             .nes
             .memory_mut()
             .as_ppu_memory();
 
+        let width = NameTableRenderer::WIDTH;
+        let height = NameTableRenderer::HEIGHT;
+        self.buffer.place_wrapping_horizontal_line(0, 0, width, Rgb::new(255, 255, 255));
+        self.buffer.place_wrapping_horizontal_line(height, 0, width, Rgb::new(255, 255, 255));
+        self.buffer.place_wrapping_vertical_line(0, 0, height, Rgb::new(255, 255, 255));
+        self.buffer.place_wrapping_vertical_line(width, 0, height, Rgb::new(255, 255, 255));
+
         self.frame.set_universal_background_rgb(mem.palette_table().universal_background_rgb());
         mem.name_table(NameTablePosition::TopLeft)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
-        self.buffer.place_frame(0, TOP_MENU_BAR_HEIGHT, &self.frame);
+        self.buffer.place_frame(1, 1, &self.frame);
         mem.name_table(NameTablePosition::TopRight)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
-        self.buffer.place_frame(261, TOP_MENU_BAR_HEIGHT, &self.frame);
+        self.buffer.place_frame(257, 1, &self.frame);
         mem.name_table(NameTablePosition::BottomLeft)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
-        self.buffer.place_frame(0, 245 + TOP_MENU_BAR_HEIGHT, &self.frame);
+        self.buffer.place_frame(1, 241, &self.frame);
         mem.name_table(NameTablePosition::BottomRight)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
-        self.buffer.place_frame(261, 245 + TOP_MENU_BAR_HEIGHT, &self.frame);
+        self.buffer.place_frame(257, 241, &self.frame);
+
+        self.buffer.place_wrapping_horizontal_line(y, x, x + 257, Rgb::new(255, 0, 0));
+        self.buffer.place_wrapping_horizontal_line(y + 241, x, x + 257, Rgb::new(255, 0, 0));
+        self.buffer.place_wrapping_vertical_line(x, y, y + 241, Rgb::new(255, 0, 0));
+        self.buffer.place_wrapping_vertical_line(x + 257, y, y + 241, Rgb::new(255, 0, 0));
+
         self.buffer.copy_to_rgba_buffer(pixels.get_frame().try_into().unwrap());
     }
 

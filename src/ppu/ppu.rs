@@ -1,10 +1,9 @@
 use crate::memory::memory::{PpuMemory, PALETTE_TABLE_START};
 use crate::memory::ppu::ppu_address::PpuAddress;
-use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::clock::Clock;
-use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_position::NameTablePosition;
 use crate::ppu::oam::Oam;
+use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ppu_data::PpuData;

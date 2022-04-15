@@ -226,6 +226,56 @@ impl <const WIDTH: usize, const HEIGHT: usize> DebugBuffer<WIDTH, HEIGHT> {
         }
     }
 
+    pub fn place_wrapping_horizontal_line(
+        &mut self,
+        row: usize,
+        left_column: usize,
+        right_column: usize,
+        rgb: Rgb,
+    ) {
+        let row = row.rem_euclid(HEIGHT);
+        let left_column = left_column.rem_euclid(WIDTH);
+        let right_column = right_column.rem_euclid(WIDTH);
+        if left_column < right_column {
+            for column in left_column..=right_column {
+                self[(column, row)] = rgb;
+            }
+        } else {
+            for column in left_column..WIDTH {
+                self[(column, row)] = rgb;
+            }
+
+            for column in 0..=right_column {
+                self[(column, row)] = rgb;
+            }
+        }
+    }
+
+    pub fn place_wrapping_vertical_line(
+        &mut self,
+        column: usize,
+        top_row: usize,
+        bottom_row: usize,
+        rgb: Rgb,
+    ) {
+        let column = column.rem_euclid(WIDTH);
+        let top_row = top_row.rem_euclid(HEIGHT);
+        let bottom_row = bottom_row.rem_euclid(HEIGHT);
+        if top_row < bottom_row {
+            for row in top_row..=bottom_row {
+                self[(column, row)] = rgb;
+            }
+        } else {
+            for row in top_row..HEIGHT {
+                self[(column, row)] = rgb;
+            }
+
+            for row in 0..=bottom_row {
+                self[(column, row)] = rgb;
+            }
+        }
+    }
+
     pub fn copy_to_rgba_buffer(&self, buffer: &mut [u8]) {
         for row in 0..HEIGHT {
             for column in 0..WIDTH {
