@@ -67,7 +67,7 @@ pub fn analyze(rom_base_path: &Path) {
 
     let cartridge_iter = cartridge_iter.map(|entry| {
         let entry = entry.as_ref().unwrap();
-        (entry.0.clone(), entry.1.clone(), entry.2.clone())
+        (entry.0.clone(), entry.1, entry.2.clone())
     });
 
     let grouped_cartridges: BTreeMap<i32, Vec<(String, i32, String)>> = cartridge_iter

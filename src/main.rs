@@ -11,6 +11,7 @@ mod cartridge;
 mod config;
 mod controller;
 mod cpu;
+mod debug;
 mod gui;
 mod ppu;
 mod memory;

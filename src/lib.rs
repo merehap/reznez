@@ -3,7 +3,6 @@
 #![feature(const_option)]
 #![feature(if_let_guard)]
 #![feature(type_ascription)]
-#![allow(dead_code)]
 #![allow(clippy::module_inception)]
 #![allow(clippy::new_without_default)]
 
@@ -12,6 +11,7 @@ pub mod cartridge;
 pub mod config;
 pub mod controller;
 pub mod cpu;
+pub mod debug;
 pub mod gui;
 pub mod ppu;
 pub mod memory;

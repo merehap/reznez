@@ -95,21 +95,21 @@ fn events(keyboard_input: Res<Input<KeyCode>>) -> Events {
     let mut joypad2_button_statuses = BTreeMap::new();
 
     for key_code in keyboard_input.get_just_pressed() {
-        if let Some(&button) = JOY_1_BUTTON_MAPPINGS.get(&key_code) {
+        if let Some(&button) = JOY_1_BUTTON_MAPPINGS.get(key_code) {
             joypad1_button_statuses.insert(button, ButtonStatus::Pressed);
         }
 
-        if let Some(&button) = JOY_2_BUTTON_MAPPINGS.get(&key_code) {
+        if let Some(&button) = JOY_2_BUTTON_MAPPINGS.get(key_code) {
             joypad2_button_statuses.insert(button, ButtonStatus::Pressed);
         }
     }
 
     for key_code in keyboard_input.get_just_released() {
-        if let Some(&button) = JOY_1_BUTTON_MAPPINGS.get(&key_code) {
+        if let Some(&button) = JOY_1_BUTTON_MAPPINGS.get(key_code) {
             joypad1_button_statuses.insert(button, ButtonStatus::Unpressed);
         }
 
-        if let Some(&button) = JOY_2_BUTTON_MAPPINGS.get(&key_code) {
+        if let Some(&button) = JOY_2_BUTTON_MAPPINGS.get(key_code) {
             joypad2_button_statuses.insert(button, ButtonStatus::Unpressed);
         }
     }

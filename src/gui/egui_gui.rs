@@ -122,6 +122,8 @@ impl Gui for EguiGui {
     }
 }
 
+type WindowArgs = (Box<dyn Renderer>, Position, u64);
+
 /// Manages all state required for rendering egui over `Pixels`.
 struct EguiWindow {
     egui_ctx: Context,
@@ -217,7 +219,7 @@ impl EguiWindow {
         self.egui_state.on_event(&self.egui_ctx, event);
     }
 
-    fn draw(&mut self, world: &mut World) -> Result<Option<(Box<dyn Renderer>, Position, u64)>, String> {
+    fn draw(&mut self, world: &mut World) -> Result<Option<WindowArgs>, String> {
         self.renderer.render(world, &mut self.pixels);
 
         // Run the egui frame and create all paint jobs to prepare for rendering.
@@ -277,7 +279,7 @@ impl WindowManager {
     pub fn new(event_loop: &EventLoopWindowTarget<()>, primary_renderer: Box<dyn Renderer>) -> WindowManager {
         let name = primary_renderer.name();
         let primary_window = EguiWindow::from_event_loop(
-            &event_loop,
+            event_loop,
             3,
             Position::Physical(PhysicalPosition {x: 50, y: 50}),
             primary_renderer,
@@ -317,7 +319,7 @@ impl WindowManager {
 
     pub fn remove_window(&mut self, window_id: &WindowId) -> bool {
         let primary_removed = *window_id == self.primary_window_id;
-        if let Some((name, _)) = self.windows_by_id.remove(&window_id) {
+        if let Some((name, _)) = self.windows_by_id.remove(window_id) {
             self.window_names.remove(&name);
         }
 
@@ -339,7 +341,7 @@ impl WindowManager {
 
 trait Renderer {
     fn name(&self) -> String;
-    fn ui(&mut self, ctx: &Context, world: &World) -> Option<(Box<dyn Renderer>, Position, u64)>;
+    fn ui(&mut self, ctx: &Context, world: &World) -> Option<WindowArgs>;
     fn render(&mut self, world: &mut World, pixels: &mut Pixels);
     fn width(&self) -> usize;
     fn height(&self) -> usize;
@@ -356,7 +358,7 @@ impl Renderer for PrimaryRenderer {
         "REZNEZ".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, _world: &World) -> Option<(Box<dyn Renderer>, Position, u64)> {
+    fn ui(&mut self, ctx: &Context, _world: &World) -> Option<WindowArgs> {
         let mut result = None;
         egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
@@ -440,7 +442,7 @@ impl Renderer for StatusRenderer {
         "Status".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, world: &World) -> Option<(Box<dyn Renderer>, Position, u64)> {
+    fn ui(&mut self, ctx: &Context, world: &World) -> Option<WindowArgs> {
         let nes = &world.nes;
         let clock = nes.ppu().clock();
         let ppu_regs = nes.memory().ppu_regs();
@@ -496,7 +498,7 @@ impl Renderer for StatusRenderer {
                     ));
                     ui.end_row();
                     ui.label("");
-                    ui.label(format!(""));
+                    ui.label("");
                     ui.end_row();
                     ui.label("Mapper");
                     ui.label(format!("{:?}", nes.cartridge().mapper_number()));
@@ -550,7 +552,7 @@ impl Renderer for LayersRenderer {
         "Layers".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<(Box<dyn Renderer>, Position, u64)> {None}
+    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<WindowArgs> {None}
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         self.buffer.place_frame(0, TOP_MENU_BAR_HEIGHT, world.nes.frame());
@@ -567,7 +569,7 @@ impl Renderer for LayersRenderer {
         ppu.oam().only_back_sprites().render(&mem, &mut self.frame);
         self.buffer.place_frame(261, 245 + TOP_MENU_BAR_HEIGHT, &self.frame);
 
-        self.buffer.copy_to_rgba_buffer(pixels.get_frame().try_into().unwrap());
+        self.buffer.copy_to_rgba_buffer(pixels.get_frame());
     }
 
     fn width(&self) -> usize {
@@ -601,7 +603,7 @@ impl Renderer for NameTableRenderer {
         "Name Tables".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<(Box<dyn Renderer>, Position, u64)> {None}
+    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<WindowArgs> {None}
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         let x = usize::from(world.nes.ppu().x_scroll());
@@ -637,7 +639,7 @@ impl Renderer for NameTableRenderer {
         self.buffer.place_wrapping_vertical_line(x, y, y + 241, Rgb::new(255, 0, 0));
         self.buffer.place_wrapping_vertical_line(x + 257, y, y + 241, Rgb::new(255, 0, 0));
 
-        self.buffer.copy_to_rgba_buffer(pixels.get_frame().try_into().unwrap());
+        self.buffer.copy_to_rgba_buffer(pixels.get_frame());
     }
 
     fn width(&self) -> usize {
@@ -671,7 +673,7 @@ impl Renderer for PatternTableRenderer {
         "Pattern Table".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<(Box<dyn Renderer>, Position, u64)> {None}
+    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<WindowArgs> {None}
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         let mem = world
@@ -699,7 +701,7 @@ impl Renderer for PatternTableRenderer {
             offset += (8 + 1) * 16 + 10;
         }
 
-        self.buffer.copy_to_rgba_buffer(pixels.get_frame().try_into().unwrap());
+        self.buffer.copy_to_rgba_buffer(pixels.get_frame());
     }
 
     fn width(&self) -> usize {
@@ -733,7 +735,7 @@ impl Renderer for ChrBanksRenderer {
         "CHR Banks".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<(Box<dyn Renderer>, Position, u64)> {None}
+    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<WindowArgs> {None}
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         let palette = world
@@ -786,7 +788,7 @@ impl Renderer for ChrBanksRenderer {
         }
         */
 
-        self.buffer.copy_to_rgba_buffer(pixels.get_frame().try_into().unwrap());
+        self.buffer.copy_to_rgba_buffer(pixels.get_frame());
     }
 
     fn width(&self) -> usize {
