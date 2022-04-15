@@ -187,28 +187,25 @@ impl Ppu {
             -i16::from(self.next_address.y_scroll()),
             frame,
         );
-        match mem.name_table_mirroring() {
-            NameTableMirroring::Horizontal =>
-                mem.name_table(name_table_position.next_vertical()).render_scanline(
-                    pixel_row,
-                    &mem.pattern_table(background_table_side),
-                    &palette_table,
-                    0,
-                    -i16::from(self.next_address.y_scroll()) + 240,
-                    frame,
-                ),
-            NameTableMirroring::Vertical =>
-                mem.name_table(name_table_position.next_horizontal()).render_scanline(
-                    pixel_row,
-                    &mem.pattern_table(background_table_side),
-                    &palette_table,
-                    -i16::from(self.next_address.x_scroll()) + 256,
-                    0,
-                    frame,
-                ),
-            NameTableMirroring::OneScreenLeftBank | NameTableMirroring::OneScreenRightBank =>
-                {/* TODO: Not sure how to support scrolling for OneScreen.*/},
-            m => todo!("{:?} NameTableMirroring is not supported yet.", m),
+
+        if self.next_address.x_scroll() > 0 {
+            mem.name_table(name_table_position.next_horizontal()).render_scanline(
+                pixel_row,
+                &mem.pattern_table(background_table_side),
+                &palette_table,
+                -i16::from(self.next_address.x_scroll()) + 256,
+                0,
+                frame,
+            );
+        } else if self.next_address.y_scroll() > 0 {
+            mem.name_table(name_table_position.next_vertical()).render_scanline(
+                pixel_row,
+                &mem.pattern_table(background_table_side),
+                &palette_table,
+                0,
+                -i16::from(self.next_address.y_scroll()) + 240,
+                frame,
+            );
         }
     }
 
