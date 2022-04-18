@@ -181,6 +181,12 @@ impl Ppu {
         let x_scroll = self.next_address.x_scroll();
         let y_scroll = self.next_address.y_scroll();
 
+        if y_scroll >= 240 {
+            // FIXME See Teenage Mutant Ninja Turtles entry to implement this:
+            // https://www.nesdev.org/wiki/Tricky-to-emulate_games
+            todo!("Y Scroll values 240 or greater.");
+        }
+
         if let Some(bounds) = Rectangle::from_raw((x_scroll, y_scroll), (255, 239)) {
             mem.name_table(name_table_position).render_scanline(
                 pixel_row,
