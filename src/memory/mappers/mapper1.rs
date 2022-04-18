@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use arr_macro::arr;
+use log::error;
 
 use crate::cartridge::Cartridge;
 use crate::memory::cpu::cpu_address::CpuAddress;
@@ -152,7 +153,7 @@ impl Mapper for Mapper1 {
         }
 
         if get_bit(self.selected_prg_bank, 3) {
-            todo!("Bypassing PRG fixed bank logic not supported.");
+            error!("Bypassing PRG fixed bank logic not supported.");
         }
 
         let (first_index, second_index) = self.prg_bank_indexes();
