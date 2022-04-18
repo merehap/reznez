@@ -184,7 +184,8 @@ impl Ppu {
         if y_scroll >= 240 {
             // FIXME See Teenage Mutant Ninja Turtles entry to implement this:
             // https://www.nesdev.org/wiki/Tricky-to-emulate_games
-            todo!("Y Scroll values 240 or greater.");
+            println!("Scroll value >= 240 written!");
+            return;
         }
 
         if let Some(bounds) = Rectangle::from_raw((x_scroll, y_scroll), (255, 239)) {
