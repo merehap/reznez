@@ -64,11 +64,10 @@ impl PixelColumn {
         Some(PixelColumn::new(value))
     }
 
-    // FIXME: Seems like this function is infallible? Remove Option?
     pub fn offset(self, offset: i16) -> Option<PixelColumn> {
-        let mut column: i16 = i16::from(self.0) + offset;
+        let column: i16 = i16::from(self.0) + offset;
         if column < 0 {
-            column += 256;
+            return None;
         }
 
         column
@@ -113,8 +112,8 @@ impl PixelRow {
         PixelRowIterator(0)
     }
 
-    pub fn try_from_u8(pixel_row: u8) -> Option<PixelRow> {
-        if usize::from(pixel_row) < PixelRow::ROW_COUNT {
+    pub const fn try_from_u8(pixel_row: u8) -> Option<PixelRow> {
+        if (pixel_row as usize) < PixelRow::ROW_COUNT {
             Some(PixelRow(pixel_row))
         } else {
             None
@@ -125,18 +124,18 @@ impl PixelRow {
         PixelRow::try_from_u8(pixel_row.try_into().ok()?)
     }
 
+    pub const fn saturate_from_u8(pixel_row: u8) -> PixelRow {
+        PixelRow::try_from_u8(pixel_row).unwrap_or(PixelRow::MAX)
+    }
+
     pub fn add_row_in_tile(self, row_in_tile: RowInTile) -> Option<PixelRow> {
         let value = self.0.checked_add(row_in_tile as u8)?;
         PixelRow::try_from_u8(value)
     }
 
     pub fn offset(self, offset: i16) -> Option<PixelRow> {
-        let mut row: i16 = i16::from(self.0) + offset;
-        if row < 0 {
-            row += 256;
-        }
-
-        if row >= 240 {
+        let row: i16 = i16::from(self.0) + offset;
+        if 0 > row || row >= 240 {
             None
         } else {
             Some(PixelRow::try_from_u8(row as u8).unwrap())

@@ -103,9 +103,9 @@ pub trait Mapper {
     fn raw_name_table<'a>(
         &'a self,
         ppu_internal_ram: &'a PpuInternalRam,
-        number: NameTablePosition,
+        position: NameTablePosition,
     ) -> &'a [u8; NAME_TABLE_SIZE] {
-        let side = vram_side(number, self.name_table_mirroring());
+        let side = vram_side(position, self.name_table_mirroring());
         ppu_internal_ram.vram.side(side)
     }
 
@@ -113,9 +113,9 @@ pub trait Mapper {
     fn raw_name_table_mut<'a>(
         &'a mut self,
         ppu_internal_ram: &'a mut PpuInternalRam,
-        number: NameTablePosition,
+        position: NameTablePosition,
     ) -> &'a mut [u8; NAME_TABLE_SIZE] {
-        let side = vram_side(number, self.name_table_mirroring());
+        let side = vram_side(position, self.name_table_mirroring());
         ppu_internal_ram.vram.side_mut(side)
     }
 
@@ -139,8 +139,8 @@ pub trait Mapper {
         ppu_internal_ram: &PpuInternalRam,
         address: PpuAddress,
     ) -> u8 {
-        let (name_table_number, index) = address_to_name_table_index(address);
-        self.raw_name_table(ppu_internal_ram, name_table_number)[index]
+        let (name_table_position, index) = address_to_name_table_index(address);
+        self.raw_name_table(ppu_internal_ram, name_table_position)[index]
     }
 
     #[inline]
@@ -150,8 +150,8 @@ pub trait Mapper {
         address: PpuAddress,
         value: u8,
     ) {
-        let (name_table_number, index) = address_to_name_table_index(address);
-        self.raw_name_table_mut(ppu_internal_ram, name_table_number)[index] = value;
+        let (name_table_position, index) = address_to_name_table_index(address);
+        self.raw_name_table_mut(ppu_internal_ram, name_table_position)[index] = value;
     }
 
     #[inline]
@@ -211,10 +211,10 @@ fn address_to_name_table_index(address: PpuAddress) -> (NameTablePosition, usize
 
     let index = index - NAME_TABLE_START;
 
-    let name_table_number =
+    let name_table_position =
         NameTablePosition::from_usize(index / NAME_TABLE_SIZE).unwrap();
     let index = index % NAME_TABLE_SIZE;
-    (name_table_number, index)
+    (name_table_position, index)
 }
 
 fn address_to_palette_ram_index(address: PpuAddress) -> usize {

@@ -615,6 +615,7 @@ impl Renderer for NameTableRenderer {
 
         let width = NameTableRenderer::WIDTH;
         let height = NameTableRenderer::HEIGHT;
+        // Clear any junk of of the outer border.
         self.buffer.place_wrapping_horizontal_line(0, 0, width, Rgb::new(255, 255, 255));
         self.buffer.place_wrapping_horizontal_line(height, 0, width, Rgb::new(255, 255, 255));
         self.buffer.place_wrapping_vertical_line(0, 0, height, Rgb::new(255, 255, 255));

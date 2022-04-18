@@ -156,7 +156,6 @@ impl <'a> PpuMemory<'a> {
         self.memory.mapper.name_table_mirroring()
     }
 
-
     #[inline]
     pub fn pattern_table(&self, side: PatternTableSide) -> PatternTable {
         PatternTable::new(self.memory.mapper.raw_pattern_table(side))

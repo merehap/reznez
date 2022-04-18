@@ -1,6 +1,7 @@
 use crate::memory::memory::{PpuMemory, PALETTE_TABLE_START};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::clock::Clock;
+use crate::ppu::name_table::name_table::Rectangle;
 use crate::ppu::name_table::name_table_position::NameTablePosition;
 use crate::ppu::oam::Oam;
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
@@ -171,40 +172,68 @@ impl Ppu {
         }
     }
 
-    // FIXME: Stop rendering off-screen pixels.
     fn render_background_scanline(&self, pixel_row: PixelRow, mem: &PpuMemory, frame: &mut Frame) {
         let palette_table = mem.palette_table();
         frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
         let name_table_position = self.next_address.name_table_position();
         let background_table_side = mem.regs().background_table_side();
-        mem.name_table(name_table_position).render_scanline(
-            pixel_row,
-            &mem.pattern_table(background_table_side),
-            &palette_table,
-            -i16::from(self.next_address.x_scroll()),
-            -i16::from(self.next_address.y_scroll()),
-            frame,
-        );
+        let x_scroll = self.next_address.x_scroll();
+        let y_scroll = self.next_address.y_scroll();
 
-        if self.next_address.x_scroll() > 0 {
-            mem.name_table(name_table_position.next_horizontal()).render_scanline(
+        if let Some(bounds) = Rectangle::from_raw((x_scroll, y_scroll), (255, 239)) {
+            mem.name_table(name_table_position).render_scanline(
                 pixel_row,
                 &mem.pattern_table(background_table_side),
                 &palette_table,
-                -i16::from(self.next_address.x_scroll()) + 256,
-                0,
+                -i16::from(x_scroll),
+                -i16::from(y_scroll),
+                bounds,
                 frame,
             );
-        } else if self.next_address.y_scroll() > 0 {
-            mem.name_table(name_table_position.next_vertical()).render_scanline(
-                pixel_row,
-                &mem.pattern_table(background_table_side),
-                &palette_table,
-                0,
-                -i16::from(self.next_address.y_scroll()) + 240,
-                frame,
-            );
+        }
+
+        if x_scroll > 0 {
+            if let Some(bounds) = Rectangle::from_raw((0, 0), (x_scroll, 239)) {
+                mem.name_table(name_table_position.next_horizontal()).render_scanline(
+                    pixel_row,
+                    &mem.pattern_table(background_table_side),
+                    &palette_table,
+                    -i16::from(x_scroll) + 256,
+                    -i16::from(y_scroll),
+                    bounds,
+                    frame,
+                );
+            }
+        }
+
+        if y_scroll > 0 {
+            if let Some(bounds) = Rectangle::from_raw((0, 0), (255, y_scroll)) {
+                mem.name_table(name_table_position.next_vertical()).render_scanline(
+                    pixel_row,
+                    &mem.pattern_table(background_table_side),
+                    &palette_table,
+                    -i16::from(x_scroll),
+                    -i16::from(y_scroll) + 240,
+                    bounds,
+                    frame,
+                );
+            }
+        }
+
+        if x_scroll > 0 && y_scroll > 0 {
+            if let Some(bounds) = Rectangle::from_raw((0, 0), (x_scroll, y_scroll)) {
+                let position = name_table_position.next_horizontal().next_vertical();
+                mem.name_table(position).render_scanline(
+                    pixel_row,
+                    &mem.pattern_table(background_table_side),
+                    &palette_table,
+                    -i16::from(x_scroll) + 256,
+                    -i16::from(y_scroll) + 240,
+                    bounds,
+                    frame,
+                );
+            }
         }
     }
 

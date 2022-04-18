@@ -2,7 +2,7 @@ use std::fmt;
 
 use enum_iterator::IntoEnumIterator;
 
-use crate::ppu::pixel_index::{PixelRow, ColumnInTile};
+use crate::ppu::pixel_index::{PixelColumn, PixelRow, ColumnInTile};
 use crate::ppu::name_table::background_tile_index::{BackgroundTileIndex, TileColumn, TileRow};
 use crate::ppu::name_table::attribute_table::AttributeTable;
 use crate::ppu::palette::palette_table::PaletteTable;
@@ -36,7 +36,8 @@ impl <'a> NameTable<'a> {
         frame: &mut Frame,
     ) {
         for pixel_row in PixelRow::iter() {
-            self.render_scanline(pixel_row, pattern_table, palette_table, 0, 0, frame);
+            self.render_scanline(
+                pixel_row, pattern_table, palette_table, 0, 0, Rectangle::FULL, frame);
         }
     }
 
@@ -47,9 +48,15 @@ impl <'a> NameTable<'a> {
         palette_table: &PaletteTable,
         x_offset: i16,
         y_offset: i16,
+        bounds: Rectangle,
         frame: &mut Frame,
     ) {
-        let (tile_row, row_in_tile) = TileRow::from_pixel_row(pixel_row);
+        let original_pixel_row = pixel_row;
+        let Some(pixel_row) = pixel_row.offset(y_offset) else {
+            return;
+        };
+
+        let (tile_row, row_in_tile) = TileRow::from_pixel_row(original_pixel_row);
         let mut tile_sliver = [Rgbt::Transparent; 8];
         for tile_column in TileColumn::iter() {
             let background_tile_index =
@@ -69,7 +76,10 @@ impl <'a> NameTable<'a> {
                     .to_pixel_column(column_in_tile)
                     .offset(x_offset);
                 if let Some(pixel_column) = maybe_pixel_column {
-                    if let Some(pixel_row) = pixel_row.offset(y_offset) {
+                    if bounds.is_in_bounds(
+                        background_tile_index.tile_column().to_pixel_column(column_in_tile),
+                        original_pixel_row,
+                    ) {
                         frame.set_background_pixel(
                             pixel_column,
                             pixel_row,
@@ -108,5 +118,59 @@ impl fmt::Display for NameTable<'_> {
         }
 
         Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct Rectangle {
+    left_column: PixelColumn,
+    top_row: PixelRow,
+
+    right_column: PixelColumn,
+    bottom_row: PixelRow,
+}
+
+impl Rectangle {
+    pub const FULL: Rectangle = Rectangle::const_from_raw((0, 0), (255, 239)).unwrap();
+
+    pub const fn const_from_raw(
+        (left, top): (u8, u8),
+        (right, bottom): (u8, u8),
+    ) -> Option<Rectangle> {
+        if left > right || top > bottom {
+            panic!();
+        }
+
+        let Some(top_row) = PixelRow::try_from_u8(top) else {
+            return None;
+        };
+
+        let bottom_row = PixelRow::saturate_from_u8(bottom);
+        let left_column = PixelColumn::new(left);
+        let right_column = PixelColumn::new(right);
+        Some(Rectangle {left_column, top_row, right_column, bottom_row})
+    }
+
+    pub fn from_raw(
+        (left, top): (u8, u8),
+        (right, bottom): (u8, u8),
+    ) -> Option<Rectangle> {
+        if left > right || top > bottom {
+            panic!("Left: {}, Right: {}, Top: {}, Bottom: {}", left, right, top, bottom);
+        }
+
+        let Some(top_row) = PixelRow::try_from_u8(top) else {
+            return None;
+        };
+
+        let bottom_row = PixelRow::saturate_from_u8(bottom);
+        let left_column = PixelColumn::new(left);
+        let right_column = PixelColumn::new(right);
+        Some(Rectangle {left_column, top_row, right_column, bottom_row})
+    }
+
+    pub fn is_in_bounds(&self, column: PixelColumn, row: PixelRow) -> bool {
+        self.left_column <= column && column <= self.right_column &&
+            self.top_row <= row && row <= self.bottom_row
     }
 }
