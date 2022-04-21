@@ -136,6 +136,7 @@ impl Mapper for Mapper1 {
             self.prg_ram[address.to_usize() - PRG_RAM_START.to_usize()]
         } else {
             // Ignore lower PRG RAM space which is not supported by mapper 1.
+            // FIXME: Open bus behavior here instead?
             0
         }
     }
@@ -157,7 +158,9 @@ impl Mapper for Mapper1 {
                 0x4020..=0x5FFF => {/* Do nothing. */},
                 0x6000..=0x7FFF => self.prg_ram[address.to_usize()] = value,
                 0x8000..=0x9FFF => self.control = Control::from_u8(self.shift),
+                // FIXME: Handle cases for special boards.
                 0xA000..=0xBFFF => self.selected_chr_bank0 = self.shift,
+                // FIXME: Handle cases for special boards.
                 0xC000..=0xDFFF => self.selected_chr_bank1 = self.shift,
                 0xE000..=0xFFFF => self.selected_prg_bank = self.shift,
             }
@@ -168,6 +171,9 @@ impl Mapper for Mapper1 {
         if get_bit(self.selected_prg_bank, 3) {
             error!("Bypassing PRG fixed bank logic not supported.");
         }
+
+        // Clear the high bit which is never used to change the PRG bank.
+        self.selected_prg_bank &= 0b0_1111;
 
         let (first_index, second_index) = self.prg_bank_indexes();
         self.prg_rom.update_from_halves(
