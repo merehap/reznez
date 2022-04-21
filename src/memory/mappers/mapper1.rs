@@ -14,6 +14,7 @@ use crate::util::mapped_array::{MappedArray, Chunk};
 
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
 const EMPTY_PRG_BANK: [u8; 0x4000] = [0; 0x4000];
+const PRG_RAM_START: CpuAddress = CpuAddress::new(0x6000);
 
 // SxROM (MMC1)
 pub struct Mapper1 {
@@ -28,6 +29,7 @@ pub struct Mapper1 {
     // 16 16KiB banks or 8 32KiB banks.
     prg_banks: [Rc<RefCell<[u8; 0x4000]>>; 16],
     prg_rom: MappedArray<32>,
+    prg_ram: [u8; 0x2000],
     last_prg_bank_index: u8,
 }
 
@@ -61,6 +63,7 @@ impl Mapper1 {
             raw_pattern_tables,
             prg_banks,
             prg_rom,
+            prg_ram: [0; 0x2000],
             last_prg_bank_index,
         }
     }
@@ -128,6 +131,15 @@ impl Mapper for Mapper1 {
         chunks
     }
 
+    fn read_prg_ram(&self, address: CpuAddress) -> u8 {
+        if address >= PRG_RAM_START {
+            self.prg_ram[address.to_usize() - PRG_RAM_START.to_usize()]
+        } else {
+            // Ignore lower PRG RAM space which is not supported by mapper 1.
+            0
+        }
+    }
+
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
         if get_bit(value, 0) {
             self.shift = EMPTY_SHIFT_REGISTER;
@@ -142,7 +154,8 @@ impl Mapper for Mapper1 {
         if is_last_shift {
             match address.to_raw() {
                 0x0000..=0x401F => unreachable!("{}", address),
-                0x4020..=0x7FFF => {/* Do nothing. */},
+                0x4020..=0x5FFF => {/* Do nothing. */},
+                0x6000..=0x7FFF => self.prg_ram[address.to_usize()] = value,
                 0x8000..=0x9FFF => self.control = Control::from_u8(self.shift),
                 0xA000..=0xBFFF => self.selected_chr_bank0 = self.shift,
                 0xC000..=0xDFFF => self.selected_chr_bank1 = self.shift,
