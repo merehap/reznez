@@ -25,7 +25,7 @@ pub struct Mapper1 {
     selected_prg_bank: u8,
 
     // 32 4KiB banks or 16 8KiB banks.
-    raw_pattern_tables: [MappedArray<4>; 32],
+    raw_pattern_tables: [RawPatternTable; 32],
     // 16 16KiB banks or 8 32KiB banks.
     prg_banks: [Rc<RefCell<[u8; 0x4000]>>; 16],
     prg_rom: MappedArray<32>,
@@ -108,12 +108,8 @@ impl Mapper for Mapper1 {
     }
 
     #[inline]
-    fn raw_pattern_table(
-        &self,
-        side: PatternTableSide,
-    ) -> &MappedArray<4> {
+    fn raw_pattern_table(&self, side: PatternTableSide) -> &RawPatternTable {
         let (selected_bank0, selected_bank1) = self.chr_bank_indexes();
-
         match side {
             PatternTableSide::Left =>
                 &self.raw_pattern_tables[selected_bank0 as usize],

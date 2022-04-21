@@ -7,7 +7,7 @@ use crate::util::mapped_array::{MappedArray, Chunk};
 // NROM
 pub struct Mapper0 {
     prg_rom: MappedArray<32>,
-    raw_pattern_tables: [MappedArray<4>; 2],
+    raw_pattern_tables: RawPatternTablePair,
     name_table_mirroring: NameTableMirroring,
 }
 
@@ -59,7 +59,7 @@ impl Mapper for Mapper0 {
     }
 
     #[inline]
-    fn raw_pattern_table(&self, side: PatternTableSide) -> &MappedArray<4> {
+    fn raw_pattern_table(&self, side: PatternTableSide) -> &RawPatternTable {
         &self.raw_pattern_tables[side as usize]
     }
 

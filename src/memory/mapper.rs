@@ -17,13 +17,16 @@ use crate::util::mapped_array::{MappedArray, Chunk};
 pub const PATTERN_TABLE_SIZE: usize = 0x1000;
 pub const NAME_TABLE_SIZE: usize = 0x400;
 
+pub type RawPatternTable = MappedArray<4>;
+pub type RawPatternTablePair = [RawPatternTable; 2];
+
 pub trait Mapper {
     fn name_table_mirroring(&self) -> NameTableMirroring;
     fn prg_rom(&self) -> &MappedArray<32>;
     fn is_chr_writable(&self) -> bool;
     fn prg_rom_bank_string(&self) -> String;
     fn chr_rom_bank_string(&self) -> String;
-    fn raw_pattern_table(&self, side: PatternTableSide) -> &MappedArray<4>;
+    fn raw_pattern_table(&self, side: PatternTableSide) -> &RawPatternTable;
     fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>>;
 
     fn read_prg_ram(&self, _address: CpuAddress) -> u8 {

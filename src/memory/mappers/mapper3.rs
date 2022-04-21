@@ -11,7 +11,7 @@ const EMPTY_CHR_CHUNK: [u8; 0x2000] = [0; 0x2000];
 // CNROM
 pub struct Mapper3 {
     prg_rom: MappedArray<32>,
-    raw_pattern_tables: [[MappedArray<4>; 2]; 4],
+    raw_pattern_tables: [RawPatternTablePair; 4],
     selected_chr_bank: ChrBankId,
     name_table_mirroring: NameTableMirroring,
 }
@@ -69,7 +69,7 @@ impl Mapper for Mapper3 {
         false
     }
 
-    fn raw_pattern_table(&self, side: PatternTableSide) -> &MappedArray<4> {
+    fn raw_pattern_table(&self, side: PatternTableSide) -> &RawPatternTable {
         &self.raw_pattern_tables[self.selected_chr_bank as usize][side as usize]
     }
 
