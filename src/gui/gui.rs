@@ -5,7 +5,7 @@ use std::fs::File;
 use std::ops::Add;
 use std::time::{Duration, SystemTime};
 
-use log::warn;
+use log::{info, warn};
 
 use crate::config::Config;
 use crate::controller::joypad::{Button, ButtonStatus};
@@ -58,11 +58,11 @@ fn dump_frame(frame: &Frame, mask: Mask, frame_index: u64) {
 }
 
 #[inline]
-fn end_frame(_frame_index: u64, start_time: SystemTime, intended_frame_end_time: SystemTime) {
+fn end_frame(frame_index: u64, start_time: SystemTime, intended_frame_end_time: SystemTime) {
     let mut current_time;
     loop {
         current_time = SystemTime::now();
-        if intended_frame_end_time.duration_since(current_time).is_ok() {
+        if current_time.duration_since(intended_frame_end_time).is_ok() {
             break;
         }
 
@@ -70,14 +70,12 @@ fn end_frame(_frame_index: u64, start_time: SystemTime, intended_frame_end_time:
         std::thread::yield_now();
     }
 
-    if let Ok(_duration) = current_time.duration_since(start_time) {
-        /*
+    if let Ok(duration) = current_time.duration_since(start_time) {
         info!(
             "Frame {} rendered. Framerate: {}",
             frame_index,
             1_000_000_000.0 / duration.as_nanos() as f64,
         );
-        */
     } else {
         warn!("Unknown framerate. System clock went backwards.");
     }
