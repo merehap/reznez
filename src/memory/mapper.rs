@@ -29,14 +29,8 @@ pub trait Mapper {
     fn raw_pattern_table(&self, side: PatternTableSide) -> &RawPatternTable;
     fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>>;
 
-    fn read_prg_ram(&self, _address: CpuAddress) -> u8 {
-        // PRG RAM is not supported by default.
-        0
-    }
-
-    fn write_to_cartridge_space(&mut self, _address: CpuAddress, _value: u8) {
-        // Writes to cartridge space (including PRG RAM) are not supported by default.
-    }
+    fn read_prg_ram(&self, address: CpuAddress) -> u8;
+    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8);
 
     #[inline]
     fn cpu_read(

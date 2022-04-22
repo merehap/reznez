@@ -86,6 +86,11 @@ impl Mapper for Mapper3 {
         ]
     }
 
+    fn read_prg_ram(&self, _address: CpuAddress) -> u8 {
+        // FIXME: Change to open bus behavior.
+        0
+    }
+
     fn write_to_cartridge_space(&mut self, _cpu_address: CpuAddress, value: u8) {
         //println!("Switching to bank {} ({}). Address: {}.", value % 4, value, cpu_address);
         self.selected_chr_bank = ChrBankId::from_u8(value);

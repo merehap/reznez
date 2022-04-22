@@ -1,4 +1,5 @@
 use crate::cartridge::Cartridge;
+use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
@@ -64,7 +65,17 @@ impl Mapper for Mapper0 {
     }
 
     fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>> {
+        // Mapper 0 has no CHR banks.
         Vec::new()
+    }
+
+    fn read_prg_ram(&self, _address: CpuAddress) -> u8 {
+        // FIXME: Change to open bus behavior.
+        0
+    }
+
+    fn write_to_cartridge_space(&mut self, _address: CpuAddress, _value: u8) {
+        // Does nothing for mapper 0.
     }
 
     fn prg_rom_bank_string(&self) -> String {
