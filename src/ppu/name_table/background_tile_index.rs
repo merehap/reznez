@@ -4,7 +4,7 @@ use num_traits::FromPrimitive;
 
 use crate::ppu::pixel_index::{PixelColumn, ColumnInTile, PixelRow, RowInTile};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct BackgroundTileIndex {
     column: TileColumn,
     row: TileRow,
@@ -46,10 +46,11 @@ impl Iterator for BackgroundTileIndexIterator {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct TileColumn(u8);
 
 impl TileColumn {
+    pub const ZERO: TileColumn = TileColumn(0);
     const COLUMN_COUNT: usize = 32;
     const MAX: TileColumn = TileColumn(31);
 
@@ -74,7 +75,7 @@ impl TileColumn {
         self == TileColumn::MAX
     }
 
-    fn try_from_u8(tile_column: u8) -> Option<TileColumn> {
+    pub fn try_from_u8(tile_column: u8) -> Option<TileColumn> {
         if usize::from(tile_column) < TileColumn::COLUMN_COUNT {
             Some(TileColumn(tile_column))
         } else {
@@ -100,11 +101,12 @@ impl Iterator for TileColumnIterator {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct TileRow(u8);
 
 impl TileRow {
-    const ROW_COUNT: u8 = 30;
+    pub const ZERO: TileRow = TileRow(0);
+    const ROW_COUNT: u8 = 32;
     //const MAX: TileRow = TileRow(29);
 
     pub fn iter() -> TileRowIterator {
@@ -125,7 +127,7 @@ impl TileRow {
         usize::from(self.0)
     }
 
-    fn try_from_u8(tile_row: u8) -> Option<TileRow> {
+    pub fn try_from_u8(tile_row: u8) -> Option<TileRow> {
         if tile_row < TileRow::ROW_COUNT {
             Some(TileRow(tile_row))
         } else {

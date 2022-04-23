@@ -167,7 +167,7 @@ impl Iterator for PixelRowIterator {
     }
 }
 
-#[derive(Clone, Copy, FromPrimitive, IntoEnumIterator)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, IntoEnumIterator)]
 pub enum ColumnInTile {
     Zero,
     One,
@@ -185,7 +185,7 @@ impl ColumnInTile {
     }
 }
 
-#[derive(Clone, Copy, FromPrimitive, IntoEnumIterator)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, IntoEnumIterator)]
 pub enum RowInTile {
     Zero,
     One,

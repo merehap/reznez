@@ -468,10 +468,10 @@ impl Renderer for StatusRenderer {
                     ui.end_row();
                     */
                     ui.label("X Scroll");
-                    ui.label(format!("{}", nes.ppu().x_scroll()));
+                    ui.label(format!("{}", nes.ppu().x_scroll().to_u8()));
                     ui.end_row();
                     ui.label("Y Scroll");
-                    ui.label(format!("{}", nes.ppu().y_scroll()));
+                    ui.label(format!("{}", nes.ppu().y_scroll().to_u8()));
                     ui.end_row();
                     ui.label("NMI Enabled");
                     ui.label(format!("{}", ppu_regs.nmi_enabled()));
@@ -606,8 +606,8 @@ impl Renderer for NameTableRenderer {
     fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<WindowArgs> {None}
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
-        let x = usize::from(world.nes.ppu().x_scroll());
-        let y = usize::from(world.nes.ppu().y_scroll());
+        let x = usize::from(world.nes.ppu().x_scroll().to_u8());
+        let y = usize::from(world.nes.ppu().y_scroll().to_u8());
         let mem = world
             .nes
             .memory_mut()

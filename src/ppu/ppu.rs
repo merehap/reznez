@@ -1,5 +1,5 @@
 use crate::memory::memory::{PpuMemory, PALETTE_TABLE_START};
-use crate::memory::ppu::ppu_address::PpuAddress;
+use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table::Rectangle;
 use crate::ppu::name_table::name_table_position::NameTablePosition;
@@ -57,11 +57,11 @@ impl Ppu {
         self.next_address.name_table_position()
     }
 
-    pub fn x_scroll(&self) -> u8 {
+    pub fn x_scroll(&self) -> XScroll {
         self.next_address.x_scroll()
     }
 
-    pub fn y_scroll(&self) -> u8 {
+    pub fn y_scroll(&self) -> YScroll {
         self.next_address.y_scroll()
     }
 
@@ -181,62 +181,58 @@ impl Ppu {
         let x_scroll = self.next_address.x_scroll();
         let y_scroll = self.next_address.y_scroll();
 
-        if y_scroll >= 240 {
-            // FIXME See Teenage Mutant Ninja Turtles entry to implement this:
-            // https://www.nesdev.org/wiki/Tricky-to-emulate_games
-            println!("Scroll value >= 240 written!");
-            return;
-        }
+        let x_divider = 255 - x_scroll.to_u8();
+        let y_divider = 239 - (y_scroll.to_u8() % 240);
 
-        if let Some(bounds) = Rectangle::from_raw((x_scroll, y_scroll), (255, 239)) {
+        if let Some(bounds) = Rectangle::from_raw((0, 0), (x_divider, y_divider)) {
             mem.name_table(name_table_position).render_scanline(
                 pixel_row,
                 &mem.pattern_table(background_table_side),
                 &palette_table,
-                -i16::from(x_scroll),
-                -i16::from(y_scroll),
+                x_scroll,
+                y_scroll,
                 bounds,
                 frame,
             );
         }
 
-        if x_scroll > 0 {
-            if let Some(bounds) = Rectangle::from_raw((0, 0), (x_scroll, 239)) {
+        if !x_scroll.is_zero() {
+            if let Some(bounds) = Rectangle::from_raw((x_divider + 1, 0), (255, y_divider)) {
                 mem.name_table(name_table_position.next_horizontal()).render_scanline(
                     pixel_row,
                     &mem.pattern_table(background_table_side),
                     &palette_table,
-                    -i16::from(x_scroll) + 256,
-                    -i16::from(y_scroll),
+                    x_scroll,
+                    y_scroll,
                     bounds,
                     frame,
                 );
             }
         }
 
-        if y_scroll > 0 {
-            if let Some(bounds) = Rectangle::from_raw((0, 0), (255, y_scroll)) {
+        if !y_scroll.is_zero() {
+            if let Some(bounds) = Rectangle::from_raw((0, y_divider + 1), (x_divider, 239)) {
                 mem.name_table(name_table_position.next_vertical()).render_scanline(
                     pixel_row,
                     &mem.pattern_table(background_table_side),
                     &palette_table,
-                    -i16::from(x_scroll),
-                    -i16::from(y_scroll) + 240,
+                    x_scroll,
+                    y_scroll.shift_down(),
                     bounds,
                     frame,
                 );
             }
         }
 
-        if x_scroll > 0 && y_scroll > 0 {
-            if let Some(bounds) = Rectangle::from_raw((0, 0), (x_scroll, y_scroll)) {
+        if !x_scroll.is_zero() && !y_scroll.is_zero() {
+            if let Some(bounds) = Rectangle::from_raw((x_divider + 1, y_divider + 1), (255, 239)) {
                 let position = name_table_position.next_horizontal().next_vertical();
                 mem.name_table(position).render_scanline(
                     pixel_row,
                     &mem.pattern_table(background_table_side),
                     &palette_table,
-                    -i16::from(x_scroll) + 256,
-                    -i16::from(y_scroll) + 240,
+                    x_scroll,
+                    y_scroll.shift_down(),
                     bounds,
                     frame,
                 );
@@ -393,8 +389,8 @@ mod tests {
         assert_eq!(ppu.write_toggle, WriteToggle::SecondByte);
         assert_eq!(ppu.current_address, PPU_ZERO);
         assert_eq!(ppu.next_address, PpuAddress::from_u16(0b0010_1100_1111_1111));
-        assert_eq!(ppu.next_address.x_scroll(), 0b1111_1000);
-        assert_eq!(ppu.next_address.y_scroll(), 0b0011_1010);
+        assert_eq!(ppu.next_address.x_scroll().to_u8(), 0b1111_1000);
+        assert_eq!(ppu.next_address.y_scroll().to_u8(), 0b0011_1010);
 
         println!("PPUData: {}", ppu.current_address);
 
@@ -430,8 +426,8 @@ mod tests {
         assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(ppu.next_address, PpuAddress::from_u16(0b0111_0111_1111_1111));
         assert_eq!(ppu.current_address, PPU_ZERO);
-        assert_eq!(ppu.next_address.x_scroll(), 0b1111_1000);
-        assert_eq!(ppu.next_address.y_scroll(), 0b1111_1011);
+        assert_eq!(ppu.next_address.x_scroll().to_u8(), 0b1111_1000);
+        assert_eq!(ppu.next_address.y_scroll().to_u8(), 0b1111_1011);
 
         let x_scroll = 0b1100_1100;
         mem.as_cpu_memory().write(CPU_SCROLL, x_scroll);
@@ -439,8 +435,8 @@ mod tests {
         assert_eq!(ppu.write_toggle, WriteToggle::SecondByte);
         assert_eq!(ppu.next_address, PpuAddress::from_u16(0b0111_0111_1111_1001));
         assert_eq!(ppu.current_address, PPU_ZERO);
-        assert_eq!(ppu.next_address.x_scroll(), x_scroll);
-        assert_eq!(ppu.next_address.y_scroll(), 0b1111_1011);
+        assert_eq!(ppu.next_address.x_scroll().to_u8(), x_scroll);
+        assert_eq!(ppu.next_address.y_scroll().to_u8(), 0b1111_1011);
 
         let y_scroll = 0b1010_1010;
         mem.as_cpu_memory().write(CPU_SCROLL, y_scroll);
@@ -448,16 +444,16 @@ mod tests {
         assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(ppu.next_address, PpuAddress::from_u16(0b0010_0110_1011_1001));
         assert_eq!(ppu.current_address, PPU_ZERO);
-        assert_eq!(ppu.next_address.x_scroll(), x_scroll);
-        assert_eq!(ppu.next_address.y_scroll(), y_scroll);
+        assert_eq!(ppu.next_address.x_scroll().to_u8(), x_scroll);
+        assert_eq!(ppu.next_address.y_scroll().to_u8(), y_scroll);
 
         mem.as_cpu_memory().write(CPU_CTRL, 0b0000_0010);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(ppu.next_address, PpuAddress::from_u16(0b0010_1010_1011_1001));
         assert_eq!(ppu.current_address, PPU_ZERO);
-        assert_eq!(ppu.next_address.x_scroll(), x_scroll);
-        assert_eq!(ppu.next_address.y_scroll(), y_scroll);
+        assert_eq!(ppu.next_address.x_scroll().to_u8(), x_scroll);
+        assert_eq!(ppu.next_address.y_scroll().to_u8(), y_scroll);
     }
 
     #[test]
@@ -487,8 +483,8 @@ mod tests {
         assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(ppu.next_address, PpuAddress::from_u16(0b0010_0001_1010_1010));
         assert_eq!(ppu.current_address, PpuAddress::from_u16(0b0010_0001_1010_1010), "Bad VRAM (not temp)");
-        assert_eq!(ppu.next_address.x_scroll(), 0b0101_0000);
-        assert_eq!(ppu.next_address.y_scroll(), 0b0110_1010);
+        assert_eq!(ppu.next_address.x_scroll().to_u8(), 0b0101_0000);
+        assert_eq!(ppu.next_address.y_scroll().to_u8(), 0b0110_1010);
     }
 
     #[test]
@@ -509,8 +505,8 @@ mod tests {
         assert_eq!(ppu.write_toggle, WriteToggle::SecondByte);
         assert_eq!(ppu.next_address, PpuAddress::from_u16(0b0000_0111_1111_1111));
         assert_eq!(ppu.current_address, PPU_ZERO);
-        assert_eq!(ppu.next_address.x_scroll(), x_scroll);
-        assert_eq!(ppu.next_address.y_scroll(), 0b1111_1000);
+        assert_eq!(ppu.next_address.x_scroll().to_u8(), x_scroll);
+        assert_eq!(ppu.next_address.y_scroll().to_u8(), 0b1111_1000);
 
         let low_half = 0b1010_1010;
         mem.as_cpu_memory().write(CPU_PPU_ADDR, low_half);
@@ -518,7 +514,7 @@ mod tests {
         assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(ppu.next_address, PpuAddress::from_u16(0b0000_0111_1010_1010));
         assert_eq!(ppu.current_address, PpuAddress::from_u16(0b0000_0111_1010_1010));
-        assert_eq!(ppu.next_address.x_scroll(), 0b0101_0111);
-        assert_eq!(ppu.next_address.y_scroll(), 0b1110_1000);
+        assert_eq!(ppu.next_address.x_scroll().to_u8(), 0b0101_0111);
+        assert_eq!(ppu.next_address.y_scroll().to_u8(), 0b1110_1000);
     }
 }

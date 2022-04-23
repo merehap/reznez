@@ -1,9 +1,8 @@
 use std::fmt;
 
-use enum_iterator::IntoEnumIterator;
-
-use crate::ppu::pixel_index::{PixelColumn, PixelRow, ColumnInTile};
-use crate::ppu::name_table::background_tile_index::{BackgroundTileIndex, TileColumn, TileRow};
+use crate::memory::ppu::ppu_address::{XScroll, YScroll};
+use crate::ppu::pixel_index::{PixelColumn, PixelRow};
+use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
 use crate::ppu::name_table::attribute_table::AttributeTable;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
@@ -16,14 +15,14 @@ const ATTRIBUTE_START_INDEX: usize = 0x3C0;
 
 #[derive(Debug)]
 pub struct NameTable<'a> {
-    tiles: &'a [u8; ATTRIBUTE_START_INDEX],
+    tiles: &'a [u8; NAME_TABLE_SIZE],
     attribute_table: AttributeTable<'a>,
 }
 
 impl <'a> NameTable<'a> {
     pub fn new(raw: &'a [u8; NAME_TABLE_SIZE]) -> NameTable<'a> {
         NameTable {
-            tiles: raw[0..ATTRIBUTE_START_INDEX].try_into().unwrap(),
+            tiles: raw,
             attribute_table:
                 AttributeTable::new(raw[ATTRIBUTE_START_INDEX..].try_into().unwrap()),
         }
@@ -37,7 +36,14 @@ impl <'a> NameTable<'a> {
     ) {
         for pixel_row in PixelRow::iter() {
             self.render_scanline(
-                pixel_row, pattern_table, palette_table, 0, 0, Rectangle::FULL, frame);
+                pixel_row,
+                pattern_table,
+                palette_table,
+                XScroll::ZERO,
+                YScroll::ZERO,
+                Rectangle::FULL,
+                frame,
+            );
         }
     }
 
@@ -46,18 +52,34 @@ impl <'a> NameTable<'a> {
         pixel_row: PixelRow,
         pattern_table: &PatternTable,
         palette_table: &PaletteTable,
-        x_offset: i16,
-        y_offset: i16,
+        x_scroll: XScroll,
+        y_scroll: YScroll,
         bounds: Rectangle,
         frame: &mut Frame,
     ) {
+        /*
         let original_pixel_row = pixel_row;
         let Some(pixel_row) = pixel_row.offset(y_offset) else {
             return;
         };
+        */
 
+        for pixel_column in PixelColumn::iter() {
+            if bounds.is_in_bounds(pixel_column, pixel_row) {
+                self.render_pixel(
+                    pixel_column,
+                    pixel_row,
+                    pattern_table,
+                    palette_table,
+                    x_scroll,
+                    y_scroll,
+                    frame,
+                );
+            }
+        }
+
+        /*
         let (tile_row, row_in_tile) = TileRow::from_pixel_row(original_pixel_row);
-        let mut tile_sliver = [Rgbt::Transparent; 8];
         for tile_column in TileColumn::iter() {
             let background_tile_index =
                 BackgroundTileIndex::from_tile_column_row(tile_column, tile_row);
@@ -71,24 +93,58 @@ impl <'a> NameTable<'a> {
             );
 
             for column_in_tile in ColumnInTile::into_enum_iter() {
+                let pixel_column = background_tile_index
+                    .tile_column()
+                    .to_pixel_column(column_in_tile);
+                if !bounds.is_in_bounds(pixel_column, pixel_row) {
+                    continue;
+                }
+
                 let maybe_pixel_column = background_tile_index
                     .tile_column()
                     .to_pixel_column(column_in_tile)
                     .offset(x_offset);
                 if let Some(pixel_column) = maybe_pixel_column {
-                    if bounds.is_in_bounds(
-                        background_tile_index.tile_column().to_pixel_column(column_in_tile),
-                        original_pixel_row,
-                    ) {
-                        frame.set_background_pixel(
-                            pixel_column,
-                            pixel_row,
-                            tile_sliver[column_in_tile as usize],
-                        );
-                    }
+                    frame.set_background_pixel(
+                        pixel_column,
+                        pixel_row,
+                        tile_sliver[column_in_tile as usize],
+                    );
                 }
             }
         }
+        */
+    }
+
+    fn render_pixel(
+        &self,
+        pixel_column: PixelColumn,
+        pixel_row: PixelRow,
+        pattern_table: &PatternTable,
+        palette_table: &PaletteTable,
+        x_scroll: XScroll,
+        y_scroll: YScroll,
+        frame: &mut Frame,
+    ) {
+        let (tile_column, column_in_tile) = x_scroll.tile_column(pixel_column);
+        let (tile_row, row_in_tile) = y_scroll.tile_row(pixel_row);
+        let background_tile_index =
+            BackgroundTileIndex::from_tile_column_row(tile_column, tile_row);
+
+        let (pattern_index, palette_table_index) =
+            self.tile_entry_at(background_tile_index);
+        let mut tile_sliver = [Rgbt::Transparent; 8];
+        pattern_table.render_background_tile_sliver(
+            pattern_index,
+            row_in_tile,
+            palette_table.background_palette(palette_table_index),
+            &mut tile_sliver,
+        );
+        frame.set_background_pixel(
+            pixel_column,
+            pixel_row,
+            tile_sliver[column_in_tile as usize],
+        );
     }
 
     #[inline]
