@@ -10,6 +10,7 @@ pub struct Mapper0 {
     prg_rom: MappedArray<32>,
     raw_pattern_tables: RawPatternTablePair,
     name_table_mirroring: NameTableMirroring,
+    is_chr_writable: bool,
 }
 
 impl Mapper0 {
@@ -30,7 +31,7 @@ impl Mapper0 {
         let chr_rom_chunks = cartridge.chr_rom_chunks();
         let raw_pattern_tables =
             match chr_rom_chunks.len() {
-                // Provide empty CHR ROM if the cartridge doesn't provide any.
+                // Provide empty CHR RAM if the cartridge doesn't provide any CHR ROM.
                 0 => [MappedArray::<4>::empty(), MappedArray::<4>::empty()],
                 1 => split_chr_chunk(&*chr_rom_chunks[0]),
                 n => return Err(format!(
@@ -40,7 +41,8 @@ impl Mapper0 {
             };
 
         let name_table_mirroring = cartridge.name_table_mirroring();
-        Ok(Mapper0 {prg_rom, raw_pattern_tables, name_table_mirroring})
+        let is_chr_writable = chr_rom_chunks.is_empty();
+        Ok(Mapper0 {prg_rom, raw_pattern_tables, name_table_mirroring, is_chr_writable})
     }
 }
 
@@ -56,7 +58,7 @@ impl Mapper for Mapper0 {
 
     #[inline]
     fn is_chr_writable(&self) -> bool {
-        true
+        self.is_chr_writable
     }
 
     #[inline]
