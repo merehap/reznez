@@ -57,13 +57,6 @@ impl <'a> NameTable<'a> {
         bounds: Rectangle,
         frame: &mut Frame,
     ) {
-        /*
-        let original_pixel_row = pixel_row;
-        let Some(pixel_row) = pixel_row.offset(y_offset) else {
-            return;
-        };
-        */
-
         for pixel_column in PixelColumn::iter() {
             if bounds.is_in_bounds(pixel_column, pixel_row) {
                 self.render_pixel(
@@ -77,43 +70,6 @@ impl <'a> NameTable<'a> {
                 );
             }
         }
-
-        /*
-        let (tile_row, row_in_tile) = TileRow::from_pixel_row(original_pixel_row);
-        for tile_column in TileColumn::iter() {
-            let background_tile_index =
-                BackgroundTileIndex::from_tile_column_row(tile_column, tile_row);
-            let (pattern_index, palette_table_index) =
-                self.tile_entry_at(background_tile_index);
-            pattern_table.render_background_tile_sliver(
-                pattern_index,
-                row_in_tile,
-                palette_table.background_palette(palette_table_index),
-                &mut tile_sliver,
-            );
-
-            for column_in_tile in ColumnInTile::into_enum_iter() {
-                let pixel_column = background_tile_index
-                    .tile_column()
-                    .to_pixel_column(column_in_tile);
-                if !bounds.is_in_bounds(pixel_column, pixel_row) {
-                    continue;
-                }
-
-                let maybe_pixel_column = background_tile_index
-                    .tile_column()
-                    .to_pixel_column(column_in_tile)
-                    .offset(x_offset);
-                if let Some(pixel_column) = maybe_pixel_column {
-                    frame.set_background_pixel(
-                        pixel_column,
-                        pixel_row,
-                        tile_sliver[column_in_tile as usize],
-                    );
-                }
-            }
-        }
-        */
     }
 
     fn render_pixel(
