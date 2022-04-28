@@ -10,7 +10,7 @@ impl Ppm {
     const DATA_SIZE: usize = 3 * 256 * 240;
 
     pub fn new(data: Vec<u8>) -> Ppm {
-        Ppm {data}
+        Ppm { data }
     }
 
     pub fn from_bytes(raw: &[u8]) -> Result<Ppm, String> {
@@ -27,10 +27,10 @@ impl Ppm {
                 "Expected PPM data length to be {} but was {}.",
                 Ppm::DATA_SIZE,
                 data.len(),
-            ))
+            ));
         }
 
-        Ok(Ppm {data})
+        Ok(Ppm { data })
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {

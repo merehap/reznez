@@ -4,6 +4,7 @@ use std::time::Duration;
 #[derive(Clone, Copy, Debug)]
 pub struct FrameRate(f64);
 
+#[rustfmt::skip]
 impl FrameRate {
     const NTSC:  FrameRate = FrameRate(60.0988);
     const PAL:   FrameRate = FrameRate(50.0070);
@@ -26,6 +27,7 @@ impl FrameRate {
 impl FromStr for FrameRate {
     type Err = String;
 
+    #[rustfmt::skip]
     fn from_str(value: &str) -> Result<FrameRate, String> {
         Ok(match value {
             "ntsc"  => FrameRate::NTSC,
