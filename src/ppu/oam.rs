@@ -1,8 +1,8 @@
 use crate::memory::memory::PpuMemory;
+use crate::ppu::pixel_index::PixelRow;
 use crate::ppu::register::registers::ctrl::SpriteHeight;
 use crate::ppu::render::frame::Frame;
-use crate::ppu::pixel_index::PixelRow;
-use crate::ppu::sprite::{Sprite, Priority};
+use crate::ppu::sprite::{Priority, Sprite};
 
 const ATTRIBUTE_BYTE_INDEX: u8 = 2;
 
@@ -54,12 +54,11 @@ impl Oam {
 
     pub fn write(&mut self, index: u8, value: u8) {
         // The three unimplemented attribute bits should never be set.
-        let value =
-            if index % 4 == ATTRIBUTE_BYTE_INDEX {
-                value & 0b1110_0011
-            } else {
-                value
-            };
+        let value = if index % 4 == ATTRIBUTE_BYTE_INDEX {
+            value & 0b1110_0011
+        } else {
+            value
+        };
         self.0[index as usize] = value;
     }
 
@@ -70,7 +69,12 @@ impl Oam {
         }
     }
 
-    pub fn render_scanline(&self, pixel_row: PixelRow, mem: &PpuMemory, frame: &mut Frame) {
+    pub fn render_scanline(
+        &self,
+        pixel_row: PixelRow,
+        mem: &PpuMemory,
+        frame: &mut Frame,
+    ) {
         frame.clear_sprite_line(pixel_row);
 
         let sprite_table_side = mem.regs().sprite_table_side();
@@ -90,7 +94,14 @@ impl Oam {
                     mem.pattern_table(sprite.tall_sprite_pattern_table_side());
             }
 
-            sprite.render_sliver(pixel_row, sprite_height, &pattern_table, &palette_table, is_sprite_0, frame);
+            sprite.render_sliver(
+                pixel_row,
+                sprite_height,
+                &pattern_table,
+                &palette_table,
+                is_sprite_0,
+                frame,
+            );
         }
     }
 }

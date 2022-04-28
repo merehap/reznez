@@ -70,10 +70,7 @@ impl PixelColumn {
             return None;
         }
 
-        column
-            .try_into()
-            .ok()
-            .map(PixelColumn)
+        column.try_into().ok().map(PixelColumn)
     }
 
     pub fn is_in_left_margin(self) -> bool {
@@ -167,7 +164,9 @@ impl Iterator for PixelRowIterator {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, IntoEnumIterator)]
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, IntoEnumIterator,
+)]
 pub enum ColumnInTile {
     Zero,
     One,
@@ -185,7 +184,9 @@ impl ColumnInTile {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, IntoEnumIterator)]
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, IntoEnumIterator,
+)]
 pub enum RowInTile {
     Zero,
     One,

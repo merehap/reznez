@@ -40,7 +40,7 @@ impl Clock {
     }
 
     pub fn is_first_cycle_of_frame(&self) -> bool {
-        let first_cycle_of_scanline = if self.skipped_cycle {1} else {0};
+        let first_cycle_of_scanline = if self.skipped_cycle { 1 } else { 0 };
         self.scanline == 0 && self.cycle == first_cycle_of_scanline
     }
 
@@ -63,14 +63,14 @@ impl Clock {
                 } else {
                     self.cycle = 0;
                 }
-            },
+            }
             (_, MAX_CYCLE) => {
                 self.scanline += 1;
                 self.cycle = 0;
-            },
+            }
             _ => {
                 self.cycle += 1;
-            },
+            }
         }
     }
 }

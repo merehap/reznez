@@ -1,9 +1,9 @@
 use enum_iterator::IntoEnumIterator;
 
-use crate::ppu::pixel_index::{PixelColumn, PixelRow, ColumnInTile, RowInTile};
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::rgbt::Rgbt;
+use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::Sprite;
 use crate::util::bit_util::get_bit;
@@ -14,7 +14,7 @@ const PATTERN_SIZE: usize = 16;
 
 pub struct PatternTable<'a>(&'a MappedArray<4>);
 
-impl <'a> PatternTable<'a> {
+impl<'a> PatternTable<'a> {
     pub fn new(raw: &MappedArray<4>) -> PatternTable {
         PatternTable(raw)
     }
@@ -28,11 +28,16 @@ impl <'a> PatternTable<'a> {
     ) {
         for row_in_tile in RowInTile::into_enum_iter() {
             self.render_background_tile_sliver(
-                pattern_index, row_in_tile, palette, &mut tile.0[row_in_tile as usize])
+                pattern_index,
+                row_in_tile,
+                palette,
+                &mut tile.0[row_in_tile as usize],
+            )
         }
     }
 
     #[inline]
+    #[rustfmt::skip]
     pub fn render_background_tile_sliver(
         &self,
         pattern_index: PatternIndex,
@@ -50,19 +55,19 @@ impl <'a> PatternTable<'a> {
         for (column_in_tile, pixel) in tile_sliver.iter_mut().enumerate() {
             let low_bit = get_bit(low_byte, column_in_tile);
             let high_bit = get_bit(high_byte, column_in_tile);
-            *pixel =
-                match (low_bit, high_bit) {
-                    (false, false) => Rgbt::Transparent,
-                    (true , false) => Rgbt::Opaque(palette[PaletteIndex::One]),
-                    (false, true ) => Rgbt::Opaque(palette[PaletteIndex::Two]),
-                    (true , true ) => Rgbt::Opaque(palette[PaletteIndex::Three]),
-                };
+            *pixel = match (low_bit, high_bit) {
+                (false, false) => Rgbt::Transparent,
+                (true , false) => Rgbt::Opaque(palette[PaletteIndex::One]),
+                (false, true ) => Rgbt::Opaque(palette[PaletteIndex::Two]),
+                (true , true ) => Rgbt::Opaque(palette[PaletteIndex::Three]),
+            };
         }
     }
 
+    #[inline]
     // No obvious way to reduce the number of parameters.
     #[allow(clippy::too_many_arguments)]
-    #[inline]
+    #[rustfmt::skip]
     pub fn render_sprite_sliver(
         &self,
         sprite: Sprite,
@@ -85,13 +90,13 @@ impl <'a> PatternTable<'a> {
         for mut column_in_sprite in ColumnInTile::into_enum_iter() {
             let low_bit = get_bit(low_byte, column_in_sprite as usize);
             let high_bit = get_bit(high_byte, column_in_sprite as usize);
-            let rgb =
-                match (low_bit, high_bit) {
-                    (false, false) => /* Transparent. */ continue,
-                    (true , false) => palette[PaletteIndex::One],
-                    (false, true ) => palette[PaletteIndex::Two],
-                    (true , true ) => palette[PaletteIndex::Three],
-                };
+            let rgb = match (low_bit, high_bit) {
+                /* Transparent. */
+                (false, false) => continue,
+                (true , false) => palette[PaletteIndex::One],
+                (false, true ) => palette[PaletteIndex::Two],
+                (true , true ) => palette[PaletteIndex::Three],
+            };
 
             if flip {
                 column_in_sprite = column_in_sprite.flip();
@@ -122,7 +127,7 @@ impl PatternTableSide {
 
     pub fn to_start_end(self) -> (usize, usize) {
         match self {
-            PatternTableSide::Left  => (0x0000, PATTERN_TABLE_SIZE),
+            PatternTableSide::Left => (0x0000, PATTERN_TABLE_SIZE),
             PatternTableSide::Right => (PATTERN_TABLE_SIZE, 2 * PATTERN_TABLE_SIZE),
         }
     }
@@ -136,6 +141,7 @@ impl PatternIndex {
         PatternIndex(value)
     }
 
+    #[rustfmt::skip]
     pub fn to_tall_indexes(self) -> (PatternIndex, PatternIndex) {
         let first  = self.0 & 0b1111_1110;
         let second = self.0 | 0b0000_0001;
