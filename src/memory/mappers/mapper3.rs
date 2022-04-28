@@ -4,7 +4,7 @@ use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::bit_util::get_bit;
-use crate::util::mapped_array::{MappedArray, Chunk};
+use crate::util::mapped_array::{Chunk, MappedArray};
 
 const EMPTY_CHR_CHUNK: [u8; 0x2000] = [0; 0x2000];
 
@@ -19,15 +19,18 @@ pub struct Mapper3 {
 impl Mapper3 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper3, String> {
         let prg_rom_chunks = cartridge.prg_rom_chunks();
-        let prg_rom =
-            match prg_rom_chunks.len() {
-                1 => MappedArray::<32>::mirror_half(*prg_rom_chunks[0]),
-                2 => MappedArray::<32>::new::<0x8000>(cartridge.prg_rom().try_into().unwrap()),
-                c => return Err(format!(
-                         "PRG ROM size must be 16K or 32K for this mapper, but was {}K",
-                         16 * c,
-                     )),
-            };
+        let prg_rom = match prg_rom_chunks.len() {
+            1 => MappedArray::<32>::mirror_half(*prg_rom_chunks[0]),
+            2 => {
+                MappedArray::<32>::new::<0x8000>(cartridge.prg_rom().try_into().unwrap())
+            }
+            c => {
+                return Err(format!(
+                    "PRG ROM size must be 16K or 32K for this mapper, but was {}K",
+                    16 * c,
+                ))
+            }
+        };
 
         let chr_chunk_count = cartridge.chr_rom_chunks().len();
         if chr_chunk_count > 4 {
@@ -38,13 +41,12 @@ impl Mapper3 {
         }
 
         let mut chunk_iter = cartridge.chr_rom_chunks().iter();
-        let raw_pattern_tables =
-            [
-                split_chr_chunk(&**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
-                split_chr_chunk(&**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
-                split_chr_chunk(&**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
-                split_chr_chunk(&**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
-            ];
+        let raw_pattern_tables = [
+            split_chr_chunk(&**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
+            split_chr_chunk(&**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
+            split_chr_chunk(&**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
+            split_chr_chunk(&**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
+        ];
         let name_table_mirroring = cartridge.name_table_mirroring();
         Ok(Mapper3 {
             prg_rom,
@@ -73,6 +75,7 @@ impl Mapper for Mapper3 {
         &self.raw_pattern_tables[self.selected_chr_bank as usize][side as usize]
     }
 
+    #[rustfmt::skip]
     fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>> {
         vec![
             self.raw_pattern_tables[0][PatternTableSide::Left as usize].to_chunks().to_vec(),
@@ -114,6 +117,7 @@ enum ChrBankId {
 }
 
 impl ChrBankId {
+    #[rustfmt::skip]
     pub fn from_u8(value: u8) -> ChrBankId {
         match (get_bit(value, 6), get_bit(value, 7)) {
             (false, false) => ChrBankId::Zero,

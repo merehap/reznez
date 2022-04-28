@@ -10,7 +10,7 @@ use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::bit_util::get_bit;
-use crate::util::mapped_array::{MappedArray, Chunk};
+use crate::util::mapped_array::{Chunk, MappedArray};
 
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
 const EMPTY_PRG_BANK: [u8; 0x4000] = [0; 0x4000];
@@ -36,8 +36,7 @@ pub struct Mapper1 {
 impl Mapper1 {
     pub fn new(cartridge: &Cartridge) -> Mapper1 {
         let mut chr_chunk_iter = cartridge.chr_rom_half_chunks().into_iter();
-        let raw_pattern_tables =
-            arr![
+        let raw_pattern_tables = arr![
                 chr_chunk_iter
                     .next()
                     .map(|chunk| MappedArray::new(chunk.clone()))
@@ -47,7 +46,7 @@ impl Mapper1 {
         let mut prg_chunk_iter = cartridge.prg_rom_chunks().iter();
         let prg_banks = arr![Rc::new(RefCell::new(*prg_chunk_iter.next().unwrap_or(&Box::new(EMPTY_PRG_BANK)).clone())); 16];
         let mut prg_rom = MappedArray::empty();
-        let last_prg_bank_index =  (cartridge.prg_rom_chunks().len() - 1) as u8;
+        let last_prg_bank_index = (cartridge.prg_rom_chunks().len() - 1) as u8;
         prg_rom.update_from_halves(
             &prg_banks[0],
             &prg_banks[usize::from(last_prg_bank_index)],
@@ -73,9 +72,8 @@ impl Mapper1 {
             ChrBankMode::Large => {
                 let index = self.selected_chr_bank0 & 0b0001_1110;
                 (index, index + 1)
-            },
-            ChrBankMode::TwoSmall =>
-                (self.selected_chr_bank0, self.selected_chr_bank1),
+            }
+            ChrBankMode::TwoSmall => (self.selected_chr_bank0, self.selected_chr_bank1),
         }
     }
 
@@ -85,7 +83,7 @@ impl Mapper1 {
             PrgBankMode::Large => {
                 let first_index = selected_bank & 0b0000_1110;
                 (first_index, first_index + 1)
-            },
+            }
             PrgBankMode::FixedFirst => (0, selected_bank),
             PrgBankMode::FixedLast => (selected_bank, self.last_prg_bank_index),
         }
@@ -111,10 +109,8 @@ impl Mapper for Mapper1 {
     fn raw_pattern_table(&self, side: PatternTableSide) -> &RawPatternTable {
         let (selected_bank0, selected_bank1) = self.chr_bank_indexes();
         match side {
-            PatternTableSide::Left =>
-                &self.raw_pattern_tables[selected_bank0 as usize],
-            PatternTableSide::Right =>
-                &self.raw_pattern_tables[selected_bank1 as usize],
+            PatternTableSide::Left => &self.raw_pattern_tables[selected_bank0 as usize],
+            PatternTableSide::Right => &self.raw_pattern_tables[selected_bank1 as usize],
         }
     }
 
@@ -151,8 +147,10 @@ impl Mapper for Mapper1 {
         if is_last_shift {
             match address.to_raw() {
                 0x0000..=0x401F => unreachable!("{}", address),
-                0x4020..=0x5FFF => {/* Do nothing. */},
-                0x6000..=0x7FFF => self.prg_ram[address.to_usize() - PRG_RAM_START.to_usize()] = value,
+                0x4020..=0x5FFF => { /* Do nothing. */ }
+                0x6000..=0x7FFF => {
+                    self.prg_ram[address.to_usize() - PRG_RAM_START.to_usize()] = value
+                }
                 0x8000..=0x9FFF => self.control = Control::from_u8(self.shift),
                 // FIXME: Handle cases for special boards.
                 0xA000..=0xBFFF => self.selected_chr_bank0 = self.shift,
@@ -180,14 +178,16 @@ impl Mapper for Mapper1 {
 
     fn prg_rom_bank_string(&self) -> String {
         let (first_index, second_index) = self.prg_bank_indexes();
-        format!("{} and {} [16, 16 KiB banks, mode: {:?}]",
+        format!(
+            "{} and {} [16, 16 KiB banks, mode: {:?}]",
             first_index, second_index, self.control.prg_bank_mode,
         )
     }
 
     fn chr_rom_bank_string(&self) -> String {
         let (selected_bank0, selected_bank1) = self.chr_bank_indexes();
-        format!("{} and {} [32, 4 KiB banks, mode: {:?}]",
+        format!(
+            "{} and {} [32, 4 KiB banks, mode: {:?}]",
             selected_bank0, selected_bank1, self.control.chr_bank_mode,
         )
     }
@@ -209,14 +209,14 @@ impl Control {
         }
     }
 
+    #[rustfmt::skip]
     fn from_u8(value: u8) -> Control {
         Control {
-            chr_bank_mode:
-                if get_bit(value, 3) {
-                    ChrBankMode::TwoSmall
-                } else {
-                    ChrBankMode::Large
-                },
+            chr_bank_mode: if get_bit(value, 3) {
+                ChrBankMode::TwoSmall
+            } else {
+                ChrBankMode::Large
+            },
             prg_bank_mode:
                 match (get_bit(value, 4), get_bit(value, 5)) {
                     (false, _    ) => PrgBankMode::Large,
