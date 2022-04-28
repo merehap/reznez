@@ -33,6 +33,7 @@ impl Mask {
         mask
     }
 
+    #[rustfmt::skip]
     pub fn from_u8(value: u8) -> Mask {
         Mask {
             emphasize_blue:                  get_bit(value, 0),

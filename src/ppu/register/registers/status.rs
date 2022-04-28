@@ -17,17 +17,15 @@ impl Status {
     }
 
     pub fn to_u8(self) -> u8 {
-        pack_bools(
-            [
-                self.vblank_active,
-                self.sprite0_hit,
-                self.sprite_overflow,
-                false,
-                false,
-                false,
-                false,
-                false,
-            ]
-        )
+        pack_bools([
+            self.vblank_active,
+            self.sprite0_hit,
+            self.sprite_overflow,
+            false,
+            false,
+            false,
+            false,
+            false,
+        ])
     }
 }

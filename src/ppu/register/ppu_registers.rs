@@ -3,7 +3,7 @@ use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::register::ppu_register_latch::PpuRegisterLatch;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ctrl;
-use crate::ppu::register::registers::ctrl::{Ctrl, SpriteHeight, AddressIncrement};
+use crate::ppu::register::registers::ctrl::{AddressIncrement, Ctrl, SpriteHeight};
 use crate::ppu::register::registers::mask;
 use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::register::registers::ppu_data;
@@ -35,7 +35,7 @@ impl PpuRegisters {
             oam_data: 0,
             scroll: 0,
             ppu_addr: 0,
-            ppu_data: PpuData {value: 0, is_palette_data: false},
+            ppu_data: PpuData { value: 0, is_palette_data: false },
 
             latch: PpuRegisterLatch::new(),
             latch_access: None,
@@ -112,26 +112,22 @@ impl PpuRegisters {
 
     pub fn read(&mut self, register_type: RegisterType) -> u8 {
         use RegisterType::*;
-        let register_value =
-            match register_type {
-                // Write-only registers.
-                Ctrl | Mask | OamAddr | Scroll | PpuAddr => None,
-                // Retain the open bus values for the unused bits of Status.
-                Status => Some(self.status.to_u8() | (self.latch.value() & 0b0001_1111)),
-                OamData => Some(self.oam_data),
-                PpuData if self.ppu_data.is_palette_data =>
-                    Some(self.ppu_data.value | (self.latch.value() & 0b1100_0000)),
-                PpuData => Some(self.ppu_data.value),
-            };
+        let register_value = match register_type {
+            // Write-only registers.
+            Ctrl | Mask | OamAddr | Scroll | PpuAddr => None,
+            // Retain the open bus values for the unused bits of Status.
+            Status => Some(self.status.to_u8() | (self.latch.value() & 0b0001_1111)),
+            OamData => Some(self.oam_data),
+            PpuData if self.ppu_data.is_palette_data => {
+                Some(self.ppu_data.value | (self.latch.value() & 0b1100_0000))
+            }
+            PpuData => Some(self.ppu_data.value),
+        };
 
         // If a readable register is read from, update the latch.
         if let Some(register_value) = register_value {
-            self.latch_access = Some(
-                LatchAccess {
-                    register_type,
-                    access_mode: AccessMode::Read,
-                }
-            );
+            self.latch_access =
+                Some(LatchAccess { register_type, access_mode: AccessMode::Read });
 
             self.latch.update_from_read(register_type, register_value);
         }
@@ -140,12 +136,8 @@ impl PpuRegisters {
     }
 
     pub fn write(&mut self, register_type: RegisterType, register_value: u8) {
-        self.latch_access = Some(
-            LatchAccess {
-                register_type,
-                access_mode: AccessMode::Write,
-            }
-        );
+        self.latch_access =
+            Some(LatchAccess { register_type, access_mode: AccessMode::Write });
 
         self.latch.update_from_write(register_value);
 
@@ -153,16 +145,15 @@ impl PpuRegisters {
         match register_type {
             Ctrl => self.ctrl = ctrl::Ctrl::from_u8(register_value),
             Mask => self.mask = mask::Mask::from_u8(register_value),
-            Status => {/* Read-only. */},
+            Status => { /* Read-only. */ }
             OamAddr => self.oam_addr = register_value,
             OamData => self.oam_data = register_value,
             Scroll => self.scroll = register_value,
             PpuAddr => self.ppu_addr = register_value,
-            PpuData => self.ppu_data =
-                ppu_data::PpuData {
-                    value: register_value,
-                    is_palette_data: false,
-                },
+            PpuData => {
+                self.ppu_data =
+                    ppu_data::PpuData { value: register_value, is_palette_data: false }
+            }
         }
     }
 }

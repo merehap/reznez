@@ -29,54 +29,47 @@ impl Ctrl {
     pub fn from_u8(value: u8) -> Ctrl {
         Ctrl {
             nmi_enabled: get_bit(value, 0),
-            ext_pin_role:
-                if get_bit(value, 1) {
-                    ExtPinRole::Write
-                } else {
-                    ExtPinRole::Read
-                },
-            sprite_height:
-                if get_bit(value, 2) {
-                    SpriteHeight::Tall
-                } else {
-                    SpriteHeight::Normal
-                },
-            background_table_side:
-                if get_bit(value, 3) {
-                    PatternTableSide::Right
-                } else {
-                    PatternTableSide::Left
-                },
-            sprite_table_side:
-                if get_bit(value, 4) {
-                    PatternTableSide::Right
-                } else {
-                    PatternTableSide::Left
-                },
-            current_address_increment:
-                if get_bit(value, 5) {
-                    AddressIncrement::Down
-                } else {
-                    AddressIncrement::Right
-                },
+            ext_pin_role: if get_bit(value, 1) {
+                ExtPinRole::Write
+            } else {
+                ExtPinRole::Read
+            },
+            sprite_height: if get_bit(value, 2) {
+                SpriteHeight::Tall
+            } else {
+                SpriteHeight::Normal
+            },
+            background_table_side: if get_bit(value, 3) {
+                PatternTableSide::Right
+            } else {
+                PatternTableSide::Left
+            },
+            sprite_table_side: if get_bit(value, 4) {
+                PatternTableSide::Right
+            } else {
+                PatternTableSide::Left
+            },
+            current_address_increment: if get_bit(value, 5) {
+                AddressIncrement::Down
+            } else {
+                AddressIncrement::Right
+            },
             base_name_table_position: NameTablePosition::from_last_two_bits(value),
         }
     }
 
     #[allow(dead_code)]
     pub fn to_u8(self) -> u8 {
-        pack_bools(
-            [
-                self.nmi_enabled,
-                self.ext_pin_role == ExtPinRole::Write,
-                self.sprite_height == SpriteHeight::Tall,
-                self.background_table_side == PatternTableSide::Right,
-                self.sprite_table_side == PatternTableSide::Right,
-                self.current_address_increment == AddressIncrement::Down,
-                self.base_name_table_position as u8 & 0b0000_0010 != 0,
-                self.base_name_table_position as u8 & 0b0000_0001 != 0,
-            ]
-        )
+        pack_bools([
+            self.nmi_enabled,
+            self.ext_pin_role == ExtPinRole::Write,
+            self.sprite_height == SpriteHeight::Tall,
+            self.background_table_side == PatternTableSide::Right,
+            self.sprite_table_side == PatternTableSide::Right,
+            self.current_address_increment == AddressIncrement::Down,
+            self.base_name_table_position as u8 & 0b0000_0010 != 0,
+            self.base_name_table_position as u8 & 0b0000_0001 != 0,
+        ])
     }
 }
 

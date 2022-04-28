@@ -47,26 +47,24 @@ impl PpuRegisterLatch {
 
     pub fn maybe_decay(&mut self) {
         let v = &mut self.value;
+        maybe_decay_internal(v, &mut self.scanlines_until_decay, 0b0000_0000);
         maybe_decay_internal(
-            v, &mut self.scanlines_until_decay, 0b0000_0000);
-        maybe_decay_internal(
-            v, &mut self.scanlines_until_unused_status_bits_decay, 0b1110_0000);
+            v,
+            &mut self.scanlines_until_unused_status_bits_decay,
+            0b1110_0000,
+        );
     }
 }
 
 #[inline]
-fn maybe_decay_internal(
-    latch: &mut u8,
-    scanlines_remaining: &mut Option<u16>,
-    mask: u8,
-) {
+fn maybe_decay_internal(latch: &mut u8, scanlines_remaining: &mut Option<u16>, mask: u8) {
     match *scanlines_remaining {
-        None => {/* The bits have already decayed. */},
+        None => { /* The bits have already decayed. */ }
         Some(0) => {
             // Decay the latch and halt the decay process.
             *latch &= mask;
             *scanlines_remaining = None;
-        },
+        }
         Some(scanlines) => *scanlines_remaining = Some(scanlines - 1),
     }
 }
