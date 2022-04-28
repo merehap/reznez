@@ -10,7 +10,7 @@ pub struct Color {
 
 impl Color {
     pub const fn new(hue: Hue, brightness: Brightness) -> Color {
-        Color {hue, brightness}
+        Color { hue, brightness }
     }
 
     pub fn from_u8(value: u8) -> Color {
@@ -23,8 +23,18 @@ impl Color {
     }
 }
 
-#[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug,
-         FromPrimitive, IntoEnumIterator)]
+#[derive(
+    PartialOrd,
+    Ord,
+    PartialEq,
+    Eq,
+    Hash,
+    Clone,
+    Copy,
+    Debug,
+    FromPrimitive,
+    IntoEnumIterator,
+)]
 pub enum Hue {
     Gray,
     Azure,
@@ -44,8 +54,18 @@ pub enum Hue {
     ExtraBlack,
 }
 
-#[derive(PartialOrd, Ord, PartialEq, Eq, Hash, Clone, Copy, Debug,
-         FromPrimitive, IntoEnumIterator)]
+#[derive(
+    PartialOrd,
+    Ord,
+    PartialEq,
+    Eq,
+    Hash,
+    Clone,
+    Copy,
+    Debug,
+    FromPrimitive,
+    IntoEnumIterator,
+)]
 pub enum Brightness {
     Minimum,
     Low,

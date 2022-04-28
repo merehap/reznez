@@ -18,20 +18,18 @@ impl PaletteTable {
             system_palette.lookup_rgb(Color::from_u8(raw_color))
         };
 
-        let background_palettes =
-            [
-                Palette::new([rgb(raw[0x01]), rgb(raw[0x02]), rgb(raw[0x03])]),
-                Palette::new([rgb(raw[0x05]), rgb(raw[0x06]), rgb(raw[0x07])]),
-                Palette::new([rgb(raw[0x09]), rgb(raw[0x0A]), rgb(raw[0x0B])]),
-                Palette::new([rgb(raw[0x0D]), rgb(raw[0x0E]), rgb(raw[0x0F])]),
-            ];
-        let sprite_palettes =
-            [
-                Palette::new([rgb(raw[0x11]), rgb(raw[0x12]), rgb(raw[0x13])]),
-                Palette::new([rgb(raw[0x15]), rgb(raw[0x16]), rgb(raw[0x17])]),
-                Palette::new([rgb(raw[0x19]), rgb(raw[0x1A]), rgb(raw[0x1B])]),
-                Palette::new([rgb(raw[0x1D]), rgb(raw[0x1E]), rgb(raw[0x1F])]),
-            ];
+        let background_palettes = [
+            Palette::new([rgb(raw[0x01]), rgb(raw[0x02]), rgb(raw[0x03])]),
+            Palette::new([rgb(raw[0x05]), rgb(raw[0x06]), rgb(raw[0x07])]),
+            Palette::new([rgb(raw[0x09]), rgb(raw[0x0A]), rgb(raw[0x0B])]),
+            Palette::new([rgb(raw[0x0D]), rgb(raw[0x0E]), rgb(raw[0x0F])]),
+        ];
+        let sprite_palettes = [
+            Palette::new([rgb(raw[0x11]), rgb(raw[0x12]), rgb(raw[0x13])]),
+            Palette::new([rgb(raw[0x15]), rgb(raw[0x16]), rgb(raw[0x17])]),
+            Palette::new([rgb(raw[0x19]), rgb(raw[0x1A]), rgb(raw[0x1B])]),
+            Palette::new([rgb(raw[0x1D]), rgb(raw[0x1E]), rgb(raw[0x1F])]),
+        ];
 
         PaletteTable {
             universal_background_rgb: rgb(raw[0x00]),

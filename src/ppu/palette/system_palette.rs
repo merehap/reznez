@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use enum_iterator::IntoEnumIterator;
 use num_traits::FromPrimitive;
 
-use crate::ppu::palette::color::{Color, Hue, Brightness};
+use crate::ppu::palette::color::{Brightness, Color, Hue};
 use crate::ppu::palette::rgb::Rgb;
 
 #[derive(Clone)]
@@ -23,14 +23,14 @@ impl SystemPalette {
             return Err(format!(
                 "A system palette must have exactly 4 brightness lines, but found {}.",
                 lines.len(),
-            ))
+            ));
         }
 
         for (i, line) in lines.iter().enumerate() {
             let brightness = FromPrimitive::from_usize(i).unwrap();
             SystemPalette::parse_line(&mut result, brightness, line)?;
         }
-    
+
         Ok(SystemPalette(result))
     }
 
@@ -43,11 +43,7 @@ impl SystemPalette {
         brightness: Brightness,
         line: &str,
     ) -> Result<(), String> {
-
-        let words: Vec<&str> = line
-            .split(' ')
-            .filter(|s| !s.is_empty())
-            .collect();
+        let words: Vec<&str> = line.split(' ').filter(|s| !s.is_empty()).collect();
 
         let mut nums = Vec::new();
         for word in &words {

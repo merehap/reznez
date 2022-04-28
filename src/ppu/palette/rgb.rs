@@ -10,7 +10,7 @@ impl Rgb {
     pub const WHITE: Rgb = Rgb::new(0xFF, 0xFF, 0xFF);
 
     pub const fn new(red: u8, green: u8, blue: u8) -> Rgb {
-        Rgb {red, green, blue}
+        Rgb { red, green, blue }
     }
 
     pub fn red(self) -> u8 {
