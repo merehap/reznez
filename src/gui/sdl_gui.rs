@@ -2,18 +2,18 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 use lazy_static::lazy_static;
-use sdl2::EventPump;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
+use sdl2::EventPump;
 
 use crate::config::Config;
-use crate::ppu::pixel_index::{PixelIndex, PixelColumn, PixelRow};
 use crate::controller::joypad::{Button, ButtonStatus};
-use crate::gui::gui::{execute_frame, Gui, Events};
+use crate::gui::gui::{execute_frame, Events, Gui};
 use crate::nes::Nes;
+use crate::ppu::pixel_index::{PixelColumn, PixelIndex, PixelRow};
 use crate::ppu::render::frame::Frame;
 
 lazy_static! {
@@ -59,7 +59,11 @@ impl SdlGui {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
         let window = video_subsystem
-            .window("REZNEZ", (PixelColumn::COLUMN_COUNT * 3) as u32, (PixelRow::ROW_COUNT * 3) as u32)
+            .window(
+                "REZNEZ",
+                (PixelColumn::COLUMN_COUNT * 3) as u32,
+                (PixelRow::ROW_COUNT * 3) as u32,
+            )
             .position_centered()
             .build()
             .unwrap();
@@ -69,7 +73,11 @@ impl SdlGui {
 
         let texture_creator = canvas.texture_creator();
         let texture = texture_creator
-            .create_texture_target(PixelFormatEnum::RGB24, PixelColumn::COLUMN_COUNT as u32, PixelRow::ROW_COUNT as u32)
+            .create_texture_target(
+                PixelFormatEnum::RGB24,
+                PixelColumn::COLUMN_COUNT as u32,
+                PixelRow::ROW_COUNT as u32,
+            )
             .unwrap();
 
         SdlGui {
@@ -89,12 +97,11 @@ impl SdlGui {
 
         for event in self.event_pump.poll_iter() {
             match event {
-                Event::Quit { .. } |
-                Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => should_quit = true,
-                Event::KeyDown {keycode: Some(code), ..} => {
+                Event::Quit { .. }
+                | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+                    should_quit = true
+                }
+                Event::KeyDown { keycode: Some(code), .. } => {
                     if let Some(&button) = JOY_1_BUTTON_MAPPINGS.get(&code) {
                         joypad1_button_statuses.insert(button, ButtonStatus::Pressed);
                     }
@@ -102,8 +109,8 @@ impl SdlGui {
                     if let Some(&button) = JOY_2_BUTTON_MAPPINGS.get(&code) {
                         joypad2_button_statuses.insert(button, ButtonStatus::Pressed);
                     }
-                },
-                Event::KeyUp {keycode: Some(code), ..} => {
+                }
+                Event::KeyUp { keycode: Some(code), .. } => {
                     if let Some(&button) = JOY_1_BUTTON_MAPPINGS.get(&code) {
                         joypad1_button_statuses.insert(button, ButtonStatus::Unpressed);
                     }
@@ -111,7 +118,7 @@ impl SdlGui {
                     if let Some(&button) = JOY_2_BUTTON_MAPPINGS.get(&code) {
                         joypad2_button_statuses.insert(button, ButtonStatus::Unpressed);
                     }
-                },
+                }
                 _ => { /* Do nothing. */ }
             }
         }

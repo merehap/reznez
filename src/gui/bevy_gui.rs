@@ -7,7 +7,7 @@ use lazy_static::lazy_static;
 
 use crate::config::Config;
 use crate::controller::joypad::{Button, ButtonStatus};
-use crate::gui::gui::{execute_frame, Gui, Events};
+use crate::gui::gui::{execute_frame, Events, Gui};
 use crate::nes::Nes;
 use crate::ppu::render::frame::Frame;
 
@@ -47,21 +47,20 @@ pub struct BevyGui {
 
 impl BevyGui {
     pub fn new() -> BevyGui {
-        let mut gui = BevyGui {app: App::new()};
+        let mut gui = BevyGui { app: App::new() };
         gui.app
-            .insert_resource(PixelsOptions {
-                width: 256,
-                height: 240,
-            })
+            .insert_resource(PixelsOptions { width: 256, height: 240 })
             // Default plugins, minus logging.
             .add_plugin(bevy::core::CorePlugin)
             .add_plugin(bevy::diagnostic::DiagnosticsPlugin)
             .add_plugin(bevy::input::InputPlugin)
-            .add_plugin(bevy::window::WindowPlugin {add_primary_window: true, exit_on_close: true})
+            .add_plugin(bevy::window::WindowPlugin {
+                add_primary_window: true,
+                exit_on_close: true,
+            })
             .add_plugin(bevy::asset::AssetPlugin)
             .add_plugin(bevy::scene::ScenePlugin)
             .add_plugin(bevy::winit::WinitPlugin)
-
             // REZNEZ-specific.
             .add_plugin(PixelsPlugin)
             .add_system(main_system);
