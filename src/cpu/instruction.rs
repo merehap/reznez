@@ -7,9 +7,11 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::memory::CpuMemory;
 
 lazy_static! {
-    static ref INSTRUCTION_TEMPLATES: [InstructionTemplate; 256] = instruction_templates();
+    static ref INSTRUCTION_TEMPLATES: [InstructionTemplate; 256] =
+        instruction_templates();
 }
 
+#[rustfmt::skip]
 fn instruction_templates() -> [InstructionTemplate; 256] {
     use OpCode::*;
     use AccessMode::*;
@@ -77,7 +79,6 @@ impl Instruction {
         y_index: u8,
         mem: &mut CpuMemory,
     ) -> Instruction {
-
         let template = INSTRUCTION_TEMPLATES[mem.read(program_counter) as usize];
         let low = mem.read(program_counter.offset(1));
         let high = mem.read(program_counter.offset(2));
@@ -91,43 +92,44 @@ impl Instruction {
             ZP => {
                 let address = CpuAddress::zero_page(low);
                 Argument::Addr(address)
-            },
+            }
             ZPX => {
                 let address = CpuAddress::zero_page(low.wrapping_add(x_index));
                 Argument::Addr(address)
-            },
+            }
             ZPY => {
                 let address = CpuAddress::zero_page(low.wrapping_add(y_index));
                 Argument::Addr(address)
-            },
+            }
             Abs => {
                 let address = CpuAddress::from_low_high(low, high);
                 Argument::Addr(address)
-            },
+            }
             AbX => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(x_index);
                 page_boundary_crossed = start_address.page() != address.page();
                 Argument::Addr(address)
-            },
+            }
             AbY => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(y_index);
                 page_boundary_crossed = start_address.page() != address.page();
                 Argument::Addr(address)
-            },
+            }
             Rel => {
                 let address = program_counter
                     .offset(low as i8)
                     .advance(template.access_mode.instruction_length());
                 Argument::Addr(address)
-            },
+            }
             Ind => {
                 let first = CpuAddress::from_low_high(low, high);
                 let second = CpuAddress::from_low_high(low.wrapping_add(1), high);
-                let address = CpuAddress::from_low_high(mem.read(first), mem.read(second));
+                let address =
+                    CpuAddress::from_low_high(mem.read(first), mem.read(second));
                 Argument::Addr(address)
-            },
+            }
             IzX => {
                 let low = low.wrapping_add(x_index);
                 let address = CpuAddress::from_low_high(
@@ -135,7 +137,7 @@ impl Instruction {
                     mem.read(CpuAddress::zero_page(low.wrapping_add(1))),
                 );
                 Argument::Addr(address)
-            },
+            }
             IzY => {
                 let start_address = CpuAddress::from_low_high(
                     mem.read(CpuAddress::zero_page(low)),
@@ -145,14 +147,10 @@ impl Instruction {
                 let address = start_address.advance(y_index);
                 page_boundary_crossed = start_address.page() != address.page();
                 Argument::Addr(address)
-            },
+            }
         };
 
-        Instruction {
-            template,
-            argument,
-            page_boundary_crossed,
-        }
+        Instruction { template, argument, page_boundary_crossed }
     }
 
     pub fn should_add_oops_cycle(&self) -> bool {
@@ -171,10 +169,17 @@ impl fmt::Display for Instruction {
             access_mode.push(' ');
         }
 
-        write!(f, "{:02X} ({:?} {} Cycles:{:?}+{:?}) PB:{:5} Arg:{:5}",
-            self.template.code_point, self.template.op_code, access_mode,
-            self.template.cycle_count as usize, self.template.extra_cycle,
-            self.page_boundary_crossed, self.argument)
+        write!(
+            f,
+            "{:02X} ({:?} {} Cycles:{:?}+{:?}) PB:{:5} Arg:{:5}",
+            self.template.code_point,
+            self.template.op_code,
+            access_mode,
+            self.template.cycle_count as usize,
+            self.template.extra_cycle,
+            self.page_boundary_crossed,
+            self.argument
+        )
     }
 }
 
@@ -205,7 +210,10 @@ pub struct InstructionTemplate {
 }
 
 impl InstructionTemplate {
-    fn from_tuple(code_point: u8, tuple: (OpCode, AccessMode, u8, ExtraCycle)) -> InstructionTemplate {
+    fn from_tuple(
+        code_point: u8,
+        tuple: (OpCode, AccessMode, u8, ExtraCycle),
+    ) -> InstructionTemplate {
         InstructionTemplate {
             code_point,
             op_code: tuple.0,

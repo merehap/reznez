@@ -14,9 +14,7 @@ pub struct CycleActionQueue {
 
 impl CycleActionQueue {
     pub fn new() -> CycleActionQueue {
-        CycleActionQueue {
-            queue: VecDeque::with_capacity(CAPACITY),
-        }
+        CycleActionQueue { queue: VecDeque::with_capacity(CAPACITY) }
     }
 
     pub fn is_empty(&self) -> bool {

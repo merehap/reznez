@@ -27,14 +27,15 @@ impl Status {
 
     pub fn from_byte(value: u8) -> Status {
         let mut status = Status::startup();
-        [ status.negative
-        , status.overflow
-        , _
-        , _
-        , status.decimal
-        , status.interrupts_disabled
-        , status.zero
-        , status.carry,
+        [
+            status.negative,
+            status.overflow,
+            _,
+            _,
+            status.decimal,
+            status.interrupts_disabled,
+            status.zero,
+            status.carry,
         ] = unpack_bools(value);
 
         status
@@ -82,14 +83,15 @@ impl Status {
 
 impl fmt::Display for Status {
     fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
-        write!(f,
+        write!(
+            f,
             "{}{}__{}{}{}{}",
-            if self.negative {'N'} else {'_'},
-            if self.overflow {'V'} else {'_'},
-            if self.decimal {'D'} else {'_'},
-            if self.interrupts_disabled {'I'} else {'_'},
-            if self.zero {'Z'} else {'_'},
-            if self.carry {'C'} else {'_'},
+            if self.negative { 'N' } else { '_' },
+            if self.overflow { 'V' } else { '_' },
+            if self.decimal { 'D' } else { '_' },
+            if self.interrupts_disabled { 'I' } else { '_' },
+            if self.zero { 'Z' } else { '_' },
+            if self.carry { 'C' } else { '_' },
         )
     }
 }
@@ -162,7 +164,10 @@ mod tests {
 
     #[test]
     fn mixed_set_round_trip() {
-        assert_eq!(Status::from_byte(MIXED_SET.to_instruction_byte()), MIXED_SET);
+        assert_eq!(
+            Status::from_byte(MIXED_SET.to_instruction_byte()),
+            MIXED_SET
+        );
     }
 
     #[test]

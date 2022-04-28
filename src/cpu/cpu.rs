@@ -2,7 +2,7 @@ use log::info;
 
 use crate::cpu::cycle_action::{CycleAction, DmaTransferState};
 use crate::cpu::cycle_action_queue::CycleActionQueue;
-use crate::cpu::instruction::{Instruction, OpCode, Argument};
+use crate::cpu::instruction::{Argument, Instruction, OpCode};
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::ports::DmaPort;
@@ -31,7 +31,10 @@ pub struct Cpu {
 
 impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
-    pub fn new(memory: &mut CpuMemory, program_counter_source: ProgramCounterSource) -> Cpu {
+    pub fn new(
+        memory: &mut CpuMemory,
+        program_counter_source: ProgramCounterSource,
+    ) -> Cpu {
         use ProgramCounterSource::*;
         let program_counter = match program_counter_source {
             ResetVector => memory.reset_vector(),
@@ -103,16 +106,18 @@ impl Cpu {
 
     pub fn step(&mut self, memory: &mut CpuMemory) -> Option<Instruction> {
         if let Some(dma_page) = self.dma_port.take_page() {
-            self.cycle_action_queue.enqueue_dma_transfer(dma_page, self.cycle);
+            self.cycle_action_queue
+                .enqueue_dma_transfer(dma_page, self.cycle);
         }
 
         if self.cycle_action_queue.is_empty() {
-            self.cycle_action_queue.enqueue_instruction(Instruction::from_memory(
-                self.program_counter,
-                self.x,
-                self.y,
-                memory,
-            ));
+            self.cycle_action_queue
+                .enqueue_instruction(Instruction::from_memory(
+                    self.program_counter,
+                    self.x,
+                    self.y,
+                    memory,
+                ));
         }
 
         if self.nmi_pending {
@@ -122,20 +127,23 @@ impl Cpu {
         }
 
         let mut instruction = None;
-        match self.cycle_action_queue.dequeue().expect("Ran out of CycleActions!") {
+        match self
+            .cycle_action_queue
+            .dequeue()
+            .expect("Ran out of CycleActions!")
+        {
             CycleAction::Instruction(instr) => {
                 let (branch_taken, oops) = self.execute_instruction(memory, instr);
                 if branch_taken || oops {
-                    self.cycle_action_queue.skip_to_front(
-                        CycleAction::InstructionReturn(instr));
+                    self.cycle_action_queue
+                        .skip_to_front(CycleAction::InstructionReturn(instr));
                     if branch_taken && oops {
                         self.cycle_action_queue.skip_to_front(CycleAction::Nop);
                     }
-
                 } else {
                     instruction = Some(instr);
                 }
-            },
+            }
             CycleAction::InstructionReturn(instr) => {
                 instruction = Some(instr);
             }
@@ -144,15 +152,15 @@ impl Cpu {
                 memory.stack().push_address(self.program_counter);
                 memory.stack().push(self.status.to_interrupt_byte());
                 self.program_counter = memory.nmi_vector();
-            },
+            }
             CycleAction::DmaTransfer(DmaTransferState::Read(cpu_address)) => {
                 self.next_dma_byte_to_write = Some(memory.read(cpu_address));
-            },
+            }
             CycleAction::DmaTransfer(DmaTransferState::Write) => {
                 memory.write(OAM_DATA_ADDRESS, self.next_dma_byte_to_write.unwrap());
                 self.next_dma_byte_to_write = None;
-            },
-            CycleAction::DmaTransfer(_) | CycleAction::Nop => {/* Do nothing. */},
+            }
+            CycleAction::DmaTransfer(_) | CycleAction::Nop => { /* Do nothing. */ }
         }
 
         self.cycle += 1;
@@ -160,6 +168,7 @@ impl Cpu {
         instruction
     }
 
+    #[rustfmt::skip]
     fn execute_instruction(
         &mut self,
         memory: &mut CpuMemory,
@@ -209,11 +218,11 @@ impl Cpu {
                 memory.stack().push(self.status.to_instruction_byte());
                 self.status.interrupts_disabled = true;
                 self.program_counter = memory.irq_vector();
-            },
+            }
             (RTI, Imp) => {
                 self.status = Status::from_byte(memory.stack().pop());
                 self.program_counter = memory.stack().pop_address();
-            },
+            }
             (RTS, Imp) => self.program_counter = memory.stack().pop_address().advance(1),
 
             (STA, Addr(addr)) => memory.write(addr, self.a),
@@ -223,12 +232,12 @@ impl Cpu {
                 let value = memory.read(addr).wrapping_sub(1);
                 memory.write(addr, value);
                 self.nz(value);
-            },
+            }
             (INC, Addr(addr)) => {
                 let value = memory.read(addr).wrapping_add(1);
                 memory.write(addr, value);
                 self.nz(value);
-            },
+            }
             (BPL, Addr(addr)) =>
                 (branch_taken, oops) = self.maybe_branch(!self.status.negative, addr),
             (BMI, Addr(addr)) =>
@@ -249,7 +258,7 @@ impl Cpu {
                 // Push the address one previous for some reason.
                 memory.stack().push_address(self.program_counter.offset(-1));
                 self.program_counter = addr;
-            },
+            }
             (JMP, Addr(addr)) => self.program_counter = addr,
 
             (BIT, Addr(addr)) => {
@@ -257,7 +266,7 @@ impl Cpu {
                 self.status.negative = val & 0b1000_0000 != 0;
                 self.status.overflow = val & 0b0100_0000 != 0;
                 self.status.zero = val & self.a == 0;
-            },
+            }
 
             (LDA, Imm(val)) => self.a = self.nz(val),
             (LDX, Imm(val)) => self.x = self.nz(val),
@@ -287,38 +296,38 @@ impl Cpu {
                 self.a = val;
                 self.x = val;
                 self.nz(val);
-            },
+            }
             (LAX, Addr(addr)) => {
                 let val = memory.read(addr);
                 self.a = val;
                 self.x = val;
                 self.nz(val);
-            },
+            }
 
             (ASL, Imp) => self.a = self.asl(self.a),
             (ASL, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.asl(value);
                 memory.write(addr, value);
-            },
+            }
             (ROL, Imp) => self.a = self.rol(self.a),
             (ROL, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.rol(value);
                 memory.write(addr, value);
-            },
+            }
             (LSR, Imp) => self.a = self.lsr(self.a),
             (LSR, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.lsr(value);
                 memory.write(addr, value);
-            },
+            }
             (ROR, Imp) => self.a = self.ror(self.a),
             (ROR, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.ror(value);
                 memory.write(addr, value);
-            },
+            }
 
             // Undocumented op codes.
             (SLO, Addr(addr)) => {
@@ -327,48 +336,48 @@ impl Cpu {
                 memory.write(addr, value);
                 self.a |= value;
                 self.nz(self.a);
-            },
+            }
             (RLA, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.rol(value);
                 memory.write(addr, value);
                 self.a &= value;
                 self.nz(self.a);
-            },
+            }
             (SRE, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.lsr(value);
                 memory.write(addr, value);
                 self.a ^= value;
                 self.nz(self.a);
-            },
+            }
             (RRA, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.ror(value);
                 memory.write(addr, value);
                 self.a = self.adc(value);
                 self.nz(self.a);
-            },
+            }
             (SAX, Addr(addr)) => memory.write(addr, self.a & self.x),
             (DCP, Addr(addr)) => {
                 let value = memory.read(addr).wrapping_sub(1);
                 memory.write(addr, value);
                 self.cmp(value);
-            },
+            }
             (ISC, Addr(addr)) => {
                 let value = memory.read(addr).wrapping_add(1);
                 memory.write(addr, value);
                 self.a = self.sbc(value);
-            },
+            }
 
             (ANC, Imm(val)) => {
                 self.a = self.nz(self.a & val);
                 self.status.carry = self.status.negative;
-            },
+            }
             (ALR, Imm(val)) => {
                 self.a = self.nz(self.a & val);
                 self.a = self.lsr(self.a);
-            },
+            }
             (ARR, Imm(val)) => {
                 // TODO: What a mess.
                 let value = (self.a & val) >> 1;
@@ -377,29 +386,29 @@ impl Cpu {
                 self.status.overflow =
                     ((if self.status.carry {0x01} else {0x00}) ^
                     ((self.a >> 5) & 0x01)) != 0;
-            },
+            }
             (XAA, _) => unimplemented!(),
             (AXS, Imm(val)) => {
                 self.status.carry = self.a & self.x >= val;
                 self.x = self.nz((self.a & self.x).wrapping_sub(val));
-            },
+            }
             (AHX, _) => unimplemented!(),
             (SHY, Addr(addr)) => {
                 let (low, high) = addr.to_low_high();
                 let value = self.y & high.wrapping_add(1);
                 let addr = CpuAddress::from_low_high(low, high & self.y);
                 memory.write(addr, value);
-            },
+            }
             (SHX, Addr(addr)) => {
                 let (low, high) = addr.to_low_high();
                 let value = self.x & high.wrapping_add(1);
                 let addr = CpuAddress::from_low_high(low, high & self.x);
                 memory.write(addr, value);
-            },
+            }
             (TAS, _) => unimplemented!(),
             (LAS, _) => unimplemented!(),
 
-            (NOP, _) => {},
+            (NOP, _) => {}
             (JAM, _) => panic!("JAM instruction encountered!"),
             (op_code, arg) =>
                 unreachable!(
@@ -413,14 +422,13 @@ impl Cpu {
     }
 
     fn adc(&mut self, value: u8) -> u8 {
-        let carry = if self.status.carry {1} else {0};
+        let carry = if self.status.carry { 1 } else { 0 };
         let result = (u16::from(self.a)) + (u16::from(value)) + carry;
         self.status.carry = result > 0xFF;
         let result = self.nz(result as u8);
         // If the inputs have the same sign, set overflow if the output doesn't.
         self.status.overflow =
-            (is_neg(self.a) == is_neg(value)) &&
-            (is_neg(self.a) != is_neg(result));
+            (is_neg(self.a) == is_neg(value)) && (is_neg(self.a) != is_neg(result));
         result
     }
 
@@ -482,7 +490,11 @@ impl Cpu {
         value
     }
 
-    fn maybe_branch(&mut self, take_branch: bool, destination: CpuAddress) -> (bool, bool) {
+    fn maybe_branch(
+        &mut self,
+        take_branch: bool,
+        destination: CpuAddress,
+    ) -> (bool, bool) {
         if !take_branch {
             return (false, false);
         }
@@ -574,10 +586,8 @@ mod tests {
         let nmi_vector = CpuAddress::new(0xC000);
         let reset_vector = CpuAddress::new(0x8000);
         let mut mem = memory_with_nop_cartridge(nmi_vector, reset_vector);
-        let mut cpu = Cpu::new(
-            &mut mem.as_cpu_memory(),
-            ProgramCounterSource::ResetVector,
-        );
+        let mut cpu =
+            Cpu::new(&mut mem.as_cpu_memory(), ProgramCounterSource::ResetVector);
 
         // No instruction loaded yet.
         assert_eq!(0xFD, mem.stack_pointer());
@@ -618,22 +628,18 @@ mod tests {
     }
 
     #[test]
-    fn nmi_scheduled_before_branching() {
-    }
+    fn nmi_scheduled_before_branching() {}
 
     #[test]
-    fn nmi_scheduled_before_oops() {
-    }
+    fn nmi_scheduled_before_oops() {}
 
     #[test]
-    fn nmi_scheduled_before_branching_oops() {
-    }
+    fn nmi_scheduled_before_branching_oops() {}
 
     fn memory_with_nop_cartridge(
         nmi_vector: CpuAddress,
         reset_vector: CpuAddress,
     ) -> Memory {
-
         let irq_vector = CpuAddress::new(0xF000);
         // Providing no data results in a program filled with NOPs (0xEA).
         let cartridge = cartridge::test_data::cartridge_with_prg_rom(
