@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use sscanf;
 use walkdir::WalkDir;
 
-use reznez::config::{Config, Opt, GuiType};
+use reznez::config::{Config, GuiType, Opt};
 use reznez::nes::Nes;
 use reznez::ppu::render::frame_rate::TargetFrameRate;
 use reznez::ppu::render::ppm::Ppm;
@@ -67,15 +67,23 @@ fn framematch() {
         };
 
         let nes = Nes::new(&Config::new(&opt));
-        let rom_name = frame_directory.file_stem().unwrap().to_str().unwrap().to_string();
-        frame_hash_data.push(FrameHashData {rom_name, nes, frame_hashes});
+        let rom_name = frame_directory
+            .file_stem()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string();
+        frame_hash_data.push(FrameHashData { rom_name, nes, frame_hashes });
     }
 
     println!();
 
     let mut failed = false;
-    for FrameHashData {rom_name, mut nes, frame_hashes} in frame_hash_data {
-        println!("FRAMEMATCH TEST: testing against expected frames for {} .", rom_name);
+    for FrameHashData { rom_name, mut nes, frame_hashes } in frame_hash_data {
+        println!(
+            "FRAMEMATCH TEST: testing against expected frames for {} .",
+            rom_name
+        );
         let max_frame_index = frame_hashes.keys().last().unwrap();
         for frame_index in 0..=*max_frame_index {
             nes.step_frame();
@@ -90,20 +98,12 @@ fn framematch() {
                 if actual_hash != *expected_hash {
                     failed = true;
 
-                    let actual_ppm_path = format!(
-                        "{}_actual_frame_{:03}.ppm",
-                        rom_name,
-                        frame_index,
-                    );
-                    fs::write(
-                        actual_ppm_path.clone(),
-                        actual_ppm.to_bytes(),
-                    ).unwrap();
+                    let actual_ppm_path =
+                        format!("{}_actual_frame_{:03}.ppm", rom_name, frame_index,);
+                    fs::write(actual_ppm_path.clone(), actual_ppm.to_bytes()).unwrap();
                     println!(
                         "\t\tActual hash {} didn't match expected hash {} . See {} .",
-                        actual_hash,
-                        expected_hash,
-                        actual_ppm_path,
+                        actual_hash, expected_hash, actual_ppm_path,
                     );
                 }
             }

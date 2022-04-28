@@ -1,12 +1,12 @@
 extern crate reznez;
 
 use std::fmt;
-use std::io::{BufRead, BufReader};
 use std::fs::File;
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use reznez::config::{Config, Opt, GuiType};
+use reznez::config::{Config, GuiType, Opt};
 use reznez::cpu::instruction::OpCode;
 use reznez::cpu::status::Status;
 use reznez::memory::cpu::cpu_address::CpuAddress;
@@ -17,8 +17,7 @@ use reznez::util::logger::Logger;
 
 #[test]
 fn nestest() {
-    let f = File::open("tests/data/nestest_expected")
-        .expect("Test data not found!");
+    let f = File::open("tests/data/nestest_expected").expect("Test data not found!");
     let mut expected_states = BufReader::new(f)
         .lines()
         .map(|line| State::from_text(line.unwrap()));
@@ -34,7 +33,7 @@ fn nestest() {
         analysis: false,
     };
 
-    logger::init(Logger {log_cpu: opt.log_cpu}).unwrap();
+    logger::init(Logger { log_cpu: opt.log_cpu }).unwrap();
 
     let config = Config::new(&opt);
     let mut nes = Nes::new(&config);
@@ -74,7 +73,10 @@ fn nestest() {
             };
 
             if state != expected_state {
-                panic!("State diverged from expected state!\nExpected:\n{}\nActual:\n{}", expected_state, state);
+                panic!(
+                    "State diverged from expected state!\nExpected:\n{}\nActual:\n{}",
+                    expected_state, state
+                );
             }
         } else {
             break;
@@ -106,7 +108,9 @@ impl State {
         }
 
         State {
-            program_counter: CpuAddress::new(u16::from_str_radix(&line[0..4], 16).unwrap()),
+            program_counter: CpuAddress::new(
+                u16::from_str_radix(&line[0..4], 16).unwrap(),
+            ),
             code_point: u8::from_str_radix(&line[6..8], 16).unwrap(),
             op_code: OpCode::from_str(raw_op_code).unwrap(),
             a: u8::from_str_radix(&line[50..52], 16).unwrap(),

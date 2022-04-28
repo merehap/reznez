@@ -37,7 +37,8 @@ impl Config {
         let cartridge = Cartridge::load(file_name, &rom).unwrap();
         info!("ROM loaded.\n{}", cartridge);
 
-        let system_palette = SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
+        let system_palette =
+            SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
 
         let program_counter_source =
             if let Some(override_program_counter) = opt.override_program_counter {

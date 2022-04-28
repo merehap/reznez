@@ -6,16 +6,16 @@ use num_traits::FromPrimitive;
 
 use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
 use crate::ppu::name_table::name_table_position::NameTablePosition;
-use crate::ppu::pixel_index::{PixelColumn, ColumnInTile, PixelRow, RowInTile};
+use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 
 const HIGH_BYTE_MASK: u16 = 0b0111_1111_0000_0000;
-const LOW_BYTE_MASK:  u16 = 0b0000_0000_1111_1111;
+const LOW_BYTE_MASK: u16 = 0b0000_0000_1111_1111;
 
-const FINE_Y_MASK:                u16 = 0b0111_0000_0000_0000;
-const VERTICAL_NAME_TABLE_MASK:   u16 = 0b0000_1000_0000_0000;
+const FINE_Y_MASK: u16 = 0b0111_0000_0000_0000;
+const VERTICAL_NAME_TABLE_MASK: u16 = 0b0000_1000_0000_0000;
 const HORIZONTAL_NAME_TABLE_MASK: u16 = 0b0000_0100_0000_0000;
-const COARSE_Y_MASK:              u16 = 0b0000_0011_1110_0000;
-const COARSE_X_MASK:              u16 = 0b0000_0000_0001_1111;
+const COARSE_Y_MASK: u16 = 0b0000_0011_1110_0000;
+const COARSE_X_MASK: u16 = 0b0000_0000_0001_1111;
 
 const Y_MASK: u16 = FINE_Y_MASK | COARSE_Y_MASK;
 const NAME_TABLE_MASK: u16 = VERTICAL_NAME_TABLE_MASK | HORIZONTAL_NAME_TABLE_MASK;
@@ -141,7 +141,7 @@ pub struct XScroll {
 
 impl XScroll {
     pub const ZERO: XScroll =
-        XScroll {coarse: TileColumn::ZERO, fine: ColumnInTile::Zero};
+        XScroll { coarse: TileColumn::ZERO, fine: ColumnInTile::Zero };
 
     pub fn coarse(self) -> TileColumn {
         self.coarse
@@ -175,7 +175,7 @@ pub struct YScroll {
 }
 
 impl YScroll {
-    pub const ZERO: YScroll = YScroll {coarse: TileRow::ZERO, fine: RowInTile::Zero};
+    pub const ZERO: YScroll = YScroll { coarse: TileRow::ZERO, fine: RowInTile::Zero };
 
     fn from_u8(value: u8) -> YScroll {
         YScroll {
