@@ -6,7 +6,7 @@ const CHUNK_LEN: usize = 0x400;
 
 pub struct MappedArray<const CHUNK_COUNT: usize>([Chunk; CHUNK_COUNT]);
 
-impl <const CHUNK_COUNT: usize> MappedArray<CHUNK_COUNT> {
+impl<const CHUNK_COUNT: usize> MappedArray<CHUNK_COUNT> {
     pub fn empty() -> MappedArray<CHUNK_COUNT> {
         let mut chunks = Vec::new();
         for _ in 0..CHUNK_COUNT {
@@ -46,9 +46,13 @@ impl <const CHUNK_COUNT: usize> MappedArray<CHUNK_COUNT> {
     }
 
     pub fn update<const LEN: usize>(&mut self, backing: &Rc<RefCell<[u8; LEN]>>) {
-        assert_eq!(LEN, CHUNK_COUNT * CHUNK_LEN,
+        assert_eq!(
+            LEN,
+            CHUNK_COUNT * CHUNK_LEN,
             "LEN == CHUNK_COUNT * CHUNK_LEN must be true but {} != {} * {}",
-            LEN, CHUNK_COUNT, CHUNK_LEN,
+            LEN,
+            CHUNK_COUNT,
+            CHUNK_LEN,
         );
 
         for (i, chunk) in self.0.iter_mut().enumerate() {
@@ -61,9 +65,13 @@ impl <const CHUNK_COUNT: usize> MappedArray<CHUNK_COUNT> {
         first_half: &Rc<RefCell<[u8; LEN]>>,
         second_half: &Rc<RefCell<[u8; LEN]>>,
     ) {
-        assert_eq!(2 * LEN, CHUNK_COUNT * CHUNK_LEN,
+        assert_eq!(
+            2 * LEN,
+            CHUNK_COUNT * CHUNK_LEN,
             "2 * LEN == CHUNK_COUNT * CHUNK_LEN must be true but {} != {} * {}",
-            2 * LEN, CHUNK_COUNT, CHUNK_LEN,
+            2 * LEN,
+            CHUNK_COUNT,
+            CHUNK_LEN,
         );
 
         let half_count = CHUNK_COUNT / 2;
@@ -107,7 +115,7 @@ impl Chunk {
     pub fn new(backing: Rc<RefCell<[u8]>>, start_index: usize) -> Chunk {
         assert!(backing.borrow().len() >= CHUNK_LEN);
 
-        Chunk {backing, start_index}
+        Chunk { backing, start_index }
     }
 
     fn read(&self, index: usize) -> u8 {

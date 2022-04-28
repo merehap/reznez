@@ -15,9 +15,9 @@ mod controller;
 mod cpu;
 mod debug;
 mod gui;
-mod ppu;
 mod memory;
 pub mod nes;
+mod ppu;
 mod util;
 
 use structopt::StructOpt;
@@ -29,7 +29,11 @@ use crate::util::logger::Logger;
 
 fn main() {
     let opt = Opt::from_args();
-    logger::init(Logger {log_cpu: opt.log_cpu}).unwrap();
+    logger::init(Logger {
+        log_cpu: opt.log_cpu,
+    })
+    .unwrap();
+
     if opt.analysis {
         analysis::cartridge_db::analyze(&opt.rom_path);
     } else {

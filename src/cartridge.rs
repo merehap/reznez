@@ -27,6 +27,7 @@ pub struct Cartridge {
 }
 
 impl Cartridge {
+    #[rustfmt::skip]
     pub fn load(name: String, rom: &[u8]) -> Result<Cartridge, String> {
         if &rom[0..4] != INES_HEADER_CONSTANT {
             return Err(format!(
@@ -151,7 +152,7 @@ impl Cartridge {
     pub fn name_table_mirroring(&self) -> NameTableMirroring {
         self.name_table_mirroring
     }
-    
+
     pub fn prg_rom_chunks(&self) -> &[Box<[u8; 0x4000]>] {
         &self.prg_rom_chunks
     }
@@ -208,9 +209,7 @@ impl fmt::Display for Cartridge {
 }
 
 #[derive(Clone, Debug)]
-struct INes2 {
-
-}
+struct INes2 {}
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
@@ -228,7 +227,6 @@ pub struct PlayChoice {
     prom_data: [u8; 16],
     prom_counter_out: [u8; 16],
 }
-
 
 #[cfg(test)]
 pub mod test_data {
@@ -270,9 +268,11 @@ pub mod test_data {
         reset_vector: CpuAddress,
         irq_vector: CpuAddress,
     ) -> Cartridge {
-
         // Filled with NOPs.
-        let mut prg_chunks = [Box::new([0xEA; PRG_ROM_CHUNK_LENGTH]), Box::new([0xEA; PRG_ROM_CHUNK_LENGTH])];
+        let mut prg_chunks = [
+            Box::new([0xEA; PRG_ROM_CHUNK_LENGTH]),
+            Box::new([0xEA; PRG_ROM_CHUNK_LENGTH]),
+        ];
         for chunk_index in 0..2 {
             for i in 0..prg_rom_chunks[chunk_index].len() {
                 prg_chunks[chunk_index][i] = prg_rom_chunks[chunk_index][i];

@@ -9,9 +9,9 @@ use structopt::StructOpt;
 use crate::cartridge::Cartridge;
 use crate::cpu::cpu::ProgramCounterSource;
 use crate::gui::bevy_gui::BevyGui;
+use crate::gui::egui_gui::EguiGui;
 use crate::gui::gui::Gui;
 use crate::gui::no_gui::NoGui;
-use crate::gui::egui_gui::EguiGui;
 use crate::gui::sdl_gui::SdlGui;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::ppu::palette::system_palette::SystemPalette;
@@ -32,16 +32,12 @@ impl Config {
 
         info!("Loading ROM '{}'.", rom_path.display());
         let mut rom = Vec::new();
-        File::open(rom_path)
-            .unwrap()
-            .read_to_end(&mut rom)
-            .unwrap();
+        File::open(rom_path).unwrap().read_to_end(&mut rom).unwrap();
         let file_name = rom_path.file_name().unwrap().to_str().unwrap().to_string();
         let cartridge = Cartridge::load(file_name, &rom).unwrap();
         info!("ROM loaded.\n{}", cartridge);
 
-        let system_palette = SystemPalette::parse(include_str!("../palettes/2C02.pal"))
-            .unwrap();
+        let system_palette = SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
 
         let program_counter_source =
             if let Some(override_program_counter) = opt.override_program_counter {

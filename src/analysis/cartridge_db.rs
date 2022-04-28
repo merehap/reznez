@@ -6,7 +6,7 @@ use std::path::Path;
 
 use itertools::Itertools;
 use log::{error, info};
-use rusqlite::{params, Connection, Result, MappedRows};
+use rusqlite::{params, Connection, MappedRows, Result};
 use walkdir::WalkDir;
 
 use crate::cartridge::Cartridge;
@@ -33,37 +33,44 @@ pub fn analyze(rom_base_path: &Path) {
     }
 
     let connection = Connection::open_in_memory().unwrap();
-    connection.execute(
-        "CREATE TABLE cartridges (
+    connection
+        .execute(
+            "CREATE TABLE cartridges (
             name TEXT NOT NULL,
             mapper INTEGER NOT NULL,
             mirroring TEXT NOT NULL
         )",
-        [],
-    ).unwrap();
+            [],
+        )
+        .unwrap();
     for cartridge in cartridges {
-        connection.execute(
-            "INSERT INTO cartridges VALUES (?1, ?2, ?3)",
-            params![
-                cartridge.name(),
-                cartridge.mapper_number(),
-                format!("{:?}", cartridge.name_table_mirroring()),
-            ],
-        ).unwrap();
+        connection
+            .execute(
+                "INSERT INTO cartridges VALUES (?1, ?2, ?3)",
+                params![
+                    cartridge.name(),
+                    cartridge.mapper_number(),
+                    format!("{:?}", cartridge.name_table_mirroring()),
+                ],
+            )
+            .unwrap();
     }
 
-    let db = CartridgeDB {connection};
-    let mut select = db.connection.prepare(
-        "SELECT name, mapper, mirroring FROM cartridges ORDER BY mapper ASC"
-    ).unwrap();
+    let db = CartridgeDB { connection };
+    let mut select = db
+        .connection
+        .prepare("SELECT name, mapper, mirroring FROM cartridges ORDER BY mapper ASC")
+        .unwrap();
 
-    let cartridge_iter: MappedRows<_> = select.query_map([], |row| {
-        Ok((
+    let cartridge_iter: MappedRows<_> = select
+        .query_map([], |row| {
+            Ok((
                 row.get(0).unwrap(),
                 row.get(1).unwrap(),
                 row.get(2).unwrap(),
-        )) : Result<(String, i32, String)>
-    }).unwrap();
+            )): Result<(String, i32, String)>
+        })
+        .unwrap();
 
     let cartridge_iter = cartridge_iter.map(|entry| {
         let entry = entry.as_ref().unwrap();

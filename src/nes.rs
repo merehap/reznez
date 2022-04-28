@@ -1,21 +1,21 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use log::{info, log_enabled};
 use log::Level::Info;
+use log::{info, log_enabled};
 
 use crate::cartridge::Cartridge;
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::Cpu;
-use crate::cpu::instruction::{Instruction, Argument, AccessMode};
+use crate::cpu::instruction::{AccessMode, Argument, Instruction};
 use crate::gui::gui::Events;
 use crate::memory::cpu::ports::Ports;
-use crate::memory::memory::Memory;
 use crate::memory::mapper::Mapper;
 use crate::memory::mappers::mapper0::Mapper0;
 use crate::memory::mappers::mapper1::Mapper1;
 use crate::memory::mappers::mapper3::Mapper3;
+use crate::memory::memory::Memory;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::render::frame::Frame;
 
@@ -33,13 +33,12 @@ pub struct Nes {
 
 impl Nes {
     pub fn new(config: &Config) -> Nes {
-        let mapper =
-            match config.cartridge.mapper_number() {
-                0 => Box::new(Mapper0::new(&config.cartridge).unwrap()) as Box<dyn Mapper>,
-                1 => Box::new(Mapper1::new(&config.cartridge)),
-                3 => Box::new(Mapper3::new(&config.cartridge).unwrap()),
-                _ => todo!(),
-            };
+        let mapper = match config.cartridge.mapper_number() {
+            0 => Box::new(Mapper0::new(&config.cartridge).unwrap()) as Box<dyn Mapper>,
+            1 => Box::new(Mapper1::new(&config.cartridge)),
+            3 => Box::new(Mapper3::new(&config.cartridge).unwrap()),
+            _ => todo!(),
+        };
 
         let joypad1 = Rc::new(RefCell::new(Joypad::new()));
         let joypad2 = Rc::new(RefCell::new(Joypad::new()));
@@ -60,7 +59,7 @@ impl Nes {
     }
 
     pub fn cpu(&self) -> &Cpu {
-       &self.cpu
+        &self.cpu
     }
 
     pub fn ppu(&self) -> &Ppu {
@@ -115,7 +114,9 @@ impl Nes {
             }
         }
 
-        let ppu_result = self.ppu.step(&mut self.memory.as_ppu_memory(), &mut self.frame);
+        let ppu_result = self
+            .ppu
+            .step(&mut self.memory.as_ppu_memory(), &mut self.frame);
         if ppu_result.should_generate_nmi {
             self.cpu.schedule_nmi();
         }
@@ -132,11 +133,15 @@ impl Nes {
     #[inline]
     pub fn process_gui_events(&mut self, events: &Events) {
         for (button, status) in &events.joypad1_button_statuses {
-            self.joypad1.borrow_mut().set_button_status(*button, *status);
+            self.joypad1
+                .borrow_mut()
+                .set_button_status(*button, *status);
         }
 
         for (button, status) in &events.joypad2_button_statuses {
-            self.joypad2.borrow_mut().set_button_status(*button, *status);
+            self.joypad2
+                .borrow_mut()
+                .set_button_status(*button, *status);
         }
     }
 
@@ -156,28 +161,27 @@ impl Nes {
             self.cpu.status(),
         );
         */
-        let argument =
-            match instruction.argument {
-                Argument::Imp => /* Unused. */ 0,
-                Argument::Imm(value) => u16::from(value),
-                Argument::Addr(address) => address.to_raw(),
-            };
+        let argument = match instruction.argument {
+            // No argument for Imp, so this value is unused.
+            Argument::Imp => 0,
+            Argument::Imm(value) => u16::from(value),
+            Argument::Addr(address) => address.to_raw(),
+        };
         use AccessMode::*;
-        let formatted_argument =
-            match instruction.template.access_mode {
-                Imp => "".to_string(),
-                Imm => format!("#${:02X}", argument),
-                ZP  => format!("${:02X}", argument),
-                ZPX => format!("${:02X},X @", argument),
-                ZPY => format!("(${:02X}),Y", argument),
-                Abs => format!("${:04X}", argument),
-                AbX => format!("${:04X},X", argument),
-                AbY => format!("${:04X},Y", argument),
-                Rel => format!("${:04X}", argument),
-                Ind => format!("${:04X}", argument),
-                IzX => format!("${:04X},X", argument),
-                IzY => format!("${:04X},Y", argument),
-            };
+        let formatted_argument = match instruction.template.access_mode {
+            Imp => "".to_string(),
+            Imm => format!("#${:02X}", argument),
+            ZP => format!("${:02X}", argument),
+            ZPX => format!("${:02X},X @", argument),
+            ZPY => format!("(${:02X}),Y", argument),
+            Abs => format!("${:04X}", argument),
+            AbX => format!("${:04X},X", argument),
+            AbY => format!("${:04X},Y", argument),
+            Rel => format!("${:04X}", argument),
+            Ind => format!("${:04X}", argument),
+            IzX => format!("${:04X},X", argument),
+            IzY => format!("${:04X},Y", argument),
+        };
 
         info!(
             "{:04X} {:?} {:8}A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{:<3} SL:{:<3} CPU Cycle:{}",
@@ -286,7 +290,10 @@ mod tests {
         let cartridge = cartridge::test_data::cartridge();
 
         Nes {
-            cpu: Cpu::new(&mut memory.as_cpu_memory(), ProgramCounterSource::Override(CpuAddress::new(0x0000))),
+            cpu: Cpu::new(
+                &mut memory.as_cpu_memory(),
+                ProgramCounterSource::Override(CpuAddress::new(0x0000)),
+            ),
             ppu: Ppu::new(),
             memory,
             cartridge,
@@ -300,10 +307,13 @@ mod tests {
     fn step_until_vblank_nmi_enabled(nes: &mut Nes) {
         let mut ctrl = Ctrl::new();
         ctrl.nmi_enabled = true;
-        nes.memory.as_cpu_memory().write(CpuAddress::new(0x2000), ctrl.to_u8());
+        nes.memory
+            .as_cpu_memory()
+            .write(CpuAddress::new(0x2000), ctrl.to_u8());
 
         loop {
-            assert!(!nes.cpu.nmi_pending(),
+            assert!(
+                !nes.cpu.nmi_pending(),
                 "NMI must not be pending before one is scheduled.",
             );
             let nmi_scheduled = nes.step().nmi_scheduled;

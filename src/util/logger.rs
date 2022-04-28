@@ -1,4 +1,4 @@
-use log::{Record, Level, Metadata, SetLoggerError, LevelFilter};
+use log::{Level, LevelFilter, Metadata, Record, SetLoggerError};
 
 pub fn init(logger: Logger) -> Result<(), SetLoggerError> {
     log::set_boxed_logger(Box::new(logger))

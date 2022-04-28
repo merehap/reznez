@@ -54,7 +54,10 @@ mod tests {
 
     #[test]
     fn pack_mixture() {
-        assert_eq!(pack_bools([true, true, false, true, true, false, true, false]), 0xDA);
+        assert_eq!(
+            pack_bools([true, true, false, true, true, false, true, false]),
+            0xDA
+        );
     }
 
     #[test]
@@ -69,7 +72,10 @@ mod tests {
 
     #[test]
     fn unpack_mixture() {
-        assert_eq!(unpack_bools(0xDA), [true, true, false, true, true, false, true, false]);
+        assert_eq!(
+            unpack_bools(0xDA),
+            [true, true, false, true, true, false, true, false]
+        );
     }
 
     #[test]
