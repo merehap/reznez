@@ -16,12 +16,16 @@ impl Vram {
 
     pub fn side(&self, side: VramSide) -> &[u8; CHUNK_SIZE] {
         let start_index = side as usize;
-        self.0[start_index..start_index + CHUNK_SIZE].try_into().unwrap()
+        self.0[start_index..start_index + CHUNK_SIZE]
+            .try_into()
+            .unwrap()
     }
 
     pub fn side_mut(&mut self, side: VramSide) -> &mut [u8; CHUNK_SIZE] {
         let start_index = side as usize;
-        (&mut self.0[start_index..start_index + CHUNK_SIZE]).try_into().unwrap()
+        (&mut self.0[start_index..start_index + CHUNK_SIZE])
+            .try_into()
+            .unwrap()
     }
 }
 

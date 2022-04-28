@@ -7,9 +7,9 @@ pub struct Stack<'a> {
     pointer: &'a mut u8,
 }
 
-impl <'a> Stack<'a> {
+impl<'a> Stack<'a> {
     pub fn new(raw: &'a mut [u8; 0x100], pointer: &'a mut u8) -> Stack<'a> {
-        Stack {raw, pointer}
+        Stack { raw, pointer }
     }
 
     pub fn push(&mut self, value: u8) {

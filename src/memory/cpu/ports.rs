@@ -11,11 +11,7 @@ pub struct Ports {
 
 impl Ports {
     pub fn new(joypad1: Rc<RefCell<Joypad>>, joypad2: Rc<RefCell<Joypad>>) -> Ports {
-        Ports {
-            dma: DmaPort::new(),
-            joypad1,
-            joypad2,
-        }
+        Ports { dma: DmaPort::new(), joypad1, joypad2 }
     }
 
     pub fn change_strobe(&mut self, value: u8) {
@@ -36,7 +32,7 @@ pub struct DmaPort {
 
 impl DmaPort {
     pub fn new() -> DmaPort {
-        DmaPort {page: Rc::new(RefCell::new(None))}
+        DmaPort { page: Rc::new(RefCell::new(None)) }
     }
 
     pub fn set_page(&mut self, page: u8) {

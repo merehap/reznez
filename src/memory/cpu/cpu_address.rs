@@ -65,8 +65,7 @@ impl FromStr for CpuAddress {
     type Err = String;
 
     fn from_str(value: &str) -> Result<CpuAddress, String> {
-        let raw = u16::from_str(value)
-            .map_err(|err| err.to_string())?;
+        let raw = u16::from_str(value).map_err(|err| err.to_string())?;
         Ok(CpuAddress(raw))
     }
 }

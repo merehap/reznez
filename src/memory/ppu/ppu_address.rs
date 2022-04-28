@@ -1,3 +1,5 @@
+#[rustfmt::skip]
+
 use std::fmt;
 
 use num_traits::FromPrimitive;

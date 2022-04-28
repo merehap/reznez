@@ -1,5 +1,7 @@
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::cpu::cpu_internal_ram::{CpuInternalRam, NMI_VECTOR, RESET_VECTOR, IRQ_VECTOR};
+use crate::memory::cpu::cpu_internal_ram::{
+    CpuInternalRam, IRQ_VECTOR, NMI_VECTOR, RESET_VECTOR,
+};
 use crate::memory::cpu::ports::Ports;
 use crate::memory::cpu::stack::Stack;
 use crate::memory::mapper::Mapper;
@@ -41,11 +43,11 @@ impl Memory {
     }
 
     pub fn as_cpu_memory(&mut self) -> CpuMemory {
-        CpuMemory {memory: self}
+        CpuMemory { memory: self }
     }
 
     pub fn as_ppu_memory(&mut self) -> PpuMemory {
-        PpuMemory {memory: self}
+        PpuMemory { memory: self }
     }
 
     pub fn mapper(&self) -> &dyn Mapper {
@@ -66,7 +68,7 @@ pub struct CpuMemory<'a> {
     memory: &'a mut Memory,
 }
 
-impl <'a> CpuMemory<'a> {
+impl<'a> CpuMemory<'a> {
     #[inline]
     pub fn read(&mut self, address: CpuAddress) -> u8 {
         self.memory.mapper.cpu_read(
@@ -120,10 +122,7 @@ impl <'a> CpuMemory<'a> {
     }
 
     fn address_from_vector(&mut self, mut vector: CpuAddress) -> CpuAddress {
-        CpuAddress::from_low_high(
-            self.read(vector),
-            self.read(vector.inc()),
-        )
+        CpuAddress::from_low_high(self.read(vector), self.read(vector.inc()))
     }
 }
 
@@ -131,15 +130,19 @@ pub struct PpuMemory<'a> {
     memory: &'a mut Memory,
 }
 
-impl <'a> PpuMemory<'a> {
+impl<'a> PpuMemory<'a> {
     #[inline]
     pub fn read(&self, address: PpuAddress) -> u8 {
-        self.memory.mapper.ppu_read(&self.memory.ppu_internal_ram, address)
+        self.memory
+            .mapper
+            .ppu_read(&self.memory.ppu_internal_ram, address)
     }
 
     #[inline]
     pub fn write(&mut self, address: PpuAddress, value: u8) {
-        self.memory.mapper.ppu_write(&mut self.memory.ppu_internal_ram, address, value);
+        self.memory
+            .mapper
+            .ppu_write(&mut self.memory.ppu_internal_ram, address, value);
     }
 
     #[inline]
@@ -173,12 +176,19 @@ impl <'a> PpuMemory<'a> {
 
     #[inline]
     pub fn name_table(&self, number: NameTablePosition) -> NameTable {
-        NameTable::new(self.memory.mapper.raw_name_table(&self.memory.ppu_internal_ram, number))
+        NameTable::new(
+            self.memory
+                .mapper
+                .raw_name_table(&self.memory.ppu_internal_ram, number),
+        )
     }
 
     #[inline]
     pub fn palette_table(&self) -> PaletteTable {
-        PaletteTable::new(self.memory.ppu_internal_ram.palette_ram.to_slice(), &self.memory.system_palette)
+        PaletteTable::new(
+            self.memory.ppu_internal_ram.palette_ram.to_slice(),
+            &self.memory.system_palette,
+        )
     }
 }
 

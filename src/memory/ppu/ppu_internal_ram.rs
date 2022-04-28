@@ -8,9 +8,6 @@ pub struct PpuInternalRam {
 
 impl PpuInternalRam {
     pub fn new() -> PpuInternalRam {
-        PpuInternalRam {
-            vram: Vram::new(),
-            palette_ram: PaletteRam::new(),
-        }
+        PpuInternalRam { vram: Vram::new(), palette_ram: PaletteRam::new() }
     }
 }

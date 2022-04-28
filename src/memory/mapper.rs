@@ -12,7 +12,7 @@ use crate::ppu::name_table::name_table_position::NameTablePosition;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::register::register_type::RegisterType;
-use crate::util::mapped_array::{MappedArray, Chunk};
+use crate::util::mapped_array::{Chunk, MappedArray};
 
 pub const PATTERN_TABLE_SIZE: usize = 0x1000;
 pub const NAME_TABLE_SIZE: usize = 0x400;
@@ -33,6 +33,7 @@ pub trait Mapper {
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8);
 
     #[inline]
+    #[rustfmt::skip]
     fn cpu_read(
         &self,
         cpu_internal_ram: &CpuInternalRam,
@@ -43,9 +44,9 @@ pub trait Mapper {
         match address.to_raw() {
             0x0000..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF],
             0x2000..=0x3FFF => ppu_registers.read(address_to_ppu_register_type(address)),
-            0x4000..=0x4013 => {/* APU */ 0},
+            0x4000..=0x4013 => {/* TODO: APU */ 0},
             0x4014          => {/* OAM DMA is write-only. */ 0},
-            0x4015          => {/* APU */ 0},
+            0x4015          => {/* TODO: APU */ 0},
             0x4016          => ports.joypad1.borrow_mut().next_status() as u8,
             0x4017          => ports.joypad2.borrow_mut().next_status() as u8,
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
@@ -55,6 +56,7 @@ pub trait Mapper {
     }
 
     #[inline]
+    #[rustfmt::skip]
     fn cpu_write(
         &mut self,
         cpu_internal_ram: &mut CpuInternalRam,
@@ -81,17 +83,30 @@ pub trait Mapper {
         match address.to_u16() {
             0x0000..=0x1FFF => self.read_pattern_table_byte(address),
             0x2000..=0x3EFF => self.read_name_table_byte(ppu_internal_ram, address),
-            0x3F00..=0x3FFF => self.read_palette_table_byte(&ppu_internal_ram.palette_ram, address),
+            0x3F00..=0x3FFF => {
+                self.read_palette_table_byte(&ppu_internal_ram.palette_ram, address)
+            }
             0x4000..=0xFFFF => unreachable!(),
         }
     }
 
     #[inline]
-    fn ppu_write(&mut self, ppu_internal_ram: &mut PpuInternalRam, address: PpuAddress, value: u8) {
+    fn ppu_write(
+        &mut self,
+        ppu_internal_ram: &mut PpuInternalRam,
+        address: PpuAddress,
+        value: u8,
+    ) {
         match address.to_u16() {
             0x0000..=0x1FFF => self.write_pattern_table_byte(address, value),
-            0x2000..=0x3EFF => self.write_name_table_byte(ppu_internal_ram, address, value),
-            0x3F00..=0x3FFF => self.write_palette_table_byte(&mut ppu_internal_ram.palette_ram, address, value),
+            0x2000..=0x3EFF => {
+                self.write_name_table_byte(ppu_internal_ram, address, value)
+            }
+            0x3F00..=0x3FFF => self.write_palette_table_byte(
+                &mut ppu_internal_ram.palette_ram,
+                address,
+                value,
+            ),
             0x4000..=0xFFFF => unreachable!(),
         }
     }
@@ -192,6 +207,7 @@ fn address_to_pattern_table_index(address: PpuAddress) -> (PatternTableSide, usi
 }
 
 #[inline]
+#[rustfmt::skip]
 fn address_to_name_table_index(address: PpuAddress) -> (NameTablePosition, usize) {
     const NAME_TABLE_START:    usize = 0x2000;
     const MIRROR_START:        usize = 0x3000;
@@ -216,7 +232,7 @@ fn address_to_name_table_index(address: PpuAddress) -> (NameTablePosition, usize
 
 fn address_to_palette_ram_index(address: PpuAddress) -> usize {
     const PALETTE_TABLE_START: usize = 0x3F00;
-    const HIGH_ADDRESS_START : usize = 0x4000;
+    const HIGH_ADDRESS_START: usize = 0x4000;
 
     let mut address = address.to_usize();
     assert!(address >= PALETTE_TABLE_START);
@@ -232,6 +248,7 @@ fn address_to_palette_ram_index(address: PpuAddress) -> usize {
 }
 
 #[inline]
+#[rustfmt::skip]
 fn vram_side(
     name_table_position: NameTablePosition,
     mirroring: NameTableMirroring,

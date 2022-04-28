@@ -31,7 +31,9 @@ impl CpuInternalRam {
 
     pub fn stack(&mut self) -> Stack {
         Stack::new(
-            (&mut self.memory[STACK_START..=STACK_END]).try_into().unwrap(),
+            (&mut self.memory[STACK_START..=STACK_END])
+                .try_into()
+                .unwrap(),
             &mut self.stack_pointer,
         )
     }
