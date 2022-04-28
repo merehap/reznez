@@ -91,7 +91,7 @@ impl<'a> NameTable<'a> {
         let (pattern_index, palette_table_index) =
             self.tile_entry_at(background_tile_index);
         let mut tile_sliver = [Rgbt::Transparent; 8];
-        pattern_table.render_background_tile_sliver(
+        pattern_table.render_pixel_sliver(
             pattern_index,
             row_in_tile,
             palette_table.background_palette(palette_table_index),

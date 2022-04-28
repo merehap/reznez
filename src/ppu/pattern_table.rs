@@ -1,4 +1,5 @@
 use enum_iterator::IntoEnumIterator;
+use num_traits::FromPrimitive;
 
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::palette_index::PaletteIndex;
@@ -27,7 +28,7 @@ impl<'a> PatternTable<'a> {
         tile: &mut Tile,
     ) {
         for row_in_tile in RowInTile::into_enum_iter() {
-            self.render_background_tile_sliver(
+            self.render_pixel_sliver(
                 pattern_index,
                 row_in_tile,
                 palette,
@@ -38,7 +39,7 @@ impl<'a> PatternTable<'a> {
 
     #[inline]
     #[rustfmt::skip]
-    pub fn render_background_tile_sliver(
+    pub fn render_pixel_sliver(
         &self,
         pattern_index: PatternIndex,
         row_in_background_tile: RowInTile,
@@ -67,7 +68,6 @@ impl<'a> PatternTable<'a> {
     #[inline]
     // No obvious way to reduce the number of parameters.
     #[allow(clippy::too_many_arguments)]
-    #[rustfmt::skip]
     pub fn render_sprite_sliver(
         &self,
         sprite: Sprite,
@@ -79,25 +79,17 @@ impl<'a> PatternTable<'a> {
         row_in_sprite: RowInTile,
         is_sprite_0: bool,
     ) {
-        let index = 16 * pattern_index.to_usize();
-        let low_index = index + row_in_sprite as usize;
-        let high_index = low_index + 8;
-
-        let low_byte = self.0.read(low_index);
-        let high_byte = self.0.read(high_index);
+        let mut tile_sliver = [Rgbt::Transparent; 8];
+        self.render_pixel_sliver(pattern_index, row_in_sprite, palette, &mut tile_sliver);
 
         let flip = sprite.flip_horizontally();
-        for mut column_in_sprite in ColumnInTile::into_enum_iter() {
-            let low_bit = get_bit(low_byte, column_in_sprite as usize);
-            let high_bit = get_bit(high_byte, column_in_sprite as usize);
-            let rgb = match (low_bit, high_bit) {
-                /* Transparent. */
-                (false, false) => continue,
-                (true , false) => palette[PaletteIndex::One],
-                (false, true ) => palette[PaletteIndex::Two],
-                (true , true ) => palette[PaletteIndex::Three],
+        for (column_in_sprite, &pixel) in tile_sliver.iter().enumerate() {
+            let Rgbt::Opaque(rgb) = pixel else {
+                continue;
             };
 
+            let mut column_in_sprite =
+                ColumnInTile::from_usize(column_in_sprite).unwrap();
             if flip {
                 column_in_sprite = column_in_sprite.flip();
             }
