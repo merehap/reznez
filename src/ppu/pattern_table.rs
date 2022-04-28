@@ -1,12 +1,9 @@
 use enum_iterator::IntoEnumIterator;
-use num_traits::FromPrimitive;
 
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
-use crate::ppu::render::frame::Frame;
-use crate::ppu::sprite::Sprite;
+use crate::ppu::pixel_index::RowInTile;
 use crate::util::bit_util::get_bit;
 use crate::util::mapped_array::MappedArray;
 
@@ -62,41 +59,6 @@ impl<'a> PatternTable<'a> {
                 (false, true ) => Rgbt::Opaque(palette[PaletteIndex::Two]),
                 (true , true ) => Rgbt::Opaque(palette[PaletteIndex::Three]),
             };
-        }
-    }
-
-    #[inline]
-    // No obvious way to reduce the number of parameters.
-    #[allow(clippy::too_many_arguments)]
-    pub fn render_sprite_sliver(
-        &self,
-        sprite: Sprite,
-        pattern_index: PatternIndex,
-        palette: Palette,
-        frame: &mut Frame,
-        column: PixelColumn,
-        row: PixelRow,
-        row_in_sprite: RowInTile,
-        is_sprite_0: bool,
-    ) {
-        let mut tile_sliver = [Rgbt::Transparent; 8];
-        self.render_pixel_sliver(pattern_index, row_in_sprite, palette, &mut tile_sliver);
-
-        let flip = sprite.flip_horizontally();
-        for (column_in_sprite, &pixel) in tile_sliver.iter().enumerate() {
-            let Rgbt::Opaque(rgb) = pixel else {
-                continue;
-            };
-
-            let mut column_in_sprite =
-                ColumnInTile::from_usize(column_in_sprite).unwrap();
-            if flip {
-                column_in_sprite = column_in_sprite.flip();
-            }
-
-            if let Some(column) = column.add_column_in_tile(column_in_sprite) {
-                frame.set_sprite_pixel(column, row, rgb, sprite.priority(), is_sprite_0);
-            }
         }
     }
 }
