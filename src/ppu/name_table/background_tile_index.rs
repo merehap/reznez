@@ -1,8 +1,8 @@
-use itertools::Itertools;
 use itertools::structs::Product;
+use itertools::Itertools;
 use num_traits::FromPrimitive;
 
-use crate::ppu::pixel_index::{PixelColumn, ColumnInTile, PixelRow, RowInTile};
+use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 
 #[derive(Clone, Copy, Debug)]
 pub struct BackgroundTileIndex {
@@ -12,13 +12,11 @@ pub struct BackgroundTileIndex {
 
 impl BackgroundTileIndex {
     pub fn iter() -> BackgroundTileIndexIterator {
-        BackgroundTileIndexIterator(
-            TileRow::iter().cartesian_product(TileColumn::iter())
-        )
+        BackgroundTileIndexIterator(TileRow::iter().cartesian_product(TileColumn::iter()))
     }
 
     pub fn from_tile_column_row(column: TileColumn, row: TileRow) -> BackgroundTileIndex {
-        BackgroundTileIndex {column, row}
+        BackgroundTileIndex { column, row }
     }
 
     pub fn to_usize(self) -> usize {
@@ -42,7 +40,9 @@ impl Iterator for BackgroundTileIndexIterator {
     type Item = BackgroundTileIndex;
 
     fn next(&mut self) -> Option<BackgroundTileIndex> {
-        self.0.next().map(|(row, column)| BackgroundTileIndex {column, row})
+        self.0
+            .next()
+            .map(|(row, column)| BackgroundTileIndex { column, row })
     }
 }
 
@@ -60,7 +60,9 @@ impl TileColumn {
 
     pub fn to_pixel_column(self, column_in_tile: ColumnInTile) -> PixelColumn {
         // Unwrap always succeeds since 248 + 7 == 255.
-        self.pixel_column().add_column_in_tile(column_in_tile).unwrap()
+        self.pixel_column()
+            .add_column_in_tile(column_in_tile)
+            .unwrap()
     }
 
     pub fn to_u8(self) -> u8 {

@@ -10,6 +10,7 @@ pub enum NameTablePosition {
     BottomRight,
 }
 
+#[rustfmt::skip]
 impl NameTablePosition {
     pub fn from_last_two_bits(value: u8) -> NameTablePosition {
         match (get_bit(value, 6), get_bit(value, 7)) {

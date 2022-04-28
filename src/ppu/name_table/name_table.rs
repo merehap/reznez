@@ -1,13 +1,13 @@
 use std::fmt;
 
 use crate::memory::ppu::ppu_address::{XScroll, YScroll};
-use crate::ppu::pixel_index::{PixelColumn, PixelRow};
-use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
 use crate::ppu::name_table::attribute_table::AttributeTable;
+use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pattern_table::{PatternTable, PatternIndex};
+use crate::ppu::pattern_table::{PatternIndex, PatternTable};
+use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::render::frame::Frame;
 
 const NAME_TABLE_SIZE: usize = 0x400;
@@ -19,12 +19,13 @@ pub struct NameTable<'a> {
     attribute_table: AttributeTable<'a>,
 }
 
-impl <'a> NameTable<'a> {
+impl<'a> NameTable<'a> {
     pub fn new(raw: &'a [u8; NAME_TABLE_SIZE]) -> NameTable<'a> {
         NameTable {
             tiles: raw,
-            attribute_table:
-                AttributeTable::new(raw[ATTRIBUTE_START_INDEX..].try_into().unwrap()),
+            attribute_table: AttributeTable::new(
+                raw[ATTRIBUTE_START_INDEX..].try_into().unwrap(),
+            ),
         }
     }
 
@@ -108,11 +109,11 @@ impl <'a> NameTable<'a> {
         &self,
         background_tile_index: BackgroundTileIndex,
     ) -> (PatternIndex, PaletteTableIndex) {
-
         let pattern_index =
             PatternIndex::new(self.tiles[background_tile_index.to_usize()]);
-        let palette_table_index =
-            self.attribute_table.palette_table_index(background_tile_index);
+        let palette_table_index = self
+            .attribute_table
+            .palette_table_index(background_tile_index);
 
         (pattern_index, palette_table_index)
     }
@@ -160,7 +161,7 @@ impl Rectangle {
         let bottom_row = PixelRow::saturate_from_u8(bottom);
         let left_column = PixelColumn::new(left);
         let right_column = PixelColumn::new(right);
-        Some(Rectangle {left_column, top_row, right_column, bottom_row})
+        Some(Rectangle { left_column, top_row, right_column, bottom_row })
     }
 
     pub fn from_raw(
@@ -168,7 +169,10 @@ impl Rectangle {
         (right, bottom): (u8, u8),
     ) -> Option<Rectangle> {
         if left > right || top > bottom {
-            panic!("Left: {}, Right: {}, Top: {}, Bottom: {}", left, right, top, bottom);
+            panic!(
+                "Left: {}, Right: {}, Top: {}, Bottom: {}",
+                left, right, top, bottom
+            );
         }
 
         let Some(top_row) = PixelRow::try_from_u8(top) else {
@@ -178,11 +182,13 @@ impl Rectangle {
         let bottom_row = PixelRow::saturate_from_u8(bottom);
         let left_column = PixelColumn::new(left);
         let right_column = PixelColumn::new(right);
-        Some(Rectangle {left_column, top_row, right_column, bottom_row})
+        Some(Rectangle { left_column, top_row, right_column, bottom_row })
     }
 
     pub fn is_in_bounds(&self, column: PixelColumn, row: PixelRow) -> bool {
-        self.left_column <= column && column <= self.right_column &&
-            self.top_row <= row && row <= self.bottom_row
+        self.left_column <= column
+            && column <= self.right_column
+            && self.top_row <= row
+            && row <= self.bottom_row
     }
 }
