@@ -12,6 +12,7 @@ use crate::nes::Nes;
 use crate::ppu::render::frame::Frame;
 
 lazy_static! {
+    #[rustfmt::skip]
     static ref JOY_1_BUTTON_MAPPINGS: HashMap<KeyCode, Button> = {
         let mut mappings = HashMap::new();
         mappings.insert(KeyCode::Space,  Button::A);
@@ -25,6 +26,7 @@ lazy_static! {
         mappings
     };
 
+    #[rustfmt::skip]
     static ref JOY_2_BUTTON_MAPPINGS: HashMap<KeyCode, Button> = {
         let mut mappings = HashMap::new();
         mappings.insert(KeyCode::Numpad0,        Button::A);

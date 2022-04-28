@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
-use std::io::{Write, ErrorKind};
 use std::fs;
 use std::fs::File;
+use std::io::{ErrorKind, Write};
 use std::ops::Add;
 use std::time::{Duration, SystemTime};
 
@@ -21,8 +21,9 @@ pub trait Gui {
 }
 
 pub fn execute_frame<F>(nes: &mut Nes, config: &Config, events: Events, display_frame: F)
-    where F: FnOnce(&Frame, Mask, u64) {
-
+where
+    F: FnOnce(&Frame, Mask, u64),
+{
     let frame_index = nes.ppu().clock().frame();
     let start_time = SystemTime::now();
     let target_frame_rate = config.target_frame_rate;
@@ -48,17 +49,17 @@ fn dump_frame(frame: &Frame, mask: Mask, frame_index: u64) {
     if let Err(err) = fs::create_dir(FRAME_DUMP_DIRECTORY) {
         assert!(err.kind() == ErrorKind::AlreadyExists, "{:?}", err.kind());
     }
-    let file_name = format!(
-        "{}/frame{:03}.ppm",
-        FRAME_DUMP_DIRECTORY,
-        frame_index,
-    );
+    let file_name = format!("{}/frame{:03}.ppm", FRAME_DUMP_DIRECTORY, frame_index,);
     let mut file = File::create(file_name).unwrap();
     file.write_all(&frame.to_ppm(mask).to_bytes()).unwrap();
 }
 
 #[inline]
-fn end_frame(frame_index: u64, start_time: SystemTime, intended_frame_end_time: SystemTime) {
+fn end_frame(
+    frame_index: u64,
+    start_time: SystemTime,
+    intended_frame_end_time: SystemTime,
+) {
     let mut current_time;
     loop {
         current_time = SystemTime::now();
