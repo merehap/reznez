@@ -22,13 +22,12 @@ impl Joypad {
     }
 
     pub fn next_status(&mut self) -> ButtonStatus {
-        let status =
-            if let Some(selected_button) = self.selected_button {
-                self.button_statuses[selected_button]
-            } else {
-                // After every button has been cycled through, always return Pressed.
-                ButtonStatus::Pressed
-            };
+        let status = if let Some(selected_button) = self.selected_button {
+            self.button_statuses[selected_button]
+        } else {
+            // After every button has been cycled through, always return Pressed.
+            ButtonStatus::Pressed
+        };
 
         if self.strobe_mode == StrobeMode::Off {
             // Advance to the next button for the next read.
@@ -58,7 +57,9 @@ pub enum StrobeMode {
     On,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, IntoEnumIterator)]
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, IntoEnumIterator,
+)]
 pub enum Button {
     A,
     B,
@@ -101,7 +102,6 @@ impl IndexMut<Button> for ButtonStatuses {
         &mut self.0[button as usize]
     }
 }
-
 
 #[derive(Clone, Copy, Debug)]
 pub enum ButtonStatus {

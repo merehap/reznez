@@ -13,7 +13,6 @@ pub mod cartridge;
 pub mod config;
 pub mod controller;
 pub mod cpu;
-pub mod debug;
 pub mod gui;
 pub mod memory;
 pub mod nes;
