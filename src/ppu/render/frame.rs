@@ -316,7 +316,9 @@ impl<const WIDTH: usize, const HEIGHT: usize> DebugBuffer<WIDTH, HEIGHT> {
     }
 
     fn read(&self, column: usize, row: usize) -> Rgb {
-        self.buffer[row][column].to_rgb().unwrap_or(self.background_rgb)
+        self.buffer[row][column]
+            .to_rgb()
+            .unwrap_or(self.background_rgb)
     }
 
     fn write(&mut self, column: usize, row: usize, rgb: Rgb) {

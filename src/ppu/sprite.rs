@@ -196,10 +196,13 @@ impl Sprite {
         let sprite_top_row = self.y_coordinate.to_pixel_row()?;
         let offset = pixel_row.difference(sprite_top_row)?;
         let row_in_half = FromPrimitive::from_u8(offset % 8).unwrap();
-        match (offset / 8, sprite_height) {
-            (0,                  _) => Some((SpriteHalf::Top, row_in_half)),
-            (1, SpriteHeight::Tall) => Some((SpriteHalf::Bottom, row_in_half)),
-            (_,                  _) => None,
+        match (offset / 8, sprite_height, self.flip_vertically) {
+            (0, SpriteHeight::Normal, _    ) => Some((SpriteHalf::Top   , row_in_half)),
+            (0, SpriteHeight::Tall  , false) => Some((SpriteHalf::Top   , row_in_half)),
+            (0, SpriteHeight::Tall  , true ) => Some((SpriteHalf::Bottom, row_in_half)),
+            (1, SpriteHeight::Tall  , false) => Some((SpriteHalf::Bottom, row_in_half)),
+            (1, SpriteHeight::Tall  , true ) => Some((SpriteHalf::Top   , row_in_half)),
+            (_, _                   , _    ) => None,
         }
     }
 }

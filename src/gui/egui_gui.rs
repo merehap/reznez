@@ -732,10 +732,8 @@ impl Renderer for SpritesRenderer {
         let mem = world.nes.memory_mut().as_ppu_memory();
 
         for (index, sprite) in sprites.iter().enumerate() {
-            let tile = sprite.render_normal_height(
-                &mem.sprite_pattern_table(),
-                &mem.palette_table(),
-            );
+            let tile = sprite
+                .render_normal_height(&mem.sprite_pattern_table(), &mem.palette_table());
             self.buffer.place_tile(
                 (8 + 1) * (index as usize % 8),
                 (8 + 1) * (index as usize / 8),
