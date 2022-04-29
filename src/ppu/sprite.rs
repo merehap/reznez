@@ -222,7 +222,7 @@ impl SpriteY {
         // up rendered one scanline lower than would be expected.
         // Sprites with y >= 239 are valid but can't be rendered.
         // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Byte_0
-        PixelRow::try_from_u8((u16::from(self.0) + 1).try_into().ok()?)
+        PixelRow::try_from_u16(u16::from(self.0) + 1)
     }
 }
 
