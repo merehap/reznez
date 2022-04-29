@@ -132,7 +132,7 @@ impl PixelRow {
 
     pub fn offset(self, offset: i16) -> Option<PixelRow> {
         let row: i16 = i16::from(self.0) + offset;
-        if 0 > row || row >= 240 {
+        if !(0..240).contains(&row) {
             None
         } else {
             Some(PixelRow::try_from_u8(row as u8).unwrap())

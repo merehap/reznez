@@ -48,6 +48,7 @@ impl<'a> NameTable<'a> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn render_scanline(
         &self,
         pixel_row: PixelRow,
@@ -73,6 +74,7 @@ impl<'a> NameTable<'a> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn render_pixel(
         &self,
         pixel_column: PixelColumn,
