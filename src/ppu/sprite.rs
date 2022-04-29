@@ -68,12 +68,41 @@ impl Sprite {
         is_sprite_0: bool,
         frame: &mut Frame,
     ) {
-        let Some((sprite_half, mut row_in_sprite)) = self.row_in_sprite(sprite_height, row) else {
+        let Some((sprite_half, row_in_half)) = self.row_in_sprite(sprite_height, row) else {
             return;
         };
 
+        let mut sprite_sliver = [Rgbt::Transparent; 8];
+        self.render_sliver_from_sprite_half(
+            sprite_height,
+            sprite_half,
+            row_in_half,
+            pattern_table,
+            palette_table,
+            &mut sprite_sliver,
+        );
+
+        for (column_in_sprite, &pixel) in sprite_sliver.iter().enumerate() {
+            let column_in_sprite = ColumnInTile::from_usize(column_in_sprite).unwrap();
+            if let Rgbt::Opaque(rgb) = pixel {
+                if let Some(column) = self.x_coordinate.add_column_in_tile(column_in_sprite) {
+                    frame.set_sprite_pixel(column, row, rgb, self.priority(), is_sprite_0);
+                }
+            }
+        }
+    }
+
+    fn render_sliver_from_sprite_half(
+        self,
+        sprite_height: SpriteHeight,
+        sprite_half: SpriteHalf,
+        mut row_in_half: RowInTile,
+        pattern_table: &PatternTable,
+        palette_table: &PaletteTable,
+        sprite_sliver: &mut [Rgbt; 8],
+    ) {
         if self.flip_vertically {
-            row_in_sprite = row_in_sprite.flip();
+            row_in_half = row_in_half.flip();
         }
 
         #[rustfmt::skip]
@@ -85,27 +114,16 @@ impl Sprite {
         };
 
         let sprite_palette = palette_table.sprite_palette(self.palette_table_index);
-        let mut tile_sliver = [Rgbt::Transparent; 8];
         pattern_table.render_pixel_sliver(
             pattern_index,
-            row_in_sprite,
+            row_in_half,
             sprite_palette,
-            &mut tile_sliver,
+            sprite_sliver,
         );
 
-        for (column_in_sprite, &pixel) in tile_sliver.iter().enumerate() {
-            let Rgbt::Opaque(rgb) = pixel else {
-                continue;
-            };
-
-            let mut column_in_sprite =
-                ColumnInTile::from_usize(column_in_sprite).unwrap();
-            if self.flip_horizontally {
-                column_in_sprite = column_in_sprite.flip();
-            }
-
-            if let Some(column) = self.x_coordinate.add_column_in_tile(column_in_sprite) {
-                frame.set_sprite_pixel(column, row, rgb, self.priority(), is_sprite_0);
+        if self.flip_horizontally {
+            for i in 0..sprite_sliver.len() / 2 {
+                sprite_sliver.swap(i, 7 - i);
             }
         }
     }
@@ -118,10 +136,10 @@ impl Sprite {
     ) -> Option<(SpriteHalf, RowInTile)> {
         let sprite_top_row = self.y_coordinate.to_pixel_row()?;
         let offset = pixel_row.difference(sprite_top_row)?;
-        let row_in_sprite = FromPrimitive::from_u8(offset % 8).unwrap();
+        let row_in_half = FromPrimitive::from_u8(offset % 8).unwrap();
         match (offset / 8, sprite_height) {
-            (0,                  _) => Some((SpriteHalf::Upper, row_in_sprite)),
-            (1, SpriteHeight::Tall) => Some((SpriteHalf::Lower, row_in_sprite)),
+            (0,                  _) => Some((SpriteHalf::Upper, row_in_half)),
+            (1, SpriteHeight::Tall) => Some((SpriteHalf::Lower, row_in_half)),
             (_,                  _) => None,
         }
     }
