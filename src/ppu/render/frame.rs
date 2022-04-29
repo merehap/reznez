@@ -211,13 +211,17 @@ impl<T> IndexMut<(PixelColumn, PixelRow)> for FrameBuffer<T> {
     }
 }
 
-pub struct DebugBuffer<const WIDTH: usize, const HEIGHT: usize>(
-    Box<[[Rgb; WIDTH]; HEIGHT]>,
-);
+pub struct DebugBuffer<const WIDTH: usize, const HEIGHT: usize> {
+    buffer: Box<[[Rgbt; WIDTH]; HEIGHT]>,
+    background_rgb: Rgb,
+}
 
 impl<const WIDTH: usize, const HEIGHT: usize> DebugBuffer<WIDTH, HEIGHT> {
-    pub fn filled(value: Rgb) -> DebugBuffer<WIDTH, HEIGHT> {
-        DebugBuffer(Box::new([[value; WIDTH]; HEIGHT]))
+    pub fn new(background_rgb: Rgb) -> DebugBuffer<WIDTH, HEIGHT> {
+        DebugBuffer {
+            buffer: Box::new([[Rgbt::Transparent; WIDTH]; HEIGHT]),
+            background_rgb,
+        }
     }
 
     pub fn place_frame(&mut self, left_column: usize, top_row: usize, frame: &Frame) {
@@ -225,7 +229,11 @@ impl<const WIDTH: usize, const HEIGHT: usize> DebugBuffer<WIDTH, HEIGHT> {
         for pixel_index in PixelIndex::iter() {
             let (column, row) = pixel_index.to_column_row();
             let (pixel, _) = frame.pixel(mask, column, row);
-            self[(left_column + column.to_usize(), top_row + row.to_usize())] = pixel;
+            self.write(
+                left_column + column.to_usize(),
+                top_row + row.to_usize(),
+                pixel,
+            );
         }
     }
 
@@ -234,9 +242,11 @@ impl<const WIDTH: usize, const HEIGHT: usize> DebugBuffer<WIDTH, HEIGHT> {
             for column_in_tile in ColumnInTile::into_enum_iter() {
                 let column_in_tile = column_in_tile as usize;
                 let row_in_tile = row_in_tile as usize;
-                if let Rgbt::Opaque(rgb) = tile.0[row_in_tile][column_in_tile] {
-                    self[(left_column + column_in_tile, top_row + row_in_tile)] = rgb;
-                }
+                self.write_rgbt(
+                    left_column + column_in_tile,
+                    top_row + row_in_tile,
+                    tile.0[row_in_tile][column_in_tile],
+                );
             }
         }
     }
@@ -253,15 +263,15 @@ impl<const WIDTH: usize, const HEIGHT: usize> DebugBuffer<WIDTH, HEIGHT> {
         let right_column = right_column.rem_euclid(WIDTH);
         if left_column < right_column {
             for column in left_column..=right_column {
-                self[(column, row)] = rgb;
+                self.write(column, row, rgb);
             }
         } else {
             for column in left_column..WIDTH {
-                self[(column, row)] = rgb;
+                self.write(column, row, rgb);
             }
 
             for column in 0..=right_column {
-                self[(column, row)] = rgb;
+                self.write(column, row, rgb);
             }
         }
     }
@@ -278,15 +288,15 @@ impl<const WIDTH: usize, const HEIGHT: usize> DebugBuffer<WIDTH, HEIGHT> {
         let bottom_row = bottom_row.rem_euclid(HEIGHT);
         if top_row < bottom_row {
             for row in top_row..=bottom_row {
-                self[(column, row)] = rgb;
+                self.write(column, row, rgb);
             }
         } else {
             for row in top_row..HEIGHT {
-                self[(column, row)] = rgb;
+                self.write(column, row, rgb);
             }
 
             for row in 0..=bottom_row {
-                self[(column, row)] = rgb;
+                self.write(column, row, rgb);
             }
         }
     }
@@ -295,7 +305,7 @@ impl<const WIDTH: usize, const HEIGHT: usize> DebugBuffer<WIDTH, HEIGHT> {
         for row in 0..HEIGHT {
             for column in 0..WIDTH {
                 let index = 4 * (WIDTH * row + column);
-                let pixel = self[(column, row)];
+                let pixel = self.read(column, row);
                 buffer[index] = pixel.red();
                 buffer[index + 1] = pixel.green();
                 buffer[index + 2] = pixel.blue();
@@ -304,22 +314,16 @@ impl<const WIDTH: usize, const HEIGHT: usize> DebugBuffer<WIDTH, HEIGHT> {
             }
         }
     }
-}
 
-impl<const WIDTH: usize, const HEIGHT: usize> Index<(usize, usize)>
-    for DebugBuffer<WIDTH, HEIGHT>
-{
-    type Output = Rgb;
-
-    fn index(&self, (column, row): (usize, usize)) -> &Rgb {
-        &self.0[row][column]
+    fn read(&self, column: usize, row: usize) -> Rgb {
+        self.buffer[row][column].to_rgb().unwrap_or(self.background_rgb)
     }
-}
 
-impl<const WIDTH: usize, const HEIGHT: usize> IndexMut<(usize, usize)>
-    for DebugBuffer<WIDTH, HEIGHT>
-{
-    fn index_mut(&mut self, (column, row): (usize, usize)) -> &mut Rgb {
-        &mut self.0[row][column]
+    fn write(&mut self, column: usize, row: usize, rgb: Rgb) {
+        self.buffer[row][column] = Rgbt::Opaque(rgb);
+    }
+
+    fn write_rgbt(&mut self, column: usize, row: usize, rgbt: Rgbt) {
+        self.buffer[row][column] = rgbt;
     }
 }

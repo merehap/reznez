@@ -40,7 +40,7 @@ impl Oam {
         result
     }
 
-    fn sprites(&self) -> [Sprite; 64] {
+    pub fn sprites(&self) -> [Sprite; 64] {
         let mut iter = self.0.array_chunks::<4>();
         [(); 64].map(|_| {
             let raw = u32::from_be_bytes(*iter.next().unwrap());

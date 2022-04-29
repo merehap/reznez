@@ -390,7 +390,7 @@ impl Renderer for PrimaryRenderer {
                         ui.close_menu();
                         result = Some((
                             Box::new(StatusRenderer::new()) as Box<dyn Renderer>,
-                            Position::Physical(PhysicalPosition { x: 50, y: 660 }),
+                            Position::Physical(PhysicalPosition { x: 850, y: 360 }),
                             2,
                         ));
                     }
@@ -408,6 +408,14 @@ impl Renderer for PrimaryRenderer {
                             Box::new(NameTableRenderer::new()),
                             Position::Physical(PhysicalPosition { x: 1400, y: 50 }),
                             1,
+                        ));
+                    }
+                    if ui.button("Sprites").clicked() {
+                        ui.close_menu();
+                        result = Some((
+                            Box::new(SpritesRenderer::new()),
+                            Position::Physical(PhysicalPosition { x: 1400, y: 660 }),
+                            6,
                         ));
                     }
                     if ui.button("Pattern Tables").clicked() {
@@ -575,7 +583,7 @@ impl LayersRenderer {
     fn new() -> LayersRenderer {
         LayersRenderer {
             frame: Frame::new(),
-            buffer: DebugBuffer::filled(Rgb::WHITE),
+            buffer: DebugBuffer::new(Rgb::WHITE),
         }
     }
 }
@@ -635,7 +643,7 @@ impl NameTableRenderer {
     fn new() -> NameTableRenderer {
         NameTableRenderer {
             frame: Frame::new(),
-            buffer: DebugBuffer::filled(Rgb::WHITE),
+            buffer: DebugBuffer::new(Rgb::WHITE),
         }
     }
 }
@@ -697,6 +705,56 @@ impl Renderer for NameTableRenderer {
     }
 }
 
+struct SpritesRenderer {
+    buffer: DebugBuffer<{ SpritesRenderer::WIDTH }, { SpritesRenderer::HEIGHT }>,
+}
+
+impl SpritesRenderer {
+    const WIDTH: usize = 8 * (8 + 1);
+    const HEIGHT: usize = 8 * (8 + 1);
+
+    fn new() -> SpritesRenderer {
+        SpritesRenderer { buffer: DebugBuffer::new(Rgb::WHITE) }
+    }
+}
+
+impl Renderer for SpritesRenderer {
+    fn name(&self) -> String {
+        "Sprites".to_string()
+    }
+
+    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<WindowArgs> {
+        None
+    }
+
+    fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
+        let sprites = world.nes.ppu().oam().sprites();
+        let mem = world.nes.memory_mut().as_ppu_memory();
+
+        for (index, sprite) in sprites.iter().enumerate() {
+            let tile = sprite.render_normal_height(
+                &mem.sprite_pattern_table(),
+                &mem.palette_table(),
+            );
+            self.buffer.place_tile(
+                (8 + 1) * (index as usize % 8),
+                (8 + 1) * (index as usize / 8),
+                &tile,
+            );
+        }
+
+        self.buffer.copy_to_rgba_buffer(pixels.get_frame());
+    }
+
+    fn width(&self) -> usize {
+        SpritesRenderer::WIDTH
+    }
+
+    fn height(&self) -> usize {
+        SpritesRenderer::HEIGHT
+    }
+}
+
 struct PatternTableRenderer {
     tile: Tile,
     buffer:
@@ -710,7 +768,7 @@ impl PatternTableRenderer {
     fn new() -> PatternTableRenderer {
         PatternTableRenderer {
             tile: Tile::new(),
-            buffer: DebugBuffer::filled(Rgb::WHITE),
+            buffer: DebugBuffer::new(Rgb::WHITE),
         }
     }
 }
@@ -775,7 +833,7 @@ impl ChrBanksRenderer {
     fn new() -> ChrBanksRenderer {
         ChrBanksRenderer {
             tile: Tile::new(),
-            buffer: DebugBuffer::filled(Rgb::WHITE),
+            buffer: DebugBuffer::new(Rgb::WHITE),
         }
     }
 }

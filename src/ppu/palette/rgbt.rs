@@ -19,4 +19,12 @@ impl Rgbt {
     pub fn is_opaque(self) -> bool {
         matches!(self, Rgbt::Opaque(_))
     }
+
+    pub fn to_rgb(self) -> Option<Rgb> {
+        if let Rgbt::Opaque(rgb) = self {
+            Some(rgb)
+        } else {
+            None
+        }
+    }
 }
