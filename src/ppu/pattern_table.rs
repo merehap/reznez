@@ -117,4 +117,8 @@ impl Tile {
     pub fn new() -> Tile {
         Tile([[Rgbt::Transparent; 8]; 8])
     }
+
+    pub fn row_mut(&mut self, row: RowInTile) -> &mut [Rgbt; 8] {
+        &mut self.0[row as usize]
+    }
 }

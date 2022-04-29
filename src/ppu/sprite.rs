@@ -1,10 +1,11 @@
+use enum_iterator::IntoEnumIterator;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pattern_table::{PatternIndex, PatternTable, PatternTableSide};
+use crate::ppu::pattern_table::{PatternIndex, PatternTable, PatternTableSide, Tile};
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::register::registers::ctrl::SpriteHeight;
 use crate::ppu::render::frame::Frame;
@@ -59,6 +60,34 @@ impl Sprite {
         self.priority
     }
 
+    // For debug screens only.
+    pub fn render_normal_height(
+        self,
+        pattern_table: &PatternTable,
+        palette_table: &PaletteTable,
+    ) -> Tile {
+        self.render_tile(
+            SpriteHeight::Normal,
+            SpriteHalf::Top,
+            pattern_table,
+            palette_table,
+        )
+    }
+
+    // For debug screens only.
+    pub fn render_tall(
+        self,
+        pattern_table: &PatternTable,
+        palette_table: &PaletteTable,
+    ) -> (Tile, Tile) {
+        use SpriteHalf::*;
+        use SpriteHeight::Tall;
+        (
+            self.render_tile(Tall, Top, pattern_table, palette_table),
+            self.render_tile(Tall, Bottom, pattern_table, palette_table),
+        )
+    }
+
     pub fn render_sliver(
         self,
         row: PixelRow,
@@ -85,11 +114,41 @@ impl Sprite {
         for (column_in_sprite, &pixel) in sprite_sliver.iter().enumerate() {
             let column_in_sprite = ColumnInTile::from_usize(column_in_sprite).unwrap();
             if let Rgbt::Opaque(rgb) = pixel {
-                if let Some(column) = self.x_coordinate.add_column_in_tile(column_in_sprite) {
-                    frame.set_sprite_pixel(column, row, rgb, self.priority(), is_sprite_0);
+                if let Some(column) =
+                    self.x_coordinate.add_column_in_tile(column_in_sprite)
+                {
+                    frame.set_sprite_pixel(
+                        column,
+                        row,
+                        rgb,
+                        self.priority(),
+                        is_sprite_0,
+                    );
                 }
             }
         }
+    }
+
+    fn render_tile(
+        self,
+        sprite_height: SpriteHeight,
+        sprite_half: SpriteHalf,
+        pattern_table: &PatternTable,
+        palette_table: &PaletteTable,
+    ) -> Tile {
+        let mut tile = Tile::new();
+        for row in RowInTile::into_enum_iter() {
+            self.render_sliver_from_sprite_half(
+                sprite_height,
+                sprite_half,
+                row,
+                pattern_table,
+                palette_table,
+                tile.row_mut(row),
+            );
+        }
+
+        tile
     }
 
     fn render_sliver_from_sprite_half(
@@ -101,17 +160,17 @@ impl Sprite {
         palette_table: &PaletteTable,
         sprite_sliver: &mut [Rgbt; 8],
     ) {
+        #[rustfmt::skip]
+        let pattern_index = match (sprite_height, sprite_half) {
+            (SpriteHeight::Normal, SpriteHalf::Top) => self.pattern_index,
+            (SpriteHeight::Normal, SpriteHalf::Bottom) => unreachable!(),
+            (SpriteHeight::Tall,   SpriteHalf::Top) => self.pattern_index.to_tall_indexes().0,
+            (SpriteHeight::Tall,   SpriteHalf::Bottom) => self.pattern_index.to_tall_indexes().1,
+        };
+
         if self.flip_vertically {
             row_in_half = row_in_half.flip();
         }
-
-        #[rustfmt::skip]
-        let pattern_index = match (sprite_height, sprite_half) {
-            (SpriteHeight::Normal, SpriteHalf::Upper) => self.pattern_index,
-            (SpriteHeight::Normal, SpriteHalf::Lower) => unreachable!(),
-            (SpriteHeight::Tall,   SpriteHalf::Upper) => self.pattern_index.to_tall_indexes().0,
-            (SpriteHeight::Tall,   SpriteHalf::Lower) => self.pattern_index.to_tall_indexes().1,
-        };
 
         let sprite_palette = palette_table.sprite_palette(self.palette_table_index);
         pattern_table.render_pixel_sliver(
@@ -138,8 +197,8 @@ impl Sprite {
         let offset = pixel_row.difference(sprite_top_row)?;
         let row_in_half = FromPrimitive::from_u8(offset % 8).unwrap();
         match (offset / 8, sprite_height) {
-            (0,                  _) => Some((SpriteHalf::Upper, row_in_half)),
-            (1, SpriteHeight::Tall) => Some((SpriteHalf::Lower, row_in_half)),
+            (0,                  _) => Some((SpriteHalf::Top, row_in_half)),
+            (1, SpriteHeight::Tall) => Some((SpriteHalf::Bottom, row_in_half)),
             (_,                  _) => None,
         }
     }
@@ -164,10 +223,10 @@ impl SpriteY {
     }
 }
 
-#[derive(FromPrimitive)]
+#[derive(Clone, Copy, FromPrimitive)]
 enum SpriteHalf {
-    Upper,
-    Lower,
+    Top,
+    Bottom,
 }
 
 impl From<bool> for Priority {
