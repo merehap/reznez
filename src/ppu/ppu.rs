@@ -108,7 +108,7 @@ impl Ppu {
         self.update_ppu_data(mem);
 
         let is_last_cycle_of_frame = self.clock.is_last_cycle_of_frame();
-        self.clock.tick(mem.regs().background_enabled());
+        self.clock.tick(mem.regs().rendering_enabled());
         let should_generate_nmi = maybe_generate_nmi && mem.regs().can_generate_nmi();
 
         StepResult { is_last_cycle_of_frame, should_generate_nmi }
