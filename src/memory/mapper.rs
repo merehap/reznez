@@ -8,7 +8,7 @@ use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu::vram::VramSide;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
-use crate::ppu::name_table::name_table_position::NameTablePosition;
+use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::register::register_type::RegisterType;
@@ -115,7 +115,7 @@ pub trait Mapper {
     fn raw_name_table<'a>(
         &'a self,
         ppu_internal_ram: &'a PpuInternalRam,
-        position: NameTablePosition,
+        position: NameTableQuadrant,
     ) -> &'a [u8; NAME_TABLE_SIZE] {
         let side = vram_side(position, self.name_table_mirroring());
         ppu_internal_ram.vram.side(side)
@@ -125,7 +125,7 @@ pub trait Mapper {
     fn raw_name_table_mut<'a>(
         &'a mut self,
         ppu_internal_ram: &'a mut PpuInternalRam,
-        position: NameTablePosition,
+        position: NameTableQuadrant,
     ) -> &'a mut [u8; NAME_TABLE_SIZE] {
         let side = vram_side(position, self.name_table_mirroring());
         ppu_internal_ram.vram.side_mut(side)
@@ -151,8 +151,8 @@ pub trait Mapper {
         ppu_internal_ram: &PpuInternalRam,
         address: PpuAddress,
     ) -> u8 {
-        let (name_table_position, index) = address_to_name_table_index(address);
-        self.raw_name_table(ppu_internal_ram, name_table_position)[index]
+        let (name_table_quadrant, index) = address_to_name_table_index(address);
+        self.raw_name_table(ppu_internal_ram, name_table_quadrant)[index]
     }
 
     #[inline]
@@ -162,8 +162,8 @@ pub trait Mapper {
         address: PpuAddress,
         value: u8,
     ) {
-        let (name_table_position, index) = address_to_name_table_index(address);
-        self.raw_name_table_mut(ppu_internal_ram, name_table_position)[index] = value;
+        let (name_table_quadrant, index) = address_to_name_table_index(address);
+        self.raw_name_table_mut(ppu_internal_ram, name_table_quadrant)[index] = value;
     }
 
     #[inline]
@@ -208,7 +208,7 @@ fn address_to_pattern_table_index(address: PpuAddress) -> (PatternTableSide, usi
 
 #[inline]
 #[rustfmt::skip]
-fn address_to_name_table_index(address: PpuAddress) -> (NameTablePosition, usize) {
+fn address_to_name_table_index(address: PpuAddress) -> (NameTableQuadrant, usize) {
     const NAME_TABLE_START:    usize = 0x2000;
     const MIRROR_START:        usize = 0x3000;
     const PALETTE_TABLE_START: usize = 0x3F00;
@@ -224,10 +224,10 @@ fn address_to_name_table_index(address: PpuAddress) -> (NameTablePosition, usize
 
     let index = index - NAME_TABLE_START;
 
-    let name_table_position =
-        NameTablePosition::from_usize(index / NAME_TABLE_SIZE).unwrap();
+    let name_table_quadrant =
+        NameTableQuadrant::from_usize(index / NAME_TABLE_SIZE).unwrap();
     let index = index % NAME_TABLE_SIZE;
-    (name_table_position, index)
+    (name_table_quadrant, index)
 }
 
 fn address_to_palette_ram_index(address: PpuAddress) -> usize {
@@ -250,13 +250,13 @@ fn address_to_palette_ram_index(address: PpuAddress) -> usize {
 #[inline]
 #[rustfmt::skip]
 fn vram_side(
-    name_table_position: NameTablePosition,
+    name_table_quadrant: NameTableQuadrant,
     mirroring: NameTableMirroring,
 ) -> VramSide {
 
-    use NameTablePosition::*;
+    use NameTableQuadrant::*;
     use NameTableMirroring::*;
-    match (name_table_position, mirroring) {
+    match (name_table_quadrant, mirroring) {
         (TopLeft    , _         ) => VramSide::Left,
         (TopRight   , Horizontal) => VramSide::Left,
         (BottomLeft , Horizontal) => VramSide::Right,

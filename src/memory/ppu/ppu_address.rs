@@ -5,7 +5,7 @@ use std::fmt;
 use num_traits::FromPrimitive;
 
 use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
-use crate::ppu::name_table::name_table_position::NameTablePosition;
+use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 
 const HIGH_BYTE_MASK: u16 = 0b0111_1111_0000_0000;
@@ -53,8 +53,8 @@ impl PpuAddress {
         }
     }
 
-    pub fn name_table_position(self) -> NameTablePosition {
-        NameTablePosition::from_last_two_bits((self.address >> 10) as u8)
+    pub fn name_table_quadrant(self) -> NameTableQuadrant {
+        NameTableQuadrant::from_last_two_bits((self.address >> 10) as u8)
     }
 
     /*
@@ -84,7 +84,7 @@ impl PpuAddress {
         }
     }
 
-    pub fn set_name_table_position(&mut self, value: u8) {
+    pub fn set_name_table_quadrant(&mut self, value: u8) {
         self.address &= !NAME_TABLE_MASK;
         self.address |= (u16::from(value) & 0b0000_0011) << 10;
     }

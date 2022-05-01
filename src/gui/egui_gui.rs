@@ -16,7 +16,7 @@ use crate::config::Config;
 use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::gui::{execute_frame, Events, Gui};
 use crate::nes::Nes;
-use crate::ppu::name_table::name_table_position::NameTablePosition;
+use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::pattern_table::{PatternIndex, PatternTable, PatternTableSide, Tile};
@@ -516,10 +516,10 @@ impl Renderer for StatusRenderer {
                     ui.label(format!("{:?}", ppu_regs.sprite_height()));
                     ui.end_row();
                     ui.label("Base Name Table");
-                    ui.label(format!("{:?}", ppu_regs.base_name_table_position()));
+                    ui.label(format!("{:?}", ppu_regs.base_name_table_quadrant()));
                     ui.end_row();
                     ui.label("Active Name Table");
-                    ui.label(format!("{:?}", nes.ppu().active_name_table_position()));
+                    ui.label(format!("{:?}", nes.ppu().active_name_table_quadrant()));
                     ui.end_row();
                     ui.label("Background");
                     ui.label(format!(
@@ -675,16 +675,16 @@ impl Renderer for NameTableRenderer {
         self.buffer.place_wrapping_vertical_line(width, 0, height, Rgb::new(255, 255, 255));
 
         self.frame.set_universal_background_rgb(mem.palette_table().universal_background_rgb());
-        mem.name_table(NameTablePosition::TopLeft)
+        mem.name_table(NameTableQuadrant::TopLeft)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(1, 1, &self.frame);
-        mem.name_table(NameTablePosition::TopRight)
+        mem.name_table(NameTableQuadrant::TopRight)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(257, 1, &self.frame);
-        mem.name_table(NameTablePosition::BottomLeft)
+        mem.name_table(NameTableQuadrant::BottomLeft)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(1, 241, &self.frame);
-        mem.name_table(NameTablePosition::BottomRight)
+        mem.name_table(NameTableQuadrant::BottomRight)
             .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(257, 241, &self.frame);
 

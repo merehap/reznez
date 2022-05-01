@@ -2,7 +2,7 @@ use crate::memory::memory::{PpuMemory, PALETTE_TABLE_START};
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table::Rectangle;
-use crate::ppu::name_table::name_table_position::NameTablePosition;
+use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::oam::Oam;
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::register::ppu_registers::*;
@@ -53,8 +53,8 @@ impl Ppu {
         &self.clock
     }
 
-    pub fn active_name_table_position(&self) -> NameTablePosition {
-        self.next_address.name_table_position()
+    pub fn active_name_table_quadrant(&self) -> NameTableQuadrant {
+        self.next_address.name_table_quadrant()
     }
 
     pub fn x_scroll(&self) -> XScroll {
@@ -129,7 +129,7 @@ impl Ppu {
             (Mask | Status | OamAddr, Write) => {}
 
             (Ctrl, Write) => {
-                self.next_address.set_name_table_position(value);
+                self.next_address.set_name_table_quadrant(value);
                 if !self.nmi_was_enabled_last_cycle {
                     // Attempt to trigger the second (or higher) NMI of this frame.
                     maybe_generate_nmi = true;
@@ -186,7 +186,7 @@ impl Ppu {
         let palette_table = mem.palette_table();
         frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
-        let name_table_position = self.next_address.name_table_position();
+        let name_table_quadrant = self.next_address.name_table_quadrant();
         let background_table_side = mem.regs().background_table_side();
         let x_scroll = self.next_address.x_scroll();
         let y_scroll = self.next_address.y_scroll();
@@ -195,7 +195,7 @@ impl Ppu {
         let y_divider = 239 - (y_scroll.to_u8() % 240);
 
         if let Some(bounds) = Rectangle::from_raw((0, 0), (x_divider, y_divider)) {
-            mem.name_table(name_table_position).render_scanline(
+            mem.name_table(name_table_quadrant).render_scanline(
                 pixel_row,
                 &mem.pattern_table(background_table_side),
                 &palette_table,
@@ -210,7 +210,7 @@ impl Ppu {
             if let Some(bounds) =
                 Rectangle::from_raw((x_divider + 1, 0), (255, y_divider))
             {
-                mem.name_table(name_table_position.next_horizontal())
+                mem.name_table(name_table_quadrant.next_horizontal())
                     .render_scanline(
                         pixel_row,
                         &mem.pattern_table(background_table_side),
@@ -227,7 +227,7 @@ impl Ppu {
             if let Some(bounds) =
                 Rectangle::from_raw((0, y_divider + 1), (x_divider, 239))
             {
-                mem.name_table(name_table_position.next_vertical())
+                mem.name_table(name_table_quadrant.next_vertical())
                     .render_scanline(
                         pixel_row,
                         &mem.pattern_table(background_table_side),
@@ -244,7 +244,7 @@ impl Ppu {
             if let Some(bounds) =
                 Rectangle::from_raw((x_divider + 1, y_divider + 1), (255, 239))
             {
-                let position = name_table_position.next_horizontal().next_vertical();
+                let position = name_table_quadrant.next_horizontal().next_vertical();
                 mem.name_table(position).render_scanline(
                     pixel_row,
                     &mem.pattern_table(background_table_side),

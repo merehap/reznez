@@ -1,4 +1,4 @@
-use crate::ppu::name_table::name_table_position::NameTablePosition;
+use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::register::ppu_register_latch::PpuRegisterLatch;
 use crate::ppu::register::register_type::RegisterType;
@@ -62,8 +62,8 @@ impl PpuRegisters {
         self.ctrl.current_address_increment
     }
 
-    pub fn base_name_table_position(&self) -> NameTablePosition {
-        self.ctrl.base_name_table_position
+    pub fn base_name_table_quadrant(&self) -> NameTableQuadrant {
+        self.ctrl.base_name_table_quadrant
     }
 
     pub fn background_enabled(&self) -> bool {

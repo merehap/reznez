@@ -1,4 +1,4 @@
-use crate::ppu::name_table::name_table_position::NameTablePosition;
+use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::bit_util::{get_bit, pack_bools};
 
@@ -10,7 +10,7 @@ pub struct Ctrl {
     pub background_table_side: PatternTableSide,
     pub sprite_table_side: PatternTableSide,
     pub current_address_increment: AddressIncrement,
-    pub base_name_table_position: NameTablePosition,
+    pub base_name_table_quadrant: NameTableQuadrant,
 }
 
 impl Ctrl {
@@ -22,7 +22,7 @@ impl Ctrl {
             background_table_side: PatternTableSide::Left,
             sprite_table_side: PatternTableSide::Left,
             current_address_increment: AddressIncrement::Right,
-            base_name_table_position: NameTablePosition::TopLeft,
+            base_name_table_quadrant: NameTableQuadrant::TopLeft,
         }
     }
 
@@ -54,7 +54,7 @@ impl Ctrl {
             } else {
                 AddressIncrement::Right
             },
-            base_name_table_position: NameTablePosition::from_last_two_bits(value),
+            base_name_table_quadrant: NameTableQuadrant::from_last_two_bits(value),
         }
     }
 
@@ -67,8 +67,8 @@ impl Ctrl {
             self.background_table_side == PatternTableSide::Right,
             self.sprite_table_side == PatternTableSide::Right,
             self.current_address_increment == AddressIncrement::Down,
-            self.base_name_table_position as u8 & 0b0000_0010 != 0,
-            self.base_name_table_position as u8 & 0b0000_0001 != 0,
+            self.base_name_table_quadrant as u8 & 0b0000_0010 != 0,
+            self.base_name_table_quadrant as u8 & 0b0000_0001 != 0,
         ])
     }
 }
