@@ -12,13 +12,7 @@ pub struct Clock {
 
 impl Clock {
     pub fn new() -> Clock {
-        Clock {
-            frame: 0,
-            scanline: 0,
-            cycle: 0,
-
-            total_cycles: 0,
-        }
+        Clock { frame: 0, scanline: 0, cycle: 0, total_cycles: 0 }
     }
 
     pub fn frame(&self) -> u64 {

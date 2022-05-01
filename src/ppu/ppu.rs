@@ -4,7 +4,10 @@ use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table::Rectangle;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::oam::Oam;
-use crate::ppu::pixel_index::{PixelColumn, PixelRow};
+use crate::ppu::palette::palette_table_index::PaletteTableIndex;
+use crate::ppu::palette::rgbt::Rgbt;
+use crate::ppu::pattern_table::{PatternIndex, PatternRegister};
+use crate::ppu::pixel_index::{PixelColumn, PixelRow, RowInTile};
 use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ppu_data::PpuData;
@@ -24,6 +27,9 @@ pub struct Ppu {
 
     suppress_vblank_active: bool,
     nmi_was_enabled_last_cycle: bool,
+
+    current_background_sliver: [Rgbt; 8],
+    pending_pattern_register: PatternRegister,
 }
 
 impl Ppu {
@@ -42,6 +48,9 @@ impl Ppu {
 
             suppress_vblank_active: false,
             nmi_was_enabled_last_cycle: false,
+
+            current_background_sliver: [Rgbt::Transparent; 8],
+            pending_pattern_register: PatternRegister::empty(),
         }
     }
 
@@ -84,6 +93,34 @@ impl Ppu {
             }
 
             if (1..=256).contains(&self.clock.cycle()) {
+                let background_table_side = mem.regs().background_table_side();
+                let current_pattern_index = PatternIndex::new(0);
+                let row_in_tile = RowInTile::Zero;
+                match cycle % 8 {
+                    2 => { /* Name table */ }
+                    4 => { /* Attribute table */ }
+                    6 => self.pending_pattern_register.add_low_byte(
+                        &mem.pattern_table(background_table_side),
+                        current_pattern_index,
+                        row_in_tile,
+                    ),
+                    0 => {
+                        self.pending_pattern_register.add_high_byte(
+                            &mem.pattern_table(background_table_side),
+                            current_pattern_index,
+                            row_in_tile,
+                        );
+                        let palette_table_index = PaletteTableIndex::Zero;
+                        let palette =
+                            mem.palette_table().background_palette(palette_table_index);
+                        self.pending_pattern_register.take_tile_sliver(
+                            palette,
+                            &mut self.current_background_sliver,
+                        );
+                    }
+                    _ => { /* Only even cycles commit changes for two-cycle fetches. */ }
+                }
+
                 self.maybe_set_sprite0_hit(mem, frame);
             }
         }
