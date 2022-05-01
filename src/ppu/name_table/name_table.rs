@@ -29,6 +29,7 @@ impl<'a> NameTable<'a> {
         }
     }
 
+    // For debug screen use only.
     pub fn render(
         &self,
         pattern_table: &PatternTable,

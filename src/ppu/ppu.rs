@@ -83,7 +83,7 @@ impl Ppu {
                 self.maybe_render_scanline(pixel_row, mem, frame);
             }
 
-            if self.clock.cycle() != 0 && self.clock.cycle() <= 256 {
+            if (1..=256).contains(&self.clock.cycle()) {
                 self.maybe_set_sprite0_hit(mem, frame);
             }
         }
