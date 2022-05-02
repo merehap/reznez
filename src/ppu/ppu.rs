@@ -7,7 +7,7 @@ use crate::ppu::oam::Oam;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table::{PatternIndex, PatternRegister};
-use crate::ppu::pixel_index::{PixelColumn, PixelRow, RowInTile};
+use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ppu_data::PpuData;
@@ -92,25 +92,26 @@ impl Ppu {
                 self.maybe_render_scanline(pixel_row, mem, frame);
             }
 
-            if (1..=256).contains(&self.clock.cycle()) {
+            if (1..=256).contains(&cycle) {
+                let pixel_column = PixelColumn::try_from_u16(cycle - 1).unwrap();
+                let (pattern_index, palette_table_index, _column_in_tile, row_in_tile) =
+                    self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+
                 let background_table_side = mem.regs().background_table_side();
-                let current_pattern_index = PatternIndex::new(0);
-                let row_in_tile = RowInTile::Zero;
                 match cycle % 8 {
                     2 => { /* Name table */ }
                     4 => { /* Attribute table */ }
                     6 => self.pending_pattern_register.add_low_byte(
                         &mem.pattern_table(background_table_side),
-                        current_pattern_index,
+                        pattern_index,
                         row_in_tile,
                     ),
                     0 => {
                         self.pending_pattern_register.add_high_byte(
                             &mem.pattern_table(background_table_side),
-                            current_pattern_index,
+                            pattern_index,
                             row_in_tile,
                         );
-                        let palette_table_index = PaletteTableIndex::Zero;
                         let palette =
                             mem.palette_table().background_palette(palette_table_index);
                         self.pending_pattern_register.take_tile_sliver(
@@ -293,6 +294,35 @@ impl Ppu {
                 );
             }
         }
+    }
+
+    fn tile_entry_for_pixel(
+        &self,
+        pixel_column: PixelColumn,
+        pixel_row: PixelRow,
+        mem: &PpuMemory,
+    ) -> (PatternIndex, PaletteTableIndex, ColumnInTile, RowInTile) {
+        let mut name_table_quadrant = self.next_address.name_table_quadrant();
+
+        let x_scroll = self.next_address.x_scroll();
+        let x_divider = 255 - x_scroll.to_u8();
+        if pixel_column.to_u8() > x_divider {
+            name_table_quadrant = name_table_quadrant.next_horizontal();
+        }
+
+        let mut y_scroll = self.next_address.y_scroll();
+        let y_divider = 239 - (y_scroll.to_u8() % 240);
+        if pixel_row.to_u8() > y_divider {
+            name_table_quadrant = name_table_quadrant.next_vertical();
+            y_scroll = y_scroll.shift_down();
+        }
+
+        mem.name_table(name_table_quadrant).tile_entry_for_pixel(
+            pixel_column,
+            pixel_row,
+            x_scroll,
+            y_scroll,
+        )
     }
 
     // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits

@@ -7,7 +7,7 @@ use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table::{PatternIndex, PatternTable};
-use crate::ppu::pixel_index::{PixelColumn, PixelRow};
+use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::render::frame::Frame;
 
 const NAME_TABLE_SIZE: usize = 0x400;
@@ -105,6 +105,28 @@ impl<'a> NameTable<'a> {
             pixel_row,
             tile_sliver[column_in_tile as usize],
         );
+    }
+
+    pub fn tile_entry_for_pixel(
+        &self,
+        pixel_column: PixelColumn,
+        pixel_row: PixelRow,
+        x_scroll: XScroll,
+        y_scroll: YScroll,
+    ) -> (PatternIndex, PaletteTableIndex, ColumnInTile, RowInTile) {
+        let (tile_column, column_in_tile) = x_scroll.tile_column(pixel_column);
+        let (tile_row, row_in_tile) = y_scroll.tile_row(pixel_row);
+        let background_tile_index =
+            BackgroundTileIndex::from_tile_column_row(tile_column, tile_row);
+
+        let (pattern_index, palette_table_index) =
+            self.tile_entry_at(background_tile_index);
+        (
+            pattern_index,
+            palette_table_index,
+            column_in_tile,
+            row_in_tile,
+        )
     }
 
     #[inline]
