@@ -39,12 +39,12 @@ impl<'a> PatternTable<'a> {
     pub fn render_pixel_sliver(
         &self,
         pattern_index: PatternIndex,
-        row_in_background_tile: RowInTile,
+        row_in_tile: RowInTile,
         palette: Palette,
         tile_sliver: &mut [Rgbt; 8],
     ) {
         let index = PATTERN_SIZE * pattern_index.to_usize();
-        let low_index = index + row_in_background_tile as usize;
+        let low_index = index + row_in_tile as usize;
         let high_index = low_index + 8;
 
         let low_byte = self.0.read(low_index);

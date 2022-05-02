@@ -1,7 +1,6 @@
 use crate::memory::memory::{PpuMemory, PALETTE_TABLE_START};
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::clock::Clock;
-use crate::ppu::name_table::name_table::Rectangle;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::oam::Oam;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
@@ -142,7 +141,9 @@ impl Ppu {
                 */
 
                 if cycle == 1 {
-                    self.maybe_render_scanline(pixel_row, mem, frame);
+                    if mem.regs().sprites_enabled() {
+                        self.oam.render_scanline(pixel_row, mem, frame);
+                    }
                 }
 
                 self.maybe_set_sprite0_hit(mem, frame);
@@ -221,104 +222,6 @@ impl Ppu {
         }
 
         maybe_generate_nmi
-    }
-
-    fn maybe_render_scanline(
-        &mut self,
-        pixel_row: PixelRow,
-        mem: &PpuMemory,
-        frame: &mut Frame,
-    ) {
-        /*
-        if mem.regs().background_enabled() {
-            self.render_background_scanline(pixel_row, mem, frame);
-        }
-        */
-
-        if mem.regs().sprites_enabled() {
-            self.oam.render_scanline(pixel_row, mem, frame);
-        }
-    }
-
-    fn render_background_scanline(
-        &self,
-        pixel_row: PixelRow,
-        mem: &PpuMemory,
-        frame: &mut Frame,
-    ) {
-        let palette_table = mem.palette_table();
-        frame.set_universal_background_rgb(palette_table.universal_background_rgb());
-
-        let name_table_quadrant = self.next_address.name_table_quadrant();
-        let background_table_side = mem.regs().background_table_side();
-        let x_scroll = self.next_address.x_scroll();
-        let y_scroll = self.next_address.y_scroll();
-
-        let x_divider = 255 - x_scroll.to_u8();
-        let y_divider = 239 - (y_scroll.to_u8() % 240);
-
-        if let Some(bounds) = Rectangle::from_raw((0, 0), (x_divider, y_divider)) {
-            mem.name_table(name_table_quadrant).render_scanline(
-                pixel_row,
-                &mem.pattern_table(background_table_side),
-                &palette_table,
-                x_scroll,
-                y_scroll,
-                bounds,
-                frame,
-            );
-        }
-
-        if !x_scroll.is_zero() {
-            if let Some(bounds) =
-                Rectangle::from_raw((x_divider + 1, 0), (255, y_divider))
-            {
-                mem.name_table(name_table_quadrant.next_horizontal())
-                    .render_scanline(
-                        pixel_row,
-                        &mem.pattern_table(background_table_side),
-                        &palette_table,
-                        x_scroll,
-                        y_scroll,
-                        bounds,
-                        frame,
-                    );
-            }
-        }
-
-        if !y_scroll.is_zero() {
-            if let Some(bounds) =
-                Rectangle::from_raw((0, y_divider + 1), (x_divider, 239))
-            {
-                mem.name_table(name_table_quadrant.next_vertical())
-                    .render_scanline(
-                        pixel_row,
-                        &mem.pattern_table(background_table_side),
-                        &palette_table,
-                        x_scroll,
-                        y_scroll.shift_down(),
-                        bounds,
-                        frame,
-                    );
-            }
-        }
-
-        if !x_scroll.is_zero() && !y_scroll.is_zero() {
-            if let Some(bounds) =
-                Rectangle::from_raw((x_divider + 1, y_divider + 1), (255, 239))
-            {
-                let position = name_table_quadrant.next_horizontal().next_vertical();
-                mem.name_table(position).render_scanline(
-                    pixel_row,
-                    &mem.pattern_table(background_table_side),
-                    &palette_table,
-                    x_scroll,
-                    y_scroll.shift_down(),
-                    bounds,
-                    frame,
-                );
-            }
-        }
     }
 
     fn tile_entry_for_pixel(

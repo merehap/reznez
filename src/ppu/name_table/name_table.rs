@@ -43,35 +43,31 @@ impl<'a> NameTable<'a> {
                 palette_table,
                 XScroll::ZERO,
                 YScroll::ZERO,
-                Rectangle::FULL,
                 frame,
             );
         }
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn render_scanline(
+    fn render_scanline(
         &self,
         pixel_row: PixelRow,
         pattern_table: &PatternTable,
         palette_table: &PaletteTable,
         x_scroll: XScroll,
         y_scroll: YScroll,
-        bounds: Rectangle,
         frame: &mut Frame,
     ) {
         for pixel_column in PixelColumn::iter() {
-            if bounds.is_in_bounds(pixel_column, pixel_row) {
-                self.render_pixel(
-                    pixel_column,
-                    pixel_row,
-                    pattern_table,
-                    palette_table,
-                    x_scroll,
-                    y_scroll,
-                    frame,
-                );
-            }
+            self.render_pixel(
+                pixel_column,
+                pixel_row,
+                pattern_table,
+                palette_table,
+                x_scroll,
+                y_scroll,
+                frame,
+            );
         }
     }
 
@@ -156,64 +152,5 @@ impl fmt::Display for NameTable<'_> {
         }
 
         Ok(())
-    }
-}
-
-#[derive(Debug)]
-pub struct Rectangle {
-    left_column: PixelColumn,
-    top_row: PixelRow,
-
-    right_column: PixelColumn,
-    bottom_row: PixelRow,
-}
-
-impl Rectangle {
-    pub const FULL: Rectangle = Rectangle::const_from_raw((0, 0), (255, 239)).unwrap();
-
-    pub const fn const_from_raw(
-        (left, top): (u8, u8),
-        (right, bottom): (u8, u8),
-    ) -> Option<Rectangle> {
-        if left > right || top > bottom {
-            panic!();
-        }
-
-        let Some(top_row) = PixelRow::try_from_u8(top) else {
-            return None;
-        };
-
-        let bottom_row = PixelRow::saturate_from_u8(bottom);
-        let left_column = PixelColumn::new(left);
-        let right_column = PixelColumn::new(right);
-        Some(Rectangle { left_column, top_row, right_column, bottom_row })
-    }
-
-    pub fn from_raw(
-        (left, top): (u8, u8),
-        (right, bottom): (u8, u8),
-    ) -> Option<Rectangle> {
-        if left > right || top > bottom {
-            panic!(
-                "Left: {}, Right: {}, Top: {}, Bottom: {}",
-                left, right, top, bottom
-            );
-        }
-
-        let Some(top_row) = PixelRow::try_from_u8(top) else {
-            return None;
-        };
-
-        let bottom_row = PixelRow::saturate_from_u8(bottom);
-        let left_column = PixelColumn::new(left);
-        let right_column = PixelColumn::new(right);
-        Some(Rectangle { left_column, top_row, right_column, bottom_row })
-    }
-
-    pub fn is_in_bounds(&self, column: PixelColumn, row: PixelRow) -> bool {
-        self.left_column <= column
-            && column <= self.right_column
-            && self.top_row <= row
-            && row <= self.bottom_row
     }
 }
