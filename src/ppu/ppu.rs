@@ -6,7 +6,7 @@ use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::oam::Oam;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pattern_table::{PatternIndex, PatternRegister};
+use crate::ppu::pattern_table::PatternIndex;
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
@@ -29,7 +29,7 @@ pub struct Ppu {
     nmi_was_enabled_last_cycle: bool,
 
     current_background_sliver: [Rgbt; 8],
-    pending_pattern_register: PatternRegister,
+    //pending_pattern_register: PatternRegister,
 }
 
 impl Ppu {
@@ -50,7 +50,7 @@ impl Ppu {
             nmi_was_enabled_last_cycle: false,
 
             current_background_sliver: [Rgbt::Transparent; 8],
-            pending_pattern_register: PatternRegister::empty(),
+            //pending_pattern_register: PatternRegister::empty(),
         }
     }
 
@@ -88,16 +88,28 @@ impl Ppu {
         let scanline = self.clock.scanline();
         let cycle = self.clock.cycle();
         if let Some(pixel_row) = PixelRow::try_from_u16(scanline) {
-            if cycle == 1 {
-                self.maybe_render_scanline(pixel_row, mem, frame);
-            }
-
             if (1..=256).contains(&cycle) {
-                let pixel_column = PixelColumn::try_from_u16(cycle - 1).unwrap();
-                let (pattern_index, palette_table_index, _column_in_tile, row_in_tile) =
-                    self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                if mem.regs().background_enabled() {
+                    frame.set_universal_background_rgb(mem.palette_table().universal_background_rgb());
+                    let pixel_column = PixelColumn::try_from_u16(cycle - 1).unwrap();
+                    let (pattern_index, palette_table_index, column_in_tile, row_in_tile) =
+                        self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
 
-                let background_table_side = mem.regs().background_table_side();
+                    let background_table_side = mem.regs().background_table_side();
+                    mem.pattern_table(background_table_side).render_pixel_sliver(
+                        pattern_index,
+                        row_in_tile,
+                        mem.palette_table().background_palette(palette_table_index),
+                        &mut self.current_background_sliver,
+                    );
+                    frame.set_background_pixel(
+                        pixel_column,
+                        pixel_row,
+                        self.current_background_sliver[column_in_tile as usize],
+                    );
+                }
+
+                /*
                 match cycle % 8 {
                     2 => { /* Name table */ }
                     4 => { /* Attribute table */ }
@@ -120,6 +132,11 @@ impl Ppu {
                         );
                     }
                     _ => { /* Only even cycles commit changes for two-cycle fetches. */ }
+                }
+                */
+
+                if cycle == 1 {
+                    self.maybe_render_scanline(pixel_row, mem, frame);
                 }
 
                 self.maybe_set_sprite0_hit(mem, frame);
@@ -206,9 +223,11 @@ impl Ppu {
         mem: &PpuMemory,
         frame: &mut Frame,
     ) {
+        /*
         if mem.regs().background_enabled() {
             self.render_background_scanline(pixel_row, mem, frame);
         }
+        */
 
         if mem.regs().sprites_enabled() {
             self.oam.render_scanline(pixel_row, mem, frame);
