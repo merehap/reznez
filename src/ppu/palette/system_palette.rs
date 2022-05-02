@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use enum_iterator::IntoEnumIterator;
 use num_traits::FromPrimitive;
 
@@ -7,11 +5,11 @@ use crate::ppu::palette::color::{Brightness, Color, Hue};
 use crate::ppu::palette::rgb::Rgb;
 
 #[derive(Clone)]
-pub struct SystemPalette(BTreeMap<Color, Rgb>);
+pub struct SystemPalette([Rgb; 64]);
 
 impl SystemPalette {
     pub fn parse(raw: &str) -> Result<SystemPalette, String> {
-        let mut result = BTreeMap::new();
+        let mut result = [Rgb::BLACK; 64];
 
         let lines: Vec<&str> = raw
             .lines()
@@ -35,11 +33,11 @@ impl SystemPalette {
     }
 
     pub fn lookup_rgb(&self, color: Color) -> Rgb {
-        self.0[&color]
+        self.0[color.to_usize()]
     }
 
     fn parse_line(
-        palette: &mut BTreeMap<Color, Rgb>,
+        palette: &mut [Rgb; 64],
         brightness: Brightness,
         line: &str,
     ) -> Result<(), String> {
@@ -68,7 +66,7 @@ impl SystemPalette {
             let i = hue as usize;
             let color = Color::new(hue, brightness);
             let rgb = Rgb::new(nums[3 * i], nums[3 * i + 1], nums[3 * i + 2]);
-            palette.insert(color, rgb);
+            palette[color.to_usize()] = rgb;
         }
 
         Ok(())

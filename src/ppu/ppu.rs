@@ -28,7 +28,8 @@ pub struct Ppu {
     suppress_vblank_active: bool,
     nmi_was_enabled_last_cycle: bool,
 
-    current_background_sliver: [Rgbt; 8],
+    current_background_pixel: Rgbt,
+    //current_background_sliver: [Rgbt; 8],
     //pending_pattern_register: PatternRegister,
 }
 
@@ -49,7 +50,8 @@ impl Ppu {
             suppress_vblank_active: false,
             nmi_was_enabled_last_cycle: false,
 
-            current_background_sliver: [Rgbt::Transparent; 8],
+            current_background_pixel: Rgbt::Transparent,
+            //current_background_sliver: [Rgbt::Transparent; 8],
             //pending_pattern_register: PatternRegister::empty(),
         }
     }
@@ -90,22 +92,26 @@ impl Ppu {
         if let Some(pixel_row) = PixelRow::try_from_u16(scanline) {
             if (1..=256).contains(&cycle) {
                 if mem.regs().background_enabled() {
-                    frame.set_universal_background_rgb(mem.palette_table().universal_background_rgb());
+                    let palette_table = mem.palette_table();
+                    frame.set_universal_background_rgb(
+                        palette_table.universal_background_rgb(),
+                    );
                     let pixel_column = PixelColumn::try_from_u16(cycle - 1).unwrap();
                     let (pattern_index, palette_table_index, column_in_tile, row_in_tile) =
                         self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
 
                     let background_table_side = mem.regs().background_table_side();
-                    mem.pattern_table(background_table_side).render_pixel_sliver(
+                    mem.pattern_table(background_table_side).render_pixel(
                         pattern_index,
+                        column_in_tile,
                         row_in_tile,
-                        mem.palette_table().background_palette(palette_table_index),
-                        &mut self.current_background_sliver,
+                        palette_table.background_palette(palette_table_index),
+                        &mut self.current_background_pixel,
                     );
                     frame.set_background_pixel(
                         pixel_column,
                         pixel_row,
-                        self.current_background_sliver[column_in_tile as usize],
+                        self.current_background_pixel,
                     );
                 }
 

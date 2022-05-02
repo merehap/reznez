@@ -3,7 +3,7 @@ use enum_iterator::IntoEnumIterator;
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pixel_index::RowInTile;
+use crate::ppu::pixel_index::{ColumnInTile, RowInTile};
 use crate::util::bit_util::get_bit;
 use crate::util::mapped_array::MappedArray;
 
@@ -60,6 +60,31 @@ impl<'a> PatternTable<'a> {
                 (true , true ) => Rgbt::Opaque(palette[PaletteIndex::Three]),
             };
         }
+    }
+
+    pub fn render_pixel(
+        &self,
+        pattern_index: PatternIndex,
+        column_in_tile: ColumnInTile,
+        row_in_tile: RowInTile,
+        palette: Palette,
+        pixel: &mut Rgbt,
+    ) {
+        let index = PATTERN_SIZE * pattern_index.to_usize();
+        let low_index = index + row_in_tile as usize;
+        let high_index = low_index + 8;
+
+        let low_byte = self.0.read(low_index);
+        let high_byte = self.0.read(high_index);
+
+        let low_bit = get_bit(low_byte, column_in_tile as usize);
+        let high_bit = get_bit(high_byte, column_in_tile as usize);
+        *pixel = match (low_bit, high_bit) {
+            (false, false) => Rgbt::Transparent,
+            (true, false) => Rgbt::Opaque(palette[PaletteIndex::One]),
+            (false, true) => Rgbt::Opaque(palette[PaletteIndex::Two]),
+            (true, true) => Rgbt::Opaque(palette[PaletteIndex::Three]),
+        };
     }
 }
 

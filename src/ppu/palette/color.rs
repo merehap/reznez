@@ -21,6 +21,10 @@ impl Color {
             brightness: FromPrimitive::from_u8((value & 0b0011_0000) >> 4).unwrap(),
         }
     }
+
+    pub fn to_usize(self) -> usize {
+        ((self.brightness as usize) << 4) | (self.hue as usize)
+    }
 }
 
 #[derive(
