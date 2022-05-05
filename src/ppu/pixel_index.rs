@@ -1,42 +1,46 @@
 use enum_iterator::IntoEnumIterator;
+use itertools::structs::Product;
+use itertools::Itertools;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 #[derive(Clone, Copy)]
-pub struct PixelIndex(usize);
+pub struct PixelIndex {
+    column: PixelColumn,
+    row: PixelRow,
+}
 
 impl PixelIndex {
     pub const PIXEL_COUNT: usize = PixelColumn::COLUMN_COUNT * PixelRow::ROW_COUNT;
 
     pub fn iter() -> PixelIndexIterator {
-        PixelIndexIterator(0)
+        PixelIndexIterator::new()
     }
 
     pub fn to_column_row(self) -> (PixelColumn, PixelRow) {
-        (
-            PixelColumn::new((self.0 % 256).try_into().unwrap()),
-            PixelRow::try_from_u8((self.0 / 256) as u8).unwrap(),
-        )
+        (self.column, self.row)
     }
 
     pub fn to_usize(self) -> usize {
-        self.0
+        PixelColumn::COLUMN_COUNT * self.row.to_usize() + self.column.to_usize()
     }
 }
 
-pub struct PixelIndexIterator(usize);
+pub struct PixelIndexIterator(Product<PixelRowIterator, PixelColumnIterator>);
+
+impl PixelIndexIterator {
+    pub fn new() -> PixelIndexIterator {
+        PixelIndexIterator(PixelRow::iter().cartesian_product(PixelColumn::iter()))
+    }
+}
 
 impl Iterator for PixelIndexIterator {
     type Item = PixelIndex;
 
     fn next(&mut self) -> Option<PixelIndex> {
-        if self.0 == PixelIndex::PIXEL_COUNT {
-            None
-        } else {
-            let result = Some(PixelIndex(self.0));
-            self.0 += 1;
-            result
-        }
+        self.0
+            .next()
+            .map(|(row, column)| PixelIndex { column, row })
     }
 }
 
@@ -86,6 +90,7 @@ impl PixelColumn {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct PixelColumnIterator(u16);
 
 impl Iterator for PixelColumnIterator {
@@ -152,6 +157,7 @@ impl PixelRow {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct PixelRowIterator(u8);
 
 impl Iterator for PixelRowIterator {
