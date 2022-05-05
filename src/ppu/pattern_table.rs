@@ -17,6 +17,22 @@ impl<'a> PatternTable<'a> {
         PatternTable(raw)
     }
 
+    pub fn read_low_byte(
+        &self,
+        pattern_index: PatternIndex,
+        row_in_tile: RowInTile,
+    ) -> u8 {
+        self.0.read(pattern_index.to_low_index(row_in_tile))
+    }
+
+    pub fn read_high_byte(
+        &self,
+        pattern_index: PatternIndex,
+        row_in_tile: RowInTile,
+    ) -> u8 {
+        self.0.read(pattern_index.to_high_index(row_in_tile))
+    }
+
     // Used for debug windows only.
     pub fn render_background_tile(
         &self,
@@ -153,70 +169,5 @@ impl Tile {
 
     pub fn row_mut(&mut self, row: RowInTile) -> &mut [Rgbt; 8] {
         &mut self.0[row as usize]
-    }
-}
-
-#[derive(PartialEq, Eq)]
-pub enum PatternRegister {
-    Empty,
-    LowByteOnly { low_byte: u8 },
-    Complete { low_byte: u8, high_byte: u8 },
-}
-
-impl PatternRegister {
-    pub fn empty() -> PatternRegister {
-        PatternRegister::Empty
-    }
-
-    pub fn add_low_byte(
-        &mut self,
-        pattern_table: &PatternTable,
-        pattern_index: PatternIndex,
-        row_in_tile: RowInTile,
-    ) {
-        if *self != PatternRegister::Empty {
-            panic!("Can't add low byte to a non-empty PatternRegister!");
-        }
-
-        let low_byte = pattern_table
-            .0
-            .read(pattern_index.to_low_index(row_in_tile));
-        *self = PatternRegister::LowByteOnly { low_byte };
-    }
-
-    pub fn add_high_byte(
-        &mut self,
-        pattern_table: &PatternTable,
-        pattern_index: PatternIndex,
-        row_in_tile: RowInTile,
-    ) {
-        let &mut PatternRegister::LowByteOnly { low_byte } = self else {
-            panic!("Can't add high byte to PatternRegister that already has one!")
-        };
-
-        let high_byte = pattern_table
-            .0
-            .read(pattern_index.to_high_index(row_in_tile));
-        *self = PatternRegister::Complete { low_byte, high_byte };
-    }
-
-    #[rustfmt::skip]
-    pub fn take_tile_sliver(&mut self, palette: Palette, tile_sliver: &mut [Rgbt; 8]) {
-        let PatternRegister::Complete { low_byte, high_byte } = self else {
-            panic!("Can't convert an incomplete PatternRegister into a tile sliver.");
-        };
-
-        for (column_in_tile, pixel) in tile_sliver.iter_mut().enumerate() {
-            let low_bit = get_bit(*low_byte, column_in_tile);
-            let high_bit = get_bit(*high_byte, column_in_tile);
-            *pixel = match (low_bit, high_bit) {
-                (false, false) => Rgbt::Transparent,
-                (true , false) => Rgbt::Opaque(palette[PaletteIndex::One]),
-                (false, true ) => Rgbt::Opaque(palette[PaletteIndex::Two]),
-                (true , true ) => Rgbt::Opaque(palette[PaletteIndex::Three]),
-            };
-        }
-
-        *self = PatternRegister::Empty;
     }
 }

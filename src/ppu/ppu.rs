@@ -3,14 +3,17 @@ use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::oam::Oam;
+use crate::ppu::palette::palette_index::PaletteIndex;
+use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pattern_table::PatternIndex;
+use crate::ppu::pattern_table::{PatternTable, PatternIndex};
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::render::frame::Frame;
+use crate::util::bit_util::get_bit;
 
 pub struct Ppu {
     oam: Oam,
@@ -28,8 +31,8 @@ pub struct Ppu {
     nmi_was_enabled_last_cycle: bool,
 
     current_background_pixel: Rgbt,
-    //current_background_sliver: [Rgbt; 8],
-    //pending_pattern_register: PatternRegister,
+    current_render_params: RenderParams,
+    next_render_params: RenderParamsBuilder,
 }
 
 impl Ppu {
@@ -50,8 +53,8 @@ impl Ppu {
             nmi_was_enabled_last_cycle: false,
 
             current_background_pixel: Rgbt::Transparent,
-            //current_background_sliver: [Rgbt::Transparent; 8],
-            //pending_pattern_register: PatternRegister::empty(),
+            current_render_params: RenderParams::default(),
+            next_render_params: RenderParamsBuilder::new(),
         }
     }
 
@@ -100,13 +103,15 @@ impl Ppu {
                         self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
 
                     let background_table_side = mem.regs().background_table_side();
-                    mem.pattern_table(background_table_side).render_pixel(
-                        pattern_index,
-                        column_in_tile,
-                        row_in_tile,
-                        palette_table.background_palette(palette_table_index),
-                        &mut self.current_background_pixel,
-                    );
+                    let pattern_table = mem.pattern_table(background_table_side);
+
+                    self.next_render_params.pattern_index(pattern_index);
+                    self.next_render_params.palette_table_index(palette_table_index);
+                    self.next_render_params.low_pattern(&pattern_table, row_in_tile);
+                    self.next_render_params.high_pattern(&pattern_table, row_in_tile);
+                    self.current_render_params = std::mem::take(&mut self.next_render_params).build();
+                    self.current_background_pixel = self.current_render_params.pixel(&mem.palette_table(), column_in_tile);
+
                     frame.set_background_pixel(
                         pixel_column,
                         pixel_row,
@@ -352,6 +357,66 @@ impl WriteToggle {
             FirstByte => SecondByte,
             SecondByte => FirstByte,
         };
+    }
+}
+
+#[derive(Default)]
+pub struct RenderParams {
+    palette_table_index: PaletteTableIndex,
+    low_pattern: u8,
+    high_pattern: u8,
+}
+
+impl RenderParams {
+    #[rustfmt::skip]
+    pub fn pixel(&self, palette_table: &PaletteTable, column_in_tile: ColumnInTile) -> Rgbt {
+        let palette = palette_table.background_palette(self.palette_table_index);
+        let low_bit = get_bit(self.low_pattern, column_in_tile as usize);
+        let high_bit = get_bit(self.high_pattern, column_in_tile as usize);
+        match (low_bit, high_bit) {
+            (false, false) => Rgbt::Transparent,
+            (true , false) => Rgbt::Opaque(palette[PaletteIndex::One]),
+            (false, true ) => Rgbt::Opaque(palette[PaletteIndex::Two]),
+            (true , true ) => Rgbt::Opaque(palette[PaletteIndex::Three]),
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct RenderParamsBuilder {
+    pattern_index: Option<PatternIndex>,
+    palette_table_index: Option<PaletteTableIndex>,
+    low_pattern: Option<u8>,
+    high_pattern: Option<u8>,
+}
+
+impl RenderParamsBuilder {
+    pub fn new() -> RenderParamsBuilder {
+        Default::default()
+    }
+
+    pub fn pattern_index(&mut self, value: PatternIndex) {
+        self.pattern_index = Some(value);
+    }
+
+    pub fn palette_table_index(&mut self, value: PaletteTableIndex) {
+        self.palette_table_index = Some(value);
+    }
+
+    pub fn low_pattern(&mut self, pattern_table: &PatternTable, row_in_tile: RowInTile) {
+        self.low_pattern = Some(pattern_table.read_low_byte(self.pattern_index.unwrap(), row_in_tile));
+    }
+
+    pub fn high_pattern(&mut self, pattern_table: &PatternTable, row_in_tile: RowInTile) {
+        self.high_pattern = Some(pattern_table.read_high_byte(self.pattern_index.unwrap(), row_in_tile));
+    }
+
+    pub fn build(self) -> RenderParams {
+        RenderParams {
+            palette_table_index: self.palette_table_index.unwrap(),
+            low_pattern: self.low_pattern.unwrap(),
+            high_pattern: self.high_pattern.unwrap(),
+        }
     }
 }
 

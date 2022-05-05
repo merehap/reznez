@@ -32,3 +32,7 @@ impl PaletteTableIndex {
         }
     }
 }
+
+impl Default for PaletteTableIndex {
+    fn default() -> Self { PaletteTableIndex::Zero }
+}
