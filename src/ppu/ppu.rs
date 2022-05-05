@@ -8,7 +8,7 @@ use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table::{PatternTable, PatternIndex};
-use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
+use crate::ppu::pixel_index::{PixelIndex, ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ppu_data::PpuData;
@@ -89,70 +89,67 @@ impl Ppu {
             maybe_generate_nmi = self.process_latch_access(mem, latch_access);
         }
 
-        let scanline = self.clock.scanline();
-        let cycle = self.clock.cycle();
-        if let Some(pixel_row) = PixelRow::try_from_u16(scanline) {
-            if (1..=256).contains(&cycle) {
-                if mem.regs().background_enabled() {
-                    let palette_table = mem.palette_table();
-                    frame.set_universal_background_rgb(
-                        palette_table.universal_background_rgb(),
-                    );
-                    let pixel_column = PixelColumn::try_from_u16(cycle - 1).unwrap();
-                    let (pattern_index, palette_table_index, column_in_tile, row_in_tile) =
-                        self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+        if let Some(pixel_index) = PixelIndex::try_from_clock(&self.clock) {
+            let (pixel_column, pixel_row) = pixel_index.to_column_row();
+            if mem.regs().background_enabled() {
+                let palette_table = mem.palette_table();
+                frame.set_universal_background_rgb(
+                    palette_table.universal_background_rgb(),
+                );
+                let (pattern_index, palette_table_index, column_in_tile, row_in_tile) =
+                    self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
 
-                    let background_table_side = mem.regs().background_table_side();
-                    let pattern_table = mem.pattern_table(background_table_side);
+                let background_table_side = mem.regs().background_table_side();
+                let pattern_table = mem.pattern_table(background_table_side);
 
-                    self.next_render_params.pattern_index(pattern_index);
-                    self.next_render_params.palette_table_index(palette_table_index);
-                    self.next_render_params.low_pattern(&pattern_table, row_in_tile);
-                    self.next_render_params.high_pattern(&pattern_table, row_in_tile);
-                    self.current_render_params = std::mem::take(&mut self.next_render_params).build();
-                    self.current_background_pixel = self.current_render_params.pixel(&mem.palette_table(), column_in_tile);
+                self.next_render_params.pattern_index(pattern_index);
+                self.next_render_params.palette_table_index(palette_table_index);
+                self.next_render_params.low_pattern(&pattern_table, row_in_tile);
+                self.next_render_params.high_pattern(&pattern_table, row_in_tile);
+                self.current_render_params = std::mem::take(&mut self.next_render_params).build();
+                self.current_background_pixel = self.current_render_params.pixel(&mem.palette_table(), column_in_tile);
 
-                    frame.set_background_pixel(
-                        pixel_column,
-                        pixel_row,
-                        self.current_background_pixel,
-                    );
-                }
+                frame.set_background_pixel(
+                    pixel_column,
+                    pixel_row,
+                    self.current_background_pixel,
+                );
+            }
 
-                /*
-                match cycle % 8 {
-                    2 => { /* Name table */ }
-                    4 => { /* Attribute table */ }
-                    6 => self.pending_pattern_register.add_low_byte(
+            /*
+            match cycle % 8 {
+                2 => { /* Name table */ }
+                4 => { /* Attribute table */ }
+                6 => self.pending_pattern_register.add_low_byte(
+                    &mem.pattern_table(background_table_side),
+                    pattern_index,
+                    row_in_tile,
+                ),
+                0 => {
+                    self.pending_pattern_register.add_high_byte(
                         &mem.pattern_table(background_table_side),
                         pattern_index,
                         row_in_tile,
-                    ),
-                    0 => {
-                        self.pending_pattern_register.add_high_byte(
-                            &mem.pattern_table(background_table_side),
-                            pattern_index,
-                            row_in_tile,
-                        );
-                        let palette =
-                            mem.palette_table().background_palette(palette_table_index);
-                        self.pending_pattern_register.take_tile_sliver(
-                            palette,
-                            &mut self.current_background_sliver,
-                        );
-                    }
-                    _ => { /* Only even cycles commit changes for two-cycle fetches. */ }
+                    );
+                    let palette =
+                        mem.palette_table().background_palette(palette_table_index);
+                    self.pending_pattern_register.take_tile_sliver(
+                        palette,
+                        &mut self.current_background_sliver,
+                    );
                 }
-                */
-
-                if cycle == 1 {
-                    if mem.regs().sprites_enabled() {
-                        self.oam.render_scanline(pixel_row, mem, frame);
-                    }
-                }
-
-                self.maybe_set_sprite0_hit(mem, frame);
+                _ => { /* Only even cycles commit changes for two-cycle fetches. */ }
             }
+            */
+
+            let cycle = self.clock.cycle();
+            if cycle == 1 {
+                if mem.regs().sprites_enabled() {
+                    self.oam.render_scanline(pixel_row, mem, frame);
+                }
+            }
+
+            self.maybe_set_sprite0_hit(mem, frame);
         }
 
         match (self.clock.scanline(), self.clock.cycle()) {

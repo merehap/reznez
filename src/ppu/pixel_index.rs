@@ -4,6 +4,8 @@ use itertools::Itertools;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
+use crate::ppu::clock::Clock;
+
 #[derive(Clone, Copy)]
 pub struct PixelIndex {
     column: PixelColumn,
@@ -15,6 +17,12 @@ impl PixelIndex {
 
     pub fn iter() -> PixelIndexIterator {
         PixelIndexIterator::new()
+    }
+
+    pub fn try_from_clock(clock: &Clock) -> Option<PixelIndex> {
+        let column = PixelColumn::try_from_u16(clock.cycle() - 1)?;
+        let row = PixelRow::try_from_u16(clock.scanline())?;
+        Some(PixelIndex { column, row })
     }
 
     pub fn to_column_row(self) -> (PixelColumn, PixelRow) {
