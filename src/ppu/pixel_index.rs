@@ -25,6 +25,26 @@ impl PixelIndex {
         Some(PixelIndex { column, row })
     }
 
+    #[rustfmt::skip]
+    pub fn try_from_tile_offsetted_clock(clock: &Clock) -> Option<PixelIndex> {
+        let (future_scanline, future_cycle) = match clock.cycle() {
+            // Offset by two tile fetch sequences.
+            (001..=248) => (clock.scanline()    , clock.cycle() +  16),
+            // FIXME: Need to do dummy name table fetches.
+            (249..=256) => return None,
+            // Wrap around to the next scanline.
+            (321..=336) => (clock.scanline() + 1, clock.cycle() - 320),
+            // FIXME: Need to do dummy name table fetches.
+            (337..=340) => return None,
+            // Not a tile fetch cycle.
+            _ => return None,
+        };
+        Some(PixelIndex {
+            column: PixelColumn::try_from_u16(future_cycle)?,
+            row: PixelRow::try_from_u16(future_scanline)?,
+        })
+    }
+
     pub fn to_column_row(self) -> (PixelColumn, PixelRow) {
         (self.column, self.row)
     }

@@ -32,7 +32,8 @@ pub struct Ppu {
 
     current_background_pixel: Rgbt,
     current_render_params: RenderParams,
-    next_render_params: RenderParamsBuilder,
+    next_render_params: RenderParams,
+    next_render_params_builder: RenderParamsBuilder,
 }
 
 impl Ppu {
@@ -54,7 +55,8 @@ impl Ppu {
 
             current_background_pixel: Rgbt::Transparent,
             current_render_params: RenderParams::default(),
-            next_render_params: RenderParamsBuilder::new(),
+            next_render_params: RenderParams::default(),
+            next_render_params_builder: RenderParamsBuilder::new(),
         }
     }
 
@@ -96,17 +98,9 @@ impl Ppu {
                 frame.set_universal_background_rgb(
                     palette_table.universal_background_rgb(),
                 );
-                let (pattern_index, palette_table_index, column_in_tile, row_in_tile) =
+                let (_, _, column_in_tile, _) =
                     self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
 
-                let background_table_side = mem.regs().background_table_side();
-                let pattern_table = mem.pattern_table(background_table_side);
-
-                self.next_render_params.pattern_index(pattern_index);
-                self.next_render_params.palette_table_index(palette_table_index);
-                self.next_render_params.low_pattern(&pattern_table, row_in_tile);
-                self.next_render_params.high_pattern(&pattern_table, row_in_tile);
-                self.current_render_params = std::mem::take(&mut self.next_render_params).build();
                 self.current_background_pixel = self.current_render_params.pixel(&mem.palette_table(), column_in_tile);
 
                 frame.set_background_pixel(
@@ -116,32 +110,6 @@ impl Ppu {
                 );
             }
 
-            /*
-            match cycle % 8 {
-                2 => { /* Name table */ }
-                4 => { /* Attribute table */ }
-                6 => self.pending_pattern_register.add_low_byte(
-                    &mem.pattern_table(background_table_side),
-                    pattern_index,
-                    row_in_tile,
-                ),
-                0 => {
-                    self.pending_pattern_register.add_high_byte(
-                        &mem.pattern_table(background_table_side),
-                        pattern_index,
-                        row_in_tile,
-                    );
-                    let palette =
-                        mem.palette_table().background_palette(palette_table_index);
-                    self.pending_pattern_register.take_tile_sliver(
-                        palette,
-                        &mut self.current_background_sliver,
-                    );
-                }
-                _ => { /* Only even cycles commit changes for two-cycle fetches. */ }
-            }
-            */
-
             let cycle = self.clock.cycle();
             if cycle == 1 {
                 if mem.regs().sprites_enabled() {
@@ -150,6 +118,46 @@ impl Ppu {
             }
 
             self.maybe_set_sprite0_hit(mem, frame);
+        }
+
+        /*
+        // FIXME: Expand this to 257.
+        if (9..=249).contains(&self.clock.cycle()) && self.clock.cycle() % 8 == 1 {
+            self.current_render_params = std::mem::take(&mut self.next_render_params).build();
+        }
+        */
+
+        if let Some(pixel_index) = PixelIndex::try_from_tile_offsetted_clock(&self.clock) {
+            let (pixel_column, pixel_row) = pixel_index.to_column_row();
+            let background_table_side = mem.regs().background_table_side();
+            let pattern_table = mem.pattern_table(background_table_side);
+            match self.clock.cycle() % 8 {
+                2 => {
+                    let (pattern_index, _, _, _) =
+                        self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                    self.next_render_params_builder.pattern_index(pattern_index);
+                }
+                4 => {
+                    let (_, palette_table_index, _, _) =
+                        self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                    self.next_render_params_builder.palette_table_index(palette_table_index);
+                }
+                6 => {
+                    let (_, _, _, row_in_tile) =
+                        self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                    self.next_render_params_builder.low_pattern(&pattern_table, row_in_tile);
+                }
+                0 => {
+                    let (_, _, _, row_in_tile) =
+                        self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                    self.next_render_params_builder.high_pattern(&pattern_table, row_in_tile);
+
+                    // FIXME: This should be a cycle later.
+                    self.current_render_params = std::mem::take(&mut self.next_render_params);
+                    self.next_render_params = std::mem::take(&mut self.next_render_params_builder).build();
+                }
+                _ => { /* Only even cycles commit changes for two-cycle fetches. */ }
+            }
         }
 
         match (self.clock.scanline(), self.clock.cycle()) {
