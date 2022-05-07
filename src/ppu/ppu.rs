@@ -1,19 +1,21 @@
+use std::collections::VecDeque;
+use std::ops::{Index, IndexMut};
+
 use crate::memory::memory::{PpuMemory, PALETTE_TABLE_START};
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::oam::Oam;
 use crate::ppu::palette::palette_index::PaletteIndex;
-use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pattern_table::{PatternTable, PatternIndex};
+use crate::ppu::pattern_table::PatternIndex;
 use crate::ppu::pixel_index::{PixelIndex, ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::render::frame::Frame;
-use crate::util::bit_util::get_bit;
+use crate::util::bit_util::unpack_bools;
 
 pub struct Ppu {
     oam: Oam,
@@ -31,9 +33,10 @@ pub struct Ppu {
     nmi_was_enabled_last_cycle: bool,
 
     current_background_pixel: Rgbt,
-    current_render_params: RenderParams,
-    next_render_params: RenderParams,
-    next_render_params_builder: RenderParamsBuilder,
+
+    next_pattern_index: PatternIndex,
+    pattern_register: PatternRegister,
+    attribute_register: AttributeRegister,
 }
 
 impl Ppu {
@@ -54,9 +57,10 @@ impl Ppu {
             nmi_was_enabled_last_cycle: false,
 
             current_background_pixel: Rgbt::Transparent,
-            current_render_params: RenderParams::default(),
-            next_render_params: RenderParams::default(),
-            next_render_params_builder: RenderParamsBuilder::new(),
+
+            next_pattern_index: PatternIndex::new(0),
+            pattern_register: PatternRegister::new(),
+            attribute_register: AttributeRegister::new(),
         }
     }
 
@@ -91,6 +95,100 @@ impl Ppu {
             maybe_generate_nmi = self.process_latch_access(mem, latch_access);
         }
 
+        let background_table_side = mem.regs().background_table_side();
+        let pattern_table = mem.pattern_table(background_table_side);
+        let scanline = self.clock.scanline();
+        let cycle = self.clock.cycle();
+        if (0..=239).contains(&scanline) || scanline == 261 {
+            match cycle {
+                000..=000 => { /* Idle. */ }
+                001..=001 => { /* First NT byte cycle. Ignored for now. */ }
+                002..=256 => {
+                    let (pixel_column, pixel_row) = PixelIndex::try_from_tile_offsetted_clock(&self.clock).unwrap().to_column_row();
+                    match cycle % 8 {
+                        2 => {
+                            let (pattern_index, _, _, _) =
+                                self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                            self.next_pattern_index = pattern_index;
+                        }
+                        3 => {}
+                        4 => {
+                            let (_, palette_table_index, _, _) =
+                                self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                            self.attribute_register.set_pending_palette_table_index(palette_table_index);
+                        }
+                        5 => {}
+                        6 => {
+                            let (_, _, _, row_in_tile) =
+                                self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                            let low_byte = pattern_table.read_low_byte(self.next_pattern_index, row_in_tile);
+                            self.pattern_register.set_pending_low_byte(low_byte);
+                        }
+                        7 => {}
+                        0 => {
+                            let (_, _, _, row_in_tile) =
+                                self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                            let high_byte = pattern_table.read_high_byte(self.next_pattern_index, row_in_tile);
+                            self.pattern_register.set_pending_high_byte(high_byte);
+                        }
+                        1 => {
+                            self.attribute_register.prepare_next_palette_table_index();
+                            self.pattern_register.load_next_palette_indexes();
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                257..=257 => {
+                    self.attribute_register.prepare_next_palette_table_index();
+                    self.pattern_register.load_next_palette_indexes();
+                }
+                258..=320 => { /* Idle. */ }
+                321..=321 => { /* First NT byte cycle. Ignored for now. */ }
+                322..=336 => {
+                    let (pixel_column, pixel_row) = PixelIndex::try_from_tile_offsetted_clock(&self.clock).unwrap().to_column_row();
+                    match cycle % 8 {
+                        2 => {
+                            let (pattern_index, _, _, _) =
+                                self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                            self.next_pattern_index = pattern_index;
+                        }
+                        3 => {}
+                        4 => {
+                            let (_, palette_table_index, _, _) =
+                                self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                            self.attribute_register.set_pending_palette_table_index(palette_table_index);
+                        }
+                        5 => {}
+                        6 => {
+                            let (_, _, _, row_in_tile) =
+                                self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                            let low_byte = pattern_table.read_low_byte(self.next_pattern_index, row_in_tile);
+                            self.pattern_register.set_pending_low_byte(low_byte);
+                        }
+                        7 => {}
+                        0 => {
+                            let (_, _, _, row_in_tile) =
+                                self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                            let high_byte = pattern_table.read_high_byte(self.next_pattern_index, row_in_tile);
+                            self.pattern_register.set_pending_high_byte(high_byte);
+                        }
+                        1 => {
+                            self.attribute_register.prepare_next_palette_table_index();
+                            self.pattern_register.load_next_palette_indexes();
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                337..=337 => {
+                    self.attribute_register.prepare_next_palette_table_index();
+                    self.pattern_register.load_next_palette_indexes();
+                }
+                // FIXME: This needs to start at 337, but the shifter reload happens on 337 too.
+                338..=340 => { /* Unused NT byte fetches not implemented yet. */ }
+                341..=u16::MAX => unreachable!(),
+            }
+        }
+
         if let Some(pixel_index) = PixelIndex::try_from_clock(&self.clock) {
             let (pixel_column, pixel_row) = pixel_index.to_column_row();
             if mem.regs().background_enabled() {
@@ -98,16 +196,21 @@ impl Ppu {
                 frame.set_universal_background_rgb(
                     palette_table.universal_background_rgb(),
                 );
-                let (_, _, column_in_tile, _) =
-                    self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
 
-                self.current_background_pixel = self.current_render_params.pixel(&mem.palette_table(), column_in_tile);
+                let column_in_tile = self.next_address.x_scroll().fine();
+                let palette = palette_table.background_palette(self.attribute_register.current_palette_table_index(column_in_tile));
+                self.current_background_pixel = self.pattern_register.palette_index(column_in_tile)
+                    .map(|palette_index| Rgbt::Opaque(palette[palette_index]))
+                    .unwrap_or(Rgbt::Transparent);
 
                 frame.set_background_pixel(
                     pixel_column,
                     pixel_row,
                     self.current_background_pixel,
                 );
+
+                self.pattern_register.shift_left();
+                self.attribute_register.push_next_palette_table_index();
             }
 
             let cycle = self.clock.cycle();
@@ -118,46 +221,6 @@ impl Ppu {
             }
 
             self.maybe_set_sprite0_hit(mem, frame);
-        }
-
-        /*
-        // FIXME: Expand this to 257.
-        if (9..=249).contains(&self.clock.cycle()) && self.clock.cycle() % 8 == 1 {
-            self.current_render_params = std::mem::take(&mut self.next_render_params).build();
-        }
-        */
-
-        if let Some(pixel_index) = PixelIndex::try_from_tile_offsetted_clock(&self.clock) {
-            let (pixel_column, pixel_row) = pixel_index.to_column_row();
-            let background_table_side = mem.regs().background_table_side();
-            let pattern_table = mem.pattern_table(background_table_side);
-            match self.clock.cycle() % 8 {
-                2 => {
-                    let (pattern_index, _, _, _) =
-                        self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
-                    self.next_render_params_builder.pattern_index(pattern_index);
-                }
-                4 => {
-                    let (_, palette_table_index, _, _) =
-                        self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
-                    self.next_render_params_builder.palette_table_index(palette_table_index);
-                }
-                6 => {
-                    let (_, _, _, row_in_tile) =
-                        self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
-                    self.next_render_params_builder.low_pattern(&pattern_table, row_in_tile);
-                }
-                0 => {
-                    let (_, _, _, row_in_tile) =
-                        self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
-                    self.next_render_params_builder.high_pattern(&pattern_table, row_in_tile);
-
-                    // FIXME: This should be a cycle later.
-                    self.current_render_params = std::mem::take(&mut self.next_render_params);
-                    self.next_render_params = std::mem::take(&mut self.next_render_params_builder).build();
-                }
-                _ => { /* Only even cycles commit changes for two-cycle fetches. */ }
-            }
         }
 
         match (self.clock.scanline(), self.clock.cycle()) {
@@ -365,63 +428,127 @@ impl WriteToggle {
     }
 }
 
-#[derive(Default)]
-pub struct RenderParams {
-    palette_table_index: PaletteTableIndex,
-    low_pattern: u8,
-    high_pattern: u8,
+pub struct PatternRegister {
+    pending_low_byte: Option<u8>,
+    pending_high_byte: Option<u8>,
+    current_indexes: ShiftArray<Option<PaletteIndex>, 16>,
 }
 
-impl RenderParams {
-    #[rustfmt::skip]
-    pub fn pixel(&self, palette_table: &PaletteTable, column_in_tile: ColumnInTile) -> Rgbt {
-        let palette = palette_table.background_palette(self.palette_table_index);
-        let low_bit = get_bit(self.low_pattern, column_in_tile as usize);
-        let high_bit = get_bit(self.high_pattern, column_in_tile as usize);
-        match (low_bit, high_bit) {
-            (false, false) => Rgbt::Transparent,
-            (true , false) => Rgbt::Opaque(palette[PaletteIndex::One]),
-            (false, true ) => Rgbt::Opaque(palette[PaletteIndex::Two]),
-            (true , true ) => Rgbt::Opaque(palette[PaletteIndex::Three]),
+impl PatternRegister {
+    pub fn new() -> PatternRegister {
+        PatternRegister {
+            pending_low_byte: None,
+            pending_high_byte: None,
+            current_indexes: ShiftArray::new(),
         }
     }
-}
 
-#[derive(Default)]
-pub struct RenderParamsBuilder {
-    pattern_index: Option<PatternIndex>,
-    palette_table_index: Option<PaletteTableIndex>,
-    low_pattern: Option<u8>,
-    high_pattern: Option<u8>,
-}
-
-impl RenderParamsBuilder {
-    pub fn new() -> RenderParamsBuilder {
-        Default::default()
+    pub fn set_pending_low_byte(&mut self, low_byte: u8) {
+        assert_eq!(self.pending_low_byte, None);
+        self.pending_low_byte = Some(low_byte);
     }
 
-    pub fn pattern_index(&mut self, value: PatternIndex) {
-        self.pattern_index = Some(value);
+    pub fn set_pending_high_byte(&mut self, high_byte: u8) {
+        assert_eq!(self.pending_high_byte, None);
+        self.pending_high_byte = Some(high_byte);
     }
 
-    pub fn palette_table_index(&mut self, value: PaletteTableIndex) {
-        self.palette_table_index = Some(value);
-    }
+    pub fn load_next_palette_indexes(&mut self) {
+        let low_bits = unpack_bools(self.pending_low_byte.take().unwrap());
+        let high_bits = unpack_bools(self.pending_high_byte.take().unwrap());
+        for i in 0..8 {
+            let palette_index = match (low_bits[i], high_bits[i]) {
+                (false, false) => None,
+                (true , false) => Some(PaletteIndex::One),
+                (false, true ) => Some(PaletteIndex::Two),
+                (true , true ) => Some(PaletteIndex::Three),
+            };
 
-    pub fn low_pattern(&mut self, pattern_table: &PatternTable, row_in_tile: RowInTile) {
-        self.low_pattern = Some(pattern_table.read_low_byte(self.pattern_index.unwrap(), row_in_tile));
-    }
-
-    pub fn high_pattern(&mut self, pattern_table: &PatternTable, row_in_tile: RowInTile) {
-        self.high_pattern = Some(pattern_table.read_high_byte(self.pattern_index.unwrap(), row_in_tile));
-    }
-
-    pub fn build(self) -> RenderParams {
-        RenderParams {
-            palette_table_index: self.palette_table_index.unwrap(),
-            low_pattern: self.low_pattern.unwrap(),
-            high_pattern: self.high_pattern.unwrap(),
+            self.current_indexes[i + 8] = palette_index;
         }
+    }
+
+    pub fn shift_left(&mut self) {
+        self.current_indexes.shift_left();
+    }
+
+    pub fn palette_index(&self, column_in_tile: ColumnInTile) -> Option<PaletteIndex> {
+        self.current_indexes[column_in_tile]
+    }
+}
+
+pub struct AttributeRegister {
+    pending_index: Option<PaletteTableIndex>,
+    next_index: PaletteTableIndex,
+    current_indexes: ShiftArray<PaletteTableIndex, 8>,
+}
+
+impl AttributeRegister {
+    pub fn new() -> AttributeRegister {
+        AttributeRegister {
+            pending_index: None,
+            next_index: PaletteTableIndex::Zero,
+            current_indexes: ShiftArray::new(),
+        }
+    }
+
+    pub fn set_pending_palette_table_index(&mut self, index: PaletteTableIndex) {
+        self.pending_index = Some(index);
+    }
+
+    pub fn prepare_next_palette_table_index(&mut self) {
+        self.next_index = self.pending_index.take().unwrap();
+    }
+
+    pub fn push_next_palette_table_index(&mut self) {
+        self.current_indexes.push(self.next_index);
+    }
+
+    pub fn current_palette_table_index(&self, column_in_tile: ColumnInTile) -> PaletteTableIndex {
+        self.current_indexes[column_in_tile]
+    }
+}
+
+struct ShiftArray<T, const N: usize>(VecDeque<T>);
+
+impl <T: Copy + std::fmt::Debug + Default, const N: usize> ShiftArray<T, N> {
+    pub fn new() -> ShiftArray<T, N> {
+        ShiftArray(VecDeque::from_iter([Default::default(); N]))
+    }
+
+    pub fn shift_left(&mut self) {
+        self.0.pop_front();
+        self.0.push_back(Default::default());
+    }
+
+    pub fn push(&mut self, value: T) {
+        self.0.pop_front();
+        self.0.push_back(value);
+    }
+}
+
+impl <T, const N: usize> Index<ColumnInTile> for ShiftArray<T, N> {
+    type Output = T;
+
+    // Indexes greater than 7 are intentionally inaccessible.
+    fn index(&self, column_in_tile: ColumnInTile) -> &T {
+        &self.0[column_in_tile as usize]
+    }
+}
+
+impl <T, const N: usize> Index<usize> for ShiftArray<T, N> {
+    type Output = T;
+
+    // Indexes greater than 7 are intentionally inaccessible.
+    fn index(&self, index: usize) -> &T {
+        &self.0[index]
+    }
+}
+
+impl <T, const N: usize> IndexMut<usize> for ShiftArray<T, N> {
+    // Indexes greater than 7 are intentionally inaccessible.
+    fn index_mut(&mut self, index: usize) -> &mut T {
+        &mut self.0[index]
     }
 }
 
