@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::memory::ppu::ppu_address::{XScroll, YScroll};
 use crate::ppu::name_table::attribute_table::AttributeTable;
-use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
+use crate::ppu::name_table::background_tile_index::{BackgroundTileIndex, TileColumn, TileRow};
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
@@ -27,6 +27,10 @@ impl<'a> NameTable<'a> {
                 raw[ATTRIBUTE_START_INDEX..].try_into().unwrap(),
             ),
         }
+    }
+
+    pub fn attribute_table(&self) -> &AttributeTable<'a> {
+        &self.attribute_table
     }
 
     // For debug screen use only.
@@ -125,6 +129,11 @@ impl<'a> NameTable<'a> {
         )
     }
 
+    pub fn pattern_index(&self, tile_column: TileColumn, tile_row: TileRow) -> PatternIndex {
+        let index = BackgroundTileIndex::from_tile_column_row(tile_column, tile_row);
+        PatternIndex::new(self.tiles[index.to_usize()])
+    }
+
     #[inline]
     fn tile_entry_at(
         &self,
@@ -134,7 +143,7 @@ impl<'a> NameTable<'a> {
             PatternIndex::new(self.tiles[background_tile_index.to_usize()]);
         let palette_table_index = self
             .attribute_table
-            .palette_table_index(background_tile_index);
+            .palette_table_index(background_tile_index.tile_column(), background_tile_index.tile_row());
 
         (pattern_index, palette_table_index)
     }

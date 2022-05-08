@@ -511,7 +511,7 @@ impl AttributeRegister {
 
 struct ShiftArray<T, const N: usize>(VecDeque<T>);
 
-impl <T: Copy + std::fmt::Debug + Default, const N: usize> ShiftArray<T, N> {
+impl <T: Copy + Default, const N: usize> ShiftArray<T, N> {
     pub fn new() -> ShiftArray<T, N> {
         ShiftArray(VecDeque::from_iter([Default::default(); N]))
     }
