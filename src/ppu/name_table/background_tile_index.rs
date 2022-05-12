@@ -46,16 +46,27 @@ impl Iterator for BackgroundTileIndexIterator {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub struct TileColumn(u8);
 
 impl TileColumn {
     pub const ZERO: TileColumn = TileColumn(0);
-    const COLUMN_COUNT: usize = 32;
     const MAX: TileColumn = TileColumn(31);
+    const COLUMN_COUNT: usize = 32;
 
     pub fn iter() -> TileColumnIterator {
         TileColumnIterator(0)
+    }
+
+    pub fn increment(&mut self) -> bool {
+        let will_wrap = *self == TileColumn::MAX;
+        if will_wrap {
+            self.0 = 0;
+        } else {
+            self.0 += 1;
+        }
+
+        will_wrap
     }
 
     pub fn to_pixel_column(self, column_in_tile: ColumnInTile) -> PixelColumn {
@@ -67,6 +78,10 @@ impl TileColumn {
 
     pub fn to_u8(self) -> u8 {
         self.0
+    }
+
+    pub fn to_u16(self) -> u16 {
+        u16::from(self.0)
     }
 
     pub fn to_usize(self) -> usize {
@@ -103,16 +118,27 @@ impl Iterator for TileColumnIterator {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub struct TileRow(u8);
 
 impl TileRow {
     pub const ZERO: TileRow = TileRow(0);
     const ROW_COUNT: u8 = 32;
-    //const MAX: TileRow = TileRow(29);
+    const MAX: TileRow = TileRow(31);
 
     pub fn iter() -> TileRowIterator {
         TileRowIterator(0)
+    }
+
+    pub fn increment(&mut self) -> bool {
+        let will_wrap = *self == TileRow::MAX;
+        if will_wrap {
+            self.0 = 0;
+        } else {
+            self.0 += 1;
+        }
+
+        will_wrap
     }
 
     pub fn from_pixel_row(pixel_row: PixelRow) -> (TileRow, RowInTile) {
@@ -125,11 +151,15 @@ impl TileRow {
         self.0
     }
 
+    pub fn to_u16(self) -> u16 {
+        u16::from(self.0)
+    }
+
     pub fn to_usize(self) -> usize {
         usize::from(self.0)
     }
 
-    pub fn try_from_u8(tile_row: u8) -> Option<TileRow> {
+    pub const fn try_from_u8(tile_row: u8) -> Option<TileRow> {
         if tile_row < TileRow::ROW_COUNT {
             Some(TileRow(tile_row))
         } else {

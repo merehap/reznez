@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::ops::{Index, IndexMut};
 
-use crate::memory::memory::{PpuMemory, PALETTE_TABLE_START};
+use crate::memory::memory::PpuMemory;
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
@@ -46,8 +46,8 @@ impl Ppu {
 
             clock: Clock::new(),
 
-            current_address: PpuAddress::from_u16(0),
-            next_address: PpuAddress::from_u16(0),
+            current_address: PpuAddress::ZERO,
+            next_address: PpuAddress::ZERO,
 
             pending_data: 0,
 
@@ -264,7 +264,7 @@ impl Ppu {
             (Mask | Status | OamAddr, Write) => {}
 
             (Ctrl, Write) => {
-                self.next_address.set_name_table_quadrant(value);
+                self.next_address.set_name_table_quadrant(NameTableQuadrant::from_last_two_bits(value));
                 if !self.nmi_was_enabled_last_cycle {
                     // Attempt to trigger the second (or higher) NMI of this frame.
                     maybe_generate_nmi = true;
@@ -347,7 +347,7 @@ impl Ppu {
     }
 
     fn update_ppu_data(&self, mem: &mut PpuMemory) {
-        let is_palette_data = self.current_address >= PALETTE_TABLE_START;
+        let is_palette_data = self.current_address >= PpuAddress::PALETTE_TABLE_START;
         // When reading palette data only, read the current data pointed to
         // by self.current_address, not what was previously pointed to.
         let value = if is_palette_data {
@@ -366,23 +366,13 @@ impl Ppu {
     }
 
     fn update_pending_data_then_advance_current_address(&mut self, mem: &PpuMemory) {
-        let mut data_source = self.current_address;
-        if data_source >= PALETTE_TABLE_START {
-            // Even though palette ram isn't mirrored down, its data address is.
-            // https://forums.nesdev.org/viewtopic.php?t=18627
-            data_source.subtract(0x1000);
-        }
-
-        self.pending_data = mem.read(data_source);
-
-        let increment = mem.regs().current_address_increment() as u16;
-        self.current_address.advance(increment);
+        self.pending_data = mem.read(self.current_address.to_pending_data_source());
+        self.current_address.advance(mem.regs().current_address_increment());
     }
 
     fn write_then_advance_current_address(&mut self, mem: &mut PpuMemory, value: u8) {
         mem.write(self.current_address, value);
-        let increment = mem.regs().current_address_increment() as u16;
-        self.current_address.advance(increment);
+        self.current_address.advance(mem.regs().current_address_increment());
     }
 
     fn write_byte_to_next_address(&mut self, value: u8) {
@@ -566,7 +556,7 @@ mod tests {
     const CPU_PPU_ADDR: CpuAddress = CpuAddress::new(0x2006);
     const CPU_PPU_DATA: CpuAddress = CpuAddress::new(0x2007);
 
-    const PPU_ZERO: PpuAddress = PpuAddress::from_u16(0x0000);
+    const PPU_ZERO: PpuAddress = PpuAddress::ZERO;
 
     #[test]
     fn basic() {

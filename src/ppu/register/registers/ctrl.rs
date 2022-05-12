@@ -87,8 +87,8 @@ pub enum SpriteHeight {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum AddressIncrement {
-    Right = 1,
-    Down = 32,
+    Right,
+    Down,
 }
 
 #[cfg(test)]

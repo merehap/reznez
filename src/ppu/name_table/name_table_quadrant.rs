@@ -2,7 +2,7 @@ use num_derive::FromPrimitive;
 
 use crate::util::bit_util::get_bit;
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug, FromPrimitive)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive)]
 pub enum NameTableQuadrant {
     TopLeft,
     TopRight,
@@ -39,5 +39,18 @@ impl NameTableQuadrant {
             BottomLeft  => TopLeft,
             BottomRight => TopRight,
         }
+    }
+
+    pub fn increment(&mut self) -> bool {
+        use NameTableQuadrant::*;
+        let (result, wrap) = match self {
+            TopLeft     => (TopRight, false),
+            TopRight    => (BottomLeft, false),
+            BottomLeft  => (BottomRight, false),
+            BottomRight => (TopLeft, true),
+        };
+
+        *self = result;
+        wrap
     }
 }

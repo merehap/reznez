@@ -7,43 +7,94 @@ use num_traits::FromPrimitive;
 use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
+use crate::ppu::register::registers::ctrl::AddressIncrement;
 
-const HIGH_BYTE_MASK: u16 = 0b0111_1111_0000_0000;
-const LOW_BYTE_MASK: u16 = 0b0000_0000_1111_1111;
-
-const FINE_Y_MASK: u16 = 0b0111_0000_0000_0000;
-const VERTICAL_NAME_TABLE_MASK: u16 = 0b0000_1000_0000_0000;
+const VERTICAL_NAME_TABLE_MASK: u16   = 0b0000_1000_0000_0000;
 const HORIZONTAL_NAME_TABLE_MASK: u16 = 0b0000_0100_0000_0000;
-const COARSE_Y_MASK: u16 = 0b0000_0011_1110_0000;
-const COARSE_X_MASK: u16 = 0b0000_0000_0001_1111;
+const COARSE_Y_MASK: u16              = 0b0000_0011_1110_0000;
+const COARSE_X_MASK: u16              = 0b0000_0000_0001_1111;
 
-const Y_MASK: u16 = FINE_Y_MASK | COARSE_Y_MASK;
 const NAME_TABLE_MASK: u16 = VERTICAL_NAME_TABLE_MASK | HORIZONTAL_NAME_TABLE_MASK;
+const FINE_Y_ZERO_TOP_BIT_MASK: u16   = 0b0011_0000_0000_0000;
 
-const FINE_X_MASK: u8 = 0b0000_0111;
-
+/*
+ * 0 123 45 6789A BCDEF
+ * . yyy NN YYYYY XXXXX
+ * | ||| || ||||| +++++-- Coarse X Scroll
+ * | ||| || +++++-------- Coarse Y Scroll
+ * | ||| ++-------------- Nametable Select
+ * | +++----------------- Fine Y Scroll
+ * +--------------------- Unused
+ */
 #[derive(Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub struct PpuAddress {
-    address: u16,
+    fine_y_scroll: RowInTile,
+    name_table_quadrant: NameTableQuadrant,
+    coarse_y_scroll: TileRow,
+    coarse_x_scroll: TileColumn,
+
     fine_x_scroll: ColumnInTile,
 }
 
 impl PpuAddress {
-    pub const fn from_u16(value: u16) -> PpuAddress {
+    pub const ZERO: PpuAddress = PpuAddress {
+        fine_y_scroll: RowInTile::Zero,
+        name_table_quadrant: NameTableQuadrant::TopLeft,
+        coarse_y_scroll: TileRow::ZERO,
+        coarse_x_scroll: TileColumn::ZERO,
+        fine_x_scroll: ColumnInTile::Zero,
+    };
+    pub const PALETTE_TABLE_START: PpuAddress = PpuAddress {
+        fine_y_scroll: RowInTile::Three,
+        name_table_quadrant: NameTableQuadrant::BottomRight,
+        coarse_y_scroll: TileRow::try_from_u8(7).unwrap(),
+        coarse_x_scroll: TileColumn::ZERO,
+        fine_x_scroll: ColumnInTile::Zero,
+    };
+
+    pub fn from_u16(value: u16) -> PpuAddress {
         PpuAddress {
-            address: value & 0x3FFF,
+            fine_y_scroll: RowInTile::from_u8(((value & FINE_Y_ZERO_TOP_BIT_MASK) >> 12) as u8).unwrap(),
+            name_table_quadrant: FromPrimitive::from_u16((value & NAME_TABLE_MASK) >> 10).unwrap(),
+            coarse_y_scroll: TileRow::try_from_u8(((value & COARSE_Y_MASK) >> 5) as u8).unwrap(),
+            coarse_x_scroll: TileColumn::try_from_u8((value & COARSE_X_MASK) as u8).unwrap(),
+
             fine_x_scroll: ColumnInTile::Zero,
         }
     }
 
-    pub fn advance(&mut self, offset: u16) {
-        self.address = self.address.wrapping_add(offset) & 0x3FFF;
+    pub fn advance(&mut self, address_increment: AddressIncrement) {
+        if address_increment == AddressIncrement::Right {
+            let wrapped = self.coarse_x_scroll.increment();
+            if !wrapped {
+                return;
+            }
+        }
+
+        let wrapped = self.coarse_y_scroll.increment();
+        if wrapped {
+            let wrapped = self.name_table_quadrant.increment();
+            if wrapped {
+                self.fine_y_scroll.increment_low_bits();
+            }
+        }
     }
 
-    pub fn subtract(&mut self, offset: u16) {
-        self.address = self.address.wrapping_sub(offset) & 0x3FFF;
+    pub fn to_pending_data_source(self) -> PpuAddress {
+        let mut data_source = self;
+        // Even though palette ram isn't mirrored down, its data address is.
+        // https://forums.nesdev.org/viewtopic.php?t=18627
+        if (self.fine_y_scroll as u8) >= 3 &&
+                self.name_table_quadrant == NameTableQuadrant::BottomRight &&
+                self.coarse_y_scroll.to_u8() >= 0b0001_1000 {
+
+            data_source.fine_y_scroll = data_source.fine_y_scroll.decrement()
+        }
+
+        data_source
     }
 
+    /*
     pub fn increment_coarse_x_scroll(&mut self) {
         if self.address & COARSE_X_MASK == COARSE_X_MASK {
             self.address ^= HORIZONTAL_NAME_TABLE_MASK;
@@ -52,9 +103,10 @@ impl PpuAddress {
             self.address += 1;
         }
     }
+    */
 
     pub fn name_table_quadrant(self) -> NameTableQuadrant {
-        NameTableQuadrant::from_last_two_bits((self.address >> 10) as u8)
+        self.name_table_quadrant
     }
 
     /*
@@ -63,9 +115,8 @@ impl PpuAddress {
      * ----67----------  $CTRL
      */
     pub fn x_scroll(self) -> XScroll {
-        let coarse = (self.address & COARSE_X_MASK) as u8;
         XScroll {
-            coarse: TileColumn::try_from_u8(coarse).unwrap(),
+            coarse: self.coarse_x_scroll,
             fine: self.fine_x_scroll,
         }
     }
@@ -76,44 +127,51 @@ impl PpuAddress {
      *  ---67----------  $CTRL
      */
     pub fn y_scroll(self) -> YScroll {
-        let coarse = ((self.address & COARSE_Y_MASK) >> 5) as u8;
-        let fine = ((self.address & FINE_Y_MASK) >> 12) as u8;
         YScroll {
-            coarse: TileRow::try_from_u8(coarse).unwrap(),
-            fine: RowInTile::from_u8(fine).unwrap(),
+            coarse: self.coarse_y_scroll,
+            fine: self.fine_y_scroll,
         }
     }
 
-    pub fn set_name_table_quadrant(&mut self, value: u8) {
-        self.address &= !NAME_TABLE_MASK;
-        self.address |= (u16::from(value) & 0b0000_0011) << 10;
+    pub fn set_name_table_quadrant(&mut self, quadrant: NameTableQuadrant) {
+        self.name_table_quadrant = quadrant;
     }
 
     pub fn set_x_scroll(&mut self, value: u8) {
-        self.fine_x_scroll = ColumnInTile::from_u8(value & FINE_X_MASK).unwrap();
-
-        self.address &= !COARSE_X_MASK;
-        self.address |= u16::from(value) >> 3;
+        let value = XScroll::from_u8(value);
+        self.coarse_x_scroll = value.coarse();
+        self.fine_x_scroll = value.fine();
     }
 
     pub fn set_y_scroll(&mut self, value: u8) {
-        self.address &= !Y_MASK;
-        self.address |= (u16::from(value) & 0b1111_1000) << 2;
-        self.address |= (u16::from(value) & 0b0000_0111) << 12;
+        let value = YScroll::from_u8(value);
+        self.coarse_y_scroll = value.coarse();
+        self.fine_y_scroll = value.fine();
     }
 
     pub fn set_high_byte(&mut self, value: u8) {
-        self.address &= !HIGH_BYTE_MASK;
-        self.address |= (u16::from(value) & 0b0011_1111) << 8;
+        self.fine_y_scroll = RowInTile::from_u8((value & 0b0011_0000) >> 4).unwrap();
+        self.name_table_quadrant = FromPrimitive::from_u8((value & 0b0000_1100) >> 2).unwrap();
+        self.coarse_y_scroll = TileRow::try_from_u8(((self.coarse_y_scroll.to_u8()) & !0b1_1000) | ((value & 0b11) << 3)).unwrap();
     }
 
     pub fn set_low_byte(&mut self, value: u8) {
-        self.address &= !LOW_BYTE_MASK;
-        self.address |= u16::from(value);
+        self.coarse_y_scroll = TileRow::try_from_u8(((self.coarse_y_scroll.to_u8()) & !0b111) | ((value & 0b1110_0000) >> 5)).unwrap();
+        self.coarse_x_scroll = TileColumn::try_from_u8(value & 0b0001_1111).unwrap();
     }
 
     pub fn to_u16(self) -> u16 {
-        self.address & 0x3FFF
+        // Chop off the top bit of fine y to leave a 14-bit representation.
+        self.to_scroll_u16() & 0b0011_1111_1111_1111
+    }
+
+    fn to_scroll_u16(self) -> u16 {
+        // Chop off the top bit of fine y to leave a 14-bit representation.
+        let fine_y = ((self.fine_y_scroll as u16) & 0b111) << 12;
+        let quadrant = (self.name_table_quadrant as u16) << 10;
+        let coarse_y = (self.coarse_y_scroll.to_u16()) << 5;
+        let coarse_x = self.coarse_x_scroll.to_u16();
+        fine_y | quadrant | coarse_y | coarse_x
     }
 
     pub fn to_usize(self) -> usize {
@@ -129,7 +187,7 @@ impl PartialEq for PpuAddress {
 
 impl fmt::Display for PpuAddress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "${:04X}", self.address)
+        write!(f, "${:04X}", self.to_u16())
     }
 }
 
@@ -142,6 +200,13 @@ pub struct XScroll {
 impl XScroll {
     pub const ZERO: XScroll =
         XScroll { coarse: TileColumn::ZERO, fine: ColumnInTile::Zero };
+
+    fn from_u8(value: u8) -> XScroll {
+        XScroll {
+            coarse: TileColumn::try_from_u8(value >> 3).unwrap(),
+            fine: ColumnInTile::from_u8(value & 0b111).unwrap(),
+        }
+    }
 
     pub fn coarse(self) -> TileColumn {
         self.coarse
@@ -213,9 +278,6 @@ impl YScroll {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
-struct FineXScroll(u8);
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -223,8 +285,10 @@ mod tests {
     #[test]
     fn reduce_bit_1_from_high_byte() {
         let mut address = PpuAddress::from_u16(0);
+        println!("Zero: {:016b}", address.to_u16());
         address.set_high_byte(0b1111_1111);
-        assert_eq!(address.address, 0b0011_1111_0000_0000);
+        println!("After: {:016b}", address.to_u16());
+        assert_eq!(address.to_scroll_u16(), 0b0011_1111_0000_0000);
         assert_eq!(address.to_u16(), 0b0011_1111_0000_0000);
     }
 
@@ -232,15 +296,15 @@ mod tests {
     fn reduce_bit_1_from_y_scroll() {
         let mut address = PpuAddress::from_u16(0);
         address.set_y_scroll(0b1111_1111);
-        assert_eq!(address.address, 0b0111_0011_1110_0000);
+        assert_eq!(address.to_scroll_u16(), 0b0111_0011_1110_0000);
         assert_eq!(address.to_u16(), 0b0011_0011_1110_0000);
     }
 
     #[test]
     fn wrap_advance() {
         let mut address = PpuAddress::from_u16(0x3FFF);
-        address.advance(1);
-        assert_eq!(address.address, 0x0000);
+        address.advance(AddressIncrement::Right);
+        assert_eq!(address.to_scroll_u16(), 0x0000);
         assert_eq!(address.to_u16(), 0x0000);
     }
 
