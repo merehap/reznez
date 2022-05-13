@@ -452,12 +452,10 @@ impl PatternRegister {
     }
 
     pub fn set_pending_low_byte(&mut self, low_byte: u8) {
-        assert_eq!(self.pending_low_byte, None);
         self.pending_low_byte = Some(low_byte);
     }
 
     pub fn set_pending_high_byte(&mut self, high_byte: u8) {
-        assert_eq!(self.pending_high_byte, None);
         self.pending_high_byte = Some(high_byte);
     }
 
