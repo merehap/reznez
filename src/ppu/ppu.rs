@@ -437,31 +437,31 @@ impl WriteToggle {
 }
 
 pub struct PatternRegister {
-    pending_low_byte: Option<u8>,
-    pending_high_byte: Option<u8>,
+    pending_low_byte: u8,
+    pending_high_byte: u8,
     current_indexes: ShiftArray<Option<PaletteIndex>, 16>,
 }
 
 impl PatternRegister {
     pub fn new() -> PatternRegister {
         PatternRegister {
-            pending_low_byte: None,
-            pending_high_byte: None,
+            pending_low_byte: 0,
+            pending_high_byte: 0,
             current_indexes: ShiftArray::new(),
         }
     }
 
     pub fn set_pending_low_byte(&mut self, low_byte: u8) {
-        self.pending_low_byte = Some(low_byte);
+        self.pending_low_byte = low_byte;
     }
 
     pub fn set_pending_high_byte(&mut self, high_byte: u8) {
-        self.pending_high_byte = Some(high_byte);
+        self.pending_high_byte = high_byte;
     }
 
     pub fn load_next_palette_indexes(&mut self) {
-        let low_bits = unpack_bools(self.pending_low_byte.take().unwrap());
-        let high_bits = unpack_bools(self.pending_high_byte.take().unwrap());
+        let low_bits = unpack_bools(self.pending_low_byte);
+        let high_bits = unpack_bools(self.pending_high_byte);
         for i in 0..8 {
             let palette_index = match (low_bits[i], high_bits[i]) {
                 (false, false) => None,
@@ -484,7 +484,7 @@ impl PatternRegister {
 }
 
 pub struct AttributeRegister {
-    pending_index: Option<PaletteTableIndex>,
+    pending_index: PaletteTableIndex,
     next_index: PaletteTableIndex,
     current_indexes: ShiftArray<PaletteTableIndex, 8>,
 }
@@ -492,18 +492,18 @@ pub struct AttributeRegister {
 impl AttributeRegister {
     pub fn new() -> AttributeRegister {
         AttributeRegister {
-            pending_index: None,
+            pending_index: PaletteTableIndex::Zero,
             next_index: PaletteTableIndex::Zero,
             current_indexes: ShiftArray::new(),
         }
     }
 
     pub fn set_pending_palette_table_index(&mut self, index: PaletteTableIndex) {
-        self.pending_index = Some(index);
+        self.pending_index = index;
     }
 
     pub fn prepare_next_palette_table_index(&mut self) {
-        self.next_index = self.pending_index.take().unwrap();
+        self.next_index = self.pending_index;
     }
 
     pub fn push_next_palette_table_index(&mut self) {
