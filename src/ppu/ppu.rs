@@ -10,7 +10,7 @@ use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table::PatternIndex;
-use crate::ppu::pixel_index::{PixelIndex, ColumnInTile, PixelColumn, PixelRow, RowInTile};
+use crate::ppu::pixel_index::{PixelIndex, ColumnInTile, PixelColumn, PixelRow};
 use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ppu_data::PpuData;
@@ -85,6 +85,9 @@ impl Ppu {
     }
 
     pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) -> StepResult {
+        let scanline = self.clock.scanline();
+        let cycle = self.clock.cycle();
+
         if self.clock.cycle() == 1 {
             mem.regs_mut().maybe_decay_latch();
         }
@@ -97,39 +100,43 @@ impl Ppu {
 
         let background_table_side = mem.regs().background_table_side();
         let pattern_table = mem.pattern_table(background_table_side);
-        let scanline = self.clock.scanline();
-        let cycle = self.clock.cycle();
-        if (0..=239).contains(&scanline) || scanline == 261 {
+        if mem.regs().background_enabled() && ((0..=239).contains(&scanline) || scanline == 261) {
+            if scanline == 261 && cycle == 320 {
+                self.current_address = self.next_address;
+            }
+
             match cycle {
                 000..=000 => { /* Idle. */ }
-                001..=001 => { /* First NT byte cycle. Ignored for now. */ }
+                001..=001 => {/* First NT fetch cycle. Ignored for now. */ }
                 002..=256 => {
-                    let (pixel_column, pixel_row) = PixelIndex::try_from_tile_offsetted_clock(&self.clock).unwrap().to_column_row();
+                    let tile_column = self.current_address.x_scroll().coarse();
+                    let tile_row = self.current_address.y_scroll().coarse();
+                    let name_table = mem.name_table(self.current_address.name_table_quadrant());
                     match cycle % 8 {
                         2 => {
-                            let (pattern_index, _, _, _) =
-                                self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
-                            self.next_pattern_index = pattern_index;
+                            self.next_pattern_index = name_table.pattern_index(tile_column, tile_row);
                         }
                         3 => {}
                         4 => {
-                            let (_, palette_table_index, _, _) =
-                                self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                            let palette_table_index = name_table.attribute_table().palette_table_index(tile_column, tile_row);
                             self.attribute_register.set_pending_palette_table_index(palette_table_index);
                         }
                         5 => {}
                         6 => {
-                            let (_, _, _, row_in_tile) =
-                                self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                            let row_in_tile = self.current_address.y_scroll().fine();
                             let low_byte = pattern_table.read_low_byte(self.next_pattern_index, row_in_tile);
                             self.pattern_register.set_pending_low_byte(low_byte);
                         }
                         7 => {}
                         0 => {
-                            let (_, _, _, row_in_tile) =
-                                self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                            let row_in_tile = self.current_address.y_scroll().fine();
                             let high_byte = pattern_table.read_high_byte(self.next_pattern_index, row_in_tile);
                             self.pattern_register.set_pending_high_byte(high_byte);
+                            if cycle == 256 {
+                                self.current_address.increment_fine_y_scroll();
+                            } else {
+                                self.current_address.increment_coarse_x_scroll();
+                            }
                         }
                         1 => {
                             self.attribute_register.prepare_next_palette_table_index();
@@ -141,36 +148,41 @@ impl Ppu {
                 257..=257 => {
                     self.attribute_register.prepare_next_palette_table_index();
                     self.pattern_register.load_next_palette_indexes();
+                    self.current_address.copy_coarse_x_scroll(self.next_address);
+                    self.current_address.copy_horizontal_name_table_side(self.next_address);
                 }
                 258..=320 => { /* Idle. */ }
-                321..=321 => { /* First NT byte cycle. Ignored for now. */ }
+                321..=321 => {
+                    /* First NT byte cycle. Ignored for now. */
+                    // Hack to reset base name table
+                    //self.current_address.copy_name_table_quadrant(self.next_address);
+                }
                 322..=336 => {
-                    let (pixel_column, pixel_row) = PixelIndex::try_from_tile_offsetted_clock(&self.clock).unwrap().to_column_row();
+                    //let (pixel_column, pixel_row) = PixelIndex::try_from_tile_offsetted_clock(&self.clock).unwrap().to_column_row();
+                    let tile_column = self.current_address.x_scroll().coarse();
+                    let tile_row = self.current_address.y_scroll().coarse();
+                    let name_table = mem.name_table(self.current_address.name_table_quadrant());
                     match cycle % 8 {
                         2 => {
-                            let (pattern_index, _, _, _) =
-                                self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
-                            self.next_pattern_index = pattern_index;
+                            self.next_pattern_index = name_table.pattern_index(tile_column, tile_row);
                         }
                         3 => {}
                         4 => {
-                            let (_, palette_table_index, _, _) =
-                                self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                            let palette_table_index = name_table.attribute_table().palette_table_index(tile_column, tile_row);
                             self.attribute_register.set_pending_palette_table_index(palette_table_index);
                         }
                         5 => {}
                         6 => {
-                            let (_, _, _, row_in_tile) =
-                                self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                            let row_in_tile = self.current_address.y_scroll().fine();
                             let low_byte = pattern_table.read_low_byte(self.next_pattern_index, row_in_tile);
                             self.pattern_register.set_pending_low_byte(low_byte);
                         }
                         7 => {}
                         0 => {
-                            let (_, _, _, row_in_tile) =
-                                self.tile_entry_for_pixel(pixel_column, pixel_row, mem);
+                            let row_in_tile = self.current_address.y_scroll().fine();
                             let high_byte = pattern_table.read_high_byte(self.next_pattern_index, row_in_tile);
                             self.pattern_register.set_pending_high_byte(high_byte);
+                            self.current_address.increment_coarse_x_scroll();
                         }
                         1 => {
                             self.attribute_register.prepare_next_palette_table_index();
@@ -186,6 +198,10 @@ impl Ppu {
                 // FIXME: This needs to start at 337, but the shifter reload happens on 337 too.
                 338..=340 => { /* Unused NT byte fetches not implemented yet. */ }
                 341..=u16::MAX => unreachable!(),
+            }
+
+            if scanline == 261 && cycle >= 280 && cycle <= 304 {
+                self.current_address.copy_y_scroll(self.next_address);
             }
         }
 
@@ -297,6 +313,7 @@ impl Ppu {
         maybe_generate_nmi
     }
 
+    /*
     fn tile_entry_for_pixel(
         &self,
         pixel_column: PixelColumn,
@@ -325,6 +342,7 @@ impl Ppu {
             y_scroll,
         )
     }
+    */
 
     // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
     fn maybe_set_sprite0_hit(&self, mem: &mut PpuMemory, frame: &mut Frame) {

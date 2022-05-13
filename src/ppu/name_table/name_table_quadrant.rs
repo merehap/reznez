@@ -53,4 +53,16 @@ impl NameTableQuadrant {
         *self = result;
         wrap
     }
+
+    pub fn copy_horizontal_side_from(&mut self, other: NameTableQuadrant) {
+        let different_sides = self.is_on_left() != other.is_on_left();
+        if different_sides {
+            *self = self.next_horizontal();
+        }
+    }
+
+    fn is_on_left(self) -> bool {
+        use NameTableQuadrant::*;
+        self == TopLeft || self == BottomLeft
+    }
 }

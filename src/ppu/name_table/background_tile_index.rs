@@ -125,6 +125,7 @@ impl TileRow {
     pub const ZERO: TileRow = TileRow(0);
     const ROW_COUNT: u8 = 32;
     const MAX: TileRow = TileRow(31);
+    const MAX_VISIBLE: TileRow = TileRow(29);
 
     pub fn iter() -> TileRowIterator {
         TileRowIterator(0)
@@ -139,6 +140,16 @@ impl TileRow {
         }
 
         will_wrap
+    }
+
+    pub fn increment_visible(&mut self) -> bool {
+        // Increment normally except if we're on the last visible tile.
+        if *self == TileRow::MAX_VISIBLE {
+            self.0 = 0;
+            true
+        } else {
+            self.increment()
+        }
     }
 
     pub fn from_pixel_row(pixel_row: PixelRow) -> (TileRow, RowInTile) {

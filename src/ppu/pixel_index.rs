@@ -23,26 +23,6 @@ impl PixelIndex {
         PixelIndex::try_from_scanline_cycle(clock.scanline(), clock.cycle())
     }
 
-    #[rustfmt::skip]
-    pub fn try_from_tile_offsetted_clock(clock: &Clock) -> Option<PixelIndex> {
-        let (future_scanline, mut future_cycle) = match clock.cycle() {
-            // Offset by two tile fetch sequences.
-            (001..=256) => (clock.scanline()    , clock.cycle() +  16),
-            // Wrap around to the next scanline.
-            (321..=336) if clock.scanline() == 261 => (0, clock.cycle() - 320),
-            (321..=336) => (clock.scanline() + 1, clock.cycle() - 320),
-            // FIXME: Need to do dummy name table fetches.
-            (337..=340) => return None,
-            // Not a tile fetch cycle.
-            _ => return None,
-        };
-        // FIXME: The modulus here is a hack for the unused tiles.
-        if future_cycle >= 256 {
-            future_cycle = 1;
-        }
-        PixelIndex::try_from_scanline_cycle(future_scanline % 240, future_cycle)
-    }
-
     pub fn to_column_row(self) -> (PixelColumn, PixelRow) {
         (self.column, self.row)
     }
@@ -250,6 +230,17 @@ impl RowInTile {
         }
 
         *self = RowInTile::from_u8(result).unwrap();
+    }
+
+    pub fn increment(&mut self) -> bool {
+        let will_wrap = *self == RowInTile::Seven;
+        if will_wrap {
+            *self = RowInTile::Zero;
+        } else {
+            *self = FromPrimitive::from_u8(*self as u8 + 1).unwrap();
+        }
+
+        will_wrap
     }
 
     pub fn decrement(self) -> RowInTile {

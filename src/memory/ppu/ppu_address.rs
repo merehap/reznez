@@ -80,6 +80,23 @@ impl PpuAddress {
         }
     }
 
+    pub fn increment_coarse_x_scroll(&mut self) {
+        let wrapped = self.coarse_x_scroll.increment();
+        if wrapped {
+            self.name_table_quadrant = self.name_table_quadrant.next_horizontal();
+        }
+    }
+
+    pub fn increment_fine_y_scroll(&mut self) {
+        let wrapped = self.fine_y_scroll.increment();
+        if wrapped {
+            let wrapped = self.coarse_y_scroll.increment_visible();
+            if wrapped {
+                self.name_table_quadrant = self.name_table_quadrant.next_vertical();
+            }
+        }
+    }
+
     pub fn to_pending_data_source(self) -> PpuAddress {
         let mut data_source = self;
         // Even though palette ram isn't mirrored down, its data address is.
@@ -93,17 +110,6 @@ impl PpuAddress {
 
         data_source
     }
-
-    /*
-    pub fn increment_coarse_x_scroll(&mut self) {
-        if self.address & COARSE_X_MASK == COARSE_X_MASK {
-            self.address ^= HORIZONTAL_NAME_TABLE_MASK;
-            self.address &= !COARSE_X_MASK;
-        } else {
-            self.address += 1;
-        }
-    }
-    */
 
     pub fn name_table_quadrant(self) -> NameTableQuadrant {
         self.name_table_quadrant
@@ -149,6 +155,22 @@ impl PpuAddress {
         self.fine_y_scroll = value.fine();
     }
 
+    pub fn copy_coarse_x_scroll(&mut self, other: PpuAddress) {
+        self.coarse_x_scroll = other.coarse_x_scroll;
+    }
+
+    pub fn copy_y_scroll(&mut self, other: PpuAddress) {
+        self.set_y_scroll(other.y_scroll().to_u8());
+    }
+
+    pub fn copy_name_table_quadrant(&mut self, other: PpuAddress) {
+        self.name_table_quadrant = other.name_table_quadrant;
+    }
+
+    pub fn copy_horizontal_name_table_side(&mut self, other: PpuAddress) {
+        self.name_table_quadrant.copy_horizontal_side_from(other.name_table_quadrant);
+    }
+
     pub fn set_high_byte(&mut self, value: u8) {
         self.fine_y_scroll = RowInTile::from_u8((value & 0b0011_0000) >> 4).unwrap();
         self.name_table_quadrant = FromPrimitive::from_u8((value & 0b0000_1100) >> 2).unwrap();
@@ -165,6 +187,10 @@ impl PpuAddress {
         self.to_scroll_u16() & 0b0011_1111_1111_1111
     }
 
+    pub fn to_usize(self) -> usize {
+        usize::from(self.to_u16())
+    }
+
     fn to_scroll_u16(self) -> u16 {
         // Chop off the top bit of fine y to leave a 14-bit representation.
         let fine_y = ((self.fine_y_scroll as u16) & 0b111) << 12;
@@ -172,10 +198,6 @@ impl PpuAddress {
         let coarse_y = (self.coarse_y_scroll.to_u16()) << 5;
         let coarse_x = self.coarse_x_scroll.to_u16();
         fine_y | quadrant | coarse_y | coarse_x
-    }
-
-    pub fn to_usize(self) -> usize {
-        usize::from(self.to_u16())
     }
 }
 
