@@ -107,15 +107,13 @@ impl Ppu {
 
             match cycle {
                 000..=000 => { /* Idle. */ }
-                001..=001 => {/* First NT fetch cycle. Ignored for now. */ }
+                001..=001 => { /* First NT fetch cycle. Ignored for now. */ }
                 002..=256 => {
                     let tile_column = self.current_address.x_scroll().coarse();
                     let tile_row = self.current_address.y_scroll().coarse();
                     let name_table = mem.name_table(self.current_address.name_table_quadrant());
                     match cycle % 8 {
-                        2 => {
-                            self.next_pattern_index = name_table.pattern_index(tile_column, tile_row);
-                        }
+                        2 => self.next_pattern_index = name_table.pattern_index(tile_column, tile_row),
                         3 => {}
                         4 => {
                             let palette_table_index = name_table.attribute_table().palette_table_index(tile_column, tile_row);
@@ -152,20 +150,13 @@ impl Ppu {
                     self.current_address.copy_horizontal_name_table_side(self.next_address);
                 }
                 258..=320 => { /* Idle. */ }
-                321..=321 => {
-                    /* First NT byte cycle. Ignored for now. */
-                    // Hack to reset base name table
-                    //self.current_address.copy_name_table_quadrant(self.next_address);
-                }
+                321..=321 => { /* First NT byte cycle. Ignored for now. */ }
                 322..=336 => {
-                    //let (pixel_column, pixel_row) = PixelIndex::try_from_tile_offsetted_clock(&self.clock).unwrap().to_column_row();
                     let tile_column = self.current_address.x_scroll().coarse();
                     let tile_row = self.current_address.y_scroll().coarse();
                     let name_table = mem.name_table(self.current_address.name_table_quadrant());
                     match cycle % 8 {
-                        2 => {
-                            self.next_pattern_index = name_table.pattern_index(tile_column, tile_row);
-                        }
+                        2 => self.next_pattern_index = name_table.pattern_index(tile_column, tile_row),
                         3 => {}
                         4 => {
                             let palette_table_index = name_table.attribute_table().palette_table_index(tile_column, tile_row);
@@ -190,6 +181,9 @@ impl Ppu {
                         }
                         _ => unreachable!(),
                     }
+
+                    self.pattern_register.shift_left();
+                    self.attribute_register.push_next_palette_table_index();
                 }
                 337..=337 => {
                     self.attribute_register.prepare_next_palette_table_index();
@@ -213,6 +207,7 @@ impl Ppu {
                     palette_table.universal_background_rgb(),
                 );
 
+                // TODO: Switch over to current_address (kinda arbitrary, but consistency...)
                 let column_in_tile = self.next_address.x_scroll().fine();
                 let palette = palette_table.background_palette(self.attribute_register.current_palette_table_index(column_in_tile));
                 self.current_background_pixel = self.pattern_register.palette_index(column_in_tile)
@@ -312,37 +307,6 @@ impl Ppu {
 
         maybe_generate_nmi
     }
-
-    /*
-    fn tile_entry_for_pixel(
-        &self,
-        pixel_column: PixelColumn,
-        pixel_row: PixelRow,
-        mem: &PpuMemory,
-    ) -> (PatternIndex, PaletteTableIndex, ColumnInTile, RowInTile) {
-        let mut name_table_quadrant = self.next_address.name_table_quadrant();
-
-        let x_scroll = self.next_address.x_scroll();
-        let x_divider = 255 - x_scroll.to_u8();
-        if pixel_column.to_u8() > x_divider {
-            name_table_quadrant = name_table_quadrant.next_horizontal();
-        }
-
-        let mut y_scroll = self.next_address.y_scroll();
-        let y_divider = 239 - (y_scroll.to_u8() % 240);
-        if pixel_row.to_u8() > y_divider {
-            name_table_quadrant = name_table_quadrant.next_vertical();
-            y_scroll = y_scroll.shift_down();
-        }
-
-        mem.name_table(name_table_quadrant).tile_entry_for_pixel(
-            pixel_column,
-            pixel_row,
-            x_scroll,
-            y_scroll,
-        )
-    }
-    */
 
     // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
     fn maybe_set_sprite0_hit(&self, mem: &mut PpuMemory, frame: &mut Frame) {
