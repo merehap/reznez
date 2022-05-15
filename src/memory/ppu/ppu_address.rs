@@ -99,13 +99,8 @@ impl PpuAddress {
 
     pub fn to_pending_data_source(self) -> PpuAddress {
         let mut data_source = self;
-        // Even though palette ram isn't mirrored down, its data address is.
-        // https://forums.nesdev.org/viewtopic.php?t=18627
-        if (self.fine_y_scroll as u8) >= 3 &&
-                self.name_table_quadrant == NameTableQuadrant::BottomRight &&
-                self.coarse_y_scroll.to_u8() >= 0b0001_1000 {
-
-            data_source.fine_y_scroll = data_source.fine_y_scroll.decrement()
+        if data_source.to_u16() >= 0x3000 {
+            data_source = PpuAddress::from_u16(data_source.to_u16() - 0x1000);
         }
 
         data_source
