@@ -299,6 +299,13 @@ mod tests {
     use super::*;
 
     #[test]
+    fn from_and_to_u16() {
+        for address in 0x0000..=0xFFFF {
+            assert_eq!(address & 0x3FFF, PpuAddress::from_u16(address).to_u16());
+        }
+    }
+
+    #[test]
     fn reduce_bit_1_from_high_byte() {
         let mut address = PpuAddress::from_u16(0);
         println!("Zero: {:016b}", address.to_u16());

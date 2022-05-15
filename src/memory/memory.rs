@@ -191,6 +191,44 @@ impl<'a> PpuMemory<'a> {
 }
 
 #[cfg(test)]
+mod tests {
+    use crate::memory::memory::test_data;
+    use crate::memory::memory::PpuAddress;
+    use crate::ppu::register::registers::ctrl::AddressIncrement;
+
+    #[test]
+    fn mirrored_3000s() {
+        let mut memory = test_data::memory();
+        let mut memory = memory.as_ppu_memory();
+        let mut address = PpuAddress::from_u16(0x2000);
+        let mut value = 1;
+        while address < PpuAddress::from_u16(0x2F00) {
+            memory.write(address, value);
+            let low_value = memory.read(address);
+            let high_value = memory.read(PpuAddress::from_u16(address.to_u16() + 0x1000));
+            assert_eq!(low_value, value);
+            assert_eq!(low_value, high_value);
+
+            value = value.wrapping_add(1);
+            address.advance(AddressIncrement::Right);
+        }
+
+        let mut address = PpuAddress::from_u16(0x3000);
+        let mut value = 111;
+        while address < PpuAddress::from_u16(0x3F00) {
+            memory.write(address, value);
+            let high_value = memory.read(address);
+            let low_value = memory.read(PpuAddress::from_u16(address.to_u16() - 0x1000));
+            assert_eq!(low_value, value);
+            assert_eq!(low_value, high_value);
+
+            value = value.wrapping_add(1);
+            address.advance(AddressIncrement::Right);
+        }
+    }
+}
+
+#[cfg(test)]
 pub mod test_data {
     use crate::cartridge;
     use crate::cartridge::Cartridge;
