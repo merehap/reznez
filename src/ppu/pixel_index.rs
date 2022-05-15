@@ -222,14 +222,8 @@ impl RowInTile {
     }
 
     pub fn increment_low_bits(&mut self) {
-        let mut result = (*self as u8) & 0b11;
-        if result == 0b11 {
-            result = 0;
-        } else {
-            result += 1;
-        }
-
-        *self = RowInTile::from_u8(result).unwrap();
+        self.increment();
+        *self = RowInTile::from_u8((*self as u8) & 0b11).unwrap();
     }
 
     pub fn increment(&mut self) -> bool {
