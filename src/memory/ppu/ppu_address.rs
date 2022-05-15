@@ -192,8 +192,7 @@ impl PpuAddress {
     }
 
     fn to_scroll_u16(self) -> u16 {
-        // Chop off the top bit of fine y to leave a 14-bit representation.
-        let fine_y = ((self.fine_y_scroll as u16) & 0b111) << 12;
+        let fine_y = (self.fine_y_scroll as u16) << 12;
         let quadrant = (self.name_table_quadrant as u16) << 10;
         let coarse_y = (self.coarse_y_scroll.to_u16()) << 5;
         let coarse_x = self.coarse_x_scroll.to_u16();
@@ -203,7 +202,7 @@ impl PpuAddress {
 
 impl PartialEq for PpuAddress {
     fn eq(&self, rhs: &PpuAddress) -> bool {
-        self.to_u16() & 0x3FFF == rhs.to_u16() & 0x3FFF
+        self.to_u16() == rhs.to_u16()
     }
 }
 
