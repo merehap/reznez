@@ -93,17 +93,15 @@ pub trait Mapper {
     #[inline]
     fn ppu_write(
         &mut self,
-        ppu_internal_ram: &mut PpuInternalRam,
+        internal_ram: &mut PpuInternalRam,
         address: PpuAddress,
         value: u8,
     ) {
         match address.to_u16() {
             0x0000..=0x1FFF => self.write_pattern_table_byte(address, value),
-            0x2000..=0x3EFF => {
-                self.write_name_table_byte(ppu_internal_ram, address, value)
-            }
+            0x2000..=0x3EFF => self.write_name_table_byte(internal_ram, address, value),
             0x3F00..=0x3FFF => self.write_palette_table_byte(
-                &mut ppu_internal_ram.palette_ram,
+                &mut internal_ram.palette_ram,
                 address,
                 value,
             ),
