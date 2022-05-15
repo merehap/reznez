@@ -132,24 +132,25 @@ impl TileRow {
     }
 
     pub fn increment(&mut self) -> bool {
-        let will_wrap = *self == TileRow::MAX;
-        if will_wrap {
+        let should_wrap = *self == TileRow::MAX;
+        if should_wrap {
             self.0 = 0;
         } else {
             self.0 += 1;
         }
 
-        will_wrap
+        should_wrap
     }
 
     pub fn increment_visible(&mut self) -> bool {
-        // Increment normally except if we're on the last visible tile.
-        if *self == TileRow::MAX_VISIBLE {
+        let should_wrap = *self == TileRow::MAX_VISIBLE;
+        if *self == TileRow::MAX_VISIBLE || *self == TileRow::MAX {
             self.0 = 0;
-            true
         } else {
-            self.increment()
+            self.0 += 1;
         }
+
+        should_wrap
     }
 
     pub fn from_pixel_row(pixel_row: PixelRow) -> (TileRow, RowInTile) {
