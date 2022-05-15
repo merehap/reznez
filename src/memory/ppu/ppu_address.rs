@@ -155,8 +155,8 @@ impl PpuAddress {
         self.fine_y_scroll = value.fine();
     }
 
-    pub fn copy_coarse_x_scroll(&mut self, other: PpuAddress) {
-        self.coarse_x_scroll = other.coarse_x_scroll;
+    pub fn copy_x_scroll(&mut self, other: PpuAddress) {
+        self.set_x_scroll(other.x_scroll().to_u8());
     }
 
     pub fn copy_y_scroll(&mut self, other: PpuAddress) {

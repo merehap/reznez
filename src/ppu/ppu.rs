@@ -146,7 +146,7 @@ impl Ppu {
                 257..=257 => {
                     self.attribute_register.prepare_next_palette_table_index();
                     self.pattern_register.load_next_palette_indexes();
-                    self.current_address.copy_coarse_x_scroll(self.next_address);
+                    self.current_address.copy_x_scroll(self.next_address);
                     self.current_address.copy_horizontal_name_table_side(self.next_address);
                 }
                 258..=320 => { /* Idle. */ }
@@ -207,8 +207,7 @@ impl Ppu {
                     palette_table.universal_background_rgb(),
                 );
 
-                // TODO: Switch over to current_address (kinda arbitrary, but consistency...)
-                let column_in_tile = self.next_address.x_scroll().fine();
+                let column_in_tile = self.current_address.x_scroll().fine();
                 let palette = palette_table.background_palette(self.attribute_register.current_palette_table_index(column_in_tile));
                 self.current_background_pixel = self.pattern_register.palette_index(column_in_tile)
                     .map(|palette_index| Rgbt::Opaque(palette[palette_index]))
