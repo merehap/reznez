@@ -17,6 +17,18 @@ use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::render::frame::Frame;
 use crate::util::bit_util::unpack_bools;
 
+#[derive(Clone, Copy, Debug)]
+pub enum CycleAction {
+    Idle,
+    NT,
+    AT,
+    LowBg,
+    HighBgThenGotoNextColumn,
+    HighBgThenGotoNextRow,
+    PrepareForNextColumn,
+    PrepareForNextRow,
+}
+
 pub struct Ppu {
     oam: Oam,
 
@@ -37,10 +49,33 @@ pub struct Ppu {
     next_pattern_index: PatternIndex,
     pattern_register: PatternRegister,
     attribute_register: AttributeRegister,
+
+    background_scanline_actions: [CycleAction; 341],
 }
 
 impl Ppu {
     pub fn new() -> Ppu {
+        use CycleAction::*;
+        let tile_fetch_actions: [CycleAction; 8] =
+            [NT, Idle, AT, Idle, LowBg, Idle, HighBgThenGotoNextColumn, PrepareForNextColumn];
+        let next_row_prep_actions: [CycleAction; 8] =
+            [NT, Idle, AT, Idle, LowBg, Idle, HighBgThenGotoNextRow, PrepareForNextRow];
+        let background_scanline_actions: [CycleAction; 341] =
+            [
+                // Cycles 0-1 (Cycle 0 skipped on odd, rendering frames.)
+                vec![Idle; 2],
+                // Cycles 2-249: Retrieve the remaining 31 tiles for the current scanline.
+                vec![tile_fetch_actions; 31].concat(),
+                // Cycles 250-257
+                next_row_prep_actions.to_vec(),
+                // Cycles 258-321
+                vec![Idle; 64],
+                // Cycles 322-337: Retrieve the first two tiles for the next scanline.
+                vec![tile_fetch_actions; 2].concat(),
+                // Cycles 338-340 (TODO: This should be unused NT fetches.)
+                vec![Idle; 3],
+            ].concat().try_into().unwrap();
+
         Ppu {
             oam: Oam::new(),
 
@@ -61,6 +96,8 @@ impl Ppu {
             next_pattern_index: PatternIndex::new(0),
             pattern_register: PatternRegister::new(),
             attribute_register: AttributeRegister::new(),
+
+            background_scanline_actions,
         }
     }
 
@@ -105,93 +142,13 @@ impl Ppu {
                 self.current_address = self.next_address;
             }
 
+            self.execute_cycle_action(mem, self.background_scanline_actions[usize::from(cycle)]);
             match cycle {
-                000..=000 => { /* Idle. */ }
-                001..=001 => { /* First NT fetch cycle. Ignored for now. */ }
-                002..=256 => {
-                    let tile_column = self.current_address.x_scroll().coarse();
-                    let tile_row = self.current_address.y_scroll().coarse();
-                    let name_table = mem.name_table(self.current_address.name_table_quadrant());
-                    match cycle % 8 {
-                        2 => self.next_pattern_index = name_table.pattern_index(tile_column, tile_row),
-                        3 => {}
-                        4 => {
-                            let palette_table_index = name_table.attribute_table().palette_table_index(tile_column, tile_row);
-                            self.attribute_register.set_pending_palette_table_index(palette_table_index);
-                        }
-                        5 => {}
-                        6 => {
-                            let row_in_tile = self.current_address.y_scroll().fine();
-                            let low_byte = pattern_table.read_low_byte(self.next_pattern_index, row_in_tile);
-                            self.pattern_register.set_pending_low_byte(low_byte);
-                        }
-                        7 => {}
-                        0 => {
-                            let row_in_tile = self.current_address.y_scroll().fine();
-                            let high_byte = pattern_table.read_high_byte(self.next_pattern_index, row_in_tile);
-                            self.pattern_register.set_pending_high_byte(high_byte);
-                            if cycle == 256 {
-                                self.current_address.increment_fine_y_scroll();
-                            } else {
-                                self.current_address.increment_coarse_x_scroll();
-                            }
-                        }
-                        1 => {
-                            self.attribute_register.prepare_next_palette_table_index();
-                            self.pattern_register.load_next_palette_indexes();
-                        }
-                        _ => unreachable!(),
-                    }
-                }
-                257..=257 => {
-                    self.attribute_register.prepare_next_palette_table_index();
-                    self.pattern_register.load_next_palette_indexes();
-                    self.current_address.copy_x_scroll(self.next_address);
-                    self.current_address.copy_horizontal_name_table_side(self.next_address);
-                }
-                258..=320 => { /* Idle. */ }
-                321..=321 => { /* First NT byte cycle. Ignored for now. */ }
                 322..=336 => {
-                    let tile_column = self.current_address.x_scroll().coarse();
-                    let tile_row = self.current_address.y_scroll().coarse();
-                    let name_table = mem.name_table(self.current_address.name_table_quadrant());
-                    match cycle % 8 {
-                        2 => self.next_pattern_index = name_table.pattern_index(tile_column, tile_row),
-                        3 => {}
-                        4 => {
-                            let palette_table_index = name_table.attribute_table().palette_table_index(tile_column, tile_row);
-                            self.attribute_register.set_pending_palette_table_index(palette_table_index);
-                        }
-                        5 => {}
-                        6 => {
-                            let row_in_tile = self.current_address.y_scroll().fine();
-                            let low_byte = pattern_table.read_low_byte(self.next_pattern_index, row_in_tile);
-                            self.pattern_register.set_pending_low_byte(low_byte);
-                        }
-                        7 => {}
-                        0 => {
-                            let row_in_tile = self.current_address.y_scroll().fine();
-                            let high_byte = pattern_table.read_high_byte(self.next_pattern_index, row_in_tile);
-                            self.pattern_register.set_pending_high_byte(high_byte);
-                            self.current_address.increment_coarse_x_scroll();
-                        }
-                        1 => {
-                            self.attribute_register.prepare_next_palette_table_index();
-                            self.pattern_register.load_next_palette_indexes();
-                        }
-                        _ => unreachable!(),
-                    }
-
                     self.pattern_register.shift_left();
                     self.attribute_register.push_next_palette_table_index();
                 }
-                337..=337 => {
-                    self.attribute_register.prepare_next_palette_table_index();
-                    self.pattern_register.load_next_palette_indexes();
-                }
-                // FIXME: This needs to start at 337, but the shifter reload happens on 337 too.
-                338..=340 => { /* Unused NT byte fetches not implemented yet. */ }
-                341..=u16::MAX => unreachable!(),
+                _ => {}
             }
 
             if scanline == 261 && cycle >= 280 && cycle <= 304 {
@@ -258,6 +215,52 @@ impl Ppu {
 
         StepResult { is_last_cycle_of_frame, should_generate_nmi }
     }
+
+    pub fn execute_cycle_action(&mut self, mem: &mut PpuMemory, cycle_action: CycleAction) {
+        let background_table_side = mem.regs().background_table_side();
+        let pattern_table = mem.pattern_table(background_table_side);
+        let tile_column = self.current_address.x_scroll().coarse();
+        let tile_row = self.current_address.y_scroll().coarse();
+        let name_table = mem.name_table(self.current_address.name_table_quadrant());
+
+        use CycleAction::*;
+        match cycle_action {
+            Idle => {},
+            NT => self.next_pattern_index = name_table.pattern_index(tile_column, tile_row),
+            AT => {
+                let palette_table_index = name_table.attribute_table().palette_table_index(tile_column, tile_row);
+                self.attribute_register.set_pending_palette_table_index(palette_table_index);
+            }
+            LowBg => {
+                let row_in_tile = self.current_address.y_scroll().fine();
+                let low_byte = pattern_table.read_low_byte(self.next_pattern_index, row_in_tile);
+                self.pattern_register.set_pending_low_byte(low_byte);
+            }
+            HighBgThenGotoNextColumn => {
+                let row_in_tile = self.current_address.y_scroll().fine();
+                let high_byte = pattern_table.read_high_byte(self.next_pattern_index, row_in_tile);
+                self.pattern_register.set_pending_high_byte(high_byte);
+                self.current_address.increment_coarse_x_scroll();
+            }
+            HighBgThenGotoNextRow => {
+                let row_in_tile = self.current_address.y_scroll().fine();
+                let high_byte = pattern_table.read_high_byte(self.next_pattern_index, row_in_tile);
+                self.pattern_register.set_pending_high_byte(high_byte);
+                self.current_address.increment_fine_y_scroll();
+            }
+            PrepareForNextColumn => {
+                self.attribute_register.prepare_next_palette_table_index();
+                self.pattern_register.load_next_palette_indexes();
+            }
+            PrepareForNextRow => {
+                self.attribute_register.prepare_next_palette_table_index();
+                self.pattern_register.load_next_palette_indexes();
+                self.current_address.copy_x_scroll(self.next_address);
+                self.current_address.copy_horizontal_name_table_side(self.next_address);
+            }
+        }
+    }
+
 
     fn process_latch_access(
         &mut self,
