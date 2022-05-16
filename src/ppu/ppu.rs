@@ -19,7 +19,6 @@ use crate::util::bit_util::unpack_bools;
 
 #[derive(Clone, Copy, Debug)]
 pub enum CycleAction {
-    Idle,
     NT,
     AT,
     LowBg,
@@ -50,31 +49,60 @@ pub struct Ppu {
     pattern_register: PatternRegister,
     attribute_register: AttributeRegister,
 
-    background_scanline_actions: [CycleAction; 341],
+    background_scanline_actions: [Vec<CycleAction>; 341],
 }
 
 impl Ppu {
     pub fn new() -> Ppu {
         use CycleAction::*;
-        let tile_fetch_actions: [CycleAction; 8] =
-            [NT, Idle, AT, Idle, LowBg, Idle, HighBgThenGotoNextColumn, PrepareForNextColumn];
-        let next_row_prep_actions: [CycleAction; 8] =
-            [NT, Idle, AT, Idle, LowBg, Idle, HighBgThenGotoNextRow, PrepareForNextRow];
-        let background_scanline_actions: [CycleAction; 341] =
-            [
-                // Cycles 0-1 (Cycle 0 skipped on odd, rendering frames.)
-                vec![Idle; 2],
-                // Cycles 2-249: Retrieve the remaining 31 tiles for the current scanline.
-                vec![tile_fetch_actions; 31].concat(),
-                // Cycles 250-257
-                next_row_prep_actions.to_vec(),
-                // Cycles 258-321
-                vec![Idle; 64],
-                // Cycles 322-337: Retrieve the first two tiles for the next scanline.
-                vec![tile_fetch_actions; 2].concat(),
-                // Cycles 338-340 (TODO: This should be unused NT fetches.)
-                vec![Idle; 3],
-            ].concat().try_into().unwrap();
+        let mut acts = Vec::new();
+        // Cycle 0 (Skipped on odd, rendering frames.)
+        acts.push(vec![]);
+        // Cycle 1
+        acts.push(vec![]);
+        // Cycles 2-249: Retrieve the remaining 31 tiles used for the current scanline.
+        for _ in 2..=32 {
+            acts.push(vec![NT]);
+            acts.push(vec![]);
+            acts.push(vec![AT]);
+            acts.push(vec![]);
+            acts.push(vec![LowBg]);
+            acts.push(vec![]);
+            acts.push(vec![HighBgThenGotoNextColumn]);
+            acts.push(vec![PrepareForNextColumn]);
+        }
+
+        // Cycles 250-257: Retrieve an unused tile then prepare for the next pixel row.
+        acts.push(vec![NT]);
+        acts.push(vec![]);
+        acts.push(vec![AT]);
+        acts.push(vec![]);
+        acts.push(vec![LowBg]);
+        acts.push(vec![]);
+        acts.push(vec![HighBgThenGotoNextRow]);
+        acts.push(vec![PrepareForNextRow]);
+
+        // TODO: Sprite rendering.
+        for _cycle in 258..=321 {
+            acts.push(vec![]);
+        }
+
+        // Cycles 322-337: Retrieve the first two tiles for the next scanline.
+        for _tile in 0..=1 {
+            acts.push(vec![NT]);
+            acts.push(vec![]);
+            acts.push(vec![AT]);
+            acts.push(vec![]);
+            acts.push(vec![LowBg]);
+            acts.push(vec![]);
+            acts.push(vec![HighBgThenGotoNextColumn]);
+            acts.push(vec![PrepareForNextColumn]);
+        }
+
+        // TODO: This should be unused NT fetches.
+        for _cycle in 338..=340 {
+            acts.push(vec![]);
+        }
 
         Ppu {
             oam: Oam::new(),
@@ -97,7 +125,7 @@ impl Ppu {
             pattern_register: PatternRegister::new(),
             attribute_register: AttributeRegister::new(),
 
-            background_scanline_actions,
+            background_scanline_actions: acts.try_into().unwrap(),
         }
     }
 
@@ -135,14 +163,15 @@ impl Ppu {
             maybe_generate_nmi = self.process_latch_access(mem, latch_access);
         }
 
-        let background_table_side = mem.regs().background_table_side();
-        let pattern_table = mem.pattern_table(background_table_side);
         if mem.regs().background_enabled() && ((0..=239).contains(&scanline) || scanline == 261) {
             if scanline == 261 && cycle == 320 {
                 self.current_address = self.next_address;
             }
 
-            self.execute_cycle_action(mem, self.background_scanline_actions[usize::from(cycle)]);
+            for action in self.background_scanline_actions[usize::from(cycle)].clone() {
+                self.execute_cycle_action(mem, action);
+            }
+
             match cycle {
                 322..=336 => {
                     self.pattern_register.shift_left();
@@ -225,7 +254,6 @@ impl Ppu {
 
         use CycleAction::*;
         match cycle_action {
-            Idle => {},
             NT => self.next_pattern_index = name_table.pattern_index(tile_column, tile_row),
             AT => {
                 let palette_table_index = name_table.attribute_table().palette_table_index(tile_column, tile_row);
