@@ -19,13 +19,15 @@ use crate::util::bit_util::unpack_bools;
 
 #[derive(Clone, Copy, Debug)]
 pub enum CycleAction {
-    NT,
-    AT,
-    LowBg,
-    HighBgThenGotoNextColumn,
-    HighBgThenGotoNextRow,
-    PrepareForNextColumn,
-    PrepareForNextRow,
+    GetPatternIndex,
+    GetPaletteIndex,
+    GetBackgroundTileLowByte,
+    GetBackgroundTileHighByte,
+
+    GotoNextTileColumn,
+    GotoNextPixelRow,
+    PrepareNextTile,
+    ResetTileColumn,
 }
 
 pub struct Ppu {
@@ -62,25 +64,25 @@ impl Ppu {
         acts.push(vec![]);
         // Cycles 2-249: Retrieve the remaining 31 tiles used for the current scanline.
         for _ in 2..=32 {
-            acts.push(vec![NT]);
+            acts.push(vec![GetPatternIndex]);
             acts.push(vec![]);
-            acts.push(vec![AT]);
+            acts.push(vec![GetPaletteIndex]);
             acts.push(vec![]);
-            acts.push(vec![LowBg]);
+            acts.push(vec![GetBackgroundTileLowByte]);
             acts.push(vec![]);
-            acts.push(vec![HighBgThenGotoNextColumn]);
-            acts.push(vec![PrepareForNextColumn]);
+            acts.push(vec![GetBackgroundTileHighByte, GotoNextTileColumn]);
+            acts.push(vec![PrepareNextTile]);
         }
 
         // Cycles 250-257: Retrieve an unused tile then prepare for the next pixel row.
-        acts.push(vec![NT]);
+        acts.push(vec![GetPatternIndex]);
         acts.push(vec![]);
-        acts.push(vec![AT]);
+        acts.push(vec![GetPaletteIndex]);
         acts.push(vec![]);
-        acts.push(vec![LowBg]);
+        acts.push(vec![GetBackgroundTileLowByte]);
         acts.push(vec![]);
-        acts.push(vec![HighBgThenGotoNextRow]);
-        acts.push(vec![PrepareForNextRow]);
+        acts.push(vec![GetBackgroundTileHighByte, GotoNextPixelRow]);
+        acts.push(vec![ResetTileColumn, PrepareNextTile]);
 
         // TODO: Sprite rendering.
         for _cycle in 258..=321 {
@@ -89,20 +91,20 @@ impl Ppu {
 
         // Cycles 322-337: Retrieve the first two tiles for the next scanline.
         for _tile in 0..=1 {
-            acts.push(vec![NT]);
+            acts.push(vec![GetPatternIndex]);
             acts.push(vec![]);
-            acts.push(vec![AT]);
+            acts.push(vec![GetPaletteIndex]);
             acts.push(vec![]);
-            acts.push(vec![LowBg]);
+            acts.push(vec![GetBackgroundTileLowByte]);
             acts.push(vec![]);
-            acts.push(vec![HighBgThenGotoNextColumn]);
-            acts.push(vec![PrepareForNextColumn]);
+            acts.push(vec![GetBackgroundTileHighByte, GotoNextTileColumn]);
+            acts.push(vec![PrepareNextTile]);
         }
 
-        // TODO: This should be unused NT fetches.
-        for _cycle in 338..=340 {
-            acts.push(vec![]);
-        }
+        // Unused fetches from the Name Table.
+        acts.push(vec![GetPatternIndex]);
+        acts.push(vec![]);
+        acts.push(vec![GetPatternIndex]);
 
         Ppu {
             oam: Oam::new(),
@@ -250,45 +252,36 @@ impl Ppu {
         let pattern_table = mem.pattern_table(background_table_side);
         let tile_column = self.current_address.x_scroll().coarse();
         let tile_row = self.current_address.y_scroll().coarse();
+        let row_in_tile = self.current_address.y_scroll().fine();
         let name_table = mem.name_table(self.current_address.name_table_quadrant());
 
         use CycleAction::*;
         match cycle_action {
-            NT => self.next_pattern_index = name_table.pattern_index(tile_column, tile_row),
-            AT => {
+            GetPatternIndex => self.next_pattern_index = name_table.pattern_index(tile_column, tile_row),
+            GetPaletteIndex => {
                 let palette_table_index = name_table.attribute_table().palette_table_index(tile_column, tile_row);
                 self.attribute_register.set_pending_palette_table_index(palette_table_index);
             }
-            LowBg => {
-                let row_in_tile = self.current_address.y_scroll().fine();
+            GetBackgroundTileLowByte => {
                 let low_byte = pattern_table.read_low_byte(self.next_pattern_index, row_in_tile);
                 self.pattern_register.set_pending_low_byte(low_byte);
             }
-            HighBgThenGotoNextColumn => {
-                let row_in_tile = self.current_address.y_scroll().fine();
+            GetBackgroundTileHighByte => {
                 let high_byte = pattern_table.read_high_byte(self.next_pattern_index, row_in_tile);
                 self.pattern_register.set_pending_high_byte(high_byte);
-                self.current_address.increment_coarse_x_scroll();
             }
-            HighBgThenGotoNextRow => {
-                let row_in_tile = self.current_address.y_scroll().fine();
-                let high_byte = pattern_table.read_high_byte(self.next_pattern_index, row_in_tile);
-                self.pattern_register.set_pending_high_byte(high_byte);
-                self.current_address.increment_fine_y_scroll();
-            }
-            PrepareForNextColumn => {
-                self.attribute_register.prepare_next_palette_table_index();
-                self.pattern_register.load_next_palette_indexes();
-            }
-            PrepareForNextRow => {
-                self.attribute_register.prepare_next_palette_table_index();
-                self.pattern_register.load_next_palette_indexes();
+            GotoNextTileColumn => self.current_address.increment_coarse_x_scroll(),
+            GotoNextPixelRow => self.current_address.increment_fine_y_scroll(),
+            ResetTileColumn => {
                 self.current_address.copy_x_scroll(self.next_address);
                 self.current_address.copy_horizontal_name_table_side(self.next_address);
             }
+            PrepareNextTile => {
+                self.attribute_register.prepare_next_palette_table_index();
+                self.pattern_register.load_next_palette_indexes();
+            }
         }
     }
-
 
     fn process_latch_access(
         &mut self,
