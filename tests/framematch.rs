@@ -1,6 +1,5 @@
 extern crate reznez;
 
-use std::borrow::Borrow;
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsStr;
 use std::fs;
@@ -29,7 +28,7 @@ fn framematch() {
         .map(|path| path.parent().unwrap().to_path_buf())
         .collect();
 
-    let mut failed = Arc::new(AtomicBool::new(false));
+    let failed = Arc::new(AtomicBool::new(false));
     frame_directories.par_iter().for_each(|frame_directory| {
         println!("Frame directory: {}", frame_directory.as_path().display());
         let mut rom_path_vec: Vec<_> = frame_directory.into_iter().collect();
@@ -111,10 +110,4 @@ fn framematch() {
     });
 
     assert!(!failed.load(Ordering::Relaxed));
-}
-
-struct FrameHashData {
-    rom_name: String,
-    nes: Nes,
-    frame_hashes: BTreeMap<u16, u64>,
 }

@@ -8,10 +8,12 @@ use structopt::StructOpt;
 
 use crate::cartridge::Cartridge;
 use crate::cpu::cpu::ProgramCounterSource;
+#[cfg(feature = "bevy")]
 use crate::gui::bevy_gui::BevyGui;
 use crate::gui::egui_gui::EguiGui;
 use crate::gui::gui::Gui;
 use crate::gui::no_gui::NoGui;
+#[cfg(feature = "sdl")]
 use crate::gui::sdl_gui::SdlGui;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::ppu::palette::system_palette::SystemPalette;
@@ -60,8 +62,10 @@ impl Config {
     pub fn gui(opt: &Opt) -> Box<dyn Gui> {
         match opt.gui {
             GuiType::NoGui => Box::new(NoGui::new()) as Box<dyn Gui>,
+            #[cfg(feature = "bevy")]
             GuiType::Bevy => Box::new(BevyGui::new()),
             GuiType::Egui => Box::new(EguiGui::new()),
+            #[cfg(feature = "sdl")]
             GuiType::Sdl => Box::new(SdlGui::new()),
         }
     }
@@ -97,8 +101,10 @@ pub struct Opt {
 #[derive(Debug)]
 pub enum GuiType {
     NoGui,
+    #[cfg(feature = "bevy")]
     Bevy,
     Egui,
+    #[cfg(feature = "sdl")]
     Sdl,
 }
 
@@ -108,8 +114,10 @@ impl FromStr for GuiType {
     fn from_str(value: &str) -> Result<GuiType, String> {
         match value.to_lowercase().as_str() {
             "nogui" => Ok(GuiType::NoGui),
+            #[cfg(feature = "bevy")]
             "bevy" => Ok(GuiType::Bevy),
             "egui" => Ok(GuiType::Egui),
+            #[cfg(feature = "sdl")]
             "sdl" => Ok(GuiType::Sdl),
             _ => Err(format!("Invalid gui type: {}", value)),
         }
