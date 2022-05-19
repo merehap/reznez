@@ -62,8 +62,9 @@ impl Ppu {
         acts.push(vec![]);
         // Cycle 1
         acts.push(vec![]);
+
         // Cycles 2-249: Retrieve the remaining 31 tiles used for the current scanline.
-        for _ in 2..=32 {
+        for _tile in 2..=32 {
             acts.push(vec![GetPatternIndex]);
             acts.push(vec![]);
             acts.push(vec![GetPaletteIndex]);
@@ -175,7 +176,7 @@ impl Ppu {
             }
 
             match cycle {
-                322..=336 => {
+                321..=336 => {
                     self.pattern_register.shift_left();
                     self.attribute_register.push_next_palette_table_index();
                 }
