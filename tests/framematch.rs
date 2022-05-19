@@ -1,11 +1,15 @@
 extern crate reznez;
 
+use std::borrow::Borrow;
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsStr;
 use std::fs;
 use std::fs::File;
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
+use rayon::prelude::*;
 use sscanf;
 use walkdir::WalkDir;
 
@@ -25,8 +29,8 @@ fn framematch() {
         .map(|path| path.parent().unwrap().to_path_buf())
         .collect();
 
-    let mut frame_hash_data = Vec::new();
-    for frame_directory in frame_directories {
+    let mut failed = Arc::new(AtomicBool::new(false));
+    frame_directories.par_iter().for_each(|frame_directory| {
         println!("Frame directory: {}", frame_directory.as_path().display());
         let mut rom_path_vec: Vec<_> = frame_directory.into_iter().collect();
         rom_path_vec[1] = OsStr::new("roms");
@@ -34,7 +38,7 @@ fn framematch() {
         rom_path.set_extension("nes");
         if File::open(rom_path.clone()).is_err() {
             // Some ROMs aren't committed due to copyright.
-            continue;
+            return;
         }
 
         let mut frame_hashes = BTreeMap::new();
@@ -52,7 +56,7 @@ fn framematch() {
         }
 
         if frame_hashes.is_empty() {
-            continue;
+            return;
         }
 
         let opt = Opt {
@@ -66,20 +70,14 @@ fn framematch() {
             analysis: false,
         };
 
-        let nes = Nes::new(&Config::new(&opt));
+        let mut nes = Nes::new(&Config::new(&opt));
         let rom_name = frame_directory
             .file_stem()
             .unwrap()
             .to_str()
             .unwrap()
             .to_string();
-        frame_hash_data.push(FrameHashData { rom_name, nes, frame_hashes });
-    }
 
-    println!();
-
-    let mut failed = false;
-    for FrameHashData { rom_name, mut nes, frame_hashes } in frame_hash_data {
         println!(
             "FRAMEMATCH TEST: testing against expected frames for {} .",
             rom_name
@@ -96,7 +94,7 @@ fn framematch() {
                 let actual_ppm = &nes.frame().to_ppm(mask);
                 let actual_hash = calculate_hash(&actual_ppm);
                 if actual_hash != *expected_hash {
-                    failed = true;
+                    failed.store(true, Ordering::Relaxed);
 
                     let actual_ppm_path =
                         format!("{}_actual_frame_{:03}.ppm", rom_name, frame_index,);
@@ -108,9 +106,11 @@ fn framematch() {
                 }
             }
         }
-    }
 
-    assert!(!failed);
+        println!();
+    });
+
+    assert!(!failed.load(Ordering::Relaxed));
 }
 
 struct FrameHashData {
