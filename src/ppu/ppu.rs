@@ -238,7 +238,13 @@ impl Ppu {
             (_, _) => { /* Do nothing. */ }
         }
 
-        self.update_oam_data(mem.regs_mut());
+        // Only update $2004 during VBlank.
+        // TODO: Narrow this down to the proper range.
+        // TODO: Should update_ppu_data be within this block too?
+        if self.clock.scanline() >= 241 {
+            self.update_oam_data(mem.regs_mut());
+        }
+
         self.update_ppu_data(mem);
 
         let is_last_cycle_of_frame = self.clock.is_last_cycle_of_frame();
