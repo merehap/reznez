@@ -5,7 +5,7 @@ use crate::memory::memory::PpuMemory;
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
-use crate::ppu::oam::{Oam, SpriteIndex, SpriteDataIndex};
+use crate::ppu::oam::{Oam, OamIndex};
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
@@ -36,9 +36,7 @@ pub enum CycleAction {
 
 pub struct Ppu {
     oam: Oam,
-    sprite_index: SpriteIndex,
-    sprite_data_index: SpriteDataIndex,
-    sprite_rendering_complete: bool,
+    oam_index: OamIndex,
     secondary_oam: [u8; 32],
     secondary_oam_pointer: u8,
 
@@ -130,9 +128,7 @@ impl Ppu {
 
         Ppu {
             oam: Oam::new(),
-            sprite_index: SpriteIndex::new(),
-            sprite_data_index: SpriteDataIndex::new(),
-            sprite_rendering_complete: true,
+            oam_index: OamIndex::new(),
             secondary_oam: [0xFF; 32],
             secondary_oam_pointer: 0,
 
@@ -322,49 +318,33 @@ impl Ppu {
                 self.secondary_oam[self.secondary_oam_pointer as usize] = 0xFF;
                 self.secondary_oam_pointer += 1;
                 self.secondary_oam_pointer %= 32;
-                self.sprite_rendering_complete = false;
+                self.oam_index.reset();
             }
             SpriteEvaluation => {
                 // Odd cycles copy from primary OAM to $2004,
                 // even cycles copy from $2004 to secondary OAM.
                 if self.clock.cycle() % 2 == 1 {
-                    mem.regs_mut().oam_data = self.oam.read_sprite_data(self.sprite_index, self.sprite_data_index);
+                    mem.regs_mut().oam_data = self.oam.read_sprite_data(self.oam_index);
                 } else {
-                    if self.sprite_rendering_complete {
+                    if !self.oam_index.end_reached() {
                         // Reading and incrementing still happen after sprite rendering is
                         // complete, but writes fail (i.e. they don't happen).
-                        self.sprite_index.increment();
-                    } else if self.sprite_data_index == SpriteDataIndex::YCoordinate {
+                        self.oam_index.next_sprite();
+                    } else if self.oam_index.new_sprite_started() {
                         let sprite_y = mem.regs().oam_data;
                         self.secondary_oam[self.secondary_oam_pointer as usize] = sprite_y;
                         // Check if the y coordinate is on screen.
                         if SpriteY::new(sprite_y).to_pixel_row().is_some() {
                             self.secondary_oam_pointer += 1;
-                            self.sprite_data_index.increment();
-                            let overflow = self.sprite_data_index.increment();
-                            if overflow {
-                                let overflow = self.sprite_index.increment();
-                                if overflow {
-                                    self.sprite_rendering_complete = true;
-                                }
-                            }
+                            self.oam_index.next_field();
                         } else {
-                            let overflow = self.sprite_index.increment();
-                            if overflow {
-                                self.sprite_rendering_complete = true;
-                            }
+                            self.oam_index.next_sprite();
                         }
                     } else {
                         // The current sprite is in range, copy one more byte of its data over.
                         self.secondary_oam[self.secondary_oam_pointer as usize] = mem.regs().oam_data;
                         self.secondary_oam_pointer += 1;
-                        let overflow = self.sprite_data_index.increment();
-                        if overflow {
-                            let overflow = self.sprite_index.increment();
-                            if overflow {
-                                self.sprite_rendering_complete = true;
-                            }
-                        }
+                        self.oam_index.next_field();
                     }
                 }
             }

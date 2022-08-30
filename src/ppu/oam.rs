@@ -48,8 +48,8 @@ impl Oam {
         })
     }
 
-    pub fn read_sprite_data(&self, sprite_index: SpriteIndex, data_index: SpriteDataIndex) -> u8 {
-        self.read((sprite_index.to_u8() << 2) | data_index.to_u8())
+    pub fn read_sprite_data(&self, oam_index: OamIndex) -> u8 {
+        self.read((oam_index.sprite_index << 2) | oam_index.field_index as u8)
     }
 
     pub fn read(&self, index: u8) -> u8 {
@@ -122,61 +122,67 @@ impl SecondaryOam {
     }
 }
 
-// "n" in the documentation
 #[derive(Clone, Copy)]
-pub struct SpriteIndex(u8);
+pub struct OamIndex {
+    // "n" in the documentation
+    sprite_index: u8,
+    // "m" in the documentation
+    field_index: FieldIndex,
+    end_reached: bool,
+}
 
-impl SpriteIndex {
-    const MAX: u8 = 63;
+impl OamIndex {
+    const MAX_SPRITE_INDEX: u8 = 63;
 
-    pub fn new() -> Self {
-        SpriteIndex(0)
-    }
-
-    pub fn increment(&mut self) -> bool {
-        let overflow = self.0 == SpriteIndex::MAX;
-        if overflow {
-            self.0 = 0;
-        } else {
-            self.0 += 1;
+    pub fn new() -> OamIndex {
+        OamIndex {
+            sprite_index: 0,
+            field_index: FieldIndex::YCoordinate,
+            end_reached: false,
         }
-
-        overflow
     }
 
-    fn to_u8(self) -> u8 {
-        self.0
-    }
-}
-
-// "m" in the documentation
-#[derive(PartialEq, Clone, Copy)]
-pub enum SpriteDataIndex {
-    YCoordinate       = 0,
-    PatternIndex      = 1,
-    Attributes        = 2,
-    XCoordinate       = 3,
-}
-
-impl SpriteDataIndex {
-    pub fn new() -> Self {
-        SpriteDataIndex::YCoordinate
+    pub fn new_sprite_started(self) -> bool {
+        self.field_index == FieldIndex::YCoordinate
     }
 
-    pub fn increment(&mut self) -> bool {
-        use SpriteDataIndex::*;
-        *self = match self {
-            YCoordinate       => PatternIndex,
-            PatternIndex      => Attributes,
-            Attributes        => XCoordinate,
-            XCoordinate       => YCoordinate,
+    pub fn end_reached(self) -> bool {
+        self.end_reached
+    }
+
+    pub fn reset(&mut self) {
+        *self = OamIndex::new();
+    }
+
+    pub fn next_sprite(&mut self) {
+        self.end_reached = self.sprite_index == OamIndex::MAX_SPRITE_INDEX;
+        if self.end_reached {
+            self.sprite_index = 0;
+        } else {
+            self.sprite_index += 1;
+        }
+    }
+
+    pub fn next_field(&mut self) {
+        use FieldIndex::*;
+        self.field_index = match self.field_index {
+            YCoordinate  => PatternIndex,
+            PatternIndex => Attributes,
+            Attributes   => XCoordinate,
+            XCoordinate  => YCoordinate,
         };
 
-        // Did we overflow?
-        *self == YCoordinate
+        let overflow = self.field_index == YCoordinate;
+        if overflow {
+            self.next_sprite();
+        }
     }
+}
 
-    fn to_u8(self) -> u8 {
-        self as u8
-    }
+#[derive(PartialEq, Clone, Copy)]
+enum FieldIndex {
+    YCoordinate  = 0,
+    PatternIndex = 1,
+    Attributes   = 2,
+    XCoordinate  = 3,
 }
