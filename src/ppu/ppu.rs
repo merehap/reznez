@@ -5,7 +5,7 @@ use crate::memory::memory::PpuMemory;
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
-use crate::ppu::oam::Oam;
+use crate::ppu::oam::{Oam, SpriteIndex, SpriteDataIndex};
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
@@ -15,6 +15,7 @@ use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::render::frame::Frame;
+use crate::ppu::sprite::SpriteY;
 use crate::util::bit_util::unpack_bools;
 
 #[derive(Clone, Copy, Debug)]
@@ -28,10 +29,18 @@ pub enum CycleAction {
     GotoNextPixelRow,
     PrepareNextTile,
     ResetTileColumn,
+
+    ClearSecondaryOamByte,
+    SpriteEvaluation,
 }
 
 pub struct Ppu {
     oam: Oam,
+    sprite_index: SpriteIndex,
+    sprite_data_index: SpriteDataIndex,
+    sprite_rendering_complete: bool,
+    secondary_oam: [u8; 32],
+    secondary_oam_pointer: u8,
 
     clock: Clock,
 
@@ -107,8 +116,25 @@ impl Ppu {
         acts.push(vec![]);
         acts.push(vec![GetPatternIndex]);
 
+        let mut sprite_acts = Vec::new();
+        // Cycle 0 (Skipped on odd, rendering frames.)
+        sprite_acts.push(vec![]);
+
+        for _cycle in 1..=64 {
+            sprite_acts.push(vec![ClearSecondaryOamByte]);
+        }
+
+        for _cycle in 65..=256 {
+            sprite_acts.push(vec![SpriteEvaluation]);
+        }
+
         Ppu {
             oam: Oam::new(),
+            sprite_index: SpriteIndex::new(),
+            sprite_data_index: SpriteDataIndex::new(),
+            sprite_rendering_complete: true,
+            secondary_oam: [0xFF; 32],
+            secondary_oam_pointer: 0,
 
             clock: Clock::new(),
 
@@ -277,6 +303,7 @@ impl Ppu {
                 let high_byte = pattern_table.read_high_byte(self.next_pattern_index, row_in_tile);
                 self.pattern_register.set_pending_high_byte(high_byte);
             }
+
             GotoNextTileColumn => self.current_address.increment_coarse_x_scroll(),
             GotoNextPixelRow => self.current_address.increment_fine_y_scroll(),
             ResetTileColumn => {
@@ -286,6 +313,60 @@ impl Ppu {
             PrepareNextTile => {
                 self.attribute_register.prepare_next_palette_table_index();
                 self.pattern_register.load_next_palette_indexes();
+            }
+
+            ClearSecondaryOamByte => {
+                // TODO: We're supposed to just do a normal read/write and then return 0XFF,
+                // rather than actually overwrite Secondary OAM.
+                // https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
+                self.secondary_oam[self.secondary_oam_pointer as usize] = 0xFF;
+                self.secondary_oam_pointer += 1;
+                self.secondary_oam_pointer %= 32;
+                self.sprite_rendering_complete = false;
+            }
+            SpriteEvaluation => {
+                // Odd cycles copy from primary OAM to $2004,
+                // even cycles copy from $2004 to secondary OAM.
+                if self.clock.cycle() % 2 == 1 {
+                    mem.regs_mut().oam_data = self.oam.read_sprite_data(self.sprite_index, self.sprite_data_index);
+                } else {
+                    if self.sprite_rendering_complete {
+                        // Reading and incrementing still happen after sprite rendering is
+                        // complete, but writes fail (i.e. they don't happen).
+                        self.sprite_index.increment();
+                    } else if self.sprite_data_index == SpriteDataIndex::YCoordinate {
+                        let sprite_y = mem.regs().oam_data;
+                        self.secondary_oam[self.secondary_oam_pointer as usize] = sprite_y;
+                        // Check if the y coordinate is on screen.
+                        if SpriteY::new(sprite_y).to_pixel_row().is_some() {
+                            self.secondary_oam_pointer += 1;
+                            self.sprite_data_index.increment();
+                            let overflow = self.sprite_data_index.increment();
+                            if overflow {
+                                let overflow = self.sprite_index.increment();
+                                if overflow {
+                                    self.sprite_rendering_complete = true;
+                                }
+                            }
+                        } else {
+                            let overflow = self.sprite_index.increment();
+                            if overflow {
+                                self.sprite_rendering_complete = true;
+                            }
+                        }
+                    } else {
+                        // The current sprite is in range, copy one more byte of its data over.
+                        self.secondary_oam[self.secondary_oam_pointer as usize] = mem.regs().oam_data;
+                        self.secondary_oam_pointer += 1;
+                        let overflow = self.sprite_data_index.increment();
+                        if overflow {
+                            let overflow = self.sprite_index.increment();
+                            if overflow {
+                                self.sprite_rendering_complete = true;
+                            }
+                        }
+                    }
+                }
             }
         }
     }

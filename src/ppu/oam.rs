@@ -48,6 +48,10 @@ impl Oam {
         })
     }
 
+    pub fn read_sprite_data(&self, sprite_index: SpriteIndex, data_index: SpriteDataIndex) -> u8 {
+        self.read((sprite_index.to_u8() << 2) | data_index.to_u8())
+    }
+
     pub fn read(&self, index: u8) -> u8 {
         self.0[index as usize]
     }
@@ -103,5 +107,76 @@ impl Oam {
                 frame,
             );
         }
+    }
+}
+
+pub struct SecondaryOam([u8; 32]);
+
+impl SecondaryOam {
+    pub fn new() -> SecondaryOam {
+        SecondaryOam([0xFF; 32])
+    }
+
+    pub fn blank(&mut self, index: usize) {
+        self.0[index] = 0xFF;
+    }
+}
+
+// "n" in the documentation
+#[derive(Clone, Copy)]
+pub struct SpriteIndex(u8);
+
+impl SpriteIndex {
+    const MAX: u8 = 63;
+
+    pub fn new() -> Self {
+        SpriteIndex(0)
+    }
+
+    pub fn increment(&mut self) -> bool {
+        let overflow = self.0 == SpriteIndex::MAX;
+        if overflow {
+            self.0 = 0;
+        } else {
+            self.0 += 1;
+        }
+
+        overflow
+    }
+
+    fn to_u8(self) -> u8 {
+        self.0
+    }
+}
+
+// "m" in the documentation
+#[derive(PartialEq, Clone, Copy)]
+pub enum SpriteDataIndex {
+    YCoordinate       = 0,
+    PatternIndex      = 1,
+    Attributes        = 2,
+    XCoordinate       = 3,
+}
+
+impl SpriteDataIndex {
+    pub fn new() -> Self {
+        SpriteDataIndex::YCoordinate
+    }
+
+    pub fn increment(&mut self) -> bool {
+        use SpriteDataIndex::*;
+        *self = match self {
+            YCoordinate       => PatternIndex,
+            PatternIndex      => Attributes,
+            Attributes        => XCoordinate,
+            XCoordinate       => YCoordinate,
+        };
+
+        // Did we overflow?
+        *self == YCoordinate
+    }
+
+    fn to_u8(self) -> u8 {
+        self as u8
     }
 }

@@ -214,9 +214,13 @@ pub enum Priority {
 }
 
 #[derive(Clone, Copy, Debug)]
-struct SpriteY(u8);
+pub struct SpriteY(u8);
 
 impl SpriteY {
+    pub fn new(value: u8) -> SpriteY {
+        SpriteY(value)
+    }
+
     pub fn to_pixel_row(self) -> Option<PixelRow> {
         // Rendering of sprites is delayed by one scanline so the sprite ends
         // up rendered one scanline lower than would be expected.
