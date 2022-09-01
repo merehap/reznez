@@ -32,6 +32,10 @@ pub enum CycleAction {
 
     ClearSecondaryOamByte,
     SpriteEvaluation,
+    ReadSpriteY,
+    ReadSpritePatternIndex,
+    ReadSpriteAttributes,
+    ReadSpriteX,
 }
 
 pub struct Ppu {
@@ -59,6 +63,7 @@ pub struct Ppu {
     attribute_register: AttributeRegister,
 
     background_scanline_actions: [Vec<CycleAction>; 341],
+    sprite_scanline_actions: [Vec<CycleAction>; 341],
 }
 
 impl Ppu {
@@ -126,6 +131,23 @@ impl Ppu {
             sprite_acts.push(vec![SpriteEvaluation]);
         }
 
+        // Cycles 257-320
+        for _sprite in 0..8 {
+            sprite_acts.push(vec![ReadSpriteY]);
+            sprite_acts.push(vec![ReadSpritePatternIndex]);
+            sprite_acts.push(vec![ReadSpriteAttributes]);
+            sprite_acts.push(vec![ReadSpriteX]);
+            sprite_acts.push(vec![ReadSpriteX]);
+            sprite_acts.push(vec![ReadSpriteX]);
+            sprite_acts.push(vec![ReadSpriteX]);
+            sprite_acts.push(vec![ReadSpriteX]);
+        }
+
+        for _cycle in 321..=340 {
+            // TODO: Verify that this is reading the first byte of secondary OAM.
+            sprite_acts.push(vec![ReadSpriteY]);
+        }
+
         Ppu {
             oam: Oam::new(),
             oam_index: OamIndex::new(),
@@ -151,6 +173,7 @@ impl Ppu {
             attribute_register: AttributeRegister::new(),
 
             background_scanline_actions: acts.try_into().unwrap(),
+            sprite_scanline_actions: sprite_acts.try_into().unwrap(),
         }
     }
 
@@ -348,6 +371,10 @@ impl Ppu {
                     }
                 }
             }
+            ReadSpriteY => {}
+            ReadSpritePatternIndex => {}
+            ReadSpriteAttributes => {}
+            ReadSpriteX => {}
         }
     }
 
@@ -400,6 +427,7 @@ impl Ppu {
     }
 
     // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
+    // TODO: This can take regs_mut instead of mem.
     fn maybe_set_sprite0_hit(&self, mem: &mut PpuMemory, frame: &mut Frame) {
         let maybe_x = PixelColumn::try_from_u16(self.clock.cycle() - 1);
         let maybe_y = PixelRow::try_from_u16(self.clock.scanline());
