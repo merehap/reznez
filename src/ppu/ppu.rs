@@ -67,6 +67,7 @@ pub struct Ppu {
 }
 
 impl Ppu {
+    #[allow(clippy::vec_init_then_push)]
     pub fn new() -> Ppu {
         use CycleAction::*;
         let mut acts = Vec::new();
@@ -119,8 +120,8 @@ impl Ppu {
         acts.push(vec![]);
         acts.push(vec![GetPatternIndex]);
 
-        let mut sprite_acts = Vec::new();
         // Cycle 0 (Skipped on odd, rendering frames.)
+        let mut sprite_acts = Vec::new();
         sprite_acts.push(vec![]);
 
         for _cycle in 1..=64 {
@@ -220,12 +221,9 @@ impl Ppu {
                 self.execute_cycle_action(mem, action);
             }
 
-            match cycle {
-                321..=336 => {
-                    self.pattern_register.shift_left();
-                    self.attribute_register.push_next_palette_table_index();
-                }
-                _ => {}
+            if let 321..=336 = cycle {
+                self.pattern_register.shift_left();
+                self.attribute_register.push_next_palette_table_index();
             }
 
             if scanline == 261 && cycle >= 280 && cycle <= 304 {
@@ -258,10 +256,8 @@ impl Ppu {
             }
 
             let cycle = self.clock.cycle();
-            if cycle == 1 {
-                if mem.regs().sprites_enabled() {
-                    self.oam.render_scanline(pixel_row, mem, frame);
-                }
+            if cycle == 1 && mem.regs().sprites_enabled() {
+                self.oam.render_scanline(pixel_row, mem, frame);
             }
 
             self.maybe_set_sprite0_hit(mem, frame);
@@ -348,27 +344,25 @@ impl Ppu {
                 // even cycles copy from $2004 to secondary OAM.
                 if self.clock.cycle() % 2 == 1 {
                     mem.regs_mut().oam_data = self.oam.read_sprite_data(self.oam_index);
-                } else {
-                    if !self.oam_index.end_reached() {
-                        // Reading and incrementing still happen after sprite rendering is
-                        // complete, but writes fail (i.e. they don't happen).
-                        self.oam_index.next_sprite();
-                    } else if self.oam_index.new_sprite_started() {
-                        let sprite_y = mem.regs().oam_data;
-                        self.secondary_oam[self.secondary_oam_pointer as usize] = sprite_y;
-                        // Check if the y coordinate is on screen.
-                        if SpriteY::new(sprite_y).to_pixel_row().is_some() {
-                            self.secondary_oam_pointer += 1;
-                            self.oam_index.next_field();
-                        } else {
-                            self.oam_index.next_sprite();
-                        }
-                    } else {
-                        // The current sprite is in range, copy one more byte of its data over.
-                        self.secondary_oam[self.secondary_oam_pointer as usize] = mem.regs().oam_data;
+                } else if !self.oam_index.end_reached() {
+                    // Reading and incrementing still happen after sprite rendering is
+                    // complete, but writes fail (i.e. they don't happen).
+                    self.oam_index.next_sprite();
+                } else if self.oam_index.new_sprite_started() {
+                    let sprite_y = mem.regs().oam_data;
+                    self.secondary_oam[self.secondary_oam_pointer as usize] = sprite_y;
+                    // Check if the y coordinate is on screen.
+                    if SpriteY::new(sprite_y).to_pixel_row().is_some() {
                         self.secondary_oam_pointer += 1;
                         self.oam_index.next_field();
+                    } else {
+                        self.oam_index.next_sprite();
                     }
+                } else {
+                    // The current sprite is in range, copy one more byte of its data over.
+                    self.secondary_oam[self.secondary_oam_pointer as usize] = mem.regs().oam_data;
+                    self.secondary_oam_pointer += 1;
+                    self.oam_index.next_field();
                 }
             }
             ReadSpriteY => {}
