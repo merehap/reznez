@@ -448,7 +448,7 @@ impl Renderer for PrimaryRenderer {
         execute_frame(
             &mut world.nes,
             &world.config,
-            events(&world.input),
+            &events(&world.input),
             display_frame,
         );
     }

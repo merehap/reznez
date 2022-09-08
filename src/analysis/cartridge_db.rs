@@ -81,7 +81,7 @@ pub fn analyze(rom_base_path: &Path) {
         .into_group_map_by(|(_, mapper_number, _)| *mapper_number)
         .into_iter()
         .collect();
-    for (mapper_number, group) in grouped_cartridges.iter() {
+    for (mapper_number, group) in &grouped_cartridges {
         info!("{}", mapper_number);
         for (name, _, mirroring) in group {
             info!("\t{}: {} mirroring", name, mirroring);

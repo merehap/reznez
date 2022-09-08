@@ -20,7 +20,7 @@ pub trait Gui {
     fn run(&mut self, nes: Nes, config: Config);
 }
 
-pub fn execute_frame<F>(nes: &mut Nes, config: &Config, events: Events, display_frame: F)
+pub fn execute_frame<F>(nes: &mut Nes, config: &Config, events: &Events, display_frame: F)
 where
     F: FnOnce(&Frame, Mask, u64),
 {
@@ -29,7 +29,7 @@ where
     let target_frame_rate = config.target_frame_rate;
     let intended_frame_end_time = start_time.add(frame_duration(target_frame_rate));
 
-    nes.process_gui_events(&events);
+    nes.process_gui_events(events);
     nes.step_frame();
     let mask = nes.memory_mut().as_ppu_memory().regs().mask;
     display_frame(nes.frame(), mask, frame_index);

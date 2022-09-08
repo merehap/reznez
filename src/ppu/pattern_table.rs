@@ -46,7 +46,7 @@ impl<'a> PatternTable<'a> {
                 row_in_tile,
                 palette,
                 &mut tile.0[row_in_tile as usize],
-            )
+            );
         }
     }
 

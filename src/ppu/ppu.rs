@@ -242,8 +242,7 @@ impl Ppu {
                 let column_in_tile = self.current_address.x_scroll().fine();
                 let palette = palette_table.background_palette(self.attribute_register.current_palette_table_index(column_in_tile));
                 self.current_background_pixel = self.pattern_register.palette_index(column_in_tile)
-                    .map(|palette_index| Rgbt::Opaque(palette[palette_index]))
-                    .unwrap_or(Rgbt::Transparent);
+                    .map_or(Rgbt::Transparent, |palette_index| Rgbt::Opaque(palette[palette_index]));
 
                 frame.set_background_pixel(
                     pixel_column,
