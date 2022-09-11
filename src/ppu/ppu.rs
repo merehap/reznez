@@ -364,7 +364,7 @@ impl Ppu {
                     self.oam_index.next_field();
                 }
             }
-            ReadSpriteY => {}
+            ReadSpriteY => { /* Do nothing. */ }
             ReadSpritePatternIndex => {}
             ReadSpriteAttributes => {}
             ReadSpriteX => {}

@@ -2,7 +2,7 @@ use crate::memory::memory::PpuMemory;
 use crate::ppu::pixel_index::PixelRow;
 use crate::ppu::register::registers::ctrl::SpriteHeight;
 use crate::ppu::render::frame::Frame;
-use crate::ppu::sprite::{Priority, Sprite};
+use crate::ppu::sprite::{Priority, Sprite, SpriteAttributes};
 
 const ATTRIBUTE_BYTE_INDEX: u8 = 2;
 
@@ -185,4 +185,61 @@ enum FieldIndex {
     PatternIndex = 1,
     Attributes   = 2,
     XCoordinate  = 3,
+}
+
+pub struct OamRegisters {
+    oam_registers: [SpriteRegisters; 8],
+}
+
+pub struct SpriteRegisters {
+    low_pattern: u8,
+    high_pattern: u8,
+    attributes: SpriteAttributes,
+    x_counter: u8,
+}
+
+impl SpriteRegisters {
+    pub fn new() -> SpriteRegisters {
+        SpriteRegisters {
+            low_pattern: 0,
+            high_pattern: 0,
+            attributes: SpriteAttributes::new(),
+            x_counter: 0,
+        }
+    }
+
+    pub fn set_pattern(&mut self, low_pattern: u8, high_pattern: u8) {
+        self.low_pattern = low_pattern;
+        self.high_pattern = high_pattern;
+    }
+
+    pub fn set_attributes(&mut self, attributes: SpriteAttributes) {
+        self.attributes = attributes;
+    }
+
+    pub fn set_x_counter(&mut self, initial_value: u8) {
+        self.x_counter = initial_value;
+    }
+
+    /*
+    pub fn step(&mut self) -> Rgbt {
+        if self.x_counter > 0 {
+            // This sprite is still inactive.
+            self.x_counter -= 1;
+            return Rgbt::Transparent;
+        }
+
+        let low_bit = get_bit(self.low_pattern, 0);
+        let high_bit = get_bit(self.high_pattern, 0);
+        self.low_pattern <<= 1;
+        self.high_pattern <<= 1;
+
+        match (low_bit, high_bit) {
+            (false, false) => Rgbt::Transparent,
+            (true, false) => Rgbt::Opaque(palette[PaletteIndex::One]),
+            (false, true) => Rgbt::Opaque(palette[PaletteIndex::Two]),
+            (true, true) => Rgbt::Opaque(palette[PaletteIndex::Three]),
+        }
+    }
+    */
 }

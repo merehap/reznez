@@ -16,34 +16,21 @@ pub struct Sprite {
     x_coordinate: PixelColumn,
     y_coordinate: SpriteY,
     pattern_index: PatternIndex,
-    flip_vertically: bool,
-    flip_horizontally: bool,
-    priority: Priority,
-    palette_table_index: PaletteTableIndex,
+    attributes: SpriteAttributes,
 }
 
 impl Sprite {
     #[inline]
     #[rustfmt::skip]
     pub fn from_u32(value: u32) -> Sprite {
-        let [y_coordinate, raw_pattern_index, attribute, x_coordinate] =
+        let [y_coordinate, raw_pattern_index, attributes, x_coordinate] =
             value.to_be_bytes();
-
-        let palette_table_index = match (get_bit(attribute, 6), get_bit(attribute, 7)) {
-            (false, false) => PaletteTableIndex::Zero,
-            (false, true ) => PaletteTableIndex::One,
-            (true , false) => PaletteTableIndex::Two,
-            (true , true ) => PaletteTableIndex::Three,
-        };
 
         Sprite {
             x_coordinate: PixelColumn::new(x_coordinate),
             y_coordinate: SpriteY(y_coordinate),
             pattern_index: PatternIndex::new(raw_pattern_index),
-            flip_vertically:   get_bit(attribute, 0),
-            flip_horizontally: get_bit(attribute, 1),
-            priority:          get_bit(attribute, 2).into(),
-            palette_table_index,
+            attributes: SpriteAttributes::from_u8(attributes),
         }
     }
 
@@ -57,7 +44,7 @@ impl Sprite {
     }
 
     pub fn priority(self) -> Priority {
-        self.priority
+        self.attributes.priority
     }
 
     // For debug screens only.
@@ -168,11 +155,11 @@ impl Sprite {
             (SpriteHeight::Tall,   SpriteHalf::Bottom) => self.pattern_index.to_tall_indexes().1,
         };
 
-        if self.flip_vertically {
+        if self.attributes.flip_vertically {
             row_in_half = row_in_half.flip();
         }
 
-        let sprite_palette = palette_table.sprite_palette(self.palette_table_index);
+        let sprite_palette = palette_table.sprite_palette(self.attributes.palette_table_index);
         pattern_table.render_pixel_sliver(
             pattern_index,
             row_in_half,
@@ -180,7 +167,7 @@ impl Sprite {
             sprite_sliver,
         );
 
-        if self.flip_horizontally {
+        if self.attributes.flip_horizontally {
             for i in 0..sprite_sliver.len() / 2 {
                 sprite_sliver.swap(i, 7 - i);
             }
@@ -196,7 +183,7 @@ impl Sprite {
         let sprite_top_row = self.y_coordinate.to_pixel_row()?;
         let offset = pixel_row.difference(sprite_top_row)?;
         let row_in_half = FromPrimitive::from_u8(offset % 8).unwrap();
-        match (offset / 8, sprite_height, self.flip_vertically) {
+        match (offset / 8, sprite_height, self.attributes.flip_vertically) {
             (0, SpriteHeight::Normal, _    ) => Some((SpriteHalf::Top   , row_in_half)),
             (0, SpriteHeight::Tall  , false) => Some((SpriteHalf::Top   , row_in_half)),
             (0, SpriteHeight::Tall  , true ) => Some((SpriteHalf::Bottom, row_in_half)),
@@ -242,6 +229,41 @@ impl From<bool> for Priority {
             Priority::Behind
         } else {
             Priority::InFront
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SpriteAttributes {
+    flip_vertically: bool,
+    flip_horizontally: bool,
+    priority: Priority,
+    palette_table_index: PaletteTableIndex,
+}
+
+impl SpriteAttributes {
+    pub fn new() -> SpriteAttributes {
+        SpriteAttributes {
+            flip_vertically:   false,
+            flip_horizontally: false,
+            priority:          Priority::InFront,
+            palette_table_index: PaletteTableIndex::Zero,
+        }
+    }
+
+    pub fn from_u8(value: u8) -> SpriteAttributes {
+        let palette_table_index = match (get_bit(value, 6), get_bit(value, 7)) {
+            (false, false) => PaletteTableIndex::Zero,
+            (false, true ) => PaletteTableIndex::One,
+            (true , false) => PaletteTableIndex::Two,
+            (true , true ) => PaletteTableIndex::Three,
+        };
+
+        SpriteAttributes {
+            flip_vertically:   get_bit(value, 0),
+            flip_horizontally: get_bit(value, 1),
+            priority:          get_bit(value, 2).into(),
+            palette_table_index,
         }
     }
 }

@@ -17,6 +17,17 @@ impl<'a> PatternTable<'a> {
         PatternTable(raw)
     }
 
+    pub fn read_pattern_data_at(
+        &self,
+        pattern_index: PatternIndex,
+        row_in_tile: RowInTile,
+    ) -> (u8, u8) {
+        (
+            self.0.read(pattern_index.to_low_index(row_in_tile)),
+            self.0.read(pattern_index.to_high_index(row_in_tile)),
+        )
+    }
+
     pub fn read_low_byte(
         &self,
         pattern_index: PatternIndex,
