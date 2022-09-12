@@ -1,8 +1,12 @@
 use crate::memory::memory::PpuMemory;
+use crate::ppu::palette::rgbt::Rgbt;
+use crate::ppu::palette::palette_index::PaletteIndex;
+use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::pixel_index::PixelRow;
 use crate::ppu::register::registers::ctrl::SpriteHeight;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::{Priority, Sprite, SpriteAttributes};
+use crate::util::bit_util::get_bit;
 
 const ATTRIBUTE_BYTE_INDEX: u8 = 2;
 
@@ -188,9 +192,19 @@ enum FieldIndex {
 }
 
 pub struct OamRegisters {
-    oam_registers: [SpriteRegisters; 8],
+    pub registers: [SpriteRegisters; 8],
 }
 
+impl OamRegisters {
+    pub fn new() -> OamRegisters {
+        OamRegisters {
+            registers: [SpriteRegisters::new(); 8],
+        }
+    }
+}
+
+
+#[derive(Clone, Copy)]
 pub struct SpriteRegisters {
     low_pattern: u8,
     high_pattern: u8,
@@ -208,21 +222,21 @@ impl SpriteRegisters {
         }
     }
 
+    // TODO: Store PatternIndex and set patterns later on.
     pub fn set_pattern(&mut self, low_pattern: u8, high_pattern: u8) {
         self.low_pattern = low_pattern;
         self.high_pattern = high_pattern;
     }
 
-    pub fn set_attributes(&mut self, attributes: SpriteAttributes) {
-        self.attributes = attributes;
+    pub fn set_attributes(&mut self, attributes: u8) {
+        self.attributes = SpriteAttributes::from_u8(attributes);
     }
 
     pub fn set_x_counter(&mut self, initial_value: u8) {
         self.x_counter = initial_value;
     }
 
-    /*
-    pub fn step(&mut self) -> Rgbt {
+    pub fn step(&mut self, palette_table: &PaletteTable) -> Rgbt {
         if self.x_counter > 0 {
             // This sprite is still inactive.
             self.x_counter -= 1;
@@ -234,6 +248,7 @@ impl SpriteRegisters {
         self.low_pattern <<= 1;
         self.high_pattern <<= 1;
 
+        let palette = palette_table.sprite_palette(self.attributes.palette_table_index());
         match (low_bit, high_bit) {
             (false, false) => Rgbt::Transparent,
             (true, false) => Rgbt::Opaque(palette[PaletteIndex::One]),
@@ -241,5 +256,4 @@ impl SpriteRegisters {
             (true, true) => Rgbt::Opaque(palette[PaletteIndex::Three]),
         }
     }
-    */
 }

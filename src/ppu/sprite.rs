@@ -246,7 +246,7 @@ impl SpriteAttributes {
         SpriteAttributes {
             flip_vertically:   false,
             flip_horizontally: false,
-            priority:          Priority::InFront,
+            priority: Priority::InFront,
             palette_table_index: PaletteTableIndex::Zero,
         }
     }
@@ -265,5 +265,9 @@ impl SpriteAttributes {
             priority:          get_bit(value, 2).into(),
             palette_table_index,
         }
+    }
+
+    pub fn palette_table_index(self) -> PaletteTableIndex {
+        self.palette_table_index
     }
 }

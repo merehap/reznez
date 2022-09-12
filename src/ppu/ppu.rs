@@ -5,7 +5,7 @@ use crate::memory::memory::PpuMemory;
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
-use crate::ppu::oam::{Oam, OamIndex};
+use crate::ppu::oam::{Oam, OamIndex, OamRegisters};
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
@@ -43,6 +43,8 @@ pub struct Ppu {
     oam_index: OamIndex,
     secondary_oam: [u8; 32],
     secondary_oam_pointer: u8,
+    oam_registers: OamRegisters,
+    oam_register_index: usize,
 
     clock: Clock,
 
@@ -154,6 +156,8 @@ impl Ppu {
             oam_index: OamIndex::new(),
             secondary_oam: [0xFF; 32],
             secondary_oam_pointer: 0,
+            oam_registers: OamRegisters::new(),
+            oam_register_index: 0,
 
             clock: Clock::new(),
 
@@ -364,10 +368,29 @@ impl Ppu {
                     self.oam_index.next_field();
                 }
             }
-            ReadSpriteY => { /* Do nothing. */ }
-            ReadSpritePatternIndex => {}
-            ReadSpriteAttributes => {}
-            ReadSpriteX => {}
+            ReadSpriteY => self.secondary_oam_pointer += 1,
+            ReadSpritePatternIndex => {
+                let pattern_index = self.secondary_oam[self.secondary_oam_pointer as usize];
+                let pattern_index = PatternIndex::new(pattern_index);
+                self.secondary_oam_pointer += 1;
+                let sprite_table_side = mem.regs().sprite_table_side();
+                let (low, high) = mem.pattern_table(sprite_table_side).read_pattern_data_at(pattern_index, row_in_tile);
+                self.oam_registers.registers[self.oam_register_index].set_pattern(low, high);
+            }
+            ReadSpriteAttributes => {
+                let attributes = self.secondary_oam[self.secondary_oam_pointer as usize];
+                self.secondary_oam_pointer += 1;
+                self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
+            }
+            ReadSpriteX => {
+                let x_counter = self.secondary_oam[self.secondary_oam_pointer as usize];
+                self.secondary_oam_pointer += 1;
+                if self.secondary_oam_pointer % 8 == 0 {
+                    self.oam_register_index = 0;
+                }
+
+                self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
+            }
         }
     }
 
