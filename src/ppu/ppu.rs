@@ -36,6 +36,7 @@ pub enum CycleAction {
     ReadSpritePatternIndex,
     ReadSpriteAttributes,
     ReadSpriteX,
+    DummyReadSpriteX,
 }
 
 pub struct Ppu {
@@ -140,10 +141,10 @@ impl Ppu {
             sprite_acts.push(vec![ReadSpritePatternIndex]);
             sprite_acts.push(vec![ReadSpriteAttributes]);
             sprite_acts.push(vec![ReadSpriteX]);
-            sprite_acts.push(vec![ReadSpriteX]);
-            sprite_acts.push(vec![ReadSpriteX]);
-            sprite_acts.push(vec![ReadSpriteX]);
-            sprite_acts.push(vec![ReadSpriteX]);
+            sprite_acts.push(vec![DummyReadSpriteX]);
+            sprite_acts.push(vec![DummyReadSpriteX]);
+            sprite_acts.push(vec![DummyReadSpriteX]);
+            sprite_acts.push(vec![DummyReadSpriteX]);
         }
 
         for _cycle in 321..=340 {
@@ -225,6 +226,10 @@ impl Ppu {
                 self.execute_cycle_action(mem, action);
             }
 
+            for action in self.sprite_scanline_actions[usize::from(cycle)].clone() {
+                self.execute_cycle_action(mem, action);
+            }
+
             if let 321..=336 = cycle {
                 self.pattern_register.shift_left();
                 self.attribute_register.push_next_palette_table_index();
@@ -257,6 +262,8 @@ impl Ppu {
                 self.pattern_register.shift_left();
                 self.attribute_register.push_next_palette_table_index();
             }
+
+            self.oam_registers.step(&mem.palette_table());
 
             let cycle = self.clock.cycle();
             if cycle == 1 && mem.regs().sprites_enabled() {
@@ -337,6 +344,7 @@ impl Ppu {
                 // TODO: We're supposed to just do a normal read/write and then return 0XFF,
                 // rather than actually overwrite Secondary OAM.
                 // https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
+                self.secondary_oam_pointer %= 32;
                 self.secondary_oam[self.secondary_oam_pointer as usize] = 0xFF;
                 self.secondary_oam_pointer += 1;
                 self.secondary_oam_pointer %= 32;
@@ -368,30 +376,35 @@ impl Ppu {
                     self.oam_index.next_field();
                 }
             }
-            ReadSpriteY => self.secondary_oam_pointer += 1,
+            ReadSpriteY => { /* FIXME: Do something here? */ }
             ReadSpritePatternIndex => {
-                let pattern_index = self.secondary_oam[self.secondary_oam_pointer as usize];
-                let pattern_index = PatternIndex::new(pattern_index);
-                self.secondary_oam_pointer += 1;
+                let pattern_index = PatternIndex::new(self.read_secondary_oam());
                 let sprite_table_side = mem.regs().sprite_table_side();
                 let (low, high) = mem.pattern_table(sprite_table_side).read_pattern_data_at(pattern_index, row_in_tile);
                 self.oam_registers.registers[self.oam_register_index].set_pattern(low, high);
             }
             ReadSpriteAttributes => {
-                let attributes = self.secondary_oam[self.secondary_oam_pointer as usize];
-                self.secondary_oam_pointer += 1;
+                let attributes = self.read_secondary_oam();
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
-                let x_counter = self.secondary_oam[self.secondary_oam_pointer as usize];
-                self.secondary_oam_pointer += 1;
-                if self.secondary_oam_pointer % 8 == 0 {
+                let x_counter = self.read_secondary_oam();
+                self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
+                if (self.secondary_oam_index() + 1) % 8 == 0 {
                     self.oam_register_index = 0;
                 }
-
-                self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
             }
+            DummyReadSpriteX => {/* FIXME: Actually do something here. */}
         }
+    }
+
+    fn secondary_oam_index(&self) -> usize {
+        let index = self.clock.cycle() - 257;
+        usize::from(index % 4 + 4 * (index / 8))
+    }
+
+    fn read_secondary_oam(&self) -> u8 {
+        self.secondary_oam[self.secondary_oam_index()]
     }
 
     fn process_latch_access(

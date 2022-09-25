@@ -201,6 +201,10 @@ impl OamRegisters {
             registers: [SpriteRegisters::new(); 8],
         }
     }
+
+    pub fn step(&mut self, palette_table: &PaletteTable) -> [Rgbt; 8] {
+        self.registers.map(|mut r| r.step(palette_table))
+    }
 }
 
 
