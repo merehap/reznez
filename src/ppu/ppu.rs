@@ -15,7 +15,7 @@ use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::render::frame::Frame;
-use crate::ppu::sprite::SpriteY;
+use crate::ppu::sprite::{Sprite, SpriteY};
 use crate::util::bit_util::unpack_bools;
 
 #[derive(Clone, Copy, Debug)]
@@ -263,12 +263,23 @@ impl Ppu {
                 self.attribute_register.push_next_palette_table_index();
             }
 
-            self.oam_registers.step(&mem.palette_table());
+            if mem.regs().sprites_enabled() {
+                let (sprite_pixel, priority, is_sprite_0) = self.oam_registers.step(&mem.palette_table());
+                frame.set_sprite_pixel(
+                    pixel_column,
+                    pixel_row,
+                    sprite_pixel,
+                    priority,
+                    is_sprite_0,
+                );
+            }
 
+            /*
             let cycle = self.clock.cycle();
             if cycle == 1 && mem.regs().sprites_enabled() {
                 self.oam.render_scanline(pixel_row, mem, frame);
             }
+            */
 
             self.maybe_set_sprite0_hit(mem, frame);
         }
@@ -363,9 +374,18 @@ impl Ppu {
                     let sprite_y = mem.regs().oam_data;
                     self.secondary_oam[self.secondary_oam_pointer as usize] = sprite_y;
                     // Check if the y coordinate is on screen.
-                    if SpriteY::new(sprite_y).to_pixel_row().is_some() {
-                        self.secondary_oam_pointer += 1;
-                        self.oam_index.next_field();
+                    if let Some(_) = SpriteY::new(sprite_y).to_pixel_row() {
+                        if let Some(pixel_index) = PixelIndex::try_from_clock(&self.clock) {
+                            let pixel_row = pixel_index.to_column_row().1;
+                            if let Some(_) = Sprite::row_in_sprite(SpriteY::new(sprite_y), false, mem.regs().sprite_height(), pixel_row) {
+                                self.secondary_oam_pointer += 1;
+                                self.oam_index.next_field();
+                            } else {
+                                self.oam_index.next_sprite();
+                            }
+                        } else {
+                            self.oam_index.next_sprite();
+                        }
                     } else {
                         self.oam_index.next_sprite();
                     }
@@ -376,7 +396,11 @@ impl Ppu {
                     self.oam_index.next_field();
                 }
             }
-            ReadSpriteY => { /* FIXME: Do something here? */ }
+            ReadSpriteY => {
+                // FIXME: Wrong sprite 0 test.
+                self.oam_registers.registers[self.oam_register_index]
+                    .set_is_sprite_0(self.secondary_oam_index() == 0);
+            }
             ReadSpritePatternIndex => {
                 let pattern_index = PatternIndex::new(self.read_secondary_oam());
                 let sprite_table_side = mem.regs().sprite_table_side();

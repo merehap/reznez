@@ -108,11 +108,11 @@ impl Frame {
         &mut self,
         column: PixelColumn,
         row: PixelRow,
-        rgb: Rgb,
+        rgbt: Rgbt,
         priority: Priority,
         is_sprite_0: bool,
     ) {
-        self.sprite_buffer[(column, row)] = (Rgbt::Opaque(rgb), priority, is_sprite_0);
+        self.sprite_buffer[(column, row)] = (rgbt, priority, is_sprite_0);
     }
 
     pub fn write_all_pixel_data(

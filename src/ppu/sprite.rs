@@ -84,7 +84,9 @@ impl Sprite {
         is_sprite_0: bool,
         frame: &mut Frame,
     ) {
-        let Some((sprite_half, row_in_half)) = self.row_in_sprite(sprite_height, row) else {
+        let Some((sprite_half, row_in_half)) =
+            Sprite::row_in_sprite(self.y_coordinate, self.attributes.flip_vertically, sprite_height, row) else {
+
             return;
         };
 
@@ -100,14 +102,14 @@ impl Sprite {
 
         for (column_in_sprite, &pixel) in sprite_sliver.iter().enumerate() {
             let column_in_sprite = ColumnInTile::from_usize(column_in_sprite).unwrap();
-            if let Rgbt::Opaque(rgb) = pixel {
+            if let Rgbt::Opaque(_) = pixel {
                 if let Some(column) =
                     self.x_coordinate.add_column_in_tile(column_in_sprite)
                 {
                     frame.set_sprite_pixel(
                         column,
                         row,
-                        rgb,
+                        pixel,
                         self.priority(),
                         is_sprite_0,
                     );
@@ -175,15 +177,16 @@ impl Sprite {
     }
 
     #[rustfmt::skip]
-    fn row_in_sprite(
-        self,
+    pub fn row_in_sprite(
+        y_coordinate: SpriteY,
+        flip_vertically: bool,
         sprite_height: SpriteHeight,
         pixel_row: PixelRow,
     ) -> Option<(SpriteHalf, RowInTile)> {
-        let sprite_top_row = self.y_coordinate.to_pixel_row()?;
+        let sprite_top_row = y_coordinate.to_pixel_row()?;
         let offset = pixel_row.difference(sprite_top_row)?;
         let row_in_half = FromPrimitive::from_u8(offset % 8).unwrap();
-        match (offset / 8, sprite_height, self.attributes.flip_vertically) {
+        match (offset / 8, sprite_height, flip_vertically) {
             (0, SpriteHeight::Normal, _    ) => Some((SpriteHalf::Top   , row_in_half)),
             (0, SpriteHeight::Tall  , false) => Some((SpriteHalf::Top   , row_in_half)),
             (0, SpriteHeight::Tall  , true ) => Some((SpriteHalf::Bottom, row_in_half)),
@@ -218,7 +221,7 @@ impl SpriteY {
 }
 
 #[derive(Clone, Copy, FromPrimitive)]
-enum SpriteHalf {
+pub enum SpriteHalf {
     Top,
     Bottom,
 }
@@ -265,6 +268,10 @@ impl SpriteAttributes {
             priority:          get_bit(value, 2).into(),
             palette_table_index,
         }
+    }
+
+    pub fn priority(self) -> Priority {
+        self.priority
     }
 
     pub fn palette_table_index(self) -> PaletteTableIndex {

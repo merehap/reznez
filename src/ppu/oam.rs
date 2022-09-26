@@ -202,8 +202,16 @@ impl OamRegisters {
         }
     }
 
-    pub fn step(&mut self, palette_table: &PaletteTable) -> [Rgbt; 8] {
-        self.registers.map(|mut r| r.step(palette_table))
+    pub fn step(&mut self, palette_table: &PaletteTable) -> (Rgbt, Priority, bool) {
+        let mut result = (Rgbt::Transparent, Priority::Behind, false);
+        for register in self.registers.iter_mut().rev() {
+            let candidate@(rgbt, _, _) = register.step(palette_table);
+            if let Rgbt::Opaque(_) = rgbt {
+                result = candidate;
+            }
+        }
+
+        result
     }
 }
 
@@ -214,6 +222,7 @@ pub struct SpriteRegisters {
     high_pattern: u8,
     attributes: SpriteAttributes,
     x_counter: u8,
+    is_sprite_0: bool,
 }
 
 impl SpriteRegisters {
@@ -223,6 +232,7 @@ impl SpriteRegisters {
             high_pattern: 0,
             attributes: SpriteAttributes::new(),
             x_counter: 0,
+            is_sprite_0: false,
         }
     }
 
@@ -240,11 +250,15 @@ impl SpriteRegisters {
         self.x_counter = initial_value;
     }
 
-    pub fn step(&mut self, palette_table: &PaletteTable) -> Rgbt {
+    pub fn set_is_sprite_0(&mut self, is_sprite_0: bool) {
+        self.is_sprite_0 = is_sprite_0;
+    }
+
+    pub fn step(&mut self, palette_table: &PaletteTable) -> (Rgbt, Priority, bool) {
         if self.x_counter > 0 {
             // This sprite is still inactive.
             self.x_counter -= 1;
-            return Rgbt::Transparent;
+            return (Rgbt::Transparent, Priority::Behind, false);
         }
 
         let low_bit = get_bit(self.low_pattern, 0);
@@ -253,11 +267,13 @@ impl SpriteRegisters {
         self.high_pattern <<= 1;
 
         let palette = palette_table.sprite_palette(self.attributes.palette_table_index());
-        match (low_bit, high_bit) {
+        let rgbt = match (low_bit, high_bit) {
             (false, false) => Rgbt::Transparent,
             (true, false) => Rgbt::Opaque(palette[PaletteIndex::One]),
             (false, true) => Rgbt::Opaque(palette[PaletteIndex::Two]),
             (true, true) => Rgbt::Opaque(palette[PaletteIndex::Three]),
-        }
+        };
+
+        (rgbt, self.attributes.priority(), self.is_sprite_0)
     }
 }
