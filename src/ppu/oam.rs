@@ -262,6 +262,10 @@ impl OamRegisters {
         }
     }
 
+    pub fn reset(&mut self) {
+        *self = OamRegisters::new();
+    }
+
     pub fn step(&mut self, palette_table: &PaletteTable) -> (Rgbt, Priority, bool) {
         let mut result = (Rgbt::Transparent, Priority::Behind, false);
         for register in self.registers.iter_mut().rev() {
