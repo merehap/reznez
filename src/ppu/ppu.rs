@@ -15,7 +15,7 @@ use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::render::frame::Frame;
-use crate::ppu::sprite::{Sprite, SpriteY};
+use crate::ppu::sprite::{Sprite, SpriteY, SpriteAttributes};
 use crate::util::bit_util::unpack_bools;
 
 #[derive(Clone, Copy, Debug)]
@@ -352,12 +352,22 @@ impl Ppu {
             }
 
             ClearSecondaryOamByte => {
+                // FIXME: Hack.
+                if self.secondary_oam_pointer.end_reached() {
+                    self.secondary_oam_pointer.reset();
+                }
                 // TODO: We're supposed to just do a normal read/write and then return 0XFF,
                 // rather than actually overwrite Secondary OAM.
                 // https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
                 self.secondary_oam.set(self.secondary_oam_pointer, 0xFF);
                 self.secondary_oam_pointer.increment();
+                // FIXME: Hack.
+                if self.secondary_oam_pointer.end_reached() {
+                    self.secondary_oam_pointer.reset();
+                }
+
                 self.oam_index.reset();
+                self.oam_register_index = 0;
             }
             SpriteEvaluation => {
                 // Odd cycles copy from primary OAM to $2004,
@@ -370,7 +380,9 @@ impl Ppu {
                     self.oam_index.next_sprite();
                 } else if self.oam_index.new_sprite_started() {
                     let sprite_y = mem.regs().oam_data;
-                    self.secondary_oam.set(self.secondary_oam_pointer, sprite_y);
+                    if !self.secondary_oam_pointer.end_reached() {
+                        self.secondary_oam.set(self.secondary_oam_pointer, sprite_y);
+                    }
                     // Check if the y coordinate is on screen.
                     if let Some(pixel_index) = PixelIndex::try_from_clock(&self.clock) {
                         let pixel_row = pixel_index.to_column_row().1;
@@ -385,7 +397,10 @@ impl Ppu {
                     }
                 } else {
                     // The current sprite is in range, copy one more byte of its data over.
-                    self.secondary_oam.set(self.secondary_oam_pointer, mem.regs().oam_data);
+                    if !self.secondary_oam_pointer.end_reached() {
+                        self.secondary_oam.set(self.secondary_oam_pointer, mem.regs().oam_data);
+                    }
+
                     self.secondary_oam_pointer.increment();
                     self.oam_index.next_field();
                 }
@@ -402,7 +417,7 @@ impl Ppu {
                 self.oam_registers.registers[self.oam_register_index].set_pattern(low, high);
             }
             ReadSpriteAttributes => {
-                let attributes = self.read_secondary_oam();
+                let attributes = SpriteAttributes::from_u8(self.read_secondary_oam());
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {

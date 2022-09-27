@@ -122,32 +122,67 @@ impl SecondaryOam {
     }
 
     pub fn get(&self, pointer: SecondaryOamPointer) -> u8 {
-        self.0[pointer.0]
+        self.0[pointer.pointer]
     }
 
     pub fn set(&mut self, pointer: SecondaryOamPointer, value: u8) {
-        self.0[pointer.0] = value;
+        self.0[pointer.pointer] = value;
+    }
+
+    pub fn to_string(&self) -> String {
+        let mut text = "Y  Pa At X\n".to_string();
+        for i in 0..8 {
+            text.push_str(&format!("{:02X} {:02X} {:02X} {:02X}\n", self.0[i], self.0[i+1], self.0[i+2], self.0[i+3]));
+        }
+
+        text
     }
 }
 
 #[derive(Clone, Copy)]
-pub struct SecondaryOamPointer(usize);
+pub struct SecondaryOamPointer {
+    pointer: usize,
+    end_reached: bool,
+}
 
 impl SecondaryOamPointer {
     pub fn new() -> SecondaryOamPointer {
-        SecondaryOamPointer(0)
+        SecondaryOamPointer {
+            pointer: 0,
+            end_reached: false,
+        }
     }
 
     pub fn try_from_usize(value: usize) -> Option<SecondaryOamPointer> {
         if value >= 32 {
             None
         } else {
-            Some(SecondaryOamPointer(usize::from(value)))
+            Some(SecondaryOamPointer {
+                pointer: usize::from(value),
+                end_reached: false,
+            })
         }
     }
 
+    pub fn current_sprite_index(self) -> usize {
+        self.pointer / 8
+    }
+
+    pub fn end_reached(self) -> bool {
+        self.end_reached
+    }
+
+    pub fn reset(&mut self) {
+        *self = SecondaryOamPointer::new();
+    }
+
     pub fn increment(&mut self) {
-        self.0 = (self.0 + 1) % 32;
+        if self.pointer == 31 {
+            self.pointer = 0;
+            self.end_reached = true;
+        } else {
+            self.pointer += 1;
+        }
     }
 }
 
@@ -267,8 +302,8 @@ impl SpriteRegisters {
         self.high_pattern = high_pattern;
     }
 
-    pub fn set_attributes(&mut self, attributes: u8) {
-        self.attributes = SpriteAttributes::from_u8(attributes);
+    pub fn set_attributes(&mut self, attributes: SpriteAttributes) {
+        self.attributes = attributes;
     }
 
     pub fn set_x_counter(&mut self, initial_value: u8) {
