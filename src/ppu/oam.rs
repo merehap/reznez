@@ -151,7 +151,7 @@ impl SecondaryOamPointer {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct OamIndex {
     // "n" in the documentation
     sprite_index: u8,
@@ -208,7 +208,7 @@ impl OamIndex {
     }
 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 enum FieldIndex {
     YCoordinate  = 0,
     PatternIndex = 1,

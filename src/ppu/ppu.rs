@@ -364,7 +364,7 @@ impl Ppu {
                 // even cycles copy from $2004 to secondary OAM.
                 if self.clock.cycle() % 2 == 1 {
                     mem.regs_mut().oam_data = self.oam.read_sprite_data(self.oam_index);
-                } else if !self.oam_index.end_reached() {
+                } else if self.oam_index.end_reached() {
                     // Reading and incrementing still happen after sprite rendering is
                     // complete, but writes fail (i.e. they don't happen).
                     self.oam_index.next_sprite();
