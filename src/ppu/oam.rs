@@ -121,8 +121,33 @@ impl SecondaryOam {
         SecondaryOam([0xFF; 32])
     }
 
-    pub fn blank(&mut self, index: usize) {
-        self.0[index] = 0xFF;
+    pub fn get(&self, pointer: SecondaryOamPointer) -> u8 {
+        self.0[pointer.0]
+    }
+
+    pub fn set(&mut self, pointer: SecondaryOamPointer, value: u8) {
+        self.0[pointer.0] = value;
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct SecondaryOamPointer(usize);
+
+impl SecondaryOamPointer {
+    pub fn new() -> SecondaryOamPointer {
+        SecondaryOamPointer(0)
+    }
+
+    pub fn try_from_usize(value: usize) -> Option<SecondaryOamPointer> {
+        if value >= 32 {
+            None
+        } else {
+            Some(SecondaryOamPointer(usize::from(value)))
+        }
+    }
+
+    pub fn increment(&mut self) {
+        self.0 = (self.0 + 1) % 32;
     }
 }
 
