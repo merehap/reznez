@@ -277,6 +277,17 @@ impl OamRegisters {
 
         result
     }
+
+    pub fn to_string(&self) -> String {
+        let mut result = String::new();
+        for reg in self.registers.iter() {
+            result.push_str(&reg.to_string());
+            result.push_str("\n");
+        }
+
+        result.push_str("\n");
+        result
+    }
 }
 
 
@@ -325,10 +336,20 @@ impl SpriteRegisters {
             return (Rgbt::Transparent, Priority::Behind, false);
         }
 
-        let low_bit = get_bit(self.low_pattern, 0);
-        let high_bit = get_bit(self.high_pattern, 0);
-        self.low_pattern <<= 1;
-        self.high_pattern <<= 1;
+        // Ugly :-(
+        let low_bit;
+        let high_bit;
+        if self.attributes.flip_horizontally() {
+            low_bit = get_bit(self.low_pattern, 7);
+            high_bit = get_bit(self.high_pattern, 7);
+            self.low_pattern >>= 1;
+            self.high_pattern >>= 1;
+        } else {
+            low_bit = get_bit(self.low_pattern, 0);
+            high_bit = get_bit(self.high_pattern, 0);
+            self.low_pattern <<= 1;
+            self.high_pattern <<= 1;
+        }
 
         let palette = palette_table.sprite_palette(self.attributes.palette_table_index());
         let rgbt = match (low_bit, high_bit) {
@@ -339,5 +360,9 @@ impl SpriteRegisters {
         };
 
         (rgbt, self.attributes.priority(), self.is_sprite_0)
+    }
+
+    pub fn to_string(&self) -> String {
+        format!("X: {:03}, Low: {:02X}, Flip: {}", self.x_counter, self.low_pattern, self.attributes.flip_horizontally())
     }
 }

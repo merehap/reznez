@@ -270,6 +270,14 @@ impl SpriteAttributes {
         }
     }
 
+    pub fn flip_vertically(self) -> bool {
+        self.flip_vertically
+    }
+
+    pub fn flip_horizontally(self) -> bool {
+        self.flip_horizontally
+    }
+
     pub fn priority(self) -> Priority {
         self.priority
     }

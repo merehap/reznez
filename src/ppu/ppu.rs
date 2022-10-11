@@ -281,12 +281,12 @@ impl Ppu {
                 );
             }
 
-            /*
             let cycle = self.clock.cycle();
             if cycle == 1 && mem.regs().sprites_enabled() {
-                self.oam.render_scanline(pixel_row, mem, frame);
+                //println!("{}", self.secondary_oam.to_string());
+                //println!("{}", self.oam_registers.to_string());
+                //self.oam.render_scanline(pixel_row, mem, frame);
             }
-            */
 
             self.maybe_set_sprite0_hit(mem, frame);
         }
@@ -383,7 +383,7 @@ impl Ppu {
                 if self.clock.cycle() % 2 == 1 {
                     mem.regs_mut().oam_data = self.oam.read_sprite_data(self.oam_index);
                 } else if self.oam_index.end_reached() {
-                    // Reading and incrementing still happen after sprite rendering is
+                    // Reading and incrementing still happen after sprite evaluation is
                     // complete, but writes fail (i.e. they don't happen).
                     self.oam_index.next_sprite();
                     self.oam_registers.reset();
@@ -442,9 +442,7 @@ impl Ppu {
                     self.oam_register_index = 0;
                 }
             }
-            DummyReadSpriteX => {
-                // TODO: Only do this once, not 4 times.
-            }
+            DummyReadSpriteX => {}
         }
     }
 
@@ -528,8 +526,7 @@ impl Ppu {
     }
 
     fn update_oam_data(&self, regs: &mut PpuRegisters) {
-        let oam_data = self.oam.read(regs.oam_addr);
-        regs.oam_data = oam_data;
+        regs.oam_data = self.oam.read(regs.oam_addr);
     }
 
     fn update_ppu_data(&self, mem: &mut PpuMemory) {
