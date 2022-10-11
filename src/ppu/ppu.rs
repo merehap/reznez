@@ -65,6 +65,9 @@ pub struct Ppu {
     pattern_register: PatternRegister,
     attribute_register: AttributeRegister,
 
+    next_sprite_pattern_index: PatternIndex,
+    current_sprite_y: SpriteY,
+
     background_scanline_actions: [Vec<CycleAction>; 341],
     sprite_scanline_actions: [Vec<CycleAction>; 341],
 }
@@ -172,11 +175,15 @@ impl Ppu {
             suppress_vblank_active: false,
             nmi_was_enabled_last_cycle: false,
 
+            // FIXME: Looks like this doesn't need to be a member variable anymore.
             current_background_pixel: Rgbt::Transparent,
 
             next_pattern_index: PatternIndex::new(0),
             pattern_register: PatternRegister::new(),
             attribute_register: AttributeRegister::new(),
+
+            next_sprite_pattern_index: PatternIndex::new(0),
+            current_sprite_y: SpriteY::new(0),
 
             background_scanline_actions: acts.try_into().unwrap(),
             sprite_scanline_actions: sprite_acts.try_into().unwrap(),
@@ -318,6 +325,7 @@ impl Ppu {
 
     pub fn execute_cycle_action(&mut self, mem: &mut PpuMemory, cycle_action: CycleAction) {
         let background_table_side = mem.regs().background_table_side();
+        let sprite_table_side = mem.regs().sprite_table_side();
         let pattern_table = mem.pattern_table(background_table_side);
         let tile_column = self.current_address.x_scroll().coarse();
         let tile_row = self.current_address.y_scroll().coarse();
@@ -356,7 +364,7 @@ impl Ppu {
                 if self.secondary_oam_pointer.end_reached() {
                     self.secondary_oam_pointer.reset();
                 }
-                // TODO: We're supposed to just do a normal read/write and then return 0XFF,
+                // TODO: We're supposed to just do a normal read/write and then return 0xFF,
                 // rather than actually overwrite Secondary OAM.
                 // https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
                 self.secondary_oam.set(self.secondary_oam_pointer, 0xFF);
@@ -385,8 +393,7 @@ impl Ppu {
                         self.secondary_oam.set(self.secondary_oam_pointer, sprite_y);
                     }
                     // Check if the y coordinate is on screen.
-                    if let Some(pixel_index) = PixelIndex::try_from_clock(&self.clock) {
-                        let pixel_row = pixel_index.to_column_row().1;
+                    if let Some(pixel_row) = self.clock.scanline_pixel_row() {
                         if Sprite::row_in_sprite(SpriteY::new(sprite_y), false, mem.regs().sprite_height(), pixel_row).is_some() {
                             self.secondary_oam_pointer.increment();
                             self.oam_index.next_field();
@@ -407,15 +414,19 @@ impl Ppu {
                 }
             }
             ReadSpriteY => {
+                self.current_sprite_y = SpriteY::new(self.read_secondary_oam());
                 // FIXME: Wrong sprite 0 test.
                 //self.oam_registers.registers[self.oam_register_index]
                 //    .set_is_sprite_0(self.secondary_oam_index() == 0);
             }
             ReadSpritePatternIndex => {
-                let pattern_index = PatternIndex::new(self.read_secondary_oam());
-                let sprite_table_side = mem.regs().sprite_table_side();
-                let (low, high) = mem.pattern_table(sprite_table_side).read_pattern_data_at(pattern_index, row_in_tile);
-                self.oam_registers.registers[self.oam_register_index].set_pattern(low, high);
+                self.next_sprite_pattern_index = PatternIndex::new(self.read_secondary_oam());
+                if let Some(pixel_row) = self.clock.scanline_pixel_row() {
+                    if let Some((_, row_in_tile)) = Sprite::row_in_sprite(self.current_sprite_y, false, mem.regs().sprite_height(), pixel_row) {
+                        let (low, high) = mem.pattern_table(sprite_table_side).read_pattern_data_at(self.next_sprite_pattern_index, row_in_tile);
+                        self.oam_registers.registers[self.oam_register_index].set_pattern(low, high);
+                    }
+                }
             }
             ReadSpriteAttributes => {
                 let attributes = SpriteAttributes::from_u8(self.read_secondary_oam());
@@ -431,13 +442,20 @@ impl Ppu {
                     self.oam_register_index = 0;
                 }
             }
-            DummyReadSpriteX => {/* FIXME: Actually do something here. */}
+            DummyReadSpriteX => {
+                // TODO: Only do this once, not 4 times.
+            }
         }
     }
 
     fn secondary_oam_index(&self) -> SecondaryOamPointer {
         let index = self.clock.cycle() - 257;
-        let index = usize::from(index % 4 + 4 * (index / 8));
+        let mut index = usize::from(index % 4 + 4 * (index / 8));
+        // Hack to support dummy Sprite Y reads on cycles 257-320.
+        if index >= 32 {
+            index = 0;
+        }
+
         SecondaryOamPointer::try_from_usize(index).unwrap()
     }
 

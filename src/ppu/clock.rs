@@ -1,3 +1,5 @@
+use crate::ppu::pixel_index::PixelRow;
+
 pub const MAX_SCANLINE: u16 = 261;
 pub const MAX_CYCLE: u16 = 340;
 
@@ -21,6 +23,10 @@ impl Clock {
 
     pub fn scanline(&self) -> u16 {
         self.scanline
+    }
+
+    pub fn scanline_pixel_row(&self) -> Option<PixelRow> {
+        PixelRow::try_from_u16(self.scanline)
     }
 
     pub fn cycle(&self) -> u16 {
