@@ -219,7 +219,10 @@ impl OamIndex {
     }
 
     pub fn next_sprite(&mut self) {
-        self.end_reached = self.sprite_index == OamIndex::MAX_SPRITE_INDEX;
+        if self.sprite_index == OamIndex::MAX_SPRITE_INDEX {
+            self.end_reached = true;
+        }
+
         if self.end_reached {
             self.sprite_index = 0;
         } else {
