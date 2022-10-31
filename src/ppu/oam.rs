@@ -336,6 +336,7 @@ impl SpriteRegisters {
         if self.x_counter > 0 {
             // This sprite is still inactive.
             self.x_counter -= 1;
+
             return (Rgbt::Transparent, Priority::Behind, false);
         }
 

@@ -386,7 +386,6 @@ impl Ppu {
                     // Reading and incrementing still happen after sprite evaluation is
                     // complete, but writes fail (i.e. they don't happen).
                     self.oam_index.next_sprite();
-                    self.oam_registers.reset();
                 } else if self.oam_index.new_sprite_started() {
                     let sprite_y = mem.regs().oam_data;
                     if !self.secondary_oam_pointer.end_reached() {
