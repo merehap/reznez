@@ -158,7 +158,7 @@ impl SecondaryOamPointer {
             None
         } else {
             Some(SecondaryOamPointer {
-                pointer: usize::from(value),
+                pointer: value,
                 end_reached: false,
             })
         }

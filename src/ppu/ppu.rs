@@ -360,21 +360,15 @@ impl Ppu {
             }
 
             ClearSecondaryOamByte => {
-                // FIXME: Hack.
-                if self.secondary_oam_pointer.end_reached() {
-                    self.secondary_oam_pointer.reset();
-                }
                 // TODO: We're supposed to just do a normal read/write and then return 0xFF,
                 // rather than actually overwrite Secondary OAM.
                 // https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
-                self.secondary_oam.set(self.secondary_oam_pointer, 0xFF);
-                self.secondary_oam_pointer.increment();
-                // FIXME: Hack.
-                if self.secondary_oam_pointer.end_reached() {
-                    self.secondary_oam_pointer.reset();
+                if self.clock.cycle() % 2 == 0 {
+                    self.secondary_oam.set(self.secondary_oam_clearing_index(), 0xFF);
                 }
 
                 self.oam_index.reset();
+                self.secondary_oam_pointer.reset();
                 self.oam_register_index = 0;
             }
             SpriteEvaluation => {
@@ -438,6 +432,10 @@ impl Ppu {
             }
             DummyReadSpriteX => {}
         }
+    }
+
+    fn secondary_oam_clearing_index(&self) -> SecondaryOamPointer {
+        SecondaryOamPointer::try_from_usize((self.clock.cycle() as usize - 1) / 2).unwrap()
     }
 
     fn secondary_oam_index(&self) -> SecondaryOamPointer {
