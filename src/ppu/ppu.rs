@@ -434,12 +434,7 @@ impl Ppu {
             ReadSpriteX => {
                 let x_counter = self.read_secondary_oam();
                 self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
-                // Reset back to the first sprite, preparing for the next frame.
-                if self.oam_register_index < 7 {
-                    self.oam_register_index += 1;
-                } else {
-                    self.oam_register_index = 0;
-                }
+                self.oam_register_index += 1;
             }
             DummyReadSpriteX => {}
         }
