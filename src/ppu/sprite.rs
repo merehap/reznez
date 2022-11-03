@@ -183,7 +183,7 @@ impl Sprite {
         sprite_height: SpriteHeight,
         pixel_row: PixelRow,
     ) -> Option<(SpriteHalf, RowInTile)> {
-        let sprite_top_row = y_coordinate.to_pixel_row()?;
+        let sprite_top_row = y_coordinate.to_current_pixel_row()?;
         let offset = pixel_row.difference(sprite_top_row)?;
         let row_in_half = FromPrimitive::from_u8(offset % 8).unwrap();
         match (offset / 8, sprite_height, flip_vertically) {
@@ -211,7 +211,11 @@ impl SpriteY {
         SpriteY(value)
     }
 
-    pub fn to_pixel_row(self) -> Option<PixelRow> {
+    pub fn to_current_pixel_row(self) -> Option<PixelRow> {
+        PixelRow::try_from_u16(u16::from(self.0))
+    }
+
+    pub fn to_next_pixel_row(self) -> Option<PixelRow> {
         // Rendering of sprites is delayed by one scanline so the sprite ends
         // up rendered one scanline lower than would be expected.
         // Sprites with y >= 239 are valid but can't be rendered.
