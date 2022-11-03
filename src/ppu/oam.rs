@@ -214,6 +214,10 @@ impl OamIndex {
         self.end_reached
     }
 
+    pub fn is_at_sprite_0(self) -> bool {
+        self.sprite_index == 0
+    }
+
     pub fn reset(&mut self) {
         *self = OamIndex::new();
     }
@@ -267,6 +271,10 @@ impl OamRegisters {
 
     pub fn reset(&mut self) {
         *self = OamRegisters::new();
+    }
+
+    pub fn sprite_0_present(&mut self) {
+        self.registers[0].is_sprite_0 = true;
     }
 
     pub fn step(&mut self, palette_table: &PaletteTable) -> (Rgbt, Priority, bool) {

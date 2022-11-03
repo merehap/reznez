@@ -67,6 +67,7 @@ pub struct Ppu {
 
     next_sprite_pattern_index: PatternIndex,
     current_sprite_y: SpriteY,
+    sprite_0_present: bool,
 
     background_scanline_actions: [Vec<CycleAction>; 341],
     sprite_scanline_actions: [Vec<CycleAction>; 341],
@@ -184,6 +185,7 @@ impl Ppu {
 
             next_sprite_pattern_index: PatternIndex::new(0),
             current_sprite_y: SpriteY::new(0),
+            sprite_0_present: false,
 
             background_scanline_actions: acts.try_into().unwrap(),
             sprite_scanline_actions: sprite_acts.try_into().unwrap(),
@@ -370,6 +372,7 @@ impl Ppu {
                 self.oam_index.reset();
                 self.secondary_oam_pointer.reset();
                 self.oam_register_index = 0;
+                self.sprite_0_present = false;
             }
             SpriteEvaluation => {
                 // Odd cycles copy from primary OAM to $2004,
@@ -388,6 +391,10 @@ impl Ppu {
                     // Check if the y coordinate is on screen.
                     if let Some(pixel_row) = self.clock.scanline_pixel_row() {
                         if Sprite::row_in_sprite(SpriteY::new(sprite_y), false, mem.regs().sprite_height(), pixel_row).is_some() {
+                            if self.oam_index.is_at_sprite_0() {
+                                self.oam_registers.sprite_0_present();
+                            }
+
                             self.secondary_oam_pointer.increment();
                             self.oam_index.next_field();
                         } else {
@@ -408,9 +415,6 @@ impl Ppu {
             }
             ReadSpriteY => {
                 self.current_sprite_y = SpriteY::new(self.read_secondary_oam());
-                // FIXME: Wrong sprite 0 test.
-                //self.oam_registers.registers[self.oam_register_index]
-                //    .set_is_sprite_0(self.secondary_oam_index() == 0);
             }
             ReadSpritePatternIndex => {
                 self.next_sprite_pattern_index = PatternIndex::new(self.read_secondary_oam());
