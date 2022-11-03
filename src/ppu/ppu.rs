@@ -15,7 +15,7 @@ use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::render::frame::Frame;
-use crate::ppu::sprite::{Sprite, SpriteY, SpriteAttributes};
+use crate::ppu::sprite::{Sprite, SpriteY, SpriteAttributes, SpriteHalf};
 use crate::util::bit_util::unpack_bools;
 
 #[derive(Clone, Copy, Debug)]
@@ -419,8 +419,12 @@ impl Ppu {
             ReadSpritePatternIndex => {
                 self.next_sprite_pattern_index = PatternIndex::new(self.read_secondary_oam());
                 if let Some(pixel_row) = self.clock.scanline_pixel_row() {
-                    if let Some((_, row_in_tile)) = Sprite::row_in_sprite(self.current_sprite_y, false, mem.regs().sprite_height(), pixel_row) {
-                        let (low, high) = mem.pattern_table(sprite_table_side).read_pattern_data_at(self.next_sprite_pattern_index, row_in_tile);
+                    if let Some((sprite_half, row_in_tile)) = Sprite::row_in_sprite(self.current_sprite_y, false, mem.regs().sprite_height(), pixel_row) {
+                        let pattern_index = match sprite_half {
+                            SpriteHalf::Top => self.next_sprite_pattern_index,
+                            SpriteHalf::Bottom => self.next_sprite_pattern_index.to_tall_indexes().1,
+                        };
+                        let (low, high) = mem.pattern_table(sprite_table_side).read_pattern_data_at(pattern_index, row_in_tile);
                         self.oam_registers.registers[self.oam_register_index].set_pattern(low, high);
                     }
                 }
