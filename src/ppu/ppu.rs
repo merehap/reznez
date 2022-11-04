@@ -444,13 +444,7 @@ impl Ppu {
                             row_in_half = row_in_half.flip();
                         }
 
-                        let pattern_table_side = if sprite_height == SpriteHeight::Tall {
-                            pattern_index.tall_sprite_pattern_table_side()
-                        } else {
-                            sprite_table_side
-                        };
-
-                        let (low, high) = mem.pattern_table(pattern_table_side).read_pattern_data_at(pattern_index, row_in_half);
+                        let (low, high) = mem.pattern_table(sprite_table_side).read_pattern_data_at(pattern_index, row_in_half);
                         self.oam_registers.registers[self.oam_register_index].set_pattern(low, high);
                     }
                 }
