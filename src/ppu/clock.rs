@@ -1,4 +1,5 @@
 use crate::ppu::pixel_index::PixelRow;
+use crate::ppu::oam::SecondaryOamIndex;
 
 pub const MAX_SCANLINE: u16 = 261;
 pub const MAX_CYCLE: u16 = 340;
@@ -25,10 +26,6 @@ impl Clock {
         self.scanline
     }
 
-    pub fn scanline_pixel_row(&self) -> Option<PixelRow> {
-        PixelRow::try_from_u16(self.scanline)
-    }
-
     pub fn cycle(&self) -> u16 {
         self.cycle
     }
@@ -36,6 +33,26 @@ impl Clock {
     pub fn total_cycles(&self) -> u64 {
         self.total_cycles
     }
+
+    pub fn scanline_pixel_row(&self) -> Option<PixelRow> {
+        PixelRow::try_from_u16(self.scanline)
+    }
+
+    pub fn secondary_oam_clearing_index(&self) -> SecondaryOamIndex {
+        SecondaryOamIndex::try_from_usize((self.cycle as usize - 1) / 2).unwrap()
+    }
+
+    pub fn secondary_oam_transfer_index(&self) -> SecondaryOamIndex {
+        let index = self.cycle - 257;
+        let mut index = usize::from(index % 4 + 4 * (index / 8));
+        // Hack to support dummy Sprite Y reads on cycles 257-320.
+        if index >= 32 {
+            index = 0;
+        }
+
+        SecondaryOamIndex::try_from_usize(index).unwrap()
+    }
+
 
     #[inline]
     pub fn is_last_cycle_of_frame(&self) -> bool {
