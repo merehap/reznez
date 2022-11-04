@@ -60,8 +60,6 @@ pub struct Ppu {
     suppress_vblank_active: bool,
     nmi_was_enabled_last_cycle: bool,
 
-    current_background_pixel: Rgbt,
-
     next_pattern_index: PatternIndex,
     pattern_register: PatternRegister,
     attribute_register: AttributeRegister,
@@ -177,9 +175,6 @@ impl Ppu {
             suppress_vblank_active: false,
             nmi_was_enabled_last_cycle: false,
 
-            // FIXME: Looks like this doesn't need to be a member variable anymore.
-            current_background_pixel: Rgbt::Transparent,
-
             next_pattern_index: PatternIndex::new(0),
             pattern_register: PatternRegister::new(),
             attribute_register: AttributeRegister::new(),
@@ -260,13 +255,14 @@ impl Ppu {
 
                 let column_in_tile = self.current_address.x_scroll().fine();
                 let palette = palette_table.background_palette(self.attribute_register.current_palette_table_index(column_in_tile));
-                self.current_background_pixel = self.pattern_register.palette_index(column_in_tile)
+
+                let current_background_pixel = self.pattern_register.palette_index(column_in_tile)
                     .map_or(Rgbt::Transparent, |palette_index| Rgbt::Opaque(palette[palette_index]));
 
                 frame.set_background_pixel(
                     pixel_column,
                     pixel_row,
-                    self.current_background_pixel,
+                    current_background_pixel,
                 );
 
                 self.pattern_register.shift_left();
