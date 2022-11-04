@@ -128,15 +128,6 @@ impl SecondaryOam {
     pub fn set(&mut self, pointer: SecondaryOamIndex, value: u8) {
         self.0[pointer.pointer] = value;
     }
-
-    pub fn to_string(&self) -> String {
-        let mut text = "Y  Pa At X\n".to_string();
-        for i in 0..8 {
-            text.push_str(&format!("{:02X} {:02X} {:02X} {:02X}\n", self.0[i], self.0[i+1], self.0[i+2], self.0[i+3]));
-        }
-
-        text
-    }
 }
 
 #[derive(Clone, Copy)]
@@ -288,17 +279,6 @@ impl OamRegisters {
 
         result
     }
-
-    pub fn to_string(&self) -> String {
-        let mut result = String::new();
-        for reg in self.registers.iter() {
-            result.push_str(&reg.to_string());
-            result.push_str("\n");
-        }
-
-        result.push_str("\n");
-        result
-    }
 }
 
 
@@ -336,10 +316,6 @@ impl SpriteRegisters {
         self.x_counter = initial_value;
     }
 
-    pub fn set_is_sprite_0(&mut self, is_sprite_0: bool) {
-        self.is_sprite_0 = is_sprite_0;
-    }
-
     pub fn step(&mut self, palette_table: &PaletteTable) -> (Rgbt, Priority, bool) {
         if self.x_counter > 0 {
             // This sprite is still inactive.
@@ -372,9 +348,5 @@ impl SpriteRegisters {
         };
 
         (rgbt, self.attributes.priority(), self.is_sprite_0)
-    }
-
-    pub fn to_string(&self) -> String {
-        format!("X: {:03}, Low: {:02X}, Flip: {}", self.x_counter, self.low_pattern, self.attributes.flip_horizontally())
     }
 }
