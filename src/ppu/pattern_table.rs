@@ -154,6 +154,15 @@ impl PatternIndex {
         (PatternIndex(first), PatternIndex(second))
     }
 
+    #[inline]
+    pub fn tall_sprite_pattern_table_side(self) -> PatternTableSide {
+        if self.to_u8() & 1 == 0 {
+            PatternTableSide::Left
+        } else {
+            PatternTableSide::Right
+        }
+    }
+
     pub fn to_u8(self) -> u8 {
         self.0
     }

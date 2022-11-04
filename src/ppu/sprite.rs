@@ -5,7 +5,7 @@ use num_traits::FromPrimitive;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pattern_table::{PatternIndex, PatternTable, PatternTableSide, Tile};
+use crate::ppu::pattern_table::{PatternIndex, PatternTable, Tile};
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::register::registers::ctrl::SpriteHeight;
 use crate::ppu::render::frame::Frame;
@@ -34,17 +34,12 @@ impl Sprite {
         }
     }
 
-    #[inline]
-    pub fn tall_sprite_pattern_table_side(self) -> PatternTableSide {
-        if self.pattern_index.to_u8() & 1 == 0 {
-            PatternTableSide::Left
-        } else {
-            PatternTableSide::Right
-        }
-    }
-
     pub fn priority(self) -> Priority {
         self.attributes.priority
+    }
+
+    pub fn pattern_index(self) -> PatternIndex {
+        self.pattern_index
     }
 
     // For debug screens only.

@@ -13,6 +13,7 @@ use crate::ppu::pattern_table::PatternIndex;
 use crate::ppu::pixel_index::{PixelIndex, ColumnInTile, PixelColumn, PixelRow};
 use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
+use crate::ppu::register::registers::ctrl::SpriteHeight;
 use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::{Sprite, SpriteY, SpriteAttributes, SpriteHalf};
@@ -418,20 +419,41 @@ impl Ppu {
             }
             ReadSpritePatternIndex => {
                 self.next_sprite_pattern_index = PatternIndex::new(self.read_secondary_oam());
-                if let Some(pixel_row) = self.clock.scanline_pixel_row() {
-                    if let Some((sprite_half, row_in_tile)) = Sprite::row_in_sprite(self.current_sprite_y, false, mem.regs().sprite_height(), pixel_row) {
-                        let pattern_index = match sprite_half {
-                            SpriteHalf::Top => self.next_sprite_pattern_index,
-                            SpriteHalf::Bottom => self.next_sprite_pattern_index.to_tall_indexes().1,
-                        };
-                        let (low, high) = mem.pattern_table(sprite_table_side).read_pattern_data_at(pattern_index, row_in_tile);
-                        self.oam_registers.registers[self.oam_register_index].set_pattern(low, high);
-                    }
-                }
             }
             ReadSpriteAttributes => {
                 let attributes = SpriteAttributes::from_u8(self.read_secondary_oam());
+                // FIXME: oam_register_index overflows at the end of SMB.
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
+                if let Some(pixel_row) = self.clock.scanline_pixel_row() {
+                    let sprite_height = mem.regs().sprite_height();
+                    if let Some((sprite_half, mut row_in_half)) = Sprite::row_in_sprite(
+                            self.current_sprite_y,
+                            attributes.flip_vertically(),
+                            sprite_height,
+                            pixel_row
+                        ) {
+                        #[rustfmt::skip]
+                        let pattern_index = match (sprite_height, sprite_half) {
+                            (SpriteHeight::Normal, SpriteHalf::Top) => self.next_sprite_pattern_index,
+                            (SpriteHeight::Normal, SpriteHalf::Bottom) => unreachable!(),
+                            (SpriteHeight::Tall,   SpriteHalf::Top) => self.next_sprite_pattern_index.to_tall_indexes().0,
+                            (SpriteHeight::Tall,   SpriteHalf::Bottom) => self.next_sprite_pattern_index.to_tall_indexes().1,
+                        };
+
+                        if attributes.flip_vertically() {
+                            row_in_half = row_in_half.flip();
+                        }
+
+                        let pattern_table_side = if sprite_height == SpriteHeight::Tall {
+                            pattern_index.tall_sprite_pattern_table_side()
+                        } else {
+                            sprite_table_side
+                        };
+
+                        let (low, high) = mem.pattern_table(pattern_table_side).read_pattern_data_at(pattern_index, row_in_half);
+                        self.oam_registers.registers[self.oam_register_index].set_pattern(low, high);
+                    }
+                }
             }
             ReadSpriteX => {
                 let x_counter = self.read_secondary_oam();
