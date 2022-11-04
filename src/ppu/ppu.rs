@@ -385,17 +385,15 @@ impl Ppu {
                         self.secondary_oam.set(self.secondary_oam_index, sprite_y);
                     }
                     // Check if the y coordinate is on screen.
-                    if let Some(pixel_row) = self.clock.scanline_pixel_row() {
-                        if Sprite::row_in_sprite(SpriteY::new(sprite_y), false, mem.regs().sprite_height(), pixel_row).is_some() {
-                            if self.oam_index.is_at_sprite_0() {
-                                self.oam_registers.sprite_0_present();
-                            }
-
-                            self.secondary_oam_index.increment();
-                            self.oam_index.next_field();
-                        } else {
-                            self.oam_index.next_sprite();
+                    if let Some(pixel_row) = self.clock.scanline_pixel_row()
+                        && Sprite::row_in_sprite(SpriteY::new(sprite_y), false, mem.regs().sprite_height(), pixel_row).is_some()
+                    {
+                        if self.oam_index.is_at_sprite_0() {
+                            self.oam_registers.sprite_0_present();
                         }
+
+                        self.secondary_oam_index.increment();
+                        self.oam_index.next_field();
                     } else {
                         self.oam_index.next_sprite();
                     }
