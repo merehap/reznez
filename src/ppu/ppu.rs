@@ -10,7 +10,7 @@ use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table::PatternIndex;
-use crate::ppu::pixel_index::{PixelIndex, ColumnInTile, PixelColumn, PixelRow};
+use crate::ppu::pixel_index::{PixelIndex, ColumnInTile};
 use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ctrl::SpriteHeight;
@@ -280,7 +280,13 @@ impl Ppu {
                 );
             }
 
-            self.maybe_set_sprite0_hit(mem, frame);
+            // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
+            if mem.regs().sprites_enabled()
+                && mem.regs().background_enabled()
+                && frame.pixel(mem.regs().mask, pixel_column, pixel_row).1.hit()
+            {
+                mem.regs_mut().set_sprite0_hit();
+            }
         }
 
         match (self.clock.scanline(), self.clock.cycle()) {
@@ -517,22 +523,6 @@ impl Ppu {
         }
 
         maybe_generate_nmi
-    }
-
-    // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
-    // TODO: This can take regs_mut instead of mem.
-    fn maybe_set_sprite0_hit(&self, mem: &mut PpuMemory, frame: &mut Frame) {
-        let maybe_x = PixelColumn::try_from_u16(self.clock.cycle() - 1);
-        let maybe_y = PixelRow::try_from_u16(self.clock.scanline());
-
-        if let (Some(x), Some(y)) = (maybe_x, maybe_y) {
-            if mem.regs().sprites_enabled()
-                && mem.regs().background_enabled()
-                && frame.pixel(mem.regs().mask, x, y).1.hit()
-            {
-                mem.regs_mut().set_sprite0_hit();
-            }
-        }
     }
 
     fn update_oam_data(&self, regs: &mut PpuRegisters) {
