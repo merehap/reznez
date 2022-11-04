@@ -222,6 +222,14 @@ impl Ppu {
             maybe_generate_nmi = self.process_latch_access(mem, latch_access);
         }
 
+        if self.clock.cycle() == 65 {
+            self.sprite_0_present = false;
+        }
+
+        if self.clock.cycle() == 256 {
+            self.oam_registers.set_sprite_0_presence(self.sprite_0_present);
+        }
+
         if mem.regs().background_enabled() && ((0..=239).contains(&scanline) || scanline == 261) {
             if scanline == 261 && cycle == 320 {
                 self.current_address = self.next_address;
@@ -388,8 +396,8 @@ impl Ppu {
                     if let Some(pixel_row) = self.clock.scanline_pixel_row()
                         && Sprite::row_in_sprite(SpriteY::new(sprite_y), false, mem.regs().sprite_height(), pixel_row).is_some()
                     {
-                        if self.secondary_oam_index.current_sprite_index() == 0 {
-                            self.oam_registers.set_sprite_0_presence(self.oam_index.is_at_sprite_0());
+                        if self.oam_index.is_at_sprite_0() {
+                            self.sprite_0_present = true;
                         }
 
                         self.secondary_oam_index.increment();
