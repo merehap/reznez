@@ -260,12 +260,8 @@ impl OamRegisters {
         }
     }
 
-    pub fn reset(&mut self) {
-        *self = OamRegisters::new();
-    }
-
-    pub fn sprite_0_present(&mut self) {
-        self.registers[0].is_sprite_0 = true;
+    pub fn set_sprite_0_presence(&mut self, present: bool) {
+        self.registers[0].is_sprite_0 = present;
     }
 
     pub fn step(&mut self, palette_table: &PaletteTable) -> (Rgbt, Priority, bool) {

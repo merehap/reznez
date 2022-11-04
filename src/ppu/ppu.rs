@@ -388,8 +388,8 @@ impl Ppu {
                     if let Some(pixel_row) = self.clock.scanline_pixel_row()
                         && Sprite::row_in_sprite(SpriteY::new(sprite_y), false, mem.regs().sprite_height(), pixel_row).is_some()
                     {
-                        if self.oam_index.is_at_sprite_0() {
-                            self.oam_registers.sprite_0_present();
+                        if self.secondary_oam_index.current_sprite_index() == 0 {
+                            self.oam_registers.set_sprite_0_presence(self.oam_index.is_at_sprite_0());
                         }
 
                         self.secondary_oam_index.increment();
