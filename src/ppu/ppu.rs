@@ -223,6 +223,7 @@ impl Ppu {
         }
 
         if self.clock.cycle() == 65 {
+            self.oam_register_index = 0;
             self.sprite_0_present = false;
         }
 
@@ -423,12 +424,6 @@ impl Ppu {
             }
             ReadSpriteAttributes => {
                 let attributes = SpriteAttributes::from_u8(self.read_secondary_oam());
-                // TODO: Determine why oam_register_index overflows at the end of SMB.
-                if self.oam_register_index > 7 {
-                    println!("OAM REGISTER INDEX overflowed!");
-                    self.oam_register_index = 0;
-                }
-
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
                 if let Some(pixel_row) = self.clock.scanline_pixel_row() {
                     let sprite_height = mem.regs().sprite_height();
