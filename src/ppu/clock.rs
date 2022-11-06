@@ -37,23 +37,6 @@ impl Clock {
         PixelRow::try_from_u16(self.scanline)
     }
 
-    /*
-    pub fn secondary_oam_clearing_index(&self) -> SecondaryOamIndex {
-        SecondaryOamIndex::try_from_usize((self.cycle as usize - 1) / 2).unwrap()
-    }
-
-    pub fn secondary_oam_transfer_index(&self) -> SecondaryOamIndex {
-        let index = self.cycle - 257;
-        let mut index = usize::from(index % 4 + 4 * (index / 8));
-        // Hack to support dummy Sprite Y reads on cycles 257-320.
-        if index >= 32 {
-            index = 0;
-        }
-
-        SecondaryOamIndex::try_from_usize(index).unwrap()
-    }
-    */
-
     #[inline]
     pub fn is_last_cycle_of_frame(&self) -> bool {
         self.scanline == MAX_SCANLINE && self.cycle == MAX_CYCLE
@@ -79,26 +62,6 @@ impl Clock {
             _ => {
                 self.cycle += 1;
             }
-        }
-    }
-}
-
-#[derive(PartialEq, Eq)]
-pub enum Parity {
-    Even,
-    Odd,
-}
-
-pub trait HasParity {
-    fn parity(&self) -> Parity;
-}
-
-impl HasParity for u16 {
-    fn parity(&self) -> Parity {
-        match *self % 2 {
-            0 => Parity::Even,
-            1 => Parity::Odd,
-            _ => unreachable!(),
         }
     }
 }

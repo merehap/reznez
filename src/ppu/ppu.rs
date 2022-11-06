@@ -3,8 +3,7 @@ use std::ops::{Index, IndexMut};
 
 use crate::memory::memory::PpuMemory;
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
-use crate::ppu::clock::{Clock, HasParity};
-use crate::ppu::clock::Parity::{Even, Odd};
+use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::oam::{Oam, OamIndex, SecondaryOam, OamRegisters};
 use crate::ppu::palette::palette_index::PaletteIndex;
@@ -32,8 +31,11 @@ pub enum CycleAction {
     PrepareNextTile,
     ResetTileColumn,
 
+    DummyReadOamByte,
     ClearSecondaryOamByte,
-    SpriteEvaluation,
+    ReadOamByte,
+    WriteSecondaryOamByte,
+
     ReadSpriteY,
     ReadSpritePatternIndex,
     ReadSpriteAttributes,
@@ -130,12 +132,16 @@ impl Ppu {
         let mut sprite_acts = Vec::new();
         sprite_acts.push(vec![]);
 
-        for _cycle in 1..=64 {
+        // Cycles 1-64
+        for _read_clear in 0..32 {
+            sprite_acts.push(vec![DummyReadOamByte]);
             sprite_acts.push(vec![ClearSecondaryOamByte]);
         }
 
-        for _cycle in 65..=256 {
-            sprite_acts.push(vec![SpriteEvaluation]);
+        // Cycles 65-256
+        for _read_write in 0..96 {
+            sprite_acts.push(vec![ReadOamByte]);
+            sprite_acts.push(vec![WriteSecondaryOamByte]);
         }
 
         // Cycles 257-320
@@ -371,28 +377,28 @@ impl Ppu {
                 self.pattern_register.load_next_palette_indexes();
             }
 
-            ClearSecondaryOamByte => {
-                // https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
-                match self.clock.cycle().parity() {
-                    Odd => {self.oam.read_sprite_data(self.oam_index);},
-                    Even => self.secondary_oam.write_and_advance(0xFF),
-                }
+            DummyReadOamByte => {
+                // Dummy read. TODO: Can this be removed?
+                self.oam.read_sprite_data(self.oam_index);
+                mem.regs_mut().oam_data = 0xFF;
             }
-            SpriteEvaluation => {
-                // Odd cycles copy from primary OAM to $2004,
-                // even cycles copy from $2004 to secondary OAM.
-                if self.clock.cycle().parity() == Odd {
-                    mem.regs_mut().oam_data = self.oam.read_sprite_data(self.oam_index);
-                } else if self.oam_index.end_reached() {
+            ClearSecondaryOamByte => {
+                self.secondary_oam.write_and_advance(mem.regs().oam_data);
+            }
+            ReadOamByte => {
+                mem.regs_mut().oam_data = self.oam.read_sprite_data(self.oam_index);
+            }
+            WriteSecondaryOamByte => {
+                let oam_data = mem.regs().oam_data;
+                if self.oam_index.end_reached() {
                     // Reading and incrementing still happen after sprite evaluation is
                     // complete, but writes fail (i.e. they don't happen).
                     self.oam_index.next_sprite();
                 } else if self.oam_index.new_sprite_started() {
-                    let sprite_y = mem.regs().oam_data;
-                    self.secondary_oam.write(sprite_y);
+                    self.secondary_oam.write(oam_data);
                     // Check if the y coordinate is on screen.
                     if let Some(pixel_row) = self.clock.scanline_pixel_row()
-                        && Sprite::row_in_sprite(SpriteY::new(sprite_y), false, mem.regs().sprite_height(), pixel_row).is_some()
+                        && Sprite::row_in_sprite(SpriteY::new(oam_data), false, mem.regs().sprite_height(), pixel_row).is_some()
                     {
                         if self.oam_index.is_at_sprite_0() {
                             self.sprite_0_present = true;
@@ -405,7 +411,7 @@ impl Ppu {
                     }
                 } else {
                     // The current sprite is in range, copy one more byte of its data over.
-                    self.secondary_oam.write_and_advance(mem.regs().oam_data);
+                    self.secondary_oam.write_and_advance(oam_data);
                     self.oam_index.next_field();
                 }
             }
