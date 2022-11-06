@@ -227,6 +227,7 @@ impl Ppu {
                 self.secondary_oam.reset_index();
                 self.oam_register_index = 0;
                 self.sprite_0_present = false;
+                self.oam_index.reset();
             }
             256 => {
                 self.secondary_oam.reset_index();
@@ -376,10 +377,6 @@ impl Ppu {
                     Odd => {self.secondary_oam.read();},
                     Even => self.secondary_oam.write_and_advance(0xFF),
                 }
-
-                self.oam_index.reset();
-                self.oam_register_index = 0;
-                self.sprite_0_present = false;
             }
             SpriteEvaluation => {
                 // Odd cycles copy from primary OAM to $2004,

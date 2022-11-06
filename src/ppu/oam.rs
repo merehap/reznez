@@ -151,10 +151,6 @@ impl SecondaryOam {
         self.advance();
     }
 
-    pub fn is_full(&self) -> bool {
-        self.is_full
-    }
-
     pub fn reset_index(&mut self) {
         self.index = 0;
         self.is_full = false;
