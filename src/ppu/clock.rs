@@ -1,5 +1,4 @@
 use crate::ppu::pixel_index::PixelRow;
-use crate::ppu::oam::SecondaryOamIndex;
 
 pub const MAX_SCANLINE: u16 = 261;
 pub const MAX_CYCLE: u16 = 340;
@@ -38,6 +37,7 @@ impl Clock {
         PixelRow::try_from_u16(self.scanline)
     }
 
+    /*
     pub fn secondary_oam_clearing_index(&self) -> SecondaryOamIndex {
         SecondaryOamIndex::try_from_usize((self.cycle as usize - 1) / 2).unwrap()
     }
@@ -52,7 +52,7 @@ impl Clock {
 
         SecondaryOamIndex::try_from_usize(index).unwrap()
     }
-
+    */
 
     #[inline]
     pub fn is_last_cycle_of_frame(&self) -> bool {
@@ -79,6 +79,26 @@ impl Clock {
             _ => {
                 self.cycle += 1;
             }
+        }
+    }
+}
+
+#[derive(PartialEq, Eq)]
+pub enum Parity {
+    Even,
+    Odd,
+}
+
+pub trait HasParity {
+    fn parity(&self) -> Parity;
+}
+
+impl HasParity for u16 {
+    fn parity(&self) -> Parity {
+        match *self % 2 {
+            0 => Parity::Even,
+            1 => Parity::Odd,
+            _ => unreachable!(),
         }
     }
 }

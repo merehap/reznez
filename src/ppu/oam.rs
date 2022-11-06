@@ -114,65 +114,58 @@ impl Oam {
     }
 }
 
-pub struct SecondaryOam([u8; 32]);
+pub struct SecondaryOam {
+    data: [u8; 32],
+    index: usize,
+    is_full: bool,
+}
 
 impl SecondaryOam {
     pub fn new() -> SecondaryOam {
-        SecondaryOam([0xFF; 32])
-    }
-
-    pub fn get(&self, pointer: SecondaryOamIndex) -> u8 {
-        self.0[pointer.pointer]
-    }
-
-    pub fn set(&mut self, pointer: SecondaryOamIndex, value: u8) {
-        self.0[pointer.pointer] = value;
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct SecondaryOamIndex {
-    pointer: usize,
-    end_reached: bool,
-}
-
-impl SecondaryOamIndex {
-    pub fn new() -> SecondaryOamIndex {
-        SecondaryOamIndex {
-            pointer: 0,
-            end_reached: false,
+        SecondaryOam {
+            data: [0xFF; 32],
+            index: 0,
+            is_full: false,
         }
     }
 
-    pub fn try_from_usize(value: usize) -> Option<SecondaryOamIndex> {
-        if value >= 32 {
-            None
-        } else {
-            Some(SecondaryOamIndex {
-                pointer: value,
-                end_reached: false,
-            })
+    pub fn read(&self) -> u8 {
+        self.data[self.index]
+    }
+
+    pub fn read_and_advance(&mut self) -> u8 {
+        let result = self.data[self.index];
+        self.advance();
+        result
+    }
+
+    pub fn write(&mut self, value: u8) {
+        self.data[self.index] = value;
+    }
+
+    pub fn write_and_advance(&mut self, value: u8) {
+        if !self.is_full {
+            self.data[self.index] = value;
         }
+
+        self.advance();
     }
 
-    pub fn current_sprite_index(self) -> usize {
-        self.pointer / 8
+    pub fn is_full(&self) -> bool {
+        self.is_full
     }
 
-    pub fn end_reached(self) -> bool {
-        self.end_reached
+    pub fn reset_index(&mut self) {
+        self.index = 0;
+        self.is_full = false;
     }
 
-    pub fn reset(&mut self) {
-        *self = SecondaryOamIndex::new();
-    }
-
-    pub fn increment(&mut self) {
-        if self.pointer == 31 {
-            self.pointer = 0;
-            self.end_reached = true;
+    pub fn advance(&mut self) {
+        if self.index == 31 {
+            self.index = 0;
+            self.is_full = true;
         } else {
-            self.pointer += 1;
+            self.index += 1;
         }
     }
 }

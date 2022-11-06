@@ -3,9 +3,10 @@ use std::ops::{Index, IndexMut};
 
 use crate::memory::memory::PpuMemory;
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
-use crate::ppu::clock::Clock;
+use crate::ppu::clock::{Clock, HasParity};
+use crate::ppu::clock::Parity::{Even, Odd};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
-use crate::ppu::oam::{Oam, OamIndex, SecondaryOam, SecondaryOamIndex, OamRegisters};
+use crate::ppu::oam::{Oam, OamIndex, SecondaryOam, OamRegisters};
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
@@ -44,7 +45,6 @@ pub struct Ppu {
     oam: Oam,
     oam_index: OamIndex,
     secondary_oam: SecondaryOam,
-    secondary_oam_index: SecondaryOamIndex,
     oam_registers: OamRegisters,
     oam_register_index: usize,
 
@@ -159,7 +159,6 @@ impl Ppu {
             oam: Oam::new(),
             oam_index: OamIndex::new(),
             secondary_oam: SecondaryOam::new(),
-            secondary_oam_index: SecondaryOamIndex::new(),
             oam_registers: OamRegisters::new(),
             oam_register_index: 0,
 
@@ -222,13 +221,18 @@ impl Ppu {
             maybe_generate_nmi = self.process_latch_access(mem, latch_access);
         }
 
-        if self.clock.cycle() == 65 {
-            self.oam_register_index = 0;
-            self.sprite_0_present = false;
-        }
-
-        if self.clock.cycle() == 256 {
-            self.oam_registers.set_sprite_0_presence(self.sprite_0_present);
+        match self.clock.cycle() {
+            001 => self.secondary_oam.reset_index(),
+            065 => {
+                self.secondary_oam.reset_index();
+                self.oam_register_index = 0;
+                self.sprite_0_present = false;
+            }
+            256 => {
+                self.secondary_oam.reset_index();
+                self.oam_registers.set_sprite_0_presence(self.sprite_0_present);
+            }
+            _ => {},
         }
 
         if mem.regs().background_enabled() && ((0..=239).contains(&scanline) || scanline == 261) {
@@ -367,22 +371,20 @@ impl Ppu {
             }
 
             ClearSecondaryOamByte => {
-                // TODO: We're supposed to just do a normal read/write and then return 0xFF,
-                // rather than actually overwrite Secondary OAM.
                 // https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
-                if self.clock.cycle() % 2 == 0 {
-                    self.secondary_oam.set(self.clock.secondary_oam_clearing_index(), 0xFF);
+                match self.clock.cycle().parity() {
+                    Odd => {self.secondary_oam.read();},
+                    Even => self.secondary_oam.write_and_advance(0xFF),
                 }
 
                 self.oam_index.reset();
-                self.secondary_oam_index.reset();
                 self.oam_register_index = 0;
                 self.sprite_0_present = false;
             }
             SpriteEvaluation => {
                 // Odd cycles copy from primary OAM to $2004,
                 // even cycles copy from $2004 to secondary OAM.
-                if self.clock.cycle() % 2 == 1 {
+                if self.clock.cycle().parity() == Odd {
                     mem.regs_mut().oam_data = self.oam.read_sprite_data(self.oam_index);
                 } else if self.oam_index.end_reached() {
                     // Reading and incrementing still happen after sprite evaluation is
@@ -390,9 +392,7 @@ impl Ppu {
                     self.oam_index.next_sprite();
                 } else if self.oam_index.new_sprite_started() {
                     let sprite_y = mem.regs().oam_data;
-                    if !self.secondary_oam_index.end_reached() {
-                        self.secondary_oam.set(self.secondary_oam_index, sprite_y);
-                    }
+                    self.secondary_oam.write(sprite_y);
                     // Check if the y coordinate is on screen.
                     if let Some(pixel_row) = self.clock.scanline_pixel_row()
                         && Sprite::row_in_sprite(SpriteY::new(sprite_y), false, mem.regs().sprite_height(), pixel_row).is_some()
@@ -401,29 +401,25 @@ impl Ppu {
                             self.sprite_0_present = true;
                         }
 
-                        self.secondary_oam_index.increment();
+                        self.secondary_oam.advance();
                         self.oam_index.next_field();
                     } else {
                         self.oam_index.next_sprite();
                     }
                 } else {
                     // The current sprite is in range, copy one more byte of its data over.
-                    if !self.secondary_oam_index.end_reached() {
-                        self.secondary_oam.set(self.secondary_oam_index, mem.regs().oam_data);
-                    }
-
-                    self.secondary_oam_index.increment();
+                    self.secondary_oam.write_and_advance(mem.regs().oam_data);
                     self.oam_index.next_field();
                 }
             }
             ReadSpriteY => {
-                self.current_sprite_y = SpriteY::new(self.read_secondary_oam());
+                self.current_sprite_y = SpriteY::new(self.secondary_oam.read_and_advance());
             }
             ReadSpritePatternIndex => {
-                self.next_sprite_pattern_index = PatternIndex::new(self.read_secondary_oam());
+                self.next_sprite_pattern_index = PatternIndex::new(self.secondary_oam.read_and_advance());
             }
             ReadSpriteAttributes => {
-                let attributes = SpriteAttributes::from_u8(self.read_secondary_oam());
+                let attributes = SpriteAttributes::from_u8(self.secondary_oam.read_and_advance());
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
                 if let Some(pixel_row) = self.clock.scanline_pixel_row() {
                     let sprite_height = mem.regs().sprite_height();
@@ -451,16 +447,12 @@ impl Ppu {
                 }
             }
             ReadSpriteX => {
-                let x_counter = self.read_secondary_oam();
+                let x_counter = self.secondary_oam.read_and_advance();
                 self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
                 self.oam_register_index += 1;
             }
             DummyReadSpriteX => {}
         }
-    }
-
-    fn read_secondary_oam(&self) -> u8 {
-        self.secondary_oam.get(self.clock.secondary_oam_transfer_index())
     }
 
     fn process_latch_access(
