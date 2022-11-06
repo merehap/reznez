@@ -374,7 +374,7 @@ impl Ppu {
             ClearSecondaryOamByte => {
                 // https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
                 match self.clock.cycle().parity() {
-                    Odd => {self.secondary_oam.read();},
+                    Odd => {self.oam.read_sprite_data(self.oam_index);},
                     Even => self.secondary_oam.write_and_advance(0xFF),
                 }
             }
