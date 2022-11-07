@@ -242,15 +242,20 @@ impl Ppu {
             _ => {},
         }
 
-        if mem.regs().background_enabled() && ((0..=239).contains(&scanline) || scanline == 261) {
-            if scanline == 261 && cycle == 320 {
-                self.current_address = self.next_address;
-            }
-
+        if (0..=239).contains(&scanline) || scanline == 261 {
             for action in self.background_scanline_actions[usize::from(cycle)].clone() {
                 self.execute_cycle_action(mem, action);
             }
 
+            for action in self.sprite_scanline_actions[usize::from(cycle)].clone() {
+                self.execute_cycle_action(mem, action);
+            }
+        }
+
+        if mem.regs().background_enabled() && ((0..=239).contains(&scanline) || scanline == 261) {
+            if scanline == 261 && cycle == 320 {
+                self.current_address = self.next_address;
+            }
             if let 321..=336 = cycle {
                 self.pattern_register.shift_left();
                 self.attribute_register.push_next_palette_table_index();
@@ -258,12 +263,6 @@ impl Ppu {
 
             if scanline == 261 && cycle >= 280 && cycle <= 304 {
                 self.current_address.copy_y_scroll(self.next_address);
-            }
-        }
-
-        if mem.regs().background_enabled() || mem.regs().sprites_enabled() {
-            for action in self.sprite_scanline_actions[usize::from(cycle)].clone() {
-                self.execute_cycle_action(mem, action);
             }
         }
 
@@ -330,7 +329,6 @@ impl Ppu {
 
         // Only update $2004 during VBlank.
         // TODO: Narrow this down to the proper range.
-        // TODO: Should update_ppu_data be within this block too?
         if self.clock.scanline() >= 241 {
             self.update_oam_data(mem.regs_mut());
         }
@@ -353,45 +351,67 @@ impl Ppu {
         let row_in_tile = self.current_address.y_scroll().fine();
         let name_table = mem.name_table(self.current_address.name_table_quadrant());
 
+        let background_enabled = mem.regs().background_enabled();
+        let sprites_enabled = mem.regs().sprites_enabled();
+
         use CycleAction::*;
         match cycle_action {
-            GetPatternIndex => self.next_pattern_index = name_table.pattern_index(tile_column, tile_row),
+            GetPatternIndex => {
+                if !background_enabled { return; }
+                self.next_pattern_index = name_table.pattern_index(tile_column, tile_row);
+            }
             GetPaletteIndex => {
+                if !background_enabled { return; }
                 let palette_table_index = name_table.attribute_table().palette_table_index(tile_column, tile_row);
                 self.attribute_register.set_pending_palette_table_index(palette_table_index);
             }
             GetBackgroundTileLowByte => {
+                if !background_enabled { return; }
                 let low_byte = pattern_table.read_low_byte(self.next_pattern_index, row_in_tile);
                 self.pattern_register.set_pending_low_byte(low_byte);
             }
             GetBackgroundTileHighByte => {
+                if !background_enabled { return; }
                 let high_byte = pattern_table.read_high_byte(self.next_pattern_index, row_in_tile);
                 self.pattern_register.set_pending_high_byte(high_byte);
             }
 
-            GotoNextTileColumn => self.current_address.increment_coarse_x_scroll(),
-            GotoNextPixelRow => self.current_address.increment_fine_y_scroll(),
+            GotoNextTileColumn => {
+                if !background_enabled { return; }
+                self.current_address.increment_coarse_x_scroll();
+            }
+            GotoNextPixelRow => {
+                if !background_enabled { return; }
+                self.current_address.increment_fine_y_scroll();
+            }
             ResetTileColumn => {
+                if !background_enabled { return; }
                 self.current_address.copy_x_scroll(self.next_address);
                 self.current_address.copy_horizontal_name_table_side(self.next_address);
             }
             PrepareNextTile => {
+                if !background_enabled { return; }
                 self.attribute_register.prepare_next_palette_table_index();
                 self.pattern_register.load_next_palette_indexes();
             }
 
             DummyReadOamByte => {
+                if !background_enabled && !sprites_enabled { return; }
                 // Dummy read. TODO: Can this be removed?
                 self.oam.read_sprite_data(self.oam_index);
                 mem.regs_mut().oam_data = 0xFF;
             }
             ClearSecondaryOamByte => {
+                if !background_enabled && !sprites_enabled { return; }
                 self.secondary_oam.write_and_advance(mem.regs().oam_data);
             }
             ReadOamByte => {
+                if !background_enabled && !sprites_enabled { return; }
                 mem.regs_mut().oam_data = self.oam.read_sprite_data(self.oam_index);
             }
             WriteSecondaryOamByte => {
+                if !background_enabled && !sprites_enabled { return; }
+
                 let oam_data = mem.regs().oam_data;
                 if self.oam_index.end_reached() {
                     // Reading and incrementing still happen after sprite evaluation is
@@ -429,12 +449,16 @@ impl Ppu {
                 }
             }
             ReadSpriteY => {
+                if !background_enabled && !sprites_enabled { return; }
                 self.current_sprite_y = SpriteY::new(self.secondary_oam.read_and_advance());
             }
             ReadSpritePatternIndex => {
+                if !background_enabled && !sprites_enabled { return; }
                 self.next_sprite_pattern_index = PatternIndex::new(self.secondary_oam.read_and_advance());
             }
             ReadSpriteAttributes => {
+                if !background_enabled && !sprites_enabled { return; }
+
                 let attributes = SpriteAttributes::from_u8(self.secondary_oam.read_and_advance());
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
                 if let Some(pixel_row) = self.clock.scanline_pixel_row() {
@@ -463,11 +487,15 @@ impl Ppu {
                 }
             }
             ReadSpriteX => {
+                if !background_enabled && !sprites_enabled { return; }
+
                 let x_counter = self.secondary_oam.read_and_advance();
                 self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
                 self.oam_register_index += 1;
             }
-            DummyReadSpriteX => {}
+            DummyReadSpriteX => {
+                if !background_enabled && !sprites_enabled { return; }
+            }
         }
     }
 
