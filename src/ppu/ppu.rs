@@ -321,6 +321,7 @@ impl Ppu {
             (261, 1) => {
                 mem.regs_mut().stop_vblank();
                 mem.regs_mut().clear_sprite0_hit();
+                mem.regs_mut().clear_sprite_overflow();
             }
             (_, _) => { /* Do nothing. */ }
         }
@@ -404,9 +405,19 @@ impl Ppu {
                             self.sprite_0_present = true;
                         }
 
+                        if self.secondary_oam.is_full() {
+                            mem.regs_mut().set_sprite_overflow();
+                        }
+
                         self.secondary_oam.advance();
                         self.oam_index.next_field();
                     } else {
+                        if self.secondary_oam.is_full() {
+                            // Sprite overflow hardware bug
+                            // https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
+                            self.oam_index.corrupt_sprite_y_index();
+                        }
+
                         self.oam_index.next_sprite();
                     }
                 } else {

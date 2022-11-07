@@ -90,6 +90,14 @@ impl PpuRegisters {
         self.status.sprite0_hit = false;
     }
 
+    pub(in crate::ppu) fn set_sprite_overflow(&mut self) {
+        self.status.sprite_overflow= true;
+    }
+
+    pub(in crate::ppu) fn clear_sprite_overflow(&mut self) {
+        self.status.sprite_overflow = false;
+    }
+
     pub(in crate::ppu) fn latch_value(&self) -> u8 {
         self.latch.value()
     }

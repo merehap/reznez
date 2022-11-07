@@ -129,8 +129,8 @@ impl SecondaryOam {
         }
     }
 
-    pub fn read(&self) -> u8 {
-        self.data[self.index]
+    pub fn is_full(&self) -> bool {
+        self.is_full
     }
 
     pub fn read_and_advance(&mut self) -> u8 {
@@ -172,6 +172,8 @@ pub struct OamIndex {
     sprite_index: u8,
     // "m" in the documentation
     field_index: FieldIndex,
+    // Buggy sprite overflow offset.
+    sprite_start_field_index: FieldIndex,
     end_reached: bool,
 }
 
@@ -182,12 +184,14 @@ impl OamIndex {
         OamIndex {
             sprite_index: 0,
             field_index: FieldIndex::YCoordinate,
+            // This field keeps its initial value unless a sprite overflow occurs.
+            sprite_start_field_index: FieldIndex::YCoordinate,
             end_reached: false,
         }
     }
 
     pub fn new_sprite_started(self) -> bool {
-        self.field_index == FieldIndex::YCoordinate
+        self.field_index == self.sprite_start_field_index
     }
 
     pub fn end_reached(self) -> bool {
@@ -215,18 +219,16 @@ impl OamIndex {
     }
 
     pub fn next_field(&mut self) {
-        use FieldIndex::*;
-        self.field_index = match self.field_index {
-            YCoordinate  => PatternIndex,
-            PatternIndex => Attributes,
-            Attributes   => XCoordinate,
-            XCoordinate  => YCoordinate,
-        };
-
-        let overflow = self.field_index == YCoordinate;
-        if overflow {
+        self.field_index.increment();
+        let carry = self.field_index == FieldIndex::YCoordinate;
+        if carry {
             self.next_sprite();
         }
+    }
+
+    pub fn corrupt_sprite_y_index(&mut self) {
+        self.field_index.increment();
+        self.sprite_start_field_index = self.field_index;
     }
 }
 
@@ -236,6 +238,18 @@ enum FieldIndex {
     PatternIndex = 1,
     Attributes   = 2,
     XCoordinate  = 3,
+}
+
+impl FieldIndex {
+    pub fn increment(&mut self) {
+        use FieldIndex::*;
+        *self = match self {
+            YCoordinate  => PatternIndex,
+            PatternIndex => Attributes,
+            Attributes   => XCoordinate,
+            XCoordinate  => YCoordinate,
+        };
+    }
 }
 
 pub struct OamRegisters {
