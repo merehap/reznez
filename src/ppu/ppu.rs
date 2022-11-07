@@ -251,10 +251,6 @@ impl Ppu {
                 self.execute_cycle_action(mem, action);
             }
 
-            for action in self.sprite_scanline_actions[usize::from(cycle)].clone() {
-                self.execute_cycle_action(mem, action);
-            }
-
             if let 321..=336 = cycle {
                 self.pattern_register.shift_left();
                 self.attribute_register.push_next_palette_table_index();
@@ -262,6 +258,12 @@ impl Ppu {
 
             if scanline == 261 && cycle >= 280 && cycle <= 304 {
                 self.current_address.copy_y_scroll(self.next_address);
+            }
+        }
+
+        if mem.regs().background_enabled() || mem.regs().sprites_enabled() {
+            for action in self.sprite_scanline_actions[usize::from(cycle)].clone() {
+                self.execute_cycle_action(mem, action);
             }
         }
 

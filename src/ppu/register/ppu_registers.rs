@@ -91,7 +91,7 @@ impl PpuRegisters {
     }
 
     pub(in crate::ppu) fn set_sprite_overflow(&mut self) {
-        self.status.sprite_overflow= true;
+        self.status.sprite_overflow = true;
     }
 
     pub(in crate::ppu) fn clear_sprite_overflow(&mut self) {
