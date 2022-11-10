@@ -78,6 +78,29 @@ impl Ppu {
     #[allow(clippy::vec_init_then_push)]
     pub fn new() -> Ppu {
         use CycleAction::*;
+
+        let get_background_tile = vec![
+            vec![GetPatternIndex],
+            vec![],
+            vec![GetPaletteIndex],
+            vec![],
+            vec![GetBackgroundTileLowByte],
+            vec![],
+            vec![GetBackgroundTileHighByte, GotoNextTileColumn],
+            vec![PrepareNextTile],
+        ];
+
+        let prepare_for_next_row = vec![
+            vec![GetPatternIndex],
+            vec![],
+            vec![GetPaletteIndex],
+            vec![],
+            vec![GetBackgroundTileLowByte],
+            vec![],
+            vec![GetBackgroundTileHighByte, GotoNextPixelRow],
+            vec![ResetTileColumn, PrepareNextTile],
+        ];
+
         let mut acts = Vec::new();
         // Cycle 0 (Skipped on odd, rendering frames.)
         acts.push(vec![]);
@@ -86,41 +109,20 @@ impl Ppu {
 
         // Cycles 2-249: Retrieve the remaining 31 tiles used for the current scanline.
         for _tile in 2..=32 {
-            acts.push(vec![GetPatternIndex]);
-            acts.push(vec![]);
-            acts.push(vec![GetPaletteIndex]);
-            acts.push(vec![]);
-            acts.push(vec![GetBackgroundTileLowByte]);
-            acts.push(vec![]);
-            acts.push(vec![GetBackgroundTileHighByte, GotoNextTileColumn]);
-            acts.push(vec![PrepareNextTile]);
+            acts.append(&mut get_background_tile.clone());
         }
 
         // Cycles 250-257: Retrieve an unused tile then prepare for the next pixel row.
-        acts.push(vec![GetPatternIndex]);
-        acts.push(vec![]);
-        acts.push(vec![GetPaletteIndex]);
-        acts.push(vec![]);
-        acts.push(vec![GetBackgroundTileLowByte]);
-        acts.push(vec![]);
-        acts.push(vec![GetBackgroundTileHighByte, GotoNextPixelRow]);
-        acts.push(vec![ResetTileColumn, PrepareNextTile]);
+        acts.append(&mut prepare_for_next_row.clone());
 
-        // TODO: Sprite rendering.
+        // No background rendering during sprite rendering.
         for _cycle in 258..=321 {
             acts.push(vec![]);
         }
 
         // Cycles 322-337: Retrieve the first two tiles for the next scanline.
         for _tile in 0..=1 {
-            acts.push(vec![GetPatternIndex]);
-            acts.push(vec![]);
-            acts.push(vec![GetPaletteIndex]);
-            acts.push(vec![]);
-            acts.push(vec![GetBackgroundTileLowByte]);
-            acts.push(vec![]);
-            acts.push(vec![GetBackgroundTileHighByte, GotoNextTileColumn]);
-            acts.push(vec![PrepareNextTile]);
+            acts.append(&mut get_background_tile.clone());
         }
 
         // Unused fetches from the Name Table.
@@ -132,19 +134,19 @@ impl Ppu {
         let mut sprite_acts = Vec::new();
         sprite_acts.push(vec![]);
 
-        // Cycles 1-64
+        // Cycles 1-64: Clear out Secondary OAM.
         for _read_clear in 0..32 {
             sprite_acts.push(vec![DummyReadOamByte]);
             sprite_acts.push(vec![ClearSecondaryOamByte]);
         }
 
-        // Cycles 65-256
+        // Cycles 65-256: Sprite evaluation (storing to secondary OAM).
         for _read_write in 0..96 {
             sprite_acts.push(vec![ReadOamByte]);
             sprite_acts.push(vec![WriteSecondaryOamByte]);
         }
 
-        // Cycles 257-320
+        // Cycles 257-320: Move secondary OAM into the OAM registers.
         for _sprite in 0..8 {
             sprite_acts.push(vec![ReadSpriteY]);
             sprite_acts.push(vec![ReadSpritePatternIndex]);
@@ -156,6 +158,7 @@ impl Ppu {
             sprite_acts.push(vec![DummyReadSpriteX]);
         }
 
+        // Dummy reads.
         for _cycle in 321..=340 {
             // TODO: Verify that this is reading the first byte of secondary OAM.
             sprite_acts.push(vec![ReadSpriteY]);
@@ -280,11 +283,7 @@ impl Ppu {
                 let current_background_pixel = self.pattern_register.palette_index(column_in_tile)
                     .map_or(Rgbt::Transparent, |palette_index| Rgbt::Opaque(palette[palette_index]));
 
-                frame.set_background_pixel(
-                    pixel_column,
-                    pixel_row,
-                    current_background_pixel,
-                );
+                frame.set_background_pixel(pixel_column, pixel_row, current_background_pixel);
 
                 self.pattern_register.shift_left();
                 self.attribute_register.push_next_palette_table_index();
