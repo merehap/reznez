@@ -245,6 +245,16 @@ impl Ppu {
             _ => {},
         }
 
+        if mem.regs().background_enabled() && ((0..=239).contains(&scanline) || scanline == 261) {
+            if scanline == 261 && cycle == 320 {
+                self.current_address = self.next_address;
+            }
+
+            if scanline == 261 && cycle >= 280 && cycle <= 304 {
+                self.current_address.copy_y_scroll(self.next_address);
+            }
+        }
+
         if (0..=239).contains(&scanline) || scanline == 261 {
             for action in self.background_scanline_actions[usize::from(cycle)].clone() {
                 self.execute_cycle_action(mem, action);
@@ -256,16 +266,9 @@ impl Ppu {
         }
 
         if mem.regs().background_enabled() && ((0..=239).contains(&scanline) || scanline == 261) {
-            if scanline == 261 && cycle == 320 {
-                self.current_address = self.next_address;
-            }
             if let 321..=336 = cycle {
                 self.pattern_register.shift_left();
                 self.attribute_register.push_next_palette_table_index();
-            }
-
-            if scanline == 261 && cycle >= 280 && cycle <= 304 {
-                self.current_address.copy_y_scroll(self.next_address);
             }
         }
 
@@ -454,12 +457,10 @@ impl Ppu {
             }
             ReadSpriteY => {
                 if !rendering_enabled { return; }
-
                 self.current_sprite_y = SpriteY::new(self.secondary_oam.read_and_advance());
             }
             ReadSpritePatternIndex => {
                 if !rendering_enabled { return; }
-
                 self.next_sprite_pattern_index = PatternIndex::new(self.secondary_oam.read_and_advance());
             }
             ReadSpriteAttributes => {
