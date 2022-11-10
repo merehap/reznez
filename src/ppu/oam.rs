@@ -145,11 +145,6 @@ impl SecondaryOam {
         }
     }
 
-    pub fn write_and_advance(&mut self, value: u8) {
-        self.write(value);
-        self.advance();
-    }
-
     pub fn reset_index(&mut self) {
         self.index = 0;
         self.is_full = false;

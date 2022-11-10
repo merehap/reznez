@@ -402,7 +402,8 @@ impl Ppu {
             }
             ClearSecondaryOamByte => {
                 if !rendering_enabled { return; }
-                self.secondary_oam.write_and_advance(mem.regs().oam_data);
+                self.secondary_oam.write(mem.regs().oam_data);
+                self.secondary_oam.advance();
             }
             ReadOamByte => {
                 if !rendering_enabled { return; }
@@ -418,18 +419,17 @@ impl Ppu {
                     return;
                 }
 
-                let oam_data = mem.regs().oam_data;
+                self.secondary_oam.write(mem.regs().oam_data);
                 if !self.oam_index.new_sprite_started() {
                     // The current sprite is in range, copy one more byte of its data over.
-                    self.secondary_oam.write_and_advance(oam_data);
+                    self.secondary_oam.advance();
                     self.oam_index.next_field();
                     return;
                 }
 
-                self.secondary_oam.write(oam_data);
                 // Check if the y coordinate is on screen.
                 if let Some(pixel_row) = self.clock.scanline_pixel_row()
-                    && Sprite::row_in_sprite(SpriteY::new(oam_data), false, mem.regs().sprite_height(), pixel_row).is_some()
+                    && Sprite::row_in_sprite(SpriteY::new(mem.regs().oam_data), false, mem.regs().sprite_height(), pixel_row).is_some()
                 {
                     if self.oam_index.is_at_sprite_0() {
                         self.sprite_0_present = true;
