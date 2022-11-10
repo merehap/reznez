@@ -130,8 +130,8 @@ impl Ppu {
         acts.push(vec![]);
         acts.push(vec![GetPatternIndex]);
 
-        // Cycle 0 (Skipped on odd, rendering frames.)
         let mut sprite_acts = Vec::new();
+        // Cycle 0 (Skipped on odd, rendering frames.)
         sprite_acts.push(vec![]);
 
         // Cycles 1-64: Clear out Secondary OAM.
@@ -356,40 +356,40 @@ impl Ppu {
         use CycleAction::*;
         match cycle_action {
             GetPatternIndex => {
-                if !background_enabled { return; }
+                if !background_enabled && !sprites_enabled { return; }
                 self.next_pattern_index = name_table.pattern_index(tile_column, tile_row);
             }
             GetPaletteIndex => {
-                if !background_enabled { return; }
+                if !background_enabled && !sprites_enabled { return; }
                 let palette_table_index = name_table.attribute_table().palette_table_index(tile_column, tile_row);
                 self.attribute_register.set_pending_palette_table_index(palette_table_index);
             }
             GetBackgroundTileLowByte => {
-                if !background_enabled { return; }
+                if !background_enabled && !sprites_enabled { return; }
                 let low_byte = pattern_table.read_low_byte(self.next_pattern_index, row_in_tile);
                 self.pattern_register.set_pending_low_byte(low_byte);
             }
             GetBackgroundTileHighByte => {
-                if !background_enabled { return; }
+                if !background_enabled && !sprites_enabled { return; }
                 let high_byte = pattern_table.read_high_byte(self.next_pattern_index, row_in_tile);
                 self.pattern_register.set_pending_high_byte(high_byte);
             }
 
             GotoNextTileColumn => {
-                if !background_enabled { return; }
+                if !background_enabled && !sprites_enabled { return; }
                 self.current_address.increment_coarse_x_scroll();
             }
             GotoNextPixelRow => {
-                if !background_enabled { return; }
+                if !background_enabled && !sprites_enabled { return; }
                 self.current_address.increment_fine_y_scroll();
             }
             ResetTileColumn => {
-                if !background_enabled { return; }
+                if !background_enabled && !sprites_enabled { return; }
                 self.current_address.copy_x_scroll(self.next_address);
                 self.current_address.copy_horizontal_name_table_side(self.next_address);
             }
             PrepareNextTile => {
-                if !background_enabled { return; }
+                if !background_enabled && !sprites_enabled { return; }
                 self.attribute_register.prepare_next_palette_table_index();
                 self.pattern_register.load_next_palette_indexes();
             }
