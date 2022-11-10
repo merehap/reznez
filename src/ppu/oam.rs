@@ -140,14 +140,13 @@ impl SecondaryOam {
     }
 
     pub fn write(&mut self, value: u8) {
-        self.data[self.index] = value;
-    }
-
-    pub fn write_and_advance(&mut self, value: u8) {
         if !self.is_full {
             self.data[self.index] = value;
         }
+    }
 
+    pub fn write_and_advance(&mut self, value: u8) {
+        self.write(value);
         self.advance();
     }
 
