@@ -350,66 +350,66 @@ impl Ppu {
         let row_in_tile = self.current_address.y_scroll().fine();
         let name_table = mem.name_table(self.current_address.name_table_quadrant());
 
-        let background_enabled = mem.regs().background_enabled();
-        let sprites_enabled = mem.regs().sprites_enabled();
+        let rendering_enabled =
+            mem.regs().background_enabled() || mem.regs().sprites_enabled();
 
         use CycleAction::*;
         match cycle_action {
             GetPatternIndex => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
                 self.next_pattern_index = name_table.pattern_index(tile_column, tile_row);
             }
             GetPaletteIndex => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
                 let palette_table_index = name_table.attribute_table().palette_table_index(tile_column, tile_row);
                 self.attribute_register.set_pending_palette_table_index(palette_table_index);
             }
             GetBackgroundTileLowByte => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
                 let low_byte = pattern_table.read_low_byte(self.next_pattern_index, row_in_tile);
                 self.pattern_register.set_pending_low_byte(low_byte);
             }
             GetBackgroundTileHighByte => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
                 let high_byte = pattern_table.read_high_byte(self.next_pattern_index, row_in_tile);
                 self.pattern_register.set_pending_high_byte(high_byte);
             }
 
             GotoNextTileColumn => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
                 self.current_address.increment_coarse_x_scroll();
             }
             GotoNextPixelRow => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
                 self.current_address.increment_fine_y_scroll();
             }
             ResetTileColumn => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
                 self.current_address.copy_x_scroll(self.next_address);
                 self.current_address.copy_horizontal_name_table_side(self.next_address);
             }
             PrepareNextTile => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
                 self.attribute_register.prepare_next_palette_table_index();
                 self.pattern_register.load_next_palette_indexes();
             }
 
             DummyReadOamByte => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
                 // Dummy read. TODO: Can this be removed?
                 self.oam.read_sprite_data(self.oam_index);
                 mem.regs_mut().oam_data = 0xFF;
             }
             ClearSecondaryOamByte => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
                 self.secondary_oam.write_and_advance(mem.regs().oam_data);
             }
             ReadOamByte => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
                 mem.regs_mut().oam_data = self.oam.read_sprite_data(self.oam_index);
             }
             WriteSecondaryOamByte => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
 
                 let oam_data = mem.regs().oam_data;
                 if self.oam_index.end_reached() {
@@ -448,15 +448,17 @@ impl Ppu {
                 }
             }
             ReadSpriteY => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
+
                 self.current_sprite_y = SpriteY::new(self.secondary_oam.read_and_advance());
             }
             ReadSpritePatternIndex => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
+
                 self.next_sprite_pattern_index = PatternIndex::new(self.secondary_oam.read_and_advance());
             }
             ReadSpriteAttributes => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
 
                 let attributes = SpriteAttributes::from_u8(self.secondary_oam.read_and_advance());
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
@@ -486,14 +488,14 @@ impl Ppu {
                 }
             }
             ReadSpriteX => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
 
                 let x_counter = self.secondary_oam.read_and_advance();
                 self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
                 self.oam_register_index += 1;
             }
             DummyReadSpriteX => {
-                if !background_enabled && !sprites_enabled { return; }
+                if !rendering_enabled { return; }
             }
         }
     }
