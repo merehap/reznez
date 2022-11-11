@@ -4,6 +4,7 @@ use std::ops::{Index, IndexMut};
 use crate::memory::memory::PpuMemory;
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::clock::Clock;
+use crate::ppu::cycle_action::{CycleAction, FrameActions, NTSC_FRAME_ACTIONS};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::oam::{Oam, OamIndex, SecondaryOam, OamRegisters};
 use crate::ppu::palette::palette_index::PaletteIndex;
@@ -18,30 +19,6 @@ use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::{Sprite, SpriteY, SpriteAttributes, SpriteHalf};
 use crate::util::bit_util::unpack_bools;
-
-#[derive(Clone, Copy, Debug)]
-pub enum CycleAction {
-    GetPatternIndex,
-    GetPaletteIndex,
-    GetBackgroundTileLowByte,
-    GetBackgroundTileHighByte,
-
-    GotoNextTileColumn,
-    GotoNextPixelRow,
-    PrepareNextTile,
-    ResetTileColumn,
-
-    DummyReadOamByte,
-    ClearSecondaryOamByte,
-    ReadOamByte,
-    WriteSecondaryOamByte,
-
-    ReadSpriteY,
-    ReadSpritePatternIndex,
-    ReadSpriteAttributes,
-    ReadSpriteX,
-    DummyReadSpriteX,
-}
 
 pub struct Ppu {
     oam: Oam,
@@ -70,100 +47,12 @@ pub struct Ppu {
     current_sprite_y: SpriteY,
     sprite_0_present: bool,
 
-    background_scanline_actions: [Vec<CycleAction>; 341],
-    sprite_scanline_actions: [Vec<CycleAction>; 341],
+    frame_actions: FrameActions,
 }
 
 impl Ppu {
     #[allow(clippy::vec_init_then_push)]
     pub fn new() -> Ppu {
-        use CycleAction::*;
-
-        let get_background_tile = vec![
-            vec![GetPatternIndex],
-            vec![],
-            vec![GetPaletteIndex],
-            vec![],
-            vec![GetBackgroundTileLowByte],
-            vec![],
-            vec![GetBackgroundTileHighByte, GotoNextTileColumn],
-            vec![PrepareNextTile],
-        ];
-
-        let prepare_for_next_row = vec![
-            vec![GetPatternIndex],
-            vec![],
-            vec![GetPaletteIndex],
-            vec![],
-            vec![GetBackgroundTileLowByte],
-            vec![],
-            vec![GetBackgroundTileHighByte, GotoNextPixelRow],
-            vec![ResetTileColumn, PrepareNextTile],
-        ];
-
-        let mut acts = Vec::new();
-        // Cycle 0 (Skipped on odd, rendering frames.)
-        acts.push(vec![]);
-        // Cycle 1
-        acts.push(vec![]);
-
-        // Cycles 2-249: Retrieve the remaining 31 tiles used for the current scanline.
-        for _tile in 2..=32 {
-            acts.append(&mut get_background_tile.clone());
-        }
-
-        // Cycles 250-257: Retrieve an unused tile then prepare for the next pixel row.
-        acts.append(&mut prepare_for_next_row.clone());
-
-        // No background rendering during sprite rendering.
-        for _cycle in 258..=321 {
-            acts.push(vec![]);
-        }
-
-        // Cycles 322-337: Retrieve the first two tiles for the next scanline.
-        for _tile in 0..=1 {
-            acts.append(&mut get_background_tile.clone());
-        }
-
-        // Unused fetches from the Name Table.
-        acts.push(vec![GetPatternIndex]);
-        acts.push(vec![]);
-        acts.push(vec![GetPatternIndex]);
-
-        let mut sprite_acts = Vec::new();
-        // Cycle 0 (Skipped on odd, rendering frames.)
-        sprite_acts.push(vec![]);
-
-        // Cycles 1-64: Clear out Secondary OAM.
-        for _read_clear in 0..32 {
-            sprite_acts.push(vec![DummyReadOamByte]);
-            sprite_acts.push(vec![ClearSecondaryOamByte]);
-        }
-
-        // Cycles 65-256: Sprite evaluation (storing to secondary OAM).
-        for _read_write in 0..96 {
-            sprite_acts.push(vec![ReadOamByte]);
-            sprite_acts.push(vec![WriteSecondaryOamByte]);
-        }
-
-        // Cycles 257-320: Move secondary OAM into the OAM registers.
-        for _sprite in 0..8 {
-            sprite_acts.push(vec![ReadSpriteY]);
-            sprite_acts.push(vec![ReadSpritePatternIndex]);
-            sprite_acts.push(vec![ReadSpriteAttributes]);
-            sprite_acts.push(vec![ReadSpriteX]);
-            sprite_acts.push(vec![DummyReadSpriteX]);
-            sprite_acts.push(vec![DummyReadSpriteX]);
-            sprite_acts.push(vec![DummyReadSpriteX]);
-            sprite_acts.push(vec![DummyReadSpriteX]);
-        }
-
-        // Dummy reads.
-        for _cycle in 321..=340 {
-            // TODO: Verify that this is reading the first byte of secondary OAM.
-            sprite_acts.push(vec![ReadSpriteY]);
-        }
-
         Ppu {
             oam: Oam::new(),
             oam_index: OamIndex::new(),
@@ -191,8 +80,7 @@ impl Ppu {
             current_sprite_y: SpriteY::new(0),
             sprite_0_present: false,
 
-            background_scanline_actions: acts.try_into().unwrap(),
-            sprite_scanline_actions: sprite_acts.try_into().unwrap(),
+            frame_actions: NTSC_FRAME_ACTIONS.clone(),
         }
     }
 
@@ -255,14 +143,11 @@ impl Ppu {
             }
         }
 
-        if (0..=239).contains(&scanline) || scanline == 261 {
-            for action in self.background_scanline_actions[usize::from(cycle)].clone() {
-                self.execute_cycle_action(mem, action);
-            }
-
-            for action in self.sprite_scanline_actions[usize::from(cycle)].clone() {
-                self.execute_cycle_action(mem, action);
-            }
+        // TODO: Figure out how to eliminate duplication and the index.
+        let len = self.frame_actions.current_cycle_actions(&self.clock).len();
+        for i in 0..len {
+            let cycle_action = self.frame_actions.current_cycle_actions(&self.clock)[i];
+            self.execute_cycle_action(mem, cycle_action);
         }
 
         if mem.regs().background_enabled() && ((0..=239).contains(&scanline) || scanline == 261) {
@@ -391,7 +276,7 @@ impl Ppu {
                 self.current_address.copy_x_scroll(self.next_address);
                 self.current_address.copy_horizontal_name_table_side(self.next_address);
             }
-            PrepareNextTile => {
+            PrepareForNextTile => {
                 if !rendering_enabled { return; }
                 self.attribute_register.prepare_next_palette_table_index();
                 self.pattern_register.load_next_palette_indexes();

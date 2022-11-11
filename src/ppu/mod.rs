@@ -1,4 +1,5 @@
 pub mod clock;
+pub mod cycle_action;
 pub mod name_table;
 pub mod oam;
 pub mod palette;
