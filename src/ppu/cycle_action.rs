@@ -19,43 +19,43 @@ fn ntsc_frame_actions() -> FrameActions {
     // Cycles 1 through 249.
     for tile in 0..31 {
         let cycle = 8 * tile + 1;
-        visible_scanline.add_cycle_action_at(cycle + 1, GetPatternIndex);
-        visible_scanline.add_cycle_action_at(cycle + 3, GetPaletteIndex);
-        visible_scanline.add_cycle_action_at(cycle + 5, GetBackgroundTileLowByte);
-        visible_scanline.add_cycle_action_at(cycle + 7, GetBackgroundTileHighByte);
-        visible_scanline.add_cycle_action_at(cycle + 7, GotoNextTileColumn);
-        visible_scanline.add_cycle_action_at(cycle + 8, PrepareForNextTile);
+        visible_scanline.add_cycle_actions_at(cycle + 1, vec![GetPatternIndex]);
+        visible_scanline.add_cycle_actions_at(cycle + 3, vec![GetPaletteIndex]);
+        visible_scanline.add_cycle_actions_at(cycle + 5, vec![GetBackgroundTileLowByte]);
+        visible_scanline.add_cycle_actions_at(cycle + 7, vec![GetBackgroundTileHighByte]);
+        visible_scanline.add_cycle_actions_at(cycle + 7, vec![GotoNextTileColumn]);
+        visible_scanline.add_cycle_actions_at(cycle + 8, vec![PrepareForNextTile]);
     }
 
     // Fetch a final unused background tile and get ready for the next ROW of tiles.
-    visible_scanline.add_cycle_action_at(250, GetPatternIndex);
-    visible_scanline.add_cycle_action_at(252, GetPaletteIndex);
-    visible_scanline.add_cycle_action_at(254, GetBackgroundTileLowByte);
-    visible_scanline.add_cycle_action_at(256, GetBackgroundTileHighByte);
-    visible_scanline.add_cycle_action_at(256, GotoNextPixelRow);
-    visible_scanline.add_cycle_action_at(257, ResetTileColumn);
-    visible_scanline.add_cycle_action_at(257, PrepareForNextTile);
+    visible_scanline.add_cycle_actions_at(250, vec![GetPatternIndex]);
+    visible_scanline.add_cycle_actions_at(252, vec![GetPaletteIndex]);
+    visible_scanline.add_cycle_actions_at(254, vec![GetBackgroundTileLowByte]);
+    visible_scanline.add_cycle_actions_at(256, vec![GetBackgroundTileHighByte]);
+    visible_scanline.add_cycle_actions_at(256, vec![GotoNextPixelRow]);
+    visible_scanline.add_cycle_actions_at(257, vec![ResetTileColumn]);
+    visible_scanline.add_cycle_actions_at(257, vec![PrepareForNextTile]);
 
     // Cycles 258 through 321: No background rendering occurs, only sprite rendering.
 
     // Fetch the first background tile for the next scanline.
-    visible_scanline.add_cycle_action_at(322, GetPatternIndex);
-    visible_scanline.add_cycle_action_at(324, GetPaletteIndex);
-    visible_scanline.add_cycle_action_at(326, GetBackgroundTileLowByte);
-    visible_scanline.add_cycle_action_at(328, GetBackgroundTileHighByte);
-    visible_scanline.add_cycle_action_at(328, GotoNextTileColumn);
-    visible_scanline.add_cycle_action_at(329, PrepareForNextTile);
+    visible_scanline.add_cycle_actions_at(322, vec![GetPatternIndex]);
+    visible_scanline.add_cycle_actions_at(324, vec![GetPaletteIndex]);
+    visible_scanline.add_cycle_actions_at(326, vec![GetBackgroundTileLowByte]);
+    visible_scanline.add_cycle_actions_at(328, vec![GetBackgroundTileHighByte]);
+    visible_scanline.add_cycle_actions_at(328, vec![GotoNextTileColumn]);
+    visible_scanline.add_cycle_actions_at(329, vec![PrepareForNextTile]);
     // Fetch the second background tile for the next scanline.
-    visible_scanline.add_cycle_action_at(330, GetPatternIndex);
-    visible_scanline.add_cycle_action_at(332, GetPaletteIndex);
-    visible_scanline.add_cycle_action_at(334, GetBackgroundTileLowByte);
-    visible_scanline.add_cycle_action_at(336, GetBackgroundTileHighByte);
-    visible_scanline.add_cycle_action_at(336, GotoNextTileColumn);
-    visible_scanline.add_cycle_action_at(337, PrepareForNextTile);
+    visible_scanline.add_cycle_actions_at(330, vec![GetPatternIndex]);
+    visible_scanline.add_cycle_actions_at(332, vec![GetPaletteIndex]);
+    visible_scanline.add_cycle_actions_at(334, vec![GetBackgroundTileLowByte]);
+    visible_scanline.add_cycle_actions_at(336, vec![GetBackgroundTileHighByte]);
+    visible_scanline.add_cycle_actions_at(336, vec![GotoNextTileColumn]);
+    visible_scanline.add_cycle_actions_at(337, vec![PrepareForNextTile]);
 
     // Unused name table fetches.
-    visible_scanline.add_cycle_action_at(338, GetPatternIndex);
-    visible_scanline.add_cycle_action_at(340, GetPatternIndex);
+    visible_scanline.add_cycle_actions_at(338, vec![GetPatternIndex]);
+    visible_scanline.add_cycle_actions_at(340, vec![GetPatternIndex]);
 
     // SPRITE CALCULATIONS
 
@@ -63,34 +63,34 @@ fn ntsc_frame_actions() -> FrameActions {
     // Cycles 1 through 64.
     for read_clear in 0..32 {
         let cycle = 2 * read_clear + 1;
-        visible_scanline.add_cycle_action_at(cycle + 0, DummyReadOamByte);
-        visible_scanline.add_cycle_action_at(cycle + 1, ClearSecondaryOamByte);
+        visible_scanline.add_cycle_actions_at(cycle + 0, vec![DummyReadOamByte]);
+        visible_scanline.add_cycle_actions_at(cycle + 1, vec![ClearSecondaryOamByte]);
     }
 
     // Sprite evaluation, transfering OAM to secondary OAM.
     // Cycles 65 through 256.
     for read_write in 0..96 {
         let cycle = 2 * read_write + 65;
-        visible_scanline.add_cycle_action_at(cycle + 0, ReadOamByte);
-        visible_scanline.add_cycle_action_at(cycle + 1, WriteSecondaryOamByte);
+        visible_scanline.add_cycle_actions_at(cycle + 0, vec![ReadOamByte]);
+        visible_scanline.add_cycle_actions_at(cycle + 1, vec![WriteSecondaryOamByte]);
     }
 
     // Transfer secondary OAM to OAM registers.
     for sprite in 0..8 {
         let cycle = 8 * sprite + 257;
-        visible_scanline.add_cycle_action_at(cycle + 0, ReadSpriteY);
-        visible_scanline.add_cycle_action_at(cycle + 1, ReadSpritePatternIndex);
-        visible_scanline.add_cycle_action_at(cycle + 2, ReadSpriteAttributes);
-        visible_scanline.add_cycle_action_at(cycle + 3, ReadSpriteX);
-        visible_scanline.add_cycle_action_at(cycle + 4, DummyReadSpriteX);
-        visible_scanline.add_cycle_action_at(cycle + 5, DummyReadSpriteX);
-        visible_scanline.add_cycle_action_at(cycle + 6, DummyReadSpriteX);
-        visible_scanline.add_cycle_action_at(cycle + 7, DummyReadSpriteX);
+        visible_scanline.add_cycle_actions_at(cycle + 0, vec![ReadSpriteY]);
+        visible_scanline.add_cycle_actions_at(cycle + 1, vec![ReadSpritePatternIndex]);
+        visible_scanline.add_cycle_actions_at(cycle + 2, vec![ReadSpriteAttributes]);
+        visible_scanline.add_cycle_actions_at(cycle + 3, vec![ReadSpriteX]);
+        visible_scanline.add_cycle_actions_at(cycle + 4, vec![DummyReadSpriteX]);
+        visible_scanline.add_cycle_actions_at(cycle + 5, vec![DummyReadSpriteX]);
+        visible_scanline.add_cycle_actions_at(cycle + 6, vec![DummyReadSpriteX]);
+        visible_scanline.add_cycle_actions_at(cycle + 7, vec![DummyReadSpriteX]);
     }
 
     for cycle in 321..=340 {
         // TODO: Verify that this is reading the first byte of secondary OAM.
-        visible_scanline.add_cycle_action_at(cycle, ReadSpriteY);
+        visible_scanline.add_cycle_actions_at(cycle, vec![ReadSpriteY]);
     }
 
     let start_vblank = ScanlineActions::new();
@@ -147,8 +147,8 @@ impl ScanlineActions {
         }
     }
 
-    fn add_cycle_action_at(&mut self, cycle: usize, action: CycleAction) {
-        self.all_cycle_actions[cycle].push(action);
+    fn add_cycle_actions_at(&mut self, cycle: usize, mut actions: Vec<CycleAction>) {
+        self.all_cycle_actions[cycle].append(&mut actions);
     }
 }
 
