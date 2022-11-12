@@ -19,38 +19,49 @@ fn ntsc_frame_actions() -> FrameActions {
     // Cycles 1 through 249.
     for tile in 0..31 {
         let cycle = 8 * tile + 1;
-        visible_scanline.add_cycle_actions_at(cycle + 1, vec![GetPatternIndex]);
-        visible_scanline.add_cycle_actions_at(cycle + 3, vec![GetPaletteIndex]);
-        visible_scanline.add_cycle_actions_at(cycle + 5, vec![GetBackgroundTileLowByte]);
-        visible_scanline.add_cycle_actions_at(cycle + 7, vec![GetBackgroundTileHighByte]);
-        visible_scanline.add_cycle_actions_at(cycle + 7, vec![GotoNextTileColumn]);
+        visible_scanline.add_cycle_actions_at(cycle + 0, vec![                           SetBackgroundPixel, PrepareNextBackgroundPixel]);
+        visible_scanline.add_cycle_actions_at(cycle + 1, vec![GetPatternIndex          , SetBackgroundPixel, PrepareNextBackgroundPixel]);
+        visible_scanline.add_cycle_actions_at(cycle + 2, vec![                           SetBackgroundPixel, PrepareNextBackgroundPixel]);
+        visible_scanline.add_cycle_actions_at(cycle + 3, vec![GetPaletteIndex          , SetBackgroundPixel, PrepareNextBackgroundPixel]);
+        visible_scanline.add_cycle_actions_at(cycle + 4, vec![                           SetBackgroundPixel, PrepareNextBackgroundPixel]);
+        visible_scanline.add_cycle_actions_at(cycle + 5, vec![GetBackgroundTileLowByte , SetBackgroundPixel, PrepareNextBackgroundPixel]);
+        visible_scanline.add_cycle_actions_at(cycle + 6, vec![                           SetBackgroundPixel, PrepareNextBackgroundPixel]);
+        visible_scanline.add_cycle_actions_at(cycle + 7, vec![GetBackgroundTileHighByte, GotoNextTileColumn, SetBackgroundPixel, PrepareNextBackgroundPixel]);
         visible_scanline.add_cycle_actions_at(cycle + 8, vec![PrepareForNextTile]);
     }
 
+    visible_scanline.add_cycle_actions_at(249, vec![                           SetBackgroundPixel, PrepareNextBackgroundPixel]);
+
     // Fetch a final unused background tile and get ready for the next ROW of tiles.
-    visible_scanline.add_cycle_actions_at(250, vec![GetPatternIndex]);
-    visible_scanline.add_cycle_actions_at(252, vec![GetPaletteIndex]);
-    visible_scanline.add_cycle_actions_at(254, vec![GetBackgroundTileLowByte]);
-    visible_scanline.add_cycle_actions_at(256, vec![GetBackgroundTileHighByte]);
-    visible_scanline.add_cycle_actions_at(256, vec![GotoNextPixelRow]);
-    visible_scanline.add_cycle_actions_at(257, vec![ResetTileColumn]);
-    visible_scanline.add_cycle_actions_at(257, vec![PrepareForNextTile]);
+    visible_scanline.add_cycle_actions_at(250, vec![GetPatternIndex          , SetBackgroundPixel, PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(251, vec![                           SetBackgroundPixel, PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(252, vec![GetPaletteIndex          , SetBackgroundPixel, PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(253, vec![                           SetBackgroundPixel, PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(254, vec![GetBackgroundTileLowByte , SetBackgroundPixel, PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(255, vec![                           SetBackgroundPixel, PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(256, vec![GetBackgroundTileHighByte, GotoNextPixelRow  , SetBackgroundPixel, PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(257, vec![ResetTileColumn          , PrepareForNextTile]);
 
-    // Cycles 258 through 321: No background rendering occurs, only sprite rendering.
+    // Cycles 258 through 320: No background rendering occurs, only sprite rendering.
 
+    visible_scanline.add_cycle_actions_at(321, vec![                           PrepareNextBackgroundPixel]);
     // Fetch the first background tile for the next scanline.
-    visible_scanline.add_cycle_actions_at(322, vec![GetPatternIndex]);
-    visible_scanline.add_cycle_actions_at(324, vec![GetPaletteIndex]);
-    visible_scanline.add_cycle_actions_at(326, vec![GetBackgroundTileLowByte]);
-    visible_scanline.add_cycle_actions_at(328, vec![GetBackgroundTileHighByte]);
-    visible_scanline.add_cycle_actions_at(328, vec![GotoNextTileColumn]);
-    visible_scanline.add_cycle_actions_at(329, vec![PrepareForNextTile]);
+    visible_scanline.add_cycle_actions_at(322, vec![GetPatternIndex          , PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(323, vec![                           PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(324, vec![GetPaletteIndex          , PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(325, vec![                           PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(326, vec![GetBackgroundTileLowByte , PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(327, vec![                           PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(328, vec![GetBackgroundTileHighByte, GotoNextTileColumn, PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(329, vec![PrepareForNextTile       , PrepareNextBackgroundPixel]);
     // Fetch the second background tile for the next scanline.
-    visible_scanline.add_cycle_actions_at(330, vec![GetPatternIndex]);
-    visible_scanline.add_cycle_actions_at(332, vec![GetPaletteIndex]);
-    visible_scanline.add_cycle_actions_at(334, vec![GetBackgroundTileLowByte]);
-    visible_scanline.add_cycle_actions_at(336, vec![GetBackgroundTileHighByte]);
-    visible_scanline.add_cycle_actions_at(336, vec![GotoNextTileColumn]);
+    visible_scanline.add_cycle_actions_at(330, vec![GetPatternIndex          , PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(331, vec![                           PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(332, vec![GetPaletteIndex          , PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(333, vec![                           PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(334, vec![GetBackgroundTileLowByte , PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(335, vec![                           PrepareNextBackgroundPixel]);
+    visible_scanline.add_cycle_actions_at(336, vec![GetBackgroundTileHighByte, GotoNextTileColumn, PrepareNextBackgroundPixel]);
     visible_scanline.add_cycle_actions_at(337, vec![PrepareForNextTile]);
 
     // Unused name table fetches.
@@ -109,9 +120,60 @@ fn ntsc_frame_actions() -> FrameActions {
     }
 
     // PRE-RENDER SCANLINE
-    ntsc_frame.set_scanline_actions_at(261, visible_scanline);
+    ntsc_frame.set_scanline_actions_at(261, pre_render_scanline_actions());
 
     ntsc_frame
+}
+
+fn pre_render_scanline_actions() -> ScanlineActions {
+    use CycleAction::*;
+
+    let mut scanline = ScanlineActions::new();
+    // Fetch the remaining 31 used background tiles for the current scanline.
+    // Cycles 1 through 249.
+    for tile in 0..31 {
+        let cycle = 8 * tile + 1;
+        scanline.add_cycle_actions_at(cycle + 1, vec![GetPatternIndex]);
+        scanline.add_cycle_actions_at(cycle + 3, vec![GetPaletteIndex]);
+        scanline.add_cycle_actions_at(cycle + 5, vec![GetBackgroundTileLowByte]);
+        scanline.add_cycle_actions_at(cycle + 7, vec![GetBackgroundTileHighByte, GotoNextTileColumn]);
+        scanline.add_cycle_actions_at(cycle + 8, vec![PrepareForNextTile]);
+    }
+
+    // Fetch a final unused background tile and get ready for the next ROW of tiles.
+    scanline.add_cycle_actions_at(250, vec![GetPatternIndex]);
+    scanline.add_cycle_actions_at(252, vec![GetPaletteIndex]);
+    scanline.add_cycle_actions_at(254, vec![GetBackgroundTileLowByte]);
+    scanline.add_cycle_actions_at(256, vec![GetBackgroundTileHighByte, GotoNextPixelRow]);
+    scanline.add_cycle_actions_at(257, vec![ResetTileColumn, PrepareForNextTile]);
+
+    // Cycles 258 through 320: No background rendering occurs, only sprite rendering.
+
+    scanline.add_cycle_actions_at(321, vec![                          PrepareNextBackgroundPixel]);
+    // Fetch the first background tile for the next scanline.
+    scanline.add_cycle_actions_at(322, vec![GetPatternIndex         , PrepareNextBackgroundPixel]);
+    scanline.add_cycle_actions_at(323, vec![                          PrepareNextBackgroundPixel]);
+    scanline.add_cycle_actions_at(324, vec![GetPaletteIndex         , PrepareNextBackgroundPixel]);
+    scanline.add_cycle_actions_at(325, vec![                          PrepareNextBackgroundPixel]);
+    scanline.add_cycle_actions_at(326, vec![GetBackgroundTileLowByte, PrepareNextBackgroundPixel]);
+    scanline.add_cycle_actions_at(327, vec![                          PrepareNextBackgroundPixel]);
+    scanline.add_cycle_actions_at(328, vec![GetBackgroundTileHighByte, GotoNextTileColumn, PrepareNextBackgroundPixel]);
+    scanline.add_cycle_actions_at(329, vec![PrepareForNextTile      , PrepareNextBackgroundPixel]);
+    // Fetch the second background tile for the next scanline.
+    scanline.add_cycle_actions_at(330, vec![GetPatternIndex         , PrepareNextBackgroundPixel]);
+    scanline.add_cycle_actions_at(331, vec![                          PrepareNextBackgroundPixel]);
+    scanline.add_cycle_actions_at(332, vec![GetPaletteIndex         , PrepareNextBackgroundPixel]);
+    scanline.add_cycle_actions_at(333, vec![                          PrepareNextBackgroundPixel]);
+    scanline.add_cycle_actions_at(334, vec![GetBackgroundTileLowByte, PrepareNextBackgroundPixel]);
+    scanline.add_cycle_actions_at(335, vec![                          PrepareNextBackgroundPixel]);
+    scanline.add_cycle_actions_at(336, vec![GetBackgroundTileHighByte, GotoNextTileColumn, PrepareNextBackgroundPixel]);
+    scanline.add_cycle_actions_at(337, vec![PrepareForNextTile]);
+
+    // Unused name table fetches.
+    scanline.add_cycle_actions_at(338, vec![GetPatternIndex]);
+    scanline.add_cycle_actions_at(340, vec![GetPatternIndex]);
+
+    scanline
 }
 
 #[derive(Clone)]
@@ -163,6 +225,9 @@ pub enum CycleAction {
     GotoNextPixelRow,
     PrepareForNextTile,
     ResetTileColumn,
+
+    SetBackgroundPixel,
+    PrepareNextBackgroundPixel,
 
     DummyReadOamByte,
     ClearSecondaryOamByte,

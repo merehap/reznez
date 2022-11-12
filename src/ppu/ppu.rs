@@ -147,36 +147,11 @@ impl Ppu {
         let len = self.frame_actions.current_cycle_actions(&self.clock).len();
         for i in 0..len {
             let cycle_action = self.frame_actions.current_cycle_actions(&self.clock)[i];
-            self.execute_cycle_action(mem, cycle_action);
-        }
-
-        if mem.regs().background_enabled() && ((0..=239).contains(&scanline) || scanline == 261) {
-            if let 321..=336 = cycle {
-                self.pattern_register.shift_left();
-                self.attribute_register.push_next_palette_table_index();
-            }
+            self.execute_cycle_action(mem, frame, cycle_action);
         }
 
         if let Some(pixel_index) = PixelIndex::try_from_clock(&self.clock) {
             let (pixel_column, pixel_row) = pixel_index.to_column_row();
-            if mem.regs().background_enabled() {
-                let palette_table = mem.palette_table();
-                frame.set_universal_background_rgb(
-                    palette_table.universal_background_rgb(),
-                );
-
-                let column_in_tile = self.current_address.x_scroll().fine();
-                let palette = palette_table.background_palette(self.attribute_register.current_palette_table_index(column_in_tile));
-
-                let current_background_pixel = self.pattern_register.palette_index(column_in_tile)
-                    .map_or(Rgbt::Transparent, |palette_index| Rgbt::Opaque(palette[palette_index]));
-
-                frame.set_background_pixel(pixel_column, pixel_row, current_background_pixel);
-
-                self.pattern_register.shift_left();
-                self.attribute_register.push_next_palette_table_index();
-            }
-
             if mem.regs().sprites_enabled() {
                 let (sprite_pixel, priority, is_sprite_0) = self.oam_registers.step(&mem.palette_table());
                 frame.set_sprite_pixel(
@@ -229,7 +204,7 @@ impl Ppu {
         StepResult { is_last_cycle_of_frame, should_generate_nmi }
     }
 
-    pub fn execute_cycle_action(&mut self, mem: &mut PpuMemory, cycle_action: CycleAction) {
+    pub fn execute_cycle_action(&mut self, mem: &mut PpuMemory, frame: &mut Frame, cycle_action: CycleAction) {
         let background_table_side = mem.regs().background_table_side();
         let sprite_table_side = mem.regs().sprite_table_side();
         let pattern_table = mem.pattern_table(background_table_side);
@@ -238,8 +213,9 @@ impl Ppu {
         let row_in_tile = self.current_address.y_scroll().fine();
         let name_table = mem.name_table(self.current_address.name_table_quadrant());
 
-        let rendering_enabled =
-            mem.regs().background_enabled() || mem.regs().sprites_enabled();
+        let background_enabled = mem.regs().background_enabled();
+        let sprites_enabled = mem.regs().sprites_enabled();
+        let rendering_enabled = background_enabled || sprites_enabled;
 
         use CycleAction::*;
         match cycle_action {
@@ -280,6 +256,29 @@ impl Ppu {
                 if !rendering_enabled { return; }
                 self.attribute_register.prepare_next_palette_table_index();
                 self.pattern_register.load_next_palette_indexes();
+            }
+            SetBackgroundPixel => {
+                if !background_enabled { return; }
+
+                let (pixel_column, pixel_row) = PixelIndex::try_from_clock(&self.clock).unwrap().to_column_row();
+                let palette_table = mem.palette_table();
+                // TODO: Figure out where this goes. Maybe have frame call palette_table when displaying.
+                frame.set_universal_background_rgb(
+                    palette_table.universal_background_rgb(),
+                );
+
+                let column_in_tile = self.current_address.x_scroll().fine();
+                let palette = palette_table.background_palette(self.attribute_register.current_palette_table_index(column_in_tile));
+
+                let current_background_pixel = self.pattern_register.palette_index(column_in_tile)
+                    .map_or(Rgbt::Transparent, |palette_index| Rgbt::Opaque(palette[palette_index]));
+
+                frame.set_background_pixel(pixel_column, pixel_row, current_background_pixel);
+            }
+            PrepareNextBackgroundPixel => {
+                if !background_enabled { return; }
+                self.pattern_register.shift_left();
+                self.attribute_register.push_next_palette_table_index();
             }
 
             DummyReadOamByte => {
