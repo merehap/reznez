@@ -38,6 +38,7 @@ pub struct Ppu {
     write_toggle: WriteToggle,
 
     suppress_vblank_active: bool,
+    nmi_requested: bool,
     nmi_was_enabled_last_cycle: bool,
 
     next_pattern_index: PatternIndex,
@@ -72,6 +73,7 @@ impl Ppu {
             write_toggle: WriteToggle::FirstByte,
 
             suppress_vblank_active: false,
+            nmi_requested: false,
             nmi_was_enabled_last_cycle: false,
 
             next_pattern_index: PatternIndex::new(0),
@@ -115,13 +117,14 @@ impl Ppu {
         }
 
         let latch_access = mem.regs_mut().take_latch_access();
-        let mut maybe_generate_nmi = false;
+
+        self.nmi_requested = false;
         if let Some(latch_access) = latch_access {
-            maybe_generate_nmi = self.process_latch_access(mem, latch_access);
+            self.nmi_requested = self.process_latch_access(mem, latch_access);
         }
 
         match (self.clock.scanline(), self.clock.cycle()) {
-            (241, 3) => maybe_generate_nmi = true,
+            (241, 3) => self.nmi_requested = true,
             (261, 1) => {
                 mem.regs_mut().stop_vblank();
                 mem.regs_mut().clear_sprite0_hit();
@@ -151,7 +154,7 @@ impl Ppu {
 
         let is_last_cycle_of_frame = self.clock.is_last_cycle_of_frame();
         self.clock.tick(mem.regs().rendering_enabled());
-        let should_generate_nmi = maybe_generate_nmi && mem.regs().can_generate_nmi();
+        let should_generate_nmi = self.nmi_requested && mem.regs().can_generate_nmi();
 
         StepResult { is_last_cycle_of_frame, should_generate_nmi }
     }
@@ -394,7 +397,7 @@ impl Ppu {
         latch_access: LatchAccess,
     ) -> bool {
         let value = mem.regs().latch_value();
-        let mut maybe_generate_nmi = false;
+        let mut request_nmi = false;
 
         use AccessMode::*;
         use RegisterType::*;
@@ -406,7 +409,7 @@ impl Ppu {
                 self.next_address.set_name_table_quadrant(NameTableQuadrant::from_last_two_bits(value));
                 if !self.nmi_was_enabled_last_cycle {
                     // Attempt to trigger the second (or higher) NMI of this frame.
-                    maybe_generate_nmi = true;
+                    request_nmi = true;
                 }
 
                 self.nmi_was_enabled_last_cycle = mem.regs().nmi_enabled();
@@ -433,7 +436,7 @@ impl Ppu {
             ),
         }
 
-        maybe_generate_nmi
+        request_nmi
     }
 
     fn update_oam_data(&self, regs: &mut PpuRegisters) {
