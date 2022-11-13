@@ -123,16 +123,6 @@ impl Ppu {
             self.nmi_requested = self.process_latch_access(mem, latch_access);
         }
 
-        match (self.clock.scanline(), self.clock.cycle()) {
-            (241, 3) => self.nmi_requested = true,
-            (261, 1) => {
-                mem.regs_mut().stop_vblank();
-                mem.regs_mut().clear_sprite0_hit();
-                mem.regs_mut().clear_sprite_overflow();
-            }
-            (_, _) => { /* Do nothing. */ }
-        }
-
         if mem.regs().background_enabled() {
             if scanline == 261 && cycle == 320 {
                 self.current_address = self.next_address;
@@ -385,6 +375,15 @@ impl Ppu {
 
                 self.suppress_vblank_active = false;
             }
+            RequestNmi => {
+                self.nmi_requested = true;
+            }
+            ClearFlags => {
+                mem.regs_mut().stop_vblank();
+                mem.regs_mut().clear_sprite0_hit();
+                mem.regs_mut().clear_sprite_overflow();
+            }
+
             UpdateOamData => {
                 self.update_oam_data(mem.regs_mut());
             }

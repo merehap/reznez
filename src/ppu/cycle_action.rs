@@ -118,6 +118,7 @@ fn start_vblank_scanline_actions() -> ScanlineActions {
 
     let mut scanline = vblank_scanline_actions();
     scanline.add(1, vec![StartVblank]);
+    scanline.add(3, vec![RequestNmi]);
     scanline
 }
 
@@ -137,6 +138,9 @@ fn pre_render_scanline_actions() -> ScanlineActions {
     use CycleAction::*;
 
     let mut scanline = ScanlineActions::new();
+    // Clear vblank, sprite 0 hit, and sprite overflow.
+    scanline.add(            1, vec![ClearFlags                                                        ]);
+
     //               ||CYCLE||       ||---------BACKGROUND-TILE-ACTIONS---------|| ||-DISPLAY-ACTIONS-||
     // Fetch the remaining 31 used background tiles for the current scanline.
     // Cycles 1 through 249.
@@ -250,5 +254,8 @@ pub enum CycleAction {
     ResetForTransferToOamRegisters,
 
     StartVblank,
+    RequestNmi,
+    ClearFlags,
+
     UpdateOamData,
 }
