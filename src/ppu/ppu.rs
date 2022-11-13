@@ -26,6 +26,7 @@ pub struct Ppu {
     secondary_oam: SecondaryOam,
     oam_registers: OamRegisters,
     oam_register_index: usize,
+    clear_oam: bool,
 
     clock: Clock,
 
@@ -59,6 +60,7 @@ impl Ppu {
             secondary_oam: SecondaryOam::new(),
             oam_registers: OamRegisters::new(),
             oam_register_index: 0,
+            clear_oam: false,
 
             clock: Clock::new(),
 
@@ -119,9 +121,13 @@ impl Ppu {
         }
 
         match self.clock.cycle() {
-            001 => self.secondary_oam.reset_index(),
+            001 => {
+                self.secondary_oam.reset_index();
+                self.clear_oam = true;
+            }
             065 => {
                 self.secondary_oam.reset_index();
+                self.clear_oam = false;
                 self.oam_register_index = 0;
                 self.sprite_0_present = false;
                 self.oam_index.reset();
@@ -281,23 +287,22 @@ impl Ppu {
                 self.attribute_register.push_next_palette_table_index();
             }
 
-            DummyReadOamByte => {
-                if !rendering_enabled { return; }
-                // Dummy read. TODO: Can this be removed?
-                self.oam.read_sprite_data(self.oam_index);
-                mem.regs_mut().oam_data = 0xFF;
-            }
-            ClearSecondaryOamByte => {
-                if !rendering_enabled { return; }
-                self.secondary_oam.write(mem.regs().oam_data);
-                self.secondary_oam.advance();
-            }
             ReadOamByte => {
                 if !rendering_enabled { return; }
+                // This is a dummy read if OAM clear is active. TODO: Can this be removed?
                 mem.regs_mut().oam_data = self.oam.read_sprite_data(self.oam_index);
+                if self.clear_oam {
+                    mem.regs_mut().oam_data = 0xFF;
+                }
             }
             WriteSecondaryOamByte => {
                 if !rendering_enabled { return; }
+
+                if self.clear_oam {
+                    self.secondary_oam.write(mem.regs().oam_data);
+                    self.secondary_oam.advance();
+                    return;
+                }
 
                 if self.oam_index.end_reached() {
                     // Reading and incrementing still happen after sprite evaluation is

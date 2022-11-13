@@ -90,18 +90,10 @@ fn visible_scanline_actions() -> ScanlineActions {
 
     // SPRITE CALCULATIONS
 
-    // Clear secondary OAM.
-    // Cycles 1 through 64.
-    for read_clear in 0..32 {
-        let cycle = 2 * read_clear + 1;
-        line.add(cycle + 0, vec![DummyReadOamByte]);
-        line.add(cycle + 1, vec![ClearSecondaryOamByte]);
-    }
-
-    // Sprite evaluation, transfering OAM to secondary OAM.
-    // Cycles 65 through 256.
-    for read_write in 0..96 {
-        let cycle = 2 * read_write + 65;
+    // Sprite evaluation (including clearing secondary OAM), transfering OAM to secondary OAM.
+    // Cycles 1 through 256.
+    for read_write in 0..128 {
+        let cycle = 2 * read_write + 1;
         line.add(cycle + 0, vec![ReadOamByte]);
         line.add(cycle + 1, vec![WriteSecondaryOamByte]);
     }
@@ -231,8 +223,6 @@ pub enum CycleAction {
     SetBackgroundPixel,
     PrepareNextBackgroundPixel,
 
-    DummyReadOamByte,
-    ClearSecondaryOamByte,
     ReadOamByte,
     WriteSecondaryOamByte,
 
