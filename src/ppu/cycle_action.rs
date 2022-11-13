@@ -36,8 +36,13 @@ fn visible_scanline_actions() -> ScanlineActions {
     use CycleAction::*;
 
     let mut line = ScanlineActions::new();
+    //               CYCLE,      BACKGROUND_TILE_ACTIONS , V_UPDATES         , SETTING_PIXEL      , STARTING_NEXT_PIXEL,        SPRITE_ACTIONS
+    // Overlaps with the first cycle of tile fetching.
+    line.add(          001, vec![                                                                                               ResetForOamClear     ]);
+    line.add(          065, vec![                                                                                               ResetForSpriteEvaluation]);
+
     // Fetch the remaining 31 usable background tiles for the current scanline.
-    // Sprite evaluation (including clearing secondary OAM), transfering OAM to secondary OAM.
+    // Secondary OAM clearing then sprite evaluation, transfering OAM to secondary OAM.
     // Cycles 1 through 249.
     for tile in 0..31 {
         let cycle = 8 * tile + 1;
@@ -62,7 +67,7 @@ fn visible_scanline_actions() -> ScanlineActions {
     line.add(          254, vec![GetBackgroundTileLowByte ,                     SetBackgroundPixel, PrepareNextBackgroundPixel, WriteSecondaryOamByte]);
     line.add(          255, vec![                                               SetBackgroundPixel, PrepareNextBackgroundPixel, ReadOamByte          ]);
     line.add(          256, vec![GetBackgroundTileHighByte, GotoNextPixelRow  , SetBackgroundPixel, PrepareNextBackgroundPixel, WriteSecondaryOamByte]);
-    line.add(          257, vec![PrepareForNextTile       , ResetTileColumn                                                                          ]);
+    line.add(          257, vec![PrepareForNextTile       , ResetTileColumn   ,                                                 ResetForTransferToOamRegisters]);
 
     // Transfer secondary OAM to OAM registers.
     // Cycles 257 through 320
@@ -217,6 +222,7 @@ pub enum CycleAction {
     ReadSpriteX,
     DummyReadSpriteX,
 
-    //StartOamClear,
-    //StartSpriteEvaluation,
+    ResetForOamClear,
+    ResetForSpriteEvaluation,
+    ResetForTransferToOamRegisters,
 }

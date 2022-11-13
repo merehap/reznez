@@ -120,26 +120,6 @@ impl Ppu {
             maybe_generate_nmi = self.process_latch_access(mem, latch_access);
         }
 
-        match self.clock.cycle() {
-            001 => {
-                self.secondary_oam.reset_index();
-                self.clear_oam = true;
-            }
-            065 => {
-                self.secondary_oam.reset_index();
-                self.clear_oam = false;
-                self.oam_register_index = 0;
-                self.sprite_0_present = false;
-                self.oam_index.reset();
-            }
-            257 => {
-                // TODO: Determine if this needs to occur on cycle 256 instead.
-                self.secondary_oam.reset_index();
-                self.oam_registers.set_sprite_0_presence(self.sprite_0_present);
-            }
-            _ => {},
-        }
-
         match (self.clock.scanline(), self.clock.cycle()) {
             (241, 1) => {
                 if !self.suppress_vblank_active {
@@ -392,6 +372,23 @@ impl Ppu {
             }
             DummyReadSpriteX => {
                 if !rendering_enabled { return; }
+            }
+
+            ResetForOamClear => {
+                self.secondary_oam.reset_index();
+                self.clear_oam = true;
+            }
+            ResetForSpriteEvaluation => {
+                self.secondary_oam.reset_index();
+                self.clear_oam = false;
+                self.oam_register_index = 0;
+                self.sprite_0_present = false;
+                self.oam_index.reset();
+            }
+            ResetForTransferToOamRegisters => {
+                // TODO: Determine if this needs to occur on cycle 256 instead.
+                self.secondary_oam.reset_index();
+                self.oam_registers.set_sprite_0_presence(self.sprite_0_present);
             }
         }
     }
