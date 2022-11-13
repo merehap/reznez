@@ -65,7 +65,7 @@ fn visible_scanline_actions() -> ScanlineActions {
     line.add(          257, vec![PrepareForNextTile       , ResetTileColumn                                                                          ]);
 
     // Transfer secondary OAM to OAM registers.
-    // Cycles 258 through 320
+    // Cycles 257 through 320
     for sprite in 0..8 {
         let cycle = 8 * sprite + 257;
         line.add(cycle + 0, vec![                                                                                               ReadSpriteY          ]);
@@ -216,4 +216,7 @@ pub enum CycleAction {
     ReadSpriteAttributes,
     ReadSpriteX,
     DummyReadSpriteX,
+
+    //StartOamClear,
+    //StartSpriteEvaluation,
 }

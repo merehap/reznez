@@ -132,7 +132,8 @@ impl Ppu {
                 self.sprite_0_present = false;
                 self.oam_index.reset();
             }
-            256 => {
+            257 => {
+                // TODO: Determine if this needs to occur on cycle 256 instead.
                 self.secondary_oam.reset_index();
                 self.oam_registers.set_sprite_0_presence(self.sprite_0_present);
             }
