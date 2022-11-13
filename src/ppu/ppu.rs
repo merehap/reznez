@@ -133,7 +133,24 @@ impl Ppu {
             _ => {},
         }
 
-        if mem.regs().background_enabled() && ((0..=239).contains(&scanline) || scanline == 261) {
+        match (self.clock.scanline(), self.clock.cycle()) {
+            (241, 1) => {
+                if !self.suppress_vblank_active {
+                    mem.regs_mut().start_vblank();
+                }
+
+                self.suppress_vblank_active = false;
+            }
+            (241, 3) => maybe_generate_nmi = true,
+            (261, 1) => {
+                mem.regs_mut().stop_vblank();
+                mem.regs_mut().clear_sprite0_hit();
+                mem.regs_mut().clear_sprite_overflow();
+            }
+            (_, _) => { /* Do nothing. */ }
+        }
+
+        if mem.regs().background_enabled() {
             if scanline == 261 && cycle == 320 {
                 self.current_address = self.next_address;
             }
@@ -170,23 +187,6 @@ impl Ppu {
             {
                 mem.regs_mut().set_sprite0_hit();
             }
-        }
-
-        match (self.clock.scanline(), self.clock.cycle()) {
-            (241, 1) => {
-                if !self.suppress_vblank_active {
-                    mem.regs_mut().start_vblank();
-                }
-
-                self.suppress_vblank_active = false;
-            }
-            (241, 3) => maybe_generate_nmi = true,
-            (261, 1) => {
-                mem.regs_mut().stop_vblank();
-                mem.regs_mut().clear_sprite0_hit();
-                mem.regs_mut().clear_sprite_overflow();
-            }
-            (_, _) => { /* Do nothing. */ }
         }
 
         // Only update $2004 during VBlank.

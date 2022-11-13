@@ -30,9 +30,8 @@ fn ntsc_frame_actions() -> FrameActions {
         visible_scanline.add_cycle_actions_at(cycle + 8, vec![PrepareForNextTile]);
     }
 
-    visible_scanline.add_cycle_actions_at(249, vec![                           SetBackgroundPixel, PrepareNextBackgroundPixel]);
-
     // Fetch a final unused background tile and get ready for the next ROW of tiles.
+    visible_scanline.add_cycle_actions_at(249, vec![                           SetBackgroundPixel, PrepareNextBackgroundPixel]);
     visible_scanline.add_cycle_actions_at(250, vec![GetPatternIndex          , SetBackgroundPixel, PrepareNextBackgroundPixel]);
     visible_scanline.add_cycle_actions_at(251, vec![                           SetBackgroundPixel, PrepareNextBackgroundPixel]);
     visible_scanline.add_cycle_actions_at(252, vec![GetPaletteIndex          , SetBackgroundPixel, PrepareNextBackgroundPixel]);
@@ -40,7 +39,7 @@ fn ntsc_frame_actions() -> FrameActions {
     visible_scanline.add_cycle_actions_at(254, vec![GetBackgroundTileLowByte , SetBackgroundPixel, PrepareNextBackgroundPixel]);
     visible_scanline.add_cycle_actions_at(255, vec![                           SetBackgroundPixel, PrepareNextBackgroundPixel]);
     visible_scanline.add_cycle_actions_at(256, vec![GetBackgroundTileHighByte, GotoNextPixelRow  , SetBackgroundPixel, PrepareNextBackgroundPixel]);
-    visible_scanline.add_cycle_actions_at(257, vec![ResetTileColumn          , PrepareForNextTile]);
+    visible_scanline.add_cycle_actions_at(257, vec![PrepareForNextTile, ResetTileColumn]);
 
     // Cycles 258 through 320: No background rendering occurs, only sprite rendering.
 
@@ -145,7 +144,7 @@ fn pre_render_scanline_actions() -> ScanlineActions {
     scanline.add_cycle_actions_at(252, vec![GetPaletteIndex]);
     scanline.add_cycle_actions_at(254, vec![GetBackgroundTileLowByte]);
     scanline.add_cycle_actions_at(256, vec![GetBackgroundTileHighByte, GotoNextPixelRow]);
-    scanline.add_cycle_actions_at(257, vec![ResetTileColumn, PrepareForNextTile]);
+    scanline.add_cycle_actions_at(257, vec![PrepareForNextTile, ResetTileColumn]);
 
     // Cycles 258 through 320: No background rendering occurs, only sprite rendering.
 
