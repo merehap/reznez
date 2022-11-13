@@ -154,18 +154,6 @@ impl Ppu {
             self.execute_cycle_action(mem, frame, cycle_action);
         }
 
-        if let Some(pixel_index) = PixelIndex::try_from_clock(&self.clock) {
-            let (pixel_column, pixel_row) = pixel_index.to_column_row();
-
-            // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
-            if mem.regs().sprites_enabled()
-                && mem.regs().background_enabled()
-                && frame.pixel(mem.regs().mask, pixel_column, pixel_row).1.hit()
-            {
-                mem.regs_mut().set_sprite0_hit();
-            }
-        }
-
         // Only update $2004 during VBlank.
         // TODO: Narrow this down to the proper range.
         if self.clock.scanline() >= 241 {
@@ -261,6 +249,13 @@ impl Ppu {
                         priority,
                         is_sprite_0,
                     );
+                }
+
+                // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
+                if sprites_enabled && background_enabled
+                    && frame.pixel(mem.regs().mask, pixel_column, pixel_row).1.hit()
+                {
+                    mem.regs_mut().set_sprite0_hit();
                 }
             }
             PrepareForNextPixel => {

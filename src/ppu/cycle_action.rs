@@ -54,7 +54,7 @@ fn visible_scanline_actions() -> ScanlineActions {
         line.add(cycle + 5, vec![GetBackgroundTileLowByte ,                     SetPixel, PrepareForNextPixel, WriteSecondaryOamByte]);
         line.add(cycle + 6, vec![                                               SetPixel, PrepareForNextPixel, ReadOamByte          ]);
         line.add(cycle + 7, vec![GetBackgroundTileHighByte, GotoNextTileColumn, SetPixel, PrepareForNextPixel, WriteSecondaryOamByte]);
-        line.add(cycle + 8, vec![PrepareForNextTile                                                                                                  ]);
+        line.add(cycle + 8, vec![PrepareForNextTile                                                                                 ]);
     }
 
     // Fetch a final unused background tile and get ready for the next ROW of tiles.
