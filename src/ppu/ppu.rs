@@ -156,16 +156,6 @@ impl Ppu {
 
         if let Some(pixel_index) = PixelIndex::try_from_clock(&self.clock) {
             let (pixel_column, pixel_row) = pixel_index.to_column_row();
-            if mem.regs().sprites_enabled() {
-                let (sprite_pixel, priority, is_sprite_0) = self.oam_registers.step(&mem.palette_table());
-                frame.set_sprite_pixel(
-                    pixel_column,
-                    pixel_row,
-                    sprite_pixel,
-                    priority,
-                    is_sprite_0,
-                );
-            }
 
             // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
             if mem.regs().sprites_enabled()
@@ -244,25 +234,36 @@ impl Ppu {
                 self.attribute_register.prepare_next_palette_table_index();
                 self.pattern_register.load_next_palette_indexes();
             }
-            SetBackgroundPixel => {
-                if !background_enabled { return; }
-
+            SetPixel => {
                 let (pixel_column, pixel_row) = PixelIndex::try_from_clock(&self.clock).unwrap().to_column_row();
-                let palette_table = mem.palette_table();
-                // TODO: Figure out where this goes. Maybe have frame call palette_table when displaying.
-                frame.set_universal_background_rgb(
-                    palette_table.universal_background_rgb(),
-                );
+                if background_enabled {
+                    let palette_table = mem.palette_table();
+                    // TODO: Figure out where this goes. Maybe have frame call palette_table when displaying.
+                    frame.set_universal_background_rgb(
+                        palette_table.universal_background_rgb(),
+                    );
 
-                let column_in_tile = self.current_address.x_scroll().fine();
-                let palette = palette_table.background_palette(self.attribute_register.current_palette_table_index(column_in_tile));
+                    let column_in_tile = self.current_address.x_scroll().fine();
+                    let palette = palette_table.background_palette(self.attribute_register.current_palette_table_index(column_in_tile));
 
-                let current_background_pixel = self.pattern_register.palette_index(column_in_tile)
-                    .map_or(Rgbt::Transparent, |palette_index| Rgbt::Opaque(palette[palette_index]));
+                    let current_background_pixel = self.pattern_register.palette_index(column_in_tile)
+                        .map_or(Rgbt::Transparent, |palette_index| Rgbt::Opaque(palette[palette_index]));
 
-                frame.set_background_pixel(pixel_column, pixel_row, current_background_pixel);
+                    frame.set_background_pixel(pixel_column, pixel_row, current_background_pixel);
+                }
+
+                if sprites_enabled {
+                    let (sprite_pixel, priority, is_sprite_0) = self.oam_registers.step(&mem.palette_table());
+                    frame.set_sprite_pixel(
+                        pixel_column,
+                        pixel_row,
+                        sprite_pixel,
+                        priority,
+                        is_sprite_0,
+                    );
+                }
             }
-            PrepareNextBackgroundPixel => {
+            PrepareForNextPixel => {
                 if !background_enabled { return; }
                 self.pattern_register.shift_left();
                 self.attribute_register.push_next_palette_table_index();

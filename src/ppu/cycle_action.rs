@@ -36,77 +36,77 @@ fn visible_scanline_actions() -> ScanlineActions {
     use CycleAction::*;
 
     let mut line = ScanlineActions::new();
-    //               CYCLE,      BACKGROUND_TILE_ACTIONS , V_UPDATES         , SETTING_PIXEL      , STARTING_NEXT_PIXEL,        SPRITE_ACTIONS
+    //               CYCLE,      BACKGROUND_TILE_ACTIONS , V_UPDATES         ,SET_PIXEL, PREPARE_FOR_NEXT_PIXEL,SPRITE_ACTIONS
     // Overlaps with the first cycle of tile fetching.
-    line.add(          001, vec![                                                                                               ResetForOamClear     ]);
-    line.add(          065, vec![                                                                                               ResetForSpriteEvaluation]);
+    line.add(          001, vec![                                                                              ResetForOamClear     ]);
+    line.add(          065, vec![                                                                              ResetForSpriteEvaluation]);
 
     // Fetch the remaining 31 usable background tiles for the current scanline.
     // Secondary OAM clearing then sprite evaluation, transfering OAM to secondary OAM.
     // Cycles 1 through 249.
     for tile in 0..31 {
         let cycle = 8 * tile + 1;
-        line.add(cycle + 0, vec![                                               SetBackgroundPixel, PrepareNextBackgroundPixel, ReadOamByte          ]);
-        line.add(cycle + 1, vec![GetPatternIndex          ,                     SetBackgroundPixel, PrepareNextBackgroundPixel, WriteSecondaryOamByte]);
-        line.add(cycle + 2, vec![                                               SetBackgroundPixel, PrepareNextBackgroundPixel, ReadOamByte          ]);
-        line.add(cycle + 3, vec![GetPaletteIndex          ,                     SetBackgroundPixel, PrepareNextBackgroundPixel, WriteSecondaryOamByte]);
-        line.add(cycle + 4, vec![                                               SetBackgroundPixel, PrepareNextBackgroundPixel, ReadOamByte          ]);
-        line.add(cycle + 5, vec![GetBackgroundTileLowByte ,                     SetBackgroundPixel, PrepareNextBackgroundPixel, WriteSecondaryOamByte]);
-        line.add(cycle + 6, vec![                                               SetBackgroundPixel, PrepareNextBackgroundPixel, ReadOamByte          ]);
-        line.add(cycle + 7, vec![GetBackgroundTileHighByte, GotoNextTileColumn, SetBackgroundPixel, PrepareNextBackgroundPixel, WriteSecondaryOamByte]);
+        line.add(cycle + 0, vec![                                               SetPixel, PrepareForNextPixel, ReadOamByte          ]);
+        line.add(cycle + 1, vec![GetPatternIndex          ,                     SetPixel, PrepareForNextPixel, WriteSecondaryOamByte]);
+        line.add(cycle + 2, vec![                                               SetPixel, PrepareForNextPixel, ReadOamByte          ]);
+        line.add(cycle + 3, vec![GetPaletteIndex          ,                     SetPixel, PrepareForNextPixel, WriteSecondaryOamByte]);
+        line.add(cycle + 4, vec![                                               SetPixel, PrepareForNextPixel, ReadOamByte          ]);
+        line.add(cycle + 5, vec![GetBackgroundTileLowByte ,                     SetPixel, PrepareForNextPixel, WriteSecondaryOamByte]);
+        line.add(cycle + 6, vec![                                               SetPixel, PrepareForNextPixel, ReadOamByte          ]);
+        line.add(cycle + 7, vec![GetBackgroundTileHighByte, GotoNextTileColumn, SetPixel, PrepareForNextPixel, WriteSecondaryOamByte]);
         line.add(cycle + 8, vec![PrepareForNextTile                                                                                                  ]);
     }
 
     // Fetch a final unused background tile and get ready for the next ROW of tiles.
     // Complete the sprite evaluation.
-    line.add(          249, vec![                                               SetBackgroundPixel, PrepareNextBackgroundPixel, ReadOamByte          ]);
-    line.add(          250, vec![GetPatternIndex          ,                     SetBackgroundPixel, PrepareNextBackgroundPixel, WriteSecondaryOamByte]);
-    line.add(          251, vec![                                               SetBackgroundPixel, PrepareNextBackgroundPixel, ReadOamByte          ]);
-    line.add(          252, vec![GetPaletteIndex          ,                     SetBackgroundPixel, PrepareNextBackgroundPixel, WriteSecondaryOamByte]);
-    line.add(          253, vec![                                               SetBackgroundPixel, PrepareNextBackgroundPixel, ReadOamByte          ]);
-    line.add(          254, vec![GetBackgroundTileLowByte ,                     SetBackgroundPixel, PrepareNextBackgroundPixel, WriteSecondaryOamByte]);
-    line.add(          255, vec![                                               SetBackgroundPixel, PrepareNextBackgroundPixel, ReadOamByte          ]);
-    line.add(          256, vec![GetBackgroundTileHighByte, GotoNextPixelRow  , SetBackgroundPixel, PrepareNextBackgroundPixel, WriteSecondaryOamByte]);
-    line.add(          257, vec![PrepareForNextTile       , ResetTileColumn   ,                                                 ResetForTransferToOamRegisters]);
+    line.add(          249, vec![                                               SetPixel, PrepareForNextPixel, ReadOamByte          ]);
+    line.add(          250, vec![GetPatternIndex          ,                     SetPixel, PrepareForNextPixel, WriteSecondaryOamByte]);
+    line.add(          251, vec![                                               SetPixel, PrepareForNextPixel, ReadOamByte          ]);
+    line.add(          252, vec![GetPaletteIndex          ,                     SetPixel, PrepareForNextPixel, WriteSecondaryOamByte]);
+    line.add(          253, vec![                                               SetPixel, PrepareForNextPixel, ReadOamByte          ]);
+    line.add(          254, vec![GetBackgroundTileLowByte ,                     SetPixel, PrepareForNextPixel, WriteSecondaryOamByte]);
+    line.add(          255, vec![                                               SetPixel, PrepareForNextPixel, ReadOamByte          ]);
+    line.add(          256, vec![GetBackgroundTileHighByte, GotoNextPixelRow  , SetPixel, PrepareForNextPixel, WriteSecondaryOamByte]);
+    line.add(          257, vec![PrepareForNextTile       , ResetTileColumn   ,                                ResetForTransferToOamRegisters]);
 
     // Transfer secondary OAM to OAM registers.
     // Cycles 257 through 320
     for sprite in 0..8 {
         let cycle = 8 * sprite + 257;
-        line.add(cycle + 0, vec![                                                                                               ReadSpriteY          ]);
-        line.add(cycle + 1, vec![                                                                                               ReadSpritePatternIndex]);
-        line.add(cycle + 2, vec![                                                                                               ReadSpriteAttributes ]);
-        line.add(cycle + 3, vec![                                                                                               ReadSpriteX          ]);
-        line.add(cycle + 4, vec![                                                                                               DummyReadSpriteX     ]);
-        line.add(cycle + 5, vec![                                                                                               DummyReadSpriteX     ]);
-        line.add(cycle + 6, vec![                                                                                               DummyReadSpriteX     ]);
-        line.add(cycle + 7, vec![                                                                                               DummyReadSpriteX     ]);
+        line.add(cycle + 0, vec![                                                                              ReadSpriteY          ]);
+        line.add(cycle + 1, vec![                                                                              ReadSpritePatternIndex]);
+        line.add(cycle + 2, vec![                                                                              ReadSpriteAttributes ]);
+        line.add(cycle + 3, vec![                                                                              ReadSpriteX          ]);
+        line.add(cycle + 4, vec![                                                                              DummyReadSpriteX     ]);
+        line.add(cycle + 5, vec![                                                                              DummyReadSpriteX     ]);
+        line.add(cycle + 6, vec![                                                                              DummyReadSpriteX     ]);
+        line.add(cycle + 7, vec![                                                                              DummyReadSpriteX     ]);
     }
 
     // Fetch the first background tile for the next scanline.
-    line.add(          321, vec![                                                                   PrepareNextBackgroundPixel, ReadSpriteY          ]);
-    line.add(          322, vec![GetPatternIndex          ,                                         PrepareNextBackgroundPixel, ReadSpriteY          ]);
-    line.add(          323, vec![                                                                   PrepareNextBackgroundPixel, ReadSpriteY          ]);
-    line.add(          324, vec![GetPaletteIndex          ,                                         PrepareNextBackgroundPixel, ReadSpriteY          ]);
-    line.add(          325, vec![                                                                   PrepareNextBackgroundPixel, ReadSpriteY          ]);
-    line.add(          326, vec![GetBackgroundTileLowByte ,                                         PrepareNextBackgroundPixel, ReadSpriteY          ]);
-    line.add(          327, vec![                                                                   PrepareNextBackgroundPixel, ReadSpriteY          ]);
-    line.add(          328, vec![GetBackgroundTileHighByte, GotoNextTileColumn,                     PrepareNextBackgroundPixel, ReadSpriteY          ]);
-    line.add(          329, vec![PrepareForNextTile       ,                                         PrepareNextBackgroundPixel, ReadSpriteY          ]);
+    line.add(          321, vec![                                                         PrepareForNextPixel, ReadSpriteY          ]);
+    line.add(          322, vec![GetPatternIndex          ,                               PrepareForNextPixel, ReadSpriteY          ]);
+    line.add(          323, vec![                                                         PrepareForNextPixel, ReadSpriteY          ]);
+    line.add(          324, vec![GetPaletteIndex          ,                               PrepareForNextPixel, ReadSpriteY          ]);
+    line.add(          325, vec![                                                         PrepareForNextPixel, ReadSpriteY          ]);
+    line.add(          326, vec![GetBackgroundTileLowByte ,                               PrepareForNextPixel, ReadSpriteY          ]);
+    line.add(          327, vec![                                                         PrepareForNextPixel, ReadSpriteY          ]);
+    line.add(          328, vec![GetBackgroundTileHighByte, GotoNextTileColumn,           PrepareForNextPixel, ReadSpriteY          ]);
+    line.add(          329, vec![PrepareForNextTile       ,                               PrepareForNextPixel, ReadSpriteY          ]);
     // Fetch the second background tile for the next scanline.
-    line.add(          330, vec![GetPatternIndex          ,                                         PrepareNextBackgroundPixel, ReadSpriteY          ]);
-    line.add(          331, vec![                                                                   PrepareNextBackgroundPixel, ReadSpriteY          ]);
-    line.add(          332, vec![GetPaletteIndex          ,                                         PrepareNextBackgroundPixel, ReadSpriteY          ]);
-    line.add(          333, vec![                                                                   PrepareNextBackgroundPixel, ReadSpriteY          ]);
-    line.add(          334, vec![GetBackgroundTileLowByte ,                                         PrepareNextBackgroundPixel, ReadSpriteY          ]);
-    line.add(          335, vec![                                                                   PrepareNextBackgroundPixel, ReadSpriteY          ]);
-    line.add(          336, vec![GetBackgroundTileHighByte, GotoNextTileColumn,                     PrepareNextBackgroundPixel, ReadSpriteY          ]);
-    line.add(          337, vec![PrepareForNextTile       ,                                                                     ReadSpriteY          ]);
+    line.add(          330, vec![GetPatternIndex          ,                               PrepareForNextPixel, ReadSpriteY          ]);
+    line.add(          331, vec![                                                         PrepareForNextPixel, ReadSpriteY          ]);
+    line.add(          332, vec![GetPaletteIndex          ,                               PrepareForNextPixel, ReadSpriteY          ]);
+    line.add(          333, vec![                                                         PrepareForNextPixel, ReadSpriteY          ]);
+    line.add(          334, vec![GetBackgroundTileLowByte ,                               PrepareForNextPixel, ReadSpriteY          ]);
+    line.add(          335, vec![                                                         PrepareForNextPixel, ReadSpriteY          ]);
+    line.add(          336, vec![GetBackgroundTileHighByte, GotoNextTileColumn,           PrepareForNextPixel, ReadSpriteY          ]);
+    line.add(          337, vec![PrepareForNextTile       ,                                                    ReadSpriteY          ]);
 
     // Unused name table fetches.
-    line.add(          338, vec![GetPatternIndex          ,                                                                     ReadSpriteY          ]);
-    line.add(          339, vec![                                                                                               ReadSpriteY          ]);
-    line.add(          340, vec![GetPatternIndex          ,                                                                     ReadSpriteY          ]);
+    line.add(          338, vec![GetPatternIndex          ,                                                    ReadSpriteY          ]);
+    line.add(          339, vec![                                                                              ReadSpriteY          ]);
+    line.add(          340, vec![GetPatternIndex          ,                                                    ReadSpriteY          ]);
 
     line
 }
@@ -134,23 +134,23 @@ fn pre_render_scanline_actions() -> ScanlineActions {
     scanline.add(          257, vec![PrepareForNextTile       , ResetTileColumn                               ]);
 
     // Fetch the first background tile for the next scanline.
-    scanline.add(          321, vec![                                               PrepareNextBackgroundPixel]);
-    scanline.add(          322, vec![GetPatternIndex          ,                     PrepareNextBackgroundPixel]);
-    scanline.add(          323, vec![                                               PrepareNextBackgroundPixel]);
-    scanline.add(          324, vec![GetPaletteIndex          ,                     PrepareNextBackgroundPixel]);
-    scanline.add(          325, vec![                                               PrepareNextBackgroundPixel]);
-    scanline.add(          326, vec![GetBackgroundTileLowByte ,                     PrepareNextBackgroundPixel]);
-    scanline.add(          327, vec![                                               PrepareNextBackgroundPixel]);
-    scanline.add(          328, vec![GetBackgroundTileHighByte, GotoNextTileColumn, PrepareNextBackgroundPixel]);
-    scanline.add(          329, vec![PrepareForNextTile       ,                     PrepareNextBackgroundPixel]);
+    scanline.add(          321, vec![                                               PrepareForNextPixel]);
+    scanline.add(          322, vec![GetPatternIndex          ,                     PrepareForNextPixel]);
+    scanline.add(          323, vec![                                               PrepareForNextPixel]);
+    scanline.add(          324, vec![GetPaletteIndex          ,                     PrepareForNextPixel]);
+    scanline.add(          325, vec![                                               PrepareForNextPixel]);
+    scanline.add(          326, vec![GetBackgroundTileLowByte ,                     PrepareForNextPixel]);
+    scanline.add(          327, vec![                                               PrepareForNextPixel]);
+    scanline.add(          328, vec![GetBackgroundTileHighByte, GotoNextTileColumn, PrepareForNextPixel]);
+    scanline.add(          329, vec![PrepareForNextTile       ,                     PrepareForNextPixel]);
     // Fetch the second background tile for the next scanline.
-    scanline.add(          330, vec![GetPatternIndex          ,                     PrepareNextBackgroundPixel]);
-    scanline.add(          331, vec![                                               PrepareNextBackgroundPixel]);
-    scanline.add(          332, vec![GetPaletteIndex          ,                     PrepareNextBackgroundPixel]);
-    scanline.add(          333, vec![                                               PrepareNextBackgroundPixel]);
-    scanline.add(          334, vec![GetBackgroundTileLowByte ,                     PrepareNextBackgroundPixel]);
-    scanline.add(          335, vec![                                               PrepareNextBackgroundPixel]);
-    scanline.add(          336, vec![GetBackgroundTileHighByte, GotoNextTileColumn, PrepareNextBackgroundPixel]);
+    scanline.add(          330, vec![GetPatternIndex          ,                     PrepareForNextPixel]);
+    scanline.add(          331, vec![                                               PrepareForNextPixel]);
+    scanline.add(          332, vec![GetPaletteIndex          ,                     PrepareForNextPixel]);
+    scanline.add(          333, vec![                                               PrepareForNextPixel]);
+    scanline.add(          334, vec![GetBackgroundTileLowByte ,                     PrepareForNextPixel]);
+    scanline.add(          335, vec![                                               PrepareForNextPixel]);
+    scanline.add(          336, vec![GetBackgroundTileHighByte, GotoNextTileColumn, PrepareForNextPixel]);
     scanline.add(          337, vec![PrepareForNextTile                                                       ]);
 
     // Unused name table fetches.
@@ -210,8 +210,8 @@ pub enum CycleAction {
     PrepareForNextTile,
     ResetTileColumn,
 
-    SetBackgroundPixel,
-    PrepareNextBackgroundPixel,
+    SetPixel,
+    PrepareForNextPixel,
 
     ReadOamByte,
     WriteSecondaryOamByte,
