@@ -121,13 +121,6 @@ impl Ppu {
         }
 
         match (self.clock.scanline(), self.clock.cycle()) {
-            (241, 1) => {
-                if !self.suppress_vblank_active {
-                    mem.regs_mut().start_vblank();
-                }
-
-                self.suppress_vblank_active = false;
-            }
             (241, 3) => maybe_generate_nmi = true,
             (261, 1) => {
                 mem.regs_mut().stop_vblank();
@@ -152,12 +145,6 @@ impl Ppu {
         for i in 0..len {
             let cycle_action = self.frame_actions.current_cycle_actions(&self.clock)[i];
             self.execute_cycle_action(mem, frame, cycle_action);
-        }
-
-        // Only update $2004 during VBlank.
-        // TODO: Narrow this down to the proper range.
-        if self.clock.scanline() >= 241 {
-            self.update_oam_data(mem.regs_mut());
         }
 
         self.update_ppu_data(mem);
@@ -284,6 +271,7 @@ impl Ppu {
                 if self.oam_index.end_reached() {
                     // Reading and incrementing still happen after sprite evaluation is
                     // complete, but writes fail (i.e. they don't happen).
+                    // TODO: Writes failing should result in a read occuring here.
                     self.oam_index.next_sprite();
                     return;
                 }
@@ -385,6 +373,17 @@ impl Ppu {
                 // TODO: Determine if this needs to occur on cycle 256 instead.
                 self.secondary_oam.reset_index();
                 self.oam_registers.set_sprite_0_presence(self.sprite_0_present);
+            }
+
+            StartVblank => {
+                if !self.suppress_vblank_active {
+                    mem.regs_mut().start_vblank();
+                }
+
+                self.suppress_vblank_active = false;
+            }
+            UpdateOamData => {
+                self.update_oam_data(mem.regs_mut());
             }
         }
     }

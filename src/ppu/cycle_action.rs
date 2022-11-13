@@ -10,20 +10,16 @@ lazy_static! {
 fn ntsc_frame_actions() -> FrameActions {
     let mut ntsc_frame = FrameActions::new();
 
-    let empty_scanline = ScanlineActions::new();
-
-    let start_vblank = ScanlineActions::new();
-
     // VISIBLE SCANLINES
     for scanline in 0..=239 {
         ntsc_frame.set_scanline_actions_at(scanline, visible_scanline_actions());
     }
 
     // POST-RENDER SCANLINES
-    ntsc_frame.set_scanline_actions_at(240, empty_scanline.clone());
-    ntsc_frame.set_scanline_actions_at(241, start_vblank);
+    ntsc_frame.set_scanline_actions_at(240, empty_scanline_actions());
+    ntsc_frame.set_scanline_actions_at(241, start_vblank_scanline_actions());
     for scanline in 242..=260 {
-        ntsc_frame.set_scanline_actions_at(scanline, empty_scanline.clone());
+        ntsc_frame.set_scanline_actions_at(scanline, vblank_scanline_actions());
     }
 
     // PRE-RENDER SCANLINE
@@ -109,6 +105,32 @@ fn visible_scanline_actions() -> ScanlineActions {
     line.add(          340, vec![GetPatternIndex          ,                     ReadSpriteY                                         ]);
 
     line
+}
+
+// TODO: Does UpdateOamData occur here despite 'vblank == false' ?
+fn empty_scanline_actions() -> ScanlineActions {
+    ScanlineActions::new()
+}
+
+// TODO: Determine if UpdateOamData actually occurs on cycle 0 and 1.
+fn start_vblank_scanline_actions() -> ScanlineActions {
+    use CycleAction::*;
+
+    let mut scanline = vblank_scanline_actions();
+    scanline.add(1, vec![StartVblank]);
+    scanline
+}
+
+fn vblank_scanline_actions() -> ScanlineActions {
+    use CycleAction::*;
+
+    let mut scanline = ScanlineActions::new();
+    // Every cycle.
+    for cycle in 0..=340 {
+        scanline.add(cycle, vec![UpdateOamData]);
+    }
+
+    scanline
 }
 
 fn pre_render_scanline_actions() -> ScanlineActions {
@@ -226,4 +248,7 @@ pub enum CycleAction {
     ResetForOamClear,
     ResetForSpriteEvaluation,
     ResetForTransferToOamRegisters,
+
+    StartVblank,
+    UpdateOamData,
 }
