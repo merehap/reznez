@@ -304,7 +304,7 @@ impl Ppu {
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
                 if let Some(pixel_row) = self.clock.scanline_pixel_row() {
                     let sprite_height = mem.regs().sprite_height();
-                    if let Some((sprite_half, mut row_in_half)) = self.current_sprite_y.row_in_sprite(
+                    if let Some((sprite_half, row_in_half)) = self.current_sprite_y.row_in_sprite(
                         attributes.flip_vertically(),
                         sprite_height,
                         pixel_row
@@ -316,10 +316,6 @@ impl Ppu {
                             (SpriteHeight::Tall,   SpriteHalf::Top) => self.next_sprite_pattern_index.to_tall_indexes().0,
                             (SpriteHeight::Tall,   SpriteHalf::Bottom) => self.next_sprite_pattern_index.to_tall_indexes().1,
                         };
-
-                        if attributes.flip_vertically() {
-                            row_in_half = row_in_half.flip();
-                        }
 
                         let (low, high) = mem.pattern_table(sprite_table_side).read_pattern_data_at(pattern_index, row_in_half);
                         self.oam_registers.registers[self.oam_register_index].set_pattern(low, high);

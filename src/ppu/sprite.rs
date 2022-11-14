@@ -200,12 +200,14 @@ impl SpriteY {
         let sprite_top_row = self.to_current_pixel_row()?;
         let offset = pixel_row.difference(sprite_top_row)?;
         let row_in_half = FromPrimitive::from_u8(offset % 8).unwrap();
+
         match (offset / 8, sprite_height, flip_vertically) {
-            (0, SpriteHeight::Normal, _    ) => Some((SpriteHalf::Top   , row_in_half)),
+            (0, SpriteHeight::Normal, false) => Some((SpriteHalf::Top   , row_in_half)),
+            (0, SpriteHeight::Normal, true ) => Some((SpriteHalf::Top   , row_in_half.flip())),
             (0, SpriteHeight::Tall  , false) => Some((SpriteHalf::Top   , row_in_half)),
-            (0, SpriteHeight::Tall  , true ) => Some((SpriteHalf::Bottom, row_in_half)),
+            (0, SpriteHeight::Tall  , true ) => Some((SpriteHalf::Bottom, row_in_half.flip())),
             (1, SpriteHeight::Tall  , false) => Some((SpriteHalf::Bottom, row_in_half)),
-            (1, SpriteHeight::Tall  , true ) => Some((SpriteHalf::Top   , row_in_half)),
+            (1, SpriteHeight::Tall  , true ) => Some((SpriteHalf::Top   , row_in_half.flip())),
             (_, _                   , _    ) => None,
         }
     }
