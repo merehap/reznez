@@ -369,18 +369,6 @@ impl Ppu {
                 self.current_address.copy_y_scroll(self.next_address);
             }
 
-            /*
-            if mem.regs().background_enabled() {
-                if scanline == 261 && cycle == 320 {
-                    self.current_address = self.next_address;
-                }
-
-                if scanline == 261 && cycle >= 280 && cycle <= 304 {
-                    self.current_address.copy_y_scroll(self.next_address);
-                }
-            }
-            */
-
             ClearFlags => {
                 mem.regs_mut().stop_vblank();
                 mem.regs_mut().clear_sprite0_hit();
