@@ -53,7 +53,6 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    #[allow(clippy::vec_init_then_push)]
     pub fn new() -> Ppu {
         Ppu {
             oam: Oam::new(),
@@ -109,9 +108,6 @@ impl Ppu {
     }
 
     pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) -> StepResult {
-        let scanline = self.clock.scanline();
-        let cycle = self.clock.cycle();
-
         if self.clock.cycle() == 1 {
             mem.regs_mut().maybe_decay_latch();
         }
@@ -121,16 +117,6 @@ impl Ppu {
         self.nmi_requested = false;
         if let Some(latch_access) = latch_access {
             self.nmi_requested = self.process_latch_access(mem, latch_access);
-        }
-
-        if mem.regs().background_enabled() {
-            if scanline == 261 && cycle == 320 {
-                self.current_address = self.next_address;
-            }
-
-            if scanline == 261 && cycle >= 280 && cycle <= 304 {
-                self.current_address.copy_y_scroll(self.next_address);
-            }
         }
 
         // TODO: Figure out how to eliminate duplication and the index.
@@ -378,12 +364,32 @@ impl Ppu {
             RequestNmi => {
                 self.nmi_requested = true;
             }
+            SetInitialScrollOffsets => {
+                if !background_enabled { return; }
+                self.current_address = self.next_address;
+            }
+            SetInitialYScroll => {
+                if !background_enabled { return; }
+                self.current_address.copy_y_scroll(self.next_address);
+            }
+
+            /*
+            if mem.regs().background_enabled() {
+                if scanline == 261 && cycle == 320 {
+                    self.current_address = self.next_address;
+                }
+
+                if scanline == 261 && cycle >= 280 && cycle <= 304 {
+                    self.current_address.copy_y_scroll(self.next_address);
+                }
+            }
+            */
+
             ClearFlags => {
                 mem.regs_mut().stop_vblank();
                 mem.regs_mut().clear_sprite0_hit();
                 mem.regs_mut().clear_sprite_overflow();
             }
-
             UpdateOamData => {
                 self.update_oam_data(mem.regs_mut());
             }

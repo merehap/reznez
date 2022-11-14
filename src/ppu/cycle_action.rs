@@ -160,6 +160,12 @@ fn pre_render_scanline_actions() -> ScanlineActions {
     scanline.add(          256, vec![GetBackgroundTileHighByte, GotoNextPixelRow                       ]);
     scanline.add(          257, vec![PrepareForNextTile       , ResetTileColumn                        ]);
 
+    for cycle in 280..=304 {
+        scanline.add(    cycle, vec![SetInitialYScroll                                                 ]);
+    }
+
+    scanline.add(          320, vec![SetInitialScrollOffsets                                           ]);
+
     // Fetch the first background tile for the next scanline.
     scanline.add(          321, vec![                                               PrepareForNextPixel]);
     scanline.add(          322, vec![GetPatternIndex          ,                     PrepareForNextPixel]);
@@ -255,6 +261,8 @@ pub enum CycleAction {
 
     StartVblank,
     RequestNmi,
+    SetInitialScrollOffsets,
+    SetInitialYScroll,
     ClearFlags,
 
     UpdateOamData,
