@@ -1,31 +1,14 @@
 use arr_macro::arr;
 use lazy_static::lazy_static;
 
-use crate::ppu::clock::Clock;
+use crate::ppu::cycle_action::cycle_action::CycleAction;
 
 lazy_static! {
-    pub static ref NTSC_FRAME_ACTIONS: FrameActions = ntsc_frame_actions();
-}
-
-fn ntsc_frame_actions() -> FrameActions {
-    let mut ntsc_frame = FrameActions::new();
-
-    // VISIBLE SCANLINES
-    for scanline in 0..=239 {
-        ntsc_frame.set_scanline_actions_at(scanline, visible_scanline_actions());
-    }
-
-    // POST-RENDER SCANLINES
-    ntsc_frame.set_scanline_actions_at(240, empty_scanline_actions());
-    ntsc_frame.set_scanline_actions_at(241, start_vblank_scanline_actions());
-    for scanline in 242..=260 {
-        ntsc_frame.set_scanline_actions_at(scanline, vblank_scanline_actions());
-    }
-
-    // PRE-RENDER SCANLINE
-    ntsc_frame.set_scanline_actions_at(261, pre_render_scanline_actions());
-
-    ntsc_frame
+    pub static ref VISIBLE_SCANLINE_ACTIONS: ScanlineActions = visible_scanline_actions();
+    pub static ref EMPTY_SCANLINE_ACTIONS: ScanlineActions = empty_scanline_actions();
+    pub static ref START_VBLANK_SCANLINE_ACTIONS: ScanlineActions = start_vblank_scanline_actions();
+    pub static ref VBLANK_SCANLINE_ACTIONS: ScanlineActions = vblank_scanline_actions();
+    pub static ref PRE_RENDER_SCANLINE_ACTIONS: ScanlineActions = pre_render_scanline_actions();
 }
 
 fn visible_scanline_actions() -> ScanlineActions {
@@ -33,7 +16,6 @@ fn visible_scanline_actions() -> ScanlineActions {
 
     let mut line = ScanlineActions::new();
     //           ||CYCLE||       ||---------BACKGROUND-TILE-ACTIONS---------||  ||-SPRITE--ACTIONS-||  ||-----DISPLAY-ACTIONS-----||
-    // Overlaps with the first cycle of tile fetching.
     line.add(          001, vec![                                               ResetForOamClear                                    ]);
     line.add(          065, vec![                                               ResetForSpriteEvaluation                            ]);
 
@@ -194,32 +176,15 @@ fn pre_render_scanline_actions() -> ScanlineActions {
 }
 
 #[derive(Clone)]
-pub struct FrameActions {
-    all_scanline_actions: Box<[ScanlineActions; 262]>,
-}
-
-impl FrameActions {
-    pub fn current_cycle_actions(&self, clock: &Clock) -> &[CycleAction] {
-        &self.all_scanline_actions[clock.scanline() as usize].all_cycle_actions[clock.cycle() as usize]
-    }
-
-    fn new() -> FrameActions {
-        FrameActions {
-            all_scanline_actions: Box::new(arr![ScanlineActions::new(); 262]),
-        }
-    }
-
-    fn set_scanline_actions_at(&mut self, scanline: usize, scanline_actions: ScanlineActions) {
-        self.all_scanline_actions[scanline] = scanline_actions;
-    }
-}
-
-#[derive(Clone)]
 pub struct ScanlineActions {
     all_cycle_actions: Box<[Vec<CycleAction>; 341]>,
 }
 
 impl ScanlineActions {
+    pub fn actions_at_cycle(&self, cycle: u16) -> &Vec<CycleAction> {
+        &self.all_cycle_actions[usize::from(cycle)]
+    }
+
     fn new() -> ScanlineActions {
         ScanlineActions {
             all_cycle_actions: Box::new(arr![Vec::new(); 341]),
@@ -229,41 +194,4 @@ impl ScanlineActions {
     fn add(&mut self, cycle: usize, mut actions: Vec<CycleAction>) {
         self.all_cycle_actions[cycle].append(&mut actions);
     }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum CycleAction {
-    GetPatternIndex,
-    GetPaletteIndex,
-    GetBackgroundTileLowByte,
-    GetBackgroundTileHighByte,
-
-    GotoNextTileColumn,
-    GotoNextPixelRow,
-    PrepareForNextTile,
-    ResetTileColumn,
-
-    SetPixel,
-    PrepareForNextPixel,
-
-    ReadOamByte,
-    WriteSecondaryOamByte,
-
-    ReadSpriteY,
-    ReadSpritePatternIndex,
-    ReadSpriteAttributes,
-    ReadSpriteX,
-    DummyReadSpriteX,
-
-    ResetForOamClear,
-    ResetForSpriteEvaluation,
-    ResetForTransferToOamRegisters,
-
-    StartVblank,
-    RequestNmi,
-    SetInitialScrollOffsets,
-    SetInitialYScroll,
-    ClearFlags,
-
-    UpdateOamData,
 }
