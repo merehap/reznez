@@ -12,13 +12,12 @@ use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table::PatternIndex;
-use crate::ppu::pixel_index::{PixelIndex, ColumnInTile};
+use crate::ppu::pixel_index::{PixelIndex, PixelRow, ColumnInTile};
 use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
-use crate::ppu::register::registers::ctrl::SpriteHeight;
 use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::render::frame::Frame;
-use crate::ppu::sprite::{SpriteY, SpriteAttributes, SpriteHalf};
+use crate::ppu::sprite::{SpriteY, SpriteAttributes};
 use crate::util::bit_util::unpack_bools;
 
 pub struct Ppu {
@@ -266,7 +265,9 @@ impl Ppu {
 
                 // Check if the y coordinate is on screen.
                 if let Some(pixel_row) = self.clock.scanline_pixel_row()
-                    && SpriteY::new(mem.regs().oam_data).row_in_sprite(false, mem.regs().sprite_height(), pixel_row).is_some()
+                    && let Some(top_sprite_row) = PixelRow::try_from_u8(mem.regs().oam_data)
+                    && let Some(offset) = pixel_row.difference(top_sprite_row)
+                    && offset < (mem.regs().sprite_height() as u8)
                 {
                     if self.oam_index.is_at_sprite_0() {
                         self.sprite_0_present = true;
@@ -304,19 +305,12 @@ impl Ppu {
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
                 if let Some(pixel_row) = self.clock.scanline_pixel_row() {
                     let sprite_height = mem.regs().sprite_height();
-                    if let Some((sprite_half, row_in_half)) = self.current_sprite_y.row_in_sprite(
+                    if let Some((pattern_index, row_in_half)) = self.next_sprite_pattern_index.index_and_row(
+                        self.current_sprite_y,
                         attributes.flip_vertically(),
                         sprite_height,
                         pixel_row
                     ) {
-                        #[rustfmt::skip]
-                        let pattern_index = match (sprite_height, sprite_half) {
-                            (SpriteHeight::Normal, SpriteHalf::Top) => self.next_sprite_pattern_index,
-                            (SpriteHeight::Normal, SpriteHalf::Bottom) => unreachable!(),
-                            (SpriteHeight::Tall,   SpriteHalf::Top) => self.next_sprite_pattern_index.to_tall_indexes().0,
-                            (SpriteHeight::Tall,   SpriteHalf::Bottom) => self.next_sprite_pattern_index.to_tall_indexes().1,
-                        };
-
                         let (low, high) = mem.pattern_table(sprite_table_side).read_pattern_data_at(pattern_index, row_in_half);
                         self.oam_registers.registers[self.oam_register_index].set_pattern(low, high);
                     }

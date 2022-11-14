@@ -191,7 +191,7 @@ impl SpriteY {
     }
 
     #[rustfmt::skip]
-    pub fn row_in_sprite(
+    fn row_in_sprite(
         self,
         flip_vertically: bool,
         sprite_height: SpriteHeight,
@@ -214,7 +214,7 @@ impl SpriteY {
 }
 
 #[derive(Clone, Copy, FromPrimitive)]
-pub enum SpriteHalf {
+enum SpriteHalf {
     Top,
     Bottom,
 }
