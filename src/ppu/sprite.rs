@@ -80,7 +80,7 @@ impl Sprite {
         frame: &mut Frame,
     ) {
         let Some((sprite_half, row_in_half)) =
-            Sprite::row_in_sprite(self.y_coordinate, self.attributes.flip_vertically, sprite_height, row) else {
+            self.y_coordinate.row_in_sprite(self.attributes.flip_vertically, sprite_height, row) else {
 
             return;
         };
@@ -170,26 +170,6 @@ impl Sprite {
             }
         }
     }
-
-    #[rustfmt::skip]
-    pub fn row_in_sprite(
-        y_coordinate: SpriteY,
-        flip_vertically: bool,
-        sprite_height: SpriteHeight,
-        pixel_row: PixelRow,
-    ) -> Option<(SpriteHalf, RowInTile)> {
-        let sprite_top_row = y_coordinate.to_current_pixel_row()?;
-        let offset = pixel_row.difference(sprite_top_row)?;
-        let row_in_half = FromPrimitive::from_u8(offset % 8).unwrap();
-        match (offset / 8, sprite_height, flip_vertically) {
-            (0, SpriteHeight::Normal, _    ) => Some((SpriteHalf::Top   , row_in_half)),
-            (0, SpriteHeight::Tall  , false) => Some((SpriteHalf::Top   , row_in_half)),
-            (0, SpriteHeight::Tall  , true ) => Some((SpriteHalf::Bottom, row_in_half)),
-            (1, SpriteHeight::Tall  , false) => Some((SpriteHalf::Bottom, row_in_half)),
-            (1, SpriteHeight::Tall  , true ) => Some((SpriteHalf::Top   , row_in_half)),
-            (_, _                   , _    ) => None,
-        }
-    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -210,12 +190,24 @@ impl SpriteY {
         PixelRow::try_from_u16(u16::from(self.0))
     }
 
-    pub fn to_next_pixel_row(self) -> Option<PixelRow> {
-        // Rendering of sprites is delayed by one scanline so the sprite ends
-        // up rendered one scanline lower than would be expected.
-        // Sprites with y >= 239 are valid but can't be rendered.
-        // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Byte_0
-        PixelRow::try_from_u16(u16::from(self.0) + 1)
+    #[rustfmt::skip]
+    pub fn row_in_sprite(
+        self,
+        flip_vertically: bool,
+        sprite_height: SpriteHeight,
+        pixel_row: PixelRow,
+    ) -> Option<(SpriteHalf, RowInTile)> {
+        let sprite_top_row = self.to_current_pixel_row()?;
+        let offset = pixel_row.difference(sprite_top_row)?;
+        let row_in_half = FromPrimitive::from_u8(offset % 8).unwrap();
+        match (offset / 8, sprite_height, flip_vertically) {
+            (0, SpriteHeight::Normal, _    ) => Some((SpriteHalf::Top   , row_in_half)),
+            (0, SpriteHeight::Tall  , false) => Some((SpriteHalf::Top   , row_in_half)),
+            (0, SpriteHeight::Tall  , true ) => Some((SpriteHalf::Bottom, row_in_half)),
+            (1, SpriteHeight::Tall  , false) => Some((SpriteHalf::Bottom, row_in_half)),
+            (1, SpriteHeight::Tall  , true ) => Some((SpriteHalf::Top   , row_in_half)),
+            (_, _                   , _    ) => None,
+        }
     }
 }
 

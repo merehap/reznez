@@ -18,7 +18,7 @@ use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ctrl::SpriteHeight;
 use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::render::frame::Frame;
-use crate::ppu::sprite::{Sprite, SpriteY, SpriteAttributes, SpriteHalf};
+use crate::ppu::sprite::{SpriteY, SpriteAttributes, SpriteHalf};
 use crate::util::bit_util::unpack_bools;
 
 pub struct Ppu {
@@ -266,7 +266,7 @@ impl Ppu {
 
                 // Check if the y coordinate is on screen.
                 if let Some(pixel_row) = self.clock.scanline_pixel_row()
-                    && Sprite::row_in_sprite(SpriteY::new(mem.regs().oam_data), false, mem.regs().sprite_height(), pixel_row).is_some()
+                    && SpriteY::new(mem.regs().oam_data).row_in_sprite(false, mem.regs().sprite_height(), pixel_row).is_some()
                 {
                     if self.oam_index.is_at_sprite_0() {
                         self.sprite_0_present = true;
@@ -304,12 +304,11 @@ impl Ppu {
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
                 if let Some(pixel_row) = self.clock.scanline_pixel_row() {
                     let sprite_height = mem.regs().sprite_height();
-                    if let Some((sprite_half, mut row_in_half)) = Sprite::row_in_sprite(
-                            self.current_sprite_y,
-                            attributes.flip_vertically(),
-                            sprite_height,
-                            pixel_row
-                        ) {
+                    if let Some((sprite_half, mut row_in_half)) = self.current_sprite_y.row_in_sprite(
+                        attributes.flip_vertically(),
+                        sprite_height,
+                        pixel_row
+                    ) {
                         #[rustfmt::skip]
                         let pattern_index = match (sprite_height, sprite_half) {
                             (SpriteHeight::Normal, SpriteHalf::Top) => self.next_sprite_pattern_index,
