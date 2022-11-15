@@ -20,7 +20,6 @@ pub struct Sprite {
 
 impl Sprite {
     #[inline]
-    #[rustfmt::skip]
     pub fn from_u32(value: u32) -> Sprite {
         let [y_coordinate, raw_pattern_index, attributes, x_coordinate] =
             value.to_be_bytes();
@@ -207,15 +206,10 @@ impl SpriteY {
         pixel_row: PixelRow,
     ) -> Option<(SpriteHalf, RowInTile)> {
         let sprite_top_row = self.to_current_pixel_row()?;
-        let offset = pixel_row.difference(sprite_top_row)?;
+        let y_offset = pixel_row.difference(sprite_top_row)?;
 
-        let mut row_in_half: RowInTile = FromPrimitive::from_u8(offset % 8).unwrap();
-        let mut half = match (offset / 8, sprite_height) {
-            (0, _                   ) => SpriteHalf::Top,
-            (1, SpriteHeight::Tall  ) => SpriteHalf::Bottom,
-            (_, _                   ) => return None,
-        };
-
+        let mut row_in_half: RowInTile = FromPrimitive::from_u8(y_offset % 8).unwrap();
+        let mut half = sprite_height.sprite_half(y_offset)?;
         if flip_vertically {
             row_in_half = row_in_half.flip();
             if sprite_height == SpriteHeight::Tall {
@@ -233,8 +227,22 @@ pub enum SpriteHeight {
     Tall = 16,
 }
 
+impl SpriteHeight {
+    pub fn sprite_half(self, y_offset: u8) -> Option<SpriteHalf> {
+        match (self, y_offset / 8) {
+            (_                 , 0) => Some(SpriteHalf::Top),
+            (SpriteHeight::Tall, 1) => Some(SpriteHalf::Bottom),
+            (_                 , _) => None,
+        }
+    }
+
+    pub fn is_in_range(self, y_offset: u8) -> bool {
+        self.sprite_half(y_offset).is_some()
+    }
+}
+
 #[derive(Clone, Copy, FromPrimitive)]
-enum SpriteHalf {
+pub enum SpriteHalf {
     Top,
     Bottom,
 }
