@@ -198,8 +198,7 @@ impl SpriteY {
         PixelRow::try_from_u16(u16::from(self.0))
     }
 
-    #[rustfmt::skip]
-    fn row_in_sprite(
+    pub fn row_in_sprite(
         self,
         flip_vertically: bool,
         sprite_height: SpriteHeight,
@@ -228,6 +227,7 @@ pub enum SpriteHeight {
 }
 
 impl SpriteHeight {
+    #[rustfmt::skip]
     pub fn sprite_half(self, y_offset: u8) -> Option<SpriteHalf> {
         match (self, y_offset / 8) {
             (_                 , 0) => Some(SpriteHalf::Top),

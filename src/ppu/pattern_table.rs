@@ -1,11 +1,10 @@
 use enum_iterator::IntoEnumIterator;
-use num_traits::FromPrimitive;
 
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pixel_index::{PixelRow, ColumnInTile, RowInTile};
-use crate::ppu::sprite::{SpriteHeight, SpriteY};
+use crate::ppu::sprite::{SpriteHalf, SpriteHeight, SpriteY};
 use crate::util::bit_util::get_bit;
 use crate::util::mapped_array::MappedArray;
 
@@ -149,7 +148,6 @@ impl PatternIndex {
         PatternIndex(value)
     }
 
-    #[rustfmt::skip]
     pub fn index_and_row(
         self,
         sprite_top_row: SpriteY,
@@ -157,20 +155,17 @@ impl PatternIndex {
         sprite_height: SpriteHeight,
         pixel_row: PixelRow,
     ) -> Option<(PatternIndex, RowInTile)> {
-        let sprite_top_row = sprite_top_row.to_current_pixel_row()?;
-        let offset = pixel_row.difference(sprite_top_row)?;
-        let row_in_half = FromPrimitive::from_u8(offset % 8).unwrap();
+        let (sprite_half, row_in_half) =
+            sprite_top_row.row_in_sprite(flip_vertically, sprite_height, pixel_row)?;
 
-        // TODO: Simplify all the way.
-        match (offset / 8, sprite_height, flip_vertically) {
-            (0, SpriteHeight::Normal, false) => Some((self                    , row_in_half       )),
-            (0, SpriteHeight::Normal, true ) => Some((self                    , row_in_half.flip())),
-            (0, SpriteHeight::Tall  , false) => Some((self.to_tall_indexes().0, row_in_half       )),
-            (0, SpriteHeight::Tall  , true ) => Some((self.to_tall_indexes().1, row_in_half.flip())),
-            (1, SpriteHeight::Tall  , false) => Some((self.to_tall_indexes().1, row_in_half       )),
-            (1, SpriteHeight::Tall  , true ) => Some((self.to_tall_indexes().0, row_in_half.flip())),
-            (_, _                   , _    ) => None,
-        }
+        #[rustfmt::skip]
+        let pattern_index = match (sprite_height, sprite_half) {
+            (SpriteHeight::Normal, _                 ) => self,
+            (_                   , SpriteHalf::Top   ) => self.to_tall_indexes().0,
+            (_                   , SpriteHalf::Bottom) => self.to_tall_indexes().1,
+        };
+
+        Some((pattern_index, row_in_half))
     }
 
     #[rustfmt::skip]
