@@ -1,5 +1,6 @@
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pattern_table::PatternTableSide;
+use crate::ppu::sprite::SpriteHeight;
 use crate::util::bit_util::{get_bit, pack_bools};
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -77,12 +78,6 @@ impl Ctrl {
 pub enum ExtPinRole {
     Read,
     Write,
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum SpriteHeight {
-    Normal = 8,
-    Tall = 16,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

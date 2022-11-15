@@ -3,9 +3,8 @@ use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::pixel_index::PixelRow;
-use crate::ppu::register::registers::ctrl::SpriteHeight;
 use crate::ppu::render::frame::Frame;
-use crate::ppu::sprite::{Priority, Sprite, SpriteAttributes};
+use crate::ppu::sprite::{Priority, Sprite, SpriteAttributes, SpriteHeight};
 use crate::util::bit_util::get_bit;
 
 const ATTRIBUTE_BYTE_INDEX: u8 = 2;

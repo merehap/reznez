@@ -5,8 +5,7 @@ use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pixel_index::{PixelRow, ColumnInTile, RowInTile};
-use crate::ppu::register::registers::ctrl::SpriteHeight;
-use crate::ppu::sprite::SpriteY;
+use crate::ppu::sprite::{SpriteHeight, SpriteY};
 use crate::util::bit_util::get_bit;
 use crate::util::mapped_array::MappedArray;
 

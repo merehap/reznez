@@ -7,7 +7,6 @@ use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table::{PatternIndex, PatternTable, Tile};
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
-use crate::ppu::register::registers::ctrl::SpriteHeight;
 use crate::ppu::render::frame::Frame;
 use crate::util::bit_util::get_bit;
 
@@ -226,6 +225,12 @@ impl SpriteY {
 
         Some((half, row_in_half))
     }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum SpriteHeight {
+    Normal = 8,
+    Tall = 16,
 }
 
 #[derive(Clone, Copy, FromPrimitive)]

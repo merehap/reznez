@@ -3,12 +3,13 @@ use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::register::ppu_register_latch::PpuRegisterLatch;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ctrl;
-use crate::ppu::register::registers::ctrl::{AddressIncrement, Ctrl, SpriteHeight};
+use crate::ppu::register::registers::ctrl::{AddressIncrement, Ctrl};
 use crate::ppu::register::registers::mask;
 use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::register::registers::ppu_data;
 use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::register::registers::status::Status;
+use crate::ppu::sprite::SpriteHeight;
 
 #[derive(Clone)]
 pub struct PpuRegisters {
