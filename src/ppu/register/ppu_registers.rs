@@ -9,7 +9,7 @@ use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::register::registers::ppu_data;
 use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::register::registers::status::Status;
-use crate::ppu::sprite::SpriteHeight;
+use crate::ppu::sprite::sprite_height::SpriteHeight;
 
 #[derive(Clone)]
 pub struct PpuRegisters {

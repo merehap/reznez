@@ -4,7 +4,9 @@ use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pixel_index::{PixelRow, ColumnInTile, RowInTile};
-use crate::ppu::sprite::{SpriteHalf, SpriteHeight, SpriteY};
+use crate::ppu::sprite::sprite_half::SpriteHalf;
+use crate::ppu::sprite::sprite_height::SpriteHeight;
+use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::util::bit_util::get_bit;
 use crate::util::mapped_array::MappedArray;
 
@@ -160,7 +162,8 @@ impl PatternIndex {
 
         #[rustfmt::skip]
         let pattern_index = match (sprite_height, sprite_half) {
-            (SpriteHeight::Normal, _                 ) => self,
+            (SpriteHeight::Normal, SpriteHalf::Top   ) => self,
+            (SpriteHeight::Normal, SpriteHalf::Bottom) => unreachable!(),
             (_                   , SpriteHalf::Top   ) => self.to_tall_indexes().0,
             (_                   , SpriteHalf::Bottom) => self.to_tall_indexes().1,
         };

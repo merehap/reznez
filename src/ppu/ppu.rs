@@ -7,7 +7,6 @@ use crate::ppu::clock::Clock;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
-use crate::ppu::oam::{Oam, OamIndex, SecondaryOam, OamRegisters};
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
@@ -17,7 +16,12 @@ use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::render::frame::Frame;
-use crate::ppu::sprite::{SpriteY, SpriteAttributes};
+use crate::ppu::sprite::sprite_attributes::SpriteAttributes;
+use crate::ppu::sprite::oam::Oam;
+use crate::ppu::sprite::oam_index::OamIndex;
+use crate::ppu::sprite::secondary_oam::SecondaryOam;
+use crate::ppu::sprite::oam_registers::OamRegisters;
+use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::util::bit_util::unpack_bools;
 
 pub struct Ppu {

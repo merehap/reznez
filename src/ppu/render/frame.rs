@@ -10,7 +10,7 @@ use crate::ppu::pixel_index::{
 };
 use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::render::ppm::Ppm;
-use crate::ppu::sprite::Priority;
+use crate::ppu::sprite::sprite_attributes::Priority;
 
 #[derive(Clone)]
 pub struct Frame {

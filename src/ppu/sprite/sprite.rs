@@ -1,14 +1,15 @@
 use enum_iterator::IntoEnumIterator;
-use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 use crate::ppu::palette::palette_table::PaletteTable;
-use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table::{PatternIndex, PatternTable, Tile};
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::render::frame::Frame;
-use crate::util::bit_util::get_bit;
+use crate::ppu::sprite::sprite_attributes::{SpriteAttributes, Priority};
+use crate::ppu::sprite::sprite_half::SpriteHalf;
+use crate::ppu::sprite::sprite_height::SpriteHeight;
+use crate::ppu::sprite::sprite_y::SpriteY;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Sprite {
@@ -26,14 +27,14 @@ impl Sprite {
 
         Sprite {
             x_coordinate: PixelColumn::new(x_coordinate),
-            y_coordinate: SpriteY(y_coordinate),
+            y_coordinate: SpriteY::new(y_coordinate),
             pattern_index: PatternIndex::new(raw_pattern_index),
             attributes: SpriteAttributes::from_u8(attributes),
         }
     }
 
     pub fn priority(self) -> Priority {
-        self.attributes.priority
+        self.attributes.priority()
     }
 
     pub fn pattern_index(self) -> PatternIndex {
@@ -78,7 +79,7 @@ impl Sprite {
         frame: &mut Frame,
     ) {
         let Some((sprite_half, row_in_half)) =
-            self.y_coordinate.row_in_sprite(self.attributes.flip_vertically, sprite_height, row) else {
+            self.y_coordinate.row_in_sprite(self.attributes.flip_vertically(), sprite_height, row) else {
 
             return;
         };
@@ -150,11 +151,11 @@ impl Sprite {
             (SpriteHeight::Tall,   SpriteHalf::Bottom) => self.pattern_index.to_tall_indexes().1,
         };
 
-        if self.attributes.flip_vertically {
+        if self.attributes.flip_vertically() {
             row_in_half = row_in_half.flip();
         }
 
-        let sprite_palette = palette_table.sprite_palette(self.attributes.palette_table_index);
+        let sprite_palette = palette_table.sprite_palette(self.attributes.palette_table_index());
         pattern_table.render_pixel_sliver(
             pattern_index,
             row_in_half,
@@ -162,148 +163,10 @@ impl Sprite {
             sprite_sliver,
         );
 
-        if self.attributes.flip_horizontally {
+        if self.attributes.flip_horizontally() {
             for i in 0..sprite_sliver.len() / 2 {
                 sprite_sliver.swap(i, 7 - i);
             }
         }
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum Priority {
-    InFront,
-    Behind,
-}
-
-impl From<bool> for Priority {
-    fn from(value: bool) -> Self {
-        if value {
-            Priority::Behind
-        } else {
-            Priority::InFront
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct SpriteY(u8);
-
-impl SpriteY {
-    pub fn new(value: u8) -> SpriteY {
-        SpriteY(value)
-    }
-
-    pub fn to_current_pixel_row(self) -> Option<PixelRow> {
-        PixelRow::try_from_u16(u16::from(self.0))
-    }
-
-    pub fn row_in_sprite(
-        self,
-        flip_vertically: bool,
-        sprite_height: SpriteHeight,
-        pixel_row: PixelRow,
-    ) -> Option<(SpriteHalf, RowInTile)> {
-        let sprite_top_row = self.to_current_pixel_row()?;
-        let y_offset = pixel_row.difference(sprite_top_row)?;
-
-        let mut row_in_half: RowInTile = FromPrimitive::from_u8(y_offset % 8).unwrap();
-        let mut half = sprite_height.sprite_half(y_offset)?;
-        if flip_vertically {
-            row_in_half = row_in_half.flip();
-            if sprite_height == SpriteHeight::Tall {
-                half = half.flip();
-            }
-        }
-
-        Some((half, row_in_half))
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum SpriteHeight {
-    Normal = 8,
-    Tall = 16,
-}
-
-impl SpriteHeight {
-    #[rustfmt::skip]
-    pub fn sprite_half(self, y_offset: u8) -> Option<SpriteHalf> {
-        match (self, y_offset / 8) {
-            (_                 , 0) => Some(SpriteHalf::Top),
-            (SpriteHeight::Tall, 1) => Some(SpriteHalf::Bottom),
-            (_                 , _) => None,
-        }
-    }
-
-    pub fn is_in_range(self, y_offset: u8) -> bool {
-        self.sprite_half(y_offset).is_some()
-    }
-}
-
-#[derive(Clone, Copy, FromPrimitive)]
-pub enum SpriteHalf {
-    Top,
-    Bottom,
-}
-
-impl SpriteHalf {
-    fn flip(self) -> SpriteHalf {
-        use SpriteHalf::*;
-        match self {
-            Top    => Bottom,
-            Bottom => Top,
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct SpriteAttributes {
-    flip_vertically: bool,
-    flip_horizontally: bool,
-    priority: Priority,
-    palette_table_index: PaletteTableIndex,
-}
-
-impl SpriteAttributes {
-    pub fn new() -> SpriteAttributes {
-        SpriteAttributes {
-            flip_vertically:   false,
-            flip_horizontally: false,
-            priority: Priority::InFront,
-            palette_table_index: PaletteTableIndex::Zero,
-        }
-    }
-
-    pub fn from_u8(value: u8) -> SpriteAttributes {
-        let palette_table_index = match (get_bit(value, 6), get_bit(value, 7)) {
-            (false, false) => PaletteTableIndex::Zero,
-            (false, true ) => PaletteTableIndex::One,
-            (true , false) => PaletteTableIndex::Two,
-            (true , true ) => PaletteTableIndex::Three,
-        };
-
-        SpriteAttributes {
-            flip_vertically:   get_bit(value, 0),
-            flip_horizontally: get_bit(value, 1),
-            priority:          get_bit(value, 2).into(),
-            palette_table_index,
-        }
-    }
-
-    pub fn flip_vertically(self) -> bool {
-        self.flip_vertically
-    }
-
-    pub fn flip_horizontally(self) -> bool {
-        self.flip_horizontally
-    }
-
-    pub fn priority(self) -> Priority {
-        self.priority
-    }
-
-    pub fn palette_table_index(self) -> PaletteTableIndex {
-        self.palette_table_index
     }
 }
