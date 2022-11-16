@@ -529,14 +529,8 @@ impl PatternRegister {
         let low_bits = unpack_bools(self.pending_low_byte);
         let high_bits = unpack_bools(self.pending_high_byte);
         for i in 0..8 {
-            let palette_index = match (low_bits[i], high_bits[i]) {
-                (false, false) => None,
-                (true , false) => Some(PaletteIndex::One),
-                (false, true ) => Some(PaletteIndex::Two),
-                (true , true ) => Some(PaletteIndex::Three),
-            };
-
-            self.current_indexes[i + 8] = palette_index;
+            self.current_indexes[i + 8] =
+                PaletteIndex::from_low_high(low_bits[i], high_bits[i]);
         }
     }
 

@@ -1,7 +1,6 @@
 use enum_iterator::IntoEnumIterator;
 
 use crate::ppu::palette::palette::Palette;
-use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pixel_index::{PixelRow, ColumnInTile, RowInTile};
 use crate::ppu::sprite::sprite_half::SpriteHalf;
@@ -83,12 +82,7 @@ impl<'a> PatternTable<'a> {
         for (column_in_tile, pixel) in tile_sliver.iter_mut().enumerate() {
             let low_bit = get_bit(low_byte, column_in_tile);
             let high_bit = get_bit(high_byte, column_in_tile);
-            *pixel = match (low_bit, high_bit) {
-                (false, false) => Rgbt::Transparent,
-                (true , false) => Rgbt::Opaque(palette[PaletteIndex::One]),
-                (false, true ) => Rgbt::Opaque(palette[PaletteIndex::Two]),
-                (true , true ) => Rgbt::Opaque(palette[PaletteIndex::Three]),
-            };
+            *pixel = palette.rgbt_from_low_high(low_bit, high_bit);
         }
     }
 
@@ -109,12 +103,7 @@ impl<'a> PatternTable<'a> {
 
         let low_bit = get_bit(low_byte, column_in_tile as usize);
         let high_bit = get_bit(high_byte, column_in_tile as usize);
-        *pixel = match (low_bit, high_bit) {
-            (false, false) => Rgbt::Transparent,
-            (true, false) => Rgbt::Opaque(palette[PaletteIndex::One]),
-            (false, true) => Rgbt::Opaque(palette[PaletteIndex::Two]),
-            (true, true) => Rgbt::Opaque(palette[PaletteIndex::Three]),
-        };
+        *pixel = palette.rgbt_from_low_high(low_bit, high_bit);
     }
 }
 
@@ -171,7 +160,6 @@ impl PatternIndex {
         Some((pattern_index, row_in_half))
     }
 
-    #[rustfmt::skip]
     pub fn to_tall_indexes(self) -> (PatternIndex, PatternIndex) {
         let first  = self.0 & 0b1111_1110;
         let second = self.0 | 0b0000_0001;

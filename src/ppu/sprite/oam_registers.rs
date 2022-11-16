@@ -1,4 +1,3 @@
-use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::sprite::sprite_attributes::{SpriteAttributes, Priority};
@@ -90,13 +89,7 @@ impl SpriteRegisters {
         }
 
         let palette = palette_table.sprite_palette(self.attributes.palette_table_index());
-        let rgbt = match (low_bit, high_bit) {
-            (false, false) => Rgbt::Transparent,
-            (true, false) => Rgbt::Opaque(palette[PaletteIndex::One]),
-            (false, true) => Rgbt::Opaque(palette[PaletteIndex::Two]),
-            (true, true) => Rgbt::Opaque(palette[PaletteIndex::Three]),
-        };
-
+        let rgbt = palette.rgbt_from_low_high(low_bit, high_bit);
         (rgbt, self.attributes.priority(), self.is_sprite_0)
     }
 }
