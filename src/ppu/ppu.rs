@@ -1,4 +1,3 @@
-use std::collections::VecDeque;
 use std::ops::{Index, IndexMut};
 
 use crate::memory::memory::PpuMemory;
@@ -7,14 +6,14 @@ use crate::ppu::clock::Clock;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
-use crate::ppu::palette::palette_index::PaletteIndex;
-use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table::PatternIndex;
-use crate::ppu::pixel_index::{PixelIndex, PixelRow, ColumnInTile};
+use crate::ppu::pixel_index::{PixelIndex, PixelRow};
 use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ppu_data::PpuData;
+use crate::ppu::register::registers::attribute_register::AttributeRegister;
+use crate::ppu::register::registers::pattern_register::PatternRegister;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::sprite_attributes::SpriteAttributes;
 use crate::ppu::sprite::oam::Oam;
@@ -22,7 +21,6 @@ use crate::ppu::sprite::oam_index::OamIndex;
 use crate::ppu::sprite::secondary_oam::SecondaryOam;
 use crate::ppu::sprite::oam_registers::OamRegisters;
 use crate::ppu::sprite::sprite_y::SpriteY;
-use crate::util::bit_util::unpack_bools;
 
 pub struct Ppu {
     oam: Oam,
@@ -499,122 +497,6 @@ impl WriteToggle {
             FirstByte => SecondByte,
             SecondByte => FirstByte,
         };
-    }
-}
-
-pub struct PatternRegister {
-    pending_low_byte: u8,
-    pending_high_byte: u8,
-    current_indexes: ShiftArray<Option<PaletteIndex>, 16>,
-}
-
-impl PatternRegister {
-    pub fn new() -> PatternRegister {
-        PatternRegister {
-            pending_low_byte: 0,
-            pending_high_byte: 0,
-            current_indexes: ShiftArray::new(),
-        }
-    }
-
-    pub fn set_pending_low_byte(&mut self, low_byte: u8) {
-        self.pending_low_byte = low_byte;
-    }
-
-    pub fn set_pending_high_byte(&mut self, high_byte: u8) {
-        self.pending_high_byte = high_byte;
-    }
-
-    pub fn load_next_palette_indexes(&mut self) {
-        let low_bits = unpack_bools(self.pending_low_byte);
-        let high_bits = unpack_bools(self.pending_high_byte);
-        for i in 0..8 {
-            self.current_indexes[i + 8] =
-                PaletteIndex::from_low_high(low_bits[i], high_bits[i]);
-        }
-    }
-
-    pub fn shift_left(&mut self) {
-        self.current_indexes.shift_left();
-    }
-
-    pub fn palette_index(&self, column_in_tile: ColumnInTile) -> Option<PaletteIndex> {
-        self.current_indexes[column_in_tile]
-    }
-}
-
-pub struct AttributeRegister {
-    pending_index: PaletteTableIndex,
-    next_index: PaletteTableIndex,
-    current_indexes: ShiftArray<PaletteTableIndex, 8>,
-}
-
-impl AttributeRegister {
-    pub fn new() -> AttributeRegister {
-        AttributeRegister {
-            pending_index: PaletteTableIndex::Zero,
-            next_index: PaletteTableIndex::Zero,
-            current_indexes: ShiftArray::new(),
-        }
-    }
-
-    pub fn set_pending_palette_table_index(&mut self, index: PaletteTableIndex) {
-        self.pending_index = index;
-    }
-
-    pub fn prepare_next_palette_table_index(&mut self) {
-        self.next_index = self.pending_index;
-    }
-
-    pub fn push_next_palette_table_index(&mut self) {
-        self.current_indexes.push(self.next_index);
-    }
-
-    pub fn current_palette_table_index(&self, column_in_tile: ColumnInTile) -> PaletteTableIndex {
-        self.current_indexes[column_in_tile]
-    }
-}
-
-struct ShiftArray<T, const N: usize>(VecDeque<T>);
-
-impl <T: Copy + Default, const N: usize> ShiftArray<T, N> {
-    pub fn new() -> ShiftArray<T, N> {
-        ShiftArray(VecDeque::from_iter([Default::default(); N]))
-    }
-
-    pub fn shift_left(&mut self) {
-        self.0.pop_front();
-        self.0.push_back(Default::default());
-    }
-
-    pub fn push(&mut self, value: T) {
-        self.0.pop_front();
-        self.0.push_back(value);
-    }
-}
-
-impl <T, const N: usize> Index<ColumnInTile> for ShiftArray<T, N> {
-    type Output = T;
-
-    // Indexes greater than 7 are intentionally inaccessible.
-    fn index(&self, column_in_tile: ColumnInTile) -> &T {
-        &self.0[column_in_tile as usize]
-    }
-}
-
-impl <T, const N: usize> Index<usize> for ShiftArray<T, N> {
-    type Output = T;
-
-    // Indexes greater than 7 are intentionally inaccessible.
-    fn index(&self, index: usize) -> &T {
-        &self.0[index]
-    }
-}
-
-impl <T, const N: usize> IndexMut<usize> for ShiftArray<T, N> {
-    // Indexes greater than 7 are intentionally inaccessible.
-    fn index_mut(&mut self, index: usize) -> &mut T {
-        &mut self.0[index]
     }
 }
 
