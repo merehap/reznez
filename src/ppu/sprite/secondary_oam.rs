@@ -17,6 +17,10 @@ impl SecondaryOam {
         self.is_full
     }
 
+    pub fn read(&self) -> u8 {
+        self.data[self.index]
+    }
+
     pub fn read_and_advance(&mut self) -> u8 {
         let result = self.data[self.index];
         self.advance();
@@ -24,9 +28,7 @@ impl SecondaryOam {
     }
 
     pub fn write(&mut self, value: u8) {
-        if !self.is_full {
-            self.data[self.index] = value;
-        }
+        self.data[self.index] = value;
     }
 
     pub fn reset_index(&mut self) {

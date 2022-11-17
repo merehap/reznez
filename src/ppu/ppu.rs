@@ -1,5 +1,3 @@
-use std::ops::{Index, IndexMut};
-
 use crate::memory::memory::PpuMemory;
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::clock::Clock;
@@ -257,7 +255,13 @@ impl Ppu {
                     return;
                 }
 
-                self.secondary_oam.write(mem.regs().oam_data);
+                if self.secondary_oam.is_full() {
+                    // TODO: Does this go before oam_index.end_reached()?
+                    mem.regs_mut().oam_data = self.secondary_oam.read();
+                } else {
+                    self.secondary_oam.write(mem.regs().oam_data);
+                }
+
                 if !self.oam_index.new_sprite_started() {
                     // The current sprite is in range, copy one more byte of its data over.
                     self.secondary_oam.advance();
