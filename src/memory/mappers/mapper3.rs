@@ -7,6 +7,7 @@ use crate::util::bit_util::get_bit;
 use crate::util::mapped_array::{Chunk, MappedArray};
 
 const EMPTY_CHR_CHUNK: [u8; 0x2000] = [0; 0x2000];
+const BANK_SELECT_START: CpuAddress = CpuAddress::new(0x8000);
 
 // CNROM
 pub struct Mapper3 {
@@ -94,9 +95,11 @@ impl Mapper for Mapper3 {
         0
     }
 
-    fn write_to_cartridge_space(&mut self, _cpu_address: CpuAddress, value: u8) {
-        //println!("Switching to bank {} ({}). Address: {}.", value % 4, value, cpu_address);
-        self.selected_chr_bank = ChrBankId::from_u8(value);
+    fn write_to_cartridge_space(&mut self, cpu_address: CpuAddress, value: u8) {
+        if cpu_address >= BANK_SELECT_START {
+            //println!("Switching to bank {} ({}). Address: {}.", value % 4, value, cpu_address);
+            self.selected_chr_bank = ChrBankId::from_u8(value);
+        }
     }
 
     fn prg_rom_bank_string(&self) -> String {
