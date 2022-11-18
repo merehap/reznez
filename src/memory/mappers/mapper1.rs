@@ -146,7 +146,7 @@ impl Mapper for Mapper1 {
 
         if is_last_shift {
             match address.to_raw() {
-                0x0000..=0x401F => unreachable!("{}", address),
+                0x0000..=0x401F => unreachable!(),
                 0x4020..=0x5FFF => { /* Do nothing. */ }
                 0x6000..=0x7FFF => {
                     self.prg_ram[address.to_usize() - PRG_RAM_START.to_usize()] = value;

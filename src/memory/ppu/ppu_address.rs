@@ -44,10 +44,11 @@ impl PpuAddress {
         coarse_x_scroll: TileColumn::ZERO,
         fine_x_scroll: ColumnInTile::Zero,
     };
+    // 0x3F00
     pub const PALETTE_TABLE_START: PpuAddress = PpuAddress {
         fine_y_scroll: RowInTile::Three,
         name_table_quadrant: NameTableQuadrant::BottomRight,
-        coarse_y_scroll: TileRow::try_from_u8(7).unwrap(),
+        coarse_y_scroll: TileRow::try_from_u8(0b1_1000).unwrap(),
         coarse_x_scroll: TileColumn::ZERO,
         fine_x_scroll: ColumnInTile::Zero,
     };

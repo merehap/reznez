@@ -33,7 +33,7 @@ pub struct Ppu {
     current_address: PpuAddress,
     next_address: PpuAddress,
 
-    pending_data: u8,
+    pub pending_data: u8,
 
     write_toggle: WriteToggle,
 
@@ -93,6 +93,10 @@ impl Ppu {
 
     pub fn clock(&self) -> &Clock {
         &self.clock
+    }
+
+    pub fn current_address(&self) -> PpuAddress {
+        self.current_address
     }
 
     pub fn active_name_table_quadrant(&self) -> NameTableQuadrant {
