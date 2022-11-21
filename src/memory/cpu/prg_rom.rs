@@ -43,6 +43,10 @@ impl PrgRom {
         PrgRom { prg_rom: raw_bank_bytes, bank_size, selected_bank_indexes }
     }
 
+    pub fn selected_bank_indexes(&self) -> &[usize] {
+        &self.selected_bank_indexes
+    }
+
     pub fn select_new_banks(&mut self, selected_bank_indexes: Vec<usize>) {
         assert_eq!(self.selected_bank_indexes.len(), selected_bank_indexes.len());
         self.selected_bank_indexes = selected_bank_indexes;

@@ -70,18 +70,6 @@ impl Mapper1 {
             ChrBankMode::TwoSmall => (self.selected_chr_bank0, self.selected_chr_bank1),
         }
     }
-
-    fn prg_bank_indexes(&self) -> (u8, u8) {
-        let selected_bank = self.selected_prg_bank;
-        match self.control.prg_bank_mode {
-            PrgBankMode::Large => {
-                let first_index = selected_bank & 0b0000_1110;
-                (first_index, first_index + 1)
-            }
-            PrgBankMode::FixedFirst => (0, selected_bank),
-            PrgBankMode::FixedLast => (selected_bank, self.last_prg_bank_index),
-        }
-    }
 }
 
 impl Mapper for Mapper1 {
@@ -163,17 +151,27 @@ impl Mapper for Mapper1 {
         // Clear the high bit which is never used to change the PRG bank.
         self.selected_prg_bank &= 0b0_1111;
 
-        // TODO: Get rid of self.prg_bank_indexes() and store the indexes in prg_rom instead.
-        let (first_index, second_index) = self.prg_bank_indexes();
-        self.prg_rom.select_new_banks(vec![usize::from(first_index), usize::from(second_index)]);
+        let (left_index, right_index) = match self.control.prg_bank_mode {
+            PrgBankMode::Large => {
+                let left_index = self.selected_prg_bank & 0b0000_1110;
+                (left_index, left_index + 1)
+            }
+            PrgBankMode::FixedFirst => (0, self.selected_prg_bank),
+            PrgBankMode::FixedLast => (self.selected_prg_bank, self.last_prg_bank_index),
+        };
+        self.prg_rom.select_new_banks(vec![usize::from(left_index), usize::from(right_index)]);
     }
 
+    // TODO: Generalize this across mappers.
     fn prg_rom_bank_string(&self) -> String {
-        let (first_index, second_index) = self.prg_bank_indexes();
-        format!(
-            "{} and {} [16, 16 KiB banks, mode: {:?}]",
-            first_index, second_index, self.control.prg_bank_mode,
-        )
+        if let &[left_index, right_index] = &self.prg_rom.selected_bank_indexes() {
+            format!(
+                "{} and {} [16, 16 KiB banks, mode: {:?}]",
+                left_index, right_index, self.control.prg_bank_mode,
+            )
+        } else {
+            unreachable!()
+        }
     }
 
     fn chr_rom_bank_string(&self) -> String {
