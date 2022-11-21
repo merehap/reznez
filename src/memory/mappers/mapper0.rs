@@ -1,5 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::cpu::prg_rom::PrgRom;
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
@@ -7,7 +8,7 @@ use crate::util::mapped_array::{Chunk, MappedArray};
 
 // NROM
 pub struct Mapper0 {
-    prg_rom: MappedArray<32>,
+    prg_rom: PrgRom,
     raw_pattern_tables: RawPatternTablePair,
     name_table_mirroring: NameTableMirroring,
     is_chr_writable: bool,
@@ -18,11 +19,9 @@ impl Mapper0 {
         let prg_rom_chunks = cartridge.prg_rom_chunks();
         let prg_rom = match prg_rom_chunks.len() {
             /* Nrom128 - Mirrored mappings. */
-            1 => MappedArray::<32>::mirror_half(*prg_rom_chunks[0]),
+            1 => PrgRom::single_bank_mirrored(prg_rom_chunks[0].clone()),
             /* Nrom256 - A single long mapping. */
-            2 => {
-                MappedArray::<32>::new::<0x8000>(cartridge.prg_rom().try_into().unwrap())
-            }
+            2 => PrgRom::single_bank(Box::new(cartridge.prg_rom().try_into().unwrap())),
             c => {
                 return Err(format!(
                     "PRG ROM size must be 16K or 32K for this mapper, but was {}K",
@@ -61,7 +60,7 @@ impl Mapper for Mapper0 {
     }
 
     #[inline]
-    fn prg_rom(&self) -> &MappedArray<32> {
+    fn prg_rom(&self) -> &PrgRom {
         &self.prg_rom
     }
 

@@ -1,11 +1,9 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use arr_macro::arr;
 use log::error;
 
 use crate::cartridge::Cartridge;
 use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::cpu::prg_rom::PrgRom;
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
@@ -13,7 +11,7 @@ use crate::util::bit_util::get_bit;
 use crate::util::mapped_array::{Chunk, MappedArray};
 
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
-const EMPTY_PRG_BANK: [u8; 0x4000] = [0; 0x4000];
+//const EMPTY_PRG_BANK: [u8; 0x4000] = [0; 0x4000];
 const PRG_RAM_START: CpuAddress = CpuAddress::new(0x6000);
 
 // SxROM (MMC1)
@@ -26,9 +24,7 @@ pub struct Mapper1 {
 
     // 32 4KiB banks or 16 8KiB banks.
     raw_pattern_tables: [RawPatternTable; 32],
-    // 16 16KiB banks or 8 32KiB banks.
-    prg_banks: [Rc<RefCell<[u8; 0x4000]>>; 16],
-    prg_rom: MappedArray<32>,
+    prg_rom: PrgRom,
     prg_ram: [u8; 0x2000],
     last_prg_bank_index: u8,
 }
@@ -43,13 +39,12 @@ impl Mapper1 {
                     .unwrap_or(MappedArray::empty())
             ; 32];
 
-        let mut prg_chunk_iter = cartridge.prg_rom_chunks().iter();
-        let prg_banks = arr![Rc::new(RefCell::new(*prg_chunk_iter.next().unwrap_or(&Box::new(EMPTY_PRG_BANK)).clone())); 16];
-        let mut prg_rom = MappedArray::empty();
-        let last_prg_bank_index = (cartridge.prg_rom_chunks().len() - 1) as u8;
-        prg_rom.update_from_halves(
-            &prg_banks[0],
-            &prg_banks[usize::from(last_prg_bank_index)],
+        let prg_bank_count = cartridge.prg_rom_chunks().len();
+        let selected_bank_indexes = vec![0, prg_bank_count - 1];
+        let prg_rom = PrgRom::multiple_banks(
+            cartridge.prg_rom(),
+            prg_bank_count,
+            selected_bank_indexes,
         );
 
         Mapper1 {
@@ -60,10 +55,9 @@ impl Mapper1 {
             selected_prg_bank: 0,
 
             raw_pattern_tables,
-            prg_banks,
             prg_rom,
             prg_ram: [0; 0x2000],
-            last_prg_bank_index,
+            last_prg_bank_index: prg_bank_count as u8 - 1,
         }
     }
 
@@ -95,7 +89,7 @@ impl Mapper for Mapper1 {
         self.control.mirroring
     }
 
-    fn prg_rom(&self) -> &MappedArray<32> {
+    fn prg_rom(&self) -> &PrgRom {
         &self.prg_rom
     }
 
@@ -169,11 +163,9 @@ impl Mapper for Mapper1 {
         // Clear the high bit which is never used to change the PRG bank.
         self.selected_prg_bank &= 0b0_1111;
 
+        // TODO: Get rid of self.prg_bank_indexes() and store the indexes in prg_rom instead.
         let (first_index, second_index) = self.prg_bank_indexes();
-        self.prg_rom.update_from_halves(
-            &self.prg_banks[first_index as usize],
-            &self.prg_banks[second_index as usize],
-        );
+        self.prg_rom.select_new_banks(vec![usize::from(first_index), usize::from(second_index)]);
     }
 
     fn prg_rom_bank_string(&self) -> String {
