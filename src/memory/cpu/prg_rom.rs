@@ -6,7 +6,7 @@ const MINIMUM_BANK_SIZE: usize = 8 * 0x400;
 pub struct PrgRom {
     prg_rom: Vec<u8>,
     bank_size: usize,
-    selected_bank_indexes: Vec<usize>,
+    selected_bank_indexes: Vec<u8>,
 }
 
 impl PrgRom {
@@ -29,25 +29,27 @@ impl PrgRom {
 
     pub fn multiple_banks(
         raw_bank_bytes: Vec<u8>,
-        bank_count: usize,
-        selected_bank_indexes: Vec<usize>,
+        bank_count: u8,
+        selected_bank_indexes: Vec<u8>,
     ) -> PrgRom {
         assert!(bank_count > 0);
-        assert_eq!(raw_bank_bytes.len() % bank_count, 0);
-        assert_eq!(raw_bank_bytes.len() % MINIMUM_BANK_SIZE, 0);
         for &bank_index in &selected_bank_indexes {
             assert!(bank_index < bank_count);
         }
+
+        let bank_count = usize::from(bank_count);
+        assert_eq!(raw_bank_bytes.len() % bank_count, 0);
+        assert_eq!(raw_bank_bytes.len() % MINIMUM_BANK_SIZE, 0);
 
         let bank_size = raw_bank_bytes.len() / bank_count;
         PrgRom { prg_rom: raw_bank_bytes, bank_size, selected_bank_indexes }
     }
 
-    pub fn selected_bank_indexes(&self) -> &[usize] {
+    pub fn selected_bank_indexes(&self) -> &[u8] {
         &self.selected_bank_indexes
     }
 
-    pub fn select_new_banks(&mut self, selected_bank_indexes: Vec<usize>) {
+    pub fn select_new_banks(&mut self, selected_bank_indexes: Vec<u8>) {
         assert_eq!(self.selected_bank_indexes.len(), selected_bank_indexes.len());
         self.selected_bank_indexes = selected_bank_indexes;
     }
@@ -66,7 +68,7 @@ impl PrgRom {
         assert!(external_index < PRG_ROM_SIZE);
 
         let placement  = external_index / self.bank_size;
-        let bank_index = self.selected_bank_indexes[placement];
+        let bank_index = usize::from(self.selected_bank_indexes[placement]);
         let byte_index = external_index % self.bank_size;
         self.bank_size * bank_index + byte_index
     }

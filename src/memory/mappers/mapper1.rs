@@ -39,7 +39,8 @@ impl Mapper1 {
                     .unwrap_or(MappedArray::empty())
             ; 32];
 
-        let prg_bank_count = cartridge.prg_rom_chunks().len();
+        let prg_bank_count = cartridge.prg_rom_chunks().len().try_into()
+            .expect("Way too many PRG ROM chunks.");
         let selected_bank_indexes = vec![0, prg_bank_count - 1];
         let prg_rom = PrgRom::multiple_banks(
             cartridge.prg_rom(),
@@ -159,7 +160,7 @@ impl Mapper for Mapper1 {
             PrgBankMode::FixedFirst => (0, self.selected_prg_bank),
             PrgBankMode::FixedLast => (self.selected_prg_bank, self.last_prg_bank_index),
         };
-        self.prg_rom.select_new_banks(vec![usize::from(left_index), usize::from(right_index)]);
+        self.prg_rom.select_new_banks(vec![left_index, right_index]);
     }
 
     // TODO: Generalize this across mappers.
