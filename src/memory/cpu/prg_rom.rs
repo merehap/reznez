@@ -5,6 +5,7 @@ const MINIMUM_BANK_SIZE: usize = 8 * 0x400;
 
 pub struct PrgRom {
     prg_rom: Vec<u8>,
+    bank_count: u8,
     selected_bank_indexes: Vec<u8>,
 }
 
@@ -12,16 +13,18 @@ impl PrgRom {
     pub fn single_bank(bank: Box<[u8; PRG_ROM_SIZE]>) -> PrgRom {
         // Only a single bank and only a single index, which points at it.
         let prg_rom = bank.to_vec();
+        let bank_count = 1;
         let selected_bank_indexes = vec![0];
-        PrgRom { prg_rom, selected_bank_indexes }
+        PrgRom { prg_rom, bank_count, selected_bank_indexes }
     }
 
     pub fn single_bank_mirrored(bank: Box<[u8; PRG_ROM_SIZE / 2]>) -> PrgRom {
         // Only a single bank that is half the size of indexable PRG ROM,
         // so two indexes are necessary, both which point to the only bank.
         let prg_rom = bank.to_vec();
+        let bank_count = 1;
         let selected_bank_indexes = vec![0, 0];
-        PrgRom { prg_rom, selected_bank_indexes }
+        PrgRom { prg_rom, bank_count, selected_bank_indexes }
     }
 
     pub fn multiple_banks(
@@ -34,11 +37,10 @@ impl PrgRom {
             assert!(bank_index < bank_count);
         }
 
-        let bank_count = usize::from(bank_count);
-        assert_eq!(raw_bank_bytes.len() % bank_count, 0);
+        assert_eq!(raw_bank_bytes.len() % usize::from(bank_count), 0);
         assert_eq!(raw_bank_bytes.len() % MINIMUM_BANK_SIZE, 0);
 
-        PrgRom { prg_rom: raw_bank_bytes, selected_bank_indexes }
+        PrgRom { prg_rom: raw_bank_bytes, bank_count, selected_bank_indexes }
     }
 
     pub fn selected_bank_indexes(&self) -> &[u8] {
@@ -47,6 +49,11 @@ impl PrgRom {
 
     pub fn select_new_banks(&mut self, selected_bank_indexes: Vec<u8>) {
         assert_eq!(self.selected_bank_indexes.len(), selected_bank_indexes.len());
+        assert_eq!(PRG_ROM_SIZE % selected_bank_indexes.len(), 0);
+        for &bank_index in &selected_bank_indexes {
+            assert!(bank_index < self.bank_count);
+        }
+
         self.selected_bank_indexes = selected_bank_indexes;
     }
 
