@@ -82,12 +82,11 @@ pub trait Mapper {
 
     #[inline]
     fn ppu_read(&self, ppu_internal_ram: &PpuInternalRam, address: PpuAddress) -> u8 {
+        let palette_ram = &ppu_internal_ram.palette_ram;
         match address.to_u16() {
             0x0000..=0x1FFF => self.read_pattern_table_byte(address),
             0x2000..=0x3EFF => self.read_name_table_byte(ppu_internal_ram, address),
-            0x3F00..=0x3FFF => {
-                self.read_palette_table_byte(&ppu_internal_ram.palette_ram, address)
-            }
+            0x3F00..=0x3FFF => self.read_palette_table_byte(palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
         }
     }

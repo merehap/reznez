@@ -25,20 +25,15 @@ impl Mapper7 {
             .map_err(|err| format!("Way too many banks. {}", err))?;
 
         let selected_bank_indexes = vec![0];
-        let prg_rom = PrgRom::multiple_banks(
-            cartridge.prg_rom(),
-            bank_count,
-            selected_bank_indexes,
-        );
+        let prg_rom = PrgRom::multiple_banks(prg_rom, bank_count, selected_bank_indexes);
 
         assert_eq!(cartridge.chr_rom_chunks().len(), 0);
         let raw_pattern_tables = [MappedArray::<4>::empty(), MappedArray::<4>::empty()];
-        let name_table_mirroring = NameTableMirroring::OneScreenLeftBank;
 
         Ok(Mapper7 {
             prg_rom,
             raw_pattern_tables,
-            name_table_mirroring,
+            name_table_mirroring: NameTableMirroring::OneScreenLeftBank,
         })
     }
 }
