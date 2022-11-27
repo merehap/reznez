@@ -3,8 +3,10 @@
 
 use std::ops::{Index, IndexMut};
 
-const VRAM_SIZE: usize = 0x800;
-const CHUNK_SIZE: usize = 0x400;
+use crate::util::unit::KIBIBYTE;
+
+const VRAM_SIZE: usize = 2 * KIBIBYTE;
+const CHUNK_SIZE: usize = KIBIBYTE;
 
 // CIRAM
 pub struct Vram(Box<[u8; VRAM_SIZE]>);

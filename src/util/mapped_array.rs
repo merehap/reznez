@@ -1,8 +1,10 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-// One KibiByte.
-const CHUNK_LEN: usize = 0x400;
+use crate::util::unit::KIBIBYTE;
+
+
+const CHUNK_LEN: usize = KIBIBYTE;
 
 pub struct MappedArray<const CHUNK_COUNT: usize>([Chunk; CHUNK_COUNT]);
 

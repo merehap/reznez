@@ -9,9 +9,13 @@ use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table::{PatternIndex, PatternTable};
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::render::frame::Frame;
+use crate::util::unit::KIBIBYTE;
 
-const NAME_TABLE_SIZE: usize = 0x400;
-const ATTRIBUTE_START_INDEX: usize = 0x3C0;
+// The size of the name table proper plus attribute table.
+const NAME_TABLE_SIZE: usize = KIBIBYTE;
+const ATTRIBUTE_TABLE_SIZE: usize = 64;
+// 0x3C0
+const ATTRIBUTE_START_INDEX: usize = NAME_TABLE_SIZE - ATTRIBUTE_TABLE_SIZE;
 
 #[derive(Debug)]
 pub struct NameTable<'a> {

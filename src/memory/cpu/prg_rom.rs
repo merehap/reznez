@@ -1,7 +1,7 @@
-// 32 KiB
-const PRG_ROM_SIZE: usize = 32 * 0x400;
-// 8 KiB
-const MINIMUM_BANK_SIZE: usize = 8 * 0x400;
+use crate::util::unit::KIBIBYTE;
+
+const PRG_ROM_SIZE: usize = 32 * KIBIBYTE;
+const MINIMUM_BANK_SIZE: usize = 8 * KIBIBYTE;
 
 pub struct PrgRom {
     prg_rom: Vec<u8>,

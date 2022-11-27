@@ -14,9 +14,10 @@ use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::register::register_type::RegisterType;
 use crate::util::mapped_array::{Chunk, MappedArray};
+use crate::util::unit::KIBIBYTE;
 
-pub const PATTERN_TABLE_SIZE: usize = 0x1000;
-pub const NAME_TABLE_SIZE: usize = 0x400;
+pub const PATTERN_TABLE_SIZE: usize = 4 * KIBIBYTE;
+pub const NAME_TABLE_SIZE: usize = KIBIBYTE;
 
 pub type RawPatternTable = MappedArray<4>;
 pub type RawPatternTablePair = [RawPatternTable; 2];

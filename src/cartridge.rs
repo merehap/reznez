@@ -3,10 +3,11 @@ use std::fmt;
 use log::error;
 
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
+use crate::util::unit::KIBIBYTE;
 
 const INES_HEADER_CONSTANT: &[u8] = &[0x4E, 0x45, 0x53, 0x1A];
-const PRG_ROM_CHUNK_LENGTH: usize = 0x4000;
-const CHR_ROM_CHUNK_LENGTH: usize = 0x2000;
+const PRG_ROM_CHUNK_LENGTH: usize = 16 * KIBIBYTE;
+const CHR_ROM_CHUNK_LENGTH: usize = 8 * KIBIBYTE;
 
 // See https://wiki.nesdev.org/w/index.php?title=INES
 #[derive(Clone, Debug)]
@@ -20,8 +21,8 @@ pub struct Cartridge {
     ines2: Option<INes2>,
 
     trainer: Option<[u8; 512]>,
-    prg_rom_chunks: Vec<Box<[u8; 0x4000]>>,
-    chr_rom_chunks: Vec<Box<[u8; 0x2000]>>,
+    prg_rom_chunks: Vec<Box<[u8; PRG_ROM_CHUNK_LENGTH]>>,
+    chr_rom_chunks: Vec<Box<[u8; CHR_ROM_CHUNK_LENGTH]>>,
     console_type: ConsoleType,
     title: String,
 }
@@ -153,7 +154,7 @@ impl Cartridge {
         self.name_table_mirroring
     }
 
-    pub fn prg_rom_chunks(&self) -> &[Box<[u8; 0x4000]>] {
+    pub fn prg_rom_chunks(&self) -> &[Box<[u8; PRG_ROM_CHUNK_LENGTH]>] {
         &self.prg_rom_chunks
     }
 
@@ -166,11 +167,11 @@ impl Cartridge {
         result
     }
 
-    pub fn chr_rom_chunks(&self) -> &[Box<[u8; 0x2000]>] {
+    pub fn chr_rom_chunks(&self) -> &[Box<[u8; CHR_ROM_CHUNK_LENGTH]>] {
         &self.chr_rom_chunks
     }
 
-    pub fn chr_rom_half_chunks(&self) -> Vec<[u8; 0x1000]> {
+    pub fn chr_rom_half_chunks(&self) -> Vec<[u8; CHR_ROM_CHUNK_LENGTH / 2]> {
         let mut half_chunks = Vec::new();
         for chunk in &self.chr_rom_chunks {
             half_chunks.push(chunk[0x0000..0x1000].try_into().unwrap());

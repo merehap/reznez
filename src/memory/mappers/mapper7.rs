@@ -5,9 +5,9 @@ use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::mapped_array::{MappedArray, Chunk};
+use crate::util::unit::KIBIBYTE;
 
-// 32 KiB.
-const PRG_ROM_BANK_SIZE: usize = 32 * 0x400;
+const PRG_ROM_BANK_SIZE: usize = 32 * KIBIBYTE;
 
 // AxROM
 pub struct Mapper7 {
