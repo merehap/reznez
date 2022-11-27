@@ -3,7 +3,7 @@ use num_traits::FromPrimitive;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
-use crate::memory::cpu::prg_rom::PrgRom;
+use crate::memory::cpu::prg_rom::CartridgeMemory;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
@@ -24,7 +24,7 @@ pub type RawPatternTablePair = [RawPatternTable; 2];
 
 pub trait Mapper {
     fn name_table_mirroring(&self) -> NameTableMirroring;
-    fn prg_rom(&self) -> &PrgRom;
+    fn prg_rom(&self) -> &CartridgeMemory;
     fn is_chr_writable(&self) -> bool;
     fn prg_rom_bank_string(&self) -> String;
     fn chr_rom_bank_string(&self) -> String;

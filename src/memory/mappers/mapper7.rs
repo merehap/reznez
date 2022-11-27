@@ -1,6 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::cpu::prg_rom::PrgRom;
+use crate::memory::cpu::prg_rom::CartridgeMemory;
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
@@ -11,7 +11,7 @@ const PRG_ROM_BANK_SIZE: usize = 32 * KIBIBYTE;
 
 // AxROM
 pub struct Mapper7 {
-    prg_rom: PrgRom,
+    prg_rom: CartridgeMemory,
     raw_pattern_tables: RawPatternTablePair,
     name_table_mirroring: NameTableMirroring,
 }
@@ -25,7 +25,7 @@ impl Mapper7 {
             .map_err(|err| format!("Way too many banks. {}", err))?;
 
         let selected_bank_indexes = vec![0];
-        let prg_rom = PrgRom::multiple_banks(prg_rom, bank_count, selected_bank_indexes);
+        let prg_rom = CartridgeMemory::multiple_banks(prg_rom, bank_count, selected_bank_indexes);
 
         assert_eq!(cartridge.chr_rom_chunks().len(), 0);
         let raw_pattern_tables = [MappedArray::<4>::empty(), MappedArray::<4>::empty()];
@@ -43,7 +43,7 @@ impl Mapper for Mapper7 {
         self.name_table_mirroring
     }
 
-    fn prg_rom(&self) -> &PrgRom {
+    fn prg_rom(&self) -> &CartridgeMemory {
         &self.prg_rom
     }
 
