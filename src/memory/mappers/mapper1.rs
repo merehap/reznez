@@ -3,7 +3,7 @@ use log::error;
 
 use crate::cartridge::Cartridge;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::cpu::cartridge_memory::CartridgeMemory;
+use crate::memory::cpu::cartridge_space::CartridgeSpace;
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
@@ -24,7 +24,7 @@ pub struct Mapper1 {
 
     // 32 4KiB banks or 16 8KiB banks.
     raw_pattern_tables: [RawPatternTable; 32],
-    prg_rom: CartridgeMemory,
+    prg_rom: CartridgeSpace,
     prg_ram: [u8; 0x2000],
     last_prg_bank_index: u8,
 }
@@ -42,7 +42,7 @@ impl Mapper1 {
         let prg_bank_count = cartridge.prg_rom_chunks().len().try_into()
             .expect("Way too many PRG ROM chunks.");
         let selected_bank_indexes = vec![0, prg_bank_count - 1];
-        let prg_rom = CartridgeMemory::multiple_banks(
+        let prg_rom = CartridgeSpace::multiple_banks(
             cartridge.prg_rom(),
             prg_bank_count,
             selected_bank_indexes,
@@ -78,7 +78,7 @@ impl Mapper for Mapper1 {
         self.control.mirroring
     }
 
-    fn prg_rom(&self) -> &CartridgeMemory {
+    fn prg_rom(&self) -> &CartridgeSpace {
         &self.prg_rom
     }
 

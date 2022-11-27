@@ -1,6 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::cpu::cartridge_memory::CartridgeMemory;
+use crate::memory::cpu::cartridge_space::CartridgeSpace;
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
@@ -12,7 +12,7 @@ const BANK_SELECT_START: CpuAddress = CpuAddress::new(0x8000);
 
 // CNROM
 pub struct Mapper3 {
-    prg_rom: CartridgeMemory,
+    prg_rom: CartridgeSpace,
     raw_pattern_tables: [RawPatternTablePair; 4],
     selected_chr_bank: ChrBankId,
     name_table_mirroring: NameTableMirroring,
@@ -22,8 +22,8 @@ impl Mapper3 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper3, String> {
         let prg_rom_chunks = cartridge.prg_rom_chunks();
         let prg_rom = match prg_rom_chunks.len() {
-            1 => CartridgeMemory::single_bank_mirrored(prg_rom_chunks[0].clone()),
-            2 => CartridgeMemory::single_bank(Box::new(cartridge.prg_rom().try_into().unwrap())),
+            1 => CartridgeSpace::single_bank_mirrored(prg_rom_chunks[0].clone()),
+            2 => CartridgeSpace::single_bank(Box::new(cartridge.prg_rom().try_into().unwrap())),
             c => {
                 return Err(format!(
                     "PRG ROM size must be 16K or 32K for this mapper, but was {}K",
@@ -62,7 +62,7 @@ impl Mapper for Mapper3 {
         self.name_table_mirroring
     }
 
-    fn prg_rom(&self) -> &CartridgeMemory {
+    fn prg_rom(&self) -> &CartridgeSpace {
         &self.prg_rom
     }
 

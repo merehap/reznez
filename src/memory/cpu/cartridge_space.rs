@@ -3,35 +3,37 @@ use crate::util::unit::KIBIBYTE;
 const PRG_ROM_SIZE: usize = 32 * KIBIBYTE;
 const MINIMUM_BANK_SIZE: usize = 8 * KIBIBYTE;
 
-pub struct CartridgeMemory {
+pub struct CartridgeSpace {
     prg_rom: Vec<u8>,
     bank_count: u8,
     selected_bank_indexes: Vec<u8>,
 }
 
-impl CartridgeMemory {
-    pub fn single_bank(bank: Box<[u8; PRG_ROM_SIZE]>) -> CartridgeMemory {
+impl CartridgeSpace {
+    pub fn single_bank(bank: Box<[u8; PRG_ROM_SIZE]>) -> CartridgeSpace {
         // Only a single bank and only a single index, which points at it.
-        let prg_rom = bank.to_vec();
-        let bank_count = 1;
-        let selected_bank_indexes = vec![0];
-        CartridgeMemory { prg_rom, bank_count, selected_bank_indexes }
+        CartridgeSpace {
+            prg_rom: bank.to_vec(),
+            bank_count: 1,
+            selected_bank_indexes: vec![0],
+        }
     }
 
-    pub fn single_bank_mirrored(bank: Box<[u8; PRG_ROM_SIZE / 2]>) -> CartridgeMemory {
+    pub fn single_bank_mirrored(bank: Box<[u8; PRG_ROM_SIZE / 2]>) -> CartridgeSpace {
         // Only a single bank that is half the size of indexable PRG ROM,
         // so two indexes are necessary, both which point to the only bank.
-        let prg_rom = bank.to_vec();
-        let bank_count = 1;
-        let selected_bank_indexes = vec![0, 0];
-        CartridgeMemory { prg_rom, bank_count, selected_bank_indexes }
+        CartridgeSpace {
+            prg_rom: bank.to_vec(),
+            bank_count: 1,
+            selected_bank_indexes: vec![0, 0],
+        }
     }
 
     pub fn multiple_banks(
         raw_bank_bytes: Vec<u8>,
         bank_count: u8,
         selected_bank_indexes: Vec<u8>,
-    ) -> CartridgeMemory {
+    ) -> CartridgeSpace {
         assert!(bank_count > 0);
         for &bank_index in &selected_bank_indexes {
             assert!(bank_index < bank_count);
@@ -40,7 +42,7 @@ impl CartridgeMemory {
         assert_eq!(raw_bank_bytes.len() % usize::from(bank_count), 0);
         assert_eq!(raw_bank_bytes.len() % MINIMUM_BANK_SIZE, 0);
 
-        CartridgeMemory { prg_rom: raw_bank_bytes, bank_count, selected_bank_indexes }
+        CartridgeSpace { prg_rom: raw_bank_bytes, bank_count, selected_bank_indexes }
     }
 
     pub fn selected_bank_indexes(&self) -> &[u8] {
