@@ -3,7 +3,7 @@ use num_traits::FromPrimitive;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
-use crate::memory::cpu::prg_rom::CartridgeMemory;
+use crate::memory::cpu::cartridge_memory::CartridgeMemory;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
