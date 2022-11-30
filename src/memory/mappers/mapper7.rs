@@ -1,6 +1,8 @@
 use crate::cartridge::Cartridge;
+use crate::memory::cpu::cartridge_space::WindowStart::*;
+use crate::memory::cpu::cartridge_space::WindowEnd::*;
+use crate::memory::cpu::cartridge_space::{CartridgeSpace, PrgMemory, WindowType};
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::cpu::cartridge_space::CartridgeSpace;
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
@@ -11,7 +13,7 @@ const PRG_ROM_BANK_SIZE: usize = 32 * KIBIBYTE;
 
 // AxROM
 pub struct Mapper7 {
-    prg_rom: CartridgeSpace,
+    cartridge_space: CartridgeSpace,
     raw_pattern_tables: RawPatternTablePair,
     name_table_mirroring: NameTableMirroring,
 }
@@ -19,19 +21,26 @@ pub struct Mapper7 {
 impl Mapper7 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper7, String> {
         let prg_rom = cartridge.prg_rom();
-        assert_eq!(prg_rom.len() % PRG_ROM_BANK_SIZE, 0);
+        let prg_rom_len = prg_rom.len();
+        assert_eq!(prg_rom_len % PRG_ROM_BANK_SIZE, 0);
 
-        let bank_count = (prg_rom.len() / PRG_ROM_BANK_SIZE).try_into()
+        let bank_count: u8 = (prg_rom.len() / PRG_ROM_BANK_SIZE).try_into()
             .map_err(|err| format!("Way too many banks. {}", err))?;
 
-        let selected_bank_indexes = vec![0];
-        let prg_rom = CartridgeSpace::multiple_banks(prg_rom, bank_count, selected_bank_indexes);
+        let prg_memory = PrgMemory::builder()
+            .raw_memory(prg_rom)
+            .bank_count(bank_count)
+            .bank_size(PRG_ROM_BANK_SIZE)
+            .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Unmapped)
+            .add_window(Ox8000, OxFFFF, 32 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
+            .build();
+        let cartridge_space = CartridgeSpace::new(prg_memory);
 
         assert_eq!(cartridge.chr_rom_chunks().len(), 0);
         let raw_pattern_tables = [MappedArray::<4>::empty(), MappedArray::<4>::empty()];
 
         Ok(Mapper7 {
-            prg_rom,
+            cartridge_space,
             raw_pattern_tables,
             name_table_mirroring: NameTableMirroring::OneScreenLeftBank,
         })
@@ -44,7 +53,7 @@ impl Mapper for Mapper7 {
     }
 
     fn prg_rom(&self) -> &CartridgeSpace {
-        &self.prg_rom
+        &self.cartridge_space
     }
 
     fn is_chr_writable(&self) -> bool {
@@ -75,7 +84,7 @@ impl Mapper for Mapper7 {
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
         if address.to_raw() >= 0x8000 {
             let bank = value & 0b0000_0111;
-            self.prg_rom.select_new_banks(vec![bank]);
+            self.cartridge_space.switch_prg_bank_at(Ox8000, bank);
 
             self.name_table_mirroring = if value & 0b0001_0000 == 0 {
                 NameTableMirroring::OneScreenLeftBank

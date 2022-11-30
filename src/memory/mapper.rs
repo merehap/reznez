@@ -53,7 +53,7 @@ pub trait Mapper {
             0x4017          => ports.joypad2.borrow_mut().next_status() as u8,
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
             0x4020..=0x7FFF => self.read_prg_ram(address),
-            0x8000..=0xFFFF => self.prg_rom().read(address.to_usize() - 0x8000),
+            0x8000..=0xFFFF => self.prg_rom().read_prg(address),
         }
     }
 
