@@ -8,7 +8,7 @@ use crate::util::mapped_array::{Chunk, MappedArray};
 
 // NROM
 pub struct Mapper0 {
-    prg_rom: CartridgeSpace,
+    cartridge_space: CartridgeSpace,
     raw_pattern_tables: RawPatternTablePair,
     name_table_mirroring: NameTableMirroring,
     is_chr_writable: bool,
@@ -17,7 +17,7 @@ pub struct Mapper0 {
 impl Mapper0 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper0, String> {
         let prg_rom_chunks = cartridge.prg_rom_chunks();
-        let prg_rom = match prg_rom_chunks.len() {
+        let cartridge_space = match prg_rom_chunks.len() {
             /* Nrom128 - Mirrored mappings. */
             1 => CartridgeSpace::single_bank_mirrored(prg_rom_chunks[0].clone()),
             /* Nrom256 - A single long mapping. */
@@ -46,7 +46,7 @@ impl Mapper0 {
         let name_table_mirroring = cartridge.name_table_mirroring();
         let is_chr_writable = chr_rom_chunks.is_empty();
         Ok(Mapper0 {
-            prg_rom,
+            cartridge_space,
             raw_pattern_tables,
             name_table_mirroring,
             is_chr_writable,
@@ -60,8 +60,8 @@ impl Mapper for Mapper0 {
     }
 
     #[inline]
-    fn prg_rom(&self) -> &CartridgeSpace {
-        &self.prg_rom
+    fn cartridge_space(&self) -> &CartridgeSpace {
+        &self.cartridge_space
     }
 
     #[inline]

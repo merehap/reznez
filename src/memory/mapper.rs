@@ -24,7 +24,7 @@ pub type RawPatternTablePair = [RawPatternTable; 2];
 
 pub trait Mapper {
     fn name_table_mirroring(&self) -> NameTableMirroring;
-    fn prg_rom(&self) -> &CartridgeSpace;
+    fn cartridge_space(&self) -> &CartridgeSpace;
     fn is_chr_writable(&self) -> bool;
     fn prg_rom_bank_string(&self) -> String;
     fn chr_rom_bank_string(&self) -> String;
@@ -53,7 +53,7 @@ pub trait Mapper {
             0x4017          => ports.joypad2.borrow_mut().next_status() as u8,
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
             0x4020..=0x7FFF => self.read_prg_ram(address),
-            0x8000..=0xFFFF => self.prg_rom().read_prg(address),
+            0x8000..=0xFFFF => self.cartridge_space().read_prg(address),
         }
     }
 

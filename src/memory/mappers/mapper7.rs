@@ -52,7 +52,7 @@ impl Mapper for Mapper7 {
         self.name_table_mirroring
     }
 
-    fn prg_rom(&self) -> &CartridgeSpace {
+    fn cartridge_space(&self) -> &CartridgeSpace {
         &self.cartridge_space
     }
 

@@ -12,7 +12,7 @@ const BANK_SELECT_START: CpuAddress = CpuAddress::new(0x8000);
 
 // CNROM
 pub struct Mapper3 {
-    prg_rom: CartridgeSpace,
+    cartridge_space: CartridgeSpace,
     raw_pattern_tables: [RawPatternTablePair; 4],
     selected_chr_bank: ChrBankId,
     name_table_mirroring: NameTableMirroring,
@@ -21,7 +21,7 @@ pub struct Mapper3 {
 impl Mapper3 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper3, String> {
         let prg_rom_chunks = cartridge.prg_rom_chunks();
-        let prg_rom = match prg_rom_chunks.len() {
+        let cartridge_space = match prg_rom_chunks.len() {
             1 => CartridgeSpace::single_bank_mirrored(prg_rom_chunks[0].clone()),
             2 => CartridgeSpace::single_bank(Box::new(cartridge.prg_rom().try_into().unwrap())),
             c => {
@@ -49,7 +49,7 @@ impl Mapper3 {
         ];
         let name_table_mirroring = cartridge.name_table_mirroring();
         Ok(Mapper3 {
-            prg_rom,
+            cartridge_space,
             raw_pattern_tables,
             selected_chr_bank: ChrBankId::Zero,
             name_table_mirroring,
@@ -62,8 +62,8 @@ impl Mapper for Mapper3 {
         self.name_table_mirroring
     }
 
-    fn prg_rom(&self) -> &CartridgeSpace {
-        &self.prg_rom
+    fn cartridge_space(&self) -> &CartridgeSpace {
+        &self.cartridge_space
     }
 
     #[inline]

@@ -86,7 +86,7 @@ impl Mapper for Mapper1 {
         self.control.mirroring
     }
 
-    fn prg_rom(&self) -> &CartridgeSpace {
+    fn cartridge_space(&self) -> &CartridgeSpace {
         &self.cartridge_space
     }
 
