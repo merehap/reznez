@@ -114,16 +114,6 @@ impl Mapper for Mapper1 {
         chunks
     }
 
-    fn read_prg_ram(&self, address: CpuAddress) -> u8 {
-        if address >= PRG_RAM_START {
-            self.prg_ram[address.to_usize() - PRG_RAM_START.to_usize()]
-        } else {
-            // Ignore lower PRG RAM space which is not supported by mapper 1.
-            // FIXME: Open bus behavior here instead?
-            0
-        }
-    }
-
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
         if get_bit(value, 0) {
             self.shift = EMPTY_SHIFT_REGISTER;

@@ -76,11 +76,6 @@ impl Mapper for Mapper7 {
         Vec::new()
     }
 
-    fn read_prg_ram(&self, _address: CpuAddress) -> u8 {
-        // FIXME: Open bus.
-        0
-    }
-
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
         if address.to_raw() >= 0x8000 {
             let bank = value & 0b0000_0111;

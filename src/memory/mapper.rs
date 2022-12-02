@@ -31,7 +31,6 @@ pub trait Mapper {
     fn raw_pattern_table(&self, side: PatternTableSide) -> &RawPatternTable;
     fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>>;
 
-    fn read_prg_ram(&self, address: CpuAddress) -> u8;
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8);
 
     #[inline]
@@ -52,8 +51,8 @@ pub trait Mapper {
             0x4016          => ports.joypad1.borrow_mut().next_status() as u8,
             0x4017          => ports.joypad2.borrow_mut().next_status() as u8,
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
-            0x4020..=0x7FFF => self.read_prg_ram(address),
-            0x8000..=0xFFFF => self.cartridge_space().read_prg(address),
+            0x4020..=0x5FFF => {/* TODO: Low registers. */ 0},
+            0x6000..=0xFFFF => self.cartridge_space().read_prg(address),
         }
     }
 

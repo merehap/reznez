@@ -79,11 +79,6 @@ impl Mapper for Mapper0 {
         Vec::new()
     }
 
-    fn read_prg_ram(&self, _address: CpuAddress) -> u8 {
-        // FIXME: Change to open bus behavior.
-        0
-    }
-
     fn write_to_cartridge_space(&mut self, _address: CpuAddress, _value: u8) {
         // Does nothing for mapper 0.
     }
