@@ -60,10 +60,6 @@ impl Mapper for Mapper7 {
         true
     }
 
-    fn prg_rom_bank_string(&self) -> String {
-        "Blah".to_string()
-    }
-
     fn chr_rom_bank_string(&self) -> String {
         "Blah".to_string()
     }

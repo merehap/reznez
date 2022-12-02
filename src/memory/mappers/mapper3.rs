@@ -96,10 +96,6 @@ impl Mapper for Mapper3 {
         }
     }
 
-    fn prg_rom_bank_string(&self) -> String {
-        "(Fixed)".to_string()
-    }
-
     fn chr_rom_bank_string(&self) -> String {
         format!("{} of 4 [8 KiB banks]", self.selected_chr_bank as u8)
     }

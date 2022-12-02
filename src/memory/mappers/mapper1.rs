@@ -163,18 +163,6 @@ impl Mapper for Mapper1 {
         self.cartridge_space.switch_prg_bank_at(OxC000, right_index);
     }
 
-    // TODO: Generalize this across mappers.
-    fn prg_rom_bank_string(&self) -> String {
-        if let &[left_index, right_index] = &self.cartridge_space.selected_prg_bank_indexes()[..] {
-            format!(
-                "{} and {} [16, 16 KiB banks, mode: {:?}]",
-                left_index, right_index, self.control.prg_bank_mode,
-            )
-        } else {
-            unreachable!()
-        }
-    }
-
     fn chr_rom_bank_string(&self) -> String {
         let (selected_bank0, selected_bank1) = self.chr_bank_indexes();
         format!(

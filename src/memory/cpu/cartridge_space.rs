@@ -21,6 +21,10 @@ impl CartridgeSpace {
         self.prg_memory.write(address, value);
     }
 
+    pub fn prg_bank_count(&self) -> u8 {
+        self.prg_memory.bank_count
+    }
+
     pub fn selected_prg_bank_indexes(&self) -> Vec<BankIndex> {
         self.prg_memory.selected_bank_indexes()
     }

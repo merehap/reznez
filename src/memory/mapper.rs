@@ -26,7 +26,19 @@ pub trait Mapper {
     fn name_table_mirroring(&self) -> NameTableMirroring;
     fn cartridge_space(&self) -> &CartridgeSpace;
     fn is_chr_writable(&self) -> bool;
-    fn prg_rom_bank_string(&self) -> String;
+
+    fn prg_rom_bank_string(&self) -> String {
+        let indexes = self.cartridge_space().selected_prg_bank_indexes();
+        let mut bank_text = indexes[0].to_string();
+        for i in 1..indexes.len() {
+            bank_text.push_str(&format!(", {}", indexes[i]));
+        }
+
+        bank_text.push_str(&format!(" ({} banks total)", self.cartridge_space().prg_bank_count()));
+
+        bank_text
+    }
+
     fn chr_rom_bank_string(&self) -> String;
     fn raw_pattern_table(&self, side: PatternTableSide) -> &RawPatternTable;
     fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>>;

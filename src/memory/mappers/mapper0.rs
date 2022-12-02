@@ -83,10 +83,6 @@ impl Mapper for Mapper0 {
         // Does nothing for mapper 0.
     }
 
-    fn prg_rom_bank_string(&self) -> String {
-        "(Fixed)".to_string()
-    }
-
     fn chr_rom_bank_string(&self) -> String {
         "(Fixed)".to_string()
     }
