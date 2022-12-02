@@ -38,7 +38,7 @@ impl CartridgeSpace {
             .raw_memory(bank.to_vec())
             .bank_count(1)
             .bank_size(32 * KIBIBYTE)
-            .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Unmapped)
+            .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
             .add_window(Ox8000, OxFFFF, 32 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
             .build();
 
@@ -55,7 +55,7 @@ impl CartridgeSpace {
             .raw_memory(bank.to_vec())
             .bank_count(1)
             .bank_size(16 * KIBIBYTE)
-            .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Unmapped)
+            .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
             .add_window(Ox8000, OxBFFF, 16 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
             .add_window(OxC000, OxFFFF, 16 * KIBIBYTE, WindowType::MirrorPrevious)
             .build();
@@ -65,6 +65,7 @@ impl CartridgeSpace {
 
 pub struct PrgMemory {
     raw_memory: Vec<u8>,
+    work_ram: Vec<u8>,
     bank_count: u8,
     bank_size: usize,
     windows: Vec<Window>,
@@ -100,21 +101,22 @@ impl PrgMemory {
     }
 
     fn read(&self, address: CpuAddress) -> u8 {
-        if let Some(index) = self.address_to_prg_index(address) {
-            self.raw_memory[index]
-        } else {
-            // TODO: Open bus behavior instead.
-            0
+        match self.address_to_prg_index(address) {
+            PrgMemoryIndex::None => /* TODO: Open bus behavior instead. */ 0,
+            PrgMemoryIndex::MappedMemory(index) => self.raw_memory[index],
+            PrgMemoryIndex::WorkRam(index) => self.work_ram[index],
         }
     }
 
     fn write(&mut self, address: CpuAddress, value: u8) {
-        if let Some(index) = self.address_to_prg_index(address) {
-            self.raw_memory[index] = value;
+        match self.address_to_prg_index(address) {
+            PrgMemoryIndex::None => {},
+            PrgMemoryIndex::MappedMemory(index) => self.raw_memory[index] = value,
+            PrgMemoryIndex::WorkRam(index) => self.work_ram[index] = value,
         }
     }
 
-    fn address_to_prg_index(&self, address: CpuAddress) -> Option<usize> {
+    fn address_to_prg_index(&self, address: CpuAddress) -> PrgMemoryIndex {
         assert!(address >= PRG_MEMORY_START);
         assert!(!self.windows.is_empty());
 
@@ -127,8 +129,17 @@ impl PrgMemory {
                     i -= 1;
                 }
 
-                let bank_index = self.windows[i].bank_index()?;
-                return Some(bank_index as usize * self.bank_size as usize + bank_offset as usize);
+                return match self.windows[i].window_type {
+                    WindowType::Empty => PrgMemoryIndex::None,
+                    WindowType::Rom { bank_index } | WindowType::Ram { bank_index } => {
+                        let mapped_memory_index =
+                            bank_index as usize * self.bank_size as usize + bank_offset as usize;
+                        PrgMemoryIndex::MappedMemory(mapped_memory_index)
+                    }
+                    // WRAM, Save RAM, SRAM, ambiguously "PRG RAM".
+                    WindowType::WorkRam => PrgMemoryIndex::WorkRam(usize::from(bank_offset)),
+                    WindowType::MirrorPrevious => unreachable!(),
+                };
             }
         }
 
@@ -137,6 +148,7 @@ impl PrgMemory {
 
     fn new(
         raw_memory: Vec<u8>,
+        work_ram: Vec<u8>,
         bank_count: u8,
         bank_size: usize,
         windows: Vec<Window>,
@@ -158,6 +170,7 @@ impl PrgMemory {
 
         PrgMemory {
             raw_memory,
+            work_ram,
             bank_count,
             bank_size,
             windows,
@@ -167,6 +180,7 @@ impl PrgMemory {
 
 pub struct PrgMemoryBuilder {
     raw_memory: Option<Vec<u8>>,
+    work_ram: Vec<u8>,
     bank_count: Option<u8>,
     bank_size: Option<usize>,
     windows: Vec<Window>,
@@ -207,13 +221,22 @@ impl PrgMemoryBuilder {
         let bank_size = self.bank_size.unwrap() as u16;
         println!("Size: {}, bank size: {}", size, bank_size);
         assert!(size % bank_size == 0 || bank_size % size == 0);
+
+        if window_type == WindowType::WorkRam {
+            assert!(self.work_ram.is_empty(), "Only one Work RAM section may be specified.");
+            self.work_ram = vec![0; usize::from(size)];
+        }
+
         self.windows.push(window);
         self
     }
 
     pub fn build(self) -> PrgMemory {
+        assert!(!self.windows.is_empty());
+
         PrgMemory::new(
             self.raw_memory.unwrap(),
+            self.work_ram,
             self.bank_count.unwrap(),
             self.bank_size.unwrap(),
             self.windows,
@@ -223,11 +246,18 @@ impl PrgMemoryBuilder {
     fn new() -> PrgMemoryBuilder {
         PrgMemoryBuilder {
             raw_memory: None,
+            work_ram: Vec::new(),
             bank_count: None,
             bank_size: None,
             windows: Vec::new(),
         }
     }
+}
+
+enum PrgMemoryIndex {
+    None,
+    WorkRam(usize),
+    MappedMemory(usize),
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
@@ -279,9 +309,11 @@ impl Window {
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum WindowType {
-    Unmapped,
+    Empty,
     Rom { bank_index: BankIndex },
     Ram { bank_index: BankIndex },
+    // WRAM, Save RAM, SRAM, ambiguously "PRG RAM".
+    WorkRam,
     MirrorPrevious,
 }
 
@@ -291,7 +323,7 @@ impl WindowType {
         match self {
             Rom { bank_index } => Some(bank_index),
             Ram { bank_index } => Some(bank_index),
-            Unmapped | MirrorPrevious => None,
+            Empty | MirrorPrevious | WorkRam => None,
         }
     }
 
@@ -300,7 +332,7 @@ impl WindowType {
         match self {
             Rom {..} => *self = Rom { bank_index: new_bank_index },
             Ram {..} => *self = Ram { bank_index: new_bank_index },
-            Unmapped | MirrorPrevious => unreachable!(),
+            Empty | MirrorPrevious | WorkRam => unreachable!(),
         }
     }
 }

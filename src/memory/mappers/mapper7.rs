@@ -31,7 +31,7 @@ impl Mapper7 {
             .raw_memory(prg_rom)
             .bank_count(bank_count)
             .bank_size(PRG_ROM_BANK_SIZE)
-            .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Unmapped)
+            .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
             .add_window(Ox8000, OxFFFF, 32 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
             .build();
         let cartridge_space = CartridgeSpace::new(prg_memory);
