@@ -8,13 +8,12 @@ use crate::util::bit_util::get_bit;
 use crate::util::mapped_array::Chunk;
 use crate::util::unit::KIBIBYTE;
 
-const EMPTY_CHR_CHUNK: [u8; 0x2000] = [0; 0x2000];
 const BANK_SELECT_START: CpuAddress = CpuAddress::new(0x8000);
 
 // CNROM
 pub struct Mapper3 {
     prg_memory: PrgMemory,
-    raw_pattern_tables: [RawPatternTablePair; 4],
+    raw_pattern_tables: Vec<RawPatternTablePair>,
     selected_chr_bank: ChrBankId,
     name_table_mirroring: NameTableMirroring,
 }
@@ -50,20 +49,17 @@ impl Mapper3 {
         };
 
         let chr_chunk_count = cartridge.chr_rom_chunks().len();
-        if chr_chunk_count > 4 {
+        if chr_chunk_count > 256 {
             return Err(format!(
-                "Max CHR chunks for Mapper 3 is 4, but found {}.",
+                "Max CHR chunks for Mapper 3 is 256, but found {}.",
                 chr_chunk_count,
             ));
         }
 
-        let mut chunk_iter = cartridge.chr_rom_chunks().iter();
-        let raw_pattern_tables = [
-            split_chr_chunk(&**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
-            split_chr_chunk(&**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
-            split_chr_chunk(&**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
-            split_chr_chunk(&**chunk_iter.next().unwrap_or(&Box::new(EMPTY_CHR_CHUNK))),
-        ];
+        let raw_pattern_tables = cartridge.chr_rom_chunks().iter()
+            .map(|chunk| split_chr_chunk(chunk))
+            .collect();
+
         let name_table_mirroring = cartridge.name_table_mirroring();
         Ok(Mapper3 {
             prg_memory,
