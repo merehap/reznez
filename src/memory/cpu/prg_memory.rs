@@ -4,69 +4,6 @@ use crate::util::unit::KIBIBYTE;
 const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
 const PRG_ROM_SIZE: usize = 32 * KIBIBYTE;
 
-pub struct CartridgeSpace {
-    prg_memory: PrgMemory,
-}
-
-impl CartridgeSpace {
-    pub fn new(prg_memory: PrgMemory) -> CartridgeSpace {
-        CartridgeSpace { prg_memory }
-    }
-
-    pub fn read_prg(&self, address: CpuAddress) -> u8 {
-        self.prg_memory.read(address)
-    }
-
-    pub fn write_prg(&mut self, address: CpuAddress, value: u8) {
-        self.prg_memory.write(address, value);
-    }
-
-    pub fn prg_bank_count(&self) -> u8 {
-        self.prg_memory.bank_count
-    }
-
-    pub fn selected_prg_bank_indexes(&self) -> Vec<BankIndex> {
-        self.prg_memory.selected_bank_indexes()
-    }
-
-    pub fn switch_prg_bank_at(&mut self, address: WindowStart, new_bank_index: BankIndex) {
-        self.prg_memory.switch_bank_at(address, new_bank_index);
-    }
-
-    pub fn single_bank(bank: Box<[u8; PRG_ROM_SIZE]>) -> CartridgeSpace {
-        use WindowStart::*;
-        use WindowEnd::*;
-
-        // Only a single bank and only a single index, which points at it.
-        let prg_memory = PrgMemory::builder()
-            .raw_memory(bank.to_vec())
-            .bank_count(1)
-            .bank_size(32 * KIBIBYTE)
-            .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
-            .add_window(Ox8000, OxFFFF, 32 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
-            .build();
-
-        CartridgeSpace { prg_memory }
-    }
-
-    pub fn single_bank_mirrored(bank: Box<[u8; PRG_ROM_SIZE / 2]>) -> CartridgeSpace {
-        use WindowStart::*;
-        use WindowEnd::*;
-
-        // Only a single bank that is half the size of indexable PRG ROM,
-        // so two indexes are necessary, both which point to the only bank.
-        let prg_memory = PrgMemory::builder()
-            .raw_memory(bank.to_vec())
-            .bank_count(1)
-            .bank_size(16 * KIBIBYTE)
-            .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
-            .add_window(Ox8000, OxBFFF, 16 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
-            .add_window(OxC000, OxFFFF, 16 * KIBIBYTE, WindowType::MirrorPrevious)
-            .build();
-        CartridgeSpace { prg_memory }
-    }
-}
-
 pub struct PrgMemory {
     raw_memory: Vec<u8>,
     work_ram: Vec<u8>,
@@ -80,7 +17,41 @@ impl PrgMemory {
         PrgMemoryBuilder::new()
     }
 
-    fn selected_bank_indexes(&self) -> Vec<BankIndex> {
+    pub fn single_bank(bank: Box<[u8; PRG_ROM_SIZE]>) -> PrgMemory {
+        use WindowStart::*;
+        use WindowEnd::*;
+
+        // Only a single bank and only a single index, which points at it.
+        PrgMemory::builder()
+            .raw_memory(bank.to_vec())
+            .bank_count(1)
+            .bank_size(32 * KIBIBYTE)
+            .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
+            .add_window(Ox8000, OxFFFF, 32 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
+            .build()
+    }
+
+    pub fn single_bank_mirrored(bank: Box<[u8; PRG_ROM_SIZE / 2]>) -> PrgMemory {
+        use WindowStart::*;
+        use WindowEnd::*;
+
+        // Only a single bank that is half the size of indexable PRG ROM,
+        // so two indexes are necessary, both which point to the only bank.
+        PrgMemory::builder()
+            .raw_memory(bank.to_vec())
+            .bank_count(1)
+            .bank_size(16 * KIBIBYTE)
+            .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
+            .add_window(Ox8000, OxBFFF, 16 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
+            .add_window(OxC000, OxFFFF, 16 * KIBIBYTE, WindowType::MirrorPrevious)
+            .build()
+    }
+
+    pub fn bank_count(&self) -> u8 {
+        self.bank_count
+    }
+
+    pub fn selected_bank_indexes(&self) -> Vec<BankIndex> {
         let mut indexes = Vec::new();
         for window in &self.windows {
             if let Some(bank_index) = window.bank_index() {
@@ -91,7 +62,7 @@ impl PrgMemory {
         indexes
     }
 
-    fn switch_bank_at(&mut self, start: WindowStart, new_bank_index: BankIndex) {
+    pub fn switch_bank_at(&mut self, start: WindowStart, new_bank_index: BankIndex) {
         assert!(new_bank_index < self.bank_count);
 
         for window in &mut self.windows {
@@ -104,7 +75,7 @@ impl PrgMemory {
         panic!("No window exists at {:?}", start);
     }
 
-    fn read(&self, address: CpuAddress) -> u8 {
+    pub fn read(&self, address: CpuAddress) -> u8 {
         match self.address_to_prg_index(address) {
             PrgMemoryIndex::None => /* TODO: Open bus behavior instead. */ 0,
             PrgMemoryIndex::MappedMemory(index) => self.raw_memory[index],
@@ -112,7 +83,7 @@ impl PrgMemory {
         }
     }
 
-    fn write(&mut self, address: CpuAddress, value: u8) {
+    pub fn write(&mut self, address: CpuAddress, value: u8) {
         match self.address_to_prg_index(address) {
             PrgMemoryIndex::None => {},
             PrgMemoryIndex::MappedMemory(index) => self.raw_memory[index] = value,

@@ -3,7 +3,7 @@ use num_traits::FromPrimitive;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
-use crate::memory::cpu::cartridge_space::CartridgeSpace;
+use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
@@ -24,17 +24,17 @@ pub type RawPatternTablePair = [RawPatternTable; 2];
 
 pub trait Mapper {
     fn name_table_mirroring(&self) -> NameTableMirroring;
-    fn cartridge_space(&self) -> &CartridgeSpace;
+    fn prg_memory(&self) -> &PrgMemory;
     fn is_chr_writable(&self) -> bool;
 
     fn prg_rom_bank_string(&self) -> String {
-        let indexes = self.cartridge_space().selected_prg_bank_indexes();
+        let indexes = self.prg_memory().selected_bank_indexes();
         let mut bank_text = indexes[0].to_string();
         for i in 1..indexes.len() {
             bank_text.push_str(&format!(", {}", indexes[i]));
         }
 
-        bank_text.push_str(&format!(" ({} banks total)", self.cartridge_space().prg_bank_count()));
+        bank_text.push_str(&format!(" ({} banks total)", self.prg_memory().bank_count()));
 
         bank_text
     }
@@ -43,7 +43,7 @@ pub trait Mapper {
     fn raw_pattern_table(&self, side: PatternTableSide) -> &RawPatternTable;
     fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>>;
 
-    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8);
+    fn write_to_prg_memory(&mut self, address: CpuAddress, value: u8);
 
     #[inline]
     #[rustfmt::skip]
@@ -64,7 +64,7 @@ pub trait Mapper {
             0x4017          => ports.joypad2.borrow_mut().next_status() as u8,
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
             0x4020..=0x5FFF => {/* TODO: Low registers. */ 0},
-            0x6000..=0xFFFF => self.cartridge_space().read_prg(address),
+            0x6000..=0xFFFF => self.prg_memory().read(address),
         }
     }
 
@@ -87,7 +87,7 @@ pub trait Mapper {
             0x4016          => ports.change_strobe(value),
             0x4017          => {/* Do nothing? */},
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
-            0x4020..=0xFFFF => self.write_to_cartridge_space(address, value),
+            0x4020..=0xFFFF => self.write_to_prg_memory(address, value),
         }
     }
 

@@ -2,9 +2,9 @@ use arr_macro::arr;
 use log::error;
 
 use crate::cartridge::Cartridge;
-use crate::memory::cpu::cartridge_space::{CartridgeSpace, PrgMemory, WindowType};
-use crate::memory::cpu::cartridge_space::WindowStart::*;
-use crate::memory::cpu::cartridge_space::WindowEnd::*;
+use crate::memory::cpu::prg_memory::{PrgMemory, WindowType};
+use crate::memory::cpu::prg_memory::WindowStart::*;
+use crate::memory::cpu::prg_memory::WindowEnd::*;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
@@ -26,7 +26,7 @@ pub struct Mapper1 {
 
     // 32 4KiB banks or 16 8KiB banks.
     raw_pattern_tables: [RawPatternTable; 32],
-    cartridge_space: CartridgeSpace,
+    prg_memory: PrgMemory,
     prg_ram: [u8; 0x2000],
     last_prg_bank_index: u8,
 }
@@ -41,20 +41,19 @@ impl Mapper1 {
                     .unwrap_or(MappedArray::empty())
             ; 32];
 
-        let prg_bank_count = cartridge.prg_rom_chunks().len().try_into()
+        let bank_count = cartridge.prg_rom_chunks().len().try_into()
             .expect("Way too many PRG ROM chunks.");
-        let last_prg_bank_index = prg_bank_count - 1;
+        let last_prg_bank_index = bank_count - 1;
 
         // TODO: Allow Work RAM to be turned on.
         let prg_memory = PrgMemory::builder()
             .raw_memory(cartridge.prg_rom())
-            .bank_count(prg_bank_count)
+            .bank_count(bank_count)
             .bank_size(16 * KIBIBYTE)
             .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
             .add_window(Ox8000, OxBFFF, 16 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
             .add_window(OxC000, OxFFFF, 16 * KIBIBYTE, WindowType::Rom { bank_index: last_prg_bank_index })
             .build();
-        let cartridge_space = CartridgeSpace::new(prg_memory);
 
         Mapper1 {
             shift: EMPTY_SHIFT_REGISTER,
@@ -64,7 +63,7 @@ impl Mapper1 {
             selected_prg_bank: 0,
 
             raw_pattern_tables,
-            cartridge_space,
+            prg_memory,
             prg_ram: [0; 0x2000],
             last_prg_bank_index,
         }
@@ -86,8 +85,8 @@ impl Mapper for Mapper1 {
         self.control.mirroring
     }
 
-    fn cartridge_space(&self) -> &CartridgeSpace {
-        &self.cartridge_space
+    fn prg_memory(&self) -> &PrgMemory {
+        &self.prg_memory
     }
 
     // TODO: Verify if this is always true.
@@ -114,7 +113,7 @@ impl Mapper for Mapper1 {
         chunks
     }
 
-    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+    fn write_to_prg_memory(&mut self, address: CpuAddress, value: u8) {
         if get_bit(value, 0) {
             self.shift = EMPTY_SHIFT_REGISTER;
             return;
@@ -159,8 +158,8 @@ impl Mapper for Mapper1 {
             PrgBankMode::FixedLast => (self.selected_prg_bank, self.last_prg_bank_index),
         };
 
-        self.cartridge_space.switch_prg_bank_at(Ox8000, left_index);
-        self.cartridge_space.switch_prg_bank_at(OxC000, right_index);
+        self.prg_memory.switch_bank_at(Ox8000, left_index);
+        self.prg_memory.switch_bank_at(OxC000, right_index);
     }
 
     fn chr_rom_bank_string(&self) -> String {

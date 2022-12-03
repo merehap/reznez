@@ -1,7 +1,7 @@
 use crate::cartridge::Cartridge;
-use crate::memory::cpu::cartridge_space::WindowStart::*;
-use crate::memory::cpu::cartridge_space::WindowEnd::*;
-use crate::memory::cpu::cartridge_space::{CartridgeSpace, PrgMemory, WindowType};
+use crate::memory::cpu::prg_memory::WindowStart::*;
+use crate::memory::cpu::prg_memory::WindowEnd::*;
+use crate::memory::cpu::prg_memory::{PrgMemory, WindowType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
@@ -13,7 +13,7 @@ const PRG_ROM_BANK_SIZE: usize = 32 * KIBIBYTE;
 
 // AxROM
 pub struct Mapper7 {
-    cartridge_space: CartridgeSpace,
+    prg_memory: PrgMemory,
     raw_pattern_tables: RawPatternTablePair,
     name_table_mirroring: NameTableMirroring,
 }
@@ -34,13 +34,12 @@ impl Mapper7 {
             .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
             .add_window(Ox8000, OxFFFF, 32 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
             .build();
-        let cartridge_space = CartridgeSpace::new(prg_memory);
 
         assert_eq!(cartridge.chr_rom_chunks().len(), 0);
         let raw_pattern_tables = [MappedArray::<4>::empty(), MappedArray::<4>::empty()];
 
         Ok(Mapper7 {
-            cartridge_space,
+            prg_memory,
             raw_pattern_tables,
             name_table_mirroring: NameTableMirroring::OneScreenLeftBank,
         })
@@ -52,8 +51,8 @@ impl Mapper for Mapper7 {
         self.name_table_mirroring
     }
 
-    fn cartridge_space(&self) -> &CartridgeSpace {
-        &self.cartridge_space
+    fn prg_memory(&self) -> &PrgMemory {
+        &self.prg_memory
     }
 
     fn is_chr_writable(&self) -> bool {
@@ -72,10 +71,10 @@ impl Mapper for Mapper7 {
         Vec::new()
     }
 
-    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+    fn write_to_prg_memory(&mut self, address: CpuAddress, value: u8) {
         if address.to_raw() >= 0x8000 {
             let bank = value & 0b0000_0111;
-            self.cartridge_space.switch_prg_bank_at(Ox8000, bank);
+            self.prg_memory.switch_bank_at(Ox8000, bank);
 
             self.name_table_mirroring = if value & 0b0001_0000 == 0 {
                 NameTableMirroring::OneScreenLeftBank

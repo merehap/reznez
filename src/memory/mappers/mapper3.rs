@@ -1,6 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::cpu::cartridge_space::CartridgeSpace;
+use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
@@ -12,7 +12,7 @@ const BANK_SELECT_START: CpuAddress = CpuAddress::new(0x8000);
 
 // CNROM
 pub struct Mapper3 {
-    cartridge_space: CartridgeSpace,
+    prg_memory: PrgMemory,
     raw_pattern_tables: [RawPatternTablePair; 4],
     selected_chr_bank: ChrBankId,
     name_table_mirroring: NameTableMirroring,
@@ -21,9 +21,9 @@ pub struct Mapper3 {
 impl Mapper3 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper3, String> {
         let prg_rom_chunks = cartridge.prg_rom_chunks();
-        let cartridge_space = match prg_rom_chunks.len() {
-            1 => CartridgeSpace::single_bank_mirrored(prg_rom_chunks[0].clone()),
-            2 => CartridgeSpace::single_bank(Box::new(cartridge.prg_rom().try_into().unwrap())),
+        let prg_memory = match prg_rom_chunks.len() {
+            1 => PrgMemory::single_bank_mirrored(prg_rom_chunks[0].clone()),
+            2 => PrgMemory::single_bank(Box::new(cartridge.prg_rom().try_into().unwrap())),
             c => {
                 return Err(format!(
                     "PRG ROM size must be 16K or 32K for this mapper, but was {}K",
@@ -49,7 +49,7 @@ impl Mapper3 {
         ];
         let name_table_mirroring = cartridge.name_table_mirroring();
         Ok(Mapper3 {
-            cartridge_space,
+            prg_memory,
             raw_pattern_tables,
             selected_chr_bank: ChrBankId::Zero,
             name_table_mirroring,
@@ -62,8 +62,8 @@ impl Mapper for Mapper3 {
         self.name_table_mirroring
     }
 
-    fn cartridge_space(&self) -> &CartridgeSpace {
-        &self.cartridge_space
+    fn prg_memory(&self) -> &PrgMemory {
+        &self.prg_memory
     }
 
     #[inline]
@@ -89,7 +89,7 @@ impl Mapper for Mapper3 {
         ]
     }
 
-    fn write_to_cartridge_space(&mut self, cpu_address: CpuAddress, value: u8) {
+    fn write_to_prg_memory(&mut self, cpu_address: CpuAddress, value: u8) {
         if cpu_address >= BANK_SELECT_START {
             //println!("Switching to bank {} ({}). Address: {}.", value % 4, value, cpu_address);
             self.selected_chr_bank = ChrBankId::from_u8(value);
