@@ -12,7 +12,6 @@ use crate::util::mapped_array::{Chunk, MappedArray};
 use crate::util::unit::KIBIBYTE;
 
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
-const PRG_RAM_START: CpuAddress = CpuAddress::new(0x6000);
 
 // SxROM (MMC1)
 pub struct Mapper1 {
@@ -25,7 +24,6 @@ pub struct Mapper1 {
     // 32 4KiB banks or 16 8KiB banks.
     raw_pattern_tables: [RawPatternTable; 32],
     prg_memory: PrgMemory,
-    prg_ram: [u8; 0x2000],
     last_prg_bank_index: u8,
 }
 
@@ -62,7 +60,6 @@ impl Mapper1 {
 
             raw_pattern_tables,
             prg_memory,
-            prg_ram: [0; 0x2000],
             last_prg_bank_index,
         }
     }
@@ -126,9 +123,7 @@ impl Mapper for Mapper1 {
             match address.to_raw() {
                 0x0000..=0x401F => unreachable!(),
                 0x4020..=0x5FFF => { /* Do nothing. */ }
-                0x6000..=0x7FFF => {
-                    self.prg_ram[address.to_usize() - PRG_RAM_START.to_usize()] = value;
-                }
+                0x6000..=0x7FFF => self.prg_memory.write(address, value),
                 0x8000..=0x9FFF => self.control = Control::from_u8(self.shift),
                 // FIXME: Handle cases for special boards.
                 0xA000..=0xBFFF => self.selected_chr_bank0 = self.shift,
