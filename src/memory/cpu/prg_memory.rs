@@ -80,7 +80,6 @@ impl PrgMemory {
                             bank_index as usize * self.bank_size as usize + bank_offset as usize;
                         PrgMemoryIndex::MappedMemory(mapped_memory_index)
                     }
-                    // WRAM, Save RAM, SRAM, ambiguously "PRG RAM".
                     WindowType::WorkRam => PrgMemoryIndex::WorkRam(usize::from(bank_offset)),
                     WindowType::MirrorPrevious => unreachable!(),
                 };

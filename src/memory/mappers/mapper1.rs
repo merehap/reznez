@@ -46,7 +46,7 @@ impl Mapper1 {
             .raw_memory(cartridge.prg_rom())
             .bank_count(bank_count)
             .bank_size(16 * KIBIBYTE)
-            .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, WindowType::Empty)
+            .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, WindowType::WorkRam)
             .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
             .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, WindowType::Rom { bank_index: last_prg_bank_index })
             .build();
