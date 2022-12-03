@@ -1,6 +1,4 @@
 use crate::cartridge::Cartridge;
-use crate::memory::cpu::prg_memory::WindowStart::*;
-use crate::memory::cpu::prg_memory::WindowEnd::*;
 use crate::memory::cpu::prg_memory::{PrgMemory, WindowType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
@@ -31,8 +29,8 @@ impl Mapper7 {
             .raw_memory(prg_rom)
             .bank_count(bank_count)
             .bank_size(PRG_ROM_BANK_SIZE)
-            .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
-            .add_window(Ox8000, OxFFFF, 32 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
+            .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, WindowType::Empty)
+            .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
             .build();
 
         assert_eq!(cartridge.chr_rom_chunks().len(), 0);
@@ -74,7 +72,7 @@ impl Mapper for Mapper7 {
     fn write_to_prg_memory(&mut self, address: CpuAddress, value: u8) {
         if address.to_raw() >= 0x8000 {
             let bank = value & 0b0000_0111;
-            self.prg_memory.switch_bank_at(Ox8000, bank);
+            self.prg_memory.switch_bank_at(0x8000, bank);
 
             self.name_table_mirroring = if value & 0b0001_0000 == 0 {
                 NameTableMirroring::OneScreenLeftBank

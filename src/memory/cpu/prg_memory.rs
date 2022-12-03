@@ -47,11 +47,11 @@ impl PrgMemory {
         indexes
     }
 
-    pub fn switch_bank_at(&mut self, start: WindowStart, new_bank_index: BankIndex) {
+    pub fn switch_bank_at(&mut self, start: u16, new_bank_index: BankIndex) {
         assert!(new_bank_index < self.bank_count);
 
         for window in &mut self.windows {
-            if window.start == start {
+            if window.start.to_raw() == start {
                 window.switch_bank(new_bank_index);
                 return;
             }
@@ -65,8 +65,8 @@ impl PrgMemory {
         assert!(!self.windows.is_empty());
 
         for mut i in 0..self.windows.len() {
-            if i == self.windows.len() - 1 || address < self.windows[i + 1].start.to_cpu_address() {
-                let bank_offset = address.to_raw() - (self.windows[i].start as u16);
+            if i == self.windows.len() - 1 || address < self.windows[i + 1].start {
+                let bank_offset = address.to_raw() - (self.windows[i].start.to_raw());
                 // Step backwards until we find which window is being mirrored.
                 while self.windows[i].is_mirror() {
                     assert!(i > 0);
@@ -102,13 +102,13 @@ impl PrgMemory {
         assert!([8 * KIBIBYTE, 16 * KIBIBYTE, 32 * KIBIBYTE].contains(&bank_size));
         assert_eq!(usize::from(bank_count) * bank_size, raw_memory.len());
 
-        assert_eq!(windows[0].start, WindowStart::Ox6000);
-        assert_eq!(windows[windows.len() - 1].end, WindowEnd::OxFFFF);
+        assert_eq!(windows[0].start.to_raw(), 0x6000);
+        assert_eq!(windows[windows.len() - 1].end.to_raw(), 0xFFFF);
 
         for i in 0..windows.len() - 1 {
             assert_eq!(
-                windows[i + 1].start as usize,
-                windows[i].end as usize + 1,
+                windows[i + 1].start.to_raw(),
+                windows[i].end.to_raw() + 1,
             );
         }
 
@@ -148,15 +148,17 @@ impl PrgMemoryBuilder {
 
     pub fn add_window(
         &mut self,
-        start: WindowStart,
-        end: WindowEnd,
+        start: u16,
+        end: u16,
         size: usize,
         window_type: WindowType,
     ) -> &mut PrgMemoryBuilder {
-        let window = Window { start, end, window_type };
+        let window = Window {
+            start: CpuAddress::new(start),
+            end: CpuAddress::new(end),
+            window_type
+        };
 
-        let start = start as u16;
-        let end = end as u16;
         assert!([8 * KIBIBYTE, 16 * KIBIBYTE, 32 * KIBIBYTE].contains(&size));
         assert!(end > start);
         let size: u16 = size.try_into().unwrap();
@@ -204,36 +206,12 @@ enum PrgMemoryIndex {
     MappedMemory(usize),
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
-pub enum WindowStart {
-    Ox6000 = 0x6000,
-    Ox8000 = 0x8000,
-    OxA000 = 0xA000,
-    OxC000 = 0xC000,
-    OxE000 = 0xE000,
-}
-
-impl WindowStart {
-    fn to_cpu_address(self) -> CpuAddress {
-        CpuAddress::new(self as u16)
-    }
-}
-
-#[derive(PartialEq, PartialOrd, Clone, Copy, Debug)]
-pub enum WindowEnd {
-    Ox7FFF = 0x7FFF,
-    Ox9FFF = 0x9FFF,
-    OxBFFF = 0xBFFF,
-    OxDFFF = 0xDFFF,
-    OxFFFF = 0xFFFF,
-}
-
 // A Window is a range within addressable memory.
 // If the specified bank cannot fill the window, adjacent banks will be included too.
 #[derive(Clone, Copy)]
 struct Window {
-    start: WindowStart,
-    end: WindowEnd,
+    start: CpuAddress,
+    end: CpuAddress,
     window_type: WindowType,
 }
 

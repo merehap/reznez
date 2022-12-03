@@ -1,6 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::cpu::prg_memory::{PrgMemory, WindowType, WindowStart, WindowEnd};
+use crate::memory::cpu::prg_memory::{PrgMemory, WindowType};
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
@@ -20,25 +20,22 @@ pub struct Mapper3 {
 
 impl Mapper3 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper3, String> {
-        use WindowStart::*;
-        use WindowEnd::*;
-
         let prg_rom_chunks = cartridge.prg_rom_chunks();
         let prg_memory = match prg_rom_chunks.len() {
             1 => PrgMemory::builder()
                     .raw_memory(cartridge.prg_rom_chunks()[0].to_vec())
                     .bank_count(1)
                     .bank_size(16 * KIBIBYTE)
-                    .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
-                    .add_window(Ox8000, OxBFFF, 16 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
-                    .add_window(OxC000, OxFFFF, 16 * KIBIBYTE, WindowType::MirrorPrevious)
+                    .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, WindowType::Empty)
+                    .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
+                    .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, WindowType::MirrorPrevious)
                     .build(),
             2 => PrgMemory::builder()
                     .raw_memory(cartridge.prg_rom())
                     .bank_count(1)
                     .bank_size(32 * KIBIBYTE)
-                    .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
-                    .add_window(Ox8000, OxFFFF, 32 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
+                    .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, WindowType::Empty)
+                    .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
                     .build(),
             c => {
                 return Err(format!(
@@ -60,12 +57,11 @@ impl Mapper3 {
             .map(|chunk| split_chr_chunk(chunk))
             .collect();
 
-        let name_table_mirroring = cartridge.name_table_mirroring();
         Ok(Mapper3 {
             prg_memory,
             raw_pattern_tables,
             selected_chr_bank: ChrBankId::Zero,
-            name_table_mirroring,
+            name_table_mirroring: cartridge.name_table_mirroring(),
         })
     }
 }

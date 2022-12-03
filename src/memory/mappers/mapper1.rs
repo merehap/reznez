@@ -3,8 +3,6 @@ use log::error;
 
 use crate::cartridge::Cartridge;
 use crate::memory::cpu::prg_memory::{PrgMemory, WindowType};
-use crate::memory::cpu::prg_memory::WindowStart::*;
-use crate::memory::cpu::prg_memory::WindowEnd::*;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
@@ -50,9 +48,9 @@ impl Mapper1 {
             .raw_memory(cartridge.prg_rom())
             .bank_count(bank_count)
             .bank_size(16 * KIBIBYTE)
-            .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
-            .add_window(Ox8000, OxBFFF, 16 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
-            .add_window(OxC000, OxFFFF, 16 * KIBIBYTE, WindowType::Rom { bank_index: last_prg_bank_index })
+            .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, WindowType::Empty)
+            .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
+            .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, WindowType::Rom { bank_index: last_prg_bank_index })
             .build();
 
         Mapper1 {
@@ -158,8 +156,8 @@ impl Mapper for Mapper1 {
             PrgBankMode::FixedLast => (self.selected_prg_bank, self.last_prg_bank_index),
         };
 
-        self.prg_memory.switch_bank_at(Ox8000, left_index);
-        self.prg_memory.switch_bank_at(OxC000, right_index);
+        self.prg_memory.switch_bank_at(0x8000, left_index);
+        self.prg_memory.switch_bank_at(0xC000, right_index);
     }
 
     fn chr_rom_bank_string(&self) -> String {
