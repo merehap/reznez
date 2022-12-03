@@ -2,7 +2,6 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::util::unit::KIBIBYTE;
 
 const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
-const PRG_ROM_SIZE: usize = 32 * KIBIBYTE;
 
 pub struct PrgMemory {
     raw_memory: Vec<u8>,
@@ -17,38 +16,24 @@ impl PrgMemory {
         PrgMemoryBuilder::new()
     }
 
-    pub fn single_bank(bank: Box<[u8; PRG_ROM_SIZE]>) -> PrgMemory {
-        use WindowStart::*;
-        use WindowEnd::*;
-
-        // Only a single bank and only a single index, which points at it.
-        PrgMemory::builder()
-            .raw_memory(bank.to_vec())
-            .bank_count(1)
-            .bank_size(32 * KIBIBYTE)
-            .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
-            .add_window(Ox8000, OxFFFF, 32 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
-            .build()
-    }
-
-    pub fn single_bank_mirrored(bank: Box<[u8; PRG_ROM_SIZE / 2]>) -> PrgMemory {
-        use WindowStart::*;
-        use WindowEnd::*;
-
-        // Only a single bank that is half the size of indexable PRG ROM,
-        // so two indexes are necessary, both which point to the only bank.
-        PrgMemory::builder()
-            .raw_memory(bank.to_vec())
-            .bank_count(1)
-            .bank_size(16 * KIBIBYTE)
-            .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
-            .add_window(Ox8000, OxBFFF, 16 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
-            .add_window(OxC000, OxFFFF, 16 * KIBIBYTE, WindowType::MirrorPrevious)
-            .build()
-    }
-
     pub fn bank_count(&self) -> u8 {
         self.bank_count
+    }
+
+    pub fn read(&self, address: CpuAddress) -> u8 {
+        match self.address_to_prg_index(address) {
+            PrgMemoryIndex::None => /* TODO: Open bus behavior instead. */ 0,
+            PrgMemoryIndex::MappedMemory(index) => self.raw_memory[index],
+            PrgMemoryIndex::WorkRam(index) => self.work_ram[index],
+        }
+    }
+
+    pub fn write(&mut self, address: CpuAddress, value: u8) {
+        match self.address_to_prg_index(address) {
+            PrgMemoryIndex::None => {},
+            PrgMemoryIndex::MappedMemory(index) => self.raw_memory[index] = value,
+            PrgMemoryIndex::WorkRam(index) => self.work_ram[index] = value,
+        }
     }
 
     pub fn selected_bank_indexes(&self) -> Vec<BankIndex> {
@@ -73,22 +58,6 @@ impl PrgMemory {
         }
 
         panic!("No window exists at {:?}", start);
-    }
-
-    pub fn read(&self, address: CpuAddress) -> u8 {
-        match self.address_to_prg_index(address) {
-            PrgMemoryIndex::None => /* TODO: Open bus behavior instead. */ 0,
-            PrgMemoryIndex::MappedMemory(index) => self.raw_memory[index],
-            PrgMemoryIndex::WorkRam(index) => self.work_ram[index],
-        }
-    }
-
-    pub fn write(&mut self, address: CpuAddress, value: u8) {
-        match self.address_to_prg_index(address) {
-            PrgMemoryIndex::None => {},
-            PrgMemoryIndex::MappedMemory(index) => self.raw_memory[index] = value,
-            PrgMemoryIndex::WorkRam(index) => self.work_ram[index] = value,
-        }
     }
 
     fn address_to_prg_index(&self, address: CpuAddress) -> PrgMemoryIndex {
@@ -162,28 +131,28 @@ pub struct PrgMemoryBuilder {
 }
 
 impl PrgMemoryBuilder {
-    pub fn raw_memory(mut self, raw_memory: Vec<u8>) -> PrgMemoryBuilder {
+    pub fn raw_memory(&mut self, raw_memory: Vec<u8>) -> &mut PrgMemoryBuilder {
         self.raw_memory = Some(raw_memory);
         self
     }
 
-    pub fn bank_count(mut self, bank_count: u8) -> PrgMemoryBuilder {
+    pub fn bank_count(&mut self, bank_count: u8) -> &mut PrgMemoryBuilder {
         self.bank_count = Some(bank_count);
         self
     }
 
-    pub fn bank_size(mut self, bank_size: usize) -> PrgMemoryBuilder {
+    pub fn bank_size(&mut self, bank_size: usize) -> &mut PrgMemoryBuilder {
         self.bank_size = Some(bank_size);
         self
     }
 
     pub fn add_window(
-        mut self,
+        &mut self,
         start: WindowStart,
         end: WindowEnd,
         size: usize,
         window_type: WindowType,
-    ) -> PrgMemoryBuilder {
+    ) -> &mut PrgMemoryBuilder {
         let window = Window { start, end, window_type };
 
         let start = start as u16;
@@ -206,15 +175,15 @@ impl PrgMemoryBuilder {
         self
     }
 
-    pub fn build(self) -> PrgMemory {
+    pub fn build(&self) -> PrgMemory {
         assert!(!self.windows.is_empty());
 
         PrgMemory::new(
-            self.raw_memory.unwrap(),
-            self.work_ram,
-            self.bank_count.unwrap(),
-            self.bank_size.unwrap(),
-            self.windows,
+            self.raw_memory.as_ref().unwrap().clone(),
+            self.work_ram.clone(),
+            self.bank_count.unwrap().clone(),
+            self.bank_size.unwrap().clone(),
+            self.windows.clone(),
         )
     }
 

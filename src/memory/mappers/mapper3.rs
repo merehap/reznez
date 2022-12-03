@@ -1,11 +1,12 @@
 use crate::cartridge::Cartridge;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::cpu::prg_memory::PrgMemory;
+use crate::memory::cpu::prg_memory::{PrgMemory, WindowType, WindowStart, WindowEnd};
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::bit_util::get_bit;
 use crate::util::mapped_array::Chunk;
+use crate::util::unit::KIBIBYTE;
 
 const EMPTY_CHR_CHUNK: [u8; 0x2000] = [0; 0x2000];
 const BANK_SELECT_START: CpuAddress = CpuAddress::new(0x8000);
@@ -20,10 +21,26 @@ pub struct Mapper3 {
 
 impl Mapper3 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper3, String> {
+        use WindowStart::*;
+        use WindowEnd::*;
+
         let prg_rom_chunks = cartridge.prg_rom_chunks();
         let prg_memory = match prg_rom_chunks.len() {
-            1 => PrgMemory::single_bank_mirrored(prg_rom_chunks[0].clone()),
-            2 => PrgMemory::single_bank(Box::new(cartridge.prg_rom().try_into().unwrap())),
+            1 => PrgMemory::builder()
+                    .raw_memory(cartridge.prg_rom_chunks()[0].to_vec())
+                    .bank_count(1)
+                    .bank_size(16 * KIBIBYTE)
+                    .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
+                    .add_window(Ox8000, OxBFFF, 16 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
+                    .add_window(OxC000, OxFFFF, 16 * KIBIBYTE, WindowType::MirrorPrevious)
+                    .build(),
+            2 => PrgMemory::builder()
+                    .raw_memory(cartridge.prg_rom())
+                    .bank_count(1)
+                    .bank_size(32 * KIBIBYTE)
+                    .add_window(Ox6000, Ox7FFF,  8 * KIBIBYTE, WindowType::Empty)
+                    .add_window(Ox8000, OxFFFF, 32 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
+                    .build(),
             c => {
                 return Err(format!(
                     "PRG ROM size must be 16K or 32K for this mapper, but was {}K",
