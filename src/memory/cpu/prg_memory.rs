@@ -74,14 +74,14 @@ impl PrgMemory {
                 }
 
                 return match self.windows[i].window_type {
-                    WindowType::Empty => PrgMemoryIndex::None,
-                    WindowType::Rom { bank_index } | WindowType::Ram { bank_index } => {
+                    PrgType::Empty => PrgMemoryIndex::None,
+                    PrgType::Rom { bank_index } | PrgType::Ram { bank_index } => {
                         let mapped_memory_index =
                             bank_index as usize * self.bank_size as usize + bank_offset as usize;
                         PrgMemoryIndex::MappedMemory(mapped_memory_index)
                     }
-                    WindowType::WorkRam => PrgMemoryIndex::WorkRam(usize::from(bank_offset)),
-                    WindowType::MirrorPrevious => unreachable!(),
+                    PrgType::WorkRam => PrgMemoryIndex::WorkRam(usize::from(bank_offset)),
+                    PrgType::MirrorPrevious => unreachable!(),
                 };
             }
         }
@@ -150,7 +150,7 @@ impl PrgMemoryBuilder {
         start: u16,
         end: u16,
         size: usize,
-        window_type: WindowType,
+        window_type: PrgType,
     ) -> &mut PrgMemoryBuilder {
         let window = Window {
             start: CpuAddress::new(start),
@@ -167,7 +167,7 @@ impl PrgMemoryBuilder {
         println!("Size: {}, bank size: {}", size, bank_size);
         assert!(size % bank_size == 0 || bank_size % size == 0);
 
-        if window_type == WindowType::WorkRam {
+        if window_type == PrgType::WorkRam {
             assert!(self.work_ram.is_empty(), "Only one Work RAM section may be specified.");
             self.work_ram = vec![0; usize::from(size)];
         }
@@ -211,7 +211,7 @@ enum PrgMemoryIndex {
 struct Window {
     start: CpuAddress,
     end: CpuAddress,
-    window_type: WindowType,
+    window_type: PrgType,
 }
 
 impl Window {
@@ -224,12 +224,12 @@ impl Window {
     }
 
     fn is_mirror(self) -> bool {
-        self.window_type == WindowType::MirrorPrevious
+        self.window_type == PrgType::MirrorPrevious
     }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy)]
-pub enum WindowType {
+pub enum PrgType {
     Empty,
     Rom { bank_index: BankIndex },
     Ram { bank_index: BankIndex },
@@ -238,9 +238,9 @@ pub enum WindowType {
     MirrorPrevious,
 }
 
-impl WindowType {
+impl PrgType {
     fn bank_index(self) -> Option<BankIndex> {
-        use WindowType::*;
+        use PrgType::*;
         match self {
             Rom { bank_index } => Some(bank_index),
             Ram { bank_index } => Some(bank_index),
@@ -249,7 +249,7 @@ impl WindowType {
     }
 
     fn switch_bank(&mut self, new_bank_index: BankIndex) {
-        use WindowType::*;
+        use PrgType::*;
         match self {
             Rom {..} => *self = Rom { bank_index: new_bank_index },
             Ram {..} => *self = Ram { bank_index: new_bank_index },

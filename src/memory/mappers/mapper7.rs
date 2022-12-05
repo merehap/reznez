@@ -1,5 +1,5 @@
 use crate::cartridge::Cartridge;
-use crate::memory::cpu::prg_memory::{PrgMemory, WindowType};
+use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
@@ -29,8 +29,8 @@ impl Mapper7 {
             .raw_memory(prg_rom)
             .bank_count(bank_count)
             .bank_size(PRG_ROM_BANK_SIZE)
-            .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, WindowType::Empty)
-            .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, WindowType::Rom { bank_index: 0 })
+            .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
+            .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Rom { bank_index: 0 })
             .build();
 
         assert_eq!(cartridge.chr_rom_chunks().len(), 0);
