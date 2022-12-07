@@ -4,6 +4,7 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::cpu::prg_memory::PrgMemory;
+use crate::memory::ppu::chr_memory::ChrMemory;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
@@ -25,6 +26,8 @@ pub type RawPatternTablePair = [RawPatternTable; 2];
 pub trait Mapper {
     fn name_table_mirroring(&self) -> NameTableMirroring;
     fn prg_memory(&self) -> &PrgMemory;
+    fn chr_memory(&self) -> &ChrMemory;
+    fn chr_memory_mut(&mut self) -> &mut ChrMemory;
     fn is_chr_writable(&self) -> bool;
 
     fn prg_rom_bank_string(&self) -> String {
@@ -143,15 +146,13 @@ pub trait Mapper {
 
     #[inline]
     fn read_pattern_table_byte(&self, address: PpuAddress) -> u8 {
-        let (side, index) = address_to_pattern_table_index(address);
-        self.raw_pattern_table(side).read(index)
+        self.chr_memory().read(address)
     }
 
     #[inline]
     fn write_pattern_table_byte(&mut self, address: PpuAddress, value: u8) {
         if self.is_chr_writable() {
-            let (side, index) = address_to_pattern_table_index(address);
-            self.raw_pattern_table(side).write(index, value);
+            self.chr_memory_mut().write(address, value);
         }
     }
 

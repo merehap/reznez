@@ -22,7 +22,7 @@ const FINE_Y_ZERO_TOP_BIT_MASK: u16   = 0b0011_0000_0000_0000;
  * . yyy NN YYYYY XXXXX
  * | ||| || ||||| +++++-- Coarse X Scroll
  * | ||| || +++++-------- Coarse Y Scroll
- * | ||| ++-------------- Nametable Select
+ * | ||| ++-------------- Nametable Quadrant
  * | +++----------------- Fine Y Scroll
  * +--------------------- Unused
  */

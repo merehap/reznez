@@ -60,13 +60,14 @@ impl PrgMemory {
         panic!("No window exists at {:?}", start);
     }
 
+    // TODO: Indicate if read-only.
     fn address_to_prg_index(&self, address: CpuAddress) -> PrgMemoryIndex {
         assert!(address >= PRG_MEMORY_START);
         assert!(!self.windows.is_empty());
 
         for mut i in 0..self.windows.len() {
             if i == self.windows.len() - 1 || address < self.windows[i + 1].start {
-                let bank_offset = address.to_raw() - (self.windows[i].start.to_raw());
+                let bank_offset = address.to_raw() - self.windows[i].start.to_raw();
                 // Step backwards until we find which window is being mirrored.
                 while self.windows[i].is_mirror() {
                     assert!(i > 0);
@@ -111,13 +112,7 @@ impl PrgMemory {
             );
         }
 
-        PrgMemory {
-            raw_memory,
-            work_ram,
-            bank_count,
-            bank_size,
-            windows,
-        }
+        PrgMemory { raw_memory, work_ram, bank_count, bank_size, windows }
     }
 }
 
@@ -164,7 +159,6 @@ impl PrgMemoryBuilder {
         assert_eq!(end - start + 1, size);
 
         let bank_size = self.bank_size.unwrap() as u16;
-        println!("Size: {}, bank size: {}", size, bank_size);
         assert!(size % bank_size == 0 || bank_size % size == 0);
 
         if window_type == PrgType::WorkRam {

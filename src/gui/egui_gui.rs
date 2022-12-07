@@ -857,6 +857,8 @@ impl Renderer for ChrBanksRenderer {
             return;
         }
 
+        // TODO: See if this can be re-enabled or if it isn't generalizable (most likely).
+        /*
         assert_eq!(chunks[0].len(), 4);
 
         let mut y_offset = 0;
@@ -877,6 +879,7 @@ impl Renderer for ChrBanksRenderer {
 
             y_offset += 9;
         }
+        */
 
         // TODO: Add ability to switch between the normal display and the following one.
         /*

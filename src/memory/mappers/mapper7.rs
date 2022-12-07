@@ -1,4 +1,5 @@
 use crate::cartridge::Cartridge;
+use crate::memory::ppu::chr_memory::{ChrMemory, ChrType};
 use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
@@ -12,6 +13,7 @@ const PRG_ROM_BANK_SIZE: usize = 32 * KIBIBYTE;
 // AxROM
 pub struct Mapper7 {
     prg_memory: PrgMemory,
+    chr_memory: ChrMemory,
     raw_pattern_tables: RawPatternTablePair,
     name_table_mirroring: NameTableMirroring,
 }
@@ -36,8 +38,16 @@ impl Mapper7 {
         assert_eq!(cartridge.chr_rom_chunks().len(), 0);
         let raw_pattern_tables = [MappedArray::<4>::empty(), MappedArray::<4>::empty()];
 
+        let chr_memory = ChrMemory::builder()
+            .raw_memory(cartridge.chr_rom())
+            .bank_count(1)
+            .bank_size(8 * KIBIBYTE)
+            .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::Rom { bank_index: 0 })
+            .build();
+
         Ok(Mapper7 {
             prg_memory,
+            chr_memory,
             raw_pattern_tables,
             name_table_mirroring: NameTableMirroring::OneScreenLeftBank,
         })
@@ -51,6 +61,14 @@ impl Mapper for Mapper7 {
 
     fn prg_memory(&self) -> &PrgMemory {
         &self.prg_memory
+    }
+
+    fn chr_memory(&self) -> &ChrMemory {
+        &self.chr_memory
+    }
+
+    fn chr_memory_mut(&mut self) -> &mut ChrMemory {
+        &mut self.chr_memory
     }
 
     fn is_chr_writable(&self) -> bool {

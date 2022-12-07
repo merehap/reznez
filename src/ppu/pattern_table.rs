@@ -7,15 +7,15 @@ use crate::ppu::sprite::sprite_half::SpriteHalf;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::util::bit_util::get_bit;
-use crate::util::mapped_array::MappedArray;
+use crate::util::unit::KIBIBYTE;
 
 const PATTERN_TABLE_SIZE: usize = 0x1000;
 const PATTERN_SIZE: usize = 16;
 
-pub struct PatternTable<'a>(&'a MappedArray<4>);
+pub struct PatternTable<'a>([&'a [u8]; 4]);
 
 impl<'a> PatternTable<'a> {
-    pub fn new(raw: &MappedArray<4>) -> PatternTable {
+    pub fn new(raw: [&'a [u8]; 4]) -> PatternTable {
         PatternTable(raw)
     }
 
@@ -25,8 +25,8 @@ impl<'a> PatternTable<'a> {
         row_in_tile: RowInTile,
     ) -> (u8, u8) {
         (
-            self.0.read(pattern_index.to_low_index(row_in_tile)),
-            self.0.read(pattern_index.to_high_index(row_in_tile)),
+            self.read(pattern_index.to_low_index(row_in_tile)),
+            self.read(pattern_index.to_high_index(row_in_tile)),
         )
     }
 
@@ -35,7 +35,7 @@ impl<'a> PatternTable<'a> {
         pattern_index: PatternIndex,
         row_in_tile: RowInTile,
     ) -> u8 {
-        self.0.read(pattern_index.to_low_index(row_in_tile))
+        self.read(pattern_index.to_low_index(row_in_tile))
     }
 
     pub fn read_high_byte(
@@ -43,7 +43,7 @@ impl<'a> PatternTable<'a> {
         pattern_index: PatternIndex,
         row_in_tile: RowInTile,
     ) -> u8 {
-        self.0.read(pattern_index.to_high_index(row_in_tile))
+        self.read(pattern_index.to_high_index(row_in_tile))
     }
 
     // Used for debug windows only.
@@ -76,8 +76,8 @@ impl<'a> PatternTable<'a> {
         let low_index = index + row_in_tile as usize;
         let high_index = low_index + 8;
 
-        let low_byte = self.0.read(low_index);
-        let high_byte = self.0.read(high_index);
+        let low_byte = self.read(low_index);
+        let high_byte = self.read(high_index);
 
         for (column_in_tile, pixel) in tile_sliver.iter_mut().enumerate() {
             let low_bit = get_bit(low_byte, column_in_tile);
@@ -98,12 +98,21 @@ impl<'a> PatternTable<'a> {
         let low_index = index + row_in_tile as usize;
         let high_index = low_index + 8;
 
-        let low_byte = self.0.read(low_index);
-        let high_byte = self.0.read(high_index);
+        let low_byte = self.read(low_index);
+        let high_byte = self.read(high_index);
 
         let low_bit = get_bit(low_byte, column_in_tile as usize);
         let high_bit = get_bit(high_byte, column_in_tile as usize);
         *pixel = palette.rgbt_from_low_high(low_bit, high_bit);
+    }
+
+    fn read(&self, index: usize) -> u8 {
+        let quadrant = index / KIBIBYTE;
+        assert!(quadrant < 5);
+
+        let offset = index % KIBIBYTE;
+
+        self.0[quadrant][offset]
     }
 }
 

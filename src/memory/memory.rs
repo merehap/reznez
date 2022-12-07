@@ -159,7 +159,7 @@ impl<'a> PpuMemory<'a> {
 
     #[inline]
     pub fn pattern_table(&self, side: PatternTableSide) -> PatternTable {
-        PatternTable::new(self.memory.mapper.raw_pattern_table(side))
+        self.memory.mapper.chr_memory().pattern_table(side)
     }
 
     #[inline]

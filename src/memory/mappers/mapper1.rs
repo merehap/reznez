@@ -2,6 +2,7 @@ use arr_macro::arr;
 use log::error;
 
 use crate::cartridge::Cartridge;
+use crate::memory::ppu::chr_memory::{ChrMemory, ChrType};
 use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
@@ -25,6 +26,7 @@ pub struct Mapper1 {
     raw_pattern_tables: [RawPatternTable; 32],
     prg_memory: PrgMemory,
     last_prg_bank_index: u8,
+    chr_memory: ChrMemory,
 }
 
 impl Mapper1 {
@@ -51,6 +53,14 @@ impl Mapper1 {
             .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Rom { bank_index: last_prg_bank_index })
             .build();
 
+        let chr_memory = ChrMemory::builder()
+            .raw_memory(cartridge.chr_rom())
+            .bank_count((2 * cartridge.chr_rom_chunks().len()).try_into().unwrap())
+            .bank_size(4 * KIBIBYTE)
+            .add_window(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::Rom { bank_index: 0 })
+            .add_window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::Rom { bank_index: 0 })
+            .build();
+
         Mapper1 {
             shift: EMPTY_SHIFT_REGISTER,
             control: Control::new(),
@@ -61,6 +71,7 @@ impl Mapper1 {
             raw_pattern_tables,
             prg_memory,
             last_prg_bank_index,
+            chr_memory,
         }
     }
 
@@ -82,6 +93,14 @@ impl Mapper for Mapper1 {
 
     fn prg_memory(&self) -> &PrgMemory {
         &self.prg_memory
+    }
+
+    fn chr_memory(&self) -> &ChrMemory {
+        &self.chr_memory
+    }
+
+    fn chr_memory_mut(&mut self) -> &mut ChrMemory {
+        &mut self.chr_memory
     }
 
     // TODO: Verify if this is always true.
@@ -134,6 +153,11 @@ impl Mapper for Mapper1 {
 
             self.shift = EMPTY_SHIFT_REGISTER;
         }
+
+        // TODO: Consolidate this logic so that the selected_chr_bank vars can be removed.
+        let (left_bank, right_bank) = self.chr_bank_indexes();
+        self.chr_memory.switch_bank_at(0x0000, left_bank);
+        self.chr_memory.switch_bank_at(0x1000, right_bank);
 
         if get_bit(self.selected_prg_bank, 3) {
             error!("Bypassing PRG fixed bank logic not supported.");

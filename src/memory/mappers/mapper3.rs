@@ -1,5 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::ppu::chr_memory::{ChrMemory, ChrType};
 use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
@@ -13,6 +14,7 @@ const BANK_SELECT_START: CpuAddress = CpuAddress::new(0x8000);
 // CNROM
 pub struct Mapper3 {
     prg_memory: PrgMemory,
+    chr_memory: ChrMemory,
     raw_pattern_tables: Vec<RawPatternTablePair>,
     selected_chr_bank: ChrBankId,
     name_table_mirroring: NameTableMirroring,
@@ -23,7 +25,7 @@ impl Mapper3 {
         let prg_rom_chunks = cartridge.prg_rom_chunks();
         let prg_memory = match prg_rom_chunks.len() {
             1 => PrgMemory::builder()
-                    .raw_memory(cartridge.prg_rom_chunks()[0].to_vec())
+                    .raw_memory(prg_rom_chunks[0].to_vec())
                     .bank_count(1)
                     .bank_size(16 * KIBIBYTE)
                     .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
@@ -57,8 +59,16 @@ impl Mapper3 {
             .map(|chunk| split_chr_chunk(chunk))
             .collect();
 
+        let chr_memory = ChrMemory::builder()
+            .raw_memory(cartridge.chr_rom())
+            .bank_count(chr_chunk_count.try_into().unwrap())
+            .bank_size(8 * KIBIBYTE)
+            .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::Rom { bank_index: 0 })
+            .build();
+
         Ok(Mapper3 {
             prg_memory,
+            chr_memory,
             raw_pattern_tables,
             selected_chr_bank: ChrBankId::Zero,
             name_table_mirroring: cartridge.name_table_mirroring(),
@@ -73,6 +83,14 @@ impl Mapper for Mapper3 {
 
     fn prg_memory(&self) -> &PrgMemory {
         &self.prg_memory
+    }
+
+    fn chr_memory(&self) -> &ChrMemory {
+        &self.chr_memory
+    }
+
+    fn chr_memory_mut(&mut self) -> &mut ChrMemory {
+        &mut self.chr_memory
     }
 
     #[inline]
@@ -102,6 +120,7 @@ impl Mapper for Mapper3 {
         if cpu_address >= BANK_SELECT_START {
             //println!("Switching to bank {} ({}). Address: {}.", value % 4, value, cpu_address);
             self.selected_chr_bank = ChrBankId::from_u8(value);
+            self.chr_memory.switch_bank_at(0x0000, value);
         }
     }
 
