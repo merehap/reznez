@@ -32,13 +32,23 @@ impl Mapper7 {
             .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Rom { bank_index: 0 })
             .build();
 
-        assert_eq!(cartridge.chr_rom_chunks().len(), 0);
+        let (raw_chr_memory, chr_type) = match cartridge.chr_rom_chunks().len() {
+            // Provide empty CHR RAM if the cartridge doesn't provide any CHR ROM.
+            0 => (vec![0; 8 * KIBIBYTE], ChrType::Ram { bank_index: 0 }),
+            1 => (cartridge.chr_rom(), ChrType::Rom { bank_index: 0 }),
+            n => {
+                return Err(format!(
+                    "CHR ROM size must be 0K or 8K for mapper 0, but was {}K",
+                    8 * n
+                ))
+            }
+        };
 
         let chr_memory = ChrMemory::builder()
-            .raw_memory(cartridge.chr_rom())
+            .raw_memory(raw_chr_memory)
             .bank_count(1)
             .bank_size(8 * KIBIBYTE)
-            .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::Rom { bank_index: 0 })
+            .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, chr_type)
             .build();
 
         Ok(Mapper7 {
