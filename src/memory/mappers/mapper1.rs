@@ -30,7 +30,7 @@ impl Mapper1 {
             .expect("Way too many PRG ROM chunks.");
         let last_prg_bank_index = bank_count - 1;
 
-        // TODO: Allow Work RAM to be turned on.
+        // TODO: Allow Work RAM to be turned on/off.
         let prg_memory = PrgMemory::builder()
             .raw_memory(cartridge.prg_rom())
             .bank_count(bank_count)

@@ -4,7 +4,6 @@ use crate::memory::ppu::chr_memory::{ChrMemory, ChrType};
 use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
-use crate::util::bit_util::get_bit;
 use crate::util::unit::KIBIBYTE;
 
 const BANK_SELECT_START: CpuAddress = CpuAddress::new(0x8000);
@@ -13,7 +12,6 @@ const BANK_SELECT_START: CpuAddress = CpuAddress::new(0x8000);
 pub struct Mapper3 {
     prg_memory: PrgMemory,
     chr_memory: ChrMemory,
-    selected_chr_bank: ChrBankId,
     name_table_mirroring: NameTableMirroring,
 }
 
@@ -62,7 +60,6 @@ impl Mapper3 {
         Ok(Mapper3 {
             prg_memory,
             chr_memory,
-            selected_chr_bank: ChrBankId::Zero,
             name_table_mirroring: cartridge.name_table_mirroring(),
         })
     }
@@ -92,29 +89,7 @@ impl Mapper for Mapper3 {
 
     fn write_to_prg_memory(&mut self, cpu_address: CpuAddress, value: u8) {
         if cpu_address >= BANK_SELECT_START {
-            //println!("Switching to bank {} ({}). Address: {}.", value % 4, value, cpu_address);
-            self.selected_chr_bank = ChrBankId::from_u8(value);
             self.chr_memory.switch_bank_at(0x0000, value);
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-enum ChrBankId {
-    Zero,
-    One,
-    Two,
-    Three,
-}
-
-impl ChrBankId {
-    #[rustfmt::skip]
-    pub fn from_u8(value: u8) -> ChrBankId {
-        match (get_bit(value, 6), get_bit(value, 7)) {
-            (false, false) => ChrBankId::Zero,
-            (false, true ) => ChrBankId::One,
-            (true , false) => ChrBankId::Two,
-            (true , true ) => ChrBankId::Three,
         }
     }
 }
