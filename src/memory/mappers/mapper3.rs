@@ -4,9 +4,7 @@ use crate::memory::ppu::chr_memory::{ChrMemory, ChrType};
 use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
-use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::bit_util::get_bit;
-use crate::util::mapped_array::Chunk;
 use crate::util::unit::KIBIBYTE;
 
 const BANK_SELECT_START: CpuAddress = CpuAddress::new(0x8000);
@@ -15,7 +13,6 @@ const BANK_SELECT_START: CpuAddress = CpuAddress::new(0x8000);
 pub struct Mapper3 {
     prg_memory: PrgMemory,
     chr_memory: ChrMemory,
-    raw_pattern_tables: Vec<RawPatternTablePair>,
     selected_chr_bank: ChrBankId,
     name_table_mirroring: NameTableMirroring,
 }
@@ -55,10 +52,6 @@ impl Mapper3 {
             ));
         }
 
-        let raw_pattern_tables = cartridge.chr_rom_chunks().iter()
-            .map(|chunk| split_chr_chunk(chunk))
-            .collect();
-
         let chr_memory = ChrMemory::builder()
             .raw_memory(cartridge.chr_rom())
             .bank_count(chr_chunk_count.try_into().unwrap())
@@ -69,7 +62,6 @@ impl Mapper3 {
         Ok(Mapper3 {
             prg_memory,
             chr_memory,
-            raw_pattern_tables,
             selected_chr_bank: ChrBankId::Zero,
             name_table_mirroring: cartridge.name_table_mirroring(),
         })
@@ -98,34 +90,12 @@ impl Mapper for Mapper3 {
         false
     }
 
-    fn raw_pattern_table(&self, side: PatternTableSide) -> &RawPatternTable {
-        &self.raw_pattern_tables[self.selected_chr_bank as usize][side as usize]
-    }
-
-    #[rustfmt::skip]
-    fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>> {
-        vec![
-            self.raw_pattern_tables[0][PatternTableSide::Left as usize].to_chunks().to_vec(),
-            self.raw_pattern_tables[0][PatternTableSide::Right as usize].to_chunks().to_vec(),
-            self.raw_pattern_tables[1][PatternTableSide::Left as usize].to_chunks().to_vec(),
-            self.raw_pattern_tables[1][PatternTableSide::Right as usize].to_chunks().to_vec(),
-            self.raw_pattern_tables[2][PatternTableSide::Left as usize].to_chunks().to_vec(),
-            self.raw_pattern_tables[2][PatternTableSide::Right as usize].to_chunks().to_vec(),
-            self.raw_pattern_tables[3][PatternTableSide::Left as usize].to_chunks().to_vec(),
-            self.raw_pattern_tables[3][PatternTableSide::Right as usize].to_chunks().to_vec(),
-        ]
-    }
-
     fn write_to_prg_memory(&mut self, cpu_address: CpuAddress, value: u8) {
         if cpu_address >= BANK_SELECT_START {
             //println!("Switching to bank {} ({}). Address: {}.", value % 4, value, cpu_address);
             self.selected_chr_bank = ChrBankId::from_u8(value);
             self.chr_memory.switch_bank_at(0x0000, value);
         }
-    }
-
-    fn chr_rom_bank_string(&self) -> String {
-        format!("{} of 4 [8 KiB banks]", self.selected_chr_bank as u8)
     }
 }
 

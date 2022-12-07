@@ -19,10 +19,9 @@ use crate::nes::Nes;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgb::Rgb;
-use crate::ppu::pattern_table::{PatternIndex, PatternTable, PatternTableSide, Tile};
+use crate::ppu::pattern_table::{PatternIndex, PatternTableSide, Tile};
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::render::frame::{DebugBuffer, Frame};
-use crate::util::mapped_array::MappedArray;
 
 const TOP_MENU_BAR_HEIGHT: usize = 24;
 
@@ -820,7 +819,7 @@ impl Renderer for PatternTableRenderer {
 }
 
 struct ChrBanksRenderer {
-    tile: Tile,
+    //tile: Tile,
     buffer: DebugBuffer<{ ChrBanksRenderer::WIDTH }, { ChrBanksRenderer::HEIGHT }>,
 }
 
@@ -830,7 +829,7 @@ impl ChrBanksRenderer {
 
     fn new() -> ChrBanksRenderer {
         ChrBanksRenderer {
-            tile: Tile::new(),
+            //tile: Tile::new(),
             buffer: DebugBuffer::new(Rgb::WHITE),
         }
     }
@@ -845,20 +844,21 @@ impl Renderer for ChrBanksRenderer {
         None
     }
 
-    fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
+    fn render(&mut self, _world: &mut World, pixels: &mut Pixels) {
+        // TODO: See if this can be re-enabled or if it isn't generalizable (most likely).
+        /*
         let palette = world
             .nes
             .memory_mut()
             .as_ppu_memory()
             .palette_table()
             .sprite_palette(PaletteTableIndex::Zero);
+
         let chunks = world.nes.memory().mapper().chr_bank_chunks();
         if chunks.is_empty() {
             return;
         }
 
-        // TODO: See if this can be re-enabled or if it isn't generalizable (most likely).
-        /*
         assert_eq!(chunks[0].len(), 4);
 
         let mut y_offset = 0;

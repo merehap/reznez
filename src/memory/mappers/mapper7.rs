@@ -4,8 +4,6 @@ use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
-use crate::ppu::pattern_table::PatternTableSide;
-use crate::util::mapped_array::{MappedArray, Chunk};
 use crate::util::unit::KIBIBYTE;
 
 const PRG_ROM_BANK_SIZE: usize = 32 * KIBIBYTE;
@@ -14,7 +12,6 @@ const PRG_ROM_BANK_SIZE: usize = 32 * KIBIBYTE;
 pub struct Mapper7 {
     prg_memory: PrgMemory,
     chr_memory: ChrMemory,
-    raw_pattern_tables: RawPatternTablePair,
     name_table_mirroring: NameTableMirroring,
 }
 
@@ -36,7 +33,6 @@ impl Mapper7 {
             .build();
 
         assert_eq!(cartridge.chr_rom_chunks().len(), 0);
-        let raw_pattern_tables = [MappedArray::<4>::empty(), MappedArray::<4>::empty()];
 
         let chr_memory = ChrMemory::builder()
             .raw_memory(cartridge.chr_rom())
@@ -48,7 +44,6 @@ impl Mapper7 {
         Ok(Mapper7 {
             prg_memory,
             chr_memory,
-            raw_pattern_tables,
             name_table_mirroring: NameTableMirroring::OneScreenLeftBank,
         })
     }
@@ -73,18 +68,6 @@ impl Mapper for Mapper7 {
 
     fn is_chr_writable(&self) -> bool {
         true
-    }
-
-    fn chr_rom_bank_string(&self) -> String {
-        "Blah".to_string()
-    }
-
-    fn raw_pattern_table(&self, side: PatternTableSide) -> &RawPatternTable {
-        &self.raw_pattern_tables[side as usize]
-    }
-
-    fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>> {
-        Vec::new()
     }
 
     fn write_to_prg_memory(&mut self, address: CpuAddress, value: u8) {

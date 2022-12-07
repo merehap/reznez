@@ -11,17 +11,11 @@ use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu::vram::VramSide;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
-use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::register::register_type::RegisterType;
-use crate::util::mapped_array::{Chunk, MappedArray};
 use crate::util::unit::KIBIBYTE;
 
-pub const PATTERN_TABLE_SIZE: usize = 4 * KIBIBYTE;
 pub const NAME_TABLE_SIZE: usize = KIBIBYTE;
-
-pub type RawPatternTable = MappedArray<4>;
-pub type RawPatternTablePair = [RawPatternTable; 2];
 
 pub trait Mapper {
     fn name_table_mirroring(&self) -> NameTableMirroring;
@@ -29,23 +23,6 @@ pub trait Mapper {
     fn chr_memory(&self) -> &ChrMemory;
     fn chr_memory_mut(&mut self) -> &mut ChrMemory;
     fn is_chr_writable(&self) -> bool;
-
-    fn prg_rom_bank_string(&self) -> String {
-        let indexes = self.prg_memory().selected_bank_indexes();
-        let mut bank_text = indexes[0].to_string();
-        for i in 1..indexes.len() {
-            bank_text.push_str(&format!(", {}", indexes[i]));
-        }
-
-        bank_text.push_str(&format!(" ({} banks total)", self.prg_memory().bank_count()));
-
-        bank_text
-    }
-
-    fn chr_rom_bank_string(&self) -> String;
-    fn raw_pattern_table(&self, side: PatternTableSide) -> &RawPatternTable;
-    fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>>;
-
     fn write_to_prg_memory(&mut self, address: CpuAddress, value: u8);
 
     #[inline]
@@ -195,26 +172,35 @@ pub trait Mapper {
     ) {
         palette_ram.write(address_to_palette_ram_index(address), value);
     }
-}
 
-pub fn split_chr_chunk(chunk: &[u8; 0x2000]) -> [MappedArray<4>; 2] {
-    [
-        MappedArray::<4>::new::<0x1000>(chunk[0x0000..0x1000].try_into().unwrap()),
-        MappedArray::<4>::new::<0x1000>(chunk[0x1000..0x2000].try_into().unwrap()),
-    ]
+    fn prg_rom_bank_string(&self) -> String {
+        let indexes = self.prg_memory().selected_bank_indexes();
+        let mut bank_text = indexes[0].to_string();
+        for i in 1..indexes.len() {
+            bank_text.push_str(&format!(", {}", indexes[i]));
+        }
+
+        bank_text.push_str(&format!(" ({} banks total)", self.prg_memory().bank_count()));
+
+        bank_text
+    }
+
+    fn chr_rom_bank_string(&self) -> String {
+        let indexes = self.chr_memory().selected_bank_indexes();
+        let mut bank_text = indexes[0].to_string();
+        for i in 1..indexes.len() {
+            bank_text.push_str(&format!(", {}", indexes[i]));
+        }
+
+        bank_text.push_str(&format!(" ({} banks total)", self.prg_memory().bank_count()));
+
+        bank_text
+    }
 }
 
 #[inline]
 fn address_to_ppu_register_type(address: CpuAddress) -> RegisterType {
     FromPrimitive::from_usize(address.to_usize() % 8).unwrap()
-}
-
-#[inline]
-fn address_to_pattern_table_index(address: PpuAddress) -> (PatternTableSide, usize) {
-    let mut index = address.to_usize();
-    let side = PatternTableSide::from_index(index);
-    index %= PATTERN_TABLE_SIZE;
-    (side, index)
 }
 
 #[inline]

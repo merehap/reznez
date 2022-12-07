@@ -1,4 +1,3 @@
-use arr_macro::arr;
 use log::error;
 
 use crate::cartridge::Cartridge;
@@ -7,9 +6,7 @@ use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
-use crate::ppu::pattern_table::PatternTableSide;
 use crate::util::bit_util::get_bit;
-use crate::util::mapped_array::{Chunk, MappedArray};
 use crate::util::unit::KIBIBYTE;
 
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
@@ -22,8 +19,6 @@ pub struct Mapper1 {
     selected_chr_bank1: u8,
     selected_prg_bank: u8,
 
-    // 32 4KiB banks or 16 8KiB banks.
-    raw_pattern_tables: [RawPatternTable; 32],
     prg_memory: PrgMemory,
     last_prg_bank_index: u8,
     chr_memory: ChrMemory,
@@ -31,14 +26,6 @@ pub struct Mapper1 {
 
 impl Mapper1 {
     pub fn new(cartridge: &Cartridge) -> Mapper1 {
-        let mut chr_chunk_iter = cartridge.chr_rom_half_chunks().into_iter();
-        let raw_pattern_tables = arr![
-                chr_chunk_iter
-                    .next()
-                    .map(|chunk| MappedArray::new(chunk.clone()))
-                    .unwrap_or(MappedArray::empty())
-            ; 32];
-
         let bank_count = cartridge.prg_rom_chunks().len().try_into()
             .expect("Way too many PRG ROM chunks.");
         let last_prg_bank_index = bank_count - 1;
@@ -67,8 +54,6 @@ impl Mapper1 {
             selected_chr_bank0: 0,
             selected_chr_bank1: 0,
             selected_prg_bank: 0,
-
-            raw_pattern_tables,
             prg_memory,
             last_prg_bank_index,
             chr_memory,
@@ -107,24 +92,6 @@ impl Mapper for Mapper1 {
     #[inline]
     fn is_chr_writable(&self) -> bool {
         true
-    }
-
-    #[inline]
-    fn raw_pattern_table(&self, side: PatternTableSide) -> &RawPatternTable {
-        let (selected_bank0, selected_bank1) = self.chr_bank_indexes();
-        match side {
-            PatternTableSide::Left => &self.raw_pattern_tables[selected_bank0 as usize],
-            PatternTableSide::Right => &self.raw_pattern_tables[selected_bank1 as usize],
-        }
-    }
-
-    fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>> {
-        let mut chunks = Vec::with_capacity(32);
-        for raw_pattern_table in &self.raw_pattern_tables {
-            chunks.push(raw_pattern_table.to_chunks().to_vec());
-        }
-
-        chunks
     }
 
     fn write_to_prg_memory(&mut self, address: CpuAddress, value: u8) {
@@ -177,14 +144,6 @@ impl Mapper for Mapper1 {
 
         self.prg_memory.switch_bank_at(0x8000, left_index);
         self.prg_memory.switch_bank_at(0xC000, right_index);
-    }
-
-    fn chr_rom_bank_string(&self) -> String {
-        let (selected_bank0, selected_bank1) = self.chr_bank_indexes();
-        format!(
-            "{} and {} [32, 4 KiB banks, mode: {:?}]",
-            selected_bank0, selected_bank1, self.control.chr_bank_mode,
-        )
     }
 }
 

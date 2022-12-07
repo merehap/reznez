@@ -1,6 +1,5 @@
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
-use crate::util::mapped_array::Chunk;
 use crate::util::unit::KIBIBYTE;
 
 pub struct ChrMemory {
@@ -59,10 +58,6 @@ impl ChrMemory {
             PatternTableSide::Left => PatternTable::new(self.left_chunks()),
             PatternTableSide::Right => PatternTable::new(self.right_chunks()),
         }
-    }
-
-    pub fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>> {
-        Vec::new()
     }
 
     fn address_to_chr_index(&self, address: PpuAddress) -> usize {

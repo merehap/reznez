@@ -4,14 +4,11 @@ use crate::memory::ppu::chr_memory::{ChrMemory, ChrType};
 use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
-use crate::ppu::pattern_table::PatternTableSide;
-use crate::util::mapped_array::{Chunk, MappedArray};
 use crate::util::unit::KIBIBYTE;
 
 // NROM
 pub struct Mapper0 {
     prg_memory: PrgMemory,
-    raw_pattern_tables: RawPatternTablePair,
     name_table_mirroring: NameTableMirroring,
     chr_memory: ChrMemory,
     is_chr_writable: bool,
@@ -47,17 +44,6 @@ impl Mapper0 {
         };
 
         let chr_rom_chunks = cartridge.chr_rom_chunks();
-        let raw_pattern_tables = match chr_rom_chunks.len() {
-            // Provide empty CHR RAM if the cartridge doesn't provide any CHR ROM.
-            0 => [MappedArray::<4>::empty(), MappedArray::<4>::empty()],
-            1 => split_chr_chunk(&*chr_rom_chunks[0]),
-            n => {
-                return Err(format!(
-                    "CHR ROM size must be 0K or 8K for mapper 0, but was {}K",
-                    8 * n
-                ))
-            }
-        };
 
         let (raw_chr_memory, chr_type) = match chr_rom_chunks.len() {
             // Provide empty CHR RAM if the cartridge doesn't provide any CHR ROM.
@@ -81,7 +67,6 @@ impl Mapper0 {
         Ok(Mapper0 {
             prg_memory,
             chr_memory,
-            raw_pattern_tables,
             name_table_mirroring: cartridge.name_table_mirroring(),
             is_chr_writable: chr_rom_chunks.is_empty(),
         })
@@ -111,21 +96,7 @@ impl Mapper for Mapper0 {
         self.is_chr_writable
     }
 
-    #[inline]
-    fn raw_pattern_table(&self, side: PatternTableSide) -> &RawPatternTable {
-        &self.raw_pattern_tables[side as usize]
-    }
-
-    fn chr_bank_chunks(&self) -> Vec<Vec<Chunk>> {
-        // Mapper 0 has no CHR banks.
-        Vec::new()
-    }
-
     fn write_to_prg_memory(&mut self, _address: CpuAddress, _value: u8) {
         // Does nothing for mapper 0.
-    }
-
-    fn chr_rom_bank_string(&self) -> String {
-        "(Fixed)".to_string()
     }
 }
