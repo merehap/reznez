@@ -22,7 +22,6 @@ pub trait Mapper {
     fn prg_memory(&self) -> &PrgMemory;
     fn chr_memory(&self) -> &ChrMemory;
     fn chr_memory_mut(&mut self) -> &mut ChrMemory;
-    fn is_chr_writable(&self) -> bool;
     fn write_to_prg_memory(&mut self, address: CpuAddress, value: u8);
 
     #[inline]
@@ -128,9 +127,7 @@ pub trait Mapper {
 
     #[inline]
     fn write_pattern_table_byte(&mut self, address: PpuAddress, value: u8) {
-        if self.is_chr_writable() {
-            self.chr_memory_mut().write(address, value);
-        }
+        self.chr_memory_mut().write(address, value);
     }
 
     #[inline]

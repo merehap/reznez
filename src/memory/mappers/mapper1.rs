@@ -40,12 +40,13 @@ impl Mapper1 {
             .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Rom { bank_index: last_prg_bank_index })
             .build();
 
+        // TODO: Not all boards support CHR RAM.
         let chr_memory = ChrMemory::builder()
             .raw_memory(cartridge.chr_rom())
             .bank_count((2 * cartridge.chr_rom_chunks().len()).try_into().unwrap())
             .bank_size(4 * KIBIBYTE)
-            .add_window(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::Rom { bank_index: 0 })
-            .add_window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::Rom { bank_index: 0 })
+            .add_window(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::Ram { bank_index: 0 })
+            .add_window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::Ram { bank_index: 0 })
             .build(AddDefaultRamIfRomMissing::No);
 
         Mapper1 {
@@ -86,12 +87,6 @@ impl Mapper for Mapper1 {
 
     fn chr_memory_mut(&mut self) -> &mut ChrMemory {
         &mut self.chr_memory
-    }
-
-    // TODO: Verify if this is always true.
-    #[inline]
-    fn is_chr_writable(&self) -> bool {
-        true
     }
 
     fn write_to_prg_memory(&mut self, address: CpuAddress, value: u8) {

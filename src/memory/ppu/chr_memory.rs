@@ -15,13 +15,15 @@ impl ChrMemory {
     }
 
     pub fn read(&self, address: PpuAddress) -> u8 {
-        let index = self.address_to_chr_index(address);
+        let (index, _) = self.address_to_chr_index(address);
         self.raw_memory[index]
     }
 
     pub fn write(&mut self, address: PpuAddress, value: u8) {
-        let index = self.address_to_chr_index(address);
-        self.raw_memory[index] = value;
+        let (index, writable) = self.address_to_chr_index(address);
+        if writable {
+            self.raw_memory[index] = value;
+        }
     }
 
     pub fn selected_bank_indexes(&self) -> Vec<BankIndex> {
@@ -60,19 +62,17 @@ impl ChrMemory {
         }
     }
 
-    fn address_to_chr_index(&self, address: PpuAddress) -> usize {
+    fn address_to_chr_index(&self, address: PpuAddress) -> (usize, bool) {
         assert!(address.to_u16() < 0x2000);
 
         for window in &self.windows {
             if let Some(bank_offset) = window.offset(address) {
-                return usize::from(window.bank_index()) *
+                let index = usize::from(window.bank_index()) *
                     usize::from(self.bank_size) +
                     usize::from(bank_offset);
+                return (index, window.is_writable());
             }
         }
-
-        println!("CHR Address? {}", address);
-        println!("Window {:X}-{:X}", self.windows[0].start.to_u16(), self.windows[0].end.to_u16());
 
         unreachable!();
     }
@@ -89,19 +89,19 @@ impl ChrMemory {
 
     fn left_indexes(&self) -> [usize; 4] {
         [
-            self.address_to_chr_index(PpuAddress::from_u16(0x0000)),
-            self.address_to_chr_index(PpuAddress::from_u16(0x0400)),
-            self.address_to_chr_index(PpuAddress::from_u16(0x0800)),
-            self.address_to_chr_index(PpuAddress::from_u16(0x0C00)),
+            self.address_to_chr_index(PpuAddress::from_u16(0x0000)).0,
+            self.address_to_chr_index(PpuAddress::from_u16(0x0400)).0,
+            self.address_to_chr_index(PpuAddress::from_u16(0x0800)).0,
+            self.address_to_chr_index(PpuAddress::from_u16(0x0C00)).0,
         ]
     }
 
     fn right_indexes(&self) -> [usize; 4] {
         [
-            self.address_to_chr_index(PpuAddress::from_u16(0x1000)),
-            self.address_to_chr_index(PpuAddress::from_u16(0x1400)),
-            self.address_to_chr_index(PpuAddress::from_u16(0x1800)),
-            self.address_to_chr_index(PpuAddress::from_u16(0x1C00)),
+            self.address_to_chr_index(PpuAddress::from_u16(0x1000)).0,
+            self.address_to_chr_index(PpuAddress::from_u16(0x1400)).0,
+            self.address_to_chr_index(PpuAddress::from_u16(0x1800)).0,
+            self.address_to_chr_index(PpuAddress::from_u16(0x1C00)).0,
         ]
     }
 
@@ -239,6 +239,10 @@ impl Window {
         self.chr_type.switch_bank(new_bank_index);
     }
 
+    fn is_writable(self) -> bool {
+        self.chr_type.is_writable()
+    }
+
     fn make_writable(&mut self) {
         self.chr_type.make_writable();
     }
@@ -264,6 +268,10 @@ impl ChrType {
             Rom {..} => *self = Rom { bank_index: new_bank_index },
             Ram {..} => *self = Ram { bank_index: new_bank_index },
         }
+    }
+
+    fn is_writable(self) -> bool {
+        matches!(self, ChrType::Ram {..})
     }
 
     fn make_writable(&mut self) {

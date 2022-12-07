@@ -82,11 +82,6 @@ impl Mapper for Mapper3 {
         &mut self.chr_memory
     }
 
-    #[inline]
-    fn is_chr_writable(&self) -> bool {
-        false
-    }
-
     fn write_to_prg_memory(&mut self, cpu_address: CpuAddress, value: u8) {
         if cpu_address >= BANK_SELECT_START {
             self.chr_memory.switch_bank_at(0x0000, value);

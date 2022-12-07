@@ -9,9 +9,8 @@ use crate::util::unit::KIBIBYTE;
 // NROM
 pub struct Mapper0 {
     prg_memory: PrgMemory,
-    name_table_mirroring: NameTableMirroring,
     chr_memory: ChrMemory,
-    is_chr_writable: bool,
+    name_table_mirroring: NameTableMirroring,
 }
 
 impl Mapper0 {
@@ -61,7 +60,6 @@ impl Mapper0 {
             prg_memory,
             chr_memory,
             name_table_mirroring: cartridge.name_table_mirroring(),
-            is_chr_writable: cartridge.chr_rom_chunks().is_empty(),
         })
     }
 }
@@ -82,11 +80,6 @@ impl Mapper for Mapper0 {
 
     fn chr_memory_mut(&mut self) -> &mut ChrMemory {
         &mut self.chr_memory
-    }
-
-    #[inline]
-    fn is_chr_writable(&self) -> bool {
-        self.is_chr_writable
     }
 
     fn write_to_prg_memory(&mut self, _address: CpuAddress, _value: u8) {

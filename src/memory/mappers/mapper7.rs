@@ -43,7 +43,7 @@ impl Mapper7 {
             .raw_memory(cartridge.chr_rom())
             .bank_count(1)
             .bank_size(8 * KIBIBYTE)
-            .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::Rom { bank_index: 0 })
+            .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::Ram { bank_index: 0 })
             .build(AddDefaultRamIfRomMissing::Yes);
 
         Ok(Mapper7 {
@@ -69,10 +69,6 @@ impl Mapper for Mapper7 {
 
     fn chr_memory_mut(&mut self) -> &mut ChrMemory {
         &mut self.chr_memory
-    }
-
-    fn is_chr_writable(&self) -> bool {
-        true
     }
 
     fn write_to_prg_memory(&mut self, address: CpuAddress, value: u8) {
