@@ -1,6 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::ppu::chr_memory::{ChrMemory, ChrType};
+use crate::memory::ppu::chr_memory::{ChrMemory, ChrType, AddDefaultRamIfRomMissing};
 use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
@@ -16,6 +16,13 @@ pub struct Mapper0 {
 
 impl Mapper0 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper0, String> {
+        if cartridge.chr_rom_chunks().len() >= 2 {
+            return Err(format!(
+                "CHR ROM size must be 0K or 8K for mapper 0, but was {}K",
+                8 * cartridge.chr_rom_chunks().len(),
+            ))
+        }
+
         let prg_rom_chunks = cartridge.prg_rom_chunks();
         let prg_memory = match prg_rom_chunks.len() {
             /* Nrom128 - Mirrored mappings. */
@@ -43,32 +50,18 @@ impl Mapper0 {
             }
         };
 
-        let chr_rom_chunks = cartridge.chr_rom_chunks();
-
-        let (raw_chr_memory, chr_type) = match chr_rom_chunks.len() {
-            // Provide empty CHR RAM if the cartridge doesn't provide any CHR ROM.
-            0 => (vec![0; 8 * KIBIBYTE], ChrType::Ram { bank_index: 0 }),
-            1 => (cartridge.chr_rom(), ChrType::Rom { bank_index: 0 }),
-            n => {
-                return Err(format!(
-                    "CHR ROM size must be 0K or 8K for mapper 0, but was {}K",
-                    8 * n
-                ))
-            }
-        };
-
         let chr_memory = ChrMemory::builder()
-            .raw_memory(raw_chr_memory)
+            .raw_memory(cartridge.chr_rom())
             .bank_count(1)
             .bank_size(8 * KIBIBYTE)
-            .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, chr_type)
-            .build();
+            .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::Rom { bank_index: 0 })
+            .build(AddDefaultRamIfRomMissing::Yes);
 
         Ok(Mapper0 {
             prg_memory,
             chr_memory,
             name_table_mirroring: cartridge.name_table_mirroring(),
-            is_chr_writable: chr_rom_chunks.is_empty(),
+            is_chr_writable: cartridge.chr_rom_chunks().is_empty(),
         })
     }
 }

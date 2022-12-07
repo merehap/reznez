@@ -1,6 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::ppu::chr_memory::{ChrMemory, ChrType};
+use crate::memory::ppu::chr_memory::{ChrMemory, ChrType, AddDefaultRamIfRomMissing};
 use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
@@ -55,7 +55,7 @@ impl Mapper3 {
             .bank_count(chr_chunk_count.try_into().unwrap())
             .bank_size(8 * KIBIBYTE)
             .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::Rom { bank_index: 0 })
-            .build();
+            .build(AddDefaultRamIfRomMissing::No);
 
         Ok(Mapper3 {
             prg_memory,

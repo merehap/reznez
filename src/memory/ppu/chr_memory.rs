@@ -183,7 +183,20 @@ impl ChrMemoryBuilder {
         self
     }
 
-    pub fn build(&mut self) -> ChrMemory {
+    pub fn build(
+        &mut self,
+        add_default_ram_if_rom_missing: AddDefaultRamIfRomMissing,
+    ) -> ChrMemory {
+        if add_default_ram_if_rom_missing.is_yes() && self.raw_memory.as_ref().unwrap().is_empty() {
+            assert_eq!(self.bank_count.unwrap(), 1);
+            assert_eq!(self.bank_size.unwrap(), 8 * KIBIBYTE);
+            assert_eq!(self.windows.len(), 1);
+            assert_eq!(self.windows[0].start.to_u16(), 0x0000);
+            assert_eq!(self.windows[0].end.to_u16(), 0x1FFF);
+            self.raw_memory = Some(vec![0; 8 * KIBIBYTE]);
+            self.windows[0].make_writable();
+        }
+
         ChrMemory::new(
             self.raw_memory.clone().unwrap(),
             self.bank_count.unwrap(),
@@ -225,6 +238,10 @@ impl Window {
     fn switch_bank(&mut self, new_bank_index: BankIndex) {
         self.chr_type.switch_bank(new_bank_index);
     }
+
+    fn make_writable(&mut self) {
+        self.chr_type.make_writable();
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -248,6 +265,22 @@ impl ChrType {
             Ram {..} => *self = Ram { bank_index: new_bank_index },
         }
     }
+
+    fn make_writable(&mut self) {
+        *self = ChrType::Ram { bank_index: self.bank_index() };
+    }
 }
 
 type BankIndex = u8;
+
+#[derive(Clone, Copy)]
+pub enum AddDefaultRamIfRomMissing {
+    Yes,
+    No,
+}
+
+impl AddDefaultRamIfRomMissing {
+    fn is_yes(self) -> bool {
+        matches!(self, AddDefaultRamIfRomMissing::Yes)
+    }
+}
