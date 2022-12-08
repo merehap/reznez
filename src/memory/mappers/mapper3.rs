@@ -56,6 +56,14 @@ impl Mapper3 {
 }
 
 impl Mapper for Mapper3 {
+    fn write_to_cartridge_space(&mut self, cpu_address: CpuAddress, value: u8) {
+        match cpu_address.to_raw() {
+            0x0000..=0x401F => unreachable!(),
+            0x4020..=0x7FFF => { /* Do nothing. */ },
+            0x8000..=0xFFFF => self.chr_memory.switch_bank_at(0x0000, value),
+        }
+    }
+
     fn name_table_mirroring(&self) -> NameTableMirroring {
         self.name_table_mirroring
     }
@@ -70,13 +78,5 @@ impl Mapper for Mapper3 {
 
     fn chr_memory_mut(&mut self) -> &mut ChrMemory {
         &mut self.chr_memory
-    }
-
-    fn write_to_prg_memory(&mut self, cpu_address: CpuAddress, value: u8) {
-        match cpu_address.to_raw() {
-            0x0000..=0x401F => unreachable!(),
-            0x4020..=0x7FFF => { /* Do nothing. */ },
-            0x8000..=0xFFFF => self.chr_memory.switch_bank_at(0x0000, value),
-        }
     }
 }

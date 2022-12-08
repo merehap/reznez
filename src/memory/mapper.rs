@@ -21,7 +21,7 @@ pub trait Mapper {
     fn prg_memory(&self) -> &PrgMemory;
     fn chr_memory(&self) -> &ChrMemory;
     fn chr_memory_mut(&mut self) -> &mut ChrMemory;
-    fn write_to_prg_memory(&mut self, address: CpuAddress, value: u8);
+    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8);
 
     #[inline]
     #[rustfmt::skip]
@@ -65,7 +65,7 @@ pub trait Mapper {
             0x4016          => ports.change_strobe(value),
             0x4017          => {/* Do nothing? */},
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
-            0x4020..=0xFFFF => self.write_to_prg_memory(address, value),
+            0x4020..=0xFFFF => self.write_to_cartridge_space(address, value),
         }
     }
 
@@ -73,7 +73,7 @@ pub trait Mapper {
     fn ppu_read(&self, ppu_internal_ram: &PpuInternalRam, address: PpuAddress) -> u8 {
         let palette_ram = &ppu_internal_ram.palette_ram;
         match address.to_u16() {
-            0x0000..=0x1FFF => self.read_pattern_table_byte(address),
+            0x0000..=0x1FFF => self.chr_memory().read(address),
             0x2000..=0x3EFF => self.read_name_table_byte(ppu_internal_ram, address),
             0x3F00..=0x3FFF => self.read_palette_table_byte(palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
@@ -88,7 +88,7 @@ pub trait Mapper {
         value: u8,
     ) {
         match address.to_u16() {
-            0x0000..=0x1FFF => self.write_pattern_table_byte(address, value),
+            0x0000..=0x1FFF => self.chr_memory_mut().write(address, value),
             0x2000..=0x3EFF => self.write_name_table_byte(internal_ram, address, value),
             0x3F00..=0x3FFF => self.write_palette_table_byte(
                 &mut internal_ram.palette_ram,
@@ -117,16 +117,6 @@ pub trait Mapper {
     ) -> &'a mut [u8; KIBIBYTE] {
         let side = vram_side(position, self.name_table_mirroring());
         ppu_internal_ram.vram.side_mut(side)
-    }
-
-    #[inline]
-    fn read_pattern_table_byte(&self, address: PpuAddress) -> u8 {
-        self.chr_memory().read(address)
-    }
-
-    #[inline]
-    fn write_pattern_table_byte(&mut self, address: PpuAddress, value: u8) {
-        self.chr_memory_mut().write(address, value);
     }
 
     #[inline]

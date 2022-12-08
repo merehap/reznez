@@ -16,9 +16,9 @@ pub struct Mapper1 {
     selected_chr_bank0: u8,
     selected_chr_bank1: u8,
     selected_prg_bank: u8,
+    last_prg_bank_index: u8,
 
     prg_memory: PrgMemory,
-    last_prg_bank_index: u8,
     chr_memory: ChrMemory,
 }
 
@@ -63,23 +63,7 @@ impl Mapper1 {
 }
 
 impl Mapper for Mapper1 {
-    fn name_table_mirroring(&self) -> NameTableMirroring {
-        self.control.mirroring
-    }
-
-    fn prg_memory(&self) -> &PrgMemory {
-        &self.prg_memory
-    }
-
-    fn chr_memory(&self) -> &ChrMemory {
-        &self.chr_memory
-    }
-
-    fn chr_memory_mut(&mut self) -> &mut ChrMemory {
-        &mut self.chr_memory
-    }
-
-    fn write_to_prg_memory(&mut self, address: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
         if get_bit(value, 0) {
             self.shift = EMPTY_SHIFT_REGISTER;
             return;
@@ -135,6 +119,22 @@ impl Mapper for Mapper1 {
 
         self.prg_memory.switch_bank_at(0x8000, left_index);
         self.prg_memory.switch_bank_at(0xC000, right_index);
+    }
+
+    fn name_table_mirroring(&self) -> NameTableMirroring {
+        self.control.mirroring
+    }
+
+    fn prg_memory(&self) -> &PrgMemory {
+        &self.prg_memory
+    }
+
+    fn chr_memory(&self) -> &ChrMemory {
+        &self.chr_memory
+    }
+
+    fn chr_memory_mut(&mut self) -> &mut ChrMemory {
+        &mut self.chr_memory
     }
 }
 

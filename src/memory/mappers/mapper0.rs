@@ -12,7 +12,6 @@ pub struct Mapper0 {
     chr_memory: ChrMemory,
     name_table_mirroring: NameTableMirroring,
 }
-
 impl Mapper0 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper0, String> {
         validate_chr_data_length(cartridge, |len| len <= 8 * KIBIBYTE)?;
@@ -57,11 +56,17 @@ impl Mapper0 {
 }
 
 impl Mapper for Mapper0 {
+    fn write_to_cartridge_space(&mut self, address: CpuAddress, _value: u8) {
+        match address.to_raw() {
+            0x0000..=0x401F => unreachable!(),
+            0x4020..=0xFFFF => { /* Only mapper 0 does nothing here. */ },
+        }
+    }
+
     fn name_table_mirroring(&self) -> NameTableMirroring {
         self.name_table_mirroring
     }
 
-    #[inline]
     fn prg_memory(&self) -> &PrgMemory {
         &self.prg_memory
     }
@@ -72,12 +77,5 @@ impl Mapper for Mapper0 {
 
     fn chr_memory_mut(&mut self) -> &mut ChrMemory {
         &mut self.chr_memory
-    }
-
-    fn write_to_prg_memory(&mut self, address: CpuAddress, _value: u8) {
-        match address.to_raw() {
-            0x0000..=0x401F => unreachable!(),
-            0x4020..=0xFFFF => { /* Only mapper 0 does nothing here. */ },
-        }
     }
 }
