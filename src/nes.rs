@@ -36,7 +36,7 @@ impl Nes {
     pub fn new(config: &Config) -> Nes {
         let mapper = match config.cartridge.mapper_number() {
             0 => Box::new(Mapper0::new(&config.cartridge).unwrap()) as Box<dyn Mapper>,
-            1 => Box::new(Mapper1::new(&config.cartridge)),
+            1 => Box::new(Mapper1::new(&config.cartridge).unwrap()),
             3 => Box::new(Mapper3::new(&config.cartridge).unwrap()),
             7 => Box::new(Mapper7::new(&config.cartridge).unwrap()),
             _ => todo!(),

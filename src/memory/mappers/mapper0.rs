@@ -15,38 +15,30 @@ pub struct Mapper0 {
 
 impl Mapper0 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper0, String> {
-        if cartridge.chr_rom_chunks().len() >= 2 {
-            return Err(format!(
-                "CHR ROM size must be 0K or 8K for mapper 0, but was {}K",
-                8 * cartridge.chr_rom_chunks().len(),
-            ))
-        }
+        validate_chr_data_length(cartridge, |len| len <= 8 * KIBIBYTE)?;
 
-        let prg_rom_chunks = cartridge.prg_rom_chunks();
-        let prg_memory = match prg_rom_chunks.len() {
+        let prg_rom_len = cartridge.prg_rom().len();
+        let prg_memory = if prg_rom_len == 16 * KIBIBYTE {
             /* Nrom128 - Mirrored mappings. */
-            1 => PrgMemory::builder()
-                    .raw_memory(cartridge.prg_rom_chunks()[0].to_vec())
-                    .bank_count(1)
-                    .bank_size(16 * KIBIBYTE)
-                    .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-                    .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Rom { bank_index: 0 })
-                    .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::MirrorPrevious)
-                    .build(),
+            PrgMemory::builder()
+                .raw_memory(cartridge.prg_rom())
+                .bank_count(1)
+                .bank_size(16 * KIBIBYTE)
+                .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
+                .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Rom { bank_index: 0 })
+                .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::MirrorPrevious)
+                .build()
+        } else if prg_rom_len == 32 * KIBIBYTE {
             /* Nrom256 - A single long mapping. */
-            2 => PrgMemory::builder()
-                    .raw_memory(cartridge.prg_rom())
-                    .bank_count(1)
-                    .bank_size(32 * KIBIBYTE)
-                    .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-                    .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Rom { bank_index: 0 })
-                    .build(),
-            c => {
-                return Err(format!(
-                    "PRG ROM size must be 16K or 32K for this mapper, but was {}K",
-                    16 * c,
-                ))
-            }
+            PrgMemory::builder()
+                .raw_memory(cartridge.prg_rom())
+                .bank_count(1)
+                .bank_size(32 * KIBIBYTE)
+                .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
+                .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Rom { bank_index: 0 })
+                .build()
+        } else {
+            return Err("PRG ROM size must be 16K or 32K for mapper 0.".to_string());
         };
 
         let chr_memory = ChrMemory::builder()
@@ -82,7 +74,10 @@ impl Mapper for Mapper0 {
         &mut self.chr_memory
     }
 
-    fn write_to_prg_memory(&mut self, _address: CpuAddress, _value: u8) {
-        // Does nothing for mapper 0.
+    fn write_to_prg_memory(&mut self, address: CpuAddress, _value: u8) {
+        match address.to_raw() {
+            0x0000..=0x401F => unreachable!(),
+            0x4020..=0xFFFF => { /* Only mapper 0 does nothing here. */ },
+        }
     }
 }

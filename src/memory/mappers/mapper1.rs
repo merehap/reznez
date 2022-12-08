@@ -1,5 +1,3 @@
-use log::error;
-
 use crate::cartridge::Cartridge;
 use crate::memory::ppu::chr_memory::{ChrMemory, ChrType, AddDefaultRamIfRomMissing};
 use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
@@ -25,7 +23,9 @@ pub struct Mapper1 {
 }
 
 impl Mapper1 {
-    pub fn new(cartridge: &Cartridge) -> Mapper1 {
+    pub fn new(cartridge: &Cartridge) -> Result<Mapper1, String> {
+        validate_chr_data_length(cartridge, |len| len <= 128 * KIBIBYTE)?;
+
         let bank_count = cartridge.prg_rom_chunks().len().try_into()
             .expect("Way too many PRG ROM chunks.");
         let last_prg_bank_index = bank_count - 1;
@@ -49,7 +49,7 @@ impl Mapper1 {
             .add_window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::Ram { bank_index: 0 })
             .build(AddDefaultRamIfRomMissing::No);
 
-        Mapper1 {
+        Ok(Mapper1 {
             shift: EMPTY_SHIFT_REGISTER,
             control: Control::new(),
             selected_chr_bank0: 0,
@@ -58,17 +58,7 @@ impl Mapper1 {
             prg_memory,
             last_prg_bank_index,
             chr_memory,
-        }
-    }
-
-    fn chr_bank_indexes(&self) -> (u8, u8) {
-        match self.control.chr_bank_mode {
-            ChrBankMode::Large => {
-                let index = self.selected_chr_bank0 & 0b0001_1110;
-                (index, index + 1)
-            }
-            ChrBankMode::TwoSmall => (self.selected_chr_bank0, self.selected_chr_bank1),
-        }
+        })
     }
 }
 
@@ -116,13 +106,19 @@ impl Mapper for Mapper1 {
             self.shift = EMPTY_SHIFT_REGISTER;
         }
 
-        // TODO: Consolidate this logic so that the selected_chr_bank vars can be removed.
-        let (left_bank, right_bank) = self.chr_bank_indexes();
+        let (left_bank, right_bank) = match self.control.chr_bank_mode {
+            ChrBankMode::Large => {
+                let index = self.selected_chr_bank0 & 0b0001_1110;
+                (index, index + 1)
+            }
+            ChrBankMode::TwoSmall => (self.selected_chr_bank0, self.selected_chr_bank1),
+        };
+
         self.chr_memory.switch_bank_at(0x0000, left_bank);
         self.chr_memory.switch_bank_at(0x1000, right_bank);
 
         if get_bit(self.selected_prg_bank, 3) {
-            error!("Bypassing PRG fixed bank logic not supported.");
+            unimplemented!("Bypassing PRG fixed bank logic not supported.");
         }
 
         // Clear the high bit which is never used to change the PRG bank.

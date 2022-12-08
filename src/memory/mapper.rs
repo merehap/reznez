@@ -1,5 +1,6 @@
 use num_traits::FromPrimitive;
 
+use crate::cartridge::Cartridge;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
@@ -14,8 +15,6 @@ use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::register::register_type::RegisterType;
 use crate::util::unit::KIBIBYTE;
-
-pub const NAME_TABLE_SIZE: usize = KIBIBYTE;
 
 pub trait Mapper {
     fn name_table_mirroring(&self) -> NameTableMirroring;
@@ -105,7 +104,7 @@ pub trait Mapper {
         &'a self,
         ppu_internal_ram: &'a PpuInternalRam,
         position: NameTableQuadrant,
-    ) -> &'a [u8; NAME_TABLE_SIZE] {
+    ) -> &'a [u8; KIBIBYTE] {
         let side = vram_side(position, self.name_table_mirroring());
         ppu_internal_ram.vram.side(side)
     }
@@ -115,7 +114,7 @@ pub trait Mapper {
         &'a mut self,
         ppu_internal_ram: &'a mut PpuInternalRam,
         position: NameTableQuadrant,
-    ) -> &'a mut [u8; NAME_TABLE_SIZE] {
+    ) -> &'a mut [u8; KIBIBYTE] {
         let side = vram_side(position, self.name_table_mirroring());
         ppu_internal_ram.vram.side_mut(side)
     }
@@ -195,6 +194,23 @@ pub trait Mapper {
     }
 }
 
+pub fn validate_chr_data_length<P>(
+    cartridge: &Cartridge,
+    predicate: P,
+) -> Result<(), String>
+where P: Fn(usize) -> bool {
+    let length = cartridge.chr_rom().len();
+    if predicate(length) {
+        Ok(())
+    } else {
+        Err(format!(
+            "Mapper {} must not have a CHR ROM length of {}KiB.",
+            cartridge.mapper_number(),
+            8 * cartridge.chr_rom_chunks().len(),
+        ))
+    }
+}
+
 #[inline]
 fn address_to_ppu_register_type(address: CpuAddress) -> RegisterType {
     FromPrimitive::from_usize(address.to_usize() % 8).unwrap()
@@ -219,8 +235,8 @@ fn address_to_name_table_index(address: PpuAddress) -> (NameTableQuadrant, usize
     let index = index - NAME_TABLE_START;
 
     let name_table_quadrant =
-        NameTableQuadrant::from_usize(index / NAME_TABLE_SIZE).unwrap();
-    let index = index % NAME_TABLE_SIZE;
+        NameTableQuadrant::from_usize(index / KIBIBYTE).unwrap();
+    let index = index % KIBIBYTE;
     (name_table_quadrant, index)
 }
 
