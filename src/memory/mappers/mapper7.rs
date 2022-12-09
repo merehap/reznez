@@ -1,5 +1,5 @@
 use crate::cartridge::Cartridge;
-use crate::memory::ppu::chr_memory::{ChrMemory, ChrType, AddDefaultRamIfRomMissing};
+use crate::memory::ppu::chr_memory::{ChrMemory, ChrType};
 use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
@@ -30,7 +30,7 @@ impl Mapper7 {
             .bank_count(1)
             .bank_size(8 * KIBIBYTE)
             .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::Ram { bank_index: 0 })
-            .build(AddDefaultRamIfRomMissing::Yes);
+            .add_default_ram_if_chr_data_missing();
 
         Ok(Mapper7 {
             prg_memory,

@@ -183,16 +183,12 @@ impl ChrMemoryBuilder {
         self
     }
 
-    pub fn build(
-        &mut self,
-        add_default_ram_if_rom_missing: AddDefaultRamIfRomMissing,
-    ) -> ChrMemory {
-        if add_default_ram_if_rom_missing.is_yes() && self.raw_memory.as_ref().unwrap().is_empty() {
+    pub fn add_default_ram_if_chr_data_missing(&mut self) -> ChrMemory {
+        if self.raw_memory.as_ref().unwrap().is_empty() {
             assert_eq!(self.bank_count.unwrap(), 1);
-            assert_eq!(self.bank_size.unwrap(), 8 * KIBIBYTE);
-            assert_eq!(self.windows.len(), 1);
+            // The window configuration needs to be valid despite wiping it out now.
             assert_eq!(self.windows[0].start.to_u16(), 0x0000);
-            assert_eq!(self.windows[0].end.to_u16(), 0x1FFF);
+            assert_eq!(self.windows[self.windows.len() - 1].end.to_u16(), 0x1FFF);
             self.raw_memory = Some(vec![0; 8 * KIBIBYTE]);
             self.windows[0].make_writable();
         }
@@ -280,15 +276,3 @@ impl ChrType {
 }
 
 type BankIndex = u8;
-
-#[derive(Clone, Copy)]
-pub enum AddDefaultRamIfRomMissing {
-    Yes,
-    No,
-}
-
-impl AddDefaultRamIfRomMissing {
-    fn is_yes(self) -> bool {
-        matches!(self, AddDefaultRamIfRomMissing::Yes)
-    }
-}
