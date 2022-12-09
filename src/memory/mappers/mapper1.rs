@@ -26,14 +26,17 @@ impl Mapper1 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper1, String> {
         validate_chr_data_length(cartridge, |len| len <= 128 * KIBIBYTE)?;
 
-        let bank_count = cartridge.prg_rom_chunks().len().try_into()
+        let prg_bank_count = cartridge.prg_rom_chunks().len().try_into()
             .expect("Way too many PRG ROM chunks.");
-        let last_prg_bank_index = bank_count - 1;
+        let last_prg_bank_index = prg_bank_count - 1;
+
+        let chr_bank_count = (2 * cartridge.chr_rom_chunks().len()).try_into()
+            .expect("Too many CHR banks.");
 
         // TODO: Allow Work RAM to be turned on/off.
         let prg_memory = PrgMemory::builder()
             .raw_memory(cartridge.prg_rom())
-            .bank_count(bank_count)
+            .bank_count(prg_bank_count)
             .bank_size(16 * KIBIBYTE)
             .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
             .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Rom { bank_index: 0 })
@@ -43,7 +46,7 @@ impl Mapper1 {
         // TODO: Not all boards support CHR RAM.
         let chr_memory = ChrMemory::builder()
             .raw_memory(cartridge.chr_rom())
-            .bank_count((2 * cartridge.chr_rom_chunks().len()).try_into().unwrap())
+            .bank_count(chr_bank_count)
             .bank_size(4 * KIBIBYTE)
             .add_window(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::Ram { bank_index: 0 })
             .add_window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::Ram { bank_index: 0 })

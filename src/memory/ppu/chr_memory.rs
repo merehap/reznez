@@ -184,13 +184,17 @@ impl ChrMemoryBuilder {
     }
 
     pub fn add_default_ram_if_chr_data_missing(&mut self) -> ChrMemory {
+        // If no CHR data is provided, add 8KiB of CHR RAM.
         if self.raw_memory.as_ref().unwrap().is_empty() {
-            assert_eq!(self.bank_count.unwrap(), 1);
-            // The window configuration needs to be valid despite wiping it out now.
-            assert_eq!(self.windows[0].start.to_u16(), 0x0000);
-            assert_eq!(self.windows[self.windows.len() - 1].end.to_u16(), 0x1FFF);
+            if self.bank_count.unwrap() == 0 {
+                let bank_count = 8 * KIBIBYTE / self.bank_size.unwrap();
+                self.bank_count = Some(bank_count.try_into().unwrap());
+            }
+
             self.raw_memory = Some(vec![0; 8 * KIBIBYTE]);
-            self.windows[0].make_writable();
+            for window in &mut self.windows {
+                window.make_writable();
+            }
         }
 
         ChrMemory::new(

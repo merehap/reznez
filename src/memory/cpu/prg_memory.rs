@@ -47,8 +47,12 @@ impl PrgMemory {
         indexes
     }
 
-    pub fn switch_bank_at(&mut self, start: u16, new_bank_index: BankIndex) {
-        assert!(new_bank_index < self.bank_count);
+    pub fn switch_bank_at(&mut self, start: u16, mut new_bank_index: BankIndex) {
+        // Power of 2.
+        if self.bank_count & (self.bank_count - 1) == 0 {
+            // Ignore irrelevant high bits. TODO: Make it work for non-powers-of-2.
+            new_bank_index %= self.bank_count;
+        }
 
         for window in &mut self.windows {
             if window.start.to_raw() == start {
