@@ -15,12 +15,12 @@ impl ChrMemory {
     }
 
     pub fn read(&self, address: PpuAddress) -> u8 {
-        let (index, _) = self.address_to_chr_index(address);
+        let (index, _) = self.address_to_chr_index(address.to_u16());
         self.raw_memory[index]
     }
 
     pub fn write(&mut self, address: PpuAddress, value: u8) {
-        let (index, writable) = self.address_to_chr_index(address);
+        let (index, writable) = self.address_to_chr_index(address.to_u16());
         if writable {
             self.raw_memory[index] = value;
         }
@@ -42,14 +42,14 @@ impl ChrMemory {
         assert!(new_bank_index < self.bank_count);
 
         for window in &mut self.windows {
-            if window.start.to_u16() == start {
+            if window.start == start {
                 window.switch_bank(new_bank_index);
                 return;
             }
         }
 
         for window in &mut self.windows {
-            println!("Window: {:X} {:X}", window.start.to_u16(), window.end.to_u16());
+            println!("Window: {:X} {:X}", window.start, window.end);
         }
 
         panic!("No window exists at {:X?}", start);
@@ -62,8 +62,8 @@ impl ChrMemory {
         }
     }
 
-    fn address_to_chr_index(&self, address: PpuAddress) -> (usize, bool) {
-        assert!(address.to_u16() < 0x2000);
+    fn address_to_chr_index(&self, address: u16) -> (usize, bool) {
+        assert!(address < 0x2000);
 
         for window in &self.windows {
             if let Some(bank_offset) = window.offset(address) {
@@ -89,19 +89,19 @@ impl ChrMemory {
 
     fn left_indexes(&self) -> [usize; 4] {
         [
-            self.address_to_chr_index(PpuAddress::from_u16(0x0000)).0,
-            self.address_to_chr_index(PpuAddress::from_u16(0x0400)).0,
-            self.address_to_chr_index(PpuAddress::from_u16(0x0800)).0,
-            self.address_to_chr_index(PpuAddress::from_u16(0x0C00)).0,
+            self.address_to_chr_index(0x0000).0,
+            self.address_to_chr_index(0x0400).0,
+            self.address_to_chr_index(0x0800).0,
+            self.address_to_chr_index(0x0C00).0,
         ]
     }
 
     fn right_indexes(&self) -> [usize; 4] {
         [
-            self.address_to_chr_index(PpuAddress::from_u16(0x1000)).0,
-            self.address_to_chr_index(PpuAddress::from_u16(0x1400)).0,
-            self.address_to_chr_index(PpuAddress::from_u16(0x1800)).0,
-            self.address_to_chr_index(PpuAddress::from_u16(0x1C00)).0,
+            self.address_to_chr_index(0x1000).0,
+            self.address_to_chr_index(0x1400).0,
+            self.address_to_chr_index(0x1800).0,
+            self.address_to_chr_index(0x1C00).0,
         ]
     }
 
@@ -121,13 +121,13 @@ impl ChrMemory {
         println!("Count: {}, Size: {}, Len: {}", bank_count, bank_size, raw_memory.len());
         assert_eq!(usize::from(bank_count) * bank_size, raw_memory.len());
 
-        assert_eq!(windows[0].start.to_u16(), 0x0000);
-        assert_eq!(windows[windows.len() - 1].end.to_u16(), 0x1FFF);
+        assert_eq!(windows[0].start, 0x0000);
+        assert_eq!(windows[windows.len() - 1].end, 0x1FFF);
 
         for i in 0..windows.len() - 1 {
             assert_eq!(
-                windows[i + 1].start.to_u16(),
-                windows[i].end.to_u16() + 1,
+                windows[i + 1].start,
+                windows[i].end + 1,
             );
         }
 
@@ -165,12 +165,6 @@ impl ChrMemoryBuilder {
         size: usize,
         chr_type: ChrType,
     ) -> &mut ChrMemoryBuilder {
-        let window = Window {
-            start: PpuAddress::from_u16(start),
-            end: PpuAddress::from_u16(end),
-            chr_type,
-        };
-
         assert!([1 * KIBIBYTE, 2 * KIBIBYTE, 4 * KIBIBYTE, 8 * KIBIBYTE].contains(&size));
         assert!(end > start);
         let size: u16 = size.try_into().unwrap();
@@ -179,7 +173,7 @@ impl ChrMemoryBuilder {
         let bank_size = self.bank_size.unwrap() as u16;
         assert!(size % bank_size == 0 || bank_size % size == 0);
 
-        self.windows.push(window);
+        self.windows.push(Window { start, end, chr_type });
         self
     }
 
@@ -217,15 +211,15 @@ impl ChrMemoryBuilder {
 
 #[derive(Clone, Copy, Debug)]
 struct Window {
-    start: PpuAddress,
-    end: PpuAddress,
+    start: u16,
+    end: u16,
     chr_type: ChrType,
 }
 
 impl Window {
-    fn offset(self, address: PpuAddress) -> Option<u16> {
-        if self.start.to_u16() <= address.to_u16() && address.to_u16() <= self.end.to_u16() {
-            Some(address.to_u16() - self.start.to_u16())
+    fn offset(self, address: u16) -> Option<u16> {
+        if self.start <= address && address <= self.end {
+            Some(address - self.start)
         } else {
             None
         }
