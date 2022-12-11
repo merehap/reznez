@@ -100,6 +100,10 @@ impl Nes {
         loop {
             let step_result = self.step();
             if step_result.is_last_cycle_of_frame {
+                if self.cpu.jammed() {
+                    println!("CPU is jammed!");
+                }
+
                 break;
             }
         }
@@ -108,7 +112,8 @@ impl Nes {
     pub fn step(&mut self) -> StepResult {
         let mut instruction = None;
         if self.cycle % 3 == 2 {
-            instruction = self.cpu.step(&mut self.memory.as_cpu_memory());
+            instruction = self.cpu.step(&mut self.memory.as_cpu_memory())
+                .to_instruction();
             if let Some(instruction) = instruction {
                 if log_enabled!(target: "cpu", Info) {
                     self.log_state(instruction);
@@ -135,6 +140,7 @@ impl Nes {
     #[inline]
     pub fn process_gui_events(&mut self, events: &Events) {
         for (button, status) in &events.joypad1_button_statuses {
+            println!("Joypad 1: button {:?} status is {:?}", button, status);
             self.joypad1
                 .borrow_mut()
                 .set_button_status(*button, *status);

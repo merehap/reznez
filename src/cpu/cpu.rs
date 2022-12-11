@@ -1,4 +1,4 @@
-use log::info;
+use log::{info, error};
 
 use crate::cpu::cycle_action::{CycleAction, DmaTransferState};
 use crate::cpu::cycle_action_queue::CycleActionQueue;
@@ -27,6 +27,8 @@ pub struct Cpu {
     next_dma_byte_to_write: Option<u8>,
 
     cycle: u64,
+
+    jammed: bool,
 }
 
 impl Cpu {
@@ -57,6 +59,8 @@ impl Cpu {
             // Unclear why this is the case, but nestest must be obeyed.
             // https://github.com/SourMesen/Mesen/blob/master/Core/CPU.cpp#L154
             cycle: 7,
+
+            jammed: false,
         }
     }
 
@@ -67,6 +71,7 @@ impl Cpu {
         self.cycle_action_queue = CycleActionQueue::new();
         self.nmi_pending = false;
         self.cycle = 7;
+        self.jammed = false;
         // TODO: APU resets?
     }
 
@@ -94,17 +99,23 @@ impl Cpu {
         self.cycle
     }
 
+    pub fn jammed(&self) -> bool {
+        self.jammed
+    }
+
     pub fn nmi_pending(&self) -> bool {
         self.nmi_pending
     }
 
     pub fn schedule_nmi(&mut self) {
-        //println!("CycleActionQueue before NMI scheduled: {:#?}", self.cycle_action_queue);
-        //println!("Scheduling NMI");
         self.nmi_pending = true;
     }
 
-    pub fn step(&mut self, memory: &mut CpuMemory) -> Option<Instruction> {
+    pub fn step(&mut self, memory: &mut CpuMemory) -> StepResult {
+        if self.jammed {
+            return StepResult::Nop;
+        }
+
         if let Some(dma_page) = self.dma_port.take_page() {
             self.cycle_action_queue
                 .enqueue_dma_transfer(dma_page, self.cycle);
@@ -123,29 +134,34 @@ impl Cpu {
         if self.nmi_pending {
             self.cycle_action_queue.enqueue_nmi();
             self.nmi_pending = false;
-            //println!("CycleActionQueue after NMI enqueue: {:#?}", self.cycle_action_queue);
         }
 
-        let mut instruction = None;
+        let mut step_result = StepResult::Nop;
         match self
             .cycle_action_queue
             .dequeue()
             .expect("Ran out of CycleActions!")
         {
             CycleAction::Instruction(instr) => {
-                let (branch_taken, oops) = self.execute_instruction(memory, instr);
-                if branch_taken || oops {
-                    self.cycle_action_queue
-                        .skip_to_front(CycleAction::InstructionReturn(instr));
-                    if branch_taken && oops {
-                        self.cycle_action_queue.skip_to_front(CycleAction::Nop);
+                match self.execute_instruction(memory, instr) {
+                    InstructionResult::Success {branch_taken, oops} if branch_taken || oops => {
+                        self.cycle_action_queue
+                            .skip_to_front(CycleAction::InstructionReturn(instr));
+                        if branch_taken && oops {
+                            self.cycle_action_queue.skip_to_front(CycleAction::Nop);
+                        }
                     }
-                } else {
-                    instruction = Some(instr);
+                    InstructionResult::Success {..} =>
+                        step_result = StepResult::Instruction(instr),
+                    InstructionResult::Jam => {
+                        self.jammed = true;
+                        error!("JAMMED!");
+                        step_result = StepResult::Instruction(instr);
+                    }
                 }
             }
             CycleAction::InstructionReturn(instr) => {
-                instruction = Some(instr);
+                step_result = StepResult::Instruction(instr);
             }
             CycleAction::Nmi => {
                 info!(target: "cpu", "Executing NMI.");
@@ -165,7 +181,7 @@ impl Cpu {
 
         self.cycle += 1;
 
-        instruction
+        step_result
     }
 
     #[rustfmt::skip]
@@ -173,7 +189,7 @@ impl Cpu {
         &mut self,
         memory: &mut CpuMemory,
         instruction: Instruction,
-    ) -> (bool, bool) {
+    ) -> InstructionResult {
 
         self.program_counter = self.program_counter.advance(instruction.length());
 
@@ -409,7 +425,7 @@ impl Cpu {
             (LAS, _) => unimplemented!(),
 
             (NOP, _) => {}
-            (JAM, _) => panic!("JAM instruction encountered!"),
+            (JAM, _) => return InstructionResult::Jam,
             (op_code, arg) =>
                 unreachable!(
                     "Argument type {:?} is invalid for the {:?} opcode.",
@@ -418,7 +434,7 @@ impl Cpu {
                     ),
         }
 
-        (branch_taken, oops)
+        InstructionResult::Success { branch_taken, oops }
     }
 
     fn adc(&mut self, value: u8) -> u8 {
@@ -520,6 +536,30 @@ fn is_neg(value: u8) -> bool {
 pub enum ProgramCounterSource {
     ResetVector,
     Override(CpuAddress),
+}
+
+#[derive(Clone, Copy)]
+pub enum StepResult {
+    Nop,
+    Instruction(Instruction),
+}
+
+impl StepResult {
+    pub fn to_instruction(self) -> Option<Instruction> {
+        if let StepResult::Instruction(instruction) = self {
+            Some(instruction)
+        } else {
+            None
+        }
+    }
+}
+
+enum InstructionResult {
+    Jam,
+    Success {
+        branch_taken: bool,
+        oops: bool,
+    },
 }
 
 #[cfg(test)]
