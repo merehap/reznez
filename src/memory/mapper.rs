@@ -103,9 +103,9 @@ pub trait Mapper {
     fn raw_name_table<'a>(
         &'a self,
         ppu_internal_ram: &'a PpuInternalRam,
-        position: NameTableQuadrant,
+        quadrant: NameTableQuadrant,
     ) -> &'a [u8; KIBIBYTE] {
-        let side = vram_side(position, self.name_table_mirroring());
+        let side = vram_side(quadrant, self.name_table_mirroring());
         ppu_internal_ram.vram.side(side)
     }
 
@@ -253,18 +253,17 @@ fn vram_side(
     name_table_quadrant: NameTableQuadrant,
     mirroring: NameTableMirroring,
 ) -> VramSide {
-
     use NameTableQuadrant::*;
     use NameTableMirroring::*;
     match (name_table_quadrant, mirroring) {
+        (_          , FourScreen) => todo!("FourScreen isn't supported yet."),
+        (_          , OneScreenLeftBank) => VramSide::Left,
+        (_          , OneScreenRightBank) => VramSide::Right,
         (TopLeft    , _         ) => VramSide::Left,
         (TopRight   , Horizontal) => VramSide::Left,
         (BottomLeft , Horizontal) => VramSide::Right,
         (TopRight   , Vertical  ) => VramSide::Right,
         (BottomLeft , Vertical  ) => VramSide::Left,
         (BottomRight, _         ) => VramSide::Right,
-        (_          , FourScreen) => todo!("FourScreen isn't supported yet."),
-        (_          , OneScreenLeftBank) => VramSide::Left,
-        (_          , OneScreenRightBank) => VramSide::Right,
     }
 }

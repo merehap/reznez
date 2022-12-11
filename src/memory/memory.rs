@@ -173,11 +173,11 @@ impl<'a> PpuMemory<'a> {
     }
 
     #[inline]
-    pub fn name_table(&self, number: NameTableQuadrant) -> NameTable {
+    pub fn name_table(&self, quadrant: NameTableQuadrant) -> NameTable {
         NameTable::new(
             self.memory
                 .mapper
-                .raw_name_table(&self.memory.ppu_internal_ram, number),
+                .raw_name_table(&self.memory.ppu_internal_ram, quadrant),
         )
     }
 
