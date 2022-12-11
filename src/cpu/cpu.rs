@@ -155,7 +155,7 @@ impl Cpu {
                         step_result = StepResult::Instruction(instr),
                     InstructionResult::Jam => {
                         self.jammed = true;
-                        error!("JAMMED!");
+                        error!("CPU JAMMED! Instruction code point: ${:02X}", instr.template.code_point);
                         step_result = StepResult::Instruction(instr);
                     }
                 }

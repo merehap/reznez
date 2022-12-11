@@ -30,7 +30,10 @@ impl CycleActionQueue {
     }
 
     pub fn enqueue_instruction(&mut self, instruction: Instruction) {
-        for _ in 0..instruction.template.cycle_count as u8 - 1 {
+        let remaining_cycle_count = (instruction.template.cycle_count as u8)
+            .checked_sub(1)
+            .unwrap();
+        for _ in 0..remaining_cycle_count {
             self.queue.push_back(CycleAction::Nop);
         }
 

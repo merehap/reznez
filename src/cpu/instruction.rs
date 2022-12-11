@@ -17,7 +17,7 @@ fn instruction_templates() -> [InstructionTemplate; 256] {
     use AccessMode::*;
     use ExtraCycle::*;
 
-    let jam = (JAM, Imp, 0, No);
+    let jam = (JAM, Imp, 1, No);
     let codes: [[(OpCode, AccessMode, u8, ExtraCycle); 8]; 32] = [
         /*00*/           /*20*/          /*40*/          /*60*/          /*80*/          /*A0*/          /*C0*/          /*E0*/
 /*+00*/ [(BRK,Imp,7,No), (JSR,Abs,6,No), (RTI,Imp,6,No), (RTS,Imp,6,No), (NOP,Imm,2,No), (LDY,Imm,2,No), (CPY,Imm,2,No), (CPX,Imm,2,No)],
