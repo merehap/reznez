@@ -39,8 +39,8 @@ impl Mapper1 {
             .bank_count(prg_bank_count)
             .bank_size(16 * KIBIBYTE)
             .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
-            .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Rom { bank_index: 0 })
-            .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Rom { bank_index: last_prg_bank_index })
+            .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Ram { bank_index: 0 })
+            .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Ram { bank_index: last_prg_bank_index })
             .build();
 
         // TODO: Not all boards support CHR RAM.
