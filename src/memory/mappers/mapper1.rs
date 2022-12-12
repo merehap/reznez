@@ -67,6 +67,11 @@ impl Mapper1 {
 
 impl Mapper for Mapper1 {
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+        if matches!(address.to_raw(), 0x6000..=0x7FFF) {
+            self.prg_memory.write(address, value);
+            return;
+        }
+
         if get_bit(value, 0) {
             self.shift = EMPTY_SHIFT_REGISTER;
             self.control.prg_bank_mode = PrgBankMode::FixedLast;
@@ -82,7 +87,7 @@ impl Mapper for Mapper1 {
             match address.to_raw() {
                 0x0000..=0x401F => unreachable!(),
                 0x4020..=0x5FFF => { /* Do nothing. */ }
-                0x6000..=0x7FFF => self.prg_memory.write(address, value),
+                0x6000..=0x7FFF => unreachable!(),
                 0x8000..=0x9FFF => self.control = Control::from_u8(self.shift),
                 // FIXME: Handle cases for special boards.
                 0xA000..=0xBFFF => self.selected_chr_bank0 = self.shift,
