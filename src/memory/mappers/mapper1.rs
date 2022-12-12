@@ -69,6 +69,7 @@ impl Mapper for Mapper1 {
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
         if get_bit(value, 0) {
             self.shift = EMPTY_SHIFT_REGISTER;
+            self.control.prg_bank_mode = PrgBankMode::FixedLast;
             return;
         }
 
