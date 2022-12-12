@@ -48,11 +48,8 @@ impl PrgMemory {
     }
 
     pub fn switch_bank_at(&mut self, start: u16, mut new_bank_index: BankIndex) {
-        // Power of 2.
-        if self.bank_count & (self.bank_count - 1) == 0 {
-            // Ignore irrelevant high bits. TODO: Make it work for non-powers-of-2.
-            new_bank_index %= self.bank_count;
-        }
+        // Ignore irrelevant high bits.
+        new_bank_index %= self.bank_count;
 
         for window in &mut self.windows {
             if window.start.to_raw() == start {
@@ -102,6 +99,9 @@ impl PrgMemory {
         windows: Vec<Window>,
     ) -> PrgMemory {
         assert!(!windows.is_empty());
+
+        // Power of 2.
+        assert_eq!(bank_count & (bank_count - 1), 0);
 
         assert!([8 * KIBIBYTE, 16 * KIBIBYTE, 32 * KIBIBYTE].contains(&bank_size));
         assert_eq!(usize::from(bank_count) * bank_size, raw_memory.len());
