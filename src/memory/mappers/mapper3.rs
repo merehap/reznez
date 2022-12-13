@@ -12,26 +12,22 @@ impl Mapper3 {
         validate_chr_data_length(cartridge, |len| len > 0 && len <= 2048 * KIBIBYTE)?;
 
         // Same as Mapper 0.
-        let prg_rom_len = cartridge.prg_rom().len();
-        let prg_memory = if prg_rom_len == 16 * KIBIBYTE {
-            PrgMemory::builder()
+        let prg_memory = match Mapper3::board(cartridge)? {
+            Board::Cnrom128 => PrgMemory::builder()
                 .raw_memory(cartridge.prg_rom())
                 .bank_count(1)
                 .bank_size(16 * KIBIBYTE)
                 .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
                 .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Rom { bank_index: 0 })
                 .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::MirrorPrevious)
-                .build()
-        } else if prg_rom_len == 32 * KIBIBYTE {
-            PrgMemory::builder()
+                .build(),
+            Board::Cnrom256 => PrgMemory::builder()
                 .raw_memory(cartridge.prg_rom())
                 .bank_count(1)
                 .bank_size(32 * KIBIBYTE)
                 .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
                 .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Rom { bank_index: 0 })
-                .build()
-        } else {
-            return Err("PRG ROM size must be 16K or 32K for mapper 3.".to_string());
+                .build(),
         };
 
         let chr_memory = ChrMemory::builder()
@@ -46,6 +42,17 @@ impl Mapper3 {
             chr_memory,
             name_table_mirroring: cartridge.name_table_mirroring(),
         })
+    }
+
+    fn board(cartridge: &Cartridge) -> Result<Board, String> {
+        let prg_rom_len = cartridge.prg_rom().len();
+        if prg_rom_len == 16 * KIBIBYTE {
+            Ok(Board::Cnrom128)
+        } else if prg_rom_len == 32 * KIBIBYTE {
+            Ok(Board::Cnrom256)
+        } else {
+            Err("PRG ROM size must be 16K or 32K for mapper 0.".to_string())
+        }
     }
 }
 
@@ -73,4 +80,9 @@ impl Mapper for Mapper3 {
     fn chr_memory_mut(&mut self) -> &mut ChrMemory {
         &mut self.chr_memory
     }
+}
+
+enum Board {
+    Cnrom128,
+    Cnrom256,
 }
