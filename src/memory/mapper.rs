@@ -1,20 +1,20 @@
 use num_traits::FromPrimitive;
 
-use crate::cartridge::Cartridge;
-use crate::memory::cpu::cpu_address::CpuAddress;
+pub use crate::cartridge::Cartridge;
+pub use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
-use crate::memory::cpu::prg_memory::PrgMemory;
-use crate::memory::ppu::chr_memory::ChrMemory;
+pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
+pub use crate::memory::ppu::chr_memory::{ChrMemory, ChrType};
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu::vram::VramSide;
-use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
+pub use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::register::register_type::RegisterType;
-use crate::util::unit::KIBIBYTE;
+pub use crate::util::unit::KIBIBYTE;
 
 pub trait Mapper {
     fn name_table_mirroring(&self) -> NameTableMirroring;

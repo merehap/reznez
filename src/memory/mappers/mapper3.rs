@@ -1,10 +1,4 @@
-use crate::cartridge::Cartridge;
-use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::ppu::chr_memory::{ChrMemory, ChrType};
-use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
 use crate::memory::mapper::*;
-use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
-use crate::util::unit::KIBIBYTE;
 
 // CNROM
 pub struct Mapper3 {

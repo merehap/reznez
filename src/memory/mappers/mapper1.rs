@@ -1,11 +1,5 @@
-use crate::cartridge::Cartridge;
-use crate::memory::ppu::chr_memory::{ChrMemory, ChrType};
-use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
-use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::mapper::*;
-use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::bit_util::get_bit;
-use crate::util::unit::KIBIBYTE;
 
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
 
