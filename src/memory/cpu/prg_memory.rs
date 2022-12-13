@@ -104,9 +104,10 @@ impl PrgMemory {
         assert_eq!(bank_count & (bank_count - 1), 0);
 
         assert!([8 * KIBIBYTE, 16 * KIBIBYTE, 32 * KIBIBYTE].contains(&bank_size));
-        assert_eq!(usize::from(bank_count) * bank_size, raw_memory.len());
+        assert_eq!(raw_memory.len(), usize::from(bank_count) * bank_size, "Bad PRG data size.");
 
-        assert_eq!(windows[0].start.to_raw(), 0x6000);
+        assert_eq!(windows[0].start.to_raw(), 0x6000,
+            "Every mapper needs a window starting at 0x6000 (usually WorkRam or Empty).");
         assert_eq!(windows[windows.len() - 1].end.to_raw(), 0xFFFF);
 
         for i in 0..windows.len() - 1 {

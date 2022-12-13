@@ -118,7 +118,6 @@ impl ChrMemory {
         // Power of 2.
         assert_eq!(bank_count & (bank_count - 1), 0);
 
-        println!("Count: {}, Size: {}, Len: {}", bank_count, bank_size, raw_memory.len());
         assert_eq!(usize::from(bank_count) * bank_size, raw_memory.len());
 
         assert_eq!(windows[0].start, 0x0000);

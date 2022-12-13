@@ -1,0 +1,73 @@
+use crate::memory::mapper::*;
+
+// UxROM (common usages)
+pub struct Mapper2 {
+    prg_memory: PrgMemory,
+    chr_memory: ChrMemory,
+    name_table_mirroring: NameTableMirroring,
+}
+
+impl Mapper2 {
+    pub fn new(cartridge: &Cartridge) -> Result<Mapper2, String> {
+        validate_chr_data_length(cartridge, |len| len <= 8 * KIBIBYTE)?;
+        let prg_bank_count = Mapper2::prg_bank_count(cartridge)?;
+
+        let prg_memory = PrgMemory::builder()
+            .raw_memory(cartridge.prg_rom())
+            .bank_count(prg_bank_count)
+            .bank_size(16 * KIBIBYTE)
+            .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
+            .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Rom { bank_index: 0 })
+            .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Rom { bank_index: prg_bank_count - 1})
+            .build();
+
+        let chr_memory = ChrMemory::builder()
+            .raw_memory(cartridge.chr_rom())
+            .bank_count(1)
+            .bank_size(8 * KIBIBYTE)
+            .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::Rom { bank_index: 0 })
+            .add_default_ram_if_chr_data_missing();
+
+        Ok(Mapper2 {
+            prg_memory,
+            chr_memory,
+            name_table_mirroring: cartridge.name_table_mirroring(),
+        })
+    }
+
+    fn prg_bank_count(cartridge: &Cartridge) -> Result<u8, String> {
+        let bank_size = 16 * KIBIBYTE;
+        let prg_rom_len = cartridge.prg_rom().len();
+        assert_eq!(prg_rom_len % bank_size, 0);
+
+        (prg_rom_len / bank_size)
+            .try_into()
+            .map_err(|err| format!("Way too many banks. {}", err))
+    }
+}
+
+impl Mapper for Mapper2 {
+    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+        match address.to_raw() {
+            0x0000..=0x401F => unreachable!(),
+            0x4020..=0x7FFF => { /* Do nothing. */ },
+            0x8000..=0xFFFF => self.prg_memory.switch_bank_at(0x8000, value),
+        }
+    }
+
+    fn name_table_mirroring(&self) -> NameTableMirroring {
+        self.name_table_mirroring
+    }
+
+    fn prg_memory(&self) -> &PrgMemory {
+        &self.prg_memory
+    }
+
+    fn chr_memory(&self) -> &ChrMemory {
+        &self.chr_memory
+    }
+
+    fn chr_memory_mut(&mut self) -> &mut ChrMemory {
+        &mut self.chr_memory
+    }
+}
