@@ -9,21 +9,21 @@ pub struct Mapper2 {
 
 impl Mapper2 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper2, String> {
-        validate_chr_data_length(cartridge, |len| len <= 8 * KIBIBYTE)?;
-        let prg_bank_count = Mapper2::prg_bank_count(cartridge)?;
+        let last_bank_index = Mapper2::prg_bank_count(cartridge)? - 1;
 
         let prg_memory = PrgMemory::builder()
             .raw_memory(cartridge.prg_rom())
-            .bank_count(prg_bank_count)
+            .max_bank_count(256)
             .bank_size(16 * KIBIBYTE)
             .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
             .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Rom { bank_index: 0 })
-            .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Rom { bank_index: prg_bank_count - 1})
+            .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Rom { bank_index: last_bank_index})
             .build();
 
+        // Not bank-switched.
         let chr_memory = ChrMemory::builder()
             .raw_memory(cartridge.chr_rom())
-            .bank_count(1)
+            .max_bank_count(1)
             .bank_size(8 * KIBIBYTE)
             .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::Rom { bank_index: 0 })
             .add_default_ram_if_chr_data_missing();
@@ -35,7 +35,7 @@ impl Mapper2 {
         })
     }
 
-    fn prg_bank_count(cartridge: &Cartridge) -> Result<u8, String> {
+    fn prg_bank_count(cartridge: &Cartridge) -> Result<u16, String> {
         let bank_size = 16 * KIBIBYTE;
         let prg_rom_len = cartridge.prg_rom().len();
         assert_eq!(prg_rom_len % bank_size, 0);
@@ -51,7 +51,7 @@ impl Mapper for Mapper2 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
-            0x8000..=0xFFFF => self.prg_memory.switch_bank_at(0x8000, value),
+            0x8000..=0xFFFF => self.prg_memory.switch_bank_at(0x8000, value.into()),
         }
     }
 

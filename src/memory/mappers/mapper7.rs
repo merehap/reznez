@@ -9,19 +9,18 @@ pub struct Mapper7 {
 
 impl Mapper7 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper7, String> {
-        validate_chr_data_length(cartridge, |len| len <= 8 * KIBIBYTE)?;
-
         let prg_memory = PrgMemory::builder()
             .raw_memory(cartridge.prg_rom())
-            .bank_count(Mapper7::prg_bank_count(cartridge)?)
+            .max_bank_count(8)
             .bank_size(32 * KIBIBYTE)
             .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
             .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Rom { bank_index: 0 })
             .build();
 
+        // Not bank-switched.
         let chr_memory = ChrMemory::builder()
             .raw_memory(cartridge.chr_rom())
-            .bank_count(1)
+            .max_bank_count(1)
             .bank_size(8 * KIBIBYTE)
             .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::Ram { bank_index: 0 })
             .add_default_ram_if_chr_data_missing();
@@ -32,16 +31,6 @@ impl Mapper7 {
             name_table_mirroring: NameTableMirroring::OneScreenLeftBank,
         })
     }
-
-    fn prg_bank_count(cartridge: &Cartridge) -> Result<u8, String> {
-        let bank_size = 32 * KIBIBYTE;
-        let prg_rom_len = cartridge.prg_rom().len();
-        assert_eq!(prg_rom_len % bank_size, 0);
-
-        (prg_rom_len / bank_size)
-            .try_into()
-            .map_err(|err| format!("Way too many banks. {}", err))
-    }
 }
 
 impl Mapper for Mapper7 {
@@ -50,7 +39,7 @@ impl Mapper for Mapper7 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
             0x8000..=0xFFFF => {
-                let new_bank = value & 0b0000_0111;
+                let new_bank = (value & 0b0000_0111).into();
                 self.prg_memory.switch_bank_at(0x8000, new_bank);
 
                 self.name_table_mirroring = if value & 0b0001_0000 == 0 {

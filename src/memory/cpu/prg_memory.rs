@@ -6,7 +6,6 @@ const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
 pub struct PrgMemory {
     raw_memory: Vec<u8>,
     work_ram: Vec<u8>,
-    bank_count: u8,
     bank_size: usize,
     windows: Vec<Window>,
 }
@@ -16,8 +15,10 @@ impl PrgMemory {
         PrgMemoryBuilder::new()
     }
 
-    pub fn bank_count(&self) -> u8 {
-        self.bank_count
+    pub fn bank_count(&self) -> u16 {
+        (self.raw_memory.len() / usize::from(self.bank_size))
+            .try_into()
+            .expect("Way too many banks.")
     }
 
     pub fn read(&self, address: CpuAddress) -> u8 {
@@ -49,7 +50,7 @@ impl PrgMemory {
 
     pub fn switch_bank_at(&mut self, start: u16, mut new_bank_index: BankIndex) {
         // Ignore irrelevant high bits.
-        new_bank_index %= self.bank_count;
+        new_bank_index %= self.bank_count();
 
         for window in &mut self.windows {
             if window.start.to_raw() == start {
@@ -94,37 +95,54 @@ impl PrgMemory {
     fn new(
         raw_memory: Vec<u8>,
         work_ram: Vec<u8>,
-        bank_count: u8,
+        max_bank_count: u16,
         bank_size: usize,
         windows: Vec<Window>,
     ) -> PrgMemory {
+
         assert!(!windows.is_empty());
 
-        // Power of 2.
-        assert_eq!(bank_count & (bank_count - 1), 0);
-
-        assert!([8 * KIBIBYTE, 16 * KIBIBYTE, 32 * KIBIBYTE].contains(&bank_size));
-        assert_eq!(raw_memory.len(), usize::from(bank_count) * bank_size, "Bad PRG data size.");
+        assert!(
+            [8 * KIBIBYTE, 16 * KIBIBYTE, 32 * KIBIBYTE].contains(&bank_size),
+            "Bad PRG bank size",
+        );
 
         assert_eq!(windows[0].start.to_raw(), 0x6000,
-            "Every mapper needs a window starting at 0x6000 (usually WorkRam or Empty).");
-        assert_eq!(windows[windows.len() - 1].end.to_raw(), 0xFFFF);
+            "Every mapper needs one PRG window starting at 0x6000 (usually WorkRam or Empty).");
+        assert_eq!(
+            windows[windows.len() - 1].end.to_raw(),
+            0xFFFF,"Every mapper needs one PRG window that extends to 0xFFFF",
+        );
 
         for i in 0..windows.len() - 1 {
             assert_eq!(
                 windows[i + 1].start.to_raw(),
                 windows[i].end.to_raw() + 1,
+                "There must be no gaps nor overlap between PRG windows.",
             );
         }
 
-        PrgMemory { raw_memory, work_ram, bank_count, bank_size, windows }
+        let prg_memory = PrgMemory { raw_memory, work_ram, bank_size, windows };
+        let bank_count = prg_memory.bank_count();
+        assert!(bank_count <= max_bank_count);
+        assert_eq!(
+            prg_memory.raw_memory.len(),
+            usize::from(bank_count) * bank_size,
+            "Bad PRG data size.",
+        );
+        // Power of 2.
+        assert_eq!(max_bank_count & (max_bank_count - 1), 0);
+        assert_eq!(bank_count & (bank_count - 1), 0);
+
+
+        prg_memory
     }
 }
 
 pub struct PrgMemoryBuilder {
     raw_memory: Option<Vec<u8>>,
     work_ram: Vec<u8>,
-    bank_count: Option<u8>,
+    max_bank_count: Option<u16>,
     bank_size: Option<usize>,
     windows: Vec<Window>,
 }
@@ -135,8 +153,8 @@ impl PrgMemoryBuilder {
         self
     }
 
-    pub fn bank_count(&mut self, bank_count: u8) -> &mut PrgMemoryBuilder {
-        self.bank_count = Some(bank_count);
+    pub fn max_bank_count(&mut self, max_bank_count: u16) -> &mut PrgMemoryBuilder {
+        self.max_bank_count = Some(max_bank_count);
         self
     }
 
@@ -181,7 +199,7 @@ impl PrgMemoryBuilder {
         PrgMemory::new(
             self.raw_memory.as_ref().unwrap().clone(),
             self.work_ram.clone(),
-            self.bank_count.unwrap().clone(),
+            self.max_bank_count.unwrap().clone(),
             self.bank_size.unwrap().clone(),
             self.windows.clone(),
         )
@@ -191,7 +209,7 @@ impl PrgMemoryBuilder {
         PrgMemoryBuilder {
             raw_memory: None,
             work_ram: Vec::new(),
-            bank_count: None,
+            max_bank_count: None,
             bank_size: None,
             windows: Vec::new(),
         }
@@ -257,4 +275,4 @@ impl PrgType {
     }
 }
 
-type BankIndex = u8;
+type BankIndex = u16;

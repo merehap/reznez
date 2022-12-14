@@ -4,7 +4,6 @@ use crate::util::unit::KIBIBYTE;
 
 pub struct ChrMemory {
     raw_memory: Vec<u8>,
-    bank_count: u8,
     bank_size: usize,
     windows: Vec<Window>,
 }
@@ -12,6 +11,12 @@ pub struct ChrMemory {
 impl ChrMemory {
     pub fn builder() -> ChrMemoryBuilder {
         ChrMemoryBuilder::new()
+    }
+
+    pub fn bank_count(&self) -> u16 {
+        (self.raw_memory.len() / self.bank_size)
+            .try_into()
+            .expect("Way too many CHR banks.")
     }
 
     pub fn read(&self, address: PpuAddress) -> u8 {
@@ -34,9 +39,7 @@ impl ChrMemory {
 
     pub fn switch_bank_at(&mut self, start: u16, mut new_bank_index: BankIndex) {
         // Ignore irrelevant high bits.
-        new_bank_index %= self.bank_count;
-
-        assert!(new_bank_index < self.bank_count);
+        new_bank_index %= self.bank_count();
 
         for window in &mut self.windows {
             if window.start == start {
@@ -104,7 +107,7 @@ impl ChrMemory {
 
     fn new(
         raw_memory: Vec<u8>,
-        bank_count: u8,
+        max_bank_count: u16,
         bank_size: usize,
         windows: Vec<Window>,
     ) -> ChrMemory {
@@ -114,11 +117,6 @@ impl ChrMemory {
         );
 
         assert!(!windows.is_empty());
-
-        // Power of 2.
-        assert_eq!(bank_count & (bank_count - 1), 0);
-
-        assert_eq!(usize::from(bank_count) * bank_size, raw_memory.len());
 
         assert_eq!(windows[0].start, 0x0000);
         assert_eq!(windows[windows.len() - 1].end, 0x1FFF);
@@ -130,13 +128,22 @@ impl ChrMemory {
             );
         }
 
-        ChrMemory { raw_memory, bank_count, bank_size, windows }
+        let chr_memory = ChrMemory { raw_memory, bank_size, windows };
+
+        let bank_count = chr_memory.bank_count();
+        assert_eq!(usize::from(bank_count) * bank_size, chr_memory.raw_memory.len());
+        // Power of 2.
+        assert_eq!(max_bank_count & (max_bank_count - 1), 0);
+        assert_eq!(bank_count & (bank_count - 1), 0);
+        assert!(bank_count <= max_bank_count);
+
+        chr_memory
     }
 }
 
 pub struct ChrMemoryBuilder {
     raw_memory: Option<Vec<u8>>,
-    bank_count: Option<u8>,
+    max_bank_count: Option<u16>,
     bank_size: Option<usize>,
     windows: Vec<Window>,
 }
@@ -147,8 +154,8 @@ impl ChrMemoryBuilder {
         self
     }
 
-    pub fn bank_count(&mut self, bank_count: u8) -> &mut ChrMemoryBuilder {
-        self.bank_count = Some(bank_count);
+    pub fn max_bank_count(&mut self, max_bank_count: u16) -> &mut ChrMemoryBuilder {
+        self.max_bank_count = Some(max_bank_count);
         self
     }
 
@@ -179,11 +186,6 @@ impl ChrMemoryBuilder {
     pub fn add_default_ram_if_chr_data_missing(&mut self) -> ChrMemory {
         // If no CHR data is provided, add 8KiB of CHR RAM.
         if self.raw_memory.as_ref().unwrap().is_empty() {
-            if self.bank_count.unwrap() == 0 {
-                let bank_count = 8 * KIBIBYTE / self.bank_size.unwrap();
-                self.bank_count = Some(bank_count.try_into().unwrap());
-            }
-
             self.raw_memory = Some(vec![0; 8 * KIBIBYTE]);
             for window in &mut self.windows {
                 window.make_writable();
@@ -192,7 +194,7 @@ impl ChrMemoryBuilder {
 
         ChrMemory::new(
             self.raw_memory.clone().unwrap(),
-            self.bank_count.unwrap(),
+            self.max_bank_count.unwrap(),
             self.bank_size.unwrap(),
             self.windows.clone(),
         )
@@ -201,7 +203,7 @@ impl ChrMemoryBuilder {
     fn new() -> ChrMemoryBuilder {
         ChrMemoryBuilder {
             raw_memory: None,
-            bank_count: None,
+            max_bank_count: None,
             bank_size: None,
             windows: Vec::new(),
         }
@@ -224,7 +226,7 @@ impl Window {
         }
     }
 
-    fn bank_index(self) -> u8 {
+    fn bank_index(self) -> BankIndex {
         self.chr_type.bank_index()
     }
 
@@ -243,12 +245,12 @@ impl Window {
 
 #[derive(Clone, Copy, Debug)]
 pub enum ChrType {
-    Rom { bank_index: u8 },
-    Ram { bank_index: u8 },
+    Rom { bank_index: BankIndex },
+    Ram { bank_index: BankIndex },
 }
 
 impl ChrType {
-    fn bank_index(self) -> u8 {
+    fn bank_index(self) -> BankIndex {
         use ChrType::*;
         match self {
             Rom { bank_index } | Ram { bank_index } => bank_index,
@@ -272,4 +274,4 @@ impl ChrType {
     }
 }
 
-type BankIndex = u8;
+type BankIndex = u16;
