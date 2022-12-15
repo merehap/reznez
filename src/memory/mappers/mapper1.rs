@@ -23,8 +23,8 @@ impl Mapper1 {
             .max_bank_count(16)
             .bank_size(16 * KIBIBYTE)
             .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
-            .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Ram(BankIndex::FIRST))
-            .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Ram(BankIndex::LAST))
+            .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Ram, BankIndex::FIRST))
+            .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Ram, BankIndex::LAST))
             .build();
 
         // TODO: Not all boards support CHR RAM.
@@ -32,8 +32,8 @@ impl Mapper1 {
             .raw_memory(cartridge.chr_rom())
             .max_bank_count(32)
             .bank_size(4 * KIBIBYTE)
-            .add_window(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::Ram(BankIndex::FIRST))
-            .add_window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::Ram(BankIndex::FIRST))
+            .add_window(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
+            .add_window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
             .add_default_ram_if_chr_data_missing();
 
         Ok(Mapper1 {

@@ -4,3 +4,4 @@ pub mod mapper;
 pub mod mappers;
 pub mod memory;
 pub mod ppu;
+pub mod writability;

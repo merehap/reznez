@@ -1,5 +1,6 @@
 use crate::memory::bank_index::BankIndex;
 use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::writability::Writability;
 use crate::util::unit::KIBIBYTE;
 
 const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
@@ -80,7 +81,7 @@ impl PrgMemory {
 
                 let prg_memory_index = match self.windows[i].window_type {
                     PrgType::Empty => PrgMemoryIndex::None,
-                    PrgType::Rom(bank_index) | PrgType::Ram(bank_index) => {
+                    PrgType::Banked(_, bank_index) => {
                         let mapped_memory_index =
                             bank_index.to_usize(self.bank_count()) * self.bank_size as usize + bank_offset as usize;
                         PrgMemoryIndex::MappedMemory(mapped_memory_index)
@@ -251,8 +252,7 @@ impl Window {
 #[derive(PartialEq, Clone, Copy)]
 pub enum PrgType {
     Empty,
-    Rom(BankIndex),
-    Ram(BankIndex),
+    Banked(Writability, BankIndex),
     // WRAM, Save RAM, SRAM, ambiguously "PRG RAM".
     WorkRam,
     MirrorPrevious,
@@ -262,8 +262,7 @@ impl PrgType {
     fn bank_index(self) -> Option<BankIndex> {
         use PrgType::*;
         match self {
-            Rom(bank_index) => Some(bank_index),
-            Ram(bank_index) => Some(bank_index),
+            Banked(_, bank_index) => Some(bank_index),
             Empty | MirrorPrevious | WorkRam => None,
         }
     }
@@ -271,8 +270,8 @@ impl PrgType {
     fn switch_bank_to(&mut self, new_bank_index: BankIndex) {
         use PrgType::*;
         match self {
-            Rom(_) => *self = Rom(new_bank_index),
-            Ram(_) => *self = Ram(new_bank_index),
+            Banked(writability, _) =>
+                *self = PrgType::Banked(*writability, new_bank_index),
             Empty | MirrorPrevious | WorkRam => unreachable!(),
         }
     }

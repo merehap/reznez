@@ -1,5 +1,6 @@
 use crate::memory::bank_index::BankIndex;
 use crate::memory::ppu::ppu_address::PpuAddress;
+use crate::memory::writability::Writability;
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
 
@@ -172,16 +173,18 @@ impl ChrMemoryBuilder {
         let bank_size = self.bank_size.unwrap() as u16;
         assert!(size % bank_size == 0 || bank_size % size == 0);
 
-        self.windows.push(Window { start, end, chr_type });
+        self.windows.push(Window { start, end, chr_type, write_status: None });
         self
     }
 
     pub fn add_default_ram_if_chr_data_missing(&mut self) -> ChrMemory {
         // If no CHR data is provided, add 8KiB of CHR RAM.
+        // This is the only instance where changing the ROM/RAM type after configuration time is
+        // allowed.
         if self.raw_memory.as_ref().unwrap().is_empty() {
             self.raw_memory = Some(vec![0; 8 * KIBIBYTE]);
             for window in &mut self.windows {
-                window.make_writable();
+                window.chr_type.0 = Writability::Ram;
             }
         }
 
@@ -208,6 +211,7 @@ pub struct Window {
     start: u16,
     end: u16,
     chr_type: ChrType,
+    write_status: Option<WriteStatus>,
 }
 
 impl Window {
@@ -228,41 +232,38 @@ impl Window {
     }
 
     fn is_writable(self) -> bool {
-        self.chr_type.is_writable()
+        match (self.chr_type.0, self.write_status) {
+            (Writability::Rom   , None) => false,
+            (Writability::Ram   , None) => true,
+            (Writability::RomRam, Some(WriteStatus::ReadOnly)) => false,
+            (Writability::RomRam, Some(WriteStatus::Writable)) => true,
+            _ => unreachable!(),
+        }
     }
 
+    #[allow(dead_code)]
     fn make_writable(&mut self) {
-        self.chr_type.make_writable();
+        assert!(self.write_status.is_some(), "Only RamRom can have its WriteStatus changed.");
+        self.write_status = Some(WriteStatus::Writable);
     }
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum ChrType {
-    Rom(BankIndex),
-    Ram(BankIndex),
-}
+pub struct ChrType(pub Writability, pub BankIndex);
 
 impl ChrType {
     fn bank_index(self) -> BankIndex {
-        use ChrType::*;
-        match self {
-            Rom(bank_index) | Ram(bank_index) => bank_index,
-        }
+        self.1
     }
 
     fn switch_bank_to(&mut self, new_bank_index: BankIndex) {
-        use ChrType::*;
-        match self {
-            Rom(_) => *self = Rom(new_bank_index),
-            Ram(_) => *self = Ram(new_bank_index),
-        }
+        self.1 = new_bank_index;
     }
+}
 
-    fn is_writable(self) -> bool {
-        matches!(self, ChrType::Ram(_))
-    }
-
-    fn make_writable(&mut self) {
-        *self = ChrType::Ram(self.bank_index());
-    }
+#[allow(dead_code)]
+#[derive(Clone, Copy, Debug)]
+pub enum WriteStatus {
+    ReadOnly,
+    Writable,
 }
