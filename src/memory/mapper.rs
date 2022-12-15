@@ -186,23 +186,6 @@ pub trait Mapper {
     }
 }
 
-pub fn validate_chr_data_length<P>(
-    cartridge: &Cartridge,
-    predicate: P,
-) -> Result<(), String>
-where P: Fn(usize) -> bool {
-    let length = cartridge.chr_rom().len();
-    if predicate(length) {
-        Ok(())
-    } else {
-        Err(format!(
-            "Mapper {} must not have a CHR ROM length of {}KiB.",
-            cartridge.mapper_number(),
-            8 * cartridge.chr_rom_chunks().len(),
-        ))
-    }
-}
-
 #[inline]
 fn address_to_ppu_register_type(address: CpuAddress) -> RegisterType {
     FromPrimitive::from_usize(address.to_usize() % 8).unwrap()
