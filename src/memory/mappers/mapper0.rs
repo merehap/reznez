@@ -9,14 +9,14 @@ pub struct Mapper0 {
 
 impl Mapper0 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper0, String> {
-        // Not bank-switched.
+        // Only one bank, so not bank-switched.
         let prg_memory = match Mapper0::board(cartridge)? {
             Board::Nrom128 => PrgMemory::builder()
                 .raw_memory(cartridge.prg_rom())
                 .max_bank_count(1)
                 .bank_size(16 * KIBIBYTE)
                 .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-                .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Rom { bank_index: 0 })
+                .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Rom(BankIndex::FIRST))
                 .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::MirrorPrevious)
                 .build(),
             Board::Nrom256 => PrgMemory::builder()
@@ -24,16 +24,16 @@ impl Mapper0 {
                 .max_bank_count(1)
                 .bank_size(32 * KIBIBYTE)
                 .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-                .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Rom { bank_index: 0 })
+                .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Rom(BankIndex::FIRST))
                 .build(),
         };
 
-        // Not bank-switched.
+        // Only one bank, so not bank-switched.
         let chr_memory = ChrMemory::builder()
             .raw_memory(cartridge.chr_rom())
             .max_bank_count(1)
             .bank_size(8 * KIBIBYTE)
-            .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::Rom { bank_index: 0 })
+            .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::Rom(BankIndex::FIRST))
             .add_default_ram_if_chr_data_missing();
 
         Ok(Mapper0 {

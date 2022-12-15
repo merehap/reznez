@@ -1,3 +1,4 @@
+use crate::memory::bank_index::BankIndex;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
@@ -31,16 +32,13 @@ impl ChrMemory {
         }
     }
 
-    pub fn selected_bank_indexes(&self) -> Vec<BankIndex> {
+    pub fn resolve_selected_bank_indexes(&self) -> Vec<u16> {
         self.windows.iter()
-            .map(|window| window.bank_index())
+            .map(|window| window.bank_index().to_u16(self.bank_count()))
             .collect()
     }
 
-    pub fn switch_bank_at(&mut self, start: u16, mut new_bank_index: BankIndex) {
-        // Ignore irrelevant high bits.
-        new_bank_index %= self.bank_count();
-
+    pub fn switch_bank_at(&mut self, start: u16, new_bank_index: BankIndex) {
         for window in &mut self.windows {
             if window.start == start {
                 window.switch_bank(new_bank_index);
@@ -67,7 +65,7 @@ impl ChrMemory {
 
         for window in &self.windows {
             if let Some(bank_offset) = window.offset(address) {
-                let index = usize::from(window.bank_index()) *
+                let index = usize::from(window.bank_index().to_u16(self.bank_count())) *
                     usize::from(self.bank_size) +
                     usize::from(bank_offset);
                 return (index, window.is_writable());
@@ -245,33 +243,31 @@ impl Window {
 
 #[derive(Clone, Copy, Debug)]
 pub enum ChrType {
-    Rom { bank_index: BankIndex },
-    Ram { bank_index: BankIndex },
+    Rom(BankIndex),
+    Ram(BankIndex),
 }
 
 impl ChrType {
     fn bank_index(self) -> BankIndex {
         use ChrType::*;
         match self {
-            Rom { bank_index } | Ram { bank_index } => bank_index,
+            Rom(bank_index) | Ram(bank_index) => bank_index,
         }
     }
 
     fn switch_bank(&mut self, new_bank_index: BankIndex) {
         use ChrType::*;
         match self {
-            Rom {..} => *self = Rom { bank_index: new_bank_index },
-            Ram {..} => *self = Ram { bank_index: new_bank_index },
+            Rom(_) => *self = Rom(new_bank_index),
+            Ram(_) => *self = Ram(new_bank_index),
         }
     }
 
     fn is_writable(self) -> bool {
-        matches!(self, ChrType::Ram {..})
+        matches!(self, ChrType::Ram(_))
     }
 
     fn make_writable(&mut self) {
-        *self = ChrType::Ram { bank_index: self.bank_index() };
+        *self = ChrType::Ram(self.bank_index());
     }
 }
-
-type BankIndex = u16;

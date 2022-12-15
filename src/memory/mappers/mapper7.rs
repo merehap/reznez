@@ -14,15 +14,15 @@ impl Mapper7 {
             .max_bank_count(8)
             .bank_size(32 * KIBIBYTE)
             .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-            .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Rom { bank_index: 0 })
+            .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Rom(BankIndex::FIRST))
             .build();
 
-        // Not bank-switched.
+        // Only one bank, so not bank-switched.
         let chr_memory = ChrMemory::builder()
             .raw_memory(cartridge.chr_rom())
             .max_bank_count(1)
             .bank_size(8 * KIBIBYTE)
-            .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::Ram { bank_index: 0 })
+            .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::Ram(BankIndex::FIRST))
             .add_default_ram_if_chr_data_missing();
 
         Ok(Mapper7 {
@@ -39,7 +39,7 @@ impl Mapper for Mapper7 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
             0x8000..=0xFFFF => {
-                let new_bank = (value & 0b0000_0111).into();
+                let new_bank = BankIndex::from_u8(value & 0b0000_0111);
                 self.prg_memory.switch_bank_at(0x8000, new_bank);
 
                 self.name_table_mirroring = if value & 0b0001_0000 == 0 {

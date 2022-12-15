@@ -1,6 +1,6 @@
+pub mod bank_index;
 pub mod cpu;
-pub mod mappers;
-pub mod ppu;
-
 pub mod mapper;
+pub mod mappers;
 pub mod memory;
+pub mod ppu;

@@ -1,3 +1,4 @@
+use crate::memory::bank_index::BankIndex;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::util::unit::KIBIBYTE;
 
@@ -21,6 +22,10 @@ impl PrgMemory {
             .expect("Way too many banks.")
     }
 
+    pub fn last_bank_index(&self) -> u16 {
+        self.bank_count() - 1
+    }
+
     pub fn read(&self, address: CpuAddress) -> u8 {
         match self.address_to_prg_index(address) {
             PrgMemoryIndex::None => /* TODO: Open bus behavior instead. */ 0,
@@ -29,6 +34,7 @@ impl PrgMemory {
         }
     }
 
+    // TODO: Handle read-only.
     pub fn write(&mut self, address: CpuAddress, value: u8) {
         match self.address_to_prg_index(address) {
             PrgMemoryIndex::None => {},
@@ -37,21 +43,18 @@ impl PrgMemory {
         }
     }
 
-    pub fn selected_bank_indexes(&self) -> Vec<BankIndex> {
+    pub fn resolve_selected_bank_indexes(&self) -> Vec<u16> {
         let mut indexes = Vec::new();
         for window in &self.windows {
             if let Some(bank_index) = window.bank_index() {
-                indexes.push(bank_index);
+                indexes.push(bank_index.to_u16(self.bank_count()));
             }
         }
 
         indexes
     }
 
-    pub fn switch_bank_at(&mut self, start: u16, mut new_bank_index: BankIndex) {
-        // Ignore irrelevant high bits.
-        new_bank_index %= self.bank_count();
-
+    pub fn switch_bank_at(&mut self, start: u16, new_bank_index: BankIndex) {
         for window in &mut self.windows {
             if window.start.to_raw() == start {
                 window.switch_bank(new_bank_index);
@@ -76,16 +79,17 @@ impl PrgMemory {
                     i -= 1;
                 }
 
-                return match self.windows[i].window_type {
+                let prg_memory_index = match self.windows[i].window_type {
                     PrgType::Empty => PrgMemoryIndex::None,
-                    PrgType::Rom { bank_index } | PrgType::Ram { bank_index } => {
+                    PrgType::Rom(bank_index) | PrgType::Ram(bank_index) => {
                         let mapped_memory_index =
-                            bank_index as usize * self.bank_size as usize + bank_offset as usize;
+                            bank_index.to_usize(self.bank_count()) * self.bank_size as usize + bank_offset as usize;
                         PrgMemoryIndex::MappedMemory(mapped_memory_index)
                     }
                     PrgType::WorkRam => PrgMemoryIndex::WorkRam(usize::from(bank_offset)),
                     PrgType::MirrorPrevious => unreachable!(),
                 };
+                return prg_memory_index;
             }
         }
 
@@ -245,11 +249,11 @@ impl Window {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum PrgType {
     Empty,
-    Rom { bank_index: BankIndex },
-    Ram { bank_index: BankIndex },
+    Rom(BankIndex),
+    Ram(BankIndex),
     // WRAM, Save RAM, SRAM, ambiguously "PRG RAM".
     WorkRam,
     MirrorPrevious,
@@ -259,8 +263,8 @@ impl PrgType {
     fn bank_index(self) -> Option<BankIndex> {
         use PrgType::*;
         match self {
-            Rom { bank_index } => Some(bank_index),
-            Ram { bank_index } => Some(bank_index),
+            Rom(bank_index) => Some(bank_index),
+            Ram(bank_index) => Some(bank_index),
             Empty | MirrorPrevious | WorkRam => None,
         }
     }
@@ -268,11 +272,9 @@ impl PrgType {
     fn switch_bank(&mut self, new_bank_index: BankIndex) {
         use PrgType::*;
         match self {
-            Rom {..} => *self = Rom { bank_index: new_bank_index },
-            Ram {..} => *self = Ram { bank_index: new_bank_index },
+            Rom(_) => *self = Rom(new_bank_index),
+            Ram(_) => *self = Ram(new_bank_index),
             Empty | MirrorPrevious | WorkRam => unreachable!(),
         }
     }
 }
-
-type BankIndex = u16;

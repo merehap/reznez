@@ -1,6 +1,7 @@
 use num_traits::FromPrimitive;
 
 pub use crate::cartridge::Cartridge;
+pub use crate::memory::bank_index::BankIndex;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
@@ -21,6 +22,7 @@ pub trait Mapper {
     fn prg_memory(&self) -> &PrgMemory;
     fn chr_memory(&self) -> &ChrMemory;
     fn chr_memory_mut(&mut self) -> &mut ChrMemory;
+
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8);
 
     #[inline]
@@ -160,7 +162,7 @@ pub trait Mapper {
     }
 
     fn prg_rom_bank_string(&self) -> String {
-        let indexes = self.prg_memory().selected_bank_indexes();
+        let indexes = self.prg_memory().resolve_selected_bank_indexes();
         let mut bank_text = indexes[0].to_string();
         for i in 1..indexes.len() {
             bank_text.push_str(&format!(", {}", indexes[i]));
@@ -172,7 +174,7 @@ pub trait Mapper {
     }
 
     fn chr_rom_bank_string(&self) -> String {
-        let indexes = self.chr_memory().selected_bank_indexes();
+        let indexes = self.chr_memory().resolve_selected_bank_indexes();
         let mut bank_text = indexes[0].to_string();
         for i in 1..indexes.len() {
             bank_text.push_str(&format!(", {}", indexes[i]));

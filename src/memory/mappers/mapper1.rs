@@ -10,7 +10,6 @@ pub struct Mapper1 {
     selected_chr_bank0: u8,
     selected_chr_bank1: u8,
     selected_prg_bank: u8,
-    last_prg_bank_index: u8,
 
     prg_memory: PrgMemory,
     chr_memory: ChrMemory,
@@ -18,18 +17,14 @@ pub struct Mapper1 {
 
 impl Mapper1 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper1, String> {
-        let prg_bank_count: u8 = cartridge.prg_rom_chunks().len().try_into()
-            .expect("Way too many PRG ROM chunks.");
-        let last_prg_bank_index = prg_bank_count - 1;
-
         // TODO: Allow Work RAM to be turned on/off.
         let prg_memory = PrgMemory::builder()
             .raw_memory(cartridge.prg_rom())
             .max_bank_count(16)
             .bank_size(16 * KIBIBYTE)
             .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
-            .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Ram { bank_index: 0 })
-            .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Ram { bank_index: last_prg_bank_index.into() })
+            .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Ram(BankIndex::FIRST))
+            .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Ram(BankIndex::LAST))
             .build();
 
         // TODO: Not all boards support CHR RAM.
@@ -37,8 +32,8 @@ impl Mapper1 {
             .raw_memory(cartridge.chr_rom())
             .max_bank_count(32)
             .bank_size(4 * KIBIBYTE)
-            .add_window(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::Ram { bank_index: 0 })
-            .add_window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::Ram { bank_index: 0 })
+            .add_window(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::Ram(BankIndex::FIRST))
+            .add_window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::Ram(BankIndex::FIRST))
             .add_default_ram_if_chr_data_missing();
 
         Ok(Mapper1 {
@@ -48,7 +43,6 @@ impl Mapper1 {
             selected_chr_bank1: 0,
             selected_prg_bank: 0,
             prg_memory,
-            last_prg_bank_index,
             chr_memory,
         })
     }
@@ -96,8 +90,8 @@ impl Mapper for Mapper1 {
             ChrBankMode::TwoSmall => (self.selected_chr_bank0, self.selected_chr_bank1),
         };
 
-        self.chr_memory.switch_bank_at(0x0000, left_bank.into());
-        self.chr_memory.switch_bank_at(0x1000, right_bank.into());
+        self.chr_memory.switch_bank_at(0x0000, BankIndex::from_u8(left_bank));
+        self.chr_memory.switch_bank_at(0x1000, BankIndex::from_u8(right_bank));
 
         if get_bit(self.selected_prg_bank, 3) {
             unimplemented!("Bypassing PRG fixed bank logic not supported.");
@@ -112,11 +106,11 @@ impl Mapper for Mapper1 {
                 (left_index, left_index + 1)
             }
             PrgBankMode::FixedFirst => (0, self.selected_prg_bank),
-            PrgBankMode::FixedLast => (self.selected_prg_bank, self.last_prg_bank_index),
+            PrgBankMode::FixedLast => (self.selected_prg_bank, self.prg_memory.last_bank_index() as u8),
         };
 
-        self.prg_memory.switch_bank_at(0x8000, left_index.into());
-        self.prg_memory.switch_bank_at(0xC000, right_index.into());
+        self.prg_memory.switch_bank_at(0x8000, BankIndex::from_u8(left_index));
+        self.prg_memory.switch_bank_at(0xC000, BankIndex::from_u8(right_index));
     }
 
     fn name_table_mirroring(&self) -> NameTableMirroring {
