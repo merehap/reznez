@@ -94,7 +94,9 @@ impl Mapper for Mapper1 {
         self.chr_memory.window_at(0x1000).switch_bank_to(BankIndex::from_u8(right_bank));
 
         if get_bit(self.selected_prg_bank, 3) {
-            unimplemented!("Bypassing PRG fixed bank logic not supported.");
+            self.prg_memory.disable_work_ram();
+        } else {
+            self.prg_memory.enable_work_ram();
         }
 
         // Clear the high bit which is never used to change the PRG bank.
