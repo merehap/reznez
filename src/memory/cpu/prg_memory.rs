@@ -7,8 +7,8 @@ const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
 
 pub struct PrgMemory {
     raw_memory: Vec<u8>,
-    work_ram: Vec<u8>,
     bank_size: usize,
+    work_ram: Option<WorkRam>,
     windows: Vec<Window>,
 }
 
@@ -31,7 +31,16 @@ impl PrgMemory {
         match self.address_to_prg_index(address) {
             PrgMemoryIndex::None => /* TODO: Open bus behavior instead. */ 0,
             PrgMemoryIndex::MappedMemory(index) => self.raw_memory[index],
-            PrgMemoryIndex::WorkRam(index) => self.work_ram[index],
+            PrgMemoryIndex::WorkRam(index) => {
+                let work_ram = self.work_ram.as_ref()
+                    .expect("Attempted to read from WorkRam but it is not present.");
+                if work_ram.enabled {
+                    work_ram.data[index]
+                } else {
+                    /* TODO: Open bus behavior instead. */
+                    0
+                }
+            }
         }
     }
 
@@ -40,7 +49,13 @@ impl PrgMemory {
         match self.address_to_prg_index(address) {
             PrgMemoryIndex::None => {},
             PrgMemoryIndex::MappedMemory(index) => self.raw_memory[index] = value,
-            PrgMemoryIndex::WorkRam(index) => self.work_ram[index] = value,
+            PrgMemoryIndex::WorkRam(index) => {
+                let work_ram = self.work_ram.as_mut()
+                    .expect("Attempted to write to WorkRam but but it is not present.");
+                if work_ram.enabled {
+                    work_ram.data[index] = value;
+                }
+            }
         }
     }
 
@@ -63,6 +78,14 @@ impl PrgMemory {
         }
 
         panic!("No window exists at {:?}", start);
+    }
+
+    pub fn disable_work_ram(&mut self) {
+        self.work_ram.as_mut().unwrap().enabled = false;
+    }
+
+    pub fn enable_work_ram(&mut self) {
+        self.work_ram.as_mut().unwrap().enabled = true;
     }
 
     // TODO: Indicate if read-only.
@@ -98,7 +121,7 @@ impl PrgMemory {
 
     fn new(
         raw_memory: Vec<u8>,
-        work_ram: Vec<u8>,
+        work_ram: Option<WorkRam>,
         max_bank_count: u16,
         bank_size: usize,
         windows: Vec<Window>,
@@ -138,16 +161,15 @@ impl PrgMemory {
         assert_eq!(max_bank_count & (max_bank_count - 1), 0);
         assert_eq!(bank_count & (bank_count - 1), 0);
 
-
         prg_memory
     }
 }
 
 pub struct PrgMemoryBuilder {
     raw_memory: Option<Vec<u8>>,
-    work_ram: Vec<u8>,
     max_bank_count: Option<u16>,
     bank_size: Option<usize>,
+    work_ram: Option<WorkRam>,
     windows: Vec<Window>,
 }
 
@@ -189,8 +211,8 @@ impl PrgMemoryBuilder {
         assert!(size % bank_size == 0 || bank_size % size == 0);
 
         if window_type == PrgType::WorkRam {
-            assert!(self.work_ram.is_empty(), "Only one Work RAM section may be specified.");
-            self.work_ram = vec![0; usize::from(size)];
+            assert!(self.work_ram.is_none(), "Only one Work RAM section may be specified.");
+            self.work_ram = Some(WorkRam { data: vec![0; usize::from(size)], enabled: true });
         }
 
         self.windows.push(window);
@@ -212,7 +234,7 @@ impl PrgMemoryBuilder {
     fn new() -> PrgMemoryBuilder {
         PrgMemoryBuilder {
             raw_memory: None,
-            work_ram: Vec::new(),
+            work_ram: None,
             max_bank_count: None,
             bank_size: None,
             windows: Vec::new(),
@@ -275,4 +297,10 @@ impl PrgType {
             Empty | MirrorPrevious | WorkRam => unreachable!(),
         }
     }
+}
+
+#[derive(Clone)]
+struct WorkRam {
+    data: Vec<u8>,
+    enabled: bool,
 }
