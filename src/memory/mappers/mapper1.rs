@@ -90,8 +90,8 @@ impl Mapper for Mapper1 {
             ChrBankMode::TwoSmall => (self.selected_chr_bank0, self.selected_chr_bank1),
         };
 
-        self.chr_memory.switch_bank_at(0x0000, BankIndex::from_u8(left_bank));
-        self.chr_memory.switch_bank_at(0x1000, BankIndex::from_u8(right_bank));
+        self.chr_memory.window_at(0x0000).switch_bank_to(BankIndex::from_u8(left_bank));
+        self.chr_memory.window_at(0x1000).switch_bank_to(BankIndex::from_u8(right_bank));
 
         if get_bit(self.selected_prg_bank, 3) {
             unimplemented!("Bypassing PRG fixed bank logic not supported.");
@@ -109,8 +109,8 @@ impl Mapper for Mapper1 {
             PrgBankMode::FixedLast => (self.selected_prg_bank, self.prg_memory.last_bank_index() as u8),
         };
 
-        self.prg_memory.switch_bank_at(0x8000, BankIndex::from_u8(left_index));
-        self.prg_memory.switch_bank_at(0xC000, BankIndex::from_u8(right_index));
+        self.prg_memory.window_at(0x8000).switch_bank_to(BankIndex::from_u8(left_index));
+        self.prg_memory.window_at(0xC000).switch_bank_to(BankIndex::from_u8(right_index));
     }
 
     fn name_table_mirroring(&self) -> NameTableMirroring {

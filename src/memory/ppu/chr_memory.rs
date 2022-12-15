@@ -38,16 +38,11 @@ impl ChrMemory {
             .collect()
     }
 
-    pub fn switch_bank_at(&mut self, start: u16, new_bank_index: BankIndex) {
+    pub fn window_at(&mut self, start: u16) -> &mut Window {
         for window in &mut self.windows {
             if window.start == start {
-                window.switch_bank(new_bank_index);
-                return;
+                return window;
             }
-        }
-
-        for window in &mut self.windows {
-            println!("Window: {:X} {:X}", window.start, window.end);
         }
 
         panic!("No window exists at {:X?}", start);
@@ -209,13 +204,17 @@ impl ChrMemoryBuilder {
 }
 
 #[derive(Clone, Copy, Debug)]
-struct Window {
+pub struct Window {
     start: u16,
     end: u16,
     chr_type: ChrType,
 }
 
 impl Window {
+    pub fn switch_bank_to(&mut self, new_bank_index: BankIndex) {
+        self.chr_type.switch_bank_to(new_bank_index);
+    }
+
     fn offset(self, address: u16) -> Option<u16> {
         if self.start <= address && address <= self.end {
             Some(address - self.start)
@@ -226,10 +225,6 @@ impl Window {
 
     fn bank_index(self) -> BankIndex {
         self.chr_type.bank_index()
-    }
-
-    fn switch_bank(&mut self, new_bank_index: BankIndex) {
-        self.chr_type.switch_bank(new_bank_index);
     }
 
     fn is_writable(self) -> bool {
@@ -255,7 +250,7 @@ impl ChrType {
         }
     }
 
-    fn switch_bank(&mut self, new_bank_index: BankIndex) {
+    fn switch_bank_to(&mut self, new_bank_index: BankIndex) {
         use ChrType::*;
         match self {
             Rom(_) => *self = Rom(new_bank_index),

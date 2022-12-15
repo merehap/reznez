@@ -54,11 +54,10 @@ impl PrgMemory {
         indexes
     }
 
-    pub fn switch_bank_at(&mut self, start: u16, new_bank_index: BankIndex) {
+    pub fn window_at(&mut self, start: u16) -> &mut Window {
         for window in &mut self.windows {
             if window.start.to_raw() == start {
-                window.switch_bank(new_bank_index);
-                return;
+                return window;
             }
         }
 
@@ -229,19 +228,19 @@ enum PrgMemoryIndex {
 // A Window is a range within addressable memory.
 // If the specified bank cannot fill the window, adjacent banks will be included too.
 #[derive(Clone, Copy)]
-struct Window {
+pub struct Window {
     start: CpuAddress,
     end: CpuAddress,
     window_type: PrgType,
 }
 
 impl Window {
-    fn bank_index(self) -> Option<BankIndex> {
-        self.window_type.bank_index()
+    pub fn switch_bank_to(&mut self, new_bank_index: BankIndex) {
+        self.window_type.switch_bank_to(new_bank_index);
     }
 
-    fn switch_bank(&mut self, new_bank_index: BankIndex) {
-        self.window_type.switch_bank(new_bank_index);
+    fn bank_index(self) -> Option<BankIndex> {
+        self.window_type.bank_index()
     }
 
     fn is_mirror(self) -> bool {
@@ -269,7 +268,7 @@ impl PrgType {
         }
     }
 
-    fn switch_bank(&mut self, new_bank_index: BankIndex) {
+    fn switch_bank_to(&mut self, new_bank_index: BankIndex) {
         use PrgType::*;
         match self {
             Rom(_) => *self = Rom(new_bank_index),
