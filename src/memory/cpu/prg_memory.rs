@@ -6,19 +6,35 @@ use crate::util::unit::KIBIBYTE;
 const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
 
 pub struct PrgMemory {
+    layout: PrgLayout,
     raw_memory: Vec<u8>,
-    bank_size: usize,
     work_ram: Option<WorkRam>,
-    windows: Vec<Window>,
 }
 
 impl PrgMemory {
-    pub fn builder() -> PrgMemoryBuilder {
-        PrgMemoryBuilder::new()
+    pub fn new(layout: PrgLayout, raw_memory: Vec<u8>) -> PrgMemory {
+        let mut prg_memory = PrgMemory { layout, raw_memory, work_ram: None};
+        for window in &prg_memory.layout.windows {
+            if window.prg_type == PrgType::WorkRam {
+                assert!(prg_memory.work_ram.is_none(), "Only one Work RAM section may be specified.");
+                prg_memory.work_ram = Some(WorkRam::new(window.size));
+            }
+        }
+
+        let bank_count = prg_memory.bank_count();
+        assert!(bank_count <= prg_memory.layout.max_bank_count);
+        assert_eq!(
+            prg_memory.raw_memory.len(),
+            usize::from(bank_count) * prg_memory.layout.bank_size,
+            "Bad PRG data size.",
+        );
+        assert_eq!(bank_count & (bank_count - 1), 0);
+
+        prg_memory
     }
 
     pub fn bank_count(&self) -> u16 {
-        (self.raw_memory.len() / usize::from(self.bank_size))
+        (self.raw_memory.len() / usize::from(self.layout.bank_size))
             .try_into()
             .expect("Way too many banks.")
     }
@@ -61,7 +77,7 @@ impl PrgMemory {
 
     pub fn resolve_selected_bank_indexes(&self) -> Vec<u16> {
         let mut indexes = Vec::new();
-        for window in &self.windows {
+        for window in &self.layout.windows {
             if let Some(bank_index) = window.bank_index() {
                 indexes.push(bank_index.to_u16(self.bank_count()));
             }
@@ -71,7 +87,7 @@ impl PrgMemory {
     }
 
     pub fn window_at(&mut self, start: u16) -> &mut Window {
-        for window in &mut self.windows {
+        for window in &mut self.layout.windows {
             if window.start.to_raw() == start {
                 return window;
             }
@@ -91,22 +107,24 @@ impl PrgMemory {
     // TODO: Indicate if read-only.
     fn address_to_prg_index(&self, address: CpuAddress) -> PrgMemoryIndex {
         assert!(address >= PRG_MEMORY_START);
-        assert!(!self.windows.is_empty());
 
-        for mut i in 0..self.windows.len() {
-            if i == self.windows.len() - 1 || address < self.windows[i + 1].start {
-                let bank_offset = address.to_raw() - self.windows[i].start.to_raw();
+        let windows = &self.layout.windows;
+        assert!(!windows.is_empty());
+
+        for mut i in 0..windows.len() {
+            if i == windows.len() - 1 || address < windows[i + 1].start {
+                let bank_offset = address.to_raw() - windows[i].start.to_raw();
                 // Step backwards until we find which window is being mirrored.
-                while self.windows[i].is_mirror() {
+                while windows[i].is_mirror() {
                     assert!(i > 0);
                     i -= 1;
                 }
 
-                let prg_memory_index = match self.windows[i].window_type {
+                let prg_memory_index = match windows[i].prg_type {
                     PrgType::Empty => PrgMemoryIndex::None,
                     PrgType::Banked(_, bank_index) => {
                         let mapped_memory_index =
-                            bank_index.to_usize(self.bank_count()) * self.bank_size as usize + bank_offset as usize;
+                            bank_index.to_usize(self.bank_count()) * self.layout.bank_size as usize + bank_offset as usize;
                         PrgMemoryIndex::MappedMemory(mapped_memory_index)
                     }
                     PrgType::WorkRam => PrgMemoryIndex::WorkRam(usize::from(bank_offset)),
@@ -118,14 +136,25 @@ impl PrgMemory {
 
         unreachable!();
     }
+}
+
+#[derive(Clone)]
+pub struct PrgLayout {
+    max_bank_count: u16,
+    bank_size: usize,
+    windows: Vec<Window>,
+}
+
+impl PrgLayout {
+    pub fn builder() -> PrgLayoutBuilder {
+        PrgLayoutBuilder::new()
+    }
 
     fn new(
-        raw_memory: Vec<u8>,
-        work_ram: Option<WorkRam>,
         max_bank_count: u16,
         bank_size: usize,
         windows: Vec<Window>,
-    ) -> PrgMemory {
+    ) -> PrgLayout {
 
         assert!(!windows.is_empty());
 
@@ -134,11 +163,14 @@ impl PrgMemory {
             "Bad PRG bank size",
         );
 
-        assert_eq!(windows[0].start.to_raw(), 0x6000,
+        assert_eq!(
+            windows[0].start.to_raw(),
+            0x6000,
             "Every mapper needs one PRG window starting at 0x6000 (usually WorkRam or Empty).");
         assert_eq!(
             windows[windows.len() - 1].end.to_raw(),
-            0xFFFF,"Every mapper needs one PRG window that extends to 0xFFFF",
+            0xFFFF,
+            "Every mapper needs one PRG window that extends to 0xFFFF",
         );
 
         for i in 0..windows.len() - 1 {
@@ -149,42 +181,27 @@ impl PrgMemory {
             );
         }
 
-        let prg_memory = PrgMemory { raw_memory, work_ram, bank_size, windows };
-        let bank_count = prg_memory.bank_count();
-        assert!(bank_count <= max_bank_count);
-        assert_eq!(
-            prg_memory.raw_memory.len(),
-            usize::from(bank_count) * bank_size,
-            "Bad PRG data size.",
-        );
+
         // Power of 2.
         assert_eq!(max_bank_count & (max_bank_count - 1), 0);
-        assert_eq!(bank_count & (bank_count - 1), 0);
 
-        prg_memory
+        PrgLayout { max_bank_count, bank_size, windows }
     }
 }
 
-pub struct PrgMemoryBuilder {
-    raw_memory: Option<Vec<u8>>,
+pub struct PrgLayoutBuilder {
     max_bank_count: Option<u16>,
     bank_size: Option<usize>,
-    work_ram: Option<WorkRam>,
     windows: Vec<Window>,
 }
 
-impl PrgMemoryBuilder {
-    pub fn raw_memory(&mut self, raw_memory: Vec<u8>) -> &mut PrgMemoryBuilder {
-        self.raw_memory = Some(raw_memory);
-        self
-    }
-
-    pub fn max_bank_count(&mut self, max_bank_count: u16) -> &mut PrgMemoryBuilder {
+impl PrgLayoutBuilder {
+    pub fn max_bank_count(&mut self, max_bank_count: u16) -> &mut PrgLayoutBuilder {
         self.max_bank_count = Some(max_bank_count);
         self
     }
 
-    pub fn bank_size(&mut self, bank_size: usize) -> &mut PrgMemoryBuilder {
+    pub fn bank_size(&mut self, bank_size: usize) -> &mut PrgLayoutBuilder {
         self.bank_size = Some(bank_size);
         self
     }
@@ -195,46 +212,26 @@ impl PrgMemoryBuilder {
         end: u16,
         size: usize,
         window_type: PrgType,
-    ) -> &mut PrgMemoryBuilder {
-        let window = Window {
-            start: CpuAddress::new(start),
-            end: CpuAddress::new(end),
-            window_type
-        };
-
-        assert!([8 * KIBIBYTE, 16 * KIBIBYTE, 32 * KIBIBYTE].contains(&size));
-        assert!(end > start);
-        let size: u16 = size.try_into().unwrap();
-        assert_eq!(end - start + 1, size);
-
-        let bank_size = self.bank_size.unwrap() as u16;
+    ) -> &mut PrgLayoutBuilder {
+        let bank_size = self.bank_size.unwrap();
         assert!(size % bank_size == 0 || bank_size % size == 0);
 
-        if window_type == PrgType::WorkRam {
-            assert!(self.work_ram.is_none(), "Only one Work RAM section may be specified.");
-            self.work_ram = Some(WorkRam { data: vec![0; usize::from(size)], enabled: true });
-        }
-
-        self.windows.push(window);
+        self.windows.push(Window::new(start, end, size, window_type));
         self
     }
 
-    pub fn build(&self) -> PrgMemory {
+    pub fn build(&self) -> PrgLayout {
         assert!(!self.windows.is_empty());
 
-        PrgMemory::new(
-            self.raw_memory.as_ref().unwrap().clone(),
-            self.work_ram.clone(),
-            self.max_bank_count.unwrap().clone(),
-            self.bank_size.unwrap().clone(),
+        PrgLayout::new(
+            self.max_bank_count.unwrap(),
+            self.bank_size.unwrap(),
             self.windows.clone(),
         )
     }
 
-    fn new() -> PrgMemoryBuilder {
-        PrgMemoryBuilder {
-            raw_memory: None,
-            work_ram: None,
+    fn new() -> PrgLayoutBuilder {
+        PrgLayoutBuilder {
             max_bank_count: None,
             bank_size: None,
             windows: Vec::new(),
@@ -254,20 +251,34 @@ enum PrgMemoryIndex {
 pub struct Window {
     start: CpuAddress,
     end: CpuAddress,
-    window_type: PrgType,
+    size: usize,
+    prg_type: PrgType,
 }
 
 impl Window {
     pub fn switch_bank_to(&mut self, new_bank_index: BankIndex) {
-        self.window_type.switch_bank_to(new_bank_index);
+        self.prg_type.switch_bank_to(new_bank_index);
     }
 
     fn bank_index(self) -> Option<BankIndex> {
-        self.window_type.bank_index()
+        self.prg_type.bank_index()
     }
 
     fn is_mirror(self) -> bool {
-        self.window_type == PrgType::MirrorPrevious
+        self.prg_type == PrgType::MirrorPrevious
+    }
+
+    fn new(start: u16, end: u16, size: usize, prg_type: PrgType) -> Window {
+        assert!([8 * KIBIBYTE, 16 * KIBIBYTE, 32 * KIBIBYTE].contains(&size));
+        assert!(end > start);
+        assert_eq!(end as usize - start as usize + 1, size);
+
+        Window {
+            start: CpuAddress::new(start),
+            end: CpuAddress::new(end),
+            size,
+            prg_type,
+        }
     }
 }
 
@@ -303,4 +314,13 @@ impl PrgType {
 struct WorkRam {
     data: Vec<u8>,
     enabled: bool,
+}
+
+impl WorkRam {
+    fn new(size: usize) -> WorkRam {
+        WorkRam {
+            data: vec![0; usize::from(size)],
+            enabled: true,
+        }
+    }
 }

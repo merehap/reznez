@@ -1,5 +1,16 @@
 use crate::memory::mapper::*;
 
+lazy_static! {
+    static ref PRG_LAYOUT: PrgLayout = PrgLayout::builder()
+        .max_bank_count(256)
+        .bank_size(16 * KIBIBYTE)
+        .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
+        .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
+        .build();
+
+}
+
 // UxROM (common usages)
 pub struct Mapper2 {
     prg_memory: PrgMemory,
@@ -9,15 +20,6 @@ pub struct Mapper2 {
 
 impl Mapper2 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper2, String> {
-        let prg_memory = PrgMemory::builder()
-            .raw_memory(cartridge.prg_rom())
-            .max_bank_count(256)
-            .bank_size(16 * KIBIBYTE)
-            .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-            .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
-            .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
-            .build();
-
         // Only one bank, so not bank-switched.
         let chr_memory = ChrMemory::builder()
             .raw_memory(cartridge.chr_rom())
@@ -27,7 +29,7 @@ impl Mapper2 {
             .add_default_ram_if_chr_data_missing();
 
         Ok(Mapper2 {
-            prg_memory,
+            prg_memory: PrgMemory::new(PRG_LAYOUT.clone(), cartridge.prg_rom()),
             chr_memory,
             name_table_mirroring: cartridge.name_table_mirroring(),
         })

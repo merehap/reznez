@@ -3,6 +3,16 @@ use crate::util::bit_util::get_bit;
 
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
 
+lazy_static! {
+    static ref PRG_LAYOUT: PrgLayout = PrgLayout::builder()
+        .max_bank_count(16)
+        .bank_size(16 * KIBIBYTE)
+        .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
+        .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
+        .build();
+}
+
 // SxROM (MMC1)
 pub struct Mapper1 {
     shift: u8,
@@ -17,16 +27,6 @@ pub struct Mapper1 {
 
 impl Mapper1 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper1, String> {
-        // TODO: Allow Work RAM to be turned on/off.
-        let prg_memory = PrgMemory::builder()
-            .raw_memory(cartridge.prg_rom())
-            .max_bank_count(16)
-            .bank_size(16 * KIBIBYTE)
-            .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
-            .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
-            .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
-            .build();
-
         // TODO: Not all boards support CHR RAM.
         let chr_memory = ChrMemory::builder()
             .raw_memory(cartridge.chr_rom())
@@ -42,7 +42,7 @@ impl Mapper1 {
             selected_chr_bank0: 0,
             selected_chr_bank1: 0,
             selected_prg_bank: 0,
-            prg_memory,
+            prg_memory: PrgMemory::new(PRG_LAYOUT.clone(), cartridge.prg_rom()),
             chr_memory,
         })
     }

@@ -1,5 +1,22 @@
 use crate::memory::mapper::*;
 
+lazy_static! {
+    // Same as Mapper 0's PRG layouts. Only one bank, so not bank-switched.
+    static ref PRG_LAYOUT_CNROM_128: PrgLayout = PrgLayout::builder()
+        .max_bank_count(1)
+        .bank_size(16 * KIBIBYTE)
+        .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
+        .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::MirrorPrevious)
+        .build();
+    static ref PRG_LAYOUT_CNROM_256: PrgLayout = PrgLayout::builder()
+        .max_bank_count(1)
+        .bank_size(32 * KIBIBYTE)
+        .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
+        .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .build();
+}
+
 // CNROM
 pub struct Mapper3 {
     prg_memory: PrgMemory,
@@ -9,23 +26,9 @@ pub struct Mapper3 {
 
 impl Mapper3 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper3, String> {
-        // Same as Mapper 0's PRG layout. Only one bank, so not bank-switched.
-        let prg_memory = match Mapper3::board(cartridge)? {
-            Board::Cnrom128 => PrgMemory::builder()
-                .raw_memory(cartridge.prg_rom())
-                .max_bank_count(1)
-                .bank_size(16 * KIBIBYTE)
-                .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-                .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
-                .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::MirrorPrevious)
-                .build(),
-            Board::Cnrom256 => PrgMemory::builder()
-                .raw_memory(cartridge.prg_rom())
-                .max_bank_count(1)
-                .bank_size(32 * KIBIBYTE)
-                .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-                .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
-                .build(),
+        let prg_layout = match Mapper3::board(cartridge)? {
+            Board::Cnrom128 => PRG_LAYOUT_CNROM_128.clone(),
+            Board::Cnrom256 => PRG_LAYOUT_CNROM_256.clone(),
         };
 
         let chr_memory = ChrMemory::builder()
@@ -36,7 +39,7 @@ impl Mapper3 {
             .add_default_ram_if_chr_data_missing();
 
         Ok(Mapper3 {
-            prg_memory,
+            prg_memory: PrgMemory::new(prg_layout, cartridge.prg_rom()),
             chr_memory,
             name_table_mirroring: cartridge.name_table_mirroring(),
         })

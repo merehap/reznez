@@ -3,7 +3,7 @@ pub use lazy_static::lazy_static;
 pub use crate::cartridge::Cartridge;
 pub use crate::memory::bank_index::BankIndex;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
-pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgType};
+pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout, PrgType};
 pub use crate::memory::ppu::chr_memory::{ChrMemory, ChrType};
 pub use crate::memory::writability::Writability::*;
 pub use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;

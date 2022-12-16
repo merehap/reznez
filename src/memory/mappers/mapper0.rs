@@ -1,5 +1,23 @@
 use crate::memory::mapper::*;
 
+lazy_static! {
+    // Only one bank, so not bank-switched.
+    static ref PRG_LAYOUT_NROM_128: PrgLayout = PrgLayout::builder()
+        .max_bank_count(1)
+        .bank_size(16 * KIBIBYTE)
+        .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
+        .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::MirrorPrevious)
+        .build();
+    // Only one bank, so not bank-switched.
+    static ref PRG_LAYOUT_NROM_256: PrgLayout = PrgLayout::builder()
+        .max_bank_count(1)
+        .bank_size(32 * KIBIBYTE)
+        .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
+        .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .build();
+}
+
 // NROM
 pub struct Mapper0 {
     prg_memory: PrgMemory,
@@ -9,23 +27,9 @@ pub struct Mapper0 {
 
 impl Mapper0 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper0, String> {
-        // Only one bank, so not bank-switched.
-        let prg_memory = match Mapper0::board(cartridge)? {
-            Board::Nrom128 => PrgMemory::builder()
-                .raw_memory(cartridge.prg_rom())
-                .max_bank_count(1)
-                .bank_size(16 * KIBIBYTE)
-                .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-                .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
-                .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::MirrorPrevious)
-                .build(),
-            Board::Nrom256 => PrgMemory::builder()
-                .raw_memory(cartridge.prg_rom())
-                .max_bank_count(1)
-                .bank_size(32 * KIBIBYTE)
-                .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-                .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
-                .build(),
+        let prg_layout = match Mapper0::board(cartridge)? {
+            Board::Nrom128 => PRG_LAYOUT_NROM_128.clone(),
+            Board::Nrom256 => PRG_LAYOUT_NROM_256.clone(),
         };
 
         // Only one bank, so not bank-switched.
@@ -37,7 +41,7 @@ impl Mapper0 {
             .add_default_ram_if_chr_data_missing();
 
         Ok(Mapper0 {
-            prg_memory,
+            prg_memory: PrgMemory::new(prg_layout, cartridge.prg_rom()),
             chr_memory,
             name_table_mirroring: cartridge.name_table_mirroring(),
         })

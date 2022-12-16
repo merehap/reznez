@@ -1,5 +1,14 @@
 use crate::memory::mapper::*;
 
+lazy_static! {
+    static ref PRG_LAYOUT: PrgLayout = PrgLayout::builder()
+        .max_bank_count(8)
+        .bank_size(32 * KIBIBYTE)
+        .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
+        .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .build();
+}
+
 // AxROM
 pub struct Mapper7 {
     prg_memory: PrgMemory,
@@ -9,14 +18,6 @@ pub struct Mapper7 {
 
 impl Mapper7 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper7, String> {
-        let prg_memory = PrgMemory::builder()
-            .raw_memory(cartridge.prg_rom())
-            .max_bank_count(8)
-            .bank_size(32 * KIBIBYTE)
-            .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-            .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
-            .build();
-
         // Only one bank, so not bank-switched.
         let chr_memory = ChrMemory::builder()
             .raw_memory(cartridge.chr_rom())
@@ -26,7 +27,7 @@ impl Mapper7 {
             .add_default_ram_if_chr_data_missing();
 
         Ok(Mapper7 {
-            prg_memory,
+            prg_memory: PrgMemory::new(PRG_LAYOUT.clone(), cartridge.prg_rom()),
             chr_memory,
             name_table_mirroring: NameTableMirroring::OneScreenLeftBank,
         })
