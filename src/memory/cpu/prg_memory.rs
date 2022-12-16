@@ -268,7 +268,7 @@ impl Window {
     }
 
     fn size(self) -> usize {
-        usize::from(self.end.to_raw() - self.start.to_raw())
+        usize::from(self.end.to_raw() - self.start.to_raw() + 1)
     }
 
     fn new(start: u16, end: u16, size: usize, prg_type: PrgType) -> Window {
