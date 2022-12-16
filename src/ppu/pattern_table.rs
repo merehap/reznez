@@ -162,8 +162,8 @@ impl PatternIndex {
         let pattern_index = match (sprite_height, sprite_half) {
             (SpriteHeight::Normal, SpriteHalf::Top   ) => self,
             (SpriteHeight::Normal, SpriteHalf::Bottom) => unreachable!(),
-            (_                   , SpriteHalf::Top   ) => self.to_tall_indexes().0,
-            (_                   , SpriteHalf::Bottom) => self.to_tall_indexes().1,
+            (SpriteHeight::Tall  , SpriteHalf::Top   ) => self.to_tall_indexes().0,
+            (SpriteHeight::Tall  , SpriteHalf::Bottom) => self.to_tall_indexes().1,
         };
 
         Some((pattern_index, row_in_half))

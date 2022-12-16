@@ -19,6 +19,7 @@ use crate::ppu::sprite::oam_index::OamIndex;
 use crate::ppu::sprite::secondary_oam::SecondaryOam;
 use crate::ppu::sprite::oam_registers::OamRegisters;
 use crate::ppu::sprite::sprite_y::SpriteY;
+use crate::ppu::sprite::sprite_height::SpriteHeight;
 
 pub struct Ppu {
     oam: Oam,
@@ -321,7 +322,12 @@ impl Ppu {
                         sprite_height,
                         pixel_row
                     ) {
-                        let (low, high) = mem.pattern_table(sprite_table_side).read_pattern_data_at(pattern_index, row_in_half);
+                        let sprite_table_side = match sprite_height  {
+                            SpriteHeight::Normal => sprite_table_side,
+                            SpriteHeight::Tall => self.next_sprite_pattern_index.tall_sprite_pattern_table_side(),
+                        };
+                        let (low, high) = mem.pattern_table(sprite_table_side)
+                            .read_pattern_data_at(pattern_index, row_in_half);
                         self.oam_registers.registers[self.oam_register_index].set_pattern(low, high);
                     }
                 }
