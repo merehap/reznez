@@ -86,7 +86,14 @@ impl Mapper for Mapper1 {
                 0xA000..=0xBFFF => self.selected_chr_bank0 = self.shift,
                 // FIXME: Handle cases for special boards.
                 0xC000..=0xDFFF => self.selected_chr_bank1 = self.shift,
-                0xE000..=0xFFFF => self.selected_prg_bank = self.shift,
+                0xE000..=0xFFFF => {
+                    self.selected_prg_bank = self.shift & 0b0_1111;
+                    if get_bit(self.shift, 3) {
+                        self.prg_memory.disable_work_ram();
+                    } else {
+                        self.prg_memory.enable_work_ram();
+                    }
+                }
             }
 
             self.shift = EMPTY_SHIFT_REGISTER;
@@ -103,15 +110,6 @@ impl Mapper for Mapper1 {
                 self.chr_memory.window_at(0x1000).switch_bank_to(self.selected_chr_bank1);
             }
         }
-
-        if get_bit(self.selected_prg_bank, 3) {
-            self.prg_memory.disable_work_ram();
-        } else {
-            self.prg_memory.enable_work_ram();
-        }
-
-        // Clear the high bit which is never used to change the PRG bank.
-        self.selected_prg_bank &= 0b0_1111;
 
         match self.control.prg_bank_mode {
             PrgBankMode::Large => {
