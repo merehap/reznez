@@ -88,10 +88,10 @@ impl Mapper for Mapper1 {
                 0xC000..=0xDFFF => self.selected_chr_bank1 = self.shift,
                 0xE000..=0xFFFF => {
                     self.selected_prg_bank = self.shift & 0b0_1111;
-                    if get_bit(self.shift, 3) {
-                        self.prg_memory.disable_work_ram();
-                    } else {
+                    if self.shift & 0b1_0000 == 0 {
                         self.prg_memory.enable_work_ram();
+                    } else {
+                        self.prg_memory.disable_work_ram();
                     }
                 }
             }
