@@ -7,6 +7,12 @@ lazy_static! {
         .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
         .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
         .build();
+    // Only one bank, so not bank-switched.
+    static ref CHR_LAYOUT: ChrLayout = ChrLayout::builder()
+        .max_bank_count(1)
+        .bank_size(8 * KIBIBYTE)
+        .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
+        .build();
 }
 
 // AxROM
@@ -18,17 +24,9 @@ pub struct Mapper7 {
 
 impl Mapper7 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper7, String> {
-        // Only one bank, so not bank-switched.
-        let chr_memory = ChrMemory::builder()
-            .raw_memory(cartridge.chr_rom())
-            .max_bank_count(1)
-            .bank_size(8 * KIBIBYTE)
-            .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
-            .add_default_ram_if_chr_data_missing();
-
         Ok(Mapper7 {
             prg_memory: PrgMemory::new(PRG_LAYOUT.clone(), cartridge.prg_rom()),
-            chr_memory,
+            chr_memory: ChrMemory::new(CHR_LAYOUT.clone(), cartridge.chr_rom()),
             name_table_mirroring: NameTableMirroring::OneScreenLeftBank,
         })
     }

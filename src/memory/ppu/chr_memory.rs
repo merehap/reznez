@@ -5,18 +5,48 @@ use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
 
 pub struct ChrMemory {
+    layout: ChrLayout,
     raw_memory: Vec<u8>,
-    bank_size: usize,
-    windows: Vec<Window>,
 }
 
 impl ChrMemory {
-    pub fn builder() -> ChrMemoryBuilder {
-        ChrMemoryBuilder::new()
+    pub fn new(mut layout: ChrLayout, mut raw_memory: Vec<u8>) -> ChrMemory {
+        // If no CHR data is provided, add 8KiB of CHR RAM.
+        // This is the only instance where changing the ROM/RAM type after configuration time is
+        // allowed.
+        if raw_memory.is_empty() {
+            raw_memory = vec![0; 8 * KIBIBYTE];
+            for window in &mut layout.windows {
+                window.chr_type.0 = Writability::Ram;
+            }
+        }
+
+        let windows = &layout.windows;
+        assert!(!windows.is_empty());
+
+        assert_eq!(windows[0].start, 0x0000);
+        assert_eq!(windows[windows.len() - 1].end, 0x1FFF);
+
+        for i in 0..windows.len() - 1 {
+            assert_eq!(
+                windows[i + 1].start,
+                windows[i].end + 1,
+            );
+        }
+
+        let chr_memory = ChrMemory { layout, raw_memory };
+
+        let bank_count = chr_memory.bank_count();
+        assert_eq!(usize::from(bank_count) * chr_memory.layout.bank_size, chr_memory.raw_memory.len());
+        // Power of 2.
+        assert_eq!(bank_count & (bank_count - 1), 0);
+        assert!(bank_count <= chr_memory.layout.max_bank_count);
+
+        chr_memory
     }
 
     pub fn bank_count(&self) -> u16 {
-        (self.raw_memory.len() / self.bank_size)
+        (self.raw_memory.len() / self.layout.bank_size)
             .try_into()
             .expect("Way too many CHR banks.")
     }
@@ -34,13 +64,13 @@ impl ChrMemory {
     }
 
     pub fn resolve_selected_bank_indexes(&self) -> Vec<u16> {
-        self.windows.iter()
+        self.layout.windows.iter()
             .map(|window| window.bank_index().to_u16(self.bank_count()))
             .collect()
     }
 
     pub fn window_at(&mut self, start: u16) -> &mut Window {
-        for window in &mut self.windows {
+        for window in &mut self.layout.windows {
             if window.start == start {
                 return window;
             }
@@ -59,10 +89,10 @@ impl ChrMemory {
     fn address_to_chr_index(&self, address: u16) -> (usize, bool) {
         assert!(address < 0x2000);
 
-        for window in &self.windows {
+        for window in &self.layout.windows {
             if let Some(bank_offset) = window.offset(address) {
                 let index = usize::from(window.bank_index().to_u16(self.bank_count())) *
-                    usize::from(self.bank_size) +
+                    usize::from(self.layout.bank_size) +
                     usize::from(bank_offset);
                 return (index, window.is_writable());
             }
@@ -98,18 +128,25 @@ impl ChrMemory {
             self.address_to_chr_index(0x1C00).0,
         ]
     }
+}
+
+#[derive(Clone)]
+pub struct ChrLayout {
+    max_bank_count: u16,
+    bank_size: usize,
+    windows: Vec<Window>,
+}
+
+impl ChrLayout {
+    pub fn builder() -> ChrLayoutBuilder {
+        ChrLayoutBuilder::new()
+    }
 
     fn new(
-        raw_memory: Vec<u8>,
         max_bank_count: u16,
         bank_size: usize,
         windows: Vec<Window>,
-    ) -> ChrMemory {
-        assert!(
-            !raw_memory.is_empty(),
-            "No CHR memory provided. Is this mapper missing 8 KiB CHR RAM defaulting?",
-        );
-
+    ) -> ChrLayout {
         assert!(!windows.is_empty());
 
         assert_eq!(windows[0].start, 0x0000);
@@ -122,38 +159,24 @@ impl ChrMemory {
             );
         }
 
-        let chr_memory = ChrMemory { raw_memory, bank_size, windows };
-
-        let bank_count = chr_memory.bank_count();
-        assert_eq!(usize::from(bank_count) * bank_size, chr_memory.raw_memory.len());
-        // Power of 2.
         assert_eq!(max_bank_count & (max_bank_count - 1), 0);
-        assert_eq!(bank_count & (bank_count - 1), 0);
-        assert!(bank_count <= max_bank_count);
-
-        chr_memory
+        ChrLayout { max_bank_count, bank_size, windows }
     }
 }
 
-pub struct ChrMemoryBuilder {
-    raw_memory: Option<Vec<u8>>,
+pub struct ChrLayoutBuilder {
     max_bank_count: Option<u16>,
     bank_size: Option<usize>,
     windows: Vec<Window>,
 }
 
-impl ChrMemoryBuilder {
-    pub fn raw_memory(&mut self, raw_memory: Vec<u8>) -> &mut ChrMemoryBuilder {
-        self.raw_memory = Some(raw_memory);
-        self
-    }
-
-    pub fn max_bank_count(&mut self, max_bank_count: u16) -> &mut ChrMemoryBuilder {
+impl ChrLayoutBuilder {
+    pub fn max_bank_count(&mut self, max_bank_count: u16) -> &mut ChrLayoutBuilder {
         self.max_bank_count = Some(max_bank_count);
         self
     }
 
-    pub fn bank_size(&mut self, bank_size: usize) -> &mut ChrMemoryBuilder {
+    pub fn bank_size(&mut self, bank_size: usize) -> &mut ChrLayoutBuilder {
         self.bank_size = Some(bank_size);
         self
     }
@@ -164,41 +187,24 @@ impl ChrMemoryBuilder {
         end: u16,
         size: usize,
         chr_type: ChrType,
-    ) -> &mut ChrMemoryBuilder {
-        assert!([1 * KIBIBYTE, 2 * KIBIBYTE, 4 * KIBIBYTE, 8 * KIBIBYTE].contains(&size));
-        assert!(end > start);
-        let size: u16 = size.try_into().unwrap();
-        assert_eq!(end - start + 1, size);
-
-        let bank_size = self.bank_size.unwrap() as u16;
+    ) -> &mut ChrLayoutBuilder {
+        let bank_size = self.bank_size.unwrap();
         assert!(size % bank_size == 0 || bank_size % size == 0);
 
-        self.windows.push(Window { start, end, chr_type, write_status: None });
+        self.windows.push(Window::new(start, end, size, chr_type));
         self
     }
 
-    pub fn add_default_ram_if_chr_data_missing(&mut self) -> ChrMemory {
-        // If no CHR data is provided, add 8KiB of CHR RAM.
-        // This is the only instance where changing the ROM/RAM type after configuration time is
-        // allowed.
-        if self.raw_memory.as_ref().unwrap().is_empty() {
-            self.raw_memory = Some(vec![0; 8 * KIBIBYTE]);
-            for window in &mut self.windows {
-                window.chr_type.0 = Writability::Ram;
-            }
-        }
-
-        ChrMemory::new(
-            self.raw_memory.clone().unwrap(),
+    pub fn build(&mut self) -> ChrLayout {
+        ChrLayout::new(
             self.max_bank_count.unwrap(),
             self.bank_size.unwrap(),
             self.windows.clone(),
         )
     }
 
-    fn new() -> ChrMemoryBuilder {
-        ChrMemoryBuilder {
-            raw_memory: None,
+    fn new() -> ChrLayoutBuilder {
+        ChrLayoutBuilder {
             max_bank_count: None,
             bank_size: None,
             windows: Vec::new(),
@@ -217,6 +223,14 @@ pub struct Window {
 impl Window {
     pub fn switch_bank_to(&mut self, new_bank_index: BankIndex) {
         self.chr_type.switch_bank_to(new_bank_index);
+    }
+
+    fn new(start: u16, end: u16, size: usize, chr_type: ChrType) -> Window {
+        assert!([1 * KIBIBYTE, 2 * KIBIBYTE, 4 * KIBIBYTE, 8 * KIBIBYTE].contains(&size));
+        assert!(end > start);
+        assert_eq!(end as usize - start as usize + 1, size);
+
+        Window { start, end, chr_type, write_status: None }
     }
 
     fn offset(self, address: u16) -> Option<u16> {

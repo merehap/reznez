@@ -15,6 +15,12 @@ lazy_static! {
         .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
         .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
         .build();
+
+    static ref CHR_LAYOUT: ChrLayout = ChrLayout::builder()
+        .max_bank_count(256)
+        .bank_size(8 * KIBIBYTE)
+        .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::FIRST))
+        .build();
 }
 
 // CNROM
@@ -31,16 +37,9 @@ impl Mapper3 {
             Board::Cnrom256 => PRG_LAYOUT_CNROM_256.clone(),
         };
 
-        let chr_memory = ChrMemory::builder()
-            .raw_memory(cartridge.chr_rom())
-            .max_bank_count(256)
-            .bank_size(8 * KIBIBYTE)
-            .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::FIRST))
-            .add_default_ram_if_chr_data_missing();
-
         Ok(Mapper3 {
             prg_memory: PrgMemory::new(prg_layout, cartridge.prg_rom()),
-            chr_memory,
+            chr_memory: ChrMemory::new(CHR_LAYOUT.clone(), cartridge.chr_rom()),
             name_table_mirroring: cartridge.name_table_mirroring(),
         })
     }

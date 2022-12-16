@@ -11,6 +11,13 @@ lazy_static! {
         .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
         .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
         .build();
+    // TODO: Not all boards support CHR RAM.
+    static ref CHR_LAYOUT: ChrLayout = ChrLayout::builder()
+        .max_bank_count(32)
+        .bank_size(4 * KIBIBYTE)
+        .add_window(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
+        .add_window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
+        .build();
 }
 
 // SxROM (MMC1)
@@ -27,15 +34,6 @@ pub struct Mapper1 {
 
 impl Mapper1 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper1, String> {
-        // TODO: Not all boards support CHR RAM.
-        let chr_memory = ChrMemory::builder()
-            .raw_memory(cartridge.chr_rom())
-            .max_bank_count(32)
-            .bank_size(4 * KIBIBYTE)
-            .add_window(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
-            .add_window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
-            .add_default_ram_if_chr_data_missing();
-
         Ok(Mapper1 {
             shift: EMPTY_SHIFT_REGISTER,
             control: Control::new(),
@@ -43,7 +41,7 @@ impl Mapper1 {
             selected_chr_bank1: 0,
             selected_prg_bank: 0,
             prg_memory: PrgMemory::new(PRG_LAYOUT.clone(), cartridge.prg_rom()),
-            chr_memory,
+            chr_memory: ChrMemory::new(CHR_LAYOUT.clone(), cartridge.chr_rom()),
         })
     }
 }

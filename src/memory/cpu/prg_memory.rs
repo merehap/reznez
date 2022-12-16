@@ -17,7 +17,7 @@ impl PrgMemory {
         for window in &prg_memory.layout.windows {
             if window.prg_type == PrgType::WorkRam {
                 assert!(prg_memory.work_ram.is_none(), "Only one Work RAM section may be specified.");
-                prg_memory.work_ram = Some(WorkRam::new(window.size));
+                prg_memory.work_ram = Some(WorkRam::new(window.size()));
             }
         }
 
@@ -251,7 +251,6 @@ enum PrgMemoryIndex {
 pub struct Window {
     start: CpuAddress,
     end: CpuAddress,
-    size: usize,
     prg_type: PrgType,
 }
 
@@ -268,6 +267,10 @@ impl Window {
         self.prg_type == PrgType::MirrorPrevious
     }
 
+    fn size(self) -> usize {
+        usize::from(self.end.to_raw() - self.start.to_raw())
+    }
+
     fn new(start: u16, end: u16, size: usize, prg_type: PrgType) -> Window {
         assert!([8 * KIBIBYTE, 16 * KIBIBYTE, 32 * KIBIBYTE].contains(&size));
         assert!(end > start);
@@ -276,7 +279,6 @@ impl Window {
         Window {
             start: CpuAddress::new(start),
             end: CpuAddress::new(end),
-            size,
             prg_type,
         }
     }
