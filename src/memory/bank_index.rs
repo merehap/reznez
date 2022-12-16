@@ -26,3 +26,9 @@ impl BankIndex {
         self.to_u16(bank_count).into()
     }
 }
+
+impl From<u8> for BankIndex {
+    fn from(value: u8) -> Self {
+        BankIndex::IndexFromStart(value.into())
+    }
+}

@@ -88,8 +88,8 @@ impl Mapper for Mapper1 {
             ChrBankMode::TwoSmall => (self.selected_chr_bank0, self.selected_chr_bank1),
         };
 
-        self.chr_memory.window_at(0x0000).switch_bank_to(BankIndex::from_u8(left_bank));
-        self.chr_memory.window_at(0x1000).switch_bank_to(BankIndex::from_u8(right_bank));
+        self.chr_memory.window_at(0x0000).switch_bank_to(left_bank);
+        self.chr_memory.window_at(0x1000).switch_bank_to(right_bank);
 
         if get_bit(self.selected_prg_bank, 3) {
             self.prg_memory.disable_work_ram();
@@ -103,14 +103,14 @@ impl Mapper for Mapper1 {
         let (left_index, right_index) = match self.control.prg_bank_mode {
             PrgBankMode::Large => {
                 let left_index = self.selected_prg_bank & 0b0000_1110;
-                (left_index, left_index + 1)
+                (left_index.into(), (left_index + 1).into())
             }
-            PrgBankMode::FixedFirst => (0, self.selected_prg_bank),
-            PrgBankMode::FixedLast => (self.selected_prg_bank, self.prg_memory.last_bank_index() as u8),
+            PrgBankMode::FixedFirst => (BankIndex::FIRST, self.selected_prg_bank.into()),
+            PrgBankMode::FixedLast => (self.selected_prg_bank.into(), BankIndex::LAST),
         };
 
-        self.prg_memory.window_at(0x8000).switch_bank_to(BankIndex::from_u8(left_index));
-        self.prg_memory.window_at(0xC000).switch_bank_to(BankIndex::from_u8(right_index));
+        self.prg_memory.window_at(0x8000).switch_bank_to(left_index);
+        self.prg_memory.window_at(0xC000).switch_bank_to(right_index);
     }
 
     fn name_table_mirroring(&self) -> NameTableMirroring {

@@ -38,9 +38,7 @@ impl Mapper for Mapper7 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
             0x8000..=0xFFFF => {
-                let new_bank = BankIndex::from_u8(value & 0b0000_0111);
-                self.prg_memory.window_at(0x8000).switch_bank_to(new_bank);
-
+                self.prg_memory.window_at(0x8000).switch_bank_to(value & 0b0000_0111);
                 self.name_table_mirroring = if value & 0b0001_0000 == 0 {
                     NameTableMirroring::OneScreenLeftBank
                 } else {

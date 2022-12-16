@@ -255,8 +255,10 @@ pub struct Window {
 }
 
 impl Window {
-    pub fn switch_bank_to(&mut self, new_bank_index: BankIndex) {
-        self.prg_type.switch_bank_to(new_bank_index);
+    pub fn switch_bank_to<Index>(&mut self, new_bank_index: Index)
+    where Index: Into<BankIndex>
+    {
+        self.prg_type.switch_bank_to(new_bank_index.into());
     }
 
     fn bank_index(self) -> Option<BankIndex> {

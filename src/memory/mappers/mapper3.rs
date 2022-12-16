@@ -61,8 +61,7 @@ impl Mapper for Mapper3 {
         match cpu_address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
-            0x8000..=0xFFFF =>
-                self.chr_memory.window_at(0x0000).switch_bank_to(BankIndex::from_u8(value)),
+            0x8000..=0xFFFF => self.chr_memory.window_at(0x0000).switch_bank_to(value),
         }
     }
 
