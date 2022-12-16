@@ -104,6 +104,10 @@ impl PrgMemory {
         self.work_ram.as_mut().unwrap().enabled = true;
     }
 
+    pub fn set_layout(&mut self, layout: PrgLayout) {
+        self.layout = layout;
+    }
+
     // TODO: Indicate if read-only.
     fn address_to_prg_index(&self, address: CpuAddress) -> PrgMemoryIndex {
         assert!(address >= PRG_MEMORY_START);

@@ -79,6 +79,10 @@ impl ChrMemory {
         panic!("No window exists at {:X?}", start);
     }
 
+    pub fn set_layout(&mut self, layout: ChrLayout) {
+        self.layout = layout;
+    }
+
     pub fn pattern_table(&self, side: PatternTableSide) -> PatternTable {
         match side {
             PatternTableSide::Left => PatternTable::new(self.left_chunks()),

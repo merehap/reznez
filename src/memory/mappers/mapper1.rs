@@ -4,19 +4,31 @@ use crate::util::bit_util::get_bit;
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
 
 lazy_static! {
-    static ref PRG_LAYOUT: PrgLayout = PrgLayout::builder()
+    static ref PRG_LAYOUT_16KIB_WINDOWS: PrgLayout = PrgLayout::builder()
         .max_bank_count(16)
         .bank_size(16 * KIBIBYTE)
         .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
         .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
         .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
         .build();
+    static ref PRG_LAYOUT_32KIB_WINDOW: PrgLayout = PrgLayout::builder()
+        .max_bank_count(8)
+        .bank_size(32 * KIBIBYTE)
+        .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
+        .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .build();
+
     // TODO: Not all boards support CHR RAM.
-    static ref CHR_LAYOUT: ChrLayout = ChrLayout::builder()
+    static ref CHR_LAYOUT_4KIB_WINDOWS: ChrLayout = ChrLayout::builder()
         .max_bank_count(32)
         .bank_size(4 * KIBIBYTE)
         .add_window(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
         .add_window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
+        .build();
+    static ref CHR_LAYOUT_8KIB_WINDOW: ChrLayout = ChrLayout::builder()
+        .max_bank_count(16)
+        .bank_size(8 * KIBIBYTE)
+        .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
         .build();
 }
 
@@ -40,8 +52,8 @@ impl Mapper1 {
             selected_chr_bank0: 0,
             selected_chr_bank1: 0,
             selected_prg_bank: 0,
-            prg_memory: PrgMemory::new(PRG_LAYOUT.clone(), cartridge.prg_rom()),
-            chr_memory: ChrMemory::new(CHR_LAYOUT.clone(), cartridge.chr_rom()),
+            prg_memory: PrgMemory::new(PRG_LAYOUT_16KIB_WINDOWS.clone(), cartridge.prg_rom()),
+            chr_memory: ChrMemory::new(CHR_LAYOUT_4KIB_WINDOWS.clone(), cartridge.chr_rom()),
         })
     }
 }
@@ -80,16 +92,17 @@ impl Mapper for Mapper1 {
             self.shift = EMPTY_SHIFT_REGISTER;
         }
 
-        let (left_bank, right_bank) = match self.control.chr_bank_mode {
+        match self.control.chr_bank_mode {
             ChrBankMode::Large => {
-                let index = self.selected_chr_bank0 & 0b0001_1110;
-                (index, index + 1)
+                self.chr_memory.set_layout(CHR_LAYOUT_8KIB_WINDOW.clone());
+                self.chr_memory.window_at(0x0000).switch_bank_to(self.selected_chr_bank0 >> 1);
             }
-            ChrBankMode::TwoSmall => (self.selected_chr_bank0, self.selected_chr_bank1),
-        };
-
-        self.chr_memory.window_at(0x0000).switch_bank_to(left_bank);
-        self.chr_memory.window_at(0x1000).switch_bank_to(right_bank);
+            ChrBankMode::TwoSmall => {
+                self.chr_memory.set_layout(CHR_LAYOUT_4KIB_WINDOWS.clone());
+                self.chr_memory.window_at(0x0000).switch_bank_to(self.selected_chr_bank0);
+                self.chr_memory.window_at(0x1000).switch_bank_to(self.selected_chr_bank1);
+            }
+        }
 
         if get_bit(self.selected_prg_bank, 3) {
             self.prg_memory.disable_work_ram();
@@ -100,17 +113,22 @@ impl Mapper for Mapper1 {
         // Clear the high bit which is never used to change the PRG bank.
         self.selected_prg_bank &= 0b0_1111;
 
-        let (left_index, right_index) = match self.control.prg_bank_mode {
+        match self.control.prg_bank_mode {
             PrgBankMode::Large => {
-                let left_index = self.selected_prg_bank & 0b0000_1110;
-                (left_index.into(), (left_index + 1).into())
+                self.prg_memory.set_layout(PRG_LAYOUT_32KIB_WINDOW.clone());
+                self.prg_memory.window_at(0x8000).switch_bank_to(self.selected_prg_bank >> 1);
             }
-            PrgBankMode::FixedFirst => (BankIndex::FIRST, self.selected_prg_bank.into()),
-            PrgBankMode::FixedLast => (self.selected_prg_bank.into(), BankIndex::LAST),
-        };
-
-        self.prg_memory.window_at(0x8000).switch_bank_to(left_index);
-        self.prg_memory.window_at(0xC000).switch_bank_to(right_index);
+            PrgBankMode::FixedFirst => {
+                self.prg_memory.set_layout(PRG_LAYOUT_16KIB_WINDOWS.clone());
+                self.prg_memory.window_at(0x8000).switch_bank_to(BankIndex::FIRST);
+                self.prg_memory.window_at(0xC000).switch_bank_to(self.selected_prg_bank);
+            }
+            PrgBankMode::FixedLast => {
+                self.prg_memory.set_layout(PRG_LAYOUT_16KIB_WINDOWS.clone());
+                self.prg_memory.window_at(0x8000).switch_bank_to(self.selected_prg_bank);
+                self.prg_memory.window_at(0xC000).switch_bank_to(BankIndex::LAST);
+            }
+        }
     }
 
     fn name_table_mirroring(&self) -> NameTableMirroring {
