@@ -2,7 +2,7 @@ use log::{info, error};
 
 use crate::cpu::cycle_action::{CycleAction, DmaTransferState};
 use crate::cpu::cycle_action_queue::CycleActionQueue;
-use crate::cpu::instruction::{Argument, Instruction, OpCode};
+use crate::cpu::instruction::{AccessMode, Argument, Instruction, OpCode};
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::ports::DmaPort;
@@ -153,8 +153,14 @@ impl Cpu {
                     ));
                 self.program_counter.inc();
             }
-            CycleAction::FetchLowAddressByte => {}
-            CycleAction::FetchHighAddressByte => {}
+            CycleAction::FetchLowAddressByte => {
+                self.address_bus.push_low_byte(memory.read(self.program_counter));
+                self.program_counter.inc();
+            }
+            CycleAction::FetchHighAddressByte => {
+                self.address_bus.push_high_byte(memory.read(self.program_counter));
+                self.program_counter.inc();
+            }
             CycleAction::FetchData => {}
             CycleAction::Instruction(instr) => {
                 match self.execute_instruction(memory, instr) {
@@ -205,7 +211,10 @@ impl Cpu {
         instruction: Instruction,
     ) -> InstructionResult {
 
-        self.program_counter = self.program_counter.advance(instruction.length() - 1);
+        match instruction.template.access_mode {
+            AccessMode::Abs => {}
+            _ => self.program_counter = self.program_counter.advance(instruction.length() - 1),
+        }
 
         let mut branch_taken = false;
         let mut oops = false;
@@ -589,13 +598,15 @@ impl AddressBus {
         }
     }
 
-    fn push_next_byte(&mut self, value: u8) {
-        if let Some(low) = self.next_low_byte {
-            self.address = CpuAddress::from_low_high(low, value);
-            self.next_low_byte = None;
-        } else {
-            self.next_low_byte = Some(value);
-        }
+    fn push_low_byte(&mut self, value: u8) {
+        assert!(self.next_low_byte.is_none());
+        self.next_low_byte = Some(value);
+    }
+
+    fn push_high_byte(&mut self, value: u8) {
+        assert!(self.next_low_byte.is_some());
+        self.address = CpuAddress::from_low_high(value, value);
+        self.next_low_byte = None;
     }
 }
 

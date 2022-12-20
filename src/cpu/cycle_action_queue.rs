@@ -41,7 +41,7 @@ impl CycleActionQueue {
         // Cycle 0 was the instruction fetch, cycle n - 1 is the instruction execution.
         match (instruction.template.access_mode, instruction.template.op_code) {
             (Abs, JMP) => self.queue.push_front(CycleAction::Nop),
-            (Abs, code) => {
+            (Abs, _code) => {
                 self.prepend(&vec![CycleAction::Nop; instruction.template.cycle_count as usize - 4]);
                 // TODO: Make exceptions for JSR and potentially others.
                 self.prepend(&[CycleAction::FetchLowAddressByte, CycleAction::FetchHighAddressByte]);
