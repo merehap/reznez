@@ -4,11 +4,9 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 #[derive(Clone, Copy, Debug)]
 pub enum CycleAction {
     FetchInstruction,
-    /*
     FetchLowAddressByte,
     FetchHighAddressByte,
     FetchData,
-    */
 
     Nop,
     Instruction(Instruction),

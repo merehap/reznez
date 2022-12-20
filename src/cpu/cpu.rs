@@ -153,6 +153,9 @@ impl Cpu {
                     ));
                 self.program_counter.inc();
             }
+            CycleAction::FetchLowAddressByte => {}
+            CycleAction::FetchHighAddressByte => {}
+            CycleAction::FetchData => {}
             CycleAction::Instruction(instr) => {
                 match self.execute_instruction(memory, instr) {
                     InstructionResult::Success {branch_taken, oops} if branch_taken || oops => {

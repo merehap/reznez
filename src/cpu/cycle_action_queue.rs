@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::cpu::cycle_action::{CycleAction, DmaTransferState};
-use crate::cpu::instruction::{Instruction, AccessMode};
+use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
 use crate::memory::cpu::cpu_address::CpuAddress;
 
 // More than enough space for a DMA transfer (513 cycles) plus an instruction.
@@ -37,14 +37,15 @@ impl CycleActionQueue {
         self.queue.push_front(CycleAction::Instruction(instruction));
 
         use AccessMode::*;
+        use OpCode::*;
         // Cycle 0 was the instruction fetch, cycle n - 1 is the instruction execution.
-        match instruction.template.access_mode {
-            /*
-            Abs => {
-                for _ in 1..instruction.template.cycle_count as u8 - 4 {
-                    self.queue.push_front(CycleAction::Nop);
-                }
-            }*/
+        match (instruction.template.access_mode, instruction.template.op_code) {
+            (Abs, JMP) => self.queue.push_front(CycleAction::Nop),
+            (Abs, code) => {
+                self.prepend(&vec![CycleAction::Nop; instruction.template.cycle_count as usize - 4]);
+                // TODO: Make exceptions for JSR and potentially others.
+                self.prepend(&[CycleAction::FetchLowAddressByte, CycleAction::FetchHighAddressByte]);
+            }
             _ => {
                 self.prepend(&vec![CycleAction::Nop; instruction.template.cycle_count as usize - 2]);
             }
