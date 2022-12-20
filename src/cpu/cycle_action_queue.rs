@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::cpu::cycle_action::{CycleAction, DmaTransferState};
-use crate::cpu::instruction::Instruction;
+use crate::cpu::instruction::{Instruction, AccessMode};
 use crate::memory::cpu::cpu_address::CpuAddress;
 
 // More than enough space for a DMA transfer (513 cycles) plus an instruction.
@@ -36,9 +36,18 @@ impl CycleActionQueue {
     pub fn enqueue_instruction(&mut self, instruction: Instruction) {
         self.queue.push_front(CycleAction::Instruction(instruction));
 
+        use AccessMode::*;
         // Cycle 0 was the instruction fetch, cycle n - 1 is the instruction execution.
-        for _ in 1..instruction.template.cycle_count as u8 - 1 {
-            self.queue.push_front(CycleAction::Nop);
+        match instruction.template.access_mode {
+            /*
+            Abs => {
+                for _ in 1..instruction.template.cycle_count as u8 - 4 {
+                    self.queue.push_front(CycleAction::Nop);
+                }
+            }*/
+            _ => {
+                self.prepend(&vec![CycleAction::Nop; instruction.template.cycle_count as usize - 2]);
+            }
         }
     }
 
@@ -69,5 +78,11 @@ impl CycleActionQueue {
 
     fn enqueue_dma_transfer_state(&mut self, state: DmaTransferState) {
         self.queue.push_back(CycleAction::DmaTransfer(state));
+    }
+
+    fn prepend(&mut self, actions: &[CycleAction]) {
+        for &action in actions.iter().rev() {
+            self.queue.push_front(action);
+        }
     }
 }

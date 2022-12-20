@@ -327,6 +327,7 @@ pub enum AccessMode {
     ZP,
     ZPX,
     ZPY,
+    // Absolute addressing.
     Abs,
     AbX,
     AbY,

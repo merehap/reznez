@@ -1,7 +1,7 @@
 use crate::cpu::instruction::Instruction;
 use crate::memory::cpu::cpu_address::CpuAddress;
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum CycleAction {
     FetchInstruction,
     /*
