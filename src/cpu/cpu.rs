@@ -29,6 +29,9 @@ pub struct Cpu {
     cycle: u64,
 
     jammed: bool,
+
+    address_bus: AddressBus,
+    data_bus: u8,
 }
 
 impl Cpu {
@@ -61,6 +64,9 @@ impl Cpu {
             cycle: 7,
 
             jammed: false,
+
+            address_bus: AddressBus::new(),
+            data_bus: 0,
         }
     }
 
@@ -122,13 +128,8 @@ impl Cpu {
         }
 
         if self.cycle_action_queue.is_empty() {
-            self.cycle_action_queue
-                .enqueue_instruction(Instruction::from_memory(
-                    self.program_counter,
-                    self.x,
-                    self.y,
-                    memory,
-                ));
+            // Get ready to start the next instruction.
+            self.cycle_action_queue.enqueue_instruction_fetch();
         }
 
         if self.nmi_pending {
@@ -142,6 +143,15 @@ impl Cpu {
             .dequeue()
             .expect("Ran out of CycleActions!")
         {
+            CycleAction::FetchInstruction => {
+                self.cycle_action_queue
+                    .enqueue_instruction(Instruction::from_memory(
+                        self.program_counter,
+                        self.x,
+                        self.y,
+                        memory,
+                    ));
+            }
             CycleAction::Instruction(instr) => {
                 match self.execute_instruction(memory, instr) {
                     InstructionResult::Success {branch_taken, oops} if branch_taken || oops => {
@@ -560,6 +570,29 @@ enum InstructionResult {
         branch_taken: bool,
         oops: bool,
     },
+}
+
+struct AddressBus {
+    address: CpuAddress,
+    next_low_byte: Option<u8>,
+}
+
+impl AddressBus {
+    fn new() -> AddressBus {
+        AddressBus {
+            address: CpuAddress::new(0x0000),
+            next_low_byte: None,
+        }
+    }
+
+    fn push_next_byte(&mut self, value: u8) {
+        if let Some(low) = self.next_low_byte {
+            self.address = CpuAddress::from_low_high(low, value);
+            self.next_low_byte = None;
+        } else {
+            self.next_low_byte = Some(value);
+        }
+    }
 }
 
 #[cfg(test)]

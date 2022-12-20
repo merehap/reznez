@@ -29,15 +29,17 @@ impl CycleActionQueue {
         self.queue.push_front(action);
     }
 
-    pub fn enqueue_instruction(&mut self, instruction: Instruction) {
-        let remaining_cycle_count = (instruction.template.cycle_count as u8)
-            .checked_sub(1)
-            .unwrap();
-        for _ in 0..remaining_cycle_count {
-            self.queue.push_back(CycleAction::Nop);
-        }
+    pub fn enqueue_instruction_fetch(&mut self) {
+        self.queue.push_back(CycleAction::FetchInstruction);
+    }
 
-        self.queue.push_back(CycleAction::Instruction(instruction));
+    pub fn enqueue_instruction(&mut self, instruction: Instruction) {
+        self.queue.push_front(CycleAction::Instruction(instruction));
+
+        // Cycle 0 was the instruction fetch, cycle n - 1 is the instruction execution.
+        for _ in 1..instruction.template.cycle_count as u8 - 1 {
+            self.queue.push_front(CycleAction::Nop);
+        }
     }
 
     pub fn enqueue_nmi(&mut self) {

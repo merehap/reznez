@@ -3,6 +3,13 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 
 #[derive(Debug)]
 pub enum CycleAction {
+    FetchInstruction,
+    /*
+    FetchLowAddressByte,
+    FetchHighAddressByte,
+    FetchData,
+    */
+
     Nop,
     Instruction(Instruction),
     InstructionReturn(Instruction),
