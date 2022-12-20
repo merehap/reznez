@@ -151,6 +151,7 @@ impl Cpu {
                         self.y,
                         memory,
                     ));
+                self.program_counter.inc();
             }
             CycleAction::Instruction(instr) => {
                 match self.execute_instruction(memory, instr) {
@@ -201,7 +202,7 @@ impl Cpu {
         instruction: Instruction,
     ) -> InstructionResult {
 
-        self.program_counter = self.program_counter.advance(instruction.length());
+        self.program_counter = self.program_counter.advance(instruction.length() - 1);
 
         let mut branch_taken = false;
         let mut oops = false;
@@ -668,7 +669,7 @@ mod tests {
         // Execute first cycle of the first instruction.
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFD, mem.stack_pointer());
-        assert_eq!(reset_vector, cpu.program_counter());
+        assert_eq!(reset_vector.advance(1), cpu.program_counter());
 
         // Execute final cycle of the first instruction.
         cpu.step(&mut mem.as_cpu_memory());
@@ -682,7 +683,7 @@ mod tests {
         // Execute first cycle of the second instruction.
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFD, mem.stack_pointer());
-        assert_eq!(reset_vector.advance(1), cpu.program_counter());
+        assert_eq!(reset_vector.advance(2), cpu.program_counter());
 
         // Execute final cycle of the second instruction.
         cpu.step(&mut mem.as_cpu_memory());
@@ -692,8 +693,9 @@ mod tests {
         // Execute the seven cycles of the NMI subroutine.
         for _ in 0..6 {
             cpu.step(&mut mem.as_cpu_memory());
-            assert_eq!(reset_vector.advance(2), cpu.program_counter());
         }
+
+        assert_eq!(reset_vector.advance(2), cpu.program_counter());
 
         cpu.step(&mut mem.as_cpu_memory());
         assert_eq!(0xFA, mem.stack_pointer());
