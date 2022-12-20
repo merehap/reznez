@@ -208,11 +208,20 @@ impl Cpu {
     fn execute_instruction(
         &mut self,
         memory: &mut CpuMemory,
-        instruction: Instruction,
+        mut instruction: Instruction,
     ) -> InstructionResult {
+        use OpCode::*;
+        use Argument::*;
 
         match instruction.template.access_mode {
-            AccessMode::Abs => {}
+            AccessMode::Abs if instruction.template.op_code != JMP && matches!(instruction.argument, Addr(_)) => {
+                let Addr(addr) = instruction.argument else {
+                    panic!();
+                };
+
+                assert_eq!(addr, self.address_bus.address());
+                instruction.argument = Addr(self.address_bus.address());
+            }
             _ => self.program_counter = self.program_counter.advance(instruction.length() - 1),
         }
 
@@ -223,8 +232,6 @@ impl Cpu {
             oops = true;
         }
 
-        use OpCode::*;
-        use Argument::*;
         match (instruction.template.op_code, instruction.argument) {
             (INX, Imp) => self.x = self.nz(self.x.wrapping_add(1)),
             (INY, Imp) => self.y = self.nz(self.y.wrapping_add(1)),
@@ -598,15 +605,22 @@ impl AddressBus {
         }
     }
 
+    fn address(&self) -> CpuAddress {
+        self.address
+    }
+
     fn push_low_byte(&mut self, value: u8) {
         assert!(self.next_low_byte.is_none());
         self.next_low_byte = Some(value);
     }
 
     fn push_high_byte(&mut self, value: u8) {
-        assert!(self.next_low_byte.is_some());
-        self.address = CpuAddress::from_low_high(value, value);
-        self.next_low_byte = None;
+        if let Some(low) = self.next_low_byte {
+            self.address = CpuAddress::from_low_high(low, value);
+            self.next_low_byte = None;
+        } else {
+            unreachable!();
+        }
     }
 }
 
