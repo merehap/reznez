@@ -1,7 +1,7 @@
 use log::{info, error};
 
 use crate::cpu::cycle_action::{CycleAction, DmaTransferState};
-use crate::cpu::cycle_action_queue::CycleActionQueue;
+use crate::cpu::cycle_action_queue::{CycleActionQueue, QueueItem};
 use crate::cpu::instruction::{AccessMode, Argument, Instruction, OpCode};
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
@@ -142,9 +142,29 @@ impl Cpu {
             self.nmi_pending = false;
         }
 
-        match self.cycle_action_queue.dequeue()
-            .expect("Ran out of CycleActions!")
-        {
+        let queue_item = self.cycle_action_queue.dequeue()
+            .expect("Ran out of CycleActions!");
+        match queue_item {
+            QueueItem::Single(cycle_action) => {
+                self.execute_cycle_action(memory, cycle_action);
+            }
+            QueueItem::Double(first_action, second_action) => {
+                self.execute_cycle_action(memory, first_action);
+                self.execute_cycle_action(memory, second_action);
+            }
+        }
+
+        self.cycle += 1;
+
+        if self.cycle_action_queue.is_empty() {
+            StepResult::Instruction(self.current_instruction.unwrap())
+        } else {
+            StepResult::Nop
+        }
+    }
+
+    fn execute_cycle_action(&mut self, memory: &mut CpuMemory, action: CycleAction) {
+        match action {
             CycleAction::FetchInstruction => {
                 let instruction = Instruction::from_memory(
                     self.program_counter, self.x, self.y, memory);
@@ -163,10 +183,13 @@ impl Cpu {
             }
             CycleAction::FetchData => {}
 
-            CycleAction::DummyReadAndIncrementProgramCounter => {
+            CycleAction::DummyRead => {
                 let _ = memory.read(self.program_counter);
+            }
+            CycleAction::IncrementProgramCounter => {
                 self.program_counter.inc();
             }
+
             CycleAction::PushProgramCounterHigh => {
                 memory.stack().push(self.program_counter.high_byte());
             }
@@ -176,9 +199,11 @@ impl Cpu {
             CycleAction::PushStatus => {
                 memory.stack().push(self.status.to_instruction_byte());
             }
-            CycleAction::FetchProgramCounterLowFromIrqVectorAndDisableInterrupts => {
-                self.address_bus.push_low_byte(memory.read(CpuAddress::new(0xFFFE)));
+            CycleAction::DisableInterrupts => {
                 self.status.interrupts_disabled = true;
+            }
+            CycleAction::FetchProgramCounterLowFromIrqVector => {
+                self.address_bus.push_low_byte(memory.read(CpuAddress::new(0xFFFE)));
             }
             CycleAction::FetchProgramCounterHighFromIrqVector => {
                 self.address_bus.push_high_byte(memory.read(CpuAddress::new(0xFFFF)));
@@ -218,13 +243,6 @@ impl Cpu {
             CycleAction::DmaTransfer(_) | CycleAction::Nop => { /* Do nothing. */ }
         }
 
-        self.cycle += 1;
-
-        if self.cycle_action_queue.is_empty() {
-            StepResult::Instruction(self.current_instruction.unwrap())
-        } else {
-            StepResult::Nop
-        }
     }
 
     #[rustfmt::skip]
