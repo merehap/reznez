@@ -29,6 +29,14 @@ impl CpuAddress {
         (self.0 as u8, (self.0 >> 8) as u8)
     }
 
+    pub fn low_byte(self) -> u8 {
+        u8::try_from(self.0 & 0x00FF).unwrap()
+    }
+
+    pub fn high_byte(self) -> u8 {
+        u8::try_from(self.0 >> 8).unwrap()
+    }
+
     pub fn advance(self, value: u8) -> CpuAddress {
         CpuAddress::new(self.0.wrapping_add(u16::from(value)))
     }

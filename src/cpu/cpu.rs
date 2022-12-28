@@ -157,6 +157,30 @@ impl Cpu {
                 self.program_counter.inc();
             }
             CycleAction::FetchData => {}
+
+            CycleAction::DummyReadAndIncrementProgramCounter => {
+                let _ = memory.read(self.program_counter);
+                self.program_counter.inc();
+            }
+            CycleAction::PushProgramCounterHighAndDisableInterrupts => {
+                memory.stack().push(self.program_counter.high_byte());
+                self.status.interrupts_disabled = true;
+            }
+            CycleAction::PushProgramCounterLow => {
+                memory.stack().push(self.program_counter.low_byte());
+                self.status.interrupts_disabled = true;
+            }
+            CycleAction::PushStatus => {
+                memory.stack().push(self.status.to_instruction_byte());
+            }
+            CycleAction::FetchProgramCounterLowFromIrqVector => {
+                self.address_bus.push_low_byte(memory.read(CpuAddress::new(0xFFFE)));
+            }
+            CycleAction::FetchProgramCounterHighFromIrqVector => {
+                self.address_bus.push_high_byte(memory.read(CpuAddress::new(0xFFFF)));
+                self.program_counter = self.address_bus.address;
+            }
+
             CycleAction::Instruction(instr) => {
                 match self.execute_instruction(memory, instr) {
                     InstructionResult::Success {branch_taken, oops} if branch_taken || oops => {

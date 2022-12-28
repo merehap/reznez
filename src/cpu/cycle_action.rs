@@ -8,6 +8,13 @@ pub enum CycleAction {
     FetchHighAddressByte,
     FetchData,
 
+    DummyReadAndIncrementProgramCounter,
+    PushProgramCounterHighAndDisableInterrupts,
+    PushProgramCounterLow,
+    PushStatus,
+    FetchProgramCounterLowFromIrqVector,
+    FetchProgramCounterHighFromIrqVector,
+
     Nop,
     Instruction(Instruction),
     InstructionReturn(Instruction),
