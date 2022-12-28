@@ -138,19 +138,14 @@ impl Cpu {
         }
 
         let mut step_result = StepResult::Nop;
-        match self
-            .cycle_action_queue
-            .dequeue()
+        match self.cycle_action_queue.dequeue()
             .expect("Ran out of CycleActions!")
         {
             CycleAction::FetchInstruction => {
-                self.cycle_action_queue
-                    .enqueue_instruction(Instruction::from_memory(
-                        self.program_counter,
-                        self.x,
-                        self.y,
-                        memory,
-                    ));
+                let instruction = Instruction::from_memory(
+                    self.program_counter, self.x, self.y, memory);
+                self.cycle_action_queue.enqueue_instruction(instruction);
+                self.data_bus = instruction.template.code_point;
                 self.program_counter.inc();
             }
             CycleAction::FetchLowAddressByte => {
