@@ -1,4 +1,3 @@
-use crate::cpu::instruction::Instruction;
 use crate::memory::cpu::cpu_address::CpuAddress;
 
 #[derive(Clone, Copy, Debug)]
@@ -16,8 +15,8 @@ pub enum CycleAction {
     FetchProgramCounterHighFromIrqVector,
 
     Nop,
-    Instruction(Instruction),
-    InstructionReturn(Instruction),
+    Instruction,
+    InstructionReturn,
     Nmi,
     DmaTransfer(DmaTransferState),
 }

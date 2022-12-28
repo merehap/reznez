@@ -20,6 +20,8 @@ pub struct Cpu {
     program_counter: CpuAddress,
     status: Status,
 
+    current_instruction: Option<Instruction>,
+
     cycle_action_queue: CycleActionQueue,
     nmi_pending: bool,
 
@@ -54,6 +56,8 @@ impl Cpu {
             program_counter,
             status: Status::startup(),
 
+            current_instruction: None,
+
             cycle_action_queue: CycleActionQueue::new(),
             nmi_pending: false,
             dma_port: memory.ports().dma.clone(),
@@ -74,6 +78,7 @@ impl Cpu {
     pub fn reset(&mut self, memory: &mut CpuMemory) {
         self.status.interrupts_disabled = true;
         self.program_counter = memory.reset_vector();
+        self.current_instruction = None;
         self.cycle_action_queue = CycleActionQueue::new();
         self.nmi_pending = false;
         self.cycle = 7;
@@ -144,6 +149,7 @@ impl Cpu {
             CycleAction::FetchInstruction => {
                 let instruction = Instruction::from_memory(
                     self.program_counter, self.x, self.y, memory);
+                self.current_instruction = Some(instruction);
                 self.cycle_action_queue.enqueue_instruction(instruction);
                 self.data_bus = instruction.template.code_point;
                 self.program_counter.inc();
@@ -181,11 +187,11 @@ impl Cpu {
                 self.program_counter = self.address_bus.address;
             }
 
-            CycleAction::Instruction(instr) => {
+            CycleAction::Instruction => {
+                let instr = self.current_instruction.unwrap();
                 match self.execute_instruction(memory, instr) {
                     InstructionResult::Success {branch_taken, oops} if branch_taken || oops => {
-                        self.cycle_action_queue
-                            .skip_to_front(CycleAction::InstructionReturn(instr));
+                        self.cycle_action_queue.skip_to_front(CycleAction::InstructionReturn);
                         if branch_taken && oops {
                             self.cycle_action_queue.skip_to_front(CycleAction::Nop);
                         }
@@ -199,7 +205,8 @@ impl Cpu {
                     }
                 }
             }
-            CycleAction::InstructionReturn(instr) => {
+            CycleAction::InstructionReturn => {
+                let instr = self.current_instruction.unwrap();
                 step_result = StepResult::Instruction(instr);
             }
             CycleAction::Nmi => {

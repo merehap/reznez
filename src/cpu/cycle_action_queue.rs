@@ -34,7 +34,7 @@ impl CycleActionQueue {
     }
 
     pub fn enqueue_instruction(&mut self, instruction: Instruction) {
-        self.queue.push_front(CycleAction::Instruction(instruction));
+        self.queue.push_front(CycleAction::Instruction);
 
         use AccessMode::*;
         use OpCode::*;
