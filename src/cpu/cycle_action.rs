@@ -8,10 +8,10 @@ pub enum CycleAction {
     FetchData,
 
     DummyReadAndIncrementProgramCounter,
-    PushProgramCounterHighAndDisableInterrupts,
+    PushProgramCounterHigh,
     PushProgramCounterLow,
     PushStatus,
-    FetchProgramCounterLowFromIrqVector,
+    FetchProgramCounterLowFromIrqVectorAndDisableInterrupts,
     FetchProgramCounterHighFromIrqVector,
 
     Nop,

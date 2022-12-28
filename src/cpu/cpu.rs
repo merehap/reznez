@@ -142,7 +142,6 @@ impl Cpu {
             self.nmi_pending = false;
         }
 
-        let mut step_result = StepResult::Nop;
         match self.cycle_action_queue.dequeue()
             .expect("Ran out of CycleActions!")
         {
@@ -168,19 +167,18 @@ impl Cpu {
                 let _ = memory.read(self.program_counter);
                 self.program_counter.inc();
             }
-            CycleAction::PushProgramCounterHighAndDisableInterrupts => {
+            CycleAction::PushProgramCounterHigh => {
                 memory.stack().push(self.program_counter.high_byte());
-                self.status.interrupts_disabled = true;
             }
             CycleAction::PushProgramCounterLow => {
                 memory.stack().push(self.program_counter.low_byte());
-                self.status.interrupts_disabled = true;
             }
             CycleAction::PushStatus => {
                 memory.stack().push(self.status.to_instruction_byte());
             }
-            CycleAction::FetchProgramCounterLowFromIrqVector => {
+            CycleAction::FetchProgramCounterLowFromIrqVectorAndDisableInterrupts => {
                 self.address_bus.push_low_byte(memory.read(CpuAddress::new(0xFFFE)));
+                self.status.interrupts_disabled = true;
             }
             CycleAction::FetchProgramCounterHighFromIrqVector => {
                 self.address_bus.push_high_byte(memory.read(CpuAddress::new(0xFFFF)));
@@ -196,19 +194,14 @@ impl Cpu {
                             self.cycle_action_queue.skip_to_front(CycleAction::Nop);
                         }
                     }
-                    InstructionResult::Success {..} =>
-                        step_result = StepResult::Instruction(instr),
+                    InstructionResult::Success {..} => {},
                     InstructionResult::Jam => {
                         self.jammed = true;
                         error!("CPU JAMMED! Instruction code point: ${:02X}", instr.template.code_point);
-                        step_result = StepResult::Instruction(instr);
                     }
                 }
             }
-            CycleAction::InstructionReturn => {
-                let instr = self.current_instruction.unwrap();
-                step_result = StepResult::Instruction(instr);
-            }
+            CycleAction::InstructionReturn => {}
             CycleAction::Nmi => {
                 info!(target: "cpu", "Executing NMI.");
                 memory.stack().push_address(self.program_counter);
@@ -227,7 +220,11 @@ impl Cpu {
 
         self.cycle += 1;
 
-        step_result
+        if self.cycle_action_queue.is_empty() {
+            StepResult::Instruction(self.current_instruction.unwrap())
+        } else {
+            StepResult::Nop
+        }
     }
 
     #[rustfmt::skip]
@@ -285,11 +282,13 @@ impl Cpu {
             (CLV, Imp) => self.status.overflow = false,
             (BRK, Imp) => {
                 // Not sure why we need to increment here.
+                /*
                 self.program_counter.inc();
                 memory.stack().push_address(self.program_counter);
                 memory.stack().push(self.status.to_instruction_byte());
                 self.status.interrupts_disabled = true;
                 self.program_counter = memory.irq_vector();
+                */
             }
             (RTI, Imp) => {
                 self.status = Status::from_byte(memory.stack().pop());

@@ -34,17 +34,38 @@ impl CycleActionQueue {
     }
 
     pub fn enqueue_instruction(&mut self, instruction: Instruction) {
-        self.queue.push_front(CycleAction::Instruction);
-
         use AccessMode::*;
         use OpCode::*;
+        use CycleAction::*;
+
+        let mut fallback = false;
+        match (instruction.template.access_mode, instruction.template.op_code) {
+            (Imp, BRK) => {
+                self.prepend(&[
+                    DummyReadAndIncrementProgramCounter,
+                    PushProgramCounterHigh,
+                    PushProgramCounterLow,
+                    PushStatus,
+                    FetchProgramCounterLowFromIrqVectorAndDisableInterrupts,
+                    FetchProgramCounterHighFromIrqVector,
+                ]);
+            }
+            _ => fallback = true,
+        }
+
+        if !fallback {
+            return;
+        }
+
+        self.queue.push_front(CycleAction::Instruction);
+
         // Cycle 0 was the instruction fetch, cycle n - 1 is the instruction execution.
         match (instruction.template.access_mode, instruction.template.op_code) {
             (Abs, JMP) => self.queue.push_front(CycleAction::Nop),
             (Abs, _code) => {
                 self.prepend(&vec![CycleAction::Nop; instruction.template.cycle_count as usize - 4]);
                 // TODO: Make exceptions for JSR and potentially others.
-                self.prepend(&[CycleAction::FetchLowAddressByte, CycleAction::FetchHighAddressByte]);
+                self.prepend(&[FetchLowAddressByte, FetchHighAddressByte]);
             }
             _ => {
                 self.prepend(&vec![CycleAction::Nop; instruction.template.cycle_count as usize - 2]);
