@@ -166,11 +166,11 @@ impl Cpu {
                 self.data_bus = instruction.template.code_point;
                 self.program_counter.inc();
             }
-            CycleAction::FetchLowAddressByte => {
+            CycleAction::FetchAddressLow => {
                 self.address_bus.push_low_byte(memory.read(self.program_counter));
                 self.program_counter.inc();
             }
-            CycleAction::FetchHighAddressByte => {
+            CycleAction::FetchAddressHigh => {
                 self.address_bus.push_high_byte(memory.read(self.program_counter));
                 self.program_counter.inc();
             }
@@ -186,13 +186,13 @@ impl Cpu {
             }
 
             CycleAction::PushProgramCounterHigh => {
-                memory.stack().set_at_stack_pointer(self.program_counter.high_byte());
+                memory.stack().set_at_pointer(self.program_counter.high_byte());
             }
             CycleAction::PushProgramCounterLow => {
-                memory.stack().set_at_stack_pointer(self.program_counter.low_byte());
+                memory.stack().set_at_pointer(self.program_counter.low_byte());
             }
             CycleAction::PushStatus => {
-                memory.stack().set_at_stack_pointer(self.status.to_instruction_byte());
+                memory.stack().set_at_pointer(self.status.to_instruction_byte());
             }
             CycleAction::FetchProgramCounterLowFromIrqVector => {
                 self.address_bus.push_low_byte(memory.read(CpuAddress::new(0xFFFE)));

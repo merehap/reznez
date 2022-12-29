@@ -88,8 +88,8 @@ impl CycleActionQueue {
                 ]);
                 // TODO: Make exceptions for JSR and potentially others.
                 self.prepend(&[
-                    (FetchLowAddressByte, CycleAction::Nop),
-                    (FetchHighAddressByte, CycleAction::Nop)
+                    (FetchAddressLow, CycleAction::Nop),
+                    (FetchAddressHigh, CycleAction::Nop)
                 ]);
             }
             _ => {

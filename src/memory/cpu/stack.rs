@@ -12,7 +12,7 @@ impl<'a> Stack<'a> {
         Stack { raw, pointer }
     }
 
-    pub fn set_at_stack_pointer(&mut self, value: u8) {
+    pub fn set_at_pointer(&mut self, value: u8) {
         self.raw[*self.pointer as usize] = value;
     }
 
