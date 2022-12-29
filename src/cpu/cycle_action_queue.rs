@@ -51,6 +51,15 @@ impl CycleActionQueue {
                     Single(FetchProgramCounterHighFromIrqVector),
                 ]);
             }
+            (Imp, RTI) => {
+                self.prepend(&[
+                    Single(DummyRead),
+                    Single(IncrementStackPointer),
+                    Double(PeekStatus, IncrementStackPointer),
+                    Double(PeekProgramCounterLow, IncrementStackPointer),
+                    Single(PeekProgramCounterHigh),
+                ]);
+            }
             _ => fallback = true,
         }
 

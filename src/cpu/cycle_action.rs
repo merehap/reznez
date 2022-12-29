@@ -11,11 +11,18 @@ pub enum CycleAction {
     IncrementProgramCounter,
     DisableInterrupts,
 
+    // BRK.
     PushProgramCounterHigh,
     PushProgramCounterLow,
     PushStatus,
     FetchProgramCounterLowFromIrqVector,
     FetchProgramCounterHighFromIrqVector,
+
+    // RTI
+    IncrementStackPointer,
+    PeekStatus,
+    PeekProgramCounterLow,
+    PeekProgramCounterHigh,
 
     Nop,
     Instruction,

@@ -189,6 +189,9 @@ impl Cpu {
             CycleAction::IncrementProgramCounter => {
                 self.program_counter.inc();
             }
+            CycleAction::DisableInterrupts => {
+                self.status.interrupts_disabled = true;
+            }
 
             CycleAction::PushProgramCounterHigh => {
                 memory.stack().push(self.program_counter.high_byte());
@@ -199,9 +202,6 @@ impl Cpu {
             CycleAction::PushStatus => {
                 memory.stack().push(self.status.to_instruction_byte());
             }
-            CycleAction::DisableInterrupts => {
-                self.status.interrupts_disabled = true;
-            }
             CycleAction::FetchProgramCounterLowFromIrqVector => {
                 self.address_bus.push_low_byte(memory.read(CpuAddress::new(0xFFFE)));
             }
@@ -209,6 +209,20 @@ impl Cpu {
                 self.address_bus.push_high_byte(memory.read(CpuAddress::new(0xFFFF)));
                 self.program_counter = self.address_bus.address;
             }
+
+            CycleAction::IncrementStackPointer => {
+                memory.stack().increment_stack_pointer();
+            },
+            CycleAction::PeekStatus => {
+                self.status = Status::from_byte(memory.stack().peek());
+            },
+            CycleAction::PeekProgramCounterLow => {
+                self.address_bus.push_low_byte(memory.stack().peek());
+            },
+            CycleAction::PeekProgramCounterHigh => {
+                self.address_bus.push_high_byte(memory.stack().peek());
+                self.program_counter = self.address_bus.address;
+            },
 
             CycleAction::Instruction => {
                 let instr = self.current_instruction.unwrap();
@@ -298,20 +312,8 @@ impl Cpu {
             (CLI, Imp) => self.status.interrupts_disabled = false,
             (SEI, Imp) => self.status.interrupts_disabled = true,
             (CLV, Imp) => self.status.overflow = false,
-            (BRK, Imp) => {
-                // Not sure why we need to increment here.
-                /*
-                self.program_counter.inc();
-                memory.stack().push_address(self.program_counter);
-                memory.stack().push(self.status.to_instruction_byte());
-                self.status.interrupts_disabled = true;
-                self.program_counter = memory.irq_vector();
-                */
-            }
-            (RTI, Imp) => {
-                self.status = Status::from_byte(memory.stack().pop());
-                self.program_counter = memory.stack().pop_address();
-            }
+            (BRK, Imp) => {}
+            (RTI, Imp) => unreachable!(),
             (RTS, Imp) => self.program_counter = memory.stack().pop_address().advance(1),
 
             (STA, Addr(addr)) => memory.write(addr, self.a),

@@ -27,6 +27,10 @@ impl<'a> Stack<'a> {
         self.push(low);
     }
 
+    pub fn peek(&self) -> u8 {
+        self.raw[*self.pointer as usize]
+    }
+
     pub fn pop(&mut self) -> u8 {
         if *self.pointer == 0xFF {
             info!("Popping from empty stack. Wrapping around.");
@@ -40,5 +44,9 @@ impl<'a> Stack<'a> {
         let low = self.pop();
         let high = self.pop();
         CpuAddress::from_low_high(low, high)
+    }
+
+    pub fn increment_stack_pointer(&mut self) {
+        *self.pointer = self.pointer.wrapping_add(1);
     }
 }
