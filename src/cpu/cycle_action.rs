@@ -5,7 +5,6 @@ pub enum CycleAction {
     FetchInstruction,
     FetchLowAddressByte,
     FetchHighAddressByte,
-    FetchData,
 
     DummyRead,
     IncrementProgramCounter,
@@ -20,6 +19,7 @@ pub enum CycleAction {
 
     // RTI
     IncrementStackPointer,
+    DecrementStackPointer,
     PeekStatus,
     PeekProgramCounterLow,
     PeekProgramCounterHigh,

@@ -9,7 +9,7 @@ const CAPACITY: usize = 1000;
 
 #[derive(Debug)]
 pub struct CycleActionQueue {
-    queue: VecDeque<QueueItem>,
+    queue: VecDeque<(CycleAction, CycleAction)>,
 }
 
 impl CycleActionQueue {
@@ -21,52 +21,52 @@ impl CycleActionQueue {
         self.queue.is_empty()
     }
 
-    pub fn dequeue(&mut self) -> Option<QueueItem> {
+    pub fn dequeue(&mut self) -> Option<(CycleAction, CycleAction)> {
         self.queue.pop_front()
     }
 
-    pub fn skip_to_front(&mut self, action: CycleAction) {
-        self.queue.push_front(QueueItem::Single(action));
+    pub fn skip_to_front(&mut self, first: CycleAction, second: CycleAction) {
+        self.queue.push_front((first, second));
     }
 
     pub fn enqueue_instruction_fetch(&mut self) {
-        self.queue.push_back(QueueItem::Single(CycleAction::FetchInstruction));
+        // FIXME: Nop isn't always correct here.
+        self.queue.push_back((CycleAction::FetchInstruction, CycleAction::Nop));
     }
 
     pub fn enqueue_instruction(&mut self, instruction: Instruction) {
         use AccessMode::*;
         use OpCode::*;
         use CycleAction::*;
-        use QueueItem::*;
 
         let mut fallback = false;
         match (instruction.template.access_mode, instruction.template.op_code) {
             (Imp, BRK) => {
                 self.prepend(&[
-                    Double(DummyRead, IncrementProgramCounter),
-                    Single(PushProgramCounterHigh),
-                    Single(PushProgramCounterLow),
-                    Single(PushStatus),
-                    Double(FetchProgramCounterLowFromIrqVector, DisableInterrupts),
-                    Single(FetchProgramCounterHighFromIrqVector),
+                    (DummyRead, IncrementProgramCounter),
+                    (PushProgramCounterHigh, DecrementStackPointer),
+                    (PushProgramCounterLow, DecrementStackPointer),
+                    (PushStatus, DecrementStackPointer),
+                    (FetchProgramCounterLowFromIrqVector, DisableInterrupts),
+                    (FetchProgramCounterHighFromIrqVector, Nop),
                 ]);
             }
             (Imp, RTI) => {
                 self.prepend(&[
-                    Single(DummyRead),
-                    Single(IncrementStackPointer),
-                    Double(PeekStatus, IncrementStackPointer),
-                    Double(PeekProgramCounterLow, IncrementStackPointer),
-                    Single(PeekProgramCounterHigh),
+                    (DummyRead, Nop),
+                    (IncrementStackPointer, Nop),
+                    (PeekStatus, IncrementStackPointer),
+                    (PeekProgramCounterLow, IncrementStackPointer),
+                    (PeekProgramCounterHigh, Nop),
                 ]);
             }
             (Imp, RTS) => {
                 self.prepend(&[
-                    Single(DummyRead),
-                    Single(IncrementStackPointer),
-                    Double(PeekProgramCounterLow, IncrementStackPointer),
-                    Single(PeekProgramCounterHigh),
-                    Single(IncrementProgramCounter),
+                    (DummyRead, Nop),
+                    (IncrementStackPointer, Nop),
+                    (PeekProgramCounterLow, IncrementStackPointer),
+                    (PeekProgramCounterHigh, Nop),
+                    (IncrementProgramCounter, Nop),
                 ]);
             }
             _ => fallback = true,
@@ -76,22 +76,25 @@ impl CycleActionQueue {
             return;
         }
 
-        self.queue.push_front(Single(CycleAction::Instruction));
+        self.queue.push_front((CycleAction::Instruction, CycleAction::Nop));
 
         // Cycle 0 was the instruction fetch, cycle n - 1 is the instruction execution.
         match (instruction.template.access_mode, instruction.template.op_code) {
-            (Abs, JMP) => self.queue.push_front(Single(CycleAction::Nop)),
+            (Abs, JMP) => self.queue.push_front((CycleAction::Nop, CycleAction::Nop)),
             (Abs, _code) => {
-                self.prepend(&vec![Single(CycleAction::Nop); instruction.template.cycle_count as usize - 4]);
+                self.prepend(&vec![
+                    (CycleAction::Nop, CycleAction::Nop);
+                    instruction.template.cycle_count as usize - 4
+                ]);
                 // TODO: Make exceptions for JSR and potentially others.
                 self.prepend(&[
-                    Single(FetchLowAddressByte),
-                    Single(FetchHighAddressByte)
+                    (FetchLowAddressByte, CycleAction::Nop),
+                    (FetchHighAddressByte, CycleAction::Nop)
                 ]);
             }
             _ => {
                 self.prepend(&vec![
-                    Single(CycleAction::Nop);
+                    (CycleAction::Nop, CycleAction::Nop);
                     instruction.template.cycle_count as usize - 2
                 ]);
             }
@@ -100,10 +103,10 @@ impl CycleActionQueue {
 
     pub fn enqueue_nmi(&mut self) {
         for _ in 0..6 {
-            self.queue.push_back(QueueItem::Single(CycleAction::Nop));
+            self.queue.push_back((CycleAction::Nop, CycleAction::Nop));
         }
 
-        self.queue.push_back(QueueItem::Single(CycleAction::Nmi));
+        self.queue.push_back((CycleAction::Nmi, CycleAction::Nop));
     }
 
     pub fn enqueue_dma_transfer(&mut self, page: u8, current_cycle: u64) {
@@ -124,18 +127,12 @@ impl CycleActionQueue {
     }
 
     fn enqueue_dma_transfer_state(&mut self, state: DmaTransferState) {
-        self.queue.push_back(QueueItem::Single(CycleAction::DmaTransfer(state)));
+        self.queue.push_back((CycleAction::DmaTransfer(state), CycleAction::Nop));
     }
 
-    fn prepend(&mut self, actions: &[QueueItem]) {
+    fn prepend(&mut self, actions: &[(CycleAction, CycleAction)]) {
         for &action in actions.iter().rev() {
             self.queue.push_front(action);
         }
     }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum QueueItem {
-    Single(CycleAction),
-    Double(CycleAction, CycleAction),
 }

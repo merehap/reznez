@@ -1,7 +1,7 @@
 use log::{info, error};
 
 use crate::cpu::cycle_action::{CycleAction, DmaTransferState};
-use crate::cpu::cycle_action_queue::{CycleActionQueue, QueueItem};
+use crate::cpu::cycle_action_queue::{CycleActionQueue};
 use crate::cpu::instruction::{AccessMode, Argument, Instruction, OpCode};
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
@@ -142,17 +142,10 @@ impl Cpu {
             self.nmi_pending = false;
         }
 
-        let queue_item = self.cycle_action_queue.dequeue()
+        let (first_action, second_action) = self.cycle_action_queue.dequeue()
             .expect("Ran out of CycleActions!");
-        match queue_item {
-            QueueItem::Single(cycle_action) => {
-                self.execute_cycle_action(memory, cycle_action);
-            }
-            QueueItem::Double(first_action, second_action) => {
-                self.execute_cycle_action(memory, first_action);
-                self.execute_cycle_action(memory, second_action);
-            }
-        }
+        self.execute_cycle_action(memory, first_action);
+        self.execute_cycle_action(memory, second_action);
 
         self.cycle += 1;
 
@@ -181,7 +174,6 @@ impl Cpu {
                 self.address_bus.push_high_byte(memory.read(self.program_counter));
                 self.program_counter.inc();
             }
-            CycleAction::FetchData => {}
 
             CycleAction::DummyRead => {
                 let _ = memory.read(self.program_counter);
@@ -194,13 +186,13 @@ impl Cpu {
             }
 
             CycleAction::PushProgramCounterHigh => {
-                memory.stack().push(self.program_counter.high_byte());
+                memory.stack().set_at_stack_pointer(self.program_counter.high_byte());
             }
             CycleAction::PushProgramCounterLow => {
-                memory.stack().push(self.program_counter.low_byte());
+                memory.stack().set_at_stack_pointer(self.program_counter.low_byte());
             }
             CycleAction::PushStatus => {
-                memory.stack().push(self.status.to_instruction_byte());
+                memory.stack().set_at_stack_pointer(self.status.to_instruction_byte());
             }
             CycleAction::FetchProgramCounterLowFromIrqVector => {
                 self.address_bus.push_low_byte(memory.read(CpuAddress::new(0xFFFE)));
@@ -213,6 +205,9 @@ impl Cpu {
             CycleAction::IncrementStackPointer => {
                 memory.stack().increment_stack_pointer();
             },
+            CycleAction::DecrementStackPointer => {
+                memory.stack().decrement_stack_pointer();
+            }
             CycleAction::PeekStatus => {
                 self.status = Status::from_byte(memory.stack().peek());
             },
@@ -228,9 +223,10 @@ impl Cpu {
                 let instr = self.current_instruction.unwrap();
                 match self.execute_instruction(memory, instr) {
                     InstructionResult::Success {branch_taken, oops} if branch_taken || oops => {
-                        self.cycle_action_queue.skip_to_front(CycleAction::InstructionReturn);
+                        self.cycle_action_queue.skip_to_front(
+                            CycleAction::InstructionReturn, CycleAction::Nop);
                         if branch_taken && oops {
-                            self.cycle_action_queue.skip_to_front(CycleAction::Nop);
+                            self.cycle_action_queue.skip_to_front(CycleAction::Nop, CycleAction::Nop);
                         }
                     }
                     InstructionResult::Success {..} => {},

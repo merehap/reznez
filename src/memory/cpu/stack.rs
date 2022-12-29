@@ -12,6 +12,10 @@ impl<'a> Stack<'a> {
         Stack { raw, pointer }
     }
 
+    pub fn set_at_stack_pointer(&mut self, value: u8) {
+        self.raw[*self.pointer as usize] = value;
+    }
+
     pub fn push(&mut self, value: u8) {
         if *self.pointer == 0x00 {
             info!("Pushing to full stack. Wrapping around.");
@@ -48,5 +52,9 @@ impl<'a> Stack<'a> {
 
     pub fn increment_stack_pointer(&mut self) {
         *self.pointer = self.pointer.wrapping_add(1);
+    }
+
+    pub fn decrement_stack_pointer(&mut self) {
+        *self.pointer = self.pointer.wrapping_sub(1);
     }
 }
