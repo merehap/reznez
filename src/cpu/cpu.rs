@@ -174,19 +174,18 @@ impl Cpu {
                     self.program_counter, self.x, self.y, memory);
                 self.current_instruction = Some(instruction);
                 self.cycle_action_queue.enqueue_instruction(instruction);
-                self.data_bus = instruction.template.code_point;
-                self.program_counter.inc();
+                self.next_address = Some(self.program_counter.inc());
             }
             CycleAction::FetchAddressLow => {
                 self.pending_address_low = memory.read(self.program_counter);
-                self.program_counter.inc();
+                self.next_address = Some(self.program_counter.inc());
             }
             CycleAction::FetchAddressHigh => {
                 let address_high = memory.read(self.program_counter);
-                self.address_bus = CpuAddress::from_low_high(
+                self.next_address = Some(CpuAddress::from_low_high(
                     self.pending_address_low,
                     address_high,
-                );
+                ));
                 self.program_counter.inc();
             }
 
