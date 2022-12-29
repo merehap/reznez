@@ -33,6 +33,7 @@ pub struct Cpu {
     jammed: bool,
 
     address_bus: CpuAddress,
+    next_address: Option<CpuAddress>,
     data_bus: u8,
     pending_address_low: u8,
 }
@@ -71,6 +72,7 @@ impl Cpu {
             jammed: false,
 
             address_bus: CpuAddress::new(0x0000),
+            next_address: None,
             data_bus: 0,
             pending_address_low: 0,
         }
@@ -80,6 +82,8 @@ impl Cpu {
     pub fn reset(&mut self, memory: &mut CpuMemory) {
         self.status.interrupts_disabled = true;
         self.program_counter = memory.reset_vector();
+        self.address_bus = memory.reset_vector();
+        self.next_address = None;
         self.current_instruction = None;
         self.cycle_action_queue = CycleActionQueue::new();
         self.nmi_pending = false;
@@ -146,6 +150,11 @@ impl Cpu {
 
         let (first_action, second_action) = self.cycle_action_queue.dequeue()
             .expect("Ran out of CycleActions!");
+        if let Some(address) = self.next_address.take() {
+            self.address_bus = address;
+            self.data_bus = memory.read(self.address_bus);
+        }
+
         self.execute_cycle_action(memory, first_action);
         self.execute_cycle_action(memory, second_action);
 
