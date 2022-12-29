@@ -32,8 +32,9 @@ pub struct Cpu {
 
     jammed: bool,
 
-    address_bus: AddressBus,
+    address_bus: CpuAddress,
     data_bus: u8,
+    pending_address_low: u8,
 }
 
 impl Cpu {
@@ -69,8 +70,9 @@ impl Cpu {
 
             jammed: false,
 
-            address_bus: AddressBus::new(),
+            address_bus: CpuAddress::new(0x0000),
             data_bus: 0,
+            pending_address_low: 0,
         }
     }
 
@@ -167,11 +169,15 @@ impl Cpu {
                 self.program_counter.inc();
             }
             CycleAction::FetchAddressLow => {
-                self.address_bus.push_low_byte(memory.read(self.program_counter));
+                self.pending_address_low = memory.read(self.program_counter);
                 self.program_counter.inc();
             }
             CycleAction::FetchAddressHigh => {
-                self.address_bus.push_high_byte(memory.read(self.program_counter));
+                let address_high = memory.read(self.program_counter);
+                self.address_bus = CpuAddress::from_low_high(
+                    self.pending_address_low,
+                    address_high,
+                );
                 self.program_counter.inc();
             }
 
@@ -195,11 +201,15 @@ impl Cpu {
                 memory.stack().set_at_pointer(self.status.to_instruction_byte());
             }
             CycleAction::FetchProgramCounterLowFromIrqVector => {
-                self.address_bus.push_low_byte(memory.read(CpuAddress::new(0xFFFE)));
+                self.pending_address_low = memory.read(CpuAddress::new(0xFFFE));
             }
             CycleAction::FetchProgramCounterHighFromIrqVector => {
-                self.address_bus.push_high_byte(memory.read(CpuAddress::new(0xFFFF)));
-                self.program_counter = self.address_bus.address;
+                let address_high = memory.read(CpuAddress::new(0xFFFF));
+                self.address_bus = CpuAddress::from_low_high(
+                    self.pending_address_low,
+                    address_high,
+                );
+                self.program_counter = self.address_bus;
             }
 
             CycleAction::IncrementStackPointer => {
@@ -212,11 +222,15 @@ impl Cpu {
                 self.status = Status::from_byte(memory.stack().peek());
             },
             CycleAction::PeekProgramCounterLow => {
-                self.address_bus.push_low_byte(memory.stack().peek());
+                self.pending_address_low = memory.stack().peek();
             },
             CycleAction::PeekProgramCounterHigh => {
-                self.address_bus.push_high_byte(memory.stack().peek());
-                self.program_counter = self.address_bus.address;
+                let address_high = memory.stack().peek();
+                self.address_bus = CpuAddress::from_low_high(
+                    self.pending_address_low,
+                    address_high,
+                );
+                self.program_counter = self.address_bus;
             },
 
             CycleAction::Instruction => {
@@ -270,8 +284,8 @@ impl Cpu {
                     panic!();
                 };
 
-                assert_eq!(addr, self.address_bus.address());
-                instruction.argument = Addr(self.address_bus.address());
+                assert_eq!(addr, self.address_bus);
+                instruction.argument = Addr(self.address_bus);
             }
             _ => self.program_counter = self.program_counter.advance(instruction.length() - 1),
         }
@@ -631,38 +645,6 @@ enum InstructionResult {
         branch_taken: bool,
         oops: bool,
     },
-}
-
-struct AddressBus {
-    address: CpuAddress,
-    next_low_byte: Option<u8>,
-}
-
-impl AddressBus {
-    fn new() -> AddressBus {
-        AddressBus {
-            address: CpuAddress::new(0x0000),
-            next_low_byte: None,
-        }
-    }
-
-    fn address(&self) -> CpuAddress {
-        self.address
-    }
-
-    fn push_low_byte(&mut self, value: u8) {
-        assert!(self.next_low_byte.is_none());
-        self.next_low_byte = Some(value);
-    }
-
-    fn push_high_byte(&mut self, value: u8) {
-        if let Some(low) = self.next_low_byte {
-            self.address = CpuAddress::from_low_high(low, value);
-            self.next_low_byte = None;
-        } else {
-            unreachable!();
-        }
-    }
 }
 
 #[cfg(test)]
