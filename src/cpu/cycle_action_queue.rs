@@ -60,6 +60,15 @@ impl CycleActionQueue {
                     Single(PeekProgramCounterHigh),
                 ]);
             }
+            (Imp, RTS) => {
+                self.prepend(&[
+                    Single(DummyRead),
+                    Single(IncrementStackPointer),
+                    Double(PeekProgramCounterLow, IncrementStackPointer),
+                    Single(PeekProgramCounterHigh),
+                    Single(IncrementProgramCounter),
+                ]);
+            }
             _ => fallback = true,
         }
 

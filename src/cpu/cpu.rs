@@ -312,9 +312,9 @@ impl Cpu {
             (CLI, Imp) => self.status.interrupts_disabled = false,
             (SEI, Imp) => self.status.interrupts_disabled = true,
             (CLV, Imp) => self.status.overflow = false,
-            (BRK, Imp) => {}
+            (BRK, Imp) => unreachable!(),
             (RTI, Imp) => unreachable!(),
-            (RTS, Imp) => self.program_counter = memory.stack().pop_address().advance(1),
+            (RTS, Imp) => unreachable!(),
 
             (STA, Addr(addr)) => memory.write(addr, self.a),
             (STX, Addr(addr)) => memory.write(addr, self.x),
