@@ -62,11 +62,12 @@ impl CycleActionQueue {
             }
             (Imp, RTS) => {
                 self.prepend(&[
-                    (Read                           , Nop                    ),
-                    (Nop                            , IncrementStackPointer  ),
-                    (ReadProgramCounterLowFromStack , IncrementStackPointer  ),
-                    (ReadProgramCounterHighFromStack, Nop                    ),
-                    (Nop                            , IncrementProgramCounter),
+                    (Copy { from: ProgramCounter, to: DataBus                }, Nop                    ),
+                    (Copy { from: TopOfStack    , to: DataBus                }, IncrementStackPointer  ),
+                    (Copy { from: TopOfStack    , to: DataBus                }, IncrementStackPointer  ),
+                    (Copy { from: TopOfStack    , to: ProgramCounterHighByte }, Nop                    ),
+                    // TODO: Make sure this dummy read is correct.
+                    (Copy { from: ProgramCounter, to: DataBus                }, IncrementProgramCounter),
                 ]);
             }
             _ => fallback = true,

@@ -6,13 +6,10 @@ pub enum CycleAction {
 
     // BRK
     IncrementProgramCounter,
-    Read,
     DecrementStackPointer,
 
     // RTI
     IncrementStackPointer,
-    ReadProgramCounterLowFromStack,
-    ReadProgramCounterHighFromStack,
 
     FetchInstruction,
     FetchAddressLow,

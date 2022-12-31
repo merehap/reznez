@@ -163,24 +163,6 @@ impl Cpu {
         match action {
             CycleAction::Copy { from, to } => self.copy_data(memory, from, to),
 
-            CycleAction::Read => {
-                self.address_bus = self.program_counter;
-                self.data_bus = memory.read(self.address_bus);
-            }
-            CycleAction::ReadProgramCounterLowFromStack => {
-                self.address_bus = memory.stack_pointer_address();
-                self.data_bus = memory.read(self.address_bus);
-            }
-            CycleAction::ReadProgramCounterHighFromStack => {
-                let program_counter_low = self.data_bus;
-                self.address_bus = memory.stack_pointer_address();
-                self.data_bus = memory.read(self.address_bus);
-                self.program_counter = CpuAddress::from_low_high(
-                    program_counter_low,
-                    self.data_bus,
-                );
-            }
-
             CycleAction::FetchInstruction => {
                 self.address_bus = self.program_counter;
                 self.data_bus = memory.read(self.address_bus);
