@@ -31,7 +31,7 @@ impl CycleActionQueue {
 
     pub fn enqueue_instruction_fetch(&mut self) {
         // FIXME: Nop isn't always correct here.
-        self.queue.push_back((CycleAction::FetchInstruction, CycleAction::Nop));
+        self.queue.push_back((CycleAction::FetchInstruction, CycleAction::IncrementProgramCounter));
     }
 
     pub fn enqueue_instruction(&mut self, instruction: Instruction) {
@@ -80,21 +80,21 @@ impl CycleActionQueue {
 
         // Cycle 0 was the instruction fetch, cycle n - 1 is the instruction execution.
         match (instruction.template.access_mode, instruction.template.op_code) {
-            (Abs, JMP) => self.queue.push_front((CycleAction::Nop, CycleAction::Nop)),
+            (Abs, JMP) => self.queue.push_front((Nop, Nop)),
             (Abs, _code) => {
                 self.prepend(&vec![
-                    (CycleAction::Nop, CycleAction::Nop);
+                    (Nop, Nop);
                     instruction.template.cycle_count as usize - 4
                 ]);
                 // TODO: Make exceptions for JSR and potentially others.
                 self.prepend(&[
-                    (FetchAddressLow, CycleAction::Nop),
-                    (FetchAddressHigh, CycleAction::Nop)
+                    (FetchAddressLow, IncrementProgramCounter),
+                    (FetchAddressHigh, IncrementProgramCounter),
                 ]);
             }
             _ => {
                 self.prepend(&vec![
-                    (CycleAction::Nop, CycleAction::Nop);
+                    (Nop, Nop);
                     instruction.template.cycle_count as usize - 2
                 ]);
             }

@@ -33,7 +33,6 @@ pub struct Cpu {
     jammed: bool,
 
     address_bus: CpuAddress,
-    next_address: Option<CpuAddress>,
     data_bus: u8,
     pending_address_low: u8,
 }
@@ -65,14 +64,12 @@ impl Cpu {
             dma_port: memory.ports().dma.clone(),
             next_dma_byte_to_write: None,
 
-            // Unclear why this is the case, but nestest must be obeyed.
-            // https://github.com/SourMesen/Mesen/blob/master/Core/CPU.cpp#L154
+            // See startup sequence in NES-manual so this isn't hard-coded.
             cycle: 7,
 
             jammed: false,
 
             address_bus: CpuAddress::new(0x0000),
-            next_address: None,
             data_bus: 0,
             pending_address_low: 0,
         }
@@ -83,7 +80,6 @@ impl Cpu {
         self.status.interrupts_disabled = true;
         self.program_counter = memory.reset_vector();
         self.address_bus = memory.reset_vector();
-        self.next_address = None;
         self.current_instruction = None;
         self.cycle_action_queue = CycleActionQueue::new();
         self.nmi_pending = false;
@@ -150,11 +146,6 @@ impl Cpu {
 
         let (first_action, second_action) = self.cycle_action_queue.dequeue()
             .expect("Ran out of CycleActions!");
-        if let Some(address) = self.next_address.take() {
-            self.address_bus = address;
-            self.data_bus = memory.read(self.address_bus);
-        }
-
         self.execute_cycle_action(memory, first_action);
         self.execute_cycle_action(memory, second_action);
 
@@ -224,23 +215,21 @@ impl Cpu {
             }
 
             CycleAction::FetchInstruction => {
+                self.address_bus = self.program_counter;
+                self.data_bus = memory.read(self.address_bus);
                 let instruction = Instruction::from_memory(
-                    self.program_counter, self.x, self.y, memory);
+                    self.address_bus, self.x, self.y, memory);
                 self.current_instruction = Some(instruction);
                 self.cycle_action_queue.enqueue_instruction(instruction);
-                self.next_address = Some(self.program_counter.inc());
             }
             CycleAction::FetchAddressLow => {
-                self.pending_address_low = memory.read(self.program_counter);
-                self.next_address = Some(self.program_counter.inc());
+                self.address_bus = self.program_counter;
+                self.data_bus = memory.read(self.address_bus);
             }
             CycleAction::FetchAddressHigh => {
-                let address_high = memory.read(self.program_counter);
-                self.next_address = Some(CpuAddress::from_low_high(
-                    self.pending_address_low,
-                    address_high,
-                ));
-                self.program_counter.inc();
+                self.pending_address_low = self.data_bus;
+                self.address_bus = self.program_counter;
+                self.data_bus = memory.read(self.address_bus);
             }
 
             CycleAction::IncrementProgramCounter => {
@@ -297,20 +286,13 @@ impl Cpu {
     fn execute_instruction(
         &mut self,
         memory: &mut CpuMemory,
-        mut instruction: Instruction,
+        instruction: Instruction,
     ) -> InstructionResult {
         use OpCode::*;
         use Argument::*;
 
         match instruction.template.access_mode {
-            AccessMode::Abs if instruction.template.op_code != JMP && matches!(instruction.argument, Addr(_)) => {
-                let Addr(addr) = instruction.argument else {
-                    panic!();
-                };
-
-                assert_eq!(addr, self.address_bus);
-                instruction.argument = Addr(self.address_bus);
-            }
+            AccessMode::Abs if instruction.template.op_code != JMP && matches!(instruction.argument, Addr(_)) => {}
             _ => self.program_counter = self.program_counter.advance(instruction.length() - 1),
         }
 
