@@ -2,15 +2,12 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 
 #[derive(Clone, Copy, Debug)]
 pub enum CycleAction {
+    Copy { from: Location, to: Location },
+
     // BRK
     IncrementProgramCounter,
     Read,
-    WriteProgramCounterHighToStack,
     DecrementStackPointer,
-    WriteProgramCounterLowToStack,
-    WriteStatusToStack,
-    ReadProgramCounterHighFromIrqVector,
-    ReadProgramCounterLowFromIrqVector,
 
     // RTI
     IncrementStackPointer,
@@ -37,4 +34,22 @@ pub enum DmaTransferState {
     AlignToEven,
     Read(CpuAddress),
     Write,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum Location {
+    DataBus,
+
+    ProgramCounter,
+    ProgramCounterLowByte,
+    ProgramCounterHighByte,
+
+    Status,
+    InterruptStatus,
+    InstructionStatus,
+
+    TopOfStack,
+
+    IrqVectorLow,
+    IrqVectorHigh,
 }

@@ -1,8 +1,9 @@
 use log::{info, error};
 
-use crate::cpu::cycle_action::{CycleAction, DmaTransferState};
+use crate::cpu::cycle_action::{CycleAction, DmaTransferState, Location};
 use crate::cpu::cycle_action_queue::{CycleActionQueue};
 use crate::cpu::instruction::{AccessMode, Argument, Instruction, OpCode};
+use crate::cpu::status;
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::ports::DmaPort;
@@ -160,41 +161,12 @@ impl Cpu {
 
     fn execute_cycle_action(&mut self, memory: &mut CpuMemory, action: CycleAction) {
         match action {
+            CycleAction::Copy { from, to } => self.copy_data(memory, from, to),
+
             CycleAction::Read => {
                 self.address_bus = self.program_counter;
                 self.data_bus = memory.read(self.address_bus);
             }
-            CycleAction::WriteProgramCounterHighToStack => {
-                self.address_bus = memory.stack_pointer_address();
-                self.data_bus = self.program_counter.high_byte();
-                memory.write(self.address_bus, self.data_bus);
-            }
-            CycleAction::WriteProgramCounterLowToStack => {
-                self.address_bus = memory.stack_pointer_address();
-                self.data_bus = self.program_counter.low_byte();
-                memory.write(self.address_bus, self.data_bus);
-            }
-            CycleAction::WriteStatusToStack => {
-                self.address_bus = memory.stack_pointer_address();
-                self.data_bus = self.status.to_instruction_byte();
-                memory.write(self.address_bus, self.data_bus);
-            }
-            // TODO: Generalize?
-            CycleAction::ReadProgramCounterLowFromIrqVector => {
-                self.address_bus = CpuAddress::new(0xFFFE);
-                self.data_bus = memory.read(self.address_bus);
-
-            }
-            CycleAction::ReadProgramCounterHighFromIrqVector => {
-                let program_counter_low = self.data_bus;
-                self.address_bus = CpuAddress::new(0xFFFF);
-                self.data_bus = memory.read(self.address_bus);
-                self.program_counter = CpuAddress::from_low_high(
-                    program_counter_low,
-                    self.data_bus,
-                );
-            }
-
             CycleAction::ReadStatusFromStack => {
                 self.address_bus = memory.stack_pointer_address();
                 self.data_bus = memory.read(self.address_bus);
@@ -279,7 +251,62 @@ impl Cpu {
             }
             CycleAction::DmaTransfer(_) | CycleAction::Nop => { /* Do nothing. */ }
         }
+    }
 
+    // Note that most source/destination combos are invalid.
+    // In particular, there is no way to directly copy from one memory location to another.
+    fn copy_data(&mut self, memory: &mut CpuMemory, source: Location, destination: Location) {
+        let old_data_bus_value = self.data_bus;
+
+        use Location::*;
+        self.data_bus = match source {
+            DataBus => unimplemented!("Maybe this should be used for NOPs?"),
+            ProgramCounter => {
+                self.address_bus = self.program_counter;
+                memory.read(self.address_bus)
+            },
+            TopOfStack => {
+                self.address_bus = memory.stack_pointer_address();
+                memory.read(self.address_bus)
+            }
+            IrqVectorLow => {
+                self.address_bus = CpuAddress::new(0xFFFE);
+                memory.read(self.address_bus)
+            }
+            IrqVectorHigh => {
+                self.address_bus = CpuAddress::new(0xFFFF);
+                memory.read(self.address_bus)
+            }
+            ProgramCounterLowByte => self.program_counter.low_byte(),
+            ProgramCounterHighByte => self.program_counter.high_byte(),
+            Status => unimplemented!("Use InterruptStatus or InstructionStatus instead."),
+            InterruptStatus => self.status.to_interrupt_byte(),
+            InstructionStatus => self.status.to_instruction_byte(),
+        };
+
+        match destination {
+            DataBus => { /* The data bus was already copied to regardless of source. */ },
+            ProgramCounter => {
+                self.address_bus = self.program_counter;
+                memory.write(self.address_bus, self.data_bus);
+            }
+            TopOfStack => {
+                self.address_bus = memory.stack_pointer_address();
+                memory.write(self.address_bus, self.data_bus);
+            }
+            IrqVectorLow => unreachable!("Vectors should be written to via ProgramCounter."),
+            IrqVectorHigh => unreachable!("Vectors should be written to via ProgramCounter."),
+            ProgramCounterLowByte => unreachable!("Use DataBus instead."),
+            ProgramCounterHighByte => {
+                self.program_counter = CpuAddress::from_low_high(
+                    old_data_bus_value,
+                    self.data_bus,
+                );
+            }
+            Status => self.status = status::Status::from_byte(self.data_bus),
+            InterruptStatus => unimplemented!("Use Status instead."),
+            InstructionStatus => unimplemented!("Use Status instead."),
+        }
     }
 
     #[rustfmt::skip]

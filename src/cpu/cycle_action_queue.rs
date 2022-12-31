@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use crate::cpu::cycle_action::{CycleAction, DmaTransferState};
+use crate::cpu::cycle_action::{CycleAction, DmaTransferState, Location};
 use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
 use crate::memory::cpu::cpu_address::CpuAddress;
 
@@ -30,7 +30,6 @@ impl CycleActionQueue {
     }
 
     pub fn enqueue_instruction_fetch(&mut self) {
-        // FIXME: Nop isn't always correct here.
         self.queue.push_back((CycleAction::FetchInstruction, CycleAction::IncrementProgramCounter));
     }
 
@@ -38,17 +37,18 @@ impl CycleActionQueue {
         use AccessMode::*;
         use OpCode::*;
         use CycleAction::*;
+        use Location::*;
 
         let mut fallback = false;
         match (instruction.template.access_mode, instruction.template.op_code) {
             (Imp, BRK) => {
                 self.prepend(&[
-                    (Read                               , IncrementProgramCounter),
-                    (WriteProgramCounterHighToStack     , DecrementStackPointer  ),
-                    (WriteProgramCounterLowToStack      , DecrementStackPointer  ),
-                    (WriteStatusToStack                 , DecrementStackPointer  ),
-                    (ReadProgramCounterLowFromIrqVector , DisableInterrupts      ),
-                    (ReadProgramCounterHighFromIrqVector, Nop                    ),
+                    (Copy { from: ProgramCounter        , to: DataBus                }, IncrementProgramCounter),
+                    (Copy { from: ProgramCounterHighByte, to: TopOfStack             }, DecrementStackPointer  ),
+                    (Copy { from: ProgramCounterLowByte , to: TopOfStack             }, DecrementStackPointer  ),
+                    (Copy { from: InstructionStatus     , to: TopOfStack             }, DecrementStackPointer  ),
+                    (Copy { from: IrqVectorLow          , to: DataBus                }, DisableInterrupts      ),
+                    (Copy { from: IrqVectorHigh         , to: ProgramCounterHighByte }, Nop                    ),
                 ]);
             }
             (Imp, RTI) => {
