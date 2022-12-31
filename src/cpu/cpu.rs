@@ -167,11 +167,6 @@ impl Cpu {
                 self.address_bus = self.program_counter;
                 self.data_bus = memory.read(self.address_bus);
             }
-            CycleAction::ReadStatusFromStack => {
-                self.address_bus = memory.stack_pointer_address();
-                self.data_bus = memory.read(self.address_bus);
-                self.status = Status::from_byte(self.data_bus);
-            }
             CycleAction::ReadProgramCounterLowFromStack => {
                 self.address_bus = memory.stack_pointer_address();
                 self.data_bus = memory.read(self.address_bus);
@@ -280,7 +275,6 @@ impl Cpu {
             ProgramCounterLowByte => self.program_counter.low_byte(),
             ProgramCounterHighByte => self.program_counter.high_byte(),
             Status => unimplemented!("Use InterruptStatus or InstructionStatus instead."),
-            InterruptStatus => self.status.to_interrupt_byte(),
             InstructionStatus => self.status.to_instruction_byte(),
         };
 
@@ -304,7 +298,6 @@ impl Cpu {
                 );
             }
             Status => self.status = status::Status::from_byte(self.data_bus),
-            InterruptStatus => unimplemented!("Use Status instead."),
             InstructionStatus => unimplemented!("Use Status instead."),
         }
     }

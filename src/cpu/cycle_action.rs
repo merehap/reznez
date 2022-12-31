@@ -11,7 +11,6 @@ pub enum CycleAction {
 
     // RTI
     IncrementStackPointer,
-    ReadStatusFromStack,
     ReadProgramCounterLowFromStack,
     ReadProgramCounterHighFromStack,
 
@@ -45,7 +44,6 @@ pub enum Location {
     ProgramCounterHighByte,
 
     Status,
-    InterruptStatus,
     InstructionStatus,
 
     TopOfStack,
