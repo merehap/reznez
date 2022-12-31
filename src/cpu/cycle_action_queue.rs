@@ -53,7 +53,7 @@ impl CycleActionQueue {
             }
             (Imp, RTI) => {
                 self.prepend(&[
-                    (Read                           , IncrementProgramCounter),
+                    (Read                           , Nop                    ),
                     (Nop                            , IncrementStackPointer  ),
                     (ReadStatusFromStack            , IncrementStackPointer  ),
                     (ReadProgramCounterLowFromStack , IncrementStackPointer  ),
@@ -62,11 +62,11 @@ impl CycleActionQueue {
             }
             (Imp, RTS) => {
                 self.prepend(&[
-                    (DummyRead, Nop),
-                    (IncrementStackPointer, Nop),
-                    (PeekProgramCounterLow, IncrementStackPointer),
-                    (PeekProgramCounterHigh, Nop),
-                    (IncrementProgramCounter, Nop),
+                    (Read                           , Nop                    ),
+                    (Nop                            , IncrementStackPointer  ),
+                    (ReadProgramCounterLowFromStack , IncrementStackPointer  ),
+                    (ReadProgramCounterHighFromStack, Nop                    ),
+                    (Nop                            , IncrementProgramCounter),
                 ]);
             }
             _ => fallback = true,

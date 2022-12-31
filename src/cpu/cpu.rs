@@ -243,9 +243,6 @@ impl Cpu {
                 self.program_counter.inc();
             }
 
-            CycleAction::DummyRead => {
-                let _ = memory.read(self.program_counter);
-            }
             CycleAction::IncrementProgramCounter => {
                 self.program_counter.inc();
             }
@@ -259,17 +256,6 @@ impl Cpu {
             CycleAction::DecrementStackPointer => {
                 memory.stack().decrement_stack_pointer();
             }
-            CycleAction::PeekProgramCounterLow => {
-                self.pending_address_low = memory.stack().peek();
-            },
-            CycleAction::PeekProgramCounterHigh => {
-                let address_high = memory.stack().peek();
-                self.address_bus = CpuAddress::from_low_high(
-                    self.pending_address_low,
-                    address_high,
-                );
-                self.program_counter = self.address_bus;
-            },
 
             CycleAction::Instruction => {
                 let instr = self.current_instruction.unwrap();

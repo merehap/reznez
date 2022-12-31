@@ -22,12 +22,7 @@ pub enum CycleAction {
     FetchAddressLow,
     FetchAddressHigh,
 
-    DummyRead,
     DisableInterrupts,
-
-    // RTI
-    PeekProgramCounterLow,
-    PeekProgramCounterHigh,
 
     Nop,
     Instruction,
