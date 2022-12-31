@@ -30,7 +30,13 @@ impl CycleActionQueue {
     }
 
     pub fn enqueue_instruction_fetch(&mut self) {
-        self.queue.push_back((CycleAction::FetchInstruction, CycleAction::IncrementProgramCounter));
+        use CycleAction::*;
+        self.queue.push_back(
+            (
+                Copy { from: Location::ProgramCounter, to: Location::Instruction},
+                IncrementProgramCounter,
+            )
+        );
     }
 
     pub fn enqueue_instruction(&mut self, instruction: Instruction) {
@@ -89,8 +95,8 @@ impl CycleActionQueue {
                 ]);
                 // TODO: Make exceptions for JSR and potentially others.
                 self.prepend(&[
-                    (FetchAddressLow, IncrementProgramCounter),
-                    (FetchAddressHigh, IncrementProgramCounter),
+                    (Copy { from: ProgramCounter, to: DataBus                }, IncrementProgramCounter),
+                    (Copy { from: ProgramCounter, to: PendingAddressHighByte }, IncrementProgramCounter),
                 ]);
             }
             _ => {

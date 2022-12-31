@@ -2,6 +2,7 @@ use log::{info, error};
 
 use crate::cpu::cycle_action::{CycleAction, DmaTransferState, Location};
 use crate::cpu::cycle_action_queue::{CycleActionQueue};
+use crate::cpu::instruction;
 use crate::cpu::instruction::{AccessMode, Argument, Instruction, OpCode};
 use crate::cpu::status;
 use crate::cpu::status::Status;
@@ -163,24 +164,6 @@ impl Cpu {
         match action {
             CycleAction::Copy { from, to } => self.copy_data(memory, from, to),
 
-            CycleAction::FetchInstruction => {
-                self.address_bus = self.program_counter;
-                self.data_bus = memory.read(self.address_bus);
-                let instruction = Instruction::from_memory(
-                    self.address_bus, self.x, self.y, memory);
-                self.current_instruction = Some(instruction);
-                self.cycle_action_queue.enqueue_instruction(instruction);
-            }
-            CycleAction::FetchAddressLow => {
-                self.address_bus = self.program_counter;
-                self.data_bus = memory.read(self.address_bus);
-            }
-            CycleAction::FetchAddressHigh => {
-                self.pending_address_low = self.data_bus;
-                self.address_bus = self.program_counter;
-                self.data_bus = memory.read(self.address_bus);
-            }
-
             CycleAction::IncrementProgramCounter => {
                 self.program_counter.inc();
             }
@@ -256,8 +239,11 @@ impl Cpu {
             }
             ProgramCounterLowByte => self.program_counter.low_byte(),
             ProgramCounterHighByte => self.program_counter.high_byte(),
-            Status => unimplemented!("Use InterruptStatus or InstructionStatus instead."),
+            PendingAddressHighByte => unreachable!("PendingAddressHighByte should only be written to."),
+            Status => unreachable!("Use InterruptStatus or InstructionStatus instead."),
             InstructionStatus => self.status.to_instruction_byte(),
+
+            Instruction => unreachable!("Instruction can't be read from."),
         };
 
         match destination {
@@ -279,8 +265,19 @@ impl Cpu {
                     self.data_bus,
                 );
             }
+            PendingAddressHighByte => {
+                // The high byte was already written to the data bus above.
+                self.pending_address_low = old_data_bus_value;
+            }
             Status => self.status = status::Status::from_byte(self.data_bus),
-            InstructionStatus => unimplemented!("Use Status instead."),
+            InstructionStatus => unreachable!("Use Status instead."),
+
+            Instruction => {
+                let instruction = instruction::Instruction::from_memory(
+                    self.address_bus, self.x, self.y, memory);
+                self.current_instruction = Some(instruction);
+                self.cycle_action_queue.enqueue_instruction(instruction);
+            }
         }
     }
 

@@ -11,10 +11,6 @@ pub enum CycleAction {
     // RTI
     IncrementStackPointer,
 
-    FetchInstruction,
-    FetchAddressLow,
-    FetchAddressHigh,
-
     DisableInterrupts,
 
     Nop,
@@ -39,6 +35,7 @@ pub enum Location {
     ProgramCounter,
     ProgramCounterLowByte,
     ProgramCounterHighByte,
+    PendingAddressHighByte,
 
     Status,
     InstructionStatus,
@@ -47,4 +44,6 @@ pub enum Location {
 
     IrqVectorLow,
     IrqVectorHigh,
+
+    Instruction,
 }
