@@ -107,6 +107,10 @@ impl<'a> CpuMemory<'a> {
         &mut self.memory.cpu_internal_ram.stack_pointer
     }
 
+    pub fn stack_pointer_address(&self) -> CpuAddress {
+        CpuAddress::from_low_high(self.stack_pointer(), 0x01)
+    }
+
     pub fn nmi_vector(&mut self) -> CpuAddress {
         self.address_from_vector(NMI_VECTOR)
     }

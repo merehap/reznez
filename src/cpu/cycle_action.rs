@@ -2,24 +2,25 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 
 #[derive(Clone, Copy, Debug)]
 pub enum CycleAction {
+    // BRK
+    IncrementProgramCounter,
+    Read,
+    WriteProgramCounterHighToStack,
+    DecrementStackPointer,
+    WriteProgramCounterLowToStack,
+    WriteStatusToStack,
+    ReadProgramCounterHighFromIrqVector,
+    ReadProgramCounterLowFromIrqVector,
+
     FetchInstruction,
     FetchAddressLow,
     FetchAddressHigh,
 
     DummyRead,
-    IncrementProgramCounter,
     DisableInterrupts,
-
-    // BRK.
-    PushProgramCounterHigh,
-    PushProgramCounterLow,
-    PushStatus,
-    FetchProgramCounterLowFromIrqVector,
-    FetchProgramCounterHighFromIrqVector,
 
     // RTI
     IncrementStackPointer,
-    DecrementStackPointer,
     PeekStatus,
     PeekProgramCounterLow,
     PeekProgramCounterHigh,

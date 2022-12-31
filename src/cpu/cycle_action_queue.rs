@@ -43,12 +43,12 @@ impl CycleActionQueue {
         match (instruction.template.access_mode, instruction.template.op_code) {
             (Imp, BRK) => {
                 self.prepend(&[
-                    (DummyRead, IncrementProgramCounter),
-                    (PushProgramCounterHigh, DecrementStackPointer),
-                    (PushProgramCounterLow, DecrementStackPointer),
-                    (PushStatus, DecrementStackPointer),
-                    (FetchProgramCounterLowFromIrqVector, DisableInterrupts),
-                    (FetchProgramCounterHighFromIrqVector, Nop),
+                    (Read                               , IncrementProgramCounter),
+                    (WriteProgramCounterHighToStack     , DecrementStackPointer  ),
+                    (WriteProgramCounterLowToStack      , DecrementStackPointer  ),
+                    (WriteStatusToStack                 , DecrementStackPointer  ),
+                    (ReadProgramCounterLowFromIrqVector , DisableInterrupts      ),
+                    (ReadProgramCounterHighFromIrqVector, Nop                    ),
                 ]);
             }
             (Imp, RTI) => {

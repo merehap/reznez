@@ -169,6 +169,42 @@ impl Cpu {
 
     fn execute_cycle_action(&mut self, memory: &mut CpuMemory, action: CycleAction) {
         match action {
+            CycleAction::Read => {
+                self.address_bus = self.program_counter;
+                self.data_bus = memory.read(self.address_bus);
+            }
+            CycleAction::WriteProgramCounterHighToStack => {
+                self.address_bus = memory.stack_pointer_address();
+                self.data_bus = self.program_counter.high_byte();
+                memory.write(self.address_bus, self.data_bus);
+            }
+            CycleAction::WriteProgramCounterLowToStack => {
+                self.address_bus = memory.stack_pointer_address();
+                self.data_bus = self.program_counter.low_byte();
+                memory.write(self.address_bus, self.data_bus);
+            }
+            CycleAction::WriteStatusToStack => {
+                self.address_bus = memory.stack_pointer_address();
+                self.data_bus = self.status.to_instruction_byte();
+                memory.write(self.address_bus, self.data_bus);
+            }
+            // TODO: Generalize?
+            CycleAction::ReadProgramCounterLowFromIrqVector => {
+                self.address_bus = CpuAddress::new(0xFFFE);
+                self.data_bus = memory.read(self.address_bus);
+
+            }
+            CycleAction::ReadProgramCounterHighFromIrqVector => {
+                let program_counter_low = self.data_bus;
+                self.address_bus = CpuAddress::new(0xFFFF);
+                self.data_bus = memory.read(self.address_bus);
+                self.program_counter = CpuAddress::from_low_high(
+                    program_counter_low,
+                    self.data_bus,
+                );
+            }
+
+
             CycleAction::FetchInstruction => {
                 let instruction = Instruction::from_memory(
                     self.program_counter, self.x, self.y, memory);
@@ -197,27 +233,6 @@ impl Cpu {
             }
             CycleAction::DisableInterrupts => {
                 self.status.interrupts_disabled = true;
-            }
-
-            CycleAction::PushProgramCounterHigh => {
-                memory.stack().set_at_pointer(self.program_counter.high_byte());
-            }
-            CycleAction::PushProgramCounterLow => {
-                memory.stack().set_at_pointer(self.program_counter.low_byte());
-            }
-            CycleAction::PushStatus => {
-                memory.stack().set_at_pointer(self.status.to_instruction_byte());
-            }
-            CycleAction::FetchProgramCounterLowFromIrqVector => {
-                self.pending_address_low = memory.read(CpuAddress::new(0xFFFE));
-            }
-            CycleAction::FetchProgramCounterHighFromIrqVector => {
-                let address_high = memory.read(CpuAddress::new(0xFFFF));
-                self.address_bus = CpuAddress::from_low_high(
-                    self.pending_address_low,
-                    address_high,
-                );
-                self.program_counter = self.address_bus;
             }
 
             CycleAction::IncrementStackPointer => {
