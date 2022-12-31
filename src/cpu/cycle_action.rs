@@ -12,6 +12,12 @@ pub enum CycleAction {
     ReadProgramCounterHighFromIrqVector,
     ReadProgramCounterLowFromIrqVector,
 
+    // RTI
+    IncrementStackPointer,
+    ReadStatusFromStack,
+    ReadProgramCounterLowFromStack,
+    ReadProgramCounterHighFromStack,
+
     FetchInstruction,
     FetchAddressLow,
     FetchAddressHigh,
@@ -20,8 +26,6 @@ pub enum CycleAction {
     DisableInterrupts,
 
     // RTI
-    IncrementStackPointer,
-    PeekStatus,
     PeekProgramCounterLow,
     PeekProgramCounterHigh,
 

@@ -53,11 +53,11 @@ impl CycleActionQueue {
             }
             (Imp, RTI) => {
                 self.prepend(&[
-                    (DummyRead, Nop),
-                    (IncrementStackPointer, Nop),
-                    (PeekStatus, IncrementStackPointer),
-                    (PeekProgramCounterLow, IncrementStackPointer),
-                    (PeekProgramCounterHigh, Nop),
+                    (Read                           , IncrementProgramCounter),
+                    (Nop                            , IncrementStackPointer  ),
+                    (ReadStatusFromStack            , IncrementStackPointer  ),
+                    (ReadProgramCounterLowFromStack , IncrementStackPointer  ),
+                    (ReadProgramCounterHighFromStack, Nop                    ),
                 ]);
             }
             (Imp, RTS) => {

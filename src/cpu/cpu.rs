@@ -204,6 +204,24 @@ impl Cpu {
                 );
             }
 
+            CycleAction::ReadStatusFromStack => {
+                self.address_bus = memory.stack_pointer_address();
+                self.data_bus = memory.read(self.address_bus);
+                self.status = Status::from_byte(self.data_bus);
+            }
+            CycleAction::ReadProgramCounterLowFromStack => {
+                self.address_bus = memory.stack_pointer_address();
+                self.data_bus = memory.read(self.address_bus);
+            }
+            CycleAction::ReadProgramCounterHighFromStack => {
+                let program_counter_low = self.data_bus;
+                self.address_bus = memory.stack_pointer_address();
+                self.data_bus = memory.read(self.address_bus);
+                self.program_counter = CpuAddress::from_low_high(
+                    program_counter_low,
+                    self.data_bus,
+                );
+            }
 
             CycleAction::FetchInstruction => {
                 let instruction = Instruction::from_memory(
@@ -241,9 +259,6 @@ impl Cpu {
             CycleAction::DecrementStackPointer => {
                 memory.stack().decrement_stack_pointer();
             }
-            CycleAction::PeekStatus => {
-                self.status = Status::from_byte(memory.stack().peek());
-            },
             CycleAction::PeekProgramCounterLow => {
                 self.pending_address_low = memory.stack().peek();
             },
