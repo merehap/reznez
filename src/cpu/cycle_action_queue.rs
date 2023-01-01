@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 
-use crate::cpu::cycle_action::{CycleAction, DmaTransferState, Location};
+use crate::cpu::cycle_action::{CycleAction, Location};
 use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
-use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::mapper::CpuAddress;
 
 // More than enough space for a DMA transfer (513 cycles) plus an instruction.
 const CAPACITY: usize = 1000;
@@ -116,25 +116,24 @@ impl CycleActionQueue {
         self.queue.push_back((CycleAction::Nmi, CycleAction::Nop));
     }
 
-    pub fn enqueue_dma_transfer(&mut self, page: u8, current_cycle: u64) {
-        let is_odd_cycle = current_cycle % 2 == 1;
-        let mut current_cpu_address = CpuAddress::from_low_high(0, page);
+    // Note: the values of the address bus might not be correct for some cycles.
+    pub fn enqueue_dma_transfer(&mut self, port: u8, current_cycle: u64) {
+        use CycleAction::*;
+        use Location::*;
 
-        use DmaTransferState::*;
-        self.enqueue_dma_transfer_state(WaitOnPreviousWrite);
+        let transfer_start_address = CpuAddress::from_low_high(0x00, port);
+        // Unclear this is the correct timing. Might not matter even if it's wrong.
+        self.queue.push_back((Nop, SetAddressBus(transfer_start_address)));
+
+        let is_odd_cycle = current_cycle % 2 == 1;
         if is_odd_cycle {
-            self.enqueue_dma_transfer_state(AlignToEven);
+            self.queue.push_back((Nop, Nop));
         }
 
         for _ in 0..256 {
-            self.enqueue_dma_transfer_state(Read(current_cpu_address));
-            self.enqueue_dma_transfer_state(Write);
-            current_cpu_address.inc();
+            self.queue.push_back((Copy { from: AddressBus, to: DataBus }, Nop                ));
+            self.queue.push_back((Copy { from: DataBus   , to: OamData }, IncrementAddressBus));
         }
-    }
-
-    fn enqueue_dma_transfer_state(&mut self, state: DmaTransferState) {
-        self.queue.push_back((CycleAction::DmaTransfer(state), CycleAction::Nop));
     }
 
     fn prepend(&mut self, actions: &[(CycleAction, CycleAction)]) {

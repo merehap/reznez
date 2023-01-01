@@ -1,15 +1,14 @@
-use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::mapper::CpuAddress;
 
 #[derive(Clone, Copy, Debug)]
 pub enum CycleAction {
     Copy { from: Location, to: Location },
 
-    // BRK
     IncrementProgramCounter,
-    DecrementStackPointer,
-
-    // RTI
+    IncrementAddressBus,
+    SetAddressBus(CpuAddress),
     IncrementStackPointer,
+    DecrementStackPointer,
 
     DisableInterrupts,
 
@@ -17,25 +16,18 @@ pub enum CycleAction {
     Instruction,
     InstructionReturn,
     Nmi,
-    DmaTransfer(DmaTransferState),
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum DmaTransferState {
-    WaitOnPreviousWrite,
-    AlignToEven,
-    Read(CpuAddress),
-    Write,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub enum Location {
     DataBus,
+    AddressBus,
 
     ProgramCounter,
     ProgramCounterLowByte,
     ProgramCounterHighByte,
     PendingAddressHighByte,
+    OamData,
 
     Status,
     InstructionStatus,

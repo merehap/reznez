@@ -1,6 +1,6 @@
 use log::{info, error};
 
-use crate::cpu::cycle_action::{CycleAction, DmaTransferState, Location};
+use crate::cpu::cycle_action::{CycleAction, Location};
 use crate::cpu::cycle_action_queue::{CycleActionQueue};
 use crate::cpu::instruction;
 use crate::cpu::instruction::{AccessMode, Argument, Instruction, OpCode};
@@ -130,8 +130,7 @@ impl Cpu {
         }
 
         if let Some(dma_page) = self.dma_port.take_page() {
-            self.cycle_action_queue
-                .enqueue_dma_transfer(dma_page, self.cycle);
+            self.cycle_action_queue.enqueue_dma_transfer(dma_page, self.cycle);
         }
 
         if self.cycle_action_queue.is_empty() {
@@ -165,15 +164,22 @@ impl Cpu {
             CycleAction::IncrementProgramCounter => {
                 self.program_counter.inc();
             }
-            CycleAction::DisableInterrupts => {
-                self.status.interrupts_disabled = true;
+            CycleAction::IncrementAddressBus => {
+                // TODO: Make sure this isn't supposed to wrap within the same page.
+                self.address_bus.inc();
             }
-
+            CycleAction::SetAddressBus(address) => {
+                self.address_bus = address;
+            }
             CycleAction::IncrementStackPointer => {
                 memory.stack().increment_stack_pointer();
             },
             CycleAction::DecrementStackPointer => {
                 memory.stack().decrement_stack_pointer();
+            }
+
+            CycleAction::DisableInterrupts => {
+                self.status.interrupts_disabled = true;
             }
 
             CycleAction::Instruction => {
@@ -200,13 +206,7 @@ impl Cpu {
                 memory.stack().push(self.status.to_interrupt_byte());
                 self.program_counter = memory.nmi_vector();
             }
-            CycleAction::DmaTransfer(DmaTransferState::Read(cpu_address)) => {
-                self.data_bus = memory.read(cpu_address);
-            }
-            CycleAction::DmaTransfer(DmaTransferState::Write) => {
-                memory.write(OAM_DATA_ADDRESS, self.data_bus);
-            }
-            CycleAction::DmaTransfer(_) | CycleAction::Nop => { /* Do nothing. */ }
+            CycleAction::Nop => { /* Do nothing. */ }
         }
     }
 
@@ -217,7 +217,10 @@ impl Cpu {
 
         use Location::*;
         self.data_bus = match source {
-            DataBus => unimplemented!("Maybe this should be used for NOPs?"),
+            DataBus => self.data_bus,
+            AddressBus => {
+                memory.read(self.address_bus)
+            },
             ProgramCounter => {
                 self.address_bus = self.program_counter;
                 memory.read(self.address_bus)
@@ -236,6 +239,7 @@ impl Cpu {
             }
             ProgramCounterLowByte => self.program_counter.low_byte(),
             ProgramCounterHighByte => self.program_counter.high_byte(),
+            OamData => todo!(),
             PendingAddressHighByte => unreachable!("PendingAddressHighByte should only be written to."),
             Status => unreachable!("Use InterruptStatus or InstructionStatus instead."),
             InstructionStatus => self.status.to_instruction_byte(),
@@ -244,6 +248,7 @@ impl Cpu {
         };
 
         match destination {
+            AddressBus => unreachable!(),
             DataBus => { /* The data bus was already copied to regardless of source. */ },
             ProgramCounter => {
                 self.address_bus = self.program_counter;
@@ -261,6 +266,11 @@ impl Cpu {
                     old_data_bus_value,
                     self.data_bus,
                 );
+            }
+            OamData => {
+                println!("Writing to OAM. Address: {}, Data: {}", self.address_bus, self.data_bus);
+                // The only write that doesn't use/change the address bus?
+                memory.write(OAM_DATA_ADDRESS, self.data_bus);
             }
             PendingAddressHighByte => {
                 // The high byte was already written to the data bus above.
