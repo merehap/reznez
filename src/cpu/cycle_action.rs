@@ -2,8 +2,6 @@ use crate::memory::mapper::CpuAddress;
 
 #[derive(Clone, Copy, Debug)]
 pub enum CycleAction {
-    Copy { from: Location, to: Location },
-
     IncrementProgramCounter,
     IncrementAddressBus,
     SetAddressBus(CpuAddress),
@@ -19,23 +17,32 @@ pub enum CycleAction {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum Location {
+pub enum From {
     DataBus,
     AddressBus,
 
     ProgramCounter,
+
     ProgramCounterLowByte,
     ProgramCounterHighByte,
-    PendingAddressHighByte,
-    OamData,
 
-    Status,
     InstructionStatus,
-
     TopOfStack,
 
     IrqVectorLow,
     IrqVectorHigh,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum To {
+    DataBus,
+
+    ProgramCounterHighByte,
+    PendingAddressHighByte,
+
+    Status,
+    TopOfStack,
+    OamData,
 
     Instruction,
 }

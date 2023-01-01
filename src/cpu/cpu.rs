@@ -1,6 +1,6 @@
 use log::{info, error};
 
-use crate::cpu::cycle_action::{CycleAction, Location};
+use crate::cpu::cycle_action::{CycleAction, From, To};
 use crate::cpu::cycle_action_queue::{CycleActionQueue};
 use crate::cpu::instruction;
 use crate::cpu::instruction::{AccessMode, Argument, Instruction, OpCode};
@@ -143,10 +143,10 @@ impl Cpu {
             self.nmi_pending = false;
         }
 
-        let (first_action, second_action) = self.cycle_action_queue.dequeue()
+        let (from, to, action) = self.cycle_action_queue.dequeue()
             .expect("Ran out of CycleActions!");
-        self.execute_cycle_action(memory, first_action);
-        self.execute_cycle_action(memory, second_action);
+        self.copy_data(memory, from, to);
+        self.execute_cycle_action(memory, action);
 
         self.cycle += 1;
 
@@ -160,8 +160,6 @@ impl Cpu {
     fn execute_cycle_action(&mut self, memory: &mut CpuMemory, action: CycleAction) {
         use CycleAction::*;
         match action {
-            Copy { from, to } => self.copy_data(memory, from, to),
-
             IncrementProgramCounter => { self.program_counter.inc(); }
             // TODO: Make sure this isn't supposed to wrap within the same page.
             IncrementAddressBus => { self.address_bus.inc(); }
@@ -176,9 +174,10 @@ impl Cpu {
                 match self.execute_instruction(memory, instr) {
                     InstructionResult::Success {branch_taken, oops} if branch_taken || oops => {
                         self.cycle_action_queue.skip_to_front(
-                            CycleAction::InstructionReturn, CycleAction::Nop);
+                            From::DataBus, To::DataBus, CycleAction::InstructionReturn);
                         if branch_taken && oops {
-                            self.cycle_action_queue.skip_to_front(CycleAction::Nop, CycleAction::Nop);
+                            self.cycle_action_queue.skip_to_front(
+                                From::DataBus, To::DataBus, CycleAction::Nop);
                         }
                     }
                     InstructionResult::Success {..} => {},
@@ -201,74 +200,58 @@ impl Cpu {
 
     // Note that most source/destination combos are invalid.
     // In particular, there is no way to directly copy from one memory location to another.
-    fn copy_data(&mut self, memory: &mut CpuMemory, source: Location, destination: Location) {
+    fn copy_data(&mut self, memory: &mut CpuMemory, source: From, destination: To) {
         let old_data_bus_value = self.data_bus;
 
-        use Location::*;
         self.data_bus = match source {
-            DataBus => self.data_bus,
-            AddressBus => {
+            From::DataBus => self.data_bus,
+            From::AddressBus => {
                 memory.read(self.address_bus)
             },
-            ProgramCounter => {
+            From::ProgramCounter => {
                 self.address_bus = self.program_counter;
                 memory.read(self.address_bus)
             },
-            TopOfStack => {
+            From::TopOfStack => {
                 self.address_bus = memory.stack_pointer_address();
                 memory.read(self.address_bus)
             }
-            IrqVectorLow => {
+            From::IrqVectorLow => {
                 self.address_bus = CpuAddress::new(0xFFFE);
                 memory.read(self.address_bus)
             }
-            IrqVectorHigh => {
+            From::IrqVectorHigh => {
                 self.address_bus = CpuAddress::new(0xFFFF);
                 memory.read(self.address_bus)
             }
-            ProgramCounterLowByte => self.program_counter.low_byte(),
-            ProgramCounterHighByte => self.program_counter.high_byte(),
-            OamData => todo!(),
-            PendingAddressHighByte => unreachable!("PendingAddressHighByte should only be written to."),
-            Status => unreachable!("Use InterruptStatus or InstructionStatus instead."),
-            InstructionStatus => self.status.to_instruction_byte(),
-
-            Instruction => unreachable!("Instruction can't be read from."),
+            From::ProgramCounterLowByte => self.program_counter.low_byte(),
+            From::ProgramCounterHighByte => self.program_counter.high_byte(),
+            From::InstructionStatus => self.status.to_instruction_byte(),
         };
 
         match destination {
-            AddressBus => unreachable!(),
-            DataBus => { /* The data bus was already copied to regardless of source. */ },
-            ProgramCounter => {
-                self.address_bus = self.program_counter;
-                memory.write(self.address_bus, self.data_bus);
-            }
-            TopOfStack => {
+            To::DataBus => { /* The data bus was already copied to regardless of source. */ },
+            To::TopOfStack => {
                 self.address_bus = memory.stack_pointer_address();
                 memory.write(self.address_bus, self.data_bus);
             }
-            IrqVectorLow => unreachable!("Vectors should be written to via ProgramCounter."),
-            IrqVectorHigh => unreachable!("Vectors should be written to via ProgramCounter."),
-            ProgramCounterLowByte => unreachable!("Use DataBus instead."),
-            ProgramCounterHighByte => {
+            To::ProgramCounterHighByte => {
                 self.program_counter = CpuAddress::from_low_high(
                     old_data_bus_value,
                     self.data_bus,
                 );
             }
-            OamData => {
-                println!("Writing to OAM. Address: {}, Data: {}", self.address_bus, self.data_bus);
+            To::OamData => {
                 // The only write that doesn't use/change the address bus?
                 memory.write(OAM_DATA_ADDRESS, self.data_bus);
             }
-            PendingAddressHighByte => {
+            To::PendingAddressHighByte => {
                 // The high byte was already written to the data bus above.
                 self.pending_address_low = old_data_bus_value;
             }
-            Status => self.status = status::Status::from_byte(self.data_bus),
-            InstructionStatus => unreachable!("Use Status instead."),
+            To::Status => self.status = status::Status::from_byte(self.data_bus),
 
-            Instruction => {
+            To::Instruction => {
                 let instruction = instruction::Instruction::from_memory(
                     self.address_bus, self.x, self.y, memory);
                 self.current_instruction = Some(instruction);
