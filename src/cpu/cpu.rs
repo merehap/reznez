@@ -28,7 +28,6 @@ pub struct Cpu {
     nmi_pending: bool,
 
     dma_port: DmaPort,
-    next_dma_byte_to_write: Option<u8>,
 
     cycle: u64,
 
@@ -64,7 +63,6 @@ impl Cpu {
             cycle_action_queue: CycleActionQueue::new(),
             nmi_pending: false,
             dma_port: memory.ports().dma.clone(),
-            next_dma_byte_to_write: None,
 
             // See startup sequence in NES-manual so this isn't hard-coded.
             cycle: 7,
@@ -203,11 +201,10 @@ impl Cpu {
                 self.program_counter = memory.nmi_vector();
             }
             CycleAction::DmaTransfer(DmaTransferState::Read(cpu_address)) => {
-                self.next_dma_byte_to_write = Some(memory.read(cpu_address));
+                self.data_bus = memory.read(cpu_address);
             }
             CycleAction::DmaTransfer(DmaTransferState::Write) => {
-                memory.write(OAM_DATA_ADDRESS, self.next_dma_byte_to_write.unwrap());
-                self.next_dma_byte_to_write = None;
+                memory.write(OAM_DATA_ADDRESS, self.data_bus);
             }
             CycleAction::DmaTransfer(_) | CycleAction::Nop => { /* Do nothing. */ }
         }
