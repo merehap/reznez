@@ -158,31 +158,20 @@ impl Cpu {
     }
 
     fn execute_cycle_action(&mut self, memory: &mut CpuMemory, action: CycleAction) {
+        use CycleAction::*;
         match action {
-            CycleAction::Copy { from, to } => self.copy_data(memory, from, to),
+            Copy { from, to } => self.copy_data(memory, from, to),
 
-            CycleAction::IncrementProgramCounter => {
-                self.program_counter.inc();
-            }
-            CycleAction::IncrementAddressBus => {
-                // TODO: Make sure this isn't supposed to wrap within the same page.
-                self.address_bus.inc();
-            }
-            CycleAction::SetAddressBus(address) => {
-                self.address_bus = address;
-            }
-            CycleAction::IncrementStackPointer => {
-                memory.stack().increment_stack_pointer();
-            },
-            CycleAction::DecrementStackPointer => {
-                memory.stack().decrement_stack_pointer();
-            }
+            IncrementProgramCounter => { self.program_counter.inc(); }
+            // TODO: Make sure this isn't supposed to wrap within the same page.
+            IncrementAddressBus => { self.address_bus.inc(); }
+            SetAddressBus(address) => self.address_bus = address,
+            IncrementStackPointer => memory.stack().increment_stack_pointer(),
+            DecrementStackPointer => memory.stack().decrement_stack_pointer(),
 
-            CycleAction::DisableInterrupts => {
-                self.status.interrupts_disabled = true;
-            }
+            DisableInterrupts => self.status.interrupts_disabled = true,
 
-            CycleAction::Instruction => {
+            Instruction => {
                 let instr = self.current_instruction.unwrap();
                 match self.execute_instruction(memory, instr) {
                     InstructionResult::Success {branch_taken, oops} if branch_taken || oops => {
@@ -199,14 +188,14 @@ impl Cpu {
                     }
                 }
             }
-            CycleAction::InstructionReturn => {}
-            CycleAction::Nmi => {
+            InstructionReturn => {}
+            Nmi => {
                 info!(target: "cpu", "Executing NMI.");
                 memory.stack().push_address(self.program_counter);
                 memory.stack().push(self.status.to_interrupt_byte());
                 self.program_counter = memory.nmi_vector();
             }
-            CycleAction::Nop => { /* Do nothing. */ }
+            Nop => { /* Do nothing. */ }
         }
     }
 
