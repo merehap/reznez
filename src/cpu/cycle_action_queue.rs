@@ -48,8 +48,8 @@ impl CycleActionQueue {
                     (From::ProgramCounterLowByte , To::TopOfStack            , DecrementStackPointer  ),
                     (From::StatusForInstruction  , To::TopOfStack            , DecrementStackPointer  ),
                     // Copy the new ProgramCounterLowByte to the data bus.
-                    (From::IrqVectorLow          , To::DataBus               , DisableInterrupts      ),
-                    (From::IrqVectorHigh         , To::ProgramCounterHighByte, Nop                    ),
+                    (From::IRQ_VECTOR_LOW        , To::DataBus               , DisableInterrupts      ),
+                    (From::IRQ_VECTOR_HIGH       , To::ProgramCounterHighByte, Nop                    ),
                 ]);
             }
             (Imp, RTI) => {
@@ -113,8 +113,8 @@ impl CycleActionQueue {
             (From::ProgramCounterLowByte , To::TopOfStack            , DecrementStackPointer),
             (From::StatusForInterrupt    , To::TopOfStack            , DecrementStackPointer),
             // Copy the new ProgramCounterLowByte to the data bus.
-            (From::NmiVectorLow          , To::DataBus               , Nop                  ),
-            (From::NmiVectorHigh         , To::ProgramCounterHighByte, Nop                  ),
+            (From::NMI_VECTOR_LOW        , To::DataBus               , Nop                  ),
+            (From::NMI_VECTOR_HIGH       , To::ProgramCounterHighByte, Nop                  ),
         ]);
     }
 

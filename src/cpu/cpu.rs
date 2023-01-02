@@ -210,20 +210,8 @@ impl Cpu {
                 self.address_bus = memory.stack_pointer_address();
                 memory.read(self.address_bus)
             }
-            From::NmiVectorLow => {
-                self.address_bus = CpuAddress::new(0xFFFA);
-                memory.read(self.address_bus)
-            }
-            From::NmiVectorHigh => {
-                self.address_bus = CpuAddress::new(0xFFFB);
-                memory.read(self.address_bus)
-            }
-            From::IrqVectorLow => {
-                self.address_bus = CpuAddress::new(0xFFFE);
-                memory.read(self.address_bus)
-            }
-            From::IrqVectorHigh => {
-                self.address_bus = CpuAddress::new(0xFFFF);
+            From::Address(address) => {
+                self.address_bus = address;
                 memory.read(self.address_bus)
             }
             From::ProgramCounterLowByte => self.program_counter.low_byte(),
