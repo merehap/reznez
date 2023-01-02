@@ -18,9 +18,9 @@ pub enum CycleAction {
 #[derive(Clone, Copy, Debug)]
 pub enum From {
     DataBus,
-    AddressBus,
+    AddressBusTarget,
 
-    ProgramCounter,
+    ProgramCounterTarget,
     TopOfStack,
 
     ProgramCounterLowByte,
@@ -29,14 +29,14 @@ pub enum From {
     StatusForInstruction,
     StatusForInterrupt,
 
-    Address(CpuAddress),
+    AddressTarget(CpuAddress),
 }
 
 impl From {
-    pub const NMI_VECTOR_LOW : From = From::Address(CpuAddress::new(0xFFFA));
-    pub const NMI_VECTOR_HIGH: From = From::Address(CpuAddress::new(0xFFFB));
-    pub const IRQ_VECTOR_LOW : From = From::Address(CpuAddress::new(0xFFFE));
-    pub const IRQ_VECTOR_HIGH: From = From::Address(CpuAddress::new(0xFFFF));
+    pub const NMI_VECTOR_LOW : From = From::AddressTarget(CpuAddress::new(0xFFFA));
+    pub const NMI_VECTOR_HIGH: From = From::AddressTarget(CpuAddress::new(0xFFFB));
+    pub const IRQ_VECTOR_LOW : From = From::AddressTarget(CpuAddress::new(0xFFFE));
+    pub const IRQ_VECTOR_HIGH: From = From::AddressTarget(CpuAddress::new(0xFFFF));
 }
 
 #[derive(Clone, Copy, Debug)]

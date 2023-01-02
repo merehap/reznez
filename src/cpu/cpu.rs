@@ -199,10 +199,10 @@ impl Cpu {
 
         self.data_bus = match source {
             From::DataBus => self.data_bus,
-            From::AddressBus => {
+            From::AddressBusTarget => {
                 memory.read(self.address_bus)
             },
-            From::ProgramCounter => {
+            From::ProgramCounterTarget => {
                 self.address_bus = self.program_counter;
                 memory.read(self.address_bus)
             },
@@ -210,7 +210,7 @@ impl Cpu {
                 self.address_bus = memory.stack_pointer_address();
                 memory.read(self.address_bus)
             }
-            From::Address(address) => {
+            From::AddressTarget(address) => {
                 self.address_bus = address;
                 memory.read(self.address_bus)
             }

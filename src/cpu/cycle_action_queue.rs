@@ -31,7 +31,7 @@ impl CycleActionQueue {
 
     pub fn enqueue_instruction_fetch(&mut self) {
         use CycleAction::*;
-        self.queue.push_back((From::ProgramCounter, To::Instruction, IncrementProgramCounter));
+        self.queue.push_back((From::ProgramCounterTarget, To::Instruction, IncrementProgramCounter));
     }
 
     pub fn enqueue_instruction(&mut self, instruction: Instruction) {
@@ -43,7 +43,7 @@ impl CycleActionQueue {
         match (instruction.template.access_mode, instruction.template.op_code) {
             (Imp, BRK) => {
                 self.prepend(&[
-                    (From::ProgramCounter        , To::DataBus               , IncrementProgramCounter),
+                    (From::ProgramCounterTarget  , To::DataBus               , IncrementProgramCounter),
                     (From::ProgramCounterHighByte, To::TopOfStack            , DecrementStackPointer  ),
                     (From::ProgramCounterLowByte , To::TopOfStack            , DecrementStackPointer  ),
                     (From::StatusForInstruction  , To::TopOfStack            , DecrementStackPointer  ),
@@ -54,32 +54,32 @@ impl CycleActionQueue {
             }
             (Imp, RTI) => {
                 self.prepend(&[
-                    (From::ProgramCounter, To::DataBus               , Nop                  ),
-                    (From::TopOfStack    , To::DataBus               , IncrementStackPointer),
-                    (From::TopOfStack    , To::Status                , IncrementStackPointer),
-                    (From::TopOfStack    , To::DataBus               , IncrementStackPointer),
-                    (From::TopOfStack    , To::ProgramCounterHighByte, Nop                  ),
+                    (From::ProgramCounterTarget, To::DataBus               , Nop                  ),
+                    (From::TopOfStack          , To::DataBus               , IncrementStackPointer),
+                    (From::TopOfStack          , To::Status                , IncrementStackPointer),
+                    (From::TopOfStack          , To::DataBus               , IncrementStackPointer),
+                    (From::TopOfStack          , To::ProgramCounterHighByte, Nop                  ),
                 ]);
             }
             (Imp, RTS) => {
                 self.prepend(&[
-                    (From::ProgramCounter, To::DataBus               , Nop                    ),
-                    (From::TopOfStack    , To::DataBus               , IncrementStackPointer  ),
-                    (From::TopOfStack    , To::DataBus               , IncrementStackPointer  ),
-                    (From::TopOfStack    , To::ProgramCounterHighByte, Nop                    ),
+                    (From::ProgramCounterTarget, To::DataBus               , Nop                    ),
+                    (From::TopOfStack          , To::DataBus               , IncrementStackPointer  ),
+                    (From::TopOfStack          , To::DataBus               , IncrementStackPointer  ),
+                    (From::TopOfStack          , To::ProgramCounterHighByte, Nop                    ),
                     // TODO: Make sure this dummy read is correct.
-                    (From::ProgramCounter, To::DataBus               , IncrementProgramCounter),
+                    (From::ProgramCounterTarget, To::DataBus               , IncrementProgramCounter),
                 ]);
             }
             (Imp, PHA) => {
                 self.prepend(&[
-                    (From::ProgramCounter, To::DataBus   , Nop                  ),
-                    (From::Accumulator   , To::TopOfStack, DecrementStackPointer),
+                    (From::ProgramCounterTarget, To::DataBus   , Nop                  ),
+                    (From::Accumulator         , To::TopOfStack, DecrementStackPointer),
                 ]);
             }
             (Imp, PHP) => {
                 self.prepend(&[
-                    (From::ProgramCounter      , To::DataBus   , Nop                  ),
+                    (From::ProgramCounterTarget, To::DataBus   , Nop                  ),
                     (From::StatusForInstruction, To::TopOfStack, DecrementStackPointer),
                 ]);
             }
@@ -102,8 +102,8 @@ impl CycleActionQueue {
                 ]);
                 // TODO: Make exceptions for JSR and potentially others.
                 self.prepend(&[
-                    (From::ProgramCounter, To::DataBus               , IncrementProgramCounter),
-                    (From::ProgramCounter, To::PendingAddressHighByte, IncrementProgramCounter),
+                    (From::ProgramCounterTarget, To::DataBus               , IncrementProgramCounter),
+                    (From::ProgramCounterTarget, To::PendingAddressHighByte, IncrementProgramCounter),
                 ]);
             }
             _ => {
@@ -120,7 +120,7 @@ impl CycleActionQueue {
         self.append(&[
             // Not sure what NMI does during the first cycle, so just put NOPs here.
             (From::DataBus               , To::DataBus               , Nop                  ),
-            (From::ProgramCounter        , To::DataBus               , Nop                  ),
+            (From::ProgramCounterTarget  , To::DataBus               , Nop                  ),
             (From::ProgramCounterHighByte, To::TopOfStack            , DecrementStackPointer),
             (From::ProgramCounterLowByte , To::TopOfStack            , DecrementStackPointer),
             (From::StatusForInterrupt    , To::TopOfStack            , DecrementStackPointer),
@@ -144,7 +144,7 @@ impl CycleActionQueue {
         }
 
         for _ in 0..256 {
-            self.queue.push_back((From::AddressBus, To::DataBus, Nop                ));
+            self.queue.push_back((From::AddressBusTarget, To::DataBus, Nop                ));
             self.queue.push_back((From::DataBus   , To::OamData, IncrementAddressBus));
         }
     }
