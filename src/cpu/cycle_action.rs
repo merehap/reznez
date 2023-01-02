@@ -13,7 +13,6 @@ pub enum CycleAction {
     Nop,
     Instruction,
     InstructionReturn,
-    Nmi,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -26,9 +25,12 @@ pub enum From {
     ProgramCounterLowByte,
     ProgramCounterHighByte,
 
-    InstructionStatus,
+    StatusForInstruction,
+    StatusForInterrupt,
     TopOfStack,
 
+    NmiVectorLow,
+    NmiVectorHigh,
     IrqVectorLow,
     IrqVectorHigh,
 }

@@ -188,12 +188,6 @@ impl Cpu {
                 }
             }
             InstructionReturn => {}
-            Nmi => {
-                info!(target: "cpu", "Executing NMI.");
-                memory.stack().push_address(self.program_counter);
-                memory.stack().push(self.status.to_interrupt_byte());
-                self.program_counter = memory.nmi_vector();
-            }
             Nop => { /* Do nothing. */ }
         }
     }
@@ -216,6 +210,14 @@ impl Cpu {
                 self.address_bus = memory.stack_pointer_address();
                 memory.read(self.address_bus)
             }
+            From::NmiVectorLow => {
+                self.address_bus = CpuAddress::new(0xFFFA);
+                memory.read(self.address_bus)
+            }
+            From::NmiVectorHigh => {
+                self.address_bus = CpuAddress::new(0xFFFB);
+                memory.read(self.address_bus)
+            }
             From::IrqVectorLow => {
                 self.address_bus = CpuAddress::new(0xFFFE);
                 memory.read(self.address_bus)
@@ -226,7 +228,8 @@ impl Cpu {
             }
             From::ProgramCounterLowByte => self.program_counter.low_byte(),
             From::ProgramCounterHighByte => self.program_counter.high_byte(),
-            From::InstructionStatus => self.status.to_instruction_byte(),
+            From::StatusForInstruction => self.status.to_instruction_byte(),
+            From::StatusForInterrupt => self.status.to_interrupt_byte(),
         };
 
         match destination {

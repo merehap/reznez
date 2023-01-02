@@ -46,7 +46,7 @@ impl CycleActionQueue {
                     (From::ProgramCounter        , To::DataBus               , IncrementProgramCounter),
                     (From::ProgramCounterHighByte, To::TopOfStack            , DecrementStackPointer  ),
                     (From::ProgramCounterLowByte , To::TopOfStack            , DecrementStackPointer  ),
-                    (From::InstructionStatus     , To::TopOfStack            , DecrementStackPointer  ),
+                    (From::StatusForInstruction  , To::TopOfStack            , DecrementStackPointer  ),
                     // Copy the new ProgramCounterLowByte to the data bus.
                     (From::IrqVectorLow          , To::DataBus               , DisableInterrupts      ),
                     (From::IrqVectorHigh         , To::ProgramCounterHighByte, Nop                    ),
@@ -104,11 +104,18 @@ impl CycleActionQueue {
     }
 
     pub fn enqueue_nmi(&mut self) {
-        for _ in 0..6 {
-            self.queue.push_back((From::DataBus, To::DataBus, CycleAction::Nop));
-        }
-
-        self.queue.push_back((From::DataBus, To::DataBus, CycleAction::Nmi));
+        use CycleAction::*;
+        self.append(&[
+            // Not sure what NMI does during the first cycle, so just put NOPs here.
+            (From::DataBus               , To::DataBus               , Nop                  ),
+            (From::ProgramCounter        , To::DataBus               , Nop                  ),
+            (From::ProgramCounterHighByte, To::TopOfStack            , DecrementStackPointer),
+            (From::ProgramCounterLowByte , To::TopOfStack            , DecrementStackPointer),
+            (From::StatusForInterrupt    , To::TopOfStack            , DecrementStackPointer),
+            // Copy the new ProgramCounterLowByte to the data bus.
+            (From::NmiVectorLow          , To::DataBus               , Nop                  ),
+            (From::NmiVectorHigh         , To::ProgramCounterHighByte, Nop                  ),
+        ]);
     }
 
     // Note: the values of the address bus might not be correct for some cycles.
@@ -127,6 +134,12 @@ impl CycleActionQueue {
         for _ in 0..256 {
             self.queue.push_back((From::AddressBus, To::DataBus, Nop                ));
             self.queue.push_back((From::DataBus   , To::OamData, IncrementAddressBus));
+        }
+    }
+
+    fn append(&mut self, actions: &[(From, To, CycleAction)]) {
+        for &action in actions.iter() {
+            self.queue.push_back(action);
         }
     }
 
