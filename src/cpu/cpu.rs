@@ -169,6 +169,8 @@ impl Cpu {
 
             DisableInterrupts => self.status.interrupts_disabled = true,
 
+            CheckNegativeAndZero => { self.nz(self.data_bus); }
+
             Instruction => {
                 let instr = self.current_instruction.unwrap();
                 match self.execute_instruction(memory, instr) {
@@ -241,6 +243,7 @@ impl Cpu {
                 // The high byte was already written to the data bus above.
                 self.pending_address_low = old_data_bus_value;
             }
+            To::Accumulator => self.a = self.data_bus,
             To::Status => self.status = status::Status::from_byte(self.data_bus),
 
             To::Instruction => {
@@ -286,11 +289,8 @@ impl Cpu {
             (TYA, Imp) => self.a = self.nz(self.y),
             (PHA, Imp) => unreachable!(),
             (PHP, Imp) => unreachable!(),
-            (PLA, Imp) => {
-                self.a = memory.stack().pop();
-                self.nz(self.a);
-            },
-            (PLP, Imp) => self.status = Status::from_byte(memory.stack().pop()),
+            (PLA, Imp) => unreachable!(),
+            (PLP, Imp) => unreachable!(),
             (CLC, Imp) => self.status.carry = false,
             (SEC, Imp) => self.status.carry = true,
             (CLD, Imp) => self.status.decimal = false,

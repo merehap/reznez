@@ -83,6 +83,20 @@ impl CycleActionQueue {
                     (From::StatusForInstruction, To::TopOfStack, DecrementStackPointer),
                 ]);
             }
+            (Imp, PLA) => {
+                self.prepend(&[
+                    (From::ProgramCounterTarget, To::DataBus    , Nop                  ),
+                    (From::TopOfStack          , To::DataBus    , IncrementStackPointer),
+                    (From::TopOfStack          , To::Accumulator, CheckNegativeAndZero ),
+                ]);
+            }
+            (Imp, PLP) => {
+                self.prepend(&[
+                    (From::ProgramCounterTarget, To::DataBus, Nop                  ),
+                    (From::TopOfStack          , To::DataBus, IncrementStackPointer),
+                    (From::TopOfStack          , To::Status , Nop                  ),
+                ]);
+            }
             _ => fallback = true,
         }
 

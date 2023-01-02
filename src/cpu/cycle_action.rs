@@ -10,6 +10,8 @@ pub enum CycleAction {
 
     DisableInterrupts,
 
+    CheckNegativeAndZero,
+
     Nop,
     Instruction,
     InstructionReturn,
@@ -43,12 +45,15 @@ impl From {
 pub enum To {
     DataBus,
 
+    TopOfStack,
+
     ProgramCounterHighByte,
     PendingAddressHighByte,
 
-    Status,
-    TopOfStack,
     OamData,
+
+    Accumulator,
+    Status,
 
     Instruction,
 }
