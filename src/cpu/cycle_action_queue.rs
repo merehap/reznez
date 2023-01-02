@@ -71,6 +71,18 @@ impl CycleActionQueue {
                     (From::ProgramCounter, To::DataBus               , IncrementProgramCounter),
                 ]);
             }
+            (Imp, PHA) => {
+                self.prepend(&[
+                    (From::ProgramCounter, To::DataBus   , Nop                  ),
+                    (From::Accumulator   , To::TopOfStack, DecrementStackPointer),
+                ]);
+            }
+            (Imp, PHP) => {
+                self.prepend(&[
+                    (From::ProgramCounter      , To::DataBus   , Nop                  ),
+                    (From::StatusForInstruction, To::TopOfStack, DecrementStackPointer),
+                ]);
+            }
             _ => fallback = true,
         }
 

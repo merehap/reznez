@@ -21,13 +21,13 @@ pub enum From {
     AddressBus,
 
     ProgramCounter,
+    TopOfStack,
 
     ProgramCounterLowByte,
     ProgramCounterHighByte,
-
+    Accumulator,
     StatusForInstruction,
     StatusForInterrupt,
-    TopOfStack,
 
     Address(CpuAddress),
 }

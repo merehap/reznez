@@ -216,6 +216,7 @@ impl Cpu {
             }
             From::ProgramCounterLowByte => self.program_counter.low_byte(),
             From::ProgramCounterHighByte => self.program_counter.high_byte(),
+            From::Accumulator => self.a,
             From::StatusForInstruction => self.status.to_instruction_byte(),
             From::StatusForInterrupt => self.status.to_interrupt_byte(),
         };
@@ -283,8 +284,8 @@ impl Cpu {
             (TXS, Imp) => *memory.stack_pointer_mut() = self.x,
             (TXA, Imp) => self.a = self.nz(self.x),
             (TYA, Imp) => self.a = self.nz(self.y),
-            (PHA, Imp) => memory.stack().push(self.a),
-            (PHP, Imp) => memory.stack().push(self.status.to_instruction_byte()),
+            (PHA, Imp) => unreachable!(),
+            (PHP, Imp) => unreachable!(),
             (PLA, Imp) => {
                 self.a = memory.stack().pop();
                 self.nz(self.a);
