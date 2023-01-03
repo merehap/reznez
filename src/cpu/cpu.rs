@@ -2,9 +2,7 @@ use log::{info, error};
 
 use crate::cpu::cycle_action::{CycleAction, From, To};
 use crate::cpu::cycle_action_queue::{CycleActionQueue};
-use crate::cpu::instruction;
 use crate::cpu::instruction::{AccessMode, Argument, Instruction, OpCode};
-use crate::cpu::status;
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::ports::DmaPort;
@@ -22,7 +20,7 @@ pub struct Cpu {
     program_counter: CpuAddress,
     status: Status,
 
-    current_instruction: Option<Instruction>,
+    current_instruction: Option<(Instruction, CpuAddress)>,
 
     cycle_action_queue: CycleActionQueue,
     nmi_pending: bool,
@@ -35,6 +33,7 @@ pub struct Cpu {
 
     address_bus: CpuAddress,
     data_bus: u8,
+    previous_data_bus_value: u8,
     pending_address_low: u8,
 }
 
@@ -71,6 +70,7 @@ impl Cpu {
 
             address_bus: CpuAddress::new(0x0000),
             data_bus: 0,
+            previous_data_bus_value: 0,
             pending_address_low: 0,
         }
     }
@@ -151,7 +151,8 @@ impl Cpu {
         self.cycle += 1;
 
         if matches!(to, To::Instruction) {
-            StepResult::Instruction(self.current_instruction.unwrap())
+            let (instruction, program_counter) = self.current_instruction.unwrap();
+            StepResult::Instruction(instruction, program_counter)
         } else {
             StepResult::Nop
         }
@@ -164,15 +165,20 @@ impl Cpu {
             // TODO: Make sure this isn't supposed to wrap within the same page.
             IncrementAddressBus => { self.address_bus.inc(); }
             SetAddressBus(address) => self.address_bus = address,
+            StorePendingAddressLowByte => self.pending_address_low = self.previous_data_bus_value,
+
             IncrementStackPointer => memory.stack().increment_stack_pointer(),
             DecrementStackPointer => memory.stack().decrement_stack_pointer(),
 
             DisableInterrupts => self.status.interrupts_disabled = true,
 
-            CheckNegativeAndZero => { self.nz(self.data_bus); }
+            CheckNegativeAndZero => {
+                self.status.negative = (self.data_bus >> 7) == 1;
+                self.status.zero = self.data_bus == 0;
+             }
 
             Instruction => {
-                let instr = self.current_instruction.unwrap();
+                let (instr, _) = self.current_instruction.unwrap();
                 match self.execute_instruction(memory, instr) {
                     InstructionResult::Success {branch_taken, oops} if branch_taken || oops => {
                         self.cycle_action_queue.skip_to_front(
@@ -197,7 +203,7 @@ impl Cpu {
     // Note that most source/destination combos are invalid.
     // In particular, there is no way to directly copy from one memory location to another.
     fn copy_data(&mut self, memory: &mut CpuMemory, source: From, destination: To) {
-        let old_data_bus_value = self.data_bus;
+        self.previous_data_bus_value = self.data_bus;
 
         self.data_bus = match source {
             From::DataBus => self.data_bus,
@@ -208,6 +214,11 @@ impl Cpu {
                 self.address_bus = self.program_counter;
                 memory.read(self.address_bus)
             },
+            From::PendingProgramCounterTarget => {
+                self.address_bus = CpuAddress::from_low_high(self.pending_address_low, self.data_bus);
+                self.program_counter = self.address_bus;
+                memory.read(self.address_bus)
+            }
             From::TopOfStack => {
                 self.address_bus = memory.stack_pointer_address();
                 memory.read(self.address_bus)
@@ -229,9 +240,10 @@ impl Cpu {
                 self.address_bus = memory.stack_pointer_address();
                 memory.write(self.address_bus, self.data_bus);
             }
+            // TODO: Rename.
             To::ProgramCounterHighByte => {
                 self.program_counter = CpuAddress::from_low_high(
-                    old_data_bus_value,
+                    self.previous_data_bus_value,
                     self.data_bus,
                 );
             }
@@ -239,17 +251,18 @@ impl Cpu {
                 // The only write that doesn't use/change the address bus?
                 memory.write(OAM_DATA_ADDRESS, self.data_bus);
             }
+            // TODO: Get rid of this variant.
             To::PendingAddressHighByte => {
                 // The high byte was already written to the data bus above.
-                self.pending_address_low = old_data_bus_value;
+                self.pending_address_low = self.previous_data_bus_value;
             }
             To::Accumulator => self.a = self.data_bus,
-            To::Status => self.status = status::Status::from_byte(self.data_bus),
+            To::Status => self.status = Status::from_byte(self.data_bus),
 
             To::Instruction => {
-                let instruction = instruction::Instruction::from_memory(
+                let instruction = Instruction::from_memory(
                     self.address_bus, self.x, self.y, memory);
-                self.current_instruction = Some(instruction);
+                self.current_instruction = Some((instruction, self.address_bus));
                 self.cycle_action_queue.enqueue_instruction(instruction);
             }
         }
@@ -331,11 +344,7 @@ impl Cpu {
                 (branch_taken, oops) = self.maybe_branch(!self.status.zero, addr),
             (BEQ, Addr(addr)) =>
                 (branch_taken, oops) = self.maybe_branch(self.status.zero, addr),
-            (JSR, Addr(addr)) => {
-                // Push the address one previous for some reason.
-                memory.stack().push_address(self.program_counter.offset(-1));
-                self.program_counter = addr;
-            }
+            (JSR, Addr(_addr)) => unreachable!(),
             (JMP, Addr(addr)) => self.program_counter = addr,
 
             (BIT, Addr(addr)) => {
@@ -602,13 +611,13 @@ pub enum ProgramCounterSource {
 #[derive(Clone, Copy)]
 pub enum StepResult {
     Nop,
-    Instruction(Instruction),
+    Instruction(Instruction, CpuAddress),
 }
 
 impl StepResult {
-    pub fn to_instruction(self) -> Option<Instruction> {
-        if let StepResult::Instruction(instruction) = self {
-            Some(instruction)
+    pub fn to_instruction_and_program_counter(self) -> Option<(Instruction, CpuAddress)> {
+        if let StepResult::Instruction(instruction, program_counter) = self {
+            Some((instruction, program_counter))
         } else {
             None
         }

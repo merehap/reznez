@@ -63,8 +63,11 @@ impl CycleActionQueue {
             }
             (Imp, RTS) => {
                 self.prepend(&[
+                    // Dummy read.
                     (From::ProgramCounterTarget, To::DataBus               , Nop                    ),
+                    // Dummy read.
                     (From::TopOfStack          , To::DataBus               , IncrementStackPointer  ),
+                    // Read low byte of next program counter.
                     (From::TopOfStack          , To::DataBus               , IncrementStackPointer  ),
                     (From::TopOfStack          , To::ProgramCounterHighByte, Nop                    ),
                     // TODO: Make sure this dummy read is correct.
@@ -95,6 +98,18 @@ impl CycleActionQueue {
                     (From::ProgramCounterTarget, To::DataBus, Nop                  ),
                     (From::TopOfStack          , To::DataBus, IncrementStackPointer),
                     (From::TopOfStack          , To::Status , Nop                  ),
+                ]);
+            }
+            (Abs, JSR) => {
+                self.prepend(&[
+                    // Put the pending address low byte on the data bus.
+                    (From::ProgramCounterTarget        , To::DataBus               , IncrementProgramCounter   ),
+                    (From::DataBus                     , To::DataBus               , StorePendingAddressLowByte),
+                    (From::ProgramCounterHighByte      , To::TopOfStack            , DecrementStackPointer     ),
+                    (From::ProgramCounterLowByte       , To::TopOfStack            , DecrementStackPointer     ),
+                    // Put the pending address high byte on the data bus.
+                    (From::ProgramCounterTarget        , To::DataBus               , Nop                       ),
+                    (From::PendingProgramCounterTarget , To::Instruction           , IncrementProgramCounter   ),
                 ]);
             }
             _ => fallback = true,

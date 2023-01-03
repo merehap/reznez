@@ -5,6 +5,8 @@ pub enum CycleAction {
     IncrementProgramCounter,
     IncrementAddressBus,
     SetAddressBus(CpuAddress),
+    StorePendingAddressLowByte,
+
     IncrementStackPointer,
     DecrementStackPointer,
 
@@ -23,6 +25,8 @@ pub enum From {
     AddressBusTarget,
 
     ProgramCounterTarget,
+    PendingProgramCounterTarget,
+
     TopOfStack,
 
     ProgramCounterLowByte,

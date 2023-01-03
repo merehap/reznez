@@ -10,6 +10,7 @@ use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::Cpu;
 use crate::cpu::instruction::{AccessMode, Argument, Instruction};
 use crate::gui::gui::Events;
+use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::mapper::Mapper;
 use crate::memory::mappers::mapper0::Mapper0;
@@ -115,8 +116,8 @@ impl Nes {
         let mut instruction = None;
         if self.cycle % 3 == 2 {
             instruction = self.cpu.step(&mut self.memory.as_cpu_memory())
-                .to_instruction();
-            if let Some(instruction) = instruction {
+                .to_instruction_and_program_counter();
+            if let Some((instruction, _)) = instruction {
                 if log_enabled!(target: "cpu", Info) {
                     self.log_state(instruction);
                 }
@@ -211,7 +212,7 @@ impl Nes {
 }
 
 pub struct StepResult {
-    pub instruction: Option<Instruction>,
+    pub instruction: Option<(Instruction, CpuAddress)>,
     pub is_last_cycle_of_frame: bool,
     pub nmi_scheduled: bool,
 }

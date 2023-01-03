@@ -41,7 +41,7 @@ fn nestest() {
     loop {
         if let Some(expected_state) = expected_states.next() {
             let instruction;
-            let mut program_counter;
+            let program_counter;
             let mut a;
             let mut x;
             let mut y;
@@ -52,7 +52,6 @@ fn nestest() {
             let mut c;
 
             loop {
-                program_counter = nes.cpu().program_counter();
                 a = nes.cpu().accumulator();
                 x = nes.cpu().x_index();
                 y = nes.cpu().y_index();
@@ -74,8 +73,9 @@ fn nestest() {
 
                 c = nes.cpu().cycle();
 
-                if let Some(instr) = nes.step().instruction {
+                if let Some((instr, pc)) = nes.step().instruction {
                     instruction = instr;
+                    program_counter = pc;
                     break;
                 }
             }
