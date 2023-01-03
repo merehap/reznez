@@ -150,7 +150,7 @@ impl Cpu {
 
         self.cycle += 1;
 
-        if self.cycle_action_queue.is_empty() {
+        if matches!(to, To::Instruction) {
             StepResult::Instruction(self.current_instruction.unwrap())
         } else {
             StepResult::Nop

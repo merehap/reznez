@@ -39,19 +39,41 @@ fn nestest() {
     let mut nes = Nes::new(&config);
 
     loop {
-        let program_counter = nes.cpu().program_counter();
-        let a = nes.cpu().accumulator();
-        let x = nes.cpu().x_index();
-        let y = nes.cpu().y_index();
-        let p = nes.cpu().status();
-        let s = nes.stack_pointer();
-        let ppu_cycle = nes.ppu().clock().cycle();
-        let ppu_scanline = nes.ppu().clock().scanline();
-        let c = nes.cpu().cycle();
-
         if let Some(expected_state) = expected_states.next() {
             let instruction;
+            let mut program_counter;
+            let mut a;
+            let mut x;
+            let mut y;
+            let mut p;
+            let mut s;
+            let mut ppu_cycle;
+            let mut ppu_scanline;
+            let mut c;
+
             loop {
+                program_counter = nes.cpu().program_counter();
+                a = nes.cpu().accumulator();
+                x = nes.cpu().x_index();
+                y = nes.cpu().y_index();
+                p = nes.cpu().status();
+                s = nes.stack_pointer();
+                ppu_scanline = nes.ppu().clock().scanline();
+                ppu_cycle = nes.ppu().clock().cycle();
+                // TODO: Fix this.
+                if ppu_cycle < 2 {
+                    ppu_cycle += 341;
+                    if ppu_scanline == 0 {
+                        ppu_scanline = 240;
+                    } else {
+                        ppu_scanline -= 1;
+                    }
+                }
+
+                ppu_cycle -= 2;
+
+                c = nes.cpu().cycle();
+
                 if let Some(instr) = nes.step().instruction {
                     instruction = instr;
                     break;
