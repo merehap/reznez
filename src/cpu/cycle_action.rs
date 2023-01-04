@@ -4,7 +4,7 @@ use crate::memory::mapper::CpuAddress;
 pub enum CycleAction {
     IncrementProgramCounter,
     IncrementAddressBus,
-    SetAddressBus(CpuAddress),
+    SetAddressBusToOamDmaStart,
     StorePendingAddressLowByte,
 
     IncrementStackPointer,
@@ -14,7 +14,6 @@ pub enum CycleAction {
 
     CheckNegativeAndZero,
 
-    Nop,
     Instruction,
     InstructionReturn,
 }

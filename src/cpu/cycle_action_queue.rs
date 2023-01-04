@@ -1,15 +1,14 @@
 use std::collections::VecDeque;
 
-use crate::cpu::cycle_action::{CycleAction, From, To};
+use crate::cpu::step::*;
 use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
-use crate::memory::mapper::CpuAddress;
 
 // More than enough space for a DMA transfer (513 cycles) plus an instruction.
 const CAPACITY: usize = 1000;
 
 #[derive(Debug)]
 pub struct CycleActionQueue {
-    queue: VecDeque<(From, To, CycleAction)>,
+    queue: VecDeque<Step>,
 }
 
 impl CycleActionQueue {
@@ -21,97 +20,32 @@ impl CycleActionQueue {
         self.queue.is_empty()
     }
 
-    pub fn dequeue(&mut self) -> Option<(From, To, CycleAction)> {
+    pub fn dequeue(&mut self) -> Option<Step> {
         self.queue.pop_front()
     }
 
-    pub fn skip_to_front(&mut self, copy_from: From, to: To, action: CycleAction) {
-        self.queue.push_front((copy_from, to, action));
+    pub fn skip_to_front(&mut self, step: Step) {
+        self.queue.push_front(step);
     }
 
     pub fn enqueue_instruction_fetch(&mut self) {
-        use CycleAction::*;
-        self.queue.push_back((From::ProgramCounterTarget, To::Instruction, IncrementProgramCounter));
+        self.queue.push_back(READ_INSTRUCTION_STEP);
     }
 
     pub fn enqueue_instruction(&mut self, instruction: Instruction) {
         use AccessMode::*;
         use OpCode::*;
-        use CycleAction::*;
 
         let mut fallback = false;
         match (instruction.template.access_mode, instruction.template.op_code) {
-            (Imp, BRK) => {
-                self.prepend(&[
-                    (From::ProgramCounterTarget  , To::DataBus               , IncrementProgramCounter),
-                    (From::ProgramCounterHighByte, To::TopOfStack            , DecrementStackPointer  ),
-                    (From::ProgramCounterLowByte , To::TopOfStack            , DecrementStackPointer  ),
-                    (From::StatusForInstruction  , To::TopOfStack            , DecrementStackPointer  ),
-                    // Copy the new ProgramCounterLowByte to the data bus.
-                    (From::IRQ_VECTOR_LOW        , To::DataBus               , DisableInterrupts      ),
-                    (From::IRQ_VECTOR_HIGH       , To::ProgramCounterHighByte, Nop                    ),
-                ]);
-            }
-            (Imp, RTI) => {
-                self.prepend(&[
-                    (From::ProgramCounterTarget, To::DataBus               , Nop                  ),
-                    (From::TopOfStack          , To::DataBus               , IncrementStackPointer),
-                    (From::TopOfStack          , To::Status                , IncrementStackPointer),
-                    (From::TopOfStack          , To::DataBus               , IncrementStackPointer),
-                    (From::TopOfStack          , To::ProgramCounterHighByte, Nop                  ),
-                ]);
-            }
-            (Imp, RTS) => {
-                self.prepend(&[
-                    // Dummy read.
-                    (From::ProgramCounterTarget, To::DataBus               , Nop                    ),
-                    // Dummy read.
-                    (From::TopOfStack          , To::DataBus               , IncrementStackPointer  ),
-                    // Read low byte of next program counter.
-                    (From::TopOfStack          , To::DataBus               , IncrementStackPointer  ),
-                    (From::TopOfStack          , To::ProgramCounterHighByte, Nop                    ),
-                    // TODO: Make sure this dummy read is correct.
-                    (From::ProgramCounterTarget, To::DataBus               , IncrementProgramCounter),
-                ]);
-            }
-            (Imp, PHA) => {
-                self.prepend(&[
-                    (From::ProgramCounterTarget, To::DataBus   , Nop                  ),
-                    (From::Accumulator         , To::TopOfStack, DecrementStackPointer),
-                ]);
-            }
-            (Imp, PHP) => {
-                self.prepend(&[
-                    (From::ProgramCounterTarget, To::DataBus   , Nop                  ),
-                    (From::StatusForInstruction, To::TopOfStack, DecrementStackPointer),
-                ]);
-            }
-            (Imp, PLA) => {
-                self.prepend(&[
-                    (From::ProgramCounterTarget, To::DataBus    , Nop                  ),
-                    (From::TopOfStack          , To::DataBus    , IncrementStackPointer),
-                    (From::TopOfStack          , To::Accumulator, CheckNegativeAndZero ),
-                ]);
-            }
-            (Imp, PLP) => {
-                self.prepend(&[
-                    (From::ProgramCounterTarget, To::DataBus, Nop                  ),
-                    (From::TopOfStack          , To::DataBus, IncrementStackPointer),
-                    (From::TopOfStack          , To::Status , Nop                  ),
-                ]);
-            }
-            (Abs, JSR) => {
-                self.prepend(&[
-                    // Put the pending address low byte on the data bus.
-                    (From::ProgramCounterTarget        , To::DataBus               , IncrementProgramCounter   ),
-                    (From::DataBus                     , To::DataBus               , StorePendingAddressLowByte),
-                    (From::ProgramCounterHighByte      , To::TopOfStack            , DecrementStackPointer     ),
-                    (From::ProgramCounterLowByte       , To::TopOfStack            , DecrementStackPointer     ),
-                    // Put the pending address high byte on the data bus.
-                    (From::ProgramCounterTarget        , To::DataBus               , Nop                       ),
-                    (From::PendingProgramCounterTarget , To::Instruction           , IncrementProgramCounter   ),
-                ]);
-            }
+            (Imp, BRK) => self.prepend(BRK_STEPS),
+            (Imp, RTI) => self.prepend(RTI_STEPS),
+            (Imp, RTS) => self.prepend(RTS_STEPS),
+            (Imp, PHA) => self.prepend(PHA_STEPS),
+            (Imp, PHP) => self.prepend(PHP_STEPS),
+            (Imp, PLA) => self.prepend(PLA_STEPS),
+            (Imp, PLP) => self.prepend(PLP_STEPS),
+            (Abs, JSR) => self.prepend(JSR_STEPS),
             _ => fallback = true,
         }
 
@@ -119,74 +53,54 @@ impl CycleActionQueue {
             return;
         }
 
-        self.queue.push_front((From::DataBus, To::DataBus, Instruction));
+        self.queue.push_front(FULL_INSTRUCTION_STEP);
 
         // Cycle 0 was the instruction fetch, cycle n - 1 is the instruction execution.
         match (instruction.template.access_mode, instruction.template.op_code) {
-            (Abs, JMP) => self.queue.push_front((From::DataBus, To::DataBus, Nop)),
+            (Abs, JMP) => self.queue.push_front(NOP_STEP),
             (Abs, _code) => {
-                self.prepend(&vec![
-                    (From::DataBus, To::DataBus, Nop);
-                    instruction.template.cycle_count as usize - 4
-                ]);
+                self.prepend(&vec![NOP_STEP; instruction.template.cycle_count as usize - 4]);
                 // TODO: Make exceptions for JSR and potentially others.
                 self.prepend(&[
-                    (From::ProgramCounterTarget, To::DataBus               , IncrementProgramCounter),
-                    (From::ProgramCounterTarget, To::PendingAddressHighByte, IncrementProgramCounter),
+                    PENDING_ADDRESS_LOW_BYTE_STEP,
+                    PENDING_ADDRESS_HIGH_BYTE_STEP,
                 ]);
             }
             _ => {
-                self.prepend(&vec![
-                    (From::DataBus, To::DataBus, Nop);
-                    instruction.template.cycle_count as usize - 2
-                ]);
+                self.prepend(&vec![NOP_STEP; instruction.template.cycle_count as usize - 2]);
             }
         }
     }
 
     pub fn enqueue_nmi(&mut self) {
-        use CycleAction::*;
-        self.append(&[
-            // Not sure what NMI does during the first cycle, so just put NOPs here.
-            (From::DataBus               , To::DataBus               , Nop                  ),
-            (From::ProgramCounterTarget  , To::DataBus               , Nop                  ),
-            (From::ProgramCounterHighByte, To::TopOfStack            , DecrementStackPointer),
-            (From::ProgramCounterLowByte , To::TopOfStack            , DecrementStackPointer),
-            (From::StatusForInterrupt    , To::TopOfStack            , DecrementStackPointer),
-            // Copy the new ProgramCounterLowByte to the data bus.
-            (From::NMI_VECTOR_LOW        , To::DataBus               , Nop                  ),
-            (From::NMI_VECTOR_HIGH       , To::ProgramCounterHighByte, Nop                  ),
-        ]);
+        self.append(NMI_STEPS);
     }
 
     // Note: the values of the address bus might not be correct for some cycles.
-    pub fn enqueue_dma_transfer(&mut self, port: u8, current_cycle: u64) {
-        use CycleAction::*;
-
-        let transfer_start_address = CpuAddress::from_low_high(0x00, port);
+    pub fn enqueue_dma_transfer(&mut self, current_cycle: u64) {
         // Unclear this is the correct timing. Might not matter even if it's wrong.
-        self.queue.push_back((From::DataBus, To::DataBus, SetAddressBus(transfer_start_address)));
+        self.queue.push_back(OAM_DMA_START_TRANSFER_STEP);
 
         let is_odd_cycle = current_cycle % 2 == 1;
         if is_odd_cycle {
-            self.queue.push_back((From::DataBus, To::DataBus, Nop));
+            self.queue.push_back(NOP_STEP);
         }
 
         for _ in 0..256 {
-            self.queue.push_back((From::AddressBusTarget, To::DataBus, Nop                ));
-            self.queue.push_back((From::DataBus   , To::OamData, IncrementAddressBus));
+            self.queue.push_back(OAM_DMA_READ_STEP);
+            self.queue.push_back(OAM_DMA_WRITE_STEP);
         }
     }
 
-    fn append(&mut self, actions: &[(From, To, CycleAction)]) {
-        for &action in actions.iter() {
-            self.queue.push_back(action);
+    fn append(&mut self, steps: &[Step]) {
+        for step in steps.iter() {
+            self.queue.push_back(step.clone());
         }
     }
 
-    fn prepend(&mut self, actions: &[(From, To, CycleAction)]) {
-        for &action in actions.iter().rev() {
-            self.queue.push_front(action);
+    fn prepend(&mut self, steps: &[Step]) {
+        for step in steps.iter().rev() {
+            self.queue.push_front(step.clone());
         }
     }
 }

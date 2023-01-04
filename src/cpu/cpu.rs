@@ -1,7 +1,8 @@
 use log::{info, error};
 
+use crate::cpu::step::*;
 use crate::cpu::cycle_action::{CycleAction, From, To};
-use crate::cpu::cycle_action_queue::{CycleActionQueue};
+use crate::cpu::cycle_action_queue::CycleActionQueue;
 use crate::cpu::instruction::{AccessMode, Argument, Instruction, OpCode};
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
@@ -129,8 +130,8 @@ impl Cpu {
             return StepResult::Nop;
         }
 
-        if let Some(dma_page) = self.dma_port.take_page() {
-            self.cycle_action_queue.enqueue_dma_transfer(dma_page, self.cycle);
+        if self.dma_port.take_page().is_some() {
+            self.cycle_action_queue.enqueue_dma_transfer(self.cycle);
         }
 
         if self.cycle_action_queue.is_empty() {
@@ -143,14 +144,16 @@ impl Cpu {
             self.nmi_pending = false;
         }
 
-        let (from, to, action) = self.cycle_action_queue.dequeue()
+        let step = self.cycle_action_queue.dequeue()
             .expect("Ran out of CycleActions!");
-        self.copy_data(memory, from, to);
-        self.execute_cycle_action(memory, action);
+        self.copy_data(memory, step.from(), step.to());
+        for &action in step.actions() {
+            self.execute_cycle_action(memory, action);
+        }
 
         self.cycle += 1;
 
-        if matches!(to, To::Instruction) {
+        if matches!(step.to(), To::Instruction) {
             let (instruction, program_counter) = self.current_instruction.unwrap();
             StepResult::Instruction(instruction, program_counter)
         } else {
@@ -164,7 +167,7 @@ impl Cpu {
             IncrementProgramCounter => { self.program_counter.inc(); }
             // TODO: Make sure this isn't supposed to wrap within the same page.
             IncrementAddressBus => { self.address_bus.inc(); }
-            SetAddressBus(address) => self.address_bus = address,
+            SetAddressBusToOamDmaStart => self.address_bus = self.dma_port.start_address(),
             StorePendingAddressLowByte => self.pending_address_low = self.previous_data_bus_value,
 
             IncrementStackPointer => memory.stack().increment_stack_pointer(),
@@ -181,11 +184,9 @@ impl Cpu {
                 let (instr, _) = self.current_instruction.unwrap();
                 match self.execute_instruction(memory, instr) {
                     InstructionResult::Success {branch_taken, oops} if branch_taken || oops => {
-                        self.cycle_action_queue.skip_to_front(
-                            From::DataBus, To::DataBus, CycleAction::InstructionReturn);
+                        self.cycle_action_queue.skip_to_front(INSTRUCTION_RETURN_STEP);
                         if branch_taken && oops {
-                            self.cycle_action_queue.skip_to_front(
-                                From::DataBus, To::DataBus, CycleAction::Nop);
+                            self.cycle_action_queue.skip_to_front(NOP_STEP);
                         }
                     }
                     InstructionResult::Success {..} => {},
@@ -196,7 +197,6 @@ impl Cpu {
                 }
             }
             InstructionReturn => {}
-            Nop => { /* Do nothing. */ }
         }
     }
 

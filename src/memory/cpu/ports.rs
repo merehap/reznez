@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::controller::joypad::Joypad;
+use crate::memory::cpu::cpu_address::CpuAddress;
 
 pub struct Ports {
     pub dma: DmaPort,
@@ -28,19 +29,33 @@ impl Ports {
 #[derive(Clone)]
 pub struct DmaPort {
     page: Rc<RefCell<Option<u8>>>,
+    // TODO: Find a way to remove this field.
+    start_address: CpuAddress,
 }
 
 impl DmaPort {
     pub fn new() -> DmaPort {
-        DmaPort { page: Rc::new(RefCell::new(None)) }
+        DmaPort {
+            page: Rc::new(RefCell::new(None)),
+            start_address: CpuAddress::new(0x0000),
+        }
     }
 
     pub fn set_page(&mut self, page: u8) {
         *self.page.borrow_mut() = Some(page);
     }
 
-    pub fn take_page(&mut self) -> Option<u8> {
-        self.page.borrow_mut().take()
+    pub fn take_page(&mut self) -> Option<()> {
+        if let Some(port) = self.page.borrow_mut().take() {
+            self.start_address = CpuAddress::from_low_high(0x00, port);
+            Some(())
+        } else {
+            None
+        }
+    }
+
+    pub fn start_address(&self) -> CpuAddress {
+        self.start_address
     }
 }
 
