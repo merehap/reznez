@@ -88,18 +88,31 @@ pub const PLP_STEPS: &'static [Step] = &[
 
 pub const JSR_STEPS: &'static [Step] = &[
     // Put the pending address low byte on the data bus.
-    Step::new(From::ProgramCounterTarget        , To::DataBus    , &[IncrementProgramCounter]   ),
-    Step::new(From::DataBus                     , To::DataBus    , &[StorePendingAddressLowByte]),
-    Step::new(From::ProgramCounterHighByte      , To::TopOfStack , &[DecrementStackPointer]     ),
-    Step::new(From::ProgramCounterLowByte       , To::TopOfStack , &[DecrementStackPointer]     ),
+    Step::new(From::ProgramCounterTarget       , To::DataBus    , &[IncrementProgramCounter]   ),
+    Step::new(From::DataBus                    , To::DataBus    , &[StorePendingAddressLowByte]),
+    Step::new(From::ProgramCounterHighByte     , To::TopOfStack , &[DecrementStackPointer]     ),
+    Step::new(From::ProgramCounterLowByte      , To::TopOfStack , &[DecrementStackPointer]     ),
     // Put the pending address high byte on the data bus.
-    Step::new(From::ProgramCounterTarget        , To::DataBus    , &[]                          ),
-    Step::new(From::PendingProgramCounterTarget , To::Instruction, &[IncrementProgramCounter]   ),
+    Step::new(From::ProgramCounterTarget       , To::DataBus    , &[]                          ),
+    Step::new(From::PendingProgramCounterTarget, To::Instruction, &[IncrementProgramCounter]   ),
 ];
 
 pub const JMP_ABS_STEPS: &'static [Step] = &[
-    Step::new(From::ProgramCounterTarget , To::DataBus               , &[IncrementProgramCounter]),
-    Step::new(From::ProgramCounterTarget , To::ProgramCounterHighByte, &[]                       ),
+    Step::new(From::ProgramCounterTarget, To::DataBus               , &[IncrementProgramCounter]),
+    Step::new(From::ProgramCounterTarget, To::ProgramCounterHighByte, &[]                       ),
+];
+
+pub const JMP_IND_STEPS: &'static [Step] = &[
+    // Low byte of the index address.
+    Step::new(From::ProgramCounterTarget       , To::DataBus    , &[IncrementProgramCounter]   ),
+    // High byte of the index address.
+    Step::new(From::ProgramCounterTarget       , To::DataBus    , &[StorePendingAddressLowByte]),
+    // Low byte of the looked-up address.
+    Step::new(From::PendingAddressTarget       , To::DataBus    , &[IncrementAddressBusLow]    ),
+    // High byte of the looked-up address.
+    Step::new(From::AddressBusTarget           , To::DataBus    , &[StorePendingAddressLowByte]),
+    // Jump to next instruction.
+    Step::new(From::PendingProgramCounterTarget, To::Instruction, &[IncrementProgramCounter]   ),
 ];
 
 #[derive(Clone, Debug)]

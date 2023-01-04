@@ -171,6 +171,7 @@ impl Cpu {
             IncrementProgramCounter => { self.program_counter.inc(); }
             // TODO: Make sure this isn't supposed to wrap within the same page.
             IncrementAddressBus => { self.address_bus.inc(); }
+            IncrementAddressBusLow => self.address_bus.inc_low(),
             SetAddressBusToOamDmaStart => self.address_bus = self.dma_port.start_address(),
             StorePendingAddressLowByte => self.pending_address_low = self.previous_data_bus_value,
 
@@ -218,6 +219,10 @@ impl Cpu {
                 self.address_bus = self.program_counter;
                 memory.read(self.address_bus)
             },
+            From::PendingAddressTarget => {
+                self.address_bus = CpuAddress::from_low_high(self.pending_address_low, self.data_bus);
+                memory.read(self.address_bus)
+            }
             From::PendingProgramCounterTarget => {
                 self.address_bus = CpuAddress::from_low_high(self.pending_address_low, self.data_bus);
                 self.program_counter = self.address_bus;
@@ -349,7 +354,7 @@ impl Cpu {
             (BEQ, Addr(addr)) =>
                 (branch_taken, oops) = self.maybe_branch(self.status.zero, addr),
             (JSR, Addr(_addr)) => unreachable!(),
-            (JMP, Addr(addr)) => self.program_counter = addr,
+            (JMP, Addr(_addr)) => unreachable!(),
 
             (BIT, Addr(addr)) => {
                 let val = memory.read(addr);

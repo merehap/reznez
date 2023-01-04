@@ -50,6 +50,14 @@ impl CpuAddress {
         *self
     }
 
+    pub fn inc_low(&mut self) {
+        let (low, high) = self.to_low_high();
+        *self = CpuAddress::from_low_high(
+            low.wrapping_add(1),
+            high,
+        );
+    }
+
     pub fn page(self) -> u8 {
         (self.0 >> 8) as u8
     }
