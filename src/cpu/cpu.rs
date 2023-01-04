@@ -140,6 +140,10 @@ impl Cpu {
         }
 
         if self.nmi_pending {
+            info!(target: "cpu", "Enqueueing NMI at cycle {}. {} cycle(s) until start.",
+                self.cycle,
+                self.cycle_action_queue.len(),
+            );
             self.cycle_action_queue.enqueue_nmi();
             self.nmi_pending = false;
         }
