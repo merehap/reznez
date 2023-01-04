@@ -282,7 +282,7 @@ impl Cpu {
         use Argument::*;
 
         match instruction.template.access_mode {
-            AccessMode::Abs if instruction.template.op_code != JMP && matches!(instruction.argument, Addr(_)) => {}
+            AccessMode::Abs => {}
             _ => self.program_counter = self.program_counter.advance(instruction.length() - 1),
         }
 

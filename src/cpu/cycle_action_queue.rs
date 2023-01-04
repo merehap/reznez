@@ -50,6 +50,7 @@ impl CycleActionQueue {
             (Imp, PLA) => self.prepend(PLA_STEPS),
             (Imp, PLP) => self.prepend(PLP_STEPS),
             (Abs, JSR) => self.prepend(JSR_STEPS),
+            (Abs, JMP) => self.prepend(JMP_ABS_STEPS),
             _ => fallback = true,
         }
 

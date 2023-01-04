@@ -54,12 +54,12 @@ pub const RTI_STEPS: &'static [Step] = &[
 
 pub const RTS_STEPS: &'static [Step] = &[
     // Dummy read.
-    Step::new(From::ProgramCounterTarget, To::DataBus               , &[]),
+    Step::new(From::ProgramCounterTarget, To::DataBus               , &[]                       ),
     // Dummy read.
-    Step::new(From::TopOfStack          , To::DataBus               , &[IncrementStackPointer]),
+    Step::new(From::TopOfStack          , To::DataBus               , &[IncrementStackPointer]  ),
     // Read low byte of next program counter.
-    Step::new(From::TopOfStack          , To::DataBus               , &[IncrementStackPointer]),
-    Step::new(From::TopOfStack          , To::ProgramCounterHighByte, &[]),
+    Step::new(From::TopOfStack          , To::DataBus               , &[IncrementStackPointer]  ),
+    Step::new(From::TopOfStack          , To::ProgramCounterHighByte, &[]                       ),
     // TODO: Make sure this dummy read is correct.
     Step::new(From::ProgramCounterTarget, To::DataBus               , &[IncrementProgramCounter]),
 ];
@@ -95,6 +95,11 @@ pub const JSR_STEPS: &'static [Step] = &[
     // Put the pending address high byte on the data bus.
     Step::new(From::ProgramCounterTarget        , To::DataBus    , &[]                          ),
     Step::new(From::PendingProgramCounterTarget , To::Instruction, &[IncrementProgramCounter]   ),
+];
+
+pub const JMP_ABS_STEPS: &'static [Step] = &[
+    Step::new(From::ProgramCounterTarget , To::DataBus               , &[IncrementProgramCounter]),
+    Step::new(From::ProgramCounterTarget , To::ProgramCounterHighByte, &[]                       ),
 ];
 
 #[derive(Clone, Debug)]
