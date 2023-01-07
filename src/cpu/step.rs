@@ -12,10 +12,10 @@ lazy_static! {
     pub static ref OAM_DMA_TRANSFER_STEPS: [Step; 513] = {
         let mut steps = Vec::with_capacity(513);
 
-        steps.push(OAM_DMA_START_TRANSFER_STEP);
+        steps.push(Step::new(From::DataBus, To::DataBus, &[SetAddressBusToOamDmaStart]));
         for _ in 0..256 {
-            steps.push(OAM_DMA_READ_STEP);
-            steps.push(OAM_DMA_WRITE_STEP);
+            steps.push(Step::new(From::AddressBusTarget, To::DataBus, &[]));
+            steps.push(Step::new(From::DataBus         , To::OamData, &[IncrementAddressBus]));
         }
 
         steps.try_into().unwrap()
@@ -50,16 +50,12 @@ fn template_to_instruction(template: InstructionTemplate) -> CpuInstruction {
     };
 
     CpuInstruction {
-        op_code: template.op_code,
-        addressing_mode: template.access_mode,
         steps,
     }
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct CpuInstruction {
-    op_code: OpCode,
-    addressing_mode: AccessMode,
     steps: &'static [Step],
 }
 
@@ -73,12 +69,6 @@ pub const READ_INSTRUCTION_STEP: Step =
     Step::new(From::ProgramCounterTarget      , To::Instruction           , &[IncrementProgramCounter]    );
 pub const NOP_STEP: Step =
     Step::new(From::DataBus                   , To::DataBus               , &[]                           );
-pub const OAM_DMA_START_TRANSFER_STEP: Step =
-    Step::new(From::DataBus                   , To::DataBus               , &[SetAddressBusToOamDmaStart] );
-pub const OAM_DMA_READ_STEP: Step =
-    Step::new(From::AddressBusTarget          , To::DataBus               , &[]                           );
-pub const OAM_DMA_WRITE_STEP: Step =
-    Step::new(From::DataBus                   , To::OamData               , &[IncrementAddressBus]        );
 pub const PENDING_ADDRESS_LOW_BYTE_STEP: Step =
     Step::new(From::ProgramCounterTarget      , To::DataBus               , &[IncrementProgramCounter]    );
 pub const PENDING_ADDRESS_HIGH_BYTE_STEP: Step =

@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::cpu::step::*;
-use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
+use crate::cpu::instruction::Instruction;
 
 // More than enough space for a DMA transfer (513 cycles) plus an instruction.
 const CAPACITY: usize = 1000;
@@ -37,7 +37,8 @@ impl CycleActionQueue {
     }
 
     pub fn enqueue_instruction(&mut self, instruction: Instruction) {
-        self.prepend(INSTRUCTIONS[usize::try_from(instruction.template.code_point).unwrap()].steps());
+        let code_point = usize::try_from(instruction.template.code_point).unwrap();
+        self.prepend(INSTRUCTIONS[code_point].steps());
     }
 
     pub fn enqueue_nmi(&mut self) {
