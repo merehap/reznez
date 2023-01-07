@@ -115,6 +115,71 @@ pub const JMP_IND_STEPS: &'static [Step] = &[
     Step::new(From::PendingProgramCounterTarget, To::Instruction           , &[IncrementProgramCounter]   ),
 ];
 
+
+
+pub const ABS_4_STEPS: &'static [Step] = &[
+    PENDING_ADDRESS_LOW_BYTE_STEP,
+    PENDING_ADDRESS_HIGH_BYTE_STEP,
+    FULL_INSTRUCTION_STEP,
+];
+
+pub const ABS_6_STEPS: &'static [Step] = &[
+    NOP_STEP,
+    NOP_STEP,
+    PENDING_ADDRESS_LOW_BYTE_STEP,
+    PENDING_ADDRESS_HIGH_BYTE_STEP,
+    FULL_INSTRUCTION_STEP,
+];
+
+pub const OTHER_2_STEPS: &'static [Step] = &[
+    FULL_INSTRUCTION_STEP,
+];
+
+pub const OTHER_3_STEPS: &'static [Step] = &[
+    NOP_STEP,
+    FULL_INSTRUCTION_STEP,
+];
+
+pub const OTHER_4_STEPS: &'static [Step] = &[
+    NOP_STEP,
+    NOP_STEP,
+    FULL_INSTRUCTION_STEP,
+];
+
+pub const OTHER_5_STEPS: &'static [Step] = &[
+    NOP_STEP,
+    NOP_STEP,
+    NOP_STEP,
+    FULL_INSTRUCTION_STEP,
+];
+
+pub const OTHER_6_STEPS: &'static [Step] = &[
+    NOP_STEP,
+    NOP_STEP,
+    NOP_STEP,
+    NOP_STEP,
+    FULL_INSTRUCTION_STEP,
+];
+
+pub const OTHER_7_STEPS: &'static [Step] = &[
+    NOP_STEP,
+    NOP_STEP,
+    NOP_STEP,
+    NOP_STEP,
+    NOP_STEP,
+    FULL_INSTRUCTION_STEP,
+];
+
+pub const OTHER_8_STEPS: &'static [Step] = &[
+    NOP_STEP,
+    NOP_STEP,
+    NOP_STEP,
+    NOP_STEP,
+    NOP_STEP,
+    NOP_STEP,
+    FULL_INSTRUCTION_STEP,
+];
+
 #[derive(Clone, Debug)]
 pub struct Step {
     from: From,

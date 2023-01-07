@@ -59,22 +59,20 @@ impl CycleActionQueue {
             return;
         }
 
-        self.queue.push_front(FULL_INSTRUCTION_STEP);
 
         // Cycle 0 was the instruction fetch, cycle n - 1 is the instruction execution.
-        match (instruction.template.access_mode, instruction.template.op_code) {
-            (Abs, JMP) => self.queue.push_front(NOP_STEP),
-            (Abs, _code) => {
-                self.prepend(&vec![NOP_STEP; instruction.template.cycle_count as usize - 4]);
-                // TODO: Make exceptions for JSR and potentially others.
-                self.prepend(&[
-                    PENDING_ADDRESS_LOW_BYTE_STEP,
-                    PENDING_ADDRESS_HIGH_BYTE_STEP,
-                ]);
-            }
-            _ => {
-                self.prepend(&vec![NOP_STEP; instruction.template.cycle_count as usize - 2]);
-            }
+        match (instruction.template.access_mode, instruction.template.cycle_count as u8) {
+            (Abs, 4) => self.prepend(ABS_4_STEPS),
+            (Abs, 6) => self.prepend(ABS_6_STEPS),
+            (Abs, _) => unreachable!(),
+            (_  , 2) => self.prepend(OTHER_2_STEPS),
+            (_  , 3) => self.prepend(OTHER_3_STEPS),
+            (_  , 4) => self.prepend(OTHER_4_STEPS),
+            (_  , 5) => self.prepend(OTHER_5_STEPS),
+            (_  , 6) => self.prepend(OTHER_6_STEPS),
+            (_  , 7) => self.prepend(OTHER_7_STEPS),
+            (_  , 8) => self.prepend(OTHER_8_STEPS),
+            (_, _) => unreachable!(),
         }
     }
 
