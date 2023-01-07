@@ -7,7 +7,7 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::memory::CpuMemory;
 
 lazy_static! {
-    static ref INSTRUCTION_TEMPLATES: [InstructionTemplate; 256] = instruction_templates();
+    pub static ref INSTRUCTION_TEMPLATES: [InstructionTemplate; 256] = instruction_templates();
 }
 
 #[rustfmt::skip]

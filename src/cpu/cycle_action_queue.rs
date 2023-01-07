@@ -37,43 +37,7 @@ impl CycleActionQueue {
     }
 
     pub fn enqueue_instruction(&mut self, instruction: Instruction) {
-        use AccessMode::*;
-        use OpCode::*;
-
-        let mut fallback = false;
-        match (instruction.template.access_mode, instruction.template.op_code) {
-            (Imp, BRK) => self.prepend(BRK_STEPS),
-            (Imp, RTI) => self.prepend(RTI_STEPS),
-            (Imp, RTS) => self.prepend(RTS_STEPS),
-            (Imp, PHA) => self.prepend(PHA_STEPS),
-            (Imp, PHP) => self.prepend(PHP_STEPS),
-            (Imp, PLA) => self.prepend(PLA_STEPS),
-            (Imp, PLP) => self.prepend(PLP_STEPS),
-            (Abs, JSR) => self.prepend(JSR_STEPS),
-            (Abs, JMP) => self.prepend(JMP_ABS_STEPS),
-            (Ind, JMP) => self.prepend(JMP_IND_STEPS),
-            _ => fallback = true,
-        }
-
-        if !fallback {
-            return;
-        }
-
-
-        // Cycle 0 was the instruction fetch, cycle n - 1 is the instruction execution.
-        match (instruction.template.access_mode, instruction.template.cycle_count as u8) {
-            (Abs, 4) => self.prepend(ABS_4_STEPS),
-            (Abs, 6) => self.prepend(ABS_6_STEPS),
-            (Abs, _) => unreachable!(),
-            (_  , 2) => self.prepend(OTHER_2_STEPS),
-            (_  , 3) => self.prepend(OTHER_3_STEPS),
-            (_  , 4) => self.prepend(OTHER_4_STEPS),
-            (_  , 5) => self.prepend(OTHER_5_STEPS),
-            (_  , 6) => self.prepend(OTHER_6_STEPS),
-            (_  , 7) => self.prepend(OTHER_7_STEPS),
-            (_  , 8) => self.prepend(OTHER_8_STEPS),
-            (_, _) => unreachable!(),
-        }
+        self.prepend(INSTRUCTIONS[usize::try_from(instruction.template.code_point).unwrap()].steps());
     }
 
     pub fn enqueue_nmi(&mut self) {

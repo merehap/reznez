@@ -1,6 +1,61 @@
+use lazy_static::lazy_static;
+
 use crate::cpu::cycle_action::{From, To};
 use crate::cpu::cycle_action::CycleAction;
 use crate::cpu::cycle_action::CycleAction::*;
+use crate::cpu::instruction::*;
+
+lazy_static! {
+    pub static ref INSTRUCTIONS: [CpuInstruction; 256] =
+        INSTRUCTION_TEMPLATES.map(template_to_instruction);
+}
+
+fn template_to_instruction(template: InstructionTemplate) -> CpuInstruction {
+    use AccessMode::*;
+    use OpCode::*;
+    let steps = match (template.access_mode, template.op_code, template.cycle_count as u8) {
+        (Imp, BRK, _) => BRK_STEPS,
+        (Imp, RTI, _) => RTI_STEPS,
+        (Imp, RTS, _) => RTS_STEPS,
+        (Imp, PHA, _) => PHA_STEPS,
+        (Imp, PHP, _) => PHP_STEPS,
+        (Imp, PLA, _) => PLA_STEPS,
+        (Imp, PLP, _) => PLP_STEPS,
+        (Abs, JSR, _) => JSR_STEPS,
+        (Abs, JMP, _) => JMP_ABS_STEPS,
+        (Ind, JMP, _) => JMP_IND_STEPS,
+        (Abs,   _, 4) => ABS_4_STEPS,
+        (Abs,   _, 6) => ABS_6_STEPS,
+        (Abs,   _, _) => unreachable!(),
+        (_  ,   _, 2) => OTHER_2_STEPS,
+        (_  ,   _, 3) => OTHER_3_STEPS,
+        (_  ,   _, 4) => OTHER_4_STEPS,
+        (_  ,   _, 5) => OTHER_5_STEPS,
+        (_  ,   _, 6) => OTHER_6_STEPS,
+        (_  ,   _, 7) => OTHER_7_STEPS,
+        (_  ,   _, 8) => OTHER_8_STEPS,
+        (_  ,   _, _) => unreachable!(),
+    };
+
+    CpuInstruction {
+        op_code: template.op_code,
+        addressing_mode: template.access_mode,
+        steps,
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct CpuInstruction {
+    op_code: OpCode,
+    addressing_mode: AccessMode,
+    steps: &'static [Step],
+}
+
+impl CpuInstruction {
+    pub fn steps(&self) -> &'static [Step] {
+        self.steps
+    }
+}
 
 pub const READ_INSTRUCTION_STEP: Step =
     Step::new(From::ProgramCounterTarget      , To::Instruction           , &[IncrementProgramCounter]    );
@@ -114,8 +169,6 @@ pub const JMP_IND_STEPS: &'static [Step] = &[
     // Jump to next instruction.
     Step::new(From::PendingProgramCounterTarget, To::Instruction           , &[IncrementProgramCounter]   ),
 ];
-
-
 
 pub const ABS_4_STEPS: &'static [Step] = &[
     PENDING_ADDRESS_LOW_BYTE_STEP,
