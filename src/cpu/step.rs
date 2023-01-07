@@ -8,6 +8,18 @@ use crate::cpu::instruction::*;
 lazy_static! {
     pub static ref INSTRUCTIONS: [CpuInstruction; 256] =
         INSTRUCTION_TEMPLATES.map(template_to_instruction);
+
+    pub static ref OAM_DMA_TRANSFER_STEPS: [Step; 513] = {
+        let mut steps = Vec::with_capacity(513);
+
+        steps.push(OAM_DMA_START_TRANSFER_STEP);
+        for _ in 0..256 {
+            steps.push(OAM_DMA_READ_STEP);
+            steps.push(OAM_DMA_WRITE_STEP);
+        }
+
+        steps.try_into().unwrap()
+    };
 }
 
 fn template_to_instruction(template: InstructionTemplate) -> CpuInstruction {

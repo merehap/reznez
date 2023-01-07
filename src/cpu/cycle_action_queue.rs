@@ -47,17 +47,12 @@ impl CycleActionQueue {
     // Note: the values of the address bus might not be correct for some cycles.
     pub fn enqueue_dma_transfer(&mut self, current_cycle: u64) {
         // Unclear this is the correct timing. Might not matter even if it's wrong.
-        self.queue.push_back(OAM_DMA_START_TRANSFER_STEP);
-
         let is_odd_cycle = current_cycle % 2 == 1;
         if is_odd_cycle {
             self.queue.push_back(NOP_STEP);
         }
 
-        for _ in 0..256 {
-            self.queue.push_back(OAM_DMA_READ_STEP);
-            self.queue.push_back(OAM_DMA_WRITE_STEP);
-        }
+        self.append(&*OAM_DMA_TRANSFER_STEPS);
     }
 
     fn append(&mut self, steps: &[Step]) {
