@@ -53,7 +53,6 @@ pub enum To {
     TopOfStack,
 
     ProgramCounterHighByte,
-    PendingAddressHighByte,
 
     OamData,
 

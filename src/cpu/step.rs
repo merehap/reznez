@@ -36,9 +36,6 @@ fn template_to_instruction(template: InstructionTemplate) -> CpuInstruction {
         (Abs, JSR, _) => JSR_STEPS,
         (Abs, JMP, _) => JMP_ABS_STEPS,
         (Ind, JMP, _) => JMP_IND_STEPS,
-        (Abs,   _, 4) => ABS_4_STEPS,
-        (Abs,   _, 6) => ABS_6_STEPS,
-        (Abs,   _, _) => unreachable!(),
         (_  ,   _, 2) => OTHER_2_STEPS,
         (_  ,   _, 3) => OTHER_3_STEPS,
         (_  ,   _, 4) => OTHER_4_STEPS,
@@ -69,10 +66,6 @@ pub const READ_INSTRUCTION_STEP: Step =
     Step::new(From::ProgramCounterTarget      , To::Instruction           , &[IncrementProgramCounter]    );
 pub const NOP_STEP: Step =
     Step::new(From::DataBus                   , To::DataBus               , &[]                           );
-pub const PENDING_ADDRESS_LOW_BYTE_STEP: Step =
-    Step::new(From::ProgramCounterTarget      , To::DataBus               , &[IncrementProgramCounter]    );
-pub const PENDING_ADDRESS_HIGH_BYTE_STEP: Step =
-    Step::new(From::ProgramCounterTarget      , To::PendingAddressHighByte, &[IncrementProgramCounter]    );
 pub const FULL_INSTRUCTION_STEP: Step =
     Step::new(From::DataBus                   , To::DataBus               , &[Instruction]                );
 pub const INSTRUCTION_RETURN_STEP: Step =
@@ -170,20 +163,6 @@ pub const JMP_IND_STEPS: &'static [Step] = &[
     Step::new(From::AddressBusTarget           , To::DataBus               , &[StorePendingAddressLowByte]),
     // Jump to next instruction.
     Step::new(From::PendingProgramCounterTarget, To::Instruction           , &[IncrementProgramCounter]   ),
-];
-
-pub const ABS_4_STEPS: &'static [Step] = &[
-    PENDING_ADDRESS_LOW_BYTE_STEP,
-    PENDING_ADDRESS_HIGH_BYTE_STEP,
-    FULL_INSTRUCTION_STEP,
-];
-
-pub const ABS_6_STEPS: &'static [Step] = &[
-    NOP_STEP,
-    NOP_STEP,
-    PENDING_ADDRESS_LOW_BYTE_STEP,
-    PENDING_ADDRESS_HIGH_BYTE_STEP,
-    FULL_INSTRUCTION_STEP,
 ];
 
 pub const OTHER_2_STEPS: &'static [Step] = &[

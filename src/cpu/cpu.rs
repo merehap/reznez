@@ -3,7 +3,7 @@ use log::{info, error};
 use crate::cpu::step::*;
 use crate::cpu::cycle_action::{CycleAction, From, To};
 use crate::cpu::cycle_action_queue::CycleActionQueue;
-use crate::cpu::instruction::{AccessMode, Argument, Instruction, OpCode};
+use crate::cpu::instruction::{Argument, Instruction, OpCode};
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::ports::DmaPort;
@@ -260,11 +260,6 @@ impl Cpu {
                 // The only write that doesn't use/change the address bus?
                 memory.write(OAM_DATA_ADDRESS, self.data_bus);
             }
-            // TODO: Get rid of this variant.
-            To::PendingAddressHighByte => {
-                // The high byte was already written to the data bus above.
-                self.pending_address_low = self.previous_data_bus_value;
-            }
             To::Accumulator => self.a = self.data_bus,
             To::Status => self.status = Status::from_byte(self.data_bus),
 
@@ -286,10 +281,7 @@ impl Cpu {
         use OpCode::*;
         use Argument::*;
 
-        match instruction.template.access_mode {
-            AccessMode::Abs => {}
-            _ => self.program_counter = self.program_counter.advance(instruction.length() - 1),
-        }
+        self.program_counter = self.program_counter.advance(instruction.length() - 1);
 
         let mut branch_taken = false;
         let mut oops = false;
