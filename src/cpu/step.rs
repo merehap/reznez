@@ -38,6 +38,7 @@ fn template_to_instruction(template: InstructionTemplate) -> CpuInstruction {
         (Ind, JMP, _) => JMP_IND_STEPS,
 
         (Imp,   _, _) => IMPLICIT_ADDRESSING_STEPS,
+        (Imm,   _, _) => IMMEDIATE_ADDRESSING_STEPS,
 
         (_  ,   _, 2) => OTHER_2_STEPS,
         (_  ,   _, 3) => OTHER_3_STEPS,
@@ -67,6 +68,10 @@ impl CpuInstruction {
 
 pub const IMPLICIT_ADDRESSING_STEPS: &'static [Step] = &[
     Step::new(From::ProgramCounterTarget      , To::DataBus               , &[ExecuteOpCode]),
+];
+
+pub const IMMEDIATE_ADDRESSING_STEPS: &'static [Step] = &[
+    Step::new(From::ProgramCounterTarget      , To::DataBus               , &[ExecuteOpCode, IncrementProgramCounter]),
 ];
 
 pub const READ_INSTRUCTION_STEP: Step =

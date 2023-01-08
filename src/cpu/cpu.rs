@@ -206,6 +206,7 @@ impl Cpu {
             ExecuteOpCode => {
                 use OpCode::*;
                 match self.current_instruction.unwrap().0.template.op_code {
+                    // Implicit (and Accumulator) op codes.
                     INX => self.x = self.nz(self.x.wrapping_add(1)),
                     INY => self.y = self.nz(self.y.wrapping_add(1)),
                     DEX => self.x = self.nz(self.x.wrapping_sub(1)),
@@ -228,6 +229,45 @@ impl Cpu {
                     LSR => self.a = self.lsr(self.a),
                     ROR => self.a = self.ror(self.a),
                     NOP => { /* Do nothing. */ },
+
+                    // Immediate op codes.
+                    LDA => self.a = self.nz(self.data_bus),
+                    LDX => self.x = self.nz(self.data_bus),
+                    LDY => self.y = self.nz(self.data_bus),
+                    CMP => self.cmp(self.data_bus),
+                    CPX => self.cpx(self.data_bus),
+                    CPY => self.cpy(self.data_bus),
+                    ORA => self.a = self.nz(self.a | self.data_bus),
+                    AND => self.a = self.nz(self.a & self.data_bus),
+                    EOR => self.a = self.nz(self.a ^ self.data_bus),
+                    ADC => self.a = self.adc(self.data_bus),
+                    SBC => self.a = self.sbc(self.data_bus),
+                    LAX => {
+                        self.a = self.data_bus;
+                        self.x = self.data_bus;
+                        self.nz(self.data_bus);
+                    }
+                    ANC => {
+                        self.a = self.nz(self.a & self.data_bus);
+                        self.status.carry = self.status.negative;
+                    }
+                    ALR => {
+                        self.a = self.nz(self.a & self.data_bus);
+                        self.a = self.lsr(self.a);
+                    }
+                    ARR => {
+                        // TODO: What a mess.
+                        let value = (self.a & self.data_bus) >> 1;
+                        self.a = self.nz(value | if self.status.carry {0x80} else {0x00});
+                        self.status.carry = self.a & 0x40 != 0;
+                        self.status.overflow =
+                            ((if self.status.carry {0x01} else {0x00}) ^
+                            ((self.a >> 5) & 0x01)) != 0;
+                    }
+                    AXS => {
+                        self.status.carry = self.a & self.x >= self.data_bus;
+                        self.x = self.nz((self.a & self.x).wrapping_sub(self.data_bus));
+                    }
                     op_code => todo!("{:?}", op_code),
                 }
             }
@@ -384,17 +424,17 @@ impl Cpu {
                 self.status.zero = val & self.a == 0;
             }
 
-            (LDA, Imm(val)) => self.a = self.nz(val),
-            (LDX, Imm(val)) => self.x = self.nz(val),
-            (LDY, Imm(val)) => self.y = self.nz(val),
-            (CMP, Imm(val)) => self.cmp(val),
-            (CPX, Imm(val)) => self.cpx(val),
-            (CPY, Imm(val)) => self.cpy(val),
-            (ORA, Imm(val)) => self.a = self.nz(self.a | val),
-            (AND, Imm(val)) => self.a = self.nz(self.a & val),
-            (EOR, Imm(val)) => self.a = self.nz(self.a ^ val),
-            (ADC, Imm(val)) => self.a = self.adc(val),
-            (SBC, Imm(val)) => self.a = self.sbc(val),
+            (LDA, Imm(_val)) => unreachable!(),
+            (LDX, Imm(_val)) => unreachable!(),
+            (LDY, Imm(_val)) => unreachable!(),
+            (CMP, Imm(_val)) => unreachable!(),
+            (CPX, Imm(_val)) => unreachable!(),
+            (CPY, Imm(_val)) => unreachable!(),
+            (ORA, Imm(_val)) => unreachable!(),
+            (AND, Imm(_val)) => unreachable!(),
+            (EOR, Imm(_val)) => unreachable!(),
+            (ADC, Imm(_val)) => unreachable!(),
+            (SBC, Imm(_val)) => unreachable!(),
 
             (LDA, Addr(addr)) => {let val = memory.read(addr); self.a = self.nz(val)},
             (LDX, Addr(addr)) => {let val = memory.read(addr); self.x = self.nz(val)},
@@ -408,11 +448,7 @@ impl Cpu {
             (ADC, Addr(addr)) => {let val = memory.read(addr); self.a = self.adc(val)},
             (SBC, Addr(addr)) => {let val = memory.read(addr); self.a = self.sbc(val)},
 
-            (LAX, Imm(val)) => {
-                self.a = val;
-                self.x = val;
-                self.nz(val);
-            }
+            (LAX, Imm(_val)) => unreachable!(),
             (LAX, Addr(addr)) => {
                 let val = memory.read(addr);
                 self.a = val;
@@ -486,28 +522,11 @@ impl Cpu {
                 self.a = self.sbc(value);
             }
 
-            (ANC, Imm(val)) => {
-                self.a = self.nz(self.a & val);
-                self.status.carry = self.status.negative;
-            }
-            (ALR, Imm(val)) => {
-                self.a = self.nz(self.a & val);
-                self.a = self.lsr(self.a);
-            }
-            (ARR, Imm(val)) => {
-                // TODO: What a mess.
-                let value = (self.a & val) >> 1;
-                self.a = self.nz(value | if self.status.carry {0x80} else {0x00});
-                self.status.carry = self.a & 0x40 != 0;
-                self.status.overflow =
-                    ((if self.status.carry {0x01} else {0x00}) ^
-                    ((self.a >> 5) & 0x01)) != 0;
-            }
+            (ANC, Imm(_val)) => unreachable!(),
+            (ALR, Imm(_val)) => unreachable!(),
+            (ARR, Imm(_val)) => unreachable!(),
             (XAA, _) => unimplemented!(),
-            (AXS, Imm(val)) => {
-                self.status.carry = self.a & self.x >= val;
-                self.x = self.nz((self.a & self.x).wrapping_sub(val));
-            }
+            (AXS, Imm(_val)) => unreachable!(),
             (AHX, _) => unimplemented!(),
             (SHY, Addr(addr)) => {
                 let (low, high) = addr.to_low_high();
