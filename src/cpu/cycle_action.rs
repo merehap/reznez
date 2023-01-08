@@ -17,6 +17,7 @@ pub enum CycleAction {
 
     Instruction,
     InstructionReturn,
+    ExecuteOpCode,
 }
 
 #[derive(Clone, Copy, Debug)]

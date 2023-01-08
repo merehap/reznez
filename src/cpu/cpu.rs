@@ -202,6 +202,35 @@ impl Cpu {
                 }
             }
             InstructionReturn => {}
+
+            ExecuteOpCode => {
+                use OpCode::*;
+                match self.current_instruction.unwrap().0.template.op_code {
+                    INX => self.x = self.nz(self.x.wrapping_add(1)),
+                    INY => self.y = self.nz(self.y.wrapping_add(1)),
+                    DEX => self.x = self.nz(self.x.wrapping_sub(1)),
+                    DEY => self.y = self.nz(self.y.wrapping_sub(1)),
+                    TAX => self.x = self.nz(self.a),
+                    TAY => self.y = self.nz(self.a),
+                    TSX => self.x = self.nz(memory.stack_pointer()),
+                    TXS => *memory.stack_pointer_mut() = self.x,
+                    TXA => self.a = self.nz(self.x),
+                    TYA => self.a = self.nz(self.y),
+                    CLC => self.status.carry = false,
+                    SEC => self.status.carry = true,
+                    CLD => self.status.decimal = false,
+                    SED => self.status.decimal = true,
+                    CLI => self.status.interrupts_disabled = false,
+                    SEI => self.status.interrupts_disabled = true,
+                    CLV => self.status.overflow = false,
+                    ASL => self.a = self.asl(self.a),
+                    ROL => self.a = self.rol(self.a),
+                    LSR => self.a = self.lsr(self.a),
+                    ROR => self.a = self.ror(self.a),
+                    NOP => { /* Do nothing. */ },
+                    op_code => todo!("{:?}", op_code),
+                }
+            }
         }
     }
 
@@ -291,27 +320,27 @@ impl Cpu {
         }
 
         match (instruction.template.op_code, instruction.argument) {
-            (INX, Imp) => self.x = self.nz(self.x.wrapping_add(1)),
-            (INY, Imp) => self.y = self.nz(self.y.wrapping_add(1)),
-            (DEX, Imp) => self.x = self.nz(self.x.wrapping_sub(1)),
-            (DEY, Imp) => self.y = self.nz(self.y.wrapping_sub(1)),
-            (TAX, Imp) => self.x = self.nz(self.a),
-            (TAY, Imp) => self.y = self.nz(self.a),
-            (TSX, Imp) => self.x = self.nz(memory.stack_pointer()),
-            (TXS, Imp) => *memory.stack_pointer_mut() = self.x,
-            (TXA, Imp) => self.a = self.nz(self.x),
-            (TYA, Imp) => self.a = self.nz(self.y),
+            (INX, Imp) => unreachable!(),
+            (INY, Imp) => unreachable!(),
+            (DEX, Imp) => unreachable!(),
+            (DEY, Imp) => unreachable!(),
+            (TAX, Imp) => unreachable!(),
+            (TAY, Imp) => unreachable!(),
+            (TSX, Imp) => unreachable!(),
+            (TXS, Imp) => unreachable!(),
+            (TXA, Imp) => unreachable!(),
+            (TYA, Imp) => unreachable!(),
             (PHA, Imp) => unreachable!(),
             (PHP, Imp) => unreachable!(),
             (PLA, Imp) => unreachable!(),
             (PLP, Imp) => unreachable!(),
-            (CLC, Imp) => self.status.carry = false,
-            (SEC, Imp) => self.status.carry = true,
-            (CLD, Imp) => self.status.decimal = false,
-            (SED, Imp) => self.status.decimal = true,
-            (CLI, Imp) => self.status.interrupts_disabled = false,
-            (SEI, Imp) => self.status.interrupts_disabled = true,
-            (CLV, Imp) => self.status.overflow = false,
+            (CLC, Imp) => unreachable!(),
+            (SEC, Imp) => unreachable!(),
+            (CLD, Imp) => unreachable!(),
+            (SED, Imp) => unreachable!(),
+            (CLI, Imp) => unreachable!(),
+            (SEI, Imp) => unreachable!(),
+            (CLV, Imp) => unreachable!(),
             (BRK, Imp) => unreachable!(),
             (RTI, Imp) => unreachable!(),
             (RTS, Imp) => unreachable!(),
@@ -391,25 +420,25 @@ impl Cpu {
                 self.nz(val);
             }
 
-            (ASL, Imp) => self.a = self.asl(self.a),
+            (ASL, Imp) => unreachable!(),
             (ASL, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.asl(value);
                 memory.write(addr, value);
             }
-            (ROL, Imp) => self.a = self.rol(self.a),
+            (ROL, Imp) => unreachable!(),
             (ROL, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.rol(value);
                 memory.write(addr, value);
             }
-            (LSR, Imp) => self.a = self.lsr(self.a),
+            (LSR, Imp) => unreachable!(),
             (LSR, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.lsr(value);
                 memory.write(addr, value);
             }
-            (ROR, Imp) => self.a = self.ror(self.a),
+            (ROR, Imp) => unreachable!(),
             (ROR, Addr(addr)) => {
                 let value = memory.read(addr);
                 let value = self.ror(value);
