@@ -21,7 +21,8 @@ pub struct Cpu {
     program_counter: CpuAddress,
     status: Status,
 
-    current_instruction: Option<(Instruction, CpuAddress)>,
+    current_instruction: Option<Instruction>,
+    next_instruction: Option<(Instruction, CpuAddress)>,
 
     cycle_action_queue: CycleActionQueue,
     nmi_pending: bool,
@@ -36,7 +37,6 @@ pub struct Cpu {
     data_bus: u8,
     previous_data_bus_value: u8,
     pending_address_low: u8,
-    current_op_code: u8,
 
     suppress_program_counter_increment: bool,
 }
@@ -62,6 +62,7 @@ impl Cpu {
             status: Status::startup(),
 
             current_instruction: None,
+            next_instruction: None,
 
             cycle_action_queue: CycleActionQueue::new(),
             nmi_pending: false,
@@ -76,7 +77,6 @@ impl Cpu {
             data_bus: 0,
             previous_data_bus_value: 0,
             pending_address_low: 0,
-            current_op_code: 0,
 
             suppress_program_counter_increment: false,
         }
@@ -88,6 +88,7 @@ impl Cpu {
         self.program_counter = memory.reset_vector();
         self.address_bus = memory.reset_vector();
         self.current_instruction = None;
+        self.next_instruction = None;
         self.cycle_action_queue = CycleActionQueue::new();
         self.nmi_pending = false;
         self.cycle = 7;
@@ -166,7 +167,7 @@ impl Cpu {
         self.cycle += 1;
 
         if matches!(step.to(), To::Instruction) {
-            let (instruction, program_counter) = self.current_instruction.unwrap();
+            let (instruction, program_counter) = self.next_instruction.unwrap();
             StepResult::Instruction(instruction, program_counter)
         } else {
             StepResult::Nop
@@ -198,7 +199,8 @@ impl Cpu {
              }
 
             InterpretOpCode => {
-                let instruction = self.current_instruction.unwrap().0;
+                let instruction = self.next_instruction.take().unwrap().0;
+                self.current_instruction = Some(instruction);
                 if instruction.template.access_mode == AccessMode::Imp && instruction.template.op_code != OpCode::BRK {
                     self.suppress_program_counter_increment = true;
                 }
@@ -212,7 +214,7 @@ impl Cpu {
                 }
             }
             Instruction => {
-                let (instr, _) = self.current_instruction.unwrap();
+                let instr = self.current_instruction.unwrap();
                 match self.execute_instruction(memory, instr) {
                     InstructionResult::Success {branch_taken, oops} if branch_taken || oops => {
                         self.cycle_action_queue.skip_to_front(NOP_STEP);
@@ -230,7 +232,7 @@ impl Cpu {
 
             ExecuteOpCode => {
                 use OpCode::*;
-                match self.current_instruction.unwrap().0.template.op_code {
+                match self.current_instruction.unwrap().template.op_code {
                     // Implicit (and Accumulator) op codes.
                     INX => self.x = self.nz(self.x.wrapping_add(1)),
                     INY => self.y = self.nz(self.y.wrapping_add(1)),
@@ -359,10 +361,9 @@ impl Cpu {
             To::Status => self.status = Status::from_byte(self.data_bus),
 
             To::Instruction => {
-                self.current_op_code = self.data_bus;
                 let instruction = Instruction::from_memory(
                     self.address_bus, self.x, self.y, memory);
-                self.current_instruction = Some((instruction, self.address_bus));
+                self.next_instruction = Some((instruction, self.address_bus));
             }
         }
     }
