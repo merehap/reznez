@@ -166,7 +166,7 @@ impl Cpu {
 
         self.cycle += 1;
 
-        if matches!(step.to(), To::Instruction) {
+        if matches!(step.to(), To::NextOpCode) {
             let (instruction, program_counter) = self.next_instruction.unwrap();
             StepResult::Instruction(instruction, program_counter)
         } else {
@@ -360,7 +360,7 @@ impl Cpu {
             To::Accumulator => self.a = self.data_bus,
             To::Status => self.status = Status::from_byte(self.data_bus),
 
-            To::Instruction => {
+            To::NextOpCode => {
                 let instruction = Instruction::from_memory(
                     self.address_bus, self.x, self.y, memory);
                 self.next_instruction = Some((instruction, self.address_bus));

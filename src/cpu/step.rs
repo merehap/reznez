@@ -67,7 +67,7 @@ impl CpuInstruction {
 }
 
 pub const READ_AND_INTERPRET_OP_CODE_STEPS: &'static [Step] = &[
-    Step::new(From::ProgramCounterTarget      , To::Instruction           , &[IncrementProgramCounter]    ),
+    Step::new(From::ProgramCounterTarget      , To::NextOpCode            , &[IncrementProgramCounter]    ),
     Step::new(From::ProgramCounterTarget      , To::DataBus               , &[InterpretOpCode, IncrementProgramCounter]),
 ];
 
@@ -147,7 +147,7 @@ pub const JSR_STEPS: &'static [Step] = &[
     Step::new(From::ProgramCounterLowByte      , To::TopOfStack            , &[DecrementStackPointer]     ),
     // Put the pending address high byte on the data bus.
     Step::new(From::ProgramCounterTarget       , To::DataBus               , &[]                          ),
-    Step::new(From::PendingProgramCounterTarget, To::Instruction           , &[IncrementProgramCounter]   ),
+    Step::new(From::PendingProgramCounterTarget, To::NextOpCode            , &[IncrementProgramCounter]   ),
     Step::new(From::ProgramCounterTarget       , To::DataBus               , &[InterpretOpCode, IncrementProgramCounter]),
 ];
 
@@ -163,7 +163,7 @@ pub const JMP_IND_STEPS: &'static [Step] = &[
     // High byte of the looked-up address.
     Step::new(From::AddressBusTarget           , To::DataBus               , &[StorePendingAddressLowByte]),
     // Jump to next instruction.
-    Step::new(From::PendingProgramCounterTarget, To::Instruction           , &[IncrementProgramCounter]   ),
+    Step::new(From::PendingProgramCounterTarget, To::NextOpCode            , &[IncrementProgramCounter]   ),
     Step::new(From::ProgramCounterTarget       , To::DataBus               , &[InterpretOpCode, IncrementProgramCounter]),
 ];
 

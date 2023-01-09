@@ -60,5 +60,5 @@ pub enum To {
     Accumulator,
     Status,
 
-    Instruction,
+    NextOpCode,
 }
