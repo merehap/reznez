@@ -319,7 +319,7 @@ pub enum OpCode {
 }
 
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum AccessMode {
     Imp,
     Imm,

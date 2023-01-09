@@ -3,7 +3,7 @@ use log::{info, error};
 use crate::cpu::step::*;
 use crate::cpu::cycle_action::{CycleAction, From, To};
 use crate::cpu::cycle_action_queue::CycleActionQueue;
-use crate::cpu::instruction::{Argument, Instruction, OpCode};
+use crate::cpu::instruction::{AccessMode, Argument, Instruction, OpCode};
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::ports::DmaPort;
@@ -36,6 +36,9 @@ pub struct Cpu {
     data_bus: u8,
     previous_data_bus_value: u8,
     pending_address_low: u8,
+    current_op_code: u8,
+
+    suppress_program_counter_increment: bool,
 }
 
 impl Cpu {
@@ -73,6 +76,9 @@ impl Cpu {
             data_bus: 0,
             previous_data_bus_value: 0,
             pending_address_low: 0,
+            current_op_code: 0,
+
+            suppress_program_counter_increment: false,
         }
     }
 
@@ -155,6 +161,8 @@ impl Cpu {
             self.execute_cycle_action(memory, action);
         }
 
+        self.suppress_program_counter_increment = false;
+
         self.cycle += 1;
 
         if matches!(step.to(), To::Instruction) {
@@ -168,7 +176,11 @@ impl Cpu {
     fn execute_cycle_action(&mut self, memory: &mut CpuMemory, action: CycleAction) {
         use CycleAction::*;
         match action {
-            IncrementProgramCounter => { self.program_counter.inc(); }
+            IncrementProgramCounter => {
+                if !self.suppress_program_counter_increment {
+                    self.program_counter.inc();
+                }
+            }
             // TODO: Make sure this isn't supposed to wrap within the same page.
             IncrementAddressBus => { self.address_bus.inc(); }
             IncrementAddressBusLow => self.address_bus.inc_low(),
@@ -185,11 +197,25 @@ impl Cpu {
                 self.status.zero = self.data_bus == 0;
              }
 
+            InterpretOpCode => {
+                let instruction = self.current_instruction.unwrap().0;
+                if instruction.template.access_mode == AccessMode::Imp && instruction.template.op_code != OpCode::BRK {
+                    self.suppress_program_counter_increment = true;
+                }
+
+                if instruction.template.access_mode == AccessMode::Rel {
+                    self.execute_cycle_action(memory, Instruction);
+                } else if instruction.template.cycle_count as u8 == 2 {
+                    self.execute_cycle_action(memory, ExecuteOpCode);
+                } else {
+                    self.cycle_action_queue.enqueue_instruction(instruction);
+                }
+            }
             Instruction => {
                 let (instr, _) = self.current_instruction.unwrap();
                 match self.execute_instruction(memory, instr) {
                     InstructionResult::Success {branch_taken, oops} if branch_taken || oops => {
-                        self.cycle_action_queue.skip_to_front(INSTRUCTION_RETURN_STEP);
+                        self.cycle_action_queue.skip_to_front(NOP_STEP);
                         if branch_taken && oops {
                             self.cycle_action_queue.skip_to_front(NOP_STEP);
                         }
@@ -201,7 +227,6 @@ impl Cpu {
                     }
                 }
             }
-            InstructionReturn => {}
 
             ExecuteOpCode => {
                 use OpCode::*;
@@ -268,6 +293,7 @@ impl Cpu {
                         self.status.carry = self.a & self.x >= self.data_bus;
                         self.x = self.nz((self.a & self.x).wrapping_sub(self.data_bus));
                     }
+
                     op_code => todo!("{:?}", op_code),
                 }
             }
@@ -333,10 +359,10 @@ impl Cpu {
             To::Status => self.status = Status::from_byte(self.data_bus),
 
             To::Instruction => {
+                self.current_op_code = self.data_bus;
                 let instruction = Instruction::from_memory(
                     self.address_bus, self.x, self.y, memory);
                 self.current_instruction = Some((instruction, self.address_bus));
-                self.cycle_action_queue.enqueue_instruction(instruction);
             }
         }
     }
@@ -350,7 +376,7 @@ impl Cpu {
         use OpCode::*;
         use Argument::*;
 
-        self.program_counter = self.program_counter.advance(instruction.length() - 1);
+        self.program_counter = self.program_counter.advance(instruction.length() - 2);
 
         let mut branch_taken = false;
         let mut oops = false;
@@ -634,9 +660,11 @@ impl Cpu {
             return (false, false);
         }
 
+        self.suppress_program_counter_increment = true;
+
         info!(target: "cpu", "Branch taken, cycle added.");
 
-        let oops = self.program_counter.page() != destination.page();
+        let oops = self.program_counter.offset(1).page() != destination.page();
         if oops {
             info!(target: "cpu", "Branch crossed page boundary, 'Oops' cycle added.");
         }

@@ -16,7 +16,7 @@ pub enum CycleAction {
     CheckNegativeAndZero,
 
     Instruction,
-    InstructionReturn,
+    InterpretOpCode,
     ExecuteOpCode,
 }
 

@@ -66,6 +66,11 @@ impl CpuInstruction {
     }
 }
 
+pub const READ_AND_INTERPRET_OP_CODE_STEPS: &'static [Step] = &[
+    Step::new(From::ProgramCounterTarget      , To::Instruction           , &[IncrementProgramCounter]    ),
+    Step::new(From::ProgramCounterTarget      , To::DataBus               , &[InterpretOpCode, IncrementProgramCounter]),
+];
+
 pub const IMPLICIT_ADDRESSING_STEPS: &'static [Step] = &[
     Step::new(From::ProgramCounterTarget      , To::DataBus               , &[ExecuteOpCode]),
 ];
@@ -74,14 +79,10 @@ pub const IMMEDIATE_ADDRESSING_STEPS: &'static [Step] = &[
     Step::new(From::ProgramCounterTarget      , To::DataBus               , &[ExecuteOpCode, IncrementProgramCounter]),
 ];
 
-pub const READ_INSTRUCTION_STEP: Step =
-    Step::new(From::ProgramCounterTarget      , To::Instruction           , &[IncrementProgramCounter]    );
 pub const NOP_STEP: Step =
     Step::new(From::DataBus                   , To::DataBus               , &[]                           );
 pub const FULL_INSTRUCTION_STEP: Step =
     Step::new(From::DataBus                   , To::DataBus               , &[Instruction]                );
-pub const INSTRUCTION_RETURN_STEP: Step =
-    Step::new(From::DataBus                   , To::DataBus               , &[InstructionReturn]          );
 
 pub const NMI_STEPS: &'static [Step] = &[
     // FIXME: Fix first two steps in accordance to:
@@ -97,7 +98,6 @@ pub const NMI_STEPS: &'static [Step] = &[
 ];
 
 pub const BRK_STEPS: &'static [Step] = &[
-    Step::new(From::ProgramCounterTarget      , To::DataBus               , &[IncrementProgramCounter]    ),
     Step::new(From::ProgramCounterHighByte    , To::TopOfStack            , &[DecrementStackPointer]      ),
     Step::new(From::ProgramCounterLowByte     , To::TopOfStack            , &[DecrementStackPointer]      ),
     Step::new(From::StatusForInstruction      , To::TopOfStack            , &[DecrementStackPointer]      ),
@@ -107,7 +107,6 @@ pub const BRK_STEPS: &'static [Step] = &[
 ];
 
 pub const RTI_STEPS: &'static [Step] = &[
-    Step::new(From::ProgramCounterTarget      , To::DataBus               , &[]                           ),
     Step::new(From::TopOfStack                , To::DataBus               , &[IncrementStackPointer]      ),
     Step::new(From::TopOfStack                , To::Status                , &[IncrementStackPointer]      ),
     Step::new(From::TopOfStack                , To::DataBus               , &[IncrementStackPointer]      ),
@@ -115,8 +114,6 @@ pub const RTI_STEPS: &'static [Step] = &[
 ];
 
 pub const RTS_STEPS: &'static [Step] = &[
-    // Dummy read.
-    Step::new(From::ProgramCounterTarget      , To::DataBus                , &[]                          ),
     // Dummy read.
     Step::new(From::TopOfStack                , To::DataBus                , &[IncrementStackPointer]     ),
     // Read low byte of next program counter.
@@ -127,46 +124,38 @@ pub const RTS_STEPS: &'static [Step] = &[
 ];
 
 pub const PHA_STEPS: &'static [Step] = &[
-    Step::new(From::ProgramCounterTarget      , To::DataBus                , &[]                          ),
     Step::new(From::Accumulator               , To::TopOfStack             , &[DecrementStackPointer]     ),
 ];
 
 pub const PHP_STEPS: &'static [Step] = &[
-    Step::new(From::ProgramCounterTarget      , To::DataBus                , &[]                          ),
     Step::new(From::StatusForInstruction      , To::TopOfStack             , &[DecrementStackPointer]     ),
 ];
 
 pub const PLA_STEPS: &'static [Step] = &[
-    Step::new(From::ProgramCounterTarget      , To::DataBus                , &[]                          ),
     Step::new(From::TopOfStack                , To::DataBus                , &[IncrementStackPointer]     ),
     Step::new(From::TopOfStack                , To::Accumulator            , &[CheckNegativeAndZero]      ),
 ];
 
 pub const PLP_STEPS: &'static [Step] = &[
-    Step::new(From::ProgramCounterTarget      , To::DataBus                , &[]                          ),
     Step::new(From::TopOfStack                , To::DataBus                , &[IncrementStackPointer]     ),
     Step::new(From::TopOfStack                , To::Status                 , &[]                          ),
 ];
 
 pub const JSR_STEPS: &'static [Step] = &[
-    // Put the pending address low byte on the data bus.
-    Step::new(From::ProgramCounterTarget       , To::DataBus               , &[IncrementProgramCounter]   ),
     Step::new(From::DataBus                    , To::DataBus               , &[StorePendingAddressLowByte]),
     Step::new(From::ProgramCounterHighByte     , To::TopOfStack            , &[DecrementStackPointer]     ),
     Step::new(From::ProgramCounterLowByte      , To::TopOfStack            , &[DecrementStackPointer]     ),
     // Put the pending address high byte on the data bus.
     Step::new(From::ProgramCounterTarget       , To::DataBus               , &[]                          ),
     Step::new(From::PendingProgramCounterTarget, To::Instruction           , &[IncrementProgramCounter]   ),
+    Step::new(From::ProgramCounterTarget       , To::DataBus               , &[InterpretOpCode, IncrementProgramCounter]),
 ];
 
 pub const JMP_ABS_STEPS: &'static [Step] = &[
-    Step::new(From::ProgramCounterTarget       , To::DataBus               , &[IncrementProgramCounter]   ),
     Step::new(From::ProgramCounterTarget       , To::ProgramCounterHighByte, &[]                          ),
 ];
 
 pub const JMP_IND_STEPS: &'static [Step] = &[
-    // Low byte of the index address.
-    Step::new(From::ProgramCounterTarget       , To::DataBus               , &[IncrementProgramCounter]   ),
     // High byte of the index address.
     Step::new(From::ProgramCounterTarget       , To::DataBus               , &[StorePendingAddressLowByte]),
     // Low byte of the looked-up address.
@@ -175,19 +164,17 @@ pub const JMP_IND_STEPS: &'static [Step] = &[
     Step::new(From::AddressBusTarget           , To::DataBus               , &[StorePendingAddressLowByte]),
     // Jump to next instruction.
     Step::new(From::PendingProgramCounterTarget, To::Instruction           , &[IncrementProgramCounter]   ),
+    Step::new(From::ProgramCounterTarget       , To::DataBus               , &[InterpretOpCode, IncrementProgramCounter]),
 ];
 
 pub const OTHER_2_STEPS: &'static [Step] = &[
-    FULL_INSTRUCTION_STEP,
 ];
 
 pub const OTHER_3_STEPS: &'static [Step] = &[
-    NOP_STEP,
     FULL_INSTRUCTION_STEP,
 ];
 
 pub const OTHER_4_STEPS: &'static [Step] = &[
-    NOP_STEP,
     NOP_STEP,
     FULL_INSTRUCTION_STEP,
 ];
@@ -195,12 +182,10 @@ pub const OTHER_4_STEPS: &'static [Step] = &[
 pub const OTHER_5_STEPS: &'static [Step] = &[
     NOP_STEP,
     NOP_STEP,
-    NOP_STEP,
     FULL_INSTRUCTION_STEP,
 ];
 
 pub const OTHER_6_STEPS: &'static [Step] = &[
-    NOP_STEP,
     NOP_STEP,
     NOP_STEP,
     NOP_STEP,
@@ -212,12 +197,10 @@ pub const OTHER_7_STEPS: &'static [Step] = &[
     NOP_STEP,
     NOP_STEP,
     NOP_STEP,
-    NOP_STEP,
     FULL_INSTRUCTION_STEP,
 ];
 
 pub const OTHER_8_STEPS: &'static [Step] = &[
-    NOP_STEP,
     NOP_STEP,
     NOP_STEP,
     NOP_STEP,
