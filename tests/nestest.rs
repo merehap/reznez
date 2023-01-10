@@ -42,21 +42,16 @@ fn nestest() {
         if let Some(expected_state) = expected_states.next() {
             let instruction;
             let program_counter;
-            let mut a;
-            let mut x;
-            let mut y;
-            let mut p;
-            let mut s;
+            let a;
+            let x;
+            let y;
+            let p;
+            let s;
             let mut ppu_cycle;
             let mut ppu_scanline;
             let mut c;
 
             loop {
-                a = nes.cpu().accumulator();
-                x = nes.cpu().x_index();
-                y = nes.cpu().y_index();
-                p = nes.cpu().status();
-                s = nes.stack_pointer();
                 ppu_scanline = nes.ppu().clock().scanline();
                 ppu_cycle = nes.ppu().clock().cycle();
                 // TODO: Fix this.
@@ -76,6 +71,11 @@ fn nestest() {
                 if let Some((instr, pc)) = nes.step().instruction {
                     instruction = instr;
                     program_counter = pc;
+                    a = nes.cpu().accumulator();
+                    x = nes.cpu().x_index();
+                    y = nes.cpu().y_index();
+                    p = nes.cpu().status();
+                    s = nes.stack_pointer();
                     break;
                 }
             }
