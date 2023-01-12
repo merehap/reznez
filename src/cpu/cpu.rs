@@ -120,6 +120,18 @@ impl Cpu {
         self.cycle
     }
 
+    pub fn address_bus(&self) -> CpuAddress {
+        self.address_bus
+    }
+
+    pub fn current_instruction(&self) -> Option<Instruction> {
+        self.current_instruction
+    }
+
+    pub fn next_instruction_address(&self) -> Option<CpuAddress> {
+        self.next_instruction.map(|(_, a)| a)
+    }
+
     pub fn jammed(&self) -> bool {
         self.jammed
     }
@@ -132,9 +144,9 @@ impl Cpu {
         self.nmi_pending = true;
     }
 
-    pub fn step(&mut self, memory: &mut CpuMemory) -> StepResult {
+    pub fn step(&mut self, memory: &mut CpuMemory) -> Option<Step> {
         if self.jammed {
-            return StepResult::Nop;
+            return None;
         }
 
         if self.dma_port.take_page().is_some() {
@@ -166,12 +178,7 @@ impl Cpu {
 
         self.cycle += 1;
 
-        if matches!(step.to(), To::NextOpCode) {
-            let (instruction, program_counter) = self.next_instruction.unwrap();
-            StepResult::Instruction(instruction, program_counter)
-        } else {
-            StepResult::Nop
-        }
+        Some(step)
     }
 
     fn execute_cycle_action(&mut self, memory: &mut CpuMemory, action: CycleAction) {
@@ -684,22 +691,6 @@ fn is_neg(value: u8) -> bool {
 pub enum ProgramCounterSource {
     ResetVector,
     Override(CpuAddress),
-}
-
-#[derive(Clone, Copy)]
-pub enum StepResult {
-    Nop,
-    Instruction(Instruction, CpuAddress),
-}
-
-impl StepResult {
-    pub fn to_instruction_and_program_counter(self) -> Option<(Instruction, CpuAddress)> {
-        if let StepResult::Instruction(instruction, program_counter) = self {
-            Some((instruction, program_counter))
-        } else {
-            None
-        }
-    }
 }
 
 enum InstructionResult {

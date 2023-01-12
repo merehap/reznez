@@ -1,3 +1,4 @@
+#![feature(let_chains)]
 extern crate reznez;
 
 use std::fmt;
@@ -40,13 +41,6 @@ fn nestest() {
 
     loop {
         if let Some(expected_state) = expected_states.next() {
-            let instruction;
-            let program_counter;
-            let a;
-            let x;
-            let y;
-            let p;
-            let s;
             let mut ppu_cycle;
             let mut ppu_scanline;
             let mut c;
@@ -63,22 +57,35 @@ fn nestest() {
                         ppu_scanline -= 1;
                     }
                 }
-
                 ppu_cycle -= 2;
 
                 c = nes.cpu().cycle();
 
-                if let Some((instr, pc)) = nes.step().instruction {
-                    instruction = instr;
-                    program_counter = pc;
-                    a = nes.cpu().accumulator();
-                    x = nes.cpu().x_index();
-                    y = nes.cpu().y_index();
-                    p = nes.cpu().status();
-                    s = nes.stack_pointer();
+                if let Some(step) = nes.step().step && step.has_op_code_read() {
                     break;
                 }
             }
+
+            let program_counter = nes.cpu().address_bus();
+
+            let mut a;
+            let mut x;
+            let mut y;
+            let mut p;
+            let mut s;
+            loop {
+                a = nes.cpu().accumulator();
+                x = nes.cpu().x_index();
+                y = nes.cpu().y_index();
+                p = nes.cpu().status();
+                s = nes.stack_pointer();
+
+                if let Some(step) = nes.step().step && step.has_interpret_op_code() {
+                    break;
+                }
+            }
+
+            let instruction = nes.cpu().current_instruction().unwrap();
 
             let state = State {
                 program_counter,
