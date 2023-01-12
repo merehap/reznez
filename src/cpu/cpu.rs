@@ -3,6 +3,7 @@ use log::{info, error};
 use crate::cpu::step::*;
 use crate::cpu::cycle_action::{CycleAction, From, To};
 use crate::cpu::cycle_action_queue::CycleActionQueue;
+use crate::cpu::instruction;
 use crate::cpu::instruction::{AccessMode, Argument, Instruction, OpCode};
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
@@ -22,7 +23,7 @@ pub struct Cpu {
     status: Status,
 
     current_instruction: Option<Instruction>,
-    next_instruction: Option<(Instruction, CpuAddress)>,
+    next_op_code: Option<(u8, CpuAddress)>,
 
     cycle_action_queue: CycleActionQueue,
     nmi_pending: bool,
@@ -62,7 +63,7 @@ impl Cpu {
             status: Status::startup(),
 
             current_instruction: None,
-            next_instruction: None,
+            next_op_code: None,
 
             cycle_action_queue: CycleActionQueue::new(),
             nmi_pending: false,
@@ -88,7 +89,7 @@ impl Cpu {
         self.program_counter = memory.reset_vector();
         self.address_bus = memory.reset_vector();
         self.current_instruction = None;
-        self.next_instruction = None;
+        self.next_op_code = None;
         self.cycle_action_queue = CycleActionQueue::new();
         self.nmi_pending = false;
         self.cycle = 7;
@@ -128,8 +129,8 @@ impl Cpu {
         self.current_instruction
     }
 
-    pub fn next_instruction_address(&self) -> Option<CpuAddress> {
-        self.next_instruction.map(|(_, a)| a)
+    pub fn next_op_code(&self) -> Option<(u8, CpuAddress)> {
+        self.next_op_code
     }
 
     pub fn jammed(&self) -> bool {
@@ -206,7 +207,9 @@ impl Cpu {
              }
 
             InterpretOpCode => {
-                let instruction = self.next_instruction.take().unwrap().0;
+                let (op_code, start_address) = self.next_op_code.unwrap();
+                let instruction = instruction::Instruction::from_memory(
+                    op_code, start_address, self.x, self.y, memory);
                 self.current_instruction = Some(instruction);
                 if instruction.template.access_mode == AccessMode::Imp && instruction.template.op_code != OpCode::BRK {
                     self.suppress_program_counter_increment = true;
@@ -368,9 +371,7 @@ impl Cpu {
             To::Status => self.status = Status::from_byte(self.data_bus),
 
             To::NextOpCode => {
-                let instruction = Instruction::from_memory(
-                    self.address_bus, self.x, self.y, memory);
-                self.next_instruction = Some((instruction, self.address_bus));
+                self.next_op_code = Some((self.data_bus, self.address_bus));
             }
         }
     }

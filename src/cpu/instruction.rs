@@ -73,14 +73,15 @@ pub struct Instruction {
 
 impl Instruction {
     pub fn from_memory(
-        program_counter: CpuAddress,
+        op_code: u8,
+        start_address: CpuAddress,
         x_index: u8,
         y_index: u8,
         mem: &mut CpuMemory,
     ) -> Instruction {
-        let template = INSTRUCTION_TEMPLATES[mem.read(program_counter) as usize];
-        let low = mem.read(program_counter.offset(1));
-        let high = mem.read(program_counter.offset(2));
+        let template = INSTRUCTION_TEMPLATES[op_code as usize];
+        let low = mem.read(start_address.offset(1));
+        let high = mem.read(start_address.offset(2));
 
         let mut page_boundary_crossed = false;
 
@@ -117,7 +118,7 @@ impl Instruction {
                 Argument::Addr(address)
             }
             Rel => {
-                let address = program_counter
+                let address = start_address
                     .offset(low as i8)
                     .advance(template.access_mode.instruction_length());
                 Argument::Addr(address)
