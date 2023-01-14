@@ -20,10 +20,6 @@ impl CycleActionQueue {
         self.queue.is_empty()
     }
 
-    pub fn len(&self) -> usize {
-        self.queue.len()
-    }
-
     pub fn dequeue(&mut self) -> Option<Step> {
         self.queue.pop_front()
     }

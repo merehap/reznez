@@ -117,9 +117,10 @@ impl Nes {
         if self.cycle % 3 == 2 {
             step = self.cpu.step(&mut self.memory.as_cpu_memory());
             if let Some(ref step) = step && step.has_interpret_op_code() {
-                let instruction = Some(self.cpu.current_instruction().unwrap());
-                if log_enabled!(target: "cpu", Info) {
-                    self.log_state(instruction.unwrap());
+                if let Some(instruction) = self.cpu.current_instruction() {
+                    if log_enabled!(target: "cpu", Info) {
+                        self.log_state(instruction);
+                    }
                 }
             }
         }

@@ -86,10 +86,6 @@ pub const FULL_INSTRUCTION_STEP: Step =
     Step::new(From::DataBus                   , To::DataBus               , &[Instruction]                );
 
 pub const NMI_STEPS: &'static [Step] = &[
-    // FIXME: Fix first two steps in accordance to:
-    // https://www.nesdev.org/wiki/CPU_interrupts#IRQ_and_NMI_tick-by-tick_execution
-    Step::new(From::DataBus                   , To::DataBus               , &[]                           ),
-    Step::new(From::ProgramCounterTarget      , To::DataBus               , &[]                           ),
     Step::new(From::ProgramCounterHighByte    , To::TopOfStack            , &[DecrementStackPointer]      ),
     Step::new(From::ProgramCounterLowByte     , To::TopOfStack            , &[DecrementStackPointer]      ),
     Step::new(From::StatusForInterrupt        , To::TopOfStack            , &[DecrementStackPointer]      ),
@@ -208,7 +204,7 @@ pub const OTHER_8_STEPS: &'static [Step] = &[
     FULL_INSTRUCTION_STEP,
 ];
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Step {
     from: From,
     to: To,

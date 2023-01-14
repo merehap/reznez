@@ -26,7 +26,7 @@ pub struct Cpu {
     next_op_code: Option<(u8, CpuAddress)>,
 
     cycle_action_queue: CycleActionQueue,
-    nmi_pending: bool,
+    nmi_status: NmiStatus,
 
     dma_port: DmaPort,
 
@@ -66,7 +66,7 @@ impl Cpu {
             next_op_code: None,
 
             cycle_action_queue: CycleActionQueue::new(),
-            nmi_pending: false,
+            nmi_status: NmiStatus::Inactive,
             dma_port: memory.ports().dma.clone(),
 
             // See startup sequence in NES-manual so this isn't hard-coded.
@@ -91,7 +91,7 @@ impl Cpu {
         self.current_instruction = None;
         self.next_op_code = None;
         self.cycle_action_queue = CycleActionQueue::new();
-        self.nmi_pending = false;
+        self.nmi_status = NmiStatus::Inactive;
         self.cycle = 7;
         self.jammed = false;
         // TODO: APU resets?
@@ -138,11 +138,11 @@ impl Cpu {
     }
 
     pub fn nmi_pending(&self) -> bool {
-        self.nmi_pending
+        self.nmi_status == NmiStatus::Pending
     }
 
     pub fn schedule_nmi(&mut self) {
-        self.nmi_pending = true;
+        self.nmi_status = NmiStatus::Pending;
     }
 
     pub fn step(&mut self, memory: &mut CpuMemory) -> Option<Step> {
@@ -163,15 +163,6 @@ impl Cpu {
             self.cycle_action_queue.enqueue_op_code_read();
         }
 
-        if self.nmi_pending {
-            info!(target: "cpu", "Enqueueing NMI at cycle {}. {} cycle(s) until start.",
-                self.cycle,
-                self.cycle_action_queue.len(),
-            );
-            self.cycle_action_queue.enqueue_nmi();
-            self.nmi_pending = false;
-        }
-
         let step = self.cycle_action_queue.dequeue()
             .expect("Ran out of CycleActions!");
         self.copy_data(memory, step.from(), step.to());
@@ -180,6 +171,11 @@ impl Cpu {
         }
 
         self.suppress_program_counter_increment = false;
+
+        if self.nmi_status == NmiStatus::Pending {
+            info!(target: "cpu", "NMI will start after the current instruction completes.");
+            self.nmi_status = NmiStatus::Ready;
+        }
 
         self.cycle += 1;
 
@@ -212,6 +208,15 @@ impl Cpu {
 
             InterpretOpCode => {
                 let (op_code, start_address) = self.next_op_code.take().unwrap();
+                if self.nmi_status == NmiStatus::Active {
+                    // FIXME: This should happen during the first cycle of the next instruction.
+                    self.nmi_status = NmiStatus::Inactive;
+                    self.suppress_program_counter_increment = true;
+                    self.current_instruction = None;
+                    self.cycle_action_queue.enqueue_nmi();
+                    return;
+                }
+
                 let instruction = instruction::Instruction::from_memory(
                     op_code, start_address, self.x, self.y, memory);
                 self.current_instruction = Some(instruction);
@@ -375,7 +380,19 @@ impl Cpu {
             To::Status => self.status = Status::from_byte(self.data_bus),
 
             To::NextOpCode => {
-                self.next_op_code = Some((self.data_bus, self.address_bus));
+                match self.nmi_status {
+                    NmiStatus::Inactive | NmiStatus::Pending => {
+                        self.next_op_code = Some((self.data_bus, self.address_bus));
+                    }
+                    NmiStatus::Ready => {
+                        info!(target: "cpu", "Starting NMI");
+                        self.nmi_status = NmiStatus::Active;
+                        // NMI has BRK's code point (0x00). TODO: Set the data bus to 0x00?
+                        self.next_op_code = Some((0x00, self.address_bus));
+                        self.suppress_program_counter_increment = true;
+                    }
+                    NmiStatus::Active => unreachable!("TODO: Eventually this might set status to Inactive."),
+                }
             }
         }
     }
@@ -696,6 +713,14 @@ fn is_neg(value: u8) -> bool {
 pub enum ProgramCounterSource {
     ResetVector,
     Override(CpuAddress),
+}
+
+#[derive(PartialEq, Eq)]
+enum NmiStatus {
+    Inactive,
+    Pending,
+    Ready,
+    Active,
 }
 
 enum InstructionResult {
