@@ -707,6 +707,8 @@ mod tests {
     use crate::cartridge;
     use crate::memory::memory;
     use crate::memory::memory::Memory;
+    use crate::util::logger;
+    use crate::util::logger::Logger;
 
     use super::*;
 
@@ -763,6 +765,8 @@ mod tests {
 
     #[test]
     fn nmi_after_instruction() {
+        logger::init(Logger { log_cpu: true }).unwrap();
+
         let nmi_vector = CpuAddress::new(0xC000);
         let reset_vector = CpuAddress::new(0x8000);
         let mut mem = memory_with_nop_cartridge(nmi_vector, reset_vector);
