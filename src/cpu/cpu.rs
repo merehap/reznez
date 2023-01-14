@@ -154,9 +154,13 @@ impl Cpu {
             self.cycle_action_queue.enqueue_dma_transfer(self.cycle);
         }
 
+        if self.next_op_code.is_some() {
+            self.cycle_action_queue.enqueue_op_code_interpret();
+        }
+
         if self.cycle_action_queue.is_empty() {
             // Get ready to start the next instruction.
-            self.cycle_action_queue.enqueue_instruction_fetch();
+            self.cycle_action_queue.enqueue_op_code_read();
         }
 
         if self.nmi_pending {
@@ -207,7 +211,7 @@ impl Cpu {
              }
 
             InterpretOpCode => {
-                let (op_code, start_address) = self.next_op_code.unwrap();
+                let (op_code, start_address) = self.next_op_code.take().unwrap();
                 let instruction = instruction::Instruction::from_memory(
                     op_code, start_address, self.x, self.y, memory);
                 self.current_instruction = Some(instruction);

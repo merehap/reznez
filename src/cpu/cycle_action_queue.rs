@@ -32,8 +32,12 @@ impl CycleActionQueue {
         self.queue.push_front(step);
     }
 
-    pub fn enqueue_instruction_fetch(&mut self) {
-        self.append(READ_AND_INTERPRET_OP_CODE_STEPS);
+    pub fn enqueue_op_code_read(&mut self) {
+        self.queue.push_front(READ_OP_CODE_STEP);
+    }
+
+    pub fn enqueue_op_code_interpret(&mut self) {
+        self.queue.push_front(INTERPRET_OP_CODE_STEP);
     }
 
     pub fn enqueue_instruction(&mut self, instruction: Instruction) {
