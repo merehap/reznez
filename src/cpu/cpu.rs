@@ -165,6 +165,7 @@ impl Cpu {
 
         let step = self.cycle_action_queue.dequeue()
             .expect("Ran out of CycleActions!");
+        //println!("\tPC: {}, Cycle: {}, {:?}", self.program_counter, self.cycle, step);
         self.copy_data(memory, step.from(), step.to());
         for &action in step.actions() {
             self.execute_cycle_action(memory, action);
@@ -226,8 +227,6 @@ impl Cpu {
 
                 if instruction.template.access_mode == AccessMode::Rel {
                     self.execute_cycle_action(memory, Instruction);
-                } else if instruction.template.cycle_count as u8 == 2 {
-                    self.execute_cycle_action(memory, ExecuteOpCode);
                 } else {
                     self.cycle_action_queue.enqueue_instruction(instruction);
                 }
@@ -250,6 +249,8 @@ impl Cpu {
             }
 
             ExecuteOpCode => {
+                let value = self.previous_data_bus_value;
+
                 use OpCode::*;
                 match self.current_instruction.unwrap().template.op_code {
                     // Implicit (and Accumulator) op codes.
@@ -277,33 +278,33 @@ impl Cpu {
                     NOP => { /* Do nothing. */ },
 
                     // Immediate op codes.
-                    LDA => self.a = self.nz(self.data_bus),
-                    LDX => self.x = self.nz(self.data_bus),
-                    LDY => self.y = self.nz(self.data_bus),
-                    CMP => self.cmp(self.data_bus),
-                    CPX => self.cpx(self.data_bus),
-                    CPY => self.cpy(self.data_bus),
-                    ORA => self.a = self.nz(self.a | self.data_bus),
-                    AND => self.a = self.nz(self.a & self.data_bus),
-                    EOR => self.a = self.nz(self.a ^ self.data_bus),
-                    ADC => self.a = self.adc(self.data_bus),
-                    SBC => self.a = self.sbc(self.data_bus),
+                    LDA => self.a = self.nz(value),
+                    LDX => self.x = self.nz(value),
+                    LDY => self.y = self.nz(value),
+                    CMP => self.cmp(value),
+                    CPX => self.cpx(value),
+                    CPY => self.cpy(value),
+                    ORA => self.a = self.nz(self.a | value),
+                    AND => self.a = self.nz(self.a & value),
+                    EOR => self.a = self.nz(self.a ^ value),
+                    ADC => self.a = self.adc(value),
+                    SBC => self.a = self.sbc(value),
                     LAX => {
-                        self.a = self.data_bus;
-                        self.x = self.data_bus;
-                        self.nz(self.data_bus);
+                        self.a = value;
+                        self.x = value;
+                        self.nz(value);
                     }
                     ANC => {
-                        self.a = self.nz(self.a & self.data_bus);
+                        self.a = self.nz(self.a & value);
                         self.status.carry = self.status.negative;
                     }
                     ALR => {
-                        self.a = self.nz(self.a & self.data_bus);
+                        self.a = self.nz(self.a & value);
                         self.a = self.lsr(self.a);
                     }
                     ARR => {
                         // TODO: What a mess.
-                        let value = (self.a & self.data_bus) >> 1;
+                        let value = (self.a & value) >> 1;
                         self.a = self.nz(value | if self.status.carry {0x80} else {0x00});
                         self.status.carry = self.a & 0x40 != 0;
                         self.status.overflow =
@@ -311,8 +312,8 @@ impl Cpu {
                             ((self.a >> 5) & 0x01)) != 0;
                     }
                     AXS => {
-                        self.status.carry = self.a & self.x >= self.data_bus;
-                        self.x = self.nz((self.a & self.x).wrapping_sub(self.data_bus));
+                        self.status.carry = self.a & self.x >= value;
+                        self.x = self.nz((self.a & self.x).wrapping_sub(value));
                     }
 
                     op_code => todo!("{:?}", op_code),

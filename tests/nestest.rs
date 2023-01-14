@@ -156,7 +156,7 @@ impl State {
 
 impl fmt::Display for State {
     fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
-        write!(f, "State {{PC:{}, CodePoint:0x{:02X}, OpCode:{:?}, A:0x{:02X}, X:0x{:02X}, Y:0x{:02X}, P:{} (0x{:2X}), S:0x{:02X}, C:{:05}, PPUC:{:03}, PPUS:{:03}}}",
+        write!(f, "State {{PC:{}, CodePoint:0x{:02X}, OpCode:{:?}, A:0x{:02X}, X:0x{:02X}, Y:0x{:02X}, P:{} (0x{:02X}), S:0x{:02X}, C:{:05}, PPUC:{:03}, PPUS:{:03}}}",
                self.program_counter, self.code_point, self.op_code, self.a,
                self.x, self.y, self.p.to_string(), self.p.to_register_byte(), self.s, self.c, self.ppu_cycle, self.ppu_scanline)
     }

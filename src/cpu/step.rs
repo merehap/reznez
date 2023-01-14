@@ -73,11 +73,12 @@ pub const INTERPRET_OP_CODE_STEP: Step =
     Step::new(From::ProgramCounterTarget      , To::DataBus               , &[InterpretOpCode, IncrementProgramCounter]);
 
 pub const IMPLICIT_ADDRESSING_STEPS: &'static [Step] = &[
-    Step::new(From::ProgramCounterTarget      , To::DataBus               , &[ExecuteOpCode]),
+    // Read the NEXT op code, execute the CURRENT op code.
+    Step::new(From::ProgramCounterTarget      , To::NextOpCode            , &[ExecuteOpCode, IncrementProgramCounter]),
 ];
-
 pub const IMMEDIATE_ADDRESSING_STEPS: &'static [Step] = &[
-    Step::new(From::ProgramCounterTarget      , To::DataBus               , &[ExecuteOpCode, IncrementProgramCounter]),
+    // Read the NEXT op code, execute the CURRENT op code.
+    Step::new(From::ProgramCounterTarget      , To::NextOpCode            , &[ExecuteOpCode, IncrementProgramCounter]),
 ];
 
 pub const NOP_STEP: Step =
