@@ -39,7 +39,7 @@ fn template_to_instruction(template: InstructionTemplate) -> CpuInstruction {
 
         (Imp,   _, _) => IMPLICIT_ADDRESSING_STEPS,
         (Imm,   _, _) => IMMEDIATE_ADDRESSING_STEPS,
-
+        (Abs, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP, _) => ABSOLUTE_READ_STEPS,
         (_  ,   _, 2) => OTHER_2_STEPS,
         (_  ,   _, 3) => OTHER_3_STEPS,
         (_  ,   _, 4) => OTHER_4_STEPS,
@@ -78,6 +78,12 @@ pub const IMPLICIT_ADDRESSING_STEPS: &'static [Step] = &[
 ];
 pub const IMMEDIATE_ADDRESSING_STEPS: &'static [Step] = &[
     // Read the NEXT op code, execute the CURRENT op code.
+    Step::new(From::ProgramCounterTarget      , To::NextOpCode            , &[ExecuteOpCode, IncrementProgramCounter]),
+];
+
+pub const ABSOLUTE_READ_STEPS: &'static [Step] = &[
+    Step::new(From::ProgramCounterTarget      , To::DataBus               , &[StorePendingAddressLowByte, IncrementProgramCounter]),
+    Step::new(From::PendingAddressTarget      , To::DataBus               , &[]),
     Step::new(From::ProgramCounterTarget      , To::NextOpCode            , &[ExecuteOpCode, IncrementProgramCounter]),
 ];
 

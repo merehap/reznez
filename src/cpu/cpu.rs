@@ -165,7 +165,6 @@ impl Cpu {
 
         let step = self.cycle_action_queue.dequeue()
             .expect("Ran out of CycleActions!");
-        //println!("\tPC: {}, Cycle: {}, {:?}", self.program_counter, self.cycle, step);
         self.copy_data(memory, step.from(), step.to());
         for &action in step.actions() {
             self.execute_cycle_action(memory, action);
@@ -314,6 +313,12 @@ impl Cpu {
                     AXS => {
                         self.status.carry = self.a & self.x >= value;
                         self.x = self.nz((self.a & self.x).wrapping_sub(value));
+                    }
+
+                    BIT => {
+                        self.status.negative = value & 0b1000_0000 != 0;
+                        self.status.overflow = value & 0b0100_0000 != 0;
+                        self.status.zero = value & self.a == 0;
                     }
 
                     op_code => todo!("{:?}", op_code),
