@@ -9,16 +9,13 @@ lazy_static! {
     pub static ref INSTRUCTIONS: [CpuInstruction; 256] =
         INSTRUCTION_TEMPLATES.map(template_to_instruction);
 
-    pub static ref OAM_DMA_TRANSFER_STEPS: [Step; 513] = {
-        let mut steps = Vec::with_capacity(513);
+    pub static ref OAM_DMA_TRANSFER_STEPS: [Step; 512] = {
+        let read_write = &[
+            Step::new(From::AddressBusTarget, To::DataBus, &[]),
+            Step::new(From::DataBus         , To::OamData, &[IncrementAddressBus]),
+        ];
 
-        steps.push(Step::new(From::DataBus, To::DataBus, &[SetAddressBusToOamDmaStart]));
-        for _ in 0..256 {
-            steps.push(Step::new(From::AddressBusTarget, To::DataBus, &[]));
-            steps.push(Step::new(From::DataBus         , To::OamData, &[IncrementAddressBus]));
-        }
-
-        steps.try_into().unwrap()
+        read_write.repeat(256).try_into().unwrap()
     };
 }
 

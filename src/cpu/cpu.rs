@@ -150,10 +150,6 @@ impl Cpu {
             return None;
         }
 
-        if self.dma_port.take_page().is_some() {
-            self.cycle_action_queue.enqueue_dma_transfer(self.cycle);
-        }
-
         if self.next_op_code.is_some() {
             self.cycle_action_queue.enqueue_op_code_interpret();
         }
@@ -386,6 +382,15 @@ impl Cpu {
             To::Status => self.status = Status::from_byte(self.data_bus),
 
             To::NextOpCode => {
+                if self.dma_port.take_page().is_some() {
+                    self.cycle_action_queue.enqueue_dma_transfer(self.cycle);
+                    self.suppress_program_counter_increment = true;
+                    // Seems like a hack. Normally this would be a declarative part of the step.
+                    // It also may just be the wrong address bus value for this cycle.
+                    self.address_bus = self.dma_port.start_address();
+                    return;
+                }
+
                 match self.nmi_status {
                     NmiStatus::Inactive | NmiStatus::Pending => {
                         self.next_op_code = Some((self.data_bus, self.address_bus));
