@@ -23,6 +23,8 @@ pub enum CycleAction {
 #[derive(Clone, Copy, Debug)]
 pub enum From {
     DataBus,
+    PendingAddress,
+
     AddressBusTarget,
 
     ProgramCounterTarget,

@@ -35,6 +35,7 @@ pub struct Cpu {
     jammed: bool,
 
     address_bus: CpuAddress,
+    previous_address_bus_value: CpuAddress,
     data_bus: u8,
     previous_data_bus_value: u8,
     pending_address_low: u8,
@@ -75,6 +76,7 @@ impl Cpu {
             jammed: false,
 
             address_bus: CpuAddress::new(0x0000),
+            previous_address_bus_value: CpuAddress::new(0x0000),
             data_bus: 0,
             previous_data_bus_value: 0,
             pending_address_low: 0,
@@ -318,6 +320,12 @@ impl Cpu {
                         self.status.zero = value & self.a == 0;
                     }
 
+                    // Write op codes.
+                    STA => memory.write(self.address_bus, self.a),
+                    STX => memory.write(self.address_bus, self.x),
+                    STY => memory.write(self.address_bus, self.y),
+                    SAX => memory.write(self.address_bus, self.a & self.x),
+
                     op_code => todo!("{:?}", op_code),
                 }
             }
@@ -327,10 +335,15 @@ impl Cpu {
     // Note that most source/destination combos are invalid.
     // In particular, there is no way to directly copy from one memory location to another.
     fn copy_data(&mut self, memory: &mut CpuMemory, source: From, destination: To) {
+        self.previous_address_bus_value = self.address_bus;
         self.previous_data_bus_value = self.data_bus;
 
         self.data_bus = match source {
             From::DataBus => self.data_bus,
+            From::PendingAddress => {
+                self.address_bus = CpuAddress::from_low_high(self.pending_address_low, self.data_bus);
+                self.data_bus
+            }
             From::AddressBusTarget => {
                 memory.read(self.address_bus)
             },
@@ -384,6 +397,7 @@ impl Cpu {
 
             To::NextOpCode => {
                 if self.dma_port.take_page().is_some() {
+                    info!(target: "cpuoperation", "Starting DMA transfer at {}.", self.dma_port.start_address());
                     self.cycle_action_queue.enqueue_dma_transfer(self.cycle);
                     self.suppress_program_counter_increment = true;
                     // Seems like a hack. Normally this would be a declarative part of the step.
