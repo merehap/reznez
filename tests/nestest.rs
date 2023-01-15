@@ -29,12 +29,16 @@ fn nestest() {
         stop_frame: None,
         target_frame_rate: TargetFrameRate::Unbounded,
         override_program_counter: Some(CpuAddress::new(0xC000)),
-        log_cpu: true,
+        log_cpu_operations: true,
+        log_cpu_steps: true,
         frame_dump: false,
         analysis: false,
     };
 
-    logger::init(Logger { log_cpu: opt.log_cpu }).unwrap();
+    logger::init(Logger {
+        log_cpu_operations: true,
+        log_cpu_steps: true,
+    }).unwrap();
 
     let config = Config::new(&opt);
     let mut nes = Nes::new(&config);

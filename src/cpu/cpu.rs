@@ -161,6 +161,7 @@ impl Cpu {
 
         let step = self.cycle_action_queue.dequeue()
             .expect("Ran out of CycleActions!");
+        info!(target: "cpustep", "\tPC: {}, Cycle: {}, {:?}", self.program_counter, self.cycle, step);
         self.copy_data(memory, step.from(), step.to());
         for &action in step.actions() {
             self.execute_cycle_action(memory, action);
@@ -169,7 +170,7 @@ impl Cpu {
         self.suppress_program_counter_increment = false;
 
         if self.nmi_status == NmiStatus::Pending {
-            info!(target: "cpu", "NMI will start after the current instruction completes.");
+            info!(target: "cpuoperation", "NMI will start after the current instruction completes.");
             self.nmi_status = NmiStatus::Ready;
         }
 
@@ -396,7 +397,7 @@ impl Cpu {
                         self.next_op_code = Some((self.data_bus, self.address_bus));
                     }
                     NmiStatus::Ready => {
-                        info!(target: "cpu", "Starting NMI");
+                        info!(target: "cpuoperation", "Starting NMI");
                         self.nmi_status = NmiStatus::Active;
                         // NMI has BRK's code point (0x00). TODO: Set the data bus to 0x00?
                         self.next_op_code = Some((0x00, self.address_bus));
@@ -422,7 +423,7 @@ impl Cpu {
         let mut branch_taken = false;
         let mut oops = false;
         if instruction.should_add_oops_cycle() {
-            info!(target: "cpu", "'Oops' cycle added.");
+            info!(target: "cpuoperation", "'Oops' cycle added.");
             oops = true;
         }
 
@@ -703,11 +704,11 @@ impl Cpu {
 
         self.suppress_program_counter_increment = true;
 
-        info!(target: "cpu", "Branch taken, cycle added.");
+        info!(target: "cpuoperation", "Branch taken, cycle added.");
 
         let oops = self.program_counter.offset(1).page() != destination.page();
         if oops {
-            info!(target: "cpu", "Branch crossed page boundary, 'Oops' cycle added.");
+            info!(target: "cpuoperation", "Branch crossed page boundary, 'Oops' cycle added.");
         }
 
         self.program_counter = destination;
@@ -805,7 +806,7 @@ mod tests {
 
     #[test]
     fn nmi_after_instruction() {
-        logger::init(Logger { log_cpu: true }).unwrap();
+        logger::init(Logger { log_cpu_operations: true, log_cpu_steps: true }).unwrap();
 
         let nmi_vector = CpuAddress::new(0xC000);
         let reset_vector = CpuAddress::new(0x8000);

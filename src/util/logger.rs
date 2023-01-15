@@ -6,16 +6,27 @@ pub fn init(logger: Logger) -> Result<(), SetLoggerError> {
 }
 
 pub struct Logger {
-    pub log_cpu: bool,
+    pub log_cpu_operations: bool,
+    pub log_cpu_steps: bool,
 }
 
 impl log::Log for Logger {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        if !self.log_cpu && metadata.target() == "cpu" {
-            return false;
+        match metadata.target() {
+            "" => true,
+            "cpuoperation" => self.log_cpu_operations,
+            "cpustep" => self.log_cpu_steps,
+            target => {
+                let chunks: Vec<&str> = target.split("::").collect();
+                match &chunks[..] {
+                    &["reznez", ..] => true,
+                    &["winit", ..] => false,
+                    &["wgpu_hal", ..] => false,
+                    &["wgpu_core", ..] => false,
+                    _ => panic!("Unexpected logger target: {}", target),
+                }
+            }
         }
-
-        true
     }
 
     fn log(&self, record: &Record) {

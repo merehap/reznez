@@ -64,7 +64,8 @@ fn framematch() {
             stop_frame: None,
             target_frame_rate: TargetFrameRate::Unbounded,
             override_program_counter: None,
-            log_cpu: false,
+            log_cpu_operations: false,
+            log_cpu_steps: false,
             frame_dump: false,
             analysis: false,
         };

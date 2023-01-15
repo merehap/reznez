@@ -86,8 +86,11 @@ pub struct Opt {
     #[structopt(name = "stopframe", long)]
     pub stop_frame: Option<u64>,
 
-    #[structopt(name = "logcpu", long)]
-    pub log_cpu: bool,
+    #[structopt(name = "logcpuoperations", long)]
+    pub log_cpu_operations: bool,
+
+    #[structopt(name = "logcpusteps", long)]
+    pub log_cpu_steps: bool,
 
     #[structopt(name = "framedump", long)]
     pub frame_dump: bool,

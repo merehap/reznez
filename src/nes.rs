@@ -104,7 +104,7 @@ impl Nes {
             let step_result = self.step();
             if step_result.is_last_cycle_of_frame {
                 if self.cpu.jammed() {
-                    println!("CPU is jammed!");
+                    info!("CPU is jammed!");
                 }
 
                 break;
@@ -118,7 +118,7 @@ impl Nes {
             step = self.cpu.step(&mut self.memory.as_cpu_memory());
             if let Some(ref step) = step && step.has_interpret_op_code() {
                 if let Some(instruction) = self.cpu.current_instruction() {
-                    if log_enabled!(target: "cpu", Info) {
+                    if log_enabled!(target: "cpuoperation", Info) {
                         self.log_state(instruction);
                     }
                 }
