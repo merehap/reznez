@@ -275,10 +275,6 @@ impl Cpu {
                     CLI => self.status.interrupts_disabled = false,
                     SEI => self.status.interrupts_disabled = true,
                     CLV => self.status.overflow = false,
-                    ASL => Cpu::asl(&mut self.status, rmw_operand),
-                    ROL => Cpu::rol(&mut self.status, rmw_operand),
-                    LSR => Cpu::lsr(&mut self.status, rmw_operand),
-                    ROR => Cpu::ror(&mut self.status, rmw_operand),
                     NOP => { /* Do nothing. */ },
 
                     // Immediate op codes.
@@ -332,6 +328,49 @@ impl Cpu {
                     STY => memory.write(self.address_bus, self.y),
                     SAX => memory.write(self.address_bus, self.a & self.x),
 
+
+                    // Read-Modify-Write op codes.
+                    ASL => Cpu::asl(&mut self.status, rmw_operand),
+                    ROL => Cpu::rol(&mut self.status, rmw_operand),
+                    LSR => Cpu::lsr(&mut self.status, rmw_operand),
+                    ROR => Cpu::ror(&mut self.status, rmw_operand),
+                    INC => {
+                        self.data_bus = self.data_bus.wrapping_add(1);
+                        Cpu::nz_status(&mut self.status, self.data_bus);
+                    }
+                    DEC => {
+                        self.data_bus = self.data_bus.wrapping_sub(1);
+                        Cpu::nz_status(&mut self.status, self.data_bus);
+                    }
+                    SLO => {
+                        Cpu::asl(&mut self.status, &mut self.data_bus);
+                        self.a |= self.data_bus;
+                        self.nz(self.a);
+                    }
+                    SRE => {
+                        Cpu::lsr(&mut self.status, &mut self.data_bus);
+                        self.a ^= self.data_bus;
+                        self.nz(self.a);
+                    }
+                    RLA => {
+                        Cpu::rol(&mut self.status, &mut self.data_bus);
+                        self.a &= self.data_bus;
+                        self.nz(self.a);
+                    },
+                    RRA => {
+                        Cpu::ror(&mut self.status, &mut self.data_bus);
+                        self.a = self.adc(self.data_bus);
+                        self.nz(self.a);
+                    }
+                    ISC => {
+                        self.data_bus = self.data_bus.wrapping_add(1);
+                        self.a = self.sbc(self.data_bus);
+                    }
+                    DCP => {
+                        self.data_bus = self.data_bus.wrapping_sub(1);
+                        self.cmp(self.data_bus);
+                    },
+
                     op_code => todo!("{:?}", op_code),
                 }
             }
@@ -383,6 +422,7 @@ impl Cpu {
 
         match destination {
             To::DataBus => { /* The data bus was already copied to regardless of source. */ },
+            To::AddressBusTarget => memory.write(self.address_bus, self.data_bus),
             To::TopOfStack => {
                 self.address_bus = memory.stack_pointer_address();
                 memory.write(self.address_bus, self.data_bus);

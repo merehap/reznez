@@ -53,6 +53,7 @@ impl From {
 pub enum To {
     DataBus,
 
+    AddressBusTarget,
     TopOfStack,
 
     ProgramCounterHighByte,
