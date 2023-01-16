@@ -248,6 +248,12 @@ impl Cpu {
 
             ExecuteOpCode => {
                 let value = self.previous_data_bus_value;
+                let access_mode = self.current_instruction.unwrap().template.access_mode;
+                let rmw_operand = if access_mode == AccessMode::Imp {
+                    &mut self.a
+                } else {
+                    &mut self.data_bus
+                };
 
                 use OpCode::*;
                 match self.current_instruction.unwrap().template.op_code {
@@ -269,10 +275,10 @@ impl Cpu {
                     CLI => self.status.interrupts_disabled = false,
                     SEI => self.status.interrupts_disabled = true,
                     CLV => self.status.overflow = false,
-                    ASL => self.a = self.asl(self.a),
-                    ROL => self.a = self.rol(self.a),
-                    LSR => self.a = self.lsr(self.a),
-                    ROR => self.a = self.ror(self.a),
+                    ASL => Cpu::asl(&mut self.status, rmw_operand),
+                    ROL => Cpu::rol(&mut self.status, rmw_operand),
+                    LSR => Cpu::lsr(&mut self.status, rmw_operand),
+                    ROR => Cpu::ror(&mut self.status, rmw_operand),
                     NOP => { /* Do nothing. */ },
 
                     // Immediate op codes.
@@ -298,7 +304,7 @@ impl Cpu {
                     }
                     ALR => {
                         self.a = self.nz(self.a & value);
-                        self.a = self.lsr(self.a);
+                        Cpu::lsr(&mut self.status, &mut self.a);
                     }
                     ARR => {
                         // TODO: What a mess.
@@ -540,54 +546,54 @@ impl Cpu {
 
             (ASL, Imp) => unreachable!(),
             (ASL, Addr(addr)) => {
-                let value = memory.read(addr);
-                let value = self.asl(value);
+                let mut value = memory.read(addr);
+                Cpu::asl(&mut self.status, &mut value);
                 memory.write(addr, value);
             }
             (ROL, Imp) => unreachable!(),
             (ROL, Addr(addr)) => {
-                let value = memory.read(addr);
-                let value = self.rol(value);
+                let mut value = memory.read(addr);
+                Cpu::rol(&mut self.status, &mut value);
                 memory.write(addr, value);
             }
             (LSR, Imp) => unreachable!(),
             (LSR, Addr(addr)) => {
-                let value = memory.read(addr);
-                let value = self.lsr(value);
+                let mut value = memory.read(addr);
+                Cpu::lsr(&mut self.status, &mut value);
                 memory.write(addr, value);
             }
             (ROR, Imp) => unreachable!(),
             (ROR, Addr(addr)) => {
-                let value = memory.read(addr);
-                let value = self.ror(value);
+                let mut value = memory.read(addr);
+                Cpu::ror(&mut self.status, &mut value);
                 memory.write(addr, value);
             }
 
             // Undocumented op codes.
             (SLO, Addr(addr)) => {
-                let value = memory.read(addr);
-                let value = self.asl(value);
+                let mut value = memory.read(addr);
+                Cpu::asl(&mut self.status, &mut value);
                 memory.write(addr, value);
                 self.a |= value;
                 self.nz(self.a);
             }
             (RLA, Addr(addr)) => {
-                let value = memory.read(addr);
-                let value = self.rol(value);
+                let mut value = memory.read(addr);
+                Cpu::rol(&mut self.status, &mut value);
                 memory.write(addr, value);
                 self.a &= value;
                 self.nz(self.a);
             }
             (SRE, Addr(addr)) => {
-                let value = memory.read(addr);
-                let value = self.lsr(value);
+                let mut value = memory.read(addr);
+                Cpu::lsr(&mut self.status, &mut value);
                 memory.write(addr, value);
                 self.a ^= value;
                 self.nz(self.a);
             }
             (RRA, Addr(addr)) => {
-                let value = memory.read(addr);
-                let value = self.ror(value);
+                let mut value = memory.read(addr);
+                Cpu::ror(&mut self.status, &mut value);
                 memory.write(addr, value);
                 self.a = self.adc(value);
                 self.nz(self.a);
@@ -668,36 +674,38 @@ impl Cpu {
         self.status.carry = self.y >= value;
     }
 
-    fn asl(&mut self, value: u8) -> u8 {
-        self.status.carry = (value >> 7) == 1;
-        self.nz(value << 1)
+    fn asl(status: &mut Status, value: &mut u8) {
+        status.carry = (*value >> 7) == 1;
+        *value <<= 1;
+        Cpu::nz_status(status, *value);
     }
 
-    fn rol(&mut self, value: u8) -> u8 {
-        let old_carry = self.status.carry;
-        self.status.carry = (value >> 7) == 1;
-        let mut result = value << 1;
+    fn rol(status: &mut Status, value: &mut u8) {
+        let old_carry = status.carry;
+        status.carry = (*value >> 7) == 1;
+        *value <<= 1;
         if old_carry {
-            result |= 1;
+            *value |= 1;
         }
 
-        self.nz(result)
+        Cpu::nz_status(status, *value);
     }
 
-    fn ror(&mut self, value: u8) -> u8 {
-        let old_carry = self.status.carry;
-        self.status.carry = (value & 1) == 1;
-        let mut result = value >> 1;
+    fn ror(status: &mut Status, value: &mut u8) {
+        let old_carry = status.carry;
+        status.carry = (*value & 1) == 1;
+        *value >>= 1;
         if old_carry {
-            result |= 0b1000_0000;
+            *value |= 0b1000_0000;
         }
 
-        self.nz(result)
+        Cpu::nz_status(status, *value);
     }
 
-    fn lsr(&mut self, value: u8) -> u8 {
-        self.status.carry = (value & 1) == 1;
-        self.nz(value >> 1)
+    fn lsr(status: &mut Status, value: &mut u8) {
+        status.carry = (*value & 1) == 1;
+        *value >>= 1;
+        Cpu::nz_status(status, *value);
     }
 
     // Set or unset the negative (N) and zero (Z) fields based upon "value".
@@ -705,6 +713,11 @@ impl Cpu {
         self.status.negative = is_neg(value);
         self.status.zero = value == 0;
         value
+    }
+
+    fn nz_status(status: &mut Status, value: u8) {
+        status.negative = is_neg(value);
+        status.zero = value == 0;
     }
 
     fn maybe_branch(
