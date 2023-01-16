@@ -24,11 +24,13 @@ pub enum CycleAction {
 pub enum From {
     DataBus,
     PendingAddress,
+    PendingZeroPageAddress,
 
     AddressBusTarget,
 
     ProgramCounterTarget,
     PendingAddressTarget,
+    PendingZeroPageTarget,
     PendingProgramCounterTarget,
 
     TopOfStack,

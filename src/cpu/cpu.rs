@@ -389,6 +389,10 @@ impl Cpu {
                 self.address_bus = CpuAddress::from_low_high(self.pending_address_low, self.data_bus);
                 self.data_bus
             }
+            From::PendingZeroPageAddress => {
+                self.address_bus = CpuAddress::from_low_high(self.data_bus, 0);
+                self.data_bus
+            }
             From::AddressBusTarget => {
                 memory.read(self.address_bus)
             },
@@ -398,6 +402,10 @@ impl Cpu {
             },
             From::PendingAddressTarget => {
                 self.address_bus = CpuAddress::from_low_high(self.pending_address_low, self.data_bus);
+                memory.read(self.address_bus)
+            }
+            From::PendingZeroPageTarget => {
+                self.address_bus = CpuAddress::from_low_high(self.data_bus, 0);
                 memory.read(self.address_bus)
             }
             From::PendingProgramCounterTarget => {
