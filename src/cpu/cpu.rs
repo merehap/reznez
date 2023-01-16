@@ -39,6 +39,7 @@ pub struct Cpu {
     data_bus: u8,
     previous_data_bus_value: u8,
     pending_address_low: u8,
+    address_bus_carry: bool,
 
     suppress_program_counter_increment: bool,
 }
@@ -80,6 +81,7 @@ impl Cpu {
             data_bus: 0,
             previous_data_bus_value: 0,
             pending_address_low: 0,
+            address_bus_carry: false,
 
             suppress_program_counter_increment: false,
         }
@@ -90,6 +92,7 @@ impl Cpu {
         self.status.interrupts_disabled = true;
         self.program_counter = memory.reset_vector();
         self.address_bus = memory.reset_vector();
+        self.address_bus_carry = false;
         self.current_instruction = None;
         self.next_op_code = None;
         self.cycle_action_queue = CycleActionQueue::new();
@@ -191,7 +194,7 @@ impl Cpu {
             }
             // TODO: Make sure this isn't supposed to wrap within the same page.
             IncrementAddressBus => { self.address_bus.inc(); }
-            IncrementAddressBusLow => self.address_bus.inc_low(),
+            IncrementAddressBusLow => { self.address_bus.offset_low(1); }
             SetAddressBusToOamDmaStart => self.address_bus = self.dma_port.start_address(),
             StorePendingAddressLowByte => self.pending_address_low = self.previous_data_bus_value,
 
@@ -203,7 +206,27 @@ impl Cpu {
             CheckNegativeAndZero => {
                 self.status.negative = (self.data_bus >> 7) == 1;
                 self.status.zero = self.data_bus == 0;
-             }
+            }
+
+            XOffset => {
+                (self.pending_address_low, self.address_bus_carry) =
+                    self.pending_address_low.overflowing_add(self.x);
+            }
+            YOffset => {
+                (self.pending_address_low, self.address_bus_carry) =
+                    self.pending_address_low.overflowing_add(self.y);
+            }
+            MaybeInsertOopsStep => {
+                if self.address_bus_carry {
+                    self.cycle_action_queue.skip_to_front(ADDRESS_BUS_READ_STEP);
+                }
+            }
+            AddCarryToAddressBus => {
+                if self.address_bus_carry {
+                    self.address_bus_carry = false;
+                    self.address_bus.offset_high(1);
+                }
+            }
 
             InterpretOpCode => {
                 let (op_code, start_address) = self.next_op_code.take().unwrap();

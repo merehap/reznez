@@ -15,6 +15,11 @@ pub enum CycleAction {
 
     CheckNegativeAndZero,
 
+    XOffset,
+    YOffset,
+    MaybeInsertOopsStep,
+    AddCarryToAddressBus,
+
     Instruction,
     InterpretOpCode,
     ExecuteOpCode,

@@ -45,17 +45,22 @@ impl CpuAddress {
         CpuAddress::new((i32::from(self.0)).wrapping_add(i32::from(value)) as u16)
     }
 
+    pub fn offset_low(&mut self, value: u8) -> bool {
+        let (low, high) = self.to_low_high();
+        let (low, carry) = low.overflowing_add(value);
+        *self = CpuAddress::from_low_high(low, high);
+        carry
+    }
+
+    pub fn offset_high(&mut self, value: u8) {
+        let (low, high) = self.to_low_high();
+        let high = high.wrapping_add(value);
+        *self = CpuAddress::from_low_high(low, high);
+    }
+
     pub fn inc(&mut self) -> CpuAddress {
         self.0 = self.0.wrapping_add(1);
         *self
-    }
-
-    pub fn inc_low(&mut self) {
-        let (low, high) = self.to_low_high();
-        *self = CpuAddress::from_low_high(
-            low.wrapping_add(1),
-            high,
-        );
     }
 
     pub fn page(self) -> u8 {
