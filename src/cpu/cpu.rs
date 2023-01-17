@@ -39,7 +39,7 @@ pub struct Cpu {
     data_bus: u8,
     previous_data_bus_value: u8,
     pending_address_low: u8,
-    address_bus_carry: bool,
+    address_carry: i8,
 
     suppress_program_counter_increment: bool,
 }
@@ -81,7 +81,7 @@ impl Cpu {
             data_bus: 0,
             previous_data_bus_value: 0,
             pending_address_low: 0,
-            address_bus_carry: false,
+            address_carry: 0,
 
             suppress_program_counter_increment: false,
         }
@@ -92,7 +92,7 @@ impl Cpu {
         self.status.interrupts_disabled = true;
         self.program_counter = memory.reset_vector();
         self.address_bus = memory.reset_vector();
-        self.address_bus_carry = false;
+        self.address_carry = 0;
         self.current_instruction = None;
         self.next_op_code = None;
         self.cycle_action_queue = CycleActionQueue::new();
@@ -198,12 +198,22 @@ impl Cpu {
             SetAddressBusToOamDmaStart => self.address_bus = self.dma_port.start_address(),
             StorePendingAddressLowByte => self.pending_address_low = self.previous_data_bus_value,
             StorePendingAddressLowByteWithXOffset => {
-                (self.pending_address_low, self.address_bus_carry) =
+                assert_eq!(self.address_carry, 0);
+                let carry;
+                (self.pending_address_low, carry) =
                     self.previous_data_bus_value.overflowing_add(self.x);
+                if carry {
+                    self.address_carry = 1;
+                }
             }
             StorePendingAddressLowByteWithYOffset => {
-                (self.pending_address_low, self.address_bus_carry) =
+                assert_eq!(self.address_carry, 0);
+                let carry;
+                (self.pending_address_low, carry) =
                     self.previous_data_bus_value.overflowing_add(self.y);
+                if carry {
+                    self.address_carry = 1;
+                }
             }
 
             IncrementStackPointer => memory.stack().increment_stack_pointer(),
@@ -218,15 +228,13 @@ impl Cpu {
 
             XOffsetAddressBus => { self.address_bus.offset_low(self.x); }
             MaybeInsertOopsStep => {
-                if self.address_bus_carry {
+                if self.address_carry != 0 {
                     self.cycle_action_queue.skip_to_front(ADDRESS_BUS_READ_STEP);
                 }
             }
             AddCarryToAddressBus => {
-                if self.address_bus_carry {
-                    self.address_bus_carry = false;
-                    self.address_bus.offset_high(1);
-                }
+                self.address_bus.offset_high(self.address_carry);
+                self.address_carry = 0;
             }
 
             InterpretOpCode => {

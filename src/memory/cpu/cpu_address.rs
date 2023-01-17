@@ -52,9 +52,9 @@ impl CpuAddress {
         carry
     }
 
-    pub fn offset_high(&mut self, value: u8) {
+    pub fn offset_high(&mut self, value: i8) {
         let (low, high) = self.to_low_high();
-        let high = high.wrapping_add(value);
+        let high = high.wrapping_add_signed(value);
         *self = CpuAddress::from_low_high(low, high);
     }
 

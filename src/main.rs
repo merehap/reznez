@@ -4,7 +4,6 @@
 #![feature(if_let_guard)]
 #![feature(let_chains)]
 #![feature(type_ascription)]
-#![feature(let_else)]
 #![feature(const_option_ext)]
 #![allow(clippy::module_inception)]
 #![allow(clippy::new_without_default)]
