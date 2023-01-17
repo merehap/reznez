@@ -44,6 +44,7 @@ fn template_to_instruction(template: InstructionTemplate) -> CpuInstruction {
         (AbX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP | /*LAE |*/ TAS, _) => ABSOLUTE_X_READ_STEPS,
         (AbY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP | /*LAE |*/ TAS, _) => ABSOLUTE_Y_READ_STEPS,
         (IzX, LDA |             EOR | AND | ORA | ADC | SBC | CMP |       LAX, _) => INDEXED_INDIRECT_READ_STEPS,
+        (IzY, LDA |             EOR | AND | ORA | ADC | SBC | CMP            , _) => INDIRECT_INDEXED_READ_STEPS,
 
         // Write operations.
         (Abs, STA | STX | STY | SAX, _) => ABSOLUTE_WRITE_STEPS,
@@ -133,6 +134,13 @@ pub const INDEXED_INDIRECT_READ_STEPS: &'static [Step] = &[
     Step::new(From::AddressBusTarget          , To::DataBus               , &[IncrementAddressBusLow]),
     Step::new(From::AddressBusTarget          , To::DataBus               , &[StorePendingAddressLowByte]),
     Step::new(From::PendingAddressTarget      , To::DataBus               , &[]),
+    Step::new(From::ProgramCounterTarget      , To::NextOpCode            , &[ExecuteOpCode, IncrementProgramCounter]),
+];
+
+pub const INDIRECT_INDEXED_READ_STEPS: &'static [Step] = &[
+    Step::new(From::PendingZeroPageTarget     , To::DataBus               , &[IncrementAddressBusLow]),
+    Step::new(From::AddressBusTarget          , To::DataBus               , &[StorePendingAddressLowByteWithYOffset]),
+    Step::new(From::PendingAddressTarget      , To::DataBus               , &[MaybeInsertOopsStep, AddCarryToAddressBus]),
     Step::new(From::ProgramCounterTarget      , To::NextOpCode            , &[ExecuteOpCode, IncrementProgramCounter]),
 ];
 
