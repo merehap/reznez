@@ -378,10 +378,6 @@ impl Step {
         &self.actions
     }
 
-    pub fn has_op_code_read(&self) -> bool {
-        matches!(self.to, To::NextOpCode)
-    }
-
     pub fn has_interpret_op_code(&self) -> bool {
         for action in self.actions {
             if matches!(action, CycleAction::InterpretOpCode) {
