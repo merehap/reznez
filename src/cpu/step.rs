@@ -49,8 +49,9 @@ fn template_to_instruction(template: InstructionTemplate) -> CpuInstruction {
         (Abs, STA | STX | STY | SAX, _) => ABSOLUTE_WRITE_STEPS,
         (ZP , STA | STX | STY | SAX, _) => ZERO_PAGE_WRITE_STEPS,
         // TODO: Remove the unused combos.
-        (AbX, STA | STX | STY, _) => ABSOLUTE_X_WRITE_STEPS,
-        (AbY, STA | STX | STY, _) => ABSOLUTE_Y_WRITE_STEPS,
+        (AbX, STA | STX | STY      , _) => ABSOLUTE_X_WRITE_STEPS,
+        (AbY, STA | STX | STY      , _) => ABSOLUTE_Y_WRITE_STEPS,
+        (IzX, STA |             SAX, _) => INDEXED_INDIRECT_WRITE_STEPS,
 
         // Read-modify-write operations.
         (Abs, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ABSOLUTE_READ_MODIFY_WRITE_STEPS,
@@ -58,6 +59,7 @@ fn template_to_instruction(template: InstructionTemplate) -> CpuInstruction {
         // TODO: Remove the unused combos.
         (AbX, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ABSOLUTE_X_READ_MODIFY_WRITE_STEPS,
         (AbY, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ABSOLUTE_Y_READ_MODIFY_WRITE_STEPS,
+        //(IzX, SLO | SRE | RLA | RRA | ISC | DCP, _) => INDEXED_INDIRECT_READ_MODIFY_WRITE_STEPS,
 
         (_  ,   _, 2) => OTHER_2_STEPS,
         (_  ,   _, 3) => OTHER_3_STEPS,
@@ -163,6 +165,14 @@ pub const ABSOLUTE_READ_MODIFY_WRITE_STEPS: &'static [Step] = &[
     Step::new(From::DataBus                   , To::AddressBusTarget      , &[ExecuteOpCode]),
     Step::new(From::DataBus                   , To::AddressBusTarget      , &[]),
 ];
+
+pub const INDEXED_INDIRECT_WRITE_STEPS: &'static [Step] = &[
+    Step::new(From::PendingZeroPageTarget     , To::DataBus               , &[XOffsetAddressBus]),
+    Step::new(From::AddressBusTarget          , To::DataBus               , &[IncrementAddressBusLow]),
+    Step::new(From::AddressBusTarget          , To::DataBus               , &[StorePendingAddressLowByte]),
+    Step::new(From::PendingAddressTarget      , To::DataBus               , &[ExecuteOpCode]),
+];
+
 
 pub const ZERO_PAGE_READ_MODIFY_WRITE_STEPS: &'static [Step] = &[
     Step::new(From::PendingZeroPageTarget     , To::DataBus               , &[]),
