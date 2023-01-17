@@ -7,6 +7,8 @@ pub enum CycleAction {
     IncrementAddressBusLow,
     SetAddressBusToOamDmaStart,
     StorePendingAddressLowByte,
+    StorePendingAddressLowByteWithXOffset,
+    StorePendingAddressLowByteWithYOffset,
 
     IncrementStackPointer,
     DecrementStackPointer,
@@ -15,8 +17,7 @@ pub enum CycleAction {
 
     CheckNegativeAndZero,
 
-    XOffset,
-    YOffset,
+    XOffsetAddressBus,
     MaybeInsertOopsStep,
     AddCarryToAddressBus,
 

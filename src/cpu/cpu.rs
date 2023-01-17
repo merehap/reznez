@@ -197,6 +197,14 @@ impl Cpu {
             IncrementAddressBusLow => { self.address_bus.offset_low(1); }
             SetAddressBusToOamDmaStart => self.address_bus = self.dma_port.start_address(),
             StorePendingAddressLowByte => self.pending_address_low = self.previous_data_bus_value,
+            StorePendingAddressLowByteWithXOffset => {
+                (self.pending_address_low, self.address_bus_carry) =
+                    self.previous_data_bus_value.overflowing_add(self.x);
+            }
+            StorePendingAddressLowByteWithYOffset => {
+                (self.pending_address_low, self.address_bus_carry) =
+                    self.previous_data_bus_value.overflowing_add(self.y);
+            }
 
             IncrementStackPointer => memory.stack().increment_stack_pointer(),
             DecrementStackPointer => memory.stack().decrement_stack_pointer(),
@@ -208,13 +216,8 @@ impl Cpu {
                 self.status.zero = self.data_bus == 0;
             }
 
-            XOffset => {
-                (self.pending_address_low, self.address_bus_carry) =
-                    self.pending_address_low.overflowing_add(self.x);
-            }
-            YOffset => {
-                (self.pending_address_low, self.address_bus_carry) =
-                    self.pending_address_low.overflowing_add(self.y);
+            XOffsetAddressBus => {
+                self.address_bus_carry = self.address_bus.offset_low(self.x)
             }
             MaybeInsertOopsStep => {
                 if self.address_bus_carry {
