@@ -198,7 +198,6 @@ impl Cpu {
             SetAddressBusToOamDmaStart => self.address_bus = self.dma_port.start_address(),
             StorePendingAddressLowByte => self.pending_address_low = self.previous_data_bus_value,
             StorePendingAddressLowByteWithXOffset => {
-                assert_eq!(self.address_carry, 0);
                 let carry;
                 (self.pending_address_low, carry) =
                     self.previous_data_bus_value.overflowing_add(self.x);
@@ -207,7 +206,6 @@ impl Cpu {
                 }
             }
             StorePendingAddressLowByteWithYOffset => {
-                assert_eq!(self.address_carry, 0);
                 let carry;
                 (self.pending_address_low, carry) =
                     self.previous_data_bus_value.overflowing_add(self.y);
@@ -832,6 +830,12 @@ fn is_neg(value: u8) -> bool {
 pub enum ProgramCounterSource {
     ResetVector,
     Override(CpuAddress),
+}
+
+enum AddressCarry {
+    Negative,
+    Zero,
+    Positive,
 }
 
 #[derive(PartialEq, Eq)]
