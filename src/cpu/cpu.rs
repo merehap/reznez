@@ -832,12 +832,6 @@ pub enum ProgramCounterSource {
     Override(CpuAddress),
 }
 
-enum AddressCarry {
-    Negative,
-    Zero,
-    Positive,
-}
-
 #[derive(PartialEq, Eq)]
 enum NmiStatus {
     Inactive,
