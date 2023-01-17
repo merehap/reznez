@@ -53,6 +53,7 @@ fn template_to_instruction(template: InstructionTemplate) -> CpuInstruction {
         (AbX, STA | STX | STY      , _) => ABSOLUTE_X_WRITE_STEPS,
         (AbY, STA | STX | STY      , _) => ABSOLUTE_Y_WRITE_STEPS,
         (IzX, STA |             SAX, _) => INDEXED_INDIRECT_WRITE_STEPS,
+        (IzY, STA /*| SHA*/        , _) => INDIRECT_INDEXED_WRITE_STEPS,
 
         // Read-modify-write operations.
         (Abs, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ABSOLUTE_READ_MODIFY_WRITE_STEPS,
@@ -167,13 +168,6 @@ pub const ABSOLUTE_Y_WRITE_STEPS: &'static [Step] = &[
     Step::new(From::DataBus                   , To::DataBus               , &[ExecuteOpCode]),
 ];
 
-pub const ABSOLUTE_READ_MODIFY_WRITE_STEPS: &'static [Step] = &[
-    Step::new(From::ProgramCounterTarget      , To::DataBus               , &[StorePendingAddressLowByte, IncrementProgramCounter]),
-    Step::new(From::PendingAddressTarget      , To::DataBus               , &[]),
-    Step::new(From::DataBus                   , To::AddressBusTarget      , &[ExecuteOpCode]),
-    Step::new(From::DataBus                   , To::AddressBusTarget      , &[]),
-];
-
 pub const INDEXED_INDIRECT_WRITE_STEPS: &'static [Step] = &[
     Step::new(From::PendingZeroPageTarget     , To::DataBus               , &[XOffsetAddressBus]),
     Step::new(From::AddressBusTarget          , To::DataBus               , &[IncrementAddressBusLow]),
@@ -181,6 +175,19 @@ pub const INDEXED_INDIRECT_WRITE_STEPS: &'static [Step] = &[
     Step::new(From::PendingAddressTarget      , To::DataBus               , &[ExecuteOpCode]),
 ];
 
+pub const INDIRECT_INDEXED_WRITE_STEPS: &'static [Step] = &[
+    Step::new(From::PendingZeroPageTarget     , To::DataBus               , &[IncrementAddressBusLow]),
+    Step::new(From::AddressBusTarget          , To::DataBus               , &[StorePendingAddressLowByteWithYOffset]),
+    Step::new(From::PendingAddressTarget      , To::DataBus               , &[AddCarryToAddressBus]),
+    Step::new(From::AddressBusTarget          , To::DataBus               , &[ExecuteOpCode]),
+];
+
+pub const ABSOLUTE_READ_MODIFY_WRITE_STEPS: &'static [Step] = &[
+    Step::new(From::ProgramCounterTarget      , To::DataBus               , &[StorePendingAddressLowByte, IncrementProgramCounter]),
+    Step::new(From::PendingAddressTarget      , To::DataBus               , &[]),
+    Step::new(From::DataBus                   , To::AddressBusTarget      , &[ExecuteOpCode]),
+    Step::new(From::DataBus                   , To::AddressBusTarget      , &[]),
+];
 
 pub const ZERO_PAGE_READ_MODIFY_WRITE_STEPS: &'static [Step] = &[
     Step::new(From::PendingZeroPageTarget     , To::DataBus               , &[]),
