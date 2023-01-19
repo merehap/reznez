@@ -11,8 +11,8 @@ lazy_static! {
 
     pub static ref OAM_DMA_TRANSFER_STEPS: [Step; 512] = {
         let read_write = &[
-            Step::new(From::AddressBusTarget, To::DataBus, &[]),
-            Step::new(From::DataBus         , To::OamData, &[IncrementAddressBus]),
+            Step::new(From::DmaAddressTarget, To::DataBus, &[]),
+            Step::new(From::DataBus         , To::OamData, &[IncrementDmaAddress]),
         ];
 
         read_write.repeat(256).try_into().unwrap()
@@ -272,9 +272,6 @@ pub const INDIRECT_INDEXED_READ_MODIFY_WRITE_STEPS: &'static [Step] = &[
     Step::new(From::DataBus                   , To::AddressBusTarget      , &[ExecuteOpCode]),
     Step::new(From::DataBus                   , To::AddressBusTarget      , &[]),
 ];
-
-pub const NOP_STEP: Step =
-    Step::new(From::DataBus                   , To::DataBus               , &[]                           );
 
 pub const NMI_STEPS: &'static [Step] = &[
     Step::new(From::ProgramCounterHighByte    , To::TopOfStack            , &[DecrementStackPointer]      ),

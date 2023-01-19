@@ -30,14 +30,14 @@ impl Ports {
 pub struct DmaPort {
     page: Rc<RefCell<Option<u8>>>,
     // TODO: Find a way to remove this field.
-    start_address: CpuAddress,
+    current_address: CpuAddress,
 }
 
 impl DmaPort {
     pub fn new() -> DmaPort {
         DmaPort {
             page: Rc::new(RefCell::new(None)),
-            start_address: CpuAddress::new(0x0000),
+            current_address: CpuAddress::new(0x0000),
         }
     }
 
@@ -47,15 +47,19 @@ impl DmaPort {
 
     pub fn take_page(&mut self) -> Option<()> {
         if let Some(port) = self.page.borrow_mut().take() {
-            self.start_address = CpuAddress::from_low_high(0x00, port);
+            self.current_address = CpuAddress::from_low_high(0x00, port);
             Some(())
         } else {
             None
         }
     }
 
-    pub fn start_address(&self) -> CpuAddress {
-        self.start_address
+    pub fn current_address(&self) -> CpuAddress {
+        self.current_address
+    }
+
+    pub fn increment_current_address(&mut self) {
+        self.current_address.inc();
     }
 }
 

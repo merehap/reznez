@@ -5,7 +5,7 @@ pub enum CycleAction {
     IncrementProgramCounter,
     IncrementAddressBus,
     IncrementAddressBusLow,
-    SetAddressBusToOamDmaStart,
+    IncrementDmaAddress,
     StorePendingAddressLowByte,
     StorePendingAddressLowByteWithXOffset,
     StorePendingAddressLowByteWithYOffset,
@@ -36,6 +36,7 @@ pub enum From {
     PendingZeroPageAddress,
 
     AddressBusTarget,
+    DmaAddressTarget,
 
     ProgramCounterTarget,
     PendingAddressTarget,

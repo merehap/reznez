@@ -50,7 +50,7 @@ impl CycleActionQueue {
         // TODO: Improve accuracy by following this: https://www.nesdev.org/wiki/DMA#OAM_DMA
         let is_odd_cycle = current_cycle % 2 == 1;
         if is_odd_cycle {
-            self.queue.push_back(NOP_STEP);
+            self.queue.push_back(ADDRESS_BUS_READ_STEP);
         }
 
         self.append(&*OAM_DMA_TRANSFER_STEPS);

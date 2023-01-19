@@ -199,7 +199,7 @@ impl Cpu {
             // TODO: Make sure this isn't supposed to wrap within the same page.
             IncrementAddressBus => { self.address_bus.inc(); }
             IncrementAddressBusLow => { self.address_bus.offset_low(1); }
-            SetAddressBusToOamDmaStart => self.address_bus = self.dma_port.start_address(),
+            IncrementDmaAddress => self.dma_port.increment_current_address(),
             StorePendingAddressLowByte => self.pending_address_low = self.previous_data_bus_value,
             StorePendingAddressLowByteWithXOffset => {
                 let carry;
@@ -261,12 +261,9 @@ impl Cpu {
                 }
 
                 if self.dma_port.take_page().is_some() {
-                    info!(target: "cpuoperation", "Starting DMA transfer at {}.", self.dma_port.start_address());
+                    info!(target: "cpuoperation", "Starting DMA transfer at {}.", self.dma_port.current_address());
                     self.cycle_action_queue.enqueue_dma_transfer(self.cycle);
                     self.suppress_program_counter_increment = true;
-                    // Seems like a hack. Normally this would be a declarative part of the step.
-                    // It also may just be the wrong address bus value for this cycle.
-                    self.address_bus = self.dma_port.start_address();
                     return;
                 }
 
@@ -476,11 +473,15 @@ impl Cpu {
             }
             From::AddressBusTarget => {
                 memory.read(self.address_bus)
-            },
+            }
+            From::DmaAddressTarget => {
+                self.address_bus = self.dma_port.current_address();
+                memory.read(self.address_bus)
+            }
             From::ProgramCounterTarget => {
                 self.address_bus = self.program_counter;
                 memory.read(self.address_bus)
-            },
+            }
             From::PendingAddressTarget => {
                 self.address_bus = CpuAddress::from_low_high(self.pending_address_low, self.data_bus);
                 memory.read(self.address_bus)
