@@ -40,28 +40,34 @@ fn template_to_instruction(template: InstructionTemplate) -> CpuInstruction {
 
         // Read operations.
         (Abs, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP, _) => ABSOLUTE_READ_STEPS,
-        (ZP , LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP, _) => ZERO_PAGE_READ_STEPS,
         // TODO: Remove the unused combos.
         (AbX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP | /*LAE |*/ TAS, _) => ABSOLUTE_X_READ_STEPS,
         (AbY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP | /*LAE |*/ TAS, _) => ABSOLUTE_Y_READ_STEPS,
+        (ZP , LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP, _) => ZERO_PAGE_READ_STEPS,
+        (ZPX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP, _) => ZERO_PAGE_X_READ_STEPS,
+        (ZPY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP, _) => ZERO_PAGE_Y_READ_STEPS,
         (IzX, LDA |             EOR | AND | ORA | ADC | SBC | CMP |       LAX, _) => INDEXED_INDIRECT_READ_STEPS,
         (IzY, LDA |             EOR | AND | ORA | ADC | SBC | CMP            , _) => INDIRECT_INDEXED_READ_STEPS,
 
         // Write operations.
         (Abs, STA | STX | STY | SAX, _) => ABSOLUTE_WRITE_STEPS,
-        (ZP , STA | STX | STY | SAX, _) => ZERO_PAGE_WRITE_STEPS,
         // TODO: Remove the unused combos.
         (AbX, STA | STX | STY      , _) => ABSOLUTE_X_WRITE_STEPS,
         (AbY, STA | STX | STY      , _) => ABSOLUTE_Y_WRITE_STEPS,
+        (ZP , STA | STX | STY | SAX, _) => ZERO_PAGE_WRITE_STEPS,
+        (ZPX, STA | STX | STY | SAX, _) => ZERO_PAGE_X_WRITE_STEPS,
+        (ZPY, STA | STX | STY | SAX, _) => ZERO_PAGE_Y_WRITE_STEPS,
         (IzX, STA |             SAX, _) => INDEXED_INDIRECT_WRITE_STEPS,
         (IzY, STA /*| SHA*/        , _) => INDIRECT_INDEXED_WRITE_STEPS,
 
         // Read-modify-write operations.
         (Abs, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ABSOLUTE_READ_MODIFY_WRITE_STEPS,
-        (ZP , ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ZERO_PAGE_READ_MODIFY_WRITE_STEPS,
         // TODO: Remove the unused combos.
         (AbX, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ABSOLUTE_X_READ_MODIFY_WRITE_STEPS,
         (AbY, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ABSOLUTE_Y_READ_MODIFY_WRITE_STEPS,
+        (ZP , ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ZERO_PAGE_READ_MODIFY_WRITE_STEPS,
+        (ZPX, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ZERO_PAGE_X_READ_MODIFY_WRITE_STEPS,
+        (ZPY, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ZERO_PAGE_Y_READ_MODIFY_WRITE_STEPS,
         (IzX,                                     SLO | SRE | RLA | RRA | ISC | DCP, _) => INDEXED_INDIRECT_READ_MODIFY_WRITE_STEPS,
         (IzY,                                     SLO | SRE | RLA | RRA | ISC | DCP, _) => INDIRECT_INDEXED_READ_MODIFY_WRITE_STEPS,
 
@@ -133,9 +139,21 @@ pub const ABSOLUTE_X_READ_STEPS: &'static [Step] = &[
     Step::new(From::ProgramCounterTarget      , To::DataBus            , &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 
+pub const ZERO_PAGE_X_READ_STEPS: &'static [Step] = &[
+    Step::new(From::PendingZeroPageTarget     , To::DataBus               , &[XOffsetAddressBus]),
+    Step::new(From::AddressBusTarget          , To::DataBus               , &[]),
+    Step::new(From::ProgramCounterTarget      , To::DataBus            , &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
+];
+
 pub const ABSOLUTE_Y_READ_STEPS: &'static [Step] = &[
     Step::new(From::ProgramCounterTarget      , To::DataBus               , &[StorePendingAddressLowByteWithYOffset, IncrementProgramCounter]),
     Step::new(From::PendingAddressTarget      , To::DataBus               , &[MaybeInsertOopsStep, AddCarryToAddressBus]),
+    Step::new(From::ProgramCounterTarget      , To::DataBus            , &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
+];
+
+pub const ZERO_PAGE_Y_READ_STEPS: &'static [Step] = &[
+    Step::new(From::PendingZeroPageTarget     , To::DataBus               , &[YOffsetAddressBus]),
+    Step::new(From::AddressBusTarget          , To::DataBus               , &[]),
     Step::new(From::ProgramCounterTarget      , To::DataBus            , &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 
@@ -159,7 +177,7 @@ pub const ABSOLUTE_WRITE_STEPS: &'static [Step] = &[
     Step::new(From::ProgramCounterTarget      , To::DataBus               , &[StorePendingAddressLowByte, IncrementProgramCounter]),
     Step::new(From::PendingAddress            , To::DataBus               , &[ExecuteOpCode]),
 ];
-//
+
 // TODO: The data bus needs to be set to the data written.
 pub const ZERO_PAGE_WRITE_STEPS: &'static [Step] = &[
     Step::new(From::PendingZeroPageAddress    , To::DataBus               , &[ExecuteOpCode]),
@@ -171,10 +189,20 @@ pub const ABSOLUTE_X_WRITE_STEPS: &'static [Step] = &[
     Step::new(From::DataBus                   , To::DataBus               , &[ExecuteOpCode]),
 ];
 
+pub const ZERO_PAGE_X_WRITE_STEPS: &'static [Step] = &[
+    Step::new(From::PendingZeroPageAddress    , To::DataBus               , &[XOffsetAddressBus]),
+    Step::new(From::AddressBusTarget          , To::DataBus               , &[ExecuteOpCode]),
+];
+
 pub const ABSOLUTE_Y_WRITE_STEPS: &'static [Step] = &[
     Step::new(From::ProgramCounterTarget      , To::DataBus               , &[StorePendingAddressLowByteWithYOffset, IncrementProgramCounter]),
     Step::new(From::PendingAddressTarget      , To::DataBus               , &[AddCarryToAddressBus]),
     Step::new(From::DataBus                   , To::DataBus               , &[ExecuteOpCode]),
+];
+
+pub const ZERO_PAGE_Y_WRITE_STEPS: &'static [Step] = &[
+    Step::new(From::PendingZeroPageAddress    , To::DataBus               , &[YOffsetAddressBus]),
+    Step::new(From::AddressBusTarget          , To::DataBus               , &[ExecuteOpCode]),
 ];
 
 pub const INDEXED_INDIRECT_WRITE_STEPS: &'static [Step] = &[
@@ -212,9 +240,23 @@ pub const ABSOLUTE_X_READ_MODIFY_WRITE_STEPS: &'static [Step] = &[
     Step::new(From::DataBus                   , To::AddressBusTarget      , &[]),
 ];
 
+pub const ZERO_PAGE_X_READ_MODIFY_WRITE_STEPS: &'static [Step] = &[
+    Step::new(From::PendingZeroPageTarget     , To::DataBus               , &[XOffsetAddressBus]),
+    Step::new(From::AddressBusTarget          , To::DataBus               , &[]),
+    Step::new(From::DataBus                   , To::AddressBusTarget      , &[ExecuteOpCode]),
+    Step::new(From::DataBus                   , To::AddressBusTarget      , &[]),
+];
+
 pub const ABSOLUTE_Y_READ_MODIFY_WRITE_STEPS: &'static [Step] = &[
     Step::new(From::ProgramCounterTarget      , To::DataBus               , &[StorePendingAddressLowByteWithYOffset, IncrementProgramCounter]),
     Step::new(From::PendingAddressTarget      , To::DataBus               , &[AddCarryToAddressBus]),
+    Step::new(From::AddressBusTarget          , To::DataBus               , &[]),
+    Step::new(From::DataBus                   , To::AddressBusTarget      , &[ExecuteOpCode]),
+    Step::new(From::DataBus                   , To::AddressBusTarget      , &[]),
+];
+
+pub const ZERO_PAGE_Y_READ_MODIFY_WRITE_STEPS: &'static [Step] = &[
+    Step::new(From::PendingZeroPageTarget     , To::DataBus               , &[YOffsetAddressBus]),
     Step::new(From::AddressBusTarget          , To::DataBus               , &[]),
     Step::new(From::DataBus                   , To::AddressBusTarget      , &[ExecuteOpCode]),
     Step::new(From::DataBus                   , To::AddressBusTarget      , &[]),

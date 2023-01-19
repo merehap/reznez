@@ -229,6 +229,7 @@ impl Cpu {
             }
 
             XOffsetAddressBus => { self.address_bus.offset_low(self.x); }
+            YOffsetAddressBus => { self.address_bus.offset_low(self.y); }
             MaybeInsertOopsStep => {
                 if self.address_carry != 0 {
                     self.cycle_action_queue.skip_to_front(ADDRESS_BUS_READ_STEP);

@@ -18,6 +18,7 @@ pub enum CycleAction {
     CheckNegativeAndZero,
 
     XOffsetAddressBus,
+    YOffsetAddressBus,
     MaybeInsertOopsStep,
     MaybeInsertBranchOopsStep,
     AddCarryToAddressBus,
