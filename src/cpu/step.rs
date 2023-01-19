@@ -22,63 +22,56 @@ lazy_static! {
 fn template_to_instruction(template: InstructionTemplate) -> CpuInstruction {
     use AccessMode::*;
     use OpCode::*;
-    let steps = match (template.access_mode, template.op_code, template.cycle_count as u8) {
-        (Imp, BRK, _) => BRK_STEPS,
-        (Imp, RTI, _) => RTI_STEPS,
-        (Imp, RTS, _) => RTS_STEPS,
-        (Imp, PHA, _) => PHA_STEPS,
-        (Imp, PHP, _) => PHP_STEPS,
-        (Imp, PLA, _) => PLA_STEPS,
-        (Imp, PLP, _) => PLP_STEPS,
-        (Abs, JSR, _) => JSR_STEPS,
-        (Abs, JMP, _) => JMP_ABS_STEPS,
-        (Ind, JMP, _) => JMP_IND_STEPS,
+    let steps = match (template.access_mode, template.op_code) {
+        (Imp, BRK) => BRK_STEPS,
+        (Imp, RTI) => RTI_STEPS,
+        (Imp, RTS) => RTS_STEPS,
+        (Imp, PHA) => PHA_STEPS,
+        (Imp, PHP) => PHP_STEPS,
+        (Imp, PLA) => PLA_STEPS,
+        (Imp, PLP) => PLP_STEPS,
+        (Abs, JSR) => JSR_STEPS,
+        (Abs, JMP) => JMP_ABS_STEPS,
+        (Ind, JMP) => JMP_IND_STEPS,
 
-        (Imp,   _, _) => IMPLICIT_ADDRESSING_STEPS,
-        (Imm,   _, _) => IMMEDIATE_ADDRESSING_STEPS,
-        (Rel,   _, _) => RELATIVE_ADDRESSING_STEPS,
+        (Imp,   _) => IMPLICIT_ADDRESSING_STEPS,
+        (Imm,   _) => IMMEDIATE_ADDRESSING_STEPS,
+        (Rel,   _) => RELATIVE_ADDRESSING_STEPS,
 
         // Read operations.
-        (Abs, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP, _) => ABSOLUTE_READ_STEPS,
+        (Abs, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | CPX | CPY | BIT | LAX | NOP) => ABSOLUTE_READ_STEPS,
         // TODO: Remove the unused combos.
-        (AbX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP | /*LAE |*/ TAS, _) => ABSOLUTE_X_READ_STEPS,
-        (AbY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP | /*LAE |*/ TAS, _) => ABSOLUTE_Y_READ_STEPS,
-        (ZP , LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP, _) => ZERO_PAGE_READ_STEPS,
-        (ZPX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP, _) => ZERO_PAGE_X_READ_STEPS,
-        (ZPY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP, _) => ZERO_PAGE_Y_READ_STEPS,
-        (IzX, LDA |             EOR | AND | ORA | ADC | SBC | CMP |       LAX, _) => INDEXED_INDIRECT_READ_STEPS,
-        (IzY, LDA |             EOR | AND | ORA | ADC | SBC | CMP            , _) => INDIRECT_INDEXED_READ_STEPS,
+        (AbX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |             BIT | LAX | NOP) => ABSOLUTE_X_READ_STEPS,
+        (AbY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |             BIT | LAX | NOP | LAS | TAS | AHX) => ABSOLUTE_Y_READ_STEPS,
+        (ZP , LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | CPX | CPY | BIT | LAX | NOP) => ZERO_PAGE_READ_STEPS,
+        (ZPX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |             BIT | LAX | NOP) => ZERO_PAGE_X_READ_STEPS,
+        (ZPY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |             BIT | LAX | NOP) => ZERO_PAGE_Y_READ_STEPS,
+        (IzX, LDA |             EOR | AND | ORA | ADC | SBC | CMP |                   LAX) => INDEXED_INDIRECT_READ_STEPS,
+        (IzY, LDA |             EOR | AND | ORA | ADC | SBC | CMP |                   LAX | AHX) => INDIRECT_INDEXED_READ_STEPS,
 
         // Write operations.
-        (Abs, STA | STX | STY | SAX, _) => ABSOLUTE_WRITE_STEPS,
+        (Abs, STA | STX | STY | SAX) => ABSOLUTE_WRITE_STEPS,
         // TODO: Remove the unused combos.
-        (AbX, STA | STX | STY      , _) => ABSOLUTE_X_WRITE_STEPS,
-        (AbY, STA | STX | STY      , _) => ABSOLUTE_Y_WRITE_STEPS,
-        (ZP , STA | STX | STY | SAX, _) => ZERO_PAGE_WRITE_STEPS,
-        (ZPX, STA | STX | STY | SAX, _) => ZERO_PAGE_X_WRITE_STEPS,
-        (ZPY, STA | STX | STY | SAX, _) => ZERO_PAGE_Y_WRITE_STEPS,
-        (IzX, STA |             SAX, _) => INDEXED_INDIRECT_WRITE_STEPS,
-        (IzY, STA /*| SHA*/        , _) => INDIRECT_INDEXED_WRITE_STEPS,
+        (AbX, STA | STX | STY |     SHY) => ABSOLUTE_X_WRITE_STEPS,
+        (AbY, STA | STX | STY |     SHX) => ABSOLUTE_Y_WRITE_STEPS,
+        (ZP , STA | STX | STY | SAX) => ZERO_PAGE_WRITE_STEPS,
+        (ZPX, STA | STX | STY | SAX) => ZERO_PAGE_X_WRITE_STEPS,
+        (ZPY, STA | STX | STY | SAX) => ZERO_PAGE_Y_WRITE_STEPS,
+        (IzX, STA |             SAX) => INDEXED_INDIRECT_WRITE_STEPS,
+        (IzY, STA) => INDIRECT_INDEXED_WRITE_STEPS,
 
         // Read-modify-write operations.
-        (Abs, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ABSOLUTE_READ_MODIFY_WRITE_STEPS,
+        (Abs, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP) => ABSOLUTE_READ_MODIFY_WRITE_STEPS,
         // TODO: Remove the unused combos.
-        (AbX, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ABSOLUTE_X_READ_MODIFY_WRITE_STEPS,
-        (AbY, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ABSOLUTE_Y_READ_MODIFY_WRITE_STEPS,
-        (ZP , ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ZERO_PAGE_READ_MODIFY_WRITE_STEPS,
-        (ZPX, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ZERO_PAGE_X_READ_MODIFY_WRITE_STEPS,
-        (ZPY, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP, _) => ZERO_PAGE_Y_READ_MODIFY_WRITE_STEPS,
-        (IzX,                                     SLO | SRE | RLA | RRA | ISC | DCP, _) => INDEXED_INDIRECT_READ_MODIFY_WRITE_STEPS,
-        (IzY,                                     SLO | SRE | RLA | RRA | ISC | DCP, _) => INDIRECT_INDEXED_READ_MODIFY_WRITE_STEPS,
+        (AbX, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP) => ABSOLUTE_X_READ_MODIFY_WRITE_STEPS,
+        (AbY, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP) => ABSOLUTE_Y_READ_MODIFY_WRITE_STEPS,
+        (ZP , ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP) => ZERO_PAGE_READ_MODIFY_WRITE_STEPS,
+        (ZPX, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP) => ZERO_PAGE_X_READ_MODIFY_WRITE_STEPS,
+        (ZPY, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP) => ZERO_PAGE_Y_READ_MODIFY_WRITE_STEPS,
+        (IzX,                                     SLO | SRE | RLA | RRA | ISC | DCP) => INDEXED_INDIRECT_READ_MODIFY_WRITE_STEPS,
+        (IzY,                                     SLO | SRE | RLA | RRA | ISC | DCP) => INDIRECT_INDEXED_READ_MODIFY_WRITE_STEPS,
 
-        (_  ,   _, 2) => OTHER_2_STEPS,
-        (_  ,   _, 3) => OTHER_3_STEPS,
-        (_  ,   _, 4) => OTHER_4_STEPS,
-        (_  ,   _, 5) => OTHER_5_STEPS,
-        (_  ,   _, 6) => OTHER_6_STEPS,
-        (_  ,   _, 7) => OTHER_7_STEPS,
-        (_  ,   _, 8) => OTHER_8_STEPS,
-        (_  ,   _, _) => unreachable!(),
+        (_, _) => unreachable!("{:X?}", template),
     };
 
     CpuInstruction {
@@ -282,8 +275,6 @@ pub const INDIRECT_INDEXED_READ_MODIFY_WRITE_STEPS: &'static [Step] = &[
 
 pub const NOP_STEP: Step =
     Step::new(From::DataBus                   , To::DataBus               , &[]                           );
-pub const FULL_INSTRUCTION_STEP: Step =
-    Step::new(From::DataBus                   , To::DataBus               , &[Instruction]                );
 
 pub const NMI_STEPS: &'static [Step] = &[
     Step::new(From::ProgramCounterHighByte    , To::TopOfStack            , &[DecrementStackPointer]      ),
@@ -360,48 +351,6 @@ pub const JMP_IND_STEPS: &'static [Step] = &[
     Step::new(From::AddressBusTarget           , To::DataBus               , &[StorePendingAddressLowByte]),
     // Jump to next instruction.
     Step::new(From::PendingProgramCounterTarget, To::DataBus            , &[StartNextInstruction, IncrementProgramCounter]   ),
-];
-
-pub const OTHER_2_STEPS: &'static [Step] = &[
-];
-
-pub const OTHER_3_STEPS: &'static [Step] = &[
-    FULL_INSTRUCTION_STEP,
-];
-
-pub const OTHER_4_STEPS: &'static [Step] = &[
-    NOP_STEP,
-    FULL_INSTRUCTION_STEP,
-];
-
-pub const OTHER_5_STEPS: &'static [Step] = &[
-    NOP_STEP,
-    NOP_STEP,
-    FULL_INSTRUCTION_STEP,
-];
-
-pub const OTHER_6_STEPS: &'static [Step] = &[
-    NOP_STEP,
-    NOP_STEP,
-    NOP_STEP,
-    FULL_INSTRUCTION_STEP,
-];
-
-pub const OTHER_7_STEPS: &'static [Step] = &[
-    NOP_STEP,
-    NOP_STEP,
-    NOP_STEP,
-    NOP_STEP,
-    FULL_INSTRUCTION_STEP,
-];
-
-pub const OTHER_8_STEPS: &'static [Step] = &[
-    NOP_STEP,
-    NOP_STEP,
-    NOP_STEP,
-    NOP_STEP,
-    NOP_STEP,
-    FULL_INSTRUCTION_STEP,
 ];
 
 #[derive(Clone, Copy, Debug)]

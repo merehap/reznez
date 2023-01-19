@@ -24,8 +24,6 @@ pub enum CycleAction {
     AddCarryToAddressBus,
     AddCarryToProgramCounter,
 
-    Instruction,
-
     StartNextInstruction,
     InterpretOpCode,
     ExecuteOpCode,

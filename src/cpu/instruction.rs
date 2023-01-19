@@ -152,14 +152,6 @@ impl Instruction {
 
         Instruction { template, argument, page_boundary_crossed }
     }
-
-    pub fn should_add_oops_cycle(&self) -> bool {
-        self.template.extra_cycle == ExtraCycle::PB && self.page_boundary_crossed
-    }
-
-    pub fn length(&self) -> u8 {
-        self.template.access_mode.instruction_length()
-    }
 }
 
 impl fmt::Display for Instruction {

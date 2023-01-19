@@ -1,10 +1,10 @@
-use log::{info, error};
+use log::info;
 
 use crate::cpu::step::*;
 use crate::cpu::cycle_action::{CycleAction, From, To};
 use crate::cpu::cycle_action_queue::CycleActionQueue;
 use crate::cpu::instruction;
-use crate::cpu::instruction::{AccessMode, Argument, Instruction, OpCode};
+use crate::cpu::instruction::{AccessMode, Instruction, OpCode};
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::ports::DmaPort;
@@ -305,23 +305,6 @@ impl Cpu {
 
                 self.cycle_action_queue.enqueue_instruction(instruction);
             }
-            Instruction => {
-                let instr = self.current_instruction.unwrap();
-                match self.execute_instruction(memory, instr) {
-                    InstructionResult::Success {branch_taken, oops} if branch_taken || oops => {
-                        self.cycle_action_queue.skip_to_front(NOP_STEP);
-                        if branch_taken && oops {
-                            self.cycle_action_queue.skip_to_front(NOP_STEP);
-                        }
-                    }
-                    InstructionResult::Success {..} => {},
-                    InstructionResult::Jam => {
-                        self.jammed = true;
-                        error!("CPU JAMMED! Instruction code point: ${:02X}", instr.template.code_point);
-                    }
-                }
-            }
-
             ExecuteOpCode => {
                 let value = self.previous_data_bus_value;
                 let access_mode = self.current_instruction.unwrap().template.access_mode;
@@ -403,6 +386,18 @@ impl Cpu {
                     STX => memory.write(self.address_bus, self.x),
                     STY => memory.write(self.address_bus, self.y),
                     SAX => memory.write(self.address_bus, self.a & self.x),
+                    SHX => {
+                        let (low, high) = self.address_bus.to_low_high();
+                        let value = self.x & high.wrapping_add(1);
+                        let addr = CpuAddress::from_low_high(low, high & self.x);
+                        memory.write(addr, value);
+                    }
+                    SHY => {
+                        let (low, high) = self.address_bus.to_low_high();
+                        let value = self.y & high.wrapping_add(1);
+                        let addr = CpuAddress::from_low_high(low, high & self.y);
+                        memory.write(addr, value);
+                    }
 
 
                     // Read-Modify-Write op codes.
@@ -457,7 +452,7 @@ impl Cpu {
                     BNE => if !self.status.zero { self.branch(); }
                     BEQ => if self.status.zero { self.branch(); }
 
-                    op_code => todo!("{:?}", op_code),
+                    _ => todo!("{:X?}", self.current_instruction.unwrap()),
                 }
             }
         }
@@ -537,221 +532,6 @@ impl Cpu {
         }
     }
 
-    #[rustfmt::skip]
-    fn execute_instruction(
-        &mut self,
-        memory: &mut CpuMemory,
-        instruction: Instruction,
-    ) -> InstructionResult {
-        use OpCode::*;
-        use Argument::*;
-
-        self.program_counter = self.program_counter.advance(instruction.length() - 2);
-
-        let mut branch_taken = false;
-        let mut oops = false;
-        if instruction.should_add_oops_cycle() {
-            info!(target: "cpuoperation", "'Oops' cycle added.");
-            oops = true;
-        }
-
-        match (instruction.template.op_code, instruction.argument) {
-            (INX, Imp) => unreachable!(),
-            (INY, Imp) => unreachable!(),
-            (DEX, Imp) => unreachable!(),
-            (DEY, Imp) => unreachable!(),
-            (TAX, Imp) => unreachable!(),
-            (TAY, Imp) => unreachable!(),
-            (TSX, Imp) => unreachable!(),
-            (TXS, Imp) => unreachable!(),
-            (TXA, Imp) => unreachable!(),
-            (TYA, Imp) => unreachable!(),
-            (PHA, Imp) => unreachable!(),
-            (PHP, Imp) => unreachable!(),
-            (PLA, Imp) => unreachable!(),
-            (PLP, Imp) => unreachable!(),
-            (CLC, Imp) => unreachable!(),
-            (SEC, Imp) => unreachable!(),
-            (CLD, Imp) => unreachable!(),
-            (SED, Imp) => unreachable!(),
-            (CLI, Imp) => unreachable!(),
-            (SEI, Imp) => unreachable!(),
-            (CLV, Imp) => unreachable!(),
-            (BRK, Imp) => unreachable!(),
-            (RTI, Imp) => unreachable!(),
-            (RTS, Imp) => unreachable!(),
-
-            (STA, Addr(addr)) => memory.write(addr, self.a),
-            (STX, Addr(addr)) => memory.write(addr, self.x),
-            (STY, Addr(addr)) => memory.write(addr, self.y),
-            (DEC, Addr(addr)) => {
-                let value = memory.read(addr).wrapping_sub(1);
-                memory.write(addr, value);
-                self.nz(value);
-            }
-            (INC, Addr(addr)) => {
-                let value = memory.read(addr).wrapping_add(1);
-                memory.write(addr, value);
-                self.nz(value);
-            }
-            (BPL, Addr(addr)) =>
-                (branch_taken, oops) = self.maybe_branch(!self.status.negative, addr),
-            (BMI, Addr(addr)) =>
-                (branch_taken, oops) = self.maybe_branch(self.status.negative, addr),
-            (BVC, Addr(addr)) =>
-                (branch_taken, oops) = self.maybe_branch(!self.status.overflow, addr),
-            (BVS, Addr(addr)) =>
-                (branch_taken, oops) = self.maybe_branch(self.status.overflow, addr),
-            (BCC, Addr(addr)) =>
-                (branch_taken, oops) = self.maybe_branch(!self.status.carry, addr),
-            (BCS, Addr(addr)) =>
-                (branch_taken, oops) = self.maybe_branch(self.status.carry, addr),
-            (BNE, Addr(addr)) =>
-                (branch_taken, oops) = self.maybe_branch(!self.status.zero, addr),
-            (BEQ, Addr(addr)) =>
-                (branch_taken, oops) = self.maybe_branch(self.status.zero, addr),
-            (JSR, Addr(_addr)) => unreachable!(),
-            (JMP, Addr(_addr)) => unreachable!(),
-
-            (BIT, Addr(addr)) => {
-                let val = memory.read(addr);
-                self.status.negative = val & 0b1000_0000 != 0;
-                self.status.overflow = val & 0b0100_0000 != 0;
-                self.status.zero = val & self.a == 0;
-            }
-
-            (LDA, Imm(_val)) => unreachable!(),
-            (LDX, Imm(_val)) => unreachable!(),
-            (LDY, Imm(_val)) => unreachable!(),
-            (CMP, Imm(_val)) => unreachable!(),
-            (CPX, Imm(_val)) => unreachable!(),
-            (CPY, Imm(_val)) => unreachable!(),
-            (ORA, Imm(_val)) => unreachable!(),
-            (AND, Imm(_val)) => unreachable!(),
-            (EOR, Imm(_val)) => unreachable!(),
-            (ADC, Imm(_val)) => unreachable!(),
-            (SBC, Imm(_val)) => unreachable!(),
-
-            (LDA, Addr(addr)) => {let val = memory.read(addr); self.a = self.nz(val)},
-            (LDX, Addr(addr)) => {let val = memory.read(addr); self.x = self.nz(val)},
-            (LDY, Addr(addr)) => {let val = memory.read(addr); self.y = self.nz(val)},
-            (CMP, Addr(addr)) => {let val = memory.read(addr); self.cmp(val)},
-            (CPX, Addr(addr)) => {let val = memory.read(addr); self.cpx(val)},
-            (CPY, Addr(addr)) => {let val = memory.read(addr); self.cpy(val)},
-            (ORA, Addr(addr)) => {let val = memory.read(addr); self.a = self.nz(self.a | val)},
-            (AND, Addr(addr)) => {let val = memory.read(addr); self.a = self.nz(self.a & val)},
-            (EOR, Addr(addr)) => {let val = memory.read(addr); self.a = self.nz(self.a ^ val)},
-            (ADC, Addr(addr)) => {let val = memory.read(addr); self.a = self.adc(val)},
-            (SBC, Addr(addr)) => {let val = memory.read(addr); self.a = self.sbc(val)},
-
-            (LAX, Imm(_val)) => unreachable!(),
-            (LAX, Addr(addr)) => {
-                let val = memory.read(addr);
-                self.a = val;
-                self.x = val;
-                self.nz(val);
-            }
-
-            (ASL, Imp) => unreachable!(),
-            (ASL, Addr(addr)) => {
-                let mut value = memory.read(addr);
-                Cpu::asl(&mut self.status, &mut value);
-                memory.write(addr, value);
-            }
-            (ROL, Imp) => unreachable!(),
-            (ROL, Addr(addr)) => {
-                let mut value = memory.read(addr);
-                Cpu::rol(&mut self.status, &mut value);
-                memory.write(addr, value);
-            }
-            (LSR, Imp) => unreachable!(),
-            (LSR, Addr(addr)) => {
-                let mut value = memory.read(addr);
-                Cpu::lsr(&mut self.status, &mut value);
-                memory.write(addr, value);
-            }
-            (ROR, Imp) => unreachable!(),
-            (ROR, Addr(addr)) => {
-                let mut value = memory.read(addr);
-                Cpu::ror(&mut self.status, &mut value);
-                memory.write(addr, value);
-            }
-
-            // Undocumented op codes.
-            (SLO, Addr(addr)) => {
-                let mut value = memory.read(addr);
-                Cpu::asl(&mut self.status, &mut value);
-                memory.write(addr, value);
-                self.a |= value;
-                self.nz(self.a);
-            }
-            (RLA, Addr(addr)) => {
-                let mut value = memory.read(addr);
-                Cpu::rol(&mut self.status, &mut value);
-                memory.write(addr, value);
-                self.a &= value;
-                self.nz(self.a);
-            }
-            (SRE, Addr(addr)) => {
-                let mut value = memory.read(addr);
-                Cpu::lsr(&mut self.status, &mut value);
-                memory.write(addr, value);
-                self.a ^= value;
-                self.nz(self.a);
-            }
-            (RRA, Addr(addr)) => {
-                let mut value = memory.read(addr);
-                Cpu::ror(&mut self.status, &mut value);
-                memory.write(addr, value);
-                self.a = self.adc(value);
-                self.nz(self.a);
-            }
-            (SAX, Addr(addr)) => memory.write(addr, self.a & self.x),
-            (DCP, Addr(addr)) => {
-                let value = memory.read(addr).wrapping_sub(1);
-                memory.write(addr, value);
-                self.cmp(value);
-            }
-            (ISC, Addr(addr)) => {
-                let value = memory.read(addr).wrapping_add(1);
-                memory.write(addr, value);
-                self.a = self.sbc(value);
-            }
-
-            (ANC, Imm(_val)) => unreachable!(),
-            (ALR, Imm(_val)) => unreachable!(),
-            (ARR, Imm(_val)) => unreachable!(),
-            (XAA, _) => unimplemented!(),
-            (AXS, Imm(_val)) => unreachable!(),
-            (AHX, _) => unimplemented!(),
-            (SHY, Addr(addr)) => {
-                let (low, high) = addr.to_low_high();
-                let value = self.y & high.wrapping_add(1);
-                let addr = CpuAddress::from_low_high(low, high & self.y);
-                memory.write(addr, value);
-            }
-            (SHX, Addr(addr)) => {
-                let (low, high) = addr.to_low_high();
-                let value = self.x & high.wrapping_add(1);
-                let addr = CpuAddress::from_low_high(low, high & self.x);
-                memory.write(addr, value);
-            }
-            (TAS, _) => unimplemented!(),
-            (LAS, _) => unimplemented!(),
-
-            (NOP, _) => {}
-            (JAM, _) => return InstructionResult::Jam,
-            (op_code, arg) =>
-                unreachable!(
-                    "Argument type {:?} is invalid for the {:?} opcode.",
-                    arg,
-                    op_code,
-                    ),
-        }
-
-        InstructionResult::Success { branch_taken, oops }
-    }
-
     fn adc(&mut self, value: u8) -> u8 {
         let carry = if self.status.carry { 1 } else { 0 };
         let result = (u16::from(self.a)) + (u16::from(value)) + carry;
@@ -828,29 +608,6 @@ impl Cpu {
         status.zero = value == 0;
     }
 
-    fn maybe_branch(
-        &mut self,
-        take_branch: bool,
-        destination: CpuAddress,
-    ) -> (bool, bool) {
-        if !take_branch {
-            return (false, false);
-        }
-
-        self.suppress_program_counter_increment = true;
-
-        info!(target: "cpuoperation", "Branch taken, cycle added.");
-
-        let oops = self.program_counter.offset(1).page() != destination.page();
-        if oops {
-            info!(target: "cpuoperation", "Branch crossed page boundary, 'Oops' cycle added.");
-        }
-
-        self.program_counter = destination;
-
-        (take_branch, oops)
-    }
-
     fn branch(&mut self) {
         self.suppress_program_counter_increment = true;
         self.address_carry = self.program_counter.offset_with_carry(self.previous_data_bus_value as i8);
@@ -876,14 +633,6 @@ enum NmiStatus {
     Pending,
     Ready,
     Active,
-}
-
-enum InstructionResult {
-    Jam,
-    Success {
-        branch_taken: bool,
-        oops: bool,
-    },
 }
 
 #[cfg(test)]

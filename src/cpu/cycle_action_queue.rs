@@ -47,7 +47,7 @@ impl CycleActionQueue {
 
     // Note: the values of the address bus might not be correct for some cycles.
     pub fn enqueue_dma_transfer(&mut self, current_cycle: u64) {
-        // Unclear this is the correct timing. Might not matter even if it's wrong.
+        // TODO: Improve accuracy by following this: https://www.nesdev.org/wiki/DMA#OAM_DMA
         let is_odd_cycle = current_cycle % 2 == 1;
         if is_odd_cycle {
             self.queue.push_back(NOP_STEP);
