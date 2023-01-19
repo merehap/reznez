@@ -65,7 +65,7 @@ fn nestest() {
 
                 c = nes.cpu().cycle();
 
-                if let Some(step) = nes.step().step && nes.cpu().next_op_code().is_some() {
+                if nes.step().step.is_some() && nes.cpu().next_op_code().is_some() {
                     break;
                 }
             }

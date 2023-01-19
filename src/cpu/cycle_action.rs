@@ -22,6 +22,8 @@ pub enum CycleAction {
     AddCarryToAddressBus,
 
     Instruction,
+
+    StartNextInstruction,
     InterpretOpCode,
     ExecuteOpCode,
 }
@@ -70,6 +72,4 @@ pub enum To {
 
     Accumulator,
     Status,
-
-    NextOpCode,
 }

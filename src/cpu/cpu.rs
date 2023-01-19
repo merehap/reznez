@@ -235,6 +235,32 @@ impl Cpu {
                 self.address_carry = 0;
             }
 
+            StartNextInstruction => {
+                if self.dma_port.take_page().is_some() {
+                    info!(target: "cpuoperation", "Starting DMA transfer at {}.", self.dma_port.start_address());
+                    self.cycle_action_queue.enqueue_dma_transfer(self.cycle);
+                    self.suppress_program_counter_increment = true;
+                    // Seems like a hack. Normally this would be a declarative part of the step.
+                    // It also may just be the wrong address bus value for this cycle.
+                    self.address_bus = self.dma_port.start_address();
+                    return;
+                }
+
+                match self.nmi_status {
+                    NmiStatus::Inactive | NmiStatus::Pending => {
+                        self.next_op_code = Some((self.data_bus, self.address_bus));
+                    }
+                    NmiStatus::Ready => {
+                        info!(target: "cpuoperation", "Starting NMI");
+                        self.nmi_status = NmiStatus::Active;
+                        // NMI has BRK's code point (0x00). TODO: Set the data bus to 0x00?
+                        self.next_op_code = Some((0x00, self.address_bus));
+                        self.suppress_program_counter_increment = true;
+                    }
+                    NmiStatus::Active => unreachable!("TODO: Eventually this might set status to Inactive."),
+                }
+            }
+
             InterpretOpCode => {
                 let (op_code, start_address) = self.next_op_code.take().unwrap();
                 if self.nmi_status == NmiStatus::Active {
@@ -478,32 +504,6 @@ impl Cpu {
             }
             To::Accumulator => self.a = self.data_bus,
             To::Status => self.status = Status::from_byte(self.data_bus),
-
-            To::NextOpCode => {
-                if self.dma_port.take_page().is_some() {
-                    info!(target: "cpuoperation", "Starting DMA transfer at {}.", self.dma_port.start_address());
-                    self.cycle_action_queue.enqueue_dma_transfer(self.cycle);
-                    self.suppress_program_counter_increment = true;
-                    // Seems like a hack. Normally this would be a declarative part of the step.
-                    // It also may just be the wrong address bus value for this cycle.
-                    self.address_bus = self.dma_port.start_address();
-                    return;
-                }
-
-                match self.nmi_status {
-                    NmiStatus::Inactive | NmiStatus::Pending => {
-                        self.next_op_code = Some((self.data_bus, self.address_bus));
-                    }
-                    NmiStatus::Ready => {
-                        info!(target: "cpuoperation", "Starting NMI");
-                        self.nmi_status = NmiStatus::Active;
-                        // NMI has BRK's code point (0x00). TODO: Set the data bus to 0x00?
-                        self.next_op_code = Some((0x00, self.address_bus));
-                        self.suppress_program_counter_increment = true;
-                    }
-                    NmiStatus::Active => unreachable!("TODO: Eventually this might set status to Inactive."),
-                }
-            }
         }
     }
 
