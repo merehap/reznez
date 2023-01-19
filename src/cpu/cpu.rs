@@ -42,6 +42,7 @@ pub struct Cpu {
     address_carry: i8,
 
     suppress_program_counter_increment: bool,
+    suppress_next_instruction_start: bool,
 }
 
 impl Cpu {
@@ -84,6 +85,7 @@ impl Cpu {
             address_carry: 0,
 
             suppress_program_counter_increment: false,
+            suppress_next_instruction_start: false,
         }
     }
 
@@ -99,6 +101,8 @@ impl Cpu {
         self.nmi_status = NmiStatus::Inactive;
         self.cycle = 7;
         self.jammed = false;
+        self.suppress_program_counter_increment = false;
+        self.suppress_next_instruction_start = false;
         // TODO: APU resets?
     }
 
@@ -230,12 +234,31 @@ impl Cpu {
                     self.cycle_action_queue.skip_to_front(ADDRESS_BUS_READ_STEP);
                 }
             }
+            MaybeInsertBranchOopsStep => {
+                if self.address_carry != 0 {
+                    self.suppress_next_instruction_start = true;
+                    self.suppress_program_counter_increment = true;
+                    info!(target: "cpuoperation", "\tBranch crossed page boundary, 'Oops' cycle added.");
+                    self.cycle_action_queue.skip_to_front(READ_OP_CODE_STEP);
+                }
+            }
             AddCarryToAddressBus => {
                 self.address_bus.offset_high(self.address_carry);
                 self.address_carry = 0;
             }
+            AddCarryToProgramCounter => {
+                if self.address_carry != 0 {
+                    self.program_counter.offset_high(self.address_carry);
+                    self.address_carry = 0;
+                }
+            }
 
             StartNextInstruction => {
+                if self.suppress_next_instruction_start {
+                    self.suppress_next_instruction_start = false;
+                    return;
+                }
+
                 if self.dma_port.take_page().is_some() {
                     info!(target: "cpuoperation", "Starting DMA transfer at {}.", self.dma_port.start_address());
                     self.cycle_action_queue.enqueue_dma_transfer(self.cycle);
@@ -279,11 +302,7 @@ impl Cpu {
                     self.suppress_program_counter_increment = true;
                 }
 
-                if instruction.template.access_mode == AccessMode::Rel {
-                    self.execute_cycle_action(memory, Instruction);
-                } else {
-                    self.cycle_action_queue.enqueue_instruction(instruction);
-                }
+                self.cycle_action_queue.enqueue_instruction(instruction);
             }
             Instruction => {
                 let instr = self.current_instruction.unwrap();
@@ -426,6 +445,16 @@ impl Cpu {
                         self.data_bus = self.data_bus.wrapping_sub(1);
                         self.cmp(self.data_bus);
                     },
+
+                    // Relative op codes.
+                    BPL => if !self.status.negative { self.branch(); }
+                    BMI => if self.status.negative { self.branch(); }
+                    BVC => if !self.status.overflow { self.branch(); }
+                    BVS => if self.status.overflow { self.branch(); }
+                    BCC => if !self.status.carry { self.branch(); }
+                    BCS => if self.status.carry { self.branch(); }
+                    BNE => if !self.status.zero { self.branch(); }
+                    BEQ => if self.status.zero { self.branch(); }
 
                     op_code => todo!("{:?}", op_code),
                 }
@@ -819,6 +848,14 @@ impl Cpu {
         self.program_counter = destination;
 
         (take_branch, oops)
+    }
+
+    fn branch(&mut self) {
+        self.suppress_program_counter_increment = true;
+        self.address_carry = self.program_counter.offset_with_carry(self.previous_data_bus_value as i8);
+        self.suppress_next_instruction_start = true;
+        info!(target: "cpuoperation", "\tBranch taken, cycle added.");
+        self.cycle_action_queue.skip_to_front(BRANCH_TAKEN_STEP);
     }
 }
 

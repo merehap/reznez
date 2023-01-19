@@ -45,6 +45,13 @@ impl CpuAddress {
         CpuAddress::new((i32::from(self.0)).wrapping_add(i32::from(value)) as u16)
     }
 
+    pub fn offset_with_carry(&mut self, value: i8) -> i8 {
+        let temp = self.offset(value);
+        let carry: i8 = (i16::from(temp.high_byte()) - i16::from(self.high_byte())).try_into().unwrap();
+        *self = CpuAddress::from_low_high(temp.low_byte(), self.high_byte());
+        carry
+    }
+
     pub fn offset_low(&mut self, value: u8) -> bool {
         let (low, high) = self.to_low_high();
         let (low, carry) = low.overflowing_add(value);

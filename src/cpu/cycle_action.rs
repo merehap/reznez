@@ -19,7 +19,9 @@ pub enum CycleAction {
 
     XOffsetAddressBus,
     MaybeInsertOopsStep,
+    MaybeInsertBranchOopsStep,
     AddCarryToAddressBus,
+    AddCarryToProgramCounter,
 
     Instruction,
 

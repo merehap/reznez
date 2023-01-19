@@ -36,6 +36,7 @@ fn template_to_instruction(template: InstructionTemplate) -> CpuInstruction {
 
         (Imp,   _, _) => IMPLICIT_ADDRESSING_STEPS,
         (Imm,   _, _) => IMMEDIATE_ADDRESSING_STEPS,
+        (Rel,   _, _) => RELATIVE_ADDRESSING_STEPS,
 
         // Read operations.
         (Abs, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | BIT | LAX | NOP, _) => ABSOLUTE_READ_STEPS,
@@ -99,12 +100,19 @@ pub const INTERPRET_OP_CODE_STEP: Step =
 pub const ADDRESS_BUS_READ_STEP: Step =
     Step::new(From::AddressBusTarget          , To::DataBus               , &[]);
 
+pub const BRANCH_TAKEN_STEP: Step =
+    Step::new(From::ProgramCounterTarget      , To::DataBus,
+        &[MaybeInsertBranchOopsStep, AddCarryToProgramCounter, StartNextInstruction, IncrementProgramCounter]);
+
 pub const IMPLICIT_ADDRESSING_STEPS: &'static [Step] = &[
     // Read the NEXT op code, execute the CURRENT op code.
     Step::new(From::ProgramCounterTarget      , To::DataBus            , &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 pub const IMMEDIATE_ADDRESSING_STEPS: &'static [Step] = &[
     // Read the NEXT op code, execute the CURRENT op code.
+    Step::new(From::ProgramCounterTarget      , To::DataBus            , &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
+];
+pub const RELATIVE_ADDRESSING_STEPS: &'static [Step] = &[
     Step::new(From::ProgramCounterTarget      , To::DataBus            , &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 
