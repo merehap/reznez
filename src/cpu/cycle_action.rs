@@ -41,16 +41,9 @@ pub enum From {
 
     TopOfStack,
 
-    AddressTarget(CpuAddress),
+    InterruptVectorLow,
+    InterruptVectorHigh,
 }
-
-impl From {
-    pub const NMI_VECTOR_LOW : From = From::AddressTarget(CpuAddress::new(0xFFFA));
-    pub const NMI_VECTOR_HIGH: From = From::AddressTarget(CpuAddress::new(0xFFFB));
-    pub const IRQ_VECTOR_LOW : From = From::AddressTarget(CpuAddress::new(0xFFFE));
-    pub const IRQ_VECTOR_HIGH: From = From::AddressTarget(CpuAddress::new(0xFFFF));
-}
-
 
 #[derive(Clone, Copy, Debug)]
 pub enum To {

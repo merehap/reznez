@@ -168,13 +168,11 @@ pub const INDIRECT_INDEXED_READ_STEPS: &'static [Step] = &[
     Read(From::ProgramCounterTarget , &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 
-// TODO: The data bus needs to be set to the data written.
 pub const ABSOLUTE_WRITE_STEPS: &'static [Step] = &[
     Read(From::ProgramCounterTarget, &[StorePendingAddressLowByte, IncrementProgramCounter]),
     WriteField(OpRegister, To::PendingAddressTarget, &[]),
 ];
 
-// TODO: The data bus needs to be set to the data written.
 pub const ZERO_PAGE_WRITE_STEPS: &'static [Step] = &[
     WriteField(OpRegister, To::PendingZeroPageTarget, &[]),
 ];
@@ -281,8 +279,8 @@ pub const NMI_STEPS: &'static [Step] = &[
     WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer]),
     WriteField(StatusForInterrupt    , To::TopOfStack, &[DecrementStackPointer]),
     // Copy the new ProgramCounterLowByte to the data bus.
-    Read(                              From::NMI_VECTOR_LOW , &[DisableInterrupts]),
-    ReadField(ProgramCounterHighByte , From::NMI_VECTOR_HIGH, &[]),
+    Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
+    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[]),
 ];
 
 pub const BRK_STEPS: &'static [Step] = &[
@@ -290,8 +288,8 @@ pub const BRK_STEPS: &'static [Step] = &[
     WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer]),
     WriteField(StatusForInstruction  , To::TopOfStack, &[DecrementStackPointer]),
     // Copy the new ProgramCounterLowByte to the data bus.
-    Read(                              From::IRQ_VECTOR_LOW , &[DisableInterrupts]),
-    ReadField(ProgramCounterHighByte,  From::IRQ_VECTOR_HIGH, &[]),
+    Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
+    ReadField(ProgramCounterHighByte,  From::InterruptVectorHigh, &[]),
 ];
 
 pub const RTI_STEPS: &'static [Step] = &[

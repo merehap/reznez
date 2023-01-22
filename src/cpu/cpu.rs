@@ -31,6 +31,8 @@ pub struct Cpu {
 
     cycle: u64,
 
+    current_interrupt_vector: InterruptVector,
+
     jammed: bool,
 
     address_bus: CpuAddress,
@@ -72,6 +74,9 @@ impl Cpu {
 
             // See startup sequence in NES-manual so this isn't hard-coded.
             cycle: 7,
+
+            // The initial value probably doesn't matter.
+            current_interrupt_vector: InterruptVector::Reset,
 
             jammed: false,
 
@@ -149,6 +154,7 @@ impl Cpu {
 
     pub fn schedule_nmi(&mut self) {
         self.nmi_status = NmiStatus::Pending;
+        self.current_interrupt_vector = InterruptVector::Nmi;
     }
 
     pub fn step(&mut self, memory: &mut CpuMemory) -> Option<Step> {
@@ -286,7 +292,14 @@ impl Cpu {
                 }
 
                 match self.nmi_status {
-                    NmiStatus::Inactive | NmiStatus::Pending => {
+                    NmiStatus::Inactive => {
+                        self.next_op_code = Some((self.data_bus, self.address_bus));
+                        // If the next instruction is BRK, set the appropriate interrupt vector.
+                        if self.data_bus == 0x00 {
+                            self.current_interrupt_vector = InterruptVector::Irq;
+                        }
+                    }
+                    NmiStatus::Pending => {
                         self.next_op_code = Some((self.data_bus, self.address_bus));
                     }
                     NmiStatus::Ready => {
@@ -475,7 +488,16 @@ impl Cpu {
                 self.program_counter
             }
             TopOfStack => memory.stack_pointer_address(),
-            AddressTarget(address) => address,
+            InterruptVectorLow => match self.current_interrupt_vector {
+                InterruptVector::Nmi   => CpuAddress::new(0xFFFA),
+                InterruptVector::Reset => CpuAddress::new(0xFFFC),
+                InterruptVector::Irq   => CpuAddress::new(0xFFFE),
+            }
+            InterruptVectorHigh => match self.current_interrupt_vector {
+                InterruptVector::Nmi   => CpuAddress::new(0xFFFB),
+                InterruptVector::Reset => CpuAddress::new(0xFFFD),
+                InterruptVector::Irq   => CpuAddress::new(0xFFFF),
+            }
         }
     }
 
@@ -653,6 +675,13 @@ enum NmiStatus {
     Pending,
     Ready,
     Active,
+}
+
+#[derive(Debug)]
+enum InterruptVector {
+    Nmi,
+    Reset,
+    Irq,
 }
 
 #[cfg(test)]

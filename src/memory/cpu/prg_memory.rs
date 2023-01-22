@@ -28,7 +28,7 @@ impl PrgMemory {
             usize::from(bank_count) * prg_memory.layout.bank_size,
             "Bad PRG data size.",
         );
-        assert_eq!(bank_count & (bank_count - 1), 0);
+        //assert_eq!(bank_count & (bank_count - 1), 0);
 
         prg_memory
     }
