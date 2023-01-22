@@ -41,9 +41,9 @@ pub trait Mapper {
         match address.to_raw() {
             0x0000..=0x1FFF => Some(cpu_internal_ram[address.to_usize() & 0x07FF]),
             0x2000..=0x3FFF => Some(ppu_registers.read(address_to_ppu_register_type(address))),
-            0x4000..=0x4013 => {/* TODO: APU */ Some(0)},
+            0x4000..=0x4013 => { None },
             0x4014          => {/* OAM DMA is write-only. TODO: Is 0 correct here? */ Some(0)},
-            0x4015          => {/* TODO: APU */ Some(0)},
+            0x4015          => { None },
             // TODO: Open bus https://www.nesdev.org/wiki/Controller_reading
             0x4016          => Some(ports.joypad1.borrow_mut().next_status() as u8),
             0x4017          => Some(ports.joypad2.borrow_mut().next_status() as u8),
