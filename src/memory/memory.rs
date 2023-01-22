@@ -68,7 +68,7 @@ pub struct CpuMemory<'a> {
 
 impl<'a> CpuMemory<'a> {
     #[inline]
-    pub fn read(&mut self, address: CpuAddress) -> u8 {
+    pub fn read(&mut self, address: CpuAddress) -> Option<u8> {
         self.memory.mapper.cpu_read(
             &self.memory.cpu_internal_ram,
             &mut self.memory.ports,
@@ -124,7 +124,10 @@ impl<'a> CpuMemory<'a> {
     }
 
     fn address_from_vector(&mut self, mut vector: CpuAddress) -> CpuAddress {
-        CpuAddress::from_low_high(self.read(vector), self.read(vector.inc()))
+        CpuAddress::from_low_high(
+            self.read(vector).expect("Read open bus."),
+            self.read(vector.inc()).expect("Read open bus."),
+        )
     }
 }
 

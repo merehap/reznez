@@ -172,16 +172,16 @@ impl Cpu {
         match step {
             Step::Read(from, _) => {
                 self.address_bus = self.from_address(memory, from);
-                self.data_bus = memory.read(self.address_bus);
+                self.data_bus = memory.read(self.address_bus).unwrap_or(self.data_bus);
+            }
+            Step::ReadField(field, from, _) => {
+                self.address_bus = self.from_address(memory, from);
+                self.data_bus = memory.read(self.address_bus).unwrap_or(self.data_bus);
+                self.set_field_value(field);
             }
             Step::Write(to, _) => {
                 self.address_bus = self.to_address(memory, to);
                 memory.write(self.address_bus, self.data_bus);
-            }
-            Step::ReadField(field, from, _) => {
-                self.address_bus = self.from_address(memory, from);
-                self.data_bus = memory.read(self.address_bus);
-                self.set_field_value(field);
             }
             Step::WriteField(field, to, _) => {
                 self.address_bus = self.to_address(memory, to);

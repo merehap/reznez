@@ -37,17 +37,18 @@ pub trait Mapper {
         ports: &mut Ports,
         ppu_registers: &mut PpuRegisters,
         address: CpuAddress,
-    ) -> u8 {
+    ) -> Option<u8> {
         match address.to_raw() {
-            0x0000..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF],
-            0x2000..=0x3FFF => ppu_registers.read(address_to_ppu_register_type(address)),
-            0x4000..=0x4013 => {/* TODO: APU */ 0},
-            0x4014          => {/* OAM DMA is write-only. */ 0},
-            0x4015          => {/* TODO: APU */ 0},
-            0x4016          => ports.joypad1.borrow_mut().next_status() as u8,
-            0x4017          => ports.joypad2.borrow_mut().next_status() as u8,
+            0x0000..=0x1FFF => Some(cpu_internal_ram[address.to_usize() & 0x07FF]),
+            0x2000..=0x3FFF => Some(ppu_registers.read(address_to_ppu_register_type(address))),
+            0x4000..=0x4013 => {/* TODO: APU */ Some(0)},
+            0x4014          => {/* OAM DMA is write-only. TODO: Is 0 correct here? */ Some(0)},
+            0x4015          => {/* TODO: APU */ Some(0)},
+            // TODO: Open bus https://www.nesdev.org/wiki/Controller_reading
+            0x4016          => Some(ports.joypad1.borrow_mut().next_status() as u8),
+            0x4017          => Some(ports.joypad2.borrow_mut().next_status() as u8),
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
-            0x4020..=0x5FFF => {/* TODO: Low registers. */ 0},
+            0x4020..=0x5FFF => {/* TODO: Low registers. */ None},
             0x6000..=0xFFFF => self.prg_memory().read(address),
         }
     }

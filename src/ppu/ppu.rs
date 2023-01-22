@@ -584,11 +584,11 @@ mod tests {
         );
 
         mem.as_ppu_memory().write(ppu.current_address, 184);
-        let value = mem.as_cpu_memory().read(CPU_PPU_DATA);
+        let value = mem.as_cpu_memory().read(CPU_PPU_DATA).unwrap();
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(value, 0);
         assert_eq!(ppu.pending_data, 184);
-        let value = mem.as_cpu_memory().read(CPU_PPU_DATA);
+        let value = mem.as_cpu_memory().read(CPU_PPU_DATA).unwrap();
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(value, 184);
         assert_eq!(ppu.pending_data, 0);

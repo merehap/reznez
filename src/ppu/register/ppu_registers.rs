@@ -124,9 +124,10 @@ impl PpuRegisters {
         let register_value = match register_type {
             // Write-only registers.
             Ctrl | Mask | OamAddr | Scroll | PpuAddr => None,
-            // Retain the open bus values for the unused bits of Status.
+            // Retain the previous latch values for the unused bits of Status.
             Status => Some(self.status.to_u8() | (self.latch.value() & 0b0001_1111)),
             OamData => Some(self.oam_data),
+            // Retain the previous latch values for the unused bits of palette data.
             PpuData if self.ppu_data.is_palette_data => {
                 Some(self.ppu_data.value | (self.latch.value() & 0b1100_0000))
             }

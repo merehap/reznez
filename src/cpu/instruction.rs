@@ -80,8 +80,8 @@ impl Instruction {
         mem: &mut CpuMemory,
     ) -> Instruction {
         let template = INSTRUCTION_TEMPLATES[op_code as usize];
-        let low = mem.read(start_address.offset(1));
-        let high = mem.read(start_address.offset(2));
+        let low = mem.read(start_address.offset(1)).expect("Read open bus.");
+        let high = mem.read(start_address.offset(2)).expect("Read open bus.");
 
         let mut page_boundary_crossed = false;
 
@@ -126,22 +126,24 @@ impl Instruction {
             Ind => {
                 let first = CpuAddress::from_low_high(low, high);
                 let second = CpuAddress::from_low_high(low.wrapping_add(1), high);
-                let address =
-                    CpuAddress::from_low_high(mem.read(first), mem.read(second));
+                let address = CpuAddress::from_low_high(
+                    mem.read(first).expect("Read open bus."),
+                    mem.read(second).expect("Read open bus.")
+                );
                 Argument::Addr(address)
             }
             IzX => {
                 let low = low.wrapping_add(x_index);
                 let address = CpuAddress::from_low_high(
-                    mem.read(CpuAddress::zero_page(low)),
-                    mem.read(CpuAddress::zero_page(low.wrapping_add(1))),
+                    mem.read(CpuAddress::zero_page(low)).expect("Read open bus."),
+                    mem.read(CpuAddress::zero_page(low.wrapping_add(1))).expect("Read open bus."),
                 );
                 Argument::Addr(address)
             }
             IzY => {
                 let start_address = CpuAddress::from_low_high(
-                    mem.read(CpuAddress::zero_page(low)),
-                    mem.read(CpuAddress::zero_page(low.wrapping_add(1))),
+                    mem.read(CpuAddress::zero_page(low)).expect("Read open bus."),
+                    mem.read(CpuAddress::zero_page(low.wrapping_add(1))).expect("Read open bus."),
                 );
                 // TODO: Should this wrap around just the current page?
                 let address = start_address.advance(y_index);
