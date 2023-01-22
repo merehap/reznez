@@ -31,10 +31,6 @@ pub enum CycleAction {
 
 #[derive(Clone, Copy, Debug)]
 pub enum From {
-    DataBus,
-    PendingAddress,
-    PendingZeroPageAddress,
-
     AddressBusTarget,
     DmaAddressTarget,
 
@@ -44,12 +40,6 @@ pub enum From {
     PendingProgramCounterTarget,
 
     TopOfStack,
-
-    ProgramCounterLowByte,
-    ProgramCounterHighByte,
-    Accumulator,
-    StatusForInstruction,
-    StatusForInterrupt,
 
     AddressTarget(CpuAddress),
 }
@@ -61,17 +51,32 @@ impl From {
     pub const IRQ_VECTOR_HIGH: From = From::AddressTarget(CpuAddress::new(0xFFFF));
 }
 
+
 #[derive(Clone, Copy, Debug)]
 pub enum To {
-    DataBus,
-
     AddressBusTarget,
-    TopOfStack,
+    DmaAddressTarget,
 
-    ProgramCounterHighByte,
+    ProgramCounterTarget,
+    PendingAddressTarget,
+    PendingZeroPageTarget,
+    PendingProgramCounterTarget,
+
+    TopOfStack,
 
     OamData,
 
+    AddressTarget(CpuAddress),
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum Field {
+    ProgramCounterLowByte,
+    ProgramCounterHighByte,
     Accumulator,
     Status,
+    StatusForInstruction,
+    StatusForInterrupt,
+
+    OpRegister,
 }

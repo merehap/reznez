@@ -1,10 +1,11 @@
 use log::info;
 
 use crate::cpu::step::*;
-use crate::cpu::cycle_action::{CycleAction, From, To};
+use crate::cpu::cycle_action::{CycleAction, From, To, Field};
 use crate::cpu::cycle_action_queue::CycleActionQueue;
 use crate::cpu::instruction;
 use crate::cpu::instruction::{AccessMode, Instruction, OpCode};
+use crate::cpu::status;
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::ports::DmaPort;
@@ -35,7 +36,6 @@ pub struct Cpu {
     jammed: bool,
 
     address_bus: CpuAddress,
-    previous_address_bus_value: CpuAddress,
     data_bus: u8,
     previous_data_bus_value: u8,
     pending_address_low: u8,
@@ -78,7 +78,6 @@ impl Cpu {
             jammed: false,
 
             address_bus: CpuAddress::new(0x0000),
-            previous_address_bus_value: CpuAddress::new(0x0000),
             data_bus: 0,
             previous_data_bus_value: 0,
             pending_address_low: 0,
@@ -171,7 +170,28 @@ impl Cpu {
         let step = self.cycle_action_queue.dequeue()
             .expect("Ran out of CycleActions!");
         info!(target: "cpustep", "\tPC: {}, Cycle: {}, {:?}", self.program_counter, self.cycle, step);
-        self.copy_data(memory, step.from(), step.to());
+        self.previous_data_bus_value = self.data_bus;
+        match step {
+            Step::Read(from, _) => {
+                self.address_bus = self.from_address(memory, from);
+                self.data_bus = memory.read(self.address_bus);
+            }
+            Step::Write(to, _) => {
+                self.address_bus = self.to_address(memory, to);
+                memory.write(self.address_bus, self.data_bus);
+            }
+            Step::ReadField(field, from, _) => {
+                self.address_bus = self.from_address(memory, from);
+                self.data_bus = memory.read(self.address_bus);
+                self.set_field_value(field);
+            }
+            Step::WriteField(field, to, _) => {
+                self.address_bus = self.to_address(memory, to);
+                self.data_bus = self.field_value(field);
+                memory.write(self.address_bus, self.data_bus);
+            }
+        }
+
         for &action in step.actions() {
             self.execute_cycle_action(memory, action);
         }
@@ -379,22 +399,7 @@ impl Cpu {
                     }
 
                     // Write op codes.
-                    STA => memory.write(self.address_bus, self.a),
-                    STX => memory.write(self.address_bus, self.x),
-                    STY => memory.write(self.address_bus, self.y),
-                    SAX => memory.write(self.address_bus, self.a & self.x),
-                    SHX => {
-                        let (low, high) = self.address_bus.to_low_high();
-                        let value = self.x & high.wrapping_add(1);
-                        let addr = CpuAddress::from_low_high(low, high & self.x);
-                        memory.write(addr, value);
-                    }
-                    SHY => {
-                        let (low, high) = self.address_bus.to_low_high();
-                        let value = self.y & high.wrapping_add(1);
-                        let addr = CpuAddress::from_low_high(low, high & self.y);
-                        memory.write(addr, value);
-                    }
+                    STA | STX | STY | SAX | SHX | SHY => unreachable!(),
 
 
                     // Read-Modify-Write op codes.
@@ -455,81 +460,99 @@ impl Cpu {
         }
     }
 
-    // Note that most source/destination combos are invalid.
-    // In particular, there is no way to directly copy from one memory location to another.
-    fn copy_data(&mut self, memory: &mut CpuMemory, source: From, destination: To) {
-        self.previous_address_bus_value = self.address_bus;
-        self.previous_data_bus_value = self.data_bus;
-
-        self.data_bus = match source {
-            From::DataBus => self.data_bus,
-            From::PendingAddress => {
+    fn from_address(&mut self, memory: &CpuMemory, from: From) -> CpuAddress {
+        use self::From::*;
+        match from {
+            AddressBusTarget => self.address_bus,
+            DmaAddressTarget => self.dma_port.current_address(),
+            ProgramCounterTarget => self.program_counter,
+            PendingAddressTarget =>
+                CpuAddress::from_low_high(self.pending_address_low, self.data_bus),
+            PendingZeroPageTarget =>
+                CpuAddress::from_low_high(self.data_bus, 0),
+            PendingProgramCounterTarget => {
                 self.address_bus = CpuAddress::from_low_high(self.pending_address_low, self.data_bus);
-                self.data_bus
-            }
-            From::PendingZeroPageAddress => {
-                self.address_bus = CpuAddress::from_low_high(self.data_bus, 0);
-                self.data_bus
-            }
-            From::AddressBusTarget => {
-                memory.read(self.address_bus)
-            }
-            From::DmaAddressTarget => {
-                self.address_bus = self.dma_port.current_address();
-                memory.read(self.address_bus)
-            }
-            From::ProgramCounterTarget => {
-                self.address_bus = self.program_counter;
-                memory.read(self.address_bus)
-            }
-            From::PendingAddressTarget => {
-                self.address_bus = CpuAddress::from_low_high(self.pending_address_low, self.data_bus);
-                memory.read(self.address_bus)
-            }
-            From::PendingZeroPageTarget => {
-                self.address_bus = CpuAddress::from_low_high(self.data_bus, 0);
-                memory.read(self.address_bus)
-            }
-            From::PendingProgramCounterTarget => {
-                self.address_bus = CpuAddress::from_low_high(self.pending_address_low, self.data_bus);
+                // FIXME: Make this a CycleAction instead so from_address won't have side effects.
                 self.program_counter = self.address_bus;
-                memory.read(self.address_bus)
+                self.program_counter
             }
-            From::TopOfStack => {
-                self.address_bus = memory.stack_pointer_address();
-                memory.read(self.address_bus)
-            }
-            From::AddressTarget(address) => {
-                self.address_bus = address;
-                memory.read(self.address_bus)
-            }
-            From::ProgramCounterLowByte => self.program_counter.low_byte(),
-            From::ProgramCounterHighByte => self.program_counter.high_byte(),
-            From::Accumulator => self.a,
-            From::StatusForInstruction => self.status.to_instruction_byte(),
-            From::StatusForInterrupt => self.status.to_interrupt_byte(),
-        };
+            TopOfStack => memory.stack_pointer_address(),
+            AddressTarget(address) => address,
+        }
+    }
 
-        match destination {
-            To::DataBus => { /* The data bus was already copied to regardless of source. */ },
-            To::AddressBusTarget => memory.write(self.address_bus, self.data_bus),
-            To::TopOfStack => {
-                self.address_bus = memory.stack_pointer_address();
-                memory.write(self.address_bus, self.data_bus);
+    // A copy of from_address, unfortunately.
+    fn to_address(&mut self, memory: &CpuMemory, to: To) -> CpuAddress {
+        use self::To::*;
+        match to {
+            AddressBusTarget => self.address_bus,
+            DmaAddressTarget => self.dma_port.current_address(),
+            ProgramCounterTarget => self.program_counter,
+            PendingAddressTarget =>
+                CpuAddress::from_low_high(self.pending_address_low, self.data_bus),
+            PendingZeroPageTarget =>
+                CpuAddress::from_low_high(self.data_bus, 0),
+            PendingProgramCounterTarget => {
+                self.address_bus = CpuAddress::from_low_high(self.pending_address_low, self.data_bus);
+                // FIXME: Make this a CycleAction instead so from_address won't have side effects.
+                self.program_counter = self.address_bus;
+                self.program_counter
             }
-            // TODO: Rename.
-            To::ProgramCounterHighByte => {
+            TopOfStack => memory.stack_pointer_address(),
+            AddressTarget(address) => address,
+
+            OamData => OAM_DATA_ADDRESS,
+        }
+    }
+
+    fn field_value(&mut self, field: Field) -> u8 {
+        use Field::*;
+        match field {
+            ProgramCounterLowByte => self.program_counter.low_byte(),
+            ProgramCounterHighByte => self.program_counter.high_byte(),
+            Accumulator => self.a,
+            Status => unreachable!(),
+            StatusForInstruction => self.status.to_instruction_byte(),
+            StatusForInterrupt => self.status.to_interrupt_byte(),
+            OpRegister => match self.current_instruction.unwrap().template.op_code {
+                OpCode::STA => self.a,
+                OpCode::STX => self.x,
+                OpCode::STY => self.y,
+                OpCode::SAX => self.a & self.x,
+                // FIXME: Calculations should be done as part of an earlier CycleAction.
+                OpCode::SHX => {
+                    let (low, high) = self.address_bus.to_low_high();
+                    self.address_bus = CpuAddress::from_low_high(low, high & self.x);
+                    self.x & high.wrapping_add(1)
+                }
+
+                // FIXME: Calculations should be done as part of an earlier CycleAction.
+                OpCode::SHY => {
+                    let (low, high) = self.address_bus.to_low_high();
+                    self.address_bus = CpuAddress::from_low_high(low, high & self.y);
+                    self.y & high.wrapping_add(1)
+                }
+                op_code => todo!("{:?}", op_code),
+            }
+        }
+    }
+
+    fn set_field_value(&mut self, field: Field) {
+        use Field::*;
+        match field {
+            ProgramCounterLowByte => unreachable!(),
+            ProgramCounterHighByte => {
                 self.program_counter = CpuAddress::from_low_high(
                     self.previous_data_bus_value,
                     self.data_bus,
                 );
             }
-            To::OamData => {
-                // The only write that doesn't use/change the address bus?
-                memory.write(OAM_DATA_ADDRESS, self.data_bus);
-            }
-            To::Accumulator => self.a = self.data_bus,
-            To::Status => self.status = Status::from_byte(self.data_bus),
+
+            Accumulator => self.a = self.data_bus,
+            Status => self.status = status::Status::from_byte(self.data_bus),
+            StatusForInstruction => unreachable!(),
+            StatusForInterrupt => unreachable!(),
+            OpRegister => panic!(),
         }
     }
 
