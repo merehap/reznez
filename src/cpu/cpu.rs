@@ -11,8 +11,6 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::ports::DmaPort;
 use crate::memory::memory::CpuMemory;
 
-const OAM_DATA_ADDRESS: CpuAddress = CpuAddress::new(0x2004);
-
 pub struct Cpu {
     // Accumulator
     a: u8,
@@ -500,8 +498,6 @@ impl Cpu {
             }
             TopOfStack => memory.stack_pointer_address(),
             AddressTarget(address) => address,
-
-            OamData => OAM_DATA_ADDRESS,
         }
     }
 

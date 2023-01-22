@@ -15,8 +15,7 @@ lazy_static! {
     pub static ref OAM_DMA_TRANSFER_STEPS: [Step; 512] = {
         let read_write = &[
             Read(From::DmaAddressTarget, &[]),
-            // TODO: Unspecial-case OamData.
-            Write(To::OamData          , &[IncrementDmaAddress]),
+            Write(To::OAM_DATA, &[IncrementDmaAddress]),
         ];
 
         read_write.repeat(256).try_into().unwrap()

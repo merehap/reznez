@@ -64,9 +64,11 @@ pub enum To {
 
     TopOfStack,
 
-    OamData,
-
     AddressTarget(CpuAddress),
+}
+
+impl To {
+    pub const OAM_DATA: To = To::AddressTarget(CpuAddress::new(0x2004));
 }
 
 #[derive(Clone, Copy, Debug)]
