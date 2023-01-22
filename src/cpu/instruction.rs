@@ -14,44 +14,43 @@ lazy_static! {
 fn instruction_templates() -> [InstructionTemplate; 256] {
     use OpCode::*;
     use AccessMode::*;
-    use ExtraCycle::*;
 
-    let jam = (JAM, Imp, 8, No);
-    let codes: [[(OpCode, AccessMode, u8, ExtraCycle); 8]; 32] = [
-        /*00*/           /*20*/          /*40*/          /*60*/          /*80*/          /*A0*/          /*C0*/          /*E0*/
-/*+00*/ [(BRK,Imp,7,No), (JSR,Abs,6,No), (RTI,Imp,6,No), (RTS,Imp,6,No), (NOP,Imm,2,No), (LDY,Imm,2,No), (CPY,Imm,2,No), (CPX,Imm,2,No)],
-/*+01*/ [(ORA,IzX,6,No), (AND,IzX,6,No), (EOR,IzX,6,No), (ADC,IzX,6,No), (STA,IzX,6,No), (LDA,IzX,6,No), (CMP,IzX,6,No), (SBC,IzX,6,No)],
-/*+02*/ [jam           , jam           , jam           , jam           , (NOP,Imm,2,No), (LDX,Imm,2,No), (NOP,Imm,2,No), (NOP,Imm,2,No)],
-/*+03*/ [(SLO,IzX,8,No), (RLA,IzX,8,No), (SRE,IzX,8,No), (RRA,IzX,8,No), (SAX,IzX,6,No), (LAX,IzX,6,No), (DCP,IzX,8,No), (ISC,IzX,8,No)],
-/*+04*/ [(NOP,ZP ,3,No), (BIT,ZP ,3,No), (NOP,ZP ,3,No), (NOP,ZP ,3,No), (STY,ZP ,3,No), (LDY,ZP ,3,No), (CPY,ZP ,3,No), (CPX,ZP ,3,No)],
-/*+05*/ [(ORA,ZP ,3,No), (AND,ZP ,3,No), (EOR,ZP ,3,No), (ADC,ZP ,3,No), (STA,ZP ,3,No), (LDA,ZP ,3,No), (CMP,ZP ,3,No), (SBC,ZP ,3,No)],
-/*+06*/ [(ASL,ZP ,5,No), (ROL,ZP ,5,No), (LSR,ZP ,5,No), (ROR,ZP ,5,No), (STX,ZP ,3,No), (LDX,ZP ,3,No), (DEC,ZP ,5,No), (INC,ZP ,5,No)],
-/*+07*/ [(SLO,ZP ,5,No), (RLA,ZP ,5,No), (SRE,ZP ,5,No), (RRA,ZP ,5,No), (SAX,ZP ,3,No), (LAX,ZP ,3,No), (DCP,ZP ,5,No), (ISC,ZP ,5,No)],
-/*+08*/ [(PHP,Imp,3,No), (PLP,Imp,4,No), (PHA,Imp,3,No), (PLA,Imp,4,No), (DEY,Imp,2,No), (TAY,Imp,2,No), (INY,Imp,2,No), (INX,Imp,2,No)],
-/*+09*/ [(ORA,Imm,2,No), (AND,Imm,2,No), (EOR,Imm,2,No), (ADC,Imm,2,No), (NOP,Imm,2,No), (LDA,Imm,2,No), (CMP,Imm,2,No), (SBC,Imm,2,No)],
-/*+0A*/ [(ASL,Imp,2,No), (ROL,Imp,2,No), (LSR,Imp,2,No), (ROR,Imp,2,No), (TXA,Imp,2,No), (TAX,Imp,2,No), (DEX,Imp,2,No), (NOP,Imp,2,No)],
-/*+0B*/ [(ANC,Imm,2,No), (ANC,Imm,2,No), (ALR,Imm,2,No), (ARR,Imm,2,No), (XAA,Imm,2,No), (LAX,Imm,2,No), (AXS,Imm,2,No), (SBC,Imm,2,No)],
-/*+0C*/ [(NOP,Abs,4,No), (BIT,Abs,4,No), (JMP,Abs,3,No), (JMP,Ind,5,No), (STY,Abs,4,No), (LDY,Abs,4,No), (CPY,Abs,4,No), (CPX,Abs,4,No)],
-/*+0D*/ [(ORA,Abs,4,No), (AND,Abs,4,No), (EOR,Abs,4,No), (ADC,Abs,4,No), (STA,Abs,4,No), (LDA,Abs,4,No), (CMP,Abs,4,No), (SBC,Abs,4,No)],
-/*+0E*/ [(ASL,Abs,6,No), (ROL,Abs,6,No), (LSR,Abs,6,No), (ROR,Abs,6,No), (STX,Abs,4,No), (LDX,Abs,4,No), (DEC,Abs,6,No), (INC,Abs,6,No)],
-/*+0F*/ [(SLO,Abs,6,No), (RLA,Abs,6,No), (SRE,Abs,6,No), (RRA,Abs,6,No), (SAX,Abs,4,No), (LAX,Abs,4,No), (DCP,Abs,6,No), (ISC,Abs,6,No)],
+    let jam = (JAM, Imp);
+    let codes: [[(OpCode, AccessMode); 8]; 32] = [
+        /*00*/      /*20*/     /*40*/     /*60*/     /*80*/     /*A0*/     /*C0*/     /*E0*/
+/*+00*/ [(BRK,Imp), (JSR,Abs), (RTI,Imp), (RTS,Imp), (NOP,Imm), (LDY,Imm), (CPY,Imm), (CPX,Imm)],
+/*+01*/ [(ORA,IzX), (AND,IzX), (EOR,IzX), (ADC,IzX), (STA,IzX), (LDA,IzX), (CMP,IzX), (SBC,IzX)],
+/*+02*/ [jam      , jam      , jam      , jam      , (NOP,Imm), (LDX,Imm), (NOP,Imm), (NOP,Imm)],
+/*+03*/ [(SLO,IzX), (RLA,IzX), (SRE,IzX), (RRA,IzX), (SAX,IzX), (LAX,IzX), (DCP,IzX), (ISC,IzX)],
+/*+04*/ [(NOP,ZP ), (BIT,ZP ), (NOP,ZP ), (NOP,ZP ), (STY,ZP ), (LDY,ZP ), (CPY,ZP ), (CPX,ZP )],
+/*+05*/ [(ORA,ZP ), (AND,ZP ), (EOR,ZP ), (ADC,ZP ), (STA,ZP ), (LDA,ZP ), (CMP,ZP ), (SBC,ZP )],
+/*+06*/ [(ASL,ZP ), (ROL,ZP ), (LSR,ZP ), (ROR,ZP ), (STX,ZP ), (LDX,ZP ), (DEC,ZP ), (INC,ZP )],
+/*+07*/ [(SLO,ZP ), (RLA,ZP ), (SRE,ZP ), (RRA,ZP ), (SAX,ZP ), (LAX,ZP ), (DCP,ZP ), (ISC,ZP )],
+/*+08*/ [(PHP,Imp), (PLP,Imp), (PHA,Imp), (PLA,Imp), (DEY,Imp), (TAY,Imp), (INY,Imp), (INX,Imp)],
+/*+09*/ [(ORA,Imm), (AND,Imm), (EOR,Imm), (ADC,Imm), (NOP,Imm), (LDA,Imm), (CMP,Imm), (SBC,Imm)],
+/*+0A*/ [(ASL,Imp), (ROL,Imp), (LSR,Imp), (ROR,Imp), (TXA,Imp), (TAX,Imp), (DEX,Imp), (NOP,Imp)],
+/*+0B*/ [(ANC,Imm), (ANC,Imm), (ALR,Imm), (ARR,Imm), (XAA,Imm), (LAX,Imm), (AXS,Imm), (SBC,Imm)],
+/*+0C*/ [(NOP,Abs), (BIT,Abs), (JMP,Abs), (JMP,Ind), (STY,Abs), (LDY,Abs), (CPY,Abs), (CPX,Abs)],
+/*+0D*/ [(ORA,Abs), (AND,Abs), (EOR,Abs), (ADC,Abs), (STA,Abs), (LDA,Abs), (CMP,Abs), (SBC,Abs)],
+/*+0E*/ [(ASL,Abs), (ROL,Abs), (LSR,Abs), (ROR,Abs), (STX,Abs), (LDX,Abs), (DEC,Abs), (INC,Abs)],
+/*+0F*/ [(SLO,Abs), (RLA,Abs), (SRE,Abs), (RRA,Abs), (SAX,Abs), (LAX,Abs), (DCP,Abs), (ISC,Abs)],
 
-/*+10*/ [(BPL,Rel,2,PB), (BMI,Rel,2,PB), (BVC,Rel,2,PB), (BVS,Rel,2,PB), (BCC,Rel,2,PB), (BCS,Rel,2,PB), (BNE,Rel,2,PB), (BEQ,Rel,2,PB)],
-/*+11*/ [(ORA,IzY,5,PB), (AND,IzY,5,PB), (EOR,IzY,5,PB), (ADC,IzY,5,PB), (STA,IzY,6,No), (LDA,IzY,5,PB), (CMP,IzY,5,PB), (SBC,IzY,5,PB)],
-/*+12*/ [jam           , jam           , jam           , jam           , jam           , jam           , jam           , jam           ],
-/*+13*/ [(SLO,IzY,8,No), (RLA,IzY,8,No), (SRE,IzY,8,No), (RRA,IzY,8,No), (AHX,IzY,8,No), (LAX,IzY,5,PB), (DCP,IzY,8,No), (ISC,IzY,8,No)],
-/*+14*/ [(NOP,ZPX,4,No), (NOP,ZPX,4,No), (NOP,ZPX,4,No), (NOP,ZPX,4,No), (STY,ZPX,4,No), (LDY,ZPX,4,No), (NOP,ZPX,4,No), (NOP,ZPX,4,No)],
-/*+15*/ [(ORA,ZPX,4,No), (AND,ZPX,4,No), (EOR,ZPX,4,No), (ADC,ZPX,4,No), (STA,ZPX,4,No), (LDA,ZPX,4,No), (CMP,ZPX,4,No), (SBC,ZPX,4,No)],
-/*+16*/ [(ASL,ZPX,6,No), (ROL,ZPX,6,No), (LSR,ZPX,6,No), (ROR,ZPX,6,No), (STX,ZPY,4,No), (LDX,ZPY,4,No), (DEC,ZPX,6,No), (INC,ZPX,6,No)],
-/*+17*/ [(SLO,ZPX,6,No), (RLA,ZPX,6,No), (SRE,ZPX,6,No), (RRA,ZPX,6,No), (SAX,ZPY,4,No), (LAX,ZPY,4,No), (DCP,ZPX,6,No), (ISC,ZPX,6,No)],
-/*+18*/ [(CLC,Imp,2,No), (SEC,Imp,2,No), (CLI,Imp,2,No), (SEI,Imp,2,No), (TYA,Imp,2,No), (CLV,Imp,2,No), (CLD,Imp,2,No), (SED,Imp,2,No)],
-/*+19*/ [(ORA,AbY,4,PB), (AND,AbY,4,PB), (EOR,AbY,4,PB), (ADC,AbY,4,PB), (STA,AbY,5,No), (LDA,AbY,4,PB), (CMP,AbY,4,PB), (SBC,AbY,4,PB)],
-/*+1A*/ [(NOP,Imp,2,No), (NOP,Imp,2,No), (NOP,Imp,2,No), (NOP,Imp,2,No), (TXS,Imp,2,No), (TSX,Imp,2,No), (NOP,Imp,2,No), (NOP,Imp,2,No)],
-/*+1B*/ [(SLO,AbY,7,No), (RLA,AbY,7,No), (SRE,AbY,7,No), (RRA,AbY,7,No), (TAS,AbY,5,No), (LAS,AbY,4,PB), (DCP,AbY,7,No), (ISC,AbY,7,No)],
-/*+1C*/ [(NOP,AbX,4,PB), (NOP,AbX,4,PB), (NOP,AbX,4,PB), (NOP,AbX,4,PB), (SHY,AbX,5,No), (LDY,AbX,4,PB), (NOP,AbX,4,PB), (NOP,AbX,4,PB)],
-/*+1D*/ [(ORA,AbX,4,PB), (AND,AbX,4,PB), (EOR,AbX,4,PB), (ADC,AbX,4,PB), (STA,AbX,5,No), (LDA,AbX,4,PB), (CMP,AbX,4,PB), (SBC,AbX,4,PB)],
-/*+1E*/ [(ASL,AbX,7,No), (ROL,AbX,7,No), (LSR,AbX,7,No), (ROR,AbX,7,No), (SHX,AbY,5,No), (LDX,AbY,4,PB), (DEC,AbX,7,No), (INC,AbX,7,No)],
-/*+1F*/ [(SLO,AbX,7,No), (RLA,AbX,7,No), (SRE,AbX,7,No), (RRA,AbX,7,No), (AHX,AbY,5,No), (LAX,AbY,4,PB), (DCP,AbX,7,No), (ISC,AbX,7,No)],
+/*+10*/ [(BPL,Rel), (BMI,Rel), (BVC,Rel), (BVS,Rel), (BCC,Rel), (BCS,Rel), (BNE,Rel), (BEQ,Rel)],
+/*+11*/ [(ORA,IzY), (AND,IzY), (EOR,IzY), (ADC,IzY), (STA,IzY), (LDA,IzY), (CMP,IzY), (SBC,IzY)],
+/*+12*/ [jam      , jam      , jam      , jam      , jam      , jam      , jam      , jam      ],
+/*+13*/ [(SLO,IzY), (RLA,IzY), (SRE,IzY), (RRA,IzY), (AHX,IzY), (LAX,IzY), (DCP,IzY), (ISC,IzY)],
+/*+14*/ [(NOP,ZPX), (NOP,ZPX), (NOP,ZPX), (NOP,ZPX), (STY,ZPX), (LDY,ZPX), (NOP,ZPX), (NOP,ZPX)],
+/*+15*/ [(ORA,ZPX), (AND,ZPX), (EOR,ZPX), (ADC,ZPX), (STA,ZPX), (LDA,ZPX), (CMP,ZPX), (SBC,ZPX)],
+/*+16*/ [(ASL,ZPX), (ROL,ZPX), (LSR,ZPX), (ROR,ZPX), (STX,ZPY), (LDX,ZPY), (DEC,ZPX), (INC,ZPX)],
+/*+17*/ [(SLO,ZPX), (RLA,ZPX), (SRE,ZPX), (RRA,ZPX), (SAX,ZPY), (LAX,ZPY), (DCP,ZPX), (ISC,ZPX)],
+/*+18*/ [(CLC,Imp), (SEC,Imp), (CLI,Imp), (SEI,Imp), (TYA,Imp), (CLV,Imp), (CLD,Imp), (SED,Imp)],
+/*+19*/ [(ORA,AbY), (AND,AbY), (EOR,AbY), (ADC,AbY), (STA,AbY), (LDA,AbY), (CMP,AbY), (SBC,AbY)],
+/*+1A*/ [(NOP,Imp), (NOP,Imp), (NOP,Imp), (NOP,Imp), (TXS,Imp), (TSX,Imp), (NOP,Imp), (NOP,Imp)],
+/*+1B*/ [(SLO,AbY), (RLA,AbY), (SRE,AbY), (RRA,AbY), (TAS,AbY), (LAS,AbY), (DCP,AbY), (ISC,AbY)],
+/*+1C*/ [(NOP,AbX), (NOP,AbX), (NOP,AbX), (NOP,AbX), (SHY,AbX), (LDY,AbX), (NOP,AbX), (NOP,AbX)],
+/*+1D*/ [(ORA,AbX), (AND,AbX), (EOR,AbX), (ADC,AbX), (STA,AbX), (LDA,AbX), (CMP,AbX), (SBC,AbX)],
+/*+1E*/ [(ASL,AbX), (ROL,AbX), (LSR,AbX), (ROR,AbX), (SHX,AbY), (LDX,AbY), (DEC,AbX), (INC,AbX)],
+/*+1F*/ [(SLO,AbX), (RLA,AbX), (SRE,AbX), (RRA,AbX), (AHX,AbY), (LAX,AbY), (DCP,AbX), (ISC,AbX)],
     ];
 
     let mut result = [InstructionTemplate::from_tuple(0x2, jam); 256];
@@ -165,12 +164,10 @@ impl fmt::Display for Instruction {
 
         write!(
             f,
-            "{:02X} ({:?} {} Cycles:{:?}+{:?}) PB:{:5} Arg:{:5}",
+            "{:02X} ({:?} {} PB:{:5} Arg:{:5}",
             self.template.code_point,
             self.template.op_code,
             access_mode,
-            self.template.cycle_count as usize,
-            self.template.extra_cycle,
             self.page_boundary_crossed,
             self.argument
         )
@@ -199,21 +196,17 @@ pub struct InstructionTemplate {
     pub code_point: u8,
     pub op_code: OpCode,
     pub access_mode: AccessMode,
-    pub cycle_count: CycleCount,
-    pub extra_cycle: ExtraCycle,
 }
 
 impl InstructionTemplate {
     fn from_tuple(
         code_point: u8,
-        tuple: (OpCode, AccessMode, u8, ExtraCycle),
+        tuple: (OpCode, AccessMode),
     ) -> InstructionTemplate {
         InstructionTemplate {
             code_point,
             op_code: tuple.0,
             access_mode: tuple.1,
-            cycle_count: CycleCount::new(tuple.2).unwrap(),
-            extra_cycle: tuple.3,
         }
     }
 }
@@ -340,41 +333,4 @@ impl AccessMode {
             Abs | AbX | AbY | Ind => 3,
         }
     }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum CycleCount {
-    Zero,
-    One,
-    Two,
-    Three,
-    Four,
-    Five,
-    Six,
-    Seven,
-    Eight,
-}
-
-impl CycleCount {
-    fn new(value: u8) -> Result<CycleCount, String> {
-        use CycleCount::*;
-        Ok(match value {
-            0 => Zero,
-            1 => One,
-            2 => Two,
-            3 => Three,
-            4 => Four,
-            5 => Five,
-            6 => Six,
-            7 => Seven,
-            8 => Eight,
-            _ => return Err(format!("CycleCount can't exceed 8 but was {}.", value)),
-        })
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum ExtraCycle {
-    No,
-    PB,
 }
