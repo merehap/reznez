@@ -31,7 +31,7 @@ pub struct Cpu {
 
     cycle: u64,
 
-    current_interrupt_vector: InterruptVector,
+    current_interrupt_vector: Option<InterruptVector>,
 
     jammed: bool,
 
@@ -76,7 +76,7 @@ impl Cpu {
             cycle: 7,
 
             // The initial value probably doesn't matter.
-            current_interrupt_vector: InterruptVector::Reset,
+            current_interrupt_vector: None,
 
             jammed: false,
 
@@ -102,6 +102,7 @@ impl Cpu {
         self.cycle_action_queue = CycleActionQueue::new();
         self.nmi_status = NmiStatus::Inactive;
         self.cycle = 7;
+        self.current_interrupt_vector = None;
         self.jammed = false;
         self.suppress_program_counter_increment = false;
         self.suppress_next_instruction_start = false;
@@ -154,7 +155,6 @@ impl Cpu {
 
     pub fn schedule_nmi(&mut self) {
         self.nmi_status = NmiStatus::Pending;
-        self.current_interrupt_vector = InterruptVector::Nmi;
     }
 
     pub fn step(&mut self, memory: &mut CpuMemory) -> Option<Step> {
@@ -246,6 +246,18 @@ impl Cpu {
             DecrementStackPointer => memory.stack().decrement_stack_pointer(),
 
             DisableInterrupts => self.status.interrupts_disabled = true,
+            SetInterruptVector => {
+                self.current_interrupt_vector =
+                    if self.nmi_status != NmiStatus::Inactive {
+                        Some(InterruptVector::Nmi)
+                    } else if let Some(inst) = self.current_instruction && inst.template.op_code == OpCode::BRK {
+                        Some(InterruptVector::Irq)
+                    } else {
+                        None
+                    };
+            }
+            ClearInterruptVector => self.current_interrupt_vector = None,
+            ClearNmi => self.nmi_status = NmiStatus::Inactive,
 
             CheckNegativeAndZero => {
                 self.status.negative = (self.data_bus >> 7) == 1;
@@ -292,14 +304,7 @@ impl Cpu {
                 }
 
                 match self.nmi_status {
-                    NmiStatus::Inactive => {
-                        self.next_op_code = Some((self.data_bus, self.address_bus));
-                        // If the next instruction is BRK, set the appropriate interrupt vector.
-                        if self.data_bus == 0x00 {
-                            self.current_interrupt_vector = InterruptVector::Irq;
-                        }
-                    }
-                    NmiStatus::Pending => {
+                    NmiStatus::Inactive | NmiStatus::Pending => {
                         self.next_op_code = Some((self.data_bus, self.address_bus));
                     }
                     NmiStatus::Ready => {
@@ -309,15 +314,13 @@ impl Cpu {
                         self.next_op_code = Some((0x00, self.address_bus));
                         self.suppress_program_counter_increment = true;
                     }
-                    NmiStatus::Active => unreachable!("TODO: Eventually this might set status to Inactive."),
+                    NmiStatus::Active => unreachable!(),
                 }
             }
 
             InterpretOpCode => {
                 let (op_code, start_address) = self.next_op_code.take().unwrap();
                 if self.nmi_status == NmiStatus::Active {
-                    // FIXME: This should happen during the first cycle of the next instruction.
-                    self.nmi_status = NmiStatus::Inactive;
                     self.suppress_program_counter_increment = true;
                     self.current_instruction = None;
                     self.cycle_action_queue.enqueue_nmi();
@@ -488,14 +491,12 @@ impl Cpu {
                 self.program_counter
             }
             TopOfStack => memory.stack_pointer_address(),
-            InterruptVectorLow => match self.current_interrupt_vector {
+            InterruptVectorLow => match self.current_interrupt_vector.unwrap() {
                 InterruptVector::Nmi   => CpuAddress::new(0xFFFA),
-                InterruptVector::Reset => CpuAddress::new(0xFFFC),
                 InterruptVector::Irq   => CpuAddress::new(0xFFFE),
             }
-            InterruptVectorHigh => match self.current_interrupt_vector {
+            InterruptVectorHigh => match self.current_interrupt_vector.unwrap() {
                 InterruptVector::Nmi   => CpuAddress::new(0xFFFB),
-                InterruptVector::Reset => CpuAddress::new(0xFFFD),
                 InterruptVector::Irq   => CpuAddress::new(0xFFFF),
             }
         }
@@ -677,10 +678,9 @@ enum NmiStatus {
     Active,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 enum InterruptVector {
     Nmi,
-    Reset,
     Irq,
 }
 

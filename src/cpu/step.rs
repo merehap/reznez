@@ -276,20 +276,20 @@ pub const INDIRECT_INDEXED_READ_MODIFY_WRITE_STEPS: &'static [Step] = &[
 
 pub const NMI_STEPS: &'static [Step] = &[
     WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),
-    WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer]),
+    WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
     WriteField(StatusForInterrupt    , To::TopOfStack, &[DecrementStackPointer]),
     // Copy the new ProgramCounterLowByte to the data bus.
     Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
-    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[]),
+    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector, ClearNmi]),
 ];
 
 pub const BRK_STEPS: &'static [Step] = &[
     WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),
-    WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer]),
+    WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
     WriteField(StatusForInstruction  , To::TopOfStack, &[DecrementStackPointer]),
     // Copy the new ProgramCounterLowByte to the data bus.
     Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
-    ReadField(ProgramCounterHighByte,  From::InterruptVectorHigh, &[]),
+    ReadField(ProgramCounterHighByte,  From::InterruptVectorHigh, &[ClearInterruptVector]),
 ];
 
 pub const RTI_STEPS: &'static [Step] = &[

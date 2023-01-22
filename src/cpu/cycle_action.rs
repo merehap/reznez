@@ -14,6 +14,9 @@ pub enum CycleAction {
     DecrementStackPointer,
 
     DisableInterrupts,
+    SetInterruptVector,
+    ClearInterruptVector,
+    ClearNmi,
 
     CheckNegativeAndZero,
 
