@@ -8,6 +8,7 @@
 #![allow(clippy::module_inception)]
 #![allow(clippy::new_without_default)]
 
+mod apu;
 mod analysis;
 mod cartridge;
 mod config;
