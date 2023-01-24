@@ -3,6 +3,7 @@ use crate::apu::triangle_channel::TriangleChannel;
 use crate::apu::noise_channel::NoiseChannel;
 use crate::apu::dmc::Dmc;
 use crate::apu::frame_counter::FrameCounter;
+use crate::util::bit_util;
 
 #[derive(Default)]
 pub struct ApuRegisters {
@@ -27,7 +28,7 @@ impl ApuRegisters {
         }
     }
 
-    pub fn write_status(&mut self, value: u8) {
+    pub fn write_status_byte(&mut self, value: u8) {
         self.dmc.enabled      = value & 0b0001_0000 != 0;
         self.noise.enabled    = value & 0b0000_1000 != 0;
         self.triangle.enabled = value & 0b0000_0100 != 0;
@@ -36,6 +37,7 @@ impl ApuRegisters {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Status {
     dmc_interrupt: bool,
     frame_interrupt: bool,
@@ -44,4 +46,21 @@ pub struct Status {
     triangle_active: bool,
     pulse_2_active: bool,
     pulse_1_active: bool,
+}
+
+impl Status {
+    pub fn to_u8(self) -> u8 {
+        bit_util::pack_bools(
+            [
+                self.dmc_interrupt,
+                self.frame_interrupt,
+                false,
+                self.dmc_active,
+                self.noise_active,
+                self.triangle_active,
+                self.pulse_2_active,
+                self.pulse_1_active,
+            ]
+        )
+    }
 }

@@ -1,3 +1,4 @@
+use crate::apu::apu_registers::ApuRegisters;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::{
     CpuInternalRam, IRQ_VECTOR, NMI_VECTOR, RESET_VECTOR,
@@ -21,6 +22,7 @@ pub struct Memory {
     ppu_internal_ram: PpuInternalRam,
     ports: Ports,
     ppu_registers: PpuRegisters,
+    apu_registers: ApuRegisters,
     system_palette: SystemPalette,
 }
 
@@ -36,6 +38,7 @@ impl Memory {
             ppu_internal_ram: PpuInternalRam::new(),
             ports,
             ppu_registers: PpuRegisters::new(),
+            apu_registers: ApuRegisters::default(),
             system_palette,
         }
     }
@@ -73,6 +76,7 @@ impl<'a> CpuMemory<'a> {
             &self.memory.cpu_internal_ram,
             &mut self.memory.ports,
             &mut self.memory.ppu_registers,
+            &mut self.memory.apu_registers,
             address,
         )
     }
@@ -83,6 +87,7 @@ impl<'a> CpuMemory<'a> {
             &mut self.memory.cpu_internal_ram,
             &mut self.memory.ports,
             &mut self.memory.ppu_registers,
+            &mut self.memory.apu_registers,
             address,
             value,
         );

@@ -11,6 +11,7 @@ pub use crate::util::unit::KIBIBYTE;
 
 use num_traits::FromPrimitive;
 
+use crate::apu::apu_registers::ApuRegisters;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::ppu::palette_ram::PaletteRam;
@@ -36,14 +37,15 @@ pub trait Mapper {
         cpu_internal_ram: &CpuInternalRam,
         ports: &mut Ports,
         ppu_registers: &mut PpuRegisters,
+        apu_registers: &mut ApuRegisters,
         address: CpuAddress,
     ) -> Option<u8> {
         match address.to_raw() {
             0x0000..=0x1FFF => Some(cpu_internal_ram[address.to_usize() & 0x07FF]),
             0x2000..=0x3FFF => Some(ppu_registers.read(address_to_ppu_register_type(address))),
-            0x4000..=0x4013 => { None },
-            0x4014          => {/* OAM DMA is write-only. TODO: Is 0 correct here? */ Some(0)},
-            0x4015          => { None },
+            0x4000..=0x4013 => { /* APU registers are write-only. */ None },
+            0x4014          => { /* OAM DMA is write-only. TODO: Is open bus correct? */ None},
+            0x4015          => Some(apu_registers.read_status().to_u8()),
             // TODO: Open bus https://www.nesdev.org/wiki/Controller_reading
             0x4016          => Some(ports.joypad1.borrow_mut().next_status() as u8),
             0x4017          => Some(ports.joypad2.borrow_mut().next_status() as u8),
@@ -60,17 +62,37 @@ pub trait Mapper {
         cpu_internal_ram: &mut CpuInternalRam,
         ports: &mut Ports,
         ppu_registers: &mut PpuRegisters,
+        apu_registers: &mut ApuRegisters,
         address: CpuAddress,
         value: u8,
     ) {
         match address.to_raw() {
             0x0000..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF] = value,
             0x2000..=0x3FFF => ppu_registers.write(address_to_ppu_register_type(address), value),
-            0x4000..=0x4013 => {/* APU */},
+            0x4000          => apu_registers.pulse_1.write_control_byte(value),
+            0x4001          => apu_registers.pulse_1.write_sweep_byte(value),
+            0x4002          => apu_registers.pulse_1.write_timer_low_byte(value),
+            0x4003          => apu_registers.pulse_1.write_lcl_and_timer_high_byte(value),
+            0x4004          => apu_registers.pulse_2.write_control_byte(value),
+            0x4005          => apu_registers.pulse_2.write_sweep_byte(value),
+            0x4006          => apu_registers.pulse_2.write_timer_low_byte(value),
+            0x4007          => apu_registers.pulse_2.write_lcl_and_timer_high_byte(value),
+            0x4008          => apu_registers.triangle.write_control_byte(value),
+            0x4009          => { /* Unused. */ }
+            0x400A          => apu_registers.triangle.write_timer_low_byte(value),
+            0x400B          => apu_registers.triangle.write_lcl_and_timer_high_byte(value),
+            0x400C          => apu_registers.noise.write_control_byte(value),
+            0x400D          => { /* Unused. */ }
+            0x400E          => apu_registers.noise.write_loop_and_period_byte(value),
+            0x400F          => apu_registers.noise.write_lcl_byte(value),
+            0x4010          => apu_registers.dmc.write_control_byte(value),
+            0x4011          => apu_registers.dmc.write_load_counter(value),
+            0x4012          => apu_registers.dmc.write_sample_address(value),
+            0x4013          => apu_registers.dmc.write_sample_length(value),
             0x4014          => ports.dma.set_page(value),
-            0x4015          => {/* APU */},
+            0x4015          => apu_registers.write_status_byte(value),
             0x4016          => ports.change_strobe(value),
-            0x4017          => {/* Do nothing? */},
+            0x4017          => apu_registers.frame_counter.write(value),
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
             0x4020..=0xFFFF => self.write_to_cartridge_space(address, value),
         }
