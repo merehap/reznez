@@ -41,10 +41,21 @@ pub trait Mapper {
         address: CpuAddress,
     ) -> Option<u8> {
         match address.to_raw() {
-            0x0000..=0x1FFF => Some(cpu_internal_ram[address.to_usize() & 0x07FF]),
-            0x2000..=0x3FFF => Some(ppu_registers.read(address_to_ppu_register_type(address))),
-            0x4000..=0x4013 => { /* APU registers are write-only. */ None },
-            0x4014          => { /* OAM DMA is write-only. TODO: Is open bus correct? */ None},
+            0x0000..=0x07FF => Some(cpu_internal_ram[address.to_usize()]),
+            0x0800..=0x1FFF => Some(cpu_internal_ram[address.to_usize() & 0x07FF]),
+            0x2000..=0x3FFF => Some(match address.to_raw() & 0x2007 {
+                0x2000 => ppu_registers.read(RegisterType::Ctrl),
+                0x2001 => ppu_registers.read(RegisterType::Mask),
+                0x2002 => ppu_registers.read(RegisterType::Status),
+                0x2003 => ppu_registers.read(RegisterType::OamAddr),
+                0x2004 => ppu_registers.read(RegisterType::OamData),
+                0x2005 => ppu_registers.read(RegisterType::Scroll),
+                0x2006 => ppu_registers.read(RegisterType::PpuAddr),
+                0x2007 => ppu_registers.read(RegisterType::PpuData),
+                _ => unreachable!(),
+            }),
+            0x4000..=0x4013 => { /* APU registers are write-only. */ None }
+            0x4014          => { /* OAM DMA is write-only. TODO: Is open bus correct? */ None}
             0x4015          => Some(apu_registers.read_status().to_u8()),
             // TODO: Open bus https://www.nesdev.org/wiki/Controller_reading
             0x4016          => Some(ports.joypad1.borrow_mut().next_status() as u8),
@@ -67,8 +78,19 @@ pub trait Mapper {
         value: u8,
     ) {
         match address.to_raw() {
-            0x0000..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF] = value,
-            0x2000..=0x3FFF => ppu_registers.write(address_to_ppu_register_type(address), value),
+            0x0000..=0x07FF => cpu_internal_ram[address.to_usize()] = value,
+            0x0800..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF] = value,
+            0x2000..=0x3FFF => match address.to_raw() & 0x2007 {
+                0x2000 => ppu_registers.write(RegisterType::Ctrl, value),
+                0x2001 => ppu_registers.write(RegisterType::Mask, value),
+                0x2002 => ppu_registers.write(RegisterType::Status, value),
+                0x2003 => ppu_registers.write(RegisterType::OamAddr, value),
+                0x2004 => ppu_registers.write(RegisterType::OamData, value),
+                0x2005 => ppu_registers.write(RegisterType::Scroll, value),
+                0x2006 => ppu_registers.write(RegisterType::PpuAddr, value),
+                0x2007 => ppu_registers.write(RegisterType::PpuData, value),
+                _ => unreachable!(),
+            }
             0x4000          => apu_registers.pulse_1.write_control_byte(value),
             0x4001          => apu_registers.pulse_1.write_sweep_byte(value),
             0x4002          => apu_registers.pulse_1.write_timer_low_byte(value),
@@ -211,11 +233,6 @@ pub trait Mapper {
 
         bank_text
     }
-}
-
-#[inline]
-fn address_to_ppu_register_type(address: CpuAddress) -> RegisterType {
-    FromPrimitive::from_usize(address.to_usize() % 8).unwrap()
 }
 
 #[inline]

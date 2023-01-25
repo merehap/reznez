@@ -1,6 +1,4 @@
-use num_derive::FromPrimitive;
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug, FromPrimitive)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum RegisterType {
     Ctrl,
     Mask,
