@@ -16,8 +16,17 @@ impl From<u8> for U4 {
     }
 }
 
-#[derive(Default)]
+#[derive(PartialEq, Eq, Default)]
 pub struct U5(u8);
+
+impl U5 {
+    pub const ZERO: U5 = U5(0);
+
+    fn decrement(&mut self) {
+        assert!(self.0 != 0);
+        self.0 -= 1;
+    }
+}
 
 impl From<u8> for U5 {
     fn from(value: u8) -> Self {

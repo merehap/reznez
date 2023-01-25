@@ -7,7 +7,7 @@ pub struct TriangleChannel {
     counter_control: bool,
     linear_counter_load: U7,
     timer: U11,
-    length_counter_load: U5,
+    length_counter: U5,
 }
 
 impl TriangleChannel {
@@ -20,8 +20,19 @@ impl TriangleChannel {
         self.timer.set_low_byte(value);
     }
 
-    pub fn write_lcl_and_timer_high_byte(&mut self, value: u8) {
-        self.length_counter_load = ((value & 0b1111_1000) >> 3).into();
-        self.timer.set_high_bits(    value & 0b0000_0111);
+    pub fn write_length_and_timer_high_byte(&mut self, value: u8) {
+        self.length_counter =  ((value & 0b1111_1000) >> 3).into();
+        self.timer.set_high_bits(value & 0b0000_0111);
+    }
+
+    pub(super) fn enable_or_disable(&mut self, enable: bool) {
+        self.enabled = enable;
+        if !self.enabled {
+            self.length_counter = U5::ZERO;
+        }
+    }
+
+    pub(super) fn active(&self) -> bool {
+        self.length_counter != U5::ZERO
     }
 }

@@ -309,9 +309,7 @@ mod tests {
     #[test]
     fn reduce_bit_1_from_high_byte() {
         let mut address = PpuAddress::from_u16(0);
-        println!("Zero: {:016b}", address.to_u16());
         address.set_high_byte(0b1111_1111);
-        println!("After: {:016b}", address.to_u16());
         assert_eq!(address.to_scroll_u16(), 0b0011_1111_0000_0000);
         assert_eq!(address.to_u16(), 0b0011_1111_0000_0000);
     }

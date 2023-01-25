@@ -17,23 +17,26 @@ pub struct ApuRegisters {
 
 impl ApuRegisters {
     pub fn read_status(&mut self) -> Status {
+        let frame_interrupt = self.frame_counter.frame_interrupt;
+        self.frame_counter.frame_interrupt = false;
+
         Status {
-            dmc_interrupt: false,
-            frame_interrupt: false,
-            dmc_active: false,
-            noise_active: false,
-            triangle_active: false,
-            pulse_2_active: false,
-            pulse_1_active: false,
+            dmc_interrupt: self.dmc.irq_enabled,
+            frame_interrupt,
+            dmc_active: self.dmc.active(),
+            noise_active: self.noise.active(),
+            triangle_active: self.triangle.active(),
+            pulse_2_active: self.pulse_2.active(),
+            pulse_1_active: self.pulse_1.active(),
         }
     }
 
     pub fn write_status_byte(&mut self, value: u8) {
-        self.dmc.enabled      = value & 0b0001_0000 != 0;
-        self.noise.enabled    = value & 0b0000_1000 != 0;
-        self.triangle.enabled = value & 0b0000_0100 != 0;
-        self.pulse_1.enabled  = value & 0b0000_0010 != 0;
-        self.pulse_2.enabled  = value & 0b0000_0001 != 0;
+        self.dmc.enable_or_disable(value & 0b0001_0000 != 0);
+        self.noise.enable_or_disable(value & 0b0000_1000 != 0);
+        self.triangle.enable_or_disable(value & 0b0000_0100 != 0);
+        self.pulse_1.enable_or_disable(value & 0b0000_0010 != 0);
+        self.pulse_2.enable_or_disable(value & 0b0000_0001 != 0);
     }
 }
 
