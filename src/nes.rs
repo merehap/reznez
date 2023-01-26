@@ -19,6 +19,7 @@ use crate::memory::mappers::mapper2::Mapper2;
 use crate::memory::mappers::mapper3::Mapper3;
 use crate::memory::mappers::mapper7::Mapper7;
 use crate::memory::memory::Memory;
+use crate::ppu::ppu;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::render::frame::Frame;
 
@@ -114,22 +115,22 @@ impl Nes {
 
     pub fn step(&mut self) -> StepResult {
         let mut step = None;
-        if self.cycle % 3 == 2 {
-            step = self.cpu.step(&mut self.memory.as_cpu_memory());
-            if let Some(ref step) = step && step.has_interpret_op_code() {
-                if let Some(instruction) = self.cpu.current_instruction() {
-                    if log_enabled!(target: "cpuoperation", Info) {
-                        self.log_state(instruction);
-                    }
-                }
+        let ppu_result;
+        match self.cycle % 6 {
+            0 => ppu_result = self.ppu_step(),
+            1 => ppu_result = self.ppu_step(),
+            2 => {
+                step = self.cpu_step();
+                ppu_result = self.ppu_step();
             }
-        }
-
-        let ppu_result = self
-            .ppu
-            .step(&mut self.memory.as_ppu_memory(), &mut self.frame);
-        if ppu_result.should_generate_nmi {
-            self.cpu.schedule_nmi();
+            3 => ppu_result = self.ppu_step(),
+            4 => ppu_result = self.ppu_step(),
+            5 => {
+                step = self.cpu_step();
+                self.apu_step();
+                ppu_result = self.ppu_step();
+            }
+            _ => unreachable!(),
         }
 
         self.cycle += 1;
@@ -139,6 +140,34 @@ impl Nes {
             is_last_cycle_of_frame: ppu_result.is_last_cycle_of_frame,
             nmi_scheduled: ppu_result.should_generate_nmi,
         }
+    }
+
+    fn cpu_step(&mut self) -> Option<Step> {
+        let step = self.cpu.step(&mut self.memory.as_cpu_memory());
+        if let Some(ref step) = step && step.has_interpret_op_code() {
+            if let Some(instruction) = self.cpu.current_instruction() {
+                if log_enabled!(target: "cpuoperation", Info) {
+                    self.log_state(instruction);
+                }
+            }
+        }
+
+        step
+    }
+
+    fn ppu_step(&mut self) -> ppu::StepResult {
+        let ppu_result = self
+            .ppu
+            .step(&mut self.memory.as_ppu_memory(), &mut self.frame);
+        if ppu_result.should_generate_nmi {
+            self.cpu.schedule_nmi();
+        }
+
+        ppu_result
+    }
+
+    fn apu_step(&mut self) {
+
     }
 
     #[inline]
