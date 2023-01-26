@@ -4,6 +4,7 @@ use std::rc::Rc;
 use log::Level::Info;
 use log::{info, log_enabled};
 
+use crate::apu::apu::Apu;
 use crate::cartridge::Cartridge;
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
@@ -26,6 +27,7 @@ use crate::ppu::render::frame::Frame;
 pub struct Nes {
     cpu: Cpu,
     ppu: Ppu,
+    apu: Apu,
     memory: Memory,
     cartridge: Cartridge,
     frame: Frame,
@@ -54,6 +56,7 @@ impl Nes {
         Nes {
             cpu: Cpu::new(&mut memory.as_cpu_memory(), config.program_counter_source),
             ppu: Ppu::new(),
+            apu: Apu::new(),
             memory,
             cartridge: config.cartridge.clone(),
             frame: Frame::new(),
@@ -121,6 +124,7 @@ impl Nes {
             1 => ppu_result = self.ppu_step(),
             2 => {
                 step = self.cpu_step();
+                self.apu.step_triangle_channel_only(&mut self.memory.apu_regs());
                 ppu_result = self.ppu_step();
             }
             3 => ppu_result = self.ppu_step(),
@@ -167,7 +171,7 @@ impl Nes {
     }
 
     fn apu_step(&mut self) {
-
+        self.apu.step(&mut self.memory.apu_regs());
     }
 
     #[inline]

@@ -63,6 +63,10 @@ impl Memory {
     pub fn ppu_regs(&self) -> &PpuRegisters {
         &self.ppu_registers
     }
+
+    pub fn apu_regs(&mut self) -> &mut ApuRegisters {
+        &mut self.apu_registers
+    }
 }
 
 pub struct CpuMemory<'a> {

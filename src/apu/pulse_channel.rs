@@ -1,4 +1,5 @@
-use crate::util::integer::{U3, U4, U5, U11};
+use crate::apu::timer::Timer;
+use crate::util::integer::{U3, U4, U5};
 
 #[derive(Default)]
 pub struct PulseChannel {
@@ -10,7 +11,7 @@ pub struct PulseChannel {
     volume_or_envelope: U4,
 
     sweep: Sweep,
-    timer: U11,
+    timer: Timer,
     length_counter: U5,
 }
 
@@ -27,12 +28,12 @@ impl PulseChannel {
     }
 
     pub fn write_timer_low_byte(&mut self, value: u8) {
-        self.timer.set_low_byte(value);
+        self.timer.set_period_low(value);
     }
 
     pub fn write_length_and_timer_high_byte(&mut self, value: u8) {
-        self.length_counter =  ((value & 0b1110_0000) >> 5).into();
-        self.timer.set_high_bits(value & 0b0000_0111);
+        self.length_counter =                    ((value & 0b1110_0000) >> 5).into();
+        self.timer.set_period_high_and_reset_index(value & 0b0000_0111);
     }
 
     pub(super) fn enable_or_disable(&mut self, enable: bool) {
@@ -44,6 +45,10 @@ impl PulseChannel {
 
     pub(super) fn active(&self) -> bool {
         self.length_counter != U5::ZERO
+    }
+
+    pub(super) fn step(&mut self) -> bool {
+        self.timer.tick()
     }
 }
 

@@ -42,18 +42,3 @@ impl From<u8> for U7 {
         U7(value & 0b0111_1111)
     }
 }
-
-#[derive(Default)]
-pub struct U11(u16);
-
-impl U11 {
-    pub fn set_low_byte(&mut self, value: u8) {
-        self.0 &=          0b0000_0111_0000_0000;
-        self.0 |= u16::from(value) & 0b0000_0000_1111_1111;
-    }
-
-    pub fn set_high_bits(&mut self, value: u8) {
-        self.0 &=                           0b0000_0000_1111_1111;
-        self.0 |= (u16::from(value) << 8) & 0b0000_0111_0000_0000;
-    }
-}
