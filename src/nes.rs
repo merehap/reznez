@@ -357,6 +357,7 @@ mod tests {
                 ProgramCounterSource::Override(CpuAddress::new(0x0000)),
             ),
             ppu: Ppu::new(),
+            apu: Apu::new(),
             memory,
             cartridge,
             frame: Frame::new(),
