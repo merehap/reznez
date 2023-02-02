@@ -29,8 +29,6 @@ use crate::util::logger::Logger;
 
 fn main() {
     let opt = Opt::from_args();
-    println!("Ops: {}", opt.log_cpu_operations);
-    println!("Steps: {}", opt.log_cpu_steps);
     logger::init(Logger {
         log_cpu_operations: opt.log_cpu_operations,
         log_cpu_steps: opt.log_cpu_steps,

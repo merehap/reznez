@@ -1,5 +1,6 @@
 use crate::apu::timer::Timer;
 use crate::util::integer::{U3, U4, U5};
+use crate::util::bit_util;
 
 #[derive(Default)]
 pub struct PulseChannel {
@@ -13,6 +14,8 @@ pub struct PulseChannel {
     sweep: Sweep,
     timer: Timer,
     length_counter: U5,
+
+    sequence_index: usize,
 }
 
 impl PulseChannel {
@@ -47,18 +50,35 @@ impl PulseChannel {
         self.length_counter != U5::ZERO
     }
 
-    pub(super) fn step(&mut self) -> bool {
-        self.timer.tick()
+    pub(super) fn step(&mut self) {
+        let wrapped_around = self.timer.tick();
+        if wrapped_around {
+            self.sequence_index += 1;
+            self.sequence_index %= 8;
+        }
+    }
+    pub(super) fn sample(&self) -> f32 {
+        self.duty.value_at(self.sequence_index)
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Copy, Default)]
 pub enum Duty {
     #[default]
     Low     = 0b0100_0000,
     Medium  = 0b0110_0000,
     High    = 0b0111_1000,
     Negated = 0b1001_1111,
+}
+
+impl Duty {
+    fn value_at(self, sequence_index: usize) -> f32 {
+        if bit_util::get_bit(self as u8, sequence_index) {
+            1.0
+        } else {
+            0.0
+        }
+    }
 }
 
 impl From<u8> for Duty {
