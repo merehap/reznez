@@ -48,13 +48,29 @@ impl Apu {
                 .lock()
                 .unwrap();
             if queue.len() < MAX_QUEUE_LENGTH {
-                queue.push_back(regs.pulse_1.sample());
+                queue.push_back(Apu::mix_samples(regs));
             }
         }
         //regs.pulse_2.step();
         //regs.triangle.step();
 
         self.cycle += 1;
+    }
+
+    fn mix_samples(regs: &ApuRegisters) -> f32 {
+        let pulse_1 = regs.pulse_1.sample();
+        let pulse_2 = 0.0;
+        let triangle = 0.0;
+        let noise = 0.0;
+        let dmc = 0.0;
+
+        let pulse_out = 95.88 / (8128.0 / (pulse_1 + pulse_2) + 100.0);
+        let tnd_out = 159.79 / ((1.0 / (triangle / 8227.0 + noise / 12241.0 + dmc / 22368.0)) + 100.0);
+        let mix = pulse_out + tnd_out;
+
+        assert!(mix >= 0.0);
+        assert!(mix <= 1.0);
+        mix
     }
 }
 
