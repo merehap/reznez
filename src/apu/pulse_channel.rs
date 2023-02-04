@@ -57,8 +57,11 @@ impl PulseChannel {
             self.sequence_index %= 8;
         }
     }
+
     pub(super) fn sample(&self) -> f32 {
-        self.duty.value_at(self.sequence_index)
+        let volume = f32::from(self.volume_or_envelope.to_u8());
+        let on_or_off = self.duty.value_at(self.sequence_index);
+        volume * on_or_off
     }
 }
 
