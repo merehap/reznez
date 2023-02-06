@@ -5,6 +5,10 @@ pub struct Timer {
 }
 
 impl Timer {
+    pub fn period(&self) -> u16 {
+        self.period
+    }
+
     pub fn set_period_high_and_reset_index(&mut self, period_high: u8) {
         self.period &= 0b0000_0000_1111_1111;
         self.period |= u16::from(period_high & 0b0000_0111) << 8;
