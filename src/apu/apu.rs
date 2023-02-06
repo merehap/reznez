@@ -58,8 +58,8 @@ impl Apu {
     }
 
     fn mix_samples(regs: &ApuRegisters) -> f32 {
-        let pulse_1 = regs.pulse_1.sample();
-        let pulse_2 = regs.pulse_2.sample();
+        let pulse_1 = regs.pulse_1.sample_volume();
+        let pulse_2 = regs.pulse_2.sample_volume();
         let triangle = 0.0;
         let noise = 0.0;
         let dmc = 0.0;

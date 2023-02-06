@@ -58,10 +58,17 @@ impl PulseChannel {
         }
     }
 
-    pub(super) fn sample(&self) -> f32 {
-        let volume = f32::from(self.volume_or_envelope.to_u8());
-        let on_or_off = self.duty.value_at(self.sequence_index);
-        volume * on_or_off
+    pub(super) fn sample_volume(&self) -> f32 {
+        let on_duty = self.duty.is_on_at(self.sequence_index);
+
+        let enabled = on_duty;
+        let volume = if enabled {
+            f32::from(self.volume_or_envelope.to_u8())
+        } else {
+            0.0
+        };
+
+        volume
     }
 }
 
@@ -75,12 +82,8 @@ pub enum Duty {
 }
 
 impl Duty {
-    fn value_at(self, sequence_index: usize) -> f32 {
-        if bit_util::get_bit(self as u8, sequence_index) {
-            1.0
-        } else {
-            0.0
-        }
+    fn is_on_at(self, sequence_index: usize) -> bool {
+        bit_util::get_bit(self as u8, sequence_index)
     }
 }
 
