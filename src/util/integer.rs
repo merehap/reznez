@@ -34,6 +34,12 @@ impl U5 {
     }
 }
 
+impl U5 {
+    pub fn to_u8(&self) -> u8 {
+        self.0
+    }
+}
+
 impl From<u8> for U5 {
     fn from(value: u8) -> Self {
         U5(value & 0b0001_1111)

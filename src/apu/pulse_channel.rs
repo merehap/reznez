@@ -35,7 +35,7 @@ impl PulseChannel {
     }
 
     pub fn write_length_and_timer_high_byte(&mut self, value: u8) {
-        self.length_counter =                    ((value & 0b1110_0000) >> 5).into();
+        self.length_counter =                    ((value & 0b1111_1000) >> 3).into();
         self.timer.set_period_high_and_reset_index(value & 0b0000_0111);
     }
 
@@ -60,9 +60,10 @@ impl PulseChannel {
 
     pub(super) fn sample_volume(&self) -> f32 {
         let on_duty = self.duty.is_on_at(self.sequence_index);
-        let short_period = self.timer.period() < 8;
+        let non_short_period = self.timer.period() >= 8;
+        let non_zero_length = self.length_counter.to_u8() > 0;
 
-        let enabled = on_duty && !short_period;
+        let enabled = on_duty && non_short_period && non_zero_length;
         let volume = if enabled {
             f32::from(self.volume_or_envelope.to_u8())
         } else {
