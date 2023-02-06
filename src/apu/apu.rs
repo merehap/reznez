@@ -43,6 +43,7 @@ impl Apu {
 
     pub fn step(&mut self, regs: &mut ApuRegisters) {
         regs.pulse_1.step();
+        regs.pulse_2.step();
         if self.cycle % 20 == 0 {
             let mut queue = self.pulse_queue
                 .lock()
@@ -51,7 +52,6 @@ impl Apu {
                 queue.push_back(Apu::mix_samples(regs));
             }
         }
-        //regs.pulse_2.step();
         //regs.triangle.step();
 
         self.cycle += 1;
@@ -59,7 +59,7 @@ impl Apu {
 
     fn mix_samples(regs: &ApuRegisters) -> f32 {
         let pulse_1 = regs.pulse_1.sample();
-        let pulse_2 = 0.0;
+        let pulse_2 = regs.pulse_2.sample();
         let triangle = 0.0;
         let noise = 0.0;
         let dmc = 0.0;
