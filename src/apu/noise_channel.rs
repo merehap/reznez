@@ -26,7 +26,9 @@ impl NoiseChannel {
     }
 
     pub fn write_length_byte(&mut self, value: u8) {
-        self.length_counter = ((value & 0b1111_1000) >> 3).into();
+        if self.enabled {
+            self.length_counter = ((value & 0b1111_1000) >> 3).into();
+        }
     }
 
     pub(super) fn enable_or_disable(&mut self, enable: bool) {
