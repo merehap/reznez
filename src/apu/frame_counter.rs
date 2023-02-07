@@ -1,6 +1,6 @@
 #[derive(Default)]
 pub struct FrameCounter {
-    step_mode: StepMode,
+    pub(super) step_mode: StepMode,
     pub(super) frame_interrupt: bool,
 }
 
@@ -12,9 +12,21 @@ impl FrameCounter {
     }
 }
 
-#[derive(Default)]
+#[derive(PartialEq, Clone, Copy, Default)]
 pub enum StepMode {
     #[default]
     FourStep,
     FiveStep,
+}
+
+impl StepMode {
+    pub const FOUR_STEP_FRAME_LENGTH: u16 = 14915;
+    pub const FIVE_STEP_FRAME_LENGTH: u16 = 18641;
+
+    pub const fn frame_length(self) -> u16 {
+        match self {
+            StepMode::FourStep => StepMode::FOUR_STEP_FRAME_LENGTH,
+            StepMode::FiveStep => StepMode::FIVE_STEP_FRAME_LENGTH,
+        }
+    }
 }

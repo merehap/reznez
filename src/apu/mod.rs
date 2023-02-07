@@ -1,5 +1,6 @@
 pub mod apu;
 pub mod apu_registers;
+pub mod length_counter;
 pub mod timer;
 
 // Write-only registers.

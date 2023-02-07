@@ -124,7 +124,7 @@ impl Nes {
             1 => ppu_result = self.ppu_step(),
             2 => {
                 step = self.cpu_step();
-                self.apu.step_triangle_channel_only(&mut self.memory.apu_regs());
+                self.apu.half_step(&mut self.memory.apu_regs());
                 ppu_result = self.ppu_step();
             }
             3 => ppu_result = self.ppu_step(),

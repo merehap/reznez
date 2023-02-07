@@ -1,5 +1,6 @@
+use crate::apu::length_counter::LengthCounter;
 use crate::apu::timer::Timer;
-use crate::util::integer::{U3, U4, U5};
+use crate::util::integer::{U3, U4};
 use crate::util::bit_util;
 
 #[derive(Default)]
@@ -13,7 +14,7 @@ pub struct PulseChannel {
 
     sweep: Sweep,
     timer: Timer,
-    length_counter: U5,
+    pub(super) length_counter: LengthCounter,
 
     sequence_index: usize,
 }
@@ -36,21 +37,23 @@ impl PulseChannel {
 
     pub fn write_length_and_timer_high_byte(&mut self, value: u8) {
         if self.enabled {
-            self.length_counter = ((value & 0b1111_1000) >> 3).into();
+            let index = (value & 0b1111_1000) >> 3;
+            self.length_counter = LengthCounter::from_lookup(index);
         }
 
+        self.sequence_index = 0;
         self.timer.set_period_high_and_reset_index(value & 0b0000_0111);
     }
 
     pub(super) fn enable_or_disable(&mut self, enable: bool) {
         self.enabled = enable;
         if !self.enabled {
-            self.length_counter = U5::ZERO;
+            self.length_counter.set_to_zero();
         }
     }
 
     pub(super) fn active(&self) -> bool {
-        self.length_counter != U5::ZERO
+        !self.length_counter.is_zero()
     }
 
     pub(super) fn step(&mut self) {
@@ -64,7 +67,7 @@ impl PulseChannel {
     pub(super) fn sample_volume(&self) -> f32 {
         let on_duty = self.duty.is_on_at(self.sequence_index);
         let non_short_period = self.timer.period() >= 8;
-        let non_zero_length = self.length_counter.to_u8() > 0;
+        let non_zero_length = !self.length_counter.is_zero();
 
         let enabled = on_duty && non_short_period && non_zero_length;
         let volume = if enabled {

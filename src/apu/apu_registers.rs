@@ -38,6 +38,11 @@ impl ApuRegisters {
         self.pulse_1.enable_or_disable(value & 0b0000_0010 != 0);
         self.pulse_2.enable_or_disable(value & 0b0000_0001 != 0);
     }
+
+    pub fn decrement_length_counters(&mut self) {
+        self.pulse_1.length_counter.decrement_towards_zero();
+        self.pulse_2.length_counter.decrement_towards_zero();
+    }
 }
 
 #[derive(Clone, Copy)]

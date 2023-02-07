@@ -7,13 +7,14 @@ use rodio::{OutputStream, Sink};
 use rodio::source::Source;
 
 use crate::apu::apu_registers::ApuRegisters;
+use crate::apu::frame_counter::StepMode;
 
 const SAMPLE_RATE: u32 = 44100;
 const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
 
 pub struct Apu {
     pulse_queue: Arc<Mutex<VecDeque<f32>>>,
-    cycle: u64,
+    cycle: u16,
 }
 
 impl Apu {
@@ -37,7 +38,29 @@ impl Apu {
         }
     }
 
-    pub fn step_triangle_channel_only(&self, _regs: &mut ApuRegisters) {
+    pub fn half_step(&self, regs: &mut ApuRegisters) {
+        const FIRST_STEP : u16 = 03728;
+        const SECOND_STEP: u16 = 07456;
+        const THIRD_STEP : u16 = 11185;
+
+        use StepMode::*;
+        match (regs.frame_counter.step_mode, self.cycle) {
+            (_, FIRST_STEP) => {}
+            (_, SECOND_STEP) => {
+                regs.decrement_length_counters();
+            }
+            (_, THIRD_STEP) => {}
+            (FourStep, _) if self.cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1 => {
+                regs.decrement_length_counters();
+            }
+            (FiveStep, _) if self.cycle == StepMode::FIVE_STEP_FRAME_LENGTH - 1 => {
+                regs.decrement_length_counters();
+            }
+            (FourStep, _) if self.cycle >= StepMode::FOUR_STEP_FRAME_LENGTH => unreachable!(),
+            (FiveStep, _) if self.cycle >= StepMode::FIVE_STEP_FRAME_LENGTH => unreachable!(),
+            _ => { /* Do nothing. */ }
+        }
+
         //regs.triangle.step();
     }
 
@@ -55,6 +78,7 @@ impl Apu {
         //regs.triangle.step();
 
         self.cycle += 1;
+        self.cycle %= regs.frame_counter.step_mode.frame_length();
     }
 
     fn mix_samples(regs: &ApuRegisters) -> f32 {
