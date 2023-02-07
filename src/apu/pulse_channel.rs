@@ -8,7 +8,6 @@ pub struct PulseChannel {
     pub(super) enabled: bool,
 
     duty: Duty,
-    length_counter_halt: bool,
     constant_volume: bool,
     volume_or_envelope: U4,
 
@@ -21,10 +20,10 @@ pub struct PulseChannel {
 
 impl PulseChannel {
     pub fn write_control_byte(&mut self, value: u8) {
-        self.duty =               ((value & 0b1100_0000) >> 6).into();
-        self.length_counter_halt = (value & 0b0010_0000) != 0;
-        self.constant_volume =     (value & 0b0001_0000) != 0;
-        self.volume_or_envelope =  (value & 0b0000_1111).into();
+        self.duty =                 ((value & 0b1100_0000) >> 6).into();
+        self.length_counter.set_halt((value & 0b0010_0000) != 0);
+        self.constant_volume =       (value & 0b0001_0000) != 0;
+        self.volume_or_envelope =    (value & 0b0000_1111).into();
     }
 
     pub fn write_sweep_byte(&mut self, value: u8) {
@@ -37,16 +36,15 @@ impl PulseChannel {
 
     pub fn write_length_and_timer_high_byte(&mut self, value: u8) {
         if self.enabled {
-            let index = (value & 0b1111_1000) >> 3;
-            self.length_counter = LengthCounter::from_lookup(index);
+            self.length_counter = LengthCounter::from_lookup((value & 0b1111_1000) >> 3);
         }
 
         self.sequence_index = 0;
         self.timer.set_period_high_and_reset_index(value & 0b0000_0111);
     }
 
-    pub(super) fn enable_or_disable(&mut self, enable: bool) {
-        self.enabled = enable;
+    pub(super) fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
         if !self.enabled {
             self.length_counter.set_to_zero();
         }

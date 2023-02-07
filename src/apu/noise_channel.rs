@@ -1,23 +1,23 @@
-use crate::util::integer::{U4, U5};
+use crate::apu::length_counter::LengthCounter;
+use crate::util::integer::U4;
 
 #[derive(Default)]
 pub struct NoiseChannel {
     pub(super) enabled: bool,
 
-    length_counter_halt: bool,
     constant_volume: bool,
     volume_or_envelope: U4,
 
     should_loop: bool,
     period: U4,
-    length_counter: U5,
+    length_counter: LengthCounter,
 }
 
 impl NoiseChannel {
     pub fn write_control_byte(&mut self, value: u8) {
-        self.length_counter_halt = (value & 0b0010_0000) != 0;
-        self.constant_volume =     (value & 0b0001_0000) != 0;
-        self.volume_or_envelope =  (value & 0b0000_1111).into();
+        self.length_counter.set_halt((value & 0b0010_0000) != 0);
+        self.constant_volume =       (value & 0b0001_0000) != 0;
+        self.volume_or_envelope =    (value & 0b0000_1111).into();
     }
 
     pub fn write_loop_and_period_byte(&mut self, value: u8) {
@@ -27,18 +27,18 @@ impl NoiseChannel {
 
     pub fn write_length_byte(&mut self, value: u8) {
         if self.enabled {
-            self.length_counter = ((value & 0b1111_1000) >> 3).into();
+            self.length_counter = LengthCounter::from_lookup((value & 0b1111_1000) >> 3);
         }
     }
 
-    pub(super) fn enable_or_disable(&mut self, enable: bool) {
-        self.enabled = enable;
+    pub(super) fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
         if !self.enabled {
-            self.length_counter = U5::ZERO;
+            self.length_counter.set_to_zero();
         }
     }
 
     pub(super) fn active(&self) -> bool {
-        self.length_counter != U5::ZERO
+        self.length_counter.is_zero()
     }
 }

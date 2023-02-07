@@ -34,8 +34,8 @@ impl Dmc {
         self.sample_bytes_remaining.load_new_length_byte(value);
     }
 
-    pub(super) fn enable_or_disable(&mut self, enable: bool) {
-        self.enabled = enable;
+    pub(super) fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
         if !self.enabled {
             self.sample_bytes_remaining.clear();
             self.irq_enabled = false;

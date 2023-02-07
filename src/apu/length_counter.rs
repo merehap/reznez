@@ -4,24 +4,34 @@ const TABLE: [u8; 0x20] = [
 ];
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]
-pub struct LengthCounter(u8);
+pub struct LengthCounter {
+    count: u8,
+    halt: bool,
+}
 
 impl LengthCounter {
     pub fn from_lookup(index: u8) -> LengthCounter {
-        LengthCounter(TABLE[usize::from(index)])
+        LengthCounter {
+            count: TABLE[usize::from(index)],
+            halt: false,
+        }
     }
 
     pub fn is_zero(self) -> bool {
-        self.0 == 0
+        self.count == 0
     }
 
     pub fn set_to_zero(&mut self) {
-        self.0 = 0;
+        self.count = 0;
     }
 
     pub fn decrement_towards_zero(&mut self) {
-        if self.0 != 0 {
-            self.0 -= 1;
+        if self.count != 0 {
+            self.count -= 1;
         }
+    }
+
+    pub fn set_halt(&mut self, halt: bool) {
+        self.halt = halt;
     }
 }

@@ -32,11 +32,11 @@ impl ApuRegisters {
     }
 
     pub fn write_status_byte(&mut self, value: u8) {
-        self.dmc.enable_or_disable(value & 0b0001_0000 != 0);
-        self.noise.enable_or_disable(value & 0b0000_1000 != 0);
-        self.triangle.enable_or_disable(value & 0b0000_0100 != 0);
-        self.pulse_1.enable_or_disable(value & 0b0000_0010 != 0);
-        self.pulse_2.enable_or_disable(value & 0b0000_0001 != 0);
+        self.dmc.set_enabled(     value & 0b0001_0000 != 0);
+        self.noise.set_enabled(   value & 0b0000_1000 != 0);
+        self.triangle.set_enabled(value & 0b0000_0100 != 0);
+        self.pulse_1.set_enabled( value & 0b0000_0010 != 0);
+        self.pulse_2.set_enabled( value & 0b0000_0001 != 0);
     }
 
     pub fn decrement_length_counters(&mut self) {
