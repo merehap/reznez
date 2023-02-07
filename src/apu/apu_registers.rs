@@ -42,6 +42,7 @@ impl ApuRegisters {
     pub fn decrement_length_counters(&mut self) {
         self.pulse_1.length_counter.decrement_towards_zero();
         self.pulse_2.length_counter.decrement_towards_zero();
+        self.triangle.length_counter.decrement_towards_zero();
     }
 }
 
