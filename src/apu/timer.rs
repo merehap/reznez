@@ -20,10 +20,6 @@ impl Timer {
         self.period |= u16::from(period_low);
     }
 
-    pub fn reset_index(&mut self) {
-        self.index = 0;
-    }
-
     pub fn tick(&mut self) -> bool {
         let mut wrapped_around = false;
         match (self.period, self.index) {
