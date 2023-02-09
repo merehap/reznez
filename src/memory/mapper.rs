@@ -114,7 +114,7 @@ pub trait Mapper {
             0x4014          => ports.dma.set_page(value),
             0x4015          => apu_registers.write_status_byte(value),
             0x4016          => ports.change_strobe(value),
-            0x4017          => apu_registers.frame_counter.write(value),
+            0x4017          => apu_registers.write_frame_counter(value),
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
             0x4020..=0xFFFF => self.write_to_cartridge_space(address, value),
         }

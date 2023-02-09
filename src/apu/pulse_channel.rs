@@ -35,10 +35,8 @@ impl PulseChannel {
     }
 
     pub fn write_length_and_timer_high_byte(&mut self, value: u8) {
-        println!("Writing length?");
         if self.enabled {
-            self.length_counter = LengthCounter::from_lookup((value & 0b1111_1000) >> 3);
-            println!("Channel enabled, length updated to {:?}", self.length_counter);
+            self.length_counter.set_count_from_lookup((value & 0b1111_1000) >> 3);
         }
 
         self.sequence_index = 0;

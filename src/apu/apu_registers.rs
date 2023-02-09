@@ -2,7 +2,6 @@ use crate::apu::pulse_channel::PulseChannel;
 use crate::apu::triangle_channel::TriangleChannel;
 use crate::apu::noise_channel::NoiseChannel;
 use crate::apu::dmc::Dmc;
-use crate::apu::frame_counter::FrameCounter;
 use crate::util::bit_util;
 
 #[derive(Default)]
@@ -12,10 +11,14 @@ pub struct ApuRegisters {
     pub triangle: TriangleChannel,
     pub noise: NoiseChannel,
     pub dmc: Dmc,
-    pub frame_counter: FrameCounter,
+    frame_counter: FrameCounter,
 }
 
 impl ApuRegisters {
+    pub fn step_mode(&self) -> StepMode {
+        self.frame_counter.step_mode
+    }
+
     pub fn read_status(&mut self) -> Status {
         let frame_interrupt = self.frame_counter.frame_interrupt;
         self.frame_counter.frame_interrupt = false;
@@ -39,10 +42,24 @@ impl ApuRegisters {
         self.pulse_1.set_enabled( value & 0b0000_0001 != 0);
     }
 
+    pub fn write_frame_counter(&mut self, value: u8) {
+        use StepMode::*;
+        self.frame_counter.step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
+        self.frame_counter.frame_interrupt = value & 0b0100_0000 == 0;
+
+        if self.frame_counter.step_mode == StepMode::FiveStep {
+            self.pulse_1.length_counter.try_set_to_zero();
+            self.pulse_2.length_counter.try_set_to_zero();
+            self.triangle.length_counter.try_set_to_zero();
+            self.noise.length_counter.try_set_to_zero();
+        }
+    }
+
     pub fn decrement_length_counters(&mut self) {
         self.pulse_1.length_counter.decrement_towards_zero();
         self.pulse_2.length_counter.decrement_towards_zero();
         self.triangle.length_counter.decrement_towards_zero();
+        self.noise.length_counter.decrement_towards_zero();
     }
 }
 
@@ -71,5 +88,30 @@ impl Status {
                 self.pulse_1_active,
             ]
         )
+    }
+}
+
+#[derive(Default)]
+pub struct FrameCounter {
+    step_mode: StepMode,
+    frame_interrupt: bool,
+}
+
+#[derive(PartialEq, Clone, Copy, Default)]
+pub enum StepMode {
+    #[default]
+    FourStep,
+    FiveStep,
+}
+
+impl StepMode {
+    pub const FOUR_STEP_FRAME_LENGTH: u16 = 14915;
+    pub const FIVE_STEP_FRAME_LENGTH: u16 = 18641;
+
+    pub const fn frame_length(self) -> u16 {
+        match self {
+            StepMode::FourStep => StepMode::FOUR_STEP_FRAME_LENGTH,
+            StepMode::FiveStep => StepMode::FIVE_STEP_FRAME_LENGTH,
+        }
     }
 }

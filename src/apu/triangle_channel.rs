@@ -36,7 +36,7 @@ impl TriangleChannel {
 
     pub fn write_length_and_timer_high_byte(&mut self, value: u8) {
         if self.enabled {
-            self.length_counter = LengthCounter::from_lookup((value & 0b1111_1000) >> 3);
+            self.length_counter.set_count_from_lookup((value & 0b1111_1000) >> 3);
         }
 
         self.timer.set_period_high_and_reset_index(value & 0b0000_0111);

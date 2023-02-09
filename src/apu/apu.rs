@@ -6,8 +6,7 @@ use std::time::Duration;
 use rodio::{OutputStream, Sink};
 use rodio::source::Source;
 
-use crate::apu::apu_registers::ApuRegisters;
-use crate::apu::frame_counter::StepMode;
+use crate::apu::apu_registers::{ApuRegisters, StepMode};
 
 const SAMPLE_RATE: u32 = 44100;
 const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
@@ -44,7 +43,7 @@ impl Apu {
         const THIRD_STEP : u16 = 11185;
 
         use StepMode::*;
-        match (regs.frame_counter.step_mode, self.cycle) {
+        match (regs.step_mode(), self.cycle) {
             (_, FIRST_STEP) => {}
             (_, SECOND_STEP) => {
                 regs.decrement_length_counters();
@@ -68,6 +67,7 @@ impl Apu {
         regs.pulse_1.step();
         regs.pulse_2.step();
         regs.triangle.step_half_frame();
+        regs.noise.step();
 
         if self.cycle % 20 == 0 {
             let mut queue = self.pulse_queue
@@ -79,7 +79,7 @@ impl Apu {
         }
 
         self.cycle += 1;
-        self.cycle %= regs.frame_counter.step_mode.frame_length();
+        self.cycle %= regs.step_mode().frame_length();
     }
 
     fn mix_samples(regs: &ApuRegisters) -> f32 {

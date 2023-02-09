@@ -1,4 +1,5 @@
 use crate::apu::length_counter::LengthCounter;
+use crate::apu::timer::Timer;
 use crate::util::integer::U4;
 
 #[derive(Default)]
@@ -10,7 +11,8 @@ pub struct NoiseChannel {
 
     should_loop: bool,
     period: U4,
-    length_counter: LengthCounter,
+    timer: Timer,
+    pub(super) length_counter: LengthCounter,
 }
 
 impl NoiseChannel {
@@ -27,7 +29,7 @@ impl NoiseChannel {
 
     pub fn write_length_byte(&mut self, value: u8) {
         if self.enabled {
-            self.length_counter = LengthCounter::from_lookup((value & 0b1111_1000) >> 3);
+            self.length_counter.set_count_from_lookup((value & 0b1111_1000) >> 3);
         }
     }
 
@@ -39,6 +41,10 @@ impl NoiseChannel {
     }
 
     pub(super) fn active(&self) -> bool {
-        self.length_counter.is_zero()
+        !self.length_counter.is_zero()
+    }
+
+    pub(super) fn step(&mut self) {
+        let _wrapped_around = self.timer.tick();
     }
 }

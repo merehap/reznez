@@ -10,11 +10,8 @@ pub struct LengthCounter {
 }
 
 impl LengthCounter {
-    pub fn from_lookup(index: u8) -> LengthCounter {
-        LengthCounter {
-            count: TABLE[usize::from(index)],
-            halt: false,
-        }
+    pub fn set_count_from_lookup(&mut self, index: u8) {
+        self.count = TABLE[usize::from(index)];
     }
 
     pub fn is_zero(self) -> bool {
@@ -25,8 +22,14 @@ impl LengthCounter {
         self.count = 0;
     }
 
+    pub fn try_set_to_zero(&mut self) {
+        if !self.halt {
+            self.count = 0;
+        }
+    }
+
     pub fn decrement_towards_zero(&mut self) {
-        if self.count != 0 {
+        if !self.halt && self.count != 0 {
             self.count -= 1;
         }
     }
