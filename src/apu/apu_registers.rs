@@ -35,8 +35,8 @@ impl ApuRegisters {
         self.dmc.set_enabled(     value & 0b0001_0000 != 0);
         self.noise.set_enabled(   value & 0b0000_1000 != 0);
         self.triangle.set_enabled(value & 0b0000_0100 != 0);
-        self.pulse_1.set_enabled( value & 0b0000_0010 != 0);
-        self.pulse_2.set_enabled( value & 0b0000_0001 != 0);
+        self.pulse_2.set_enabled( value & 0b0000_0010 != 0);
+        self.pulse_1.set_enabled( value & 0b0000_0001 != 0);
     }
 
     pub fn decrement_length_counters(&mut self) {
