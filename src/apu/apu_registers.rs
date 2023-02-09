@@ -43,11 +43,12 @@ impl ApuRegisters {
     }
 
     pub fn write_frame_counter(&mut self, value: u8) {
+        let old_step_mode = self.frame_counter.step_mode;
         use StepMode::*;
         self.frame_counter.step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
         self.frame_counter.frame_interrupt = value & 0b0100_0000 == 0;
 
-        if self.frame_counter.step_mode == StepMode::FiveStep {
+        if old_step_mode == StepMode::FourStep && self.frame_counter.step_mode == StepMode::FiveStep {
             self.pulse_1.length_counter.try_set_to_zero();
             self.pulse_2.length_counter.try_set_to_zero();
             self.triangle.length_counter.try_set_to_zero();
@@ -97,7 +98,7 @@ pub struct FrameCounter {
     frame_interrupt: bool,
 }
 
-#[derive(PartialEq, Clone, Copy, Default)]
+#[derive(PartialEq, Clone, Copy, Debug, Default)]
 pub enum StepMode {
     #[default]
     FourStep,
