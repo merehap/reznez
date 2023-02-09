@@ -13,6 +13,7 @@ const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
 
 pub struct Apu {
     pulse_queue: Arc<Mutex<VecDeque<f32>>>,
+    muted: Arc<Mutex<bool>>,
     cycle: u16,
 }
 
@@ -20,10 +21,12 @@ impl Apu {
     pub fn new() -> Apu {
         // TODO: Select a proper capacity value.
         let pulse_queue = Arc::new(Mutex::new(VecDeque::with_capacity(MAX_QUEUE_LENGTH)));
+        let muted = Arc::new(Mutex::new(false));
 
-        let cloned = pulse_queue.clone();
+        let cloned_queue = pulse_queue.clone();
+        let cloned_muted = muted.clone();
         thread::spawn(move || {
-            let source = PulseWave::new(cloned);
+            let source = PulseWave::new(cloned_queue, cloned_muted);
             let (_stream, stream_handle) = OutputStream::try_default().unwrap();
             let sink = Sink::try_new(&stream_handle).unwrap();
             sink.append(source);
@@ -33,8 +36,13 @@ impl Apu {
 
         Apu {
             pulse_queue,
+            muted,
             cycle: 0,
         }
+    }
+
+    pub fn mute(&mut self) {
+        *self.muted.lock().unwrap() = true;
     }
 
     pub fn half_step(&self, regs: &mut ApuRegisters) {
@@ -102,16 +110,22 @@ impl Apu {
 #[derive(Clone, Debug)]
 pub struct PulseWave {
     queue: Arc<Mutex<VecDeque<f32>>>,
+    muted: Arc<Mutex<bool>>,
     previous_value: f32,
 }
 
 impl PulseWave {
     #[inline]
-    pub fn new(queue: Arc<Mutex<VecDeque<f32>>>) -> Self {
+    pub fn new(queue: Arc<Mutex<VecDeque<f32>>>, muted: Arc<Mutex<bool>>) -> Self {
         PulseWave {
             queue,
+            muted,
             previous_value: 0.0,
         }
+    }
+
+    pub fn mute(&mut self) {
+        *self.muted.lock().unwrap() = true;
     }
 }
 
@@ -120,7 +134,9 @@ impl Iterator for PulseWave {
 
     #[inline]
     fn next(&mut self) -> Option<f32> {
-        if let Some(value) = self.queue.lock().unwrap().pop_front() {
+        if *self.muted.lock().unwrap() {
+            None
+        } else if let Some(value) = self.queue.lock().unwrap().pop_front() {
             self.previous_value = value;
             Some(value)
         } else {

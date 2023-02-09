@@ -103,6 +103,10 @@ impl Nes {
         self.memory.stack_pointer()
     }
 
+    pub fn mute(&mut self) {
+        self.apu.mute()
+    }
+
     pub fn step_frame(&mut self) {
         loop {
             let step_result = self.step();

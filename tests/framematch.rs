@@ -71,6 +71,7 @@ fn framematch() {
         };
 
         let mut nes = Nes::new(&Config::new(&opt));
+        nes.mute();
         let rom_name = frame_directory
             .file_stem()
             .unwrap()
