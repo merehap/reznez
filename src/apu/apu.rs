@@ -14,7 +14,7 @@ const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
 pub struct Apu {
     pulse_queue: Arc<Mutex<VecDeque<f32>>>,
     muted: Arc<Mutex<bool>>,
-    cycle: u16,
+    cycle: u64,
 }
 
 impl Apu {
@@ -50,28 +50,30 @@ impl Apu {
         const SECOND_STEP: u16 = 07456;
         const THIRD_STEP : u16 = 11185;
 
+        let cycle_within_frame = self.cycle_within_frame(regs);
+
         use StepMode::*;
-        match (regs.step_mode(), self.cycle) {
+        match (regs.step_mode(), cycle_within_frame) {
             (_, FIRST_STEP) => {}
             (_, SECOND_STEP) => {
                 regs.decrement_length_counters();
             }
             (_, THIRD_STEP) => {}
-            (FourStep, _) if self.cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1 => {
+            (FourStep, _) if cycle_within_frame == StepMode::FOUR_STEP_FRAME_LENGTH - 1 => {
                 regs.decrement_length_counters();
             }
-            (FiveStep, _) if self.cycle == StepMode::FIVE_STEP_FRAME_LENGTH - 1 => {
+            (FiveStep, _) if cycle_within_frame == StepMode::FIVE_STEP_FRAME_LENGTH - 1 => {
                 regs.decrement_length_counters();
             }
-            (FourStep, _) if self.cycle >= StepMode::FOUR_STEP_FRAME_LENGTH => unreachable!(),
-            (FiveStep, _) if self.cycle >= StepMode::FIVE_STEP_FRAME_LENGTH => unreachable!(),
+            (FourStep, _) if cycle_within_frame >= StepMode::FOUR_STEP_FRAME_LENGTH => unreachable!(),
+            (FiveStep, _) if cycle_within_frame >= StepMode::FIVE_STEP_FRAME_LENGTH => unreachable!(),
             _ => { /* Do nothing. */ }
         }
 
         regs.triangle.step_quarter_frame();
     }
 
-    pub fn step(&mut self, regs: &mut ApuRegisters) {
+    pub fn step(&mut self, regs: &mut ApuRegisters) -> bool {
         regs.pulse_1.step();
         regs.pulse_2.step();
         regs.triangle.step_half_frame();
@@ -86,8 +88,19 @@ impl Apu {
             }
         }
 
+        let mut frame_irq_pending = false;
+        if self.cycle_within_frame(regs) == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
+            regs.maybe_set_frame_irq_pending();
+            frame_irq_pending = regs.frame_irq_pending();
+        }
+
         self.cycle += 1;
-        self.cycle %= regs.step_mode().frame_length();
+
+        frame_irq_pending
+    }
+
+    fn cycle_within_frame(&self, regs: &ApuRegisters) -> u16 {
+        u16::try_from(self.cycle % u64::from(regs.step_mode().frame_length())).unwrap()
     }
 
     fn mix_samples(regs: &ApuRegisters) -> f32 {

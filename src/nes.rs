@@ -175,7 +175,10 @@ impl Nes {
     }
 
     fn apu_step(&mut self) {
-        self.apu.step(&mut self.memory.apu_regs());
+        let frame_irq_pending = self.apu.step(&mut self.memory.apu_regs());
+        if frame_irq_pending {
+            self.cpu.schedule_irq();
+        }
     }
 
     #[inline]

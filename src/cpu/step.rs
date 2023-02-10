@@ -283,6 +283,15 @@ pub const NMI_STEPS: &'static [Step] = &[
     ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector, ClearNmi]),
 ];
 
+pub const IRQ_STEPS: &'static [Step] = &[
+    WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),
+    WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
+    WriteField(StatusForInterrupt    , To::TopOfStack, &[DecrementStackPointer]),
+    // Copy the new ProgramCounterLowByte to the data bus.
+    Read(                              From::InterruptVectorLow , &[DisableInterrupts, ClearIrq]),
+    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector]),
+];
+
 pub const BRK_STEPS: &'static [Step] = &[
     WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),
     WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),

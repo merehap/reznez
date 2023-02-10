@@ -11,21 +11,24 @@ pub struct ApuRegisters {
     pub triangle: TriangleChannel,
     pub noise: NoiseChannel,
     pub dmc: Dmc,
-    frame_counter: FrameCounter,
+
+    step_mode: StepMode,
+    suppress_irq: bool,
+    frame_irq_pending: bool,
 }
 
 impl ApuRegisters {
     pub fn step_mode(&self) -> StepMode {
-        self.frame_counter.step_mode
+        self.step_mode
     }
 
     pub fn read_status(&mut self) -> Status {
-        let frame_interrupt = self.frame_counter.frame_interrupt;
-        self.frame_counter.frame_interrupt = false;
+        let frame_irq_pending = self.frame_irq_pending;
+        self.frame_irq_pending = false;
 
         Status {
             dmc_interrupt: self.dmc.irq_enabled,
-            frame_interrupt,
+            frame_irq_pending,
             dmc_active: self.dmc.active(),
             noise_active: self.noise.active(),
             triangle_active: self.triangle.active(),
@@ -43,12 +46,16 @@ impl ApuRegisters {
     }
 
     pub fn write_frame_counter(&mut self, value: u8) {
-        let old_step_mode = self.frame_counter.step_mode;
+        let old_step_mode = self.step_mode;
         use StepMode::*;
-        self.frame_counter.step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
-        self.frame_counter.frame_interrupt = value & 0b0100_0000 == 0;
+        self.step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
+        self.suppress_irq = value & 0b0100_0000 != 0;
 
-        if old_step_mode == StepMode::FourStep && self.frame_counter.step_mode == StepMode::FiveStep {
+        if self.suppress_irq {
+            self.frame_irq_pending = false;
+        }
+
+        if old_step_mode == StepMode::FourStep && self.step_mode == StepMode::FiveStep {
             self.pulse_1.length_counter.try_set_to_zero();
             self.pulse_2.length_counter.try_set_to_zero();
             self.triangle.length_counter.try_set_to_zero();
@@ -62,12 +69,26 @@ impl ApuRegisters {
         self.triangle.length_counter.decrement_towards_zero();
         self.noise.length_counter.decrement_towards_zero();
     }
+
+    pub fn frame_irq_pending(&self) -> bool {
+        self.frame_irq_pending
+    }
+
+    pub fn maybe_set_frame_irq_pending(&mut self) {
+        if self.step_mode == StepMode::FourStep && !self.suppress_irq {
+            self.frame_irq_pending = true;
+        }
+    }
+
+    pub fn acknowledge_frame_irq(&mut self) {
+        self.frame_irq_pending = false;
+    }
 }
 
 #[derive(Clone, Copy)]
 pub struct Status {
     dmc_interrupt: bool,
-    frame_interrupt: bool,
+    frame_irq_pending: bool,
     dmc_active: bool,
     noise_active: bool,
     triangle_active: bool,
@@ -80,7 +101,7 @@ impl Status {
         bit_util::pack_bools(
             [
                 self.dmc_interrupt,
-                self.frame_interrupt,
+                self.frame_irq_pending,
                 false,
                 self.dmc_active,
                 self.noise_active,
@@ -90,12 +111,6 @@ impl Status {
             ]
         )
     }
-}
-
-#[derive(Default)]
-pub struct FrameCounter {
-    step_mode: StepMode,
-    frame_interrupt: bool,
 }
 
 #[derive(PartialEq, Clone, Copy, Debug, Default)]
