@@ -73,7 +73,7 @@ impl Apu {
         regs.triangle.step_quarter_frame();
     }
 
-    pub fn step(&mut self, regs: &mut ApuRegisters) -> bool {
+    pub fn step(&mut self, regs: &mut ApuRegisters) {
         regs.pulse_1.step();
         regs.pulse_2.step();
         regs.triangle.step_half_frame();
@@ -88,15 +88,11 @@ impl Apu {
             }
         }
 
-        let mut frame_irq_pending = false;
         if self.cycle_within_frame(regs) == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
             regs.maybe_set_frame_irq_pending();
-            frame_irq_pending = regs.frame_irq_pending();
         }
 
         self.cycle += 1;
-
-        frame_irq_pending
     }
 
     fn cycle_within_frame(&self, regs: &ApuRegisters) -> u16 {

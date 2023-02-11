@@ -164,6 +164,11 @@ impl Cpu {
         self.irq_status = IrqStatus::Pending;
     }
 
+    pub fn deschedule_irq(&mut self) {
+        assert!(self.irq_status != IrqStatus::Active);
+        self.irq_status = IrqStatus::Inactive;
+    }
+
     pub fn step(&mut self, memory: &mut CpuMemory) -> Option<Step> {
         if self.jammed {
             return None;
