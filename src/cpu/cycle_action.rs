@@ -49,7 +49,7 @@ pub enum From {
     InterruptVectorHigh,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum To {
     AddressBusTarget,
     DmaAddressTarget,
@@ -68,7 +68,7 @@ impl To {
     pub const OAM_DATA: To = To::AddressTarget(CpuAddress::new(0x2004));
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Field {
     ProgramCounterLowByte,
     ProgramCounterHighByte,

@@ -382,6 +382,8 @@ impl Cpu {
                     TXS => *memory.stack_pointer_mut() = self.x,
                     TXA => self.a = self.nz(self.x),
                     TYA => self.a = self.nz(self.y),
+                    PLA => self.a = self.nz(value),
+                    PLP => self.status = Status::from_byte(value),
                     CLC => self.status.carry = false,
                     SEC => self.status.carry = true,
                     CLD => self.status.decimal = false,

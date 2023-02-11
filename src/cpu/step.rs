@@ -108,7 +108,7 @@ pub const BRANCH_TAKEN_STEP: Step =
 
 pub const IMPLICIT_ADDRESSING_STEPS: &'static [Step] = &[
     // Read the NEXT op code, execute the CURRENT op code.
-    Read(From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, ExecuteOpCode, IncrementProgramCounter]),
 ];
 pub const IMMEDIATE_ADDRESSING_STEPS: &'static [Step] = &[
     // Read the NEXT op code, execute the CURRENT op code.
@@ -327,13 +327,17 @@ pub const PHP_STEPS: &'static [Step] = &[
 ];
 
 pub const PLA_STEPS: &'static [Step] = &[
-    Read(                  From::TopOfStack, &[IncrementStackPointer]),
-    ReadField(Accumulator, From::TopOfStack, &[CheckNegativeAndZero]),
+    Read(From::TopOfStack          , &[IncrementStackPointer]),
+    Read(From::TopOfStack          , &[]),
+    // Note swapped order of StartNextInstruction and ExecuteOpCode.
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, ExecuteOpCode, IncrementProgramCounter]),
 ];
 
 pub const PLP_STEPS: &'static [Step] = &[
     Read(             From::TopOfStack, &[IncrementStackPointer]),
-    ReadField(Status, From::TopOfStack, &[]),
+    Read(From::TopOfStack, &[]),
+    // Note swapped order of StartNextInstruction and ExecuteOpCode, necessary for IRQs.
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, ExecuteOpCode, IncrementProgramCounter]),
 ];
 
 pub const JSR_STEPS: &'static [Step] = &[
