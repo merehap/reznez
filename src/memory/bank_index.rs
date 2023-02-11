@@ -6,6 +6,7 @@ pub enum BankIndex {
 
 impl BankIndex {
     pub const FIRST: BankIndex = BankIndex::IndexFromStart(0);
+    pub const SECOND_LAST: BankIndex = BankIndex::IndexFromEnd(1);
     pub const LAST: BankIndex = BankIndex::IndexFromEnd(0);
 
     pub fn from_u8(value: u8) -> BankIndex {
