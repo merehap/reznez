@@ -161,7 +161,9 @@ impl Cpu {
     }
 
     pub fn schedule_irq(&mut self) {
-        self.irq_status = IrqStatus::Pending;
+        if self.irq_status != IrqStatus::Active {
+            self.irq_status = IrqStatus::Pending;
+        }
     }
 
     pub fn deschedule_irq(&mut self) {
@@ -703,7 +705,7 @@ pub enum ProgramCounterSource {
     Override(CpuAddress),
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 enum NmiStatus {
     Inactive,
     Pending,
@@ -711,7 +713,7 @@ enum NmiStatus {
     Active,
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 enum IrqStatus {
     Inactive,
     Pending,
