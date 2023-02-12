@@ -2,6 +2,7 @@
 pub enum BankIndex {
     IndexFromStart(u16),
     IndexFromEnd(u16),
+    RegisterBacked(BankIndexRegisterId),
 }
 
 impl BankIndex {
@@ -13,18 +14,24 @@ impl BankIndex {
         BankIndex::IndexFromStart(value.into())
     }
 
-    pub fn to_u16(self, bank_count: u16) -> u16 {
+    pub fn to_u16(self, registers: &BankIndexRegisters, bank_count: u16) -> u16 {
         match self {
             BankIndex::IndexFromStart(index) => index % bank_count,
             BankIndex::IndexFromEnd(index) => {
                 assert!(index < bank_count);
                 bank_count - index - 1
             }
+            // TODO: Get rid of this recursive call.
+            BankIndex::RegisterBacked(id) => registers.get(id)
         }
     }
 
-    pub fn to_usize(self, bank_count: u16) -> usize {
-        self.to_u16(bank_count).into()
+    pub fn to_usize(self, registers: &BankIndexRegisters, bank_count: u16) -> usize {
+        self.to_u16(registers, bank_count).into()
+    }
+
+    pub fn is_register_backed(self) -> bool {
+        matches!(self, BankIndex::RegisterBacked(_))
     }
 }
 
@@ -32,4 +39,41 @@ impl From<u8> for BankIndex {
     fn from(value: u8) -> Self {
         BankIndex::IndexFromStart(value.into())
     }
+}
+
+pub struct BankIndexRegisters {
+    registers: [Option<u16>; 8],
+}
+
+impl BankIndexRegisters {
+    pub fn new(active_ids: &[BankIndexRegisterId]) -> BankIndexRegisters {
+        let mut registers = [None; 8];
+        for &id in active_ids {
+            registers[id as usize] = Some(0);
+        }
+
+        BankIndexRegisters { registers }
+    }
+
+    fn get(&self, id: BankIndexRegisterId) -> u16 {
+        self.registers[id as usize]
+            .expect(&format!("Register {:?} is not configured.", id))
+    }
+
+    pub fn set(&mut self, id: BankIndexRegisterId, index: u16) {
+        assert!(self.registers[id as usize].is_some(), "Register {:?} is not configured.", id);
+        self.registers[id as usize] = Some(index);
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum BankIndexRegisterId {
+    R0,
+    R1,
+    R2,
+    R3,
+    R4,
+    R5,
+    R6,
+    R7,
 }

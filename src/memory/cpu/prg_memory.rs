@@ -1,4 +1,4 @@
-use crate::memory::bank_index::BankIndex;
+use crate::memory::bank_index::{BankIndex, BankIndexRegisters, BankIndexRegisterId};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::writability::Writability;
 use crate::util::unit::KIBIBYTE;
@@ -7,16 +7,28 @@ const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
 
 pub struct PrgMemory {
     layout: PrgLayout,
+    // Mainly (only?) used by MMC3 and variants.
+    bank_index_registers: BankIndexRegisters,
     raw_memory: Vec<u8>,
     work_ram: Option<WorkRam>,
 }
 
 impl PrgMemory {
     pub fn new(layout: PrgLayout, raw_memory: Vec<u8>) -> PrgMemory {
-        let mut prg_memory = PrgMemory { layout, raw_memory, work_ram: None};
+        let bank_index_registers =
+            BankIndexRegisters::new(&layout.active_register_ids());
+
+        let mut prg_memory = PrgMemory {
+            layout,
+            bank_index_registers,
+            raw_memory,
+            work_ram: None,
+        };
+
         for window in &prg_memory.layout.windows {
             if window.prg_type == PrgType::WorkRam {
-                assert!(prg_memory.work_ram.is_none(), "Only one Work RAM section may be specified.");
+                assert!(prg_memory.work_ram.is_none(),
+                    "Only one Work RAM section may be specified.");
                 prg_memory.work_ram = Some(WorkRam::new(window.size()));
             }
         }
@@ -66,7 +78,7 @@ impl PrgMemory {
             PrgMemoryIndex::MappedMemory(index) => self.raw_memory[index] = value,
             PrgMemoryIndex::WorkRam(index) => {
                 let work_ram = self.work_ram.as_mut()
-                    .expect("Attempted to write to WorkRam but but it is not present.");
+                    .expect("Attempted to write to WorkRam but it is not present.");
                 if work_ram.enabled {
                     work_ram.data[index] = value;
                 }
@@ -78,7 +90,8 @@ impl PrgMemory {
         let mut indexes = Vec::new();
         for window in &self.layout.windows {
             if let Some(bank_index) = window.bank_index() {
-                indexes.push(bank_index.to_u16(self.bank_count()));
+                let raw_index = bank_index.to_u16(&self.bank_index_registers, self.bank_count());
+                indexes.push(raw_index);
             }
         }
 
@@ -107,6 +120,14 @@ impl PrgMemory {
         self.layout = layout;
     }
 
+    pub fn set_bank_index_register(
+        &mut self,
+        id: BankIndexRegisterId,
+        raw_bank_index: u16,
+    ) {
+        self.bank_index_registers.set(id, raw_bank_index);
+    }
+
     // TODO: Indicate if read-only.
     fn address_to_prg_index(&self, address: CpuAddress) -> PrgMemoryIndex {
         assert!(address >= PRG_MEMORY_START);
@@ -126,8 +147,10 @@ impl PrgMemory {
                 let prg_memory_index = match windows[i].prg_type {
                     PrgType::Empty => PrgMemoryIndex::None,
                     PrgType::Banked(_, bank_index) => {
+                        let raw_bank_index =
+                            bank_index.to_usize(&self.bank_index_registers, self.bank_count());
                         let mapped_memory_index =
-                            bank_index.to_usize(self.bank_count()) * self.layout.bank_size as usize + bank_offset as usize;
+                             raw_bank_index * self.layout.bank_size as usize + bank_offset as usize;
                         PrgMemoryIndex::MappedMemory(mapped_memory_index)
                     }
                     PrgType::WorkRam => PrgMemoryIndex::WorkRam(usize::from(bank_offset)),
@@ -189,6 +212,12 @@ impl PrgLayout {
         assert_eq!(max_bank_count & (max_bank_count - 1), 0);
 
         PrgLayout { max_bank_count, bank_size, windows }
+    }
+
+    fn active_register_ids(&self) -> Vec<BankIndexRegisterId> {
+        self.windows.iter()
+            .filter_map(|window| window.register_id())
+            .collect()
     }
 }
 
@@ -276,6 +305,14 @@ impl Window {
         usize::from(self.end.to_raw() - self.start.to_raw() + 1)
     }
 
+    fn register_id(self) -> Option<BankIndexRegisterId> {
+        if let PrgType::Banked(_, BankIndex::RegisterBacked(id)) = self.prg_type {
+            Some(id)
+        } else {
+            None
+        }
+    }
+
     fn new(start: u16, end: u16, size: usize, prg_type: PrgType) -> Window {
         assert!([8 * KIBIBYTE, 16 * KIBIBYTE, 32 * KIBIBYTE].contains(&size));
         assert!(end > start);
@@ -308,11 +345,14 @@ impl PrgType {
     }
 
     fn switch_bank_to(&mut self, new_bank_index: BankIndex) {
+        assert!(!new_bank_index.is_register_backed());
+
         use PrgType::*;
         match self {
+            Banked(_, old_bank_index) if old_bank_index.is_register_backed() => panic!(),
             Banked(writability, _) =>
                 *self = PrgType::Banked(*writability, new_bank_index),
-            Empty | MirrorPrevious | WorkRam => unreachable!(),
+            Empty | MirrorPrevious | WorkRam => panic!(),
         }
     }
 }

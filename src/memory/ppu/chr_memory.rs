@@ -1,4 +1,4 @@
-use crate::memory::bank_index::BankIndex;
+use crate::memory::bank_index::{BankIndex, BankIndexRegisters, BankIndexRegisterId};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::writability::Writability;
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
@@ -6,6 +6,8 @@ use crate::util::unit::KIBIBYTE;
 
 pub struct ChrMemory {
     layout: ChrLayout,
+    // Mainly (only?) used by MMC3 and variants.
+    bank_index_registers: BankIndexRegisters,
     raw_memory: Vec<u8>,
 }
 
@@ -34,7 +36,9 @@ impl ChrMemory {
             );
         }
 
-        let chr_memory = ChrMemory { layout, raw_memory };
+        let bank_index_registers =
+            BankIndexRegisters::new(&layout.active_register_ids());
+        let chr_memory = ChrMemory { layout, bank_index_registers, raw_memory };
 
         let bank_count = chr_memory.bank_count();
         assert_eq!(usize::from(bank_count) * chr_memory.layout.bank_size, chr_memory.raw_memory.len());
@@ -65,7 +69,7 @@ impl ChrMemory {
 
     pub fn resolve_selected_bank_indexes(&self) -> Vec<u16> {
         self.layout.windows.iter()
-            .map(|window| window.bank_index().to_u16(self.bank_count()))
+            .map(|window| window.bank_index().to_u16(&self.bank_index_registers, self.bank_count()))
             .collect()
     }
 
@@ -95,7 +99,9 @@ impl ChrMemory {
 
         for window in &self.layout.windows {
             if let Some(bank_offset) = window.offset(address) {
-                let index = usize::from(window.bank_index().to_u16(self.bank_count())) *
+                let raw_bank_index = window.bank_index()
+                    .to_u16(&self.bank_index_registers, self.bank_count());
+                let index = usize::from(raw_bank_index) *
                     usize::from(self.layout.bank_size) +
                     usize::from(bank_offset);
                 return (index, window.is_writable());
@@ -165,6 +171,12 @@ impl ChrLayout {
 
         assert_eq!(max_bank_count & (max_bank_count - 1), 0);
         ChrLayout { max_bank_count, bank_size, windows }
+    }
+
+    fn active_register_ids(&self) -> Vec<BankIndexRegisterId> {
+        self.windows.iter()
+            .filter_map(|window| window.register_id())
+            .collect()
     }
 }
 
@@ -258,6 +270,14 @@ impl Window {
             (Writability::RomRam, Some(WriteStatus::ReadOnly)) => false,
             (Writability::RomRam, Some(WriteStatus::Writable)) => true,
             _ => unreachable!(),
+        }
+    }
+
+    fn register_id(self) -> Option<BankIndexRegisterId> {
+        if let BankIndex::RegisterBacked(id) = self.chr_type.1 {
+            Some(id)
+        } else {
+            None
         }
     }
 
