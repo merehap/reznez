@@ -59,7 +59,7 @@ impl BankIndexRegisters {
 
     fn get(&self, id: BankIndexRegisterId) -> u16 {
         self.registers[id as usize]
-            .expect(&format!("Register {:?} is not configured.", id))
+            .unwrap_or_else(|| panic!("Register {:?} is not configured.", id))
     }
 
     pub fn set(&mut self, id: BankIndexRegisterId, index: u16) {

@@ -49,6 +49,7 @@ impl ChrMemory {
         chr_memory
     }
 
+    #[inline]
     pub fn bank_count(&self) -> u16 {
         (self.raw_memory.len() / self.layout.bank_size)
             .try_into()
@@ -119,16 +120,19 @@ impl ChrMemory {
         unreachable!();
     }
 
+    #[inline]
     fn left_chunks(&self) -> [&[u8]; 4] {
         self.left_indexes()
             .map(|index| &self.raw_memory[index..index + 0x400])
     }
 
+    #[inline]
     fn right_chunks(&self) -> [&[u8]; 4] {
         self.right_indexes()
             .map(|index| &self.raw_memory[index..index + 0x400])
     }
 
+    #[inline]
     fn left_indexes(&self) -> [usize; 4] {
         [
             self.address_to_chr_index(0x0000).0,
@@ -138,6 +142,7 @@ impl ChrMemory {
         ]
     }
 
+    #[inline]
     fn right_indexes(&self) -> [usize; 4] {
         [
             self.address_to_chr_index(0x1000).0,

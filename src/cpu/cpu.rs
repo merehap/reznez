@@ -167,7 +167,11 @@ impl Cpu {
     }
 
     pub fn deschedule_irq(&mut self) {
-        assert!(self.irq_status != IrqStatus::Active);
+        if self.irq_status == IrqStatus::Active {
+            info!("IRQ is already active. Ignoring descheduling.");
+            return;
+        }
+
         self.irq_status = IrqStatus::Inactive;
     }
 
