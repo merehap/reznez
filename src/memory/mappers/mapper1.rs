@@ -33,6 +33,7 @@ lazy_static! {
 }
 
 // SxROM (MMC1)
+// TODO: Migrate to using bank index registers?
 pub struct Mapper1 {
     shift: u8,
     control: Control,

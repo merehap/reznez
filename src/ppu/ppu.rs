@@ -203,7 +203,9 @@ impl Ppu {
                     );
 
                     let column_in_tile = self.current_address.x_scroll().fine();
-                    let palette = palette_table.background_palette(self.attribute_register.current_palette_table_index(column_in_tile));
+                    let current_palette_table_index =
+                        self.attribute_register.current_palette_table_index(column_in_tile);
+                    let palette = palette_table.background_palette(current_palette_table_index);
 
                     let current_background_pixel = self.pattern_register.palette_index(column_in_tile)
                         .map_or(Rgbt::Transparent, |palette_index| Rgbt::Opaque(palette[palette_index]));

@@ -6,8 +6,10 @@ pub use crate::memory::bank_index::BankIndexRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout, PrgType};
 pub use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout, ChrType};
+pub use crate::memory::ppu::ppu_address::PpuAddress;
 pub use crate::memory::writability::Writability::*;
 pub use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
+pub use crate::ppu::pattern_table::PatternTableSide;
 pub use crate::util::unit::KIBIBYTE;
 
 use num_traits::FromPrimitive;
@@ -16,7 +18,6 @@ use crate::apu::apu_registers::ApuRegisters;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::ppu::palette_ram::PaletteRam;
-use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu::vram::VramSide;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
@@ -30,6 +31,11 @@ pub trait Mapper {
     fn chr_memory_mut(&mut self) -> &mut ChrMemory;
 
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8);
+
+    // Do nothing by default. Some mappers trigger IRQs based on changes.
+    fn process_current_ppu_address(&mut self, _address: PpuAddress) -> bool {
+        false
+    }
 
     #[inline]
     #[rustfmt::skip]

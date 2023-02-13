@@ -6,22 +6,22 @@ lazy_static! {
     static ref PRG_LAYOUT_R6_AT_8000: PrgLayout = PrgLayout::builder()
         .max_bank_count(32)
         .bank_size(8 * KIBIBYTE)
-        .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
-        .add_window(0x8000, 0x9FFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(R6)))
-        .add_window(0xA000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(R7)))
-        .add_window(0xC000, 0xDFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::SECOND_LAST))
-        .add_window(0xE000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
+        .add_window(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgType::WorkRam)
+        .add_window(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(R6)))
+        .add_window(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(R7)))
+        .add_window(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::SECOND_LAST))
+        .add_window(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
         .build();
 
     // Same as PRG_LAYOUT_R6_AT_8000, except the 0x8000 and 0xC000 windows are swapped.
     static ref PRG_LAYOUT_R6_AT_C000: PrgLayout = PrgLayout::builder()
         .max_bank_count(32)
         .bank_size(8 * KIBIBYTE)
-        .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
-        .add_window(0x8000, 0x9FFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::SECOND_LAST))
-        .add_window(0xA000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(R7)))
-        .add_window(0xC000, 0xDFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(R6)))
-        .add_window(0xE000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
+        .add_window(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgType::WorkRam)
+        .add_window(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::SECOND_LAST))
+        .add_window(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(R7)))
+        .add_window(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(R6)))
+        .add_window(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
         .build();
 
     static ref CHR_LAYOUT_BIG_WINDOWS_FIRST: ChrLayout = ChrLayout::builder()
@@ -55,6 +55,12 @@ lazy_static! {
 pub struct Mapper4 {
     selected_register_id: BankIndexRegisterId,
 
+    irq_enabled: bool,
+    irq_counter: u8,
+    force_reload_irq_counter: bool,
+    irq_counter_reload_value: u8,
+    pattern_table_side: PatternTableSide,
+
     prg_memory: PrgMemory,
     chr_memory: ChrMemory,
     name_table_mirroring: NameTableMirroring,
@@ -64,6 +70,12 @@ impl Mapper4 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper4, String> {
         Ok(Mapper4 {
             selected_register_id: R0,
+
+            irq_enabled: false,
+            irq_counter: 0,
+            force_reload_irq_counter: false,
+            irq_counter_reload_value: 0,
+            pattern_table_side: PatternTableSide::Left,
 
             prg_memory: PrgMemory::new(PRG_LAYOUT_R6_AT_8000.clone(), cartridge.prg_rom()),
             chr_memory: ChrMemory::new(CHR_LAYOUT_BIG_WINDOWS_FIRST.clone(), cartridge.chr_rom()),
@@ -90,31 +102,57 @@ impl Mapper4 {
     }
 
     fn set_bank_index(&mut self, value: u8) {
-
+        match self.selected_register_id {
+            // Double-width windows can only use even banks.
+            R0 | R1 => {
+                let bank_index = u16::from(value & 0b1111_1110);
+                self.chr_memory.set_bank_index_register(self.selected_register_id, bank_index);
+            }
+            R2 | R3 | R4 | R5 => {
+                let bank_index = u16::from(value);
+                self.chr_memory.set_bank_index_register(self.selected_register_id, bank_index);
+            }
+            // There can only be up to 64 PRG banks, though some ROM hacks use more.
+            R6 | R7 => {
+                assert_eq!(value & 0b1100_0000, 0, "ROM hack.");
+                let bank_index = u16::from(value & 0b0011_1111);
+                self.prg_memory.set_bank_index_register(self.selected_register_id, bank_index);
+            }
+        };
     }
 
     fn set_mirroring(&mut self, value: u8) {
-
+        match (self.name_table_mirroring, value & 0b0000_0001) {
+            (NameTableMirroring::Vertical, 1) =>
+                self.name_table_mirroring = NameTableMirroring::Horizontal,
+            (NameTableMirroring::Horizontal, 0) =>
+                self.name_table_mirroring = NameTableMirroring::Vertical,
+            (_, _) => { /* Other mirrorings cannot be changed. */ },
+        }
     }
 
-    fn prg_ram_protect(&mut self, value: u8) {
-
+    fn prg_ram_protect(&mut self, _value: u8) {
+        // TODO: See if this can be implemented while remaining compatible with MMC6.
+        // https://www.nesdev.org/wiki/MMC3#PRG_RAM_protect_($A001-$BFFF,_odd)
     }
 
     fn set_irq_reload_value(&mut self, value: u8) {
-
+        self.irq_counter_reload_value = value;
     }
 
-    fn reload_irq(&mut self) {
-
+    fn reload_irq_counter(&mut self) {
+        self.irq_counter = 0;
+        // FIXME: This needs to be delayed until the next "rising edge of the PPU address".
+        self.irq_counter = self.irq_counter_reload_value;
     }
 
     fn disable_irq(&mut self) {
-
+        // TODO: Acknowledge pending interrupts.
+        self.irq_enabled = false;
     }
 
     fn enable_irq(&mut self) {
-
+        self.irq_enabled = true;
     }
 }
 
@@ -124,16 +162,46 @@ impl Mapper for Mapper4 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ },
-            0x6000..=0x7FFF => self.prg_memory.write(address, value),
+            0x6000..=0x7FFF =>                    self.prg_memory.write(address, value),
             0x8000..=0x9FFF if is_even_address => self.bank_select(value),
-            0x8000..=0x9FFF => self.set_bank_index(value),
+            0x8000..=0x9FFF =>                    self.set_bank_index(value),
             0xA000..=0xBFFF if is_even_address => self.set_mirroring(value),
-            0xA000..=0xBFFF => self.prg_ram_protect(value),
+            0xA000..=0xBFFF =>                    self.prg_ram_protect(value),
             0xC000..=0xDFFF if is_even_address => self.set_irq_reload_value(value),
-            0xC000..=0xDFFF => self.reload_irq(),
+            0xC000..=0xDFFF =>                    self.reload_irq_counter(),
             0xE000..=0xFFFF if is_even_address => self.disable_irq(),
-            0xE000..=0xFFFF => self.enable_irq(),
+            0xE000..=0xFFFF =>                    self.enable_irq(),
         }
+    }
+
+    fn process_current_ppu_address(&mut self, address: PpuAddress) -> bool {
+        // TODO: Investigate why this is necessary.
+        if address.to_u16() >= 0x2000 {
+            return false;
+        }
+
+        let next_side = address.pattern_table_side();
+        let should_tick_irq_counter =
+            self.pattern_table_side == PatternTableSide::Left
+            && next_side == PatternTableSide::Right;
+
+        let mut generate_irq = false;
+        if should_tick_irq_counter {
+            if self.irq_counter == 0 || self.force_reload_irq_counter {
+                self.irq_counter = self.irq_counter_reload_value;
+                if self.irq_enabled {
+                    generate_irq = true;
+                }
+            } else {
+                self.irq_counter -= 1;
+            }
+        }
+
+        self.pattern_table_side = next_side;
+
+
+
+        generate_irq
     }
 
     fn name_table_mirroring(&self) -> NameTableMirroring {

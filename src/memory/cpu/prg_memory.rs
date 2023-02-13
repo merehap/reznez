@@ -316,7 +316,13 @@ impl Window {
     fn new(start: u16, end: u16, size: usize, prg_type: PrgType) -> Window {
         assert!([8 * KIBIBYTE, 16 * KIBIBYTE, 32 * KIBIBYTE].contains(&size));
         assert!(end > start);
-        assert_eq!(end as usize - start as usize + 1, size);
+        assert_eq!(end as usize - start as usize + 1, size,
+            "Interval from 0x{:04X} to 0x{:04X} is {}KiB, but it is specified as {}Kib",
+            start,
+            end,
+            (end - start + 1) as usize / KIBIBYTE,
+            size / KIBIBYTE,
+        );
 
         Window {
             start: CpuAddress::new(start),

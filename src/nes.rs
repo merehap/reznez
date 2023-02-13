@@ -18,6 +18,7 @@ use crate::memory::mappers::mapper0::Mapper0;
 use crate::memory::mappers::mapper1::Mapper1;
 use crate::memory::mappers::mapper2::Mapper2;
 use crate::memory::mappers::mapper3::Mapper3;
+use crate::memory::mappers::mapper4::Mapper4;
 use crate::memory::mappers::mapper7::Mapper7;
 use crate::memory::memory::Memory;
 use crate::ppu::ppu;
@@ -44,6 +45,7 @@ impl Nes {
             1 => Box::new(Mapper1::new(&config.cartridge).unwrap()),
             2 => Box::new(Mapper2::new(&config.cartridge).unwrap()),
             3 => Box::new(Mapper3::new(&config.cartridge).unwrap()),
+            4 => Box::new(Mapper4::new(&config.cartridge).unwrap()),
             7 => Box::new(Mapper7::new(&config.cartridge).unwrap()),
             _ => todo!(),
         };
@@ -169,6 +171,13 @@ impl Nes {
             .step(&mut self.memory.as_ppu_memory(), &mut self.frame);
         if ppu_result.should_generate_nmi {
             self.cpu.schedule_nmi();
+        }
+
+        let generate_irq = self.memory
+            .mapper_mut()
+            .process_current_ppu_address(self.ppu.current_address());
+        if generate_irq {
+            self.cpu.schedule_irq();
         }
 
         ppu_result

@@ -87,6 +87,14 @@ impl ChrMemory {
         self.layout = layout;
     }
 
+    pub fn set_bank_index_register(
+        &mut self,
+        id: BankIndexRegisterId,
+        raw_bank_index: u16,
+    ) {
+        self.bank_index_registers.set(id, raw_bank_index);
+    }
+
     pub fn pattern_table(&self, side: PatternTableSide) -> PatternTable {
         match side {
             PatternTableSide::Left => PatternTable::new(self.left_chunks()),

@@ -6,6 +6,7 @@ use num_traits::FromPrimitive;
 
 use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
+use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::register::registers::ctrl::AddressIncrement;
 
@@ -185,6 +186,14 @@ impl PpuAddress {
 
     pub fn to_usize(self) -> usize {
         usize::from(self.to_u16())
+    }
+
+    pub fn pattern_table_side(self) -> PatternTableSide {
+        if (self.fine_y_scroll as u8) & 1 == 0 {
+            PatternTableSide::Left
+        } else {
+            PatternTableSide::Right
+        }
     }
 
     fn to_scroll_u16(self) -> u16 {

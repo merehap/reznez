@@ -55,6 +55,10 @@ impl Memory {
         &*self.mapper
     }
 
+    pub fn mapper_mut(&mut self) -> &mut dyn Mapper {
+        &mut *self.mapper
+    }
+
     pub fn stack_pointer(&self) -> u8 {
         self.cpu_internal_ram.stack_pointer
     }
