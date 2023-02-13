@@ -274,7 +274,7 @@ impl Window {
     }
 
     fn register_id(self) -> Option<BankIndexRegisterId> {
-        if let BankIndex::RegisterBacked(id) = self.chr_type.1 {
+        if let BankIndex::Register(id) = self.chr_type.1 {
             Some(id)
         } else {
             None

@@ -306,7 +306,7 @@ impl Window {
     }
 
     fn register_id(self) -> Option<BankIndexRegisterId> {
-        if let PrgType::Banked(_, BankIndex::RegisterBacked(id)) = self.prg_type {
+        if let PrgType::Banked(_, BankIndex::Register(id)) = self.prg_type {
             Some(id)
         } else {
             None

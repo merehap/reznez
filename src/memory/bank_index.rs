@@ -1,8 +1,10 @@
+use num_derive::FromPrimitive;
+
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum BankIndex {
     IndexFromStart(u16),
     IndexFromEnd(u16),
-    RegisterBacked(BankIndexRegisterId),
+    Register(BankIndexRegisterId),
 }
 
 impl BankIndex {
@@ -22,7 +24,7 @@ impl BankIndex {
                 bank_count - index - 1
             }
             // TODO: Get rid of this recursive call.
-            BankIndex::RegisterBacked(id) => registers.get(id)
+            BankIndex::Register(id) => registers.get(id)
         }
     }
 
@@ -31,7 +33,7 @@ impl BankIndex {
     }
 
     pub fn is_register_backed(self) -> bool {
-        matches!(self, BankIndex::RegisterBacked(_))
+        matches!(self, BankIndex::Register(_))
     }
 }
 
@@ -66,7 +68,7 @@ impl BankIndexRegisters {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, FromPrimitive)]
 pub enum BankIndexRegisterId {
     R0,
     R1,
