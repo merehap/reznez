@@ -160,22 +160,7 @@ impl Cpu {
         self.nmi_status = NmiStatus::Pending;
     }
 
-    pub fn schedule_irq(&mut self) {
-        if self.irq_status != IrqStatus::Active {
-            self.irq_status = IrqStatus::Pending;
-        }
-    }
-
-    pub fn deschedule_irq(&mut self) {
-        if self.irq_status == IrqStatus::Active {
-            info!("IRQ is already active. Ignoring descheduling.");
-            return;
-        }
-
-        self.irq_status = IrqStatus::Inactive;
-    }
-
-    pub fn step(&mut self, memory: &mut CpuMemory) -> Option<Step> {
+    pub fn step(&mut self, memory: &mut CpuMemory, irq_pending: bool) -> Option<Step> {
         if self.jammed {
             return None;
         }
@@ -215,7 +200,7 @@ impl Cpu {
         }
 
         for &action in step.actions() {
-            self.execute_cycle_action(memory, action);
+            self.execute_cycle_action(memory, irq_pending, action);
         }
 
         self.suppress_program_counter_increment = false;
@@ -230,7 +215,7 @@ impl Cpu {
         Some(step)
     }
 
-    fn execute_cycle_action(&mut self, memory: &mut CpuMemory, action: CycleAction) {
+    fn execute_cycle_action(&mut self, memory: &mut CpuMemory, irq_pending: bool, action: CycleAction) {
         use CycleAction::*;
         match action {
             IncrementProgramCounter => {
@@ -268,7 +253,7 @@ impl Cpu {
                 self.current_interrupt_vector =
                     if self.nmi_status != NmiStatus::Inactive {
                         Some(InterruptVector::Nmi)
-                    } else if self.irq_status != IrqStatus::Inactive {
+                    } else if self.irq_status == IrqStatus::Active {
                         Some(InterruptVector::Irq)
                     } else if let Some(inst) = self.current_instruction && inst.template.op_code == OpCode::BRK {
                         Some(InterruptVector::Irq)
@@ -325,7 +310,7 @@ impl Cpu {
                 }
 
                 match self.nmi_status {
-                    NmiStatus::Inactive if self.irq_status == IrqStatus::Pending && !self.status.interrupts_disabled => {
+                    NmiStatus::Inactive if irq_pending && !self.status.interrupts_disabled => {
                         info!(target: "cpuoperation", "Starting IRQ");
                         self.irq_status = IrqStatus::Active;
                         // IRQ has BRK's code point (0x00). TODO: Set the data bus to 0x00?
@@ -720,7 +705,6 @@ enum NmiStatus {
 #[derive(PartialEq, Eq, Debug)]
 enum IrqStatus {
     Inactive,
-    Pending,
     Active,
 }
 
@@ -805,12 +789,12 @@ mod tests {
         assert_eq!(0xFD, mem.stack_pointer());
 
         // Execute first cycle of the first instruction.
-        cpu.step(&mut mem.as_cpu_memory());
+        cpu.step(&mut mem.as_cpu_memory(), false);
         assert_eq!(0xFD, mem.stack_pointer());
         assert_eq!(reset_vector.advance(1), cpu.program_counter());
 
         // Execute final cycle of the first instruction.
-        cpu.step(&mut mem.as_cpu_memory());
+        cpu.step(&mut mem.as_cpu_memory(), false);
         assert_eq!(0xFD, mem.stack_pointer());
         assert_eq!(reset_vector.advance(1), cpu.program_counter());
 
@@ -819,23 +803,23 @@ mod tests {
         assert_eq!(reset_vector.advance(1), cpu.program_counter());
 
         // Execute first cycle of the second instruction.
-        cpu.step(&mut mem.as_cpu_memory());
+        cpu.step(&mut mem.as_cpu_memory(), false);
         assert_eq!(0xFD, mem.stack_pointer());
         assert_eq!(reset_vector.advance(2), cpu.program_counter());
 
         // Execute final cycle of the second instruction.
-        cpu.step(&mut mem.as_cpu_memory());
+        cpu.step(&mut mem.as_cpu_memory(), false);
         assert_eq!(0xFD, mem.stack_pointer());
         assert_eq!(reset_vector.advance(2), cpu.program_counter());
 
         // Execute the seven cycles of the NMI subroutine.
         for _ in 0..6 {
-            cpu.step(&mut mem.as_cpu_memory());
+            cpu.step(&mut mem.as_cpu_memory(), false);
         }
 
         assert_eq!(reset_vector.advance(2), cpu.program_counter());
 
-        cpu.step(&mut mem.as_cpu_memory());
+        cpu.step(&mut mem.as_cpu_memory(), false);
         assert_eq!(0xFA, mem.stack_pointer());
         assert_eq!(nmi_vector, cpu.program_counter());
     }
