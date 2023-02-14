@@ -55,6 +55,7 @@ lazy_static! {
 pub struct Mapper4 {
     selected_register_id: BankIndexRegisterId,
 
+    irq_pending: bool,
     irq_enabled: bool,
     irq_counter: u8,
     force_reload_irq_counter: bool,
@@ -71,6 +72,7 @@ impl Mapper4 {
         Ok(Mapper4 {
             selected_register_id: R0,
 
+            irq_pending: false,
             irq_enabled: false,
             irq_counter: 0,
             force_reload_irq_counter: false,
@@ -147,8 +149,8 @@ impl Mapper4 {
     }
 
     fn disable_irq(&mut self) {
-        // TODO: Acknowledge pending interrupts.
         self.irq_enabled = false;
+        self.irq_pending = false;
     }
 
     fn enable_irq(&mut self) {
@@ -174,10 +176,10 @@ impl Mapper for Mapper4 {
         }
     }
 
-    fn process_current_ppu_address(&mut self, address: PpuAddress) -> bool {
+    fn process_current_ppu_address(&mut self, address: PpuAddress) {
         // TODO: Investigate why this is necessary.
         if address.to_u16() >= 0x2000 {
-            return false;
+            return;
         }
 
         let next_side = address.pattern_table_side();
@@ -185,12 +187,11 @@ impl Mapper for Mapper4 {
             self.pattern_table_side == PatternTableSide::Left
             && next_side == PatternTableSide::Right;
 
-        let mut generate_irq = false;
         if should_tick_irq_counter {
             if self.irq_counter == 0 || self.force_reload_irq_counter {
                 self.irq_counter = self.irq_counter_reload_value;
                 if self.irq_enabled {
-                    generate_irq = true;
+                    self.irq_pending = true;
                 }
             } else {
                 self.irq_counter -= 1;
@@ -198,10 +199,6 @@ impl Mapper for Mapper4 {
         }
 
         self.pattern_table_side = next_side;
-
-
-
-        generate_irq
     }
 
     fn name_table_mirroring(&self) -> NameTableMirroring {

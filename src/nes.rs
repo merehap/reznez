@@ -153,7 +153,9 @@ impl Nes {
     }
 
     fn cpu_step(&mut self) -> Option<Step> {
-        let irq_pending = self.memory.apu_regs().frame_irq_pending();
+        let irq_pending =
+            self.memory.apu_regs().frame_irq_pending()
+            || self.memory.mapper().irq_pending();
         let step = self.cpu.step(&mut self.memory.as_cpu_memory(), irq_pending);
         if let Some(ref step) = step && step.has_interpret_op_code() {
             if let Some(instruction) = self.cpu.current_instruction() {
@@ -174,12 +176,9 @@ impl Nes {
             self.cpu.schedule_nmi();
         }
 
-        let generate_irq = self.memory
+        self.memory
             .mapper_mut()
             .process_current_ppu_address(self.ppu.current_address());
-        if generate_irq {
-            //self.cpu.schedule_irq();
-        }
 
         ppu_result
     }

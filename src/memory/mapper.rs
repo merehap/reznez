@@ -32,10 +32,10 @@ pub trait Mapper {
 
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8);
 
-    // Do nothing by default. Some mappers trigger IRQs based on changes.
-    fn process_current_ppu_address(&mut self, _address: PpuAddress) -> bool {
-        false
-    }
+    // Most mappers don't care about the current PPU address.
+    fn process_current_ppu_address(&mut self, _address: PpuAddress) {}
+    // Most mappers don't trigger IRQs.
+    fn irq_pending(&self) -> bool { false }
 
     #[inline]
     #[rustfmt::skip]
