@@ -124,12 +124,11 @@ impl Mapper4 {
     }
 
     fn set_mirroring(&mut self, value: u8) {
+        use NameTableMirroring::*;
         match (self.name_table_mirroring, value & 0b0000_0001) {
-            (NameTableMirroring::Vertical, 1) =>
-                self.name_table_mirroring = NameTableMirroring::Horizontal,
-            (NameTableMirroring::Horizontal, 0) =>
-                self.name_table_mirroring = NameTableMirroring::Vertical,
-            (_, _) => { /* Other mirrorings cannot be changed. */ },
+            (Vertical, 1) => self.name_table_mirroring = Horizontal,
+            (Horizontal, 0) => self.name_table_mirroring = Vertical,
+            _ => { /* Other mirrorings cannot be changed. */ },
         }
     }
 
