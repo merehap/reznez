@@ -100,7 +100,7 @@ impl Mapper4 {
             self.prg_memory.set_layout(PRG_LAYOUT_R6_AT_8000.clone());
         } else {
             self.prg_memory.set_layout(PRG_LAYOUT_R6_AT_C000.clone());
-        };
+        }
     }
 
     fn set_bank_index(&mut self, value: u8) {
@@ -177,11 +177,6 @@ impl Mapper for Mapper4 {
     }
 
     fn process_current_ppu_address(&mut self, address: PpuAddress) {
-        // TODO: Investigate why this is necessary.
-        if address.to_u16() >= 0x2000 {
-            return;
-        }
-
         let next_side = address.pattern_table_side();
         let should_tick_irq_counter =
             self.pattern_table_side == PatternTableSide::Left
@@ -199,6 +194,10 @@ impl Mapper for Mapper4 {
         }
 
         self.pattern_table_side = next_side;
+    }
+
+    fn irq_pending(&self) -> bool {
+        self.irq_pending
     }
 
     fn name_table_mirroring(&self) -> NameTableMirroring {

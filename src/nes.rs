@@ -190,7 +190,7 @@ impl Nes {
     #[inline]
     pub fn process_gui_events(&mut self, events: &Events) {
         for (button, status) in &events.joypad1_button_statuses {
-            println!("Joypad 1: button {:?} status is {:?}", button, status);
+            info!("Joypad 1: button {:?} status is {:?}", button, status);
             self.joypad1
                 .borrow_mut()
                 .set_button_status(*button, *status);
