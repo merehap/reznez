@@ -143,8 +143,12 @@ impl Mapper4 {
 
     fn reload_irq_counter(&mut self) {
         self.irq_counter = 0;
+        /*
+        self.irq_counter = 0;
         // FIXME: This needs to be delayed until the next "rising edge of the PPU address".
         self.irq_counter = self.irq_counter_reload_value;
+        */
+        self.force_reload_irq_counter = true;
     }
 
     fn disable_irq(&mut self) {
@@ -187,6 +191,8 @@ impl Mapper for Mapper4 {
             } else {
                 self.irq_counter -= 1;
             }
+
+            self.force_reload_irq_counter = false;
 
             if self.irq_enabled && self.irq_counter == 0 {
                 self.irq_pending = true;

@@ -474,14 +474,11 @@ impl Ppu {
     }
 
     fn write_byte_to_next_address(&mut self, value: u8) {
-        println!("Write byte to next_address");
         match self.write_toggle {
             WriteToggle::FirstByte => self.next_address.set_high_byte(value),
             WriteToggle::SecondByte => {
-                println!("\tPrevious address: {}", self.current_address);
                 self.next_address.set_low_byte(value);
                 self.current_address = self.next_address;
-                println!("\tUpdated address: {}", self.current_address);
             }
         }
 
