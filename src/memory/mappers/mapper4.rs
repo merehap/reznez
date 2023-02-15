@@ -188,11 +188,10 @@ impl Mapper for Mapper4 {
         if should_tick_irq_counter {
             if self.irq_counter == 0 || self.force_reload_irq_counter {
                 self.irq_counter = self.irq_counter_reload_value;
+                self.force_reload_irq_counter = false;
             } else {
                 self.irq_counter -= 1;
             }
-
-            self.force_reload_irq_counter = false;
 
             if self.irq_enabled && self.irq_counter == 0 {
                 self.irq_pending = true;
