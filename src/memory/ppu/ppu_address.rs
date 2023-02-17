@@ -71,6 +71,26 @@ impl PpuAddress {
         )
     }
 
+    /*
+     * 0123 45 6789A BCDEF
+     * 0001 NN RRRRR CCCCC
+     *      || ||||| +++++-- Tile Column
+     *      || +++++-------- Tile Row
+     *      ++-------------- Nametable Quadrant
+     */
+    pub fn in_attribute_table(
+        quadrant: NameTableQuadrant,
+        tile_column: TileColumn,
+        tile_row: TileRow,
+    ) -> PpuAddress {
+        PpuAddress::from_u16(
+            0x23C0
+            + 0x400 * quadrant as u16
+            + (TileColumn::COLUMN_COUNT as u16) / 4 * (tile_row.to_u16() / 4)
+            + tile_column.to_u16() / 4
+        )
+    }
+
     pub fn advance(&mut self, address_increment: AddressIncrement) {
         if address_increment == AddressIncrement::Right {
             let mut coarse_x_scroll = self.coarse_x_scroll();

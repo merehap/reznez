@@ -4,6 +4,7 @@ use crate::ppu::clock::Clock;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
+use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table::PatternIndex;
 use crate::ppu::pixel_index::{PixelIndex, PixelRow};
@@ -148,7 +149,6 @@ impl Ppu {
         let tile_row = self.current_address.y_scroll().coarse();
         let row_in_tile = self.current_address.y_scroll().fine();
         let name_table_quadrant = self.current_address.name_table_quadrant();
-        let name_table = mem.name_table(self.current_address.name_table_quadrant());
 
         let background_enabled = mem.regs().background_enabled();
         let sprites_enabled = mem.regs().sprites_enabled();
@@ -163,7 +163,10 @@ impl Ppu {
             }
             GetPaletteIndex => {
                 if !rendering_enabled { return; }
-                let palette_table_index = name_table.attribute_table().palette_table_index(tile_column, tile_row);
+                let address = PpuAddress::in_attribute_table(name_table_quadrant, tile_column, tile_row);
+                let attribute_byte = mem.read(address);
+                let palette_table_index =
+                    PaletteTableIndex::from_attribute_byte(attribute_byte, tile_column, tile_row);
                 self.attribute_register.set_pending_palette_table_index(palette_table_index);
             }
             GetBackgroundTileLowByte => {

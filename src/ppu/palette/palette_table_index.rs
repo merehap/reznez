@@ -1,5 +1,7 @@
 use enum_iterator::IntoEnumIterator;
 
+use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
+
 #[derive(Clone, Copy, Debug, IntoEnumIterator)]
 pub enum PaletteTableIndex {
     Zero,
@@ -9,6 +11,18 @@ pub enum PaletteTableIndex {
 }
 
 impl PaletteTableIndex {
+    pub fn from_attribute_byte(
+        attribute_byte: u8,
+        tile_column: TileColumn,
+        tile_row: TileRow,
+    ) -> PaletteTableIndex {
+        let palette_table_indexes = PaletteTableIndex::unpack_byte(attribute_byte);
+        let index_selection =
+            if tile_row.to_usize()    / 2 % 2 == 0 {2} else {0} +
+            if tile_column.to_usize() / 2 % 2 == 0 {1} else {0};
+        palette_table_indexes[index_selection]
+    }
+
     pub fn unpack_byte(value: u8) -> [PaletteTableIndex; 4] {
         [
             // Bottom right.
