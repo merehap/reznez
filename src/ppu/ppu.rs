@@ -334,9 +334,15 @@ impl Ppu {
                             SpriteHeight::Normal => sprite_table_side,
                             SpriteHeight::Tall => self.next_sprite_pattern_index.tall_sprite_pattern_table_side(),
                         };
-                        let (low, high) = mem.pattern_table(sprite_table_side)
-                            .read_pattern_data_at(pattern_index, row_in_half);
-                        self.oam_registers.registers[self.oam_register_index].set_pattern(low, high);
+
+                        let low_address = PpuAddress::in_pattern_table(
+                            sprite_table_side, pattern_index, row_in_half, false);
+                        let high_address = PpuAddress::in_pattern_table(
+                            sprite_table_side, pattern_index, row_in_half, true);
+                        self.oam_registers.registers[self.oam_register_index].set_pattern(
+                            mem.read(low_address),
+                            mem.read(high_address),
+                        );
                     }
                 }
             }
