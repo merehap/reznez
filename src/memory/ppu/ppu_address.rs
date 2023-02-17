@@ -25,76 +25,80 @@ const FINE_Y_ZERO_TOP_BIT_MASK: u16   = 0b0011_0000_0000_0000;
  * | ||| || +++++-------- Coarse Y Scroll
  * | ||| ++-------------- Nametable Quadrant
  * | +++----------------- Fine Y Scroll
- * +--------------------- Unused
+ * +--------------------- Unused, always zero
  */
 #[derive(Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub struct PpuAddress {
-    fine_y_scroll: RowInTile,
-    name_table_quadrant: NameTableQuadrant,
-    coarse_y_scroll: TileRow,
-    coarse_x_scroll: TileColumn,
-
+    address: u16,
     fine_x_scroll: ColumnInTile,
 }
 
 impl PpuAddress {
     pub const ZERO: PpuAddress = PpuAddress {
-        fine_y_scroll: RowInTile::Zero,
-        name_table_quadrant: NameTableQuadrant::TopLeft,
-        coarse_y_scroll: TileRow::ZERO,
-        coarse_x_scroll: TileColumn::ZERO,
+        address: 0x0000,
         fine_x_scroll: ColumnInTile::Zero,
     };
     // 0x3F00
     pub const PALETTE_TABLE_START: PpuAddress = PpuAddress {
-        fine_y_scroll: RowInTile::Three,
-        name_table_quadrant: NameTableQuadrant::BottomRight,
-        coarse_y_scroll: TileRow::try_from_u8(0b1_1000).unwrap(),
-        coarse_x_scroll: TileColumn::ZERO,
+        address: 0x3F00,
         fine_x_scroll: ColumnInTile::Zero,
     };
 
     pub fn from_u16(value: u16) -> PpuAddress {
         PpuAddress {
-            fine_y_scroll: RowInTile::from_u8(((value & FINE_Y_ZERO_TOP_BIT_MASK) >> 12) as u8).unwrap(),
-            name_table_quadrant: FromPrimitive::from_u16((value & NAME_TABLE_MASK) >> 10).unwrap(),
-            coarse_y_scroll: TileRow::try_from_u8(((value & COARSE_Y_MASK) >> 5) as u8).unwrap(),
-            coarse_x_scroll: TileColumn::try_from_u8((value & COARSE_X_MASK) as u8).unwrap(),
-
+            address: value & 0b0011_1111_1111_1111,
             fine_x_scroll: ColumnInTile::Zero,
         }
     }
 
     pub fn advance(&mut self, address_increment: AddressIncrement) {
         if address_increment == AddressIncrement::Right {
-            let wrapped = self.coarse_x_scroll.increment();
+            let mut coarse_x_scroll = self.coarse_x_scroll();
+            let wrapped = coarse_x_scroll.increment();
+            self.set_coarse_x_scroll(coarse_x_scroll);
             if !wrapped {
                 return;
             }
         }
 
-        let wrapped = self.coarse_y_scroll.increment();
+        let mut coarse_y_scroll = self.coarse_y_scroll();
+        let wrapped = coarse_y_scroll.increment();
+        self.set_coarse_y_scroll(coarse_y_scroll);
         if wrapped {
-            let wrapped = self.name_table_quadrant.increment();
+            let mut name_table_quadrant = self.name_table_quadrant();
+            let wrapped = name_table_quadrant.increment();
+            self.set_name_table_quadrant(name_table_quadrant);
             if wrapped {
-                self.fine_y_scroll.increment_low_bits();
+                let mut fine_y_scroll = self.fine_y_scroll();
+                fine_y_scroll.increment_low_bits();
+                self.set_fine_y_scroll(fine_y_scroll);
             }
         }
     }
 
     pub fn increment_coarse_x_scroll(&mut self) {
-        let wrapped = self.coarse_x_scroll.increment();
+        let mut coarse_x_scroll = self.coarse_x_scroll();
+        let wrapped = coarse_x_scroll.increment();
+        self.set_coarse_x_scroll(coarse_x_scroll);
         if wrapped {
-            self.name_table_quadrant = self.name_table_quadrant.next_horizontal();
+            let mut name_table_quadrant = self.name_table_quadrant();
+            name_table_quadrant = name_table_quadrant.next_horizontal();
+            self.set_name_table_quadrant(name_table_quadrant);
         }
     }
 
     pub fn increment_fine_y_scroll(&mut self) {
-        let wrapped = self.fine_y_scroll.increment();
+        let mut fine_y_scroll = self.fine_y_scroll();
+        let wrapped = fine_y_scroll.increment();
+        self.set_fine_y_scroll(fine_y_scroll);
         if wrapped {
-            let wrapped = self.coarse_y_scroll.increment_visible();
+            let mut coarse_y_scroll = self.coarse_y_scroll();
+            let wrapped = coarse_y_scroll.increment_visible();
+            self.set_coarse_y_scroll(coarse_y_scroll);
             if wrapped {
-                self.name_table_quadrant = self.name_table_quadrant.next_vertical();
+                let mut name_table_quadrant = self.name_table_quadrant();
+                name_table_quadrant = name_table_quadrant.next_vertical();
+                self.set_name_table_quadrant(name_table_quadrant);
             }
         }
     }
@@ -109,7 +113,7 @@ impl PpuAddress {
     }
 
     pub fn name_table_quadrant(self) -> NameTableQuadrant {
-        self.name_table_quadrant
+        NameTableQuadrant::from_last_two_bits((self.address >> 10) as u8)
     }
 
     /*
@@ -119,9 +123,13 @@ impl PpuAddress {
      */
     pub fn x_scroll(self) -> XScroll {
         XScroll {
-            coarse: self.coarse_x_scroll,
+            coarse: self.coarse_x_scroll(),
             fine: self.fine_x_scroll,
         }
+    }
+
+    fn coarse_x_scroll(self) -> TileColumn {
+        TileColumn::try_from_u8(self.address as u8 & 0b11111).unwrap()
     }
 
     /*
@@ -131,25 +139,49 @@ impl PpuAddress {
      */
     pub fn y_scroll(self) -> YScroll {
         YScroll {
-            coarse: self.coarse_y_scroll,
-            fine: self.fine_y_scroll,
+            coarse: self.coarse_y_scroll(),
+            fine: self.fine_y_scroll(),
         }
     }
 
+    fn coarse_y_scroll(self) -> TileRow {
+        TileRow::try_from_u8(((self.address & 0b1111100000) >> 5) as u8).unwrap()
+    }
+
+    fn fine_y_scroll(self) -> RowInTile {
+        RowInTile::from_u8(((self.address & 0b0111_0000_0000_0000) >> 12) as u8).unwrap()
+    }
+
     pub fn set_name_table_quadrant(&mut self, quadrant: NameTableQuadrant) {
-        self.name_table_quadrant = quadrant;
+        self.address &= 0b0111_0011_1111_1111;
+        self.address |= (quadrant as u16) << 10;
     }
 
     pub fn set_x_scroll(&mut self, value: u8) {
         let value = XScroll::from_u8(value);
-        self.coarse_x_scroll = value.coarse();
         self.fine_x_scroll = value.fine();
+        self.set_coarse_x_scroll(value.coarse());
+    }
+
+    fn set_coarse_x_scroll(&mut self, coarse_x: TileColumn) {
+        self.address &= 0b1111_1111_1110_0000;
+        self.address |= coarse_x.to_u16();
     }
 
     pub fn set_y_scroll(&mut self, value: u8) {
         let value = YScroll::from_u8(value);
-        self.coarse_y_scroll = value.coarse();
-        self.fine_y_scroll = value.fine();
+        self.set_coarse_y_scroll(value.coarse());
+        self.set_fine_y_scroll(value.fine());
+    }
+
+    fn set_coarse_y_scroll(&mut self, coarse_y: TileRow) {
+        self.address &= 0b0111_1100_0001_1111;
+        self.address |= coarse_y.to_u16() << 5;
+    }
+
+    fn set_fine_y_scroll(&mut self, fine_y: RowInTile) {
+        self.address &= 0b0000_1111_1111_1111;
+        self.address |= (fine_y as u16) << 12;
     }
 
     pub fn copy_x_scroll(&mut self, other: PpuAddress) {
@@ -161,22 +193,24 @@ impl PpuAddress {
     }
 
     pub fn copy_name_table_quadrant(&mut self, other: PpuAddress) {
-        self.name_table_quadrant = other.name_table_quadrant;
+        self.set_name_table_quadrant(other.name_table_quadrant());
     }
 
     pub fn copy_horizontal_name_table_side(&mut self, other: PpuAddress) {
-        self.name_table_quadrant.copy_horizontal_side_from(other.name_table_quadrant);
+        let mut name_table_quadrant = self.name_table_quadrant();
+        name_table_quadrant.copy_horizontal_side_from(other.name_table_quadrant());
+        self.set_name_table_quadrant(name_table_quadrant);
     }
 
     pub fn set_high_byte(&mut self, value: u8) {
-        self.fine_y_scroll = RowInTile::from_u8((value & 0b0011_0000) >> 4).unwrap();
-        self.name_table_quadrant = FromPrimitive::from_u8((value & 0b0000_1100) >> 2).unwrap();
-        self.coarse_y_scroll = TileRow::try_from_u8(((self.coarse_y_scroll.to_u8()) & !0b1_1000) | ((value & 0b11) << 3)).unwrap();
+        // Lose the top bit of the fine y scroll.
+        self.address &= 0b0000_0000_1111_1111;
+        self.address |= u16::from(value & 0b0011_1111) << 8;
     }
 
     pub fn set_low_byte(&mut self, value: u8) {
-        self.coarse_y_scroll = TileRow::try_from_u8(((self.coarse_y_scroll.to_u8()) & !0b111) | ((value & 0b1110_0000) >> 5)).unwrap();
-        self.coarse_x_scroll = TileColumn::try_from_u8(value & 0b0001_1111).unwrap();
+        self.address &= 0b1111_1111_0000_0000;
+        self.address |= u16::from(value);
     }
 
     pub fn to_u16(self) -> u16 {
@@ -189,7 +223,7 @@ impl PpuAddress {
     }
 
     pub fn pattern_table_side(self) -> PatternTableSide {
-        if (self.fine_y_scroll as u8) & 1 == 0 {
+        if (self.fine_y_scroll() as u8) & 1 == 0 {
             PatternTableSide::Left
         } else {
             PatternTableSide::Right
@@ -197,11 +231,7 @@ impl PpuAddress {
     }
 
     fn to_scroll_u16(self) -> u16 {
-        let fine_y = (self.fine_y_scroll as u16) << 12;
-        let quadrant = (self.name_table_quadrant as u16) << 10;
-        let coarse_y = (self.coarse_y_scroll.to_u16()) << 5;
-        let coarse_x = self.coarse_x_scroll.to_u16();
-        fine_y | quadrant | coarse_y | coarse_x
+        self.address
     }
 }
 
