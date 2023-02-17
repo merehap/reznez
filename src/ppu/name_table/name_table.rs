@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::memory::ppu::ppu_address::{XScroll, YScroll};
 use crate::ppu::name_table::attribute_table::AttributeTable;
-use crate::ppu::name_table::background_tile_index::{BackgroundTileIndex, TileColumn, TileRow};
+use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;

@@ -6,7 +6,7 @@ use num_traits::FromPrimitive;
 
 use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
-use crate::ppu::pattern_table::PatternTableSide;
+use crate::ppu::pattern_table::{PatternTableSide, PatternIndex};
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::register::registers::ctrl::AddressIncrement;
 
@@ -73,7 +73,7 @@ impl PpuAddress {
 
     /*
      * 0123 45 6789A BCDEF
-     * 0001 NN RRRRR CCCCC
+     * 0010 NN RRRRR CCCCC
      *      || ||||| +++++-- Tile Column
      *      || +++++-------- Tile Row
      *      ++-------------- Nametable Quadrant
@@ -88,6 +88,28 @@ impl PpuAddress {
             + 0x400 * quadrant as u16
             + (TileColumn::COLUMN_COUNT as u16) / 4 * (tile_row.to_u16() / 4)
             + tile_column.to_u16() / 4
+        )
+    }
+
+    /*
+     * 012 3 456789AB C DEF
+     * 000 S PPPPPPPP H RRR
+     *     | |||||||| | +++-- Row In Tile
+     *     | |||||||| +------ Select High Byte (or Low Byte)
+     *     | ++++++++-------- Pattern Index
+     *     +----------------- Pattern Table Side
+     */
+    pub fn in_pattern_table(
+        side: PatternTableSide,
+        pattern_index: PatternIndex,
+        row_in_tile: RowInTile,
+        select_high_byte: bool,
+    ) -> PpuAddress {
+        PpuAddress::from_u16(
+            0x1000 * side as u16
+            | pattern_index.to_u16() << 4
+            | if select_high_byte { 0x8 } else { 0x0 }
+            | row_in_tile as u16
         )
     }
 

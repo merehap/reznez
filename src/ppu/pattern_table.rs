@@ -188,6 +188,10 @@ impl PatternIndex {
         self.0
     }
 
+    pub fn to_u16(self) -> u16 {
+        u16::from(self.0)
+    }
+
     pub fn to_usize(self) -> usize {
         usize::from(self.0)
     }

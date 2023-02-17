@@ -144,7 +144,6 @@ impl Ppu {
     pub fn execute_cycle_action(&mut self, mem: &mut PpuMemory, frame: &mut Frame, cycle_action: CycleAction) {
         let background_table_side = mem.regs().background_table_side();
         let sprite_table_side = mem.regs().sprite_table_side();
-        let pattern_table = mem.pattern_table(background_table_side);
         let tile_column = self.current_address.x_scroll().coarse();
         let tile_row = self.current_address.y_scroll().coarse();
         let row_in_tile = self.current_address.y_scroll().fine();
@@ -171,13 +170,15 @@ impl Ppu {
             }
             GetBackgroundTileLowByte => {
                 if !rendering_enabled { return; }
-                let low_byte = pattern_table.read_low_byte(self.next_pattern_index, row_in_tile);
-                self.pattern_register.set_pending_low_byte(low_byte);
+                let address = PpuAddress::in_pattern_table(
+                    background_table_side, self.next_pattern_index, row_in_tile, false);
+                self.pattern_register.set_pending_low_byte(mem.read(address));
             }
             GetBackgroundTileHighByte => {
                 if !rendering_enabled { return; }
-                let high_byte = pattern_table.read_high_byte(self.next_pattern_index, row_in_tile);
-                self.pattern_register.set_pending_high_byte(high_byte);
+                let address = PpuAddress::in_pattern_table(
+                    background_table_side, self.next_pattern_index, row_in_tile, true);
+                self.pattern_register.set_pending_high_byte(mem.read(address));
             }
 
             GotoNextTileColumn => {
