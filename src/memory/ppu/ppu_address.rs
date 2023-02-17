@@ -20,7 +20,7 @@ const FINE_Y_ZERO_TOP_BIT_MASK: u16   = 0b0011_0000_0000_0000;
 
 /*
  * 0 123 45 6789A BCDEF
- * . yyy NN YYYYY XXXXX
+ * 0 yyy NN YYYYY XXXXX
  * | ||| || ||||| +++++-- Coarse X Scroll
  * | ||| || +++++-------- Coarse Y Scroll
  * | ||| ++-------------- Nametable Quadrant
@@ -49,6 +49,26 @@ impl PpuAddress {
             address: value & 0b0011_1111_1111_1111,
             fine_x_scroll: ColumnInTile::Zero,
         }
+    }
+
+    /*
+     * 0123 45 6789A BCDEF
+     * 0001 NN RRRRR CCCCC
+     *      || ||||| +++++-- Tile Column
+     *      || +++++-------- Tile Row
+     *      ++-------------- Nametable Quadrant
+     */
+    pub fn in_name_table(
+        quadrant: NameTableQuadrant,
+        tile_column: TileColumn,
+        tile_row: TileRow,
+    ) -> PpuAddress {
+        PpuAddress::from_u16(
+            0x2000
+            | 0x400 * quadrant as u16
+            | TileColumn::COLUMN_COUNT as u16 * tile_row.to_u16()
+            | tile_column.to_u16()
+        )
     }
 
     pub fn advance(&mut self, address_increment: AddressIncrement) {

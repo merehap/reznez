@@ -51,8 +51,8 @@ pub struct TileColumn(u8);
 
 impl TileColumn {
     pub const ZERO: TileColumn = TileColumn(0);
+    pub const COLUMN_COUNT: usize = 32;
     const MAX: TileColumn = TileColumn(31);
-    const COLUMN_COUNT: usize = 32;
 
     pub fn iter() -> TileColumnIterator {
         TileColumnIterator(0)
@@ -123,7 +123,7 @@ pub struct TileRow(u8);
 
 impl TileRow {
     pub const ZERO: TileRow = TileRow(0);
-    const ROW_COUNT: u8 = 32;
+    pub const ROW_COUNT: u8 = 32;
     const MAX: TileRow = TileRow(31);
     const MAX_VISIBLE: TileRow = TileRow(29);
 

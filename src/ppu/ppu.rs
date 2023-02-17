@@ -147,6 +147,7 @@ impl Ppu {
         let tile_column = self.current_address.x_scroll().coarse();
         let tile_row = self.current_address.y_scroll().coarse();
         let row_in_tile = self.current_address.y_scroll().fine();
+        let name_table_quadrant = self.current_address.name_table_quadrant();
         let name_table = mem.name_table(self.current_address.name_table_quadrant());
 
         let background_enabled = mem.regs().background_enabled();
@@ -157,7 +158,8 @@ impl Ppu {
         match cycle_action {
             GetPatternIndex => {
                 if !rendering_enabled { return; }
-                self.next_pattern_index = name_table.pattern_index(tile_column, tile_row);
+                let address = PpuAddress::in_name_table(name_table_quadrant, tile_column, tile_row);
+                self.next_pattern_index = PatternIndex::new(mem.read(address));
             }
             GetPaletteIndex => {
                 if !rendering_enabled { return; }

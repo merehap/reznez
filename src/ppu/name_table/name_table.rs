@@ -133,11 +133,6 @@ impl<'a> NameTable<'a> {
         )
     }
 
-    pub fn pattern_index(&self, tile_column: TileColumn, tile_row: TileRow) -> PatternIndex {
-        let index = BackgroundTileIndex::from_tile_column_row(tile_column, tile_row);
-        PatternIndex::new(self.tiles[index.to_usize()])
-    }
-
     #[inline]
     fn tile_entry_at(
         &self,
