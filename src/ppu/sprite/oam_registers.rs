@@ -51,10 +51,16 @@ impl SpriteRegisters {
         }
     }
 
-    // TODO: Store PatternIndex and set patterns later on.
-    pub fn set_pattern(&mut self, low_pattern: u8, high_pattern: u8) {
+    pub fn set_pattern_low(&mut self, low_pattern: u8) {
         self.low_pattern = low_pattern;
+    }
+
+    pub fn set_pattern_high(&mut self, high_pattern: u8) {
         self.high_pattern = high_pattern;
+    }
+
+    pub fn attributes(&self) -> SpriteAttributes {
+        self.attributes
     }
 
     pub fn set_attributes(&mut self, attributes: SpriteAttributes) {

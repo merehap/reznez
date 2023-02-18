@@ -47,7 +47,7 @@ fn visible_scanline_actions() -> ScanlineActions {
     line.add(          256, vec![GetPatternHighByte       , GotoNextPixelRow  , WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
     line.add(          257, vec![PrepareForNextTile       , ResetTileColumn   , ResetForTransferToOamRegisters, StartSpriteRendering]);
 
-    // Transfer secondary OAM to OAM registers.
+    // Transfer secondary OAM to OAM registers and fetch sprite pattern data.
     // Cycles 257 through 320
     for sprite in 0..8 {
         let cycle = 8 * sprite + 257;
@@ -56,9 +56,9 @@ fn visible_scanline_actions() -> ScanlineActions {
         line.add(cycle + 2, vec![                                               ReadSpriteAttributes                                ]);
         line.add(cycle + 3, vec![                                               ReadSpriteX                                         ]);
         line.add(cycle + 4, vec![                                               DummyReadSpriteX                                    ]);
-        line.add(cycle + 5, vec![                                               DummyReadSpriteX                                    ]);
+        line.add(cycle + 5, vec![GetSpritePatternLowByte  ,                     DummyReadSpriteX                                    ]);
         line.add(cycle + 6, vec![                                               DummyReadSpriteX                                    ]);
-        line.add(cycle + 7, vec![                                               DummyReadSpriteX                                    ]);
+        line.add(cycle + 7, vec![GetSpritePatternHighByte ,                     DummyReadSpriteX                                    ]);
     }
 
     // Fetch the first background tile for the next scanline.

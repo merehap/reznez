@@ -341,7 +341,23 @@ impl Ppu {
 
                 let attributes = SpriteAttributes::from_u8(self.secondary_oam.read_and_advance());
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
+            }
+            ReadSpriteX => {
+                if !rendering_enabled { return; }
+
+                let x_counter = self.secondary_oam.read_and_advance();
+                self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
+            }
+            DummyReadSpriteX => {
+                if !rendering_enabled { return; }
+            }
+
+            GetSpritePatternLowByte => {
+                // FIXME: Hack
+                let mut address = PpuAddress::from_u16(0x1000);
+                let mut visible = false;
                 if let Some(pixel_row) = self.clock.scanline_pixel_row() {
+                    let attributes = self.oam_registers.registers[self.oam_register_index].attributes();
                     let sprite_height = mem.regs().sprite_height();
                     if let Some((pattern_index, row_in_half)) = self.next_sprite_pattern_index.index_and_row(
                         self.current_sprite_y,
@@ -349,31 +365,58 @@ impl Ppu {
                         sprite_height,
                         pixel_row
                     ) {
+                        visible = true;
                         let sprite_table_side = match sprite_height  {
                             SpriteHeight::Normal => pattern_table_side,
                             SpriteHeight::Tall => self.next_sprite_pattern_index.tall_sprite_pattern_table_side(),
                         };
 
-                        let low_address = PpuAddress::in_pattern_table(
+                        address = PpuAddress::in_pattern_table(
                             sprite_table_side, pattern_index, row_in_half, false);
-                        let high_address = PpuAddress::in_pattern_table(
-                            sprite_table_side, pattern_index, row_in_half, true);
-                        self.oam_registers.registers[self.oam_register_index].set_pattern(
-                            mem.read(low_address),
-                            mem.read(high_address),
-                        );
                     }
                 }
-            }
-            ReadSpriteX => {
-                if !rendering_enabled { return; }
 
-                let x_counter = self.secondary_oam.read_and_advance();
-                self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
-                self.oam_register_index += 1;
+                let pattern_low = mem.read(address);
+                if rendering_enabled && visible {
+                    self.oam_registers.registers[self.oam_register_index]
+                        .set_pattern_low(pattern_low);
+                }
             }
-            DummyReadSpriteX => {
-                if !rendering_enabled { return; }
+            GetSpritePatternHighByte => {
+                // FIXME: Hack
+                let mut address = PpuAddress::from_u16(0x1000);
+                let mut visible = false;
+                if let Some(pixel_row) = self.clock.scanline_pixel_row() {
+                    let attributes = self.oam_registers.registers[self.oam_register_index].attributes();
+                    let sprite_height = mem.regs().sprite_height();
+                    if let Some((pattern_index, row_in_half)) = self.next_sprite_pattern_index.index_and_row(
+                        self.current_sprite_y,
+                        attributes.flip_vertically(),
+                        sprite_height,
+                        pixel_row
+                    ) {
+                        visible = true;
+
+                        let sprite_table_side = match sprite_height  {
+                            SpriteHeight::Normal => pattern_table_side,
+                            SpriteHeight::Tall => self.next_sprite_pattern_index.tall_sprite_pattern_table_side(),
+                        };
+
+                        address = PpuAddress::in_pattern_table(
+                            sprite_table_side, pattern_index, row_in_half, true);
+                    }
+                }
+
+                let pattern_high = mem.read(address);
+                if rendering_enabled {
+                    if visible {
+                        self.oam_registers.registers[self.oam_register_index]
+                            .set_pattern_high(pattern_high);
+                    }
+
+                    // FIXME: Hack. Make a separate CycleAction for this.
+                    self.oam_register_index += 1;
+                }
             }
 
             ResetForOamClear => {
