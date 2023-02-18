@@ -45,7 +45,7 @@ fn visible_scanline_actions() -> ScanlineActions {
     line.add(          254, vec![GetBackgroundTileLowByte ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
     line.add(          255, vec![                                               ReadOamByte          , SetPixel, PrepareForNextPixel]);
     line.add(          256, vec![GetBackgroundTileHighByte, GotoNextPixelRow  , WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
-    line.add(          257, vec![PrepareForNextTile       , ResetTileColumn   , ResetForTransferToOamRegisters                      ]);
+    line.add(          257, vec![PrepareForNextTile       , ResetTileColumn   , ResetForTransferToOamRegisters, StartSpriteRendering]);
 
     // Transfer secondary OAM to OAM registers.
     // Cycles 257 through 320
@@ -62,7 +62,7 @@ fn visible_scanline_actions() -> ScanlineActions {
     }
 
     // Fetch the first background tile for the next scanline.
-    line.add(          321, vec![                                               ReadSpriteY                    , PrepareForNextPixel]);
+    line.add(          321, vec![StartBackgroundRendering ,                     ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          322, vec![GetPatternIndex          ,                     ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          323, vec![                                               ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          324, vec![GetPaletteIndex          ,                     ReadSpriteY                    , PrepareForNextPixel]);

@@ -43,6 +43,7 @@ pub struct Ppu {
     nmi_requested: bool,
     nmi_was_enabled_last_cycle: bool,
 
+    sprites_rendering: bool,
     next_pattern_index: PatternIndex,
     pattern_register: PatternRegister,
     attribute_register: AttributeRegister,
@@ -77,6 +78,7 @@ impl Ppu {
             nmi_requested: false,
             nmi_was_enabled_last_cycle: false,
 
+            sprites_rendering: false,
             next_pattern_index: PatternIndex::new(0),
             pattern_register: PatternRegister::new(),
             attribute_register: AttributeRegister::new(),
@@ -141,9 +143,19 @@ impl Ppu {
         StepResult { is_last_cycle_of_frame, should_generate_nmi }
     }
 
-    pub fn execute_cycle_action(&mut self, mem: &mut PpuMemory, frame: &mut Frame, cycle_action: CycleAction) {
-        let background_table_side = mem.regs().background_table_side();
-        let sprite_table_side = mem.regs().sprite_table_side();
+    pub fn execute_cycle_action(
+        &mut self,
+        mem: &mut PpuMemory,
+        frame: &mut Frame,
+        cycle_action: CycleAction,
+    ) {
+        let pattern_table_side;
+        if self.sprites_rendering {
+            pattern_table_side = mem.regs().sprite_table_side();
+        } else {
+            pattern_table_side = mem.regs().background_table_side()
+        };
+
         let tile_column = self.current_address.x_scroll().coarse();
         let tile_row = self.current_address.y_scroll().coarse();
         let row_in_tile = self.current_address.y_scroll().fine();
@@ -155,6 +167,13 @@ impl Ppu {
 
         use CycleAction::*;
         match cycle_action {
+            StartBackgroundRendering => {
+                self.sprites_rendering = false;
+            }
+            StartSpriteRendering => {
+                self.sprites_rendering = true;
+            }
+
             GetPatternIndex => {
                 if !rendering_enabled { return; }
                 let address = PpuAddress::in_name_table(name_table_quadrant, tile_column, tile_row);
@@ -171,13 +190,13 @@ impl Ppu {
             GetBackgroundTileLowByte => {
                 if !rendering_enabled { return; }
                 let address = PpuAddress::in_pattern_table(
-                    background_table_side, self.next_pattern_index, row_in_tile, false);
+                    pattern_table_side, self.next_pattern_index, row_in_tile, false);
                 self.pattern_register.set_pending_low_byte(mem.read(address));
             }
             GetBackgroundTileHighByte => {
                 if !rendering_enabled { return; }
                 let address = PpuAddress::in_pattern_table(
-                    background_table_side, self.next_pattern_index, row_in_tile, true);
+                    pattern_table_side, self.next_pattern_index, row_in_tile, true);
                 self.pattern_register.set_pending_high_byte(mem.read(address));
             }
 
@@ -331,7 +350,7 @@ impl Ppu {
                         pixel_row
                     ) {
                         let sprite_table_side = match sprite_height  {
-                            SpriteHeight::Normal => sprite_table_side,
+                            SpriteHeight::Normal => pattern_table_side,
                             SpriteHeight::Tall => self.next_sprite_pattern_index.tall_sprite_pattern_table_side(),
                         };
 
