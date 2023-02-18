@@ -5,8 +5,8 @@ pub enum CycleAction {
 
     GetPatternIndex,
     GetPaletteIndex,
-    GetBackgroundTileLowByte,
-    GetBackgroundTileHighByte,
+    GetPatternLowByte,
+    GetPatternHighByte,
 
     GotoNextTileColumn,
     GotoNextPixelRow,

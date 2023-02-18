@@ -187,13 +187,13 @@ impl Ppu {
                     PaletteTableIndex::from_attribute_byte(attribute_byte, tile_column, tile_row);
                 self.attribute_register.set_pending_palette_table_index(palette_table_index);
             }
-            GetBackgroundTileLowByte => {
+            GetPatternLowByte => {
                 if !rendering_enabled { return; }
                 let address = PpuAddress::in_pattern_table(
                     pattern_table_side, self.next_pattern_index, row_in_tile, false);
                 self.pattern_register.set_pending_low_byte(mem.read(address));
             }
-            GetBackgroundTileHighByte => {
+            GetPatternHighByte => {
                 if !rendering_enabled { return; }
                 let address = PpuAddress::in_pattern_table(
                     pattern_table_side, self.next_pattern_index, row_in_tile, true);
