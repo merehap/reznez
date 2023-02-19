@@ -448,61 +448,9 @@ impl Ppu {
                 mem.regs_mut().clear_sprite_overflow();
             }
             UpdateOamData => {
-                self.update_oam_data(mem.regs_mut());
+                mem.regs_mut().oam_data = self.oam.read(mem.regs().oam_addr);
             }
         }
-    }
-
-    fn process_latch_access(
-        &mut self,
-        mem: &mut PpuMemory,
-        latch_access: LatchAccess,
-    ) -> bool {
-        let value = mem.regs().latch_value();
-        let mut request_nmi = false;
-
-        use AccessMode::*;
-        use RegisterType::*;
-        match (latch_access.register_type, latch_access.access_mode) {
-            (OamData, Read) => {}
-            (Mask | Status | OamAddr, Write) => {}
-
-            (Ctrl, Write) => {
-                self.next_address.set_name_table_quadrant(NameTableQuadrant::from_last_two_bits(value));
-                if !self.nmi_was_enabled_last_cycle {
-                    // Attempt to trigger the second (or higher) NMI of this frame.
-                    request_nmi = true;
-                }
-
-                self.nmi_was_enabled_last_cycle = mem.regs().nmi_enabled();
-            }
-
-            (Status, Read) => {
-                mem.regs_mut().stop_vblank();
-                // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
-                if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
-                    self.suppress_vblank_active = true;
-                }
-
-                self.write_toggle = WriteToggle::FirstByte;
-            }
-            (OamData, Write) => self.write_oam(mem.regs_mut(), value),
-            (PpuAddr, Write) => self.write_byte_to_next_address(value),
-            (PpuData, Read) => self.update_pending_data_then_advance_current_address(mem),
-            (PpuData, Write) => self.write_then_advance_current_address(mem, value),
-            (Scroll, Write) => self.write_scroll_dimension(value),
-
-            (Ctrl | Mask | OamAddr | Scroll | PpuAddr, Read) => unreachable!(
-                "The data latch should not be filled by a read to {:?}.",
-                latch_access.register_type,
-            ),
-        }
-
-        request_nmi
-    }
-
-    fn update_oam_data(&self, regs: &mut PpuRegisters) {
-        regs.oam_data = self.oam.read(regs.oam_addr);
     }
 
     fn update_ppu_data(&self, mem: &mut PpuMemory) {
@@ -517,23 +465,85 @@ impl Ppu {
         mem.regs_mut().ppu_data = PpuData { value, is_palette_data };
     }
 
-    fn write_oam(&mut self, regs: &mut PpuRegisters, value: u8) {
+    fn process_latch_access(
+        &mut self,
+        mem: &mut PpuMemory,
+        latch_access: LatchAccess,
+    ) -> bool {
+        let value = mem.regs().latch_value();
+        let mut request_nmi = false;
+
+        use AccessMode::*;
+        use RegisterType::*;
+        match (latch_access.register_type, latch_access.access_mode) {
+            // 0x2000
+            (Ctrl, Read) => unreachable!(),
+            (Ctrl, Write) => request_nmi = self.write_ctrl(mem.regs(), value),
+            // 0x2001
+            (Mask, Read) => unreachable!(),
+            (Mask, Write) => {}
+            // 0x2002
+            (Status, Read) => self.read_status(mem.regs_mut()),
+            (Status, Write) => {}
+            // 0x2003
+            (OamAddr, Read) => unreachable!(),
+            (OamAddr, Write) => {}
+            // 0x2004
+            (OamData, Read) => {}
+            (OamData, Write) => self.write_oam_data(mem.regs_mut(), value),
+            // 0x2005
+            (Scroll, Read) => unreachable!(),
+            (Scroll, Write) => self.write_scroll_dimension(value),
+            // 0x2006
+            (PpuAddr, Read) => unreachable!(),
+            (PpuAddr, Write) => self.write_byte_to_next_address(value),
+            // 0x2007
+            (PpuData, Read) => self.update_pending_data_then_advance_current_address(mem),
+            (PpuData, Write) => self.write_then_advance_current_address(mem, value),
+        }
+
+        request_nmi
+    }
+
+    // Write 0x2000
+    fn write_ctrl(&mut self, regs: &PpuRegisters, value: u8) -> bool {
+        self.next_address.set_name_table_quadrant(NameTableQuadrant::from_last_two_bits(value));
+        // Potentially attempt to trigger the second (or higher) NMI of this frame.
+        let request_nmi = !self.nmi_was_enabled_last_cycle;
+        self.nmi_was_enabled_last_cycle = regs.nmi_enabled();
+        request_nmi
+    }
+
+    // Read 0x2002
+    fn read_status(&mut self, regs: &mut PpuRegisters) {
+        regs.stop_vblank();
+        // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
+        if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
+            self.suppress_vblank_active = true;
+        }
+
+        self.write_toggle = WriteToggle::FirstByte;
+    }
+
+    // Write 0x2003
+    fn write_oam_data(&mut self, regs: &mut PpuRegisters, value: u8) {
         let oam_addr = regs.oam_addr;
         self.oam.write(oam_addr, value);
         // Advance to next sprite byte to write.
         regs.oam_addr = oam_addr.wrapping_add(1);
     }
 
-    fn update_pending_data_then_advance_current_address(&mut self, mem: &PpuMemory) {
-        self.pending_data = mem.read(self.current_address.to_pending_data_source());
-        self.current_address.advance(mem.regs().current_address_increment());
+    // Write 0x2005
+    fn write_scroll_dimension(&mut self, dimension: u8) {
+        match self.write_toggle {
+            WriteToggle::FirstByte => self.next_address.set_x_scroll(dimension),
+            WriteToggle::SecondByte => self.next_address.set_y_scroll(dimension),
+        }
+
+        self.write_toggle.toggle();
     }
 
-    fn write_then_advance_current_address(&mut self, mem: &mut PpuMemory, value: u8) {
-        mem.write(self.current_address, value);
-        self.current_address.advance(mem.regs().current_address_increment());
-    }
-
+    // Write 0x2006
     fn write_byte_to_next_address(&mut self, value: u8) {
         match self.write_toggle {
             WriteToggle::FirstByte => self.next_address.set_high_byte(value),
@@ -546,13 +556,16 @@ impl Ppu {
         self.write_toggle.toggle();
     }
 
-    fn write_scroll_dimension(&mut self, dimension: u8) {
-        match self.write_toggle {
-            WriteToggle::FirstByte => self.next_address.set_x_scroll(dimension),
-            WriteToggle::SecondByte => self.next_address.set_y_scroll(dimension),
-        }
+    // Read 0x2007
+    fn update_pending_data_then_advance_current_address(&mut self, mem: &PpuMemory) {
+        self.pending_data = mem.read(self.current_address.to_pending_data_source());
+        self.current_address.advance(mem.regs().current_address_increment());
+    }
 
-        self.write_toggle.toggle();
+    // Write 0x2007
+    fn write_then_advance_current_address(&mut self, mem: &mut PpuMemory, value: u8) {
+        mem.write(self.current_address, value);
+        self.current_address.advance(mem.regs().current_address_increment());
     }
 }
 
