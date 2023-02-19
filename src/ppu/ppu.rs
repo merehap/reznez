@@ -484,15 +484,15 @@ impl Ppu {
             // 0x2006
             (PpuAddr, Read) => unreachable!(),
             (PpuAddr, Write) => {
-                self.write_byte_to_next_address(value);
+                self.write_ppu_address(value);
                 self.update_ppu_data(mem);
             }
             // 0x2007
             (PpuData, Read) => {
-                self.update_pending_data_then_advance_current_address(mem);
+                self.read_ppu_data(mem);
                 self.update_ppu_data(mem);
             }
-            (PpuData, Write) => self.write_then_advance_current_address(mem, value),
+            (PpuData, Write) => self.write_ppu_data(mem, value),
         }
 
         request_nmi
@@ -549,7 +549,7 @@ impl Ppu {
     }
 
     // Write 0x2006
-    fn write_byte_to_next_address(&mut self, value: u8) {
+    fn write_ppu_address(&mut self, value: u8) {
         match self.write_toggle {
             WriteToggle::FirstByte => self.next_address.set_high_byte(value),
             WriteToggle::SecondByte => {
@@ -562,13 +562,13 @@ impl Ppu {
     }
 
     // Read 0x2007
-    fn update_pending_data_then_advance_current_address(&mut self, mem: &PpuMemory) {
+    fn read_ppu_data(&mut self, mem: &PpuMemory) {
         self.pending_data = mem.read(self.current_address.to_pending_data_source());
         self.current_address.advance(mem.regs().current_address_increment());
     }
 
     // Write 0x2007
-    fn write_then_advance_current_address(&mut self, mem: &mut PpuMemory, value: u8) {
+    fn write_ppu_data(&mut self, mem: &mut PpuMemory, value: u8) {
         mem.write(self.current_address, value);
         self.current_address.advance(mem.regs().current_address_increment());
     }
