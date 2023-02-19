@@ -132,7 +132,6 @@ impl Ppu {
             self.execute_cycle_action(mem, frame, cycle_action);
         }
 
-        self.update_ppu_data(mem);
 
         let is_last_cycle_of_frame = self.clock.is_last_cycle_of_frame();
         self.clock.tick(mem.regs().rendering_enabled());
@@ -501,6 +500,8 @@ impl Ppu {
             (PpuData, Read) => self.update_pending_data_then_advance_current_address(mem),
             (PpuData, Write) => self.write_then_advance_current_address(mem, value),
         }
+
+        self.update_ppu_data(mem);
 
         request_nmi
     }
