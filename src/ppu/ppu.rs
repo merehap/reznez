@@ -483,31 +483,13 @@ impl Ppu {
             (Scroll, Write) => self.write_scroll_dimension(value),
             // 0x2006
             (PpuAddr, Read) => unreachable!(),
-            (PpuAddr, Write) => {
-                self.write_ppu_address(value);
-                self.update_ppu_data(mem);
-            }
+            (PpuAddr, Write) => self.write_ppu_address(mem, value),
             // 0x2007
-            (PpuData, Read) => {
-                self.read_ppu_data(mem);
-                self.update_ppu_data(mem);
-            }
+            (PpuData, Read) => self.read_ppu_data(mem),
             (PpuData, Write) => self.write_ppu_data(mem, value),
         }
 
         request_nmi
-    }
-
-    fn update_ppu_data(&self, mem: &mut PpuMemory) {
-        let is_palette_data = self.current_address >= PpuAddress::PALETTE_TABLE_START;
-        // When reading palette data only, read the current data pointed to
-        // by self.current_address, not what was previously pointed to.
-        let value = if is_palette_data {
-            mem.read(self.current_address)
-        } else {
-            self.pending_data
-        };
-        mem.regs_mut().ppu_data = PpuData { value, is_palette_data };
     }
 
     // Write 0x2000
@@ -549,7 +531,7 @@ impl Ppu {
     }
 
     // Write 0x2006
-    fn write_ppu_address(&mut self, value: u8) {
+    fn write_ppu_address(&mut self, mem: &mut PpuMemory, value: u8) {
         match self.write_toggle {
             WriteToggle::FirstByte => self.next_address.set_high_byte(value),
             WriteToggle::SecondByte => {
@@ -559,12 +541,32 @@ impl Ppu {
         }
 
         self.write_toggle.toggle();
+
+        let is_palette_data = self.current_address >= PpuAddress::PALETTE_TABLE_START;
+        // When reading palette data only, read the current data pointed to
+        // by self.current_address, not what was previously pointed to.
+        let value = if is_palette_data {
+            mem.read(self.current_address)
+        } else {
+            self.pending_data
+        };
+        mem.regs_mut().ppu_data = PpuData { value, is_palette_data };
     }
 
     // Read 0x2007
-    fn read_ppu_data(&mut self, mem: &PpuMemory) {
+    fn read_ppu_data(&mut self, mem: &mut PpuMemory) {
         self.pending_data = mem.read(self.current_address.to_pending_data_source());
         self.current_address.advance(mem.regs().current_address_increment());
+
+        let is_palette_data = self.current_address >= PpuAddress::PALETTE_TABLE_START;
+        // When reading palette data only, read the current data pointed to
+        // by self.current_address, not what was previously pointed to.
+        let value = if is_palette_data {
+            mem.read(self.current_address)
+        } else {
+            self.pending_data
+        };
+        mem.regs_mut().ppu_data = PpuData { value, is_palette_data };
     }
 
     // Write 0x2007
