@@ -452,18 +452,6 @@ impl Ppu {
         }
     }
 
-    fn update_ppu_data(&self, mem: &mut PpuMemory) {
-        let is_palette_data = self.current_address >= PpuAddress::PALETTE_TABLE_START;
-        // When reading palette data only, read the current data pointed to
-        // by self.current_address, not what was previously pointed to.
-        let value = if is_palette_data {
-            mem.read(self.current_address)
-        } else {
-            self.pending_data
-        };
-        mem.regs_mut().ppu_data = PpuData { value, is_palette_data };
-    }
-
     fn process_latch_access(
         &mut self,
         mem: &mut PpuMemory,
@@ -495,15 +483,31 @@ impl Ppu {
             (Scroll, Write) => self.write_scroll_dimension(value),
             // 0x2006
             (PpuAddr, Read) => unreachable!(),
-            (PpuAddr, Write) => self.write_byte_to_next_address(value),
+            (PpuAddr, Write) => {
+                self.write_byte_to_next_address(value);
+                self.update_ppu_data(mem);
+            }
             // 0x2007
-            (PpuData, Read) => self.update_pending_data_then_advance_current_address(mem),
+            (PpuData, Read) => {
+                self.update_pending_data_then_advance_current_address(mem);
+                self.update_ppu_data(mem);
+            }
             (PpuData, Write) => self.write_then_advance_current_address(mem, value),
         }
 
-        self.update_ppu_data(mem);
-
         request_nmi
+    }
+
+    fn update_ppu_data(&self, mem: &mut PpuMemory) {
+        let is_palette_data = self.current_address >= PpuAddress::PALETTE_TABLE_START;
+        // When reading palette data only, read the current data pointed to
+        // by self.current_address, not what was previously pointed to.
+        let value = if is_palette_data {
+            mem.read(self.current_address)
+        } else {
+            self.pending_data
+        };
+        mem.regs_mut().ppu_data = PpuData { value, is_palette_data };
     }
 
     // Write 0x2000

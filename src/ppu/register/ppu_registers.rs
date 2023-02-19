@@ -6,7 +6,6 @@ use crate::ppu::register::registers::ctrl;
 use crate::ppu::register::registers::ctrl::{AddressIncrement, Ctrl};
 use crate::ppu::register::registers::mask;
 use crate::ppu::register::registers::mask::Mask;
-use crate::ppu::register::registers::ppu_data;
 use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::register::registers::status::Status;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
@@ -160,10 +159,7 @@ impl PpuRegisters {
             OamData => self.oam_data = register_value,
             Scroll => self.scroll = register_value,
             PpuAddr => self.ppu_addr = register_value,
-            PpuData => {
-                self.ppu_data =
-                    ppu_data::PpuData { value: register_value, is_palette_data: false }
-            }
+            PpuData => { /* Writing to PpuData already stored the value to memory. */ }
         }
     }
 }
