@@ -1,8 +1,5 @@
 #[derive(Clone, Copy, Debug)]
 pub enum CycleAction {
-    StartBackgroundRendering,
-    StartSpriteRendering,
-
     GetPatternIndex,
     GetPaletteIndex,
     GetPatternLowByte,

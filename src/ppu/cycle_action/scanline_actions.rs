@@ -45,16 +45,16 @@ fn visible_scanline_actions() -> ScanlineActions {
     line.add(          254, vec![GetPatternLowByte        ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
     line.add(          255, vec![                                               ReadOamByte          , SetPixel, PrepareForNextPixel]);
     line.add(          256, vec![GetPatternHighByte       , GotoNextPixelRow  , WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
-    line.add(          257, vec![PrepareForNextTile       , ResetTileColumn   , ResetForTransferToOamRegisters, StartSpriteRendering]);
+    line.add(          257, vec![PrepareForNextTile       , ResetTileColumn   , ResetForTransferToOamRegisters                      ]);
 
     // Transfer secondary OAM to OAM registers and fetch sprite pattern data.
     // Cycles 257 through 320
     for sprite in 0..8 {
         let cycle = 8 * sprite + 257;
         line.add(cycle + 0, vec![                                               ReadSpriteY                                         ]);
-        line.add(cycle + 1, vec![                                               ReadSpritePatternIndex                              ]);
+        line.add(cycle + 1, vec![GetPatternIndex          ,                     ReadSpritePatternIndex                              ]);
         line.add(cycle + 2, vec![                                               ReadSpriteAttributes                                ]);
-        line.add(cycle + 3, vec![                                               ReadSpriteX                                         ]);
+        line.add(cycle + 3, vec![GetPatternIndex          ,                     ReadSpriteX                                         ]);
         line.add(cycle + 4, vec![                                               DummyReadSpriteX                                    ]);
         line.add(cycle + 5, vec![GetSpritePatternLowByte  ,                     DummyReadSpriteX                                    ]);
         line.add(cycle + 6, vec![                                               DummyReadSpriteX                                    ]);
@@ -62,14 +62,14 @@ fn visible_scanline_actions() -> ScanlineActions {
     }
 
     // Fetch the first background tile for the next scanline.
-    line.add(          321, vec![StartBackgroundRendering ,                     ReadSpriteY                    , PrepareForNextPixel]);
+    line.add(          321, vec![                                               ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          322, vec![GetPatternIndex          ,                     ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          323, vec![                                               ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          324, vec![GetPaletteIndex          ,                     ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          325, vec![                                               ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          326, vec![GetPatternLowByte        ,                     ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          327, vec![                                               ReadSpriteY                    , PrepareForNextPixel]);
-    line.add(          328, vec![GetPatternHighByte, GotoNextTileColumn, ReadSpriteY                    , PrepareForNextPixel]);
+    line.add(          328, vec![GetPatternHighByte       , GotoNextTileColumn, ReadSpriteY                    , PrepareForNextPixel]);
     line.add(          329, vec![PrepareForNextTile       ,                     ReadSpriteY                    , PrepareForNextPixel]);
     // Fetch the second background tile for the next scanline.
     line.add(          330, vec![GetPatternIndex          ,                     ReadSpriteY                    , PrepareForNextPixel]);

@@ -126,8 +126,6 @@ impl Nes {
         let mut step = None;
         let ppu_result;
         match self.cycle % 6 {
-            4 => ppu_result = self.ppu_step(),
-            5 => ppu_result = self.ppu_step(),
             0 => {
                 step = self.cpu_step();
                 self.apu.half_step(&mut self.memory.apu_regs());
@@ -140,6 +138,8 @@ impl Nes {
                 self.apu_step();
                 ppu_result = self.ppu_step();
             }
+            4 => ppu_result = self.ppu_step(),
+            5 => ppu_result = self.ppu_step(),
             _ => unreachable!(),
         }
 
