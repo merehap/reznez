@@ -126,16 +126,16 @@ impl Nes {
         let mut step = None;
         let ppu_result;
         match self.cycle % 6 {
-            0 => ppu_result = self.ppu_step(),
-            1 => ppu_result = self.ppu_step(),
-            2 => {
+            4 => ppu_result = self.ppu_step(),
+            5 => ppu_result = self.ppu_step(),
+            0 => {
                 step = self.cpu_step();
                 self.apu.half_step(&mut self.memory.apu_regs());
                 ppu_result = self.ppu_step();
             }
-            3 => ppu_result = self.ppu_step(),
-            4 => ppu_result = self.ppu_step(),
-            5 => {
+            1 => ppu_result = self.ppu_step(),
+            2 => ppu_result = self.ppu_step(),
+            3 => {
                 step = self.cpu_step();
                 self.apu_step();
                 ppu_result = self.ppu_step();

@@ -52,17 +52,6 @@ fn nestest() {
             loop {
                 ppu_scanline = nes.ppu().clock().scanline();
                 ppu_cycle = nes.ppu().clock().cycle();
-                // TODO: Fix this.
-                if ppu_cycle < 2 {
-                    ppu_cycle += 341;
-                    if ppu_scanline == 0 {
-                        ppu_scanline = 240;
-                    } else {
-                        ppu_scanline -= 1;
-                    }
-                }
-                ppu_cycle -= 2;
-
                 c = nes.cpu().cycle();
 
                 if nes.step().step.is_some() && nes.cpu().next_op_code().is_some() {
