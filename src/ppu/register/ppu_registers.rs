@@ -17,8 +17,6 @@ pub struct PpuRegisters {
     pub(in crate::ppu) status: Status,
     pub(in crate::ppu) oam_addr: u8,
     pub(in crate::ppu) oam_data: u8,
-    pub(in crate::ppu) scroll: u8,
-    pub(in crate::ppu) ppu_addr: u8,
     pub(in crate::ppu) ppu_data: PpuData,
 
     latch: PpuRegisterLatch,
@@ -33,8 +31,6 @@ impl PpuRegisters {
             status: Status::new(),
             oam_addr: 0,
             oam_data: 0,
-            scroll: 0,
-            ppu_addr: 0,
             ppu_data: PpuData { value: 0, is_palette_data: false },
 
             latch: PpuRegisterLatch::new(),
@@ -157,8 +153,8 @@ impl PpuRegisters {
             Status => { /* Read-only. */ }
             OamAddr => self.oam_addr = register_value,
             OamData => self.oam_data = register_value,
-            Scroll => self.scroll = register_value,
-            PpuAddr => self.ppu_addr = register_value,
+            Scroll => {}
+            PpuAddr => {}
             PpuData => { /* Writing to PpuData already stored the value to memory. */ }
         }
     }
