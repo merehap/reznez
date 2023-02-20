@@ -465,7 +465,7 @@ impl Ppu {
             (PpuAddr, Write) => self.write_ppu_address(mem, value),
             // 0x2007
             (PpuData, Read) => self.read_ppu_data(mem),
-            (PpuData, Write) => self.write_ppu_data(mem, value),
+            (PpuData, Write) => self.write_ppu_data(mem),
         }
 
         request_nmi
@@ -550,8 +550,7 @@ impl Ppu {
     }
 
     // Write 0x2007
-    fn write_ppu_data(&mut self, mem: &mut PpuMemory, value: u8) {
-        mem.write(mem.regs().current_address, value);
+    fn write_ppu_data(&mut self, mem: &mut PpuMemory) {
         let increment = mem.regs().current_address_increment();
         mem.regs_mut().current_address.advance(increment);
     }

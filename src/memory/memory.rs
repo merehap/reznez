@@ -96,6 +96,7 @@ impl<'a> CpuMemory<'a> {
             &mut self.memory.ports,
             &mut self.memory.ppu_registers,
             &mut self.memory.apu_registers,
+            &mut self.memory.ppu_internal_ram,
             address,
             value,
         );

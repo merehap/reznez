@@ -81,6 +81,7 @@ pub trait Mapper {
         ports: &mut Ports,
         ppu_registers: &mut PpuRegisters,
         apu_registers: &mut ApuRegisters,
+        ppu_internal_ram: &mut PpuInternalRam,
         address: CpuAddress,
         value: u8,
     ) {
@@ -95,7 +96,10 @@ pub trait Mapper {
                 0x2004 => ppu_registers.write(RegisterType::OamData, value),
                 0x2005 => ppu_registers.write(RegisterType::Scroll, value),
                 0x2006 => ppu_registers.write(RegisterType::PpuAddr, value),
-                0x2007 => ppu_registers.write(RegisterType::PpuData, value),
+                0x2007 => {
+                    self.ppu_write(ppu_internal_ram, ppu_registers.current_address(), value);
+                    ppu_registers.write(RegisterType::PpuData, value);
+                }
                 _ => unreachable!(),
             }
             0x4000          => apu_registers.pulse_1.write_control_byte(value),
