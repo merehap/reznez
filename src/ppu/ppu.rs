@@ -1,5 +1,5 @@
 use crate::memory::memory::PpuMemory;
-use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
+use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::clock::Clock;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
@@ -32,9 +32,6 @@ pub struct Ppu {
 
     clock: Clock,
 
-    current_address: PpuAddress,
-    next_address: PpuAddress,
-
     pub pending_data: u8,
 
     write_toggle: WriteToggle,
@@ -66,9 +63,6 @@ impl Ppu {
 
             clock: Clock::new(),
 
-            current_address: PpuAddress::ZERO,
-            next_address: PpuAddress::ZERO,
-
             pending_data: 0,
 
             write_toggle: WriteToggle::FirstByte,
@@ -97,22 +91,6 @@ impl Ppu {
         &self.clock
     }
 
-    pub fn current_address(&self) -> PpuAddress {
-        self.current_address
-    }
-
-    pub fn active_name_table_quadrant(&self) -> NameTableQuadrant {
-        self.next_address.name_table_quadrant()
-    }
-
-    pub fn x_scroll(&self) -> XScroll {
-        self.next_address.x_scroll()
-    }
-
-    pub fn y_scroll(&self) -> YScroll {
-        self.next_address.y_scroll()
-    }
-
     pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) -> StepResult {
         if self.clock.cycle() == 1 {
             mem.regs_mut().maybe_decay_latch();
@@ -132,7 +110,6 @@ impl Ppu {
             self.execute_cycle_action(mem, frame, cycle_action);
         }
 
-
         let is_last_cycle_of_frame = self.clock.is_last_cycle_of_frame();
         self.clock.tick(mem.regs().rendering_enabled());
         let should_generate_nmi = self.nmi_requested && mem.regs().can_generate_nmi();
@@ -149,10 +126,10 @@ impl Ppu {
         let background_table_side = mem.regs().background_table_side();
         let sprite_table_side = mem.regs().sprite_table_side();
 
-        let tile_column = self.current_address.x_scroll().coarse();
-        let tile_row = self.current_address.y_scroll().coarse();
-        let row_in_tile = self.current_address.y_scroll().fine();
-        let name_table_quadrant = self.current_address.name_table_quadrant();
+        let tile_column = mem.regs().current_address.x_scroll().coarse();
+        let tile_row = mem.regs().current_address.y_scroll().coarse();
+        let row_in_tile = mem.regs().current_address.y_scroll().fine();
+        let name_table_quadrant = mem.regs().current_address.name_table_quadrant();
 
         let background_enabled = mem.regs().background_enabled();
         let sprites_enabled = mem.regs().sprites_enabled();
@@ -188,16 +165,17 @@ impl Ppu {
 
             GotoNextTileColumn => {
                 if !rendering_enabled { return; }
-                self.current_address.increment_coarse_x_scroll();
+                mem.regs_mut().current_address.increment_coarse_x_scroll();
             }
             GotoNextPixelRow => {
                 if !rendering_enabled { return; }
-                self.current_address.increment_fine_y_scroll();
+                mem.regs_mut().current_address.increment_fine_y_scroll();
             }
             ResetTileColumn => {
                 if !rendering_enabled { return; }
-                self.current_address.copy_x_scroll(self.next_address);
-                self.current_address.copy_horizontal_name_table_side(self.next_address);
+                let next_address = mem.regs().next_address;
+                mem.regs_mut().current_address.copy_x_scroll(next_address);
+                mem.regs_mut().current_address.copy_horizontal_name_table_side(next_address);
             }
             PrepareForNextTile => {
                 if !rendering_enabled { return; }
@@ -213,7 +191,7 @@ impl Ppu {
                         palette_table.universal_background_rgb(),
                     );
 
-                    let column_in_tile = self.current_address.x_scroll().fine();
+                    let column_in_tile = mem.regs_mut().current_address.x_scroll().fine();
                     let current_palette_table_index =
                         self.attribute_register.current_palette_table_index(column_in_tile);
                     let palette = palette_table.background_palette(current_palette_table_index);
@@ -434,11 +412,12 @@ impl Ppu {
             }
             SetInitialScrollOffsets => {
                 if !background_enabled { return; }
-                self.current_address = self.next_address;
+                mem.regs_mut().current_address = mem.regs().next_address;
             }
             SetInitialYScroll => {
                 if !background_enabled { return; }
-                self.current_address.copy_y_scroll(self.next_address);
+                let next_address = mem.regs().next_address;
+                mem.regs_mut().current_address.copy_y_scroll(next_address);
             }
 
             ClearFlags => {
@@ -465,7 +444,7 @@ impl Ppu {
         match (latch_access.register_type, latch_access.access_mode) {
             // 0x2000
             (Ctrl, Read) => unreachable!(),
-            (Ctrl, Write) => request_nmi = self.write_ctrl(mem.regs(), value),
+            (Ctrl, Write) => request_nmi = self.write_ctrl(mem.regs_mut(), value),
             // 0x2001
             (Mask, Read) => unreachable!(),
             (Mask, Write) => {}
@@ -480,7 +459,7 @@ impl Ppu {
             (OamData, Write) => self.write_oam_data(mem.regs_mut(), value),
             // 0x2005
             (Scroll, Read) => unreachable!(),
-            (Scroll, Write) => self.write_scroll_dimension(value),
+            (Scroll, Write) => self.write_scroll_dimension(mem.regs_mut(), value),
             // 0x2006
             (PpuAddr, Read) => unreachable!(),
             (PpuAddr, Write) => self.write_ppu_address(mem, value),
@@ -493,8 +472,8 @@ impl Ppu {
     }
 
     // Write 0x2000
-    fn write_ctrl(&mut self, regs: &PpuRegisters, value: u8) -> bool {
-        self.next_address.set_name_table_quadrant(NameTableQuadrant::from_last_two_bits(value));
+    fn write_ctrl(&mut self, regs: &mut PpuRegisters, value: u8) -> bool {
+        regs.next_address.set_name_table_quadrant(NameTableQuadrant::from_last_two_bits(value));
         // Potentially attempt to trigger the second (or higher) NMI of this frame.
         let request_nmi = !self.nmi_was_enabled_last_cycle;
         self.nmi_was_enabled_last_cycle = regs.nmi_enabled();
@@ -521,10 +500,10 @@ impl Ppu {
     }
 
     // Write 0x2005
-    fn write_scroll_dimension(&mut self, dimension: u8) {
+    fn write_scroll_dimension(&mut self, regs: &mut PpuRegisters, dimension: u8) {
         match self.write_toggle {
-            WriteToggle::FirstByte => self.next_address.set_x_scroll(dimension),
-            WriteToggle::SecondByte => self.next_address.set_y_scroll(dimension),
+            WriteToggle::FirstByte => regs.next_address.set_x_scroll(dimension),
+            WriteToggle::SecondByte => regs.next_address.set_y_scroll(dimension),
         }
 
         self.write_toggle.toggle();
@@ -533,20 +512,20 @@ impl Ppu {
     // Write 0x2006
     fn write_ppu_address(&mut self, mem: &mut PpuMemory, value: u8) {
         match self.write_toggle {
-            WriteToggle::FirstByte => self.next_address.set_high_byte(value),
+            WriteToggle::FirstByte => mem.regs_mut().next_address.set_high_byte(value),
             WriteToggle::SecondByte => {
-                self.next_address.set_low_byte(value);
-                self.current_address = self.next_address;
+                mem.regs_mut().next_address.set_low_byte(value);
+                mem.regs_mut().current_address = mem.regs().next_address;
             }
         }
 
         self.write_toggle.toggle();
 
-        let is_palette_data = self.current_address >= PpuAddress::PALETTE_TABLE_START;
+        let is_palette_data = mem.regs().current_address >= PpuAddress::PALETTE_TABLE_START;
         // When reading palette data only, read the current data pointed to
         // by self.current_address, not what was previously pointed to.
         let value = if is_palette_data {
-            mem.read(self.current_address)
+            mem.read(mem.regs().current_address)
         } else {
             self.pending_data
         };
@@ -555,14 +534,15 @@ impl Ppu {
 
     // Read 0x2007
     fn read_ppu_data(&mut self, mem: &mut PpuMemory) {
-        self.pending_data = mem.read(self.current_address.to_pending_data_source());
-        self.current_address.advance(mem.regs().current_address_increment());
+        self.pending_data = mem.read(mem.regs().current_address.to_pending_data_source());
+        let increment = mem.regs().current_address_increment();
+        mem.regs_mut().current_address.advance(increment);
 
-        let is_palette_data = self.current_address >= PpuAddress::PALETTE_TABLE_START;
+        let is_palette_data = mem.regs().current_address >= PpuAddress::PALETTE_TABLE_START;
         // When reading palette data only, read the current data pointed to
         // by self.current_address, not what was previously pointed to.
         let value = if is_palette_data {
-            mem.read(self.current_address)
+            mem.read(mem.regs().current_address)
         } else {
             self.pending_data
         };
@@ -571,8 +551,9 @@ impl Ppu {
 
     // Write 0x2007
     fn write_ppu_data(&mut self, mem: &mut PpuMemory, value: u8) {
-        mem.write(self.current_address, value);
-        self.current_address.advance(mem.regs().current_address_increment());
+        mem.write(mem.regs().current_address, value);
+        let increment = mem.regs().current_address_increment();
+        mem.regs_mut().current_address.advance(increment);
     }
 }
 
@@ -636,37 +617,38 @@ mod tests {
         let mut mem = memory::test_data::memory();
         let mut frame = Frame::new();
 
-        ppu.next_address = PpuAddress::from_u16(0b0111_1111_1111_1111);
+        mem.as_ppu_memory().regs_mut().next_address = PpuAddress::from_u16(0b0111_1111_1111_1111);
 
         let high_half = 0b1110_1100;
         mem.as_cpu_memory().write(CPU_PPU_ADDR, high_half);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(ppu.write_toggle, WriteToggle::SecondByte);
-        assert_eq!(ppu.current_address, PPU_ZERO);
+        assert_eq!(mem.ppu_regs().current_address, PPU_ZERO);
         assert_eq!(
-            ppu.next_address,
+            mem.ppu_regs().next_address,
             PpuAddress::from_u16(0b0010_1100_1111_1111)
         );
-        assert_eq!(ppu.next_address.x_scroll().to_u8(), 0b1111_1000);
-        assert_eq!(ppu.next_address.y_scroll().to_u8(), 0b0011_1010);
+        assert_eq!(mem.ppu_regs().next_address.x_scroll().to_u8(), 0b1111_1000);
+        assert_eq!(mem.ppu_regs().next_address.y_scroll().to_u8(), 0b0011_1010);
 
-        println!("PPUData: {}", ppu.current_address);
+        println!("PPUData: {}", mem.ppu_regs().current_address);
 
         let low_half = 0b1010_1010;
         mem.as_cpu_memory().write(CPU_PPU_ADDR, low_half);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
-        println!("PPUData: {}", ppu.current_address);
+        println!("PPUData: {}", mem.ppu_regs().current_address);
         assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(
-            ppu.next_address,
+            mem.ppu_regs().next_address,
             PpuAddress::from_u16(0b0010_1100_1010_1010)
         );
         assert_eq!(
-            ppu.current_address,
+            mem.ppu_regs().current_address,
             PpuAddress::from_u16(0b0010_1100_1010_1010)
         );
 
-        mem.as_ppu_memory().write(ppu.current_address, 184);
+        let current_address = mem.ppu_regs().current_address;
+        mem.as_ppu_memory().write(current_address, 184);
         let value = mem.as_cpu_memory().read(CPU_PPU_DATA).unwrap();
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(value, 0);
@@ -683,53 +665,53 @@ mod tests {
         let mut mem = memory::test_data::memory();
         let mut frame = Frame::new();
 
-        ppu.next_address = PpuAddress::from_u16(0b0111_1111_1111_1111);
+        mem.as_ppu_memory().regs_mut().next_address = PpuAddress::from_u16(0b0111_1111_1111_1111);
 
         mem.as_cpu_memory().write(CPU_CTRL, 0b1111_1101);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(
-            ppu.next_address,
+            mem.ppu_regs().next_address,
             PpuAddress::from_u16(0b0111_0111_1111_1111)
         );
-        assert_eq!(ppu.current_address, PPU_ZERO);
-        assert_eq!(ppu.next_address.x_scroll().to_u8(), 0b1111_1000);
-        assert_eq!(ppu.next_address.y_scroll().to_u8(), 0b1111_1011);
+        assert_eq!(mem.ppu_regs().current_address, PPU_ZERO);
+        assert_eq!(mem.ppu_regs().next_address.x_scroll().to_u8(), 0b1111_1000);
+        assert_eq!(mem.ppu_regs().next_address.y_scroll().to_u8(), 0b1111_1011);
 
         let x_scroll = 0b1100_1100;
         mem.as_cpu_memory().write(CPU_SCROLL, x_scroll);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(ppu.write_toggle, WriteToggle::SecondByte);
         assert_eq!(
-            ppu.next_address,
+            mem.ppu_regs().next_address,
             PpuAddress::from_u16(0b0111_0111_1111_1001)
         );
-        assert_eq!(ppu.current_address, PPU_ZERO);
-        assert_eq!(ppu.next_address.x_scroll().to_u8(), x_scroll);
-        assert_eq!(ppu.next_address.y_scroll().to_u8(), 0b1111_1011);
+        assert_eq!(mem.ppu_regs().current_address, PPU_ZERO);
+        assert_eq!(mem.ppu_regs().next_address.x_scroll().to_u8(), x_scroll);
+        assert_eq!(mem.ppu_regs().next_address.y_scroll().to_u8(), 0b1111_1011);
 
         let y_scroll = 0b1010_1010;
         mem.as_cpu_memory().write(CPU_SCROLL, y_scroll);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(
-            ppu.next_address,
+            mem.ppu_regs().next_address,
             PpuAddress::from_u16(0b0010_0110_1011_1001)
         );
-        assert_eq!(ppu.current_address, PPU_ZERO);
-        assert_eq!(ppu.next_address.x_scroll().to_u8(), x_scroll);
-        assert_eq!(ppu.next_address.y_scroll().to_u8(), y_scroll);
+        assert_eq!(mem.ppu_regs().current_address, PPU_ZERO);
+        assert_eq!(mem.ppu_regs().next_address.x_scroll().to_u8(), x_scroll);
+        assert_eq!(mem.ppu_regs().next_address.y_scroll().to_u8(), y_scroll);
 
         mem.as_cpu_memory().write(CPU_CTRL, 0b0000_0010);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(
-            ppu.next_address,
+            mem.ppu_regs().next_address,
             PpuAddress::from_u16(0b0010_1010_1011_1001)
         );
-        assert_eq!(ppu.current_address, PPU_ZERO);
-        assert_eq!(ppu.next_address.x_scroll().to_u8(), x_scroll);
-        assert_eq!(ppu.next_address.y_scroll().to_u8(), y_scroll);
+        assert_eq!(mem.ppu_regs().current_address, PPU_ZERO);
+        assert_eq!(mem.ppu_regs().next_address.x_scroll().to_u8(), x_scroll);
+        assert_eq!(mem.ppu_regs().next_address.y_scroll().to_u8(), y_scroll);
     }
 
     #[test]
@@ -738,42 +720,42 @@ mod tests {
         let mut mem = memory::test_data::memory();
         let mut frame = Frame::new();
 
-        ppu.next_address = PpuAddress::from_u16(0b0111_1111_1111_1111);
+        mem.as_ppu_memory().regs_mut().next_address = PpuAddress::from_u16(0b0111_1111_1111_1111);
 
         let high_half = 0b1110_1101;
         mem.as_cpu_memory().write(CPU_PPU_ADDR, high_half);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(ppu.write_toggle, WriteToggle::SecondByte);
         assert_eq!(
-            ppu.next_address,
+            mem.ppu_regs().next_address,
             PpuAddress::from_u16(0b0010_1101_1111_1111)
         );
-        assert_eq!(ppu.current_address, PPU_ZERO);
+        assert_eq!(mem.ppu_regs().current_address, PPU_ZERO);
 
         mem.as_cpu_memory().write(CPU_CTRL, 0b1111_1100);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(ppu.write_toggle, WriteToggle::SecondByte);
         assert_eq!(
-            ppu.next_address,
+            mem.ppu_regs().next_address,
             PpuAddress::from_u16(0b0010_0001_1111_1111)
         );
-        assert_eq!(ppu.current_address, PPU_ZERO);
+        assert_eq!(mem.ppu_regs().current_address, PPU_ZERO);
 
         let low_half = 0b1010_1010;
         mem.as_cpu_memory().write(CPU_PPU_ADDR, low_half);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(
-            ppu.next_address,
+            mem.ppu_regs().next_address,
             PpuAddress::from_u16(0b0010_0001_1010_1010)
         );
         assert_eq!(
-            ppu.current_address,
+            mem.ppu_regs().current_address,
             PpuAddress::from_u16(0b0010_0001_1010_1010),
             "Bad VRAM (not temp)"
         );
-        assert_eq!(ppu.next_address.x_scroll().to_u8(), 0b0101_0000);
-        assert_eq!(ppu.next_address.y_scroll().to_u8(), 0b0110_1010);
+        assert_eq!(mem.ppu_regs().next_address.x_scroll().to_u8(), 0b0101_0000);
+        assert_eq!(mem.ppu_regs().next_address.y_scroll().to_u8(), 0b0110_1010);
     }
 
     #[test]
@@ -782,12 +764,12 @@ mod tests {
         let mut mem = memory::test_data::memory();
         let mut frame = Frame::new();
 
-        ppu.next_address = PpuAddress::from_u16(0b0000_1111_1110_0000);
+        mem.as_ppu_memory().regs_mut().next_address = PpuAddress::from_u16(0b0000_1111_1110_0000);
 
         mem.as_cpu_memory().write(CPU_CTRL, 0b1111_1101);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(
-            ppu.next_address,
+            mem.ppu_regs().next_address,
             PpuAddress::from_u16(0b0000_0111_1110_0000)
         );
 
@@ -796,26 +778,26 @@ mod tests {
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(ppu.write_toggle, WriteToggle::SecondByte);
         assert_eq!(
-            ppu.next_address,
+            mem.ppu_regs().next_address,
             PpuAddress::from_u16(0b0000_0111_1111_1111)
         );
-        assert_eq!(ppu.current_address, PPU_ZERO);
-        assert_eq!(ppu.next_address.x_scroll().to_u8(), x_scroll);
-        assert_eq!(ppu.next_address.y_scroll().to_u8(), 0b1111_1000);
+        assert_eq!(mem.ppu_regs().current_address, PPU_ZERO);
+        assert_eq!(mem.ppu_regs().next_address.x_scroll().to_u8(), x_scroll);
+        assert_eq!(mem.ppu_regs().next_address.y_scroll().to_u8(), 0b1111_1000);
 
         let low_half = 0b1010_1010;
         mem.as_cpu_memory().write(CPU_PPU_ADDR, low_half);
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
         assert_eq!(
-            ppu.next_address,
+            mem.ppu_regs().next_address,
             PpuAddress::from_u16(0b0000_0111_1010_1010)
         );
         assert_eq!(
-            ppu.current_address,
+            mem.ppu_regs().current_address,
             PpuAddress::from_u16(0b0000_0111_1010_1010)
         );
-        assert_eq!(ppu.next_address.x_scroll().to_u8(), 0b0101_0111);
-        assert_eq!(ppu.next_address.y_scroll().to_u8(), 0b1110_1000);
+        assert_eq!(mem.ppu_regs().next_address.x_scroll().to_u8(), 0b0101_0111);
+        assert_eq!(mem.ppu_regs().next_address.y_scroll().to_u8(), 0b1110_1000);
     }
 }

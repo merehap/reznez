@@ -503,10 +503,10 @@ impl Renderer for StatusRenderer {
                     ui.end_row();
                     */
                     ui.label("X Scroll");
-                    ui.label(format!("{}", nes.ppu().x_scroll().to_u8()));
+                    ui.label(format!("{}", ppu_regs.x_scroll().to_u8()));
                     ui.end_row();
                     ui.label("Y Scroll");
-                    ui.label(format!("{}", nes.ppu().y_scroll().to_u8()));
+                    ui.label(format!("{}", ppu_regs.y_scroll().to_u8()));
                     ui.end_row();
                     ui.label("NMI Enabled");
                     ui.label(format!("{}", ppu_regs.nmi_enabled()));
@@ -518,7 +518,7 @@ impl Renderer for StatusRenderer {
                     ui.label(format!("{:?}", ppu_regs.base_name_table_quadrant()));
                     ui.end_row();
                     ui.label("Active Name Table");
-                    ui.label(format!("{:?}", nes.ppu().active_name_table_quadrant()));
+                    ui.label(format!("{:?}", nes.memory().ppu_regs().active_name_table_quadrant()));
                     ui.end_row();
                     ui.label("Background");
                     ui.label(format!(
@@ -658,8 +658,8 @@ impl Renderer for NameTableRenderer {
 
     #[rustfmt::skip]
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
-        let x = usize::from(world.nes.ppu().x_scroll().to_u8());
-        let y = usize::from(world.nes.ppu().y_scroll().to_u8());
+        let x = usize::from(world.nes.memory().ppu_regs().x_scroll().to_u8());
+        let y = usize::from(world.nes.memory().ppu_regs().y_scroll().to_u8());
         let mem = world
             .nes
             .memory_mut()

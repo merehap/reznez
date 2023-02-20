@@ -1,3 +1,4 @@
+use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::register::ppu_register_latch::PpuRegisterLatch;
@@ -19,6 +20,9 @@ pub struct PpuRegisters {
     pub(in crate::ppu) oam_data: u8,
     pub(in crate::ppu) ppu_data: PpuData,
 
+    pub(in crate::ppu) current_address: PpuAddress,
+    pub(in crate::ppu) next_address: PpuAddress,
+
     latch: PpuRegisterLatch,
     latch_access: Option<LatchAccess>,
 }
@@ -32,6 +36,9 @@ impl PpuRegisters {
             oam_addr: 0,
             oam_data: 0,
             ppu_data: PpuData { value: 0, is_palette_data: false },
+
+            current_address: PpuAddress::ZERO,
+            next_address: PpuAddress::ZERO,
 
             latch: PpuRegisterLatch::new(),
             latch_access: None,
@@ -68,6 +75,22 @@ impl PpuRegisters {
 
     pub fn sprites_enabled(&self) -> bool {
         self.mask.sprites_enabled
+    }
+
+    pub fn current_address(&self) -> PpuAddress {
+        self.current_address
+    }
+
+    pub fn active_name_table_quadrant(&self) -> NameTableQuadrant {
+        self.next_address.name_table_quadrant()
+    }
+
+    pub fn x_scroll(&self) -> XScroll {
+        self.next_address.x_scroll()
+    }
+
+    pub fn y_scroll(&self) -> YScroll {
+        self.next_address.y_scroll()
     }
 
     pub(in crate::ppu) fn start_vblank(&mut self) {
