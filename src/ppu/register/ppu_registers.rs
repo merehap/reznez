@@ -19,6 +19,7 @@ pub struct PpuRegisters {
     pub(in crate::ppu) oam_addr: u8,
     pub(in crate::ppu) oam_data: u8,
     pub(in crate::ppu) ppu_data: PpuData,
+    pub(in crate::ppu) pending_ppu_data: u8,
 
     pub(in crate::ppu) current_address: PpuAddress,
     pub(in crate::ppu) next_address: PpuAddress,
@@ -36,6 +37,7 @@ impl PpuRegisters {
             oam_addr: 0,
             oam_data: 0,
             ppu_data: PpuData { value: 0, is_palette_data: false },
+            pending_ppu_data: 0,
 
             current_address: PpuAddress::ZERO,
             next_address: PpuAddress::ZERO,

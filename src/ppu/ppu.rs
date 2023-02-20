@@ -32,8 +32,6 @@ pub struct Ppu {
 
     clock: Clock,
 
-    pub pending_data: u8,
-
     write_toggle: WriteToggle,
 
     suppress_vblank_active: bool,
@@ -62,8 +60,6 @@ impl Ppu {
             clear_oam: false,
 
             clock: Clock::new(),
-
-            pending_data: 0,
 
             write_toggle: WriteToggle::FirstByte,
 
@@ -527,14 +523,14 @@ impl Ppu {
         let value = if is_palette_data {
             mem.read(mem.regs().current_address)
         } else {
-            self.pending_data
+            mem.regs().pending_ppu_data
         };
         mem.regs_mut().ppu_data = PpuData { value, is_palette_data };
     }
 
     // Read 0x2007
     fn read_ppu_data(&mut self, mem: &mut PpuMemory) {
-        self.pending_data = mem.read(mem.regs().current_address.to_pending_data_source());
+        mem.regs_mut().pending_ppu_data = mem.read(mem.regs().current_address.to_pending_data_source());
         let increment = mem.regs().current_address_increment();
         mem.regs_mut().current_address.advance(increment);
 
@@ -544,7 +540,7 @@ impl Ppu {
         let value = if is_palette_data {
             mem.read(mem.regs().current_address)
         } else {
-            self.pending_data
+            mem.regs().pending_ppu_data
         };
         mem.regs_mut().ppu_data = PpuData { value, is_palette_data };
     }
@@ -651,11 +647,11 @@ mod tests {
         let value = mem.as_cpu_memory().read(CPU_PPU_DATA).unwrap();
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(value, 0);
-        assert_eq!(ppu.pending_data, 184);
+        assert_eq!(mem.ppu_regs().pending_ppu_data, 184);
         let value = mem.as_cpu_memory().read(CPU_PPU_DATA).unwrap();
         ppu.step(&mut mem.as_ppu_memory(), &mut frame);
         assert_eq!(value, 184);
-        assert_eq!(ppu.pending_data, 0);
+        assert_eq!(mem.ppu_regs().pending_ppu_data, 0);
     }
 
     #[test]
