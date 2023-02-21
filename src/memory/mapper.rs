@@ -42,6 +42,7 @@ pub trait Mapper {
     fn cpu_read(
         &self,
         cpu_internal_ram: &CpuInternalRam,
+        ppu_internal_ram: &PpuInternalRam,
         ports: &mut Ports,
         ppu_registers: &mut PpuRegisters,
         apu_registers: &mut ApuRegisters,
@@ -58,7 +59,10 @@ pub trait Mapper {
                 0x2004 => ppu_registers.read(RegisterType::OamData),
                 0x2005 => ppu_registers.read(RegisterType::Scroll),
                 0x2006 => ppu_registers.read(RegisterType::PpuAddr),
-                0x2007 => ppu_registers.read(RegisterType::PpuData),
+                0x2007 => {
+                    ppu_registers.update_ppu_data(|ppu_address| self.ppu_read(ppu_internal_ram, ppu_address));
+                    ppu_registers.read(RegisterType::PpuData)
+                }
                 _ => unreachable!(),
             }),
             0x4000..=0x4013 => { /* APU registers are write-only. */ None }
@@ -78,10 +82,10 @@ pub trait Mapper {
     fn cpu_write(
         &mut self,
         cpu_internal_ram: &mut CpuInternalRam,
+        ppu_internal_ram: &mut PpuInternalRam,
         ports: &mut Ports,
         ppu_registers: &mut PpuRegisters,
         apu_registers: &mut ApuRegisters,
-        ppu_internal_ram: &mut PpuInternalRam,
         address: CpuAddress,
         value: u8,
     ) {

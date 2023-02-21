@@ -82,6 +82,7 @@ impl<'a> CpuMemory<'a> {
     pub fn read(&mut self, address: CpuAddress) -> Option<u8> {
         self.memory.mapper.cpu_read(
             &self.memory.cpu_internal_ram,
+            &self.memory.ppu_internal_ram,
             &mut self.memory.ports,
             &mut self.memory.ppu_registers,
             &mut self.memory.apu_registers,
@@ -93,10 +94,10 @@ impl<'a> CpuMemory<'a> {
     pub fn write(&mut self, address: CpuAddress, value: u8) {
         self.memory.mapper.cpu_write(
             &mut self.memory.cpu_internal_ram,
+            &mut self.memory.ppu_internal_ram,
             &mut self.memory.ports,
             &mut self.memory.ppu_registers,
             &mut self.memory.apu_registers,
-            &mut self.memory.ppu_internal_ram,
             address,
             value,
         );

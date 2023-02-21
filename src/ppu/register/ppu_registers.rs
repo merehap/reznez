@@ -131,6 +131,28 @@ impl PpuRegisters {
         self.latch_access.take()
     }
 
+    pub fn update_ppu_data(&mut self, read: impl Fn(PpuAddress) -> u8) {
+        let is_palette_data = self.current_address >= PpuAddress::PALETTE_TABLE_START;
+        // When reading palette data only, read the current data pointed to
+        // by self.current_address, not what was previously pointed to.
+        if is_palette_data {
+            self.ppu_data = PpuData {
+                value: read(self.current_address),
+                is_palette_data
+            };
+            self.pending_ppu_data = read(self.current_address.to_pending_data_source());
+        } else {
+            self.ppu_data = PpuData {
+                value: self.pending_ppu_data,
+                is_palette_data
+            };
+            self.pending_ppu_data = read(self.current_address);
+        };
+
+        let increment = self.current_address_increment();
+        self.current_address.advance(increment);
+    }
+
     pub fn rendering_enabled(&self) -> bool {
         self.mask.sprites_enabled || self.mask.background_enabled
     }
@@ -180,7 +202,7 @@ impl PpuRegisters {
             OamData => self.oam_data = register_value,
             Scroll => {}
             PpuAddr => {}
-            PpuData => { /* Writing to PpuData already stored the value to memory. */ }
+            PpuData => self.current_address.advance(self.current_address_increment()),
         }
     }
 }

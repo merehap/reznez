@@ -10,7 +10,6 @@ use crate::ppu::pattern_table::PatternIndex;
 use crate::ppu::pixel_index::{PixelIndex, PixelRow};
 use crate::ppu::register::ppu_registers::*;
 use crate::ppu::register::register_type::RegisterType;
-use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::register::registers::attribute_register::AttributeRegister;
 use crate::ppu::register::registers::pattern_register::PatternRegister;
 use crate::ppu::render::frame::Frame;
@@ -460,8 +459,8 @@ impl Ppu {
             (PpuAddr, Read) => unreachable!(),
             (PpuAddr, Write) => self.write_ppu_address(mem, value),
             // 0x2007
-            (PpuData, Read) => self.read_ppu_data(mem),
-            (PpuData, Write) => self.write_ppu_data(mem),
+            (PpuData, Read) => {},
+            (PpuData, Write) => {},
         }
 
         request_nmi
@@ -516,39 +515,6 @@ impl Ppu {
         }
 
         self.write_toggle.toggle();
-
-        let is_palette_data = mem.regs().current_address >= PpuAddress::PALETTE_TABLE_START;
-        // When reading palette data only, read the current data pointed to
-        // by self.current_address, not what was previously pointed to.
-        let value = if is_palette_data {
-            mem.read(mem.regs().current_address)
-        } else {
-            mem.regs().pending_ppu_data
-        };
-        mem.regs_mut().ppu_data = PpuData { value, is_palette_data };
-    }
-
-    // Read 0x2007
-    fn read_ppu_data(&mut self, mem: &mut PpuMemory) {
-        mem.regs_mut().pending_ppu_data = mem.read(mem.regs().current_address.to_pending_data_source());
-        let increment = mem.regs().current_address_increment();
-        mem.regs_mut().current_address.advance(increment);
-
-        let is_palette_data = mem.regs().current_address >= PpuAddress::PALETTE_TABLE_START;
-        // When reading palette data only, read the current data pointed to
-        // by self.current_address, not what was previously pointed to.
-        let value = if is_palette_data {
-            mem.read(mem.regs().current_address)
-        } else {
-            mem.regs().pending_ppu_data
-        };
-        mem.regs_mut().ppu_data = PpuData { value, is_palette_data };
-    }
-
-    // Write 0x2007
-    fn write_ppu_data(&mut self, mem: &mut PpuMemory) {
-        let increment = mem.regs().current_address_increment();
-        mem.regs_mut().current_address.advance(increment);
     }
 }
 
