@@ -51,17 +51,20 @@ pub trait Mapper {
         match address.to_raw() {
             0x0000..=0x07FF => Some(cpu_internal_ram[address.to_usize()]),
             0x0800..=0x1FFF => Some(cpu_internal_ram[address.to_usize() & 0x07FF]),
-            0x2000..=0x3FFF => Some(match address.to_raw() & 0x2007 {
-                0x2000 => ppu_registers.peek(RegisterType::Ctrl),
-                0x2001 => ppu_registers.peek(RegisterType::Mask),
-                0x2002 => ppu_registers.peek(RegisterType::Status),
-                0x2003 => ppu_registers.peek(RegisterType::OamAddr),
-                0x2004 => ppu_registers.peek(RegisterType::OamData),
-                0x2005 => ppu_registers.peek(RegisterType::Scroll),
-                0x2006 => ppu_registers.peek(RegisterType::PpuAddr),
-                0x2007 => todo!(),
-                _ => unreachable!(),
-            }),
+            0x2000..=0x3FFF => {
+                let peeker = |ppu_address| self.ppu_peek(ppu_internal_ram, ppu_address);
+                Some(match address.to_raw() & 0x2007 {
+                    0x2000 => ppu_registers.peek(RegisterType::Ctrl, peeker),
+                    0x2001 => ppu_registers.peek(RegisterType::Mask, peeker),
+                    0x2002 => ppu_registers.peek(RegisterType::Status, peeker),
+                    0x2003 => ppu_registers.peek(RegisterType::OamAddr, peeker),
+                    0x2004 => ppu_registers.peek(RegisterType::OamData, peeker),
+                    0x2005 => ppu_registers.peek(RegisterType::Scroll, peeker),
+                    0x2006 => ppu_registers.peek(RegisterType::PpuAddr, peeker),
+                    0x2007 => ppu_registers.peek(RegisterType::PpuAddr, peeker),
+                    _ => unreachable!(),
+                })
+            }
             0x4000..=0x4013 => { /* APU registers are write-only. */ None }
             0x4014          => { /* OAM DMA is write-only. TODO: Is open bus correct? */ None}
             0x4015          => Some(apu_registers.peek_status().to_u8()),
@@ -88,22 +91,20 @@ pub trait Mapper {
         match address.to_raw() {
             0x0000..=0x07FF => Some(cpu_internal_ram[address.to_usize()]),
             0x0800..=0x1FFF => Some(cpu_internal_ram[address.to_usize() & 0x07FF]),
-            0x2000..=0x3FFF => Some(match address.to_raw() & 0x2007 {
-                0x2000 => ppu_registers.read(RegisterType::Ctrl),
-                0x2001 => ppu_registers.read(RegisterType::Mask),
-                0x2002 => ppu_registers.read(RegisterType::Status),
-                0x2003 => ppu_registers.read(RegisterType::OamAddr),
-                0x2004 => ppu_registers.read(RegisterType::OamData),
-                0x2005 => ppu_registers.read(RegisterType::Scroll),
-                0x2006 => ppu_registers.read(RegisterType::PpuAddr),
-                0x2007 => {
-                    ppu_registers.update_ppu_data(|ppu_address| self.ppu_read(ppu_internal_ram, ppu_address, false));
-                    let result = ppu_registers.read(RegisterType::PpuData);
-                    self.process_current_ppu_address(ppu_registers.current_address());
-                    result
-                }
-                _ => unreachable!(),
-            }),
+            0x2000..=0x3FFF => {
+                let reader = |ppu_address| self.ppu_read(ppu_internal_ram, ppu_address, false);
+                Some(match address.to_raw() & 0x2007 {
+                    0x2000 => ppu_registers.read(RegisterType::Ctrl, reader),
+                    0x2001 => ppu_registers.read(RegisterType::Mask, reader),
+                    0x2002 => ppu_registers.read(RegisterType::Status, reader),
+                    0x2003 => ppu_registers.read(RegisterType::OamAddr, reader),
+                    0x2004 => ppu_registers.read(RegisterType::OamData, reader),
+                    0x2005 => ppu_registers.read(RegisterType::Scroll, reader),
+                    0x2006 => ppu_registers.read(RegisterType::PpuAddr, reader),
+                    0x2007 => ppu_registers.read(RegisterType::PpuData, reader),
+                    _ => unreachable!(),
+                })
+            }
             0x4000..=0x4013 => { /* APU registers are write-only. */ None }
             0x4014          => { /* OAM DMA is write-only. TODO: Is open bus correct? */ None}
             0x4015          => Some(apu_registers.read_status().to_u8()),

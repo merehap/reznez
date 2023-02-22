@@ -462,7 +462,7 @@ impl Ppu {
             (PpuAddr, Read) => unreachable!(),
             (PpuAddr, Write) => self.write_ppu_address(mem, value),
             // 0x2007
-            (PpuData, Read) => {},
+            (PpuData, Read) => self.read_ppu_data(mem),
             (PpuData, Write) => {},
         }
 
@@ -519,6 +519,10 @@ impl Ppu {
         }
 
         self.write_toggle.toggle();
+    }
+
+    fn read_ppu_data(&self, mem: &mut PpuMemory) {
+        mem.process_current_ppu_address(mem.regs().current_address);
     }
 }
 

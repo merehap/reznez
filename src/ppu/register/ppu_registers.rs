@@ -7,7 +7,6 @@ use crate::ppu::register::registers::ctrl;
 use crate::ppu::register::registers::ctrl::{AddressIncrement, Ctrl};
 use crate::ppu::register::registers::mask;
 use crate::ppu::register::registers::mask::Mask;
-use crate::ppu::register::registers::ppu_data::PpuData;
 use crate::ppu::register::registers::status::Status;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 
@@ -18,7 +17,6 @@ pub struct PpuRegisters {
     pub(in crate::ppu) status: Status,
     pub(in crate::ppu) oam_addr: u8,
     pub(in crate::ppu) oam_data: u8,
-    pub(in crate::ppu) ppu_data: PpuData,
     pub(in crate::ppu) pending_ppu_data: u8,
 
     pub(in crate::ppu) current_address: PpuAddress,
@@ -36,7 +34,6 @@ impl PpuRegisters {
             status: Status::new(),
             oam_addr: 0,
             oam_data: 0,
-            ppu_data: PpuData { value: 0, is_palette_data: false },
             pending_ppu_data: 0,
 
             current_address: PpuAddress::ZERO,
@@ -131,6 +128,7 @@ impl PpuRegisters {
         self.latch_access.take()
     }
 
+    /*
     pub fn update_ppu_data(&mut self, mut read: impl FnMut(PpuAddress) -> u8) {
         let is_palette_data = self.current_address >= PpuAddress::PALETTE_TABLE_START;
         // When reading palette data only, read the current data pointed to
@@ -140,12 +138,8 @@ impl PpuRegisters {
         } else {
             self.pending_ppu_data
         };
-        self.ppu_data = PpuData {value, is_palette_data};
-        self.pending_ppu_data = read(self.current_address.to_pending_data_source());
-
-        let increment = self.current_address_increment();
-        self.current_address.advance(increment);
     }
+    */
 
     pub fn rendering_enabled(&self) -> bool {
         self.mask.sprites_enabled || self.mask.background_enabled
@@ -155,18 +149,31 @@ impl PpuRegisters {
         self.status.vblank_active && self.ctrl.nmi_enabled
     }
 
-    pub fn peek(&self, register_type: RegisterType) -> u8 {
-        self.check(register_type)
+    pub fn peek(
+        &self,
+        register_type: RegisterType,
+        peek: impl FnMut(PpuAddress) -> u8
+    ) -> u8 {
+        self.check(register_type, peek)
             .unwrap_or(self.latch.value())
     }
 
-    pub fn read(&mut self, register_type: RegisterType) -> u8 {
+    pub fn read(
+        &mut self,
+        register_type: RegisterType,
+        mut read: impl FnMut(PpuAddress) -> u8,
+    ) -> u8 {
         // If a readable register is read from, update the latch.
-        if let Some(register_value) = self.check(register_type) {
+        if let Some(register_value) = self.check(register_type, &mut read) {
             self.latch_access =
                 Some(LatchAccess { register_type, access_mode: AccessMode::Read });
 
             self.latch.update_from_read(register_type, register_value);
+        }
+
+        if register_type == RegisterType::PpuData {
+            self.pending_ppu_data = read(self.current_address.to_pending_data_source());
+            self.current_address.advance(self.current_address_increment());
         }
 
         self.latch.value()
@@ -191,7 +198,11 @@ impl PpuRegisters {
         }
     }
 
-    fn check(&self, register_type: RegisterType) -> Option<u8> {
+    fn check(
+        &self,
+        register_type: RegisterType,
+        mut access: impl FnMut(PpuAddress) -> u8,
+    ) -> Option<u8> {
         use RegisterType::*;
         match register_type {
             // Write-only registers.
@@ -199,11 +210,15 @@ impl PpuRegisters {
             // Retain the previous latch values for the unused bits of Status.
             Status => Some(self.status.to_u8() | (self.latch.value() & 0b0001_1111)),
             OamData => Some(self.oam_data),
-            // Retain the previous latch values for the unused bits of palette data.
-            PpuData if self.ppu_data.is_palette_data => {
-                Some(self.ppu_data.value | (self.latch.value() & 0b1100_0000))
+            PpuData if self.current_address >= PpuAddress::PALETTE_TABLE_START => {
+                // When reading palette data only, read the current data pointed to
+                // by self.current_address, not what was previously pointed to.
+                let value = access(self.current_address);
+                // Retain the previous latch values for the unused bits of palette data.
+                let high_latch = self.latch.value() & 0b1100_0000;
+                Some(value | high_latch)
             }
-            PpuData => Some(self.ppu_data.value),
+            PpuData => Some(self.pending_ppu_data),
         }
     }
 }
