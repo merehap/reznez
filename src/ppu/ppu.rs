@@ -109,6 +109,7 @@ impl Ppu {
         self.clock.tick(mem.regs().rendering_enabled());
         let should_generate_nmi = self.nmi_requested && mem.regs().can_generate_nmi();
 
+        mem.process_end_of_ppu_cycle();
         StepResult { is_last_cycle_of_frame, should_generate_nmi }
     }
 
@@ -135,12 +136,12 @@ impl Ppu {
             GetPatternIndex => {
                 if !rendering_enabled { return; }
                 let address = PpuAddress::in_name_table(name_table_quadrant, tile_column, tile_row);
-                self.next_pattern_index = PatternIndex::new(mem.read(address));
+                self.next_pattern_index = PatternIndex::new(mem.read(address, true));
             }
             GetPaletteIndex => {
                 if !rendering_enabled { return; }
                 let address = PpuAddress::in_attribute_table(name_table_quadrant, tile_column, tile_row);
-                let attribute_byte = mem.read(address);
+                let attribute_byte = mem.read(address, true);
                 let palette_table_index =
                     PaletteTableIndex::from_attribute_byte(attribute_byte, tile_column, tile_row);
                 self.attribute_register.set_pending_palette_table_index(palette_table_index);
@@ -149,13 +150,13 @@ impl Ppu {
                 if !rendering_enabled { return; }
                 let address = PpuAddress::in_pattern_table(
                     background_table_side, self.next_pattern_index, row_in_tile, false);
-                self.pattern_register.set_pending_low_byte(mem.read(address));
+                self.pattern_register.set_pending_low_byte(mem.read(address, true));
             }
             GetPatternHighByte => {
                 if !rendering_enabled { return; }
                 let address = PpuAddress::in_pattern_table(
                     background_table_side, self.next_pattern_index, row_in_tile, true);
-                self.pattern_register.set_pending_high_byte(mem.read(address));
+                self.pattern_register.set_pending_high_byte(mem.read(address, true));
             }
 
             GotoNextTileColumn => {
@@ -335,10 +336,12 @@ impl Ppu {
                     }
                 }
 
-                let pattern_low = mem.read(address);
-                if rendering_enabled && visible {
-                    self.oam_registers.registers[self.oam_register_index]
-                        .set_pattern_low(pattern_low);
+                if rendering_enabled {
+                    let pattern_low = mem.read(address, true);
+                    if visible {
+                        self.oam_registers.registers[self.oam_register_index]
+                            .set_pattern_low(pattern_low);
+                    }
                 }
             }
             GetSpritePatternHighByte => {
@@ -366,8 +369,8 @@ impl Ppu {
                     }
                 }
 
-                let pattern_high = mem.read(address);
                 if rendering_enabled {
+                    let pattern_high = mem.read(address, true);
                     if visible {
                         self.oam_registers.registers[self.oam_register_index]
                             .set_pattern_high(pattern_high);
@@ -511,6 +514,7 @@ impl Ppu {
             WriteToggle::SecondByte => {
                 mem.regs_mut().next_address.set_low_byte(value);
                 mem.regs_mut().current_address = mem.regs().next_address;
+                mem.process_current_ppu_address(mem.regs().current_address);
             }
         }
 
@@ -567,7 +571,7 @@ mod tests {
         assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
 
         for i in 0x0000..0xFFFF {
-            let value = ppu_mem.read(PpuAddress::from_u16(i));
+            let value = ppu_mem.read(PpuAddress::from_u16(i), false);
             assert_eq!(value, 0);
         }
     }

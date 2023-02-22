@@ -131,7 +131,7 @@ impl PpuRegisters {
         self.latch_access.take()
     }
 
-    pub fn update_ppu_data(&mut self, read: impl Fn(PpuAddress) -> u8) {
+    pub fn update_ppu_data(&mut self, mut read: impl FnMut(PpuAddress) -> u8) {
         let is_palette_data = self.current_address >= PpuAddress::PALETTE_TABLE_START;
         // When reading palette data only, read the current data pointed to
         // by self.current_address, not what was previously pointed to.

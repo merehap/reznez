@@ -32,6 +32,8 @@ pub trait Mapper {
 
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8);
 
+    // Most mappers don't care about PPU cycles.
+    fn process_end_of_ppu_cycle(&mut self) {}
     // Most mappers don't care about the current PPU address.
     fn process_current_ppu_address(&mut self, _address: PpuAddress) {}
     // Most mappers don't trigger IRQs.
@@ -40,7 +42,7 @@ pub trait Mapper {
     #[inline]
     #[rustfmt::skip]
     fn cpu_read(
-        &self,
+        &mut self,
         cpu_internal_ram: &CpuInternalRam,
         ppu_internal_ram: &PpuInternalRam,
         ports: &mut Ports,
@@ -60,8 +62,10 @@ pub trait Mapper {
                 0x2005 => ppu_registers.read(RegisterType::Scroll),
                 0x2006 => ppu_registers.read(RegisterType::PpuAddr),
                 0x2007 => {
-                    ppu_registers.update_ppu_data(|ppu_address| self.ppu_read(ppu_internal_ram, ppu_address));
-                    ppu_registers.read(RegisterType::PpuData)
+                    ppu_registers.update_ppu_data(|ppu_address| self.ppu_read(ppu_internal_ram, ppu_address, false));
+                    let result = ppu_registers.read(RegisterType::PpuData);
+                    self.process_current_ppu_address(ppu_registers.current_address());
+                    result
                 }
                 _ => unreachable!(),
             }),
@@ -103,6 +107,7 @@ pub trait Mapper {
                 0x2007 => {
                     self.ppu_write(ppu_internal_ram, ppu_registers.current_address(), value);
                     ppu_registers.write(RegisterType::PpuData, value);
+                    self.process_current_ppu_address(ppu_registers.current_address());
                 }
                 _ => unreachable!(),
             }
@@ -136,7 +141,16 @@ pub trait Mapper {
     }
 
     #[inline]
-    fn ppu_read(&self, ppu_internal_ram: &PpuInternalRam, address: PpuAddress) -> u8 {
+    fn ppu_read(
+        &mut self,
+        ppu_internal_ram: &PpuInternalRam,
+        address: PpuAddress,
+        rendering: bool,
+    ) -> u8 {
+        if rendering {
+            self.process_current_ppu_address(address);
+        }
+
         let palette_ram = &ppu_internal_ram.palette_ram;
         match address.to_u16() {
             0x0000..=0x1FFF => self.chr_memory().read(address),

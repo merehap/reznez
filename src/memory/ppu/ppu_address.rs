@@ -284,16 +284,16 @@ impl PpuAddress {
         usize::from(self.to_u16())
     }
 
+    pub fn to_scroll_u16(self) -> u16 {
+        self.address
+    }
+
     pub fn pattern_table_side(self) -> PatternTableSide {
-        if (self.fine_y_scroll() as u8) & 1 == 0 {
+        if self.address & 0b0001_0000_0000_0000 == 0 {
             PatternTableSide::Left
         } else {
             PatternTableSide::Right
         }
-    }
-
-    fn to_scroll_u16(self) -> u16 {
-        self.address
     }
 }
 

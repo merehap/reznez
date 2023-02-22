@@ -112,7 +112,7 @@ pub const IMPLICIT_ADDRESSING_STEPS: &'static [Step] = &[
 ];
 pub const IMMEDIATE_ADDRESSING_STEPS: &'static [Step] = &[
     // Read the NEXT op code, execute the CURRENT op code.
-    Read(From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
+    Read(From::ProgramCounterTarget, &[StartNextInstruction, ExecuteOpCode, IncrementProgramCounter]),
 ];
 pub const RELATIVE_ADDRESSING_STEPS: &'static [Step] = &[
     Read(From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),

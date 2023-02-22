@@ -60,6 +60,7 @@ pub struct Mapper4 {
     irq_counter: u8,
     force_reload_irq_counter: bool,
     irq_counter_reload_value: u8,
+    irq_counter_suppression_cycles: u8,
     pattern_table_side: PatternTableSide,
 
     prg_memory: PrgMemory,
@@ -77,6 +78,7 @@ impl Mapper4 {
             irq_counter: 0,
             force_reload_irq_counter: false,
             irq_counter_reload_value: 0,
+            irq_counter_suppression_cycles: 0,
             pattern_table_side: PatternTableSide::Left,
 
             prg_memory: PrgMemory::new(PRG_LAYOUT_R6_AT_8000.clone(), cartridge.prg_rom()),
@@ -142,12 +144,8 @@ impl Mapper4 {
     }
 
     fn reload_irq_counter(&mut self) {
+        // TODO: This line probably isn't useful despite what the wiki says.
         self.irq_counter = 0;
-        /*
-        self.irq_counter = 0;
-        // FIXME: This needs to be delayed until the next "rising edge of the PPU address".
-        self.irq_counter = self.irq_counter_reload_value;
-        */
         self.force_reload_irq_counter = true;
     }
 
@@ -179,11 +177,25 @@ impl Mapper for Mapper4 {
         }
     }
 
+    fn process_end_of_ppu_cycle(&mut self) {
+        if self.irq_counter_suppression_cycles > 0 {
+            self.irq_counter_suppression_cycles -= 1;
+        }
+    }
+
     fn process_current_ppu_address(&mut self, address: PpuAddress) {
+        if address.to_scroll_u16() >= 0x2000 {
+            return;
+        }
+
         let next_side = address.pattern_table_side();
         let should_tick_irq_counter =
             self.pattern_table_side == PatternTableSide::Left
-            && next_side == PatternTableSide::Right;
+            && next_side == PatternTableSide::Right
+            && self.irq_counter_suppression_cycles == 0;
+        if next_side == PatternTableSide::Right {
+            self.irq_counter_suppression_cycles = 16;
+        }
 
         if should_tick_irq_counter {
             if self.irq_counter == 0 || self.force_reload_irq_counter {

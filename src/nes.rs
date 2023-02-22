@@ -176,12 +176,6 @@ impl Nes {
             self.cpu.schedule_nmi();
         }
 
-        // FIXME: Current address should be accessible from within process_current_ppu_address.
-        let current_address = self.memory.ppu_regs().current_address();
-        self.memory
-            .mapper_mut()
-            .process_current_ppu_address(current_address);
-
         ppu_result
     }
 
