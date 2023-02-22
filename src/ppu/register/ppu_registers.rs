@@ -161,23 +161,14 @@ impl PpuRegisters {
         self.status.vblank_active && self.ctrl.nmi_enabled
     }
 
-    pub fn read(&mut self, register_type: RegisterType) -> u8 {
-        use RegisterType::*;
-        let register_value = match register_type {
-            // Write-only registers.
-            Ctrl | Mask | OamAddr | Scroll | PpuAddr => None,
-            // Retain the previous latch values for the unused bits of Status.
-            Status => Some(self.status.to_u8() | (self.latch.value() & 0b0001_1111)),
-            OamData => Some(self.oam_data),
-            // Retain the previous latch values for the unused bits of palette data.
-            PpuData if self.ppu_data.is_palette_data => {
-                Some(self.ppu_data.value | (self.latch.value() & 0b1100_0000))
-            }
-            PpuData => Some(self.ppu_data.value),
-        };
+    pub fn peek(&self, register_type: RegisterType) -> u8 {
+        self.check(register_type)
+            .unwrap_or(self.latch.value())
+    }
 
+    pub fn read(&mut self, register_type: RegisterType) -> u8 {
         // If a readable register is read from, update the latch.
-        if let Some(register_value) = register_value {
+        if let Some(register_value) = self.check(register_type) {
             self.latch_access =
                 Some(LatchAccess { register_type, access_mode: AccessMode::Read });
 
@@ -203,6 +194,22 @@ impl PpuRegisters {
             Scroll => {}
             PpuAddr => {}
             PpuData => self.current_address.advance(self.current_address_increment()),
+        }
+    }
+
+    fn check(&self, register_type: RegisterType) -> Option<u8> {
+        use RegisterType::*;
+        match register_type {
+            // Write-only registers.
+            Ctrl | Mask | OamAddr | Scroll | PpuAddr => None,
+            // Retain the previous latch values for the unused bits of Status.
+            Status => Some(self.status.to_u8() | (self.latch.value() & 0b0001_1111)),
+            OamData => Some(self.oam_data),
+            // Retain the previous latch values for the unused bits of palette data.
+            PpuData if self.ppu_data.is_palette_data => {
+                Some(self.ppu_data.value | (self.latch.value() & 0b1100_0000))
+            }
+            PpuData => Some(self.ppu_data.value),
         }
     }
 }

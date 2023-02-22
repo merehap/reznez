@@ -55,7 +55,7 @@ impl PrgMemory {
         self.bank_count() - 1
     }
 
-    pub fn read(&self, address: CpuAddress) -> Option<u8> {
+    pub fn peek(&self, address: CpuAddress) -> Option<u8> {
         match self.address_to_prg_index(address) {
             PrgMemoryIndex::None => None,
             PrgMemoryIndex::MappedMemory(index) => Some(self.raw_memory[index]),

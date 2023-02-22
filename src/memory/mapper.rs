@@ -39,6 +39,41 @@ pub trait Mapper {
     // Most mappers don't trigger IRQs.
     fn irq_pending(&self) -> bool { false }
 
+    fn cpu_peek(
+        &self,
+        cpu_internal_ram: &CpuInternalRam,
+        ppu_internal_ram: &PpuInternalRam,
+        ports: &Ports,
+        ppu_registers: &PpuRegisters,
+        apu_registers: &ApuRegisters,
+        address: CpuAddress,
+    ) -> Option<u8> {
+        match address.to_raw() {
+            0x0000..=0x07FF => Some(cpu_internal_ram[address.to_usize()]),
+            0x0800..=0x1FFF => Some(cpu_internal_ram[address.to_usize() & 0x07FF]),
+            0x2000..=0x3FFF => Some(match address.to_raw() & 0x2007 {
+                0x2000 => ppu_registers.peek(RegisterType::Ctrl),
+                0x2001 => ppu_registers.peek(RegisterType::Mask),
+                0x2002 => ppu_registers.peek(RegisterType::Status),
+                0x2003 => ppu_registers.peek(RegisterType::OamAddr),
+                0x2004 => ppu_registers.peek(RegisterType::OamData),
+                0x2005 => ppu_registers.peek(RegisterType::Scroll),
+                0x2006 => ppu_registers.peek(RegisterType::PpuAddr),
+                0x2007 => todo!(),
+                _ => unreachable!(),
+            }),
+            0x4000..=0x4013 => { /* APU registers are write-only. */ None }
+            0x4014          => { /* OAM DMA is write-only. TODO: Is open bus correct? */ None}
+            0x4015          => Some(apu_registers.peek_status().to_u8()),
+            // TODO: Open bus https://www.nesdev.org/wiki/Controller_reading
+            0x4016          => Some(ports.joypad1.borrow().peek_status() as u8),
+            0x4017          => Some(ports.joypad2.borrow().peek_status() as u8),
+            0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
+            0x4020..=0x5FFF => {/* TODO: Low registers. */ None},
+            0x6000..=0xFFFF => self.prg_memory().peek(address),
+        }
+    }
+
     #[inline]
     #[rustfmt::skip]
     fn cpu_read(
@@ -73,11 +108,11 @@ pub trait Mapper {
             0x4014          => { /* OAM DMA is write-only. TODO: Is open bus correct? */ None}
             0x4015          => Some(apu_registers.read_status().to_u8()),
             // TODO: Open bus https://www.nesdev.org/wiki/Controller_reading
-            0x4016          => Some(ports.joypad1.borrow_mut().next_status() as u8),
-            0x4017          => Some(ports.joypad2.borrow_mut().next_status() as u8),
+            0x4016          => Some(ports.joypad1.borrow_mut().read_status() as u8),
+            0x4017          => Some(ports.joypad2.borrow_mut().read_status() as u8),
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
             0x4020..=0x5FFF => {/* TODO: Low registers. */ None},
-            0x6000..=0xFFFF => self.prg_memory().read(address),
+            0x6000..=0xFFFF => self.prg_memory().peek(address),
         }
     }
 

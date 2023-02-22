@@ -22,19 +22,22 @@ impl ApuRegisters {
         self.step_mode
     }
 
-    pub fn read_status(&mut self) -> Status {
-        let frame_irq_pending = self.frame_irq_pending;
-        self.frame_irq_pending = false;
-
+    pub fn peek_status(&self) -> Status {
         Status {
             dmc_interrupt: self.dmc.irq_enabled,
-            frame_irq_pending,
+            frame_irq_pending: self.frame_irq_pending,
             dmc_active: self.dmc.active(),
             noise_active: self.noise.active(),
             triangle_active: self.triangle.active(),
             pulse_2_active: self.pulse_2.active(),
             pulse_1_active: self.pulse_1.active(),
         }
+    }
+
+    pub fn read_status(&mut self) -> Status {
+        let status = self.peek_status();
+        self.frame_irq_pending = false;
+        status
     }
 
     pub fn write_status_byte(&mut self, value: u8) {
