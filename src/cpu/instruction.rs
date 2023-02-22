@@ -79,8 +79,8 @@ impl Instruction {
         mem: &mut CpuMemory,
     ) -> Instruction {
         let template = INSTRUCTION_TEMPLATES[op_code as usize];
-        let low = mem.read(start_address.offset(1)).expect("Read open bus.");
-        let high = mem.read(start_address.offset(2)).expect("Read open bus.");
+        let low = mem.peek(start_address.offset(1)).expect("Read open bus.");
+        let high = mem.peek(start_address.offset(2)).expect("Read open bus.");
 
         let mut page_boundary_crossed = false;
 
@@ -126,23 +126,23 @@ impl Instruction {
                 let first = CpuAddress::from_low_high(low, high);
                 let second = CpuAddress::from_low_high(low.wrapping_add(1), high);
                 let address = CpuAddress::from_low_high(
-                    mem.read(first).expect("Read open bus."),
-                    mem.read(second).expect("Read open bus.")
+                    mem.peek(first).expect("Read open bus."),
+                    mem.peek(second).expect("Read open bus.")
                 );
                 Argument::Addr(address)
             }
             IzX => {
                 let low = low.wrapping_add(x_index);
                 let address = CpuAddress::from_low_high(
-                    mem.read(CpuAddress::zero_page(low)).expect("Read open bus."),
-                    mem.read(CpuAddress::zero_page(low.wrapping_add(1))).expect("Read open bus."),
+                    mem.peek(CpuAddress::zero_page(low)).expect("Read open bus."),
+                    mem.peek(CpuAddress::zero_page(low.wrapping_add(1))).expect("Read open bus."),
                 );
                 Argument::Addr(address)
             }
             IzY => {
                 let start_address = CpuAddress::from_low_high(
-                    mem.read(CpuAddress::zero_page(low)).expect("Read open bus."),
-                    mem.read(CpuAddress::zero_page(low.wrapping_add(1))).expect("Read open bus."),
+                    mem.peek(CpuAddress::zero_page(low)).expect("Read open bus."),
+                    mem.peek(CpuAddress::zero_page(low.wrapping_add(1))).expect("Read open bus."),
                 );
                 // TODO: Should this wrap around just the current page?
                 let address = start_address.advance(y_index);

@@ -79,6 +79,18 @@ pub struct CpuMemory<'a> {
 
 impl<'a> CpuMemory<'a> {
     #[inline]
+    pub fn peek(&self, address: CpuAddress) -> Option<u8> {
+        self.memory.mapper.cpu_peek(
+            &self.memory.cpu_internal_ram,
+            &self.memory.ppu_internal_ram,
+            &self.memory.ports,
+            &self.memory.ppu_registers,
+            &self.memory.apu_registers,
+            address,
+        )
+    }
+
+    #[inline]
     pub fn read(&mut self, address: CpuAddress) -> Option<u8> {
         self.memory.mapper.cpu_read(
             &self.memory.cpu_internal_ram,
