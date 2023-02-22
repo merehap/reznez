@@ -140,6 +140,20 @@ pub trait Mapper {
         }
     }
 
+    fn ppu_peek(
+        &self,
+        ppu_internal_ram: &PpuInternalRam,
+        address: PpuAddress,
+    ) -> u8 {
+        let palette_ram = &ppu_internal_ram.palette_ram;
+        match address.to_u16() {
+            0x0000..=0x1FFF => self.chr_memory().peek(address),
+            0x2000..=0x3EFF => self.peek_name_table_byte(ppu_internal_ram, address),
+            0x3F00..=0x3FFF => self.peek_palette_table_byte(palette_ram, address),
+            0x4000..=0xFFFF => unreachable!(),
+        }
+    }
+
     #[inline]
     fn ppu_read(
         &mut self,
@@ -151,13 +165,7 @@ pub trait Mapper {
             self.process_current_ppu_address(address);
         }
 
-        let palette_ram = &ppu_internal_ram.palette_ram;
-        match address.to_u16() {
-            0x0000..=0x1FFF => self.chr_memory().read(address),
-            0x2000..=0x3EFF => self.read_name_table_byte(ppu_internal_ram, address),
-            0x3F00..=0x3FFF => self.read_palette_table_byte(palette_ram, address),
-            0x4000..=0xFFFF => unreachable!(),
-        }
+        self.ppu_peek(ppu_internal_ram, address)
     }
 
     #[inline]
@@ -200,7 +208,7 @@ pub trait Mapper {
     }
 
     #[inline]
-    fn read_name_table_byte(
+    fn peek_name_table_byte(
         &self,
         ppu_internal_ram: &PpuInternalRam,
         address: PpuAddress,
@@ -221,7 +229,7 @@ pub trait Mapper {
     }
 
     #[inline]
-    fn read_palette_table_byte(
+    fn peek_palette_table_byte(
         &self,
         palette_ram: &PaletteRam,
         address: PpuAddress,
