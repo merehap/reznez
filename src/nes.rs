@@ -200,7 +200,7 @@ impl Nes {
     }
 
     #[inline]
-    fn log_state(&self, instruction: Instruction) {
+    fn log_state(&mut self, instruction: Instruction) {
         /*
         info!(
             target: "cpu",
@@ -215,30 +215,36 @@ impl Nes {
             self.cpu.status(),
         );
         */
-        let argument = match instruction.argument {
+
+
+        let (address, value) = match instruction.argument {
             // No argument for Imp, so this value is unused.
-            Argument::Imp => 0,
-            Argument::Imm(value) => u16::from(value),
-            Argument::Addr(address) => address.to_raw(),
+            Argument::Imp => (0, "".to_string()),
+            Argument::Imm(value) => (0, format!("{:02X}", value)),
+            Argument::Addr(address) => {
+                let value = self.memory.as_cpu_memory().peek(address);
+                let value = value.map(|v| format!("#{:02X}", v)).unwrap_or("OB".to_string());
+                (address.to_raw(), value)
+            }
         };
         use AccessMode::*;
         let formatted_argument = match instruction.template.access_mode {
             Imp => "".to_string(),
-            Imm => format!("#${:02X}", argument),
-            ZP => format!("${:02X}", argument),
-            ZPX => format!("${:02X},X @", argument),
-            ZPY => format!("(${:02X}),Y", argument),
-            Abs => format!("${:04X}", argument),
-            AbX => format!("${:04X},X", argument),
-            AbY => format!("${:04X},Y", argument),
-            Rel => format!("${:04X}", argument),
-            Ind => format!("${:04X}", argument),
-            IzX => format!("${:04X},X", argument),
-            IzY => format!("${:04X},Y", argument),
+            Imm => format!("#${}", value),
+            ZP => format!("[${:02X}]={}", address, value),
+            ZPX => format!("[${:02X},X @]={}", address, value),
+            ZPY => format!("[(${:02X}),Y]={}", address, value),
+            Abs => format!("[${:04X}]={}", address, value),
+            AbX => format!("[${:04X},X]={}", address, value),
+            AbY => format!("[${:04X},Y]={}", address, value),
+            Rel => format!("${:04X}", address),
+            Ind => format!("${:04X}", address),
+            IzX => format!("[${:04X},X]={}", address, value),
+            IzY => format!("[${:04X},Y]={}", address, value),
         };
 
         info!(
-            "{:04X} {:?} {:8}A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{:<3} SL:{:<3} CPU Cycle:{}",
+            "{:04X} {:?} {:14}A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{:<3} SL:{:<3} CPU Cycle:{}",
             self.cpu.program_counter().to_raw(),
             instruction.template.op_code,
             formatted_argument,
