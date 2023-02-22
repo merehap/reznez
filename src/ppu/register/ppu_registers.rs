@@ -135,19 +135,13 @@ impl PpuRegisters {
         let is_palette_data = self.current_address >= PpuAddress::PALETTE_TABLE_START;
         // When reading palette data only, read the current data pointed to
         // by self.current_address, not what was previously pointed to.
-        if is_palette_data {
-            self.ppu_data = PpuData {
-                value: read(self.current_address),
-                is_palette_data
-            };
-            self.pending_ppu_data = read(self.current_address.to_pending_data_source());
+        let value = if is_palette_data {
+            read(self.current_address)
         } else {
-            self.ppu_data = PpuData {
-                value: self.pending_ppu_data,
-                is_palette_data
-            };
-            self.pending_ppu_data = read(self.current_address);
+            self.pending_ppu_data
         };
+        self.ppu_data = PpuData {value, is_palette_data};
+        self.pending_ppu_data = read(self.current_address.to_pending_data_source());
 
         let increment = self.current_address_increment();
         self.current_address.advance(increment);
