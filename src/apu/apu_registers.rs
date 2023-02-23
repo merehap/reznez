@@ -49,7 +49,6 @@ impl ApuRegisters {
     }
 
     pub fn write_frame_counter(&mut self, value: u8) {
-        let old_step_mode = self.step_mode;
         use StepMode::*;
         self.step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
         self.suppress_irq = value & 0b0100_0000 != 0;
@@ -58,11 +57,8 @@ impl ApuRegisters {
             self.frame_irq_pending = false;
         }
 
-        if old_step_mode == StepMode::FourStep && self.step_mode == StepMode::FiveStep {
-            self.pulse_1.length_counter.try_set_to_zero();
-            self.pulse_2.length_counter.try_set_to_zero();
-            self.triangle.length_counter.try_set_to_zero();
-            self.noise.length_counter.try_set_to_zero();
+        if self.step_mode == StepMode::FiveStep {
+            self.decrement_length_counters();
         }
     }
 
