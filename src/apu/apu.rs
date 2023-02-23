@@ -14,7 +14,6 @@ const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
 pub struct Apu {
     pulse_queue: Arc<Mutex<VecDeque<f32>>>,
     muted: Arc<Mutex<bool>>,
-    cycle: u64,
 }
 
 impl Apu {
@@ -37,7 +36,6 @@ impl Apu {
         Apu {
             pulse_queue,
             muted,
-            cycle: 0,
         }
     }
 
@@ -50,7 +48,7 @@ impl Apu {
         const SECOND_STEP: u16 = 07456;
         const THIRD_STEP : u16 = 11185;
 
-        let cycle_within_frame = self.cycle_within_frame(regs);
+        let cycle_within_frame = regs.cycle_within_frame();
 
         use StepMode::*;
         match (regs.step_mode(), cycle_within_frame) {
@@ -79,7 +77,7 @@ impl Apu {
         regs.triangle.step_half_frame();
         regs.noise.step();
 
-        if self.cycle % 20 == 0 {
+        if regs.cycle() % 20 == 0 {
             let mut queue = self.pulse_queue
                 .lock()
                 .unwrap();
@@ -88,15 +86,11 @@ impl Apu {
             }
         }
 
-        if self.cycle_within_frame(regs) == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
+        if regs.cycle_within_frame() == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
             regs.maybe_set_frame_irq_pending();
         }
 
-        self.cycle += 1;
-    }
-
-    fn cycle_within_frame(&self, regs: &ApuRegisters) -> u16 {
-        u16::try_from(self.cycle % u64::from(regs.step_mode().frame_length())).unwrap()
+        regs.increment_cycle();
     }
 
     fn mix_samples(regs: &ApuRegisters) -> f32 {

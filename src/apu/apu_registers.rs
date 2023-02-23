@@ -15,6 +15,7 @@ pub struct ApuRegisters {
     step_mode: StepMode,
     suppress_irq: bool,
     frame_irq_pending: bool,
+    cycle: u64,
 }
 
 impl ApuRegisters {
@@ -57,6 +58,7 @@ impl ApuRegisters {
             self.frame_irq_pending = false;
         }
 
+        self.cycle = 0;
         if self.step_mode == StepMode::FiveStep {
             self.decrement_length_counters();
         }
@@ -81,6 +83,18 @@ impl ApuRegisters {
 
     pub fn acknowledge_frame_irq(&mut self) {
         self.frame_irq_pending = false;
+    }
+
+    pub fn increment_cycle(&mut self) {
+        self.cycle += 1;
+    }
+
+    pub fn cycle(&self) -> u64 {
+        self.cycle
+    }
+
+    pub fn cycle_within_frame(&self) -> u16 {
+        u16::try_from(self.cycle % u64::from(self.step_mode.frame_length())).unwrap()
     }
 }
 
