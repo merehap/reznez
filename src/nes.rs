@@ -127,15 +127,15 @@ impl Nes {
         let ppu_result;
         match self.cycle % 6 {
             0 => {
-                step = self.cpu_step();
                 self.apu.half_step(&mut self.memory.apu_regs());
+                step = self.cpu_step();
                 ppu_result = self.ppu_step();
             }
             1 => ppu_result = self.ppu_step(),
             2 => ppu_result = self.ppu_step(),
             3 => {
-                step = self.cpu_step();
                 self.apu_step();
+                step = self.cpu_step();
                 ppu_result = self.ppu_step();
             }
             4 => ppu_result = self.ppu_step(),
