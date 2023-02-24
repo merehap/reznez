@@ -22,12 +22,6 @@ impl LengthCounter {
         self.count = 0;
     }
 
-    pub fn try_set_to_zero(&mut self) {
-        if !self.halt {
-            self.count = 0;
-        }
-    }
-
     pub fn decrement_towards_zero(&mut self) {
         if !self.halt && self.count != 0 {
             self.count -= 1;

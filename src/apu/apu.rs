@@ -102,10 +102,6 @@ impl Apu {
         self.cycle += 1;
     }
 
-    pub fn cycle(&self) -> u64 {
-        self.cycle
-    }
-
     pub fn cycle_within_frame(&self, regs: &ApuRegisters) -> u16 {
         u16::try_from(self.cycle % u64::from(regs.step_mode().frame_length())).unwrap()
     }
@@ -142,10 +138,6 @@ impl PulseWave {
             muted,
             previous_value: 0.0,
         }
-    }
-
-    pub fn mute(&mut self) {
-        *self.muted.lock().unwrap() = true;
     }
 }
 

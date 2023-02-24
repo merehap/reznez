@@ -8,4 +8,3 @@ pub mod pulse_channel;
 pub mod triangle_channel;
 pub mod noise_channel;
 pub mod dmc;
-pub mod frame_counter;

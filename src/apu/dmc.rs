@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use bitvec::prelude::BitVec;
 
 use crate::util::integer::{U4, U7};

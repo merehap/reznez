@@ -10,14 +10,6 @@ use crate::ppu::pattern_table::{PatternTableSide, PatternIndex};
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::register::registers::ctrl::AddressIncrement;
 
-const VERTICAL_NAME_TABLE_MASK: u16   = 0b0000_1000_0000_0000;
-const HORIZONTAL_NAME_TABLE_MASK: u16 = 0b0000_0100_0000_0000;
-const COARSE_Y_MASK: u16              = 0b0000_0011_1110_0000;
-const COARSE_X_MASK: u16              = 0b0000_0000_0001_1111;
-
-const NAME_TABLE_MASK: u16 = VERTICAL_NAME_TABLE_MASK | HORIZONTAL_NAME_TABLE_MASK;
-const FINE_Y_ZERO_TOP_BIT_MASK: u16   = 0b0011_0000_0000_0000;
-
 /*
  * 0 123 45 6789A BCDEF
  * 0 yyy NN YYYYY XXXXX

@@ -1,6 +1,6 @@
 use crate::apu::length_counter::LengthCounter;
 use crate::apu::timer::Timer;
-use crate::util::integer::{U3, U4};
+use crate::util::integer::U4;
 use crate::util::bit_util;
 
 #[derive(Default)]
@@ -11,7 +11,7 @@ pub struct PulseChannel {
     constant_volume: bool,
     volume_or_envelope: U4,
 
-    sweep: Sweep,
+    //sweep: Sweep,
     timer: Timer,
     pub(super) length_counter: LengthCounter,
 
@@ -26,8 +26,8 @@ impl PulseChannel {
         self.volume_or_envelope =    (value & 0b0000_1111).into();
     }
 
-    pub fn write_sweep_byte(&mut self, value: u8) {
-        self.sweep = Sweep::from_u8(value);
+    pub fn write_sweep_byte(&mut self, _value: u8) {
+        //self.sweep = Sweep::from_u8(value);
     }
 
     pub fn write_timer_low_byte(&mut self, value: u8) {
@@ -105,6 +105,7 @@ impl From<u8> for Duty {
     }
 }
 
+/*
 #[derive(Default)]
 pub struct Sweep {
     enabled: bool,
@@ -140,3 +141,4 @@ impl From<u8> for PeriodChange {
         }
     }
 }
+*/
