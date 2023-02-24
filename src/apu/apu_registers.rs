@@ -15,7 +15,7 @@ pub struct ApuRegisters {
     step_mode: StepMode,
     suppress_irq: bool,
     frame_irq_pending: bool,
-    cycle: u64,
+    pub frame_reset_status: FrameResetStatus,
 }
 
 impl ApuRegisters {
@@ -58,7 +58,7 @@ impl ApuRegisters {
             self.frame_irq_pending = false;
         }
 
-        self.cycle = 0;
+        self.frame_reset_status.begin_wait();
         if self.step_mode == StepMode::FiveStep {
             self.decrement_length_counters();
         }
@@ -83,18 +83,6 @@ impl ApuRegisters {
 
     pub fn acknowledge_frame_irq(&mut self) {
         self.frame_irq_pending = false;
-    }
-
-    pub fn increment_cycle(&mut self) {
-        self.cycle += 1;
-    }
-
-    pub fn cycle(&self) -> u64 {
-        self.cycle
-    }
-
-    pub fn cycle_within_frame(&self) -> u16 {
-        u16::try_from(self.cycle % u64::from(self.step_mode.frame_length())).unwrap()
     }
 }
 
@@ -142,5 +130,34 @@ impl StepMode {
             StepMode::FourStep => StepMode::FOUR_STEP_FRAME_LENGTH,
             StepMode::FiveStep => StepMode::FIVE_STEP_FRAME_LENGTH,
         }
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]
+pub enum FrameResetStatus {
+    #[default]
+    Inactive,
+    WaitingOnEvenCycle,
+    NextCycle,
+}
+
+impl FrameResetStatus {
+    pub fn begin_wait(&mut self) {
+        assert_eq!(*self, FrameResetStatus::Inactive);
+        *self = FrameResetStatus::WaitingOnEvenCycle;
+    }
+
+    pub fn even_cycle_reached(&mut self) {
+        match *self {
+            FrameResetStatus::Inactive => {}
+            FrameResetStatus::WaitingOnEvenCycle => {
+                *self = FrameResetStatus::NextCycle;
+            }
+            FrameResetStatus::NextCycle => unreachable!(),
+        }
+    }
+
+    pub fn finished(&mut self) {
+        *self = FrameResetStatus::Inactive;
     }
 }

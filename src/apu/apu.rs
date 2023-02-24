@@ -6,7 +6,7 @@ use std::time::Duration;
 use rodio::{OutputStream, Sink};
 use rodio::source::Source;
 
-use crate::apu::apu_registers::{ApuRegisters, StepMode};
+use crate::apu::apu_registers::{ApuRegisters, FrameResetStatus, StepMode};
 
 const SAMPLE_RATE: u32 = 44100;
 const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
@@ -14,6 +14,7 @@ const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
 pub struct Apu {
     pulse_queue: Arc<Mutex<VecDeque<f32>>>,
     muted: Arc<Mutex<bool>>,
+    cycle: u64,
 }
 
 impl Apu {
@@ -36,6 +37,7 @@ impl Apu {
         Apu {
             pulse_queue,
             muted,
+            cycle: 0,
         }
     }
 
@@ -44,11 +46,13 @@ impl Apu {
     }
 
     pub fn half_step(&self, regs: &mut ApuRegisters) {
+        regs.frame_reset_status.even_cycle_reached();
+
         const FIRST_STEP : u16 = 03728;
         const SECOND_STEP: u16 = 07456;
         const THIRD_STEP : u16 = 11185;
 
-        let cycle_within_frame = regs.cycle_within_frame();
+        let cycle_within_frame = self.cycle_within_frame(regs);
 
         use StepMode::*;
         match (regs.step_mode(), cycle_within_frame) {
@@ -72,12 +76,17 @@ impl Apu {
     }
 
     pub fn step(&mut self, regs: &mut ApuRegisters) {
+        if regs.frame_reset_status == FrameResetStatus::NextCycle {
+            self.cycle = 0;
+            regs.frame_reset_status.finished();
+        }
+
         regs.pulse_1.step();
         regs.pulse_2.step();
         regs.triangle.step_half_frame();
         regs.noise.step();
 
-        if regs.cycle() % 20 == 0 {
+        if self.cycle % 20 == 0 {
             let mut queue = self.pulse_queue
                 .lock()
                 .unwrap();
@@ -86,11 +95,19 @@ impl Apu {
             }
         }
 
-        if regs.cycle_within_frame() == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
+        if self.cycle_within_frame(regs) == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
             regs.maybe_set_frame_irq_pending();
         }
 
-        regs.increment_cycle();
+        self.cycle += 1;
+    }
+
+    pub fn cycle(&self) -> u64 {
+        self.cycle
+    }
+
+    pub fn cycle_within_frame(&self, regs: &ApuRegisters) -> u16 {
+        u16::try_from(self.cycle % u64::from(regs.step_mode().frame_length())).unwrap()
     }
 
     fn mix_samples(regs: &ApuRegisters) -> f32 {
