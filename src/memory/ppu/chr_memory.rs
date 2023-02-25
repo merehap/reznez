@@ -81,7 +81,7 @@ impl ChrMemory {
             }
         }
 
-        panic!("No window exists at {:X?}", start);
+        panic!("No window exists at {start:X?}");
     }
 
     pub fn set_layout(&mut self, layout: ChrLayout) {
@@ -111,7 +111,7 @@ impl ChrMemory {
                 let raw_bank_index = window.bank_index()
                     .to_u16(&self.bank_index_registers, self.bank_count());
                 let index = usize::from(raw_bank_index) *
-                    usize::from(self.layout.bank_size) +
+                    self.layout.bank_size +
                     usize::from(bank_offset);
                 return (index, window.is_writable());
             }
@@ -256,6 +256,7 @@ impl Window {
         self.chr_type.switch_bank_to(new_bank_index.into());
     }
 
+    #[allow(clippy::identity_op)]
     fn new(start: u16, end: u16, size: usize, chr_type: ChrType) -> Window {
         assert!([1 * KIBIBYTE, 2 * KIBIBYTE, 4 * KIBIBYTE, 8 * KIBIBYTE].contains(&size));
         assert!(end > start);

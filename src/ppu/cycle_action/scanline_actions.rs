@@ -11,13 +11,14 @@ lazy_static! {
     pub static ref PRE_RENDER_SCANLINE_ACTIONS: ScanlineActions = pre_render_scanline_actions();
 }
 
+#[allow(clippy::identity_op)]
 fn visible_scanline_actions() -> ScanlineActions {
     use CycleAction::*;
 
     let mut line = ScanlineActions::new();
     //           ||CYCLE||       ||---------BACKGROUND-TILE-ACTIONS---------||  ||-SPRITE--ACTIONS-||  ||-----DISPLAY-ACTIONS-----||
-    line.add(          001, vec![                                               ResetForOamClear                                    ]);
-    line.add(          065, vec![                                               ResetForSpriteEvaluation                            ]);
+    line.add(            1, vec![                                               ResetForOamClear                                    ]);
+    line.add(           65, vec![                                               ResetForSpriteEvaluation                            ]);
 
     // Fetch the remaining 31 usable background tiles for the current scanline.
     // Secondary OAM clearing then sprite evaluation, transfering OAM to secondary OAM.
@@ -116,6 +117,7 @@ fn vblank_scanline_actions() -> ScanlineActions {
     scanline
 }
 
+#[allow(clippy::identity_op)]
 fn pre_render_scanline_actions() -> ScanlineActions {
     use CycleAction::*;
 

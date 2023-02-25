@@ -82,7 +82,7 @@ impl Status {
 }
 
 impl fmt::Display for Status {
-    fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}{}__{}{}{}{}",

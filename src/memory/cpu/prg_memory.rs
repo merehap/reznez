@@ -46,7 +46,7 @@ impl PrgMemory {
     }
 
     pub fn bank_count(&self) -> u16 {
-        (self.raw_memory.len() / usize::from(self.layout.bank_size))
+        (self.raw_memory.len() / self.layout.bank_size)
             .try_into()
             .expect("Way too many banks.")
     }
@@ -105,7 +105,7 @@ impl PrgMemory {
             }
         }
 
-        panic!("No window exists at {:?}", start);
+        panic!("No window exists at {start:?}");
     }
 
     pub fn disable_work_ram(&mut self) {
@@ -150,7 +150,7 @@ impl PrgMemory {
                         let raw_bank_index =
                             bank_index.to_usize(&self.bank_index_registers, self.bank_count());
                         let mapped_memory_index =
-                             raw_bank_index * self.layout.bank_size as usize + bank_offset as usize;
+                             raw_bank_index * self.layout.bank_size + bank_offset as usize;
                         PrgMemoryIndex::MappedMemory(mapped_memory_index)
                     }
                     PrgType::WorkRam => PrgMemoryIndex::WorkRam(usize::from(bank_offset)),
@@ -372,7 +372,7 @@ struct WorkRam {
 impl WorkRam {
     fn new(size: usize) -> WorkRam {
         WorkRam {
-            data: vec![0; usize::from(size)],
+            data: vec![0; size],
             enabled: true,
         }
     }

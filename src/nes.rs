@@ -127,7 +127,7 @@ impl Nes {
         let ppu_result;
         match self.cycle % 6 {
             0 => {
-                self.apu.half_step(&mut self.memory.apu_regs());
+                self.apu.half_step(self.memory.apu_regs());
                 step = self.cpu_step();
                 ppu_result = self.ppu_step();
             }
@@ -180,7 +180,7 @@ impl Nes {
     }
 
     fn apu_step(&mut self) {
-        self.apu.step(&mut self.memory.apu_regs());
+        self.apu.step(self.memory.apu_regs());
     }
 
     #[inline]
@@ -220,27 +220,27 @@ impl Nes {
         let (address, value) = match instruction.argument {
             // No argument for Imp, so this value is unused.
             Argument::Imp => (0, "".to_string()),
-            Argument::Imm(value) => (0, format!("{:02X}", value)),
+            Argument::Imm(value) => (0, format!("{value:02X}")),
             Argument::Addr(address) => {
                 let value = self.memory.as_cpu_memory().peek(address);
-                let value = value.map(|v| format!("#{:02X}", v)).unwrap_or("OB".to_string());
+                let value = value.map(|v| format!("#{v:02X}")).unwrap_or("OB".to_string());
                 (address.to_raw(), value)
             }
         };
         use AccessMode::*;
         let formatted_argument = match instruction.template.access_mode {
             Imp => "".to_string(),
-            Imm => format!("#${}", value),
-            ZP => format!("[${:02X}]={}", address, value),
-            ZPX => format!("[${:02X},X @]={}", address, value),
-            ZPY => format!("[(${:02X}),Y]={}", address, value),
-            Abs => format!("[${:04X}]={}", address, value),
-            AbX => format!("[${:04X},X]={}", address, value),
-            AbY => format!("[${:04X},Y]={}", address, value),
-            Rel => format!("${:04X}", address),
-            Ind => format!("${:04X}", address),
-            IzX => format!("[${:04X},X]={}", address, value),
-            IzY => format!("[${:04X},Y]={}", address, value),
+            Imm => format!("#${value}"),
+            ZP => format!("[${address:02X}]={value}"),
+            ZPX => format!("[${address:02X},X @]={value}"),
+            ZPY => format!("[(${address:02X}),Y]={value}"),
+            Abs => format!("[${address:04X}]={value}"),
+            AbX => format!("[${address:04X},X]={value}"),
+            AbY => format!("[${address:04X},Y]={value}"),
+            Rel => format!("${address:04X}"),
+            Ind => format!("${address:04X}"),
+            IzX => format!("[${address:04X},X]={value}"),
+            IzY => format!("[${address:04X},Y]={value}"),
         };
 
         info!(

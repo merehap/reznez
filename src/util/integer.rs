@@ -11,7 +11,7 @@ impl From<u8> for U3 {
 pub struct U4(u8);
 
 impl U4 {
-    pub fn to_u8(&self) -> u8 {
+    pub fn to_u8(self) -> u8 {
         self.0
     }
 }

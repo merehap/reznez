@@ -185,8 +185,8 @@ impl fmt::Display for Argument {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Argument::Imp => write!(f, "No   "),
-            Argument::Imm(value) => write!(f, "#{:02X}  ", value),
-            Argument::Addr(address) => write!(f, "[{}]", address),
+            Argument::Imm(value) => write!(f, "#{value:02X}  "),
+            Argument::Addr(address) => write!(f, "[{address}]"),
         }
     }
 }

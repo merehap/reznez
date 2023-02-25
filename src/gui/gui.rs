@@ -49,7 +49,7 @@ fn dump_frame(frame: &Frame, mask: Mask, frame_index: u64) {
     if let Err(err) = fs::create_dir(FRAME_DUMP_DIRECTORY) {
         assert!(err.kind() == ErrorKind::AlreadyExists, "{:?}", err.kind());
     }
-    let file_name = format!("{}/frame{:03}.ppm", FRAME_DUMP_DIRECTORY, frame_index,);
+    let file_name = format!("{FRAME_DUMP_DIRECTORY}/frame{frame_index:03}.ppm");
     let mut file = File::create(file_name).unwrap();
     file.write_all(&frame.to_ppm(mask).to_bytes()).unwrap();
 }

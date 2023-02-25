@@ -309,7 +309,8 @@ impl Ppu {
                 self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
             }
             DummyReadSpriteX => {
-                if !rendering_enabled { return; }
+                // TODO
+                //if !rendering_enabled { return; }
             }
 
             GetSpritePatternLowByte => {

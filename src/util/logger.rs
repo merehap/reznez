@@ -18,12 +18,12 @@ impl log::Log for Logger {
             "cpustep" => self.log_cpu_steps,
             target => {
                 let chunks: Vec<&str> = target.split("::").collect();
-                match &chunks[..] {
-                    &["reznez", ..] => true,
-                    &["winit", ..] => false,
-                    &["wgpu_hal", ..] => false,
-                    &["wgpu_core", ..] => false,
-                    _ => panic!("Unexpected logger target: {}", target),
+                match chunks[..] {
+                    ["reznez", ..] => true,
+                    ["winit", ..] => false,
+                    ["wgpu_hal", ..] => false,
+                    ["wgpu_core", ..] => false,
+                    _ => panic!("Unexpected logger target: {target}"),
                 }
             }
         }

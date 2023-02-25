@@ -180,20 +180,20 @@ impl Cpu {
         self.previous_data_bus_value = self.data_bus;
         match step {
             Step::Read(from, _) => {
-                self.address_bus = self.from_address(memory, from);
+                self.address_bus = self.lookup_from_address(memory, from);
                 self.data_bus = memory.read(self.address_bus).unwrap_or(self.data_bus);
             }
             Step::ReadField(field, from, _) => {
-                self.address_bus = self.from_address(memory, from);
+                self.address_bus = self.lookup_from_address(memory, from);
                 self.data_bus = memory.read(self.address_bus).unwrap_or(self.data_bus);
                 self.set_field_value(field);
             }
             Step::Write(to, _) => {
-                self.address_bus = self.to_address(memory, to);
+                self.address_bus = self.lookup_to_address(memory, to);
                 memory.write(self.address_bus, self.data_bus);
             }
             Step::WriteField(field, to, _) => {
-                self.address_bus = self.to_address(memory, to);
+                self.address_bus = self.lookup_to_address(memory, to);
                 self.data_bus = self.field_value(field);
                 memory.write(self.address_bus, self.data_bus);
             }
@@ -498,7 +498,7 @@ impl Cpu {
         }
     }
 
-    fn from_address(&mut self, memory: &CpuMemory, from: From) -> CpuAddress {
+    fn lookup_from_address(&mut self, memory: &CpuMemory, from: From) -> CpuAddress {
         use self::From::*;
         match from {
             AddressBusTarget => self.address_bus,
@@ -527,7 +527,7 @@ impl Cpu {
     }
 
     // A copy of from_address, unfortunately.
-    fn to_address(&mut self, memory: &CpuMemory, to: To) -> CpuAddress {
+    fn lookup_to_address(&mut self, memory: &CpuMemory, to: To) -> CpuAddress {
         use self::To::*;
         match to {
             AddressBusTarget => self.address_bus,

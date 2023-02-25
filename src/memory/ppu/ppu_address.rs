@@ -57,8 +57,8 @@ impl PpuAddress {
     ) -> PpuAddress {
         PpuAddress::from_u16(
             0x2000
-            | 0x400 * quadrant as u16
-            | TileColumn::COLUMN_COUNT as u16 * tile_row.to_u16()
+            | (0x400 * quadrant as u16)
+            | (TileColumn::COLUMN_COUNT as u16 * tile_row.to_u16())
             | tile_column.to_u16()
         )
     }
@@ -98,7 +98,7 @@ impl PpuAddress {
         select_high_byte: bool,
     ) -> PpuAddress {
         PpuAddress::from_u16(
-            0x1000 * side as u16
+            (0x1000 * side as u16)
             | pattern_index.to_u16() << 4
             | if select_high_byte { 0x8 } else { 0x0 }
             | row_in_tile as u16

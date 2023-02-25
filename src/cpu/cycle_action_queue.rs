@@ -61,14 +61,14 @@ impl CycleActionQueue {
     }
 
     fn append(&mut self, steps: &[Step]) {
-        for step in steps.iter() {
-            self.queue.push_back(step.clone());
+        for &step in steps.iter() {
+            self.queue.push_back(step);
         }
     }
 
     fn prepend(&mut self, steps: &[Step]) {
-        for step in steps.iter().rev() {
-            self.queue.push_front(step.clone());
+        for &step in steps.iter().rev() {
+            self.queue.push_front(step);
         }
     }
 }

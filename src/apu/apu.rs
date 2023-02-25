@@ -31,7 +31,9 @@ impl Apu {
             let sink = Sink::try_new(&stream_handle).unwrap();
             sink.append(source);
 
-            loop {}
+            loop {
+                thread::sleep(Duration::from_millis(1000))
+            }
         });
 
         Apu {
@@ -48,8 +50,8 @@ impl Apu {
     pub fn half_step(&self, regs: &mut ApuRegisters) {
         regs.frame_reset_status.even_cycle_reached();
 
-        const FIRST_STEP : u16 = 03728;
-        const SECOND_STEP: u16 = 07456;
+        const FIRST_STEP : u16 = 3728;
+        const SECOND_STEP: u16 = 7456;
         const THIRD_STEP : u16 = 11185;
 
         let cycle_within_frame = self.cycle_within_frame(regs);

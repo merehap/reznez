@@ -59,11 +59,11 @@ impl BankIndexRegisters {
 
     fn get(&self, id: BankIndexRegisterId) -> u16 {
         self.registers[id as usize]
-            .unwrap_or_else(|| panic!("Register {:?} is not configured.", id))
+            .unwrap_or_else(|| panic!("Register {id:?} is not configured."))
     }
 
     pub fn set(&mut self, id: BankIndexRegisterId, index: u16) {
-        assert!(self.registers[id as usize].is_some(), "Register {:?} is not configured.", id);
+        assert!(self.registers[id as usize].is_some(), "Register {id:?} is not configured.");
         self.registers[id as usize] = Some(index);
     }
 }

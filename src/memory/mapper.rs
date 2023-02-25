@@ -119,6 +119,7 @@ pub trait Mapper {
 
     #[inline]
     #[rustfmt::skip]
+    #[allow(clippy::too_many_arguments)]
     fn cpu_write(
         &mut self,
         cpu_internal_ram: &mut CpuInternalRam,
@@ -286,8 +287,8 @@ pub trait Mapper {
     fn prg_rom_bank_string(&self) -> String {
         let indexes = self.prg_memory().resolve_selected_bank_indexes();
         let mut bank_text = indexes[0].to_string();
-        for i in 1..indexes.len() {
-            bank_text.push_str(&format!(", {}", indexes[i]));
+        for index in indexes.iter().skip(1) {
+            bank_text.push_str(&format!(", {index}"));
         }
 
         bank_text.push_str(&format!(" ({} banks total)", self.prg_memory().bank_count()));
@@ -298,8 +299,8 @@ pub trait Mapper {
     fn chr_rom_bank_string(&self) -> String {
         let indexes = self.chr_memory().resolve_selected_bank_indexes();
         let mut bank_text = indexes[0].to_string();
-        for i in 1..indexes.len() {
-            bank_text.push_str(&format!(", {}", indexes[i]));
+        for index in indexes.iter().skip(1) {
+            bank_text.push_str(&format!(", {index}"));
         }
 
         bank_text.push_str(&format!(" ({} banks total)", self.prg_memory().bank_count()));

@@ -734,8 +734,8 @@ impl Renderer for SpritesRenderer {
             let tile = sprite
                 .render_normal_height(&mem.sprite_pattern_table(), &mem.palette_table());
             self.buffer.place_tile(
-                (8 + 1) * (index as usize % 8),
-                (8 + 1) * (index as usize / 8),
+                (8 + 1) * (index % 8),
+                (8 + 1) * (index / 8),
                 &tile,
             );
         }

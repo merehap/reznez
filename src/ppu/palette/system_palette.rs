@@ -49,8 +49,7 @@ impl SystemPalette {
                 nums.push(number);
             } else {
                 return Err(format!(
-                    "A .pal file must consist of all numbers, but found '{}'.",
-                    word,
+                    "A .pal file must consist of all numbers, but found '{word}'.",
                 ));
             }
         }

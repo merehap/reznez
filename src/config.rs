@@ -122,7 +122,7 @@ impl FromStr for GuiType {
             "egui" => Ok(GuiType::Egui),
             #[cfg(feature = "sdl")]
             "sdl" => Ok(GuiType::Sdl),
-            _ => Err(format!("Invalid gui type: {}", value)),
+            _ => Err(format!("Invalid gui type: {value}")),
         }
     }
 }

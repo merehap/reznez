@@ -2,8 +2,9 @@ use enum_iterator::IntoEnumIterator;
 
 use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
 
-#[derive(Clone, Copy, Debug, IntoEnumIterator)]
+#[derive(Clone, Copy, Debug, Default, IntoEnumIterator)]
 pub enum PaletteTableIndex {
+    #[default]
     Zero,
     One,
     Two,
@@ -45,8 +46,4 @@ impl PaletteTableIndex {
             _ => unreachable!(),
         }
     }
-}
-
-impl Default for PaletteTableIndex {
-    fn default() -> Self { PaletteTableIndex::Zero }
 }

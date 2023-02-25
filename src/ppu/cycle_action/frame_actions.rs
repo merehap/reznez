@@ -42,7 +42,7 @@ pub struct FrameActions {
 
 impl FrameActions {
     pub fn current_cycle_actions(&self, clock: &Clock) -> &[CycleAction] {
-        &self.all_scanline_actions[clock.scanline() as usize].actions_at_cycle(clock.cycle())
+        self.all_scanline_actions[clock.scanline() as usize].actions_at_cycle(clock.cycle())
     }
 
     fn new() -> FrameActions {
