@@ -58,10 +58,11 @@ impl PrgMemory {
             PrgMemoryIndex::MappedMemory(index) => Some(self.raw_memory[index]),
             PrgMemoryIndex::WorkRam { section_id, index } => {
                 let work_ram = &self.work_ram_sections[section_id];
-                if work_ram.enabled {
-                    Some(work_ram.data[index])
-                } else {
-                    None
+                use WorkRamStatus::*;
+                match work_ram.status {
+                    Disabled => None,
+                    ReadOnlyZeros => Some(0),
+                    ReadOnly | ReadWrite => Some(work_ram.data[index]),
                 }
             }
         }
@@ -74,7 +75,7 @@ impl PrgMemory {
             PrgMemoryIndex::MappedMemory(index) => self.raw_memory[index] = value,
             PrgMemoryIndex::WorkRam { section_id, index } => {
                 let work_ram = &mut self.work_ram_sections[section_id];
-                if work_ram.enabled {
+                if work_ram.status == WorkRamStatus::ReadWrite {
                     work_ram.data[index] = value;
                 }
             }
@@ -98,11 +99,11 @@ impl PrgMemory {
     }
 
     pub fn disable_work_ram(&mut self, address: u16) {
-        self.work_ram_at(address).enabled = false;
+        self.work_ram_at(address).status = WorkRamStatus::Disabled;
     }
 
     pub fn enable_work_ram(&mut self, address: u16) {
-        self.work_ram_at(address).enabled = true;
+        self.work_ram_at(address).status = WorkRamStatus::ReadWrite;
     }
 
     pub fn set_layout(&mut self, layout: PrgLayout) {
@@ -352,7 +353,7 @@ impl Window {
     }
 }
 
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum PrgType {
     Empty,
     Banked(Writability, BankIndex),
@@ -386,14 +387,22 @@ impl PrgType {
 #[derive(Clone)]
 struct WorkRam {
     data: Vec<u8>,
-    enabled: bool,
+    status: WorkRamStatus,
 }
 
 impl WorkRam {
     fn new(size: usize) -> WorkRam {
         WorkRam {
             data: vec![0; size],
-            enabled: true,
+            status: WorkRamStatus::ReadWrite,
         }
     }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum WorkRamStatus {
+    Disabled,
+    ReadOnlyZeros,
+    ReadOnly,
+    ReadWrite,
 }

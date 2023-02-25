@@ -1,6 +1,6 @@
 use num_derive::FromPrimitive;
 
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum BankIndex {
     IndexFromStart(u16),
     IndexFromEnd(u16),
