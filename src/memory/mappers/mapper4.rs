@@ -6,7 +6,10 @@ lazy_static! {
     static ref PRG_LAYOUT_R6_AT_8000: PrgLayout = PrgLayout::builder()
         .max_bank_count(32)
         .bank_size(8 * KIBIBYTE)
-        .add_window(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgType::WorkRam)
+        .add_window(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgType::WorkRam)
+        .add_window(0x7000, 0x71FF, KIBIBYTE / 2, PrgType::WorkRam)
+        .add_window(0x7200, 0x73FF, KIBIBYTE / 2, PrgType::WorkRam)
+        .add_window(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgType::WorkRam)
         .add_window(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(R6)))
         .add_window(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(R7)))
         .add_window(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::SECOND_LAST))
@@ -17,7 +20,10 @@ lazy_static! {
     static ref PRG_LAYOUT_R6_AT_C000: PrgLayout = PrgLayout::builder()
         .max_bank_count(32)
         .bank_size(8 * KIBIBYTE)
-        .add_window(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgType::WorkRam)
+        .add_window(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgType::WorkRam)
+        .add_window(0x7000, 0x71FF, KIBIBYTE / 2, PrgType::WorkRam)
+        .add_window(0x7200, 0x73FF, KIBIBYTE / 2, PrgType::WorkRam)
+        .add_window(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgType::WorkRam)
         .add_window(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::SECOND_LAST))
         .add_window(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(R7)))
         .add_window(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(R6)))
@@ -51,7 +57,7 @@ lazy_static! {
         .build();
 }
 
-// MMC3 and MMC6
+// MMC3 (TSROM and others) and MMC6 (HKROM)
 pub struct Mapper4 {
     selected_register_id: BankIndexRegisterId,
 

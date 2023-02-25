@@ -7,10 +7,9 @@ const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
 
 pub struct PrgMemory {
     layout: PrgLayout,
-    // Mainly (only?) used by MMC3 and variants.
     bank_index_registers: BankIndexRegisters,
     raw_memory: Vec<u8>,
-    work_ram: Option<WorkRam>,
+    work_ram_sections: Vec<WorkRam>,
 }
 
 impl PrgMemory {
@@ -22,14 +21,12 @@ impl PrgMemory {
             layout,
             bank_index_registers,
             raw_memory,
-            work_ram: None,
+            work_ram_sections: Vec::new(),
         };
 
         for window in &prg_memory.layout.windows {
             if window.prg_type == PrgType::WorkRam {
-                assert!(prg_memory.work_ram.is_none(),
-                    "Only one Work RAM section may be specified.");
-                prg_memory.work_ram = Some(WorkRam::new(window.size()));
+                prg_memory.work_ram_sections.push(WorkRam::new(window.size()));
             }
         }
 
@@ -59,9 +56,8 @@ impl PrgMemory {
         match self.address_to_prg_index(address) {
             PrgMemoryIndex::None => None,
             PrgMemoryIndex::MappedMemory(index) => Some(self.raw_memory[index]),
-            PrgMemoryIndex::WorkRam(index) => {
-                let work_ram = self.work_ram.as_ref()
-                    .expect("Attempted to read from WorkRam but it is not present.");
+            PrgMemoryIndex::WorkRam { section_id, index } => {
+                let work_ram = &self.work_ram_sections[section_id];
                 if work_ram.enabled {
                     Some(work_ram.data[index])
                 } else {
@@ -76,9 +72,8 @@ impl PrgMemory {
         match self.address_to_prg_index(address) {
             PrgMemoryIndex::None => {},
             PrgMemoryIndex::MappedMemory(index) => self.raw_memory[index] = value,
-            PrgMemoryIndex::WorkRam(index) => {
-                let work_ram = self.work_ram.as_mut()
-                    .expect("Attempted to write to WorkRam but it is not present.");
+            PrgMemoryIndex::WorkRam { section_id, index } => {
+                let work_ram = &mut self.work_ram_sections[section_id];
                 if work_ram.enabled {
                     work_ram.data[index] = value;
                 }
@@ -99,21 +94,15 @@ impl PrgMemory {
     }
 
     pub fn window_at(&mut self, start: u16) -> &mut Window {
-        for window in &mut self.layout.windows {
-            if window.start.to_raw() == start {
-                return window;
-            }
-        }
-
-        panic!("No window exists at {start:?}");
+        self.window_with_index_at(start).0
     }
 
-    pub fn disable_work_ram(&mut self) {
-        self.work_ram.as_mut().unwrap().enabled = false;
+    pub fn disable_work_ram(&mut self, address: u16) {
+        self.work_ram_at(address).enabled = false;
     }
 
-    pub fn enable_work_ram(&mut self) {
-        self.work_ram.as_mut().unwrap().enabled = true;
+    pub fn enable_work_ram(&mut self, address: u16) {
+        self.work_ram_at(address).enabled = true;
     }
 
     pub fn set_layout(&mut self, layout: PrgLayout) {
@@ -153,7 +142,20 @@ impl PrgMemory {
                              raw_bank_index * self.layout.bank_size + bank_offset as usize;
                         PrgMemoryIndex::MappedMemory(mapped_memory_index)
                     }
-                    PrgType::WorkRam => PrgMemoryIndex::WorkRam(usize::from(bank_offset)),
+                    PrgType::WorkRam => {
+                        let mut index = usize::from(bank_offset);
+                        let mut result = None;
+                        for (section_id, work_ram_section) in self.work_ram_sections.iter().enumerate() {
+                            if index < work_ram_section.data.len() {
+                                result = Some(PrgMemoryIndex::WorkRam { section_id, index });
+                                break;
+                            }
+
+                            index -= work_ram_section.data.len();
+                        }
+
+                        result.unwrap()
+                    }
                     PrgType::MirrorPrevious => unreachable!(),
                 };
                 return prg_memory_index;
@@ -161,6 +163,23 @@ impl PrgMemory {
         }
 
         unreachable!();
+    }
+
+    // This method assume that all WorkRam is at the start of the PrgLayout.
+    fn work_ram_at(&mut self, start: u16) -> &mut WorkRam {
+        let (window, index) = self.window_with_index_at(start);
+        assert_eq!(window.prg_type, PrgType::WorkRam);
+        &mut self.work_ram_sections[index]
+    }
+
+    fn window_with_index_at(&mut self, start: u16) -> (&mut Window, usize) {
+        for (index, window) in self.layout.windows.iter_mut().enumerate() {
+            if window.start.to_raw() == start {
+                return (window, index);
+            }
+        }
+
+        panic!("No window exists at {start:?}");
     }
 }
 
@@ -246,7 +265,9 @@ impl PrgLayoutBuilder {
         window_type: PrgType,
     ) -> &mut PrgLayoutBuilder {
         let bank_size = self.bank_size.unwrap();
-        assert!(size % bank_size == 0 || bank_size % size == 0);
+        if window_type != PrgType::WorkRam {
+            assert!(size % bank_size == 0 || bank_size % size == 0);
+        }
 
         self.windows.push(Window::new(start, end, size, window_type));
         self
@@ -273,7 +294,7 @@ impl PrgLayoutBuilder {
 
 enum PrgMemoryIndex {
     None,
-    WorkRam(usize),
+    WorkRam { section_id: usize, index: usize },
     MappedMemory(usize),
 }
 
@@ -314,7 +335,6 @@ impl Window {
     }
 
     fn new(start: u16, end: u16, size: usize, prg_type: PrgType) -> Window {
-        assert!([8 * KIBIBYTE, 16 * KIBIBYTE, 32 * KIBIBYTE].contains(&size));
         assert!(end > start);
         assert_eq!(end as usize - start as usize + 1, size,
             "Interval from 0x{:04X} to 0x{:04X} is {}KiB, but it is specified as {}Kib",
@@ -332,7 +352,7 @@ impl Window {
     }
 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum PrgType {
     Empty,
     Banked(Writability, BankIndex),

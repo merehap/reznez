@@ -90,9 +90,9 @@ impl Mapper for Mapper1 {
                 0xE000..=0xFFFF => {
                     self.selected_prg_bank = self.shift & 0b0_1111;
                     if self.shift & 0b1_0000 == 0 {
-                        self.prg_memory.enable_work_ram();
+                        self.prg_memory.enable_work_ram(0x6000);
                     } else {
-                        self.prg_memory.disable_work_ram();
+                        self.prg_memory.disable_work_ram(0x6000);
                     }
                 }
             }
