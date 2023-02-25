@@ -96,6 +96,7 @@ impl Mapper4 {
     fn bank_select(&mut self, value: u8) {
         let chr_big_windows_first =                             (value & 0b1000_0000) == 0;
         let r6_is_at_0x8000 =                                   (value & 0b0100_0000) == 0;
+        //self.prg_ram_enabled =                                (value & 0b0010_0000) != 0;
         self.selected_register_id = BankIndexRegisterId::from_u8(value & 0b0000_0111).unwrap();
 
         if chr_big_windows_first {
@@ -141,8 +142,28 @@ impl Mapper4 {
     }
 
     fn prg_ram_protect(&mut self, _value: u8) {
-        // TODO: See if this can be implemented while remaining compatible with MMC6.
-        // https://www.nesdev.org/wiki/MMC3#PRG_RAM_protect_($A001-$BFFF,_odd)
+        // TODO: Once NES 2.0 is supported, then MMC3 and MMC6 can properly be supported.
+        /*
+        if !self.prg_ram_enabled {
+            return;
+        }
+
+        // MMC6 logic only here since MMC3 logic conflicts:
+        // https://www.nesdev.org/wiki/MMC3#iNES_Mapper_004_and_MMC6
+        // TODO: Attempt to support Low G Man.
+        let mut status_7000 = Mapper4::work_ram_status_from_bits(value & 0b1100_0000 >> 6);
+        let mut status_7200 = Mapper4::work_ram_status_from_bits(value & 0b0011_0000 >> 4);
+
+        // "If only one bank is enabled for reading, the other reads back as zero."
+        use WorkRamStatus::*;
+        match (status_7000, status_7200) {
+            (ReadOnly | ReadWrite, Disabled            ) => status_7200 = ReadOnlyZeros,
+            (Disabled            , ReadOnly | ReadWrite) => status_7000 = ReadOnlyZeros,
+        }
+
+        self.prg_memory.set_work_ram_status_at(0x7000, status_7000);
+        self.prg_memory.set_work_ram_status_at(0x7200, status_7200);
+        */
     }
 
     fn set_irq_reload_value(&mut self, value: u8) {
@@ -163,6 +184,20 @@ impl Mapper4 {
     fn enable_irq(&mut self) {
         self.irq_enabled = true;
     }
+
+    /*
+    fn work_ram_status_from_bits(value: u8) -> WorkRamStatus {
+        assert_eq!(value & 0b1111_1100, 0);
+
+        match value {
+            0b00 => WorkRamStatus::Disabled,
+            0b01 => WorkRamStatus::Disabled,
+            0b10 => WorkRamStatus::ReadOnly,
+            0b11 => WorkRamStatus::ReadWrite,
+            _ => unreachable!(),
+        }
+    }
+    */
 }
 
 impl Mapper for Mapper4 {

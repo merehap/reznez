@@ -98,6 +98,10 @@ impl PrgMemory {
         self.window_with_index_at(start).0
     }
 
+    pub fn set_work_ram_status_at(&mut self, address: u16, status: WorkRamStatus) {
+        self.work_ram_at(address).status = status;
+    }
+
     pub fn disable_work_ram(&mut self, address: u16) {
         self.work_ram_at(address).status = WorkRamStatus::Disabled;
     }
