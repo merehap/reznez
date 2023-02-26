@@ -32,6 +32,31 @@ pub struct Mapper0 {
     name_table_mirroring: NameTableMirroring,
 }
 
+impl Mapper for Mapper0 {
+    fn write_to_cartridge_space(&mut self, address: CpuAddress, _value: u8) {
+        match address.to_raw() {
+            0x0000..=0x401F => unreachable!(),
+            0x4020..=0xFFFF => { /* Only mapper 0 does nothing here. */ },
+        }
+    }
+
+    fn name_table_mirroring(&self) -> NameTableMirroring {
+        self.name_table_mirroring
+    }
+
+    fn prg_memory(&self) -> &PrgMemory {
+        &self.prg_memory
+    }
+
+    fn chr_memory(&self) -> &ChrMemory {
+        &self.chr_memory
+    }
+
+    fn chr_memory_mut(&mut self) -> &mut ChrMemory {
+        &mut self.chr_memory
+    }
+}
+
 impl Mapper0 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper0, String> {
         let prg_layout = match Mapper0::board(cartridge)? {
@@ -55,31 +80,6 @@ impl Mapper0 {
         } else {
             Err("PRG ROM size must be 16K or 32K for mapper 0.".to_string())
         }
-    }
-}
-
-impl Mapper for Mapper0 {
-    fn write_to_cartridge_space(&mut self, address: CpuAddress, _value: u8) {
-        match address.to_raw() {
-            0x0000..=0x401F => unreachable!(),
-            0x4020..=0xFFFF => { /* Only mapper 0 does nothing here. */ },
-        }
-    }
-
-    fn name_table_mirroring(&self) -> NameTableMirroring {
-        self.name_table_mirroring
-    }
-
-    fn prg_memory(&self) -> &PrgMemory {
-        &self.prg_memory
-    }
-
-    fn chr_memory(&self) -> &ChrMemory {
-        &self.chr_memory
-    }
-
-    fn chr_memory_mut(&mut self) -> &mut ChrMemory {
-        &mut self.chr_memory
     }
 }
 

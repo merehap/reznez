@@ -30,32 +30,6 @@ pub struct Mapper3 {
     name_table_mirroring: NameTableMirroring,
 }
 
-impl Mapper3 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper3, String> {
-        let prg_layout = match Mapper3::board(cartridge)? {
-            Board::Cnrom128 => PRG_LAYOUT_CNROM_128.clone(),
-            Board::Cnrom256 => PRG_LAYOUT_CNROM_256.clone(),
-        };
-
-        Ok(Mapper3 {
-            prg_memory: PrgMemory::new(prg_layout, cartridge.prg_rom()),
-            chr_memory: ChrMemory::new(CHR_LAYOUT.clone(), cartridge.chr_rom()),
-            name_table_mirroring: cartridge.name_table_mirroring(),
-        })
-    }
-
-    fn board(cartridge: &Cartridge) -> Result<Board, String> {
-        let prg_rom_len = cartridge.prg_rom().len();
-        if prg_rom_len == 16 * KIBIBYTE {
-            Ok(Board::Cnrom128)
-        } else if prg_rom_len == 32 * KIBIBYTE {
-            Ok(Board::Cnrom256)
-        } else {
-            Err("PRG ROM size must be 16K or 32K for mapper 0.".to_string())
-        }
-    }
-}
-
 impl Mapper for Mapper3 {
     fn write_to_cartridge_space(&mut self, cpu_address: CpuAddress, value: u8) {
         match cpu_address.to_raw() {
@@ -79,6 +53,32 @@ impl Mapper for Mapper3 {
 
     fn chr_memory_mut(&mut self) -> &mut ChrMemory {
         &mut self.chr_memory
+    }
+}
+
+impl Mapper3 {
+    pub fn new(cartridge: &Cartridge) -> Result<Mapper3, String> {
+        let prg_layout = match Mapper3::board(cartridge)? {
+            Board::Cnrom128 => PRG_LAYOUT_CNROM_128.clone(),
+            Board::Cnrom256 => PRG_LAYOUT_CNROM_256.clone(),
+        };
+
+        Ok(Mapper3 {
+            prg_memory: PrgMemory::new(prg_layout, cartridge.prg_rom()),
+            chr_memory: ChrMemory::new(CHR_LAYOUT.clone(), cartridge.chr_rom()),
+            name_table_mirroring: cartridge.name_table_mirroring(),
+        })
+    }
+
+    fn board(cartridge: &Cartridge) -> Result<Board, String> {
+        let prg_rom_len = cartridge.prg_rom().len();
+        if prg_rom_len == 16 * KIBIBYTE {
+            Ok(Board::Cnrom128)
+        } else if prg_rom_len == 32 * KIBIBYTE {
+            Ok(Board::Cnrom256)
+        } else {
+            Err("PRG ROM size must be 16K or 32K for mapper 0.".to_string())
+        }
     }
 }
 

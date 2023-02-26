@@ -74,6 +74,81 @@ pub struct Mapper4 {
     name_table_mirroring: NameTableMirroring,
 }
 
+impl Mapper for Mapper4 {
+    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+        let is_even_address = address.to_raw() % 2 == 0;
+        match address.to_raw() {
+            0x0000..=0x401F => unreachable!(),
+            0x4020..=0x5FFF => { /* Do nothing. */ },
+            0x6000..=0x7FFF =>                    self.prg_memory.write(address, value),
+            0x8000..=0x9FFF if is_even_address => self.bank_select(value),
+            0x8000..=0x9FFF =>                    self.set_bank_index(value),
+            0xA000..=0xBFFF if is_even_address => self.set_mirroring(value),
+            0xA000..=0xBFFF =>                    self.prg_ram_protect(value),
+            0xC000..=0xDFFF if is_even_address => self.set_irq_reload_value(value),
+            0xC000..=0xDFFF =>                    self.reload_irq_counter(),
+            0xE000..=0xFFFF if is_even_address => self.disable_irq(),
+            0xE000..=0xFFFF =>                    self.enable_irq(),
+        }
+    }
+
+    fn process_end_of_ppu_cycle(&mut self) {
+        if self.irq_counter_suppression_cycles > 0 {
+            self.irq_counter_suppression_cycles -= 1;
+        }
+    }
+
+    fn process_current_ppu_address(&mut self, address: PpuAddress) {
+        if address.to_scroll_u16() >= 0x2000 {
+            return;
+        }
+
+        let next_side = address.pattern_table_side();
+        let should_tick_irq_counter =
+            self.pattern_table_side == PatternTableSide::Left
+            && next_side == PatternTableSide::Right
+            && self.irq_counter_suppression_cycles == 0;
+        if next_side == PatternTableSide::Right {
+            self.irq_counter_suppression_cycles = 16;
+        }
+
+        if should_tick_irq_counter {
+            if self.irq_counter == 0 || self.force_reload_irq_counter {
+                self.irq_counter = self.irq_counter_reload_value;
+                self.force_reload_irq_counter = false;
+            } else {
+                self.irq_counter -= 1;
+            }
+
+            if self.irq_enabled && self.irq_counter == 0 {
+                self.irq_pending = true;
+            }
+        }
+
+        self.pattern_table_side = next_side;
+    }
+
+    fn irq_pending(&self) -> bool {
+        self.irq_pending
+    }
+
+    fn name_table_mirroring(&self) -> NameTableMirroring {
+        self.name_table_mirroring
+    }
+
+    fn prg_memory(&self) -> &PrgMemory {
+        &self.prg_memory
+    }
+
+    fn chr_memory(&self) -> &ChrMemory {
+        &self.chr_memory
+    }
+
+    fn chr_memory_mut(&mut self) -> &mut ChrMemory {
+        &mut self.chr_memory
+    }
+}
+
 impl Mapper4 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper4, String> {
         Ok(Mapper4 {
@@ -198,79 +273,4 @@ impl Mapper4 {
         }
     }
     */
-}
-
-impl Mapper for Mapper4 {
-    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
-        let is_even_address = address.to_raw() % 2 == 0;
-        match address.to_raw() {
-            0x0000..=0x401F => unreachable!(),
-            0x4020..=0x5FFF => { /* Do nothing. */ },
-            0x6000..=0x7FFF =>                    self.prg_memory.write(address, value),
-            0x8000..=0x9FFF if is_even_address => self.bank_select(value),
-            0x8000..=0x9FFF =>                    self.set_bank_index(value),
-            0xA000..=0xBFFF if is_even_address => self.set_mirroring(value),
-            0xA000..=0xBFFF =>                    self.prg_ram_protect(value),
-            0xC000..=0xDFFF if is_even_address => self.set_irq_reload_value(value),
-            0xC000..=0xDFFF =>                    self.reload_irq_counter(),
-            0xE000..=0xFFFF if is_even_address => self.disable_irq(),
-            0xE000..=0xFFFF =>                    self.enable_irq(),
-        }
-    }
-
-    fn process_end_of_ppu_cycle(&mut self) {
-        if self.irq_counter_suppression_cycles > 0 {
-            self.irq_counter_suppression_cycles -= 1;
-        }
-    }
-
-    fn process_current_ppu_address(&mut self, address: PpuAddress) {
-        if address.to_scroll_u16() >= 0x2000 {
-            return;
-        }
-
-        let next_side = address.pattern_table_side();
-        let should_tick_irq_counter =
-            self.pattern_table_side == PatternTableSide::Left
-            && next_side == PatternTableSide::Right
-            && self.irq_counter_suppression_cycles == 0;
-        if next_side == PatternTableSide::Right {
-            self.irq_counter_suppression_cycles = 16;
-        }
-
-        if should_tick_irq_counter {
-            if self.irq_counter == 0 || self.force_reload_irq_counter {
-                self.irq_counter = self.irq_counter_reload_value;
-                self.force_reload_irq_counter = false;
-            } else {
-                self.irq_counter -= 1;
-            }
-
-            if self.irq_enabled && self.irq_counter == 0 {
-                self.irq_pending = true;
-            }
-        }
-
-        self.pattern_table_side = next_side;
-    }
-
-    fn irq_pending(&self) -> bool {
-        self.irq_pending
-    }
-
-    fn name_table_mirroring(&self) -> NameTableMirroring {
-        self.name_table_mirroring
-    }
-
-    fn prg_memory(&self) -> &PrgMemory {
-        &self.prg_memory
-    }
-
-    fn chr_memory(&self) -> &ChrMemory {
-        &self.chr_memory
-    }
-
-    fn chr_memory_mut(&mut self) -> &mut ChrMemory {
-        &mut self.chr_memory
-    }
 }

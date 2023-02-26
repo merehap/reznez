@@ -45,20 +45,6 @@ pub struct Mapper1 {
     chr_memory: ChrMemory,
 }
 
-impl Mapper1 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper1, String> {
-        Ok(Mapper1 {
-            shift: EMPTY_SHIFT_REGISTER,
-            control: Control::new(),
-            selected_chr_bank0: 0,
-            selected_chr_bank1: 0,
-            selected_prg_bank: 0,
-            prg_memory: PrgMemory::new(PRG_LAYOUT_16KIB_WINDOWS.clone(), cartridge.prg_rom()),
-            chr_memory: ChrMemory::new(CHR_LAYOUT_4KIB_WINDOWS.clone(), cartridge.chr_rom()),
-        })
-    }
-}
-
 impl Mapper for Mapper1 {
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
         if matches!(address.to_raw(), 0x6000..=0x7FFF) {
@@ -144,6 +130,20 @@ impl Mapper for Mapper1 {
 
     fn chr_memory_mut(&mut self) -> &mut ChrMemory {
         &mut self.chr_memory
+    }
+}
+
+impl Mapper1 {
+    pub fn new(cartridge: &Cartridge) -> Result<Mapper1, String> {
+        Ok(Mapper1 {
+            shift: EMPTY_SHIFT_REGISTER,
+            control: Control::new(),
+            selected_chr_bank0: 0,
+            selected_chr_bank1: 0,
+            selected_prg_bank: 0,
+            prg_memory: PrgMemory::new(PRG_LAYOUT_16KIB_WINDOWS.clone(), cartridge.prg_rom()),
+            chr_memory: ChrMemory::new(CHR_LAYOUT_4KIB_WINDOWS.clone(), cartridge.chr_rom()),
+        })
     }
 }
 

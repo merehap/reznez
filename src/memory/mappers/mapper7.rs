@@ -22,16 +22,6 @@ pub struct Mapper7 {
     name_table_mirroring: NameTableMirroring,
 }
 
-impl Mapper7 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper7, String> {
-        Ok(Mapper7 {
-            prg_memory: PrgMemory::new(PRG_LAYOUT.clone(), cartridge.prg_rom()),
-            chr_memory: ChrMemory::new(CHR_LAYOUT.clone(), cartridge.chr_rom()),
-            name_table_mirroring: NameTableMirroring::OneScreenLeftBank,
-        })
-    }
-}
-
 impl Mapper for Mapper7 {
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
         match address.to_raw() {
@@ -62,5 +52,15 @@ impl Mapper for Mapper7 {
 
     fn chr_memory_mut(&mut self) -> &mut ChrMemory {
         &mut self.chr_memory
+    }
+}
+
+impl Mapper7 {
+    pub fn new(cartridge: &Cartridge) -> Result<Mapper7, String> {
+        Ok(Mapper7 {
+            prg_memory: PrgMemory::new(PRG_LAYOUT.clone(), cartridge.prg_rom()),
+            chr_memory: ChrMemory::new(CHR_LAYOUT.clone(), cartridge.chr_rom()),
+            name_table_mirroring: NameTableMirroring::OneScreenLeftBank,
+        })
     }
 }
