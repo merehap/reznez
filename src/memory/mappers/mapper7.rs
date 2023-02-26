@@ -5,7 +5,7 @@ lazy_static! {
         .max_bank_count(8)
         .bank_size(32 * KIBIBYTE)
         .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-        .window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
         .build();
     // Only one bank, so not bank-switched.
     static ref CHR_LAYOUT: ChrLayout = ChrLayout::builder()
@@ -26,8 +26,7 @@ impl Mapper for Mapper7 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
             0x8000..=0xFFFF => {
-                self.params.prg_memory.window_at(0x8000)
-                    .switch_bank_to(value & 0b0000_0111);
+                self.params.prg_memory.set_bank_index_register(P0, value & 0b0000_01111);
                 self.params.name_table_mirroring = if value & 0b0001_0000 == 0 {
                     NameTableMirroring::OneScreenLeftBank
                 } else {
