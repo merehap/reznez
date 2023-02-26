@@ -25,9 +25,7 @@ lazy_static! {
 
 // CNROM
 pub struct Mapper3 {
-    prg_memory: PrgMemory,
-    chr_memory: ChrMemory,
-    name_table_mirroring: NameTableMirroring,
+    params: MapperParams,
 }
 
 impl Mapper for Mapper3 {
@@ -35,25 +33,12 @@ impl Mapper for Mapper3 {
         match cpu_address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
-            0x8000..=0xFFFF => self.chr_memory.window_at(0x0000).switch_bank_to(value),
+            0x8000..=0xFFFF => self.params.chr_memory.window_at(0x0000).switch_bank_to(value),
         }
     }
 
-    fn name_table_mirroring(&self) -> NameTableMirroring {
-        self.name_table_mirroring
-    }
-
-    fn prg_memory(&self) -> &PrgMemory {
-        &self.prg_memory
-    }
-
-    fn chr_memory(&self) -> &ChrMemory {
-        &self.chr_memory
-    }
-
-    fn chr_memory_mut(&mut self) -> &mut ChrMemory {
-        &mut self.chr_memory
-    }
+    fn params(&self) -> &MapperParams { &self.params }
+    fn params_mut(&mut self) -> &mut MapperParams { &mut self.params }
 }
 
 impl Mapper3 {
@@ -63,11 +48,13 @@ impl Mapper3 {
             Board::Cnrom256 => PRG_LAYOUT_CNROM_256.clone(),
         };
 
-        Ok(Mapper3 {
-            prg_memory: PrgMemory::new(prg_layout, cartridge.prg_rom()),
-            chr_memory: ChrMemory::new(CHR_LAYOUT.clone(), cartridge.chr_rom()),
-            name_table_mirroring: cartridge.name_table_mirroring(),
-        })
+        let params = MapperParams::new(
+            cartridge,
+            prg_layout,
+            CHR_LAYOUT.clone(),
+            cartridge.name_table_mirroring(),
+        );
+        Ok(Mapper3 { params })
     }
 
     fn board(cartridge: &Cartridge) -> Result<Board, String> {

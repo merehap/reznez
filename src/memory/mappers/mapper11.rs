@@ -17,9 +17,7 @@ lazy_static! {
 
 // Color Dreams. Same as GxROM except with different register locations.
 pub struct Mapper11 {
-    prg_memory: PrgMemory,
-    chr_memory: ChrMemory,
-    name_table_mirroring: NameTableMirroring,
+    params: MapperParams,
 }
 
 impl Mapper for Mapper11 {
@@ -28,37 +26,26 @@ impl Mapper for Mapper11 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
             0x8000..=0xFFFF => {
-                self.prg_memory.window_at(0x8000)
+                self.params.prg_memory.window_at(0x8000)
                     .switch_bank_to(value & 0b0000_0011);
-                self.chr_memory.window_at(0x0000)
+                self.params.chr_memory.window_at(0x0000)
                     .switch_bank_to(value >> 4);
             }
         }
     }
 
-    fn name_table_mirroring(&self) -> NameTableMirroring {
-        self.name_table_mirroring
-    }
-
-    fn prg_memory(&self) -> &PrgMemory {
-        &self.prg_memory
-    }
-
-    fn chr_memory(&self) -> &ChrMemory {
-        &self.chr_memory
-    }
-
-    fn chr_memory_mut(&mut self) -> &mut ChrMemory {
-        &mut self.chr_memory
-    }
+    fn params(&self) -> &MapperParams { &self.params }
+    fn params_mut(&mut self) -> &mut MapperParams { &mut self.params }
 }
 
 impl Mapper11 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper11, String> {
-        Ok(Mapper11 {
-            prg_memory: PrgMemory::new(PRG_LAYOUT.clone(), cartridge.prg_rom()),
-            chr_memory: ChrMemory::new(CHR_LAYOUT.clone(), cartridge.chr_rom()),
-            name_table_mirroring: cartridge.name_table_mirroring(),
-        })
+        let params = MapperParams::new(
+            cartridge,
+            PRG_LAYOUT.clone(),
+            CHR_LAYOUT.clone(),
+            cartridge.name_table_mirroring(),
+        );
+        Ok(Mapper11 { params })
     }
 }

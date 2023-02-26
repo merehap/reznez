@@ -25,11 +25,8 @@ use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::register::register_type::RegisterType;
 
 pub trait Mapper {
-    fn name_table_mirroring(&self) -> NameTableMirroring;
-    fn prg_memory(&self) -> &PrgMemory;
-    fn chr_memory(&self) -> &ChrMemory;
-    fn chr_memory_mut(&mut self) -> &mut ChrMemory;
-
+    fn params(&self) -> &MapperParams;
+    fn params_mut(&mut self) -> &mut MapperParams;
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8);
 
     // Most mappers don't care about PPU cycles.
@@ -307,6 +304,22 @@ pub trait Mapper {
 
         bank_text
     }
+
+    fn name_table_mirroring(&self) -> NameTableMirroring {
+        self.params().name_table_mirroring
+    }
+
+    fn prg_memory(&self) -> &PrgMemory {
+        &self.params().prg_memory
+    }
+
+    fn chr_memory(&self) -> &ChrMemory {
+        &self.params().chr_memory
+    }
+
+    fn chr_memory_mut(&mut self) -> &mut ChrMemory {
+        &mut self.params_mut().chr_memory
+    }
 }
 
 #[inline]
@@ -368,5 +381,26 @@ fn vram_side(
         (TopRight   , Vertical  ) => VramSide::Right,
         (BottomLeft , Vertical  ) => VramSide::Left,
         (BottomRight, _         ) => VramSide::Right,
+    }
+}
+
+pub struct MapperParams {
+    pub prg_memory: PrgMemory,
+    pub chr_memory: ChrMemory,
+    pub name_table_mirroring: NameTableMirroring,
+}
+
+impl MapperParams {
+    pub fn new(
+        cartridge: &Cartridge,
+        initial_prg_layout: PrgLayout,
+        initial_chr_layout: ChrLayout,
+        initial_name_table_mirroring: NameTableMirroring,
+    ) -> MapperParams {
+        MapperParams {
+            prg_memory: PrgMemory::new(initial_prg_layout, cartridge.prg_rom()),
+            chr_memory: ChrMemory::new(initial_chr_layout, cartridge.chr_rom()),
+            name_table_mirroring: initial_name_table_mirroring,
+        }
     }
 }
