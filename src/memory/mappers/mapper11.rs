@@ -5,13 +5,13 @@ lazy_static! {
         .max_bank_count(4)
         .bank_size(32 * KIBIBYTE)
         .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-        .window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
         .build();
 
     static ref CHR_LAYOUT: ChrLayout = ChrLayout::builder()
         .max_bank_count(16)
         .bank_size(8 * KIBIBYTE)
-        .window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::FIRST))
+        .window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::Register(P0)))
         .build();
 }
 
@@ -26,10 +26,8 @@ impl Mapper for Mapper11 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
             0x8000..=0xFFFF => {
-                self.params.prg_memory.window_at(0x8000)
-                    .switch_bank_to(value & 0b0000_0011);
-                self.params.chr_memory.window_at(0x0000)
-                    .switch_bank_to(value >> 4);
+                self.params.prg_memory.set_bank_index_register(P0, value & 0b0000_0011);
+                self.params.chr_memory.set_bank_index_register(C0, value >> 4);
             }
         }
     }
@@ -40,12 +38,11 @@ impl Mapper for Mapper11 {
 
 impl Mapper11 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper11, String> {
-        let params = MapperParams::new(
+        Ok(Mapper11 { params: MapperParams::new(
             cartridge,
             PRG_LAYOUT.clone(),
             CHR_LAYOUT.clone(),
             cartridge.name_table_mirroring(),
-        );
-        Ok(Mapper11 { params })
+        )})
     }
 }

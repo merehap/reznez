@@ -36,12 +36,11 @@ impl Mapper for Mapper2 {
 
 impl Mapper2 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper2, String> {
-        let params = MapperParams::new(
+        Ok(Mapper2 { params: MapperParams::new(
             cartridge,
             PRG_LAYOUT.clone(),
             CHR_LAYOUT.clone(),
             cartridge.name_table_mirroring(),
-        );
-        Ok(Mapper2 { params })
+        )})
     }
 }

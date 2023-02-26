@@ -42,12 +42,11 @@ impl Mapper for Mapper7 {
 
 impl Mapper7 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper7, String> {
-        let params = MapperParams::new(
+        Ok(Mapper7 { params: MapperParams::new(
             cartridge,
             PRG_LAYOUT.clone(),
             CHR_LAYOUT.clone(),
             NameTableMirroring::OneScreenLeftBank,
-        );
-        Ok(Mapper7 { params })
+        )})
     }
 }
