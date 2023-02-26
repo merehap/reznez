@@ -6,7 +6,6 @@ use crate::util::unit::KIBIBYTE;
 
 pub struct ChrMemory {
     layout: ChrLayout,
-    // Mainly (only?) used by MMC3 and variants.
     bank_index_registers: BankIndexRegisters,
     raw_memory: Vec<u8>,
 }
@@ -88,11 +87,13 @@ impl ChrMemory {
         self.layout = layout;
     }
 
-    pub fn set_bank_index_register(
+    pub fn set_bank_index_register<INDEX: Into<u16>>(
         &mut self,
         id: BankIndexRegisterId,
-        raw_bank_index: u16,
+        raw_bank_index: INDEX,
     ) {
+        let mut raw_bank_index = raw_bank_index.into();
+        raw_bank_index %= self.bank_count();
         self.bank_index_registers.set(id, raw_bank_index);
     }
 
