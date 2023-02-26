@@ -20,6 +20,7 @@ use crate::memory::mappers::mapper2::Mapper2;
 use crate::memory::mappers::mapper3::Mapper3;
 use crate::memory::mappers::mapper4::Mapper4;
 use crate::memory::mappers::mapper7::Mapper7;
+use crate::memory::mappers::mapper11::Mapper11;
 use crate::memory::mappers::mapper66::Mapper66;
 use crate::memory::mappers::mapper140::Mapper140;
 use crate::memory::memory::Memory;
@@ -49,6 +50,7 @@ impl Nes {
             3 => Box::new(Mapper3::new(&config.cartridge).unwrap()),
             4 => Box::new(Mapper4::new(&config.cartridge).unwrap()),
             7 => Box::new(Mapper7::new(&config.cartridge).unwrap()),
+            11 => Box::new(Mapper11::new(&config.cartridge).unwrap()),
             66 => Box::new(Mapper66::new(&config.cartridge).unwrap()),
             140 => Box::new(Mapper140::new(&config.cartridge).unwrap()),
             _ => todo!(),
