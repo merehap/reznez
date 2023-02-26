@@ -114,12 +114,12 @@ impl PrgMemory {
         self.layout = layout;
     }
 
-    pub fn set_bank_index_register(
+    pub fn set_bank_index_register<INDEX: Into<u16>>(
         &mut self,
         id: BankIndexRegisterId,
-        raw_bank_index: u16,
+        raw_bank_index: INDEX,
     ) {
-        self.bank_index_registers.set(id, raw_bank_index);
+        self.bank_index_registers.set(id, raw_bank_index.into());
     }
 
     // TODO: Indicate if read-only.

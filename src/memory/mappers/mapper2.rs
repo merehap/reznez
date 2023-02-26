@@ -5,7 +5,7 @@ lazy_static! {
         .max_bank_count(256)
         .bank_size(16 * KIBIBYTE)
         .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-        .window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
         .window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
         .build();
     // Only one bank, so not bank-switched.
@@ -26,7 +26,7 @@ impl Mapper for Mapper2 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
-            0x8000..=0xFFFF => self.params.prg_memory.window_at(0x8000).switch_bank_to(value),
+            0x8000..=0xFFFF => self.params.prg_memory.set_bank_index_register(P0, value),
         }
     }
 
