@@ -70,12 +70,12 @@ impl BankIndexRegisters {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, FromPrimitive)]
 pub enum BankIndexRegisterId {
-    R0,
-    R1,
-    R2,
-    R3,
-    R4,
-    R5,
-    R6,
-    R7,
+    C0,
+    C1,
+    C2,
+    C3,
+    C4,
+    C5,
+    P0,
+    P1,
 }

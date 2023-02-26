@@ -3,21 +3,21 @@ use num_traits::FromPrimitive;
 use crate::memory::mapper::*;
 
 lazy_static! {
-    static ref PRG_LAYOUT_R6_AT_8000: PrgLayout = PrgLayout::builder()
+    static ref PRG_LAYOUT_P0_AT_8000: PrgLayout = PrgLayout::builder()
         .max_bank_count(32)
         .bank_size(8 * KIBIBYTE)
         .window(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgType::WorkRam)
         .window(0x7000, 0x71FF, KIBIBYTE / 2, PrgType::WorkRam)
         .window(0x7200, 0x73FF, KIBIBYTE / 2, PrgType::WorkRam)
         .window(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgType::WorkRam)
-        .window(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(R6)))
-        .window(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(R7)))
+        .window(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
+        .window(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P1)))
         .window(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::SECOND_LAST))
         .window(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
         .build();
 
-    // Same as PRG_LAYOUT_R6_AT_8000, except the 0x8000 and 0xC000 windows are swapped.
-    static ref PRG_LAYOUT_R6_AT_C000: PrgLayout = PrgLayout::builder()
+    // Same as PRG_LAYOUT_P0_AT_8000, except the 0x8000 and 0xC000 windows are swapped.
+    static ref PRG_LAYOUT_P0_AT_C000: PrgLayout = PrgLayout::builder()
         .max_bank_count(32)
         .bank_size(8 * KIBIBYTE)
         .window(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgType::WorkRam)
@@ -25,8 +25,8 @@ lazy_static! {
         .window(0x7200, 0x73FF, KIBIBYTE / 2, PrgType::WorkRam)
         .window(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgType::WorkRam)
         .window(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::SECOND_LAST))
-        .window(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(R7)))
-        .window(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(R6)))
+        .window(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P1)))
+        .window(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
         .window(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
         .build();
 
@@ -34,26 +34,26 @@ lazy_static! {
         .max_bank_count(256)
         .bank_size(1 * KIBIBYTE)
         // Big windows.
-        .window(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(R0)))
-        .window(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(R1)))
+        .window(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C0)))
+        .window(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C1)))
         // Small windows.
-        .window(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(R2)))
-        .window(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(R3)))
-        .window(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(R4)))
-        .window(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(R5)))
+        .window(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C2)))
+        .window(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3)))
+        .window(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C4)))
+        .window(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C5)))
         .build();
 
     static ref CHR_LAYOUT_SMALL_WINDOWS_FIRST: ChrLayout = ChrLayout::builder()
         .max_bank_count(256)
         .bank_size(1 * KIBIBYTE)
         // Small windows.
-        .window(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(R2)))
-        .window(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(R3)))
-        .window(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(R4)))
-        .window(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(R5)))
+        .window(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C2)))
+        .window(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3)))
+        .window(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C4)))
+        .window(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C5)))
         // Big windows.
-        .window(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(R0)))
-        .window(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(R1)))
+        .window(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C0)))
+        .window(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C1)))
         .build();
 }
 
@@ -138,12 +138,12 @@ impl Mapper4 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper4, String> {
         let params = MapperParams::new(
             cartridge,
-            PRG_LAYOUT_R6_AT_8000.clone(),
+            PRG_LAYOUT_P0_AT_8000.clone(),
             CHR_LAYOUT_BIG_WINDOWS_FIRST.clone(),
             cartridge.name_table_mirroring(),
         );
         Ok(Mapper4 {
-            selected_register_id: R0,
+            selected_register_id: C0,
 
             irq_pending: false,
             irq_enabled: false,
@@ -159,7 +159,7 @@ impl Mapper4 {
 
     fn bank_select(&mut self, value: u8) {
         let chr_big_windows_first =                             (value & 0b1000_0000) == 0;
-        let r6_is_at_0x8000 =                                   (value & 0b0100_0000) == 0;
+        let p0_is_at_0x8000 =                                   (value & 0b0100_0000) == 0;
         //self.prg_ram_enabled =                                (value & 0b0010_0000) != 0;
         self.selected_register_id = BankIndexRegisterId::from_u8(value & 0b0000_0111).unwrap();
 
@@ -169,26 +169,26 @@ impl Mapper4 {
             self.params.chr_memory.set_layout(CHR_LAYOUT_SMALL_WINDOWS_FIRST.clone())
         }
 
-        if r6_is_at_0x8000 {
-            self.params.prg_memory.set_layout(PRG_LAYOUT_R6_AT_8000.clone());
+        if p0_is_at_0x8000 {
+            self.params.prg_memory.set_layout(PRG_LAYOUT_P0_AT_8000.clone());
         } else {
-            self.params.prg_memory.set_layout(PRG_LAYOUT_R6_AT_C000.clone());
+            self.params.prg_memory.set_layout(PRG_LAYOUT_P0_AT_C000.clone());
         }
     }
 
     fn set_bank_index(&mut self, value: u8) {
         match self.selected_register_id {
             // Double-width windows can only use even banks.
-            R0 | R1 => {
+            C0 | C1 => {
                 let bank_index = u16::from(value & 0b1111_1110);
                 self.params.chr_memory.set_bank_index_register(self.selected_register_id, bank_index);
             }
-            R2 | R3 | R4 | R5 => {
+            C2 | C3 | C4 | C5 => {
                 let bank_index = u16::from(value);
                 self.params.chr_memory.set_bank_index_register(self.selected_register_id, bank_index);
             }
             // There can only be up to 64 PRG banks, though some ROM hacks use more.
-            R6 | R7 => {
+            P0 | P1 => {
                 assert_eq!(value & 0b1100_0000, 0, "ROM hack.");
                 let bank_index = u16::from(value & 0b0011_1111);
                 self.params.prg_memory.set_bank_index_register(self.selected_register_id, bank_index);
