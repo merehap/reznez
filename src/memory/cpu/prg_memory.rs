@@ -274,7 +274,7 @@ impl PrgLayoutBuilder {
         self
     }
 
-    pub fn add_window(
+    pub fn window(
         &mut self,
         start: u16,
         end: u16,

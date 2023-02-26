@@ -4,14 +4,14 @@ lazy_static! {
     static ref PRG_LAYOUT: PrgLayout = PrgLayout::builder()
         .max_bank_count(8)
         .bank_size(32 * KIBIBYTE)
-        .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-        .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
+        .window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
         .build();
     // Only one bank, so not bank-switched.
     static ref CHR_LAYOUT: ChrLayout = ChrLayout::builder()
         .max_bank_count(1)
         .bank_size(8 * KIBIBYTE)
-        .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
+        .window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
         .build();
 }
 

@@ -7,28 +7,28 @@ lazy_static! {
     static ref PRG_LAYOUT_16KIB_WINDOWS: PrgLayout = PrgLayout::builder()
         .max_bank_count(16)
         .bank_size(16 * KIBIBYTE)
-        .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
-        .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
-        .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
+        .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
+        .window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
         .build();
     static ref PRG_LAYOUT_32KIB_WINDOW: PrgLayout = PrgLayout::builder()
         .max_bank_count(8)
         .bank_size(32 * KIBIBYTE)
-        .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
-        .add_window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
+        .window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
         .build();
 
     // TODO: Not all boards support CHR RAM.
     static ref CHR_LAYOUT_4KIB_WINDOWS: ChrLayout = ChrLayout::builder()
         .max_bank_count(32)
         .bank_size(4 * KIBIBYTE)
-        .add_window(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
-        .add_window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
+        .window(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
+        .window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
         .build();
     static ref CHR_LAYOUT_8KIB_WINDOW: ChrLayout = ChrLayout::builder()
         .max_bank_count(16)
         .bank_size(8 * KIBIBYTE)
-        .add_window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
+        .window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
         .build();
 }
 
