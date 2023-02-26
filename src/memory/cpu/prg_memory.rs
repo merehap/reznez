@@ -129,16 +129,18 @@ impl PrgMemory {
         let windows = &self.layout.windows;
         assert!(!windows.is_empty());
 
-        for mut i in 0..windows.len() {
+        for i in 0..windows.len() {
             if i == windows.len() - 1 || address < windows[i + 1].start {
                 let bank_offset = address.to_raw() - windows[i].start.to_raw();
-                // Step backwards until we find which window is being mirrored.
-                while windows[i].is_mirror() {
-                    assert!(i > 0);
-                    i -= 1;
+
+                let window;
+                if let PrgType::Mirror(mirrored_window_start) = windows[i].prg_type {
+                    window = self.window(mirrored_window_start);
+                } else {
+                    window = &windows[i];
                 }
 
-                let prg_memory_index = match windows[i].prg_type {
+                let prg_memory_index = match window.prg_type {
                     PrgType::Empty => PrgMemoryIndex::None,
                     PrgType::Banked(_, bank_index) => {
                         let raw_bank_index =
@@ -161,7 +163,7 @@ impl PrgMemory {
 
                         result.unwrap()
                     }
-                    PrgType::MirrorPrevious => unreachable!(),
+                    PrgType::Mirror(_) => unreachable!(),
                 };
                 return prg_memory_index;
             }
@@ -181,6 +183,16 @@ impl PrgMemory {
         for (index, window) in self.layout.windows.iter_mut().enumerate() {
             if window.start.to_raw() == start {
                 return (window, index);
+            }
+        }
+
+        panic!("No window exists at {start:?}");
+    }
+
+    fn window(&self, start: u16) -> &Window {
+        for window in &self.layout.windows {
+            if window.start.to_raw() == start {
+                return window;
             }
         }
 
@@ -323,10 +335,6 @@ impl Window {
         self.prg_type.bank_index()
     }
 
-    fn is_mirror(self) -> bool {
-        self.prg_type == PrgType::MirrorPrevious
-    }
-
     fn size(self) -> usize {
         usize::from(self.end.to_raw() - self.start.to_raw() + 1)
     }
@@ -363,7 +371,7 @@ pub enum PrgType {
     Banked(Writability, BankIndex),
     // WRAM, Save RAM, SRAM, ambiguously "PRG RAM".
     WorkRam,
-    MirrorPrevious,
+    Mirror(u16),
 }
 
 impl PrgType {
@@ -371,7 +379,7 @@ impl PrgType {
         use PrgType::*;
         match self {
             Banked(_, bank_index) => Some(bank_index),
-            Empty | MirrorPrevious | WorkRam => None,
+            Empty | Mirror(_) | WorkRam => None,
         }
     }
 
@@ -383,7 +391,7 @@ impl PrgType {
             Banked(_, old_bank_index) if old_bank_index.is_register_backed() => panic!(),
             Banked(writability, _) =>
                 *self = PrgType::Banked(*writability, new_bank_index),
-            Empty | MirrorPrevious | WorkRam => panic!(),
+            Empty | Mirror(_) | WorkRam => panic!(),
         }
     }
 }

@@ -1,13 +1,13 @@
 use crate::memory::mapper::*;
 
 lazy_static! {
-    // Same as Mapper 0's PRG layouts. Only one bank, so not bank-switched.
+    // Same as NROM's PRG layouts. Only one bank, so not bank-switched.
     static ref PRG_LAYOUT_CNROM_128: PrgLayout = PrgLayout::builder()
         .max_bank_count(1)
         .bank_size(16 * KIBIBYTE)
         .add_window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
         .add_window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
-        .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::MirrorPrevious)
+        .add_window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Mirror(0x8000))
         .build();
     static ref PRG_LAYOUT_CNROM_256: PrgLayout = PrgLayout::builder()
         .max_bank_count(1)
