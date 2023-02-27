@@ -26,7 +26,7 @@ impl Mapper for Mapper2 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
-            0x8000..=0xFFFF => self.params.prg_memory.set_bank_index_register(P0, value),
+            0x8000..=0xFFFF => self.prg_memory_mut().set_bank_index_register(P0, value),
         }
     }
 

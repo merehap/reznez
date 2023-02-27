@@ -78,7 +78,7 @@ impl Mapper for Mapper4 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ },
-            0x6000..=0x7FFF =>                    self.params.prg_memory.write(address, value),
+            0x6000..=0x7FFF =>                    self.prg_memory_mut().write(address, value),
             0x8000..=0x9FFF if is_even_address => self.bank_select(value),
             0x8000..=0x9FFF =>                    self.set_bank_index(value),
             0xA000..=0xBFFF if is_even_address => self.set_mirroring(value),
@@ -136,12 +136,6 @@ impl Mapper for Mapper4 {
 
 impl Mapper4 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper4, String> {
-        let params = MapperParams::new(
-            cartridge,
-            PRG_LAYOUT_P0_AT_8000.clone(),
-            CHR_LAYOUT_BIG_WINDOWS_FIRST.clone(),
-            cartridge.name_table_mirroring(),
-        );
         Ok(Mapper4 {
             selected_register_id: C0,
 
@@ -153,7 +147,12 @@ impl Mapper4 {
             irq_counter_suppression_cycles: 0,
             pattern_table_side: PatternTableSide::Left,
 
-            params
+            params: MapperParams::new(
+                cartridge,
+                PRG_LAYOUT_P0_AT_8000.clone(),
+                CHR_LAYOUT_BIG_WINDOWS_FIRST.clone(),
+                cartridge.name_table_mirroring(),
+            )
         })
     }
 
@@ -164,43 +163,44 @@ impl Mapper4 {
         self.selected_register_id = BankIndexRegisterId::from_u8(value & 0b0000_0111).unwrap();
 
         if chr_big_windows_first {
-            self.params.chr_memory.set_layout(CHR_LAYOUT_BIG_WINDOWS_FIRST.clone())
+            self.chr_memory_mut().set_layout(CHR_LAYOUT_BIG_WINDOWS_FIRST.clone())
         } else {
-            self.params.chr_memory.set_layout(CHR_LAYOUT_SMALL_WINDOWS_FIRST.clone())
+            self.chr_memory_mut().set_layout(CHR_LAYOUT_SMALL_WINDOWS_FIRST.clone())
         }
 
         if p0_is_at_0x8000 {
-            self.params.prg_memory.set_layout(PRG_LAYOUT_P0_AT_8000.clone());
+            self.prg_memory_mut().set_layout(PRG_LAYOUT_P0_AT_8000.clone());
         } else {
-            self.params.prg_memory.set_layout(PRG_LAYOUT_P0_AT_C000.clone());
+            self.prg_memory_mut().set_layout(PRG_LAYOUT_P0_AT_C000.clone());
         }
     }
 
     fn set_bank_index(&mut self, value: u8) {
-        match self.selected_register_id {
+        let selected_register_id = self.selected_register_id;
+        match selected_register_id {
             // Double-width windows can only use even banks.
             C0 | C1 => {
                 let bank_index = u16::from(value & 0b1111_1110);
-                self.params.chr_memory.set_bank_index_register(self.selected_register_id, bank_index);
+                self.chr_memory_mut().set_bank_index_register(selected_register_id, bank_index);
             }
             C2 | C3 | C4 | C5 => {
                 let bank_index = u16::from(value);
-                self.params.chr_memory.set_bank_index_register(self.selected_register_id, bank_index);
+                self.chr_memory_mut().set_bank_index_register(selected_register_id, bank_index);
             }
             // There can only be up to 64 PRG banks, though some ROM hacks use more.
             P0 | P1 => {
                 assert_eq!(value & 0b1100_0000, 0, "ROM hack.");
                 let bank_index = u16::from(value & 0b0011_1111);
-                self.params.prg_memory.set_bank_index_register(self.selected_register_id, bank_index);
+                self.prg_memory_mut().set_bank_index_register(selected_register_id, bank_index);
             }
         };
     }
 
     fn set_mirroring(&mut self, value: u8) {
         use NameTableMirroring::*;
-        match (self.params.name_table_mirroring, value & 0b0000_0001) {
-            (Vertical, 1) => self.params.name_table_mirroring = Horizontal,
-            (Horizontal, 0) => self.params.name_table_mirroring = Vertical,
+        match (self.name_table_mirroring(), value & 0b0000_0001) {
+            (Vertical, 1) => self.set_name_table_mirroring(Horizontal),
+            (Horizontal, 0) => self.set_name_table_mirroring(Vertical),
             _ => { /* Other mirrorings cannot be changed. */ },
         }
     }

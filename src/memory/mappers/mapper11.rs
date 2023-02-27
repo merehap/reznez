@@ -26,8 +26,8 @@ impl Mapper for Mapper11 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
             0x8000..=0xFFFF => {
-                self.params.prg_memory.set_bank_index_register(P0, value & 0b0000_0011);
-                self.params.chr_memory.set_bank_index_register(C0, value >> 4);
+                self.prg_memory_mut().set_bank_index_register(P0, value & 0b0000_0011);
+                self.chr_memory_mut().set_bank_index_register(C0, value >> 4);
             }
         }
     }

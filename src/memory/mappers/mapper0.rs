@@ -47,14 +47,12 @@ impl Mapper0 {
             Board::Nrom128 => PRG_LAYOUT_NROM_128.clone(),
             Board::Nrom256 => PRG_LAYOUT_NROM_256.clone(),
         };
-
-        let params = MapperParams::new(
+        Ok(Mapper0 { params: MapperParams::new(
             cartridge,
             prg_layout,
             CHR_LAYOUT.clone(),
             cartridge.name_table_mirroring(),
-        );
-        Ok(Mapper0 { params })
+        )})
     }
 
     fn board(cartridge: &Cartridge) -> Result<Board, String> {

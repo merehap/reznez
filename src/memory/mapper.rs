@@ -309,8 +309,16 @@ pub trait Mapper {
         self.params().name_table_mirroring
     }
 
+    fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring) {
+        self.params_mut().name_table_mirroring = name_table_mirroring;
+    }
+
     fn prg_memory(&self) -> &PrgMemory {
         &self.params().prg_memory
+    }
+
+    fn prg_memory_mut(&mut self) -> &mut PrgMemory {
+        &mut self.params_mut().prg_memory
     }
 
     fn chr_memory(&self) -> &ChrMemory {

@@ -27,8 +27,8 @@ impl Mapper for Mapper140 {
             0x4020..=0x5FFF => { /* Do nothing. */ }
             0x6000..=0x7FFF => {
                 assert_eq!(value & 0b1100_0000, 0);
-                self.params.prg_memory.set_bank_index_register(P0, (value & 0b0011_0000) >> 4);
-                self.params.chr_memory.set_bank_index_register(C0, value & 0b0000_1111);
+                self.prg_memory_mut().set_bank_index_register(P0, (value & 0b0011_0000) >> 4);
+                self.chr_memory_mut().set_bank_index_register(C0, value & 0b0000_1111);
             }
             0x8000..=0xFFFF => { /* Do nothing. */ }
         }

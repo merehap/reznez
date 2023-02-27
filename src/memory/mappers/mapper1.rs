@@ -49,13 +49,13 @@ impl Mapper for Mapper1 {
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
         // Work RAM writes don't trigger any of the shifter logic.
         if matches!(address.to_raw(), 0x6000..=0x7FFF) {
-            self.params.prg_memory.write(address, value);
+            self.prg_memory_mut().write(address, value);
             return;
         }
 
         if get_bit(value, 0) {
             self.shift = EMPTY_SHIFT_REGISTER;
-            self.params.prg_memory.set_layout(PRG_LAYOUT_FIXED_LAST_WINDOW.clone());
+            self.prg_memory_mut().set_layout(PRG_LAYOUT_FIXED_LAST_WINDOW.clone());
             return;
         }
 
@@ -64,26 +64,27 @@ impl Mapper for Mapper1 {
         self.shift >>= 1;
         self.shift |= u8::from(get_bit(value, 7)) << 4;
 
+        let shift = self.shift;
         if is_last_shift {
             match address.to_raw() {
                 0x0000..=0x401F => unreachable!(),
                 0x4020..=0x5FFF => { /* Do nothing. */ }
                 0x6000..=0x7FFF => unreachable!(),
                 0x8000..=0x9FFF => {
-                    self.params.prg_memory.set_layout(Mapper1::next_prg_layout(self.shift));
-                    self.params.chr_memory.set_layout(Mapper1::next_chr_layout(self.shift));
-                    self.params.name_table_mirroring = Mapper1::next_mirroring(self.shift);
+                    self.prg_memory_mut().set_layout(Mapper1::next_prg_layout(shift));
+                    self.chr_memory_mut().set_layout(Mapper1::next_chr_layout(shift));
+                    self.set_name_table_mirroring(Mapper1::next_mirroring(shift));
                 }
                 // FIXME: Handle cases for special boards.
-                0xA000..=0xBFFF => self.params.chr_memory.set_bank_index_register(C0, self.shift),
+                0xA000..=0xBFFF => self.chr_memory_mut().set_bank_index_register(C0, shift),
                 // FIXME: Handle cases for special boards.
-                0xC000..=0xDFFF => self.params.chr_memory.set_bank_index_register(C1, self.shift),
+                0xC000..=0xDFFF => self.chr_memory_mut().set_bank_index_register(C1, shift),
                 0xE000..=0xFFFF => {
-                    self.params.prg_memory.set_bank_index_register(P0, self.shift & 0b0_1111);
-                    if self.shift & 0b1_0000 == 0 {
-                        self.params.prg_memory.enable_work_ram(0x6000);
+                    self.prg_memory_mut().set_bank_index_register(P0, shift & 0b0_1111);
+                    if shift & 0b1_0000 == 0 {
+                        self.prg_memory_mut().enable_work_ram(0x6000);
                     } else {
-                        self.params.prg_memory.disable_work_ram(0x6000);
+                        self.prg_memory_mut().disable_work_ram(0x6000);
                     }
                 }
             }
