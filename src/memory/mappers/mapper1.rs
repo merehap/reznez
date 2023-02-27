@@ -64,8 +64,8 @@ impl Mapper for Mapper1 {
         self.shift >>= 1;
         self.shift |= u8::from(get_bit(value, 7)) << 4;
 
-        let shift = self.shift;
         if is_last_shift {
+            let shift = self.shift;
             match address.to_raw() {
                 0x0000..=0x401F => unreachable!(),
                 0x4020..=0x5FFF => { /* Do nothing. */ }
@@ -111,27 +111,29 @@ impl Mapper1 {
     }
 
     fn next_prg_layout(value: u8) -> PrgLayout {
-        match (get_bit(value, 4), get_bit(value, 5)) {
-            (false, _    ) => PRG_LAYOUT_32KIB_WINDOW.clone(),
-            (true , false) => PRG_LAYOUT_FIXED_FIRST_WINDOW.clone(),
-            (true , true ) => PRG_LAYOUT_FIXED_LAST_WINDOW.clone(),
+        match (value & 0b0000_1100) >> 2 {
+            0b00 | 0b01 => PRG_LAYOUT_32KIB_WINDOW.clone(),
+            0b10 => PRG_LAYOUT_FIXED_FIRST_WINDOW.clone(),
+            0b11 => PRG_LAYOUT_FIXED_LAST_WINDOW.clone(),
+            _ => unreachable!(),
         }
     }
 
     fn next_chr_layout(value: u8) -> ChrLayout {
-        if get_bit(value, 3) {
-            CHR_LAYOUT_TWO_SMALL_WINDOWS.clone()
-        } else {
-            CHR_LAYOUT_BIG_WINDOW.clone()
+        match (value & 0b0001_0000) >> 4 {
+            0 => CHR_LAYOUT_BIG_WINDOW.clone(),
+            1 => CHR_LAYOUT_TWO_SMALL_WINDOWS.clone(),
+            _ => unreachable!(),
         }
     }
 
     fn next_mirroring(value: u8) -> NameTableMirroring {
-        match (get_bit(value, 6), get_bit(value, 7)) {
-            (false, false) => NameTableMirroring::OneScreenRightBank,
-            (false, true ) => NameTableMirroring::OneScreenLeftBank,
-            (true , false) => NameTableMirroring::Vertical,
-            (true , true ) => NameTableMirroring::Horizontal,
+        match value & 0b0000_0011 {
+            0b00 => NameTableMirroring::OneScreenRightBank,
+            0b01 => NameTableMirroring::OneScreenLeftBank,
+            0b10 => NameTableMirroring::Vertical,
+            0b11 => NameTableMirroring::Horizontal,
+            _ => unreachable!(),
         }
     }
 }
