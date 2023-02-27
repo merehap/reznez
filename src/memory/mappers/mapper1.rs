@@ -4,19 +4,19 @@ use crate::util::bit_util::get_bit;
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
 
 lazy_static! {
-    static ref PRG_LAYOUT_FIXED_FIRST_WINDOW: PrgLayout = PrgLayout::builder()
-        .max_bank_count(16)
-        .bank_size(16 * KIBIBYTE)
-        .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
-        .window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
-        .window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
-        .build();
     static ref PRG_LAYOUT_FIXED_LAST_WINDOW: PrgLayout = PrgLayout::builder()
         .max_bank_count(16)
         .bank_size(16 * KIBIBYTE)
         .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
         .window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
         .window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
+        .build();
+    static ref PRG_LAYOUT_FIXED_FIRST_WINDOW: PrgLayout = PrgLayout::builder()
+        .max_bank_count(16)
+        .bank_size(16 * KIBIBYTE)
+        .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
+        .window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
         .build();
     static ref PRG_LAYOUT_32KIB_WINDOW: PrgLayout = PrgLayout::builder()
         .max_bank_count(16)
@@ -26,28 +26,22 @@ lazy_static! {
         .build();
 
     // TODO: Not all boards support CHR RAM.
-    static ref CHR_LAYOUT_4KIB_WINDOWS: ChrLayout = ChrLayout::builder()
+    static ref CHR_LAYOUT_BIG_WINDOW: ChrLayout = ChrLayout::builder()
         .max_bank_count(32)
         .bank_size(4 * KIBIBYTE)
-        .window(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
-        .window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
+        .window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Ram, BankIndex::Register(C0)))
         .build();
-    static ref CHR_LAYOUT_8KIB_WINDOW: ChrLayout = ChrLayout::builder()
-        .max_bank_count(16)
-        .bank_size(8 * KIBIBYTE)
-        .window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Ram, BankIndex::FIRST))
+    static ref CHR_LAYOUT_TWO_SMALL_WINDOWS: ChrLayout = ChrLayout::builder()
+        .max_bank_count(32)
+        .bank_size(4 * KIBIBYTE)
+        .window(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::Register(C0)))
+        .window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::Register(C1)))
         .build();
 }
 
 // SxROM (MMC1)
-// TODO: Migrate to using bank index registers?
 pub struct Mapper1 {
     shift: u8,
-
-    chr_bank_mode: ChrBankMode,
-    selected_chr_bank0: u8,
-    selected_chr_bank1: u8,
-
     params: MapperParams,
 }
 
@@ -76,9 +70,9 @@ impl Mapper for Mapper1 {
                 0x6000..=0x7FFF => unreachable!(),
                 0x8000..=0x9FFF => self.set_controls(self.shift),
                 // FIXME: Handle cases for special boards.
-                0xA000..=0xBFFF => self.selected_chr_bank0 = self.shift,
+                0xA000..=0xBFFF => self.params.chr_memory.set_bank_index_register(C0, self.shift),
                 // FIXME: Handle cases for special boards.
-                0xC000..=0xDFFF => self.selected_chr_bank1 = self.shift,
+                0xC000..=0xDFFF => self.params.chr_memory.set_bank_index_register(C1, self.shift),
                 0xE000..=0xFFFF => {
                     self.params.prg_memory.set_bank_index_register(P0, self.shift & 0b0_1111);
                     if self.shift & 0b1_0000 == 0 {
@@ -91,18 +85,6 @@ impl Mapper for Mapper1 {
 
             self.shift = EMPTY_SHIFT_REGISTER;
         }
-
-        match self.chr_bank_mode {
-            ChrBankMode::Large => {
-                self.params.chr_memory.set_layout(CHR_LAYOUT_8KIB_WINDOW.clone());
-                self.params.chr_memory.window_at(0x0000).switch_bank_to(self.selected_chr_bank0 >> 1);
-            }
-            ChrBankMode::TwoSmall => {
-                self.params.chr_memory.set_layout(CHR_LAYOUT_4KIB_WINDOWS.clone());
-                self.params.chr_memory.window_at(0x0000).switch_bank_to(self.selected_chr_bank0);
-                self.params.chr_memory.window_at(0x1000).switch_bank_to(self.selected_chr_bank1);
-            }
-        }
     }
 
     fn params(&self) -> &MapperParams { &self.params }
@@ -114,33 +96,30 @@ impl Mapper1 {
         let params = MapperParams::new(
             cartridge,
             PRG_LAYOUT_FIXED_LAST_WINDOW.clone(),
-            CHR_LAYOUT_4KIB_WINDOWS.clone(),
+            CHR_LAYOUT_BIG_WINDOW.clone(),
             NameTableMirroring::OneScreenRightBank,
         );
         Ok(Mapper1 {
             shift: EMPTY_SHIFT_REGISTER,
-
-            chr_bank_mode: ChrBankMode::Large,
-            selected_chr_bank0: 0,
-            selected_chr_bank1: 0,
-
             params,
         })
     }
 
     #[rustfmt::skip]
     fn set_controls(&mut self, value: u8) {
-        self.chr_bank_mode = if get_bit(value, 3) {
-            ChrBankMode::TwoSmall
+        let chr_layout = if get_bit(value, 3) {
+            CHR_LAYOUT_TWO_SMALL_WINDOWS.clone()
         } else {
-            ChrBankMode::Large
+            CHR_LAYOUT_BIG_WINDOW.clone()
         };
-        let layout = match (get_bit(value, 4), get_bit(value, 5)) {
+        self.params.chr_memory.set_layout(chr_layout);
+
+        let prg_layout = match (get_bit(value, 4), get_bit(value, 5)) {
             (false, _    ) => PRG_LAYOUT_32KIB_WINDOW.clone(),
             (true , false) => PRG_LAYOUT_FIXED_FIRST_WINDOW.clone(),
             (true , true ) => PRG_LAYOUT_FIXED_LAST_WINDOW.clone(),
         };
-        self.params.prg_memory.set_layout(layout);
+        self.params.prg_memory.set_layout(prg_layout);
 
         self.params.name_table_mirroring =
             match (get_bit(value, 6), get_bit(value, 7)) {
@@ -150,10 +129,4 @@ impl Mapper1 {
                 (true , true ) => NameTableMirroring::Horizontal,
             };
     }
-}
-
-#[derive(PartialEq, Eq, Debug)]
-enum ChrBankMode {
-    Large,
-    TwoSmall,
 }

@@ -66,6 +66,14 @@ impl BankIndexRegisters {
         assert!(self.registers[id as usize].is_some(), "Register {id:?} is not configured.");
         self.registers[id as usize] = Some(index);
     }
+
+    pub fn merge(&mut self, new_registers: &BankIndexRegisters) {
+        for i in 0..self.registers.len() {
+            if self.registers[i].is_none() && new_registers.registers[i].is_some() {
+                self.registers[i] = new_registers.registers[i];
+            }
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, FromPrimitive)]

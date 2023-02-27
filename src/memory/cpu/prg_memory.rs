@@ -111,6 +111,9 @@ impl PrgMemory {
     }
 
     pub fn set_layout(&mut self, layout: PrgLayout) {
+        let new_bank_index_registers =
+            BankIndexRegisters::new(&layout.active_register_ids());
+        self.bank_index_registers.merge(&new_bank_index_registers);
         self.layout = layout;
     }
 

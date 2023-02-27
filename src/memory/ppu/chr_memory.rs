@@ -84,6 +84,9 @@ impl ChrMemory {
     }
 
     pub fn set_layout(&mut self, layout: ChrLayout) {
+        let new_bank_index_registers =
+            BankIndexRegisters::new(&layout.active_register_ids());
+        self.bank_index_registers.merge(&new_bank_index_registers);
         self.layout = layout;
     }
 
@@ -109,9 +112,12 @@ impl ChrMemory {
 
         for window in &self.layout.windows {
             if let Some(bank_offset) = window.offset(address) {
-                let raw_bank_index = window.bank_index()
-                    .to_u16(&self.bank_index_registers, self.bank_count());
-                let index = usize::from(raw_bank_index) *
+                let mut raw_bank_index = window.bank_index()
+                    .to_usize(&self.bank_index_registers, self.bank_count());
+                // Clear low bits for large windows.
+                let window_multiple = window.size() / self.layout.bank_size;
+                raw_bank_index &= !(window_multiple >> 1);
+                let index = raw_bank_index *
                     self.layout.bank_size +
                     usize::from(bank_offset);
                 return (index, window.is_writable());
@@ -242,6 +248,7 @@ impl ChrLayoutBuilder {
     }
 }
 
+// TODO: Switch over to PpuAddress?
 #[derive(Clone, Copy, Debug)]
 pub struct Window {
     start: u16,
@@ -264,6 +271,10 @@ impl Window {
         assert_eq!(end as usize - start as usize + 1, size);
 
         Window { start, end, chr_type, write_status: None }
+    }
+
+    fn size(self) -> usize {
+        usize::from(self.end - self.start + 1)
     }
 
     fn offset(self, address: u16) -> Option<u16> {
