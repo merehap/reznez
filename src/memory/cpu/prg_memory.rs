@@ -331,12 +331,6 @@ pub struct Window {
 }
 
 impl Window {
-    pub fn switch_bank_to<Index>(&mut self, new_bank_index: Index)
-    where Index: Into<BankIndex>
-    {
-        self.prg_type.switch_bank_to(new_bank_index.into());
-    }
-
     fn bank_index(self) -> Option<BankIndex> {
         self.prg_type.bank_index()
     }
@@ -386,18 +380,6 @@ impl PrgType {
         match self {
             Banked(_, bank_index) => Some(bank_index),
             Empty | Mirror(_) | WorkRam => None,
-        }
-    }
-
-    fn switch_bank_to(&mut self, new_bank_index: BankIndex) {
-        assert!(!new_bank_index.is_register_backed());
-
-        use PrgType::*;
-        match self {
-            Banked(_, old_bank_index) if old_bank_index.is_register_backed() => panic!(),
-            Banked(writability, _) =>
-                *self = PrgType::Banked(*writability, new_bank_index),
-            Empty | Mirror(_) | WorkRam => panic!(),
         }
     }
 }

@@ -47,6 +47,7 @@ pub struct Mapper1 {
 
 impl Mapper for Mapper1 {
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+        // Work RAM writes don't trigger any of the shifter logic.
         if matches!(address.to_raw(), 0x6000..=0x7FFF) {
             self.params.prg_memory.write(address, value);
             return;
@@ -68,7 +69,11 @@ impl Mapper for Mapper1 {
                 0x0000..=0x401F => unreachable!(),
                 0x4020..=0x5FFF => { /* Do nothing. */ }
                 0x6000..=0x7FFF => unreachable!(),
-                0x8000..=0x9FFF => self.set_controls(self.shift),
+                0x8000..=0x9FFF => {
+                    self.params.prg_memory.set_layout(Mapper1::next_prg_layout(self.shift));
+                    self.params.chr_memory.set_layout(Mapper1::next_chr_layout(self.shift));
+                    self.params.name_table_mirroring = Mapper1::next_mirroring(self.shift);
+                }
                 // FIXME: Handle cases for special boards.
                 0xA000..=0xBFFF => self.params.chr_memory.set_bank_index_register(C0, self.shift),
                 // FIXME: Handle cases for special boards.
@@ -93,40 +98,39 @@ impl Mapper for Mapper1 {
 
 impl Mapper1 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper1, String> {
-        let params = MapperParams::new(
-            cartridge,
-            PRG_LAYOUT_FIXED_LAST_WINDOW.clone(),
-            CHR_LAYOUT_BIG_WINDOW.clone(),
-            NameTableMirroring::OneScreenRightBank,
-        );
         Ok(Mapper1 {
             shift: EMPTY_SHIFT_REGISTER,
-            params,
+            params: MapperParams::new(
+                cartridge,
+                PRG_LAYOUT_FIXED_LAST_WINDOW.clone(),
+                CHR_LAYOUT_BIG_WINDOW.clone(),
+                NameTableMirroring::OneScreenRightBank,
+            ),
         })
     }
 
-    #[rustfmt::skip]
-    fn set_controls(&mut self, value: u8) {
-        let chr_layout = if get_bit(value, 3) {
-            CHR_LAYOUT_TWO_SMALL_WINDOWS.clone()
-        } else {
-            CHR_LAYOUT_BIG_WINDOW.clone()
-        };
-        self.params.chr_memory.set_layout(chr_layout);
-
-        let prg_layout = match (get_bit(value, 4), get_bit(value, 5)) {
+    fn next_prg_layout(value: u8) -> PrgLayout {
+        match (get_bit(value, 4), get_bit(value, 5)) {
             (false, _    ) => PRG_LAYOUT_32KIB_WINDOW.clone(),
             (true , false) => PRG_LAYOUT_FIXED_FIRST_WINDOW.clone(),
             (true , true ) => PRG_LAYOUT_FIXED_LAST_WINDOW.clone(),
-        };
-        self.params.prg_memory.set_layout(prg_layout);
+        }
+    }
 
-        self.params.name_table_mirroring =
-            match (get_bit(value, 6), get_bit(value, 7)) {
-                (false, false) => NameTableMirroring::OneScreenRightBank,
-                (false, true ) => NameTableMirroring::OneScreenLeftBank,
-                (true , false) => NameTableMirroring::Vertical,
-                (true , true ) => NameTableMirroring::Horizontal,
-            };
+    fn next_chr_layout(value: u8) -> ChrLayout {
+        if get_bit(value, 3) {
+            CHR_LAYOUT_TWO_SMALL_WINDOWS.clone()
+        } else {
+            CHR_LAYOUT_BIG_WINDOW.clone()
+        }
+    }
+
+    fn next_mirroring(value: u8) -> NameTableMirroring {
+        match (get_bit(value, 6), get_bit(value, 7)) {
+            (false, false) => NameTableMirroring::OneScreenRightBank,
+            (false, true ) => NameTableMirroring::OneScreenLeftBank,
+            (true , false) => NameTableMirroring::Vertical,
+            (true , true ) => NameTableMirroring::Horizontal,
+        }
     }
 }

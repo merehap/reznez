@@ -258,12 +258,6 @@ pub struct Window {
 }
 
 impl Window {
-    pub fn switch_bank_to<Index>(&mut self, new_bank_index: Index)
-    where Index: Into<BankIndex>
-    {
-        self.chr_type.switch_bank_to(new_bank_index.into());
-    }
-
     #[allow(clippy::identity_op)]
     fn new(start: u16, end: u16, size: usize, chr_type: ChrType) -> Window {
         assert!([1 * KIBIBYTE, 2 * KIBIBYTE, 4 * KIBIBYTE, 8 * KIBIBYTE].contains(&size));
@@ -320,10 +314,6 @@ pub struct ChrType(pub Writability, pub BankIndex);
 impl ChrType {
     fn bank_index(self) -> BankIndex {
         self.1
-    }
-
-    fn switch_bank_to(&mut self, new_bank_index: BankIndex) {
-        self.1 = new_bank_index;
     }
 }
 
