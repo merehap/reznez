@@ -4,18 +4,25 @@ use crate::util::bit_util::get_bit;
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
 
 lazy_static! {
-    static ref PRG_LAYOUT_16KIB_WINDOWS: PrgLayout = PrgLayout::builder()
+    static ref PRG_LAYOUT_FIXED_FIRST_WINDOW: PrgLayout = PrgLayout::builder()
         .max_bank_count(16)
         .bank_size(16 * KIBIBYTE)
         .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
         .window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
+        .build();
+    static ref PRG_LAYOUT_FIXED_LAST_WINDOW: PrgLayout = PrgLayout::builder()
+        .max_bank_count(16)
+        .bank_size(16 * KIBIBYTE)
+        .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
+        .window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
         .window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
         .build();
     static ref PRG_LAYOUT_32KIB_WINDOW: PrgLayout = PrgLayout::builder()
-        .max_bank_count(8)
-        .bank_size(32 * KIBIBYTE)
+        .max_bank_count(16)
+        .bank_size(16 * KIBIBYTE)
         .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
-        .window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
+        .window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
         .build();
 
     // TODO: Not all boards support CHR RAM.
@@ -41,9 +48,6 @@ pub struct Mapper1 {
     selected_chr_bank0: u8,
     selected_chr_bank1: u8,
 
-    prg_bank_mode: PrgBankMode,
-    selected_prg_bank: u8,
-
     params: MapperParams,
 }
 
@@ -56,7 +60,7 @@ impl Mapper for Mapper1 {
 
         if get_bit(value, 0) {
             self.shift = EMPTY_SHIFT_REGISTER;
-            self.prg_bank_mode = PrgBankMode::FixedLast;
+            self.params.prg_memory.set_layout(PRG_LAYOUT_FIXED_LAST_WINDOW.clone());
             return;
         }
 
@@ -76,7 +80,7 @@ impl Mapper for Mapper1 {
                 // FIXME: Handle cases for special boards.
                 0xC000..=0xDFFF => self.selected_chr_bank1 = self.shift,
                 0xE000..=0xFFFF => {
-                    self.selected_prg_bank = self.shift & 0b0_1111;
+                    self.params.prg_memory.set_bank_index_register(P0, self.shift & 0b0_1111);
                     if self.shift & 0b1_0000 == 0 {
                         self.params.prg_memory.enable_work_ram(0x6000);
                     } else {
@@ -99,23 +103,6 @@ impl Mapper for Mapper1 {
                 self.params.chr_memory.window_at(0x1000).switch_bank_to(self.selected_chr_bank1);
             }
         }
-
-        match self.prg_bank_mode {
-            PrgBankMode::Large => {
-                self.params.prg_memory.set_layout(PRG_LAYOUT_32KIB_WINDOW.clone());
-                self.params.prg_memory.window_at(0x8000).switch_bank_to(self.selected_prg_bank >> 1);
-            }
-            PrgBankMode::FixedFirst => {
-                self.params.prg_memory.set_layout(PRG_LAYOUT_16KIB_WINDOWS.clone());
-                self.params.prg_memory.window_at(0x8000).switch_bank_to(BankIndex::FIRST);
-                self.params.prg_memory.window_at(0xC000).switch_bank_to(self.selected_prg_bank);
-            }
-            PrgBankMode::FixedLast => {
-                self.params.prg_memory.set_layout(PRG_LAYOUT_16KIB_WINDOWS.clone());
-                self.params.prg_memory.window_at(0x8000).switch_bank_to(self.selected_prg_bank);
-                self.params.prg_memory.window_at(0xC000).switch_bank_to(BankIndex::LAST);
-            }
-        }
     }
 
     fn params(&self) -> &MapperParams { &self.params }
@@ -126,7 +113,7 @@ impl Mapper1 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper1, String> {
         let params = MapperParams::new(
             cartridge,
-            PRG_LAYOUT_16KIB_WINDOWS.clone(),
+            PRG_LAYOUT_FIXED_LAST_WINDOW.clone(),
             CHR_LAYOUT_4KIB_WINDOWS.clone(),
             NameTableMirroring::OneScreenRightBank,
         );
@@ -136,9 +123,6 @@ impl Mapper1 {
             chr_bank_mode: ChrBankMode::Large,
             selected_chr_bank0: 0,
             selected_chr_bank1: 0,
-
-            prg_bank_mode: PrgBankMode::FixedLast,
-            selected_prg_bank: 0,
 
             params,
         })
@@ -151,12 +135,13 @@ impl Mapper1 {
         } else {
             ChrBankMode::Large
         };
-        self.prg_bank_mode =
-            match (get_bit(value, 4), get_bit(value, 5)) {
-                (false, _    ) => PrgBankMode::Large,
-                (true , false) => PrgBankMode::FixedFirst,
-                (true , true ) => PrgBankMode::FixedLast,
-            };
+        let layout = match (get_bit(value, 4), get_bit(value, 5)) {
+            (false, _    ) => PRG_LAYOUT_32KIB_WINDOW.clone(),
+            (true , false) => PRG_LAYOUT_FIXED_FIRST_WINDOW.clone(),
+            (true , true ) => PRG_LAYOUT_FIXED_LAST_WINDOW.clone(),
+        };
+        self.params.prg_memory.set_layout(layout);
+
         self.params.name_table_mirroring =
             match (get_bit(value, 6), get_bit(value, 7)) {
                 (false, false) => NameTableMirroring::OneScreenRightBank,
@@ -171,11 +156,4 @@ impl Mapper1 {
 enum ChrBankMode {
     Large,
     TwoSmall,
-}
-
-#[derive(PartialEq, Eq, Debug)]
-enum PrgBankMode {
-    Large,
-    FixedFirst,
-    FixedLast,
 }

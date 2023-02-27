@@ -143,8 +143,11 @@ impl PrgMemory {
                 let prg_memory_index = match window.prg_type {
                     PrgType::Empty => PrgMemoryIndex::None,
                     PrgType::Banked(_, bank_index) => {
-                        let raw_bank_index =
+                        let mut raw_bank_index =
                             bank_index.to_usize(&self.bank_index_registers, self.bank_count());
+                        // Clear low bits for large windows.
+                        let window_multiple = window.size() / self.layout.bank_size;
+                        raw_bank_index &= !(window_multiple >> 1);
                         let mapped_memory_index =
                              raw_bank_index * self.layout.bank_size + bank_offset as usize;
                         PrgMemoryIndex::MappedMemory(mapped_memory_index)
