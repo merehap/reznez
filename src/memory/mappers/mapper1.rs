@@ -12,7 +12,7 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout {
     chr_bank_size: 4 * KIBIBYTE,
     chr_windows: CHR_WINDOWS_ONE_BIG,
 
-    name_table_mirroring_source: NameTableMirroringSource::Cartridge,
+    name_table_mirroring_source: NameTableMirroringSource::Direct(NameTableMirroring::OneScreenRightBank),
 };
 
 const PRG_WINDOWS_FIXED_LAST: &[PrgWindow] = &[

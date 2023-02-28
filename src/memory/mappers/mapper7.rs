@@ -9,7 +9,7 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout {
     chr_bank_size: 8 * KIBIBYTE,
     chr_windows: CHR_WINDOWS,
 
-    name_table_mirroring_source: NameTableMirroringSource::Cartridge,
+    name_table_mirroring_source: NameTableMirroringSource::Direct(NameTableMirroring::OneScreenLeftBank),
 };
 
 const PRG_WINDOWS: &[PrgWindow] = &[
@@ -30,7 +30,7 @@ impl Mapper for Mapper7 {
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
-            0x4020..=0x7FFF => { /* Do nothing. */ },
+            0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 self.prg_memory_mut().set_bank_index_register(P0, value & 0b0000_01111);
                 self.set_name_table_mirroring(if value & 0b0001_0000 == 0 {

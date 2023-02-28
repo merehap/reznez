@@ -2,60 +2,62 @@ use num_traits::FromPrimitive;
 
 use crate::memory::mapper::*;
 
-lazy_static! {
-    static ref PRG_LAYOUT_P0_AT_8000: PrgLayout = PrgLayout::builder()
-        .max_bank_count(32)
-        .bank_size(8 * KIBIBYTE)
-        .window(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgType::WorkRam)
-        .window(0x7000, 0x71FF, KIBIBYTE / 2, PrgType::WorkRam)
-        .window(0x7200, 0x73FF, KIBIBYTE / 2, PrgType::WorkRam)
-        .window(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgType::WorkRam)
-        .window(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
-        .window(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P1)))
-        .window(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::SECOND_LAST))
-        .window(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
-        .build();
+const INITIAL_LAYOUT: InitialLayout = InitialLayout {
+    prg_max_bank_count: 32,
+    prg_bank_size: 8 * KIBIBYTE,
+    prg_windows_by_board: &[(Board::Any, PRG_WINDOWS_C000_FIXED)],
 
-    // Same as PRG_LAYOUT_P0_AT_8000, except the 0x8000 and 0xC000 windows are swapped.
-    static ref PRG_LAYOUT_P0_AT_C000: PrgLayout = PrgLayout::builder()
-        .max_bank_count(32)
-        .bank_size(8 * KIBIBYTE)
-        .window(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgType::WorkRam)
-        .window(0x7000, 0x71FF, KIBIBYTE / 2, PrgType::WorkRam)
-        .window(0x7200, 0x73FF, KIBIBYTE / 2, PrgType::WorkRam)
-        .window(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgType::WorkRam)
-        .window(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::SECOND_LAST))
-        .window(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P1)))
-        .window(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
-        .window(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
-        .build();
+    chr_max_bank_count: 256,
+    chr_bank_size: 1 * KIBIBYTE,
+    chr_windows: CHR_BIG_WINDOWS_FIRST,
 
-    static ref CHR_LAYOUT_BIG_WINDOWS_FIRST: ChrLayout = ChrLayout::builder()
-        .max_bank_count(256)
-        .bank_size(1 * KIBIBYTE)
-        // Big windows.
-        .window(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C0)))
-        .window(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C1)))
-        // Small windows.
-        .window(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C2)))
-        .window(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3)))
-        .window(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C4)))
-        .window(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C5)))
-        .build();
+    name_table_mirroring_source: NameTableMirroringSource::Cartridge,
+};
 
-    static ref CHR_LAYOUT_SMALL_WINDOWS_FIRST: ChrLayout = ChrLayout::builder()
-        .max_bank_count(256)
-        .bank_size(1 * KIBIBYTE)
-        // Small windows.
-        .window(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C2)))
-        .window(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3)))
-        .window(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C4)))
-        .window(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C5)))
-        // Big windows.
-        .window(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C0)))
-        .window(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C1)))
-        .build();
-}
+const PRG_WINDOWS_C000_FIXED: &[PrgWindow] = &[
+    PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgType::WorkRam),
+    PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgType::WorkRam),
+    PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, PrgType::WorkRam),
+    PrgWindow::new(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgType::WorkRam),
+    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0))),
+    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P1))),
+    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::SECOND_LAST)),
+    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST)),
+];
+
+// Same as PRG_WINDOWS_C000_FIXED, except the 0x8000 and 0xC000 windows are swapped.
+const PRG_WINDOWS_8000_FIXED: &[PrgWindow] = &[
+    PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgType::WorkRam),
+    PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgType::WorkRam),
+    PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, PrgType::WorkRam),
+    PrgWindow::new(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgType::WorkRam),
+    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::SECOND_LAST)),
+    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P1))),
+    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0))),
+    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST)),
+];
+
+const CHR_BIG_WINDOWS_FIRST: &[ChrWindow] = &[
+    // Big windows.
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C0))),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C1))),
+    // Small windows.
+    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C2))),
+    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3))),
+    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C4))),
+    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C5))),
+];
+
+const CHR_SMALL_WINDOWS_FIRST: &[ChrWindow] = &[
+    // Small windows.
+    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C2))),
+    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3))),
+    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C4))),
+    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C5))),
+    // Big windows.
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C0))),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C1))),
+];
 
 // MMC3 (TSROM and others) and MMC6 (HKROM)
 pub struct Mapper4 {
@@ -147,31 +149,26 @@ impl Mapper4 {
             irq_counter_suppression_cycles: 0,
             pattern_table_side: PatternTableSide::Left,
 
-            params: MapperParams::new(
-                cartridge,
-                PRG_LAYOUT_P0_AT_8000.clone(),
-                CHR_LAYOUT_BIG_WINDOWS_FIRST.clone(),
-                cartridge.name_table_mirroring(),
-            )
+            params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
         })
     }
 
     fn bank_select(&mut self, value: u8) {
         let chr_big_windows_first =                             (value & 0b1000_0000) == 0;
-        let p0_is_at_0x8000 =                                   (value & 0b0100_0000) == 0;
+        let prg_fixed_c000 =                                    (value & 0b0100_0000) == 0;
         //self.prg_ram_enabled =                                (value & 0b0010_0000) != 0;
         self.selected_register_id = BankIndexRegisterId::from_u8(value & 0b0000_0111).unwrap();
 
         if chr_big_windows_first {
-            self.chr_memory_mut().set_layout(CHR_LAYOUT_BIG_WINDOWS_FIRST.clone())
+            self.chr_memory_mut().set_windows(CHR_BIG_WINDOWS_FIRST.clone())
         } else {
-            self.chr_memory_mut().set_layout(CHR_LAYOUT_SMALL_WINDOWS_FIRST.clone())
+            self.chr_memory_mut().set_windows(CHR_SMALL_WINDOWS_FIRST.clone())
         }
 
-        if p0_is_at_0x8000 {
-            self.prg_memory_mut().set_layout(PRG_LAYOUT_P0_AT_8000.clone());
+        if prg_fixed_c000 {
+            self.prg_memory_mut().set_windows(PRG_WINDOWS_C000_FIXED.clone());
         } else {
-            self.prg_memory_mut().set_layout(PRG_LAYOUT_P0_AT_C000.clone());
+            self.prg_memory_mut().set_windows(PRG_WINDOWS_8000_FIXED.clone());
         }
     }
 
