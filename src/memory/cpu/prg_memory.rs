@@ -110,6 +110,16 @@ impl PrgMemory {
         self.work_ram_at(address).status = WorkRamStatus::ReadWrite;
     }
 
+    pub fn set_windows(&mut self, windows: &'static [PrgWindow]) {
+        let max_bank_count = self.layout.max_bank_count;
+        let bank_size = self.layout.bank_size;
+        self.set_layout(PrgLayout {
+            max_bank_count,
+            bank_size,
+            windows: windows.to_vec(),
+        });
+    }
+
     pub fn set_layout(&mut self, layout: PrgLayout) {
         let new_bank_index_registers =
             BankIndexRegisters::new(&layout.active_register_ids());

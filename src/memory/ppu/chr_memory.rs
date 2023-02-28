@@ -83,6 +83,16 @@ impl ChrMemory {
         panic!("No window exists at {start:X?}");
     }
 
+    pub fn set_windows(&mut self, windows: &'static [ChrWindow]) {
+        let max_bank_count = self.layout.max_bank_count;
+        let bank_size = self.layout.bank_size;
+        self.set_layout(ChrLayout {
+            max_bank_count,
+            bank_size,
+            windows: windows.to_vec(),
+        });
+    }
+
     pub fn set_layout(&mut self, layout: ChrLayout) {
         let new_bank_index_registers =
             BankIndexRegisters::new(&layout.active_register_ids());

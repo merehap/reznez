@@ -3,41 +3,41 @@ use crate::util::bit_util::get_bit;
 
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
 
-lazy_static! {
-    static ref PRG_LAYOUT_FIXED_LAST_WINDOW: PrgLayout = PrgLayout::builder()
-        .max_bank_count(16)
-        .bank_size(16 * KIBIBYTE)
-        .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
-        .window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
-        .window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
-        .build();
-    static ref PRG_LAYOUT_FIXED_FIRST_WINDOW: PrgLayout = PrgLayout::builder()
-        .max_bank_count(16)
-        .bank_size(16 * KIBIBYTE)
-        .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
-        .window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
-        .window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
-        .build();
-    static ref PRG_LAYOUT_32KIB_WINDOW: PrgLayout = PrgLayout::builder()
-        .max_bank_count(16)
-        .bank_size(16 * KIBIBYTE)
-        .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam)
-        .window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
-        .build();
+const INITIAL_LAYOUT: InitialLayout = InitialLayout {
+    prg_max_bank_count: 16,
+    prg_bank_size: 16 * KIBIBYTE,
+    prg_windows_by_board: &[(Board::Any, PRG_WINDOWS_FIXED_LAST)],
 
-    // TODO: Not all boards support CHR RAM.
-    static ref CHR_LAYOUT_BIG_WINDOW: ChrLayout = ChrLayout::builder()
-        .max_bank_count(32)
-        .bank_size(4 * KIBIBYTE)
-        .window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Ram, BankIndex::Register(C0)))
-        .build();
-    static ref CHR_LAYOUT_TWO_SMALL_WINDOWS: ChrLayout = ChrLayout::builder()
-        .max_bank_count(32)
-        .bank_size(4 * KIBIBYTE)
-        .window(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::Register(C0)))
-        .window(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::Register(C1)))
-        .build();
-}
+    chr_max_bank_count: 32,
+    chr_bank_size: 4 * KIBIBYTE,
+    chr_windows: CHR_WINDOWS_ONE_BIG,
+
+    name_table_mirroring_source: NameTableMirroringSource::Cartridge,
+};
+
+const PRG_WINDOWS_FIXED_LAST: &[PrgWindow] = &[
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0))),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST)),
+];
+const PRG_WINDOWS_FIXED_FIRST: &[PrgWindow] = &[
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST)),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0))),
+];
+const PRG_WINDOWS_ONE_BIG: &[PrgWindow] = &[
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0))),
+];
+
+// TODO: Not all boards support CHR RAM.
+const CHR_WINDOWS_ONE_BIG: &[ChrWindow] = &[
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Ram, BankIndex::Register(C0))),
+];
+const CHR_WINDOWS_TWO_SMALL: &[ChrWindow] = &[
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::Register(C0))),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::Register(C1))),
+];
 
 // SxROM (MMC1)
 pub struct Mapper1 {
@@ -55,7 +55,7 @@ impl Mapper for Mapper1 {
 
         if get_bit(value, 0) {
             self.shift = EMPTY_SHIFT_REGISTER;
-            self.prg_memory_mut().set_layout(PRG_LAYOUT_FIXED_LAST_WINDOW.clone());
+            self.prg_memory_mut().set_windows(PRG_WINDOWS_FIXED_LAST.clone());
             return;
         }
 
@@ -71,8 +71,8 @@ impl Mapper for Mapper1 {
                 0x4020..=0x5FFF => { /* Do nothing. */ }
                 0x6000..=0x7FFF => unreachable!(),
                 0x8000..=0x9FFF => {
-                    self.prg_memory_mut().set_layout(Mapper1::next_prg_layout(shift));
-                    self.chr_memory_mut().set_layout(Mapper1::next_chr_layout(shift));
+                    self.prg_memory_mut().set_windows(Mapper1::next_prg_windows(shift));
+                    self.chr_memory_mut().set_windows(Mapper1::next_chr_windows(shift));
                     self.set_name_table_mirroring(Mapper1::next_mirroring(shift));
                 }
                 // FIXME: Handle cases for special boards.
@@ -101,28 +101,23 @@ impl Mapper1 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper1, String> {
         Ok(Mapper1 {
             shift: EMPTY_SHIFT_REGISTER,
-            params: MapperParams::new(
-                cartridge,
-                PRG_LAYOUT_FIXED_LAST_WINDOW.clone(),
-                CHR_LAYOUT_BIG_WINDOW.clone(),
-                NameTableMirroring::OneScreenRightBank,
-            ),
+            params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
         })
     }
 
-    fn next_prg_layout(value: u8) -> PrgLayout {
+    fn next_prg_windows(value: u8) -> &'static [PrgWindow] {
         match (value & 0b0000_1100) >> 2 {
-            0b00 | 0b01 => PRG_LAYOUT_32KIB_WINDOW.clone(),
-            0b10 => PRG_LAYOUT_FIXED_FIRST_WINDOW.clone(),
-            0b11 => PRG_LAYOUT_FIXED_LAST_WINDOW.clone(),
+            0b00 | 0b01 => PRG_WINDOWS_ONE_BIG.clone(),
+            0b10 => PRG_WINDOWS_FIXED_FIRST.clone(),
+            0b11 => PRG_WINDOWS_FIXED_LAST.clone(),
             _ => unreachable!(),
         }
     }
 
-    fn next_chr_layout(value: u8) -> ChrLayout {
+    fn next_chr_windows(value: u8) -> &'static [ChrWindow] {
         match (value & 0b0001_0000) >> 4 {
-            0 => CHR_LAYOUT_BIG_WINDOW.clone(),
-            1 => CHR_LAYOUT_TWO_SMALL_WINDOWS.clone(),
+            0 => CHR_WINDOWS_ONE_BIG.clone(),
+            1 => CHR_WINDOWS_TWO_SMALL.clone(),
             _ => unreachable!(),
         }
     }
