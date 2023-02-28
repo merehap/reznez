@@ -22,11 +22,11 @@ const CHR_WINDOWS: &[ChrWindow] = &[
 ];
 
 // GxROM
-pub struct Mapper66 {
+pub struct Mapper066 {
     params: MapperParams,
 }
 
-impl Mapper for Mapper66 {
+impl Mapper for Mapper066 {
     fn write_to_cartridge_space(&mut self, cpu_address: CpuAddress, value: u8) {
         match cpu_address.to_raw() {
             0x0000..=0x401F => unreachable!(),
@@ -43,9 +43,9 @@ impl Mapper for Mapper66 {
     fn params_mut(&mut self) -> &mut MapperParams { &mut self.params }
 }
 
-impl Mapper66 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper66, String> {
-        Ok(Mapper66 {
+impl Mapper066 {
+    pub fn new(cartridge: &Cartridge) -> Result<Mapper066, String> {
+        Ok(Mapper066 {
             params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
         })
     }

@@ -60,7 +60,7 @@ const CHR_SMALL_WINDOWS_FIRST: &[ChrWindow] = &[
 ];
 
 // MMC3 (TSROM and others) and MMC6 (HKROM)
-pub struct Mapper4 {
+pub struct Mapper004 {
     selected_register_id: BankIndexRegisterId,
 
     irq_pending: bool,
@@ -74,7 +74,7 @@ pub struct Mapper4 {
     params: MapperParams,
 }
 
-impl Mapper for Mapper4 {
+impl Mapper for Mapper004 {
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
         let is_even_address = address.to_raw() % 2 == 0;
         match address.to_raw() {
@@ -136,9 +136,9 @@ impl Mapper for Mapper4 {
     fn params_mut(&mut self) -> &mut MapperParams { &mut self.params }
 }
 
-impl Mapper4 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper4, String> {
-        Ok(Mapper4 {
+impl Mapper004 {
+    pub fn new(cartridge: &Cartridge) -> Result<Mapper004, String> {
+        Ok(Mapper004 {
             selected_register_id: C0,
 
             irq_pending: false,
@@ -212,8 +212,8 @@ impl Mapper4 {
         // MMC6 logic only here since MMC3 logic conflicts:
         // https://www.nesdev.org/wiki/MMC3#iNES_Mapper_004_and_MMC6
         // TODO: Attempt to support Low G Man.
-        let mut status_7000 = Mapper4::work_ram_status_from_bits(value & 0b1100_0000 >> 6);
-        let mut status_7200 = Mapper4::work_ram_status_from_bits(value & 0b0011_0000 >> 4);
+        let mut status_7000 = Mapper004::work_ram_status_from_bits(value & 0b1100_0000 >> 6);
+        let mut status_7200 = Mapper004::work_ram_status_from_bits(value & 0b0011_0000 >> 4);
 
         // "If only one bank is enabled for reading, the other reads back as zero."
         use WorkRamStatus::*;

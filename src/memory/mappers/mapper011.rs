@@ -22,11 +22,11 @@ const CHR_WINDOWS: &[ChrWindow] = &[
 ];
 
 // Color Dreams. Same as GxROM except with different register locations.
-pub struct Mapper11 {
+pub struct Mapper011 {
     params: MapperParams,
 }
 
-impl Mapper for Mapper11 {
+impl Mapper for Mapper011 {
     fn write_to_cartridge_space(&mut self, cpu_address: CpuAddress, value: u8) {
         match cpu_address.to_raw() {
             0x0000..=0x401F => unreachable!(),
@@ -42,9 +42,9 @@ impl Mapper for Mapper11 {
     fn params_mut(&mut self) -> &mut MapperParams { &mut self.params }
 }
 
-impl Mapper11 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper11, String> {
-        Ok(Mapper11 {
+impl Mapper011 {
+    pub fn new(cartridge: &Cartridge) -> Result<Mapper011, String> {
+        Ok(Mapper011 {
             params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
         })
     }

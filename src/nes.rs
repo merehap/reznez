@@ -14,14 +14,14 @@ use crate::cpu::instruction::{AccessMode, Argument, Instruction};
 use crate::gui::gui::Events;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::mapper::Mapper;
-use crate::memory::mappers::mapper0::Mapper0;
-use crate::memory::mappers::mapper1::Mapper1;
-use crate::memory::mappers::mapper2::Mapper2;
-use crate::memory::mappers::mapper3::Mapper3;
-use crate::memory::mappers::mapper4::Mapper4;
-use crate::memory::mappers::mapper7::Mapper7;
-use crate::memory::mappers::mapper11::Mapper11;
-use crate::memory::mappers::mapper66::Mapper66;
+use crate::memory::mappers::mapper000::Mapper000;
+use crate::memory::mappers::mapper001::Mapper001;
+use crate::memory::mappers::mapper002::Mapper002;
+use crate::memory::mappers::mapper003::Mapper003;
+use crate::memory::mappers::mapper004::Mapper004;
+use crate::memory::mappers::mapper007::Mapper007;
+use crate::memory::mappers::mapper011::Mapper011;
+use crate::memory::mappers::mapper066::Mapper066;
 use crate::memory::mappers::mapper140::Mapper140;
 use crate::memory::memory::Memory;
 use crate::ppu::ppu;
@@ -44,14 +44,14 @@ pub struct Nes {
 impl Nes {
     pub fn new(config: &Config) -> Nes {
         let mapper = match config.cartridge.mapper_number() {
-            0 => Box::new(Mapper0::new(&config.cartridge).unwrap()) as Box<dyn Mapper>,
-            1 => Box::new(Mapper1::new(&config.cartridge).unwrap()),
-            2 => Box::new(Mapper2::new(&config.cartridge).unwrap()),
-            3 => Box::new(Mapper3::new(&config.cartridge).unwrap()),
-            4 => Box::new(Mapper4::new(&config.cartridge).unwrap()),
-            7 => Box::new(Mapper7::new(&config.cartridge).unwrap()),
-            11 => Box::new(Mapper11::new(&config.cartridge).unwrap()),
-            66 => Box::new(Mapper66::new(&config.cartridge).unwrap()),
+            000 => Box::new(Mapper000::new(&config.cartridge).unwrap()) as Box<dyn Mapper>,
+            001 => Box::new(Mapper001::new(&config.cartridge).unwrap()),
+            002 => Box::new(Mapper002::new(&config.cartridge).unwrap()),
+            003 => Box::new(Mapper003::new(&config.cartridge).unwrap()),
+            004 => Box::new(Mapper004::new(&config.cartridge).unwrap()),
+            007 => Box::new(Mapper007::new(&config.cartridge).unwrap()),
+            011 => Box::new(Mapper011::new(&config.cartridge).unwrap()),
+            066 => Box::new(Mapper066::new(&config.cartridge).unwrap()),
             140 => Box::new(Mapper140::new(&config.cartridge).unwrap()),
             _ => todo!(),
         };
