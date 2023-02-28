@@ -13,16 +13,7 @@ use crate::cpu::step::Step;
 use crate::cpu::instruction::{AccessMode, Argument, Instruction};
 use crate::gui::gui::Events;
 use crate::memory::cpu::ports::Ports;
-use crate::memory::mapper::Mapper;
-use crate::memory::mappers::mapper000::Mapper000;
-use crate::memory::mappers::mapper001::Mapper001;
-use crate::memory::mappers::mapper002::Mapper002;
-use crate::memory::mappers::mapper003::Mapper003;
-use crate::memory::mappers::mapper004::Mapper004;
-use crate::memory::mappers::mapper007::Mapper007;
-use crate::memory::mappers::mapper011::Mapper011;
-use crate::memory::mappers::mapper066::Mapper066;
-use crate::memory::mappers::mapper140::Mapper140;
+use crate::memory::mapper_list;
 use crate::memory::memory::Memory;
 use crate::ppu::ppu;
 use crate::ppu::ppu::Ppu;
@@ -43,19 +34,7 @@ pub struct Nes {
 
 impl Nes {
     pub fn new(config: &Config) -> Nes {
-        let mapper = match config.cartridge.mapper_number() {
-            000 => Box::new(Mapper000::new(&config.cartridge).unwrap()) as Box<dyn Mapper>,
-            001 => Box::new(Mapper001::new(&config.cartridge).unwrap()),
-            002 => Box::new(Mapper002::new(&config.cartridge).unwrap()),
-            003 => Box::new(Mapper003::new(&config.cartridge).unwrap()),
-            004 => Box::new(Mapper004::new(&config.cartridge).unwrap()),
-            007 => Box::new(Mapper007::new(&config.cartridge).unwrap()),
-            011 => Box::new(Mapper011::new(&config.cartridge).unwrap()),
-            066 => Box::new(Mapper066::new(&config.cartridge).unwrap()),
-            140 => Box::new(Mapper140::new(&config.cartridge).unwrap()),
-            _ => todo!(),
-        };
-
+        let mapper = mapper_list::lookup_mapper(&config.cartridge);
         let joypad1 = Rc::new(RefCell::new(Joypad::new()));
         let joypad2 = Rc::new(RefCell::new(Joypad::new()));
         let ports = Ports::new(joypad1.clone(), joypad2.clone());
@@ -277,6 +256,7 @@ mod tests {
     use crate::cartridge;
     use crate::cpu::cpu::ProgramCounterSource;
     use crate::memory::cpu::cpu_address::CpuAddress;
+    use crate::memory::mappers::mapper000::Mapper000;
     use crate::memory::memory::Memory;
     use crate::ppu::palette::system_palette;
     use crate::ppu::register::registers::ctrl::Ctrl;
@@ -359,7 +339,7 @@ mod tests {
     }
 
     fn sample_nes() -> Nes {
-        let mapper = Box::new(Mapper0::new(&test_data::cartridge()).unwrap());
+        let mapper = Box::new(Mapper000::new(&test_data::cartridge()).unwrap());
         let system_palette = system_palette::test_data::system_palette();
         let joypad1 = Rc::new(RefCell::new(Joypad::new()));
         let joypad2 = Rc::new(RefCell::new(Joypad::new()));

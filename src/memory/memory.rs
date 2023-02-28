@@ -279,21 +279,21 @@ pub mod test_data {
     use crate::cartridge;
     use crate::cartridge::Cartridge;
     use crate::memory::cpu::ports;
-    use crate::memory::mappers::mapper0::Mapper0;
+    use crate::memory::mappers::mapper000::Mapper000;
     use crate::ppu::palette::system_palette;
 
     use super::*;
 
     pub fn memory() -> Memory {
         Memory::new(
-            Box::new(Mapper0::new(&cartridge::test_data::cartridge()).unwrap()),
+            Box::new(Mapper000::new(&cartridge::test_data::cartridge()).unwrap()),
             ports::test_data::ports(),
             system_palette::test_data::system_palette(),
         )
     }
 
     pub fn memory_with_cartridge(cartridge: &Cartridge) -> Memory {
-        let mapper = Box::new(Mapper0::new(cartridge).unwrap());
+        let mapper = Box::new(Mapper000::new(cartridge).unwrap());
         Memory::new(
             mapper,
             ports::test_data::ports(),

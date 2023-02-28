@@ -3,6 +3,7 @@ pub mod board;
 pub mod cpu;
 pub mod initial_layout;
 pub mod mapper;
+pub mod mapper_list;
 pub mod mappers;
 pub mod memory;
 pub mod ppu;

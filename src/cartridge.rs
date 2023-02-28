@@ -14,7 +14,7 @@ const CHR_ROM_CHUNK_LENGTH: usize = 8 * KIBIBYTE;
 pub struct Cartridge {
     name: String,
 
-    mapper_number: u8,
+    mapper_number: u16,
     name_table_mirroring: NameTableMirroring,
     has_persistent_memory: bool,
     ripper_name: String,
@@ -74,7 +74,7 @@ impl Cartridge {
             return Err("VS Unisystem isn't implemented yet.".to_string());
         }
 
-        let mapper_number = upper_mapper_number | (lower_mapper_number >> 4);
+        let mapper_number = u16::from(upper_mapper_number | (lower_mapper_number >> 4));
         let name_table_mirroring = match (four_screen, vertical_mirroring) {
             (true, _) => NameTableMirroring::FourScreen,
             (_, false) => NameTableMirroring::Horizontal,
@@ -146,7 +146,7 @@ impl Cartridge {
         &self.name
     }
 
-    pub fn mapper_number(&self) -> u8 {
+    pub fn mapper_number(&self) -> u16 {
         self.mapper_number
     }
 
