@@ -1,7 +1,6 @@
 use crate::memory::mapper::*;
 
 const INITIAL_LAYOUT: InitialLayout = InitialLayout {
-    // TODO: Figure out how to fix this for mirrored memory, if necessary
     prg_max_bank_count: 2,
     prg_bank_size: 16 * KIBIBYTE,
     prg_windows_by_board: &[
