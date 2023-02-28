@@ -1,5 +1,7 @@
 pub mod bank_index;
+pub mod board;
 pub mod cpu;
+pub mod initial_layout;
 pub mod mapper;
 pub mod mappers;
 pub mod memory;

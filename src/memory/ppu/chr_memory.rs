@@ -172,7 +172,7 @@ impl ChrLayout {
         ChrLayoutBuilder::new()
     }
 
-    fn new(
+    pub fn new(
         max_bank_count: u16,
         bank_size: usize,
         windows: Vec<Window>,
@@ -259,10 +259,10 @@ pub struct Window {
 
 impl Window {
     #[allow(clippy::identity_op)]
-    fn new(start: u16, end: u16, size: usize, chr_type: ChrType) -> Window {
-        assert!([1 * KIBIBYTE, 2 * KIBIBYTE, 4 * KIBIBYTE, 8 * KIBIBYTE].contains(&size));
-        assert!(end > start);
-        assert_eq!(end as usize - start as usize + 1, size);
+    pub const fn new(start: u16, end: u16, _size: usize, chr_type: ChrType) -> Window {
+        //assert!([1 * KIBIBYTE, 2 * KIBIBYTE, 4 * KIBIBYTE, 8 * KIBIBYTE].contains(&size));
+        //assert!(end > start);
+        //assert_eq!(end as usize - start as usize + 1, size);
 
         Window { start, end, chr_type, write_status: None }
     }

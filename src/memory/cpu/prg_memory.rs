@@ -218,7 +218,7 @@ impl PrgLayout {
         PrgLayoutBuilder::new()
     }
 
-    fn new(
+    pub fn new(
         max_bank_count: u16,
         bank_size: usize,
         windows: Vec<Window>,
@@ -347,7 +347,8 @@ impl Window {
         }
     }
 
-    fn new(start: u16, end: u16, size: usize, prg_type: PrgType) -> Window {
+    pub const fn new(start: u16, end: u16, _size: usize, prg_type: PrgType) -> Window {
+        /*
         assert!(end > start);
         assert_eq!(end as usize - start as usize + 1, size,
             "Interval from 0x{:04X} to 0x{:04X} is {}KiB, but it is specified as {}Kib",
@@ -356,6 +357,7 @@ impl Window {
             (end - start + 1) as usize / KIBIBYTE,
             size / KIBIBYTE,
         );
+        */
 
         Window {
             start: CpuAddress::new(start),

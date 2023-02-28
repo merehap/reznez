@@ -1,28 +1,34 @@
 use crate::memory::mapper::*;
 
-lazy_static! {
-    // Only one bank, so not bank-switched.
-    static ref PRG_LAYOUT_NROM_128: PrgLayout = PrgLayout::builder()
-        .max_bank_count(1)
-        .bank_size(16 * KIBIBYTE)
-        .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-        .window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
-        .window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Mirror(0x8000))
-        .build();
-    static ref PRG_LAYOUT_NROM_256: PrgLayout = PrgLayout::builder()
-        .max_bank_count(1)
-        .bank_size(32 * KIBIBYTE)
-        .window(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty)
-        .window(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST))
-        .build();
+const INITIAL_LAYOUT: InitialLayout = InitialLayout {
+    // TODO: Figure out how to fix this for mirrored memory, if necessary
+    prg_max_bank_count: 2,
+    prg_bank_size: 16 * KIBIBYTE,
+    prg_windows_by_board: &[
+        (Board::Nrom128, PRG_WINDOWS_NROM_128),
+        (Board::Nrom256, PRG_WINDOWS_NROM_256),
+    ],
 
-    // Only one bank, so not bank-switched.
-    static ref CHR_LAYOUT: ChrLayout = ChrLayout::builder()
-        .max_bank_count(1)
-        .bank_size(8 * KIBIBYTE)
-        .window(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::FIRST))
-        .build();
-}
+    chr_max_bank_count: 1,
+    chr_bank_size: 8 * KIBIBYTE,
+    chr_windows: CHR_WINDOWS,
+
+    name_table_mirroring_source: NameTableMirroringSource::Cartridge,
+};
+
+const PRG_WINDOWS_NROM_128: &[prg_memory::Window] = &[
+    prg_memory::Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),
+    prg_memory::Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST)),
+    prg_memory::Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Mirror(0x8000)),
+];
+const PRG_WINDOWS_NROM_256: &[prg_memory::Window] = &[
+    prg_memory::Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),
+    prg_memory::Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST)),
+];
+
+const CHR_WINDOWS: &[chr_memory::Window] = &[
+    chr_memory::Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::FIRST)),
+];
 
 // NROM
 pub struct Mapper0 {
@@ -43,16 +49,9 @@ impl Mapper for Mapper0 {
 
 impl Mapper0 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper0, String> {
-        let prg_layout = match Mapper0::board(cartridge)? {
-            Board::Nrom128 => PRG_LAYOUT_NROM_128.clone(),
-            Board::Nrom256 => PRG_LAYOUT_NROM_256.clone(),
-        };
-        Ok(Mapper0 { params: MapperParams::new(
-            cartridge,
-            prg_layout,
-            CHR_LAYOUT.clone(),
-            cartridge.name_table_mirroring(),
-        )})
+        let board = Mapper0::board(cartridge)?;
+        let params = INITIAL_LAYOUT.make_mapper_params(cartridge, board);
+        Ok(Mapper0 { params })
     }
 
     fn board(cartridge: &Cartridge) -> Result<Board, String> {
@@ -65,9 +64,4 @@ impl Mapper0 {
             Err("PRG ROM size must be 16K or 32K for mapper 0.".to_string())
         }
     }
-}
-
-enum Board {
-    Nrom128,
-    Nrom256,
 }
