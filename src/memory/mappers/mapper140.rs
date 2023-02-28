@@ -46,7 +46,8 @@ impl Mapper for Mapper140 {
 
 impl Mapper140 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper140, String> {
-        let params = INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any);
-        Ok(Mapper140 { params })
+        Ok(Mapper140 {
+            params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
+        })
     }
 }
