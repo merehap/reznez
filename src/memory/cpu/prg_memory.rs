@@ -94,7 +94,7 @@ impl PrgMemory {
         indexes
     }
 
-    pub fn window_at(&mut self, start: u16) -> &mut Window {
+    pub fn window_at(&mut self, start: u16) -> &mut PrgWindow {
         self.window_with_index_at(start).0
     }
 
@@ -185,7 +185,7 @@ impl PrgMemory {
         &mut self.work_ram_sections[index]
     }
 
-    fn window_with_index_at(&mut self, start: u16) -> (&mut Window, usize) {
+    fn window_with_index_at(&mut self, start: u16) -> (&mut PrgWindow, usize) {
         for (index, window) in self.layout.windows.iter_mut().enumerate() {
             if window.start.to_raw() == start {
                 return (window, index);
@@ -195,7 +195,7 @@ impl PrgMemory {
         panic!("No window exists at {start:?}");
     }
 
-    fn window(&self, start: u16) -> &Window {
+    fn window(&self, start: u16) -> &PrgWindow {
         for window in &self.layout.windows {
             if window.start.to_raw() == start {
                 return window;
@@ -210,7 +210,7 @@ impl PrgMemory {
 pub struct PrgLayout {
     max_bank_count: u16,
     bank_size: usize,
-    windows: Vec<Window>,
+    windows: Vec<PrgWindow>,
 }
 
 impl PrgLayout {
@@ -221,7 +221,7 @@ impl PrgLayout {
     pub fn new(
         max_bank_count: u16,
         bank_size: usize,
-        windows: Vec<Window>,
+        windows: Vec<PrgWindow>,
     ) -> PrgLayout {
 
         assert!(!windows.is_empty());
@@ -266,7 +266,7 @@ impl PrgLayout {
 pub struct PrgLayoutBuilder {
     max_bank_count: Option<u16>,
     bank_size: Option<usize>,
-    windows: Vec<Window>,
+    windows: Vec<PrgWindow>,
 }
 
 impl PrgLayoutBuilder {
@@ -292,7 +292,7 @@ impl PrgLayoutBuilder {
             assert!(size % bank_size == 0 || bank_size % size == 0);
         }
 
-        self.windows.push(Window::new(start, end, size, window_type));
+        self.windows.push(PrgWindow::new(start, end, size, window_type));
         self
     }
 
@@ -321,16 +321,16 @@ enum PrgMemoryIndex {
     MappedMemory(usize),
 }
 
-// A Window is a range within addressable memory.
+// A PrgWindow is a range within addressable memory.
 // If the specified bank cannot fill the window, adjacent banks will be included too.
 #[derive(Clone, Copy)]
-pub struct Window {
+pub struct PrgWindow {
     start: CpuAddress,
     end: CpuAddress,
     prg_type: PrgType,
 }
 
-impl Window {
+impl PrgWindow {
     fn bank_index(self) -> Option<BankIndex> {
         self.prg_type.bank_index()
     }
@@ -347,7 +347,7 @@ impl Window {
         }
     }
 
-    pub const fn new(start: u16, end: u16, _size: usize, prg_type: PrgType) -> Window {
+    pub const fn new(start: u16, end: u16, _size: usize, prg_type: PrgType) -> PrgWindow {
         /*
         assert!(end > start);
         assert_eq!(end as usize - start as usize + 1, size,
@@ -359,7 +359,7 @@ impl Window {
         );
         */
 
-        Window {
+        PrgWindow {
             start: CpuAddress::new(start),
             end: CpuAddress::new(end),
             prg_type,

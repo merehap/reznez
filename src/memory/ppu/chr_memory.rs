@@ -73,7 +73,7 @@ impl ChrMemory {
             .collect()
     }
 
-    pub fn window_at(&mut self, start: u16) -> &mut Window {
+    pub fn window_at(&mut self, start: u16) -> &mut ChrWindow {
         for window in &mut self.layout.windows {
             if window.start == start {
                 return window;
@@ -164,7 +164,7 @@ impl ChrMemory {
 pub struct ChrLayout {
     max_bank_count: u16,
     bank_size: usize,
-    windows: Vec<Window>,
+    windows: Vec<ChrWindow>,
 }
 
 impl ChrLayout {
@@ -175,7 +175,7 @@ impl ChrLayout {
     pub fn new(
         max_bank_count: u16,
         bank_size: usize,
-        windows: Vec<Window>,
+        windows: Vec<ChrWindow>,
     ) -> ChrLayout {
         assert!(!windows.is_empty());
 
@@ -203,7 +203,7 @@ impl ChrLayout {
 pub struct ChrLayoutBuilder {
     max_bank_count: Option<u16>,
     bank_size: Option<usize>,
-    windows: Vec<Window>,
+    windows: Vec<ChrWindow>,
 }
 
 impl ChrLayoutBuilder {
@@ -227,7 +227,7 @@ impl ChrLayoutBuilder {
         let bank_size = self.bank_size.unwrap();
         assert!(size % bank_size == 0 || bank_size % size == 0);
 
-        self.windows.push(Window::new(start, end, size, chr_type));
+        self.windows.push(ChrWindow::new(start, end, size, chr_type));
         self
     }
 
@@ -250,21 +250,21 @@ impl ChrLayoutBuilder {
 
 // TODO: Switch over to PpuAddress?
 #[derive(Clone, Copy, Debug)]
-pub struct Window {
+pub struct ChrWindow {
     start: u16,
     end: u16,
     chr_type: ChrType,
     write_status: Option<WriteStatus>,
 }
 
-impl Window {
+impl ChrWindow {
     #[allow(clippy::identity_op)]
-    pub const fn new(start: u16, end: u16, _size: usize, chr_type: ChrType) -> Window {
+    pub const fn new(start: u16, end: u16, _size: usize, chr_type: ChrType) -> ChrWindow {
         //assert!([1 * KIBIBYTE, 2 * KIBIBYTE, 4 * KIBIBYTE, 8 * KIBIBYTE].contains(&size));
         //assert!(end > start);
         //assert_eq!(end as usize - start as usize + 1, size);
 
-        Window { start, end, chr_type, write_status: None }
+        ChrWindow { start, end, chr_type, write_status: None }
     }
 
     fn size(self) -> usize {

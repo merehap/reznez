@@ -16,18 +16,18 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout {
     name_table_mirroring_source: NameTableMirroringSource::Cartridge,
 };
 
-const PRG_WINDOWS_NROM_128: &[prg_memory::Window] = &[
-    prg_memory::Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),
-    prg_memory::Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST)),
-    prg_memory::Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Mirror(0x8000)),
+const PRG_WINDOWS_NROM_128: &[PrgWindow] = &[
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST)),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Mirror(0x8000)),
 ];
-const PRG_WINDOWS_NROM_256: &[prg_memory::Window] = &[
-    prg_memory::Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),
-    prg_memory::Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST)),
+const PRG_WINDOWS_NROM_256: &[PrgWindow] = &[
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST)),
 ];
 
-const CHR_WINDOWS: &[chr_memory::Window] = &[
-    chr_memory::Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::FIRST)),
+const CHR_WINDOWS: &[ChrWindow] = &[
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::FIRST)),
 ];
 
 // NROM

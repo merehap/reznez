@@ -1,20 +1,18 @@
 use crate::cartridge::Cartridge;
 use crate::memory::board::Board;
-use crate::memory::cpu::prg_memory;
-use crate::memory::cpu::prg_memory::{PrgLayout, PrgMemory};
+use crate::memory::cpu::prg_memory::{PrgLayout, PrgMemory, PrgWindow};
 use crate::memory::mapper::MapperParams;
-use crate::memory::ppu::chr_memory;
-use crate::memory::ppu::chr_memory::{ChrLayout, ChrMemory};
+use crate::memory::ppu::chr_memory::{ChrLayout, ChrMemory, ChrWindow};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 
 pub struct InitialLayout {
     pub prg_max_bank_count: u16,
     pub prg_bank_size: usize,
-    pub prg_windows_by_board: &'static[(Board, &'static [prg_memory::Window])],
+    pub prg_windows_by_board: &'static[(Board, &'static [PrgWindow])],
 
     pub chr_max_bank_count: u16,
     pub chr_bank_size: usize,
-    pub chr_windows: &'static [chr_memory::Window],
+    pub chr_windows: &'static [ChrWindow],
 
     pub name_table_mirroring_source: NameTableMirroringSource,
 }
@@ -36,7 +34,7 @@ impl InitialLayout {
         MapperParams { prg_memory, chr_memory, name_table_mirroring }
     }
 
-    fn lookup_prg_windows_by_board(&self, target: Board) -> &[prg_memory::Window] {
+    fn lookup_prg_windows_by_board(&self, target: Board) -> &[PrgWindow] {
         for &(board, prg_windows) in self.prg_windows_by_board {
             if board == target {
                 return prg_windows;

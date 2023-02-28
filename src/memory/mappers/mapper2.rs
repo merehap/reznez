@@ -8,7 +8,6 @@ lazy_static! {
         .window(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0)))
         .window(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST))
         .build();
-    // Only one bank, so not bank-switched.
     static ref CHR_LAYOUT: ChrLayout = ChrLayout::builder()
         .max_bank_count(1)
         .bank_size(8 * KIBIBYTE)
