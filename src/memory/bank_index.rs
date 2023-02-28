@@ -42,12 +42,12 @@ impl From<u8> for BankIndex {
 }
 
 pub struct BankIndexRegisters {
-    registers: [Option<u16>; 8],
+    registers: [Option<u16>; 13],
 }
 
 impl BankIndexRegisters {
     pub fn new(active_ids: &[BankIndexRegisterId]) -> BankIndexRegisters {
-        let mut registers = [None; 8];
+        let mut registers = [None; 13];
         for &id in active_ids {
             registers[id as usize] = Some(0);
         }
@@ -82,6 +82,11 @@ pub enum BankIndexRegisterId {
     C3,
     C4,
     C5,
+    C6,
+    C7,
     P0,
     P1,
+    P2,
+    P3,
+    P4,
 }

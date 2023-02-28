@@ -188,6 +188,7 @@ impl Mapper004 {
                 let bank_index = u16::from(value & 0b0011_1111);
                 self.prg_memory_mut().set_bank_index_register(selected_register_id, bank_index);
             }
+            _ => unreachable!("Bank Index Register ID {selected_register_id:?} is not used by mapper 4."),
         };
     }
 
