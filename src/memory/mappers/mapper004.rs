@@ -1,5 +1,3 @@
-use num_traits::FromPrimitive;
-
 use crate::memory::mapper::*;
 
 const INITIAL_LAYOUT: InitialLayout = InitialLayout {
@@ -79,7 +77,7 @@ impl Mapper for Mapper004 {
         let is_even_address = address.to_raw() % 2 == 0;
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
-            0x4020..=0x5FFF => { /* Do nothing. */ },
+            0x4020..=0x5FFF => { /* Do nothing. */ }
             0x6000..=0x7FFF =>                    self.prg_memory_mut().write(address, value),
             0x8000..=0x9FFF if is_even_address => self.bank_select(value),
             0x8000..=0x9FFF =>                    self.set_bank_index(value),
@@ -154,10 +152,10 @@ impl Mapper004 {
     }
 
     fn bank_select(&mut self, value: u8) {
-        let chr_big_windows_first =                             (value & 0b1000_0000) == 0;
-        let prg_fixed_c000 =                                    (value & 0b0100_0000) == 0;
-        //self.prg_ram_enabled =                                (value & 0b0010_0000) != 0;
-        self.selected_register_id = BankIndexRegisterId::from_u8(value & 0b0000_0111).unwrap();
+        let chr_big_windows_first =                                 (value & 0b1000_0000) == 0;
+        let prg_fixed_c000 =                                        (value & 0b0100_0000) == 0;
+        //self.prg_ram_enabled =                                    (value & 0b0010_0000) != 0;
+        self.selected_register_id = Mapper004::register_id_from_byte(value & 0b0000_0111);
 
         if chr_big_windows_first {
             self.chr_memory_mut().set_windows(CHR_BIG_WINDOWS_FIRST.clone())
@@ -244,6 +242,21 @@ impl Mapper004 {
 
     fn enable_irq(&mut self) {
         self.irq_enabled = true;
+    }
+
+    fn register_id_from_byte(value: u8) -> BankIndexRegisterId {
+        use BankIndexRegisterId::*;
+        match value {
+            0b000 => C0,
+            0b001 => C1,
+            0b010 => C2,
+            0b011 => C3,
+            0b100 => C4,
+            0b101 => C5,
+            0b110 => P0,
+            0b111 => P1,
+            _ => unreachable!(),
+        }
     }
 
     /*

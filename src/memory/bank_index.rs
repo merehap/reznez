@@ -1,5 +1,3 @@
-use num_derive::FromPrimitive;
-
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum BankIndex {
     IndexFromStart(u16),
@@ -76,7 +74,7 @@ impl BankIndexRegisters {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug, FromPrimitive)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum BankIndexRegisterId {
     C0,
     C1,
