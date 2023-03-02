@@ -41,19 +41,19 @@ const PRG_WINDOWS_MODE_3: &[PrgWindow] = &[
 ];
 
 const CHR_WINDOWS_MODE_0: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C0))),
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C7))),
 ];
 
 const CHR_WINDOWS_MODE_1: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C0))),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C1))),
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3))),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C7))),
 ];
 
 const CHR_WINDOWS_MODE_2: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C0))),
-    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C1))),
-    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C2))),
-    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3))),
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C1))),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3))),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C5))),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C7))),
 ];
 
 const CHR_WINDOWS_MODE_3: &[ChrWindow] = &[
@@ -209,10 +209,32 @@ impl Mapper005 {
         self.prg_memory_mut().set_bank_index_register(register_id, value);
     }
 
-    fn chr_bank_switching(&mut self, _address: u16, _value: u8) {}
+    fn chr_bank_switching(&mut self, address: u16, value: u8) {
+        let (first_reg_id, maybe_second_reg_id) = match address {
+            0x5120 => (C0, None),
+            0x5121 => (C1, None),
+            0x5122 => (C2, None),
+            0x5123 => (C3, None),
+            0x5124 => (C4, None),
+            0x5125 => (C5, None),
+            0x5126 => (C6, None),
+            0x5127 => (C7, None),
+            0x5128 => (C0, Some(C4)),
+            0x5129 => (C1, Some(C5)),
+            0x512A => (C2, Some(C6)),
+            0x512B => (C3, Some(C7)),
+            _ => unreachable!(),
+        };
+        self.chr_memory_mut().set_bank_index_register(first_reg_id, value);
+        if let Some(second_reg_id) = maybe_second_reg_id {
+            self.chr_memory_mut().set_bank_index_register(second_reg_id, value);
+        }
+    }
+
     fn set_upper_chr_bank_bits(&mut self, _value: u8) {
         todo!("Upper CHR Bank bits. No commercial game uses them.");
     }
+
     fn vertical_split_mode(&mut self, _value: u8) {}
     fn vertical_split_scroll(&mut self, _value: u8) {}
     fn vertical_split_bank(&mut self, _value: u8) {}
