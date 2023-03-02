@@ -7,11 +7,16 @@ use crate::util::unit::KIBIBYTE;
 pub struct ChrMemory {
     layout: ChrLayout,
     bank_index_registers: BankIndexRegisters,
+    align_large_chr_windows: bool,
     raw_memory: Vec<u8>,
 }
 
 impl ChrMemory {
-    pub fn new(mut layout: ChrLayout, mut raw_memory: Vec<u8>) -> ChrMemory {
+    pub fn new(
+        mut layout: ChrLayout,
+        align_large_chr_windows: bool,
+        mut raw_memory: Vec<u8>,
+    ) -> ChrMemory {
         // If no CHR data is provided, add 8KiB of CHR RAM.
         // This is the only instance where changing the ROM/RAM type after configuration time is
         // allowed.
@@ -37,7 +42,12 @@ impl ChrMemory {
 
         let bank_index_registers =
             BankIndexRegisters::new(&layout.active_register_ids());
-        let chr_memory = ChrMemory { layout, bank_index_registers, raw_memory };
+        let chr_memory = ChrMemory {
+            layout,
+            bank_index_registers,
+            align_large_chr_windows,
+            raw_memory,
+        };
 
         let bank_count = chr_memory.bank_count();
         assert_eq!(usize::from(bank_count) * chr_memory.layout.bank_size, chr_memory.raw_memory.len());
@@ -124,9 +134,11 @@ impl ChrMemory {
             if let Some(bank_offset) = window.offset(address) {
                 let mut raw_bank_index = window.bank_index()
                     .to_usize(&self.bank_index_registers, self.bank_count());
-                // Clear low bits for large windows.
-                let window_multiple = window.size() / self.layout.bank_size;
-                raw_bank_index &= !(window_multiple >> 1);
+                if self.align_large_chr_windows {
+                    let window_multiple = window.size() / self.layout.bank_size;
+                    raw_bank_index &= !(window_multiple >> 1);
+                }
+
                 let index = raw_bank_index *
                     self.layout.bank_size +
                     usize::from(bank_offset);

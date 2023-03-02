@@ -408,10 +408,15 @@ impl MapperParams {
         initial_prg_layout: PrgLayout,
         initial_chr_layout: ChrLayout,
         initial_name_table_mirroring: NameTableMirroring,
+        truncate_large_window_bank_indexes: bool,
     ) -> MapperParams {
         MapperParams {
             prg_memory: PrgMemory::new(initial_prg_layout, cartridge.prg_rom()),
-            chr_memory: ChrMemory::new(initial_chr_layout, cartridge.chr_rom()),
+            chr_memory: ChrMemory::new(
+                initial_chr_layout,
+                truncate_large_window_bank_indexes,
+                cartridge.chr_rom(),
+            ),
             name_table_mirroring: initial_name_table_mirroring,
         }
     }

@@ -13,6 +13,7 @@ pub struct InitialLayout {
     chr_max_bank_count: u16,
     chr_bank_size: usize,
     chr_windows: &'static [ChrWindow],
+    align_large_chr_windows: bool,
 
     name_table_mirroring_source: NameTableMirroringSource,
 }
@@ -28,7 +29,7 @@ impl InitialLayout {
         let prg_memory = PrgMemory::new(prg_layout, cartridge.prg_rom());
 
         let chr_layout = ChrLayout::new(self.chr_max_bank_count, self.chr_bank_size, self.chr_windows.to_vec());
-        let chr_memory = ChrMemory::new(chr_layout, cartridge.chr_rom());
+        let chr_memory = ChrMemory::new(chr_layout, self.align_large_chr_windows, cartridge.chr_rom());
 
         let name_table_mirroring = match self.name_table_mirroring_source {
             NameTableMirroringSource::Direct(mirroring) => mirroring,
@@ -58,6 +59,7 @@ pub struct InitialLayoutBuilder {
     chr_max_bank_count: Option<u16>,
     chr_bank_size: Option<usize>,
     chr_windows: Option<&'static [ChrWindow]>,
+    align_large_chr_windows: bool,
 
     name_table_mirroring_source: Option<NameTableMirroringSource>,
 }
@@ -72,6 +74,7 @@ impl InitialLayoutBuilder {
             chr_max_bank_count: None,
             chr_bank_size: None,
             chr_windows: None,
+            align_large_chr_windows: true,
 
             name_table_mirroring_source: None,
         }
@@ -110,6 +113,11 @@ impl InitialLayoutBuilder {
         self
     }
 
+    pub const fn do_not_align_large_chr_windows(&mut self) -> &mut InitialLayoutBuilder {
+        self.align_large_chr_windows = false;
+        self
+    }
+
     pub const fn name_table_mirroring_source(
         &mut self,
         value: NameTableMirroringSource,
@@ -127,6 +135,7 @@ impl InitialLayoutBuilder {
             chr_max_bank_count: self.chr_max_bank_count.unwrap(),
             chr_bank_size: self.chr_bank_size.unwrap(),
             chr_windows: self.chr_windows.unwrap(),
+            align_large_chr_windows: self.align_large_chr_windows,
 
             name_table_mirroring_source: self.name_table_mirroring_source.unwrap(),
         }

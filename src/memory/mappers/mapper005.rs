@@ -9,6 +9,7 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .chr_max_bank_count(1024)
     .chr_bank_size(1 * KIBIBYTE)
     .chr_windows(CHR_WINDOWS_MODE_0)
+    .do_not_align_large_chr_windows()
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .build();
 
