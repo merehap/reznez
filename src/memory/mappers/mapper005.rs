@@ -16,20 +16,20 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout {
 
 const PRG_WINDOWS_MODE_0: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Banked(Ram,    BankIndex::Register(P0))),
-    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P1))),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P4))),
 ];
 
 const PRG_WINDOWS_MODE_1: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Banked(Ram,    BankIndex::Register(P0))),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P1))),
-    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P2))),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P2))),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P4))),
 ];
 
 const PRG_WINDOWS_MODE_2: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Banked(Ram,    BankIndex::Register(P0))),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P1))),
-    PrgWindow::new(0xC000, 0xDFFF, 16 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P2))),
-    PrgWindow::new(0xE000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P3))),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P2))),
+    PrgWindow::new(0xC000, 0xDFFF, 16 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P3))),
+    PrgWindow::new(0xE000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P4))),
 ];
 
 const PRG_WINDOWS_MODE_3: &[PrgWindow] = &[
@@ -71,6 +71,9 @@ const CHR_WINDOWS_MODE_3: &[ChrWindow] = &[
 pub struct Mapper005 {
     pulse_2: PulseChannel,
     pulse_3: PulseChannel,
+
+    prg_ram_enabled_1: bool,
+    prg_ram_enabled_2: bool,
 
     params: MapperParams,
 }
@@ -144,6 +147,10 @@ impl Mapper005 {
         Ok(Mapper005 {
             pulse_2: PulseChannel::default(),
             pulse_3: PulseChannel::default(),
+
+            prg_ram_enabled_1: false,
+            prg_ram_enabled_2: false,
+
             params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
         })
     }
@@ -151,15 +158,54 @@ impl Mapper005 {
     fn write_pcm_info(&mut self, _value: u8) {}
     fn write_raw_pcm(&mut self, _value: u8) {}
     fn write_apu_status(&mut self, _value: u8) {}
-    fn set_prg_banking_mode(&mut self, _value: u8) {}
-    fn set_chr_banking_mode(&mut self, _value: u8) {}
-    fn prg_ram_protect_1(&mut self, _value: u8) {}
-    fn prg_ram_protect_2(&mut self, _value: u8) {}
+
+    fn set_prg_banking_mode(&mut self, value: u8) {
+        let windows = match value & 0b0000_0011 {
+            0 => PRG_WINDOWS_MODE_0,
+            1 => PRG_WINDOWS_MODE_1,
+            2 => PRG_WINDOWS_MODE_2,
+            3 => PRG_WINDOWS_MODE_3,
+            _ => unreachable!(),
+        };
+        self.prg_memory_mut().set_windows(windows);
+    }
+
+    fn set_chr_banking_mode(&mut self, value: u8) {
+        let windows = match value & 0b0000_0011 {
+            0 => CHR_WINDOWS_MODE_0,
+            1 => CHR_WINDOWS_MODE_1,
+            2 => CHR_WINDOWS_MODE_2,
+            3 => CHR_WINDOWS_MODE_3,
+            _ => unreachable!(),
+        };
+        self.chr_memory_mut().set_windows(windows);
+    }
+
+    fn prg_ram_protect_1(&mut self, value: u8) {
+        self.prg_ram_enabled_1 = value & 0b0000_0011 == 0b0000_0010;
+    }
+
+    fn prg_ram_protect_2(&mut self, value: u8) {
+        self.prg_ram_enabled_2 = value & 0b0000_0011 == 0b0000_0001;
+    }
+
     fn extended_ram_mode(&mut self, _value: u8) {}
     fn set_name_table_mapping(&mut self, _value: u8) {}
     fn set_fill_mode_tile(&mut self, _value: u8) {}
     fn set_fill_mode_palette_index(&mut self, _value: u8) {}
-    fn prg_bank_switching(&mut self, _address: u16, _value: u8) {}
+
+    fn prg_bank_switching(&mut self, address: u16, value: u8) {
+        let register_id = match address {
+            0x5113 => P0,
+            0x5114 => P1,
+            0x5115 => P2,
+            0x5116 => P3,
+            0x5117 => P4,
+            _ => unreachable!(),
+        };
+        self.prg_memory_mut().set_bank_index_register(register_id, value);
+    }
+
     fn chr_bank_switching(&mut self, _address: u16, _value: u8) {}
     fn set_upper_chr_bank_bits(&mut self, _value: u8) {}
     fn vertical_split_mode(&mut self, _value: u8) {}
