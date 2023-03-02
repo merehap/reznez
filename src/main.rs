@@ -5,6 +5,7 @@
 #![feature(let_chains)]
 #![feature(type_ascription)]
 #![feature(const_option_ext)]
+#![feature(const_mut_refs)]
 #![allow(clippy::module_inception)]
 #![allow(clippy::new_without_default)]
 #![allow(clippy::identity_op)]

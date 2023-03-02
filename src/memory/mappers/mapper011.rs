@@ -1,16 +1,14 @@
 use crate::memory::mapper::*;
 
-const INITIAL_LAYOUT: InitialLayout = InitialLayout {
-    prg_max_bank_count: 4,
-    prg_bank_size: 32 * KIBIBYTE,
-    prg_windows_by_board: &[(Board::Any, PRG_WINDOWS)],
-
-    chr_max_bank_count: 16,
-    chr_bank_size: 8 * KIBIBYTE,
-    chr_windows: CHR_WINDOWS,
-
-    name_table_mirroring_source: NameTableMirroringSource::Cartridge,
-};
+const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
+    .prg_max_bank_count(4)
+    .prg_bank_size(32 * KIBIBYTE)
+    .prg_windows_by_board(&[(Board::Any, PRG_WINDOWS)])
+    .chr_max_bank_count(16)
+    .chr_bank_size(8 * KIBIBYTE)
+    .chr_windows(CHR_WINDOWS)
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+    .build();
 
 const PRG_WINDOWS: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),

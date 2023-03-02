@@ -2,17 +2,15 @@ use crate::apu::pulse_channel::PulseChannel;
 
 use crate::memory::mapper::*;
 
-const INITIAL_LAYOUT: InitialLayout = InitialLayout {
-    prg_max_bank_count: 128,
-    prg_bank_size: 8 * KIBIBYTE,
-    prg_windows_by_board: &[(Board::Any, PRG_WINDOWS_MODE_3)],
-
-    chr_max_bank_count: 1024,
-    chr_bank_size: 1 * KIBIBYTE,
-    chr_windows: CHR_WINDOWS_MODE_0,
-
-    name_table_mirroring_source: NameTableMirroringSource::Cartridge,
-};
+const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
+    .prg_max_bank_count(128)
+    .prg_bank_size(8 * KIBIBYTE)
+    .prg_windows_by_board(&[(Board::Any, PRG_WINDOWS_MODE_3)])
+    .chr_max_bank_count(1024)
+    .chr_bank_size(1 * KIBIBYTE)
+    .chr_windows(CHR_WINDOWS_MODE_0)
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+    .build();
 
 const PRG_WINDOWS_MODE_0: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Banked(Ram,    BankIndex::Register(P0))),

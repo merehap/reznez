@@ -3,17 +3,15 @@ use crate::util::bit_util::get_bit;
 
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
 
-const INITIAL_LAYOUT: InitialLayout = InitialLayout {
-    prg_max_bank_count: 16,
-    prg_bank_size: 16 * KIBIBYTE,
-    prg_windows_by_board: &[(Board::Any, PRG_WINDOWS_FIXED_LAST)],
-
-    chr_max_bank_count: 32,
-    chr_bank_size: 4 * KIBIBYTE,
-    chr_windows: CHR_WINDOWS_ONE_BIG,
-
-    name_table_mirroring_source: NameTableMirroringSource::Direct(NameTableMirroring::OneScreenRightBank),
-};
+const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
+    .prg_max_bank_count(16)
+    .prg_bank_size(16 * KIBIBYTE)
+    .prg_windows_by_board(&[(Board::Any, PRG_WINDOWS_FIXED_LAST)])
+    .chr_max_bank_count(32)
+    .chr_bank_size(4 * KIBIBYTE)
+    .chr_windows(CHR_WINDOWS_ONE_BIG)
+    .name_table_mirroring_source(NameTableMirroringSource::Direct(NameTableMirroring::OneScreenRightBank))
+    .build();
 
 const PRG_WINDOWS_FIXED_LAST: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
