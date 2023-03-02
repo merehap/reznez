@@ -15,15 +15,17 @@ impl BankIndex {
     }
 
     pub fn to_u16(self, registers: &BankIndexRegisters, bank_count: u16) -> u16 {
-        match self {
-            BankIndex::IndexFromStart(index) => index % bank_count,
+        let raw_bank_index = match self {
+            BankIndex::IndexFromStart(index) => index,
             BankIndex::IndexFromEnd(index) => {
                 assert!(index < bank_count);
                 bank_count - index - 1
             }
             // TODO: Get rid of this recursive call.
             BankIndex::Register(id) => registers.get(id)
-        }
+        };
+
+        raw_bank_index % bank_count
     }
 
     pub fn to_usize(self, registers: &BankIndexRegisters, bank_count: u16) -> usize {

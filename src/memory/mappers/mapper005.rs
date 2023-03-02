@@ -144,7 +144,7 @@ impl Mapper for Mapper005 {
 
 impl Mapper005 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper005, String> {
-        Ok(Mapper005 {
+        let mut mapper = Mapper005 {
             pulse_2: PulseChannel::default(),
             pulse_3: PulseChannel::default(),
 
@@ -152,7 +152,10 @@ impl Mapper005 {
             prg_ram_enabled_2: false,
 
             params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
-        })
+        };
+        let last_bank_index = mapper.prg_memory().last_bank_index();
+        mapper.prg_memory_mut().set_bank_index_register(P4, last_bank_index);
+        Ok(mapper)
     }
 
     fn write_pcm_info(&mut self, _value: u8) {}
@@ -207,7 +210,9 @@ impl Mapper005 {
     }
 
     fn chr_bank_switching(&mut self, _address: u16, _value: u8) {}
-    fn set_upper_chr_bank_bits(&mut self, _value: u8) {}
+    fn set_upper_chr_bank_bits(&mut self, _value: u8) {
+        todo!("Upper CHR Bank bits. No commercial game uses them.");
+    }
     fn vertical_split_mode(&mut self, _value: u8) {}
     fn vertical_split_scroll(&mut self, _value: u8) {}
     fn vertical_split_bank(&mut self, _value: u8) {}
