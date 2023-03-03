@@ -170,6 +170,17 @@ impl PpuAddress {
         NameTableQuadrant::from_last_two_bits((self.address >> 10) as u8)
     }
 
+    pub fn name_table_location(self) -> Option<(NameTableQuadrant, u16)> {
+        if self.address >= 0x2000 && self.address < 0x3F00 {
+            Some((
+                    NameTableQuadrant::from_last_two_bits((self.address >> 10) as u8),
+                    self.address & 0b11_1111_1111,
+                ))
+        } else {
+            None
+        }
+    }
+
     /*
      * 0123456789ABCDEF
      * -----------01234  $SCROLL#1

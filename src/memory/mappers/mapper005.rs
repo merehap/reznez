@@ -1,5 +1,6 @@
 use crate::apu::pulse_channel::PulseChannel;
-
+use crate::ppu::palette::palette_index::PaletteIndex;
+use crate::memory::ppu::vram::VramSide;
 use crate::memory::mapper::*;
 
 const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
@@ -74,6 +75,13 @@ pub struct Mapper005 {
     prg_ram_enabled_1: bool,
     prg_ram_enabled_2: bool,
 
+    extended_ram: [u8; 1 * KIBIBYTE],
+    name_table_sources: [NameTableSource; 4],
+    fill_mode_tile: u8,
+    fill_mode_palette_index: Option<PaletteIndex>,
+
+    irq_scanline: u8,
+
     params: MapperParams,
 }
 
@@ -121,8 +129,25 @@ impl Mapper for Mapper005 {
             0x5207..=0x520A => { /* Do nothing yet. MMC5A registers. */ }
             0x520B..=0x57FF => { /* Do nothing. */ }
             0x5800..=0x5BFF => { /* Do nothing yet. MMC5A registers. */ }
-            0x5C00..=0x5FFF => self.write_to_extended_ram(value),
+            0x5C00..=0x5FFF => self.write_to_extended_ram(address.to_raw(), value),
             0x6000..=0xFFFF => { /* Do nothing extra. ROM/RAM space. */ }
+        }
+    }
+
+    fn custom_ppu_peek(&self, address: PpuAddress) -> CustomPpuPeekResult {
+        if let Some((name_table_quadrant, index)) = address.name_table_location() {
+            match self.name_table_sources[name_table_quadrant as usize] {
+                NameTableSource::CiramLeft =>
+                    CustomPpuPeekResult::InternalRam(VramSide::Left, index),
+                NameTableSource::CiramRight =>
+                    CustomPpuPeekResult::InternalRam(VramSide::Right, index),
+                NameTableSource::ExtendedRam =>
+                    CustomPpuPeekResult::Value(self.extended_ram[index as usize]),
+                NameTableSource::Fill =>
+                    CustomPpuPeekResult::Value(self.fill_mode_tile),
+            }
+        } else {
+            CustomPpuPeekResult::NoOverride
         }
     }
 
@@ -149,6 +174,13 @@ impl Mapper005 {
 
             prg_ram_enabled_1: false,
             prg_ram_enabled_2: false,
+
+            extended_ram: [0; 1 * KIBIBYTE],
+            name_table_sources: [NameTableSource::CiramLeft; 4],
+            fill_mode_tile: 0,
+            fill_mode_palette_index: None,
+
+            irq_scanline: 0,
 
             params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
         };
@@ -191,10 +223,31 @@ impl Mapper005 {
         self.prg_ram_enabled_2 = value & 0b0000_0011 == 0b0000_0001;
     }
 
-    fn extended_ram_mode(&mut self, _value: u8) {}
-    fn set_name_table_mapping(&mut self, _value: u8) {}
-    fn set_fill_mode_tile(&mut self, _value: u8) {}
-    fn set_fill_mode_palette_index(&mut self, _value: u8) {}
+    fn extended_ram_mode(&mut self, value: u8) {
+        if value != 0 {
+            todo!("Extended RAM mode {}.", value);
+        }
+    }
+
+    fn set_name_table_mapping(&mut self, value: u8) {
+        for (i, source) in self.name_table_sources.iter_mut().enumerate() {
+            *source = match (value >> (2 * i)) & 0b11 {
+                0b00 => NameTableSource::CiramLeft,
+                0b01 => NameTableSource::CiramRight,
+                0b10 => NameTableSource::ExtendedRam,
+                0b11 => NameTableSource::Fill,
+                _ => unreachable!(),
+            };
+        }
+    }
+
+    fn set_fill_mode_tile(&mut self, value: u8) {
+        self.fill_mode_tile = value;
+    }
+
+    fn set_fill_mode_palette_index(&mut self, value: u8) {
+        self.fill_mode_palette_index = PaletteIndex::from_two_low_bits(value);
+    }
 
     fn prg_bank_switching(&mut self, address: u16, value: u8) {
         let register_id = match address {
@@ -234,12 +287,47 @@ impl Mapper005 {
         todo!("Upper CHR Bank bits. No commercial game uses them.");
     }
 
-    fn vertical_split_mode(&mut self, _value: u8) {}
-    fn vertical_split_scroll(&mut self, _value: u8) {}
-    fn vertical_split_bank(&mut self, _value: u8) {}
-    fn set_target_irq_scanline(&mut self, _value: u8) {}
-    fn enable_or_disable_scanline_irq(&mut self, _value: u8) {}
-    fn set_multiplicand(&mut self, _value: u8) {}
-    fn set_multiplier(&mut self, _value: u8) {}
-    fn write_to_extended_ram(&mut self, _value: u8) {}
+    fn vertical_split_mode(&mut self, value: u8) {
+        if value & 0b1000_0000 != 0 {
+            todo!("Vertical split mode");
+        }
+    }
+
+    fn vertical_split_scroll(&mut self, _value: u8) {
+        todo!("Vertical split scroll");
+    }
+
+    fn vertical_split_bank(&mut self, _value: u8) {
+        todo!("Vertical split bank");
+    }
+
+    fn set_target_irq_scanline(&mut self, value: u8) {
+        self.irq_scanline = value;
+    }
+
+    fn enable_or_disable_scanline_irq(&mut self, value: u8) {
+        if value & 0b1000_0000 != 0 {
+            todo!("Scanline IRQ enable");
+        }
+    }
+
+    fn set_multiplicand(&mut self, _value: u8) {
+        todo!("Multiplicand");
+    }
+
+    fn set_multiplier(&mut self, _value: u8) {
+        todo!("Multiplier");
+    }
+
+    fn write_to_extended_ram(&mut self, address: u16, value: u8) {
+        self.extended_ram[usize::from(address - 0x5C00)] = value;
+    }
+}
+
+#[derive(Clone, Copy)]
+enum NameTableSource {
+    CiramLeft,
+    CiramRight,
+    ExtendedRam,
+    Fill,
 }
