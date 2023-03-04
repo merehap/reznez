@@ -49,13 +49,15 @@ pub trait Mapper {
     fn custom_ppu_peek(&self, _address: PpuAddress) -> CustomPpuPeekResult {
         CustomPpuPeekResult::NoOverride
     }
+    // Most mappers don't care about CPU cycles.
+    fn on_end_of_cpu_cycle(&mut self) {}
     // Most mappers don't care about PPU cycles.
-    fn process_end_of_ppu_cycle(&mut self) {}
+    fn on_end_of_ppu_cycle(&mut self) {}
     // Most mappers don't trigger anything based upon ppu reads.
-    fn process_ppu_read(&mut self, _address: PpuAddress) {}
+    fn on_ppu_read(&mut self, _address: PpuAddress) {}
     // Most mappers don't care about the current PPU address.
     fn process_current_ppu_address(&mut self, _address: PpuAddress) {}
-    // Most mappers don't trigger IRQs.
+    // Most mappers don't trigger custom IRQs.
     fn irq_pending(&self) -> bool { false }
 
     fn cpu_peek(
@@ -223,7 +225,7 @@ pub trait Mapper {
         address: PpuAddress,
         rendering: bool,
     ) -> u8 {
-        self.process_ppu_read(address);
+        self.on_ppu_read(address);
         if rendering {
             self.process_current_ppu_address(address);
         }

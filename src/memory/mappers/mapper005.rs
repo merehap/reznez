@@ -1,4 +1,3 @@
-use crate::ppu::clock;
 use crate::apu::pulse_channel::PulseChannel;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::memory::ppu::vram::VramSide;
@@ -84,10 +83,13 @@ pub struct Mapper005 {
 
     scanline_irq_enabled: bool,
     irq_scanline: u8,
-    current_scanline: u16,
+    current_scanline: u8,
     irq_pending: bool,
-    ppu_address_read: PpuAddress,
+    irq_in_frame: bool,
+    previous_ppu_address_read: Option<PpuAddress>,
     consecutive_reads_of_same_address: u8,
+    cpu_cycles_since_last_ppu_read: u8,
+    ppu_read_occurred_since_last_cpu_cycle: bool,
 
     params: MapperParams,
 }
@@ -185,25 +187,49 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn process_ppu_read(&mut self, address: PpuAddress) {
-        if self.consecutive_reads_of_same_address == 3 {
-            self.current_scanline += 1;
-            self.current_scanline %= clock::MAX_SCANLINE + 1;
-            if self.current_scanline == u16::from(self.irq_scanline) {
-                self.irq_pending = true;
+    fn on_end_of_cpu_cycle(&mut self) {
+        if self.ppu_read_occurred_since_last_cpu_cycle {
+            self.cpu_cycles_since_last_ppu_read = 0;
+        } else {
+            self.cpu_cycles_since_last_ppu_read += 1;
+            if self.cpu_cycles_since_last_ppu_read == 3 {
+                self.irq_in_frame = false;
+                self.previous_ppu_address_read = None;
             }
         }
 
-        if address == self.ppu_address_read {
-            self.consecutive_reads_of_same_address += 1;
-        } else {
-            self.ppu_address_read = address;
-            self.consecutive_reads_of_same_address = 1;
+        self.ppu_read_occurred_since_last_cpu_cycle = false;
+    }
+
+    fn on_ppu_read(&mut self, address: PpuAddress) {
+        self.ppu_read_occurred_since_last_cpu_cycle = true;
+        if self.consecutive_reads_of_same_address == 3 {
+            if !self.irq_in_frame {
+                self.irq_in_frame = true;
+                self.current_scanline = 0;
+            } else {
+                self.current_scanline += 1;
+                if self.current_scanline == self.irq_scanline {
+                    self.irq_pending = true;
+                }
+            }
         }
+
+        if address.to_u16() >= 0x2000 && address.to_u16() < 0x3000 {
+            if self.previous_ppu_address_read == Some(address) {
+                self.consecutive_reads_of_same_address += 1;
+            } else {
+                self.consecutive_reads_of_same_address = 1;
+            }
+        } else {
+            self.consecutive_reads_of_same_address = 0;
+        }
+
+        self.previous_ppu_address_read = Some(address);
     }
 
     fn irq_pending(&self) -> bool {
-        self.irq_pending
+        self.scanline_irq_enabled && self.irq_pending
     }
 
     /*
@@ -237,8 +263,11 @@ impl Mapper005 {
             irq_scanline: 0,
             current_scanline: 0,
             irq_pending: false,
-            ppu_address_read: PpuAddress::ZERO,
+            irq_in_frame: false,
+            previous_ppu_address_read: None,
             consecutive_reads_of_same_address: 0,
+            cpu_cycles_since_last_ppu_read: 0,
+            ppu_read_occurred_since_last_cpu_cycle: false,
 
             params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
         };
@@ -398,7 +427,9 @@ impl Mapper005 {
             result |= 0b1000_0000;
         }
 
-        // TODO: Add in frame flag.
+        if self.irq_in_frame {
+            result |= 0b0100_0000;
+        }
 
         result
     }

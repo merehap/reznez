@@ -88,7 +88,7 @@ impl Mapper for Mapper004 {
         }
     }
 
-    fn process_end_of_ppu_cycle(&mut self) {
+    fn on_end_of_ppu_cycle(&mut self) {
         if self.irq_counter_suppression_cycles > 0 {
             self.irq_counter_suppression_cycles -= 1;
         }

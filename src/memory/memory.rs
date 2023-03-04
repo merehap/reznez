@@ -180,7 +180,7 @@ impl<'a> PpuMemory<'a> {
     pub fn process_end_of_ppu_cycle(&mut self) {
         self.memory
             .mapper
-            .process_end_of_ppu_cycle();
+            .on_end_of_ppu_cycle();
     }
 
     pub fn process_current_ppu_address(&mut self, address: PpuAddress) {
