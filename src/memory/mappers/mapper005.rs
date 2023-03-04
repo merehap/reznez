@@ -1,3 +1,4 @@
+use crate::ppu::clock;
 use crate::apu::pulse_channel::PulseChannel;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::memory::ppu::vram::VramSide;
@@ -81,7 +82,12 @@ pub struct Mapper005 {
     fill_mode_tile: u8,
     fill_mode_palette_index: Option<PaletteIndex>,
 
+    scanline_irq_enabled: bool,
     irq_scanline: u8,
+    current_scanline: u16,
+    irq_pending: bool,
+    ppu_address_read: PpuAddress,
+    consecutive_reads_of_same_address: u8,
 
     params: MapperParams,
 }
@@ -91,15 +97,27 @@ impl Mapper for Mapper005 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x500F => None,
-            0x5010 => todo!(),
+            0x5010 => /* TODO: Implement properly. */ Some(0x01),
             0x5011..=0x5014 => None,
             0x5015 => todo!(),
             0x5016..=0x5203 => None,
-            0x5204..=0x5206 => todo!(),
+            0x5204 => Some(self.scanline_irq_status()),
+            0x5205..=0x5206 => todo!(),
             0x5007..=0x5BFF => None,
             0x5C00..=0x5FFF => self.peek_from_extended_ram(address),
             0x6000..=0xFFFF => self.prg_memory().peek(address),
         }
+    }
+
+    fn read_from_cartridge_space(&mut self, address: CpuAddress) -> Option<u8> {
+        let result = self.peek_from_cartridge_space(address);
+        match address.to_raw() {
+            0x0000..=0x401F => unreachable!(),
+            0x4020..=0x5203 => {}
+            0x5204 => self.irq_pending = false,
+            0x5205..=0xFFFF => {}
+        }
+        result
     }
 
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
@@ -167,14 +185,32 @@ impl Mapper for Mapper005 {
         }
     }
 
+    fn process_ppu_read(&mut self, address: PpuAddress) {
+        if self.consecutive_reads_of_same_address == 3 {
+            self.current_scanline += 1;
+            self.current_scanline %= clock::MAX_SCANLINE + 1;
+            if self.current_scanline == u16::from(self.irq_scanline) {
+                self.irq_pending = true;
+            }
+        }
+
+        if address == self.ppu_address_read {
+            self.consecutive_reads_of_same_address += 1;
+        } else {
+            self.ppu_address_read = address;
+            self.consecutive_reads_of_same_address = 1;
+        }
+    }
+
+    fn irq_pending(&self) -> bool {
+        self.irq_pending
+    }
+
     /*
     fn process_end_of_ppu_cycle(&mut self) {
     }
 
     fn process_current_ppu_address(&mut self, address: PpuAddress) {
-    }
-
-    fn irq_pending(&self) -> bool {
     }
     */
 
@@ -197,7 +233,12 @@ impl Mapper005 {
             fill_mode_tile: 0,
             fill_mode_palette_index: None,
 
+            scanline_irq_enabled: false,
             irq_scanline: 0,
+            current_scanline: 0,
+            irq_pending: false,
+            ppu_address_read: PpuAddress::ZERO,
+            consecutive_reads_of_same_address: 0,
 
             params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
         };
@@ -327,9 +368,7 @@ impl Mapper005 {
     }
 
     fn enable_or_disable_scanline_irq(&mut self, value: u8) {
-        if value & 0b1000_0000 != 0 {
-            todo!("Scanline IRQ enable");
-        }
+        self.scanline_irq_enabled = value & 0b1000_0000 != 0;
     }
 
     fn set_multiplicand(&mut self, _value: u8) {
@@ -351,6 +390,17 @@ impl Mapper005 {
     fn write_to_extended_ram(&mut self, address: CpuAddress, value: u8) {
         // TODO: Write zeros if rendering is disabled.
         self.extended_ram[usize::from(address.to_raw() - 0x5C00)] = value;
+    }
+
+    fn scanline_irq_status(&self) -> u8 {
+        let mut result = 0;
+        if self.irq_pending {
+            result |= 0b1000_0000;
+        }
+
+        // TODO: Add in frame flag.
+
+        result
     }
 }
 
