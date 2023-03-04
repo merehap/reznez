@@ -33,6 +33,15 @@ pub trait Mapper {
     fn params_mut(&mut self) -> &mut MapperParams;
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8);
 
+    // Most mappers don't override the default cartridge peeking behavior.
+    fn peek_from_cartridge_space(&self, address: CpuAddress) -> Option<u8> {
+        match address.to_raw() {
+            0x0000..=0x401F => unreachable!(),
+            0x4020..=0x5FFF => None,
+            0x6000..=0xFFFF => self.prg_memory().peek(address),
+        }
+    }
+
     // Most mappers don't override the default ppu_peek behavior.
     fn custom_ppu_peek(&self, _address: PpuAddress) -> CustomPpuPeekResult {
         CustomPpuPeekResult::NoOverride
@@ -77,8 +86,7 @@ pub trait Mapper {
             0x4016          => Some(ports.joypad1.borrow().peek_status() as u8),
             0x4017          => Some(ports.joypad2.borrow().peek_status() as u8),
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
-            0x4020..=0x5FFF => {/* TODO: Low registers. */ None},
-            0x6000..=0xFFFF => self.prg_memory().peek(address),
+            0x4020..=0xFFFF => self.peek_from_cartridge_space(address),
         }
     }
 
@@ -117,8 +125,7 @@ pub trait Mapper {
             0x4016          => Some(ports.joypad1.borrow_mut().read_status() as u8),
             0x4017          => Some(ports.joypad2.borrow_mut().read_status() as u8),
             0x4018..=0x401F => todo!("CPU Test Mode not yet supported."),
-            0x4020..=0x5FFF => {/* TODO: Low registers. */ None},
-            0x6000..=0xFFFF => self.prg_memory().peek(address),
+            0x4020..=0xFFFF => self.peek_from_cartridge_space(address),
         }
     }
 

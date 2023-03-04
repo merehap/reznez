@@ -130,7 +130,7 @@ impl Mapper for Mapper005 {
             0x520B..=0x57FF => { /* Do nothing. */ }
             0x5800..=0x5BFF => { /* Do nothing yet. MMC5A registers. */ }
             0x5C00..=0x5FFF => self.write_to_extended_ram(address.to_raw(), value),
-            0x6000..=0xFFFF => { /* Do nothing extra. ROM/RAM space. */ }
+            0x6000..=0xFFFF => self.prg_memory_mut().write(address, value),
         }
     }
 
