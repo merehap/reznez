@@ -103,7 +103,7 @@ impl ChrMemory {
         });
     }
 
-    pub fn set_layout(&mut self, layout: ChrLayout) {
+    fn set_layout(&mut self, layout: ChrLayout) {
         let new_bank_index_registers =
             BankIndexRegisters::new(&layout.active_register_ids());
         self.bank_index_registers.merge(&new_bank_index_registers);

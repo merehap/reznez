@@ -76,6 +76,7 @@ pub struct Mapper005 {
     prg_ram_enabled_2: bool,
 
     extended_ram: [u8; 1 * KIBIBYTE],
+    extended_ram_mode: ExtendedRamMode,
     name_table_sources: [NameTableSource; 4],
     fill_mode_tile: u8,
     fill_mode_palette_index: Option<PaletteIndex>,
@@ -86,6 +87,21 @@ pub struct Mapper005 {
 }
 
 impl Mapper for Mapper005 {
+    fn peek_from_cartridge_space(&self, address: CpuAddress) -> Option<u8> {
+        match address.to_raw() {
+            0x0000..=0x401F => unreachable!(),
+            0x4020..=0x500F => None,
+            0x5010 => todo!(),
+            0x5011..=0x5014 => None,
+            0x5015 => todo!(),
+            0x5016..=0x5203 => None,
+            0x5204..=0x5206 => todo!(),
+            0x5007..=0x5BFF => None,
+            0x5C00..=0x5FFF => self.peek_from_extended_ram(address),
+            0x6000..=0xFFFF => self.prg_memory().peek(address),
+        }
+    }
+
     fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
@@ -129,7 +145,7 @@ impl Mapper for Mapper005 {
             0x5207..=0x520A => { /* Do nothing yet. MMC5A registers. */ }
             0x520B..=0x57FF => { /* Do nothing. */ }
             0x5800..=0x5BFF => { /* Do nothing yet. MMC5A registers. */ }
-            0x5C00..=0x5FFF => self.write_to_extended_ram(address.to_raw(), value),
+            0x5C00..=0x5FFF => self.write_to_extended_ram(address, value),
             0x6000..=0xFFFF => self.prg_memory_mut().write(address, value),
         }
     }
@@ -176,6 +192,7 @@ impl Mapper005 {
             prg_ram_enabled_2: false,
 
             extended_ram: [0; 1 * KIBIBYTE],
+            extended_ram_mode: ExtendedRamMode::WriteOnly,
             name_table_sources: [NameTableSource::CiramLeft; 4],
             fill_mode_tile: 0,
             fill_mode_palette_index: None,
@@ -224,8 +241,12 @@ impl Mapper005 {
     }
 
     fn extended_ram_mode(&mut self, value: u8) {
-        if value != 0 {
-            todo!("Extended RAM mode {}.", value);
+        self.extended_ram_mode = match value & 0b11 {
+            0b00 => ExtendedRamMode::WriteOnly,
+            0b01 => ExtendedRamMode::ExtendedAttributes,
+            0b10 => ExtendedRamMode::ReadWrite,
+            0b11 => ExtendedRamMode::ReadOnly,
+            _ => unreachable!(),
         }
     }
 
@@ -319,8 +340,17 @@ impl Mapper005 {
         todo!("Multiplier");
     }
 
-    fn write_to_extended_ram(&mut self, address: u16, value: u8) {
-        self.extended_ram[usize::from(address - 0x5C00)] = value;
+    fn peek_from_extended_ram(&self, address: CpuAddress) -> Option<u8> {
+        if self.extended_ram_mode.is_readable() {
+            Some(self.extended_ram[usize::from(address.to_raw() - 0x5C00)])
+        } else {
+            None
+        }
+    }
+
+    fn write_to_extended_ram(&mut self, address: CpuAddress, value: u8) {
+        // TODO: Write zeros if rendering is disabled.
+        self.extended_ram[usize::from(address.to_raw() - 0x5C00)] = value;
     }
 }
 
@@ -330,4 +360,22 @@ enum NameTableSource {
     CiramRight,
     ExtendedRam,
     Fill,
+}
+
+#[derive(Clone, Copy)]
+enum ExtendedRamMode {
+    WriteOnly,
+    ExtendedAttributes,
+    ReadWrite,
+    ReadOnly,
+}
+
+impl ExtendedRamMode {
+    fn is_readable(self) -> bool {
+        use ExtendedRamMode::*;
+        match self {
+            ReadWrite | ReadOnly => true,
+            WriteOnly | ExtendedAttributes => false,
+        }
+    }
 }

@@ -111,6 +111,10 @@ impl PrgMemory {
     }
 
     pub fn set_windows(&mut self, windows: &'static [PrgWindow]) {
+        for window in windows {
+            assert!(window.size() <= self.raw_memory.len());
+        }
+
         let max_bank_count = self.layout.max_bank_count;
         let bank_size = self.layout.bank_size;
         self.set_layout(PrgLayout {
@@ -120,7 +124,8 @@ impl PrgMemory {
         });
     }
 
-    pub fn set_layout(&mut self, layout: PrgLayout) {
+    // TODO: Remove this and PrgLayout.
+    fn set_layout(&mut self, layout: PrgLayout) {
         let new_bank_index_registers =
             BankIndexRegisters::new(&layout.active_register_ids());
         self.bank_index_registers.merge(&new_bank_index_registers);

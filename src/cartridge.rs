@@ -200,8 +200,8 @@ impl fmt::Display for Cartridge {
         writeln!(f, "iNES2 present: {}", self.ines2.is_some())?;
 
         writeln!(f, "Trainer present: {}", self.trainer.is_some())?;
-        writeln!(f, "PRG ROM chunk count: {}", self.prg_rom_chunks.len())?;
-        writeln!(f, "CHR ROM chunk count: {}", self.chr_rom_chunks.len())?;
+        writeln!(f, "PRG ROM size: {}KiB", 16 * self.prg_rom_chunks.len())?;
+        writeln!(f, "CHR ROM size: {}KiB", 8 * self.chr_rom_chunks.len())?;
         writeln!(f, "Console type: {:?}", self.console_type)?;
         writeln!(f, "Title: {:?}", self.title)?;
 

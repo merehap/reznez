@@ -43,6 +43,7 @@ impl From<u8> for BankIndex {
     }
 }
 
+#[derive(Debug)]
 pub struct BankIndexRegisters {
     registers: [Option<u16>; 13],
 }
@@ -63,7 +64,6 @@ impl BankIndexRegisters {
     }
 
     pub fn set(&mut self, id: BankIndexRegisterId, index: u16) {
-        assert!(self.registers[id as usize].is_some(), "Register {id:?} is not configured.");
         self.registers[id as usize] = Some(index);
     }
 
