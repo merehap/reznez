@@ -92,6 +92,9 @@ pub struct Mapper005 {
     cpu_cycles_since_last_ppu_read: u8,
     ppu_read_occurred_since_last_cpu_cycle: bool,
 
+    multiplicand: u8,
+    multiplier: u8,
+
     params: MapperParams,
 }
 
@@ -105,7 +108,8 @@ impl Mapper for Mapper005 {
             0x5015 => todo!(),
             0x5016..=0x5203 => None,
             0x5204 => Some(self.scanline_irq_status()),
-            0x5205..=0x5206 => todo!(),
+            0x5205 => Some((self.multiplicand as u16 * self.multiplier as u16) as u8),
+            0x5206 => Some(((self.multiplicand as u16 * self.multiplier as u16) >> 8) as u8),
             0x5007..=0x5BFF => None,
             0x5C00..=0x5FFF => self.peek_from_extended_ram(address),
             0x6000..=0xFFFF => self.prg_memory().peek(address),
@@ -245,14 +249,6 @@ impl Mapper for Mapper005 {
         self.scanline_irq_enabled && self.irq_pending
     }
 
-    /*
-    fn process_end_of_ppu_cycle(&mut self) {
-    }
-
-    fn process_current_ppu_address(&mut self, address: PpuAddress) {
-    }
-    */
-
     fn params(&self) -> &MapperParams { &self.params }
     fn params_mut(&mut self) -> &mut MapperParams { &mut self.params }
 }
@@ -281,6 +277,9 @@ impl Mapper005 {
             consecutive_reads_of_same_address: 0,
             cpu_cycles_since_last_ppu_read: 0,
             ppu_read_occurred_since_last_cpu_cycle: false,
+
+            multiplicand: 0xFF,
+            multiplier: 0xFF,
 
             params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
         };
@@ -387,8 +386,10 @@ impl Mapper005 {
         }
     }
 
-    fn set_upper_chr_bank_bits(&mut self, _value: u8) {
-        todo!("Upper CHR Bank bits. No commercial game uses them.");
+    fn set_upper_chr_bank_bits(&mut self, value: u8) {
+        if value != 0 {
+            todo!("Upper CHR Bank bits. No commercial game uses them.");
+        }
     }
 
     fn vertical_split_mode(&mut self, value: u8) {
@@ -413,12 +414,12 @@ impl Mapper005 {
         self.scanline_irq_enabled = value & 0b1000_0000 != 0;
     }
 
-    fn set_multiplicand(&mut self, _value: u8) {
-        todo!("Multiplicand");
+    fn set_multiplicand(&mut self, value: u8) {
+        self.multiplicand = value;
     }
 
-    fn set_multiplier(&mut self, _value: u8) {
-        todo!("Multiplier");
+    fn set_multiplier(&mut self, value: u8) {
+        self.multiplier = value;
     }
 
     fn peek_from_extended_ram(&self, address: CpuAddress) -> Option<u8> {
