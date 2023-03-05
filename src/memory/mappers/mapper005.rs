@@ -93,6 +93,9 @@ const CHR_WINDOWS_ALTERNATE_MODE_3: &[ChrWindow] = &[
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
 ];
 
+const SPRITE_PATTERN_FETCH_START: u8 = 64;
+const BACKGROUND_PATTERN_FETCH_START: u8 = 81;
+
 // MMC5 (ExROM)
 pub struct Mapper005 {
     pulse_2: PulseChannel,
@@ -117,6 +120,7 @@ pub struct Mapper005 {
     cpu_cycles_since_last_ppu_read: u8,
     ppu_read_occurred_since_last_cpu_cycle: bool,
 
+    chr_window_mode: ChrWindowMode,
     sprite_height: SpriteHeight,
     pattern_fetch_count: u8,
 
@@ -152,6 +156,7 @@ impl Mapper for Mapper005 {
             0x5204 => self.irq_pending = false,
             0x5205..=0xFFFF => {}
         }
+
         result
     }
 
@@ -244,7 +249,10 @@ impl Mapper for Mapper005 {
     fn on_cpu_write(&mut self, address: CpuAddress, value: u8) {
         match address.to_raw() {
             // PPU Ctrl
-            0x2000 => self.sprite_height = Ctrl::from_u8(value).sprite_height,
+            0x2000 => {
+                self.sprite_height = Ctrl::from_u8(value).sprite_height;
+                self.update_chr_windows();
+            }
             // PPU Mask
             0x2001 if value & 0b0001_1000 == 0 => {
                 self.irq_in_frame = false;
@@ -257,20 +265,9 @@ impl Mapper for Mapper005 {
     fn on_ppu_read(&mut self, address: PpuAddress) {
         if (0x0000..=0x1FFF).contains(&address.to_u16()) {
             self.pattern_fetch_count += 1;
-            if self.sprite_height == SpriteHeight::Tall {
-                match (self.pattern_fetch_count, self.chr_memory().window_count()) {
-                    (64, 1) => self.chr_memory_mut().set_windows(CHR_WINDOWS_MODE_0),
-                    (64, 2) => self.chr_memory_mut().set_windows(CHR_WINDOWS_MODE_1),
-                    (64, 4) => self.chr_memory_mut().set_windows(CHR_WINDOWS_MODE_2),
-                    (64, 8) => self.chr_memory_mut().set_windows(CHR_WINDOWS_MODE_3),
-                    (64, _) => unreachable!(),
-                    (81, 1) => self.chr_memory_mut().set_windows(CHR_WINDOWS_ALTERNATE_MODE_0),
-                    (81, 2) => self.chr_memory_mut().set_windows(CHR_WINDOWS_ALTERNATE_MODE_1),
-                    (81, 4) => self.chr_memory_mut().set_windows(CHR_WINDOWS_ALTERNATE_MODE_2),
-                    (81, 8) => self.chr_memory_mut().set_windows(CHR_WINDOWS_ALTERNATE_MODE_3),
-                    (81, _) => unreachable!(),
-                    _ => { /* Do nothing. */ }
-                }
+            if self.pattern_fetch_count == SPRITE_PATTERN_FETCH_START
+                || self.pattern_fetch_count == BACKGROUND_PATTERN_FETCH_START {
+                self.update_chr_windows();
             }
         } else if (0x2000..=0x2FFF).contains(&address.to_u16())
             && self.previous_ppu_address_read == Some(address) {
@@ -331,6 +328,7 @@ impl Mapper005 {
             cpu_cycles_since_last_ppu_read: 0,
             ppu_read_occurred_since_last_cpu_cycle: false,
 
+            chr_window_mode: ChrWindowMode::Mode0,
             sprite_height: SpriteHeight::Normal,
             pattern_fetch_count: 0,
 
@@ -360,14 +358,14 @@ impl Mapper005 {
     }
 
     fn set_chr_banking_mode(&mut self, value: u8) {
-        let windows = match value & 0b0000_0011 {
-            0 => CHR_WINDOWS_MODE_0,
-            1 => CHR_WINDOWS_MODE_1,
-            2 => CHR_WINDOWS_MODE_2,
-            3 => CHR_WINDOWS_MODE_3,
+        self.chr_window_mode = match value & 0b0000_0011 {
+            0 => ChrWindowMode::Mode0,
+            1 => ChrWindowMode::Mode1,
+            2 => ChrWindowMode::Mode2,
+            3 => ChrWindowMode::Mode3,
             _ => unreachable!(),
         };
-        self.chr_memory_mut().set_windows(windows);
+        self.update_chr_windows();
     }
 
     fn prg_ram_protect_1(&mut self, value: u8) {
@@ -434,12 +432,6 @@ impl Mapper005 {
             0x5129 => C9,
             0x512A => C10,
             0x512B => C11,
-            /*
-            0x5128 => (C0, Some(C4)),
-            0x5129 => (C1, Some(C5)),
-            0x512A => (C2, Some(C6)),
-            0x512B => (C3, Some(C7)),
-            */
             _ => unreachable!(),
         };
         self.chr_memory_mut().set_bank_index_register(register_id, value);
@@ -506,6 +498,36 @@ impl Mapper005 {
 
         result
     }
+
+    fn update_chr_windows(&mut self) {
+        let sprite_fetching =
+            (SPRITE_PATTERN_FETCH_START..BACKGROUND_PATTERN_FETCH_START)
+            .contains(&self.pattern_fetch_count);
+        let windows = if self.sprite_height == SpriteHeight::Normal || sprite_fetching {
+            match self.chr_window_mode {
+                ChrWindowMode::Mode0 => CHR_WINDOWS_MODE_0,
+                ChrWindowMode::Mode1 => CHR_WINDOWS_MODE_1,
+                ChrWindowMode::Mode2 => CHR_WINDOWS_MODE_2,
+                ChrWindowMode::Mode3 => CHR_WINDOWS_MODE_3,
+            }
+        } else {
+            match self.chr_window_mode {
+                ChrWindowMode::Mode0 => CHR_WINDOWS_ALTERNATE_MODE_0,
+                ChrWindowMode::Mode1 => CHR_WINDOWS_ALTERNATE_MODE_1,
+                ChrWindowMode::Mode2 => CHR_WINDOWS_ALTERNATE_MODE_2,
+                ChrWindowMode::Mode3 => CHR_WINDOWS_ALTERNATE_MODE_3,
+            }
+        };
+
+        self.chr_memory_mut().set_windows(windows);
+    }
+}
+
+enum ChrWindowMode {
+    Mode0,
+    Mode1,
+    Mode2,
+    Mode3,
 }
 
 #[derive(Clone, Copy)]
