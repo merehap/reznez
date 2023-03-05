@@ -65,6 +65,10 @@ impl ChrMemory {
             .expect("Way too many CHR banks.")
     }
 
+    pub fn window_count(&self) -> u8 {
+        self.layout.windows.len().try_into().unwrap()
+    }
+
     pub fn peek(&self, address: PpuAddress) -> u8 {
         let (index, _) = self.address_to_chr_index(address.to_u16());
         self.raw_memory[index]

@@ -1,5 +1,7 @@
 use crate::apu::pulse_channel::PulseChannel;
 use crate::ppu::palette::palette_index::PaletteIndex;
+use crate::ppu::register::registers::ctrl::Ctrl;
+use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::memory::mapper::*;
 use crate::memory::memory::{NMI_VECTOR_LOW, NMI_VECTOR_HIGH};
 use crate::memory::ppu::vram::VramSide;
@@ -44,10 +46,17 @@ const PRG_WINDOWS_MODE_3: &[PrgWindow] = &[
 const CHR_WINDOWS_MODE_0: &[ChrWindow] = &[
     ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C7))),
 ];
+const CHR_WINDOWS_ALTERNATE_MODE_0: &[ChrWindow] = &[
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
+];
 
 const CHR_WINDOWS_MODE_1: &[ChrWindow] = &[
     ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3))),
     ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C7))),
+];
+const CHR_WINDOWS_ALTERNATE_MODE_1: &[ChrWindow] = &[
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
 ];
 
 const CHR_WINDOWS_MODE_2: &[ChrWindow] = &[
@@ -55,6 +64,12 @@ const CHR_WINDOWS_MODE_2: &[ChrWindow] = &[
     ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3))),
     ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C5))),
     ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C7))),
+];
+const CHR_WINDOWS_ALTERNATE_MODE_2: &[ChrWindow] = &[
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C9))),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C9))),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
 ];
 
 const CHR_WINDOWS_MODE_3: &[ChrWindow] = &[
@@ -66,6 +81,16 @@ const CHR_WINDOWS_MODE_3: &[ChrWindow] = &[
     ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C5))),
     ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C6))),
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C7))),
+];
+const CHR_WINDOWS_ALTERNATE_MODE_3: &[ChrWindow] = &[
+    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C8))),
+    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C9))),
+    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C10))),
+    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
+    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C8))),
+    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C9))),
+    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C10))),
+    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
 ];
 
 // MMC5 (ExROM)
@@ -91,6 +116,9 @@ pub struct Mapper005 {
     consecutive_reads_of_same_address: u8,
     cpu_cycles_since_last_ppu_read: u8,
     ppu_read_occurred_since_last_cpu_cycle: bool,
+
+    sprite_height: SpriteHeight,
+    pattern_fetch_count: u8,
 
     multiplicand: u8,
     multiplier: u8,
@@ -214,15 +242,39 @@ impl Mapper for Mapper005 {
     }
 
     fn on_cpu_write(&mut self, address: CpuAddress, value: u8) {
-        if address.to_raw() == 0x2001 && value & 0b0001_1000 == 0 {
-            self.irq_in_frame = false;
-            self.previous_ppu_address_read = None;
+        match address.to_raw() {
+            // PPU Ctrl
+            0x2000 => self.sprite_height = Ctrl::from_u8(value).sprite_height,
+            // PPU Mask
+            0x2001 if value & 0b0001_1000 == 0 => {
+                self.irq_in_frame = false;
+                self.previous_ppu_address_read = None;
+            }
+            _ => {}
         }
     }
 
     fn on_ppu_read(&mut self, address: PpuAddress) {
-        if address.to_u16() >= 0x2000
-            && address.to_u16() < 0x3000
+        if (0x0000..=0x1FFF).contains(&address.to_u16()) {
+            self.pattern_fetch_count += 1;
+            /*
+            if self.sprite_height == SpriteHeight::Tall {
+                match (self.pattern_fetch_count, self.chr_memory().window_count()) {
+                    (64, 1) => self.chr_memory_mut().set_windows(CHR_WINDOWS_MODE_0),
+                    (64, 2) => self.chr_memory_mut().set_windows(CHR_WINDOWS_MODE_1),
+                    (64, 4) => self.chr_memory_mut().set_windows(CHR_WINDOWS_MODE_2),
+                    (64, 8) => self.chr_memory_mut().set_windows(CHR_WINDOWS_MODE_3),
+                    (64, _) => unreachable!(),
+                    (81, 1) => self.chr_memory_mut().set_windows(CHR_WINDOWS_ALTERNATE_MODE_0),
+                    (81, 2) => self.chr_memory_mut().set_windows(CHR_WINDOWS_ALTERNATE_MODE_1),
+                    (81, 4) => self.chr_memory_mut().set_windows(CHR_WINDOWS_ALTERNATE_MODE_2),
+                    (81, 8) => self.chr_memory_mut().set_windows(CHR_WINDOWS_ALTERNATE_MODE_3),
+                    (81, _) => unreachable!(),
+                    _ => { /* Do nothing. */ }
+                }
+            }
+        */
+        } else if (0x2000..=0x2FFF).contains(&address.to_u16())
             && self.previous_ppu_address_read == Some(address) {
 
             self.consecutive_reads_of_same_address += 1;
@@ -233,8 +285,10 @@ impl Mapper for Mapper005 {
                         self.irq_pending = true;
                     }
                 } else {
+                    // Starting new frame.
                     self.irq_in_frame = true;
                     self.current_scanline = 0;
+                    self.pattern_fetch_count = 0;
                 }
             }
         } else {
@@ -277,6 +331,9 @@ impl Mapper005 {
             consecutive_reads_of_same_address: 0,
             cpu_cycles_since_last_ppu_read: 0,
             ppu_read_occurred_since_last_cpu_cycle: false,
+
+            sprite_height: SpriteHeight::Normal,
+            pattern_fetch_count: 0,
 
             multiplicand: 0xFF,
             multiplier: 0xFF,
@@ -325,7 +382,7 @@ impl Mapper005 {
     fn extended_ram_mode(&mut self, value: u8) {
         self.extended_ram_mode = match value & 0b11 {
             0b00 => ExtendedRamMode::WriteOnly,
-            0b01 => ExtendedRamMode::ExtendedAttributes,
+            0b01 => /*ExtendedRamMode::ExtendedAttributes*/ panic!(),
             0b10 => ExtendedRamMode::ReadWrite,
             0b11 => ExtendedRamMode::ReadOnly,
             _ => unreachable!(),
@@ -365,25 +422,28 @@ impl Mapper005 {
     }
 
     fn chr_bank_switching(&mut self, address: u16, value: u8) {
-        let (first_reg_id, maybe_second_reg_id) = match address {
-            0x5120 => (C0, None),
-            0x5121 => (C1, None),
-            0x5122 => (C2, None),
-            0x5123 => (C3, None),
-            0x5124 => (C4, None),
-            0x5125 => (C5, None),
-            0x5126 => (C6, None),
-            0x5127 => (C7, None),
+        let register_id = match address {
+            0x5120 => C0,
+            0x5121 => C1,
+            0x5122 => C2,
+            0x5123 => C3,
+            0x5124 => C4,
+            0x5125 => C5,
+            0x5126 => C6,
+            0x5127 => C7,
+            0x5128 => C8,
+            0x5129 => C9,
+            0x512A => C10,
+            0x512B => C11,
+            /*
             0x5128 => (C0, Some(C4)),
             0x5129 => (C1, Some(C5)),
             0x512A => (C2, Some(C6)),
             0x512B => (C3, Some(C7)),
+            */
             _ => unreachable!(),
         };
-        self.chr_memory_mut().set_bank_index_register(first_reg_id, value);
-        if let Some(second_reg_id) = maybe_second_reg_id {
-            self.chr_memory_mut().set_bank_index_register(second_reg_id, value);
-        }
+        self.chr_memory_mut().set_bank_index_register(register_id, value);
     }
 
     fn set_upper_chr_bank_bits(&mut self, value: u8) {
