@@ -202,30 +202,28 @@ impl Mapper for Mapper005 {
     }
 
     fn on_ppu_read(&mut self, address: PpuAddress) {
-        self.ppu_read_occurred_since_last_cpu_cycle = true;
-        if self.consecutive_reads_of_same_address == 3 {
-            if !self.irq_in_frame {
-                self.irq_in_frame = true;
-                self.current_scanline = 0;
-            } else {
-                self.current_scanline += 1;
-                if self.current_scanline == self.irq_scanline {
-                    self.irq_pending = true;
-                }
-            }
-        }
+        if address.to_u16() >= 0x2000
+            && address.to_u16() < 0x3000
+            && self.previous_ppu_address_read == Some(address) {
 
-        if address.to_u16() >= 0x2000 && address.to_u16() < 0x3000 {
-            if self.previous_ppu_address_read == Some(address) {
-                self.consecutive_reads_of_same_address += 1;
-            } else {
-                self.consecutive_reads_of_same_address = 1;
+            self.consecutive_reads_of_same_address += 1;
+            if self.consecutive_reads_of_same_address == 2 {
+                if self.irq_in_frame {
+                    self.current_scanline += 1;
+                    if self.current_scanline == self.irq_scanline {
+                        self.irq_pending = true;
+                    }
+                } else {
+                    self.irq_in_frame = true;
+                    self.current_scanline = 0;
+                }
             }
         } else {
             self.consecutive_reads_of_same_address = 0;
         }
 
         self.previous_ppu_address_read = Some(address);
+        self.ppu_read_occurred_since_last_cpu_cycle = true;
     }
 
     fn irq_pending(&self) -> bool {
