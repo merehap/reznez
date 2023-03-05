@@ -257,7 +257,6 @@ impl Mapper for Mapper005 {
     fn on_ppu_read(&mut self, address: PpuAddress) {
         if (0x0000..=0x1FFF).contains(&address.to_u16()) {
             self.pattern_fetch_count += 1;
-            /*
             if self.sprite_height == SpriteHeight::Tall {
                 match (self.pattern_fetch_count, self.chr_memory().window_count()) {
                     (64, 1) => self.chr_memory_mut().set_windows(CHR_WINDOWS_MODE_0),
@@ -273,7 +272,6 @@ impl Mapper for Mapper005 {
                     _ => { /* Do nothing. */ }
                 }
             }
-        */
         } else if (0x2000..=0x2FFF).contains(&address.to_u16())
             && self.previous_ppu_address_read == Some(address) {
 
@@ -288,8 +286,9 @@ impl Mapper for Mapper005 {
                     // Starting new frame.
                     self.irq_in_frame = true;
                     self.current_scanline = 0;
-                    self.pattern_fetch_count = 0;
                 }
+
+                self.pattern_fetch_count = 0;
             }
         } else {
             self.consecutive_reads_of_same_address = 0;
