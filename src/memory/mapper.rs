@@ -51,6 +51,8 @@ pub trait Mapper {
     }
     // Most mappers don't care about CPU cycles.
     fn on_end_of_cpu_cycle(&mut self) {}
+    fn on_cpu_read(&mut self, _address: CpuAddress) {}
+    fn on_cpu_write(&mut self, _address: CpuAddress, _value: u8) {}
     // Most mappers don't care about PPU cycles.
     fn on_end_of_ppu_cycle(&mut self) {}
     // Most mappers don't trigger anything based upon ppu reads.
@@ -108,6 +110,7 @@ pub trait Mapper {
         apu_registers: &mut ApuRegisters,
         address: CpuAddress,
     ) -> Option<u8> {
+        self.on_cpu_read(address);
         match address.to_raw() {
             0x0000..=0x07FF => Some(cpu_internal_ram[address.to_usize()]),
             0x0800..=0x1FFF => Some(cpu_internal_ram[address.to_usize() & 0x07FF]),
@@ -149,6 +152,7 @@ pub trait Mapper {
         address: CpuAddress,
         value: u8,
     ) {
+        self.on_cpu_write(address, value);
         match address.to_raw() {
             0x0000..=0x07FF => cpu_internal_ram[address.to_usize()] = value,
             0x0800..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF] = value,

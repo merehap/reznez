@@ -9,7 +9,7 @@ use crate::cpu::status;
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::ports::DmaPort;
-use crate::memory::memory::CpuMemory;
+use crate::memory::memory::{CpuMemory, IRQ_VECTOR_LOW, IRQ_VECTOR_HIGH, NMI_VECTOR_LOW, NMI_VECTOR_HIGH};
 
 pub struct Cpu {
     // Accumulator
@@ -516,12 +516,12 @@ impl Cpu {
             }
             TopOfStack => memory.stack_pointer_address(),
             InterruptVectorLow => match self.current_interrupt_vector.unwrap() {
-                InterruptVector::Nmi => CpuAddress::new(0xFFFA),
-                InterruptVector::Irq => CpuAddress::new(0xFFFE),
+                InterruptVector::Nmi => NMI_VECTOR_LOW,
+                InterruptVector::Irq => IRQ_VECTOR_LOW,
             }
             InterruptVectorHigh => match self.current_interrupt_vector.unwrap() {
-                InterruptVector::Nmi => CpuAddress::new(0xFFFB),
-                InterruptVector::Irq => CpuAddress::new(0xFFFF),
+                InterruptVector::Nmi => NMI_VECTOR_HIGH,
+                InterruptVector::Irq => IRQ_VECTOR_HIGH,
             }
         }
     }

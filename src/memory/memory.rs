@@ -1,8 +1,6 @@
 use crate::apu::apu_registers::ApuRegisters;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::cpu::cpu_internal_ram::{
-    CpuInternalRam, IRQ_VECTOR, NMI_VECTOR, RESET_VECTOR,
-};
+use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::cpu::stack::Stack;
 use crate::memory::mapper::Mapper;
@@ -15,6 +13,12 @@ use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::ppu::register::ppu_registers::PpuRegisters;
+
+pub const NMI_VECTOR_LOW: CpuAddress    = CpuAddress::new(0xFFFA);
+pub const NMI_VECTOR_HIGH: CpuAddress   = CpuAddress::new(0xFFFB);
+pub const RESET_VECTOR_LOW: CpuAddress  = CpuAddress::new(0xFFFC);
+pub const IRQ_VECTOR_LOW: CpuAddress    = CpuAddress::new(0xFFFE);
+pub const IRQ_VECTOR_HIGH: CpuAddress   = CpuAddress::new(0xFFFF);
 
 pub struct Memory {
     mapper: Box<dyn Mapper>,
@@ -139,15 +143,15 @@ impl<'a> CpuMemory<'a> {
     }
 
     pub fn nmi_vector(&mut self) -> CpuAddress {
-        self.address_from_vector(NMI_VECTOR)
+        self.address_from_vector(NMI_VECTOR_LOW)
     }
 
     pub fn reset_vector(&mut self) -> CpuAddress {
-        self.address_from_vector(RESET_VECTOR)
+        self.address_from_vector(RESET_VECTOR_LOW)
     }
 
     pub fn irq_vector(&mut self) -> CpuAddress {
-        self.address_from_vector(IRQ_VECTOR)
+        self.address_from_vector(IRQ_VECTOR_LOW)
     }
 
     fn address_from_vector(&mut self, mut vector: CpuAddress) -> CpuAddress {

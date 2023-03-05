@@ -3,12 +3,7 @@
 
 use std::ops::{Index, IndexMut};
 
-use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::stack::Stack;
-
-pub const NMI_VECTOR: CpuAddress = CpuAddress::new(0xFFFA);
-pub const RESET_VECTOR: CpuAddress = CpuAddress::new(0xFFFC);
-pub const IRQ_VECTOR: CpuAddress = CpuAddress::new(0xFFFE);
 
 const RAM_SIZE: usize = 0x2000;
 const STACK_START: usize = 0x100;

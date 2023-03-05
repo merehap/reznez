@@ -1,7 +1,8 @@
 use crate::apu::pulse_channel::PulseChannel;
 use crate::ppu::palette::palette_index::PaletteIndex;
-use crate::memory::ppu::vram::VramSide;
 use crate::memory::mapper::*;
+use crate::memory::memory::{NMI_VECTOR_LOW, NMI_VECTOR_HIGH};
+use crate::memory::ppu::vram::VramSide;
 
 const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .prg_max_bank_count(128)
@@ -199,6 +200,20 @@ impl Mapper for Mapper005 {
         }
 
         self.ppu_read_occurred_since_last_cpu_cycle = false;
+    }
+
+    fn on_cpu_read(&mut self, address: CpuAddress) {
+        if address == NMI_VECTOR_LOW || address == NMI_VECTOR_HIGH {
+            self.irq_in_frame = false;
+            self.previous_ppu_address_read = None;
+        }
+    }
+
+    fn on_cpu_write(&mut self, address: CpuAddress, value: u8) {
+        if address.to_raw() == 0x2001 && value & 0b0001_1000 == 0 {
+            self.irq_in_frame = false;
+            self.previous_ppu_address_read = None;
+        }
     }
 
     fn on_ppu_read(&mut self, address: PpuAddress) {
