@@ -4,6 +4,7 @@ use crate::ppu::register::registers::ctrl::Ctrl;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::memory::mapper::*;
 use crate::memory::memory::{NMI_VECTOR_LOW, NMI_VECTOR_HIGH};
+use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu::vram::VramSide;
 
 const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
@@ -208,20 +209,28 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn custom_ppu_peek(&self, address: PpuAddress) -> CustomPpuPeekResult {
-        if let Some((name_table_quadrant, index)) = address.name_table_location() {
-            match self.name_table_sources[name_table_quadrant as usize] {
-                NameTableSource::CiramLeft =>
-                    CustomPpuPeekResult::InternalRam(VramSide::Left, index),
-                NameTableSource::CiramRight =>
-                    CustomPpuPeekResult::InternalRam(VramSide::Right, index),
-                NameTableSource::ExtendedRam =>
-                    CustomPpuPeekResult::Value(self.extended_ram[index as usize]),
-                NameTableSource::Fill =>
-                    CustomPpuPeekResult::Value(self.fill_mode_tile),
+    fn ppu_peek(
+        &self,
+        ppu_internal_ram: &PpuInternalRam,
+        address: PpuAddress,
+    ) -> u8 {
+        match address.to_u16() {
+            0x0000..=0x1FFF => self.chr_memory().peek(address),
+            0x2000..=0x3EFF => {
+                let (name_table_quadrant, index) = address.name_table_location().unwrap();
+                match self.name_table_sources[name_table_quadrant as usize] {
+                    NameTableSource::CiramLeft =>
+                        ppu_internal_ram.vram.side(VramSide::Left)[index as usize],
+                    NameTableSource::CiramRight =>
+                        ppu_internal_ram.vram.side(VramSide::Right)[index as usize],
+                    NameTableSource::ExtendedRam =>
+                        self.extended_ram[index as usize],
+                    NameTableSource::Fill =>
+                        self.fill_mode_tile,
+                }
             }
-        } else {
-            CustomPpuPeekResult::NoOverride
+            0x3F00..=0x3FFF => self.peek_palette_table_byte(&ppu_internal_ram.palette_ram, address),
+            0x4000..=0xFFFF => unreachable!(),
         }
     }
 

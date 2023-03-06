@@ -45,10 +45,6 @@ pub trait Mapper {
         self.peek_from_cartridge_space(address)
     }
 
-    // Most mappers don't override the default ppu_peek behavior.
-    fn custom_ppu_peek(&self, _address: PpuAddress) -> CustomPpuPeekResult {
-        CustomPpuPeekResult::NoOverride
-    }
     // Most mappers don't care about CPU cycles.
     fn on_end_of_cpu_cycle(&mut self) {}
     fn on_cpu_read(&mut self, _address: CpuAddress) {}
@@ -205,14 +201,6 @@ pub trait Mapper {
         ppu_internal_ram: &PpuInternalRam,
         address: PpuAddress,
     ) -> u8 {
-        match self.custom_ppu_peek(address) {
-            CustomPpuPeekResult::NoOverride => { /* Fall through to a normal peek. */ }
-            CustomPpuPeekResult::Value(value) =>
-                return value,
-            CustomPpuPeekResult::InternalRam(vram_side, index) =>
-                return ppu_internal_ram.vram.side(vram_side)[index as usize],
-        }
-
         let palette_ram = &ppu_internal_ram.palette_ram;
         match address.to_u16() {
             0x0000..=0x1FFF => self.chr_memory().peek(address),
@@ -451,10 +439,4 @@ impl MapperParams {
             name_table_mirroring: initial_name_table_mirroring,
         }
     }
-}
-
-pub enum CustomPpuPeekResult {
-    NoOverride,
-    Value(u8),
-    InternalRam(VramSide, u16),
 }
