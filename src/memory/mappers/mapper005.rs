@@ -12,7 +12,7 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .prg_windows_by_board(&[(Board::Any, PRG_WINDOWS_MODE_3)])
     .chr_max_bank_count(1024)
     .chr_bank_size(1 * KIBIBYTE)
-    .chr_windows(CHR_WINDOWS_MODE_0)
+    .chr_windows(ONE_8K_CHR_WINDOW)
     .do_not_align_large_chr_windows()
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .build();
@@ -43,36 +43,36 @@ const PRG_WINDOWS_MODE_3: &[PrgWindow] = &[
     PrgWindow::new(0xE000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P4))),
 ];
 
-const CHR_WINDOWS_MODE_0: &[ChrWindow] = &[
+const ONE_8K_CHR_WINDOW: &[ChrWindow] = &[
     ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C7))),
 ];
-const CHR_WINDOWS_ALTERNATE_MODE_0: &[ChrWindow] = &[
+const ONE_8K_CHR_WINDOW_ALTERNATE: &[ChrWindow] = &[
     ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
 ];
 
-const CHR_WINDOWS_MODE_1: &[ChrWindow] = &[
+const TWO_4K_CHR_WINDOWS: &[ChrWindow] = &[
     ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3))),
     ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C7))),
 ];
-const CHR_WINDOWS_ALTERNATE_MODE_1: &[ChrWindow] = &[
+const TWO_4K_CHR_WINDOWS_ALTERNATE: &[ChrWindow] = &[
     ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
     ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
 ];
 
-const CHR_WINDOWS_MODE_2: &[ChrWindow] = &[
+const FOUR_2K_CHR_WINDOWS: &[ChrWindow] = &[
     ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C1))),
     ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3))),
     ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C5))),
     ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C7))),
 ];
-const CHR_WINDOWS_ALTERNATE_MODE_2: &[ChrWindow] = &[
+const FOUR_2K_CHR_WINDOWS_ALTERNATE: &[ChrWindow] = &[
     ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C9))),
     ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
     ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C9))),
     ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
 ];
 
-const CHR_WINDOWS_MODE_3: &[ChrWindow] = &[
+const EIGHT_1K_CHR_WINDOWS: &[ChrWindow] = &[
     ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C0))),
     ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C1))),
     ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C2))),
@@ -82,7 +82,7 @@ const CHR_WINDOWS_MODE_3: &[ChrWindow] = &[
     ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C6))),
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C7))),
 ];
-const CHR_WINDOWS_ALTERNATE_MODE_3: &[ChrWindow] = &[
+const EIGHT_1K_CHR_WINDOWS_ALTERNATE: &[ChrWindow] = &[
     ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C8))),
     ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C9))),
     ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C10))),
@@ -328,7 +328,7 @@ impl Mapper005 {
             cpu_cycles_since_last_ppu_read: 0,
             ppu_read_occurred_since_last_cpu_cycle: false,
 
-            chr_window_mode: ChrWindowMode::Mode0,
+            chr_window_mode: ChrWindowMode::One8K,
             sprite_height: SpriteHeight::Normal,
             pattern_fetch_count: 0,
 
@@ -359,10 +359,10 @@ impl Mapper005 {
 
     fn set_chr_banking_mode(&mut self, value: u8) {
         self.chr_window_mode = match value & 0b0000_0011 {
-            0 => ChrWindowMode::Mode0,
-            1 => ChrWindowMode::Mode1,
-            2 => ChrWindowMode::Mode2,
-            3 => ChrWindowMode::Mode3,
+            0 => ChrWindowMode::One8K,
+            1 => ChrWindowMode::Two4K,
+            2 => ChrWindowMode::Four2K,
+            3 => ChrWindowMode::Eight1K,
             _ => unreachable!(),
         };
         self.update_chr_windows();
@@ -505,14 +505,14 @@ impl Mapper005 {
             .contains(&self.pattern_fetch_count);
         let normal_mode = self.sprite_height == SpriteHeight::Normal || sprite_fetching;
         let windows = match (self.chr_window_mode, normal_mode) {
-            (ChrWindowMode::Mode0, true) => CHR_WINDOWS_MODE_0,
-            (ChrWindowMode::Mode0, false) => CHR_WINDOWS_ALTERNATE_MODE_0,
-            (ChrWindowMode::Mode1, true) => CHR_WINDOWS_MODE_1,
-            (ChrWindowMode::Mode1, false) => CHR_WINDOWS_ALTERNATE_MODE_1,
-            (ChrWindowMode::Mode2, true) => CHR_WINDOWS_MODE_2,
-            (ChrWindowMode::Mode2, false) => CHR_WINDOWS_ALTERNATE_MODE_2,
-            (ChrWindowMode::Mode3, true) => CHR_WINDOWS_MODE_3,
-            (ChrWindowMode::Mode3, false) => CHR_WINDOWS_ALTERNATE_MODE_3,
+            (ChrWindowMode::One8K, true) => ONE_8K_CHR_WINDOW,
+            (ChrWindowMode::One8K, false) => ONE_8K_CHR_WINDOW_ALTERNATE,
+            (ChrWindowMode::Two4K, true) => TWO_4K_CHR_WINDOWS,
+            (ChrWindowMode::Two4K, false) => TWO_4K_CHR_WINDOWS_ALTERNATE,
+            (ChrWindowMode::Four2K, true) => FOUR_2K_CHR_WINDOWS,
+            (ChrWindowMode::Four2K, false) => FOUR_2K_CHR_WINDOWS_ALTERNATE,
+            (ChrWindowMode::Eight1K, true) => EIGHT_1K_CHR_WINDOWS,
+            (ChrWindowMode::Eight1K, false) => EIGHT_1K_CHR_WINDOWS_ALTERNATE,
         };
 
         self.chr_memory_mut().set_windows(windows);
@@ -521,10 +521,10 @@ impl Mapper005 {
 
 #[derive(Clone, Copy)]
 enum ChrWindowMode {
-    Mode0,
-    Mode1,
-    Mode2,
-    Mode3,
+    One8K,
+    Two4K,
+    Four2K,
+    Eight1K,
 }
 
 #[derive(Clone, Copy)]
