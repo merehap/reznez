@@ -114,7 +114,7 @@ pub struct Mapper005 {
     irq_scanline: u8,
     current_scanline: u8,
     irq_pending: bool,
-    irq_in_frame: bool,
+    in_frame: bool,
     previous_ppu_address_read: Option<PpuAddress>,
     consecutive_reads_of_same_address: u8,
     cpu_cycles_since_last_ppu_read: u8,
@@ -231,7 +231,7 @@ impl Mapper for Mapper005 {
         } else {
             self.cpu_cycles_since_last_ppu_read += 1;
             if self.cpu_cycles_since_last_ppu_read == 3 {
-                self.irq_in_frame = false;
+                self.in_frame = false;
                 self.previous_ppu_address_read = None;
             }
         }
@@ -241,7 +241,7 @@ impl Mapper for Mapper005 {
 
     fn on_cpu_read(&mut self, address: CpuAddress) {
         if address == NMI_VECTOR_LOW || address == NMI_VECTOR_HIGH {
-            self.irq_in_frame = false;
+            self.in_frame = false;
             self.previous_ppu_address_read = None;
         }
     }
@@ -255,7 +255,7 @@ impl Mapper for Mapper005 {
             }
             // PPU Mask
             0x2001 if value & 0b0001_1000 == 0 => {
-                self.irq_in_frame = false;
+                self.in_frame = false;
                 self.previous_ppu_address_read = None;
             }
             _ => {}
@@ -274,14 +274,14 @@ impl Mapper for Mapper005 {
 
             self.consecutive_reads_of_same_address += 1;
             if self.consecutive_reads_of_same_address == 2 {
-                if self.irq_in_frame {
+                if self.in_frame {
                     self.current_scanline += 1;
                     if self.current_scanline == self.irq_scanline {
                         self.irq_pending = true;
                     }
                 } else {
                     // Starting new frame.
-                    self.irq_in_frame = true;
+                    self.in_frame = true;
                     self.current_scanline = 0;
                 }
 
@@ -322,7 +322,7 @@ impl Mapper005 {
             irq_scanline: 0,
             current_scanline: 0,
             irq_pending: false,
-            irq_in_frame: false,
+            in_frame: false,
             previous_ppu_address_read: None,
             consecutive_reads_of_same_address: 0,
             cpu_cycles_since_last_ppu_read: 0,
@@ -379,7 +379,7 @@ impl Mapper005 {
     fn extended_ram_mode(&mut self, value: u8) {
         self.extended_ram_mode = match value & 0b11 {
             0b00 => ExtendedRamMode::WriteOnly,
-            0b01 => /*ExtendedRamMode::ExtendedAttributes*/ panic!(),
+            0b01 => /*ExtendedRamMode::ExtendedAttributes*/ todo!(),
             0b10 => ExtendedRamMode::ReadWrite,
             0b11 => ExtendedRamMode::ReadOnly,
             _ => unreachable!(),
@@ -492,7 +492,7 @@ impl Mapper005 {
             result |= 0b1000_0000;
         }
 
-        if self.irq_in_frame {
+        if self.in_frame {
             result |= 0b0100_0000;
         }
 
@@ -503,26 +503,23 @@ impl Mapper005 {
         let sprite_fetching =
             (SPRITE_PATTERN_FETCH_START..BACKGROUND_PATTERN_FETCH_START)
             .contains(&self.pattern_fetch_count);
-        let windows = if self.sprite_height == SpriteHeight::Normal || sprite_fetching {
-            match self.chr_window_mode {
-                ChrWindowMode::Mode0 => CHR_WINDOWS_MODE_0,
-                ChrWindowMode::Mode1 => CHR_WINDOWS_MODE_1,
-                ChrWindowMode::Mode2 => CHR_WINDOWS_MODE_2,
-                ChrWindowMode::Mode3 => CHR_WINDOWS_MODE_3,
-            }
-        } else {
-            match self.chr_window_mode {
-                ChrWindowMode::Mode0 => CHR_WINDOWS_ALTERNATE_MODE_0,
-                ChrWindowMode::Mode1 => CHR_WINDOWS_ALTERNATE_MODE_1,
-                ChrWindowMode::Mode2 => CHR_WINDOWS_ALTERNATE_MODE_2,
-                ChrWindowMode::Mode3 => CHR_WINDOWS_ALTERNATE_MODE_3,
-            }
+        let normal_mode = self.sprite_height == SpriteHeight::Normal || sprite_fetching;
+        let windows = match (self.chr_window_mode, normal_mode) {
+            (ChrWindowMode::Mode0, true) => CHR_WINDOWS_MODE_0,
+            (ChrWindowMode::Mode0, false) => CHR_WINDOWS_ALTERNATE_MODE_0,
+            (ChrWindowMode::Mode1, true) => CHR_WINDOWS_MODE_1,
+            (ChrWindowMode::Mode1, false) => CHR_WINDOWS_ALTERNATE_MODE_1,
+            (ChrWindowMode::Mode2, true) => CHR_WINDOWS_MODE_2,
+            (ChrWindowMode::Mode2, false) => CHR_WINDOWS_ALTERNATE_MODE_2,
+            (ChrWindowMode::Mode3, true) => CHR_WINDOWS_MODE_3,
+            (ChrWindowMode::Mode3, false) => CHR_WINDOWS_ALTERNATE_MODE_3,
         };
 
         self.chr_memory_mut().set_windows(windows);
     }
 }
 
+#[derive(Clone, Copy)]
 enum ChrWindowMode {
     Mode0,
     Mode1,
