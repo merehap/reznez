@@ -1,4 +1,5 @@
 use crate::memory::bank_index::{BankIndex, BankIndexRegisters, BankIndexRegisterId};
+
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::writability::Writability;
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
@@ -285,10 +286,12 @@ pub struct ChrWindow {
 
 impl ChrWindow {
     #[allow(clippy::identity_op)]
-    pub const fn new(start: u16, end: u16, _size: usize, chr_type: ChrType) -> ChrWindow {
+    pub const fn new(start: u16, end: u16, size: usize, chr_type: ChrType) -> ChrWindow {
         //assert!([1 * KIBIBYTE, 2 * KIBIBYTE, 4 * KIBIBYTE, 8 * KIBIBYTE].contains(&size));
-        //assert!(end > start);
-        //assert_eq!(end as usize - start as usize + 1, size);
+        assert!(end > start);
+        if end as usize - start as usize + 1 != size {
+            panic!("CHR window 'end - start != size'");
+        }
 
         ChrWindow { start, end, chr_type, write_status: None }
     }

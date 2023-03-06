@@ -9,7 +9,7 @@ use crate::memory::ppu::vram::VramSide;
 const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .prg_max_bank_count(128)
     .prg_bank_size(8 * KIBIBYTE)
-    .prg_windows_by_board(&[(Board::Any, PRG_WINDOWS_MODE_3)])
+    .prg_windows_by_board(&[(Board::Any, FOUR_8K_PRG_WINDOWS)])
     .chr_max_bank_count(1024)
     .chr_bank_size(1 * KIBIBYTE)
     .chr_windows(ONE_8K_CHR_WINDOW)
@@ -17,30 +17,30 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .build();
 
-const PRG_WINDOWS_MODE_0: &[PrgWindow] = &[
+const ONE_32K_PRG_WINDOW: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Banked(Ram,    BankIndex::Register(P0))),
     PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P4))),
 ];
 
-const PRG_WINDOWS_MODE_1: &[PrgWindow] = &[
+const TWO_16K_PRG_WINDOWS: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Banked(Ram,    BankIndex::Register(P0))),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P2))),
     PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P4))),
 ];
 
-const PRG_WINDOWS_MODE_2: &[PrgWindow] = &[
+const ONE_16K_AND_TWO_8K_PRG_WINDOWS: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Banked(Ram,    BankIndex::Register(P0))),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P2))),
-    PrgWindow::new(0xC000, 0xDFFF, 16 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P3))),
-    PrgWindow::new(0xE000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P4))),
+    PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P3))),
+    PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P4))),
 ];
 
-const PRG_WINDOWS_MODE_3: &[PrgWindow] = &[
+const FOUR_8K_PRG_WINDOWS: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Banked(Ram,    BankIndex::Register(P0))),
-    PrgWindow::new(0x8000, 0x9FFF, 16 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P1))),
-    PrgWindow::new(0xA000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P2))),
-    PrgWindow::new(0xC000, 0xDFFF, 16 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P3))),
-    PrgWindow::new(0xE000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P4))),
+    PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P1))),
+    PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P2))),
+    PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P3))),
+    PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P4))),
 ];
 
 const ONE_8K_CHR_WINDOW: &[ChrWindow] = &[
@@ -348,10 +348,10 @@ impl Mapper005 {
 
     fn set_prg_banking_mode(&mut self, value: u8) {
         let windows = match value & 0b0000_0011 {
-            0 => PRG_WINDOWS_MODE_0,
-            1 => PRG_WINDOWS_MODE_1,
-            2 => PRG_WINDOWS_MODE_2,
-            3 => PRG_WINDOWS_MODE_3,
+            0 => ONE_32K_PRG_WINDOW,
+            1 => TWO_16K_PRG_WINDOWS,
+            2 => ONE_16K_AND_TWO_8K_PRG_WINDOWS,
+            3 => FOUR_8K_PRG_WINDOWS,
             _ => unreachable!(),
         };
         self.prg_memory_mut().set_windows(windows);

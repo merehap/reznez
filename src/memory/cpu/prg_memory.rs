@@ -362,17 +362,11 @@ impl PrgWindow {
         }
     }
 
-    pub const fn new(start: u16, end: u16, _size: usize, prg_type: PrgType) -> PrgWindow {
-        /*
+    pub const fn new(start: u16, end: u16, size: usize, prg_type: PrgType) -> PrgWindow {
         assert!(end > start);
-        assert_eq!(end as usize - start as usize + 1, size,
-            "Interval from 0x{:04X} to 0x{:04X} is {}KiB, but it is specified as {}Kib",
-            start,
-            end,
-            (end - start + 1) as usize / KIBIBYTE,
-            size / KIBIBYTE,
-        );
-        */
+        if end as usize - start as usize + 1 != size {
+            panic!("PRG window 'end - start != size'");
+        }
 
         PrgWindow {
             start: CpuAddress::new(start),
