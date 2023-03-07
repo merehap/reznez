@@ -94,6 +94,11 @@ const EIGHT_1K_CHR_WINDOWS_ALTERNATE: &[ChrWindow] = &[
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
 ];
 
+const EXTENDED_ATTRIBUTES_CHR_WINDOWS: &[ChrWindow] = &[
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C12))),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C12))),
+];
+
 const SPRITE_PATTERN_FETCH_START: u8 = 64;
 const BACKGROUND_PATTERN_FETCH_START: u8 = 81;
 
@@ -124,6 +129,7 @@ pub struct Mapper005 {
     chr_window_mode: ChrWindowMode,
     sprite_height: SpriteHeight,
     pattern_fetch_count: u8,
+    upper_chr_bank_bits: u8,
 
     multiplicand: u8,
     multiplier: u8,
@@ -216,8 +222,6 @@ impl Mapper for Mapper005 {
         address: PpuAddress,
     ) -> u8 {
         match address.to_u16() {
-            0x0000..=0x1FFF if self.extended_attribute_mode_enabled() =>
-                self.chr_memory().peek(address),
             0x0000..=0x1FFF => self.chr_memory().peek(address),
             0x2000..=0x3EFF
                 if address.is_in_attribute_table() && self.extended_attribute_mode_enabled() => {
@@ -280,7 +284,21 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_ppu_read(&mut self, address: PpuAddress) {
+    fn on_ppu_read(&mut self, address: PpuAddress, _value: u8) {
+        let sprite_fetching =
+            (SPRITE_PATTERN_FETCH_START..BACKGROUND_PATTERN_FETCH_START)
+            .contains(&self.pattern_fetch_count);
+        if !sprite_fetching && self.extended_attribute_mode_enabled() && address.is_in_name_table_proper() {
+            // TODO: Verify if this is correct. Potential bugs:
+            // * Is it right to cache the value? A write will overwrite the original exram value.
+            // * Does any PPU read trigger this? Or just actual scheduled rendering reads?
+            // If this value isn't cached, then some ugly hack to get the value into C12
+            // just-in-time may be necessary.
+            let raw_bank_index = (self.upper_chr_bank_bits << 6) | (self.extended_ram[usize::from(address.to_u16() % 0x400)] & 0b0011_1111);
+            println!("{} is in name table proper. Raw bank index: {}. Pattern Fetch: {}", address, raw_bank_index, self.pattern_fetch_count);
+            self.chr_memory_mut().set_bank_index_register(C12, raw_bank_index);
+        }
+
         if (0x0000..=0x1FFF).contains(&address.to_u16()) {
             self.pattern_fetch_count += 1;
             if self.pattern_fetch_count == SPRITE_PATTERN_FETCH_START
@@ -349,6 +367,7 @@ impl Mapper005 {
             chr_window_mode: ChrWindowMode::One8K,
             sprite_height: SpriteHeight::Normal,
             pattern_fetch_count: 0,
+            upper_chr_bank_bits: 0b0000_0000,
 
             multiplicand: 0xFF,
             multiplier: 0xFF,
@@ -397,11 +416,12 @@ impl Mapper005 {
     fn extended_ram_mode(&mut self, value: u8) {
         self.extended_ram_mode = match value & 0b11 {
             0b00 => ExtendedRamMode::WriteOnly,
-            0b01 => /*ExtendedRamMode::ExtendedAttributes*/ todo!(),
+            0b01 => ExtendedRamMode::ExtendedAttributes,
             0b10 => ExtendedRamMode::ReadWrite,
             0b11 => ExtendedRamMode::ReadOnly,
             _ => unreachable!(),
-        }
+        };
+        self.update_chr_windows();
     }
 
     fn set_name_table_mapping(&mut self, value: u8) {
@@ -456,9 +476,7 @@ impl Mapper005 {
     }
 
     fn set_upper_chr_bank_bits(&mut self, value: u8) {
-        if value != 0 {
-            todo!("Upper CHR Bank bits. No commercial game uses them.");
-        }
+        self.upper_chr_bank_bits = value;
     }
 
     fn vertical_split_mode(&mut self, value: u8) {
@@ -518,6 +536,14 @@ impl Mapper005 {
     }
 
     fn update_chr_windows(&mut self) {
+        let sprite_fetching =
+            (SPRITE_PATTERN_FETCH_START..BACKGROUND_PATTERN_FETCH_START)
+            .contains(&self.pattern_fetch_count);
+        if !sprite_fetching && self.extended_attribute_mode_enabled() {
+            self.chr_memory_mut().set_windows(EXTENDED_ATTRIBUTES_CHR_WINDOWS);
+            return;
+        }
+
         let sprite_fetching =
             (SPRITE_PATTERN_FETCH_START..BACKGROUND_PATTERN_FETCH_START)
             .contains(&self.pattern_fetch_count);

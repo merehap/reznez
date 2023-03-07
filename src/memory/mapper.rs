@@ -52,7 +52,7 @@ pub trait Mapper {
     // Most mappers don't care about PPU cycles.
     fn on_end_of_ppu_cycle(&mut self) {}
     // Most mappers don't trigger anything based upon ppu reads.
-    fn on_ppu_read(&mut self, _address: PpuAddress) {}
+    fn on_ppu_read(&mut self, _address: PpuAddress, _value: u8) {}
     // Most mappers don't care about the current PPU address.
     fn process_current_ppu_address(&mut self, _address: PpuAddress) {}
     // Most mappers don't trigger custom IRQs.
@@ -217,12 +217,13 @@ pub trait Mapper {
         address: PpuAddress,
         rendering: bool,
     ) -> u8 {
-        self.on_ppu_read(address);
         if rendering {
             self.process_current_ppu_address(address);
         }
 
-        self.ppu_peek(ppu_internal_ram, address)
+        let value = self.ppu_peek(ppu_internal_ram, address);
+        self.on_ppu_read(address, value);
+        value
     }
 
     #[inline]
