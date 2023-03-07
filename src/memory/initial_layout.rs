@@ -2,7 +2,7 @@ use crate::cartridge::Cartridge;
 use crate::memory::board::Board;
 use crate::memory::cpu::prg_memory::{PrgMemory, PrgWindow};
 use crate::memory::mapper::MapperParams;
-use crate::memory::ppu::chr_memory::{ChrLayout, ChrMemory, ChrWindow};
+use crate::memory::ppu::chr_memory::{ChrMemory, ChrWindow};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 
 pub struct InitialLayout {
@@ -32,8 +32,13 @@ impl InitialLayout {
             cartridge.prg_rom(),
         );
 
-        let chr_layout = ChrLayout::new(self.chr_max_bank_count, self.chr_bank_size, self.chr_windows.to_vec());
-        let chr_memory = ChrMemory::new(chr_layout, self.align_large_chr_windows, cartridge.chr_rom());
+        let chr_memory = ChrMemory::new(
+            self.chr_windows.to_vec(),
+            self.chr_max_bank_count,
+            self.chr_bank_size,
+            self.align_large_chr_windows,
+            cartridge.chr_rom(),
+        );
 
         let name_table_mirroring = match self.name_table_mirroring_source {
             NameTableMirroringSource::Direct(mirroring) => mirroring,
