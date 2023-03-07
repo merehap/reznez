@@ -1,6 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::memory::board::Board;
-use crate::memory::cpu::prg_memory::{PrgLayout, PrgMemory, PrgWindow};
+use crate::memory::cpu::prg_memory::{PrgMemory, PrgWindow};
 use crate::memory::mapper::MapperParams;
 use crate::memory::ppu::chr_memory::{ChrLayout, ChrMemory, ChrWindow};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
@@ -23,10 +23,14 @@ impl InitialLayout {
         InitialLayoutBuilder::new()
     }
 
-    pub fn make_mapper_params(&self, cartridge: &Cartridge, board: Board) -> MapperParams {
+    pub fn make_mapper_params(&'static self, cartridge: &Cartridge, board: Board) -> MapperParams {
         let prg_windows = self.lookup_prg_windows_by_board(board);
-        let prg_layout = PrgLayout::new(self.prg_max_bank_count, self.prg_bank_size, prg_windows.to_vec());
-        let prg_memory = PrgMemory::new(prg_layout, cartridge.prg_rom());
+        let prg_memory = PrgMemory::new(
+            prg_windows,
+            self.prg_max_bank_count,
+            self.prg_bank_size,
+            cartridge.prg_rom(),
+        );
 
         let chr_layout = ChrLayout::new(self.chr_max_bank_count, self.chr_bank_size, self.chr_windows.to_vec());
         let chr_memory = ChrMemory::new(chr_layout, self.align_large_chr_windows, cartridge.chr_rom());

@@ -19,8 +19,6 @@ use num_traits::FromPrimitive;
 use crate::apu::apu_registers::ApuRegisters;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
-use crate::memory::cpu::prg_memory::PrgLayout;
-use crate::memory::ppu::chr_memory::ChrLayout;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu::vram::VramSide;
@@ -420,24 +418,4 @@ pub struct MapperParams {
     pub prg_memory: PrgMemory,
     pub chr_memory: ChrMemory,
     pub name_table_mirroring: NameTableMirroring,
-}
-
-impl MapperParams {
-    pub fn new(
-        cartridge: &Cartridge,
-        initial_prg_layout: PrgLayout,
-        initial_chr_layout: ChrLayout,
-        initial_name_table_mirroring: NameTableMirroring,
-        truncate_large_window_bank_indexes: bool,
-    ) -> MapperParams {
-        MapperParams {
-            prg_memory: PrgMemory::new(initial_prg_layout, cartridge.prg_rom()),
-            chr_memory: ChrMemory::new(
-                initial_chr_layout,
-                truncate_large_window_bank_indexes,
-                cartridge.chr_rom(),
-            ),
-            name_table_mirroring: initial_name_table_mirroring,
-        }
-    }
 }

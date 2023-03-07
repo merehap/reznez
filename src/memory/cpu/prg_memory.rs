@@ -1,40 +1,50 @@
 use crate::memory::bank_index::{BankIndex, BankIndexRegisters, BankIndexRegisterId};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::writability::Writability;
-use crate::util::unit::KIBIBYTE;
 
 const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
 
 pub struct PrgMemory {
-    layout: PrgLayout,
+    windows: &'static [PrgWindow],
+    max_bank_count: u16,
+    bank_size: usize,
     bank_index_registers: BankIndexRegisters,
     raw_memory: Vec<u8>,
     work_ram_sections: Vec<WorkRam>,
 }
 
 impl PrgMemory {
-    pub fn new(layout: PrgLayout, raw_memory: Vec<u8>) -> PrgMemory {
-        let bank_index_registers =
-            BankIndexRegisters::new(&layout.active_register_ids());
+    pub fn new(
+        windows: &'static [PrgWindow],
+        max_bank_count: u16,
+        bank_size: usize,
+        raw_memory: Vec<u8>,
+    ) -> PrgMemory {
+        let reg_ids: Vec<_> = windows.iter()
+            .filter_map(|window| window.register_id())
+            .collect();
+        let bank_index_registers = BankIndexRegisters::new(&reg_ids);
 
         let mut prg_memory = PrgMemory {
-            layout,
+            windows,
+            max_bank_count,
+            bank_size,
             bank_index_registers,
             raw_memory,
             work_ram_sections: Vec::new(),
         };
 
-        for window in &prg_memory.layout.windows {
+        for window in prg_memory.windows {
             if window.prg_type == PrgType::WorkRam {
                 prg_memory.work_ram_sections.push(WorkRam::new(window.size()));
             }
         }
 
         let bank_count = prg_memory.bank_count();
-        assert!(bank_count <= prg_memory.layout.max_bank_count, "Bank count: {}, max: {}", bank_count, prg_memory.layout.max_bank_count);
+        assert!(bank_count <= prg_memory.max_bank_count, "Bank count: {}, max: {}", bank_count, max_bank_count);
         assert_eq!(
             prg_memory.raw_memory.len(),
-            usize::from(bank_count) * prg_memory.layout.bank_size,
+            usize::from(bank_count) * bank_size,
             "Bad PRG data size.",
         );
         //assert_eq!(bank_count & (bank_count - 1), 0);
@@ -43,7 +53,7 @@ impl PrgMemory {
     }
 
     pub fn bank_count(&self) -> u16 {
-        (self.raw_memory.len() / self.layout.bank_size)
+        (self.raw_memory.len() / self.bank_size)
             .try_into()
             .expect("Way too many banks.")
     }
@@ -84,7 +94,7 @@ impl PrgMemory {
 
     pub fn resolve_selected_bank_indexes(&self) -> Vec<u16> {
         let mut indexes = Vec::new();
-        for window in &self.layout.windows {
+        for window in self.windows {
             if let Some(bank_index) = window.bank_index() {
                 let raw_index = bank_index.to_u16(&self.bank_index_registers, self.bank_count());
                 indexes.push(raw_index);
@@ -94,7 +104,7 @@ impl PrgMemory {
         indexes
     }
 
-    pub fn window_at(&mut self, start: u16) -> &mut PrgWindow {
+    pub fn window_at(&self, start: u16) -> &PrgWindow {
         self.window_with_index_at(start).0
     }
 
@@ -115,21 +125,7 @@ impl PrgMemory {
             assert!(window.size() <= self.raw_memory.len());
         }
 
-        let max_bank_count = self.layout.max_bank_count;
-        let bank_size = self.layout.bank_size;
-        self.set_layout(PrgLayout {
-            max_bank_count,
-            bank_size,
-            windows: windows.to_vec(),
-        });
-    }
-
-    // TODO: Remove this and PrgLayout.
-    fn set_layout(&mut self, layout: PrgLayout) {
-        let new_bank_index_registers =
-            BankIndexRegisters::new(&layout.active_register_ids());
-        self.bank_index_registers.merge(&new_bank_index_registers);
-        self.layout = layout;
+        self.windows = windows;
     }
 
     pub fn set_bank_index_register<INDEX: Into<u16>>(
@@ -144,7 +140,7 @@ impl PrgMemory {
     fn address_to_prg_index(&self, address: CpuAddress) -> PrgMemoryIndex {
         assert!(address >= PRG_MEMORY_START);
 
-        let windows = &self.layout.windows;
+        let windows = &self.windows;
         assert!(!windows.is_empty());
 
         for i in 0..windows.len() {
@@ -163,11 +159,11 @@ impl PrgMemory {
                     PrgType::Banked(_, bank_index) => {
                         let mut raw_bank_index =
                             bank_index.to_usize(&self.bank_index_registers, self.bank_count());
-                        let window_multiple = window.size() / self.layout.bank_size;
+                        let window_multiple = window.size() / self.bank_size;
                         // Clear low bits for large windows.
                         raw_bank_index &= !(window_multiple >> 1);
                         let mapped_memory_index =
-                             raw_bank_index * self.layout.bank_size + bank_offset as usize;
+                             raw_bank_index * self.bank_size + bank_offset as usize;
                         PrgMemoryIndex::MappedMemory(mapped_memory_index)
                     }
                     PrgType::WorkRam => {
@@ -200,8 +196,8 @@ impl PrgMemory {
         &mut self.work_ram_sections[index]
     }
 
-    fn window_with_index_at(&mut self, start: u16) -> (&mut PrgWindow, usize) {
-        for (index, window) in self.layout.windows.iter_mut().enumerate() {
+    fn window_with_index_at(&self, start: u16) -> (&PrgWindow, usize) {
+        for (index, window) in self.windows.iter().enumerate() {
             if window.start.to_raw() == start {
                 return (window, index);
             }
@@ -211,7 +207,7 @@ impl PrgMemory {
     }
 
     fn window(&self, start: u16) -> &PrgWindow {
-        for window in &self.layout.windows {
+        for window in self.windows {
             if window.start.to_raw() == start {
                 return window;
             }
@@ -221,6 +217,7 @@ impl PrgMemory {
     }
 }
 
+/*
 #[derive(Clone)]
 pub struct PrgLayout {
     max_bank_count: u16,
@@ -329,6 +326,7 @@ impl PrgLayoutBuilder {
         }
     }
 }
+*/
 
 enum PrgMemoryIndex {
     None,
