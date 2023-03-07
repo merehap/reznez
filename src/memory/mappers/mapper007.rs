@@ -1,8 +1,8 @@
 use crate::memory::mapper::*;
 
 const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
-    .prg_max_bank_count(2)
-    .prg_bank_size(16 * KIBIBYTE)
+    .prg_max_bank_count(8)
+    .prg_bank_size(32 * KIBIBYTE)
     .prg_windows_by_board(&[(Board::Any, PRG_WINDOWS)])
     .chr_max_bank_count(1)
     .chr_bank_size(8 * KIBIBYTE)
