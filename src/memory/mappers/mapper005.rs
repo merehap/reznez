@@ -151,6 +151,7 @@ impl Mapper for Mapper005 {
 
     fn read_from_cartridge_space(&mut self, address: CpuAddress) -> Option<u8> {
         let result = self.peek_from_cartridge_space(address);
+        // TODO: Replace with ifs.
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5203 => {}
@@ -215,7 +216,15 @@ impl Mapper for Mapper005 {
         address: PpuAddress,
     ) -> u8 {
         match address.to_u16() {
+            0x0000..=0x1FFF if self.extended_attribute_mode_enabled() =>
+                self.chr_memory().peek(address),
             0x0000..=0x1FFF => self.chr_memory().peek(address),
+            0x2000..=0x3EFF
+                if address.is_in_attribute_table() && self.extended_attribute_mode_enabled() => {
+                    let (_, index) = address.name_table_location().unwrap();
+                    let attribute = self.extended_ram[index as usize] >> 6;
+                    (attribute << 6) | (attribute << 4) | (attribute << 2) | (attribute << 0)
+                }
             0x2000..=0x3EFF => {
                 let (name_table_quadrant, index) = address.name_table_location().unwrap();
                 match self.name_table_sources[name_table_quadrant as usize] {
@@ -526,6 +535,10 @@ impl Mapper005 {
 
         self.chr_memory_mut().set_windows(windows);
     }
+
+    fn extended_attribute_mode_enabled(&self) -> bool {
+        self.extended_ram_mode == ExtendedRamMode::ExtendedAttributes
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -544,7 +557,7 @@ enum NameTableSource {
     Fill,
 }
 
-#[derive(Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 enum ExtendedRamMode {
     WriteOnly,
     ExtendedAttributes,
