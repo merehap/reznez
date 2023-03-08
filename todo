@@ -49,7 +49,7 @@ MAPPER 3
 Athletic World (Freezes on nestopia too. Freezes at the beginning of the Hurdles event)
 
 MAPPER 4
-Crystalis index out of bounds: the len is 131072 but the index is 203776', src/memory/ppu/chr_memory.rs:61:9
+Crystalis - Junk on scanline above status bar.
 
 MAPPER 7
 Aladdin - Corrupted sprites, gets stuck in a loop writing to PPUDATA, JAMs.
