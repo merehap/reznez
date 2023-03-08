@@ -136,6 +136,14 @@ impl PrgMemory {
         self.bank_index_registers.set(id, raw_bank_index.into());
     }
 
+    pub fn update_bank_index_register(
+        &mut self,
+        id: BankIndexRegisterId,
+        updater: &dyn Fn(u16) -> u16,
+    ) {
+        self.bank_index_registers.update(id, updater);
+    }
+
     // TODO: Indicate if read-only.
     fn address_to_prg_index(&self, address: CpuAddress) -> PrgMemoryIndex {
         assert!(address >= PRG_MEMORY_START);

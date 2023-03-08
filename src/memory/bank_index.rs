@@ -67,6 +67,11 @@ impl BankIndexRegisters {
         self.registers[id as usize] = Some(index);
     }
 
+    pub fn update(&mut self, id: BankIndexRegisterId, updater: &dyn Fn(u16) -> u16) {
+        let value = self.registers[id as usize].unwrap();
+        self.registers[id as usize] = Some(updater(value));
+    }
+
     pub fn merge(&mut self, new_registers: &BankIndexRegisters) {
         for i in 0..self.registers.len() {
             if self.registers[i].is_none() && new_registers.registers[i].is_some() {
