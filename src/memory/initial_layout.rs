@@ -4,6 +4,7 @@ use crate::memory::cpu::prg_memory::{PrgMemory, PrgWindow};
 use crate::memory::mapper::MapperParams;
 use crate::memory::ppu::chr_memory::{ChrMemory, ChrWindow};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
+use crate::memory::bank_index::{BankIndex, BankIndexRegisters, BankIndexRegisterId};
 
 pub struct InitialLayout {
     prg_max_bank_count: u16,
@@ -16,6 +17,7 @@ pub struct InitialLayout {
     align_large_chr_windows: bool,
 
     name_table_mirroring_source: NameTableMirroringSource,
+    bank_index_register_override: Option<(BankIndexRegisterId, BankIndex)>,
 }
 
 impl InitialLayout {
@@ -25,18 +27,32 @@ impl InitialLayout {
 
     pub fn make_mapper_params(&'static self, cartridge: &Cartridge, board: Board) -> MapperParams {
         let prg_windows = self.lookup_prg_windows_by_board(board);
+        let prg_reg_ids: Vec<_> = prg_windows.iter()
+            .filter_map(|window| window.register_id())
+            .collect();
+        let mut prg_bank_index_registers = BankIndexRegisters::new(&prg_reg_ids);
+        if let Some((register_id, bank_index)) = self.bank_index_register_override {
+            prg_bank_index_registers.set(register_id, bank_index);
+        }
+
         let prg_memory = PrgMemory::new(
             prg_windows,
             self.prg_max_bank_count,
             self.prg_bank_size,
+            prg_bank_index_registers,
             cartridge.prg_rom(),
         );
 
+        let chr_reg_ids: Vec<_> = self.chr_windows.iter()
+            .filter_map(|window| window.register_id())
+            .collect();
+        let chr_bank_index_registers = BankIndexRegisters::new(&chr_reg_ids);
         let chr_memory = ChrMemory::new(
             self.chr_windows.to_vec(),
             self.chr_max_bank_count,
             self.chr_bank_size,
             self.align_large_chr_windows,
+            chr_bank_index_registers,
             cartridge.chr_rom(),
         );
 
@@ -71,6 +87,7 @@ pub struct InitialLayoutBuilder {
     align_large_chr_windows: bool,
 
     name_table_mirroring_source: Option<NameTableMirroringSource>,
+    bank_index_register_override: Option<(BankIndexRegisterId, BankIndex)>,
 }
 
 impl InitialLayoutBuilder {
@@ -86,6 +103,7 @@ impl InitialLayoutBuilder {
             align_large_chr_windows: true,
 
             name_table_mirroring_source: None,
+            bank_index_register_override: None,
         }
     }
 
@@ -135,6 +153,15 @@ impl InitialLayoutBuilder {
         self
     }
 
+    pub const fn override_bank_index_register(
+        &mut self,
+        id: BankIndexRegisterId,
+        bank_index: BankIndex,
+    ) -> &mut InitialLayoutBuilder {
+        self.bank_index_register_override = Some((id, bank_index));
+        self
+    }
+
     pub const fn build(self) -> InitialLayout {
         InitialLayout {
             prg_max_bank_count: self.prg_max_bank_count.unwrap(),
@@ -147,6 +174,7 @@ impl InitialLayoutBuilder {
             align_large_chr_windows: self.align_large_chr_windows,
 
             name_table_mirroring_source: self.name_table_mirroring_source.unwrap(),
+            bank_index_register_override: self.bank_index_register_override,
         }
     }
 }

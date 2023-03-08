@@ -6,8 +6,12 @@ impl BankIndex {
     pub const SECOND_LAST: BankIndex = BankIndex(0xFFFE);
     pub const LAST: BankIndex = BankIndex(0xFFFF);
 
-    pub fn from_u8(value: u8) -> BankIndex {
-        BankIndex(value.into())
+    pub const fn from_u8(value: u8) -> BankIndex {
+        BankIndex(value as u16)
+    }
+
+    pub const fn from_u16(value: u16) -> BankIndex {
+        BankIndex(value)
     }
 
     pub fn to_u16(self, bank_count: u16) -> u16 {
@@ -45,8 +49,8 @@ impl BankIndexRegisters {
             .unwrap_or_else(|| panic!("Register {id:?} is not configured."))
     }
 
-    pub fn set(&mut self, id: BankIndexRegisterId, index: u16) {
-        self.registers[id as usize] = Some(BankIndex(index));
+    pub fn set(&mut self, id: BankIndexRegisterId, bank_index: BankIndex) {
+        self.registers[id as usize] = Some(bank_index);
     }
 
     pub fn update(&mut self, id: BankIndexRegisterId, updater: &dyn Fn(u16) -> u16) {

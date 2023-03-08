@@ -16,6 +16,7 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .chr_windows(ONE_8K_CHR_WINDOW)
     .do_not_align_large_chr_windows()
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+    .override_bank_index_register(P4, BankIndex::LAST)
     .build();
 
 const ONE_32K_PRG_WINDOW: &[PrgWindow] = &[
@@ -341,7 +342,7 @@ impl Mapper for Mapper005 {
 
 impl Mapper005 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper005, String> {
-        let mut mapper = Mapper005 {
+        Ok(Mapper005 {
             pulse_2: PulseChannel::default(),
             pulse_3: PulseChannel::default(),
 
@@ -373,10 +374,7 @@ impl Mapper005 {
             multiplier: 0xFF,
 
             params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
-        };
-        let last_bank_index = mapper.prg_memory().last_bank_index();
-        mapper.prg_memory_mut().set_bank_index_register(P4, last_bank_index);
-        Ok(mapper)
+        })
     }
 
     fn write_pcm_info(&mut self, _value: u8) {}

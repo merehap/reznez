@@ -18,13 +18,9 @@ impl PrgMemory {
         windows: &'static [PrgWindow],
         max_bank_count: u16,
         bank_size: usize,
+        bank_index_registers: BankIndexRegisters,
         raw_memory: Vec<u8>,
     ) -> PrgMemory {
-        let reg_ids: Vec<_> = windows.iter()
-            .filter_map(|window| window.register_id())
-            .collect();
-        let bank_index_registers = BankIndexRegisters::new(&reg_ids);
-
         let mut prg_memory = PrgMemory {
             windows,
             max_bank_count,
@@ -133,7 +129,7 @@ impl PrgMemory {
         id: BankIndexRegisterId,
         raw_bank_index: INDEX,
     ) {
-        self.bank_index_registers.set(id, raw_bank_index.into());
+        self.bank_index_registers.set(id, BankIndex::from_u16(raw_bank_index.into()));
     }
 
     pub fn update_bank_index_register(
@@ -370,7 +366,7 @@ impl PrgWindow {
         usize::from(self.end.to_raw() - self.start.to_raw() + 1)
     }
 
-    fn register_id(self) -> Option<BankIndexRegisterId> {
+    pub fn register_id(self) -> Option<BankIndexRegisterId> {
         if let PrgType::VariableBank(_, id) = self.prg_type {
             Some(id)
         } else {

@@ -8,6 +8,8 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .chr_bank_size(8 * KIBIBYTE)
     .chr_windows(CHR_WINDOWS)
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+    // The last bank for any of the mapper 232 PRG "blocks".
+    .override_bank_index_register(P1, BankIndex::from_u8(0b11))
     .build();
 
 const PRG_WINDOWS: &[PrgWindow] = &[
@@ -53,10 +55,8 @@ impl Mapper for Mapper232 {
 
 impl Mapper232 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper232, String> {
-        let mut mapper = Mapper232 {
+        Ok(Mapper232 {
             params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
-        };
-        mapper.prg_memory_mut().set_bank_index_register(P1, 0b11u16);
-        Ok(mapper)
+        })
     }
 }

@@ -9,8 +9,8 @@ pub struct ChrMemory {
     windows: Vec<ChrWindow>,
     max_bank_count: u16,
     bank_size: usize,
-    bank_index_registers: BankIndexRegisters,
     align_large_chr_windows: bool,
+    bank_index_registers: BankIndexRegisters,
     raw_memory: Vec<u8>,
 }
 
@@ -20,6 +20,7 @@ impl ChrMemory {
         max_bank_count: u16,
         bank_size: usize,
         align_large_chr_windows: bool,
+        bank_index_registers: BankIndexRegisters,
         mut raw_memory: Vec<u8>,
     ) -> ChrMemory {
         // If no CHR data is provided, add 8KiB of CHR RAM.
@@ -44,10 +45,6 @@ impl ChrMemory {
             );
         }
 
-        let reg_ids: Vec<_> = windows.iter()
-            .filter_map(|window| window.register_id())
-            .collect();
-        let bank_index_registers = BankIndexRegisters::new(&reg_ids);
         let chr_memory = ChrMemory {
             windows,
             max_bank_count,
@@ -121,7 +118,7 @@ impl ChrMemory {
     ) {
         let mut raw_bank_index = raw_bank_index.into();
         raw_bank_index %= self.bank_count();
-        self.bank_index_registers.set(id, raw_bank_index);
+        self.bank_index_registers.set(id, BankIndex::from_u16(raw_bank_index));
     }
 
     pub fn pattern_table(&self, side: PatternTableSide) -> PatternTable {
@@ -271,7 +268,7 @@ impl ChrWindow {
         }
     }
 
-    fn register_id(self) -> Option<BankIndexRegisterId> {
+    pub fn register_id(self) -> Option<BankIndexRegisterId> {
         if let ChrType::VariableBank(_, id) = self.chr_type {
             Some(id)
         } else {

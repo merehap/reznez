@@ -12,7 +12,6 @@ Don't display bottom tiles of screen by default (see Aladdin junk tiles)
 Separate attribute table from name table?
 oam_stress
 Proper encapsulation for PPU registers
-Allow mapper config to set initial memory values (e.g. P4 for MMC5)
 Improve cycle accuracy of undocumented instructions
 Open Bus for joysticks.
 Other input devices.
