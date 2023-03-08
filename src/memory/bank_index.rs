@@ -1,75 +1,57 @@
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum BankIndex {
-    IndexFromStart(u16),
-    IndexFromEnd(u16),
-    Register(BankIndexRegisterId),
-}
+pub struct BankIndex(u16);
 
 impl BankIndex {
-    pub const FIRST: BankIndex = BankIndex::IndexFromStart(0);
-    pub const SECOND_LAST: BankIndex = BankIndex::IndexFromEnd(1);
-    pub const LAST: BankIndex = BankIndex::IndexFromEnd(0);
+    pub const FIRST: BankIndex = BankIndex(0);
+    pub const SECOND_LAST: BankIndex = BankIndex(0xFFFE);
+    pub const LAST: BankIndex = BankIndex(0xFFFF);
 
     pub fn from_u8(value: u8) -> BankIndex {
-        BankIndex::IndexFromStart(value.into())
+        BankIndex(value.into())
     }
 
-    pub fn to_u16(self, registers: &BankIndexRegisters, bank_count: u16) -> u16 {
-        let raw_bank_index = match self {
-            BankIndex::IndexFromStart(index) => index,
-            BankIndex::IndexFromEnd(index) => {
-                assert!(index < bank_count);
-                bank_count - index - 1
-            }
-            // TODO: Get rid of this recursive call.
-            BankIndex::Register(id) => registers.get(id)
-        };
-
-        raw_bank_index % bank_count
+    pub fn to_u16(self, bank_count: u16) -> u16 {
+        self.0 % bank_count
     }
 
-    pub fn to_usize(self, registers: &BankIndexRegisters, bank_count: u16) -> usize {
-        self.to_u16(registers, bank_count).into()
-    }
-
-    pub fn is_register_backed(self) -> bool {
-        matches!(self, BankIndex::Register(_))
+    pub fn to_usize(self, bank_count: u16) -> usize {
+        self.to_u16(bank_count).into()
     }
 }
 
 impl From<u8> for BankIndex {
     fn from(value: u8) -> Self {
-        BankIndex::IndexFromStart(value.into())
+        BankIndex(value.into())
     }
 }
 
 #[derive(Debug)]
 pub struct BankIndexRegisters {
-    registers: [Option<u16>; 18],
+    registers: [Option<BankIndex>; 18],
 }
 
 impl BankIndexRegisters {
     pub fn new(active_ids: &[BankIndexRegisterId]) -> BankIndexRegisters {
         let mut registers = [None; 18];
         for &id in active_ids {
-            registers[id as usize] = Some(0);
+            registers[id as usize] = Some(BankIndex::FIRST);
         }
 
         BankIndexRegisters { registers }
     }
 
-    fn get(&self, id: BankIndexRegisterId) -> u16 {
+    pub fn get(&self, id: BankIndexRegisterId) -> BankIndex {
         self.registers[id as usize]
             .unwrap_or_else(|| panic!("Register {id:?} is not configured."))
     }
 
     pub fn set(&mut self, id: BankIndexRegisterId, index: u16) {
-        self.registers[id as usize] = Some(index);
+        self.registers[id as usize] = Some(BankIndex(index));
     }
 
     pub fn update(&mut self, id: BankIndexRegisterId, updater: &dyn Fn(u16) -> u16) {
-        let value = self.registers[id as usize].unwrap();
-        self.registers[id as usize] = Some(updater(value));
+        let value = self.registers[id as usize].unwrap().0;
+        self.registers[id as usize] = Some(BankIndex(updater(value)));
     }
 
     pub fn merge(&mut self, new_registers: &BankIndexRegisters) {

@@ -15,10 +15,10 @@ const PRG_WINDOWS_C000_FIXED: &[PrgWindow] = &[
     PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgType::WorkRam),
     PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, PrgType::WorkRam),
     PrgWindow::new(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgType::WorkRam),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0))),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P1))),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::SECOND_LAST)),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST)),
+    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::VariableBank(Rom, P0)),
+    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::VariableBank(Rom, P1)),
+    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::SECOND_LAST)),
+    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::LAST)),
 ];
 
 // Same as PRG_WINDOWS_C000_FIXED, except the 0x8000 and 0xC000 windows are swapped.
@@ -27,32 +27,32 @@ const PRG_WINDOWS_8000_FIXED: &[PrgWindow] = &[
     PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgType::WorkRam),
     PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, PrgType::WorkRam),
     PrgWindow::new(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgType::WorkRam),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::SECOND_LAST)),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P1))),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0))),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST)),
+    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::SECOND_LAST)),
+    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::VariableBank(Rom, P1)),
+    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::VariableBank(Rom, P0)),
+    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::LAST)),
 ];
 
 const CHR_BIG_WINDOWS_FIRST: &[ChrWindow] = &[
     // Big windows.
-    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C0))),
-    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C1))),
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C0)),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C1)),
     // Small windows.
-    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C2))),
-    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3))),
-    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C4))),
-    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C5))),
+    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C2)),
+    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C3)),
+    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C4)),
+    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C5)),
 ];
 
 const CHR_SMALL_WINDOWS_FIRST: &[ChrWindow] = &[
     // Small windows.
-    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C2))),
-    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3))),
-    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C4))),
-    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C5))),
+    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C2)),
+    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C3)),
+    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C4)),
+    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C5)),
     // Big windows.
-    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C0))),
-    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C1))),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C0)),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C1)),
 ];
 
 // MMC3 (TSROM and others) and MMC6 (HKROM)

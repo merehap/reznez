@@ -95,8 +95,8 @@ impl PrgMemory {
     pub fn resolve_selected_bank_indexes(&self) -> Vec<u16> {
         let mut indexes = Vec::new();
         for window in self.windows {
-            if let Some(bank_index) = window.bank_index() {
-                let raw_index = bank_index.to_u16(&self.bank_index_registers, self.bank_count());
+            if let Some(bank_index) = window.bank_index(&self.bank_index_registers) {
+                let raw_index = bank_index.to_u16(self.bank_count());
                 indexes.push(raw_index);
             }
         }
@@ -164,9 +164,19 @@ impl PrgMemory {
 
                 let prg_memory_index = match window.prg_type {
                     PrgType::Empty => PrgMemoryIndex::None,
-                    PrgType::Banked(_, bank_index) => {
-                        let mut raw_bank_index =
-                            bank_index.to_usize(&self.bank_index_registers, self.bank_count());
+                    PrgType::ConstantBank(_, bank_index) => {
+                        // TODO: Consolidate ConstantBank and VariableBank logic.
+                        let mut raw_bank_index = bank_index.to_usize(self.bank_count());
+                        let window_multiple = window.size() / self.bank_size;
+                        // Clear low bits for large windows.
+                        raw_bank_index &= !(window_multiple >> 1);
+                        let mapped_memory_index =
+                             raw_bank_index * self.bank_size + bank_offset as usize;
+                        PrgMemoryIndex::MappedMemory(mapped_memory_index)
+                    }
+                    PrgType::VariableBank(_, register_id) => {
+                        let mut raw_bank_index = self.bank_index_registers.get(register_id)
+                            .to_usize(self.bank_count());
                         let window_multiple = window.size() / self.bank_size;
                         // Clear low bits for large windows.
                         raw_bank_index &= !(window_multiple >> 1);
@@ -352,8 +362,8 @@ pub struct PrgWindow {
 }
 
 impl PrgWindow {
-    fn bank_index(self) -> Option<BankIndex> {
-        self.prg_type.bank_index()
+    fn bank_index(self, registers: &BankIndexRegisters) -> Option<BankIndex> {
+        self.prg_type.bank_index(registers)
     }
 
     fn size(self) -> usize {
@@ -361,7 +371,7 @@ impl PrgWindow {
     }
 
     fn register_id(self) -> Option<BankIndexRegisterId> {
-        if let PrgType::Banked(_, BankIndex::Register(id)) = self.prg_type {
+        if let PrgType::VariableBank(_, id) = self.prg_type {
             Some(id)
         } else {
             None
@@ -385,17 +395,19 @@ impl PrgWindow {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum PrgType {
     Empty,
-    Banked(Writability, BankIndex),
+    ConstantBank(Writability, BankIndex),
+    VariableBank(Writability, BankIndexRegisterId),
     // WRAM, Save RAM, SRAM, ambiguously "PRG RAM".
     WorkRam,
     Mirror(u16),
 }
 
 impl PrgType {
-    fn bank_index(self) -> Option<BankIndex> {
+    fn bank_index(self, registers: &BankIndexRegisters) -> Option<BankIndex> {
         use PrgType::*;
         match self {
-            Banked(_, bank_index) => Some(bank_index),
+            ConstantBank(_, bank_index) => Some(bank_index),
+            VariableBank(_, register_id) => Some(registers.get(register_id)),
             Empty | Mirror(_) | WorkRam => None,
         }
     }

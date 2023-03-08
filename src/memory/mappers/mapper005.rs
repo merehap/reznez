@@ -19,84 +19,84 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .build();
 
 const ONE_32K_PRG_WINDOW: &[PrgWindow] = &[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Banked(Ram,    BankIndex::Register(P0))),
-    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P4))),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::VariableBank(Ram,    P0)),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::VariableBank(Rom,    P4)),
 ];
 
 const TWO_16K_PRG_WINDOWS: &[PrgWindow] = &[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Banked(Ram,    BankIndex::Register(P0))),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P2))),
-    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P4))),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::VariableBank(Ram,    P0)),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::VariableBank(RomRam, P2)),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::VariableBank(Rom,    P4)),
 ];
 
 const ONE_16K_AND_TWO_8K_PRG_WINDOWS: &[PrgWindow] = &[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Banked(Ram,    BankIndex::Register(P0))),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P2))),
-    PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P3))),
-    PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P4))),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::VariableBank(Ram,    P0)),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::VariableBank(RomRam, P2)),
+    PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgType::VariableBank(RomRam, P3)),
+    PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgType::VariableBank(Rom,    P4)),
 ];
 
 const FOUR_8K_PRG_WINDOWS: &[PrgWindow] = &[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Banked(Ram,    BankIndex::Register(P0))),
-    PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P1))),
-    PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P2))),
-    PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgType::Banked(RomRam, BankIndex::Register(P3))),
-    PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgType::Banked(Rom,    BankIndex::Register(P4))),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::VariableBank(Ram,    P0)),
+    PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, PrgType::VariableBank(RomRam, P1)),
+    PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, PrgType::VariableBank(RomRam, P2)),
+    PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgType::VariableBank(RomRam, P3)),
+    PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgType::VariableBank(Rom,    P4)),
 ];
 
 const ONE_8K_CHR_WINDOW: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C7))),
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::VariableBank(Rom, C7)),
 ];
 const ONE_8K_CHR_WINDOW_ALTERNATE: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::VariableBank(Rom, C11)),
 ];
 
 const TWO_4K_CHR_WINDOWS: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3))),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C7))),
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::VariableBank(Rom, C3)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::VariableBank(Rom, C7)),
 ];
 const TWO_4K_CHR_WINDOWS_ALTERNATE: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::VariableBank(Rom, C11)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::VariableBank(Rom, C11)),
 ];
 
 const FOUR_2K_CHR_WINDOWS: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C1))),
-    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3))),
-    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C5))),
-    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C7))),
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C1)),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C3)),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C5)),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C7)),
 ];
 const FOUR_2K_CHR_WINDOWS_ALTERNATE: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C9))),
-    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
-    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C9))),
-    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C9)),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C11)),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C9)),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C11)),
 ];
 
 const EIGHT_1K_CHR_WINDOWS: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C0))),
-    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C1))),
-    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C2))),
-    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C3))),
-    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C4))),
-    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C5))),
-    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C6))),
-    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C7))),
+    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C0)),
+    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C1)),
+    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C2)),
+    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C3)),
+    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C4)),
+    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C5)),
+    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C6)),
+    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C7)),
 ];
 const EIGHT_1K_CHR_WINDOWS_ALTERNATE: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C8))),
-    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C9))),
-    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C10))),
-    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
-    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C8))),
-    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C9))),
-    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C10))),
-    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C11))),
+    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C8)),
+    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C9)),
+    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C10)),
+    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C11)),
+    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C8)),
+    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C9)),
+    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C10)),
+    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C11)),
 ];
 
 const EXTENDED_ATTRIBUTES_CHR_WINDOWS: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C12))),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C12))),
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::VariableBank(Rom, C12)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::VariableBank(Rom, C12)),
 ];
 
 const SPRITE_PATTERN_FETCH_START: u8 = 64;

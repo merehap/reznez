@@ -15,26 +15,26 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
 
 const PRG_WINDOWS_FIXED_LAST: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0))),
-    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::LAST)),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::VariableBank(Rom, P0)),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::LAST)),
 ];
 const PRG_WINDOWS_FIXED_FIRST: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::FIRST)),
-    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0))),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::FIRST)),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::VariableBank(Rom, P0)),
 ];
 const PRG_WINDOWS_ONE_BIG: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
-    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0))),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::VariableBank(Rom, P0)),
 ];
 
 // TODO: Not all boards support CHR RAM.
 const CHR_WINDOWS_ONE_BIG: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Ram, BankIndex::Register(C0))),
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::VariableBank(Ram, C0)),
 ];
 const CHR_WINDOWS_TWO_SMALL: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::Register(C0))),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType(Ram, BankIndex::Register(C1))),
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::VariableBank(Ram, C0)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::VariableBank(Ram, C1)),
 ];
 
 // SxROM (MMC1)

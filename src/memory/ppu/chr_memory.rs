@@ -28,7 +28,7 @@ impl ChrMemory {
         if raw_memory.is_empty() {
             raw_memory = vec![0; 8 * KIBIBYTE];
             for window in &mut windows {
-                window.chr_type.0 = Writability::Ram;
+                window.chr_type.set_writability(Writability::Ram);
             }
         }
 
@@ -91,7 +91,7 @@ impl ChrMemory {
 
     pub fn resolve_selected_bank_indexes(&self) -> Vec<u16> {
         self.windows.iter()
-            .map(|window| window.bank_index().to_u16(&self.bank_index_registers, self.bank_count()))
+            .map(|window| window.bank_index(&self.bank_index_registers).to_u16(self.bank_count()))
             .collect()
     }
 
@@ -136,8 +136,8 @@ impl ChrMemory {
 
         for window in &self.windows {
             if let Some(bank_offset) = window.offset(address) {
-                let mut raw_bank_index = window.bank_index()
-                    .to_usize(&self.bank_index_registers, self.bank_count());
+                let mut raw_bank_index = window.bank_index(&self.bank_index_registers)
+                    .to_usize(self.bank_count());
                 if self.align_large_chr_windows {
                     let window_multiple = window.size() / self.bank_size;
                     raw_bank_index &= !(window_multiple >> 1);
@@ -257,12 +257,12 @@ impl ChrWindow {
         }
     }
 
-    fn bank_index(self) -> BankIndex {
-        self.chr_type.bank_index()
+    fn bank_index(self, registers: &BankIndexRegisters) -> BankIndex {
+        self.chr_type.bank_index(registers)
     }
 
     fn is_writable(self) -> bool {
-        match (self.chr_type.0, self.write_status) {
+        match (self.chr_type.writability(), self.write_status) {
             (Writability::Rom   , None) => false,
             (Writability::Ram   , None) => true,
             (Writability::RomRam, Some(WriteStatus::ReadOnly)) => false,
@@ -272,7 +272,7 @@ impl ChrWindow {
     }
 
     fn register_id(self) -> Option<BankIndexRegisterId> {
-        if let BankIndex::Register(id) = self.chr_type.1 {
+        if let ChrType::VariableBank(_, id) = self.chr_type {
             Some(id)
         } else {
             None
@@ -287,11 +287,31 @@ impl ChrWindow {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct ChrType(pub Writability, pub BankIndex);
+pub enum ChrType {
+    ConstantBank(Writability, BankIndex),
+    VariableBank(Writability, BankIndexRegisterId),
+}
 
 impl ChrType {
-    fn bank_index(self) -> BankIndex {
-        self.1
+    fn writability(self) -> Writability {
+        match self {
+            ChrType::ConstantBank(writability, _) => writability,
+            ChrType::VariableBank(writability, _) => writability,
+        }
+    }
+
+    fn set_writability(&mut self, writability: Writability) {
+        *self = match *self {
+            ChrType::ConstantBank(_, bank_index) => ChrType::ConstantBank(writability, bank_index),
+            ChrType::VariableBank(_, register_id) => ChrType::VariableBank(writability, register_id),
+        };
+    }
+
+    fn bank_index(self, registers: &BankIndexRegisters) -> BankIndex {
+        match self {
+            ChrType::ConstantBank(_, bank_index) => bank_index,
+            ChrType::VariableBank(_, register_id) => registers.get(register_id),
+        }
     }
 }
 

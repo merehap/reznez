@@ -12,11 +12,11 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
 
 const PRG_WINDOWS: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),
-    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::Banked(Rom, BankIndex::Register(P0))),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::VariableBank(Rom, P0)),
 ];
 
 const CHR_WINDOWS: &[ChrWindow] = &[
-    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType(Rom, BankIndex::Register(C0))),
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::VariableBank(Rom, C0)),
 ];
 
 // Same as GNROM, except the writable port is moved to 0x6000 and more CHR banks are allowed.
