@@ -1,0 +1,85 @@
+ROADMAP
+Battletoads
+Work out priorities for WorkRam vs registers. Why does WorkRam need to be explicitly written to by each mapper?
+Move CPU bus into CpuMemory
+Always mirror ROM up to 32KiB? mmc5_test (v1) seems like it might depend upon this.
+ppu_open_bus tests
+Audio
+apu_test jitter
+Rename CycleAction to StepAction.
+Bus Conflicts
+Don't display bottom tiles of screen by default (see Aladdin junk tiles)
+Separate attribute table from name table?
+oam_stress
+Proper encapsulation for PPU registers
+Allow mapper config to set initial memory values (e.g. P4 for MMC5)
+Improve cycle accuracy of undocumented instructions
+Open Bus for joysticks.
+Other input devices.
+
+Simplest mappers: 0, 2, 3, 7, 11, 66, 87
+Japan mapper order: 0, 87, 3, 184, 185, 2, 206, 75, 66, 94, 140, 34, 180, 95, 152, 1...
+US mapper order: 0, 66, 3, 2, 1, 34, 206, 9, 7, 4, 68, 158, 11...
+
+
+FANCY NICE-TO-HAVES
+APU frequency correction
+
+UNTESTED
+(Nothing known, but there is plenty)
+
+BUGS
+Holding down the arrow keys doesn't generate input quickly enough.
+Gracefully handle bad CHR size? ((( Argus (J) [hM03][o2].nes ))) ((( Atlantis no Nazo (J) [hM03][b3].nes )))
+Gracefully handle bad PRG size? ((( Boy and His Blob, A - Trouble on Blobolonia (U) [o5].nes )))
+(Low priority) What should happen when BankIndex > bank_count when bank_count isn't a power of 2? Open bus?
+
+FAILING TESTS
+ppu_vbl_nmi/rom_singles/10-even_odd_timing.nes
+oam stress
+
+---------------------GAMES------------------------------------
+MAPPER 0
+Cheetah Men II [b1] (Doesn't work on nestopia either. Wrong tiles are rendered during some intro screens, probably due to the game relying on certain RAM values being present at startup)
+
+MAPPER 1
+A Ressha de Ikou (https://www.nesdev.org/wiki/MMC1#SZROM)
+
+MAPPER 3
+Athletic World (Freezes on nestopia too. Freezes at the beginning of the Hurdles event)
+
+MAPPER 4
+Crystalis index out of bounds: the len is 131072 but the index is 203776', src/memory/ppu/chr_memory.rs:61:9
+
+MAPPER 7
+Aladdin - Corrupted sprites, gets stuck in a loop writing to PPUDATA, JAMs.
+Battletoads - Every other frame rendered with wrong pattern table (due to even/odd frame timing test failing?). Flickering from somehow reading X and Y offset at the wrong time?
+
+MAPPER 66
+Dragon Ball - Goku can't move to spots he should be able to.
+
+
+MAPPER 71
+Fantastic Adventures of Dizzy - Status bar jumps a scanline or two, some sprites flicker. Sprites over the character intros.
+Fire Hawk: Can't move helicopter. Broken name table display. (Wiki: DMC IRQ required?)
+Micro Machines: Junk scanlines through the middle. See wiki.
+
+
+Total games implemented:
+0: 247
+1: 680
+2: 270
+3: 155
+4: 599
+7: 75
+11: 34
+66: 17
+71: 16
+87: 10
+101: 0
+140: 3
+
+2136/2447
+
+To implement:
+5:  25
