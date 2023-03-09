@@ -112,7 +112,7 @@ impl Apu {
         let pulse_1 = regs.pulse_1.sample_volume();
         let pulse_2 = regs.pulse_2.sample_volume();
         let triangle = regs.triangle.sample_volume();
-        let noise = 0.0;
+        let noise = regs.noise.sample_volume();
         let dmc = 0.0;
 
         let pulse_out = 95.88 / (8128.0 / (pulse_1 + pulse_2) + 100.0);

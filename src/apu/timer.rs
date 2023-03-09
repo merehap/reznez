@@ -9,6 +9,11 @@ impl Timer {
         self.period
     }
 
+    pub fn set_period_and_reset_index(&mut self, period: u16) {
+        self.period = period;
+        self.index = self.period;
+    }
+
     pub fn set_period_high_and_reset_index(&mut self, period_high: u8) {
         self.period &= 0b0000_0000_1111_1111;
         self.period |= u16::from(period_high & 0b0000_0111) << 8;
