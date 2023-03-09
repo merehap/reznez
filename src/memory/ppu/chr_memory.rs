@@ -6,31 +6,29 @@ use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
 
 pub struct ChrMemory {
-    windows: Vec<ChrWindow>,
+    windows: &'static [ChrWindow],
     max_bank_count: u16,
     bank_size: usize,
     align_large_chr_windows: bool,
+    override_write_protection: bool,
     bank_index_registers: BankIndexRegisters,
     raw_memory: Vec<u8>,
 }
 
 impl ChrMemory {
     pub fn new(
-        mut windows: Vec<ChrWindow>,
+        windows: &'static [ChrWindow],
         max_bank_count: u16,
         bank_size: usize,
         align_large_chr_windows: bool,
         bank_index_registers: BankIndexRegisters,
         mut raw_memory: Vec<u8>,
     ) -> ChrMemory {
-        // If no CHR data is provided, add 8KiB of CHR RAM.
-        // This is the only instance where changing the ROM/RAM type after configuration time is
-        // allowed.
+        // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only windows.
+        let mut override_write_protection = false;
         if raw_memory.is_empty() {
             raw_memory = vec![0; 8 * KIBIBYTE];
-            for window in &mut windows {
-                window.chr_type.set_writability(Writability::Ram);
-            }
+            override_write_protection = true;
         }
 
         assert!(!windows.is_empty());
@@ -51,6 +49,7 @@ impl ChrMemory {
             bank_size,
             bank_index_registers,
             align_large_chr_windows,
+            override_write_protection,
             raw_memory,
         };
 
@@ -81,7 +80,7 @@ impl ChrMemory {
 
     pub fn write(&mut self, address: PpuAddress, value: u8) {
         let (index, writable) = self.address_to_chr_index(address.to_u16());
-        if writable {
+        if writable || self.override_write_protection {
             self.raw_memory[index] = value;
         }
     }
@@ -92,8 +91,8 @@ impl ChrMemory {
             .collect()
     }
 
-    pub fn window_at(&mut self, start: u16) -> &mut ChrWindow {
-        for window in &mut self.windows {
+    pub fn window_at(&self, start: u16) -> &ChrWindow {
+        for window in self.windows {
             if window.start == start {
                 return window;
             }
@@ -108,7 +107,7 @@ impl ChrMemory {
             .collect();
         let new_bank_index_registers = BankIndexRegisters::new(&reg_ids);
         self.bank_index_registers.merge(&new_bank_index_registers);
-        self.windows = windows.to_vec();
+        self.windows = windows;
     }
 
     pub fn set_bank_index_register<INDEX: Into<u16>>(
@@ -131,7 +130,7 @@ impl ChrMemory {
     fn address_to_chr_index(&self, address: u16) -> (usize, bool) {
         assert!(address < 0x2000);
 
-        for window in &self.windows {
+        for window in self.windows {
             if let Some(bank_offset) = window.offset(address) {
                 let mut raw_bank_index = window.bank_index(&self.bank_index_registers)
                     .to_usize(self.bank_count());
@@ -295,13 +294,6 @@ impl ChrType {
             ChrType::ConstantBank(writability, _) => writability,
             ChrType::VariableBank(writability, _) => writability,
         }
-    }
-
-    fn set_writability(&mut self, writability: Writability) {
-        *self = match *self {
-            ChrType::ConstantBank(_, bank_index) => ChrType::ConstantBank(writability, bank_index),
-            ChrType::VariableBank(_, register_id) => ChrType::VariableBank(writability, register_id),
-        };
     }
 
     fn bank_index(self, registers: &BankIndexRegisters) -> BankIndex {

@@ -46,7 +46,7 @@ impl InitialLayout {
             .collect();
         let chr_bank_index_registers = BankIndexRegisters::new(&chr_reg_ids);
         let chr_memory = ChrMemory::new(
-            self.chr_windows.to_vec(),
+            self.chr_windows,
             self.chr_max_bank_count,
             self.chr_bank_size,
             self.align_large_chr_windows,
