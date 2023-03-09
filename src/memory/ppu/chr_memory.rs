@@ -24,6 +24,7 @@ impl ChrMemory {
         bank_index_registers: BankIndexRegisters,
         mut raw_memory: Vec<u8>,
     ) -> ChrMemory {
+        windows.validate_bank_size_multiples(bank_size);
         // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only windows.
         let mut override_write_protection = false;
         if raw_memory.is_empty() {
@@ -81,7 +82,7 @@ impl ChrMemory {
 
     pub fn window_at(&self, start: u16) -> &ChrWindow {
         for window in self.windows.0 {
-            if window.start == start {
+            if window.start.to_u16() == start {
                 return window;
             }
         }
@@ -178,17 +179,17 @@ impl ChrWindows {
             panic!("No PRG windows specified.");
         }
 
-        if windows[0].start != 0x0000 {
+        if windows[0].start.to_u16() != 0x0000 {
             panic!("The first CHR window must start at 0x0000.");
         }
 
-        if windows[windows.len() - 1].end != 0x1FFF {
+        if windows[windows.len() - 1].end.to_u16() != 0x1FFF {
             panic!("The last CHR window must end at 0x1FFF.");
         }
 
         let mut i = 1;
         while i < windows.len() {
-            if windows[i].start != windows[i - 1].end + 1 {
+            if windows[i].start.to_u16() != windows[i - 1].end.to_u16() + 1 {
                 panic!("There must be no gaps nor overlap between CHR windows.");
             }
 
@@ -220,8 +221,8 @@ impl ChrWindows {
 // TODO: Switch over to PpuAddress?
 #[derive(Clone, Copy, Debug)]
 pub struct ChrWindow {
-    start: u16,
-    end: u16,
+    start: PpuAddress,
+    end: PpuAddress,
     chr_type: ChrType,
     write_status: Option<WriteStatus>,
 }
@@ -235,16 +236,21 @@ impl ChrWindow {
             panic!("CHR window 'end - start != size'");
         }
 
-        ChrWindow { start, end, chr_type, write_status: None }
+        ChrWindow {
+            start: PpuAddress::from_u16(start),
+            end: PpuAddress::from_u16(end),
+            chr_type,
+            write_status: None,
+        }
     }
 
     const fn size(self) -> usize {
-        (self.end - self.start + 1) as usize
+        (self.end.to_u16() - self.start.to_u16() + 1) as usize
     }
 
     fn offset(self, address: u16) -> Option<u16> {
-        if self.start <= address && address <= self.end {
-            Some(address - self.start)
+        if self.start.to_u16() <= address && address <= self.end.to_u16() {
+            Some(address - self.start.to_u16())
         } else {
             None
         }

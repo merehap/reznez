@@ -36,7 +36,7 @@ impl PpuAddress {
         fine_x_scroll: ColumnInTile::Zero,
     };
 
-    pub fn from_u16(value: u16) -> PpuAddress {
+    pub const fn from_u16(value: u16) -> PpuAddress {
         PpuAddress {
             address: value & 0b0011_1111_1111_1111,
             fine_x_scroll: ColumnInTile::Zero,
@@ -294,7 +294,7 @@ impl PpuAddress {
         self.address |= u16::from(value);
     }
 
-    pub fn to_u16(self) -> u16 {
+    pub const fn to_u16(self) -> u16 {
         // Chop off the top bit of fine y to leave a 14-bit representation.
         self.to_scroll_u16() & 0b0011_1111_1111_1111
     }
@@ -303,7 +303,7 @@ impl PpuAddress {
         usize::from(self.to_u16())
     }
 
-    pub fn to_scroll_u16(self) -> u16 {
+    pub const fn to_scroll_u16(self) -> u16 {
         self.address
     }
 

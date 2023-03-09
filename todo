@@ -37,7 +37,6 @@ IMPROVEMENTS TO PRG/CHR LAYOUTS
 Validate up front all windows as bank size multiples.
 Automatically add registers from every layout? Maybe not since certain layouts won't be used by certain boards.
 Automatically mirror under-sized PRG?
-Switch ChrWindow over to PpuAddresses.
 
 FAILING TESTS
 ppu_vbl_nmi/rom_singles/10-even_odd_timing.nes
