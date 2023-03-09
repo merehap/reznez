@@ -16,9 +16,9 @@ const PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::LAST)),
 ]);
 
-const CHR_WINDOWS: &[ChrWindow] = &[
+const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
     ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::ConstantBank(Rom, BankIndex::FIRST)),
-];
+]);
 
 // Similar to UxROM.
 pub struct Mapper071 {

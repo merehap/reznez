@@ -33,7 +33,7 @@ const PRG_WINDOWS_8000_FIXED: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::LAST)),
 ]);
 
-const CHR_BIG_WINDOWS_FIRST: &[ChrWindow] = &[
+const CHR_BIG_WINDOWS_FIRST: ChrWindows = ChrWindows::new(&[
     // Big windows.
     ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C0)),
     ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C1)),
@@ -42,9 +42,9 @@ const CHR_BIG_WINDOWS_FIRST: &[ChrWindow] = &[
     ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C3)),
     ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C4)),
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C5)),
-];
+]);
 
-const CHR_SMALL_WINDOWS_FIRST: &[ChrWindow] = &[
+const CHR_SMALL_WINDOWS_FIRST: ChrWindows = ChrWindows::new(&[
     // Small windows.
     ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C2)),
     ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C3)),
@@ -53,7 +53,7 @@ const CHR_SMALL_WINDOWS_FIRST: &[ChrWindow] = &[
     // Big windows.
     ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C0)),
     ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C1)),
-];
+]);
 
 // MMC3 (TSROM and others) and MMC6 (HKROM)
 pub struct Mapper004 {

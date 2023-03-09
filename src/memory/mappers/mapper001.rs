@@ -29,13 +29,13 @@ const PRG_WINDOWS_ONE_BIG: PrgWindows = PrgWindows::new(&[
 ]);
 
 // TODO: Not all boards support CHR RAM.
-const CHR_WINDOWS_ONE_BIG: &[ChrWindow] = &[
+const CHR_WINDOWS_ONE_BIG: ChrWindows = ChrWindows::new(&[
     ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::VariableBank(Ram, C0)),
-];
-const CHR_WINDOWS_TWO_SMALL: &[ChrWindow] = &[
+]);
+const CHR_WINDOWS_TWO_SMALL: ChrWindows = ChrWindows::new(&[
     ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::VariableBank(Ram, C0)),
     ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::VariableBank(Ram, C1)),
-];
+]);
 
 // SxROM (MMC1)
 pub struct Mapper001 {
@@ -112,7 +112,7 @@ impl Mapper001 {
         }
     }
 
-    fn next_chr_windows(value: u8) -> &'static [ChrWindow] {
+    fn next_chr_windows(value: u8) -> ChrWindows {
         match (value & 0b0001_0000) >> 4 {
             0 => CHR_WINDOWS_ONE_BIG.clone(),
             1 => CHR_WINDOWS_TWO_SMALL.clone(),

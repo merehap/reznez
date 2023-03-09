@@ -267,7 +267,7 @@ impl PrgWindows {
         self.0
     }
 
-    pub const fn validate_bank_size_multiples(&self, bank_size: usize) {
+    const fn validate_bank_size_multiples(&self, bank_size: usize) {
         let mut i = 0;
         while i < self.0.len() {
             let window = self.0[i];
@@ -288,60 +288,6 @@ impl PrgWindows {
             .collect()
     }
 }
-
-/*
-pub struct PrgWindowsBuilder {
-    max_bank_count: Option<u16>,
-    bank_size: Option<usize>,
-    windows: Vec<PrgWindow>,
-}
-
-impl PrgWindowsBuilder {
-    pub fn max_bank_count(&mut self, max_bank_count: u16) -> &mut PrgWindowsBuilder {
-        self.max_bank_count = Some(max_bank_count);
-        self
-    }
-
-    pub fn bank_size(&mut self, bank_size: usize) -> &mut PrgWindowsBuilder {
-        self.bank_size = Some(bank_size);
-        self
-    }
-
-    pub fn window(
-        &mut self,
-        start: u16,
-        end: u16,
-        size: usize,
-        window_type: PrgType,
-    ) -> &mut PrgWindowsBuilder {
-        let bank_size = self.bank_size.unwrap();
-        if window_type != PrgType::WorkRam {
-            assert!(size % bank_size == 0 || bank_size % size == 0);
-        }
-
-        self.windows.push(PrgWindow::new(start, end, size, window_type));
-        self
-    }
-
-    pub fn build(&self) -> PrgWindows {
-        assert!(!self.windows.is_empty());
-
-        PrgWindows::new(
-            self.max_bank_count.unwrap(),
-            self.bank_size.unwrap(),
-            self.windows.clone(),
-        )
-    }
-
-    fn new() -> PrgWindowsBuilder {
-        PrgWindowsBuilder {
-            max_bank_count: None,
-            bank_size: None,
-            windows: Vec::new(),
-        }
-    }
-}
-*/
 
 enum PrgMemoryIndex {
     None,

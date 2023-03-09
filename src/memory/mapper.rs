@@ -7,7 +7,7 @@ pub use crate::memory::board::Board;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgWindows, PrgWindow, PrgType};
 pub use crate::memory::initial_layout::{InitialLayout, NameTableMirroringSource};
-pub use crate::memory::ppu::chr_memory::{ChrMemory, ChrWindow, ChrType};
+pub use crate::memory::ppu::chr_memory::{ChrMemory, ChrWindows, ChrWindow, ChrType};
 pub use crate::memory::ppu::ppu_address::PpuAddress;
 pub use crate::memory::writability::Writability::*;
 pub use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;

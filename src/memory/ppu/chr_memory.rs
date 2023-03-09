@@ -6,7 +6,7 @@ use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
 
 pub struct ChrMemory {
-    windows: &'static [ChrWindow],
+    windows: ChrWindows,
     max_bank_count: u16,
     bank_size: usize,
     align_large_chr_windows: bool,
@@ -17,7 +17,7 @@ pub struct ChrMemory {
 
 impl ChrMemory {
     pub fn new(
-        windows: &'static [ChrWindow],
+        windows: ChrWindows,
         max_bank_count: u16,
         bank_size: usize,
         align_large_chr_windows: bool,
@@ -29,18 +29,6 @@ impl ChrMemory {
         if raw_memory.is_empty() {
             raw_memory = vec![0; 8 * KIBIBYTE];
             override_write_protection = true;
-        }
-
-        assert!(!windows.is_empty());
-
-        assert_eq!(windows[0].start, 0x0000);
-        assert_eq!(windows[windows.len() - 1].end, 0x1FFF);
-
-        for i in 0..windows.len() - 1 {
-            assert_eq!(
-                windows[i + 1].start,
-                windows[i].end + 1,
-            );
         }
 
         let chr_memory = ChrMemory {
@@ -70,7 +58,7 @@ impl ChrMemory {
     }
 
     pub fn window_count(&self) -> u8 {
-        self.windows.len().try_into().unwrap()
+        self.windows.0.len().try_into().unwrap()
     }
 
     pub fn peek(&self, address: PpuAddress) -> u8 {
@@ -86,13 +74,13 @@ impl ChrMemory {
     }
 
     pub fn resolve_selected_bank_indexes(&self) -> Vec<u16> {
-        self.windows.iter()
+        self.windows.0.iter()
             .map(|window| window.bank_index(&self.bank_index_registers).to_u16(self.bank_count()))
             .collect()
     }
 
     pub fn window_at(&self, start: u16) -> &ChrWindow {
-        for window in self.windows {
+        for window in self.windows.0 {
             if window.start == start {
                 return window;
             }
@@ -101,10 +89,9 @@ impl ChrMemory {
         panic!("No window exists at {start:X?}");
     }
 
-    pub fn set_windows(&mut self, windows: &'static [ChrWindow]) {
-        let reg_ids: Vec<_> = windows.iter()
-            .filter_map(|window| window.register_id())
-            .collect();
+    pub fn set_windows(&mut self, windows: ChrWindows) {
+        windows.validate_bank_size_multiples(self.bank_size);
+        let reg_ids = windows.active_register_ids();
         let new_bank_index_registers = BankIndexRegisters::new(&reg_ids);
         self.bank_index_registers.merge(&new_bank_index_registers);
         self.windows = windows;
@@ -130,7 +117,7 @@ impl ChrMemory {
     fn address_to_chr_index(&self, address: u16) -> (usize, bool) {
         assert!(address < 0x2000);
 
-        for window in self.windows {
+        for window in self.windows.0 {
             if let Some(bank_offset) = window.offset(address) {
                 let mut raw_bank_index = window.bank_index(&self.bank_index_registers)
                     .to_usize(self.bank_count());
@@ -182,43 +169,53 @@ impl ChrMemory {
     }
 }
 
-/*
-#[derive(Clone)]
-pub struct ChrLayout {
-    max_bank_count: u16,
-    bank_size: usize,
-    windows: Vec<ChrWindow>,
-}
+#[derive(Clone, Copy)]
+pub struct ChrWindows(&'static [ChrWindow]);
 
-impl ChrLayout {
-    pub fn new(
-        max_bank_count: u16,
-        bank_size: usize,
-        windows: Vec<ChrWindow>,
-    ) -> ChrLayout {
-        assert!(!windows.is_empty());
-
-        assert_eq!(windows[0].start, 0x0000);
-        assert_eq!(windows[windows.len() - 1].end, 0x1FFF);
-
-        for i in 0..windows.len() - 1 {
-            assert_eq!(
-                windows[i + 1].start,
-                windows[i].end + 1,
-            );
+impl ChrWindows {
+    pub const fn new(windows: &'static [ChrWindow]) -> ChrWindows {
+        if windows.is_empty() {
+            panic!("No PRG windows specified.");
         }
 
-        assert_eq!(max_bank_count & (max_bank_count - 1), 0);
-        ChrLayout { max_bank_count, bank_size, windows }
+        if windows[0].start != 0x0000 {
+            panic!("The first CHR window must start at 0x0000.");
+        }
+
+        if windows[windows.len() - 1].end != 0x1FFF {
+            panic!("The last CHR window must end at 0x1FFF.");
+        }
+
+        let mut i = 1;
+        while i < windows.len() {
+            if windows[i].start != windows[i - 1].end + 1 {
+                panic!("There must be no gaps nor overlap between CHR windows.");
+            }
+
+            i += 1;
+        }
+
+        ChrWindows(windows)
     }
 
-    fn active_register_ids(&self) -> Vec<BankIndexRegisterId> {
-        self.windows.iter()
+    pub fn active_register_ids(&self) -> Vec<BankIndexRegisterId> {
+        self.0.iter()
             .filter_map(|window| window.register_id())
             .collect()
     }
+
+    const fn validate_bank_size_multiples(&self, bank_size: usize) {
+        let mut i = 0;
+        while i < self.0.len() {
+            let window = self.0[i];
+            if bank_size % window.size() != 0 && window.size() % bank_size != 0 {
+                panic!("Bank size must be a multiple of window size or vice versa.");
+            }
+
+            i += 1;
+        }
+    }
 }
-*/
 
 // TODO: Switch over to PpuAddress?
 #[derive(Clone, Copy, Debug)]
@@ -241,8 +238,8 @@ impl ChrWindow {
         ChrWindow { start, end, chr_type, write_status: None }
     }
 
-    fn size(self) -> usize {
-        usize::from(self.end - self.start + 1)
+    const fn size(self) -> usize {
+        (self.end - self.start + 1) as usize
     }
 
     fn offset(self, address: u16) -> Option<u16> {
@@ -273,12 +270,6 @@ impl ChrWindow {
         } else {
             None
         }
-    }
-
-    #[allow(dead_code)]
-    fn make_writable(&mut self) {
-        assert!(self.write_status.is_some(), "Only RamRom can have its WriteStatus changed.");
-        self.write_status = Some(WriteStatus::Writable);
     }
 }
 

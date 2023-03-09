@@ -15,9 +15,9 @@ const PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::VariableBank(Rom, P0)),
 ]);
 
-const CHR_WINDOWS: &[ChrWindow] = &[
+const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
     ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::VariableBank(Rom, C0)),
-];
+]);
 
 // GxROM
 pub struct Mapper066 {

@@ -2,7 +2,7 @@ use crate::cartridge::Cartridge;
 use crate::memory::board::Board;
 use crate::memory::cpu::prg_memory::{PrgMemory, PrgWindows};
 use crate::memory::mapper::MapperParams;
-use crate::memory::ppu::chr_memory::{ChrMemory, ChrWindow};
+use crate::memory::ppu::chr_memory::{ChrMemory, ChrWindows};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::memory::bank_index::{BankIndex, BankIndexRegisters, BankIndexRegisterId};
 
@@ -13,7 +13,7 @@ pub struct InitialLayout {
 
     chr_max_bank_count: u16,
     chr_bank_size: usize,
-    chr_windows: &'static [ChrWindow],
+    chr_windows: ChrWindows,
     align_large_chr_windows: bool,
 
     name_table_mirroring_source: NameTableMirroringSource,
@@ -41,9 +41,7 @@ impl InitialLayout {
             cartridge.prg_rom(),
         );
 
-        let chr_reg_ids: Vec<_> = self.chr_windows.iter()
-            .filter_map(|window| window.register_id())
-            .collect();
+        let chr_reg_ids: Vec<_> = self.chr_windows.active_register_ids();
         let chr_bank_index_registers = BankIndexRegisters::new(&chr_reg_ids);
         let chr_memory = ChrMemory::new(
             self.chr_windows,
@@ -81,7 +79,7 @@ pub struct InitialLayoutBuilder {
 
     chr_max_bank_count: Option<u16>,
     chr_bank_size: Option<usize>,
-    chr_windows: Option<&'static [ChrWindow]>,
+    chr_windows: Option<ChrWindows>,
     align_large_chr_windows: bool,
 
     name_table_mirroring_source: Option<NameTableMirroringSource>,
@@ -133,7 +131,7 @@ impl InitialLayoutBuilder {
         self
     }
 
-    pub const fn chr_windows(&mut self, value: &'static [ChrWindow]) -> &mut InitialLayoutBuilder {
+    pub const fn chr_windows(&mut self, value: ChrWindows) -> &mut InitialLayoutBuilder {
         self.chr_windows = Some(value);
         self
     }
