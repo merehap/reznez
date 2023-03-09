@@ -13,20 +13,20 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .name_table_mirroring_source(NameTableMirroringSource::Direct(NameTableMirroring::OneScreenRightBank))
     .build();
 
-const PRG_WINDOWS_FIXED_LAST: &[PrgWindow] = &[
+const PRG_WINDOWS_FIXED_LAST: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::VariableBank(Rom, P0)),
     PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::LAST)),
-];
-const PRG_WINDOWS_FIXED_FIRST: &[PrgWindow] = &[
+]);
+const PRG_WINDOWS_FIXED_FIRST: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::FIRST)),
     PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::VariableBank(Rom, P0)),
-];
-const PRG_WINDOWS_ONE_BIG: &[PrgWindow] = &[
+]);
+const PRG_WINDOWS_ONE_BIG: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
     PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::VariableBank(Rom, P0)),
-];
+]);
 
 // TODO: Not all boards support CHR RAM.
 const CHR_WINDOWS_ONE_BIG: &[ChrWindow] = &[
@@ -103,7 +103,7 @@ impl Mapper001 {
         })
     }
 
-    fn next_prg_windows(value: u8) -> &'static [PrgWindow] {
+    fn next_prg_windows(value: u8) -> PrgWindows {
         match (value & 0b0000_1100) >> 2 {
             0b00 | 0b01 => PRG_WINDOWS_ONE_BIG.clone(),
             0b10 => PRG_WINDOWS_FIXED_FIRST.clone(),

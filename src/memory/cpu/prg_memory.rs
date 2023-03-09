@@ -5,7 +5,7 @@ use crate::memory::writability::Writability;
 const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
 
 pub struct PrgMemory {
-    windows: &'static [PrgWindow],
+    windows: PrgWindows,
     max_bank_count: u16,
     bank_size: usize,
     bank_index_registers: BankIndexRegisters,
@@ -15,12 +15,14 @@ pub struct PrgMemory {
 
 impl PrgMemory {
     pub fn new(
-        windows: &'static [PrgWindow],
+        windows: PrgWindows,
         max_bank_count: u16,
         bank_size: usize,
         bank_index_registers: BankIndexRegisters,
         raw_memory: Vec<u8>,
     ) -> PrgMemory {
+
+        windows.validate_bank_size_multiples(bank_size);
         let mut prg_memory = PrgMemory {
             windows,
             max_bank_count,
@@ -30,7 +32,7 @@ impl PrgMemory {
             work_ram_sections: Vec::new(),
         };
 
-        for window in prg_memory.windows {
+        for window in prg_memory.windows.0 {
             if window.prg_type == PrgType::WorkRam {
                 prg_memory.work_ram_sections.push(WorkRam::new(window.size()));
             }
@@ -90,7 +92,7 @@ impl PrgMemory {
 
     pub fn resolve_selected_bank_indexes(&self) -> Vec<u16> {
         let mut indexes = Vec::new();
-        for window in self.windows {
+        for window in self.windows.0 {
             if let Some(bank_index) = window.bank_index(&self.bank_index_registers) {
                 let raw_index = bank_index.to_u16(self.bank_count());
                 indexes.push(raw_index);
@@ -116,8 +118,9 @@ impl PrgMemory {
         self.work_ram_at(address).status = WorkRamStatus::ReadWrite;
     }
 
-    pub fn set_windows(&mut self, windows: &'static [PrgWindow]) {
-        for window in windows {
+    pub fn set_windows(&mut self, windows: PrgWindows) {
+        windows.validate_bank_size_multiples(self.bank_size);
+        for window in windows.0 {
             assert!(window.size() <= self.raw_memory.len());
         }
 
@@ -144,7 +147,7 @@ impl PrgMemory {
     fn address_to_prg_index(&self, address: CpuAddress) -> PrgMemoryIndex {
         assert!(address >= PRG_MEMORY_START);
 
-        let windows = &self.windows;
+        let windows = &self.windows.0;
         assert!(!windows.is_empty());
 
         for i in 0..windows.len() {
@@ -203,7 +206,7 @@ impl PrgMemory {
         unreachable!();
     }
 
-    // This method assume that all WorkRam is at the start of the PrgLayout.
+    // This method assume that all WorkRam is at the start of the PrgWindows.
     fn work_ram_at(&mut self, start: u16) -> &mut WorkRam {
         let (window, index) = self.window_with_index_at(start);
         assert_eq!(window.prg_type, PrgType::WorkRam);
@@ -211,7 +214,7 @@ impl PrgMemory {
     }
 
     fn window_with_index_at(&self, start: u16) -> (&PrgWindow, usize) {
-        for (index, window) in self.windows.iter().enumerate() {
+        for (index, window) in self.windows.0.iter().enumerate() {
             if window.start.to_raw() == start {
                 return (window, index);
             }
@@ -221,7 +224,7 @@ impl PrgMemory {
     }
 
     fn window(&self, start: u16) -> &PrgWindow {
-        for window in self.windows {
+        for window in self.windows.0 {
             if window.start.to_raw() == start {
                 return window;
             }
@@ -231,77 +234,75 @@ impl PrgMemory {
     }
 }
 
-/*
 #[derive(Clone)]
-pub struct PrgLayout {
-    max_bank_count: u16,
-    bank_size: usize,
-    windows: Vec<PrgWindow>,
-}
+pub struct PrgWindows(&'static [PrgWindow]);
 
-impl PrgLayout {
-    pub fn builder() -> PrgLayoutBuilder {
-        PrgLayoutBuilder::new()
-    }
-
-    pub fn new(
-        max_bank_count: u16,
-        bank_size: usize,
-        windows: Vec<PrgWindow>,
-    ) -> PrgLayout {
-
-        assert!(!windows.is_empty());
-
-        assert!(
-            [8 * KIBIBYTE, 16 * KIBIBYTE, 32 * KIBIBYTE].contains(&bank_size),
-            "Bad PRG bank size",
-        );
-
-        assert_eq!(
-            windows[0].start.to_raw(),
-            0x6000,
-            "Every mapper needs one PRG window starting at 0x6000 (usually WorkRam or Empty).");
-        assert_eq!(
-            windows[windows.len() - 1].end.to_raw(),
-            0xFFFF,
-            "Every mapper needs one PRG window that extends to 0xFFFF",
-        );
-
-        for i in 0..windows.len() - 1 {
-            assert_eq!(
-                windows[i + 1].start.to_raw(),
-                windows[i].end.to_raw() + 1,
-                "There must be no gaps nor overlap between PRG windows.",
-            );
+impl PrgWindows {
+    pub const fn new(windows: &'static [PrgWindow]) -> PrgWindows {
+        if windows.is_empty() {
+            panic!("No PRG windows specified.");
         }
 
+        if windows[0].start.to_raw() != 0x6000 {
+            panic!("The first PRG window must start at 0x6000.");
+        }
 
-        // Power of 2.
-        assert_eq!(max_bank_count & (max_bank_count - 1), 0);
+        if windows[windows.len() - 1].end.to_raw() != 0xFFFF {
+            panic!("The last PRG window must end at 0xFFFF.");
+        }
 
-        PrgLayout { max_bank_count, bank_size, windows }
+        let mut i = 1;
+        while i < windows.len() {
+            if windows[i].start.to_raw() != windows[i - 1].end.to_raw() + 1 {
+                panic!("There must be no gaps nor overlap between PRG windows.");
+            }
+
+            i += 1;
+        }
+
+        PrgWindows(windows)
     }
 
-    fn active_register_ids(&self) -> Vec<BankIndexRegisterId> {
-        self.windows.iter()
+    pub fn windows(&self) -> &[PrgWindow] {
+        self.0
+    }
+
+    pub const fn validate_bank_size_multiples(&self, bank_size: usize) {
+        let mut i = 0;
+        while i < self.0.len() {
+            let window = self.0[i];
+            if !matches!(window.prg_type, PrgType::WorkRam)
+                && bank_size % window.size() != 0
+                && window.size() % bank_size != 0 {
+
+                panic!("Bank size must be a multiple of window size or vice versa.");
+            }
+
+            i += 1;
+        }
+    }
+
+    pub fn active_register_ids(&self) -> Vec<BankIndexRegisterId> {
+        self.0.iter()
             .filter_map(|window| window.register_id())
             .collect()
     }
 }
 
-pub struct PrgLayoutBuilder {
+/*
+pub struct PrgWindowsBuilder {
     max_bank_count: Option<u16>,
     bank_size: Option<usize>,
     windows: Vec<PrgWindow>,
 }
 
-impl PrgLayoutBuilder {
-    pub fn max_bank_count(&mut self, max_bank_count: u16) -> &mut PrgLayoutBuilder {
+impl PrgWindowsBuilder {
+    pub fn max_bank_count(&mut self, max_bank_count: u16) -> &mut PrgWindowsBuilder {
         self.max_bank_count = Some(max_bank_count);
         self
     }
 
-    pub fn bank_size(&mut self, bank_size: usize) -> &mut PrgLayoutBuilder {
+    pub fn bank_size(&mut self, bank_size: usize) -> &mut PrgWindowsBuilder {
         self.bank_size = Some(bank_size);
         self
     }
@@ -312,7 +313,7 @@ impl PrgLayoutBuilder {
         end: u16,
         size: usize,
         window_type: PrgType,
-    ) -> &mut PrgLayoutBuilder {
+    ) -> &mut PrgWindowsBuilder {
         let bank_size = self.bank_size.unwrap();
         if window_type != PrgType::WorkRam {
             assert!(size % bank_size == 0 || bank_size % size == 0);
@@ -322,18 +323,18 @@ impl PrgLayoutBuilder {
         self
     }
 
-    pub fn build(&self) -> PrgLayout {
+    pub fn build(&self) -> PrgWindows {
         assert!(!self.windows.is_empty());
 
-        PrgLayout::new(
+        PrgWindows::new(
             self.max_bank_count.unwrap(),
             self.bank_size.unwrap(),
             self.windows.clone(),
         )
     }
 
-    fn new() -> PrgLayoutBuilder {
-        PrgLayoutBuilder {
+    fn new() -> PrgWindowsBuilder {
+        PrgWindowsBuilder {
             max_bank_count: None,
             bank_size: None,
             windows: Vec::new(),
@@ -362,11 +363,11 @@ impl PrgWindow {
         self.prg_type.bank_index(registers)
     }
 
-    fn size(self) -> usize {
-        usize::from(self.end.to_raw() - self.start.to_raw() + 1)
+    const fn size(self) -> usize {
+        (self.end.to_raw() - self.start.to_raw() + 1) as usize
     }
 
-    pub fn register_id(self) -> Option<BankIndexRegisterId> {
+    fn register_id(self) -> Option<BankIndexRegisterId> {
         if let PrgType::VariableBank(_, id) = self.prg_type {
             Some(id)
         } else {

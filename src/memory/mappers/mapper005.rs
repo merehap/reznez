@@ -19,31 +19,31 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .override_bank_index_register(P4, BankIndex::LAST)
     .build();
 
-const ONE_32K_PRG_WINDOW: &[PrgWindow] = &[
+const ONE_32K_PRG_WINDOW: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::VariableBank(Ram,    P0)),
     PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::VariableBank(Rom,    P4)),
-];
+]);
 
-const TWO_16K_PRG_WINDOWS: &[PrgWindow] = &[
+const TWO_16K_PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::VariableBank(Ram,    P0)),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::VariableBank(RomRam, P2)),
     PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::VariableBank(Rom,    P4)),
-];
+]);
 
-const ONE_16K_AND_TWO_8K_PRG_WINDOWS: &[PrgWindow] = &[
+const ONE_16K_AND_TWO_8K_PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::VariableBank(Ram,    P0)),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::VariableBank(RomRam, P2)),
     PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgType::VariableBank(RomRam, P3)),
     PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgType::VariableBank(Rom,    P4)),
-];
+]);
 
-const FOUR_8K_PRG_WINDOWS: &[PrgWindow] = &[
+const FOUR_8K_PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::VariableBank(Ram,    P0)),
     PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, PrgType::VariableBank(RomRam, P1)),
     PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, PrgType::VariableBank(RomRam, P2)),
     PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgType::VariableBank(RomRam, P3)),
     PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgType::VariableBank(Rom,    P4)),
-];
+]);
 
 const ONE_8K_CHR_WINDOW: &[ChrWindow] = &[
     ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::VariableBank(Rom, C7)),

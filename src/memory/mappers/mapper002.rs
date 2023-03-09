@@ -10,11 +10,11 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .build();
 
-const PRG_WINDOWS: &[PrgWindow] = &[
+const PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::VariableBank(Rom, P0)),
     PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::LAST)),
-];
+]);
 
 const CHR_WINDOWS: &[ChrWindow] = &[
     ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::ConstantBank(Rom, BankIndex::FIRST)),

@@ -5,7 +5,7 @@ pub use crate::memory::bank_index::{BankIndex, BankIndexRegisterId};
 pub use crate::memory::bank_index::BankIndexRegisterId::*;
 pub use crate::memory::board::Board;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
-pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgWindow, PrgType};
+pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgWindows, PrgWindow, PrgType};
 pub use crate::memory::initial_layout::{InitialLayout, NameTableMirroringSource};
 pub use crate::memory::ppu::chr_memory::{ChrMemory, ChrWindow, ChrType};
 pub use crate::memory::ppu::ppu_address::PpuAddress;

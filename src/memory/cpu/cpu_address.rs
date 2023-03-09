@@ -17,7 +17,7 @@ impl CpuAddress {
         CpuAddress::new(u16::from(low))
     }
 
-    pub fn to_raw(self) -> u16 {
+    pub const fn to_raw(self) -> u16 {
         self.0
     }
 

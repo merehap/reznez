@@ -1,6 +1,6 @@
 use crate::cartridge::Cartridge;
 use crate::memory::board::Board;
-use crate::memory::cpu::prg_memory::{PrgMemory, PrgWindow};
+use crate::memory::cpu::prg_memory::{PrgMemory, PrgWindows};
 use crate::memory::mapper::MapperParams;
 use crate::memory::ppu::chr_memory::{ChrMemory, ChrWindow};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
@@ -9,7 +9,7 @@ use crate::memory::bank_index::{BankIndex, BankIndexRegisters, BankIndexRegister
 pub struct InitialLayout {
     prg_max_bank_count: u16,
     prg_bank_size: usize,
-    prg_windows_by_board: &'static[(Board, &'static [PrgWindow])],
+    prg_windows_by_board: &'static[(Board, PrgWindows)],
 
     chr_max_bank_count: u16,
     chr_bank_size: usize,
@@ -27,9 +27,7 @@ impl InitialLayout {
 
     pub fn make_mapper_params(&'static self, cartridge: &Cartridge, board: Board) -> MapperParams {
         let prg_windows = self.lookup_prg_windows_by_board(board);
-        let prg_reg_ids: Vec<_> = prg_windows.iter()
-            .filter_map(|window| window.register_id())
-            .collect();
+        let prg_reg_ids: Vec<_> = prg_windows.active_register_ids();
         let mut prg_bank_index_registers = BankIndexRegisters::new(&prg_reg_ids);
         if let Some((register_id, bank_index)) = self.bank_index_register_override {
             prg_bank_index_registers.set(register_id, bank_index);
@@ -64,10 +62,10 @@ impl InitialLayout {
         MapperParams { prg_memory, chr_memory, name_table_mirroring }
     }
 
-    fn lookup_prg_windows_by_board(&self, target: Board) -> &[PrgWindow] {
-        for &(board, prg_windows) in self.prg_windows_by_board {
-            if board == target {
-                return prg_windows;
+    fn lookup_prg_windows_by_board(&self, target: Board) -> PrgWindows {
+        for (board, prg_windows) in self.prg_windows_by_board {
+            if *board == target {
+                return prg_windows.clone();
             }
         }
 
@@ -79,7 +77,7 @@ impl InitialLayout {
 pub struct InitialLayoutBuilder {
     prg_max_bank_count: Option<u16>,
     prg_bank_size: Option<usize>,
-    prg_windows_by_board: Option<&'static[(Board, &'static [PrgWindow])]>,
+    prg_windows_by_board: Option<&'static [(Board, PrgWindows)]>,
 
     chr_max_bank_count: Option<u16>,
     chr_bank_size: Option<usize>,
@@ -119,7 +117,7 @@ impl InitialLayoutBuilder {
 
     pub const fn prg_windows_by_board(
         &mut self,
-        value: &'static[(Board, &'static [PrgWindow])],
+        value: &'static[(Board, PrgWindows)],
     ) -> &mut InitialLayoutBuilder {
         self.prg_windows_by_board = Some(value);
         self

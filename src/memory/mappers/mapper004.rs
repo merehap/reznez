@@ -10,7 +10,7 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .build();
 
-const PRG_WINDOWS_C000_FIXED: &[PrgWindow] = &[
+const PRG_WINDOWS_C000_FIXED: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgType::WorkRam),
     PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgType::WorkRam),
     PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, PrgType::WorkRam),
@@ -19,10 +19,10 @@ const PRG_WINDOWS_C000_FIXED: &[PrgWindow] = &[
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::VariableBank(Rom, P1)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::SECOND_LAST)),
     PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::LAST)),
-];
+]);
 
 // Same as PRG_WINDOWS_C000_FIXED, except the 0x8000 and 0xC000 windows are swapped.
-const PRG_WINDOWS_8000_FIXED: &[PrgWindow] = &[
+const PRG_WINDOWS_8000_FIXED: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgType::WorkRam),
     PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgType::WorkRam),
     PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, PrgType::WorkRam),
@@ -31,7 +31,7 @@ const PRG_WINDOWS_8000_FIXED: &[PrgWindow] = &[
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::VariableBank(Rom, P1)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::VariableBank(Rom, P0)),
     PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::LAST)),
-];
+]);
 
 const CHR_BIG_WINDOWS_FIRST: &[ChrWindow] = &[
     // Big windows.
