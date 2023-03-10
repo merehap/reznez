@@ -417,9 +417,6 @@ impl Ppu {
                 mem.regs_mut().clear_sprite0_hit();
                 mem.regs_mut().clear_sprite_overflow();
             }
-            UpdateOamData => {
-                mem.regs_mut().oam_data = mem.oam().peek(mem.regs().oam_addr);
-            }
         }
     }
 

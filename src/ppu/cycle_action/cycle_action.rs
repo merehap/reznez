@@ -33,6 +33,4 @@ pub enum CycleAction {
     SetInitialScrollOffsets,
     SetInitialYScroll,
     ClearFlags,
-
-    UpdateOamData,
 }

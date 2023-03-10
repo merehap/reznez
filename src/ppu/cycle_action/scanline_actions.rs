@@ -7,7 +7,6 @@ lazy_static! {
     pub static ref VISIBLE_SCANLINE_ACTIONS: ScanlineActions = visible_scanline_actions();
     pub static ref EMPTY_SCANLINE_ACTIONS: ScanlineActions = empty_scanline_actions();
     pub static ref START_VBLANK_SCANLINE_ACTIONS: ScanlineActions = start_vblank_scanline_actions();
-    pub static ref VBLANK_SCANLINE_ACTIONS: ScanlineActions = vblank_scanline_actions();
     pub static ref PRE_RENDER_SCANLINE_ACTIONS: ScanlineActions = pre_render_scanline_actions();
 }
 
@@ -90,7 +89,6 @@ fn visible_scanline_actions() -> ScanlineActions {
     line
 }
 
-// TODO: Does UpdateOamData occur here despite 'vblank == false' ?
 fn empty_scanline_actions() -> ScanlineActions {
     ScanlineActions::new()
 }
@@ -99,21 +97,9 @@ fn empty_scanline_actions() -> ScanlineActions {
 fn start_vblank_scanline_actions() -> ScanlineActions {
     use CycleAction::*;
 
-    let mut scanline = vblank_scanline_actions();
+    let mut scanline = ScanlineActions::new();
     scanline.add(1, vec![StartVblank]);
     scanline.add(3, vec![RequestNmi]);
-    scanline
-}
-
-fn vblank_scanline_actions() -> ScanlineActions {
-    use CycleAction::*;
-
-    let mut scanline = ScanlineActions::new();
-    // Every cycle.
-    for cycle in 0..=340 {
-        scanline.add(cycle, vec![UpdateOamData]);
-    }
-
     scanline
 }
 

@@ -8,7 +8,6 @@ use crate::ppu::cycle_action::scanline_actions::{
     VISIBLE_SCANLINE_ACTIONS,
     EMPTY_SCANLINE_ACTIONS,
     START_VBLANK_SCANLINE_ACTIONS,
-    VBLANK_SCANLINE_ACTIONS,
     PRE_RENDER_SCANLINE_ACTIONS,
 };
 
@@ -27,7 +26,7 @@ fn ntsc_frame_actions() -> FrameActions {
     ntsc_frame.set_scanline_actions_at(         240, EMPTY_SCANLINE_ACTIONS.clone());
     ntsc_frame.set_scanline_actions_at(         241, START_VBLANK_SCANLINE_ACTIONS.clone());
     for scanline in 242..=260 {
-        ntsc_frame.set_scanline_actions_at(scanline, VBLANK_SCANLINE_ACTIONS.clone());
+        ntsc_frame.set_scanline_actions_at(scanline, EMPTY_SCANLINE_ACTIONS.clone());
     }
 
     ntsc_frame.set_scanline_actions_at(         261, PRE_RENDER_SCANLINE_ACTIONS.clone());
