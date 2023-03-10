@@ -81,10 +81,10 @@ impl Ppu {
 
     pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) -> StepResult {
         if self.clock.cycle() == 1 {
-            mem.regs_mut().maybe_decay_latch();
+            mem.regs_mut().maybe_decay_ppu_io_bus();
         }
 
-        let latch_access = mem.regs_mut().take_latch_access();
+        let latch_access = mem.regs_mut().take_io_bus_access();
 
         self.nmi_requested = false;
         if let Some(latch_access) = latch_access {
@@ -425,7 +425,7 @@ impl Ppu {
         mem: &mut PpuMemory,
         latch_access: LatchAccess,
     ) -> bool {
-        let value = mem.regs().latch_value();
+        let value = mem.regs().ppu_io_bus_value();
         let mut request_nmi = false;
 
         use AccessMode::*;

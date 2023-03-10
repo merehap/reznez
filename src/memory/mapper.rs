@@ -119,7 +119,11 @@ pub trait Mapper {
                     0x2001 => ppu_registers.read(RegisterType::Mask, reader),
                     0x2002 => ppu_registers.read(RegisterType::Status, reader),
                     0x2003 => ppu_registers.read(RegisterType::OamAddr, reader),
-                    0x2004 => oam.peek(ppu_registers.oam_addr),
+                    0x2004 => {
+                        let value = oam.peek(ppu_registers.oam_addr);
+                        ppu_registers.ppu_io_bus.update_from_read(RegisterType::OamData, value);
+                        value
+                    }
                     //0x2004 => ppu_registers.read(RegisterType::OamData, reader),
                     0x2005 => ppu_registers.read(RegisterType::Scroll, reader),
                     0x2006 => ppu_registers.read(RegisterType::PpuAddr, reader),

@@ -1,4 +1,6 @@
 ROADMAP
+Read PPU IO open bus for OAMDATA during rendering.
+Disable OAMDATA writes (other than address increment) during rendering
 Battletoads
 Work out priorities for WorkRam vs registers. Why does WorkRam need to be explicitly written to by each mapper?
 Move CPU bus into CpuMemory

@@ -1,4 +1,4 @@
-pub mod ppu_register_latch;
+pub mod ppu_io_bus;
 pub mod ppu_registers;
 pub mod register_type;
 

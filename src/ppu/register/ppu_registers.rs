@@ -1,7 +1,7 @@
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pattern_table::PatternTableSide;
-use crate::ppu::register::ppu_register_latch::PpuRegisterLatch;
+use crate::ppu::register::ppu_io_bus::PpuIoBus;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ctrl;
 use crate::ppu::register::registers::ctrl::{AddressIncrement, Ctrl};
@@ -22,8 +22,8 @@ pub struct PpuRegisters {
     pub(in crate::ppu) current_address: PpuAddress,
     pub(in crate::ppu) next_address: PpuAddress,
 
-    latch: PpuRegisterLatch,
-    latch_access: Option<LatchAccess>,
+    pub ppu_io_bus: PpuIoBus,
+    io_bus_access: Option<LatchAccess>,
 }
 
 impl PpuRegisters {
@@ -39,8 +39,8 @@ impl PpuRegisters {
             current_address: PpuAddress::ZERO,
             next_address: PpuAddress::ZERO,
 
-            latch: PpuRegisterLatch::new(),
-            latch_access: None,
+            ppu_io_bus: PpuIoBus::new(),
+            io_bus_access: None,
         }
     }
 
@@ -116,16 +116,16 @@ impl PpuRegisters {
         self.status.sprite_overflow = false;
     }
 
-    pub(in crate::ppu) fn latch_value(&self) -> u8 {
-        self.latch.value()
+    pub(in crate::ppu) fn ppu_io_bus_value(&self) -> u8 {
+        self.ppu_io_bus.value()
     }
 
-    pub(in crate::ppu) fn maybe_decay_latch(&mut self) {
-        self.latch.maybe_decay();
+    pub(in crate::ppu) fn maybe_decay_ppu_io_bus(&mut self) {
+        self.ppu_io_bus.maybe_decay();
     }
 
-    pub(in crate::ppu) fn take_latch_access(&mut self) -> Option<LatchAccess> {
-        self.latch_access.take()
+    pub(in crate::ppu) fn take_io_bus_access(&mut self) -> Option<LatchAccess> {
+        self.io_bus_access.take()
     }
 
     pub fn rendering_enabled(&self) -> bool {
@@ -142,7 +142,7 @@ impl PpuRegisters {
         peek: impl FnMut(PpuAddress) -> u8
     ) -> u8 {
         self.check(register_type, peek)
-            .unwrap_or(self.latch.value())
+            .unwrap_or(self.ppu_io_bus.value())
     }
 
     pub fn read(
@@ -150,12 +150,12 @@ impl PpuRegisters {
         register_type: RegisterType,
         mut read: impl FnMut(PpuAddress) -> u8,
     ) -> u8 {
-        // If a readable register is read from, update the latch.
+        // If a readable register is read from, update the ppu_io_bus.
         if let Some(register_value) = self.check(register_type, &mut read) {
-            self.latch_access =
+            self.io_bus_access =
                 Some(LatchAccess { register_type, access_mode: AccessMode::Read });
 
-            self.latch.update_from_read(register_type, register_value);
+            self.ppu_io_bus.update_from_read(register_type, register_value);
         }
 
         if register_type == RegisterType::PpuData {
@@ -163,14 +163,14 @@ impl PpuRegisters {
             self.current_address.advance(self.current_address_increment());
         }
 
-        self.latch.value()
+        self.ppu_io_bus.value()
     }
 
     pub fn write(&mut self, register_type: RegisterType, register_value: u8) {
-        self.latch_access =
+        self.io_bus_access =
             Some(LatchAccess { register_type, access_mode: AccessMode::Write });
 
-        self.latch.update_from_write(register_value);
+        self.ppu_io_bus.update_from_write(register_value);
 
         use RegisterType::*;
         match register_type {
@@ -194,15 +194,15 @@ impl PpuRegisters {
         match register_type {
             // Write-only registers.
             Ctrl | Mask | OamAddr | OamData | Scroll | PpuAddr => None,
-            // Retain the previous latch values for the unused bits of Status.
-            Status => Some(self.status.to_u8() | (self.latch.value() & 0b0001_1111)),
+            // Retain the previous ppu_io_bus values for the unused bits of Status.
+            Status => Some(self.status.to_u8() | (self.ppu_io_bus.value() & 0b0001_1111)),
             PpuData if self.current_address >= PpuAddress::PALETTE_TABLE_START => {
                 // When reading palette data only, read the current data pointed to
                 // by self.current_address, not what was previously pointed to.
                 let value = access(self.current_address);
-                // Retain the previous latch values for the unused bits of palette data.
-                let high_latch = self.latch.value() & 0b1100_0000;
-                Some(value | high_latch)
+                // Retain the previous ppu_io_bus values for the unused bits of palette data.
+                let high_ppu_io_bus = self.ppu_io_bus.value() & 0b1100_0000;
+                Some(value | high_ppu_io_bus)
             }
             PpuData => Some(self.pending_ppu_data),
         }

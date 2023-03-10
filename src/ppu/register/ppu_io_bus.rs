@@ -2,15 +2,15 @@ use crate::ppu::clock::MAX_SCANLINE;
 use crate::ppu::register::register_type::RegisterType;
 
 #[derive(Clone, Copy)]
-pub struct PpuRegisterLatch {
+pub struct PpuIoBus {
     value: u8,
     scanlines_until_decay: Option<u16>,
     scanlines_until_unused_status_bits_decay: Option<u16>,
 }
 
-impl PpuRegisterLatch {
-    pub fn new() -> PpuRegisterLatch {
-        PpuRegisterLatch {
+impl PpuIoBus {
+    pub fn new() -> PpuIoBus {
+        PpuIoBus {
             value: 0,
             scanlines_until_decay: None,
             scanlines_until_unused_status_bits_decay: None,
@@ -22,6 +22,7 @@ impl PpuRegisterLatch {
     }
 
     pub fn update_from_read(&mut self, register_type: RegisterType, value: u8) {
+        println!("Updating PPU bus from read of {register_type:?}:{value}");
         self.value = value;
 
         self.scanlines_until_unused_status_bits_decay =
