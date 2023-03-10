@@ -25,6 +25,7 @@ use crate::memory::ppu::vram::VramSide;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::register::register_type::RegisterType;
+use crate::ppu::sprite::oam::Oam;
 
 pub trait Mapper {
     fn params(&self) -> &MapperParams;
@@ -60,6 +61,7 @@ pub trait Mapper {
         &self,
         cpu_internal_ram: &CpuInternalRam,
         ppu_internal_ram: &PpuInternalRam,
+        oam: &Oam,
         ports: &Ports,
         ppu_registers: &PpuRegisters,
         apu_registers: &ApuRegisters,
@@ -99,6 +101,7 @@ pub trait Mapper {
         &mut self,
         cpu_internal_ram: &CpuInternalRam,
         ppu_internal_ram: &PpuInternalRam,
+        oam: &Oam,
         ports: &mut Ports,
         ppu_registers: &mut PpuRegisters,
         apu_registers: &mut ApuRegisters,
@@ -140,6 +143,7 @@ pub trait Mapper {
         &mut self,
         cpu_internal_ram: &mut CpuInternalRam,
         ppu_internal_ram: &mut PpuInternalRam,
+        oam: &mut Oam,
         ports: &mut Ports,
         ppu_registers: &mut PpuRegisters,
         apu_registers: &mut ApuRegisters,

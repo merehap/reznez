@@ -50,11 +50,11 @@ impl Oam {
         })
     }
 
-    pub fn read_sprite_data(&self, oam_index: OamIndex) -> u8 {
-        self.read(oam_index.to_u8())
+    pub fn peek_sprite_data(&self, oam_index: OamIndex) -> u8 {
+        self.peek(oam_index.to_u8())
     }
 
-    pub fn read(&self, index: u8) -> u8 {
+    pub fn peek(&self, index: u8) -> u8 {
         self.0[index as usize]
     }
 

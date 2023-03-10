@@ -609,12 +609,12 @@ impl Renderer for LayersRenderer {
         let mem = mem.as_ppu_memory();
 
         self.frame.clear();
-        ppu.oam().only_front_sprites().render(&mem, &mut self.frame);
+        mem.oam().only_front_sprites().render(&mem, &mut self.frame);
         self.buffer
             .place_frame(0, 245 + TOP_MENU_BAR_HEIGHT, &self.frame);
 
         self.frame.clear();
-        ppu.oam().only_back_sprites().render(&mem, &mut self.frame);
+        mem.oam().only_back_sprites().render(&mem, &mut self.frame);
         self.buffer
             .place_frame(261, 245 + TOP_MENU_BAR_HEIGHT, &self.frame);
 
@@ -727,7 +727,7 @@ impl Renderer for SpritesRenderer {
     }
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
-        let sprites = world.nes.ppu().oam().sprites();
+        let sprites = world.nes.memory_mut().as_ppu_memory().oam().sprites();
         let mem = world.nes.memory_mut().as_ppu_memory();
 
         for (index, sprite) in sprites.iter().enumerate() {

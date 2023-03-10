@@ -14,7 +14,6 @@ use crate::ppu::register::registers::attribute_register::AttributeRegister;
 use crate::ppu::register::registers::pattern_register::PatternRegister;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::sprite_attributes::SpriteAttributes;
-use crate::ppu::sprite::oam::Oam;
 use crate::ppu::sprite::oam_index::OamIndex;
 use crate::ppu::sprite::secondary_oam::SecondaryOam;
 use crate::ppu::sprite::oam_registers::OamRegisters;
@@ -22,7 +21,6 @@ use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 
 pub struct Ppu {
-    oam: Oam,
     oam_index: OamIndex,
     secondary_oam: SecondaryOam,
     oam_registers: OamRegisters,
@@ -51,7 +49,6 @@ pub struct Ppu {
 impl Ppu {
     pub fn new() -> Ppu {
         Ppu {
-            oam: Oam::new(),
             oam_index: OamIndex::new(),
             secondary_oam: SecondaryOam::new(),
             oam_registers: OamRegisters::new(),
@@ -76,10 +73,6 @@ impl Ppu {
 
             frame_actions: NTSC_FRAME_ACTIONS.clone(),
         }
-    }
-
-    pub fn oam(&self) -> &Oam {
-        &self.oam
     }
 
     pub fn clock(&self) -> &Clock {
@@ -225,7 +218,7 @@ impl Ppu {
             ReadOamByte => {
                 if !rendering_enabled { return; }
                 // This is a dummy read if OAM clear is active. TODO: Can this be removed?
-                mem.regs_mut().oam_data = self.oam.read_sprite_data(self.oam_index);
+                mem.regs_mut().oam_data = mem.oam().peek_sprite_data(self.oam_index);
                 if self.clear_oam {
                     mem.regs_mut().oam_data = 0xFF;
                 }
@@ -425,7 +418,7 @@ impl Ppu {
                 mem.regs_mut().clear_sprite_overflow();
             }
             UpdateOamData => {
-                mem.regs_mut().oam_data = self.oam.read(mem.regs().oam_addr);
+                mem.regs_mut().oam_data = mem.oam().peek(mem.regs().oam_addr);
             }
         }
     }
@@ -455,7 +448,7 @@ impl Ppu {
             (OamAddr, Write) => {}
             // 0x2004
             (OamData, Read) => {}
-            (OamData, Write) => self.write_oam_data(mem.regs_mut(), value),
+            (OamData, Write) => self.write_oam_data(mem, value),
             // 0x2005
             (Scroll, Read) => unreachable!(),
             (Scroll, Write) => self.write_scroll_dimension(mem.regs_mut(), value),
@@ -491,11 +484,11 @@ impl Ppu {
     }
 
     // Write 0x2003
-    fn write_oam_data(&mut self, regs: &mut PpuRegisters, value: u8) {
-        let oam_addr = regs.oam_addr;
-        self.oam.write(oam_addr, value);
+    fn write_oam_data(&mut self, mem: &mut PpuMemory, value: u8) {
+        let oam_addr = mem.regs().oam_addr;
+        mem.oam_mut().write(oam_addr, value);
         // Advance to next sprite byte to write.
-        regs.oam_addr = oam_addr.wrapping_add(1);
+        mem.regs_mut().oam_addr = oam_addr.wrapping_add(1);
     }
 
     // Write 0x2005

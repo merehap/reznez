@@ -13,6 +13,7 @@ use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::ppu::register::ppu_registers::PpuRegisters;
+use crate::ppu::sprite::oam::Oam;
 
 pub const NMI_VECTOR_LOW: CpuAddress    = CpuAddress::new(0xFFFA);
 pub const NMI_VECTOR_HIGH: CpuAddress   = CpuAddress::new(0xFFFB);
@@ -24,6 +25,7 @@ pub struct Memory {
     mapper: Box<dyn Mapper>,
     cpu_internal_ram: CpuInternalRam,
     ppu_internal_ram: PpuInternalRam,
+    oam: Oam,
     ports: Ports,
     ppu_registers: PpuRegisters,
     apu_registers: ApuRegisters,
@@ -40,6 +42,7 @@ impl Memory {
             mapper,
             cpu_internal_ram: CpuInternalRam::new(),
             ppu_internal_ram: PpuInternalRam::new(),
+            oam: Oam::new(),
             ports,
             ppu_registers: PpuRegisters::new(),
             apu_registers: ApuRegisters::default(),
@@ -87,6 +90,7 @@ impl<'a> CpuMemory<'a> {
         self.memory.mapper.cpu_peek(
             &self.memory.cpu_internal_ram,
             &self.memory.ppu_internal_ram,
+            &self.memory.oam,
             &self.memory.ports,
             &self.memory.ppu_registers,
             &self.memory.apu_registers,
@@ -99,6 +103,7 @@ impl<'a> CpuMemory<'a> {
         self.memory.mapper.cpu_read(
             &self.memory.cpu_internal_ram,
             &self.memory.ppu_internal_ram,
+            &self.memory.oam,
             &mut self.memory.ports,
             &mut self.memory.ppu_registers,
             &mut self.memory.apu_registers,
@@ -111,6 +116,7 @@ impl<'a> CpuMemory<'a> {
         self.memory.mapper.cpu_write(
             &mut self.memory.cpu_internal_ram,
             &mut self.memory.ppu_internal_ram,
+            &mut self.memory.oam,
             &mut self.memory.ports,
             &mut self.memory.ppu_registers,
             &mut self.memory.apu_registers,
@@ -179,6 +185,14 @@ impl<'a> PpuMemory<'a> {
         self.memory
             .mapper
             .ppu_write(&mut self.memory.ppu_internal_ram, address, value);
+    }
+
+    pub fn oam(&self) -> &Oam {
+        &self.memory.oam
+    }
+
+    pub fn oam_mut(&mut self) -> &mut Oam {
+        &mut self.memory.oam
     }
 
     pub fn process_end_of_ppu_cycle(&mut self) {
