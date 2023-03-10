@@ -161,7 +161,10 @@ pub trait Mapper {
                 0x2001 => ppu_registers.write(RegisterType::Mask, value),
                 0x2002 => ppu_registers.write(RegisterType::Status, value),
                 0x2003 => ppu_registers.write(RegisterType::OamAddr, value),
-                0x2004 => ppu_registers.write(RegisterType::OamData, value),
+                0x2004 => {
+                    oam.write(ppu_registers.oam_addr, value);
+                    ppu_registers.write(RegisterType::OamData, value);
+                }
                 0x2005 => ppu_registers.write(RegisterType::Scroll, value),
                 0x2006 => ppu_registers.write(RegisterType::PpuAddr, value),
                 0x2007 => {

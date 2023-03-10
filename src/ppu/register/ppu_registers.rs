@@ -128,19 +128,6 @@ impl PpuRegisters {
         self.latch_access.take()
     }
 
-    /*
-    pub fn update_ppu_data(&mut self, mut read: impl FnMut(PpuAddress) -> u8) {
-        let is_palette_data = self.current_address >= PpuAddress::PALETTE_TABLE_START;
-        // When reading palette data only, read the current data pointed to
-        // by self.current_address, not what was previously pointed to.
-        let value = if is_palette_data {
-            read(self.current_address)
-        } else {
-            self.pending_ppu_data
-        };
-    }
-    */
-
     pub fn rendering_enabled(&self) -> bool {
         self.mask.sprites_enabled || self.mask.background_enabled
     }
@@ -191,7 +178,7 @@ impl PpuRegisters {
             Mask => self.mask = mask::Mask::from_u8(register_value),
             Status => { /* Read-only. */ }
             OamAddr => self.oam_addr = register_value,
-            OamData => self.oam_data = register_value,
+            OamData => {}
             Scroll => {}
             PpuAddr => {}
             PpuData => self.current_address.advance(self.current_address_increment()),
@@ -206,10 +193,9 @@ impl PpuRegisters {
         use RegisterType::*;
         match register_type {
             // Write-only registers.
-            Ctrl | Mask | OamAddr | Scroll | PpuAddr => None,
+            Ctrl | Mask | OamAddr | OamData | Scroll | PpuAddr => None,
             // Retain the previous latch values for the unused bits of Status.
             Status => Some(self.status.to_u8() | (self.latch.value() & 0b0001_1111)),
-            OamData => Some(self.oam_data),
             PpuData if self.current_address >= PpuAddress::PALETTE_TABLE_START => {
                 // When reading palette data only, read the current data pointed to
                 // by self.current_address, not what was previously pointed to.
