@@ -1,6 +1,6 @@
 pub mod cpu;
 mod cycle_action;
-mod cycle_action_queue;
+mod step_queue;
 pub mod instruction;
 pub mod status;
 pub mod step;

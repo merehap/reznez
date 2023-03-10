@@ -7,13 +7,13 @@ use crate::cpu::instruction::Instruction;
 const CAPACITY: usize = 1000;
 
 #[derive(Debug)]
-pub struct CycleActionQueue {
+pub struct StepQueue {
     queue: VecDeque<Step>,
 }
 
-impl CycleActionQueue {
-    pub fn new() -> CycleActionQueue {
-        CycleActionQueue { queue: VecDeque::with_capacity(CAPACITY) }
+impl StepQueue {
+    pub fn new() -> StepQueue {
+        StepQueue { queue: VecDeque::with_capacity(CAPACITY) }
     }
 
     pub fn is_empty(&self) -> bool {

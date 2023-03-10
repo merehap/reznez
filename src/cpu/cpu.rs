@@ -2,7 +2,7 @@ use log::info;
 
 use crate::cpu::step::*;
 use crate::cpu::cycle_action::{CycleAction, From, To, Field};
-use crate::cpu::cycle_action_queue::CycleActionQueue;
+use crate::cpu::step_queue::StepQueue;
 use crate::cpu::instruction;
 use crate::cpu::instruction::{AccessMode, Instruction, OpCode};
 use crate::cpu::status;
@@ -24,7 +24,7 @@ pub struct Cpu {
     current_instruction: Option<Instruction>,
     next_op_code: Option<(u8, CpuAddress)>,
 
-    cycle_action_queue: CycleActionQueue,
+    step_queue: StepQueue,
     nmi_status: NmiStatus,
     irq_status: IrqStatus,
 
@@ -69,7 +69,7 @@ impl Cpu {
             current_instruction: None,
             next_op_code: None,
 
-            cycle_action_queue: CycleActionQueue::new(),
+            step_queue: StepQueue::new(),
             nmi_status: NmiStatus::Inactive,
             irq_status: IrqStatus::Inactive,
             dma_port: memory.ports().dma.clone(),
@@ -101,7 +101,7 @@ impl Cpu {
         self.address_carry = 0;
         self.current_instruction = None;
         self.next_op_code = None;
-        self.cycle_action_queue = CycleActionQueue::new();
+        self.step_queue = StepQueue::new();
         self.nmi_status = NmiStatus::Inactive;
         self.irq_status = IrqStatus::Inactive;
         self.cycle = 7;
@@ -166,15 +166,15 @@ impl Cpu {
         }
 
         if self.next_op_code.is_some() {
-            self.cycle_action_queue.enqueue_op_code_interpret();
+            self.step_queue.enqueue_op_code_interpret();
         }
 
-        if self.cycle_action_queue.is_empty() {
+        if self.step_queue.is_empty() {
             // Get ready to start the next instruction.
-            self.cycle_action_queue.enqueue_op_code_read();
+            self.step_queue.enqueue_op_code_read();
         }
 
-        let step = self.cycle_action_queue.dequeue()
+        let step = self.step_queue.dequeue()
             .expect("Ran out of CycleActions!");
         info!(target: "cpustep", "\tPC: {}, Cycle: {}, {:?}", self.program_counter, self.cycle, step);
         self.previous_data_bus_value = self.data_bus;
@@ -274,7 +274,7 @@ impl Cpu {
             YOffsetAddressBus => { self.address_bus.offset_low(self.y); }
             MaybeInsertOopsStep => {
                 if self.address_carry != 0 {
-                    self.cycle_action_queue.skip_to_front(ADDRESS_BUS_READ_STEP);
+                    self.step_queue.skip_to_front(ADDRESS_BUS_READ_STEP);
                 }
             }
             MaybeInsertBranchOopsStep => {
@@ -282,7 +282,7 @@ impl Cpu {
                     self.suppress_next_instruction_start = true;
                     self.suppress_program_counter_increment = true;
                     info!(target: "cpuoperation", "\tBranch crossed page boundary, 'Oops' cycle added.");
-                    self.cycle_action_queue.skip_to_front(READ_OP_CODE_STEP);
+                    self.step_queue.skip_to_front(READ_OP_CODE_STEP);
                 }
             }
             AddCarryToAddressBus => {
@@ -304,7 +304,7 @@ impl Cpu {
 
                 if self.dma_port.take_page().is_some() {
                     info!(target: "cpuoperation", "Starting DMA transfer at {}.", self.dma_port.current_address());
-                    self.cycle_action_queue.enqueue_dma_transfer(self.cycle);
+                    self.step_queue.enqueue_dma_transfer(self.cycle);
                     self.suppress_program_counter_increment = true;
                     return;
                 }
@@ -336,14 +336,14 @@ impl Cpu {
                 if self.nmi_status == NmiStatus::Active {
                     self.suppress_program_counter_increment = true;
                     self.current_instruction = None;
-                    self.cycle_action_queue.enqueue_nmi();
+                    self.step_queue.enqueue_nmi();
                     return;
                 }
 
                 if self.irq_status == IrqStatus::Active {
                     self.suppress_program_counter_increment = true;
                     self.current_instruction = None;
-                    self.cycle_action_queue.enqueue_irq();
+                    self.step_queue.enqueue_irq();
                     return;
                 }
 
@@ -354,7 +354,7 @@ impl Cpu {
                     self.suppress_program_counter_increment = true;
                 }
 
-                self.cycle_action_queue.enqueue_instruction(instruction);
+                self.step_queue.enqueue_instruction(instruction);
             }
             ExecuteOpCode => {
                 let value = self.previous_data_bus_value;
@@ -680,7 +680,7 @@ impl Cpu {
         self.address_carry = self.program_counter.offset_with_carry(self.previous_data_bus_value as i8);
         self.suppress_next_instruction_start = true;
         info!(target: "cpuoperation", "\tBranch taken, cycle added.");
-        self.cycle_action_queue.skip_to_front(BRANCH_TAKEN_STEP);
+        self.step_queue.skip_to_front(BRANCH_TAKEN_STEP);
     }
 }
 
