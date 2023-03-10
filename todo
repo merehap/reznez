@@ -39,6 +39,7 @@ Automatically add registers from every layout? Maybe not since certain layouts w
 Automatically mirror under-sized PRG?
 
 FAILING TESTS
+cpu_dummy_writes_oam
 ppu_vbl_nmi/rom_singles/10-even_odd_timing.nes
 oam stress
 
