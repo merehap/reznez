@@ -605,7 +605,7 @@ impl Renderer for LayersRenderer {
             &world.nes.frame().to_background_only(),
         );
 
-        let (ppu, mem) = world.nes.ppu_and_memory_mut();
+        let (_, mem) = world.nes.ppu_and_memory_mut();
         let mem = mem.as_ppu_memory();
 
         self.frame.clear();

@@ -15,7 +15,7 @@ pub struct PpuRegisters {
     pub(in crate::ppu) ctrl: Ctrl,
     pub mask: Mask,
     pub(in crate::ppu) status: Status,
-    pub(in crate::ppu) oam_addr: u8,
+    pub oam_addr: u8,
     pub(in crate::ppu) oam_data: u8,
     pub(in crate::ppu) pending_ppu_data: u8,
 
