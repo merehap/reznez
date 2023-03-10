@@ -18,23 +18,25 @@ pub struct Apu {
 }
 
 impl Apu {
-    pub fn new() -> Apu {
+    pub fn new(disable_audio: bool) -> Apu {
         // TODO: Select a proper capacity value.
         let pulse_queue = Arc::new(Mutex::new(VecDeque::with_capacity(MAX_QUEUE_LENGTH)));
         let muted = Arc::new(Mutex::new(false));
 
-        let cloned_queue = pulse_queue.clone();
-        let cloned_muted = muted.clone();
-        thread::spawn(move || {
-            let source = PulseWave::new(cloned_queue, cloned_muted);
-            let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-            let sink = Sink::try_new(&stream_handle).unwrap();
-            sink.append(source);
+        if !disable_audio {
+            let cloned_queue = pulse_queue.clone();
+            let cloned_muted = muted.clone();
+            thread::spawn(move || {
+                let source = PulseWave::new(cloned_queue, cloned_muted);
+                let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+                let sink = Sink::try_new(&stream_handle).unwrap();
+                sink.append(source);
 
-            loop {
-                thread::sleep(Duration::from_millis(1000))
-            }
-        });
+                loop {
+                    thread::sleep(Duration::from_millis(1000))
+                }
+            });
+        }
 
         Apu {
             pulse_queue,

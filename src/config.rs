@@ -23,6 +23,7 @@ pub struct Config {
     pub cartridge: Cartridge,
     pub system_palette: SystemPalette,
     pub target_frame_rate: TargetFrameRate,
+    pub disable_audio: bool,
     pub stop_frame: Option<u64>,
     pub frame_dump: bool,
     pub program_counter_source: ProgramCounterSource,
@@ -53,6 +54,7 @@ impl Config {
             cartridge,
             system_palette,
             target_frame_rate: opt.target_frame_rate,
+            disable_audio: opt.disable_audio,
             stop_frame: opt.stop_frame,
             frame_dump: opt.frame_dump,
             program_counter_source,
@@ -85,6 +87,9 @@ pub struct Opt {
 
     #[structopt(name = "stopframe", long)]
     pub stop_frame: Option<u64>,
+
+    #[structopt(name = "disableaudio", long)]
+    pub disable_audio: bool,
 
     #[structopt(name = "logcpuoperations", long)]
     pub log_cpu_operations: bool,

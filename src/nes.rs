@@ -43,7 +43,7 @@ impl Nes {
         Nes {
             cpu: Cpu::new(&mut memory.as_cpu_memory(), config.program_counter_source),
             ppu: Ppu::new(),
-            apu: Apu::new(),
+            apu: Apu::new(config.disable_audio),
             memory,
             cartridge: config.cartridge.clone(),
             frame: Frame::new(),
@@ -358,7 +358,7 @@ mod tests {
                 ProgramCounterSource::Override(CpuAddress::new(0x0000)),
             ),
             ppu: Ppu::new(),
-            apu: Apu::new(),
+            apu: Apu::new(true),
             memory,
             cartridge,
             frame: Frame::new(),

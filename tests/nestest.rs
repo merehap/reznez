@@ -29,6 +29,7 @@ fn nestest() {
         stop_frame: None,
         target_frame_rate: TargetFrameRate::Unbounded,
         override_program_counter: Some(CpuAddress::new(0xC000)),
+        disable_audio: true,
         log_cpu_operations: true,
         log_cpu_steps: true,
         frame_dump: false,
