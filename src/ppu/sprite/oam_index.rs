@@ -20,6 +20,15 @@ impl OamIndex {
         }
     }
 
+    pub fn from_u8(value: u8) -> OamIndex {
+        OamIndex {
+            sprite_index: value >> 2,
+            field_index: FieldIndex::from_u8(value & 0b11),
+            // This field keeps its initial value unless a sprite overflow occurs.
+            sprite_start_field_index: FieldIndex::YCoordinate,
+        }
+    }
+
     pub fn new_sprite_started(self) -> bool {
         self.field_index == self.sprite_start_field_index
     }
@@ -30,6 +39,11 @@ impl OamIndex {
 
     pub fn reset(&mut self) {
         *self = OamIndex::new();
+    }
+
+    pub fn increment(&mut self) {
+        // TODO: Make efficient?
+        *self = OamIndex::from_u8(self.to_u8().wrapping_add(1));
     }
 
     pub fn next_sprite(&mut self) -> bool {
@@ -72,6 +86,17 @@ enum FieldIndex {
 }
 
 impl FieldIndex {
+    pub fn from_u8(value: u8) -> FieldIndex {
+        use FieldIndex::*;
+        match value {
+            0 => YCoordinate,
+            1 => PatternIndex,
+            2 => Attributes,
+            3 => XCoordinate,
+            _ => unreachable!(),
+        }
+    }
+
     pub fn increment(&mut self) {
         use FieldIndex::*;
         *self = match self {

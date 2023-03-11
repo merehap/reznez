@@ -50,22 +50,20 @@ impl Oam {
         })
     }
 
-    pub fn peek_sprite_data(&self, oam_index: OamIndex) -> u8 {
-        self.peek(oam_index.to_u8())
+    pub fn peek(&self, address: OamIndex) -> u8 {
+        self.0[address.to_u8() as usize]
     }
 
-    pub fn peek(&self, index: u8) -> u8 {
-        self.0[index as usize]
-    }
-
-    pub fn write(&mut self, index: u8, value: u8) {
+    pub fn write(&mut self, address: OamIndex, value: u8) {
+        let address = address.to_u8();
         // The three unimplemented attribute bits should never be set.
-        let value = if index % 4 == ATTRIBUTE_BYTE_INDEX {
+        // FIXME: Use method, not mod.
+        let value = if address % 4 == ATTRIBUTE_BYTE_INDEX {
             value & 0b1110_0011
         } else {
             value
         };
-        self.0[index as usize] = value;
+        self.0[address as usize] = value;
     }
 
     // For debug windows only.

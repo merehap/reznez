@@ -220,7 +220,7 @@ impl Ppu {
             ReadOamByte => {
                 if !rendering_enabled { return; }
                 // This is a dummy read if OAM clear is active. TODO: Can this be removed?
-                mem.regs_mut().oam_data = mem.oam().peek_sprite_data(self.oam_index);
+                mem.regs_mut().oam_data = mem.oam().peek(self.oam_index);
                 if self.clear_oam {
                     mem.regs_mut().oam_data = 0xFF;
                 }
@@ -486,7 +486,7 @@ impl Ppu {
         let oam_addr = mem.regs().oam_addr;
         mem.oam_mut().write(oam_addr, value);
         // Advance to next sprite byte to write.
-        mem.regs_mut().oam_addr = oam_addr.wrapping_add(1);
+        mem.regs_mut().oam_addr.increment();
     }
 
     // Write 0x2005

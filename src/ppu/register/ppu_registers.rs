@@ -8,6 +8,7 @@ use crate::ppu::register::registers::ctrl::{AddressIncrement, Ctrl};
 use crate::ppu::register::registers::mask;
 use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::register::registers::status::Status;
+use crate::ppu::sprite::oam_index::OamIndex;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 
 #[derive(Clone)]
@@ -15,7 +16,7 @@ pub struct PpuRegisters {
     pub(in crate::ppu) ctrl: Ctrl,
     pub mask: Mask,
     pub(in crate::ppu) status: Status,
-    pub oam_addr: u8,
+    pub oam_addr: OamIndex,
     pub(in crate::ppu) oam_data: u8,
     pub(in crate::ppu) pending_ppu_data: u8,
 
@@ -32,7 +33,7 @@ impl PpuRegisters {
             ctrl: Ctrl::new(),
             mask: Mask::all_disabled(),
             status: Status::new(),
-            oam_addr: 0,
+            oam_addr: OamIndex::new(),
             oam_data: 0,
             pending_ppu_data: 0,
 
@@ -177,7 +178,7 @@ impl PpuRegisters {
             Ctrl => self.ctrl = ctrl::Ctrl::from_u8(register_value),
             Mask => self.mask = mask::Mask::from_u8(register_value),
             Status => { /* Read-only. */ }
-            OamAddr => self.oam_addr = register_value,
+            OamAddr => self.oam_addr = OamIndex::from_u8(register_value),
             OamData => {}
             Scroll => {}
             PpuAddr => {}
