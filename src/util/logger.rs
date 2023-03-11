@@ -8,6 +8,8 @@ pub fn init(logger: Logger) -> Result<(), SetLoggerError> {
 pub struct Logger {
     pub log_cpu_operations: bool,
     pub log_cpu_steps: bool,
+    pub log_ppu_operations: bool,
+    pub log_ppu_steps: bool,
 }
 
 impl log::Log for Logger {
@@ -16,6 +18,8 @@ impl log::Log for Logger {
             "" => true,
             "cpuoperation" => self.log_cpu_operations,
             "cpustep" => self.log_cpu_steps,
+            "ppuoperation" => self.log_ppu_operations,
+            "ppustep" => self.log_ppu_steps,
             target => {
                 let chunks: Vec<&str> = target.split("::").collect();
                 match chunks[..] {

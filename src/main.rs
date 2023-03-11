@@ -35,6 +35,8 @@ fn main() {
     logger::init(Logger {
         log_cpu_operations: opt.log_cpu_operations,
         log_cpu_steps: opt.log_cpu_steps,
+        log_ppu_operations: opt.log_ppu_operations,
+        log_ppu_steps: opt.log_ppu_steps,
     }).unwrap();
 
     if opt.analysis {

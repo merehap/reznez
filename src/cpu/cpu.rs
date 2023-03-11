@@ -777,7 +777,12 @@ mod tests {
 
     #[test]
     fn nmi_after_instruction() {
-        logger::init(Logger { log_cpu_operations: true, log_cpu_steps: true }).unwrap();
+        logger::init(Logger {
+            log_cpu_operations: true,
+            log_cpu_steps: true,
+            log_ppu_operations: false,
+            log_ppu_steps: false,
+        }).unwrap();
 
         let nmi_vector = CpuAddress::new(0xC000);
         let reset_vector = CpuAddress::new(0x8000);

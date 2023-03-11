@@ -97,6 +97,12 @@ pub struct Opt {
     #[structopt(name = "logcpusteps", long)]
     pub log_cpu_steps: bool,
 
+    #[structopt(name = "logppuoperations", long)]
+    pub log_ppu_operations: bool,
+
+    #[structopt(name = "logppusteps", long)]
+    pub log_ppu_steps: bool,
+
     #[structopt(name = "framedump", long)]
     pub frame_dump: bool,
 
