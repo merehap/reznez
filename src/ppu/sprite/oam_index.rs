@@ -6,7 +6,6 @@ pub struct OamIndex {
     field_index: FieldIndex,
     // Buggy sprite overflow offset.
     sprite_start_field_index: FieldIndex,
-    end_reached: bool,
 }
 
 impl OamIndex {
@@ -18,16 +17,11 @@ impl OamIndex {
             field_index: FieldIndex::YCoordinate,
             // This field keeps its initial value unless a sprite overflow occurs.
             sprite_start_field_index: FieldIndex::YCoordinate,
-            end_reached: false,
         }
     }
 
     pub fn new_sprite_started(self) -> bool {
         self.field_index == self.sprite_start_field_index
-    }
-
-    pub fn end_reached(self) -> bool {
-        self.end_reached
     }
 
     pub fn is_at_sprite_0(self) -> bool {
@@ -38,23 +32,24 @@ impl OamIndex {
         *self = OamIndex::new();
     }
 
-    pub fn next_sprite(&mut self) {
-        if self.sprite_index == OamIndex::MAX_SPRITE_INDEX {
-            self.end_reached = true;
-        }
-
-        if self.end_reached {
+    pub fn next_sprite(&mut self) -> bool {
+        let end_reached = self.sprite_index == OamIndex::MAX_SPRITE_INDEX;
+        if end_reached {
             self.sprite_index = 0;
         } else {
             self.sprite_index += 1;
         }
+
+        end_reached
     }
 
-    pub fn next_field(&mut self) {
+    pub fn next_field(&mut self) -> bool {
         self.field_index.increment();
         let carry = self.field_index == FieldIndex::YCoordinate;
         if carry {
-            self.next_sprite();
+            self.next_sprite()
+        } else {
+            false
         }
     }
 

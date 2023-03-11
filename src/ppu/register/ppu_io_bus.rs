@@ -22,7 +22,6 @@ impl PpuIoBus {
     }
 
     pub fn update_from_read(&mut self, register_type: RegisterType, value: u8) {
-        println!("Updating PPU bus from read of {register_type:?}:{value}");
         self.value = value;
 
         self.scanlines_until_unused_status_bits_decay =

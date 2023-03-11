@@ -93,7 +93,6 @@ fn empty_scanline_actions() -> ScanlineActions {
     ScanlineActions::new()
 }
 
-// TODO: Determine if UpdateOamData actually occurs on cycle 0 and 1.
 fn start_vblank_scanline_actions() -> ScanlineActions {
     use CycleAction::*;
 
@@ -171,7 +170,7 @@ fn pre_render_scanline_actions() -> ScanlineActions {
     scanline.add(          336, vec![GetPatternHighByte       , GotoNextTileColumn, PrepareForNextPixel]);
     scanline.add(          337, vec![PrepareForNextTile                                                ]);
 
-    // Unused name table fetches.
+    // Dummy name table fetches.
     scanline.add(          338, vec![GetPatternIndex                                                   ]);
     scanline.add(          340, vec![GetPatternIndex                                                   ]);
 

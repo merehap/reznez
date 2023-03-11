@@ -26,6 +26,7 @@ pub struct Ppu {
     oam_registers: OamRegisters,
     oam_register_index: usize,
     clear_oam: bool,
+    all_sprites_evaluated: bool,
 
     clock: Clock,
 
@@ -54,6 +55,7 @@ impl Ppu {
             oam_registers: OamRegisters::new(),
             oam_register_index: 0,
             clear_oam: false,
+            all_sprites_evaluated: false,
 
             clock: Clock::new(),
 
@@ -232,16 +234,14 @@ impl Ppu {
                     return;
                 }
 
-                if self.oam_index.end_reached() {
-                    // Reading and incrementing still happen after sprite evaluation is
+                if self.all_sprites_evaluated {
+                    // TODO: Reading and incrementing still happen after sprite evaluation is
                     // complete, but writes fail (i.e. they don't happen).
-                    // TODO: Writes failing should result in a read occuring here.
-                    self.oam_index.next_sprite();
                     return;
                 }
 
                 if self.secondary_oam.is_full() {
-                    // TODO: Does this go before oam_index.end_reached()?
+                    // TODO: self.all_sprites_evaluated?
                     mem.regs_mut().oam_data = self.secondary_oam.read();
                 } else {
                     self.secondary_oam.write(mem.regs().oam_data);
@@ -250,7 +250,7 @@ impl Ppu {
                 if !self.oam_index.new_sprite_started() {
                     // The current sprite is in range, copy one more byte of its data over.
                     self.secondary_oam.advance();
-                    self.oam_index.next_field();
+                    self.all_sprites_evaluated = self.oam_index.next_field();
                     return;
                 }
 
@@ -269,7 +269,7 @@ impl Ppu {
                     }
 
                     self.secondary_oam.advance();
-                    self.oam_index.next_field();
+                    self.all_sprites_evaluated = self.oam_index.next_field();
                     return;
                 }
 
@@ -279,7 +279,7 @@ impl Ppu {
                     self.oam_index.corrupt_sprite_y_index();
                 }
 
-                self.oam_index.next_sprite();
+                self.all_sprites_evaluated = self.oam_index.next_sprite();
             }
             ReadSpriteY => {
                 if !rendering_enabled { return; }
@@ -387,6 +387,7 @@ impl Ppu {
                 self.oam_index.reset();
             }
             ResetForTransferToOamRegisters => {
+                self.all_sprites_evaluated = false;
                 // TODO: Determine if this needs to occur on cycle 256 instead.
                 self.secondary_oam.reset_index();
                 self.oam_registers.set_sprite_0_presence(self.sprite_0_present);
