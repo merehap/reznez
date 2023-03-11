@@ -1,5 +1,5 @@
 pub mod oam;
-pub mod oam_index;
+pub mod oam_address;
 pub mod oam_registers;
 pub mod secondary_oam;
 pub mod sprite;

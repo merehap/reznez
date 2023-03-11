@@ -14,14 +14,14 @@ use crate::ppu::register::registers::attribute_register::AttributeRegister;
 use crate::ppu::register::registers::pattern_register::PatternRegister;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::sprite_attributes::SpriteAttributes;
-use crate::ppu::sprite::oam_index::OamIndex;
+use crate::ppu::sprite::oam_address::OamAddress;
 use crate::ppu::sprite::secondary_oam::SecondaryOam;
 use crate::ppu::sprite::oam_registers::OamRegisters;
 use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 
 pub struct Ppu {
-    oam_index: OamIndex,
+    oam_addr: OamAddress,
     secondary_oam: SecondaryOam,
     oam_registers: OamRegisters,
     oam_register_index: usize,
@@ -50,7 +50,7 @@ pub struct Ppu {
 impl Ppu {
     pub fn new() -> Ppu {
         Ppu {
-            oam_index: OamIndex::new(),
+            oam_addr: OamAddress::new(),
             secondary_oam: SecondaryOam::new(),
             oam_registers: OamRegisters::new(),
             oam_register_index: 0,
@@ -220,7 +220,7 @@ impl Ppu {
             ReadOamByte => {
                 if !rendering_enabled { return; }
                 // This is a dummy read if OAM clear is active. TODO: Can this be removed?
-                mem.regs_mut().oam_data = mem.oam().peek(self.oam_index);
+                mem.regs_mut().oam_data = mem.oam().peek(self.oam_addr);
                 if self.clear_oam {
                     mem.regs_mut().oam_data = 0xFF;
                 }
@@ -247,10 +247,10 @@ impl Ppu {
                     self.secondary_oam.write(mem.regs().oam_data);
                 }
 
-                if !self.oam_index.new_sprite_started() {
+                if !self.oam_addr.new_sprite_started() {
                     // The current sprite is in range, copy one more byte of its data over.
                     self.secondary_oam.advance();
-                    self.all_sprites_evaluated = self.oam_index.next_field();
+                    self.all_sprites_evaluated = self.oam_addr.next_field();
                     return;
                 }
 
@@ -260,7 +260,7 @@ impl Ppu {
                     && let Some(offset) = pixel_row.difference(top_sprite_row)
                     && offset < (mem.regs().sprite_height() as u8)
                 {
-                    if self.oam_index.is_at_sprite_0() {
+                    if self.oam_addr.is_at_sprite_0() {
                         self.sprite_0_present = true;
                     }
 
@@ -269,17 +269,17 @@ impl Ppu {
                     }
 
                     self.secondary_oam.advance();
-                    self.all_sprites_evaluated = self.oam_index.next_field();
+                    self.all_sprites_evaluated = self.oam_addr.next_field();
                     return;
                 }
 
                 if self.secondary_oam.is_full() {
                     // Sprite overflow hardware bug
                     // https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
-                    self.oam_index.corrupt_sprite_y_index();
+                    self.oam_addr.corrupt_sprite_y_index();
                 }
 
-                self.all_sprites_evaluated = self.oam_index.next_sprite();
+                self.all_sprites_evaluated = self.oam_addr.next_sprite();
             }
             ReadSpriteY => {
                 if !rendering_enabled { return; }
@@ -384,7 +384,7 @@ impl Ppu {
                 self.clear_oam = false;
                 self.oam_register_index = 0;
                 self.sprite_0_present = false;
-                self.oam_index.reset();
+                self.oam_addr.reset();
             }
             ResetForTransferToOamRegisters => {
                 self.all_sprites_evaluated = false;

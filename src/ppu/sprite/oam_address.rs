@@ -1,5 +1,5 @@
 #[derive(Clone, Copy, Debug)]
-pub struct OamIndex {
+pub struct OamAddress {
     // "n" in the documentation
     sprite_index: u8,
     // "m" in the documentation
@@ -8,11 +8,11 @@ pub struct OamIndex {
     sprite_start_field_index: FieldIndex,
 }
 
-impl OamIndex {
+impl OamAddress {
     const MAX_SPRITE_INDEX: u8 = 63;
 
-    pub fn new() -> OamIndex {
-        OamIndex {
+    pub fn new() -> OamAddress {
+        OamAddress {
             sprite_index: 0,
             field_index: FieldIndex::YCoordinate,
             // This field keeps its initial value unless a sprite overflow occurs.
@@ -20,8 +20,8 @@ impl OamIndex {
         }
     }
 
-    pub fn from_u8(value: u8) -> OamIndex {
-        OamIndex {
+    pub fn from_u8(value: u8) -> OamAddress {
+        OamAddress {
             sprite_index: value >> 2,
             field_index: FieldIndex::from_u8(value & 0b11),
             // This field keeps its initial value unless a sprite overflow occurs.
@@ -38,16 +38,16 @@ impl OamIndex {
     }
 
     pub fn reset(&mut self) {
-        *self = OamIndex::new();
+        *self = OamAddress::new();
     }
 
     pub fn increment(&mut self) {
         // TODO: Make efficient?
-        *self = OamIndex::from_u8(self.to_u8().wrapping_add(1));
+        *self = OamAddress::from_u8(self.to_u8().wrapping_add(1));
     }
 
     pub fn next_sprite(&mut self) -> bool {
-        let end_reached = self.sprite_index == OamIndex::MAX_SPRITE_INDEX;
+        let end_reached = self.sprite_index == OamAddress::MAX_SPRITE_INDEX;
         if end_reached {
             self.sprite_index = 0;
         } else {

@@ -1,7 +1,7 @@
 use crate::memory::memory::PpuMemory;
 use crate::ppu::pixel_index::PixelRow;
 use crate::ppu::render::frame::Frame;
-use crate::ppu::sprite::oam_index::OamIndex;
+use crate::ppu::sprite::oam_address::OamAddress;
 use crate::ppu::sprite::sprite::Sprite;
 use crate::ppu::sprite::sprite_attributes::Priority;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
@@ -50,11 +50,11 @@ impl Oam {
         })
     }
 
-    pub fn peek(&self, address: OamIndex) -> u8 {
+    pub fn peek(&self, address: OamAddress) -> u8 {
         self.0[address.to_u8() as usize]
     }
 
-    pub fn write(&mut self, address: OamIndex, value: u8) {
+    pub fn write(&mut self, address: OamAddress, value: u8) {
         let address = address.to_u8();
         // The three unimplemented attribute bits should never be set.
         // FIXME: Use method, not mod.
