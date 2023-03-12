@@ -1,3 +1,5 @@
+use log::info;
+
 use crate::memory::memory::PpuMemory;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::clock::Clock;
@@ -375,32 +377,59 @@ impl Ppu {
                 }
             }
 
-            ResetForOamClear => {
+            StartVisibleScanlines => {
+                info!(target: "ppuoperation", "{}\tSTARTING VISIBLE SCANLINES.", self.clock);
+            }
+            StartPostRenderScanline => {
+                info!(target: "ppuoperation", "{}\tSTARTING POST-RENDER SCANLINE", self.clock);
+            }
+            StartVblankScanlines => {
+                info!(target: "ppuoperation", "{}\tSTARTING VBLANK SCANLINES.", self.clock);
+            }
+            StartPreRenderScanline => {
+                info!(target: "ppuoperation", "{}\tSTARTING PRE-RENDER SCANLINE.", self.clock);
+            }
+
+            StartReadingBackgroundTiles => {
+                info!(target: "ppuoperation", "{}\t\tStarting to read background tiles.", self.clock);
+            }
+            StopReadingBackgroundTiles => {
+                info!(target: "ppuoperation", "{}\t\tBackground tile reading ended.", self.clock);
+            }
+
+            StartClearingSecondaryOam => {
+                info!(target: "ppuoperation", "{}\t\tStarting to clear secondary OAM.", self.clock);
                 self.secondary_oam.reset_index();
                 self.clear_oam = true;
             }
-            ResetForSpriteEvaluation => {
+            StartSpriteEvaluation => {
+                info!(target: "ppuoperation", "{}\t\tStarting sprite evaluation (secondary OAM clear ended).", self.clock);
                 self.secondary_oam.reset_index();
                 self.clear_oam = false;
                 self.oam_register_index = 0;
                 self.sprite_0_present = false;
                 self.oam_addr.reset();
             }
-            ResetForTransferToOamRegisters => {
+            StartLoadingOamRegisters => {
+                info!(target: "ppuoperation", "{}\t\tStarting to load OAM registers (sprite evaluation ended).", self.clock);
                 self.all_sprites_evaluated = false;
                 // TODO: Determine if this needs to occur on cycle 256 instead.
                 self.secondary_oam.reset_index();
                 self.oam_registers.set_sprite_0_presence(self.sprite_0_present);
             }
+            StopLoadingOamRegisters => {
+                info!(target: "ppuoperation", "{}\t\tLoading OAM registers ended.", self.clock);
+            }
 
             StartVblank => {
                 if !self.suppress_vblank_active {
-                    mem.regs_mut().start_vblank();
+                    mem.regs_mut().start_vblank(&self.clock);
                 }
 
                 self.suppress_vblank_active = false;
             }
             RequestNmi => {
+                info!(target: "ppuoperation", "{}\t\t\tNMI requested.", self.clock);
                 self.nmi_requested = true;
             }
             SetInitialScrollOffsets => {
@@ -414,7 +443,7 @@ impl Ppu {
             }
 
             ClearFlags => {
-                mem.regs_mut().stop_vblank();
+                mem.regs_mut().stop_vblank(&self.clock);
                 mem.regs_mut().clear_sprite0_hit();
                 mem.regs_mut().clear_sprite_overflow();
             }
@@ -472,7 +501,7 @@ impl Ppu {
 
     // Read 0x2002
     fn read_status(&mut self, regs: &mut PpuRegisters) {
-        regs.stop_vblank();
+        regs.stop_vblank(&self.clock);
         // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
         if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
             self.suppress_vblank_active = true;

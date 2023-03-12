@@ -39,6 +39,10 @@ impl log::Log for Logger {
                 print!("{} - ", record.level());
             }
 
+            if record.target() == "ppuoperation" {
+                print!("PPU ");
+            }
+
             println!("{}", record.args());
         }
     }

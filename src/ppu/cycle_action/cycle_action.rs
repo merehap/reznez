@@ -24,9 +24,17 @@ pub enum CycleAction {
     ReadSpriteX,
     DummyReadSpriteX,
 
-    ResetForOamClear,
-    ResetForSpriteEvaluation,
-    ResetForTransferToOamRegisters,
+    StartVisibleScanlines,
+    StartPostRenderScanline,
+    StartVblankScanlines,
+    StartPreRenderScanline,
+
+    StartReadingBackgroundTiles,
+    StopReadingBackgroundTiles,
+    StartClearingSecondaryOam,
+    StartSpriteEvaluation,
+    StartLoadingOamRegisters,
+    StopLoadingOamRegisters,
 
     StartVblank,
     RequestNmi,

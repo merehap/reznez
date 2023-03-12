@@ -4,9 +4,11 @@ use lazy_static::lazy_static;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 
 lazy_static! {
+    pub static ref FIRST_VISIBLE_SCANLINE_ACTIONS: ScanlineActions = first_visible_scanline_actions();
     pub static ref VISIBLE_SCANLINE_ACTIONS: ScanlineActions = visible_scanline_actions();
-    pub static ref EMPTY_SCANLINE_ACTIONS: ScanlineActions = empty_scanline_actions();
+    pub static ref POST_RENDER_SCANLINE_ACTIONS: ScanlineActions = post_render_scanline_actions();
     pub static ref START_VBLANK_SCANLINE_ACTIONS: ScanlineActions = start_vblank_scanline_actions();
+    pub static ref EMPTY_SCANLINE_ACTIONS: ScanlineActions = empty_scanline_actions();
     pub static ref PRE_RENDER_SCANLINE_ACTIONS: ScanlineActions = pre_render_scanline_actions();
 }
 
@@ -16,8 +18,13 @@ fn visible_scanline_actions() -> ScanlineActions {
 
     let mut line = ScanlineActions::new();
     //           ||CYCLE||       ||---------BACKGROUND-TILE-ACTIONS---------||  ||-SPRITE--ACTIONS-||  ||-----DISPLAY-ACTIONS-----||
-    line.add(            1, vec![                                               ResetForOamClear                                    ]);
-    line.add(           65, vec![                                               ResetForSpriteEvaluation                            ]);
+    line.add(          321, vec![StartReadingBackgroundTiles                                                                        ]);
+    line.add(          256, vec![StopReadingBackgroundTiles                                                                         ]);
+
+    line.add(            1, vec![                                               StartClearingSecondaryOam                           ]);
+    line.add(           65, vec![                                               StartSpriteEvaluation                               ]);
+    line.add(          257, vec![                                               StartLoadingOamRegisters                            ]);
+    line.add(          321, vec![                                               StopLoadingOamRegisters                             ]);
 
     // Fetch the remaining 31 usable background tiles for the current scanline.
     // Secondary OAM clearing then sprite evaluation, transfering OAM to secondary OAM.
@@ -45,7 +52,7 @@ fn visible_scanline_actions() -> ScanlineActions {
     line.add(          254, vec![GetPatternLowByte        ,                     WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
     line.add(          255, vec![                                               ReadOamByte          , SetPixel, PrepareForNextPixel]);
     line.add(          256, vec![GetPatternHighByte       , GotoNextPixelRow  , WriteSecondaryOamByte, SetPixel, PrepareForNextPixel]);
-    line.add(          257, vec![PrepareForNextTile       , ResetTileColumn   , ResetForTransferToOamRegisters                      ]);
+    line.add(          257, vec![PrepareForNextTile       , ResetTileColumn                                                         ]);
 
     // Transfer secondary OAM to OAM registers and fetch sprite pattern data.
     // Cycles 257 through 320
@@ -89,17 +96,24 @@ fn visible_scanline_actions() -> ScanlineActions {
     line
 }
 
-fn empty_scanline_actions() -> ScanlineActions {
-    ScanlineActions::new()
+fn post_render_scanline_actions() -> ScanlineActions {
+    let mut post_render_scanline = ScanlineActions::new();
+    post_render_scanline.prepend(0, CycleAction::StartPostRenderScanline);
+    post_render_scanline
 }
 
 fn start_vblank_scanline_actions() -> ScanlineActions {
     use CycleAction::*;
 
     let mut scanline = ScanlineActions::new();
+    scanline.add(0, vec![StartVblankScanlines]);
     scanline.add(1, vec![StartVblank]);
     scanline.add(3, vec![RequestNmi]);
     scanline
+}
+
+fn empty_scanline_actions() -> ScanlineActions {
+    ScanlineActions::new()
 }
 
 #[allow(clippy::identity_op)]
@@ -109,6 +123,7 @@ fn pre_render_scanline_actions() -> ScanlineActions {
     let mut scanline = ScanlineActions::new();
     // Clear vblank, sprite 0 hit, and sprite overflow.
     scanline.add(            1, vec![ClearFlags                                                        ]);
+    scanline.add(          321, vec![StartReadingBackgroundTiles                                                                        ]);
 
     //               ||CYCLE||       ||---------BACKGROUND-TILE-ACTIONS---------|| ||-DISPLAY-ACTIONS-||
     // Fetch the remaining 31 used background tiles for the current scanline.
@@ -177,6 +192,12 @@ fn pre_render_scanline_actions() -> ScanlineActions {
     scanline
 }
 
+fn first_visible_scanline_actions() -> ScanlineActions {
+    let mut first_visible_scanline = VISIBLE_SCANLINE_ACTIONS.clone();
+    first_visible_scanline.prepend(1, CycleAction::StartVisibleScanlines);
+    first_visible_scanline
+}
+
 #[derive(Clone)]
 pub struct ScanlineActions {
     all_cycle_actions: Box<[Vec<CycleAction>; 341]>,
@@ -195,5 +216,9 @@ impl ScanlineActions {
 
     fn add(&mut self, cycle: usize, mut actions: Vec<CycleAction>) {
         self.all_cycle_actions[cycle].append(&mut actions);
+    }
+
+    pub(in crate::ppu::cycle_action) fn prepend(&mut self, cycle: usize, action: CycleAction) {
+        self.all_cycle_actions[cycle].insert(0, action);
     }
 }

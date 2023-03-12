@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::ppu::pixel_index::PixelRow;
 
 pub const MAX_SCANLINE: u16 = 261;
@@ -63,5 +65,11 @@ impl Clock {
                 self.cycle += 1;
             }
         }
+    }
+}
+
+impl fmt::Display for Clock {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "F:{},S:{:03},C:{:03}", self.frame, self.scanline, self.cycle)
     }
 }

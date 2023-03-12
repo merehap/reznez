@@ -1,4 +1,7 @@
+use log::info;
+
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
+use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::register::ppu_io_bus::PpuIoBus;
@@ -93,11 +96,16 @@ impl PpuRegisters {
         self.next_address.y_scroll()
     }
 
-    pub(in crate::ppu) fn start_vblank(&mut self) {
+    pub(in crate::ppu) fn start_vblank(&mut self, clock: &Clock) {
+        info!(target: "ppuoperation", "{}\t\tStarting vblank.", clock);
         self.status.vblank_active = true;
     }
 
-    pub(in crate::ppu) fn stop_vblank(&mut self) {
+    pub(in crate::ppu) fn stop_vblank(&mut self, clock: &Clock) {
+        if self.status.vblank_active {
+            info!(target: "ppuoperation", "{}\t\tStopping vblank.", clock);
+        }
+
         self.status.vblank_active = false;
     }
 
