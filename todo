@@ -12,7 +12,6 @@ Rename CycleAction to StepAction.
 Bus Conflicts
 Don't display bottom tiles of screen by default (see Aladdin junk tiles)
 Separate attribute table from name table?
-oam_stress
 Proper encapsulation for PPU registers
 Improve cycle accuracy of undocumented instructions
 Open Bus for joysticks.
@@ -41,9 +40,7 @@ Automatically add registers from every layout? Maybe not since certain layouts w
 Automatically mirror under-sized PRG?
 
 FAILING TESTS
-cpu_dummy_writes_oam
 ppu_vbl_nmi/rom_singles/10-even_odd_timing.nes
-oam stress
 
 ---------------------GAMES------------------------------------
 MAPPER 0

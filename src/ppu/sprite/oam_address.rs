@@ -1,6 +1,6 @@
 use log::info;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct OamAddress {
     // "n" in the documentation
     sprite_index: u8,
@@ -85,7 +85,7 @@ impl OamAddress {
     }
 }
 
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 enum FieldIndex {
     YCoordinate  = 0,
     PatternIndex = 1,
