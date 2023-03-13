@@ -295,11 +295,13 @@ pub enum OpCode {
     ARR,
     XAA,
     AXS,
+    // a.k.a. SHA
     AHX,
     // a.k.a. SYA
     SHY,
     // a.k.a. SXA
     SHX,
+    // a.k.a. ANE
     TAS,
     LAS,
 

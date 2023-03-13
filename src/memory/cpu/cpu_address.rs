@@ -47,7 +47,7 @@ impl CpuAddress {
 
     pub fn offset_with_carry(&mut self, value: i8) -> i8 {
         let temp = self.offset(value);
-        let carry: i8 = (i16::from(temp.high_byte()) - i16::from(self.high_byte())).try_into().unwrap();
+        let carry = (i16::from(temp.high_byte()) - i16::from(self.high_byte())) as i8;
         *self = CpuAddress::from_low_high(temp.low_byte(), self.high_byte());
         carry
     }

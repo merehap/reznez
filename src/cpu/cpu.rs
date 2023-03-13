@@ -478,7 +478,30 @@ impl Cpu {
                     DCP => {
                         self.data_bus = self.data_bus.wrapping_sub(1);
                         self.cmp(self.data_bus);
-                    },
+                    }
+
+                    TAS => {
+                        self.data_bus = (self.a | 0xEE) & self.x & self.data_bus;
+                        self.a = self.data_bus;
+                    }
+                    LAS => {
+                        let value = memory.read(self.address_bus).unwrap_or(self.data_bus)
+                            & memory.stack_pointer();
+                        self.a = value;
+                        self.x = value;
+                        *memory.stack_pointer_mut() = value;
+                    }
+
+                    AHX => {
+                        let high_inc = self.address_bus.high_byte().wrapping_add(1);
+                        let value = self.a & self.x & high_inc;
+                        memory.write(self.address_bus, value);
+                    }
+
+                    XAA => {
+                        self.a = self.nz(self.x);
+                        self.a = self.nz(self.a & value);
+                    }
 
                     // Relative op codes.
                     BPL => if !self.status.negative { self.branch(); }
