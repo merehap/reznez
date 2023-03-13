@@ -220,6 +220,12 @@ impl Ppu {
                 self.attribute_register.push_next_palette_table_index();
             }
 
+            ResetOamAddress => {
+                if !rendering_enabled { return; }
+                self.oam_addr.reset();
+                mem.regs_mut().oam_addr.reset();
+            }
+
             ReadOamByte => {
                 if !rendering_enabled { return; }
                 // This is a dummy read if OAM clear is active. TODO: Can this be removed?
@@ -409,7 +415,6 @@ impl Ppu {
                 self.clear_oam = false;
                 self.oam_register_index = 0;
                 self.sprite_0_present = false;
-                self.oam_addr.reset();
             }
             StartLoadingOamRegisters => {
                 info!(target: "ppustage", "\t\tLoading OAM registers.");

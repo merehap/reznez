@@ -15,6 +15,8 @@ pub enum CycleAction {
     SetPixel,
     PrepareForNextPixel,
 
+    ResetOamAddress,
+
     ReadOamByte,
     WriteSecondaryOamByte,
 

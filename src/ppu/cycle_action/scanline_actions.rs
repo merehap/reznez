@@ -57,14 +57,14 @@ fn visible_scanline_actions() -> ScanlineActions {
     // Cycles 257 through 320
     for sprite in 0..8 {
         let cycle = 8 * sprite + 257;
-        line.add(cycle + 0, vec![                                               ReadSpriteY                                         ]);
-        line.add(cycle + 1, vec![GetPatternIndex          ,                     ReadSpritePatternIndex                              ]);
-        line.add(cycle + 2, vec![                                               ReadSpriteAttributes                                ]);
-        line.add(cycle + 3, vec![GetPatternIndex          ,                     ReadSpriteX                                         ]);
-        line.add(cycle + 4, vec![                                               DummyReadSpriteX                                    ]);
-        line.add(cycle + 5, vec![GetSpritePatternLowByte  ,                     DummyReadSpriteX                                    ]);
-        line.add(cycle + 6, vec![                                               DummyReadSpriteX                                    ]);
-        line.add(cycle + 7, vec![GetSpritePatternHighByte ,                     DummyReadSpriteX                                    ]);
+        line.add(cycle + 0, vec![                                               ReadSpriteY           , ResetOamAddress             ]);
+        line.add(cycle + 1, vec![GetPatternIndex          ,                     ReadSpritePatternIndex, ResetOamAddress             ]);
+        line.add(cycle + 2, vec![                                               ReadSpriteAttributes  , ResetOamAddress             ]);
+        line.add(cycle + 3, vec![GetPatternIndex          ,                     ReadSpriteX           , ResetOamAddress             ]);
+        line.add(cycle + 4, vec![                                               DummyReadSpriteX      , ResetOamAddress             ]);
+        line.add(cycle + 5, vec![GetSpritePatternLowByte  ,                     DummyReadSpriteX      , ResetOamAddress             ]);
+        line.add(cycle + 6, vec![                                               DummyReadSpriteX      , ResetOamAddress             ]);
+        line.add(cycle + 7, vec![GetSpritePatternHighByte ,                     DummyReadSpriteX      , ResetOamAddress             ]);
     }
 
     // Fetch the first background tile for the next scanline.
@@ -147,14 +147,14 @@ fn pre_render_scanline_actions() -> ScanlineActions {
     // Cycles 257 through 320
     for sprite in 0..8 {
         let cycle = 8 * sprite + 257;
-        scanline.add(cycle + 0, vec![                                                                  ]);
-        scanline.add(cycle + 1, vec![                                                                  ]);
-        scanline.add(cycle + 2, vec![                                                                  ]);
-        scanline.add(cycle + 3, vec![                                                                  ]);
-        scanline.add(cycle + 4, vec![                                                                  ]);
-        scanline.add(cycle + 5, vec![GetSpritePatternLowByte                                           ]);
-        scanline.add(cycle + 6, vec![                                                                  ]);
-        scanline.add(cycle + 7, vec![GetSpritePatternHighByte                                          ]);
+        scanline.add(cycle + 0, vec![                          ResetOamAddress                         ]);
+        scanline.add(cycle + 1, vec![                          ResetOamAddress                         ]);
+        scanline.add(cycle + 2, vec![                          ResetOamAddress                         ]);
+        scanline.add(cycle + 3, vec![                          ResetOamAddress                         ]);
+        scanline.add(cycle + 4, vec![                          ResetOamAddress                         ]);
+        scanline.add(cycle + 5, vec![GetSpritePatternLowByte , ResetOamAddress                         ]);
+        scanline.add(cycle + 6, vec![                          ResetOamAddress                         ]);
+        scanline.add(cycle + 7, vec![GetSpritePatternHighByte, ResetOamAddress                         ]);
     }
 
     // Overlaps the above dummy sprite pattern fetches.
