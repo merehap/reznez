@@ -21,7 +21,7 @@ impl log::Log for Logger {
             "cpustep" => self.log_cpu_steps,
             "ppustage" => self.log_ppu_stages,
             "ppuflags" => self.log_ppu_flags,
-            "ppustep" => self.log_ppu_steps,
+            "ppusteps" => self.log_ppu_steps,
             target => {
                 let chunks: Vec<&str> = target.split("::").collect();
                 match chunks[..] {
@@ -42,9 +42,9 @@ impl log::Log for Logger {
             }
 
             match record.target() {
-                "ppustage" => print!("PPU STAGE:"),
-                "ppuflags" => print!("PPU FLAGS:"),
-                "ppusteps" => print!("PPU STEPS:"),
+                "ppustage" => print!("PPU STAGE "),
+                "ppuflags" => print!("PPU FLAGS "),
+                "ppusteps" => print!("PPU STEPS "),
                 _ => {}
             }
 

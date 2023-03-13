@@ -32,7 +32,8 @@ fn nestest() {
         disable_audio: true,
         log_cpu_operations: true,
         log_cpu_steps: true,
-        log_ppu_operations: false,
+        log_ppu_stages: false,
+        log_ppu_flags: false,
         log_ppu_steps: false,
         frame_dump: false,
         analysis: false,
@@ -41,7 +42,8 @@ fn nestest() {
     logger::init(Logger {
         log_cpu_operations: true,
         log_cpu_steps: true,
-        log_ppu_operations: false,
+        log_ppu_stages: false,
+        log_ppu_flags: false,
         log_ppu_steps: false,
     }).unwrap();
 

@@ -99,6 +99,7 @@ impl Ppu {
         let len = self.frame_actions.current_cycle_actions(&self.clock).len();
         for i in 0..len {
             let cycle_action = self.frame_actions.current_cycle_actions(&self.clock)[i];
+            info!(target: "ppusteps", "\t{:?}", cycle_action);
             self.execute_cycle_action(mem, frame, cycle_action);
         }
 
@@ -391,19 +392,19 @@ impl Ppu {
             }
 
             StartReadingBackgroundTiles => {
-                info!(target: "ppustage", "{}\t\tReading background tiles.", self.clock);
+                info!(target: "ppustage", "{}\t\tREADING BACKGROUND TILES", self.clock);
             }
             StopReadingBackgroundTiles => {
-                info!(target: "ppustage", "{}\t\tEnded reading background tiles.", self.clock);
+                info!(target: "ppustage", "{}\t\tENDED READING BACKGROUND TILES", self.clock);
             }
 
             StartClearingSecondaryOam => {
-                info!(target: "ppustage", "{}\t\tClearing secondary OAM.", self.clock);
+                info!(target: "ppustage", "{}\t\tCLEARING SECONDARY OAM", self.clock);
                 self.secondary_oam.reset_index();
                 self.clear_oam = true;
             }
             StartSpriteEvaluation => {
-                info!(target: "ppustage", "{}\t\tSprite evaluation.", self.clock);
+                info!(target: "ppustage", "\t\tSPRITE EVALUATION");
                 self.secondary_oam.reset_index();
                 self.clear_oam = false;
                 self.oam_register_index = 0;
@@ -411,14 +412,14 @@ impl Ppu {
                 self.oam_addr.reset();
             }
             StartLoadingOamRegisters => {
-                info!(target: "ppustage", "{}\t\tLoading OAM registers.", self.clock);
+                info!(target: "ppustage", "\t\tLoading OAM registers.");
                 self.all_sprites_evaluated = false;
                 // TODO: Determine if this needs to occur on cycle 256 instead.
                 self.secondary_oam.reset_index();
                 self.oam_registers.set_sprite_0_presence(self.sprite_0_present);
             }
             StopLoadingOamRegisters => {
-                info!(target: "ppustage", "{}\t\tLoading OAM registers ended.", self.clock);
+                info!(target: "ppustage", "\t\tLoading OAM registers ended.");
             }
 
             StartVblank => {
