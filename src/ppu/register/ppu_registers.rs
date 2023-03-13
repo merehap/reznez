@@ -18,7 +18,6 @@ pub struct PpuRegisters {
     mask: Mask,
     pub(in crate::ppu) status: Status,
     pub oam_addr: OamAddress,
-    pub(in crate::ppu) oam_data: u8,
     pub(in crate::ppu) pending_ppu_data: u8,
 
     pub(in crate::ppu) current_address: PpuAddress,
@@ -35,7 +34,6 @@ impl PpuRegisters {
             mask: Mask::all_disabled(),
             status: Status::new(),
             oam_addr: OamAddress::new(),
-            oam_data: 0,
             pending_ppu_data: 0,
 
             current_address: PpuAddress::ZERO,

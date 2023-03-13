@@ -78,7 +78,6 @@ pub trait Mapper {
                     0x2002 => ppu_registers.peek(RegisterType::Status, peeker),
                     0x2003 => ppu_registers.peek(RegisterType::OamAddr, peeker),
                     0x2004 => oam.peek(ppu_registers.oam_addr),
-                    //0x2004 => ppu_registers.peek(RegisterType::OamData, peeker),
                     0x2005 => ppu_registers.peek(RegisterType::Scroll, peeker),
                     0x2006 => ppu_registers.peek(RegisterType::PpuAddr, peeker),
                     0x2007 => ppu_registers.peek(RegisterType::PpuAddr, peeker),
@@ -124,7 +123,6 @@ pub trait Mapper {
                         ppu_registers.ppu_io_bus.update_from_read(RegisterType::OamData, value);
                         value
                     }
-                    //0x2004 => ppu_registers.read(RegisterType::OamData, reader),
                     0x2005 => ppu_registers.read(RegisterType::Scroll, reader),
                     0x2006 => ppu_registers.read(RegisterType::PpuAddr, reader),
                     0x2007 => ppu_registers.read(RegisterType::PpuData, reader),

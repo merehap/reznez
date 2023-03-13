@@ -22,6 +22,7 @@ use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 
 pub struct Ppu {
+    oam_data_read: u8,
     secondary_oam: SecondaryOam,
     oam_registers: OamRegisters,
     oam_register_index: usize,
@@ -50,6 +51,7 @@ pub struct Ppu {
 impl Ppu {
     pub fn new() -> Ppu {
         Ppu {
+            oam_data_read: 0,
             secondary_oam: SecondaryOam::new(),
             oam_registers: OamRegisters::new(),
             oam_register_index: 0,
@@ -225,16 +227,16 @@ impl Ppu {
             ReadOamByte => {
                 if !rendering_enabled { return; }
                 // This is a dummy read if OAM clear is active. TODO: Can this be removed?
-                mem.regs_mut().oam_data = mem.oam().peek(mem.regs().oam_addr);
+                self.oam_data_read = mem.oam().peek(mem.regs().oam_addr);
                 if self.clear_oam {
-                    mem.regs_mut().oam_data = 0xFF;
+                    self.oam_data_read = 0xFF;
                 }
             }
             WriteSecondaryOamByte => {
                 if !rendering_enabled { return; }
 
                 if self.clear_oam {
-                    self.secondary_oam.write(mem.regs().oam_data);
+                    self.secondary_oam.write(self.oam_data_read);
                     self.secondary_oam.advance();
                     return;
                 }
@@ -247,9 +249,9 @@ impl Ppu {
 
                 if self.secondary_oam.is_full() {
                     // TODO: self.all_sprites_evaluated?
-                    mem.regs_mut().oam_data = self.secondary_oam.read();
+                    self.oam_data_read = self.secondary_oam.read();
                 } else {
-                    self.secondary_oam.write(mem.regs().oam_data);
+                    self.secondary_oam.write(self.oam_data_read);
                 }
 
                 if !mem.regs().oam_addr.new_sprite_started() {
@@ -261,7 +263,7 @@ impl Ppu {
 
                 // Check if the y coordinate is on screen.
                 if let Some(pixel_row) = self.clock.scanline_pixel_row()
-                    && let Some(top_sprite_row) = PixelRow::try_from_u8(mem.regs().oam_data)
+                    && let Some(top_sprite_row) = PixelRow::try_from_u8(self.oam_data_read)
                     && let Some(offset) = pixel_row.difference(top_sprite_row)
                     && offset < (mem.regs().sprite_height() as u8)
                 {
