@@ -208,7 +208,7 @@ impl Ppu {
 
                 // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
                 if sprites_enabled && background_enabled
-                    && frame.pixel(mem.regs().mask, pixel_column, pixel_row).1.hit()
+                    && frame.pixel(mem.regs().mask(), pixel_column, pixel_row).1.hit()
                 {
                     mem.regs_mut().set_sprite0_hit();
                 }
@@ -378,32 +378,32 @@ impl Ppu {
             }
 
             StartVisibleScanlines => {
-                info!(target: "ppuoperation", "{}\tSTARTING VISIBLE SCANLINES.", self.clock);
+                info!(target: "ppustage", "{}\tVISIBLE SCANLINES", self.clock);
             }
             StartPostRenderScanline => {
-                info!(target: "ppuoperation", "{}\tSTARTING POST-RENDER SCANLINE", self.clock);
+                info!(target: "ppustage", "{}\tPOST-RENDER SCANLINE", self.clock);
             }
             StartVblankScanlines => {
-                info!(target: "ppuoperation", "{}\tSTARTING VBLANK SCANLINES.", self.clock);
+                info!(target: "ppustage", "{}\tVBLANK SCANLINES", self.clock);
             }
             StartPreRenderScanline => {
-                info!(target: "ppuoperation", "{}\tSTARTING PRE-RENDER SCANLINE.", self.clock);
+                info!(target: "ppustage", "{}\tPRE-RENDER SCANLINE", self.clock);
             }
 
             StartReadingBackgroundTiles => {
-                info!(target: "ppuoperation", "{}\t\tStarting to read background tiles.", self.clock);
+                info!(target: "ppustage", "{}\t\tReading background tiles.", self.clock);
             }
             StopReadingBackgroundTiles => {
-                info!(target: "ppuoperation", "{}\t\tBackground tile reading ended.", self.clock);
+                info!(target: "ppustage", "{}\t\tEnded reading background tiles.", self.clock);
             }
 
             StartClearingSecondaryOam => {
-                info!(target: "ppuoperation", "{}\t\tStarting to clear secondary OAM.", self.clock);
+                info!(target: "ppustage", "{}\t\tClearing secondary OAM.", self.clock);
                 self.secondary_oam.reset_index();
                 self.clear_oam = true;
             }
             StartSpriteEvaluation => {
-                info!(target: "ppuoperation", "{}\t\tStarting sprite evaluation (secondary OAM clear ended).", self.clock);
+                info!(target: "ppustage", "{}\t\tSprite evaluation.", self.clock);
                 self.secondary_oam.reset_index();
                 self.clear_oam = false;
                 self.oam_register_index = 0;
@@ -411,25 +411,25 @@ impl Ppu {
                 self.oam_addr.reset();
             }
             StartLoadingOamRegisters => {
-                info!(target: "ppuoperation", "{}\t\tStarting to load OAM registers (sprite evaluation ended).", self.clock);
+                info!(target: "ppustage", "{}\t\tLoading OAM registers.", self.clock);
                 self.all_sprites_evaluated = false;
                 // TODO: Determine if this needs to occur on cycle 256 instead.
                 self.secondary_oam.reset_index();
                 self.oam_registers.set_sprite_0_presence(self.sprite_0_present);
             }
             StopLoadingOamRegisters => {
-                info!(target: "ppuoperation", "{}\t\tLoading OAM registers ended.", self.clock);
+                info!(target: "ppustage", "{}\t\tLoading OAM registers ended.", self.clock);
             }
 
             StartVblank => {
                 if !self.suppress_vblank_active {
-                    mem.regs_mut().start_vblank(&self.clock);
+                    mem.regs_mut().start_vblank();
                 }
 
                 self.suppress_vblank_active = false;
             }
             RequestNmi => {
-                info!(target: "ppuoperation", "{}\t\t\tNMI requested.", self.clock);
+                info!(target: "ppuflags", "\tNMI requested.");
                 self.nmi_requested = true;
             }
             SetInitialScrollOffsets => {
@@ -443,7 +443,7 @@ impl Ppu {
             }
 
             ClearFlags => {
-                mem.regs_mut().stop_vblank(&self.clock);
+                mem.regs_mut().stop_vblank();
                 mem.regs_mut().clear_sprite0_hit();
                 mem.regs_mut().clear_sprite_overflow();
             }
@@ -501,7 +501,7 @@ impl Ppu {
 
     // Read 0x2002
     fn read_status(&mut self, regs: &mut PpuRegisters) {
-        regs.stop_vblank(&self.clock);
+        regs.stop_vblank();
         // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
         if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
             self.suppress_vblank_active = true;

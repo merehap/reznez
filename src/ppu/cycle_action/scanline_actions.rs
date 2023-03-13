@@ -18,13 +18,12 @@ fn visible_scanline_actions() -> ScanlineActions {
 
     let mut line = ScanlineActions::new();
     //           ||CYCLE||       ||---------BACKGROUND-TILE-ACTIONS---------||  ||-SPRITE--ACTIONS-||  ||-----DISPLAY-ACTIONS-----||
-    line.add(          321, vec![StartReadingBackgroundTiles                                                                        ]);
-    line.add(          256, vec![StopReadingBackgroundTiles                                                                         ]);
-
     line.add(            1, vec![                                               StartClearingSecondaryOam                           ]);
     line.add(           65, vec![                                               StartSpriteEvaluation                               ]);
+    line.add(          257, vec![StopReadingBackgroundTiles                                                                         ]);
     line.add(          257, vec![                                               StartLoadingOamRegisters                            ]);
     line.add(          321, vec![                                               StopLoadingOamRegisters                             ]);
+    line.add(          321, vec![StartReadingBackgroundTiles                                                                        ]);
 
     // Fetch the remaining 31 usable background tiles for the current scanline.
     // Secondary OAM clearing then sprite evaluation, transfering OAM to secondary OAM.

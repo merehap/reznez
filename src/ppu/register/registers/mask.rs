@@ -1,3 +1,5 @@
+use log::info;
+
 use crate::util::bit_util::get_bit;
 
 #[derive(Clone, Copy, Debug)]
@@ -33,9 +35,9 @@ impl Mask {
         mask
     }
 
-    #[rustfmt::skip]
-    pub fn from_u8(value: u8) -> Mask {
-        Mask {
+    pub fn set(&mut self, value: u8) {
+        let old_mask = *self;
+        *self = Mask {
             emphasize_blue:                  get_bit(value, 0),
             emphasize_green:                 get_bit(value, 1),
             emphasize_red:                   get_bit(value, 2),
@@ -44,6 +46,33 @@ impl Mask {
             left_sprite_columns_enabled:     get_bit(value, 5),
             left_background_columns_enabled: get_bit(value, 6),
             greyscale_enabled:               get_bit(value, 7),
-        }
+        };
+
+        log_change(old_mask.emphasize_blue, self.emphasize_blue, "Blue emphasis");
+        log_change(old_mask.emphasize_green, self.emphasize_green, "Green emphasis");
+        log_change(old_mask.emphasize_red, self.emphasize_red, "Red emphasis");
+        log_change(old_mask.sprites_enabled, self.sprites_enabled, "Sprites");
+        log_change(old_mask.background_enabled, self.background_enabled, "Background");
+
+        log_change(
+            old_mask.left_sprite_columns_enabled,
+            self.left_sprite_columns_enabled,
+            "Left sprite columns",
+        );
+        log_change(
+            old_mask.left_background_columns_enabled,
+            self.left_background_columns_enabled,
+            "Left background columns",
+        );
+        log_change(old_mask.greyscale_enabled, self.greyscale_enabled, "Greyscale");
     }
+}
+
+fn log_change(old: bool, new: bool, message_prefix: &str) {
+    let message = match (old, new) {
+        (false, true) => format!("\t{} enabled.", message_prefix),
+        (true, false) => format!("\t{} disabled.", message_prefix),
+        _ => return,
+    };
+    info!(target: "ppuflags", "{}", message);
 }

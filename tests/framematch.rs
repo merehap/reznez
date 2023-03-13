@@ -94,7 +94,7 @@ fn framematch() {
                     "\tChecking actual hash vs expected hash for frame {}.",
                     frame_index,
                 );
-                let mask = nes.memory_mut().as_ppu_memory().regs().mask;
+                let mask = nes.memory_mut().as_ppu_memory().regs().mask();
                 let actual_ppm = &nes.frame().to_ppm(mask);
                 let actual_hash = calculate_hash(&actual_ppm);
                 if actual_hash != *expected_hash {

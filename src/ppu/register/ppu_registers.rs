@@ -1,14 +1,12 @@
 use log::info;
 
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
-use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::register::ppu_io_bus::PpuIoBus;
 use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::register::registers::ctrl;
 use crate::ppu::register::registers::ctrl::{AddressIncrement, Ctrl};
-use crate::ppu::register::registers::mask;
 use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::register::registers::status::Status;
 use crate::ppu::sprite::oam_address::OamAddress;
@@ -17,7 +15,7 @@ use crate::ppu::sprite::sprite_height::SpriteHeight;
 #[derive(Clone)]
 pub struct PpuRegisters {
     pub(in crate::ppu) ctrl: Ctrl,
-    pub mask: Mask,
+    mask: Mask,
     pub(in crate::ppu) status: Status,
     pub oam_addr: OamAddress,
     pub(in crate::ppu) oam_data: u8,
@@ -72,6 +70,10 @@ impl PpuRegisters {
         self.ctrl.base_name_table_quadrant
     }
 
+    pub fn mask(&self) -> Mask {
+        self.mask
+    }
+
     pub fn background_enabled(&self) -> bool {
         self.mask.background_enabled
     }
@@ -96,14 +98,14 @@ impl PpuRegisters {
         self.next_address.y_scroll()
     }
 
-    pub(in crate::ppu) fn start_vblank(&mut self, clock: &Clock) {
-        info!(target: "ppuoperation", "{}\t\tStarting vblank.", clock);
+    pub(in crate::ppu) fn start_vblank(&mut self) {
+        info!(target: "ppuflags", "\tStarting vblank.");
         self.status.vblank_active = true;
     }
 
-    pub(in crate::ppu) fn stop_vblank(&mut self, clock: &Clock) {
+    pub(in crate::ppu) fn stop_vblank(&mut self) {
         if self.status.vblank_active {
-            info!(target: "ppuoperation", "{}\t\tStopping vblank.", clock);
+            info!(target: "ppuflags", "\tStopping vblank.");
         }
 
         self.status.vblank_active = false;
@@ -184,7 +186,7 @@ impl PpuRegisters {
         use RegisterType::*;
         match register_type {
             Ctrl => self.ctrl = ctrl::Ctrl::from_u8(register_value),
-            Mask => self.mask = mask::Mask::from_u8(register_value),
+            Mask => self.mask.set(register_value),
             Status => { /* Read-only. */ }
             OamAddr => self.oam_addr = OamAddress::from_u8(register_value),
             OamData => {}

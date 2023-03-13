@@ -8,7 +8,8 @@ pub fn init(logger: Logger) -> Result<(), SetLoggerError> {
 pub struct Logger {
     pub log_cpu_operations: bool,
     pub log_cpu_steps: bool,
-    pub log_ppu_operations: bool,
+    pub log_ppu_stages: bool,
+    pub log_ppu_flags: bool,
     pub log_ppu_steps: bool,
 }
 
@@ -18,7 +19,8 @@ impl log::Log for Logger {
             "" => true,
             "cpuoperation" => self.log_cpu_operations,
             "cpustep" => self.log_cpu_steps,
-            "ppuoperation" => self.log_ppu_operations,
+            "ppustage" => self.log_ppu_stages,
+            "ppuflags" => self.log_ppu_flags,
             "ppustep" => self.log_ppu_steps,
             target => {
                 let chunks: Vec<&str> = target.split("::").collect();
@@ -39,8 +41,11 @@ impl log::Log for Logger {
                 print!("{} - ", record.level());
             }
 
-            if record.target() == "ppuoperation" {
-                print!("PPU ");
+            match record.target() {
+                "ppustage" => print!("PPU STAGE:"),
+                "ppuflags" => print!("PPU FLAGS:"),
+                "ppusteps" => print!("PPU STEPS:"),
+                _ => {}
             }
 
             println!("{}", record.args());
