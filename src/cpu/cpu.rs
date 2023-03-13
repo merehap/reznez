@@ -783,6 +783,7 @@ mod tests {
             log_ppu_stages: false,
             log_ppu_flags: false,
             log_ppu_steps: false,
+            log_oam_addr: false,
         }).unwrap();
 
         let nmi_vector = CpuAddress::new(0xC000);

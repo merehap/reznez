@@ -1,3 +1,5 @@
+use log::info;
+
 #[derive(Clone, Copy, Debug)]
 pub struct OamAddress {
     // "n" in the documentation
@@ -38,12 +40,14 @@ impl OamAddress {
     }
 
     pub fn reset(&mut self) {
+        info!(target: "oamaddr", "\tResetting OamAddress to 0x00.");
         *self = OamAddress::new();
     }
 
     pub fn increment(&mut self) {
         // TODO: Make efficient?
         *self = OamAddress::from_u8(self.to_u8().wrapping_add(1));
+        info!(target: "oamaddr", "\tIncrementing OamAddress to 0x{:02X}.", self.to_u8());
     }
 
     pub fn next_sprite(&mut self) -> bool {
@@ -54,11 +58,14 @@ impl OamAddress {
             self.sprite_index += 1;
         }
 
+        info!(target: "oamaddr", "\tAdvancing to next sprite OamAddress 0x{:02X}.", self.to_u8());
+
         end_reached
     }
 
     pub fn next_field(&mut self) -> bool {
         self.field_index.increment();
+        info!(target: "oamaddr", "\tAdvancing to next field OamAddress 0x{:02X}.", self.to_u8());
         let carry = self.field_index == FieldIndex::YCoordinate;
         if carry {
             self.next_sprite()
@@ -70,6 +77,7 @@ impl OamAddress {
     pub fn corrupt_sprite_y_index(&mut self) {
         self.field_index.increment();
         self.sprite_start_field_index = self.field_index;
+        info!(target: "oamaddr", "\tCorrupting OamAddress 0x{:02X}.", self.to_u8());
     }
 
     pub fn to_u8(self) -> u8 {

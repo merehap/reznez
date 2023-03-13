@@ -38,6 +38,7 @@ fn main() {
         log_ppu_stages: opt.log_ppu_stages,
         log_ppu_flags: opt.log_ppu_flags,
         log_ppu_steps: opt.log_ppu_steps,
+        log_oam_addr: opt.log_oam_addr,
     }).unwrap();
 
     if opt.analysis {
