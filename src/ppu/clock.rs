@@ -40,22 +40,23 @@ impl Clock {
     }
 
     #[inline]
-    pub fn is_last_cycle_of_frame(&self) -> bool {
-        self.scanline == MAX_SCANLINE && self.cycle == MAX_CYCLE
+    pub fn is_last_cycle_of_frame(&self, skip_odd_frame_cycle: bool) -> bool {
+        let max_cycle = if skip_odd_frame_cycle && self.frame % 2 == 1 {
+            MAX_CYCLE - 1
+        } else {
+            MAX_CYCLE
+        };
+        self.scanline == MAX_SCANLINE && self.cycle >= max_cycle
     }
 
     pub fn tick(&mut self, skip_odd_frame_cycle: bool) {
         self.total_cycles += 1;
 
         match (self.scanline, self.cycle) {
-            (MAX_SCANLINE, MAX_CYCLE) => {
+            (_, _) if self.is_last_cycle_of_frame(skip_odd_frame_cycle) => {
                 self.frame += 1;
                 self.scanline = 0;
-                if skip_odd_frame_cycle && self.frame % 2 == 1 {
-                    self.cycle = 1;
-                } else {
-                    self.cycle = 0;
-                }
+                self.cycle = 0;
             }
             (_, MAX_CYCLE) => {
                 self.scanline += 1;

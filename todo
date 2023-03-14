@@ -4,7 +4,6 @@ Battletoads
 Work out priorities for WorkRam vs registers. Why does WorkRam need to be explicitly written to by each mapper?
 Move CPU bus into CpuMemory
 Always mirror ROM up to 32KiB? mmc5_test (v1) seems like it might depend upon this.
-ppu_open_bus tests
 Audio
 apu_test jitter
 Rename CycleAction to StepAction.
