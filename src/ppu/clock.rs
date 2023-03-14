@@ -39,33 +39,27 @@ impl Clock {
         PixelRow::try_from_u16(self.scanline)
     }
 
-    #[inline]
-    pub fn is_last_cycle_of_frame(&self, skip_odd_frame_cycle: bool) -> bool {
+    pub fn tick(&mut self, skip_odd_frame_cycle: bool) -> bool {
+        self.total_cycles += 1;
+
         let max_cycle = if skip_odd_frame_cycle && self.frame % 2 == 1 {
             MAX_CYCLE - 1
         } else {
             MAX_CYCLE
         };
-        self.scanline == MAX_SCANLINE && self.cycle >= max_cycle
-    }
-
-    pub fn tick(&mut self, skip_odd_frame_cycle: bool) {
-        self.total_cycles += 1;
-
-        match (self.scanline, self.cycle) {
-            (_, _) if self.is_last_cycle_of_frame(skip_odd_frame_cycle) => {
-                self.frame += 1;
-                self.scanline = 0;
-                self.cycle = 0;
-            }
-            (_, MAX_CYCLE) => {
-                self.scanline += 1;
-                self.cycle = 0;
-            }
-            _ => {
-                self.cycle += 1;
-            }
+        let is_last_cycle_of_frame = self.scanline == MAX_SCANLINE && self.cycle >= max_cycle;
+        if is_last_cycle_of_frame {
+            self.frame += 1;
+            self.scanline = 0;
+            self.cycle = 0;
+        } else if self.cycle == MAX_CYCLE {
+            self.scanline += 1;
+            self.cycle = 0;
+        } else {
+            self.cycle += 1;
         }
+
+        is_last_cycle_of_frame
     }
 }
 
