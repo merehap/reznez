@@ -102,8 +102,9 @@ fn framematch() {
                 if actual_hash != *expected_hash {
                     failed.store(true, Ordering::Relaxed);
 
+                    fs::create_dir_all(format!("tests/actual_frames/{}/", rom_name)).unwrap();
                     let actual_ppm_path =
-                        format!("{}_actual_frame_{:03}.ppm", rom_name, frame_index,);
+                        format!("tests/actual_frames/{}/frame{:03}.ppm", rom_name, frame_index);
                     fs::write(actual_ppm_path.clone(), actual_ppm.to_bytes()).unwrap();
                     println!(
                         "\t\tActual hash {} didn't match expected hash {} . See {} .",
