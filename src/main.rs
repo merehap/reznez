@@ -33,7 +33,8 @@ use crate::util::logger::Logger;
 fn main() {
     let opt = Opt::from_args();
     logger::init(Logger {
-        log_cpu_operations: opt.log_cpu_operations,
+        log_cpu_instructions: opt.log_cpu_instructions,
+        log_cpu_flow_control: opt.log_cpu_flow_control,
         log_cpu_steps: opt.log_cpu_steps,
         log_ppu_stages: opt.log_ppu_stages,
         log_ppu_flags: opt.log_ppu_flags,

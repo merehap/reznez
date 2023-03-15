@@ -30,7 +30,8 @@ fn nestest() {
         target_frame_rate: TargetFrameRate::Unbounded,
         override_program_counter: Some(CpuAddress::new(0xC000)),
         disable_audio: true,
-        log_cpu_operations: true,
+        log_cpu_instructions: true,
+        log_cpu_flow_control: true,
         log_cpu_steps: true,
         log_ppu_stages: false,
         log_ppu_flags: false,
@@ -41,7 +42,8 @@ fn nestest() {
     };
 
     logger::init(Logger {
-        log_cpu_operations: true,
+        log_cpu_instructions: true,
+        log_cpu_flow_control: true,
         log_cpu_steps: true,
         log_ppu_stages: false,
         log_ppu_flags: false,

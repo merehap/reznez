@@ -206,7 +206,7 @@ impl Cpu {
         self.suppress_program_counter_increment = false;
 
         if self.nmi_status == NmiStatus::Pending {
-            info!(target: "cpuoperation", "NMI will start after the current instruction completes.");
+            info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
             self.nmi_status = NmiStatus::Ready;
         }
 
@@ -281,7 +281,7 @@ impl Cpu {
                 if self.address_carry != 0 {
                     self.suppress_next_instruction_start = true;
                     self.suppress_program_counter_increment = true;
-                    info!(target: "cpuoperation", "\tBranch crossed page boundary, 'Oops' cycle added.");
+                    info!(target: "cpuflowcontrol", "\tBranch crossed page boundary, 'Oops' cycle added.");
                     self.step_queue.skip_to_front(READ_OP_CODE_STEP);
                 }
             }
@@ -303,7 +303,7 @@ impl Cpu {
                 }
 
                 if self.dma_port.take_page().is_some() {
-                    info!(target: "cpuoperation", "Starting DMA transfer at {}.", self.dma_port.current_address());
+                    info!(target: "cpuflowcontrol", "Starting DMA transfer at {}.", self.dma_port.current_address());
                     self.step_queue.enqueue_dma_transfer(self.cycle);
                     self.suppress_program_counter_increment = true;
                     return;
@@ -311,7 +311,7 @@ impl Cpu {
 
                 match self.nmi_status {
                     NmiStatus::Inactive if irq_pending && !self.status.interrupts_disabled => {
-                        info!(target: "cpuoperation", "Starting IRQ");
+                        info!(target: "cpuflowcontrol", "Starting IRQ");
                         self.irq_status = IrqStatus::Active;
                         // IRQ has BRK's code point (0x00). TODO: Set the data bus to 0x00?
                         self.next_op_code = Some((0x00, self.address_bus));
@@ -321,7 +321,7 @@ impl Cpu {
                         self.next_op_code = Some((self.data_bus, self.address_bus));
                     }
                     NmiStatus::Ready => {
-                        info!(target: "cpuoperation", "Starting NMI");
+                        info!(target: "cpuflowcontrol", "Starting NMI");
                         self.nmi_status = NmiStatus::Active;
                         // NMI has BRK's code point (0x00). TODO: Set the data bus to 0x00?
                         self.next_op_code = Some((0x00, self.address_bus));
@@ -703,7 +703,7 @@ impl Cpu {
         self.suppress_program_counter_increment = true;
         self.address_carry = self.program_counter.offset_with_carry(self.previous_data_bus_value as i8);
         self.suppress_next_instruction_start = true;
-        info!(target: "cpuoperation", "\tBranch taken, cycle added.");
+        info!(target: "cpuflowcontrol", "\tBranch taken, cycle added.");
         self.step_queue.skip_to_front(BRANCH_TAKEN_STEP);
     }
 }
@@ -802,7 +802,8 @@ mod tests {
     #[test]
     fn nmi_after_instruction() {
         logger::init(Logger {
-            log_cpu_operations: true,
+            log_cpu_instructions: true,
+            log_cpu_flow_control: true,
             log_cpu_steps: true,
             log_ppu_stages: false,
             log_ppu_flags: false,

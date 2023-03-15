@@ -6,7 +6,8 @@ pub fn init(logger: Logger) -> Result<(), SetLoggerError> {
 }
 
 pub struct Logger {
-    pub log_cpu_operations: bool,
+    pub log_cpu_instructions: bool,
+    pub log_cpu_flow_control: bool,
     pub log_cpu_steps: bool,
     pub log_ppu_stages: bool,
     pub log_ppu_flags: bool,
@@ -18,7 +19,8 @@ impl log::Log for Logger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         match metadata.target() {
             "" => true,
-            "cpuoperation" => self.log_cpu_operations,
+            "cpuinstructions" => self.log_cpu_instructions,
+            "cpuflowcontrol" => self.log_cpu_flow_control,
             "cpustep" => self.log_cpu_steps,
             "ppustage" => self.log_ppu_stages,
             "ppuflags" => self.log_ppu_flags,

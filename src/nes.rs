@@ -144,7 +144,7 @@ impl Nes {
         let step = self.cpu.step(&mut self.memory.as_cpu_memory(), irq_pending);
         if let Some(ref step) = step && step.has_interpret_op_code() {
             if let Some(instruction) = self.cpu.current_instruction() {
-                if log_enabled!(target: "cpuoperation", Info) {
+                if log_enabled!(target: "cpuinstructions", Info) {
                     self.log_state(instruction);
                 }
             }

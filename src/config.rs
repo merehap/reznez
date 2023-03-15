@@ -91,8 +91,11 @@ pub struct Opt {
     #[structopt(name = "disableaudio", long)]
     pub disable_audio: bool,
 
-    #[structopt(name = "logcpuoperations", long)]
-    pub log_cpu_operations: bool,
+    #[structopt(name = "logcpuinstructions", long)]
+    pub log_cpu_instructions: bool,
+
+    #[structopt(name = "logcpuflowcontrol", long)]
+    pub log_cpu_flow_control: bool,
 
     #[structopt(name = "logcpusteps", long)]
     pub log_cpu_steps: bool,
