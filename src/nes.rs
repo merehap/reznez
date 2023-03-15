@@ -141,13 +141,22 @@ impl Nes {
         let irq_pending =
             self.memory.apu_regs().frame_irq_pending()
             || self.memory.mapper().irq_pending();
+
+        let log_message = if log_enabled!(target: "cpuinstructions", Info) {
+            let address = self.cpu.address_for_next_step(&mut self.memory.as_cpu_memory());
+            Instruction::at_address(
+                address,
+                self.cpu.x_index(),
+                self.cpu.y_index(),
+                &self.memory.as_cpu_memory(),
+            ).map(|instruction| self.format_state(instruction))
+        } else {
+            None
+        };
+
         let step = self.cpu.step(&mut self.memory.as_cpu_memory(), irq_pending);
-        if let Some(ref step) = step && step.has_interpret_op_code() {
-            if let Some(instruction) = self.cpu.current_instruction() {
-                if log_enabled!(target: "cpuinstructions", Info) {
-                    self.log_state(instruction);
-                }
-            }
+        if let Some(log_message) = log_message && self.cpu.next_instruction_starting() {
+            info!(target: "cpuinstructions", "{}", log_message);
         }
 
         step
@@ -185,7 +194,7 @@ impl Nes {
     }
 
     #[inline]
-    fn log_state(&mut self, instruction: Instruction) {
+    fn format_state(&mut self, instruction: Instruction) -> String {
         /*
         info!(
             target: "cpu",
@@ -228,7 +237,7 @@ impl Nes {
             IzY => format!("[${address:04X},Y]={value}"),
         };
 
-        info!(
+        format!(
             "{:04X} {:?} {:14}A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{:<3} SL:{:<3} CPU Cycle:{}",
             self.cpu.program_counter().to_raw(),
             instruction.template.op_code,
@@ -241,7 +250,7 @@ impl Nes {
             self.ppu.clock().cycle(),
             self.ppu.clock().scanline(),
             self.cpu.cycle(),
-        );
+        )
     }
 }
 

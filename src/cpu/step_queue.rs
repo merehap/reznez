@@ -20,6 +20,10 @@ impl StepQueue {
         self.queue.is_empty()
     }
 
+    pub fn peek(&self) -> Option<Step> {
+        self.queue.front().copied()
+    }
+
     pub fn dequeue(&mut self) -> Option<Step> {
         self.queue.pop_front()
     }

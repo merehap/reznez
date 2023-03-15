@@ -160,6 +160,30 @@ impl Cpu {
         self.nmi_status = NmiStatus::Pending;
     }
 
+    pub fn interrupt_active(&self) -> bool {
+        self.nmi_status == NmiStatus::Active || self.irq_status == IrqStatus::Active
+    }
+
+    pub fn next_instruction_starting(&self) -> bool {
+        self.next_op_code.is_some()
+            && !self.interrupt_active()
+            && !self.suppress_next_instruction_start
+            && !self.jammed
+    }
+
+    pub fn address_for_next_step(&self, memory: &mut CpuMemory) -> CpuAddress {
+        self.step_queue.peek()
+            .map(|step| {
+                match step {
+                    Step::Read(from, _) | Step::ReadField(_, from, _) =>
+                        self.lookup_from_address(memory, from),
+                    Step::Write(to, _) | Step::WriteField(_, to, _) =>
+                        self.lookup_to_address(memory, to),
+                }
+            })
+            .unwrap_or(self.program_counter)
+    }
+
     pub fn step(&mut self, memory: &mut CpuMemory, irq_pending: bool) -> Option<Step> {
         if self.jammed {
             return None;
@@ -549,7 +573,7 @@ impl Cpu {
     }
 
     // A copy of from_address, unfortunately.
-    fn lookup_to_address(&mut self, memory: &CpuMemory, to: To) -> CpuAddress {
+    fn lookup_to_address(&self, memory: &CpuMemory, to: To) -> CpuAddress {
         use self::To::*;
         match to {
             AddressBusTarget => self.address_bus,
@@ -559,12 +583,6 @@ impl Cpu {
                 CpuAddress::from_low_high(self.pending_address_low, self.data_bus),
             PendingZeroPageTarget =>
                 CpuAddress::from_low_high(self.data_bus, 0),
-            PendingProgramCounterTarget => {
-                self.address_bus = CpuAddress::from_low_high(self.pending_address_low, self.data_bus);
-                // FIXME: Make this a CycleAction instead so from_address won't have side effects.
-                self.program_counter = self.address_bus;
-                self.program_counter
-            }
             TopOfStack => memory.stack_pointer_address(),
             AddressTarget(address) => address,
         }

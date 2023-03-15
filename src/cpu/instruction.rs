@@ -71,12 +71,22 @@ pub struct Instruction {
 }
 
 impl Instruction {
+    pub fn at_address(
+        address: CpuAddress,
+        x_index: u8,
+        y_index: u8,
+        mem: &CpuMemory,
+    ) -> Option<Instruction> {
+        mem.peek(address)
+            .map(|op_code| Instruction::from_memory(op_code, address, x_index, y_index, mem))
+    }
+
     pub fn from_memory(
         op_code: u8,
         start_address: CpuAddress,
         x_index: u8,
         y_index: u8,
-        mem: &mut CpuMemory,
+        mem: &CpuMemory,
     ) -> Instruction {
         let template = INSTRUCTION_TEMPLATES[op_code as usize];
         let low = mem.peek(start_address.offset(1)).expect("Read open bus.");
@@ -125,9 +135,10 @@ impl Instruction {
             Ind => {
                 let first = CpuAddress::from_low_high(low, high);
                 let second = CpuAddress::from_low_high(low.wrapping_add(1), high);
+                println!("FIRST: {first}");
                 let address = CpuAddress::from_low_high(
-                    mem.peek(first).expect("Read open bus."),
-                    mem.peek(second).expect("Read open bus.")
+                    mem.peek(first).unwrap_or(0),
+                    mem.peek(second).unwrap_or(0),
                 );
                 Argument::Addr(address)
             }

@@ -57,7 +57,6 @@ pub enum To {
     ProgramCounterTarget,
     PendingAddressTarget,
     PendingZeroPageTarget,
-    PendingProgramCounterTarget,
 
     TopOfStack,
 

@@ -384,6 +384,16 @@ impl Step {
         }
     }
 
+    pub fn has_start_new_instruction(&self) -> bool {
+        for action in self.actions() {
+            if matches!(action, CycleAction::StartNextInstruction) {
+                return true;
+            }
+        }
+
+        false
+    }
+
     pub fn has_interpret_op_code(&self) -> bool {
         for action in self.actions() {
             if matches!(action, CycleAction::InterpretOpCode) {
