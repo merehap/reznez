@@ -285,6 +285,10 @@ impl Cpu {
                     self.step_queue.skip_to_front(READ_OP_CODE_STEP);
                 }
             }
+
+            CopyAddressToPC => {
+                self.program_counter = self.address_bus;
+            }
             AddCarryToAddressBus => {
                 self.address_bus.offset_high(self.address_carry);
                 self.address_carry = 0;
@@ -522,7 +526,7 @@ impl Cpu {
         }
     }
 
-    fn lookup_from_address(&mut self, memory: &CpuMemory, from: From) -> CpuAddress {
+    fn lookup_from_address(&self, memory: &CpuMemory, from: From) -> CpuAddress {
         use self::From::*;
         match from {
             AddressBusTarget => self.address_bus,
@@ -532,12 +536,6 @@ impl Cpu {
                 CpuAddress::from_low_high(self.pending_address_low, self.data_bus),
             PendingZeroPageTarget =>
                 CpuAddress::from_low_high(self.data_bus, 0),
-            PendingProgramCounterTarget => {
-                self.address_bus = CpuAddress::from_low_high(self.pending_address_low, self.data_bus);
-                // FIXME: Make this a CycleAction instead so from_address won't have side effects.
-                self.program_counter = self.address_bus;
-                self.program_counter
-            }
             TopOfStack => memory.stack_pointer_address(),
             InterruptVectorLow => match self.current_interrupt_vector.unwrap() {
                 InterruptVector::Nmi => NMI_VECTOR_LOW,

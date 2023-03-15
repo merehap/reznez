@@ -25,6 +25,7 @@ pub enum CycleAction {
     YOffsetAddressBus,
     MaybeInsertOopsStep,
     MaybeInsertBranchOopsStep,
+    CopyAddressToPC,
     AddCarryToAddressBus,
     AddCarryToProgramCounter,
 
@@ -41,7 +42,6 @@ pub enum From {
     ProgramCounterTarget,
     PendingAddressTarget,
     PendingZeroPageTarget,
-    PendingProgramCounterTarget,
 
     TopOfStack,
 

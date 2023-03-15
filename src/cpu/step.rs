@@ -347,8 +347,8 @@ pub const JSR_STEPS: &[Step] = &[
     WriteField(ProgramCounterHighByte, To::TopOfStack  , &[DecrementStackPointer]),
     WriteField(ProgramCounterLowByte , To::TopOfStack  , &[DecrementStackPointer]),
     // Put the pending address high byte on the data bus.
-    Read(                              From::ProgramCounterTarget       , &[]),
-    Read(                              From::PendingProgramCounterTarget, &[StartNextInstruction, IncrementProgramCounter]),
+    Read(                              From::ProgramCounterTarget, &[]),
+    Read(                              From::PendingAddressTarget, &[CopyAddressToPC, StartNextInstruction, IncrementProgramCounter]),
 ];
 
 pub const JMP_ABS_STEPS: &[Step] = &[
@@ -363,7 +363,7 @@ pub const JMP_IND_STEPS: &[Step] = &[
     // High byte of the looked-up address.
     Read(From::AddressBusTarget           , &[StorePendingAddressLowByte]),
     // Jump to next instruction.
-    Read(From::PendingProgramCounterTarget, &[StartNextInstruction, IncrementProgramCounter]),
+    Read(From::PendingAddressTarget       , &[CopyAddressToPC, StartNextInstruction, IncrementProgramCounter]),
 ];
 
 #[derive(Clone, Copy, Debug)]
