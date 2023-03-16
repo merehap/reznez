@@ -757,8 +757,8 @@ mod tests {
     use crate::cartridge;
     use crate::memory::memory;
     use crate::memory::memory::Memory;
-    use crate::util::logger;
-    use crate::util::logger::Logger;
+    use crate::logging::logger;
+    use crate::logging::logger::Logger;
 
     use super::*;
 

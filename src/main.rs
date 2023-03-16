@@ -18,6 +18,7 @@ mod config;
 mod controller;
 mod cpu;
 mod gui;
+mod logging;
 mod memory;
 pub mod nes;
 mod ppu;
@@ -26,9 +27,9 @@ mod util;
 use structopt::StructOpt;
 
 use crate::config::{Config, Opt};
+use crate::logging::logger;
 use crate::nes::Nes;
-use crate::util::logger;
-use crate::util::logger::Logger;
+use crate::logging::logger::Logger;
 
 fn main() {
     let opt = Opt::from_args();

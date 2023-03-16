@@ -13,8 +13,8 @@ use reznez::cpu::status::Status;
 use reznez::memory::cpu::cpu_address::CpuAddress;
 use reznez::nes::Nes;
 use reznez::ppu::render::frame_rate::TargetFrameRate;
-use reznez::util::logger;
-use reznez::util::logger::Logger;
+use reznez::logging::logger;
+use reznez::logging::logger::Logger;
 
 #[test]
 fn nestest() {

@@ -18,6 +18,7 @@ pub mod config;
 pub mod controller;
 pub mod cpu;
 pub mod gui;
+pub mod logging;
 pub mod memory;
 pub mod nes;
 pub mod ppu;
