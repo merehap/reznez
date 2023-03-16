@@ -10,8 +10,8 @@ use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::Cpu;
 use crate::cpu::step::Step;
-use crate::cpu::instruction::Instruction;
 use crate::gui::gui::Events;
+use crate::logging::formatter::*;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::mapper_list;
 use crate::memory::memory::Memory;
@@ -30,6 +30,8 @@ pub struct Nes {
     joypad1: Rc<RefCell<Joypad>>,
     joypad2: Rc<RefCell<Joypad>>,
     cycle: u64,
+
+    log_formatter: Box<dyn Formatter>,
 }
 
 impl Nes {
@@ -51,6 +53,8 @@ impl Nes {
             joypad1,
             joypad2,
             cycle: 0,
+
+            log_formatter: Box::new(Nintendulator0980Formatter),
         }
     }
 
@@ -149,20 +153,9 @@ impl Nes {
 
         let step = self.cpu.step(&mut self.memory.as_cpu_memory(), irq_pending);
         if log_enabled!(target: "cpuinstructions", Info) && self.cpu.next_instruction_starting() {
-            let start = Instruction::at_address(&self.cpu, address, &self.memory.as_cpu_memory());
-            let end = format!(
-                "A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} PPU:{:>3},{:>3} CYC:{}",
-                self.cpu.accumulator(),
-                self.cpu.x_index(),
-                self.cpu.y_index(),
-                self.cpu.status().to_register_byte() | 0b0010_0000,
-                self.memory.stack_pointer(),
-                ppu_cycle,
-                scanline,
-                cpu_cycle,
-            );
-            let log_message = format!("{}{}", start, end);
-            info!(target: "cpuinstructions", "{}", log_message);
+            let message = self.log_formatter.format_instruction(
+                &self, cpu_cycle, ppu_cycle, scanline, address);
+            info!("{}", message);
         }
 
         step
@@ -320,6 +313,7 @@ mod tests {
             joypad1,
             joypad2,
             cycle: 0,
+            log_formatter: Box::new(Nintendulator0980Formatter),
         }
     }
 

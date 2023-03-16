@@ -170,7 +170,7 @@ impl Cpu {
             && !self.jammed
     }
 
-    pub fn address_for_next_step(&self, memory: &mut CpuMemory) -> CpuAddress {
+    pub fn address_for_next_step(&self, memory: &CpuMemory) -> CpuAddress {
         self.step_queue.peek()
             .map(|step| {
                 match step {

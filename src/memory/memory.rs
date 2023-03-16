@@ -78,6 +78,18 @@ impl Memory {
     pub fn apu_regs(&mut self) -> &mut ApuRegisters {
         &mut self.apu_registers
     }
+
+    pub fn cpu_peek(&self, address: CpuAddress) -> Option<u8> {
+        self.mapper.cpu_peek(
+            &self.cpu_internal_ram,
+            &self.ppu_internal_ram,
+            &self.oam,
+            &self.ports,
+            &self.ppu_registers,
+            &self.apu_registers,
+            address,
+        )
+    }
 }
 
 pub struct CpuMemory<'a> {

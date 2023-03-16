@@ -1,10 +1,6 @@
 use lazy_static::lazy_static;
 use strum_macros::EnumString;
 
-use crate::cpu::cpu::Cpu;
-use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::memory::CpuMemory;
-
 lazy_static! {
     pub static ref INSTRUCTION_TEMPLATES: [InstructionTemplate; 256] = instruction_templates();
 }
@@ -60,109 +56,6 @@ fn instruction_templates() -> [InstructionTemplate; 256] {
     }
 
     result
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct Instruction {
-}
-
-impl Instruction {
-    pub fn at_address(cpu: &Cpu, start_address: CpuAddress, mem: &CpuMemory) -> String {
-        let op_code = mem.peek(start_address).unwrap();
-        let template = INSTRUCTION_TEMPLATES[op_code as usize];
-        let low = mem.peek(start_address.offset(1)).expect("Read open bus.");
-        let high = mem.peek(start_address.offset(2)).expect("Read open bus.");
-
-        let mut argument_string = String::new();
-        use AccessMode::*;
-        match template.access_mode {
-            Imp => {},
-            Imm => {
-                argument_string.push_str(&format!("#${low:02X}"));
-            }
-            ZP => {
-                let address = CpuAddress::zero_page(low);
-                let value = mem.peek(address).unwrap_or(0);
-                argument_string.push_str(&format!("${low:02X} = {value:02X}"));
-            }
-            ZPX => {
-                argument_string.push_str(&format!("${low:02X},X"));
-                let _address = CpuAddress::zero_page(low.wrapping_add(cpu.x_index()));
-            }
-            ZPY => {
-                argument_string.push_str(&format!("${low:02X},Y"));
-                let _address = CpuAddress::zero_page(low.wrapping_add(cpu.y_index()));
-            }
-            Abs => {
-                let address = CpuAddress::from_low_high(low, high);
-                argument_string.push_str(&format!("${high:02X}{low:02X}"));
-                if template.op_code != OpCode::JMP {
-                    let value = mem.peek(address).unwrap_or(0);
-                    argument_string.push_str(&format!(" = {value:02X}"));
-                }
-            }
-            AbX => {
-                let start_address = CpuAddress::from_low_high(low, high);
-                let address = start_address.advance(cpu.x_index());
-                let value = mem.peek(address).unwrap_or(0);
-                argument_string.push_str(&format!("${high:02X}{low:02X},X = {value:02X}"));
-            }
-            AbY => {
-                let start_address = CpuAddress::from_low_high(low, high);
-                let address = start_address.advance(cpu.y_index());
-                let value = mem.peek(address).unwrap_or(0);
-                argument_string.push_str(&format!("${high:02X}{low:02X},Y = {value:02X}"));
-            }
-            Rel => {
-                let address = start_address
-                    .offset(low as i8)
-                    .advance(template.access_mode.instruction_length());
-                argument_string.push_str(&format!("${:04X}", address.to_raw()));
-            }
-            Ind => {
-                let first = CpuAddress::from_low_high(low, high);
-                let second = CpuAddress::from_low_high(low.wrapping_add(1), high);
-                let _address = CpuAddress::from_low_high(
-                    mem.peek(first).unwrap_or(0),
-                    mem.peek(second).unwrap_or(0),
-                );
-            }
-            IzX => {
-                argument_string.push_str(&format!("(${low:02X}),X ="));
-                let low = low.wrapping_add(cpu.x_index());
-                let _address = CpuAddress::from_low_high(
-                    mem.peek(CpuAddress::zero_page(low)).expect("Read open bus."),
-                    mem.peek(CpuAddress::zero_page(low.wrapping_add(1))).expect("Read open bus."),
-                );
-            }
-            IzY => {
-                argument_string.push_str(&format!("(${low:02X}),Y ="));
-                let start_address = CpuAddress::from_low_high(
-                    mem.peek(CpuAddress::zero_page(low)).expect("Read open bus."),
-                    mem.peek(CpuAddress::zero_page(low.wrapping_add(1))).expect("Read open bus."),
-                );
-                // TODO: Should this wrap around just the current page?
-                let _address = start_address.advance(cpu.y_index());
-            }
-        };
-
-        let instr_bytes = match template.access_mode.instruction_length() {
-            1 => format!("{:02X}      ", template.code_point),
-            2 => format!("{:02X} {:02X}    ", template.code_point, low),
-            3 => format!("{:02X} {:02X} {:02X} ", template.code_point, low, high),
-            _ => unreachable!(),
-        };
-
-        let text = format!(
-            "{:04X}  {:<9} {:?} {:28}",
-            start_address.to_raw(),
-            instr_bytes,
-            template.op_code,
-            argument_string,
-        );
-
-        text
-    }
 }
 
 #[derive(Clone, Copy, Debug)]
