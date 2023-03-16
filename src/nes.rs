@@ -10,7 +10,7 @@ use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::Cpu;
 use crate::cpu::step::Step;
-use crate::cpu::instruction::{AccessMode, Argument, Instruction};
+use crate::cpu::instruction::Instruction;
 use crate::gui::gui::Events;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::mapper_list;
@@ -144,12 +144,13 @@ impl Nes {
 
         let log_message = if log_enabled!(target: "cpuinstructions", Info) {
             let address = self.cpu.address_for_next_step(&mut self.memory.as_cpu_memory());
-            Instruction::at_address(
-                address,
-                self.cpu.x_index(),
-                self.cpu.y_index(),
-                &self.memory.as_cpu_memory(),
-            ).map(|instruction| self.format_state(instruction))
+            Instruction::at_address(&self.cpu, address, &self.memory.as_cpu_memory())
+                .map(|(_,message)| format!("{} PPU:{:>3},{:>3} CYC:{}",
+                    message,
+                    self.ppu.clock().cycle(),
+                    self.ppu.clock().scanline(),
+                    self.cpu.cycle(),
+                ))
         } else {
             None
         };
@@ -191,66 +192,6 @@ impl Nes {
                 .borrow_mut()
                 .set_button_status(*button, *status);
         }
-    }
-
-    #[inline]
-    fn format_state(&mut self, instruction: Instruction) -> String {
-        /*
-        info!(
-            target: "cpu",
-            "{:010} PC:{}, A:{:02X} X:{:02X} Y:{:02X} P:{:02X} S:{:02X} {} | {instruction}",
-            self.cpu.cycle(),
-            self.cpu.program_counter(),
-            self.cpu.accumulator(),
-            self.cpu.x_index(),
-            self.cpu.y_index(),
-            self.cpu.status().to_register_byte(),
-            self.memory.stack_pointer(),
-            self.cpu.status(),
-        );
-        */
-
-
-        let (address, value) = match instruction.argument {
-            // No argument for Imp, so this value is unused.
-            Argument::Imp => (0, "".to_string()),
-            Argument::Imm(value) => (0, format!("{value:02X}")),
-            Argument::Addr(address) => {
-                let value = self.memory.as_cpu_memory().peek(address);
-                let value = value.map(|v| format!("#{v:02X}")).unwrap_or("OB".to_string());
-                (address.to_raw(), value)
-            }
-        };
-        use AccessMode::*;
-        let formatted_argument = match instruction.template.access_mode {
-            Imp => "".to_string(),
-            Imm => format!("#${value}"),
-            ZP => format!("[${address:02X}]={value}"),
-            ZPX => format!("[${address:02X},X @]={value}"),
-            ZPY => format!("[(${address:02X}),Y]={value}"),
-            Abs => format!("[${address:04X}]={value}"),
-            AbX => format!("[${address:04X},X]={value}"),
-            AbY => format!("[${address:04X},Y]={value}"),
-            Rel => format!("${address:04X}"),
-            Ind => format!("${address:04X}"),
-            IzX => format!("[${address:04X},X]={value}"),
-            IzY => format!("[${address:04X},Y]={value}"),
-        };
-
-        format!(
-            "{:04X} {:?} {:14}A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{:<3} SL:{:<3} CPU Cycle:{}",
-            self.cpu.program_counter().to_raw(),
-            instruction.template.op_code,
-            formatted_argument,
-            self.cpu.accumulator(),
-            self.cpu.x_index(),
-            self.cpu.y_index(),
-            self.cpu.status().to_register_byte(),
-            self.memory.stack_pointer(),
-            self.ppu.clock().cycle(),
-            self.ppu.clock().scanline(),
-            self.cpu.cycle(),
-        )
     }
 }
 

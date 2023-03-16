@@ -376,7 +376,7 @@ impl Cpu {
                 }
 
                 let instruction = instruction::Instruction::from_memory(
-                    op_code, start_address, self.x, self.y, memory);
+                    &self, op_code, start_address, memory).0;
                 self.current_instruction = Some(instruction);
                 if instruction.template.access_mode == AccessMode::Imp && instruction.template.op_code != OpCode::BRK {
                     self.suppress_program_counter_increment = true;
