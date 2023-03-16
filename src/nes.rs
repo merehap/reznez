@@ -142,21 +142,32 @@ impl Nes {
             self.memory.apu_regs().frame_irq_pending()
             || self.memory.mapper().irq_pending();
 
-        let log_message = if log_enabled!(target: "cpuinstructions", Info) {
+        let log_messages = if log_enabled!(target: "cpuinstructions", Info) {
             let address = self.cpu.address_for_next_step(&mut self.memory.as_cpu_memory());
             Instruction::at_address(&self.cpu, address, &self.memory.as_cpu_memory())
-                .map(|(_,message)| format!("{} PPU:{:>3},{:>3} CYC:{}",
-                    message,
-                    self.ppu.clock().cycle(),
-                    self.ppu.clock().scanline(),
-                    self.cpu.cycle(),
-                ))
+                .map(|(_, start)| {
+                    let cycles = format!("PPU:{:>3},{:>3} CYC:{}",
+                        self.ppu.clock().cycle(),
+                        self.ppu.clock().scanline(),
+                        self.cpu.cycle(),
+                    );
+                    (start, cycles)
+                })
         } else {
             None
         };
 
         let step = self.cpu.step(&mut self.memory.as_cpu_memory(), irq_pending);
-        if let Some(log_message) = log_message && self.cpu.next_instruction_starting() {
+        if let Some((start, cycles)) = log_messages && self.cpu.next_instruction_starting() {
+            let registers = format!(
+                "A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}",
+                self.cpu.accumulator(),
+                self.cpu.x_index(),
+                self.cpu.y_index(),
+                self.cpu.status().to_register_byte() | 0b0010_0000,
+                self.memory.stack_pointer(),
+            );
+            let log_message = format!("{}{} {}", start, registers, cycles);
             info!(target: "cpuinstructions", "{}", log_message);
         }
 

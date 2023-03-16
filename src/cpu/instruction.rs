@@ -108,12 +108,12 @@ impl Instruction {
                 Argument::Addr(address)
             }
             ZPX => {
-                argument_string.push_str(&format!("$({low:02X}),X"));
+                argument_string.push_str(&format!("${low:02X},X"));
                 let address = CpuAddress::zero_page(low.wrapping_add(cpu.x_index()));
                 Argument::Addr(address)
             }
             ZPY => {
-                argument_string.push_str(&format!("$({low:02X}),Y"));
+                argument_string.push_str(&format!("${low:02X},Y"));
                 let address = CpuAddress::zero_page(low.wrapping_add(cpu.y_index()));
                 Argument::Addr(address)
             }
@@ -131,16 +131,15 @@ impl Instruction {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(cpu.x_index());
                 let value = mem.peek(address).unwrap_or(0);
-                argument_string.push_str(&format!("(${high:02X}{low:02X}),X = {value:02X}"));
+                argument_string.push_str(&format!("${high:02X}{low:02X},X = {value:02X}"));
                 page_boundary_crossed = start_address.page() != address.page();
                 Argument::Addr(address)
             }
             AbY => {
-                argument_string.push_str(&format!("(${high:02X}{low:02X}),Y"));
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(cpu.y_index());
                 let value = mem.peek(address).unwrap_or(0);
-                argument_string.push_str(&format!("(${high:02X}{low:02X}),Y = {value:02X}"));
+                argument_string.push_str(&format!("${high:02X}{low:02X},Y = {value:02X}"));
                 page_boundary_crossed = start_address.page() != address.page();
                 Argument::Addr(address)
             }
@@ -148,6 +147,7 @@ impl Instruction {
                 let address = start_address
                     .offset(low as i8)
                     .advance(template.access_mode.instruction_length());
+                argument_string.push_str(&format!("${:04X}", address.to_raw()));
                 Argument::Addr(address)
             }
             Ind => {
@@ -181,23 +181,19 @@ impl Instruction {
             }
         };
 
-        let instr_bytes = match argument {
-            Argument::Imp => format!("{:02X}      ", template.code_point),
-            Argument::Imm(_) => format!("{:02X} {:02X}    ", template.code_point, low),
-            Argument::Addr(_) => format!("{:02X} {:02X} {:02X} ", template.code_point, low, high),
+        let instr_bytes = match template.access_mode.instruction_length() {
+            1 => format!("{:02X}      ", template.code_point),
+            2 => format!("{:02X} {:02X}    ", template.code_point, low),
+            3 => format!("{:02X} {:02X} {:02X} ", template.code_point, low, high),
+            _ => unreachable!(),
         };
 
         let text = format!(
-            "{:04X}  {:<9} {:?} {:28}A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}",
+            "{:04X}  {:<9} {:?} {:28}",
             start_address.to_raw(),
             instr_bytes,
             template.op_code,
             argument_string,
-            cpu.accumulator(),
-            cpu.x_index(),
-            cpu.y_index(),
-            cpu.status().to_register_byte() | 0b0010_0000,
-            mem.stack_pointer(),
         );
 
         (Instruction { template, argument, page_boundary_crossed }, text)
