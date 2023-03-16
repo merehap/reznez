@@ -83,6 +83,7 @@ impl Ppu {
     }
 
     pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) -> StepResult {
+        //println!("PPUCYCLE: {}", self.clock.cycle());
         if self.clock.cycle() == 1 {
             mem.regs_mut().maybe_decay_ppu_io_bus();
         }
@@ -427,6 +428,8 @@ impl Ppu {
             StartVblank => {
                 if !self.suppress_vblank_active {
                     mem.regs_mut().start_vblank();
+                } else {
+                    info!(target: "ppu_flags", "\tSuppressing vblank.");
                 }
 
                 self.suppress_vblank_active = false;

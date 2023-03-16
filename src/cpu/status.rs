@@ -79,6 +79,18 @@ impl Status {
             self.carry,
         ])
     }
+
+    pub fn to_mesen_string(self) -> String {
+        format!(
+            "{}{}--{}{}{}{}",
+            if self.negative { 'N' } else { 'n' },
+            if self.overflow { 'V' } else { 'v' },
+            if self.decimal { 'D' } else { 'd' },
+            if self.interrupts_disabled { 'I' } else { 'i' },
+            if self.zero { 'Z' } else { 'z' },
+            if self.carry { 'C' } else { 'c' },
+        )
+    }
 }
 
 impl fmt::Display for Status {

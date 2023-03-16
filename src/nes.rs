@@ -54,7 +54,7 @@ impl Nes {
             joypad2,
             cycle: 0,
 
-            log_formatter: Box::new(Nintendulator0980Formatter),
+            log_formatter: Box::new(MesenFormatter),
         }
     }
 
@@ -147,14 +147,13 @@ impl Nes {
             || self.memory.mapper().irq_pending();
 
         let cpu_cycle = self.cpu.cycle();
-        let ppu_cycle = self.ppu.clock().cycle();
-        let scanline = self.ppu.clock().scanline();
+        let ppu_clock = self.ppu.clock().clone();
         let address = self.cpu.address_for_next_step(&mut self.memory.as_cpu_memory());
 
         let step = self.cpu.step(&mut self.memory.as_cpu_memory(), irq_pending);
         if log_enabled!(target: "cpuinstructions", Info) && self.cpu.next_instruction_starting() {
             let message = self.log_formatter.format_instruction(
-                &self, cpu_cycle, ppu_cycle, scanline, address);
+                &self, cpu_cycle, ppu_clock, address);
             info!("{}", message);
         }
 
@@ -313,7 +312,7 @@ mod tests {
             joypad1,
             joypad2,
             cycle: 0,
-            log_formatter: Box::new(Nintendulator0980Formatter),
+            log_formatter: Box::new(MesenFormatter),
         }
     }
 
