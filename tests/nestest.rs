@@ -89,12 +89,12 @@ fn nestest() {
                 }
             }
 
-            let instruction = nes.cpu().current_instruction().unwrap();
+            let template = nes.cpu().current_instruction_template().unwrap();
 
             let state = State {
                 program_counter,
-                code_point: instruction.template.code_point,
-                op_code: instruction.template.op_code,
+                code_point: template.code_point,
+                op_code: template.op_code,
                 a,
                 x,
                 y,

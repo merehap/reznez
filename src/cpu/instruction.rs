@@ -1,5 +1,3 @@
-use std::fmt;
-
 use lazy_static::lazy_static;
 use strum_macros::EnumString;
 
@@ -66,56 +64,34 @@ fn instruction_templates() -> [InstructionTemplate; 256] {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Instruction {
-    pub template: InstructionTemplate,
-    pub argument: Argument,
-    pub page_boundary_crossed: bool,
 }
 
 impl Instruction {
-    pub fn at_address(
-        cpu: &Cpu,
-        address: CpuAddress,
-        mem: &CpuMemory,
-    ) -> Option<(Instruction, String)> {
-        mem.peek(address)
-            .map(|op_code| Instruction::from_memory(cpu, op_code, address, mem))
-    }
-
-    pub fn from_memory(
-        cpu: &Cpu,
-        op_code: u8,
-        start_address: CpuAddress,
-        mem: &CpuMemory,
-    ) -> (Instruction, String) {
+    pub fn at_address(cpu: &Cpu, start_address: CpuAddress, mem: &CpuMemory) -> String {
+        let op_code = mem.peek(start_address).unwrap();
         let template = INSTRUCTION_TEMPLATES[op_code as usize];
         let low = mem.peek(start_address.offset(1)).expect("Read open bus.");
         let high = mem.peek(start_address.offset(2)).expect("Read open bus.");
 
-        let mut page_boundary_crossed = false;
-
         let mut argument_string = String::new();
         use AccessMode::*;
-        let argument = match template.access_mode {
-            Imp => Argument::Imp,
+        match template.access_mode {
+            Imp => {},
             Imm => {
                 argument_string.push_str(&format!("#${low:02X}"));
-                Argument::Imm(low)
             }
             ZP => {
                 let address = CpuAddress::zero_page(low);
                 let value = mem.peek(address).unwrap_or(0);
                 argument_string.push_str(&format!("${low:02X} = {value:02X}"));
-                Argument::Addr(address)
             }
             ZPX => {
                 argument_string.push_str(&format!("${low:02X},X"));
-                let address = CpuAddress::zero_page(low.wrapping_add(cpu.x_index()));
-                Argument::Addr(address)
+                let _address = CpuAddress::zero_page(low.wrapping_add(cpu.x_index()));
             }
             ZPY => {
                 argument_string.push_str(&format!("${low:02X},Y"));
-                let address = CpuAddress::zero_page(low.wrapping_add(cpu.y_index()));
-                Argument::Addr(address)
+                let _address = CpuAddress::zero_page(low.wrapping_add(cpu.y_index()));
             }
             Abs => {
                 let address = CpuAddress::from_low_high(low, high);
@@ -124,49 +100,40 @@ impl Instruction {
                     let value = mem.peek(address).unwrap_or(0);
                     argument_string.push_str(&format!(" = {value:02X}"));
                 }
-
-                Argument::Addr(address)
             }
             AbX => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(cpu.x_index());
                 let value = mem.peek(address).unwrap_or(0);
                 argument_string.push_str(&format!("${high:02X}{low:02X},X = {value:02X}"));
-                page_boundary_crossed = start_address.page() != address.page();
-                Argument::Addr(address)
             }
             AbY => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(cpu.y_index());
                 let value = mem.peek(address).unwrap_or(0);
                 argument_string.push_str(&format!("${high:02X}{low:02X},Y = {value:02X}"));
-                page_boundary_crossed = start_address.page() != address.page();
-                Argument::Addr(address)
             }
             Rel => {
                 let address = start_address
                     .offset(low as i8)
                     .advance(template.access_mode.instruction_length());
                 argument_string.push_str(&format!("${:04X}", address.to_raw()));
-                Argument::Addr(address)
             }
             Ind => {
                 let first = CpuAddress::from_low_high(low, high);
                 let second = CpuAddress::from_low_high(low.wrapping_add(1), high);
-                let address = CpuAddress::from_low_high(
+                let _address = CpuAddress::from_low_high(
                     mem.peek(first).unwrap_or(0),
                     mem.peek(second).unwrap_or(0),
                 );
-                Argument::Addr(address)
             }
             IzX => {
                 argument_string.push_str(&format!("(${low:02X}),X ="));
                 let low = low.wrapping_add(cpu.x_index());
-                let address = CpuAddress::from_low_high(
+                let _address = CpuAddress::from_low_high(
                     mem.peek(CpuAddress::zero_page(low)).expect("Read open bus."),
                     mem.peek(CpuAddress::zero_page(low.wrapping_add(1))).expect("Read open bus."),
                 );
-                Argument::Addr(address)
             }
             IzY => {
                 argument_string.push_str(&format!("(${low:02X}),Y ="));
@@ -175,9 +142,7 @@ impl Instruction {
                     mem.peek(CpuAddress::zero_page(low.wrapping_add(1))).expect("Read open bus."),
                 );
                 // TODO: Should this wrap around just the current page?
-                let address = start_address.advance(cpu.y_index());
-                page_boundary_crossed = start_address.page() != address.page();
-                Argument::Addr(address)
+                let _address = start_address.advance(cpu.y_index());
             }
         };
 
@@ -196,43 +161,7 @@ impl Instruction {
             argument_string,
         );
 
-        (Instruction { template, argument, page_boundary_crossed }, text)
-    }
-}
-
-impl fmt::Display for Instruction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
-        let mut access_mode = format!("{:?}", self.template.access_mode);
-        if access_mode.len() == 2 {
-            access_mode.push(' ');
-        }
-
-        write!(
-            f,
-            "{:02X} ({:?} {} PB:{:5} Arg:{:5}",
-            self.template.code_point,
-            self.template.op_code,
-            access_mode,
-            self.page_boundary_crossed,
-            self.argument
-        )
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum Argument {
-    Imp,
-    Imm(u8),
-    Addr(CpuAddress),
-}
-
-impl fmt::Display for Argument {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Argument::Imp => write!(f, "No   "),
-            Argument::Imm(value) => write!(f, "#{value:02X}  "),
-            Argument::Addr(address) => write!(f, "[{address}]"),
-        }
+        text
     }
 }
 
@@ -244,6 +173,10 @@ pub struct InstructionTemplate {
 }
 
 impl InstructionTemplate {
+    pub fn from_code_point(code_point: u8) -> InstructionTemplate {
+        INSTRUCTION_TEMPLATES[code_point as usize]
+    }
+
     fn from_tuple(
         code_point: u8,
         tuple: (OpCode, AccessMode),

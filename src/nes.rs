@@ -149,7 +149,7 @@ impl Nes {
 
         let step = self.cpu.step(&mut self.memory.as_cpu_memory(), irq_pending);
         if log_enabled!(target: "cpuinstructions", Info) && self.cpu.next_instruction_starting() {
-            let start = Instruction::at_address(&self.cpu, address, &self.memory.as_cpu_memory()).unwrap().1;
+            let start = Instruction::at_address(&self.cpu, address, &self.memory.as_cpu_memory());
             let end = format!(
                 "A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} PPU:{:>3},{:>3} CYC:{}",
                 self.cpu.accumulator(),
