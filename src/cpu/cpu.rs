@@ -279,7 +279,7 @@ impl Cpu {
                         Some(InterruptVector::Nmi)
                     } else if self.irq_status == IrqStatus::Active {
                         Some(InterruptVector::Irq)
-                    } else if let Some(template) = self.current_instruction && template.op_code == OpCode::BRK {
+                    } else if let Some(instruction) = self.current_instruction && instruction.op_code() == OpCode::BRK {
                         Some(InterruptVector::Irq)
                     } else {
                         None
@@ -375,17 +375,17 @@ impl Cpu {
                     return;
                 }
 
-                let template = Instruction::from_code_point(op_code);
-                self.current_instruction = Some(template);
-                if template.access_mode == AccessMode::Imp && template.op_code != OpCode::BRK {
+                let instruction = Instruction::from_code_point(op_code);
+                self.current_instruction = Some(instruction);
+                if instruction.access_mode() == AccessMode::Imp && instruction.op_code() != OpCode::BRK {
                     self.suppress_program_counter_increment = true;
                 }
 
-                self.step_queue.enqueue_instruction(template.code_point);
+                self.step_queue.enqueue_instruction(instruction.code_point());
             }
             ExecuteOpCode => {
                 let value = self.previous_data_bus_value;
-                let access_mode = self.current_instruction.unwrap().access_mode;
+                let access_mode = self.current_instruction.unwrap().access_mode();
                 let rmw_operand = if access_mode == AccessMode::Imp {
                     &mut self.a
                 } else {
@@ -393,7 +393,7 @@ impl Cpu {
                 };
 
                 use OpCode::*;
-                match self.current_instruction.unwrap().op_code {
+                match self.current_instruction.unwrap().op_code() {
                     // Implicit (and Accumulator) op codes.
                     INX => self.x = self.nz(self.x.wrapping_add(1)),
                     INY => self.y = self.nz(self.y.wrapping_add(1)),
@@ -596,7 +596,7 @@ impl Cpu {
             Status => unreachable!(),
             StatusForInstruction => self.status.to_instruction_byte(),
             StatusForInterrupt => self.status.to_interrupt_byte(),
-            OpRegister => match self.current_instruction.unwrap().op_code {
+            OpRegister => match self.current_instruction.unwrap().op_code() {
                 OpCode::STA => self.a,
                 OpCode::STX => self.x,
                 OpCode::STY => self.y,

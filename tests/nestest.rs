@@ -94,8 +94,8 @@ fn nestest() {
 
             let state = State {
                 program_counter,
-                code_point: template.code_point,
-                op_code: template.op_code,
+                code_point: template.code_point(),
+                op_code: template.op_code(),
                 a,
                 x,
                 y,

@@ -14,15 +14,14 @@ impl Formatter for Nintendulator0980Formatter {
 
         let cpu = nes.cpu();
 
-        let op_code = peek(start_address);
-        let template = INSTRUCTIONS[op_code as usize];
+        let instruction = INSTRUCTIONS[peek(start_address) as usize];
         let low = peek(start_address.offset(1));
         let high = peek(start_address.offset(2));
 
         let mut argument_string = String::new();
         use AccessMode::*;
-        match template.access_mode {
-            Imp => {},
+        match instruction.access_mode() {
+            Imp => {}
             Imm => {
                 argument_string.push_str(&format!("#${low:02X}"));
             }
@@ -42,7 +41,7 @@ impl Formatter for Nintendulator0980Formatter {
             Abs => {
                 let address = CpuAddress::from_low_high(low, high);
                 argument_string.push_str(&format!("${high:02X}{low:02X}"));
-                if template.op_code != OpCode::JMP {
+                if instruction.op_code() != OpCode::JMP {
                     let value = peek(address);
                     argument_string.push_str(&format!(" = {value:02X}"));
                 }
@@ -62,7 +61,7 @@ impl Formatter for Nintendulator0980Formatter {
             Rel => {
                 let address = start_address
                     .offset(low as i8)
-                    .advance(template.access_mode.instruction_length());
+                    .advance(instruction.access_mode().instruction_length());
                 argument_string.push_str(&format!("${:04X}", address.to_raw()));
             }
             Ind => {
@@ -92,10 +91,10 @@ impl Formatter for Nintendulator0980Formatter {
             }
         };
 
-        let instr_bytes = match template.access_mode.instruction_length() {
-            1 => format!("{:02X}      ", template.code_point),
-            2 => format!("{:02X} {:02X}    ", template.code_point, low),
-            3 => format!("{:02X} {:02X} {:02X} ", template.code_point, low, high),
+        let instr_bytes = match instruction.access_mode().instruction_length() {
+            1 => format!("{:02X}      ", instruction.code_point()),
+            2 => format!("{:02X} {:02X}    ", instruction.code_point(), low),
+            3 => format!("{:02X} {:02X} {:02X} ", instruction.code_point(), low, high),
             _ => unreachable!(),
         };
 
@@ -103,7 +102,7 @@ impl Formatter for Nintendulator0980Formatter {
             "{:04X}  {:<9} {:?} {:28}A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} PPU:{:>3},{:>3} CYC:{}",
             start_address.to_raw(),
             instr_bytes,
-            template.op_code,
+            instruction.op_code(),
             argument_string,
             cpu.accumulator(),
             cpu.x_index(),
@@ -125,15 +124,14 @@ impl Formatter for MesenFormatter {
 
         let cpu = nes.cpu();
 
-        let op_code = peek(start_address);
-        let template = INSTRUCTIONS[op_code as usize];
+        let instruction = INSTRUCTIONS[peek(start_address) as usize];
         let low = peek(start_address.offset(1));
         let high = peek(start_address.offset(2));
 
         let mut argument_string = String::new();
         use AccessMode::*;
-        match template.access_mode {
-            Imp => {},
+        match instruction.access_mode() {
+            Imp => {}
             Imm => {
                 argument_string.push_str(&format!("#${low:02X}"));
             }
@@ -153,7 +151,7 @@ impl Formatter for MesenFormatter {
             Abs => {
                 let address = CpuAddress::from_low_high(low, high);
                 argument_string.push_str(&format!("${high:02X}{low:02X}"));
-                if template.op_code != OpCode::JMP {
+                if instruction.op_code() != OpCode::JMP {
                     let value = peek(address);
                     argument_string.push_str(&format!(" = {value:02X}"));
                 }
@@ -173,7 +171,7 @@ impl Formatter for MesenFormatter {
             Rel => {
                 let address = start_address
                     .offset(low as i8)
-                    .advance(template.access_mode.instruction_length());
+                    .advance(instruction.access_mode().instruction_length());
                 argument_string.push_str(&format!("${:04X}", address.to_raw()));
             }
             Ind => {
@@ -211,7 +209,7 @@ impl Formatter for MesenFormatter {
         format!(
             "{:04X}  {:?} {:28}A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} V:{:<3} H:{:<3} Fr:{} Cycle:{}",
             start_address.to_raw(),
-            template.op_code,
+            instruction.op_code(),
             argument_string,
             cpu.accumulator(),
             cpu.x_index(),

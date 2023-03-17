@@ -63,13 +63,25 @@ fn instructions() -> [Instruction; 256] {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Instruction {
-    pub code_point: u8,
-    pub op_code: OpCode,
-    pub access_mode: AccessMode,
+    code_point: u8,
+    op_code: OpCode,
+    access_mode: AccessMode,
     steps: &'static [Step],
 }
 
 impl Instruction {
+    pub fn code_point(&self) -> u8 {
+        self.code_point
+    }
+
+    pub fn op_code(&self) -> OpCode {
+        self.op_code
+    }
+
+    pub fn access_mode(&self) -> AccessMode {
+        self.access_mode
+    }
+
     pub fn steps(&self) -> &'static [Step] {
         self.steps
     }
