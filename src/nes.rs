@@ -20,8 +20,10 @@ use crate::ppu::ppu::Ppu;
 use crate::ppu::render::frame::Frame;
 
 pub struct Nes {
-    cpu: Cpu,
-    ppu: Ppu,
+    // FIXME: Shouldn't be pub.
+    pub cpu: Cpu,
+    // FIXME: Shouldn't be pub.
+    pub ppu: Ppu,
     apu: Apu,
     memory: Memory,
     cartridge: Cartridge,
@@ -146,15 +148,10 @@ impl Nes {
             self.memory.apu_regs().frame_irq_pending()
             || self.memory.mapper().irq_pending();
 
-        let cpu_cycle = self.cpu.cycle();
-        let ppu_clock = self.ppu.clock().clone();
         let address = self.cpu.address_for_next_step(&mut self.memory.as_cpu_memory());
-
         let step = self.cpu.step(&mut self.memory.as_cpu_memory(), irq_pending);
         if log_enabled!(target: "cpuinstructions", Info) && self.cpu.next_instruction_starting() {
-            let message = self.log_formatter.format_instruction(
-                &self, cpu_cycle, ppu_clock, address);
-            info!("{}", message);
+            info!("{}", self.log_formatter.format_instruction(&self, address));
         }
 
         step

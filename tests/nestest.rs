@@ -53,19 +53,20 @@ fn nestest() {
 
     let config = Config::new(&opt);
     let mut nes = Nes::new(&config);
+    nes.cpu.cycle = 6;
+    nes.ppu.clock.cycle = -1;
 
     loop {
         if let Some(expected_state) = expected_states.next() {
-            let mut ppu_cycle;
-            let mut ppu_scanline;
-            let mut c;
+            let c;
+            let ppu_cycle;
+            let ppu_scanline;
 
             loop {
-                ppu_scanline = nes.ppu().clock().scanline();
-                ppu_cycle = nes.ppu().clock().cycle();
-                c = nes.cpu().cycle();
-
                 if nes.step().step.is_some() && nes.cpu().next_op_code().is_some() {
+                    c = nes.cpu().cycle();
+                    ppu_cycle = nes.ppu().clock().cycle();
+                    ppu_scanline = nes.ppu().clock().scanline();
                     break;
                 }
             }

@@ -1,28 +1,15 @@
 use crate::cpu::instruction::{INSTRUCTION_TEMPLATES, OpCode, AccessMode};
 use crate::memory::mapper::CpuAddress;
 use crate::nes::Nes;
-use crate::ppu::clock::Clock;
 
 pub trait Formatter {
-    fn format_instruction(
-        &self,
-        _nes: &Nes,
-        _cpu_cycle: u64,
-        _ppu_clock: Clock,
-        _address: CpuAddress,
-    ) -> String;
+    fn format_instruction(&self, _nes: &Nes, _address: CpuAddress) -> String;
 }
 
 pub struct Nintendulator0980Formatter;
 
 impl Formatter for Nintendulator0980Formatter {
-    fn format_instruction(
-        &self,
-        nes: &Nes,
-        cpu_cycle: u64,
-        ppu_clock: Clock,
-        start_address: CpuAddress,
-    ) -> String {
+    fn format_instruction(&self, nes: &Nes, start_address: CpuAddress) -> String {
         let peek = |address| nes.memory().cpu_peek(address).unwrap_or(0);
 
         let cpu = nes.cpu();
@@ -123,9 +110,9 @@ impl Formatter for Nintendulator0980Formatter {
             cpu.y_index(),
             cpu.status().to_register_byte() | 0b0010_0000,
             nes.memory().stack_pointer(),
-            ppu_clock.cycle(),
-            ppu_clock.scanline(),
-            cpu_cycle,
+            nes.ppu().clock().cycle(),
+            nes.ppu().clock().scanline(),
+            nes.cpu().cycle(),
         )
     }
 }
@@ -133,13 +120,7 @@ impl Formatter for Nintendulator0980Formatter {
 pub struct MesenFormatter;
 
 impl Formatter for MesenFormatter {
-    fn format_instruction(
-        &self,
-        nes: &Nes,
-        cpu_cycle: u64,
-        ppu_clock: Clock,
-        start_address: CpuAddress,
-    ) -> String {
+    fn format_instruction(&self, nes: &Nes, start_address: CpuAddress) -> String {
         let peek = |address| nes.memory().cpu_peek(address).unwrap_or(0);
 
         let cpu = nes.cpu();
@@ -222,7 +203,7 @@ impl Formatter for MesenFormatter {
             }
         };
 
-        let mut scanline = ppu_clock.scanline() as i16;
+        let mut scanline = nes.ppu().clock().scanline() as i16;
         if scanline == 261 {
             scanline = -1;
         }
@@ -238,9 +219,9 @@ impl Formatter for MesenFormatter {
             nes.memory().stack_pointer(),
             cpu.status().to_mesen_string(),
             scanline,
-            ppu_clock.cycle(),
-            ppu_clock.frame(),
-            cpu_cycle,
+            nes.ppu().clock().cycle(),
+            nes.ppu().clock().frame(),
+            nes.cpu().cycle(),
         )
     }
 }

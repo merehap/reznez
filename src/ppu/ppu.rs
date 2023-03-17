@@ -29,7 +29,8 @@ pub struct Ppu {
     clear_oam: bool,
     all_sprites_evaluated: bool,
 
-    clock: Clock,
+    // FIXME: Shouldn't be pub.
+    pub clock: Clock,
 
     write_toggle: WriteToggle,
 
@@ -83,6 +84,8 @@ impl Ppu {
     }
 
     pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) -> StepResult {
+        let is_last_cycle_of_frame = self.clock.tick(mem.regs().rendering_enabled());
+
         //println!("PPUCYCLE: {}", self.clock.cycle());
         if self.clock.cycle() == 1 {
             mem.regs_mut().maybe_decay_ppu_io_bus();
@@ -103,7 +106,6 @@ impl Ppu {
             self.execute_cycle_action(mem, frame, cycle_action);
         }
 
-        let is_last_cycle_of_frame = self.clock.tick(mem.regs().rendering_enabled());
         let should_generate_nmi = self.nmi_requested && mem.regs().can_generate_nmi();
 
         mem.process_end_of_ppu_cycle();
@@ -429,7 +431,7 @@ impl Ppu {
                 if !self.suppress_vblank_active {
                     mem.regs_mut().start_vblank();
                 } else {
-                    info!(target: "ppu_flags", "\tSuppressing vblank.");
+                    info!(target: "ppuflags", "\tSuppressing vblank.");
                 }
 
                 self.suppress_vblank_active = false;

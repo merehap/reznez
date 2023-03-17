@@ -29,7 +29,8 @@ pub struct Cpu {
 
     dma_port: DmaPort,
 
-    cycle: u64,
+    // FIXME: Shouldn't be pub.
+    pub cycle: u64,
 
     current_interrupt_vector: Option<InterruptVector>,
 
@@ -103,7 +104,7 @@ impl Cpu {
         self.step_queue = StepQueue::new();
         self.nmi_status = NmiStatus::Inactive;
         self.irq_status = IrqStatus::Inactive;
-        self.cycle = 7;
+        self.cycle = 6;
         self.current_interrupt_vector = None;
         self.jammed = false;
         self.suppress_program_counter_increment = false;
@@ -188,6 +189,8 @@ impl Cpu {
             return None;
         }
 
+        self.cycle += 1;
+
         if self.next_op_code.is_some() {
             self.step_queue.enqueue_op_code_interpret();
         }
@@ -232,8 +235,6 @@ impl Cpu {
             info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
             self.nmi_status = NmiStatus::Ready;
         }
-
-        self.cycle += 1;
 
         Some(step)
     }
