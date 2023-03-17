@@ -34,6 +34,9 @@ pub struct Ppu {
 
     write_toggle: WriteToggle,
 
+    rendering_enabled: bool,
+    toggle_rendering_enabled: bool,
+
     suppress_vblank_active: bool,
     nmi_requested: bool,
     nmi_was_enabled_last_cycle: bool,
@@ -63,6 +66,9 @@ impl Ppu {
 
             write_toggle: WriteToggle::FirstByte,
 
+            rendering_enabled: false,
+            toggle_rendering_enabled: false,
+
             suppress_vblank_active: false,
             nmi_requested: false,
             nmi_was_enabled_last_cycle: false,
@@ -84,7 +90,12 @@ impl Ppu {
     }
 
     pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) -> StepResult {
-        let is_last_cycle_of_frame = self.clock.tick(mem.regs().rendering_enabled());
+        let is_last_cycle_of_frame = self.clock.tick(self.rendering_enabled);
+
+        if self.toggle_rendering_enabled {
+            self.rendering_enabled = !self.rendering_enabled;
+            self.toggle_rendering_enabled = false;
+        }
 
         //println!("PPUCYCLE: {}", self.clock.cycle());
         if self.clock.cycle() == 1 {
@@ -128,17 +139,16 @@ impl Ppu {
 
         let background_enabled = mem.regs().background_enabled();
         let sprites_enabled = mem.regs().sprites_enabled();
-        let rendering_enabled = background_enabled || sprites_enabled;
 
         use CycleAction::*;
         match cycle_action {
             GetPatternIndex => {
-                if !rendering_enabled { return; }
+                if !self.rendering_enabled { return; }
                 let address = PpuAddress::in_name_table(name_table_quadrant, tile_column, tile_row);
                 self.next_pattern_index = PatternIndex::new(mem.read(address, true));
             }
             GetPaletteIndex => {
-                if !rendering_enabled { return; }
+                if !self.rendering_enabled { return; }
                 let address = PpuAddress::in_attribute_table(name_table_quadrant, tile_column, tile_row);
                 let attribute_byte = mem.read(address, true);
                 let palette_table_index =
@@ -146,39 +156,40 @@ impl Ppu {
                 self.attribute_register.set_pending_palette_table_index(palette_table_index);
             }
             GetPatternLowByte => {
-                if !rendering_enabled { return; }
+                if !self.rendering_enabled { return; }
                 let address = PpuAddress::in_pattern_table(
                     background_table_side, self.next_pattern_index, row_in_tile, false);
                 self.pattern_register.set_pending_low_byte(mem.read(address, true));
             }
             GetPatternHighByte => {
-                if !rendering_enabled { return; }
+                if !self.rendering_enabled { return; }
                 let address = PpuAddress::in_pattern_table(
                     background_table_side, self.next_pattern_index, row_in_tile, true);
                 self.pattern_register.set_pending_high_byte(mem.read(address, true));
             }
 
             GotoNextTileColumn => {
-                if !rendering_enabled { return; }
+                if !self.rendering_enabled { return; }
                 mem.regs_mut().current_address.increment_coarse_x_scroll();
             }
             GotoNextPixelRow => {
-                if !rendering_enabled { return; }
+                if !self.rendering_enabled { return; }
                 mem.regs_mut().current_address.increment_fine_y_scroll();
             }
             ResetTileColumn => {
-                if !rendering_enabled { return; }
+                if !self.rendering_enabled { return; }
                 let next_address = mem.regs().next_address;
                 mem.regs_mut().current_address.copy_x_scroll(next_address);
                 mem.regs_mut().current_address.copy_horizontal_name_table_side(next_address);
             }
             PrepareForNextTile => {
-                if !rendering_enabled { return; }
+                if !self.rendering_enabled { return; }
                 self.attribute_register.prepare_next_palette_table_index();
                 self.pattern_register.load_next_palette_indexes();
             }
             SetPixel => {
                 let (pixel_column, pixel_row) = PixelIndex::try_from_clock(&self.clock).unwrap().to_column_row();
+                // TODO: Verify if these need to be delayed like self.rendering_enabled.
                 if background_enabled {
                     let palette_table = mem.palette_table();
                     // TODO: Figure out where this goes. Maybe have frame call palette_table when displaying.
@@ -197,6 +208,7 @@ impl Ppu {
                     frame.set_background_pixel(pixel_column, pixel_row, current_background_pixel);
                 }
 
+                // TODO: Verify if this need to be delayed like self.rendering_enabled.
                 if sprites_enabled {
                     let (sprite_pixel, priority, is_sprite_0) = self.oam_registers.step(&mem.palette_table());
                     frame.set_sprite_pixel(
@@ -209,6 +221,7 @@ impl Ppu {
                 }
 
                 // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
+                // TODO: Verify if these need to be delayed like self.rendering_enabled.
                 if sprites_enabled && background_enabled
                     && frame.pixel(mem.regs().mask(), pixel_column, pixel_row).1.hit()
                 {
@@ -216,18 +229,19 @@ impl Ppu {
                 }
             }
             PrepareForNextPixel => {
+                // TODO: Verify if this needs to be !self.rendering_enabled, which is time-delayed.
                 if !background_enabled { return; }
                 self.pattern_register.shift_left();
                 self.attribute_register.push_next_palette_table_index();
             }
 
             ResetOamAddress => {
-                if !rendering_enabled { return; }
+                if !self.rendering_enabled { return; }
                 mem.regs_mut().oam_addr.reset();
             }
 
             ReadOamByte => {
-                if !rendering_enabled { return; }
+                if !self.rendering_enabled { return; }
                 // This is a dummy read if OAM clear is active. TODO: Can this be removed?
                 self.oam_data_read = mem.oam().peek(mem.regs().oam_addr);
                 if self.clear_oam {
@@ -235,7 +249,7 @@ impl Ppu {
                 }
             }
             WriteSecondaryOamByte => {
-                if !rendering_enabled { return; }
+                if !self.rendering_enabled { return; }
 
                 if self.clear_oam {
                     self.secondary_oam.write(self.oam_data_read);
@@ -291,28 +305,28 @@ impl Ppu {
                 self.all_sprites_evaluated = mem.regs_mut().oam_addr.next_sprite();
             }
             ReadSpriteY => {
-                if !rendering_enabled { return; }
+                if !self.rendering_enabled { return; }
                 self.current_sprite_y = SpriteY::new(self.secondary_oam.read_and_advance());
             }
             ReadSpritePatternIndex => {
-                if !rendering_enabled { return; }
+                if !self.rendering_enabled { return; }
                 self.next_sprite_pattern_index = PatternIndex::new(self.secondary_oam.read_and_advance());
             }
             ReadSpriteAttributes => {
-                if !rendering_enabled { return; }
+                if !self.rendering_enabled { return; }
 
                 let attributes = SpriteAttributes::from_u8(self.secondary_oam.read_and_advance());
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
-                if !rendering_enabled { return; }
+                if !self.rendering_enabled { return; }
 
                 let x_counter = self.secondary_oam.read_and_advance();
                 self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
             }
             DummyReadSpriteX => {
                 // TODO
-                //if !rendering_enabled { return; }
+                //if !self.rendering_enabled { return; }
             }
 
             GetSpritePatternLowByte => {
@@ -339,7 +353,7 @@ impl Ppu {
                     }
                 }
 
-                if rendering_enabled {
+                if self.rendering_enabled {
                     let pattern_low = mem.read(address, true);
                     if visible {
                         self.oam_registers.registers[self.oam_register_index]
@@ -372,7 +386,7 @@ impl Ppu {
                     }
                 }
 
-                if rendering_enabled {
+                if self.rendering_enabled {
                     let pattern_high = mem.read(address, true);
                     if visible {
                         self.oam_registers.registers[self.oam_register_index]
@@ -441,10 +455,12 @@ impl Ppu {
                 self.nmi_requested = true;
             }
             SetInitialScrollOffsets => {
+                // TODO: Verify if this needs to be !self.rendering_enabled, which is time-delayed.
                 if !background_enabled { return; }
                 mem.regs_mut().current_address = mem.regs().next_address;
             }
             SetInitialYScroll => {
+                // TODO: Verify if this needs to be !self.rendering_enabled, which is time-delayed.
                 if !background_enabled { return; }
                 let next_address = mem.regs().next_address;
                 mem.regs_mut().current_address.copy_y_scroll(next_address);
@@ -474,7 +490,7 @@ impl Ppu {
             (Ctrl, Write) => request_nmi = self.write_ctrl(mem.regs_mut(), value),
             // 0x2001
             (Mask, Read) => unreachable!(),
-            (Mask, Write) => {}
+            (Mask, Write) => self.write_mask(mem.regs()),
             // 0x2002
             (Status, Read) => self.read_status(mem.regs_mut()),
             (Status, Write) => {}
@@ -505,6 +521,13 @@ impl Ppu {
         let request_nmi = !self.nmi_was_enabled_last_cycle;
         self.nmi_was_enabled_last_cycle = regs.nmi_enabled();
         request_nmi
+    }
+
+    // Write 0x2001
+    fn write_mask(&mut self, regs: &PpuRegisters) {
+        if self.rendering_enabled != regs.rendering_enabled() {
+            self.toggle_rendering_enabled = true;
+        }
     }
 
     // Read 0x2002

@@ -1,4 +1,5 @@
 ROADMAP
+Move nestest over to new formatting system.
 Disable OAMDATA writes (other than address increment) during rendering
 Battletoads
 Work out priorities for WorkRam vs registers. Why does WorkRam need to be explicitly written to by each mapper?
@@ -38,7 +39,6 @@ Automatically add registers from every layout? Maybe not since certain layouts w
 Automatically mirror under-sized PRG?
 
 FAILING TESTS
-ppu_vbl_nmi/rom_singles/10-even_odd_timing.nes
 
 ---------------------GAMES------------------------------------
 MAPPER 0
