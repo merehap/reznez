@@ -3,7 +3,7 @@ use log::info;
 use crate::cpu::step::*;
 use crate::cpu::cycle_action::{CycleAction, From, To, Field};
 use crate::cpu::step_queue::StepQueue;
-use crate::cpu::instruction::{AccessMode, InstructionTemplate, OpCode};
+use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
 use crate::cpu::status;
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
@@ -20,7 +20,7 @@ pub struct Cpu {
     program_counter: CpuAddress,
     status: Status,
 
-    current_instruction_template: Option<InstructionTemplate>,
+    current_instruction: Option<Instruction>,
     next_op_code: Option<(u8, CpuAddress)>,
 
     step_queue: StepQueue,
@@ -66,7 +66,7 @@ impl Cpu {
             program_counter,
             status: Status::startup(),
 
-            current_instruction_template: None,
+            current_instruction: None,
             next_op_code: None,
 
             step_queue: StepQueue::new(),
@@ -99,7 +99,7 @@ impl Cpu {
         self.program_counter = memory.reset_vector();
         self.address_bus = memory.reset_vector();
         self.address_carry = 0;
-        self.current_instruction_template = None;
+        self.current_instruction = None;
         self.next_op_code = None;
         self.step_queue = StepQueue::new();
         self.nmi_status = NmiStatus::Inactive;
@@ -140,8 +140,8 @@ impl Cpu {
         self.address_bus
     }
 
-    pub fn current_instruction_template(&self) -> Option<InstructionTemplate> {
-        self.current_instruction_template
+    pub fn current_instruction(&self) -> Option<Instruction> {
+        self.current_instruction
     }
 
     pub fn next_op_code(&self) -> Option<(u8, CpuAddress)> {
@@ -279,7 +279,7 @@ impl Cpu {
                         Some(InterruptVector::Nmi)
                     } else if self.irq_status == IrqStatus::Active {
                         Some(InterruptVector::Irq)
-                    } else if let Some(template) = self.current_instruction_template && template.op_code == OpCode::BRK {
+                    } else if let Some(template) = self.current_instruction && template.op_code == OpCode::BRK {
                         Some(InterruptVector::Irq)
                     } else {
                         None
@@ -363,20 +363,20 @@ impl Cpu {
                 let (op_code, _start_address) = self.next_op_code.take().unwrap();
                 if self.nmi_status == NmiStatus::Active {
                     self.suppress_program_counter_increment = true;
-                    self.current_instruction_template = None;
+                    self.current_instruction = None;
                     self.step_queue.enqueue_nmi();
                     return;
                 }
 
                 if self.irq_status == IrqStatus::Active {
                     self.suppress_program_counter_increment = true;
-                    self.current_instruction_template = None;
+                    self.current_instruction = None;
                     self.step_queue.enqueue_irq();
                     return;
                 }
 
-                let template = InstructionTemplate::from_code_point(op_code);
-                self.current_instruction_template = Some(template);
+                let template = Instruction::from_code_point(op_code);
+                self.current_instruction = Some(template);
                 if template.access_mode == AccessMode::Imp && template.op_code != OpCode::BRK {
                     self.suppress_program_counter_increment = true;
                 }
@@ -385,7 +385,7 @@ impl Cpu {
             }
             ExecuteOpCode => {
                 let value = self.previous_data_bus_value;
-                let access_mode = self.current_instruction_template.unwrap().access_mode;
+                let access_mode = self.current_instruction.unwrap().access_mode;
                 let rmw_operand = if access_mode == AccessMode::Imp {
                     &mut self.a
                 } else {
@@ -393,7 +393,7 @@ impl Cpu {
                 };
 
                 use OpCode::*;
-                match self.current_instruction_template.unwrap().op_code {
+                match self.current_instruction.unwrap().op_code {
                     // Implicit (and Accumulator) op codes.
                     INX => self.x = self.nz(self.x.wrapping_add(1)),
                     INY => self.y = self.nz(self.y.wrapping_add(1)),
@@ -543,7 +543,7 @@ impl Cpu {
 
                     JAM => self.jammed = true,
 
-                    _ => todo!("{:X?}", self.current_instruction_template.unwrap()),
+                    _ => todo!("{:X?}", self.current_instruction.unwrap()),
                 }
             }
         }
@@ -596,7 +596,7 @@ impl Cpu {
             Status => unreachable!(),
             StatusForInstruction => self.status.to_instruction_byte(),
             StatusForInterrupt => self.status.to_interrupt_byte(),
-            OpRegister => match self.current_instruction_template.unwrap().op_code {
+            OpRegister => match self.current_instruction.unwrap().op_code {
                 OpCode::STA => self.a,
                 OpCode::STX => self.x,
                 OpCode::STY => self.y,

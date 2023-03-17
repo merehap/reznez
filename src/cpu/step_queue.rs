@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 
+use crate::cpu::instruction::INSTRUCTIONS;
 use crate::cpu::step::*;
 
 // More than enough space for a DMA transfer (513 cycles) plus an instruction.

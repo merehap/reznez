@@ -90,7 +90,7 @@ fn nestest() {
                 }
             }
 
-            let template = nes.cpu().current_instruction_template().unwrap();
+            let template = nes.cpu().current_instruction().unwrap();
 
             let state = State {
                 program_counter,

@@ -1,12 +1,14 @@
 use lazy_static::lazy_static;
 use strum_macros::EnumString;
 
+use crate::cpu::step::*;
+
 lazy_static! {
-    pub static ref INSTRUCTION_TEMPLATES: [InstructionTemplate; 256] = instruction_templates();
+    pub static ref INSTRUCTIONS: [Instruction; 256] = instructions();
 }
 
 #[rustfmt::skip]
-fn instruction_templates() -> [InstructionTemplate; 256] {
+fn instructions() -> [Instruction; 256] {
     use OpCode::*;
     use AccessMode::*;
 
@@ -48,36 +50,94 @@ fn instruction_templates() -> [InstructionTemplate; 256] {
 /*+1F*/ [(SLO,AbX), (RLA,AbX), (SRE,AbX), (RRA,AbX), (AHX,AbY), (LAX,AbY), (DCP,AbX), (ISC,AbX)],
     ];
 
-    let mut result = [InstructionTemplate::from_tuple(0x2, jam); 256];
+    let mut result = [Instruction::from_tuple(0x2, JAM, Imp); 256];
     for (index, template) in result.iter_mut().enumerate() {
         let i = index % 0x20;
         let j = index / 0x20;
-        *template = InstructionTemplate::from_tuple(index as u8, codes[i][j]);
+        let (op_code, access_mode) = codes[i][j];
+        *template = Instruction::from_tuple(index as u8, op_code, access_mode);
     }
 
     result
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct InstructionTemplate {
+pub struct Instruction {
     pub code_point: u8,
     pub op_code: OpCode,
     pub access_mode: AccessMode,
+    steps: &'static [Step],
 }
 
-impl InstructionTemplate {
-    pub fn from_code_point(code_point: u8) -> InstructionTemplate {
-        INSTRUCTION_TEMPLATES[code_point as usize]
+impl Instruction {
+    pub fn steps(&self) -> &'static [Step] {
+        self.steps
     }
 
-    fn from_tuple(
-        code_point: u8,
-        tuple: (OpCode, AccessMode),
-    ) -> InstructionTemplate {
-        InstructionTemplate {
+    pub fn from_code_point(code_point: u8) -> Instruction {
+        INSTRUCTIONS[code_point as usize]
+    }
+
+    fn from_tuple(code_point: u8, op_code: OpCode, access_mode: AccessMode) -> Instruction {
+        use AccessMode::*;
+        use OpCode::*;
+        let steps = match (access_mode, op_code) {
+            (Imp, BRK) => BRK_STEPS,
+            (Imp, RTI) => RTI_STEPS,
+            (Imp, RTS) => RTS_STEPS,
+            (Imp, PHA) => PHA_STEPS,
+            (Imp, PHP) => PHP_STEPS,
+            (Imp, PLA) => PLA_STEPS,
+            (Imp, PLP) => PLP_STEPS,
+            (Abs, JSR) => JSR_STEPS,
+            (Abs, JMP) => JMP_ABS_STEPS,
+            (Ind, JMP) => JMP_IND_STEPS,
+
+            (Imp,   _) => IMPLICIT_ADDRESSING_STEPS,
+            (Imm,   _) => IMMEDIATE_ADDRESSING_STEPS,
+            (Rel,   _) => RELATIVE_ADDRESSING_STEPS,
+
+            // Read operations.
+            (Abs, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | CPX | CPY | BIT | LAX | NOP) => ABSOLUTE_READ_STEPS,
+            // TODO: Remove the unused combos.
+            (AbX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP) => ABSOLUTE_X_READ_STEPS,
+            (AbY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP | LAS | TAS | AHX) => ABSOLUTE_Y_READ_STEPS,
+            (ZP , LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | CPX | CPY | BIT | LAX | NOP) => ZERO_PAGE_READ_STEPS,
+            (ZPX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP) => ZERO_PAGE_X_READ_STEPS,
+            (ZPY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP) => ZERO_PAGE_Y_READ_STEPS,
+            (IzX, LDA |             EOR | AND | ORA | ADC | SBC | CMP |                   LAX) => INDEXED_INDIRECT_READ_STEPS,
+            (IzY, LDA |             EOR | AND | ORA | ADC | SBC | CMP |                   LAX | AHX) => INDIRECT_INDEXED_READ_STEPS,
+
+            // Write operations.
+            (Abs, STA | STX | STY | SAX) => ABSOLUTE_WRITE_STEPS,
+            // TODO: Remove the unused combos.
+            (AbX, STA | STX | STY |     SHY) => ABSOLUTE_X_WRITE_STEPS,
+            (AbY, STA | STX | STY |     SHX) => ABSOLUTE_Y_WRITE_STEPS,
+            (ZP , STA | STX | STY | SAX) => ZERO_PAGE_WRITE_STEPS,
+            (ZPX, STA | STX | STY | SAX) => ZERO_PAGE_X_WRITE_STEPS,
+            (ZPY, STA | STX | STY | SAX) => ZERO_PAGE_Y_WRITE_STEPS,
+            (IzX, STA |             SAX) => INDEXED_INDIRECT_WRITE_STEPS,
+            (IzY, STA) => INDIRECT_INDEXED_WRITE_STEPS,
+
+            // Read-modify-write operations.
+            (Abs, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP) => ABSOLUTE_READ_MODIFY_WRITE_STEPS,
+            // TODO: Remove the unused combos.
+            (AbX, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP) => ABSOLUTE_X_READ_MODIFY_WRITE_STEPS,
+            (AbY, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP) => ABSOLUTE_Y_READ_MODIFY_WRITE_STEPS,
+            (ZP , ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP) => ZERO_PAGE_READ_MODIFY_WRITE_STEPS,
+            (ZPX, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP) => ZERO_PAGE_X_READ_MODIFY_WRITE_STEPS,
+            (ZPY, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP) => ZERO_PAGE_Y_READ_MODIFY_WRITE_STEPS,
+            (IzX,                                     SLO | SRE | RLA | RRA | ISC | DCP) => INDEXED_INDIRECT_READ_MODIFY_WRITE_STEPS,
+            (IzY,                                     SLO | SRE | RLA | RRA | ISC | DCP) => INDIRECT_INDEXED_READ_MODIFY_WRITE_STEPS,
+
+            template => unreachable!("{:X?}", template),
+        };
+
+        Instruction {
             code_point,
-            op_code: tuple.0,
-            access_mode: tuple.1,
+            op_code,
+            access_mode,
+            steps,
         }
     }
 }

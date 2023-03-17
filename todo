@@ -1,4 +1,5 @@
 ROADMAP
+Wide pixels.
 Move nestest over to new formatting system.
 Disable OAMDATA writes (other than address increment) during rendering
 Battletoads
@@ -6,7 +7,6 @@ Work out priorities for WorkRam vs registers. Why does WorkRam need to be explic
 Move CPU bus into CpuMemory
 Always mirror ROM up to 32KiB? mmc5_test (v1) seems like it might depend upon this.
 Audio
-apu_test jitter
 Rename CycleAction to StepAction.
 Bus Conflicts
 Don't display bottom tiles of screen by default (see Aladdin junk tiles)
@@ -39,6 +39,7 @@ Automatically add registers from every layout? Maybe not since certain layouts w
 Automatically mirror under-sized PRG?
 
 FAILING TESTS
+apu_test jitter
 
 ---------------------GAMES------------------------------------
 MAPPER 0
