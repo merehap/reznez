@@ -18,6 +18,7 @@ pub enum CycleAction {
     ClearInterruptVector,
     ClearNmi,
     ClearIrq,
+    ClearReset,
 
     CheckNegativeAndZero,
 

@@ -13,7 +13,9 @@ pub struct StepQueue {
 
 impl StepQueue {
     pub fn new() -> StepQueue {
-        StepQueue { queue: VecDeque::with_capacity(CAPACITY) }
+        let mut queue = StepQueue { queue: VecDeque::with_capacity(CAPACITY) };
+        queue.append(START_STEPS);
+        queue
     }
 
     pub fn is_empty(&self) -> bool {

@@ -61,6 +61,10 @@ impl Config {
         }
     }
 
+    pub fn cartridge_mut(&mut self) -> &mut Cartridge {
+        &mut self.cartridge
+    }
+
     pub fn gui(opt: &Opt) -> Box<dyn Gui> {
         match opt.gui {
             GuiType::NoGui => Box::new(NoGui::new()) as Box<dyn Gui>,

@@ -51,8 +51,16 @@ fn nestest() {
         log_oam_addr: false,
     }).unwrap();
 
-    let config = Config::new(&opt);
+    let mut config = Config::new(&opt);
+    config.cartridge_mut().set_prg_rom_at(0x4000 - 4, 0x00);
+    config.cartridge_mut().set_prg_rom_at(0x4000 - 3, 0xC0);
     let mut nes = Nes::new(&config);
+
+    // Step past the Start sequence.
+    for _ in 0..21 {
+        nes.step();
+    }
+
     nes.cpu.cycle = 6;
     nes.ppu.clock.cycle = -1;
 

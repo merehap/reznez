@@ -189,6 +189,12 @@ impl Cartridge {
 
         result
     }
+
+    pub fn set_prg_rom_at(&mut self, index: usize, value: u8) {
+        let chunk_index = index / PRG_ROM_CHUNK_LENGTH;
+        let index_in_chunk = index % PRG_ROM_CHUNK_LENGTH;
+        self.prg_rom_chunks[chunk_index][index_in_chunk] = value;
+    }
 }
 
 impl fmt::Display for Cartridge {

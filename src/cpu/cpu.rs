@@ -8,7 +8,11 @@ use crate::cpu::status;
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::ports::DmaPort;
-use crate::memory::memory::{CpuMemory, IRQ_VECTOR_LOW, IRQ_VECTOR_HIGH, NMI_VECTOR_LOW, NMI_VECTOR_HIGH};
+use crate::memory::memory::{CpuMemory,
+    IRQ_VECTOR_LOW, IRQ_VECTOR_HIGH,
+    RESET_VECTOR_LOW, RESET_VECTOR_HIGH,
+    NMI_VECTOR_LOW, NMI_VECTOR_HIGH,
+};
 
 pub struct Cpu {
     // Accumulator
@@ -26,6 +30,7 @@ pub struct Cpu {
     step_queue: StepQueue,
     nmi_status: NmiStatus,
     irq_status: IrqStatus,
+    reset_pending: bool,
 
     dma_port: DmaPort,
 
@@ -50,20 +55,14 @@ impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
     pub fn new(
         memory: &mut CpuMemory,
-        program_counter_source: ProgramCounterSource,
+        _program_counter_source: ProgramCounterSource,
     ) -> Cpu {
-        use ProgramCounterSource::*;
-        let program_counter = match program_counter_source {
-            ResetVector => memory.reset_vector(),
-            Override(address) => address,
-        };
-
-        info!("Starting execution at PC={}", program_counter);
         Cpu {
             a: 0,
             x: 0,
             y: 0,
-            program_counter,
+            // The Start sequence will set this properly.
+            program_counter: CpuAddress::new(0x0000),
             status: Status::startup(),
 
             current_instruction: None,
@@ -72,10 +71,10 @@ impl Cpu {
             step_queue: StepQueue::new(),
             nmi_status: NmiStatus::Inactive,
             irq_status: IrqStatus::Inactive,
+            reset_pending: true,
             dma_port: memory.ports().dma.clone(),
 
-            // See startup sequence in NES-manual so this isn't hard-coded.
-            cycle: 7,
+            cycle: 0,
 
             // The initial value probably doesn't matter.
             current_interrupt_vector: None,
@@ -96,7 +95,6 @@ impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
     pub fn reset(&mut self, memory: &mut CpuMemory) {
         self.status.interrupts_disabled = true;
-        self.program_counter = memory.reset_vector();
         self.address_bus = memory.reset_vector();
         self.address_carry = 0;
         self.current_instruction = None;
@@ -104,6 +102,7 @@ impl Cpu {
         self.step_queue = StepQueue::new();
         self.nmi_status = NmiStatus::Inactive;
         self.irq_status = IrqStatus::Inactive;
+        self.reset_pending = true;
         self.cycle = 6;
         self.current_interrupt_vector = None;
         self.jammed = false;
@@ -275,7 +274,9 @@ impl Cpu {
             DisableInterrupts => self.status.interrupts_disabled = true,
             SetInterruptVector => {
                 self.current_interrupt_vector =
-                    if self.nmi_status != NmiStatus::Inactive {
+                    if self.reset_pending {
+                        Some(InterruptVector::Reset)
+                    } else if self.nmi_status != NmiStatus::Inactive {
                         Some(InterruptVector::Nmi)
                     } else if self.irq_status == IrqStatus::Active {
                         Some(InterruptVector::Irq)
@@ -288,6 +289,7 @@ impl Cpu {
             ClearInterruptVector => self.current_interrupt_vector = None,
             ClearNmi => self.nmi_status = NmiStatus::Inactive,
             ClearIrq => self.irq_status = IrqStatus::Inactive,
+            ClearReset => self.reset_pending = false,
 
             CheckNegativeAndZero => {
                 self.status.negative = (self.data_bus >> 7) == 1;
@@ -562,10 +564,12 @@ impl Cpu {
             TopOfStack => memory.stack_pointer_address(),
             InterruptVectorLow => match self.current_interrupt_vector.unwrap() {
                 InterruptVector::Nmi => NMI_VECTOR_LOW,
+                InterruptVector::Reset => RESET_VECTOR_LOW,
                 InterruptVector::Irq => IRQ_VECTOR_LOW,
             }
             InterruptVectorHigh => match self.current_interrupt_vector.unwrap() {
                 InterruptVector::Nmi => NMI_VECTOR_HIGH,
+                InterruptVector::Reset => RESET_VECTOR_HIGH,
                 InterruptVector::Irq => IRQ_VECTOR_HIGH,
             }
         }
@@ -750,6 +754,7 @@ enum IrqStatus {
 #[derive(Clone, Copy, Debug)]
 enum InterruptVector {
     Nmi,
+    Reset,
     Irq,
 }
 
@@ -831,6 +836,11 @@ mod tests {
         let mut mem = memory_with_nop_cartridge(nmi_vector, reset_vector);
         let mut cpu =
             Cpu::new(&mut mem.as_cpu_memory(), ProgramCounterSource::ResetVector);
+
+        // Skip through the start sequence.
+        for _ in 0..7 {
+            cpu.step(&mut mem.as_cpu_memory(), false);
+        }
 
         // No instruction loaded yet.
         assert_eq!(0xFD, mem.stack_pointer());

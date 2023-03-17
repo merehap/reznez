@@ -199,6 +199,19 @@ pub const INDIRECT_INDEXED_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     Write(To::AddressBusTarget      , &[]),
 ];
 
+pub const START_STEPS: &[Step] = &[
+    Read(                              From::ProgramCounterTarget, &[IncrementProgramCounter]),
+    Read(                              From::ProgramCounterTarget, &[]),
+    // NES Manual: "read/write line is disabled so that no writes to stack are accomplished".
+    // Hopefully switching the writes to reads here is what is actually intended.
+    Read(                              From::TopOfStack, &[DecrementStackPointer]),
+    Read(                              From::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
+    Read(                              From::TopOfStack, &[DecrementStackPointer]),
+    // Copy the new ProgramCounterLowByte to the data bus.
+    Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
+    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector, ClearReset]),
+];
+
 pub const NMI_STEPS: &[Step] = &[
     WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),
     WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
@@ -213,8 +226,10 @@ pub const IRQ_STEPS: &[Step] = &[
     WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
     WriteField(StatusForInterrupt    , To::TopOfStack, &[DecrementStackPointer]),
     // Copy the new ProgramCounterLowByte to the data bus.
-    Read(                              From::InterruptVectorLow , &[DisableInterrupts, ClearIrq]),
-    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector]),
+    Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
+    // TODO: Is ClearIrq supposed to be on the previous line? It was, then I moved it here for
+    // consistency.
+    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector, ClearIrq]),
 ];
 
 pub const BRK_STEPS: &[Step] = &[

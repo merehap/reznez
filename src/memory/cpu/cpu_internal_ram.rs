@@ -9,7 +9,8 @@ const RAM_SIZE: usize = 0x2000;
 const STACK_START: usize = 0x100;
 const STACK_END: usize = 0x1FF;
 
-const STARTUP_STACK_POINTER: u8 = 0xFD;
+// The reset sequence brings this "down" to 0xFD for the first instruction.
+const STARTUP_STACK_POINTER: u8 = 0x00;
 
 pub struct CpuInternalRam {
     pub stack_pointer: u8,

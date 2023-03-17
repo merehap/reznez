@@ -15,11 +15,12 @@ use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::sprite::oam::Oam;
 
-pub const NMI_VECTOR_LOW: CpuAddress    = CpuAddress::new(0xFFFA);
-pub const NMI_VECTOR_HIGH: CpuAddress   = CpuAddress::new(0xFFFB);
-pub const RESET_VECTOR_LOW: CpuAddress  = CpuAddress::new(0xFFFC);
-pub const IRQ_VECTOR_LOW: CpuAddress    = CpuAddress::new(0xFFFE);
-pub const IRQ_VECTOR_HIGH: CpuAddress   = CpuAddress::new(0xFFFF);
+pub const NMI_VECTOR_LOW: CpuAddress     = CpuAddress::new(0xFFFA);
+pub const NMI_VECTOR_HIGH: CpuAddress    = CpuAddress::new(0xFFFB);
+pub const RESET_VECTOR_LOW: CpuAddress   = CpuAddress::new(0xFFFC);
+pub const RESET_VECTOR_HIGH: CpuAddress  = CpuAddress::new(0xFFFD);
+pub const IRQ_VECTOR_LOW: CpuAddress     = CpuAddress::new(0xFFFE);
+pub const IRQ_VECTOR_HIGH: CpuAddress    = CpuAddress::new(0xFFFF);
 
 pub struct Memory {
     mapper: Box<dyn Mapper>,
