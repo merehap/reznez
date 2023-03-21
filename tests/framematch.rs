@@ -20,7 +20,6 @@ use reznez::util::hash_util::calculate_hash;
 
 #[test]
 fn framematch() {
-    println!("FRAMEMATCH TEST: LOADING EXPECTED_FRAMES PPMS AND ROMS.");
     let frame_directories: BTreeSet<_> = WalkDir::new("tests/expected_frames")
         .into_iter()
         .map(|entry| entry.unwrap().path().to_path_buf())
@@ -30,7 +29,6 @@ fn framematch() {
 
     let failed = Arc::new(AtomicBool::new(false));
     frame_directories.par_iter().for_each(|frame_directory| {
-        println!("Frame directory: {}", frame_directory.as_path().display());
         let mut rom_path_vec: Vec<_> = frame_directory.into_iter().collect();
         rom_path_vec[1] = OsStr::new("roms");
         let mut rom_path: PathBuf = rom_path_vec.into_iter().collect();
@@ -43,7 +41,6 @@ fn framematch() {
         let mut frame_hashes = BTreeMap::new();
         for ppm_entry in fs::read_dir(frame_directory.clone()).unwrap() {
             let ppm_path = ppm_entry.unwrap().path();
-            println!("\tPPM Path: {}", ppm_path.to_str().unwrap());
             let ppm_file_name = ppm_path.file_name().unwrap().to_str().unwrap();
             let frame_index = sscanf::scanf!(ppm_file_name, "frame{}.ppm", u16);
 
@@ -85,18 +82,10 @@ fn framematch() {
             .unwrap()
             .to_string();
 
-        println!(
-            "FRAMEMATCH TEST: testing against expected frames for {} .",
-            rom_name
-        );
         let max_frame_index = frame_hashes.keys().last().unwrap();
         for frame_index in 0..=*max_frame_index {
             nes.step_frame();
             if let Some(expected_hash) = frame_hashes.get(&frame_index) {
-                println!(
-                    "\tChecking actual hash vs expected hash for frame {}.",
-                    frame_index,
-                );
                 let mask = nes.memory_mut().as_ppu_memory().regs().mask();
                 let actual_ppm = &nes.frame().to_ppm(mask);
                 let actual_hash = calculate_hash(&actual_ppm);
@@ -109,8 +98,8 @@ fn framematch() {
                         format!("tests/actual_frames/{}/frame{:03}.ppm", directory.display(), frame_index);
                     fs::write(actual_ppm_path.clone(), actual_ppm.to_bytes()).unwrap();
                     println!(
-                        "\t\tActual hash {} didn't match expected hash {} . See {} .",
-                        actual_hash, expected_hash, actual_ppm_path,
+                        "\t\tROM {} didn't match expected hash at frame {}. See {} .",
+                        rom_name, frame_index, actual_ppm_path,
                     );
                 }
             }
