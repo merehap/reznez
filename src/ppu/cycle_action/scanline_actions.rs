@@ -64,7 +64,7 @@ fn visible_scanline_actions() -> ScanlineActions {
         line.add(cycle + 4, vec![                                               DummyReadSpriteX      , ResetOamAddress             ]);
         line.add(cycle + 5, vec![GetSpritePatternLowByte  ,                     DummyReadSpriteX      , ResetOamAddress             ]);
         line.add(cycle + 6, vec![                                               DummyReadSpriteX      , ResetOamAddress             ]);
-        line.add(cycle + 7, vec![GetSpritePatternHighByte ,                     DummyReadSpriteX      , ResetOamAddress             ]);
+        line.add(cycle + 7, vec![GetSpritePatternHighByte ,                     DummyReadSpriteX      , ResetOamAddress, IncrementOamRegisterIndex]);
     }
 
     // Fetch the first background tile for the next scanline.

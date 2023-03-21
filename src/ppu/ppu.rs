@@ -391,10 +391,10 @@ impl Ppu {
                         self.oam_registers.registers[self.oam_register_index]
                             .set_pattern_high(pattern_high);
                     }
-
-                    // FIXME: Hack. Make a separate CycleAction for this.
-                    self.oam_register_index += 1;
                 }
+            }
+            IncrementOamRegisterIndex => {
+                self.oam_register_index += 1;
             }
 
             StartVisibleScanlines => {
