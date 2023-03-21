@@ -84,8 +84,8 @@ impl Cartridge {
         let prg_rom_start = 0x10;
         let prg_rom_end = prg_rom_start + PRG_ROM_CHUNK_LENGTH * prg_rom_chunk_count;
         let prg_rom = rom.get(prg_rom_start..prg_rom_end)
-            .expect(&format!("ROM {} claimed to have {} PRG chunks, but the ROM was too short.",
-                name, prg_rom_chunk_count))
+            .unwrap_or_else(
+                || panic!("ROM {name} was too short (claimed to have {prg_rom_chunk_count} PRG chunks)."))
             .to_vec();
 
         let chr_rom_start = prg_rom_end;

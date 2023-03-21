@@ -11,7 +11,7 @@ impl Mapper for Mapper101 {
         self.mapper003.write_to_cartridge_space(cpu_address, value);
     }
 
-    fn params(&self) -> &MapperParams { &self.mapper003.params() }
+    fn params(&self) -> &MapperParams { self.mapper003.params() }
     fn params_mut(&mut self) -> &mut MapperParams { self.mapper003.params_mut() }
 }
 

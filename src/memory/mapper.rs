@@ -57,6 +57,7 @@ pub trait Mapper {
     // Most mappers don't trigger custom IRQs.
     fn irq_pending(&self) -> bool { false }
 
+    #[allow(clippy::too_many_arguments)]
     fn cpu_peek(
         &self,
         cpu_internal_ram: &CpuInternalRam,
@@ -97,6 +98,7 @@ pub trait Mapper {
 
     #[inline]
     #[rustfmt::skip]
+    #[allow(clippy::too_many_arguments)]
     fn cpu_read(
         &mut self,
         cpu_internal_ram: &CpuInternalRam,

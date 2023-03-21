@@ -156,15 +156,15 @@ impl Mapper004 {
         self.selected_register_id = Mapper004::register_id_from_byte(value & 0b0000_0111);
 
         if chr_big_windows_first {
-            self.chr_memory_mut().set_windows(CHR_BIG_WINDOWS_FIRST.clone())
+            self.chr_memory_mut().set_windows(CHR_BIG_WINDOWS_FIRST)
         } else {
-            self.chr_memory_mut().set_windows(CHR_SMALL_WINDOWS_FIRST.clone())
+            self.chr_memory_mut().set_windows(CHR_SMALL_WINDOWS_FIRST)
         }
 
         if prg_fixed_c000 {
-            self.prg_memory_mut().set_windows(PRG_WINDOWS_C000_FIXED.clone());
+            self.prg_memory_mut().set_windows(PRG_WINDOWS_C000_FIXED);
         } else {
-            self.prg_memory_mut().set_windows(PRG_WINDOWS_8000_FIXED.clone());
+            self.prg_memory_mut().set_windows(PRG_WINDOWS_8000_FIXED);
         }
     }
 

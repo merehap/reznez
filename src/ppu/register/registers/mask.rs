@@ -70,8 +70,8 @@ impl Mask {
 
 fn log_change(old: bool, new: bool, message_prefix: &str) {
     let message = match (old, new) {
-        (false, true) => format!("\t{} enabled.", message_prefix),
-        (true, false) => format!("\t{} disabled.", message_prefix),
+        (false, true) => format!("\t{message_prefix} enabled."),
+        (true, false) => format!("\t{message_prefix} disabled."),
         _ => return,
     };
     info!(target: "ppuflags", "{}", message);

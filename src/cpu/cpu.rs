@@ -506,7 +506,7 @@ impl Cpu {
                     }
 
                     TAS => {
-                        self.data_bus = (self.a | 0xEE) & self.x & self.data_bus;
+                        self.data_bus &= (self.a | 0xEE) & self.x;
                         self.a = self.data_bus;
                     }
                     LAS => {

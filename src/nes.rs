@@ -146,10 +146,10 @@ impl Nes {
             self.memory.apu_regs().frame_irq_pending()
             || self.memory.mapper().irq_pending();
 
-        let address = self.cpu.address_for_next_step(&mut self.memory.as_cpu_memory());
+        let address = self.cpu.address_for_next_step(&self.memory.as_cpu_memory());
         let step = self.cpu.step(&mut self.memory.as_cpu_memory(), irq_pending);
         if log_enabled!(target: "cpuinstructions", Info) && self.cpu.next_instruction_starting() {
-            info!("{}", self.log_formatter.format_instruction(&self, address));
+            info!("{}", self.log_formatter.format_instruction(self, address));
         }
 
         step

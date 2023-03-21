@@ -150,7 +150,7 @@ impl Mapper for Mapper005 {
             0x5204 => Some(self.scanline_irq_status()),
             0x5205 => Some((self.multiplicand as u16 * self.multiplier as u16) as u8),
             0x5206 => Some(((self.multiplicand as u16 * self.multiplier as u16) >> 8) as u8),
-            0x5007..=0x5BFF => None,
+            0x5207..=0x5BFF => None,
             0x5C00..=0x5FFF => self.peek_from_extended_ram(address),
             0x6000..=0xFFFF => self.prg_memory().peek(address),
         }

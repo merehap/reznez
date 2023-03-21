@@ -53,7 +53,7 @@ impl Mapper for Mapper001 {
 
         if get_bit(value, 0) {
             self.shift = EMPTY_SHIFT_REGISTER;
-            self.prg_memory_mut().set_windows(PRG_WINDOWS_FIXED_LAST.clone());
+            self.prg_memory_mut().set_windows(PRG_WINDOWS_FIXED_LAST);
             return;
         }
 
@@ -105,17 +105,17 @@ impl Mapper001 {
 
     fn next_prg_windows(value: u8) -> PrgWindows {
         match (value & 0b0000_1100) >> 2 {
-            0b00 | 0b01 => PRG_WINDOWS_ONE_BIG.clone(),
-            0b10 => PRG_WINDOWS_FIXED_FIRST.clone(),
-            0b11 => PRG_WINDOWS_FIXED_LAST.clone(),
+            0b00 | 0b01 => PRG_WINDOWS_ONE_BIG,
+            0b10 => PRG_WINDOWS_FIXED_FIRST,
+            0b11 => PRG_WINDOWS_FIXED_LAST,
             _ => unreachable!(),
         }
     }
 
     fn next_chr_windows(value: u8) -> ChrWindows {
         match (value & 0b0001_0000) >> 4 {
-            0 => CHR_WINDOWS_ONE_BIG.clone(),
-            1 => CHR_WINDOWS_TWO_SMALL.clone(),
+            0 => CHR_WINDOWS_ONE_BIG,
+            1 => CHR_WINDOWS_TWO_SMALL,
             _ => unreachable!(),
         }
     }

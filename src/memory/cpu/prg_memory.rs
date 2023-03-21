@@ -39,7 +39,8 @@ impl PrgMemory {
         }
 
         let bank_count = prg_memory.bank_count();
-        assert!(bank_count <= prg_memory.max_bank_count, "Bank count: {}, max: {}", bank_count, max_bank_count);
+        assert!(bank_count <= prg_memory.max_bank_count,
+            "Bank count: {bank_count}, max: {max_bank_count}");
         assert_eq!(
             prg_memory.raw_memory.len(),
             usize::from(bank_count) * bank_size,
