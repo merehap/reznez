@@ -56,6 +56,8 @@ fn nestest() {
     // Override the RESET vector to point to where the headless nestest starts.
     config.cartridge.set_prg_rom_at(0x4000 - 4, 0x00);
     config.cartridge.set_prg_rom_at(0x4000 - 3, 0xC0);
+    // Nestest starts the first instruction a cycle early compared to the NES Manual and Mesen.
+    config.starting_cpu_cycle = -1;
     // Nestest starts the first instruction on cycle 0, but PPU stuff happens before that.
     config.ppu_clock = Clock::starting_at(-1, MAX_SCANLINE, MAX_CYCLE - 21);
 
@@ -65,8 +67,6 @@ fn nestest() {
     for _ in 0..21 {
         nes.step();
     }
-
-    nes.cpu.cycle = 6;
 
     loop {
         if let Some(expected_state) = expected_states.next() {
@@ -142,7 +142,7 @@ struct State {
     s: u8,
     ppu_cycle: u16,
     ppu_scanline: u16,
-    c: u64,
+    c: i64,
 }
 
 impl State {
@@ -166,7 +166,7 @@ impl State {
             s: u8::from_str_radix(&line[71..73], 16).unwrap(),
             ppu_cycle: u16::from_str_radix(&line[78..81].trim(), 10).unwrap(),
             ppu_scanline: u16::from_str_radix(&line[82..85].trim(), 10).unwrap(),
-            c: u64::from_str_radix(&line[90..], 10).unwrap(),
+            c: i64::from_str_radix(&line[90..], 10).unwrap(),
         }
     }
 }

@@ -21,6 +21,7 @@ use crate::ppu::render::frame_rate::TargetFrameRate;
 
 pub struct Config {
     pub cartridge: Cartridge,
+    pub starting_cpu_cycle: i64,
     pub ppu_clock: Clock,
     pub system_palette: SystemPalette,
     pub target_frame_rate: TargetFrameRate,
@@ -45,6 +46,7 @@ impl Config {
 
         Config {
             cartridge,
+            starting_cpu_cycle: 0,
             ppu_clock: Clock::mesen_compatible(),
             system_palette,
             target_frame_rate: opt.target_frame_rate,

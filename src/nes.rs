@@ -20,8 +20,7 @@ use crate::ppu::ppu::Ppu;
 use crate::ppu::render::frame::Frame;
 
 pub struct Nes {
-    // FIXME: Shouldn't be pub.
-    pub cpu: Cpu,
+    cpu: Cpu,
     ppu: Ppu,
     apu: Apu,
     memory: Memory,
@@ -44,7 +43,7 @@ impl Nes {
         let mut memory = Memory::new(mapper, ports, config.system_palette.clone());
 
         Nes {
-            cpu: Cpu::new(&mut memory.as_cpu_memory()),
+            cpu: Cpu::new(&mut memory.as_cpu_memory(), config.starting_cpu_cycle),
             ppu: Ppu::new(config.ppu_clock),
             apu: Apu::new(config.disable_audio),
             memory,
@@ -296,7 +295,7 @@ mod tests {
         let cartridge = cartridge::test_data::cartridge();
 
         Nes {
-            cpu: Cpu::new(&mut memory.as_cpu_memory()),
+            cpu: Cpu::new(&mut memory.as_cpu_memory(), 0),
             ppu: Ppu::new(Clock::mesen_compatible()),
             apu: Apu::new(true),
             memory,

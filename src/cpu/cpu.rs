@@ -34,8 +34,7 @@ pub struct Cpu {
 
     dma_port: DmaPort,
 
-    // FIXME: Shouldn't be pub.
-    pub cycle: u64,
+    cycle: i64,
 
     current_interrupt_vector: Option<InterruptVector>,
 
@@ -53,7 +52,7 @@ pub struct Cpu {
 
 impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
-    pub fn new(memory: &mut CpuMemory) -> Cpu {
+    pub fn new(memory: &mut CpuMemory, starting_cycle: i64) -> Cpu {
         Cpu {
             a: 0,
             x: 0,
@@ -71,7 +70,7 @@ impl Cpu {
             reset_pending: true,
             dma_port: memory.ports().dma.clone(),
 
-            cycle: 0,
+            cycle: starting_cycle,
 
             // The initial value probably doesn't matter.
             current_interrupt_vector: None,
@@ -128,7 +127,7 @@ impl Cpu {
         self.status
     }
 
-    pub fn cycle(&self) -> u64 {
+    pub fn cycle(&self) -> i64 {
         self.cycle
     }
 
@@ -825,7 +824,7 @@ mod tests {
         let nmi_vector = CpuAddress::new(0xC000);
         let reset_vector = CpuAddress::new(0x8000);
         let mut mem = memory_with_nop_cartridge(nmi_vector, reset_vector);
-        let mut cpu = Cpu::new(&mut mem.as_cpu_memory());
+        let mut cpu = Cpu::new(&mut mem.as_cpu_memory(), 0);
 
         // Skip through the start sequence.
         for _ in 0..7 {
