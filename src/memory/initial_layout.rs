@@ -38,7 +38,7 @@ impl InitialLayout {
             self.prg_max_bank_count,
             self.prg_bank_size,
             prg_bank_index_registers,
-            cartridge.prg_rom(),
+            cartridge.prg_rom().to_vec(),
         );
 
         let chr_reg_ids: Vec<_> = self.chr_windows.active_register_ids();
@@ -49,7 +49,7 @@ impl InitialLayout {
             self.chr_bank_size,
             self.align_large_chr_windows,
             chr_bank_index_registers,
-            cartridge.chr_rom(),
+            cartridge.chr_rom().to_vec(),
         );
 
         let name_table_mirroring = match self.name_table_mirroring_source {

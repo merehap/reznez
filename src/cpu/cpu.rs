@@ -897,7 +897,7 @@ mod tests {
         let irq_vector = CpuAddress::new(0xF000);
         // Providing no data results in a program filled with NOPs (0xEA).
         let cartridge = cartridge::test_data::cartridge_with_prg_rom(
-            [Vec::new(), Vec::new()],
+            vec![0xEA; 32 * crate::util::unit::KIBIBYTE],
             nmi_vector,
             reset_vector,
             irq_vector,
