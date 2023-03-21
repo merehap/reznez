@@ -29,8 +29,7 @@ pub struct Ppu {
     clear_oam: bool,
     all_sprites_evaluated: bool,
 
-    // FIXME: Shouldn't be pub.
-    pub clock: Clock,
+    clock: Clock,
 
     write_toggle: WriteToggle,
 
@@ -53,7 +52,7 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    pub fn new() -> Ppu {
+    pub fn new(clock: Clock) -> Ppu {
         Ppu {
             oam_data_read: 0,
             secondary_oam: SecondaryOam::new(),
@@ -62,7 +61,7 @@ impl Ppu {
             clear_oam: false,
             all_sprites_evaluated: false,
 
-            clock: Clock::new(),
+            clock,
 
             write_toggle: WriteToggle::FirstByte,
 
@@ -617,7 +616,7 @@ mod tests {
 
     #[test]
     fn basic() {
-        let mut ppu = Ppu::new();
+        let mut ppu = Ppu::new(Clock::mesen_compatible());
         let mut mem = memory::test_data::memory();
         let mut ppu_mem = mem.as_ppu_memory();
         let mut frame = Frame::new();
@@ -634,7 +633,7 @@ mod tests {
 
     #[test]
     fn set_ppu_address() {
-        let mut ppu = Ppu::new();
+        let mut ppu = Ppu::new(Clock::mesen_compatible());
         let mut mem = memory::test_data::memory();
         let mut frame = Frame::new();
 
@@ -682,7 +681,7 @@ mod tests {
 
     #[test]
     fn set_scroll() {
-        let mut ppu = Ppu::new();
+        let mut ppu = Ppu::new(Clock::mesen_compatible());
         let mut mem = memory::test_data::memory();
         let mut frame = Frame::new();
 
@@ -737,7 +736,7 @@ mod tests {
 
     #[test]
     fn ctrl_ppuaddr_interference() {
-        let mut ppu = Ppu::new();
+        let mut ppu = Ppu::new(Clock::mesen_compatible());
         let mut mem = memory::test_data::memory();
         let mut frame = Frame::new();
 
@@ -781,7 +780,7 @@ mod tests {
 
     #[test]
     fn scroll_ppuaddr_interference() {
-        let mut ppu = Ppu::new();
+        let mut ppu = Ppu::new(Clock::mesen_compatible());
         let mut mem = memory::test_data::memory();
         let mut frame = Frame::new();
 

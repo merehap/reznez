@@ -22,8 +22,7 @@ use crate::ppu::render::frame::Frame;
 pub struct Nes {
     // FIXME: Shouldn't be pub.
     pub cpu: Cpu,
-    // FIXME: Shouldn't be pub.
-    pub ppu: Ppu,
+    ppu: Ppu,
     apu: Apu,
     memory: Memory,
     cartridge: Cartridge,
@@ -45,8 +44,8 @@ impl Nes {
         let mut memory = Memory::new(mapper, ports, config.system_palette.clone());
 
         Nes {
-            cpu: Cpu::new(&mut memory.as_cpu_memory(), config.program_counter_source),
-            ppu: Ppu::new(),
+            cpu: Cpu::new(&mut memory.as_cpu_memory()),
+            ppu: Ppu::new(config.ppu_clock),
             apu: Apu::new(config.disable_audio),
             memory,
             cartridge: config.cartridge.clone(),
@@ -198,10 +197,10 @@ pub struct StepResult {
 #[cfg(test)]
 mod tests {
     use crate::cartridge;
-    use crate::cpu::cpu::ProgramCounterSource;
     use crate::memory::cpu::cpu_address::CpuAddress;
     use crate::memory::mappers::mapper000::Mapper000;
     use crate::memory::memory::Memory;
+    use crate::ppu::clock::Clock;
     use crate::ppu::palette::system_palette;
     use crate::ppu::register::registers::ctrl::Ctrl;
 
@@ -297,11 +296,8 @@ mod tests {
         let cartridge = cartridge::test_data::cartridge();
 
         Nes {
-            cpu: Cpu::new(
-                &mut memory.as_cpu_memory(),
-                ProgramCounterSource::Override(CpuAddress::new(0x0000)),
-            ),
-            ppu: Ppu::new(),
+            cpu: Cpu::new(&mut memory.as_cpu_memory()),
+            ppu: Ppu::new(Clock::mesen_compatible()),
             apu: Apu::new(true),
             memory,
             cartridge,

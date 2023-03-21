@@ -3,24 +3,27 @@ use std::fmt;
 use crate::ppu::pixel_index::PixelRow;
 
 pub const MAX_SCANLINE: u16 = 261;
-pub const MAX_CYCLE: i16 = 340;
+pub const MAX_CYCLE: u16 = 340;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Clock {
-    frame: u64,
+    frame: i64,
     scanline: u16,
-    // FIXME: Shouldn't be pub.
-    pub cycle: i16,
+    cycle: u16,
 
     total_cycles: u64,
 }
 
 impl Clock {
-    pub fn new() -> Clock {
+    pub fn mesen_compatible() -> Clock {
         Clock { frame: 0, scanline: 0, cycle: 6, total_cycles: 0 }
     }
 
-    pub fn frame(&self) -> u64 {
+    pub fn starting_at(frame: i64, scanline: u16, cycle: u16) -> Clock {
+        Clock { frame, scanline, cycle, total_cycles: 0 }
+    }
+
+    pub fn frame(&self) -> i64 {
         self.frame
     }
 
@@ -29,7 +32,7 @@ impl Clock {
     }
 
     pub fn cycle(&self) -> u16 {
-        self.cycle as u16
+        self.cycle
     }
 
     pub fn total_cycles(&self) -> u64 {

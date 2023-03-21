@@ -22,7 +22,7 @@ pub trait Gui {
 
 pub fn execute_frame<F>(nes: &mut Nes, config: &Config, events: &Events, display_frame: F)
 where
-    F: FnOnce(&Frame, Mask, u64),
+    F: FnOnce(&Frame, Mask, i64),
 {
     let frame_index = nes.ppu().clock().frame();
     let start_time = SystemTime::now();
@@ -45,7 +45,7 @@ where
     }
 }
 
-fn dump_frame(frame: &Frame, mask: Mask, frame_index: u64) {
+fn dump_frame(frame: &Frame, mask: Mask, frame_index: i64) {
     if let Err(err) = fs::create_dir(FRAME_DUMP_DIRECTORY) {
         assert!(err.kind() == ErrorKind::AlreadyExists, "{:?}", err.kind());
     }
@@ -56,7 +56,7 @@ fn dump_frame(frame: &Frame, mask: Mask, frame_index: u64) {
 
 #[inline]
 fn end_frame(
-    frame_index: u64,
+    frame_index: i64,
     start_time: SystemTime,
     intended_frame_end_time: SystemTime,
 ) {

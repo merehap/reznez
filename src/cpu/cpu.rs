@@ -53,10 +53,7 @@ pub struct Cpu {
 
 impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
-    pub fn new(
-        memory: &mut CpuMemory,
-        _program_counter_source: ProgramCounterSource,
-    ) -> Cpu {
+    pub fn new(memory: &mut CpuMemory) -> Cpu {
         Cpu {
             a: 0,
             x: 0,
@@ -731,12 +728,6 @@ fn is_neg(value: u8) -> bool {
     (value >> 7) == 1
 }
 
-#[derive(Clone, Copy)]
-pub enum ProgramCounterSource {
-    ResetVector,
-    Override(CpuAddress),
-}
-
 #[derive(PartialEq, Eq, Debug)]
 enum NmiStatus {
     Inactive,
@@ -834,8 +825,7 @@ mod tests {
         let nmi_vector = CpuAddress::new(0xC000);
         let reset_vector = CpuAddress::new(0x8000);
         let mut mem = memory_with_nop_cartridge(nmi_vector, reset_vector);
-        let mut cpu =
-            Cpu::new(&mut mem.as_cpu_memory(), ProgramCounterSource::ResetVector);
+        let mut cpu = Cpu::new(&mut mem.as_cpu_memory());
 
         // Skip through the start sequence.
         for _ in 0..7 {

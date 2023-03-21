@@ -7,7 +7,6 @@ use log::info;
 use structopt::StructOpt;
 
 use crate::cartridge::Cartridge;
-use crate::cpu::cpu::ProgramCounterSource;
 #[cfg(feature = "bevy")]
 use crate::gui::bevy_gui::BevyGui;
 use crate::gui::egui_gui::EguiGui;
@@ -16,17 +15,18 @@ use crate::gui::no_gui::NoGui;
 #[cfg(feature = "sdl")]
 use crate::gui::sdl_gui::SdlGui;
 use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::ppu::clock::Clock;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::render::frame_rate::TargetFrameRate;
 
 pub struct Config {
     pub cartridge: Cartridge,
+    pub ppu_clock: Clock,
     pub system_palette: SystemPalette,
     pub target_frame_rate: TargetFrameRate,
     pub disable_audio: bool,
-    pub stop_frame: Option<u64>,
+    pub stop_frame: Option<i64>,
     pub frame_dump: bool,
-    pub program_counter_source: ProgramCounterSource,
 }
 
 impl Config {
@@ -43,26 +43,15 @@ impl Config {
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
 
-        let program_counter_source =
-            if let Some(override_program_counter) = opt.override_program_counter {
-                ProgramCounterSource::Override(override_program_counter)
-            } else {
-                ProgramCounterSource::ResetVector
-            };
-
         Config {
             cartridge,
+            ppu_clock: Clock::mesen_compatible(),
             system_palette,
             target_frame_rate: opt.target_frame_rate,
             disable_audio: opt.disable_audio,
             stop_frame: opt.stop_frame,
             frame_dump: opt.frame_dump,
-            program_counter_source,
         }
-    }
-
-    pub fn cartridge_mut(&mut self) -> &mut Cartridge {
-        &mut self.cartridge
     }
 
     pub fn gui(opt: &Opt) -> Box<dyn Gui> {
@@ -90,7 +79,7 @@ pub struct Opt {
     pub target_frame_rate: TargetFrameRate,
 
     #[structopt(name = "stopframe", long)]
-    pub stop_frame: Option<u64>,
+    pub stop_frame: Option<i64>,
 
     #[structopt(name = "disableaudio", long)]
     pub disable_audio: bool,

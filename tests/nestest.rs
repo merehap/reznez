@@ -12,6 +12,7 @@ use reznez::cpu::instruction::OpCode;
 use reznez::cpu::status::Status;
 use reznez::memory::cpu::cpu_address::CpuAddress;
 use reznez::nes::Nes;
+use reznez::ppu::clock::{Clock, MAX_SCANLINE, MAX_CYCLE};
 use reznez::ppu::render::frame_rate::TargetFrameRate;
 use reznez::logging::logger;
 use reznez::logging::logger::Logger;
@@ -52,8 +53,12 @@ fn nestest() {
     }).unwrap();
 
     let mut config = Config::new(&opt);
-    config.cartridge_mut().set_prg_rom_at(0x4000 - 4, 0x00);
-    config.cartridge_mut().set_prg_rom_at(0x4000 - 3, 0xC0);
+    // Override the RESET vector to point to where the headless nestest starts.
+    config.cartridge.set_prg_rom_at(0x4000 - 4, 0x00);
+    config.cartridge.set_prg_rom_at(0x4000 - 3, 0xC0);
+    // Nestest starts the first instruction on cycle 0, but PPU stuff happens before that.
+    config.ppu_clock = Clock::starting_at(-1, MAX_SCANLINE, MAX_CYCLE - 21);
+
     let mut nes = Nes::new(&config);
 
     // Step past the Start sequence.
@@ -62,7 +67,6 @@ fn nestest() {
     }
 
     nes.cpu.cycle = 6;
-    nes.ppu.clock.cycle = -1;
 
     loop {
         if let Some(expected_state) = expected_states.next() {
