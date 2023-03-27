@@ -143,12 +143,12 @@ impl Ppu {
             GetPatternIndex => {
                 if !self.rendering_enabled { return; }
                 let address = PpuAddress::in_name_table(name_table_quadrant, tile_column, tile_row);
-                self.next_pattern_index = PatternIndex::new(mem.read(address, true));
+                self.next_pattern_index = PatternIndex::new(mem.read(address));
             }
             GetPaletteIndex => {
                 if !self.rendering_enabled { return; }
                 let address = PpuAddress::in_attribute_table(name_table_quadrant, tile_column, tile_row);
-                let attribute_byte = mem.read(address, true);
+                let attribute_byte = mem.read(address);
                 let palette_table_index =
                     PaletteTableIndex::from_attribute_byte(attribute_byte, tile_column, tile_row);
                 self.attribute_register.set_pending_palette_table_index(palette_table_index);
@@ -157,13 +157,13 @@ impl Ppu {
                 if !self.rendering_enabled { return; }
                 let address = PpuAddress::in_pattern_table(
                     background_table_side, self.next_pattern_index, row_in_tile, 0x0);
-                self.pattern_register.set_pending_low_byte(mem.read(address, true));
+                self.pattern_register.set_pending_low_byte(mem.read(address));
             }
             GetPatternHighByte => {
                 if !self.rendering_enabled { return; }
                 let address = PpuAddress::in_pattern_table(
                     background_table_side, self.next_pattern_index, row_in_tile, 0x8);
-                self.pattern_register.set_pending_high_byte(mem.read(address, true));
+                self.pattern_register.set_pending_high_byte(mem.read(address));
             }
 
             GotoNextTileColumn => {
@@ -331,7 +331,7 @@ impl Ppu {
                 let low_offset = 0x0;
                 let (address, visible) = self.current_sprite_pattern_address(mem, low_offset);
                 if self.rendering_enabled {
-                    let pattern_low = mem.read(address, true);
+                    let pattern_low = mem.read(address);
                     if visible {
                         self.oam_registers.registers[self.oam_register_index]
                             .set_pattern_low(pattern_low);
@@ -342,7 +342,7 @@ impl Ppu {
                 let high_offset = 0x8;
                 let (address, visible) = self.current_sprite_pattern_address(mem, high_offset);
                 if self.rendering_enabled {
-                    let pattern_high = mem.read(address, true);
+                    let pattern_high = mem.read(address);
                     if visible {
                         self.oam_registers.registers[self.oam_register_index]
                             .set_pattern_high(pattern_high);
@@ -617,7 +617,7 @@ mod tests {
         assert_eq!(ppu.write_toggle, WriteToggle::FirstByte);
 
         for i in 0x0000..0xFFFF {
-            let value = ppu_mem.read(PpuAddress::from_u16(i), false);
+            let value = ppu_mem.read(PpuAddress::from_u16(i));
             assert_eq!(value, 0);
         }
     }
