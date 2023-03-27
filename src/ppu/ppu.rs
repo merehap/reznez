@@ -129,7 +129,6 @@ impl Ppu {
         cycle_action: CycleAction,
     ) {
         let background_table_side = mem.regs().background_table_side();
-        let sprite_table_side = mem.regs().sprite_table_side();
 
         let tile_column = mem.regs().current_address.x_scroll().coarse();
         let tile_row = mem.regs().current_address.y_scroll().coarse();
@@ -157,13 +156,13 @@ impl Ppu {
             GetPatternLowByte => {
                 if !self.rendering_enabled { return; }
                 let address = PpuAddress::in_pattern_table(
-                    background_table_side, self.next_pattern_index, row_in_tile, false);
+                    background_table_side, self.next_pattern_index, row_in_tile, 0x0);
                 self.pattern_register.set_pending_low_byte(mem.read(address, true));
             }
             GetPatternHighByte => {
                 if !self.rendering_enabled { return; }
                 let address = PpuAddress::in_pattern_table(
-                    background_table_side, self.next_pattern_index, row_in_tile, true);
+                    background_table_side, self.next_pattern_index, row_in_tile, 0x8);
                 self.pattern_register.set_pending_high_byte(mem.read(address, true));
             }
 
@@ -329,29 +328,8 @@ impl Ppu {
             }
 
             GetSpritePatternLowByte => {
-                // FIXME: Hack
-                let mut address = PpuAddress::from_u16(0x1000);
-                let mut visible = false;
-                if let Some(pixel_row) = self.clock.scanline_pixel_row() {
-                    let attributes = self.oam_registers.registers[self.oam_register_index].attributes();
-                    let sprite_height = mem.regs().sprite_height();
-                    if let Some((pattern_index, row_in_half)) = self.next_sprite_pattern_index.index_and_row(
-                        self.current_sprite_y,
-                        attributes.flip_vertically(),
-                        sprite_height,
-                        pixel_row
-                    ) {
-                        visible = true;
-                        let sprite_table_side = match sprite_height  {
-                            SpriteHeight::Normal => sprite_table_side,
-                            SpriteHeight::Tall => self.next_sprite_pattern_index.tall_sprite_pattern_table_side(),
-                        };
-
-                        address = PpuAddress::in_pattern_table(
-                            sprite_table_side, pattern_index, row_in_half, false);
-                    }
-                }
-
+                let low_offset = 0x0;
+                let (address, visible) = self.current_sprite_pattern_address(mem, low_offset);
                 if self.rendering_enabled {
                     let pattern_low = mem.read(address, true);
                     if visible {
@@ -361,30 +339,8 @@ impl Ppu {
                 }
             }
             GetSpritePatternHighByte => {
-                // FIXME: Hack
-                let mut address = PpuAddress::from_u16(0x1000);
-                let mut visible = false;
-                if let Some(pixel_row) = self.clock.scanline_pixel_row() {
-                    let attributes = self.oam_registers.registers[self.oam_register_index].attributes();
-                    let sprite_height = mem.regs().sprite_height();
-                    if let Some((pattern_index, row_in_half)) = self.next_sprite_pattern_index.index_and_row(
-                        self.current_sprite_y,
-                        attributes.flip_vertically(),
-                        sprite_height,
-                        pixel_row
-                    ) {
-                        visible = true;
-
-                        let sprite_table_side = match sprite_height  {
-                            SpriteHeight::Normal => sprite_table_side,
-                            SpriteHeight::Tall => self.next_sprite_pattern_index.tall_sprite_pattern_table_side(),
-                        };
-
-                        address = PpuAddress::in_pattern_table(
-                            sprite_table_side, pattern_index, row_in_half, true);
-                    }
-                }
-
+                let high_offset = 0x8;
+                let (address, visible) = self.current_sprite_pattern_address(mem, high_offset);
                 if self.rendering_enabled {
                     let pattern_high = mem.read(address, true);
                     if visible {
@@ -574,6 +530,41 @@ impl Ppu {
 
     fn read_ppu_data(&self, mem: &mut PpuMemory) {
         mem.process_current_ppu_address(mem.regs().current_address);
+    }
+
+    fn current_sprite_pattern_address(&self, mem: &PpuMemory, high_low_offset: u16) -> (PpuAddress, bool) {
+        let sprite_table_side = mem.regs().sprite_table_side();
+        let sprite_height = mem.regs().sprite_height();
+        let sprite_table_side = match sprite_height {
+            SpriteHeight::Normal => sprite_table_side,
+            SpriteHeight::Tall => self.next_sprite_pattern_index.tall_sprite_pattern_table_side(),
+        };
+
+        let address;
+        let visible;
+        if let Some(pixel_row) = self.clock.scanline_pixel_row() {
+            let attributes = self.oam_registers.registers[self.oam_register_index].attributes();
+            if let Some((pattern_index, row_in_half)) = self.next_sprite_pattern_index.index_and_row(
+                self.current_sprite_y,
+                attributes.flip_vertically(),
+                sprite_height,
+                pixel_row
+            ) {
+                visible = true;
+                address = PpuAddress::in_pattern_table(
+                    sprite_table_side, pattern_index, row_in_half, high_low_offset);
+            } else {
+                // Hidden sprite. TODO: address should be the same as non-hidden sprites.
+                address = PpuAddress::from_u16(0x1000);
+                visible = false;
+            }
+        } else {
+            // Pre-render scanline. TODO: use correct address based upon pattern index.
+            address = PpuAddress::from_u16(0x1000);
+            visible = false;
+        }
+
+        (address, visible)
     }
 }
 

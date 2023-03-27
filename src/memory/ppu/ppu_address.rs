@@ -95,12 +95,13 @@ impl PpuAddress {
         side: PatternTableSide,
         pattern_index: PatternIndex,
         row_in_tile: RowInTile,
-        select_high_byte: bool,
+        high_low_offset: u16,
     ) -> PpuAddress {
         PpuAddress::from_u16(
             (0x1000 * side as u16)
             | pattern_index.to_u16() << 4
-            | if select_high_byte { 0x8 } else { 0x0 }
+            // 0x0 or 0x8
+            | high_low_offset
             | row_in_tile as u16
         )
     }
