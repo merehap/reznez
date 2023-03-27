@@ -3,7 +3,6 @@ Remove GetSpritePatternHack in ppu.rs.
 Verify when the IRQ flag is supposed to be cleared. An update to the location of ClearIrq caused the apu_test jitter to have a different result.
        See newoutput: E24C  AND #$40                        A:10 X:00 Y:00 S:FD P:nv--dIzc V:242 H:117 Fr:4 Cycle:1
 
-Allow configurable starting cycles.
 Wide pixels.
 Move nestest over to new formatting system.
 Disable OAMDATA writes (other than address increment) during rendering
@@ -42,6 +41,7 @@ Rollerblade Racer: Glitched status bar.
 Wizards and Warriors 3: Bad scanlines at middle of screen. Sprite flickering.
 Arkanoid: Extra sprite.
 Tatakai no Banka: Flickering sprites.
+instr_timing: Infinite BRKs starting at V:14  H:142 Fr:889 Cycle:26476503
 
 IMPROVEMENTS TO PRG/CHR LAYOUTS
 Validate up front all windows as bank size multiples.

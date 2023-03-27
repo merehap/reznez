@@ -29,7 +29,6 @@ fn nestest() {
         gui: GuiType::NoGui,
         stop_frame: None,
         target_frame_rate: TargetFrameRate::Unbounded,
-        override_program_counter: Some(CpuAddress::new(0xC000)),
         disable_audio: true,
         log_cpu_instructions: true,
         log_cpu_flow_control: true,

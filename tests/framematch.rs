@@ -60,7 +60,6 @@ fn framematch() {
             gui: GuiType::NoGui,
             stop_frame: None,
             target_frame_rate: TargetFrameRate::Unbounded,
-            override_program_counter: None,
             disable_audio: true,
             log_cpu_instructions: false,
             log_cpu_flow_control: false,

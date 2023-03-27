@@ -524,7 +524,6 @@ impl Cpu {
                     }
 
                     XAA => {
-                        println!("XAAAAAAAA!");
                         self.a = self.nz(self.x);
                         self.a = self.nz(self.a & value);
                     }
