@@ -1,6 +1,5 @@
 ROADMAP
 Remove GetSpritePatternHack in ppu.rs.
-Remove boolean from cpumem.read()
 Verify when the IRQ flag is supposed to be cleared. An update to the location of ClearIrq caused the apu_test jitter to have a different result.
        See newoutput: E24C  AND #$40                        A:10 X:00 Y:00 S:FD P:nv--dIzc V:242 H:117 Fr:4 Cycle:1
 
@@ -38,6 +37,11 @@ Holding down the arrow keys doesn't generate input quickly enough.
 Gracefully handle bad CHR size? ((( Argus (J) [hM03][o2].nes ))) ((( Atlantis no Nazo (J) [hM03][b3].nes )))
 Gracefully handle bad PRG size? ((( Boy and His Blob, A - Trouble on Blobolonia (U) [o5].nes )))
 (Low priority) What should happen when BankIndex > bank_count when bank_count isn't a power of 2? Open bus?
+Marble Madness: Bank-switching mid-scanline isn't working, text doesn't render.
+Rollerblade Racer: Glitched status bar.
+Wizards and Warriors 3: Bad scanlines at middle of screen. Sprite flickering.
+Arkanoid: Extra sprite.
+Tatakai no Banka: Flickering sprites.
 
 IMPROVEMENTS TO PRG/CHR LAYOUTS
 Validate up front all windows as bank size multiples.

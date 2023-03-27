@@ -124,6 +124,10 @@ fn pre_render_scanline_actions() -> ScanlineActions {
     scanline.add(            1, vec![ClearFlags                                                        ]);
     scanline.add(          321, vec![StartReadingBackgroundTiles                                       ]);
 
+    for cycle in 1..9 {
+        scanline.add(cycle    , vec![MaybeCorruptOamStart                                              ]);
+    }
+
     //               ||CYCLE||       ||---------BACKGROUND-TILE-ACTIONS---------|| ||-DISPLAY-ACTIONS-||
     // Fetch the remaining 31 used background tiles for the current scanline.
     // Cycles 1 through 249.

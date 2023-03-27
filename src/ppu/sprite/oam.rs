@@ -66,6 +66,14 @@ impl Oam {
         self.0[address as usize] = value;
     }
 
+    pub fn maybe_corrupt_starting_byte(&mut self, address: OamAddress, cycle: u16) {
+        let index = cycle as usize - 1;
+        let address = address.to_u8();
+        if address >= 0x08 {
+            self.0[index] = self.0[(address & 0xF8) as usize + index];
+        }
+    }
+
     // For debug windows only.
     pub fn render(&self, mem: &PpuMemory, frame: &mut Frame) {
         for pixel_row in PixelRow::iter() {

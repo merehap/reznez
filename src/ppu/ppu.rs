@@ -233,6 +233,14 @@ impl Ppu {
                 self.attribute_register.push_next_palette_table_index();
             }
 
+            MaybeCorruptOamStart => {
+                // Unclear if these are the correct cycles to trigger on.
+                if self.rendering_enabled {
+                    let oam_addr = mem.regs().oam_addr;
+                    mem.oam_mut().maybe_corrupt_starting_byte(oam_addr, self.clock.cycle());
+                }
+            }
+
             ResetOamAddress => {
                 if !self.rendering_enabled { return; }
                 mem.regs_mut().oam_addr.reset();
