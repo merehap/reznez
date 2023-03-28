@@ -21,9 +21,9 @@ impl SpriteY {
         flip_vertically: bool,
         sprite_height: SpriteHeight,
         pixel_row: PixelRow,
-    ) -> Option<(SpriteHalf, RowInTile)> {
-        let sprite_top_row = self.to_current_pixel_row()?;
-        let y_offset = pixel_row.difference(sprite_top_row)?;
+    ) -> Option<(SpriteHalf, RowInTile, bool)> {
+        let visible = self.to_current_pixel_row().is_some();
+        let y_offset = pixel_row.to_u8().checked_sub(self.0)?;
 
         let mut row_in_half: RowInTile = FromPrimitive::from_u8(y_offset % 8).unwrap();
         let mut sprite_half = sprite_height.sprite_half(y_offset)?;
@@ -34,6 +34,6 @@ impl SpriteY {
             }
         }
 
-        Some((sprite_half, row_in_half))
+        Some((sprite_half, row_in_half, visible))
     }
 }

@@ -78,7 +78,7 @@ impl Sprite {
         is_sprite_0: bool,
         frame: &mut Frame,
     ) {
-        let Some((sprite_half, row_in_half)) =
+        let Some((sprite_half, row_in_half, _visible)) =
             self.y_coordinate.row_in_sprite(self.attributes.flip_vertically(), sprite_height, row) else {
 
             return;

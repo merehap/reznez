@@ -552,17 +552,17 @@ impl Ppu {
         let visible;
         if let Some(pixel_row) = self.clock.scanline_pixel_row() {
             let attributes = self.oam_registers.registers[self.oam_register_index].attributes();
-            if let Some((pattern_index, row_in_half)) = self.next_sprite_pattern_index.index_and_row(
+            if let Some((pattern_index, row_in_half, v)) = self.next_sprite_pattern_index.index_and_row(
                 self.current_sprite_y,
                 attributes.flip_vertically(),
                 sprite_height,
                 pixel_row
             ) {
-                visible = true;
+                visible = v;
                 address = PpuAddress::in_pattern_table(
                     sprite_table_side, pattern_index, row_in_half, high_low_offset);
             } else {
-                // Hidden sprite. TODO: address should be the same as non-hidden sprites.
+                // Sprite not on current scanline. TODO: what address should be here?
                 address = PpuAddress::from_u16(0x1000);
                 visible = false;
             }

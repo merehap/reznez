@@ -154,8 +154,8 @@ impl PatternIndex {
         flip_vertically: bool,
         sprite_height: SpriteHeight,
         pixel_row: PixelRow,
-    ) -> Option<(PatternIndex, RowInTile)> {
-        let (sprite_half, row_in_half) =
+    ) -> Option<(PatternIndex, RowInTile, bool)> {
+        let (sprite_half, row_in_half, visible) =
             sprite_top_row.row_in_sprite(flip_vertically, sprite_height, pixel_row)?;
 
         #[rustfmt::skip]
@@ -166,7 +166,7 @@ impl PatternIndex {
             (SpriteHeight::Tall  , SpriteHalf::Bottom) => self.to_tall_indexes().1,
         };
 
-        Some((pattern_index, row_in_half))
+        Some((pattern_index, row_in_half, visible))
     }
 
     pub fn to_tall_indexes(self) -> (PatternIndex, PatternIndex) {
