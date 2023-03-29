@@ -1,4 +1,4 @@
-use crate::memory::bank_index::{BankIndex, BankIndexRegisters, BankIndexRegisterId};
+use crate::memory::bank_index::{BankIndex, BankIndexRegisters, BankIndexRegisterId, MetaRegisterId};
 
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::writability::Writability;
@@ -103,6 +103,10 @@ impl ChrMemory {
         let mut raw_bank_index = raw_bank_index.into();
         raw_bank_index %= self.bank_count();
         self.bank_index_registers.set(id, BankIndex::from_u16(raw_bank_index));
+    }
+
+    pub fn set_meta_register(&mut self, id: MetaRegisterId, value: BankIndexRegisterId) {
+        self.bank_index_registers.set_meta(id, value);
     }
 
     pub fn pattern_table(&self, side: PatternTableSide) -> PatternTable {
@@ -280,6 +284,7 @@ impl ChrWindow {
 pub enum ChrType {
     ConstantBank(Writability, BankIndex),
     VariableBank(Writability, BankIndexRegisterId),
+    MetaVariableBank(Writability, MetaRegisterId),
 }
 
 impl ChrType {
@@ -287,6 +292,7 @@ impl ChrType {
         match self {
             ChrType::ConstantBank(writability, _) => writability,
             ChrType::VariableBank(writability, _) => writability,
+            ChrType::MetaVariableBank(writability, _) => writability,
         }
     }
 
@@ -294,6 +300,7 @@ impl ChrType {
         match self {
             ChrType::ConstantBank(_, bank_index) => bank_index,
             ChrType::VariableBank(_, register_id) => registers.get(register_id),
+            ChrType::MetaVariableBank(_, meta_id) => registers.get_from_meta(meta_id),
         }
     }
 }

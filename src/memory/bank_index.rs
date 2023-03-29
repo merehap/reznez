@@ -3,6 +3,8 @@ pub struct BankIndex(u16);
 
 impl BankIndex {
     pub const FIRST: BankIndex = BankIndex(0);
+    // Rely on later bit masking to reduce these indexes to within the valid range.
+    pub const THIRD_LAST: BankIndex = BankIndex(0xFFFD);
     pub const SECOND_LAST: BankIndex = BankIndex(0xFFFE);
     pub const LAST: BankIndex = BankIndex(0xFFFF);
 
@@ -32,11 +34,16 @@ impl From<u8> for BankIndex {
 #[derive(Debug)]
 pub struct BankIndexRegisters {
     registers: [BankIndex; 18],
+    meta_registers: [BankIndexRegisterId; 2],
 }
 
 impl BankIndexRegisters {
     pub fn new() -> BankIndexRegisters {
-        BankIndexRegisters { registers: [BankIndex::FIRST; 18] }
+        BankIndexRegisters {
+            registers: [BankIndex::FIRST; 18],
+            // Meta registers are only used for CHR currently.
+            meta_registers: [BankIndexRegisterId::C0, BankIndexRegisterId::C0],
+        }
     }
 
     pub fn get(&self, id: BankIndexRegisterId) -> BankIndex {
@@ -50,6 +57,14 @@ impl BankIndexRegisters {
     pub fn update(&mut self, id: BankIndexRegisterId, updater: &dyn Fn(u16) -> u16) {
         let value = self.registers[id as usize].0;
         self.registers[id as usize] = BankIndex(updater(value));
+    }
+
+    pub fn get_from_meta(&self, id: MetaRegisterId) -> BankIndex {
+        self.get(self.meta_registers[id as usize])
+    }
+
+    pub fn set_meta(&mut self, id: MetaRegisterId, value: BankIndexRegisterId) {
+        self.meta_registers[id as usize] = value;
     }
 }
 
@@ -74,4 +89,10 @@ pub enum BankIndexRegisterId {
     P2,
     P3,
     P4,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum MetaRegisterId {
+    M0,
+    M1,
 }

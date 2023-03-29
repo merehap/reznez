@@ -3,6 +3,7 @@ pub use lazy_static::lazy_static;
 pub use crate::cartridge::Cartridge;
 pub use crate::memory::bank_index::{BankIndex, BankIndexRegisterId};
 pub use crate::memory::bank_index::BankIndexRegisterId::*;
+pub use crate::memory::bank_index::MetaRegisterId::*;
 pub use crate::memory::board::Board;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgWindows, PrgWindow, PrgType};
