@@ -31,39 +31,25 @@ impl From<u8> for BankIndex {
 
 #[derive(Debug)]
 pub struct BankIndexRegisters {
-    registers: [Option<BankIndex>; 18],
+    registers: [BankIndex; 18],
 }
 
 impl BankIndexRegisters {
-    pub fn new(active_ids: &[BankIndexRegisterId]) -> BankIndexRegisters {
-        let mut registers = [None; 18];
-        for &id in active_ids {
-            registers[id as usize] = Some(BankIndex::FIRST);
-        }
-
-        BankIndexRegisters { registers }
+    pub fn new() -> BankIndexRegisters {
+        BankIndexRegisters { registers: [BankIndex::FIRST; 18] }
     }
 
     pub fn get(&self, id: BankIndexRegisterId) -> BankIndex {
         self.registers[id as usize]
-            .unwrap_or_else(|| panic!("Register {id:?} is not configured."))
     }
 
     pub fn set(&mut self, id: BankIndexRegisterId, bank_index: BankIndex) {
-        self.registers[id as usize] = Some(bank_index);
+        self.registers[id as usize] = bank_index;
     }
 
     pub fn update(&mut self, id: BankIndexRegisterId, updater: &dyn Fn(u16) -> u16) {
-        let value = self.registers[id as usize].unwrap().0;
-        self.registers[id as usize] = Some(BankIndex(updater(value)));
-    }
-
-    pub fn merge(&mut self, new_registers: &BankIndexRegisters) {
-        for i in 0..self.registers.len() {
-            if self.registers[i].is_none() && new_registers.registers[i].is_some() {
-                self.registers[i] = new_registers.registers[i];
-            }
-        }
+        let value = self.registers[id as usize].0;
+        self.registers[id as usize] = BankIndex(updater(value));
     }
 }
 

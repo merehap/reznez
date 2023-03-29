@@ -27,8 +27,7 @@ impl InitialLayout {
 
     pub fn make_mapper_params(&'static self, cartridge: &Cartridge, board: Board) -> MapperParams {
         let prg_windows = self.lookup_prg_windows_by_board(board);
-        let prg_reg_ids: Vec<_> = prg_windows.active_register_ids();
-        let mut prg_bank_index_registers = BankIndexRegisters::new(&prg_reg_ids);
+        let mut prg_bank_index_registers = BankIndexRegisters::new();
         if let Some((register_id, bank_index)) = self.bank_index_register_override {
             prg_bank_index_registers.set(register_id, bank_index);
         }
@@ -41,8 +40,7 @@ impl InitialLayout {
             cartridge.prg_rom().to_vec(),
         );
 
-        let chr_reg_ids: Vec<_> = self.chr_windows.active_register_ids();
-        let chr_bank_index_registers = BankIndexRegisters::new(&chr_reg_ids);
+        let chr_bank_index_registers = BankIndexRegisters::new();
         let chr_memory = ChrMemory::new(
             self.chr_windows,
             self.chr_max_bank_count,

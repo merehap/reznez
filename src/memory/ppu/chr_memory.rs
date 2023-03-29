@@ -92,9 +92,6 @@ impl ChrMemory {
 
     pub fn set_windows(&mut self, windows: ChrWindows) {
         windows.validate_bank_size_multiples(self.bank_size);
-        let reg_ids = windows.active_register_ids();
-        let new_bank_index_registers = BankIndexRegisters::new(&reg_ids);
-        self.bank_index_registers.merge(&new_bank_index_registers);
         self.windows = windows;
     }
 
