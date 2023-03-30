@@ -26,14 +26,14 @@ const PRG_WINDOWS_ENDS_FIXED: PrgWindows = PrgWindows::new(&[
 ]);
 
 const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
-    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType::VariableBank(Ram, C0)),
-    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType::VariableBank(Ram, C1)),
-    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType::VariableBank(Ram, C2)),
-    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrType::VariableBank(Ram, C3)),
-    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType::VariableBank(Ram, C4)),
-    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType::VariableBank(Ram, C5)),
-    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType::VariableBank(Ram, C6)),
-    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType::VariableBank(Ram, C7)),
+    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C0)),
+    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C1)),
+    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C2)),
+    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C3)),
+    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C4)),
+    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C5)),
+    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C6)),
+    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType::VariableBank(Rom, C7)),
 ]);
 
 // Irem's G-101
