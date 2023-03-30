@@ -45,6 +45,7 @@ Tatakai no Banka: Flickering sprites.
 instr_timing: Infinite BRKs starting at V:14  H:142 Fr:889 Cycle:26476503
 Fire Emblem Gaiden: Blank screen.
 Kaiketsu Yanchamaru 2: PRG bank switching bug leads to JAM.
+Mission Impossible 2: JAMs. Need to mirror CHR ROM due to it being too short?
 
 IMPROVEMENTS TO PRG/CHR LAYOUTS
 Validate up front all windows as bank size multiples.
@@ -93,6 +94,7 @@ Total games implemented:
 11: 34
 32: 6
 33: 9
+34: 5
 66: 17
 71: 16
 87: 10

@@ -19,6 +19,7 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> Box<dyn Mapper> {
 
         32 => Box::new(m::mapper032::Mapper032::new(cartridge).unwrap()),
         33 => Box::new(m::mapper033::Mapper033::new(cartridge).unwrap()),
+        34 => Box::new(m::mapper034::Mapper034::new(cartridge).unwrap()),
 
         66 => Box::new(m::mapper066::Mapper066::new(cartridge).unwrap()),
 

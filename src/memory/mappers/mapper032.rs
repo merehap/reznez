@@ -7,7 +7,7 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .chr_max_bank_count(256)
     .chr_bank_size(1 * KIBIBYTE)
     .chr_windows(CHR_WINDOWS)
-    .name_table_mirroring_source(NameTableMirroringSource::Direct(NameTableMirroring::OneScreenRightBank))
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .build();
 
 const PRG_WINDOWS_LAST_TWO_FIXED: PrgWindows = PrgWindows::new(&[
