@@ -43,6 +43,7 @@ Arkanoid: Extra sprite.
 Tatakai no Banka: Flickering sprites.
 instr_timing: Infinite BRKs starting at V:14  H:142 Fr:889 Cycle:26476503
 Fire Emblem Gaiden: Blank screen.
+Kaiketsu Yanchamaru 2: PRG bank switching bug leads to JAM.
 
 IMPROVEMENTS TO PRG/CHR LAYOUTS
 Validate up front all windows as bank size multiples.
@@ -89,6 +90,7 @@ Total games implemented:
 9: 11
 10: 3
 11: 34
+32: 6
 66: 17
 71: 16
 87: 10
@@ -96,7 +98,7 @@ Total games implemented:
 140: 3
 232: 5
 
-2155/2447
+2161/2447
 
 To implement:
 5:  25
