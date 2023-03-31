@@ -8,6 +8,7 @@ pub struct PrgMemory {
     windows: PrgWindows,
     max_bank_count: u16,
     bank_size: usize,
+    bank_count: u16,
     bank_index_registers: BankIndexRegisters,
     raw_memory: Vec<u8>,
     work_ram_sections: Vec<WorkRam>,
@@ -23,10 +24,22 @@ impl PrgMemory {
     ) -> PrgMemory {
 
         windows.validate_bank_size_multiples(bank_size);
+        let bank_count;
+        if raw_memory.len() % bank_size == 0 {
+            bank_count = (raw_memory.len() / bank_size)
+                .try_into()
+                .expect("Way too many banks.");
+        } else if !raw_memory.is_empty() && bank_size % raw_memory.len() == 0 {
+            bank_count = 1;
+        } else {
+            panic!("Bad PRG length: {} . Bank size: {} .", raw_memory.len(), bank_size);
+        }
+
         let mut prg_memory = PrgMemory {
             windows,
             max_bank_count,
             bank_size,
+            bank_count,
             bank_index_registers,
             raw_memory,
             work_ram_sections: Vec::new(),
@@ -41,20 +54,20 @@ impl PrgMemory {
         let bank_count = prg_memory.bank_count();
         assert!(bank_count <= prg_memory.max_bank_count,
             "Bank count: {bank_count}, max: {max_bank_count}");
-        assert_eq!(
-            prg_memory.raw_memory.len(),
-            usize::from(bank_count) * bank_size,
-            "Bad PRG data size.",
-        );
+        if prg_memory.raw_memory.len() >= usize::from(bank_count) * bank_size {
+            assert_eq!(
+                prg_memory.raw_memory.len(),
+                usize::from(bank_count) * bank_size,
+                "Bad PRG data size.",
+            );
+        }
         //assert_eq!(bank_count & (bank_count - 1), 0);
 
         prg_memory
     }
 
     pub fn bank_count(&self) -> u16 {
-        (self.raw_memory.len() / self.bank_size)
-            .try_into()
-            .expect("Way too many banks.")
+        self.bank_count
     }
 
     pub fn last_bank_index(&self) -> u16 {
@@ -64,7 +77,8 @@ impl PrgMemory {
     pub fn peek(&self, address: CpuAddress) -> Option<u8> {
         match self.address_to_prg_index(address) {
             PrgMemoryIndex::None => None,
-            PrgMemoryIndex::MappedMemory(index) => Some(self.raw_memory[index]),
+            PrgMemoryIndex::MappedMemory(index) =>
+                Some(self.raw_memory[index % self.raw_memory.len()]),
             PrgMemoryIndex::WorkRam { section_id, index } => {
                 let work_ram = &self.work_ram_sections[section_id];
                 use WorkRamStatus::*;
@@ -80,7 +94,7 @@ impl PrgMemory {
     // TODO: Handle read-only.
     pub fn write(&mut self, address: CpuAddress, value: u8) {
         match self.address_to_prg_index(address) {
-            PrgMemoryIndex::None => {},
+            PrgMemoryIndex::None => {}
             PrgMemoryIndex::MappedMemory(index) => self.raw_memory[index] = value,
             PrgMemoryIndex::WorkRam { section_id, index } => {
                 let work_ram = &mut self.work_ram_sections[section_id];
@@ -121,10 +135,6 @@ impl PrgMemory {
 
     pub fn set_windows(&mut self, windows: PrgWindows) {
         windows.validate_bank_size_multiples(self.bank_size);
-        for window in windows.0 {
-            assert!(window.size() <= self.raw_memory.len());
-        }
-
         self.windows = windows;
     }
 
@@ -155,13 +165,7 @@ impl PrgMemory {
             if i == windows.len() - 1 || address < windows[i + 1].start {
                 let bank_offset = address.to_raw() - windows[i].start.to_raw();
 
-                let window;
-                if let PrgType::Mirror(mirrored_window_start) = windows[i].prg_type {
-                    window = self.window(mirrored_window_start);
-                } else {
-                    window = &windows[i];
-                }
-
+                let window = &windows[i];
                 let prg_memory_index = match window.prg_type {
                     PrgType::Empty => PrgMemoryIndex::None,
                     PrgType::ConstantBank(_, bank_index) => {
@@ -198,7 +202,6 @@ impl PrgMemory {
 
                         result.unwrap()
                     }
-                    PrgType::Mirror(_) => unreachable!(),
                 };
                 return prg_memory_index;
             }
@@ -223,19 +226,9 @@ impl PrgMemory {
 
         panic!("No window exists at {start:?}");
     }
-
-    fn window(&self, start: u16) -> &PrgWindow {
-        for window in self.windows.0 {
-            if window.start.to_raw() == start {
-                return window;
-            }
-        }
-
-        panic!("No window exists at {start:?}");
-    }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct PrgWindows(&'static [PrgWindow]);
 
 impl PrgWindows {
@@ -343,7 +336,6 @@ pub enum PrgType {
     VariableBank(Writability, BankIndexRegisterId),
     // WRAM, Save RAM, SRAM, ambiguously "PRG RAM".
     WorkRam,
-    Mirror(u16),
 }
 
 impl PrgType {
@@ -352,7 +344,7 @@ impl PrgType {
         match self {
             ConstantBank(_, bank_index) => Some(bank_index),
             VariableBank(_, register_id) => Some(registers.get(register_id)),
-            Empty | Mirror(_) | WorkRam => None,
+            Empty | WorkRam => None,
         }
     }
 }

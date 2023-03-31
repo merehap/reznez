@@ -6,7 +6,7 @@ const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
 const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .prg_max_bank_count(16)
     .prg_bank_size(16 * KIBIBYTE)
-    .prg_windows_by_board(&[(Board::Any, PRG_WINDOWS_FIXED_LAST)])
+    .prg_windows(PRG_WINDOWS_FIXED_LAST)
     .chr_max_bank_count(32)
     .chr_bank_size(4 * KIBIBYTE)
     .chr_windows(CHR_WINDOWS_ONE_BIG)
@@ -99,7 +99,7 @@ impl Mapper001 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper001, String> {
         Ok(Mapper001 {
             shift: EMPTY_SHIFT_REGISTER,
-            params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
+            params: INITIAL_LAYOUT.make_mapper_params(cartridge),
         })
     }
 

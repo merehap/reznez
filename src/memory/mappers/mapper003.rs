@@ -1,25 +1,16 @@
 use crate::memory::mapper::*;
 
 const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
-    // TODO: Figure out how to fix this for mirrored memory, if necessary
-    .prg_max_bank_count(2)
-    .prg_bank_size(16 * KIBIBYTE)
-    .prg_windows_by_board(&[
-        (Board::Cnrom128, PRG_WINDOWS_CNROM_128),
-        (Board::Cnrom256, PRG_WINDOWS_CNROM_256),
-    ])
+    .prg_max_bank_count(1)
+    .prg_bank_size(32 * KIBIBYTE)
+    .prg_windows(PRG_WINDOWS)
     .chr_max_bank_count(256)
     .chr_bank_size(8 * KIBIBYTE)
     .chr_windows(CHR_WINDOWS)
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .build();
 
-const PRG_WINDOWS_CNROM_128: PrgWindows = PrgWindows::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::FIRST)),
-    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::Mirror(0x8000)),
-]);
-const PRG_WINDOWS_CNROM_256: PrgWindows = PrgWindows::new(&[
+const PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),
     PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::FIRST)),
 ]);
@@ -48,20 +39,8 @@ impl Mapper for Mapper003 {
 
 impl Mapper003 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper003, String> {
-        let prg_board = Mapper003::board(cartridge)?;
         Ok(Mapper003 {
-            params: INITIAL_LAYOUT.make_mapper_params(cartridge, prg_board),
+            params: INITIAL_LAYOUT.make_mapper_params(cartridge),
         })
-    }
-
-    fn board(cartridge: &Cartridge) -> Result<Board, String> {
-        let prg_rom_len = cartridge.prg_rom().len();
-        if prg_rom_len == 16 * KIBIBYTE {
-            Ok(Board::Cnrom128)
-        } else if prg_rom_len == 32 * KIBIBYTE {
-            Ok(Board::Cnrom256)
-        } else {
-            Err("PRG ROM size must be 16K or 32K for mapper 0.".to_string())
-        }
     }
 }

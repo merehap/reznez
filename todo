@@ -1,5 +1,4 @@
 ROADMAP
-Auto-mirror undersized PRG and CHR.
 Remove GetSpritePatternHack in ppu.rs.
 Verify when the IRQ flag is supposed to be cleared. An update to the location of ClearIrq caused the apu_test jitter to have a different result.
        See newoutput: E24C  AND #$40                        A:10 X:00 Y:00 S:FD P:nv--dIzc V:242 H:117 Fr:4 Cycle:1
@@ -10,7 +9,6 @@ Disable OAMDATA writes (other than address increment) during rendering
 Battletoads
 Work out priorities for WorkRam vs registers. Why does WorkRam need to be explicitly written to by each mapper?
 Move CPU bus into CpuMemory
-Always mirror ROM up to 32KiB? mmc5_test (v1) seems like it might depend upon this.
 Audio
 Rename CycleAction to StepAction.
 Bus Conflicts
@@ -20,6 +18,7 @@ Proper encapsulation for PPU registers
 Improve cycle accuracy of undocumented instructions
 Open Bus for joysticks.
 Other input devices.
+Auto-mirror undersized CHR (for mapper 99 and maybe others).
 
 Simplest mappers: 0, 2, 3, 7, 11, 66, 87
 Japan mapper order: 0, 87, 3, 184, 185, 2, 206, 75, 66, 94, 140, 34, 180, 95, 152, 1...
@@ -46,6 +45,7 @@ instr_timing: Infinite BRKs starting at V:14  H:142 Fr:889 Cycle:26476503
 Fire Emblem Gaiden: Blank screen.
 Kaiketsu Yanchamaru 2: PRG bank switching bug leads to JAM.
 Mission Impossible 2: JAMs. Need to mirror CHR ROM due to it being too short?
+mmc5test: black screen.
 
 IMPROVEMENTS TO PRG/CHR LAYOUTS
 Validate up front all windows as bank size multiples.

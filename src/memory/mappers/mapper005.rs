@@ -10,7 +10,7 @@ use crate::memory::ppu::vram::VramSide;
 const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .prg_max_bank_count(128)
     .prg_bank_size(8 * KIBIBYTE)
-    .prg_windows_by_board(&[(Board::Any, FOUR_8K_PRG_WINDOWS)])
+    .prg_windows(FOUR_8K_PRG_WINDOWS)
     .chr_max_bank_count(1024)
     .chr_bank_size(1 * KIBIBYTE)
     .chr_windows(ONE_8K_CHR_WINDOW)
@@ -373,7 +373,7 @@ impl Mapper005 {
             multiplicand: 0xFF,
             multiplier: 0xFF,
 
-            params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
+            params: INITIAL_LAYOUT.make_mapper_params(cartridge),
         })
     }
 

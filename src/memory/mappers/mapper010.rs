@@ -3,7 +3,7 @@ use crate::memory::mapper::*;
 const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .prg_max_bank_count(16)
     .prg_bank_size(16 * KIBIBYTE)
-    .prg_windows_by_board(&[(Board::Any, PRG_WINDOWS)])
+    .prg_windows(PRG_WINDOWS)
     .chr_max_bank_count(256)
     .chr_bank_size(4 * KIBIBYTE)
     .chr_windows(CHR_WINDOWS)
@@ -68,7 +68,7 @@ impl Mapper for Mapper010 {
 impl Mapper010 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper010, String> {
         let mut mapper = Mapper010 {
-            params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
+            params: INITIAL_LAYOUT.make_mapper_params(cartridge),
         };
         mapper.chr_memory_mut().set_meta_register(M0, C1);
         mapper.chr_memory_mut().set_meta_register(M1, C3);

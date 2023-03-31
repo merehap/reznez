@@ -4,7 +4,7 @@ const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     // TODO: Figure out how to fix this for mirrored memory, if necessary
     .prg_max_bank_count(2)
     .prg_bank_size(16 * KIBIBYTE)
-    .prg_windows_by_board(&[(Board::Any, PRG_WINDOWS)])
+    .prg_windows(PRG_WINDOWS)
     .chr_max_bank_count(256)
     .chr_bank_size(8 * KIBIBYTE)
     .chr_windows(CHR_WINDOWS)
@@ -44,7 +44,7 @@ impl Mapper for Mapper087 {
 impl Mapper087 {
     pub fn new(cartridge: &Cartridge) -> Result<Mapper087, String> {
         Ok(Mapper087 {
-            params: INITIAL_LAYOUT.make_mapper_params(cartridge, Board::Any),
+            params: INITIAL_LAYOUT.make_mapper_params(cartridge),
         })
     }
 }
