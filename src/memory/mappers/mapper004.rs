@@ -1,15 +1,5 @@
 use crate::memory::mapper::*;
 
-const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
-    .prg_max_bank_count(32)
-    .prg_bank_size(8 * KIBIBYTE)
-    .prg_windows(PRG_WINDOWS_C000_FIXED)
-    .chr_max_bank_count(256)
-    .chr_bank_size(1 * KIBIBYTE)
-    .chr_windows(CHR_BIG_WINDOWS_FIRST)
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-    .build();
-
 const PRG_WINDOWS_C000_FIXED: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgType::WorkRam),
     PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgType::WorkRam),
@@ -69,6 +59,18 @@ pub struct Mapper004 {
 }
 
 impl Mapper for Mapper004 {
+    fn initial_layout(&self) -> InitialLayout {
+        InitialLayout::builder()
+            .prg_max_bank_count(32)
+            .prg_bank_size(8 * KIBIBYTE)
+            .prg_windows(PRG_WINDOWS_C000_FIXED)
+            .chr_max_bank_count(256)
+            .chr_bank_size(1 * KIBIBYTE)
+            .chr_windows(CHR_BIG_WINDOWS_FIRST)
+            .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+            .build()
+    }
+
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         let is_even_address = address.to_raw() % 2 == 0;
         match address.to_raw() {
@@ -128,7 +130,7 @@ impl Mapper for Mapper004 {
 }
 
 impl Mapper004 {
-    pub fn new() -> (Self, InitialLayout) {
+    pub fn new() -> Self {
         let mapper = Mapper004 {
             selected_register_id: C0,
 
@@ -140,7 +142,7 @@ impl Mapper004 {
             irq_counter_suppression_cycles: 0,
             pattern_table_side: PatternTableSide::Left,
         };
-        (mapper, INITIAL_LAYOUT)
+        mapper
     }
 
     fn bank_select(&mut self, params: &mut MapperParams, value: u8) {

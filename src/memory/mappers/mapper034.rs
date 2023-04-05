@@ -1,16 +1,5 @@
 use crate::memory::mapper::*;
 
-const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
-    .prg_max_bank_count(256)
-    .prg_bank_size(32 * KIBIBYTE)
-    .prg_windows(PRG_WINDOWS)
-    .chr_max_bank_count(16)
-    .chr_bank_size(4 * KIBIBYTE)
-    .chr_windows(CHR_WINDOWS)
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-    .override_bank_index_register(C1, BankIndex::LAST)
-    .build();
-
 const PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
     PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::VariableBank(Rom, P0)),
@@ -27,6 +16,19 @@ pub struct Mapper034 {
 }
 
 impl Mapper for Mapper034 {
+    fn initial_layout(&self) -> InitialLayout {
+        InitialLayout::builder()
+            .prg_max_bank_count(256)
+            .prg_bank_size(32 * KIBIBYTE)
+            .prg_windows(PRG_WINDOWS)
+            .chr_max_bank_count(16)
+            .chr_bank_size(4 * KIBIBYTE)
+            .chr_windows(CHR_WINDOWS)
+            .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+            .override_bank_index_register(C1, BankIndex::LAST)
+            .build()
+    }
+
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
@@ -46,14 +48,14 @@ impl Mapper for Mapper034 {
 }
 
 impl Mapper034 {
-    pub fn new(cartridge: &Cartridge) -> (Self, InitialLayout) {
+    pub fn new(cartridge: &Cartridge) -> Self {
         let board = if cartridge.chr_rom().len() <= 8 * KIBIBYTE {
             MapperBoard::BxROM
         } else {
             MapperBoard::Nina001
         };
 
-        (Self { board }, INITIAL_LAYOUT)
+        Self { board }
     }
 }
 

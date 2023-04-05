@@ -1,17 +1,5 @@
 use crate::memory::mapper::*;
 
-const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
-    .prg_max_bank_count(16)
-    .prg_bank_size(16 * KIBIBYTE)
-    .prg_windows(PRG_WINDOWS)
-    .chr_max_bank_count(1)
-    .chr_bank_size(8 * KIBIBYTE)
-    .chr_windows(CHR_WINDOWS)
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-    // The last bank for any of the mapper 232 PRG "blocks".
-    .override_bank_index_register(P1, BankIndex::from_u8(0b11))
-    .build();
-
 const PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::VariableBank(Rom, P0)),
@@ -26,6 +14,20 @@ const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
 pub struct Mapper232;
 
 impl Mapper for Mapper232 {
+    fn initial_layout(&self) -> InitialLayout {
+        InitialLayout::builder()
+            .prg_max_bank_count(16)
+            .prg_bank_size(16 * KIBIBYTE)
+            .prg_windows(PRG_WINDOWS)
+            .chr_max_bank_count(1)
+            .chr_bank_size(8 * KIBIBYTE)
+            .chr_windows(CHR_WINDOWS)
+            .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+            // The last bank for any of the mapper 232 PRG "blocks".
+            .override_bank_index_register(P1, BankIndex::from_u8(0b11))
+            .build()
+    }
+
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         let value = u16::from(value);
         match address.to_raw() {
@@ -45,11 +47,5 @@ impl Mapper for Mapper232 {
                 params.prg_memory_mut().update_bank_index_register(P0, &set_low_bank_bits);
             }
         }
-    }
-}
-
-impl Mapper232 {
-    pub fn new() -> (Self, InitialLayout) {
-        (Self, INITIAL_LAYOUT)
     }
 }

@@ -28,6 +28,9 @@ use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::sprite::oam::Oam;
 
 pub trait Mapper {
+    // Should be const, but that's not yet allowed by Rust.
+    fn initial_layout(&self) -> InitialLayout;
+
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8);
 
     // Most mappers don't override the default cartridge peeking/reading behavior.

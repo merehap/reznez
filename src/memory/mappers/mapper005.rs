@@ -7,18 +7,6 @@ use crate::memory::memory::{NMI_VECTOR_LOW, NMI_VECTOR_HIGH};
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu::vram::VramSide;
 
-const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
-    .prg_max_bank_count(128)
-    .prg_bank_size(8 * KIBIBYTE)
-    .prg_windows(FOUR_8K_PRG_WINDOWS)
-    .chr_max_bank_count(1024)
-    .chr_bank_size(1 * KIBIBYTE)
-    .chr_windows(ONE_8K_CHR_WINDOW)
-    .do_not_align_large_chr_windows()
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-    .override_bank_index_register(P4, BankIndex::LAST)
-    .build();
-
 const ONE_32K_PRG_WINDOW: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::VariableBank(Ram,    P0)),
     PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::VariableBank(Rom,    P4)),
@@ -137,6 +125,20 @@ pub struct Mapper005 {
 }
 
 impl Mapper for Mapper005 {
+    fn initial_layout(&self) -> InitialLayout {
+        InitialLayout::builder()
+            .prg_max_bank_count(128)
+            .prg_bank_size(8 * KIBIBYTE)
+            .prg_windows(FOUR_8K_PRG_WINDOWS)
+            .chr_max_bank_count(1024)
+            .chr_bank_size(1 * KIBIBYTE)
+            .chr_windows(ONE_8K_CHR_WINDOW)
+            .do_not_align_large_chr_windows()
+            .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+            .override_bank_index_register(P4, BankIndex::LAST)
+            .build()
+    }
+
     fn peek_from_cartridge_space(&self, params: &MapperParams, address: CpuAddress) -> Option<u8> {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
@@ -337,8 +339,8 @@ impl Mapper for Mapper005 {
 }
 
 impl Mapper005 {
-    pub fn new() -> (Self, InitialLayout) {
-        let mapper = Mapper005 {
+    pub fn new() -> Self {
+        Mapper005 {
             pulse_2: PulseChannel::default(),
             pulse_3: PulseChannel::default(),
 
@@ -368,8 +370,7 @@ impl Mapper005 {
 
             multiplicand: 0xFF,
             multiplier: 0xFF,
-        };
-        (mapper, INITIAL_LAYOUT)
+        }
     }
 
     fn write_pcm_info(&mut self, _value: u8) {}

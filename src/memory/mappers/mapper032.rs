@@ -1,15 +1,5 @@
 use crate::memory::mapper::*;
 
-const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
-    .prg_max_bank_count(32)
-    .prg_bank_size(8 * KIBIBYTE)
-    .prg_windows(PRG_WINDOWS_LAST_TWO_FIXED)
-    .chr_max_bank_count(256)
-    .chr_bank_size(1 * KIBIBYTE)
-    .chr_windows(CHR_WINDOWS)
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-    .build();
-
 const PRG_WINDOWS_LAST_TWO_FIXED: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgType::Empty),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::VariableBank(Rom, P0)),
@@ -40,6 +30,18 @@ const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
 pub struct Mapper032;
 
 impl Mapper for Mapper032 {
+    fn initial_layout(&self) -> InitialLayout {
+        InitialLayout::builder()
+            .prg_max_bank_count(32)
+            .prg_bank_size(8 * KIBIBYTE)
+            .prg_windows(PRG_WINDOWS_LAST_TWO_FIXED)
+            .chr_max_bank_count(256)
+            .chr_bank_size(1 * KIBIBYTE)
+            .chr_windows(CHR_WINDOWS)
+            .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+            .build()
+    }
+
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
@@ -70,11 +72,5 @@ impl Mapper for Mapper032 {
             0xB007 => params.chr_memory_mut().set_bank_index_register(C7, value),
             _ => { /* Do nothing. */ }
         }
-    }
-}
-
-impl Mapper032 {
-    pub fn new() -> (Self, InitialLayout) {
-        (Self, INITIAL_LAYOUT)
     }
 }

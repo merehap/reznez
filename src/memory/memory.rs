@@ -36,13 +36,14 @@ pub struct Memory {
 
 impl Memory {
     pub fn new(
-        mapper_params: (Box<dyn Mapper>, MapperParams),
+        mapper: Box<dyn Mapper>, 
+        mapper_params: MapperParams,
         ports: Ports,
         system_palette: SystemPalette,
     ) -> Memory {
         Memory {
-            mapper: mapper_params.0,
-            mapper_params: mapper_params.1,
+            mapper,
+            mapper_params,
             cpu_internal_ram: CpuInternalRam::new(),
             ppu_internal_ram: PpuInternalRam::new(),
             oam: Oam::new(),
@@ -318,18 +319,15 @@ pub mod test_data {
     use super::*;
 
     pub fn memory() -> Memory {
-        let (mapper, initial_layout) = Mapper000::new();
-        Memory::new(
-            (Box::new(mapper), initial_layout.make_mapper_params(&cartridge::test_data::cartridge())),
-            ports::test_data::ports(),
-            system_palette::test_data::system_palette(),
-        )
+        memory_with_cartridge(&cartridge::test_data::cartridge())
     }
 
     pub fn memory_with_cartridge(cartridge: &Cartridge) -> Memory {
-        let (mapper, initial_layout) = Mapper000::new();
+        let mapper = Mapper000;
+        let mapper_params = mapper.initial_layout().make_mapper_params(cartridge);
         Memory::new(
-            (Box::new(mapper), initial_layout.make_mapper_params(cartridge)),
+            Box::new(mapper),
+            mapper_params,
             ports::test_data::ports(),
             system_palette::test_data::system_palette(),
         )

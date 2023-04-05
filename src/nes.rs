@@ -36,11 +36,11 @@ pub struct Nes {
 
 impl Nes {
     pub fn new(config: &Config) -> Nes {
-        let mapper = mapper_list::lookup_mapper(&config.cartridge);
+        let (mapper, mapper_params) = mapper_list::lookup_mapper(&config.cartridge);
         let joypad1 = Rc::new(RefCell::new(Joypad::new()));
         let joypad2 = Rc::new(RefCell::new(Joypad::new()));
         let ports = Ports::new(joypad1.clone(), joypad2.clone());
-        let mut memory = Memory::new(mapper, ports, config.system_palette.clone());
+        let mut memory = Memory::new(mapper, mapper_params, ports, config.system_palette.clone());
 
         Nes {
             cpu: Cpu::new(&mut memory.as_cpu_memory(), config.starting_cpu_cycle),
@@ -197,6 +197,7 @@ pub struct StepResult {
 mod tests {
     use crate::cartridge;
     use crate::memory::cpu::cpu_address::CpuAddress;
+    use crate::memory::mapper::Mapper;
     use crate::memory::mappers::mapper000::Mapper000;
     use crate::memory::memory::Memory;
     use crate::ppu::clock::Clock;
@@ -281,13 +282,15 @@ mod tests {
     }
 
     fn sample_nes() -> Nes {
-        let (mapper, initial_layout) = Mapper000::new();
+        let mapper = Mapper000;
+        let mapper_params = mapper.initial_layout().make_mapper_params(&test_data::cartridge());
         let system_palette = system_palette::test_data::system_palette();
         let joypad1 = Rc::new(RefCell::new(Joypad::new()));
         let joypad2 = Rc::new(RefCell::new(Joypad::new()));
         let ports = Ports::new(joypad1.clone(), joypad2.clone());
         let mut memory = Memory::new(
-            (Box::new(mapper), initial_layout.make_mapper_params(&test_data::cartridge())),
+            Box::new(mapper),
+            mapper_params,
             ports,
             system_palette,
         );

@@ -1,18 +1,6 @@
 use crate::memory::mapper::*;
 use crate::util::bit_util::get_bit;
 
-const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
-
-const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
-    .prg_max_bank_count(16)
-    .prg_bank_size(16 * KIBIBYTE)
-    .prg_windows(PRG_WINDOWS_FIXED_LAST)
-    .chr_max_bank_count(32)
-    .chr_bank_size(4 * KIBIBYTE)
-    .chr_windows(CHR_WINDOWS_ONE_BIG)
-    .name_table_mirroring_source(NameTableMirroringSource::Direct(NameTableMirroring::OneScreenRightBank))
-    .build();
-
 const PRG_WINDOWS_FIXED_LAST: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::VariableBank(Rom, P0)),
@@ -37,12 +25,26 @@ const CHR_WINDOWS_TWO_SMALL: ChrWindows = ChrWindows::new(&[
     ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::VariableBank(Ram, C1)),
 ]);
 
+const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
+
 // SxROM (MMC1)
 pub struct Mapper001 {
     shift: u8,
 }
 
 impl Mapper for Mapper001 {
+    fn initial_layout(&self) -> InitialLayout {
+        InitialLayout::builder()
+            .prg_max_bank_count(16)
+            .prg_bank_size(16 * KIBIBYTE)
+            .prg_windows(PRG_WINDOWS_FIXED_LAST)
+            .chr_max_bank_count(32)
+            .chr_bank_size(4 * KIBIBYTE)
+            .chr_windows(CHR_WINDOWS_ONE_BIG)
+            .name_table_mirroring_source(NameTableMirroringSource::Direct(NameTableMirroring::OneScreenRightBank))
+            .build()
+    }
+
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         // Work RAM writes don't trigger any of the shifter logic.
         if matches!(address.to_raw(), 0x6000..=0x7FFF) {
@@ -92,9 +94,8 @@ impl Mapper for Mapper001 {
 }
 
 impl Mapper001 {
-    pub fn new() -> (Self, InitialLayout) {
-        let mapper = Self { shift: EMPTY_SHIFT_REGISTER };
-        (mapper, INITIAL_LAYOUT)
+    pub fn new() -> Self {
+        Self { shift: EMPTY_SHIFT_REGISTER }
     }
 
     fn next_prg_windows(value: u8) -> PrgWindows {

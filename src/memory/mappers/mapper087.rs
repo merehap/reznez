@@ -1,16 +1,5 @@
 use crate::memory::mapper::*;
 
-const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
-    // TODO: Figure out how to fix this for mirrored memory, if necessary
-    .prg_max_bank_count(2)
-    .prg_bank_size(16 * KIBIBYTE)
-    .prg_windows(PRG_WINDOWS)
-    .chr_max_bank_count(256)
-    .chr_bank_size(8 * KIBIBYTE)
-    .chr_windows(CHR_WINDOWS)
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-    .build();
-
 const PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),
     PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::ConstantBank(Rom, BankIndex::FIRST)),
@@ -24,6 +13,19 @@ const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
 pub struct Mapper087;
 
 impl Mapper for Mapper087 {
+    fn initial_layout(&self) -> InitialLayout {
+        InitialLayout::builder()
+            // TODO: Figure out how to fix this for mirrored memory, if necessary
+            .prg_max_bank_count(2)
+            .prg_bank_size(16 * KIBIBYTE)
+            .prg_windows(PRG_WINDOWS)
+            .chr_max_bank_count(256)
+            .chr_bank_size(8 * KIBIBYTE)
+            .chr_windows(CHR_WINDOWS)
+            .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+            .build()
+    }
+
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: CpuAddress, value: u8) {
         // Swap the low two bits, ignore the rest.
         let bank_index = ((value & 0b10) >> 1) | ((value & 0b01) << 1);
@@ -33,11 +35,5 @@ impl Mapper for Mapper087 {
             0x6000..=0x7FFF => params.chr_memory_mut().set_bank_index_register(C0, bank_index),
             0x8000..=0xFFFF => { /* Do nothing. */ }
         }
-    }
-}
-
-impl Mapper087 {
-    pub fn new() -> (Self, InitialLayout) {
-        (Self, INITIAL_LAYOUT)
     }
 }
