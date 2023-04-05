@@ -25,33 +25,31 @@ const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
 ]);
 
 // MMC2
-pub struct Mapper009 {
-    params: MapperParams,
-}
+pub struct Mapper009;
 
 impl Mapper for Mapper009 {
-    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         let bank_index = value & 0b0001_1111;
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x9FFF => { /* Do nothing. */ }
-            0xA000..=0xAFFF => self.prg_memory_mut().set_bank_index_register(P0, bank_index),
-            0xB000..=0xBFFF => self.chr_memory_mut().set_bank_index_register(C0, bank_index),
-            0xC000..=0xCFFF => self.chr_memory_mut().set_bank_index_register(C1, bank_index),
-            0xD000..=0xDFFF => self.chr_memory_mut().set_bank_index_register(C2, bank_index),
-            0xE000..=0xEFFF => self.chr_memory_mut().set_bank_index_register(C3, bank_index),
+            0xA000..=0xAFFF => params.prg_memory_mut().set_bank_index_register(P0, bank_index),
+            0xB000..=0xBFFF => params.chr_memory_mut().set_bank_index_register(C0, bank_index),
+            0xC000..=0xCFFF => params.chr_memory_mut().set_bank_index_register(C1, bank_index),
+            0xD000..=0xDFFF => params.chr_memory_mut().set_bank_index_register(C2, bank_index),
+            0xE000..=0xEFFF => params.chr_memory_mut().set_bank_index_register(C3, bank_index),
             0xF000..=0xFFFF => {
                 let mirroring = if value & 1 == 0 {
                     NameTableMirroring::Vertical
                 } else {
                     NameTableMirroring::Horizontal
                 };
-                self.set_name_table_mirroring(mirroring);
+                params.set_name_table_mirroring(mirroring);
             }
         }
     }
 
-    fn on_ppu_read(&mut self, address: PpuAddress, _value: u8) {
+    fn on_ppu_read(&mut self, params: &mut MapperParams, address: PpuAddress, _value: u8) {
         let (meta_id, bank_index_register_id) = match address.to_u16() {
             0x0FD8 => (M0, C0),
             0x0FE8 => (M0, C1),
@@ -61,17 +59,12 @@ impl Mapper for Mapper009 {
             _ => return,
         };
 
-        self.chr_memory_mut().set_meta_register(meta_id, bank_index_register_id);
+        params.chr_memory_mut().set_meta_register(meta_id, bank_index_register_id);
     }
-
-    fn params(&self) -> &MapperParams { &self.params }
-    fn params_mut(&mut self) -> &mut MapperParams { &mut self.params }
 }
 
 impl Mapper009 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper009, String> {
-        Ok(Mapper009 {
-            params: INITIAL_LAYOUT.make_mapper_params(cartridge),
-        })
+    pub fn new() -> (Self, InitialLayout) {
+        (Self, INITIAL_LAYOUT)
     }
 }

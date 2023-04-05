@@ -23,12 +23,10 @@ const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
 ]);
 
 // Similar to mapper 71.
-pub struct Mapper232 {
-    params: MapperParams,
-}
+pub struct Mapper232;
 
 impl Mapper for Mapper232 {
-    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         let value = u16::from(value);
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
@@ -37,26 +35,21 @@ impl Mapper for Mapper232 {
                 let set_high_bank_bits = |bank_index| {
                     (bank_index & 0b0011) | ((value & 0b1_1000) >> 1)
                 };
-                self.prg_memory_mut().update_bank_index_register(P0, &set_high_bank_bits);
-                self.prg_memory_mut().update_bank_index_register(P1, &set_high_bank_bits);
+                params.prg_memory_mut().update_bank_index_register(P0, &set_high_bank_bits);
+                params.prg_memory_mut().update_bank_index_register(P1, &set_high_bank_bits);
             }
             0xC000..=0xFFFF => {
                 let set_low_bank_bits = |bank_index| {
                     (bank_index & 0b1100) | (value & 0b0011)
                 };
-                self.prg_memory_mut().update_bank_index_register(P0, &set_low_bank_bits);
+                params.prg_memory_mut().update_bank_index_register(P0, &set_low_bank_bits);
             }
         }
     }
-
-    fn params(&self) -> &MapperParams { &self.params }
-    fn params_mut(&mut self) -> &mut MapperParams { &mut self.params }
 }
 
 impl Mapper232 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper232, String> {
-        Ok(Mapper232 {
-            params: INITIAL_LAYOUT.make_mapper_params(cartridge),
-        })
+    pub fn new() -> (Self, InitialLayout) {
+        (Self, INITIAL_LAYOUT)
     }
 }

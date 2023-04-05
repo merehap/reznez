@@ -20,18 +20,16 @@ const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
 ]);
 
 // AxROM
-pub struct Mapper007 {
-    params: MapperParams,
-}
+pub struct Mapper007;
 
 impl Mapper for Mapper007 {
-    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                self.prg_memory_mut().set_bank_index_register(P0, value & 0b0000_1111);
-                self.set_name_table_mirroring(if value & 0b0001_0000 == 0 {
+                params.prg_memory_mut().set_bank_index_register(P0, value & 0b0000_1111);
+                params.set_name_table_mirroring(if value & 0b0001_0000 == 0 {
                     NameTableMirroring::OneScreenLeftBank
                 } else {
                     NameTableMirroring::OneScreenRightBank
@@ -39,15 +37,10 @@ impl Mapper for Mapper007 {
             }
         }
     }
-
-    fn params(&self) -> &MapperParams { &self.params }
-    fn params_mut(&mut self) -> &mut MapperParams { &mut self.params }
 }
 
 impl Mapper007 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper007, String> {
-        Ok(Mapper007 {
-            params: INITIAL_LAYOUT.make_mapper_params(cartridge),
-        })
+    pub fn new() -> (Self, InitialLayout) {
+        (Self, INITIAL_LAYOUT)
     }
 }

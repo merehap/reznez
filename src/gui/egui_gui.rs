@@ -481,6 +481,7 @@ impl Renderer for StatusRenderer {
         let nes = &world.nes;
         let clock = nes.ppu().clock();
         let ppu_regs = nes.memory().ppu_regs();
+        let mapper_params = nes.memory().mapper_params();
 
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::Grid::new("my_grid")
@@ -543,14 +544,14 @@ impl Renderer for StatusRenderer {
                     ui.label("Name Table Mirroring");
                     ui.label(format!(
                         "{:?}",
-                        nes.memory().mapper().name_table_mirroring()
+                        mapper_params.name_table_mirroring()
                     ));
                     ui.end_row();
                     ui.label("PRG ROM banks");
-                    ui.label(&nes.memory().mapper().prg_rom_bank_string());
+                    ui.label(&nes.memory().mapper().prg_rom_bank_string(&mapper_params));
                     ui.end_row();
                     ui.label("CHR ROM banks");
-                    ui.label(&nes.memory().mapper().chr_rom_bank_string());
+                    ui.label(&nes.memory().mapper().chr_rom_bank_string(&mapper_params));
                 });
         });
 

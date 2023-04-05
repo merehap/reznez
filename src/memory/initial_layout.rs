@@ -24,7 +24,7 @@ impl InitialLayout {
         InitialLayoutBuilder::new()
     }
 
-    pub fn make_mapper_params(&'static self, cartridge: &Cartridge) -> MapperParams {
+    pub fn make_mapper_params(&self, cartridge: &Cartridge) -> MapperParams {
         let mut prg_bank_index_registers = BankIndexRegisters::new();
         if let Some((register_id, bank_index)) = self.bank_index_register_override {
             prg_bank_index_registers.set(register_id, bank_index);

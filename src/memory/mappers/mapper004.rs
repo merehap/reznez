@@ -66,20 +66,18 @@ pub struct Mapper004 {
     irq_counter_reload_value: u8,
     irq_counter_suppression_cycles: u8,
     pattern_table_side: PatternTableSide,
-
-    params: MapperParams,
 }
 
 impl Mapper for Mapper004 {
-    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         let is_even_address = address.to_raw() % 2 == 0;
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
-            0x6000..=0x7FFF =>                    self.prg_memory_mut().write(address, value),
-            0x8000..=0x9FFF if is_even_address => self.bank_select(value),
-            0x8000..=0x9FFF =>                    self.set_bank_index(value),
-            0xA000..=0xBFFF if is_even_address => self.set_mirroring(value),
+            0x6000..=0x7FFF =>                    params.prg_memory_mut().write(address, value),
+            0x8000..=0x9FFF if is_even_address => self.bank_select(params, value),
+            0x8000..=0x9FFF =>                    self.set_bank_index(params, value),
+            0xA000..=0xBFFF if is_even_address => self.set_mirroring(params, value),
             0xA000..=0xBFFF =>                    self.prg_ram_protect(value),
             0xC000..=0xDFFF if is_even_address => self.set_irq_reload_value(value),
             0xC000..=0xDFFF =>                    self.reload_irq_counter(),
@@ -127,14 +125,11 @@ impl Mapper for Mapper004 {
     fn irq_pending(&self) -> bool {
         self.irq_pending
     }
-
-    fn params(&self) -> &MapperParams { &self.params }
-    fn params_mut(&mut self) -> &mut MapperParams { &mut self.params }
 }
 
 impl Mapper004 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper004, String> {
-        Ok(Mapper004 {
+    pub fn new() -> (Self, InitialLayout) {
+        let mapper = Mapper004 {
             selected_register_id: C0,
 
             irq_pending: false,
@@ -144,58 +139,57 @@ impl Mapper004 {
             irq_counter_reload_value: 0,
             irq_counter_suppression_cycles: 0,
             pattern_table_side: PatternTableSide::Left,
-
-            params: INITIAL_LAYOUT.make_mapper_params(cartridge),
-        })
+        };
+        (mapper, INITIAL_LAYOUT)
     }
 
-    fn bank_select(&mut self, value: u8) {
+    fn bank_select(&mut self, params: &mut MapperParams, value: u8) {
         let chr_big_windows_first =                                 (value & 0b1000_0000) == 0;
         let prg_fixed_c000 =                                        (value & 0b0100_0000) == 0;
         //self.prg_ram_enabled =                                    (value & 0b0010_0000) != 0;
         self.selected_register_id = Mapper004::register_id_from_byte(value & 0b0000_0111);
 
         if chr_big_windows_first {
-            self.chr_memory_mut().set_windows(CHR_BIG_WINDOWS_FIRST)
+            params.chr_memory_mut().set_windows(CHR_BIG_WINDOWS_FIRST)
         } else {
-            self.chr_memory_mut().set_windows(CHR_SMALL_WINDOWS_FIRST)
+            params.chr_memory_mut().set_windows(CHR_SMALL_WINDOWS_FIRST)
         }
 
         if prg_fixed_c000 {
-            self.prg_memory_mut().set_windows(PRG_WINDOWS_C000_FIXED);
+            params.prg_memory_mut().set_windows(PRG_WINDOWS_C000_FIXED);
         } else {
-            self.prg_memory_mut().set_windows(PRG_WINDOWS_8000_FIXED);
+            params.prg_memory_mut().set_windows(PRG_WINDOWS_8000_FIXED);
         }
     }
 
-    fn set_bank_index(&mut self, value: u8) {
+    fn set_bank_index(&mut self, params: &mut MapperParams, value: u8) {
         let selected_register_id = self.selected_register_id;
         match selected_register_id {
             // Double-width windows can only use even banks.
             C0 | C1 => {
                 let bank_index = u16::from(value & 0b1111_1110);
-                self.chr_memory_mut().set_bank_index_register(selected_register_id, bank_index);
+                params.chr_memory_mut().set_bank_index_register(selected_register_id, bank_index);
             }
             C2 | C3 | C4 | C5 => {
                 let bank_index = u16::from(value);
-                self.chr_memory_mut().set_bank_index_register(selected_register_id, bank_index);
+                params.chr_memory_mut().set_bank_index_register(selected_register_id, bank_index);
             }
             // There can only be up to 64 PRG banks, though some ROM hacks use more.
             P0 | P1 => {
                 assert_eq!(value & 0b1100_0000, 0, "ROM hack.");
                 let bank_index = u16::from(value & 0b0011_1111);
-                self.prg_memory_mut().set_bank_index_register(selected_register_id, bank_index);
+                params.prg_memory_mut().set_bank_index_register(selected_register_id, bank_index);
             }
             _ => unreachable!("Bank Index Register ID {selected_register_id:?} is not used by mapper 4."),
         };
     }
 
-    fn set_mirroring(&mut self, value: u8) {
+    fn set_mirroring(&mut self, params: &mut MapperParams, value: u8) {
         use NameTableMirroring::*;
-        match (self.name_table_mirroring(), value & 0b0000_0001) {
-            (Vertical, 1) => self.set_name_table_mirroring(Horizontal),
-            (Horizontal, 0) => self.set_name_table_mirroring(Vertical),
-            _ => { /* Other mirrorings cannot be changed. */ },
+        match (params.name_table_mirroring(), value & 0b0000_0001) {
+            (Vertical, 1) => params.set_name_table_mirroring(Horizontal),
+            (Horizontal, 0) => params.set_name_table_mirroring(Vertical),
+            _ => { /* Other mirrorings cannot be changed. */ }
         }
     }
 

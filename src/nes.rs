@@ -281,12 +281,16 @@ mod tests {
     }
 
     fn sample_nes() -> Nes {
-        let mapper = Box::new(Mapper000::new(&test_data::cartridge()).unwrap());
+        let (mapper, initial_layout) = Mapper000::new();
         let system_palette = system_palette::test_data::system_palette();
         let joypad1 = Rc::new(RefCell::new(Joypad::new()));
         let joypad2 = Rc::new(RefCell::new(Joypad::new()));
         let ports = Ports::new(joypad1.clone(), joypad2.clone());
-        let mut memory = Memory::new(mapper, ports, system_palette);
+        let mut memory = Memory::new(
+            (Box::new(mapper), initial_layout.make_mapper_params(&test_data::cartridge())),
+            ports,
+            system_palette,
+        );
         // Write NOPs to where the RESET_VECTOR starts the program.
         for i in 0x0200..0x0800 {
             memory.as_cpu_memory().write(CpuAddress::new(i), 0xEA);

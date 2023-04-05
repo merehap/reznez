@@ -22,33 +22,31 @@ const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
 ]);
 
 // MMC4 - Similar to MMC2, but with Work RAM, bigger PRG ROM windows, and different bank-switching.
-pub struct Mapper010 {
-    params: MapperParams,
-}
+pub struct Mapper010;
 
 impl Mapper for Mapper010 {
-    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         let bank_index = value & 0b0001_1111;
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x9FFF => { /* Do nothing. */ }
-            0xA000..=0xAFFF => self.prg_memory_mut().set_bank_index_register(P0, bank_index & 0b0000_1111),
-            0xB000..=0xBFFF => self.chr_memory_mut().set_bank_index_register(C0, bank_index),
-            0xC000..=0xCFFF => self.chr_memory_mut().set_bank_index_register(C1, bank_index),
-            0xD000..=0xDFFF => self.chr_memory_mut().set_bank_index_register(C2, bank_index),
-            0xE000..=0xEFFF => self.chr_memory_mut().set_bank_index_register(C3, bank_index),
+            0xA000..=0xAFFF => params.prg_memory_mut().set_bank_index_register(P0, bank_index & 0b0000_1111),
+            0xB000..=0xBFFF => params.chr_memory_mut().set_bank_index_register(C0, bank_index),
+            0xC000..=0xCFFF => params.chr_memory_mut().set_bank_index_register(C1, bank_index),
+            0xD000..=0xDFFF => params.chr_memory_mut().set_bank_index_register(C2, bank_index),
+            0xE000..=0xEFFF => params.chr_memory_mut().set_bank_index_register(C3, bank_index),
             0xF000..=0xFFFF => {
                 let mirroring = if value & 1 == 0 {
                     NameTableMirroring::Vertical
                 } else {
                     NameTableMirroring::Horizontal
                 };
-                self.set_name_table_mirroring(mirroring);
+                params.set_name_table_mirroring(mirroring);
             }
         }
     }
 
-    fn on_ppu_read(&mut self, address: PpuAddress, _value: u8) {
+    fn on_ppu_read(&mut self, params: &mut MapperParams, address: PpuAddress, _value: u8) {
         let (meta_id, bank_index_register_id) = match address.to_u16() {
             0x0FD8..=0x0FDF => (M0, C0),
             0x0FE8..=0x0FEF => (M0, C1),
@@ -58,20 +56,12 @@ impl Mapper for Mapper010 {
             _ => return,
         };
 
-        self.chr_memory_mut().set_meta_register(meta_id, bank_index_register_id);
+        params.chr_memory_mut().set_meta_register(meta_id, bank_index_register_id);
     }
-
-    fn params(&self) -> &MapperParams { &self.params }
-    fn params_mut(&mut self) -> &mut MapperParams { &mut self.params }
 }
 
 impl Mapper010 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper010, String> {
-        let mut mapper = Mapper010 {
-            params: INITIAL_LAYOUT.make_mapper_params(cartridge),
-        };
-        mapper.chr_memory_mut().set_meta_register(M0, C1);
-        mapper.chr_memory_mut().set_meta_register(M1, C3);
-        Ok(mapper)
+    pub fn new() -> (Self, InitialLayout) {
+        (Self, INITIAL_LAYOUT)
     }
 }

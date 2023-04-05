@@ -7,18 +7,17 @@ pub struct Mapper101 {
 }
 
 impl Mapper for Mapper101 {
-    fn write_to_cartridge_space(&mut self, cpu_address: CpuAddress, value: u8) {
-        self.mapper003.write_to_cartridge_space(cpu_address, value);
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: CpuAddress, value: u8) {
+        self.mapper003.write_to_cartridge_space(params, cpu_address, value);
     }
-
-    fn params(&self) -> &MapperParams { self.mapper003.params() }
-    fn params_mut(&mut self) -> &mut MapperParams { self.mapper003.params_mut() }
 }
 
 impl Mapper101 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper101, String> {
-        Ok(Mapper101 {
-            mapper003: Mapper003::new(cartridge)?,
-        })
+    pub fn new() -> (Self, InitialLayout) {
+        let (mapper003, initial_layout) = Mapper003::new();
+        let mapper = Mapper101 { mapper003 };
+        (mapper, initial_layout)
     }
+
+
 }

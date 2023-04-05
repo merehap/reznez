@@ -134,12 +134,10 @@ pub struct Mapper005 {
 
     multiplicand: u8,
     multiplier: u8,
-
-    params: MapperParams,
 }
 
 impl Mapper for Mapper005 {
-    fn peek_from_cartridge_space(&self, address: CpuAddress) -> Option<u8> {
+    fn peek_from_cartridge_space(&self, params: &MapperParams, address: CpuAddress) -> Option<u8> {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x500F => None,
@@ -152,12 +150,12 @@ impl Mapper for Mapper005 {
             0x5206 => Some(((self.multiplicand as u16 * self.multiplier as u16) >> 8) as u8),
             0x5207..=0x5BFF => None,
             0x5C00..=0x5FFF => self.peek_from_extended_ram(address),
-            0x6000..=0xFFFF => self.prg_memory().peek(address),
+            0x6000..=0xFFFF => params.prg_memory().peek(address),
         }
     }
 
-    fn read_from_cartridge_space(&mut self, address: CpuAddress) -> Option<u8> {
-        let result = self.peek_from_cartridge_space(address);
+    fn read_from_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress) -> Option<u8> {
+        let result = self.peek_from_cartridge_space(params, address);
         // TODO: Replace with ifs.
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
@@ -169,7 +167,7 @@ impl Mapper for Mapper005 {
         result
     }
 
-    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x4FFF => { /* Do nothing. */ }
@@ -187,18 +185,18 @@ impl Mapper for Mapper005 {
             0x5012..=0x5014 => { /* Do nothing. */ }
             0x5015 => self.write_apu_status(value),
             0x5016..=0x50FF => { /* Do nothing. */ }
-            0x5100 => self.set_prg_banking_mode(value),
-            0x5101 => self.set_chr_banking_mode(value),
+            0x5100 => self.set_prg_banking_mode(params, value),
+            0x5101 => self.set_chr_banking_mode(params, value),
             0x5102 => self.prg_ram_protect_1(value),
             0x5103 => self.prg_ram_protect_2(value),
-            0x5104 => self.extended_ram_mode(value),
+            0x5104 => self.extended_ram_mode(params, value),
             0x5105 => self.set_name_table_mapping(value),
             0x5106 => self.set_fill_mode_tile(value),
             0x5107 => self.set_fill_mode_palette_index(value),
             0x5108..=0x5112 => { /* Do nothing. */ }
-            0x5113..=0x5117 => self.prg_bank_switching(address.to_raw(), value),
+            0x5113..=0x5117 => self.prg_bank_switching(params, address.to_raw(), value),
             0x5118..=0x511F => { /* Do nothing. */ }
-            0x5120..=0x512B => self.chr_bank_switching(address.to_raw(), value),
+            0x5120..=0x512B => self.chr_bank_switching(params, address.to_raw(), value),
             0x512C..=0x512F => { /* Do nothing. */ }
             0x5130 => self.set_upper_chr_bank_bits(value),
             0x5131..=0x51FF => { /* Do nothing */ }
@@ -213,17 +211,18 @@ impl Mapper for Mapper005 {
             0x520B..=0x57FF => { /* Do nothing. */ }
             0x5800..=0x5BFF => { /* Do nothing yet. MMC5A registers. */ }
             0x5C00..=0x5FFF => self.write_to_extended_ram(address, value),
-            0x6000..=0xFFFF => self.prg_memory_mut().write(address, value),
+            0x6000..=0xFFFF => params.prg_memory_mut().write(address, value),
         }
     }
 
     fn ppu_peek(
         &self,
+        params: &MapperParams, 
         ppu_internal_ram: &PpuInternalRam,
         address: PpuAddress,
     ) -> u8 {
         match address.to_u16() {
-            0x0000..=0x1FFF => self.chr_memory().peek(address),
+            0x0000..=0x1FFF => params.chr_memory().peek(address),
             0x2000..=0x3EFF
                 if address.is_in_attribute_table() && self.extended_attribute_mode_enabled() => {
                     let (_, index) = address.name_table_location().unwrap();
@@ -269,12 +268,12 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_cpu_write(&mut self, address: CpuAddress, value: u8) {
+    fn on_cpu_write(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         match address.to_raw() {
             // PPU Ctrl
             0x2000 => {
                 self.sprite_height = Ctrl::from_u8(value).sprite_height;
-                self.update_chr_windows();
+                self.update_chr_windows(params);
             }
             // PPU Mask
             0x2001 if value & 0b0001_1000 == 0 => {
@@ -285,7 +284,7 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_ppu_read(&mut self, address: PpuAddress, _value: u8) {
+    fn on_ppu_read(&mut self, params: &mut MapperParams, address: PpuAddress, _value: u8) {
         let sprite_fetching =
             (SPRITE_PATTERN_FETCH_START..BACKGROUND_PATTERN_FETCH_START)
             .contains(&self.pattern_fetch_count);
@@ -297,14 +296,14 @@ impl Mapper for Mapper005 {
             // just-in-time may be necessary.
             let raw_bank_index = (self.upper_chr_bank_bits << 6) | (self.extended_ram[usize::from(address.to_u16() % 0x400)] & 0b0011_1111);
             println!("{} is in name table proper. Raw bank index: {}. Pattern Fetch: {}", address, raw_bank_index, self.pattern_fetch_count);
-            self.chr_memory_mut().set_bank_index_register(C12, raw_bank_index);
+            params.chr_memory_mut().set_bank_index_register(C12, raw_bank_index);
         }
 
         if (0x0000..=0x1FFF).contains(&address.to_u16()) {
             self.pattern_fetch_count += 1;
             if self.pattern_fetch_count == SPRITE_PATTERN_FETCH_START
                 || self.pattern_fetch_count == BACKGROUND_PATTERN_FETCH_START {
-                self.update_chr_windows();
+                self.update_chr_windows(params);
             }
         } else if (0x2000..=0x2FFF).contains(&address.to_u16())
             && self.previous_ppu_address_read == Some(address) {
@@ -335,14 +334,11 @@ impl Mapper for Mapper005 {
     fn irq_pending(&self) -> bool {
         self.scanline_irq_enabled && self.irq_pending
     }
-
-    fn params(&self) -> &MapperParams { &self.params }
-    fn params_mut(&mut self) -> &mut MapperParams { &mut self.params }
 }
 
 impl Mapper005 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper005, String> {
-        Ok(Mapper005 {
+    pub fn new() -> (Self, InitialLayout) {
+        let mapper = Mapper005 {
             pulse_2: PulseChannel::default(),
             pulse_3: PulseChannel::default(),
 
@@ -372,16 +368,15 @@ impl Mapper005 {
 
             multiplicand: 0xFF,
             multiplier: 0xFF,
-
-            params: INITIAL_LAYOUT.make_mapper_params(cartridge),
-        })
+        };
+        (mapper, INITIAL_LAYOUT)
     }
 
     fn write_pcm_info(&mut self, _value: u8) {}
     fn write_raw_pcm(&mut self, _value: u8) {}
     fn write_apu_status(&mut self, _value: u8) {}
 
-    fn set_prg_banking_mode(&mut self, value: u8) {
+    fn set_prg_banking_mode(&mut self, params: &mut MapperParams, value: u8) {
         let windows = match value & 0b0000_0011 {
             0 => ONE_32K_PRG_WINDOW,
             1 => TWO_16K_PRG_WINDOWS,
@@ -389,10 +384,10 @@ impl Mapper005 {
             3 => FOUR_8K_PRG_WINDOWS,
             _ => unreachable!(),
         };
-        self.prg_memory_mut().set_windows(windows);
+        params.prg_memory_mut().set_windows(windows);
     }
 
-    fn set_chr_banking_mode(&mut self, value: u8) {
+    fn set_chr_banking_mode(&mut self, params: &mut MapperParams, value: u8) {
         self.chr_window_mode = match value & 0b0000_0011 {
             0 => ChrWindowMode::One8K,
             1 => ChrWindowMode::Two4K,
@@ -400,7 +395,7 @@ impl Mapper005 {
             3 => ChrWindowMode::Eight1K,
             _ => unreachable!(),
         };
-        self.update_chr_windows();
+        self.update_chr_windows(params);
     }
 
     fn prg_ram_protect_1(&mut self, value: u8) {
@@ -411,7 +406,7 @@ impl Mapper005 {
         self.prg_ram_enabled_2 = value & 0b0000_0011 == 0b0000_0001;
     }
 
-    fn extended_ram_mode(&mut self, value: u8) {
+    fn extended_ram_mode(&mut self, params: &mut MapperParams, value: u8) {
         self.extended_ram_mode = match value & 0b11 {
             0b00 => ExtendedRamMode::WriteOnly,
             0b01 => ExtendedRamMode::ExtendedAttributes,
@@ -419,7 +414,7 @@ impl Mapper005 {
             0b11 => ExtendedRamMode::ReadOnly,
             _ => unreachable!(),
         };
-        self.update_chr_windows();
+        self.update_chr_windows(params);
     }
 
     fn set_name_table_mapping(&mut self, value: u8) {
@@ -442,7 +437,7 @@ impl Mapper005 {
         self.fill_mode_palette_index = PaletteIndex::from_two_low_bits(value);
     }
 
-    fn prg_bank_switching(&mut self, address: u16, value: u8) {
+    fn prg_bank_switching(&mut self, params: &mut MapperParams, address: u16, value: u8) {
         let register_id = match address {
             0x5113 => P0,
             0x5114 => P1,
@@ -451,10 +446,10 @@ impl Mapper005 {
             0x5117 => P4,
             _ => unreachable!(),
         };
-        self.prg_memory_mut().set_bank_index_register(register_id, value);
+        params.prg_memory_mut().set_bank_index_register(register_id, value);
     }
 
-    fn chr_bank_switching(&mut self, address: u16, value: u8) {
+    fn chr_bank_switching(&mut self, params: &mut MapperParams, address: u16, value: u8) {
         let register_id = match address {
             0x5120 => C0,
             0x5121 => C1,
@@ -470,7 +465,7 @@ impl Mapper005 {
             0x512B => C11,
             _ => unreachable!(),
         };
-        self.chr_memory_mut().set_bank_index_register(register_id, value);
+        params.chr_memory_mut().set_bank_index_register(register_id, value);
     }
 
     fn set_upper_chr_bank_bits(&mut self, value: u8) {
@@ -533,12 +528,12 @@ impl Mapper005 {
         result
     }
 
-    fn update_chr_windows(&mut self) {
+    fn update_chr_windows(&mut self, params: &mut MapperParams) {
         let sprite_fetching =
             (SPRITE_PATTERN_FETCH_START..BACKGROUND_PATTERN_FETCH_START)
             .contains(&self.pattern_fetch_count);
         if !sprite_fetching && self.extended_attribute_mode_enabled() {
-            self.chr_memory_mut().set_windows(EXTENDED_ATTRIBUTES_CHR_WINDOWS);
+            params.chr_memory_mut().set_windows(EXTENDED_ATTRIBUTES_CHR_WINDOWS);
             return;
         }
 
@@ -557,7 +552,7 @@ impl Mapper005 {
             (ChrWindowMode::Eight1K, false) => EIGHT_1K_CHR_WINDOWS_ALTERNATE,
         };
 
-        self.chr_memory_mut().set_windows(windows);
+        params.chr_memory_mut().set_windows(windows);
     }
 
     fn extended_attribute_mode_enabled(&self) -> bool {

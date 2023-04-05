@@ -24,43 +24,36 @@ const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
 // BNROM (BxROM) and NINA-01. Two unrelated mappers combined into one.
 pub struct Mapper034 {
     board: MapperBoard,
-    params: MapperParams,
 }
 
 impl Mapper for Mapper034 {
-    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             // NINA-001 bank-switching.
-            0x7FFD => self.prg_memory_mut().set_bank_index_register(P0, value & 1),
-            0x7FFE => self.chr_memory_mut().set_bank_index_register(C0, value & 0b1111),
-            0x7FFF => self.chr_memory_mut().set_bank_index_register(C1, value & 0b1111),
+            0x7FFD => params.prg_memory_mut().set_bank_index_register(P0, value & 1),
+            0x7FFE => params.chr_memory_mut().set_bank_index_register(C0, value & 0b1111),
+            0x7FFF => params.chr_memory_mut().set_bank_index_register(C1, value & 0b1111),
             // BNROM/BxROM bank-switching.
             0x8000..=0xFFFF => {
                 if self.board == MapperBoard::BxROM {
-                    self.prg_memory_mut().set_bank_index_register(P0, value);
+                    params.prg_memory_mut().set_bank_index_register(P0, value);
                 }
             }
             _ => { /* Do nothing. */ }
         }
     }
-
-    fn params(&self) -> &MapperParams { &self.params }
-    fn params_mut(&mut self) -> &mut MapperParams { &mut self.params }
 }
 
 impl Mapper034 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper034, String> {
+    pub fn new(cartridge: &Cartridge) -> (Self, InitialLayout) {
         let board = if cartridge.chr_rom().len() <= 8 * KIBIBYTE {
             MapperBoard::BxROM
         } else {
             MapperBoard::Nina001
         };
 
-        Ok(Mapper034 {
-            board,
-            params: INITIAL_LAYOUT.make_mapper_params(cartridge),
-        })
+        (Self { board }, INITIAL_LAYOUT)
     }
 }
 

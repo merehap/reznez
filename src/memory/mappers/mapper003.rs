@@ -20,27 +20,20 @@ const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
 ]);
 
 // CNROM
-pub struct Mapper003 {
-    params: MapperParams,
-}
+pub struct Mapper003;
 
 impl Mapper for Mapper003 {
-    fn write_to_cartridge_space(&mut self, cpu_address: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: CpuAddress, value: u8) {
         match cpu_address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
-            0x8000..=0xFFFF => self.chr_memory_mut().set_bank_index_register(C0, value),
+            0x8000..=0xFFFF => params.chr_memory_mut().set_bank_index_register(C0, value),
         }
     }
-
-    fn params(&self) -> &MapperParams { &self.params }
-    fn params_mut(&mut self) -> &mut MapperParams { &mut self.params }
 }
 
 impl Mapper003 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper003, String> {
-        Ok(Mapper003 {
-            params: INITIAL_LAYOUT.make_mapper_params(cartridge),
-        })
+    pub fn new() -> (Self, InitialLayout) {
+        (Self, INITIAL_LAYOUT)
     }
 }

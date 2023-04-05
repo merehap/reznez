@@ -3,7 +3,7 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::cpu::stack::Stack;
-use crate::memory::mapper::Mapper;
+use crate::memory::mapper::{Mapper, MapperParams};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::ppu::name_table::name_table::NameTable;
@@ -24,6 +24,7 @@ pub const IRQ_VECTOR_HIGH: CpuAddress    = CpuAddress::new(0xFFFF);
 
 pub struct Memory {
     mapper: Box<dyn Mapper>,
+    mapper_params: MapperParams,
     cpu_internal_ram: CpuInternalRam,
     ppu_internal_ram: PpuInternalRam,
     oam: Oam,
@@ -35,12 +36,13 @@ pub struct Memory {
 
 impl Memory {
     pub fn new(
-        mapper: Box<dyn Mapper>,
+        mapper_params: (Box<dyn Mapper>, MapperParams),
         ports: Ports,
         system_palette: SystemPalette,
     ) -> Memory {
         Memory {
-            mapper,
+            mapper: mapper_params.0,
+            mapper_params: mapper_params.1,
             cpu_internal_ram: CpuInternalRam::new(),
             ppu_internal_ram: PpuInternalRam::new(),
             oam: Oam::new(),
@@ -67,6 +69,10 @@ impl Memory {
         &mut *self.mapper
     }
 
+    pub fn mapper_params(&self) -> &MapperParams {
+        &self.mapper_params
+    }
+
     pub fn stack_pointer(&self) -> u8 {
         self.cpu_internal_ram.stack_pointer
     }
@@ -82,6 +88,7 @@ impl Memory {
 
     pub fn cpu_peek(&self, address: CpuAddress) -> Option<u8> {
         self.mapper.cpu_peek(
+            &self.mapper_params,
             &self.cpu_internal_ram,
             &self.ppu_internal_ram,
             &self.oam,
@@ -101,6 +108,7 @@ impl<'a> CpuMemory<'a> {
     #[inline]
     pub fn peek(&self, address: CpuAddress) -> Option<u8> {
         self.memory.mapper.cpu_peek(
+            &self.memory.mapper_params,
             &self.memory.cpu_internal_ram,
             &self.memory.ppu_internal_ram,
             &self.memory.oam,
@@ -114,6 +122,7 @@ impl<'a> CpuMemory<'a> {
     #[inline]
     pub fn read(&mut self, address: CpuAddress) -> Option<u8> {
         self.memory.mapper.cpu_read(
+            &mut self.memory.mapper_params,
             &self.memory.cpu_internal_ram,
             &self.memory.ppu_internal_ram,
             &self.memory.oam,
@@ -127,6 +136,7 @@ impl<'a> CpuMemory<'a> {
     #[inline]
     pub fn write(&mut self, address: CpuAddress, value: u8) {
         self.memory.mapper.cpu_write(
+            &mut self.memory.mapper_params,
             &mut self.memory.cpu_internal_ram,
             &mut self.memory.ppu_internal_ram,
             &mut self.memory.oam,
@@ -188,12 +198,12 @@ pub struct PpuMemory<'a> {
 impl<'a> PpuMemory<'a> {
     #[inline]
     pub fn read(&mut self, address: PpuAddress) -> u8 {
-        self.memory.mapper.ppu_read(&self.memory.ppu_internal_ram, address, true)
+        self.memory.mapper.ppu_read(&mut self.memory.mapper_params, &self.memory.ppu_internal_ram, address, true)
     }
 
     #[inline]
     pub fn write(&mut self, address: PpuAddress, value: u8) {
-        self.memory.mapper.ppu_write(&mut self.memory.ppu_internal_ram, address, value);
+        self.memory.mapper.ppu_write(&mut self.memory.mapper_params, &mut self.memory.ppu_internal_ram, address, value);
     }
 
     pub fn oam(&self) -> &Oam {
@@ -223,12 +233,12 @@ impl<'a> PpuMemory<'a> {
     }
 
     pub fn name_table_mirroring(&self) -> NameTableMirroring {
-        self.memory.mapper.name_table_mirroring()
+        self.memory.mapper_params.name_table_mirroring()
     }
 
     #[inline]
     pub fn pattern_table(&self, side: PatternTableSide) -> PatternTable {
-        self.memory.mapper.chr_memory().pattern_table(side)
+        self.memory.mapper_params.chr_memory().pattern_table(side)
     }
 
     #[inline]
@@ -246,7 +256,7 @@ impl<'a> PpuMemory<'a> {
         NameTable::new(
             self.memory
                 .mapper
-                .raw_name_table(&self.memory.ppu_internal_ram, quadrant),
+                .raw_name_table(self.memory.mapper_params.name_table_mirroring(), &self.memory.ppu_internal_ram, quadrant),
         )
     }
 
@@ -308,17 +318,18 @@ pub mod test_data {
     use super::*;
 
     pub fn memory() -> Memory {
+        let (mapper, initial_layout) = Mapper000::new();
         Memory::new(
-            Box::new(Mapper000::new(&cartridge::test_data::cartridge()).unwrap()),
+            (Box::new(mapper), initial_layout.make_mapper_params(&cartridge::test_data::cartridge())),
             ports::test_data::ports(),
             system_palette::test_data::system_palette(),
         )
     }
 
     pub fn memory_with_cartridge(cartridge: &Cartridge) -> Memory {
-        let mapper = Box::new(Mapper000::new(cartridge).unwrap());
+        let (mapper, initial_layout) = Mapper000::new();
         Memory::new(
-            mapper,
+            (Box::new(mapper), initial_layout.make_mapper_params(cartridge)),
             ports::test_data::ports(),
             system_palette::test_data::system_palette(),
         )

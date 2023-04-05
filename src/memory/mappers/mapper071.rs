@@ -21,12 +21,10 @@ const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
 ]);
 
 // Similar to UxROM.
-pub struct Mapper071 {
-    params: MapperParams,
-}
+pub struct Mapper071;
 
 impl Mapper for Mapper071 {
-    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         let bank_index = value & 0b1111;
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
@@ -38,21 +36,16 @@ impl Mapper for Mapper071 {
                 } else {
                     NameTableMirroring::OneScreenRightBank
                 };
-                self.set_name_table_mirroring(mirroring);
+                params.set_name_table_mirroring(mirroring);
             }
             0xA000..=0xBFFF => { /* Do nothing. */ }
-            0xC000..=0xFFFF => self.prg_memory_mut().set_bank_index_register(P0, bank_index),
+            0xC000..=0xFFFF => params.prg_memory_mut().set_bank_index_register(P0, bank_index),
         }
     }
-
-    fn params(&self) -> &MapperParams { &self.params }
-    fn params_mut(&mut self) -> &mut MapperParams { &mut self.params }
 }
 
 impl Mapper071 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper071, String> {
-        Ok(Mapper071 {
-            params: INITIAL_LAYOUT.make_mapper_params(cartridge),
-        })
+    pub fn new() -> (Self, InitialLayout) {
+        (Self, INITIAL_LAYOUT)
     }
 }

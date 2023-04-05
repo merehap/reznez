@@ -28,12 +28,10 @@ const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
 ]);
 
 // Taito's TC0190
-pub struct Mapper033 {
-    params: MapperParams,
-}
+pub struct Mapper033;
 
 impl Mapper for Mapper033 {
-    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x8000 => {
@@ -42,30 +40,25 @@ impl Mapper for Mapper033 {
                 } else {
                     NameTableMirroring::Horizontal
                 };
-                self.set_name_table_mirroring(mirroring);
-                self.prg_memory_mut().set_bank_index_register(P0, value & 0b0011_1111);
+                params.set_name_table_mirroring(mirroring);
+                params.prg_memory_mut().set_bank_index_register(P0, value & 0b0011_1111);
             }
-            0x8001 => self.prg_memory_mut().set_bank_index_register(P1, value & 0b0011_1111),
+            0x8001 => params.prg_memory_mut().set_bank_index_register(P1, value & 0b0011_1111),
             // Large CHR windows: this allows accessing 512KiB CHR by doubling the bank indexes.
-            0x8002 => self.chr_memory_mut().set_bank_index_register(C0, 2 * u16::from(value)),
-            0x8003 => self.chr_memory_mut().set_bank_index_register(C1, 2 * u16::from(value)),
+            0x8002 => params.chr_memory_mut().set_bank_index_register(C0, 2 * u16::from(value)),
+            0x8003 => params.chr_memory_mut().set_bank_index_register(C1, 2 * u16::from(value)),
             // Small CHR windows.
-            0xA000 => self.chr_memory_mut().set_bank_index_register(C2, value),
-            0xA001 => self.chr_memory_mut().set_bank_index_register(C3, value),
-            0xA002 => self.chr_memory_mut().set_bank_index_register(C4, value),
-            0xA003 => self.chr_memory_mut().set_bank_index_register(C5, value),
+            0xA000 => params.chr_memory_mut().set_bank_index_register(C2, value),
+            0xA001 => params.chr_memory_mut().set_bank_index_register(C3, value),
+            0xA002 => params.chr_memory_mut().set_bank_index_register(C4, value),
+            0xA003 => params.chr_memory_mut().set_bank_index_register(C5, value),
             _ => { /* Do nothing. */ }
         }
     }
-
-    fn params(&self) -> &MapperParams { &self.params }
-    fn params_mut(&mut self) -> &mut MapperParams { &mut self.params }
 }
 
 impl Mapper033 {
-    pub fn new(cartridge: &Cartridge) -> Result<Mapper033, String> {
-        Ok(Mapper033 {
-            params: INITIAL_LAYOUT.make_mapper_params(cartridge),
-        })
+    pub fn new() -> (Self, InitialLayout) {
+        (Self, INITIAL_LAYOUT)
     }
 }

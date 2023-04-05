@@ -28,30 +28,29 @@ use crate::ppu::register::register_type::RegisterType;
 use crate::ppu::sprite::oam::Oam;
 
 pub trait Mapper {
-    fn params(&self) -> &MapperParams;
-    fn params_mut(&mut self) -> &mut MapperParams;
-    fn write_to_cartridge_space(&mut self, address: CpuAddress, value: u8);
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8);
 
     // Most mappers don't override the default cartridge peeking/reading behavior.
-    fn peek_from_cartridge_space(&self, address: CpuAddress) -> Option<u8> {
+    fn peek_from_cartridge_space(&self, params: &MapperParams, address: CpuAddress) -> Option<u8> {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => None,
-            0x6000..=0xFFFF => self.prg_memory().peek(address),
+            0x6000..=0xFFFF => params.prg_memory().peek(address),
         }
     }
-    fn read_from_cartridge_space(&mut self, address: CpuAddress) -> Option<u8> {
-        self.peek_from_cartridge_space(address)
+
+    fn read_from_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress) -> Option<u8> {
+        self.peek_from_cartridge_space(params, address)
     }
 
     // Most mappers don't care about CPU cycles.
     fn on_end_of_cpu_cycle(&mut self) {}
     fn on_cpu_read(&mut self, _address: CpuAddress) {}
-    fn on_cpu_write(&mut self, _address: CpuAddress, _value: u8) {}
+    fn on_cpu_write(&mut self, _params: &mut MapperParams, _address: CpuAddress, _value: u8) {}
     // Most mappers don't care about PPU cycles.
     fn on_end_of_ppu_cycle(&mut self) {}
     // Most mappers don't trigger anything based upon ppu reads.
-    fn on_ppu_read(&mut self, _address: PpuAddress, _value: u8) {}
+    fn on_ppu_read(&mut self, _params: &mut MapperParams, _address: PpuAddress, _value: u8) {}
     // Most mappers don't care about the current PPU address.
     fn process_current_ppu_address(&mut self, _address: PpuAddress) {}
     // Most mappers don't trigger custom IRQs.
@@ -60,6 +59,7 @@ pub trait Mapper {
     #[allow(clippy::too_many_arguments)]
     fn cpu_peek(
         &self,
+        params: &MapperParams,
         cpu_internal_ram: &CpuInternalRam,
         ppu_internal_ram: &PpuInternalRam,
         oam: &Oam,
@@ -72,7 +72,7 @@ pub trait Mapper {
             0x0000..=0x07FF => Some(cpu_internal_ram[address.to_usize()]),
             0x0800..=0x1FFF => Some(cpu_internal_ram[address.to_usize() & 0x07FF]),
             0x2000..=0x3FFF => {
-                let peeker = |ppu_address| self.ppu_peek(ppu_internal_ram, ppu_address);
+                let peeker = |ppu_address| self.ppu_peek(params, ppu_internal_ram, ppu_address);
                 Some(match address.to_raw() & 0x2007 {
                     0x2000 => ppu_registers.peek(RegisterType::Ctrl, peeker),
                     0x2001 => ppu_registers.peek(RegisterType::Mask, peeker),
@@ -92,7 +92,7 @@ pub trait Mapper {
             0x4016          => Some(ports.joypad1.borrow().peek_status() as u8),
             0x4017          => Some(ports.joypad2.borrow().peek_status() as u8),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ Some(0),
-            0x4020..=0xFFFF => self.peek_from_cartridge_space(address),
+            0x4020..=0xFFFF => self.peek_from_cartridge_space(params, address),
         }
     }
 
@@ -101,6 +101,7 @@ pub trait Mapper {
     #[allow(clippy::too_many_arguments)]
     fn cpu_read(
         &mut self,
+        params: &mut MapperParams,
         cpu_internal_ram: &CpuInternalRam,
         ppu_internal_ram: &PpuInternalRam,
         oam: &Oam,
@@ -114,7 +115,7 @@ pub trait Mapper {
             0x0000..=0x07FF => Some(cpu_internal_ram[address.to_usize()]),
             0x0800..=0x1FFF => Some(cpu_internal_ram[address.to_usize() & 0x07FF]),
             0x2000..=0x3FFF => {
-                let reader = |ppu_address| self.ppu_read(ppu_internal_ram, ppu_address, false);
+                let reader = |ppu_address| self.ppu_read(params, ppu_internal_ram, ppu_address, false);
                 Some(match address.to_raw() & 0x2007 {
                     0x2000 => ppu_registers.read(RegisterType::Ctrl, reader),
                     0x2001 => ppu_registers.read(RegisterType::Mask, reader),
@@ -138,7 +139,7 @@ pub trait Mapper {
             0x4016          => Some(ports.joypad1.borrow_mut().read_status() as u8),
             0x4017          => Some(ports.joypad2.borrow_mut().read_status() as u8),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ Some(0),
-            0x4020..=0xFFFF => self.read_from_cartridge_space(address),
+            0x4020..=0xFFFF => self.read_from_cartridge_space(params, address),
         }
     }
 
@@ -147,6 +148,7 @@ pub trait Mapper {
     #[allow(clippy::too_many_arguments)]
     fn cpu_write(
         &mut self,
+        params: &mut MapperParams,
         cpu_internal_ram: &mut CpuInternalRam,
         ppu_internal_ram: &mut PpuInternalRam,
         oam: &mut Oam,
@@ -156,7 +158,7 @@ pub trait Mapper {
         address: CpuAddress,
         value: u8,
     ) {
-        self.on_cpu_write(address, value);
+        self.on_cpu_write(params, address, value);
         match address.to_raw() {
             0x0000..=0x07FF => cpu_internal_ram[address.to_usize()] = value,
             0x0800..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF] = value,
@@ -172,7 +174,7 @@ pub trait Mapper {
                 0x2005 => ppu_registers.write(RegisterType::Scroll, value),
                 0x2006 => ppu_registers.write(RegisterType::PpuAddr, value),
                 0x2007 => {
-                    self.ppu_write(ppu_internal_ram, ppu_registers.current_address(), value);
+                    self.ppu_write(params, ppu_internal_ram, ppu_registers.current_address(), value);
                     ppu_registers.write(RegisterType::PpuData, value);
                     self.process_current_ppu_address(ppu_registers.current_address());
                 }
@@ -203,19 +205,20 @@ pub trait Mapper {
             0x4016          => ports.change_strobe(value),
             0x4017          => apu_registers.write_frame_counter(value),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ {}
-            0x4020..=0xFFFF => self.write_to_cartridge_space(address, value),
+            0x4020..=0xFFFF => self.write_to_cartridge_space(params, address, value),
         }
     }
 
     fn ppu_peek(
         &self,
+        params: &MapperParams,
         ppu_internal_ram: &PpuInternalRam,
         address: PpuAddress,
     ) -> u8 {
         let palette_ram = &ppu_internal_ram.palette_ram;
         match address.to_u16() {
-            0x0000..=0x1FFF => self.chr_memory().peek(address),
-            0x2000..=0x3EFF => self.peek_name_table_byte(ppu_internal_ram, address),
+            0x0000..=0x1FFF => params.chr_memory().peek(address),
+            0x2000..=0x3EFF => self.peek_name_table_byte(params.name_table_mirroring(), ppu_internal_ram, address),
             0x3F00..=0x3FFF => self.peek_palette_table_byte(palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
         }
@@ -224,6 +227,7 @@ pub trait Mapper {
     #[inline]
     fn ppu_read(
         &mut self,
+        params: &mut MapperParams,
         ppu_internal_ram: &PpuInternalRam,
         address: PpuAddress,
         rendering: bool,
@@ -232,21 +236,22 @@ pub trait Mapper {
             self.process_current_ppu_address(address);
         }
 
-        let value = self.ppu_peek(ppu_internal_ram, address);
-        self.on_ppu_read(address, value);
+        let value = self.ppu_peek(params, ppu_internal_ram, address);
+        self.on_ppu_read(params, address, value);
         value
     }
 
     #[inline]
     fn ppu_write(
         &mut self,
+        params: &mut MapperParams,
         internal_ram: &mut PpuInternalRam,
         address: PpuAddress,
         value: u8,
     ) {
         match address.to_u16() {
-            0x0000..=0x1FFF => self.chr_memory_mut().write(address, value),
-            0x2000..=0x3EFF => self.write_name_table_byte(internal_ram, address, value),
+            0x0000..=0x1FFF => params.chr_memory_mut().write(address, value),
+            0x2000..=0x3EFF => self.write_name_table_byte(params.name_table_mirroring(), internal_ram, address, value),
             0x3F00..=0x3FFF => self.write_palette_table_byte(
                 &mut internal_ram.palette_ram,
                 address,
@@ -259,42 +264,46 @@ pub trait Mapper {
     #[inline]
     fn raw_name_table<'a>(
         &'a self,
+        name_table_mirroring: NameTableMirroring,
         ppu_internal_ram: &'a PpuInternalRam,
         quadrant: NameTableQuadrant,
     ) -> &'a [u8; KIBIBYTE] {
-        let side = vram_side(quadrant, self.name_table_mirroring());
+        let side = vram_side(quadrant, name_table_mirroring);
         ppu_internal_ram.vram.side(side)
     }
 
     #[inline]
     fn raw_name_table_mut<'a>(
         &'a mut self,
+        name_table_mirroring: NameTableMirroring,
         ppu_internal_ram: &'a mut PpuInternalRam,
         position: NameTableQuadrant,
     ) -> &'a mut [u8; KIBIBYTE] {
-        let side = vram_side(position, self.name_table_mirroring());
+        let side = vram_side(position, name_table_mirroring);
         ppu_internal_ram.vram.side_mut(side)
     }
 
     #[inline]
     fn peek_name_table_byte(
         &self,
+        name_table_mirroring: NameTableMirroring,
         ppu_internal_ram: &PpuInternalRam,
         address: PpuAddress,
     ) -> u8 {
         let (name_table_quadrant, index) = address_to_name_table_index(address);
-        self.raw_name_table(ppu_internal_ram, name_table_quadrant)[index]
+        self.raw_name_table(name_table_mirroring, ppu_internal_ram, name_table_quadrant)[index]
     }
 
     #[inline]
     fn write_name_table_byte(
         &mut self,
+        name_table_mirroring: NameTableMirroring,
         ppu_internal_ram: &mut PpuInternalRam,
         address: PpuAddress,
         value: u8,
     ) {
         let (name_table_quadrant, index) = address_to_name_table_index(address);
-        self.raw_name_table_mut(ppu_internal_ram, name_table_quadrant)[index] = value;
+        self.raw_name_table_mut(name_table_mirroring, ppu_internal_ram, name_table_quadrant)[index] = value;
     }
 
     #[inline]
@@ -316,52 +325,28 @@ pub trait Mapper {
         palette_ram.write(address_to_palette_ram_index(address), value);
     }
 
-    fn prg_rom_bank_string(&self) -> String {
-        let indexes = self.prg_memory().resolve_selected_bank_indexes();
+    fn prg_rom_bank_string(&self, params: &MapperParams) -> String {
+        let indexes = params.prg_memory().resolve_selected_bank_indexes();
         let mut bank_text = indexes[0].to_string();
         for index in indexes.iter().skip(1) {
             bank_text.push_str(&format!(", {index}"));
         }
 
-        bank_text.push_str(&format!(" ({} banks total)", self.prg_memory().bank_count()));
+        bank_text.push_str(&format!(" ({} banks total)", params.prg_memory().bank_count()));
 
         bank_text
     }
 
-    fn chr_rom_bank_string(&self) -> String {
-        let indexes = self.chr_memory().resolve_selected_bank_indexes();
+    fn chr_rom_bank_string(&self, params: &MapperParams) -> String {
+        let indexes = params.chr_memory().resolve_selected_bank_indexes();
         let mut bank_text = indexes[0].to_string();
         for index in indexes.iter().skip(1) {
             bank_text.push_str(&format!(", {index}"));
         }
 
-        bank_text.push_str(&format!(" ({} banks total)", self.prg_memory().bank_count()));
+        bank_text.push_str(&format!(" ({} banks total)", params.prg_memory().bank_count()));
 
         bank_text
-    }
-
-    fn name_table_mirroring(&self) -> NameTableMirroring {
-        self.params().name_table_mirroring
-    }
-
-    fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring) {
-        self.params_mut().name_table_mirroring = name_table_mirroring;
-    }
-
-    fn prg_memory(&self) -> &PrgMemory {
-        &self.params().prg_memory
-    }
-
-    fn prg_memory_mut(&mut self) -> &mut PrgMemory {
-        &mut self.params_mut().prg_memory
-    }
-
-    fn chr_memory(&self) -> &ChrMemory {
-        &self.params().chr_memory
-    }
-
-    fn chr_memory_mut(&mut self) -> &mut ChrMemory {
-        &mut self.params_mut().chr_memory
     }
 }
 
@@ -431,4 +416,30 @@ pub struct MapperParams {
     pub prg_memory: PrgMemory,
     pub chr_memory: ChrMemory,
     pub name_table_mirroring: NameTableMirroring,
+}
+
+impl MapperParams {
+    pub fn name_table_mirroring(&self) -> NameTableMirroring {
+        self.name_table_mirroring
+    }
+
+    pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring) {
+        self.name_table_mirroring = name_table_mirroring;
+    }
+
+    pub fn prg_memory(&self) -> &PrgMemory {
+        &self.prg_memory
+    }
+
+    pub fn prg_memory_mut(&mut self) -> &mut PrgMemory {
+        &mut self.prg_memory
+    }
+
+    pub fn chr_memory(&self) -> &ChrMemory {
+        &self.chr_memory
+    }
+
+    pub fn chr_memory_mut(&mut self) -> &mut ChrMemory {
+        &mut self.chr_memory
+    }
 }
