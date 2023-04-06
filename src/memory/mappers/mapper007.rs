@@ -21,7 +21,7 @@ impl Mapper for Mapper007 {
             .chr_max_bank_count(1)
             .chr_bank_size(8 * KIBIBYTE)
             .chr_windows(CHR_WINDOWS)
-            .name_table_mirroring_source(NameTableMirroringSource::Direct(NameTableMirroring::OneScreenLeftBank))
+            .name_table_mirroring_source(NameTableMirroring::OneScreenLeftBank.to_source())
             .build()
     }
 

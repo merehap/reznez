@@ -163,3 +163,9 @@ pub enum NameTableMirroringSource {
     Direct(NameTableMirroring),
     Cartridge,
 }
+
+impl NameTableMirroring {
+    pub const fn to_source(self) -> NameTableMirroringSource {
+        NameTableMirroringSource::Direct(self)
+    }
+}

@@ -1,5 +1,4 @@
 use crate::memory::mapper::*;
-use crate::util::bit_util::get_bit;
 
 const PRG_WINDOWS_FIXED_LAST: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
@@ -41,7 +40,7 @@ impl Mapper for Mapper001 {
             .chr_max_bank_count(32)
             .chr_bank_size(4 * KIBIBYTE)
             .chr_windows(CHR_WINDOWS_ONE_BIG)
-            .name_table_mirroring_source(NameTableMirroringSource::Direct(NameTableMirroring::OneScreenRightBank))
+            .name_table_mirroring_source(NameTableMirroring::OneScreenRightBank.to_source())
             .build()
     }
 
@@ -52,16 +51,16 @@ impl Mapper for Mapper001 {
             return;
         }
 
-        if get_bit(value, 0) {
+        if value & 0b1000_0000 != 0 {
             self.shift = EMPTY_SHIFT_REGISTER;
             params.prg_memory_mut().set_windows(PRG_WINDOWS_FIXED_LAST);
             return;
         }
 
-        let is_last_shift = get_bit(self.shift, 7);
+        let is_last_shift = self.shift & 1 == 1;
 
         self.shift >>= 1;
-        self.shift |= u8::from(get_bit(value, 7)) << 4;
+        self.shift |= u8::from(value & 1) << 4;
 
         if is_last_shift {
             let shift = self.shift;
