@@ -5,6 +5,8 @@ use std::str::FromStr;
 pub struct CpuAddress(u16);
 
 impl CpuAddress {
+    pub const ZERO: CpuAddress = CpuAddress::new(0x0000);
+
     pub const fn new(value: u16) -> CpuAddress {
         CpuAddress(value)
     }

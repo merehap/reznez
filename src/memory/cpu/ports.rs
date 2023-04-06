@@ -5,14 +5,14 @@ use crate::controller::joypad::Joypad;
 use crate::memory::cpu::cpu_address::CpuAddress;
 
 pub struct Ports {
-    pub dma: DmaPort,
+    pub oam_dma: OamDmaPort,
     pub joypad1: Rc<RefCell<Joypad>>,
     pub joypad2: Rc<RefCell<Joypad>>,
 }
 
 impl Ports {
     pub fn new(joypad1: Rc<RefCell<Joypad>>, joypad2: Rc<RefCell<Joypad>>) -> Ports {
-        Ports { dma: DmaPort::new(), joypad1, joypad2 }
+        Ports { oam_dma: OamDmaPort::new(), joypad1, joypad2 }
     }
 
     pub fn change_strobe(&mut self, value: u8) {
@@ -27,15 +27,15 @@ impl Ports {
 }
 
 #[derive(Clone)]
-pub struct DmaPort {
+pub struct OamDmaPort {
     page: Rc<RefCell<Option<u8>>>,
     // TODO: Find a way to remove this field.
     current_address: CpuAddress,
 }
 
-impl DmaPort {
-    pub fn new() -> DmaPort {
-        DmaPort {
+impl OamDmaPort {
+    pub fn new() -> OamDmaPort {
+        OamDmaPort {
             page: Rc::new(RefCell::new(None)),
             current_address: CpuAddress::new(0x0000),
         }

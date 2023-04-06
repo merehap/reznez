@@ -25,7 +25,7 @@ impl ApuRegisters {
 
     pub fn peek_status(&self) -> Status {
         Status {
-            dmc_interrupt: self.dmc.irq_enabled,
+            dmc_interrupt: self.dmc.irq_pending,
             frame_irq_pending: self.frame_irq_pending,
             dmc_active: self.dmc.active(),
             noise_active: self.noise.active(),
@@ -73,6 +73,10 @@ impl ApuRegisters {
 
     pub fn frame_irq_pending(&self) -> bool {
         self.frame_irq_pending
+    }
+
+    pub fn dmc_irq_pending(&self) -> bool {
+        self.dmc.irq_pending
     }
 
     pub fn maybe_set_frame_irq_pending(&mut self) {

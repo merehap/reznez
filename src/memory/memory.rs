@@ -153,6 +153,14 @@ impl<'a> CpuMemory<'a> {
         &self.memory.ports
     }
 
+    pub fn take_dmc_dma_pending_address(&mut self) -> Option<CpuAddress> {
+        self.memory.apu_registers.dmc.take_dma_pending_address()
+    }
+
+    pub fn set_dmc_sample_buffer(&mut self, value: u8) {
+        self.memory.apu_registers.dmc.set_sample_buffer(value);
+    }
+
     #[inline]
     pub fn stack(&mut self) -> Stack {
         self.memory.cpu_internal_ram.stack()

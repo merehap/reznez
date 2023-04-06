@@ -144,6 +144,7 @@ impl Nes {
     fn cpu_step(&mut self) -> Option<Step> {
         let irq_pending =
             self.memory.apu_regs().frame_irq_pending()
+            || self.memory.apu_regs().dmc_irq_pending()
             || self.memory.mapper().irq_pending();
 
         let address = self.cpu.address_for_next_step(&self.memory.as_cpu_memory());

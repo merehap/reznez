@@ -7,7 +7,7 @@ use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
 use crate::cpu::status;
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::cpu::ports::DmaPort;
+use crate::memory::cpu::ports::OamDmaPort;
 use crate::memory::memory::{CpuMemory,
     IRQ_VECTOR_LOW, IRQ_VECTOR_HIGH,
     RESET_VECTOR_LOW, RESET_VECTOR_HIGH,
@@ -32,7 +32,7 @@ pub struct Cpu {
     irq_status: IrqStatus,
     reset_pending: bool,
 
-    dma_port: DmaPort,
+    oam_dma_port: OamDmaPort,
 
     cycle: i64,
 
@@ -68,7 +68,7 @@ impl Cpu {
             nmi_status: NmiStatus::Inactive,
             irq_status: IrqStatus::Inactive,
             reset_pending: true,
-            dma_port: memory.ports().dma.clone(),
+            oam_dma_port: memory.ports().oam_dma.clone(),
 
             cycle: starting_cycle,
 
@@ -245,7 +245,7 @@ impl Cpu {
             // TODO: Make sure this isn't supposed to wrap within the same page.
             IncrementAddressBus => { self.address_bus.inc(); }
             IncrementAddressBusLow => { self.address_bus.offset_low(1); }
-            IncrementDmaAddress => self.dma_port.increment_current_address(),
+            IncrementDmaAddress => self.oam_dma_port.increment_current_address(),
             StorePendingAddressLowByte => self.pending_address_low = self.previous_data_bus_value,
             StorePendingAddressLowByteWithXOffset => {
                 let carry;
@@ -328,9 +328,18 @@ impl Cpu {
                     return;
                 }
 
-                if self.dma_port.take_page().is_some() {
-                    info!(target: "cpuflowcontrol", "Starting DMA transfer at {}.", self.dma_port.current_address());
-                    self.step_queue.enqueue_dma_transfer(self.cycle);
+                if let Some(address) = memory.take_dmc_dma_pending_address() {
+                    info!(target: "cpuflowcontrol", "Reading DMC DMA byte at {} on next cycle.", address);
+                    let new_sample_buffer = memory.read(address).unwrap_or(self.data_bus);
+                    memory.set_dmc_sample_buffer(new_sample_buffer);
+                    self.suppress_program_counter_increment = true;
+                    return;
+                }
+
+                if self.oam_dma_port.take_page().is_some() {
+                    info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
+                        self.oam_dma_port.current_address());
+                    self.step_queue.enqueue_oam_dma_transfer(self.cycle);
                     self.suppress_program_counter_increment = true;
                     return;
                 }
@@ -550,7 +559,7 @@ impl Cpu {
         use self::From::*;
         match from {
             AddressBusTarget => self.address_bus,
-            DmaAddressTarget => self.dma_port.current_address(),
+            DmaAddressTarget => self.oam_dma_port.current_address(),
             ProgramCounterTarget => self.program_counter,
             PendingAddressTarget =>
                 CpuAddress::from_low_high(self.pending_address_low, self.data_bus),
@@ -575,7 +584,7 @@ impl Cpu {
         use self::To::*;
         match to {
             AddressBusTarget => self.address_bus,
-            DmaAddressTarget => self.dma_port.current_address(),
+            DmaAddressTarget => self.oam_dma_port.current_address(),
             ProgramCounterTarget => self.program_counter,
             PendingAddressTarget =>
                 CpuAddress::from_low_high(self.pending_address_low, self.data_bus),

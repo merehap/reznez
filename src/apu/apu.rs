@@ -50,6 +50,7 @@ impl Apu {
     }
 
     pub fn half_step(&self, regs: &mut ApuRegisters) {
+        regs.dmc.maybe_start_dma();
         regs.frame_reset_status.even_cycle_reached();
 
         const FIRST_STEP : u16 = 3728;
@@ -80,6 +81,7 @@ impl Apu {
     }
 
     pub fn step(&mut self, regs: &mut ApuRegisters) {
+        regs.dmc.maybe_start_dma();
         if regs.frame_reset_status == FrameResetStatus::NextCycle {
             self.cycle = 0;
             regs.frame_reset_status.finished();
@@ -89,6 +91,7 @@ impl Apu {
         regs.pulse_2.step();
         regs.triangle.step_half_frame();
         regs.noise.step();
+        regs.dmc.step();
 
         if self.cycle % 20 == 0 {
             let mut queue = self.pulse_queue
@@ -115,7 +118,7 @@ impl Apu {
         let pulse_2 = regs.pulse_2.sample_volume();
         let triangle = regs.triangle.sample_volume();
         let noise = regs.noise.sample_volume();
-        let dmc = 0.0;
+        let dmc = regs.dmc.sample_volume();
 
         let pulse_out = 95.88 / (8128.0 / (pulse_1 + pulse_2) + 100.0);
         let tnd_out = 159.79 / ((1.0 / (triangle / 8227.0 + noise / 12241.0 + dmc / 22368.0)) + 100.0);
