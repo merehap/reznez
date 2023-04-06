@@ -26,4 +26,6 @@ pub mod mapper101;
 
 pub mod mapper140;
 
+pub mod mapper152;
+
 pub mod mapper232;
