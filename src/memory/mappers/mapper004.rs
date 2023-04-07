@@ -146,10 +146,10 @@ impl Mapper004 {
     }
 
     fn bank_select(&mut self, params: &mut MapperParams, value: u8) {
-        let chr_big_windows_first =                                 (value & 0b1000_0000) == 0;
-        let prg_fixed_c000 =                                        (value & 0b0100_0000) == 0;
-        //self.prg_ram_enabled =                                    (value & 0b0010_0000) != 0;
-        self.selected_register_id = Mapper004::register_id_from_byte(value & 0b0000_0111);
+        let chr_big_windows_first =                      (value & 0b1000_0000) == 0;
+        let prg_fixed_c000 =                             (value & 0b0100_0000) == 0;
+        //self.prg_ram_enabled =                         (value & 0b0010_0000) != 0;
+        self.selected_register_id = register_id_from_byte(value & 0b0000_0111);
 
         if chr_big_windows_first {
             params.chr_memory_mut().set_windows(CHR_BIG_WINDOWS_FIRST)
@@ -239,21 +239,6 @@ impl Mapper004 {
         self.irq_enabled = true;
     }
 
-    fn register_id_from_byte(value: u8) -> BankIndexRegisterId {
-        use BankIndexRegisterId::*;
-        match value {
-            0b000 => C0,
-            0b001 => C1,
-            0b010 => C2,
-            0b011 => C3,
-            0b100 => C4,
-            0b101 => C5,
-            0b110 => P0,
-            0b111 => P1,
-            _ => unreachable!(),
-        }
-    }
-
     /*
     fn work_ram_status_from_bits(value: u8) -> WorkRamStatus {
         assert_eq!(value & 0b1111_1100, 0);
@@ -267,4 +252,18 @@ impl Mapper004 {
         }
     }
     */
+}
+
+fn register_id_from_byte(value: u8) -> BankIndexRegisterId {
+    match value {
+        0b000 => C0,
+        0b001 => C1,
+        0b010 => C2,
+        0b011 => C3,
+        0b100 => C4,
+        0b101 => C5,
+        0b110 => P0,
+        0b111 => P1,
+        _ => unreachable!(),
+    }
 }
