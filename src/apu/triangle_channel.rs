@@ -55,7 +55,7 @@ impl TriangleChannel {
         !self.length_counter.is_zero()
     }
 
-    pub(super) fn quarter_frame_step(&mut self) {
+    pub(super) fn off_cycle_step(&mut self) {
         self.advance_timer_and_sequence_index();
         if self.linear_counter_reload {
             self.linear_counter = self.linear_counter_reload_value;
@@ -68,7 +68,7 @@ impl TriangleChannel {
         }
     }
 
-    pub(super) fn half_frame_step(&mut self) {
+    pub(super) fn on_cycle_step(&mut self) {
         self.advance_timer_and_sequence_index();
     }
 

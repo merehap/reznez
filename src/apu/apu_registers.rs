@@ -15,12 +15,22 @@ pub struct ApuRegisters {
     step_mode: StepMode,
     suppress_irq: bool,
     frame_irq_pending: bool,
-    pub frame_reset_status: FrameResetStatus,
+    write_delay: Option<u8>,
+
+    cycle: u64,
 }
 
 impl ApuRegisters {
     pub fn step_mode(&self) -> StepMode {
         self.step_mode
+    }
+
+    pub fn cycle(&self) -> u64 {
+        self.cycle
+    }
+
+    pub fn increment_cycle(&mut self) {
+        self.cycle += 1;
     }
 
     pub fn peek_status(&self) -> Status {
@@ -53,14 +63,25 @@ impl ApuRegisters {
         use StepMode::*;
         self.step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
         self.suppress_irq = value & 0b0100_0000 != 0;
-
         if self.suppress_irq {
             self.frame_irq_pending = false;
         }
 
-        self.frame_reset_status.begin_wait();
+        self.write_delay = Some(if self.cycle % 2 == 0 { 3 } else { 4 });
+
         if self.step_mode == StepMode::FiveStep {
             self.decrement_length_counters();
+        }
+    }
+
+    pub fn maybe_update_step_mode(&mut self) {
+        if let Some(write_delay) = self.write_delay {
+            if write_delay == 1 {
+                self.cycle = 0;
+                self.write_delay = None;
+            } else {
+                self.write_delay = Some(write_delay - 1);
+            }
         }
     }
 
@@ -134,34 +155,5 @@ impl StepMode {
             StepMode::FourStep => StepMode::FOUR_STEP_FRAME_LENGTH,
             StepMode::FiveStep => StepMode::FIVE_STEP_FRAME_LENGTH,
         }
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]
-pub enum FrameResetStatus {
-    #[default]
-    Inactive,
-    WaitingOnEvenCycle,
-    NextCycle,
-}
-
-impl FrameResetStatus {
-    pub fn begin_wait(&mut self) {
-        assert_eq!(*self, FrameResetStatus::Inactive);
-        *self = FrameResetStatus::WaitingOnEvenCycle;
-    }
-
-    pub fn even_cycle_reached(&mut self) {
-        match *self {
-            FrameResetStatus::Inactive => {}
-            FrameResetStatus::WaitingOnEvenCycle => {
-                *self = FrameResetStatus::NextCycle;
-            }
-            FrameResetStatus::NextCycle => unreachable!(),
-        }
-    }
-
-    pub fn finished(&mut self) {
-        *self = FrameResetStatus::Inactive;
     }
 }

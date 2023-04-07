@@ -6,7 +6,7 @@ use std::time::Duration;
 use rodio::{OutputStream, Sink};
 use rodio::source::Source;
 
-use crate::apu::apu_registers::{ApuRegisters, FrameResetStatus, StepMode};
+use crate::apu::apu_registers::{ApuRegisters, StepMode};
 
 const SAMPLE_RATE: u32 = 44100;
 const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
@@ -14,7 +14,6 @@ const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
 pub struct Apu {
     pulse_queue: Arc<Mutex<VecDeque<f32>>>,
     muted: Arc<Mutex<bool>>,
-    cycle: u64,
 }
 
 impl Apu {
@@ -41,7 +40,6 @@ impl Apu {
         Apu {
             pulse_queue,
             muted,
-            cycle: 0,
         }
     }
 
@@ -49,9 +47,8 @@ impl Apu {
         *self.muted.lock().unwrap() = true;
     }
 
-    pub fn quarter_frame_step(&self, regs: &mut ApuRegisters) {
+    pub fn off_cycle_step(&self, regs: &mut ApuRegisters) {
         regs.dmc.maybe_start_dma();
-        regs.frame_reset_status.even_cycle_reached();
 
         const FIRST_STEP : u16 = 3728;
         const SECOND_STEP: u16 = 7456;
@@ -77,23 +74,20 @@ impl Apu {
             _ => { /* Do nothing. */ }
         }
 
-        regs.triangle.quarter_frame_step();
+        regs.triangle.off_cycle_step();
     }
 
-    pub fn half_frame_step(&mut self, regs: &mut ApuRegisters) {
+    pub fn on_cycle_step(&mut self, regs: &mut ApuRegisters) {
         regs.dmc.maybe_start_dma();
-        if regs.frame_reset_status == FrameResetStatus::NextCycle {
-            self.cycle = 0;
-            regs.frame_reset_status.finished();
-        }
+        regs.maybe_update_step_mode();
 
-        regs.pulse_1.half_frame_step();
-        regs.pulse_2.half_frame_step();
-        regs.triangle.half_frame_step();
-        regs.noise.half_frame_step();
-        regs.dmc.half_frame_step();
+        regs.pulse_1.on_cycle_step();
+        regs.pulse_2.on_cycle_step();
+        regs.triangle.on_cycle_step();
+        regs.noise.on_cycle_step();
+        regs.dmc.on_cycle_step();
 
-        if self.cycle % 20 == 0 {
+        if regs.cycle() % 20 == 0 {
             let mut queue = self.pulse_queue
                 .lock()
                 .unwrap();
@@ -106,11 +100,11 @@ impl Apu {
             regs.maybe_set_frame_irq_pending();
         }
 
-        self.cycle += 1;
+        regs.increment_cycle();
     }
 
     pub fn cycle_within_frame(&self, regs: &ApuRegisters) -> u16 {
-        u16::try_from(self.cycle % u64::from(regs.step_mode().frame_length())).unwrap()
+        u16::try_from(regs.cycle() % u64::from(regs.step_mode().frame_length())).unwrap()
     }
 
     fn mix_samples(regs: &ApuRegisters) -> f32 {
