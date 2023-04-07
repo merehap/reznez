@@ -49,7 +49,7 @@ impl Apu {
         *self.muted.lock().unwrap() = true;
     }
 
-    pub fn half_step(&self, regs: &mut ApuRegisters) {
+    pub fn quarter_frame_step(&self, regs: &mut ApuRegisters) {
         regs.dmc.maybe_start_dma();
         regs.frame_reset_status.even_cycle_reached();
 
@@ -77,21 +77,21 @@ impl Apu {
             _ => { /* Do nothing. */ }
         }
 
-        regs.triangle.step_quarter_frame();
+        regs.triangle.quarter_frame_step();
     }
 
-    pub fn step(&mut self, regs: &mut ApuRegisters) {
+    pub fn half_frame_step(&mut self, regs: &mut ApuRegisters) {
         regs.dmc.maybe_start_dma();
         if regs.frame_reset_status == FrameResetStatus::NextCycle {
             self.cycle = 0;
             regs.frame_reset_status.finished();
         }
 
-        regs.pulse_1.step();
-        regs.pulse_2.step();
-        regs.triangle.step_half_frame();
-        regs.noise.step();
-        regs.dmc.step();
+        regs.pulse_1.half_frame_step();
+        regs.pulse_2.half_frame_step();
+        regs.triangle.half_frame_step();
+        regs.noise.half_frame_step();
+        regs.dmc.half_frame_step();
 
         if self.cycle % 20 == 0 {
             let mut queue = self.pulse_queue

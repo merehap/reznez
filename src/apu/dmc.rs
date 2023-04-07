@@ -97,7 +97,7 @@ impl Dmc {
         }
     }
 
-    pub(super) fn step(&mut self) {
+    pub(super) fn half_frame_step(&mut self) {
         if self.cycles_remaining >= 2 {
             self.cycles_remaining -= 2;
             return;
