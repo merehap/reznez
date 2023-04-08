@@ -12,6 +12,7 @@ pub struct ApuRegisters {
     pub noise: NoiseChannel,
     pub dmc: Dmc,
 
+    pending_step_mode: StepMode,
     step_mode: StepMode,
     suppress_irq: bool,
     frame_irq_pending: bool,
@@ -70,17 +71,13 @@ impl ApuRegisters {
 
     pub fn write_frame_counter(&mut self, value: u8) {
         use StepMode::*;
-        self.step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
+        self.pending_step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
         self.suppress_irq = value & 0b0100_0000 != 0;
         if self.suppress_irq {
             self.frame_irq_pending = false;
         }
 
         self.write_delay = Some(if self.off_cycle { 4 } else { 3 });
-
-        if self.step_mode == StepMode::FiveStep {
-            self.decrement_length_counters();
-        }
     }
 
     pub fn maybe_update_step_mode(&mut self) {
@@ -88,6 +85,10 @@ impl ApuRegisters {
             if write_delay == 1 {
                 self.cycle = 0;
                 self.write_delay = None;
+                self.step_mode = self.pending_step_mode;
+                if self.step_mode == StepMode::FiveStep {
+                    self.decrement_length_counters();
+                }
             } else {
                 self.write_delay = Some(write_delay - 1);
             }
