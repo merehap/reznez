@@ -102,6 +102,7 @@ impl ApuRegisters {
 
     pub fn maybe_set_frame_irq_pending(&mut self) {
         if self.step_mode == StepMode::FourStep && !self.suppress_irq {
+            println!("Frame IRQ pending");
             self.frame_irq_pending = true;
         }
     }

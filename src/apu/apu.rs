@@ -49,6 +49,7 @@ impl Apu {
 
     pub fn off_cycle_step(&self, regs: &mut ApuRegisters) {
         regs.dmc.maybe_start_dma();
+        regs.maybe_update_step_mode();
 
         const FIRST_STEP : u16 = 3728;
         const SECOND_STEP: u16 = 7456;
