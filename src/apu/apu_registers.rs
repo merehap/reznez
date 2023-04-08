@@ -17,6 +17,7 @@ pub struct ApuRegisters {
     frame_irq_pending: bool,
     write_delay: Option<u8>,
 
+    off_cycle: bool,
     cycle: u64,
 }
 
@@ -27,6 +28,14 @@ impl ApuRegisters {
 
     pub fn cycle(&self) -> u64 {
         self.cycle
+    }
+
+    pub fn off_cycle(&mut self) {
+        self.off_cycle = true;
+    }
+
+    pub fn on_cycle(&mut self) {
+        self.off_cycle = false;
     }
 
     pub fn increment_cycle(&mut self) {
@@ -67,7 +76,7 @@ impl ApuRegisters {
             self.frame_irq_pending = false;
         }
 
-        self.write_delay = Some(if self.cycle % 2 == 0 { 3 } else { 4 });
+        self.write_delay = Some(if self.off_cycle { 4 } else { 3 });
 
         if self.step_mode == StepMode::FiveStep {
             self.decrement_length_counters();
@@ -102,7 +111,6 @@ impl ApuRegisters {
 
     pub fn maybe_set_frame_irq_pending(&mut self) {
         if self.step_mode == StepMode::FourStep && !self.suppress_irq {
-            println!("Frame IRQ pending");
             self.frame_irq_pending = true;
         }
     }

@@ -47,7 +47,35 @@ impl Apu {
         *self.muted.lock().unwrap() = true;
     }
 
+    pub fn on_cycle_step(&mut self, regs: &mut ApuRegisters) {
+        regs.on_cycle();
+        regs.dmc.maybe_start_dma();
+        regs.maybe_update_step_mode();
+
+        regs.pulse_1.on_cycle_step();
+        regs.pulse_2.on_cycle_step();
+        regs.triangle.on_cycle_step();
+        regs.noise.on_cycle_step();
+        regs.dmc.on_cycle_step();
+
+        if regs.cycle() % 20 == 0 {
+            let mut queue = self.pulse_queue
+                .lock()
+                .unwrap();
+            if queue.len() < MAX_QUEUE_LENGTH {
+                queue.push_back(Apu::mix_samples(regs));
+            }
+        }
+
+        if self.cycle_within_frame(regs) == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
+            regs.maybe_set_frame_irq_pending();
+        }
+
+        regs.increment_cycle();
+    }
+
     pub fn off_cycle_step(&self, regs: &mut ApuRegisters) {
+        regs.off_cycle();
         regs.dmc.maybe_start_dma();
         regs.maybe_update_step_mode();
 
@@ -80,32 +108,6 @@ impl Apu {
         }
 
         regs.triangle.off_cycle_step();
-    }
-
-    pub fn on_cycle_step(&mut self, regs: &mut ApuRegisters) {
-        regs.dmc.maybe_start_dma();
-        regs.maybe_update_step_mode();
-
-        regs.pulse_1.on_cycle_step();
-        regs.pulse_2.on_cycle_step();
-        regs.triangle.on_cycle_step();
-        regs.noise.on_cycle_step();
-        regs.dmc.on_cycle_step();
-
-        if regs.cycle() % 20 == 0 {
-            let mut queue = self.pulse_queue
-                .lock()
-                .unwrap();
-            if queue.len() < MAX_QUEUE_LENGTH {
-                queue.push_back(Apu::mix_samples(regs));
-            }
-        }
-
-        if self.cycle_within_frame(regs) == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
-            regs.maybe_set_frame_irq_pending();
-        }
-
-        regs.increment_cycle();
     }
 
     pub fn cycle_within_frame(&self, regs: &ApuRegisters) -> u16 {
