@@ -74,6 +74,10 @@ impl Apu {
             _ => { /* Do nothing. */ }
         }
 
+        if self.cycle_within_frame(regs) == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
+            regs.maybe_set_frame_irq_pending();
+        }
+
         regs.triangle.off_cycle_step();
     }
 
