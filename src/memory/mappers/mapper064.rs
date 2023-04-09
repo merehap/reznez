@@ -64,8 +64,6 @@ const CPU_CYCLE_MODE_IRQ_PENDING_DELAY: u8 = 1;
 const SCANLINE_MODE_IRQ_PENDING_DELAY: u8 = 4;
 
 // RAMBO-1 (Similar to MMC3)
-// FIXME: Skull & Crossbones
-// FIXME: Hard Drivin'
 pub struct Mapper064 {
     selected_register_id: BankIndexRegisterId,
 
