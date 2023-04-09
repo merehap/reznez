@@ -266,10 +266,9 @@ impl PrgWindows {
         while i < self.0.len() {
             let window = self.0[i];
             if !matches!(window.prg_type, PrgType::WorkRam)
-                && bank_size % window.size() != 0
+                && !matches!(window.prg_type, PrgType::Empty)
                 && window.size() % bank_size != 0 {
-
-                panic!("Bank size must be a multiple of window size or vice versa.");
+                panic!("Window size must be a multiple of bank size.");
             }
 
             i += 1;
