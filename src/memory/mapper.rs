@@ -47,7 +47,7 @@ pub trait Mapper {
     }
 
     // Most mappers don't care about CPU cycles.
-    fn on_end_of_cpu_cycle(&mut self) {}
+    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {}
     fn on_cpu_read(&mut self, _address: CpuAddress) {}
     fn on_cpu_write(&mut self, _params: &mut MapperParams, _address: CpuAddress, _value: u8) {}
     // Most mappers don't care about PPU cycles.

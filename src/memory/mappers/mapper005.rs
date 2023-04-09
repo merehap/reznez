@@ -249,7 +249,7 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self) {
+    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {
         if self.ppu_read_occurred_since_last_cpu_cycle {
             self.cpu_cycles_since_last_ppu_read = 0;
         } else {

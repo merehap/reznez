@@ -182,6 +182,10 @@ impl PpuAddress {
         }
     }
 
+    pub fn is_in_pattern_table(self) -> bool {
+        self.address < 0x2000
+    }
+
     pub fn is_in_name_table_proper(self) -> bool {
         if self.address >= 0x2000 && self.address < 0x3F00 {
             self.address % 0x400 < 0x3C0

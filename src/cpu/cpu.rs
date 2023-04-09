@@ -231,6 +231,8 @@ impl Cpu {
             self.nmi_status = NmiStatus::Ready;
         }
 
+        memory.process_end_of_cpu_cycle(self.cycle);
+
         Some(step)
     }
 

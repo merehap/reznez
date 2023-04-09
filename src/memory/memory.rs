@@ -192,6 +192,10 @@ impl<'a> CpuMemory<'a> {
         self.address_from_vector(IRQ_VECTOR_LOW)
     }
 
+    pub fn process_end_of_cpu_cycle(&mut self, cycle: i64) {
+        self.memory.mapper.on_end_of_cpu_cycle(cycle);
+    }
+
     fn address_from_vector(&mut self, mut vector: CpuAddress) -> CpuAddress {
         CpuAddress::from_low_high(
             self.read(vector).expect("Read open bus."),
