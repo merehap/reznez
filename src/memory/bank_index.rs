@@ -3,6 +3,7 @@ pub struct BankIndex(u16);
 
 impl BankIndex {
     pub const FIRST: BankIndex = BankIndex(0);
+    pub const SECOND: BankIndex = BankIndex(1);
     // Rely on later bit masking to reduce these indexes to within the valid range.
     pub const THIRD_LAST: BankIndex = BankIndex(0xFFFD);
     pub const SECOND_LAST: BankIndex = BankIndex(0xFFFE);
