@@ -272,7 +272,7 @@ impl ChrWindow {
     }
 
     pub fn register_id(self) -> Option<BankIndexRegisterId> {
-        if let ChrType::VariableBank(_, id) = self.chr_type {
+        if let ChrType::SwitchableBank(_, id) = self.chr_type {
             Some(id)
         } else {
             None
@@ -282,25 +282,25 @@ impl ChrWindow {
 
 #[derive(Clone, Copy, Debug)]
 pub enum ChrType {
-    ConstantBank(Writability, BankIndex),
-    VariableBank(Writability, BankIndexRegisterId),
-    MetaVariableBank(Writability, MetaRegisterId),
+    FixedBank(Writability, BankIndex),
+    SwitchableBank(Writability, BankIndexRegisterId),
+    MetaSwitchableBank(Writability, MetaRegisterId),
 }
 
 impl ChrType {
     fn writability(self) -> Writability {
         match self {
-            ChrType::ConstantBank(writability, _) => writability,
-            ChrType::VariableBank(writability, _) => writability,
-            ChrType::MetaVariableBank(writability, _) => writability,
+            ChrType::FixedBank(writability, _) => writability,
+            ChrType::SwitchableBank(writability, _) => writability,
+            ChrType::MetaSwitchableBank(writability, _) => writability,
         }
     }
 
     fn bank_index(self, registers: &BankIndexRegisters) -> BankIndex {
         match self {
-            ChrType::ConstantBank(_, bank_index) => bank_index,
-            ChrType::VariableBank(_, register_id) => registers.get(register_id),
-            ChrType::MetaVariableBank(_, meta_id) => registers.get_from_meta(meta_id),
+            ChrType::FixedBank(_, bank_index) => bank_index,
+            ChrType::SwitchableBank(_, register_id) => registers.get(register_id),
+            ChrType::MetaSwitchableBank(_, meta_id) => registers.get_from_meta(meta_id),
         }
     }
 }

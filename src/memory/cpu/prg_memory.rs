@@ -168,8 +168,8 @@ impl PrgMemory {
                 let window = &windows[i];
                 let prg_memory_index = match window.prg_type {
                     PrgType::Empty => PrgMemoryIndex::None,
-                    PrgType::ConstantBank(_, bank_index) => {
-                        // TODO: Consolidate ConstantBank and VariableBank logic.
+                    PrgType::FixedBank(_, bank_index) => {
+                        // TODO: Consolidate FixedBank and SwitchableBank logic.
                         let mut raw_bank_index = bank_index.to_usize(self.bank_count());
                         let window_multiple = window.size() / self.bank_size;
                         // Clear low bits for large windows.
@@ -178,7 +178,7 @@ impl PrgMemory {
                              raw_bank_index * self.bank_size + bank_offset as usize;
                         PrgMemoryIndex::MappedMemory(mapped_memory_index)
                     }
-                    PrgType::VariableBank(_, register_id) => {
+                    PrgType::SwitchableBank(_, register_id) => {
                         let mut raw_bank_index = self.bank_index_registers.get(register_id)
                             .to_usize(self.bank_count());
                         let window_multiple = window.size() / self.bank_size;
@@ -308,7 +308,7 @@ impl PrgWindow {
     }
 
     fn register_id(self) -> Option<BankIndexRegisterId> {
-        if let PrgType::VariableBank(_, id) = self.prg_type {
+        if let PrgType::SwitchableBank(_, id) = self.prg_type {
             Some(id)
         } else {
             None
@@ -332,8 +332,8 @@ impl PrgWindow {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum PrgType {
     Empty,
-    ConstantBank(Writability, BankIndex),
-    VariableBank(Writability, BankIndexRegisterId),
+    FixedBank(Writability, BankIndex),
+    SwitchableBank(Writability, BankIndexRegisterId),
     // WRAM, Save RAM, SRAM, ambiguously "PRG RAM".
     WorkRam,
 }
@@ -342,8 +342,8 @@ impl PrgType {
     fn bank_index(self, registers: &BankIndexRegisters) -> Option<BankIndex> {
         use PrgType::*;
         match self {
-            ConstantBank(_, bank_index) => Some(bank_index),
-            VariableBank(_, register_id) => Some(registers.get(register_id)),
+            FixedBank(_, bank_index) => Some(bank_index),
+            SwitchableBank(_, register_id) => Some(registers.get(register_id)),
             Empty | WorkRam => None,
         }
     }
