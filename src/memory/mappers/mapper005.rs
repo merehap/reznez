@@ -91,6 +91,11 @@ const EXTENDED_ATTRIBUTES_CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
 const SPRITE_PATTERN_FETCH_START: u8 = 64;
 const BACKGROUND_PATTERN_FETCH_START: u8 = 81;
 
+const PRG_REGISTER_IDS: [BankIndexRegisterId; 5] =
+    [P0, P1, P2, P3, P4];
+const CHR_REGISTER_IDS: [BankIndexRegisterId; 12] =
+    [C0, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11];
+
 // MMC5 (ExROM)
 pub struct Mapper005 {
     pulse_2: PulseChannel,
@@ -439,33 +444,12 @@ impl Mapper005 {
     }
 
     fn prg_bank_switching(&mut self, params: &mut MapperParams, address: u16, value: u8) {
-        let register_id = match address {
-            0x5113 => P0,
-            0x5114 => P1,
-            0x5115 => P2,
-            0x5116 => P3,
-            0x5117 => P4,
-            _ => unreachable!(),
-        };
+        let register_id = PRG_REGISTER_IDS[(address - 0x5113) as usize];
         params.prg_memory_mut().set_bank_index_register(register_id, value);
     }
 
     fn chr_bank_switching(&mut self, params: &mut MapperParams, address: u16, value: u8) {
-        let register_id = match address {
-            0x5120 => C0,
-            0x5121 => C1,
-            0x5122 => C2,
-            0x5123 => C3,
-            0x5124 => C4,
-            0x5125 => C5,
-            0x5126 => C6,
-            0x5127 => C7,
-            0x5128 => C8,
-            0x5129 => C9,
-            0x512A => C10,
-            0x512B => C11,
-            _ => unreachable!(),
-        };
+        let register_id = CHR_REGISTER_IDS[(address - 0x5120) as usize];
         params.chr_memory_mut().set_bank_index_register(register_id, value);
     }
 

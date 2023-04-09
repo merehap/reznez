@@ -63,6 +63,11 @@ const CHR_SMALL_WINDOWS_SECONDARY: ChrWindows = ChrWindows::new(&[
 const CPU_CYCLE_MODE_IRQ_PENDING_DELAY: u8 = 1;
 const SCANLINE_MODE_IRQ_PENDING_DELAY: u8 = 4;
 
+const BANK_INDEX_REGISTER_IDS: [Option<BankIndexRegisterId>; 16] =
+    [Some(C0), Some(C1), Some(C2), Some(C3), Some(C4), Some(C5), Some(P0), Some(P1),
+     Some(C6), Some(C7),     None,     None,     None,     None,     None, Some(P2),
+    ];
+
 // RAMBO-1 (Similar to MMC3)
 pub struct Mapper064 {
     selected_register_id: BankIndexRegisterId,
@@ -197,22 +202,9 @@ impl Mapper064 {
         };
         params.chr_memory_mut().set_windows(chr_windows);
 
-        self.selected_register_id = match value & 0b0000_1111 {
-            0b0000 => C0,
-            0b0001 => C1,
-            0b0010 => C2,
-            0b0011 => C3,
-            0b0100 => C4,
-            0b0101 => C5,
-            0b0110 => P0,
-            0b0111 => P1,
-            0b1000 => C6,
-            0b1001 => C7,
-            0b1011 => return,
-            0b1101 => return,
-            0b1111 => P2,
-            _ => unreachable!(),
-        };
+        if let Some(reg_id) = BANK_INDEX_REGISTER_IDS[(value & 0b0000_1111) as usize] {
+            self.selected_register_id = reg_id;
+        }
     }
 
     fn set_bank_index(&self, params: &mut MapperParams, value: u8) {

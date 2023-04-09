@@ -45,6 +45,9 @@ const CHR_SMALL_WINDOWS_FIRST: ChrWindows = ChrWindows::new(&[
     ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType::VariableBank(Rom, C1)),
 ]);
 
+const BANK_INDEX_REGISTER_IDS: [Option<BankIndexRegisterId>; 8] =
+    [Some(C0), Some(C1), Some(C2), Some(C3), Some(C4), Some(C5), Some(P0), Some(P1)];
+
 // MMC3 (TSROM and others) and MMC6 (HKROM)
 pub struct Mapper004 {
     selected_register_id: BankIndexRegisterId,
@@ -149,7 +152,9 @@ impl Mapper004 {
         let chr_big_windows_first =                      (value & 0b1000_0000) == 0;
         let prg_fixed_c000 =                             (value & 0b0100_0000) == 0;
         //self.prg_ram_enabled =                         (value & 0b0010_0000) != 0;
-        self.selected_register_id = register_id_from_byte(value & 0b0000_0111);
+        if let Some(reg_id) = BANK_INDEX_REGISTER_IDS[(value & 0b0000_0111) as usize] {
+            self.selected_register_id = reg_id;
+        }
 
         if chr_big_windows_first {
             params.chr_memory_mut().set_windows(CHR_BIG_WINDOWS_FIRST)
@@ -252,18 +257,4 @@ impl Mapper004 {
         }
     }
     */
-}
-
-fn register_id_from_byte(value: u8) -> BankIndexRegisterId {
-    match value {
-        0b000 => C0,
-        0b001 => C1,
-        0b010 => C2,
-        0b011 => C3,
-        0b100 => C4,
-        0b101 => C5,
-        0b110 => P0,
-        0b111 => P1,
-        _ => unreachable!(),
-    }
 }
