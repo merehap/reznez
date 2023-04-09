@@ -57,6 +57,13 @@ impl TriangleChannel {
 
     pub(super) fn off_cycle_step(&mut self) {
         self.advance_timer_and_sequence_index();
+    }
+
+    pub(super) fn on_cycle_step(&mut self) {
+        self.advance_timer_and_sequence_index();
+    }
+
+    pub(super) fn decrement_linear_counter(&mut self) {
         if self.linear_counter_reload {
             self.linear_counter = self.linear_counter_reload_value;
         } else {
@@ -66,10 +73,6 @@ impl TriangleChannel {
         if !self.counter_control {
             self.linear_counter_reload = false;
         }
-    }
-
-    pub(super) fn on_cycle_step(&mut self) {
-        self.advance_timer_and_sequence_index();
     }
 
     pub(super) fn sample_volume(&self) -> f32 {

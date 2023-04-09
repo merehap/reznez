@@ -87,15 +87,22 @@ impl Apu {
 
         use StepMode::*;
         match (regs.step_mode(), cycle_within_frame) {
-            (_, FIRST_STEP) => {}
+            (_, FIRST_STEP) => {
+                regs.triangle.decrement_linear_counter();
+            }
             (_, SECOND_STEP) => {
+                regs.triangle.decrement_linear_counter();
                 regs.decrement_length_counters();
             }
-            (_, THIRD_STEP) => {}
+            (_, THIRD_STEP) => {
+                regs.triangle.decrement_linear_counter();
+            }
             (FourStep, _) if cycle_within_frame == StepMode::FOUR_STEP_FRAME_LENGTH - 1 => {
+                regs.triangle.decrement_linear_counter();
                 regs.decrement_length_counters();
             }
             (FiveStep, _) if cycle_within_frame == StepMode::FIVE_STEP_FRAME_LENGTH - 1 => {
+                regs.triangle.decrement_linear_counter();
                 regs.decrement_length_counters();
             }
             (FourStep, _) if cycle_within_frame >= StepMode::FOUR_STEP_FRAME_LENGTH => unreachable!(),
