@@ -25,6 +25,10 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
         33 => Box::new(m::mapper033::Mapper033),
         34 => Box::new(m::mapper034::Mapper034::new(cartridge)),
 
+        38 => Box::new(m::mapper038::Mapper038),
+        // Seems to be duplicate, so just use that mapper instead.
+        39 => Box::new(m::mapper241::Mapper241),
+
         64 => Box::new(m::mapper064::Mapper064::new()),
         65 => Box::new(m::mapper065::Mapper065::new()),
         66 => Box::new(m::mapper066::Mapper066),
@@ -41,6 +45,8 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
         152 => Box::new(m::mapper152::Mapper152),
 
         232 => Box::new(m::mapper232::Mapper232),
+
+        241 => Box::new(m::mapper241::Mapper241),
         _ => todo!(),
     };
 
