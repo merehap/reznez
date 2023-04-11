@@ -6,6 +6,7 @@ use crate::memory::bank_index::MetaRegisterId::*;
 
 pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
     let mapper: Box<dyn Mapper> = match cartridge.mapper_number() {
+        // NROM
         0 => Box::new(m::mapper000::Mapper000),
         1 => Box::new(m::mapper001::Mapper001::new()),
         2 => Box::new(m::mapper002::Mapper002),
@@ -26,6 +27,7 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
         34 => Box::new(m::mapper034::Mapper034::new(cartridge)),
 
         38 => Box::new(m::mapper038::Mapper038),
+        // Duplicate of 241.
         39 => Box::new(m::mapper039::Mapper039::new()),
 
         46 => Box::new(m::mapper046::Mapper046::new()),
@@ -48,6 +50,9 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
         152 => Box::new(m::mapper152::Mapper152),
 
         177 => Box::new(m::mapper177::Mapper177),
+
+        // DxROM, Tengen MIMIC-1, Namcot 118
+        206 => Box::new(m::mapper206::Mapper206::new()),
 
         232 => Box::new(m::mapper232::Mapper232),
 
