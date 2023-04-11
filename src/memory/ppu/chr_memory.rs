@@ -11,7 +11,6 @@ pub struct ChrMemory {
     bank_size: usize,
     align_large_chr_windows: bool,
     override_write_protection: bool,
-    bank_index_registers: BankIndexRegisters,
     raw_memory: Vec<u8>,
 }
 
@@ -21,7 +20,6 @@ impl ChrMemory {
         max_bank_count: u16,
         bank_size: usize,
         align_large_chr_windows: bool,
-        bank_index_registers: BankIndexRegisters,
         mut raw_memory: Vec<u8>,
     ) -> ChrMemory {
         windows.validate_bank_size_multiples(bank_size);
@@ -36,7 +34,6 @@ impl ChrMemory {
             windows,
             max_bank_count,
             bank_size,
-            bank_index_registers,
             align_large_chr_windows,
             override_write_protection,
             raw_memory,
@@ -62,21 +59,21 @@ impl ChrMemory {
         self.windows.0.len().try_into().unwrap()
     }
 
-    pub fn peek(&self, address: PpuAddress) -> u8 {
-        let (index, _) = self.address_to_chr_index(address.to_u16());
+    pub fn peek(&self, registers: &BankIndexRegisters, address: PpuAddress) -> u8 {
+        let (index, _) = self.address_to_chr_index(registers, address.to_u16());
         self.raw_memory[index]
     }
 
-    pub fn write(&mut self, address: PpuAddress, value: u8) {
-        let (index, writable) = self.address_to_chr_index(address.to_u16());
+    pub fn write(&mut self, registers: &BankIndexRegisters, address: PpuAddress, value: u8) {
+        let (index, writable) = self.address_to_chr_index(registers, address.to_u16());
         if writable || self.override_write_protection {
             self.raw_memory[index] = value;
         }
     }
 
-    pub fn resolve_selected_bank_indexes(&self) -> Vec<u16> {
+    pub fn resolve_selected_bank_indexes(&self, registers: &BankIndexRegisters) -> Vec<u16> {
         self.windows.0.iter()
-            .map(|window| window.bank_index(&self.bank_index_registers).to_u16(self.bank_count()))
+            .map(|window| window.bank_index(registers).to_u16(self.bank_count()))
             .collect()
     }
 
@@ -90,7 +87,7 @@ impl ChrMemory {
         panic!("No window exists at {start:X?}");
     }
 
-    pub fn set_windows(&mut self, windows: ChrLayout) {
+    pub fn set_layout(&mut self, windows: ChrLayout) {
         windows.validate_bank_size_multiples(self.bank_size);
         self.windows = windows;
     }
@@ -117,20 +114,19 @@ impl ChrMemory {
         self.bank_index_registers.set_meta(id, value);
     }
 
-    pub fn pattern_table(&self, side: PatternTableSide) -> PatternTable {
+    pub fn pattern_table(&self, registers: &BankIndexRegisters, side: PatternTableSide) -> PatternTable {
         match side {
-            PatternTableSide::Left => PatternTable::new(self.left_chunks()),
-            PatternTableSide::Right => PatternTable::new(self.right_chunks()),
+            PatternTableSide::Left => PatternTable::new(self.left_chunks(registers)),
+            PatternTableSide::Right => PatternTable::new(self.right_chunks(registers)),
         }
     }
 
-    fn address_to_chr_index(&self, address: u16) -> (usize, bool) {
+    fn address_to_chr_index(&self, registers: &BankIndexRegisters, address: u16) -> (usize, bool) {
         assert!(address < 0x2000);
 
         for window in self.windows.0 {
             if let Some(bank_offset) = window.offset(address) {
-                let mut raw_bank_index = window.bank_index(&self.bank_index_registers)
-                    .to_usize(self.bank_count());
+                let mut raw_bank_index = window.bank_index(&registers).to_usize(self.bank_count());
                 if self.align_large_chr_windows {
                     let window_multiple = window.size() / self.bank_size;
                     raw_bank_index &= !(window_multiple >> 1);
@@ -147,34 +143,34 @@ impl ChrMemory {
     }
 
     #[inline]
-    fn left_chunks(&self) -> [&[u8]; 4] {
-        self.left_indexes()
+    fn left_chunks(&self, registers: &BankIndexRegisters) -> [&[u8]; 4] {
+        self.left_indexes(registers)
             .map(|index| &self.raw_memory[index..index + 0x400])
     }
 
     #[inline]
-    fn right_chunks(&self) -> [&[u8]; 4] {
-        self.right_indexes()
+    fn right_chunks(&self, registers: &BankIndexRegisters) -> [&[u8]; 4] {
+        self.right_indexes(registers)
             .map(|index| &self.raw_memory[index..index + 0x400])
     }
 
     #[inline]
-    fn left_indexes(&self) -> [usize; 4] {
+    fn left_indexes(&self, registers: &BankIndexRegisters) -> [usize; 4] {
         [
-            self.address_to_chr_index(0x0000).0,
-            self.address_to_chr_index(0x0400).0,
-            self.address_to_chr_index(0x0800).0,
-            self.address_to_chr_index(0x0C00).0,
+            self.address_to_chr_index(registers, 0x0000).0,
+            self.address_to_chr_index(registers, 0x0400).0,
+            self.address_to_chr_index(registers, 0x0800).0,
+            self.address_to_chr_index(registers, 0x0C00).0,
         ]
     }
 
     #[inline]
-    fn right_indexes(&self) -> [usize; 4] {
+    fn right_indexes(&self, registers: &BankIndexRegisters) -> [usize; 4] {
         [
-            self.address_to_chr_index(0x1000).0,
-            self.address_to_chr_index(0x1400).0,
-            self.address_to_chr_index(0x1800).0,
-            self.address_to_chr_index(0x1C00).0,
+            self.address_to_chr_index(registers, 0x1000).0,
+            self.address_to_chr_index(registers, 0x1400).0,
+            self.address_to_chr_index(registers, 0x1800).0,
+            self.address_to_chr_index(registers, 0x1C00).0,
         ]
     }
 }

@@ -25,26 +25,17 @@ impl InitialLayout {
     }
 
     pub fn make_mapper_params(&self, cartridge: &Cartridge) -> MapperParams {
-        let mut prg_bank_index_registers = BankIndexRegisters::new();
-        if let Some((register_id, bank_index)) = self.bank_index_register_override {
-            prg_bank_index_registers.set(register_id, bank_index);
-        }
-
         let prg_memory = PrgMemory::new(
             self.prg_windows,
             self.prg_max_bank_count,
             self.prg_bank_size,
-            prg_bank_index_registers,
             cartridge.prg_rom().to_vec(),
         );
-
-        let chr_bank_index_registers = BankIndexRegisters::new();
         let chr_memory = ChrMemory::new(
             self.chr_windows,
             self.chr_max_bank_count,
             self.chr_bank_size,
             self.align_large_chr_windows,
-            chr_bank_index_registers,
             cartridge.chr_rom().to_vec(),
         );
 
@@ -53,7 +44,12 @@ impl InitialLayout {
             NameTableMirroringSource::Cartridge => cartridge.name_table_mirroring(),
         };
 
-        MapperParams { prg_memory, chr_memory, name_table_mirroring }
+        let mut bank_index_registers = BankIndexRegisters::new();
+        if let Some((register_id, bank_index)) = self.bank_index_register_override {
+            bank_index_registers.set(register_id, bank_index);
+        }
+
+        MapperParams { prg_memory, chr_memory, name_table_mirroring, bank_index_registers }
     }
 }
 

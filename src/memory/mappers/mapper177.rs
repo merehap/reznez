@@ -36,7 +36,7 @@ impl Mapper for Mapper177 {
                     NameTableMirroring::Horizontal
                 };
                 params.set_name_table_mirroring(mirroring);
-                params.prg_memory_mut().set_bank_index_register(P0, value & 0b0001_1111);
+                params.set_bank_index_register(P0, value & 0b0001_1111);
             }
         }
     }

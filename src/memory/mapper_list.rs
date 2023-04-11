@@ -81,8 +81,8 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
     let mut mapper_params = mapper.initial_layout().make_mapper_params(cartridge);
     // FIXME: HACK
     if cartridge.mapper_number() == 10 {
-        mapper_params.chr_memory_mut().set_meta_register(M0, C1);
-        mapper_params.chr_memory_mut().set_meta_register(M1, C3);
+        mapper_params.set_meta_register(M0, C1);
+        mapper_params.set_meta_register(M1, C3);
     }
 
     (mapper, mapper_params)

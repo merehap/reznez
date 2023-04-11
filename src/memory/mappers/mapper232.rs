@@ -37,14 +37,14 @@ impl Mapper for Mapper232 {
                 let set_high_bank_bits = |bank_index| {
                     (bank_index & 0b0011) | ((value & 0b1_1000) >> 1)
                 };
-                params.prg_memory_mut().update_bank_index_register(P0, &set_high_bank_bits);
-                params.prg_memory_mut().update_bank_index_register(P1, &set_high_bank_bits);
+                params.update_bank_index_register(P0, &set_high_bank_bits);
+                params.update_bank_index_register(P1, &set_high_bank_bits);
             }
             0xC000..=0xFFFF => {
                 let set_low_bank_bits = |bank_index| {
                     (bank_index & 0b1100) | (value & 0b0011)
                 };
-                params.prg_memory_mut().update_bank_index_register(P0, &set_low_bank_bits);
+                params.update_bank_index_register(P0, &set_low_bank_bits);
             }
         }
     }

@@ -45,14 +45,14 @@ impl Mapper for Mapper032 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
-            0x8000..=0x8007 => params.prg_memory_mut().set_bank_index_register(P0, value & 0b1_1111),
+            0x8000..=0x8007 => params.set_bank_index_register(P0, value & 0b1_1111),
             0x9000..=0x9007 => {
                 let windows = if value & 0b10 == 0 {
                     PRG_LAYOUT_LAST_TWO_FIXED
                 } else {
                     PRG_LAYOUT_ENDS_FIXED
                 };
-                params.prg_memory_mut().set_windows(windows);
+                params.set_prg_layout(windows);
 
                 let mirroring = if value & 0b01 == 0 {
                     NameTableMirroring::Vertical
@@ -61,15 +61,15 @@ impl Mapper for Mapper032 {
                 };
                 params.set_name_table_mirroring(mirroring);
             }
-            0xA000..=0xA007 => params.prg_memory_mut().set_bank_index_register(P1, value & 0b1_1111),
-            0xB000 => params.chr_memory_mut().set_bank_index_register(C0, value),
-            0xB001 => params.chr_memory_mut().set_bank_index_register(C1, value),
-            0xB002 => params.chr_memory_mut().set_bank_index_register(C2, value),
-            0xB003 => params.chr_memory_mut().set_bank_index_register(C3, value),
-            0xB004 => params.chr_memory_mut().set_bank_index_register(C4, value),
-            0xB005 => params.chr_memory_mut().set_bank_index_register(C5, value),
-            0xB006 => params.chr_memory_mut().set_bank_index_register(C6, value),
-            0xB007 => params.chr_memory_mut().set_bank_index_register(C7, value),
+            0xA000..=0xA007 => params.set_bank_index_register(P1, value & 0b1_1111),
+            0xB000 => params.set_bank_index_register(C0, value),
+            0xB001 => params.set_bank_index_register(C1, value),
+            0xB002 => params.set_bank_index_register(C2, value),
+            0xB003 => params.set_bank_index_register(C3, value),
+            0xB004 => params.set_bank_index_register(C4, value),
+            0xB005 => params.set_bank_index_register(C5, value),
+            0xB006 => params.set_bank_index_register(C6, value),
+            0xB007 => params.set_bank_index_register(C7, value),
             _ => { /* Do nothing. */ }
         }
     }

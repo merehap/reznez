@@ -41,7 +41,7 @@ impl Mapper for Mapper076 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
-            0x6000..=0x7FFF => params.prg_memory_mut().write(address, value),
+            0x6000..=0x7FFF => params.write_prg(address, value),
             0x8000..=0x9FFF => {
                 if address.to_raw() % 2 == 0 {
                     self.bank_select(params, value)
@@ -72,10 +72,10 @@ impl Mapper076 {
         let selected_register_id = self.selected_register_id;
         match selected_register_id {
             C0 | C1 | C2 | C3 | C4 | C5 => {
-                params.chr_memory_mut().set_bank_index_register(selected_register_id, bank_index);
+                params.set_bank_index_register(selected_register_id, bank_index);
             }
             P0 | P1 => {
-                params.prg_memory_mut().set_bank_index_register(selected_register_id, bank_index);
+                params.set_bank_index_register(selected_register_id, bank_index);
             }
             _ => unreachable!("Register ID {selected_register_id:?} is not used by this mapper."),
         }

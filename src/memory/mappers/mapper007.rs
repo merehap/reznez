@@ -30,7 +30,7 @@ impl Mapper for Mapper007 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                params.prg_memory_mut().set_bank_index_register(P0, value & 0b0000_1111);
+                params.set_bank_index_register(P0, value & 0b0000_1111);
                 params.set_name_table_mirroring(if value & 0b0001_0000 == 0 {
                     NameTableMirroring::OneScreenLeftBank
                 } else {

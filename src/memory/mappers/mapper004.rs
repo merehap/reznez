@@ -45,8 +45,7 @@ const CHR_SMALL_WINDOWS_FIRST: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::Switchable(Rom, C1)),
 ]);
 
-const BANK_INDEX_REGISTER_IDS: [Option<BankIndexRegisterId>; 8] =
-    [Some(C0), Some(C1), Some(C2), Some(C3), Some(C4), Some(C5), Some(P0), Some(P1)];
+const BANK_INDEX_REGISTER_IDS: [BankIndexRegisterId; 8] = [C0, C1, C2, C3, C4, C5, P0, P1];
 
 // MMC3 (TSROM and others) and MMC6 (HKROM)
 pub struct Mapper004 {
@@ -79,7 +78,7 @@ impl Mapper for Mapper004 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
-            0x6000..=0x7FFF =>                    params.prg_memory_mut().write(address, value),
+            0x6000..=0x7FFF =>                    params.write_prg(address, value),
             0x8000..=0x9FFF if is_even_address => self.bank_select(params, value),
             0x8000..=0x9FFF =>                    self.set_bank_index(params, value),
             0xA000..=0xBFFF if is_even_address => self.set_mirroring(params, value),
@@ -148,23 +147,21 @@ impl Mapper004 {
     }
 
     fn bank_select(&mut self, params: &mut MapperParams, value: u8) {
-        let chr_big_windows_first =                      (value & 0b1000_0000) == 0;
-        let prg_fixed_c000 =                             (value & 0b0100_0000) == 0;
-        //self.prg_ram_enabled =                         (value & 0b0010_0000) != 0;
-        if let Some(reg_id) = BANK_INDEX_REGISTER_IDS[(value & 0b0000_0111) as usize] {
-            self.selected_register_id = reg_id;
-        }
+        let chr_big_windows_first =                         (value & 0b1000_0000) == 0;
+        let prg_fixed_c000 =                                (value & 0b0100_0000) == 0;
+        //self.prg_ram_enabled =                            (value & 0b0010_0000) != 0;
+        self.selected_register_id = BANK_INDEX_REGISTER_IDS[(value & 0b0000_0111) as usize];
 
         if chr_big_windows_first {
-            params.chr_memory_mut().set_windows(CHR_BIG_WINDOWS_FIRST)
+            params.set_chr_layout(CHR_BIG_WINDOWS_FIRST)
         } else {
-            params.chr_memory_mut().set_windows(CHR_SMALL_WINDOWS_FIRST)
+            params.set_chr_layout(CHR_SMALL_WINDOWS_FIRST)
         }
 
         if prg_fixed_c000 {
-            params.prg_memory_mut().set_windows(PRG_LAYOUT_C000_FIXED);
+            params.set_prg_layout(PRG_LAYOUT_C000_FIXED);
         } else {
-            params.prg_memory_mut().set_windows(PRG_LAYOUT_8000_FIXED);
+            params.set_prg_layout(PRG_LAYOUT_8000_FIXED);
         }
     }
 
@@ -174,17 +171,17 @@ impl Mapper004 {
             // Double-width windows can only use even banks.
             C0 | C1 => {
                 let bank_index = u16::from(value & 0b1111_1110);
-                params.chr_memory_mut().set_bank_index_register(selected_register_id, bank_index);
+                params.set_bank_index_register(selected_register_id, bank_index);
             }
             C2 | C3 | C4 | C5 => {
                 let bank_index = u16::from(value);
-                params.chr_memory_mut().set_bank_index_register(selected_register_id, bank_index);
+                params.set_bank_index_register(selected_register_id, bank_index);
             }
             // There can only be up to 64 PRG banks, though some ROM hacks use more.
             P0 | P1 => {
                 assert_eq!(value & 0b1100_0000, 0, "ROM hack.");
                 let bank_index = u16::from(value & 0b0011_1111);
-                params.prg_memory_mut().set_bank_index_register(selected_register_id, bank_index);
+                params.set_bank_index_register(selected_register_id, bank_index);
             }
             _ => unreachable!("Bank Index Register ID {selected_register_id:?} is not used by mapper 4."),
         };

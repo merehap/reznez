@@ -43,17 +43,17 @@ impl Mapper for Mapper033 {
                     NameTableMirroring::Horizontal
                 };
                 params.set_name_table_mirroring(mirroring);
-                params.prg_memory_mut().set_bank_index_register(P0, value & 0b0011_1111);
+                params.set_bank_index_register(P0, value & 0b0011_1111);
             }
-            0x8001 => params.prg_memory_mut().set_bank_index_register(P1, value & 0b0011_1111),
+            0x8001 => params.set_bank_index_register(P1, value & 0b0011_1111),
             // Large CHR windows: this allows accessing 512KiB CHR by doubling the bank indexes.
-            0x8002 => params.chr_memory_mut().set_bank_index_register(C0, 2 * u16::from(value)),
-            0x8003 => params.chr_memory_mut().set_bank_index_register(C1, 2 * u16::from(value)),
+            0x8002 => params.set_bank_index_register(C0, 2 * u16::from(value)),
+            0x8003 => params.set_bank_index_register(C1, 2 * u16::from(value)),
             // Small CHR windows.
-            0xA000 => params.chr_memory_mut().set_bank_index_register(C2, value),
-            0xA001 => params.chr_memory_mut().set_bank_index_register(C3, value),
-            0xA002 => params.chr_memory_mut().set_bank_index_register(C4, value),
-            0xA003 => params.chr_memory_mut().set_bank_index_register(C5, value),
+            0xA000 => params.set_bank_index_register(C2, value),
+            0xA001 => params.set_bank_index_register(C3, value),
+            0xA002 => params.set_bank_index_register(C4, value),
+            0xA003 => params.set_bank_index_register(C5, value),
             _ => { /* Do nothing. */ }
         }
     }

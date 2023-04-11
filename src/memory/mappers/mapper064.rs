@@ -212,7 +212,7 @@ impl Mapper064 {
         } else {
             PRG_LAYOUT_SECONDARY
         };
-        params.prg_memory_mut().set_windows(prg_windows);
+        params.set_prg_layout(prg_windows);
 
         let chr_windows = match value & 0b1010_0000 {
             0b0000_0000 => CHR_BIG_WINDOWS_PRIMARY,
@@ -221,7 +221,7 @@ impl Mapper064 {
             0b1010_0000 => CHR_SMALL_WINDOWS_SECONDARY,
             _ => unreachable!(),
         };
-        params.chr_memory_mut().set_windows(chr_windows);
+        params.set_chr_layout(chr_windows);
 
         if let Some(reg_id) = BANK_INDEX_REGISTER_IDS[(value & 0b0000_1111) as usize] {
             self.selected_register_id = reg_id;
@@ -231,9 +231,9 @@ impl Mapper064 {
     fn set_bank_index(&self, params: &mut MapperParams, value: u8) {
         match self.selected_register_id {
             P0 | P1 | P2 => 
-                params.prg_memory_mut().set_bank_index_register(self.selected_register_id, value),
+                params.set_bank_index_register(self.selected_register_id, value),
             C0 | C1 | C2 | C3 | C4 | C5 | C6 | C7 =>
-                params.chr_memory_mut().set_bank_index_register(self.selected_register_id, value),
+                params.set_bank_index_register(self.selected_register_id, value),
             _ => unreachable!(),
         }
     }

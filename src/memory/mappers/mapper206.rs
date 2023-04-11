@@ -42,7 +42,7 @@ impl Mapper for Mapper206 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
-            0x6000..=0x7FFF => params.prg_memory_mut().write(address, value),
+            0x6000..=0x7FFF => params.write_prg(address, value),
             0x8000..=0x9FFF => {
                 if address.to_raw() % 2 == 0 {
                     self.bank_select(params, value)
@@ -70,16 +70,16 @@ impl Mapper206 {
             // Double-width windows can only use even banks.
             C0 | C1 => {
                 let bank_index = u16::from(value & 0b0011_1110);
-                params.chr_memory_mut().set_bank_index_register(selected_register_id, bank_index);
+                params.set_bank_index_register(selected_register_id, bank_index);
             }
             C2 | C3 | C4 | C5 => {
                 let bank_index = u16::from(value & 0b0011_1111);
-                params.chr_memory_mut().set_bank_index_register(selected_register_id, bank_index);
+                params.set_bank_index_register(selected_register_id, bank_index);
             }
             // There can only be up to 64 PRG banks, though some ROM hacks use more.
             P0 | P1 => {
                 let bank_index = u16::from(value & 0b0000_1111);
-                params.prg_memory_mut().set_bank_index_register(selected_register_id, bank_index);
+                params.set_bank_index_register(selected_register_id, bank_index);
             }
             _ => unreachable!("Bank Index Register ID {selected_register_id:?} is not used by mapper 4."),
         }

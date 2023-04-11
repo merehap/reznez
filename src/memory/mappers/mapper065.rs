@@ -57,11 +57,11 @@ impl Mapper for Mapper065 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
 
-            0x8000 => params.prg_memory_mut().set_bank_index_register(P0, value),
-            0xA000 => params.prg_memory_mut().set_bank_index_register(P1, value),
+            0x8000 => params.set_bank_index_register(P0, value),
+            0xA000 => params.set_bank_index_register(P1, value),
             0xB000..=0xB007 => {
                 let reg_id = CHR_REGISTER_IDS[(cpu_address.to_raw() - 0xB000) as usize];
-                params.chr_memory_mut().set_bank_index_register(reg_id, value);
+                params.set_bank_index_register(reg_id, value);
             }
             0x9000 => {
                 let prg_windows = if value & 0b1000_0000 == 0 {
@@ -69,7 +69,7 @@ impl Mapper for Mapper065 {
                 } else {
                     PRG_LAYOUT_C000_FIXED
                 };
-                params.prg_memory_mut().set_windows(prg_windows);
+                params.set_prg_layout(prg_windows);
             }
             0x9001 => {
                 let mirroring = match value & 0b1100_0000 {

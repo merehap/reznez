@@ -37,8 +37,8 @@ impl Mapper for Mapper152 {
                     params.set_name_table_mirroring(NameTableMirroring::OneScreenRightBank);
                 }
 
-                params.prg_memory_mut().set_bank_index_register(P0, (value >> 4) & 0b0111);
-                params.chr_memory_mut().set_bank_index_register(C0, value & 0b1111);
+                params.set_bank_index_register(P0, (value >> 4) & 0b0111);
+                params.set_bank_index_register(C0, value & 0b1111);
             }
         }
     }

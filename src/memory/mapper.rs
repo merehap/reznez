@@ -1,7 +1,7 @@
 pub use lazy_static::lazy_static;
 
 pub use crate::cartridge::Cartridge;
-pub use crate::memory::bank_index::{BankIndex, BankIndexRegisterId};
+pub use crate::memory::bank_index::{BankIndex, BankIndexRegisterId, MetaRegisterId, BankIndexRegisters};
 pub use crate::memory::bank_index::BankIndexRegisterId::*;
 pub use crate::memory::bank_index::MetaRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
@@ -11,7 +11,7 @@ pub use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout, ChrWindow, ChrBan
 pub use crate::memory::ppu::ppu_address::PpuAddress;
 pub use crate::memory::writability::Writability::*;
 pub use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
-pub use crate::ppu::pattern_table::PatternTableSide;
+pub use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 pub use crate::util::unit::KIBIBYTE;
 
 use num_traits::FromPrimitive;
@@ -38,7 +38,7 @@ pub trait Mapper {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => None,
-            0x6000..=0xFFFF => params.prg_memory().peek(address),
+            0x6000..=0xFFFF => params.peek_prg(address),
         }
     }
 
@@ -220,7 +220,7 @@ pub trait Mapper {
     ) -> u8 {
         let palette_ram = &ppu_internal_ram.palette_ram;
         match address.to_u16() {
-            0x0000..=0x1FFF => params.chr_memory().peek(address),
+            0x0000..=0x1FFF => params.peek_chr(address),
             0x2000..=0x3EFF => self.peek_name_table_byte(params.name_table_mirroring(), ppu_internal_ram, address),
             0x3F00..=0x3FFF => self.peek_palette_table_byte(palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
@@ -253,7 +253,7 @@ pub trait Mapper {
         value: u8,
     ) {
         match address.to_u16() {
-            0x0000..=0x1FFF => params.chr_memory_mut().write(address, value),
+            0x0000..=0x1FFF => params.write_chr(address, value),
             0x2000..=0x3EFF => self.write_name_table_byte(params.name_table_mirroring(), internal_ram, address, value),
             0x3F00..=0x3FFF => self.write_palette_table_byte(
                 &mut internal_ram.palette_ram,
@@ -329,7 +329,7 @@ pub trait Mapper {
     }
 
     fn prg_rom_bank_string(&self, params: &MapperParams) -> String {
-        let indexes = params.prg_memory().resolve_selected_bank_indexes();
+        let indexes = params.resolve_prg_bank_indexes();
         let mut bank_text = indexes[0].to_string();
         for index in indexes.iter().skip(1) {
             bank_text.push_str(&format!(", {index}"));
@@ -341,7 +341,7 @@ pub trait Mapper {
     }
 
     fn chr_rom_bank_string(&self, params: &MapperParams) -> String {
-        let indexes = params.chr_memory().resolve_selected_bank_indexes();
+        let indexes = params.resolve_chr_bank_indexes();
         let mut bank_text = indexes[0].to_string();
         for index in indexes.iter().skip(1) {
             bank_text.push_str(&format!(", {index}"));
@@ -418,6 +418,7 @@ fn vram_side(
 pub struct MapperParams {
     pub prg_memory: PrgMemory,
     pub chr_memory: ChrMemory,
+    pub bank_index_registers: BankIndexRegisters,
     pub name_table_mirroring: NameTableMirroring,
 }
 
@@ -434,15 +435,71 @@ impl MapperParams {
         &self.prg_memory
     }
 
-    pub fn prg_memory_mut(&mut self) -> &mut PrgMemory {
-        &mut self.prg_memory
+    pub fn set_prg_layout(&mut self, layout: PrgLayout) {
+        self.prg_memory.set_layout(layout);
+    }
+
+    pub fn resolve_prg_bank_indexes(&self) -> Vec<u16> {
+        self.prg_memory.resolve_selected_bank_indexes(&self.bank_index_registers)
+    }
+
+    pub fn peek_prg(&self, address: CpuAddress) -> Option<u8> {
+        self.prg_memory.peek(&self.bank_index_registers, address)
+    }
+
+    pub fn write_prg(&mut self, address: CpuAddress, value: u8) {
+        self.prg_memory.write(&self.bank_index_registers, address, value);
+    }
+
+    pub fn enable_work_ram(&mut self, address: u16) {
+        self.prg_memory.enable_work_ram(address);
+    }
+
+    pub fn disable_work_ram(&mut self, address: u16) {
+        self.prg_memory.disable_work_ram(address);
     }
 
     pub fn chr_memory(&self) -> &ChrMemory {
         &self.chr_memory
     }
 
-    pub fn chr_memory_mut(&mut self) -> &mut ChrMemory {
-        &mut self.chr_memory
+    pub fn resolve_chr_bank_indexes(&self) -> Vec<u16> {
+        self.chr_memory.resolve_selected_bank_indexes(&self.bank_index_registers)
+    }
+
+    pub fn pattern_table(&self, side: PatternTableSide) -> PatternTable {
+        self.chr_memory.pattern_table(&self.bank_index_registers, side)
+    }
+
+    pub fn set_chr_layout(&mut self, layout: ChrLayout) {
+        self.chr_memory.set_layout(layout);
+    }
+
+    pub fn peek_chr(&self, address: PpuAddress) -> u8 {
+        self.chr_memory.peek(&self.bank_index_registers, address)
+    }
+
+    pub fn write_chr(&mut self, address: PpuAddress, value: u8) {
+        self.chr_memory.write(&self.bank_index_registers, address, value);
+    }
+
+    pub fn set_bank_index_register<INDEX: Into<u16>>(
+        &mut self,
+        id: BankIndexRegisterId,
+        value: INDEX,
+    ) {
+        self.bank_index_registers.set(id, BankIndex::from_u16(value.into()));
+    }
+
+    pub fn set_meta_register(&mut self, id: MetaRegisterId, value: BankIndexRegisterId) {
+        self.bank_index_registers.set_meta(id, value);
+    }
+
+    pub fn update_bank_index_register(
+        &mut self,
+        id: BankIndexRegisterId,
+        updater: &dyn Fn(u16) -> u16,
+    ) {
+        self.bank_index_registers.update(id, updater);
     }
 }

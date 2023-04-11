@@ -31,8 +31,8 @@ impl Mapper for Mapper066 {
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 assert_eq!(value & 0b1100_1100, 0);
-                params.prg_memory_mut().set_bank_index_register(P0, (value & 0b0011_0000) >> 4);
-                params.chr_memory_mut().set_bank_index_register(C0, value & 0b0000_0011);
+                params.set_bank_index_register(P0, (value & 0b0011_0000) >> 4);
+                params.set_bank_index_register(C0, value & 0b0000_0011);
             }
         }
     }

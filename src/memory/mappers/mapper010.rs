@@ -32,11 +32,11 @@ impl Mapper for Mapper010 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x9FFF => { /* Do nothing. */ }
-            0xA000..=0xAFFF => params.prg_memory_mut().set_bank_index_register(P0, bank_index & 0b0000_1111),
-            0xB000..=0xBFFF => params.chr_memory_mut().set_bank_index_register(C0, bank_index),
-            0xC000..=0xCFFF => params.chr_memory_mut().set_bank_index_register(C1, bank_index),
-            0xD000..=0xDFFF => params.chr_memory_mut().set_bank_index_register(C2, bank_index),
-            0xE000..=0xEFFF => params.chr_memory_mut().set_bank_index_register(C3, bank_index),
+            0xA000..=0xAFFF => params.set_bank_index_register(P0, bank_index & 0b0000_1111),
+            0xB000..=0xBFFF => params.set_bank_index_register(C0, bank_index),
+            0xC000..=0xCFFF => params.set_bank_index_register(C1, bank_index),
+            0xD000..=0xDFFF => params.set_bank_index_register(C2, bank_index),
+            0xE000..=0xEFFF => params.set_bank_index_register(C3, bank_index),
             0xF000..=0xFFFF => {
                 let mirroring = if value & 1 == 0 {
                     NameTableMirroring::Vertical
@@ -58,6 +58,6 @@ impl Mapper for Mapper010 {
             _ => return,
         };
 
-        params.chr_memory_mut().set_meta_register(meta_id, bank_index_register_id);
+        params.set_meta_register(meta_id, bank_index_register_id);
     }
 }

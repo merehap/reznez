@@ -9,7 +9,6 @@ pub struct PrgMemory {
     max_bank_count: u16,
     bank_size: usize,
     bank_count: u16,
-    bank_index_registers: BankIndexRegisters,
     raw_memory: Vec<u8>,
     work_ram_sections: Vec<WorkRam>,
 }
@@ -19,7 +18,6 @@ impl PrgMemory {
         windows: PrgLayout,
         max_bank_count: u16,
         bank_size: usize,
-        bank_index_registers: BankIndexRegisters,
         raw_memory: Vec<u8>,
     ) -> PrgMemory {
 
@@ -40,7 +38,6 @@ impl PrgMemory {
             max_bank_count,
             bank_size,
             bank_count,
-            bank_index_registers,
             raw_memory,
             work_ram_sections: Vec::new(),
         };
@@ -74,8 +71,8 @@ impl PrgMemory {
         self.bank_count() - 1
     }
 
-    pub fn peek(&self, address: CpuAddress) -> Option<u8> {
-        match self.address_to_prg_index(address) {
+    pub fn peek(&self, registers: &BankIndexRegisters, address: CpuAddress) -> Option<u8> {
+        match self.address_to_prg_index(registers, address) {
             PrgMemoryIndex::None => None,
             PrgMemoryIndex::MappedMemory(index) =>
                 Some(self.raw_memory[index % self.raw_memory.len()]),
@@ -92,8 +89,8 @@ impl PrgMemory {
     }
 
     // TODO: Handle read-only.
-    pub fn write(&mut self, address: CpuAddress, value: u8) {
-        match self.address_to_prg_index(address) {
+    pub fn write(&mut self, registers: &BankIndexRegisters, address: CpuAddress, value: u8) {
+        match self.address_to_prg_index(registers, address) {
             PrgMemoryIndex::None => {}
             PrgMemoryIndex::MappedMemory(index) => self.raw_memory[index] = value,
             PrgMemoryIndex::WorkRam { section_id, index } => {
@@ -105,10 +102,10 @@ impl PrgMemory {
         }
     }
 
-    pub fn resolve_selected_bank_indexes(&self) -> Vec<u16> {
+    pub fn resolve_selected_bank_indexes(&self, registers: &BankIndexRegisters) -> Vec<u16> {
         let mut indexes = Vec::new();
         for window in self.windows.0 {
-            if let Some(bank_index) = window.bank_index(&self.bank_index_registers) {
+            if let Some(bank_index) = window.bank_index(registers) {
                 let raw_index = bank_index.to_u16(self.bank_count());
                 indexes.push(raw_index);
             }
@@ -133,29 +130,13 @@ impl PrgMemory {
         self.work_ram_at(address).status = WorkRamStatus::ReadWrite;
     }
 
-    pub fn set_windows(&mut self, windows: PrgLayout) {
+    pub fn set_layout(&mut self, windows: PrgLayout) {
         windows.validate_bank_size_multiples(self.bank_size);
         self.windows = windows;
     }
 
-    pub fn set_bank_index_register<INDEX: Into<u16>>(
-        &mut self,
-        id: BankIndexRegisterId,
-        raw_bank_index: INDEX,
-    ) {
-        self.bank_index_registers.set(id, BankIndex::from_u16(raw_bank_index.into()));
-    }
-
-    pub fn update_bank_index_register(
-        &mut self,
-        id: BankIndexRegisterId,
-        updater: &dyn Fn(u16) -> u16,
-    ) {
-        self.bank_index_registers.update(id, updater);
-    }
-
     // TODO: Indicate if read-only.
-    fn address_to_prg_index(&self, address: CpuAddress) -> PrgMemoryIndex {
+    fn address_to_prg_index(&self, registers: &BankIndexRegisters, address: CpuAddress) -> PrgMemoryIndex {
         assert!(address >= PRG_MEMORY_START);
 
         let windows = &self.windows.0;
@@ -179,7 +160,7 @@ impl PrgMemory {
                         PrgMemoryIndex::MappedMemory(mapped_memory_index)
                     }
                     PrgBank::Switchable(_, register_id) => {
-                        let mut raw_bank_index = self.bank_index_registers.get(register_id)
+                        let mut raw_bank_index = registers.get(register_id)
                             .to_usize(self.bank_count());
                         let window_multiple = window.size() / self.bank_size;
                         // Clear low bits for large windows.

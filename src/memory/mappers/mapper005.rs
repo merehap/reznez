@@ -157,7 +157,7 @@ impl Mapper for Mapper005 {
             0x5206 => Some(((self.multiplicand as u16 * self.multiplier as u16) >> 8) as u8),
             0x5207..=0x5BFF => None,
             0x5C00..=0x5FFF => self.peek_from_extended_ram(address),
-            0x6000..=0xFFFF => params.prg_memory().peek(address),
+            0x6000..=0xFFFF => params.peek_prg(address),
         }
     }
 
@@ -218,7 +218,7 @@ impl Mapper for Mapper005 {
             0x520B..=0x57FF => { /* Do nothing. */ }
             0x5800..=0x5BFF => { /* Do nothing yet. MMC5A registers. */ }
             0x5C00..=0x5FFF => self.write_to_extended_ram(address, value),
-            0x6000..=0xFFFF => params.prg_memory_mut().write(address, value),
+            0x6000..=0xFFFF => params.write_prg(address, value),
         }
     }
 
@@ -229,7 +229,7 @@ impl Mapper for Mapper005 {
         address: PpuAddress,
     ) -> u8 {
         match address.to_u16() {
-            0x0000..=0x1FFF => params.chr_memory().peek(address),
+            0x0000..=0x1FFF => params.peek_chr(address),
             0x2000..=0x3EFF
                 if address.is_in_attribute_table() && self.extended_attribute_mode_enabled() => {
                     let (_, index) = address.name_table_location().unwrap();
@@ -303,7 +303,7 @@ impl Mapper for Mapper005 {
             // just-in-time may be necessary.
             let raw_bank_index = (self.upper_chr_bank_bits << 6) | (self.extended_ram[usize::from(address.to_u16() % 0x400)] & 0b0011_1111);
             println!("{} is in name table proper. Raw bank index: {}. Pattern Fetch: {}", address, raw_bank_index, self.pattern_fetch_count);
-            params.chr_memory_mut().set_bank_index_register(C12, raw_bank_index);
+            params.set_bank_index_register(C12, raw_bank_index);
         }
 
         if (0x0000..=0x1FFF).contains(&address.to_u16()) {
@@ -390,7 +390,7 @@ impl Mapper005 {
             3 => FOUR_8K_PRG_LAYOUT,
             _ => unreachable!(),
         };
-        params.prg_memory_mut().set_windows(windows);
+        params.set_prg_layout(windows);
     }
 
     fn set_chr_banking_mode(&mut self, params: &mut MapperParams, value: u8) {
@@ -445,12 +445,12 @@ impl Mapper005 {
 
     fn prg_bank_switching(&mut self, params: &mut MapperParams, address: u16, value: u8) {
         let register_id = PRG_REGISTER_IDS[(address - 0x5113) as usize];
-        params.prg_memory_mut().set_bank_index_register(register_id, value);
+        params.set_bank_index_register(register_id, value);
     }
 
     fn chr_bank_switching(&mut self, params: &mut MapperParams, address: u16, value: u8) {
         let register_id = CHR_REGISTER_IDS[(address - 0x5120) as usize];
-        params.chr_memory_mut().set_bank_index_register(register_id, value);
+        params.set_bank_index_register(register_id, value);
     }
 
     fn set_upper_chr_bank_bits(&mut self, value: u8) {
@@ -518,7 +518,7 @@ impl Mapper005 {
             (SPRITE_PATTERN_FETCH_START..BACKGROUND_PATTERN_FETCH_START)
             .contains(&self.pattern_fetch_count);
         if !sprite_fetching && self.extended_attribute_mode_enabled() {
-            params.chr_memory_mut().set_windows(EXTENDED_ATTRIBUTES_CHR_LAYOUT);
+            params.set_chr_layout(EXTENDED_ATTRIBUTES_CHR_LAYOUT);
             return;
         }
 
@@ -537,7 +537,7 @@ impl Mapper005 {
             (ChrWindowMode::Eight1K, false) => EIGHT_1K_CHR_LAYOUT_ALTERNATE,
         };
 
-        params.chr_memory_mut().set_windows(windows);
+        params.set_chr_layout(windows);
     }
 
     fn extended_attribute_mode_enabled(&self) -> bool {

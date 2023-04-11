@@ -33,13 +33,13 @@ impl Mapper for Mapper034 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             // NINA-001 bank-switching.
-            0x7FFD => params.prg_memory_mut().set_bank_index_register(P0, value & 1),
-            0x7FFE => params.chr_memory_mut().set_bank_index_register(C0, value & 0b1111),
-            0x7FFF => params.chr_memory_mut().set_bank_index_register(C1, value & 0b1111),
+            0x7FFD => params.set_bank_index_register(P0, value & 1),
+            0x7FFE => params.set_bank_index_register(C0, value & 0b1111),
+            0x7FFF => params.set_bank_index_register(C1, value & 0b1111),
             // BNROM/BxROM bank-switching.
             0x8000..=0xFFFF => {
                 if self.board == MapperBoard::BxROM {
-                    params.prg_memory_mut().set_bank_index_register(P0, value);
+                    params.set_bank_index_register(P0, value);
                 }
             }
             _ => { /* Do nothing. */ }
