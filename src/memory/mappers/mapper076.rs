@@ -11,28 +11,27 @@ const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
 const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType::SwitchableBank(Rom, C0)),
     ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType::SwitchableBank(Rom, C1)),
-    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C2)),
-    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C3)),
-    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C4)),
-    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C5)),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType::SwitchableBank(Rom, C2)),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType::SwitchableBank(Rom, C3)),
 ]);
 
-const BANK_INDEX_REGISTER_IDS: [BankIndexRegisterId; 8] = [C0, C1, C2, C3, C4, C5, P0, P1];
+const BANK_INDEX_REGISTER_IDS: [Option<BankIndexRegisterId>; 8] =
+    [None, None, Some(C0), Some(C1), Some(C2), Some(C3), Some(P0), Some(P1)];
 
-// DxROM, Tengen MIMIC-1, Namco 118
-// A much simpler predecessor to MMC3.
-pub struct Mapper206 {
+// NAMCOT-3446 
+// Similar to Namcot 108, but with only large CHR windows and more PRG and CHR.
+pub struct Mapper076 {
     selected_register_id: BankIndexRegisterId,
 }
 
-impl Mapper for Mapper206 {
+impl Mapper for Mapper076 {
     fn initial_layout(&self) -> InitialLayout {
         InitialLayout::builder()
             .prg_max_bank_count(16)
             .prg_bank_size(8 * KIBIBYTE)
             .prg_windows(PRG_LAYOUT)
             .chr_max_bank_count(64)
-            .chr_bank_size(1 * KIBIBYTE)
+            .chr_bank_size(2 * KIBIBYTE)
             .chr_windows(CHR_LAYOUT)
             .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
             .build()
@@ -55,33 +54,30 @@ impl Mapper for Mapper206 {
     }
 }
 
-impl Mapper206 {
+impl Mapper076 {
     pub fn new() -> Self {
-        Self { selected_register_id: C0 }
+        Self {
+            selected_register_id: C0,
+        }
     }
 
     fn bank_select(&mut self, _params: &mut MapperParams, value: u8) {
-        self.selected_register_id = BANK_INDEX_REGISTER_IDS[(value & 0b0000_0111) as usize];
+        if let Some(reg_id) = BANK_INDEX_REGISTER_IDS[(value & 0b0000_0111) as usize] {
+            self.selected_register_id = reg_id;
+        }
     }
 
     fn set_bank_index(&mut self, params: &mut MapperParams, value: u8) {
+        let bank_index = u16::from(value & 0b0011_1111);
         let selected_register_id = self.selected_register_id;
         match selected_register_id {
-            // Double-width windows can only use even banks.
-            C0 | C1 => {
-                let bank_index = u16::from(value & 0b0011_1110);
+            C0 | C1 | C2 | C3 | C4 | C5 => {
                 params.chr_memory_mut().set_bank_index_register(selected_register_id, bank_index);
             }
-            C2 | C3 | C4 | C5 => {
-                let bank_index = u16::from(value & 0b0011_1111);
-                params.chr_memory_mut().set_bank_index_register(selected_register_id, bank_index);
-            }
-            // There can only be up to 64 PRG banks, though some ROM hacks use more.
             P0 | P1 => {
-                let bank_index = u16::from(value & 0b0000_1111);
                 params.prg_memory_mut().set_bank_index_register(selected_register_id, bank_index);
             }
-            _ => unreachable!("Bank Index Register ID {selected_register_id:?} is not used by mapper 4."),
+            _ => unreachable!("Register ID {selected_register_id:?} is not used by this mapper."),
         }
     }
 }
