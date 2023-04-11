@@ -1,6 +1,5 @@
 ROADMAP
 Fix workram writes to work without manually coding it in each mapper.
-Remove split between PRG and CHR registers.
 Fix remaining issue with apu_test DMC basics.
 Remove GetSpritePatternHack in ppu.rs.
 Verify when the IRQ flag is supposed to be cleared. An update to the location of ClearIrq caused the apu_test jitter to have a different result.

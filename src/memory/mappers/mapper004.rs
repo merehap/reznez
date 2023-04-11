@@ -166,25 +166,17 @@ impl Mapper004 {
     }
 
     fn set_bank_index(&mut self, params: &mut MapperParams, value: u8) {
-        let selected_register_id = self.selected_register_id;
-        match selected_register_id {
+        let mut bank_index = value;
+        if matches!(self.selected_register_id, C0 | C1) {
             // Double-width windows can only use even banks.
-            C0 | C1 => {
-                let bank_index = u16::from(value & 0b1111_1110);
-                params.set_bank_index_register(selected_register_id, bank_index);
-            }
-            C2 | C3 | C4 | C5 => {
-                let bank_index = u16::from(value);
-                params.set_bank_index_register(selected_register_id, bank_index);
-            }
-            // There can only be up to 64 PRG banks, though some ROM hacks use more.
-            P0 | P1 => {
-                assert_eq!(value & 0b1100_0000, 0, "ROM hack.");
-                let bank_index = u16::from(value & 0b0011_1111);
-                params.set_bank_index_register(selected_register_id, bank_index);
-            }
-            _ => unreachable!("Bank Index Register ID {selected_register_id:?} is not used by mapper 4."),
-        };
+            bank_index &= 0b1111_1110;
+        }
+
+        if matches!(self.selected_register_id, P0 | P1) {
+            assert_eq!(value & 0b1100_0000, 0, "ROM hack.");
+        }
+
+        params.set_bank_index_register(self.selected_register_id, bank_index);
     }
 
     fn set_mirroring(&mut self, params: &mut MapperParams, value: u8) {

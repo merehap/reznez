@@ -229,13 +229,7 @@ impl Mapper064 {
     }
 
     fn set_bank_index(&self, params: &mut MapperParams, value: u8) {
-        match self.selected_register_id {
-            P0 | P1 | P2 => 
-                params.set_bank_index_register(self.selected_register_id, value),
-            C0 | C1 | C2 | C3 | C4 | C5 | C6 | C7 =>
-                params.set_bank_index_register(self.selected_register_id, value),
-            _ => unreachable!(),
-        }
+        params.set_bank_index_register(self.selected_register_id, value);
     }
 
     fn set_name_table_mirroring(&self, params: &mut MapperParams, value: u8) {

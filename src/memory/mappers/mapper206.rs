@@ -66,22 +66,18 @@ impl Mapper206 {
 
     fn set_bank_index(&mut self, params: &mut MapperParams, value: u8) {
         let selected_register_id = self.selected_register_id;
-        match selected_register_id {
+        let mask = match self.selected_register_id {
             // Double-width windows can only use even banks.
-            C0 | C1 => {
-                let bank_index = u16::from(value & 0b0011_1110);
-                params.set_bank_index_register(selected_register_id, bank_index);
-            }
-            C2 | C3 | C4 | C5 => {
-                let bank_index = u16::from(value & 0b0011_1111);
-                params.set_bank_index_register(selected_register_id, bank_index);
-            }
-            // There can only be up to 64 PRG banks, though some ROM hacks use more.
-            P0 | P1 => {
-                let bank_index = u16::from(value & 0b0000_1111);
-                params.set_bank_index_register(selected_register_id, bank_index);
-            }
-            _ => unreachable!("Bank Index Register ID {selected_register_id:?} is not used by mapper 4."),
-        }
+            C0 | C1 => 0b0011_1110,
+            C2 | C3 | C4 | C5 => 0b0011_1111,
+            P0 | P1 => 0b0000_1111,
+            _ => unreachable!(
+                "Bank Index Register ID {:?} is not used by this mapper.",
+                self.selected_register_id
+            ),
+        };
+
+        let bank_index = value & mask;
+        params.set_bank_index_register(selected_register_id, bank_index);
     }
 }

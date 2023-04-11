@@ -69,15 +69,6 @@ impl Mapper076 {
 
     fn set_bank_index(&mut self, params: &mut MapperParams, value: u8) {
         let bank_index = u16::from(value & 0b0011_1111);
-        let selected_register_id = self.selected_register_id;
-        match selected_register_id {
-            C0 | C1 | C2 | C3 | C4 | C5 => {
-                params.set_bank_index_register(selected_register_id, bank_index);
-            }
-            P0 | P1 => {
-                params.set_bank_index_register(selected_register_id, bank_index);
-            }
-            _ => unreachable!("Register ID {selected_register_id:?} is not used by this mapper."),
-        }
+        params.set_bank_index_register(self.selected_register_id, bank_index);
     }
 }
