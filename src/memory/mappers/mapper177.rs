@@ -30,7 +30,7 @@ impl Mapper for Mapper177 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                let mirroring = value & 0b0010_0000 == 0 {
+                let mirroring = if value & 0b0010_0000 == 0 {
                     NameTableMirroring::Vertical
                 } else {
                     NameTableMirroring::Horizontal
