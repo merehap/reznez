@@ -1,6 +1,6 @@
 use crate::memory::mapper::*;
 
-const PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
+const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
     // TODO: PlayChoice uses this window.
     PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::Empty),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
@@ -9,9 +9,9 @@ const PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::LAST)),
 ]);
 
-const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::MetaSwitchable(Rom, M0)),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::MetaSwitchable(Rom, M1)),
+const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::MetaSwitchableBank(Rom, M0)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::MetaSwitchableBank(Rom, M1)),
 ]);
 
 // MMC2
@@ -22,10 +22,10 @@ impl Mapper for Mapper009 {
         InitialLayout::builder()
             .prg_max_bank_count(32)
             .prg_bank_size(8 * KIBIBYTE)
-            .prg_windows(PRG_WINDOWS)
+            .prg_windows(PRG_LAYOUT)
             .chr_max_bank_count(256)
             .chr_bank_size(4 * KIBIBYTE)
-            .chr_windows(CHR_WINDOWS)
+            .chr_windows(CHR_LAYOUT)
             .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
             .build()
     }

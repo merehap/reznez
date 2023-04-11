@@ -5,7 +5,7 @@ use crate::memory::writability::Writability;
 const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
 
 pub struct PrgMemory {
-    windows: PrgWindows,
+    windows: PrgLayout,
     max_bank_count: u16,
     bank_size: usize,
     bank_count: u16,
@@ -16,7 +16,7 @@ pub struct PrgMemory {
 
 impl PrgMemory {
     pub fn new(
-        windows: PrgWindows,
+        windows: PrgLayout,
         max_bank_count: u16,
         bank_size: usize,
         bank_index_registers: BankIndexRegisters,
@@ -133,7 +133,7 @@ impl PrgMemory {
         self.work_ram_at(address).status = WorkRamStatus::ReadWrite;
     }
 
-    pub fn set_windows(&mut self, windows: PrgWindows) {
+    pub fn set_windows(&mut self, windows: PrgLayout) {
         windows.validate_bank_size_multiples(self.bank_size);
         self.windows = windows;
     }
@@ -210,7 +210,7 @@ impl PrgMemory {
         unreachable!();
     }
 
-    // This method assume that all WorkRam is at the start of the PrgWindows.
+    // This method assume that all WorkRam is at the start of the PrgLayout.
     fn work_ram_at(&mut self, start: u16) -> &mut WorkRam {
         let (window, index) = self.window_with_index_at(start);
         assert_eq!(window.prg_type, PrgBank::WorkRam);
@@ -229,10 +229,10 @@ impl PrgMemory {
 }
 
 #[derive(Clone, Copy)]
-pub struct PrgWindows(&'static [PrgWindow]);
+pub struct PrgLayout(&'static [PrgWindow]);
 
-impl PrgWindows {
-    pub const fn new(windows: &'static [PrgWindow]) -> PrgWindows {
+impl PrgLayout {
+    pub const fn new(windows: &'static [PrgWindow]) -> PrgLayout {
         if windows.is_empty() {
             panic!("No PRG windows specified.");
         }
@@ -254,7 +254,7 @@ impl PrgWindows {
             i += 1;
         }
 
-        PrgWindows(windows)
+        PrgLayout(windows)
     }
 
     pub fn windows(&self) -> &[PrgWindow] {

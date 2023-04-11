@@ -6,7 +6,7 @@ use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
 
 pub struct ChrMemory {
-    windows: ChrWindows,
+    windows: ChrLayout,
     max_bank_count: u16,
     bank_size: usize,
     align_large_chr_windows: bool,
@@ -17,7 +17,7 @@ pub struct ChrMemory {
 
 impl ChrMemory {
     pub fn new(
-        windows: ChrWindows,
+        windows: ChrLayout,
         max_bank_count: u16,
         bank_size: usize,
         align_large_chr_windows: bool,
@@ -90,7 +90,7 @@ impl ChrMemory {
         panic!("No window exists at {start:X?}");
     }
 
-    pub fn set_windows(&mut self, windows: ChrWindows) {
+    pub fn set_windows(&mut self, windows: ChrLayout) {
         windows.validate_bank_size_multiples(self.bank_size);
         self.windows = windows;
     }
@@ -180,10 +180,10 @@ impl ChrMemory {
 }
 
 #[derive(Clone, Copy)]
-pub struct ChrWindows(&'static [ChrWindow]);
+pub struct ChrLayout(&'static [ChrWindow]);
 
-impl ChrWindows {
-    pub const fn new(windows: &'static [ChrWindow]) -> ChrWindows {
+impl ChrLayout {
+    pub const fn new(windows: &'static [ChrWindow]) -> ChrLayout {
         if windows.is_empty() {
             panic!("No PRG windows specified.");
         }
@@ -205,7 +205,7 @@ impl ChrWindows {
             i += 1;
         }
 
-        ChrWindows(windows)
+        ChrLayout(windows)
     }
 
     pub fn active_register_ids(&self) -> Vec<BankIndexRegisterId> {

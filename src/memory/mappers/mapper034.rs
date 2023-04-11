@@ -1,13 +1,13 @@
 use crate::memory::mapper::*;
 
-const PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Empty),
-    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
+const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::SwitchableBank(Rom, P0)),
 ]);
 
-const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::Switchable(Ram, C0)),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::Switchable(Ram, C1)),
+const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::SwitchableBank(Ram, C0)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::SwitchableBank(Ram, C1)),
 ]);
 
 // BNROM (BxROM) and NINA-01. Two unrelated mappers combined into one.
@@ -20,10 +20,10 @@ impl Mapper for Mapper034 {
         InitialLayout::builder()
             .prg_max_bank_count(256)
             .prg_bank_size(32 * KIBIBYTE)
-            .prg_windows(PRG_WINDOWS)
+            .prg_windows(PRG_LAYOUT)
             .chr_max_bank_count(16)
             .chr_bank_size(4 * KIBIBYTE)
-            .chr_windows(CHR_WINDOWS)
+            .chr_windows(CHR_LAYOUT)
             .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
             .override_bank_index_register(C1, BankIndex::LAST)
             .build()

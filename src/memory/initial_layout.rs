@@ -1,18 +1,18 @@
 use crate::cartridge::Cartridge;
-use crate::memory::cpu::prg_memory::{PrgMemory, PrgWindows};
+use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout};
 use crate::memory::mapper::MapperParams;
-use crate::memory::ppu::chr_memory::{ChrMemory, ChrWindows};
+use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::memory::bank_index::{BankIndex, BankIndexRegisters, BankIndexRegisterId};
 
 pub struct InitialLayout {
     prg_max_bank_count: u16,
     prg_bank_size: usize,
-    prg_windows: PrgWindows,
+    prg_windows: PrgLayout,
 
     chr_max_bank_count: u16,
     chr_bank_size: usize,
-    chr_windows: ChrWindows,
+    chr_windows: ChrLayout,
     align_large_chr_windows: bool,
 
     name_table_mirroring_source: NameTableMirroringSource,
@@ -61,11 +61,11 @@ impl InitialLayout {
 pub struct InitialLayoutBuilder {
     prg_max_bank_count: Option<u16>,
     prg_bank_size: Option<usize>,
-    prg_windows: Option<PrgWindows>,
+    prg_windows: Option<PrgLayout>,
 
     chr_max_bank_count: Option<u16>,
     chr_bank_size: Option<usize>,
-    chr_windows: Option<ChrWindows>,
+    chr_windows: Option<ChrLayout>,
     align_large_chr_windows: bool,
 
     name_table_mirroring_source: Option<NameTableMirroringSource>,
@@ -99,7 +99,7 @@ impl InitialLayoutBuilder {
         self
     }
 
-    pub const fn prg_windows(&mut self, value: PrgWindows) -> &mut InitialLayoutBuilder {
+    pub const fn prg_windows(&mut self, value: PrgLayout) -> &mut InitialLayoutBuilder {
         self.prg_windows = Some(value);
         self
     }
@@ -114,7 +114,7 @@ impl InitialLayoutBuilder {
         self
     }
 
-    pub const fn chr_windows(&mut self, value: ChrWindows) -> &mut InitialLayoutBuilder {
+    pub const fn chr_windows(&mut self, value: ChrLayout) -> &mut InitialLayoutBuilder {
         self.chr_windows = Some(value);
         self
     }

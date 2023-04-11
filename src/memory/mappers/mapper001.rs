@@ -1,27 +1,27 @@
 use crate::memory::mapper::*;
 
-const PRG_WINDOWS_FIXED_LAST: PrgWindows = PrgWindows::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WorkRam),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
-    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::LAST)),
+const PRG_LAYOUT_FIXED_LAST: PrgLayout = PrgLayout::new(&[
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::SwitchableBank(Rom, P0)),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::FixedBank(Rom, BankIndex::LAST)),
 ]);
-const PRG_WINDOWS_FIXED_FIRST: PrgWindows = PrgWindows::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WorkRam),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::FIRST)),
-    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
+const PRG_LAYOUT_FIXED_FIRST: PrgLayout = PrgLayout::new(&[
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::FixedBank(Rom, BankIndex::FIRST)),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::SwitchableBank(Rom, P0)),
 ]);
-const PRG_WINDOWS_ONE_BIG: PrgWindows = PrgWindows::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WorkRam),
-    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
+const PRG_LAYOUT_ONE_BIG: PrgLayout = PrgLayout::new(&[
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::SwitchableBank(Rom, P0)),
 ]);
 
 // TODO: Not all boards support CHR RAM.
-const CHR_WINDOWS_ONE_BIG: ChrWindows = ChrWindows::new(&[
-    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::Switchable(Ram, C0)),
+const CHR_LAYOUT_ONE_BIG: ChrLayout = ChrLayout::new(&[
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::SwitchableBank(Ram, C0)),
 ]);
-const CHR_WINDOWS_TWO_SMALL: ChrWindows = ChrWindows::new(&[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::Switchable(Ram, C0)),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::Switchable(Ram, C1)),
+const CHR_LAYOUT_TWO_SMALL: ChrLayout = ChrLayout::new(&[
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::SwitchableBank(Ram, C0)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::SwitchableBank(Ram, C1)),
 ]);
 
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
@@ -36,10 +36,10 @@ impl Mapper for Mapper001 {
         InitialLayout::builder()
             .prg_max_bank_count(16)
             .prg_bank_size(16 * KIBIBYTE)
-            .prg_windows(PRG_WINDOWS_FIXED_LAST)
+            .prg_windows(PRG_LAYOUT_FIXED_LAST)
             .chr_max_bank_count(32)
             .chr_bank_size(4 * KIBIBYTE)
-            .chr_windows(CHR_WINDOWS_ONE_BIG)
+            .chr_windows(CHR_LAYOUT_ONE_BIG)
             .name_table_mirroring_source(NameTableMirroring::OneScreenRightBank.to_source())
             .build()
     }
@@ -53,7 +53,7 @@ impl Mapper for Mapper001 {
 
         if value & 0b1000_0000 != 0 {
             self.shift = EMPTY_SHIFT_REGISTER;
-            params.prg_memory_mut().set_windows(PRG_WINDOWS_FIXED_LAST);
+            params.prg_memory_mut().set_windows(PRG_LAYOUT_FIXED_LAST);
             return;
         }
 
@@ -97,19 +97,19 @@ impl Mapper001 {
         Self { shift: EMPTY_SHIFT_REGISTER }
     }
 
-    fn next_prg_windows(value: u8) -> PrgWindows {
+    fn next_prg_windows(value: u8) -> PrgLayout {
         match (value & 0b0000_1100) >> 2 {
-            0b00 | 0b01 => PRG_WINDOWS_ONE_BIG,
-            0b10 => PRG_WINDOWS_FIXED_FIRST,
-            0b11 => PRG_WINDOWS_FIXED_LAST,
+            0b00 | 0b01 => PRG_LAYOUT_ONE_BIG,
+            0b10 => PRG_LAYOUT_FIXED_FIRST,
+            0b11 => PRG_LAYOUT_FIXED_LAST,
             _ => unreachable!(),
         }
     }
 
-    fn next_chr_windows(value: u8) -> ChrWindows {
+    fn next_chr_windows(value: u8) -> ChrLayout {
         match (value & 0b0001_0000) >> 4 {
-            0 => CHR_WINDOWS_ONE_BIG,
-            1 => CHR_WINDOWS_TWO_SMALL,
+            0 => CHR_LAYOUT_ONE_BIG,
+            1 => CHR_LAYOUT_TWO_SMALL,
             _ => unreachable!(),
         }
     }

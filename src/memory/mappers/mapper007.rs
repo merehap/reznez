@@ -1,12 +1,12 @@
 use crate::memory::mapper::*;
 
-const PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Empty),
-    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
+const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::SwitchableBank(Rom, P0)),
 ]);
 
-const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
-    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::Fixed(Rom, BankIndex::FIRST)),
+const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::FixedBank(Rom, BankIndex::FIRST)),
 ]);
 
 // AxROM
@@ -17,10 +17,10 @@ impl Mapper for Mapper007 {
         InitialLayout::builder()
             .prg_max_bank_count(8)
             .prg_bank_size(32 * KIBIBYTE)
-            .prg_windows(PRG_WINDOWS)
+            .prg_windows(PRG_LAYOUT)
             .chr_max_bank_count(1)
             .chr_bank_size(8 * KIBIBYTE)
-            .chr_windows(CHR_WINDOWS)
+            .chr_windows(CHR_LAYOUT)
             .name_table_mirroring_source(NameTableMirroring::OneScreenLeftBank.to_source())
             .build()
     }
