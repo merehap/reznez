@@ -83,6 +83,10 @@ impl CpuAddress {
     pub fn is_end_of_page(self) -> bool {
         self.index_within_page() == 0xFF
     }
+
+    pub fn is_odd(self) -> bool {
+        self.0 % 2 == 1
+    }
 }
 
 impl fmt::Display for CpuAddress {

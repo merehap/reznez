@@ -1,6 +1,6 @@
 use crate::memory::mapper::*;
 
-const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
+pub const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgType::Empty),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::SwitchableBank(Rom, P0)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::SwitchableBank(Rom, P1)),
@@ -8,7 +8,7 @@ const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::FixedBank(Rom, BankIndex::LAST)),
 ]);
 
-const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
+pub const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType::SwitchableBank(Rom, C0)),
     ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType::SwitchableBank(Rom, C1)),
     ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C2)),
@@ -60,12 +60,16 @@ impl Mapper206 {
         Self { selected_register_id: C0 }
     }
 
+    // Public so mapper 088 can use it.
+    pub fn selected_register_id(&self) -> BankIndexRegisterId {
+        self.selected_register_id
+    }
+
     fn bank_select(&mut self, _params: &mut MapperParams, value: u8) {
         self.selected_register_id = BANK_INDEX_REGISTER_IDS[(value & 0b0000_0111) as usize];
     }
 
     fn set_bank_index(&mut self, params: &mut MapperParams, value: u8) {
-        let selected_register_id = self.selected_register_id;
         let mask = match self.selected_register_id {
             // Double-width windows can only use even banks.
             C0 | C1 => 0b0011_1110,
@@ -78,6 +82,6 @@ impl Mapper206 {
         };
 
         let bank_index = value & mask;
-        params.set_bank_index_register(selected_register_id, bank_index);
+        params.set_bank_index_register(self.selected_register_id, bank_index);
     }
 }
