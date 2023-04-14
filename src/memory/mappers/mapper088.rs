@@ -64,11 +64,6 @@ impl Mapper088 {
         }
     }
 
-    // Public so mapper 088 can use it.
-    pub fn selected_register_id(&self) -> BankIndexRegisterId {
-        self.selected_register_id
-    }
-
     fn bank_select(&mut self, _params: &mut MapperParams, value: u8) {
         self.selected_register_id = BANK_INDEX_REGISTER_IDS[(value & 0b0000_0111) as usize];
     }
