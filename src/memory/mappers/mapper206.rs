@@ -1,6 +1,6 @@
 use crate::memory::mapper::*;
 
-pub const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
+const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgType::Empty),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::SwitchableBank(Rom, P0)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::SwitchableBank(Rom, P1)),
@@ -8,7 +8,7 @@ pub const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::FixedBank(Rom, BankIndex::LAST)),
 ]);
 
-pub const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
+const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType::SwitchableBank(Rom, C0)),
     ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType::SwitchableBank(Rom, C1)),
     ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C2)),
@@ -58,11 +58,6 @@ impl Mapper for Mapper206 {
 impl Mapper206 {
     pub fn new() -> Self {
         Self { selected_register_id: C0 }
-    }
-
-    // Public so mapper 088 can use it.
-    pub fn selected_register_id(&self) -> BankIndexRegisterId {
-        self.selected_register_id
     }
 
     fn bank_select(&mut self, _params: &mut MapperParams, value: u8) {
