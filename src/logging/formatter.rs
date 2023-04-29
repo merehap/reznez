@@ -3,13 +3,13 @@ use crate::memory::mapper::CpuAddress;
 use crate::nes::Nes;
 
 pub trait Formatter {
-    fn format_instruction(&self, _nes: &Nes, _address: CpuAddress) -> String;
+    fn format_instruction(&self, _nes: &Nes, _address: CpuAddress, _interrupt_text: String) -> String;
 }
 
 pub struct Nintendulator0980Formatter;
 
 impl Formatter for Nintendulator0980Formatter {
-    fn format_instruction(&self, nes: &Nes, start_address: CpuAddress) -> String {
+    fn format_instruction(&self, nes: &Nes, start_address: CpuAddress, _interrupt_text: String) -> String {
         let peek = |address| nes.memory().cpu_peek(address).unwrap_or(0);
 
         let cpu = nes.cpu();
@@ -99,11 +99,12 @@ impl Formatter for Nintendulator0980Formatter {
         };
 
         format!(
-            "{:04X}  {:<9} {:?} {:28}A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} PPU:{:>3},{:>3} CYC:{}",
+            "{:04X}  {:<9} {:?} {:28}{} A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} PPU:{:>3},{:>3} CYC:{}",
             start_address.to_raw(),
             instr_bytes,
             instruction.op_code(),
             argument_string,
+            interrupts(nes),
             cpu.accumulator(),
             cpu.x_index(),
             cpu.y_index(),
@@ -119,7 +120,7 @@ impl Formatter for Nintendulator0980Formatter {
 pub struct MesenFormatter;
 
 impl Formatter for MesenFormatter {
-    fn format_instruction(&self, nes: &Nes, start_address: CpuAddress) -> String {
+    fn format_instruction(&self, nes: &Nes, start_address: CpuAddress, interrupt_text: String) -> String {
         let peek = |address| nes.memory().cpu_peek(address).unwrap_or(0);
 
         let cpu = nes.cpu();
@@ -207,10 +208,11 @@ impl Formatter for MesenFormatter {
         }
 
         format!(
-            "{:04X}  {:?} {:28}A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} V:{:<3} H:{:<3} Fr:{} Cycle:{}",
+            "{:04X}  {:?} {:28}{} A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} V:{:<3} H:{:<3} Fr:{} Cycle:{}",
             start_address.to_raw(),
             instruction.op_code(),
             argument_string,
+            interrupt_text,
             cpu.accumulator(),
             cpu.x_index(),
             cpu.y_index(),
@@ -222,4 +224,16 @@ impl Formatter for MesenFormatter {
             nes.cpu().cycle(),
         )
     }
+}
+
+pub fn interrupts(nes: &Nes) -> String {
+    let mut interrupts = String::new();
+    interrupts.push(if nes.memory().apu_regs().frame_irq_pending() { 'F' } else {'-'});
+    interrupts.push(if nes.memory().apu_regs().dmc_irq_pending() { 'D' } else {'-'});
+    interrupts.push(if nes.memory().mapper().irq_pending() { 'M' } else {'-'});
+    interrupts.push(if nes.cpu().nmi_pending() { 'N' } else {'-'});
+    interrupts.push(if nes.cpu().oam_dma_pending() { 'O' } else {'-'});
+    interrupts.push(if nes.memory().apu_regs().dmc.dma_pending() { 'D' } else {'-'});
+
+    interrupts
 }

@@ -83,7 +83,11 @@ impl Memory {
         &self.ppu_registers
     }
 
-    pub fn apu_regs(&mut self) -> &mut ApuRegisters {
+    pub fn apu_regs(&self) -> &ApuRegisters {
+        &self.apu_registers
+    }
+
+    pub fn apu_regs_mut(&mut self) -> &mut ApuRegisters {
         &mut self.apu_registers
     }
 

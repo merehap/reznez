@@ -147,6 +147,10 @@ impl Cpu {
         self.jammed
     }
 
+    pub fn oam_dma_pending(&self) -> bool {
+        self.oam_dma_port.page_present()
+    }
+
     pub fn nmi_pending(&self) -> bool {
         self.nmi_status == NmiStatus::Pending
     }
@@ -305,7 +309,6 @@ impl Cpu {
                 if self.address_carry != 0 {
                     self.suppress_next_instruction_start = true;
                     self.suppress_program_counter_increment = true;
-                    info!(target: "cpuflowcontrol", "\tBranch crossed page boundary, 'Oops' cycle added.");
                     self.step_queue.skip_to_front(READ_OP_CODE_STEP);
                 }
             }
@@ -728,7 +731,6 @@ impl Cpu {
         self.suppress_program_counter_increment = true;
         self.address_carry = self.program_counter.offset_with_carry(self.previous_data_bus_value as i8);
         self.suppress_next_instruction_start = true;
-        info!(target: "cpuflowcontrol", "\tBranch taken, cycle added.");
         self.step_queue.skip_to_front(BRANCH_TAKEN_STEP);
     }
 }

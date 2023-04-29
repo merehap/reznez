@@ -73,6 +73,10 @@ impl Dmc {
         }
     }
 
+    pub fn dma_pending(&self) -> bool {
+        self.dma_pending_address.is_some()
+    }
+
     pub fn take_dma_pending_address(&mut self) -> Option<CpuAddress> {
         self.dma_pending_address.take()
     }

@@ -11,6 +11,7 @@ use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::Cpu;
 use crate::cpu::step::Step;
 use crate::gui::gui::Events;
+use crate::logging::formatter;
 use crate::logging::formatter::*;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::mapper_list;
@@ -116,14 +117,14 @@ impl Nes {
         let ppu_result;
         match self.cycle % 6 {
             0 => {
-                self.apu.on_cycle_step(self.memory.apu_regs());
+                self.apu.on_cycle_step(self.memory.apu_regs_mut());
                 step = self.cpu_step();
                 ppu_result = self.ppu_step();
             }
             1 => ppu_result = self.ppu_step(),
             2 => ppu_result = self.ppu_step(),
             3 => {
-                self.apu.off_cycle_step(self.memory.apu_regs());
+                self.apu.off_cycle_step(self.memory.apu_regs_mut());
                 step = self.cpu_step();
                 ppu_result = self.ppu_step();
             }
@@ -146,11 +147,15 @@ impl Nes {
             self.memory.apu_regs().frame_irq_pending()
             || self.memory.apu_regs().dmc_irq_pending()
             || self.memory.mapper().irq_pending();
+        let mut interrupt_text = String::new();
+        if log_enabled!(target: "cpuinstructions", Info) {
+            interrupt_text = formatter::interrupts(self);
+        }
 
         let address = self.cpu.address_for_next_step(&self.memory.as_cpu_memory());
         let step = self.cpu.step(&mut self.memory.as_cpu_memory(), irq_pending);
         if log_enabled!(target: "cpuinstructions", Info) && self.cpu.next_instruction_starting() {
-            info!("{}", self.log_formatter.format_instruction(self, address));
+            info!("{}", self.log_formatter.format_instruction(self, address, interrupt_text));
         }
 
         step

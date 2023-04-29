@@ -45,6 +45,10 @@ impl OamDmaPort {
         *self.page.borrow_mut() = Some(page);
     }
 
+    pub fn page_present(&self) -> bool {
+        self.page.borrow().is_some()
+    }
+
     pub fn take_page(&mut self) -> Option<()> {
         if let Some(port) = self.page.borrow_mut().take() {
             self.current_address = CpuAddress::from_low_high(0x00, port);
