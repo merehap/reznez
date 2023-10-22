@@ -89,6 +89,8 @@ MAPPER 152
 Arkanoid 2: Top of opening screen zeroed out. Bus conflicts need to be emulated?
 Ge ge ge no Kitarou 2: Game freezes. Bus conflicts need to be emulated?
 
+MAPPER 180
+Crazy Climber: Verify operation.
 
 Total games implemented:
 000: 247
@@ -119,11 +121,12 @@ Total games implemented:
 140: 3
 152: 4
 177: 0
+180: 1
 206: 45
 232: 5
 241: 0
 
-2236/2447
+2237/2447
 
 To implement:
 5:  25
