@@ -6,7 +6,7 @@ use std::path::Path;
 
 use itertools::Itertools;
 use log::{error, info};
-use rusqlite::{params, Connection, MappedRows, Result};
+use rusqlite::{params, Connection, MappedRows};
 use walkdir::WalkDir;
 
 use crate::cartridge::Cartridge;
@@ -64,11 +64,10 @@ pub fn analyze(rom_base_path: &Path) {
 
     let cartridge_iter: MappedRows<_> = select
         .query_map([], |row| {
-            Ok((
-                row.get(0).unwrap(),
-                row.get(1).unwrap(),
-                row.get(2).unwrap(),
-            )): Result<(String, i32, String)>
+            let r0: String = row.get(0).unwrap();
+            let r1: i32 = row.get(1).unwrap();
+            let r2: String = row.get(2).unwrap();
+            Ok((r0, r1, r2))
         })
         .unwrap();
 

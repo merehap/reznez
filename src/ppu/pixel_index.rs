@@ -139,7 +139,11 @@ impl PixelRow {
     }
 
     pub const fn saturate_from_u8(pixel_row: u8) -> PixelRow {
-        PixelRow::try_from_u8(pixel_row).unwrap_or(PixelRow::MAX)
+        if let Some(row) = PixelRow::try_from_u8(pixel_row) {
+            row
+        } else {
+            PixelRow::MAX
+        }
     }
 
     pub fn add_row_in_tile(self, row_in_tile: RowInTile) -> Option<PixelRow> {
