@@ -35,7 +35,7 @@ const NAME_TABLE_MIRRORINGS: [NameTableMirroring; 4] = [
 ];
 
 // VRC4a and  VRC4c
-pub struct Mapper021 {
+pub struct Mapper023 {
     chr_bank_lows: [u8; 8],
 
     irq_enabled: bool,
@@ -47,7 +47,7 @@ pub struct Mapper021 {
     irq_counter: u8,
 }
 
-impl Mapper for Mapper021 {
+impl Mapper for Mapper023 {
     fn initial_layout(&self) -> InitialLayout {
         InitialLayout::builder()
             .prg_max_bank_count(32)
@@ -147,7 +147,7 @@ enum IrqMode {
     Cycle,
 }
 
-impl Mapper021 {
+impl Mapper023 {
     pub fn new() -> Self {
         Self {
             chr_bank_lows: [0; 8],
