@@ -8,84 +8,84 @@ use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu::vram::VramSide;
 
 const ONE_32K_PRG_WINDOW: PrgWindows = PrgWindows::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::SwitchableBank(Ram,    P0)),
-    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::SwitchableBank(Rom,    P4)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Switchable(Ram,    P0)),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::Switchable(Rom,    P4)),
 ]);
 
 const TWO_16K_PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::SwitchableBank(Ram,    P0)),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::SwitchableBank(RomRam, P2)),
-    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::SwitchableBank(Rom,    P4)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Switchable(Ram,    P0)),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::Switchable(RomRam, P2)),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::Switchable(Rom,    P4)),
 ]);
 
 const ONE_16K_AND_TWO_8K_PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::SwitchableBank(Ram,    P0)),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::SwitchableBank(RomRam, P2)),
-    PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgType::SwitchableBank(RomRam, P3)),
-    PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgType::SwitchableBank(Rom,    P4)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Switchable(Ram,    P0)),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::Switchable(RomRam, P2)),
+    PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::Switchable(RomRam, P3)),
+    PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::Switchable(Rom,    P4)),
 ]);
 
 const FOUR_8K_PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::SwitchableBank(Ram,    P0)),
-    PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, PrgType::SwitchableBank(RomRam, P1)),
-    PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, PrgType::SwitchableBank(RomRam, P2)),
-    PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgType::SwitchableBank(RomRam, P3)),
-    PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgType::SwitchableBank(Rom,    P4)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Switchable(Ram,    P0)),
+    PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, PrgBank::Switchable(RomRam, P1)),
+    PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, PrgBank::Switchable(RomRam, P2)),
+    PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::Switchable(RomRam, P3)),
+    PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::Switchable(Rom,    P4)),
 ]);
 
 const ONE_8K_CHR_WINDOW: ChrWindows = ChrWindows::new(&[
-    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::SwitchableBank(Rom, C7)),
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::Switchable(Rom, C7)),
 ]);
 const ONE_8K_CHR_WINDOW_ALTERNATE: ChrWindows = ChrWindows::new(&[
-    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::SwitchableBank(Rom, C11)),
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::Switchable(Rom, C11)),
 ]);
 
 const TWO_4K_CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::SwitchableBank(Rom, C3)),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::SwitchableBank(Rom, C7)),
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::Switchable(Rom, C3)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::Switchable(Rom, C7)),
 ]);
 const TWO_4K_CHR_WINDOWS_ALTERNATE: ChrWindows = ChrWindows::new(&[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::SwitchableBank(Rom, C11)),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::SwitchableBank(Rom, C11)),
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::Switchable(Rom, C11)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::Switchable(Rom, C11)),
 ]);
 
 const FOUR_2K_CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
-    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType::SwitchableBank(Rom, C1)),
-    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType::SwitchableBank(Rom, C3)),
-    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType::SwitchableBank(Rom, C5)),
-    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType::SwitchableBank(Rom, C7)),
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::Switchable(Rom, C1)),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::Switchable(Rom, C3)),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::Switchable(Rom, C5)),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::Switchable(Rom, C7)),
 ]);
 const FOUR_2K_CHR_WINDOWS_ALTERNATE: ChrWindows = ChrWindows::new(&[
-    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrType::SwitchableBank(Rom, C9)),
-    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrType::SwitchableBank(Rom, C11)),
-    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrType::SwitchableBank(Rom, C9)),
-    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrType::SwitchableBank(Rom, C11)),
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::Switchable(Rom, C9)),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::Switchable(Rom, C11)),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::Switchable(Rom, C9)),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::Switchable(Rom, C11)),
 ]);
 
 const EIGHT_1K_CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
-    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C0)),
-    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C1)),
-    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C2)),
-    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C3)),
-    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C4)),
-    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C5)),
-    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C6)),
-    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C7)),
+    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C0)),
+    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C1)),
+    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C2)),
+    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C3)),
+    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C4)),
+    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C5)),
+    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C6)),
+    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C7)),
 ]);
 const EIGHT_1K_CHR_WINDOWS_ALTERNATE: ChrWindows = ChrWindows::new(&[
-    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C8)),
-    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C9)),
-    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C10)),
-    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C11)),
-    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C8)),
-    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C9)),
-    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C10)),
-    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C11)),
+    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C8)),
+    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C9)),
+    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C10)),
+    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C11)),
+    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C8)),
+    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C9)),
+    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C10)),
+    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C11)),
 ]);
 
 const EXTENDED_ATTRIBUTES_CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::SwitchableBank(Rom, C12)),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::SwitchableBank(Rom, C12)),
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::Switchable(Rom, C12)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::Switchable(Rom, C12)),
 ]);
 
 const SPRITE_PATTERN_FETCH_START: u8 = 64;

@@ -224,13 +224,13 @@ impl ChrWindows {
 pub struct ChrWindow {
     start: PpuAddress,
     end: PpuAddress,
-    chr_type: ChrType,
+    chr_type: ChrBank,
     write_status: Option<WriteStatus>,
 }
 
 impl ChrWindow {
     #[allow(clippy::identity_op)]
-    pub const fn new(start: u16, end: u16, size: usize, chr_type: ChrType) -> ChrWindow {
+    pub const fn new(start: u16, end: u16, size: usize, chr_type: ChrBank) -> ChrWindow {
         //assert!([1 * KIBIBYTE, 2 * KIBIBYTE, 4 * KIBIBYTE, 8 * KIBIBYTE].contains(&size));
         assert!(end > start);
         if end as usize - start as usize + 1 != size {
@@ -272,7 +272,7 @@ impl ChrWindow {
     }
 
     pub fn register_id(self) -> Option<BankIndexRegisterId> {
-        if let ChrType::SwitchableBank(_, id) = self.chr_type {
+        if let ChrBank::Switchable(_, id) = self.chr_type {
             Some(id)
         } else {
             None
@@ -281,26 +281,26 @@ impl ChrWindow {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum ChrType {
-    FixedBank(Writability, BankIndex),
-    SwitchableBank(Writability, BankIndexRegisterId),
-    MetaSwitchableBank(Writability, MetaRegisterId),
+pub enum ChrBank {
+    Fixed(Writability, BankIndex),
+    Switchable(Writability, BankIndexRegisterId),
+    MetaSwitchable(Writability, MetaRegisterId),
 }
 
-impl ChrType {
+impl ChrBank {
     fn writability(self) -> Writability {
         match self {
-            ChrType::FixedBank(writability, _) => writability,
-            ChrType::SwitchableBank(writability, _) => writability,
-            ChrType::MetaSwitchableBank(writability, _) => writability,
+            ChrBank::Fixed(writability, _) => writability,
+            ChrBank::Switchable(writability, _) => writability,
+            ChrBank::MetaSwitchable(writability, _) => writability,
         }
     }
 
     fn bank_index(self, registers: &BankIndexRegisters) -> BankIndex {
         match self {
-            ChrType::FixedBank(_, bank_index) => bank_index,
-            ChrType::SwitchableBank(_, register_id) => registers.get(register_id),
-            ChrType::MetaSwitchableBank(_, meta_id) => registers.get_from_meta(meta_id),
+            ChrBank::Fixed(_, bank_index) => bank_index,
+            ChrBank::Switchable(_, register_id) => registers.get(register_id),
+            ChrBank::MetaSwitchable(_, meta_id) => registers.get_from_meta(meta_id),
         }
     }
 }

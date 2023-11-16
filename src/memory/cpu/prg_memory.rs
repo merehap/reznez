@@ -46,7 +46,7 @@ impl PrgMemory {
         };
 
         for window in prg_memory.windows.0 {
-            if window.prg_type == PrgType::WorkRam {
+            if window.prg_type == PrgBank::WorkRam {
                 prg_memory.work_ram_sections.push(WorkRam::new(window.size()));
             }
         }
@@ -167,9 +167,9 @@ impl PrgMemory {
 
                 let window = &windows[i];
                 let prg_memory_index = match window.prg_type {
-                    PrgType::Empty => PrgMemoryIndex::None,
-                    PrgType::FixedBank(_, bank_index) => {
-                        // TODO: Consolidate FixedBank and SwitchableBank logic.
+                    PrgBank::Empty => PrgMemoryIndex::None,
+                    PrgBank::Fixed(_, bank_index) => {
+                        // TODO: Consolidate Fixed and Switchable logic.
                         let mut raw_bank_index = bank_index.to_usize(self.bank_count());
                         let window_multiple = window.size() / self.bank_size;
                         // Clear low bits for large windows.
@@ -178,7 +178,7 @@ impl PrgMemory {
                              raw_bank_index * self.bank_size + bank_offset as usize;
                         PrgMemoryIndex::MappedMemory(mapped_memory_index)
                     }
-                    PrgType::SwitchableBank(_, register_id) => {
+                    PrgBank::Switchable(_, register_id) => {
                         let mut raw_bank_index = self.bank_index_registers.get(register_id)
                             .to_usize(self.bank_count());
                         let window_multiple = window.size() / self.bank_size;
@@ -188,7 +188,7 @@ impl PrgMemory {
                              raw_bank_index * self.bank_size + bank_offset as usize;
                         PrgMemoryIndex::MappedMemory(mapped_memory_index)
                     }
-                    PrgType::WorkRam => {
+                    PrgBank::WorkRam => {
                         let mut index = usize::from(bank_offset);
                         let mut result = None;
                         for (section_id, work_ram_section) in self.work_ram_sections.iter().enumerate() {
@@ -213,7 +213,7 @@ impl PrgMemory {
     // This method assume that all WorkRam is at the start of the PrgWindows.
     fn work_ram_at(&mut self, start: u16) -> &mut WorkRam {
         let (window, index) = self.window_with_index_at(start);
-        assert_eq!(window.prg_type, PrgType::WorkRam);
+        assert_eq!(window.prg_type, PrgBank::WorkRam);
         &mut self.work_ram_sections[index]
     }
 
@@ -265,8 +265,8 @@ impl PrgWindows {
         let mut i = 0;
         while i < self.0.len() {
             let window = self.0[i];
-            if !matches!(window.prg_type, PrgType::WorkRam)
-                && !matches!(window.prg_type, PrgType::Empty)
+            if !matches!(window.prg_type, PrgBank::WorkRam)
+                && !matches!(window.prg_type, PrgBank::Empty)
                 && window.size() % bank_size != 0 {
                 panic!("Window size must be a multiple of bank size.");
             }
@@ -294,7 +294,7 @@ enum PrgMemoryIndex {
 pub struct PrgWindow {
     start: CpuAddress,
     end: CpuAddress,
-    prg_type: PrgType,
+    prg_type: PrgBank,
 }
 
 impl PrgWindow {
@@ -307,14 +307,14 @@ impl PrgWindow {
     }
 
     fn register_id(self) -> Option<BankIndexRegisterId> {
-        if let PrgType::SwitchableBank(_, id) = self.prg_type {
+        if let PrgBank::Switchable(_, id) = self.prg_type {
             Some(id)
         } else {
             None
         }
     }
 
-    pub const fn new(start: u16, end: u16, size: usize, prg_type: PrgType) -> PrgWindow {
+    pub const fn new(start: u16, end: u16, size: usize, prg_type: PrgBank) -> PrgWindow {
         assert!(end > start);
         if end as usize - start as usize + 1 != size {
             panic!("PRG window 'end - start != size'");
@@ -329,20 +329,20 @@ impl PrgWindow {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum PrgType {
+pub enum PrgBank {
     Empty,
-    FixedBank(Writability, BankIndex),
-    SwitchableBank(Writability, BankIndexRegisterId),
+    Fixed(Writability, BankIndex),
+    Switchable(Writability, BankIndexRegisterId),
     // WRAM, Save RAM, SRAM, ambiguously "PRG RAM".
     WorkRam,
 }
 
-impl PrgType {
+impl PrgBank {
     fn bank_index(self, registers: &BankIndexRegisters) -> Option<BankIndex> {
-        use PrgType::*;
+        use PrgBank::*;
         match self {
-            FixedBank(_, bank_index) => Some(bank_index),
-            SwitchableBank(_, register_id) => Some(registers.get(register_id)),
+            Fixed(_, bank_index) => Some(bank_index),
+            Switchable(_, register_id) => Some(registers.get(register_id)),
             Empty | WorkRam => None,
         }
     }
