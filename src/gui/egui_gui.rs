@@ -548,10 +548,10 @@ impl Renderer for StatusRenderer {
                     ));
                     ui.end_row();
                     ui.label("PRG ROM banks");
-                    ui.label(&nes.memory().mapper().prg_rom_bank_string(&mapper_params));
+                    ui.label(&nes.memory().mapper().prg_rom_bank_string(mapper_params));
                     ui.end_row();
                     ui.label("CHR ROM banks");
-                    ui.label(&nes.memory().mapper().chr_rom_bank_string(&mapper_params));
+                    ui.label(&nes.memory().mapper().chr_rom_bank_string(mapper_params));
                 });
         });
 

@@ -121,10 +121,8 @@ impl Mapper for Mapper064 {
             }
         }
 
-        if self.irq_counter_reload_mode == IrqCounterReloadMode::CpuCycle {
-            if cycle % 4 == 0 {
-                self.tick_irq_counter(CPU_CYCLE_MODE_IRQ_PENDING_DELAY);
-            }
+        if self.irq_counter_reload_mode == IrqCounterReloadMode::CpuCycle && cycle % 4 == 0 {
+            self.tick_irq_counter(CPU_CYCLE_MODE_IRQ_PENDING_DELAY);
         }
     }
 

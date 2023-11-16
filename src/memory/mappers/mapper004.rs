@@ -134,7 +134,7 @@ impl Mapper for Mapper004 {
 
 impl Mapper004 {
     pub fn new() -> Self {
-        let mapper = Mapper004 {
+        Mapper004 {
             selected_register_id: C0,
 
             irq_pending: false,
@@ -144,8 +144,7 @@ impl Mapper004 {
             irq_counter_reload_value: 0,
             irq_counter_suppression_cycles: 0,
             pattern_table_side: PatternTableSide::Left,
-        };
-        mapper
+        }
     }
 
     fn bank_select(&mut self, params: &mut MapperParams, value: u8) {

@@ -60,7 +60,7 @@ impl Mapper for Mapper001 {
         let is_last_shift = self.shift & 1 == 1;
 
         self.shift >>= 1;
-        self.shift |= u8::from(value & 1) << 4;
+        self.shift |= (value & 1) << 4;
 
         if is_last_shift {
             let shift = self.shift;
