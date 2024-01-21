@@ -39,13 +39,7 @@ pub struct Mapper023 {
     chr_bank_lows: [u8; 8],
     chr_bank_highs: [u8; 8],
 
-    irq_enabled: bool,
-    irq_pending: bool,
-    enable_irq_upon_acknowledgement: bool,
-    irq_mode: IrqMode,
-    irq_counter_reload_low_value: u8,
-    irq_counter_reload_value: u8,
-    irq_counter: u8,
+    irq_state: VrcIrqState,
 }
 
 impl Mapper for Mapper023 {
@@ -62,14 +56,7 @@ impl Mapper for Mapper023 {
     }
 
     fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {
-        if self.irq_enabled {
-            if self.irq_counter == 0xFF {
-                self.irq_pending = true;
-                self.irq_counter = self.irq_counter_reload_value;
-            } else {
-                self.irq_counter += 1;
-            }
-        }
+        self.irq_state.step();
     }
 
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
@@ -114,26 +101,10 @@ impl Mapper for Mapper023 {
             0xE002 | 0xE008 => self.chr_bank_lows[7] = value,
             0xE003 | 0xE00C => self.chr_bank_highs[7] = value,
 
-            0xF000 => self.irq_counter_reload_low_value = value & 0b0000_1111,
-            0xF001 => self.irq_counter_reload_value = (value & 0b0000_1111) << 4 | self.irq_counter_reload_low_value,
-            // IRQ mode.
-            0xF002 => {
-                self.irq_pending = false;
-                self.irq_enabled = value & 0b0000_0001 != 0;
-                if self.irq_enabled {
-                    self.irq_counter = self.irq_counter_reload_value;
-                }
-                self.enable_irq_upon_acknowledgement = value & 0b0000_0010 != 0;
-                self.irq_mode = if value & 0b0000_00100 == 0 { IrqMode::Scanline } else { IrqMode::Cycle };
-            }
-            // IRQ acknowledge.
-            0xF003 => {
-                self.irq_pending = false;
-                if self.enable_irq_upon_acknowledgement {
-                    self.irq_enabled = true;
-                }
-            }
-
+            0xF000 => self.irq_state.set_reload_value_low_bits(value),
+            0xF001 => self.irq_state.set_reload_value_high_bits(value),
+            0xF002 => self.irq_state.set_mode(value),
+            0xF003 => self.irq_state.acknowledge(),
             0x4020..=0xFFFF => { /* All other writes do nothing. */ }
         }
 
@@ -154,6 +125,67 @@ fn bank_index(low: u8, high: u8) -> u16 {
     (u16::from(high & 0b0001_1111) << 4) | u16::from(low & 0b0000_1111)
 }
 
+struct VrcIrqState {
+    irq_enabled: bool,
+    irq_pending: bool,
+    enable_irq_upon_acknowledgement: bool,
+    irq_mode: IrqMode,
+    irq_counter_reload_low_value: u8,
+    irq_counter_reload_value: u8,
+    irq_counter: u8,
+}
+
+impl VrcIrqState {
+    fn new() -> Self {
+        Self {
+            irq_enabled: false,
+            irq_pending: false,
+            enable_irq_upon_acknowledgement: false,
+            irq_mode: IrqMode::Scanline,
+            irq_counter_reload_low_value: 0,
+            irq_counter_reload_value: 0,
+            irq_counter: 0,
+        }
+    }
+
+    fn step(&mut self) {
+        if self.irq_enabled {
+            if self.irq_counter == 0xFF {
+                self.irq_pending = true;
+                self.irq_counter = self.irq_counter_reload_value;
+            } else {
+                self.irq_counter += 1;
+            }
+        }
+    }
+
+    fn set_reload_value_low_bits(&mut self, value: u8) {
+        self.irq_counter_reload_low_value = value & 0b0000_1111
+    }
+
+    fn set_reload_value_high_bits(&mut self, value: u8) {
+        self.irq_counter_reload_value = (value & 0b0000_1111) << 4 | self.irq_counter_reload_low_value
+    }
+
+    fn set_mode(&mut self, value: u8) {
+        self.irq_pending = false;
+        self.irq_enabled = value & 0b0000_0001 != 0;
+        if self.irq_enabled {
+            self.irq_counter = self.irq_counter_reload_value;
+        }
+        self.enable_irq_upon_acknowledgement = value & 0b0000_0010 != 0;
+        self.irq_mode = if value & 0b0000_00100 == 0 { IrqMode::Scanline } else { IrqMode::Cycle };
+    }
+
+    fn acknowledge(&mut self) {
+        self.irq_pending = false;
+        if self.enable_irq_upon_acknowledgement {
+            self.irq_enabled = true;
+        }
+    }
+
+}
+
 #[derive(Debug)]
 enum IrqMode {
     Scanline,
@@ -165,13 +197,7 @@ impl Mapper023 {
         Self {
             chr_bank_lows: [0; 8],
             chr_bank_highs: [0; 8],
-            irq_enabled: false,
-            irq_pending: false,
-            enable_irq_upon_acknowledgement: false,
-            irq_mode: IrqMode::Scanline,
-            irq_counter_reload_low_value: 0,
-            irq_counter_reload_value: 0,
-            irq_counter: 0,
+            irq_state: VrcIrqState::new(),
         }
     }
 }
