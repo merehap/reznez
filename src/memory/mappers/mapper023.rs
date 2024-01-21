@@ -34,7 +34,7 @@ const NAME_TABLE_MIRRORINGS: [NameTableMirroring; 4] = [
     NameTableMirroring::OneScreenRightBank,
 ];
 
-// VRC4a and  VRC4c
+// VRC2b and VRC4a and VRC4c
 pub struct Mapper023 {
     chr_bank_lows: [u8; 8],
     chr_bank_highs: [u8; 8],
@@ -154,6 +154,7 @@ fn bank_index(low: u8, high: u8) -> u16 {
     (u16::from(high & 0b0001_1111) << 4) | u16::from(low & 0b0000_1111)
 }
 
+#[derive(Debug)]
 enum IrqMode {
     Scanline,
     Cycle,
