@@ -137,6 +137,8 @@ struct VrcIrqState {
     counter_reload_low_value: u8,
     counter_reload_value: u8,
     counter: u8,
+    // When prescaler drops below 0, the counter is incremented. Only relevant in scanline mode.
+    prescaler: i16,
 }
 
 impl VrcIrqState {
@@ -149,17 +151,31 @@ impl VrcIrqState {
             counter_reload_low_value: 0,
             counter_reload_value: 0,
             counter: 0,
+            prescaler: 341,
         }
     }
 
     fn step(&mut self) {
-        if self.enabled {
-            if self.counter == 0xFF {
-                self.pending = true;
-                self.counter = self.counter_reload_value;
+        if !self.enabled {
+            return;
+        }
+
+        if self.mode == IrqMode::Scanline {
+            self.prescaler -= 3;
+            if self.prescaler <= 0 {
+                // Reset the prescaler.
+                self.prescaler += 341;
             } else {
-                self.counter += 1;
+                // The counter will not be incremented.
+                return;
             }
+        }
+
+        if self.counter == 0xFF {
+            self.pending = true;
+            self.counter = self.counter_reload_value;
+        } else {
+            self.counter += 1;
         }
     }
 
@@ -193,7 +209,7 @@ impl VrcIrqState {
     }
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 enum IrqMode {
     Scanline,
     Cycle,
