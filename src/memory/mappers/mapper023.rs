@@ -1,4 +1,5 @@
 use crate::memory::mapper::*;
+use crate::memory::mappers::vrc::vrc_irq_state::VrcIrqState;
 
 const PRG_WINDOWS_SWITCHABLE_8000: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WorkRam),
@@ -127,92 +128,6 @@ impl Mapper for Mapper023 {
 
 fn bank_index(low: u8, high: u8) -> u16 {
     (u16::from(high & 0b0001_1111) << 4) | u16::from(low & 0b0000_1111)
-}
-
-struct VrcIrqState {
-    enabled: bool,
-    pending: bool,
-    enable_upon_acknowledgement: bool,
-    mode: IrqMode,
-    counter_reload_low_value: u8,
-    counter_reload_value: u8,
-    counter: u8,
-    // When prescaler drops below 0, the counter is incremented. Only relevant in scanline mode.
-    prescaler: i16,
-}
-
-impl VrcIrqState {
-    fn new() -> Self {
-        Self {
-            enabled: false,
-            pending: false,
-            enable_upon_acknowledgement: false,
-            mode: IrqMode::Scanline,
-            counter_reload_low_value: 0,
-            counter_reload_value: 0,
-            counter: 0,
-            prescaler: 341,
-        }
-    }
-
-    fn step(&mut self) {
-        if !self.enabled {
-            return;
-        }
-
-        if self.mode == IrqMode::Scanline {
-            self.prescaler -= 3;
-            if self.prescaler <= 0 {
-                // Reset the prescaler.
-                self.prescaler += 341;
-            } else {
-                // The counter will not be incremented.
-                return;
-            }
-        }
-
-        if self.counter == 0xFF {
-            self.pending = true;
-            self.counter = self.counter_reload_value;
-        } else {
-            self.counter += 1;
-        }
-    }
-
-    fn set_reload_value_low_bits(&mut self, value: u8) {
-        self.counter_reload_low_value = value & 0b0000_1111
-    }
-
-    fn set_reload_value_high_bits(&mut self, value: u8) {
-        self.counter_reload_value = (value & 0b0000_1111) << 4 | self.counter_reload_low_value
-    }
-
-    fn set_mode(&mut self, value: u8) {
-        self.pending = false;
-        self.enabled = value & 0b0000_0001 != 0;
-        if self.enabled {
-            self.counter = self.counter_reload_value;
-        }
-        self.enable_upon_acknowledgement = value & 0b0000_0010 != 0;
-        self.mode = if value & 0b0000_00100 == 0 { IrqMode::Scanline } else { IrqMode::Cycle };
-    }
-
-    fn acknowledge(&mut self) {
-        self.pending = false;
-        if self.enable_upon_acknowledgement {
-            self.enabled = true;
-        }
-    }
-
-    fn pending(&self) -> bool {
-        self.pending
-    }
-}
-
-#[derive(PartialEq, Debug)]
-enum IrqMode {
-    Scanline,
-    Cycle,
 }
 
 impl Mapper023 {
