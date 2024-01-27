@@ -105,6 +105,14 @@ impl ChrMemory {
         self.bank_index_registers.set(id, BankIndex::from_u16(raw_bank_index));
     }
 
+    pub fn set_bank_index_register_bits(
+        &mut self, id: BankIndexRegisterId, new_value: u16, mask: u16) {
+
+        let value = self.bank_index_registers.get(id).to_u16(self.bank_count());
+        let updated_value = (value & !mask) | (new_value & mask);
+        self.bank_index_registers.set(id, BankIndex::from_u16(updated_value));
+    }
+
     pub fn set_meta_register(&mut self, id: MetaRegisterId, value: BankIndexRegisterId) {
         self.bank_index_registers.set_meta(id, value);
     }
