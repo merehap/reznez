@@ -70,8 +70,17 @@ impl Mapper for Vrc2And4 {
             0x0000..=0x401F => unreachable!(),
             // Set bank for 8000 through 9FFF (or C000 through DFFF, VRC4 only).
             0x8000..=0x8003 => params.prg_memory_mut().set_bank_index_register(P0, value & 0b0001_1111),
-            0x9000 =>
-                params.set_name_table_mirroring(NAME_TABLE_MIRRORINGS[usize::from(value & 0b0000_0011)]),
+            0x9000 => {
+                // Wai Wai World writes a weird value here (all ones). Due to it being VRC2, only the last bit is used.
+                // Every other ROM is well-behaved and uses the last 2 bits (VRC2 setting only the last bit).
+                // https://forums.nesdev.org/viewtopic.php?f=3&t=13473
+                let mask = if value == 0b1111_1111 {
+                    0b0000_0001
+                } else {
+                    0b0000_0011
+                };
+                params.set_name_table_mirroring(NAME_TABLE_MIRRORINGS[usize::from(value & mask)]);
+            }
             // VRC4-only
             0x9002 => {
                 if value & 0b0000_0001 == 0 {
