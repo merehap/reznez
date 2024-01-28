@@ -2,7 +2,7 @@ use crate::memory::mapper::*;
 use crate::memory::mappers::vrc::vrc2_and_4::Vrc2And4;
 
 // VRC2b and VRC4a and VRC4c
-pub fn mapper023_from_cartridge(_cartridge: &Cartridge) -> Box<dyn Mapper> {
+pub fn mapper023() -> Box<dyn Mapper> {
     let mut mapper023_mappings = Vec::new();
 
     // VRC2b And VRC4f
