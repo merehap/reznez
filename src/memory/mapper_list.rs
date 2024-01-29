@@ -28,6 +28,9 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
 
         25 => m::mapper025::mapper025(),
 
+        // Duplicate of 23, most likely.
+        27 => m::mapper023::mapper023(),
+
         32 => Box::new(m::mapper032::Mapper032),
         33 => Box::new(m::mapper033::Mapper033),
         34 => Box::new(m::mapper034::Mapper034::new(cartridge)),
