@@ -73,6 +73,10 @@ MAPPER 7
 Aladdin - Corrupted sprites, gets stuck in a loop writing to PPUDATA, JAMs.
 Battletoads - Every other frame rendered with wrong pattern table (due to even/odd frame timing test failing?). Flickering from somehow reading X and Y offset at the wrong time?
 
+MAPPER 21
+Wai Wai World 2 - Severe flickering (sprites aren't drawn in time?)
+Ganbare Goemon Gaiden 2 - Partial bad pattern table on opening screen. Can't progress past opening screen, probably because the Microwire interface isn't implemented.
+
 MAPPER 23
 Parodius Da - Demo doesn't do anything.
 	Game freezes after intro. PRG bank switching bug?
@@ -108,6 +112,7 @@ Total games implemented:
 010: 3
 011: 34
 013: 1
+021: 2
 023: 10
 025: 6
 032: 6
@@ -133,7 +138,7 @@ Total games implemented:
 232: 5
 241: 0
 
-2253/2447
+2255/2447
 
 To implement:
 5:  25
