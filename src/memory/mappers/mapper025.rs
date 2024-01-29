@@ -1,5 +1,5 @@
 use crate::memory::mapper::*;
-use crate::memory::mappers::vrc::vrc2_and_4::Vrc2And4;
+use crate::memory::mappers::vrc::vrc2_and_4::{Vrc2And4, ChrBankLowBitBehavior};
 
 // VRC2c, VRC4b, and VRC4d (submappers 3, 1, and 2, respectively)
 pub fn mapper025() -> Box<dyn Mapper> {
@@ -29,5 +29,5 @@ pub fn mapper025() -> Box<dyn Mapper> {
         (0xE004, 0xE00C, C7),
     ]);
 
-    Box::new(Vrc2And4::new(&mapper025_mappings))
+    Box::new(Vrc2And4::new(&mapper025_mappings, ChrBankLowBitBehavior::Keep))
 }
