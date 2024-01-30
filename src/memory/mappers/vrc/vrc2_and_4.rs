@@ -69,6 +69,7 @@ impl Mapper for Vrc2And4 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
+            0x6000..=0x7FFF => params.prg_memory_mut().write(address, value),
             // Set bank for 8000 through 9FFF (or C000 through DFFF, VRC4 only).
             0x8000..=0x8003 => params.prg_memory_mut().set_bank_index_register(P0, value & 0b0001_1111),
             0x9000 => {

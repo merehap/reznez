@@ -1,4 +1,5 @@
 ROADMAP
+Fix workram writes to work without manually coding it in each mapper.
 Remove split between PRG and CHR registers.
 Fix remaining issue with apu_test DMC basics.
 Remove GetSpritePatternHack in ppu.rs.
@@ -75,11 +76,9 @@ Battletoads - Every other frame rendered with wrong pattern table (due to even/o
 
 MAPPER 21
 Wai Wai World 2 - Severe flickering (sprites aren't drawn in time?)
-Ganbare Goemon Gaiden 2 - Partial bad pattern table on opening screen. Can't progress past opening screen, probably because the Microwire interface isn't implemented.
+Ganbare Goemon Gaiden 2 - Partial bad pattern table on opening screen.
 
 MAPPER 23
-Parodius Da - Demo doesn't do anything.
-	Game freezes after intro. PRG bank switching bug?
 Tiny Toon Adventures - Status bar
 
 MAPPER 66
