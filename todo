@@ -72,7 +72,7 @@ Crystalis - Junk on scanline above status bar.
 
 MAPPER 7
 Aladdin - Corrupted sprites, gets stuck in a loop writing to PPUDATA, JAMs.
-Battletoads - Every other frame rendered with wrong pattern table (due to even/odd frame timing test failing?). Flickering from somehow reading X and Y offset at the wrong time?
+Battletoads - Working except some key input bug and sprite flickering.
 
 MAPPER 21
 Wai Wai World 2 - Severe flickering (sprites aren't drawn in time?)
