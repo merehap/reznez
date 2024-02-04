@@ -67,6 +67,9 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
         // DxROM, Tengen MIMIC-1, Namcot 118
         206 => Box::new(m::mapper206::Mapper206::new()),
 
+        // Namco 175 and 340
+        210 => Box::new(m::mapper210::Mapper210::new()),
+
         232 => Box::new(m::mapper232::Mapper232),
 
         241 => Box::new(m::mapper241::Mapper241),
