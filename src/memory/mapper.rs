@@ -428,7 +428,6 @@ impl MapperParams {
     }
 
     pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring) {
-        println!("Setting mirroring to {name_table_mirroring:?}");
         self.name_table_mirroring = name_table_mirroring;
     }
 

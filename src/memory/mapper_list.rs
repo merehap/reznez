@@ -22,6 +22,9 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
 
         13 => Box::new(m::mapper013::Mapper013),
 
+        // FCG-1 ASIC and LZ93D50 ASIC.
+        16 => Box::new(m::mapper016::Mapper016::new()),
+
         21 => m::mapper021::mapper021(),
         22 => m::mapper022::mapper022(),
         23 => m::mapper023::mapper023(),

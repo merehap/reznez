@@ -90,14 +90,15 @@ impl Cartridge {
 
         let chr_rom_start = prg_rom_end;
         let mut chr_rom_end = chr_rom_start + CHR_ROM_CHUNK_LENGTH * chr_rom_chunk_count;
-        let chr_rom = rom.get(chr_rom_start..chr_rom_end)
-            .unwrap_or({
-                error!("ROM {} claimed to have {} CHR chunks, but the ROM was too short.",
-                    name, prg_rom_chunk_count);
-                chr_rom_end = rom.len();
-                &rom[chr_rom_start..]
-            })
-            .to_vec();
+        let chr_rom;
+        if let Some(chr) = rom.get(chr_rom_start..chr_rom_end) {
+            chr_rom = chr.to_vec();
+        } else {
+            error!("ROM {} claimed to have {} CHR chunks, but the ROM was too short.",
+                name, chr_rom_chunk_count);
+            chr_rom_end = rom.len();
+            chr_rom = (&rom[chr_rom_start..]).to_vec();
+        }
 
         let title_start = chr_rom_end;
         let title = rom[title_start..].to_vec();
