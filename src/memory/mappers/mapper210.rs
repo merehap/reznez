@@ -1,6 +1,6 @@
 use crate::memory::mapper::*;
 
-const PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
+const PRG_WINDOWS: PrgLayout = PrgLayout::new(&[
     // FIXME: This is supposed to be 2KiBs mirrored. Family Circuit doesn't work without it.
     PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WorkRam),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
@@ -9,7 +9,7 @@ const PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::LAST)),
 ]);
 
-const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
+const CHR_WINDOWS: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C0)),
     ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C1)),
     ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C2)),
@@ -45,16 +45,16 @@ impl Mapper for Mapper210 {
             0x4020..=0x5FFF => { /* Do nothing. */ }
             0x6000..=0x7FFF => {
                 self.variant = Variant::Namco175;
-                params.prg_memory_mut().write(address, value);
+                params.write_prg(address, value);
             }
-            0x8000..=0x87FF => params.chr_memory_mut().set_bank_index_register(C0, value),
-            0x8800..=0x8FFF => params.chr_memory_mut().set_bank_index_register(C1, value),
-            0x9000..=0x97FF => params.chr_memory_mut().set_bank_index_register(C2, value),
-            0x9800..=0x9FFF => params.chr_memory_mut().set_bank_index_register(C3, value),
-            0xA000..=0xA7FF => params.chr_memory_mut().set_bank_index_register(C4, value),
-            0xA800..=0xAFFF => params.chr_memory_mut().set_bank_index_register(C5, value),
-            0xB000..=0xB7FF => params.chr_memory_mut().set_bank_index_register(C6, value),
-            0xB800..=0xBFFF => params.chr_memory_mut().set_bank_index_register(C7, value),
+            0x8000..=0x87FF => params.set_bank_index_register(C0, value),
+            0x8800..=0x8FFF => params.set_bank_index_register(C1, value),
+            0x9000..=0x97FF => params.set_bank_index_register(C2, value),
+            0x9800..=0x9FFF => params.set_bank_index_register(C3, value),
+            0xA000..=0xA7FF => params.set_bank_index_register(C4, value),
+            0xA800..=0xAFFF => params.set_bank_index_register(C5, value),
+            0xB000..=0xB7FF => params.set_bank_index_register(C6, value),
+            0xB800..=0xBFFF => params.set_bank_index_register(C7, value),
             0xC000..=0xC7FF => {
                 self.variant = Variant::Namco175;
                 /* TODO: External PRG RAM enable. */
@@ -78,10 +78,10 @@ impl Mapper for Mapper210 {
                     params.set_name_table_mirroring(mirroring);
                 }
 
-                params.prg_memory_mut().set_bank_index_register(P0, value & 0b0011_1111);
+                params.set_bank_index_register(P0, value & 0b0011_1111);
             }
-            0xE800..=0xEFFF => params.prg_memory_mut().set_bank_index_register(P1, value & 0b0011_1111),
-            0xF000..=0xF7FF => params.prg_memory_mut().set_bank_index_register(P2, value & 0b0011_1111),
+            0xE800..=0xEFFF => params.set_bank_index_register(P1, value & 0b0011_1111),
+            0xF000..=0xF7FF => params.set_bank_index_register(P2, value & 0b0011_1111),
             0xF800..=0xFFFF => { /* Do nothing. */ }
         }
     }

@@ -1,12 +1,12 @@
 use crate::memory::mapper::*;
 
 const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),
-    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::FixedBank(Rom, BankIndex::FIRST)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Empty),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::FIRST)),
 ]);
 
 const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::FixedBank(Rom, BankIndex::FIRST)),
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::Fixed(Rom, BankIndex::FIRST)),
 ]);
 
 // NROM

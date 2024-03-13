@@ -1,14 +1,14 @@
 use crate::memory::mapper::*;
 
 const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam), //PrgType::FixedBank(Ram, BankIndex::FIRST)),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::SwitchableBank(Rom, P0)),
-    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::FixedBank(Rom, BankIndex::LAST)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WorkRam), //PrgBank::Fixed(Ram, BankIndex::FIRST)),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::LAST)),
 ]);
 
 const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::MetaSwitchableBank(Rom, M0)),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::MetaSwitchableBank(Rom, M1)),
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::MetaSwitchable(Rom, M0)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::MetaSwitchable(Rom, M1)),
 ]);
 
 // MMC4 - Similar to MMC2, but with Work RAM, bigger PRG ROM windows, and different bank-switching.

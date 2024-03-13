@@ -491,6 +491,12 @@ impl MapperParams {
         self.bank_index_registers.set(id, BankIndex::from_u16(value.into()));
     }
 
+    pub fn set_bank_index_register_bits(
+        &mut self, id: BankIndexRegisterId, new_value: u16, mask: u16) {
+
+        self.bank_index_registers.set_bits(id, new_value, mask);
+    }
+
     pub fn set_meta_register(&mut self, id: MetaRegisterId, value: BankIndexRegisterId) {
         self.bank_index_registers.set_meta(id, value);
     }

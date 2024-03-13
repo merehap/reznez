@@ -1,16 +1,16 @@
 use crate::memory::mapper::*;
 
 const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgType::Empty),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::SwitchableBank(Rom, P0)),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::SwitchableBank(Rom, P1)),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::SwitchableBank(Rom, P2)),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::FixedBank(Rom, BankIndex::LAST)),
+    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::Empty),
+    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
+    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P1)),
+    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P2)),
+    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::LAST)),
 ]);
 
 const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::SwitchableBank(Rom, C0)),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::SwitchableBank(Rom, C1)),
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::Switchable(Rom, C0)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::Switchable(Rom, C1)),
 ]);
 
 // VRC1

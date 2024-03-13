@@ -1,27 +1,27 @@
 use crate::memory::mapper::*;
 
 const PRG_LAYOUT_FIXED_LAST: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::SwitchableBank(Rom, P0)),
-    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::FixedBank(Rom, BankIndex::LAST)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WorkRam),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::LAST)),
 ]);
 const PRG_LAYOUT_FIXED_FIRST: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::FixedBank(Rom, BankIndex::FIRST)),
-    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::SwitchableBank(Rom, P0)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WorkRam),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::FIRST)),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
 ]);
 const PRG_LAYOUT_ONE_BIG: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::WorkRam),
-    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgType::SwitchableBank(Rom, P0)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WorkRam),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
 ]);
 
 // TODO: Not all boards support CHR RAM.
 const CHR_LAYOUT_ONE_BIG: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrType::SwitchableBank(Ram, C0)),
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::Switchable(Ram, C0)),
 ]);
 const CHR_LAYOUT_TWO_SMALL: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::SwitchableBank(Ram, C0)),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::SwitchableBank(Ram, C1)),
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::Switchable(Ram, C0)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::Switchable(Ram, C1)),
 ]);
 
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;

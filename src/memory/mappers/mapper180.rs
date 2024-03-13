@@ -1,12 +1,12 @@
 use crate::memory::mapper::*;
 
-const PRG_WINDOWS: PrgWindows = PrgWindows::new(&[
+const PRG_WINDOWS: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Empty),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::FIRST)),
     PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
 ]);
 
-const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
+const CHR_WINDOWS: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::Fixed(Rom, BankIndex::FIRST)),
 ]);
 
@@ -30,7 +30,7 @@ impl Mapper for Mapper180 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
-            0x8000..=0xFFFF => params.prg_memory_mut().set_bank_index_register(P0, value & 0b0000_0111),
+            0x8000..=0xFFFF => params.set_bank_index_register(P0, value & 0b0000_0111),
         }
     }
 }

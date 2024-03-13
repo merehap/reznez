@@ -92,28 +92,6 @@ impl ChrMemory {
         self.windows = windows;
     }
 
-    pub fn set_bank_index_register<INDEX: Into<u16>>(
-        &mut self,
-        id: BankIndexRegisterId,
-        raw_bank_index: INDEX,
-    ) {
-        let mut raw_bank_index = raw_bank_index.into();
-        raw_bank_index %= self.bank_count();
-        self.bank_index_registers.set(id, BankIndex::from_u16(raw_bank_index));
-    }
-
-    pub fn set_bank_index_register_bits(
-        &mut self, id: BankIndexRegisterId, new_value: u16, mask: u16) {
-
-        let value = self.bank_index_registers.get(id).to_u16(self.bank_count());
-        let updated_value = (value & !mask) | (new_value & mask);
-        self.bank_index_registers.set(id, BankIndex::from_u16(updated_value));
-    }
-
-    pub fn set_meta_register(&mut self, id: MetaRegisterId, value: BankIndexRegisterId) {
-        self.bank_index_registers.set_meta(id, value);
-    }
-
     pub fn pattern_table(&self, registers: &BankIndexRegisters, side: PatternTableSide) -> PatternTable {
         match side {
             PatternTableSide::Left => PatternTable::new(self.left_chunks(registers)),

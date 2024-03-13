@@ -1,26 +1,26 @@
 use crate::memory::mapper::*;
 
 const PRG_LAYOUT_C000_FIXED: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgType::WorkRam),
-    PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgType::WorkRam),
-    PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, PrgType::WorkRam),
-    PrgWindow::new(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgType::WorkRam),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::SwitchableBank(Rom, P0)),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::SwitchableBank(Rom, P1)),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::FixedBank(Rom, BankIndex::SECOND_LAST)),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::FixedBank(Rom, BankIndex::LAST)),
+    PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgBank::WorkRam),
+    PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgBank::WorkRam),
+    PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, PrgBank::WorkRam),
+    PrgWindow::new(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgBank::WorkRam),
+    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
+    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P1)),
+    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::SECOND_LAST)),
+    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::LAST)),
 ]);
 
 // Same as PRG_LAYOUT_C000_FIXED, except the 0x8000 and 0xC000 windows are swapped.
 const PRG_LAYOUT_8000_FIXED: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgType::WorkRam),
-    PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgType::WorkRam),
-    PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, PrgType::WorkRam),
-    PrgWindow::new(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgType::WorkRam),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgType::FixedBank(Rom, BankIndex::SECOND_LAST)),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgType::SwitchableBank(Rom, P1)),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgType::SwitchableBank(Rom, P0)),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgType::FixedBank(Rom, BankIndex::LAST)),
+    PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgBank::WorkRam),
+    PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgBank::WorkRam),
+    PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, PrgBank::WorkRam),
+    PrgWindow::new(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgBank::WorkRam),
+    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::SECOND_LAST)),
+    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P1)),
+    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
+    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::LAST)),
 ]);
 
 const CHR_BIG_WINDOWS_FIRST: ChrLayout = ChrLayout::new(&[

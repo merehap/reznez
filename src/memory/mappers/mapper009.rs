@@ -10,8 +10,8 @@ const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
 ]);
 
 const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrType::MetaSwitchableBank(Rom, M0)),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrType::MetaSwitchableBank(Rom, M1)),
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::MetaSwitchable(Rom, M0)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::MetaSwitchable(Rom, M1)),
 ]);
 
 // MMC2

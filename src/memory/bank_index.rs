@@ -55,6 +55,12 @@ impl BankIndexRegisters {
         self.registers[id as usize] = bank_index;
     }
 
+    pub fn set_bits(&mut self, id: BankIndexRegisterId, new_value: u16, mask: u16) {
+        let value = self.registers[id as usize].0;
+        let updated_value = (value & !mask) | (new_value & mask);
+        self.registers[id as usize] = BankIndex(updated_value);
+    }
+
     pub fn update(&mut self, id: BankIndexRegisterId, updater: &dyn Fn(u16) -> u16) {
         let value = self.registers[id as usize].0;
         self.registers[id as usize] = BankIndex(updater(value));

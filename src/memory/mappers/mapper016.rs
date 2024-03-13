@@ -1,20 +1,20 @@
 use crate::memory::mapper::*;
 
 const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgType::Empty),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgType::SwitchableBank(Rom, P0)),
-    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgType::FixedBank(Rom, BankIndex::LAST)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Empty),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::LAST)),
 ]);
 
 const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C0)),
-    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C1)),
-    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C2)),
-    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C3)),
-    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C4)),
-    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C5)),
-    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C6)),
-    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrType::SwitchableBank(Rom, C7)),
+    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C0)),
+    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C1)),
+    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C2)),
+    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C3)),
+    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C4)),
+    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C5)),
+    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C6)),
+    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C7)),
 ]);
 
 // FCG-1 ASIC (submapper 4) and LZ93D50 ASIC (submapper 5).

@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::memory::mapper::*;
 use crate::memory::mappers::vrc::vrc_irq_state::VrcIrqState;
 
-const PRG_WINDOWS_SWITCHABLE_8000: PrgWindows = PrgWindows::new(&[
+const PRG_WINDOWS_SWITCHABLE_8000: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WorkRam),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P1)),
@@ -12,7 +12,7 @@ const PRG_WINDOWS_SWITCHABLE_8000: PrgWindows = PrgWindows::new(&[
 ]);
 
 // Only used for VRC4.
-const PRG_WINDOWS_SWITCHABLE_C000: PrgWindows = PrgWindows::new(&[
+const PRG_WINDOWS_SWITCHABLE_C000: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WorkRam),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::SECOND_LAST)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P1)),
@@ -20,7 +20,7 @@ const PRG_WINDOWS_SWITCHABLE_C000: PrgWindows = PrgWindows::new(&[
     PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::LAST)),
 ]);
 
-const CHR_WINDOWS: ChrWindows = ChrWindows::new(&[
+const CHR_WINDOWS: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C0)),
     ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C1)),
     ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C2)),
@@ -69,9 +69,9 @@ impl Mapper for Vrc2And4 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
-            0x6000..=0x7FFF => params.prg_memory_mut().write(address, value),
+            0x6000..=0x7FFF => params.write_prg(address, value),
             // Set bank for 8000 through 9FFF (or C000 through DFFF, VRC4 only).
-            0x8000..=0x8003 => params.prg_memory_mut().set_bank_index_register(P0, value & 0b0001_1111),
+            0x8000..=0x8003 => params.set_bank_index_register(P0, value & 0b0001_1111),
             0x9000 => {
                 // Wai Wai World writes a weird value here (all ones). Due to it being VRC2, only the last bit is used.
                 // Every other ROM is well-behaved and uses the last 2 bits (VRC2 setting only the last bit).
@@ -86,9 +86,9 @@ impl Mapper for Vrc2And4 {
             // VRC4-only
             0x9002 => {
                 if value & 0b0000_0001 == 0 {
-                    params.prg_memory_mut().disable_work_ram(0x6000);
+                    params.disable_work_ram(0x6000);
                 } else {
-                    params.prg_memory_mut().enable_work_ram(0x6000);
+                    params.enable_work_ram(0x6000);
                 }
 
                 let prg_layout = if value & 0b0000_0010 == 0 {
@@ -96,10 +96,10 @@ impl Mapper for Vrc2And4 {
                 } else {
                     PRG_WINDOWS_SWITCHABLE_C000
                 };
-                params.prg_memory_mut().set_windows(prg_layout);
+                params.set_prg_layout(prg_layout);
             }
             // Set bank for A000 through AFFF.
-            0xA000..=0xA003 => params.prg_memory_mut().set_bank_index_register(P1, value & 0b0001_1111),
+            0xA000..=0xA003 => params.set_bank_index_register(P1, value & 0b0001_1111),
 
             // Set a CHR bank mapping.
             0xB000..=0xEFFF => {
@@ -121,7 +121,7 @@ impl Mapper for Vrc2And4 {
                         mask >>= 1;
                     }
 
-                    params.chr_memory_mut().set_bank_index_register_bits(register_id, bank, mask);
+                    params.set_bank_index_register_bits(register_id, bank, mask);
                 }
             }
 
