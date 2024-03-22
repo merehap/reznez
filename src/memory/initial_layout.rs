@@ -1,4 +1,4 @@
-use crate::cartridge::Cartridge;
+use crate::cartridge::cartridge::Cartridge;
 use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout};
 use crate::memory::mapper::MapperParams;
 use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout};

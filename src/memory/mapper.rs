@@ -1,6 +1,6 @@
 pub use lazy_static::lazy_static;
 
-pub use crate::cartridge::Cartridge;
+pub use crate::cartridge::cartridge::Cartridge;
 pub use crate::memory::bank_index::{BankIndex, BankIndexRegisterId, MetaRegisterId, BankIndexRegisters};
 pub use crate::memory::bank_index::BankIndexRegisterId::*;
 pub use crate::memory::bank_index::MetaRegisterId::*;

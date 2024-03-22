@@ -5,7 +5,7 @@ use log::Level::Info;
 use log::{info, log_enabled};
 
 use crate::apu::apu::Apu;
-use crate::cartridge::Cartridge;
+use crate::cartridge::cartridge::Cartridge;
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::Cpu;
@@ -197,7 +197,7 @@ pub struct StepResult {
 
 #[cfg(test)]
 mod tests {
-    use crate::cartridge;
+    use crate::cartridge::cartridge;
     use crate::memory::cpu::cpu_address::CpuAddress;
     use crate::memory::mapper::Mapper;
     use crate::memory::mappers::mapper000::Mapper000;
@@ -206,7 +206,7 @@ mod tests {
     use crate::ppu::palette::system_palette;
     use crate::ppu::register::registers::ctrl::Ctrl;
 
-    use crate::cartridge::test_data;
+    use crate::cartridge::cartridge::test_data;
 
     use super::*;
 

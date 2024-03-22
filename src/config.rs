@@ -6,7 +6,7 @@ use std::str::FromStr;
 use log::info;
 use structopt::StructOpt;
 
-use crate::cartridge::Cartridge;
+use crate::cartridge::cartridge::Cartridge;
 #[cfg(feature = "bevy")]
 use crate::gui::bevy_gui::BevyGui;
 use crate::gui::egui_gui::EguiGui;

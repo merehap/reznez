@@ -326,8 +326,8 @@ mod tests {
 
 #[cfg(test)]
 pub mod test_data {
-    use crate::cartridge;
-    use crate::cartridge::Cartridge;
+    use crate::cartridge::cartridge;
+    use crate::cartridge::cartridge::Cartridge;
     use crate::memory::cpu::ports;
     use crate::memory::mappers::mapper000::Mapper000;
     use crate::ppu::palette::system_palette;

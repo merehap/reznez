@@ -762,7 +762,7 @@ enum InterruptVector {
 
 #[cfg(test)]
 mod tests {
-    use crate::cartridge;
+    use crate::cartridge::cartridge;
     use crate::memory::memory;
     use crate::memory::memory::Memory;
     use crate::logging::logger;

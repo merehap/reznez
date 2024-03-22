@@ -9,7 +9,7 @@ use log::{error, info};
 use rusqlite::{params, Connection, MappedRows};
 use walkdir::WalkDir;
 
-use crate::cartridge::Cartridge;
+use crate::cartridge::cartridge::Cartridge;
 
 pub fn analyze(rom_base_path: &Path) {
     let rom_paths: BTreeSet<_> = WalkDir::new(rom_base_path)
