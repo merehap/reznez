@@ -172,15 +172,16 @@ impl Cpu {
 
     pub fn address_for_next_step(&self, memory: &CpuMemory) -> CpuAddress {
         self.step_queue.peek()
-            .map(|step| {
-                match step {
-                    Step::Read(from, _) | Step::ReadField(_, from, _) =>
-                        self.lookup_from_address(memory, from),
-                    Step::Write(to, _) | Step::WriteField(_, to, _) =>
-                        self.lookup_to_address(memory, to),
-                }
-            })
-            .unwrap_or(self.program_counter)
+            .map_or(
+                self.program_counter,
+                |step| {
+                    match step {
+                        Step::Read(from, _) | Step::ReadField(_, from, _) =>
+                            self.lookup_from_address(memory, from),
+                        Step::Write(to, _) | Step::WriteField(_, to, _) =>
+                            self.lookup_to_address(memory, to),
+                    }
+                })
     }
 
     pub fn step(&mut self, memory: &mut CpuMemory, irq_pending: bool) -> Option<Step> {
@@ -459,8 +460,7 @@ impl Cpu {
                         self.a = self.nz(value | if self.status.carry {0x80} else {0x00});
                         self.status.carry = self.a & 0x40 != 0;
                         self.status.overflow =
-                            ((if self.status.carry {0x01} else {0x00}) ^
-                            ((self.a >> 5) & 0x01)) != 0;
+                            (u8::from(self.status.carry) ^ ((self.a >> 5) & 0x01)) != 0;
                     }
                     AXS => {
                         self.status.carry = self.a & self.x >= value;
@@ -652,7 +652,7 @@ impl Cpu {
     }
 
     fn adc(&mut self, value: u8) -> u8 {
-        let carry = if self.status.carry { 1 } else { 0 };
+        let carry = u16::from(self.status.carry);
         let result = (u16::from(self.a)) + (u16::from(value)) + carry;
         self.status.carry = result > 0xFF;
         let result = self.nz(result as u8);

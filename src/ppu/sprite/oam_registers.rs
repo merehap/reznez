@@ -59,7 +59,7 @@ impl SpriteRegisters {
         self.high_pattern = high_pattern;
     }
 
-    pub fn attributes(&self) -> SpriteAttributes {
+    pub fn attributes(self) -> SpriteAttributes {
         self.attributes
     }
 

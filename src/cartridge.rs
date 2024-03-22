@@ -97,7 +97,7 @@ impl Cartridge {
             error!("ROM {} claimed to have {} CHR chunks, but the ROM was too short.",
                 name, chr_rom_chunk_count);
             chr_rom_end = rom.len();
-            chr_rom = (&rom[chr_rom_start..]).to_vec();
+            chr_rom = rom[chr_rom_start..].to_vec();
         }
 
         let title_start = chr_rom_end;

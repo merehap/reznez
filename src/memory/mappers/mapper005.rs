@@ -153,8 +153,8 @@ impl Mapper for Mapper005 {
             0x5015 => todo!(),
             0x5016..=0x5203 => None,
             0x5204 => Some(self.scanline_irq_status()),
-            0x5205 => Some((self.multiplicand as u16 * self.multiplier as u16) as u8),
-            0x5206 => Some(((self.multiplicand as u16 * self.multiplier as u16) >> 8) as u8),
+            0x5205 => Some((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
+            0x5206 => Some(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
             0x5207..=0x5BFF => None,
             0x5C00..=0x5FFF => self.peek_from_extended_ram(address),
             0x6000..=0xFFFF => params.peek_prg(address),
@@ -187,12 +187,12 @@ impl Mapper for Mapper005 {
             0x5006 => self.pulse_3.write_timer_low_byte(value),
             0x5007 => self.pulse_3.write_length_and_timer_high_byte(value),
             0x5008..=0x500F => { /* Do nothing. */ }
-            0x5010 => self.write_pcm_info(value),
-            0x5011 => self.write_raw_pcm(value),
+            0x5010 => Mapper005::write_pcm_info(value),
+            0x5011 => Mapper005::write_raw_pcm(value),
             0x5012..=0x5014 => { /* Do nothing. */ }
-            0x5015 => self.write_apu_status(value),
+            0x5015 => Mapper005::write_apu_status(value),
             0x5016..=0x50FF => { /* Do nothing. */ }
-            0x5100 => self.set_prg_banking_mode(params, value),
+            0x5100 => Mapper005::set_prg_banking_mode(params, value),
             0x5101 => self.set_chr_banking_mode(params, value),
             0x5102 => self.prg_ram_protect_1(value),
             0x5103 => self.prg_ram_protect_2(value),
@@ -201,9 +201,9 @@ impl Mapper for Mapper005 {
             0x5106 => self.set_fill_mode_tile(value),
             0x5107 => self.set_fill_mode_palette_index(value),
             0x5108..=0x5112 => { /* Do nothing. */ }
-            0x5113..=0x5117 => self.prg_bank_switching(params, address.to_raw(), value),
+            0x5113..=0x5117 => Mapper005::prg_bank_switching(params, address.to_raw(), value),
             0x5118..=0x511F => { /* Do nothing. */ }
-            0x5120..=0x512B => self.chr_bank_switching(params, address.to_raw(), value),
+            0x5120..=0x512B => Mapper005::chr_bank_switching(params, address.to_raw(), value),
             0x512C..=0x512F => { /* Do nothing. */ }
             0x5130 => self.set_upper_chr_bank_bits(value),
             0x5131..=0x51FF => { /* Do nothing */ }
@@ -378,11 +378,11 @@ impl Mapper005 {
         }
     }
 
-    fn write_pcm_info(&mut self, _value: u8) {}
-    fn write_raw_pcm(&mut self, _value: u8) {}
-    fn write_apu_status(&mut self, _value: u8) {}
+    fn write_pcm_info(_value: u8) {}
+    fn write_raw_pcm(_value: u8) {}
+    fn write_apu_status(_value: u8) {}
 
-    fn set_prg_banking_mode(&mut self, params: &mut MapperParams, value: u8) {
+    fn set_prg_banking_mode(params: &mut MapperParams, value: u8) {
         let windows = match value & 0b0000_0011 {
             0 => ONE_32K_PRG_WINDOW,
             1 => TWO_16K_PRG_LAYOUT,
@@ -443,12 +443,12 @@ impl Mapper005 {
         self.fill_mode_palette_index = PaletteIndex::from_two_low_bits(value);
     }
 
-    fn prg_bank_switching(&mut self, params: &mut MapperParams, address: u16, value: u8) {
+    fn prg_bank_switching(params: &mut MapperParams, address: u16, value: u8) {
         let register_id = PRG_REGISTER_IDS[(address - 0x5113) as usize];
         params.set_bank_index_register(register_id, value);
     }
 
-    fn chr_bank_switching(&mut self, params: &mut MapperParams, address: u16, value: u8) {
+    fn chr_bank_switching(params: &mut MapperParams, address: u16, value: u8) {
         let register_id = CHR_REGISTER_IDS[(address - 0x5120) as usize];
         params.set_bank_index_register(register_id, value);
     }

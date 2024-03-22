@@ -1,3 +1,5 @@
+#![allow(clippy::needless_late_init)]
+
 use std::collections::BTreeMap;
 
 use crate::memory::mapper::*;
@@ -108,11 +110,11 @@ impl Mapper for Vrc2And4 {
                 let mut register_id = self.low_address_bank_index_register_ids.get(&address.to_raw());
                 if register_id.is_some() {
                     bank = u16::from(value);
-                    mask = Some(0b0_0000_1111)
+                    mask = Some(0b0_0000_1111);
                 } else {
                     register_id = self.high_address_bank_index_register_ids.get(&address.to_raw());
                     bank = u16::from(value) << 4;
-                    mask = Some(0b1_1111_0000)
+                    mask = Some(0b1_1111_0000);
                 }
 
                 if let (Some(&register_id), Some(mut mask)) = (register_id, mask) {

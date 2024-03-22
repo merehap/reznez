@@ -405,10 +405,10 @@ impl Ppu {
             }
 
             StartVblank => {
-                if !self.suppress_vblank_active {
-                    mem.regs_mut().start_vblank();
-                } else {
+                if self.suppress_vblank_active {
                     info!(target: "ppuflags", "\tSuppressing vblank.");
+                } else {
+                    mem.regs_mut().start_vblank();
                 }
 
                 self.suppress_vblank_active = false;
@@ -462,7 +462,7 @@ impl Ppu {
             (OamAddr, Write) => {}
             // 0x2004
             (OamData, Read) => {}
-            (OamData, Write) => self.write_oam_data(mem, value),
+            (OamData, Write) => Ppu::write_oam_data(mem, value),
             // 0x2005
             (Scroll, Read) => unreachable!(),
             (Scroll, Write) => self.write_scroll_dimension(mem.regs_mut(), value),
@@ -470,7 +470,7 @@ impl Ppu {
             (PpuAddr, Read) => unreachable!(),
             (PpuAddr, Write) => self.write_ppu_address(mem, value),
             // 0x2007
-            (PpuData, Read) => self.read_ppu_data(mem),
+            (PpuData, Read) => Ppu::read_ppu_data(mem),
             (PpuData, Write) => {},
         }
 
@@ -505,7 +505,7 @@ impl Ppu {
     }
 
     // Write 0x2003
-    fn write_oam_data(&mut self, mem: &mut PpuMemory, value: u8) {
+    fn write_oam_data(mem: &mut PpuMemory, value: u8) {
         let oam_addr = mem.regs().oam_addr;
         mem.oam_mut().write(oam_addr, value);
         // Advance to next sprite byte to write.
@@ -536,7 +536,7 @@ impl Ppu {
         self.write_toggle.toggle();
     }
 
-    fn read_ppu_data(&self, mem: &mut PpuMemory) {
+    fn read_ppu_data(mem: &mut PpuMemory) {
         mem.process_current_ppu_address(mem.regs().current_address);
     }
 

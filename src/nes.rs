@@ -96,7 +96,7 @@ impl Nes {
     }
 
     pub fn mute(&mut self) {
-        self.apu.mute()
+        self.apu.mute();
     }
 
     pub fn step_frame(&mut self) {
@@ -124,7 +124,7 @@ impl Nes {
             1 => ppu_result = self.ppu_step(),
             2 => ppu_result = self.ppu_step(),
             3 => {
-                self.apu.off_cycle_step(self.memory.apu_regs_mut());
+                Apu::off_cycle_step(self.memory.apu_regs_mut());
                 step = self.cpu_step();
                 ppu_result = self.ppu_step();
             }

@@ -100,7 +100,7 @@ impl Mapper for Mapper016 {
             }
             0x800D => todo!("Submapper 5 EEPROM Control."),
             0x600D..=0x7FFF => { /* Do nothing. */ }
-            0x800D..=0x9FFF => { /* Do nothing. */ }
+            0x800E..=0x9FFF => { /* Do nothing. */ }
             0xA000..=0xFFFF => { /* Do nothing. */ }
         }
     }

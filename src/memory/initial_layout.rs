@@ -49,7 +49,7 @@ impl InitialLayout {
             bank_index_registers.set(register_id, bank_index);
         }
 
-        MapperParams { prg_memory, chr_memory, name_table_mirroring, bank_index_registers }
+        MapperParams { prg_memory, chr_memory, bank_index_registers, name_table_mirroring }
     }
 }
 

@@ -48,7 +48,7 @@ impl Dmc {
     }
 
     pub fn write_sample_length(&mut self, value: u8) {
-        self.sample_length = ((value as u16) << 4) | 1;
+        self.sample_length = (u16::from(value) << 4) | 1;
     }
 
     pub(super) fn set_enabled(&mut self, enabled: bool) {
@@ -141,7 +141,7 @@ impl Default for Dmc {
             irq_pending: Default::default(),
             dma_pending_address: None,
             should_loop: Default::default(),
-            volume: Default::default(),
+            volume: U7::default(),
             period: Default::default(),
             cycles_remaining: 0,
             sample_start_address: CpuAddress::new(0xC000),

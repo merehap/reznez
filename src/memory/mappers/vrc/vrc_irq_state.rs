@@ -49,11 +49,11 @@ impl VrcIrqState {
     }
 
     pub fn set_reload_value_low_bits(&mut self, value: u8) {
-        self.counter_reload_low_value = value & 0b0000_1111
+        self.counter_reload_low_value = value & 0b0000_1111;
     }
 
     pub fn set_reload_value_high_bits(&mut self, value: u8) {
-        self.counter_reload_value = (value & 0b0000_1111) << 4 | self.counter_reload_low_value
+        self.counter_reload_value = (value & 0b0000_1111) << 4 | self.counter_reload_low_value;
     }
 
     pub fn set_mode(&mut self, value: u8) {
@@ -63,7 +63,7 @@ impl VrcIrqState {
             self.counter = self.counter_reload_value;
         }
         self.enable_upon_acknowledgement = value & 0b0000_0010 != 0;
-        self.mode = if value & 0b0000_00100 == 0 { IrqMode::Scanline } else { IrqMode::Cycle };
+        self.mode = if value & 0b0000_0100 == 0 { IrqMode::Scanline } else { IrqMode::Cycle };
     }
 
     pub fn acknowledge(&mut self) {

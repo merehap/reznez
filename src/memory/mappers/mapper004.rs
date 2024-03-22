@@ -81,8 +81,8 @@ impl Mapper for Mapper004 {
             0x6000..=0x7FFF =>                    params.write_prg(address, value),
             0x8000..=0x9FFF if is_even_address => self.bank_select(params, value),
             0x8000..=0x9FFF =>                    self.set_bank_index(params, value),
-            0xA000..=0xBFFF if is_even_address => self.set_mirroring(params, value),
-            0xA000..=0xBFFF =>                    self.prg_ram_protect(value),
+            0xA000..=0xBFFF if is_even_address => Mapper004::set_mirroring(params, value),
+            0xA000..=0xBFFF =>                    Mapper004::prg_ram_protect(value),
             0xC000..=0xDFFF if is_even_address => self.set_irq_reload_value(value),
             0xC000..=0xDFFF =>                    self.reload_irq_counter(),
             0xE000..=0xFFFF if is_even_address => self.disable_irq(),
@@ -153,9 +153,9 @@ impl Mapper004 {
         self.selected_register_id = BANK_INDEX_REGISTER_IDS[(value & 0b0000_0111) as usize];
 
         if chr_big_windows_first {
-            params.set_chr_layout(CHR_BIG_WINDOWS_FIRST)
+            params.set_chr_layout(CHR_BIG_WINDOWS_FIRST);
         } else {
-            params.set_chr_layout(CHR_SMALL_WINDOWS_FIRST)
+            params.set_chr_layout(CHR_SMALL_WINDOWS_FIRST);
         }
 
         if prg_fixed_c000 {
@@ -179,7 +179,7 @@ impl Mapper004 {
         params.set_bank_index_register(self.selected_register_id, bank_index);
     }
 
-    fn set_mirroring(&mut self, params: &mut MapperParams, value: u8) {
+    fn set_mirroring(params: &mut MapperParams, value: u8) {
         use NameTableMirroring::*;
         match (params.name_table_mirroring(), value & 0b0000_0001) {
             (Vertical, 1) => params.set_name_table_mirroring(Horizontal),
@@ -188,7 +188,7 @@ impl Mapper004 {
         }
     }
 
-    fn prg_ram_protect(&mut self, _value: u8) {
+    fn prg_ram_protect(_value: u8) {
         // TODO: Once NES 2.0 is supported, then MMC3 and MMC6 can properly be supported.
         /*
         if !self.prg_ram_enabled {

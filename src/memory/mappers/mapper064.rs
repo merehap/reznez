@@ -104,7 +104,7 @@ impl Mapper for Mapper064 {
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x9FFF if is_even_address => self.bank_select(params, value),
             0x8000..=0x9FFF => self.set_bank_index(params, value),
-            0xA000..=0xBFFF if is_even_address => self.set_name_table_mirroring(params, value),
+            0xA000..=0xBFFF if is_even_address => Mapper064::set_name_table_mirroring(params, value),
             0xA000..=0xBFFF => {/* Do nothing. No use of these registers has been found. */}
             0xC000..=0xDFFF if is_even_address => self.set_irq_counter_reload_value(value), 
             0xC000..=0xDFFF => self.set_irq_reload_mode(value),
@@ -209,7 +209,7 @@ impl Mapper064 {
         params.set_bank_index_register(self.selected_register_id, value);
     }
 
-    fn set_name_table_mirroring(&self, params: &mut MapperParams, value: u8) {
+    fn set_name_table_mirroring(params: &mut MapperParams, value: u8) {
         let mirroring = if value & 1 == 0 {
             NameTableMirroring::Vertical
         } else {

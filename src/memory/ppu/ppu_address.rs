@@ -231,7 +231,7 @@ impl PpuAddress {
     }
 
     fn coarse_y_scroll(self) -> TileRow {
-        TileRow::try_from_u8(((self.address & 0b1111100000) >> 5) as u8).unwrap()
+        TileRow::try_from_u8(((self.address & 0b11_1110_0000) >> 5) as u8).unwrap()
     }
 
     fn fine_y_scroll(self) -> RowInTile {

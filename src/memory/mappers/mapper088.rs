@@ -46,9 +46,9 @@ impl Mapper for Mapper088 {
             0x6000..=0x7FFF => params.write_prg(address, value),
             0x8000..=0x9FFF => {
                 if address.to_raw() % 2 == 0 {
-                    self.bank_select(params, value)
+                    self.bank_select(params, value);
                 } else {
-                    self.set_bank_index(params, value)
+                    self.set_bank_index(params, value);
                 }
             }
             0xA000..=0xFFFF => { /* Do nothing. */ }

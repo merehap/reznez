@@ -26,6 +26,7 @@ impl PulseChannel {
         self.volume_or_envelope =    (value & 0b0000_1111).into();
     }
 
+    #[allow(clippy::unused_self)]
     pub fn write_sweep_byte(&mut self, _value: u8) {
         //self.sweep = Sweep::from_u8(value);
     }

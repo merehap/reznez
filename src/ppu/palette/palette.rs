@@ -18,8 +18,7 @@ impl Palette {
 
     pub fn rgbt_from_low_high(self, low: bool, high: bool) -> Rgbt {
         PaletteIndex::from_low_high(low, high)
-            .map(|index| Rgbt::Opaque(self.0[index as usize]))
-            .unwrap_or(Rgbt::Transparent)
+            .map_or(Rgbt::Transparent, |index| Rgbt::Opaque(self.0[index as usize]))
     }
 }
 

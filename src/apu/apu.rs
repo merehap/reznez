@@ -32,7 +32,7 @@ impl Apu {
                 sink.append(source);
 
                 loop {
-                    thread::sleep(Duration::from_millis(1000))
+                    thread::sleep(Duration::from_millis(1000));
                 }
             });
         }
@@ -67,14 +67,14 @@ impl Apu {
             }
         }
 
-        if self.cycle_within_frame(regs) == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
+        if Apu::cycle_within_frame(regs) == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
             regs.maybe_set_frame_irq_pending();
         }
 
         regs.increment_cycle();
     }
 
-    pub fn off_cycle_step(&self, regs: &mut ApuRegisters) {
+    pub fn off_cycle_step(regs: &mut ApuRegisters) {
         regs.off_cycle();
         regs.dmc.maybe_start_dma();
         regs.maybe_update_step_mode();
@@ -83,7 +83,7 @@ impl Apu {
         const SECOND_STEP: u16 = 7456;
         const THIRD_STEP : u16 = 11185;
 
-        let cycle_within_frame = self.cycle_within_frame(regs);
+        let cycle_within_frame = Apu::cycle_within_frame(regs);
 
         use StepMode::*;
         match (regs.step_mode(), cycle_within_frame) {
@@ -110,14 +110,14 @@ impl Apu {
             _ => { /* Do nothing. */ }
         }
 
-        if self.cycle_within_frame(regs) == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
+        if Apu::cycle_within_frame(regs) == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
             regs.maybe_set_frame_irq_pending();
         }
 
         regs.triangle.off_cycle_step();
     }
 
-    pub fn cycle_within_frame(&self, regs: &ApuRegisters) -> u16 {
+    pub fn cycle_within_frame(regs: &ApuRegisters) -> u16 {
         u16::try_from(regs.cycle() % u64::from(regs.step_mode().frame_length())).unwrap()
     }
 

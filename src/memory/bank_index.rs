@@ -115,7 +115,7 @@ impl BankIndexRegisterId {
             10 => C10,
             11 => C11,
             12 => C12,
-            _ => panic!("Bad CHR ID: {}", id),
+            _ => panic!("Bad CHR ID: {id}"),
         }
     }
 }

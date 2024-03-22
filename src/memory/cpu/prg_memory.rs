@@ -214,23 +214,18 @@ pub struct PrgLayout(&'static [PrgWindow]);
 
 impl PrgLayout {
     pub const fn new(windows: &'static [PrgWindow]) -> PrgLayout {
-        if windows.is_empty() {
-            panic!("No PRG windows specified.");
-        }
+        assert!(!windows.is_empty(), "No PRG windows specified.");
 
-        if windows[0].start.to_raw() != 0x6000 {
-            panic!("The first PRG window must start at 0x6000.");
-        }
+        assert!(windows[0].start.to_raw() == 0x6000,
+            "The first PRG window must start at 0x6000.");
 
-        if windows[windows.len() - 1].end.to_raw() != 0xFFFF {
-            panic!("The last PRG window must end at 0xFFFF.");
-        }
+        assert!(windows[windows.len() - 1].end.to_raw() == 0xFFFF,
+                "The last PRG window must end at 0xFFFF.");
 
         let mut i = 1;
         while i < windows.len() {
-            if windows[i].start.to_raw() != windows[i - 1].end.to_raw() + 1 {
-                panic!("There must be no gaps nor overlap between PRG windows.");
-            }
+            assert!(windows[i].start.to_raw() == windows[i - 1].end.to_raw() + 1,
+                "There must be no gaps nor overlap between PRG windows.");
 
             i += 1;
         }
@@ -297,9 +292,7 @@ impl PrgWindow {
 
     pub const fn new(start: u16, end: u16, size: usize, prg_type: PrgBank) -> PrgWindow {
         assert!(end > start);
-        if end as usize - start as usize + 1 != size {
-            panic!("PRG window 'end - start != size'");
-        }
+        assert!(end as usize - start as usize + 1 == size);
 
         PrgWindow {
             start: CpuAddress::new(start),

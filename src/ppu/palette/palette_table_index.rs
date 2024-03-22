@@ -19,8 +19,8 @@ impl PaletteTableIndex {
     ) -> PaletteTableIndex {
         let palette_table_indexes = PaletteTableIndex::unpack_byte(attribute_byte);
         let index_selection =
-            if tile_row.to_usize()    / 2 % 2 == 0 {2} else {0} +
-            if tile_column.to_usize() / 2 % 2 == 0 {1} else {0};
+            2 * usize::from(tile_row.to_usize() / 2 % 2 == 0) +
+            usize::from(tile_column.to_usize() / 2 % 2 == 0);
         palette_table_indexes[index_selection]
     }
 
