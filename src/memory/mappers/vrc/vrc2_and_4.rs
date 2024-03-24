@@ -40,6 +40,7 @@ const NAME_TABLE_MIRRORINGS: [NameTableMirroring; 4] = [
     NameTableMirroring::OneScreenRightBank,
 ];
 
+// TODO: Separate VRC2 and VRC4.
 pub struct Vrc2And4 {
     low_address_bank_index_register_ids: BTreeMap<u16, BankIndexRegisterId>,
     high_address_bank_index_register_ids: BTreeMap<u16, BankIndexRegisterId>,

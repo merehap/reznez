@@ -2,6 +2,7 @@ use std::fmt;
 
 use log::error;
 
+use crate::cartridge::header_db::{HeaderDb, Header};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::unit::KIBIBYTE;
 
@@ -10,26 +11,32 @@ const PRG_ROM_CHUNK_LENGTH: usize = 16 * KIBIBYTE;
 const CHR_ROM_CHUNK_LENGTH: usize = 8 * KIBIBYTE;
 
 // See https://wiki.nesdev.org/w/index.php?title=INES
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct Cartridge {
     name: String,
 
     mapper_number: u16,
+    submapper_number: u8,
     name_table_mirroring: NameTableMirroring,
     has_persistent_memory: bool,
     ripper_name: String,
     ines2: Option<INes2>,
 
     trainer: Option<[u8; 512]>,
+
     prg_rom: Vec<u8>,
+    prg_ram_size: u32,
     chr_rom: Vec<u8>,
+    chr_ram_size: u32,
+
     console_type: ConsoleType,
     title: String,
 }
 
 impl Cartridge {
     #[rustfmt::skip]
-    pub fn load(name: String, rom: &[u8]) -> Result<Cartridge, String> {
+    pub fn load(name: String, rom: &[u8], header_db: &HeaderDb) -> Result<Cartridge, String> {
         if &rom[0..4] != INES_HEADER_CONSTANT {
             return Err(format!(
                 "Cannot load non-iNES ROM. Found {:?} but need {:?}.",
@@ -113,21 +120,36 @@ impl Cartridge {
             .take_while(|&c| c != '\u{0}')
             .collect();
 
-        Ok(Cartridge {
+        let mut cartridge =  Cartridge {
             name,
 
             mapper_number,
+            submapper_number: 0,
             name_table_mirroring,
             has_persistent_memory,
             ripper_name,
             ines2: None,
 
             trainer: None,
-            prg_rom,
-            chr_rom,
+            prg_rom: prg_rom.clone(),
+            prg_ram_size: 0,
+            chr_rom: chr_rom.clone(),
+            chr_ram_size: 0,
             console_type: ConsoleType::Nes,
             title,
-        })
+        };
+
+        if let Some(Header { prg_rom_size, prg_ram_size, chr_rom_size, chr_ram_size, mapper_number, submapper_number }) =
+                header_db.header_from_prg_rom(&prg_rom) {
+            assert_eq!(cartridge.mapper_number, mapper_number);
+            assert_eq!(prg_rom.len() as u32, prg_rom_size);
+            assert_eq!(chr_rom.len() as u32, chr_rom_size);
+            cartridge.submapper_number = submapper_number;
+            cartridge.prg_ram_size = prg_ram_size;
+            cartridge.chr_ram_size = chr_ram_size;
+        }
+
+        Ok(cartridge)
     }
 
     pub fn name(&self) -> &str {
@@ -136,6 +158,10 @@ impl Cartridge {
 
     pub fn mapper_number(&self) -> u16 {
         self.mapper_number
+    }
+
+    pub fn submapper_number(&self) -> u8 {
+        self.submapper_number
     }
 
     pub fn name_table_mirroring(&self) -> NameTableMirroring {
@@ -213,6 +239,7 @@ pub mod test_data {
         Cartridge {
             name: "Test".to_string(),
             mapper_number: 0,
+            submapper_number: 0,
             name_table_mirroring: NameTableMirroring::Horizontal,
             has_persistent_memory: false,
             ripper_name: "Test Ripper".to_string(),
@@ -220,7 +247,9 @@ pub mod test_data {
 
             trainer: None,
             prg_rom,
+            prg_ram_size: 0,
             chr_rom: vec![0x00; CHR_ROM_CHUNK_LENGTH],
+            chr_ram_size: 0,
             console_type: ConsoleType::Nes,
             title: "Test ROM".to_string(),
         }
@@ -249,6 +278,7 @@ pub mod test_data {
             name: "Test".to_string(),
 
             mapper_number: 0,
+            submapper_number: 0,
             name_table_mirroring: NameTableMirroring::Horizontal,
             has_persistent_memory: false,
             ripper_name: "Test Ripper".to_string(),
@@ -256,7 +286,9 @@ pub mod test_data {
 
             trainer: None,
             prg_rom,
+            prg_ram_size: 0,
             chr_rom: vec![0x00; CHR_ROM_CHUNK_LENGTH],
+            chr_ram_size: 0,
             console_type: ConsoleType::Nes,
             title: "Test ROM".to_string(),
         }

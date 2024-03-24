@@ -7,6 +7,7 @@ use log::info;
 use structopt::StructOpt;
 
 use crate::cartridge::cartridge::Cartridge;
+use crate::cartridge::header_db::HeaderDb;
 #[cfg(feature = "bevy")]
 use crate::gui::bevy_gui::BevyGui;
 use crate::gui::egui_gui::EguiGui;
@@ -37,7 +38,7 @@ impl Config {
         let mut rom = Vec::new();
         File::open(rom_path).unwrap().read_to_end(&mut rom).unwrap();
         let file_name = rom_path.file_name().unwrap().to_str().unwrap().to_string();
-        let cartridge = Cartridge::load(file_name, &rom).unwrap();
+        let cartridge = Cartridge::load(file_name, &rom, &HeaderDb::load()).unwrap();
         info!("ROM loaded.\n{}", cartridge);
 
         let system_palette =
