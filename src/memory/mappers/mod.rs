@@ -17,11 +17,16 @@ pub mod mapper013;
 
 pub mod mapper016;
 
-pub mod mapper021;
+pub mod mapper021_1;
+pub mod mapper021_2;
 pub mod mapper022;
-pub mod mapper023;
+pub mod mapper023_1;
+pub mod mapper023_2;
+pub mod mapper023_3;
 
-pub mod mapper025;
+pub mod mapper025_1;
+pub mod mapper025_2;
+pub mod mapper025_3;
 
 pub mod mapper032;
 pub mod mapper033;

@@ -5,83 +5,89 @@ use crate::memory::bank_index::BankIndexRegisterId::*;
 use crate::memory::bank_index::MetaRegisterId::*;
 
 pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
-    let mapper: Box<dyn Mapper> = match cartridge.mapper_number() {
+    let mapper: Box<dyn Mapper> = match (cartridge.mapper_number(), cartridge.submapper_number()) {
         // NROM
-        0 => Box::new(m::mapper000::Mapper000),
-        1 => Box::new(m::mapper001::Mapper001::new()),
-        2 => Box::new(m::mapper002::Mapper002),
-        3 => Box::new(m::mapper003::Mapper003),
-        4 => Box::new(m::mapper004::Mapper004::new()),
-        5 => Box::new(m::mapper005::Mapper005::new()),
+        (0, 0) => Box::new(m::mapper000::Mapper000),
+        (1, _) => Box::new(m::mapper001::Mapper001::new()),
+        (2, _) => Box::new(m::mapper002::Mapper002),
+        (3, _) => Box::new(m::mapper003::Mapper003),
+        (4, 0) => Box::new(m::mapper004::Mapper004::new()),
+        (5, 0) => Box::new(m::mapper005::Mapper005::new()),
 
-        7 => Box::new(m::mapper007::Mapper007),
+        (7, _) => Box::new(m::mapper007::Mapper007),
 
-        9 => Box::new(m::mapper009::Mapper009),
-        10 => Box::new(m::mapper010::Mapper010),
-        11 => Box::new(m::mapper011::Mapper011),
+        (9, 0) => Box::new(m::mapper009::Mapper009),
+        (10, 0) => Box::new(m::mapper010::Mapper010),
+        (11, 0) => Box::new(m::mapper011::Mapper011),
 
-        13 => Box::new(m::mapper013::Mapper013),
+        (13, 0) => Box::new(m::mapper013::Mapper013),
 
         // FCG-1 ASIC and LZ93D50 ASIC.
-        16 => Box::new(m::mapper016::Mapper016::new()),
+        (16, 0) => Box::new(m::mapper016::Mapper016::new()),
 
-        21 => m::mapper021::mapper021(),
-        22 => m::mapper022::mapper022(),
-        23 => m::mapper023::mapper023(),
+        (21, 1) => m::mapper021_1::mapper021_1(),
+        (21, 2) => m::mapper021_2::mapper021_2(),
+        (22, 0) => m::mapper022::mapper022(),
+        (23, 1) => m::mapper023_1::mapper023_1(),
+        (23, 2) => m::mapper023_2::mapper023_2(),
+        (23, 3) => m::mapper023_3::mapper023_3(),
 
-        25 => m::mapper025::mapper025(),
+        (25, 1) => m::mapper025_1::mapper025_1(),
+        (25, 2) => m::mapper025_2::mapper025_2(),
+        (25, 3) => m::mapper025_3::mapper025_3(),
 
         // Duplicate of 23, most likely.
-        27 => m::mapper023::mapper023(),
+        (27, 0) => m::mapper023_1::mapper023_1(),
 
-        32 => Box::new(m::mapper032::Mapper032),
-        33 => Box::new(m::mapper033::Mapper033),
-        34 => Box::new(m::mapper034::Mapper034::new(cartridge)),
+        (32, 0) => Box::new(m::mapper032::Mapper032),
+        (33, 0) => Box::new(m::mapper033::Mapper033),
+        (34, 0) => Box::new(m::mapper034::Mapper034::new(cartridge)),
 
-        38 => Box::new(m::mapper038::Mapper038),
+        (38, 0) => Box::new(m::mapper038::Mapper038),
         // Duplicate of 241.
-        39 => Box::new(m::mapper039::Mapper039::new()),
+        (39, 0) => Box::new(m::mapper039::Mapper039::new()),
 
-        46 => Box::new(m::mapper046::Mapper046::new()),
+        (46, 0) => Box::new(m::mapper046::Mapper046::new()),
 
-        64 => Box::new(m::mapper064::Mapper064::new()),
-        65 => Box::new(m::mapper065::Mapper065::new()),
-        66 => Box::new(m::mapper066::Mapper066),
+        (64, 0) => Box::new(m::mapper064::Mapper064::new()),
+        (65, 0) => Box::new(m::mapper065::Mapper065::new()),
+        (66, 0) => Box::new(m::mapper066::Mapper066),
 
-        70 => Box::new(m::mapper070::Mapper070),
-        71 => Box::new(m::mapper071::Mapper071),
+        (70, 0) => Box::new(m::mapper070::Mapper070),
+        (71, _) => Box::new(m::mapper071::Mapper071),
 
-        75 => Box::new(m::mapper075::Mapper075::new()),
+        (75, 0) => Box::new(m::mapper075::Mapper075::new()),
         // NAMCOT-3446
-        76 => Box::new(m::mapper076::Mapper076::new()),
+        (76, 0) => Box::new(m::mapper076::Mapper076::new()),
 
-        87 => Box::new(m::mapper087::Mapper087),
-        88 => Box::new(m::mapper088::Mapper088::new(cartridge)),
+        (87, 0) => Box::new(m::mapper087::Mapper087),
+        (88, 0) => Box::new(m::mapper088::Mapper088::new(cartridge)),
 
-        94 => Box::new(m::mapper094::Mapper094),
+        (94, 0) => Box::new(m::mapper094::Mapper094),
 
-        101 => Box::new(m::mapper101::Mapper101::new()),
+        (101, 0) => Box::new(m::mapper101::Mapper101::new()),
 
-        140 => Box::new(m::mapper140::Mapper140),
+        (140, 0) => Box::new(m::mapper140::Mapper140),
 
-        152 => Box::new(m::mapper152::Mapper152),
+        (152, 0) => Box::new(m::mapper152::Mapper152),
 
-        154 => Box::new(m::mapper154::Mapper154::new(cartridge)),
+        (154, 0) => Box::new(m::mapper154::Mapper154::new(cartridge)),
 
-        177 => Box::new(m::mapper177::Mapper177),
+        (177, 0) => Box::new(m::mapper177::Mapper177),
 
-        180 => Box::new(m::mapper180::Mapper180),
+        (180, 0) => Box::new(m::mapper180::Mapper180),
 
         // DxROM, Tengen MIMIC-1, Namcot 118
-        206 => Box::new(m::mapper206::Mapper206::new()),
+        (206, 0) => Box::new(m::mapper206::Mapper206::new()),
 
         // Namco 175 and 340
-        210 => Box::new(m::mapper210::Mapper210::new()),
+        (210, 0) => Box::new(m::mapper210::Mapper210::new()),
 
-        232 => Box::new(m::mapper232::Mapper232),
+        (232, 0) => Box::new(m::mapper232::Mapper232),
 
-        241 => Box::new(m::mapper241::Mapper241),
-        _ => todo!(),
+        (241, 0) => Box::new(m::mapper241::Mapper241),
+
+        (m, s) => todo!("Mapper {m} submapper {s} isn't implemented yet."),
     };
 
     let mut mapper_params = mapper.initial_layout().make_mapper_params(cartridge);

@@ -1,2 +1,3 @@
 pub mod vrc_irq_state;
-pub mod vrc2_and_4;
+pub mod vrc2;
+pub mod vrc4;
