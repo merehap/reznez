@@ -147,6 +147,8 @@ impl Cartridge {
             cartridge.submapper_number = submapper_number;
             cartridge.prg_ram_size = prg_ram_size;
             cartridge.chr_ram_size = chr_ram_size;
+        } else {
+            println!("ROM not found in header database.");
         }
 
         Ok(cartridge)

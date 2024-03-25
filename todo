@@ -8,7 +8,6 @@ Verify when the IRQ flag is supposed to be cleared. An update to the location of
 Wide pixels.
 Move nestest over to new formatting system.
 Disable OAMDATA writes (other than address increment) during rendering
-Battletoads
 Work out priorities for WorkRam vs registers. Why does WorkRam need to be explicitly written to by each mapper?
 Move CPU bus into CpuMemory
 Audio
@@ -72,7 +71,6 @@ Crystalis - Junk on scanline above status bar.
 
 MAPPER 7
 Aladdin - Corrupted sprites, gets stuck in a loop writing to PPUDATA, JAMs.
-Battletoads - Working except some key input bug and sprite flickering.
 
 MAPPER 21
 Wai Wai World 2 - Severe flickering (sprites aren't drawn in time?)
