@@ -17,16 +17,15 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C7)),
 ]);
 
-// FCG-1 ASIC (submapper 4) and LZ93D50 ASIC (submapper 5).
-pub struct Mapper016 {
+// LZ93D50 ASIC
+pub struct Mapper016_5 {
     irq_pending: bool,
     irq_counter_enabled: bool,
-    // Used only by submapper 5.
     irq_counter_latch: u16,
     irq_counter: u16,
 }
 
-impl Mapper for Mapper016 {
+impl Mapper for Mapper016_5 {
     fn initial_layout(&self) -> InitialLayout {
         InitialLayout::builder()
             .prg_max_bank_count(16)
@@ -115,7 +114,7 @@ impl Mapper for Mapper016 {
     }
 }
 
-impl Mapper016 {
+impl Mapper016_5 {
     pub fn new() -> Self {
         Self {
             irq_pending: false,
