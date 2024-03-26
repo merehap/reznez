@@ -144,6 +144,7 @@ impl Cartridge {
             assert_eq!(cartridge.mapper_number, mapper_number);
             assert_eq!(prg_rom.len() as u32, prg_rom_size);
             assert_eq!(chr_rom.len() as u32, chr_rom_size);
+            println!("CHR ROM length: {}", chr_rom.len());
             cartridge.submapper_number = submapper_number;
             cartridge.prg_ram_size = prg_ram_size;
             cartridge.chr_ram_size = chr_ram_size;
@@ -186,6 +187,7 @@ impl Cartridge {
 impl fmt::Display for Cartridge {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Mapper: {}", self.mapper_number)?;
+        writeln!(f, "Submapper: {}", self.submapper_number)?;
         writeln!(f, "Nametable mirroring: {:?}", self.name_table_mirroring)?;
         writeln!(f, "Persistent memory: {}", self.has_persistent_memory)?;
         writeln!(f, "Ripper: {}", self.ripper_name)?;

@@ -38,20 +38,19 @@ impl Mapper for Mapper016_4 {
     }
 
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
-        match address.to_raw() {
+        match address.to_raw() & 0xE00F {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
-            // First options are submapper 4, second options are submapper 5.
-            0x6000 | 0x8000 => params.set_bank_index_register(C0, value),
-            0x6001 | 0x8001 => params.set_bank_index_register(C1, value),
-            0x6002 | 0x8002 => params.set_bank_index_register(C2, value),
-            0x6003 | 0x8003 => params.set_bank_index_register(C3, value),
-            0x6004 | 0x8004 => params.set_bank_index_register(C4, value),
-            0x6005 | 0x8005 => params.set_bank_index_register(C5, value),
-            0x6006 | 0x8006 => params.set_bank_index_register(C6, value),
-            0x6007 | 0x8007 => params.set_bank_index_register(C7, value),
-            0x6008 | 0x8008 => params.set_bank_index_register(P0, value & 0b1111),
-            0x6009 | 0x8009 => {
+            0x6000 => params.set_bank_index_register(C0, value),
+            0x6001 => params.set_bank_index_register(C1, value),
+            0x6002 => params.set_bank_index_register(C2, value),
+            0x6003 => params.set_bank_index_register(C3, value),
+            0x6004 => params.set_bank_index_register(C4, value),
+            0x6005 => params.set_bank_index_register(C5, value),
+            0x6006 => params.set_bank_index_register(C6, value),
+            0x6007 => params.set_bank_index_register(C7, value),
+            0x6008 => params.set_bank_index_register(P0, value & 0b1111),
+            0x6009 => {
                 let mirroring = match value & 0b11 {
                     0 => NameTableMirroring::Vertical,
                     1 => NameTableMirroring::Horizontal,
@@ -78,26 +77,7 @@ impl Mapper for Mapper016_4 {
                 self.irq_counter &= 0b0000_0000_1111_1111;
                 self.irq_counter |= u16::from(value) << 8;
             }
-            0x800A => {
-                self.irq_pending = false;
-                self.irq_counter_enabled = value & 1 == 1;
-                if self.irq_counter_enabled && self.irq_counter == 0 {
-                    self.irq_pending = true;
-                }
-            }
-            0x800B => {
-                // Set the low byte.
-                self.irq_counter &= 0b1111_1111_0000_0000;
-                self.irq_counter |= u16::from(value);
-            }
-            0x800C => {
-                // Set the high byte.
-                self.irq_counter &= 0b0000_0000_1111_1111;
-                self.irq_counter |= u16::from(value) << 8;
-            }
-            0x600D..=0x7FFF => { /* Do nothing. */ }
-            0x800D..=0x9FFF => { /* Do nothing. */ }
-            0xA000..=0xFFFF => { /* Do nothing. */ }
+            0x600D..=0xFFFF => { /* Do nothing. */ }
         }
     }
 

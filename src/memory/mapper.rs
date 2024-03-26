@@ -347,7 +347,7 @@ pub trait Mapper {
             bank_text.push_str(&format!(", {index}"));
         }
 
-        bank_text.push_str(&format!(" ({} banks total)", params.prg_memory().bank_count()));
+        bank_text.push_str(&format!(" ({} banks total)", params.chr_memory().bank_count()));
 
         bank_text
     }
