@@ -27,6 +27,9 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
         // LZ93D50
         (16, 5) => Box::new(m::mapper016_5::Mapper016_5::new()),
 
+        (18, 0) => Box::new(m::mapper018::Mapper018::new()),
+
+        (20, 0) => panic!("Mapper 20 is only used for testing FDS images."),
         (21, 1) => m::mapper021_1::mapper021_1(),
         (21, 2) => m::mapper021_2::mapper021_2(),
         (22, 0) => m::mapper022::mapper022(),
