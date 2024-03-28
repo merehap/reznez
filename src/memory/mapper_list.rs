@@ -65,6 +65,8 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
         // NAMCOT-3446
         (76, 0) => Box::new(m::mapper076::Mapper076::new()),
 
+        (79, 0) => Box::new(m::mapper079::Mapper079),
+
         (87, 0) => Box::new(m::mapper087::Mapper087),
         (88, 0) => Box::new(m::mapper088::Mapper088::new(cartridge)),
 
@@ -73,6 +75,9 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
         (101, 0) => Box::new(m::mapper101::Mapper101::new()),
 
         (140, 0) => Box::new(m::mapper140::Mapper140),
+
+        // Duplicate of mapper 79, specifically for the Sachen 3015 board.
+        (146, 0) => Box::new(m::mapper079::Mapper079),
 
         (152, 0) => Box::new(m::mapper152::Mapper152),
 
