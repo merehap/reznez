@@ -104,6 +104,7 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
 
         (232, 0) => Box::new(m::mapper232::Mapper232),
 
+        (240, 0) => Box::new(m::mapper240::Mapper240),
         (241, 0) => Box::new(m::mapper241::Mapper241),
 
         (m, s) => todo!("Mapper {m} submapper {s} isn't implemented yet."),
