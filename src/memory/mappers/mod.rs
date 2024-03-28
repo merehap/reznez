@@ -44,6 +44,7 @@ pub mod mapper064;
 pub mod mapper065;
 pub mod mapper066;
 
+pub mod mapper069;
 pub mod mapper070;
 pub mod mapper071;
 
