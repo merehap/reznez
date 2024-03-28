@@ -81,6 +81,7 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
 
         (140, 0) => Box::new(m::mapper140::Mapper140),
 
+        (145, 0) => Box::new(m::mapper145::Mapper145),
         // Duplicate of mapper 79, specifically for the Sachen 3015 board.
         (146, 0) => Box::new(m::mapper079::Mapper079),
 
