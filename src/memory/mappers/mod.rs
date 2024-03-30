@@ -1,3 +1,4 @@
+pub mod mmc3;
 pub mod vrc;
 
 pub mod mapper000;
