@@ -112,7 +112,7 @@ impl Ppu {
         let len = self.frame_actions.current_cycle_actions(&self.clock).len();
         for i in 0..len {
             let cycle_action = self.frame_actions.current_cycle_actions(&self.clock)[i];
-            info!(target: "ppusteps", "\t{:?}", cycle_action);
+            info!(target: "ppusteps", " {}\t{:?}", self.clock, cycle_action);
             self.execute_cycle_action(mem, frame, cycle_action);
         }
 
@@ -406,15 +406,15 @@ impl Ppu {
 
             StartVblank => {
                 if self.suppress_vblank_active {
-                    info!(target: "ppuflags", "\tSuppressing vblank.");
+                    info!(target: "ppuflags", " {}\tSuppressing vblank.", self.clock);
                 } else {
-                    mem.regs_mut().start_vblank();
+                    mem.regs_mut().start_vblank(&self.clock);
                 }
 
                 self.suppress_vblank_active = false;
             }
             RequestNmi => {
-                info!(target: "ppuflags", "\tNMI requested.");
+                info!(target: "ppuflags", " {}\tNMI requested.", self.clock);
                 self.nmi_requested = true;
             }
             SetInitialScrollOffsets => {
@@ -430,7 +430,7 @@ impl Ppu {
             }
 
             ClearFlags => {
-                mem.regs_mut().stop_vblank();
+                mem.regs_mut().stop_vblank(&self.clock);
                 mem.regs_mut().clear_sprite0_hit();
                 mem.regs_mut().clear_sprite_overflow();
             }
@@ -495,7 +495,7 @@ impl Ppu {
 
     // Read 0x2002
     fn read_status(&mut self, regs: &mut PpuRegisters) {
-        regs.stop_vblank();
+        regs.stop_vblank(&self.clock);
         // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
         if self.clock.scanline() == 241 && self.clock.cycle() == 1 {
             self.suppress_vblank_active = true;
