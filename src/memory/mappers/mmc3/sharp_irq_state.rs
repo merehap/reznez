@@ -1,7 +1,7 @@
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table::PatternTableSide;
 
-pub struct NecIrqState {
+pub struct SharpIrqState {
     pending: bool,
     enabled: bool,
     counter: u8,
@@ -11,7 +11,7 @@ pub struct NecIrqState {
     pattern_table_side: PatternTableSide,
 }
 
-impl NecIrqState {
+impl SharpIrqState {
     pub fn new() -> Self {
         Self {
             pending: false,
@@ -43,7 +43,6 @@ impl NecIrqState {
         }
 
         if should_tick_irq_counter {
-            let old_counter_value = self.counter;
             if self.counter == 0 || self.force_reload_counter {
                 self.counter = self.counter_reload_value;
                 self.force_reload_counter = false;
@@ -51,9 +50,7 @@ impl NecIrqState {
                 self.counter -= 1;
             }
 
-            // NEC triggers an IRQ when the counter transitions from 1 to 0,
-            // whether from decrement or forced reload.
-            if self.enabled && self.counter == 0 && old_counter_value == 1 {
+            if self.enabled && self.counter == 0 {
                 self.pending = true;
             }
         }

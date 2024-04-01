@@ -2,12 +2,13 @@ use crate::memory::mapper::*;
 use crate::memory::mappers::mmc3::mmc3;
 use crate::memory::mappers::mmc3::nec_irq_state::NecIrqState;
 
-pub struct Mapper004 {
+// Identical to mapper 0, except NEC's IRQ behavior is used instead of Sharp's.
+pub struct Mapper004_4 {
     selected_register_id: BankIndexRegisterId,
     irq_state: NecIrqState,
 }
 
-impl Mapper for Mapper004 {
+impl Mapper for Mapper004_4 {
     fn initial_layout(&self) -> InitialLayout {
         mmc3::INITIAL_LAYOUT
     }
@@ -42,7 +43,7 @@ impl Mapper for Mapper004 {
     }
 }
 
-impl Mapper004 {
+impl Mapper004_4 {
     pub fn new() -> Self {
         Self {
             selected_register_id: C0,
