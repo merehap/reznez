@@ -14,18 +14,18 @@ impl Mapper for Mapper004_0 {
 
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         let is_even_address = address.to_raw() % 2 == 0;
-        match address.to_raw() {
-            0x0000..=0x401F => unreachable!(),
-            0x4020..=0x5FFF => { /* Do nothing. */ }
-            0x6000..=0x7FFF =>                    params.write_prg(address, value),
-            0x8000..=0x9FFF if is_even_address => mmc3::bank_select(params, &mut self.selected_register_id, value),
-            0x8000..=0x9FFF =>                    mmc3::set_bank_index(params, &mut self.selected_register_id, value),
-            0xA000..=0xBFFF if is_even_address => mmc3::set_mirroring(params, value),
-            0xA000..=0xBFFF =>                    mmc3::prg_ram_protect(params, value),
-            0xC000..=0xDFFF if is_even_address => self.irq_state.set_counter_reload_value(value),
-            0xC000..=0xDFFF =>                    self.irq_state.reload_counter(),
-            0xE000..=0xFFFF if is_even_address => self.irq_state.disable(),
-            0xE000..=0xFFFF =>                    self.irq_state.enable(),
+        match (address.to_raw(), is_even_address) {
+            (0x0000..=0x401F, _) => unreachable!(),
+            (0x4020..=0x5FFF, _) => { /* Do nothing. */ }
+            (0x6000..=0x7FFF, _) => params.write_prg(address, value),
+            (0x8000..=0x9FFF, true ) => mmc3::bank_select(params, &mut self.selected_register_id, value),
+            (0x8000..=0x9FFF, false) => mmc3::set_bank_index(params, &mut self.selected_register_id, value),
+            (0xA000..=0xBFFF, true ) => mmc3::set_mirroring(params, value),
+            (0xA000..=0xBFFF, false) => mmc3::prg_ram_protect(params, value),
+            (0xC000..=0xDFFF, true ) => self.irq_state.set_counter_reload_value(value),
+            (0xC000..=0xDFFF, false) => self.irq_state.reload_counter(),
+            (0xE000..=0xFFFF, true ) => self.irq_state.disable(),
+            (0xE000..=0xFFFF, false) => self.irq_state.enable(),
         }
     }
 
