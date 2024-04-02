@@ -238,7 +238,7 @@ pub const BRK_STEPS: &[Step] = &[
     WriteField(StatusForInstruction  , To::TopOfStack, &[DecrementStackPointer]),
     // Copy the new ProgramCounterLowByte to the data bus.
     Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
-    ReadField(ProgramCounterHighByte,  From::InterruptVectorHigh, &[ClearInterruptVector]),
+    ReadField(ProgramCounterHighByte,  From::InterruptVectorHigh, &[ClearInterruptVector, ClearNmi]),
 ];
 
 pub const RTI_STEPS: &[Step] = &[

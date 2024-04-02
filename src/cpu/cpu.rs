@@ -278,12 +278,16 @@ impl Cpu {
             SetInterruptVector => {
                 self.current_interrupt_vector =
                     if self.reset_pending {
+                        info!(target: "cpuflowcontrol", "Setting interrupt vector to RESET.");
                         Some(InterruptVector::Reset)
                     } else if self.nmi_status != NmiStatus::Inactive {
+                        info!(target: "cpuflowcontrol", "Setting interrupt vector to NMI.");
                         Some(InterruptVector::Nmi)
                     } else if self.irq_status == IrqStatus::Active {
+                        info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to IRQ.");
                         Some(InterruptVector::Irq)
                     } else if let Some(instruction) = self.current_instruction && instruction.op_code() == OpCode::BRK {
+                        info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to BRK.");
                         Some(InterruptVector::Irq)
                     } else {
                         None
