@@ -205,8 +205,8 @@ pub const START_STEPS: &[Step] = &[
     // NES Manual: "read/write line is disabled so that no writes to stack are accomplished".
     // Hopefully switching the writes to reads here is what is actually intended.
     Read(                              From::TopOfStack, &[DecrementStackPointer]),
-    Read(                              From::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
     Read(                              From::TopOfStack, &[DecrementStackPointer]),
+    Read(                              From::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
     // Copy the new ProgramCounterLowByte to the data bus.
     Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
     ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector, ClearReset]),
@@ -214,8 +214,8 @@ pub const START_STEPS: &[Step] = &[
 
 pub const NMI_STEPS: &[Step] = &[
     WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),
-    WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
-    WriteField(StatusForInterrupt    , To::TopOfStack, &[DecrementStackPointer]),
+    WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer]),
+    WriteField(StatusForInterrupt    , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
     // Copy the new ProgramCounterLowByte to the data bus.
     Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
     ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector, ClearNmi]),
@@ -223,8 +223,8 @@ pub const NMI_STEPS: &[Step] = &[
 
 pub const IRQ_STEPS: &[Step] = &[
     WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),
-    WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
-    WriteField(StatusForInterrupt    , To::TopOfStack, &[DecrementStackPointer]),
+    WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer]),
+    WriteField(StatusForInterrupt    , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
     // Copy the new ProgramCounterLowByte to the data bus.
     Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
     // TODO: Is ClearIrq supposed to be on the previous line? It was, then I moved it here for
@@ -234,8 +234,8 @@ pub const IRQ_STEPS: &[Step] = &[
 
 pub const BRK_STEPS: &[Step] = &[
     WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),
-    WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
-    WriteField(StatusForInstruction  , To::TopOfStack, &[DecrementStackPointer]),
+    WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer]),
+    WriteField(StatusForInstruction  , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
     // Copy the new ProgramCounterLowByte to the data bus.
     Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
     ReadField(ProgramCounterHighByte,  From::InterruptVectorHigh, &[ClearInterruptVector, ClearNmi]),
