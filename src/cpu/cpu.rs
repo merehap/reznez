@@ -232,8 +232,14 @@ impl Cpu {
         self.suppress_program_counter_increment = false;
 
         if self.nmi_status == NmiStatus::Pending {
-            info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
-            self.nmi_status = NmiStatus::Ready;
+            if let Some(instruction) = self.current_instruction && instruction.op_code() == OpCode::BRK {
+                // The first instruction of a BRK routine must occur before an NMI executes, for
+                // some reason.
+                info!(target: "cpuflowcontrol", "NMI will start after the NEXT instruction completes.");
+            } else {
+                info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
+                self.nmi_status = NmiStatus::Ready;
+            }
         }
 
         memory.process_end_of_cpu_cycle(self.cycle);

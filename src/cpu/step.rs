@@ -235,10 +235,10 @@ pub const IRQ_STEPS: &[Step] = &[
 pub const BRK_STEPS: &[Step] = &[
     WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),
     WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer]),
-    WriteField(StatusForInstruction  , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
+    WriteField(StatusForInstruction  , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector, ClearNmi]),
     // Copy the new ProgramCounterLowByte to the data bus.
     Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
-    ReadField(ProgramCounterHighByte,  From::InterruptVectorHigh, &[ClearInterruptVector, ClearNmi]),
+    ReadField(ProgramCounterHighByte,  From::InterruptVectorHigh, &[ClearInterruptVector]),
 ];
 
 pub const RTI_STEPS: &[Step] = &[
