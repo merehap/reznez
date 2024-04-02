@@ -209,7 +209,7 @@ pub const START_STEPS: &[Step] = &[
     Read(                              From::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
     // Copy the new ProgramCounterLowByte to the data bus.
     Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
-    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector, ClearReset]),
+    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector]),
 ];
 
 pub const NMI_STEPS: &[Step] = &[
@@ -218,7 +218,7 @@ pub const NMI_STEPS: &[Step] = &[
     WriteField(StatusForInterrupt    , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
     // Copy the new ProgramCounterLowByte to the data bus.
     Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
-    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector, ClearNmi]),
+    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector]),
 ];
 
 pub const IRQ_STEPS: &[Step] = &[
@@ -229,13 +229,13 @@ pub const IRQ_STEPS: &[Step] = &[
     Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
     // TODO: Is ClearIrq supposed to be on the previous line? It was, then I moved it here for
     // consistency.
-    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector, ClearIrq]),
+    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector]),
 ];
 
 pub const BRK_STEPS: &[Step] = &[
     WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),
     WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer]),
-    WriteField(StatusForInstruction  , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector, ClearNmi]),
+    WriteField(StatusForInstruction  , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
     // Copy the new ProgramCounterLowByte to the data bus.
     Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
     ReadField(ProgramCounterHighByte,  From::InterruptVectorHigh, &[ClearInterruptVector]),

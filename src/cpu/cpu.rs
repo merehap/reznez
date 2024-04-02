@@ -298,11 +298,12 @@ impl Cpu {
                     } else {
                         None
                     };
+                // We no longer need to track interrupt statuses now that the vector is set.
+                self.nmi_status = NmiStatus::Inactive;
+                self.irq_status = IrqStatus::Inactive;
+                self.reset_pending = false;
             }
             ClearInterruptVector => self.current_interrupt_vector = None,
-            ClearNmi => self.nmi_status = NmiStatus::Inactive,
-            ClearIrq => self.irq_status = IrqStatus::Inactive,
-            ClearReset => self.reset_pending = false,
 
             CheckNegativeAndZero => {
                 self.status.negative = (self.data_bus >> 7) == 1;
