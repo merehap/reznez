@@ -232,13 +232,15 @@ impl Cpu {
         self.suppress_program_counter_increment = false;
 
         if self.nmi_status == NmiStatus::Pending {
-            if let Some(instruction) = self.current_instruction && instruction.op_code() == OpCode::BRK {
-                // The first instruction of a BRK routine must occur before an NMI executes, for
-                // some reason.
-                info!(target: "cpuflowcontrol", "NMI will start after the NEXT instruction completes.");
-            } else {
+            if let Some(instruction) = self.current_instruction && instruction.op_code() != OpCode::BRK {
                 info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
                 self.nmi_status = NmiStatus::Ready;
+            } else {
+                // "The interrupt sequences themselves do not perform interrupt polling,
+                // meaning at least one instruction from the interrupt handler will execute
+                // before another interrupt is serviced."
+                // This includeds BRK.
+                info!(target: "cpuflowcontrol", "Interrupt sequence in progress: NMI delayed.");
             }
         }
 
