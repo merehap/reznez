@@ -191,6 +191,13 @@ impl Cpu {
 
         self.cycle += 1;
 
+        if irq_pending
+                && self.irq_status == IrqStatus::Inactive
+                && !self.status.interrupts_disabled
+                && self.current_instruction.is_some() {
+            self.irq_status = IrqStatus::Pending;
+        }
+
         if self.next_op_code.is_some() {
             self.step_queue.enqueue_op_code_interpret();
         }
@@ -226,21 +233,22 @@ impl Cpu {
         }
 
         for &action in step.actions() {
-            self.execute_cycle_action(memory, irq_pending, action);
+            self.execute_cycle_action(memory, action);
         }
 
         self.suppress_program_counter_increment = false;
 
-        if self.nmi_status == NmiStatus::Pending {
-            if let Some(instruction) = self.current_instruction && instruction.op_code() != OpCode::BRK {
+        // "The interrupt sequences themselves do not perform interrupt polling,
+        // meaning at least one instruction from the interrupt handler will execute
+        // before another interrupt is serviced."
+        // BRK is treated as an interrupt sequence in this case.
+        if let Some(instruction) = self.current_instruction && instruction.op_code() != OpCode::BRK {
+            if self.nmi_status == NmiStatus::Pending {
                 info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
                 self.nmi_status = NmiStatus::Ready;
-            } else {
-                // "The interrupt sequences themselves do not perform interrupt polling,
-                // meaning at least one instruction from the interrupt handler will execute
-                // before another interrupt is serviced."
-                // This includeds BRK.
-                info!(target: "cpuflowcontrol", "Interrupt sequence in progress: NMI delayed.");
+            } else if self.irq_status == IrqStatus::Pending {
+                info!(target: "cpuflowcontrol", "IRQ will start after the current instruction completes.");
+                self.irq_status = IrqStatus::Ready;
             }
         }
 
@@ -249,7 +257,7 @@ impl Cpu {
         Some(step)
     }
 
-    fn execute_cycle_action(&mut self, memory: &mut CpuMemory, irq_pending: bool, action: CycleAction) {
+    fn execute_cycle_action(&mut self, memory: &mut CpuMemory, action: CycleAction) {
         use CycleAction::*;
         match action {
             IncrementProgramCounter => {
@@ -291,7 +299,7 @@ impl Cpu {
                     } else if self.nmi_status != NmiStatus::Inactive {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to NMI.");
                         Some(InterruptVector::Nmi)
-                    } else if self.irq_status == IrqStatus::Active {
+                    } else if self.irq_status != IrqStatus::Inactive {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to IRQ.");
                         Some(InterruptVector::Irq)
                     } else if let Some(instruction) = self.current_instruction && instruction.op_code() == OpCode::BRK {
@@ -364,7 +372,8 @@ impl Cpu {
                 }
 
                 match self.nmi_status {
-                    NmiStatus::Inactive if irq_pending && !self.status.interrupts_disabled => {
+                    // TODO: Do we actually need to check if interrupts are enabled here?
+                    NmiStatus::Inactive if self.irq_status == IrqStatus::Ready && !self.status.interrupts_disabled => {
                         info!(target: "cpuflowcontrol", "Starting IRQ");
                         self.irq_status = IrqStatus::Active;
                         // IRQ has BRK's code point (0x00). TODO: Set the data bus to 0x00?
@@ -763,6 +772,8 @@ enum NmiStatus {
 #[derive(PartialEq, Eq, Debug)]
 enum IrqStatus {
     Inactive,
+    Pending,
+    Ready,
     Active,
 }
 
