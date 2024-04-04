@@ -156,6 +156,7 @@ impl Cpu {
     }
 
     pub fn schedule_nmi(&mut self) {
+        info!(target: "cpuflowcontrol", "NMI pending in CPU.");
         self.nmi_status = NmiStatus::Pending;
     }
 
@@ -195,6 +196,7 @@ impl Cpu {
                 && self.irq_status == IrqStatus::Inactive
                 && !self.status.interrupts_disabled
                 && self.current_instruction.is_some() {
+            info!(target: "cpuflowcontrol", "IRQ pending in CPU.");
             self.irq_status = IrqStatus::Pending;
         }
 
@@ -283,7 +285,6 @@ impl Cpu {
                 }
 
                 match self.nmi_status {
-                    // TODO: Do we actually need to check if interrupts are enabled here?
                     NmiStatus::Inactive if self.irq_status == IrqStatus::Ready && !self.status.interrupts_disabled => {
                         info!(target: "cpuflowcontrol", "Starting IRQ");
                         self.irq_status = IrqStatus::Active;
@@ -329,6 +330,7 @@ impl Cpu {
 
                 self.step_queue.enqueue_instruction(instruction.code_point());
             }
+
             ExecuteOpCode => {
                 let value = self.previous_data_bus_value;
                 let access_mode = self.current_instruction.unwrap().access_mode();
