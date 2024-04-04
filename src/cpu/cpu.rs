@@ -260,95 +260,6 @@ impl Cpu {
     fn execute_cycle_action(&mut self, memory: &mut CpuMemory, action: CycleAction) {
         use CycleAction::*;
         match action {
-            IncrementProgramCounter => {
-                if !self.suppress_program_counter_increment {
-                    self.program_counter.inc();
-                }
-            }
-            // TODO: Make sure this isn't supposed to wrap within the same page.
-            IncrementAddressBus => { self.address_bus.inc(); }
-            IncrementAddressBusLow => { self.address_bus.offset_low(1); }
-            IncrementDmaAddress => self.oam_dma_port.increment_current_address(),
-            StorePendingAddressLowByte => self.pending_address_low = self.previous_data_bus_value,
-            StorePendingAddressLowByteWithXOffset => {
-                let carry;
-                (self.pending_address_low, carry) =
-                    self.previous_data_bus_value.overflowing_add(self.x);
-                if carry {
-                    self.address_carry = 1;
-                }
-            }
-            StorePendingAddressLowByteWithYOffset => {
-                let carry;
-                (self.pending_address_low, carry) =
-                    self.previous_data_bus_value.overflowing_add(self.y);
-                if carry {
-                    self.address_carry = 1;
-                }
-            }
-
-            IncrementStackPointer => memory.stack().increment_stack_pointer(),
-            DecrementStackPointer => memory.stack().decrement_stack_pointer(),
-
-            DisableInterrupts => self.status.interrupts_disabled = true,
-            SetInterruptVector => {
-                self.current_interrupt_vector =
-                    if self.reset_pending {
-                        info!(target: "cpuflowcontrol", "Setting interrupt vector to RESET.");
-                        Some(InterruptVector::Reset)
-                    } else if self.nmi_status != NmiStatus::Inactive {
-                        info!(target: "cpuflowcontrol", "Setting interrupt vector to NMI.");
-                        Some(InterruptVector::Nmi)
-                    } else if self.irq_status != IrqStatus::Inactive {
-                        info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to IRQ.");
-                        Some(InterruptVector::Irq)
-                    } else if let Some(instruction) = self.current_instruction && instruction.op_code() == OpCode::BRK {
-                        info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to BRK.");
-                        Some(InterruptVector::Irq)
-                    } else {
-                        None
-                    };
-                // We no longer need to track interrupt statuses now that the vector is set.
-                self.nmi_status = NmiStatus::Inactive;
-                self.irq_status = IrqStatus::Inactive;
-                self.reset_pending = false;
-            }
-            ClearInterruptVector => self.current_interrupt_vector = None,
-
-            CheckNegativeAndZero => {
-                self.status.negative = (self.data_bus >> 7) == 1;
-                self.status.zero = self.data_bus == 0;
-            }
-
-            XOffsetAddressBus => { self.address_bus.offset_low(self.x); }
-            YOffsetAddressBus => { self.address_bus.offset_low(self.y); }
-            MaybeInsertOopsStep => {
-                if self.address_carry != 0 {
-                    self.step_queue.skip_to_front(ADDRESS_BUS_READ_STEP);
-                }
-            }
-            MaybeInsertBranchOopsStep => {
-                if self.address_carry != 0 {
-                    self.suppress_next_instruction_start = true;
-                    self.suppress_program_counter_increment = true;
-                    self.step_queue.skip_to_front(READ_OP_CODE_STEP);
-                }
-            }
-
-            CopyAddressToPC => {
-                self.program_counter = self.address_bus;
-            }
-            AddCarryToAddressBus => {
-                self.address_bus.offset_high(self.address_carry);
-                self.address_carry = 0;
-            }
-            AddCarryToProgramCounter => {
-                if self.address_carry != 0 {
-                    self.program_counter.offset_high(self.address_carry);
-                    self.address_carry = 0;
-                }
-            }
-
             StartNextInstruction => {
                 if self.suppress_next_instruction_start {
                     self.suppress_next_instruction_start = false;
@@ -577,6 +488,95 @@ impl Cpu {
                     JAM => self.jammed = true,
 
                     _ => todo!("{:X?}", self.current_instruction.unwrap()),
+                }
+            }
+
+            IncrementProgramCounter => {
+                if !self.suppress_program_counter_increment {
+                    self.program_counter.inc();
+                }
+            }
+            // TODO: Make sure this isn't supposed to wrap within the same page.
+            IncrementAddressBus => { self.address_bus.inc(); }
+            IncrementAddressBusLow => { self.address_bus.offset_low(1); }
+            IncrementDmaAddress => self.oam_dma_port.increment_current_address(),
+            StorePendingAddressLowByte => self.pending_address_low = self.previous_data_bus_value,
+            StorePendingAddressLowByteWithXOffset => {
+                let carry;
+                (self.pending_address_low, carry) =
+                    self.previous_data_bus_value.overflowing_add(self.x);
+                if carry {
+                    self.address_carry = 1;
+                }
+            }
+            StorePendingAddressLowByteWithYOffset => {
+                let carry;
+                (self.pending_address_low, carry) =
+                    self.previous_data_bus_value.overflowing_add(self.y);
+                if carry {
+                    self.address_carry = 1;
+                }
+            }
+
+            IncrementStackPointer => memory.stack().increment_stack_pointer(),
+            DecrementStackPointer => memory.stack().decrement_stack_pointer(),
+
+            DisableInterrupts => self.status.interrupts_disabled = true,
+            SetInterruptVector => {
+                self.current_interrupt_vector =
+                    if self.reset_pending {
+                        info!(target: "cpuflowcontrol", "Setting interrupt vector to RESET.");
+                        Some(InterruptVector::Reset)
+                    } else if self.nmi_status != NmiStatus::Inactive {
+                        info!(target: "cpuflowcontrol", "Setting interrupt vector to NMI.");
+                        Some(InterruptVector::Nmi)
+                    } else if self.irq_status != IrqStatus::Inactive {
+                        info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to IRQ.");
+                        Some(InterruptVector::Irq)
+                    } else if let Some(instruction) = self.current_instruction && instruction.op_code() == OpCode::BRK {
+                        info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to BRK.");
+                        Some(InterruptVector::Irq)
+                    } else {
+                        None
+                    };
+                // We no longer need to track interrupt statuses now that the vector is set.
+                self.nmi_status = NmiStatus::Inactive;
+                self.irq_status = IrqStatus::Inactive;
+                self.reset_pending = false;
+            }
+            ClearInterruptVector => self.current_interrupt_vector = None,
+
+            CheckNegativeAndZero => {
+                self.status.negative = (self.data_bus >> 7) == 1;
+                self.status.zero = self.data_bus == 0;
+            }
+
+            XOffsetAddressBus => { self.address_bus.offset_low(self.x); }
+            YOffsetAddressBus => { self.address_bus.offset_low(self.y); }
+            MaybeInsertOopsStep => {
+                if self.address_carry != 0 {
+                    self.step_queue.skip_to_front(ADDRESS_BUS_READ_STEP);
+                }
+            }
+            MaybeInsertBranchOopsStep => {
+                if self.address_carry != 0 {
+                    self.suppress_next_instruction_start = true;
+                    self.suppress_program_counter_increment = true;
+                    self.step_queue.skip_to_front(READ_OP_CODE_STEP);
+                }
+            }
+
+            CopyAddressToPC => {
+                self.program_counter = self.address_bus;
+            }
+            AddCarryToAddressBus => {
+                self.address_bus.offset_high(self.address_carry);
+                self.address_carry = 0;
+            }
+            AddCarryToProgramCounter => {
+                if self.address_carry != 0 {
+                    self.program_counter.offset_high(self.address_carry);
+                    self.address_carry = 0;
                 }
             }
         }
