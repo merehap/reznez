@@ -117,14 +117,14 @@ impl Nes {
         let ppu_result;
         match self.cycle % 6 {
             0 => {
-                self.apu.on_cycle_step(self.memory.apu_regs_mut());
+                Apu::off_cycle_step(self.memory.apu_regs_mut());
                 step = self.cpu_step();
                 ppu_result = self.ppu_step();
             }
             1 => ppu_result = self.ppu_step(),
             2 => ppu_result = self.ppu_step(),
             3 => {
-                Apu::off_cycle_step(self.memory.apu_regs_mut());
+                self.apu.on_cycle_step(self.memory.apu_regs_mut());
                 step = self.cpu_step();
                 ppu_result = self.ppu_step();
             }

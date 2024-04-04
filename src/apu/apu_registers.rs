@@ -121,7 +121,7 @@ impl ApuRegisters {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Status {
     dmc_interrupt: bool,
     frame_irq_pending: bool,
