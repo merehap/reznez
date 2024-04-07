@@ -20,9 +20,18 @@ pub struct ApuRegisters {
 
     off_cycle: bool,
     cycle: u64,
+
+    // Reloading the cycle counter must not cause a frame IRQ on cycle 0.
+    pub is_frame_irq_skip_cycle: bool,
 }
 
 impl ApuRegisters {
+    pub fn new() -> ApuRegisters {
+        let mut result = ApuRegisters::default();
+        result.is_frame_irq_skip_cycle = true;
+        result
+    }
+
     pub fn step_mode(&self) -> StepMode {
         self.step_mode
     }
@@ -83,6 +92,7 @@ impl ApuRegisters {
     pub fn maybe_update_step_mode(&mut self) {
         if let Some(write_delay) = self.write_delay {
             if write_delay == 1 {
+                self.is_frame_irq_skip_cycle = true;
                 self.cycle = 0;
                 self.write_delay = None;
                 self.step_mode = self.pending_step_mode;

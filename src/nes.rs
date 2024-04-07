@@ -117,7 +117,7 @@ impl Nes {
         let ppu_result;
         match self.cycle % 6 {
             0 => {
-                Apu::off_cycle_step(self.memory.apu_regs_mut());
+                self.apu.off_cycle_step(self.memory.apu_regs_mut());
                 step = self.cpu_step();
                 ppu_result = self.ppu_step();
             }

@@ -104,16 +104,18 @@ impl Apu {
         regs.increment_cycle();
     }
 
-    pub fn off_cycle_step(regs: &mut ApuRegisters) {
+    pub fn off_cycle_step(&mut self, regs: &mut ApuRegisters) {
         regs.off_cycle();
         regs.dmc.maybe_start_dma();
         regs.maybe_update_step_mode();
 
-        if Apu::cycle_within_frame(regs) == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
+        if Apu::cycle_within_frame(regs) == StepMode::FOUR_STEP_FRAME_LENGTH - 1
+                || (!regs.is_frame_irq_skip_cycle && Apu::cycle_within_frame(regs) == 0) {
             regs.maybe_set_frame_irq_pending();
         }
 
         regs.triangle.off_cycle_step();
+        regs.is_frame_irq_skip_cycle = false;
     }
 
     pub fn cycle_within_frame(regs: &ApuRegisters) -> u16 {

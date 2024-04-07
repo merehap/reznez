@@ -49,7 +49,7 @@ impl Memory {
             oam: Oam::new(),
             ports,
             ppu_registers: PpuRegisters::new(),
-            apu_registers: ApuRegisters::default(),
+            apu_registers: ApuRegisters::new(),
             system_palette,
         }
     }
