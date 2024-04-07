@@ -1,6 +1,6 @@
 use std::fmt;
 
-use log::error;
+use log::{warn, error};
 
 use crate::cartridge::header_db::{HeaderDb, Header};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
@@ -144,12 +144,11 @@ impl Cartridge {
             assert_eq!(cartridge.mapper_number, mapper_number);
             assert_eq!(prg_rom.len() as u32, prg_rom_size);
             assert_eq!(chr_rom.len() as u32, chr_rom_size);
-            println!("CHR ROM length: {}", chr_rom.len());
             cartridge.submapper_number = submapper_number;
             cartridge.prg_ram_size = prg_ram_size;
             cartridge.chr_ram_size = chr_ram_size;
         } else {
-            println!("ROM not found in header database.");
+            warn!("ROM not found in header database.");
         }
 
         Ok(cartridge)

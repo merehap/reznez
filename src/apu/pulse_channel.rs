@@ -5,7 +5,7 @@ use crate::util::bit_util;
 
 #[derive(Default)]
 pub struct PulseChannel {
-    pub(super) enabled: bool,
+    enabled: bool,
 
     duty: Duty,
     constant_volume: bool,

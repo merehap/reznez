@@ -67,23 +67,14 @@ impl Apu {
             }
         }
 
-        if Apu::cycle_within_frame(regs) == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
+        let cycle_within_frame = Apu::cycle_within_frame(regs);
+        if cycle_within_frame == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
             regs.maybe_set_frame_irq_pending();
         }
-
-        regs.increment_cycle();
-    }
-
-    pub fn off_cycle_step(regs: &mut ApuRegisters) {
-        regs.off_cycle();
-        regs.dmc.maybe_start_dma();
-        regs.maybe_update_step_mode();
 
         const FIRST_STEP : u16 = 3728;
         const SECOND_STEP: u16 = 7456;
         const THIRD_STEP : u16 = 11185;
-
-        let cycle_within_frame = Apu::cycle_within_frame(regs);
 
         use StepMode::*;
         match (regs.step_mode(), cycle_within_frame) {
@@ -109,6 +100,14 @@ impl Apu {
             (FiveStep, _) if cycle_within_frame >= StepMode::FIVE_STEP_FRAME_LENGTH => unreachable!(),
             _ => { /* Do nothing. */ }
         }
+
+        regs.increment_cycle();
+    }
+
+    pub fn off_cycle_step(regs: &mut ApuRegisters) {
+        regs.off_cycle();
+        regs.dmc.maybe_start_dma();
+        regs.maybe_update_step_mode();
 
         if Apu::cycle_within_frame(regs) == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
             regs.maybe_set_frame_irq_pending();
