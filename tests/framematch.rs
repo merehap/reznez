@@ -103,8 +103,6 @@ fn framematch() {
                 }
             }
         }
-
-        println!();
     });
 
     assert!(!failed.load(Ordering::Relaxed));
