@@ -12,6 +12,8 @@ pub struct Logger {
     pub log_ppu_stages: bool,
     pub log_ppu_flags: bool,
     pub log_ppu_steps: bool,
+    pub log_apu_cycles: bool,
+    pub log_apu_events: bool,
     pub log_oam_addr: bool,
 }
 
@@ -25,6 +27,8 @@ impl log::Log for Logger {
             "ppustage" => self.log_ppu_stages,
             "ppuflags" => self.log_ppu_flags,
             "ppusteps" => self.log_ppu_steps,
+            "apucycles" => self.log_apu_cycles,
+            "apuevents" => self.log_apu_events,
             "oamaddr" => self.log_oam_addr,
             target => {
                 let chunks: Vec<&str> = target.split("::").collect();

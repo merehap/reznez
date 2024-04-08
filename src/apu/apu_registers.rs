@@ -1,3 +1,5 @@
+use log::info;
+
 use crate::apu::pulse_channel::PulseChannel;
 use crate::apu::triangle_channel::TriangleChannel;
 use crate::apu::noise_channel::NoiseChannel;
@@ -65,12 +67,18 @@ impl ApuRegisters {
     }
 
     pub fn read_status(&mut self) -> Status {
+        if self.frame_irq_pending {
+            info!(target: "apuevents", "Status read cleared pending frame IRQ.");
+        }
+
         let status = self.peek_status();
         self.frame_irq_pending = false;
         status
     }
 
     pub fn write_status_byte(&mut self, value: u8) {
+        info!(target: "apuevents", "APU status write: {value:05b}");
+
         self.dmc.set_enabled(     value & 0b0001_0000 != 0);
         self.noise.set_enabled(   value & 0b0000_1000 != 0);
         self.triangle.set_enabled(value & 0b0000_0100 != 0);
@@ -86,12 +94,17 @@ impl ApuRegisters {
             self.frame_irq_pending = false;
         }
 
-        self.write_delay = Some(if self.off_cycle { 4 } else { 3 });
+        let write_delay = if self.off_cycle { 4 } else { 3 };
+        info!(target: "apuevents", "Frame counter write: {:?}, Suppress IRQ: {}, Write delay: {}",
+            self.pending_step_mode, self.suppress_irq, write_delay);
+
+        self.write_delay = Some(write_delay);
     }
 
     pub fn maybe_update_step_mode(&mut self) {
         if let Some(write_delay) = self.write_delay {
             if write_delay == 1 {
+                info!(target: "apuevents", "Resetting APU cycle and setting step mode.");
                 self.is_frame_irq_skip_cycle = true;
                 self.cycle = 0;
                 self.write_delay = None;
@@ -106,6 +119,7 @@ impl ApuRegisters {
     }
 
     pub fn decrement_length_counters(&mut self) {
+        info!(target: "apuevents", "Decrementing length counters.");
         self.pulse_1.length_counter.decrement_towards_zero();
         self.pulse_2.length_counter.decrement_towards_zero();
         self.triangle.length_counter.decrement_towards_zero();
@@ -122,11 +136,13 @@ impl ApuRegisters {
 
     pub fn maybe_set_frame_irq_pending(&mut self) {
         if self.step_mode == StepMode::FourStep && !self.suppress_irq {
+            info!(target: "apuevents", "Frame IRQ pending.");
             self.frame_irq_pending = true;
         }
     }
 
     pub fn acknowledge_frame_irq(&mut self) {
+        info!(target: "apuevents", "Frame IRQ acknowledged.");
         self.frame_irq_pending = false;
     }
 }

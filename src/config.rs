@@ -104,6 +104,12 @@ pub struct Opt {
     #[structopt(name = "logppusteps", long)]
     pub log_ppu_steps: bool,
 
+    #[structopt(name = "logapucycles", long)]
+    pub log_apu_cycles: bool,
+
+    #[structopt(name = "logapuevents", long)]
+    pub log_apu_events: bool,
+
     #[structopt(name = "logoamaddr", long)]
     pub log_oam_addr: bool,
 

@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
+use log::info;
 use rodio::{OutputStream, Sink};
 use rodio::source::Source;
 
@@ -48,6 +49,9 @@ impl Apu {
     }
 
     pub fn on_cycle_step(&mut self, regs: &mut ApuRegisters) {
+        let cycle = Apu::cycle_within_frame(regs);
+        info!(target: "apucycles", "APU on cycle: {cycle}");
+
         regs.on_cycle();
         regs.dmc.maybe_start_dma();
         regs.maybe_update_step_mode();
@@ -67,8 +71,8 @@ impl Apu {
             }
         }
 
-        let cycle_within_frame = Apu::cycle_within_frame(regs);
-        if cycle_within_frame == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
+        if cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
+            info!(target: "apuevents", "APU on cycle IRQ?");
             regs.maybe_set_frame_irq_pending();
         }
 
@@ -77,7 +81,7 @@ impl Apu {
         const THIRD_STEP : u16 = 11185;
 
         use StepMode::*;
-        match (regs.step_mode(), cycle_within_frame) {
+        match (regs.step_mode(), cycle) {
             (_, FIRST_STEP) => {
                 regs.triangle.decrement_linear_counter();
             }
@@ -88,16 +92,16 @@ impl Apu {
             (_, THIRD_STEP) => {
                 regs.triangle.decrement_linear_counter();
             }
-            (FourStep, _) if cycle_within_frame == StepMode::FOUR_STEP_FRAME_LENGTH - 1 => {
+            (FourStep, _) if cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1 => {
                 regs.triangle.decrement_linear_counter();
                 regs.decrement_length_counters();
             }
-            (FiveStep, _) if cycle_within_frame == StepMode::FIVE_STEP_FRAME_LENGTH - 1 => {
+            (FiveStep, _) if cycle == StepMode::FIVE_STEP_FRAME_LENGTH - 1 => {
                 regs.triangle.decrement_linear_counter();
                 regs.decrement_length_counters();
             }
-            (FourStep, _) if cycle_within_frame >= StepMode::FOUR_STEP_FRAME_LENGTH => unreachable!(),
-            (FiveStep, _) if cycle_within_frame >= StepMode::FIVE_STEP_FRAME_LENGTH => unreachable!(),
+            (FourStep, _) if cycle >= StepMode::FOUR_STEP_FRAME_LENGTH => unreachable!(),
+            (FiveStep, _) if cycle >= StepMode::FIVE_STEP_FRAME_LENGTH => unreachable!(),
             _ => { /* Do nothing. */ }
         }
 
@@ -105,12 +109,17 @@ impl Apu {
     }
 
     pub fn off_cycle_step(&mut self, regs: &mut ApuRegisters) {
+        let cycle = Apu::cycle_within_frame(regs);
+        info!(target: "apucycles", "APU off cycle: {cycle}");
+
         regs.off_cycle();
         regs.dmc.maybe_start_dma();
         regs.maybe_update_step_mode();
 
-        if Apu::cycle_within_frame(regs) == StepMode::FOUR_STEP_FRAME_LENGTH - 1
-                || (!regs.is_frame_irq_skip_cycle && Apu::cycle_within_frame(regs) == 0) {
+        if cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1
+                || (!regs.is_frame_irq_skip_cycle && cycle == 0) {
+
+            info!(target: "apuevents", "APU off cycle IRQ?");
             regs.maybe_set_frame_irq_pending();
         }
 
