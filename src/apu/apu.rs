@@ -104,8 +104,6 @@ impl Apu {
             (FiveStep, _) if cycle >= StepMode::FIVE_STEP_FRAME_LENGTH => unreachable!(),
             _ => { /* Do nothing. */ }
         }
-
-        regs.increment_cycle();
     }
 
     pub fn off_cycle_step(&mut self, regs: &mut ApuRegisters) {

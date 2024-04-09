@@ -115,6 +115,8 @@ impl ApuRegisters {
             } else {
                 self.write_delay = Some(write_delay - 1);
             }
+        } else if !self.off_cycle {
+            self.increment_cycle();
         }
     }
 
