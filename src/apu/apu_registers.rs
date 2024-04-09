@@ -20,7 +20,7 @@ pub struct ApuRegisters {
     frame_irq_pending: bool,
     write_delay: Option<u8>,
 
-    off_cycle: bool,
+    pub off_cycle: bool,
     cycle: u64,
 
     // Reloading the cycle counter must not cause a frame IRQ on cycle 0.
@@ -40,14 +40,6 @@ impl ApuRegisters {
 
     pub fn cycle(&self) -> u64 {
         self.cycle
-    }
-
-    pub fn off_cycle(&mut self) {
-        self.off_cycle = true;
-    }
-
-    pub fn on_cycle(&mut self) {
-        self.off_cycle = false;
     }
 
     pub fn increment_cycle(&mut self) {
@@ -107,6 +99,7 @@ impl ApuRegisters {
                 info!(target: "apuevents", "Resetting APU cycle and setting step mode.");
                 self.is_frame_irq_skip_cycle = true;
                 self.cycle = 0;
+                self.off_cycle = true;
                 self.write_delay = None;
                 self.step_mode = self.pending_step_mode;
                 if self.step_mode == StepMode::FiveStep {

@@ -36,6 +36,8 @@ fn nestest() {
         log_ppu_stages: false,
         log_ppu_flags: false,
         log_ppu_steps: false,
+        log_apu_cycles: false,
+        log_apu_events: false,
         log_oam_addr: false,
         frame_dump: false,
         analysis: false,
@@ -48,6 +50,8 @@ fn nestest() {
         log_ppu_stages: false,
         log_ppu_flags: false,
         log_ppu_steps: false,
+        log_apu_cycles: false,
+        log_apu_events: false,
         log_oam_addr: false,
     }).unwrap();
 
