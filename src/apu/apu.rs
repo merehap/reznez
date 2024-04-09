@@ -49,20 +49,21 @@ impl Apu {
     }
 
     pub fn step(&mut self, regs: &mut ApuRegisters) {
+        regs.dmc.maybe_start_dma();
+
         regs.off_cycle = !regs.off_cycle;
         if regs.off_cycle {
             self.off_cycle_step(regs);
         } else {
             self.on_cycle_step(regs);
         }
+
+        regs.maybe_update_step_mode();
     }
 
     fn on_cycle_step(&mut self, regs: &mut ApuRegisters) {
         let cycle = Apu::cycle_within_frame(regs);
         info!(target: "apucycles", "APU on cycle: {cycle}");
-
-        regs.dmc.maybe_start_dma();
-        regs.maybe_update_step_mode();
 
         regs.pulse_1.on_cycle_step();
         regs.pulse_2.on_cycle_step();
@@ -117,9 +118,6 @@ impl Apu {
     fn off_cycle_step(&mut self, regs: &mut ApuRegisters) {
         let cycle = Apu::cycle_within_frame(regs);
         info!(target: "apucycles", "APU off cycle: {cycle}");
-
-        regs.dmc.maybe_start_dma();
-        regs.maybe_update_step_mode();
 
         if cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1
                 || (!regs.is_frame_irq_skip_cycle && cycle == 0) {
