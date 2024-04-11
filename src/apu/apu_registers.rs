@@ -133,7 +133,7 @@ impl ApuRegisters {
         const SECOND_STEP: u16 = 7456;
         const THIRD_STEP : u16 = 11185;
 
-        let cycle = self.clock.to_u16();
+        let cycle = self.clock.cycle();
 
         use StepMode::*;
         match (self.clock.step_mode, cycle) {
@@ -182,9 +182,9 @@ impl ApuRegisters {
             return;
         }
 
-        let cycle = self.clock.to_u16();
-        let is_non_skip_first_cycle = cycle == 0 && self.clock.to_raw() != 0 && self.clock.is_off_cycle;
-        let is_last_cycle = self.clock.to_u16() == StepMode::FOUR_STEP_FRAME_LENGTH - 1;
+        let cycle = self.clock.cycle();
+        let is_non_skip_first_cycle = cycle == 0 && self.clock.raw_cycle() != 0 && self.clock.is_off_cycle;
+        let is_last_cycle = cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1;
         let is_irq_cycle = is_non_skip_first_cycle || is_last_cycle;
 
         if is_irq_cycle {
@@ -281,11 +281,11 @@ impl ApuClock {
         self.is_off_cycle
     }
 
-    pub fn to_u16(self) -> u16 {
+    pub fn cycle(self) -> u16 {
         u16::try_from(self.cycle % i64::from(self.step_mode.frame_length())).unwrap()
     }
 
-    pub fn to_raw(self) -> i64 {
+    pub fn raw_cycle(self) -> i64 {
         self.cycle
     }
 }

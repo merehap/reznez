@@ -62,12 +62,12 @@ impl Apu {
     }
 
     fn on_cycle_step(&mut self, regs: &mut ApuRegisters) {
-        let cycle = regs.clock().to_u16();
+        let cycle = regs.clock().cycle();
         info!(target: "apucycles", "APU on cycle: {cycle}");
 
         regs.on_cycle_step();
 
-        if regs.clock().to_raw() % 20 == 0 {
+        if regs.clock().raw_cycle() % 20 == 0 {
             let mut queue = self.pulse_queue
                 .lock()
                 .unwrap();
@@ -81,7 +81,7 @@ impl Apu {
     }
 
     fn off_cycle_step(&mut self, regs: &mut ApuRegisters) {
-        let cycle = regs.clock().to_u16();
+        let cycle = regs.clock().cycle();
         info!(target: "apucycles", "APU off cycle: {cycle}");
         regs.maybe_set_frame_irq_pending();
         regs.off_cycle_step();
