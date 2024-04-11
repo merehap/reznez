@@ -6,7 +6,6 @@ use crate::apu::noise_channel::NoiseChannel;
 use crate::apu::dmc::Dmc;
 use crate::util::bit_util;
 
-#[derive(Default)]
 pub struct ApuRegisters {
     pub pulse_1: PulseChannel,
     pub pulse_2: PulseChannel,
@@ -15,13 +14,11 @@ pub struct ApuRegisters {
     pub dmc: Dmc,
 
     pending_step_mode: StepMode,
-    step_mode: StepMode,
     suppress_irq: bool,
     frame_irq_pending: bool,
     write_delay: Option<u8>,
 
-    pub off_cycle: bool,
-    cycle: u64,
+    clock: ApuClock,
 
     // Reloading the cycle counter must not cause a frame IRQ on cycle 0.
     pub is_frame_irq_skip_cycle: bool,
@@ -29,21 +26,34 @@ pub struct ApuRegisters {
 
 impl ApuRegisters {
     pub fn new() -> ApuRegisters {
-        let mut result = ApuRegisters::default();
-        result.is_frame_irq_skip_cycle = true;
-        result
+        ApuRegisters {
+            pulse_1: PulseChannel::default(),
+            pulse_2: PulseChannel::default(),
+            triangle: TriangleChannel::default(),
+            noise: NoiseChannel::default(),
+            dmc: Dmc::default(),
+
+            pending_step_mode: StepMode::FourStep,
+            suppress_irq: false,
+            frame_irq_pending: false,
+            write_delay: None,
+
+            clock: ApuClock::new(),
+
+            is_frame_irq_skip_cycle: true,
+        }
     }
 
     pub fn step_mode(&self) -> StepMode {
-        self.step_mode
+        self.clock.step_mode
     }
 
-    pub fn cycle(&self) -> u64 {
-        self.cycle
+    pub fn clock(&self) -> ApuClock{
+        self.clock
     }
 
-    pub fn increment_cycle(&mut self) {
-        self.cycle += 1;
+    pub fn clock_mut(&mut self) -> &mut ApuClock {
+        &mut self.clock
     }
 
     pub fn peek_status(&self) -> Status {
@@ -86,7 +96,7 @@ impl ApuRegisters {
             self.frame_irq_pending = false;
         }
 
-        let write_delay = if self.off_cycle { 4 } else { 3 };
+        let write_delay = if self.clock.is_off_cycle { 4 } else { 3 };
         info!(target: "apuevents", "Frame counter write: {:?}, Suppress IRQ: {}, Write delay: {}",
             self.pending_step_mode, self.suppress_irq, write_delay);
 
@@ -98,18 +108,17 @@ impl ApuRegisters {
             if write_delay == 1 {
                 info!(target: "apuevents", "Resetting APU cycle and setting step mode.");
                 self.is_frame_irq_skip_cycle = true;
-                self.cycle = 0;
-                self.off_cycle = true;
+                self.clock.reset();
                 self.write_delay = None;
-                self.step_mode = self.pending_step_mode;
-                if self.step_mode == StepMode::FiveStep {
+                self.clock.step_mode = self.pending_step_mode;
+                if self.clock.step_mode == StepMode::FiveStep {
                     self.decrement_length_counters();
                 }
             } else {
                 self.write_delay = Some(write_delay - 1);
             }
-        } else if !self.off_cycle {
-            self.increment_cycle();
+        } else {
+            self.clock.increment();
         }
     }
 
@@ -130,7 +139,7 @@ impl ApuRegisters {
     }
 
     pub fn maybe_set_frame_irq_pending(&mut self) {
-        if self.step_mode == StepMode::FourStep && !self.suppress_irq {
+        if self.clock.step_mode == StepMode::FourStep && !self.suppress_irq {
             info!(target: "apuevents", "Frame IRQ pending.");
             self.frame_irq_pending = true;
         }
@@ -186,5 +195,49 @@ impl StepMode {
             StepMode::FourStep => StepMode::FOUR_STEP_FRAME_LENGTH,
             StepMode::FiveStep => StepMode::FIVE_STEP_FRAME_LENGTH,
         }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct ApuClock {
+    cycle: i64,
+    is_off_cycle: bool,
+    step_mode: StepMode,
+}
+
+impl ApuClock {
+    pub fn new() -> Self {
+        Self {
+            cycle: 0,
+            is_off_cycle: false,
+            step_mode: StepMode::FourStep,
+        }
+    }
+
+    pub fn toggle(&mut self) {
+        self.is_off_cycle = !self.is_off_cycle;
+    }
+
+    pub fn increment(&mut self) {
+        if !self.is_off_cycle {
+            self.cycle += 1;
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.cycle = 0;
+        self.is_off_cycle = true;
+    }
+
+    pub fn is_off_cycle(self) -> bool {
+        self.is_off_cycle
+    }
+
+    pub fn to_u16(self) -> u16 {
+        u16::try_from(self.cycle % i64::from(self.step_mode.frame_length())).unwrap()
+    }
+
+    pub fn to_raw(self) -> i64 {
+        self.cycle
     }
 }

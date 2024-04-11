@@ -51,8 +51,8 @@ impl Apu {
     pub fn step(&mut self, regs: &mut ApuRegisters) {
         regs.dmc.maybe_start_dma();
 
-        regs.off_cycle = !regs.off_cycle;
-        if regs.off_cycle {
+        regs.clock_mut().toggle();
+        if regs.clock().is_off_cycle() {
             self.off_cycle_step(regs);
         } else {
             self.on_cycle_step(regs);
@@ -62,7 +62,7 @@ impl Apu {
     }
 
     fn on_cycle_step(&mut self, regs: &mut ApuRegisters) {
-        let cycle = Apu::cycle_within_frame(regs);
+        let cycle = regs.clock().to_u16();
         info!(target: "apucycles", "APU on cycle: {cycle}");
 
         regs.pulse_1.on_cycle_step();
@@ -71,7 +71,7 @@ impl Apu {
         regs.noise.on_cycle_step();
         regs.dmc.on_cycle_step();
 
-        if regs.cycle() % 20 == 0 {
+        if regs.clock().to_raw() % 20 == 0 {
             let mut queue = self.pulse_queue
                 .lock()
                 .unwrap();
@@ -116,7 +116,7 @@ impl Apu {
     }
 
     fn off_cycle_step(&mut self, regs: &mut ApuRegisters) {
-        let cycle = Apu::cycle_within_frame(regs);
+        let cycle = regs.clock().to_u16();
         info!(target: "apucycles", "APU off cycle: {cycle}");
 
         if cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1
@@ -128,10 +128,6 @@ impl Apu {
 
         regs.triangle.off_cycle_step();
         regs.is_frame_irq_skip_cycle = false;
-    }
-
-    pub fn cycle_within_frame(regs: &ApuRegisters) -> u16 {
-        u16::try_from(regs.cycle() % u64::from(regs.step_mode().frame_length())).unwrap()
     }
 
     fn mix_samples(regs: &ApuRegisters) -> f32 {
