@@ -19,9 +19,6 @@ pub struct ApuRegisters {
     write_delay: Option<u8>,
 
     clock: ApuClock,
-
-    // Reloading the cycle counter must not cause a frame IRQ on cycle 0.
-    pub is_frame_irq_skip_cycle: bool,
 }
 
 impl ApuRegisters {
@@ -39,8 +36,6 @@ impl ApuRegisters {
             write_delay: None,
 
             clock: ApuClock::new(),
-
-            is_frame_irq_skip_cycle: true,
         }
     }
 
@@ -107,7 +102,6 @@ impl ApuRegisters {
         if let Some(write_delay) = self.write_delay {
             if write_delay == 1 {
                 info!(target: "apuevents", "Resetting APU cycle and setting step mode.");
-                self.is_frame_irq_skip_cycle = true;
                 self.clock.reset();
                 self.write_delay = None;
                 self.clock.step_mode = self.pending_step_mode;
@@ -139,7 +133,16 @@ impl ApuRegisters {
     }
 
     pub fn maybe_set_frame_irq_pending(&mut self) {
-        if self.clock.step_mode == StepMode::FourStep && !self.suppress_irq {
+        if self.suppress_irq || self.clock.step_mode != StepMode::FourStep {
+            return;
+        }
+
+        let cycle = self.clock.to_u16();
+        let is_non_skip_first_cycle = cycle == 0 && self.clock.to_raw() != 0 && self.clock.is_off_cycle;
+        let is_last_cycle = self.clock.to_u16() == StepMode::FOUR_STEP_FRAME_LENGTH - 1;
+        let is_irq_cycle = is_non_skip_first_cycle || is_last_cycle;
+
+        if is_irq_cycle {
             info!(target: "apuevents", "Frame IRQ pending.");
             self.frame_irq_pending = true;
         }

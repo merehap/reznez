@@ -80,10 +80,7 @@ impl Apu {
             }
         }
 
-        if cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1 {
-            info!(target: "apuevents", "APU on cycle IRQ?");
-            regs.maybe_set_frame_irq_pending();
-        }
+        regs.maybe_set_frame_irq_pending();
 
         const FIRST_STEP : u16 = 3728;
         const SECOND_STEP: u16 = 7456;
@@ -118,16 +115,8 @@ impl Apu {
     fn off_cycle_step(&mut self, regs: &mut ApuRegisters) {
         let cycle = regs.clock().to_u16();
         info!(target: "apucycles", "APU off cycle: {cycle}");
-
-        if cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1
-                || (!regs.is_frame_irq_skip_cycle && cycle == 0) {
-
-            info!(target: "apuevents", "APU off cycle IRQ?");
-            regs.maybe_set_frame_irq_pending();
-        }
-
+        regs.maybe_set_frame_irq_pending();
         regs.triangle.off_cycle_step();
-        regs.is_frame_irq_skip_cycle = false;
     }
 
     fn mix_samples(regs: &ApuRegisters) -> f32 {
