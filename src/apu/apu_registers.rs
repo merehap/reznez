@@ -116,7 +116,52 @@ impl ApuRegisters {
         }
     }
 
-    pub fn decrement_length_counters(&mut self) {
+    pub fn on_cycle_step(&mut self) {
+        self.pulse_1.on_cycle_step();
+        self.pulse_2.on_cycle_step();
+        self.triangle.on_cycle_step();
+        self.noise.on_cycle_step();
+        self.dmc.on_cycle_step();
+    }
+
+    pub fn off_cycle_step(&mut self) {
+        self.triangle.off_cycle_step();
+    }
+
+    pub fn maybe_decrement_counters(&mut self) {
+        const FIRST_STEP : u16 = 3728;
+        const SECOND_STEP: u16 = 7456;
+        const THIRD_STEP : u16 = 11185;
+
+        let cycle = self.clock.to_u16();
+
+        use StepMode::*;
+        match (self.clock.step_mode, cycle) {
+            (_, FIRST_STEP) => {
+                self.triangle.decrement_linear_counter();
+            }
+            (_, SECOND_STEP) => {
+                self.triangle.decrement_linear_counter();
+                self.decrement_length_counters();
+            }
+            (_, THIRD_STEP) => {
+                self.triangle.decrement_linear_counter();
+            }
+            (FourStep, _) if cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1 => {
+                self.triangle.decrement_linear_counter();
+                self.decrement_length_counters();
+            }
+            (FiveStep, _) if cycle == StepMode::FIVE_STEP_FRAME_LENGTH - 1 => {
+                self.triangle.decrement_linear_counter();
+                self.decrement_length_counters();
+            }
+            (FourStep, _) if cycle >= StepMode::FOUR_STEP_FRAME_LENGTH => unreachable!(),
+            (FiveStep, _) if cycle >= StepMode::FIVE_STEP_FRAME_LENGTH => unreachable!(),
+            _ => { /* Do nothing. */ }
+        }
+    }
+
+    fn decrement_length_counters(&mut self) {
         info!(target: "apuevents", "Decrementing length counters.");
         self.pulse_1.length_counter.decrement_towards_zero();
         self.pulse_2.length_counter.decrement_towards_zero();

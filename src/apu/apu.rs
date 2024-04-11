@@ -7,7 +7,7 @@ use log::info;
 use rodio::{OutputStream, Sink};
 use rodio::source::Source;
 
-use crate::apu::apu_registers::{ApuRegisters, StepMode};
+use crate::apu::apu_registers::ApuRegisters;
 
 const SAMPLE_RATE: u32 = 44100;
 const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
@@ -65,11 +65,7 @@ impl Apu {
         let cycle = regs.clock().to_u16();
         info!(target: "apucycles", "APU on cycle: {cycle}");
 
-        regs.pulse_1.on_cycle_step();
-        regs.pulse_2.on_cycle_step();
-        regs.triangle.on_cycle_step();
-        regs.noise.on_cycle_step();
-        regs.dmc.on_cycle_step();
+        regs.on_cycle_step();
 
         if regs.clock().to_raw() % 20 == 0 {
             let mut queue = self.pulse_queue
@@ -81,42 +77,14 @@ impl Apu {
         }
 
         regs.maybe_set_frame_irq_pending();
-
-        const FIRST_STEP : u16 = 3728;
-        const SECOND_STEP: u16 = 7456;
-        const THIRD_STEP : u16 = 11185;
-
-        use StepMode::*;
-        match (regs.step_mode(), cycle) {
-            (_, FIRST_STEP) => {
-                regs.triangle.decrement_linear_counter();
-            }
-            (_, SECOND_STEP) => {
-                regs.triangle.decrement_linear_counter();
-                regs.decrement_length_counters();
-            }
-            (_, THIRD_STEP) => {
-                regs.triangle.decrement_linear_counter();
-            }
-            (FourStep, _) if cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1 => {
-                regs.triangle.decrement_linear_counter();
-                regs.decrement_length_counters();
-            }
-            (FiveStep, _) if cycle == StepMode::FIVE_STEP_FRAME_LENGTH - 1 => {
-                regs.triangle.decrement_linear_counter();
-                regs.decrement_length_counters();
-            }
-            (FourStep, _) if cycle >= StepMode::FOUR_STEP_FRAME_LENGTH => unreachable!(),
-            (FiveStep, _) if cycle >= StepMode::FIVE_STEP_FRAME_LENGTH => unreachable!(),
-            _ => { /* Do nothing. */ }
-        }
+        regs.maybe_decrement_counters();
     }
 
     fn off_cycle_step(&mut self, regs: &mut ApuRegisters) {
         let cycle = regs.clock().to_u16();
         info!(target: "apucycles", "APU off cycle: {cycle}");
         regs.maybe_set_frame_irq_pending();
-        regs.triangle.off_cycle_step();
+        regs.off_cycle_step();
     }
 
     fn mix_samples(regs: &ApuRegisters) -> f32 {
