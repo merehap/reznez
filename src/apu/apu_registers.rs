@@ -99,19 +99,19 @@ impl ApuRegisters {
     }
 
     pub fn maybe_update_step_mode(&mut self) {
-        if let Some(write_delay) = self.write_delay {
-            if write_delay == 1 {
-                info!(target: "apuevents", "Resetting APU cycle and setting step mode.");
-                self.clock.reset();
-                self.write_delay = None;
-                self.clock.step_mode = self.pending_step_mode;
-                if self.clock.step_mode == StepMode::FiveStep {
-                    self.decrement_length_counters();
-                }
-            } else {
-                self.write_delay = Some(write_delay - 1);
+        if self.write_delay == Some(1) {
+            info!(target: "apuevents", "Resetting APU cycle and setting step mode.");
+            self.clock.reset();
+            self.write_delay = None;
+            self.clock.step_mode = self.pending_step_mode;
+            if self.clock.step_mode == StepMode::FiveStep {
+                self.decrement_length_counters();
             }
         } else {
+            if let Some(write_delay) = self.write_delay {
+                self.write_delay = Some(write_delay - 1);
+            }
+
             self.clock.increment();
         }
     }
