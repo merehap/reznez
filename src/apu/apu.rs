@@ -49,6 +49,7 @@ impl Apu {
     }
 
     pub fn step(&mut self, regs: &mut ApuRegisters) {
+        regs.maybe_update_step_mode();
         regs.dmc.maybe_start_dma();
 
         regs.clock_mut().toggle();
@@ -58,7 +59,6 @@ impl Apu {
             self.on_cycle_step(regs);
         }
 
-        regs.maybe_update_step_mode();
         regs.clock_mut().increment();
     }
 

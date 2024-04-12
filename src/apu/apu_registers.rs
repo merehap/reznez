@@ -272,7 +272,7 @@ impl ApuClock {
 
     pub fn reset(&mut self) {
         self.cycle = 0;
-        self.is_off_cycle = true;
+        self.is_off_cycle = false;
     }
 
     pub fn is_off_cycle(self) -> bool {
