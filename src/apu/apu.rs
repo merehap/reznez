@@ -59,6 +59,7 @@ impl Apu {
         }
 
         regs.maybe_update_step_mode();
+        regs.clock_mut().increment();
     }
 
     fn on_cycle_step(&mut self, regs: &mut ApuRegisters) {

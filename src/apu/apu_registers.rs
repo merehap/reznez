@@ -111,8 +111,6 @@ impl ApuRegisters {
             if let Some(write_delay) = self.write_delay {
                 self.write_delay = Some(write_delay - 1);
             }
-
-            self.clock.increment();
         }
     }
 
