@@ -63,7 +63,7 @@ impl Apu {
 
     fn on_cycle_step(&mut self, regs: &mut ApuRegisters) {
         let cycle = regs.clock().cycle();
-        info!(target: "apucycles", "APU on cycle: {cycle}");
+        info!(target: "apucycles", "APU cycle: {cycle}.5");
 
         regs.on_cycle_step();
 
@@ -82,7 +82,7 @@ impl Apu {
 
     fn off_cycle_step(&mut self, regs: &mut ApuRegisters) {
         let cycle = regs.clock().cycle();
-        info!(target: "apucycles", "APU off cycle: {cycle}");
+        info!(target: "apucycles", "APU cycle: {cycle}.0");
         regs.maybe_set_frame_irq_pending();
         regs.off_cycle_step();
     }
