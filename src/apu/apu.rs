@@ -52,14 +52,12 @@ impl Apu {
         regs.maybe_update_step_mode();
         regs.dmc.maybe_start_dma();
 
-        regs.clock_mut().toggle();
+        regs.clock_mut().increment();
         if regs.clock().is_off_cycle() {
             self.off_cycle_step(regs);
         } else {
             self.on_cycle_step(regs);
         }
-
-        regs.clock_mut().increment();
     }
 
     fn on_cycle_step(&mut self, regs: &mut ApuRegisters) {

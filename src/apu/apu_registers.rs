@@ -63,6 +63,7 @@ impl ApuRegisters {
         }
     }
 
+    // Read 0x4015
     pub fn read_status(&mut self) -> Status {
         if self.frame_irq_pending {
             info!(target: "apuevents", "Status read cleared pending frame IRQ.");
@@ -73,6 +74,7 @@ impl ApuRegisters {
         status
     }
 
+    // Write 0x4015
     pub fn write_status_byte(&mut self, value: u8) {
         info!(target: "apuevents", "APU status write: {value:05b}");
 
@@ -83,6 +85,7 @@ impl ApuRegisters {
         self.pulse_1.set_enabled( value & 0b0000_0001 != 0);
     }
 
+    // Write 0x4017
     pub fn write_frame_counter(&mut self, value: u8) {
         use StepMode::*;
         self.pending_step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
@@ -254,24 +257,22 @@ pub struct ApuClock {
 impl ApuClock {
     pub fn new() -> Self {
         Self {
-            cycle: 0,
+            cycle: -1,
             is_off_cycle: false,
             step_mode: StepMode::FourStep,
         }
-    }
-
-    pub fn toggle(&mut self) {
-        self.is_off_cycle = !self.is_off_cycle;
     }
 
     pub fn increment(&mut self) {
         if !self.is_off_cycle {
             self.cycle += 1;
         }
+
+        self.is_off_cycle = !self.is_off_cycle;
     }
 
     pub fn reset(&mut self) {
-        self.cycle = 0;
+        self.cycle = -1;
         self.is_off_cycle = false;
     }
 
