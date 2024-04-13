@@ -18,6 +18,11 @@ pub struct ApuRegisters {
     frame_irq_pending: bool,
     write_delay: Option<u8>,
 
+    // Whenever a quarter or half frame signal occurs, recurrence is suppressed for 2 cycles.
+    // This is the basis of apu_test_2, motivation described here:
+    // https://forums.nesdev.org/viewtopic.php?t=11174&sid=fe21b7f101cf155ca56eda5287c14c89
+    counter_suppression_cycles: u8,
+
     clock: ApuClock,
 }
 
@@ -34,6 +39,8 @@ impl ApuRegisters {
             suppress_irq: false,
             frame_irq_pending: false,
             write_delay: None,
+
+            counter_suppression_cycles: 0,
 
             clock: ApuClock::new(),
         }
@@ -102,18 +109,21 @@ impl ApuRegisters {
     }
 
     pub fn maybe_update_step_mode(&mut self) {
+        if self.counter_suppression_cycles > 0 {
+            self.counter_suppression_cycles -= 1;
+        }
+
         if self.write_delay == Some(1) {
             info!(target: "apuevents", "Resetting APU cycle and setting step mode.");
             self.clock.reset();
             self.write_delay = None;
             self.clock.step_mode = self.pending_step_mode;
-            if self.clock.step_mode == StepMode::FiveStep {
+            if self.clock.step_mode == StepMode::FiveStep && self.counter_suppression_cycles == 0 {
                 self.decrement_length_counters();
+                self.counter_suppression_cycles = 2;
             }
-        } else {
-            if let Some(write_delay) = self.write_delay {
-                self.write_delay = Some(write_delay - 1);
-            }
+        } else if let Some(write_delay) = self.write_delay {
+            self.write_delay = Some(write_delay - 1);
         }
     }
 
@@ -140,21 +150,26 @@ impl ApuRegisters {
         match (self.clock.step_mode, cycle) {
             (_, FIRST_STEP) => {
                 self.triangle.decrement_linear_counter();
+                self.counter_suppression_cycles = 2;
             }
             (_, SECOND_STEP) => {
                 self.triangle.decrement_linear_counter();
                 self.decrement_length_counters();
+                self.counter_suppression_cycles = 2;
             }
             (_, THIRD_STEP) => {
                 self.triangle.decrement_linear_counter();
+                self.counter_suppression_cycles = 2;
             }
             (FourStep, _) if cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1 => {
                 self.triangle.decrement_linear_counter();
                 self.decrement_length_counters();
+                self.counter_suppression_cycles = 2;
             }
             (FiveStep, _) if cycle == StepMode::FIVE_STEP_FRAME_LENGTH - 1 => {
                 self.triangle.decrement_linear_counter();
                 self.decrement_length_counters();
+                self.counter_suppression_cycles = 2;
             }
             (FourStep, _) if cycle >= StepMode::FOUR_STEP_FRAME_LENGTH => unreachable!(),
             (FiveStep, _) if cycle >= StepMode::FIVE_STEP_FRAME_LENGTH => unreachable!(),
@@ -163,11 +178,14 @@ impl ApuRegisters {
     }
 
     fn decrement_length_counters(&mut self) {
-        info!(target: "apuevents", "Decrementing length counters.");
-        self.pulse_1.length_counter.decrement_towards_zero();
-        self.pulse_2.length_counter.decrement_towards_zero();
-        self.triangle.length_counter.decrement_towards_zero();
-        self.noise.length_counter.decrement_towards_zero();
+        let p1 = self.pulse_1.length_counter.decrement_towards_zero();
+        let p2 = self.pulse_2.length_counter.decrement_towards_zero();
+        let t = self.triangle.length_counter.decrement_towards_zero();
+        let n = self.noise.length_counter.decrement_towards_zero();
+
+        info!(target: "apuevents", "Decremented length counters. P1: {}, P2: {}, T: {}, N: {}",
+            p1, p2, t, n,
+        );
     }
 
     pub fn frame_irq_pending(&self) -> bool {
