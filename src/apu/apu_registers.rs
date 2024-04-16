@@ -101,7 +101,7 @@ impl ApuRegisters {
             self.frame_irq_pending = false;
         }
 
-        let write_delay = if self.clock.is_off_cycle { 4 } else { 3 };
+        let write_delay = if self.clock.is_off_cycle() { 4 } else { 3 };
         info!(target: "apuevents", "Frame counter write: {:?}, Suppress IRQ: {}, Write delay: {}",
             self.pending_step_mode, self.suppress_irq, write_delay);
 
@@ -140,39 +140,42 @@ impl ApuRegisters {
     }
 
     pub fn maybe_decrement_counters(&mut self) {
-        const FIRST_STEP : u16 = 3728;
-        const SECOND_STEP: u16 = 7456;
-        const THIRD_STEP : u16 = 11185;
+        const FIRST_STEP  : u16 = 2 * 3728 + 1;
+        const SECOND_STEP : u16 = 2 * 7456 + 1;
+        const THIRD_STEP  : u16 = 2 * 11185 + 1;
+        const FOURTH_STEP : u16 = 2 * 14914 + 1;
+        const FIFTH_STEP  : u16 = 2 * 18640 + 1;
 
         let cycle = self.clock.cycle();
+        match self.clock.step_mode {
+            StepMode::FourStep => assert!(cycle < StepMode::FOUR_STEP_FRAME_LENGTH),
+            StepMode::FiveStep => assert!(cycle < StepMode::FIVE_STEP_FRAME_LENGTH),
+        }
 
-        use StepMode::*;
-        match (self.clock.step_mode, cycle) {
-            (_, FIRST_STEP) => {
+        match cycle {
+            FIRST_STEP => {
                 self.triangle.decrement_linear_counter();
                 self.counter_suppression_cycles = 2;
             }
-            (_, SECOND_STEP) => {
-                self.triangle.decrement_linear_counter();
-                self.decrement_length_counters();
-                self.counter_suppression_cycles = 2;
-            }
-            (_, THIRD_STEP) => {
-                self.triangle.decrement_linear_counter();
-                self.counter_suppression_cycles = 2;
-            }
-            (FourStep, _) if cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1 => {
+            SECOND_STEP => {
                 self.triangle.decrement_linear_counter();
                 self.decrement_length_counters();
                 self.counter_suppression_cycles = 2;
             }
-            (FiveStep, _) if cycle == StepMode::FIVE_STEP_FRAME_LENGTH - 1 => {
+            THIRD_STEP => {
+                self.triangle.decrement_linear_counter();
+                self.counter_suppression_cycles = 2;
+            }
+            FOURTH_STEP if self.clock.step_mode == StepMode::FourStep => {
                 self.triangle.decrement_linear_counter();
                 self.decrement_length_counters();
                 self.counter_suppression_cycles = 2;
             }
-            (FourStep, _) if cycle >= StepMode::FOUR_STEP_FRAME_LENGTH => unreachable!(),
-            (FiveStep, _) if cycle >= StepMode::FIVE_STEP_FRAME_LENGTH => unreachable!(),
+            FIFTH_STEP if self.clock.step_mode == StepMode::FiveStep => {
+                self.triangle.decrement_linear_counter();
+                self.decrement_length_counters();
+                self.counter_suppression_cycles = 2;
+            }
             _ => { /* Do nothing. */ }
         }
     }
@@ -202,8 +205,8 @@ impl ApuRegisters {
         }
 
         let cycle = self.clock.cycle();
-        let is_non_skip_first_cycle = cycle == 0 && self.clock.raw_cycle() != 0 && self.clock.is_off_cycle;
-        let is_last_cycle = cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1;
+        let is_non_skip_first_cycle = cycle == 0 && self.clock.raw_cycle() != 0 && self.clock.is_off_cycle();
+        let is_last_cycle = cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1 || cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 2;
         let is_irq_cycle = is_non_skip_first_cycle || is_last_cycle;
 
         if is_irq_cycle {
@@ -254,8 +257,8 @@ pub enum StepMode {
 }
 
 impl StepMode {
-    pub const FOUR_STEP_FRAME_LENGTH: u16 = 14915;
-    pub const FIVE_STEP_FRAME_LENGTH: u16 = 18641;
+    pub const FOUR_STEP_FRAME_LENGTH: u16 = 2 * 14915;
+    pub const FIVE_STEP_FRAME_LENGTH: u16 = 2 * 18641;
 
     pub const fn frame_length(self) -> u16 {
         match self {
@@ -268,7 +271,6 @@ impl StepMode {
 #[derive(Clone, Copy)]
 pub struct ApuClock {
     cycle: i64,
-    is_off_cycle: bool,
     step_mode: StepMode,
 }
 
@@ -276,26 +278,20 @@ impl ApuClock {
     pub fn new() -> Self {
         Self {
             cycle: -1,
-            is_off_cycle: false,
             step_mode: StepMode::FourStep,
         }
     }
 
     pub fn increment(&mut self) {
-        if !self.is_off_cycle {
-            self.cycle += 1;
-        }
-
-        self.is_off_cycle = !self.is_off_cycle;
+        self.cycle += 1;
     }
 
     pub fn reset(&mut self) {
         self.cycle = -1;
-        self.is_off_cycle = false;
     }
 
     pub fn is_off_cycle(self) -> bool {
-        self.is_off_cycle
+        self.cycle % 2 == 0
     }
 
     pub fn cycle(self) -> u16 {
@@ -303,6 +299,7 @@ impl ApuClock {
     }
 
     pub fn raw_cycle(self) -> i64 {
-        self.cycle
+        // FIXME: Remove the "/ 2" and fix this on the caller's side.
+        self.cycle / 2
     }
 }
