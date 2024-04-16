@@ -93,7 +93,7 @@ impl ApuRegisters {
     }
 
     // Write 0x4017
-    pub fn write_frame_counter(&mut self, value: u8) {
+    pub fn write_frame_counter(&mut self, value: u8, is_odd_cpu_cycle: bool) {
         use StepMode::*;
         self.pending_step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
         self.suppress_irq = value & 0b0100_0000 != 0;
@@ -101,7 +101,7 @@ impl ApuRegisters {
             self.frame_irq_pending = false;
         }
 
-        let write_delay = if self.clock.is_off_cycle() { 4 } else { 3 };
+        let write_delay = if is_odd_cpu_cycle { 4 } else { 3 };
         info!(target: "apuevents", "Frame counter write: {:?}, Suppress IRQ: {}, Write delay: {}",
             self.pending_step_mode, self.suppress_irq, write_delay);
 

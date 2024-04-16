@@ -225,12 +225,12 @@ impl Cpu {
             }
             Step::Write(to, _) => {
                 self.address_bus = self.lookup_to_address(memory, to);
-                memory.write(self.address_bus, self.data_bus);
+                memory.write(self.cycle, self.address_bus, self.data_bus);
             }
             Step::WriteField(field, to, _) => {
                 self.address_bus = self.lookup_to_address(memory, to);
                 self.data_bus = self.field_value(field);
-                memory.write(self.address_bus, self.data_bus);
+                memory.write(self.cycle, self.address_bus, self.data_bus);
             }
         }
 
@@ -469,7 +469,8 @@ impl Cpu {
                     AHX => {
                         let high_inc = self.address_bus.high_byte().wrapping_add(1);
                         let value = self.a & self.x & high_inc;
-                        memory.write(self.address_bus, value);
+                        // TODO: Consolidate this write into the standardized location.
+                        memory.write(self.cycle, self.address_bus, value);
                     }
 
                     XAA => {

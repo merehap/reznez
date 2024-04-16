@@ -139,7 +139,7 @@ impl<'a> CpuMemory<'a> {
     }
 
     #[inline]
-    pub fn write(&mut self, address: CpuAddress, value: u8) {
+    pub fn write(&mut self, cycle: i64, address: CpuAddress, value: u8) {
         self.memory.mapper.cpu_write(
             &mut self.memory.mapper_params,
             &mut self.memory.cpu_internal_ram,
@@ -148,6 +148,7 @@ impl<'a> CpuMemory<'a> {
             &mut self.memory.ports,
             &mut self.memory.ppu_registers,
             &mut self.memory.apu_registers,
+            cycle,
             address,
             value,
         );
