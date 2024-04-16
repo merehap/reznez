@@ -32,6 +32,7 @@ pub struct Memory {
     ppu_registers: PpuRegisters,
     apu_registers: ApuRegisters,
     system_palette: SystemPalette,
+    cpu_cycle: i64,
 }
 
 impl Memory {
@@ -51,6 +52,7 @@ impl Memory {
             ppu_registers: PpuRegisters::new(),
             apu_registers: ApuRegisters::new(),
             system_palette,
+            cpu_cycle: 0,
         }
     }
 
@@ -89,6 +91,10 @@ impl Memory {
 
     pub fn apu_regs_mut(&mut self) -> &mut ApuRegisters {
         &mut self.apu_registers
+    }
+
+    pub fn cpu_cycle(&self) -> i64 {
+        self.cpu_cycle
     }
 
     pub fn cpu_peek(&self, address: CpuAddress) -> Option<u8> {
@@ -139,7 +145,7 @@ impl<'a> CpuMemory<'a> {
     }
 
     #[inline]
-    pub fn write(&mut self, cycle: i64, address: CpuAddress, value: u8) {
+    pub fn write(&mut self, address: CpuAddress, value: u8) {
         self.memory.mapper.cpu_write(
             &mut self.memory.mapper_params,
             &mut self.memory.cpu_internal_ram,
@@ -148,7 +154,7 @@ impl<'a> CpuMemory<'a> {
             &mut self.memory.ports,
             &mut self.memory.ppu_registers,
             &mut self.memory.apu_registers,
-            cycle,
+            self.memory.cpu_cycle,
             address,
             value,
         );
@@ -197,8 +203,16 @@ impl<'a> CpuMemory<'a> {
         self.address_from_vector(IRQ_VECTOR_LOW)
     }
 
-    pub fn process_end_of_cpu_cycle(&mut self, cycle: i64) {
-        self.memory.mapper.on_end_of_cpu_cycle(cycle);
+    pub fn cpu_cycle(&self) -> i64 {
+        self.memory.cpu_cycle
+    }
+
+    pub fn set_cpu_cycle(&mut self, cycle: i64) {
+        self.memory.cpu_cycle = cycle;
+    }
+
+    pub fn process_end_of_cpu_cycle(&mut self) {
+        self.memory.mapper.on_end_of_cpu_cycle(self.memory.cpu_cycle);
     }
 
     fn address_from_vector(&mut self, mut vector: CpuAddress) -> CpuAddress {

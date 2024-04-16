@@ -34,8 +34,6 @@ pub struct Cpu {
 
     oam_dma_port: OamDmaPort,
 
-    cycle: i64,
-
     current_interrupt_vector: Option<InterruptVector>,
 
     jammed: bool,
@@ -53,6 +51,8 @@ pub struct Cpu {
 impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
     pub fn new(memory: &mut CpuMemory, starting_cycle: i64) -> Cpu {
+        memory.set_cpu_cycle(starting_cycle);
+
         Cpu {
             a: 0,
             x: 0,
@@ -69,8 +69,6 @@ impl Cpu {
             irq_status: IrqStatus::Inactive,
             reset_pending: true,
             oam_dma_port: memory.ports().oam_dma.clone(),
-
-            cycle: starting_cycle,
 
             // The initial value probably doesn't matter.
             current_interrupt_vector: None,
@@ -99,7 +97,7 @@ impl Cpu {
         self.nmi_status = NmiStatus::Inactive;
         self.irq_status = IrqStatus::Inactive;
         self.reset_pending = true;
-        self.cycle = 6;
+        memory.set_cpu_cycle(6);
         self.current_interrupt_vector = None;
         self.jammed = false;
         self.suppress_program_counter_increment = false;
@@ -125,10 +123,6 @@ impl Cpu {
 
     pub fn status(&self) -> Status {
         self.status
-    }
-
-    pub fn cycle(&self) -> i64 {
-        self.cycle
     }
 
     pub fn address_bus(&self) -> CpuAddress {
@@ -190,7 +184,10 @@ impl Cpu {
             return None;
         }
 
-        self.cycle += 1;
+        {
+            let cycle = memory.cpu_cycle();
+            memory.set_cpu_cycle(cycle + 1);
+        }
 
         if irq_pending
                 && self.irq_status == IrqStatus::Inactive
@@ -211,7 +208,7 @@ impl Cpu {
 
         let step = self.step_queue.dequeue()
             .expect("Ran out of CycleActions!");
-        info!(target: "cpustep", "\tPC: {}, Cycle: {}, {:?}", self.program_counter, self.cycle, step);
+        info!(target: "cpustep", "\tPC: {}, Cycle: {}, {:?}", self.program_counter, memory.cpu_cycle(), step);
         self.previous_data_bus_value = self.data_bus;
         match step {
             Step::Read(from, _) => {
@@ -225,12 +222,12 @@ impl Cpu {
             }
             Step::Write(to, _) => {
                 self.address_bus = self.lookup_to_address(memory, to);
-                memory.write(self.cycle, self.address_bus, self.data_bus);
+                memory.write(self.address_bus, self.data_bus);
             }
             Step::WriteField(field, to, _) => {
                 self.address_bus = self.lookup_to_address(memory, to);
                 self.data_bus = self.field_value(field);
-                memory.write(self.cycle, self.address_bus, self.data_bus);
+                memory.write(self.address_bus, self.data_bus);
             }
         }
 
@@ -254,7 +251,7 @@ impl Cpu {
             }
         }
 
-        memory.process_end_of_cpu_cycle(self.cycle);
+        memory.process_end_of_cpu_cycle();
 
         Some(step)
     }
@@ -279,7 +276,7 @@ impl Cpu {
                 if self.oam_dma_port.take_page().is_some() {
                     info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
                         self.oam_dma_port.current_address());
-                    self.step_queue.enqueue_oam_dma_transfer(self.cycle);
+                    self.step_queue.enqueue_oam_dma_transfer(memory.cpu_cycle());
                     self.suppress_program_counter_increment = true;
                     return;
                 }
@@ -470,7 +467,7 @@ impl Cpu {
                         let high_inc = self.address_bus.high_byte().wrapping_add(1);
                         let value = self.a & self.x & high_inc;
                         // TODO: Consolidate this write into the standardized location.
-                        memory.write(self.cycle, self.address_bus, value);
+                        memory.write(self.address_bus, value);
                     }
 
                     XAA => {

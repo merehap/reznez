@@ -10,6 +10,7 @@ pub struct Nintendulator0980Formatter;
 
 impl Formatter for Nintendulator0980Formatter {
     fn format_instruction(&self, nes: &Nes, start_address: CpuAddress, _interrupt_text: String) -> String {
+        let cpu_cycle = nes.memory().cpu_cycle();
         let peek = |address| nes.memory().cpu_peek(address).unwrap_or(0);
 
         let cpu = nes.cpu();
@@ -112,7 +113,7 @@ impl Formatter for Nintendulator0980Formatter {
             nes.memory().stack_pointer(),
             nes.ppu().clock().cycle(),
             nes.ppu().clock().scanline(),
-            nes.cpu().cycle(),
+            cpu_cycle,
         )
     }
 }
@@ -221,7 +222,7 @@ impl Formatter for MesenFormatter {
             scanline,
             nes.ppu().clock().cycle(),
             nes.ppu().clock().frame(),
-            nes.cpu().cycle(),
+            nes.memory().cpu_cycle(),
         )
     }
 }

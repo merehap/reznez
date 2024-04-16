@@ -79,7 +79,7 @@ fn nestest() {
 
             loop {
                 if nes.step().step.is_some() && nes.cpu().next_op_code().is_some() {
-                    c = nes.cpu().cycle();
+                    c = nes.memory().cpu_cycle();
                     ppu_cycle = nes.ppu().clock().cycle();
                     ppu_scanline = nes.ppu().clock().scanline();
                     break;
