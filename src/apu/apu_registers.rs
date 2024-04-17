@@ -16,7 +16,7 @@ pub struct ApuRegisters {
     pending_step_mode: StepMode,
     suppress_irq: bool,
     frame_irq_pending: bool,
-    write_delay: Option<u8>,
+    frame_counter_write_status: FrameCounterWriteStatus,
 
     // Whenever a quarter or half frame signal occurs, recurrence is suppressed for 2 cycles.
     // This is the basis of apu_test_2, motivation described here:
@@ -38,7 +38,7 @@ impl ApuRegisters {
             pending_step_mode: StepMode::FourStep,
             suppress_irq: false,
             frame_irq_pending: false,
-            write_delay: None,
+            frame_counter_write_status: FrameCounterWriteStatus::Inactive,
 
             counter_suppression_cycles: 0,
 
@@ -93,7 +93,7 @@ impl ApuRegisters {
     }
 
     // Write 0x4017
-    pub fn write_frame_counter(&mut self, value: u8, is_odd_cpu_cycle: bool) {
+    pub fn write_frame_counter(&mut self, value: u8) {
         use StepMode::*;
         self.pending_step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
         self.suppress_irq = value & 0b0100_0000 != 0;
@@ -101,28 +101,45 @@ impl ApuRegisters {
             self.frame_irq_pending = false;
         }
 
-        let write_delay = if is_odd_cpu_cycle { 4 } else { 3 };
-        info!(target: "apuevents", "Frame counter write: {:?}, Suppress IRQ: {}, Write delay: {}",
-            self.pending_step_mode, self.suppress_irq, write_delay);
+        self.frame_counter_write_status = FrameCounterWriteStatus::Initialized;
 
-        self.write_delay = Some(write_delay);
+        info!(target: "apuevents", "Frame counter write: {:?}, Suppress IRQ: {}, Status: {:?}",
+            self.pending_step_mode, self.suppress_irq, self.frame_counter_write_status);
     }
 
-    pub fn maybe_update_step_mode(&mut self) {
+    pub fn maybe_update_step_mode(&mut self, cpu_cycle: i64) {
         if self.counter_suppression_cycles > 0 {
             self.counter_suppression_cycles -= 1;
         }
 
-        self.write_delay = self.write_delay.map(|d| d - 1);
+        use FrameCounterWriteStatus::*;
+        match self.frame_counter_write_status {
+            Inactive => { /* Do nothing. */ }
+            Initialized => {
+                info!(target: "apuevents", "APU frame counter: Waiting for even CPU cycle. CPU Cycle: {cpu_cycle}");
+                self.frame_counter_write_status = WaitingForEvenCycle;
+            }
+            WaitingForEvenCycle if cpu_cycle % 2 == 0 => {
+                info!(target: "apuevents", "APU frame counter: Resetting on the next CPU cycle. CPU Cycle: {cpu_cycle}");
+                self.frame_counter_write_status = Ready;
+            }
+            WaitingForEvenCycle => {
+                info!(target: "apuevents", "APU frame counter: Still waiting for even CPU cycle. CPU Cycle: {cpu_cycle}");
+            }
+            Ready => {
+                info!(
+                    target: "apuevents",
+                    "APU frame counter: Resetting APU cycle and setting step mode: {:?}. CPU Cycle: {cpu_cycle}",
+                    self.pending_step_mode,
+                );
+                self.clock.reset();
+                self.clock.step_mode = self.pending_step_mode;
+                if self.clock.step_mode == StepMode::FiveStep && self.counter_suppression_cycles == 0 {
+                    self.decrement_length_counters();
+                    self.counter_suppression_cycles = 2;
+                }
 
-        if self.write_delay == Some(0) {
-            self.write_delay = None;
-            info!(target: "apuevents", "Resetting APU cycle and setting step mode.");
-            self.clock.reset();
-            self.clock.step_mode = self.pending_step_mode;
-            if self.clock.step_mode == StepMode::FiveStep && self.counter_suppression_cycles == 0 {
-                self.decrement_length_counters();
-                self.counter_suppression_cycles = 2;
+                self.frame_counter_write_status = Inactive;
             }
         }
     }
@@ -302,4 +319,13 @@ impl ApuClock {
         // FIXME: Remove the "/ 2" and fix this on the caller's side.
         self.cycle / 2
     }
+}
+
+
+#[derive(PartialEq, Eq, Debug)]
+enum FrameCounterWriteStatus {
+    Inactive,
+    Initialized,
+    WaitingForEvenCycle,
+    Ready,
 }

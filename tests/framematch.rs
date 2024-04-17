@@ -99,7 +99,7 @@ fn framematch() {
                         format!("tests/actual_frames/{}/frame{:03}.ppm", directory.display(), frame_index);
                     fs::write(actual_ppm_path.clone(), actual_ppm.to_bytes()).unwrap();
                     println!(
-                        "\t\tROM {} didn't match expected hash at frame {}. See {} .",
+                        "\t\tROM {} didn't match expected hash at frame {}. See '{}' .",
                         rom_name, frame_index, actual_ppm_path,
                     );
                 }

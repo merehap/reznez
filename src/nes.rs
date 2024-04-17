@@ -113,18 +113,19 @@ impl Nes {
     }
 
     pub fn step(&mut self) -> StepResult {
+        let cpu_cycle = self.memory.cpu_cycle();
         let mut step = None;
         let ppu_result;
         match self.cycle % 6 {
             0 => {
-                self.apu.step(self.memory.apu_regs_mut());
+                self.apu.step(self.memory.apu_regs_mut(), cpu_cycle);
                 step = self.cpu_step();
                 ppu_result = self.ppu_step();
             }
             1 => ppu_result = self.ppu_step(),
             2 => ppu_result = self.ppu_step(),
             3 => {
-                self.apu.step(self.memory.apu_regs_mut());
+                self.apu.step(self.memory.apu_regs_mut(), cpu_cycle);
                 step = self.cpu_step();
                 ppu_result = self.ppu_step();
             }

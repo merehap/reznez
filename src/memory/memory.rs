@@ -154,7 +154,6 @@ impl<'a> CpuMemory<'a> {
             &mut self.memory.ports,
             &mut self.memory.ppu_registers,
             &mut self.memory.apu_registers,
-            self.memory.cpu_cycle,
             address,
             value,
         );

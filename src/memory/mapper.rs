@@ -158,7 +158,6 @@ pub trait Mapper {
         ports: &mut Ports,
         ppu_registers: &mut PpuRegisters,
         apu_registers: &mut ApuRegisters,
-        cpu_cycle: i64,
         address: CpuAddress,
         value: u8,
     ) {
@@ -207,7 +206,7 @@ pub trait Mapper {
             0x4014          => ports.oam_dma.set_page(value),
             0x4015          => apu_registers.write_status_byte(value),
             0x4016          => ports.change_strobe(value),
-            0x4017          => apu_registers.write_frame_counter(value, cpu_cycle % 2 == 1),
+            0x4017          => apu_registers.write_frame_counter(value),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ {}
             0x4020..=0xFFFF => self.write_to_cartridge_space(params, address, value),
         }
