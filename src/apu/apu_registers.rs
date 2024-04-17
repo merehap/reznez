@@ -287,14 +287,14 @@ impl StepMode {
 
 #[derive(Clone, Copy)]
 pub struct ApuClock {
-    cycle: i64,
+    cycle: u64,
     step_mode: StepMode,
 }
 
 impl ApuClock {
     pub fn new() -> Self {
         Self {
-            cycle: -1,
+            cycle: 0,
             step_mode: StepMode::FourStep,
         }
     }
@@ -304,7 +304,7 @@ impl ApuClock {
     }
 
     pub fn reset(&mut self) {
-        self.cycle = -1;
+        self.cycle = 0;
     }
 
     pub fn is_off_cycle(self) -> bool {
@@ -312,10 +312,10 @@ impl ApuClock {
     }
 
     pub fn cycle(self) -> u16 {
-        u16::try_from(self.cycle % i64::from(self.step_mode.frame_length())).unwrap()
+        u16::try_from(self.cycle % u64::from(self.step_mode.frame_length())).unwrap()
     }
 
-    pub fn raw_cycle(self) -> i64 {
+    pub fn raw_cycle(self) -> u64 {
         // FIXME: Remove the "/ 2" and fix this on the caller's side.
         self.cycle / 2
     }
