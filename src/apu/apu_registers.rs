@@ -113,17 +113,17 @@ impl ApuRegisters {
             self.counter_suppression_cycles -= 1;
         }
 
-        if self.write_delay == Some(1) {
+        self.write_delay = self.write_delay.map(|d| d - 1);
+
+        if self.write_delay == Some(0) {
+            self.write_delay = None;
             info!(target: "apuevents", "Resetting APU cycle and setting step mode.");
             self.clock.reset();
-            self.write_delay = None;
             self.clock.step_mode = self.pending_step_mode;
             if self.clock.step_mode == StepMode::FiveStep && self.counter_suppression_cycles == 0 {
                 self.decrement_length_counters();
                 self.counter_suppression_cycles = 2;
             }
-        } else if let Some(write_delay) = self.write_delay {
-            self.write_delay = Some(write_delay - 1);
         }
     }
 
