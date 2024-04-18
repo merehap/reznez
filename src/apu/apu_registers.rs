@@ -73,7 +73,7 @@ impl ApuRegisters {
     // Read 0x4015
     pub fn read_status(&mut self) -> Status {
         if self.frame_irq_pending {
-            info!(target: "apuevents", "Status read cleared pending frame IRQ.");
+            info!(target: "apuevents", "Status read cleared pending frame IRQ. APU Cycle: {}", self.clock.cycle());
         }
 
         let status = self.peek_status();
@@ -83,7 +83,7 @@ impl ApuRegisters {
 
     // Write 0x4015
     pub fn write_status_byte(&mut self, value: u8) {
-        info!(target: "apuevents", "APU status write: {value:05b}");
+        info!(target: "apuevents", "APU status write: {value:05b} . APU Cycle: {}", self.clock.cycle());
 
         self.dmc.set_enabled(     value & 0b0001_0000 != 0);
         self.noise.set_enabled(   value & 0b0000_1000 != 0);
@@ -103,8 +103,8 @@ impl ApuRegisters {
 
         self.frame_counter_write_status = FrameCounterWriteStatus::Initialized;
 
-        info!(target: "apuevents", "Frame counter write: {:?}, Suppress IRQ: {}, Status: {:?}",
-            self.pending_step_mode, self.suppress_irq, self.frame_counter_write_status);
+        info!(target: "apuevents", "Frame counter write: {:?}, Suppress IRQ: {}, Status: {:?}, APU Cycle: {}",
+            self.pending_step_mode, self.suppress_irq, self.frame_counter_write_status, self.clock.cycle());
     }
 
     pub fn maybe_update_step_mode(&mut self) {
@@ -117,7 +117,7 @@ impl ApuRegisters {
         match self.frame_counter_write_status {
             Inactive => { /* Do nothing. */ }
             Initialized => {
-                info!(target: "apuevents", "APU frame counter: Waiting for even APU cycle. APU Cycle: {apu_cycle}");
+                info!(target: "apuevents", "APU frame counter: Waiting for APU 'ON' cycle. APU Cycle: {apu_cycle}");
                 self.frame_counter_write_status = WaitingForEvenCycle;
             }
             WaitingForEvenCycle if !self.clock.is_off_cycle() => {
@@ -125,7 +125,7 @@ impl ApuRegisters {
                 self.frame_counter_write_status = Ready;
             }
             WaitingForEvenCycle => {
-                info!(target: "apuevents", "APU frame counter: Still waiting for even APU cycle. APU Cycle: {apu_cycle}");
+                info!(target: "apuevents", "APU frame counter: Still waiting for APU 'ON' cycle. APU Cycle: {apu_cycle}");
             }
             Ready => {
                 info!(
@@ -204,8 +204,8 @@ impl ApuRegisters {
         let t = self.triangle.length_counter.decrement_towards_zero();
         let n = self.noise.length_counter.decrement_towards_zero();
 
-        info!(target: "apuevents", "Decremented length counters. P1: {}, P2: {}, T: {}, N: {}",
-            p1, p2, t, n,
+        info!(target: "apuevents", "Decremented length counters. P1: {}, P2: {}, T: {}, N: {}. APU Cycle: {}",
+            p1, p2, t, n, self.clock.cycle(),
         );
     }
 
@@ -228,13 +228,13 @@ impl ApuRegisters {
         let is_irq_cycle = is_non_skip_first_cycle || is_last_cycle;
 
         if is_irq_cycle {
-            info!(target: "apuevents", "Frame IRQ pending.");
+            info!(target: "apuevents", "Frame IRQ pending. APU Cycle: {}", self.clock.cycle());
             self.frame_irq_pending = true;
         }
     }
 
     pub fn acknowledge_frame_irq(&mut self) {
-        info!(target: "apuevents", "Frame IRQ acknowledged.");
+        info!(target: "apuevents", "Frame IRQ acknowledged. APU Cycle: {}", self.clock.cycle());
         self.frame_irq_pending = false;
     }
 }
