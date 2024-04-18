@@ -107,7 +107,8 @@ impl ApuRegisters {
             self.pending_step_mode, self.suppress_irq, self.frame_counter_write_status);
     }
 
-    pub fn maybe_update_step_mode(&mut self, cpu_cycle: i64) {
+    pub fn maybe_update_step_mode(&mut self) {
+        let apu_cycle = self.clock.cycle();
         if self.counter_suppression_cycles > 0 {
             self.counter_suppression_cycles -= 1;
         }
@@ -116,20 +117,20 @@ impl ApuRegisters {
         match self.frame_counter_write_status {
             Inactive => { /* Do nothing. */ }
             Initialized => {
-                info!(target: "apuevents", "APU frame counter: Waiting for even CPU cycle. CPU Cycle: {cpu_cycle}");
+                info!(target: "apuevents", "APU frame counter: Waiting for even APU cycle. APU Cycle: {apu_cycle}");
                 self.frame_counter_write_status = WaitingForEvenCycle;
             }
-            WaitingForEvenCycle if cpu_cycle % 2 == 0 => {
-                info!(target: "apuevents", "APU frame counter: Resetting on the next CPU cycle. CPU Cycle: {cpu_cycle}");
+            WaitingForEvenCycle if !self.clock.is_off_cycle() => {
+                info!(target: "apuevents", "APU frame counter: Resetting on the next APU cycle. APU Cycle: {apu_cycle}");
                 self.frame_counter_write_status = Ready;
             }
             WaitingForEvenCycle => {
-                info!(target: "apuevents", "APU frame counter: Still waiting for even CPU cycle. CPU Cycle: {cpu_cycle}");
+                info!(target: "apuevents", "APU frame counter: Still waiting for even APU cycle. APU Cycle: {apu_cycle}");
             }
             Ready => {
                 info!(
                     target: "apuevents",
-                    "APU frame counter: Resetting APU cycle and setting step mode: {:?}. CPU Cycle: {cpu_cycle}",
+                    "APU frame counter: Resetting APU cycle and setting step mode: {:?}. Skipped APU Cycle: {apu_cycle}",
                     self.pending_step_mode,
                 );
                 self.clock.reset();

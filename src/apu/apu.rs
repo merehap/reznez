@@ -48,8 +48,8 @@ impl Apu {
         *self.muted.lock().unwrap() = true;
     }
 
-    pub fn step(&mut self, regs: &mut ApuRegisters, cpu_cycle: i64) {
-        regs.maybe_update_step_mode(cpu_cycle);
+    pub fn step(&mut self, regs: &mut ApuRegisters) {
+        regs.maybe_update_step_mode();
         regs.dmc.maybe_start_dma();
 
         if regs.clock().is_off_cycle() {
