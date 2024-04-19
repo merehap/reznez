@@ -38,10 +38,6 @@ impl StepQueue {
         self.queue.push_back(READ_OP_CODE_STEP);
     }
 
-    pub fn enqueue_op_code_interpret(&mut self) {
-        self.queue.push_back(INTERPRET_OP_CODE_STEP);
-    }
-
     pub fn enqueue_instruction(&mut self, code_point: u8) {
         let code_point = usize::from(code_point);
         self.prepend(INSTRUCTIONS[code_point].steps());

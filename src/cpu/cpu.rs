@@ -197,10 +197,6 @@ impl Cpu {
             self.irq_status = IrqStatus::Pending;
         }
 
-        if self.next_op_code.is_some() {
-            self.step_queue.enqueue_op_code_interpret();
-        }
-
         if self.step_queue.is_empty() {
             // Get ready to start the next instruction.
             self.step_queue.enqueue_op_code_read();
@@ -251,6 +247,14 @@ impl Cpu {
             }
         }
 
+        if step.has_start_new_instruction() && !self.suppress_next_instruction_start {
+            if self.interrupt_active() {
+                self.current_instruction = None;
+            } else if let Some((next_op_code, _)) = self.next_op_code {
+                self.current_instruction = Some(Instruction::from_code_point(next_op_code));
+            }
+        }
+
         memory.process_end_of_cpu_cycle();
 
         Some(step)
@@ -288,9 +292,12 @@ impl Cpu {
                         // IRQ has BRK's code point (0x00). TODO: Set the data bus to 0x00?
                         self.next_op_code = Some((0x00, self.address_bus));
                         self.suppress_program_counter_increment = true;
+                        self.step_queue.enqueue_irq();
                     }
                     NmiStatus::Inactive | NmiStatus::Pending => {
                         self.next_op_code = Some((self.data_bus, self.address_bus));
+                        let instruction = Instruction::from_code_point(self.data_bus);
+                        self.step_queue.enqueue_instruction(instruction.code_point());
                     }
                     NmiStatus::Ready => {
                         info!(target: "cpuflowcontrol", "Starting NMI");
@@ -298,36 +305,15 @@ impl Cpu {
                         // NMI has BRK's code point (0x00). TODO: Set the data bus to 0x00?
                         self.next_op_code = Some((0x00, self.address_bus));
                         self.suppress_program_counter_increment = true;
+                        self.step_queue.enqueue_nmi();
                     }
                     NmiStatus::Active => unreachable!(),
                 }
             }
 
             InterpretOpCode => {
-                let (op_code, _start_address) = self.next_op_code.take().unwrap();
-                if self.nmi_status == NmiStatus::Active {
-                    self.suppress_program_counter_increment = true;
-                    self.current_instruction = None;
-                    self.step_queue.enqueue_nmi();
-                    return;
-                }
-
-                if self.irq_status == IrqStatus::Active {
-                    self.suppress_program_counter_increment = true;
-                    self.current_instruction = None;
-                    self.step_queue.enqueue_irq();
-                    return;
-                }
-
-                let instruction = Instruction::from_code_point(op_code);
-                self.current_instruction = Some(instruction);
-                if instruction.access_mode() == AccessMode::Imp && instruction.op_code() != OpCode::BRK {
-                    self.suppress_program_counter_increment = true;
-                }
-
-                self.step_queue.enqueue_instruction(instruction.code_point());
+                self.next_op_code = None;
             }
-
             ExecuteOpCode => {
                 let value = self.previous_data_bus_value;
                 let access_mode = self.current_instruction.unwrap().access_mode();
