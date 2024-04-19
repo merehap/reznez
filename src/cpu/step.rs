@@ -29,58 +29,59 @@ pub const BRANCH_TAKEN_STEP: Step =
         &[MaybeInsertBranchOopsStep, AddCarryToProgramCounter, StartNextInstruction, IncrementProgramCounter]);
 
 pub const IMPLICIT_ADDRESSING_STEPS: &[Step] = &[
-    Read(From::ProgramCounterTarget, &[InterpretOpCode]),
+    Read(From::ProgramCounterTarget, &[InterpretOpCode, PollInterrupts]),
     // Read the NEXT op code, execute the CURRENT op code.
     Read(From::ProgramCounterTarget, &[StartNextInstruction, ExecuteOpCode, IncrementProgramCounter]),
 ];
 pub const IMMEDIATE_ADDRESSING_STEPS: &[Step] = &[
-    Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
+    Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter, PollInterrupts]),
     // Read the NEXT op code, execute the CURRENT op code.
     Read(From::ProgramCounterTarget, &[StartNextInstruction, ExecuteOpCode, IncrementProgramCounter]),
 ];
 pub const RELATIVE_ADDRESSING_STEPS: &[Step] = &[
-    Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
+    Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter, PollInterrupts]),
     Read(From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 
 pub const ABSOLUTE_READ_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
     Read(From::ProgramCounterTarget, &[StorePendingAddressLowByte, IncrementProgramCounter]),
-    Read(From::PendingAddressTarget, &[]),
+    Read(From::PendingAddressTarget, &[PollInterrupts]),
     Read(From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 
 pub const ZERO_PAGE_READ_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
-    Read(From::PendingZeroPageTarget, &[]),
+    Read(From::PendingZeroPageTarget, &[PollInterrupts]),
     Read(From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 
 pub const ABSOLUTE_X_READ_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
     Read(From::ProgramCounterTarget, &[StorePendingAddressLowByteWithXOffset, IncrementProgramCounter]),
-    Read(From::PendingAddressTarget, &[MaybeInsertOopsStep, AddCarryToAddressBus]),
+    // TODO: Is this PollInterrupts too early if an Oops step occurs?
+    Read(From::PendingAddressTarget, &[MaybeInsertOopsStep, AddCarryToAddressBus, PollInterrupts]),
     Read(From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 
 pub const ZERO_PAGE_X_READ_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
     Read(From::PendingZeroPageTarget, &[XOffsetAddressBus]),
-    Read(From::AddressBusTarget     , &[]),
+    Read(From::AddressBusTarget     , &[PollInterrupts]),
     Read(From::ProgramCounterTarget , &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 
 pub const ABSOLUTE_Y_READ_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
     Read(From::ProgramCounterTarget, &[StorePendingAddressLowByteWithYOffset, IncrementProgramCounter]),
-    Read(From::PendingAddressTarget, &[MaybeInsertOopsStep, AddCarryToAddressBus]),
+    Read(From::PendingAddressTarget, &[MaybeInsertOopsStep, AddCarryToAddressBus, PollInterrupts]),
     Read(From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 
 pub const ZERO_PAGE_Y_READ_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
     Read(From::PendingZeroPageTarget, &[YOffsetAddressBus]),
-    Read(From::AddressBusTarget     , &[]),
+    Read(From::AddressBusTarget     , &[PollInterrupts]),
     Read(From::ProgramCounterTarget , &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 
@@ -89,7 +90,7 @@ pub const INDEXED_INDIRECT_READ_STEPS: &[Step] = &[
     Read(From::PendingZeroPageTarget, &[XOffsetAddressBus]),
     Read(From::AddressBusTarget     , &[IncrementAddressBusLow]),
     Read(From::AddressBusTarget     , &[StorePendingAddressLowByte]),
-    Read(From::PendingAddressTarget , &[]),
+    Read(From::PendingAddressTarget , &[PollInterrupts]),
     Read(From::ProgramCounterTarget , &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 
@@ -97,44 +98,44 @@ pub const INDIRECT_INDEXED_READ_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
     Read(From::PendingZeroPageTarget, &[IncrementAddressBusLow]),
     Read(From::AddressBusTarget     , &[StorePendingAddressLowByteWithYOffset]),
-    Read(From::PendingAddressTarget , &[MaybeInsertOopsStep, AddCarryToAddressBus]),
+    Read(From::PendingAddressTarget , &[MaybeInsertOopsStep, AddCarryToAddressBus, PollInterrupts]),
     Read(From::ProgramCounterTarget , &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 
 pub const ABSOLUTE_WRITE_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
-    Read(From::ProgramCounterTarget, &[StorePendingAddressLowByte, IncrementProgramCounter]),
+    Read(From::ProgramCounterTarget, &[StorePendingAddressLowByte, IncrementProgramCounter, PollInterrupts]),
     WriteField(OpRegister, To::PendingAddressTarget, &[]),
 ];
 
 pub const ZERO_PAGE_WRITE_STEPS: &[Step] = &[
-    Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
+    Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter, PollInterrupts]),
     WriteField(OpRegister, To::PendingZeroPageTarget, &[]),
 ];
 
 pub const ABSOLUTE_X_WRITE_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
     Read(From::ProgramCounterTarget, &[StorePendingAddressLowByteWithXOffset, IncrementProgramCounter]),
-    Read(From::PendingAddressTarget, &[AddCarryToAddressBus]),
+    Read(From::PendingAddressTarget, &[AddCarryToAddressBus, PollInterrupts]),
     WriteField(OpRegister, To::AddressBusTarget, &[]),
 ];
 
 pub const ZERO_PAGE_X_WRITE_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
-    Read(From::PendingZeroPageTarget, &[XOffsetAddressBus]),
+    Read(From::PendingZeroPageTarget, &[XOffsetAddressBus, PollInterrupts]),
     WriteField(OpRegister, To::AddressBusTarget, &[]),
 ];
 
 pub const ABSOLUTE_Y_WRITE_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
     Read(From::ProgramCounterTarget, &[StorePendingAddressLowByteWithYOffset, IncrementProgramCounter]),
-    Read(From::PendingAddressTarget, &[AddCarryToAddressBus]),
+    Read(From::PendingAddressTarget, &[AddCarryToAddressBus, PollInterrupts]),
     WriteField(OpRegister, To::AddressBusTarget, &[]),
 ];
 
 pub const ZERO_PAGE_Y_WRITE_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
-    Read(From::PendingZeroPageTarget, &[YOffsetAddressBus]),
+    Read(From::PendingZeroPageTarget, &[YOffsetAddressBus, PollInterrupts]),
     WriteField(OpRegister, To::AddressBusTarget, &[]),
 ];
 
@@ -142,7 +143,7 @@ pub const INDEXED_INDIRECT_WRITE_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
     Read(From::PendingZeroPageTarget, &[XOffsetAddressBus]),
     Read(From::AddressBusTarget     , &[IncrementAddressBusLow]),
-    Read(From::AddressBusTarget     , &[StorePendingAddressLowByte]),
+    Read(From::AddressBusTarget     , &[StorePendingAddressLowByte, PollInterrupts]),
     WriteField(OpRegister, To::PendingAddressTarget, &[]),
 ];
 
@@ -150,7 +151,7 @@ pub const INDIRECT_INDEXED_WRITE_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
     Read(From::PendingZeroPageTarget, &[IncrementAddressBusLow]),
     Read(From::AddressBusTarget     , &[StorePendingAddressLowByteWithYOffset]),
-    Read(From::PendingAddressTarget , &[AddCarryToAddressBus]),
+    Read(From::PendingAddressTarget , &[AddCarryToAddressBus, PollInterrupts]),
     WriteField(OpRegister, To::AddressBusTarget, &[]),
 ];
 
@@ -158,14 +159,15 @@ pub const ABSOLUTE_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
     Read(From::ProgramCounterTarget , &[StorePendingAddressLowByte, IncrementProgramCounter]),
     Read(From::PendingAddressTarget , &[]),
-    Write(To::AddressBusTarget      , &[ExecuteOpCode]),
+    // TODO: Should PollInterrupts be on the previous step instead?
+    Write(To::AddressBusTarget      , &[ExecuteOpCode, PollInterrupts]),
     Write(To::AddressBusTarget      , &[]),
 ];
 
 pub const ZERO_PAGE_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
     Read(From::PendingZeroPageTarget, &[]),
-    Write(To::AddressBusTarget      , &[ExecuteOpCode]),
+    Write(To::AddressBusTarget      , &[ExecuteOpCode, PollInterrupts]),
     Write(To::AddressBusTarget      , &[]),
 ];
 
@@ -174,7 +176,7 @@ pub const ABSOLUTE_X_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[StorePendingAddressLowByteWithXOffset, IncrementProgramCounter]),
     Read(From::PendingAddressTarget, &[AddCarryToAddressBus]),
     Read(From::AddressBusTarget    , &[]),
-    Write(To::AddressBusTarget     , &[ExecuteOpCode]),
+    Write(To::AddressBusTarget     , &[ExecuteOpCode, PollInterrupts]),
     Write(To::AddressBusTarget     , &[]),
 ];
 
@@ -182,7 +184,7 @@ pub const ZERO_PAGE_X_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
     Read(From::PendingZeroPageTarget, &[XOffsetAddressBus]),
     Read(From::AddressBusTarget     , &[]),
-    Write(To::AddressBusTarget      , &[ExecuteOpCode]),
+    Write(To::AddressBusTarget      , &[ExecuteOpCode, PollInterrupts]),
     Write(To::AddressBusTarget      , &[]),
 ];
 
@@ -191,7 +193,7 @@ pub const ABSOLUTE_Y_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[StorePendingAddressLowByteWithYOffset, IncrementProgramCounter]),
     Read(From::PendingAddressTarget, &[AddCarryToAddressBus]),
     Read(From::AddressBusTarget    , &[]),
-    Write(To::AddressBusTarget     , &[ExecuteOpCode]),
+    Write(To::AddressBusTarget     , &[ExecuteOpCode, PollInterrupts]),
     Write(To::AddressBusTarget     , &[]),
 ];
 
@@ -199,7 +201,7 @@ pub const ZERO_PAGE_Y_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
     Read(From::PendingZeroPageTarget, &[YOffsetAddressBus]),
     Read(From::AddressBusTarget     , &[]),
-    Write(To::AddressBusTarget      , &[ExecuteOpCode]),
+    Write(To::AddressBusTarget      , &[ExecuteOpCode, PollInterrupts]),
     Write(To::AddressBusTarget      , &[]),
 ];
 
@@ -209,7 +211,7 @@ pub const INDEXED_INDIRECT_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     Read(From::AddressBusTarget     , &[IncrementAddressBusLow]),
     Read(From::AddressBusTarget     , &[StorePendingAddressLowByte]),
     Read(From::PendingAddressTarget , &[]),
-    Write(To::AddressBusTarget      , &[ExecuteOpCode]),
+    Write(To::AddressBusTarget      , &[ExecuteOpCode, PollInterrupts]),
     Write(To::AddressBusTarget      , &[]),
 ];
 
@@ -219,7 +221,7 @@ pub const INDIRECT_INDEXED_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     Read(From::AddressBusTarget     , &[StorePendingAddressLowByteWithYOffset]),
     Read(From::PendingAddressTarget , &[AddCarryToAddressBus]),
     Read(From::AddressBusTarget     , &[]),
-    Write(To::AddressBusTarget      , &[ExecuteOpCode]),
+    Write(To::AddressBusTarget      , &[ExecuteOpCode, PollInterrupts]),
     Write(To::AddressBusTarget      , &[]),
 ];
 
@@ -273,7 +275,7 @@ pub const RTI_STEPS: &[Step] = &[
     // Dummy read.
     Read(                             From::TopOfStack, &[IncrementStackPointer]),
     ReadField(Status,                 From::TopOfStack, &[IncrementStackPointer]),
-    Read(                             From::TopOfStack, &[IncrementStackPointer]),
+    Read(                             From::TopOfStack, &[IncrementStackPointer, PollInterrupts]),
     ReadField(ProgramCounterHighByte, From::TopOfStack, &[]),
 ];
 
@@ -283,32 +285,32 @@ pub const RTS_STEPS: &[Step] = &[
     Read(                             From::TopOfStack          , &[IncrementStackPointer]),
     // Read low byte of next program counter.
     Read(                             From::TopOfStack          , &[IncrementStackPointer]),
-    ReadField(ProgramCounterHighByte, From::TopOfStack          , &[]),
+    ReadField(ProgramCounterHighByte, From::TopOfStack          , &[PollInterrupts]),
     // TODO: Make sure this dummy read is correct.
     Read(                             From::ProgramCounterTarget, &[IncrementProgramCounter]),
 ];
 
 pub const PHA_STEPS: &[Step] = &[
-    Read(From::ProgramCounterTarget, &[InterpretOpCode]),
+    Read(From::ProgramCounterTarget, &[InterpretOpCode, PollInterrupts]),
     WriteField(Accumulator         , To::TopOfStack, &[DecrementStackPointer]),
 ];
 pub const PHP_STEPS: &[Step] = &[
-    Read(From::ProgramCounterTarget, &[InterpretOpCode]),
+    Read(From::ProgramCounterTarget, &[InterpretOpCode, PollInterrupts]),
     WriteField(StatusForInstruction, To::TopOfStack, &[DecrementStackPointer]),
 ];
 
 pub const PLA_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode]),
     Read(From::TopOfStack          , &[IncrementStackPointer]),
-    Read(From::TopOfStack          , &[]),
+    Read(From::TopOfStack          , &[PollInterrupts]),
     // Note swapped order of StartNextInstruction and ExecuteOpCode.
     Read(From::ProgramCounterTarget, &[StartNextInstruction, ExecuteOpCode, IncrementProgramCounter]),
 ];
 
 pub const PLP_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode]),
-    Read(             From::TopOfStack, &[IncrementStackPointer]),
-    Read(From::TopOfStack, &[]),
+    Read(From::TopOfStack, &[IncrementStackPointer]),
+    Read(From::TopOfStack, &[PollInterrupts]),
     // Note swapped order of StartNextInstruction and ExecuteOpCode, necessary for IRQs.
     Read(From::ProgramCounterTarget, &[StartNextInstruction, ExecuteOpCode, IncrementProgramCounter]),
 ];
@@ -321,13 +323,14 @@ pub const JSR_STEPS: &[Step] = &[
     WriteField(ProgramCounterHighByte, To::TopOfStack  , &[DecrementStackPointer]),
     WriteField(ProgramCounterLowByte , To::TopOfStack  , &[DecrementStackPointer]),
     // Put the pending address high byte on the data bus.
-    Read(                              From::ProgramCounterTarget, &[]),
+    Read(                              From::ProgramCounterTarget, &[PollInterrupts]),
     Read(                              From::PendingAddressTarget, &[CopyAddressToPC, StartNextInstruction, IncrementProgramCounter]),
 ];
 
 pub const JMP_ABS_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
-    ReadField(ProgramCounterHighByte, From::ProgramCounterTarget, &[]),
+    // For some reason, JMP seems to poll interrupts on the last step. scanline.nes fails otherwise.
+    ReadField(ProgramCounterHighByte, From::ProgramCounterTarget, &[PollInterrupts]),
 ];
 
 pub const JMP_IND_STEPS: &[Step] = &[
@@ -337,7 +340,7 @@ pub const JMP_IND_STEPS: &[Step] = &[
     // Low byte of the looked-up address.
     Read(From::PendingAddressTarget       , &[IncrementAddressBusLow]    ),
     // High byte of the looked-up address.
-    Read(From::AddressBusTarget           , &[StorePendingAddressLowByte]),
+    Read(From::AddressBusTarget           , &[StorePendingAddressLowByte, PollInterrupts]),
     // Jump to next instruction.
     Read(From::PendingAddressTarget       , &[CopyAddressToPC, StartNextInstruction, IncrementProgramCounter]),
 ];

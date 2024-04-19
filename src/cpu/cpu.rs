@@ -233,20 +233,6 @@ impl Cpu {
 
         self.suppress_program_counter_increment = false;
 
-        // "The interrupt sequences themselves do not perform interrupt polling,
-        // meaning at least one instruction from the interrupt handler will execute
-        // before another interrupt is serviced."
-        // BRK is treated as an interrupt sequence in this case.
-        if let Some(instruction) = self.current_instruction && instruction.op_code() != OpCode::BRK {
-            if self.nmi_status == NmiStatus::Pending {
-                info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
-                self.nmi_status = NmiStatus::Ready;
-            } else if self.irq_status == IrqStatus::Pending {
-                info!(target: "cpuflowcontrol", "IRQ will start after the current instruction completes.");
-                self.irq_status = IrqStatus::Ready;
-            }
-        }
-
         if step.has_start_new_instruction() && !self.suppress_next_instruction_start {
             if self.interrupt_active() {
                 self.current_instruction = None;
@@ -529,8 +515,30 @@ impl Cpu {
                 self.nmi_status = NmiStatus::Inactive;
                 self.irq_status = IrqStatus::Inactive;
                 self.reset_pending = false;
+                // HACK: This should only be done after an instruction has completed. Branching
+                // currently prevents that is some cases unfortunately.
+                self.current_instruction = None;
+                // HACK: This should only be done after an instruction has completed. Branching
+                // currently prevents that is some cases unfortunately.
+                self.next_op_code = None;
             }
             ClearInterruptVector => self.current_interrupt_vector = None,
+            PollInterrupts => {
+                // TODO: Remove BRK hack.
+                // "The interrupt sequences themselves do not perform interrupt polling,
+                // meaning at least one instruction from the interrupt handler will execute
+                // before another interrupt is serviced."
+                // BRK is treated as an interrupt sequence in this case.
+                if let Some(instruction) = self.current_instruction && instruction.op_code() != OpCode::BRK {
+                    if self.nmi_status == NmiStatus::Pending {
+                        info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
+                        self.nmi_status = NmiStatus::Ready;
+                    } else if self.irq_status == IrqStatus::Pending {
+                        info!(target: "cpuflowcontrol", "IRQ will start after the current instruction completes.");
+                        self.irq_status = IrqStatus::Ready;
+                    }
+                }
+            }
 
             CheckNegativeAndZero => {
                 self.status.negative = (self.data_bus >> 7) == 1;
