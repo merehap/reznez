@@ -86,6 +86,9 @@ pub struct Opt {
     #[structopt(name = "disableaudio", long)]
     pub disable_audio: bool,
 
+    #[structopt(name = "logcpuall", long)]
+    pub log_cpu_all: bool,
+
     #[structopt(name = "logcpuinstructions", long)]
     pub log_cpu_instructions: bool,
 
@@ -95,6 +98,9 @@ pub struct Opt {
     #[structopt(name = "logcpusteps", long)]
     pub log_cpu_steps: bool,
 
+    #[structopt(name = "logppuall", long)]
+    pub log_ppu_all: bool,
+
     #[structopt(name = "logppustages", long)]
     pub log_ppu_stages: bool,
 
@@ -103,6 +109,9 @@ pub struct Opt {
 
     #[structopt(name = "logppusteps", long)]
     pub log_ppu_steps: bool,
+
+    #[structopt(name = "logapuall", long)]
+    pub log_apu_all: bool,
 
     #[structopt(name = "logapucycles", long)]
     pub log_apu_cycles: bool,

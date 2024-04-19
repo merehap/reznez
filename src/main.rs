@@ -33,17 +33,7 @@ use crate::logging::logger::Logger;
 
 fn main() {
     let opt = Opt::from_args();
-    logger::init(Logger {
-        log_cpu_instructions: opt.log_cpu_instructions,
-        log_cpu_flow_control: opt.log_cpu_flow_control,
-        log_cpu_steps: opt.log_cpu_steps,
-        log_ppu_stages: opt.log_ppu_stages,
-        log_ppu_flags: opt.log_ppu_flags,
-        log_ppu_steps: opt.log_ppu_steps,
-        log_apu_cycles: opt.log_apu_cycles,
-        log_apu_events: opt.log_apu_events,
-        log_oam_addr: opt.log_oam_addr,
-    }).unwrap();
+    logger::init(logger(&opt)).unwrap();
 
     if opt.analysis {
         analysis::cartridge_db::analyze(&opt.rom_path);
@@ -53,5 +43,37 @@ fn main() {
         let nes = Nes::new(&config);
 
         gui.run(nes, config);
+    }
+}
+
+fn logger(opt: &Opt) -> Logger {
+    let (log_cpu_instructions, log_cpu_steps, log_cpu_flow_control) = if opt.log_cpu_all {
+        (true, true, true)
+    } else {
+        (opt.log_cpu_instructions, opt.log_cpu_steps, opt.log_cpu_flow_control)
+    };
+
+    let (log_ppu_stages, log_ppu_flags, log_ppu_steps) = if opt.log_ppu_all {
+        (true, true, true)
+    } else {
+        (opt.log_ppu_stages, opt.log_ppu_flags, opt.log_ppu_steps)
+    };
+
+    let (log_apu_cycles, log_apu_events) = if opt.log_apu_all {
+        (true, true)
+    } else {
+        (opt.log_apu_cycles, opt.log_apu_events)
+    };
+
+    Logger {
+        log_cpu_instructions,
+        log_cpu_steps,
+        log_cpu_flow_control,
+        log_ppu_stages,
+        log_ppu_flags,
+        log_ppu_steps,
+        log_apu_cycles,
+        log_apu_events,
+        log_oam_addr: opt.log_oam_addr,
     }
 }
