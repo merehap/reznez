@@ -25,6 +25,7 @@ pub struct Cpu {
     status: Status,
 
     current_instruction: Option<Instruction>,
+    // TODO: Remove this. Only test code uses this.
     next_op_code: Option<(u8, CpuAddress)>,
 
     step_queue: StepQueue,
@@ -189,14 +190,6 @@ impl Cpu {
             memory.set_cpu_cycle(cycle + 1);
         }
 
-        if irq_pending
-                && self.irq_status == IrqStatus::Inactive
-                && !self.status.interrupts_disabled
-                && self.current_instruction.is_some() {
-            info!(target: "cpuflowcontrol", "IRQ pending in CPU.");
-            self.irq_status = IrqStatus::Pending;
-        }
-
         if self.step_queue.is_empty() {
             // Get ready to start the next instruction.
             self.step_queue.enqueue_op_code_read();
@@ -228,7 +221,7 @@ impl Cpu {
         }
 
         for &action in step.actions() {
-            self.execute_cycle_action(memory, action);
+            self.execute_cycle_action(memory, action, irq_pending);
         }
 
         self.suppress_program_counter_increment = false;
@@ -246,7 +239,7 @@ impl Cpu {
         Some(step)
     }
 
-    fn execute_cycle_action(&mut self, memory: &mut CpuMemory, action: CycleAction) {
+    fn execute_cycle_action(&mut self, memory: &mut CpuMemory, action: CycleAction, irq_pending: bool) {
         use CycleAction::*;
         match action {
             StartNextInstruction => {
@@ -272,7 +265,7 @@ impl Cpu {
                 }
 
                 match self.nmi_status {
-                    NmiStatus::Inactive if self.irq_status == IrqStatus::Ready && !self.status.interrupts_disabled => {
+                    NmiStatus::Inactive if self.irq_status == IrqStatus::Ready => {
                         info!(target: "cpuflowcontrol", "Starting IRQ");
                         self.irq_status = IrqStatus::Active;
                         // IRQ has BRK's code point (0x00). TODO: Set the data bus to 0x00?
@@ -516,10 +509,7 @@ impl Cpu {
                 self.irq_status = IrqStatus::Inactive;
                 self.reset_pending = false;
                 // HACK: This should only be done after an instruction has completed. Branching
-                // currently prevents that is some cases unfortunately.
-                self.current_instruction = None;
-                // HACK: This should only be done after an instruction has completed. Branching
-                // currently prevents that is some cases unfortunately.
+                // currently prevents that in some cases unfortunately.
                 self.next_op_code = None;
             }
             ClearInterruptVector => self.current_interrupt_vector = None,
@@ -527,7 +517,7 @@ impl Cpu {
                 if self.nmi_status == NmiStatus::Pending {
                     info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
                     self.nmi_status = NmiStatus::Ready;
-                } else if self.irq_status == IrqStatus::Pending {
+                } else if irq_pending && !self.status.interrupts_disabled {
                     info!(target: "cpuflowcontrol", "IRQ will start after the current instruction completes.");
                     self.irq_status = IrqStatus::Ready;
                 }
@@ -759,7 +749,6 @@ enum NmiStatus {
 #[derive(PartialEq, Eq, Debug)]
 enum IrqStatus {
     Inactive,
-    Pending,
     Ready,
     Active,
 }
