@@ -524,19 +524,12 @@ impl Cpu {
             }
             ClearInterruptVector => self.current_interrupt_vector = None,
             PollInterrupts => {
-                // TODO: Remove BRK hack.
-                // "The interrupt sequences themselves do not perform interrupt polling,
-                // meaning at least one instruction from the interrupt handler will execute
-                // before another interrupt is serviced."
-                // BRK is treated as an interrupt sequence in this case.
-                if let Some(instruction) = self.current_instruction && instruction.op_code() != OpCode::BRK {
-                    if self.nmi_status == NmiStatus::Pending {
-                        info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
-                        self.nmi_status = NmiStatus::Ready;
-                    } else if self.irq_status == IrqStatus::Pending {
-                        info!(target: "cpuflowcontrol", "IRQ will start after the current instruction completes.");
-                        self.irq_status = IrqStatus::Ready;
-                    }
+                if self.nmi_status == NmiStatus::Pending {
+                    info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
+                    self.nmi_status = NmiStatus::Ready;
+                } else if self.irq_status == IrqStatus::Pending {
+                    info!(target: "cpuflowcontrol", "IRQ will start after the current instruction completes.");
+                    self.irq_status = IrqStatus::Ready;
                 }
             }
 
