@@ -118,13 +118,13 @@ impl ApuRegisters {
             Inactive => { /* Do nothing. */ }
             Initialized => {
                 info!(target: "apuevents", "APU frame counter: Waiting for APU 'ON' cycle. APU Cycle: {apu_cycle}");
-                self.frame_counter_write_status = WaitingForEvenCycle;
+                self.frame_counter_write_status = WaitingForOnCycle;
             }
-            WaitingForEvenCycle if !self.clock.is_off_cycle() => {
+            WaitingForOnCycle if !self.clock.is_off_cycle() => {
                 info!(target: "apuevents", "APU frame counter: Resetting on the next APU cycle. APU Cycle: {apu_cycle}");
                 self.frame_counter_write_status = Ready;
             }
-            WaitingForEvenCycle => {
+            WaitingForOnCycle => {
                 info!(target: "apuevents", "APU frame counter: Still waiting for APU 'ON' cycle. APU Cycle: {apu_cycle}");
             }
             Ready => {
@@ -327,6 +327,6 @@ impl ApuClock {
 enum FrameCounterWriteStatus {
     Inactive,
     Initialized,
-    WaitingForEvenCycle,
+    WaitingForOnCycle,
     Ready,
 }

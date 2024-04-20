@@ -31,12 +31,12 @@ pub const BRANCH_TAKEN_STEP: Step =
 pub const IMPLICIT_ADDRESSING_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, PollInterrupts]),
     // Read the NEXT op code, execute the CURRENT op code.
-    Read(From::ProgramCounterTarget, &[StartNextInstruction, ExecuteOpCode, IncrementProgramCounter]),
+    Read(From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 pub const IMMEDIATE_ADDRESSING_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter, PollInterrupts]),
     // Read the NEXT op code, execute the CURRENT op code.
-    Read(From::ProgramCounterTarget, &[StartNextInstruction, ExecuteOpCode, IncrementProgramCounter]),
+    Read(From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 pub const RELATIVE_ADDRESSING_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter, PollInterrupts]),
@@ -255,8 +255,6 @@ pub const IRQ_STEPS: &[Step] = &[
     WriteField(StatusForInterrupt    , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
     // Copy the new ProgramCounterLowByte to the data bus.
     Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
-    // TODO: Is ClearIrq supposed to be on the previous line? It was, then I moved it here for
-    // consistency.
     ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector]),
 ];
 
@@ -303,16 +301,14 @@ pub const PLA_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode]),
     Read(From::TopOfStack          , &[IncrementStackPointer]),
     Read(From::TopOfStack          , &[PollInterrupts]),
-    // Note swapped order of StartNextInstruction and ExecuteOpCode.
-    Read(From::ProgramCounterTarget, &[StartNextInstruction, ExecuteOpCode, IncrementProgramCounter]),
+    Read(From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 
 pub const PLP_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode]),
     Read(From::TopOfStack, &[IncrementStackPointer]),
     Read(From::TopOfStack, &[PollInterrupts]),
-    // Note swapped order of StartNextInstruction and ExecuteOpCode, necessary for IRQs.
-    Read(From::ProgramCounterTarget, &[StartNextInstruction, ExecuteOpCode, IncrementProgramCounter]),
+    Read(From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 
 pub const JSR_STEPS: &[Step] = &[
