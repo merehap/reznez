@@ -429,15 +429,16 @@ impl Cpu {
                     }
 
                     AHX => {
+                        /*
                         let high_inc = self.address_bus.high_byte().wrapping_add(1);
                         let value = self.a & self.x & high_inc;
                         // TODO: Consolidate this write into the standardized location.
                         memory.write(self.address_bus, value);
+                        */
                     }
 
                     XAA => {
-                        self.a = self.nz(self.x);
-                        self.a = self.nz(self.a & value);
+                        //self.a = self.nz(self.x & value);
                     }
 
                     // Relative op codes.
