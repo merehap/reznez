@@ -417,11 +417,11 @@ impl Cpu {
                     }
 
                     TAS => {
-                        // TODO: Implement properly.
-                        /*
-                        self.data_bus &= (self.a | 0xEE) & self.x;
-                        self.a = self.data_bus;
-                        */
+                        let sp = self.x & self.a;
+                        *memory.stack_pointer_mut() = sp;
+                        // TODO: Implement this write properly.
+                        //let value = (u16::from(sp) & ((self.address_bus.to_raw() >> 8) + 1)) as u8;
+                        //memory.write(self.address_bus, value);
                     }
                     LAS => {
                         let value = memory.read(self.address_bus).unwrap_or(self.data_bus)
