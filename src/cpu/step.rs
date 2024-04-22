@@ -341,6 +341,27 @@ pub const JMP_IND_STEPS: &[Step] = &[
     Read(From::PendingAddressTarget       , &[CopyAddressToPC, StartNextInstruction, IncrementProgramCounter]),
 ];
 
+// FIXME: These certainly aren't the real AHX steps. Somehow AHX must take 6 cycles but is
+// classified as INDIRECT_INDEXED (and is a write operation which generally don't take 6 cycles).
+pub const INDIRECT_INDEXED_AHX_STEPS: &[Step] = &[
+    Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
+    Read(From::PendingZeroPageTarget, &[IncrementAddressBusLow]),
+    Read(From::AddressBusTarget     , &[StorePendingAddressLowByteWithYOffset]),
+    // Hackily add an extra cycle.
+    Read(From::AddressBusTarget, &[]),
+    Read(From::PendingAddressTarget , &[AddCarryToAddressBus, PollInterrupts]),
+    Read(From::ProgramCounterTarget , &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
+];
+
+// Same as Absolute Y Read Steps, except for some reason the 'oops' cycle is always taken.
+pub const TAS_STEPS: &[Step] = &[
+    Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
+    Read(From::ProgramCounterTarget, &[StorePendingAddressLowByteWithYOffset, IncrementProgramCounter]),
+    Read(From::PendingAddressTarget, &[AddCarryToAddressBus, PollInterrupts]),
+    Read(From::AddressBusTarget, &[]),
+    Read(From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
+];
+
 #[derive(Clone, Copy, Debug)]
 pub enum Step {
     Read(From, &'static [CycleAction]),

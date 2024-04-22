@@ -113,12 +113,14 @@ impl Instruction {
             (Abs, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | CPX | CPY | BIT | LAX | NOP) => ABSOLUTE_READ_STEPS,
             // TODO: Remove the unused combos.
             (AbX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP) => ABSOLUTE_X_READ_STEPS,
-            (AbY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP | LAS | TAS | AHX) => ABSOLUTE_Y_READ_STEPS,
+            (AbY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP | LAS | AHX) => ABSOLUTE_Y_READ_STEPS,
+            (AbY, TAS) => TAS_STEPS,
             (ZP , LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | CPX | CPY | BIT | LAX | NOP) => ZERO_PAGE_READ_STEPS,
             (ZPX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP) => ZERO_PAGE_X_READ_STEPS,
             (ZPY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP) => ZERO_PAGE_Y_READ_STEPS,
             (IzX, LDA |             EOR | AND | ORA | ADC | SBC | CMP |                   LAX) => INDEXED_INDIRECT_READ_STEPS,
-            (IzY, LDA |             EOR | AND | ORA | ADC | SBC | CMP |                   LAX | AHX) => INDIRECT_INDEXED_READ_STEPS,
+            (IzY, LDA |             EOR | AND | ORA | ADC | SBC | CMP |                   LAX) => INDIRECT_INDEXED_READ_STEPS,
+            (IzY, AHX) => INDIRECT_INDEXED_AHX_STEPS,
 
             // Write operations.
             (Abs, STA | STX | STY | SAX) => ABSOLUTE_WRITE_STEPS,

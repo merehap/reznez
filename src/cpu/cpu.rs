@@ -417,8 +417,11 @@ impl Cpu {
                     }
 
                     TAS => {
+                        // TODO: Implement properly.
+                        /*
                         self.data_bus &= (self.a | 0xEE) & self.x;
                         self.a = self.data_bus;
+                        */
                     }
                     LAS => {
                         let value = memory.read(self.address_bus).unwrap_or(self.data_bus)
@@ -429,6 +432,7 @@ impl Cpu {
                     }
 
                     AHX => {
+                        // TODO: Implement properly.
                         /*
                         let high_inc = self.address_bus.high_byte().wrapping_add(1);
                         let value = self.a & self.x & high_inc;
@@ -438,6 +442,7 @@ impl Cpu {
                     }
 
                     XAA => {
+                        // TODO: Implement properly.
                         //self.a = self.nz(self.x & value);
                     }
 
