@@ -42,13 +42,15 @@ Rollerblade Racer: Glitched status bar.
 Wizards and Warriors 3: Bad scanlines at middle of screen. Sprite flickering.
 Arkanoid: Extra sprite.
 Tatakai no Banka: Flickering sprites.
-instr_timing: Infinite BRKs starting at V:14  H:142 Fr:889 Cycle:26476503
 Fire Emblem Gaiden: Blank screen.
 Kaiketsu Yanchamaru 2: PRG bank switching bug leads to JAM.
 Mission Impossible 2: JAMs. Need to mirror CHR ROM due to it being too short?
 mmc5test: black screen.
 Dragon Ball Dai Maou Fukkatsu: infinite loop.
-inst_misc: TAS doesn't work correctly. Easy: Needs to modify the stack pointer. Harder: Address carry needs to be set so an oops cycle occurs.
+
+Tests to pass:
+blargg_ppu_tests_2005.09.15b/power_up_palette.nes
+cpu_exec_space/test_cpu_exec_space_apu.nes
 
 IMPROVEMENTS TO PRG/CHR LAYOUTS
 Validate up front all windows as bank size multiples.

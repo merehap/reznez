@@ -113,8 +113,9 @@ impl Instruction {
             (Abs, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | CPX | CPY | BIT | LAX | NOP) => ABSOLUTE_READ_STEPS,
             // TODO: Remove the unused combos.
             (AbX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP) => ABSOLUTE_X_READ_STEPS,
-            (AbY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP | LAS | AHX) => ABSOLUTE_Y_READ_STEPS,
+            (AbY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP | LAS) => ABSOLUTE_Y_READ_STEPS,
             (AbY, TAS) => TAS_STEPS,
+            (AbY, AHX) => ABSOLUTE_Y_AHX_STEPS,
             (ZP , LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | CPX | CPY | BIT | LAX | NOP) => ZERO_PAGE_READ_STEPS,
             (ZPX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP) => ZERO_PAGE_X_READ_STEPS,
             (ZPY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP) => ZERO_PAGE_Y_READ_STEPS,

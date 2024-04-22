@@ -341,6 +341,17 @@ pub const JMP_IND_STEPS: &[Step] = &[
     Read(From::PendingAddressTarget       , &[CopyAddressToPC, StartNextInstruction, IncrementProgramCounter]),
 ];
 
+// FIXME: These certainly aren't the real AHX steps. Somehow AHX must take 5 cycles but is
+// classified as absolute y (and is a write operation which generally don't take 5 cycles).
+pub const ABSOLUTE_Y_AHX_STEPS: &[Step] = &[
+    Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
+    Read(From::ProgramCounterTarget, &[StorePendingAddressLowByteWithYOffset, IncrementProgramCounter]),
+    Read(From::PendingAddressTarget, &[AddCarryToAddressBus, PollInterrupts]),
+    // Hackily add an extra cycle.
+    Read(From::AddressBusTarget, &[]),
+    Read(From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
+];
+
 // FIXME: These certainly aren't the real AHX steps. Somehow AHX must take 6 cycles but is
 // classified as INDIRECT_INDEXED (and is a write operation which generally don't take 6 cycles).
 pub const INDIRECT_INDEXED_AHX_STEPS: &[Step] = &[
