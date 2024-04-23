@@ -48,16 +48,13 @@ Mission Impossible 2: JAMs. Need to mirror CHR ROM due to it being too short?
 mmc5test: black screen.
 Dragon Ball Dai Maou Fukkatsu: infinite loop.
 
-Tests to pass:
-blargg_ppu_tests_2005.09.15b/power_up_palette.nes
-cpu_exec_space/test_cpu_exec_space_apu.nes
-
 IMPROVEMENTS TO PRG/CHR LAYOUTS
 Validate up front all windows as bank size multiples.
 Automatically add registers from every layout? Maybe not since certain layouts won't be used by certain boards.
 
 FAILING TESTS
-apu_test jitter
+blargg_ppu_tests_2005.09.15b/power_up_palette.nes
+cpu_exec_space/test_cpu_exec_space_apu.nes
 
 ---------------------GAMES------------------------------------
 MAPPER 0
