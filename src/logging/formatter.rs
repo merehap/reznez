@@ -1,21 +1,22 @@
-use crate::cpu::instruction::{INSTRUCTIONS, OpCode, AccessMode};
+use crate::cpu::instruction::{Instruction, INSTRUCTIONS, OpCode, AccessMode};
 use crate::memory::mapper::CpuAddress;
 use crate::nes::Nes;
 
 pub trait Formatter {
-    fn format_instruction(&self, _nes: &Nes, _address: CpuAddress, _interrupt_text: String) -> String;
+    fn format_instruction(&self, nes: &Nes, interrupt_text: String) -> String;
 }
 
 pub struct Nintendulator0980Formatter;
 
 impl Formatter for Nintendulator0980Formatter {
-    fn format_instruction(&self, nes: &Nes, start_address: CpuAddress, _interrupt_text: String) -> String {
+    fn format_instruction(&self, nes: &Nes, _interrupt_text: String) -> String {
         let cpu_cycle = nes.memory().cpu_cycle();
         let peek = |address| nes.memory().cpu_peek(address).unwrap_or(0);
 
         let cpu = nes.cpu();
 
-        let instruction = INSTRUCTIONS[peek(start_address) as usize];
+        let (op_code, start_address) = nes.cpu().next_op_code_and_address().unwrap();
+        let instruction: Instruction = INSTRUCTIONS[usize::from(op_code)];
         let low = peek(start_address.offset(1));
         let high = peek(start_address.offset(2));
 
@@ -121,12 +122,13 @@ impl Formatter for Nintendulator0980Formatter {
 pub struct MesenFormatter;
 
 impl Formatter for MesenFormatter {
-    fn format_instruction(&self, nes: &Nes, start_address: CpuAddress, interrupt_text: String) -> String {
+    fn format_instruction(&self, nes: &Nes, interrupt_text: String) -> String {
         let peek = |address| nes.memory().cpu_peek(address).unwrap_or(0);
 
         let cpu = nes.cpu();
 
-        let instruction = INSTRUCTIONS[peek(start_address) as usize];
+        let (op_code, start_address) = nes.cpu().next_op_code_and_address().unwrap();
+        let instruction: Instruction = INSTRUCTIONS[usize::from(op_code)];
         let low = peek(start_address.offset(1));
         let high = peek(start_address.offset(2));
 

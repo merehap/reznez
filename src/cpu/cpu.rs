@@ -166,18 +166,12 @@ impl Cpu {
             && !self.jammed
     }
 
-    pub fn address_for_next_step(&self, memory: &CpuMemory) -> CpuAddress {
-        self.step_queue.peek()
-            .map_or(
-                self.program_counter,
-                |step| {
-                    match step {
-                        Step::Read(from, _) | Step::ReadField(_, from, _) =>
-                            self.lookup_from_address(memory, from),
-                        Step::Write(to, _) | Step::WriteField(_, to, _) =>
-                            self.lookup_to_address(memory, to),
-                    }
-                })
+    pub fn next_op_code_and_address(&self) -> Option<(u8, CpuAddress)> {
+        if self.interrupt_active() || self.suppress_next_instruction_start || self.jammed {
+            None
+        } else {
+            self.next_op_code
+        }
     }
 
     pub fn step(&mut self, memory: &mut CpuMemory, irq_pending: bool) -> Option<Step> {

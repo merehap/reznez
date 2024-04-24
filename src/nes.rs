@@ -152,10 +152,9 @@ impl Nes {
             interrupt_text = formatter::interrupts(self);
         }
 
-        let address = self.cpu.address_for_next_step(&self.memory.as_cpu_memory());
         let step = self.cpu.step(&mut self.memory.as_cpu_memory(), irq_pending);
         if log_enabled!(target: "cpuinstructions", Info) && self.cpu.next_instruction_starting() {
-            info!("{}", self.log_formatter.format_instruction(self, address, interrupt_text));
+            info!("{}", self.log_formatter.format_instruction(self, interrupt_text));
         }
 
         step
