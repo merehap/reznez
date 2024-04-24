@@ -75,6 +75,7 @@ fn framematch() {
             log_apu_events: false,
             frame_dump: false,
             analysis: false,
+            disable_controllers: false,
         };
 
         let mut nes = Nes::new(&Config::new(&opt));

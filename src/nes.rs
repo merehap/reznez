@@ -38,8 +38,13 @@ pub struct Nes {
 impl Nes {
     pub fn new(config: &Config) -> Nes {
         let (mapper, mapper_params) = mapper_list::lookup_mapper(&config.cartridge);
-        let joypad1 = Rc::new(RefCell::new(Joypad::new()));
-        let joypad2 = Rc::new(RefCell::new(Joypad::new()));
+        let (joypad1, joypad2) =
+        if config.joypad_enabled {
+            (Rc::new(RefCell::new(Joypad::new())), Rc::new(RefCell::new(Joypad::new())))
+        } else {
+            (Rc::new(RefCell::new(Joypad::disabled())), Rc::new(RefCell::new(Joypad::disabled())))
+        };
+
         let ports = Ports::new(joypad1.clone(), joypad2.clone());
         let mut memory = Memory::new(mapper, mapper_params, ports, config.system_palette.clone());
 

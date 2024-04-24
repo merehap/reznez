@@ -44,6 +44,7 @@ fn nestest() {
         log_oam_addr: false,
         frame_dump: false,
         analysis: false,
+        disable_controllers: false,
     };
 
     logger::init(Logger {
