@@ -84,7 +84,7 @@ pub trait Mapper {
                     0x2004 => oam.peek(ppu_registers.oam_addr),
                     0x2005 => ppu_registers.peek(RegisterType::Scroll, peeker),
                     0x2006 => ppu_registers.peek(RegisterType::PpuAddr, peeker),
-                    0x2007 => ppu_registers.peek(RegisterType::PpuAddr, peeker),
+                    0x2007 => ppu_registers.peek(RegisterType::PpuData, peeker),
                     _ => unreachable!(),
                 })
             }
