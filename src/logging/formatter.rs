@@ -211,7 +211,7 @@ impl Formatter for MesenFormatter {
         }
 
         format!(
-            "{:04X}  {:?} {:28}{} A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} V:{:<3} H:{:<3} Fr:{} Cycle:{}",
+            "{:04X}  {:?} {:28}{} A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} V:{:<3} H:{:<3} Cycle:{}",
             start_address.to_raw(),
             instruction.op_code(),
             argument_string,
@@ -223,7 +223,6 @@ impl Formatter for MesenFormatter {
             cpu.status().to_mesen_string(),
             scanline,
             nes.ppu().clock().cycle(),
-            nes.ppu().clock().frame(),
             nes.memory().cpu_cycle(),
         )
     }
