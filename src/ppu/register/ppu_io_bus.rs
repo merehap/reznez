@@ -1,5 +1,4 @@
 use crate::ppu::clock::MAX_SCANLINE;
-use crate::ppu::register::register_type::RegisterType;
 
 #[derive(Clone, Copy)]
 pub struct PpuIoBus {
@@ -21,18 +20,18 @@ impl PpuIoBus {
         self.value
     }
 
-    pub fn update_from_read(&mut self, register_type: RegisterType, value: u8) {
+    pub fn update_from_read(&mut self, value: u8) {
         self.value = value;
+        // All bit decays are now in sync, so stop tracking this.
+        self.scanlines_until_unused_status_bits_decay = None;
+        // At least one frame should occur before the latch decays to zero.
+        self.scanlines_until_decay = Some(MAX_SCANLINE);
+    }
 
-        self.scanlines_until_unused_status_bits_decay =
-            if register_type == RegisterType::Status {
-                // The unused status bits remain on the old decay schedule.
-                self.scanlines_until_decay
-            } else {
-                // All bit decays are now in sync, so stop tracking this.
-                None
-            };
-
+    pub fn update_from_status_read(&mut self, value: u8) {
+        self.value = value;
+        // The unused status bits remain on the old decay schedule.
+        self.scanlines_until_unused_status_bits_decay = self.scanlines_until_decay;
         // At least one frame should occur before the latch decays to zero.
         self.scanlines_until_decay = Some(MAX_SCANLINE);
     }

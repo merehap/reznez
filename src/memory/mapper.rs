@@ -24,8 +24,7 @@ use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu::vram::VramSide;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
-use crate::ppu::register::ppu_registers::PpuRegisters;
-use crate::ppu::register::register_type::RegisterType;
+use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
 use crate::ppu::sprite::oam::Oam;
 
 pub trait Mapper {
@@ -76,16 +75,18 @@ pub trait Mapper {
             0x0000..=0x07FF => ReadResult::full(cpu_internal_ram[address.to_usize()]),
             0x0800..=0x1FFF => ReadResult::full(cpu_internal_ram[address.to_usize() & 0x07FF]),
             0x2000..=0x3FFF => {
-                let peeker = |ppu_address| self.ppu_peek(params, ppu_internal_ram, ppu_address);
                 ReadResult::full(match address.to_raw() & 0x2007 {
-                    0x2000 => ppu_registers.peek(RegisterType::Ctrl, peeker),
-                    0x2001 => ppu_registers.peek(RegisterType::Mask, peeker),
-                    0x2002 => ppu_registers.peek(RegisterType::Status, peeker),
-                    0x2003 => ppu_registers.peek(RegisterType::OamAddr, peeker),
-                    0x2004 => oam.peek(ppu_registers.oam_addr),
-                    0x2005 => ppu_registers.peek(RegisterType::Scroll, peeker),
-                    0x2006 => ppu_registers.peek(RegisterType::PpuAddr, peeker),
-                    0x2007 => ppu_registers.peek(RegisterType::PpuData, peeker),
+                    0x2000 => ppu_registers.peek_ppu_io_bus(),
+                    0x2001 => ppu_registers.peek_ppu_io_bus(),
+                    0x2002 => ppu_registers.peek_status(),
+                    0x2003 => ppu_registers.peek_ppu_io_bus(),
+                    0x2004 => ppu_registers.peek_oam_data(oam),
+                    0x2005 => ppu_registers.peek_ppu_io_bus(),
+                    0x2006 => ppu_registers.peek_ppu_io_bus(),
+                    0x2007 => {
+                        let peeker = |ppu_address| self.ppu_peek(params, ppu_internal_ram, ppu_address);
+                        ppu_registers.peek_ppu_data(peeker)
+                    }
                     _ => unreachable!(),
                 })
             }
@@ -119,27 +120,27 @@ pub trait Mapper {
             0x0000..=0x07FF => ReadResult::full(cpu_internal_ram[address.to_usize()]),
             0x0800..=0x1FFF => ReadResult::full(cpu_internal_ram[address.to_usize() & 0x07FF]),
             0x2000..=0x3FFF => {
-                let reader = |ppu_address| self.ppu_read(params, ppu_internal_ram, ppu_address, false);
                 ReadResult::full(match address.to_raw() & 0x2007 {
-                    0x2000 => ppu_registers.read(RegisterType::Ctrl, reader),
-                    0x2001 => ppu_registers.read(RegisterType::Mask, reader),
-                    0x2002 => ppu_registers.read(RegisterType::Status, reader),
-                    0x2003 => ppu_registers.read(RegisterType::OamAddr, reader),
-                    0x2004 => {
-                        let value = oam.peek(ppu_registers.oam_addr);
-                        ppu_registers.ppu_io_bus.update_from_read(RegisterType::OamData, value);
-                        value
+                    0x2000 => ppu_registers.peek_ppu_io_bus(),
+                    0x2001 => ppu_registers.peek_ppu_io_bus(),
+                    0x2002 => ppu_registers.read_status(),
+                    0x2003 => ppu_registers.peek_ppu_io_bus(),
+                    0x2004 => ppu_registers.read_oam_data(oam),
+                    0x2005 => ppu_registers.peek_ppu_io_bus(),
+                    0x2006 => ppu_registers.peek_ppu_io_bus(),
+                    0x2007 => {
+                        let reader = |ppu_address| self.ppu_read(params, ppu_internal_ram, ppu_address, false);
+                        let data = ppu_registers.read_ppu_data(reader);
+                        self.process_current_ppu_address(ppu_registers.current_address());
+                        data
                     }
-                    0x2005 => ppu_registers.read(RegisterType::Scroll, reader),
-                    0x2006 => ppu_registers.read(RegisterType::PpuAddr, reader),
-                    0x2007 => ppu_registers.read(RegisterType::PpuData, reader),
                     _ => unreachable!(),
                 })
             }
             0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
             0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
             0x4015          => ReadResult::full(apu_registers.read_status().to_u8()),
-            // TODO: Open bus https://www.nesdev.org/wiki/Controller_reading
+            // TODO: Move ReadResult/mask specification into the controller.
             0x4016          => ReadResult::partial_open_bus(ports.joypad1.borrow_mut().read_status() as u8, 0b0000_0001),
             0x4017          => ReadResult::partial_open_bus(ports.joypad2.borrow_mut().read_status() as u8, 0b0000_0001),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
@@ -167,19 +168,21 @@ pub trait Mapper {
             0x0000..=0x07FF => cpu_internal_ram[address.to_usize()] = value,
             0x0800..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF] = value,
             0x2000..=0x3FFF => match address.to_raw() & 0x2007 {
-                0x2000 => ppu_registers.write(RegisterType::Ctrl, value),
-                0x2001 => ppu_registers.write(RegisterType::Mask, value),
-                0x2002 => ppu_registers.write(RegisterType::Status, value),
-                0x2003 => ppu_registers.write(RegisterType::OamAddr, value),
-                0x2004 => {
-                    oam.write(ppu_registers.oam_addr, value);
-                    ppu_registers.write(RegisterType::OamData, value);
+                0x2000 => ppu_registers.write_ctrl(value),
+                0x2001 => ppu_registers.write_mask(value),
+                0x2002 => ppu_registers.write_ppu_io_bus(value),
+                0x2003 => ppu_registers.write_oam_addr(value),
+                0x2004 => ppu_registers.write_oam_data(oam, value),
+                0x2005 => ppu_registers.write_scroll(value),
+                0x2006 => {
+                    ppu_registers.write_ppu_addr(value);
+                    if ppu_registers.write_toggle() == WriteToggle::FirstByte {
+                        self.process_current_ppu_address(ppu_registers.current_address());
+                    }
                 }
-                0x2005 => ppu_registers.write(RegisterType::Scroll, value),
-                0x2006 => ppu_registers.write(RegisterType::PpuAddr, value),
                 0x2007 => {
                     self.ppu_write(params, ppu_internal_ram, ppu_registers.current_address(), value);
-                    ppu_registers.write(RegisterType::PpuData, value);
+                    ppu_registers.write_ppu_data(value);
                     self.process_current_ppu_address(ppu_registers.current_address());
                 }
                 _ => unreachable!(),
