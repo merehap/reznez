@@ -94,7 +94,7 @@ pub trait Mapper {
             // TODO: Open bus https://www.nesdev.org/wiki/Controller_reading
             0x4016          => Some(ports.joypad1.borrow().peek_status() as u8),
             0x4017          => Some(ports.joypad2.borrow().peek_status() as u8),
-            0x4018..=0x401F => /* CPU Test Mode not yet supported. */ Some(0),
+            0x4018..=0x401F => /* CPU Test Mode not yet supported. */ None,
             0x4020..=0xFFFF => self.peek_from_cartridge_space(params, address),
         }
     }
@@ -141,7 +141,7 @@ pub trait Mapper {
             // TODO: Open bus https://www.nesdev.org/wiki/Controller_reading
             0x4016          => Some(ports.joypad1.borrow_mut().read_status() as u8),
             0x4017          => Some(ports.joypad2.borrow_mut().read_status() as u8),
-            0x4018..=0x401F => /* CPU Test Mode not yet supported. */ Some(0),
+            0x4018..=0x401F => /* CPU Test Mode not yet supported. */ None,
             0x4020..=0xFFFF => self.read_from_cartridge_space(params, address),
         }
     }
