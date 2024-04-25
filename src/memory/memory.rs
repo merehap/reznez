@@ -6,6 +6,7 @@ use crate::memory::cpu::stack::Stack;
 use crate::memory::mapper::{Mapper, MapperParams};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
+use crate::memory::read_result::ReadResult;
 use crate::ppu::name_table::name_table::NameTable;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
@@ -97,7 +98,7 @@ impl Memory {
         self.cpu_cycle
     }
 
-    pub fn cpu_peek(&self, address: CpuAddress) -> Option<u8> {
+    pub fn cpu_peek(&self, address: CpuAddress) -> ReadResult {
         self.mapper.cpu_peek(
             &self.mapper_params,
             &self.cpu_internal_ram,
@@ -117,7 +118,7 @@ pub struct CpuMemory<'a> {
 
 impl<'a> CpuMemory<'a> {
     #[inline]
-    pub fn peek(&self, address: CpuAddress) -> Option<u8> {
+    pub fn peek(&self, address: CpuAddress) -> ReadResult {
         self.memory.mapper.cpu_peek(
             &self.memory.mapper_params,
             &self.memory.cpu_internal_ram,
@@ -131,7 +132,7 @@ impl<'a> CpuMemory<'a> {
     }
 
     #[inline]
-    pub fn read(&mut self, address: CpuAddress) -> Option<u8> {
+    pub fn read(&mut self, address: CpuAddress) -> ReadResult {
         self.memory.mapper.cpu_read(
             &mut self.memory.mapper_params,
             &self.memory.cpu_internal_ram,

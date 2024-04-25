@@ -54,7 +54,6 @@ Automatically add registers from every layout? Maybe not since certain layouts w
 
 FAILING TESTS
 blargg_ppu_tests_2005.09.15b/power_up_palette.nes
-cpu_exec_space/test_cpu_exec_space_apu.nes
 
 ---------------------GAMES------------------------------------
 MAPPER 0

@@ -144,31 +144,33 @@ impl Mapper for Mapper005 {
             .build()
     }
 
-    fn peek_from_cartridge_space(&self, params: &MapperParams, address: CpuAddress) -> Option<u8> {
+    fn peek_from_cartridge_space(&self, params: &MapperParams, address: CpuAddress) -> ReadResult {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
-            0x4020..=0x500F => None,
-            0x5010 => /* TODO: Implement properly. */ Some(0x01),
-            0x5011..=0x5014 => None,
+            0x4020..=0x500F => ReadResult::OPEN_BUS,
+            0x5010 => /* TODO: Implement properly. */ ReadResult::full(0x01),
+            0x5011..=0x5014 => ReadResult::OPEN_BUS,
             0x5015 => todo!(),
-            0x5016..=0x5203 => None,
-            0x5204 => Some(self.scanline_irq_status()),
-            0x5205 => Some((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
-            0x5206 => Some(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
-            0x5207..=0x5BFF => None,
+            0x5016..=0x5203 => ReadResult::OPEN_BUS,
+            0x5204 => ReadResult::full(self.scanline_irq_status()),
+            0x5205 => ReadResult::full((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
+            0x5206 => ReadResult::full(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
+            0x5207..=0x5BFF => ReadResult::OPEN_BUS,
             0x5C00..=0x5FFF => self.peek_from_extended_ram(address),
             0x6000..=0xFFFF => params.peek_prg(address),
         }
     }
 
-    fn read_from_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress) -> Option<u8> {
+    fn read_from_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress) -> ReadResult {
         let result = self.peek_from_cartridge_space(params, address);
-        // TODO: Replace with ifs.
+        // TODO: Replace with ifs?
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5203 => {}
             0x5204 => self.irq_pending = false,
             0x5205..=0xFFFF => {}
+            // FIXME: Shouldn't we have this here?
+            // 0x6000..=0xFFFF => params.read_prg(address),
         }
 
         result
@@ -487,11 +489,11 @@ impl Mapper005 {
         self.multiplier = value;
     }
 
-    fn peek_from_extended_ram(&self, address: CpuAddress) -> Option<u8> {
+    fn peek_from_extended_ram(&self, address: CpuAddress) -> ReadResult {
         if self.extended_ram_mode.is_readable() {
-            Some(self.extended_ram[usize::from(address.to_raw() - 0x5C00)])
+            ReadResult::full(self.extended_ram[usize::from(address.to_raw() - 0x5C00)])
         } else {
-            None
+            ReadResult::OPEN_BUS
         }
     }
 

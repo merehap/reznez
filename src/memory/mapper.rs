@@ -9,6 +9,7 @@ pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout, PrgWindow, PrgBan
 pub use crate::memory::initial_layout::{InitialLayout, NameTableMirroringSource};
 pub use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout, ChrWindow, ChrBank};
 pub use crate::memory::ppu::ppu_address::PpuAddress;
+pub use crate::memory::read_result::ReadResult;
 pub use crate::memory::writability::Writability::*;
 pub use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 pub use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
@@ -34,15 +35,15 @@ pub trait Mapper {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8);
 
     // Most mappers don't override the default cartridge peeking/reading behavior.
-    fn peek_from_cartridge_space(&self, params: &MapperParams, address: CpuAddress) -> Option<u8> {
+    fn peek_from_cartridge_space(&self, params: &MapperParams, address: CpuAddress) -> ReadResult {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
-            0x4020..=0x5FFF => None,
+            0x4020..=0x5FFF => ReadResult::OPEN_BUS,
             0x6000..=0xFFFF => params.peek_prg(address),
         }
     }
 
-    fn read_from_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress) -> Option<u8> {
+    fn read_from_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress) -> ReadResult {
         self.peek_from_cartridge_space(params, address)
     }
 
@@ -70,13 +71,13 @@ pub trait Mapper {
         ppu_registers: &PpuRegisters,
         apu_registers: &ApuRegisters,
         address: CpuAddress,
-    ) -> Option<u8> {
+    ) -> ReadResult {
         match address.to_raw() {
-            0x0000..=0x07FF => Some(cpu_internal_ram[address.to_usize()]),
-            0x0800..=0x1FFF => Some(cpu_internal_ram[address.to_usize() & 0x07FF]),
+            0x0000..=0x07FF => ReadResult::full(cpu_internal_ram[address.to_usize()]),
+            0x0800..=0x1FFF => ReadResult::full(cpu_internal_ram[address.to_usize() & 0x07FF]),
             0x2000..=0x3FFF => {
                 let peeker = |ppu_address| self.ppu_peek(params, ppu_internal_ram, ppu_address);
-                Some(match address.to_raw() & 0x2007 {
+                ReadResult::full(match address.to_raw() & 0x2007 {
                     0x2000 => ppu_registers.peek(RegisterType::Ctrl, peeker),
                     0x2001 => ppu_registers.peek(RegisterType::Mask, peeker),
                     0x2002 => ppu_registers.peek(RegisterType::Status, peeker),
@@ -88,13 +89,13 @@ pub trait Mapper {
                     _ => unreachable!(),
                 })
             }
-            0x4000..=0x4013 => { /* APU registers are write-only. */ None }
-            0x4014          => { /* OAM DMA is write-only. TODO: Is open bus correct? */ None}
-            0x4015          => Some(apu_registers.peek_status().to_u8()),
-            // TODO: Open bus https://www.nesdev.org/wiki/Controller_reading
-            0x4016          => Some(ports.joypad1.borrow().peek_status() as u8),
-            0x4017          => Some(ports.joypad2.borrow().peek_status() as u8),
-            0x4018..=0x401F => /* CPU Test Mode not yet supported. */ None,
+            0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
+            0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
+            0x4015          => ReadResult::full(apu_registers.peek_status().to_u8()),
+            // TODO: Move ReadResult/mask specification into the controller.
+            0x4016          => ReadResult::partial_open_bus(ports.joypad1.borrow().peek_status() as u8, 0b0000_0001),
+            0x4017          => ReadResult::partial_open_bus(ports.joypad2.borrow().peek_status() as u8, 0b0000_0001),
+            0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
             0x4020..=0xFFFF => self.peek_from_cartridge_space(params, address),
         }
     }
@@ -112,14 +113,14 @@ pub trait Mapper {
         ppu_registers: &mut PpuRegisters,
         apu_registers: &mut ApuRegisters,
         address: CpuAddress,
-    ) -> Option<u8> {
+    ) -> ReadResult {
         self.on_cpu_read(address);
         match address.to_raw() {
-            0x0000..=0x07FF => Some(cpu_internal_ram[address.to_usize()]),
-            0x0800..=0x1FFF => Some(cpu_internal_ram[address.to_usize() & 0x07FF]),
+            0x0000..=0x07FF => ReadResult::full(cpu_internal_ram[address.to_usize()]),
+            0x0800..=0x1FFF => ReadResult::full(cpu_internal_ram[address.to_usize() & 0x07FF]),
             0x2000..=0x3FFF => {
                 let reader = |ppu_address| self.ppu_read(params, ppu_internal_ram, ppu_address, false);
-                Some(match address.to_raw() & 0x2007 {
+                ReadResult::full(match address.to_raw() & 0x2007 {
                     0x2000 => ppu_registers.read(RegisterType::Ctrl, reader),
                     0x2001 => ppu_registers.read(RegisterType::Mask, reader),
                     0x2002 => ppu_registers.read(RegisterType::Status, reader),
@@ -135,13 +136,13 @@ pub trait Mapper {
                     _ => unreachable!(),
                 })
             }
-            0x4000..=0x4013 => { /* APU registers are write-only. */ None }
-            0x4014          => { /* OAM DMA is write-only. TODO: Is open bus correct? */ None}
-            0x4015          => Some(apu_registers.read_status().to_u8()),
+            0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
+            0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
+            0x4015          => ReadResult::full(apu_registers.read_status().to_u8()),
             // TODO: Open bus https://www.nesdev.org/wiki/Controller_reading
-            0x4016          => Some(ports.joypad1.borrow_mut().read_status() as u8),
-            0x4017          => Some(ports.joypad2.borrow_mut().read_status() as u8),
-            0x4018..=0x401F => /* CPU Test Mode not yet supported. */ None,
+            0x4016          => ReadResult::partial_open_bus(ports.joypad1.borrow_mut().read_status() as u8, 0b0000_0001),
+            0x4017          => ReadResult::partial_open_bus(ports.joypad2.borrow_mut().read_status() as u8, 0b0000_0001),
+            0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
             0x4020..=0xFFFF => self.read_from_cartridge_space(params, address),
         }
     }
@@ -443,7 +444,7 @@ impl MapperParams {
         self.prg_memory.resolve_selected_bank_indexes(&self.bank_index_registers)
     }
 
-    pub fn peek_prg(&self, address: CpuAddress) -> Option<u8> {
+    pub fn peek_prg(&self, address: CpuAddress) -> ReadResult {
         self.prg_memory.peek(&self.bank_index_registers, address)
     }
 

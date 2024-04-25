@@ -1,5 +1,6 @@
 use crate::memory::bank_index::{BankIndex, BankIndexRegisters, BankIndexRegisterId};
 use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::read_result::ReadResult;
 use crate::memory::writability::Writability;
 
 const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
@@ -71,18 +72,18 @@ impl PrgMemory {
         self.bank_count() - 1
     }
 
-    pub fn peek(&self, registers: &BankIndexRegisters, address: CpuAddress) -> Option<u8> {
+    pub fn peek(&self, registers: &BankIndexRegisters, address: CpuAddress) -> ReadResult {
         match self.address_to_prg_index(registers, address) {
-            PrgMemoryIndex::None => None,
+            PrgMemoryIndex::None => ReadResult::OPEN_BUS,
             PrgMemoryIndex::MappedMemory(index) =>
-                Some(self.raw_memory[index % self.raw_memory.len()]),
+                ReadResult::full(self.raw_memory[index % self.raw_memory.len()]),
             PrgMemoryIndex::WorkRam { section_id, index } => {
                 let work_ram = &self.work_ram_sections[section_id];
                 use WorkRamStatus::*;
                 match work_ram.status {
-                    Disabled => None,
-                    ReadOnlyZeros => Some(0),
-                    ReadOnly | ReadWrite => Some(work_ram.data[index]),
+                    Disabled => ReadResult::OPEN_BUS,
+                    ReadOnlyZeros => ReadResult::full(0),
+                    ReadOnly | ReadWrite => ReadResult::full(work_ram.data[index]),
                 }
             }
         }
