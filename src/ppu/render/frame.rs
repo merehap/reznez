@@ -49,13 +49,13 @@ impl Frame {
     ) -> (Rgb, Sprite0Hit) {
         use Rgbt::{Opaque, Transparent};
         let mut background_pixel = self.buffer[(column, row)];
-        if !mask.left_background_columns_enabled && column.is_in_left_margin() {
+        if !mask.left_background_columns_enabled() && column.is_in_left_margin() {
             background_pixel = Transparent;
         }
 
         let (mut sprite_pixel, sprite_priority, is_sprite_0) =
             self.sprite_buffer[(column, row)];
-        if !mask.left_sprite_columns_enabled && column.is_in_left_margin() {
+        if !mask.left_sprite_columns_enabled() && column.is_in_left_margin() {
             sprite_pixel = Transparent;
         }
 

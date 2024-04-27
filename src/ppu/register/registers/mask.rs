@@ -1,70 +1,51 @@
 use log::info;
+use modular_bitfield::prelude::*;
 
-use crate::util::bit_util::get_bit;
-
+#[bitfield]
 #[derive(Clone, Copy, Debug)]
 pub struct Mask {
-    pub emphasize_blue: bool,
-    pub emphasize_green: bool,
-    pub emphasize_red: bool,
-    pub sprites_enabled: bool,
-    pub background_enabled: bool,
-    pub left_sprite_columns_enabled: bool,
-    pub left_background_columns_enabled: bool,
     pub greyscale_enabled: bool,
+    pub left_background_columns_enabled: bool,
+    pub left_sprite_columns_enabled: bool,
+    pub background_enabled: bool,
+    pub sprites_enabled: bool,
+    pub emphasize_red: bool,
+    pub emphasize_green: bool,
+    pub emphasize_blue: bool,
 }
 
 impl Mask {
     pub fn all_disabled() -> Mask {
-        Mask {
-            emphasize_blue: false,
-            emphasize_green: false,
-            emphasize_red: false,
-            sprites_enabled: false,
-            background_enabled: false,
-            left_sprite_columns_enabled: false,
-            left_background_columns_enabled: false,
-            greyscale_enabled: false,
-        }
+        Mask::new()
     }
 
     pub fn full_screen_enabled() -> Mask {
-        let mut mask = Mask::all_disabled();
-        mask.left_sprite_columns_enabled = true;
-        mask.left_background_columns_enabled = true;
-        mask
+        Mask::new()
+            .with_left_sprite_columns_enabled(true)
+            .with_left_background_columns_enabled(true)
     }
 
     pub fn set(&mut self, value: u8) {
         let old_mask = *self;
-        *self = Mask {
-            emphasize_blue:                  get_bit(value, 0),
-            emphasize_green:                 get_bit(value, 1),
-            emphasize_red:                   get_bit(value, 2),
-            sprites_enabled:                 get_bit(value, 3),
-            background_enabled:              get_bit(value, 4),
-            left_sprite_columns_enabled:     get_bit(value, 5),
-            left_background_columns_enabled: get_bit(value, 6),
-            greyscale_enabled:               get_bit(value, 7),
-        };
+        *self = Mask::from_bytes([value]);
 
-        log_change(old_mask.emphasize_blue, self.emphasize_blue, "Blue emphasis");
-        log_change(old_mask.emphasize_green, self.emphasize_green, "Green emphasis");
-        log_change(old_mask.emphasize_red, self.emphasize_red, "Red emphasis");
-        log_change(old_mask.sprites_enabled, self.sprites_enabled, "Sprites");
-        log_change(old_mask.background_enabled, self.background_enabled, "Background");
+        log_change(old_mask.emphasize_blue(), self.emphasize_blue(), "Blue emphasis");
+        log_change(old_mask.emphasize_green(), self.emphasize_green(), "Green emphasis");
+        log_change(old_mask.emphasize_red(), self.emphasize_red(), "Red emphasis");
+        log_change(old_mask.sprites_enabled(), self.sprites_enabled(), "Sprites");
+        log_change(old_mask.background_enabled(), self.background_enabled(), "Background");
 
         log_change(
-            old_mask.left_sprite_columns_enabled,
-            self.left_sprite_columns_enabled,
+            old_mask.left_sprite_columns_enabled(),
+            self.left_sprite_columns_enabled(),
             "Left sprite columns",
         );
         log_change(
-            old_mask.left_background_columns_enabled,
-            self.left_background_columns_enabled,
+            old_mask.left_background_columns_enabled(),
+            self.left_background_columns_enabled(),
             "Left background columns",
         );
-        log_change(old_mask.greyscale_enabled, self.greyscale_enabled, "Greyscale");
+        log_change(old_mask.greyscale_enabled(), self.greyscale_enabled(), "Greyscale");
     }
 }
 
