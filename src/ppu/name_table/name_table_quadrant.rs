@@ -1,8 +1,9 @@
+use  modular_bitfield::BitfieldSpecifier;
 use num_derive::FromPrimitive;
 
 use crate::util::bit_util::get_bit;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, BitfieldSpecifier)]
 pub enum NameTableQuadrant {
     TopLeft,
     TopRight,

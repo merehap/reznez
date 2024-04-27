@@ -323,7 +323,7 @@ mod tests {
 
     fn step_until_vblank_nmi_enabled(nes: &mut Nes) {
         let mut ctrl = Ctrl::new();
-        ctrl.nmi_enabled = true;
+        ctrl.set_nmi_enabled(true);
         nes.memory
             .as_cpu_memory()
             .write(CpuAddress::new(0x2000), ctrl.to_u8());

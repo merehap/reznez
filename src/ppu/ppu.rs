@@ -254,7 +254,7 @@ impl Ppu {
                 if let Some(pixel_row) = self.clock.scanline_pixel_row()
                     && let Some(top_sprite_row) = PixelRow::try_from_u8(self.oam_data_read)
                     && let Some(offset) = pixel_row.difference(top_sprite_row)
-                    && offset < (mem.regs().sprite_height() as u8)
+                    && offset < (mem.regs().sprite_height().to_dimension())
                 {
                     if mem.regs().oam_addr.is_at_sprite_0() {
                         self.sprite_0_present = true;

@@ -1,4 +1,5 @@
 use enum_iterator::IntoEnumIterator;
+use modular_bitfield::BitfieldSpecifier;
 
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::rgbt::Rgbt;
@@ -116,7 +117,7 @@ impl<'a> PatternTable<'a> {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, BitfieldSpecifier)]
 pub enum PatternTableSide {
     Left,
     Right,

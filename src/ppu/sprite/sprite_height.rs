@@ -1,9 +1,11 @@
+use modular_bitfield::BitfieldSpecifier;
+
 use crate::ppu::sprite::sprite_half::SpriteHalf;
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, BitfieldSpecifier)]
 pub enum SpriteHeight {
-    Normal = 8,
-    Tall = 16,
+    Normal,
+    Tall,
 }
 
 impl SpriteHeight {
@@ -18,5 +20,12 @@ impl SpriteHeight {
 
     pub fn is_in_range(self, y_offset: u8) -> bool {
         self.sprite_half(y_offset).is_some()
+    }
+
+    pub fn to_dimension(self) -> u8 {
+        match self {
+            SpriteHeight::Normal => 8,
+            SpriteHeight::Tall => 16,
+        }
     }
 }
