@@ -196,11 +196,11 @@ impl Cpu {
         match step {
             Step::Read(from, _) => {
                 self.address_bus = self.lookup_from_address(memory, from);
-                self.data_bus = memory.read(self.address_bus).unwrap_or(self.data_bus);
+                self.data_bus = memory.read(self.address_bus).resolve(self.data_bus);
             }
             Step::ReadField(field, from, _) => {
                 self.address_bus = self.lookup_from_address(memory, from);
-                self.data_bus = memory.read(self.address_bus).unwrap_or(self.data_bus);
+                self.data_bus = memory.read(self.address_bus).resolve(self.data_bus);
                 self.set_field_value(field);
             }
             Step::Write(to, _) => {

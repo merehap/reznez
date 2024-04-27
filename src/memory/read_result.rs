@@ -15,6 +15,10 @@ impl ReadResult {
         Self { value, mask }
     }
 
+    pub fn resolve(self, data_bus_value: u8) -> u8 {
+        (self.value & self.mask) | (data_bus_value & !self.mask)
+    }
+
     pub fn unwrap(self) -> u8 {
         assert_eq!(self.mask, 0b1111_1111);
         self.value
