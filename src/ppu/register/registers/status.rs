@@ -1,31 +1,21 @@
-use crate::util::bit_util::pack_bools;
+#![allow(dead_code)]
 
+use modular_bitfield::bitfield;
+use modular_bitfield::specifiers::B5;
+
+#[bitfield]
 #[derive(Clone, Copy)]
 pub struct Status {
-    pub vblank_active: bool,
-    pub sprite0_hit: bool,
+    #[skip]
+    _unused: B5,
+
     pub sprite_overflow: bool,
+    pub sprite0_hit: bool,
+    pub vblank_active: bool,
 }
 
 impl Status {
-    pub fn new() -> Status {
-        Status {
-            vblank_active: false,
-            sprite0_hit: false,
-            sprite_overflow: false,
-        }
-    }
-
     pub fn to_u8(self) -> u8 {
-        pack_bools([
-            self.vblank_active,
-            self.sprite0_hit,
-            self.sprite_overflow,
-            false,
-            false,
-            false,
-            false,
-            false,
-        ])
+        self.into_bytes()[0]
     }
 }

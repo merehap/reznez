@@ -12,6 +12,7 @@ pub struct Ctrl {
     pub sprite_table_side: PatternTableSide,
     pub background_table_side: PatternTableSide,
     pub sprite_height: SpriteHeight,
+    #[allow(dead_code)]
     pub ext_pin_role: ExtPinRole,
     pub nmi_enabled: bool,
 }

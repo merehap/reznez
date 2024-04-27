@@ -1,5 +1,5 @@
 use log::info;
-use modular_bitfield::prelude::*;
+use modular_bitfield::bitfield;
 
 #[bitfield]
 #[derive(Clone, Copy, Debug)]
