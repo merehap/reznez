@@ -31,7 +31,7 @@ pub struct Cpu {
     step_queue: StepQueue,
     nmi_status: NmiStatus,
     irq_status: IrqStatus,
-    reset_pending: bool,
+    reset_status: ResetStatus,
 
     oam_dma_port: OamDmaPort,
 
@@ -68,7 +68,7 @@ impl Cpu {
             step_queue: StepQueue::new(),
             nmi_status: NmiStatus::Inactive,
             irq_status: IrqStatus::Inactive,
-            reset_pending: true,
+            reset_status: ResetStatus::Active,
             oam_dma_port: memory.ports().oam_dma.clone(),
 
             // The initial value probably doesn't matter.
@@ -98,7 +98,7 @@ impl Cpu {
         self.step_queue = StepQueue::new();
         self.nmi_status = NmiStatus::Inactive;
         self.irq_status = IrqStatus::Inactive;
-        self.reset_pending = true;
+        self.reset_status = ResetStatus::Ready;
         memory.set_cpu_cycle(6);
         self.current_interrupt_vector = None;
         self.jammed = false;
@@ -489,7 +489,7 @@ impl Cpu {
             DisableInterrupts => self.status.interrupts_disabled = true,
             SetInterruptVector => {
                 self.current_interrupt_vector =
-                    if self.reset_pending {
+                    if self.reset_status != ResetStatus::Inactive {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to RESET.");
                         Some(InterruptVector::Reset)
                     } else if self.nmi_status != NmiStatus::Inactive {
@@ -507,7 +507,7 @@ impl Cpu {
                 // We no longer need to track interrupt statuses now that the vector is set.
                 self.nmi_status = NmiStatus::Inactive;
                 self.irq_status = IrqStatus::Inactive;
-                self.reset_pending = false;
+                self.reset_status = ResetStatus::Inactive;
                 // HACK: This should only be done after an instruction has completed. Branching
                 // currently prevents that in some cases unfortunately.
                 self.next_op_code = None;
@@ -748,6 +748,13 @@ enum NmiStatus {
 
 #[derive(PartialEq, Eq, Debug)]
 enum IrqStatus {
+    Inactive,
+    Ready,
+    Active,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+enum ResetStatus {
     Inactive,
     Ready,
     Active,

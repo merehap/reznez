@@ -225,7 +225,7 @@ pub const INDIRECT_INDEXED_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     Write(To::AddressBusTarget      , &[]),
 ];
 
-pub const START_STEPS: &[Step] = &[
+pub const RESET_STEPS: &[Step] = &[
     Read(                              From::ProgramCounterTarget, &[IncrementProgramCounter]),
     Read(                              From::ProgramCounterTarget, &[]),
     // NES Manual: "read/write line is disabled so that no writes to stack are accomplished".

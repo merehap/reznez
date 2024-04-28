@@ -224,8 +224,6 @@ pub struct PlayChoice {
 
 #[cfg(test)]
 pub mod test_data {
-    use crate::memory::cpu::cpu_address::CpuAddress;
-
     use super::*;
 
     pub fn cartridge() -> Cartridge {
@@ -241,45 +239,6 @@ pub mod test_data {
 
         Cartridge {
             name: "Test".to_string(),
-            mapper_number: 0,
-            submapper_number: 0,
-            name_table_mirroring: NameTableMirroring::Horizontal,
-            has_persistent_memory: false,
-            ripper_name: "Test Ripper".to_string(),
-            ines2: None,
-
-            trainer: None,
-            prg_rom,
-            prg_ram_size: 0,
-            chr_rom: vec![0x00; CHR_ROM_CHUNK_LENGTH],
-            chr_ram_size: 0,
-            console_type: ConsoleType::Nes,
-            title: "Test ROM".to_string(),
-        }
-    }
-
-    pub fn cartridge_with_prg_rom(
-        mut prg_rom: Vec<u8>,
-        nmi_vector: CpuAddress,
-        reset_vector: CpuAddress,
-        irq_vector: CpuAddress,
-    ) -> Cartridge {
-        // Filled with NOPs.
-
-        let len = prg_rom.len();
-        let (low, high) = nmi_vector.to_low_high();
-        prg_rom[len - 6] = low;
-        prg_rom[len - 5] = high;
-        let (low, high) = reset_vector.to_low_high();
-        prg_rom[len - 4] = low;
-        prg_rom[len - 3] = high;
-        let (low, high) = irq_vector.to_low_high();
-        prg_rom[len - 2] = low;
-        prg_rom[len - 1] = high;
-
-        Cartridge {
-            name: "Test".to_string(),
-
             mapper_number: 0,
             submapper_number: 0,
             name_table_mirroring: NameTableMirroring::Horizontal,

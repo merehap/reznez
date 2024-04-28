@@ -14,7 +14,7 @@ pub struct StepQueue {
 impl StepQueue {
     pub fn new() -> StepQueue {
         let mut queue = StepQueue { queue: VecDeque::with_capacity(CAPACITY) };
-        queue.append(START_STEPS);
+        queue.enqueue_reset();
         queue
     }
 
@@ -37,6 +37,10 @@ impl StepQueue {
     pub fn enqueue_instruction(&mut self, code_point: u8) {
         let code_point = usize::from(code_point);
         self.prepend(INSTRUCTIONS[code_point].steps());
+    }
+
+    pub fn enqueue_reset(&mut self) {
+        self.append(RESET_STEPS);
     }
 
     pub fn enqueue_nmi(&mut self) {
