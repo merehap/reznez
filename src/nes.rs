@@ -106,6 +106,7 @@ impl Nes {
 
     pub fn reset(&mut self) {
         self.cpu.reset(&mut self.memory.as_cpu_memory());
+        self.memory.apu_regs_mut().reset();
     }
 
     pub fn step_frame(&mut self) {

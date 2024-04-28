@@ -46,6 +46,10 @@ impl ApuRegisters {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.write_status_byte(0b0000_0000);
+    }
+
     pub fn step_mode(&self) -> StepMode {
         self.clock.step_mode
     }
