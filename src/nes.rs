@@ -104,6 +104,10 @@ impl Nes {
         self.apu.mute();
     }
 
+    pub fn reset(&mut self) {
+        self.cpu.reset(&mut self.memory.as_cpu_memory());
+    }
+
     pub fn step_frame(&mut self) {
         loop {
             let step_result = self.step();

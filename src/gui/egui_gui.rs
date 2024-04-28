@@ -80,6 +80,10 @@ impl Gui for EguiGui {
                     return;
                 }
 
+                if world.input.key_pressed(VirtualKeyCode::F12) {
+                    world.nes.reset();
+                }
+
                 if world.input.key_pressed(VirtualKeyCode::Pause)
                     || world.input.key_pressed(VirtualKeyCode::P)
                 {

@@ -88,6 +88,7 @@ impl Cpu {
     }
 
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
+    // TODO: Actually perform the reset sequence, and do it at the correct time.
     pub fn reset(&mut self, memory: &mut CpuMemory) {
         self.status.interrupts_disabled = true;
         self.address_bus = memory.reset_vector();
@@ -103,7 +104,6 @@ impl Cpu {
         self.jammed = false;
         self.suppress_program_counter_increment = false;
         self.suppress_next_instruction_start = false;
-        // TODO: APU resets?
     }
 
     pub fn accumulator(&self) -> u8 {
