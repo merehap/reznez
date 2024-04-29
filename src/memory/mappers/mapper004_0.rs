@@ -22,7 +22,7 @@ impl Mapper for Mapper004_0 {
             (0x8000..=0x9FFF, true ) => mmc3::bank_select(params, &mut self.selected_register_id, value),
             (0x8000..=0x9FFF, false) => mmc3::set_bank_index(params, &mut self.selected_register_id, value),
             (0xA000..=0xBFFF, true ) => mmc3::set_mirroring(params, value),
-            (0xA000..=0xBFFF, false) => mmc3::prg_ram_protect(params, value),
+            (0xA000..=0xBFFF, false) => { /* Do nothing. */ }
             (0xC000..=0xDFFF, true ) => self.irq_state.set_counter_reload_value(value),
             (0xC000..=0xDFFF, false) => self.irq_state.reload_counter(),
             (0xE000..=0xFFFF, true ) => self.irq_state.disable(),

@@ -39,7 +39,7 @@ pub const CHR_SMALL_WINDOWS_FIRST: ChrLayout = ChrLayout::new(&[
 ]);
 
 pub const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
-    .prg_max_bank_count(32)
+    .prg_max_bank_count(64)
     .prg_bank_size(8 * KIBIBYTE)
     .prg_windows(PRG_LAYOUT_8000_SWITCHABLE)
     .chr_max_bank_count(256)
@@ -48,17 +48,16 @@ pub const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .build();
 
-const BANK_INDEX_REGISTER_IDS: [BankIndexRegisterId; 8] = [C0, C1, C2, C3, C4, C5, P0, P1];
+pub const BANK_INDEX_REGISTER_IDS: [BankIndexRegisterId; 8] = [C0, C1, C2, C3, C4, C5, P0, P1];
 
 pub fn bank_select(
     params: &mut MapperParams,
     selected_register_id: &mut BankIndexRegisterId,
     value: u8,
 ) {
-    let chr_big_windows_first =                         (value & 0b1000_0000) == 0;
-    let prg_fixed_c000 =                                (value & 0b0100_0000) == 0;
-    //self.prg_ram_enabled =                            (value & 0b0010_0000) != 0;
-    *selected_register_id = BANK_INDEX_REGISTER_IDS[    (value & 0b0000_0111) as usize];
+    let chr_big_windows_first =                     (value & 0b1000_0000) == 0;
+    let prg_switchable_8000 =                       (value & 0b0100_0000) == 0;
+    *selected_register_id = BANK_INDEX_REGISTER_IDS[(value & 0b0000_0111) as usize];
 
     if chr_big_windows_first {
         params.set_chr_layout(CHR_BIG_WINDOWS_FIRST);
@@ -66,7 +65,7 @@ pub fn bank_select(
         params.set_chr_layout(CHR_SMALL_WINDOWS_FIRST);
     }
 
-    if prg_fixed_c000 {
+    if prg_switchable_8000 {
         params.set_prg_layout(PRG_LAYOUT_8000_SWITCHABLE);
     } else {
         params.set_prg_layout(PRG_LAYOUT_C000_SWITCHABLE);
@@ -99,42 +98,3 @@ pub fn set_mirroring(params: &mut MapperParams, value: u8) {
         _ => { /* Other mirrorings cannot be changed. */ }
     }
 }
-
-pub fn prg_ram_protect(_params: &mut MapperParams, _value: u8) {
-    // TODO: Once NES 2.0 is supported, then MMC3 and MMC6 can properly be supported.
-    /*
-    if !self.prg_ram_enabled {
-        return;
-    }
-
-    // MMC6 logic only here since MMC3 logic conflicts:
-    // https://www.nesdev.org/wiki/MMC3#iNES_Mapper_004_and_MMC6
-    // TODO: Attempt to support Low G Man.
-    let mut status_7000 = Mapper004::work_ram_status_from_bits(value & 0b1100_0000 >> 6);
-    let mut status_7200 = Mapper004::work_ram_status_from_bits(value & 0b0011_0000 >> 4);
-
-    // "If only one bank is enabled for reading, the other reads back as zero."
-    use WorkRamStatus::*;
-    match (status_7000, status_7200) {
-        (ReadOnly | ReadWrite, Disabled            ) => status_7200 = ReadOnlyZeros,
-        (Disabled            , ReadOnly | ReadWrite) => status_7000 = ReadOnlyZeros,
-    }
-
-    self.prg_memory.set_work_ram_status_at(0x7000, status_7000);
-    self.prg_memory.set_work_ram_status_at(0x7200, status_7200);
-    */
-}
-
-/*
-fn work_ram_status_from_bits(value: u8) -> WorkRamStatus {
-    assert_eq!(value & 0b1111_1100, 0);
-
-    match value {
-        0b00 => WorkRamStatus::Disabled,
-        0b01 => WorkRamStatus::Disabled,
-        0b10 => WorkRamStatus::ReadOnly,
-        0b11 => WorkRamStatus::ReadWrite,
-        _ => unreachable!(),
-    }
-}
-*/
