@@ -2,13 +2,13 @@ use crate::memory::mapper::*;
 use crate::memory::mappers::mmc3::mmc3;
 use crate::memory::mappers::mmc3::sharp_irq_state::SharpIrqState;
 
-// MMC3 with Sharp IRQs
-pub struct Mapper004_0 {
+// MMC6. Similar to MMC3 with Sharp IRQs, but with RAM protection and different banking.
+pub struct Mapper004_1 {
     selected_register_id: BankIndexRegisterId,
     irq_state: SharpIrqState,
 }
 
-impl Mapper for Mapper004_0 {
+impl Mapper for Mapper004_1 {
     fn initial_layout(&self) -> InitialLayout {
         mmc3::INITIAL_LAYOUT
     }
@@ -43,7 +43,7 @@ impl Mapper for Mapper004_0 {
     }
 }
 
-impl Mapper004_0 {
+impl Mapper004_1 {
     pub fn new() -> Self {
         Self {
             selected_register_id: C0,
