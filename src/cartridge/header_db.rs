@@ -1,8 +1,15 @@
 use std::collections::BTreeMap;
 
+// Submapper numbers for ROMs that aren't in the NES Header DB (mostly test ROMs).
+const MISSING_ROM_SUBMAPPER_NUMBERS: &'static [(u32, u8)] = &[
+    // mmc3_test/6-MMC6.nes
+    (2914571485, 1)
+];
+
 pub struct HeaderDb {
     data_by_crc32: BTreeMap<u32, Header>,
     prg_rom_by_crc32: BTreeMap<u32, Header>,
+    missing_rom_submapper_numbers: BTreeMap<u32, u8>,
 }
 
 impl HeaderDb {
@@ -14,6 +21,7 @@ impl HeaderDb {
         let mut header_db = HeaderDb {
             data_by_crc32: BTreeMap::new(),
             prg_rom_by_crc32: BTreeMap::new(),
+            missing_rom_submapper_numbers: BTreeMap::from_iter(MISSING_ROM_SUBMAPPER_NUMBERS.iter().cloned()),
         };
 
         for game in games {
@@ -41,6 +49,15 @@ impl HeaderDb {
 
     pub fn header_from_prg_rom(&self, prg_rom: &[u8]) -> Option<Header> {
         self.prg_rom_by_crc32.get(&crc32fast::hash(prg_rom)).copied()
+    }
+
+    pub fn missing_rom_submapper_number(&self, prg_rom: &[u8]) -> Result<u8, String> {
+        let hash = crc32fast::hash(prg_rom);
+        if let Some(submapper_number) = self.missing_rom_submapper_numbers.get(&hash).copied() {
+            Ok(submapper_number)
+        } else {
+            Err(format!("Missing ROM with CRC32 of {hash} needs a fallback entry."))
+        }
     }
 }
 

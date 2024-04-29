@@ -147,6 +147,16 @@ impl Cartridge {
             cartridge.submapper_number = submapper_number;
             cartridge.prg_ram_size = prg_ram_size;
             cartridge.chr_ram_size = chr_ram_size;
+        } else if let Some(Header { prg_rom_size, prg_ram_size, chr_rom_size, chr_ram_size, mapper_number, submapper_number }) =
+                header_db.header_from_data(&rom) {
+            assert_eq!(cartridge.mapper_number, mapper_number);
+            assert_eq!(prg_rom.len() as u32, prg_rom_size);
+            assert_eq!(chr_rom.len() as u32, chr_rom_size);
+            cartridge.submapper_number = submapper_number;
+            cartridge.prg_ram_size = prg_ram_size;
+            cartridge.chr_ram_size = chr_ram_size;
+        } else if let Ok(submapper_number) = header_db.missing_rom_submapper_number(&prg_rom) {
+            cartridge.submapper_number = submapper_number;
         } else {
             warn!("ROM not found in header database.");
         }
