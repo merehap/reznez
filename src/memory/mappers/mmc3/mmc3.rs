@@ -1,14 +1,14 @@
 use crate::memory::mapper::*;
 
-pub const PRG_LAYOUT_C000_FIXED: PrgLayout = PrgLayout::new(&[
+pub const PRG_LAYOUT_8000_SWITCHABLE: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WorkRam),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P1)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::SECOND_LAST)),
     PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::LAST)),
 ]);
-// Same as PRG_LAYOUT_C000_FIXED, except the 0x8000 and 0xC000 windows are swapped.
-pub const PRG_LAYOUT_8000_FIXED: PrgLayout = PrgLayout::new(&[
+
+pub const PRG_LAYOUT_C000_SWITCHABLE: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WorkRam),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::SECOND_LAST)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P1)),
@@ -41,7 +41,7 @@ pub const CHR_SMALL_WINDOWS_FIRST: ChrLayout = ChrLayout::new(&[
 pub const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .prg_max_bank_count(32)
     .prg_bank_size(8 * KIBIBYTE)
-    .prg_windows(PRG_LAYOUT_C000_FIXED)
+    .prg_windows(PRG_LAYOUT_8000_SWITCHABLE)
     .chr_max_bank_count(256)
     .chr_bank_size(1 * KIBIBYTE)
     .chr_windows(CHR_BIG_WINDOWS_FIRST)
@@ -67,9 +67,9 @@ pub fn bank_select(
     }
 
     if prg_fixed_c000 {
-        params.set_prg_layout(PRG_LAYOUT_C000_FIXED);
+        params.set_prg_layout(PRG_LAYOUT_8000_SWITCHABLE);
     } else {
-        params.set_prg_layout(PRG_LAYOUT_8000_FIXED);
+        params.set_prg_layout(PRG_LAYOUT_C000_SWITCHABLE);
     }
 }
 
