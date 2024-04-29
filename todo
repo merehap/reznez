@@ -60,7 +60,6 @@ sprdma_and_dmc_dma
 tvpassfail/tv
 
 apu_mixer
-apu_reset
 dmc_dma_during_read4
 dmc_tests
 dpcmletterbox

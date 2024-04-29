@@ -88,18 +88,14 @@ impl Cpu {
     }
 
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
-    // TODO: Actually perform the reset sequence, and do it at the correct time.
-    pub fn reset(&mut self, memory: &mut CpuMemory) {
-        self.status.interrupts_disabled = true;
-        self.address_bus = memory.reset_vector();
+    pub fn reset(&mut self) {
+        info!(target: "cpuflowcontrol", "System reset will start after current instruction.");
+        self.reset_status = ResetStatus::Ready;
+
         self.address_carry = 0;
-        self.current_instruction = None;
         self.next_op_code = None;
-        self.step_queue = StepQueue::new();
         self.nmi_status = NmiStatus::Inactive;
         self.irq_status = IrqStatus::Inactive;
-        self.reset_status = ResetStatus::Ready;
-        memory.set_cpu_cycle(6);
         self.current_interrupt_vector = None;
         self.jammed = false;
         self.suppress_program_counter_increment = false;
@@ -156,7 +152,9 @@ impl Cpu {
     }
 
     pub fn interrupt_active(&self) -> bool {
-        self.nmi_status == NmiStatus::Active || self.irq_status == IrqStatus::Active
+        self.nmi_status == NmiStatus::Active
+            || self.irq_status == IrqStatus::Active
+            || self.reset_status == ResetStatus::Active
     }
 
     pub fn next_instruction_starting(&self) -> bool {
@@ -255,6 +253,16 @@ impl Cpu {
                         self.oam_dma_port.current_address());
                     self.step_queue.enqueue_oam_dma_transfer(memory.cpu_cycle());
                     self.suppress_program_counter_increment = true;
+                    return;
+                }
+
+                if self.reset_status == ResetStatus::Ready {
+                    info!(target: "cpuflowcontrol", "Starting system reset");
+                    self.reset_status = ResetStatus::Active;
+                    // Reset has BRK's code point (0x00). TODO: Set the data bus to 0x00?
+                    self.next_op_code = Some((0x00, self.address_bus));
+                    self.suppress_program_counter_increment = true;
+                    self.step_queue.enqueue_reset();
                     return;
                 }
 

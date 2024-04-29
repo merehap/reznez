@@ -47,7 +47,11 @@ impl ApuRegisters {
     }
 
     pub fn reset(&mut self) {
+        // At reset, $4015 should be cleared
         self.write_status_byte(0b0000_0000);
+        // At reset, $4017 should should be rewritten with last value written
+        self.frame_counter_write_status = FrameCounterWriteStatus::Initialized;
+        self.frame_irq_pending = false;
     }
 
     pub fn step_mode(&self) -> StepMode {

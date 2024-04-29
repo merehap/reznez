@@ -105,7 +105,7 @@ impl Nes {
     }
 
     pub fn reset(&mut self) {
-        self.cpu.reset(&mut self.memory.as_cpu_memory());
+        self.cpu.reset();
         self.memory.apu_regs_mut().reset();
     }
 
