@@ -147,9 +147,16 @@ impl PrgMemory {
             if i == windows.len() - 1 || address < windows[i + 1].start {
                 let bank_offset = address.to_raw() - windows[i].start.to_raw();
 
-                let window = &windows[i];
+                let window;
+                if let PrgBank::MirrorOf(mirrored_window_start) = windows[i].prg_type {
+                    window = self.window_at(mirrored_window_start);
+                } else {
+                    window = &windows[i];
+                }
+
                 let prg_memory_index = match window.prg_type {
                     PrgBank::Empty => PrgMemoryIndex::None,
+                    PrgBank::MirrorOf(_) => unreachable!(),
                     PrgBank::Fixed(_, bank_index) => {
                         // TODO: Consolidate Fixed and Switchable logic.
                         let mut raw_bank_index = bank_index.to_usize(self.bank_count());
@@ -310,6 +317,7 @@ pub enum PrgBank {
     Switchable(Writability, BankIndexRegisterId),
     // WRAM, Save RAM, SRAM, ambiguously "PRG RAM".
     WorkRam,
+    MirrorOf(u16),
 }
 
 impl PrgBank {
@@ -318,7 +326,7 @@ impl PrgBank {
         match self {
             Fixed(_, bank_index) => Some(bank_index),
             Switchable(_, register_id) => Some(registers.get(register_id)),
-            Empty | WorkRam => None,
+            Empty | WorkRam | MirrorOf(_) => None,
         }
     }
 }
