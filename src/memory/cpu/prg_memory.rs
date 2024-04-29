@@ -156,7 +156,7 @@ impl PrgMemory {
 
                 let prg_memory_index = match window.prg_type {
                     PrgBank::Empty => PrgMemoryIndex::None,
-                    PrgBank::MirrorOf(_) => unreachable!(),
+                    PrgBank::MirrorOf(_) => panic!("A mirrored bank must mirror a non-mirrored bank."),
                     PrgBank::Fixed(_, bank_index) => {
                         // TODO: Consolidate Fixed and Switchable logic.
                         let mut raw_bank_index = bank_index.to_usize(self.bank_count());
@@ -249,8 +249,7 @@ impl PrgLayout {
         let mut i = 0;
         while i < self.0.len() {
             let window = self.0[i];
-            if !matches!(window.prg_type, PrgBank::WorkRam)
-                && !matches!(window.prg_type, PrgBank::Empty)
+            if !matches!(window.prg_type, PrgBank::WorkRam | PrgBank::Empty | PrgBank::MirrorOf(_))
                 && window.size() % bank_size != 0 {
                 panic!("Window size must be a multiple of bank size.");
             }

@@ -3,7 +3,11 @@ use crate::memory::mappers::mmc3::mmc3;
 use crate::memory::mappers::mmc3::sharp_irq_state::SharpIrqState;
 
 const PRG_LAYOUT_8000_SWITCHABLE: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WorkRam),
+    PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgBank::Empty),
+    PrgWindow::new(0x7000, 0x73FF, 1 * KIBIBYTE, PrgBank::WorkRam),
+    PrgWindow::new(0x7400, 0x77FF, 1 * KIBIBYTE, PrgBank::MirrorOf(0x7000)),
+    PrgWindow::new(0x7800, 0x7BFF, 1 * KIBIBYTE, PrgBank::MirrorOf(0x7000)),
+    PrgWindow::new(0x7C00, 0x7FFF, 1 * KIBIBYTE, PrgBank::MirrorOf(0x7000)),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P1)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::SECOND_LAST)),
@@ -11,7 +15,11 @@ const PRG_LAYOUT_8000_SWITCHABLE: PrgLayout = PrgLayout::new(&[
 ]);
 
 const PRG_LAYOUT_C000_SWITCHABLE: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WorkRam),
+    PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgBank::Empty),
+    PrgWindow::new(0x7000, 0x73FF, 1 * KIBIBYTE, PrgBank::WorkRam),
+    PrgWindow::new(0x7400, 0x77FF, 1 * KIBIBYTE, PrgBank::MirrorOf(0x7000)),
+    PrgWindow::new(0x7800, 0x7BFF, 1 * KIBIBYTE, PrgBank::MirrorOf(0x7000)),
+    PrgWindow::new(0x7C00, 0x7FFF, 1 * KIBIBYTE, PrgBank::MirrorOf(0x7000)),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::SECOND_LAST)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P1)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
