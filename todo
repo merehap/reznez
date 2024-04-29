@@ -68,8 +68,6 @@ MMC3
 MMC5
 
 PaddleTest3/PaddleTest
-read_joy3/test_buttons
-read_joy3/thorough_test
 
 full_palette
 full_nes_palette
