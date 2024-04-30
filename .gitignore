@@ -1,0 +1,7 @@
+/target
+/tests/roms
+**/*.swn
+**/*.swo
+**/*.swp
+/.vscode
+/.idea
