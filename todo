@@ -20,6 +20,7 @@ Improve cycle accuracy of undocumented instructions
 Open Bus for joysticks.
 Other input devices.
 Auto-mirror undersized CHR (for mapper 99 and maybe others).
+Require PRG ROM and CHR ROM sizes in InitialLayout.
 
 Simplest mappers: 0, 2, 3, 7, 11, 66, 87
 Japan mapper order: 0, 87, 3, 184, 185, 2, 206, 75, 66, 94, 140, 34, 180, 95, 152, 1...

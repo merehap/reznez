@@ -1,3 +1,4 @@
+use crate::memory::mappers::mmc3::irq_state::IrqState;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table::PatternTableSide;
 
@@ -23,12 +24,14 @@ impl RevAIrqState {
             pattern_table_side: PatternTableSide::Left,
         }
     }
+}
 
-    pub fn pending(&self) -> bool {
+impl IrqState for RevAIrqState {
+    fn pending(&self) -> bool {
         self.pending
     }
 
-    pub fn tick_counter(&mut self, address: PpuAddress) {
+    fn tick_counter(&mut self, address: PpuAddress) {
         if address.to_scroll_u16() >= 0x2000 {
             return;
         }
@@ -60,27 +63,27 @@ impl RevAIrqState {
         self.pattern_table_side = next_side;
     }
 
-    pub fn decrement_suppression_cycle_count(&mut self) {
+    fn decrement_suppression_cycle_count(&mut self) {
         if self.counter_suppression_cycles > 0 {
             self.counter_suppression_cycles -= 1;
         }
     }
 
-    pub fn set_counter_reload_value(&mut self, value: u8) {
+    fn set_counter_reload_value(&mut self, value: u8) {
         self.counter_reload_value = value;
     }
 
-    pub fn reload_counter(&mut self) {
+    fn reload_counter(&mut self) {
         self.counter = 0;
         self.force_reload_counter = true;
     }
 
-    pub fn disable(&mut self) {
+    fn disable(&mut self) {
         self.enabled = false;
         self.pending = false;
     }
 
-    pub fn enable(&mut self) {
+    fn enable(&mut self) {
         self.enabled = true;
     }
 }

@@ -1,6 +1,7 @@
 use crate::memory::mapper::*;
 use crate::memory::mappers::mmc3::mmc3;
-use crate::memory::mappers::mmc3::sharp_irq_state::SharpIrqState;
+use crate::memory::mappers::mmc3::irq_state::IrqState;
+use crate::memory::mappers::mmc3::rev_a_irq_state::RevAIrqState;
 
 const PRG_LAYOUT_8000_SWITCHABLE: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgBank::Empty),
@@ -40,7 +41,7 @@ pub const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
 // MMC6. Similar to MMC3 with Sharp IRQs, but with Work RAM protection.
 pub struct Mapper004_1 {
     selected_register_id: BankIndexRegisterId,
-    irq_state: SharpIrqState,
+    irq_state: RevAIrqState,
     prg_ram_enabled: bool,
 }
 
@@ -128,7 +129,7 @@ impl Mapper004_1 {
     pub fn new() -> Self {
         Self {
             selected_register_id: C0,
-            irq_state: SharpIrqState::new(),
+            irq_state: RevAIrqState::new(),
             prg_ram_enabled: false,
         }
     }
