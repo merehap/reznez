@@ -207,6 +207,10 @@ impl<'a> CpuMemory<'a> {
         self.memory.cpu_cycle
     }
 
+    pub fn increment_cpu_cycle(&mut self) {
+        self.memory.cpu_cycle += 1;
+    }
+
     pub fn set_cpu_cycle(&mut self, cycle: i64) {
         self.memory.cpu_cycle = cycle;
     }

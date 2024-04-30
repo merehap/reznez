@@ -177,10 +177,7 @@ impl Cpu {
             return None;
         }
 
-        {
-            let cycle = memory.cpu_cycle();
-            memory.set_cpu_cycle(cycle + 1);
-        }
+        memory.increment_cpu_cycle();
 
         if self.step_queue.is_empty() {
             // Get ready to start the next instruction.
