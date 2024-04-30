@@ -15,6 +15,8 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
         (4, 1) => Box::new(m::mapper004_1::Mapper004_1::new()),
         (4, 3) => Box::new(m::mapper004_3::mapper004_3()),
         (4, 4) => Box::new(m::mapper004_4::mapper004_4()),
+        // Rev A IRQ doesn't have a submapper assigned to it, despite being incompatible.
+        (4, 99) => Box::new(m::mapper004_rev_a::mapper004_rev_a()),
         (5, 0) => Box::new(m::mapper005::Mapper005::new()),
 
         (7, _) => Box::new(m::mapper007::Mapper007),

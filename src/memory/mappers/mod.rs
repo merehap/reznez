@@ -9,6 +9,7 @@ pub mod mapper004_0;
 pub mod mapper004_1;
 pub mod mapper004_3;
 pub mod mapper004_4;
+pub mod mapper004_rev_a;
 pub mod mapper005;
 
 pub mod mapper007;

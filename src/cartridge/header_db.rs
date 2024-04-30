@@ -6,8 +6,8 @@ use log::info;
 const MISSING_ROM_SUBMAPPER_NUMBERS: &'static [(u32, u8)] = &[
     // mmc3_test/6-MMC6.nes
     (2914571485, 1),
-    // mmc3_irq_tests/5.MMC3_rev_A.nes
-    (4078096862, 3),
+    // mmc3_irq_tests/5.MMC3_rev_A.nes (no submapper number has been officially assigned)
+    (4078096862, 99),
 ];
 
 pub struct HeaderDb {
