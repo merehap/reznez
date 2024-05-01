@@ -8,6 +8,8 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &'static [(u32, u8)] = &[
     (2914571485, 1),
     // mmc3_irq_tests/5.MMC3_rev_A.nes (no submapper number has been officially assigned)
     (4078096862, 99),
+    // Crystalis
+    (1661724784, 99),
 ];
 
 pub struct HeaderDb {
@@ -59,6 +61,7 @@ impl HeaderDb {
 
     pub fn header_from_prg_rom(&self, prg_rom: &[u8]) -> Option<Header> {
         let hash = crc32fast::hash(prg_rom);
+        println!("Hash: {hash}");
         let result = self.prg_rom_by_crc32.get(&hash).copied();
         if result.is_none() {
             info!("ROM with PRG hash {hash} not found in DB.");
