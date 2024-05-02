@@ -139,8 +139,8 @@ impl Cartridge {
             title,
         };
 
-        if let Some(submapper_number) = header_db.missing_submapper_number(&rom, &prg_rom) {
-            println!("Using override submapper for this ROM.");
+        if let Some((submapper_number, data_hash, prg_hash)) = header_db.missing_submapper_number(&rom, &prg_rom) {
+            println!("Using override submapper for this ROM. Data hash: {data_hash}, PRG hash: {prg_hash}");
             cartridge.submapper_number = submapper_number;
         } else if let Some(Header { prg_rom_size, prg_ram_size, chr_rom_size, chr_ram_size, mapper_number, submapper_number }) =
                 header_db.header_from_data(&rom) {

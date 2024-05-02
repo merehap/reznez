@@ -11,9 +11,11 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
 ]);
 
 // UxROM (common usages)
-pub struct Mapper002;
+pub struct Uxrom {
+    has_bus_conflicts: HasBusConflicts,
+}
 
-impl Mapper for Mapper002 {
+impl Mapper for Uxrom{
     fn initial_layout(&self) -> InitialLayout {
         InitialLayout::builder()
             .prg_max_bank_count(256)
@@ -26,11 +28,21 @@ impl Mapper for Mapper002 {
             .build()
     }
 
+    fn has_bus_conflicts(&self) -> HasBusConflicts {
+        self.has_bus_conflicts
+    }
+
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
-            0x4020..=0x7FFF => { /* Do nothing. */ },
+            0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => params.set_bank_index_register(P0, value),
         }
+    }
+}
+
+impl Uxrom {
+    pub const fn new(has_bus_conflicts: HasBusConflicts) -> Uxrom {
+        Uxrom { has_bus_conflicts }
     }
 }

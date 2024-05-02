@@ -4,6 +4,15 @@ use log::info;
 
 // Submapper numbers for ROMs that aren't in the NES Header DB (mostly test ROMs).
 const MISSING_ROM_SUBMAPPER_NUMBERS: &'static [(u32, u32, u8)] = &[
+    // 2_test/2_test_0.nes
+    (2392242790, 3901840109, 1),
+    // 2_test/2_test_1.nes
+    (0922356069, 3901840109, 1),
+    // 2_test/2_test_2.nes
+    (0624876065, 3901840109, 2),
+    // 3_test/3_test_0.nes
+    // 3_test/3_test_1.nes
+    // 3_test/3_test_2.nes
     // 7_test/7_test_0.nes
     (1196595180, 1718968027, 1),
     // 7_test/7_test_1.nes
@@ -83,13 +92,13 @@ impl HeaderDb {
         result
     }
 
-    pub fn missing_submapper_number(&self, data: &[u8], prg_rom: &[u8]) -> Option<u8> {
+    pub fn missing_submapper_number(&self, data: &[u8], prg_rom: &[u8]) -> Option<(u8, u32, u32)> {
         let data_hash = crc32fast::hash(data);
         let prg_hash = crc32fast::hash(prg_rom);
         if let Some(submapper_number) = self.missing_data_submapper_numbers.get(&data_hash).copied() {
-            Some(submapper_number)
+            Some((submapper_number, data_hash, prg_hash))
         } else if let Some(submapper_number) = self.missing_prg_rom_submapper_numbers.get(&prg_hash).copied() {
-            Some(submapper_number)
+            Some((submapper_number, data_hash, prg_hash))
         } else {
             None
         }
