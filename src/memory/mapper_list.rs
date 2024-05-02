@@ -54,7 +54,8 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
 
         (32, 0) => Box::new(m::mapper032::Mapper032),
         (33, 0) => Box::new(m::mapper033::Mapper033),
-        (34, 0) => Box::new(m::mapper034::Mapper034::new(cartridge)),
+        (34, 1) => Box::new(m::mapper034_1::Mapper034_1),
+        (34, 2) => Box::new(m::mapper034_2::Mapper034_2),
 
         (38, 0) => Box::new(m::mapper038::Mapper038),
         // Duplicate of 241.
@@ -118,7 +119,7 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
         (240, 0) => Box::new(m::mapper240::Mapper240),
         (241, 0) => Box::new(m::mapper241::Mapper241),
 
-        (m, s) => todo!("Mapper {m} submapper {s} isn't implemented yet."),
+        (m, s) => todo!("Mapper {m} submapper {s} isn't implemented yet. ROM: {}", cartridge.name()),
     };
 
     let mut mapper_params = mapper.initial_layout().make_mapper_params(cartridge);

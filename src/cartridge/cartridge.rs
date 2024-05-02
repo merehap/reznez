@@ -120,7 +120,7 @@ impl Cartridge {
             .take_while(|&c| c != '\u{0}')
             .collect();
 
-        let mut cartridge =  Cartridge {
+        let mut cartridge = Cartridge {
             name,
 
             mapper_number,

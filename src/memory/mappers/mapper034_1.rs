@@ -2,29 +2,30 @@ use crate::memory::mapper::*;
 
 const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Empty),
-    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::Switchable(Ram, P0)),
 ]);
 
 const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::Switchable(Ram, C0)),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::Switchable(Ram, C1)),
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::Switchable(Rom, C0)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::Switchable(Rom, C1)),
 ]);
 
-// BNROM (BxROM) and NINA-01. Two unrelated mappers combined into one.
-pub struct Mapper034 {
-    board: MapperBoard,
-}
+// NINA-01
+pub struct Mapper034_1;
 
-impl Mapper for Mapper034 {
+impl Mapper for Mapper034_1 {
     fn initial_layout(&self) -> InitialLayout {
         InitialLayout::builder()
+            // Oversize definition. The actual cartridge only uses 2 banks.
             .prg_max_bank_count(256)
             .prg_bank_size(32 * KIBIBYTE)
             .prg_windows(PRG_LAYOUT)
-            .chr_max_bank_count(16)
+            // Oversize definition. The actual cartridge only uses 16 banks.
+            .chr_max_bank_count(256)
             .chr_bank_size(4 * KIBIBYTE)
             .chr_windows(CHR_LAYOUT)
             .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+            // TODO: Verify if this is necessary. Might only be used for BxROM.
             .override_bank_index_register(C1, BankIndex::LAST)
             .build()
     }
@@ -32,35 +33,11 @@ impl Mapper for Mapper034 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
-            // NINA-001 bank-switching.
+            0x4020..=0x7FFC => { /* Do nothing. */ }
             0x7FFD => params.set_bank_index_register(P0, value & 1),
             0x7FFE => params.set_bank_index_register(C0, value & 0b1111),
             0x7FFF => params.set_bank_index_register(C1, value & 0b1111),
-            // BNROM/BxROM bank-switching.
-            0x8000..=0xFFFF => {
-                if self.board == MapperBoard::BxROM {
-                    params.set_bank_index_register(P0, value);
-                }
-            }
-            _ => { /* Do nothing. */ }
+            0x8000..=0xFFFF => { /* Do nothing. */ }
         }
     }
-}
-
-impl Mapper034 {
-    pub fn new(cartridge: &Cartridge) -> Self {
-        let board = if cartridge.chr_rom().len() <= 8 * KIBIBYTE {
-            MapperBoard::BxROM
-        } else {
-            MapperBoard::Nina001
-        };
-
-        Self { board }
-    }
-}
-
-#[derive(PartialEq, Eq)]
-enum MapperBoard {
-    BxROM,
-    Nina001,
 }
