@@ -1,6 +1,10 @@
+Cargo.lock
 /framedump
+/mesen_dumps
+/misc
 /target
 /tests/roms
+*output*
 **/*.swn
 **/*.swo
 **/*.swp
