@@ -8,7 +8,8 @@ pub fn lookup_mapper(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
     let mapper: Box<dyn Mapper> = match (cartridge.mapper_number(), cartridge.submapper_number()) {
         // NROM
         (0, 0) => Box::new(m::mapper000::Mapper000),
-        (1, _) => Box::new(m::mapper001::Mapper001::new()),
+        (1, 0) => Box::new(m::mapper001_0::Mapper001_0::new()),
+        (1, 5) => Box::new(m::mapper001_5::Mapper001_5::new()),
         (2, 1) => Box::new(m::mapper002_1::MAPPER002_1),
         (2, 2) => Box::new(m::mapper002_2::MAPPER002_2),
         (3, 1) => Box::new(m::mapper003_1::MAPPER003_1),

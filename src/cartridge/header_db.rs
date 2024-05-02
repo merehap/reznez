@@ -32,6 +32,8 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &'static [(u32, u32, u8)] = &[
     (2768347885, 0852594764, 1),
     // 34_test/34_test_2.nes
     (0906378520, 3170842144, 2),
+    // serom/serom.nes
+    (2444067993, 3660366606, 5),
     // mmc3_test/6-MMC6.nes
     (2669308141, 2914571485, 1),
 

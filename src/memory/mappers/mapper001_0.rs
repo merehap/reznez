@@ -27,11 +27,11 @@ const CHR_LAYOUT_TWO_SMALL: ChrLayout = ChrLayout::new(&[
 const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
 
 // SxROM (MMC1)
-pub struct Mapper001 {
+pub struct Mapper001_0 {
     shift: u8,
 }
 
-impl Mapper for Mapper001 {
+impl Mapper for Mapper001_0 {
     fn initial_layout(&self) -> InitialLayout {
         InitialLayout::builder()
             .prg_max_bank_count(16)
@@ -62,37 +62,39 @@ impl Mapper for Mapper001 {
         self.shift >>= 1;
         self.shift |= (value & 1) << 4;
 
-        if is_last_shift {
-            let shift = self.shift;
-            match address.to_raw() {
-                0x0000..=0x401F => unreachable!(),
-                0x4020..=0x5FFF => { /* Do nothing. */ }
-                0x6000..=0x7FFF => unreachable!(),
-                0x8000..=0x9FFF => {
-                    params.set_prg_layout(Mapper001::next_prg_windows(shift));
-                    params.set_chr_layout(Mapper001::next_chr_windows(shift));
-                    params.set_name_table_mirroring(Mapper001::next_mirroring(shift));
-                }
-                // FIXME: Handle cases for special boards.
-                0xA000..=0xBFFF => params.set_bank_index_register(C0, shift),
-                // FIXME: Handle cases for special boards.
-                0xC000..=0xDFFF => params.set_bank_index_register(C1, shift),
-                0xE000..=0xFFFF => {
-                    params.set_bank_index_register(P0, shift & 0b0_1111);
-                    if shift & 0b1_0000 == 0 {
-                        params.enable_work_ram(0x6000);
-                    } else {
-                        params.disable_work_ram(0x6000);
-                    }
+        if !is_last_shift {
+            return;
+        }
+
+        let shift = self.shift;
+        match address.to_raw() {
+            0x0000..=0x401F => unreachable!(),
+            0x4020..=0x5FFF => { /* Do nothing. */ }
+            0x6000..=0x7FFF => unreachable!(),
+            0x8000..=0x9FFF => {
+                params.set_prg_layout(Mapper001_0::next_prg_windows(shift));
+                params.set_chr_layout(Mapper001_0::next_chr_windows(shift));
+                params.set_name_table_mirroring(Mapper001_0::next_mirroring(shift));
+            }
+            // FIXME: Handle cases for special boards.
+            0xA000..=0xBFFF => params.set_bank_index_register(C0, shift),
+            // FIXME: Handle cases for special boards.
+            0xC000..=0xDFFF => params.set_bank_index_register(C1, shift),
+            0xE000..=0xFFFF => {
+                params.set_bank_index_register(P0, shift & 0b0_1111);
+                if shift & 0b1_0000 == 0 {
+                    params.enable_work_ram(0x6000);
+                } else {
+                    params.disable_work_ram(0x6000);
                 }
             }
-
-            self.shift = EMPTY_SHIFT_REGISTER;
         }
+
+        self.shift = EMPTY_SHIFT_REGISTER;
     }
 }
 
-impl Mapper001 {
+impl Mapper001_0 {
     pub fn new() -> Self {
         Self { shift: EMPTY_SHIFT_REGISTER }
     }

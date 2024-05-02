@@ -3,7 +3,8 @@ pub mod mmc3;
 pub mod vrc;
 
 pub mod mapper000;
-pub mod mapper001;
+pub mod mapper001_0;
+pub mod mapper001_5;
 pub mod mapper002_1;
 pub mod mapper002_2;
 pub mod mapper003_1;
