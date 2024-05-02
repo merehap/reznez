@@ -10,9 +10,11 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
 ]);
 
 // AxROM
-pub struct Mapper007;
+pub struct Axrom {
+    has_bus_conflicts: HasBusConflicts,
+}
 
-impl Mapper for Mapper007 {
+impl Mapper for Axrom {
     fn initial_layout(&self) -> InitialLayout {
         InitialLayout::builder()
             .prg_max_bank_count(8)
@@ -25,18 +27,29 @@ impl Mapper for Mapper007 {
             .build()
     }
 
+    fn has_bus_conflicts(&self) -> HasBusConflicts {
+        self.has_bus_conflicts
+    }
+
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 params.set_bank_index_register(P0, value & 0b0000_1111);
-                params.set_name_table_mirroring(if value & 0b0001_0000 == 0 {
+                let mirroring = if value & 0b0001_0000 == 0 {
                     NameTableMirroring::OneScreenLeftBank
                 } else {
                     NameTableMirroring::OneScreenRightBank
-                });
+                };
+                params.set_name_table_mirroring(mirroring);
             }
         }
+    }
+}
+
+impl Axrom {
+    pub const fn new(has_bus_conflicts: HasBusConflicts) -> Axrom {
+        Axrom { has_bus_conflicts }
     }
 }

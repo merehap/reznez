@@ -34,7 +34,7 @@ pub trait Mapper {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8);
 
     // Most mappers don't override the default cartridge peeking/reading behavior.
-    fn peek_from_cartridge_space(&self, params: &MapperParams, address: CpuAddress) -> ReadResult {
+    fn peek_cartridge_space(&self, params: &MapperParams, address: CpuAddress) -> ReadResult {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => ReadResult::OPEN_BUS,
@@ -43,7 +43,7 @@ pub trait Mapper {
     }
 
     fn read_from_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress) -> ReadResult {
-        self.peek_from_cartridge_space(params, address)
+        self.peek_cartridge_space(params, address)
     }
 
     // Most mappers don't care about CPU cycles.
@@ -58,6 +58,8 @@ pub trait Mapper {
     fn process_current_ppu_address(&mut self, _address: PpuAddress) {}
     // Most mappers don't trigger custom IRQs.
     fn irq_pending(&self) -> bool { false }
+    // Most mappers don't have bus conflicts.
+    fn has_bus_conflicts(&self) -> HasBusConflicts { HasBusConflicts::No }
 
     #[allow(clippy::too_many_arguments)]
     fn cpu_peek(
@@ -97,7 +99,7 @@ pub trait Mapper {
             0x4016          => ReadResult::partial_open_bus(ports.joypad1.borrow().peek_status() as u8, 0b0000_0001),
             0x4017          => ReadResult::partial_open_bus(ports.joypad2.borrow().peek_status() as u8, 0b0000_0001),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
-            0x4020..=0xFFFF => self.peek_from_cartridge_space(params, address),
+            0x4020..=0xFFFF => self.peek_cartridge_space(params, address),
         }
     }
 
@@ -211,8 +213,17 @@ pub trait Mapper {
             0x4015          => apu_registers.write_status_byte(value),
             0x4016          => ports.change_strobe(value),
             0x4017          => apu_registers.write_frame_counter(value),
-            0x4018..=0x401F => /* CPU Test Mode not yet supported. */ {}
-            0x4020..=0xFFFF => self.write_to_cartridge_space(params, address, value),
+            0x4018..=0x401F => { /* CPU Test Mode not yet supported. */ }
+            0x4020..=0xFFFF => {
+                let value = if self.has_bus_conflicts() == HasBusConflicts::Yes {
+                    let rom_value = self.cpu_peek(params, cpu_internal_ram, ppu_internal_ram, oam,
+                        ports, ppu_registers, apu_registers, address);
+                    rom_value.bus_conflict(value)
+                } else {
+                    value
+                };
+                self.write_to_cartridge_space(params, address, value);
+            }
         }
     }
 
@@ -512,4 +523,10 @@ impl MapperParams {
     ) {
         self.bank_index_registers.update(id, updater);
     }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum HasBusConflicts {
+    Yes,
+    No,
 }

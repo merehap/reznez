@@ -3,19 +3,27 @@ use std::collections::BTreeMap;
 use log::info;
 
 // Submapper numbers for ROMs that aren't in the NES Header DB (mostly test ROMs).
-const MISSING_ROM_SUBMAPPER_NUMBERS: &'static [(u32, u8)] = &[
+const MISSING_ROM_SUBMAPPER_NUMBERS: &'static [(u32, u32, u8)] = &[
+    // 7_test/7_test_0.nes
+    (1196595180, 1718968027, 1),
+    // 7_test/7_test_1.nes
+    (4282262767, 1718968027, 1),
+    // 7_test/7_test_2.nes
+    (3975870379, 1718968027, 2),
     // mmc3_test/6-MMC6.nes
-    (2914571485, 1),
+    (2669308141, 2914571485, 1),
+
     // mmc3_irq_tests/5.MMC3_rev_A.nes (no submapper number has been officially assigned)
-    (4078096862, 99),
-    // Crystalis
-    (1661724784, 99),
+    (495013157, 4078096862, 99),
+    // Crystalis (no submapper number has been officially assigned)
+    (656187357, 1661724784, 99),
 ];
 
 pub struct HeaderDb {
     data_by_crc32: BTreeMap<u32, Header>,
     prg_rom_by_crc32: BTreeMap<u32, Header>,
-    missing_rom_submapper_numbers: BTreeMap<u32, u8>,
+    missing_data_submapper_numbers: BTreeMap<u32, u8>,
+    missing_prg_rom_submapper_numbers: BTreeMap<u32, u8>,
 }
 
 impl HeaderDb {
@@ -24,10 +32,16 @@ impl HeaderDb {
         let doc = roxmltree::Document::parse(text).unwrap();
         let games = doc.root().descendants().filter(|n| n.tag_name().name() == "game");
 
+        let missing_data_submapper_numbers: BTreeMap<u32, u8> =
+            BTreeMap::from_iter(MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(k, _, v)| (*k, *v)));
+        let missing_prg_rom_submapper_numbers: BTreeMap<u32, u8> =
+            BTreeMap::from_iter(MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(_, k, v)| (*k, *v)));
+
         let mut header_db = HeaderDb {
             data_by_crc32: BTreeMap::new(),
             prg_rom_by_crc32: BTreeMap::new(),
-            missing_rom_submapper_numbers: BTreeMap::from_iter(MISSING_ROM_SUBMAPPER_NUMBERS.iter().cloned()),
+            missing_data_submapper_numbers,
+            missing_prg_rom_submapper_numbers,
         };
 
         for game in games {
@@ -61,7 +75,6 @@ impl HeaderDb {
 
     pub fn header_from_prg_rom(&self, prg_rom: &[u8]) -> Option<Header> {
         let hash = crc32fast::hash(prg_rom);
-        println!("Hash: {hash}");
         let result = self.prg_rom_by_crc32.get(&hash).copied();
         if result.is_none() {
             info!("ROM with PRG hash {hash} not found in DB.");
@@ -70,12 +83,15 @@ impl HeaderDb {
         result
     }
 
-    pub fn missing_rom_submapper_number(&self, prg_rom: &[u8]) -> Result<u8, String> {
-        let hash = crc32fast::hash(prg_rom);
-        if let Some(submapper_number) = self.missing_rom_submapper_numbers.get(&hash).copied() {
-            Ok(submapper_number)
+    pub fn missing_submapper_number(&self, data: &[u8], prg_rom: &[u8]) -> Option<u8> {
+        let data_hash = crc32fast::hash(data);
+        let prg_hash = crc32fast::hash(prg_rom);
+        if let Some(submapper_number) = self.missing_data_submapper_numbers.get(&data_hash).copied() {
+            Some(submapper_number)
+        } else if let Some(submapper_number) = self.missing_prg_rom_submapper_numbers.get(&prg_hash).copied() {
+            Some(submapper_number)
         } else {
-            Err(format!("Missing ROM with CRC32 of {hash} needs a fallback entry."))
+            None
         }
     }
 }

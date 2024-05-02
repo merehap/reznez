@@ -1,3 +1,4 @@
+pub mod common;
 pub mod mmc3;
 pub mod vrc;
 
@@ -12,7 +13,8 @@ pub mod mapper004_4;
 pub mod mapper004_rev_a;
 pub mod mapper005;
 
-pub mod mapper007;
+pub mod mapper007_1;
+pub mod mapper007_2;
 
 pub mod mapper009;
 pub mod mapper010;

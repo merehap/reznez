@@ -19,6 +19,17 @@ impl ReadResult {
         (self.value & self.mask) | (data_bus_value & !self.mask)
     }
 
+    // Bus conflicts occur when a register exists at the same address as ROM, for boards that don't
+    // prevent bus conflicts. This results in the register value and the ROM value being ANDed when
+    // a register write occurs.
+    // If self.mask is all zeroes (a.k.a. open bus), then the register is written unmodified.
+    // If self.mask is all ones, then each register bit conflicts with ROM (and will be ANDed).
+    pub fn bus_conflict(self, register_value: u8) -> u8 {
+        assert!(self.mask == 0b0000_0000 || self.mask == 0b1111_1111,
+            "ReadResult for a potential bus conflict should not be partial open bus.");
+        (self.value & register_value & self.mask) | (register_value & !self.mask)
+    }
+
     pub fn unwrap(self) -> u8 {
         assert_eq!(self.mask, 0b1111_1111);
         self.value

@@ -144,7 +144,7 @@ impl Mapper for Mapper005 {
             .build()
     }
 
-    fn peek_from_cartridge_space(&self, params: &MapperParams, address: CpuAddress) -> ReadResult {
+    fn peek_cartridge_space(&self, params: &MapperParams, address: CpuAddress) -> ReadResult {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x500F => ReadResult::OPEN_BUS,
@@ -162,7 +162,7 @@ impl Mapper for Mapper005 {
     }
 
     fn read_from_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress) -> ReadResult {
-        let result = self.peek_from_cartridge_space(params, address);
+        let result = self.peek_cartridge_space(params, address);
         // TODO: Replace with ifs?
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
