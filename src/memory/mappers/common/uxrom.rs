@@ -15,7 +15,7 @@ pub struct Uxrom {
     has_bus_conflicts: HasBusConflicts,
 }
 
-impl Mapper for Uxrom{
+impl Mapper for Uxrom {
     fn initial_layout(&self) -> InitialLayout {
         InitialLayout::builder()
             .prg_max_bank_count(256)

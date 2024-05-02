@@ -11,8 +11,11 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &'static [(u32, u32, u8)] = &[
     // 2_test/2_test_2.nes
     (0624876065, 3901840109, 2),
     // 3_test/3_test_0.nes
+    (2333203173, 3631928862, 1),
     // 3_test/3_test_1.nes
+    (2768833268, 3631928862, 1),
     // 3_test/3_test_2.nes
+    (3609230023, 3631928862, 2),
     // 7_test/7_test_0.nes
     (1196595180, 1718968027, 1),
     // 7_test/7_test_1.nes
