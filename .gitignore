@@ -4,6 +4,7 @@ Cargo.lock
 /misc
 /target
 /tests/roms
+/tests/actual_frames
 *output*
 **/*.swn
 **/*.swo

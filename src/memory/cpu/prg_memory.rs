@@ -98,7 +98,6 @@ impl PrgMemory {
         }
     }
 
-    // TODO: Handle read-only.
     pub fn write(&mut self, registers: &BankIndexRegisters, address: CpuAddress, value: u8) {
         match self.address_to_prg_index(registers, address) {
             PrgMemoryIndex::None => {}
