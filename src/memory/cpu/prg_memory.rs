@@ -79,8 +79,13 @@ impl PrgMemory {
     pub fn peek(&self, registers: &BankIndexRegisters, address: CpuAddress) -> ReadResult {
         match self.address_to_prg_index(registers, address) {
             PrgMemoryIndex::None => ReadResult::OPEN_BUS,
-            PrgMemoryIndex::MappedMemory {index, ..} =>
-                ReadResult::full(self.raw_memory[index % self.raw_memory.len()]),
+            PrgMemoryIndex::MappedMemory {writability, index} => {
+                if writability.is_writable(self.rom_ram_mode) && !self.ram_enabled {
+                    ReadResult::OPEN_BUS
+                } else {
+                    ReadResult::full(self.raw_memory[index % self.raw_memory.len()])
+                }
+            }
             PrgMemoryIndex::WorkRam { section_id, index } => {
                 let work_ram = &self.work_ram_sections[section_id];
                 use WorkRamStatus::*;
