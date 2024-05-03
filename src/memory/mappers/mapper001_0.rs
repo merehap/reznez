@@ -1,4 +1,5 @@
 use crate::memory::mapper::*;
+use crate::memory::mappers::common::mmc1::{ShiftRegister, ShiftStatus};
 
 const PRG_LAYOUT_FIXED_LAST: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WorkRam),
@@ -23,6 +24,20 @@ const CHR_LAYOUT_TWO_SMALL: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::Switchable(Ram, C0)),
     ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::Switchable(Ram, C1)),
 ]);
+
+const PRG_LAYOUTS: [PrgLayout; 4] =
+    [PRG_LAYOUT_ONE_BIG, PRG_LAYOUT_ONE_BIG, PRG_LAYOUT_FIXED_FIRST, PRG_LAYOUT_FIXED_LAST];
+
+const CHR_LAYOUTS: [ChrLayout; 2] =
+    [CHR_LAYOUT_ONE_BIG, CHR_LAYOUT_TWO_SMALL];
+
+const MIRRORINGS: [NameTableMirroring; 4] =
+    [
+        NameTableMirroring::OneScreenRightBank,
+        NameTableMirroring::OneScreenLeftBank,
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+    ];
 
 // SxROM (MMC1)
 pub struct Mapper001_0 {
@@ -57,9 +72,13 @@ impl Mapper for Mapper001_0 {
                 0x4020..=0x5FFF => { /* Do nothing. */ }
                 0x6000..=0x7FFF => unreachable!(),
                 0x8000..=0x9FFF => {
-                    params.set_prg_layout(Mapper001_0::next_prg_windows(finished_value));
-                    params.set_chr_layout(Mapper001_0::next_chr_windows(finished_value));
-                    params.set_name_table_mirroring(Mapper001_0::next_mirroring(finished_value));
+                    let finished_value = usize::from(finished_value);
+                    let mirroring_index =  finished_value & 0b0000_0011;
+                    let prg_index       = (finished_value & 0b0000_1100) >> 2;
+                    let chr_index       = (finished_value & 0b0001_0000) >> 4;
+                    params.set_name_table_mirroring(MIRRORINGS[mirroring_index]);
+                    params.set_prg_layout(PRG_LAYOUTS[prg_index]);
+                    params.set_chr_layout(CHR_LAYOUTS[chr_index]);
                 }
                 // FIXME: Handle cases for special boards.
                 0xA000..=0xBFFF => params.set_bank_index_register(C0, finished_value),
@@ -82,70 +101,4 @@ impl Mapper001_0 {
     pub fn new() -> Self {
         Self { shift_register: ShiftRegister::new() }
     }
-
-    fn next_prg_windows(value: u8) -> PrgLayout {
-        match (value & 0b0000_1100) >> 2 {
-            0b00 | 0b01 => PRG_LAYOUT_ONE_BIG,
-            0b10 => PRG_LAYOUT_FIXED_FIRST,
-            0b11 => PRG_LAYOUT_FIXED_LAST,
-            _ => unreachable!(),
-        }
-    }
-
-    fn next_chr_windows(value: u8) -> ChrLayout {
-        match (value & 0b0001_0000) >> 4 {
-            0 => CHR_LAYOUT_ONE_BIG,
-            1 => CHR_LAYOUT_TWO_SMALL,
-            _ => unreachable!(),
-        }
-    }
-
-    fn next_mirroring(value: u8) -> NameTableMirroring {
-        match value & 0b0000_0011 {
-            0b00 => NameTableMirroring::OneScreenRightBank,
-            0b01 => NameTableMirroring::OneScreenLeftBank,
-            0b10 => NameTableMirroring::Vertical,
-            0b11 => NameTableMirroring::Horizontal,
-            _ => unreachable!(),
-        }
-    }
-}
-
-const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
-
-pub struct ShiftRegister {
-    value: u8,
-}
-
-impl ShiftRegister {
-    pub fn new() -> Self {
-        Self { value: EMPTY_SHIFT_REGISTER }
-    }
-
-    pub fn shift(&mut self, write_value: u8) -> ShiftStatus {
-        if write_value & 0b1000_0000 != 0 {
-            self.value = EMPTY_SHIFT_REGISTER;
-            return ShiftStatus::Clear;
-        }
-
-        let is_last_shift = self.value & 1 == 1;
-        self.value >>= 1;
-        // Copy the last bit from write_value to the front of self.value.
-        self.value |= (write_value & 1) << 4;
-
-        if !is_last_shift {
-            return ShiftStatus::Continue;
-        }
-
-        let finished_value = self.value;
-        self.value = EMPTY_SHIFT_REGISTER;
-        ShiftStatus::Done { finished_value }
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum ShiftStatus {
-    Clear,
-    Continue,
-    Done { finished_value: u8 },
 }

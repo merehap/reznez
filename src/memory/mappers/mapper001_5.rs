@@ -1,4 +1,5 @@
 use crate::memory::mapper::*;
+use crate::memory::mappers::common::mmc1::{ShiftRegister, ShiftStatus};
 
 const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WorkRam),
@@ -13,11 +14,20 @@ const CHR_LAYOUT_TWO_SMALL: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::Switchable(Rom, C1)),
 ]);
 
-const EMPTY_SHIFT_REGISTER: u8 = 0b0001_0000;
+const CHR_LAYOUTS: [ChrLayout; 2] =
+    [CHR_LAYOUT_ONE_BIG, CHR_LAYOUT_TWO_SMALL];
+
+const MIRRORINGS: [NameTableMirroring; 4] =
+    [
+        NameTableMirroring::OneScreenRightBank,
+        NameTableMirroring::OneScreenLeftBank,
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+    ];
 
 // SEROM. MMC1 that doesn't support PRG bank switching.
 pub struct Mapper001_5 {
-    shift: u8,
+    shift_register: ShiftRegister,
 }
 
 impl Mapper for Mapper001_5 {
@@ -40,66 +50,35 @@ impl Mapper for Mapper001_5 {
             return;
         }
 
-        if value & 0b1000_0000 != 0 {
-            self.shift = EMPTY_SHIFT_REGISTER;
-            return;
-        }
-
-        let is_last_shift = self.shift & 1 == 1;
-
-        self.shift >>= 1;
-        self.shift |= (value & 1) << 4;
-
-        if !is_last_shift {
-            return;
-        }
-
-        let shift = self.shift;
-        match address.to_raw() {
-            0x0000..=0x401F => unreachable!(),
-            0x4020..=0x5FFF => { /* Do nothing. */ }
-            0x6000..=0x7FFF => unreachable!(),
-            0x8000..=0x9FFF => {
-                params.set_chr_layout(Mapper001_5::next_chr_windows(shift));
-                params.set_name_table_mirroring(Mapper001_5::next_mirroring(shift));
-            }
-            // FIXME: Handle cases for special boards.
-            0xA000..=0xBFFF => params.set_bank_index_register(C0, shift),
-            // FIXME: Handle cases for special boards.
-            0xC000..=0xDFFF => params.set_bank_index_register(C1, shift),
-            0xE000..=0xFFFF => {
-                if shift & 0b1_0000 == 0 {
-                    params.enable_work_ram(0x6000);
-                } else {
-                    params.disable_work_ram(0x6000);
+        match self.shift_register.shift(value) {
+            ShiftStatus::Clear | ShiftStatus::Continue => { /* Do nothing additional. */ }
+            ShiftStatus::Done { finished_value } => match address.to_raw() {
+                0x0000..=0x401F => unreachable!(),
+                0x4020..=0x5FFF => { /* Do nothing. */ }
+                0x6000..=0x7FFF => unreachable!(),
+                0x8000..=0x9FFF => {
+                    let finished_value = usize::from(finished_value);
+                    let mirroring_index =  finished_value & 0b0000_0011;
+                    let chr_index       = (finished_value & 0b0001_0000) >> 4;
+                    params.set_name_table_mirroring(MIRRORINGS[mirroring_index]);
+                    params.set_chr_layout(CHR_LAYOUTS[chr_index]);
+                }
+                0xA000..=0xBFFF => params.set_bank_index_register(C0, finished_value),
+                0xC000..=0xDFFF => params.set_bank_index_register(C1, finished_value),
+                0xE000..=0xFFFF => {
+                    if finished_value & 0b1_0000 == 0 {
+                        params.enable_work_ram(0x6000);
+                    } else {
+                        params.disable_work_ram(0x6000);
+                    }
                 }
             }
         }
-
-        self.shift = EMPTY_SHIFT_REGISTER;
     }
 }
 
 impl Mapper001_5 {
     pub fn new() -> Self {
-        Self { shift: EMPTY_SHIFT_REGISTER }
-    }
-
-    fn next_chr_windows(value: u8) -> ChrLayout {
-        match (value & 0b0001_0000) >> 4 {
-            0 => CHR_LAYOUT_ONE_BIG,
-            1 => CHR_LAYOUT_TWO_SMALL,
-            _ => unreachable!(),
-        }
-    }
-
-    fn next_mirroring(value: u8) -> NameTableMirroring {
-        match value & 0b0000_0011 {
-            0b00 => NameTableMirroring::OneScreenRightBank,
-            0b01 => NameTableMirroring::OneScreenLeftBank,
-            0b10 => NameTableMirroring::Vertical,
-            0b11 => NameTableMirroring::Horizontal,
-            _ => unreachable!(),
-        }
+        Self { shift_register: ShiftRegister::new() }
     }
 }

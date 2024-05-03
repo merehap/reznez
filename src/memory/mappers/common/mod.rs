@@ -1,3 +1,5 @@
+// Mapper 1
+pub mod mmc1;
 // Mapper 2
 pub mod uxrom;
 // Mapper 3
