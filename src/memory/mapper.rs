@@ -435,6 +435,8 @@ pub struct MapperParams {
     pub chr_memory: ChrMemory,
     pub bank_index_registers: BankIndexRegisters,
     pub name_table_mirroring: NameTableMirroring,
+    pub prg_ram_enabled: bool,
+    pub rom_ram_mode: RomRamMode,
 }
 
 impl MapperParams {
@@ -529,4 +531,10 @@ impl MapperParams {
 pub enum HasBusConflicts {
     Yes,
     No,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum RomRamMode {
+    Rom,
+    Ram,
 }

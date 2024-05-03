@@ -1,7 +1,7 @@
 use crate::memory::mapper::*;
 
 const PRG_WINDOWS: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
+    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::Switchable(RomRam, P0)),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P1)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P2)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::Switchable(Rom, P3)),
@@ -72,7 +72,7 @@ impl Mapper for Mapper069 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
-            0x6000..=0x7FFF => todo!("Mapper 69 Work RAM writes."),
+            0x6000..=0x7FFF => params.write_prg(address, value),
             0x8000..=0x9FFF => self.set_command(value),
             0xA000..=0xBFFF => self.execute_command(params, value),
             0xC000..=0xFFFF => { /* Do nothing. */ }
@@ -112,9 +112,13 @@ impl Mapper069 {
             Command::ChrRomBank(id) =>
                 params.set_bank_index_register(id, value),
             Command::PrgRomRamBank => {
-                if value & 0b1100_0000 != 0 {
-                    todo!("PRG RAM toggle");
-                }
+                params.prg_ram_enabled = value & 0b1000_0000 != 0;
+                params.rom_ram_mode = if value & 0b0100_0000 == 0 {
+                    RomRamMode::Rom
+                } else {
+                    RomRamMode::Ram
+                };
+
                 params.set_bank_index_register(P0, value & 0b0011_1111);
             }
             Command::PrgRomBank(id) =>

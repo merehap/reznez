@@ -44,7 +44,7 @@ impl PrgMemory {
         };
 
         for window in prg_memory.layout.0 {
-            if window.prg_type == PrgBank::WorkRam {
+            if window.prg_bank == PrgBank::WorkRam {
                 prg_memory.work_ram_sections.push(WorkRam::new(window.size()));
             }
         }
@@ -148,13 +148,13 @@ impl PrgMemory {
                 let bank_offset = address.to_raw() - windows[i].start.to_raw();
 
                 let window;
-                if let PrgBank::MirrorOf(mirrored_window_start) = windows[i].prg_type {
+                if let PrgBank::MirrorOf(mirrored_window_start) = windows[i].prg_bank {
                     window = self.window_at(mirrored_window_start);
                 } else {
                     window = &windows[i];
                 }
 
-                let prg_memory_index = match window.prg_type {
+                let prg_memory_index = match window.prg_bank {
                     PrgBank::Empty => PrgMemoryIndex::None,
                     PrgBank::MirrorOf(_) => panic!("A mirrored bank must mirror a non-mirrored bank."),
                     PrgBank::Fixed(_, bank_index) => {
@@ -202,7 +202,7 @@ impl PrgMemory {
     // This method assume that all WorkRam is at the start of the PrgLayout.
     fn work_ram_at(&mut self, start: u16) -> &mut WorkRam {
         let (window, index) = self.window_with_index_at(start);
-        assert_eq!(window.prg_type, PrgBank::WorkRam);
+        assert_eq!(window.prg_bank, PrgBank::WorkRam);
         &mut self.work_ram_sections[index]
     }
 
@@ -249,7 +249,7 @@ impl PrgLayout {
         let mut i = 0;
         while i < self.0.len() {
             let window = self.0[i];
-            if !matches!(window.prg_type, PrgBank::WorkRam | PrgBank::Empty | PrgBank::MirrorOf(_))
+            if !matches!(window.prg_bank, PrgBank::WorkRam | PrgBank::Empty | PrgBank::MirrorOf(_))
                 && window.size() % bank_size != 0 {
                 panic!("Window size must be a multiple of bank size.");
             }
@@ -277,12 +277,12 @@ enum PrgMemoryIndex {
 pub struct PrgWindow {
     start: CpuAddress,
     end: CpuAddress,
-    prg_type: PrgBank,
+    prg_bank: PrgBank,
 }
 
 impl PrgWindow {
     fn bank_index(self, registers: &BankIndexRegisters) -> Option<BankIndex> {
-        self.prg_type.bank_index(registers)
+        self.prg_bank.bank_index(registers)
     }
 
     const fn size(self) -> usize {
@@ -290,21 +290,21 @@ impl PrgWindow {
     }
 
     fn register_id(self) -> Option<BankIndexRegisterId> {
-        if let PrgBank::Switchable(_, id) = self.prg_type {
+        if let PrgBank::Switchable(_, id) = self.prg_bank {
             Some(id)
         } else {
             None
         }
     }
 
-    pub const fn new(start: u16, end: u16, size: usize, prg_type: PrgBank) -> PrgWindow {
+    pub const fn new(start: u16, end: u16, size: usize, prg_bank: PrgBank) -> PrgWindow {
         assert!(end > start);
         assert!(end as usize - start as usize + 1 == size);
 
         PrgWindow {
             start: CpuAddress::new(start),
             end: CpuAddress::new(end),
-            prg_type,
+            prg_bank,
         }
     }
 }
