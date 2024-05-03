@@ -5,7 +5,7 @@ pub use crate::memory::bank_index::{BankIndex, BankIndexRegisterId, MetaRegister
 pub use crate::memory::bank_index::BankIndexRegisterId::*;
 pub use crate::memory::bank_index::MetaRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
-pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout, PrgWindow, PrgBank};
+pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout, PrgWindow, PrgBank, RomRamMode};
 pub use crate::memory::initial_layout::{InitialLayout, NameTableMirroringSource};
 pub use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout, ChrWindow, ChrBank};
 pub use crate::memory::ppu::ppu_address::PpuAddress;
@@ -57,6 +57,7 @@ pub trait Mapper {
     // Most mappers don't care about the current PPU address.
     fn process_current_ppu_address(&mut self, _address: PpuAddress) {}
     // Most mappers don't trigger custom IRQs.
+    // TODO: Move into MapperParams?
     fn irq_pending(&self) -> bool { false }
     // Most mappers don't have bus conflicts.
     fn has_bus_conflicts(&self) -> HasBusConflicts { HasBusConflicts::No }
@@ -435,8 +436,6 @@ pub struct MapperParams {
     pub chr_memory: ChrMemory,
     pub bank_index_registers: BankIndexRegisters,
     pub name_table_mirroring: NameTableMirroring,
-    pub prg_ram_enabled: bool,
-    pub rom_ram_mode: RomRamMode,
 }
 
 impl MapperParams {
@@ -525,16 +524,18 @@ impl MapperParams {
     ) {
         self.bank_index_registers.update(id, updater);
     }
+
+    pub fn set_prg_ram_enabled(&mut self, ram_enabled: bool) {
+        self.prg_memory.set_ram_enabled(ram_enabled);
+    }
+
+    pub fn set_prg_rom_ram_mode(&mut self, rom_ram_mode: RomRamMode) {
+        self.prg_memory.set_rom_ram_mode(rom_ram_mode);
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum HasBusConflicts {
     Yes,
     No,
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum RomRamMode {
-    Rom,
-    Ram,
 }

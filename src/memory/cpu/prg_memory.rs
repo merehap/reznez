@@ -12,6 +12,8 @@ pub struct PrgMemory {
     bank_count: u16,
     raw_memory: Vec<u8>,
     work_ram_sections: Vec<WorkRam>,
+    ram_enabled: bool,
+    rom_ram_mode: RomRamMode,
 }
 
 impl PrgMemory {
@@ -41,6 +43,8 @@ impl PrgMemory {
             bank_count,
             raw_memory,
             work_ram_sections: Vec::new(),
+            ram_enabled: true,
+            rom_ram_mode: RomRamMode::Rom,
         };
 
         for window in prg_memory.layout.0 {
@@ -75,7 +79,7 @@ impl PrgMemory {
     pub fn peek(&self, registers: &BankIndexRegisters, address: CpuAddress) -> ReadResult {
         match self.address_to_prg_index(registers, address) {
             PrgMemoryIndex::None => ReadResult::OPEN_BUS,
-            PrgMemoryIndex::MappedMemory(index) =>
+            PrgMemoryIndex::MappedMemory {index, ..} =>
                 ReadResult::full(self.raw_memory[index % self.raw_memory.len()]),
             PrgMemoryIndex::WorkRam { section_id, index } => {
                 let work_ram = &self.work_ram_sections[section_id];
@@ -93,7 +97,11 @@ impl PrgMemory {
     pub fn write(&mut self, registers: &BankIndexRegisters, address: CpuAddress, value: u8) {
         match self.address_to_prg_index(registers, address) {
             PrgMemoryIndex::None => {}
-            PrgMemoryIndex::MappedMemory(index) => self.raw_memory[index] = value,
+            PrgMemoryIndex::MappedMemory { writability, index } => {
+                if writability.is_writable(self.rom_ram_mode) {
+                    self.raw_memory[index] = value;
+                }
+            }
             PrgMemoryIndex::WorkRam { section_id, index } => {
                 let work_ram = &mut self.work_ram_sections[section_id];
                 if work_ram.status == WorkRamStatus::ReadWrite {
@@ -136,6 +144,14 @@ impl PrgMemory {
         self.layout = windows;
     }
 
+    pub fn set_ram_enabled(&mut self, ram_enabled: bool) {
+        self.ram_enabled = ram_enabled;
+    }
+
+    pub fn set_rom_ram_mode(&mut self, rom_ram_mode: RomRamMode) {
+        self.rom_ram_mode = rom_ram_mode;
+    }
+
     // TODO: Indicate if read-only.
     fn address_to_prg_index(&self, registers: &BankIndexRegisters, address: CpuAddress) -> PrgMemoryIndex {
         assert!(address >= PRG_MEMORY_START);
@@ -157,25 +173,23 @@ impl PrgMemory {
                 let prg_memory_index = match window.prg_bank {
                     PrgBank::Empty => PrgMemoryIndex::None,
                     PrgBank::MirrorOf(_) => panic!("A mirrored bank must mirror a non-mirrored bank."),
-                    PrgBank::Fixed(_, bank_index) => {
+                    PrgBank::Fixed(writability, bank_index) => {
                         // TODO: Consolidate Fixed and Switchable logic.
                         let mut raw_bank_index = bank_index.to_usize(self.bank_count());
                         let window_multiple = window.size() / self.bank_size;
                         // Clear low bits for large windows.
                         raw_bank_index &= !(window_multiple >> 1);
-                        let mapped_memory_index =
-                             raw_bank_index * self.bank_size + bank_offset as usize;
-                        PrgMemoryIndex::MappedMemory(mapped_memory_index)
+                        let index = raw_bank_index * self.bank_size + bank_offset as usize;
+                        PrgMemoryIndex::MappedMemory { writability, index }
                     }
-                    PrgBank::Switchable(_, register_id) => {
+                    PrgBank::Switchable(writability, register_id) => {
                         let mut raw_bank_index = registers.get(register_id)
                             .to_usize(self.bank_count());
                         let window_multiple = window.size() / self.bank_size;
                         // Clear low bits for large windows.
                         raw_bank_index &= !(window_multiple >> 1);
-                        let mapped_memory_index =
-                             raw_bank_index * self.bank_size + bank_offset as usize;
-                        PrgMemoryIndex::MappedMemory(mapped_memory_index)
+                        let index = raw_bank_index * self.bank_size + bank_offset as usize;
+                        PrgMemoryIndex::MappedMemory { writability, index }
                     }
                     PrgBank::WorkRam => {
                         let mut index = usize::from(bank_offset);
@@ -189,6 +203,7 @@ impl PrgMemory {
                             index -= work_ram_section.data.len();
                         }
 
+                        // Actually return the proper Writability.
                         result.unwrap()
                     }
                 };
@@ -268,7 +283,7 @@ impl PrgLayout {
 enum PrgMemoryIndex {
     None,
     WorkRam { section_id: usize, index: usize },
-    MappedMemory(usize),
+    MappedMemory { writability: Writability, index: usize },
 }
 
 // A PrgWindow is a range within addressable memory.
@@ -351,4 +366,10 @@ pub enum WorkRamStatus {
     ReadOnlyZeros,
     ReadOnly,
     ReadWrite,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum RomRamMode {
+    Rom,
+    Ram,
 }

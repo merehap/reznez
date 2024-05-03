@@ -1,6 +1,6 @@
 use crate::cartridge::cartridge::Cartridge;
 use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout};
-use crate::memory::mapper::{MapperParams, RomRamMode};
+use crate::memory::mapper::MapperParams;
 use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::memory::bank_index::{BankIndex, BankIndexRegisters, BankIndexRegisterId};
@@ -54,8 +54,6 @@ impl InitialLayout {
             chr_memory,
             bank_index_registers,
             name_table_mirroring,
-            prg_ram_enabled: true,
-            rom_ram_mode: RomRamMode::Rom,
         }
     }
 }
