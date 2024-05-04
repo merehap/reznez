@@ -88,7 +88,7 @@ impl PrgMemory {
             }
             PrgMemoryIndex::WorkRam { section_id, index } => {
                 let work_ram = &self.work_ram_sections[section_id];
-                use WorkRamStatus::*;
+                use RamStatus::*;
                 match work_ram.status {
                     Disabled => ReadResult::OPEN_BUS,
                     ReadOnlyZeros => ReadResult::full(0),
@@ -108,7 +108,7 @@ impl PrgMemory {
             }
             PrgMemoryIndex::WorkRam { section_id, index } => {
                 let work_ram = &mut self.work_ram_sections[section_id];
-                if work_ram.status == WorkRamStatus::ReadWrite {
+                if work_ram.status == RamStatus::ReadWrite {
                     work_ram.data[index] = value;
                 }
             }
@@ -131,16 +131,16 @@ impl PrgMemory {
         self.window_with_index_at(start).0
     }
 
-    pub fn set_work_ram_status_at(&mut self, address: u16, status: WorkRamStatus) {
+    pub fn set_work_ram_status_at(&mut self, address: u16, status: RamStatus) {
         self.work_ram_at(address).status = status;
     }
 
     pub fn disable_work_ram(&mut self, address: u16) {
-        self.work_ram_at(address).status = WorkRamStatus::Disabled;
+        self.work_ram_at(address).status = RamStatus::Disabled;
     }
 
     pub fn enable_work_ram(&mut self, address: u16) {
-        self.work_ram_at(address).status = WorkRamStatus::ReadWrite;
+        self.work_ram_at(address).status = RamStatus::ReadWrite;
     }
 
     pub fn set_layout(&mut self, windows: PrgLayout) {
@@ -207,7 +207,6 @@ impl PrgMemory {
                             index -= work_ram_section.data.len();
                         }
 
-                        // Actually return the proper Writability.
                         result.unwrap()
                     }
                 };
@@ -352,20 +351,20 @@ impl PrgBank {
 #[derive(Clone)]
 struct WorkRam {
     data: Vec<u8>,
-    status: WorkRamStatus,
+    status: RamStatus,
 }
 
 impl WorkRam {
     fn new(size: usize) -> WorkRam {
         WorkRam {
             data: vec![0; size],
-            status: WorkRamStatus::ReadWrite,
+            status: RamStatus::ReadWrite,
         }
     }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum WorkRamStatus {
+pub enum RamStatus {
     Disabled,
     ReadOnlyZeros,
     ReadOnly,
