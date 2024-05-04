@@ -34,8 +34,8 @@ impl Mapper for Mapper086 {
                 let prg      = (value & 0b0011_0000) >> 4;
                 let low_chr  =  value & 0b0000_0011;
 
-                params.set_bank_index_register(C0, high_chr | low_chr);
-                params.set_bank_index_register(P0, prg);
+                params.set_bank_register(C0, high_chr | low_chr);
+                params.set_bank_register(P0, prg);
             }
             0x7000..=0x7FFF => { /* TODO: Audio control. */ }
             _ => { /* Do nothing. */ }

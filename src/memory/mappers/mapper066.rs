@@ -32,8 +32,8 @@ impl Mapper for Mapper066 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                params.set_bank_index_register(P0, (value & 0b0011_0000) >> 4);
-                params.set_bank_index_register(C0, value & 0b0000_0011);
+                params.set_bank_register(P0, (value & 0b0011_0000) >> 4);
+                params.set_bank_register(C0, value & 0b0000_0011);
             }
         }
     }

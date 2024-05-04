@@ -43,8 +43,8 @@ impl Mapper for Mapper113 {
                 };
 
                 params.set_name_table_mirroring(mirroring);
-                params.set_bank_index_register(C0, high_chr | low_chr);
-                params.set_bank_index_register(P0, prg);
+                params.set_bank_register(C0, high_chr | low_chr);
+                params.set_bank_register(P0, prg);
             }
             _ => { /* Do nothing. */ }
         }

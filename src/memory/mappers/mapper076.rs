@@ -15,13 +15,13 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::Switchable(Rom, C3)),
 ]);
 
-const BANK_INDEX_REGISTER_IDS: [Option<BankIndexRegisterId>; 8] =
+const BANK_INDEX_REGISTER_IDS: [Option<BankRegisterId>; 8] =
     [None, None, Some(C0), Some(C1), Some(C2), Some(C3), Some(P0), Some(P1)];
 
 // NAMCOT-3446 
 // Similar to Namcot 108, but with only large CHR windows and more PRG and CHR.
 pub struct Mapper076 {
-    selected_register_id: BankIndexRegisterId,
+    selected_register_id: BankRegisterId,
 }
 
 impl Mapper for Mapper076 {
@@ -69,6 +69,6 @@ impl Mapper076 {
 
     fn set_bank_index(&mut self, params: &mut MapperParams, value: u8) {
         let bank_index = u16::from(value & 0b0011_1111);
-        params.set_bank_index_register(self.selected_register_id, bank_index);
+        params.set_bank_register(self.selected_register_id, bank_index);
     }
 }

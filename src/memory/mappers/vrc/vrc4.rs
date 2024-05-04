@@ -40,8 +40,8 @@ const NAME_TABLE_MIRRORINGS: [NameTableMirroring; 4] = [
 ];
 
 pub struct Vrc4 {
-    low_address_bank_index_register_ids: BTreeMap<u16, BankIndexRegisterId>,
-    high_address_bank_index_register_ids: BTreeMap<u16, BankIndexRegisterId>,
+    low_address_bank_register_ids: BTreeMap<u16, BankRegisterId>,
+    high_address_bank_register_ids: BTreeMap<u16, BankRegisterId>,
     irq_state: VrcIrqState,
 }
 
@@ -71,7 +71,7 @@ impl Mapper for Vrc4 {
             0x0000..=0x401F => unreachable!(),
             0x6000..=0x7FFF => params.write_prg(address, value),
             // Set bank for 8000 through 9FFF (or C000 through DFFF).
-            0x8000..=0x8003 => params.set_bank_index_register(P0, value & 0b0001_1111),
+            0x8000..=0x8003 => params.set_bank_register(P0, value & 0b0001_1111),
             0x9000 => {
                 let mirroring = NAME_TABLE_MIRRORINGS[usize::from(value & 0b0000_0011)];
                 params.set_name_table_mirroring(mirroring);
@@ -91,24 +91,24 @@ impl Mapper for Vrc4 {
                 params.set_prg_layout(prg_layout);
             }
             // Set bank for A000 through AFFF.
-            0xA000..=0xA003 => params.set_bank_index_register(P1, value & 0b0001_1111),
+            0xA000..=0xA003 => params.set_bank_register(P1, value & 0b0001_1111),
 
             // Set a CHR bank mapping.
             0xB000..=0xEFFF => {
                 let bank;
                 let mask;
-                let mut register_id = self.low_address_bank_index_register_ids.get(&address.to_raw());
+                let mut register_id = self.low_address_bank_register_ids.get(&address.to_raw());
                 if register_id.is_some() {
                     bank = u16::from(value);
                     mask = Some(0b0_0000_1111);
                 } else {
-                    register_id = self.high_address_bank_index_register_ids.get(&address.to_raw());
+                    register_id = self.high_address_bank_register_ids.get(&address.to_raw());
                     bank = u16::from(value) << 4;
                     mask = Some(0b1_1111_0000);
                 }
 
                 if let (Some(&register_id), Some(mask)) = (register_id, mask) {
-                    params.set_bank_index_register_bits(register_id, bank, mask);
+                    params.set_bank_register_bits(register_id, bank, mask);
                 }
             }
 
@@ -122,18 +122,18 @@ impl Mapper for Vrc4 {
 }
 
 impl Vrc4 {
-    pub fn new(bank_index_registers: &[(u16, u16, BankIndexRegisterId)]) -> Self {
+    pub fn new(bank_registers: &[(u16, u16, BankRegisterId)]) -> Self {
         // Convert the address-to-register mappings to maps for easy lookup.
-        let mut low_address_bank_index_register_ids = BTreeMap::new();
-        let mut high_address_bank_index_register_ids = BTreeMap::new();
-        for &(low, high, register_id) in bank_index_registers {
-            low_address_bank_index_register_ids.insert(low, register_id);
-            high_address_bank_index_register_ids.insert(high, register_id);
+        let mut low_address_bank_register_ids = BTreeMap::new();
+        let mut high_address_bank_register_ids = BTreeMap::new();
+        for &(low, high, register_id) in bank_registers {
+            low_address_bank_register_ids.insert(low, register_id);
+            high_address_bank_register_ids.insert(high, register_id);
         }
 
         Self {
-            low_address_bank_index_register_ids,
-            high_address_bank_index_register_ids,
+            low_address_bank_register_ids,
+            high_address_bank_register_ids,
             irq_state: VrcIrqState::new(),
         }
     }

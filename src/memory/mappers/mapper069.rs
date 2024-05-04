@@ -19,9 +19,9 @@ const CHR_WINDOWS: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C7)),
 ]);
 
-const CHR_REGISTER_IDS: [BankIndexRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
+const CHR_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
 // P0 is used by the ROM/RAM window, which gets special treatment.
-const PRG_ROM_REGISTER_IDS: [BankIndexRegisterId; 3] = [P1, P2, P3];
+const PRG_ROM_REGISTER_IDS: [BankRegisterId; 3] = [P1, P2, P3];
 
 const NAME_TABLE_MIRRORINGS: [NameTableMirroring; 4] = [
     NameTableMirroring::Vertical,
@@ -110,17 +110,17 @@ impl Mapper069 {
     fn execute_command(&mut self, params: &mut MapperParams, value: u8) {
         match self.command {
             Command::ChrRomBank(id) =>
-                params.set_bank_index_register(id, value),
+                params.set_bank_register(id, value),
             Command::PrgRomRamBank => {
                 let prg_ram_enabled = value & 0b1000_0000 != 0;
                 let rom_ram_mode = if value & 0b0100_0000 == 0 { RomRamMode::Rom } else { RomRamMode::Ram };
                 let bank_index      = value & 0b0011_1111;
                 params.set_prg_ram_enabled(prg_ram_enabled);
                 params.set_prg_rom_ram_mode(rom_ram_mode);
-                params.set_bank_index_register(P0, bank_index);
+                params.set_bank_register(P0, bank_index);
             }
             Command::PrgRomBank(id) =>
-                params.set_bank_index_register(id, value),
+                params.set_bank_register(id, value),
             Command::NameTableMirroring => {
                 let mirroring = NAME_TABLE_MIRRORINGS[usize::from(value) & 0b11];
                 params.set_name_table_mirroring(mirroring);
@@ -139,9 +139,9 @@ impl Mapper069 {
 }
 
 enum Command {
-    ChrRomBank(BankIndexRegisterId),
+    ChrRomBank(BankRegisterId),
     PrgRomRamBank,
-    PrgRomBank(BankIndexRegisterId),
+    PrgRomBank(BankRegisterId),
     NameTableMirroring,
     IrqControl,
     IrqCounterLowByte,

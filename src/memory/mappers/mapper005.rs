@@ -91,9 +91,9 @@ const EXTENDED_ATTRIBUTES_CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
 const SPRITE_PATTERN_FETCH_START: u8 = 64;
 const BACKGROUND_PATTERN_FETCH_START: u8 = 81;
 
-const PRG_REGISTER_IDS: [BankIndexRegisterId; 5] =
+const PRG_REGISTER_IDS: [BankRegisterId; 5] =
     [P0, P1, P2, P3, P4];
-const CHR_REGISTER_IDS: [BankIndexRegisterId; 12] =
+const CHR_REGISTER_IDS: [BankRegisterId; 12] =
     [C0, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11];
 
 // MMC5 (ExROM)
@@ -140,7 +140,7 @@ impl Mapper for Mapper005 {
             .chr_windows(ONE_8K_CHR_WINDOW)
             .do_not_align_large_chr_windows()
             .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-            .override_bank_index_register(P4, BankIndex::LAST)
+            .override_bank_register(P4, BankIndex::LAST)
             .build()
     }
 
@@ -305,7 +305,7 @@ impl Mapper for Mapper005 {
             // just-in-time may be necessary.
             let raw_bank_index = (self.upper_chr_bank_bits << 6) | (self.extended_ram[usize::from(address.to_u16() % 0x400)] & 0b0011_1111);
             println!("{} is in name table proper. Raw bank index: {}. Pattern Fetch: {}", address, raw_bank_index, self.pattern_fetch_count);
-            params.set_bank_index_register(C12, raw_bank_index);
+            params.set_bank_register(C12, raw_bank_index);
         }
 
         if (0x0000..=0x1FFF).contains(&address.to_u16()) {
@@ -447,12 +447,12 @@ impl Mapper005 {
 
     fn prg_bank_switching(params: &mut MapperParams, address: u16, value: u8) {
         let register_id = PRG_REGISTER_IDS[(address - 0x5113) as usize];
-        params.set_bank_index_register(register_id, value);
+        params.set_bank_register(register_id, value);
     }
 
     fn chr_bank_switching(params: &mut MapperParams, address: u16, value: u8) {
         let register_id = CHR_REGISTER_IDS[(address - 0x5120) as usize];
-        params.set_bank_index_register(register_id, value);
+        params.set_bank_register(register_id, value);
     }
 
     fn set_upper_chr_bank_bits(&mut self, value: u8) {

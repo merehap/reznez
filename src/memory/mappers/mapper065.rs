@@ -27,7 +27,7 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C7)),
 ]);
 
-const CHR_REGISTER_IDS: [BankIndexRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
+const CHR_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
 
 // Irem's H3001
 // FIXME: Daiku no Gen San 2 - small scanline flickering during intro.
@@ -48,7 +48,7 @@ impl Mapper for Mapper065 {
             .chr_bank_size(1 * KIBIBYTE)
             .chr_windows(CHR_LAYOUT)
             .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-            .override_bank_index_register(P1, BankIndex::SECOND)
+            .override_bank_register(P1, BankIndex::SECOND)
             .build()
     }
 
@@ -57,11 +57,11 @@ impl Mapper for Mapper065 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
 
-            0x8000 => params.set_bank_index_register(P0, value),
-            0xA000 => params.set_bank_index_register(P1, value),
+            0x8000 => params.set_bank_register(P0, value),
+            0xA000 => params.set_bank_register(P1, value),
             0xB000..=0xB007 => {
                 let reg_id = CHR_REGISTER_IDS[(cpu_address.to_raw() - 0xB000) as usize];
-                params.set_bank_index_register(reg_id, value);
+                params.set_bank_register(reg_id, value);
             }
             0x9000 => {
                 let prg_windows = if value & 0b1000_0000 == 0 {

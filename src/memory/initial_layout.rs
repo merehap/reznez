@@ -3,7 +3,7 @@ use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout};
 use crate::memory::mapper::MapperParams;
 use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
-use crate::memory::bank_index::{BankIndex, BankIndexRegisters, MetaRegisterId, BankIndexRegisterId};
+use crate::memory::bank_index::{BankIndex, BankRegisters, MetaRegisterId, BankRegisterId};
 
 pub struct InitialLayout {
     prg_max_bank_count: u16,
@@ -16,9 +16,9 @@ pub struct InitialLayout {
     align_large_chr_windows: bool,
 
     name_table_mirroring_source: NameTableMirroringSource,
-    bank_index_register_override: Option<(BankIndexRegisterId, BankIndex)>,
-    meta_register_override: (MetaRegisterId, BankIndexRegisterId),
-    second_meta_register_override: (MetaRegisterId, BankIndexRegisterId),
+    bank_register_override: Option<(BankRegisterId, BankIndex)>,
+    meta_register_override: (MetaRegisterId, BankRegisterId),
+    second_meta_register_override: (MetaRegisterId, BankRegisterId),
 }
 
 impl InitialLayout {
@@ -46,18 +46,18 @@ impl InitialLayout {
             NameTableMirroringSource::Cartridge => cartridge.name_table_mirroring(),
         };
 
-        let mut bank_index_registers = BankIndexRegisters::new();
-        if let Some((register_id, bank_index)) = self.bank_index_register_override {
-            bank_index_registers.set(register_id, bank_index);
+        let mut bank_registers = BankRegisters::new();
+        if let Some((register_id, bank_index)) = self.bank_register_override {
+            bank_registers.set(register_id, bank_index);
         }
 
-        bank_index_registers.set_meta(self.meta_register_override.0, self.meta_register_override.1);
-        bank_index_registers.set_meta(self.second_meta_register_override.0, self.second_meta_register_override.1);
+        bank_registers.set_meta(self.meta_register_override.0, self.meta_register_override.1);
+        bank_registers.set_meta(self.second_meta_register_override.0, self.second_meta_register_override.1);
 
         MapperParams {
             prg_memory,
             chr_memory,
-            bank_index_registers,
+            bank_registers,
             name_table_mirroring,
         }
     }
@@ -75,10 +75,10 @@ pub struct InitialLayoutBuilder {
     align_large_chr_windows: bool,
 
     name_table_mirroring_source: Option<NameTableMirroringSource>,
-    bank_index_register_override: Option<(BankIndexRegisterId, BankIndex)>,
-    meta_register_override: (MetaRegisterId, BankIndexRegisterId),
+    bank_register_override: Option<(BankRegisterId, BankIndex)>,
+    meta_register_override: (MetaRegisterId, BankRegisterId),
     // Can't clone a map in a const context, so each override must be a separate field.
-    second_meta_register_override: (MetaRegisterId, BankIndexRegisterId),
+    second_meta_register_override: (MetaRegisterId, BankRegisterId),
 }
 
 impl InitialLayoutBuilder {
@@ -94,9 +94,9 @@ impl InitialLayoutBuilder {
             align_large_chr_windows: true,
 
             name_table_mirroring_source: None,
-            bank_index_register_override: None,
-            meta_register_override: (MetaRegisterId::M0, BankIndexRegisterId::C0),
-            second_meta_register_override: (MetaRegisterId::M1, BankIndexRegisterId::C0),
+            bank_register_override: None,
+            meta_register_override: (MetaRegisterId::M0, BankRegisterId::C0),
+            second_meta_register_override: (MetaRegisterId::M1, BankRegisterId::C0),
         }
     }
 
@@ -143,19 +143,19 @@ impl InitialLayoutBuilder {
         self
     }
 
-    pub const fn override_bank_index_register(
+    pub const fn override_bank_register(
         &mut self,
-        id: BankIndexRegisterId,
+        id: BankRegisterId,
         bank_index: BankIndex,
     ) -> &mut InitialLayoutBuilder {
-        self.bank_index_register_override = Some((id, bank_index));
+        self.bank_register_override = Some((id, bank_index));
         self
     }
 
     pub const fn override_meta_register(
         &mut self,
         meta_id: MetaRegisterId,
-        id: BankIndexRegisterId,
+        id: BankRegisterId,
     ) -> &mut InitialLayoutBuilder {
         self.meta_register_override = (meta_id, id);
         self
@@ -164,7 +164,7 @@ impl InitialLayoutBuilder {
     pub const fn override_second_meta_register(
         &mut self,
         meta_id: MetaRegisterId,
-        id: BankIndexRegisterId,
+        id: BankRegisterId,
     ) -> &mut InitialLayoutBuilder {
         self.second_meta_register_override = (meta_id, id);
         self
@@ -182,7 +182,7 @@ impl InitialLayoutBuilder {
             align_large_chr_windows: self.align_large_chr_windows,
 
             name_table_mirroring_source: self.name_table_mirroring_source.unwrap(),
-            bank_index_register_override: self.bank_index_register_override,
+            bank_register_override: self.bank_register_override,
             meta_register_override: self.meta_register_override,
             second_meta_register_override: self.second_meta_register_override,
         }

@@ -1,4 +1,4 @@
-use crate::memory::bank_index::{BankIndex, BankIndexRegisters, BankIndexRegisterId};
+use crate::memory::bank_index::{BankIndex, BankRegisters, BankRegisterId};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::read_result::ReadResult;
 use crate::memory::writability::Writability;
@@ -76,7 +76,7 @@ impl PrgMemory {
         self.bank_count() - 1
     }
 
-    pub fn peek(&self, registers: &BankIndexRegisters, address: CpuAddress) -> ReadResult {
+    pub fn peek(&self, registers: &BankRegisters, address: CpuAddress) -> ReadResult {
         match self.address_to_prg_index(registers, address) {
             PrgMemoryIndex::None => ReadResult::OPEN_BUS,
             PrgMemoryIndex::MappedMemory {writability, index} => {
@@ -98,7 +98,7 @@ impl PrgMemory {
         }
     }
 
-    pub fn write(&mut self, registers: &BankIndexRegisters, address: CpuAddress, value: u8) {
+    pub fn write(&mut self, registers: &BankRegisters, address: CpuAddress, value: u8) {
         match self.address_to_prg_index(registers, address) {
             PrgMemoryIndex::None => {}
             PrgMemoryIndex::MappedMemory { writability, index } => {
@@ -115,7 +115,7 @@ impl PrgMemory {
         }
     }
 
-    pub fn resolve_selected_bank_indexes(&self, registers: &BankIndexRegisters) -> Vec<u16> {
+    pub fn resolve_selected_bank_indexes(&self, registers: &BankRegisters) -> Vec<u16> {
         let mut indexes = Vec::new();
         for window in self.layout.0 {
             if let Some(bank_index) = window.bank_index(registers) {
@@ -157,7 +157,7 @@ impl PrgMemory {
     }
 
     // TODO: Indicate if read-only.
-    fn address_to_prg_index(&self, registers: &BankIndexRegisters, address: CpuAddress) -> PrgMemoryIndex {
+    fn address_to_prg_index(&self, registers: &BankRegisters, address: CpuAddress) -> PrgMemoryIndex {
         assert!(address >= PRG_MEMORY_START);
 
         let windows = &self.layout.0;
@@ -277,7 +277,7 @@ impl PrgLayout {
         }
     }
 
-    pub fn active_register_ids(&self) -> Vec<BankIndexRegisterId> {
+    pub fn active_register_ids(&self) -> Vec<BankRegisterId> {
         self.0.iter()
             .filter_map(|window| window.register_id())
             .collect()
@@ -300,7 +300,7 @@ pub struct PrgWindow {
 }
 
 impl PrgWindow {
-    fn bank_index(self, registers: &BankIndexRegisters) -> Option<BankIndex> {
+    fn bank_index(self, registers: &BankRegisters) -> Option<BankIndex> {
         self.prg_bank.bank_index(registers)
     }
 
@@ -308,7 +308,7 @@ impl PrgWindow {
         (self.end.to_raw() - self.start.to_raw() + 1) as usize
     }
 
-    fn register_id(self) -> Option<BankIndexRegisterId> {
+    fn register_id(self) -> Option<BankRegisterId> {
         if let PrgBank::Switchable(_, id) = self.prg_bank {
             Some(id)
         } else {
@@ -332,14 +332,14 @@ impl PrgWindow {
 pub enum PrgBank {
     Empty,
     Fixed(Writability, BankIndex),
-    Switchable(Writability, BankIndexRegisterId),
+    Switchable(Writability, BankRegisterId),
     // WRAM, Save RAM, SRAM, ambiguously "PRG RAM".
     WorkRam,
     MirrorOf(u16),
 }
 
 impl PrgBank {
-    fn bank_index(self, registers: &BankIndexRegisters) -> Option<BankIndex> {
+    fn bank_index(self, registers: &BankRegisters) -> Option<BankIndex> {
         use PrgBank::*;
         match self {
             Fixed(_, bank_index) => Some(bank_index),

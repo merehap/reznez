@@ -33,35 +33,35 @@ impl From<u8> for BankIndex {
 }
 
 #[derive(Debug)]
-pub struct BankIndexRegisters {
+pub struct BankRegisters {
     registers: [BankIndex; 18],
-    meta_registers: [BankIndexRegisterId; 2],
+    meta_registers: [BankRegisterId; 2],
 }
 
-impl BankIndexRegisters {
-    pub fn new() -> BankIndexRegisters {
-        BankIndexRegisters {
+impl BankRegisters {
+    pub fn new() -> BankRegisters {
+        BankRegisters {
             registers: [BankIndex::FIRST; 18],
             // Meta registers are only used for CHR currently.
-            meta_registers: [BankIndexRegisterId::C0, BankIndexRegisterId::C0],
+            meta_registers: [BankRegisterId::C0, BankRegisterId::C0],
         }
     }
 
-    pub fn get(&self, id: BankIndexRegisterId) -> BankIndex {
+    pub fn get(&self, id: BankRegisterId) -> BankIndex {
         self.registers[id as usize]
     }
 
-    pub fn set(&mut self, id: BankIndexRegisterId, bank_index: BankIndex) {
+    pub fn set(&mut self, id: BankRegisterId, bank_index: BankIndex) {
         self.registers[id as usize] = bank_index;
     }
 
-    pub fn set_bits(&mut self, id: BankIndexRegisterId, new_value: u16, mask: u16) {
+    pub fn set_bits(&mut self, id: BankRegisterId, new_value: u16, mask: u16) {
         let value = self.registers[id as usize].0;
         let updated_value = (value & !mask) | (new_value & mask);
         self.registers[id as usize] = BankIndex(updated_value);
     }
 
-    pub fn update(&mut self, id: BankIndexRegisterId, updater: &dyn Fn(u16) -> u16) {
+    pub fn update(&mut self, id: BankRegisterId, updater: &dyn Fn(u16) -> u16) {
         let value = self.registers[id as usize].0;
         self.registers[id as usize] = BankIndex(updater(value));
     }
@@ -70,13 +70,13 @@ impl BankIndexRegisters {
         self.get(self.meta_registers[id as usize])
     }
 
-    pub fn set_meta(&mut self, id: MetaRegisterId, value: BankIndexRegisterId) {
+    pub fn set_meta(&mut self, id: MetaRegisterId, value: BankRegisterId) {
         self.meta_registers[id as usize] = value;
     }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum BankIndexRegisterId {
+pub enum BankRegisterId {
     C0,
     C1,
     C2,
@@ -98,9 +98,9 @@ pub enum BankIndexRegisterId {
     P4,
 }
 
-impl BankIndexRegisterId {
-    pub fn chr_id(id: u16) -> BankIndexRegisterId {
-        use BankIndexRegisterId::*;
+impl BankRegisterId {
+    pub fn chr_id(id: u16) -> BankRegisterId {
+        use BankRegisterId::*;
         match id {
             0 => C0,
             1 => C1,

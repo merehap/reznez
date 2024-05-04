@@ -49,11 +49,11 @@ pub const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .build();
 
-pub const BANK_INDEX_REGISTER_IDS: [BankIndexRegisterId; 8] = [C0, C1, C2, C3, C4, C5, P0, P1];
+pub const BANK_INDEX_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, P0, P1];
 
 pub fn bank_select(
     params: &mut MapperParams,
-    selected_register_id: &mut BankIndexRegisterId,
+    selected_register_id: &mut BankRegisterId,
     value: u8,
 ) {
     let chr_big_windows_first =                     (value & 0b1000_0000) == 0;
@@ -75,7 +75,7 @@ pub fn bank_select(
 
 pub fn set_bank_index(
     params: &mut MapperParams,
-    selected_register_id: &mut BankIndexRegisterId,
+    selected_register_id: &mut BankRegisterId,
     value: u8,
 ) {
     let mut bank_index = value;
@@ -88,7 +88,7 @@ pub fn set_bank_index(
         assert_eq!(value & 0b1100_0000, 0, "ROM hack.");
     }
 
-    params.set_bank_index_register(*selected_register_id, bank_index);
+    params.set_bank_register(*selected_register_id, bank_index);
 }
 
 pub fn set_mirroring(params: &mut MapperParams, value: u8) {
@@ -101,7 +101,7 @@ pub fn set_mirroring(params: &mut MapperParams, value: u8) {
 }
 
 pub struct Mapper004Mmc3 {
-    selected_register_id: BankIndexRegisterId,
+    selected_register_id: BankRegisterId,
     irq_state: Box<dyn IrqState>,
 }
 

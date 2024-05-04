@@ -63,14 +63,14 @@ const CHR_SMALL_WINDOWS_SECONDARY: ChrLayout = ChrLayout::new(&[
 const CPU_CYCLE_MODE_IRQ_PENDING_DELAY: u8 = 1;
 const SCANLINE_MODE_IRQ_PENDING_DELAY: u8 = 4;
 
-const BANK_INDEX_REGISTER_IDS: [Option<BankIndexRegisterId>; 16] =
+const BANK_INDEX_REGISTER_IDS: [Option<BankRegisterId>; 16] =
     [Some(C0), Some(C1), Some(C2), Some(C3), Some(C4), Some(C5), Some(P0), Some(P1),
      Some(C6), Some(C7),     None,     None,     None,     None,     None, Some(P2),
     ];
 
 // RAMBO-1 (Similar to MMC3)
 pub struct Mapper064 {
-    selected_register_id: BankIndexRegisterId,
+    selected_register_id: BankRegisterId,
 
     irq_enabled: bool,
     irq_pending: bool,
@@ -206,7 +206,7 @@ impl Mapper064 {
     }
 
     fn set_bank_index(&self, params: &mut MapperParams, value: u8) {
-        params.set_bank_index_register(self.selected_register_id, value);
+        params.set_bank_register(self.selected_register_id, value);
     }
 
     fn set_name_table_mirroring(params: &mut MapperParams, value: u8) {

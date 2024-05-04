@@ -24,7 +24,7 @@ impl Mapper for Mapper232 {
             .chr_windows(CHR_LAYOUT)
             .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
             // The last bank for any of the mapper 232 PRG "blocks".
-            .override_bank_index_register(P1, BankIndex::from_u8(0b11))
+            .override_bank_register(P1, BankIndex::from_u8(0b11))
             .build()
     }
 
@@ -37,14 +37,14 @@ impl Mapper for Mapper232 {
                 let set_high_bank_bits = |bank_index| {
                     (bank_index & 0b0011) | ((value & 0b1_1000) >> 1)
                 };
-                params.update_bank_index_register(P0, &set_high_bank_bits);
-                params.update_bank_index_register(P1, &set_high_bank_bits);
+                params.update_bank_register(P0, &set_high_bank_bits);
+                params.update_bank_register(P1, &set_high_bank_bits);
             }
             0xC000..=0xFFFF => {
                 let set_low_bank_bits = |bank_index| {
                     (bank_index & 0b1100) | (value & 0b0011)
                 };
-                params.update_bank_index_register(P0, &set_low_bank_bits);
+                params.update_bank_register(P0, &set_low_bank_bits);
             }
         }
     }

@@ -17,12 +17,12 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C5)),
 ]);
 
-const BANK_INDEX_REGISTER_IDS: [BankIndexRegisterId; 8] = [C0, C1, C2, C3, C4, C5, P0, P1];
+const BANK_INDEX_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, P0, P1];
 
 // DxROM, Tengen MIMIC-1, Namco 118
 // A much simpler predecessor to MMC3.
 pub struct Mapper206 {
-    selected_register_id: BankIndexRegisterId,
+    selected_register_id: BankRegisterId,
 }
 
 impl Mapper for Mapper206 {
@@ -77,6 +77,6 @@ impl Mapper206 {
         };
 
         let bank_index = value & mask;
-        params.set_bank_index_register(self.selected_register_id, bank_index);
+        params.set_bank_register(self.selected_register_id, bank_index);
     }
 }

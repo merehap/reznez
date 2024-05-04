@@ -81,11 +81,11 @@ impl Mapper for Mapper001_0 {
                     params.set_chr_layout(CHR_LAYOUTS[chr_index]);
                 }
                 // FIXME: Handle cases for special boards.
-                0xA000..=0xBFFF => params.set_bank_index_register(C0, finished_value),
+                0xA000..=0xBFFF => params.set_bank_register(C0, finished_value),
                 // FIXME: Handle cases for special boards.
-                0xC000..=0xDFFF => params.set_bank_index_register(C1, finished_value),
+                0xC000..=0xDFFF => params.set_bank_register(C1, finished_value),
                 0xE000..=0xFFFF => {
-                    params.set_bank_index_register(P0, finished_value & 0b0_1111);
+                    params.set_bank_register(P0, finished_value & 0b0_1111);
                     if finished_value & 0b1_0000 == 0 {
                         params.enable_work_ram(0x6000);
                     } else {

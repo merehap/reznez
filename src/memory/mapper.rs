@@ -1,8 +1,8 @@
 pub use lazy_static::lazy_static;
 
 pub use crate::cartridge::cartridge::Cartridge;
-pub use crate::memory::bank_index::{BankIndex, BankIndexRegisterId, MetaRegisterId, BankIndexRegisters};
-pub use crate::memory::bank_index::BankIndexRegisterId::*;
+pub use crate::memory::bank_index::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters};
+pub use crate::memory::bank_index::BankRegisterId::*;
 pub use crate::memory::bank_index::MetaRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout, PrgWindow, PrgBank, RomRamMode};
@@ -434,7 +434,7 @@ fn vram_side(
 pub struct MapperParams {
     pub prg_memory: PrgMemory,
     pub chr_memory: ChrMemory,
-    pub bank_index_registers: BankIndexRegisters,
+    pub bank_registers: BankRegisters,
     pub name_table_mirroring: NameTableMirroring,
 }
 
@@ -456,15 +456,15 @@ impl MapperParams {
     }
 
     pub fn resolve_prg_bank_indexes(&self) -> Vec<u16> {
-        self.prg_memory.resolve_selected_bank_indexes(&self.bank_index_registers)
+        self.prg_memory.resolve_selected_bank_indexes(&self.bank_registers)
     }
 
     pub fn peek_prg(&self, address: CpuAddress) -> ReadResult {
-        self.prg_memory.peek(&self.bank_index_registers, address)
+        self.prg_memory.peek(&self.bank_registers, address)
     }
 
     pub fn write_prg(&mut self, address: CpuAddress, value: u8) {
-        self.prg_memory.write(&self.bank_index_registers, address, value);
+        self.prg_memory.write(&self.bank_registers, address, value);
     }
 
     pub fn enable_work_ram(&mut self, address: u16) {
@@ -480,11 +480,11 @@ impl MapperParams {
     }
 
     pub fn resolve_chr_bank_indexes(&self) -> Vec<u16> {
-        self.chr_memory.resolve_selected_bank_indexes(&self.bank_index_registers)
+        self.chr_memory.resolve_selected_bank_indexes(&self.bank_registers)
     }
 
     pub fn pattern_table(&self, side: PatternTableSide) -> PatternTable {
-        self.chr_memory.pattern_table(&self.bank_index_registers, side)
+        self.chr_memory.pattern_table(&self.bank_registers, side)
     }
 
     pub fn set_chr_layout(&mut self, layout: ChrLayout) {
@@ -492,37 +492,37 @@ impl MapperParams {
     }
 
     pub fn peek_chr(&self, address: PpuAddress) -> u8 {
-        self.chr_memory.peek(&self.bank_index_registers, address)
+        self.chr_memory.peek(&self.bank_registers, address)
     }
 
     pub fn write_chr(&mut self, address: PpuAddress, value: u8) {
-        self.chr_memory.write(&self.bank_index_registers, address, value);
+        self.chr_memory.write(&self.bank_registers, address, value);
     }
 
-    pub fn set_bank_index_register<INDEX: Into<u16>>(
+    pub fn set_bank_register<INDEX: Into<u16>>(
         &mut self,
-        id: BankIndexRegisterId,
+        id: BankRegisterId,
         value: INDEX,
     ) {
-        self.bank_index_registers.set(id, BankIndex::from_u16(value.into()));
+        self.bank_registers.set(id, BankIndex::from_u16(value.into()));
     }
 
-    pub fn set_bank_index_register_bits(
-        &mut self, id: BankIndexRegisterId, new_value: u16, mask: u16) {
+    pub fn set_bank_register_bits(
+        &mut self, id: BankRegisterId, new_value: u16, mask: u16) {
 
-        self.bank_index_registers.set_bits(id, new_value, mask);
+        self.bank_registers.set_bits(id, new_value, mask);
     }
 
-    pub fn set_meta_register(&mut self, id: MetaRegisterId, value: BankIndexRegisterId) {
-        self.bank_index_registers.set_meta(id, value);
+    pub fn set_meta_register(&mut self, id: MetaRegisterId, value: BankRegisterId) {
+        self.bank_registers.set_meta(id, value);
     }
 
-    pub fn update_bank_index_register(
+    pub fn update_bank_register(
         &mut self,
-        id: BankIndexRegisterId,
+        id: BankRegisterId,
         updater: &dyn Fn(u16) -> u16,
     ) {
-        self.bank_index_registers.update(id, updater);
+        self.bank_registers.update(id, updater);
     }
 
     pub fn set_prg_ram_enabled(&mut self, ram_enabled: bool) {

@@ -1,4 +1,4 @@
-use crate::memory::bank_index::{BankIndex, BankIndexRegisters, BankIndexRegisterId, MetaRegisterId};
+use crate::memory::bank_index::{BankIndex, BankRegisters, BankRegisterId, MetaRegisterId};
 
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::writability::Writability;
@@ -59,19 +59,19 @@ impl ChrMemory {
         self.windows.0.len().try_into().unwrap()
     }
 
-    pub fn peek(&self, registers: &BankIndexRegisters, address: PpuAddress) -> u8 {
+    pub fn peek(&self, registers: &BankRegisters, address: PpuAddress) -> u8 {
         let (index, _) = self.address_to_chr_index(registers, address.to_u16());
         self.raw_memory[index]
     }
 
-    pub fn write(&mut self, registers: &BankIndexRegisters, address: PpuAddress, value: u8) {
+    pub fn write(&mut self, registers: &BankRegisters, address: PpuAddress, value: u8) {
         let (index, writable) = self.address_to_chr_index(registers, address.to_u16());
         if writable || self.override_write_protection {
             self.raw_memory[index] = value;
         }
     }
 
-    pub fn resolve_selected_bank_indexes(&self, registers: &BankIndexRegisters) -> Vec<u16> {
+    pub fn resolve_selected_bank_indexes(&self, registers: &BankRegisters) -> Vec<u16> {
         self.windows.0.iter()
             .map(|window| window.bank_index(registers).to_u16(self.bank_count()))
             .collect()
@@ -92,14 +92,14 @@ impl ChrMemory {
         self.windows = windows;
     }
 
-    pub fn pattern_table(&self, registers: &BankIndexRegisters, side: PatternTableSide) -> PatternTable {
+    pub fn pattern_table(&self, registers: &BankRegisters, side: PatternTableSide) -> PatternTable {
         match side {
             PatternTableSide::Left => PatternTable::new(self.left_chunks(registers)),
             PatternTableSide::Right => PatternTable::new(self.right_chunks(registers)),
         }
     }
 
-    fn address_to_chr_index(&self, registers: &BankIndexRegisters, address: u16) -> (usize, bool) {
+    fn address_to_chr_index(&self, registers: &BankRegisters, address: u16) -> (usize, bool) {
         assert!(address < 0x2000);
 
         for window in self.windows.0 {
@@ -121,19 +121,19 @@ impl ChrMemory {
     }
 
     #[inline]
-    fn left_chunks(&self, registers: &BankIndexRegisters) -> [&[u8]; 4] {
+    fn left_chunks(&self, registers: &BankRegisters) -> [&[u8]; 4] {
         self.left_indexes(registers)
             .map(|index| &self.raw_memory[index..index + 0x400])
     }
 
     #[inline]
-    fn right_chunks(&self, registers: &BankIndexRegisters) -> [&[u8]; 4] {
+    fn right_chunks(&self, registers: &BankRegisters) -> [&[u8]; 4] {
         self.right_indexes(registers)
             .map(|index| &self.raw_memory[index..index + 0x400])
     }
 
     #[inline]
-    fn left_indexes(&self, registers: &BankIndexRegisters) -> [usize; 4] {
+    fn left_indexes(&self, registers: &BankRegisters) -> [usize; 4] {
         [
             self.address_to_chr_index(registers, 0x0000).0,
             self.address_to_chr_index(registers, 0x0400).0,
@@ -143,7 +143,7 @@ impl ChrMemory {
     }
 
     #[inline]
-    fn right_indexes(&self, registers: &BankIndexRegisters) -> [usize; 4] {
+    fn right_indexes(&self, registers: &BankRegisters) -> [usize; 4] {
         [
             self.address_to_chr_index(registers, 0x1000).0,
             self.address_to_chr_index(registers, 0x1400).0,
@@ -175,7 +175,7 @@ impl ChrLayout {
         ChrLayout(windows)
     }
 
-    pub fn active_register_ids(&self) -> Vec<BankIndexRegisterId> {
+    pub fn active_register_ids(&self) -> Vec<BankRegisterId> {
         self.0.iter()
             .filter_map(|window| window.register_id())
             .collect()
@@ -227,7 +227,7 @@ impl ChrWindow {
         }
     }
 
-    fn bank_index(self, registers: &BankIndexRegisters) -> BankIndex {
+    fn bank_index(self, registers: &BankRegisters) -> BankIndex {
         self.chr_type.bank_index(registers)
     }
 
@@ -241,7 +241,7 @@ impl ChrWindow {
         }
     }
 
-    pub fn register_id(self) -> Option<BankIndexRegisterId> {
+    pub fn register_id(self) -> Option<BankRegisterId> {
         if let ChrBank::Switchable(_, id) = self.chr_type {
             Some(id)
         } else {
@@ -253,7 +253,7 @@ impl ChrWindow {
 #[derive(Clone, Copy, Debug)]
 pub enum ChrBank {
     Fixed(Writability, BankIndex),
-    Switchable(Writability, BankIndexRegisterId),
+    Switchable(Writability, BankRegisterId),
     MetaSwitchable(Writability, MetaRegisterId),
 }
 
@@ -266,7 +266,7 @@ impl ChrBank {
         }
     }
 
-    fn bank_index(self, registers: &BankIndexRegisters) -> BankIndex {
+    fn bank_index(self, registers: &BankRegisters) -> BankIndex {
         match self {
             ChrBank::Fixed(_, bank_index) => bank_index,
             ChrBank::Switchable(_, register_id) => registers.get(register_id),

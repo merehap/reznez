@@ -63,8 +63,8 @@ impl Mapper for Mapper001_5 {
                     params.set_name_table_mirroring(MIRRORINGS[mirroring_index]);
                     params.set_chr_layout(CHR_LAYOUTS[chr_index]);
                 }
-                0xA000..=0xBFFF => params.set_bank_index_register(C0, finished_value),
-                0xC000..=0xDFFF => params.set_bank_index_register(C1, finished_value),
+                0xA000..=0xBFFF => params.set_bank_register(C0, finished_value),
+                0xC000..=0xDFFF => params.set_bank_register(C1, finished_value),
                 0xE000..=0xFFFF => {
                     if finished_value & 0b1_0000 == 0 {
                         params.enable_work_ram(0x6000);

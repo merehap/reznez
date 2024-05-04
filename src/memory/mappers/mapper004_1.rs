@@ -40,7 +40,7 @@ pub const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
 
 // MMC6. Similar to MMC3 with Sharp IRQs, but with Work RAM protection.
 pub struct Mapper004_1 {
-    selected_register_id: BankIndexRegisterId,
+    selected_register_id: BankRegisterId,
     irq_state: RevAIrqState,
     prg_ram_enabled: bool,
 }

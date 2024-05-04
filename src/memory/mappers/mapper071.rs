@@ -41,7 +41,7 @@ impl Mapper for Mapper071 {
                 params.set_name_table_mirroring(mirroring);
             }
             0xA000..=0xBFFF => { /* Do nothing. */ }
-            0xC000..=0xFFFF => params.set_bank_index_register(P0, bank_index),
+            0xC000..=0xFFFF => params.set_bank_register(P0, bank_index),
         }
     }
 }

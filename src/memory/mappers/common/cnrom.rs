@@ -35,7 +35,7 @@ impl Mapper for Cnrom {
         match cpu_address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0xFFFF => params.set_bank_index_register(C0, value),
+            0x8000..=0xFFFF => params.set_bank_register(C0, value),
         }
     }
 }

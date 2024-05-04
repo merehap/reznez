@@ -31,7 +31,7 @@ impl Mapper for Mapper087 {
         match cpu_address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
-            0x6000..=0x7FFF => params.set_bank_index_register(C0, bank_index),
+            0x6000..=0x7FFF => params.set_bank_register(C0, bank_index),
             0x8000..=0xFFFF => { /* Do nothing. */ }
         }
     }

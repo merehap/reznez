@@ -42,15 +42,15 @@ impl Mapper for Mapper016_5 {
         match address.to_raw() & 0x800F {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000 => params.set_bank_index_register(C0, value),
-            0x8001 => params.set_bank_index_register(C1, value),
-            0x8002 => params.set_bank_index_register(C2, value),
-            0x8003 => params.set_bank_index_register(C3, value),
-            0x8004 => params.set_bank_index_register(C4, value),
-            0x8005 => params.set_bank_index_register(C5, value),
-            0x8006 => params.set_bank_index_register(C6, value),
-            0x8007 => params.set_bank_index_register(C7, value),
-            0x8008 => params.set_bank_index_register(P0, value & 0b1111),
+            0x8000 => params.set_bank_register(C0, value),
+            0x8001 => params.set_bank_register(C1, value),
+            0x8002 => params.set_bank_register(C2, value),
+            0x8003 => params.set_bank_register(C3, value),
+            0x8004 => params.set_bank_register(C4, value),
+            0x8005 => params.set_bank_register(C5, value),
+            0x8006 => params.set_bank_register(C6, value),
+            0x8007 => params.set_bank_register(C7, value),
+            0x8008 => params.set_bank_register(P0, value & 0b1111),
             0x8009 => {
                 let mirroring = match value & 0b11 {
                     0 => NameTableMirroring::Vertical,

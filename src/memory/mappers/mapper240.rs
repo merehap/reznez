@@ -29,8 +29,8 @@ impl Mapper for Mapper240 {
         match address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => {
-                params.set_bank_index_register(P0, (value & 0b1111_0000) >> 4);
-                params.set_bank_index_register(C0,  value & 0b0000_1111);
+                params.set_bank_register(P0, (value & 0b1111_0000) >> 4);
+                params.set_bank_register(C0,  value & 0b0000_1111);
             }
             0x6000..=0xFFFF => { /* Do nothing. */ }
         }

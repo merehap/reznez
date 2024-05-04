@@ -17,12 +17,12 @@ pub const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C5)),
 ]);
 
-const BANK_INDEX_REGISTER_IDS: [BankIndexRegisterId; 8] = [C0, C1, C2, C3, C4, C5, P0, P1];
+const BANK_INDEX_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, P0, P1];
 
 // Similar to Mapper206, but allows up to 128KiB of CHR,
 // and selects the second half of CHR for C2, C3, C4, and C5 for over-sized CHR.
 pub struct Mapper088 {
-    selected_register_id: BankIndexRegisterId,
+    selected_register_id: BankRegisterId,
     extended_chr_present: bool,
 }
 
@@ -82,6 +82,6 @@ impl Mapper088 {
             ),
         };
 
-        params.set_bank_index_register(self.selected_register_id, bank_index);
+        params.set_bank_register(self.selected_register_id, bank_index);
     }
 }

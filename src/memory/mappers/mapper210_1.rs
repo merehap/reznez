@@ -41,19 +41,19 @@ impl Mapper for Mapper210_1 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
             0x6000..=0x7FFF => params.write_prg(address, value),
-            0x8000..=0x87FF => params.set_bank_index_register(C0, value),
-            0x8800..=0x8FFF => params.set_bank_index_register(C1, value),
-            0x9000..=0x97FF => params.set_bank_index_register(C2, value),
-            0x9800..=0x9FFF => params.set_bank_index_register(C3, value),
-            0xA000..=0xA7FF => params.set_bank_index_register(C4, value),
-            0xA800..=0xAFFF => params.set_bank_index_register(C5, value),
-            0xB000..=0xB7FF => params.set_bank_index_register(C6, value),
-            0xB800..=0xBFFF => params.set_bank_index_register(C7, value),
+            0x8000..=0x87FF => params.set_bank_register(C0, value),
+            0x8800..=0x8FFF => params.set_bank_register(C1, value),
+            0x9000..=0x97FF => params.set_bank_register(C2, value),
+            0x9800..=0x9FFF => params.set_bank_register(C3, value),
+            0xA000..=0xA7FF => params.set_bank_register(C4, value),
+            0xA800..=0xAFFF => params.set_bank_register(C5, value),
+            0xB000..=0xB7FF => params.set_bank_register(C6, value),
+            0xB800..=0xBFFF => params.set_bank_register(C7, value),
             0xC000..=0xC7FF => { /* TODO: External PRG RAM enable. */ }
             0xC800..=0xDFFF => { /* Do nothing. */ }
-            0xE000..=0xE7FF => params.set_bank_index_register(P0, value & 0b0011_1111),
-            0xE800..=0xEFFF => params.set_bank_index_register(P1, value & 0b0011_1111),
-            0xF000..=0xF7FF => params.set_bank_index_register(P2, value & 0b0011_1111),
+            0xE000..=0xE7FF => params.set_bank_register(P0, value & 0b0011_1111),
+            0xE800..=0xEFFF => params.set_bank_register(P1, value & 0b0011_1111),
+            0xF000..=0xF7FF => params.set_bank_register(P2, value & 0b0011_1111),
             0xF800..=0xFFFF => { /* Do nothing. */ }
         }
     }

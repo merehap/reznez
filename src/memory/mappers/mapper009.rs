@@ -35,11 +35,11 @@ impl Mapper for Mapper009 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x9FFF => { /* Do nothing. */ }
-            0xA000..=0xAFFF => params.set_bank_index_register(P0, bank_index),
-            0xB000..=0xBFFF => params.set_bank_index_register(C0, bank_index),
-            0xC000..=0xCFFF => params.set_bank_index_register(C1, bank_index),
-            0xD000..=0xDFFF => params.set_bank_index_register(C2, bank_index),
-            0xE000..=0xEFFF => params.set_bank_index_register(C3, bank_index),
+            0xA000..=0xAFFF => params.set_bank_register(P0, bank_index),
+            0xB000..=0xBFFF => params.set_bank_register(C0, bank_index),
+            0xC000..=0xCFFF => params.set_bank_register(C1, bank_index),
+            0xD000..=0xDFFF => params.set_bank_register(C2, bank_index),
+            0xE000..=0xEFFF => params.set_bank_register(C3, bank_index),
             0xF000..=0xFFFF => {
                 let mirroring = if value & 1 == 0 {
                     NameTableMirroring::Vertical
@@ -52,7 +52,7 @@ impl Mapper for Mapper009 {
     }
 
     fn on_ppu_read(&mut self, params: &mut MapperParams, address: PpuAddress, _value: u8) {
-        let (meta_id, bank_index_register_id) = match address.to_u16() {
+        let (meta_id, bank_register_id) = match address.to_u16() {
             0x0FD8 => (M0, C0),
             0x0FE8 => (M0, C1),
             0x1FD8..=0x1FDF => (M1, C2),
@@ -61,6 +61,6 @@ impl Mapper for Mapper009 {
             _ => return,
         };
 
-        params.set_meta_register(meta_id, bank_index_register_id);
+        params.set_meta_register(meta_id, bank_register_id);
     }
 }
