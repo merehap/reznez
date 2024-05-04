@@ -73,6 +73,7 @@ fn end_frame(
 
     if let Ok(duration) = current_time.duration_since(start_time) {
         info!(
+            target: "frames",
             "Frame {} rendered. Framerate: {}",
             frame_index,
             1_000_000_000.0 / duration.as_nanos() as f64,

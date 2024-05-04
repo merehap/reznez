@@ -97,6 +97,9 @@ pub struct Opt {
     #[structopt(name = "logcpuflowcontrol", long)]
     pub log_cpu_flow_control: bool,
 
+    #[structopt(name = "logframes", long)]
+    pub log_frames: bool,
+
     #[structopt(name = "logcpusteps", long)]
     pub log_cpu_steps: bool,
 

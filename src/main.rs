@@ -66,6 +66,7 @@ fn logger(opt: &Opt) -> Logger {
     };
 
     Logger {
+        log_frames: opt.log_frames,
         log_cpu_instructions,
         log_cpu_steps,
         log_cpu_flow_control,
