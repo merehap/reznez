@@ -3,55 +3,55 @@ use std::collections::BTreeMap;
 use log::info;
 
 // Submapper numbers for ROMs that aren't in the NES Header DB (mostly test ROMs).
-const MISSING_ROM_SUBMAPPER_NUMBERS: &'static [(u32, u32, u8)] = &[
+const MISSING_ROM_SUBMAPPER_NUMBERS: &'static [(u32, u32, u16, u8)] = &[
     // ppu_read_buffer/test_ppu_read_buffer.nes
-    (1731018083, 3047829474, 1),
+    (1731018083, 3047829474, 3, 1),
     // cpu_dummy_reads.nes
-    (3745301915, 3498657192, 1),
+    (3745301915, 3498657192, 3, 1),
     // read_joy3/thorough_test.nes
-    (4081207045, 0068811153, 1),
+    (4081207045, 0068811153, 3, 1),
     // 2_test/2_test_0.nes
-    (2392242790, 3901840109, 1),
+    (2392242790, 3901840109, 2, 1),
     // 2_test/2_test_1.nes
-    (0922356069, 3901840109, 1),
+    (0922356069, 3901840109, 2, 1),
     // 2_test/2_test_2.nes
-    (0624876065, 3901840109, 2),
+    (0624876065, 3901840109, 2, 2),
     // 3_test/3_test_0.nes
-    (2333203173, 3631928862, 1),
+    (2333203173, 3631928862, 3, 1),
     // 3_test/3_test_1.nes
-    (2768833268, 3631928862, 1),
+    (2768833268, 3631928862, 3, 1),
     // 3_test/3_test_2.nes
-    (3609230023, 3631928862, 2),
+    (3609230023, 3631928862, 3, 2),
     // 7_test/7_test_0.nes
-    (1196595180, 1718968027, 1),
+    (1196595180, 1718968027, 7, 1),
     // 7_test/7_test_1.nes
-    (4282262767, 1718968027, 1),
+    (4282262767, 1718968027, 7, 1),
     // 7_test/7_test_2.nes
-    (3975870379, 1718968027, 2),
+    (3975870379, 1718968027, 7, 2),
     // 34_test/34_test_1.nes
-    (2768347885, 0852594764, 1),
+    (2768347885, 0852594764, 34, 1),
     // 34_test/34_test_2.nes
-    (0906378520, 3170842144, 2),
+    (0906378520, 3170842144, 34, 2),
     // serom/serom.nes
-    (2444067993, 3660366606, 5),
+    (2444067993, 3660366606, 1, 5),
 
     // holydiverbatman/M7_P128K.nes
-    (656988303, 3161185153, 1),
+    (0656988303, 3161185153, 7, 1),
 
     // mmc3_test/6-MMC6.nes
-    (2669308141, 2914571485, 1),
+    (2669308141, 2914571485, 4, 1),
 
     // mmc3_irq_tests/5.MMC3_rev_A.nes (no submapper number has been officially assigned)
-    (495013157, 4078096862, 99),
+    (495013157, 4078096862, 4, 99),
     // Crystalis (no submapper number has been officially assigned)
-    (656187357, 1661724784, 99),
+    (656187357, 1661724784, 4, 99),
 ];
 
 pub struct HeaderDb {
     data_by_crc32: BTreeMap<u32, Header>,
     prg_rom_by_crc32: BTreeMap<u32, Header>,
-    missing_data_submapper_numbers: BTreeMap<u32, u8>,
-    missing_prg_rom_submapper_numbers: BTreeMap<u32, u8>,
+    missing_data_submapper_numbers: BTreeMap<u32, (u16, u8)>,
+    missing_prg_rom_submapper_numbers: BTreeMap<u32, (u16, u8)>,
 }
 
 impl HeaderDb {
@@ -60,10 +60,10 @@ impl HeaderDb {
         let doc = roxmltree::Document::parse(text).unwrap();
         let games = doc.root().descendants().filter(|n| n.tag_name().name() == "game");
 
-        let missing_data_submapper_numbers: BTreeMap<u32, u8> =
-            BTreeMap::from_iter(MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(k, _, v)| (*k, *v)));
-        let missing_prg_rom_submapper_numbers: BTreeMap<u32, u8> =
-            BTreeMap::from_iter(MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(_, k, v)| (*k, *v)));
+        let missing_data_submapper_numbers: BTreeMap<u32, (u16, u8)> =
+            BTreeMap::from_iter(MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(k, _, m, s)| (*k, (*m, *s))));
+        let missing_prg_rom_submapper_numbers: BTreeMap<u32, (u16, u8)> =
+            BTreeMap::from_iter(MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(_, k, m, s)| (*k, (*m, *s))));
 
         let mut header_db = HeaderDb {
             data_by_crc32: BTreeMap::new(),
@@ -111,13 +111,13 @@ impl HeaderDb {
         result
     }
 
-    pub fn missing_submapper_number(&self, data: &[u8], prg_rom: &[u8]) -> Option<(u8, u32, u32)> {
+    pub fn missing_submapper_number(&self, data: &[u8], prg_rom: &[u8]) -> Option<(u16, u8, u32, u32)> {
         let data_hash = crc32fast::hash(data);
         let prg_hash = crc32fast::hash(prg_rom);
-        if let Some(submapper_number) = self.missing_data_submapper_numbers.get(&data_hash).copied() {
-            Some((submapper_number, data_hash, prg_hash))
-        } else if let Some(submapper_number) = self.missing_prg_rom_submapper_numbers.get(&prg_hash).copied() {
-            Some((submapper_number, data_hash, prg_hash))
+        if let Some((mapper_number, submapper_number)) = self.missing_data_submapper_numbers.get(&data_hash).copied() {
+            Some((mapper_number, submapper_number, data_hash, prg_hash))
+        } else if let Some((mapper_number, submapper_number)) = self.missing_prg_rom_submapper_numbers.get(&prg_hash).copied() {
+            Some((mapper_number, submapper_number, data_hash, prg_hash))
         } else {
             None
         }
