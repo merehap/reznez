@@ -26,6 +26,11 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C7)),
 ]);
 
+const MIRRORINGS: [NameTableMirroring; 2] = [
+    NameTableMirroring::Vertical,
+    NameTableMirroring::Horizontal,
+];
+
 // Irem's G-101
 pub struct Mapper032;
 
@@ -54,11 +59,7 @@ impl Mapper for Mapper032 {
                 };
                 params.set_prg_layout(windows);
 
-                let mirroring = if value & 0b01 == 0 {
-                    NameTableMirroring::Vertical
-                } else {
-                    NameTableMirroring::Horizontal
-                };
+                let mirroring = MIRRORINGS[usize::from(value & 0b01)];
                 params.set_name_table_mirroring(mirroring);
             }
             0xA000..=0xA007 => params.set_bank_register(P1, value & 0b1_1111),

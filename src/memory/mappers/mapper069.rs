@@ -31,7 +31,6 @@ const NAME_TABLE_MIRRORINGS: [NameTableMirroring; 4] = [
 ];
 
 // Sunsoft FME-7
-// TODO: PRG RAM functionality
 pub struct Mapper069 {
     command: Command,
 

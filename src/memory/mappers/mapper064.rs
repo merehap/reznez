@@ -68,6 +68,15 @@ const BANK_INDEX_REGISTER_IDS: [Option<BankRegisterId>; 16] =
      Some(C6), Some(C7),     None,     None,     None,     None,     None, Some(P2),
     ];
 
+const PRG_LAYOUTS: [PrgLayout; 2] = [
+    PRG_LAYOUT_PRIMARY,
+    PRG_LAYOUT_SECONDARY,
+];
+const MIRRORINGS: [NameTableMirroring; 2] = [
+    NameTableMirroring::Vertical,
+    NameTableMirroring::Horizontal,
+];
+
 // RAMBO-1 (Similar to MMC3)
 pub struct Mapper064 {
     selected_register_id: BankRegisterId,
@@ -184,13 +193,7 @@ impl Mapper064 {
     }
 
     fn bank_select(&mut self, params: &mut MapperParams, value: u8) {
-        let prg_windows = if value & 0b0100_0000 == 0 {
-            PRG_LAYOUT_PRIMARY
-        } else {
-            PRG_LAYOUT_SECONDARY
-        };
-        params.set_prg_layout(prg_windows);
-
+        params.set_prg_layout(PRG_LAYOUTS[usize::from((value & 0b0100_0000) >> 6)]);
         let chr_windows = match value & 0b1010_0000 {
             0b0000_0000 => CHR_BIG_WINDOWS_PRIMARY,
             0b0010_0000 => CHR_SMALL_WINDOWS_PRIMARY,
@@ -210,14 +213,8 @@ impl Mapper064 {
     }
 
     fn set_name_table_mirroring(params: &mut MapperParams, value: u8) {
-        let mirroring = if value & 1 == 0 {
-            NameTableMirroring::Vertical
-        } else {
-            NameTableMirroring::Horizontal
-        };
-        params.set_name_table_mirroring(mirroring);
+        params.set_name_table_mirroring(MIRRORINGS[usize::from(value & 1)]);
     }
-
 
     fn set_irq_counter_reload_value(&mut self, value: u8) {
         self.irq_counter_reload_value = value;

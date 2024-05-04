@@ -17,6 +17,13 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C7)),
 ]);
 
+const MIRRORINGS: [NameTableMirroring; 4] = [
+    NameTableMirroring::Vertical,
+    NameTableMirroring::Horizontal,
+    NameTableMirroring::OneScreenLeftBank,
+    NameTableMirroring::OneScreenRightBank,
+];
+
 // LZ93D50 ASIC
 pub struct Mapper016_5 {
     irq_pending: bool,
@@ -51,16 +58,7 @@ impl Mapper for Mapper016_5 {
             0x8006 => params.set_bank_register(C6, value),
             0x8007 => params.set_bank_register(C7, value),
             0x8008 => params.set_bank_register(P0, value & 0b1111),
-            0x8009 => {
-                let mirroring = match value & 0b11 {
-                    0 => NameTableMirroring::Vertical,
-                    1 => NameTableMirroring::Horizontal,
-                    2 => NameTableMirroring::OneScreenLeftBank,
-                    3 => NameTableMirroring::OneScreenRightBank,
-                    _ => unreachable!(),
-                };
-                params.set_name_table_mirroring(mirroring);
-            }
+            0x8009 => params.set_name_table_mirroring(MIRRORINGS[usize::from(value & 0b11)]),
             0x800A => {
                 self.irq_pending = false;
                 self.irq_counter_enabled = value & 1 == 1;

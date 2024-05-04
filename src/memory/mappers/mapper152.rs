@@ -10,6 +10,11 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::Switchable(Rom, C0)),
 ]);
 
+const MIRRORINGS: [NameTableMirroring; 2] = [
+    NameTableMirroring::OneScreenLeftBank,
+    NameTableMirroring::OneScreenRightBank,
+];
+
 // Similar to Mapper070, but with one screen mirroring control.
 pub struct Mapper152;
 
@@ -31,12 +36,7 @@ impl Mapper for Mapper152 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
             0x8000..=0xFFFF => {
-                if value & 0b1000_0000 == 0 {
-                    params.set_name_table_mirroring(NameTableMirroring::OneScreenLeftBank);
-                } else {
-                    params.set_name_table_mirroring(NameTableMirroring::OneScreenRightBank);
-                }
-
+                params.set_name_table_mirroring(MIRRORINGS[usize::from((value & 0b1000_0000) >> 7)]);
                 params.set_bank_register(P0, (value >> 4) & 0b0111);
                 params.set_bank_register(C0, value & 0b1111);
             }

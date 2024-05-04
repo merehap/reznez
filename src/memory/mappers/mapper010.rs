@@ -11,6 +11,11 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::MetaSwitchable(Rom, M1)),
 ]);
 
+const MIRRORINGS: [NameTableMirroring; 2] = [
+    NameTableMirroring::Vertical,
+    NameTableMirroring::Horizontal,
+];
+
 // MMC4 - Similar to MMC2, but with Work RAM, bigger PRG ROM windows, and different bank-switching.
 pub struct Mapper010;
 
@@ -39,14 +44,7 @@ impl Mapper for Mapper010 {
             0xC000..=0xCFFF => params.set_bank_register(C1, bank_index),
             0xD000..=0xDFFF => params.set_bank_register(C2, bank_index),
             0xE000..=0xEFFF => params.set_bank_register(C3, bank_index),
-            0xF000..=0xFFFF => {
-                let mirroring = if value & 1 == 0 {
-                    NameTableMirroring::Vertical
-                } else {
-                    NameTableMirroring::Horizontal
-                };
-                params.set_name_table_mirroring(mirroring);
-            }
+            0xF000..=0xFFFF => params.set_name_table_mirroring(MIRRORINGS[usize::from(value & 1)]),
         }
     }
 

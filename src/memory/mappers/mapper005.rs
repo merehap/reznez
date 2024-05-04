@@ -12,20 +12,20 @@ const ONE_32K_PRG_WINDOW: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::Switchable(Rom,    P4)),
 ]);
 
-const TWO_16K_PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
+const TWO_16K_PRG_WINDOWS: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Switchable(Ram,    P0)),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::Switchable(RomRam, P2)),
     PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::Switchable(Rom,    P4)),
 ]);
 
-const ONE_16K_AND_TWO_8K_PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
+const ONE_16K_AND_TWO_8K_PRG_WINDOWS: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Switchable(Ram,    P0)),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::Switchable(RomRam, P2)),
     PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::Switchable(RomRam, P3)),
     PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::Switchable(Rom,    P4)),
 ]);
 
-const FOUR_8K_PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
+const FOUR_8K_PRG_WINDOWS: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Switchable(Ram,    P0)),
     PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, PrgBank::Switchable(RomRam, P1)),
     PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, PrgBank::Switchable(RomRam, P2)),
@@ -96,6 +96,33 @@ const PRG_REGISTER_IDS: [BankRegisterId; 5] =
 const CHR_REGISTER_IDS: [BankRegisterId; 12] =
     [C0, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11];
 
+const PRG_LAYOUTS: [PrgLayout; 4] = [
+    ONE_32K_PRG_WINDOW,
+    TWO_16K_PRG_WINDOWS,
+    ONE_16K_AND_TWO_8K_PRG_WINDOWS,
+    FOUR_8K_PRG_WINDOWS,
+];
+const CHR_WINDOW_MODES: [ChrWindowMode; 4] = [
+    ChrWindowMode::One8K,
+    ChrWindowMode::Two4K,
+    ChrWindowMode::Four2K,
+    ChrWindowMode::Eight1K,
+];
+
+const EXTENDED_RAM_MODES: [ExtendedRamMode; 4] = [
+    ExtendedRamMode::WriteOnly,
+    ExtendedRamMode::ExtendedAttributes,
+    ExtendedRamMode::ReadWrite,
+    ExtendedRamMode::ReadOnly,
+];
+
+const NAME_TABLE_SOURCES: [NameTableSource; 4] = [
+    NameTableSource::CiramLeft,
+    NameTableSource::CiramRight,
+    NameTableSource::ExtendedRam,
+    NameTableSource::Fill,
+];
+
 // MMC5 (ExROM)
 pub struct Mapper005 {
     pulse_2: PulseChannel,
@@ -134,7 +161,7 @@ impl Mapper for Mapper005 {
         InitialLayout::builder()
             .prg_max_bank_count(128)
             .prg_bank_size(8 * KIBIBYTE)
-            .prg_windows(FOUR_8K_PRG_LAYOUT)
+            .prg_windows(FOUR_8K_PRG_WINDOWS)
             .chr_max_bank_count(1024)
             .chr_bank_size(1 * KIBIBYTE)
             .chr_windows(ONE_8K_CHR_WINDOW)
@@ -194,7 +221,7 @@ impl Mapper for Mapper005 {
             0x5012..=0x5014 => { /* Do nothing. */ }
             0x5015 => Mapper005::write_apu_status(value),
             0x5016..=0x50FF => { /* Do nothing. */ }
-            0x5100 => Mapper005::set_prg_banking_mode(params, value),
+            0x5100 => params.set_prg_layout(PRG_LAYOUTS[usize::from(value & 0b0000_0011)]),
             0x5101 => self.set_chr_banking_mode(params, value),
             0x5102 => self.prg_ram_protect_1(value),
             0x5103 => self.prg_ram_protect_2(value),
@@ -303,8 +330,10 @@ impl Mapper for Mapper005 {
             // * Does any PPU read trigger this? Or just actual scheduled rendering reads?
             // If this value isn't cached, then some ugly hack to get the value into C12
             // just-in-time may be necessary.
-            let raw_bank_index = (self.upper_chr_bank_bits << 6) | (self.extended_ram[usize::from(address.to_u16() % 0x400)] & 0b0011_1111);
-            println!("{} is in name table proper. Raw bank index: {}. Pattern Fetch: {}", address, raw_bank_index, self.pattern_fetch_count);
+            let raw_bank_index = (self.upper_chr_bank_bits << 6) |
+                (self.extended_ram[usize::from(address.to_u16() % 0x400)] & 0b0011_1111);
+            println!("{address} is in name table proper. Raw bank index: {raw_bank_index}. Pattern Fetch: {}",
+                self.pattern_fetch_count);
             params.set_bank_register(C12, raw_bank_index);
         }
 
@@ -384,25 +413,8 @@ impl Mapper005 {
     fn write_raw_pcm(_value: u8) {}
     fn write_apu_status(_value: u8) {}
 
-    fn set_prg_banking_mode(params: &mut MapperParams, value: u8) {
-        let windows = match value & 0b0000_0011 {
-            0 => ONE_32K_PRG_WINDOW,
-            1 => TWO_16K_PRG_LAYOUT,
-            2 => ONE_16K_AND_TWO_8K_PRG_LAYOUT,
-            3 => FOUR_8K_PRG_LAYOUT,
-            _ => unreachable!(),
-        };
-        params.set_prg_layout(windows);
-    }
-
     fn set_chr_banking_mode(&mut self, params: &mut MapperParams, value: u8) {
-        self.chr_window_mode = match value & 0b0000_0011 {
-            0 => ChrWindowMode::One8K,
-            1 => ChrWindowMode::Two4K,
-            2 => ChrWindowMode::Four2K,
-            3 => ChrWindowMode::Eight1K,
-            _ => unreachable!(),
-        };
+        self.chr_window_mode = CHR_WINDOW_MODES[usize::from(value & 0b0000_0011)];
         self.update_chr_windows(params);
     }
 
@@ -415,25 +427,13 @@ impl Mapper005 {
     }
 
     fn extended_ram_mode(&mut self, params: &mut MapperParams, value: u8) {
-        self.extended_ram_mode = match value & 0b11 {
-            0b00 => ExtendedRamMode::WriteOnly,
-            0b01 => ExtendedRamMode::ExtendedAttributes,
-            0b10 => ExtendedRamMode::ReadWrite,
-            0b11 => ExtendedRamMode::ReadOnly,
-            _ => unreachable!(),
-        };
+        self.extended_ram_mode = EXTENDED_RAM_MODES[usize::from(value & 0b11)];
         self.update_chr_windows(params);
     }
 
     fn set_name_table_mapping(&mut self, value: u8) {
         for (i, source) in self.name_table_sources.iter_mut().enumerate() {
-            *source = match (value >> (2 * i)) & 0b11 {
-                0b00 => NameTableSource::CiramLeft,
-                0b01 => NameTableSource::CiramRight,
-                0b10 => NameTableSource::ExtendedRam,
-                0b11 => NameTableSource::Fill,
-                _ => unreachable!(),
-            };
+            *source = NAME_TABLE_SOURCES[usize::from((value >> (2 * i)) & 0b11)];
         }
     }
 

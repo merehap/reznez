@@ -19,6 +19,13 @@ const CHR_WINDOWS: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C7)),
 ]);
 
+const MIRRORINGS: [NameTableMirroring; 4] = [
+    NameTableMirroring::OneScreenLeftBank,
+    NameTableMirroring::Vertical,
+    NameTableMirroring::OneScreenRightBank,
+    NameTableMirroring::Horizontal,
+];
+
 // Namco 340
 // TODO: Untested! Need relevant ROMs to test against (everything is mapper 19 instead).
 pub struct Mapper210_2;
@@ -50,15 +57,7 @@ impl Mapper for Mapper210_2 {
             0xB800..=0xBFFF => params.set_bank_register(C7, value),
             0xC000..=0xDFFF => { /* Do nothing. */ }
             0xE000..=0xE7FF => {
-                let mirroring = match value >> 6 {
-                    0b00 => NameTableMirroring::OneScreenLeftBank,
-                    0b01 => NameTableMirroring::Vertical,
-                    0b10 => NameTableMirroring::OneScreenRightBank,
-                    0b11 => NameTableMirroring::Horizontal,
-                    _ => unreachable!(),
-                };
-                params.set_name_table_mirroring(mirroring);
-
+                params.set_name_table_mirroring(MIRRORINGS[usize::from(value >> 6)]);
                 params.set_bank_register(P0, value & 0b0011_1111);
             }
             0xE800..=0xEFFF => params.set_bank_register(P1, value & 0b0011_1111),

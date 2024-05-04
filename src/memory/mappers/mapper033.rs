@@ -17,6 +17,11 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C5)),
 ]);
 
+const MIRRORINGS: [NameTableMirroring; 2] = [
+    NameTableMirroring::Vertical,
+    NameTableMirroring::Horizontal,
+];
+
 // Taito's TC0190
 pub struct Mapper033;
 
@@ -37,12 +42,7 @@ impl Mapper for Mapper033 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x8000 => {
-                let mirroring = if value & 0b0100_0000 == 0 {
-                    NameTableMirroring::Vertical
-                } else {
-                    NameTableMirroring::Horizontal
-                };
-                params.set_name_table_mirroring(mirroring);
+                params.set_name_table_mirroring(MIRRORINGS[usize::from((value & 0b0100_0000) >> 6)]);
                 params.set_bank_register(P0, value & 0b0011_1111);
             }
             0x8001 => params.set_bank_register(P1, value & 0b0011_1111),

@@ -10,6 +10,11 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::Fixed(Rom, BankIndex::FIRST)),
 ]);
 
+const MIRRORINGS: [NameTableMirroring; 2] = [
+    NameTableMirroring::OneScreenLeftBank,
+    NameTableMirroring::OneScreenRightBank,
+];
+
 // Similar to UxROM.
 pub struct Mapper071;
 
@@ -32,14 +37,7 @@ impl Mapper for Mapper071 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x8FFF => { /* Do nothing. */ }
             // https://www.nesdev.org/wiki/INES_Mapper_071#Mirroring_($8000-$9FFF)
-            0x9000..=0x9FFF => {
-                let mirroring = if value & 0b0001_0000 == 0 {
-                    NameTableMirroring::OneScreenLeftBank
-                } else {
-                    NameTableMirroring::OneScreenRightBank
-                };
-                params.set_name_table_mirroring(mirroring);
-            }
+            0x9000..=0x9FFF => params.set_name_table_mirroring(MIRRORINGS[usize::from((value & 0b0001_0000) >> 4)]),
             0xA000..=0xBFFF => { /* Do nothing. */ }
             0xC000..=0xFFFF => params.set_bank_register(P0, bank_index),
         }

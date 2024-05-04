@@ -29,6 +29,19 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
 
 const CHR_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
 
+const PRG_LAYOUTS: [PrgLayout; 2] = [
+    PRG_LAYOUT_8000_FIXED,
+    PRG_LAYOUT_C000_FIXED,
+];
+
+const MIRRORINGS: [NameTableMirroring; 4] = [
+    NameTableMirroring::Vertical,
+    NameTableMirroring::Horizontal,
+    NameTableMirroring::OneScreenLeftBank,
+    // Repeated.
+    NameTableMirroring::OneScreenLeftBank,
+];
+
 // Irem's H3001
 // FIXME: Daiku no Gen San 2 - small scanline flickering during intro.
 pub struct Mapper065 {
@@ -63,23 +76,8 @@ impl Mapper for Mapper065 {
                 let reg_id = CHR_REGISTER_IDS[(cpu_address.to_raw() - 0xB000) as usize];
                 params.set_bank_register(reg_id, value);
             }
-            0x9000 => {
-                let prg_windows = if value & 0b1000_0000 == 0 {
-                    PRG_LAYOUT_8000_FIXED
-                } else {
-                    PRG_LAYOUT_C000_FIXED
-                };
-                params.set_prg_layout(prg_windows);
-            }
-            0x9001 => {
-                let mirroring = match value & 0b1100_0000 {
-                    0b0000_0000 => NameTableMirroring::Vertical,
-                    0b1000_0000 => NameTableMirroring::Horizontal,
-                    0b0100_0000 | 0b1100_0000 => NameTableMirroring::OneScreenLeftBank,
-                    _ => unreachable!(),
-                };
-                params.set_name_table_mirroring(mirroring);
-            }
+            0x9000 => params.set_prg_layout(PRG_LAYOUTS[usize::from((value & 0b1000_0000) >> 7)]),
+            0x9001 => params.set_name_table_mirroring(MIRRORINGS[usize::from((value & 0b1100_0000) >> 6)]),
 
             0x9003 => {
                 self.irq_enabled = value & 0b1000_0000 != 0;

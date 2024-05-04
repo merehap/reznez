@@ -13,6 +13,11 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::Switchable(Rom, C1)),
 ]);
 
+const MIRRORINGS: [NameTableMirroring; 2] = [
+    NameTableMirroring::Vertical,
+    NameTableMirroring::Horizontal,
+];
+
 // VRC1
 pub struct Mapper075 {
     chr_left_high_bit: u8,
@@ -44,12 +49,7 @@ impl Mapper for Mapper075 {
                 params.set_bank_register(P2, value & 0b0000_1111),
             0x9000..=0x9FFF => {
                 if params.name_table_mirroring() != NameTableMirroring::FourScreen {
-                    let mirroring = if value & 0b001 == 0 {
-                        NameTableMirroring::Vertical
-                    } else {
-                        NameTableMirroring::Horizontal
-                    };
-                    params.set_name_table_mirroring(mirroring);
+                    params.set_name_table_mirroring(MIRRORINGS[usize::from(value & 0b001)]);
                 }
 
                 self.chr_left_high_bit = (value & 0b010) << 3;

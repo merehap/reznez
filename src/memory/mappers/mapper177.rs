@@ -9,6 +9,11 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::Fixed(Ram, BankIndex::FIRST)),
 ]);
 
+const MIRRORINGS: [NameTableMirroring; 2] = [
+    NameTableMirroring::Vertical,
+    NameTableMirroring::Horizontal,
+];
+
 // BxROM with WorkRam and mirroring control.
 pub struct Mapper177;
 
@@ -30,12 +35,7 @@ impl Mapper for Mapper177 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                let mirroring = if value & 0b0010_0000 == 0 {
-                    NameTableMirroring::Vertical
-                } else {
-                    NameTableMirroring::Horizontal
-                };
-                params.set_name_table_mirroring(mirroring);
+                params.set_name_table_mirroring(MIRRORINGS[usize::from((value & 0b0010_0000) >> 5)]);
                 params.set_bank_register(P0, value & 0b0001_1111);
             }
         }
