@@ -24,6 +24,8 @@ impl Mapper for Mapper010 {
             .chr_bank_size(4 * KIBIBYTE)
             .chr_windows(CHR_LAYOUT)
             .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+            .override_meta_register(M0, C1)
+            .override_second_meta_register(M0, C3)
             .build()
     }
 

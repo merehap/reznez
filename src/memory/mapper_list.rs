@@ -1,8 +1,6 @@
 use crate::memory::mapper::Cartridge;
 use crate::memory::mapper::{Mapper, MapperParams};
 use crate::memory::mappers as m;
-use crate::memory::bank_index::BankIndexRegisterId::*;
-use crate::memory::bank_index::MetaRegisterId::*;
 
 pub fn lookup_mapper_with_params(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
     let number = cartridge.mapper_number();
@@ -28,13 +26,7 @@ pub fn lookup_mapper_with_params(cartridge: &Cartridge) -> (Box<dyn Mapper>, Map
             panic!("Mapper {number}, submapper {sub_number} has been reassigned to {correct_mapper}, {correct_submapper} ."),
     }
 
-    let mut mapper_params = mapper.initial_layout().make_mapper_params(cartridge);
-    // FIXME: HACK
-    if cartridge.mapper_number() == 10 {
-        mapper_params.set_meta_register(M0, C1);
-        mapper_params.set_meta_register(M1, C3);
-    }
-
+    let mapper_params = mapper.initial_layout().make_mapper_params(cartridge);
     (mapper, mapper_params)
 }
 
