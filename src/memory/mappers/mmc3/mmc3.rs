@@ -51,6 +51,55 @@ pub const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
 
 pub const BANK_INDEX_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, P0, P1];
 
+pub struct Mapper004Mmc3 {
+    selected_register_id: BankRegisterId,
+    irq_state: Box<dyn IrqState>,
+}
+
+impl Mapper for Mapper004Mmc3 {
+    fn initial_layout(&self) -> InitialLayout {
+        INITIAL_LAYOUT
+    }
+
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
+        let is_even_address = address.to_raw() % 2 == 0;
+        match (address.to_raw(), is_even_address) {
+            (0x0000..=0x401F, _) => unreachable!(),
+            (0x4020..=0x5FFF, _) => { /* Do nothing. */ }
+            (0x6000..=0x7FFF, _) => params.write_prg(address, value),
+            (0x8000..=0x9FFF, true ) => bank_select(params, &mut self.selected_register_id, value),
+            (0x8000..=0x9FFF, false) => set_bank_index(params, &mut self.selected_register_id, value),
+            (0xA000..=0xBFFF, true ) => set_mirroring(params, value),
+            (0xA000..=0xBFFF, false) => { /* Do nothing. */ }
+            (0xC000..=0xDFFF, true ) => self.irq_state.set_counter_reload_value(value),
+            (0xC000..=0xDFFF, false) => self.irq_state.reload_counter(),
+            (0xE000..=0xFFFF, true ) => self.irq_state.disable(),
+            (0xE000..=0xFFFF, false) => self.irq_state.enable(),
+        }
+    }
+
+    fn on_end_of_ppu_cycle(&mut self) {
+        self.irq_state.decrement_suppression_cycle_count();
+    }
+
+    fn process_current_ppu_address(&mut self, address: PpuAddress) {
+        self.irq_state.tick_counter(address);
+    }
+
+    fn irq_pending(&self) -> bool {
+        self.irq_state.pending()
+    }
+}
+
+impl Mapper004Mmc3 {
+    pub fn new(irq_state: Box<dyn IrqState>) -> Self {
+        Self {
+            selected_register_id: C0,
+            irq_state,
+        }
+    }
+}
+
 pub fn bank_select(
     params: &mut MapperParams,
     selected_register_id: &mut BankRegisterId,
@@ -99,54 +148,5 @@ pub fn set_mirroring(params: &mut MapperParams, value: u8) {
         (Vertical, 1) => params.set_name_table_mirroring(Horizontal),
         (Horizontal, 0) => params.set_name_table_mirroring(Vertical),
         _ => { /* Other mirrorings cannot be changed. */ }
-    }
-}
-
-pub struct Mapper004Mmc3 {
-    selected_register_id: BankRegisterId,
-    irq_state: Box<dyn IrqState>,
-}
-
-impl Mapper for Mapper004Mmc3 {
-    fn initial_layout(&self) -> InitialLayout {
-        INITIAL_LAYOUT
-    }
-
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
-        let is_even_address = address.to_raw() % 2 == 0;
-        match (address.to_raw(), is_even_address) {
-            (0x0000..=0x401F, _) => unreachable!(),
-            (0x4020..=0x5FFF, _) => { /* Do nothing. */ }
-            (0x6000..=0x7FFF, _) => params.write_prg(address, value),
-            (0x8000..=0x9FFF, true ) => bank_select(params, &mut self.selected_register_id, value),
-            (0x8000..=0x9FFF, false) => set_bank_index(params, &mut self.selected_register_id, value),
-            (0xA000..=0xBFFF, true ) => set_mirroring(params, value),
-            (0xA000..=0xBFFF, false) => { /* Do nothing. */ }
-            (0xC000..=0xDFFF, true ) => self.irq_state.set_counter_reload_value(value),
-            (0xC000..=0xDFFF, false) => self.irq_state.reload_counter(),
-            (0xE000..=0xFFFF, true ) => self.irq_state.disable(),
-            (0xE000..=0xFFFF, false) => self.irq_state.enable(),
-        }
-    }
-
-    fn on_end_of_ppu_cycle(&mut self) {
-        self.irq_state.decrement_suppression_cycle_count();
-    }
-
-    fn process_current_ppu_address(&mut self, address: PpuAddress) {
-        self.irq_state.tick_counter(address);
-    }
-
-    fn irq_pending(&self) -> bool {
-        self.irq_state.pending()
-    }
-}
-
-impl Mapper004Mmc3 {
-    pub fn new(irq_state: Box<dyn IrqState>) -> Self {
-        Self {
-            selected_register_id: C0,
-            irq_state,
-        }
     }
 }
