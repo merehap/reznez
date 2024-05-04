@@ -3,7 +3,7 @@ use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout};
 use crate::memory::mapper::MapperParams;
 use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
-use crate::memory::bank_index::{BankIndex, BankIndexRegisters, BankIndexRegisterId};
+use crate::memory::bank_index::{BankIndex, BankIndexRegisters, MetaRegisterId, BankIndexRegisterId};
 
 pub struct InitialLayout {
     prg_max_bank_count: u16,
@@ -17,6 +17,8 @@ pub struct InitialLayout {
 
     name_table_mirroring_source: NameTableMirroringSource,
     bank_index_register_override: Option<(BankIndexRegisterId, BankIndex)>,
+    meta_register_override: (MetaRegisterId, BankIndexRegisterId),
+    second_meta_register_override: (MetaRegisterId, BankIndexRegisterId),
 }
 
 impl InitialLayout {
@@ -49,6 +51,9 @@ impl InitialLayout {
             bank_index_registers.set(register_id, bank_index);
         }
 
+        bank_index_registers.set_meta(self.meta_register_override.0, self.meta_register_override.1);
+        bank_index_registers.set_meta(self.second_meta_register_override.0, self.second_meta_register_override.1);
+
         MapperParams {
             prg_memory,
             chr_memory,
@@ -71,6 +76,9 @@ pub struct InitialLayoutBuilder {
 
     name_table_mirroring_source: Option<NameTableMirroringSource>,
     bank_index_register_override: Option<(BankIndexRegisterId, BankIndex)>,
+    meta_register_override: (MetaRegisterId, BankIndexRegisterId),
+    // Can't clone a map in a const context, so each override must be a separate field.
+    second_meta_register_override: (MetaRegisterId, BankIndexRegisterId),
 }
 
 impl InitialLayoutBuilder {
@@ -87,6 +95,8 @@ impl InitialLayoutBuilder {
 
             name_table_mirroring_source: None,
             bank_index_register_override: None,
+            meta_register_override: (MetaRegisterId::M0, BankIndexRegisterId::C0),
+            second_meta_register_override: (MetaRegisterId::M1, BankIndexRegisterId::C0),
         }
     }
 
@@ -142,6 +152,24 @@ impl InitialLayoutBuilder {
         self
     }
 
+    pub const fn override_meta_register(
+        &mut self,
+        meta_id: MetaRegisterId,
+        id: BankIndexRegisterId,
+    ) -> &mut InitialLayoutBuilder {
+        self.meta_register_override = (meta_id, id);
+        self
+    }
+
+    pub const fn override_second_meta_register(
+        &mut self,
+        meta_id: MetaRegisterId,
+        id: BankIndexRegisterId,
+    ) -> &mut InitialLayoutBuilder {
+        self.second_meta_register_override = (meta_id, id);
+        self
+    }
+
     pub const fn build(self) -> InitialLayout {
         InitialLayout {
             prg_max_bank_count: self.prg_max_bank_count.unwrap(),
@@ -155,6 +183,8 @@ impl InitialLayoutBuilder {
 
             name_table_mirroring_source: self.name_table_mirroring_source.unwrap(),
             bank_index_register_override: self.bank_index_register_override,
+            meta_register_override: self.meta_register_override,
+            second_meta_register_override: self.second_meta_register_override,
         }
     }
 }
