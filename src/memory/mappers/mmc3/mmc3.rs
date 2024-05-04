@@ -70,7 +70,7 @@ impl Mapper for Mapper004Mmc3 {
             (0x8000..=0x9FFF, true ) => bank_select(params, &mut self.selected_register_id, value),
             (0x8000..=0x9FFF, false) => set_bank_index(params, &mut self.selected_register_id, value),
             (0xA000..=0xBFFF, true ) => set_mirroring(params, value),
-            (0xA000..=0xBFFF, false) => { /* Do nothing. */ }
+            (0xA000..=0xBFFF, false) => prg_ram_protect(params, value),
             (0xC000..=0xDFFF, true ) => self.irq_state.set_counter_reload_value(value),
             (0xC000..=0xDFFF, false) => self.irq_state.reload_counter(),
             (0xE000..=0xFFFF, true ) => self.irq_state.disable(),
@@ -149,4 +149,12 @@ pub fn set_mirroring(params: &mut MapperParams, value: u8) {
         (Horizontal, 0) => params.set_name_table_mirroring(Vertical),
         _ => { /* Other mirrorings cannot be changed. */ }
     }
+}
+
+pub fn prg_ram_protect(params: &mut MapperParams, value: u8) {
+    let prg_ram_enabled =     value & 0b1000_0000 != 0;
+    let prg_rom_ram_mode = if value & 0b0100_0000 == 0 { RomRamMode::Rom } else { RomRamMode::Ram };
+    println!("PRG RAM enabled: {prg_ram_enabled}, ROM or RAM? {prg_rom_ram_mode:?}");
+    params.set_prg_ram_enabled(prg_ram_enabled);
+    params.set_prg_rom_ram_mode(prg_rom_ram_mode)
 }
