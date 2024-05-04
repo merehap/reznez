@@ -85,7 +85,9 @@ pub fn set_bank_index(
     }
 
     if matches!(*selected_register_id, P0 | P1) {
-        assert_eq!(value & 0b1100_0000, 0, "ROM hack.");
+        // "Some romhacks rely on an 8-bit extension of R6/7 for oversized PRG-ROM,
+        // but this is deliberately not supported by many emulators."
+        bank_index &= 0b0011_1111;
     }
 
     params.set_bank_register(*selected_register_id, bank_index);
