@@ -1,4 +1,4 @@
-pub mod bank_index;
+pub mod bank;
 pub mod cpu;
 pub mod initial_layout;
 pub mod mapper;

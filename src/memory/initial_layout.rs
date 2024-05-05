@@ -3,7 +3,7 @@ use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout};
 use crate::memory::mapper::MapperParams;
 use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
-use crate::memory::bank_index::{BankIndex, BankRegisters, MetaRegisterId, BankRegisterId};
+use crate::memory::bank::{BankIndex, BankRegisters, MetaRegisterId, BankRegisterId};
 
 pub struct InitialLayout {
     prg_max_bank_count: u16,

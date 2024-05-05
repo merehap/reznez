@@ -1,4 +1,4 @@
-use crate::memory::bank_index::{BankIndex, BankRegisters, BankRegisterId, MetaRegisterId};
+use crate::memory::bank::{BankIndex, BankRegisters, BankRegisterId, MetaRegisterId};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::read_result::ReadResult;
 use crate::memory::writability::Writability;

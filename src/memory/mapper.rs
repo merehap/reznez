@@ -1,9 +1,9 @@
 pub use lazy_static::lazy_static;
 
 pub use crate::cartridge::cartridge::Cartridge;
-pub use crate::memory::bank_index::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters};
-pub use crate::memory::bank_index::BankRegisterId::*;
-pub use crate::memory::bank_index::MetaRegisterId::*;
+pub use crate::memory::bank::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters};
+pub use crate::memory::bank::BankRegisterId::*;
+pub use crate::memory::bank::MetaRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout, PrgWindow, Bank, RomRamMode};
 pub use crate::memory::initial_layout::{InitialLayout, NameTableMirroringSource};
