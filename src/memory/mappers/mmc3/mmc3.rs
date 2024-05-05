@@ -2,7 +2,7 @@ use crate::memory::mapper::*;
 use crate::memory::mappers::mmc3::irq_state::IrqState;
 
 pub const PRG_LAYOUT_8000_SWITCHABLE: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM),
+    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
@@ -10,7 +10,7 @@ pub const PRG_LAYOUT_8000_SWITCHABLE: PrgLayout = PrgLayout::new(&[
 ]);
 
 pub const PRG_LAYOUT_C000_SWITCHABLE: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM),
+    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),

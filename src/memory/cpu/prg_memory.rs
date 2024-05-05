@@ -49,7 +49,7 @@ impl PrgMemory {
         };
 
         for window in prg_memory.layout.0 {
-            if window.prg_bank == Bank::WORK_RAM {
+            if window.prg_bank.is_work_ram() {
                 prg_memory.work_ram_sections.push(WorkRam::new(window.size()));
             }
         }
@@ -176,7 +176,7 @@ impl PrgMemory {
                 }
 
                 let prg_memory_index = match window.prg_bank {
-                    Bank::EMPTY => PrgMemoryIndex::None,
+                    Bank::Empty => PrgMemoryIndex::None,
                     Bank::MirrorOf(_) => panic!("A mirrored bank must mirror a non-mirrored bank."),
                     Bank::Rom(Location::Fixed(bank_index)) => {
                         // TODO: Consolidate Fixed and Switchable logic.
@@ -216,7 +216,7 @@ impl PrgMemory {
                     }
                     Bank::Rom(_) => todo!("Meta registers"),
                     Bank::Ram(_, _) => todo!("Meta registers"),
-                    Bank::WorkRam(_) => {
+                    Bank::WorkRam(s) => {
                         let mut index = usize::from(bank_offset);
                         let mut result = None;
                         for (section_id, work_ram_section) in self.work_ram_sections.iter().enumerate() {
@@ -226,6 +226,10 @@ impl PrgMemory {
                             }
 
                             index -= work_ram_section.data.len();
+                        }
+
+                        if result.is_none() {
+                            println!("WorkRam Bank: {s:?} Index: {index:04X} Address: {address}");
                         }
 
                         result.unwrap()
@@ -241,7 +245,7 @@ impl PrgMemory {
     // This method assume that all WorkRam is at the start of the PrgLayout.
     fn work_ram_at(&mut self, start: u16) -> &mut WorkRam {
         let (window, index) = self.window_with_index_at(start);
-        assert_eq!(window.prg_bank, Bank::WORK_RAM);
+        assert!(window.prg_bank.is_work_ram());
         &mut self.work_ram_sections[index]
     }
 
@@ -288,7 +292,7 @@ impl PrgLayout {
         let mut i = 0;
         while i < self.0.len() {
             let window = self.0[i];
-            if !matches!(window.prg_bank, Bank::WORK_RAM | Bank::EMPTY | Bank::MirrorOf(_))
+            if !matches!(window.prg_bank, Bank::WorkRam(_) | Bank::Empty | Bank::MirrorOf(_))
                 && window.size() % bank_size != 0 {
                 panic!("Window size must be a multiple of bank size.");
             }

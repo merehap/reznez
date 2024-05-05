@@ -1,6 +1,6 @@
 use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId, MetaRegisterId};
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum Bank {
     Empty,
     WorkRam(Option<RamStatusRegisterId>),
@@ -39,6 +39,10 @@ impl Bank {
             Bank::Ram(location, None) => Bank::Ram(location, Some(id)),
             _ => panic!("Only RAM and Work RAM support status registers."),
         }
+    }
+
+    pub fn is_work_ram(self) -> bool {
+        matches!(self, Bank::WorkRam(_))
     }
 
     pub fn bank_index(self, registers: &BankRegisters) -> Option<BankIndex> {
