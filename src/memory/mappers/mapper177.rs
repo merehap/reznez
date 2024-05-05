@@ -6,7 +6,7 @@ const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
 ]);
 
 const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::Fixed(Ram, BankIndex::FIRST)),
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_ram(BankIndex::FIRST)),
 ]);
 
 const MIRRORINGS: [NameTableMirroring; 2] = [

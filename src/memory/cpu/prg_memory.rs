@@ -347,9 +347,3 @@ impl WorkRam {
         }
     }
 }
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum RomRamMode {
-    Rom,
-    Ram,
-}

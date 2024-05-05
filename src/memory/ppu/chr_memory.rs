@@ -1,7 +1,7 @@
-use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId, MetaRegisterId};
+use crate::memory::bank::bank::{Bank, Location};
+use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId};
 
 use crate::memory::ppu::ppu_address::PpuAddress;
-use crate::memory::writability::Writability;
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
 
@@ -113,7 +113,7 @@ impl ChrMemory {
                 let index = raw_bank_index *
                     self.bank_size +
                     usize::from(bank_offset);
-                return (index, window.is_writable());
+                return (index, window.is_writable(registers));
             }
         }
 
@@ -196,13 +196,12 @@ impl ChrLayout {
 pub struct ChrWindow {
     start: PpuAddress,
     end: PpuAddress,
-    chr_type: ChrBank,
-    write_status: Option<WriteStatus>,
+    bank: Bank,
 }
 
 impl ChrWindow {
     #[allow(clippy::identity_op)]
-    pub const fn new(start: u16, end: u16, size: usize, chr_type: ChrBank) -> ChrWindow {
+    pub const fn new(start: u16, end: u16, size: usize, bank: Bank) -> ChrWindow {
         //assert!([1 * KIBIBYTE, 2 * KIBIBYTE, 4 * KIBIBYTE, 8 * KIBIBYTE].contains(&size));
         assert!(end > start);
         assert!(end as usize - start as usize + 1 == size);
@@ -210,8 +209,7 @@ impl ChrWindow {
         ChrWindow {
             start: PpuAddress::from_u16(start),
             end: PpuAddress::from_u16(end),
-            chr_type,
-            write_status: None,
+            bank,
         }
     }
 
@@ -228,56 +226,26 @@ impl ChrWindow {
     }
 
     fn bank_index(self, registers: &BankRegisters) -> BankIndex {
-        self.chr_type.bank_index(registers)
-    }
-
-    fn is_writable(self) -> bool {
-        match (self.chr_type.writability(), self.write_status) {
-            (Writability::Rom   , None) => false,
-            (Writability::Ram   , None) => true,
-            (Writability::RomRam, Some(WriteStatus::ReadOnly)) => false,
-            (Writability::RomRam, Some(WriteStatus::Writable)) => true,
-            _ => unreachable!(),
+        match self.bank {
+            Bank::Rom(Location::Fixed(bank_index)) | Bank::Ram(Location::Fixed(bank_index), _) =>
+                bank_index,
+            Bank::Rom(Location::Switchable(id)) | Bank::Ram(Location::Switchable(id), _) =>
+                registers.get(id),
+            Bank::Rom(Location::MetaSwitchable(meta_id)) | Bank::Ram(Location::MetaSwitchable(meta_id), _) =>
+                registers.get_from_meta(meta_id),
+            Bank::Empty | Bank::WorkRam(_) | Bank::MirrorOf(_) => unreachable!(),
         }
     }
 
+    fn is_writable(self, registers: &BankRegisters) -> bool {
+        self.bank.is_writable(registers)
+    }
+
     pub fn register_id(self) -> Option<BankRegisterId> {
-        if let ChrBank::Switchable(_, id) = self.chr_type {
+        if let Bank::Rom(Location::Switchable(id)) | Bank::Ram(Location::Switchable(id), _) = self.bank {
             Some(id)
         } else {
             None
         }
     }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum ChrBank {
-    Fixed(Writability, BankIndex),
-    Switchable(Writability, BankRegisterId),
-    MetaSwitchable(Writability, MetaRegisterId),
-}
-
-impl ChrBank {
-    fn writability(self) -> Writability {
-        match self {
-            ChrBank::Fixed(writability, _) => writability,
-            ChrBank::Switchable(writability, _) => writability,
-            ChrBank::MetaSwitchable(writability, _) => writability,
-        }
-    }
-
-    fn bank_index(self, registers: &BankRegisters) -> BankIndex {
-        match self {
-            ChrBank::Fixed(_, bank_index) => bank_index,
-            ChrBank::Switchable(_, register_id) => registers.get(register_id),
-            ChrBank::MetaSwitchable(_, meta_id) => registers.get_from_meta(meta_id),
-        }
-    }
-}
-
-#[allow(dead_code)]
-#[derive(Clone, Copy, Debug)]
-pub enum WriteStatus {
-    ReadOnly,
-    Writable,
 }

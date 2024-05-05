@@ -6,8 +6,8 @@ const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
 ]);
 
 const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::Fixed(Ram, BankIndex::FIRST)),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::Switchable(Ram, C0)),
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::fixed_ram(BankIndex::FIRST)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_ram(C0)),
 ]);
 
 // CPROM

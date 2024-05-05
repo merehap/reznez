@@ -18,11 +18,11 @@ const PRG_LAYOUT_ONE_BIG: PrgLayout = PrgLayout::new(&[
 
 // TODO: Not all boards support CHR RAM.
 const CHR_LAYOUT_ONE_BIG: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::Switchable(Ram, C0)),
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::switchable_ram(C0)),
 ]);
 const CHR_LAYOUT_TWO_SMALL: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::Switchable(Ram, C0)),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::Switchable(Ram, C1)),
+    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_ram(C0)),
+    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_ram(C1)),
 ]);
 
 const PRG_LAYOUTS: [PrgLayout; 4] =

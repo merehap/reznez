@@ -6,7 +6,7 @@ const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
 ]);
 
 const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::Switchable(Rom, C0)),
+    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::switchable_rom(C0)),
 ]);
 
 pub struct Mapper240;

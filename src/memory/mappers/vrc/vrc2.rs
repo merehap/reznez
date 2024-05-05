@@ -12,14 +12,14 @@ const PRG_WINDOWS: PrgLayout = PrgLayout::new(&[
 ]);
 
 const CHR_WINDOWS: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C0)),
-    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C1)),
-    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C2)),
-    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C3)),
-    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C4)),
-    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C5)),
-    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C6)),
-    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::Switchable(Rom, C7)),
+    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C0)),
+    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C1)),
+    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
+    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
+    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
+    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
+    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C6)),
+    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C7)),
 ]);
 
 const NAME_TABLE_MIRRORINGS: [NameTableMirroring; 2] = [
@@ -30,7 +30,7 @@ const NAME_TABLE_MIRRORINGS: [NameTableMirroring; 2] = [
 pub struct Vrc2 {
     low_address_bank_register_ids: BTreeMap<u16, BankRegisterId>,
     high_address_bank_register_ids: BTreeMap<u16, BankRegisterId>,
-    chr_bank_low_bit_behavior: ChrBankLowBitBehavior,
+    chr_bank_low_bit_behavior: BankLowBitBehavior,
 }
 
 impl Mapper for Vrc2 {
@@ -75,7 +75,7 @@ impl Mapper for Vrc2 {
                 }
 
                 if let (Some(&register_id), Some(mut mask)) = (register_id, mask) {
-                    if self.chr_bank_low_bit_behavior == ChrBankLowBitBehavior::Ignore {
+                    if self.chr_bank_low_bit_behavior == BankLowBitBehavior::Ignore {
                         bank >>= 1;
                         mask >>= 1;
                     }
@@ -92,7 +92,7 @@ impl Mapper for Vrc2 {
 impl Vrc2 {
     pub fn new(
         bank_registers: &[(u16, u16, BankRegisterId)],
-        chr_bank_low_bit_behavior: ChrBankLowBitBehavior,
+        chr_bank_low_bit_behavior: BankLowBitBehavior,
     ) -> Self {
         // Convert the address-to-register mappings to maps for easy lookup.
         let mut low_address_bank_register_ids = BTreeMap::new();
@@ -111,7 +111,7 @@ impl Vrc2 {
 }
 
 #[derive(PartialEq)]
-pub enum ChrBankLowBitBehavior {
+pub enum BankLowBitBehavior {
     Ignore,
     Keep,
 }

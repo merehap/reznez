@@ -1,4 +1,4 @@
-use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId, MetaRegisterId};
+use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId, MetaRegisterId, RamStatus};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Bank {
@@ -19,6 +19,10 @@ impl Bank {
 
     pub const fn switchable_rom(id: BankRegisterId) -> Bank {
         Bank::Rom(Location::Switchable(id))
+    }
+
+    pub const fn meta_switchable_rom(id: MetaRegisterId) -> Bank {
+        Bank::Rom(Location::MetaSwitchable(id))
     }
 
     pub const fn fixed_ram(bank_index: BankIndex) -> Bank {
@@ -53,6 +57,18 @@ impl Bank {
             Rom(Switchable(register_id)) | Ram(Switchable(register_id), _) => Some(registers.get(register_id)),
             Rom(MetaSwitchable(_)) | Ram(MetaSwitchable(_), _) => todo!(),
             Empty | WorkRam(_) | MirrorOf(_) => None,
+        }
+    }
+
+    pub fn is_writable(self, registers: &BankRegisters) -> bool {
+        match self {
+            Bank::Empty => false,
+            Bank::Rom(_) => false,
+            Bank::MirrorOf(_) => todo!("Writability of MirrorOf"),
+            // RAM with no status register is always writable.
+            Bank::Ram(_, None) | Bank::WorkRam(None) => true,
+            Bank::Ram(_, Some(status_register_id)) | Bank::WorkRam(Some(status_register_id)) =>
+                registers.ram_status(status_register_id) == RamStatus::ReadWrite,
         }
     }
 }
