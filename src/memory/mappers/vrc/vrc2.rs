@@ -5,10 +5,10 @@ use std::collections::BTreeMap;
 use crate::memory::mapper::*;
 
 const PRG_WINDOWS: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WorkRam),
-    PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, PrgBank::Switchable(Rom, P0)),
-    PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, PrgBank::Switchable(Rom, P1)),
-    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::SECOND_LAST)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
+    PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, Bank::switchable_rom(P0)),
+    PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, Bank::switchable_rom(P1)),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
 ]);
 
 const CHR_WINDOWS: ChrLayout = ChrLayout::new(&[

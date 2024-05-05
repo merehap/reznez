@@ -2,8 +2,8 @@ use crate::memory::mapper::*;
 use crate::memory::mappers::common::mmc1::{ShiftRegister, ShiftStatus};
 
 const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WorkRam),
-    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::Fixed(Rom, BankIndex::FIRST)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
 ]);
 
 const CHR_LAYOUT_ONE_BIG: ChrLayout = ChrLayout::new(&[

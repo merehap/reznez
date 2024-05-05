@@ -61,6 +61,7 @@ fn framematch() {
             stop_frame: None,
             target_frame_rate: TargetFrameRate::Unbounded,
             disable_audio: true,
+            log_frames: false,
             log_cpu_all: false,
             log_ppu_all: false,
             log_apu_all: false,

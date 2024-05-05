@@ -30,6 +30,7 @@ fn nestest() {
         stop_frame: None,
         target_frame_rate: TargetFrameRate::Unbounded,
         disable_audio: true,
+        log_frames: false,
         log_cpu_all: true,
         log_ppu_all: false,
         log_apu_all: false,
@@ -48,6 +49,7 @@ fn nestest() {
     };
 
     logger::init(Logger {
+        log_frames: false,
         log_cpu_instructions: true,
         log_cpu_flow_control: true,
         log_cpu_steps: true,

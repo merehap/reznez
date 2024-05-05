@@ -8,29 +8,29 @@ use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu::vram::VramSide;
 
 const ONE_32K_PRG_WINDOW: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Switchable(Ram,    P0)),
-    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::Switchable(Rom,    P4)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_ram(P0)),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_rom(P4)),
 ]);
 
 const TWO_16K_PRG_WINDOWS: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Switchable(Ram,    P0)),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::Switchable(RomRam, P2)),
-    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::Switchable(Rom,    P4)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_ram(P0)),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_ram(P2)),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::switchable_rom(P4)),
 ]);
 
 const ONE_16K_AND_TWO_8K_PRG_WINDOWS: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Switchable(Ram,    P0)),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::Switchable(RomRam, P2)),
-    PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::Switchable(RomRam, P3)),
-    PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::Switchable(Rom,    P4)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_ram(P0)),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_ram(P2)),
+    PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::switchable_ram(P3)),
+    PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Bank::switchable_rom(P4)),
 ]);
 
 const FOUR_8K_PRG_WINDOWS: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::Switchable(Ram,    P0)),
-    PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, PrgBank::Switchable(RomRam, P1)),
-    PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, PrgBank::Switchable(RomRam, P2)),
-    PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::Switchable(RomRam, P3)),
-    PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::Switchable(Rom,    P4)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_ram(P0)),
+    PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, Bank::switchable_ram(P1)),
+    PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, Bank::switchable_ram(P2)),
+    PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::switchable_ram(P3)),
+    PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Bank::switchable_rom(P4)),
 ]);
 
 const ONE_8K_CHR_WINDOW: ChrLayout = ChrLayout::new(&[
@@ -92,7 +92,7 @@ const SPRITE_PATTERN_FETCH_START: u8 = 64;
 const BACKGROUND_PATTERN_FETCH_START: u8 = 81;
 
 const PRG_REGISTER_IDS: [BankRegisterId; 5] =
-    [P0, P1, P2, P3, P4];
+    [P0,P1, P2, P3, P4];
 const CHR_REGISTER_IDS: [BankRegisterId; 12] =
     [C0, C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11];
 
