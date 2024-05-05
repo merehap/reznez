@@ -19,7 +19,7 @@ const MIRRORINGS: [NameTableMirroring; 2] = [
     NameTableMirroring::Horizontal,
 ];
 
-// MMC2
+// MMC2 (PNROM and PEEOROM boards)
 pub struct Mapper009;
 
 impl Mapper for Mapper009 {
@@ -32,6 +32,8 @@ impl Mapper for Mapper009 {
             .chr_bank_size(4 * KIBIBYTE)
             .chr_windows(CHR_LAYOUT)
             .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+            .override_meta_register(M0, C1)
+            .override_second_meta_register(M1, C3)
             .build()
     }
 

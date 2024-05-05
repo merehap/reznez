@@ -1,7 +1,7 @@
 use crate::memory::mapper::*;
 
 const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM), //Bank::fixed_ram(BankIndex::FIRST)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_rom(P0)),
     PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
 ]);
@@ -16,7 +16,7 @@ const MIRRORINGS: [NameTableMirroring; 2] = [
     NameTableMirroring::Horizontal,
 ];
 
-// MMC4 - Similar to MMC2, but with Work RAM, bigger PRG ROM windows, and different bank-switching.
+// MMC4 (FxROM) - Similar to MMC2, but with Work RAM, bigger PRG ROM windows, and different bank-switching.
 pub struct Mapper010;
 
 impl Mapper for Mapper010 {
@@ -38,7 +38,9 @@ impl Mapper for Mapper010 {
         let bank_index = value & 0b0001_1111;
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
-            0x4020..=0x9FFF => { /* Do nothing. */ }
+            0x4020..=0x5FFF => { /* Do nothing. */ }
+            0x6000..=0x7FFF => params.write_prg(address, value),
+            0x8000..=0x9FFF => { /* Do nothing. */ }
             0xA000..=0xAFFF => params.set_bank_register(P0, bank_index & 0b0000_1111),
             0xB000..=0xBFFF => params.set_bank_register(C0, bank_index),
             0xC000..=0xCFFF => params.set_bank_register(C1, bank_index),
