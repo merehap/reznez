@@ -1,12 +1,13 @@
 pub use lazy_static::lazy_static;
 
 pub use crate::cartridge::cartridge::Cartridge;
-pub use crate::memory::bank::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters};
-pub use crate::memory::bank::BankRegisterId::*;
-pub use crate::memory::bank::MetaRegisterId::*;
-pub use crate::memory::cpu::prg_memory::RamStatusRegisterId::*;
+pub use crate::memory::bank::bank_index::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters};
+pub use crate::memory::bank::bank_index::BankRegisterId::*;
+pub use crate::memory::bank::bank_index::MetaRegisterId::*;
+pub use crate::memory::bank::bank::Bank;
+pub use crate::memory::bank::bank::RamStatusRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
-pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout, PrgWindow, Bank, RomRamMode};
+pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout, PrgWindow, RomRamMode};
 pub use crate::memory::initial_layout::{InitialLayout, NameTableMirroringSource};
 pub use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout, ChrWindow, ChrBank};
 pub use crate::memory::ppu::ppu_address::PpuAddress;
