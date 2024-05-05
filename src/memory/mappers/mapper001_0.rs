@@ -2,17 +2,17 @@ use crate::memory::mapper::*;
 use crate::memory::mappers::common::mmc1::{ShiftRegister, ShiftStatus};
 
 const PRG_LAYOUT_FIXED_LAST: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_rom(P0)),
     PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
 ]);
 const PRG_LAYOUT_FIXED_FIRST: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
     PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::switchable_rom(P0)),
 ]);
 const PRG_LAYOUT_ONE_BIG: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_rom(P0)),
 ]);
 
@@ -86,11 +86,13 @@ impl Mapper for Mapper001_0 {
                 0xC000..=0xDFFF => params.set_bank_register(C1, finished_value),
                 0xE000..=0xFFFF => {
                     params.set_bank_register(P0, finished_value & 0b0_1111);
-                    if finished_value & 0b1_0000 == 0 {
-                        params.enable_work_ram(0x6000);
+
+                    let status = if finished_value & 0b1_0000 == 0 {
+                        RamStatus::ReadWrite
                     } else {
-                        params.disable_work_ram(0x6000);
-                    }
+                        RamStatus::Disabled
+                    };
+                    params.set_ram_status(S0, status);
                 }
             }
         }

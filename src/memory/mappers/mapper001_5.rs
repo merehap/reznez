@@ -2,7 +2,7 @@ use crate::memory::mapper::*;
 use crate::memory::mappers::common::mmc1::{ShiftRegister, ShiftStatus};
 
 const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
 ]);
 
@@ -66,11 +66,12 @@ impl Mapper for Mapper001_5 {
                 0xA000..=0xBFFF => params.set_bank_register(C0, finished_value),
                 0xC000..=0xDFFF => params.set_bank_register(C1, finished_value),
                 0xE000..=0xFFFF => {
-                    if finished_value & 0b1_0000 == 0 {
-                        params.enable_work_ram(0x6000);
+                    let status = if finished_value & 0b1_0000 == 0 {
+                        RamStatus::ReadWrite
                     } else {
-                        params.disable_work_ram(0x6000);
-                    }
+                        RamStatus::Disabled
+                    };
+                    params.set_ram_status(S0, status);
                 }
             }
         }

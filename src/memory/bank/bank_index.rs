@@ -1,3 +1,5 @@
+use crate::memory::bank::bank::RamStatusRegisterId;
+
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct BankIndex(u16);
 
@@ -36,6 +38,7 @@ impl From<u8> for BankIndex {
 pub struct BankRegisters {
     registers: [BankIndex; 18],
     meta_registers: [BankRegisterId; 2],
+    ram_statuses: [RamStatus; 2],
 }
 
 impl BankRegisters {
@@ -44,6 +47,7 @@ impl BankRegisters {
             registers: [BankIndex::FIRST; 18],
             // Meta registers are only used for CHR currently.
             meta_registers: [BankRegisterId::C0, BankRegisterId::C0],
+            ram_statuses: [RamStatus::ReadWrite, RamStatus::ReadWrite],
         }
     }
 
@@ -72,6 +76,14 @@ impl BankRegisters {
 
     pub fn set_meta(&mut self, id: MetaRegisterId, value: BankRegisterId) {
         self.meta_registers[id as usize] = value;
+    }
+
+    pub fn ram_status(&self, id: RamStatusRegisterId) -> RamStatus {
+        self.ram_statuses[id as usize]
+    }
+
+    pub fn set_ram_status(&mut self, id: RamStatusRegisterId, status: RamStatus) {
+        self.ram_statuses[id as usize] = status;
     }
 }
 
@@ -124,4 +136,12 @@ impl BankRegisterId {
 pub enum MetaRegisterId {
     M0,
     M1,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum RamStatus {
+    Disabled,
+    ReadOnlyZeros,
+    ReadOnly,
+    ReadWrite,
 }

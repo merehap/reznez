@@ -6,7 +6,7 @@ use crate::memory::mapper::*;
 use crate::memory::mappers::vrc::vrc_irq_state::VrcIrqState;
 
 const PRG_WINDOWS_SWITCHABLE_8000: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM),
+    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
@@ -14,7 +14,7 @@ const PRG_WINDOWS_SWITCHABLE_8000: PrgLayout = PrgLayout::new(&[
 ]);
 
 const PRG_WINDOWS_SWITCHABLE_C000: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM),
+    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
@@ -77,11 +77,12 @@ impl Mapper for Vrc4 {
                 params.set_name_table_mirroring(mirroring);
             }
             0x9002 => {
-                if value & 0b0000_0001 == 0 {
-                    params.disable_work_ram(0x6000);
+                let status = if value & 0b0000_0001 == 0 {
+                    RamStatus::Disabled
                 } else {
-                    params.enable_work_ram(0x6000);
-                }
+                    RamStatus::ReadWrite
+                };
+                params.set_ram_status(S0, status);
 
                 let prg_layout = if value & 0b0000_0010 == 0 {
                     PRG_WINDOWS_SWITCHABLE_8000

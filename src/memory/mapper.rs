@@ -1,10 +1,10 @@
 pub use lazy_static::lazy_static;
 
 pub use crate::cartridge::cartridge::Cartridge;
-pub use crate::memory::bank::bank_index::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters};
+pub use crate::memory::bank::bank_index::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters, RamStatus};
 pub use crate::memory::bank::bank_index::BankRegisterId::*;
 pub use crate::memory::bank::bank_index::MetaRegisterId::*;
-pub use crate::memory::bank::bank::Bank;
+pub use crate::memory::bank::bank::{Bank, RamStatusRegisterId};
 pub use crate::memory::bank::bank::RamStatusRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout, PrgWindow, RomRamMode};
@@ -469,12 +469,8 @@ impl MapperParams {
         self.prg_memory.write(&self.bank_registers, address, value);
     }
 
-    pub fn enable_work_ram(&mut self, address: u16) {
-        self.prg_memory.enable_work_ram(address);
-    }
-
-    pub fn disable_work_ram(&mut self, address: u16) {
-        self.prg_memory.disable_work_ram(address);
+    pub fn set_ram_status(&mut self, id: RamStatusRegisterId, status: RamStatus) {
+        self.bank_registers.set_ram_status(id, status);
     }
 
     pub fn chr_memory(&self) -> &ChrMemory {

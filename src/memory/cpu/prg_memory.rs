@@ -1,5 +1,5 @@
-use crate::memory::bank::bank::{Bank, Location};
-use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId};
+use crate::memory::bank::bank::{Bank, Location, RamStatusRegisterId};
+use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId, RamStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::read_result::ReadResult;
 use crate::memory::writability::Writability;
@@ -87,10 +87,13 @@ impl PrgMemory {
                     ReadResult::full(self.raw_memory[index % self.raw_memory.len()])
                 }
             }
-            PrgMemoryIndex::WorkRam { section_id, index } => {
+            PrgMemoryIndex::WorkRam { section_id, index, status_register_id } => {
                 let work_ram = &self.work_ram_sections[section_id];
+                let status = status_register_id
+                    .map(|id| registers.ram_status(id))
+                    .unwrap_or(RamStatus::ReadWrite);
                 use RamStatus::*;
-                match work_ram.status {
+                match status {
                     Disabled => ReadResult::OPEN_BUS,
                     ReadOnlyZeros => ReadResult::full(0),
                     ReadOnly | ReadWrite => ReadResult::full(work_ram.data[index]),
@@ -107,9 +110,12 @@ impl PrgMemory {
                     self.raw_memory[index] = value;
                 }
             }
-            PrgMemoryIndex::WorkRam { section_id, index } => {
+            PrgMemoryIndex::WorkRam { section_id, index, status_register_id } => {
                 let work_ram = &mut self.work_ram_sections[section_id];
-                if work_ram.status == RamStatus::ReadWrite {
+                let status: RamStatus = status_register_id
+                    .map(|id| registers.ram_status(id))
+                    .unwrap_or(RamStatus::ReadWrite);
+                if status == RamStatus::ReadWrite {
                     work_ram.data[index] = value;
                 }
             }
@@ -130,18 +136,6 @@ impl PrgMemory {
 
     pub fn window_at(&self, start: u16) -> &PrgWindow {
         self.window_with_index_at(start).0
-    }
-
-    pub fn set_work_ram_status_at(&mut self, address: u16, status: RamStatus) {
-        self.work_ram_at(address).status = status;
-    }
-
-    pub fn disable_work_ram(&mut self, address: u16) {
-        self.work_ram_at(address).status = RamStatus::Disabled;
-    }
-
-    pub fn enable_work_ram(&mut self, address: u16) {
-        self.work_ram_at(address).status = RamStatus::ReadWrite;
     }
 
     pub fn set_layout(&mut self, windows: PrgLayout) {
@@ -216,20 +210,16 @@ impl PrgMemory {
                     }
                     Bank::Rom(_) => todo!("Meta registers"),
                     Bank::Ram(_, _) => todo!("Meta registers"),
-                    Bank::WorkRam(s) => {
+                    Bank::WorkRam(status_register_id) => {
                         let mut index = usize::from(bank_offset);
                         let mut result = None;
                         for (section_id, work_ram_section) in self.work_ram_sections.iter().enumerate() {
                             if index < work_ram_section.data.len() {
-                                result = Some(PrgMemoryIndex::WorkRam { section_id, index });
+                                result = Some(PrgMemoryIndex::WorkRam { section_id, index, status_register_id });
                                 break;
                             }
 
                             index -= work_ram_section.data.len();
-                        }
-
-                        if result.is_none() {
-                            println!("WorkRam Bank: {s:?} Index: {index:04X} Address: {address}");
                         }
 
                         result.unwrap()
@@ -240,13 +230,6 @@ impl PrgMemory {
         }
 
         unreachable!();
-    }
-
-    // This method assume that all WorkRam is at the start of the PrgLayout.
-    fn work_ram_at(&mut self, start: u16) -> &mut WorkRam {
-        let (window, index) = self.window_with_index_at(start);
-        assert!(window.prg_bank.is_work_ram());
-        &mut self.work_ram_sections[index]
     }
 
     fn window_with_index_at(&self, start: u16) -> (&PrgWindow, usize) {
@@ -310,7 +293,7 @@ impl PrgLayout {
 
 enum PrgMemoryIndex {
     None,
-    WorkRam { section_id: usize, index: usize },
+    WorkRam { section_id: usize, index: usize, status_register_id: Option<RamStatusRegisterId> },
     MappedMemory { writability: Writability, index: usize },
 }
 
@@ -355,24 +338,14 @@ impl PrgWindow {
 #[derive(Clone)]
 struct WorkRam {
     data: Vec<u8>,
-    status: RamStatus,
 }
 
 impl WorkRam {
     fn new(size: usize) -> WorkRam {
         WorkRam {
             data: vec![0; size],
-            status: RamStatus::ReadWrite,
         }
     }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum RamStatus {
-    Disabled,
-    ReadOnlyZeros,
-    ReadOnly,
-    ReadWrite,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
