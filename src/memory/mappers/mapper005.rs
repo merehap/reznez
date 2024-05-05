@@ -223,8 +223,8 @@ impl Mapper for Mapper005 {
             0x5016..=0x50FF => { /* Do nothing. */ }
             0x5100 => params.set_prg_layout(PRG_LAYOUTS[usize::from(value & 0b0000_0011)]),
             0x5101 => self.set_chr_banking_mode(params, value),
-            0x5102 => self.prg_ram_protect_1(value),
-            0x5103 => self.prg_ram_protect_2(value),
+            0x5102 => self.prg_ram_protect_1(params, value),
+            0x5103 => self.prg_ram_protect_2(params, value),
             0x5104 => self.extended_ram_mode(params, value),
             0x5105 => self.set_name_table_mapping(value),
             0x5106 => self.set_fill_mode_tile(value),
@@ -418,12 +418,24 @@ impl Mapper005 {
         self.update_chr_windows(params);
     }
 
-    fn prg_ram_protect_1(&mut self, value: u8) {
+    fn prg_ram_protect_1(&mut self, params: &mut MapperParams, value: u8) {
         self.prg_ram_enabled_1 = value & 0b0000_0011 == 0b0000_0010;
+        let status = if self.prg_ram_enabled_1 && self.prg_ram_enabled_2 {
+            RamStatus::ReadWrite
+        } else {
+            RamStatus::ReadOnly
+        };
+        params.set_ram_status(S0, status);
     }
 
-    fn prg_ram_protect_2(&mut self, value: u8) {
+    fn prg_ram_protect_2(&mut self, params: &mut MapperParams, value: u8) {
         self.prg_ram_enabled_2 = value & 0b0000_0011 == 0b0000_0001;
+        let status = if self.prg_ram_enabled_1 && self.prg_ram_enabled_2 {
+            RamStatus::ReadWrite
+        } else {
+            RamStatus::ReadOnly
+        };
+        params.set_ram_status(S0, status);
     }
 
     fn extended_ram_mode(&mut self, params: &mut MapperParams, value: u8) {
