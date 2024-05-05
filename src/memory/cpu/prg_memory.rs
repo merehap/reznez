@@ -380,6 +380,14 @@ impl Bank {
         Bank::MirrorOf(window_address)
     }
 
+    pub const fn status_register(self, id: RamStatusRegisterId) -> Bank {
+        match self {
+            Bank::WorkRam(None) => Bank::WorkRam(Some(id)),
+            Bank::Ram(location, None) => Bank::Ram(location, Some(id)),
+            _ => panic!("Only RAM and Work RAM support status registers."),
+        }
+    }
+
     fn bank_index(self, registers: &BankRegisters) -> Option<BankIndex> {
         use Bank::*;
         use Location::*;
@@ -401,7 +409,10 @@ pub enum Location {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub struct RamStatusRegisterId;
+pub enum RamStatusRegisterId {
+    S0,
+    S1,
+}
 
 #[derive(Clone)]
 struct WorkRam {

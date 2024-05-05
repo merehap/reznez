@@ -4,6 +4,7 @@ pub use crate::cartridge::cartridge::Cartridge;
 pub use crate::memory::bank::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters};
 pub use crate::memory::bank::BankRegisterId::*;
 pub use crate::memory::bank::MetaRegisterId::*;
+pub use crate::memory::cpu::prg_memory::RamStatusRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout, PrgWindow, Bank, RomRamMode};
 pub use crate::memory::initial_layout::{InitialLayout, NameTableMirroringSource};
