@@ -522,14 +522,6 @@ impl MapperParams {
     ) {
         self.bank_registers.update(id, updater);
     }
-
-    pub fn set_prg_ram_enabled(&mut self, ram_enabled: bool) {
-        self.prg_memory.set_ram_enabled(ram_enabled);
-    }
-
-    pub fn set_prg_rom_ram_mode(&mut self, rom_ram_mode: RomRamMode) {
-        self.prg_memory.set_rom_ram_mode(rom_ram_mode);
-    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

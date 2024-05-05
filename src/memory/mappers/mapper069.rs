@@ -111,12 +111,19 @@ impl Mapper069 {
             Command::ChrRomBank(id) =>
                 params.set_bank_register(id, value),
             Command::PrgRomRamBank => {
-                let prg_ram_enabled = value & 0b1000_0000 != 0;
-                let rom_ram_mode = if value & 0b0100_0000 == 0 { RomRamMode::Rom } else { RomRamMode::Ram };
-                let bank_index      = value & 0b0011_1111;
-                params.set_prg_ram_enabled(prg_ram_enabled);
-                params.set_prg_rom_ram_mode(rom_ram_mode);
-                params.set_bank_register(P0, bank_index);
+                params.set_bank_register(P0, value & 0b0011_1111);
+
+                let read_only  = value & 0b0100_0000 == 0;
+                let enable_ram = value & 0b1000_0000 != 0;
+
+                let status = if read_only {
+                    RamStatus::ReadOnly
+                } else if enable_ram {
+                    RamStatus::ReadWrite
+                } else {
+                    RamStatus::Disabled
+                };
+                params.set_ram_status(S0, status);
             }
             Command::PrgRomBank(id) =>
                 params.set_bank_register(id, value),
