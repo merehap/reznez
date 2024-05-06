@@ -35,6 +35,14 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &'static [(u32, u32, u16, u8)] = &[
     // serom/serom.nes
     (2444067993, 3660366606, 1, 5),
 
+    // bntest/bntest_aorom.nes
+    (0271080456, 3417935230, 7, 1),
+    // bntest/bntest_h.nes
+    (2219365086, 3417935230, 34, 2),
+    // bntest/bntest_v.nes
+    (0180120094, 3417935230, 34, 2),
+    // bntest/bntest_v.nes
+
     // holydiverbatman/M2_P128K_V.nes
     (3834536932, 3161185153, 2, 1),
     // holydiverbatman/M3_P32K_C32K_H.nes

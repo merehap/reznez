@@ -34,9 +34,9 @@ impl Mapper for Mapper034_1 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFC => { /* Do nothing. */ }
-            0x7FFD => params.set_bank_register(P0, value & 1),
-            0x7FFE => params.set_bank_register(C0, value & 0b1111),
-            0x7FFF => params.set_bank_register(C1, value & 0b1111),
+            0x7FFD => params.set_bank_register(P0, value),
+            0x7FFE => params.set_bank_register(C0, value),
+            0x7FFF => params.set_bank_register(C1, value),
             0x8000..=0xFFFF => { /* Do nothing. */ }
         }
     }
