@@ -22,11 +22,6 @@ Other input devices.
 Auto-mirror undersized CHR (for mapper 99 and maybe others).
 Require PRG ROM and CHR ROM sizes in InitialLayout.
 
-Simplest mappers: 0, 2, 3, 7, 11, 66, 87
-Japan mapper order: 0, 87, 3, 184, 185, 2, 206, 75, 66, 94, 140, 34, 180, 95, 152, 1...
-US mapper order: 0, 66, 3, 2, 1, 34, 206, 9, 7, 4, 68, 158, 11...
-
-
 FANCY NICE-TO-HAVES
 APU frequency correction
 
@@ -152,6 +147,7 @@ Total games implemented:
 071: 16
 075: 5
 076: 1
+078: 2
 079: 16
 086: 1
 087: 10
@@ -173,7 +169,7 @@ Total games implemented:
 232: 5
 240: 0
 241: 0
-2299 / 2447
+2301 / 2447
 
 To implement:
 5:  25

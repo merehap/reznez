@@ -39,7 +39,7 @@ const MIRRORINGS: [NameTableMirroring; 4] =
         NameTableMirroring::Horizontal,
     ];
 
-// SxROM (MMC1)
+// SxROM (MMC1, MMC1B)
 pub struct Mapper001_0 {
     shift_register: ShiftRegister,
 }

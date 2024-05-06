@@ -41,6 +41,8 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &'static [(u32, u32, u16, u8)] = &[
     (0403828385, 3300419450, 3, 1),
     // holydiverbatman/M7_P128K.nes
     (0656988303, 3161185153, 7, 1),
+    // holydiverbatman/M78.3_P128K_C64K.nes
+    (2751966167, 3161185153, 78, 3),
 
     // mmc3_test/6-MMC6.nes
     (2669308141, 2914571485, 4, 1),

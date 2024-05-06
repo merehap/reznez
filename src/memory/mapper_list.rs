@@ -160,6 +160,13 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // NAMCOT-3446
         76 => Box::new(m::mapper076::Mapper076::new()),
 
+        78 => match submapper_number {
+            0 => return LookupResult::UnspecifiedSubmapper,
+            1 => Box::new(m::mapper078_1::Mapper078_1),
+            2 => return LookupResult::UnassignedSubmapper,
+            3 => Box::new(m::mapper078_3::Mapper078_3),
+            _ => return LookupResult::UnassignedSubmapper,
+        }
         79 => Box::new(m::mapper079::Mapper079),
 
         86 => Box::new(m::mapper086::Mapper086),
