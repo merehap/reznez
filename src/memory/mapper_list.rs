@@ -36,7 +36,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // NROM
         0 => Box::new(m::mapper000::Mapper000),
         1 => match submapper_number {
-            0 => Box::new(m::mapper001_0::Mapper001_0::new()),
+            0 => Box::new(m::mapper001_0::Mapper001_0::new(cartridge)),
             1 | 2 | 4 => return LookupResult::ReassignedSubmapper { correct_mapper: 1, correct_submapper: 0 },
             3 => return LookupResult::ReassignedSubmapper { correct_mapper: 155, correct_submapper: 0 },
             5 => Box::new(m::mapper001_5::Mapper001_5::new()),

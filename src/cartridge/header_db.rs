@@ -128,10 +128,10 @@ impl HeaderDb {
     pub fn missing_submapper_number(&self, data: &[u8], prg_rom: &[u8]) -> Option<(u16, u8, u32, u32)> {
         let data_hash = crc32fast::hash(data);
         let prg_hash = crc32fast::hash(prg_rom);
-        if let Some((mapper_number, submapper_number)) = self.missing_data_submapper_numbers.get(&data_hash).copied() {
-            Some((mapper_number, submapper_number, data_hash, prg_hash))
-        } else if let Some((mapper_number, submapper_number)) = self.missing_prg_rom_submapper_numbers.get(&prg_hash).copied() {
-            Some((mapper_number, submapper_number, data_hash, prg_hash))
+        if let Some((number, sub_number)) = self.missing_data_submapper_numbers.get(&data_hash).copied() {
+            Some((number, sub_number, data_hash, prg_hash))
+        } else if let Some((number, sub_number)) = self.missing_prg_rom_submapper_numbers.get(&prg_hash).copied() {
+            Some((number, sub_number, data_hash, prg_hash))
         } else {
             None
         }

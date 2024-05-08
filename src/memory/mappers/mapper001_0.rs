@@ -100,7 +100,32 @@ impl Mapper for Mapper001_0 {
 }
 
 impl Mapper001_0 {
-    pub fn new() -> Self {
+    pub fn new(cartridge: &Cartridge) -> Self {
+        let prg_rom_size = cartridge.prg_rom_size() / KIBIBYTE;
+        let prg_ram_size = cartridge.prg_ram_size() / KIBIBYTE;
+        let chr_ram_size = cartridge.chr_ram_size() / KIBIBYTE;
+
+        let board = match (prg_rom_size, prg_ram_size, chr_ram_size) {
+            (128,  8, 8) => Board::Snrom,
+            (256,  8, 8) => Board::Snrom,
+            (  _, 16, _) => Board::Sorom,
+            (  _, 32, _) => Board::Sxrom,
+            _ => Board::Standard,
+        };
+
+        assert_eq!(board, Board::Standard, "MMC1 {:?} is not yet supported.", board);
+
         Self { shift_register: ShiftRegister::new() }
     }
+}
+
+#[derive(PartialEq, Eq, Debug)]
+enum Board {
+    Standard,
+    // PRG ROM <= 256k, CHR RAM = 8k, PRG RAM = 8k
+    Snrom,
+    // PRG RAM = 16k
+    Sorom,
+    // PRG RAM = 32k
+    Sxrom
 }

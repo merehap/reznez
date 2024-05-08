@@ -193,6 +193,18 @@ impl Cartridge {
     pub fn set_prg_rom_at(&mut self, index: usize, value: u8) {
         self.prg_rom[index] = value;
     }
+
+    pub fn prg_rom_size(&self) -> usize {
+        self.prg_rom.len()
+    }
+
+    pub fn prg_ram_size(&self) -> usize {
+        self.prg_ram_size as usize
+    }
+
+    pub fn chr_ram_size(&self) -> usize {
+        self.chr_ram_size as usize
+    }
 }
 
 impl fmt::Display for Cartridge {
