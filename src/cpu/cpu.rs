@@ -258,39 +258,31 @@ impl Cpu {
                     self.reset_status = ResetStatus::Active;
                     // Reset has BRK's code point (0x00). TODO: Set the data bus to 0x00?
                     self.next_op_code = Some((0x00, self.address_bus));
-                    self.suppress_program_counter_increment = true;
                     self.step_queue.enqueue_reset();
                     return;
                 }
 
-                match self.nmi_status {
-                    NmiStatus::Inactive if self.irq_status == IrqStatus::Ready => {
-                        info!(target: "cpuflowcontrol", "Starting IRQ");
-                        self.irq_status = IrqStatus::Active;
-                        // IRQ has BRK's code point (0x00). TODO: Set the data bus to 0x00?
-                        self.next_op_code = Some((0x00, self.address_bus));
-                        self.suppress_program_counter_increment = true;
-                        self.step_queue.enqueue_irq();
-                    }
-                    NmiStatus::Inactive | NmiStatus::Pending => {
-                        self.next_op_code = Some((self.data_bus, self.address_bus));
-                        let instruction = Instruction::from_code_point(self.data_bus);
-                        self.step_queue.enqueue_instruction(instruction.code_point());
-                    }
-                    NmiStatus::Ready => {
-                        info!(target: "cpuflowcontrol", "Starting NMI");
-                        self.nmi_status = NmiStatus::Active;
-                        // NMI has BRK's code point (0x00). TODO: Set the data bus to 0x00?
-                        self.next_op_code = Some((0x00, self.address_bus));
-                        self.suppress_program_counter_increment = true;
-                        self.step_queue.enqueue_nmi();
-                    }
-                    NmiStatus::Active => unreachable!(),
+                if self.nmi_status == NmiStatus::Ready {
+                    info!(target: "cpuflowcontrol", "Starting NMI");
+                    self.nmi_status = NmiStatus::Active;
+                    // NMI has BRK's code point (0x00).
+                    self.data_bus = 0x00;
+                } else if self.irq_status == IrqStatus::Ready && self.nmi_status == NmiStatus::Inactive {
+                    info!(target: "cpuflowcontrol", "Starting IRQ");
+                    self.irq_status = IrqStatus::Active;
+                    // IRQ has BRK's code point (0x00).
+                    self.data_bus = 0x00;
                 }
+
+                self.next_op_code = Some((self.data_bus, self.address_bus));
+                let instruction = Instruction::from_code_point(self.data_bus);
+                self.step_queue.enqueue_instruction(instruction.code_point());
             }
 
             InterpretOpCode => {
-                self.next_op_code = None;
+                if !self.interrupt_active() {
+                    self.next_op_code = None;
+                }
             }
             ExecuteOpCode => {
                 let value = self.previous_data_bus_value;
@@ -462,7 +454,7 @@ impl Cpu {
             }
 
             IncrementProgramCounter => {
-                if !self.suppress_program_counter_increment {
+                if !self.suppress_program_counter_increment && !self.interrupt_active() {
                     self.program_counter.inc();
                 }
             }
@@ -610,9 +602,13 @@ impl Cpu {
             ProgramCounterLowByte => self.program_counter.low_byte(),
             ProgramCounterHighByte => self.program_counter.high_byte(),
             Accumulator => self.a,
-            Status => unreachable!(),
-            StatusForInstruction => self.status.to_instruction_byte(),
-            StatusForInterrupt => self.status.to_interrupt_byte(),
+            Status => {
+                if self.interrupt_active() {
+                    self.status.to_interrupt_byte()
+                } else {
+                    self.status.to_instruction_byte()
+                }
+            }
             OpRegister => match self.current_instruction.unwrap().op_code() {
                 OpCode::STA => self.a,
                 OpCode::STX => self.x,
@@ -649,8 +645,6 @@ impl Cpu {
 
             Accumulator => self.a = self.data_bus,
             Status => self.status = status::Status::from_byte(self.data_bus),
-            StatusForInstruction => unreachable!(),
-            StatusForInterrupt => unreachable!(),
             OpRegister => panic!(),
         }
     }

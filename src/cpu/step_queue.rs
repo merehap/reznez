@@ -43,14 +43,6 @@ impl StepQueue {
         self.append(RESET_STEPS);
     }
 
-    pub fn enqueue_nmi(&mut self) {
-        self.append(NMI_STEPS);
-    }
-
-    pub fn enqueue_irq(&mut self) {
-        self.append(IRQ_STEPS);
-    }
-
     // Note: the values of the address bus might not be correct for some cycles.
     pub fn enqueue_oam_dma_transfer(&mut self, current_cycle: i64) {
         // TODO: Improve accuracy by following this: https://www.nesdev.org/wiki/DMA#OAM_DMA

@@ -238,31 +238,11 @@ pub const RESET_STEPS: &[Step] = &[
     ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector]),
 ];
 
-pub const NMI_STEPS: &[Step] = &[
-    Read(From::ProgramCounterTarget, &[]),
-    WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),
-    WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer]),
-    WriteField(StatusForInterrupt    , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
-    // Copy the new ProgramCounterLowByte to the data bus.
-    Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
-    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector]),
-];
-
-pub const IRQ_STEPS: &[Step] = &[
-    Read(From::ProgramCounterTarget, &[]),
-    WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),
-    WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer]),
-    WriteField(StatusForInterrupt    , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
-    // Copy the new ProgramCounterLowByte to the data bus.
-    Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
-    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector]),
-];
-
 pub const BRK_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter]),
     WriteField(ProgramCounterHighByte, To::TopOfStack, &[DecrementStackPointer]),
     WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer]),
-    WriteField(StatusForInstruction  , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
+    WriteField(Status                , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
     // Copy the new ProgramCounterLowByte to the data bus.
     Read(                              From::InterruptVectorLow , &[DisableInterrupts]),
     ReadField(ProgramCounterHighByte,  From::InterruptVectorHigh, &[ClearInterruptVector]),
@@ -294,7 +274,7 @@ pub const PHA_STEPS: &[Step] = &[
 ];
 pub const PHP_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, PollInterrupts]),
-    WriteField(StatusForInstruction, To::TopOfStack, &[DecrementStackPointer]),
+    WriteField(Status              , To::TopOfStack, &[DecrementStackPointer]),
 ];
 
 pub const PLA_STEPS: &[Step] = &[

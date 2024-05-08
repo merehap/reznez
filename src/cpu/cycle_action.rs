@@ -72,8 +72,6 @@ pub enum Field {
     ProgramCounterHighByte,
     Accumulator,
     Status,
-    StatusForInstruction,
-    StatusForInterrupt,
 
     OpRegister,
 }
