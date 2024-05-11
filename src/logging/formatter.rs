@@ -6,6 +6,87 @@ pub trait Formatter {
     fn format_instruction(&self, nes: &Nes, interrupt_text: String) -> String;
 }
 
+pub struct MinimalFormatter;
+
+impl Formatter for MinimalFormatter {
+    fn format_instruction(&self, nes: &Nes, _interrupt_text: String) -> String {
+        let peek = |address| nes.memory().cpu_peek(address).unwrap_or(0);
+
+        let cpu = nes.cpu();
+
+        let (op_code, start_address) = nes.cpu().next_op_code_and_address().unwrap();
+        let instruction: Instruction = INSTRUCTIONS[usize::from(op_code)];
+        let low = peek(start_address.offset(1));
+        let high = peek(start_address.offset(2));
+
+        let mut argument_string = String::new();
+        use AccessMode::*;
+        match instruction.access_mode() {
+            Imp => {}
+            Imm => {
+                argument_string.push_str(&format!("#${low:02X}"));
+            }
+            ZP => {
+                argument_string.push_str(&format!("${low:02X}"));
+            }
+            ZPX => {
+                let address = low.wrapping_add(cpu.x_index());
+                argument_string.push_str(&format!("${address:02X}"));
+            }
+            ZPY => {
+                let address = low.wrapping_add(cpu.y_index());
+                argument_string.push_str(&format!("${address:02X}"));
+            }
+            Abs => {
+                argument_string.push_str(&format!("${high:02X}{low:02X}"));
+            }
+            AbX => {
+                let start_address = CpuAddress::from_low_high(low, high);
+                let address = start_address.advance(cpu.x_index());
+                argument_string.push_str(&format!("${:04X}", address.to_raw()));
+            }
+            AbY => {
+                let start_address = CpuAddress::from_low_high(low, high);
+                let address = start_address.advance(cpu.y_index());
+                argument_string.push_str(&format!("${:04X}", address.to_raw()));
+            }
+            Rel => {
+                let address = start_address
+                    .offset(low as i8)
+                    .advance(instruction.access_mode().instruction_length());
+                argument_string.push_str(&format!("${:04X}", address.to_raw()));
+            }
+            Ind => {
+                let first = CpuAddress::from_low_high(low, high);
+                let second = CpuAddress::from_low_high(low.wrapping_add(1), high);
+                let address = CpuAddress::from_low_high(
+                    peek(first),
+                    peek(second),
+                );
+                argument_string.push_str(&format!("${:04X}", address.to_raw()));
+            }
+            IzX => {
+                let low = low.wrapping_add(cpu.x_index());
+                let address = CpuAddress::from_low_high(
+                    peek(CpuAddress::zero_page(low)),
+                    peek(CpuAddress::zero_page(low.wrapping_add(1))),
+                );
+                argument_string.push_str(&format!("${:04X}", address.to_raw()));
+            }
+            IzY => {
+                let start_address = CpuAddress::from_low_high(
+                    peek(CpuAddress::zero_page(low)),
+                    peek(CpuAddress::zero_page(low.wrapping_add(1))),
+                );
+                let address = start_address.advance(cpu.y_index());
+                argument_string.push_str(&format!("${:04X}", address.to_raw()));
+            }
+        };
+
+        format!("{:?} {}", instruction.op_code(), argument_string)
+    }
+}
+
 pub struct Nintendulator0980Formatter;
 
 impl Formatter for Nintendulator0980Formatter {

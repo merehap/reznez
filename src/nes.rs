@@ -5,10 +5,11 @@ use log::Level::Info;
 use log::{info, log_enabled};
 
 use crate::apu::apu::Apu;
+use crate::apu::apu_registers::ApuRegisters;
 use crate::cartridge::cartridge::Cartridge;
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
-use crate::cpu::cpu::Cpu;
+use crate::cpu::cpu::{Cpu, NmiStatus, IrqStatus};
 use crate::cpu::step::Step;
 use crate::gui::gui::Events;
 use crate::logging::formatter;
@@ -16,6 +17,7 @@ use crate::logging::formatter::*;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::mapper_list;
 use crate::memory::memory::Memory;
+use crate::ppu::clock::Clock;
 use crate::ppu::ppu;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::render::frame::Frame;
@@ -33,6 +35,8 @@ pub struct Nes {
     cycle: u64,
 
     log_formatter: Box<dyn Formatter>,
+    minimal_formatter: MinimalFormatter,
+    snapshots: Snapshots,
 }
 
 impl Nes {
@@ -61,6 +65,8 @@ impl Nes {
             cycle: 0,
 
             log_formatter: Box::new(MesenFormatter),
+            minimal_formatter: MinimalFormatter,
+            snapshots: Snapshots::new(),
         }
     }
 
@@ -117,6 +123,9 @@ impl Nes {
                     info!("CPU is jammed!");
                 }
 
+                println!("{}", self.snapshots.format());
+                println!();
+
                 break;
             }
         }
@@ -127,19 +136,25 @@ impl Nes {
         let ppu_result;
         match self.cycle % 6 {
             0 => {
-                self.apu.step(self.memory.apu_regs_mut());
+                self.apu_step();
                 step = self.cpu_step();
                 ppu_result = self.ppu_step();
             }
             1 => ppu_result = self.ppu_step(),
-            2 => ppu_result = self.ppu_step(),
+            2 => {
+                ppu_result = self.ppu_step();
+                self.snapshots.start_next();
+            }
             3 => {
-                self.apu.step(self.memory.apu_regs_mut());
+                self.apu_step();
                 step = self.cpu_step();
                 ppu_result = self.ppu_step();
             }
             4 => ppu_result = self.ppu_step(),
-            5 => ppu_result = self.ppu_step(),
+            5 => {
+                ppu_result = self.ppu_step();
+                self.snapshots.start_next();
+            }
             _ => unreachable!(),
         }
 
@@ -152,7 +167,14 @@ impl Nes {
         }
     }
 
+    fn apu_step(&mut self) {
+        self.snapshots.current().apu_regs(&self.memory.apu_regs());
+        self.apu.step(self.memory.apu_regs_mut());
+    }
+
     fn cpu_step(&mut self) -> Option<Step> {
+        self.snapshots.current().cpu_cycle(self.memory.cpu_cycle());
+
         let irq_pending =
             self.memory.apu_regs().frame_irq_pending()
             || self.memory.apu_regs().dmc_irq_pending()
@@ -167,10 +189,20 @@ impl Nes {
             info!("{}", self.log_formatter.format_instruction(self, interrupt_text));
         }
 
+        if self.cpu.next_instruction_starting() {
+            let formatted_instruction = self.minimal_formatter.format_instruction(self, "".into());
+            self.snapshots.current().instruction(formatted_instruction);
+        }
+
+        self.snapshots.current().irq_status(self.cpu.irq_status());
+        self.snapshots.current().nmi_status(self.cpu.nmi_status());
+
         step
     }
 
     fn ppu_step(&mut self) -> ppu::StepResult {
+        self.snapshots.current().add_ppu_position(self.ppu.clock());
+
         let ppu_result = self
             .ppu
             .step(&mut self.memory.as_ppu_memory(), &mut self.frame);
@@ -194,6 +226,151 @@ impl Nes {
             self.joypad2
                 .borrow_mut()
                 .set_button_status(*button, *status);
+        }
+    }
+}
+
+struct Snapshots {
+    snapshots: Vec<Snapshot>,
+    builder: SnapshotBuilder,
+}
+
+impl Snapshots {
+    fn new() -> Snapshots {
+        Snapshots {
+            snapshots: Vec::new(),
+            builder: SnapshotBuilder::new(),
+        }
+    }
+
+    fn current(&mut self) -> &mut SnapshotBuilder {
+        &mut self.builder
+    }
+
+    fn start_next(&mut self) {
+        let snapshot = std::mem::take(&mut self.builder).build();
+        self.snapshots.push(snapshot);
+    }
+
+    fn format(&self) -> String {
+        let mut cpu_cycle  = "CPU Cycle ".to_string();
+        let mut apu_cycle  = "APU Cycle ".to_string();
+        let mut apu_parity = "Parity    ".to_string();
+        let mut instr      = "CPU       ".to_string();
+        let mut nmi_status = "NMI Status".to_string();
+        let mut irq_status = "IRQ Status".to_string();
+        let mut frame_irq  = "FRM       ".to_string();
+        let mut ppu_vpos   = "PPU VPOS  ".to_string();
+        let mut ppu_hpos   = "PPU HPOS  ".to_string();
+        let mut indexes = vec![0];
+        indexes.append(&mut (self.snapshots.len() - 10..self.snapshots.len() - 1).collect());
+        for index in indexes {
+            let snapshot = &self.snapshots[index];
+            cpu_cycle.push_str(&Snapshots::center(snapshot.cpu_cycle.to_string()));
+            apu_cycle.push_str(&Snapshots::center(snapshot.apu_cycle.to_string()));
+            apu_parity.push_str(&Snapshots::center(snapshot.apu_parity.clone()));
+
+            for (vpos, hpos) in snapshot.ppu_pos {
+                ppu_vpos.push_str(&format!("[{:03}]", vpos));
+                ppu_hpos.push_str(&format!("[{:03}]", hpos));
+            }
+
+            instr.push_str(&Snapshots::center(snapshot.instruction.clone()));
+            if snapshot.nmi_status != NmiStatus::Inactive {
+                nmi_status.push_str(&Snapshots::center(format!("{:?}", snapshot.nmi_status)));
+            }
+
+            if snapshot.irq_status != IrqStatus::Inactive {
+                irq_status.push_str(&Snapshots::center(format!("{:?}", snapshot.irq_status)));
+            }
+
+            if snapshot.frame_irq {
+                frame_irq.push_str(&Snapshots::center("Raise IRQ".to_string()));
+            }
+        }
+
+        vec![cpu_cycle, apu_cycle, apu_parity, ppu_vpos, ppu_hpos, instr, nmi_status, irq_status, frame_irq].join("\n")
+    }
+
+    fn center(text: String) -> String {
+       let back = (13 - text.len()) / 2;
+       let front = 13 - text.len() - back;
+
+       let mut result = "[".to_string();
+       result.push_str(&String::from_utf8(vec![b' '; front]).unwrap());
+       result.push_str(&text);
+       result.push_str(&String::from_utf8(vec![b' '; back]).unwrap());
+       result.push_str("]");
+       result
+    }
+}
+
+struct Snapshot {
+    cpu_cycle: i64,
+    apu_cycle: u16,
+    apu_parity: String,
+    instruction: String,
+    frame_irq: bool,
+    irq_status: IrqStatus,
+    nmi_status: NmiStatus,
+    ppu_pos: [(u16, u16); 3],
+}
+
+#[derive(Default)]
+struct SnapshotBuilder {
+    cpu_cycle: Option<i64>,
+    apu_cycle: Option<u16>,
+    apu_parity: Option<String>,
+    instruction: String,
+    frame_irq: Option<bool>,
+    irq_status: Option<IrqStatus>,
+    nmi_status: Option<NmiStatus>,
+    ppu_pos: Vec<(u16, u16)>,
+}
+
+impl SnapshotBuilder {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    fn cpu_cycle(&mut self, value: i64) {
+        self.cpu_cycle = Some(value);
+    }
+
+    fn apu_regs(&mut self, regs: &ApuRegisters) {
+        self.frame_irq = Some(regs.frame_irq_pending());
+        let clock = regs.clock();
+        self.apu_cycle = Some(clock.cycle());
+        let on_or_off = if clock.is_off_cycle() { "OFF" } else { "ON" };
+        self.apu_parity = Some(on_or_off.to_string());
+    }
+
+    fn add_ppu_position(&mut self, clock: &Clock) {
+        self.ppu_pos.push((clock.scanline(), clock.cycle()));
+    }
+
+    fn instruction(&mut self, value: String) {
+        self.instruction = value;
+    }
+
+    fn irq_status(&mut self, irq_status: IrqStatus) {
+        self.irq_status = Some(irq_status);
+    }
+
+    fn nmi_status(&mut self, nmi_status: NmiStatus) {
+        self.nmi_status = Some(nmi_status);
+    }
+
+    fn build(self) -> Snapshot {
+        Snapshot {
+            cpu_cycle: self.cpu_cycle.unwrap(),
+            apu_cycle: self.apu_cycle.unwrap(),
+            apu_parity: self.apu_parity.unwrap(),
+            frame_irq: self.frame_irq.unwrap(),
+            irq_status: self.irq_status.unwrap(),
+            nmi_status: self.nmi_status.unwrap(),
+            ppu_pos: self.ppu_pos.try_into().unwrap(),
+            instruction: self.instruction,
         }
     }
 }

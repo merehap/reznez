@@ -58,7 +58,7 @@ impl ApuRegisters {
         self.clock.step_mode
     }
 
-    pub fn clock(&self) -> ApuClock{
+    pub fn clock(&self) -> ApuClock {
         self.clock
     }
 

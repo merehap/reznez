@@ -142,6 +142,14 @@ impl Cpu {
         self.oam_dma_port.page_present()
     }
 
+    pub fn nmi_status(&self) -> NmiStatus {
+        self.nmi_status
+    }
+
+    pub fn irq_status(&self) -> IrqStatus {
+        self.irq_status
+    }
+
     pub fn nmi_pending(&self) -> bool {
         self.nmi_status == NmiStatus::Pending
     }
@@ -737,23 +745,25 @@ fn is_neg(value: u8) -> bool {
     (value >> 7) == 1
 }
 
-#[derive(PartialEq, Eq, Debug)]
-enum NmiStatus {
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]
+pub enum NmiStatus {
+    #[default]
     Inactive,
     Pending,
     Ready,
     Active,
 }
 
-#[derive(PartialEq, Eq, Debug)]
-enum IrqStatus {
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]
+pub enum IrqStatus {
+    #[default]
     Inactive,
     Ready,
     Active,
 }
 
 #[derive(PartialEq, Eq, Debug)]
-enum ResetStatus {
+pub enum ResetStatus {
     Inactive,
     Ready,
     Active,
