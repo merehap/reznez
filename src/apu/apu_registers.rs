@@ -231,7 +231,7 @@ impl ApuRegisters {
         }
 
         let cycle = self.clock.cycle();
-        let is_non_skip_first_cycle = cycle == 0 && self.clock.raw_cycle() != 0 && self.clock.is_off_cycle();
+        let is_non_skip_first_cycle = cycle == 0 && !self.clock.is_forced_reset_cycle();
         let is_last_cycle = cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1 || cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 2;
         let is_irq_cycle = is_non_skip_first_cycle || is_last_cycle;
 
@@ -327,6 +327,10 @@ impl ApuClock {
     pub fn raw_cycle(self) -> u64 {
         // FIXME: Remove the "/ 2" and fix this on the caller's side.
         self.cycle / 2
+    }
+
+    pub fn is_forced_reset_cycle(&self) -> bool {
+        self.cycle == 0
     }
 }
 
