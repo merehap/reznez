@@ -1,11 +1,12 @@
 use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::rc::Rc;
 
 use log::Level::Info;
 use log::{info, log_enabled};
 
 use crate::apu::apu::Apu;
-use crate::apu::apu_registers::ApuRegisters;
+use crate::apu::apu_registers::{ApuRegisters, FrameCounterWriteStatus};
 use crate::cartridge::cartridge::Cartridge;
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
@@ -123,9 +124,6 @@ impl Nes {
                     info!("CPU is jammed!");
                 }
 
-                println!("{}", self.snapshots.format());
-                println!();
-
                 break;
             }
         }
@@ -170,10 +168,11 @@ impl Nes {
     fn apu_step(&mut self) {
         self.snapshots.current().apu_regs(&self.memory.apu_regs());
         self.apu.step(self.memory.apu_regs_mut());
+        self.snapshots.current().frame_irq(&self.memory.apu_regs(), &self.cpu);
     }
 
     fn cpu_step(&mut self) -> Option<Step> {
-        self.snapshots.current().cpu_cycle(self.memory.cpu_cycle());
+        let cycle = self.memory.cpu_cycle();
 
         let irq_pending =
             self.memory.apu_regs().frame_irq_pending()
@@ -189,13 +188,17 @@ impl Nes {
             info!("{}", self.log_formatter.format_instruction(self, interrupt_text));
         }
 
+        if self.memory.apu_regs().frame_counter_write_status() == FrameCounterWriteStatus::Initialized {
+            self.snapshots.start();
+        }
+
+        self.snapshots.current().cpu_cycle(cycle);
+        self.snapshots.current().irq_status(self.cpu.irq_status());
+        self.snapshots.current().nmi_status(self.cpu.nmi_status());
         if self.cpu.next_instruction_starting() {
             let formatted_instruction = self.minimal_formatter.format_instruction(self, "".into());
             self.snapshots.current().instruction(formatted_instruction);
         }
-
-        self.snapshots.current().irq_status(self.cpu.irq_status());
-        self.snapshots.current().nmi_status(self.cpu.nmi_status());
 
         step
     }
@@ -231,16 +234,33 @@ impl Nes {
 }
 
 struct Snapshots {
+    active: bool,
     snapshots: Vec<Snapshot>,
     builder: SnapshotBuilder,
+    max_count: usize,
 }
 
 impl Snapshots {
     fn new() -> Snapshots {
         Snapshots {
+            active: false,
             snapshots: Vec::new(),
             builder: SnapshotBuilder::new(),
+            max_count: 29832 + 6,
         }
+    }
+
+    fn start(&mut self) {
+        self.active = true;
+    }
+
+    fn clear(&mut self) {
+        self.snapshots = Vec::new();
+        self.builder = SnapshotBuilder::new();
+    }
+
+    fn count(&self) -> usize {
+        self.snapshots.len()
     }
 
     fn current(&mut self) -> &mut SnapshotBuilder {
@@ -248,61 +268,102 @@ impl Snapshots {
     }
 
     fn start_next(&mut self) {
+        if !self.active {
+            return;
+        }
+
         let snapshot = std::mem::take(&mut self.builder).build();
         self.snapshots.push(snapshot);
+
+        if self.count() >= self.max_count {
+            self.active = false;
+            //println!("{}", self.format());
+            //println!();
+            self.clear();
+            return;
+        }
     }
 
     fn format(&self) -> String {
-        let mut cpu_cycle  = "CPU Cycle ".to_string();
-        let mut apu_cycle  = "APU Cycle ".to_string();
-        let mut apu_parity = "Parity    ".to_string();
-        let mut instr      = "CPU       ".to_string();
-        let mut nmi_status = "NMI Status".to_string();
-        let mut irq_status = "IRQ Status".to_string();
-        let mut frame_irq  = "FRM       ".to_string();
-        let mut ppu_vpos   = "PPU VPOS  ".to_string();
-        let mut ppu_hpos   = "PPU HPOS  ".to_string();
-        let mut indexes = vec![0];
-        indexes.append(&mut (self.snapshots.len() - 10..self.snapshots.len() - 1).collect());
-        for index in indexes {
-            let snapshot = &self.snapshots[index];
-            cpu_cycle.push_str(&Snapshots::center(snapshot.cpu_cycle.to_string()));
-            apu_cycle.push_str(&Snapshots::center(snapshot.apu_cycle.to_string()));
-            apu_parity.push_str(&Snapshots::center(snapshot.apu_parity.clone()));
+        let mut cpu_cycle   = "CPU Cycle   ".to_string();
+        let mut apu_cycle   = "APU Cycle   ".to_string();
+        let mut cycle_count = "Cycle Offset".to_string();
+        let mut apu_parity  = "Parity      ".to_string();
+        let mut instr       = "CPU         ".to_string();
+        let mut fcw_status  = "FRM Count   ".to_string();
+        let mut nmi_status  = "NMI Status  ".to_string();
+        let mut irq_status  = "IRQ Status  ".to_string();
+        let mut frame_irq   = "FRM         ".to_string();
+        let mut ppu_vpos    = "PPU VPOS    ".to_string();
+        let mut ppu_hpos    = "PPU HPOS    ".to_string();
 
-            for (vpos, hpos) in snapshot.ppu_pos {
-                ppu_vpos.push_str(&format!("[{:03}]", vpos));
-                ppu_hpos.push_str(&format!("[{:03}]", hpos));
+        let mut append_cycle = |index, skip| {
+            let snapshot: &Snapshot = &self.snapshots[index];
+            append(&mut cpu_cycle, &center(snapshot.cpu_cycle.to_string()), true, skip);
+            append(&mut apu_cycle, &center(snapshot.apu_cycle.to_string()), true, skip);
+            append(&mut cycle_count, &center((snapshot.cpu_cycle - self.snapshots[0].cpu_cycle).to_string()), true, skip);
+            append(&mut apu_parity, &center(snapshot.apu_parity.clone()), true, skip);
+
+            let mut vpos = String::new();
+            let mut hpos = String::new();
+            for (v, h) in snapshot.ppu_pos {
+                vpos.push_str(&center_n(3, v.to_string()));
+                hpos.push_str(&center_n(3, h.to_string()));
             }
 
-            instr.push_str(&Snapshots::center(snapshot.instruction.clone()));
-            if snapshot.nmi_status != NmiStatus::Inactive {
-                nmi_status.push_str(&Snapshots::center(format!("{:?}", snapshot.nmi_status)));
-            }
+            append(&mut ppu_vpos, &vpos, true, skip);
+            append(&mut ppu_hpos, &hpos, true, skip);
 
-            if snapshot.irq_status != IrqStatus::Inactive {
-                irq_status.push_str(&Snapshots::center(format!("{:?}", snapshot.irq_status)));
-            }
+            append(&mut instr, &center(format!("{}", snapshot.instruction.clone())), true, skip);
+            append(&mut fcw_status, &center(format!("{:?}", snapshot.frame_counter_write_status)),
+                snapshot.frame_counter_write_status != FrameCounterWriteStatus::Inactive, skip);
+            append(&mut nmi_status, &center(format!("{:?}", snapshot.nmi_status)), snapshot.nmi_status != NmiStatus::Inactive, skip);
+            append(&mut irq_status, &center(format!("{:?}", snapshot.irq_status)), snapshot.irq_status != IrqStatus::Inactive, skip);
+            append(&mut frame_irq, &center("Raise IRQ".to_string()), snapshot.frame_irq, skip);
+        };
 
-            if snapshot.frame_irq {
-                frame_irq.push_str(&Snapshots::center("Raise IRQ".to_string()));
-            }
+        append_cycle(0, false);
+        append_cycle(1, true);
+
+        let len = self.snapshots.len();
+        for index in len - 10..len {
+            append_cycle(index, false);
         }
 
-        vec![cpu_cycle, apu_cycle, apu_parity, ppu_vpos, ppu_hpos, instr, nmi_status, irq_status, frame_irq].join("\n")
+        vec![/*cpu_cycle, apu_cycle, */cycle_count, apu_parity, instr,
+             nmi_status, irq_status, frame_irq, /*fcw_status, */ppu_vpos, ppu_hpos].join("\n")
     }
+}
 
-    fn center(text: String) -> String {
-       let back = (13 - text.len()) / 2;
-       let front = 13 - text.len() - back;
+fn append(field: &mut String, value: &str, active: bool, skip: bool) {
+    let result = if skip {
+        "........"
+    } else if active {
+        value
+    } else {
+        "               "
+    };
 
-       let mut result = "[".to_string();
-       result.push_str(&String::from_utf8(vec![b' '; front]).unwrap());
-       result.push_str(&text);
-       result.push_str(&String::from_utf8(vec![b' '; back]).unwrap());
-       result.push_str("]");
-       result
-    }
+    field.push_str(result);
+}
+
+fn center(text: String) -> String {
+    center_n(13, text)
+}
+
+fn center_n(n: usize, text: String) -> String {
+    assert!(n >= 2);
+
+    let text: String = text.chars().take(n).collect();
+    let back = (n - text.len()) / 2;
+    let front = n - text.len() - back;
+
+    let mut result = "[".to_string();
+    result.push_str(&String::from_utf8(vec![b' '; front]).unwrap());
+    result.push_str(&text);
+    result.push_str(&String::from_utf8(vec![b' '; back]).unwrap());
+    result.push_str("]");
+    result
 }
 
 struct Snapshot {
@@ -310,6 +371,7 @@ struct Snapshot {
     apu_cycle: u16,
     apu_parity: String,
     instruction: String,
+    frame_counter_write_status: FrameCounterWriteStatus,
     frame_irq: bool,
     irq_status: IrqStatus,
     nmi_status: NmiStatus,
@@ -322,10 +384,11 @@ struct SnapshotBuilder {
     apu_cycle: Option<u16>,
     apu_parity: Option<String>,
     instruction: String,
+    frame_counter_write_status: Option<FrameCounterWriteStatus>,
     frame_irq: Option<bool>,
     irq_status: Option<IrqStatus>,
     nmi_status: Option<NmiStatus>,
-    ppu_pos: Vec<(u16, u16)>,
+    ppu_pos: VecDeque<(u16, u16)>,
 }
 
 impl SnapshotBuilder {
@@ -338,15 +401,24 @@ impl SnapshotBuilder {
     }
 
     fn apu_regs(&mut self, regs: &ApuRegisters) {
-        self.frame_irq = Some(regs.frame_irq_pending());
         let clock = regs.clock();
         self.apu_cycle = Some(clock.cycle());
         let on_or_off = if clock.is_off_cycle() { "OFF" } else { "ON" };
         self.apu_parity = Some(on_or_off.to_string());
+        self.frame_counter_write_status = Some(regs.frame_counter_write_status());
+    }
+
+    fn frame_irq(&mut self, regs: &ApuRegisters, cpu: &Cpu) {
+        self.frame_irq = Some(regs.frame_irq_pending() && !cpu.status().interrupts_disabled);
     }
 
     fn add_ppu_position(&mut self, clock: &Clock) {
-        self.ppu_pos.push((clock.scanline(), clock.cycle()));
+        assert!(self.ppu_pos.len() < 4);
+        if self.ppu_pos.len() == 3 {
+            self.ppu_pos.pop_front();
+        }
+
+        self.ppu_pos.push_back((clock.scanline(), clock.cycle()));
     }
 
     fn instruction(&mut self, value: String) {
@@ -362,15 +434,17 @@ impl SnapshotBuilder {
     }
 
     fn build(self) -> Snapshot {
+        assert_eq!(self.ppu_pos.len(), 3);
         Snapshot {
             cpu_cycle: self.cpu_cycle.unwrap(),
             apu_cycle: self.apu_cycle.unwrap(),
             apu_parity: self.apu_parity.unwrap(),
+            instruction: self.instruction,
+            frame_counter_write_status: self.frame_counter_write_status.unwrap(),
             frame_irq: self.frame_irq.unwrap(),
             irq_status: self.irq_status.unwrap(),
             nmi_status: self.nmi_status.unwrap(),
-            ppu_pos: self.ppu_pos.try_into().unwrap(),
-            instruction: self.instruction,
+            ppu_pos: [self.ppu_pos[0], self.ppu_pos[1], self.ppu_pos[2]],
         }
     }
 }

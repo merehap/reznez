@@ -48,6 +48,7 @@ impl ApuRegisters {
 
     pub fn reset(&mut self) {
         // At reset, $4015 should be cleared
+        // FIXME: Just write out the actual field writes.
         self.write_status_byte(0b0000_0000);
         // At reset, $4017 should should be rewritten with last value written
         self.frame_counter_write_status = FrameCounterWriteStatus::Initialized;
@@ -56,6 +57,10 @@ impl ApuRegisters {
 
     pub fn step_mode(&self) -> StepMode {
         self.clock.step_mode
+    }
+
+    pub fn frame_counter_write_status(&self) -> FrameCounterWriteStatus {
+        self.frame_counter_write_status
     }
 
     pub fn clock(&self) -> ApuClock {
@@ -335,8 +340,8 @@ impl ApuClock {
 }
 
 
-#[derive(PartialEq, Eq, Debug)]
-enum FrameCounterWriteStatus {
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum FrameCounterWriteStatus {
     Inactive,
     Initialized,
     WaitingForOnCycle,
