@@ -166,9 +166,15 @@ impl Nes {
     }
 
     fn apu_step(&mut self) {
-        self.snapshots.current().apu_regs(&self.memory.apu_regs());
+        if log_enabled!(target: "timings", Info) {
+            self.snapshots.current().apu_regs(&self.memory.apu_regs());
+        }
+
         self.apu.step(self.memory.apu_regs_mut());
-        self.snapshots.current().frame_irq(&self.memory.apu_regs(), &self.cpu);
+
+        if log_enabled!(target: "timings", Info) {
+            self.snapshots.current().frame_irq(&self.memory.apu_regs(), &self.cpu);
+        }
     }
 
     fn cpu_step(&mut self) -> Option<Step> {
@@ -188,23 +194,27 @@ impl Nes {
             info!("{}", self.log_formatter.format_instruction(self, interrupt_text));
         }
 
-        if self.memory.apu_regs().frame_counter_write_status() == FrameCounterWriteStatus::Initialized {
-            self.snapshots.start();
-        }
+        if log_enabled!(target: "timings", Info) {
+            if self.memory.apu_regs().frame_counter_write_status() == FrameCounterWriteStatus::Initialized {
+                self.snapshots.start();
+            }
 
-        self.snapshots.current().cpu_cycle(cycle);
-        self.snapshots.current().irq_status(self.cpu.irq_status());
-        self.snapshots.current().nmi_status(self.cpu.nmi_status());
-        if self.cpu.next_instruction_starting() {
-            let formatted_instruction = self.minimal_formatter.format_instruction(self, "".into());
-            self.snapshots.current().instruction(formatted_instruction);
+            self.snapshots.current().cpu_cycle(cycle);
+            self.snapshots.current().irq_status(self.cpu.irq_status());
+            self.snapshots.current().nmi_status(self.cpu.nmi_status());
+            if self.cpu.next_instruction_starting() {
+                let formatted_instruction = self.minimal_formatter.format_instruction(self, "".into());
+                self.snapshots.current().instruction(formatted_instruction);
+            }
         }
 
         step
     }
 
     fn ppu_step(&mut self) -> ppu::StepResult {
-        self.snapshots.current().add_ppu_position(self.ppu.clock());
+        if log_enabled!(target: "timings", Info) {
+            self.snapshots.current().add_ppu_position(self.ppu.clock());
+        }
 
         let ppu_result = self
             .ppu
@@ -277,8 +287,8 @@ impl Snapshots {
 
         if self.count() >= self.max_count {
             self.active = false;
-            //println!("{}", self.format());
-            //println!();
+            info!("{}", self.format());
+            info!("");
             self.clear();
             return;
         }

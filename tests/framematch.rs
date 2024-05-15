@@ -74,6 +74,7 @@ fn framematch() {
             log_oam_addr: false,
             log_apu_cycles: false,
             log_apu_events: false,
+            log_timings: false,
             frame_dump: false,
             analysis: false,
             disable_controllers: false,

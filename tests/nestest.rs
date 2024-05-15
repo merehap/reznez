@@ -43,6 +43,7 @@ fn nestest() {
         log_apu_cycles: false,
         log_apu_events: false,
         log_oam_addr: false,
+        log_timings: false,
         frame_dump: false,
         analysis: false,
         disable_controllers: false,
@@ -59,6 +60,7 @@ fn nestest() {
         log_apu_cycles: false,
         log_apu_events: false,
         log_oam_addr: false,
+        log_timings: false,
     }).unwrap();
 
     let mut config = Config::new(&opt);

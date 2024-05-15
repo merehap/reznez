@@ -16,6 +16,7 @@ pub struct Logger {
     pub log_apu_cycles: bool,
     pub log_apu_events: bool,
     pub log_oam_addr: bool,
+    pub log_timings: bool,
 }
 
 impl log::Log for Logger {
@@ -32,6 +33,7 @@ impl log::Log for Logger {
             "apucycles" => self.log_apu_cycles,
             "apuevents" => self.log_apu_events,
             "oamaddr" => self.log_oam_addr,
+            "timings" => self.log_timings,
             target => {
                 let chunks: Vec<&str> = target.split("::").collect();
                 match chunks[..] {

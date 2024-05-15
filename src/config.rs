@@ -127,6 +127,9 @@ pub struct Opt {
     #[structopt(name = "logoamaddr", long)]
     pub log_oam_addr: bool,
 
+    #[structopt(name = "logtimings", long)]
+    pub log_timings: bool,
+
     #[structopt(name = "framedump", long)]
     pub frame_dump: bool,
 
