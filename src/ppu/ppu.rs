@@ -67,9 +67,11 @@ impl Ppu {
         &self.clock
     }
 
-    pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) -> StepResult {
-        let is_last_cycle_of_frame = self.clock.tick(mem.regs().rendering_enabled());
+    pub fn clock_mut(&mut self) -> &mut Clock {
+        &mut self.clock
+    }
 
+    pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) -> bool {
         mem.regs_mut().maybe_apply_status_read(&self.clock);
         mem.regs_mut().maybe_toggle_rendering_enabled();
         mem.regs_mut().maybe_decay_ppu_io_bus(&self.clock);
@@ -86,7 +88,7 @@ impl Ppu {
         mem.regs_mut().nmi_requested = false;
 
         mem.process_end_of_ppu_cycle();
-        StepResult { is_last_cycle_of_frame, should_generate_nmi }
+        should_generate_nmi
     }
 
     pub fn execute_cycle_action(
@@ -438,9 +440,4 @@ impl Ppu {
 
         (address, visible)
     }
-}
-
-pub struct StepResult {
-    pub is_last_cycle_of_frame: bool,
-    pub should_generate_nmi: bool,
 }

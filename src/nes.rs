@@ -19,7 +19,6 @@ use crate::memory::cpu::ports::Ports;
 use crate::memory::mapper_list;
 use crate::memory::memory::Memory;
 use crate::ppu::clock::Clock;
-use crate::ppu::ppu;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::render::frame::Frame;
 
@@ -131,26 +130,26 @@ impl Nes {
 
     pub fn step(&mut self) -> StepResult {
         let mut step = None;
-        let ppu_result;
+        let is_last_cycle_of_frame;
         match self.cycle % 6 {
             0 => {
                 self.apu_step();
                 step = self.cpu_step();
-                ppu_result = self.ppu_step();
+                is_last_cycle_of_frame = self.ppu_step();
             }
-            1 => ppu_result = self.ppu_step(),
+            1 => is_last_cycle_of_frame = self.ppu_step(),
             2 => {
-                ppu_result = self.ppu_step();
+                is_last_cycle_of_frame = self.ppu_step();
                 self.snapshots.start_next();
             }
             3 => {
                 self.apu_step();
                 step = self.cpu_step();
-                ppu_result = self.ppu_step();
+                is_last_cycle_of_frame = self.ppu_step();
             }
-            4 => ppu_result = self.ppu_step(),
+            4 => is_last_cycle_of_frame = self.ppu_step(),
             5 => {
-                ppu_result = self.ppu_step();
+                is_last_cycle_of_frame = self.ppu_step();
                 self.snapshots.start_next();
             }
             _ => unreachable!(),
@@ -160,8 +159,7 @@ impl Nes {
 
         StepResult {
             step,
-            is_last_cycle_of_frame: ppu_result.is_last_cycle_of_frame,
-            nmi_scheduled: ppu_result.should_generate_nmi,
+            is_last_cycle_of_frame,
         }
     }
 
@@ -175,10 +173,12 @@ impl Nes {
         if log_enabled!(target: "timings", Info) {
             self.snapshots.current().frame_irq(&self.memory.apu_regs(), &self.cpu);
         }
+
+        self.memory.apu_regs_mut().clock_mut().increment();
     }
 
     fn cpu_step(&mut self) -> Option<Step> {
-        let cycle = self.memory.cpu_cycle();
+        self.memory.as_cpu_memory().increment_cpu_cycle();
 
         let irq_pending =
             self.memory.apu_regs().frame_irq_pending()
@@ -199,7 +199,7 @@ impl Nes {
                 self.snapshots.start();
             }
 
-            self.snapshots.current().cpu_cycle(cycle);
+            self.snapshots.current().cpu_cycle(self.memory.cpu_cycle());
             self.snapshots.current().irq_status(self.cpu.irq_status());
             self.snapshots.current().nmi_status(self.cpu.nmi_status());
             if self.cpu.next_instruction_starting() {
@@ -211,19 +211,20 @@ impl Nes {
         step
     }
 
-    fn ppu_step(&mut self) -> ppu::StepResult {
+    fn ppu_step(&mut self) -> bool {
+        let is_last_cycle_of_frame = self.ppu.clock_mut().tick(self.memory.ppu_regs().rendering_enabled());
         if log_enabled!(target: "timings", Info) {
             self.snapshots.current().add_ppu_position(self.ppu.clock());
         }
 
-        let ppu_result = self
+        let should_generate_nmi = self
             .ppu
             .step(&mut self.memory.as_ppu_memory(), &mut self.frame);
-        if ppu_result.should_generate_nmi {
+        if should_generate_nmi {
             self.cpu.schedule_nmi();
         }
 
-        ppu_result
+        is_last_cycle_of_frame
     }
 
     #[inline]
@@ -462,5 +463,4 @@ impl SnapshotBuilder {
 pub struct StepResult {
     pub step: Option<Step>,
     pub is_last_cycle_of_frame: bool,
-    pub nmi_scheduled: bool,
 }

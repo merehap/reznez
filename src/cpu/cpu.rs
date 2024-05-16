@@ -185,8 +185,6 @@ impl Cpu {
             return None;
         }
 
-        memory.increment_cpu_cycle();
-
         if self.step_queue.is_empty() {
             // Get ready to start the next instruction.
             self.step_queue.enqueue_op_code_read();
