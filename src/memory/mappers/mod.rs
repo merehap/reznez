@@ -30,6 +30,7 @@ pub mod mapper016_5;
 
 pub mod mapper018;
 
+// Mapper 20 is not a real mapper. It's reserved for when the emulator is running an FDS image.
 pub mod mapper021_1;
 pub mod mapper021_2;
 pub mod mapper022;
