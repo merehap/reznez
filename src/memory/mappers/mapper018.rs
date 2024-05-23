@@ -157,5 +157,5 @@ impl Mapper018 {
 }
 
 fn set_bits(value: &mut u16, new_bits: u16, mask: u16) {
-    *value = (*value & !mask) | (new_bits & mask)
+    *value = (*value & !mask) | (new_bits & mask);
 }

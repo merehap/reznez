@@ -171,8 +171,7 @@ impl PrgMemory {
                     }
                     Bank::Ram(Location::Fixed(bank_index), status_register_id) => {
                         let ram_status: RamStatus = status_register_id
-                            .map(|id| registers.ram_status(id))
-                            .unwrap_or(RamStatus::ReadWrite);
+                            .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
 
                         // TODO: Consolidate Fixed and Switchable logic.
                         let mut raw_bank_index = bank_index.to_usize(self.bank_count());
@@ -193,8 +192,7 @@ impl PrgMemory {
                     }
                     Bank::Ram(Location::Switchable(register_id), status_register_id) => {
                         let ram_status: RamStatus = status_register_id
-                            .map(|id| registers.ram_status(id))
-                            .unwrap_or(RamStatus::ReadWrite);
+                            .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
 
                         let mut raw_bank_index = registers.get(register_id)
                             .to_usize(self.bank_count());
@@ -208,8 +206,7 @@ impl PrgMemory {
                     Bank::Ram(_, _) => todo!("Meta registers"),
                     Bank::WorkRam(status_register_id) => {
                         let ram_status: RamStatus = status_register_id
-                            .map(|id| registers.ram_status(id))
-                            .unwrap_or(RamStatus::ReadWrite);
+                            .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
 
                         let mut index = usize::from(bank_offset);
                         let mut result = None;

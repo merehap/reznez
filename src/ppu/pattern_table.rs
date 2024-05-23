@@ -1,3 +1,6 @@
+// modular_bitfield pedantic clippy warnings
+#![allow(clippy::cast_lossless, clippy::no_effect_underscore_binding, clippy::map_unwrap_or)]
+
 use enum_iterator::IntoEnumIterator;
 use modular_bitfield::BitfieldSpecifier;
 

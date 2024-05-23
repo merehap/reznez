@@ -203,7 +203,7 @@ impl Nes {
             self.snapshots.current().irq_status(self.cpu.irq_status());
             self.snapshots.current().nmi_status(self.cpu.nmi_status());
             if self.cpu.next_instruction_starting() {
-                let formatted_instruction = self.minimal_formatter.format_instruction(self, "".into());
+                let formatted_instruction = self.minimal_formatter.format_instruction(self, String::new());
                 self.snapshots.current().instruction(formatted_instruction);
             }
         }
@@ -310,27 +310,27 @@ impl Snapshots {
 
         let mut append_cycle = |index, skip| {
             let snapshot: &Snapshot = &self.snapshots[index];
-            append(&mut cpu_cycle, &center(snapshot.cpu_cycle.to_string()), true, skip);
-            append(&mut apu_cycle, &center(snapshot.apu_cycle.to_string()), true, skip);
-            append(&mut cycle_count, &center((snapshot.cpu_cycle - self.snapshots[0].cpu_cycle).to_string()), true, skip);
-            append(&mut apu_parity, &center(snapshot.apu_parity.clone()), true, skip);
+            append(&mut cpu_cycle, &center(&snapshot.cpu_cycle.to_string()), true, skip);
+            append(&mut apu_cycle, &center(&snapshot.apu_cycle.to_string()), true, skip);
+            append(&mut cycle_count, &center(&(snapshot.cpu_cycle - self.snapshots[0].cpu_cycle).to_string()), true, skip);
+            append(&mut apu_parity, &center(&snapshot.apu_parity), true, skip);
 
             let mut vpos = String::new();
             let mut hpos = String::new();
             for (v, h) in snapshot.ppu_pos {
-                vpos.push_str(&center_n(3, v.to_string()));
-                hpos.push_str(&center_n(3, h.to_string()));
+                vpos.push_str(&center_n(3, &v.to_string()));
+                hpos.push_str(&center_n(3, &h.to_string()));
             }
 
             append(&mut ppu_vpos, &vpos, true, skip);
             append(&mut ppu_hpos, &hpos, true, skip);
 
-            append(&mut instr, &center(snapshot.instruction.to_string()), true, skip);
-            append(&mut fcw_status, &center(format!("{:?}", snapshot.frame_counter_write_status)),
+            append(&mut instr, &center(&snapshot.instruction.to_string()), true, skip);
+            append(&mut fcw_status, &center(&format!("{:?}", snapshot.frame_counter_write_status)),
                 snapshot.frame_counter_write_status != FrameCounterWriteStatus::Inactive, skip);
-            append(&mut nmi_status, &center(format!("{:?}", snapshot.nmi_status)), snapshot.nmi_status != NmiStatus::Inactive, skip);
-            append(&mut irq_status, &center(format!("{:?}", snapshot.irq_status)), snapshot.irq_status != IrqStatus::Inactive, skip);
-            append(&mut frame_irq, &center("Raise IRQ".to_string()), snapshot.frame_irq, skip);
+            append(&mut nmi_status, &center(&format!("{:?}", snapshot.nmi_status)), snapshot.nmi_status != NmiStatus::Inactive, skip);
+            append(&mut irq_status, &center(&format!("{:?}", snapshot.irq_status)), snapshot.irq_status != IrqStatus::Inactive, skip);
+            append(&mut frame_irq, &center("Raise IRQ"), snapshot.frame_irq, skip);
         };
 
         append_cycle(0, false);
@@ -358,11 +358,11 @@ fn append(field: &mut String, value: &str, active: bool, skip: bool) {
     field.push_str(result);
 }
 
-fn center(text: String) -> String {
+fn center(text: &str) -> String {
     center_n(13, text)
 }
 
-fn center_n(n: usize, text: String) -> String {
+fn center_n(n: usize, text: &str) -> String {
     assert!(n >= 2);
 
     let text: String = text.chars().take(n).collect();

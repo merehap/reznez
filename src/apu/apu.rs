@@ -53,7 +53,7 @@ impl Apu {
         regs.dmc.maybe_start_dma();
 
         if regs.clock().is_off_cycle() {
-            self.off_cycle_step(regs);
+            Apu::off_cycle_step(regs);
         } else {
             self.on_cycle_step(regs);
         }
@@ -78,7 +78,7 @@ impl Apu {
         regs.maybe_decrement_counters();
     }
 
-    fn off_cycle_step(&mut self, regs: &mut ApuRegisters) {
+    fn off_cycle_step(regs: &mut ApuRegisters) {
         let cycle = regs.clock().cycle();
         info!(target: "apucycles", "APU cycle: {cycle} (OFF)");
         regs.maybe_set_frame_irq_pending();

@@ -1,3 +1,6 @@
+// modular_bitfield pedantic clippy warnings
+#![allow(clippy::cast_lossless, clippy::no_effect_underscore_binding)]
+
 use modular_bitfield::BitfieldSpecifier;
 
 use crate::ppu::sprite::sprite_half::SpriteHalf;

@@ -1,3 +1,6 @@
+// modular_bitfield pedantic clippy warnings
+#![allow(clippy::cast_lossless, clippy::no_effect_underscore_binding, clippy::map_unwrap_or, clippy::semicolon_if_nothing_returned)]
+
 use modular_bitfield::{bitfield, BitfieldSpecifier};
 
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;

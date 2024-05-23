@@ -78,9 +78,9 @@ impl HeaderDb {
         let games = doc.root().descendants().filter(|n| n.tag_name().name() == "game");
 
         let missing_data_submapper_numbers: BTreeMap<u32, (u16, u8)> =
-            BTreeMap::from_iter(MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(k, _, m, s)| (*k, (*m, *s))));
+            MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(k, _, m, s)| (*k, (*m, *s))).collect();
         let missing_prg_rom_submapper_numbers: BTreeMap<u32, (u16, u8)> =
-            BTreeMap::from_iter(MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(_, k, m, s)| (*k, (*m, *s))));
+            MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(_, k, m, s)| (*k, (*m, *s))).collect();
 
         let mut header_db = HeaderDb {
             data_by_crc32: BTreeMap::new(),
