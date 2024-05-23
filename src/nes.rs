@@ -262,6 +262,7 @@ impl Snapshots {
     }
 
     fn start(&mut self) {
+        self.snapshots = Vec::new();
         self.active = true;
     }
 
@@ -341,7 +342,7 @@ impl Snapshots {
             append_cycle(index, false);
         }
 
-        vec![/*cpu_cycle, apu_cycle, */cycle_count, apu_parity, instr,
+        vec![cpu_cycle, apu_cycle, cycle_count, apu_parity, instr,
              nmi_status, irq_status, frame_irq, /*fcw_status, */ppu_vpos, ppu_hpos].join("\n")
     }
 }
