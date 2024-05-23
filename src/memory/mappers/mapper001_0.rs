@@ -113,7 +113,7 @@ impl Mapper001_0 {
             _ => Board::Standard,
         };
 
-        assert_eq!(board, Board::Standard, "MMC1 {:?} is not yet supported.", board);
+        assert_eq!(board, Board::Standard, "MMC1 {board:?} is not yet supported.");
 
         Self { shift_register: ShiftRegister::new() }
     }

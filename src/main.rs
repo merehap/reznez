@@ -46,6 +46,7 @@ fn main() {
     }
 }
 
+#[allow(clippy::similar_names)]
 fn logger(opt: &Opt) -> Logger {
     let (log_cpu_instructions, log_cpu_steps, log_cpu_flow_control) = if opt.log_cpu_all {
         (true, true, true)

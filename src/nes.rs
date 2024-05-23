@@ -165,13 +165,13 @@ impl Nes {
 
     fn apu_step(&mut self) {
         if log_enabled!(target: "timings", Info) {
-            self.snapshots.current().apu_regs(&self.memory.apu_regs());
+            self.snapshots.current().apu_regs(self.memory.apu_regs());
         }
 
         self.apu.step(self.memory.apu_regs_mut());
 
         if log_enabled!(target: "timings", Info) {
-            self.snapshots.current().frame_irq(&self.memory.apu_regs(), &self.cpu);
+            self.snapshots.current().frame_irq(self.memory.apu_regs(), &self.cpu);
         }
 
         self.memory.apu_regs_mut().clock_mut().increment();
@@ -292,7 +292,6 @@ impl Snapshots {
             info!("{}", self.format());
             info!("");
             self.clear();
-            return;
         }
     }
 
@@ -326,7 +325,7 @@ impl Snapshots {
             append(&mut ppu_vpos, &vpos, true, skip);
             append(&mut ppu_hpos, &hpos, true, skip);
 
-            append(&mut instr, &center(format!("{}", snapshot.instruction.clone())), true, skip);
+            append(&mut instr, &center(snapshot.instruction.to_string()), true, skip);
             append(&mut fcw_status, &center(format!("{:?}", snapshot.frame_counter_write_status)),
                 snapshot.frame_counter_write_status != FrameCounterWriteStatus::Inactive, skip);
             append(&mut nmi_status, &center(format!("{:?}", snapshot.nmi_status)), snapshot.nmi_status != NmiStatus::Inactive, skip);
@@ -374,7 +373,7 @@ fn center_n(n: usize, text: String) -> String {
     result.push_str(&String::from_utf8(vec![b' '; front]).unwrap());
     result.push_str(&text);
     result.push_str(&String::from_utf8(vec![b' '; back]).unwrap());
-    result.push_str("]");
+    result.push(']');
     result
 }
 

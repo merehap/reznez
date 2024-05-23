@@ -7,11 +7,9 @@ pub fn lookup_mapper_with_params(cartridge: &Cartridge) -> (Box<dyn Mapper>, Map
     let sub_number = cartridge.submapper_number();
     let cartridge_name = cartridge.name();
 
-    let mapper;
     use LookupResult::*;
-    match lookup_mapper(cartridge) {
-        Supported(supported_mapper) =>
-            mapper = supported_mapper,
+    let mapper = match lookup_mapper(cartridge) {
+        Supported(supported_mapper) => supported_mapper,
         UnassignedMapper =>
             panic!("Mapper {number} is not in use. ROM: {cartridge_name}"),
         UnassignedSubmapper =>
@@ -24,7 +22,7 @@ pub fn lookup_mapper_with_params(cartridge: &Cartridge) -> (Box<dyn Mapper>, Map
             panic!("Mapper {number}, submapper {sub_number} has unspecified behavior. ROM: {cartridge_name}"),
         ReassignedSubmapper {correct_mapper, correct_submapper } =>
             panic!("Mapper {number}, submapper {sub_number} has been reassigned to {correct_mapper}, {correct_submapper} ."),
-    }
+    };
 
     let mapper_params = mapper.initial_layout().make_mapper_params(cartridge);
     (mapper, mapper_params)

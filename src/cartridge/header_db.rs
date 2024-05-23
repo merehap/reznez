@@ -1,9 +1,12 @@
+#![allow(clippy::unreadable_literal)]
+#![allow(clippy::zero_prefixed_literal)]
+
 use std::collections::BTreeMap;
 
 use log::info;
 
 // Submapper numbers for ROMs that aren't in the NES Header DB (mostly test ROMs).
-const MISSING_ROM_SUBMAPPER_NUMBERS: &'static [(u32, u32, u16, u8)] = &[
+const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     // ppu_read_buffer/test_ppu_read_buffer.nes
     (1731018083, 3047829474, 3, 1),
     // cpu_dummy_reads.nes
@@ -140,8 +143,7 @@ impl HeaderDb {
 
 fn read_attribute<'a>(node: roxmltree::Node<'a, 'a>, child_name: &str, attribute_name: &str) -> Option<&'a str> {
     Some(node.children()
-        .filter(|n| n.tag_name().name() == child_name)
-        .next()?
+        .find(|n| n.tag_name().name() == child_name)?
         .attribute(attribute_name)
         .unwrap()
     )
