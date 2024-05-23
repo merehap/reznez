@@ -2,7 +2,7 @@ use crate::memory::mapper::*;
 use crate::memory::mappers::vrc::vrc4::Vrc4;
 
 // VRC4d
-pub fn mapper025_2() -> Box<dyn Mapper> {
+pub fn mapper025_2() -> Vrc4 {
     let mappings = &[
         (0xB000, 0xB008, C0),
         (0xB004, 0xB00C, C1),
@@ -14,5 +14,5 @@ pub fn mapper025_2() -> Box<dyn Mapper> {
         (0xE004, 0xE00C, C7),
     ];
 
-    Box::new(Vrc4::new(mappings))
+    Vrc4::new(mappings)
 }

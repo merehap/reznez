@@ -368,6 +368,10 @@ pub trait Mapper {
 
         bank_text
     }
+
+    fn supported(self) -> LookupResult where Self: Sized, Self: 'static {
+        LookupResult::Supported(Box::new(self))
+    }
 }
 
 #[inline]
@@ -527,4 +531,15 @@ impl MapperParams {
 pub enum HasBusConflicts {
     Yes,
     No,
+}
+
+// This should be in mapper_list.rs instead, but we can't write the supported() method there.
+pub enum LookupResult {
+    Supported(Box<dyn Mapper>),
+    UnassignedMapper,
+    UnassignedSubmapper,
+    TodoMapper,
+    TodoSubmapper,
+    UnspecifiedSubmapper,
+    ReassignedSubmapper {correct_mapper: u16, correct_submapper: u8 },
 }

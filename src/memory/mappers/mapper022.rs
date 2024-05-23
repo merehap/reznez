@@ -2,7 +2,7 @@ use crate::memory::mapper::*;
 use crate::memory::mappers::vrc::vrc2::{Vrc2, BankLowBitBehavior};
 
 // VRC2a
-pub fn mapper022() -> Box<dyn Mapper> {
+pub fn mapper022() -> Vrc2 {
     let mapper022_mappings = &[
         (0xB000, 0xB002, C0),
         (0xB001, 0xB003, C1),
@@ -14,5 +14,5 @@ pub fn mapper022() -> Box<dyn Mapper> {
         (0xE001, 0xE003, C7),
     ];
 
-    Box::new(Vrc2::new(mapper022_mappings, BankLowBitBehavior::Ignore))
+    Vrc2::new(mapper022_mappings, BankLowBitBehavior::Ignore)
 }
