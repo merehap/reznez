@@ -1,5 +1,6 @@
 Cargo.lock
 /framedump
+/logs
 /mesen_dumps
 /misc
 /target
