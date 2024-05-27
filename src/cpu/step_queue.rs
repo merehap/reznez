@@ -55,7 +55,7 @@ impl StepQueue {
     }
 
     fn append(&mut self, steps: &[Step]) {
-        for &step in steps.iter() {
+        for &step in steps {
             self.queue.push_back(step);
         }
     }
