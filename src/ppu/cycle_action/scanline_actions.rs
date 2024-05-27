@@ -4,15 +4,8 @@ use arr_macro::arr;
 
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 
-pub static FIRST_VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(first_visible_scanline_actions);
-pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(visible_scanline_actions);
-pub static POST_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(post_render_scanline_actions);
-pub static START_VBLANK_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(start_vblank_scanline_actions);
-pub static EMPTY_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(empty_scanline_actions);
-pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(pre_render_scanline_actions);
-
 #[allow(clippy::identity_op)]
-fn visible_scanline_actions() -> ScanlineActions {
+pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|| {
     use CycleAction::*;
 
     let mut line = ScanlineActions::new();
@@ -92,15 +85,15 @@ fn visible_scanline_actions() -> ScanlineActions {
     line.add(          340, vec![GetPatternIndex          ,                     ReadSpriteY                                         ]);
 
     line
-}
+});
 
-fn post_render_scanline_actions() -> ScanlineActions {
+pub static POST_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|| {
     let mut post_render_scanline = ScanlineActions::new();
     post_render_scanline.prepend(0, CycleAction::StartPostRenderScanline);
     post_render_scanline
-}
+});
 
-fn start_vblank_scanline_actions() -> ScanlineActions {
+pub static START_VBLANK_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|| {
     use CycleAction::*;
 
     let mut scanline = ScanlineActions::new();
@@ -108,14 +101,12 @@ fn start_vblank_scanline_actions() -> ScanlineActions {
     scanline.add(1, vec![StartVblank]);
     scanline.add(3, vec![RequestNmi]);
     scanline
-}
+});
 
-fn empty_scanline_actions() -> ScanlineActions {
-    ScanlineActions::new()
-}
+pub static EMPTY_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(ScanlineActions::new);
 
 #[allow(clippy::identity_op)]
-fn pre_render_scanline_actions() -> ScanlineActions {
+pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|| {
     use CycleAction::*;
 
     let mut scanline = ScanlineActions::new();
@@ -192,13 +183,13 @@ fn pre_render_scanline_actions() -> ScanlineActions {
     scanline.add(          340, vec![GetPatternIndex                                                   ]);
 
     scanline
-}
+});
 
-fn first_visible_scanline_actions() -> ScanlineActions {
+pub static FIRST_VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|| {
     let mut first_visible_scanline = VISIBLE_SCANLINE_ACTIONS.clone();
     first_visible_scanline.prepend(1, CycleAction::StartVisibleScanlines);
     first_visible_scanline
-}
+});
 
 #[derive(Clone)]
 pub struct ScanlineActions {

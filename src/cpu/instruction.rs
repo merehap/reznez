@@ -4,10 +4,8 @@ use strum_macros::EnumString;
 
 use crate::cpu::step::*;
 
-pub static INSTRUCTIONS: LazyLock<[Instruction; 256]> = LazyLock::new(instructions);
-
 #[rustfmt::skip]
-fn instructions() -> [Instruction; 256] {
+pub static INSTRUCTIONS: LazyLock<[Instruction; 256]> = LazyLock::new(|| {
     use OpCode::*;
     use AccessMode::*;
 
@@ -49,16 +47,16 @@ fn instructions() -> [Instruction; 256] {
 /*+1F*/ [(SLO,AbX), (RLA,AbX), (SRE,AbX), (RRA,AbX), (AHX,AbY), (LAX,AbY), (DCP,AbX), (ISC,AbX)],
     ];
 
-    let mut result = [Instruction::from_tuple(0x2, JAM, Imp); 256];
-    for (index, template) in result.iter_mut().enumerate() {
+    let mut instructions = [Instruction::from_tuple(0x2, JAM, Imp); 256];
+    for (index, template) in instructions.iter_mut().enumerate() {
         let i = index % 0x20;
         let j = index / 0x20;
         let (op_code, access_mode) = codes[i][j];
         *template = Instruction::from_tuple(index as u8, op_code, access_mode);
     }
 
-    result
-}
+    instructions
+});
 
 #[derive(Clone, Copy, Debug)]
 pub struct Instruction {

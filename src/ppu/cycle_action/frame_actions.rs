@@ -14,9 +14,7 @@ use crate::ppu::cycle_action::scanline_actions::{
     PRE_RENDER_SCANLINE_ACTIONS,
 };
 
-pub static NTSC_FRAME_ACTIONS: LazyLock<FrameActions> = LazyLock::new(ntsc_frame_actions);
-
-fn ntsc_frame_actions() -> FrameActions {
+pub static NTSC_FRAME_ACTIONS: LazyLock<FrameActions> = LazyLock::new(|| {
     let mut ntsc_frame = FrameActions::new();
 
     ntsc_frame.set_scanline_actions_at(0, FIRST_VISIBLE_SCANLINE_ACTIONS.clone());
@@ -34,7 +32,7 @@ fn ntsc_frame_actions() -> FrameActions {
     ntsc_frame.set_scanline_actions_at(261, PRE_RENDER_SCANLINE_ACTIONS.clone());
 
     ntsc_frame
-}
+});
 
 #[derive(Clone)]
 pub struct FrameActions {
