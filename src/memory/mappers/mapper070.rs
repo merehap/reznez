@@ -25,6 +25,10 @@ impl Mapper for Mapper070 {
             .build()
     }
 
+    fn has_bus_conflicts(&self) -> HasBusConflicts {
+        HasBusConflicts::Yes
+    }
+
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: CpuAddress, value: u8) {
         match cpu_address.to_raw() {
             0x0000..=0x401F => unreachable!(),

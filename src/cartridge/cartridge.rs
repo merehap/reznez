@@ -145,7 +145,10 @@ impl Cartridge {
             cartridge.submapper_number = submapper_number;
         } else if let Some(Header { prg_rom_size, prg_ram_size, chr_rom_size, chr_ram_size, mapper_number, submapper_number }) =
                 header_db.header_from_data(rom) {
-            assert_eq!(cartridge.mapper_number, mapper_number);
+            if cartridge.mapper_number != mapper_number {
+                warn!("Mapper number in ROM ({}) does not match the one in the DB {mapper_number}.", cartridge.mapper_number);
+            }
+
             assert_eq!(prg_rom.len() as u32, prg_rom_size);
             assert_eq!(chr_rom.len() as u32, chr_rom_size);
             cartridge.submapper_number = submapper_number;
@@ -153,7 +156,10 @@ impl Cartridge {
             cartridge.chr_ram_size = chr_ram_size;
         } else if let Some(Header { prg_rom_size, prg_ram_size, chr_rom_size, chr_ram_size, mapper_number, submapper_number }) =
                 header_db.header_from_prg_rom(&prg_rom) {
-            assert_eq!(cartridge.mapper_number, mapper_number);
+            if cartridge.mapper_number != mapper_number {
+                warn!("Mapper number in ROM ({}) does not match the one in the DB {mapper_number}.", cartridge.mapper_number);
+            }
+
             assert_eq!(prg_rom.len() as u32, prg_rom_size);
             assert_eq!(chr_rom.len() as u32, chr_rom_size);
             cartridge.submapper_number = submapper_number;
