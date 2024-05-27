@@ -1,16 +1,15 @@
+use std::sync::LazyLock;
+
 use arr_macro::arr;
-use lazy_static::lazy_static;
 
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 
-lazy_static! {
-    pub static ref FIRST_VISIBLE_SCANLINE_ACTIONS: ScanlineActions = first_visible_scanline_actions();
-    pub static ref VISIBLE_SCANLINE_ACTIONS: ScanlineActions = visible_scanline_actions();
-    pub static ref POST_RENDER_SCANLINE_ACTIONS: ScanlineActions = post_render_scanline_actions();
-    pub static ref START_VBLANK_SCANLINE_ACTIONS: ScanlineActions = start_vblank_scanline_actions();
-    pub static ref EMPTY_SCANLINE_ACTIONS: ScanlineActions = empty_scanline_actions();
-    pub static ref PRE_RENDER_SCANLINE_ACTIONS: ScanlineActions = pre_render_scanline_actions();
-}
+pub static FIRST_VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(first_visible_scanline_actions);
+pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(visible_scanline_actions);
+pub static POST_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(post_render_scanline_actions);
+pub static START_VBLANK_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(start_vblank_scanline_actions);
+pub static EMPTY_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(empty_scanline_actions);
+pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(pre_render_scanline_actions);
 
 #[allow(clippy::identity_op)]
 fn visible_scanline_actions() -> ScanlineActions {

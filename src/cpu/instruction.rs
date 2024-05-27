@@ -1,11 +1,10 @@
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
+
 use strum_macros::EnumString;
 
 use crate::cpu::step::*;
 
-lazy_static! {
-    pub static ref INSTRUCTIONS: [Instruction; 256] = instructions();
-}
+pub static INSTRUCTIONS: LazyLock<[Instruction; 256]> = LazyLock::new(instructions);
 
 #[rustfmt::skip]
 fn instructions() -> [Instruction; 256] {

@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
 
 use crate::cpu::cycle_action::Field;
 use crate::cpu::cycle_action::Field::*;
@@ -7,16 +7,14 @@ use crate::cpu::cycle_action::CycleAction;
 use crate::cpu::cycle_action::CycleAction::*;
 use crate::cpu::step::Step::{Read, ReadField, Write, WriteField};
 
-lazy_static! {
-    pub static ref OAM_DMA_TRANSFER_STEPS: [Step; 512] = {
-        let read_write = &[
-            Read(From::DmaAddressTarget, &[]),
-            Write(To::OAM_DATA, &[IncrementDmaAddress]),
-        ];
+pub static OAM_DMA_TRANSFER_STEPS: LazyLock<[Step; 512]> = LazyLock::new(|| {
+    let read_write = &[
+        Read(From::DmaAddressTarget, &[]),
+        Write(To::OAM_DATA, &[IncrementDmaAddress]),
+    ];
 
-        read_write.repeat(256).try_into().unwrap()
-    };
-}
+    read_write.repeat(256).try_into().unwrap()
+});
 
 pub const READ_OP_CODE_STEP: Step =
     Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementProgramCounter]);

@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::sync::LazyLock;
 
 use egui::{ClippedMesh, Context, TexturesDelta};
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
-use lazy_static::lazy_static;
 use log::error;
 use pixels::{Pixels, SurfaceTexture};
 use winit::dpi::{LogicalSize, PhysicalPosition, Position};
@@ -25,35 +25,33 @@ use crate::ppu::render::frame::{DebugBuffer, Frame};
 
 const TOP_MENU_BAR_HEIGHT: usize = 24;
 
-lazy_static! {
-    #[rustfmt::skip]
-    static ref JOY_1_BUTTON_MAPPINGS: HashMap<VirtualKeyCode, Button> = {
-        let mut mappings = HashMap::new();
-        mappings.insert(VirtualKeyCode::Space,  Button::A);
-        mappings.insert(VirtualKeyCode::F,      Button::B);
-        mappings.insert(VirtualKeyCode::RShift, Button::Select);
-        mappings.insert(VirtualKeyCode::Return, Button::Start);
-        mappings.insert(VirtualKeyCode::Up,     Button::Up);
-        mappings.insert(VirtualKeyCode::Down,   Button::Down);
-        mappings.insert(VirtualKeyCode::Left,   Button::Left);
-        mappings.insert(VirtualKeyCode::Right,  Button::Right);
-        mappings
-    };
+#[rustfmt::skip]
+static JOY_1_BUTTON_MAPPINGS: LazyLock<HashMap<VirtualKeyCode, Button>> = LazyLock::new(|| {
+    let mut mappings = HashMap::new();
+    mappings.insert(VirtualKeyCode::Space,  Button::A);
+    mappings.insert(VirtualKeyCode::F,      Button::B);
+    mappings.insert(VirtualKeyCode::RShift, Button::Select);
+    mappings.insert(VirtualKeyCode::Return, Button::Start);
+    mappings.insert(VirtualKeyCode::Up,     Button::Up);
+    mappings.insert(VirtualKeyCode::Down,   Button::Down);
+    mappings.insert(VirtualKeyCode::Left,   Button::Left);
+    mappings.insert(VirtualKeyCode::Right,  Button::Right);
+    mappings
+});
 
-    #[rustfmt::skip]
-    static ref JOY_2_BUTTON_MAPPINGS: HashMap<VirtualKeyCode, Button> = {
-        let mut mappings = HashMap::new();
-        mappings.insert(VirtualKeyCode::Numpad0,        Button::A);
-        mappings.insert(VirtualKeyCode::NumpadEnter,    Button::B);
-        mappings.insert(VirtualKeyCode::NumpadSubtract, Button::Select);
-        mappings.insert(VirtualKeyCode::NumpadAdd,      Button::Start);
-        mappings.insert(VirtualKeyCode::Numpad8,        Button::Up);
-        mappings.insert(VirtualKeyCode::Numpad5,        Button::Down);
-        mappings.insert(VirtualKeyCode::Numpad4,        Button::Left);
-        mappings.insert(VirtualKeyCode::Numpad6,        Button::Right);
-        mappings
-    };
-}
+#[rustfmt::skip]
+static JOY_2_BUTTON_MAPPINGS: LazyLock<HashMap<VirtualKeyCode, Button>> = LazyLock::new(|| {
+    let mut mappings = HashMap::new();
+    mappings.insert(VirtualKeyCode::Numpad0,        Button::A);
+    mappings.insert(VirtualKeyCode::NumpadEnter,    Button::B);
+    mappings.insert(VirtualKeyCode::NumpadSubtract, Button::Select);
+    mappings.insert(VirtualKeyCode::NumpadAdd,      Button::Start);
+    mappings.insert(VirtualKeyCode::Numpad8,        Button::Up);
+    mappings.insert(VirtualKeyCode::Numpad5,        Button::Down);
+    mappings.insert(VirtualKeyCode::Numpad4,        Button::Left);
+    mappings.insert(VirtualKeyCode::Numpad6,        Button::Right);
+    mappings
+});
 
 pub struct EguiGui;
 
@@ -552,10 +550,10 @@ impl Renderer for StatusRenderer {
                     ));
                     ui.end_row();
                     ui.label("PRG ROM banks");
-                    ui.label(&nes.memory().mapper().prg_rom_bank_string(mapper_params));
+                    ui.label(nes.memory().mapper().prg_rom_bank_string(mapper_params));
                     ui.end_row();
                     ui.label("CHR ROM banks");
-                    ui.label(&nes.memory().mapper().chr_rom_bank_string(mapper_params));
+                    ui.label(nes.memory().mapper().chr_rom_bank_string(mapper_params));
                 });
         });
 

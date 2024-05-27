@@ -1,5 +1,6 @@
+use std::sync::LazyLock;
+
 use arr_macro::arr;
-use lazy_static::lazy_static;
 
 use crate::ppu::clock::Clock;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
@@ -13,9 +14,7 @@ use crate::ppu::cycle_action::scanline_actions::{
     PRE_RENDER_SCANLINE_ACTIONS,
 };
 
-lazy_static! {
-    pub static ref NTSC_FRAME_ACTIONS: FrameActions = ntsc_frame_actions();
-}
+pub static NTSC_FRAME_ACTIONS: LazyLock<FrameActions> = LazyLock::new(ntsc_frame_actions);
 
 fn ntsc_frame_actions() -> FrameActions {
     let mut ntsc_frame = FrameActions::new();
