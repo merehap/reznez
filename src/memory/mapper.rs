@@ -1,5 +1,3 @@
-pub use lazy_static::lazy_static;
-
 pub use crate::cartridge::cartridge::Cartridge;
 pub use crate::memory::bank::bank_index::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters, RamStatus};
 pub use crate::memory::bank::bank_index::BankRegisterId::*;

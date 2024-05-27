@@ -1,13 +1,4 @@
 #[derive(Clone, Copy, Default)]
-pub struct U3(u8);
-
-impl From<u8> for U3 {
-    fn from(value: u8) -> Self {
-        U3(value & 0b0000_0111)
-    }
-}
-
-#[derive(Clone, Copy, Default)]
 pub struct U4(u8);
 
 impl U4 {
