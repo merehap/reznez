@@ -31,13 +31,17 @@ const PRG_LAYOUTS: [PrgLayout; 4] =
 const CHR_LAYOUTS: [ChrLayout; 2] =
     [CHR_LAYOUT_ONE_BIG, CHR_LAYOUT_TWO_SMALL];
 
-const MIRRORINGS: [NameTableMirroring; 4] =
-    [
-        NameTableMirroring::OneScreenRightBank,
-        NameTableMirroring::OneScreenLeftBank,
-        NameTableMirroring::Vertical,
-        NameTableMirroring::Horizontal,
-    ];
+const MIRRORINGS: [NameTableMirroring; 4] = [
+    NameTableMirroring::OneScreenRightBank,
+    NameTableMirroring::OneScreenLeftBank,
+    NameTableMirroring::Vertical,
+    NameTableMirroring::Horizontal,
+];
+
+const RAM_STATUSES: [RamStatus; 2] = [
+    RamStatus::ReadWrite,
+    RamStatus::Disabled,
+];
 
 // SxROM (MMC1, MMC1B)
 pub struct Mapper001_0 {
@@ -72,27 +76,19 @@ impl Mapper for Mapper001_0 {
                 0x4020..=0x5FFF => { /* Do nothing. */ }
                 0x6000..=0x7FFF => unreachable!(),
                 0x8000..=0x9FFF => {
-                    let finished_value = usize::from(finished_value);
-                    let mirroring_index =  finished_value & 0b0000_0011;
-                    let prg_index       = (finished_value & 0b0000_1100) >> 2;
-                    let chr_index       = (finished_value & 0b0001_0000) >> 4;
-                    params.set_name_table_mirroring(MIRRORINGS[mirroring_index]);
-                    params.set_prg_layout(PRG_LAYOUTS[prg_index]);
-                    params.set_chr_layout(CHR_LAYOUTS[chr_index]);
+                    let fields = splitbits!(finished_value, "...cppmm");
+                    params.set_chr_layout(CHR_LAYOUTS[fields.c]);
+                    params.set_prg_layout(PRG_LAYOUTS[fields.p]);
+                    params.set_name_table_mirroring(MIRRORINGS[fields.m]);
                 }
                 // FIXME: Handle cases for special boards.
                 0xA000..=0xBFFF => params.set_bank_register(C0, finished_value),
                 // FIXME: Handle cases for special boards.
                 0xC000..=0xDFFF => params.set_bank_register(C1, finished_value),
                 0xE000..=0xFFFF => {
-                    params.set_bank_register(P0, finished_value & 0b0_1111);
-
-                    let status = if finished_value & 0b1_0000 == 0 {
-                        RamStatus::ReadWrite
-                    } else {
-                        RamStatus::Disabled
-                    };
-                    params.set_ram_status(S0, status);
+                    let fields = splitbits!(finished_value, "...rbbbb");
+                    params.set_ram_status(S0, RAM_STATUSES[fields.r]);
+                    params.set_bank_register(P0, fields.b as u16);
                 }
             }
         }
