@@ -72,6 +72,12 @@ const PRG_LAYOUTS: [PrgLayout; 2] = [
     PRG_LAYOUT_PRIMARY,
     PRG_LAYOUT_SECONDARY,
 ];
+
+const CHR_LAYOUTS: [[ChrLayout; 2]; 2] = [
+    [ CHR_BIG_WINDOWS_PRIMARY, CHR_SMALL_WINDOWS_PRIMARY ],
+    [ CHR_BIG_WINDOWS_SECONDARY, CHR_SMALL_WINDOWS_SECONDARY ],
+];
+
 const MIRRORINGS: [NameTableMirroring; 2] = [
     NameTableMirroring::Vertical,
     NameTableMirroring::Horizontal,
@@ -193,17 +199,10 @@ impl Mapper064 {
     }
 
     fn bank_select(&mut self, params: &mut MapperParams, value: u8) {
-        params.set_prg_layout(PRG_LAYOUTS[usize::from((value & 0b0100_0000) >> 6)]);
-        let chr_windows = match value & 0b1010_0000 {
-            0b0000_0000 => CHR_BIG_WINDOWS_PRIMARY,
-            0b0010_0000 => CHR_SMALL_WINDOWS_PRIMARY,
-            0b1000_0000 => CHR_BIG_WINDOWS_SECONDARY,
-            0b1010_0000 => CHR_SMALL_WINDOWS_SECONDARY,
-            _ => unreachable!(),
-        };
-        params.set_chr_layout(chr_windows);
-
-        if let Some(reg_id) = BANK_INDEX_REGISTER_IDS[(value & 0b0000_1111) as usize] {
+        let fields = splitbits!(value, "ipc.bbbb");
+        params.set_prg_layout(PRG_LAYOUTS[fields.p as usize]);
+        params.set_chr_layout(CHR_LAYOUTS[fields.i as usize][fields.c as usize]);
+        if let Some(reg_id) = BANK_INDEX_REGISTER_IDS[fields.b as usize] {
             self.selected_register_id = reg_id;
         }
     }

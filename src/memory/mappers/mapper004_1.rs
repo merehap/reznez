@@ -35,7 +35,25 @@ const PRG_LAYOUT_C000_SWITCHABLE: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
 ]);
 
-pub const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
+const PRG_LAYOUTS: [PrgLayout; 2] =
+    [
+        PRG_LAYOUT_8000_SWITCHABLE,
+        PRG_LAYOUT_C000_SWITCHABLE,
+    ];
+
+const CHR_LAYOUTS: [ChrLayout; 2] =
+    [
+        mmc3::CHR_BIG_WINDOWS_FIRST,
+        mmc3::CHR_SMALL_WINDOWS_FIRST,
+    ];
+
+const RAM_STATUSES: [RamStatus; 2] =
+    [
+        RamStatus::ReadOnly,
+        RamStatus::ReadWrite,
+    ];
+
+const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .prg_max_bank_count(64)
     .prg_bank_size(8 * KIBIBYTE)
     .prg_windows(PRG_LAYOUT_8000_SWITCHABLE)
@@ -50,7 +68,6 @@ pub const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
 pub struct Mapper004_1 {
     selected_register_id: BankRegisterId,
     irq_state: RevAIrqState,
-    prg_ram_enabled: bool,
 }
 
 impl Mapper for Mapper004_1 {
@@ -91,22 +108,13 @@ impl Mapper for Mapper004_1 {
 impl Mapper004_1 {
     // Same as MMC3 except for PRG RAM enable and slightly different PRG layouts.
     pub fn bank_select(&mut self, params: &mut MapperParams, value: u8) {
-        let chr_big_windows_first =                               (value & 0b1000_0000) == 0;
-        let prg_switchable_8000 =                                 (value & 0b0100_0000) == 0;
-        self.prg_ram_enabled =                                    (value & 0b0010_0000) != 0;
-        self.selected_register_id = mmc3::BANK_INDEX_REGISTER_IDS[(value & 0b0000_0111) as usize];
-
-        if chr_big_windows_first {
-            params.set_chr_layout(mmc3::CHR_BIG_WINDOWS_FIRST);
-        } else {
-            params.set_chr_layout(mmc3::CHR_SMALL_WINDOWS_FIRST);
-        }
-
-        if prg_switchable_8000 {
-            params.set_prg_layout(PRG_LAYOUT_8000_SWITCHABLE);
-        } else {
-            params.set_prg_layout(PRG_LAYOUT_C000_SWITCHABLE);
-        }
+        let fields = splitbits!(value, "cps..bbb");
+        params.set_chr_layout(CHR_LAYOUTS[fields.c as usize]);
+        params.set_prg_layout(PRG_LAYOUTS[fields.p as usize]);
+        // FIXME: What are these actually supposed to do?
+        params.set_ram_status(S0, RAM_STATUSES[fields.s as usize]);
+        params.set_ram_status(S1, RAM_STATUSES[fields.s as usize]);
+        self.selected_register_id = mmc3::BANK_INDEX_REGISTER_IDS[fields.b as usize];
     }
 
     pub fn prg_ram_protect(_params: &mut MapperParams, _value: u8) {
@@ -138,7 +146,6 @@ impl Mapper004_1 {
         Self {
             selected_register_id: C0,
             irq_state: RevAIrqState::new(),
-            prg_ram_enabled: false,
         }
     }
 }

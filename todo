@@ -21,6 +21,7 @@ Open Bus for joysticks.
 Other input devices.
 Auto-mirror undersized CHR (for mapper 99 and maybe others).
 Require PRG ROM and CHR ROM sizes in InitialLayout.
+Don't require mappers to explicitly say that their mirroring comes from the cartridge?
 
 FANCY NICE-TO-HAVES
 APU frequency correction

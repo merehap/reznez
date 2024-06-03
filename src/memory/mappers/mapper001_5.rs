@@ -25,6 +25,12 @@ const MIRRORINGS: [NameTableMirroring; 4] =
         NameTableMirroring::Horizontal,
     ];
 
+const RAM_STATUSES: [RamStatus; 2] =
+    [
+        RamStatus::ReadWrite,
+        RamStatus::Disabled,
+    ];
+
 // SEROM. MMC1 that doesn't support PRG bank switching.
 pub struct Mapper001_5 {
     shift_register: ShiftRegister,
@@ -57,21 +63,15 @@ impl Mapper for Mapper001_5 {
                 0x4020..=0x5FFF => { /* Do nothing. */ }
                 0x6000..=0x7FFF => unreachable!(),
                 0x8000..=0x9FFF => {
-                    let finished_value = usize::from(finished_value);
-                    let mirroring_index =  finished_value & 0b0000_0011;
-                    let chr_index       = (finished_value & 0b0001_0000) >> 4;
-                    params.set_name_table_mirroring(MIRRORINGS[mirroring_index]);
-                    params.set_chr_layout(CHR_LAYOUTS[chr_index]);
+                    let fields = splitbits!(finished_value, "...c..mm");
+                    params.set_chr_layout(CHR_LAYOUTS[fields.c as usize]);
+                    params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
                 }
                 0xA000..=0xBFFF => params.set_bank_register(C0, finished_value),
                 0xC000..=0xDFFF => params.set_bank_register(C1, finished_value),
                 0xE000..=0xFFFF => {
-                    let status = if finished_value & 0b1_0000 == 0 {
-                        RamStatus::ReadWrite
-                    } else {
-                        RamStatus::Disabled
-                    };
-                    params.set_ram_status(S0, status);
+                    let fields = splitbits!(finished_value, "...s....");
+                    params.set_ram_status(S0, RAM_STATUSES[fields.s as usize]);
                 }
             }
         }

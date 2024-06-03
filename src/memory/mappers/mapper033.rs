@@ -42,8 +42,9 @@ impl Mapper for Mapper033 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x8000 => {
-                params.set_name_table_mirroring(MIRRORINGS[usize::from((value & 0b0100_0000) >> 6)]);
-                params.set_bank_register(P0, value & 0b0011_1111);
+                let fields = splitbits!(value, ".mpppppp");
+                params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
+                params.set_bank_register(P0, fields.p);
             }
             0x8001 => params.set_bank_register(P1, value & 0b0011_1111),
             // Large CHR windows: this allows accessing 512KiB CHR by doubling the bank indexes.
