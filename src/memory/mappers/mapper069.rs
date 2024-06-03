@@ -114,9 +114,9 @@ impl Mapper069 {
                 // Writable / Readable / PRG Bank
                 let fields = splitbits!(value, "wrbbbbbb");
 
-                let status = if fields.r == 1 {
+                let status = if fields.r {
                     RamStatus::ReadOnly
-                } else if fields.w == 1 {
+                } else if fields.w {
                     RamStatus::ReadWrite
                 } else {
                     RamStatus::Disabled

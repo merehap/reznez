@@ -45,8 +45,12 @@ pub fn splitbits_proc(item: TokenStream) -> TokenStream {
 
     let mut result = "{".to_string();
     result.push_str(&format!("struct {struct_name} {{\n"));
-    for (name, _) in &masks {
-        result.push_str(&format!("    {name}: u8,\n"));
+    for (name, mask) in &masks {
+        if mask.count_ones() == 1 {
+            result.push_str(&format!("    {name}: bool,\n"));
+        } else {
+            result.push_str(&format!("    {name}: u8,\n"));
+        }
     }
 
     result.push_str("}");
@@ -55,8 +59,12 @@ pub fn splitbits_proc(item: TokenStream) -> TokenStream {
     result.push_str(&format!("fn {function_name}(value: u8) -> {struct_name} {{\n"));
     result.push_str(&format!("    {struct_name} {{\n"));
     for (name, mask) in masks {
-        let shift = mask.trailing_zeros();
-        result.push_str(&format!("        {name}: (value & {mask}) >> {shift},\n"));
+        if mask.count_ones() == 1 {
+            result.push_str(&format!("        {name}: value & {mask} != 0,\n"));
+        } else {
+            let shift = mask.trailing_zeros();
+            result.push_str(&format!("        {name}: (value & {mask}) >> {shift},\n"));
+        }
     }
 
     result.push_str("    }\n");
