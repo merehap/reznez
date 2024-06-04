@@ -84,12 +84,3 @@ pub fn splitbits(item: TokenStream) -> TokenStream {
 
     result.parse().unwrap()
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-    }
-}
