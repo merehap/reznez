@@ -1,6 +1,7 @@
 extern crate proc_macro;
 
 use std::collections::BTreeMap;
+use std::fmt;
 
 use proc_macro::TokenStream;
 
@@ -32,7 +33,7 @@ pub fn splitbits(item: TokenStream) -> TokenStream {
 
     let mut fields = template.clone();
     fields.dedup();
-    let masks: BTreeMap<char, u8> = fields.iter()
+    let fields: BTreeMap<char, Field> = fields.iter()
         // Periods aren't names, they are placeholders for ignored bits.
         .filter(|&&c| c != '.')
         .map(|&name| {
@@ -45,7 +46,19 @@ pub fn splitbits(item: TokenStream) -> TokenStream {
                 }
             }
 
-            (name, mask)
+            let t = if mask.count_ones() == 1 {
+                Type::Bool
+            } else {
+                Type::U8
+            };
+
+            let field = Field {
+                name,
+                mask,
+                t,
+            };
+
+            (name, field)
         })
         .collect();
 
@@ -58,23 +71,24 @@ pub fn splitbits(item: TokenStream) -> TokenStream {
 
     let mut result = "{".to_string();
     result.push_str(&format!("struct {struct_name} {{\n"));
-    for (name, mask) in &masks {
-        if mask.count_ones() == 1 {
-            result.push_str(&format!("    {name}: bool,\n"));
-        } else {
-            result.push_str(&format!("    {name}: u8,\n"));
-        }
+    for (name, field) in &fields {
+        result.push_str(&format!("    {name}: {},\n", field.t));
     }
 
     result.push('}');
 
     result.push_str(&format!("    {struct_name} {{\n"));
-    for (name, mask) in masks {
-        if mask.count_ones() == 1 {
-            result.push_str(&format!("        {name}: {value} & {mask} != 0,\n"));
-        } else {
-            let shift = mask.trailing_zeros();
-            result.push_str(&format!("        {name}: ({value} & {mask}) >> {shift},\n"));
+    for field in fields.values() {
+        let name = field.name;
+        let mask = field.mask;
+        match field.t {
+            Type::Bool => {
+                result.push_str(&format!("        {name}: {value} & {mask} != 0,\n"));
+            }
+            Type::U8 => {
+                let shift = mask.trailing_zeros();
+                result.push_str(&format!("        {name}: ({value} & {mask}) >> {shift},\n"));
+            }
         }
     }
 
@@ -83,4 +97,23 @@ pub fn splitbits(item: TokenStream) -> TokenStream {
     result.push('}');
 
     result.parse().unwrap()
+}
+
+struct Field {
+    name: char,
+    mask: u8,
+    t: Type,
+}
+
+#[derive(Clone, Copy, Debug)]
+enum Type {
+    Bool,
+    U8,
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let result = format!("{:?}", *self).to_lowercase();
+        write!(f, "{}", result)
+    }
 }
