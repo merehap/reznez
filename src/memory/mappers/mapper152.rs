@@ -40,9 +40,10 @@ impl Mapper for Mapper152 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
             0x8000..=0xFFFF => {
-                params.set_name_table_mirroring(MIRRORINGS[usize::from((value & 0b1000_0000) >> 7)]);
-                params.set_bank_register(P0, (value >> 4) & 0b0111);
-                params.set_bank_register(C0, value & 0b1111);
+                let fields = splitbits!(value, "mpppcccc");
+                params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
+                params.set_bank_register(P0, fields.p);
+                params.set_bank_register(C0, fields.c);
             }
         }
     }

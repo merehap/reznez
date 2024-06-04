@@ -30,8 +30,9 @@ impl Mapper for Mapper148 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                params.set_bank_register(P0, (value & 0b0000_1000) >> 3);
-                params.set_bank_register(C0,  value & 0b0000_0111);
+                let banks = splitbits!(value, "....pccc");
+                params.set_bank_register(P0, banks.p);
+                params.set_bank_register(C0, banks.c);
             }
         }
     }

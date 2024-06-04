@@ -31,8 +31,9 @@ impl Mapper for Mapper079 {
             0x0000..=0x401F => unreachable!(),
             // 0x41XX, 0x43XX, ... $5DXX, $5FXX
             0x4100..=0x5FFF if (address / 0x100) % 2 == 1 => {
-                params.set_bank_register(P0, (value & 0b0000_1000) >> 3);
-                params.set_bank_register(C0, value & 0b0000_0111);
+                let banks = splitbits!(value, "....pccc");
+                params.set_bank_register(P0, banks.p as u8);
+                params.set_bank_register(C0, banks.c);
             }
             _ => { /* Do nothing. */ }
         }

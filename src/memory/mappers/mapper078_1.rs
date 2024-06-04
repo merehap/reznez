@@ -40,12 +40,10 @@ impl Mapper for Mapper078_1 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                let chr_index = (value & 0b1111_0000) >> 4;
-                let mirroring = (value & 0b0000_1000) >> 3;
-                let prg_index =  value & 0b0000_0111;
-                params.set_bank_register(C0, chr_index);
-                params.set_name_table_mirroring(MIRRORINGS[usize::from(mirroring)]);
-                params.set_bank_register(P0, prg_index);
+                let fields = splitbits!(value, "ccccmppp");
+                params.set_bank_register(C0, fields.c);
+                params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
+                params.set_bank_register(P0, fields.p);
             }
         }
     }

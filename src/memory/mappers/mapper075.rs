@@ -41,20 +41,20 @@ impl Mapper for Mapper075 {
         match cpu_address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x8FFF =>
-                params.set_bank_register(P0, value & 0b0000_1111),
-            0xA000..=0xAFFF =>
-                params.set_bank_register(P1, value & 0b0000_1111),
-            0xC000..=0xCFFF =>
-                params.set_bank_register(P2, value & 0b0000_1111),
+            0x8000..=0x8FFF => params.set_bank_register(P0, value & 0b0000_1111),
             0x9000..=0x9FFF => {
-                if params.name_table_mirroring() != NameTableMirroring::FourScreen {
-                    params.set_name_table_mirroring(MIRRORINGS[usize::from(value & 0b001)]);
-                }
+                let fields = splitbits!(value, ".....rlm");
 
-                self.chr_left_high_bit = (value & 0b010) << 3;
-                self.chr_right_high_bit = (value & 0b100) << 2;
+                self.chr_right_high_bit = u8::from(fields.r) << 4;
+                self.chr_left_high_bit = u8::from(fields.l) << 4;
+                if params.name_table_mirroring() != NameTableMirroring::FourScreen {
+                    params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
+                }
             }
+            0xA000..=0xAFFF => params.set_bank_register(P1, value & 0b0000_1111),
+            0xB000..=0xBFFF => { /* Do nothing. */ }
+            0xC000..=0xCFFF => params.set_bank_register(P2, value & 0b0000_1111),
+            0xD000..=0xDFFF => { /* Do nothing. */ }
             0xE000..=0xEFFF => {
                 let bank_index = self.chr_left_high_bit | (value & 0b0000_1111);
                 params.set_bank_register(C0, bank_index);
@@ -63,7 +63,6 @@ impl Mapper for Mapper075 {
                 let bank_index = self.chr_right_high_bit | (value & 0b0000_1111);
                 params.set_bank_register(C1, bank_index);
             }
-            0xB000..=0xBFFF | 0xD000..=0xDFFF => { /* No registers here. */ }
         }
     }
 }

@@ -36,14 +36,11 @@ impl Mapper for Mapper113 {
             0x0000..=0x401F => unreachable!(),
             // 0x41XX, 0x43XX, ... $5DXX, $5FXX
             0x4100..=0x5FFF if (address / 0x100) % 2 == 1 => {
-                let mirroring = (value & 0b1000_0000) >> 7;
-                let high_chr  = (value & 0b0100_0000) >> 3;
-                let prg       = (value & 0b0011_1000) >> 3;
-                let low_chr   =  value & 0b0000_0111;
-
-                params.set_name_table_mirroring(MIRRORINGS[usize::from(mirroring)]);
-                params.set_bank_register(C0, high_chr | low_chr);
-                params.set_bank_register(P0, prg);
+                // TODO: Update splitbits! to automatically combine high and low CHR.
+                let fields = splitbits!(value, "mhppplll");
+                params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
+                params.set_bank_register(C0, (u8::from(fields.h) << 3) | fields.l);
+                params.set_bank_register(P0, fields.p);
             }
             _ => { /* Do nothing. */ }
         }

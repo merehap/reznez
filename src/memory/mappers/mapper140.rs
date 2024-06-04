@@ -30,9 +30,11 @@ impl Mapper for Mapper140 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
             0x6000..=0x7FFF => {
+                // TODO: Remove this?
                 assert_eq!(value & 0b1100_0000, 0);
-                params.set_bank_register(P0, (value & 0b0011_0000) >> 4);
-                params.set_bank_register(C0, value & 0b0000_1111);
+                let banks = splitbits!(value, "..ppcccc");
+                params.set_bank_register(P0, banks.p);
+                params.set_bank_register(C0, banks.c);
             }
             0x8000..=0xFFFF => { /* Do nothing. */ }
         }

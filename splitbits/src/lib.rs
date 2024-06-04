@@ -4,6 +4,12 @@ use std::collections::BTreeMap;
 
 use proc_macro::TokenStream;
 
+// TODO:
+// * Allow more int types as input.
+// * Allow more int types as output.
+// * Allow parsing a single field.
+// * Enable setting pre-defined variables as an alternative to making a new struct.
+// * Enable emitting precise-sized ux crate types.
 #[proc_macro]
 pub fn splitbits_proc(item: TokenStream) -> TokenStream {
     let template = item.to_string();
@@ -29,8 +35,8 @@ pub fn splitbits_proc(item: TokenStream) -> TokenStream {
             assert!(name.is_ascii_lowercase());
 
             let mut mask: u8 = 0;
-            for index in 0..8 {
-                if template[index] == name {
+            for (index, &n) in template.iter().enumerate() {
+                if n == name {
                     mask |= 1 << (7 - index);
                 }
             }
@@ -53,7 +59,7 @@ pub fn splitbits_proc(item: TokenStream) -> TokenStream {
         }
     }
 
-    result.push_str("}");
+    result.push('}');
 
     let function_name = format!("make_fields_{template}\n");
     result.push_str(&format!("fn {function_name}(value: u8) -> {struct_name} {{\n"));
@@ -73,7 +79,7 @@ pub fn splitbits_proc(item: TokenStream) -> TokenStream {
 
     result.push_str(&function_name);
 
-    result.push_str("}");
+    result.push('}');
 
     result.parse().unwrap()
 }

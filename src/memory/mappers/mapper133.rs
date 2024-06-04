@@ -29,8 +29,9 @@ impl Mapper for Mapper133 {
         match address.to_raw() & 0xE100 {
             0x0000..=0x401F => unreachable!(),
             0x4100 => {
-                params.set_bank_register(P0, (value & 0b0000_0100) >> 2);
-                params.set_bank_register(C0,  value & 0b0000_0011);
+                let banks = splitbits!(value, ".....pcc");
+                params.set_bank_register(P0, banks.p as u8);
+                params.set_bank_register(C0, banks.c);
             }
             _ => { /* Do nothing. */ }
         }

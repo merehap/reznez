@@ -30,12 +30,10 @@ impl Mapper for Mapper086 {
         match address {
             0x0000..=0x401F => unreachable!(),
             0x6000..=0x6FFF => {
-                let high_chr = (value & 0b0100_0000) >> 4;
-                let prg      = (value & 0b0011_0000) >> 4;
-                let low_chr  =  value & 0b0000_0011;
-
-                params.set_bank_register(C0, high_chr | low_chr);
-                params.set_bank_register(P0, prg);
+                // TODO: Improve splitbits! to automatically combine the high and low CHR.
+                let banks = splitbits!(value, ".hpp..ll");
+                params.set_bank_register(C0, (u8::from(banks.h) << 2) | banks.l);
+                params.set_bank_register(P0, banks.p);
             }
             0x7000..=0x7FFF => { /* TODO: Audio control. */ }
             _ => { /* Do nothing. */ }
