@@ -1,6 +1,4 @@
-// Macro imports
-pub use crate::splitbits;
-pub use splitbits::splitbits_proc;
+pub use splitbits::splitbits;
 
 pub use crate::cartridge::cartridge::Cartridge;
 pub use crate::memory::bank::bank_index::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters, RamStatus};

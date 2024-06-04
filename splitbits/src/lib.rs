@@ -10,15 +10,19 @@ use proc_macro::TokenStream;
 // * Allow parsing a single field.
 // * Enable setting pre-defined variables as an alternative to making a new struct.
 // * Enable emitting precise-sized ux crate types.
+// * Support no_std.
 #[proc_macro]
-pub fn splitbits_proc(item: TokenStream) -> TokenStream {
-    let template = item.to_string();
+pub fn splitbits(item: TokenStream) -> TokenStream {
+    let input = item.to_string();
+    let parts: Vec<String> = input.split(',').map(str::to_string).collect();
+    assert_eq!(parts.len(), 2);
+
+    let value = parts[0].trim();
+    let template = parts[1].trim();
 
     let mut template: Vec<char> = template.chars()
         // Underscores are only for human-readability.
         .filter(|&c| c != '_')
-        // Underscores work in struct names, periods do not.
-        .map(|c| if c == '.' { '_' } else { c })
         .collect();
     assert_eq!(template.len(), 10);
     assert_eq!(template[0], '"');
@@ -30,7 +34,7 @@ pub fn splitbits_proc(item: TokenStream) -> TokenStream {
     fields.dedup();
     let masks: BTreeMap<char, u8> = fields.iter()
         // Periods aren't names, they are placeholders for ignored bits.
-        .filter(|&&c| c != '_')
+        .filter(|&&c| c != '.')
         .map(|&name| {
             assert!(name.is_ascii_lowercase());
 
@@ -45,7 +49,10 @@ pub fn splitbits_proc(item: TokenStream) -> TokenStream {
         })
         .collect();
 
-    let template: String = template.iter().collect();
+    let template: String = template.iter()
+        // Underscores work in struct names, periods do not.
+        .map(|&c| if c == '.' { '_' } else { c })
+        .collect();
 
     let struct_name = format!("Fields_{}", template);
 
@@ -61,23 +68,17 @@ pub fn splitbits_proc(item: TokenStream) -> TokenStream {
 
     result.push('}');
 
-    let function_name = format!("make_fields_{template}\n");
-    result.push_str(&format!("fn {function_name}(value: u8) -> {struct_name} {{\n"));
     result.push_str(&format!("    {struct_name} {{\n"));
     for (name, mask) in masks {
         if mask.count_ones() == 1 {
-            result.push_str(&format!("        {name}: value & {mask} != 0,\n"));
+            result.push_str(&format!("        {name}: {value} & {mask} != 0,\n"));
         } else {
             let shift = mask.trailing_zeros();
-            result.push_str(&format!("        {name}: (value & {mask}) >> {shift},\n"));
+            result.push_str(&format!("        {name}: ({value} & {mask}) >> {shift},\n"));
         }
     }
 
     result.push_str("    }\n");
-
-    result.push_str("}\n");
-
-    result.push_str(&function_name);
 
     result.push('}');
 
