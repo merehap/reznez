@@ -48,10 +48,10 @@ fn periods() {
     assert_eq!(fields.b, 0b11);
 }
 
-// Underscores are stripped out before processing, whatever place they are in.
+// Spaces are stripped out before processing, whatever place they are in.
 #[test]
 fn underscores() {
-    let fields = splitbits!(0b110_11101, "_a_aa___b_bccc__");
+    let fields = splitbits!(0b110_11101, " a aa   b bccc  ");
     assert_eq!(fields.a, 0b110);
     assert_eq!(fields.b, 0b11);
     assert_eq!(fields.c, 0b101);
@@ -59,7 +59,7 @@ fn underscores() {
 
 #[test]
 fn some_of_everything() {
-    let fields = splitbits!(0b1101_1101, ".ab._cc.d");
+    let fields = splitbits!(0b1101_1101, ".ab. cc.d");
     assert_eq!(fields.a, true);
     assert_eq!(fields.b, false);
     assert_eq!(fields.c, 0b11);
