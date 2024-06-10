@@ -111,7 +111,7 @@ impl Mapper069 {
             Command::ChrRomBank(id) =>
                 params.set_bank_register(id, value),
             Command::PrgRomRamBank => {
-                // Writable / Readable / PRG Bank
+                // Writable / Read-only / PRG Bank
                 let fields = splitbits!(value, "wrbb bbbb");
 
                 let status = if fields.r {
@@ -132,6 +132,7 @@ impl Mapper069 {
             }
             Command::IrqControl => {
                 self.irq_pending = false;
+                // TODO: splitbits tuple
                 self.irq_counter_enabled = value & 0b1000_0000 != 0;
                 self.irq_enabled         = value & 0b0000_0001 != 0;
             }

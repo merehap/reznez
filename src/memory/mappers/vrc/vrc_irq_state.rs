@@ -1,3 +1,5 @@
+use splitbits::splitbits;
+
 pub struct VrcIrqState {
     enabled: bool,
     pending: bool,
@@ -58,12 +60,15 @@ impl VrcIrqState {
 
     pub fn set_mode(&mut self, value: u8) {
         self.pending = false;
-        self.enabled = value & 0b0000_0001 != 0;
+
+        // TODO: splitbits tuple
+        let fields = splitbits!(value, ".....mae");
+        self.mode = if fields.m { IrqMode::Cycle } else { IrqMode::Scanline };
+        self.enable_upon_acknowledgement = fields.a;
+        self.enabled = fields.e;
         if self.enabled {
             self.counter = self.counter_reload_value;
         }
-        self.enable_upon_acknowledgement = value & 0b0000_0010 != 0;
-        self.mode = if value & 0b0000_0100 == 0 { IrqMode::Scanline } else { IrqMode::Cycle };
     }
 
     pub fn acknowledge(&mut self) {

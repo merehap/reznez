@@ -15,6 +15,7 @@ use syn::punctuated::Punctuated;
 // * Enable emitting precise-sized ux crate types.
 // * Support no_std.
 // * Implement combinebits.
+// * combinebits_hexadecimal
 #[proc_macro]
 pub fn splitbits(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());

@@ -76,11 +76,11 @@ impl Mapper for Mapper065 {
                 let reg_id = CHR_REGISTER_IDS[(cpu_address.to_raw() - 0xB000) as usize];
                 params.set_bank_register(reg_id, value);
             }
-            0x9000 => params.set_prg_layout(PRG_LAYOUTS[usize::from((value & 0b1000_0000) >> 7)]),
-            0x9001 => params.set_name_table_mirroring(MIRRORINGS[usize::from((value & 0b1100_0000) >> 6)]),
+            0x9000 => params.set_prg_layout(PRG_LAYOUTS[onefield!(value, "p.......") as usize]),
+            0x9001 => params.set_name_table_mirroring(MIRRORINGS[onefield!(value, "mm......") as usize]),
 
             0x9003 => {
-                self.irq_enabled = value & 0b1000_0000 != 0;
+                self.irq_enabled = onefield!(value, "i.......");
                 self.irq_pending = false;
             }
             0x9004 => {

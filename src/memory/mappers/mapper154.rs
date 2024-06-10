@@ -19,8 +19,7 @@ impl Mapper for Mapper154 {
 
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         if matches!(address.to_raw(), 0x8000..=0xFFFF) {
-            // TODO: splitbits single
-            params.set_name_table_mirroring(MIRRORINGS[usize::from((value & 0b0100_0000) >> 6)]);
+            params.set_name_table_mirroring(MIRRORINGS[onefield!(value, ".m......") as usize]);
         }
 
         self.mapper088.write_to_cartridge_space(params, address, value);
