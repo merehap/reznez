@@ -11,11 +11,11 @@ use syn::parse::Parser;
 use syn::punctuated::Punctuated;
 
 // TODO:
-// * Allow more int types as output.
 // * Allow parsing a single field.
 // * Enable setting pre-defined variables as an alternative to making a new struct.
 // * Enable emitting precise-sized ux crate types.
 // * Support no_std.
+// * Implement combinebits.
 #[proc_macro]
 pub fn splitbits(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let parts: Punctuated::<Expr, Token![,]> = Parser::parse2(
@@ -54,15 +54,19 @@ pub fn splitbits(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
             let mut mask: u128 = 0;
             for (index, &n) in template.iter().enumerate() {
                 if n == name {
-                    println!("{} {}", input_type as usize, index);
                     mask |= 1 << (input_type as usize - index - 1);
                 }
             }
 
-            let t = if mask.count_ones() == 1 {
-                Type::Bool
-            } else {
-                Type::U8
+            let t = match u128::BITS - mask.leading_zeros() - mask.trailing_zeros() {
+                0 => panic!(),
+                1        => Type::Bool,
+                2..=8    => Type::U8,
+                9..=16   => Type::U16,
+                17..=32  => Type::U32,
+                33..=64  => Type::U64,
+                65..=128 => Type::U128,
+                129..=u32::MAX => panic!("Integers larger than u128 are not supported."),
             };
 
             let field = Field {
@@ -95,16 +99,12 @@ pub fn splitbits(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
             let mask = field.mask;
             let shift = mask.trailing_zeros() as u128;
             match field.t {
-                Type::Bool => quote! {
-                    {
-                        #value & #mask != 0
-                    }
-                },
-                _ => quote! {
-                    {
-                        ((#value & #mask) >> #shift) as u8
-                    }
-                },
+                Type::Bool => quote! { #value as u128 & #mask != 0 },
+                Type::U8   => quote! { ((#value as u128 & #mask) >> #shift) as u8 },
+                Type::U16  => quote! { ((#value as u128 & #mask) >> #shift) as u16 },
+                Type::U32  => quote! { ((#value as u128 & #mask) >> #shift) as u32 },
+                Type::U64  => quote! { ((#value as u128 & #mask) >> #shift) as u64 },
+                Type::U128 => quote! { ((#value as u128 & #mask) >> #shift) as u128 },
             }
         })
         .collect();
@@ -121,7 +121,6 @@ pub fn splitbits(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
         }
     };
 
-    println!("{result}");
     result.into()
 }
 
