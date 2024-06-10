@@ -39,6 +39,9 @@ pub const CHR_SMALL_WINDOWS_FIRST: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::switchable_rom(C1)),
 ]);
 
+const CHR_LAYOUTS: [ChrLayout; 2] = [CHR_BIG_WINDOWS_FIRST, CHR_SMALL_WINDOWS_FIRST];
+const PRG_LAYOUTS: [PrgLayout; 2] = [PRG_LAYOUT_8000_SWITCHABLE, PRG_LAYOUT_C000_SWITCHABLE];
+
 pub const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .prg_max_bank_count(64)
     .prg_bank_size(8 * KIBIBYTE)
@@ -105,21 +108,10 @@ pub fn bank_select(
     selected_register_id: &mut BankRegisterId,
     value: u8,
 ) {
-    let chr_big_windows_first =                     (value & 0b1000_0000) == 0;
-    let prg_switchable_8000 =                       (value & 0b0100_0000) == 0;
-    *selected_register_id = BANK_INDEX_REGISTER_IDS[(value & 0b0000_0111) as usize];
-
-    if chr_big_windows_first {
-        params.set_chr_layout(CHR_BIG_WINDOWS_FIRST);
-    } else {
-        params.set_chr_layout(CHR_SMALL_WINDOWS_FIRST);
-    }
-
-    if prg_switchable_8000 {
-        params.set_prg_layout(PRG_LAYOUT_8000_SWITCHABLE);
-    } else {
-        params.set_prg_layout(PRG_LAYOUT_C000_SWITCHABLE);
-    }
+    let fields = splitbits!(value, "cp...rrr");
+    params.set_chr_layout(CHR_LAYOUTS[fields.c as usize]);
+    params.set_prg_layout(PRG_LAYOUTS[fields.p as usize]);
+    *selected_register_id = BANK_INDEX_REGISTER_IDS[fields.r as usize];
 }
 
 pub fn set_bank_index(
@@ -143,6 +135,7 @@ pub fn set_bank_index(
 }
 
 pub fn set_mirroring(params: &mut MapperParams, value: u8) {
+    // TODO: splitbits single 
     use NameTableMirroring::*;
     match (params.name_table_mirroring(), value & 0b0000_0001) {
         (Vertical, 1) => params.set_name_table_mirroring(Horizontal),
@@ -152,6 +145,7 @@ pub fn set_mirroring(params: &mut MapperParams, value: u8) {
 }
 
 pub fn prg_ram_protect(params: &mut MapperParams, value: u8) {
+    // TODO: splitbits tuple
     let read_only  = value & 0b0100_0000 != 0;
     let enable_ram = value & 0b1000_0000 != 0;
 

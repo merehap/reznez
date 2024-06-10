@@ -34,7 +34,7 @@ impl Mapper for Mapper070 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
             0x8000..=0xFFFF => {
-                let banks = splitbits!(value, "ppppcccc");
+                let banks = splitbits!(value, "pppp cccc");
                 params.set_bank_register(P0, banks.p);
                 params.set_bank_register(C0, banks.c);
             }

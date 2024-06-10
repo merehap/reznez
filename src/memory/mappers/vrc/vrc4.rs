@@ -32,11 +32,21 @@ const CHR_WINDOWS: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C7)),
 ]);
 
+const PRG_LAYOUTS: [PrgLayout; 2] = [
+    PRG_WINDOWS_SWITCHABLE_8000,
+    PRG_WINDOWS_SWITCHABLE_C000,
+];
+
 const NAME_TABLE_MIRRORINGS: [NameTableMirroring; 4] = [
     NameTableMirroring::Vertical,
     NameTableMirroring::Horizontal,
     NameTableMirroring::OneScreenLeftBank,
     NameTableMirroring::OneScreenRightBank,
+];
+
+const RAM_STATUSES: [RamStatus; 2] = [
+    RamStatus::Disabled,
+    RamStatus::ReadWrite,
 ];
 
 pub struct Vrc4 {
@@ -77,19 +87,9 @@ impl Mapper for Vrc4 {
                 params.set_name_table_mirroring(mirroring);
             }
             0x9002 => {
-                let status = if value & 0b0000_0001 == 0 {
-                    RamStatus::Disabled
-                } else {
-                    RamStatus::ReadWrite
-                };
-                params.set_ram_status(S0, status);
-
-                let prg_layout = if value & 0b0000_0010 == 0 {
-                    PRG_WINDOWS_SWITCHABLE_8000
-                } else {
-                    PRG_WINDOWS_SWITCHABLE_C000
-                };
-                params.set_prg_layout(prg_layout);
+                let fields = splitbits!(value, ".... ..ps");
+                params.set_prg_layout(PRG_LAYOUTS[fields.p as usize]);
+                params.set_ram_status(S0, RAM_STATUSES[fields.s as usize]);
             }
             // Set bank for A000 through AFFF.
             0xA000..=0xA003 => params.set_bank_register(P1, value & 0b0001_1111),

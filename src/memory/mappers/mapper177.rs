@@ -35,7 +35,7 @@ impl Mapper for Mapper177 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                let fields = splitbits!(value, "..mppppp");
+                let fields = splitbits!(value, "..mp pppp");
                 params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
                 params.set_bank_register(P0, fields.p);
             }

@@ -9,6 +9,11 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
 ]);
 
+const MIRRORINGS: [NameTableMirroring; 2] = [
+    NameTableMirroring::OneScreenLeftBank,
+    NameTableMirroring::OneScreenRightBank,
+];
+
 // AxROM
 pub struct Axrom {
     has_bus_conflicts: HasBusConflicts,
@@ -37,13 +42,9 @@ impl Mapper for Axrom {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                params.set_bank_register(P0, value & 0b0000_1111);
-                let mirroring = if value & 0b0001_0000 == 0 {
-                    NameTableMirroring::OneScreenLeftBank
-                } else {
-                    NameTableMirroring::OneScreenRightBank
-                };
-                params.set_name_table_mirroring(mirroring);
+                let fields = splitbits!(value, "...mpppp");
+                params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
+                params.set_bank_register(P0, fields.p);
             }
         }
     }

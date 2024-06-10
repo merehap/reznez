@@ -42,7 +42,7 @@ impl Mapper for Mapper033 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x8000 => {
-                let fields = splitbits!(value, ".mpppppp");
+                let fields = splitbits!(value, ".mpp pppp");
                 params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
                 params.set_bank_register(P0, fields.p);
             }

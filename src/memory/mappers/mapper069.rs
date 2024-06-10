@@ -112,7 +112,7 @@ impl Mapper069 {
                 params.set_bank_register(id, value),
             Command::PrgRomRamBank => {
                 // Writable / Readable / PRG Bank
-                let fields = splitbits!(value, "wrbbbbbb");
+                let fields = splitbits!(value, "wrbb bbbb");
 
                 let status = if fields.r {
                     RamStatus::ReadOnly

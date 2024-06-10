@@ -38,6 +38,7 @@ impl Mapper for Mapper046 {
                 self.chr_high_bits = (value & 0b0000_1111) << 3;
             }
             0x8000..=0xFFFF => {
+                // TODO: combinebits
                 let prg_bank_index = self.prg_high_bits | (value & 0b0000_0001);
                 params.set_bank_register(P0, prg_bank_index);
                 let chr_bank_index = self.chr_high_bits | ((value << 1) >> 5);

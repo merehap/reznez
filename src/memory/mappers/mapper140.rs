@@ -32,7 +32,7 @@ impl Mapper for Mapper140 {
             0x6000..=0x7FFF => {
                 // TODO: Remove this?
                 assert_eq!(value & 0b1100_0000, 0);
-                let banks = splitbits!(value, "..ppcccc");
+                let banks = splitbits!(value, "..pp cccc");
                 params.set_bank_register(P0, banks.p);
                 params.set_bank_register(C0, banks.c);
             }

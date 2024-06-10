@@ -43,7 +43,7 @@ impl Mapper for Mapper075 {
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x8FFF => params.set_bank_register(P0, value & 0b0000_1111),
             0x9000..=0x9FFF => {
-                let fields = splitbits!(value, ".....rlm");
+                let fields = splitbits!(value, ".... .rlm");
 
                 self.chr_right_high_bit = u8::from(fields.r) << 4;
                 self.chr_left_high_bit = u8::from(fields.l) << 4;
