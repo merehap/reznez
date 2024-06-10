@@ -1,6 +1,6 @@
 extern crate splitbits;
 
-use splitbits::splitbits;
+use splitbits::{splitbits, onefield};
 
 #[test]
 fn u8() {
@@ -170,4 +170,14 @@ fn u128() {
     assert_eq!(fields.v, 0b110);
     assert_eq!(fields.w, 0b10);
     assert_eq!(fields.x, 0b0001);
+}
+
+#[test]
+fn onefield() {
+    let field = onefield!(
+        0b1101_1101_1000_0100_0000_0000_1111_1001,
+         ".... bbbb bbbb bbbb bbbb bbb. .... ....",
+    );
+
+    assert_eq!(field, 0b110_1100_0010_0000_0000);
 }

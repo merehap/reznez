@@ -53,6 +53,14 @@ pub fn splitbits(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     result.into()
 }
 
+#[proc_macro]
+pub fn onefield(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let (value, template) = parse_input(input.into());
+    let fields = fields(template.clone());
+    assert_eq!(fields.len(), 1);
+    quote_field_value(fields[0], &value).into()
+}
+
 fn parse_input(item: TokenStream) -> (Expr, Vec<char>) {
     let parts: Punctuated::<Expr, Token![,]> = Parser::parse2(
         Punctuated::<Expr, Token![,]>::parse_terminated,
