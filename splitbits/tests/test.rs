@@ -65,3 +65,17 @@ fn some_of_everything() {
     assert_eq!(fields.c, 0b11);
     assert_eq!(fields.d, true);
 }
+
+// Using the same template twice in the same scope should work (i.e. no struct name conflicts)
+#[test]
+fn duplicate() {
+    let fields = splitbits!(0b11011101, "aaabbccc");
+    assert_eq!(fields.a, 0b110);
+    assert_eq!(fields.b, 0b11);
+    assert_eq!(fields.c, 0b101);
+
+    let fields2 = splitbits!(0b01001100, "aaabbccc");
+    assert_eq!(fields2.a, 0b010);
+    assert_eq!(fields2.b, 0b01);
+    assert_eq!(fields2.c, 0b100);
+}
