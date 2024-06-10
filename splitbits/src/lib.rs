@@ -11,7 +11,6 @@ use syn::parse::Parser;
 use syn::punctuated::Punctuated;
 
 // TODO:
-// * Allow more int types as input.
 // * Allow more int types as output.
 // * Allow parsing a single field.
 // * Enable setting pre-defined variables as an alternative to making a new struct.
@@ -35,7 +34,14 @@ pub fn splitbits(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
         // Spaces are only for human-readability.
         .filter(|&c| c != ' ')
         .collect();
-    assert_eq!(template.len(), 8);
+    let input_type = match template.len() {
+        8 => Type::U8,
+        16 => Type::U16,
+        32 => Type::U32,
+        64 => Type::U64,
+        128 => Type::U128,
+        len => panic!("Template length must be 8, 16, 32, 64, or 128, but was {len}."),
+    };
 
     let mut fields = template.clone();
     fields.dedup();
@@ -45,10 +51,11 @@ pub fn splitbits(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
         .map(|&name| {
             assert!(name.is_ascii_lowercase());
 
-            let mut mask: u8 = 0;
+            let mut mask: u128 = 0;
             for (index, &n) in template.iter().enumerate() {
                 if n == name {
-                    mask |= 1 << (7 - index);
+                    println!("{} {}", input_type as usize, index);
+                    mask |= 1 << (input_type as usize - index - 1);
                 }
             }
 
@@ -86,16 +93,16 @@ pub fn splitbits(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let values: Vec<TokenStream> = fields.iter()
         .map(|field| {
             let mask = field.mask;
-            let shift = mask.trailing_zeros();
+            let shift = mask.trailing_zeros() as u128;
             match field.t {
                 Type::Bool => quote! {
                     {
                         #value & #mask != 0
                     }
                 },
-                Type::U8 => quote! {
+                _ => quote! {
                     {
-                        (#value & #mask) >> #shift
+                        ((#value & #mask) >> #shift) as u8
                     }
                 },
             }
@@ -114,20 +121,25 @@ pub fn splitbits(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
         }
     };
 
+    println!("{result}");
     result.into()
 }
 
 #[derive(Clone, Copy)]
 struct Field {
     name: char,
-    mask: u8,
+    mask: u128,
     t: Type,
 }
 
 #[derive(Clone, Copy, Debug)]
 enum Type {
-    Bool,
-    U8,
+    Bool =   1,
+    U8   =   8,
+    U16  =  16,
+    U32  =  32,
+    U64  =  64,
+    U128 = 128,
 }
 
 impl fmt::Display for Type {
