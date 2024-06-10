@@ -1,6 +1,5 @@
 extern crate proc_macro;
 
-use std::collections::BTreeMap;
 use std::fmt;
 
 use proc_macro2::TokenStream;
@@ -17,7 +16,44 @@ use syn::punctuated::Punctuated;
 // * Support no_std.
 // * Implement combinebits.
 #[proc_macro]
-pub fn splitbits(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn splitbits(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let (value, template) = parse_input(input.into());
+
+    let fields = fields(template.clone());
+    let struct_name_suffix: String = template.iter()
+        // Underscores work in struct names, periods do not.
+        .map(|&c| if c == '.' { '_' } else { c })
+        .collect();
+
+    let struct_name = format!("Fields·{}", struct_name_suffix);
+
+    let struct_ident = format_ident!("{}", struct_name);
+    let names = fields.iter().map(|field| format_ident!("{}", field.name));
+    let names2 = names.clone();
+    let types: Vec<_> = fields.iter()
+        .map(|field| format_ident!("{}", format!("{}", field.t)))
+        .collect();
+
+    let values: Vec<TokenStream> = fields.iter()
+        .map(|&field| quote_field_value(field, &value))
+        .collect();
+
+    let result = quote! {
+        {
+            struct #struct_ident {
+                #(#names: #types,)*
+            }
+
+            #struct_ident {
+                #(#names2: #values,)*
+            }
+        }
+    };
+
+    result.into()
+}
+
+fn parse_input(item: TokenStream) -> (Expr, Vec<char>) {
     let parts: Punctuated::<Expr, Token![,]> = Parser::parse2(
         Punctuated::<Expr, Token![,]>::parse_terminated,
         item.clone().into(),
@@ -34,6 +70,11 @@ pub fn splitbits(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
         // Spaces are only for human-readability.
         .filter(|&c| c != ' ')
         .collect();
+
+    (value, template)
+}
+
+fn fields(template: Vec<char>) -> Vec<Field> {
     let input_type = match template.len() {
         8 => Type::U8,
         16 => Type::U16,
@@ -45,7 +86,7 @@ pub fn splitbits(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let mut fields = template.clone();
     fields.dedup();
-    let fields: BTreeMap<char, Field> = fields.iter()
+    fields.iter()
         // Periods aren't names, they are placeholders for ignored bits.
         .filter(|&&c| c != '.')
         .map(|&name| {
@@ -69,59 +110,26 @@ pub fn splitbits(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
                 129..=u32::MAX => panic!("Integers larger than u128 are not supported."),
             };
 
-            let field = Field {
+            Field {
                 name,
                 mask,
                 t,
-            };
-
-            (name, field)
-        })
-        .collect();
-    let fields: Vec<_> = fields.values().collect();
-
-    let template: String = template.iter()
-        // Underscores work in struct names, periods do not.
-        .map(|&c| if c == '.' { '_' } else { c })
-        .collect();
-
-    let struct_name = format!("Fields·{}", template);
-
-    let struct_ident = format_ident!("{}", struct_name);
-    let names = fields.iter().map(|field| format_ident!("{}", field.name));
-    let names2 = names.clone();
-    let types: Vec<_> = fields.iter()
-        .map(|field| format_ident!("{}", format!("{}", field.t)))
-        .collect();
-
-    let values: Vec<TokenStream> = fields.iter()
-        .map(|field| {
-            let mask = field.mask;
-            let shift = mask.trailing_zeros() as u128;
-            match field.t {
-                Type::Bool => quote! { #value as u128 & #mask != 0 },
-                Type::U8   => quote! { ((#value as u128 & #mask) >> #shift) as u8 },
-                Type::U16  => quote! { ((#value as u128 & #mask) >> #shift) as u16 },
-                Type::U32  => quote! { ((#value as u128 & #mask) >> #shift) as u32 },
-                Type::U64  => quote! { ((#value as u128 & #mask) >> #shift) as u64 },
-                Type::U128 => quote! { ((#value as u128 & #mask) >> #shift) as u128 },
             }
         })
-        .collect();
+        .collect()
+}
 
-    let result = quote! {
-        {
-            struct #struct_ident {
-                #(#names: #types,)*
-            }
-
-            #struct_ident {
-                #(#names2: #values,)*
-            }
-        }
-    };
-
-    result.into()
+fn quote_field_value(field: Field, value: &Expr) -> TokenStream {
+    let mask = field.mask;
+    let shift = mask.trailing_zeros() as u128;
+    match field.t {
+        Type::Bool => quote! { #value as u128 & #mask != 0 },
+        Type::U8   => quote! { ((#value as u128 & #mask) >> #shift) as u8 },
+        Type::U16  => quote! { ((#value as u128 & #mask) >> #shift) as u16 },
+        Type::U32  => quote! { ((#value as u128 & #mask) >> #shift) as u32 },
+        Type::U64  => quote! { ((#value as u128 & #mask) >> #shift) as u64 },
+        Type::U128 => quote! { ((#value as u128 & #mask) >> #shift) as u128 },
+    }
 }
 
 #[derive(Clone, Copy)]
