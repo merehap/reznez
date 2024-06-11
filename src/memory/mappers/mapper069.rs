@@ -132,9 +132,7 @@ impl Mapper069 {
             }
             Command::IrqControl => {
                 self.irq_pending = false;
-                // TODO: splitbits tuple
-                self.irq_counter_enabled = value & 0b1000_0000 != 0;
-                self.irq_enabled         = value & 0b0000_0001 != 0;
+                (self.irq_counter_enabled, self.irq_enabled) = splitbits_tuple!(value, "c......i");
             }
             Command::IrqCounterLowByte =>
                 set_bits(&mut self.irq_counter, u16::from(value)     , 0b0000_0000_1111_1111),

@@ -1,4 +1,4 @@
-pub use splitbits::{splitbits, onefield};
+pub use splitbits::{splitbits, splitbits_tuple, onefield};
 
 pub use crate::cartridge::cartridge::Cartridge;
 pub use crate::memory::bank::bank_index::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters, RamStatus};

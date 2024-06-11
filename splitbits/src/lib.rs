@@ -2,7 +2,7 @@ extern crate proc_macro;
 
 use std::fmt;
 
-use proc_macro2::TokenStream;
+use proc_macro2::{TokenStream, Ident};
 
 use quote::{quote, format_ident};
 use syn::{Token, Expr, Lit};
@@ -10,34 +10,30 @@ use syn::parse::Parser;
 use syn::punctuated::Punctuated;
 
 // TODO:
-// * Allow parsing a single field.
-// * Enable setting pre-defined variables as an alternative to making a new struct.
+// * Enable explicit tuple type annotations.
 // * Enable emitting precise-sized ux crate types.
 // * Support no_std.
 // * Implement combinebits.
+// * Implement splitbits_then_combine
+// * splitbits_hexadecimal
 // * combinebits_hexadecimal
+// * Remove bit shift when the shift is 0.
+// * Allow const variable templates.
+// * Allow non-const variable templates (as a separate macro?).
+// * Tighten int sizes.
 #[proc_macro]
 pub fn splitbits(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
-
     let fields = fields(template.clone());
+    let (names, types, values) = separate_fields(fields, value);
+
+    let names2 = names.clone();
+
     let struct_name_suffix: String = template.iter()
         // Underscores work in struct names, periods do not.
         .map(|&c| if c == '.' { '_' } else { c })
         .collect();
-
-    let struct_name = format!("Fields·{}", struct_name_suffix);
-
-    let struct_ident = format_ident!("{}", struct_name);
-    let names = fields.iter().map(|field| format_ident!("{}", field.name));
-    let names2 = names.clone();
-    let types: Vec<_> = fields.iter()
-        .map(|field| format_ident!("{}", format!("{}", field.t)))
-        .collect();
-
-    let values: Vec<TokenStream> = fields.iter()
-        .map(|&field| quote_field_value(field, &value))
-        .collect();
+    let struct_ident = format_ident!("{}", format!("Fields·{}", struct_name_suffix));
 
     let result = quote! {
         {
@@ -49,6 +45,19 @@ pub fn splitbits(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
                 #(#names2: #values,)*
             }
         }
+    };
+
+    result.into()
+}
+
+#[proc_macro]
+pub fn splitbits_tuple(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let (value, template) = parse_input(input.into());
+    let fields = fields(template.clone());
+    let (_, _, values) = separate_fields(fields, value);
+
+    let result = quote! {
+        (#(#values,)*)
     };
 
     result.into()
@@ -128,11 +137,25 @@ fn fields(template: Vec<char>) -> Vec<Field> {
         .collect()
 }
 
+fn separate_fields(fields: Vec<Field>, value: Expr) -> (Vec<Ident>, Vec<Ident>, Vec<TokenStream>) {
+    let names = fields.iter()
+        .map(|field| format_ident!("{}", field.name))
+        .collect();
+    let types: Vec<_> = fields.iter()
+        .map(|field| format_ident!("{}", format!("{}", field.t)))
+        .collect();
+    let values: Vec<TokenStream> = fields.iter()
+        .map(|&field| quote_field_value(field, &value))
+        .collect();
+
+    (names, types, values)
+}
+
 fn quote_field_value(field: Field, value: &Expr) -> TokenStream {
     let mask = field.mask;
     let shift = mask.trailing_zeros() as u128;
     match field.t {
-        Type::Bool => quote! { #value as u128 & #mask != 0 },
+        Type::Bool => quote! {   #value as u128 & #mask != 0 },
         Type::U8   => quote! { ((#value as u128 & #mask) >> #shift) as u8 },
         Type::U16  => quote! { ((#value as u128 & #mask) >> #shift) as u16 },
         Type::U32  => quote! { ((#value as u128 & #mask) >> #shift) as u32 },
