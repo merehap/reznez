@@ -10,14 +10,11 @@ use syn::parse::Parser;
 use syn::punctuated::Punctuated;
 
 // TODO:
-// * Enable explicit tuple type annotations.
 // * Enable emitting precise-sized ux crate types.
-// * Support no_std.
 // * Implement combinebits.
 // * Implement splitbits_then_combine
 // * splitbits_hexadecimal
 // * combinebits_hexadecimal
-// * Remove bit shift when the shift is 0.
 // * Allow const variable templates.
 // * Allow non-const variable templates (as a separate macro?).
 // * Tighten int sizes.
@@ -60,6 +57,20 @@ pub fn splitbits_tuple(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
         (#(#values,)*)
     };
 
+    result.into()
+}
+
+#[proc_macro]
+pub fn splitbits_tuple_into(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let (value, template) = parse_input(input.into());
+    let fields = fields(template.clone());
+    let (_, _, values) = separate_fields(fields, value);
+
+    let result = quote! {
+        (#((#values).into(),)*)
+    };
+
+    println!("{result}");
     result.into()
 }
 
@@ -154,13 +165,19 @@ fn separate_fields(fields: Vec<Field>, value: Expr) -> (Vec<Ident>, Vec<Ident>, 
 fn quote_field_value(field: Field, value: &Expr) -> TokenStream {
     let mask = field.mask;
     let shift = mask.trailing_zeros() as u128;
+    let shifter = if shift == 0 {
+        quote! { }
+    } else {
+        quote! { >> #shift }
+    };
+
     match field.t {
         Type::Bool => quote! {   #value as u128 & #mask != 0 },
-        Type::U8   => quote! { ((#value as u128 & #mask) >> #shift) as u8 },
-        Type::U16  => quote! { ((#value as u128 & #mask) >> #shift) as u16 },
-        Type::U32  => quote! { ((#value as u128 & #mask) >> #shift) as u32 },
-        Type::U64  => quote! { ((#value as u128 & #mask) >> #shift) as u64 },
-        Type::U128 => quote! { ((#value as u128 & #mask) >> #shift) as u128 },
+        Type::U8   => quote! { ((#value as u128 & #mask) #shifter) as u8 },
+        Type::U16  => quote! { ((#value as u128 & #mask) #shifter) as u16 },
+        Type::U32  => quote! { ((#value as u128 & #mask) #shifter) as u32 },
+        Type::U64  => quote! { ((#value as u128 & #mask) #shifter) as u64 },
+        Type::U128 => quote! { ((#value as u128 & #mask) #shifter) as u128 },
     }
 }
 

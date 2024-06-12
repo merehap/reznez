@@ -1,6 +1,6 @@
 extern crate splitbits;
 
-use splitbits::{splitbits, splitbits_tuple, onefield};
+use splitbits::{splitbits, splitbits_tuple, splitbits_tuple_into, onefield};
 
 #[test]
 fn u8() {
@@ -69,11 +69,11 @@ fn underscores() {
 
 #[test]
 fn some_of_everything() {
-    let fields = splitbits!(0b1101_1101, ".ab. cc.d");
+    let fields = splitbits!(0b1101_1101, ".ab. cdd.");
     assert_eq!(fields.a, true);
     assert_eq!(fields.b, false);
-    assert_eq!(fields.c, 0b11u8);
-    assert_eq!(fields.d, true);
+    assert_eq!(fields.c, true);
+    assert_eq!(fields.d, 0b10u8);
 }
 
 // Using the same template twice in the same scope should work (i.e. no struct name conflicts)
@@ -207,4 +207,26 @@ fn tuple_existing_variables() {
     assert_eq!(of, 0b111u8);
     assert_eq!(all, false);
     assert_eq!(time, 0b001u8);
+}
+
+#[test]
+fn tuple_existing_types() {
+    let greatest: u128; let of: u8; let all: u32; let time: u16;
+    (greatest, of, all, time) = splitbits_tuple_into!(
+        0b1101110111110001,
+         "aaaaaaaaadddefff",
+    );
+    assert_eq!(greatest, 0b110111011u128);
+    assert_eq!(of, 0b111u8);
+    assert_eq!(all, 0u32);
+    assert_eq!(time, 0b001u16);
+
+    let (greatest, of, all, time): (u128, u8, u32, u16) = splitbits_tuple_into!(
+        0b1101110111110001,
+         "aaaaaaaaadddefff",
+    );
+    assert_eq!(greatest, 0b110111011u128);
+    assert_eq!(of, 0b111u8);
+    assert_eq!(all, 0u32);
+    assert_eq!(time, 0b001u16);
 }
