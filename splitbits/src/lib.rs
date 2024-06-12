@@ -13,15 +13,54 @@ use syn::punctuated::Punctuated;
 // * Enable emitting precise-sized ux crate types.
 // * Implement combinebits.
 // * Implement splitbits_then_combine
-// * splitbits_hexadecimal
 // * combinebits_hexadecimal
 // * Allow const variable templates.
 // * Allow non-const variable templates (as a separate macro?).
 #[proc_macro]
 pub fn splitbits(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    splitbits_base(input, Base::Binary)
+}
+
+#[proc_macro]
+pub fn splithex(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    splitbits_base(input, Base::Hexadecimal)
+}
+
+#[proc_macro]
+pub fn splitbits_tuple(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    splitbits_tuple_base(input, Base::Binary)
+}
+
+#[proc_macro]
+pub fn splithex_tuple(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    splitbits_tuple_base(input, Base::Hexadecimal)
+}
+
+#[proc_macro]
+pub fn splitbits_tuple_into(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    splitbits_tuple_into_base(input, Base::Binary)
+}
+
+#[proc_macro]
+pub fn splithex_tuple_into(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    splitbits_tuple_into_base(input, Base::Hexadecimal)
+}
+
+#[proc_macro]
+pub fn onefield(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    onefield_base(input, Base::Binary)
+}
+
+#[proc_macro]
+pub fn onehexfield(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    onefield_base(input, Base::Hexadecimal)
+}
+
+fn splitbits_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
-    let fields = fields(template.clone());
-    let (names, types, values) = separate_fields(fields, value, &template);
+    let (template, input_type) = apply_base(&template, base);
+    let fields = fields(template.clone(), input_type);
+    let (names, types, values) = separate_fields(fields, value, input_type);
 
     let names2 = names.clone();
 
@@ -46,11 +85,11 @@ pub fn splitbits(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     result.into()
 }
 
-#[proc_macro]
-pub fn splitbits_tuple(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+fn splitbits_tuple_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
-    let fields = fields(template.clone());
-    let (_, _, values) = separate_fields(fields, value, &template);
+    let (template, input_type) = apply_base(&template, base);
+    let fields = fields(template.clone(), input_type);
+    let (_, _, values) = separate_fields(fields, value, input_type);
 
     let result = quote! {
         (#(#values,)*)
@@ -59,11 +98,11 @@ pub fn splitbits_tuple(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     result.into()
 }
 
-#[proc_macro]
-pub fn splitbits_tuple_into(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+fn splitbits_tuple_into_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
-    let fields = fields(template.clone());
-    let (_, _, values) = separate_fields(fields, value, &template);
+    let (template, input_type) = apply_base(&template, base);
+    let fields = fields(template.clone(), input_type);
+    let (_, _, values) = separate_fields(fields, value, input_type);
 
     let result = quote! {
         (#((#values).into(),)*)
@@ -72,12 +111,23 @@ pub fn splitbits_tuple_into(input: proc_macro::TokenStream) -> proc_macro::Token
     result.into()
 }
 
-#[proc_macro]
-pub fn onefield(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+fn onefield_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
-    let fields = fields(template.clone());
+    let (template, input_type) = apply_base(&template, base);
+    let fields = fields(template.clone(), input_type);
     assert_eq!(fields.len(), 1);
-    quote_field_value(fields[0], &value, Type::from_template(&template)).into()
+    quote_field_value(fields[0], &value, input_type).into()
+}
+
+fn apply_base(template: &[char], base: Base) -> (Vec<char>, Type) {
+    let input_type = Type::from_template(template, base);
+    // Each template char needs to be repeated if we aren't working in base 2.
+    let bit_template = template.iter()
+        .cloned()
+        .flat_map(|n| std::iter::repeat(n).take(base.bits_per_template_char()))
+        .collect();
+
+    (bit_template, input_type)
 }
 
 fn parse_input(item: TokenStream) -> (Expr, Vec<char>) {
@@ -101,9 +151,7 @@ fn parse_input(item: TokenStream) -> (Expr, Vec<char>) {
     (value, template)
 }
 
-fn fields(template: Vec<char>) -> Vec<Field> {
-    let input_type = Type::from_template(&template);
-
+fn fields(template: Vec<char>, input_type: Type) -> Vec<Field> {
     let mut fields = template.clone();
     fields.dedup();
     fields.iter()
@@ -119,7 +167,8 @@ fn fields(template: Vec<char>) -> Vec<Field> {
                 }
             }
 
-            let t = match u128::BITS - mask.leading_zeros() - mask.trailing_zeros() {
+            let bit_count = u128::BITS - mask.leading_zeros() - mask.trailing_zeros();
+            let t = match bit_count {
                 0 => panic!(),
                 1        => Type::Bool,
                 2..=8    => Type::U8,
@@ -130,18 +179,12 @@ fn fields(template: Vec<char>) -> Vec<Field> {
                 129..=u32::MAX => panic!("Integers larger than u128 are not supported."),
             };
 
-            Field {
-                name,
-                mask,
-                t,
-            }
+            Field { name, mask, t }
         })
         .collect()
 }
 
-fn separate_fields(fields: Vec<Field>, value: Expr, template: &[char]) -> (Vec<Ident>, Vec<Ident>, Vec<TokenStream>) {
-    let input_type = Type::from_template(template);
-
+fn separate_fields(fields: Vec<Field>, value: Expr, input_type: Type) -> (Vec<Ident>, Vec<Ident>, Vec<TokenStream>) {
     let names = fields.iter()
         .map(|field| format_ident!("{}", field.name))
         .collect();
@@ -194,8 +237,8 @@ enum Type {
 }
 
 impl Type {
-    fn from_template(template: &[char]) -> Type {
-        match template.len() {
+    fn from_template(template: &[char], base: Base) -> Type {
+        match base.bits_per_template_char() * template.len() {
             8 => Type::U8,
             16 => Type::U16,
             32 => Type::U32,
@@ -210,5 +253,20 @@ impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let result = format!("{:?}", *self).to_lowercase();
         write!(f, "{}", result)
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Base {
+    Binary,
+    Hexadecimal,
+}
+
+impl Base {
+    fn bits_per_template_char(self) -> usize {
+        match self {
+            Base::Binary => 1,
+            Base::Hexadecimal => 4,
+        }
     }
 }
