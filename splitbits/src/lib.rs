@@ -17,12 +17,11 @@ use syn::punctuated::Punctuated;
 // * combinebits_hexadecimal
 // * Allow const variable templates.
 // * Allow non-const variable templates (as a separate macro?).
-// * Tighten int sizes.
 #[proc_macro]
 pub fn splitbits(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
     let fields = fields(template.clone());
-    let (names, types, values) = separate_fields(fields, value);
+    let (names, types, values) = separate_fields(fields, value, &template);
 
     let names2 = names.clone();
 
@@ -51,7 +50,7 @@ pub fn splitbits(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 pub fn splitbits_tuple(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
     let fields = fields(template.clone());
-    let (_, _, values) = separate_fields(fields, value);
+    let (_, _, values) = separate_fields(fields, value, &template);
 
     let result = quote! {
         (#(#values,)*)
@@ -64,13 +63,12 @@ pub fn splitbits_tuple(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 pub fn splitbits_tuple_into(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
     let fields = fields(template.clone());
-    let (_, _, values) = separate_fields(fields, value);
+    let (_, _, values) = separate_fields(fields, value, &template);
 
     let result = quote! {
         (#((#values).into(),)*)
     };
 
-    println!("{result}");
     result.into()
 }
 
@@ -79,7 +77,7 @@ pub fn onefield(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
     let fields = fields(template.clone());
     assert_eq!(fields.len(), 1);
-    quote_field_value(fields[0], &value).into()
+    quote_field_value(fields[0], &value, Type::from_template(&template)).into()
 }
 
 fn parse_input(item: TokenStream) -> (Expr, Vec<char>) {
@@ -104,14 +102,7 @@ fn parse_input(item: TokenStream) -> (Expr, Vec<char>) {
 }
 
 fn fields(template: Vec<char>) -> Vec<Field> {
-    let input_type = match template.len() {
-        8 => Type::U8,
-        16 => Type::U16,
-        32 => Type::U32,
-        64 => Type::U64,
-        128 => Type::U128,
-        len => panic!("Template length must be 8, 16, 32, 64, or 128, but was {len}."),
-    };
+    let input_type = Type::from_template(&template);
 
     let mut fields = template.clone();
     fields.dedup();
@@ -148,7 +139,9 @@ fn fields(template: Vec<char>) -> Vec<Field> {
         .collect()
 }
 
-fn separate_fields(fields: Vec<Field>, value: Expr) -> (Vec<Ident>, Vec<Ident>, Vec<TokenStream>) {
+fn separate_fields(fields: Vec<Field>, value: Expr, template: &[char]) -> (Vec<Ident>, Vec<Ident>, Vec<TokenStream>) {
+    let input_type = Type::from_template(template);
+
     let names = fields.iter()
         .map(|field| format_ident!("{}", field.name))
         .collect();
@@ -156,15 +149,17 @@ fn separate_fields(fields: Vec<Field>, value: Expr) -> (Vec<Ident>, Vec<Ident>, 
         .map(|field| format_ident!("{}", format!("{}", field.t)))
         .collect();
     let values: Vec<TokenStream> = fields.iter()
-        .map(|&field| quote_field_value(field, &value))
+        .map(|&field| quote_field_value(field, &value, input_type))
         .collect();
 
     (names, types, values)
 }
 
-fn quote_field_value(field: Field, value: &Expr) -> TokenStream {
+fn quote_field_value(field: Field, value: &Expr, input_type: Type) -> TokenStream {
+    let input_type = format_ident!("{}", input_type.to_string());
     let mask = field.mask;
-    let shift = mask.trailing_zeros() as u128;
+    let shift = mask.trailing_zeros();
+    // There's no need to shift if the shift is 0.
     let shifter = if shift == 0 {
         quote! { }
     } else {
@@ -172,12 +167,12 @@ fn quote_field_value(field: Field, value: &Expr) -> TokenStream {
     };
 
     match field.t {
-        Type::Bool => quote! {   #value as u128 & #mask != 0 },
-        Type::U8   => quote! { ((#value as u128 & #mask) #shifter) as u8 },
-        Type::U16  => quote! { ((#value as u128 & #mask) #shifter) as u16 },
-        Type::U32  => quote! { ((#value as u128 & #mask) #shifter) as u32 },
-        Type::U64  => quote! { ((#value as u128 & #mask) #shifter) as u64 },
-        Type::U128 => quote! { ((#value as u128 & #mask) #shifter) as u128 },
+        Type::Bool => quote! {   #value as #input_type & #mask as #input_type != 0 },
+        Type::U8   => quote! { ((#value as #input_type & #mask as #input_type) #shifter) as u8 },
+        Type::U16  => quote! { ((#value as #input_type & #mask as #input_type) #shifter) as u16 },
+        Type::U32  => quote! { ((#value as #input_type & #mask as #input_type) #shifter) as u32 },
+        Type::U64  => quote! { ((#value as #input_type & #mask as #input_type) #shifter) as u64 },
+        Type::U128 => quote! { ((#value as #input_type & #mask as #input_type) #shifter) as u128 },
     }
 }
 
@@ -196,6 +191,19 @@ enum Type {
     U32  =  32,
     U64  =  64,
     U128 = 128,
+}
+
+impl Type {
+    fn from_template(template: &[char]) -> Type {
+        match template.len() {
+            8 => Type::U8,
+            16 => Type::U16,
+            32 => Type::U32,
+            64 => Type::U64,
+            128 => Type::U128,
+            len => panic!("Template length must be 8, 16, 32, 64, or 128, but was {len}."),
+        }
+    }
 }
 
 impl fmt::Display for Type {
