@@ -2,8 +2,8 @@ extern crate proc_macro;
 
 use std::fmt;
 
+use itertools::Itertools;
 use proc_macro2::{TokenStream, Ident};
-
 use quote::{quote, format_ident};
 use syn::{Token, Expr, Lit};
 use syn::parse::Parser;
@@ -59,10 +59,7 @@ pub fn onehexfield(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 fn splitbits_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
     let (template, input_type) = apply_base(&template, base);
-    let fields = fields(template.clone(), input_type);
-    let (names, types, values) = separate_fields(fields, value, input_type);
-
-    let names2 = names.clone();
+    let fields = fields(template.clone());
 
     let struct_name_suffix: String = template.iter()
         // Underscores work in struct names, periods do not.
@@ -70,6 +67,9 @@ fn splitbits_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::Tok
         .collect();
     let struct_ident = format_ident!("{}", format!("Fields·{}", struct_name_suffix));
 
+    let names: Vec<_> = fields.iter().map(|field| field.name()).collect();
+    let types: Vec<_> = fields.iter().map(|field| field.t()).collect();
+    let values: Vec<TokenStream> = fields.iter().map(|field| field.value(input_type, &value)).collect();
     let result = quote! {
         {
             struct #struct_ident {
@@ -77,7 +77,7 @@ fn splitbits_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::Tok
             }
 
             #struct_ident {
-                #(#names2: #values,)*
+                #(#names: #values,)*
             }
         }
     };
@@ -88,8 +88,8 @@ fn splitbits_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::Tok
 fn splitbits_tuple_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
     let (template, input_type) = apply_base(&template, base);
-    let fields = fields(template.clone(), input_type);
-    let (_, _, values) = separate_fields(fields, value, input_type);
+    let fields = fields(template.clone());
+    let values: Vec<TokenStream> = fields.iter().map(|field| field.value(input_type, &value)).collect();
 
     let result = quote! {
         (#(#values,)*)
@@ -101,8 +101,8 @@ fn splitbits_tuple_base(input: proc_macro::TokenStream, base: Base) -> proc_macr
 fn splitbits_tuple_into_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
     let (template, input_type) = apply_base(&template, base);
-    let fields = fields(template.clone(), input_type);
-    let (_, _, values) = separate_fields(fields, value, input_type);
+    let fields = fields(template.clone());
+    let values: Vec<TokenStream> = fields.iter().map(|field| field.value(input_type, &value)).collect();
 
     let result = quote! {
         (#((#values).into(),)*)
@@ -114,9 +114,9 @@ fn splitbits_tuple_into_base(input: proc_macro::TokenStream, base: Base) -> proc
 fn onefield_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
     let (template, input_type) = apply_base(&template, base);
-    let fields = fields(template.clone(), input_type);
+    let fields = fields(template.clone());
     assert_eq!(fields.len(), 1);
-    quote_field_value(fields[0], &value, input_type).into()
+    fields[0].value(input_type, &value).into()
 }
 
 fn apply_base(template: &[char], base: Base) -> (Vec<char>, Type) {
@@ -124,7 +124,7 @@ fn apply_base(template: &[char], base: Base) -> (Vec<char>, Type) {
     // Each template char needs to be repeated if we aren't working in base 2.
     let bit_template = template.iter()
         .cloned()
-        .flat_map(|n| std::iter::repeat(n).take(base.bits_per_template_char()))
+        .flat_map(|n| std::iter::repeat(n).take(base.bits_per_digit()))
         .collect();
 
     (bit_template, input_type)
@@ -151,79 +151,95 @@ fn parse_input(item: TokenStream) -> (Expr, Vec<char>) {
     (value, template)
 }
 
-fn fields(template: Vec<char>, input_type: Type) -> Vec<Field> {
-    let mut fields = template.clone();
-    fields.dedup();
-    fields.iter()
-        // Periods aren't names, they are placeholders for ignored bits.
-        .filter(|&&c| c != '.')
+fn fields(template: Vec<char>) -> Vec<Field> {
+    let mut names = template.clone();
+    names.sort();
+    names.dedup();
+    // Periods aren't names, they are placeholders for ignored bits.
+    names.retain(|&n| n != '.');
+
+    names.iter()
         .map(|&name| {
             assert!(name.is_ascii_lowercase());
-
-            let mut mask: u128 = 0;
-            for (index, &n) in template.iter().enumerate() {
-                if n == name {
-                    mask |= 1 << (input_type as usize - index - 1);
-                }
-            }
-
-            let bit_count = u128::BITS - mask.leading_zeros() - mask.trailing_zeros();
-            let t = match bit_count {
-                0 => panic!(),
-                1        => Type::Bool,
-                2..=8    => Type::U8,
-                9..=16   => Type::U16,
-                17..=32  => Type::U32,
-                33..=64  => Type::U64,
-                65..=128 => Type::U128,
-                129..=u32::MAX => panic!("Integers larger than u128 are not supported."),
-            };
-
-            Field { name, mask, t }
+            Field::new(name, &template)
         })
         .collect()
 }
 
-fn separate_fields(fields: Vec<Field>, value: Expr, input_type: Type) -> (Vec<Ident>, Vec<Ident>, Vec<TokenStream>) {
-    let names = fields.iter()
-        .map(|field| format_ident!("{}", field.name))
-        .collect();
-    let types: Vec<_> = fields.iter()
-        .map(|field| format_ident!("{}", format!("{}", field.t)))
-        .collect();
-    let values: Vec<TokenStream> = fields.iter()
-        .map(|&field| quote_field_value(field, &value, input_type))
-        .collect();
-
-    (names, types, values)
-}
-
-fn quote_field_value(field: Field, value: &Expr, input_type: Type) -> TokenStream {
-    let input_type = format_ident!("{}", input_type.to_string());
-    let mask = field.mask;
-    let shift = mask.trailing_zeros();
-    // There's no need to shift if the shift is 0.
-    let shifter = if shift == 0 {
-        quote! { }
-    } else {
-        quote! { >> #shift }
-    };
-
-    match field.t {
-        Type::Bool => quote! {   #value as #input_type & #mask as #input_type != 0 },
-        Type::U8   => quote! { ((#value as #input_type & #mask as #input_type) #shifter) as u8 },
-        Type::U16  => quote! { ((#value as #input_type & #mask as #input_type) #shifter) as u16 },
-        Type::U32  => quote! { ((#value as #input_type & #mask as #input_type) #shifter) as u32 },
-        Type::U64  => quote! { ((#value as #input_type & #mask as #input_type) #shifter) as u64 },
-        Type::U128 => quote! { ((#value as #input_type & #mask as #input_type) #shifter) as u128 },
-    }
-}
-
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct Field {
     name: char,
     mask: u128,
     t: Type,
+}
+
+impl Field {
+    fn new(name: char, template: &[char]) -> Field {
+        let segments: Vec<_> = template.iter()
+            .rev()
+            .enumerate()
+            .chunk_by(|(_, &n)| n)
+            .into_iter()
+            .filter_map(|(n, p)| if n == name { Some(p) } else { None })
+            .map(|p| {
+                let p: Vec<_> = p.collect();
+                Segment { length: p.len(), offset: p[0].0 }
+            })
+            .collect();
+
+        let segment = segments[0];
+        let mut mask: u128 = 2u128.pow(segment.length as u32) - 1;
+        mask <<= segment.offset;
+
+        let bit_count = u128::BITS - mask.leading_zeros() - mask.trailing_zeros();
+        let t = match bit_count {
+            0 => panic!(),
+            1        => Type::Bool,
+            2..=8    => Type::U8,
+            9..=16   => Type::U16,
+            17..=32  => Type::U32,
+            33..=64  => Type::U64,
+            65..=128 => Type::U128,
+            129..=u32::MAX => panic!("Integers larger than u128 are not supported."),
+        };
+
+        Field { name, mask, t }
+    }
+
+    fn name(&self) -> Ident {
+        format_ident!("{}", self.name)
+    }
+
+    fn t(&self) -> Ident {
+        format_ident!("{}", format!("{}", self.t))
+    }
+
+    fn value(&self, input_type: Type, input: &Expr) -> TokenStream {
+        let input_type = format_ident!("{}", input_type.to_string());
+        let mask = self.mask;
+        let shift = mask.trailing_zeros();
+        // There's no need to shift if the shift is 0.
+        let shifter = if shift == 0 {
+            quote! { }
+        } else {
+            quote! { >> #shift }
+        };
+
+        match self.t {
+            Type::Bool => quote! {   #input as #input_type & #mask as #input_type != 0 },
+            Type::U8   => quote! { ((#input as #input_type & #mask as #input_type) #shifter) as u8 },
+            Type::U16  => quote! { ((#input as #input_type & #mask as #input_type) #shifter) as u16 },
+            Type::U32  => quote! { ((#input as #input_type & #mask as #input_type) #shifter) as u32 },
+            Type::U64  => quote! { ((#input as #input_type & #mask as #input_type) #shifter) as u64 },
+            Type::U128 => quote! { ((#input as #input_type & #mask as #input_type) #shifter) as u128 },
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct Segment {
+    length: usize,
+    offset: usize,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -238,7 +254,7 @@ enum Type {
 
 impl Type {
     fn from_template(template: &[char], base: Base) -> Type {
-        match base.bits_per_template_char() * template.len() {
+        match base.bits_per_digit() * template.len() {
             8 => Type::U8,
             16 => Type::U16,
             32 => Type::U32,
@@ -263,7 +279,7 @@ enum Base {
 }
 
 impl Base {
-    fn bits_per_template_char(self) -> usize {
+    fn bits_per_digit(self) -> usize {
         match self {
             Base::Binary => 1,
             Base::Hexadecimal => 4,
