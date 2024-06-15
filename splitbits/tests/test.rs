@@ -69,12 +69,19 @@ fn underscores() {
 }
 
 #[test]
+fn noncontinguous() {
+    let fields = splitbits!(0b1101_1101, "abadadda");
+    assert_eq!(fields.a, 0b1011u8);
+    assert_eq!(fields.b, true);
+    assert_eq!(fields.d, 0b110u8);
+}
+
+#[test]
 fn some_of_everything() {
-    let fields = splitbits!(0b1101_1101, ".ab. cdd.");
+    let fields = splitbits!(0b1111_1101, ".ad. cdd.");
     assert_eq!(fields.a, true);
-    assert_eq!(fields.b, false);
     assert_eq!(fields.c, true);
-    assert_eq!(fields.d, 0b10u8);
+    assert_eq!(fields.d, 0b110u8);
 }
 
 // Using the same template twice in the same scope should work (i.e. no struct name conflicts)

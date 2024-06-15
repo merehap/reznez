@@ -1,5 +1,6 @@
 extern crate proc_macro;
 
+use std::cmp::Ordering;
 use std::fmt;
 
 use itertools::Itertools;
@@ -59,7 +60,7 @@ pub fn onehexfield(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 fn splitbits_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
     let (template, input_type) = apply_base(&template, base);
-    let fields = fields(template.clone());
+    let fields = fields(input_type, value, template.clone());
 
     let struct_name_suffix: String = template.iter()
         // Underscores work in struct names, periods do not.
@@ -69,7 +70,7 @@ fn splitbits_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::Tok
 
     let names: Vec<_> = fields.iter().map(|field| field.name()).collect();
     let types: Vec<_> = fields.iter().map(|field| field.t()).collect();
-    let values: Vec<TokenStream> = fields.iter().map(|field| field.value(input_type, &value)).collect();
+    let values: Vec<TokenStream> = fields.iter().map(|field| field.value.clone()).collect();
     let result = quote! {
         {
             struct #struct_ident {
@@ -88,8 +89,8 @@ fn splitbits_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::Tok
 fn splitbits_tuple_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
     let (template, input_type) = apply_base(&template, base);
-    let fields = fields(template.clone());
-    let values: Vec<TokenStream> = fields.iter().map(|field| field.value(input_type, &value)).collect();
+    let fields = fields(input_type, value, template.clone());
+    let values: Vec<TokenStream> = fields.iter().map(|field| field.value.clone()).collect();
 
     let result = quote! {
         (#(#values,)*)
@@ -101,8 +102,8 @@ fn splitbits_tuple_base(input: proc_macro::TokenStream, base: Base) -> proc_macr
 fn splitbits_tuple_into_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
     let (template, input_type) = apply_base(&template, base);
-    let fields = fields(template.clone());
-    let values: Vec<TokenStream> = fields.iter().map(|field| field.value(input_type, &value)).collect();
+    let fields = fields(input_type, value, template.clone());
+    let values: Vec<TokenStream> = fields.iter().map(|field| field.value.clone()).collect();
 
     let result = quote! {
         (#((#values).into(),)*)
@@ -114,9 +115,9 @@ fn splitbits_tuple_into_base(input: proc_macro::TokenStream, base: Base) -> proc
 fn onefield_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
     let (template, input_type) = apply_base(&template, base);
-    let fields = fields(template.clone());
+    let fields = fields(input_type, value, template.clone());
     assert_eq!(fields.len(), 1);
-    fields[0].value(input_type, &value).into()
+    fields[0].value.clone().into()
 }
 
 fn apply_base(template: &[char], base: Base) -> (Vec<char>, Type) {
@@ -151,7 +152,7 @@ fn parse_input(item: TokenStream) -> (Expr, Vec<char>) {
     (value, template)
 }
 
-fn fields(template: Vec<char>) -> Vec<Field> {
+fn fields(input_type: Type, input: Expr, template: Vec<char>) -> Vec<Field> {
     let mut names = template.clone();
     names.sort();
     names.dedup();
@@ -161,7 +162,7 @@ fn fields(template: Vec<char>) -> Vec<Field> {
     names.iter()
         .map(|&name| {
             assert!(name.is_ascii_lowercase());
-            Field::new(name, &template)
+            Field::new(name, input_type, &input, &template)
         })
         .collect()
 }
@@ -169,13 +170,13 @@ fn fields(template: Vec<char>) -> Vec<Field> {
 #[derive(Clone)]
 struct Field {
     name: char,
-    mask: u128,
+    value: TokenStream,
     t: Type,
 }
 
 impl Field {
-    fn new(name: char, template: &[char]) -> Field {
-        let segments: Vec<_> = template.iter()
+    fn new(name: char, input_type: Type, input: &Expr, template: &[char]) -> Field {
+        let locations: Vec<_> = template.iter()
             .rev()
             .enumerate()
             .chunk_by(|(_, &n)| n)
@@ -183,15 +184,11 @@ impl Field {
             .filter_map(|(n, p)| if n == name { Some(p) } else { None })
             .map(|p| {
                 let p: Vec<_> = p.collect();
-                Segment { length: p.len(), offset: p[0].0 }
+                (p.len() as u32, p[0].0 as u32)
             })
             .collect();
 
-        let segment = segments[0];
-        let mut mask: u128 = 2u128.pow(segment.length as u32) - 1;
-        mask <<= segment.offset;
-
-        let bit_count = u128::BITS - mask.leading_zeros() - mask.trailing_zeros();
+        let bit_count = locations.iter().map(|(length, _)| length).sum();
         let t = match bit_count {
             0 => panic!(),
             1        => Type::Bool,
@@ -203,7 +200,51 @@ impl Field {
             129..=u32::MAX => panic!("Integers larger than u128 are not supported."),
         };
 
-        Field { name, mask, t }
+        let input_type = format_ident!("{}", input_type.to_string());
+
+        let mut segment_offset = 0;
+        let mut segments = Vec::new();
+        for (length, mask_offset) in locations {
+            let mut mask: u128 = 2u128.pow(length as u32) - 1;
+            mask <<= mask_offset;
+
+            let shifter = match mask_offset.cmp(&segment_offset) {
+                // There's no need to shift if the shift is 0.
+                Ordering::Equal => quote! { },
+                Ordering::Greater => {
+                    let shift = mask_offset - segment_offset;
+                    quote! { >> #shift }
+                }
+                Ordering::Less => {
+                    let shift = segment_offset - mask_offset;
+                    quote! { << #shift }
+                }
+            };
+
+            let segment = if t == Type::Bool {
+                quote! {   #input as #input_type & #mask as #input_type != 0 }
+            } else {
+                quote! { ((#input as #input_type & #mask as #input_type) #shifter) }
+            };
+
+            segments.push(segment);
+            segment_offset += length;
+        }
+
+        let value = match t {
+            Type::Bool => {
+                assert_eq!(segments.len(), 1);
+                let segment = segments[0].clone();
+                quote! { #segment }
+            }
+            Type::U8   => quote! { (#(#segments |)* 0) as u8 },
+            Type::U16  => quote! { (#(#segments |)* 0) as u16 },
+            Type::U32  => quote! { (#(#segments |)* 0) as u32 },
+            Type::U64  => quote! { (#(#segments |)* 0) as u64 },
+            Type::U128 => quote! { (#(#segments |)* 0) as u128 },
+        };
+
+        Field { name, value, t }
     }
 
     fn name(&self) -> Ident {
@@ -213,36 +254,9 @@ impl Field {
     fn t(&self) -> Ident {
         format_ident!("{}", format!("{}", self.t))
     }
-
-    fn value(&self, input_type: Type, input: &Expr) -> TokenStream {
-        let input_type = format_ident!("{}", input_type.to_string());
-        let mask = self.mask;
-        let shift = mask.trailing_zeros();
-        // There's no need to shift if the shift is 0.
-        let shifter = if shift == 0 {
-            quote! { }
-        } else {
-            quote! { >> #shift }
-        };
-
-        match self.t {
-            Type::Bool => quote! {   #input as #input_type & #mask as #input_type != 0 },
-            Type::U8   => quote! { ((#input as #input_type & #mask as #input_type) #shifter) as u8 },
-            Type::U16  => quote! { ((#input as #input_type & #mask as #input_type) #shifter) as u16 },
-            Type::U32  => quote! { ((#input as #input_type & #mask as #input_type) #shifter) as u32 },
-            Type::U64  => quote! { ((#input as #input_type & #mask as #input_type) #shifter) as u64 },
-            Type::U128 => quote! { ((#input as #input_type & #mask as #input_type) #shifter) as u128 },
-        }
-    }
 }
 
-#[derive(Clone, Copy)]
-struct Segment {
-    length: usize,
-    offset: usize,
-}
-
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 enum Type {
     Bool =   1,
     U8   =   8,
