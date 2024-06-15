@@ -199,7 +199,7 @@ impl Mapper064 {
     }
 
     fn bank_select(&mut self, params: &mut MapperParams, value: u8) {
-        let fields = splitbits!(value, "ipc. bbbb");
+        let fields = splitbits!(value, "ipc.bbbb");
         params.set_prg_layout(PRG_LAYOUTS[fields.p as usize]);
         params.set_chr_layout(CHR_LAYOUTS[fields.i as usize][fields.c as usize]);
         if let Some(reg_id) = BANK_INDEX_REGISTER_IDS[fields.b as usize] {

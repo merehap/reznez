@@ -31,7 +31,7 @@ impl Mapper for Mapper086 {
             0x0000..=0x401F => unreachable!(),
             0x6000..=0x6FFF => {
                 // TODO: Improve splitbits! to automatically combine the high and low CHR.
-                let banks = splitbits!(value, ".hpp ..ll");
+                let banks = splitbits!(value, ".hpp..ll");
                 params.set_bank_register(C0, (u8::from(banks.h) << 2) | banks.l);
                 params.set_bank_register(P0, banks.p);
             }

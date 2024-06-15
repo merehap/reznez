@@ -87,7 +87,7 @@ impl Mapper for Vrc4 {
                 params.set_name_table_mirroring(mirroring);
             }
             0x9002 => {
-                let fields = splitbits!(value, ".... ..ps");
+                let fields = splitbits!(value, "......ps");
                 params.set_prg_layout(PRG_LAYOUTS[fields.p as usize]);
                 params.set_ram_status(S0, RAM_STATUSES[fields.s as usize]);
             }

@@ -29,7 +29,7 @@ impl Mapper for Mapper240 {
         match address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => {
-                let banks = splitbits!(value, "pppp cccc");
+                let banks = splitbits!(value, "ppppcccc");
                 params.set_bank_register(P0, banks.p);
                 params.set_bank_register(C0, banks.c);
             }

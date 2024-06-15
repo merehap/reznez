@@ -76,7 +76,7 @@ impl Mapper for Mapper001_0 {
                 0x4020..=0x5FFF => { /* Do nothing. */ }
                 0x6000..=0x7FFF => unreachable!(),
                 0x8000..=0x9FFF => {
-                    let fields = splitbits!(finished_value, "...c ppmm");
+                    let fields = splitbits!(finished_value, "...cppmm");
                     params.set_chr_layout(CHR_LAYOUTS[fields.c as usize]);
                     params.set_prg_layout(PRG_LAYOUTS[fields.p as usize]);
                     params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
@@ -86,7 +86,7 @@ impl Mapper for Mapper001_0 {
                 // FIXME: Handle cases for special boards.
                 0xC000..=0xDFFF => params.set_bank_register(C1, finished_value),
                 0xE000..=0xFFFF => {
-                    let fields = splitbits!(finished_value, "...r bbbb");
+                    let fields = splitbits!(finished_value, "...rbbbb");
                     params.set_ram_status(S0, RAM_STATUSES[fields.r as usize]);
                     params.set_bank_register(P0, fields.b);
                 }

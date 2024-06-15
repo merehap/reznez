@@ -63,14 +63,14 @@ impl Mapper for Mapper001_5 {
                 0x4020..=0x5FFF => { /* Do nothing. */ }
                 0x6000..=0x7FFF => unreachable!(),
                 0x8000..=0x9FFF => {
-                    let fields = splitbits!(finished_value, "...c ..mm");
+                    let fields = splitbits!(finished_value, "...c..mm");
                     params.set_chr_layout(CHR_LAYOUTS[fields.c as usize]);
                     params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
                 }
                 0xA000..=0xBFFF => params.set_bank_register(C0, finished_value),
                 0xC000..=0xDFFF => params.set_bank_register(C1, finished_value),
                 0xE000..=0xFFFF => {
-                    let fields = splitbits!(finished_value, "...s ....");
+                    let fields = splitbits!(finished_value, "...s....");
                     params.set_ram_status(S0, RAM_STATUSES[fields.s as usize]);
                 }
             }

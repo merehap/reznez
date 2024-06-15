@@ -108,7 +108,7 @@ impl Mapper for Mapper004_1 {
 impl Mapper004_1 {
     // Same as MMC3 except for PRG RAM enable and slightly different PRG layouts.
     pub fn bank_select(&mut self, params: &mut MapperParams, value: u8) {
-        let fields = splitbits!(value, "cps. .bbb");
+        let fields = splitbits!(value, "cps..bbb");
         params.set_chr_layout(CHR_LAYOUTS[fields.c as usize]);
         params.set_prg_layout(PRG_LAYOUTS[fields.p as usize]);
         // FIXME: What are these actually supposed to do?

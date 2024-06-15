@@ -57,7 +57,7 @@ impl Mapper for Mapper210_2 {
             0xB800..=0xBFFF => params.set_bank_register(C7, value),
             0xC000..=0xDFFF => { /* Do nothing. */ }
             0xE000..=0xE7FF => {
-                let fields = splitbits!(value, "mmpp pppp");
+                let fields = splitbits!(value, "mmpppppp");
                 params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
                 params.set_bank_register(P0, fields.p);
             }
