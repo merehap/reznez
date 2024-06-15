@@ -135,7 +135,6 @@ pub fn set_bank_index(
 }
 
 pub fn set_mirroring(params: &mut MapperParams, value: u8) {
-    // TODO: splitbits single 
     use NameTableMirroring::*;
     match (params.name_table_mirroring(), value & 0b0000_0001) {
         (Vertical, 1) => params.set_name_table_mirroring(Horizontal),
@@ -145,10 +144,7 @@ pub fn set_mirroring(params: &mut MapperParams, value: u8) {
 }
 
 pub fn prg_ram_protect(params: &mut MapperParams, value: u8) {
-    // TODO: splitbits tuple
-    let read_only  = value & 0b0100_0000 != 0;
-    let enable_ram = value & 0b1000_0000 != 0;
-
+    let (enable_ram, read_only) = splitbits_tuple!(value, "wr......");
     let status = if read_only {
         RamStatus::ReadOnly
     } else if enable_ram {

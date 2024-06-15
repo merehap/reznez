@@ -205,6 +205,15 @@ fn tuple() {
 }
 
 #[test]
+fn tuple_preserve_ordering() {
+    let (greatest, of, all, time) = splitbits_tuple!(0b1000_1011, "bdda.cc.");
+    assert_eq!(greatest, true);
+    assert_eq!(of, 0b00u8);
+    assert_eq!(all, false);
+    assert_eq!(time, 0b01u8);
+}
+
+#[test]
 fn tuple_existing_variables() {
     let greatest; let of; let all; let time;
     (greatest, of, all, time) = splitbits_tuple!(

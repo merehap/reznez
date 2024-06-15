@@ -1,4 +1,4 @@
-use splitbits::splitbits;
+use splitbits::splitbits_tuple;
 
 pub struct VrcIrqState {
     enabled: bool,
@@ -61,11 +61,9 @@ impl VrcIrqState {
     pub fn set_mode(&mut self, value: u8) {
         self.pending = false;
 
-        // TODO: splitbits tuple
-        let fields = splitbits!(value, ".....mae");
-        self.mode = if fields.m { IrqMode::Cycle } else { IrqMode::Scanline };
-        self.enable_upon_acknowledgement = fields.a;
-        self.enabled = fields.e;
+        let mode;
+        (mode, self.enable_upon_acknowledgement, self.enabled) = splitbits_tuple!(value, ".....mae");
+        self.mode = if mode { IrqMode::Cycle } else { IrqMode::Scanline };
         if self.enabled {
             self.counter = self.counter_reload_value;
         }

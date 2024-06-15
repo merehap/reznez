@@ -153,13 +153,11 @@ fn parse_input(item: TokenStream) -> (Expr, Vec<char>) {
 }
 
 fn fields(input_type: Type, input: Expr, template: Vec<char>) -> Vec<Field> {
-    let mut names = template.clone();
-    names.sort();
-    names.dedup();
-    // Periods aren't names, they are placeholders for ignored bits.
-    names.retain(|&n| n != '.');
-
-    names.iter()
+    template.clone()
+        .iter()
+        .unique()
+        // Periods aren't names, they are placeholders for ignored bits.
+        .filter(|&&n| n != '.')
         .map(|&name| {
             assert!(name.is_ascii_lowercase());
             Field::new(name, input_type, &input, &template)
@@ -237,11 +235,10 @@ impl Field {
                 let segment = segments[0].clone();
                 quote! { #segment }
             }
-            Type::U8   => quote! { (#(#segments |)* 0) as u8 },
-            Type::U16  => quote! { (#(#segments |)* 0) as u16 },
-            Type::U32  => quote! { (#(#segments |)* 0) as u32 },
-            Type::U64  => quote! { (#(#segments |)* 0) as u64 },
-            Type::U128 => quote! { (#(#segments |)* 0) as u128 },
+            _ => {
+                let t = format_ident!("{}", format!("{}", t));
+                quote! { (#(#segments)|*) as #t }
+            }
         };
 
         Field { name, value, t }
