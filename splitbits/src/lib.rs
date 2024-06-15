@@ -190,18 +190,18 @@ impl Field {
         let bit_count = locations.iter().map(|(length, _)| length).sum();
         let t = match bit_count {
             0 => panic!(),
-            1        => Type::Bool,
-            2..=8    => Type::U8,
-            9..=16   => Type::U16,
-            17..=32  => Type::U32,
-            33..=64  => Type::U64,
-            65..=128 => Type::U128,
+            1        => Type(1),
+            2..=8    => Type(8),
+            9..=16   => Type(16),
+            17..=32  => Type(32),
+            33..=64  => Type(64),
+            65..=128 => Type(128),
             129..=u32::MAX => panic!("Integers larger than u128 are not supported."),
-        };
+        }.into();
 
         let input_type = format_ident!("{}", input_type.to_string());
 
-        let value = if t == Type::Bool {
+        let value = if t == Type::BOOL {
             let (length, mask_offset) = locations[0];
             let mut mask: u128 = 2u128.pow(length as u32) - 1;
             mask <<= mask_offset;
@@ -247,33 +247,37 @@ impl Field {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-enum Type {
-    Bool =   1,
-    U8   =   8,
-    U16  =  16,
-    U32  =  32,
-    U64  =  64,
-    U128 = 128,
-}
+#[derive(PartialEq, Eq, Clone, Copy)]
+struct Type(u8);
 
 impl Type {
+    const BOOL: Type = Type(1);
+
     fn from_template(template: &[char], base: Base) -> Type {
         match base.bits_per_digit() * template.len() {
-            8 => Type::U8,
-            16 => Type::U16,
-            32 => Type::U32,
-            64 => Type::U64,
-            128 => Type::U128,
+            8 => Type(8),
+            16 => Type(16),
+            32 => Type(32),
+            64 => Type(64),
+            128 => Type(128),
             len => panic!("Template length must be 8, 16, 32, 64, or 128, but was {len}."),
         }
     }
 }
 
+impl From<u8> for Type {
+    fn from(value: u8) -> Type {
+        Type(value)
+    }
+}
+
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let result = format!("{:?}", *self).to_lowercase();
-        write!(f, "{}", result)
+        if self.0 == 1 {
+            write!(f, "bool")
+        } else {
+            write!(f, "u{}", self.0)
+        }
     }
 }
 
