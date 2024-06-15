@@ -17,6 +17,7 @@ use syn::punctuated::Punctuated;
 // * combinebits_hexadecimal
 // * Allow const variable templates.
 // * Allow non-const variable templates (as a separate macro?).
+// * Better error messages.
 #[proc_macro]
 pub fn splitbits(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     splitbits_base(input, Base::Binary)
@@ -200,45 +201,38 @@ impl Field {
 
         let input_type = format_ident!("{}", input_type.to_string());
 
-        let mut segment_offset = 0;
-        let mut segments = Vec::new();
-        for (length, mask_offset) in locations {
+        let value = if t == Type::Bool {
+            let (length, mask_offset) = locations[0];
             let mut mask: u128 = 2u128.pow(length as u32) - 1;
             mask <<= mask_offset;
+            quote! { #input as #input_type & #mask as #input_type != 0 }
+        } else {
+            let mut segment_offset = 0;
+            let mut segments = Vec::new();
+            for (length, mask_offset) in locations {
+                let mut mask: u128 = 2u128.pow(length as u32) - 1;
+                mask <<= mask_offset;
 
-            let shifter = match mask_offset.cmp(&segment_offset) {
-                // There's no need to shift if the shift is 0.
-                Ordering::Equal => quote! { },
-                Ordering::Greater => {
-                    let shift = mask_offset - segment_offset;
-                    quote! { >> #shift }
-                }
-                Ordering::Less => {
-                    let shift = segment_offset - mask_offset;
-                    quote! { << #shift }
-                }
-            };
+                let shifter = match mask_offset.cmp(&segment_offset) {
+                    // There's no need to shift if the shift is 0.
+                    Ordering::Equal => quote! { },
+                    Ordering::Greater => {
+                        let shift = mask_offset - segment_offset;
+                        quote! { >> #shift }
+                    }
+                    Ordering::Less => {
+                        let shift = segment_offset - mask_offset;
+                        quote! { << #shift }
+                    }
+                };
 
-            let segment = if t == Type::Bool {
-                quote! {   #input as #input_type & #mask as #input_type != 0 }
-            } else {
-                quote! { ((#input as #input_type & #mask as #input_type) #shifter) }
-            };
-
-            segments.push(segment);
-            segment_offset += length;
-        }
-
-        let value = match t {
-            Type::Bool => {
-                assert_eq!(segments.len(), 1);
-                let segment = segments[0].clone();
-                quote! { #segment }
+                let segment = quote! { ((#input as #input_type & #mask as #input_type) #shifter) };
+                segments.push(segment);
+                segment_offset += length;
             }
-            _ => {
-                let t = format_ident!("{}", format!("{}", t));
-                quote! { (#(#segments)|*) as #t }
-            }
+
+            let t = format_ident!("{}", format!("{}", t));
+            quote! { (#(#segments)|*) as #t }
         };
 
         Field { name, value, t }
