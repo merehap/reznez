@@ -11,57 +11,98 @@ use syn::parse::Parser;
 use syn::punctuated::Punctuated;
 
 // TODO:
-// * Enable emitting precise-sized ux crate types.
 // * Implement combinebits.
 // * Implement splitbits_then_combine
 // * combinebits_hexadecimal
 // * Allow const variable templates.
+// * Allow passing minimum variable size.
 // * Allow non-const variable templates (as a separate macro?).
 // * Better error messages.
+// * Remove itertools dependency.
 #[proc_macro]
 pub fn splitbits(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    splitbits_base(input, Base::Binary)
+    splitbits_base(input, Base::Binary, Precision::Standard)
+}
+
+#[proc_macro]
+pub fn splitbits_ux(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    splitbits_base(input, Base::Binary, Precision::Ux)
 }
 
 #[proc_macro]
 pub fn splithex(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    splitbits_base(input, Base::Hexadecimal)
+    splitbits_base(input, Base::Hexadecimal, Precision::Standard)
+}
+
+#[proc_macro]
+pub fn splithex_ux(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    splitbits_base(input, Base::Hexadecimal, Precision::Ux)
 }
 
 #[proc_macro]
 pub fn splitbits_tuple(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    splitbits_tuple_base(input, Base::Binary)
+    splitbits_tuple_base(input, Base::Binary, Precision::Standard)
+}
+
+#[proc_macro]
+pub fn splitbits_tuple_ux(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    splitbits_tuple_base(input, Base::Binary, Precision::Ux)
 }
 
 #[proc_macro]
 pub fn splithex_tuple(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    splitbits_tuple_base(input, Base::Hexadecimal)
+    splitbits_tuple_base(input, Base::Hexadecimal, Precision::Standard)
+}
+
+#[proc_macro]
+pub fn splithex_tuple_ux(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    splitbits_tuple_base(input, Base::Hexadecimal, Precision::Ux)
 }
 
 #[proc_macro]
 pub fn splitbits_tuple_into(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    splitbits_tuple_into_base(input, Base::Binary)
+    splitbits_tuple_into_base(input, Base::Binary, Precision::Standard)
+}
+
+#[proc_macro]
+pub fn splitbits_tuple_into_ux(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    splitbits_tuple_into_base(input, Base::Binary, Precision::Ux)
 }
 
 #[proc_macro]
 pub fn splithex_tuple_into(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    splitbits_tuple_into_base(input, Base::Hexadecimal)
+    splitbits_tuple_into_base(input, Base::Hexadecimal, Precision::Standard)
+}
+
+#[proc_macro]
+pub fn splithex_tuple_into_ux(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    splitbits_tuple_into_base(input, Base::Hexadecimal, Precision::Ux)
 }
 
 #[proc_macro]
 pub fn onefield(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    onefield_base(input, Base::Binary)
+    onefield_base(input, Base::Binary, Precision::Standard)
+}
+
+#[proc_macro]
+pub fn onefield_ux(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    onefield_base(input, Base::Binary, Precision::Ux)
 }
 
 #[proc_macro]
 pub fn onehexfield(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    onefield_base(input, Base::Hexadecimal)
+    onefield_base(input, Base::Hexadecimal, Precision::Standard)
 }
 
-fn splitbits_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::TokenStream {
+#[proc_macro]
+pub fn onehexfield_ux(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    onefield_base(input, Base::Hexadecimal, Precision::Ux)
+}
+
+fn splitbits_base(input: proc_macro::TokenStream, base: Base, precision: Precision) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
     let (template, input_type) = apply_base(&template, base);
-    let fields = fields(input_type, value, template.clone());
+    let fields = fields(input_type, value, template.clone(), precision);
 
     let struct_name_suffix: String = template.iter()
         // Underscores work in struct names, periods do not.
@@ -87,10 +128,10 @@ fn splitbits_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::Tok
     result.into()
 }
 
-fn splitbits_tuple_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::TokenStream {
+fn splitbits_tuple_base(input: proc_macro::TokenStream, base: Base, precision: Precision) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
     let (template, input_type) = apply_base(&template, base);
-    let fields = fields(input_type, value, template.clone());
+    let fields = fields(input_type, value, template.clone(), precision);
     let values: Vec<TokenStream> = fields.iter().map(|field| field.value.clone()).collect();
 
     let result = quote! {
@@ -100,10 +141,10 @@ fn splitbits_tuple_base(input: proc_macro::TokenStream, base: Base) -> proc_macr
     result.into()
 }
 
-fn splitbits_tuple_into_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::TokenStream {
+fn splitbits_tuple_into_base(input: proc_macro::TokenStream, base: Base, precision: Precision) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
     let (template, input_type) = apply_base(&template, base);
-    let fields = fields(input_type, value, template.clone());
+    let fields = fields(input_type, value, template.clone(), precision);
     let values: Vec<TokenStream> = fields.iter().map(|field| field.value.clone()).collect();
 
     let result = quote! {
@@ -113,10 +154,10 @@ fn splitbits_tuple_into_base(input: proc_macro::TokenStream, base: Base) -> proc
     result.into()
 }
 
-fn onefield_base(input: proc_macro::TokenStream, base: Base) -> proc_macro::TokenStream {
+fn onefield_base(input: proc_macro::TokenStream, base: Base, precision: Precision) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into());
     let (template, input_type) = apply_base(&template, base);
-    let fields = fields(input_type, value, template.clone());
+    let fields = fields(input_type, value, template.clone(), precision);
     assert_eq!(fields.len(), 1);
     fields[0].value.clone().into()
 }
@@ -153,7 +194,7 @@ fn parse_input(item: TokenStream) -> (Expr, Vec<char>) {
     (value, template)
 }
 
-fn fields(input_type: Type, input: Expr, template: Vec<char>) -> Vec<Field> {
+fn fields(input_type: Type, input: Expr, template: Vec<char>, precision: Precision) -> Vec<Field> {
     template.clone()
         .iter()
         .unique()
@@ -161,7 +202,7 @@ fn fields(input_type: Type, input: Expr, template: Vec<char>) -> Vec<Field> {
         .filter(|&&n| n != '.')
         .map(|&name| {
             assert!(name.is_ascii_lowercase());
-            Field::new(name, input_type, &input, &template)
+            Field::new(name, input_type, &input, &template, precision)
         })
         .collect()
 }
@@ -174,7 +215,7 @@ struct Field {
 }
 
 impl Field {
-    fn new(name: char, input_type: Type, input: &Expr, template: &[char]) -> Field {
+    fn new(name: char, input_type: Type, input: &Expr, template: &[char], precision: Precision) -> Field {
         let locations: Vec<_> = template.iter()
             .rev()
             .enumerate()
@@ -190,6 +231,7 @@ impl Field {
         let bit_count = locations.iter().map(|(length, _)| length).sum();
         let t = match bit_count {
             0 => panic!(),
+            1..=128 if precision == Precision::Ux => Type(bit_count.try_into().unwrap()),
             1        => Type(1),
             2..=8    => Type(8),
             9..=16   => Type(16),
@@ -232,7 +274,7 @@ impl Field {
             }
 
             let t = format_ident!("{}", format!("{}", t));
-            quote! { (#(#segments)|*) as #t }
+            quote! { #t::try_from(#(#segments)|*).unwrap() }
         };
 
         Field { name, value, t }
@@ -294,4 +336,10 @@ impl Base {
             Base::Hexadecimal => 4,
         }
     }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+enum Precision {
+    Standard,
+    Ux,
 }

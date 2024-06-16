@@ -1,7 +1,7 @@
 extern crate splitbits;
 
-use splitbits::{splitbits, splitbits_tuple, splitbits_tuple_into, onefield,
-                splithex, splithex_tuple, splithex_tuple_into, onehexfield};
+use splitbits::*;
+use ux::{u2, u9, u19};
 
 #[test]
 fn u8() {
@@ -306,4 +306,40 @@ fn onehex() {
          ".... bbbb .... .... .... .... .... ....",
     );
     assert_eq!(value, 0x0db8u16);
+}
+
+// NON-STANDARD SIZE INTEGERS
+
+#[test]
+fn ux() {
+    let fields = splitbits_ux!(
+        0b1101_1101_1000_0100_0000_0000_1111_1001,
+         "aaaa bbbb bbbb bbbb bbbb bbbi aajj kaaa",
+    );
+
+    assert_eq!(fields.a, u9::new(0b1_1011_1001));
+    assert_eq!(fields.b, u19::new(0b110_1100_0010_0000_0000));
+    assert_eq!(fields.i, false);
+    assert_eq!(fields.j, u2::new(0b11u8));
+    assert_eq!(fields.k, true);
+}
+
+#[test]
+fn ux_other() {
+    let _ = splithex_ux!(
+        0x2001_0db8_85a3_0000_0000_8a2e_0370_7334,
+         "aaaa bbbb cccc .... .... .... dddd ....",
+    );
+    let (_, _, _, _) = splithex_tuple_ux!(
+        0x2001_0db8_85a3_0000_0000_8a2e_0370_7334,
+         "aaaa bbbb cccc .... .... .... dddd ....",
+    );
+    let (_, _, _, _) : (u16, u32, u64, u128) = splithex_tuple_into_ux!(
+        0x2001_0db8_85a3_0000_0000_8a2e_0370_7334,
+         "aaaa bbbb cccc .... .... .... dddd ....",
+    );
+    let _ = onehexfield_ux!(
+        0x2001_0db8_85a3_0000_0000_8a2e_0370_7334,
+         "aaaa .... .... .... .... .... .... ....",
+    );
 }
