@@ -197,15 +197,7 @@ impl Template {
             .flat_map(|n| std::iter::repeat(n).take(base.bits_per_digit()))
             .collect();
 
-        let input_type = match template.len() {
-            8 => Type(8),
-            16 => Type(16),
-            32 => Type(32),
-            64 => Type(64),
-            128 => Type(128),
-            len => panic!("Template length must be 8, 16, 32, 64, or 128, but was {len}."),
-        };
-
+        let input_type = Type::for_template(template.len() as u32);
         let mut locations_by_name: Vec<(Name, Vec<Location>)> = Vec::new();
         for &name in &names {
             let locations: Vec<Location> = template.iter()
@@ -257,18 +249,7 @@ struct Field {
 impl Field {
     fn new(name: char, input_type: Type, input: &Expr, precision: Precision, locations: &[Location]) -> Field {
         let bit_count = locations.iter().map(|(length, _)| length).sum();
-        let t = match bit_count {
-            0 => panic!(),
-            1..=128 if precision == Precision::Ux => Type(bit_count.try_into().unwrap()),
-            1        => Type(1),
-            2..=8    => Type(8),
-            9..=16   => Type(16),
-            17..=32  => Type(32),
-            33..=64  => Type(64),
-            65..=128 => Type(128),
-            129..=u32::MAX => panic!("Integers larger than u128 are not supported."),
-        }.into();
-
+        let t = Type::for_field(bit_count, precision);
         let input_type = format_ident!("{}", input_type.to_string());
 
         let value = if t == Type::BOOL {
@@ -322,7 +303,34 @@ struct Type(u8);
 
 impl Type {
     const BOOL: Type = Type(1);
+
+    fn for_template(len: u32) -> Type {
+        match len {
+            8 => Type(8),
+            16 => Type(16),
+            32 => Type(32),
+            64 => Type(64),
+            128 => Type(128),
+            len => panic!("Template length must be 8, 16, 32, 64, or 128, but was {len}."),
+        }
+    }
+
+    fn for_field(len: u32, precision: Precision) -> Type {
+        match len {
+            0 => panic!(),
+            1..=128 if precision == Precision::Ux => Type(len.try_into().unwrap()),
+            1        => Type(1),
+            2..=8    => Type(8),
+            9..=16   => Type(16),
+            17..=32  => Type(32),
+            33..=64  => Type(64),
+            65..=128 => Type(128),
+            129..=u32::MAX => panic!("Integers larger than u128 are not supported."),
+        }
+    }
 }
+
+
 
 impl From<u8> for Type {
     fn from(value: u8) -> Type {
