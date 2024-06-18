@@ -107,7 +107,7 @@ fn splitbits_base(input: proc_macro::TokenStream, base: Base, precision: Precisi
     let struct_name = template.to_struct_name();
     let names: Vec<_> = fields.iter().map(|field| field.name()).collect();
     let types: Vec<_> = fields.iter().map(|field| field.t()).collect();
-    let values: Vec<TokenStream> = fields.iter().map(|field| field.value.clone()).collect();
+    let values: Vec<TokenStream> = fields.iter().map(|field| field.to_token_stream()).collect();
     let result = quote! {
         {
             struct #struct_name {
@@ -126,7 +126,7 @@ fn splitbits_base(input: proc_macro::TokenStream, base: Base, precision: Precisi
 fn splitbits_tuple_base(input: proc_macro::TokenStream, base: Base, precision: Precision) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into(), base, precision);
     let fields = template.extract_fields(&value);
-    let values: Vec<TokenStream> = fields.iter().map(|field| field.value.clone()).collect();
+    let values: Vec<TokenStream> = fields.iter().map(|field| field.to_token_stream()).collect();
 
     let result = quote! {
         (#(#values,)*)
@@ -138,7 +138,7 @@ fn splitbits_tuple_base(input: proc_macro::TokenStream, base: Base, precision: P
 fn splitbits_tuple_into_base(input: proc_macro::TokenStream, base: Base, precision: Precision) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into(), base, precision);
     let fields = template.extract_fields(&value);
-    let values: Vec<TokenStream> = fields.iter().map(|field| field.value.clone()).collect();
+    let values: Vec<TokenStream> = fields.iter().map(|field| field.to_token_stream()).collect();
 
     let result = quote! {
         (#((#values).into(),)*)
@@ -151,7 +151,7 @@ fn onefield_base(input: proc_macro::TokenStream, base: Base, precision: Precisio
     let (value, template) = parse_input(input.into(), base, precision);
     let fields = template.extract_fields(&value);
     assert_eq!(fields.len(), 1);
-    fields[0].value.clone().into()
+    fields[0].to_token_stream().into()
 }
 
 fn parse_input(item: TokenStream, base: Base, precision: Precision) -> (Expr, Template) {
@@ -242,51 +242,44 @@ type Location = (u32, u32);
 #[derive(Clone)]
 struct Field {
     name: char,
-    value: TokenStream,
+    segments: Vec<Shifted>,
     t: Type,
 }
 
 impl Field {
     fn new(name: char, input_type: Type, input: &Expr, precision: Precision, locations: &[Location]) -> Field {
-        let bit_count = locations.iter().map(|(length, _)| length).sum();
-        let t = Type::for_field(bit_count, precision);
         let input_type = format_ident!("{}", input_type.to_string());
 
-        let value = if t == Type::BOOL {
-            let (length, mask_offset) = locations[0];
+        let mut segment_offset = 0;
+        let mut segments = Vec::new();
+        for &(length, mask_offset) in locations {
             let mut mask: u128 = 2u128.pow(length as u32) - 1;
             mask <<= mask_offset;
-            quote! { #input as #input_type & #mask as #input_type != 0 }
+
+            let value = quote! { #input as #input_type & #mask as #input_type };
+            let mut segment = Shifted::new(value);
+            // TODO: Remove the cast.
+            segment.shift_right(mask_offset as u8);
+            segment.shift_left(segment_offset);
+            // TODO: Remove the cast.
+            segment_offset += length as u8;
+            segments.push(segment);
+        }
+
+        let bit_count = locations.iter().map(|(length, _)| length).sum();
+        let t = Type::for_field(bit_count, precision);
+        Field { name, segments, t }
+    }
+
+    fn to_token_stream(&self) -> TokenStream {
+        let t = self.t();
+        let mut segments = self.segments.iter().map(Shifted::to_value);
+        if self.t == Type::BOOL {
+            let segment = segments.next().unwrap();
+            quote! { (#segment) != 0 }
         } else {
-            let mut segment_offset = 0;
-            let mut segments = Vec::new();
-            for &(length, mask_offset) in locations {
-                let mut mask: u128 = 2u128.pow(length as u32) - 1;
-                mask <<= mask_offset;
-
-                let shifter = match mask_offset.cmp(&segment_offset) {
-                    // There's no need to shift if the shift is 0.
-                    Ordering::Equal => quote! { },
-                    Ordering::Greater => {
-                        let shift = mask_offset - segment_offset;
-                        quote! { >> #shift }
-                    }
-                    Ordering::Less => {
-                        let shift = segment_offset - mask_offset;
-                        quote! { << #shift }
-                    }
-                };
-
-                let segment = quote! { ((#input as #input_type & #mask as #input_type) #shifter) };
-                segments.push(segment);
-                segment_offset += length;
-            }
-
-            let t = format_ident!("{}", format!("{}", t));
             quote! { #t::try_from(#(#segments)|*).unwrap() }
-        };
-
-        Field { name, value, t }
+        }
     }
 
     fn name(&self) -> Ident {
@@ -367,4 +360,37 @@ impl Base {
 enum Precision {
     Standard,
     Ux,
+}
+
+#[derive(Clone)]
+struct Shifted {
+    input: TokenStream,
+    shift: i16,
+}
+
+impl Shifted {
+    fn new(input: TokenStream) -> Shifted {
+        Shifted { input, shift: 0 }
+    }
+
+    fn shift_left(&mut self, shift: u8) {
+        self.shift -= i16::from(shift);
+    }
+
+    fn shift_right(&mut self, shift: u8) {
+        self.shift += i16::from(shift);
+    }
+
+    fn to_value(&self) -> TokenStream {
+        let input = &self.input;
+        let shift = self.shift;
+        let shifter = match shift.cmp(&0) {
+            // There's no need to shift if the shift is 0.
+            Ordering::Equal => quote! { },
+            Ordering::Greater => quote! { >> #shift },
+            Ordering::Less => quote! { << #shift },
+        };
+
+        quote! { ((#input) #shifter) }
+    }
 }
