@@ -301,22 +301,19 @@ struct Location {
 #[derive(Clone)]
 struct Field {
     name: char,
-    segments: Vec<Shifted>,
+    segments: Vec<Segment>,
     t: Type,
 }
 
 impl Field {
     fn new(name: char, input_type: Type, input: &Expr, precision: Precision, locations: &[Location]) -> Field {
-        let input_type = format_ident!("{}", input_type.to_string());
-
         let mut segment_offset = 0;
         let mut segments = Vec::new();
         for &Location { len, mask_offset } in locations {
             let mut mask: u128 = 2u128.pow(len as u32) - 1;
             mask <<= mask_offset;
 
-            let segment = quote! { #input as #input_type & #mask as #input_type };
-            let mut segment = Shifted::new(segment);
+            let mut segment = Segment::new(input.clone(), input_type, mask);
             segment.shift_right(mask_offset);
             segment.shift_left(segment_offset);
             segment_offset += len;
@@ -330,7 +327,7 @@ impl Field {
 
     fn to_token_stream(&self) -> TokenStream {
         let t = self.t();
-        let mut segments = self.segments.iter().map(Shifted::to_value);
+        let mut segments = self.segments.iter().map(Segment::to_value);
         if self.t == Type::BOOL {
             let segment = segments.next().unwrap();
             quote! { (#segment) != 0 }
@@ -481,14 +478,16 @@ enum Precision {
 }
 
 #[derive(Clone)]
-struct Shifted {
-    input: TokenStream,
+struct Segment {
+    input: Expr,
+    t: Type,
+    mask: u128,
     shift: i16,
 }
 
-impl Shifted {
-    fn new(input: TokenStream) -> Shifted {
-        Shifted { input, shift: 0 }
+impl Segment {
+    fn new(input: Expr, t: Type, mask: u128) -> Self {
+        Self { input, t, mask, shift: 0 }
     }
 
     fn shift_left(&mut self, shift: u8) {
@@ -510,6 +509,8 @@ impl Shifted {
             Ordering::Less => quote! { << #shift },
         };
 
-        quote! { ((#input) #shifter) }
+        let t = format_ident!("{}", self.t.to_string());
+        let mask = self.mask;
+        quote! { (#input as #t & #mask as #t) #shifter }
     }
 }
