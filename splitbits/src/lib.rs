@@ -109,7 +109,7 @@ pub fn splitbits_then_combine(input: proc_macro::TokenStream) -> proc_macro::Tok
     let base = Base::Binary;
     let precision = Precision::Standard;
 
-    let parts: Punctuated::<Expr, Token![,]> = Parser::parse2(
+    let parts = Parser::parse2(
         Punctuated::<Expr, Token![,]>::parse_terminated,
         input.clone().into(),
     ).unwrap();
@@ -184,7 +184,7 @@ fn onefield_base(input: proc_macro::TokenStream, base: Base, precision: Precisio
 }
 
 fn parse_input(item: TokenStream, base: Base, precision: Precision) -> (Expr, Template) {
-    let parts: Punctuated::<Expr, Token![,]> = Parser::parse2(
+    let parts = Parser::parse2(
         Punctuated::<Expr, Token![,]>::parse_terminated,
         item.clone().into(),
     ).unwrap();
@@ -276,6 +276,7 @@ impl Template {
             let mut field = fields[name].clone();
             assert!(len <= field.t.size());
             field.shift_left(mask_offset);
+            field.widen(self.input_type);
             field_streams.push(field.to_token_stream());
         }
 
@@ -389,6 +390,13 @@ impl Field {
         }
     }
 
+    fn widen(&mut self, new_type: Type) {
+        self.t = new_type;
+        for segment in &mut self.segments {
+            segment.widen(new_type);
+        }
+    }
+
     fn name(&self) -> Ident {
         format_ident!("{}", self.name)
     }
@@ -398,7 +406,7 @@ impl Field {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 struct Type(u8);
 
 impl Type {
@@ -496,6 +504,12 @@ impl Segment {
 
     fn shift_right(&mut self, shift: u8) {
         self.shift += i16::from(shift);
+    }
+
+    fn widen(&mut self, new_type: Type) {
+        if new_type > self.t {
+            self.t = new_type;
+        }
     }
 
     fn to_value(&self) -> TokenStream {

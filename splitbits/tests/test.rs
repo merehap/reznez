@@ -347,16 +347,15 @@ fn ux_other() {
 #[test]
 fn split_then_combine_trivial() {
     let result = splitbits_then_combine!(0b1001_1011, "aaaa aaaa", "aaaa aaaa");
-    assert_eq!(result, 0b1001_1011);
+    assert_eq!(result, 0b1001_1011u8);
 }
 
 #[test]
 fn split_then_combine_swap() {
     let result = splitbits_then_combine!(0b1001_1010, "aaab bbbb", "bbbb baaa");
-    assert_eq!(result, 0b1101_0100);
+    assert_eq!(result, 0b1101_0100u8);
 }
 
-/*
 #[test]
 fn split_then_combine_upsize() {
     let result = splitbits_then_combine!(
@@ -364,9 +363,8 @@ fn split_then_combine_upsize() {
         0b1111_1010, "bbbb bbbb",
                      "aaaa aaaa bbbb bbbb",
     );
-    assert_eq!(result, 0b1001_0000_1111_1010);
+    assert_eq!(result, 0b1001_0000_1111_1010u16);
 }
-*/
 
 #[test]
 fn split_multiple_then_combine() {
@@ -376,7 +374,7 @@ fn split_multiple_then_combine() {
         0b1111_0011, ".... bb..",
                      "aaaa bbcc",
     );
-    assert_eq!(result, 0b1001_0010);
+    assert_eq!(result, 0b1001_0010u8);
 }
 
 /*
