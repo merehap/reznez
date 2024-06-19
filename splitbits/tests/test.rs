@@ -357,6 +357,12 @@ fn split_then_combine_swap() {
 }
 
 #[test]
+fn split_then_combine_with_literals() {
+    let result = splitbits_then_combine!(0b1001_1011, "..aa ....", "101a a011");
+    assert_eq!(result, 0b1010_1011u8);
+}
+
+#[test]
 fn split_then_combine_upsize() {
     let result = splitbits_then_combine!(
         0b1001_0000, "aaaa aaaa",
@@ -384,7 +390,7 @@ fn split_then_combine_many_fragments() {
         0b1001_0000_1111_0000, "c.aa .... ...a ....",
         0b1111_1010_0111_0000, "..a. ..a. bb.a ....",
         0b1111_0011_1111_0000, "..aa aaa. .... ...a",
-                               "bb.a aaaa aaaa aaac",
+                               "bb0a aaaa aaaa aaac",
     );
     assert_eq!(result, 0b0100_1111_1110_0101);
 }

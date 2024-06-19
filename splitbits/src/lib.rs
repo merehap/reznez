@@ -210,6 +210,7 @@ struct Template {
     names: Vec<Name>,
     locations_by_name: Vec<(Name, Vec<Location>)>,
     has_placeholders: bool,
+    literals: Option<u128>,
 }
 
 impl Template {
@@ -221,11 +222,19 @@ impl Template {
 
         assert!(template.len() <= 128);
 
+        let mut literals: Option<u128> = None;
+        if template.contains(&'0') || template.contains(&'1') {
+            let literal_string: String = template.iter()
+                .map(|&c| if c == '1' { '1' } else { '0' })
+                .collect();
+            literals = Some(u128::from_str_radix(&literal_string, 2).unwrap());
+        }
+
         let has_placeholders = template.contains(&'.');
         let names: Vec<Name> = template.clone()
             .iter()
             // Periods aren't names, they are placeholders for ignored bits.
-            .filter(|&&n| n != '.')
+            .filter(|&&n| n != '.' && n != '0' && n != '1')
             .map(|&name| { assert!(name.is_ascii_lowercase()); name })
             .unique()
             .collect();
@@ -256,7 +265,7 @@ impl Template {
             locations_by_name.push((name, locations));
         }
 
-        Template { input_type, precision, names, locations_by_name, has_placeholders }
+        Template { input_type, precision, names, locations_by_name, has_placeholders, literals }
     }
 
     fn template_string(template: &Expr) -> String {
@@ -294,7 +303,13 @@ impl Template {
             field_streams.push(field.to_token_stream());
         }
 
-        quote! { #(#field_streams)|* }
+        let mut literals_quote = quote! {};
+        if let Some(literals) = self.literals {
+            let t = format_ident!("{}", format!("{}", self.input_type));
+            literals_quote = quote! { | (#literals as #t) };
+        }
+
+        quote! { (#(#field_streams)|*) #literals_quote }
     }
 
     fn to_struct_name(&self) -> Ident {
