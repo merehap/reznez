@@ -1,6 +1,7 @@
 extern crate proc_macro;
 
 use std::cmp::Ordering;
+use std::collections::BTreeMap;
 use std::fmt;
 
 use itertools::Itertools;
@@ -100,6 +101,30 @@ pub fn onehexfield_ux(input: proc_macro::TokenStream) -> proc_macro::TokenStream
     onefield_base(input, Base::Hexadecimal, Precision::Ux)
 }
 
+#[proc_macro]
+pub fn splitbits_then_combine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let base = Base::Binary;
+    let precision = Precision::Standard;
+
+    let parts: Punctuated::<Expr, Token![,]> = Parser::parse2(
+        Punctuated::<Expr, Token![,]>::parse_terminated,
+        input.clone().into(),
+    ).unwrap();
+    let parts: Vec<Expr> = parts.into_iter().collect();
+    assert!(parts.len() >= 3);
+    assert!(parts.len() % 2 == 1);
+
+    let mut fields = Vec::new();
+    for i in 0..parts.len() / 2 {
+        let value = parts[2 * i].clone();
+        let template = Template::from_expr(&parts[2 * i + 1], base, precision);
+        fields = Field::merge(fields, template.extract_fields(&value));
+    }
+
+    let target = Template::from_expr(&parts[parts.len() - 1], base, precision);
+    target.substitute_fields(fields).into()
+}
+
 fn splitbits_base(input: proc_macro::TokenStream, base: Base, precision: Precision) -> proc_macro::TokenStream {
     let (value, template) = parse_input(input.into(), base, precision);
     let fields = template.extract_fields(&value);
@@ -183,6 +208,8 @@ impl Template {
             .filter(|&c| c != ' ')
             .collect();
 
+        assert!(template.len() <= 128);
+
         let names: Vec<Name> = template.clone()
             .iter()
             // Periods aren't names, they are placeholders for ignored bits.
@@ -197,7 +224,7 @@ impl Template {
             .flat_map(|n| std::iter::repeat(n).take(base.bits_per_digit()))
             .collect();
 
-        let input_type = Type::for_template(template.len() as u32);
+        let input_type = Type::for_template(template.len() as u8);
         let mut locations_by_name: Vec<(Name, Vec<Location>)> = Vec::new();
         for &name in &names {
             let locations: Vec<Location> = template.iter()
@@ -208,7 +235,10 @@ impl Template {
                 .filter_map(|(n, p)| if n == name { Some(p) } else { None })
                 .map(|p| {
                     let p: Vec<_> = p.collect();
-                    (p.len() as u32, p[0].0 as u32)
+                    Location {
+                        len: p.len() as u8,
+                        mask_offset: p[0].0 as u8,
+                    }
                 })
                 .collect();
             locations_by_name.push((name, locations));
@@ -227,6 +257,27 @@ impl Template {
             .collect()
     }
 
+    // WRONG ASSUMPTIONS:
+    // * Each name only has a single segment.
+    // * Each argument field isn't duplicated.
+    // * Lengths match between inputs and outputs.
+    fn substitute_fields(&self, fields: Vec<Field>) -> TokenStream {
+        let fields: BTreeMap<_, _> = fields.iter()
+            .map(|field| (field.name, field))
+            .collect();
+        let mut field_streams = Vec::new();
+        for (name, locations) in &self.locations_by_name {
+            assert_eq!(locations.len(), 0);
+            let Location {len, mask_offset} = locations[0];
+            let mut field = fields[name].clone();
+            assert!(len <= field.t.size());
+            field.shift_left(mask_offset);
+            field_streams.push(field.to_token_stream());
+        }
+
+        quote! { #(#field_streams)|* }
+    }
+
     fn to_struct_name(&self) -> Ident {
         let struct_name_suffix: String = self.names().iter()
             // Underscores work in struct names, periods do not.
@@ -237,7 +288,11 @@ impl Template {
 }
 
 type Name = char;
-type Location = (u32, u32);
+
+struct Location {
+    len: u8,
+    mask_offset: u8,
+}
 
 #[derive(Clone)]
 struct Field {
@@ -252,21 +307,19 @@ impl Field {
 
         let mut segment_offset = 0;
         let mut segments = Vec::new();
-        for &(length, mask_offset) in locations {
-            let mut mask: u128 = 2u128.pow(length as u32) - 1;
+        for &Location { len, mask_offset } in locations {
+            let mut mask: u128 = 2u128.pow(len as u32) - 1;
             mask <<= mask_offset;
 
-            let value = quote! { #input as #input_type & #mask as #input_type };
-            let mut segment = Shifted::new(value);
-            // TODO: Remove the cast.
-            segment.shift_right(mask_offset as u8);
+            let segment = quote! { #input as #input_type & #mask as #input_type };
+            let mut segment = Shifted::new(segment);
+            segment.shift_right(mask_offset);
             segment.shift_left(segment_offset);
-            // TODO: Remove the cast.
-            segment_offset += length as u8;
+            segment_offset += len;
             segments.push(segment);
         }
 
-        let bit_count = locations.iter().map(|(length, _)| length).sum();
+        let bit_count = locations.iter().map(|location| location.len).sum();
         let t = Type::for_field(bit_count, precision);
         Field { name, segments, t }
     }
@@ -279,6 +332,59 @@ impl Field {
             quote! { (#segment) != 0 }
         } else {
             quote! { #t::try_from(#(#segments)|*).unwrap() }
+        }
+    }
+
+    fn merge(upper: Vec<Field>, lower: Vec<Field>) -> Vec<Field> {
+        let lower_map: BTreeMap<_, _> = lower.iter()
+            .map(|field| (field.name, field))
+            .collect();
+        let mut result = Vec::new();
+        for u in &upper {
+            if let Some(l) = lower_map.get(&u.name) {
+                result.push(u.concat(&l));
+            } else {
+                result.push(u.clone());
+            }
+        }
+
+        let upper_map: BTreeMap<_, _> = upper.iter()
+            .map(|field| (field.name, field))
+            .collect();
+        for l in lower {
+            if !upper_map.contains_key(&l.name) {
+                result.push(l);
+            }
+        }
+
+        result
+    }
+
+    fn concat(&self, lower: &Field) -> Field {
+        assert_eq!(self.name, lower.name);
+
+        let mut new_segments = Vec::new();
+        for segment in &self.segments {
+            let mut new_segment = segment.clone();
+            new_segment.shift_left(lower.t.0);
+            new_segments.push(new_segment);
+        }
+
+        for segment in &lower.segments {
+            new_segments.push(segment.clone());
+        }
+
+        Field {
+            name: self.name,
+            segments: new_segments,
+            t: self.t.concat(lower.t),
+        }
+    }
+
+    // TODO: Fail on overflow.
+    fn shift_left(&mut self, shift: u8) {
+        for segment in &mut self.segments {
+            segment.shift_left(shift);
         }
     }
 
@@ -297,7 +403,7 @@ struct Type(u8);
 impl Type {
     const BOOL: Type = Type(1);
 
-    fn for_template(len: u32) -> Type {
+    fn for_template(len: u8) -> Type {
         match len {
             8 => Type(8),
             16 => Type(16),
@@ -308,7 +414,7 @@ impl Type {
         }
     }
 
-    fn for_field(len: u32, precision: Precision) -> Type {
+    fn for_field(len: u8, precision: Precision) -> Type {
         match len {
             0 => panic!(),
             1..=128 if precision == Precision::Ux => Type(len.try_into().unwrap()),
@@ -318,8 +424,16 @@ impl Type {
             17..=32  => Type(32),
             33..=64  => Type(64),
             65..=128 => Type(128),
-            129..=u32::MAX => panic!("Integers larger than u128 are not supported."),
+            129..=u8::MAX => panic!("Integers larger than u128 are not supported."),
         }
+    }
+
+    fn concat(self, other: Type) -> Type {
+        Type::for_field(self.0 + other.0, Precision::Standard)
+    }
+
+    fn size(self) -> u8 {
+        self.0
     }
 }
 
