@@ -124,7 +124,15 @@ pub fn splitbits_then_combine(input: proc_macro::TokenStream) -> proc_macro::Tok
         fields = Field::merge(fields, template.extract_fields(&value));
     }
 
-    let target = Template::from_expr(&parts[parts.len() - 1], base, precision);
+    let expr = &parts[parts.len() - 1];
+    let target = Template::from_expr(expr, base, precision);
+    if target.has_placeholders {
+        let bad_template = Template::template_string(expr);
+        panic!(
+            "Target template ({bad_template}) must not have placeholders (periods) in it. Use literals instead as appropriate.",
+        );
+    }
+
     let result = target.substitute_fields(fields);
     result.into()
 }
@@ -201,19 +209,19 @@ struct Template {
     precision: Precision,
     names: Vec<Name>,
     locations_by_name: Vec<(Name, Vec<Location>)>,
+    has_placeholders: bool,
 }
 
 impl Template {
     fn from_expr(template: &Expr, base: Base, precision: Precision) -> Template {
-        let Expr::Lit(template) = template.clone() else { panic!() };
-        let Lit::Str(template) = template.lit else { panic!() };
-        let template: Vec<char> = template.value().chars()
+        let template: Vec<char> = Template::template_string(template).chars()
             // Spaces are only for human-readability.
             .filter(|&c| c != ' ')
             .collect();
 
         assert!(template.len() <= 128);
 
+        let has_placeholders = template.contains(&'.');
         let names: Vec<Name> = template.clone()
             .iter()
             // Periods aren't names, they are placeholders for ignored bits.
@@ -248,7 +256,13 @@ impl Template {
             locations_by_name.push((name, locations));
         }
 
-        Template { input_type, precision, names, locations_by_name }
+        Template { input_type, precision, names, locations_by_name, has_placeholders }
+    }
+
+    fn template_string(template: &Expr) -> String {
+        let Expr::Lit(template) = template.clone() else { panic!() };
+        let Lit::Str(template) = template.lit else { panic!() };
+        template.value()
     }
 
     fn names(&self) -> &[char] {
