@@ -343,3 +343,51 @@ fn ux_other() {
          "aaaa .... .... .... .... .... .... ....",
     );
 }
+
+#[test]
+fn split_then_combine_trivial() {
+    let result = splitbits_then_combine!(0b1001_1011, "aaaa aaaa", "aaaa aaaa");
+    assert_eq!(result, 0b1001_1011);
+}
+
+#[test]
+fn split_then_combine_swap() {
+    let result = splitbits_then_combine!(0b1001_1010, "aaab bbbb", "bbbb baaa");
+    assert_eq!(result, 0b1101_0100);
+}
+
+/*
+#[test]
+fn split_then_combine_upsize() {
+    let result = splitbits_then_combine!(
+        0b1001_0000, "aaaa aaaa",
+        0b1111_1010, "bbbb bbbb",
+                     "aaaa aaaa bbbb bbbb",
+    );
+    assert_eq!(result, 0b1001_0000_1111_1010);
+}
+*/
+
+#[test]
+fn split_multiple_then_combine() {
+    let result = splitbits_then_combine!(
+        0b1001_0000, "aaaa ....",
+        0b1111_1010, ".... ..cc",
+        0b1111_0011, ".... bb..",
+                     "aaaa bbcc",
+    );
+    assert_eq!(result, 0b1001_0010);
+}
+
+/*
+#[test]
+fn split_then_combine_many_fragments() {
+    let result = splitbits_then_combine!(
+        0b1001_0000_1111_0000, "c.aa .... ...a ....",
+        0b1111_1010_0111_0000, "..a. ..a. bb.a ....",
+        0b1111_0011_1111_0000, "..aa aaa. .... ...a",
+                               "bb.a aaaa aaaa aaac",
+    );
+    assert_eq!(result, 0b0100_1111_1110_0101);
+}
+*/

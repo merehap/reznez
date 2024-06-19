@@ -101,6 +101,9 @@ pub fn onehexfield_ux(input: proc_macro::TokenStream) -> proc_macro::TokenStream
     onefield_base(input, Base::Hexadecimal, Precision::Ux)
 }
 
+// TODO:
+// * Upsize output.
+// * Repeated output fields.
 #[proc_macro]
 pub fn splitbits_then_combine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let base = Base::Binary;
@@ -122,7 +125,8 @@ pub fn splitbits_then_combine(input: proc_macro::TokenStream) -> proc_macro::Tok
     }
 
     let target = Template::from_expr(&parts[parts.len() - 1], base, precision);
-    target.substitute_fields(fields).into()
+    let result = target.substitute_fields(fields);
+    result.into()
 }
 
 fn splitbits_base(input: proc_macro::TokenStream, base: Base, precision: Precision) -> proc_macro::TokenStream {
@@ -267,7 +271,7 @@ impl Template {
             .collect();
         let mut field_streams = Vec::new();
         for (name, locations) in &self.locations_by_name {
-            assert_eq!(locations.len(), 0);
+            assert_eq!(locations.len(), 1);
             let Location {len, mask_offset} = locations[0];
             let mut field = fields[name].clone();
             assert!(len <= field.t.size());
@@ -497,8 +501,9 @@ impl Shifted {
 
     fn to_value(&self) -> TokenStream {
         let input = &self.input;
-        let shift = self.shift;
-        let shifter = match shift.cmp(&0) {
+        let ordering = self.shift.cmp(&0);
+        let shift = self.shift.abs();
+        let shifter = match ordering {
             // There's no need to shift if the shift is 0.
             Ordering::Equal => quote! { },
             Ordering::Greater => quote! { >> #shift },
