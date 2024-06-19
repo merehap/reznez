@@ -273,10 +273,10 @@ impl Template {
         for (name, locations) in &self.locations_by_name {
             assert_eq!(locations.len(), 1);
             let Location {len, mask_offset} = locations[0];
-            let mut field = fields[name].clone();
+            let field = fields[name].clone()
+                .shift_left(mask_offset)
+                .widen(self.input_type);
             assert!(len <= field.t.size());
-            field.shift_left(mask_offset);
-            field.widen(self.input_type);
             field_streams.push(field.to_token_stream());
         }
 
@@ -314,9 +314,9 @@ impl Field {
             let mut mask: u128 = 2u128.pow(len as u32) - 1;
             mask <<= mask_offset;
 
-            let mut segment = Segment::new(input.clone(), input_type, mask);
-            segment.shift_right(mask_offset);
-            segment.shift_left(segment_offset);
+            let segment = Segment::new(input.clone(), input_type, mask)
+                .shift_right(mask_offset)
+                .shift_left(segment_offset);
             segment_offset += len;
             segments.push(segment);
         }
@@ -367,8 +367,7 @@ impl Field {
 
         let mut new_segments = Vec::new();
         for segment in &self.segments {
-            let mut new_segment = segment.clone();
-            new_segment.shift_left(lower.t.0);
+            let new_segment = segment.clone().shift_left(lower.t.0);
             new_segments.push(new_segment);
         }
 
@@ -384,17 +383,21 @@ impl Field {
     }
 
     // TODO: Fail on overflow.
-    fn shift_left(&mut self, shift: u8) {
+    fn shift_left(mut self, shift: u8) -> Field {
         for segment in &mut self.segments {
             segment.shift_left(shift);
         }
+
+        self
     }
 
-    fn widen(&mut self, new_type: Type) {
+    fn widen(mut self, new_type: Type) -> Field {
         self.t = new_type;
         for segment in &mut self.segments {
             segment.widen(new_type);
         }
+
+        self
     }
 
     fn name(&self) -> Ident {
@@ -498,18 +501,22 @@ impl Segment {
         Self { input, t, mask, shift: 0 }
     }
 
-    fn shift_left(&mut self, shift: u8) {
+    fn shift_left(&mut self, shift: u8) -> Segment {
         self.shift -= i16::from(shift);
+        self.clone()
     }
 
-    fn shift_right(&mut self, shift: u8) {
+    fn shift_right(&mut self, shift: u8) -> Segment {
         self.shift += i16::from(shift);
+        self.clone()
     }
 
-    fn widen(&mut self, new_type: Type) {
+    fn widen(&mut self, new_type: Type) -> Segment {
         if new_type > self.t {
             self.t = new_type;
         }
+
+        self.clone()
     }
 
     fn to_value(&self) -> TokenStream {
