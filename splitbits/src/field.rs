@@ -18,11 +18,8 @@ impl Field {
     pub fn new(name: Name, input_type: Type, input: &Expr, precision: Precision, locations: &[Location]) -> Field {
         let mut segment_offset = 0;
         let mut segments = Vec::new();
-        for location in locations {
-            let mut mask: u128 = 2u128.pow(location.len() as u32) - 1;
-            mask <<= location.mask_offset();
-
-            let segment = Segment::new(input.clone(), input_type, location.len(), mask)
+        for &location in locations {
+            let segment = Segment::new(input.clone(), input_type, location)
                 .shift_right(location.mask_offset())
                 .shift_left(segment_offset);
             segment_offset += location.len();

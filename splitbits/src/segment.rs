@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use proc_macro2::TokenStream;
-use quote::{quote, format_ident};
+use quote::quote;
 use syn::Expr;
 
 use crate::r#type::Type;
@@ -10,14 +10,13 @@ use crate::r#type::Type;
 pub struct Segment {
     input: Expr,
     t: Type,
-    len: u8,
-    mask: u128,
+    location: Location,
     shift: i16,
 }
 
 impl Segment {
-    pub fn new(input: Expr, t: Type, len: u8, mask: u128) -> Self {
-        Self { input, t, len, mask, shift: 0 }
+    pub fn new(input: Expr, t: Type, location: Location) -> Self {
+        Self { input, t, location, shift: 0 }
     }
 
     pub fn shift_left(&mut self, shift: u8) -> Self {
@@ -49,13 +48,13 @@ impl Segment {
             Ordering::Less => quote! { << #shift },
         };
 
-        let t = format_ident!("{}", self.t.to_string());
-        let mask = self.mask;
+        let t = self.t.to_ident();
+        let mask = self.location.to_mask();
         quote! { (#input as #t & #mask as #t) #shifter }
     }
 
     pub fn len(&self) -> u8 {
-        self.len
+        self.location.len()
     }
 }
 
@@ -77,5 +76,10 @@ impl Location {
 
     pub fn mask_offset(self) -> u8 {
         self.mask_offset
+    }
+
+    pub fn to_mask(self) -> u128 {
+        let bits: u128 = 2u128.pow(self.len as u32) - 1;
+        bits << self.mask_offset
     }
 }

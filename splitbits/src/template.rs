@@ -25,8 +25,6 @@ impl Template {
             .filter(|&c| c != ' ')
             .collect();
 
-        assert!(template.len() <= 128);
-
         let characters: Result<Vec<Character>, String> = template.into_iter()
             .map(Character::from_char)
             .collect();
@@ -46,6 +44,8 @@ impl Template {
             .flat_map(|n| std::iter::repeat(n).take(base.bits_per_digit()))
             .collect();
 
+        assert!(characters.len() <= 128);
+
         let input_type = Type::for_template(characters.len() as u8);
         let mut locations_by_name: Vec<(Name, Vec<Location>)> = Vec::new();
         for &name in &names {
@@ -54,12 +54,15 @@ impl Template {
                 .enumerate()
                 .chunk_by(|(_, &n)| n)
                 .into_iter()
-                .filter_map(|(c, segment)| if c == Character::Name(name) { Some(segment) } else { None })
-                .map(|segment| {
-                    let segment: Vec<_> = segment.collect();
-                    let len = segment.len() as u8;
-                    let mask_offset = segment[0].0 as u8;
-                    Location::new(len, mask_offset)
+                .filter_map(|(c, segment)| {
+                    if c == Character::Name(name) {
+                        let segment: Vec<_> = segment.collect();
+                        let len = segment.len() as u8;
+                        let mask_offset = segment[0].0 as u8;
+                        Some(Location::new(len, mask_offset))
+                    } else {
+                        None
+                    }
                 })
                 .collect();
             locations_by_name.push((name, locations));
