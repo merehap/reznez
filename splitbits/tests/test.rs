@@ -383,15 +383,23 @@ fn split_multiple_then_combine() {
     assert_eq!(result, 0b1001_0010u8);
 }
 
-/*
+#[test]
+fn split_then_combine_fields() {
+    let result = splitbits_then_combine!(
+        0b1001_0000_1111_0000, "aaaa .... .... ....",
+        0b1111_1010_0111_0000, ".... bbbb aaaa ....",
+                               "0000 bbbb aaaa aaaa",
+    );
+    assert_eq!(result, 0b0000_1010_1001_0111u16);
+}
+
 #[test]
 fn split_then_combine_many_fragments() {
     let result = splitbits_then_combine!(
         0b1001_0000_1111_0000, "c.aa .... ...a ....",
         0b1111_1010_0111_0000, "..a. ..a. bb.a ....",
         0b1111_0011_1111_0000, "..aa aaa. .... ...a",
-                               "bb0a aaaa aaaa aaac",
+                               "bb1a aaaa aaaa aaac",
     );
-    assert_eq!(result, 0b0100_1111_1110_0101);
+    assert_eq!(result, 0b0110_1111_1110_0101u16);
 }
-*/

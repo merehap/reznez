@@ -13,7 +13,6 @@ use syn::punctuated::Punctuated;
 
 // TODO:
 // * Implement combinebits.
-// * Implement splitbits_then_combine
 // * combinebits_hexadecimal
 // * Allow const variable templates.
 // * Allow passing minimum variable size.
@@ -21,6 +20,7 @@ use syn::punctuated::Punctuated;
 // * Better error messages.
 // * Remove itertools dependency.
 // * Allow non-standard template lengths.
+// * Tests that confirm non-compilation cases.
 #[proc_macro]
 pub fn splitbits(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     splitbits_base(input, Base::Binary, Precision::Standard)
@@ -101,9 +101,6 @@ pub fn onehexfield_ux(input: proc_macro::TokenStream) -> proc_macro::TokenStream
     onefield_base(input, Base::Hexadecimal, Precision::Ux)
 }
 
-// TODO:
-// * Upsize output.
-// * Repeated output fields.
 #[proc_macro]
 pub fn splitbits_then_combine(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let base = Base::Binary;
@@ -286,10 +283,8 @@ impl Template {
 
     // WRONG ASSUMPTIONS:
     // * Each name only has a single segment.
-    // * Each argument field isn't duplicated.
-    // * Lengths match between inputs and outputs.
     fn substitute_fields(&self, fields: Vec<Field>) -> TokenStream {
-        let fields: BTreeMap<_, _> = fields.iter()
+        let fields: BTreeMap<Name, Field> = fields.into_iter()
             .map(|field| (field.name, field))
             .collect();
         let mut field_streams = Vec::new();
@@ -299,7 +294,7 @@ impl Template {
             let field = fields[name].clone()
                 .shift_left(mask_offset)
                 .widen(self.input_type);
-            assert!(len <= field.t.size());
+            assert_eq!(len, field.len());
             field_streams.push(field.to_token_stream());
         }
 
@@ -343,7 +338,7 @@ impl Field {
             let mut mask: u128 = 2u128.pow(len as u32) - 1;
             mask <<= mask_offset;
 
-            let segment = Segment::new(input.clone(), input_type, mask)
+            let segment = Segment::new(input.clone(), input_type, len, mask)
                 .shift_right(mask_offset)
                 .shift_left(segment_offset);
             segment_offset += len;
@@ -396,7 +391,7 @@ impl Field {
 
         let mut new_segments = Vec::new();
         for segment in &self.segments {
-            let new_segment = segment.clone().shift_left(lower.t.0);
+            let new_segment = segment.clone().shift_left(lower.len());
             new_segments.push(new_segment);
         }
 
@@ -436,6 +431,12 @@ impl Field {
     fn t(&self) -> Ident {
         format_ident!("{}", format!("{}", self.t))
     }
+
+    fn len(&self) -> u8 {
+        self.segments.iter()
+            .map(|segment| segment.len)
+            .sum()
+    }
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -472,13 +473,7 @@ impl Type {
     fn concat(self, other: Type) -> Type {
         Type::for_field(self.0 + other.0, Precision::Standard)
     }
-
-    fn size(self) -> u8 {
-        self.0
-    }
 }
-
-
 
 impl From<u8> for Type {
     fn from(value: u8) -> Type {
@@ -521,13 +516,14 @@ enum Precision {
 struct Segment {
     input: Expr,
     t: Type,
+    len: u8,
     mask: u128,
     shift: i16,
 }
 
 impl Segment {
-    fn new(input: Expr, t: Type, mask: u128) -> Self {
-        Self { input, t, mask, shift: 0 }
+    fn new(input: Expr, t: Type, len: u8, mask: u128) -> Self {
+        Self { input, t, len, mask, shift: 0 }
     }
 
     fn shift_left(&mut self, shift: u8) -> Segment {
