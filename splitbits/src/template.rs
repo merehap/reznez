@@ -80,10 +80,6 @@ impl Template {
         template.value()
     }
 
-    fn characters(&self) -> &[Character] {
-        &self.characters
-    }
-
     pub fn has_placeholders(&self) -> bool {
         self.has_placeholders
     }
@@ -121,7 +117,7 @@ impl Template {
     }
 
     pub fn to_struct_name(&self) -> Ident {
-        let struct_name_suffix: String = self.characters().iter()
+        let struct_name_suffix: String = self.characters.iter()
             // Underscores work in struct names, periods do not.
             .map(|&c| if c == Character::Placeholder { '_' } else { c.to_char() })
             .collect();
