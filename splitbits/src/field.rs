@@ -5,7 +5,8 @@ use quote::quote;
 use syn::Expr;
 
 use crate::name::Name;
-use crate::segment::{Segment, Location};
+use crate::location::Location;
+use crate::segment::Segment;
 use crate::r#type::{Type, Precision};
 
 #[derive(Clone)]

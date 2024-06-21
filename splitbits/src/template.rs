@@ -7,9 +7,9 @@ use syn::{Expr, Lit};
 
 use crate::character::Character;
 use crate::field::Field;
+use crate::location::Location;
 use crate::name::Name;
 use crate::r#type::{Type, Precision};
-use crate::segment::Location;
 
 pub struct Template {
     input_type: Type,

@@ -2,6 +2,7 @@ extern crate proc_macro;
 
 mod character;
 mod field;
+mod location;
 mod name;
 mod segment;
 mod template;
