@@ -5,7 +5,9 @@ use proc_macro2::{TokenStream, Ident};
 use quote::{quote, format_ident};
 use syn::{Expr, Lit};
 
-use crate::field::{Field, Character, Name};
+use crate::character::Character;
+use crate::field::Field;
+use crate::name::Name;
 use crate::r#type::{Type, Precision};
 use crate::segment::Location;
 

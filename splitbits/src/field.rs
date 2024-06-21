@@ -1,9 +1,10 @@
 use std::collections::BTreeMap;
 
-use proc_macro2::{TokenStream, Ident};
-use quote::{quote, format_ident};
+use proc_macro2::TokenStream;
+use quote::quote;
 use syn::Expr;
 
+use crate::name::Name;
 use crate::segment::{Segment, Location};
 use crate::r#type::{Type, Precision};
 
@@ -117,77 +118,5 @@ impl Field {
         self.segments.iter()
             .map(|segment| segment.len())
             .sum()
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum Character {
-    Name(Name),
-    Placeholder,
-    Zero,
-    One,
-}
-
-impl Character {
-    pub fn from_char(c: char) -> Result<Self, String> {
-        Ok(match c {
-            '.' => Character::Placeholder,
-            '0' => Character::Zero,
-            '1' => Character::One,
-            _   => Character::Name(Name::new(c)?),
-        })
-    }
-
-    pub fn is_literal(self) -> bool {
-        self == Character::Zero || self == Character::One
-    }
-
-    pub fn to_name(self) -> Option<Name> {
-        if let Character::Name(name) = self {
-            Some(name)
-        } else {
-            None
-        }
-    }
-
-    pub fn to_char(self) -> char {
-        match self {
-            Character::Name(name) => name.to_char(),
-            Character::Placeholder => '.',
-            Character::Zero => '0',
-            Character::One  => '1',
-        }
-    }
-
-    pub fn characters_to_literal(chars: &[Character]) -> Option<u128> {
-        if chars.iter().filter(|c| c.is_literal()).next().is_none() {
-            return None;
-        }
-
-        let literal_string: String = chars.iter()
-            .map(|&c| if c == Character::One { '1' } else { '0' })
-            .collect();
-        Some(u128::from_str_radix(&literal_string, 2).unwrap())
-    }
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
-pub struct Name(char);
-
-impl Name {
-    pub fn new(raw_name: char) -> Result<Self, String> {
-        if raw_name.is_ascii_lowercase() {
-            Ok(Name(raw_name))
-        } else {
-            Err(format!("'{raw_name}' is not a valid Name."))
-        }
-    }
-
-    pub fn to_char(self) -> char {
-        self.0
-    }
-
-    pub fn to_ident(self) -> Ident {
-        format_ident!("{}", self.to_char())
     }
 }
