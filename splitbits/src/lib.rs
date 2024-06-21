@@ -1,5 +1,6 @@
 extern crate proc_macro;
 
+mod base;
 mod character;
 mod field;
 mod location;
@@ -14,8 +15,9 @@ use syn::{Token, Expr};
 use syn::parse::Parser;
 use syn::punctuated::Punctuated;
 
+use crate::base::Base;
 use crate::field::Field;
-use crate::template::{Template, Base};
+use crate::template::Template;
 use crate::r#type::Precision;
 
 // TODO:

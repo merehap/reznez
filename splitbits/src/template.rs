@@ -5,6 +5,7 @@ use proc_macro2::{TokenStream, Ident};
 use quote::{quote, format_ident};
 use syn::{Expr, Lit};
 
+use crate::base::Base;
 use crate::character::Character;
 use crate::field::Field;
 use crate::location::Location;
@@ -125,20 +126,5 @@ impl Template {
             .map(|&c| if c == Character::Placeholder { '_' } else { c.to_char() })
             .collect();
         format_ident!("{}", format!("Fields·{}", struct_name_suffix))
-    }
-}
-
-#[derive(Clone, Copy)]
-pub enum Base {
-    Binary,
-    Hexadecimal,
-}
-
-impl Base {
-    pub fn bits_per_digit(self) -> usize {
-        match self {
-            Base::Binary => 1,
-            Base::Hexadecimal => 4,
-        }
     }
 }
