@@ -6,7 +6,7 @@ use quote::{quote, format_ident};
 use syn::{Expr, Lit};
 
 use crate::base::Base;
-use crate::character::Character;
+use crate::character::{Character, Characters};
 use crate::field::Field;
 use crate::location::Location;
 use crate::name::Name;
@@ -15,43 +15,18 @@ use crate::r#type::{Type, Precision};
 pub struct Template {
     input_type: Type,
     precision: Precision,
-    characters: Vec<Character>,
+    characters: Characters,
     locations_by_name: Vec<(Name, Vec<Location>)>,
-    has_placeholders: bool,
-    literal: Option<u128>,
 }
 
 impl Template {
-    pub fn from_expr(template: &Expr, base: Base, precision: Precision) -> Template {
-        let template: Vec<char> = Template::template_string(template).chars()
-            // Spaces are only for human-readability.
-            .filter(|&c| c != ' ')
-            .collect();
-
-        let characters: Result<Vec<Character>, String> = template.into_iter()
-            .map(Character::from_char)
-            .collect();
-        let characters = characters.unwrap();
-
-        let literal: Option<u128> = Character::characters_to_literal(&characters);
-
-        let has_placeholders = characters.contains(&Character::Placeholder);
-        let names: Vec<Name> = characters.clone().into_iter()
-            .filter_map(Character::to_name)
-            .unique()
-            .collect();
-
-        // Each template char needs to be repeated if we aren't working in base 2.
-        let characters: Vec<_> = characters.iter()
-            .cloned()
-            .flat_map(|n| std::iter::repeat(n).take(base.bits_per_digit()))
-            .collect();
-
-        assert!(characters.len() <= 128);
+    pub fn from_expr(expr: &Expr, base: Base, precision: Precision) -> Template {
+        let template_string = Template::template_string(expr);
+        let characters = Characters::from_str(&template_string, base);
 
         let input_type = Type::for_template(characters.len() as u8);
         let mut locations_by_name: Vec<(Name, Vec<Location>)> = Vec::new();
-        for &name in &names {
+        for name in characters.to_names() {
             let locations: Vec<Location> = characters.iter()
                 .rev()
                 .enumerate()
@@ -71,7 +46,7 @@ impl Template {
             locations_by_name.push((name, locations));
         }
 
-        Template { input_type, precision, characters, locations_by_name, has_placeholders, literal }
+        Template { input_type, precision, characters, locations_by_name }
     }
 
     pub fn template_string(template: &Expr) -> String {
@@ -81,7 +56,7 @@ impl Template {
     }
 
     pub fn has_placeholders(&self) -> bool {
-        self.has_placeholders
+        self.characters.has_placeholders()
     }
 
     pub fn extract_fields(&self, input: &Expr) -> Vec<Field> {
@@ -108,7 +83,7 @@ impl Template {
         }
 
         let mut literal_quote = quote! {};
-        if let Some(literal) = self.literal {
+        if let Some(literal) = self.characters.extract_literal() {
             let t = self.input_type.to_ident();
             literal_quote = quote! { | (#literal as #t) };
         }
@@ -117,10 +92,9 @@ impl Template {
     }
 
     pub fn to_struct_name(&self) -> Ident {
-        let struct_name_suffix: String = self.characters.iter()
+        let struct_name_suffix: String = self.characters.to_string()
             // Underscores work in struct names, periods do not.
-            .map(|&c| if c == Character::Placeholder { '_' } else { c.to_char() })
-            .collect();
+            .replace('.', "_");
         format_ident!("{}", format!("Fields·{}", struct_name_suffix))
     }
 }
