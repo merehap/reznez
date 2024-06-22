@@ -3,14 +3,7 @@ name = "reznez"
 version = "0.1.0"
 edition = "2021"
 
-[workspace]
-members = [
-    "splitbits",
-]
-
 [dependencies]
-splitbits = { path = "splitbits" }
-
 arr_macro = "0.1.3"
 bitvec = "1.0.1"
 crc32fast = "1.4.0"
@@ -37,6 +30,8 @@ pixels = "0.9"
 
 winit = "0.26"
 winit_input_helper = "0.11"
+
+splitbits = { path = "../splitbits" }
 
 [profile.release]
 debug = true
