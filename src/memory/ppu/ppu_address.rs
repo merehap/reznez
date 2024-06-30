@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use num_traits::FromPrimitive;
+use splitbits::{splitbits_named, splitbits_named_into_ux, splitbits_named_ux, combinebits, replacebits};
 
 use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
@@ -30,7 +30,6 @@ impl PpuAddress {
         address: 0x0000,
         fine_x_scroll: ColumnInTile::Zero,
     };
-    // 0x3F00
     pub const PALETTE_TABLE_START: PpuAddress = PpuAddress {
         address: 0x3F00,
         fine_x_scroll: ColumnInTile::Zero,
@@ -43,67 +42,19 @@ impl PpuAddress {
         }
     }
 
-    /*
-     * 0123 45 6789A BCDEF
-     * 0001 NN RRRRR CCCCC
-     *      || ||||| +++++-- Tile Column
-     *      || +++++-------- Tile Row
-     *      ++-------------- Nametable Quadrant
-     */
-    pub fn in_name_table(
-        quadrant: NameTableQuadrant,
-        tile_column: TileColumn,
-        tile_row: TileRow,
-    ) -> PpuAddress {
-        PpuAddress::from_u16(
-            0x2000
-            | (0x400 * quadrant as u16)
-            | (TileColumn::COLUMN_COUNT as u16 * tile_row.to_u16())
-            | tile_column.to_u16()
-        )
+    pub fn in_name_table(n: NameTableQuadrant, c: TileColumn, r: TileRow) -> PpuAddress {
+        PpuAddress::from_u16(combinebits!("0010 nn rrrrr ccccc"))
     }
 
-    /*
-     * 0123 45 6789A BCDEF
-     * 0010 NN RRRRR CCCCC
-     *      || ||||| +++++-- Tile Column
-     *      || +++++-------- Tile Row
-     *      ++-------------- Nametable Quadrant
-     */
-    pub fn in_attribute_table(
-        quadrant: NameTableQuadrant,
-        tile_column: TileColumn,
-        tile_row: TileRow,
-    ) -> PpuAddress {
-        PpuAddress::from_u16(
-            0x23C0
-            + 0x400 * quadrant as u16
-            + (TileColumn::COLUMN_COUNT as u16) / 4 * (tile_row.to_u16() / 4)
-            + tile_column.to_u16() / 4
-        )
+    pub fn in_attribute_table(n: NameTableQuadrant, c: TileColumn, r: TileRow) -> PpuAddress {
+        let r = r.to_u16() / 4;
+        let c = c.to_u16() / 4;
+        PpuAddress::from_u16(combinebits!("0010 nn 1111r rrccc"))
     }
 
-    /*
-     * 012 3 456789AB C DEF
-     * 000 S PPPPPPPP H RRR
-     *     | |||||||| | +++-- Row In Tile
-     *     | |||||||| +------ Select High Byte (or Low Byte)
-     *     | ++++++++-------- Pattern Index
-     *     +----------------- Pattern Table Side
-     */
-    pub fn in_pattern_table(
-        side: PatternTableSide,
-        pattern_index: PatternIndex,
-        row_in_tile: RowInTile,
-        high_low_offset: u16,
-    ) -> PpuAddress {
-        PpuAddress::from_u16(
-            (0x1000 * side as u16)
-            | pattern_index.to_u16() << 4
-            // 0x0 or 0x8
-            | high_low_offset
-            | row_in_tile as u16
-        )
+    pub fn in_pattern_table(s: PatternTableSide, p: PatternIndex, r: RowInTile, select_high: bool) -> PpuAddress {
+        let h = select_high;
+        PpuAddress::from_u16(combinebits!("000s pppp pppp hrrr"))
     }
 
     pub fn advance(&mut self, address_increment: AddressIncrement) {
@@ -168,15 +119,12 @@ impl PpuAddress {
     }
 
     pub fn name_table_quadrant(self) -> NameTableQuadrant {
-        NameTableQuadrant::from_last_two_bits((self.address >> 10) as u8)
+        splitbits_named_ux!(self.address, ".... nn.. .... ....").into()
     }
 
     pub fn name_table_location(self) -> Option<(NameTableQuadrant, u16)> {
         if self.address >= 0x2000 && self.address < 0x3F00 {
-            Some((
-                    NameTableQuadrant::from_last_two_bits((self.address >> 10) as u8),
-                    self.address & 0b11_1111_1111,
-                ))
+            Some(splitbits_named_into_ux!(self.address, ".... nnll llll llll"))
         } else {
             None
         }
@@ -215,7 +163,7 @@ impl PpuAddress {
     }
 
     fn coarse_x_scroll(self) -> TileColumn {
-        TileColumn::try_from_u8(self.address as u8 & 0b11111).unwrap()
+        splitbits_named_ux!(self.address, ".... .... ...x xxxx").into()
     }
 
     /*
@@ -231,16 +179,15 @@ impl PpuAddress {
     }
 
     fn coarse_y_scroll(self) -> TileRow {
-        TileRow::try_from_u8(((self.address & 0b11_1110_0000) >> 5) as u8).unwrap()
+        splitbits_named_into_ux!(self.address, "...... yyyyy .....")
     }
 
     fn fine_y_scroll(self) -> RowInTile {
-        RowInTile::from_u8(((self.address & 0b0111_0000_0000_0000) >> 12) as u8).unwrap()
+        splitbits_named_into_ux!(self.address, ". yyy ............")
     }
 
-    pub fn set_name_table_quadrant(&mut self, quadrant: NameTableQuadrant) {
-        self.address &= 0b0111_0011_1111_1111;
-        self.address |= (quadrant as u16) << 10;
+    pub fn set_name_table_quadrant(&mut self, n: NameTableQuadrant) {
+        self.address = replacebits!(self.address, "0... nn.. .... ....");
     }
 
     pub fn set_x_scroll(&mut self, value: u8) {
@@ -249,9 +196,8 @@ impl PpuAddress {
         self.set_coarse_x_scroll(value.coarse());
     }
 
-    fn set_coarse_x_scroll(&mut self, coarse_x: TileColumn) {
-        self.address &= 0b1111_1111_1110_0000;
-        self.address |= coarse_x.to_u16();
+    fn set_coarse_x_scroll(&mut self, x: TileColumn) {
+        self.address = replacebits!(self.address, ".... .... ...x xxxx");
     }
 
     pub fn set_y_scroll(&mut self, value: u8) {
@@ -260,14 +206,12 @@ impl PpuAddress {
         self.set_fine_y_scroll(value.fine());
     }
 
-    fn set_coarse_y_scroll(&mut self, coarse_y: TileRow) {
-        self.address &= 0b0111_1100_0001_1111;
-        self.address |= coarse_y.to_u16() << 5;
+    fn set_coarse_y_scroll(&mut self, y: TileRow) {
+        self.address = replacebits!(self.address, ".... ..yy yyy. ....");
     }
 
-    fn set_fine_y_scroll(&mut self, fine_y: RowInTile) {
-        self.address &= 0b0000_1111_1111_1111;
-        self.address |= (fine_y as u16) << 12;
+    fn set_fine_y_scroll(&mut self, y: RowInTile) {
+        self.address = replacebits!(self.address, "0yyy .... .... ....");
     }
 
     pub fn copy_x_scroll(&mut self, other: PpuAddress) {
@@ -288,15 +232,14 @@ impl PpuAddress {
         self.set_name_table_quadrant(name_table_quadrant);
     }
 
-    pub fn set_high_byte(&mut self, value: u8) {
+    pub fn set_high_byte(&mut self, h: u8) {
         // Lose the top bit of the fine y scroll.
-        self.address &= 0b0000_0000_1111_1111;
-        self.address |= u16::from(value & 0b0011_1111) << 8;
+        let h = h & 0b0011_1111;
+        self.address = replacebits!(self.address, "00hh hhhh .... ....");
     }
 
-    pub fn set_low_byte(&mut self, value: u8) {
-        self.address &= 0b1111_1111_0000_0000;
-        self.address |= u16::from(value);
+    pub fn set_low_byte(&mut self, l: u8) {
+        self.address = replacebits!(self.address, ".... .... llll llll");
     }
 
     pub const fn to_u16(self) -> u16 {
@@ -313,11 +256,7 @@ impl PpuAddress {
     }
 
     pub fn pattern_table_side(self) -> PatternTableSide {
-        if self.address & 0b0001_0000_0000_0000 == 0 {
-            PatternTableSide::Left
-        } else {
-            PatternTableSide::Right
-        }
+        splitbits_named!(self.address, "...p .... .... ....").into()
     }
 }
 
@@ -344,10 +283,8 @@ impl XScroll {
         XScroll { coarse: TileColumn::ZERO, fine: ColumnInTile::Zero };
 
     fn from_u8(value: u8) -> XScroll {
-        XScroll {
-            coarse: TileColumn::try_from_u8(value >> 3).unwrap(),
-            fine: ColumnInTile::from_u8(value & 0b111).unwrap(),
-        }
+        let (coarse, fine) = splitbits_named_into_ux!(value, "cccccfff");
+        XScroll { coarse, fine }
     }
 
     pub fn coarse(self) -> TileColumn {
@@ -364,14 +301,12 @@ impl XScroll {
 
     pub fn tile_column(self, pixel_column: PixelColumn) -> (TileColumn, ColumnInTile) {
         let offset_pixel_column = self.to_u8().wrapping_add(pixel_column.to_u8());
-        (
-            TileColumn::try_from_u8(offset_pixel_column / 8).unwrap(),
-            ColumnInTile::from_u8(offset_pixel_column % 8).unwrap(),
-        )
+        let (coarse, fine) = splitbits_named_ux!(offset_pixel_column, "cccccfff");
+        (coarse.into(), fine.into())
     }
 
     pub fn to_u8(self) -> u8 {
-        (self.coarse.to_u8() << 3) | self.fine as u8
+        combinebits!(self.coarse, self.fine, "cccccfff")
     }
 }
 
@@ -385,10 +320,8 @@ impl YScroll {
     pub const ZERO: YScroll = YScroll { coarse: TileRow::ZERO, fine: RowInTile::Zero };
 
     fn from_u8(value: u8) -> YScroll {
-        YScroll {
-            coarse: TileRow::try_from_u8(value >> 3).unwrap(),
-            fine: RowInTile::from_u8(value & 0b111).unwrap(),
-        }
+        let (coarse, fine) = splitbits_named_into_ux!(value, "cccccfff");
+        YScroll { coarse, fine }
     }
 
     pub fn shift_down(self) -> YScroll {
@@ -409,14 +342,11 @@ impl YScroll {
 
     pub fn tile_row(self, pixel_row: PixelRow) -> (TileRow, RowInTile) {
         let offset_pixel_row = self.to_u8().wrapping_add(pixel_row.to_u8());
-        (
-            TileRow::try_from_u8(offset_pixel_row / 8).unwrap(),
-            RowInTile::from_u8(offset_pixel_row % 8).unwrap(),
-        )
+        splitbits_named_into_ux!(offset_pixel_row, "cccccfff")
     }
 
     pub fn to_u8(self) -> u8 {
-        (self.coarse.to_u8() << 3) | self.fine as u8
+        combinebits!(self.coarse, self.fine, "cccccfff")
     }
 }
 

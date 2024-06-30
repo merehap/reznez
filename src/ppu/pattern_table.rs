@@ -76,7 +76,7 @@ impl<'a> PatternTable<'a> {
         palette: Palette,
         tile_sliver: &mut [Rgbt; 8],
     ) {
-        let index = PATTERN_SIZE * pattern_index.to_usize();
+        let index = PATTERN_SIZE * usize::from(pattern_index);
         let low_index = index + row_in_tile as usize;
         let high_index = low_index + 8;
 
@@ -98,7 +98,7 @@ impl<'a> PatternTable<'a> {
         palette: Palette,
         pixel: &mut Rgbt,
     ) {
-        let index = PATTERN_SIZE * pattern_index.to_usize();
+        let index = PATTERN_SIZE * usize::from(pattern_index);
         let low_index = index + row_in_tile as usize;
         let high_index = low_index + 8;
 
@@ -144,6 +144,21 @@ impl PatternTableSide {
     }
 }
 
+impl From<bool> for PatternTableSide {
+    fn from(value: bool) -> PatternTableSide {
+        match value {
+            false => PatternTableSide::Left,
+            true => PatternTableSide::Right,
+        }
+    }
+}
+
+impl From<PatternTableSide> for u16 {
+    fn from(value: PatternTableSide) -> Self {
+        value as u16
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct PatternIndex(u8);
 
@@ -181,31 +196,31 @@ impl PatternIndex {
 
     #[inline]
     pub fn tall_sprite_pattern_table_side(self) -> PatternTableSide {
-        if self.to_u8() & 1 == 0 {
+        if self.0 & 1 == 0 {
             PatternTableSide::Left
         } else {
             PatternTableSide::Right
         }
     }
 
-    pub fn to_u8(self) -> u8 {
-        self.0
-    }
-
-    pub fn to_u16(self) -> u16 {
-        u16::from(self.0)
-    }
-
-    pub fn to_usize(self) -> usize {
-        usize::from(self.0)
-    }
-
     fn to_low_index(self, row_in_tile: RowInTile) -> usize {
-        PATTERN_SIZE * self.to_usize() + row_in_tile as usize
+        PATTERN_SIZE * usize::from(self) + row_in_tile as usize
     }
 
     fn to_high_index(self, row_in_tile: RowInTile) -> usize {
-        PATTERN_SIZE * self.to_usize() + row_in_tile as usize + 8
+        PATTERN_SIZE * usize::from(self) + row_in_tile as usize + 8
+    }
+}
+
+impl From<PatternIndex> for u16 {
+    fn from(value: PatternIndex) -> Self {
+        value.0.into()
+    }
+}
+
+impl From<PatternIndex> for usize {
+    fn from(value: PatternIndex) -> Self {
+        value.0.into()
     }
 }
 

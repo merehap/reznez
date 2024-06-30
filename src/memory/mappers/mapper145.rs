@@ -28,7 +28,7 @@ impl Mapper for Mapper145 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         match address.to_raw() & 0xE100 {
             0x0000..=0x401F => unreachable!(),
-            0x4100 => params.set_bank_register(C0, onefield!(value, "c.......")),
+            0x4100 => params.set_bank_register(C0, splitbits_named!(value, "c.......")),
             _ => { /* Do nothing. */ }
         }
     }

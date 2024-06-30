@@ -34,11 +34,12 @@ impl Mapper for Mapper046 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
             0x6000..=0x7FFF => {
+                // TODO: replacebits
                 self.prg_high_bits = (value & 0b1111_0000) >> 3;
                 self.chr_high_bits = (value & 0b0000_1111) << 3;
             }
             0x8000..=0xFFFF => {
-                // TODO: combinebits
+                // TODO: replacebits
                 let prg_bank_index = self.prg_high_bits | (value & 0b0000_0001);
                 params.set_bank_register(P0, prg_bank_index);
                 let chr_bank_index = self.chr_high_bits | ((value << 1) >> 5);

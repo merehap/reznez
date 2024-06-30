@@ -144,7 +144,7 @@ pub fn set_mirroring(params: &mut MapperParams, value: u8) {
 }
 
 pub fn prg_ram_protect(params: &mut MapperParams, value: u8) {
-    let (enable_ram, read_only) = splitbits_tuple!(value, "wr......");
+    let (enable_ram, read_only) = splitbits_named!(value, "wr......");
     let status = if read_only {
         RamStatus::ReadOnly
     } else if enable_ram {

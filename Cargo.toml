@@ -21,6 +21,7 @@ structopt = "0.3.25"
 strum = "0.23.0"
 strum_macros = "0.23.1"
 walkdir = "2.3.2"
+ux = "0.1.6"
 
 egui = "0.17"
 egui_wgpu_backend = "0.17"
@@ -31,7 +32,7 @@ pixels = "0.9"
 winit = "0.26"
 winit_input_helper = "0.11"
 
-splitbits = { path = "../splitbits" }
+splitbits = { git = "https://github.com/merehap/splitbits.git" }
 
 [profile.release]
 debug = true

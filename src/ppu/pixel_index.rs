@@ -3,6 +3,7 @@ use itertools::structs::Product;
 use itertools::Itertools;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
+use ux::u3;
 
 use crate::ppu::clock::Clock;
 
@@ -206,6 +207,18 @@ impl ColumnInTile {
     }
 }
 
+impl From<u3> for ColumnInTile {
+    fn from(value: u3) -> Self {
+        FromPrimitive::from_u8(value.into()).unwrap()
+    }
+}
+
+impl From<ColumnInTile> for u8 {
+    fn from(value: ColumnInTile) -> Self {
+        value as u8
+    }
+}
+
 #[derive(
     PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, IntoEnumIterator,
 )]
@@ -243,5 +256,23 @@ impl RowInTile {
 
     pub fn decrement(self) -> RowInTile {
         FromPrimitive::from_u8((self as u8).wrapping_sub(1)).unwrap()
+    }
+}
+
+impl From<u3> for RowInTile {
+    fn from(value: u3) -> Self {
+        FromPrimitive::from_u8(value.into()).unwrap()
+    }
+}
+
+impl From<RowInTile> for u8 {
+    fn from(value: RowInTile) -> Self {
+        value as u8
+    }
+}
+
+impl From<RowInTile> for u16 {
+    fn from(value: RowInTile) -> Self {
+        value as u16
     }
 }

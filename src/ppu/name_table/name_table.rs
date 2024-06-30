@@ -152,7 +152,7 @@ impl fmt::Display for NameTable<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Nametable!")?;
         for index in BackgroundTileIndex::iter() {
-            write!(f, "{:02X} ", self.tile_entry_at(index).0.to_usize())?;
+            write!(f, "{:02X} ", u16::from(self.tile_entry_at(index).0))?;
 
             if index.tile_column().is_max() {
                 writeln!(f)?;

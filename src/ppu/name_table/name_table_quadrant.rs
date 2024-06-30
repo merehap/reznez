@@ -3,6 +3,8 @@
 
 use modular_bitfield::BitfieldSpecifier;
 use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
+use ux::u2;
 
 use crate::util::bit_util::get_bit;
 
@@ -68,5 +70,17 @@ impl NameTableQuadrant {
     fn is_on_left(self) -> bool {
         use NameTableQuadrant::*;
         self == TopLeft || self == BottomLeft
+    }
+}
+
+impl From<u2> for NameTableQuadrant {
+    fn from(value: u2) -> Self {
+        FromPrimitive::from_u8(value.into()).unwrap()
+    }
+}
+
+impl From<NameTableQuadrant> for u16 {
+    fn from(value: NameTableQuadrant) -> Self {
+        value as u16
     }
 }

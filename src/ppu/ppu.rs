@@ -125,13 +125,13 @@ impl Ppu {
             GetPatternLowByte => {
                 if !mem.regs().rendering_enabled() { return; }
                 let address = PpuAddress::in_pattern_table(
-                    background_table_side, self.next_pattern_index, row_in_tile, 0x0);
+                    background_table_side, self.next_pattern_index, row_in_tile, false);
                 self.pattern_register.set_pending_low_byte(mem.read(address));
             }
             GetPatternHighByte => {
                 if !mem.regs().rendering_enabled() { return; }
                 let address = PpuAddress::in_pattern_table(
-                    background_table_side, self.next_pattern_index, row_in_tile, 0x8);
+                    background_table_side, self.next_pattern_index, row_in_tile, true);
                 self.pattern_register.set_pending_high_byte(mem.read(address));
             }
 
@@ -305,8 +305,8 @@ impl Ppu {
             }
 
             GetSpritePatternLowByte => {
-                let low_offset = 0x0;
-                let (address, visible) = self.current_sprite_pattern_address(mem, low_offset);
+                let select_high = false;
+                let (address, visible) = self.current_sprite_pattern_address(mem, select_high);
                 if mem.regs().rendering_enabled() {
                     let pattern_low = mem.read(address);
                     if visible {
@@ -316,8 +316,8 @@ impl Ppu {
                 }
             }
             GetSpritePatternHighByte => {
-                let high_offset = 0x8;
-                let (address, visible) = self.current_sprite_pattern_address(mem, high_offset);
+                let select_high = true;
+                let (address, visible) = self.current_sprite_pattern_address(mem, select_high);
                 if mem.regs().rendering_enabled() {
                     let pattern_high = mem.read(address);
                     if visible {
@@ -406,7 +406,7 @@ impl Ppu {
         }
     }
 
-    fn current_sprite_pattern_address(&self, mem: &PpuMemory, high_low_offset: u16) -> (PpuAddress, bool) {
+    fn current_sprite_pattern_address(&self, mem: &PpuMemory, select_high: bool) -> (PpuAddress, bool) {
         let sprite_table_side = mem.regs().sprite_table_side();
         let sprite_height = mem.regs().sprite_height();
         let sprite_table_side = match sprite_height {
@@ -426,7 +426,7 @@ impl Ppu {
             ) {
                 visible = v;
                 address = PpuAddress::in_pattern_table(
-                    sprite_table_side, pattern_index, row_in_half, high_low_offset);
+                    sprite_table_side, pattern_index, row_in_half, select_high);
             } else {
                 // Sprite not on current scanline. TODO: what address should be here?
                 address = PpuAddress::from_u16(0x1000);

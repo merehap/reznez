@@ -1,6 +1,7 @@
 use itertools::structs::Product;
 use itertools::Itertools;
 use num_traits::FromPrimitive;
+use ux::u5;
 
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 
@@ -105,6 +106,24 @@ impl TileColumn {
     }
 }
 
+impl From<u5> for TileColumn {
+    fn from(value: u5) -> Self {
+        Self(value.into())
+    }
+}
+
+impl From<TileColumn> for u8 {
+    fn from(value: TileColumn) -> Self {
+        value.0
+    }
+}
+
+impl From<TileColumn> for u16 {
+    fn from(value: TileColumn) -> Self {
+        value.0.into()
+    }
+}
+
 #[derive(Clone)]
 pub struct TileColumnIterator(u8);
 
@@ -177,6 +196,24 @@ impl TileRow {
         } else {
             None
         }
+    }
+}
+
+impl From<u5> for TileRow {
+    fn from(value: u5) -> TileRow {
+        TileRow(value.into())
+    }
+}
+
+impl From<TileRow> for u8 {
+    fn from(value: TileRow) -> Self {
+        value.0
+    }
+}
+
+impl From<TileRow> for u16 {
+    fn from(value: TileRow) -> Self {
+        value.0.into()
     }
 }
 
