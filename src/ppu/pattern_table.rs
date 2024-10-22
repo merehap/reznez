@@ -146,9 +146,10 @@ impl PatternTableSide {
 
 impl From<bool> for PatternTableSide {
     fn from(value: bool) -> PatternTableSide {
-        match value {
-            false => PatternTableSide::Left,
-            true => PatternTableSide::Right,
+        if value {
+            PatternTableSide::Right
+        } else {
+            PatternTableSide::Left
         }
     }
 }
