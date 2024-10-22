@@ -1,7 +1,15 @@
 [package]
 name = "reznez"
-version = "0.1.0"
+version = "0.0.0"
 edition = "2021"
+license = "GPL-2.0-only"
+authors = ["Sean Erle Johnson"]
+readme = "README.md"
+documentation = "https://docs.rs/reznez"
+repository = "https://github.com/merehap/reznez.git"
+description = "The high accuracy NES Emulator"
+keywords = ["NES", "Nintendo", "emulator", "highaccuracy"]
+categories = ["emulators", "games"]
 
 [dependencies]
 arr_macro = "0.1.3"
