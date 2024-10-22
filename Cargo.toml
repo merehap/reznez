@@ -16,6 +16,7 @@ rayon = "1.5.3"
 rodio = "0.16.0"
 roxmltree = "0.19.0"
 rusqlite = {version = "0.27.0", features = ["bundled"]}
+splitbits = "0.1.2"
 sscanf = "0.1.4"
 structopt = "0.3.25"
 strum = "0.23.0"
@@ -31,8 +32,6 @@ pixels = "0.9"
 
 winit = "0.26"
 winit_input_helper = "0.11"
-
-splitbits = { git = "https://github.com/merehap/splitbits.git" }
 
 [profile.release]
 debug = true
