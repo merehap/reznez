@@ -156,6 +156,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // Duplicate of 23, most likely.
         27 => m::mapper023_1::mapper023_1().supported(),
 
+        // Homebrew. Sealie Computing - RET-CUFROM revD
+        29 => m::mapper029::Mapper029.supported(),
+
         // Irem G101
         32 => match submapper_number {
             // Normal behavior
