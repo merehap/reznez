@@ -29,13 +29,11 @@ impl InitialLayout {
     pub fn make_mapper_params(&self, cartridge: &Cartridge) -> MapperParams {
         let prg_memory = PrgMemory::new(
             self.prg_windows,
-            self.prg_max_bank_count,
             self.prg_bank_size,
             cartridge.prg_rom().to_vec(),
         );
         let chr_memory = ChrMemory::new(
             self.chr_windows,
-            self.chr_max_bank_count,
             self.chr_bank_size,
             self.align_large_chr_windows,
             cartridge.chr_rom().to_vec(),

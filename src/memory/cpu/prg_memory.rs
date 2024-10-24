@@ -7,7 +7,6 @@ const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
 
 pub struct PrgMemory {
     layout: PrgLayout,
-    max_bank_count: u16,
     bank_size: usize,
     bank_count: u16,
     raw_memory: Vec<u8>,
@@ -17,7 +16,6 @@ pub struct PrgMemory {
 impl PrgMemory {
     pub fn new(
         layout: PrgLayout,
-        max_bank_count: u16,
         bank_size: usize,
         raw_memory: Vec<u8>,
     ) -> PrgMemory {
@@ -36,7 +34,6 @@ impl PrgMemory {
 
         let mut prg_memory = PrgMemory {
             layout,
-            max_bank_count,
             bank_size,
             bank_count,
             raw_memory,
@@ -50,8 +47,6 @@ impl PrgMemory {
         }
 
         let bank_count = prg_memory.bank_count();
-        assert!(bank_count <= prg_memory.max_bank_count,
-            "Bank count: {bank_count}, max: {max_bank_count}");
         if prg_memory.raw_memory.len() >= usize::from(bank_count) * bank_size {
             assert_eq!(
                 prg_memory.raw_memory.len(),

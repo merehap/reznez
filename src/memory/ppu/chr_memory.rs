@@ -7,7 +7,6 @@ use crate::util::unit::KIBIBYTE;
 
 pub struct ChrMemory {
     windows: ChrLayout,
-    max_bank_count: u16,
     bank_size: usize,
     align_large_chr_windows: bool,
     override_write_protection: bool,
@@ -17,7 +16,6 @@ pub struct ChrMemory {
 impl ChrMemory {
     pub fn new(
         windows: ChrLayout,
-        max_bank_count: u16,
         bank_size: usize,
         align_large_chr_windows: bool,
         mut raw_memory: Vec<u8>,
@@ -32,7 +30,6 @@ impl ChrMemory {
 
         let chr_memory = ChrMemory {
             windows,
-            max_bank_count,
             bank_size,
             align_large_chr_windows,
             override_write_protection,
@@ -43,7 +40,6 @@ impl ChrMemory {
         assert_eq!(usize::from(bank_count) * chr_memory.bank_size, chr_memory.raw_memory.len());
         // Power of 2.
         assert_eq!(bank_count & (bank_count - 1), 0);
-        assert!(bank_count <= chr_memory.max_bank_count);
 
         chr_memory
     }
