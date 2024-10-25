@@ -53,10 +53,10 @@ impl Mapper for Mapper001_0 {
         InitialLayout::builder()
             .prg_max_bank_count(16)
             .prg_bank_size(16 * KIBIBYTE)
-            .prg_windows(PRG_LAYOUT_FIXED_LAST)
+            .prg_layout(PRG_LAYOUT_FIXED_LAST)
             .chr_max_bank_count(32)
             .chr_bank_size(4 * KIBIBYTE)
-            .chr_windows(CHR_LAYOUT_ONE_BIG)
+            .chr_layout(CHR_LAYOUT_ONE_BIG)
             .name_table_mirroring_source(NameTableMirroring::OneScreenRightBank.to_source())
             .build()
     }

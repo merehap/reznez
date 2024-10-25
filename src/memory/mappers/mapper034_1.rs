@@ -19,11 +19,11 @@ impl Mapper for Mapper034_1 {
             // Oversize definition. The actual cartridge only uses 2 banks.
             .prg_max_bank_count(256)
             .prg_bank_size(32 * KIBIBYTE)
-            .prg_windows(PRG_LAYOUT)
+            .prg_layout(PRG_LAYOUT)
             // Oversize definition. The actual cartridge only uses 16 banks.
             .chr_max_bank_count(256)
             .chr_bank_size(4 * KIBIBYTE)
-            .chr_windows(CHR_LAYOUT)
+            .chr_layout(CHR_LAYOUT)
             .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
             // TODO: Verify if this is necessary. Might only be used for BxROM.
             .override_bank_register(C1, BankIndex::LAST)

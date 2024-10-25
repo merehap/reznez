@@ -8,12 +8,12 @@ use crate::memory::bank::bank_index::{BankIndex, BankRegisters, MetaRegisterId, 
 pub struct InitialLayout {
     prg_max_bank_count: u16,
     prg_bank_size: usize,
-    prg_windows: PrgLayout,
+    prg_layout: PrgLayout,
 
     chr_max_bank_count: u16,
     chr_bank_size: usize,
-    chr_windows: ChrLayout,
-    align_large_chr_windows: bool,
+    chr_layout: ChrLayout,
+    align_large_chr_layout: bool,
 
     name_table_mirroring_source: NameTableMirroringSource,
     bank_register_override: Option<(BankRegisterId, BankIndex)>,
@@ -28,14 +28,14 @@ impl InitialLayout {
 
     pub fn make_mapper_params(&self, cartridge: &Cartridge) -> MapperParams {
         let prg_memory = PrgMemory::new(
-            self.prg_windows,
+            self.prg_layout,
             self.prg_bank_size,
             cartridge.prg_rom().to_vec(),
         );
         let chr_memory = ChrMemory::new(
-            self.chr_windows,
+            self.chr_layout,
             self.chr_bank_size,
-            self.align_large_chr_windows,
+            self.align_large_chr_layout,
             cartridge.chr_rom().to_vec(),
         );
 
@@ -65,12 +65,12 @@ impl InitialLayout {
 pub struct InitialLayoutBuilder {
     prg_max_bank_count: Option<u16>,
     prg_bank_size: Option<usize>,
-    prg_windows: Option<PrgLayout>,
+    prg_layout: Option<PrgLayout>,
 
     chr_max_bank_count: Option<u16>,
     chr_bank_size: Option<usize>,
-    chr_windows: Option<ChrLayout>,
-    align_large_chr_windows: bool,
+    chr_layout: Option<ChrLayout>,
+    align_large_chr_layout: bool,
 
     name_table_mirroring_source: Option<NameTableMirroringSource>,
     bank_register_override: Option<(BankRegisterId, BankIndex)>,
@@ -84,12 +84,12 @@ impl InitialLayoutBuilder {
         InitialLayoutBuilder {
             prg_max_bank_count: None,
             prg_bank_size: None,
-            prg_windows: None,
+            prg_layout: None,
 
             chr_max_bank_count: None,
             chr_bank_size: None,
-            chr_windows: None,
-            align_large_chr_windows: true,
+            chr_layout: None,
+            align_large_chr_layout: true,
 
             name_table_mirroring_source: None,
             bank_register_override: None,
@@ -108,8 +108,8 @@ impl InitialLayoutBuilder {
         self
     }
 
-    pub const fn prg_windows(&mut self, value: PrgLayout) -> &mut InitialLayoutBuilder {
-        self.prg_windows = Some(value);
+    pub const fn prg_layout(&mut self, value: PrgLayout) -> &mut InitialLayoutBuilder {
+        self.prg_layout = Some(value);
         self
     }
 
@@ -123,13 +123,13 @@ impl InitialLayoutBuilder {
         self
     }
 
-    pub const fn chr_windows(&mut self, value: ChrLayout) -> &mut InitialLayoutBuilder {
-        self.chr_windows = Some(value);
+    pub const fn chr_layout(&mut self, value: ChrLayout) -> &mut InitialLayoutBuilder {
+        self.chr_layout = Some(value);
         self
     }
 
-    pub const fn do_not_align_large_chr_windows(&mut self) -> &mut InitialLayoutBuilder {
-        self.align_large_chr_windows = false;
+    pub const fn do_not_align_large_chr_layout(&mut self) -> &mut InitialLayoutBuilder {
+        self.align_large_chr_layout = false;
         self
     }
 
@@ -172,12 +172,12 @@ impl InitialLayoutBuilder {
         InitialLayout {
             prg_max_bank_count: self.prg_max_bank_count.unwrap(),
             prg_bank_size: self.prg_bank_size.unwrap(),
-            prg_windows: self.prg_windows.unwrap(),
+            prg_layout: self.prg_layout.unwrap(),
 
             chr_max_bank_count: self.chr_max_bank_count.unwrap(),
             chr_bank_size: self.chr_bank_size.unwrap(),
-            chr_windows: self.chr_windows.unwrap(),
-            align_large_chr_windows: self.align_large_chr_windows,
+            chr_layout: self.chr_layout.unwrap(),
+            align_large_chr_layout: self.align_large_chr_layout,
 
             name_table_mirroring_source: self.name_table_mirroring_source.unwrap(),
             bank_register_override: self.bank_register_override,

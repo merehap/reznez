@@ -21,10 +21,10 @@ impl Mapper for Mapper046 {
         InitialLayout::builder()
             .prg_max_bank_count(32)
             .prg_bank_size(32 * KIBIBYTE)
-            .prg_windows(PRG_LAYOUT)
+            .prg_layout(PRG_LAYOUT)
             .chr_max_bank_count(128)
             .chr_bank_size(8 * KIBIBYTE)
-            .chr_windows(CHR_LAYOUT)
+            .chr_layout(CHR_LAYOUT)
             .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
             .build()
     }

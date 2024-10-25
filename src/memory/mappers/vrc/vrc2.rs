@@ -38,10 +38,10 @@ impl Mapper for Vrc2 {
         InitialLayout::builder()
             .prg_max_bank_count(32)
             .prg_bank_size(8 * KIBIBYTE)
-            .prg_windows(PRG_WINDOWS)
+            .prg_layout(PRG_WINDOWS)
             .chr_max_bank_count(256)
             .chr_bank_size(1 * KIBIBYTE)
-            .chr_windows(CHR_WINDOWS)
+            .chr_layout(CHR_WINDOWS)
             .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
             .build()
     }

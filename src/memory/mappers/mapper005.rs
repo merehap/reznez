@@ -161,11 +161,11 @@ impl Mapper for Mapper005 {
         InitialLayout::builder()
             .prg_max_bank_count(128)
             .prg_bank_size(8 * KIBIBYTE)
-            .prg_windows(FOUR_8K_PRG_WINDOWS)
+            .prg_layout(FOUR_8K_PRG_WINDOWS)
             .chr_max_bank_count(1024)
             .chr_bank_size(1 * KIBIBYTE)
-            .chr_windows(ONE_8K_CHR_WINDOW)
-            .do_not_align_large_chr_windows()
+            .chr_layout(ONE_8K_CHR_WINDOW)
+            .do_not_align_large_chr_layout()
             .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
             .override_bank_register(P4, BankIndex::LAST)
             .build()
@@ -309,7 +309,7 @@ impl Mapper for Mapper005 {
             // PPU Ctrl
             0x2000 => {
                 self.sprite_height = Ctrl::from_u8(value).sprite_height();
-                self.update_chr_windows(params);
+                self.update_chr_layout(params);
             }
             // PPU Mask
             0x2001 if value & 0b0001_1000 == 0 => {
@@ -341,7 +341,7 @@ impl Mapper for Mapper005 {
             self.pattern_fetch_count += 1;
             if self.pattern_fetch_count == SPRITE_PATTERN_FETCH_START
                 || self.pattern_fetch_count == BACKGROUND_PATTERN_FETCH_START {
-                self.update_chr_windows(params);
+                self.update_chr_layout(params);
             }
         } else if (0x2000..=0x2FFF).contains(&address.to_u16())
             && self.previous_ppu_address_read == Some(address) {
@@ -415,7 +415,7 @@ impl Mapper005 {
 
     fn set_chr_banking_mode(&mut self, params: &mut MapperParams, value: u8) {
         self.chr_window_mode = CHR_WINDOW_MODES[usize::from(value & 0b0000_0011)];
-        self.update_chr_windows(params);
+        self.update_chr_layout(params);
     }
 
     fn prg_ram_protect_1(&mut self, params: &mut MapperParams, value: u8) {
@@ -440,7 +440,7 @@ impl Mapper005 {
 
     fn extended_ram_mode(&mut self, params: &mut MapperParams, value: u8) {
         self.extended_ram_mode = EXTENDED_RAM_MODES[usize::from(value & 0b11)];
-        self.update_chr_windows(params);
+        self.update_chr_layout(params);
     }
 
     fn set_name_table_mapping(&mut self, value: u8) {
@@ -527,7 +527,7 @@ impl Mapper005 {
         result
     }
 
-    fn update_chr_windows(&mut self, params: &mut MapperParams) {
+    fn update_chr_layout(&mut self, params: &mut MapperParams) {
         let sprite_fetching =
             (SPRITE_PATTERN_FETCH_START..BACKGROUND_PATTERN_FETCH_START)
             .contains(&self.pattern_fetch_count);

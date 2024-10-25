@@ -18,11 +18,11 @@ impl Mapper for Mapper066 {
             // Oversize. Actual cartridge only has 4 max.
             .prg_max_bank_count(16)
             .prg_bank_size(32 * KIBIBYTE)
-            .prg_windows(PRG_LAYOUT)
+            .prg_layout(PRG_LAYOUT)
             // Oversize. Actual cartridge only has 4 max.
             .chr_max_bank_count(16)
             .chr_bank_size(8 * KIBIBYTE)
-            .chr_windows(CHR_LAYOUT)
+            .chr_layout(CHR_LAYOUT)
             .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
             .build()
     }

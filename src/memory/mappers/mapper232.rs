@@ -18,10 +18,10 @@ impl Mapper for Mapper232 {
         InitialLayout::builder()
             .prg_max_bank_count(16)
             .prg_bank_size(16 * KIBIBYTE)
-            .prg_windows(PRG_LAYOUT)
+            .prg_layout(PRG_LAYOUT)
             .chr_max_bank_count(1)
             .chr_bank_size(8 * KIBIBYTE)
-            .chr_windows(CHR_LAYOUT)
+            .chr_layout(CHR_LAYOUT)
             .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
             // The last bank for any of the mapper 232 PRG "blocks".
             .override_bank_register(P1, BankIndex::from_u8(0b11))

@@ -45,10 +45,10 @@ const PRG_LAYOUTS: [PrgLayout; 2] = [PRG_LAYOUT_8000_SWITCHABLE, PRG_LAYOUT_C000
 pub const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
     .prg_max_bank_count(64)
     .prg_bank_size(8 * KIBIBYTE)
-    .prg_windows(PRG_LAYOUT_8000_SWITCHABLE)
+    .prg_layout(PRG_LAYOUT_8000_SWITCHABLE)
     .chr_max_bank_count(256)
     .chr_bank_size(1 * KIBIBYTE)
-    .chr_windows(CHR_BIG_WINDOWS_FIRST)
+    .chr_layout(CHR_BIG_WINDOWS_FIRST)
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .build();
 
