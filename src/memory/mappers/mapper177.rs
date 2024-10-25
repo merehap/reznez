@@ -18,8 +18,8 @@ const MIRRORINGS: [NameTableMirroring; 2] = [
 pub struct Mapper177;
 
 impl Mapper for Mapper177 {
-    fn initial_layout(&self) -> InitialLayout {
-        InitialLayout::builder()
+    fn layout(&self) -> Layout {
+        Layout::builder()
             .prg_max_bank_count(32)
             .prg_bank_size(32 * KIBIBYTE)
             .prg_layout(PRG_LAYOUT)

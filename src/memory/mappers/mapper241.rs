@@ -13,8 +13,8 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
 pub struct Mapper241;
 
 impl Mapper for Mapper241 {
-    fn initial_layout(&self) -> InitialLayout {
-        InitialLayout::builder()
+    fn layout(&self) -> Layout {
+        Layout::builder()
             .prg_max_bank_count(256)
             .prg_bank_size(32 * KIBIBYTE)
             .prg_layout(PRG_LAYOUT)

@@ -1,6 +1,6 @@
 pub mod bank;
 pub mod cpu;
-pub mod initial_layout;
+pub mod layout;
 pub mod mapper;
 pub mod mapper_list;
 pub mod mappers;

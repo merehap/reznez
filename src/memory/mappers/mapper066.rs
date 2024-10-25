@@ -13,8 +13,8 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
 pub struct Mapper066;
 
 impl Mapper for Mapper066 {
-    fn initial_layout(&self) -> InitialLayout {
-        InitialLayout::builder()
+    fn layout(&self) -> Layout {
+        Layout::builder()
             // Oversize. Actual cartridge only has 4 max.
             .prg_max_bank_count(16)
             .prg_bank_size(32 * KIBIBYTE)

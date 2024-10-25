@@ -20,8 +20,8 @@ pub struct Axrom {
 }
 
 impl Mapper for Axrom {
-    fn initial_layout(&self) -> InitialLayout {
-        InitialLayout::builder()
+    fn layout(&self) -> Layout {
+        Layout::builder()
             // Oversize PRG. On real cartridges, 8 is the max.
             .prg_max_bank_count(16)
             .prg_bank_size(32 * KIBIBYTE)

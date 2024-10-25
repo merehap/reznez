@@ -52,8 +52,8 @@ pub struct Mapper065 {
 }
 
 impl Mapper for Mapper065 {
-    fn initial_layout(&self) -> InitialLayout {
-        InitialLayout::builder()
+    fn layout(&self) -> Layout {
+        Layout::builder()
             .prg_max_bank_count(256)
             .prg_bank_size(8 * KIBIBYTE)
             .prg_layout(PRG_LAYOUT_8000_FIXED)

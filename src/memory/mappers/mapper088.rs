@@ -27,8 +27,8 @@ pub struct Mapper088 {
 }
 
 impl Mapper for Mapper088 {
-    fn initial_layout(&self) -> InitialLayout {
-        InitialLayout::builder()
+    fn layout(&self) -> Layout {
+        Layout::builder()
             .prg_max_bank_count(16)
             .prg_bank_size(8 * KIBIBYTE)
             .prg_layout(PRG_LAYOUT)

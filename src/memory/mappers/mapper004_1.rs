@@ -53,7 +53,7 @@ const RAM_STATUSES: [RamStatus; 2] =
         RamStatus::ReadWrite,
     ];
 
-const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
+const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(64)
     .prg_bank_size(8 * KIBIBYTE)
     .prg_layout(PRG_LAYOUT_8000_SWITCHABLE)
@@ -71,8 +71,8 @@ pub struct Mapper004_1 {
 }
 
 impl Mapper for Mapper004_1 {
-    fn initial_layout(&self) -> InitialLayout {
-        INITIAL_LAYOUT
+    fn layout(&self) -> Layout {
+        LAYOUT
     }
 
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {

@@ -13,8 +13,8 @@ const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
 pub struct Mapper034_2;
 
 impl Mapper for Mapper034_2 {
-    fn initial_layout(&self) -> InitialLayout {
-        InitialLayout::builder()
+    fn layout(&self) -> Layout {
+        Layout::builder()
             // Oversize definition for BxROM. The actual BNROM cartridge only supports 2 banks.
             .prg_max_bank_count(256)
             .prg_bank_size(32 * KIBIBYTE)

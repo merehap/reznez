@@ -8,7 +8,7 @@ pub use crate::memory::bank::bank::{Bank, RamStatusRegisterId};
 pub use crate::memory::bank::bank::RamStatusRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout, PrgWindow};
-pub use crate::memory::initial_layout::{InitialLayout, NameTableMirroringSource};
+pub use crate::memory::layout::{Layout, NameTableMirroringSource};
 pub use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout, ChrWindow};
 pub use crate::memory::ppu::ppu_address::PpuAddress;
 pub use crate::memory::read_result::ReadResult;
@@ -30,7 +30,7 @@ use crate::ppu::sprite::oam::Oam;
 
 pub trait Mapper {
     // Should be const, but that's not yet allowed by Rust.
-    fn initial_layout(&self) -> InitialLayout;
+    fn layout(&self) -> Layout;
 
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8);
 

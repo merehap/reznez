@@ -157,8 +157,8 @@ pub struct Mapper005 {
 }
 
 impl Mapper for Mapper005 {
-    fn initial_layout(&self) -> InitialLayout {
-        InitialLayout::builder()
+    fn layout(&self) -> Layout {
+        Layout::builder()
             .prg_max_bank_count(128)
             .prg_bank_size(8 * KIBIBYTE)
             .prg_layout(FOUR_8K_PRG_WINDOWS)

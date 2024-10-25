@@ -24,8 +24,8 @@ const CHR_WINDOWS: ChrLayout = ChrLayout::new(&[
 pub struct Mapper210_1;
 
 impl Mapper for Mapper210_1 {
-    fn initial_layout(&self) -> InitialLayout {
-        InitialLayout::builder()
+    fn layout(&self) -> Layout {
+        Layout::builder()
             .prg_max_bank_count(64)
             .prg_bank_size(8 * KIBIBYTE)
             .prg_layout(PRG_WINDOWS)

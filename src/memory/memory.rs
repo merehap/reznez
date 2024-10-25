@@ -359,7 +359,7 @@ pub mod test_data {
 
     pub fn memory_with_cartridge(cartridge: &Cartridge) -> Memory {
         let mapper = Mapper000;
-        let mapper_params = mapper.initial_layout().make_mapper_params(cartridge);
+        let mapper_params = mapper.layout().make_mapper_params(cartridge);
         Memory::new(
             Box::new(mapper),
             mapper_params,

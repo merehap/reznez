@@ -7,8 +7,8 @@ pub struct Mapper039 {
 }
 
 impl Mapper for Mapper039 {
-    fn initial_layout(&self) -> InitialLayout {
-        self.mapper241.initial_layout()
+    fn layout(&self) -> Layout {
+        self.mapper241.layout()
     }
 
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: CpuAddress, value: u8) {

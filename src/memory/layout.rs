@@ -5,7 +5,7 @@ use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::memory::bank::bank_index::{BankIndex, BankRegisters, MetaRegisterId, BankRegisterId};
 
-pub struct InitialLayout {
+pub struct Layout {
     prg_max_bank_count: u16,
     prg_bank_size: usize,
     prg_layout: PrgLayout,
@@ -21,9 +21,9 @@ pub struct InitialLayout {
     second_meta_register_override: (MetaRegisterId, BankRegisterId),
 }
 
-impl InitialLayout {
-    pub const fn builder() -> InitialLayoutBuilder {
-        InitialLayoutBuilder::new()
+impl Layout {
+    pub const fn builder() -> LayoutBuilder {
+        LayoutBuilder::new()
     }
 
     pub fn make_mapper_params(&self, cartridge: &Cartridge) -> MapperParams {
@@ -62,7 +62,7 @@ impl InitialLayout {
 }
 
 #[derive(Clone, Copy)]
-pub struct InitialLayoutBuilder {
+pub struct LayoutBuilder {
     prg_max_bank_count: Option<u16>,
     prg_bank_size: Option<usize>,
     prg_layout: Option<PrgLayout>,
@@ -79,9 +79,9 @@ pub struct InitialLayoutBuilder {
     second_meta_register_override: (MetaRegisterId, BankRegisterId),
 }
 
-impl InitialLayoutBuilder {
-    const fn new() -> InitialLayoutBuilder {
-        InitialLayoutBuilder {
+impl LayoutBuilder {
+    const fn new() -> LayoutBuilder {
+        LayoutBuilder {
             prg_max_bank_count: None,
             prg_bank_size: None,
             prg_layout: None,
@@ -98,37 +98,37 @@ impl InitialLayoutBuilder {
         }
     }
 
-    pub const fn prg_max_bank_count(&mut self, value: u16) -> &mut InitialLayoutBuilder {
+    pub const fn prg_max_bank_count(&mut self, value: u16) -> &mut LayoutBuilder {
         self.prg_max_bank_count = Some(value);
         self
     }
 
-    pub const fn prg_bank_size(&mut self, value: usize) -> &mut InitialLayoutBuilder {
+    pub const fn prg_bank_size(&mut self, value: usize) -> &mut LayoutBuilder {
         self.prg_bank_size = Some(value);
         self
     }
 
-    pub const fn prg_layout(&mut self, value: PrgLayout) -> &mut InitialLayoutBuilder {
+    pub const fn prg_layout(&mut self, value: PrgLayout) -> &mut LayoutBuilder {
         self.prg_layout = Some(value);
         self
     }
 
-    pub const fn chr_max_bank_count(&mut self, value: u16) -> &mut InitialLayoutBuilder {
+    pub const fn chr_max_bank_count(&mut self, value: u16) -> &mut LayoutBuilder {
         self.chr_max_bank_count = Some(value);
         self
     }
 
-    pub const fn chr_bank_size(&mut self, value: usize) -> &mut InitialLayoutBuilder {
+    pub const fn chr_bank_size(&mut self, value: usize) -> &mut LayoutBuilder {
         self.chr_bank_size = Some(value);
         self
     }
 
-    pub const fn chr_layout(&mut self, value: ChrLayout) -> &mut InitialLayoutBuilder {
+    pub const fn chr_layout(&mut self, value: ChrLayout) -> &mut LayoutBuilder {
         self.chr_layout = Some(value);
         self
     }
 
-    pub const fn do_not_align_large_chr_layout(&mut self) -> &mut InitialLayoutBuilder {
+    pub const fn do_not_align_large_chr_layout(&mut self) -> &mut LayoutBuilder {
         self.align_large_chr_layout = false;
         self
     }
@@ -136,7 +136,7 @@ impl InitialLayoutBuilder {
     pub const fn name_table_mirroring_source(
         &mut self,
         value: NameTableMirroringSource,
-    ) -> &mut InitialLayoutBuilder {
+    ) -> &mut LayoutBuilder {
         self.name_table_mirroring_source = Some(value);
         self
     }
@@ -145,7 +145,7 @@ impl InitialLayoutBuilder {
         &mut self,
         id: BankRegisterId,
         bank_index: BankIndex,
-    ) -> &mut InitialLayoutBuilder {
+    ) -> &mut LayoutBuilder {
         self.bank_register_override = Some((id, bank_index));
         self
     }
@@ -154,7 +154,7 @@ impl InitialLayoutBuilder {
         &mut self,
         meta_id: MetaRegisterId,
         id: BankRegisterId,
-    ) -> &mut InitialLayoutBuilder {
+    ) -> &mut LayoutBuilder {
         self.meta_register_override = (meta_id, id);
         self
     }
@@ -163,13 +163,13 @@ impl InitialLayoutBuilder {
         &mut self,
         meta_id: MetaRegisterId,
         id: BankRegisterId,
-    ) -> &mut InitialLayoutBuilder {
+    ) -> &mut LayoutBuilder {
         self.second_meta_register_override = (meta_id, id);
         self
     }
 
-    pub const fn build(self) -> InitialLayout {
-        InitialLayout {
+    pub const fn build(self) -> Layout {
+        Layout {
             prg_max_bank_count: self.prg_max_bank_count.unwrap(),
             prg_bank_size: self.prg_bank_size.unwrap(),
             prg_layout: self.prg_layout.unwrap(),

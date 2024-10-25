@@ -23,7 +23,7 @@ pub fn lookup_mapper_with_params(cartridge: &Cartridge) -> (Box<dyn Mapper>, Map
             panic!("Mapper {number}, submapper {sub_number} has been reassigned to {correct_mapper}, {correct_submapper} ."),
     };
 
-    let mapper_params = mapper.initial_layout().make_mapper_params(cartridge);
+    let mapper_params = mapper.layout().make_mapper_params(cartridge);
     (mapper, mapper_params)
 }
 

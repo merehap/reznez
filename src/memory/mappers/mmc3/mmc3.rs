@@ -42,7 +42,7 @@ pub const CHR_SMALL_WINDOWS_FIRST: ChrLayout = ChrLayout::new(&[
 const CHR_LAYOUTS: [ChrLayout; 2] = [CHR_BIG_WINDOWS_FIRST, CHR_SMALL_WINDOWS_FIRST];
 const PRG_LAYOUTS: [PrgLayout; 2] = [PRG_LAYOUT_8000_SWITCHABLE, PRG_LAYOUT_C000_SWITCHABLE];
 
-pub const INITIAL_LAYOUT: InitialLayout = InitialLayout::builder()
+pub const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(64)
     .prg_bank_size(8 * KIBIBYTE)
     .prg_layout(PRG_LAYOUT_8000_SWITCHABLE)
@@ -60,8 +60,8 @@ pub struct Mapper004Mmc3 {
 }
 
 impl Mapper for Mapper004Mmc3 {
-    fn initial_layout(&self) -> InitialLayout {
-        INITIAL_LAYOUT
+    fn layout(&self) -> Layout {
+        LAYOUT
     }
 
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
