@@ -456,8 +456,8 @@ impl MapperParams {
         &self.prg_memory
     }
 
-    pub fn set_prg_layout(&mut self, layout: PrgLayout) {
-        self.prg_memory.set_layout(layout);
+    pub fn set_prg_layout(&mut self, index: usize) {
+        self.prg_memory.set_layout(index);
     }
 
     pub fn resolve_prg_bank_indexes(&self) -> Vec<u16> {
@@ -488,8 +488,8 @@ impl MapperParams {
         self.chr_memory.pattern_table(&self.bank_registers, side)
     }
 
-    pub fn set_chr_layout(&mut self, layout: ChrLayout) {
-        self.chr_memory.set_layout(layout);
+    pub fn set_chr_layout(&mut self, index: usize) {
+        self.chr_memory.set_layout(index);
     }
 
     pub fn peek_chr(&self, address: PpuAddress) -> u8 {

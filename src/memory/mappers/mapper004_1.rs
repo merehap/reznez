@@ -3,66 +3,57 @@ use crate::memory::mappers::mmc3::mmc3;
 use crate::memory::mappers::mmc3::irq_state::IrqState;
 use crate::memory::mappers::mmc3::rev_a_irq_state::RevAIrqState;
 
-const PRG_LAYOUT_8000_SWITCHABLE: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, Bank::EMPTY),
-    PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S0)),
-    PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S1)),
-    PrgWindow::new(0x7400, 0x75FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
-    PrgWindow::new(0x7600, 0x77FF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
-    PrgWindow::new(0x7800, 0x79FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
-    PrgWindow::new(0x7A00, 0x7BFF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
-    PrgWindow::new(0x7C00, 0x7DFF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
-    PrgWindow::new(0x7E00, 0x7FFF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-]);
-
-const PRG_LAYOUT_C000_SWITCHABLE: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, Bank::EMPTY),
-    PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S0)),
-    PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S1)),
-    PrgWindow::new(0x7400, 0x75FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
-    PrgWindow::new(0x7600, 0x77FF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
-    PrgWindow::new(0x7800, 0x79FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
-    PrgWindow::new(0x7A00, 0x7BFF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
-    PrgWindow::new(0x7C00, 0x7DFF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
-    PrgWindow::new(0x7E00, 0x7FFF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-]);
-
-const PRG_LAYOUTS: [PrgLayout; 2] =
-    [
-        PRG_LAYOUT_8000_SWITCHABLE,
-        PRG_LAYOUT_C000_SWITCHABLE,
-    ];
-
-const CHR_LAYOUTS: [ChrLayout; 2] =
-    [
+const LAYOUT: Layout = Layout::builder()
+    .prg_max_bank_count(64)
+    .prg_bank_size(8 * KIBIBYTE)
+    .prg_layouts(&[
+        // Switchable 0x8000
+        PrgLayout::new(&[
+            PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, Bank::EMPTY),
+            PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S0)),
+            PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S1)),
+            PrgWindow::new(0x7400, 0x75FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
+            PrgWindow::new(0x7600, 0x77FF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
+            PrgWindow::new(0x7800, 0x79FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
+            PrgWindow::new(0x7A00, 0x7BFF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
+            PrgWindow::new(0x7C00, 0x7DFF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
+            PrgWindow::new(0x7E00, 0x7FFF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
+            PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
+            PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
+            PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
+            PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+        ]),
+        // Switchable 0xC000
+        PrgLayout::new(&[
+            PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, Bank::EMPTY),
+            PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S0)),
+            PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S1)),
+            PrgWindow::new(0x7400, 0x75FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
+            PrgWindow::new(0x7600, 0x77FF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
+            PrgWindow::new(0x7800, 0x79FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
+            PrgWindow::new(0x7A00, 0x7BFF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
+            PrgWindow::new(0x7C00, 0x7DFF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
+            PrgWindow::new(0x7E00, 0x7FFF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
+            PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
+            PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
+            PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
+            PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+        ]),
+    ])
+    .chr_max_bank_count(256)
+    .chr_bank_size(1 * KIBIBYTE)
+    .chr_layouts(&[
         mmc3::CHR_BIG_WINDOWS_FIRST,
         mmc3::CHR_SMALL_WINDOWS_FIRST,
-    ];
+    ])
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+    .build();
 
 const RAM_STATUSES: [RamStatus; 2] =
     [
         RamStatus::ReadOnly,
         RamStatus::ReadWrite,
     ];
-
-const LAYOUT: Layout = Layout::builder()
-    .prg_max_bank_count(64)
-    .prg_bank_size(8 * KIBIBYTE)
-    .prg_layout(PRG_LAYOUT_8000_SWITCHABLE)
-    .chr_max_bank_count(256)
-    .chr_bank_size(1 * KIBIBYTE)
-    .chr_layout(mmc3::CHR_BIG_WINDOWS_FIRST)
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-    .build();
-
 
 // MMC6. Similar to MMC3 with Sharp IRQs, but with Work RAM protection.
 pub struct Mapper004_1 {
@@ -71,10 +62,6 @@ pub struct Mapper004_1 {
 }
 
 impl Mapper for Mapper004_1 {
-    fn layout(&self) -> Layout {
-        LAYOUT
-    }
-
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         let is_even_address = address.to_raw() % 2 == 0;
         match (address.to_raw(), is_even_address) {
@@ -103,14 +90,18 @@ impl Mapper for Mapper004_1 {
     fn irq_pending(&self) -> bool {
         self.irq_state.pending()
     }
+
+    fn layout(&self) -> Layout {
+        LAYOUT
+    }
 }
 
 impl Mapper004_1 {
     // Same as MMC3 except for PRG RAM enable and slightly different PRG layouts.
     pub fn bank_select(&mut self, params: &mut MapperParams, value: u8) {
         let fields = splitbits!(value, "cps..bbb");
-        params.set_chr_layout(CHR_LAYOUTS[fields.c as usize]);
-        params.set_prg_layout(PRG_LAYOUTS[fields.p as usize]);
+        params.set_chr_layout(fields.c as usize);
+        params.set_prg_layout(fields.p as usize);
         // FIXME: What are these actually supposed to do?
         params.set_ram_status(S0, RAM_STATUSES[fields.s as usize]);
         params.set_ram_status(S1, RAM_STATUSES[fields.s as usize]);

@@ -1,41 +1,39 @@
 use crate::memory::mapper::*;
 
-const PRG_WINDOWS: PrgLayout = PrgLayout::new(&[
-    // FIXME: This is supposed to be 2KiBs mirrored. Family Circuit doesn't work without it.
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P2)),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-]);
-
-const CHR_WINDOWS: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C0)),
-    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C1)),
-    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
-    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
-    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
-    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
-    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C6)),
-    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C7)),
-]);
+const LAYOUT: Layout = Layout::builder()
+    .prg_max_bank_count(64)
+    .prg_bank_size(8 * KIBIBYTE)
+    .prg_layouts(&[
+        PrgLayout::new(&[
+            // FIXME: This is supposed to be 2KiBs mirrored. Family Circuit doesn't work without it.
+            PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM),
+            PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
+            PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
+            PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P2)),
+            PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+        ])
+    ])
+    .chr_max_bank_count(256)
+    .chr_bank_size(1 * KIBIBYTE)
+    .chr_layouts(&[
+        ChrLayout::new(&[
+            ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C0)),
+            ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C1)),
+            ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
+            ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
+            ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
+            ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
+            ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C6)),
+            ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C7)),
+        ])
+    ])
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+    .build();
 
 // Namco 175
 pub struct Mapper210_1;
 
 impl Mapper for Mapper210_1 {
-    fn layout(&self) -> Layout {
-        Layout::builder()
-            .prg_max_bank_count(64)
-            .prg_bank_size(8 * KIBIBYTE)
-            .prg_layout(PRG_WINDOWS)
-            .chr_max_bank_count(256)
-            .chr_bank_size(1 * KIBIBYTE)
-            .chr_layout(CHR_WINDOWS)
-            .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-            .build()
-    }
-
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
@@ -56,5 +54,9 @@ impl Mapper for Mapper210_1 {
             0xF000..=0xF7FF => params.set_bank_register(P2, value & 0b0011_1111),
             0xF800..=0xFFFF => { /* Do nothing. */ }
         }
+    }
+
+    fn layout(&self) -> Layout {
+        LAYOUT
     }
 }

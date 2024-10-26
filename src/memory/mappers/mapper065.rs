@@ -1,38 +1,44 @@
 use crate::memory::mapper::*;
 
-const PRG_LAYOUT_8000_FIXED: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-]);
-const PRG_LAYOUT_C000_FIXED: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-]);
+const LAYOUT: Layout = Layout::builder()
+    .prg_max_bank_count(256)
+    .prg_bank_size(8 * KIBIBYTE)
+    .prg_layouts(&[
+        PrgLayout::new(&[
+            PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
+            PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
+            PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
+            PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
+            PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+        ]),
+        PrgLayout::new(&[
+            PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
+            PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
+            PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
+            PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
+            PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+        ]),
+    ])
+    .chr_max_bank_count(256)
+    .chr_bank_size(1 * KIBIBYTE)
+    .chr_layouts(&[
+        ChrLayout::new(&[
+            ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C0)),
+            ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C1)),
+            ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
+            ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
+            ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
+            ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
+            ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C6)),
+            ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C7)),
+        ])
+    ])
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+    .override_bank_register(P1, BankIndex::SECOND)
+    .build();
 
-
-const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C0)),
-    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C1)),
-    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
-    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
-    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
-    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
-    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C6)),
-    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C7)),
-]);
 
 const CHR_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
-
-const PRG_LAYOUTS: [PrgLayout; 2] = [
-    PRG_LAYOUT_8000_FIXED,
-    PRG_LAYOUT_C000_FIXED,
-];
 
 const MIRRORINGS: [NameTableMirroring; 4] = [
     NameTableMirroring::Vertical,
@@ -52,19 +58,6 @@ pub struct Mapper065 {
 }
 
 impl Mapper for Mapper065 {
-    fn layout(&self) -> Layout {
-        Layout::builder()
-            .prg_max_bank_count(256)
-            .prg_bank_size(8 * KIBIBYTE)
-            .prg_layout(PRG_LAYOUT_8000_FIXED)
-            .chr_max_bank_count(256)
-            .chr_bank_size(1 * KIBIBYTE)
-            .chr_layout(CHR_LAYOUT)
-            .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-            .override_bank_register(P1, BankIndex::SECOND)
-            .build()
-    }
-
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: CpuAddress, value: u8) {
         match cpu_address.to_raw() {
             0x0000..=0x401F => unreachable!(),
@@ -76,7 +69,7 @@ impl Mapper for Mapper065 {
                 let reg_id = CHR_REGISTER_IDS[(cpu_address.to_raw() - 0xB000) as usize];
                 params.set_bank_register(reg_id, value);
             }
-            0x9000 => params.set_prg_layout(PRG_LAYOUTS[splitbits_named!(value, "p.......") as usize]),
+            0x9000 => params.set_prg_layout(splitbits_named!(value, "p.......") as usize),
             0x9001 => params.set_name_table_mirroring(MIRRORINGS[splitbits_named!(value, "mm......") as usize]),
 
             0x9003 => {
@@ -110,6 +103,10 @@ impl Mapper for Mapper065 {
 
     fn irq_pending(&self) -> bool {
         self.irq_pending
+    }
+
+    fn layout(&self) -> Layout {
+        LAYOUT
     }
 }
 

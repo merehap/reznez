@@ -13,16 +13,16 @@ pub struct Mapper154 {
 }
 
 impl Mapper for Mapper154 {
-    fn layout(&self) -> Layout {
-        self.mapper088.layout()
-    }
-
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         if matches!(address.to_raw(), 0x8000..=0xFFFF) {
             params.set_name_table_mirroring(MIRRORINGS[splitbits_named!(value, ".m......") as usize]);
         }
 
         self.mapper088.write_to_cartridge_space(params, address, value);
+    }
+
+    fn layout(&self) -> Layout {
+        self.mapper088.layout()
     }
 }
 

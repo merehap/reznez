@@ -1,64 +1,66 @@
 use crate::memory::mapper::*;
 
-const PRG_LAYOUT_PRIMARY: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P2)),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-]);
-
-const PRG_LAYOUT_SECONDARY: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P2)),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-]);
-
-const CHR_BIG_WINDOWS_PRIMARY: ChrLayout = ChrLayout::new(&[
-    // Big windows.
-    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::switchable_rom(C0)),
-    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::switchable_rom(C1)),
-    // Small windows.
-    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
-    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
-    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
-    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
-]);
-
-const CHR_BIG_WINDOWS_SECONDARY: ChrLayout = ChrLayout::new(&[
-    // Small windows.
-    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
-    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
-    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
-    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
-    // Big windows.
-    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::switchable_rom(C0)),
-    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::switchable_rom(C1)),
-]);
-
-const CHR_SMALL_WINDOWS_PRIMARY: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C0)),
-    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C6)),
-    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::switchable_rom(C1)),
-    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::switchable_rom(C7)),
-    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
-    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
-    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
-    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
-]);
-
-const CHR_SMALL_WINDOWS_SECONDARY: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
-    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
-    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
-    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
-    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::switchable_rom(C0)),
-    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C6)),
-    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C1)),
-    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C7)),
-]);
+const LAYOUT: Layout = Layout::builder()
+    .prg_max_bank_count(64)
+    .prg_bank_size(8 * KIBIBYTE)
+    .prg_layouts(&[
+        PrgLayout::new(&[
+            PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
+            PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
+            PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
+            PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P2)),
+            PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+        ]),
+        PrgLayout::new(&[
+            PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
+            PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P2)),
+            PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
+            PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
+            PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+        ]),
+    ])
+    .chr_max_bank_count(256)
+    .chr_bank_size(1 * KIBIBYTE)
+    .chr_layouts(&[
+        ChrLayout::new(&[
+            ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::switchable_rom(C0)),
+            ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::switchable_rom(C1)),
+            ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
+            ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
+            ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
+            ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
+        ]),
+        ChrLayout::new(&[
+            ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C0)),
+            ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C6)),
+            ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::switchable_rom(C1)),
+            ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::switchable_rom(C7)),
+            ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
+            ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
+            ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
+            ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
+        ]),
+        ChrLayout::new(&[
+            ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
+            ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
+            ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
+            ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
+            ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::switchable_rom(C0)),
+            ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::switchable_rom(C1)),
+        ]),
+        ChrLayout::new(&[
+            ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
+            ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
+            ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
+            ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
+            ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::switchable_rom(C0)),
+            ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C6)),
+            ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C1)),
+            ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C7)),
+        ]),
+    ])
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+    .build();
 
 const CPU_CYCLE_MODE_IRQ_PENDING_DELAY: u8 = 1;
 const SCANLINE_MODE_IRQ_PENDING_DELAY: u8 = 4;
@@ -67,16 +69,6 @@ const BANK_INDEX_REGISTER_IDS: [Option<BankRegisterId>; 16] =
     [Some(C0), Some(C1), Some(C2), Some(C3), Some(C4), Some(C5), Some(P0), Some(P1),
      Some(C6), Some(C7),     None,     None,     None,     None,     None, Some(P2),
     ];
-
-const PRG_LAYOUTS: [PrgLayout; 2] = [
-    PRG_LAYOUT_PRIMARY,
-    PRG_LAYOUT_SECONDARY,
-];
-
-const CHR_LAYOUTS: [[ChrLayout; 2]; 2] = [
-    [ CHR_BIG_WINDOWS_PRIMARY, CHR_SMALL_WINDOWS_PRIMARY ],
-    [ CHR_BIG_WINDOWS_SECONDARY, CHR_SMALL_WINDOWS_SECONDARY ],
-];
 
 const MIRRORINGS: [NameTableMirroring; 2] = [
     NameTableMirroring::Vertical,
@@ -100,18 +92,6 @@ pub struct Mapper064 {
 }
 
 impl Mapper for Mapper064 {
-    fn layout(&self) -> Layout {
-        Layout::builder()
-            .prg_max_bank_count(64)
-            .prg_bank_size(8 * KIBIBYTE)
-            .prg_layout(PRG_LAYOUT_PRIMARY)
-            .chr_max_bank_count(256)
-            .chr_bank_size(1 * KIBIBYTE)
-            .chr_layout(CHR_BIG_WINDOWS_PRIMARY)
-            .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-            .build()
-    }
-
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: CpuAddress, value: u8) {
         let is_even_address = cpu_address.to_raw() % 2 == 0;
         match cpu_address.to_raw() {
@@ -178,6 +158,10 @@ impl Mapper for Mapper064 {
     fn irq_pending(&self) -> bool {
         self.irq_pending
     }
+
+    fn layout(&self) -> Layout {
+        LAYOUT
+    }
 }
 
 impl Mapper064 {
@@ -199,9 +183,9 @@ impl Mapper064 {
     }
 
     fn bank_select(&mut self, params: &mut MapperParams, value: u8) {
-        let fields = splitbits!(value, "ipc.bbbb");
-        params.set_prg_layout(PRG_LAYOUTS[fields.p as usize]);
-        params.set_chr_layout(CHR_LAYOUTS[fields.i as usize][fields.c as usize]);
+        let fields = splitbits!(value, "cpc.bbbb");
+        params.set_chr_layout(fields.c as usize);
+        params.set_prg_layout(fields.p as usize);
         if let Some(reg_id) = BANK_INDEX_REGISTER_IDS[fields.b as usize] {
             self.selected_register_id = reg_id;
         }

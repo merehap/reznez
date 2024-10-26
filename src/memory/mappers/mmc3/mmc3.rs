@@ -1,6 +1,22 @@
 use crate::memory::mapper::*;
 use crate::memory::mappers::mmc3::irq_state::IrqState;
 
+pub const LAYOUT: Layout = Layout::builder()
+    .prg_max_bank_count(64)
+    .prg_bank_size(8 * KIBIBYTE)
+    .prg_layouts(&[
+        PRG_LAYOUT_8000_SWITCHABLE,
+        PRG_LAYOUT_C000_SWITCHABLE,
+    ])
+    .chr_max_bank_count(256)
+    .chr_bank_size(1 * KIBIBYTE)
+    .chr_layouts(&[
+        CHR_BIG_WINDOWS_FIRST,
+        CHR_SMALL_WINDOWS_FIRST,
+    ])
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+    .build();
+
 pub const PRG_LAYOUT_8000_SWITCHABLE: PrgLayout = PrgLayout::new(&[
     PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
@@ -39,18 +55,6 @@ pub const CHR_SMALL_WINDOWS_FIRST: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::switchable_rom(C1)),
 ]);
 
-const CHR_LAYOUTS: [ChrLayout; 2] = [CHR_BIG_WINDOWS_FIRST, CHR_SMALL_WINDOWS_FIRST];
-const PRG_LAYOUTS: [PrgLayout; 2] = [PRG_LAYOUT_8000_SWITCHABLE, PRG_LAYOUT_C000_SWITCHABLE];
-
-pub const LAYOUT: Layout = Layout::builder()
-    .prg_max_bank_count(64)
-    .prg_bank_size(8 * KIBIBYTE)
-    .prg_layout(PRG_LAYOUT_8000_SWITCHABLE)
-    .chr_max_bank_count(256)
-    .chr_bank_size(1 * KIBIBYTE)
-    .chr_layout(CHR_BIG_WINDOWS_FIRST)
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-    .build();
 
 pub const BANK_INDEX_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, P0, P1];
 
@@ -60,10 +64,6 @@ pub struct Mapper004Mmc3 {
 }
 
 impl Mapper for Mapper004Mmc3 {
-    fn layout(&self) -> Layout {
-        LAYOUT
-    }
-
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         let is_even_address = address.to_raw() % 2 == 0;
         match (address.to_raw(), is_even_address) {
@@ -92,6 +92,10 @@ impl Mapper for Mapper004Mmc3 {
     fn irq_pending(&self) -> bool {
         self.irq_state.pending()
     }
+
+    fn layout(&self) -> Layout {
+        LAYOUT
+    }
 }
 
 impl Mapper004Mmc3 {
@@ -109,8 +113,8 @@ pub fn bank_select(
     value: u8,
 ) {
     let fields = splitbits!(value, "cp...rrr");
-    params.set_chr_layout(CHR_LAYOUTS[fields.c as usize]);
-    params.set_prg_layout(PRG_LAYOUTS[fields.p as usize]);
+    params.set_chr_layout(fields.c as usize);
+    params.set_prg_layout(fields.p as usize);
     *selected_register_id = BANK_INDEX_REGISTER_IDS[fields.r as usize];
 }
 

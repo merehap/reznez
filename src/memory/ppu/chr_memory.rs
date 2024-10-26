@@ -6,22 +6,24 @@ use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
 
 pub struct ChrMemory {
-    windows: ChrLayout,
+    layouts: &'static [ChrLayout],
+    layout_index: usize,
     bank_size: usize,
-    align_large_chr_windows: bool,
+    align_large_chr_layouts: bool,
     override_write_protection: bool,
     raw_memory: Vec<u8>,
 }
 
 impl ChrMemory {
     pub fn new(
-        windows: ChrLayout,
+        layouts: &'static [ChrLayout],
+        layout_index: usize,
         bank_size: usize,
-        align_large_chr_windows: bool,
+        align_large_chr_layouts: bool,
         mut raw_memory: Vec<u8>,
     ) -> ChrMemory {
-        windows.validate_bank_size_multiples(bank_size);
-        // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only windows.
+        //layouts.validate_bank_size_multiples(bank_size);
+        // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only layouts.
         let mut override_write_protection = false;
         if raw_memory.is_empty() {
             raw_memory = vec![0; 8 * KIBIBYTE];
@@ -29,9 +31,10 @@ impl ChrMemory {
         }
 
         let chr_memory = ChrMemory {
-            windows,
+            layouts,
+            layout_index,
             bank_size,
-            align_large_chr_windows,
+            align_large_chr_layouts,
             override_write_protection,
             raw_memory,
         };
@@ -52,7 +55,7 @@ impl ChrMemory {
     }
 
     pub fn window_count(&self) -> u8 {
-        self.windows.0.len().try_into().unwrap()
+        self.current_layout().0.len().try_into().unwrap()
     }
 
     pub fn peek(&self, registers: &BankRegisters, address: PpuAddress) -> u8 {
@@ -68,13 +71,13 @@ impl ChrMemory {
     }
 
     pub fn resolve_selected_bank_indexes(&self, registers: &BankRegisters) -> Vec<u16> {
-        self.windows.0.iter()
+        self.current_layout().0.iter()
             .map(|window| window.bank_index(registers).to_u16(self.bank_count()))
             .collect()
     }
 
     pub fn window_at(&self, start: u16) -> &ChrWindow {
-        for window in self.windows.0 {
+        for window in self.current_layout().0 {
             if window.start.to_u16() == start {
                 return window;
             }
@@ -83,9 +86,11 @@ impl ChrMemory {
         panic!("No window exists at {start:X?}");
     }
 
-    pub fn set_layout(&mut self, windows: ChrLayout) {
-        windows.validate_bank_size_multiples(self.bank_size);
-        self.windows = windows;
+    pub fn set_layout(&mut self, index: usize) {
+        assert!(index < self.layouts.len());
+        self.layout_index = index;
+        // TODO: Do this at startup.
+        //layouts.validate_bank_size_multiples(self.bank_size);
     }
 
     pub fn pattern_table(&self, registers: &BankRegisters, side: PatternTableSide) -> PatternTable {
@@ -98,10 +103,10 @@ impl ChrMemory {
     fn address_to_chr_index(&self, registers: &BankRegisters, address: u16) -> (usize, bool) {
         assert!(address < 0x2000);
 
-        for window in self.windows.0 {
+        for window in self.layouts[self.layout_index].0 {
             if let Some(bank_offset) = window.offset(address) {
                 let mut raw_bank_index = window.bank_index(registers).to_usize(self.bank_count());
-                if self.align_large_chr_windows {
+                if self.align_large_chr_layouts {
                     let window_multiple = window.size() / self.bank_size;
                     raw_bank_index &= !(window_multiple >> 1);
                 }
@@ -114,6 +119,10 @@ impl ChrMemory {
         }
 
         unreachable!();
+    }
+
+    fn current_layout(&self) -> &ChrLayout {
+        &self.layouts[self.layout_index]
     }
 
     #[inline]
@@ -154,7 +163,7 @@ pub struct ChrLayout(&'static [ChrWindow]);
 
 impl ChrLayout {
     pub const fn new(windows: &'static [ChrWindow]) -> ChrLayout {
-        assert!(!windows.is_empty(), "No PRG windows specified.");
+        assert!(!windows.is_empty(), "No PRG layouts specified.");
 
         assert!(windows[0].start.to_u16() == 0x0000, "The first CHR window must start at 0x0000.");
 
@@ -163,7 +172,7 @@ impl ChrLayout {
         let mut i = 1;
         while i < windows.len() {
             assert!(windows[i].start.to_u16() == windows[i - 1].end.to_u16() + 1,
-                    "There must be no gaps nor overlap between CHR windows.");
+                    "There must be no gaps nor overlap between CHR layouts.");
 
             i += 1;
         }

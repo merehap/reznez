@@ -6,7 +6,8 @@ use crate::memory::read_result::ReadResult;
 const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
 
 pub struct PrgMemory {
-    layout: PrgLayout,
+    layouts: &'static [PrgLayout],
+    layout_index: usize,
     bank_size: usize,
     bank_count: u16,
     raw_memory: Vec<u8>,
@@ -15,12 +16,13 @@ pub struct PrgMemory {
 
 impl PrgMemory {
     pub fn new(
-        layout: PrgLayout,
+        layouts: &'static [PrgLayout],
+        layout_index: usize,
         bank_size: usize,
         raw_memory: Vec<u8>,
     ) -> PrgMemory {
 
-        layout.validate_bank_size_multiples(bank_size);
+        //layout.validate_bank_size_multiples(bank_size);
         let bank_count;
         if raw_memory.len() % bank_size == 0 {
             bank_count = (raw_memory.len() / bank_size)
@@ -33,14 +35,15 @@ impl PrgMemory {
         }
 
         let mut prg_memory = PrgMemory {
-            layout,
+            layouts,
+            layout_index,
             bank_size,
             bank_count,
             raw_memory,
             work_ram_sections: Vec::new(),
         };
 
-        for window in prg_memory.layout.0 {
+        for window in prg_memory.current_layout().0 {
             if window.prg_bank.is_work_ram() {
                 prg_memory.work_ram_sections.push(WorkRam::new(window.size()));
             }
@@ -115,7 +118,7 @@ impl PrgMemory {
 
     pub fn resolve_selected_bank_indexes(&self, registers: &BankRegisters) -> Vec<u16> {
         let mut indexes = Vec::new();
-        for window in self.layout.0 {
+        for window in self.current_layout().0 {
             if let Some(bank_index) = window.bank_index(registers) {
                 let raw_index = bank_index.to_u16(self.bank_count());
                 indexes.push(raw_index);
@@ -129,16 +132,18 @@ impl PrgMemory {
         self.window_with_index_at(start).0
     }
 
-    pub fn set_layout(&mut self, windows: PrgLayout) {
-        windows.validate_bank_size_multiples(self.bank_size);
-        self.layout = windows;
+    pub fn set_layout(&mut self, index: usize) {
+        assert!(index < self.layouts.len());
+        self.layout_index = index;
+        // TODO: Apply this at startup.
+        //self.layouts[layout_index].validate_bank_size_multiples(self.bank_size);
     }
 
     // TODO: Indicate if read-only.
     fn address_to_prg_index(&self, registers: &BankRegisters, address: CpuAddress) -> PrgMemoryIndex {
         assert!(address >= PRG_MEMORY_START);
 
-        let windows = &self.layout.0;
+        let windows = &self.current_layout().0;
         assert!(!windows.is_empty());
 
         for i in 0..windows.len() {
@@ -225,13 +230,17 @@ impl PrgMemory {
     }
 
     fn window_with_index_at(&self, start: u16) -> (&PrgWindow, usize) {
-        for (index, window) in self.layout.0.iter().enumerate() {
+        for (index, window) in self.current_layout().0.iter().enumerate() {
             if window.start.to_raw() == start {
                 return (window, index);
             }
         }
 
         panic!("No window exists at {start:?}");
+    }
+
+    fn current_layout(&self) -> &PrgLayout {
+        &self.layouts[self.layout_index]
     }
 }
 

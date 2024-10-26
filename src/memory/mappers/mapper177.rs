@@ -1,13 +1,23 @@
 use crate::memory::mapper::*;
 
-const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
-    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_rom(P0)),
-]);
-
-const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_ram(BankIndex::FIRST)),
-]);
+const LAYOUT: Layout = Layout::builder()
+    .prg_max_bank_count(32)
+    .prg_bank_size(32 * KIBIBYTE)
+    .prg_layouts(&[
+        PrgLayout::new(&[
+            PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
+            PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_rom(P0)),
+        ])
+    ])
+    .chr_max_bank_count(1)
+    .chr_bank_size(8 * KIBIBYTE)
+    .chr_layouts(&[
+        ChrLayout::new(&[
+            ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_ram(BankIndex::FIRST)),
+        ])
+    ])
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+    .build();
 
 const MIRRORINGS: [NameTableMirroring; 2] = [
     NameTableMirroring::Vertical,
@@ -18,18 +28,6 @@ const MIRRORINGS: [NameTableMirroring; 2] = [
 pub struct Mapper177;
 
 impl Mapper for Mapper177 {
-    fn layout(&self) -> Layout {
-        Layout::builder()
-            .prg_max_bank_count(32)
-            .prg_bank_size(32 * KIBIBYTE)
-            .prg_layout(PRG_LAYOUT)
-            .chr_max_bank_count(1)
-            .chr_bank_size(8 * KIBIBYTE)
-            .chr_layout(CHR_LAYOUT)
-            .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-            .build()
-    }
-
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
@@ -40,5 +38,9 @@ impl Mapper for Mapper177 {
                 params.set_bank_register(P0, fields.p);
             }
         }
+    }
+
+    fn layout(&self) -> Layout {
+        LAYOUT
     }
 }

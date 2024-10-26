@@ -1,14 +1,24 @@
 use crate::memory::mapper::*;
 
-const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
-    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_rom(P0)),
-    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-]);
-
-const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
-]);
+const LAYOUT: Layout = Layout::builder()
+    .prg_max_bank_count(256)
+    .prg_bank_size(16 * KIBIBYTE)
+    .prg_layouts(&[
+        PrgLayout::new(&[
+            PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
+            PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_rom(P0)),
+            PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+        ])
+    ])
+    .chr_max_bank_count(1)
+    .chr_bank_size(8 * KIBIBYTE)
+    .chr_layouts(&[
+        ChrLayout::new(&[
+            ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
+        ])
+    ])
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+    .build();
 
 // UxROM (common usages)
 pub struct Uxrom {
@@ -16,18 +26,6 @@ pub struct Uxrom {
 }
 
 impl Mapper for Uxrom {
-    fn layout(&self) -> Layout {
-        Layout::builder()
-            .prg_max_bank_count(256)
-            .prg_bank_size(16 * KIBIBYTE)
-            .prg_layout(PRG_LAYOUT)
-            .chr_max_bank_count(1)
-            .chr_bank_size(8 * KIBIBYTE)
-            .chr_layout(CHR_LAYOUT)
-            .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-            .build()
-    }
-
     fn has_bus_conflicts(&self) -> HasBusConflicts {
         self.has_bus_conflicts
     }
@@ -38,6 +36,10 @@ impl Mapper for Uxrom {
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => params.set_bank_register(P0, value),
         }
+    }
+
+    fn layout(&self) -> Layout {
+        LAYOUT
     }
 }
 

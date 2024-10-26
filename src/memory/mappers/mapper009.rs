@@ -1,18 +1,30 @@
 use crate::memory::mapper::*;
 
-const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
-    // TODO: PlayChoice uses this window.
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
-    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
-    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::THIRD_LAST)),
-    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
-    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-]);
-
-const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
-    ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::meta_switchable_rom(M0)),
-    ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::meta_switchable_rom(M1)),
-]);
+const LAYOUT: Layout = Layout::builder()
+    .prg_max_bank_count(32)
+    .prg_bank_size(8 * KIBIBYTE)
+    .prg_layouts(&[
+        PrgLayout::new(&[
+            // TODO: PlayChoice uses this window.
+            PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
+            PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
+            PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::THIRD_LAST)),
+            PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
+            PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+        ])
+    ])
+    .chr_max_bank_count(256)
+    .chr_bank_size(4 * KIBIBYTE)
+    .chr_layouts(&[
+        ChrLayout::new(&[
+            ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::meta_switchable_rom(M0)),
+            ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::meta_switchable_rom(M1)),
+        ])
+    ])
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+    .override_meta_register(M0, C1)
+    .override_second_meta_register(M1, C3)
+    .build();
 
 const MIRRORINGS: [NameTableMirroring; 2] = [
     NameTableMirroring::Vertical,
@@ -23,20 +35,6 @@ const MIRRORINGS: [NameTableMirroring; 2] = [
 pub struct Mapper009;
 
 impl Mapper for Mapper009 {
-    fn layout(&self) -> Layout {
-        Layout::builder()
-            .prg_max_bank_count(32)
-            .prg_bank_size(8 * KIBIBYTE)
-            .prg_layout(PRG_LAYOUT)
-            .chr_max_bank_count(256)
-            .chr_bank_size(4 * KIBIBYTE)
-            .chr_layout(CHR_LAYOUT)
-            .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-            .override_meta_register(M0, C1)
-            .override_second_meta_register(M1, C3)
-            .build()
-    }
-
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
         let bank_index = value & 0b0001_1111;
         match address.to_raw() {
@@ -62,5 +60,9 @@ impl Mapper for Mapper009 {
         };
 
         params.set_meta_register(meta_id, bank_register_id);
+    }
+
+    fn layout(&self) -> Layout {
+        LAYOUT
     }
 }

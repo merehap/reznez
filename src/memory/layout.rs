@@ -8,11 +8,13 @@ use crate::memory::bank::bank_index::{BankIndex, BankRegisters, MetaRegisterId, 
 pub struct Layout {
     prg_max_bank_count: u16,
     prg_bank_size: usize,
-    prg_layout: PrgLayout,
+    prg_layouts: &'static [PrgLayout],
+    prg_layout_index: usize,
 
     chr_max_bank_count: u16,
     chr_bank_size: usize,
-    chr_layout: ChrLayout,
+    chr_layouts: &'static [ChrLayout],
+    chr_layout_index: usize,
     align_large_chr_layout: bool,
 
     name_table_mirroring_source: NameTableMirroringSource,
@@ -28,12 +30,14 @@ impl Layout {
 
     pub fn make_mapper_params(&self, cartridge: &Cartridge) -> MapperParams {
         let prg_memory = PrgMemory::new(
-            self.prg_layout,
+            self.prg_layouts,
+            self.prg_layout_index,
             self.prg_bank_size,
             cartridge.prg_rom().to_vec(),
         );
         let chr_memory = ChrMemory::new(
-            self.chr_layout,
+            self.chr_layouts,
+            self.chr_layout_index,
             self.chr_bank_size,
             self.align_large_chr_layout,
             cartridge.chr_rom().to_vec(),
@@ -65,11 +69,13 @@ impl Layout {
 pub struct LayoutBuilder {
     prg_max_bank_count: Option<u16>,
     prg_bank_size: Option<usize>,
-    prg_layout: Option<PrgLayout>,
+    prg_layouts: Option<&'static [PrgLayout]>,
+    prg_layout_index: usize,
 
     chr_max_bank_count: Option<u16>,
     chr_bank_size: Option<usize>,
-    chr_layout: Option<ChrLayout>,
+    chr_layouts: Option<&'static [ChrLayout]>,
+    chr_layout_index: usize,
     align_large_chr_layout: bool,
 
     name_table_mirroring_source: Option<NameTableMirroringSource>,
@@ -84,11 +90,13 @@ impl LayoutBuilder {
         LayoutBuilder {
             prg_max_bank_count: None,
             prg_bank_size: None,
-            prg_layout: None,
+            prg_layouts: None,
+            prg_layout_index: 0,
 
             chr_max_bank_count: None,
             chr_bank_size: None,
-            chr_layout: None,
+            chr_layouts: None,
+            chr_layout_index: 0,
             align_large_chr_layout: true,
 
             name_table_mirroring_source: None,
@@ -108,8 +116,13 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn prg_layout(&mut self, value: PrgLayout) -> &mut LayoutBuilder {
-        self.prg_layout = Some(value);
+    pub const fn prg_layouts(&mut self, value: &'static [PrgLayout]) -> &mut LayoutBuilder {
+        self.prg_layouts = Some(value);
+        self
+    }
+
+    pub const fn prg_layout_index(&mut self, value: usize) -> &mut LayoutBuilder {
+        self.prg_layout_index = value;
         self
     }
 
@@ -123,8 +136,13 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn chr_layout(&mut self, value: ChrLayout) -> &mut LayoutBuilder {
-        self.chr_layout = Some(value);
+    pub const fn chr_layouts(&mut self, value: &'static [ChrLayout]) -> &mut LayoutBuilder {
+        self.chr_layouts = Some(value);
+        self
+    }
+
+    pub const fn chr_layout_index(&mut self, value: usize) -> &mut LayoutBuilder {
+        self.chr_layout_index = value;
         self
     }
 
@@ -172,11 +190,13 @@ impl LayoutBuilder {
         Layout {
             prg_max_bank_count: self.prg_max_bank_count.unwrap(),
             prg_bank_size: self.prg_bank_size.unwrap(),
-            prg_layout: self.prg_layout.unwrap(),
+            prg_layouts: self.prg_layouts.unwrap(),
+            prg_layout_index: self.prg_layout_index,
 
             chr_max_bank_count: self.chr_max_bank_count.unwrap(),
             chr_bank_size: self.chr_bank_size.unwrap(),
-            chr_layout: self.chr_layout.unwrap(),
+            chr_layouts: self.chr_layouts.unwrap(),
+            chr_layout_index: self.chr_layout_index,
             align_large_chr_layout: self.align_large_chr_layout,
 
             name_table_mirroring_source: self.name_table_mirroring_source.unwrap(),
