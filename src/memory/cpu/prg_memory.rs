@@ -18,11 +18,28 @@ impl PrgMemory {
     pub fn new(
         layouts: &'static [PrgLayout],
         layout_index: usize,
-        bank_size: usize,
         raw_memory: Vec<u8>,
     ) -> PrgMemory {
 
-        //layout.validate_bank_size_multiples(bank_size);
+        let mut bank_size = None;
+        for layout in layouts {
+            for window in layout.0 {
+                if matches!(window.prg_bank, Bank::Rom(..) | Bank::Ram(..)) {
+                    if let Some(size) = bank_size {
+                        bank_size = Some(std::cmp::min(window.size(), size));
+                    } else {
+                        bank_size = Some(window.size());
+                    }
+                }
+            }
+        }
+
+        let bank_size = bank_size.expect("at least one ROM or RAM window");
+
+        for layout in layouts {
+            layout.validate_bank_size_multiples(bank_size);
+        }
+
         let bank_count;
         if raw_memory.len() % bank_size == 0 {
             bank_count = (raw_memory.len() / bank_size)

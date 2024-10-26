@@ -18,11 +18,27 @@ impl ChrMemory {
     pub fn new(
         layouts: &'static [ChrLayout],
         layout_index: usize,
-        bank_size: usize,
         align_large_chr_layouts: bool,
         mut raw_memory: Vec<u8>,
     ) -> ChrMemory {
-        //layouts.validate_bank_size_multiples(bank_size);
+        let mut bank_size = None;
+        for layout in layouts {
+            for window in layout.0 {
+                if matches!(window.bank, Bank::Rom(..) | Bank::Ram(..)) {
+                    if let Some(size) = bank_size {
+                        bank_size = Some(std::cmp::min(window.size(), size));
+                    } else {
+                        bank_size = Some(window.size());
+                    }
+                }
+            }
+        }
+
+        let bank_size = bank_size.expect("at least one ROM or RAM window");
+        for layout in layouts {
+            layout.validate_bank_size_multiples(bank_size);
+        }
+
         // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only layouts.
         let mut override_write_protection = false;
         if raw_memory.is_empty() {

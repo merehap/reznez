@@ -32,13 +32,11 @@ impl Layout {
         let prg_memory = PrgMemory::new(
             self.prg_layouts,
             self.prg_layout_index,
-            self.prg_bank_size,
             cartridge.prg_rom().to_vec(),
         );
         let chr_memory = ChrMemory::new(
             self.chr_layouts,
             self.chr_layout_index,
-            self.chr_bank_size,
             self.align_large_chr_layout,
             cartridge.chr_rom().to_vec(),
         );
