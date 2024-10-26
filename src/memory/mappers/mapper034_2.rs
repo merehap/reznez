@@ -3,21 +3,21 @@ use crate::memory::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     // Oversize definition for BxROM. The actual BNROM cartridge only supports 2 banks.
     .prg_max_bank_count(256)
+    .chr_max_bank_count(1)
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+    // TODO: Verify if this is necessary. Might only be used for NINA-001.
+    .override_bank_register(C1, BankIndex::LAST)
     .prg_layouts(&[
         PrgLayout::new(&[
             PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
             PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_rom(P0)),
         ])
     ])
-    .chr_max_bank_count(1)
     .chr_layouts(&[
         ChrLayout::new(&[
             ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_ram(BankIndex::FIRST)),
         ])
     ])
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-    // TODO: Verify if this is necessary. Might only be used for NINA-001.
-    .override_bank_register(C1, BankIndex::LAST)
     .build();
 
 // BNROM (BxROM): Irem I-IM and NES-BNROM boards

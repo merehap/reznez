@@ -2,14 +2,14 @@ use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(16)
+    .chr_max_bank_count(128)
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .prg_layouts(&[
         PRG_LAYOUT
     ])
-    .chr_max_bank_count(128)
     .chr_layouts(&[
         CHR_LAYOUT
     ])
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .build();
 
 pub const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[

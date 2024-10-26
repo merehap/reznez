@@ -3,6 +3,10 @@ use crate::memory::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     // Oversize definition. The actual cartridge only uses 2 banks.
     .prg_max_bank_count(256)
+    .chr_max_bank_count(256)
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+    // TODO: Verify if this is necessary. Might only be used for BxROM.
+    .override_bank_register(C1, BankIndex::LAST)
     .prg_layouts(&[
         PrgLayout::new(&[
             PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
@@ -10,16 +14,12 @@ const LAYOUT: Layout = Layout::builder()
         ])
     ])
     // Oversize definition. The actual cartridge only uses 16 banks.
-    .chr_max_bank_count(256)
     .chr_layouts(&[
         ChrLayout::new(&[
             ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_rom(C0)),
             ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_rom(C1)),
         ])
     ])
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-    // TODO: Verify if this is necessary. Might only be used for BxROM.
-    .override_bank_register(C1, BankIndex::LAST)
     .build();
 
 

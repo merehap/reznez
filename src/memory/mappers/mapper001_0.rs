@@ -3,6 +3,8 @@ use crate::memory::mappers::common::mmc1::{ShiftRegister, ShiftStatus};
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(16)
+    .chr_max_bank_count(32)
+    .name_table_mirroring_source(NameTableMirroring::OneScreenRightBank.to_source())
     .prg_layouts(&[
         PRG_LAYOUT_ONE_BIG,
         PRG_LAYOUT_ONE_BIG,
@@ -10,7 +12,6 @@ const LAYOUT: Layout = Layout::builder()
         PRG_LAYOUT_FIXED_LAST,
     ])
     .prg_layout_index(3)
-    .chr_max_bank_count(32)
     // TODO: Not all boards support CHR RAM.
     .chr_layouts(&[
         ChrLayout::new(&[
@@ -21,7 +22,6 @@ const LAYOUT: Layout = Layout::builder()
             ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_ram(C1)),
         ]),
     ])
-    .name_table_mirroring_source(NameTableMirroring::OneScreenRightBank.to_source())
     .build();
 
 const PRG_LAYOUT_ONE_BIG: PrgLayout = PrgLayout::new(&[

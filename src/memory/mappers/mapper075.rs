@@ -2,6 +2,8 @@ use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(16)
+    .chr_max_bank_count(32)
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .prg_layouts(&[
         PrgLayout::new(&[
             PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
@@ -11,14 +13,12 @@ const LAYOUT: Layout = Layout::builder()
             PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
         ])
     ])
-    .chr_max_bank_count(32)
     .chr_layouts(&[
         ChrLayout::new(&[
             ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_rom(C0)),
             ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_rom(C1)),
         ])
     ])
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .build();
 
 const MIRRORINGS: [NameTableMirroring; 2] = [

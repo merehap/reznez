@@ -9,6 +9,9 @@ use crate::memory::ppu::vram::VramSide;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(128)
+    .chr_max_bank_count(1024)
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+    .override_bank_register(P4, BankIndex::LAST)
     .prg_layouts(&[
         PrgLayout::new(&[
             PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_ram(P0)),
@@ -34,7 +37,6 @@ const LAYOUT: Layout = Layout::builder()
         ]),
     ])
     .prg_layout_index(3)
-    .chr_max_bank_count(1024)
     .chr_layouts(&[
         // Normal sprite height layouts
         ChrLayout::new(&[
@@ -93,8 +95,6 @@ const LAYOUT: Layout = Layout::builder()
         ]),
     ])
     .do_not_align_large_chr_layout()
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-    .override_bank_register(P4, BankIndex::LAST)
     .build();
 
 const SPRITE_PATTERN_FETCH_START: u8 = 64;

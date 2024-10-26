@@ -2,19 +2,19 @@ use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(32)
+    .chr_max_bank_count(1)
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .prg_layouts(&[
         PrgLayout::new(&[
             PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
             PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_rom(P0)),
         ])
     ])
-    .chr_max_bank_count(1)
     .chr_layouts(&[
         ChrLayout::new(&[
             ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_ram(BankIndex::FIRST)),
         ])
     ])
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .build();
 
 const MIRRORINGS: [NameTableMirroring; 2] = [

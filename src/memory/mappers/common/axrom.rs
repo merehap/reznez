@@ -3,19 +3,19 @@ use crate::memory::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     // Oversize PRG. On real cartridges, 8 is the max.
     .prg_max_bank_count(16)
+    .chr_max_bank_count(1)
+    .name_table_mirroring_source(NameTableMirroring::OneScreenLeftBank.to_source())
     .prg_layouts(&[
         PrgLayout::new(&[
             PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
             PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_rom(P0)),
         ])
     ])
-    .chr_max_bank_count(1)
     .chr_layouts(&[
         ChrLayout::new(&[
             ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
         ])
     ])
-    .name_table_mirroring_source(NameTableMirroring::OneScreenLeftBank.to_source())
     .build();
 
 const MIRRORINGS: [NameTableMirroring; 2] = [

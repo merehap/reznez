@@ -5,6 +5,8 @@ use crate::memory::mappers::mmc3::rev_a_irq_state::RevAIrqState;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(64)
+    .chr_max_bank_count(256)
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .prg_layouts(&[
         // Switchable 0x8000
         PrgLayout::new(&[
@@ -39,12 +41,10 @@ const LAYOUT: Layout = Layout::builder()
             PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
         ]),
     ])
-    .chr_max_bank_count(256)
     .chr_layouts(&[
         mmc3::CHR_BIG_WINDOWS_FIRST,
         mmc3::CHR_SMALL_WINDOWS_FIRST,
     ])
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .build();
 
 const RAM_STATUSES: [RamStatus; 2] =

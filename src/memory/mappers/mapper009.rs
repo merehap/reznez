@@ -2,6 +2,10 @@ use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(32)
+    .chr_max_bank_count(256)
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
+    .override_meta_register(M0, C1)
+    .override_second_meta_register(M1, C3)
     .prg_layouts(&[
         PrgLayout::new(&[
             // TODO: PlayChoice uses this window.
@@ -12,16 +16,12 @@ const LAYOUT: Layout = Layout::builder()
             PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
         ])
     ])
-    .chr_max_bank_count(256)
     .chr_layouts(&[
         ChrLayout::new(&[
             ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::meta_switchable_rom(M0)),
             ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::meta_switchable_rom(M1)),
         ])
     ])
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-    .override_meta_register(M0, C1)
-    .override_second_meta_register(M1, C3)
     .build();
 
 const MIRRORINGS: [NameTableMirroring; 2] = [

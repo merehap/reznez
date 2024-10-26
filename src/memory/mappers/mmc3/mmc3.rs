@@ -3,16 +3,16 @@ use crate::memory::mappers::mmc3::irq_state::IrqState;
 
 pub const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(64)
+    .chr_max_bank_count(256)
+    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .prg_layouts(&[
         PRG_LAYOUT_8000_SWITCHABLE,
         PRG_LAYOUT_C000_SWITCHABLE,
     ])
-    .chr_max_bank_count(256)
     .chr_layouts(&[
         CHR_BIG_WINDOWS_FIRST,
         CHR_SMALL_WINDOWS_FIRST,
     ])
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .build();
 
 pub const PRG_LAYOUT_8000_SWITCHABLE: PrgLayout = PrgLayout::new(&[
