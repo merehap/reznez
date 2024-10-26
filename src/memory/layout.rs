@@ -7,12 +7,10 @@ use crate::memory::bank::bank_index::{BankIndex, BankRegisters, MetaRegisterId, 
 
 pub struct Layout {
     prg_max_bank_count: u16,
-    prg_bank_size: usize,
     prg_layouts: &'static [PrgLayout],
     prg_layout_index: usize,
 
     chr_max_bank_count: u16,
-    chr_bank_size: usize,
     chr_layouts: &'static [ChrLayout],
     chr_layout_index: usize,
     align_large_chr_layout: bool,
@@ -66,12 +64,10 @@ impl Layout {
 #[derive(Clone, Copy)]
 pub struct LayoutBuilder {
     prg_max_bank_count: Option<u16>,
-    prg_bank_size: Option<usize>,
     prg_layouts: Option<&'static [PrgLayout]>,
     prg_layout_index: usize,
 
     chr_max_bank_count: Option<u16>,
-    chr_bank_size: Option<usize>,
     chr_layouts: Option<&'static [ChrLayout]>,
     chr_layout_index: usize,
     align_large_chr_layout: bool,
@@ -87,12 +83,10 @@ impl LayoutBuilder {
     const fn new() -> LayoutBuilder {
         LayoutBuilder {
             prg_max_bank_count: None,
-            prg_bank_size: None,
             prg_layouts: None,
             prg_layout_index: 0,
 
             chr_max_bank_count: None,
-            chr_bank_size: None,
             chr_layouts: None,
             chr_layout_index: 0,
             align_large_chr_layout: true,
@@ -109,11 +103,6 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn prg_bank_size(&mut self, value: usize) -> &mut LayoutBuilder {
-        self.prg_bank_size = Some(value);
-        self
-    }
-
     pub const fn prg_layouts(&mut self, value: &'static [PrgLayout]) -> &mut LayoutBuilder {
         self.prg_layouts = Some(value);
         self
@@ -126,11 +115,6 @@ impl LayoutBuilder {
 
     pub const fn chr_max_bank_count(&mut self, value: u16) -> &mut LayoutBuilder {
         self.chr_max_bank_count = Some(value);
-        self
-    }
-
-    pub const fn chr_bank_size(&mut self, value: usize) -> &mut LayoutBuilder {
-        self.chr_bank_size = Some(value);
         self
     }
 
@@ -187,12 +171,10 @@ impl LayoutBuilder {
     pub const fn build(self) -> Layout {
         Layout {
             prg_max_bank_count: self.prg_max_bank_count.unwrap(),
-            prg_bank_size: self.prg_bank_size.unwrap(),
             prg_layouts: self.prg_layouts.unwrap(),
             prg_layout_index: self.prg_layout_index,
 
             chr_max_bank_count: self.chr_max_bank_count.unwrap(),
-            chr_bank_size: self.chr_bank_size.unwrap(),
             chr_layouts: self.chr_layouts.unwrap(),
             chr_layout_index: self.chr_layout_index,
             align_large_chr_layout: self.align_large_chr_layout,

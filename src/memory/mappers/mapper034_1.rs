@@ -3,7 +3,6 @@ use crate::memory::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     // Oversize definition. The actual cartridge only uses 2 banks.
     .prg_max_bank_count(256)
-    .prg_bank_size(32 * KIBIBYTE)
     .prg_layouts(&[
         PrgLayout::new(&[
             PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
@@ -12,7 +11,6 @@ const LAYOUT: Layout = Layout::builder()
     ])
     // Oversize definition. The actual cartridge only uses 16 banks.
     .chr_max_bank_count(256)
-    .chr_bank_size(4 * KIBIBYTE)
     .chr_layouts(&[
         ChrLayout::new(&[
             ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_rom(C0)),

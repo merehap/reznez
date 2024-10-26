@@ -9,7 +9,6 @@ use crate::memory::ppu::vram::VramSide;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(128)
-    .prg_bank_size(8 * KIBIBYTE)
     .prg_layouts(&[
         PrgLayout::new(&[
             PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_ram(P0)),
@@ -36,7 +35,6 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .prg_layout_index(3)
     .chr_max_bank_count(1024)
-    .chr_bank_size(1 * KIBIBYTE)
     .chr_layouts(&[
         // Normal sprite height layouts
         ChrLayout::new(&[

@@ -6,7 +6,6 @@ use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(32)
-    .prg_bank_size(8 * KIBIBYTE)
     .prg_layouts(&[
         PrgLayout::new(&[
             PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
@@ -16,7 +15,6 @@ const LAYOUT: Layout = Layout::builder()
         ])
     ])
     .chr_max_bank_count(256)
-    .chr_bank_size(1 * KIBIBYTE)
     .chr_layouts(&[
         ChrLayout::new(&[
             ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C0)),

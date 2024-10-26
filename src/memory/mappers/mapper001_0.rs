@@ -3,7 +3,6 @@ use crate::memory::mappers::common::mmc1::{ShiftRegister, ShiftStatus};
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(16)
-    .prg_bank_size(16 * KIBIBYTE)
     .prg_layouts(&[
         PRG_LAYOUT_ONE_BIG,
         PRG_LAYOUT_ONE_BIG,
@@ -12,7 +11,6 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .prg_layout_index(3)
     .chr_max_bank_count(32)
-    .chr_bank_size(4 * KIBIBYTE)
     // TODO: Not all boards support CHR RAM.
     .chr_layouts(&[
         ChrLayout::new(&[

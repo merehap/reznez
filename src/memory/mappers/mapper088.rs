@@ -2,12 +2,10 @@ use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(16)
-    .prg_bank_size(8 * KIBIBYTE)
     .prg_layouts(&[
         PRG_LAYOUT
     ])
     .chr_max_bank_count(128)
-    .chr_bank_size(1 * KIBIBYTE)
     .chr_layouts(&[
         CHR_LAYOUT
     ])

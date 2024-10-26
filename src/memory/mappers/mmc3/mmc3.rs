@@ -3,13 +3,11 @@ use crate::memory::mappers::mmc3::irq_state::IrqState;
 
 pub const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(64)
-    .prg_bank_size(8 * KIBIBYTE)
     .prg_layouts(&[
         PRG_LAYOUT_8000_SWITCHABLE,
         PRG_LAYOUT_C000_SWITCHABLE,
     ])
     .chr_max_bank_count(256)
-    .chr_bank_size(1 * KIBIBYTE)
     .chr_layouts(&[
         CHR_BIG_WINDOWS_FIRST,
         CHR_SMALL_WINDOWS_FIRST,

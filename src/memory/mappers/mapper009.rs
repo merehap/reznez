@@ -2,7 +2,6 @@ use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(32)
-    .prg_bank_size(8 * KIBIBYTE)
     .prg_layouts(&[
         PrgLayout::new(&[
             // TODO: PlayChoice uses this window.
@@ -14,7 +13,6 @@ const LAYOUT: Layout = Layout::builder()
         ])
     ])
     .chr_max_bank_count(256)
-    .chr_bank_size(4 * KIBIBYTE)
     .chr_layouts(&[
         ChrLayout::new(&[
             ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::meta_switchable_rom(M0)),

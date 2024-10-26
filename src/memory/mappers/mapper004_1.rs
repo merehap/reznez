@@ -5,7 +5,6 @@ use crate::memory::mappers::mmc3::rev_a_irq_state::RevAIrqState;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_bank_count(64)
-    .prg_bank_size(8 * KIBIBYTE)
     .prg_layouts(&[
         // Switchable 0x8000
         PrgLayout::new(&[
@@ -41,7 +40,6 @@ const LAYOUT: Layout = Layout::builder()
         ]),
     ])
     .chr_max_bank_count(256)
-    .chr_bank_size(1 * KIBIBYTE)
     .chr_layouts(&[
         mmc3::CHR_BIG_WINDOWS_FIRST,
         mmc3::CHR_SMALL_WINDOWS_FIRST,
