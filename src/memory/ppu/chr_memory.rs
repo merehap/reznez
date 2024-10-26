@@ -8,7 +8,7 @@ use crate::util::unit::KIBIBYTE;
 pub struct ChrMemory {
     layouts: &'static [ChrLayout],
     layout_index: usize,
-    bank_size: usize,
+    bank_size: u32,
     align_large_chr_layouts: bool,
     override_write_protection: bool,
     raw_memory: Vec<u8>,
@@ -42,7 +42,7 @@ impl ChrMemory {
         // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only layouts.
         let mut override_write_protection = false;
         if raw_memory.is_empty() {
-            raw_memory = vec![0; 8 * KIBIBYTE];
+            raw_memory = vec![0; 8 * KIBIBYTE as usize];
             override_write_protection = true;
         }
 
@@ -56,7 +56,7 @@ impl ChrMemory {
         };
 
         let bank_count = chr_memory.bank_count();
-        assert_eq!(usize::from(bank_count) * chr_memory.bank_size, chr_memory.raw_memory.len());
+        assert_eq!(u32::from(bank_count) * u32::from(chr_memory.bank_size), chr_memory.raw_memory.len() as u32);
         // Power of 2.
         assert_eq!(bank_count & (bank_count - 1), 0);
 
@@ -65,7 +65,7 @@ impl ChrMemory {
 
     #[inline]
     pub fn bank_count(&self) -> u16 {
-        (self.raw_memory.len() / self.bank_size)
+        ((self.raw_memory.len() as u32) / self.bank_size)
             .try_into()
             .expect("Way too many CHR banks.")
     }
@@ -76,13 +76,13 @@ impl ChrMemory {
 
     pub fn peek(&self, registers: &BankRegisters, address: PpuAddress) -> u8 {
         let (index, _) = self.address_to_chr_index(registers, address.to_u16());
-        self.raw_memory[index]
+        self.raw_memory[index as usize]
     }
 
     pub fn write(&mut self, registers: &BankRegisters, address: PpuAddress, value: u8) {
         let (index, writable) = self.address_to_chr_index(registers, address.to_u16());
         if writable || self.override_write_protection {
-            self.raw_memory[index] = value;
+            self.raw_memory[index as usize] = value;
         }
     }
 
@@ -116,20 +116,20 @@ impl ChrMemory {
         }
     }
 
-    fn address_to_chr_index(&self, registers: &BankRegisters, address: u16) -> (usize, bool) {
+    fn address_to_chr_index(&self, registers: &BankRegisters, address: u16) -> (u32, bool) {
         assert!(address < 0x2000);
 
         for window in self.layouts[self.layout_index].0 {
             if let Some(bank_offset) = window.offset(address) {
-                let mut raw_bank_index = window.bank_index(registers).to_usize(self.bank_count());
+                let mut raw_bank_index = window.bank_index(registers).to_u32(self.bank_count());
                 if self.align_large_chr_layouts {
                     let window_multiple = window.size() / self.bank_size;
                     raw_bank_index &= !(window_multiple >> 1);
                 }
 
-                let index = raw_bank_index *
+                let index: u32 = raw_bank_index *
                     self.bank_size +
-                    usize::from(bank_offset);
+                    u32::from(bank_offset);
                 return (index, window.is_writable(registers));
             }
         }
@@ -144,17 +144,17 @@ impl ChrMemory {
     #[inline]
     fn left_chunks(&self, registers: &BankRegisters) -> [&[u8]; 4] {
         self.left_indexes(registers)
-            .map(|index| &self.raw_memory[index..index + 0x400])
+            .map(|index| &self.raw_memory[index as usize..index as usize + 0x400])
     }
 
     #[inline]
     fn right_chunks(&self, registers: &BankRegisters) -> [&[u8]; 4] {
         self.right_indexes(registers)
-            .map(|index| &self.raw_memory[index..index + 0x400])
+            .map(|index| &self.raw_memory[index as usize..index as usize + 0x400])
     }
 
     #[inline]
-    fn left_indexes(&self, registers: &BankRegisters) -> [usize; 4] {
+    fn left_indexes(&self, registers: &BankRegisters) -> [u32; 4] {
         [
             self.address_to_chr_index(registers, 0x0000).0,
             self.address_to_chr_index(registers, 0x0400).0,
@@ -164,7 +164,7 @@ impl ChrMemory {
     }
 
     #[inline]
-    fn right_indexes(&self, registers: &BankRegisters) -> [usize; 4] {
+    fn right_indexes(&self, registers: &BankRegisters) -> [u32; 4] {
         [
             self.address_to_chr_index(registers, 0x1000).0,
             self.address_to_chr_index(registers, 0x1400).0,
@@ -202,7 +202,7 @@ impl ChrLayout {
             .collect()
     }
 
-    const fn validate_bank_size_multiples(&self, bank_size: usize) {
+    const fn validate_bank_size_multiples(&self, bank_size: u32) {
         let mut i = 0;
         while i < self.0.len() {
             let window = self.0[i];
@@ -222,10 +222,10 @@ pub struct ChrWindow {
 
 impl ChrWindow {
     #[allow(clippy::identity_op)]
-    pub const fn new(start: u16, end: u16, size: usize, bank: Bank) -> ChrWindow {
+    pub const fn new(start: u16, end: u16, size: u32, bank: Bank) -> ChrWindow {
         //assert!([1 * KIBIBYTE, 2 * KIBIBYTE, 4 * KIBIBYTE, 8 * KIBIBYTE].contains(&size));
         assert!(end > start);
-        assert!(end as usize - start as usize + 1 == size);
+        assert!(end as u32 - start as u32 + 1 == size);
 
         ChrWindow {
             start: PpuAddress::from_u16(start),
@@ -234,8 +234,8 @@ impl ChrWindow {
         }
     }
 
-    const fn size(self) -> usize {
-        (self.end.to_u16() - self.start.to_u16() + 1) as usize
+    const fn size(self) -> u32 {
+        (self.end.to_u16() - self.start.to_u16() + 1) as u32
     }
 
     fn offset(self, address: u16) -> Option<u16> {

@@ -2,8 +2,8 @@ use crate::memory::mapper::*;
 use crate::memory::mappers::mmc3::irq_state::IrqState;
 
 pub const LAYOUT: Layout = Layout::builder()
-    .prg_max_bank_count(64)
-    .chr_max_bank_count(256)
+    .prg_max_size(512 * KIBIBYTE)
+    .chr_max_size(256 * KIBIBYTE)
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .prg_layouts(&[
         PRG_LAYOUT_8000_SWITCHABLE,

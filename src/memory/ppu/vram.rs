@@ -5,11 +5,11 @@ use std::ops::{Index, IndexMut};
 
 use crate::util::unit::KIBIBYTE;
 
-const VRAM_SIZE: usize = 2 * KIBIBYTE;
-const CHUNK_SIZE: usize = KIBIBYTE;
+const VRAM_SIZE: usize = 2 * KIBIBYTE as usize;
+const CHUNK_SIZE: usize = KIBIBYTE as usize;
 
 // CIRAM
-pub struct Vram(Box<[u8; VRAM_SIZE]>);
+pub struct Vram(Box<[u8; VRAM_SIZE as usize]>);
 
 impl Vram {
     pub fn new() -> Vram {

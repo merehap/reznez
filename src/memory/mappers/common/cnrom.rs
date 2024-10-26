@@ -1,8 +1,8 @@
 use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_max_bank_count(1)
-    .chr_max_bank_count(256)
+    .prg_max_size(32 * KIBIBYTE)
+    .chr_max_size(2048 * KIBIBYTE)
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .prg_layouts(&[
         PrgLayout::new(&[

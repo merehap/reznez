@@ -1,8 +1,8 @@
 use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_max_bank_count(16)
-    .chr_max_bank_count(128)
+    .prg_max_size(128 * KIBIBYTE)
+    .chr_max_size(128 * KIBIBYTE)
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .prg_layouts(&[
         PRG_LAYOUT
@@ -64,7 +64,7 @@ impl Mapper088 {
     pub fn new(cartridge: &Cartridge) -> Self {
         Self {
             selected_register_id: C0,
-            extended_chr_present: cartridge.chr_rom().len() > 64 * KIBIBYTE,
+            extended_chr_present: cartridge.chr_rom().len() > 64 * KIBIBYTE as usize,
         }
     }
 

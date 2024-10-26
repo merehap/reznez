@@ -15,7 +15,7 @@ pub struct PulseChannel {
     timer: Timer,
     pub(super) length_counter: LengthCounter,
 
-    sequence_index: usize,
+    sequence_index: u32,
 }
 
 impl PulseChannel {
@@ -87,7 +87,7 @@ pub enum Duty {
 }
 
 impl Duty {
-    fn is_on_at(self, sequence_index: usize) -> bool {
+    fn is_on_at(self, sequence_index: u32) -> bool {
         bit_util::get_bit(self as u8, sequence_index)
     }
 }

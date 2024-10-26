@@ -6,11 +6,11 @@ use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::memory::bank::bank_index::{BankIndex, BankRegisters, MetaRegisterId, BankRegisterId};
 
 pub struct Layout {
-    prg_max_bank_count: u16,
+    prg_max_size: u32,
     prg_layouts: &'static [PrgLayout],
     prg_layout_index: usize,
 
-    chr_max_bank_count: u16,
+    chr_max_size: u32,
     chr_layouts: &'static [ChrLayout],
     chr_layout_index: usize,
     align_large_chr_layout: bool,
@@ -63,11 +63,11 @@ impl Layout {
 
 #[derive(Clone, Copy)]
 pub struct LayoutBuilder {
-    prg_max_bank_count: Option<u16>,
+    prg_max_size: Option<u32>,
     prg_layouts: Option<&'static [PrgLayout]>,
     prg_layout_index: usize,
 
-    chr_max_bank_count: Option<u16>,
+    chr_max_size: Option<u32>,
     chr_layouts: Option<&'static [ChrLayout]>,
     chr_layout_index: usize,
     align_large_chr_layout: bool,
@@ -82,11 +82,11 @@ pub struct LayoutBuilder {
 impl LayoutBuilder {
     const fn new() -> LayoutBuilder {
         LayoutBuilder {
-            prg_max_bank_count: None,
+            prg_max_size: None,
             prg_layouts: None,
             prg_layout_index: 0,
 
-            chr_max_bank_count: None,
+            chr_max_size: None,
             chr_layouts: None,
             chr_layout_index: 0,
             align_large_chr_layout: true,
@@ -98,8 +98,8 @@ impl LayoutBuilder {
         }
     }
 
-    pub const fn prg_max_bank_count(&mut self, value: u16) -> &mut LayoutBuilder {
-        self.prg_max_bank_count = Some(value);
+    pub const fn prg_max_size(&mut self, value: u32) -> &mut LayoutBuilder {
+        self.prg_max_size = Some(value);
         self
     }
 
@@ -113,8 +113,8 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn chr_max_bank_count(&mut self, value: u16) -> &mut LayoutBuilder {
-        self.chr_max_bank_count = Some(value);
+    pub const fn chr_max_size(&mut self, value: u32) -> &mut LayoutBuilder {
+        self.chr_max_size = Some(value);
         self
     }
 
@@ -170,11 +170,11 @@ impl LayoutBuilder {
 
     pub const fn build(self) -> Layout {
         Layout {
-            prg_max_bank_count: self.prg_max_bank_count.unwrap(),
+            prg_max_size: self.prg_max_size.unwrap(),
             prg_layouts: self.prg_layouts.unwrap(),
             prg_layout_index: self.prg_layout_index,
 
-            chr_max_bank_count: self.chr_max_bank_count.unwrap(),
+            chr_max_size: self.chr_max_size.unwrap(),
             chr_layouts: self.chr_layouts.unwrap(),
             chr_layout_index: self.chr_layout_index,
             align_large_chr_layout: self.align_large_chr_layout,

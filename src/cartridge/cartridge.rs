@@ -7,8 +7,8 @@ use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::unit::KIBIBYTE;
 
 const INES_HEADER_CONSTANT: &[u8] = &[0x4E, 0x45, 0x53, 0x1A];
-const PRG_ROM_CHUNK_LENGTH: usize = 16 * KIBIBYTE;
-const CHR_ROM_CHUNK_LENGTH: usize = 8 * KIBIBYTE;
+const PRG_ROM_CHUNK_LENGTH: usize = 16 * KIBIBYTE as usize;
+const CHR_ROM_CHUNK_LENGTH: usize = 8 * KIBIBYTE as usize;
 
 // See https://wiki.nesdev.org/w/index.php?title=INES
 #[allow(dead_code)]
@@ -45,8 +45,8 @@ impl Cartridge {
             ));
         }
 
-        let prg_rom_chunk_count = rom[4] as usize;
-        let chr_rom_chunk_count = rom[5] as usize;
+        let prg_rom_chunk_count = rom[4] as u32;
+        let chr_rom_chunk_count = rom[5] as u32;
 
         let lower_mapper_number   = rom[6] & 0b1111_0000;
         let four_screen           = rom[6] & 0b0000_1000 != 0;
@@ -89,26 +89,26 @@ impl Cartridge {
         };
 
         let prg_rom_start = 0x10;
-        let prg_rom_end = prg_rom_start + PRG_ROM_CHUNK_LENGTH * prg_rom_chunk_count;
-        let prg_rom = rom.get(prg_rom_start..prg_rom_end)
+        let prg_rom_end = prg_rom_start + PRG_ROM_CHUNK_LENGTH as u32 * prg_rom_chunk_count;
+        let prg_rom = rom.get(prg_rom_start as usize..prg_rom_end as usize)
             .unwrap_or_else(
                 || panic!("ROM {name} was too short (claimed to have {prg_rom_chunk_count} PRG chunks)."))
             .to_vec();
 
         let chr_rom_start = prg_rom_end;
-        let mut chr_rom_end = chr_rom_start + CHR_ROM_CHUNK_LENGTH * chr_rom_chunk_count;
+        let mut chr_rom_end = chr_rom_start + CHR_ROM_CHUNK_LENGTH as u32 * chr_rom_chunk_count;
         let chr_rom;
-        if let Some(chr) = rom.get(chr_rom_start..chr_rom_end) {
+        if let Some(chr) = rom.get(chr_rom_start as usize..chr_rom_end as usize) {
             chr_rom = chr.to_vec();
         } else {
             error!("ROM {} claimed to have {} CHR chunks, but the ROM was too short.",
                 name, chr_rom_chunk_count);
-            chr_rom_end = rom.len();
-            chr_rom = rom[chr_rom_start..].to_vec();
+            chr_rom_end = rom.len() as u32;
+            chr_rom = rom[chr_rom_start as usize..].to_vec();
         }
 
         let title_start = chr_rom_end;
-        let title = rom[title_start..].to_vec();
+        let title = rom[title_start as usize..].to_vec();
         let title_length_is_proper = title.is_empty() || title.len() == 127 || title.len() == 128;
         if !title_length_is_proper {
             return Err(format!("Title must be empty or 127 or 128 bytes, but was {} bytes.", title.len()));
@@ -196,20 +196,20 @@ impl Cartridge {
         &self.chr_rom
     }
 
-    pub fn set_prg_rom_at(&mut self, index: usize, value: u8) {
-        self.prg_rom[index] = value;
+    pub fn set_prg_rom_at(&mut self, index: u32, value: u8) {
+        self.prg_rom[index as usize] = value;
     }
 
-    pub fn prg_rom_size(&self) -> usize {
-        self.prg_rom.len()
+    pub fn prg_rom_size(&self) -> u32 {
+        self.prg_rom.len().try_into().unwrap()
     }
 
-    pub fn prg_ram_size(&self) -> usize {
-        self.prg_ram_size as usize
+    pub fn prg_ram_size(&self) -> u32 {
+        self.prg_ram_size
     }
 
-    pub fn chr_ram_size(&self) -> usize {
-        self.chr_ram_size as usize
+    pub fn chr_ram_size(&self) -> u32 {
+        self.chr_ram_size
     }
 }
 
@@ -223,8 +223,8 @@ impl fmt::Display for Cartridge {
         writeln!(f, "iNES2 present: {}", self.ines2.is_some())?;
 
         writeln!(f, "Trainer present: {}", self.trainer.is_some())?;
-        writeln!(f, "PRG ROM size: {}KiB", self.prg_rom.len() / KIBIBYTE)?;
-        writeln!(f, "CHR ROM size: {}KiB", self.chr_rom.len() / KIBIBYTE)?;
+        writeln!(f, "PRG ROM size: {}KiB", self.prg_rom.len() / KIBIBYTE as usize)?;
+        writeln!(f, "CHR ROM size: {}KiB", self.chr_rom.len() / KIBIBYTE as usize)?;
         writeln!(f, "Console type: {:?}", self.console_type)?;
         writeln!(f, "Title: {:?}", self.title)?;
 

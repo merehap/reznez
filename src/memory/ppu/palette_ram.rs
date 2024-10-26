@@ -11,14 +11,14 @@ impl PaletteRam {
         PaletteRam(INITIAL_PALETTE_DATA)
     }
 
-    pub fn read(&self, index: usize) -> u8 {
-        self.0[index]
+    pub fn read(&self, index: u32) -> u8 {
+        self.0[index as usize]
     }
 
-    pub fn write(&mut self, index: usize, value: u8) {
+    pub fn write(&mut self, index: u32, value: u8) {
         // First two bits are always 0 for palette RAM bytes.
         // See https://wiki.nesdev.org/w/index.php?title=PPU_palettes#Memory_Map
-        self.0[index] = value & 0b0011_1111;
+        self.0[index as usize] = value & 0b0011_1111;
     }
 
     pub fn to_slice(&self) -> &[u8; PALETTE_RAM_SIZE] {

@@ -1,4 +1,4 @@
-pub use splitbits::{splitbits, splitbits_named};
+pub use splitbits::{splitbits, splitbits_named, splitbits_then_combine};
 
 pub use crate::cartridge::cartridge::Cartridge;
 pub use crate::memory::bank::bank_index::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters, RamStatus};
@@ -287,7 +287,7 @@ pub trait Mapper {
         name_table_mirroring: NameTableMirroring,
         ppu_internal_ram: &'a PpuInternalRam,
         quadrant: NameTableQuadrant,
-    ) -> &'a [u8; KIBIBYTE] {
+    ) -> &'a [u8; KIBIBYTE as usize] {
         let side = vram_side(quadrant, name_table_mirroring);
         ppu_internal_ram.vram.side(side)
     }
@@ -298,7 +298,7 @@ pub trait Mapper {
         name_table_mirroring: NameTableMirroring,
         ppu_internal_ram: &'a mut PpuInternalRam,
         position: NameTableQuadrant,
-    ) -> &'a mut [u8; KIBIBYTE] {
+    ) -> &'a mut [u8; KIBIBYTE as usize] {
         let side = vram_side(position, name_table_mirroring);
         ppu_internal_ram.vram.side_mut(side)
     }
@@ -311,7 +311,7 @@ pub trait Mapper {
         address: PpuAddress,
     ) -> u8 {
         let (name_table_quadrant, index) = address_to_name_table_index(address);
-        self.raw_name_table(name_table_mirroring, ppu_internal_ram, name_table_quadrant)[index]
+        self.raw_name_table(name_table_mirroring, ppu_internal_ram, name_table_quadrant)[index as usize]
     }
 
     #[inline]
@@ -323,7 +323,7 @@ pub trait Mapper {
         value: u8,
     ) {
         let (name_table_quadrant, index) = address_to_name_table_index(address);
-        self.raw_name_table_mut(name_table_mirroring, ppu_internal_ram, name_table_quadrant)[index] = value;
+        self.raw_name_table_mut(name_table_mirroring, ppu_internal_ram, name_table_quadrant)[index as usize] = value;
     }
 
     #[inline]
@@ -376,12 +376,12 @@ pub trait Mapper {
 
 #[inline]
 #[rustfmt::skip]
-fn address_to_name_table_index(address: PpuAddress) -> (NameTableQuadrant, usize) {
-    const NAME_TABLE_START:    usize = 0x2000;
-    const MIRROR_START:        usize = 0x3000;
-    const PALETTE_TABLE_START: usize = 0x3F00;
+fn address_to_name_table_index(address: PpuAddress) -> (NameTableQuadrant, u32) {
+    const NAME_TABLE_START:    u32 = 0x2000;
+    const MIRROR_START:        u32 = 0x3000;
+    const PALETTE_TABLE_START: u32 = 0x3F00;
 
-    let address = address.to_usize();
+    let address = address.to_u32();
     assert!(address >= NAME_TABLE_START);
     assert!(address < PALETTE_TABLE_START);
 
@@ -393,16 +393,16 @@ fn address_to_name_table_index(address: PpuAddress) -> (NameTableQuadrant, usize
     let index = index - NAME_TABLE_START;
 
     let name_table_quadrant =
-        NameTableQuadrant::from_usize(index / KIBIBYTE).unwrap();
+        NameTableQuadrant::from_u32(index / KIBIBYTE).unwrap();
     let index = index % KIBIBYTE;
     (name_table_quadrant, index)
 }
 
-fn address_to_palette_ram_index(address: PpuAddress) -> usize {
-    const PALETTE_TABLE_START: usize = 0x3F00;
-    const HIGH_ADDRESS_START: usize = 0x4000;
+fn address_to_palette_ram_index(address: PpuAddress) -> u32 {
+    const PALETTE_TABLE_START: u32 = 0x3F00;
+    const HIGH_ADDRESS_START: u32 = 0x4000;
 
-    let mut address = address.to_usize();
+    let mut address = address.to_u32();
     assert!(address >= PALETTE_TABLE_START);
     assert!(address < HIGH_ADDRESS_START);
 

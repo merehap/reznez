@@ -13,8 +13,8 @@ use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::util::bit_util::get_bit;
 use crate::util::unit::KIBIBYTE;
 
-const PATTERN_TABLE_SIZE: usize = 0x1000;
-const PATTERN_SIZE: usize = 16;
+const PATTERN_TABLE_SIZE: u32 = 0x1000;
+const PATTERN_SIZE: u32 = 16;
 
 pub struct PatternTable<'a>([&'a [u8]; 4]);
 
@@ -76,16 +76,16 @@ impl<'a> PatternTable<'a> {
         palette: Palette,
         tile_sliver: &mut [Rgbt; 8],
     ) {
-        let index = PATTERN_SIZE * usize::from(pattern_index);
-        let low_index = index + row_in_tile as usize;
+        let index = PATTERN_SIZE * u32::from(pattern_index);
+        let low_index = index + row_in_tile as u32;
         let high_index = low_index + 8;
 
         let low_byte = self.read(low_index);
         let high_byte = self.read(high_index);
 
         for (column_in_tile, pixel) in tile_sliver.iter_mut().enumerate() {
-            let low_bit = get_bit(low_byte, column_in_tile);
-            let high_bit = get_bit(high_byte, column_in_tile);
+            let low_bit = get_bit(low_byte, column_in_tile as u32);
+            let high_bit = get_bit(high_byte, column_in_tile as u32);
             *pixel = palette.rgbt_from_low_high(low_bit, high_bit);
         }
     }
@@ -98,25 +98,25 @@ impl<'a> PatternTable<'a> {
         palette: Palette,
         pixel: &mut Rgbt,
     ) {
-        let index = PATTERN_SIZE * usize::from(pattern_index);
-        let low_index = index + row_in_tile as usize;
+        let index = PATTERN_SIZE * u32::from(pattern_index);
+        let low_index = index + row_in_tile as u32;
         let high_index = low_index + 8;
 
         let low_byte = self.read(low_index);
         let high_byte = self.read(high_index);
 
-        let low_bit = get_bit(low_byte, column_in_tile as usize);
-        let high_bit = get_bit(high_byte, column_in_tile as usize);
+        let low_bit = get_bit(low_byte, column_in_tile as u32);
+        let high_bit = get_bit(high_byte, column_in_tile as u32);
         *pixel = palette.rgbt_from_low_high(low_bit, high_bit);
     }
 
-    fn read(&self, index: usize) -> u8 {
+    fn read(&self, index: u32) -> u8 {
         let quadrant = index / KIBIBYTE;
         assert!(quadrant < 5);
 
         let offset = index % KIBIBYTE;
 
-        self.0[quadrant][offset]
+        self.0[quadrant as usize][offset as usize]
     }
 }
 
@@ -127,7 +127,7 @@ pub enum PatternTableSide {
 }
 
 impl PatternTableSide {
-    pub fn from_index(index: usize) -> PatternTableSide {
+    pub fn from_index(index: u32) -> PatternTableSide {
         assert!(index < 2 * PATTERN_TABLE_SIZE);
         if index / PATTERN_TABLE_SIZE == 0 {
             PatternTableSide::Left
@@ -136,7 +136,7 @@ impl PatternTableSide {
         }
     }
 
-    pub fn to_start_end(self) -> (usize, usize) {
+    pub fn to_start_end(self) -> (u32, u32) {
         match self {
             PatternTableSide::Left => (0x0000, PATTERN_TABLE_SIZE),
             PatternTableSide::Right => (PATTERN_TABLE_SIZE, 2 * PATTERN_TABLE_SIZE),
@@ -204,16 +204,22 @@ impl PatternIndex {
         }
     }
 
-    fn to_low_index(self, row_in_tile: RowInTile) -> usize {
-        PATTERN_SIZE * usize::from(self) + row_in_tile as usize
+    fn to_low_index(self, row_in_tile: RowInTile) -> u32 {
+        PATTERN_SIZE * u32::from(self) + row_in_tile as u32
     }
 
-    fn to_high_index(self, row_in_tile: RowInTile) -> usize {
-        PATTERN_SIZE * usize::from(self) + row_in_tile as usize + 8
+    fn to_high_index(self, row_in_tile: RowInTile) -> u32 {
+        PATTERN_SIZE * u32::from(self) + row_in_tile as u32 + 8
     }
 }
 
 impl From<PatternIndex> for u16 {
+    fn from(value: PatternIndex) -> Self {
+        value.0.into()
+    }
+}
+
+impl From<PatternIndex> for u32 {
     fn from(value: PatternIndex) -> Self {
         value.0.into()
     }

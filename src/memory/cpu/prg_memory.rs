@@ -8,7 +8,7 @@ const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
 pub struct PrgMemory {
     layouts: &'static [PrgLayout],
     layout_index: usize,
-    bank_size: usize,
+    bank_size: u32,
     bank_count: u16,
     raw_memory: Vec<u8>,
     work_ram_sections: Vec<WorkRam>,
@@ -41,11 +41,11 @@ impl PrgMemory {
         }
 
         let bank_count;
-        if raw_memory.len() % bank_size == 0 {
-            bank_count = (raw_memory.len() / bank_size)
+        if raw_memory.len() as u32 % bank_size == 0 {
+            bank_count = (raw_memory.len() as u32 / bank_size)
                 .try_into()
                 .expect("Way too many banks.");
-        } else if !raw_memory.is_empty() && bank_size % raw_memory.len() == 0 {
+        } else if !raw_memory.is_empty() && bank_size % raw_memory.len() as u32 == 0 {
             bank_count = 1;
         } else {
             panic!("Bad PRG length: {} . Bank size: {} .", raw_memory.len(), bank_size);
@@ -67,10 +67,10 @@ impl PrgMemory {
         }
 
         let bank_count = prg_memory.bank_count();
-        if prg_memory.raw_memory.len() >= usize::from(bank_count) * bank_size {
+        if prg_memory.raw_memory.len() >= bank_count as usize * bank_size as usize {
             assert_eq!(
                 prg_memory.raw_memory.len(),
-                usize::from(bank_count) * bank_size,
+                bank_count as usize * bank_size as usize,
                 "Bad PRG data size.",
             );
         }
@@ -98,7 +98,7 @@ impl PrgMemory {
                     ReadOnlyZeros =>
                         ReadResult::full(0),
                     ReadOnly | ReadWrite =>
-                        ReadResult::full(self.raw_memory[index % self.raw_memory.len()]),
+                        ReadResult::full(self.raw_memory[index as usize % self.raw_memory.len()]),
                 }
             }
             PrgMemoryIndex::WorkRam { section_id, index, ram_status} => {
@@ -110,7 +110,7 @@ impl PrgMemory {
                     ReadOnlyZeros =>
                         ReadResult::full(0),
                     ReadOnly | ReadWrite =>
-                        ReadResult::full(work_ram.data[index]),
+                        ReadResult::full(work_ram.data[index as usize]),
                 }
             }
         }
@@ -121,13 +121,13 @@ impl PrgMemory {
             PrgMemoryIndex::None => {}
             PrgMemoryIndex::MappedMemory { index, ram_status } => {
                 if ram_status == RamStatus::ReadWrite {
-                    self.raw_memory[index] = value;
+                    self.raw_memory[index as usize] = value;
                 }
             }
             PrgMemoryIndex::WorkRam { section_id, index, ram_status} => {
                 let work_ram = &mut self.work_ram_sections[section_id];
                 if ram_status == RamStatus::ReadWrite {
-                    work_ram.data[index] = value;
+                    work_ram.data[index as usize] = value;
                 }
             }
         }
@@ -179,11 +179,11 @@ impl PrgMemory {
                     Bank::MirrorOf(_) => panic!("A mirrored bank must mirror a non-mirrored bank."),
                     Bank::Rom(Location::Fixed(bank_index)) => {
                         // TODO: Consolidate Fixed and Switchable logic.
-                        let mut raw_bank_index = bank_index.to_usize(self.bank_count());
+                        let mut raw_bank_index = bank_index.to_u32(self.bank_count());
                         let window_multiple = window.size() / self.bank_size;
                         // Clear low bits for large windows.
                         raw_bank_index &= !(window_multiple >> 1);
-                        let index = raw_bank_index * self.bank_size + bank_offset as usize;
+                        let index = raw_bank_index * self.bank_size + bank_offset as u32;
                         PrgMemoryIndex::MappedMemory { index, ram_status: RamStatus::ReadOnly }
                     }
                     Bank::Ram(Location::Fixed(bank_index), status_register_id) => {
@@ -191,20 +191,20 @@ impl PrgMemory {
                             .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
 
                         // TODO: Consolidate Fixed and Switchable logic.
-                        let mut raw_bank_index = bank_index.to_usize(self.bank_count());
+                        let mut raw_bank_index = bank_index.to_u32(self.bank_count());
                         let window_multiple = window.size() / self.bank_size;
                         // Clear low bits for large windows.
                         raw_bank_index &= !(window_multiple >> 1);
-                        let index = raw_bank_index * self.bank_size + bank_offset as usize;
+                        let index = raw_bank_index * self.bank_size + bank_offset as u32;
                         PrgMemoryIndex::MappedMemory { index, ram_status }
                     }
                     Bank::Rom(Location::Switchable(register_id)) => {
                         let mut raw_bank_index = registers.get(register_id)
-                            .to_usize(self.bank_count());
+                            .to_u32(self.bank_count());
                         let window_multiple = window.size() / self.bank_size;
                         // Clear low bits for large windows.
                         raw_bank_index &= !(window_multiple >> 1);
-                        let index = raw_bank_index * self.bank_size + bank_offset as usize;
+                        let index = raw_bank_index * self.bank_size + bank_offset as u32;
                         PrgMemoryIndex::MappedMemory { index, ram_status: RamStatus::ReadOnly }
                     }
                     Bank::Ram(Location::Switchable(register_id), status_register_id) => {
@@ -212,11 +212,11 @@ impl PrgMemory {
                             .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
 
                         let mut raw_bank_index = registers.get(register_id)
-                            .to_usize(self.bank_count());
+                            .to_u32(self.bank_count());
                         let window_multiple = window.size() / self.bank_size;
                         // Clear low bits for large windows.
                         raw_bank_index &= !(window_multiple >> 1);
-                        let index = raw_bank_index * self.bank_size + bank_offset as usize;
+                        let index = raw_bank_index * self.bank_size + bank_offset as u32;
                         PrgMemoryIndex::MappedMemory { index, ram_status }
                     }
                     Bank::Rom(_) => todo!("Meta registers"),
@@ -225,15 +225,15 @@ impl PrgMemory {
                         let ram_status: RamStatus = status_register_id
                             .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
 
-                        let mut index = usize::from(bank_offset);
+                        let mut index = u32::from(bank_offset);
                         let mut result = None;
                         for (section_id, work_ram_section) in self.work_ram_sections.iter().enumerate() {
-                            if index < work_ram_section.data.len() {
+                            if index < work_ram_section.data.len() as u32 {
                                 result = Some(PrgMemoryIndex::WorkRam { section_id, index, ram_status });
                                 break;
                             }
 
-                            index -= work_ram_section.data.len();
+                            index -= work_ram_section.data.len() as u32;
                         }
 
                         result.unwrap()
@@ -246,10 +246,10 @@ impl PrgMemory {
         unreachable!();
     }
 
-    fn window_with_index_at(&self, start: u16) -> (&PrgWindow, usize) {
+    fn window_with_index_at(&self, start: u16) -> (&PrgWindow, u32) {
         for (index, window) in self.current_layout().0.iter().enumerate() {
             if window.start.to_raw() == start {
-                return (window, index);
+                return (window, index as u32);
             }
         }
 
@@ -289,7 +289,7 @@ impl PrgLayout {
         self.0
     }
 
-    const fn validate_bank_size_multiples(&self, bank_size: usize) {
+    const fn validate_bank_size_multiples(&self, bank_size: u32) {
         let mut i = 0;
         while i < self.0.len() {
             let window = self.0[i];
@@ -311,8 +311,8 @@ impl PrgLayout {
 
 enum PrgMemoryIndex {
     None,
-    WorkRam { section_id: usize, index: usize, ram_status: RamStatus },
-    MappedMemory { index: usize, ram_status: RamStatus },
+    WorkRam { section_id: usize, index: u32, ram_status: RamStatus },
+    MappedMemory { index: u32, ram_status: RamStatus },
 }
 
 // A PrgWindow is a range within addressable memory.
@@ -329,8 +329,8 @@ impl PrgWindow {
         self.prg_bank.bank_index(registers)
     }
 
-    const fn size(self) -> usize {
-        (self.end.to_raw() - self.start.to_raw() + 1) as usize
+    const fn size(self) -> u32 {
+        (self.end.to_raw() - self.start.to_raw() + 1) as u32
     }
 
     fn register_id(self) -> Option<BankRegisterId> {
@@ -341,9 +341,9 @@ impl PrgWindow {
         }
     }
 
-    pub const fn new(start: u16, end: u16, size: usize, prg_bank: Bank) -> PrgWindow {
+    pub const fn new(start: u16, end: u16, size: u32, prg_bank: Bank) -> PrgWindow {
         assert!(end > start);
-        assert!(end as usize - start as usize + 1 == size);
+        assert!(end as u32 - start as u32 + 1 == size);
 
         PrgWindow {
             start: CpuAddress::new(start),
@@ -359,9 +359,9 @@ struct WorkRam {
 }
 
 impl WorkRam {
-    fn new(size: usize) -> WorkRam {
+    fn new(size: u32) -> WorkRam {
         WorkRam {
-            data: vec![0; size],
+            data: vec![0; size as usize],
         }
     }
 }

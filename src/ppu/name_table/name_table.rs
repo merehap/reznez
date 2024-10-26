@@ -12,23 +12,23 @@ use crate::ppu::render::frame::Frame;
 use crate::util::unit::KIBIBYTE;
 
 // The size of the name table proper plus attribute table.
-const NAME_TABLE_SIZE: usize = KIBIBYTE;
-const ATTRIBUTE_TABLE_SIZE: usize = 64;
+const NAME_TABLE_SIZE: u32 = KIBIBYTE;
+const ATTRIBUTE_TABLE_SIZE: u32 = 64;
 // 0x3C0
-const ATTRIBUTE_START_INDEX: usize = NAME_TABLE_SIZE - ATTRIBUTE_TABLE_SIZE;
+const ATTRIBUTE_START_INDEX: u32 = NAME_TABLE_SIZE - ATTRIBUTE_TABLE_SIZE;
 
 #[derive(Debug)]
 pub struct NameTable<'a> {
-    tiles: &'a [u8; NAME_TABLE_SIZE],
+    tiles: &'a [u8; NAME_TABLE_SIZE as usize],
     attribute_table: AttributeTable<'a>,
 }
 
 impl<'a> NameTable<'a> {
-    pub fn new(raw: &'a [u8; NAME_TABLE_SIZE]) -> NameTable<'a> {
+    pub fn new(raw: &'a [u8; NAME_TABLE_SIZE as usize]) -> NameTable<'a> {
         NameTable {
             tiles: raw,
             attribute_table: AttributeTable::new(
-                raw[ATTRIBUTE_START_INDEX..].try_into().unwrap(),
+                raw[ATTRIBUTE_START_INDEX as usize..].try_into().unwrap(),
             ),
         }
     }

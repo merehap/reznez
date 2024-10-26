@@ -6,8 +6,8 @@ use crate::memory::mapper::*;
 use crate::memory::mappers::vrc::vrc_irq_state::VrcIrqState;
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_max_bank_count(32)
-    .chr_max_bank_count(512)
+    .prg_max_size(256 * KIBIBYTE)
+    .chr_max_size(512 * KIBIBYTE)
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .prg_layouts(&[
         PrgLayout::new(&[

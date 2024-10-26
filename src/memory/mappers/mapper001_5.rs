@@ -2,8 +2,8 @@ use crate::memory::mapper::*;
 use crate::memory::mappers::common::mmc1::{ShiftRegister, ShiftStatus};
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_max_bank_count(1)
-    .chr_max_bank_count(16)
+    .prg_max_size(32 * KIBIBYTE)
+    .chr_max_size(64 * KIBIBYTE)
     .name_table_mirroring_source(NameTableMirroring::OneScreenRightBank.to_source())
     .prg_layouts(&[
         PrgLayout::new(&[

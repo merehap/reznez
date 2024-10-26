@@ -1,9 +1,8 @@
 use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
-    // Oversize. Actual cartridge only has 4 max.
-    .prg_max_bank_count(16)
-    .chr_max_bank_count(16)
+    .prg_max_size(128 * KIBIBYTE)
+    .chr_max_size(32 * KIBIBYTE)
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .prg_layouts(&[
         PrgLayout::new(&[

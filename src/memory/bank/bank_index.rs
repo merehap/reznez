@@ -23,7 +23,7 @@ impl BankIndex {
         self.0 % bank_count
     }
 
-    pub fn to_usize(self, bank_count: u16) -> usize {
+    pub fn to_u32(self, bank_count: u16) -> u32 {
         self.to_u16(bank_count).into()
     }
 }

@@ -1,8 +1,8 @@
 use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_max_bank_count(1)
-    .chr_max_bank_count(256)
+    .prg_max_size(32 * KIBIBYTE)
+    .chr_max_size(32 * KIBIBYTE)
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .prg_layouts(&[
         PrgLayout::new(&[
@@ -23,7 +23,8 @@ pub struct Mapper087;
 impl Mapper for Mapper087 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: CpuAddress, value: u8) {
         // Swap the low two bits, ignore the rest.
-        let bank_index = ((value & 0b10) >> 1) | ((value & 0b01) << 1);
+        let bank_index = splitbits_then_combine!(value, "......lh",
+                                                        "000000hl");
         match cpu_address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }

@@ -20,20 +20,20 @@ pub fn unpack_bools(value: u8) -> [bool; 8] {
 }
 
 #[inline]
-pub fn get_bit(byte: u8, index: usize) -> bool {
+pub fn get_bit(byte: u8, index: u32) -> bool {
     assert!(index < 8);
     let mask = 0b1000_0000 >> index as u8;
     byte & mask != 0
 }
 
 #[allow(dead_code)]
-pub fn clear_bit(byte: u8, index: usize) -> u8 {
+pub fn clear_bit(byte: u8, index: u32) -> u8 {
     assert!(index < 8);
     byte & !(1 << (7 - index))
 }
 
 #[allow(dead_code)]
-pub fn set_bit(byte: u8, index: usize) -> u8 {
+pub fn set_bit(byte: u8, index: u32) -> u8 {
     assert!(index < 8);
     byte & (1 << (7 - index))
 }

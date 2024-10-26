@@ -8,8 +8,8 @@ use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu::vram::VramSide;
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_max_bank_count(128)
-    .chr_max_bank_count(1024)
+    .prg_max_size(1024 * KIBIBYTE)
+    .chr_max_size(1024 * KIBIBYTE)
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .override_bank_register(P4, BankIndex::LAST)
     .prg_layouts(&[
@@ -134,7 +134,7 @@ pub struct Mapper005 {
     prg_ram_enabled_1: bool,
     prg_ram_enabled_2: bool,
 
-    extended_ram: [u8; 1 * KIBIBYTE],
+    extended_ram: [u8; 1 * KIBIBYTE as usize],
     extended_ram_mode: ExtendedRamMode,
     name_table_sources: [NameTableSource; 4],
     fill_mode_tile: u8,
@@ -376,7 +376,7 @@ impl Mapper005 {
             prg_ram_enabled_1: false,
             prg_ram_enabled_2: false,
 
-            extended_ram: [0; 1 * KIBIBYTE],
+            extended_ram: [0; 1 * KIBIBYTE as usize],
             extended_ram_mode: ExtendedRamMode::WriteOnly,
             name_table_sources: [NameTableSource::CiramLeft; 4],
             fill_mode_tile: 0,

@@ -1,1 +1,1 @@
-pub const KIBIBYTE: usize = 0x400;
+pub const KIBIBYTE: u32 = 0x400;

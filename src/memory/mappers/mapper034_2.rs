@@ -1,9 +1,9 @@
 use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
-    // Oversize definition for BxROM. The actual BNROM cartridge only supports 2 banks.
-    .prg_max_bank_count(256)
-    .chr_max_bank_count(1)
+    // Oversize definition for BxROM. The actual BNROM cartridge only supports 128KiB.
+    .prg_max_size(8192 * KIBIBYTE)
+    .chr_max_size(8 * KIBIBYTE)
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     // TODO: Verify if this is necessary. Might only be used for NINA-001.
     .override_bank_register(C1, BankIndex::LAST)

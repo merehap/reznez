@@ -247,8 +247,8 @@ impl PpuAddress {
         self.to_scroll_u16() & 0b0011_1111_1111_1111
     }
 
-    pub fn to_usize(self) -> usize {
-        usize::from(self.to_u16())
+    pub fn to_u32(self) -> u32 {
+        u32::from(self.to_u16())
     }
 
     pub const fn to_scroll_u16(self) -> u16 {

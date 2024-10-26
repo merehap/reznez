@@ -1,8 +1,8 @@
 use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_max_bank_count(4)
-    .chr_max_bank_count(64)
+    .prg_max_size(128 * KIBIBYTE)
+    .chr_max_size(32 * KIBIBYTE)
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .prg_layouts(&[
         PrgLayout::new(&[
@@ -18,6 +18,7 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // Bit Corp.'s Crime Busters
+// TODO: Oversize support
 pub struct Mapper038;
 
 impl Mapper for Mapper038 {
@@ -26,7 +27,7 @@ impl Mapper for Mapper038 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                let banks = splitbits!(value, "ccccccpp");
+                let banks = splitbits!(value, "....ccpp");
                 // Oversize CHR, matching FCEUX's implementation.
                 params.set_bank_register(C0, banks.c);
                 params.set_bank_register(P0, banks.p);
