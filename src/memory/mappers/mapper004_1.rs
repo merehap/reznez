@@ -7,44 +7,40 @@ const LAYOUT: Layout = Layout::builder()
     .prg_max_size(512 * KIBIBYTE)
     .chr_max_size(256 * KIBIBYTE)
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-    .prg_layouts(&[
-        // Switchable 0x8000
-        PrgLayout::new(&[
-            PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, Bank::EMPTY),
-            PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S0)),
-            PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S1)),
-            PrgWindow::new(0x7400, 0x75FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
-            PrgWindow::new(0x7600, 0x77FF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
-            PrgWindow::new(0x7800, 0x79FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
-            PrgWindow::new(0x7A00, 0x7BFF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
-            PrgWindow::new(0x7C00, 0x7DFF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
-            PrgWindow::new(0x7E00, 0x7FFF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
-            PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
-            PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
-            PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
-            PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-        ]),
-        // Switchable 0xC000
-        PrgLayout::new(&[
-            PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, Bank::EMPTY),
-            PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S0)),
-            PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S1)),
-            PrgWindow::new(0x7400, 0x75FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
-            PrgWindow::new(0x7600, 0x77FF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
-            PrgWindow::new(0x7800, 0x79FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
-            PrgWindow::new(0x7A00, 0x7BFF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
-            PrgWindow::new(0x7C00, 0x7DFF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
-            PrgWindow::new(0x7E00, 0x7FFF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
-            PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
-            PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
-            PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
-            PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-        ]),
-    ])
-    .chr_layouts(&[
-        mmc3::CHR_BIG_WINDOWS_FIRST,
-        mmc3::CHR_SMALL_WINDOWS_FIRST,
-    ])
+    // Switchable 0x8000
+    .prg_layout(PrgLayout::new(&[
+        PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, Bank::EMPTY),
+        PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S0)),
+        PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S1)),
+        PrgWindow::new(0x7400, 0x75FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
+        PrgWindow::new(0x7600, 0x77FF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
+        PrgWindow::new(0x7800, 0x79FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
+        PrgWindow::new(0x7A00, 0x7BFF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
+        PrgWindow::new(0x7C00, 0x7DFF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
+        PrgWindow::new(0x7E00, 0x7FFF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+    ]))
+    // Switchable 0xC000
+    .prg_layout(PrgLayout::new(&[
+        PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, Bank::EMPTY),
+        PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S0)),
+        PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S1)),
+        PrgWindow::new(0x7400, 0x75FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
+        PrgWindow::new(0x7600, 0x77FF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
+        PrgWindow::new(0x7800, 0x79FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
+        PrgWindow::new(0x7A00, 0x7BFF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
+        PrgWindow::new(0x7C00, 0x7DFF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
+        PrgWindow::new(0x7E00, 0x7FFF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+    ]))
+    .chr_layout(mmc3::CHR_BIG_WINDOWS_FIRST)
+    .chr_layout(mmc3::CHR_SMALL_WINDOWS_FIRST)
     .build();
 
 const RAM_STATUSES: [RamStatus; 2] =

@@ -4,12 +4,8 @@ const LAYOUT: Layout = Layout::builder()
     .prg_max_size(128 * KIBIBYTE)
     .chr_max_size(128 * KIBIBYTE)
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-    .prg_layouts(&[
-        PRG_LAYOUT
-    ])
-    .chr_layouts(&[
-        CHR_LAYOUT
-    ])
+    .prg_layout(PRG_LAYOUT)
+    .chr_layout(CHR_LAYOUT)
     .build();
 
 pub const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[

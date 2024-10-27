@@ -7,6 +7,7 @@
 #![feature(const_option_ext)]
 #![feature(const_mut_refs)]
 #![feature(const_for)]
+#![feature(const_maybe_uninit_write)]
 #![allow(clippy::module_inception)]
 #![allow(clippy::new_without_default)]
 #![allow(clippy::identity_op)]

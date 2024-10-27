@@ -4,18 +4,14 @@ const LAYOUT: Layout = Layout::builder()
     .prg_max_size(32 * KIBIBYTE)
     .chr_max_size(16 * KIBIBYTE)
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-    .prg_layouts(&[
-        PrgLayout::new(&[
-            PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
-            PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
-        ])
-    ])
-    .chr_layouts(&[
-        ChrLayout::new(&[
-            ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::fixed_ram(BankIndex::FIRST)),
-            ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_ram(C0)),
-        ])
-    ])
+    .prg_layout(PrgLayout::new(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
+    ]))
+    .chr_layout(ChrLayout::new(&[
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::fixed_ram(BankIndex::FIRST)),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_ram(C0)),
+    ]))
     .build();
 
 // CPROM

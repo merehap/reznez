@@ -6,18 +6,14 @@ const LAYOUT: Layout = Layout::builder()
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     // The last bank for any of the mapper 232 PRG "blocks".
     .override_bank_register(P1, BankIndex::from_u8(0b11))
-    .prg_layouts(&[
-        PrgLayout::new(&[
-            PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
-            PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_rom(P0)),
-            PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::switchable_rom(P1)),
-        ])
-    ])
-    .chr_layouts(&[
-        ChrLayout::new(&[
-            ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
-        ])
-    ])
+    .prg_layout(PrgLayout::new(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_rom(P0)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::switchable_rom(P1)),
+    ]))
+    .chr_layout(ChrLayout::new(&[
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
+    ]))
     .build();
 
 // Similar to mapper 71.

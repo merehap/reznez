@@ -7,7 +7,7 @@ use crate::memory::read_result::ReadResult;
 const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
 
 pub struct PrgMemory {
-    layouts: &'static [PrgLayout],
+    layouts: Vec<PrgLayout>,
     layout_index: usize,
     bank_size: u32,
     bank_count: u16,
@@ -17,13 +17,13 @@ pub struct PrgMemory {
 
 impl PrgMemory {
     pub fn new(
-        layouts: &'static [PrgLayout],
+        layouts: Vec<PrgLayout>,
         layout_index: usize,
         raw_memory: RawMemory,
     ) -> PrgMemory {
 
         let mut bank_size = None;
-        for layout in layouts {
+        for layout in &layouts {
             for window in layout.0 {
                 if matches!(window.prg_bank, Bank::Rom(..) | Bank::Ram(..)) {
                     if let Some(size) = bank_size {
@@ -37,7 +37,7 @@ impl PrgMemory {
 
         let bank_size = bank_size.expect("at least one ROM or RAM window");
 
-        for layout in layouts {
+        for layout in &layouts {
             layout.validate_bank_size_multiples(bank_size);
         }
 

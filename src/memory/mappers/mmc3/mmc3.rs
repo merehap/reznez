@@ -5,14 +5,10 @@ pub const LAYOUT: Layout = Layout::builder()
     .prg_max_size(512 * KIBIBYTE)
     .chr_max_size(256 * KIBIBYTE)
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
-    .prg_layouts(&[
-        PRG_LAYOUT_8000_SWITCHABLE,
-        PRG_LAYOUT_C000_SWITCHABLE,
-    ])
-    .chr_layouts(&[
-        CHR_BIG_WINDOWS_FIRST,
-        CHR_SMALL_WINDOWS_FIRST,
-    ])
+    .prg_layout(PRG_LAYOUT_8000_SWITCHABLE)
+    .prg_layout(PRG_LAYOUT_C000_SWITCHABLE)
+    .chr_layout(CHR_BIG_WINDOWS_FIRST)
+    .chr_layout(CHR_SMALL_WINDOWS_FIRST)
     .build();
 
 pub const PRG_LAYOUT_8000_SWITCHABLE: PrgLayout = PrgLayout::new(&[

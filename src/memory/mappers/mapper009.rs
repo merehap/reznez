@@ -6,22 +6,18 @@ const LAYOUT: Layout = Layout::builder()
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .override_meta_register(M0, C1)
     .override_second_meta_register(M1, C3)
-    .prg_layouts(&[
-        PrgLayout::new(&[
-            // TODO: PlayChoice uses this window.
-            PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
-            PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
-            PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::THIRD_LAST)),
-            PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
-            PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-        ])
-    ])
-    .chr_layouts(&[
-        ChrLayout::new(&[
-            ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::meta_switchable_rom(M0)),
-            ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::meta_switchable_rom(M1)),
-        ])
-    ])
+    .prg_layout(PrgLayout::new(&[
+        // TODO: PlayChoice uses this window.
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::THIRD_LAST)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+    ]))
+    .chr_layout(ChrLayout::new(&[
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::meta_switchable_rom(M0)),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::meta_switchable_rom(M1)),
+    ]))
     .build();
 
 const MIRRORINGS: [NameTableMirroring; 2] = [

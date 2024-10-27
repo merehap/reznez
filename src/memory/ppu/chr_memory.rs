@@ -7,7 +7,7 @@ use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
 
 pub struct ChrMemory {
-    layouts: &'static [ChrLayout],
+    layouts: Vec<ChrLayout>,
     layout_index: usize,
     bank_size: u32,
     align_large_chr_layouts: bool,
@@ -17,13 +17,13 @@ pub struct ChrMemory {
 
 impl ChrMemory {
     pub fn new(
-        layouts: &'static [ChrLayout],
+        layouts: Vec<ChrLayout>,
         layout_index: usize,
         align_large_chr_layouts: bool,
         mut raw_memory: RawMemory,
     ) -> ChrMemory {
         let mut bank_size = None;
-        for layout in layouts {
+        for layout in &layouts {
             for window in layout.0 {
                 if matches!(window.bank, Bank::Rom(..) | Bank::Ram(..)) {
                     if let Some(size) = bank_size {
@@ -36,7 +36,7 @@ impl ChrMemory {
         }
 
         let bank_size = bank_size.expect("at least one ROM or RAM window");
-        for layout in layouts {
+        for layout in &layouts {
             layout.validate_bank_size_multiples(bank_size);
         }
 

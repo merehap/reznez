@@ -5,23 +5,19 @@ const LAYOUT: Layout = Layout::builder()
     .prg_max_size(256 * KIBIBYTE)
     .chr_max_size(128 * KIBIBYTE)
     .name_table_mirroring_source(NameTableMirroring::OneScreenRightBank.to_source())
-    .prg_layouts(&[
-        PRG_LAYOUT_ONE_BIG,
-        PRG_LAYOUT_ONE_BIG,
-        PRG_LAYOUT_FIXED_FIRST,
-        PRG_LAYOUT_FIXED_LAST,
-    ])
+    .prg_layout(PRG_LAYOUT_ONE_BIG)
+    .prg_layout(PRG_LAYOUT_ONE_BIG)
+    .prg_layout(PRG_LAYOUT_FIXED_FIRST)
+    .prg_layout(PRG_LAYOUT_FIXED_LAST)
     .prg_layout_index(3)
     // TODO: Not all boards support CHR RAM.
-    .chr_layouts(&[
-        ChrLayout::new(&[
-            ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::switchable_ram(C0)),
-        ]),
-        ChrLayout::new(&[
-            ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_ram(C0)),
-            ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_ram(C1)),
-        ]),
-    ])
+    .chr_layout(ChrLayout::new(&[
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::switchable_ram(C0)),
+    ]))
+    .chr_layout(ChrLayout::new(&[
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_ram(C0)),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_ram(C1)),
+    ]))
     .build();
 
 const PRG_LAYOUT_ONE_BIG: PrgLayout = PrgLayout::new(&[

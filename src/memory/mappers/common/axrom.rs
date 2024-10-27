@@ -5,17 +5,13 @@ const LAYOUT: Layout = Layout::builder()
     .prg_max_size(512 * KIBIBYTE)
     .chr_max_size(8 * KIBIBYTE)
     .name_table_mirroring_source(NameTableMirroring::OneScreenLeftBank.to_source())
-    .prg_layouts(&[
-        PrgLayout::new(&[
-            PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
-            PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_rom(P0)),
-        ])
-    ])
-    .chr_layouts(&[
-        ChrLayout::new(&[
-            ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
-        ])
-    ])
+    .prg_layout(PrgLayout::new(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_rom(P0)),
+    ]))
+    .chr_layout(ChrLayout::new(&[
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
+    ]))
     .build();
 
 const MIRRORINGS: [NameTableMirroring; 2] = [

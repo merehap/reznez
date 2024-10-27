@@ -8,18 +8,14 @@ const LAYOUT: Layout = Layout::builder()
     .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     // TODO: Verify if this is necessary. Might only be used for BxROM.
     .override_bank_register(C1, BankIndex::LAST)
-    .prg_layouts(&[
-        PrgLayout::new(&[
-            PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
-            PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_ram(P0)),
-        ])
-    ])
-    .chr_layouts(&[
-        ChrLayout::new(&[
-            ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_rom(C0)),
-            ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_rom(C1)),
-        ])
-    ])
+    .prg_layout(PrgLayout::new(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_ram(P0)),
+    ]))
+    .chr_layout(ChrLayout::new(&[
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_rom(C0)),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_rom(C1)),
+    ]))
     .build();
 
 
