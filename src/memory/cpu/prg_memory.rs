@@ -1,6 +1,7 @@
 use crate::memory::bank::bank::{Bank, Location};
 use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId, RamStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::raw_memory::RawMemory;
 use crate::memory::read_result::ReadResult;
 
 const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
@@ -10,7 +11,7 @@ pub struct PrgMemory {
     layout_index: usize,
     bank_size: u32,
     bank_count: u16,
-    raw_memory: Vec<u8>,
+    raw_memory: RawMemory,
     work_ram_sections: Vec<WorkRam>,
 }
 
@@ -18,7 +19,7 @@ impl PrgMemory {
     pub fn new(
         layouts: &'static [PrgLayout],
         layout_index: usize,
-        raw_memory: Vec<u8>,
+        raw_memory: RawMemory,
     ) -> PrgMemory {
 
         let mut bank_size = None;
@@ -41,14 +42,14 @@ impl PrgMemory {
         }
 
         let bank_count;
-        if raw_memory.len() as u32 % bank_size == 0 {
-            bank_count = (raw_memory.len() as u32 / bank_size)
+        if raw_memory.size() as u32 % bank_size == 0 {
+            bank_count = (raw_memory.size() as u32 / bank_size)
                 .try_into()
                 .expect("Way too many banks.");
-        } else if !raw_memory.is_empty() && bank_size % raw_memory.len() as u32 == 0 {
+        } else if !raw_memory.is_empty() && bank_size % raw_memory.size() as u32 == 0 {
             bank_count = 1;
         } else {
-            panic!("Bad PRG length: {} . Bank size: {} .", raw_memory.len(), bank_size);
+            panic!("Bad PRG length: {} . Bank size: {} .", raw_memory.size(), bank_size);
         }
 
         let mut prg_memory = PrgMemory {
@@ -67,10 +68,10 @@ impl PrgMemory {
         }
 
         let bank_count = prg_memory.bank_count();
-        if prg_memory.raw_memory.len() >= bank_count as usize * bank_size as usize {
+        if prg_memory.raw_memory.size() >= bank_count as u32 * bank_size as u32 {
             assert_eq!(
-                prg_memory.raw_memory.len(),
-                bank_count as usize * bank_size as usize,
+                prg_memory.raw_memory.size(),
+                bank_count as u32 * bank_size as u32,
                 "Bad PRG data size.",
             );
         }
@@ -98,7 +99,7 @@ impl PrgMemory {
                     ReadOnlyZeros =>
                         ReadResult::full(0),
                     ReadOnly | ReadWrite =>
-                        ReadResult::full(self.raw_memory[index as usize % self.raw_memory.len()]),
+                        ReadResult::full(self.raw_memory[index % self.raw_memory.size()]),
                 }
             }
             PrgMemoryIndex::WorkRam { section_id, index, ram_status} => {
@@ -121,7 +122,7 @@ impl PrgMemory {
             PrgMemoryIndex::None => {}
             PrgMemoryIndex::MappedMemory { index, ram_status } => {
                 if ram_status == RamStatus::ReadWrite {
-                    self.raw_memory[index as usize] = value;
+                    self.raw_memory[index] = value;
                 }
             }
             PrgMemoryIndex::WorkRam { section_id, index, ram_status} => {

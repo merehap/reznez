@@ -30,13 +30,13 @@ impl Layout {
         let prg_memory = PrgMemory::new(
             self.prg_layouts,
             self.prg_layout_index,
-            cartridge.prg_rom().to_vec(),
+            cartridge.prg_rom().clone(),
         );
         let chr_memory = ChrMemory::new(
             self.chr_layouts,
             self.chr_layout_index,
             self.align_large_chr_layout,
-            cartridge.chr_rom().to_vec(),
+            cartridge.chr_rom().clone(),
         );
 
         let name_table_mirroring = match self.name_table_mirroring_source {

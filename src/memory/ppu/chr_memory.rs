@@ -1,6 +1,7 @@
 use crate::memory::bank::bank::{Bank, Location};
 use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId};
 
+use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
@@ -11,7 +12,7 @@ pub struct ChrMemory {
     bank_size: u32,
     align_large_chr_layouts: bool,
     override_write_protection: bool,
-    raw_memory: Vec<u8>,
+    raw_memory: RawMemory,
 }
 
 impl ChrMemory {
@@ -19,7 +20,7 @@ impl ChrMemory {
         layouts: &'static [ChrLayout],
         layout_index: usize,
         align_large_chr_layouts: bool,
-        mut raw_memory: Vec<u8>,
+        mut raw_memory: RawMemory,
     ) -> ChrMemory {
         let mut bank_size = None;
         for layout in layouts {
@@ -42,7 +43,7 @@ impl ChrMemory {
         // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only layouts.
         let mut override_write_protection = false;
         if raw_memory.is_empty() {
-            raw_memory = vec![0; 8 * KIBIBYTE as usize];
+            raw_memory = RawMemory::new(8 * KIBIBYTE);
             override_write_protection = true;
         }
 
@@ -56,7 +57,7 @@ impl ChrMemory {
         };
 
         let bank_count = chr_memory.bank_count();
-        assert_eq!(u32::from(bank_count) * u32::from(chr_memory.bank_size), chr_memory.raw_memory.len() as u32);
+        assert_eq!(u32::from(bank_count) * u32::from(chr_memory.bank_size), chr_memory.raw_memory.size() as u32);
         // Power of 2.
         assert_eq!(bank_count & (bank_count - 1), 0);
 
@@ -65,7 +66,7 @@ impl ChrMemory {
 
     #[inline]
     pub fn bank_count(&self) -> u16 {
-        ((self.raw_memory.len() as u32) / self.bank_size)
+        ((self.raw_memory.size() as u32) / self.bank_size)
             .try_into()
             .expect("Way too many CHR banks.")
     }
@@ -76,13 +77,13 @@ impl ChrMemory {
 
     pub fn peek(&self, registers: &BankRegisters, address: PpuAddress) -> u8 {
         let (index, _) = self.address_to_chr_index(registers, address.to_u16());
-        self.raw_memory[index as usize]
+        self.raw_memory[index]
     }
 
     pub fn write(&mut self, registers: &BankRegisters, address: PpuAddress, value: u8) {
         let (index, writable) = self.address_to_chr_index(registers, address.to_u16());
         if writable || self.override_write_protection {
-            self.raw_memory[index as usize] = value;
+            self.raw_memory[index] = value;
         }
     }
 
@@ -142,15 +143,15 @@ impl ChrMemory {
     }
 
     #[inline]
-    fn left_chunks(&self, registers: &BankRegisters) -> [&[u8]; 4] {
+    fn left_chunks(&self, registers: &BankRegisters) -> [RawMemorySlice; 4] {
         self.left_indexes(registers)
-            .map(|index| &self.raw_memory[index as usize..index as usize + 0x400])
+            .map(|index| self.raw_memory.slice(index..index + 0x400))
     }
 
     #[inline]
-    fn right_chunks(&self, registers: &BankRegisters) -> [&[u8]; 4] {
+    fn right_chunks(&self, registers: &BankRegisters) -> [RawMemorySlice; 4] {
         self.right_indexes(registers)
-            .map(|index| &self.raw_memory[index as usize..index as usize + 0x400])
+            .map(|index| self.raw_memory.slice(index..index + 0x400))
     }
 
     #[inline]

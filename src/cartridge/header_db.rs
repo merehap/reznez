@@ -5,6 +5,8 @@ use std::collections::BTreeMap;
 
 use log::info;
 
+use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
+
 // Submapper numbers for ROMs that aren't in the NES Header DB (mostly test ROMs).
 const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     // ppu_read_buffer/test_ppu_read_buffer.nes
@@ -108,9 +110,9 @@ impl HeaderDb {
         header_db
     }
 
-    pub fn header_from_data(&self, data: &[u8]) -> Option<Header> {
-        let hash = crc32fast::hash(data);
-        let result = self.data_by_crc32.get(&crc32fast::hash(data)).copied();
+    pub fn header_from_data(&self, data: &RawMemory) -> Option<Header> {
+        let hash = crc32fast::hash(data.as_slice());
+        let result = self.data_by_crc32.get(&crc32fast::hash(data.as_slice())).copied();
         if result.is_none() {
             info!("ROM with full file hash {hash} not found in DB.");
         }
@@ -118,8 +120,8 @@ impl HeaderDb {
         result
     }
 
-    pub fn header_from_prg_rom(&self, prg_rom: &[u8]) -> Option<Header> {
-        let hash = crc32fast::hash(prg_rom);
+    pub fn header_from_prg_rom(&self, prg_rom: &RawMemorySlice) -> Option<Header> {
+        let hash = crc32fast::hash(prg_rom.to_raw());
         let result = self.prg_rom_by_crc32.get(&hash).copied();
         if result.is_none() {
             info!("ROM with PRG hash {hash} not found in DB.");
@@ -128,9 +130,9 @@ impl HeaderDb {
         result
     }
 
-    pub fn missing_submapper_number(&self, data: &[u8], prg_rom: &[u8]) -> Option<(u16, u8, u32, u32)> {
-        let data_hash = crc32fast::hash(data);
-        let prg_hash = crc32fast::hash(prg_rom);
+    pub fn missing_submapper_number(&self, data: &RawMemory, prg_rom: &RawMemorySlice) -> Option<(u16, u8, u32, u32)> {
+        let data_hash = crc32fast::hash(data.as_slice());
+        let prg_hash = crc32fast::hash(prg_rom.to_raw());
         if let Some((number, sub_number)) = self.missing_data_submapper_numbers.get(&data_hash).copied() {
             Some((number, sub_number, data_hash, prg_hash))
         } else if let Some((number, sub_number)) = self.missing_prg_rom_submapper_numbers.get(&prg_hash).copied() {

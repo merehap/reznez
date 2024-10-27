@@ -4,6 +4,7 @@ use crate::ppu::register::registers::ctrl::Ctrl;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::memory::mapper::*;
 use crate::memory::memory::{NMI_VECTOR_LOW, NMI_VECTOR_HIGH};
+use crate::memory::raw_memory::RawMemoryArray;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu::vram::VramSide;
 
@@ -134,7 +135,7 @@ pub struct Mapper005 {
     prg_ram_enabled_1: bool,
     prg_ram_enabled_2: bool,
 
-    extended_ram: [u8; 1 * KIBIBYTE as usize],
+    extended_ram: RawMemoryArray<KIBIBYTE>,
     extended_ram_mode: ExtendedRamMode,
     name_table_sources: [NameTableSource; 4],
     fill_mode_tile: u8,
@@ -251,7 +252,7 @@ impl Mapper for Mapper005 {
             0x2000..=0x3EFF
                 if address.is_in_attribute_table() && self.extended_attribute_mode_enabled() => {
                     let (_, index) = address.name_table_location().unwrap();
-                    let attribute = self.extended_ram[index as usize] >> 6;
+                    let attribute = self.extended_ram[index] >> 6;
                     (attribute << 6) | (attribute << 4) | (attribute << 2) | (attribute << 0)
                 }
             0x2000..=0x3EFF => {
@@ -262,7 +263,7 @@ impl Mapper for Mapper005 {
                     NameTableSource::CiramRight =>
                         ppu_internal_ram.vram.side(VramSide::Right)[index as usize],
                     NameTableSource::ExtendedRam =>
-                        self.extended_ram[index as usize],
+                        self.extended_ram[index],
                     NameTableSource::Fill =>
                         self.fill_mode_tile,
                 }
@@ -320,7 +321,7 @@ impl Mapper for Mapper005 {
             // If this value isn't cached, then some ugly hack to get the value into C12
             // just-in-time may be necessary.
             let raw_bank_index = (self.upper_chr_bank_bits << 6) |
-                (self.extended_ram[usize::from(address.to_u16() % 0x400)] & 0b0011_1111);
+                (self.extended_ram[address.to_u32() % 0x400] & 0b0011_1111);
             println!("{address} is in name table proper. Raw bank index: {raw_bank_index}. Pattern Fetch: {}",
                 self.pattern_fetch_count);
             params.set_bank_register(C12, raw_bank_index);
@@ -376,7 +377,7 @@ impl Mapper005 {
             prg_ram_enabled_1: false,
             prg_ram_enabled_2: false,
 
-            extended_ram: [0; 1 * KIBIBYTE as usize],
+            extended_ram: RawMemoryArray::new(),
             extended_ram_mode: ExtendedRamMode::WriteOnly,
             name_table_sources: [NameTableSource::CiramLeft; 4],
             fill_mode_tile: 0,
@@ -496,7 +497,7 @@ impl Mapper005 {
 
     fn peek_from_extended_ram(&self, address: CpuAddress) -> ReadResult {
         if self.extended_ram_mode.is_readable() {
-            ReadResult::full(self.extended_ram[usize::from(address.to_raw() - 0x5C00)])
+            ReadResult::full(self.extended_ram[address.to_u32() - 0x5C00])
         } else {
             ReadResult::OPEN_BUS
         }
@@ -504,7 +505,7 @@ impl Mapper005 {
 
     fn write_to_extended_ram(&mut self, address: CpuAddress, value: u8) {
         // TODO: Write zeros if rendering is disabled.
-        self.extended_ram[usize::from(address.to_raw() - 0x5C00)] = value;
+        self.extended_ram[address.to_u32() - 0x5C00] = value;
     }
 
     fn scanline_irq_status(&self) -> u8 {

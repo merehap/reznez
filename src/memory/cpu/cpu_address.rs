@@ -23,6 +23,10 @@ impl CpuAddress {
         self.0
     }
 
+    pub const fn to_u32(self) -> u32 {
+        self.0 as u32
+    }
+
     pub fn to_usize(self) -> usize {
         usize::from(self.0)
     }

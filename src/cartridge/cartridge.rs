@@ -3,6 +3,7 @@ use std::fmt;
 use log::{info, warn, error};
 
 use crate::cartridge::header_db::{HeaderDb, Header};
+use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::unit::KIBIBYTE;
 
@@ -23,11 +24,11 @@ pub struct Cartridge {
     ripper_name: String,
     ines2: Option<INes2>,
 
-    trainer: Option<[u8; 512]>,
+    trainer: Option<RawMemoryArray<512>>,
 
-    prg_rom: Vec<u8>,
+    prg_rom: RawMemory,
     prg_ram_size: u32,
-    chr_rom: Vec<u8>,
+    chr_rom: RawMemory,
     chr_ram_size: u32,
 
     console_type: ConsoleType,
@@ -36,11 +37,11 @@ pub struct Cartridge {
 
 impl Cartridge {
     #[rustfmt::skip]
-    pub fn load(name: String, rom: &[u8], header_db: &HeaderDb) -> Result<Cartridge, String> {
-        if &rom[0..4] != INES_HEADER_CONSTANT {
+    pub fn load(name: String, rom: &RawMemory, header_db: &HeaderDb) -> Result<Cartridge, String> {
+        if rom.slice(0..4).to_raw() != INES_HEADER_CONSTANT {
             return Err(format!(
                 "Cannot load non-iNES ROM. Found {:?} but need {:?}.",
-                &rom[0..4],
+                rom.slice(0..4),
                 INES_HEADER_CONSTANT,
             ));
         }
@@ -59,7 +60,7 @@ impl Cartridge {
         let play_choice_enabled   = rom[7] & 0b0000_0010 != 0;
         let vs_unisystem_enabled  = rom[7] & 0b0000_0001 != 0;
 
-        let ripper_name: String = std::str::from_utf8(&rom[8..15])
+        let ripper_name: String = std::str::from_utf8(rom.slice(8..15).to_raw())
             .map_err(|err| err.to_string())?
             .chars()
             .map(|c| if c.is_ascii_graphic() {c} else {'~'})
@@ -90,25 +91,24 @@ impl Cartridge {
 
         let prg_rom_start = 0x10;
         let prg_rom_end = prg_rom_start + PRG_ROM_CHUNK_LENGTH as u32 * prg_rom_chunk_count;
-        let prg_rom = rom.get(prg_rom_start as usize..prg_rom_end as usize)
+        let prg_rom = rom.maybe_slice(prg_rom_start..prg_rom_end)
             .unwrap_or_else(
-                || panic!("ROM {name} was too short (claimed to have {prg_rom_chunk_count} PRG chunks)."))
-            .to_vec();
+                || panic!("ROM {name} was too short (claimed to have {prg_rom_chunk_count} PRG chunks)."));
 
         let chr_rom_start = prg_rom_end;
         let mut chr_rom_end = chr_rom_start + CHR_ROM_CHUNK_LENGTH as u32 * chr_rom_chunk_count;
         let chr_rom;
-        if let Some(chr) = rom.get(chr_rom_start as usize..chr_rom_end as usize) {
-            chr_rom = chr.to_vec();
+        if let Some(chr) = rom.maybe_slice(chr_rom_start..chr_rom_end) {
+            chr_rom = chr;
         } else {
             error!("ROM {} claimed to have {} CHR chunks, but the ROM was too short.",
                 name, chr_rom_chunk_count);
-            chr_rom_end = rom.len() as u32;
-            chr_rom = rom[chr_rom_start as usize..].to_vec();
+            chr_rom_end = rom.size();
+            chr_rom = rom.slice(chr_rom_start..rom.size());
         }
 
         let title_start = chr_rom_end;
-        let title = rom[title_start as usize..].to_vec();
+        let title = rom.slice(title_start..rom.size()).to_raw().to_vec();
         let title_length_is_proper = title.is_empty() || title.len() == 127 || title.len() == 128;
         if !title_length_is_proper {
             return Err(format!("Title must be empty or 127 or 128 bytes, but was {} bytes.", title.len()));
@@ -131,9 +131,9 @@ impl Cartridge {
             ines2: None,
 
             trainer: None,
-            prg_rom: prg_rom.clone(),
+            prg_rom: prg_rom.to_raw_memory(),
             prg_ram_size: 0,
-            chr_rom: chr_rom.clone(),
+            chr_rom: chr_rom.to_raw_memory(),
             chr_ram_size: 0,
             console_type: ConsoleType::Nes,
             title,
@@ -149,8 +149,8 @@ impl Cartridge {
                 warn!("Mapper number in ROM ({}) does not match the one in the DB {mapper_number}.", cartridge.mapper_number);
             }
 
-            assert_eq!(prg_rom.len() as u32, prg_rom_size);
-            assert_eq!(chr_rom.len() as u32, chr_rom_size);
+            assert_eq!(prg_rom.size(), prg_rom_size);
+            assert_eq!(chr_rom.size(), chr_rom_size);
             cartridge.submapper_number = submapper_number;
             cartridge.prg_ram_size = prg_ram_size;
             cartridge.chr_ram_size = chr_ram_size;
@@ -160,8 +160,8 @@ impl Cartridge {
                 warn!("Mapper number in ROM ({}) does not match the one in the DB {mapper_number}.", cartridge.mapper_number);
             }
 
-            assert_eq!(prg_rom.len() as u32, prg_rom_size);
-            assert_eq!(chr_rom.len() as u32, chr_rom_size);
+            assert_eq!(prg_rom.size(), prg_rom_size);
+            assert_eq!(chr_rom.size(), chr_rom_size);
             cartridge.submapper_number = submapper_number;
             cartridge.prg_ram_size = prg_ram_size;
             cartridge.chr_ram_size = chr_ram_size;
@@ -188,20 +188,20 @@ impl Cartridge {
         self.name_table_mirroring
     }
 
-    pub fn prg_rom(&self) -> &[u8] {
+    pub fn prg_rom(&self) -> &RawMemory {
         &self.prg_rom
     }
 
-    pub fn chr_rom(&self) -> &[u8] {
+    pub fn chr_rom(&self) -> &RawMemory {
         &self.chr_rom
     }
 
     pub fn set_prg_rom_at(&mut self, index: u32, value: u8) {
-        self.prg_rom[index as usize] = value;
+        self.prg_rom[index] = value;
     }
 
     pub fn prg_rom_size(&self) -> u32 {
-        self.prg_rom.len().try_into().unwrap()
+        self.prg_rom.size()
     }
 
     pub fn prg_ram_size(&self) -> u32 {
@@ -223,8 +223,8 @@ impl fmt::Display for Cartridge {
         writeln!(f, "iNES2 present: {}", self.ines2.is_some())?;
 
         writeln!(f, "Trainer present: {}", self.trainer.is_some())?;
-        writeln!(f, "PRG ROM size: {}KiB", self.prg_rom.len() / KIBIBYTE as usize)?;
-        writeln!(f, "CHR ROM size: {}KiB", self.chr_rom.len() / KIBIBYTE as usize)?;
+        writeln!(f, "PRG ROM size: {}KiB", self.prg_rom.size() / KIBIBYTE)?;
+        writeln!(f, "CHR ROM size: {}KiB", self.chr_rom.size() / KIBIBYTE)?;
         writeln!(f, "Console type: {:?}", self.console_type)?;
         writeln!(f, "Title: {:?}", self.title)?;
 
@@ -277,9 +277,9 @@ pub mod test_data {
             ines2: None,
 
             trainer: None,
-            prg_rom,
+            prg_rom: RawMemory::from_vec(prg_rom),
             prg_ram_size: 0,
-            chr_rom: vec![0x00; CHR_ROM_CHUNK_LENGTH],
+            chr_rom: RawMemory::new(CHR_ROM_CHUNK_LENGTH as u32),
             chr_ram_size: 0,
             console_type: ConsoleType::Nes,
             title: "Test ROM".to_string(),

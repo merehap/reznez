@@ -4,6 +4,7 @@
 use enum_iterator::IntoEnumIterator;
 use modular_bitfield::BitfieldSpecifier;
 
+use crate::memory::raw_memory::RawMemorySlice;
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pixel_index::{PixelRow, ColumnInTile, RowInTile};
@@ -16,10 +17,10 @@ use crate::util::unit::KIBIBYTE;
 const PATTERN_TABLE_SIZE: u32 = 0x1000;
 const PATTERN_SIZE: u32 = 16;
 
-pub struct PatternTable<'a>([&'a [u8]; 4]);
+pub struct PatternTable<'a>([RawMemorySlice<'a>; 4]);
 
 impl<'a> PatternTable<'a> {
-    pub fn new(raw: [&'a [u8]; 4]) -> PatternTable {
+    pub fn new(raw: [RawMemorySlice<'a>; 4]) -> PatternTable {
         PatternTable(raw)
     }
 
@@ -116,7 +117,7 @@ impl<'a> PatternTable<'a> {
 
         let offset = index % KIBIBYTE;
 
-        self.0[quadrant as usize][offset as usize]
+        self.0[quadrant as usize][offset]
     }
 }
 

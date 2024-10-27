@@ -122,7 +122,7 @@ impl PpuAddress {
         splitbits_named_ux!(self.address, ".... nn.. .... ....").into()
     }
 
-    pub fn name_table_location(self) -> Option<(NameTableQuadrant, u16)> {
+    pub fn name_table_location(self) -> Option<(NameTableQuadrant, u32)> {
         if self.address >= 0x2000 && self.address < 0x3F00 {
             Some(splitbits_named_into_ux!(self.address, ".... nnll llll llll"))
         } else {

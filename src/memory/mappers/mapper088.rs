@@ -64,7 +64,7 @@ impl Mapper088 {
     pub fn new(cartridge: &Cartridge) -> Self {
         Self {
             selected_register_id: C0,
-            extended_chr_present: cartridge.chr_rom().len() > 64 * KIBIBYTE as usize,
+            extended_chr_present: cartridge.chr_rom().size() > 64 * KIBIBYTE,
         }
     }
 

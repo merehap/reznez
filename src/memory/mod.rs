@@ -6,4 +6,5 @@ pub mod mapper_list;
 pub mod mappers;
 pub mod memory;
 pub mod ppu;
+pub mod raw_memory;
 pub mod read_result;

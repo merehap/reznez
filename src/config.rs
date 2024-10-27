@@ -11,6 +11,7 @@ use crate::cartridge::header_db::HeaderDb;
 use crate::gui::egui_gui::EguiGui;
 use crate::gui::gui::Gui;
 use crate::gui::no_gui::NoGui;
+use crate::memory::raw_memory::RawMemory;
 use crate::ppu::clock::Clock;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::render::frame_rate::TargetFrameRate;
@@ -34,6 +35,7 @@ impl Config {
         info!("Loading ROM '{}'.", rom_path.display());
         let mut rom = Vec::new();
         File::open(rom_path).unwrap().read_to_end(&mut rom).unwrap();
+        let rom = RawMemory::from_vec(rom);
         let file_name = rom_path.file_name().unwrap().to_str().unwrap().to_string();
         let cartridge = Cartridge::load(file_name, &rom, &HeaderDb::load()).unwrap();
         info!("ROM loaded.\n{}", cartridge);
