@@ -4,7 +4,7 @@ use crate::memory::mappers::common::mmc1::{ShiftRegister, ShiftStatus};
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(256 * KIBIBYTE)
     .chr_max_size(128 * KIBIBYTE)
-    .name_table_mirroring_source(NameTableMirroring::OneScreenRightBank.to_source())
+    .override_initial_name_table_mirroring(NameTableMirroring::OneScreenRightBank)
     .prg_layout(PRG_LAYOUT_ONE_BIG)
     .prg_layout(PRG_LAYOUT_ONE_BIG)
     .prg_layout(PRG_LAYOUT_FIXED_FIRST)

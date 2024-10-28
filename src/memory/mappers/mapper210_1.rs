@@ -3,7 +3,6 @@ use crate::memory::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(512 * KIBIBYTE)
     .chr_max_size(256 * KIBIBYTE)
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .prg_layout(PrgLayout::new(&[
         // FIXME: This is supposed to be 2KiBs mirrored. Family Circuit doesn't work without it.
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM),

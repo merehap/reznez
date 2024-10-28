@@ -5,7 +5,6 @@ const LAYOUT: Layout = Layout::builder()
     .prg_max_size(8192 * KIBIBYTE)
     // Oversize definition. The actual cartridge only uses 64KiB.
     .chr_max_size(1024 * KIBIBYTE)
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     // TODO: Verify if this is necessary. Might only be used for BxROM.
     .override_bank_register(C1, BankIndex::LAST)
     .prg_layout(PrgLayout::new(&[

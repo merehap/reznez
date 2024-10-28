@@ -11,7 +11,6 @@ use crate::memory::ppu::vram::VramSide;
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(1024 * KIBIBYTE)
     .chr_max_size(1024 * KIBIBYTE)
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .override_bank_register(P4, BankIndex::LAST)
     .prg_layout(PrgLayout::new(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_ram(P0)),

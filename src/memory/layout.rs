@@ -73,7 +73,7 @@ pub struct LayoutBuilder {
     chr_layout_index: usize,
     align_large_chr_layout: bool,
 
-    name_table_mirroring_source: Option<NameTableMirroringSource>,
+    name_table_mirroring_source: NameTableMirroringSource,
     bank_register_override: Option<(BankRegisterId, BankIndex)>,
     meta_register_override: (MetaRegisterId, BankRegisterId),
     // Can't clone a map in a const context, so each override must be a separate field.
@@ -92,7 +92,7 @@ impl LayoutBuilder {
             chr_layout_index: 0,
             align_large_chr_layout: true,
 
-            name_table_mirroring_source: None,
+            name_table_mirroring_source: NameTableMirroringSource::Cartridge,
             bank_register_override: None,
             meta_register_override: (MetaRegisterId::M0, BankRegisterId::C0),
             second_meta_register_override: (MetaRegisterId::M1, BankRegisterId::C0),
@@ -134,11 +134,11 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn name_table_mirroring_source(
+    pub const fn override_initial_name_table_mirroring(
         &mut self,
-        value: NameTableMirroringSource,
+        value: NameTableMirroring,
     ) -> &mut LayoutBuilder {
-        self.name_table_mirroring_source = Some(value);
+        self.name_table_mirroring_source = NameTableMirroringSource::Direct(value);
         self
     }
 
@@ -183,7 +183,7 @@ impl LayoutBuilder {
             chr_layout_index: self.chr_layout_index,
             align_large_chr_layout: self.align_large_chr_layout,
 
-            name_table_mirroring_source: self.name_table_mirroring_source.unwrap(),
+            name_table_mirroring_source: self.name_table_mirroring_source,
             bank_register_override: self.bank_register_override,
             meta_register_override: self.meta_register_override,
             second_meta_register_override: self.second_meta_register_override,

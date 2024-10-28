@@ -3,7 +3,6 @@ use crate::memory::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(128 * KIBIBYTE)
     .chr_max_size(128 * KIBIBYTE)
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .prg_layout(PRG_LAYOUT)
     .chr_layout(CHR_LAYOUT)
     .build();

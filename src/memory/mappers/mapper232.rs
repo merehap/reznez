@@ -3,7 +3,6 @@ use crate::memory::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(256 * KIBIBYTE)
     .chr_max_size(8 * KIBIBYTE)
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     // The last bank for any of the mapper 232 PRG "blocks".
     .override_bank_register(P1, BankIndex::from_u8(0b11))
     .prg_layout(PrgLayout::new(&[

@@ -3,7 +3,6 @@ use crate::memory::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(2048 * KIBIBYTE)
     .chr_max_size(256 * KIBIBYTE)
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .override_bank_register(P1, BankIndex::SECOND)
     .prg_layout(PrgLayout::new(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),

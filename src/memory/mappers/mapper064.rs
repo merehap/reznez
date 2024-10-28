@@ -4,7 +4,6 @@ const LAYOUT: Layout = Layout::builder()
     // The wiki says 256KiB, but then doesn't mask down to just 4 banks.
     .prg_max_size(8192 * KIBIBYTE)
     .chr_max_size(256 * KIBIBYTE)
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     .prg_layout(PrgLayout::new(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),

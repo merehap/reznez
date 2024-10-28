@@ -4,7 +4,6 @@ const LAYOUT: Layout = Layout::builder()
     // Oversize definition for BxROM. The actual BNROM cartridge only supports 128KiB.
     .prg_max_size(8192 * KIBIBYTE)
     .chr_max_size(8 * KIBIBYTE)
-    .name_table_mirroring_source(NameTableMirroringSource::Cartridge)
     // TODO: Verify if this is necessary. Might only be used for NINA-001.
     .override_bank_register(C1, BankIndex::LAST)
     .prg_layout(PrgLayout::new(&[

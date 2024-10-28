@@ -4,7 +4,7 @@ const LAYOUT: Layout = Layout::builder()
     // Oversize PRG. On real cartridges, 256KiB is the max.
     .prg_max_size(512 * KIBIBYTE)
     .chr_max_size(8 * KIBIBYTE)
-    .name_table_mirroring_source(NameTableMirroring::OneScreenLeftBank.to_source())
+    .override_initial_name_table_mirroring(NameTableMirroring::OneScreenLeftBank)
     .prg_layout(PrgLayout::new(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
         PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_rom(P0)),
