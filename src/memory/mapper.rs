@@ -1,4 +1,4 @@
-pub use splitbits::{splitbits, splitbits_named, splitbits_then_combine};
+pub use splitbits::{splitbits, splitbits_named, combinebits, splitbits_then_combine};
 
 pub use crate::cartridge::cartridge::Cartridge;
 pub use crate::memory::bank::bank_index::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters, RamStatus};
@@ -8,7 +8,7 @@ pub use crate::memory::bank::bank::{Bank, RamStatusRegisterId};
 pub use crate::memory::bank::bank::RamStatusRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout, PrgWindow};
-pub use crate::memory::layout::{Layout, NameTableMirroringSource};
+pub use crate::memory::layout::Layout;
 pub use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout, ChrWindow};
 pub use crate::memory::ppu::ppu_address::PpuAddress;
 pub use crate::memory::read_result::ReadResult;

@@ -17,7 +17,10 @@ pub struct Layout {
     align_large_chr_layout: bool,
 
     name_table_mirroring_source: NameTableMirroringSource,
+
+    // TODO: Replace these with ConstVecs.
     bank_register_override: Option<(BankRegisterId, BankIndex)>,
+    second_bank_register_override: Option<(BankRegisterId, BankIndex)>,
     meta_register_override: (MetaRegisterId, BankRegisterId),
     second_meta_register_override: (MetaRegisterId, BankRegisterId),
 }
@@ -50,6 +53,10 @@ impl Layout {
             bank_registers.set(register_id, bank_index);
         }
 
+        if let Some((register_id, bank_index)) = self.second_bank_register_override {
+            bank_registers.set(register_id, bank_index);
+        }
+
         bank_registers.set_meta(self.meta_register_override.0, self.meta_register_override.1);
         bank_registers.set_meta(self.second_meta_register_override.0, self.second_meta_register_override.1);
 
@@ -75,6 +82,7 @@ pub struct LayoutBuilder {
 
     name_table_mirroring_source: NameTableMirroringSource,
     bank_register_override: Option<(BankRegisterId, BankIndex)>,
+    second_bank_register_override: Option<(BankRegisterId, BankIndex)>,
     meta_register_override: (MetaRegisterId, BankRegisterId),
     // Can't clone a map in a const context, so each override must be a separate field.
     second_meta_register_override: (MetaRegisterId, BankRegisterId),
@@ -94,6 +102,7 @@ impl LayoutBuilder {
 
             name_table_mirroring_source: NameTableMirroringSource::Cartridge,
             bank_register_override: None,
+            second_bank_register_override: None,
             meta_register_override: (MetaRegisterId::M0, BankRegisterId::C0),
             second_meta_register_override: (MetaRegisterId::M1, BankRegisterId::C0),
         }
@@ -151,6 +160,15 @@ impl LayoutBuilder {
         self
     }
 
+    pub const fn override_second_bank_register(
+        &mut self,
+        id: BankRegisterId,
+        bank_index: BankIndex,
+    ) -> &mut LayoutBuilder {
+        self.second_bank_register_override = Some((id, bank_index));
+        self
+    }
+
     pub const fn override_meta_register(
         &mut self,
         meta_id: MetaRegisterId,
@@ -184,7 +202,9 @@ impl LayoutBuilder {
             align_large_chr_layout: self.align_large_chr_layout,
 
             name_table_mirroring_source: self.name_table_mirroring_source,
+
             bank_register_override: self.bank_register_override,
+            second_bank_register_override: self.second_bank_register_override,
             meta_register_override: self.meta_register_override,
             second_meta_register_override: self.second_meta_register_override,
         }

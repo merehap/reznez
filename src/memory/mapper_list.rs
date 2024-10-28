@@ -104,6 +104,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // NES CPROM
         13 => m::mapper013::Mapper013.supported(),
 
+        // K-1029 and K-1030P
+        15 => m::mapper015::Mapper015.supported(),
+
         16 => match submapper_number {
             0 => UnspecifiedSubmapper,
             1 => ReassignedSubmapper { correct_mapper: 159, correct_submapper: 0 },
