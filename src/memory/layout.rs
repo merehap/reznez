@@ -6,6 +6,7 @@ use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::memory::bank::bank_index::{BankIndex, BankRegisters, MetaRegisterId, BankRegisterId};
 use crate::util::const_vec::ConstVec;
 
+#[derive(Clone)]
 pub struct Layout {
     prg_max_size: u32,
     prg_layouts: ConstVec<PrgLayout, 10>,

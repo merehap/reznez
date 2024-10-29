@@ -186,6 +186,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // Duplicate of 241.
         39 => m::mapper039::Mapper039::new().supported(),
 
+        // FDS games hacked into cartridge form
+        42 => m::mapper042::Mapper042::new(cartridge.chr_ram_size()).supported(),
+
         // Rumble Station
         46 => m::mapper046::Mapper046::new().supported(),
 
