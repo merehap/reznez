@@ -8,7 +8,7 @@ const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
 
 pub struct PrgMemory {
     layouts: Vec<PrgLayout>,
-    layout_index: usize,
+    layout_index: u8,
     bank_size: u32,
     bank_count: u16,
     raw_memory: RawMemory,
@@ -18,7 +18,7 @@ pub struct PrgMemory {
 impl PrgMemory {
     pub fn new(
         layouts: Vec<PrgLayout>,
-        layout_index: usize,
+        layout_index: u8,
         raw_memory: RawMemory,
     ) -> PrgMemory {
 
@@ -150,8 +150,8 @@ impl PrgMemory {
         self.window_with_index_at(start).0
     }
 
-    pub fn set_layout(&mut self, index: usize) {
-        assert!(index < self.layouts.len());
+    pub fn set_layout(&mut self, index: u8) {
+        assert!(usize::from(index) < self.layouts.len());
         self.layout_index = index;
         // TODO: Apply this at startup.
         //self.layouts[layout_index].validate_bank_size_multiples(self.bank_size);
@@ -258,7 +258,7 @@ impl PrgMemory {
     }
 
     fn current_layout(&self) -> &PrgLayout {
-        &self.layouts[self.layout_index]
+        &self.layouts[usize::from(self.layout_index)]
     }
 }
 

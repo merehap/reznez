@@ -68,9 +68,9 @@ impl Mapper for Mapper001_0 {
                 0x4020..=0x5FFF => { /* Do nothing. */ }
                 0x6000..=0x7FFF => unreachable!(),
                 0x8000..=0x9FFF => {
-                    let fields = splitbits!(finished_value, "...cppmm");
-                    params.set_chr_layout(fields.c as usize);
-                    params.set_prg_layout(fields.p as usize);
+                    let fields = splitbits!(min=u8, finished_value, "...cppmm");
+                    params.set_chr_layout(fields.c);
+                    params.set_prg_layout(fields.p);
                     params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
                 }
                 // FIXME: Handle cases for special boards.

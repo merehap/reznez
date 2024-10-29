@@ -206,7 +206,7 @@ impl Mapper for Mapper005 {
             0x5012..=0x5014 => { /* Do nothing. */ }
             0x5015 => Mapper005::write_apu_status(value),
             0x5016..=0x50FF => { /* Do nothing. */ }
-            0x5100 => params.set_prg_layout(usize::from(value & 0b0000_0011)),
+            0x5100 => params.set_prg_layout(value & 0b0000_0011),
             0x5101 => self.set_chr_banking_mode(params, value),
             0x5102 => self.prg_ram_protect_1(params, value),
             0x5103 => self.prg_ram_protect_2(params, value),

@@ -8,7 +8,7 @@ use crate::util::unit::KIBIBYTE;
 
 pub struct ChrMemory {
     layouts: Vec<ChrLayout>,
-    layout_index: usize,
+    layout_index: u8,
     bank_size: u32,
     align_large_chr_layouts: bool,
     override_write_protection: bool,
@@ -18,7 +18,7 @@ pub struct ChrMemory {
 impl ChrMemory {
     pub fn new(
         layouts: Vec<ChrLayout>,
-        layout_index: usize,
+        layout_index: u8,
         align_large_chr_layouts: bool,
         mut raw_memory: RawMemory,
     ) -> ChrMemory {
@@ -103,11 +103,13 @@ impl ChrMemory {
         panic!("No window exists at {start:X?}");
     }
 
-    pub fn set_layout(&mut self, index: usize) {
-        assert!(index < self.layouts.len());
+    pub fn current_layout(&self) -> &ChrLayout {
+        &self.layouts[self.layout_index as usize]
+    }
+
+    pub fn set_layout(&mut self, index: u8) {
+        assert!(usize::from(index) < self.layouts.len());
         self.layout_index = index;
-        // TODO: Do this at startup.
-        //layouts.validate_bank_size_multiples(self.bank_size);
     }
 
     pub fn pattern_table(&self, registers: &BankRegisters, side: PatternTableSide) -> PatternTable {
@@ -120,7 +122,7 @@ impl ChrMemory {
     fn address_to_chr_index(&self, registers: &BankRegisters, address: u16) -> (u32, bool) {
         assert!(address < 0x2000);
 
-        for window in self.layouts[self.layout_index].0 {
+        for window in self.current_layout().0 {
             if let Some(bank_offset) = window.offset(address) {
                 let mut raw_bank_index = window.bank_index(registers).to_u32(self.bank_count());
                 if self.align_large_chr_layouts {
@@ -136,10 +138,6 @@ impl ChrMemory {
         }
 
         unreachable!();
-    }
-
-    fn current_layout(&self) -> &ChrLayout {
-        &self.layouts[self.layout_index]
     }
 
     #[inline]

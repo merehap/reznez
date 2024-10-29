@@ -456,7 +456,7 @@ impl MapperParams {
         &self.prg_memory
     }
 
-    pub fn set_prg_layout(&mut self, index: usize) {
+    pub fn set_prg_layout(&mut self, index: u8) {
         self.prg_memory.set_layout(index);
     }
 
@@ -488,7 +488,7 @@ impl MapperParams {
         self.chr_memory.pattern_table(&self.bank_registers, side)
     }
 
-    pub fn set_chr_layout(&mut self, index: usize) {
+    pub fn set_chr_layout(&mut self, index: u8) {
         self.chr_memory.set_layout(index);
     }
 

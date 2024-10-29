@@ -10,11 +10,11 @@ use crate::util::const_vec::ConstVec;
 pub struct Layout {
     prg_max_size: u32,
     prg_layouts: ConstVec<PrgLayout, 10>,
-    prg_layout_index: usize,
+    prg_layout_index: u8,
 
     chr_max_size: u32,
     chr_layouts: ConstVec<ChrLayout, 10>,
-    chr_layout_index: usize,
+    chr_layout_index: u8,
     align_large_chr_layout: bool,
 
     name_table_mirroring_source: NameTableMirroringSource,
@@ -74,11 +74,11 @@ impl Layout {
 pub struct LayoutBuilder {
     prg_max_size: Option<u32>,
     prg_layouts: ConstVec<PrgLayout, 10>,
-    prg_layout_index: usize,
+    prg_layout_index: u8,
 
     chr_max_size: Option<u32>,
     chr_layouts: ConstVec<ChrLayout, 10>,
-    chr_layout_index: usize,
+    chr_layout_index: u8,
     align_large_chr_layout: bool,
 
     name_table_mirroring_source: NameTableMirroringSource,
@@ -119,7 +119,7 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn prg_layout_index(&mut self, value: usize) -> &mut LayoutBuilder {
+    pub const fn prg_layout_index(&mut self, value: u8) -> &mut LayoutBuilder {
         self.prg_layout_index = value;
         self
     }
@@ -134,7 +134,7 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn chr_layout_index(&mut self, value: usize) -> &mut LayoutBuilder {
+    pub const fn chr_layout_index(&mut self, value: u8) -> &mut LayoutBuilder {
         self.chr_layout_index = value;
         self
     }

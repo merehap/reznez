@@ -37,7 +37,6 @@ const MIRRORINGS: [NameTableMirroring; 4] = [
     NameTableMirroring::Vertical,
     NameTableMirroring::Horizontal,
     NameTableMirroring::OneScreenLeftBank,
-    // Repeated.
     NameTableMirroring::OneScreenLeftBank,
 ];
 
@@ -59,11 +58,11 @@ impl Mapper for Mapper065 {
             0x8000 => params.set_bank_register(P0, value),
             0xA000 => params.set_bank_register(P1, value),
             0xB000..=0xB007 => {
-                let reg_id = CHR_REGISTER_IDS[(cpu_address.to_raw() - 0xB000) as usize];
+                let reg_id = CHR_REGISTER_IDS[usize::from(cpu_address.to_raw() - 0xB000)];
                 params.set_bank_register(reg_id, value);
             }
-            0x9000 => params.set_prg_layout(splitbits_named!(value, "p.......") as usize),
-            0x9001 => params.set_name_table_mirroring(MIRRORINGS[splitbits_named!(value, "mm......") as usize]),
+            0x9000 => params.set_prg_layout(value >> 7),
+            0x9001 => params.set_name_table_mirroring(MIRRORINGS[usize::from(value >> 6)]),
 
             0x9003 => {
                 self.irq_enabled = splitbits_named!(value, "i.......");

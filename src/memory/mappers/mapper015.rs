@@ -58,7 +58,7 @@ impl Mapper for Mapper015 {
                 let mut prg_bank = combinebits!("0pppppp0");
 
                 let mut chr_ram_status = RamStatus::ReadWrite;
-                let prg_layout_index = address.to_usize() & 0b11;
+                let prg_layout_index = (address.to_raw() & 0b11) as u8;
                 match prg_layout_index {
                     // NROM-256 and NROM-128
                     0 | 3 => chr_ram_status = RamStatus::ReadOnly,

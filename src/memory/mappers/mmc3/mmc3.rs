@@ -105,9 +105,9 @@ pub fn bank_select(
     selected_register_id: &mut BankRegisterId,
     value: u8,
 ) {
-    let fields = splitbits!(value, "cp...rrr");
-    params.set_chr_layout(fields.c as usize);
-    params.set_prg_layout(fields.p as usize);
+    let fields = splitbits!(min=u8, value, "cp...rrr");
+    params.set_chr_layout(fields.c);
+    params.set_prg_layout(fields.p);
     *selected_register_id = BANK_INDEX_REGISTER_IDS[fields.r as usize];
 }
 

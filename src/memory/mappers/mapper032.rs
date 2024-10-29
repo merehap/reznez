@@ -44,8 +44,8 @@ impl Mapper for Mapper032 {
             0x0000..=0x401F => unreachable!(),
             0x8000..=0x8007 => params.set_bank_register(P0, value & 0b1_1111),
             0x9000..=0x9007 => {
-                let fields = splitbits!(value, "......pm");
-                params.set_prg_layout(fields.p as usize);
+                let fields = splitbits!(min=u8, value, "......pm");
+                params.set_prg_layout(fields.p);
                 params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
             }
             0xA000..=0xA007 => params.set_bank_register(P1, value & 0b1_1111),
