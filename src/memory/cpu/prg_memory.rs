@@ -150,11 +150,13 @@ impl PrgMemory {
         self.window_with_index_at(start).0
     }
 
+    pub fn current_layout(&self) -> &PrgLayout {
+        &self.layouts[usize::from(self.layout_index)]
+    }
+
     pub fn set_layout(&mut self, index: u8) {
         assert!(usize::from(index) < self.layouts.len());
         self.layout_index = index;
-        // TODO: Apply this at startup.
-        //self.layouts[layout_index].validate_bank_size_multiples(self.bank_size);
     }
 
     // TODO: Indicate if read-only.
@@ -255,10 +257,6 @@ impl PrgMemory {
         }
 
         panic!("No window exists at {start:?}");
-    }
-
-    fn current_layout(&self) -> &PrgLayout {
-        &self.layouts[usize::from(self.layout_index)]
     }
 }
 
