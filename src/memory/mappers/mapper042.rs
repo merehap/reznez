@@ -47,10 +47,8 @@ pub struct Mapper042 {
 impl Mapper for Mapper042 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: CpuAddress, value: u8) {
         match cpu_address.to_raw() & 0xE003 {
-            0x0000..=0x401F => unreachable!(),
-            0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000 => params.set_chr_layout((value & 0b1111).into()),
-            0xE000 => params.set_prg_layout((value & 0b1111).into()),
+            0x8000 => params.set_bank_register(C0, value & 0b1111),
+            0xE000 => params.set_bank_register(P0, value & 0b1111),
             0xE001 => {
                 let mirroring = splitbits_named!(value, "....m...");
                 params.set_name_table_mirroring(MIRRORINGS[mirroring as usize]);
