@@ -9,7 +9,7 @@ use crate::util::unit::KIBIBYTE;
 pub struct ChrMemory {
     layouts: Vec<ChrLayout>,
     layout_index: u8,
-    bank_size: u32,
+    bank_size: u16,
     align_large_chr_layouts: bool,
     override_write_protection: bool,
     raw_memory: RawMemory,
@@ -63,9 +63,17 @@ impl ChrMemory {
 
     #[inline]
     pub fn bank_count(&self) -> u16 {
-        ((self.raw_memory.size() as u32) / self.bank_size)
+        (self.raw_memory.size() / u32::from(self.bank_size))
             .try_into()
             .expect("Way too many CHR banks.")
+    }
+
+    pub fn bank_size(&self) -> u16 {
+        self.bank_size
+    }
+
+    pub fn align_large_layouts(&self) -> bool {
+        self.align_large_chr_layouts
     }
 
     pub fn window_count(&self) -> u8 {
@@ -121,14 +129,14 @@ impl ChrMemory {
 
         for window in self.current_layout().0 {
             if let Some(bank_offset) = window.offset(address) {
-                let mut raw_bank_index = window.bank_index(registers).to_u32(self.bank_count());
-                if self.align_large_chr_layouts {
-                    let window_multiple = window.size() / self.bank_size;
-                    raw_bank_index &= !(window_multiple - 1);
-                }
-
-                let index: u32 = raw_bank_index *
-                    self.bank_size +
+                let raw_bank_index = window.resolved_bank_index(
+                    registers,
+                    self.bank_size,
+                    self.bank_count(),
+                    self.align_large_chr_layouts,
+                );
+                let index = u32::from(raw_bank_index) *
+                    u32::from(self.bank_size) +
                     u32::from(bank_offset);
                 return (index, window.is_writable(registers));
             }
@@ -192,6 +200,10 @@ impl ChrLayout {
         ChrLayout(windows)
     }
 
+    pub fn windows(&self) -> &[ChrWindow] {
+        self.0
+    }
+
     pub fn active_register_ids(&self) -> Vec<BankRegisterId> {
         self.0.iter()
             .filter_map(|window| window.register_id())
@@ -221,8 +233,42 @@ impl ChrWindow {
         }
     }
 
-    const fn size(self) -> u32 {
-        (self.end.to_u16() - self.start.to_u16() + 1) as u32
+    pub fn bank_string(
+        &self,
+        registers: &BankRegisters,
+        bank_size: u16,
+        bank_count: u16,
+        align_large_layouts: bool,
+    ) -> String {
+        match self.bank {
+            Bank::Empty => "E".into(),
+            Bank::WorkRam(_) => "W".into(),
+            Bank::Rom(_) | Bank::Ram(_, _) =>
+                self.resolved_bank_index(registers, bank_size, bank_count, align_large_layouts).to_string(),
+            Bank::MirrorOf(_) => "M".into(),
+        }
+    }
+
+    fn resolved_bank_index(
+        &self,
+        registers: &BankRegisters,
+        bank_size: u16,
+        bank_count: u16,
+        align_large_layouts: bool,
+    ) -> u16 {
+        let stored_bank_index = self.bank_index(registers);
+
+        let mut resolved_bank_index = stored_bank_index.to_u16(bank_count);
+        if align_large_layouts {
+            let window_multiple = self.size() / bank_size;
+            resolved_bank_index &= !(window_multiple - 1);
+        }
+
+        resolved_bank_index
+    }
+
+    pub const fn size(self) -> u16  {
+        self.end.to_u16() - self.start.to_u16() + 1
     }
 
     fn offset(self, address: u16) -> Option<u16> {
@@ -241,7 +287,8 @@ impl ChrWindow {
                 registers.get(id),
             Bank::Rom(Location::MetaSwitchable(meta_id)) | Bank::Ram(Location::MetaSwitchable(meta_id), _) =>
                 registers.get_from_meta(meta_id),
-            Bank::Empty | Bank::WorkRam(_) | Bank::MirrorOf(_) => unreachable!(),
+            Bank::Empty | Bank::WorkRam(_) | Bank::MirrorOf(_) =>
+                panic!("Bank type {:?} is not allowed for CHR Windows.", self.bank),
         }
     }
 
