@@ -127,7 +127,7 @@ impl ChrMemory {
                 let mut raw_bank_index = window.bank_index(registers).to_u32(self.bank_count());
                 if self.align_large_chr_layouts {
                     let window_multiple = window.size() / self.bank_size;
-                    raw_bank_index &= !(window_multiple >> 1);
+                    raw_bank_index &= !(window_multiple - 1);
                 }
 
                 let index: u32 = raw_bank_index *

@@ -185,7 +185,7 @@ impl PrgMemory {
                         let mut raw_bank_index = bank_index.to_u32(self.bank_count());
                         let window_multiple = window.size() / self.bank_size;
                         // Clear low bits for large windows.
-                        raw_bank_index &= !(window_multiple >> 1);
+                        raw_bank_index &= !(window_multiple - 1);
                         let index = raw_bank_index * self.bank_size + bank_offset as u32;
                         PrgMemoryIndex::MappedMemory { index, ram_status: RamStatus::ReadOnly }
                     }
@@ -197,7 +197,7 @@ impl PrgMemory {
                         let mut raw_bank_index = bank_index.to_u32(self.bank_count());
                         let window_multiple = window.size() / self.bank_size;
                         // Clear low bits for large windows.
-                        raw_bank_index &= !(window_multiple >> 1);
+                        raw_bank_index &= !(window_multiple - 1);
                         let index = raw_bank_index * self.bank_size + bank_offset as u32;
                         PrgMemoryIndex::MappedMemory { index, ram_status }
                     }
@@ -206,7 +206,7 @@ impl PrgMemory {
                             .to_u32(self.bank_count());
                         let window_multiple = window.size() / self.bank_size;
                         // Clear low bits for large windows.
-                        raw_bank_index &= !(window_multiple >> 1);
+                        raw_bank_index &= !(window_multiple - 1);
                         let index = raw_bank_index * self.bank_size + bank_offset as u32;
                         PrgMemoryIndex::MappedMemory { index, ram_status: RamStatus::ReadOnly }
                     }
@@ -218,7 +218,7 @@ impl PrgMemory {
                             .to_u32(self.bank_count());
                         let window_multiple = window.size() / self.bank_size;
                         // Clear low bits for large windows.
-                        raw_bank_index &= !(window_multiple >> 1);
+                        raw_bank_index &= !(window_multiple - 1);
                         let index = raw_bank_index * self.bank_size + bank_offset as u32;
                         PrgMemoryIndex::MappedMemory { index, ram_status }
                     }
