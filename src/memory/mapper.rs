@@ -346,15 +346,36 @@ pub trait Mapper {
     }
 
     fn prg_rom_bank_string(&self, params: &MapperParams) -> String {
-        let indexes = params.resolve_prg_bank_indexes();
-        let mut bank_text = indexes[0].to_string();
-        for index in indexes.iter().skip(1) {
-            bank_text.push_str(&format!(", {index}"));
+        let prg_memory = &params.prg_memory();
+
+        let mut result = String::new();
+        for window in prg_memory.current_layout().windows() {
+            let bank_string = window.bank_string(
+                &params.bank_registers,
+                prg_memory.bank_size(),
+                prg_memory.bank_count(),
+            );
+            let window_size = window.size() / KIBIBYTE as u16;
+
+            let left_padding_len;
+            let right_padding_len;
+            if window_size < 8 {
+                left_padding_len = 0;
+                right_padding_len = 0;
+            } else {
+                let padding_size = window_size - 2 - u16::try_from(bank_string.len()).unwrap();
+                left_padding_len = padding_size / 2;
+                right_padding_len = padding_size - left_padding_len;
+            }
+
+            let left_padding = " ".repeat(left_padding_len as usize);
+            let right_padding = " ".repeat(right_padding_len as usize);
+
+            let segment = format!("|{left_padding}{bank_string}{right_padding}|");
+            result.push_str(&segment);
         }
 
-        bank_text.push_str(&format!(" ({} banks total)", params.prg_memory().bank_count()));
-
-        bank_text
+        result
     }
 
     fn chr_rom_bank_string(&self, params: &MapperParams) -> String {

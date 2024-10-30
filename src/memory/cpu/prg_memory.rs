@@ -9,7 +9,7 @@ const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
 pub struct PrgMemory {
     layouts: Vec<PrgLayout>,
     layout_index: u8,
-    bank_size: u32,
+    bank_size: u16,
     bank_count: u16,
     raw_memory: RawMemory,
     work_ram_sections: Vec<WorkRam>,
@@ -37,16 +37,12 @@ impl PrgMemory {
 
         let bank_size = bank_size.expect("at least one ROM or RAM window");
 
-        for layout in &layouts {
-            layout.validate_bank_size_multiples(bank_size);
-        }
-
         let bank_count;
-        if raw_memory.size() as u32 % bank_size == 0 {
-            bank_count = (raw_memory.size() as u32 / bank_size)
+        if raw_memory.size() % u32::from(bank_size) == 0 {
+            bank_count = (raw_memory.size() / u32::from(bank_size))
                 .try_into()
                 .expect("Way too many banks.");
-        } else if !raw_memory.is_empty() && bank_size % raw_memory.size() as u32 == 0 {
+        } else if !raw_memory.is_empty() && u32::from(bank_size) % raw_memory.size() == 0 {
             bank_count = 1;
         } else {
             panic!("Bad PRG length: {} . Bank size: {} .", raw_memory.size(), bank_size);
@@ -78,6 +74,10 @@ impl PrgMemory {
         //assert_eq!(bank_count & (bank_count - 1), 0);
 
         prg_memory
+    }
+
+    pub fn bank_size(&self) -> u16 {
+        self.bank_size
     }
 
     pub fn bank_count(&self) -> u16 {
@@ -180,50 +180,21 @@ impl PrgMemory {
                 let prg_memory_index = match window.prg_bank {
                     Bank::Empty => PrgMemoryIndex::None,
                     Bank::MirrorOf(_) => panic!("A mirrored bank must mirror a non-mirrored bank."),
-                    Bank::Rom(Location::Fixed(bank_index)) => {
-                        // TODO: Consolidate Fixed and Switchable logic.
-                        let mut raw_bank_index = bank_index.to_u32(self.bank_count());
-                        let window_multiple = window.size() / self.bank_size;
-                        // Clear low bits for large windows.
-                        raw_bank_index &= !(window_multiple - 1);
-                        let index = raw_bank_index * self.bank_size + bank_offset as u32;
+                    Bank::Rom(location) => {
+                        let resolved_bank_index =
+                            window.resolved_bank_index(registers, location, self.bank_size, self.bank_count());
+                        let index = resolved_bank_index as u32 * self.bank_size as u32 + bank_offset as u32;
                         PrgMemoryIndex::MappedMemory { index, ram_status: RamStatus::ReadOnly }
                     }
-                    Bank::Ram(Location::Fixed(bank_index), status_register_id) => {
+                    Bank::Ram(location, status_register_id) => {
+                        let resolved_bank_index =
+                            window.resolved_bank_index(registers, location, self.bank_size, self.bank_count());
+                        let index = resolved_bank_index as u32 * self.bank_size as u32 + bank_offset as u32;
+
                         let ram_status: RamStatus = status_register_id
                             .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
-
-                        // TODO: Consolidate Fixed and Switchable logic.
-                        let mut raw_bank_index = bank_index.to_u32(self.bank_count());
-                        let window_multiple = window.size() / self.bank_size;
-                        // Clear low bits for large windows.
-                        raw_bank_index &= !(window_multiple - 1);
-                        let index = raw_bank_index * self.bank_size + bank_offset as u32;
                         PrgMemoryIndex::MappedMemory { index, ram_status }
                     }
-                    Bank::Rom(Location::Switchable(register_id)) => {
-                        let mut raw_bank_index = registers.get(register_id)
-                            .to_u32(self.bank_count());
-                        let window_multiple = window.size() / self.bank_size;
-                        // Clear low bits for large windows.
-                        raw_bank_index &= !(window_multiple - 1);
-                        let index = raw_bank_index * self.bank_size + bank_offset as u32;
-                        PrgMemoryIndex::MappedMemory { index, ram_status: RamStatus::ReadOnly }
-                    }
-                    Bank::Ram(Location::Switchable(register_id), status_register_id) => {
-                        let ram_status: RamStatus = status_register_id
-                            .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
-
-                        let mut raw_bank_index = registers.get(register_id)
-                            .to_u32(self.bank_count());
-                        let window_multiple = window.size() / self.bank_size;
-                        // Clear low bits for large windows.
-                        raw_bank_index &= !(window_multiple - 1);
-                        let index = raw_bank_index * self.bank_size + bank_offset as u32;
-                        PrgMemoryIndex::MappedMemory { index, ram_status }
-                    }
-                    Bank::Rom(_) => todo!("Meta registers"),
-                    Bank::Ram(_, _) => todo!("Meta registers"),
                     Bank::WorkRam(status_register_id) => {
                         let ram_status: RamStatus = status_register_id
                             .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
@@ -288,19 +259,6 @@ impl PrgLayout {
         self.0
     }
 
-    const fn validate_bank_size_multiples(&self, bank_size: u32) {
-        let mut i = 0;
-        while i < self.0.len() {
-            let window = self.0[i];
-            if !matches!(window.prg_bank, Bank::WorkRam(_) | Bank::Empty | Bank::MirrorOf(_))
-                && window.size() % bank_size != 0 {
-                panic!("Window size must be a multiple of bank size.");
-            }
-
-            i += 1;
-        }
-    }
-
     pub fn active_register_ids(&self) -> Vec<BankRegisterId> {
         self.0.iter()
             .filter_map(|window| window.register_id())
@@ -324,22 +282,6 @@ pub struct PrgWindow {
 }
 
 impl PrgWindow {
-    fn bank_index(self, registers: &BankRegisters) -> Option<BankIndex> {
-        self.prg_bank.bank_index(registers)
-    }
-
-    const fn size(self) -> u32 {
-        (self.end.to_raw() - self.start.to_raw() + 1) as u32
-    }
-
-    fn register_id(self) -> Option<BankRegisterId> {
-        if let Bank::Rom(Location::Switchable(id)) | Bank::Ram(Location::Switchable(id), _) = self.prg_bank {
-            Some(id)
-        } else {
-            None
-        }
-    }
-
     pub const fn new(start: u16, end: u16, size: u32, prg_bank: Bank) -> PrgWindow {
         assert!(end > start);
         assert!(end as u32 - start as u32 + 1 == size);
@@ -350,6 +292,53 @@ impl PrgWindow {
             prg_bank,
         }
     }
+
+    pub fn bank_string(&self, registers: &BankRegisters, bank_size: u16, bank_count: u16) -> String {
+        match self.prg_bank {
+            Bank::Empty => "E".into(),
+            Bank::WorkRam(_) => "W".into(),
+            Bank::Rom(location) | Bank::Ram(location, _) =>
+                self.resolved_bank_index(registers, location, bank_size, bank_count).to_string(),
+            Bank::MirrorOf(_) => "M".into(),
+        }
+    }
+
+    fn resolved_bank_index(
+        &self,
+        registers: &BankRegisters,
+        location: Location,
+        bank_size: u16,
+        bank_count: u16,
+    ) -> u16 {
+        let stored_bank_index = match location {
+            Location::Fixed(bank_index) => bank_index,
+            Location::Switchable(register_id) => registers.get(register_id),
+            Location::MetaSwitchable(_) => todo!("PRG meta-switchable"),
+        };
+
+        let window_multiple = self.size() / bank_size;
+        let mut resolved_bank_index = stored_bank_index.to_u16(bank_count);
+        // Clear low bits for large windows.
+        resolved_bank_index &= !(window_multiple - 1);
+
+        resolved_bank_index
+    }
+
+    pub const fn size(self) -> u16 {
+        self.end.to_raw() - self.start.to_raw() + 1
+    }
+
+    fn bank_index(self, registers: &BankRegisters) -> Option<BankIndex> {
+        self.prg_bank.bank_index(registers)
+    }
+
+    fn register_id(self) -> Option<BankRegisterId> {
+        if let Bank::Rom(Location::Switchable(id)) | Bank::Ram(Location::Switchable(id), _) = self.prg_bank {
+            Some(id)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -358,7 +347,7 @@ struct WorkRam {
 }
 
 impl WorkRam {
-    fn new(size: u32) -> WorkRam {
+    fn new(size: u16) -> WorkRam {
         WorkRam {
             data: vec![0; size as usize],
         }

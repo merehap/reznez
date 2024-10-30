@@ -50,13 +50,10 @@ impl Bank {
     }
 
     pub fn bank_index(self, registers: &BankRegisters) -> Option<BankIndex> {
-        use Bank::*;
-        use Location::*;
-        match self {
-            Rom(Fixed(bank_index)) | Ram(Fixed(bank_index), _) => Some(bank_index),
-            Rom(Switchable(register_id)) | Ram(Switchable(register_id), _) => Some(registers.get(register_id)),
-            Rom(MetaSwitchable(_)) | Ram(MetaSwitchable(_), _) => todo!(),
-            Empty | WorkRam(_) | MirrorOf(_) => None,
+        if let Bank::Rom(location) | Bank::Ram(location, _) = self {
+            Some(location.bank_index(registers))
+        } else {
+            None
         }
     }
 
@@ -78,6 +75,16 @@ pub enum Location {
     Fixed(BankIndex),
     Switchable(BankRegisterId),
     MetaSwitchable(MetaRegisterId),
+}
+
+impl Location {
+    pub fn bank_index(self, registers: &BankRegisters) -> BankIndex {
+        match self {
+            Self::Fixed(bank_index) => bank_index,
+            Self::Switchable(register_id) => registers.get(register_id),
+            Self::MetaSwitchable(_) => todo!(),
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

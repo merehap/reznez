@@ -36,9 +36,6 @@ impl ChrMemory {
         }
 
         let bank_size = bank_size.expect("at least one ROM or RAM window");
-        for layout in &layouts {
-            layout.validate_bank_size_multiples(bank_size);
-        }
 
         // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only layouts.
         let mut override_write_protection = false;
@@ -199,15 +196,6 @@ impl ChrLayout {
         self.0.iter()
             .filter_map(|window| window.register_id())
             .collect()
-    }
-
-    const fn validate_bank_size_multiples(&self, bank_size: u32) {
-        let mut i = 0;
-        while i < self.0.len() {
-            let window = self.0[i];
-            assert!(window.size() % bank_size == 0, "Window size must be a multiple of bank size.");
-            i += 1;
-        }
     }
 }
 
