@@ -5,17 +5,17 @@ const LAYOUT: Layout = Layout::builder()
     .prg_max_size(32 * KIBIBYTE)
     .chr_max_size(64 * KIBIBYTE)
     .override_initial_name_table_mirroring(NameTableMirroring::OneScreenRightBank)
-    .prg_layout(PrgLayout::new(&[
+    .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
         PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
-    ]))
-    .chr_layout(ChrLayout::new(&[
+    ])
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::switchable_rom(C0)),
-    ]))
-    .chr_layout(ChrLayout::new(&[
+    ])
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_rom(C0)),
         ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_rom(C1)),
-    ]))
+    ])
     .build();
 
 const MIRRORINGS: [NameTableMirroring; 4] =
@@ -42,7 +42,6 @@ impl Mapper for Mapper001_5 {
         // Work RAM writes don't trigger any of the shifter logic.
         if matches!(address.to_raw(), 0x6000..=0x7FFF) {
             params.write_prg(address, value);
-
             return;
         }
 

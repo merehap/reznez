@@ -3,26 +3,26 @@ use crate::memory::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(128 * KIBIBYTE)
     .chr_max_size(128 * KIBIBYTE)
-    .prg_layout(PRG_LAYOUT)
-    .chr_layout(CHR_LAYOUT)
+    .prg_layout(PRG_WINDOWS)
+    .chr_layout(CHR_WINDOWS)
     .build();
 
-pub const PRG_LAYOUT: PrgLayout = PrgLayout::new(&[
+pub const PRG_WINDOWS: &'static [PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
     PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-]);
+];
 
-pub const CHR_LAYOUT: ChrLayout = ChrLayout::new(&[
+pub const CHR_WINDOWS: &'static [ChrWindow] = &[
     ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::switchable_rom(C0)),
     ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::switchable_rom(C1)),
     ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
     ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
     ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
-]);
+];
 
 const BANK_INDEX_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, P0, P1];
 

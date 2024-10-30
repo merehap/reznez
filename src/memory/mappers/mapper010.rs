@@ -5,15 +5,15 @@ const LAYOUT: Layout = Layout::builder()
     .chr_max_size(128 * KIBIBYTE)
     .override_meta_register(M0, C1)
     .override_second_meta_register(M1, C3)
-    .prg_layout(PrgLayout::new(&[
+    .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
         PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_rom(P0)),
         PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-    ]))
-    .chr_layout(ChrLayout::new(&[
+    ])
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::meta_switchable_rom(M0)),
         ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::meta_switchable_rom(M1)),
-    ]))
+    ])
     .build();
 
 const MIRRORINGS: [NameTableMirroring; 2] = [

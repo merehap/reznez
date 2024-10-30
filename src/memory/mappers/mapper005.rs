@@ -12,44 +12,44 @@ const LAYOUT: Layout = Layout::builder()
     .prg_max_size(1024 * KIBIBYTE)
     .chr_max_size(1024 * KIBIBYTE)
     .override_bank_register(P4, BankIndex::LAST)
-    .prg_layout(PrgLayout::new(&[
+    .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_ram(P0)),
         PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_rom(P4)),
-    ]))
-    .prg_layout(PrgLayout::new(&[
+    ])
+    .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_ram(P0)),
         PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_ram(P2).status_register(S0)),
         PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::switchable_rom(P4)),
-    ]))
-    .prg_layout(PrgLayout::new(&[
+    ])
+    .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_ram(P0)),
         PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_ram(P2).status_register(S0)),
         PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::switchable_ram(P3).status_register(S0)),
         PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Bank::switchable_rom(P4)),
-    ]))
-    .prg_layout(PrgLayout::new(&[
+    ])
+    .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_ram(P0)),
         PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, Bank::switchable_ram(P1).status_register(S0)),
         PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, Bank::switchable_ram(P2).status_register(S0)),
         PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::switchable_ram(P3).status_register(S0)),
         PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Bank::switchable_rom(P4)),
-    ]))
+    ])
     .prg_layout_index(3)
     // Normal sprite height layouts
-    .chr_layout(ChrLayout::new(&[
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::switchable_rom(C7)),
-    ]))
-    .chr_layout(ChrLayout::new(&[
+    ])
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_rom(C3)),
         ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_rom(C7)),
-    ]))
-    .chr_layout(ChrLayout::new(&[
+    ])
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::switchable_rom(C1)),
         ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::switchable_rom(C3)),
         ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::switchable_rom(C5)),
         ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::switchable_rom(C7)),
-    ]))
-    .chr_layout(ChrLayout::new(&[
+    ])
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C0)),
         ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C1)),
         ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
@@ -58,23 +58,23 @@ const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
         ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C6)),
         ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C7)),
-    ]))
+    ])
 
     // Tall sprite height layouts
-    .chr_layout(ChrLayout::new(&[
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::switchable_rom(C11)),
-    ]))
-    .chr_layout(ChrLayout::new(&[
+    ])
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_rom(C11)),
         ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_rom(C11)),
-    ]))
-    .chr_layout(ChrLayout::new(&[
+    ])
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::switchable_rom(C9)),
         ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::switchable_rom(C11)),
         ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::switchable_rom(C9)),
         ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::switchable_rom(C11)),
-    ]))
-    .chr_layout(ChrLayout::new(&[
+    ])
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C8)),
         ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C9)),
         ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::switchable_rom(C10)),
@@ -83,13 +83,13 @@ const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C9)),
         ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C10)),
         ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C11)),
-    ]))
+    ])
 
     // Extended attributes layout
-    .chr_layout(ChrLayout::new(&[
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_rom(C12)),
         ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_rom(C12)),
-    ]))
+    ])
     .do_not_align_large_chr_layout()
     .build();
 

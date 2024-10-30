@@ -3,13 +3,13 @@ use crate::memory::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(1024 * KIBIBYTE)
     .chr_max_size(1024 * KIBIBYTE)
-    .prg_layout(PrgLayout::new(&[
+    .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
         PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_rom(P0)),
-    ]))
-    .chr_layout(ChrLayout::new(&[
+    ])
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::switchable_rom(C0)),
-    ]))
+    ])
     .build();
 
 // Rumble Station (Color Dreams).

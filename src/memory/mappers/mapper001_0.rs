@@ -5,35 +5,35 @@ const LAYOUT: Layout = Layout::builder()
     .prg_max_size(256 * KIBIBYTE)
     .chr_max_size(128 * KIBIBYTE)
     .override_initial_name_table_mirroring(NameTableMirroring::OneScreenRightBank)
-    .prg_layout(PRG_LAYOUT_ONE_BIG)
-    .prg_layout(PRG_LAYOUT_ONE_BIG)
-    .prg_layout(PRG_LAYOUT_FIXED_FIRST)
-    .prg_layout(PRG_LAYOUT_FIXED_LAST)
+    .prg_layout(PRG_WINDOWS_ONE_BIG)
+    .prg_layout(PRG_WINDOWS_ONE_BIG)
+    .prg_layout(PRG_WINDOWS_FIXED_FIRST)
+    .prg_layout(PRG_WINDOWS_FIXED_LAST)
     .prg_layout_index(3)
     // TODO: Not all boards support CHR RAM.
-    .chr_layout(ChrLayout::new(&[
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::switchable_ram(C0)),
-    ]))
-    .chr_layout(ChrLayout::new(&[
+    ])
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_ram(C0)),
         ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_ram(C1)),
-    ]))
+    ])
     .build();
 
-const PRG_LAYOUT_ONE_BIG: PrgLayout = PrgLayout::new(&[
+const PRG_WINDOWS_ONE_BIG: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_rom(P0)),
-]);
-const PRG_LAYOUT_FIXED_FIRST: PrgLayout = PrgLayout::new(&[
+];
+const PRG_WINDOWS_FIXED_FIRST: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
     PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::switchable_rom(P0)),
-]);
-const PRG_LAYOUT_FIXED_LAST: PrgLayout = PrgLayout::new(&[
+];
+const PRG_WINDOWS_FIXED_LAST: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_rom(P0)),
     PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-]);
+];
 
 const MIRRORINGS: [NameTableMirroring; 4] = [
     NameTableMirroring::OneScreenRightBank,

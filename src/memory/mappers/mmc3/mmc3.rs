@@ -4,29 +4,29 @@ use crate::memory::mappers::mmc3::irq_state::IrqState;
 pub const LAYOUT: Layout = Layout::builder()
     .prg_max_size(512 * KIBIBYTE)
     .chr_max_size(256 * KIBIBYTE)
-    .prg_layout(PRG_LAYOUT_8000_SWITCHABLE)
-    .prg_layout(PRG_LAYOUT_C000_SWITCHABLE)
+    .prg_layout(PRG_WINDOWS_8000_SWITCHABLE)
+    .prg_layout(PRG_WINDOWS_C000_SWITCHABLE)
     .chr_layout(CHR_BIG_WINDOWS_FIRST)
     .chr_layout(CHR_SMALL_WINDOWS_FIRST)
     .build();
 
-pub const PRG_LAYOUT_8000_SWITCHABLE: PrgLayout = PrgLayout::new(&[
+pub const PRG_WINDOWS_8000_SWITCHABLE: &'static [PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
     PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-]);
+];
 
-pub const PRG_LAYOUT_C000_SWITCHABLE: PrgLayout = PrgLayout::new(&[
+pub const PRG_WINDOWS_C000_SWITCHABLE: &'static [PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
     PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-]);
+];
 
-pub const CHR_BIG_WINDOWS_FIRST: ChrLayout = ChrLayout::new(&[
+pub const CHR_BIG_WINDOWS_FIRST: &'static [ChrWindow] = &[
     // Big windows.
     ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::switchable_rom(C0)),
     ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::switchable_rom(C1)),
@@ -35,9 +35,9 @@ pub const CHR_BIG_WINDOWS_FIRST: ChrLayout = ChrLayout::new(&[
     ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
     ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
-]);
+];
 
-pub const CHR_SMALL_WINDOWS_FIRST: ChrLayout = ChrLayout::new(&[
+pub const CHR_SMALL_WINDOWS_FIRST: &'static [ChrWindow] = &[
     // Small windows.
     ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
     ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
@@ -46,7 +46,7 @@ pub const CHR_SMALL_WINDOWS_FIRST: ChrLayout = ChrLayout::new(&[
     // Big windows.
     ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::switchable_rom(C0)),
     ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::switchable_rom(C1)),
-]);
+];
 
 
 pub const BANK_INDEX_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, P0, P1];

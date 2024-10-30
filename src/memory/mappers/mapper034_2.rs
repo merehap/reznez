@@ -6,13 +6,13 @@ const LAYOUT: Layout = Layout::builder()
     .chr_max_size(8 * KIBIBYTE)
     // TODO: Verify if this is necessary. Might only be used for NINA-001.
     .override_bank_register(C1, BankIndex::LAST)
-    .prg_layout(PrgLayout::new(&[
+    .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
         PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_rom(P0)),
-    ]))
-    .chr_layout(ChrLayout::new(&[
+    ])
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_ram(BankIndex::FIRST)),
-    ]))
+    ])
     .build();
 
 // BNROM (BxROM): Irem I-IM and NES-BNROM boards

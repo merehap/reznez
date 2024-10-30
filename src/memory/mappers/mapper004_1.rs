@@ -7,7 +7,7 @@ const LAYOUT: Layout = Layout::builder()
     .prg_max_size(512 * KIBIBYTE)
     .chr_max_size(256 * KIBIBYTE)
     // Switchable 0x8000
-    .prg_layout(PrgLayout::new(&[
+    .prg_layout(&[
         PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, Bank::EMPTY),
         PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S0)),
         PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S1)),
@@ -21,9 +21,9 @@ const LAYOUT: Layout = Layout::builder()
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::SECOND_LAST)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-    ]))
+    ])
     // Switchable 0xC000
-    .prg_layout(PrgLayout::new(&[
+    .prg_layout(&[
         PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, Bank::EMPTY),
         PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S0)),
         PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S1)),
@@ -37,7 +37,7 @@ const LAYOUT: Layout = Layout::builder()
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
-    ]))
+    ])
     .chr_layout(mmc3::CHR_BIG_WINDOWS_FIRST)
     .chr_layout(mmc3::CHR_SMALL_WINDOWS_FIRST)
     .build();

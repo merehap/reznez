@@ -5,37 +5,37 @@ const LAYOUT: Layout = Layout::builder()
     .override_second_bank_register(P2, BankIndex::from_u8(0b1110))
     .prg_max_size(1024 * KIBIBYTE)
     // NROM-256
-    .prg_layout(PrgLayout::new(&[
+    .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
         PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_rom(P0)),
         // P1 = P0 | 0b10
         PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::switchable_rom(P1)),
-    ]))
+    ])
     // UNROM
-    .prg_layout(PrgLayout::new(&[
+    .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
         PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_rom(P0)),
         // P2 = P0 | 0b1110
         PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::switchable_rom(P2)),
-    ]))
+    ])
     // NROM-64
-    .prg_layout(PrgLayout::new(&[
+    .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P0)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::mirror_of(0x8000)),
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::mirror_of(0x8000)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::mirror_of(0x8000)),
-    ]))
+    ])
     // NROM-128
-    .prg_layout(PrgLayout::new(&[
+    .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
         PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_rom(P0)),
         PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::mirror_of(0x8000)),
-    ]))
+    ])
     .chr_max_size(8 * KIBIBYTE)
-    .chr_layout(ChrLayout::new(&[
+    .chr_layout(&[
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_ram(BankIndex::FIRST).status_register(S0)),
-    ]))
+    ])
     .build();
 
 const MIRRORINGS: [NameTableMirroring; 2] = [
