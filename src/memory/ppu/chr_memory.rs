@@ -1,7 +1,8 @@
 use crate::memory::bank::bank::Bank;
-use crate::memory::bank::bank_index::{BankRegisters, BankRegisterId};
-use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
+use crate::memory::bank::bank_index::BankRegisters;
+use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
+use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
 use crate::memory::window::Window;
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
@@ -24,7 +25,7 @@ impl ChrMemory {
     ) -> ChrMemory {
         let mut bank_size = None;
         for layout in &layouts {
-            for window in layout.0 {
+            for window in layout.windows() {
                 if matches!(window.bank(), Bank::Rom(..) | Bank::Ram(..)) {
                     if let Some(size) = bank_size {
                         bank_size = Some(std::cmp::min(window.size(), size));
@@ -77,7 +78,7 @@ impl ChrMemory {
     }
 
     pub fn window_count(&self) -> u8 {
-        self.current_layout().0.len().try_into().unwrap()
+        self.current_layout().windows().len().try_into().unwrap()
     }
 
     pub fn peek(&self, registers: &BankRegisters, address: PpuAddress) -> u8 {
@@ -93,7 +94,7 @@ impl ChrMemory {
     }
 
     pub fn window_at(&self, start: u16) -> &Window {
-        for window in self.current_layout().0 {
+        for window in self.current_layout().windows() {
             if window.start() == start {
                 return window;
             }
@@ -121,7 +122,7 @@ impl ChrMemory {
     fn address_to_chr_index(&self, registers: &BankRegisters, address: u16) -> (u32, bool) {
         assert!(address < 0x2000);
 
-        for window in self.current_layout().0 {
+        for window in self.current_layout().windows() {
             if let Some(bank_offset) = window.offset(address) {
                 let raw_bank_index = window.resolved_bank_index(
                     registers,
@@ -170,38 +171,5 @@ impl ChrMemory {
             self.address_to_chr_index(registers, 0x1800).0,
             self.address_to_chr_index(registers, 0x1C00).0,
         ]
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct ChrLayout(&'static [Window]);
-
-impl ChrLayout {
-    pub const fn new(windows: &'static [Window]) -> ChrLayout {
-        assert!(!windows.is_empty(), "No PRG layouts specified.");
-
-        assert!(windows[0].start() == 0x0000, "The first CHR window must start at 0x0000.");
-
-        assert!(windows[windows.len() - 1].end() == 0x1FFF, "The last CHR window must end at 0x1FFF.");
-
-        let mut i = 1;
-        while i < windows.len() {
-            assert!(windows[i].start() == windows[i - 1].end() + 1,
-                    "There must be no gaps nor overlap between CHR layouts.");
-
-            i += 1;
-        }
-
-        ChrLayout(windows)
-    }
-
-    pub fn windows(&self) -> &[Window] {
-        self.0
-    }
-
-    pub fn active_register_ids(&self) -> Vec<BankRegisterId> {
-        self.0.iter()
-            .filter_map(|window| window.register_id())
-            .collect()
     }
 }

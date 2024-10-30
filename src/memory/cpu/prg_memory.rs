@@ -1,6 +1,7 @@
 use crate::memory::bank::bank::Bank;
-use crate::memory::bank::bank_index::{BankRegisters, BankRegisterId, RamStatus};
+use crate::memory::bank::bank_index::{BankRegisters, RamStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::raw_memory::RawMemory;
 use crate::memory::read_result::ReadResult;
 use crate::memory::window::Window;
@@ -25,7 +26,7 @@ impl PrgMemory {
 
         let mut bank_size = None;
         for layout in &layouts {
-            for window in layout.0 {
+            for window in layout.windows() {
                 if matches!(window.bank(), Bank::Rom(..) | Bank::Ram(..)) {
                     if let Some(size) = bank_size {
                         bank_size = Some(std::cmp::min(window.size(), size));
@@ -58,11 +59,10 @@ impl PrgMemory {
             work_ram_sections: Vec::new(),
         };
 
-        for window in prg_memory.current_layout().0 {
-            if window.bank().is_work_ram() {
-                prg_memory.work_ram_sections.push(WorkRam::new(window.size()));
-            }
-        }
+        prg_memory.work_ram_sections = prg_memory.current_layout().windows().iter()
+            .filter(|window| window.bank().is_work_ram())
+            .map(|window| WorkRam::new(window.size()))
+            .collect();
 
         let bank_count = prg_memory.bank_count();
         if prg_memory.raw_memory.size() >= bank_count as u32 * bank_size as u32 {
@@ -153,7 +153,7 @@ impl PrgMemory {
         assert!(address >= PRG_MEMORY_START);
         let address = address.to_raw();
 
-        let windows = &self.current_layout().0;
+        let windows = &self.current_layout().windows();
         assert!(!windows.is_empty());
 
         for i in 0..windows.len() {
@@ -211,48 +211,13 @@ impl PrgMemory {
     }
 
     fn window_with_index_at(&self, start: u16) -> (&Window, u32) {
-        for (index, window) in self.current_layout().0.iter().enumerate() {
+        for (index, window) in self.current_layout().windows().iter().enumerate() {
             if window.start() == start {
                 return (window, index as u32);
             }
         }
 
         panic!("No window exists at {start:?}");
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct PrgLayout(&'static [Window]);
-
-impl PrgLayout {
-    pub const fn new(windows: &'static [Window]) -> PrgLayout {
-        assert!(!windows.is_empty(), "No PRG windows specified.");
-
-        assert!(windows[0].start() == 0x6000,
-            "The first PRG window must start at 0x6000.");
-
-        assert!(windows[windows.len() - 1].end() == 0xFFFF,
-                "The last PRG window must end at 0xFFFF.");
-
-        let mut i = 1;
-        while i < windows.len() {
-            assert!(windows[i].start() == windows[i - 1].end() + 1,
-                "There must be no gaps nor overlap between PRG windows.");
-
-            i += 1;
-        }
-
-        PrgLayout(windows)
-    }
-
-    pub fn windows(&self) -> &[Window] {
-        self.0
-    }
-
-    pub fn active_register_ids(&self) -> Vec<BankRegisterId> {
-        self.0.iter()
-            .filter_map(|window| window.register_id())
-            .collect()
     }
 }
 

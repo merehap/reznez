@@ -1,8 +1,10 @@
 use crate::cartridge::cartridge::Cartridge;
 use crate::memory::bank::bank_index::{BankIndex, BankRegisters, MetaRegisterId, BankRegisterId};
-use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout};
+use crate::memory::cpu::prg_layout::PrgLayout;
+use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::memory::mapper::MapperParams;
-use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout};
+use crate::memory::ppu::chr_layout::ChrLayout;
+use crate::memory::ppu::chr_memory::ChrMemory;
 use crate::memory::window::Window;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::const_vec::ConstVec;
