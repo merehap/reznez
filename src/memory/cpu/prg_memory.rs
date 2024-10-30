@@ -1,8 +1,9 @@
-use crate::memory::bank::bank::{Bank, Location};
-use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId, RamStatus};
+use crate::memory::bank::bank::Bank;
+use crate::memory::bank::bank_index::{BankRegisters, BankRegisterId, RamStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::raw_memory::RawMemory;
 use crate::memory::read_result::ReadResult;
+use crate::memory::window::Window;
 
 const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
 
@@ -25,7 +26,7 @@ impl PrgMemory {
         let mut bank_size = None;
         for layout in &layouts {
             for window in layout.0 {
-                if matches!(window.prg_bank, Bank::Rom(..) | Bank::Ram(..)) {
+                if matches!(window.bank(), Bank::Rom(..) | Bank::Ram(..)) {
                     if let Some(size) = bank_size {
                         bank_size = Some(std::cmp::min(window.size(), size));
                     } else {
@@ -58,7 +59,7 @@ impl PrgMemory {
         };
 
         for window in prg_memory.current_layout().0 {
-            if window.prg_bank.is_work_ram() {
+            if window.bank().is_work_ram() {
                 prg_memory.work_ram_sections.push(WorkRam::new(window.size()));
             }
         }
@@ -134,19 +135,7 @@ impl PrgMemory {
         }
     }
 
-    pub fn resolve_selected_bank_indexes(&self, registers: &BankRegisters) -> Vec<u16> {
-        let mut indexes = Vec::new();
-        for window in self.current_layout().0 {
-            if let Some(bank_index) = window.bank_index(registers) {
-                let raw_index = bank_index.to_u16(self.bank_count());
-                indexes.push(raw_index);
-            }
-        }
-
-        indexes
-    }
-
-    pub fn window_at(&self, start: u16) -> &PrgWindow {
+    pub fn window_at(&self, start: u16) -> &Window {
         self.window_with_index_at(start).0
     }
 
@@ -162,33 +151,34 @@ impl PrgMemory {
     // TODO: Indicate if read-only.
     fn address_to_prg_index(&self, registers: &BankRegisters, address: CpuAddress) -> PrgMemoryIndex {
         assert!(address >= PRG_MEMORY_START);
+        let address = address.to_raw();
 
         let windows = &self.current_layout().0;
         assert!(!windows.is_empty());
 
         for i in 0..windows.len() {
-            if i == windows.len() - 1 || address < windows[i + 1].start {
-                let bank_offset = address.to_raw() - windows[i].start.to_raw();
+            if i == windows.len() - 1 || address < windows[i + 1].start() {
+                let bank_offset = address - windows[i].start();
 
                 let window;
-                if let Bank::MirrorOf(mirrored_window_start) = windows[i].prg_bank {
+                if let Bank::MirrorOf(mirrored_window_start) = windows[i].bank() {
                     window = self.window_at(mirrored_window_start);
                 } else {
                     window = &windows[i];
                 }
 
-                let prg_memory_index = match window.prg_bank {
+                let prg_memory_index = match window.bank() {
                     Bank::Empty => PrgMemoryIndex::None,
                     Bank::MirrorOf(_) => panic!("A mirrored bank must mirror a non-mirrored bank."),
                     Bank::Rom(location) => {
                         let resolved_bank_index =
-                            window.resolved_bank_index(registers, location, self.bank_size, self.bank_count());
+                            window.resolved_bank_index(registers, location, self.bank_size, self.bank_count(), true);
                         let index = resolved_bank_index as u32 * self.bank_size as u32 + bank_offset as u32;
                         PrgMemoryIndex::MappedMemory { index, ram_status: RamStatus::ReadOnly }
                     }
                     Bank::Ram(location, status_register_id) => {
                         let resolved_bank_index =
-                            window.resolved_bank_index(registers, location, self.bank_size, self.bank_count());
+                            window.resolved_bank_index(registers, location, self.bank_size, self.bank_count(), true);
                         let index = resolved_bank_index as u32 * self.bank_size as u32 + bank_offset as u32;
 
                         let ram_status: RamStatus = status_register_id
@@ -220,9 +210,9 @@ impl PrgMemory {
         unreachable!();
     }
 
-    fn window_with_index_at(&self, start: u16) -> (&PrgWindow, u32) {
+    fn window_with_index_at(&self, start: u16) -> (&Window, u32) {
         for (index, window) in self.current_layout().0.iter().enumerate() {
-            if window.start.to_raw() == start {
+            if window.start() == start {
                 return (window, index as u32);
             }
         }
@@ -232,21 +222,21 @@ impl PrgMemory {
 }
 
 #[derive(Clone, Copy)]
-pub struct PrgLayout(&'static [PrgWindow]);
+pub struct PrgLayout(&'static [Window]);
 
 impl PrgLayout {
-    pub const fn new(windows: &'static [PrgWindow]) -> PrgLayout {
+    pub const fn new(windows: &'static [Window]) -> PrgLayout {
         assert!(!windows.is_empty(), "No PRG windows specified.");
 
-        assert!(windows[0].start.to_raw() == 0x6000,
+        assert!(windows[0].start() == 0x6000,
             "The first PRG window must start at 0x6000.");
 
-        assert!(windows[windows.len() - 1].end.to_raw() == 0xFFFF,
+        assert!(windows[windows.len() - 1].end() == 0xFFFF,
                 "The last PRG window must end at 0xFFFF.");
 
         let mut i = 1;
         while i < windows.len() {
-            assert!(windows[i].start.to_raw() == windows[i - 1].end.to_raw() + 1,
+            assert!(windows[i].start() == windows[i - 1].end() + 1,
                 "There must be no gaps nor overlap between PRG windows.");
 
             i += 1;
@@ -255,7 +245,7 @@ impl PrgLayout {
         PrgLayout(windows)
     }
 
-    pub fn windows(&self) -> &[PrgWindow] {
+    pub fn windows(&self) -> &[Window] {
         self.0
     }
 
@@ -270,75 +260,6 @@ enum PrgMemoryIndex {
     None,
     WorkRam { section_id: usize, index: u32, ram_status: RamStatus },
     MappedMemory { index: u32, ram_status: RamStatus },
-}
-
-// A PrgWindow is a range within addressable memory.
-// If the specified bank cannot fill the window, adjacent banks will be included too.
-#[derive(Clone, Copy)]
-pub struct PrgWindow {
-    start: CpuAddress,
-    end: CpuAddress,
-    prg_bank: Bank,
-}
-
-impl PrgWindow {
-    pub const fn new(start: u16, end: u16, size: u32, prg_bank: Bank) -> PrgWindow {
-        assert!(end > start);
-        assert!(end as u32 - start as u32 + 1 == size);
-
-        PrgWindow {
-            start: CpuAddress::new(start),
-            end: CpuAddress::new(end),
-            prg_bank,
-        }
-    }
-
-    pub fn bank_string(&self, registers: &BankRegisters, bank_size: u16, bank_count: u16) -> String {
-        match self.prg_bank {
-            Bank::Empty => "E".into(),
-            Bank::WorkRam(_) => "W".into(),
-            Bank::Rom(location) | Bank::Ram(location, _) =>
-                self.resolved_bank_index(registers, location, bank_size, bank_count).to_string(),
-            Bank::MirrorOf(_) => "M".into(),
-        }
-    }
-
-    fn resolved_bank_index(
-        &self,
-        registers: &BankRegisters,
-        location: Location,
-        bank_size: u16,
-        bank_count: u16,
-    ) -> u16 {
-        let stored_bank_index = match location {
-            Location::Fixed(bank_index) => bank_index,
-            Location::Switchable(register_id) => registers.get(register_id),
-            Location::MetaSwitchable(_) => todo!("PRG meta-switchable"),
-        };
-
-        let window_multiple = self.size() / bank_size;
-        let mut resolved_bank_index = stored_bank_index.to_u16(bank_count);
-        // Clear low bits for large windows.
-        resolved_bank_index &= !(window_multiple - 1);
-
-        resolved_bank_index
-    }
-
-    pub const fn size(self) -> u16 {
-        self.end.to_raw() - self.start.to_raw() + 1
-    }
-
-    fn bank_index(self, registers: &BankRegisters) -> Option<BankIndex> {
-        self.prg_bank.bank_index(registers)
-    }
-
-    fn register_id(self) -> Option<BankRegisterId> {
-        if let Bank::Rom(Location::Switchable(id)) | Bank::Ram(Location::Switchable(id), _) = self.prg_bank {
-            Some(id)
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Clone)]

@@ -1,8 +1,8 @@
-use crate::memory::bank::bank::{Bank, Location};
-use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId};
-
+use crate::memory::bank::bank::Bank;
+use crate::memory::bank::bank_index::{BankRegisters, BankRegisterId};
 use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
 use crate::memory::ppu::ppu_address::PpuAddress;
+use crate::memory::window::Window;
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
 
@@ -25,7 +25,7 @@ impl ChrMemory {
         let mut bank_size = None;
         for layout in &layouts {
             for window in layout.0 {
-                if matches!(window.bank, Bank::Rom(..) | Bank::Ram(..)) {
+                if matches!(window.bank(), Bank::Rom(..) | Bank::Ram(..)) {
                     if let Some(size) = bank_size {
                         bank_size = Some(std::cmp::min(window.size(), size));
                     } else {
@@ -92,20 +92,14 @@ impl ChrMemory {
         }
     }
 
-    pub fn resolve_selected_bank_indexes(&self, registers: &BankRegisters) -> Vec<u16> {
-        self.current_layout().0.iter()
-            .map(|window| window.bank_index(registers).to_u16(self.bank_count()))
-            .collect()
-    }
-
-    pub fn window_at(&self, start: u16) -> &ChrWindow {
+    pub fn window_at(&self, start: u16) -> &Window {
         for window in self.current_layout().0 {
-            if window.start.to_u16() == start {
+            if window.start() == start {
                 return window;
             }
         }
 
-        panic!("No window exists at {start:X?}");
+        panic!("No window exists at {start:X}");
     }
 
     pub fn current_layout(&self) -> &ChrLayout {
@@ -180,19 +174,19 @@ impl ChrMemory {
 }
 
 #[derive(Clone, Copy)]
-pub struct ChrLayout(&'static [ChrWindow]);
+pub struct ChrLayout(&'static [Window]);
 
 impl ChrLayout {
-    pub const fn new(windows: &'static [ChrWindow]) -> ChrLayout {
+    pub const fn new(windows: &'static [Window]) -> ChrLayout {
         assert!(!windows.is_empty(), "No PRG layouts specified.");
 
-        assert!(windows[0].start.to_u16() == 0x0000, "The first CHR window must start at 0x0000.");
+        assert!(windows[0].start() == 0x0000, "The first CHR window must start at 0x0000.");
 
-        assert!(windows[windows.len() - 1].end.to_u16() == 0x1FFF, "The last CHR window must end at 0x1FFF.");
+        assert!(windows[windows.len() - 1].end() == 0x1FFF, "The last CHR window must end at 0x1FFF.");
 
         let mut i = 1;
         while i < windows.len() {
-            assert!(windows[i].start.to_u16() == windows[i - 1].end.to_u16() + 1,
+            assert!(windows[i].start() == windows[i - 1].end() + 1,
                     "There must be no gaps nor overlap between CHR layouts.");
 
             i += 1;
@@ -201,7 +195,7 @@ impl ChrLayout {
         ChrLayout(windows)
     }
 
-    pub fn windows(&self) -> &[ChrWindow] {
+    pub fn windows(&self) -> &[Window] {
         self.0
     }
 
@@ -209,117 +203,5 @@ impl ChrLayout {
         self.0.iter()
             .filter_map(|window| window.register_id())
             .collect()
-    }
-}
-
-// TODO: Switch over to PpuAddress?
-#[derive(Clone, Copy, Debug)]
-pub struct ChrWindow {
-    start: PpuAddress,
-    end: PpuAddress,
-    bank: Bank,
-}
-
-impl ChrWindow {
-    #[allow(clippy::identity_op)]
-    pub const fn new(start: u16, end: u16, size: u32, bank: Bank) -> ChrWindow {
-        //assert!([1 * KIBIBYTE, 2 * KIBIBYTE, 4 * KIBIBYTE, 8 * KIBIBYTE].contains(&size));
-        assert!(end > start);
-        assert!(end as u32 - start as u32 + 1 == size);
-
-        ChrWindow {
-            start: PpuAddress::from_u16(start),
-            end: PpuAddress::from_u16(end),
-            bank,
-        }
-    }
-
-    pub fn bank_string(
-        &self,
-        registers: &BankRegisters,
-        bank_size: u16,
-        bank_count: u16,
-        align_large_layouts: bool,
-    ) -> String {
-        match self.bank {
-            Bank::Empty => "E".into(),
-            Bank::WorkRam(_) => "W".into(),
-            Bank::Rom(_) | Bank::Ram(_, _) => self.resolved_bank_index(
-                registers,
-                self.location().unwrap(),
-                bank_size,
-                bank_count,
-                align_large_layouts,
-            ).to_string(),
-            Bank::MirrorOf(_) => "M".into(),
-        }
-    }
-
-    fn resolved_bank_index(
-        &self,
-        registers: &BankRegisters,
-        location: Location,
-        bank_size: u16,
-        bank_count: u16,
-        align_large_layouts: bool,
-    ) -> u16 {
-        let stored_bank_index = match location {
-            Location::Fixed(bank_index) => bank_index,
-            Location::Switchable(register_id) => registers.get(register_id),
-            Location::MetaSwitchable(meta_id) => registers.get_from_meta(meta_id),
-        };
-
-        let mut resolved_bank_index = stored_bank_index.to_u16(bank_count);
-        if align_large_layouts {
-            let window_multiple = self.size() / bank_size;
-            resolved_bank_index &= !(window_multiple - 1);
-        }
-
-        resolved_bank_index
-    }
-
-    pub const fn size(self) -> u16  {
-        self.end.to_u16() - self.start.to_u16() + 1
-    }
-
-    pub fn location(self) -> Result<Location, String> {
-        match self.bank {
-            Bank::Rom(location) | Bank::Ram(location, _) => Ok(location),
-            Bank::Empty | Bank::WorkRam(_) | Bank::MirrorOf(_) =>
-                Err(format!("Bank type {:?} does not have a bank location.", self.bank)),
-        }
-    }
-
-    fn offset(self, address: u16) -> Option<u16> {
-        if self.start.to_u16() <= address && address <= self.end.to_u16() {
-            Some(address - self.start.to_u16())
-        } else {
-            None
-        }
-    }
-
-    fn bank_index(self, registers: &BankRegisters) -> BankIndex {
-        match self.bank {
-            Bank::Rom(Location::Fixed(bank_index)) | Bank::Ram(Location::Fixed(bank_index), _) =>
-                bank_index,
-            Bank::Rom(Location::Switchable(id)) | Bank::Ram(Location::Switchable(id), _) =>
-                registers.get(id),
-            Bank::Rom(Location::MetaSwitchable(meta_id)) | Bank::Ram(Location::MetaSwitchable(meta_id), _) =>
-                registers.get_from_meta(meta_id),
-            Bank::Empty | Bank::WorkRam(_) | Bank::MirrorOf(_) =>
-                panic!("Bank type {:?} is not allowed for CHR Windows.", self.bank),
-        }
-    }
-
-    fn is_writable(self, registers: &BankRegisters) -> bool {
-        self.bank.is_writable(registers)
-    }
-
-    pub fn register_id(self) -> Option<BankRegisterId> {
-        if let Bank::Rom(Location::Switchable(id)) | Bank::Ram(Location::Switchable(id), _) = self.bank {
-            Some(id)
-        } else {
-            None
-        }
     }
 }

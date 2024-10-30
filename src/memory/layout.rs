@@ -1,9 +1,10 @@
 use crate::cartridge::cartridge::Cartridge;
-use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout, PrgWindow};
-use crate::memory::mapper::MapperParams;
-use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout, ChrWindow};
-use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::memory::bank::bank_index::{BankIndex, BankRegisters, MetaRegisterId, BankRegisterId};
+use crate::memory::cpu::prg_memory::{PrgMemory, PrgLayout};
+use crate::memory::mapper::MapperParams;
+use crate::memory::ppu::chr_memory::{ChrMemory, ChrLayout};
+use crate::memory::window::Window;
+use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::const_vec::ConstVec;
 
 #[derive(Clone)]
@@ -114,7 +115,7 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn prg_layout(&mut self, windows: &'static [PrgWindow]) -> &mut LayoutBuilder {
+    pub const fn prg_layout(&mut self, windows: &'static [Window]) -> &mut LayoutBuilder {
         self.prg_layouts.push(PrgLayout::new(windows));
         self
     }
@@ -129,7 +130,7 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn chr_layout(&mut self, windows: &'static [ChrWindow]) -> &mut LayoutBuilder {
+    pub const fn chr_layout(&mut self, windows: &'static [Window]) -> &mut LayoutBuilder {
         self.chr_layouts.push(ChrLayout::new(windows));
         self
     }

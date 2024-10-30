@@ -6,12 +6,12 @@ use crate::memory::mapper::*;
 const LAYOUT_WITH_SWITCHABLE_CHR_ROM: Layout = Layout::builder()
     .prg_max_size(128 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_rom(P0)),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_rom(P0)),
+        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
     ])
     .chr_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::switchable_rom(C0)),
+        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::switchable_rom(C0)),
     ])
     .build();
 
@@ -19,12 +19,12 @@ const LAYOUT_WITH_SWITCHABLE_CHR_ROM: Layout = Layout::builder()
 const LAYOUT_WITH_FIXED_CHR_RAM: Layout = Layout::builder()
     .prg_max_size(128 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_rom(P0)),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_rom(P0)),
+        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
     ])
     .chr_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_ram(BankIndex::FIRST)),
+        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::fixed_ram(BankIndex::FIRST)),
     ])
     .build();
 

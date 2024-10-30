@@ -7,11 +7,12 @@ pub use crate::memory::bank::bank_index::MetaRegisterId::*;
 pub use crate::memory::bank::bank::{Bank, RamStatusRegisterId};
 pub use crate::memory::bank::bank::RamStatusRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
-pub use crate::memory::cpu::prg_memory::{PrgMemory, PrgWindow};
+pub use crate::memory::cpu::prg_memory::PrgMemory;
 pub use crate::memory::layout::Layout;
-pub use crate::memory::ppu::chr_memory::{ChrMemory, ChrWindow};
+pub use crate::memory::ppu::chr_memory::ChrMemory;
 pub use crate::memory::ppu::ppu_address::PpuAddress;
 pub use crate::memory::read_result::ReadResult;
+pub use crate::memory::window::Window;
 pub use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 pub use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 pub use crate::util::unit::KIBIBYTE;
@@ -354,6 +355,7 @@ pub trait Mapper {
                 &params.bank_registers,
                 prg_memory.bank_size(),
                 prg_memory.bank_count(),
+                true,
             );
             let window_size = window.size() / KIBIBYTE as u16;
 
@@ -498,10 +500,6 @@ impl MapperParams {
         self.prg_memory.set_layout(index);
     }
 
-    pub fn resolve_prg_bank_indexes(&self) -> Vec<u16> {
-        self.prg_memory.resolve_selected_bank_indexes(&self.bank_registers)
-    }
-
     pub fn peek_prg(&self, address: CpuAddress) -> ReadResult {
         self.prg_memory.peek(&self.bank_registers, address)
     }
@@ -516,10 +514,6 @@ impl MapperParams {
 
     pub fn chr_memory(&self) -> &ChrMemory {
         &self.chr_memory
-    }
-
-    pub fn resolve_chr_bank_indexes(&self) -> Vec<u16> {
-        self.chr_memory.resolve_selected_bank_indexes(&self.bank_registers)
     }
 
     pub fn pattern_table(&self, side: PatternTableSide) -> PatternTable {
