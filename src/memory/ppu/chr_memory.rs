@@ -131,6 +131,7 @@ impl ChrMemory {
             if let Some(bank_offset) = window.offset(address) {
                 let raw_bank_index = window.resolved_bank_index(
                     registers,
+                    window.location().unwrap(),
                     self.bank_size,
                     self.bank_count(),
                     self.align_large_chr_layouts,
@@ -243,8 +244,13 @@ impl ChrWindow {
         match self.bank {
             Bank::Empty => "E".into(),
             Bank::WorkRam(_) => "W".into(),
-            Bank::Rom(_) | Bank::Ram(_, _) =>
-                self.resolved_bank_index(registers, bank_size, bank_count, align_large_layouts).to_string(),
+            Bank::Rom(_) | Bank::Ram(_, _) => self.resolved_bank_index(
+                registers,
+                self.location().unwrap(),
+                bank_size,
+                bank_count,
+                align_large_layouts,
+            ).to_string(),
             Bank::MirrorOf(_) => "M".into(),
         }
     }
@@ -252,11 +258,16 @@ impl ChrWindow {
     fn resolved_bank_index(
         &self,
         registers: &BankRegisters,
+        location: Location,
         bank_size: u16,
         bank_count: u16,
         align_large_layouts: bool,
     ) -> u16 {
-        let stored_bank_index = self.bank_index(registers);
+        let stored_bank_index = match location {
+            Location::Fixed(bank_index) => bank_index,
+            Location::Switchable(register_id) => registers.get(register_id),
+            Location::MetaSwitchable(meta_id) => registers.get_from_meta(meta_id),
+        };
 
         let mut resolved_bank_index = stored_bank_index.to_u16(bank_count);
         if align_large_layouts {
@@ -269,6 +280,14 @@ impl ChrWindow {
 
     pub const fn size(self) -> u16  {
         self.end.to_u16() - self.start.to_u16() + 1
+    }
+
+    pub fn location(self) -> Result<Location, String> {
+        match self.bank {
+            Bank::Rom(location) | Bank::Ram(location, _) => Ok(location),
+            Bank::Empty | Bank::WorkRam(_) | Bank::MirrorOf(_) =>
+                Err(format!("Bank type {:?} does not have a bank location.", self.bank)),
+        }
     }
 
     fn offset(self, address: u16) -> Option<u16> {
