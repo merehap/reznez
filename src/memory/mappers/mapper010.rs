@@ -7,12 +7,12 @@ const LAYOUT: Layout = Layout::builder()
     .override_second_meta_register(M1, C3)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
-        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_rom(P0)),
-        Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P0)),
+        Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(BankIndex::LAST)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::meta_switchable_rom(M0)),
-        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::meta_switchable_rom(M1)),
+        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.meta_switchable(M0)),
+        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.meta_switchable(M1)),
     ])
     .build();
 

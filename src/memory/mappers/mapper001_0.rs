@@ -12,27 +12,27 @@ const LAYOUT: Layout = Layout::builder()
     .prg_layout_index(3)
     // TODO: Not all boards support CHR RAM.
     .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::switchable_ram(C0)),
+        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.switchable(C0)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_ram(C0)),
-        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_ram(C1)),
+        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::RAM.switchable(C0)),
+        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::RAM.switchable(C1)),
     ])
     .build();
 
 const PRG_WINDOWS_ONE_BIG: &[Window] = &[
     Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
-    Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_rom(P0)),
+    Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P0)),
 ];
 const PRG_WINDOWS_FIXED_FIRST: &[Window] = &[
     Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
-    Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
-    Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::switchable_rom(P0)),
+    Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(BankIndex::FIRST)),
+    Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P0)),
 ];
 const PRG_WINDOWS_FIXED_LAST: &[Window] = &[
     Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
-    Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_rom(P0)),
-    Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+    Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P0)),
+    Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(BankIndex::LAST)),
 ];
 
 const MIRRORINGS: [NameTableMirroring; 4] = [

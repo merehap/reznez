@@ -13,82 +13,82 @@ const LAYOUT: Layout = Layout::builder()
     .chr_max_size(1024 * KIBIBYTE)
     .override_bank_register(P4, BankIndex::LAST)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_ram(P0)),
-        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_rom(P4)),
+        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
+        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_ram(P0)),
-        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_ram(P2).status_register(S0)),
-        Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::switchable_rom(P4)),
+        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
+        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::RAM.switchable(P2).status_register(S0)),
+        Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_ram(P0)),
-        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::switchable_ram(P2).status_register(S0)),
-        Window::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::switchable_ram(P3).status_register(S0)),
-        Window::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Bank::switchable_rom(P4)),
+        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
+        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::RAM.switchable(P2).status_register(S0)),
+        Window::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::RAM.switchable(P3).status_register(S0)),
+        Window::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::switchable_ram(P0)),
-        Window::new(0x8000, 0x9FFF,  8 * KIBIBYTE, Bank::switchable_ram(P1).status_register(S0)),
-        Window::new(0xA000, 0xBFFF,  8 * KIBIBYTE, Bank::switchable_ram(P2).status_register(S0)),
-        Window::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::switchable_ram(P3).status_register(S0)),
-        Window::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Bank::switchable_rom(P4)),
+        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
+        Window::new(0x8000, 0x9FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P1).status_register(S0)),
+        Window::new(0xA000, 0xBFFF,  8 * KIBIBYTE, Bank::RAM.switchable(P2).status_register(S0)),
+        Window::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::RAM.switchable(P3).status_register(S0)),
+        Window::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
     .prg_layout_index(3)
     // Normal sprite height layouts
     .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::switchable_rom(C7)),
+        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C7)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_rom(C3)),
-        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_rom(C7)),
+        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C3)),
+        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C7)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::switchable_rom(C1)),
-        Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::switchable_rom(C3)),
-        Window::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::switchable_rom(C5)),
-        Window::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::switchable_rom(C7)),
+        Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::ROM.switchable(C1)),
+        Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C3)),
+        Window::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::ROM.switchable(C5)),
+        Window::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C7)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C0)),
-        Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C1)),
-        Window::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
-        Window::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
-        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
-        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
-        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C6)),
-        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C7)),
+        Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::ROM.switchable(C0)),
+        Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::ROM.switchable(C1)),
+        Window::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C2)),
+        Window::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C3)),
+        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
+        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
+        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C6)),
+        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
     ])
 
     // Tall sprite height layouts
     .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::switchable_rom(C11)),
+        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C11)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_rom(C11)),
-        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_rom(C11)),
+        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C11)),
+        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C11)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::switchable_rom(C9)),
-        Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::switchable_rom(C11)),
-        Window::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::switchable_rom(C9)),
-        Window::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::switchable_rom(C11)),
+        Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::ROM.switchable(C9)),
+        Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C11)),
+        Window::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::ROM.switchable(C9)),
+        Window::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C11)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C8)),
-        Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C9)),
-        Window::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::switchable_rom(C10)),
-        Window::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::switchable_rom(C11)),
-        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::switchable_rom(C8)),
-        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C9)),
-        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C10)),
-        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C11)),
+        Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::ROM.switchable(C8)),
+        Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::ROM.switchable(C9)),
+        Window::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C10)),
+        Window::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C11)),
+        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::ROM.switchable(C8)),
+        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::ROM.switchable(C9)),
+        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C10)),
+        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C11)),
     ])
 
     // Extended attributes layout
     .chr_layout(&[
-        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_rom(C12)),
-        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_rom(C12)),
+        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C12)),
+        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C12)),
     ])
     .do_not_align_large_chr_layout()
     .build();

@@ -4,21 +4,21 @@ const LAYOUT: Layout = Layout::builder()
     .prg_max_size(512 * KIBIBYTE)
     .chr_max_size(256 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::switchable_ram(P0)),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::switchable_rom(P1)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::switchable_rom(P2)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::switchable_rom(P3)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::fixed_rom(BankIndex::LAST)),
+        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::RAM.switchable(P0)),
+        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
+        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),
+        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P3)),
+        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(BankIndex::LAST)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::switchable_rom(C0)),
-        Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::switchable_rom(C1)),
-        Window::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::switchable_rom(C2)),
-        Window::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::switchable_rom(C3)),
-        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::switchable_rom(C4)),
-        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::switchable_rom(C5)),
-        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::switchable_rom(C6)),
-        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::switchable_rom(C7)),
+        Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::ROM.switchable(C0)),
+        Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::ROM.switchable(C1)),
+        Window::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C2)),
+        Window::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C3)),
+        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
+        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
+        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C6)),
+        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
     ])
     .build();
 

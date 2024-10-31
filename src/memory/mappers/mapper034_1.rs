@@ -9,11 +9,11 @@ const LAYOUT: Layout = Layout::builder()
     .override_bank_register(C1, BankIndex::LAST)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::switchable_ram(P0)),
+        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::RAM.switchable(P0)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::switchable_rom(C0)),
-        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_rom(C1)),
+        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C0)),
+        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C1)),
     ])
     .build();
 

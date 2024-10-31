@@ -5,11 +5,11 @@ const LAYOUT: Layout = Layout::builder()
     .chr_max_size(16 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::fixed_rom(BankIndex::FIRST)),
+        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.fixed_index(BankIndex::FIRST)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::fixed_ram(BankIndex::FIRST)),
-        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::switchable_ram(C0)),
+        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::RAM.fixed_index(BankIndex::FIRST)),
+        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::RAM.switchable(C0)),
     ])
     .build();
 
