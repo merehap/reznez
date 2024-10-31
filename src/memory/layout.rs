@@ -8,6 +8,7 @@ use crate::memory::ppu::chr_memory::ChrMemory;
 use crate::memory::window::Window;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::const_vec::ConstVec;
+use crate::util::unit::KIBIBYTE;
 
 #[derive(Clone)]
 pub struct Layout {
@@ -35,8 +36,10 @@ impl Layout {
     }
 
     pub fn make_mapper_params(self, cartridge: &Cartridge) -> MapperParams {
-        assert!(cartridge.prg_rom().size() <= self.prg_max_size);
-        assert!(cartridge.chr_rom().size() <= self.chr_max_size);
+        let prg_size = cartridge.prg_rom().size();
+        assert!(prg_size <= self.prg_max_size, "PRG size of {}KiB is too large for this mapper.", prg_size / KIBIBYTE);
+        let chr_size = cartridge.chr_rom().size();
+        assert!(chr_size <= self.chr_max_size, "CHR size of {}KiB is too large for this mapper.", chr_size / KIBIBYTE);
 
         let prg_memory = PrgMemory::new(
             self.prg_layouts.into_vec(),

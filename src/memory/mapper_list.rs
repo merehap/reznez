@@ -188,6 +188,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
 
         // FDS games hacked into cartridge form
         42 => m::mapper042::Mapper042::new(cartridge.chr_ram_size()).supported(),
+        // TONY-I and YS-612 (FDS games in cartridge form)
+        43 => m::mapper043::Mapper043::new().supported(),
 
         // Rumble Station
         46 => m::mapper046::Mapper046::new().supported(),

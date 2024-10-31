@@ -8,8 +8,8 @@ impl PrgLayout {
     pub const fn new(windows: &'static [Window]) -> PrgLayout {
         assert!(!windows.is_empty(), "No PRG windows specified.");
 
-        assert!(windows[0].start() == 0x6000,
-            "The first PRG window must start at 0x6000.");
+        assert!(windows[0].start() <= 0x6000,
+            "The first PRG window must start at 0x6000 at highest.");
 
         assert!(windows[windows.len() - 1].end() == 0xFFFF,
                 "The last PRG window must end at 0xFFFF.");
