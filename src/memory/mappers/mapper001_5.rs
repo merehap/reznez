@@ -7,7 +7,7 @@ const LAYOUT: Layout = Layout::builder()
     .override_initial_name_table_mirroring(NameTableMirroring::OneScreenRightBank)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
-        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.fixed_index(BankIndex::FIRST)),
+        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.fixed_index(0)),
     ])
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),

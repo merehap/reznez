@@ -8,7 +8,7 @@ const LAYOUT: Layout = Layout::builder()
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
         Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(BankIndex::LAST)),
+        Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
     ])
     .chr_layout(&[
         Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.meta_switchable(M0)),

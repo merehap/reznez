@@ -15,8 +15,8 @@ impl Bank {
     pub const ROM: Bank = Bank::Rom(Location::Fixed(BankIndex::FIRST));
     pub const RAM: Bank = Bank::Ram(Location::Fixed(BankIndex::FIRST), None);
 
-    pub const fn fixed_index(self, index: BankIndex) -> Self {
-        self.set_location(Location::Fixed(index))
+    pub const fn fixed_index(self, index: i16) -> Self {
+        self.set_location(Location::Fixed(BankIndex::from_i16(index)))
     }
 
     pub const fn switchable(self, register_id: BankRegisterId) -> Self {

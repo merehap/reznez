@@ -11,7 +11,7 @@ use crate::memory::ppu::vram::VramSide;
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(1024 * KIBIBYTE)
     .chr_max_size(1024 * KIBIBYTE)
-    .override_bank_register(P4, BankIndex::LAST)
+    .override_bank_register(P4, -1)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
         Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P4)),

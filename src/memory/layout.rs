@@ -158,18 +158,18 @@ impl LayoutBuilder {
     pub const fn override_bank_register(
         &mut self,
         id: BankRegisterId,
-        bank_index: BankIndex,
+        bank_index: i16,
     ) -> &mut LayoutBuilder {
-        self.bank_register_override = Some((id, bank_index));
+        self.bank_register_override = Some((id, BankIndex::from_i16(bank_index)));
         self
     }
 
     pub const fn override_second_bank_register(
         &mut self,
         id: BankRegisterId,
-        bank_index: BankIndex,
+        bank_index: i16,
     ) -> &mut LayoutBuilder {
-        self.second_bank_register_override = Some((id, bank_index));
+        self.second_bank_register_override = Some((id, BankIndex::from_i16(bank_index)));
         self
     }
 

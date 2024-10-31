@@ -3,20 +3,20 @@ use crate::memory::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(2048 * KIBIBYTE)
     .chr_max_size(256 * KIBIBYTE)
-    .override_bank_register(P1, BankIndex::SECOND)
+    .override_bank_register(P1, 1)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
         Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
         Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(BankIndex::SECOND_LAST)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(BankIndex::LAST)),
+        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-2)),
+        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
     ])
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(BankIndex::SECOND_LAST)),
+        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-2)),
         Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
         Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(BankIndex::LAST)),
+        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
     ])
     .chr_layout(&[
         Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::ROM.switchable(C0)),

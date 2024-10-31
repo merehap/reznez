@@ -19,6 +19,15 @@ impl BankIndex {
         BankIndex(value)
     }
 
+    pub const fn from_i16(value: i16) -> BankIndex {
+        if value >= 0 {
+            BankIndex(value as u16)
+        } else {
+            // Negative values wrap around to count down from u16::MAX.
+            BankIndex(u16::MAX - value.unsigned_abs() + 1)
+        }
+    }
+
     pub fn to_u16(self, bank_count: u16) -> u16 {
         self.0 % bank_count
     }

@@ -5,13 +5,13 @@ const LAYOUT: Layout = Layout::builder()
     .prg_max_size(8192 * KIBIBYTE)
     .chr_max_size(8 * KIBIBYTE)
     // TODO: Verify if this is necessary. Might only be used for NINA-001.
-    .override_bank_register(C1, BankIndex::LAST)
+    .override_bank_register(C1, -1)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
         Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P0)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.fixed_index(BankIndex::FIRST)),
+        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.fixed_index(0)),
     ])
     .build();
 

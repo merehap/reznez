@@ -7,7 +7,7 @@ const LAYOUT_WITH_SWITCHABLE_CHR_ROM: Layout = Layout::builder()
     .prg_max_size(128 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.fixed_index(BankIndex::LAST)),
+        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
     ])
     .chr_max_size(128 * KIBIBYTE)
     .chr_layout(&[
@@ -20,11 +20,11 @@ const LAYOUT_WITH_FIXED_CHR_RAM: Layout = Layout::builder()
     .prg_max_size(128 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.fixed_index(BankIndex::LAST)),
+        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
     ])
     .chr_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.fixed_index(BankIndex::FIRST)),
+        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.fixed_index(0)),
     ])
     .build();
 
