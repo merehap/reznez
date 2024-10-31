@@ -23,11 +23,8 @@ pub struct Layout {
 
     name_table_mirroring_source: NameTableMirroringSource,
 
-    // TODO: Replace these with ConstVecs.
-    bank_register_override: Option<(BankRegisterId, BankIndex)>,
-    second_bank_register_override: Option<(BankRegisterId, BankIndex)>,
-    meta_register_override: (MetaRegisterId, BankRegisterId),
-    second_meta_register_override: (MetaRegisterId, BankRegisterId),
+    bank_register_overrides: ConstVec<(BankRegisterId, BankIndex), 5>,
+    meta_register_overrides: ConstVec<(MetaRegisterId, BankRegisterId), 5>,
 }
 
 impl Layout {
@@ -42,12 +39,12 @@ impl Layout {
         assert!(chr_size <= self.chr_max_size, "CHR size of {}KiB is too large for this mapper.", chr_size / KIBIBYTE);
 
         let prg_memory = PrgMemory::new(
-            self.prg_layouts.into_vec(),
+            self.prg_layouts.into_iter().collect(),
             self.prg_layout_index,
             cartridge.prg_rom().clone(),
         );
         let chr_memory = ChrMemory::new(
-            self.chr_layouts.into_vec(),
+            self.chr_layouts.into_iter().collect(),
             self.chr_layout_index,
             self.align_large_chr_layout,
             cartridge.chr_rom().clone(),
@@ -59,16 +56,13 @@ impl Layout {
         };
 
         let mut bank_registers = BankRegisters::new();
-        if let Some((register_id, bank_index)) = self.bank_register_override {
+        for (register_id, bank_index) in self.bank_register_overrides.into_iter() {
             bank_registers.set(register_id, bank_index);
         }
 
-        if let Some((register_id, bank_index)) = self.second_bank_register_override {
-            bank_registers.set(register_id, bank_index);
+        for (meta_id, register_id) in self.meta_register_overrides.into_iter() {
+            bank_registers.set_meta(meta_id, register_id);
         }
-
-        bank_registers.set_meta(self.meta_register_override.0, self.meta_register_override.1);
-        bank_registers.set_meta(self.second_meta_register_override.0, self.second_meta_register_override.1);
 
         MapperParams {
             prg_memory,
@@ -91,11 +85,9 @@ pub struct LayoutBuilder {
     align_large_chr_layout: bool,
 
     name_table_mirroring_source: NameTableMirroringSource,
-    bank_register_override: Option<(BankRegisterId, BankIndex)>,
-    second_bank_register_override: Option<(BankRegisterId, BankIndex)>,
-    meta_register_override: (MetaRegisterId, BankRegisterId),
-    // Can't clone a map in a const context, so each override must be a separate field.
-    second_meta_register_override: (MetaRegisterId, BankRegisterId),
+
+    bank_register_overrides: ConstVec<(BankRegisterId, BankIndex), 5>,
+    meta_register_overrides: ConstVec<(MetaRegisterId, BankRegisterId), 5>,
 }
 
 impl LayoutBuilder {
@@ -111,10 +103,9 @@ impl LayoutBuilder {
             align_large_chr_layout: true,
 
             name_table_mirroring_source: NameTableMirroringSource::Cartridge,
-            bank_register_override: None,
-            second_bank_register_override: None,
-            meta_register_override: (MetaRegisterId::M0, BankRegisterId::C0),
-            second_meta_register_override: (MetaRegisterId::M1, BankRegisterId::C0),
+
+            bank_register_overrides: ConstVec::new(),
+            meta_register_overrides: ConstVec::new(),
         }
     }
 
@@ -166,16 +157,7 @@ impl LayoutBuilder {
         id: BankRegisterId,
         bank_index: i16,
     ) -> &mut LayoutBuilder {
-        self.bank_register_override = Some((id, BankIndex::from_i16(bank_index)));
-        self
-    }
-
-    pub const fn override_second_bank_register(
-        &mut self,
-        id: BankRegisterId,
-        bank_index: i16,
-    ) -> &mut LayoutBuilder {
-        self.second_bank_register_override = Some((id, BankIndex::from_i16(bank_index)));
+        self.bank_register_overrides.push((id, BankIndex::from_i16(bank_index)));
         self
     }
 
@@ -184,16 +166,7 @@ impl LayoutBuilder {
         meta_id: MetaRegisterId,
         id: BankRegisterId,
     ) -> &mut LayoutBuilder {
-        self.meta_register_override = (meta_id, id);
-        self
-    }
-
-    pub const fn override_second_meta_register(
-        &mut self,
-        meta_id: MetaRegisterId,
-        id: BankRegisterId,
-    ) -> &mut LayoutBuilder {
-        self.second_meta_register_override = (meta_id, id);
+        self.meta_register_overrides.push((meta_id, id));
         self
     }
 
@@ -213,10 +186,8 @@ impl LayoutBuilder {
 
             name_table_mirroring_source: self.name_table_mirroring_source,
 
-            bank_register_override: self.bank_register_override,
-            second_bank_register_override: self.second_bank_register_override,
-            meta_register_override: self.meta_register_override,
-            second_meta_register_override: self.second_meta_register_override,
+            bank_register_overrides: self.bank_register_overrides,
+            meta_register_overrides: self.meta_register_overrides,
         }
     }
 }

@@ -27,10 +27,9 @@ impl <T: Clone + Copy, const CAPACITY: usize> ConstVec<T, CAPACITY> {
         self.index == 0
     }
 
-    pub fn into_vec(self) -> Vec<T> {
+    pub fn into_iter(self) -> impl Iterator<Item = T> {
         self.backing.into_iter()
             .take(self.index as usize)
             .map(|value| unsafe { value.assume_init() })
-            .collect()
     }
 }

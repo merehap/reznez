@@ -4,7 +4,7 @@ const LAYOUT: Layout = Layout::builder()
     .prg_max_size(256 * KIBIBYTE)
     .chr_max_size(128 * KIBIBYTE)
     .override_meta_register(M0, C1)
-    .override_second_meta_register(M1, C3)
+    .override_meta_register(M1, C3)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
         Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P0)),
