@@ -35,6 +35,9 @@ impl Layout {
     }
 
     pub fn make_mapper_params(self, cartridge: &Cartridge) -> MapperParams {
+        assert!(cartridge.prg_rom().size() <= self.prg_max_size);
+        assert!(cartridge.chr_rom().size() <= self.chr_max_size);
+
         let prg_memory = PrgMemory::new(
             self.prg_layouts.into_vec(),
             self.prg_layout_index,
