@@ -3,8 +3,8 @@ use crate::memory::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .override_bank_register(P1, 0b10)
     .override_bank_register(P2, 0b1110)
-    .prg_max_size(1024 * KIBIBYTE)
     // NROM-256
+    .prg_max_size(1024 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
         Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P0)),

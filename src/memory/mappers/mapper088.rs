@@ -2,8 +2,8 @@ use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(128 * KIBIBYTE)
-    .chr_max_size(128 * KIBIBYTE)
     .prg_layout(PRG_WINDOWS)
+    .chr_max_size(128 * KIBIBYTE)
     .chr_layout(CHR_WINDOWS)
     .build();
 

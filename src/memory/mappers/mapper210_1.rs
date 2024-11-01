@@ -2,7 +2,6 @@ use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(512 * KIBIBYTE)
-    .chr_max_size(256 * KIBIBYTE)
     .prg_layout(&[
         // FIXME: This is supposed to be 2KiBs mirrored. Family Circuit doesn't work without it.
         Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM),
@@ -11,6 +10,7 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),
         Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
     ])
+    .chr_max_size(256 * KIBIBYTE)
     .chr_layout(&[
         Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::ROM.switchable(C0)),
         Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::ROM.switchable(C1)),

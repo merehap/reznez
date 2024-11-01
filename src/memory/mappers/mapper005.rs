@@ -9,9 +9,9 @@ use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu::vram::VramSide;
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_max_size(1024 * KIBIBYTE)
-    .chr_max_size(1024 * KIBIBYTE)
     .override_bank_register(P4, -1)
+    .prg_max_size(1024 * KIBIBYTE)
+    .prg_layout_index(3)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
         Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P4)),
@@ -34,7 +34,7 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::RAM.switchable(P3).status_register(S0)),
         Window::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
-    .prg_layout_index(3)
+    .chr_max_size(1024 * KIBIBYTE)
     // Normal sprite height layouts
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C7)),

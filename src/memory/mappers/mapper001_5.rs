@@ -3,12 +3,11 @@ use crate::memory::mappers::common::mmc1::{ShiftRegister, ShiftStatus};
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(32 * KIBIBYTE)
-    .chr_max_size(64 * KIBIBYTE)
-    .override_initial_name_table_mirroring(NameTableMirroring::OneScreenRightBank)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
         Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.fixed_index(0)),
     ])
+    .chr_max_size(64 * KIBIBYTE)
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),
     ])
@@ -16,6 +15,7 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C0)),
         Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C1)),
     ])
+    .override_initial_name_table_mirroring(NameTableMirroring::OneScreenRightBank)
     .build();
 
 const MIRRORINGS: [NameTableMirroring; 4] =

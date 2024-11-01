@@ -1,16 +1,16 @@
 use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
-    // Oversize definition. The actual cartridge only allows 64KiB.
-    .prg_max_size(8192 * KIBIBYTE)
-    // Oversize definition. The actual cartridge only uses 64KiB.
-    .chr_max_size(1024 * KIBIBYTE)
     // TODO: Verify if this is necessary. Might only be used for BxROM.
     .override_bank_register(C1, -1)
+    // Oversize definition. The actual cartridge only allows 64KiB.
+    .prg_max_size(8192 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
         Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::RAM.switchable(P0)),
     ])
+    // Oversize definition. The actual cartridge only uses 64KiB.
+    .chr_max_size(1024 * KIBIBYTE)
     .chr_layout(&[
         Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C0)),
         Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C1)),
