@@ -18,12 +18,11 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
         Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+    ])
     .build();
-
-const MIRRORINGS: [NameTableMirroring; 2] = [
-    NameTableMirroring::Vertical,
-    NameTableMirroring::Horizontal,
-];
 
 // Taito's TC0190
 pub struct Mapper033;
@@ -33,8 +32,8 @@ impl Mapper for Mapper033 {
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x8000 => {
-                let fields = splitbits!(value, ".mpppppp");
-                params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
+                let fields = splitbits!(min=u8, value, ".mpppppp");
+                params.set_name_table_mirroring(fields.m);
                 params.set_bank_register(P0, fields.p);
             }
             0x8001 => params.set_bank_register(P1, value & 0b0011_1111),

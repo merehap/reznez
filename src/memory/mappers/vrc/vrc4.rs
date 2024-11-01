@@ -32,14 +32,13 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C6)),
         Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+        NameTableMirroring::OneScreenLeftBank,
+        NameTableMirroring::OneScreenRightBank,
+    ])
     .build();
-
-const NAME_TABLE_MIRRORINGS: [NameTableMirroring; 4] = [
-    NameTableMirroring::Vertical,
-    NameTableMirroring::Horizontal,
-    NameTableMirroring::OneScreenLeftBank,
-    NameTableMirroring::OneScreenRightBank,
-];
 
 const RAM_STATUSES: [RamStatus; 2] = [
     RamStatus::Disabled,
@@ -68,8 +67,7 @@ impl Mapper for Vrc4 {
             // Set bank for 8000 through 9FFF (or C000 through DFFF).
             0x8000..=0x8003 => params.set_bank_register(P0, value & 0b0001_1111),
             0x9000 => {
-                let mirroring = NAME_TABLE_MIRRORINGS[usize::from(value & 0b0000_0011)];
-                params.set_name_table_mirroring(mirroring);
+                params.set_name_table_mirroring(value & 0b11);
             }
             0x9002 => {
                 let fields = splitbits!(min=u8, value, "......ps");

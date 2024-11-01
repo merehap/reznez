@@ -27,13 +27,11 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C6)),
         Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+    ])
     .build();
-
-const MIRRORINGS: [NameTableMirroring; 2] =
-[
-    NameTableMirroring::Vertical,
-    NameTableMirroring::Horizontal,
-];
 
 // Irem's G-101
 pub struct Mapper032;
@@ -46,7 +44,7 @@ impl Mapper for Mapper032 {
             0x9000..=0x9007 => {
                 let fields = splitbits!(min=u8, value, "......pm");
                 params.set_prg_layout(fields.p);
-                params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
+                params.set_name_table_mirroring(fields.m);
             }
             0xA000..=0xA007 => params.set_bank_register(P1, value & 0b1_1111),
             0xB000 => params.set_bank_register(C0, value),

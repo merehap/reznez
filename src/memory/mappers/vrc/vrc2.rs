@@ -23,12 +23,11 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C6)),
         Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+    ])
     .build();
-
-const NAME_TABLE_MIRRORINGS: [NameTableMirroring; 2] = [
-    NameTableMirroring::Vertical,
-    NameTableMirroring::Horizontal,
-];
 
 pub struct Vrc2 {
     low_address_bank_register_ids: BTreeMap<u16, BankRegisterId>,
@@ -44,10 +43,7 @@ impl Mapper for Vrc2 {
             0x6000..=0x7FFF => params.write_prg(address, value),
             // Set bank for 8000 through 9FFF.
             0x8000..=0x8003 => params.set_bank_register(P0, value & 0b0001_1111),
-            0x9000 => {
-                let mirroring = NAME_TABLE_MIRRORINGS[usize::from(value & 0b0000_0001)];
-                params.set_name_table_mirroring(mirroring);
-            }
+            0x9000 => params.set_name_table_mirroring(value & 1),
             // Set bank for A000 through AFFF.
             0xA000..=0xA003 => params.set_bank_register(P1, value & 0b0001_1111),
 

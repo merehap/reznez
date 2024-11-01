@@ -13,6 +13,10 @@ const LAYOUT_WITH_SWITCHABLE_CHR_ROM: Layout = Layout::builder()
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+    ])
     .build();
 
 // Used by Bio Miracle Bokutte Upa, for example.
@@ -26,12 +30,11 @@ const LAYOUT_WITH_FIXED_CHR_RAM: Layout = Layout::builder()
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.fixed_index(0)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+    ])
     .build();
-
-const MIRRORINGS: [NameTableMirroring; 2] = [
-    NameTableMirroring::Vertical,
-    NameTableMirroring::Horizontal,
-];
 
 // FDS games hacked into cartridge form.
 // HACK: normally there should only be one Layout per mapper, but representing the option of having
@@ -50,8 +53,8 @@ impl Mapper for Mapper042 {
             0x8000 => params.set_bank_register(C0, value & 0b1111),
             0xE000 => params.set_bank_register(P0, value & 0b1111),
             0xE001 => {
-                let mirroring = splitbits_named!(value, "....m...");
-                params.set_name_table_mirroring(MIRRORINGS[mirroring as usize]);
+                let mirroring = splitbits_named!(min=u8, value, "....m...");
+                params.set_name_table_mirroring(mirroring);
             }
             0xE002 => {
                 self.irq_enabled = splitbits_named!(value, "......e.");

@@ -16,15 +16,13 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C1)),
     ])
     .override_initial_name_table_mirroring(NameTableMirroring::OneScreenRightBank)
-    .build();
-
-const MIRRORINGS: [NameTableMirroring; 4] =
-    [
+    .name_table_mirrorings(&[
         NameTableMirroring::OneScreenRightBank,
         NameTableMirroring::OneScreenLeftBank,
         NameTableMirroring::Vertical,
         NameTableMirroring::Horizontal,
-    ];
+    ])
+    .build();
 
 const RAM_STATUSES: [RamStatus; 2] =
     [
@@ -54,7 +52,7 @@ impl Mapper for Mapper001_5 {
                 0x8000..=0x9FFF => {
                     let fields = splitbits!(min=u8, finished_value, "...c..mm");
                     params.set_chr_layout(fields.c);
-                    params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
+                    params.set_name_table_mirroring(fields.m);
                 }
                 0xA000..=0xBFFF => params.set_bank_register(C0, finished_value),
                 0xC000..=0xDFFF => params.set_bank_register(C1, finished_value),

@@ -20,16 +20,13 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C6)),
         Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::OneScreenLeftBank,
+        NameTableMirroring::Vertical,
+        NameTableMirroring::OneScreenRightBank,
+        NameTableMirroring::Horizontal,
+    ])
     .build();
-
-
-
-const MIRRORINGS: [NameTableMirroring; 4] = [
-    NameTableMirroring::OneScreenLeftBank,
-    NameTableMirroring::Vertical,
-    NameTableMirroring::OneScreenRightBank,
-    NameTableMirroring::Horizontal,
-];
 
 // Namco 340
 // TODO: Untested! Need relevant ROMs to test against (everything is mapper 19 instead).
@@ -50,8 +47,8 @@ impl Mapper for Mapper210_2 {
             0xB800..=0xBFFF => params.set_bank_register(C7, value),
             0xC000..=0xDFFF => { /* Do nothing. */ }
             0xE000..=0xE7FF => {
-                let fields = splitbits!(value, "mmpppppp");
-                params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
+                let fields = splitbits!(min=u8, value, "mmpppppp");
+                params.set_name_table_mirroring(fields.m);
                 params.set_bank_register(P0, fields.p);
             }
             0xE800..=0xEFFF => params.set_bank_register(P1, value & 0b0011_1111),

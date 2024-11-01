@@ -17,12 +17,11 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.meta_switchable(M0)),
         Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.meta_switchable(M1)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+    ])
     .build();
-
-const MIRRORINGS: [NameTableMirroring; 2] = [
-    NameTableMirroring::Vertical,
-    NameTableMirroring::Horizontal,
-];
 
 // MMC2 (PNROM and PEEOROM boards)
 pub struct Mapper009;
@@ -38,7 +37,7 @@ impl Mapper for Mapper009 {
             0xC000..=0xCFFF => params.set_bank_register(C1, bank_index),
             0xD000..=0xDFFF => params.set_bank_register(C2, bank_index),
             0xE000..=0xEFFF => params.set_bank_register(C3, bank_index),
-            0xF000..=0xFFFF => params.set_name_table_mirroring(MIRRORINGS[usize::from(value & 1)]),
+            0xF000..=0xFFFF => params.set_name_table_mirroring(value & 1),
         }
     }
 

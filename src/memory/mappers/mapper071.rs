@@ -11,24 +11,23 @@ const LAYOUT: Layout = Layout::builder()
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(0)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::OneScreenLeftBank,
+        NameTableMirroring::OneScreenRightBank,
+    ])
     .build();
-
-const MIRRORINGS: [NameTableMirroring; 2] = [
-    NameTableMirroring::OneScreenLeftBank,
-    NameTableMirroring::OneScreenRightBank,
-];
 
 // Similar to UxROM.
 pub struct Mapper071;
 
 impl Mapper for Mapper071 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
-        let fields = splitbits!(value, "...mpppp");
+        let fields = splitbits!(min=u8, value, "...mpppp");
         match address.to_raw() {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x8FFF => { /* Do nothing. */ }
             // https://www.nesdev.org/wiki/INES_Mapper_071#Mirroring_($8000-$9FFF)
-            0x9000..=0x9FFF => params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]),
+            0x9000..=0x9FFF => params.set_name_table_mirroring(fields.m),
             0xA000..=0xBFFF => { /* Do nothing. */ }
             0xC000..=0xFFFF => params.set_bank_register(P0, fields.p),
         }

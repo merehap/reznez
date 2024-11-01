@@ -28,17 +28,16 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C6)),
         Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+        NameTableMirroring::OneScreenLeftBank,
+        NameTableMirroring::OneScreenLeftBank,
+    ])
     .build();
 
 
 const CHR_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
-
-const MIRRORINGS: [NameTableMirroring; 4] = [
-    NameTableMirroring::Vertical,
-    NameTableMirroring::Horizontal,
-    NameTableMirroring::OneScreenLeftBank,
-    NameTableMirroring::OneScreenLeftBank,
-];
 
 // Irem's H3001
 // FIXME: Daiku no Gen San 2 - small scanline flickering during intro.
@@ -62,7 +61,7 @@ impl Mapper for Mapper065 {
                 params.set_bank_register(reg_id, value);
             }
             0x9000 => params.set_prg_layout(value >> 7),
-            0x9001 => params.set_name_table_mirroring(MIRRORINGS[usize::from(value >> 6)]),
+            0x9001 => params.set_name_table_mirroring(value >> 6),
 
             0x9003 => {
                 self.irq_enabled = splitbits_named!(value, "i.......");

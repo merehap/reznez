@@ -54,6 +54,10 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C1)),
         Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+    ])
     .build();
 
 const CPU_CYCLE_MODE_IRQ_PENDING_DELAY: u8 = 1;
@@ -63,11 +67,6 @@ const BANK_INDEX_REGISTER_IDS: [Option<BankRegisterId>; 16] =
     [Some(C0), Some(C1), Some(C2), Some(C3), Some(C4), Some(C5), Some(P0), Some(P1),
      Some(C6), Some(C7),     None,     None,     None,     None,     None, Some(P2),
     ];
-
-const MIRRORINGS: [NameTableMirroring; 2] = [
-    NameTableMirroring::Vertical,
-    NameTableMirroring::Horizontal,
-];
 
 // RAMBO-1 (Similar to MMC3)
 pub struct Mapper064 {
@@ -190,7 +189,7 @@ impl Mapper064 {
     }
 
     fn set_name_table_mirroring(params: &mut MapperParams, value: u8) {
-        params.set_name_table_mirroring(MIRRORINGS[usize::from(value & 1)]);
+        params.set_name_table_mirroring(value & 1);
     }
 
     fn set_irq_counter_reload_value(&mut self, value: u8) {

@@ -20,14 +20,13 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C6)),
         Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::Horizontal,
+        NameTableMirroring::Vertical,
+        NameTableMirroring::OneScreenLeftBank,
+        NameTableMirroring::OneScreenRightBank,
+    ])
     .build();
-
-const NAME_TABLE_MIRRORINGS: [NameTableMirroring; 4] = [
-    NameTableMirroring::Horizontal,
-    NameTableMirroring::Vertical,
-    NameTableMirroring::OneScreenLeftBank,
-    NameTableMirroring::OneScreenRightBank,
-];
 
 // Jaleco SS 88006
 // TODO: Expansion Audio
@@ -122,10 +121,7 @@ impl Mapper for Mapper018 {
                 self.irq_enabled = value & 0b0000_0001 != 0;
                 self.irq_pending = false;
             }
-            0xF002 => {
-                let mirroring = NAME_TABLE_MIRRORINGS[usize::from(value) & 0b11];
-                params.set_name_table_mirroring(mirroring);
-            }
+            0xF002 => params.set_name_table_mirroring(value as u8 & 0b11),
             0xF003 => todo!("Expansion audio."),
             _ => unreachable!(),
         }

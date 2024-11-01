@@ -13,15 +13,16 @@ use crate::util::unit::KIBIBYTE;
 #[derive(Clone)]
 pub struct Layout {
     prg_max_size: u32,
-    prg_layouts: ConstVec<PrgLayout, 10>,
     prg_layout_index: u8,
+    prg_layouts: ConstVec<PrgLayout, 10>,
 
     chr_max_size: u32,
-    chr_layouts: ConstVec<ChrLayout, 10>,
+    align_large_chr_windows: bool,
     chr_layout_index: u8,
-    align_large_chr_layout: bool,
+    chr_layouts: ConstVec<ChrLayout, 10>,
 
     name_table_mirroring_source: NameTableMirroringSource,
+    name_table_mirrorings: &'static [NameTableMirroring],
 
     bank_register_overrides: ConstVec<(BankRegisterId, BankIndex), 5>,
     meta_register_overrides: ConstVec<(MetaRegisterId, BankRegisterId), 5>,
@@ -46,7 +47,7 @@ impl Layout {
         let chr_memory = ChrMemory::new(
             self.chr_layouts.into_iter().collect(),
             self.chr_layout_index,
-            self.align_large_chr_layout,
+            self.align_large_chr_windows,
             cartridge.chr_rom().clone(),
         );
 
@@ -69,6 +70,7 @@ impl Layout {
             chr_memory,
             bank_registers,
             name_table_mirroring,
+            name_table_mirrorings: self.name_table_mirrorings,
         }
     }
 }
@@ -82,9 +84,10 @@ pub struct LayoutBuilder {
     chr_max_size: Option<u32>,
     chr_layouts: ConstVec<ChrLayout, 10>,
     chr_layout_index: u8,
-    align_large_chr_layout: bool,
+    align_large_chr_windows: bool,
 
     name_table_mirroring_source: NameTableMirroringSource,
+    name_table_mirrorings: &'static [NameTableMirroring],
 
     bank_register_overrides: ConstVec<(BankRegisterId, BankIndex), 5>,
     meta_register_overrides: ConstVec<(MetaRegisterId, BankRegisterId), 5>,
@@ -94,15 +97,16 @@ impl LayoutBuilder {
     const fn new() -> LayoutBuilder {
         LayoutBuilder {
             prg_max_size: None,
-            prg_layouts: ConstVec::new(),
             prg_layout_index: 0,
+            prg_layouts: ConstVec::new(),
 
             chr_max_size: None,
-            chr_layouts: ConstVec::new(),
+            align_large_chr_windows: true,
             chr_layout_index: 0,
-            align_large_chr_layout: true,
+            chr_layouts: ConstVec::new(),
 
             name_table_mirroring_source: NameTableMirroringSource::Cartridge,
+            name_table_mirrorings: &[],
 
             bank_register_overrides: ConstVec::new(),
             meta_register_overrides: ConstVec::new(),
@@ -139,8 +143,8 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn do_not_align_large_chr_layout(&mut self) -> &mut LayoutBuilder {
-        self.align_large_chr_layout = false;
+    pub const fn do_not_align_large_chr_windows(&mut self) -> &mut LayoutBuilder {
+        self.align_large_chr_windows = false;
         self
     }
 
@@ -149,6 +153,14 @@ impl LayoutBuilder {
         value: NameTableMirroring,
     ) -> &mut LayoutBuilder {
         self.name_table_mirroring_source = NameTableMirroringSource::Direct(value);
+        self
+    }
+
+    pub const fn name_table_mirrorings(
+        &mut self,
+        value: &'static [NameTableMirroring],
+    ) -> &mut LayoutBuilder {
+        self.name_table_mirrorings = value;
         self
     }
 
@@ -182,9 +194,10 @@ impl LayoutBuilder {
             chr_max_size: self.chr_max_size.unwrap(),
             chr_layouts: self.chr_layouts,
             chr_layout_index: self.chr_layout_index,
-            align_large_chr_layout: self.align_large_chr_layout,
+            align_large_chr_windows: self.align_large_chr_windows,
 
             name_table_mirroring_source: self.name_table_mirroring_source,
+            name_table_mirrorings: self.name_table_mirrorings,
 
             bank_register_overrides: self.bank_register_overrides,
             meta_register_overrides: self.meta_register_overrides,

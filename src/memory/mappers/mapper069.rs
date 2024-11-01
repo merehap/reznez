@@ -20,18 +20,17 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C6)),
         Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+        NameTableMirroring::OneScreenLeftBank,
+        NameTableMirroring::OneScreenRightBank,
+    ])
     .build();
 
 const CHR_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
 // P0 is used by the ROM/RAM window, which gets special treatment.
 const PRG_ROM_REGISTER_IDS: [BankRegisterId; 3] = [P1, P2, P3];
-
-const NAME_TABLE_MIRRORINGS: [NameTableMirroring; 4] = [
-    NameTableMirroring::Vertical,
-    NameTableMirroring::Horizontal,
-    NameTableMirroring::OneScreenLeftBank,
-    NameTableMirroring::OneScreenRightBank,
-];
 
 // Sunsoft FME-7
 pub struct Mapper069 {
@@ -121,10 +120,8 @@ impl Mapper069 {
             }
             Command::PrgRomBank(id) =>
                 params.set_bank_register(id, value),
-            Command::NameTableMirroring => {
-                let mirroring = NAME_TABLE_MIRRORINGS[usize::from(value) & 0b11];
-                params.set_name_table_mirroring(mirroring);
-            }
+            Command::NameTableMirroring =>
+                params.set_name_table_mirroring(value & 0b11),
             Command::IrqControl => {
                 self.irq_pending = false;
                 (self.irq_counter_enabled, self.irq_enabled) = splitbits_named!(value, "c......i");

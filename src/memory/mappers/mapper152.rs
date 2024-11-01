@@ -12,12 +12,11 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),
     ])
     .override_initial_name_table_mirroring(NameTableMirroring::OneScreenLeftBank)
+    .name_table_mirrorings(&[
+        NameTableMirroring::OneScreenLeftBank,
+        NameTableMirroring::OneScreenRightBank,
+    ])
     .build();
-
-const MIRRORINGS: [NameTableMirroring; 2] = [
-    NameTableMirroring::OneScreenLeftBank,
-    NameTableMirroring::OneScreenRightBank,
-];
 
 // Similar to Mapper070, but with one screen mirroring control.
 pub struct Mapper152;
@@ -32,8 +31,8 @@ impl Mapper for Mapper152 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
             0x8000..=0xFFFF => {
-                let fields = splitbits!(value, "mpppcccc");
-                params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
+                let fields = splitbits!(min=u8, value, "mpppcccc");
+                params.set_name_table_mirroring(fields.m);
                 params.set_bank_register(P0, fields.p);
                 params.set_bank_register(C0, fields.c);
             }

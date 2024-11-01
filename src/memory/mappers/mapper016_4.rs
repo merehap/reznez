@@ -18,14 +18,13 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C6)),
         Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+        NameTableMirroring::OneScreenLeftBank,
+        NameTableMirroring::OneScreenRightBank,
+    ])
     .build();
-
-const MIRRORINGS: [NameTableMirroring; 4] = [
-    NameTableMirroring::Vertical,
-    NameTableMirroring::Horizontal,
-    NameTableMirroring::OneScreenLeftBank,
-    NameTableMirroring::OneScreenRightBank,
-];
 
 // FCG-1 ASIC
 pub struct Mapper016_4 {
@@ -48,7 +47,7 @@ impl Mapper for Mapper016_4 {
             0x6006 => params.set_bank_register(C6, value),
             0x6007 => params.set_bank_register(C7, value),
             0x6008 => params.set_bank_register(P0, value & 0b1111),
-            0x6009 => params.set_name_table_mirroring(MIRRORINGS[usize::from(value & 0b11)]),
+            0x6009 => params.set_name_table_mirroring(value & 0b11),
             0x600A => {
                 self.irq_pending = false;
                 self.irq_counter_enabled = value & 1 == 1;

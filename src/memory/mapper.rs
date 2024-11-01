@@ -480,7 +480,9 @@ pub struct MapperParams {
     pub prg_memory: PrgMemory,
     pub chr_memory: ChrMemory,
     pub bank_registers: BankRegisters,
+    // TODO: Consolidate these into ChrMemory?
     pub name_table_mirroring: NameTableMirroring,
+    pub name_table_mirrorings: &'static [NameTableMirroring],
 }
 
 impl MapperParams {
@@ -488,8 +490,8 @@ impl MapperParams {
         self.name_table_mirroring
     }
 
-    pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring) {
-        self.name_table_mirroring = name_table_mirroring;
+    pub fn set_name_table_mirroring(&mut self, mirroring_index: u8) {
+        self.name_table_mirroring = self.name_table_mirrorings[usize::from(mirroring_index)];
     }
 
     pub fn prg_memory(&self) -> &PrgMemory {

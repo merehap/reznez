@@ -35,6 +35,8 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
     .chr_max_size(1024 * KIBIBYTE)
+    .do_not_align_large_chr_windows()
+
     // Normal sprite height layouts
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C7)),
@@ -90,7 +92,6 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C12)),
         Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C12)),
     ])
-    .do_not_align_large_chr_layout()
     .build();
 
 const SPRITE_PATTERN_FETCH_START: u8 = 64;

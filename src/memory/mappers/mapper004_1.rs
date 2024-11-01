@@ -40,6 +40,10 @@ const LAYOUT: Layout = Layout::builder()
     .chr_max_size(256 * KIBIBYTE)
     .chr_layout(mmc3::CHR_BIG_WINDOWS_FIRST)
     .chr_layout(mmc3::CHR_SMALL_WINDOWS_FIRST)
+    .name_table_mirrorings(&[
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+    ])
     .build();
 
 const RAM_STATUSES: [RamStatus; 2] =
@@ -63,7 +67,7 @@ impl Mapper for Mapper004_1 {
             (0x6000..=0x7FFF, _) => params.write_prg(address, value),
             (0x8000..=0x9FFF, true ) => self.bank_select(params, value),
             (0x8000..=0x9FFF, false) => mmc3::set_bank_index(params, &mut self.selected_register_id, value),
-            (0xA000..=0xBFFF, true ) => mmc3::set_mirroring(params, value),
+            (0xA000..=0xBFFF, true ) => Self::set_mirroring(params, value),
             (0xA000..=0xBFFF, false) => Self::prg_ram_protect(params, value),
             (0xC000..=0xDFFF, true ) => self.irq_state.set_counter_reload_value(value),
             (0xC000..=0xDFFF, false) => self.irq_state.reload_counter(),
@@ -101,6 +105,16 @@ impl Mapper004_1 {
         self.selected_register_id = mmc3::BANK_INDEX_REGISTER_IDS[fields.b as usize];
     }
 
+    pub fn set_mirroring(params: &mut MapperParams, value: u8) {
+        use NameTableMirroring::*;
+
+        // Hard-coded 4-screen mirroring cannot be overridden.
+        if matches!(params.name_table_mirroring, Vertical | Horizontal) {
+            params.set_name_table_mirroring(value & 1);
+        }
+    }
+
+    // TODO: This should be implementable now.
     pub fn prg_ram_protect(_params: &mut MapperParams, _value: u8) {
         // TODO: Once NES 2.0 is supported, then MMC3 and MMC6 can properly be supported.
         /*

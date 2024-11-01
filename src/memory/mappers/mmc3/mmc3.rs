@@ -8,6 +8,10 @@ pub const LAYOUT: Layout = Layout::builder()
     .chr_max_size(256 * KIBIBYTE)
     .chr_layout(CHR_BIG_WINDOWS_FIRST)
     .chr_layout(CHR_SMALL_WINDOWS_FIRST)
+    .name_table_mirrorings(&[
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+    ])
     .build();
 
 pub const PRG_WINDOWS_8000_SWITCHABLE: &'static [Window] = &[
@@ -133,10 +137,10 @@ pub fn set_bank_index(
 
 pub fn set_mirroring(params: &mut MapperParams, value: u8) {
     use NameTableMirroring::*;
-    match (params.name_table_mirroring(), value & 0b0000_0001) {
-        (Vertical, 1) => params.set_name_table_mirroring(Horizontal),
-        (Horizontal, 0) => params.set_name_table_mirroring(Vertical),
-        _ => { /* Other mirrorings cannot be changed. */ }
+
+    // Cartridge hard-coded 4-screen mirroring cannot be changed.
+    if matches!(params.name_table_mirroring(), Vertical | Horizontal) {
+        params.set_name_table_mirroring(value & 1);
     }
 }
 

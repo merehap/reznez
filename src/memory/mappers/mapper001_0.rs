@@ -18,6 +18,12 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::RAM.switchable(C1)),
     ])
     .override_initial_name_table_mirroring(NameTableMirroring::OneScreenRightBank)
+    .name_table_mirrorings(&[
+        NameTableMirroring::OneScreenRightBank,
+        NameTableMirroring::OneScreenLeftBank,
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+    ])
     .build();
 
 const PRG_WINDOWS_ONE_BIG: &[Window] = &[
@@ -33,13 +39,6 @@ const PRG_WINDOWS_FIXED_LAST: &[Window] = &[
     Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P0)),
     Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
-];
-
-const MIRRORINGS: [NameTableMirroring; 4] = [
-    NameTableMirroring::OneScreenRightBank,
-    NameTableMirroring::OneScreenLeftBank,
-    NameTableMirroring::Vertical,
-    NameTableMirroring::Horizontal,
 ];
 
 const RAM_STATUSES: [RamStatus; 2] = [
@@ -71,7 +70,7 @@ impl Mapper for Mapper001_0 {
                     let fields = splitbits!(min=u8, finished_value, "...cppmm");
                     params.set_chr_layout(fields.c);
                     params.set_prg_layout(fields.p);
-                    params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
+                    params.set_name_table_mirroring(fields.m);
                 }
                 // FIXME: Handle cases for special boards.
                 0xA000..=0xBFFF => params.set_bank_register(C0, finished_value),

@@ -36,12 +36,11 @@ const LAYOUT: Layout = Layout::builder()
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.fixed_index(0).status_register(S0)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+    ])
     .build();
-
-const MIRRORINGS: [NameTableMirroring; 2] = [
-    NameTableMirroring::Vertical,
-    NameTableMirroring::Horizontal,
-];
 
 // K-1029 and K-1030P (multicart)
 // See https://www.nesdev.org/w/index.php?title=INES_Mapper_015&oldid=3854 for documentation, the
@@ -74,7 +73,7 @@ impl Mapper for Mapper015 {
                 params.set_bank_register(P0, prg_bank);
                 params.set_bank_register(P1, prg_bank | 0b10);
                 params.set_bank_register(P2, prg_bank | 0b1110);
-                params.set_name_table_mirroring(MIRRORINGS[mirroring as usize]);
+                params.set_name_table_mirroring(mirroring);
             }
         }
     }

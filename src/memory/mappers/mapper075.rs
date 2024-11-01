@@ -14,12 +14,11 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C0)),
         Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C1)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+    ])
     .build();
-
-const MIRRORINGS: [NameTableMirroring; 2] = [
-    NameTableMirroring::Vertical,
-    NameTableMirroring::Horizontal,
-];
 
 // VRC1
 pub struct Mapper075 {
@@ -34,12 +33,12 @@ impl Mapper for Mapper075 {
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x8FFF => params.set_bank_register(P0, value & 0b0000_1111),
             0x9000..=0x9FFF => {
-                let fields = splitbits!(value, ".....rlm");
+                let fields = splitbits!(min=u8, value, ".....rlm");
 
-                self.chr_right_high_bit = u8::from(fields.r) << 4;
-                self.chr_left_high_bit = u8::from(fields.l) << 4;
+                self.chr_right_high_bit = fields.r << 4;
+                self.chr_left_high_bit = fields.l << 4;
                 if params.name_table_mirroring() != NameTableMirroring::FourScreen {
-                    params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
+                    params.set_name_table_mirroring(fields.m);
                 }
             }
             0xA000..=0xAFFF => params.set_bank_register(P1, value & 0b0000_1111),

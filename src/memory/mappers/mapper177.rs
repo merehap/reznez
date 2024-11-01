@@ -10,12 +10,11 @@ const LAYOUT: Layout = Layout::builder()
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.fixed_index(0)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::Vertical,
+        NameTableMirroring::Horizontal,
+    ])
     .build();
-
-const MIRRORINGS: [NameTableMirroring; 2] = [
-    NameTableMirroring::Vertical,
-    NameTableMirroring::Horizontal,
-];
 
 // BxROM with WorkRam and mirroring control.
 pub struct Mapper177;
@@ -26,8 +25,8 @@ impl Mapper for Mapper177 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                let fields = splitbits!(value, "..mppppp");
-                params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
+                let fields = splitbits!(min=u8, value, "..mppppp");
+                params.set_name_table_mirroring(fields.m);
                 params.set_bank_register(P0, fields.p);
             }
         }

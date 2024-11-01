@@ -10,12 +10,11 @@ const LAYOUT: Layout = Layout::builder()
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::Horizontal,
+        NameTableMirroring::Vertical,
+    ])
     .build();
-
-const MIRRORINGS: [NameTableMirroring; 2] = [
-    NameTableMirroring::Horizontal,
-    NameTableMirroring::Vertical,
-];
 
 // NTD-8 (extended PRG and CHR from NINA-03 and NINA-06)
 pub struct Mapper113;
@@ -27,8 +26,8 @@ impl Mapper for Mapper113 {
             0x0000..=0x401F => unreachable!(),
             // 0x41XX, 0x43XX, ... $5DXX, $5FXX
             0x4100..=0x5FFF if (address / 0x100) % 2 == 1 => {
-                let fields = splitbits!(value, "mcpppccc");
-                params.set_name_table_mirroring(MIRRORINGS[fields.m as usize]);
+                let fields = splitbits!(min=u8, value, "mcpppccc");
+                params.set_name_table_mirroring(fields.m);
                 params.set_bank_register(C0, fields.c);
                 params.set_bank_register(P0, fields.p);
             }
