@@ -20,7 +20,7 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // TONY-I and YS-612 (FDS games in cartridge form).
-// TODO: Untested. Need test ROM.
+// TODO: Untested. Need test ROM. In particular, the 0x5000 ROM window might not work.
 pub struct Mapper043 {
     irq_enabled: bool,
     irq_pending: bool,
@@ -28,6 +28,15 @@ pub struct Mapper043 {
 }
 
 impl Mapper for Mapper043 {
+    fn peek_cartridge_space(&self, params: &MapperParams, address: CpuAddress) -> ReadResult {
+        match address.to_raw() {
+            0x0000..=0x401F => unreachable!(),
+            0x4020..=0x4FFF => ReadResult::OPEN_BUS,
+            // Normally only PRG >= 0x6000 can be peeked.
+            0x5000..=0xFFFF => params.peek_prg(address),
+        }
+    }
+
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: CpuAddress, value: u8) {
         const INDEXES: [u8; 8] = [4, 3, 4, 4, 4, 7, 5, 6];
 

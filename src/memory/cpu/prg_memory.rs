@@ -6,8 +6,6 @@ use crate::memory::raw_memory::RawMemory;
 use crate::memory::read_result::ReadResult;
 use crate::memory::window::Window;
 
-const PRG_MEMORY_START: CpuAddress = CpuAddress::new(0x6000);
-
 pub struct PrgMemory {
     layouts: Vec<PrgLayout>,
     layout_index: u8,
@@ -148,9 +146,7 @@ impl PrgMemory {
         self.layout_index = index;
     }
 
-    // TODO: Indicate if read-only.
     fn address_to_prg_index(&self, registers: &BankRegisters, address: CpuAddress) -> PrgMemoryIndex {
-        assert!(address >= PRG_MEMORY_START);
         let address = address.to_raw();
 
         let windows = &self.current_layout().windows();
