@@ -20,7 +20,7 @@ const PATTERN_SIZE: u32 = 16;
 pub struct PatternTable<'a>([RawMemorySlice<'a>; 4]);
 
 impl<'a> PatternTable<'a> {
-    pub fn new(raw: [RawMemorySlice<'a>; 4]) -> PatternTable {
+    pub fn new(raw: [RawMemorySlice<'a>; 4]) -> PatternTable<'a> {
         PatternTable(raw)
     }
 
