@@ -194,6 +194,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // Rumble Station
         46 => m::mapper046::Mapper046::new().supported(),
 
+        // BTL-MARIO1-MALEE2
+        55 => m::mapper055::Mapper055.supported(),
+
         // RAMBO-1
         64 => m::mapper064::Mapper064::new().supported(),
         // Irem's H3001

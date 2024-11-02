@@ -59,7 +59,6 @@ pub trait Mapper {
     // Most mappers don't care about the current PPU address.
     fn process_current_ppu_address(&mut self, _address: PpuAddress) {}
     // Most mappers don't trigger custom IRQs.
-    // TODO: Move into MapperParams?
     fn irq_pending(&self) -> bool { false }
     // Most mappers don't have bus conflicts.
     fn has_bus_conflicts(&self) -> HasBusConflicts { HasBusConflicts::No }

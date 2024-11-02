@@ -4,9 +4,10 @@ use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(80 * KIBIBYTE)
+    .prg_bank_size_override(8 * KIBIBYTE)
     .prg_layout(&[
-        // The minimum PRG bank size is normally 8KiB. This is weird.
-        Window::new(0x5000, 0x5FFF, 4 * KIBIBYTE, Bank::ROM.fixed_index(8)),
+        Window::new(0x5000, 0x57FF, 2 * KIBIBYTE, Bank::ROM.fixed_index(8)),
+        Window::new(0x5800, 0x5FFF, 2 * KIBIBYTE, Bank::MirrorOf(0x5000)),
         Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(2)),
         Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(1)),
         Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(0)),

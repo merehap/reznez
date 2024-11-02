@@ -19,17 +19,20 @@ impl PrgMemory {
     pub fn new(
         layouts: Vec<PrgLayout>,
         layout_index: u8,
+        bank_size_override: Option<u16>,
         raw_memory: RawMemory,
     ) -> PrgMemory {
 
-        let mut bank_size = None;
-        for layout in &layouts {
-            for window in layout.windows() {
-                if matches!(window.bank(), Bank::Rom(..) | Bank::Ram(..)) {
-                    if let Some(size) = bank_size {
-                        bank_size = Some(std::cmp::min(window.size(), size));
-                    } else {
-                        bank_size = Some(window.size());
+        let mut bank_size = bank_size_override;
+        if bank_size.is_none() {
+            for layout in &layouts {
+                for window in layout.windows() {
+                    if matches!(window.bank(), Bank::Rom(..) | Bank::Ram(..)) {
+                        if let Some(size) = bank_size {
+                            bank_size = Some(std::cmp::min(window.size(), size));
+                        } else {
+                            bank_size = Some(window.size());
+                        }
                     }
                 }
             }

@@ -13,6 +13,7 @@ use crate::util::unit::KIBIBYTE;
 #[derive(Clone)]
 pub struct Layout {
     prg_max_size: u32,
+    prg_bank_size_override: Option<u16>,
     prg_layout_index: u8,
     prg_layouts: ConstVec<PrgLayout, 10>,
 
@@ -42,6 +43,7 @@ impl Layout {
         let prg_memory = PrgMemory::new(
             self.prg_layouts.into_iter().collect(),
             self.prg_layout_index,
+            self.prg_bank_size_override,
             cartridge.prg_rom().clone(),
         );
         let chr_memory = ChrMemory::new(
@@ -78,6 +80,7 @@ impl Layout {
 #[derive(Clone, Copy)]
 pub struct LayoutBuilder {
     prg_max_size: Option<u32>,
+    prg_bank_size_override: Option<u16>,
     prg_layouts: ConstVec<PrgLayout, 10>,
     prg_layout_index: u8,
 
@@ -97,6 +100,7 @@ impl LayoutBuilder {
     const fn new() -> LayoutBuilder {
         LayoutBuilder {
             prg_max_size: None,
+            prg_bank_size_override: None,
             prg_layout_index: 0,
             prg_layouts: ConstVec::new(),
 
@@ -118,13 +122,18 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn prg_layout(&mut self, windows: &'static [Window]) -> &mut LayoutBuilder {
-        self.prg_layouts.push(PrgLayout::new(windows));
+    pub const fn prg_bank_size_override(&mut self, value: u32) -> &mut LayoutBuilder {
+        self.prg_bank_size_override = Some(value as u16);
         self
     }
 
     pub const fn prg_layout_index(&mut self, value: u8) -> &mut LayoutBuilder {
         self.prg_layout_index = value;
+        self
+    }
+
+    pub const fn prg_layout(&mut self, windows: &'static [Window]) -> &mut LayoutBuilder {
+        self.prg_layouts.push(PrgLayout::new(windows));
         self
     }
 
@@ -188,6 +197,7 @@ impl LayoutBuilder {
 
         Layout {
             prg_max_size: self.prg_max_size.unwrap(),
+            prg_bank_size_override: self.prg_bank_size_override,
             prg_layouts: self.prg_layouts,
             prg_layout_index: self.prg_layout_index,
 
