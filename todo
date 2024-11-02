@@ -12,7 +12,6 @@ Work out priorities for WorkRam vs registers. Why does WorkRam need to be explic
 Move CPU bus into CpuMemory
 Audio
 Rename CycleAction to StepAction.
-Bus Conflicts
 Don't display bottom tiles of screen by default (see Aladdin junk tiles)
 Separate attribute table from name table?
 Proper encapsulation for PPU registers
@@ -20,8 +19,6 @@ Improve cycle accuracy of undocumented instructions
 Open Bus for joysticks.
 Other input devices.
 Auto-mirror undersized CHR (for mapper 99 and maybe others).
-Require PRG ROM and CHR ROM sizes in InitialLayout.
-Don't require mappers to explicitly say that their mirroring comes from the cartridge?
 
 FANCY NICE-TO-HAVES
 APU frequency correction
@@ -46,7 +43,6 @@ mmc5test: black screen.
 Dragon Ball Dai Maou Fukkatsu: infinite loop.
 
 IMPROVEMENTS TO PRG/CHR LAYOUTS
-Validate up front all windows as bank size multiples.
 Automatically add registers from every layout? Maybe not since certain layouts won't be used by certain boards.
 
 FAILING TESTS
