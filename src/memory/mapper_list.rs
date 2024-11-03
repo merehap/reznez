@@ -200,6 +200,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
 
         // NTDEC 0324 PCB
         61 => m::mapper061::Mapper061::new(cartridge.chr_ram_size()).supported(),
+        // Super 700-in-1
+        62 => m::mapper062::Mapper062.supported(),
 
         // RAMBO-1
         64 => m::mapper064::Mapper064::new().supported(),
