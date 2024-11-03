@@ -23,7 +23,8 @@ pub fn lookup_mapper_with_params(cartridge: &Cartridge) -> (Box<dyn Mapper>, Map
             panic!("Mapper {number}, submapper {sub_number} has been reassigned to {correct_mapper}, {correct_submapper} ."),
     };
 
-    let mapper_params = mapper.layout().make_mapper_params(cartridge);
+    let mut mapper_params = mapper.layout().make_mapper_params(cartridge);
+    mapper.init_mapper_params(&mut mapper_params);
     (mapper, mapper_params)
 }
 
@@ -196,6 +197,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
 
         // BTL-MARIO1-MALEE2
         55 => m::mapper055::Mapper055.supported(),
+
+        // NTDEC 0324 PCB
+        61 => m::mapper061::Mapper061::new(cartridge.chr_ram_size()).supported(),
 
         // RAMBO-1
         64 => m::mapper064::Mapper064::new().supported(),

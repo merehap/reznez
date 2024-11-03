@@ -48,6 +48,9 @@ pub trait Mapper {
         self.peek_cartridge_space(params, address)
     }
 
+    // Most mappers don't need to modify the MapperParams before ROM execution begins, but this
+    // provides a relief valve for the rare settings that can't be expressed in a Layout.
+    fn init_mapper_params(&self, _params: &mut MapperParams) {}
     // Most mappers don't care about CPU cycles.
     fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {}
     fn on_cpu_read(&mut self, _address: CpuAddress) {}
