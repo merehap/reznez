@@ -2,8 +2,7 @@ use ux::u15;
 
 use crate::memory::mapper::*;
 
-// Used by most games.
-const LAYOUT_WITH_SWITCHABLE_CHR_ROM: Layout = Layout::builder()
+const LAYOUT: Layout = Layout::builder()
     .prg_max_size(128 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::ROM.switchable(P0)),
@@ -13,20 +12,6 @@ const LAYOUT_WITH_SWITCHABLE_CHR_ROM: Layout = Layout::builder()
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),
     ])
-    .name_table_mirrorings(&[
-        NameTableMirroring::Vertical,
-        NameTableMirroring::Horizontal,
-    ])
-    .build();
-
-// Used by Bio Miracle Bokutte Upa, for example.
-const LAYOUT_WITH_FIXED_CHR_RAM: Layout = Layout::builder()
-    .prg_max_size(128 * KIBIBYTE)
-    .prg_layout(&[
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
-    ])
-    .chr_max_size(128 * KIBIBYTE)
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.fixed_index(0)),
     ])
@@ -37,17 +22,19 @@ const LAYOUT_WITH_FIXED_CHR_RAM: Layout = Layout::builder()
     .build();
 
 // FDS games hacked into cartridge form.
-// HACK: normally there should only be one Layout per mapper, but representing the option of having
-// either switchable ROM or fixed RAM in the same layout seems excessive.
 // Unknown if subject to bus conflicts.
 // FIXME: Bottom status bar scrolls when it should be stationary in Bio Miracle Bokutte Upa.
 pub struct Mapper042 {
-    layout: Layout,
+    chr_board: ChrBoard,
     irq_enabled: bool,
     irq_counter: u15,
 }
 
 impl Mapper for Mapper042 {
+    fn init_mapper_params(&self, params: &mut MapperParams) {
+        params.set_chr_layout(self.chr_board as u8);
+    }
+
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: CpuAddress, value: u8) {
         match cpu_address.to_raw() & 0xE003 {
             0x8000 => params.set_bank_register(C0, value & 0b1111),
@@ -78,7 +65,7 @@ impl Mapper for Mapper042 {
     }
 
     fn layout(&self) -> Layout {
-        self.layout.clone()
+        LAYOUT
     }
 }
 
@@ -86,16 +73,24 @@ impl Mapper042 {
     pub fn new(chr_ram_size: u32) -> Mapper042 {
         const CHR_RAM_SIZE: u32 = 8 * KIBIBYTE;
 
-        let layout = match chr_ram_size {
-            0 => LAYOUT_WITH_SWITCHABLE_CHR_ROM,
-            CHR_RAM_SIZE => LAYOUT_WITH_FIXED_CHR_RAM,
-            _ => panic!("Invalid CHR RAM size for mapper 42: {chr_ram_size} bytes."),
+        let chr_board = match chr_ram_size {
+            0 => ChrBoard::SwitchableRom,
+            CHR_RAM_SIZE => ChrBoard::FixedRam,
+            _ => panic!("Bad CHR RAM size for mapper 42: {chr_ram_size}"),
         };
 
         Mapper042 {
-            layout,
+            chr_board,
             irq_enabled: false,
             irq_counter: 0.into(),
         }
     }
+}
+
+#[derive(Clone, Copy)]
+enum ChrBoard {
+    // Ai Senshi Nicol, for example
+    SwitchableRom = 0,
+    // Bio Miracle Bokutte Upa, for example.
+    FixedRam = 1,
 }
