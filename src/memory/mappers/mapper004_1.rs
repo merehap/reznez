@@ -44,13 +44,11 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::Vertical,
         NameTableMirroring::Horizontal,
     ])
-    .build();
-
-const RAM_STATUSES: [RamStatus; 2] =
-    [
+    .ram_statuses(&[
         RamStatus::ReadOnly,
         RamStatus::ReadWrite,
-    ];
+    ])
+    .build();
 
 // MMC6. Similar to MMC3 with Sharp IRQs, but with Work RAM protection.
 pub struct Mapper004_1 {
@@ -100,8 +98,8 @@ impl Mapper004_1 {
         params.set_chr_layout(fields.c);
         params.set_prg_layout(fields.p);
         // FIXME: What are these actually supposed to do?
-        params.set_ram_status(S0, RAM_STATUSES[fields.s as usize]);
-        params.set_ram_status(S1, RAM_STATUSES[fields.s as usize]);
+        params.set_ram_status(S0, fields.s);
+        params.set_ram_status(S1, fields.s);
         self.selected_register_id = mmc3::BANK_INDEX_REGISTER_IDS[fields.b as usize];
     }
 

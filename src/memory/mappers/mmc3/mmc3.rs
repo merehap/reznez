@@ -12,6 +12,12 @@ pub const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::Vertical,
         NameTableMirroring::Horizontal,
     ])
+    .ram_statuses(&[
+        RamStatus::Disabled,
+        RamStatus::ReadOnly,
+        RamStatus::ReadWrite,
+        RamStatus::ReadOnly,
+    ])
     .build();
 
 pub const PRG_WINDOWS_8000_SWITCHABLE: &'static [Window] = &[
@@ -145,13 +151,5 @@ pub fn set_mirroring(params: &mut MapperParams, value: u8) {
 }
 
 pub fn prg_ram_protect(params: &mut MapperParams, value: u8) {
-    let (enable_ram, read_only) = splitbits_named!(value, "wr......");
-    let status = if read_only {
-        RamStatus::ReadOnly
-    } else if enable_ram {
-        RamStatus::ReadWrite
-    } else {
-        RamStatus::Disabled
-    };
-    params.set_ram_status(S0, status);
+    params.set_ram_status(S0, value >> 6);
 }

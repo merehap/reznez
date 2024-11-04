@@ -24,6 +24,10 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::Vertical,
         NameTableMirroring::Horizontal,
     ])
+    .ram_statuses(&[
+        RamStatus::ReadWrite,
+        RamStatus::Disabled,
+    ])
     .build();
 
 const PRG_WINDOWS_ONE_BIG: &[Window] = &[
@@ -39,11 +43,6 @@ const PRG_WINDOWS_FIXED_LAST: &[Window] = &[
     Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P0)),
     Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
-];
-
-const RAM_STATUSES: [RamStatus; 2] = [
-    RamStatus::ReadWrite,
-    RamStatus::Disabled,
 ];
 
 // SxROM (MMC1, MMC1B)
@@ -77,8 +76,8 @@ impl Mapper for Mapper001_0 {
                 // FIXME: Handle cases for special boards.
                 0xC000..=0xDFFF => params.set_bank_register(C1, finished_value),
                 0xE000..=0xFFFF => {
-                    let fields = splitbits!(finished_value, "...rbbbb");
-                    params.set_ram_status(S0, RAM_STATUSES[fields.r as usize]);
+                    let fields = splitbits!(min=u8, finished_value, "...rbbbb");
+                    params.set_ram_status(S0, fields.r);
                     params.set_bank_register(P0, fields.b);
                 }
             }

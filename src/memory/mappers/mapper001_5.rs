@@ -22,13 +22,11 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::Vertical,
         NameTableMirroring::Horizontal,
     ])
-    .build();
-
-const RAM_STATUSES: [RamStatus; 2] =
-    [
+    .ram_statuses(&[
         RamStatus::ReadWrite,
         RamStatus::Disabled,
-    ];
+    ])
+    .build();
 
 // SEROM. MMC1 that doesn't support PRG bank switching.
 pub struct Mapper001_5 {
@@ -57,8 +55,8 @@ impl Mapper for Mapper001_5 {
                 0xA000..=0xBFFF => params.set_bank_register(C0, finished_value),
                 0xC000..=0xDFFF => params.set_bank_register(C1, finished_value),
                 0xE000..=0xFFFF => {
-                    let fields = splitbits!(finished_value, "...s....");
-                    params.set_ram_status(S0, RAM_STATUSES[fields.s as usize]);
+                    let fields = splitbits!(min=u8, finished_value, "...s....");
+                    params.set_ram_status(S0, fields.s);
                 }
             }
         }

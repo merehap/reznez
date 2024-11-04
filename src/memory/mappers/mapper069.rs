@@ -26,6 +26,12 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::OneScreenLeftBank,
         NameTableMirroring::OneScreenRightBank,
     ])
+    .ram_statuses(&[
+        RamStatus::ReadOnly,
+        RamStatus::Disabled,
+        RamStatus::ReadOnly,
+        RamStatus::ReadWrite,
+    ])
     .build();
 
 const CHR_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
@@ -105,18 +111,9 @@ impl Mapper069 {
             Command::ChrRomBank(id) =>
                 params.set_bank_register(id, value),
             Command::PrgRomRamBank => {
-                // Writable / Read-only / PRG Bank
-                let fields = splitbits!(value, "wrbbbbbb");
-
-                let status = if fields.r {
-                    RamStatus::ReadOnly
-                } else if fields.w {
-                    RamStatus::ReadWrite
-                } else {
-                    RamStatus::Disabled
-                };
-                params.set_ram_status(S0, status);
-                params.set_bank_register(P0, fields.b);
+                let fields = splitbits!(value, "rrpppppp");
+                params.set_ram_status(S0, fields.r);
+                params.set_bank_register(P0, fields.p);
             }
             Command::PrgRomBank(id) =>
                 params.set_bank_register(id, value),

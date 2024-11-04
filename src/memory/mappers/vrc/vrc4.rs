@@ -38,12 +38,11 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::OneScreenLeftBank,
         NameTableMirroring::OneScreenRightBank,
     ])
+    .ram_statuses(&[
+        RamStatus::Disabled,
+        RamStatus::ReadWrite,
+    ])
     .build();
-
-const RAM_STATUSES: [RamStatus; 2] = [
-    RamStatus::Disabled,
-    RamStatus::ReadWrite,
-];
 
 pub struct Vrc4 {
     low_address_bank_register_ids: BTreeMap<u16, BankRegisterId>,
@@ -72,7 +71,7 @@ impl Mapper for Vrc4 {
             0x9002 => {
                 let fields = splitbits!(min=u8, value, "......ps");
                 params.set_prg_layout(fields.p);
-                params.set_ram_status(S0, RAM_STATUSES[fields.s as usize]);
+                params.set_ram_status(S0, fields.s);
             }
             // Set bank for A000 through AFFF.
             0xA000..=0xA003 => params.set_bank_register(P1, value & 0b0001_1111),

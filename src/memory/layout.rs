@@ -2,7 +2,7 @@ use crate::cartridge::cartridge::Cartridge;
 use crate::memory::bank::bank_index::{BankIndex, BankRegisters, MetaRegisterId, BankRegisterId};
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory::PrgMemory;
-use crate::memory::mapper::MapperParams;
+use crate::memory::mapper::{MapperParams, RamStatus};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::chr_memory::ChrMemory;
 use crate::memory::window::Window;
@@ -24,6 +24,8 @@ pub struct Layout {
 
     name_table_mirroring_source: NameTableMirroringSource,
     name_table_mirrorings: &'static [NameTableMirroring],
+
+    ram_statuses: &'static [RamStatus],
 
     bank_register_overrides: ConstVec<(BankRegisterId, BankIndex), 5>,
     meta_register_overrides: ConstVec<(MetaRegisterId, BankRegisterId), 5>,
@@ -73,6 +75,7 @@ impl Layout {
             bank_registers,
             name_table_mirroring,
             name_table_mirrorings: self.name_table_mirrorings,
+            ram_statuses: self.ram_statuses,
         }
     }
 }
@@ -91,6 +94,8 @@ pub struct LayoutBuilder {
 
     name_table_mirroring_source: NameTableMirroringSource,
     name_table_mirrorings: &'static [NameTableMirroring],
+
+    ram_statuses: &'static [RamStatus],
 
     bank_register_overrides: ConstVec<(BankRegisterId, BankIndex), 5>,
     meta_register_overrides: ConstVec<(MetaRegisterId, BankRegisterId), 5>,
@@ -111,6 +116,8 @@ impl LayoutBuilder {
 
             name_table_mirroring_source: NameTableMirroringSource::Cartridge,
             name_table_mirrorings: &[],
+
+            ram_statuses: &[],
 
             bank_register_overrides: ConstVec::new(),
             meta_register_overrides: ConstVec::new(),
@@ -173,6 +180,14 @@ impl LayoutBuilder {
         self
     }
 
+    pub const fn ram_statuses(
+        &mut self,
+        value: &'static [RamStatus],
+    ) -> &mut LayoutBuilder {
+        self.ram_statuses = value;
+        self
+    }
+
     pub const fn override_bank_register(
         &mut self,
         id: BankRegisterId,
@@ -208,6 +223,8 @@ impl LayoutBuilder {
 
             name_table_mirroring_source: self.name_table_mirroring_source,
             name_table_mirrorings: self.name_table_mirrorings,
+
+            ram_statuses: self.ram_statuses,
 
             bank_register_overrides: self.bank_register_overrides,
             meta_register_overrides: self.meta_register_overrides,

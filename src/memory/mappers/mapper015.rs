@@ -40,6 +40,10 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::Vertical,
         NameTableMirroring::Horizontal,
     ])
+    .ram_statuses(&[
+        RamStatus::ReadOnly,
+        RamStatus::ReadWrite,
+    ])
     .build();
 
 // K-1029 and K-1030P (multicart)
@@ -53,27 +57,23 @@ impl Mapper for Mapper015 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                let (sub_bank, mirroring, p) = splitbits_named!(min=u8, value, "smpppppp");
-                let mut prg_bank = combinebits!("0pppppp0");
-
-                let mut chr_ram_status = RamStatus::ReadWrite;
                 let prg_layout_index = (address.to_raw() & 0b11) as u8;
-                match prg_layout_index {
-                    // NROM-256 and NROM-128
-                    0 | 3 => chr_ram_status = RamStatus::ReadOnly,
-                    // UNROM
-                    1 => { /* Do nothing. */ }
-                    // NROM-64
-                    2 => prg_bank |= sub_bank,
-                    _ => unreachable!(),
-                }
-
                 params.set_prg_layout(prg_layout_index);
-                params.set_ram_status(S0, chr_ram_status);
+                let chr_ram_writable = matches!(prg_layout_index, 1 | 2);
+                params.set_ram_status(S0, chr_ram_writable as u8);
+
+                let (s, mirroring, p) = splitbits_named!(min=u8, value, "smpppppp");
+                let prg_bank = if prg_layout_index == 2 {
+                    // NROM-64
+                    combinebits!("0pppppps")
+                } else {
+                    combinebits!("0pppppp0")
+                };
+
+                params.set_name_table_mirroring(mirroring);
                 params.set_bank_register(P0, prg_bank);
                 params.set_bank_register(P1, prg_bank | 0b10);
                 params.set_bank_register(P2, prg_bank | 0b1110);
-                params.set_name_table_mirroring(mirroring);
             }
         }
     }

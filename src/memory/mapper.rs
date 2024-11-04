@@ -485,6 +485,7 @@ pub struct MapperParams {
     // TODO: Consolidate these into ChrMemory?
     pub name_table_mirroring: NameTableMirroring,
     pub name_table_mirrorings: &'static [NameTableMirroring],
+    pub ram_statuses: &'static [RamStatus],
 }
 
 impl MapperParams {
@@ -512,8 +513,8 @@ impl MapperParams {
         self.prg_memory.write(&self.bank_registers, address, value);
     }
 
-    pub fn set_ram_status(&mut self, id: RamStatusRegisterId, status: RamStatus) {
-        self.bank_registers.set_ram_status(id, status);
+    pub fn set_ram_status(&mut self, id: RamStatusRegisterId, index: u8) {
+        self.bank_registers.set_ram_status(id, self.ram_statuses[index as usize]);
     }
 
     pub fn chr_memory(&self) -> &ChrMemory {

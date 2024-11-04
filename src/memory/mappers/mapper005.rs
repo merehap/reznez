@@ -92,6 +92,11 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C12)),
         Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C12)),
     ])
+
+    .ram_statuses(&[
+        RamStatus::ReadOnly,
+        RamStatus::ReadWrite,
+    ])
     .build();
 
 const SPRITE_PATTERN_FETCH_START: u8 = 64;
@@ -410,22 +415,14 @@ impl Mapper005 {
 
     fn prg_ram_protect_1(&mut self, params: &mut MapperParams, value: u8) {
         self.prg_ram_enabled_1 = value & 0b0000_0011 == 0b0000_0010;
-        let status = if self.prg_ram_enabled_1 && self.prg_ram_enabled_2 {
-            RamStatus::ReadWrite
-        } else {
-            RamStatus::ReadOnly
-        };
-        params.set_ram_status(S0, status);
+        let enabled = self.prg_ram_enabled_1 && self.prg_ram_enabled_2;
+        params.set_ram_status(S0, enabled as u8);
     }
 
     fn prg_ram_protect_2(&mut self, params: &mut MapperParams, value: u8) {
         self.prg_ram_enabled_2 = value & 0b0000_0011 == 0b0000_0001;
-        let status = if self.prg_ram_enabled_1 && self.prg_ram_enabled_2 {
-            RamStatus::ReadWrite
-        } else {
-            RamStatus::ReadOnly
-        };
-        params.set_ram_status(S0, status);
+        let enabled = self.prg_ram_enabled_1 && self.prg_ram_enabled_2;
+        params.set_ram_status(S0, enabled as u8);
     }
 
     fn extended_ram_mode(&mut self, params: &mut MapperParams, value: u8) {
