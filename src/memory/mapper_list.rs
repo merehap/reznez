@@ -202,7 +202,13 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         61 => m::mapper061::Mapper061::new(cartridge.chr_ram_size()).supported(),
         // Super 700-in-1
         62 => m::mapper062::Mapper062.supported(),
-
+        63 => match submapper_number {
+            // TH2291-3 and CH-011
+            0 => m::mapper063_0::Mapper063_0.supported(),
+            // 82AB
+            1 => m::mapper063_1::Mapper063_1.supported(),
+            _ => UnassignedSubmapper,
+        }
         // RAMBO-1
         64 => m::mapper064::Mapper064::new().supported(),
         // Irem's H3001
