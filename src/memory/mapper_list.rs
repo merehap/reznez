@@ -252,6 +252,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // Taito X1-017
         82 => m::mapper082::Mapper082.supported(),
 
+        84 => UnassignedMapper,
+
         // Jaleco's JF-13
         86 => m::mapper086::Mapper086.supported(),
         // Jaleco J87
@@ -266,6 +268,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
 
         // JF-10 misdump (only Urusei Yatsura - Lum no Wedding Bell)
         101 => m::mapper101::MAPPER101.supported(),
+        102 => UnassignedMapper,
 
         // HES NTD-8
         113 => m::mapper113::Mapper113.supported(),
@@ -297,6 +300,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
 
         // UNROM 74HC08 (only Crazy Climber)
         180 => m::mapper180::Mapper180.supported(),
+
+        186 => UnassignedMapper,
 
         // DxROM, Tengen MIMIC-1, Namcot 118
         206 => match submapper_number {
