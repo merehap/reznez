@@ -94,4 +94,5 @@ impl Location {
 pub enum RamStatusRegisterId {
     S0,
     S1,
+    S2,
 }

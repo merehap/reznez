@@ -248,6 +248,10 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // NINA-03 and NINA-06
         79 => m::mapper079::Mapper079.supported(),
 
+        81 => m::mapper081::Mapper081.supported(),
+        // Taito X1-017
+        82 => m::mapper082::Mapper082.supported(),
+
         // Jaleco's JF-13
         86 => m::mapper086::Mapper086.supported(),
         // Jaleco J87

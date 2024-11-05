@@ -47,7 +47,7 @@ impl From<u8> for BankIndex {
 pub struct BankRegisters {
     registers: [BankIndex; 18],
     meta_registers: [BankRegisterId; 2],
-    ram_statuses: [RamStatus; 2],
+    ram_statuses: [RamStatus; 3],
 }
 
 impl BankRegisters {
@@ -56,7 +56,7 @@ impl BankRegisters {
             registers: [BankIndex::FIRST; 18],
             // Meta registers are only used for CHR currently.
             meta_registers: [BankRegisterId::C0, BankRegisterId::C0],
-            ram_statuses: [RamStatus::ReadWrite, RamStatus::ReadWrite],
+            ram_statuses: [RamStatus::ReadWrite, RamStatus::ReadWrite, RamStatus::ReadWrite],
         }
     }
 
