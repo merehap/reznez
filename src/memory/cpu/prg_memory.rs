@@ -136,6 +136,26 @@ impl PrgMemory {
         }
     }
 
+    pub fn maybe_write_work_ram(&mut self, registers: &BankRegisters, address: CpuAddress, value: u8) -> bool {
+        let windows = &self.current_layout().windows();
+        assert!(!windows.is_empty());
+        if address.to_raw() < windows[0].start() {
+            return false;
+        }
+
+        if let PrgMemoryIndex::WorkRam { section_id, index, ram_status} =
+                self.address_to_prg_index(registers, address) {
+            let work_ram = &mut self.work_ram_sections[section_id];
+            if ram_status == RamStatus::ReadWrite {
+                work_ram.data[index as usize] = value;
+            }
+
+            return true;
+        }
+
+        false
+    }
+
     pub fn window_at(&self, start: u16) -> &Window {
         self.window_with_index_at(start).0
     }
@@ -154,6 +174,7 @@ impl PrgMemory {
 
         let windows = &self.current_layout().windows();
         assert!(!windows.is_empty());
+        assert!(address >= windows[0].start());
 
         for i in 0..windows.len() {
             if i == windows.len() - 1 || address < windows[i + 1].start() {
@@ -187,7 +208,6 @@ impl PrgMemory {
                     Bank::WorkRam(status_register_id) => {
                         let ram_status: RamStatus = status_register_id
                             .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
-
                         let mut index = u32::from(bank_offset);
                         let mut result = None;
                         for (section_id, work_ram_section) in self.work_ram_sections.iter().enumerate() {
