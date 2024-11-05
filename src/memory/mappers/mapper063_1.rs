@@ -33,12 +33,12 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper063_1;
 
 impl Mapper for Mapper063_1 {
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, _value: u8) {
-        match address.to_raw() {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, _value: u8) {
+        match cpu_address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                let fields = splitbits!(min=u8, address.to_raw(), ".... ..rp pppp pplm");
+                let fields = splitbits!(min=u8, cpu_address, ".... ..rp pppp pplm");
                 params.set_ram_status(S0, fields.r);
                 params.set_bank_register(P0, fields.p);
                 params.set_prg_layout(fields.l);

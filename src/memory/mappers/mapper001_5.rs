@@ -34,16 +34,16 @@ pub struct Mapper001_5 {
 }
 
 impl Mapper for Mapper001_5 {
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         // Work RAM writes don't trigger any of the shifter logic.
-        if matches!(address.to_raw(), 0x6000..=0x7FFF) {
-            params.write_prg(address, value);
+        if matches!(cpu_address, 0x6000..=0x7FFF) {
+            params.write_prg(cpu_address, value);
             return;
         }
 
         match self.shift_register.shift(value) {
             ShiftStatus::Clear | ShiftStatus::Continue => { /* Do nothing additional. */ }
-            ShiftStatus::Done { finished_value } => match address.to_raw() {
+            ShiftStatus::Done { finished_value } => match cpu_address {
                 0x0000..=0x401F => unreachable!(),
                 0x4020..=0x5FFF => { /* Do nothing. */ }
                 0x6000..=0x7FFF => unreachable!(),

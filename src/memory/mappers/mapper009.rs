@@ -27,9 +27,9 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper009;
 
 impl Mapper for Mapper009 {
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         let bank_index = value & 0b0001_1111;
-        match address.to_raw() {
+        match cpu_address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x9FFF => { /* Do nothing. */ }
             0xA000..=0xAFFF => params.set_bank_register(P0, bank_index),

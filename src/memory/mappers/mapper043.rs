@@ -29,19 +29,19 @@ pub struct Mapper043 {
 }
 
 impl Mapper for Mapper043 {
-    fn peek_cartridge_space(&self, params: &MapperParams, address: CpuAddress) -> ReadResult {
-        match address.to_raw() {
+    fn peek_cartridge_space(&self, params: &MapperParams, cpu_address: u16) -> ReadResult {
+        match cpu_address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x4FFF => ReadResult::OPEN_BUS,
             // Normally only PRG >= 0x6000 can be peeked.
-            0x5000..=0xFFFF => params.peek_prg(address),
+            0x5000..=0xFFFF => params.peek_prg(cpu_address),
         }
     }
 
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         const INDEXES: [u8; 8] = [4, 3, 4, 4, 4, 7, 5, 6];
 
-        match cpu_address.to_raw() & 0x71FF {
+        match cpu_address & 0x71FF {
             0x4022 => {
                 // The bank index is scrambled for some reason.
                 let index = INDEXES[usize::from(value & 0b111)];

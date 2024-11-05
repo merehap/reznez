@@ -36,12 +36,12 @@ impl Mapper for Mapper061 {
         params.set_chr_layout(self.chr_board as u8);
     }
 
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, _value: u8) {
-        match address.to_raw() {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, _value: u8) {
+        match cpu_address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                let fields = splitbits!(min=u8, address.to_raw(), ".... cccc m.ql pppp");
+                let fields = splitbits!(min=u8, cpu_address, ".... cccc m.ql pppp");
                 let prg_index = combinebits!(fields.p, fields.q, "000ppppq");
 
                 params.set_bank_register(P0, prg_index);

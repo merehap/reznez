@@ -60,18 +60,17 @@ impl Mapper for Mapper018 {
         self.irq_pending
     }
 
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
-        if matches!(address.to_raw(), 0x6000..=0x7FFF) {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+        if matches!(cpu_address, 0x6000..=0x7FFF) {
             if self.work_ram_write_enabled {
-                params.write_prg(address, value);
+                params.write_prg(cpu_address, value);
             }
 
             return;
         }
 
-        let address = address.to_raw();
         let value = u16::from(value);
-        match address & 0b1111_0000_0000_0011 {
+        match cpu_address & 0b1111_0000_0000_0011 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
             0x6000..=0x7FFF => unreachable!(),

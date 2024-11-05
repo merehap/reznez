@@ -59,10 +59,10 @@ impl Mapper for Vrc4 {
         self.irq_state.pending()
     }
 
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
-        match address.to_raw() {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+        match cpu_address {
             0x0000..=0x401F => unreachable!(),
-            0x6000..=0x7FFF => params.write_prg(address, value),
+            0x6000..=0x7FFF => params.write_prg(cpu_address, value),
             // Set bank for 8000 through 9FFF (or C000 through DFFF).
             0x8000..=0x8003 => params.set_bank_register(P0, value & 0b0001_1111),
             0x9000 => {
@@ -80,12 +80,12 @@ impl Mapper for Vrc4 {
             0xB000..=0xEFFF => {
                 let bank;
                 let mask;
-                let mut register_id = self.low_address_bank_register_ids.get(&address.to_raw());
+                let mut register_id = self.low_address_bank_register_ids.get(&cpu_address);
                 if register_id.is_some() {
                     bank = u16::from(value);
                     mask = Some(0b0_0000_1111);
                 } else {
-                    register_id = self.high_address_bank_register_ids.get(&address.to_raw());
+                    register_id = self.high_address_bank_register_ids.get(&cpu_address);
                     bank = u16::from(value) << 4;
                     mask = Some(0b1_1111_0000);
                 }

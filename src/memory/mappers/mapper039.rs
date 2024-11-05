@@ -7,7 +7,7 @@ pub struct Mapper039 {
 }
 
 impl Mapper for Mapper039 {
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: CpuAddress, value: u8) {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         self.mapper241.write_to_cartridge_space(params, cpu_address, value);
     }
 

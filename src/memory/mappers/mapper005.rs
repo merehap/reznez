@@ -162,8 +162,8 @@ pub struct Mapper005 {
 }
 
 impl Mapper for Mapper005 {
-    fn peek_cartridge_space(&self, params: &MapperParams, address: CpuAddress) -> ReadResult {
-        match address.to_raw() {
+    fn peek_cartridge_space(&self, params: &MapperParams, cpu_address: u16) -> ReadResult {
+        match cpu_address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x500F => ReadResult::OPEN_BUS,
             0x5010 => /* TODO: Implement properly. */ ReadResult::full(0x01),
@@ -174,15 +174,15 @@ impl Mapper for Mapper005 {
             0x5205 => ReadResult::full((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
             0x5206 => ReadResult::full(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
             0x5207..=0x5BFF => ReadResult::OPEN_BUS,
-            0x5C00..=0x5FFF => self.peek_from_extended_ram(address),
-            0x6000..=0xFFFF => params.peek_prg(address),
+            0x5C00..=0x5FFF => self.peek_from_extended_ram(cpu_address),
+            0x6000..=0xFFFF => params.peek_prg(cpu_address),
         }
     }
 
-    fn read_from_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress) -> ReadResult {
-        let result = self.peek_cartridge_space(params, address);
+    fn read_from_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16) -> ReadResult {
+        let result = self.peek_cartridge_space(params, cpu_address);
         // TODO: Replace with ifs?
-        match address.to_raw() {
+        match cpu_address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5203 => {}
             0x5204 => self.irq_pending = false,
@@ -194,8 +194,8 @@ impl Mapper for Mapper005 {
         result
     }
 
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
-        match address.to_raw() {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+        match cpu_address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x4FFF => { /* Do nothing. */ }
             0x5000 => self.pulse_2.write_control_byte(value),
@@ -221,9 +221,9 @@ impl Mapper for Mapper005 {
             0x5106 => self.set_fill_mode_tile(value),
             0x5107 => self.set_fill_mode_palette_index(value),
             0x5108..=0x5112 => { /* Do nothing. */ }
-            0x5113..=0x5117 => Mapper005::prg_bank_switching(params, address.to_raw(), value),
+            0x5113..=0x5117 => Mapper005::prg_bank_switching(params, cpu_address, value),
             0x5118..=0x511F => { /* Do nothing. */ }
-            0x5120..=0x512B => Mapper005::chr_bank_switching(params, address.to_raw(), value),
+            0x5120..=0x512B => Mapper005::chr_bank_switching(params, cpu_address, value),
             0x512C..=0x512F => { /* Do nothing. */ }
             0x5130 => self.set_upper_chr_bank_bits(value),
             0x5131..=0x51FF => { /* Do nothing */ }
@@ -237,8 +237,8 @@ impl Mapper for Mapper005 {
             0x5207..=0x520A => { /* Do nothing yet. MMC5A registers. */ }
             0x520B..=0x57FF => { /* Do nothing. */ }
             0x5800..=0x5BFF => { /* Do nothing yet. MMC5A registers. */ }
-            0x5C00..=0x5FFF => self.write_to_extended_ram(address, value),
-            0x6000..=0xFFFF => params.write_prg(address, value),
+            0x5C00..=0x5FFF => self.write_to_extended_ram(cpu_address, value),
+            0x6000..=0xFFFF => params.write_prg(cpu_address, value),
         }
     }
 
@@ -488,17 +488,17 @@ impl Mapper005 {
         self.multiplier = value;
     }
 
-    fn peek_from_extended_ram(&self, address: CpuAddress) -> ReadResult {
+    fn peek_from_extended_ram(&self, cpu_address: u16) -> ReadResult {
         if self.extended_ram_mode.is_readable() {
-            ReadResult::full(self.extended_ram[address.to_u32() - 0x5C00])
+            ReadResult::full(self.extended_ram[cpu_address as u32 - 0x5C00])
         } else {
             ReadResult::OPEN_BUS
         }
     }
 
-    fn write_to_extended_ram(&mut self, address: CpuAddress, value: u8) {
+    fn write_to_extended_ram(&mut self, cpu_address: u16, value: u8) {
         // TODO: Write zeros if rendering is disabled.
-        self.extended_ram[address.to_u32() - 0x5C00] = value;
+        self.extended_ram[cpu_address as u32 - 0x5C00] = value;
     }
 
     fn scanline_irq_status(&self) -> u8 {

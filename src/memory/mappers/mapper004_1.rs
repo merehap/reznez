@@ -57,12 +57,12 @@ pub struct Mapper004_1 {
 }
 
 impl Mapper for Mapper004_1 {
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
-        let is_even_address = address.to_raw() % 2 == 0;
-        match (address.to_raw(), is_even_address) {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+        let is_even_address = cpu_address % 2 == 0;
+        match (cpu_address, is_even_address) {
             (0x0000..=0x401F, _) => unreachable!(),
             (0x4020..=0x5FFF, _) => { /* Do nothing. */ }
-            (0x6000..=0x7FFF, _) => params.write_prg(address, value),
+            (0x6000..=0x7FFF, _) => params.write_prg(cpu_address, value),
             (0x8000..=0x9FFF, true ) => self.bank_select(params, value),
             (0x8000..=0x9FFF, false) => mmc3::set_bank_index(params, &mut self.selected_register_id, value),
             (0xA000..=0xBFFF, true ) => Self::set_mirroring(params, value),

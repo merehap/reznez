@@ -33,19 +33,19 @@ pub trait Mapper {
     // Should be const, but that's not yet allowed by Rust.
     fn layout(&self) -> Layout;
 
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8);
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8);
 
     // Most mappers don't override the default cartridge peeking/reading behavior.
-    fn peek_cartridge_space(&self, params: &MapperParams, address: CpuAddress) -> ReadResult {
-        match address.to_raw() {
+    fn peek_cartridge_space(&self, params: &MapperParams, cpu_address: u16) -> ReadResult {
+        match cpu_address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => ReadResult::OPEN_BUS,
-            0x6000..=0xFFFF => params.peek_prg(address),
+            0x6000..=0xFFFF => params.peek_prg(cpu_address),
         }
     }
 
-    fn read_from_cartridge_space(&mut self, params: &mut MapperParams, address: CpuAddress) -> ReadResult {
-        self.peek_cartridge_space(params, address)
+    fn read_from_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16) -> ReadResult {
+        self.peek_cartridge_space(params, cpu_address)
     }
 
     // Most mappers don't need to modify the MapperParams before ROM execution begins, but this
@@ -104,7 +104,7 @@ pub trait Mapper {
             0x4016          => ReadResult::partial_open_bus(ports.joypad1.borrow().peek_status() as u8, 0b0000_0001),
             0x4017          => ReadResult::partial_open_bus(ports.joypad2.borrow().peek_status() as u8, 0b0000_0001),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
-            0x4020..=0xFFFF => self.peek_cartridge_space(params, address),
+            0x4020..=0xFFFF => self.peek_cartridge_space(params, address.to_raw()),
         }
     }
 
@@ -151,7 +151,7 @@ pub trait Mapper {
             0x4016          => ReadResult::partial_open_bus(ports.joypad1.borrow_mut().read_status() as u8, 0b0000_0001),
             0x4017          => ReadResult::partial_open_bus(ports.joypad2.borrow_mut().read_status() as u8, 0b0000_0001),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
-            0x4020..=0xFFFF => self.read_from_cartridge_space(params, address),
+            0x4020..=0xFFFF => self.read_from_cartridge_space(params, address.to_raw()),
         }
     }
 
@@ -227,7 +227,7 @@ pub trait Mapper {
                 } else {
                     value
                 };
-                self.write_to_cartridge_space(params, address, value);
+                self.write_to_cartridge_space(params, address.to_raw(), value);
             }
         }
     }
@@ -505,12 +505,12 @@ impl MapperParams {
         self.prg_memory.set_layout(index);
     }
 
-    pub fn peek_prg(&self, address: CpuAddress) -> ReadResult {
-        self.prg_memory.peek(&self.bank_registers, address)
+    pub fn peek_prg(&self, cpu_address: u16) -> ReadResult {
+        self.prg_memory.peek(&self.bank_registers, CpuAddress::new(cpu_address))
     }
 
-    pub fn write_prg(&mut self, address: CpuAddress, value: u8) {
-        self.prg_memory.write(&self.bank_registers, address, value);
+    pub fn write_prg(&mut self, cpu_address: u16, value: u8) {
+        self.prg_memory.write(&self.bank_registers, CpuAddress::new(cpu_address), value);
     }
 
     pub fn set_ram_status(&mut self, id: RamStatusRegisterId, index: u8) {
