@@ -50,6 +50,10 @@ impl VrcIrqState {
         }
     }
 
+    pub fn set_reload_value(&mut self, value: u8) {
+        self.counter_reload_value = value;
+    }
+
     pub fn set_reload_value_low_bits(&mut self, value: u8) {
         self.counter_reload_low_value = value & 0b0000_1111;
     }

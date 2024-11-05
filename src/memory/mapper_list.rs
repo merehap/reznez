@@ -253,8 +253,13 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         82 => m::mapper082::Mapper082.supported(),
 
         84 => UnassignedMapper,
-
-        // Jaleco's JF-13
+        85 => match submapper_number {
+            0 => UnspecifiedSubmapper,
+            1 => m::mapper085_1::Mapper085_1::new().supported(),
+            2 => m::mapper085_2::Mapper085_2::new().supported(),
+            _ => UnassignedSubmapper,
+        }
+        // Jaleco JF-13
         86 => m::mapper086::Mapper086.supported(),
         // Jaleco J87
         87 => m::mapper087::Mapper087.supported(),

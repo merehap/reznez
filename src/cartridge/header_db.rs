@@ -64,6 +64,9 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     (495013157, 4078096862, 4, 99),
     // Crystalis (no submapper number has been officially assigned)
     (656187357, 1661724784, 4, 99),
+
+    // Lagrange Point
+    (2905171667, 869154800, 85, 2),
 ];
 
 pub struct HeaderDb {

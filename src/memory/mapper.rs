@@ -397,7 +397,8 @@ pub trait Mapper {
 
             let left_padding_len;
             let right_padding_len;
-            let padding_size = window_size - 2 - u16::try_from(bank_string.len()).unwrap();
+            let padding_size = 5 * window_size - 2 - u16::try_from(bank_string.len()).unwrap();
+            assert!(padding_size < 100);
             left_padding_len = padding_size / 2;
             right_padding_len = padding_size - left_padding_len;
 
