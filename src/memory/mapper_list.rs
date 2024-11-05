@@ -260,6 +260,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         87 => m::mapper087::Mapper087.supported(),
         // NAMCOT-3443
         88 => m::mapper088::Mapper088::new(cartridge).supported(),
+        // Sunsoft (Tenka no Goikenban: Mito Koumon (J))
+        89 => m::mapper089::Mapper089.supported(),
 
         // HVC-UN1ROM
         94 => m::mapper094::Mapper094.supported(),
