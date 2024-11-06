@@ -268,6 +268,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // Sunsoft (Tenka no Goikenban: Mito Koumon (J))
         89 => m::mapper089::Mapper089.supported(),
 
+        // Sunsoft-2 IC on the Sunsoft-3R board
+        93 => m::mapper093::Mapper093.supported(),
         // HVC-UN1ROM
         94 => m::mapper094::Mapper094.supported(),
 
