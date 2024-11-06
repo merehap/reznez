@@ -273,6 +273,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // HVC-UN1ROM
         94 => m::mapper094::Mapper094.supported(),
 
+        // Irem TAM-S1 (Kaiketsu Yanchamaru)
+        97 => m::mapper097::Mapper097.supported(),
         98 => UnassignedMapper,
 
         // JF-10 misdump (only Urusei Yatsura - Lum no Wedding Bell)
