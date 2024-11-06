@@ -52,9 +52,8 @@ pub struct Mapper001_0 {
 
 impl Mapper for Mapper001_0 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        // Work RAM writes don't trigger any of the shifter logic.
         if matches!(cpu_address, 0x6000..=0x7FFF) {
-            params.write_prg(cpu_address, value);
+            // Work RAM writes don't trigger shifter logic.
             return;
         }
 

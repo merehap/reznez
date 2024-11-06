@@ -51,7 +51,6 @@ impl Mapper for Mapper085_1 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
-            0x6000..=0x7FFF => params.write_prg(cpu_address, value),
             0x8000 => params.set_bank_register(P0, value & 0b0011_1111),
             0x8008 => params.set_bank_register(P1, value & 0b0011_1111),
             0x9000 => params.set_bank_register(P2, value & 0b0011_1111),

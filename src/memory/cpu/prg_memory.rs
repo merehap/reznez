@@ -120,6 +120,12 @@ impl PrgMemory {
     }
 
     pub fn write(&mut self, registers: &BankRegisters, address: CpuAddress, value: u8) {
+        let windows = &self.current_layout().windows();
+        assert!(!windows.is_empty());
+        if address.to_raw() < windows[0].start() {
+            return;
+        }
+
         match self.address_to_prg_index(registers, address) {
             PrgMemoryIndex::None => {}
             PrgMemoryIndex::MappedMemory { index, ram_status } => {
@@ -134,26 +140,6 @@ impl PrgMemory {
                 }
             }
         }
-    }
-
-    pub fn maybe_write_work_ram(&mut self, registers: &BankRegisters, address: CpuAddress, value: u8) -> bool {
-        let windows = &self.current_layout().windows();
-        assert!(!windows.is_empty());
-        if address.to_raw() < windows[0].start() {
-            return false;
-        }
-
-        if let PrgMemoryIndex::WorkRam { section_id, index, ram_status} =
-                self.address_to_prg_index(registers, address) {
-            let work_ram = &mut self.work_ram_sections[section_id];
-            if ram_status == RamStatus::ReadWrite {
-                work_ram.data[index as usize] = value;
-            }
-
-            return true;
-        }
-
-        false
     }
 
     pub fn window_at(&self, start: u16) -> &Window {

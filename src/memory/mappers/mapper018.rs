@@ -30,7 +30,7 @@ const LAYOUT: Layout = Layout::builder()
 
 // Jaleco SS 88006
 // TODO: Expansion Audio
-// TODO: PRG RAM chip enable/disable
+// TODO: PRG RAM chip enable/disable (remove work_ram_write_enabled)
 pub struct Mapper018 {
     work_ram_write_enabled: bool,
 

@@ -228,10 +228,8 @@ pub trait Mapper {
                     value
                 };
 
-                let written = params.prg_memory.maybe_write_work_ram(&params.bank_registers, address, value);
-                if !written {
-                    self.write_to_cartridge_space(params, address.to_raw(), value);
-                }
+                params.prg_memory.write(&params.bank_registers, address, value);
+                self.write_to_cartridge_space(params, address.to_raw(), value);
             }
         }
     }

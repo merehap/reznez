@@ -28,9 +28,7 @@ impl Mapper for Mapper010 {
         let bank_index = value & 0b0001_1111;
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
-            0x4020..=0x5FFF => { /* Do nothing. */ }
-            0x6000..=0x7FFF => params.write_prg(cpu_address, value),
-            0x8000..=0x9FFF => { /* Do nothing. */ }
+            0x4020..=0x9FFF => { /* Do nothing. */ }
             0xA000..=0xAFFF => params.set_bank_register(P0, bank_index & 0b0000_1111),
             0xB000..=0xBFFF => params.set_bank_register(C0, bank_index),
             0xC000..=0xCFFF => params.set_bank_register(C1, bank_index),

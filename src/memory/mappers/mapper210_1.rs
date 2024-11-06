@@ -30,8 +30,7 @@ impl Mapper for Mapper210_1 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
-            0x4020..=0x5FFF => { /* Do nothing. */ }
-            0x6000..=0x7FFF => params.write_prg(cpu_address, value),
+            0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x87FF => params.set_bank_register(C0, value),
             0x8800..=0x8FFF => params.set_bank_register(C1, value),
             0x9000..=0x97FF => params.set_bank_register(C2, value),

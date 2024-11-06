@@ -40,7 +40,7 @@ impl Mapper for Vrc2 {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
             // TODO: Properly implement microwire interface.
-            0x6000..=0x7FFF => params.write_prg(cpu_address, value),
+            0x6000..=0x7FFF => { /* Do nothing. */ }
             // Set bank for 8000 through 9FFF.
             0x8000..=0x8003 => params.set_bank_register(P0, value & 0b0001_1111),
             0x9000 => params.set_name_table_mirroring(value & 1),
