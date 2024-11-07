@@ -15,6 +15,7 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     (3745301915, 3498657192, 3, 1),
     // read_joy3/thorough_test.nes
     (4081207045, 0068811153, 3, 1),
+
     // 2_test/2_test_0.nes
     (2392242790, 3901840109, 2, 1),
     // 2_test/2_test_1.nes
@@ -33,12 +34,6 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     (4282262767, 1718968027, 7, 1),
     // 7_test/7_test_2.nes
     (3975870379, 1718968027, 7, 2),
-    // 34_test/34_test_1.nes
-    (2768347885, 0852594764, 34, 1),
-    // 34_test/34_test_2.nes
-    (0906378520, 3170842144, 34, 2),
-    // serom/serom.nes
-    (2444067993, 3660366606, 1, 5),
 
     // bntest/bntest_aorom.nes
     (0271080456, 3417935230, 7, 1),
@@ -46,7 +41,6 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     (2219365086, 3417935230, 34, 2),
     // bntest/bntest_v.nes
     (0180120094, 3417935230, 34, 2),
-    // bntest/bntest_v.nes
 
     // holydiverbatman/M2_P128K_V.nes
     (3834536932, 3161185153, 2, 1),

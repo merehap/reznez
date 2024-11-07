@@ -1,6 +1,7 @@
 use std::fmt;
 
 use log::{info, warn, error};
+use splitbits::splitbits;
 
 use crate::cartridge::header_db::{HeaderDb, Header};
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
@@ -56,7 +57,7 @@ impl Cartridge {
         let vertical_mirroring    = rom[6] & 0b0000_0001 != 0;
 
         let upper_mapper_number   = rom[7] & 0b1111_0000;
-        let ines2_present         = rom[7] & 0b0000_1100 == 0b0000_1100;
+        let ines2_present         = rom[7] & 0b0000_1100 == 0b0000_1000;
         let play_choice_enabled   = rom[7] & 0b0000_0010 != 0;
         let vs_unisystem_enabled  = rom[7] & 0b0000_0001 != 0;
 
@@ -70,8 +71,28 @@ impl Cartridge {
             return Err("Trainer isn't implemented yet.".to_string());
         }
 
+        let mut mapper_number = u16::from(upper_mapper_number | (lower_mapper_number >> 4));
+        let mut submapper_number = 0;
+        let mut prg_ram_size = 0;
+        let mut chr_ram_size = 0;
         if ines2_present {
-            return Err("iNES2 isn't implemented yet.".to_string());
+            mapper_number |= u16::from(rom[8] & 0b1111) << 8;
+            submapper_number = rom[8] >> 4;
+            let prg_sizes = splitbits!(min=u32, rom[10], "eeeepppp");
+            match (prg_sizes.e, prg_sizes.p) {
+                (0, 0) => { /* Do nothing. */ }
+                (0, 1..) => prg_ram_size = 64 << prg_sizes.p,
+                (1.., 0) => prg_ram_size = 64 << prg_sizes.e,
+                (1.., 1..) => panic!("Both EEPROM and PRGRAM are present. Not sure what to do."),
+            }
+
+            let chr_sizes = splitbits!(min=u32, rom[10], "nnnnpppp");
+            match (chr_sizes.n, chr_sizes.p) {
+                (0, 0) => { /* Do nothing. */ }
+                (0, 1..) => chr_ram_size = 64 << chr_sizes.p,
+                (1.., 0) => chr_ram_size = 64 << chr_sizes.n,
+                (1.., 1..) => panic!("Both CHR NVRAM and CHRRAM are present. Not sure what to do."),
+            }
         }
 
         if play_choice_enabled {
@@ -82,7 +103,6 @@ impl Cartridge {
             return Err("VS Unisystem isn't implemented yet.".to_string());
         }
 
-        let mapper_number = u16::from(upper_mapper_number | (lower_mapper_number >> 4));
         let name_table_mirroring = match (four_screen, vertical_mirroring) {
             (true, _) => NameTableMirroring::FourScreen,
             (_, false) => NameTableMirroring::Horizontal,
@@ -124,7 +144,7 @@ impl Cartridge {
             name,
 
             mapper_number,
-            submapper_number: 0,
+            submapper_number,
             name_table_mirroring,
             has_persistent_memory,
             ripper_name,
@@ -132,9 +152,9 @@ impl Cartridge {
 
             trainer: None,
             prg_rom: prg_rom.to_raw_memory(),
-            prg_ram_size: 0,
+            prg_ram_size,
             chr_rom: chr_rom.to_raw_memory(),
-            chr_ram_size: 0,
+            chr_ram_size,
             console_type: ConsoleType::Nes,
             title,
         };
