@@ -7,7 +7,7 @@ use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::unit::KIBIBYTE;
 
-const INES_HEADER_CONSTANT: &[u8] = &[0x4E, 0x45, 0x53, 0x1A];
+const INES_HEADER_CONSTANT: &[u8] = &[b'N', b'E', b'S', 0x1A];
 const PRG_ROM_CHUNK_LENGTH: usize = 16 * KIBIBYTE as usize;
 const CHR_ROM_CHUNK_LENGTH: usize = 8 * KIBIBYTE as usize;
 
