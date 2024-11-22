@@ -312,6 +312,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // UNROM 74HC08 (only Crazy Climber)
         180 => m::mapper180::Mapper180.supported(),
 
+        // Sunsoft-1
+        184 => m::mapper184::Mapper184.supported(),
         // CNROM with CHR RAM disable
         185 => match submapper_number {
             0 => m::mapper185_0::Mapper185_0::new().supported(),
