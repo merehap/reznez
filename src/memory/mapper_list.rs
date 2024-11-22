@@ -312,6 +312,15 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // UNROM 74HC08 (only Crazy Climber)
         180 => m::mapper180::Mapper180.supported(),
 
+        // CNROM with CHR RAM disable
+        185 => match submapper_number {
+            0 => m::mapper185_0::Mapper185_0::new().supported(),
+            4 => m::mapper185_4::MAPPER185_4.supported(),
+            5 => m::mapper185_5::MAPPER185_5.supported(),
+            6 => m::mapper185_6::MAPPER185_6.supported(),
+            7 => m::mapper185_7::MAPPER185_7.supported(),
+            _ => UnassignedSubmapper,
+        }
         186 => UnassignedMapper,
 
         // DxROM, Tengen MIMIC-1, Namcot 118

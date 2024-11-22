@@ -53,7 +53,7 @@ pub trait Mapper {
     fn init_mapper_params(&self, _params: &mut MapperParams) {}
     // Most mappers don't care about CPU cycles.
     fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {}
-    fn on_cpu_read(&mut self, _address: CpuAddress) {}
+    fn on_cpu_read(&mut self, _params: &mut MapperParams, _address: CpuAddress) {}
     fn on_cpu_write(&mut self, _params: &mut MapperParams, _address: CpuAddress, _value: u8) {}
     // Most mappers don't care about PPU cycles.
     fn on_end_of_ppu_cycle(&mut self) {}
@@ -122,7 +122,7 @@ pub trait Mapper {
         apu_registers: &mut ApuRegisters,
         address: CpuAddress,
     ) -> ReadResult {
-        self.on_cpu_read(address);
+        self.on_cpu_read(params, address);
         match address.to_raw() {
             0x0000..=0x07FF => ReadResult::full(cpu_internal_ram[address.to_usize()]),
             0x0800..=0x1FFF => ReadResult::full(cpu_internal_ram[address.to_usize() & 0x07FF]),

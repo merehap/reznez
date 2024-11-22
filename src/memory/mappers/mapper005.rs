@@ -289,7 +289,7 @@ impl Mapper for Mapper005 {
         self.ppu_read_occurred_since_last_cpu_cycle = false;
     }
 
-    fn on_cpu_read(&mut self, address: CpuAddress) {
+    fn on_cpu_read(&mut self, _params: &mut MapperParams, address: CpuAddress) {
         if address == NMI_VECTOR_LOW || address == NMI_VECTOR_HIGH {
             self.in_frame = false;
             self.previous_ppu_address_read = None;

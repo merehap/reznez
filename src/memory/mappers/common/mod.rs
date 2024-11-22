@@ -6,3 +6,5 @@ pub mod uxrom;
 pub mod cnrom;
 // Mapper 7
 pub mod axrom;
+// Mapper 185
+pub mod cnrom_with_chr_disable;
