@@ -216,6 +216,16 @@ impl Cpu {
             }
         }
 
+        if step.is_read() {
+            if self.oam_dma_port.take_page().is_some() {
+                info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
+                    self.oam_dma_port.current_address());
+                self.step_queue.enqueue_oam_dma_transfer(cycle_parity);
+                self.suppress_next_instruction_start = true;
+                self.suppress_program_counter_increment = true;
+            }
+        }
+
         for &action in step.actions() {
             self.execute_cycle_action(memory, action, cycle_parity, irq_pending);
         }
@@ -253,14 +263,6 @@ impl Cpu {
                     info!(target: "cpuflowcontrol", "Reading DMC DMA byte at {address} on next cycle.");
                     let new_sample_buffer = memory.read(address).unwrap_or(self.data_bus);
                     memory.set_dmc_sample_buffer(new_sample_buffer);
-                    self.suppress_program_counter_increment = true;
-                    return;
-                }
-
-                if self.oam_dma_port.take_page().is_some() {
-                    info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
-                        self.oam_dma_port.current_address());
-                    self.step_queue.enqueue_oam_dma_transfer(cycle_parity);
                     self.suppress_program_counter_increment = true;
                     return;
                 }
