@@ -281,6 +281,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         101 => m::mapper101::MAPPER101.supported(),
         102 => UnassignedMapper,
 
+        // Huang Di and San Guo Zhi - Qun Xiong Zheng Ba
+        112 => m::mapper112::Mapper112::new().supported(),
         // HES NTD-8
         113 => m::mapper113::Mapper113.supported(),
 
