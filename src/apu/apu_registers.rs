@@ -1,3 +1,5 @@
+use std::fmt;
+
 use log::info;
 
 use crate::apu::pulse_channel::PulseChannel;
@@ -130,15 +132,15 @@ impl ApuRegisters {
         match self.frame_counter_write_status {
             Inactive => { /* Do nothing. */ }
             Initialized => {
-                info!(target: "apuevents", "APU frame counter: Waiting for APU 'ON' cycle. APU Cycle: {apu_cycle}");
-                self.frame_counter_write_status = WaitingForOnCycle;
+                info!(target: "apuevents", "APU frame counter: Waiting for APU PUT cycle. APU Cycle: {apu_cycle}");
+                self.frame_counter_write_status = WaitingForPutCycle;
             }
-            WaitingForOnCycle if !self.clock.is_off_cycle() => {
+            WaitingForPutCycle if self.clock.cycle_parity() == CycleParity::Put => {
                 info!(target: "apuevents", "APU frame counter: Resetting on the next APU cycle. APU Cycle: {apu_cycle}");
                 self.frame_counter_write_status = Ready;
             }
-            WaitingForOnCycle => {
-                info!(target: "apuevents", "APU frame counter: Still waiting for APU 'ON' cycle. APU Cycle: {apu_cycle}");
+            WaitingForPutCycle => {
+                info!(target: "apuevents", "APU frame counter: Still waiting for APU PUT cycle. APU Cycle: {apu_cycle}");
             }
             Ready => {
                 info!(
@@ -158,16 +160,16 @@ impl ApuRegisters {
         }
     }
 
-    pub fn on_cycle_step(&mut self) {
-        self.pulse_1.on_cycle_step();
-        self.pulse_2.on_cycle_step();
-        self.triangle.on_cycle_step();
-        self.noise.on_cycle_step();
-        self.dmc.on_cycle_step();
+    pub fn execute_put_cycle(&mut self) {
+        self.pulse_1.execute_put_cycle();
+        self.pulse_2.execute_put_cycle();
+        self.triangle.execute_put_cycle();
+        self.noise.execute_put_cycle();
+        self.dmc.execute_put_cycle();
     }
 
-    pub fn off_cycle_step(&mut self) {
-        self.triangle.off_cycle_step();
+    pub fn execute_get_cycle(&mut self) {
+        self.triangle.execute_get_cycle();
     }
 
     pub fn maybe_decrement_counters(&mut self) {
@@ -321,8 +323,12 @@ impl ApuClock {
         self.cycle = 0;
     }
 
-    pub fn is_off_cycle(self) -> bool {
-        self.cycle % 2 == 0
+    pub fn cycle_parity(self) -> CycleParity {
+        if self.cycle % 2 == 0 {
+            CycleParity::Get
+        } else {
+            CycleParity::Put
+        }
     }
 
     pub fn cycle(self) -> u16 {
@@ -339,11 +345,25 @@ impl ApuClock {
     }
 }
 
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum CycleParity {
+    Get,
+    Put,
+}
+
+impl fmt::Display for CycleParity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            CycleParity::Get => write!(f, "GET"),
+            CycleParity::Put => write!(f, "PUT"),
+        }
+    }
+}
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum FrameCounterWriteStatus {
     Inactive,
     Initialized,
-    WaitingForOnCycle,
+    WaitingForPutCycle,
     Ready,
 }

@@ -55,11 +55,11 @@ impl TriangleChannel {
         !self.length_counter.is_zero()
     }
 
-    pub(super) fn off_cycle_step(&mut self) {
+    pub(super) fn execute_get_cycle(&mut self) {
         self.advance_timer_and_sequence_index();
     }
 
-    pub(super) fn on_cycle_step(&mut self) {
+    pub(super) fn execute_put_cycle(&mut self) {
         self.advance_timer_and_sequence_index();
     }
 

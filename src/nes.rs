@@ -414,8 +414,7 @@ impl SnapshotBuilder {
     fn apu_regs(&mut self, regs: &ApuRegisters) {
         let clock = regs.clock();
         self.apu_cycle = Some(clock.cycle());
-        let on_or_off = if clock.is_off_cycle() { "OFF" } else { "ON" };
-        self.apu_parity = Some(on_or_off.to_string());
+        self.apu_parity = Some(clock.cycle_parity().to_string());
         self.frame_counter_write_status = Some(regs.frame_counter_write_status());
     }
 

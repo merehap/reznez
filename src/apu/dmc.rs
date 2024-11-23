@@ -101,7 +101,7 @@ impl Dmc {
         }
     }
 
-    pub(super) fn on_cycle_step(&mut self) {
+    pub(super) fn execute_put_cycle(&mut self) {
         if self.cycles_remaining >= 2 {
             self.cycles_remaining -= 2;
             return;

@@ -55,7 +55,7 @@ impl PulseChannel {
         !self.length_counter.is_zero()
     }
 
-    pub(super) fn on_cycle_step(&mut self) {
+    pub(super) fn execute_put_cycle(&mut self) {
         let wrapped_around = self.timer.tick();
         if wrapped_around {
             self.sequence_index += 1;

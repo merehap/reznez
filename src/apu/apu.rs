@@ -7,7 +7,7 @@ use log::info;
 use rodio::{OutputStream, Sink};
 use rodio::source::Source;
 
-use crate::apu::apu_registers::ApuRegisters;
+use crate::apu::apu_registers::{ApuRegisters, CycleParity};
 
 const SAMPLE_RATE: u32 = 44100;
 const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
@@ -52,18 +52,17 @@ impl Apu {
         regs.maybe_update_step_mode();
         regs.dmc.maybe_start_dma();
 
-        if regs.clock().is_off_cycle() {
-            Apu::off_cycle_step(regs);
-        } else {
-            self.on_cycle_step(regs);
+        match regs.clock().cycle_parity() {
+            CycleParity::Get => Apu::execute_get_cycle(regs),
+            CycleParity::Put => self.execute_put_cycle(regs),
         }
     }
 
-    fn on_cycle_step(&mut self, regs: &mut ApuRegisters) {
+    fn execute_put_cycle(&mut self, regs: &mut ApuRegisters) {
         let cycle = regs.clock().cycle();
-        info!(target: "apucycles", "APU cycle: {cycle} (ON)");
+        info!(target: "apucycles", "APU cycle: {cycle} (PUT)");
 
-        regs.on_cycle_step();
+        regs.execute_put_cycle();
 
         if regs.clock().raw_cycle() % 20 == 0 {
             let mut queue = self.pulse_queue
@@ -78,11 +77,11 @@ impl Apu {
         regs.maybe_decrement_counters();
     }
 
-    fn off_cycle_step(regs: &mut ApuRegisters) {
+    fn execute_get_cycle(regs: &mut ApuRegisters) {
         let cycle = regs.clock().cycle();
-        info!(target: "apucycles", "APU cycle: {cycle} (OFF)");
+        info!(target: "apucycles", "APU cycle: {cycle} (GET)");
         regs.maybe_set_frame_irq_pending();
-        regs.off_cycle_step();
+        regs.execute_get_cycle();
     }
 
     fn mix_samples(regs: &ApuRegisters) -> f32 {
