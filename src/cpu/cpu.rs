@@ -1,5 +1,6 @@
 use log::info;
 
+use crate::apu::apu_registers::CycleParity;
 use crate::cpu::step::*;
 use crate::cpu::cycle_action::{CycleAction, From, To, Field};
 use crate::cpu::step_queue::StepQueue;
@@ -180,7 +181,7 @@ impl Cpu {
         }
     }
 
-    pub fn step(&mut self, memory: &mut CpuMemory, irq_pending: bool) -> Option<Step> {
+    pub fn step(&mut self, memory: &mut CpuMemory, cycle_parity: CycleParity, irq_pending: bool) -> Option<Step> {
         if self.jammed {
             return None;
         }
@@ -216,7 +217,7 @@ impl Cpu {
         }
 
         for &action in step.actions() {
-            self.execute_cycle_action(memory, action, irq_pending);
+            self.execute_cycle_action(memory, action, cycle_parity, irq_pending);
         }
 
         self.suppress_program_counter_increment = false;
@@ -234,7 +235,14 @@ impl Cpu {
         Some(step)
     }
 
-    fn execute_cycle_action(&mut self, memory: &mut CpuMemory, action: CycleAction, irq_pending: bool) {
+    fn execute_cycle_action(
+        &mut self,
+        memory: &mut CpuMemory,
+        action: CycleAction,
+        cycle_parity: CycleParity,
+        irq_pending: bool,
+    ) {
+
         use CycleAction::*;
         match action {
             StartNextInstruction => {
@@ -254,7 +262,7 @@ impl Cpu {
                 if self.oam_dma_port.take_page().is_some() {
                     info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
                         self.oam_dma_port.current_address());
-                    self.step_queue.enqueue_oam_dma_transfer(memory.cpu_cycle());
+                    self.step_queue.enqueue_oam_dma_transfer(cycle_parity);
                     self.suppress_program_counter_increment = true;
                     return;
                 }

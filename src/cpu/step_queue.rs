@@ -1,5 +1,8 @@
 use std::collections::VecDeque;
 
+use log::info;
+
+use crate::apu::apu_registers::CycleParity;
 use crate::cpu::instruction::INSTRUCTIONS;
 use crate::cpu::step::*;
 
@@ -44,11 +47,10 @@ impl StepQueue {
     }
 
     // Note: the values of the address bus might not be correct for some cycles.
-    pub fn enqueue_oam_dma_transfer(&mut self, current_cycle: i64) {
+    pub fn enqueue_oam_dma_transfer(&mut self, cycle_parity: CycleParity) {
         // TODO: Improve accuracy by following this: https://www.nesdev.org/wiki/DMA#OAM_DMA
-        let is_odd_cycle = current_cycle % 2 == 1;
-        if is_odd_cycle {
-            // Wait one-cycle.
+        if cycle_parity == CycleParity::Put {
+            info!(target: "cpuflowcontrol", "Waiting one cycle so OAM transfer starts on a GET cycle.");
             self.queue.push_back(ADDRESS_BUS_READ_STEP);
         }
 

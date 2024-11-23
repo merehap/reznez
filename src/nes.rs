@@ -178,6 +178,7 @@ impl Nes {
     }
 
     fn cpu_step(&mut self) -> Option<Step> {
+        let cycle_parity = self.memory.apu_regs().clock().cycle_parity();
         self.memory.as_cpu_memory().increment_cpu_cycle();
 
         let irq_pending =
@@ -189,7 +190,7 @@ impl Nes {
             interrupt_text = formatter::interrupts(self);
         }
 
-        let step = self.cpu.step(&mut self.memory.as_cpu_memory(), irq_pending);
+        let step = self.cpu.step(&mut self.memory.as_cpu_memory(), cycle_parity, irq_pending);
         if log_enabled!(target: "cpuinstructions", Info) && self.cpu.next_instruction_starting() {
             info!("{}", self.log_formatter.format_instruction(self, interrupt_text));
         }
