@@ -388,4 +388,8 @@ impl Step {
 
         false
     }
+
+    pub fn is_read(&self) -> bool {
+        matches!(&self, Step::Read(..) | Step::ReadField(..))
+    }
 }

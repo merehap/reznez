@@ -242,17 +242,15 @@ impl Cpu {
         cycle_parity: CycleParity,
         irq_pending: bool,
     ) {
-
-        use CycleAction::*;
         match action {
-            StartNextInstruction => {
+            CycleAction::StartNextInstruction => {
                 if self.suppress_next_instruction_start {
                     self.suppress_next_instruction_start = false;
                     return;
                 }
 
                 if let Some(address) = memory.take_dmc_dma_pending_address() {
-                    info!(target: "cpuflowcontrol", "Reading DMC DMA byte at {} on next cycle.", address);
+                    info!(target: "cpuflowcontrol", "Reading DMC DMA byte at {address} on next cycle.");
                     let new_sample_buffer = memory.read(address).unwrap_or(self.data_bus);
                     memory.set_dmc_sample_buffer(new_sample_buffer);
                     self.suppress_program_counter_increment = true;
@@ -293,12 +291,12 @@ impl Cpu {
                 self.step_queue.enqueue_instruction(instruction.code_point());
             }
 
-            InterpretOpCode => {
+            CycleAction::InterpretOpCode => {
                 if !self.interrupt_active() {
                     self.next_op_code = None;
                 }
             }
-            ExecuteOpCode => {
+            CycleAction::ExecuteOpCode => {
                 let value = self.previous_data_bus_value;
                 let access_mode = self.current_instruction.unwrap().access_mode();
                 let rmw_operand = if access_mode == AccessMode::Imp {
@@ -467,17 +465,17 @@ impl Cpu {
                 }
             }
 
-            IncrementProgramCounter => {
+            CycleAction::IncrementProgramCounter => {
                 if !self.suppress_program_counter_increment && !self.interrupt_active() {
                     self.program_counter.inc();
                 }
             }
             // TODO: Make sure this isn't supposed to wrap within the same page.
-            IncrementAddressBus => { self.address_bus.inc(); }
-            IncrementAddressBusLow => { self.address_bus.offset_low(1); }
-            IncrementDmaAddress => self.oam_dma_port.increment_current_address(),
-            StorePendingAddressLowByte => self.pending_address_low = self.previous_data_bus_value,
-            StorePendingAddressLowByteWithXOffset => {
+            CycleAction::IncrementAddressBus => { self.address_bus.inc(); }
+            CycleAction::IncrementAddressBusLow => { self.address_bus.offset_low(1); }
+            CycleAction::IncrementDmaAddress => self.oam_dma_port.increment_current_address(),
+            CycleAction::StorePendingAddressLowByte => self.pending_address_low = self.previous_data_bus_value,
+            CycleAction::StorePendingAddressLowByteWithXOffset => {
                 let carry;
                 (self.pending_address_low, carry) =
                     self.previous_data_bus_value.overflowing_add(self.x);
@@ -485,7 +483,7 @@ impl Cpu {
                     self.address_carry = 1;
                 }
             }
-            StorePendingAddressLowByteWithYOffset => {
+            CycleAction::StorePendingAddressLowByteWithYOffset => {
                 let carry;
                 (self.pending_address_low, carry) =
                     self.previous_data_bus_value.overflowing_add(self.y);
@@ -494,11 +492,11 @@ impl Cpu {
                 }
             }
 
-            IncrementStackPointer => memory.stack().increment_stack_pointer(),
-            DecrementStackPointer => memory.stack().decrement_stack_pointer(),
+            CycleAction::IncrementStackPointer => memory.stack().increment_stack_pointer(),
+            CycleAction::DecrementStackPointer => memory.stack().decrement_stack_pointer(),
 
-            DisableInterrupts => self.status.interrupts_disabled = true,
-            SetInterruptVector => {
+            CycleAction::DisableInterrupts => self.status.interrupts_disabled = true,
+            CycleAction::SetInterruptVector => {
                 self.current_interrupt_vector =
                     if self.reset_status != ResetStatus::Inactive {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to RESET.");
@@ -523,8 +521,8 @@ impl Cpu {
                 // currently prevents that in some cases unfortunately.
                 self.next_op_code = None;
             }
-            ClearInterruptVector => self.current_interrupt_vector = None,
-            PollInterrupts => {
+            CycleAction::ClearInterruptVector => self.current_interrupt_vector = None,
+            CycleAction::PollInterrupts => {
                 if self.nmi_status == NmiStatus::Pending {
                     info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
                     self.nmi_status = NmiStatus::Ready;
@@ -534,19 +532,19 @@ impl Cpu {
                 }
             }
 
-            CheckNegativeAndZero => {
+            CycleAction::CheckNegativeAndZero => {
                 self.status.negative = (self.data_bus >> 7) == 1;
                 self.status.zero = self.data_bus == 0;
             }
 
-            XOffsetAddressBus => { self.address_bus.offset_low(self.x); }
-            YOffsetAddressBus => { self.address_bus.offset_low(self.y); }
-            MaybeInsertOopsStep => {
+            CycleAction::XOffsetAddressBus => { self.address_bus.offset_low(self.x); }
+            CycleAction::YOffsetAddressBus => { self.address_bus.offset_low(self.y); }
+            CycleAction::MaybeInsertOopsStep => {
                 if self.address_carry != 0 {
                     self.step_queue.skip_to_front(ADDRESS_BUS_READ_STEP);
                 }
             }
-            MaybeInsertBranchOopsStep => {
+            CycleAction::MaybeInsertBranchOopsStep => {
                 if self.address_carry != 0 {
                     self.suppress_next_instruction_start = true;
                     self.suppress_program_counter_increment = true;
@@ -554,14 +552,14 @@ impl Cpu {
                 }
             }
 
-            CopyAddressToPC => {
+            CycleAction::CopyAddressToPC => {
                 self.program_counter = self.address_bus;
             }
-            AddCarryToAddressBus => {
+            CycleAction::AddCarryToAddressBus => {
                 self.address_bus.offset_high(self.address_carry);
                 self.address_carry = 0;
             }
-            AddCarryToProgramCounter => {
+            CycleAction::AddCarryToProgramCounter => {
                 if self.address_carry != 0 {
                     self.program_counter.offset_high(self.address_carry);
                     self.address_carry = 0;
