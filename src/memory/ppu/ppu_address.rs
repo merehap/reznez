@@ -119,32 +119,32 @@ impl PpuAddress {
     }
 
     pub fn name_table_quadrant(self) -> NameTableQuadrant {
-        splitbits_named_ux!(self.address, ".... nn.. .... ....").into()
+        splitbits_named_ux!(self.to_u16(), ".... nn.. .... ....").into()
     }
 
     pub fn name_table_location(self) -> Option<(NameTableQuadrant, u32)> {
-        if self.address >= 0x2000 && self.address < 0x3F00 {
-            Some(splitbits_named_into_ux!(self.address, ".... nnll llll llll"))
+        if self.to_u16() >= 0x2000 && self.to_u16() < 0x3F00 {
+            Some(splitbits_named_into_ux!(self.to_u16(), ".... nnll llll llll"))
         } else {
             None
         }
     }
 
     pub fn is_in_pattern_table(self) -> bool {
-        self.address < 0x2000
+        self.to_u16() < 0x2000
     }
 
     pub fn is_in_name_table_proper(self) -> bool {
-        if self.address >= 0x2000 && self.address < 0x3F00 {
-            self.address % 0x400 < 0x3C0
+        if self.to_u16() >= 0x2000 && self.to_u16() < 0x3F00 {
+            self.to_u16() % 0x400 < 0x3C0
         } else {
             false
         }
     }
 
     pub fn is_in_attribute_table(self) -> bool {
-        if self.address >= 0x2000 && self.address < 0x3F00 {
-            self.address % 0x400 >= 0x3C0
+        if self.to_u16() >= 0x2000 && self.to_u16() < 0x3F00 {
+            self.to_u16() % 0x400 >= 0x3C0
         } else {
             false
         }
@@ -163,7 +163,7 @@ impl PpuAddress {
     }
 
     fn coarse_x_scroll(self) -> TileColumn {
-        splitbits_named_ux!(self.address, ".... .... ...x xxxx").into()
+        splitbits_named_ux!(self.to_u16(), ".... .... ...x xxxx").into()
     }
 
     /*
@@ -179,15 +179,15 @@ impl PpuAddress {
     }
 
     fn coarse_y_scroll(self) -> TileRow {
-        splitbits_named_into_ux!(self.address, "...... yyyyy .....")
+        splitbits_named_into_ux!(self.to_scroll_u16(), "...... yyyyy .....")
     }
 
     fn fine_y_scroll(self) -> RowInTile {
-        splitbits_named_into_ux!(self.address, ". yyy ............")
+        splitbits_named_into_ux!(self.to_scroll_u16(), ". yyy ............")
     }
 
     pub fn set_name_table_quadrant(&mut self, n: NameTableQuadrant) {
-        self.address = replacebits!(self.address, "0... nn.. .... ....");
+        self.address = replacebits!(self.to_scroll_u16(), "0... nn.. .... ....");
     }
 
     pub fn set_x_scroll(&mut self, value: u8) {
@@ -197,7 +197,7 @@ impl PpuAddress {
     }
 
     fn set_coarse_x_scroll(&mut self, x: TileColumn) {
-        self.address = replacebits!(self.address, ".... .... ...x xxxx");
+        self.address = replacebits!(self.to_scroll_u16(), ".... .... ...x xxxx");
     }
 
     pub fn set_y_scroll(&mut self, value: u8) {
@@ -207,11 +207,11 @@ impl PpuAddress {
     }
 
     fn set_coarse_y_scroll(&mut self, y: TileRow) {
-        self.address = replacebits!(self.address, ".... ..yy yyy. ....");
+        self.address = replacebits!(self.to_scroll_u16(), ".... ..yy yyy. ....");
     }
 
     fn set_fine_y_scroll(&mut self, y: RowInTile) {
-        self.address = replacebits!(self.address, "0yyy .... .... ....");
+        self.address = replacebits!(self.to_scroll_u16(), "0yyy .... .... ....");
     }
 
     pub fn copy_x_scroll(&mut self, other: PpuAddress) {
@@ -235,11 +235,11 @@ impl PpuAddress {
     pub fn set_high_byte(&mut self, h: u8) {
         // Lose the top bit of the fine y scroll.
         let h = h & 0b0011_1111;
-        self.address = replacebits!(self.address, "00hh hhhh .... ....");
+        self.address = replacebits!(self.to_scroll_u16(), "00hh hhhh .... ....");
     }
 
     pub fn set_low_byte(&mut self, l: u8) {
-        self.address = replacebits!(self.address, ".... .... llll llll");
+        self.address = replacebits!(self.to_scroll_u16(), ".... .... llll llll");
     }
 
     pub const fn to_u16(self) -> u16 {
@@ -256,7 +256,7 @@ impl PpuAddress {
     }
 
     pub fn pattern_table_side(self) -> PatternTableSide {
-        splitbits_named!(self.address, "...p .... .... ....").into()
+        splitbits_named!(self.to_u16(), "...p .... .... ....").into()
     }
 }
 
