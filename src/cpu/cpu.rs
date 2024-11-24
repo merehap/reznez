@@ -216,27 +216,24 @@ impl Cpu {
             }
         }
 
-        if step.is_read() {
-            if self.oam_dma_port.take_page().is_some() {
-                info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
-                    self.oam_dma_port.current_address());
-                self.step_queue.enqueue_oam_dma_transfer(cycle_parity);
-                self.suppress_next_instruction_start = true;
-                self.suppress_program_counter_increment = true;
+        if step.is_read() && self.oam_dma_port.take_page().is_some() {
+            // TODO: Strip out unused CycleActions.
+            info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
+                self.oam_dma_port.current_address());
+            self.step_queue.enqueue_oam_dma_transfer(cycle_parity);
+        } else {
+            for &action in step.actions() {
+                self.execute_cycle_action(memory, action, cycle_parity, irq_pending);
             }
-        }
 
-        for &action in step.actions() {
-            self.execute_cycle_action(memory, action, cycle_parity, irq_pending);
-        }
+            self.suppress_program_counter_increment = false;
 
-        self.suppress_program_counter_increment = false;
-
-        if step.has_start_new_instruction() && !self.suppress_next_instruction_start {
-            if self.interrupt_active() {
-                self.current_instruction = None;
-            } else if let Some((next_op_code, _)) = self.next_op_code {
-                self.current_instruction = Some(Instruction::from_code_point(next_op_code));
+            if step.has_start_new_instruction() && !self.suppress_next_instruction_start {
+                if self.interrupt_active() {
+                    self.current_instruction = None;
+                } else if let Some((next_op_code, _)) = self.next_op_code {
+                    self.current_instruction = Some(Instruction::from_code_point(next_op_code));
+                }
             }
         }
 
