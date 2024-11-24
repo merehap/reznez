@@ -226,6 +226,12 @@ impl Cpu {
                 self.execute_cycle_action(memory, action, cycle_parity, irq_pending);
             }
 
+            if step.is_read() && let Some(dma_address) = memory.take_dmc_dma_pending_address() {
+                info!(target: "cpuflowcontrol", "Reading DMC DMA byte at {dma_address}.");
+                let new_sample_buffer = memory.read(dma_address).unwrap_or(self.data_bus);
+                memory.set_dmc_sample_buffer(new_sample_buffer);
+            }
+
             self.suppress_program_counter_increment = false;
 
             if step.has_start_new_instruction() && !self.suppress_next_instruction_start {
@@ -253,14 +259,6 @@ impl Cpu {
             CycleAction::StartNextInstruction => {
                 if self.suppress_next_instruction_start {
                     self.suppress_next_instruction_start = false;
-                    return;
-                }
-
-                if let Some(address) = memory.take_dmc_dma_pending_address() {
-                    info!(target: "cpuflowcontrol", "Reading DMC DMA byte at {address} on next cycle.");
-                    let new_sample_buffer = memory.read(address).unwrap_or(self.data_bus);
-                    memory.set_dmc_sample_buffer(new_sample_buffer);
-                    self.suppress_program_counter_increment = true;
                     return;
                 }
 
