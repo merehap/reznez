@@ -216,41 +216,41 @@ impl Cpu {
             }
         }
 
-        if step.is_read() && self.oam_dma_port.take_page().is_some() {
+        let mut execute_cycle_actions = true;
+        let mut dma_address = None;
+        if step.is_read() && let Some(address) = memory.take_dmc_dma_pending_address() {
+            info!(target: "cpuflowcontrol", "Reading DMC DMA byte at {address}.");
+            dma_address = Some(address)
+        } else if step.is_read() && self.oam_dma_port.take_page().is_some() {
             // TODO: Strip out unused CycleActions.
             info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
                 self.oam_dma_port.current_address());
             self.step_queue.enqueue_oam_dma_transfer(cycle_parity);
-        } else {
-            if step.has_start_new_instruction() && !self.suppress_next_instruction_start {
-                if self.reset_status == ResetStatus::Ready {
-                    info!(target: "cpuflowcontrol", "Starting system reset");
-                    self.reset_status = ResetStatus::Active;
-                    // Reset has BRK's code point (0x00). TODO: Set the data bus to 0x00?
-                    self.next_op_code = Some((0x00, self.address_bus));
-                    self.step_queue.enqueue_reset();
+            execute_cycle_actions = false;
+        } else if step.has_start_new_instruction() && !self.suppress_next_instruction_start {
+            if self.reset_status == ResetStatus::Ready {
+                info!(target: "cpuflowcontrol", "Starting system reset");
+                self.reset_status = ResetStatus::Active;
+                // Reset has BRK's code point (0x00). TODO: Set the data bus to 0x00?
+                self.next_op_code = Some((0x00, self.address_bus));
+                self.step_queue.enqueue_reset();
 
-                    memory.process_end_of_cpu_cycle();
-                    return Some(step);
-                }
-
-                if self.nmi_status == NmiStatus::Ready {
-                    info!(target: "cpuflowcontrol", "Starting NMI");
-                    self.nmi_status = NmiStatus::Active;
-                } else if self.irq_status == IrqStatus::Ready && self.nmi_status == NmiStatus::Inactive {
-                    info!(target: "cpuflowcontrol", "Starting IRQ");
-                    self.irq_status = IrqStatus::Active;
-                }
+                memory.process_end_of_cpu_cycle();
+                return Some(step);
             }
 
+            if self.nmi_status == NmiStatus::Ready {
+                info!(target: "cpuflowcontrol", "Starting NMI");
+                self.nmi_status = NmiStatus::Active;
+            } else if self.irq_status == IrqStatus::Ready && self.nmi_status == NmiStatus::Inactive {
+                info!(target: "cpuflowcontrol", "Starting IRQ");
+                self.irq_status = IrqStatus::Active;
+            }
+        }
+
+        if execute_cycle_actions {
             for &action in step.actions() {
                 self.execute_cycle_action(memory, action, cycle_parity, irq_pending);
-            }
-
-            if step.is_read() && let Some(dma_address) = memory.take_dmc_dma_pending_address() {
-                info!(target: "cpuflowcontrol", "Reading DMC DMA byte at {dma_address}.");
-                let new_sample_buffer = memory.read(dma_address).unwrap_or(self.data_bus);
-                memory.set_dmc_sample_buffer(new_sample_buffer);
             }
 
             self.suppress_program_counter_increment = false;
@@ -262,10 +262,14 @@ impl Cpu {
                     self.current_instruction = Some(Instruction::from_code_point(next_op_code));
                 }
             }
+
+            if let Some(dma_address) = dma_address {
+                let new_sample_buffer = memory.read(dma_address).unwrap_or(self.data_bus);
+                memory.set_dmc_sample_buffer(new_sample_buffer);
+            }
         }
 
         memory.process_end_of_cpu_cycle();
-
         Some(step)
     }
 
