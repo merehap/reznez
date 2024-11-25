@@ -222,6 +222,27 @@ impl Cpu {
                 self.oam_dma_port.current_address());
             self.step_queue.enqueue_oam_dma_transfer(cycle_parity);
         } else {
+            if step.has_start_new_instruction() && !self.suppress_next_instruction_start {
+                if self.reset_status == ResetStatus::Ready {
+                    info!(target: "cpuflowcontrol", "Starting system reset");
+                    self.reset_status = ResetStatus::Active;
+                    // Reset has BRK's code point (0x00). TODO: Set the data bus to 0x00?
+                    self.next_op_code = Some((0x00, self.address_bus));
+                    self.step_queue.enqueue_reset();
+
+                    memory.process_end_of_cpu_cycle();
+                    return Some(step);
+                }
+
+                if self.nmi_status == NmiStatus::Ready {
+                    info!(target: "cpuflowcontrol", "Starting NMI");
+                    self.nmi_status = NmiStatus::Active;
+                } else if self.irq_status == IrqStatus::Ready && self.nmi_status == NmiStatus::Inactive {
+                    info!(target: "cpuflowcontrol", "Starting IRQ");
+                    self.irq_status = IrqStatus::Active;
+                }
+            }
+
             for &action in step.actions() {
                 self.execute_cycle_action(memory, action, cycle_parity, irq_pending);
             }
@@ -262,24 +283,7 @@ impl Cpu {
                     return;
                 }
 
-                if self.reset_status == ResetStatus::Ready {
-                    info!(target: "cpuflowcontrol", "Starting system reset");
-                    self.reset_status = ResetStatus::Active;
-                    // Reset has BRK's code point (0x00). TODO: Set the data bus to 0x00?
-                    self.next_op_code = Some((0x00, self.address_bus));
-                    self.step_queue.enqueue_reset();
-                    return;
-                }
-
-                if self.nmi_status == NmiStatus::Ready {
-                    info!(target: "cpuflowcontrol", "Starting NMI");
-                    self.nmi_status = NmiStatus::Active;
-                    // NMI has BRK's code point (0x00).
-                    self.data_bus = 0x00;
-                } else if self.irq_status == IrqStatus::Ready && self.nmi_status == NmiStatus::Inactive {
-                    info!(target: "cpuflowcontrol", "Starting IRQ");
-                    self.irq_status = IrqStatus::Active;
-                    // IRQ has BRK's code point (0x00).
+                if self.nmi_status == NmiStatus::Active || self.irq_status == IrqStatus::Active {
                     self.data_bus = 0x00;
                 }
 
