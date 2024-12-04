@@ -1,6 +1,6 @@
 use crate::memory::mapper::CpuAddress;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum CycleAction {
     IncrementProgramCounter,
     IncrementAddressBus,
@@ -33,7 +33,7 @@ pub enum CycleAction {
     ExecuteOpCode,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum From {
     AddressBusTarget,
     DmaAddressTarget,

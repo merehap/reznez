@@ -4,7 +4,7 @@ use crate::apu::apu_registers::CycleParity;
 use crate::cpu::step::*;
 use crate::cpu::cycle_action::{CycleAction, From, To, Field};
 use crate::cpu::step_queue::StepQueue;
-use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
+use crate::cpu::instruction::{INSTRUCTIONS, Instruction, AccessMode, OpCode};
 use crate::cpu::status;
 use crate::cpu::status::Status;
 use crate::memory::cpu::cpu_address::CpuAddress;
@@ -14,6 +14,151 @@ use crate::memory::memory::{CpuMemory,
     RESET_VECTOR_LOW, RESET_VECTOR_HIGH,
     NMI_VECTOR_LOW, NMI_VECTOR_HIGH,
 };
+
+struct CpuModeState {
+    steps: &'static [Step],
+    step_index: usize,
+    mode: CpuMode,
+}
+
+impl CpuModeState {
+    fn startup() -> Self {
+        Self {
+            steps: RESET_STEPS,
+            step_index: 0,
+            mode: CpuMode::Reset,
+        }
+    }
+
+    fn current_step(&self) -> Step {
+        self.steps[self.step_index]
+    }
+
+    fn jam(&mut self) {
+        self.steps = &[];
+        self.step_index = 0;
+        self.mode = CpuMode::Jammed;
+    }
+
+    fn dmc_dma(&mut self) {
+        self.mode = CpuMode::DmcDma;
+    }
+
+    fn oam_dma_pending(&mut self, cycle_parity: CycleParity) {
+        match self.mode {
+            CpuMode::StartNext { oam_dma_pending: false } => {
+                self.mode = CpuMode::OamDma;
+                self.steps = match cycle_parity {
+                    CycleParity::Get => &*OAM_DMA_TRANSFER_STEPS,
+                    CycleParity::Put => &*ALIGNED_OAM_DMA_TRANSFER_STEPS,
+                };
+                self.step_index = 0;
+            }
+            // CpuMode::StartNext { oam_dma_pending: false } => self.mode = CpuMode::StartNext { oam_dma_pending: true },
+            CpuMode::Instruction { oam_dma_pending: false } => self.mode = CpuMode::Instruction { oam_dma_pending: true },
+            _ => todo!(),
+        }
+    }
+
+    /*
+    fn oam_dma(&mut self) {
+        self.mode = CpuMode::OamDma {
+            suspended_mode: Box::new(self.mode.clone()),
+            suspended_steps: self.steps,
+            suspended_step_index: self.step_index,
+        };
+        self.steps = &*OAM_DMA_TRANSFER_STEPS;
+        self.step_index = 0;
+    }
+    */
+
+    fn reset(&mut self) {
+        self.steps = RESET_STEPS;
+        self.step_index = 0;
+        self.mode = CpuMode::Reset;
+    }
+
+    fn interrupt(&mut self) {
+        self.steps = BRK_STEPS;
+        self.step_index = 0;
+        self.mode = CpuMode::InterruptSequence;
+    }
+
+    fn instruction(&mut self, steps: &'static [Step]) {
+        let oam_dma_pending = self.mode == CpuMode::Instruction { oam_dma_pending: true };
+        assert_eq!(oam_dma_pending, false);
+
+        self.steps = steps;
+        self.step_index = 0;
+        self.mode = CpuMode::Instruction { oam_dma_pending };
+    }
+
+    fn branch_taken(&mut self) {
+        self.steps = &[BRANCH_TAKEN_STEP];
+        self.step_index = 0;
+        self.mode = CpuMode::BranchTaken;
+    }
+
+    fn step(&mut self) {
+        if self.step_index < self.steps.len() - 1 {
+            if self.mode == CpuMode::DmcDma {
+                self.mode = CpuMode::Instruction { oam_dma_pending: false };
+            }
+
+            self.step_index += 1;
+            return;
+        }
+
+        println!("step() is determining the next mode. Currently: {:?}", self.mode);
+
+        // Transition to a new mode since we're at the last index of the current one.
+        self.mode = match self.mode.clone() {
+            CpuMode::Instruction { oam_dma_pending: true } => {
+                self.steps = &*OAM_DMA_TRANSFER_STEPS;
+                self.step_index = 0;
+                CpuMode::OamDma
+            }
+            CpuMode::Reset | CpuMode::Instruction { oam_dma_pending: false } | CpuMode::InterruptSequence | CpuMode::OamDma | CpuMode::DmcDma => {
+                self.steps = &[READ_OP_CODE_STEP];
+                self.step_index = 0;
+                CpuMode::StartNext { oam_dma_pending: false }
+            }
+            /*
+            CpuMode::OamDma { suspended_mode, suspended_steps, suspended_step_index } => {
+                self.steps = suspended_steps;
+                self.step_index = suspended_step_index;
+                *suspended_mode
+            }
+            */
+
+            CpuMode::Jammed => CpuMode::Jammed,
+            CpuMode::StartNext {..} => unreachable!(),
+            CpuMode::BranchTaken => todo!(),
+        };
+
+        println!("step() has determined the next mode as {:?}", self.mode);
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Debug)]
+enum CpuMode {
+    Reset,
+    Instruction { oam_dma_pending: bool },
+    InterruptSequence,
+    OamDma,
+    /*
+    OamDma {
+        suspended_mode: Box<CpuMode>,
+        suspended_steps: &'static [Step],
+        suspended_step_index: usize,
+    },
+    */
+    DmcDma,
+
+    Jammed,
+    StartNext { oam_dma_pending: bool },
+    BranchTaken,
+}
 
 pub struct Cpu {
     // Accumulator
@@ -25,6 +170,7 @@ pub struct Cpu {
     program_counter: CpuAddress,
     status: Status,
 
+    mode_state: CpuModeState,
     current_instruction: Option<Instruction>,
     // TODO: Remove this. Only test code uses this.
     next_op_code: Option<(u8, CpuAddress)>,
@@ -63,6 +209,7 @@ impl Cpu {
             program_counter: CpuAddress::new(0x0000),
             status: Status::startup(),
 
+            mode_state: CpuModeState::startup(),
             current_instruction: None,
             next_op_code: None,
 
@@ -92,6 +239,8 @@ impl Cpu {
     pub fn reset(&mut self) {
         info!(target: "cpuflowcontrol", "System reset will start after current instruction.");
         self.reset_status = ResetStatus::Ready;
+
+        self.mode_state = CpuModeState::startup();
 
         self.address_carry = 0;
         self.next_op_code = None;
@@ -187,12 +336,16 @@ impl Cpu {
         }
 
         if self.step_queue.is_empty() {
+            println!("Step queue is empty. Enqueuing StartNextInstruction.");
+            assert_eq!(self.mode_state.mode, CpuMode::StartNext { oam_dma_pending: false });
             // Get ready to start the next instruction.
             self.step_queue.enqueue_op_code_read();
         }
 
         let step = self.step_queue.dequeue()
             .expect("Ran out of CycleActions!");
+        assert_eq!(step, self.mode_state.current_step());
+
         info!(target: "cpustep", "\tPC: {}, Cycle: {}, {:?}", self.program_counter, memory.cpu_cycle(), step);
         self.previous_data_bus_value = self.data_bus;
         match step {
@@ -216,17 +369,21 @@ impl Cpu {
             }
         }
 
+        let mut start_new_instruction = false;
         let mut execute_cycle_actions = true;
         let mut dma_address = None;
         if step.is_read() && let Some(address) = memory.take_dmc_dma_pending_address() {
             info!(target: "cpuflowcontrol", "Reading DMC DMA byte at {address}.");
-            dma_address = Some(address)
+            dma_address = Some(address);
+            self.mode_state.dmc_dma();
         } else if step.is_read() && self.oam_dma_port.take_page().is_some() {
             // TODO: Strip out unused CycleActions.
             info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
                 self.oam_dma_port.current_address());
             self.step_queue.enqueue_oam_dma_transfer(cycle_parity);
             execute_cycle_actions = false;
+            self.mode_state.oam_dma_pending(cycle_parity);
+            println!("OAM DMA Pending");
         } else if step.has_start_new_instruction() && !self.suppress_next_instruction_start {
             if self.reset_status == ResetStatus::Ready {
                 info!(target: "cpuflowcontrol", "Starting system reset");
@@ -234,6 +391,7 @@ impl Cpu {
                 // Reset has BRK's code point (0x00). TODO: Set the data bus to 0x00?
                 self.next_op_code = Some((0x00, self.address_bus));
                 self.step_queue.enqueue_reset();
+                self.mode_state.reset();
 
                 memory.process_end_of_cpu_cycle();
                 return Some(step);
@@ -242,15 +400,21 @@ impl Cpu {
             if self.nmi_status == NmiStatus::Ready {
                 info!(target: "cpuflowcontrol", "Starting NMI");
                 self.nmi_status = NmiStatus::Active;
+                self.mode_state.interrupt();
             } else if self.irq_status == IrqStatus::Ready && self.nmi_status == NmiStatus::Inactive {
                 info!(target: "cpuflowcontrol", "Starting IRQ");
                 self.irq_status = IrqStatus::Active;
+                self.mode_state.interrupt();
+            } else {
+                start_new_instruction = true;
             }
+        } else {
+            self.mode_state.step();
         }
 
         if execute_cycle_actions {
             for &action in step.actions() {
-                self.execute_cycle_action(memory, action, cycle_parity, irq_pending);
+                self.execute_cycle_action(memory, action, irq_pending);
             }
 
             self.suppress_program_counter_increment = false;
@@ -260,6 +424,9 @@ impl Cpu {
                     self.current_instruction = None;
                 } else if let Some((next_op_code, _)) = self.next_op_code {
                     self.current_instruction = Some(Instruction::from_code_point(next_op_code));
+                    if start_new_instruction {
+                        self.mode_state.instruction(INSTRUCTIONS[next_op_code as usize].steps());
+                    }
                 }
             }
 
@@ -277,7 +444,6 @@ impl Cpu {
         &mut self,
         memory: &mut CpuMemory,
         action: CycleAction,
-        cycle_parity: CycleParity,
         irq_pending: bool,
     ) {
         match action {
@@ -551,6 +717,7 @@ impl Cpu {
             }
             CycleAction::MaybeInsertBranchOopsStep => {
                 if self.address_carry != 0 {
+                    println!("Inserting Branch Oops Step");
                     self.suppress_next_instruction_start = true;
                     self.suppress_program_counter_increment = true;
                     self.step_queue.skip_to_front(READ_OP_CODE_STEP);
@@ -747,6 +914,7 @@ impl Cpu {
         self.address_carry = self.program_counter.offset_with_carry(self.previous_data_bus_value as i8);
         self.suppress_next_instruction_start = true;
         self.step_queue.skip_to_front(BRANCH_TAKEN_STEP);
+        self.mode_state.branch_taken();
     }
 }
 
