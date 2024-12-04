@@ -15,6 +15,32 @@ use crate::memory::memory::{CpuMemory,
     NMI_VECTOR_LOW, NMI_VECTOR_HIGH,
 };
 
+#[derive(PartialEq, Eq, Clone, Debug)]
+enum CpuMode {
+    Reset,
+    Instruction { oam_dma_pending: bool },
+    InterruptSequence,
+    OamDma,
+    /*
+    OamDma {
+        suspended_mode: Box<CpuMode>,
+        suspended_steps: &'static [Step],
+        suspended_step_index: usize,
+    },
+    */
+    DmcDma,
+
+    Jammed,
+    StartNext { oam_dma_pending: bool },
+    BranchTaken,
+    BranchOops,
+    // FIXME: If pending, OAM DMA should be triggered on Oops steps.
+    Oops {
+        suspended_steps: &'static [Step],
+        suspended_step_index: usize,
+    },
+}
+
 struct CpuModeState {
     steps: &'static [Step],
     step_index: usize,
@@ -99,6 +125,22 @@ impl CpuModeState {
         self.mode = CpuMode::BranchTaken;
     }
 
+    fn branch_oops(&mut self) {
+        self.steps = &[READ_OP_CODE_STEP];
+        self.step_index = 0;
+        self.mode = CpuMode::BranchOops;
+    }
+
+    fn oops(&mut self) {
+        assert_eq!(self.mode, CpuMode::Instruction { oam_dma_pending: false });
+        self.mode = CpuMode::Oops {
+            suspended_steps: self.steps,
+            suspended_step_index: self.step_index,
+        };
+        self.steps = &[ADDRESS_BUS_READ_STEP];
+        self.step_index = 0;
+    }
+
     fn step(&mut self) {
         if self.step_index < self.steps.len() - 1 {
             if self.mode == CpuMode::DmcDma {
@@ -109,7 +151,7 @@ impl CpuModeState {
             return;
         }
 
-        println!("step() is determining the next mode. Currently: {:?}", self.mode);
+        //println!("step() is determining the next mode. Currently: {:?}", self.mode);
 
         // Transition to a new mode since we're at the last index of the current one.
         self.mode = match self.mode.clone() {
@@ -134,30 +176,16 @@ impl CpuModeState {
             CpuMode::Jammed => CpuMode::Jammed,
             CpuMode::StartNext {..} => unreachable!(),
             CpuMode::BranchTaken => todo!(),
+            CpuMode::BranchOops => todo!(),
+            CpuMode::Oops { suspended_steps, suspended_step_index } => {
+                self.steps = suspended_steps;
+                self.step_index = suspended_step_index;
+                CpuMode::Instruction { oam_dma_pending: false }
+            }
         };
 
-        println!("step() has determined the next mode as {:?}", self.mode);
+        //println!("step() has determined the next mode as {:?}", self.mode);
     }
-}
-
-#[derive(PartialEq, Eq, Clone, Debug)]
-enum CpuMode {
-    Reset,
-    Instruction { oam_dma_pending: bool },
-    InterruptSequence,
-    OamDma,
-    /*
-    OamDma {
-        suspended_mode: Box<CpuMode>,
-        suspended_steps: &'static [Step],
-        suspended_step_index: usize,
-    },
-    */
-    DmcDma,
-
-    Jammed,
-    StartNext { oam_dma_pending: bool },
-    BranchTaken,
 }
 
 pub struct Cpu {
@@ -336,7 +364,7 @@ impl Cpu {
         }
 
         if self.step_queue.is_empty() {
-            println!("Step queue is empty. Enqueuing StartNextInstruction.");
+            //println!("Step queue is empty. Enqueuing StartNextInstruction.");
             assert_eq!(self.mode_state.mode, CpuMode::StartNext { oam_dma_pending: false });
             // Get ready to start the next instruction.
             self.step_queue.enqueue_op_code_read();
@@ -383,7 +411,7 @@ impl Cpu {
             self.step_queue.enqueue_oam_dma_transfer(cycle_parity);
             execute_cycle_actions = false;
             self.mode_state.oam_dma_pending(cycle_parity);
-            println!("OAM DMA Pending");
+            //println!("OAM DMA Pending");
         } else if step.has_start_new_instruction() && !self.suppress_next_instruction_start {
             if self.reset_status == ResetStatus::Ready {
                 info!(target: "cpuflowcontrol", "Starting system reset");
@@ -712,15 +740,19 @@ impl Cpu {
             CycleAction::YOffsetAddressBus => { self.address_bus.offset_low(self.y); }
             CycleAction::MaybeInsertOopsStep => {
                 if self.address_carry != 0 {
+                    //println!("Inserting Oops Step");
                     self.step_queue.skip_to_front(ADDRESS_BUS_READ_STEP);
+                    self.mode_state.oops();
                 }
             }
             CycleAction::MaybeInsertBranchOopsStep => {
                 if self.address_carry != 0 {
-                    println!("Inserting Branch Oops Step");
+                    //println!("Inserting Branch Oops Step");
                     self.suppress_next_instruction_start = true;
                     self.suppress_program_counter_increment = true;
+                    assert!(self.step_queue.is_empty());
                     self.step_queue.skip_to_front(READ_OP_CODE_STEP);
+                    self.mode_state.branch_oops();
                 }
             }
 
