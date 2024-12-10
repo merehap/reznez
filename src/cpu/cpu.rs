@@ -105,6 +105,7 @@ impl CpuModeState {
     }
 
     fn interrupt(&mut self) {
+        println!("Starting interrupt");
         self.steps = BRK_STEPS;
         self.step_index = 0;
         self.mode = CpuMode::InterruptSequence;
@@ -151,7 +152,7 @@ impl CpuModeState {
             return;
         }
 
-        //println!("step() is determining the next mode. Currently: {:?}", self.mode);
+        println!("step() is determining the next mode. Currently: {:?}", self.mode);
 
         // Transition to a new mode since we're at the last index of the current one.
         self.mode = match self.mode.clone() {
@@ -184,7 +185,7 @@ impl CpuModeState {
             }
         };
 
-        //println!("step() has determined the next mode as {:?}", self.mode);
+        println!("step() has determined the next mode as {:?}", self.mode);
     }
 }
 
@@ -364,7 +365,7 @@ impl Cpu {
         }
 
         if self.step_queue.is_empty() {
-            //println!("Step queue is empty. Enqueuing StartNextInstruction.");
+            println!("Step queue is empty. Enqueuing StartNextInstruction.");
             assert_eq!(self.mode_state.mode, CpuMode::StartNext { oam_dma_pending: false });
             // Get ready to start the next instruction.
             self.step_queue.enqueue_op_code_read();
@@ -372,6 +373,7 @@ impl Cpu {
 
         let step = self.step_queue.dequeue()
             .expect("Ran out of CycleActions!");
+        println!("CPU Mode after dequeue: {:?}", self.mode_state.mode);
         assert_eq!(step, self.mode_state.current_step());
 
         info!(target: "cpustep", "\tPC: {}, Cycle: {}, {:?}", self.program_counter, memory.cpu_cycle(), step);
@@ -411,7 +413,7 @@ impl Cpu {
             self.step_queue.enqueue_oam_dma_transfer(cycle_parity);
             execute_cycle_actions = false;
             self.mode_state.oam_dma_pending(cycle_parity);
-            //println!("OAM DMA Pending");
+            println!("OAM DMA Pending");
         } else if step.has_start_new_instruction() && !self.suppress_next_instruction_start {
             if self.reset_status == ResetStatus::Ready {
                 info!(target: "cpuflowcontrol", "Starting system reset");
@@ -428,10 +430,12 @@ impl Cpu {
             if self.nmi_status == NmiStatus::Ready {
                 info!(target: "cpuflowcontrol", "Starting NMI");
                 self.nmi_status = NmiStatus::Active;
+                println!("Mode prior to NMI: {:?}", self.mode_state.mode);
                 self.mode_state.interrupt();
             } else if self.irq_status == IrqStatus::Ready && self.nmi_status == NmiStatus::Inactive {
                 info!(target: "cpuflowcontrol", "Starting IRQ");
                 self.irq_status = IrqStatus::Active;
+                println!("Mode prior to IRQ: {:?}", self.mode_state.mode);
                 self.mode_state.interrupt();
             } else {
                 start_new_instruction = true;
@@ -740,14 +744,14 @@ impl Cpu {
             CycleAction::YOffsetAddressBus => { self.address_bus.offset_low(self.y); }
             CycleAction::MaybeInsertOopsStep => {
                 if self.address_carry != 0 {
-                    //println!("Inserting Oops Step");
+                    println!("Inserting Oops Step");
                     self.step_queue.skip_to_front(ADDRESS_BUS_READ_STEP);
                     self.mode_state.oops();
                 }
             }
             CycleAction::MaybeInsertBranchOopsStep => {
                 if self.address_carry != 0 {
-                    //println!("Inserting Branch Oops Step");
+                    println!("Inserting Branch Oops Step");
                     self.suppress_next_instruction_start = true;
                     self.suppress_program_counter_increment = true;
                     assert!(self.step_queue.is_empty());
@@ -945,6 +949,7 @@ impl Cpu {
         self.suppress_program_counter_increment = true;
         self.address_carry = self.program_counter.offset_with_carry(self.previous_data_bus_value as i8);
         self.suppress_next_instruction_start = true;
+        assert!(self.step_queue.is_empty());
         self.step_queue.skip_to_front(BRANCH_TAKEN_STEP);
         self.mode_state.branch_taken();
     }
