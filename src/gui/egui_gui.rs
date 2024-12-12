@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::LazyLock;
 
-use egui::{ClippedMesh, Context, TexturesDelta};
+use egui::{ClippedPrimitive, Context, TexturesDelta};
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
 use log::error;
 use pixels::{Pixels, SurfaceTexture};
@@ -138,7 +138,7 @@ struct EguiWindow {
     egui_state: egui_winit::State,
     screen_descriptor: ScreenDescriptor,
     rpass: RenderPass,
-    paint_jobs: Vec<ClippedMesh>,
+    paint_jobs: Vec<ClippedPrimitive>,
     textures: TexturesDelta,
 
     // State for the GUI
@@ -444,7 +444,7 @@ impl Renderer for PrimaryRenderer {
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         let display_frame = |frame: &Frame, mask, _frame_index| {
-            frame.copy_to_rgba_buffer(mask, pixels.get_frame().try_into().unwrap());
+            frame.copy_to_rgba_buffer(mask, pixels.get_frame_mut().try_into().unwrap());
         };
         execute_frame(
             &mut world.nes,
@@ -621,7 +621,7 @@ impl Renderer for LayersRenderer {
         self.buffer
             .place_frame(261, 245 + TOP_MENU_BAR_HEIGHT, &self.frame);
 
-        self.buffer.copy_to_rgba_buffer(pixels.get_frame());
+        self.buffer.copy_to_rgba_buffer(pixels.get_frame_mut());
     }
 
     fn width(&self) -> usize {
@@ -695,7 +695,7 @@ impl Renderer for NameTableRenderer {
         self.buffer.place_wrapping_vertical_line(x, y, y + 241, Rgb::new(255, 0, 0));
         self.buffer.place_wrapping_vertical_line(x + 257, y, y + 241, Rgb::new(255, 0, 0));
 
-        self.buffer.copy_to_rgba_buffer(pixels.get_frame());
+        self.buffer.copy_to_rgba_buffer(pixels.get_frame_mut());
     }
 
     fn width(&self) -> usize {
@@ -743,7 +743,7 @@ impl Renderer for SpritesRenderer {
             );
         }
 
-        self.buffer.copy_to_rgba_buffer(pixels.get_frame());
+        self.buffer.copy_to_rgba_buffer(pixels.get_frame_mut());
     }
 
     fn width(&self) -> usize {
@@ -809,7 +809,7 @@ impl Renderer for PatternTableRenderer {
             offset += (8 + 1) * 16 + 10;
         }
 
-        self.buffer.copy_to_rgba_buffer(pixels.get_frame());
+        self.buffer.copy_to_rgba_buffer(pixels.get_frame_mut());
     }
 
     fn width(&self) -> usize {
@@ -906,7 +906,7 @@ impl Renderer for ChrBanksRenderer {
         }
         */
 
-        self.buffer.copy_to_rgba_buffer(pixels.get_frame());
+        self.buffer.copy_to_rgba_buffer(pixels.get_frame_mut());
     }
 
     fn width(&self) -> usize {
