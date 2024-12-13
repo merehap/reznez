@@ -45,6 +45,7 @@ struct CpuModeState {
     steps: &'static [Step],
     step_index: usize,
     mode: CpuMode,
+    next_mode: Option<CpuMode>,
 }
 
 impl CpuModeState {
@@ -53,6 +54,7 @@ impl CpuModeState {
             steps: RESET_STEPS,
             step_index: 0,
             mode: CpuMode::Reset,
+            next_mode: None,
         }
     }
 
@@ -60,28 +62,16 @@ impl CpuModeState {
         self.steps[self.step_index]
     }
 
-    fn jam(&mut self) {
-        self.steps = &[];
-        self.step_index = 0;
-        self.mode = CpuMode::Jammed;
+    fn set_next_mode(&mut self, next_mode: CpuMode) {
+        assert_eq!(self.next_mode, None);
+        self.next_mode = Some(next_mode);
     }
 
-    fn dmc_dma(&mut self) {
-        self.mode = CpuMode::DmcDma;
-    }
-
-    fn oam_dma_pending(&mut self, cycle_parity: CycleParity) {
+    fn oam_dma_pending(&mut self) {
         match self.mode {
-            CpuMode::StartNext { oam_dma_pending: false } => {
-                self.mode = CpuMode::OamDma;
-                self.steps = match cycle_parity {
-                    CycleParity::Get => &*OAM_DMA_TRANSFER_STEPS,
-                    CycleParity::Put => &*ALIGNED_OAM_DMA_TRANSFER_STEPS,
-                };
-                self.step_index = 0;
-            }
+            CpuMode::StartNext { oam_dma_pending: false } => self.set_next_mode(CpuMode::OamDma),
             // CpuMode::StartNext { oam_dma_pending: false } => self.mode = CpuMode::StartNext { oam_dma_pending: true },
-            CpuMode::Instruction { oam_dma_pending: false } => self.mode = CpuMode::Instruction { oam_dma_pending: true },
+            CpuMode::Instruction { oam_dma_pending: false } => self.set_next_mode(CpuMode::Instruction { oam_dma_pending: true }),
             _ => todo!(),
         }
     }
@@ -98,55 +88,52 @@ impl CpuModeState {
     }
     */
 
-    fn reset(&mut self) {
-        self.steps = RESET_STEPS;
-        self.step_index = 0;
-        self.mode = CpuMode::Reset;
-    }
-
-    fn interrupt(&mut self) {
-        self.steps = BRK_STEPS;
-        self.step_index = 0;
-        self.mode = CpuMode::InterruptSequence;
-    }
-
     fn instruction(&mut self, steps: &'static [Step]) {
         let oam_dma_pending = self.mode == CpuMode::Instruction { oam_dma_pending: true };
         assert_eq!(oam_dma_pending, false);
 
         self.steps = steps;
-        self.step_index = 0;
-        self.mode = CpuMode::Instruction { oam_dma_pending };
-    }
-
-    fn branch_taken(&mut self) {
-        self.steps = &[BRANCH_TAKEN_STEP];
-        self.step_index = 0;
-        self.mode = CpuMode::BranchTaken;
-    }
-
-    fn branch_oops(&mut self) {
-        self.steps = &[READ_OP_CODE_STEP];
-        self.step_index = 0;
-        self.mode = CpuMode::BranchOops;
+        self.set_next_mode(CpuMode::Instruction { oam_dma_pending });
     }
 
     fn oops(&mut self) {
         assert_eq!(self.mode, CpuMode::Instruction { oam_dma_pending: false });
-        self.mode = CpuMode::Oops {
+        self.set_next_mode(CpuMode::Oops {
             suspended_steps: self.steps,
-            suspended_step_index: self.step_index,
-        };
-        self.steps = &[ADDRESS_BUS_READ_STEP];
-        self.step_index = 0;
+            suspended_step_index: self.step_index + 1,
+        });
     }
 
-    fn step(&mut self) {
-        if self.step_index < self.steps.len() - 1 {
-            if self.mode == CpuMode::DmcDma {
-                self.mode = CpuMode::Instruction { oam_dma_pending: false };
+    fn step(&mut self, cycle_parity: CycleParity) {
+        if let Some(next_mode) = self.next_mode.take() {
+            match next_mode {
+                CpuMode::StartNext {..} => unreachable!(),
+                CpuMode::DmcDma => todo!(),
+                CpuMode::Jammed => todo!(),
+
+                CpuMode::OamDma => {
+                    self.steps = match cycle_parity {
+                        CycleParity::Get => &*OAM_DMA_TRANSFER_STEPS,
+                        CycleParity::Put => &*ALIGNED_OAM_DMA_TRANSFER_STEPS,
+                    };
+                }
+                CpuMode::Reset => self.steps = RESET_STEPS,
+                CpuMode::InterruptSequence => self.steps = BRK_STEPS,
+                CpuMode::Instruction {..} => { /* steps will be set by the caller in this case. */ }
+                CpuMode::BranchTaken => self.steps = &[BRANCH_TAKEN_STEP],
+                CpuMode::Oops {..} => {
+                    assert_eq!(self.mode, CpuMode::Instruction { oam_dma_pending: false });
+                    self.steps = &[ADDRESS_BUS_READ_STEP];
+                }
+                CpuMode::BranchOops => self.steps = &[READ_OP_CODE_STEP],
             }
 
+            self.mode = next_mode;
+            self.step_index = 0;
+            return;
+        }
+
+        if self.step_index < self.steps.len() - 1 {
             self.step_index += 1;
             return;
         }
@@ -381,7 +368,6 @@ impl Cpu {
             }
         }
 
-        let mut start_new_instruction = false;
         let mut execute_cycle_actions = true;
         let mut dma_address = None;
         if step.is_read() && let Some(address) = memory.take_dmc_dma_pending_address() {
@@ -395,17 +381,15 @@ impl Cpu {
             info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
                 self.oam_dma_port.current_address());
             execute_cycle_actions = false;
-            self.mode_state.oam_dma_pending(cycle_parity);
+            self.mode_state.oam_dma_pending();
         } else if step.has_start_new_instruction() && !self.suppress_next_instruction_start {
             if self.reset_status == ResetStatus::Ready {
                 info!(target: "cpuflowcontrol", "Starting system reset");
                 self.reset_status = ResetStatus::Active;
                 // Reset has BRK's code point (0x00). TODO: Set the data bus to 0x00?
                 self.next_op_code = Some((0x00, self.address_bus));
-                self.mode_state.reset();
-
-                memory.process_end_of_cpu_cycle();
-                return Some(step);
+                self.mode_state.set_next_mode(CpuMode::Reset);
+                execute_cycle_actions = false;
             }
 
             if self.nmi_status == NmiStatus::Ready {
@@ -414,11 +398,7 @@ impl Cpu {
             } else if self.irq_status == IrqStatus::Ready && self.nmi_status == NmiStatus::Inactive {
                 info!(target: "cpuflowcontrol", "Starting IRQ");
                 self.irq_status = IrqStatus::Active;
-            } else {
-                start_new_instruction = true;
             }
-        } else {
-            self.mode_state.step();
         }
 
         if execute_cycle_actions {
@@ -433,9 +413,7 @@ impl Cpu {
                     self.current_instruction = None;
                 } else if let Some((next_op_code, _)) = self.next_op_code {
                     self.current_instruction = Some(Instruction::from_code_point(next_op_code));
-                    if start_new_instruction {
-                        self.mode_state.instruction(INSTRUCTIONS[next_op_code as usize].steps());
-                    }
+                    self.mode_state.instruction(INSTRUCTIONS[next_op_code as usize].steps());
                 }
             }
 
@@ -446,6 +424,7 @@ impl Cpu {
         }
 
         memory.process_end_of_cpu_cycle();
+        self.mode_state.step(cycle_parity);
         Some(step)
     }
 
@@ -464,7 +443,7 @@ impl Cpu {
 
                 if self.nmi_status == NmiStatus::Active || self.irq_status == IrqStatus::Active {
                     self.data_bus = 0x00;
-                    self.mode_state.interrupt();
+                    self.mode_state.set_next_mode(CpuMode::InterruptSequence);
                 }
 
                 self.next_op_code = Some((self.data_bus, self.address_bus));
@@ -727,7 +706,7 @@ impl Cpu {
                 if self.address_carry != 0 {
                     self.suppress_next_instruction_start = true;
                     self.suppress_program_counter_increment = true;
-                    self.mode_state.branch_oops();
+                    self.mode_state.set_next_mode(CpuMode::BranchOops);
                 }
             }
 
@@ -920,7 +899,7 @@ impl Cpu {
         self.suppress_program_counter_increment = true;
         self.address_carry = self.program_counter.offset_with_carry(self.previous_data_bus_value as i8);
         self.suppress_next_instruction_start = true;
-        self.mode_state.branch_taken();
+        self.mode_state.set_next_mode(CpuMode::BranchTaken);
     }
 }
 
