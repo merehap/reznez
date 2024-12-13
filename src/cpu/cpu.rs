@@ -226,7 +226,7 @@ impl Cpu {
                 self.oam_dma_port.current_address());
             execute_cycle_actions = false;
             self.mode_state.oam_dma_pending();
-        } else if step.has_start_new_instruction() && !self.suppress_next_instruction_start {
+        } else if step.has_start_new_instruction() {
             if self.reset_status == ResetStatus::Ready {
                 info!(target: "cpuflowcontrol", "Starting system reset");
                 self.reset_status = ResetStatus::Active;

@@ -50,7 +50,7 @@ impl CpuModeState {
     }
 
     pub fn set_next_mode(&mut self, next_mode: CpuMode) {
-        assert_eq!(self.next_mode, None);
+        assert_eq!(self.next_mode, None, "next_mode should not already be set when setting it to {next_mode:?}");
         self.next_mode = Some(next_mode);
     }
 
@@ -146,7 +146,7 @@ impl CpuModeState {
             */
 
             CpuMode::Jammed => CpuMode::Jammed,
-            CpuMode::StartNext {..} => unreachable!(),
+            CpuMode::StartNext {..} => panic!(),
             CpuMode::BranchTaken => todo!(),
             CpuMode::BranchOops => todo!(),
             CpuMode::Oops { suspended_steps, suspended_step_index } => {
