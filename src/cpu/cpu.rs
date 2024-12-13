@@ -162,7 +162,7 @@ impl Cpu {
         self.nmi_status = NmiStatus::Pending;
     }
 
-    pub fn interrupt_active(&self) -> bool {
+    pub fn interrupt_sequence_active(&self) -> bool {
         self.nmi_status == NmiStatus::Active
             || self.irq_status == IrqStatus::Active
             || self.reset_status == ResetStatus::Active
@@ -170,13 +170,13 @@ impl Cpu {
 
     pub fn next_instruction_starting(&self) -> bool {
         self.next_op_code.is_some()
-            && !self.interrupt_active()
+            && !self.interrupt_sequence_active()
             && !self.suppress_next_instruction_start
             && !self.jammed
     }
 
     pub fn next_op_code_and_address(&self) -> Option<(u8, CpuAddress)> {
-        if self.interrupt_active() || self.suppress_next_instruction_start || self.jammed {
+        if self.interrupt_sequence_active() || self.suppress_next_instruction_start || self.jammed {
             None
         } else {
             self.next_op_code
@@ -234,9 +234,7 @@ impl Cpu {
                 self.next_op_code = Some((0x00, self.address_bus));
                 self.mode_state.set_next_mode(CpuMode::Reset);
                 execute_cycle_actions = false;
-            }
-
-            if self.nmi_status == NmiStatus::Ready {
+            } else if self.nmi_status == NmiStatus::Ready {
                 info!(target: "cpuflowcontrol", "Starting NMI");
                 self.nmi_status = NmiStatus::Active;
             } else if self.irq_status == IrqStatus::Ready && self.nmi_status == NmiStatus::Inactive {
@@ -253,7 +251,7 @@ impl Cpu {
             self.suppress_program_counter_increment = false;
 
             if step.has_start_new_instruction() && !self.suppress_next_instruction_start {
-                if self.interrupt_active() {
+                if self.interrupt_sequence_active() {
                     self.current_instruction = None;
                 } else if let Some((next_op_code, _)) = self.next_op_code {
                     self.current_instruction = Some(Instruction::from_code_point(next_op_code));
@@ -294,7 +292,7 @@ impl Cpu {
             }
 
             CycleAction::InterpretOpCode => {
-                if !self.interrupt_active() {
+                if !self.interrupt_sequence_active() {
                     self.next_op_code = None;
                 }
             }
@@ -468,7 +466,7 @@ impl Cpu {
             }
 
             CycleAction::IncrementProgramCounter => {
-                if !self.suppress_program_counter_increment && !self.interrupt_active() {
+                if !self.suppress_program_counter_increment && !self.interrupt_sequence_active() {
                     self.program_counter.inc();
                 }
             }
@@ -617,7 +615,7 @@ impl Cpu {
             ProgramCounterHighByte => self.program_counter.high_byte(),
             Accumulator => self.a,
             Status => {
-                if self.interrupt_active() {
+                if self.interrupt_sequence_active() {
                     self.status.to_interrupt_byte()
                 } else {
                     self.status.to_instruction_byte()
