@@ -3,7 +3,6 @@ use log::info;
 use crate::apu::apu_registers::CycleParity;
 use crate::cpu::step::*;
 use crate::cpu::cycle_action::{CycleAction, From, To, Field};
-use crate::cpu::step_queue::StepQueue;
 use crate::cpu::instruction::{INSTRUCTIONS, Instruction, AccessMode, OpCode};
 use crate::cpu::status;
 use crate::cpu::status::Status;
@@ -200,7 +199,6 @@ pub struct Cpu {
     // TODO: Remove this. Only test code uses this.
     next_op_code: Option<(u8, CpuAddress)>,
 
-    step_queue: StepQueue,
     nmi_status: NmiStatus,
     irq_status: IrqStatus,
     reset_status: ResetStatus,
@@ -238,7 +236,6 @@ impl Cpu {
             current_instruction: None,
             next_op_code: None,
 
-            step_queue: StepQueue::new(),
             nmi_status: NmiStatus::Inactive,
             irq_status: IrqStatus::Inactive,
             reset_status: ResetStatus::Active,
@@ -360,16 +357,7 @@ impl Cpu {
             return None;
         }
 
-        if self.step_queue.is_empty() {
-            assert_eq!(self.mode_state.mode, CpuMode::StartNext { oam_dma_pending: false });
-            // Get ready to start the next instruction.
-            self.step_queue.enqueue_op_code_read();
-        }
-
-        let step = self.step_queue.dequeue()
-            .expect("Ran out of CycleActions!");
-        assert_eq!(step, self.mode_state.current_step());
-
+        let step = self.mode_state.current_step();
         info!(target: "cpustep", "\tPC: {}, Cycle: {}, {:?}", self.program_counter, memory.cpu_cycle(), step);
         self.previous_data_bus_value = self.data_bus;
         match step {
@@ -406,7 +394,6 @@ impl Cpu {
             // TODO: Strip out unused CycleActions.
             info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
                 self.oam_dma_port.current_address());
-            self.step_queue.enqueue_oam_dma_transfer(cycle_parity);
             execute_cycle_actions = false;
             self.mode_state.oam_dma_pending(cycle_parity);
         } else if step.has_start_new_instruction() && !self.suppress_next_instruction_start {
@@ -415,7 +402,6 @@ impl Cpu {
                 self.reset_status = ResetStatus::Active;
                 // Reset has BRK's code point (0x00). TODO: Set the data bus to 0x00?
                 self.next_op_code = Some((0x00, self.address_bus));
-                self.step_queue.enqueue_reset();
                 self.mode_state.reset();
 
                 memory.process_end_of_cpu_cycle();
@@ -482,8 +468,6 @@ impl Cpu {
                 }
 
                 self.next_op_code = Some((self.data_bus, self.address_bus));
-                let instruction = Instruction::from_code_point(self.data_bus);
-                self.step_queue.enqueue_instruction(instruction.code_point());
             }
 
             CycleAction::InterpretOpCode => {
@@ -736,7 +720,6 @@ impl Cpu {
             CycleAction::YOffsetAddressBus => { self.address_bus.offset_low(self.y); }
             CycleAction::MaybeInsertOopsStep => {
                 if self.address_carry != 0 {
-                    self.step_queue.skip_to_front(ADDRESS_BUS_READ_STEP);
                     self.mode_state.oops();
                 }
             }
@@ -744,8 +727,6 @@ impl Cpu {
                 if self.address_carry != 0 {
                     self.suppress_next_instruction_start = true;
                     self.suppress_program_counter_increment = true;
-                    assert!(self.step_queue.is_empty());
-                    self.step_queue.skip_to_front(READ_OP_CODE_STEP);
                     self.mode_state.branch_oops();
                 }
             }
@@ -939,8 +920,6 @@ impl Cpu {
         self.suppress_program_counter_increment = true;
         self.address_carry = self.program_counter.offset_with_carry(self.previous_data_bus_value as i8);
         self.suppress_next_instruction_start = true;
-        assert!(self.step_queue.is_empty());
-        self.step_queue.skip_to_front(BRANCH_TAKEN_STEP);
         self.mode_state.branch_taken();
     }
 }
