@@ -399,8 +399,10 @@ impl Cpu {
         if step.is_read() && let Some(address) = memory.take_dmc_dma_pending_address() {
             info!(target: "cpuflowcontrol", "Reading DMC DMA byte at {address}.");
             dma_address = Some(address);
-            self.mode_state.dmc_dma();
-        } else if step.is_read() && self.oam_dma_port.take_page().is_some() {
+            //self.mode_state.dmc_dma();
+        }
+
+        if step.is_read() && self.oam_dma_port.take_page().is_some() {
             // TODO: Strip out unused CycleActions.
             info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
                 self.oam_dma_port.current_address());
