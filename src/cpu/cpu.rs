@@ -123,10 +123,6 @@ impl Cpu {
         self.mode_state.current_instruction()
     }
 
-    pub fn next_op_code(&self) -> Option<(u8, CpuAddress)> {
-        self.next_op_code
-    }
-
     pub fn is_jammed(&self) -> bool {
         self.mode_state.is_jammed()
     }
