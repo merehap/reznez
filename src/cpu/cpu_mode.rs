@@ -56,6 +56,11 @@ impl CpuModeState {
         matches!(self.next_mode, Some(CpuMode::BranchTaken | CpuMode::BranchOops))
     }
 
+    pub fn is_interrupt_sequence_active(&self) -> bool {
+        matches!(self.next_mode, Some(CpuMode::InterruptSequence | CpuMode::Reset))
+            || matches!(self.mode, CpuMode::InterruptSequence | CpuMode::Reset)
+    }
+
     pub fn current_step(&self) -> Step {
         self.steps[self.step_index]
     }

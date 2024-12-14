@@ -153,9 +153,7 @@ impl Cpu {
     }
 
     pub fn interrupt_sequence_active(&self) -> bool {
-        self.nmi_status == NmiStatus::Active
-            || self.irq_status == IrqStatus::Active
-            || self.reset_status == ResetStatus::Active
+        self.mode_state.is_interrupt_sequence_active()
     }
 
     pub fn next_instruction_starting(&self) -> bool {
