@@ -176,7 +176,7 @@ impl Cpu {
             // TODO: Strip out unused CycleActions.
             info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
                 self.oam_dma_port.current_address());
-            self.mode_state.oam_dma_pending();
+            self.mode_state.oam_dma();
         } else {
             for &action in step.actions() {
                 self.execute_cycle_action(memory, action, irq_pending);
