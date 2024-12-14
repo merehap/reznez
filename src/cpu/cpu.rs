@@ -44,7 +44,6 @@ pub struct Cpu {
     address_carry: i8,
 
     suppress_program_counter_increment: bool,
-    suppress_next_instruction_start: bool,
 }
 
 impl Cpu {
@@ -78,7 +77,6 @@ impl Cpu {
             address_carry: 0,
 
             suppress_program_counter_increment: false,
-            suppress_next_instruction_start: false,
         }
     }
 
@@ -95,7 +93,6 @@ impl Cpu {
         self.irq_status = IrqStatus::Inactive;
         self.current_interrupt_vector = None;
         self.suppress_program_counter_increment = false;
-        self.suppress_next_instruction_start = false;
     }
 
     pub fn accumulator(&self) -> u8 {
@@ -164,12 +161,12 @@ impl Cpu {
     pub fn next_instruction_starting(&self) -> bool {
         self.next_op_code.is_some()
             && !self.interrupt_sequence_active()
-            && !self.suppress_next_instruction_start
+            && !self.mode_state.should_suppress_next_instruction_start()
             && !self.is_jammed()
     }
 
     pub fn next_op_code_and_address(&self) -> Option<(u8, CpuAddress)> {
-        if self.interrupt_sequence_active() || self.suppress_next_instruction_start || self.is_jammed() {
+        if self.interrupt_sequence_active() || self.mode_state.should_suppress_next_instruction_start() || self.is_jammed() {
             None
         } else {
             self.next_op_code
@@ -243,8 +240,7 @@ impl Cpu {
     ) {
         match action {
             CycleAction::StartNextInstruction => {
-                if self.suppress_next_instruction_start {
-                    self.suppress_next_instruction_start = false;
+                if self.mode_state.should_suppress_next_instruction_start() {
                     return;
                 }
 
@@ -525,7 +521,6 @@ impl Cpu {
             }
             CycleAction::MaybeInsertBranchOopsStep => {
                 if self.address_carry != 0 {
-                    self.suppress_next_instruction_start = true;
                     self.suppress_program_counter_increment = true;
                     self.mode_state.branch_oops();
                 }
@@ -719,7 +714,6 @@ impl Cpu {
     fn branch(&mut self) {
         self.suppress_program_counter_increment = true;
         self.address_carry = self.program_counter.offset_with_carry(self.previous_data_bus_value as i8);
-        self.suppress_next_instruction_start = true;
         self.mode_state.branch_taken();
     }
 }

@@ -52,6 +52,10 @@ impl CpuModeState {
         self.mode == CpuMode::Jammed
     }
 
+    pub fn should_suppress_next_instruction_start(&self) -> bool {
+        matches!(self.next_mode, Some(CpuMode::BranchTaken | CpuMode::BranchOops))
+    }
+
     pub fn current_step(&self) -> Step {
         self.steps[self.step_index]
     }
