@@ -5,9 +5,8 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 enum CpuMode {
-    Reset,
     Instruction { oam_dma_pending: bool },
-    InterruptSequence,
+    InterruptSequence { reset: bool },
     OamDma,
     /*
     OamDma {
@@ -16,7 +15,6 @@ enum CpuMode {
         suspended_step_index: usize,
     },
     */
-    DmcDma,
 
     Jammed,
     StartNext { oam_dma_pending: bool },
@@ -43,7 +41,7 @@ impl CpuModeState {
         Self {
             steps: RESET_STEPS,
             step_index: 0,
-            mode: CpuMode::Reset,
+            mode: CpuMode::InterruptSequence { reset: true },
             next_mode: None,
             current_instruction_with_address: None,
         }
@@ -58,8 +56,8 @@ impl CpuModeState {
     }
 
     pub fn is_interrupt_sequence_active(&self) -> bool {
-        matches!(self.next_mode, Some(CpuMode::InterruptSequence | CpuMode::Reset))
-            || matches!(self.mode, CpuMode::InterruptSequence | CpuMode::Reset)
+        matches!(self.next_mode, Some(CpuMode::InterruptSequence {..}))
+            || matches!(self.mode, CpuMode::InterruptSequence {..})
     }
 
     pub fn current_step(&self) -> Step {
@@ -81,7 +79,7 @@ impl CpuModeState {
 
     pub fn reset(&mut self) {
         assert_eq!(self.next_mode, None, "next_mode should not already be set");
-        self.next_mode = Some(CpuMode::Reset);
+        self.next_mode = Some(CpuMode::InterruptSequence { reset: true });
         self.current_instruction_with_address = None;
     }
 
@@ -96,7 +94,7 @@ impl CpuModeState {
 
     pub fn interrupt_sequence(&mut self) {
         assert_eq!(self.next_mode, None, "next_mode should not already be set");
-        self.next_mode = Some(CpuMode::InterruptSequence);
+        self.next_mode = Some(CpuMode::InterruptSequence { reset: false });
         self.current_instruction_with_address = None;
     }
 
@@ -138,7 +136,6 @@ impl CpuModeState {
         if let Some(next_mode) = self.next_mode.take() {
             match next_mode {
                 CpuMode::StartNext {..} => unreachable!(),
-                CpuMode::DmcDma => todo!(),
                 CpuMode::Jammed => self.steps = &[],
 
                 CpuMode::OamDma => {
@@ -147,8 +144,8 @@ impl CpuModeState {
                         CycleParity::Put => &*ALIGNED_OAM_DMA_TRANSFER_STEPS,
                     };
                 }
-                CpuMode::Reset => self.steps = RESET_STEPS,
-                CpuMode::InterruptSequence => self.steps = BRK_STEPS,
+                CpuMode::InterruptSequence { reset: false } => self.steps = BRK_STEPS,
+                CpuMode::InterruptSequence { reset: true } => self.steps = RESET_STEPS,
                 CpuMode::Instruction {..} => { /* steps will be set by the caller in this case. */ }
                 CpuMode::BranchTaken => self.steps = &[BRANCH_TAKEN_STEP],
                 CpuMode::Oops {..} => {
@@ -175,7 +172,7 @@ impl CpuModeState {
                 self.step_index = 0;
                 CpuMode::OamDma
             }
-            CpuMode::Reset | CpuMode::Instruction { oam_dma_pending: false } | CpuMode::InterruptSequence | CpuMode::OamDma | CpuMode::DmcDma => {
+            CpuMode::Instruction { oam_dma_pending: false } | CpuMode::InterruptSequence {..} | CpuMode::OamDma => {
                 self.steps = &[READ_OP_CODE_STEP];
                 self.step_index = 0;
                 CpuMode::StartNext { oam_dma_pending: false }
