@@ -48,6 +48,10 @@ impl CpuModeState {
         }
     }
 
+    pub fn jammed(&self) -> bool {
+        self.mode == CpuMode::Jammed
+    }
+
     pub fn current_step(&self) -> Step {
         self.steps[self.step_index]
     }
@@ -108,7 +112,7 @@ impl CpuModeState {
             match next_mode {
                 CpuMode::StartNext {..} => unreachable!(),
                 CpuMode::DmcDma => todo!(),
-                CpuMode::Jammed => todo!(),
+                CpuMode::Jammed => self.steps = &[],
 
                 CpuMode::OamDma => {
                     self.steps = match cycle_parity {

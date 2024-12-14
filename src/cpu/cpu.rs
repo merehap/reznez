@@ -37,8 +37,6 @@ pub struct Cpu {
 
     current_interrupt_vector: Option<InterruptVector>,
 
-    jammed: bool,
-
     address_bus: CpuAddress,
     data_bus: u8,
     previous_data_bus_value: u8,
@@ -73,8 +71,6 @@ impl Cpu {
             // The initial value probably doesn't matter.
             current_interrupt_vector: None,
 
-            jammed: false,
-
             address_bus: CpuAddress::new(0x0000),
             data_bus: 0,
             previous_data_bus_value: 0,
@@ -98,7 +94,6 @@ impl Cpu {
         self.nmi_status = NmiStatus::Inactive;
         self.irq_status = IrqStatus::Inactive;
         self.current_interrupt_vector = None;
-        self.jammed = false;
         self.suppress_program_counter_increment = false;
         self.suppress_next_instruction_start = false;
     }
@@ -136,7 +131,7 @@ impl Cpu {
     }
 
     pub fn jammed(&self) -> bool {
-        self.jammed
+        self.mode_state.jammed()
     }
 
     pub fn oam_dma_pending(&self) -> bool {
@@ -170,11 +165,11 @@ impl Cpu {
         self.next_op_code.is_some()
             && !self.interrupt_sequence_active()
             && !self.suppress_next_instruction_start
-            && !self.jammed
+            && !self.jammed()
     }
 
     pub fn next_op_code_and_address(&self) -> Option<(u8, CpuAddress)> {
-        if self.interrupt_sequence_active() || self.suppress_next_instruction_start || self.jammed {
+        if self.interrupt_sequence_active() || self.suppress_next_instruction_start || self.jammed() {
             None
         } else {
             self.next_op_code
@@ -182,7 +177,7 @@ impl Cpu {
     }
 
     pub fn step(&mut self, memory: &mut CpuMemory, cycle_parity: CycleParity, irq_pending: bool) -> Option<Step> {
-        if self.jammed {
+        if self.jammed() {
             return None;
         }
 
@@ -447,7 +442,7 @@ impl Cpu {
                     BNE => if !self.status.zero { self.branch(); }
                     BEQ => if self.status.zero { self.branch(); }
 
-                    JAM => self.jammed = true,
+                    JAM => self.mode_state.set_next_mode(CpuMode::Jammed),
 
                     _ => todo!("{:X?}", self.current_instruction().unwrap()),
                 }
