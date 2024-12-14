@@ -216,16 +216,16 @@ impl Cpu {
             for &action in step.actions() {
                 self.execute_cycle_action(memory, action, irq_pending);
             }
+        }
 
-            self.suppress_program_counter_increment = false;
-
-            if let Some(dma_address) = dma_address {
-                let new_sample_buffer = memory.read(dma_address).unwrap_or(self.data_bus);
-                memory.set_dmc_sample_buffer(new_sample_buffer);
-            }
+        if let Some(dma_address) = dma_address {
+            let new_sample_buffer = memory.read(dma_address).unwrap_or(self.data_bus);
+            memory.set_dmc_sample_buffer(new_sample_buffer);
         }
 
         memory.process_end_of_cpu_cycle();
+
+        self.suppress_program_counter_increment = false;
         self.mode_state.step(cycle_parity);
         Some(step)
     }
