@@ -9,8 +9,8 @@ use crate::cpu::step::Step::{Read, ReadField, Write, WriteField};
 
 pub static OAM_DMA_TRANSFER_STEPS: LazyLock<[Step; 512]> = LazyLock::new(|| {
     let read_write = &[
-        Read(From::DmaAddressTarget, &[]),
-        Write(To::OAM_DATA, &[IncrementDmaAddress]),
+        Read(From::OamDmaAddressTarget, &[]),
+        Write(To::OAM_DATA, &[IncrementOamDmaAddress]),
     ];
 
     read_write.repeat(256).try_into().unwrap()
@@ -20,8 +20,8 @@ pub static ALIGNED_OAM_DMA_TRANSFER_STEPS: LazyLock<[Step; 513]> = LazyLock::new
     let mut steps = Vec::new();
     steps.push(ADDRESS_BUS_READ_STEP);
     for _ in 0..256 {
-        steps.push(Read(From::DmaAddressTarget, &[]));
-        steps.push(Write(To::OAM_DATA, &[IncrementDmaAddress]));
+        steps.push(Read(From::OamDmaAddressTarget, &[]));
+        steps.push(Write(To::OAM_DATA, &[IncrementOamDmaAddress]));
     }
 
     steps.try_into().unwrap()

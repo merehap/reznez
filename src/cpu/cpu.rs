@@ -406,7 +406,7 @@ impl Cpu {
             // TODO: Make sure this isn't supposed to wrap within the same page.
             CycleAction::IncrementAddressBus => { self.address_bus.inc(); }
             CycleAction::IncrementAddressBusLow => { self.address_bus.offset_low(1); }
-            CycleAction::IncrementDmaAddress => self.oam_dma_port.increment_current_address(),
+            CycleAction::IncrementOamDmaAddress => self.oam_dma_port.increment_current_address(),
             CycleAction::StorePendingAddressLowByte => self.pending_address_low = self.previous_data_bus_value,
             CycleAction::StorePendingAddressLowByteWithXOffset => {
                 let carry;
@@ -500,7 +500,7 @@ impl Cpu {
         use self::From::*;
         match from {
             AddressBusTarget => self.address_bus,
-            DmaAddressTarget => self.oam_dma_port.current_address(),
+            OamDmaAddressTarget => self.oam_dma_port.current_address(),
             ProgramCounterTarget => self.program_counter,
             PendingAddressTarget =>
                 CpuAddress::from_low_high(self.pending_address_low, self.data_bus),
@@ -525,7 +525,7 @@ impl Cpu {
         use self::To::*;
         match to {
             AddressBusTarget => self.address_bus,
-            DmaAddressTarget => self.oam_dma_port.current_address(),
+            OamDmaAddressTarget => self.oam_dma_port.current_address(),
             ProgramCounterTarget => self.program_counter,
             PendingAddressTarget =>
                 CpuAddress::from_low_high(self.pending_address_low, self.data_bus),

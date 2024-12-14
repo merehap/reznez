@@ -5,7 +5,7 @@ pub enum CycleAction {
     IncrementProgramCounter,
     IncrementAddressBus,
     IncrementAddressBusLow,
-    IncrementDmaAddress,
+    IncrementOamDmaAddress,
     StorePendingAddressLowByte,
     StorePendingAddressLowByteWithXOffset,
     StorePendingAddressLowByteWithYOffset,
@@ -36,7 +36,7 @@ pub enum CycleAction {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum From {
     AddressBusTarget,
-    DmaAddressTarget,
+    OamDmaAddressTarget,
 
     ProgramCounterTarget,
     PendingAddressTarget,
@@ -51,7 +51,7 @@ pub enum From {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum To {
     AddressBusTarget,
-    DmaAddressTarget,
+    OamDmaAddressTarget,
 
     ProgramCounterTarget,
     PendingAddressTarget,
