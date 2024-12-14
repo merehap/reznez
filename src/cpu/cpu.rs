@@ -26,8 +26,6 @@ pub struct Cpu {
     status: Status,
 
     mode_state: CpuModeState,
-    // TODO: Remove this. Only test code uses this.
-    next_op_code: Option<(u8, CpuAddress)>,
 
     nmi_status: NmiStatus,
     irq_status: IrqStatus,
@@ -60,7 +58,6 @@ impl Cpu {
             status: Status::startup(),
 
             mode_state: CpuModeState::startup(),
-            next_op_code: None,
 
             nmi_status: NmiStatus::Inactive,
             irq_status: IrqStatus::Inactive,
@@ -88,7 +85,6 @@ impl Cpu {
         self.mode_state = CpuModeState::startup();
 
         self.address_carry = 0;
-        self.next_op_code = None;
         self.nmi_status = NmiStatus::Inactive;
         self.irq_status = IrqStatus::Inactive;
         self.current_interrupt_vector = None;
@@ -153,10 +149,7 @@ impl Cpu {
     }
 
     pub fn next_instruction_starting(&self) -> bool {
-        self.next_op_code.is_some()
-            && !self.interrupt_sequence_active()
-            && !self.mode_state.should_suppress_next_instruction_start()
-            && !self.is_jammed()
+        self.mode_state.is_instruction_starting()
     }
 
     pub fn next_op_code_and_address(&self) -> Option<(u8, CpuAddress)> {
@@ -253,15 +246,9 @@ impl Cpu {
                 } else {
                     self.mode_state.instruction(Instruction::from_code_point(self.data_bus), self.address_bus);
                 }
-
-                self.next_op_code = Some((self.data_bus, self.address_bus));
             }
 
-            CycleAction::InterpretOpCode => {
-                if !self.interrupt_sequence_active() {
-                    self.next_op_code = None;
-                }
-            }
+            CycleAction::InterpretOpCode => {}
             CycleAction::ExecuteOpCode => {
                 let value = self.previous_data_bus_value;
                 let access_mode = self.current_instruction().unwrap().access_mode();
@@ -483,9 +470,6 @@ impl Cpu {
                 self.nmi_status = NmiStatus::Inactive;
                 self.irq_status = IrqStatus::Inactive;
                 self.reset_status = ResetStatus::Inactive;
-                // HACK: This should only be done after an instruction has completed. Branching
-                // currently prevents that in some cases unfortunately.
-                self.next_op_code = None;
             }
             CycleAction::ClearInterruptVector => self.current_interrupt_vector = None,
             CycleAction::PollInterrupts => {

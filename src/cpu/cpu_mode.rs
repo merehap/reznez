@@ -75,6 +75,10 @@ impl CpuModeState {
         self.current_instruction_with_address
     }
 
+    pub fn is_instruction_starting(&self) -> bool {
+        matches!(self.mode, CpuMode::Instruction {..}) && self.step_index == 0
+    }
+
     pub fn reset(&mut self) {
         assert_eq!(self.next_mode, None, "next_mode should not already be set");
         self.next_mode = Some(CpuMode::Reset);
