@@ -1,7 +1,7 @@
 use log::info;
 
 use crate::apu::apu_registers::CycleParity;
-use crate::cpu::cpu_mode::{CpuMode, CpuModeState};
+use crate::cpu::cpu_mode::CpuModeState;
 use crate::cpu::cycle_action::{CycleAction, From, To, Field};
 use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
 use crate::cpu::status;
@@ -130,8 +130,8 @@ impl Cpu {
         self.next_op_code
     }
 
-    pub fn jammed(&self) -> bool {
-        self.mode_state.jammed()
+    pub fn is_jammed(&self) -> bool {
+        self.mode_state.is_jammed()
     }
 
     pub fn oam_dma_pending(&self) -> bool {
@@ -165,11 +165,11 @@ impl Cpu {
         self.next_op_code.is_some()
             && !self.interrupt_sequence_active()
             && !self.suppress_next_instruction_start
-            && !self.jammed()
+            && !self.is_jammed()
     }
 
     pub fn next_op_code_and_address(&self) -> Option<(u8, CpuAddress)> {
-        if self.interrupt_sequence_active() || self.suppress_next_instruction_start || self.jammed() {
+        if self.interrupt_sequence_active() || self.suppress_next_instruction_start || self.is_jammed() {
             None
         } else {
             self.next_op_code
@@ -177,7 +177,7 @@ impl Cpu {
     }
 
     pub fn step(&mut self, memory: &mut CpuMemory, cycle_parity: CycleParity, irq_pending: bool) -> Option<Step> {
-        if self.jammed() {
+        if self.is_jammed() {
             return None;
         }
 
@@ -252,21 +252,17 @@ impl Cpu {
                     info!(target: "cpuflowcontrol", "Starting system reset");
                     self.reset_status = ResetStatus::Active;
                     self.data_bus = 0x00;
-                    self.next_op_code = Some((0x00, self.address_bus));
-                    self.mode_state.set_next_mode(CpuMode::Reset);
-                    self.mode_state.clear_current_instruction();
+                    self.mode_state.reset();
                 } else if self.nmi_status == NmiStatus::Ready {
                     info!(target: "cpuflowcontrol", "Starting NMI");
                     self.nmi_status = NmiStatus::Active;
                     self.data_bus = 0x00;
-                    self.mode_state.set_next_mode(CpuMode::InterruptSequence);
-                    self.mode_state.clear_current_instruction();
+                    self.mode_state.interrupt_sequence();
                 } else if self.irq_status == IrqStatus::Ready && self.nmi_status == NmiStatus::Inactive {
                     info!(target: "cpuflowcontrol", "Starting IRQ");
                     self.irq_status = IrqStatus::Active;
                     self.data_bus = 0x00;
-                    self.mode_state.set_next_mode(CpuMode::InterruptSequence);
-                    self.mode_state.clear_current_instruction();
+                    self.mode_state.interrupt_sequence();
                 } else {
                     self.mode_state.instruction(Instruction::from_code_point(self.data_bus));
                 }
@@ -442,7 +438,7 @@ impl Cpu {
                     BNE => if !self.status.zero { self.branch(); }
                     BEQ => if self.status.zero { self.branch(); }
 
-                    JAM => self.mode_state.set_next_mode(CpuMode::Jammed),
+                    JAM => self.mode_state.jammed(),
 
                     _ => todo!("{:X?}", self.current_instruction().unwrap()),
                 }
@@ -531,7 +527,7 @@ impl Cpu {
                 if self.address_carry != 0 {
                     self.suppress_next_instruction_start = true;
                     self.suppress_program_counter_increment = true;
-                    self.mode_state.set_next_mode(CpuMode::BranchOops);
+                    self.mode_state.branch_oops();
                 }
             }
 
@@ -724,7 +720,7 @@ impl Cpu {
         self.suppress_program_counter_increment = true;
         self.address_carry = self.program_counter.offset_with_carry(self.previous_data_bus_value as i8);
         self.suppress_next_instruction_start = true;
-        self.mode_state.set_next_mode(CpuMode::BranchTaken);
+        self.mode_state.branch_taken();
     }
 }
 

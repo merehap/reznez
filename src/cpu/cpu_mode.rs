@@ -3,7 +3,7 @@ use crate::cpu::step::*;
 use crate::cpu::instruction::Instruction;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
-pub enum CpuMode {
+enum CpuMode {
     Reset,
     Instruction { oam_dma_pending: bool },
     InterruptSequence,
@@ -48,7 +48,7 @@ impl CpuModeState {
         }
     }
 
-    pub fn jammed(&self) -> bool {
+    pub fn is_jammed(&self) -> bool {
         self.mode == CpuMode::Jammed
     }
 
@@ -60,35 +60,11 @@ impl CpuModeState {
         self.current_instruction
     }
 
-    pub fn clear_current_instruction(&mut self) {
+    pub fn reset(&mut self) {
+        assert_eq!(self.next_mode, None, "next_mode should not already be set");
+        self.next_mode = Some(CpuMode::Reset);
         self.current_instruction = None;
     }
-
-    pub fn set_next_mode(&mut self, next_mode: CpuMode) {
-        assert_eq!(self.next_mode, None, "next_mode should not already be set when setting it to {next_mode:?}");
-        self.next_mode = Some(next_mode);
-    }
-
-    pub fn oam_dma_pending(&mut self) {
-        match self.mode {
-            CpuMode::StartNext { oam_dma_pending: false } => self.set_next_mode(CpuMode::OamDma),
-            // CpuMode::StartNext { oam_dma_pending: false } => self.mode = CpuMode::StartNext { oam_dma_pending: true },
-            CpuMode::Instruction { oam_dma_pending: false } => self.set_next_mode(CpuMode::Instruction { oam_dma_pending: true }),
-            _ => todo!(),
-        }
-    }
-
-    /*
-    fn oam_dma(&mut self) {
-        self.mode = CpuMode::OamDma {
-            suspended_mode: Box::new(self.mode.clone()),
-            suspended_steps: self.steps,
-            suspended_step_index: self.step_index,
-        };
-        self.steps = &*OAM_DMA_TRANSFER_STEPS;
-        self.step_index = 0;
-    }
-    */
 
     pub fn instruction(&mut self, instruction: Instruction) {
         let oam_dma_pending = self.mode == CpuMode::Instruction { oam_dma_pending: true };
@@ -96,12 +72,44 @@ impl CpuModeState {
 
         self.current_instruction = Some(instruction);
         self.steps = instruction.steps();
-        self.set_next_mode(CpuMode::Instruction { oam_dma_pending });
+        self.next_mode = Some(CpuMode::Instruction { oam_dma_pending });
     }
 
+    pub fn interrupt_sequence(&mut self) {
+        assert_eq!(self.next_mode, None, "next_mode should not already be set");
+        self.next_mode = Some(CpuMode::InterruptSequence);
+        self.current_instruction = None;
+    }
+
+    pub fn oam_dma_pending(&mut self) {
+        match self.mode {
+            CpuMode::StartNext { oam_dma_pending: false } => self.next_mode = Some(CpuMode::OamDma),
+            // CpuMode::StartNext { oam_dma_pending: false } => self.mode = CpuMode::StartNext { oam_dma_pending: true },
+            CpuMode::Instruction { oam_dma_pending: false } => self.next_mode = Some(CpuMode::Instruction { oam_dma_pending: true }),
+            _ => todo!(),
+        }
+    }
+
+    pub fn jammed(&mut self) {
+        assert_eq!(self.next_mode, None, "next_mode should not already be set");
+        self.next_mode = Some(CpuMode::Jammed);
+    }
+
+    pub fn branch_taken(&mut self) {
+        assert_eq!(self.next_mode, None, "next_mode should not already be set");
+        self.next_mode = Some(CpuMode::BranchTaken);
+    }
+
+    pub fn branch_oops(&mut self) {
+        assert_eq!(self.next_mode, None, "next_mode should not already be set");
+        self.next_mode = Some(CpuMode::BranchOops);
+    }
+
+    // FIXME: If pending, OAM DMA should be triggered on Oops steps.
     pub fn oops(&mut self) {
+        assert_eq!(self.next_mode, None, "next_mode should not already be set");
         assert_eq!(self.mode, CpuMode::Instruction { oam_dma_pending: false });
-        self.set_next_mode(CpuMode::Oops {
+        self.next_mode = Some(CpuMode::Oops {
             suspended_steps: self.steps,
             suspended_step_index: self.step_index + 1,
         });

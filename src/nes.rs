@@ -119,7 +119,7 @@ impl Nes {
         loop {
             let step_result = self.step();
             if step_result.is_last_cycle_of_frame {
-                if self.cpu.jammed() {
+                if self.cpu.is_jammed() {
                     info!("CPU is jammed!");
                 }
 
