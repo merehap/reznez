@@ -119,7 +119,7 @@ impl Nes {
         loop {
             let step_result = self.step();
             if step_result.is_last_cycle_of_frame {
-                if self.cpu.is_jammed() {
+                if self.cpu.mode_state().is_jammed() {
                     info!("CPU is jammed!");
                 }
 
@@ -191,7 +191,7 @@ impl Nes {
         }
 
         let step = self.cpu.step(&mut self.memory.as_cpu_memory(), cycle_parity, irq_pending);
-        if log_enabled!(target: "cpuinstructions", Info) && self.cpu.next_instruction_starting() {
+        if log_enabled!(target: "cpuinstructions", Info) && self.cpu.mode_state().is_instruction_starting() {
             info!("{}", self.log_formatter.format_instruction(self, interrupt_text));
         }
 
@@ -203,7 +203,7 @@ impl Nes {
             self.snapshots.current().cpu_cycle(self.memory.cpu_cycle());
             self.snapshots.current().irq_status(self.cpu.irq_status());
             self.snapshots.current().nmi_status(self.cpu.nmi_status());
-            if self.cpu.next_instruction_starting() {
+            if self.cpu.mode_state().is_instruction_starting() {
                 let formatted_instruction = self.minimal_formatter.format_instruction(self, String::new());
                 self.snapshots.current().instruction(formatted_instruction);
             }

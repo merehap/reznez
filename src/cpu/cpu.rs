@@ -115,12 +115,8 @@ impl Cpu {
         self.address_bus
     }
 
-    pub fn current_instruction(&self) -> Option<Instruction> {
-        self.mode_state.current_instruction()
-    }
-
-    pub fn is_jammed(&self) -> bool {
-        self.mode_state.is_jammed()
+    pub fn mode_state(&self) -> &CpuModeState {
+        &self.mode_state
     }
 
     pub fn oam_dma_pending(&self) -> bool {
@@ -144,21 +140,8 @@ impl Cpu {
         self.nmi_status = NmiStatus::Pending;
     }
 
-    pub fn interrupt_sequence_active(&self) -> bool {
-        self.mode_state.is_interrupt_sequence_active()
-    }
-
-    pub fn next_instruction_starting(&self) -> bool {
-        self.mode_state.is_instruction_starting()
-    }
-
-    pub fn next_op_code_and_address(&self) -> Option<(u8, CpuAddress)> {
-        self.mode_state.current_instruction_with_address()
-            .map(|(instruction, address)| (instruction.code_point(), address))
-    }
-
     pub fn step(&mut self, memory: &mut CpuMemory, cycle_parity: CycleParity, irq_pending: bool) -> Option<Step> {
-        if self.is_jammed() {
+        if self.mode_state.is_jammed() {
             return None;
         }
 
@@ -251,7 +234,7 @@ impl Cpu {
             CycleAction::InterpretOpCode => {}
             CycleAction::ExecuteOpCode => {
                 let value = self.previous_data_bus_value;
-                let access_mode = self.current_instruction().unwrap().access_mode();
+                let access_mode = self.mode_state.current_instruction().unwrap().access_mode();
                 let rmw_operand = if access_mode == AccessMode::Imp {
                     &mut self.a
                 } else {
@@ -414,12 +397,12 @@ impl Cpu {
 
                     JAM => self.mode_state.jammed(),
 
-                    _ => todo!("{:X?}", self.current_instruction().unwrap()),
+                    _ => todo!("{:X?}", self.mode_state.current_instruction().unwrap()),
                 }
             }
 
             CycleAction::IncrementProgramCounter => {
-                if !self.suppress_program_counter_increment && !self.interrupt_sequence_active() {
+                if !self.suppress_program_counter_increment && !self.mode_state.is_interrupt_sequence_active() {
                     self.program_counter.inc();
                 }
             }
@@ -460,7 +443,7 @@ impl Cpu {
                     } else if self.irq_status != IrqStatus::Inactive {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to IRQ.");
                         Some(InterruptVector::Irq)
-                    } else if let Some(instruction) = self.current_instruction() && instruction.op_code() == OpCode::BRK {
+                    } else if let Some(instruction) = self.mode_state.current_instruction() && instruction.op_code() == OpCode::BRK {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to BRK.");
                         Some(InterruptVector::Irq)
                     } else {
@@ -564,13 +547,13 @@ impl Cpu {
             ProgramCounterHighByte => self.program_counter.high_byte(),
             Accumulator => self.a,
             Status => {
-                if self.interrupt_sequence_active() {
+                if self.mode_state.is_interrupt_sequence_active() {
                     self.status.to_interrupt_byte()
                 } else {
                     self.status.to_instruction_byte()
                 }
             }
-            OpRegister => match self.current_instruction().unwrap().op_code() {
+            OpRegister => match self.mode_state.current_instruction().unwrap().op_code() {
                 OpCode::STA => self.a,
                 OpCode::STX => self.x,
                 OpCode::STY => self.y,

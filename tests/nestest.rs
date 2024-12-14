@@ -86,7 +86,7 @@ fn nestest() {
             let ppu_scanline;
 
             loop {
-                if nes.step().step.is_some() && nes.cpu().next_instruction_starting() {
+                if nes.step().step.is_some() && nes.cpu().mode_state().is_instruction_starting() {
                     c = nes.memory().cpu_cycle();
                     ppu_cycle = nes.ppu().clock().cycle();
                     ppu_scanline = nes.ppu().clock().scanline();
@@ -113,7 +113,7 @@ fn nestest() {
                 }
             }
 
-            let template = nes.cpu().current_instruction().unwrap();
+            let template = nes.cpu().mode_state().current_instruction().unwrap();
 
             let state = State {
                 program_counter,
