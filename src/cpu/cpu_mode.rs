@@ -1,6 +1,7 @@
 use crate::apu::apu_registers::CycleParity;
 use crate::cpu::step::*;
 use crate::cpu::instruction::Instruction;
+use crate::memory::cpu::cpu_address::CpuAddress;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 enum CpuMode {
@@ -34,7 +35,7 @@ pub struct CpuModeState {
     step_index: usize,
     mode: CpuMode,
     next_mode: Option<CpuMode>,
-    current_instruction: Option<Instruction>,
+    current_instruction_with_address: Option<(Instruction, CpuAddress)>,
 }
 
 impl CpuModeState {
@@ -44,7 +45,7 @@ impl CpuModeState {
             step_index: 0,
             mode: CpuMode::Reset,
             next_mode: None,
-            current_instruction: None,
+            current_instruction_with_address: None,
         }
     }
 
@@ -66,20 +67,25 @@ impl CpuModeState {
     }
 
     pub fn current_instruction(&self) -> Option<Instruction> {
-        self.current_instruction
+        self.current_instruction_with_address
+            .map(|(instruction, _)| instruction)
+    }
+
+    pub fn current_instruction_with_address(&self) -> Option<(Instruction, CpuAddress)> {
+        self.current_instruction_with_address
     }
 
     pub fn reset(&mut self) {
         assert_eq!(self.next_mode, None, "next_mode should not already be set");
         self.next_mode = Some(CpuMode::Reset);
-        self.current_instruction = None;
+        self.current_instruction_with_address = None;
     }
 
-    pub fn instruction(&mut self, instruction: Instruction) {
+    pub fn instruction(&mut self, instruction: Instruction, address: CpuAddress) {
         let oam_dma_pending = self.mode == CpuMode::Instruction { oam_dma_pending: true };
         assert_eq!(oam_dma_pending, false);
 
-        self.current_instruction = Some(instruction);
+        self.current_instruction_with_address = Some((instruction, address));
         self.steps = instruction.steps();
         self.next_mode = Some(CpuMode::Instruction { oam_dma_pending });
     }
@@ -87,7 +93,7 @@ impl CpuModeState {
     pub fn interrupt_sequence(&mut self) {
         assert_eq!(self.next_mode, None, "next_mode should not already be set");
         self.next_mode = Some(CpuMode::InterruptSequence);
-        self.current_instruction = None;
+        self.current_instruction_with_address = None;
     }
 
     pub fn oam_dma_pending(&mut self) {

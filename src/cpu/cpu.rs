@@ -160,11 +160,8 @@ impl Cpu {
     }
 
     pub fn next_op_code_and_address(&self) -> Option<(u8, CpuAddress)> {
-        if self.interrupt_sequence_active() || self.mode_state.should_suppress_next_instruction_start() || self.is_jammed() {
-            None
-        } else {
-            self.next_op_code
-        }
+        self.mode_state.current_instruction_with_address()
+            .map(|(instruction, address)| (instruction.code_point(), address))
     }
 
     pub fn step(&mut self, memory: &mut CpuMemory, cycle_parity: CycleParity, irq_pending: bool) -> Option<Step> {
@@ -254,7 +251,7 @@ impl Cpu {
                     self.data_bus = 0x00;
                     self.mode_state.interrupt_sequence();
                 } else {
-                    self.mode_state.instruction(Instruction::from_code_point(self.data_bus));
+                    self.mode_state.instruction(Instruction::from_code_point(self.data_bus), self.address_bus);
                 }
 
                 self.next_op_code = Some((self.data_bus, self.address_bus));
