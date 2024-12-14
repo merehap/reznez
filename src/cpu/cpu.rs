@@ -40,8 +40,6 @@ pub struct Cpu {
     previous_data_bus_value: u8,
     pending_address_low: u8,
     address_carry: i8,
-
-    suppress_program_counter_increment: bool,
 }
 
 impl Cpu {
@@ -62,6 +60,7 @@ impl Cpu {
             nmi_status: NmiStatus::Inactive,
             irq_status: IrqStatus::Inactive,
             reset_status: ResetStatus::Active,
+
             oam_dma_port: memory.ports().oam_dma.clone(),
 
             // The initial value probably doesn't matter.
@@ -72,8 +71,6 @@ impl Cpu {
             previous_data_bus_value: 0,
             pending_address_low: 0,
             address_carry: 0,
-
-            suppress_program_counter_increment: false,
         }
     }
 
@@ -88,7 +85,6 @@ impl Cpu {
         self.nmi_status = NmiStatus::Inactive;
         self.irq_status = IrqStatus::Inactive;
         self.current_interrupt_vector = None;
-        self.suppress_program_counter_increment = false;
     }
 
     pub fn accumulator(&self) -> u8 {
@@ -194,7 +190,6 @@ impl Cpu {
 
         memory.process_end_of_cpu_cycle();
 
-        self.suppress_program_counter_increment = false;
         self.mode_state.step(cycle_parity);
         Some(step)
     }
@@ -402,7 +397,9 @@ impl Cpu {
             }
 
             CycleAction::IncrementProgramCounter => {
-                if !self.suppress_program_counter_increment && !self.mode_state.is_interrupt_sequence_active() {
+                // FIXME : Rather than suppressing this here, this CycleAction should have been
+                // stripped out earlier.
+                if !self.mode_state.should_suppress_next_instruction_start() && !self.mode_state.is_interrupt_sequence_active() {
                     self.program_counter.inc();
                 }
             }
@@ -479,7 +476,6 @@ impl Cpu {
             }
             CycleAction::MaybeInsertBranchOopsStep => {
                 if self.address_carry != 0 {
-                    self.suppress_program_counter_increment = true;
                     self.mode_state.branch_oops();
                 }
             }
@@ -670,7 +666,6 @@ impl Cpu {
     }
 
     fn branch(&mut self) {
-        self.suppress_program_counter_increment = true;
         self.address_carry = self.program_counter.offset_with_carry(self.previous_data_bus_value as i8);
         self.mode_state.branch_taken();
     }
