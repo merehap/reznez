@@ -1,4 +1,4 @@
-use crate::cpu::instruction::{Instruction, INSTRUCTIONS, OpCode, AccessMode};
+use crate::cpu::instruction::{Instruction, OpCode, AccessMode};
 use crate::memory::mapper::CpuAddress;
 use crate::nes::Nes;
 
@@ -15,7 +15,7 @@ impl Formatter for MinimalFormatter {
         let cpu = nes.cpu();
 
         let (op_code, start_address) = nes.cpu().next_op_code_and_address().unwrap();
-        let instruction: Instruction = INSTRUCTIONS[usize::from(op_code)];
+        let instruction = Instruction::from_code_point(op_code);
         let low = peek(start_address.offset(1));
         let high = peek(start_address.offset(2));
 
@@ -97,7 +97,7 @@ impl Formatter for Nintendulator0980Formatter {
         let cpu = nes.cpu();
 
         let (op_code, start_address) = nes.cpu().next_op_code_and_address().unwrap();
-        let instruction: Instruction = INSTRUCTIONS[usize::from(op_code)];
+        let instruction = Instruction::from_code_point(op_code);
         let low = peek(start_address.offset(1));
         let high = peek(start_address.offset(2));
 
@@ -209,7 +209,7 @@ impl Formatter for MesenFormatter {
         let cpu = nes.cpu();
 
         let (op_code, start_address) = nes.cpu().next_op_code_and_address().unwrap();
-        let instruction: Instruction = INSTRUCTIONS[usize::from(op_code)];
+        let instruction = Instruction::from_code_point(op_code);
         let low = peek(start_address.offset(1));
         let high = peek(start_address.offset(2));
 

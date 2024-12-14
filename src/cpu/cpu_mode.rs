@@ -1,5 +1,6 @@
 use crate::apu::apu_registers::CycleParity;
 use crate::cpu::step::*;
+use crate::cpu::instruction::Instruction;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum CpuMode {
@@ -33,6 +34,7 @@ pub struct CpuModeState {
     step_index: usize,
     mode: CpuMode,
     next_mode: Option<CpuMode>,
+    current_instruction: Option<Instruction>,
 }
 
 impl CpuModeState {
@@ -42,11 +44,20 @@ impl CpuModeState {
             step_index: 0,
             mode: CpuMode::Reset,
             next_mode: None,
+            current_instruction: None,
         }
     }
 
     pub fn current_step(&self) -> Step {
         self.steps[self.step_index]
+    }
+
+    pub fn current_instruction(&self) -> Option<Instruction> {
+        self.current_instruction
+    }
+
+    pub fn clear_current_instruction(&mut self) {
+        self.current_instruction = None;
     }
 
     pub fn set_next_mode(&mut self, next_mode: CpuMode) {
@@ -75,11 +86,12 @@ impl CpuModeState {
     }
     */
 
-    pub fn instruction(&mut self, steps: &'static [Step]) {
+    pub fn instruction(&mut self, instruction: Instruction) {
         let oam_dma_pending = self.mode == CpuMode::Instruction { oam_dma_pending: true };
         assert_eq!(oam_dma_pending, false);
 
-        self.steps = steps;
+        self.current_instruction = Some(instruction);
+        self.steps = instruction.steps();
         self.set_next_mode(CpuMode::Instruction { oam_dma_pending });
     }
 

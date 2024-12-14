@@ -3,7 +3,7 @@ use log::info;
 use crate::apu::apu_registers::CycleParity;
 use crate::cpu::cpu_mode::{CpuMode, CpuModeState};
 use crate::cpu::cycle_action::{CycleAction, From, To, Field};
-use crate::cpu::instruction::{INSTRUCTIONS, Instruction, AccessMode, OpCode};
+use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
 use crate::cpu::status;
 use crate::cpu::status::Status;
 use crate::cpu::step::*;
@@ -26,7 +26,6 @@ pub struct Cpu {
     status: Status,
 
     mode_state: CpuModeState,
-    current_instruction: Option<Instruction>,
     // TODO: Remove this. Only test code uses this.
     next_op_code: Option<(u8, CpuAddress)>,
 
@@ -64,7 +63,6 @@ impl Cpu {
             status: Status::startup(),
 
             mode_state: CpuModeState::startup(),
-            current_instruction: None,
             next_op_code: None,
 
             nmi_status: NmiStatus::Inactive,
@@ -130,7 +128,7 @@ impl Cpu {
     }
 
     pub fn current_instruction(&self) -> Option<Instruction> {
-        self.current_instruction
+        self.mode_state.current_instruction()
     }
 
     pub fn next_op_code(&self) -> Option<(u8, CpuAddress)> {
@@ -255,26 +253,27 @@ impl Cpu {
                     return;
                 }
 
-                self.current_instruction = None;
                 if self.reset_status == ResetStatus::Ready {
                     info!(target: "cpuflowcontrol", "Starting system reset");
                     self.reset_status = ResetStatus::Active;
                     self.data_bus = 0x00;
                     self.next_op_code = Some((0x00, self.address_bus));
                     self.mode_state.set_next_mode(CpuMode::Reset);
+                    self.mode_state.clear_current_instruction();
                 } else if self.nmi_status == NmiStatus::Ready {
                     info!(target: "cpuflowcontrol", "Starting NMI");
                     self.nmi_status = NmiStatus::Active;
                     self.data_bus = 0x00;
                     self.mode_state.set_next_mode(CpuMode::InterruptSequence);
+                    self.mode_state.clear_current_instruction();
                 } else if self.irq_status == IrqStatus::Ready && self.nmi_status == NmiStatus::Inactive {
                     info!(target: "cpuflowcontrol", "Starting IRQ");
                     self.irq_status = IrqStatus::Active;
                     self.data_bus = 0x00;
                     self.mode_state.set_next_mode(CpuMode::InterruptSequence);
+                    self.mode_state.clear_current_instruction();
                 } else {
-                    self.current_instruction = Some(Instruction::from_code_point(self.data_bus));
-                    self.mode_state.instruction(INSTRUCTIONS[self.data_bus as usize].steps());
+                    self.mode_state.instruction(Instruction::from_code_point(self.data_bus));
                 }
 
                 self.next_op_code = Some((self.data_bus, self.address_bus));
@@ -287,7 +286,7 @@ impl Cpu {
             }
             CycleAction::ExecuteOpCode => {
                 let value = self.previous_data_bus_value;
-                let access_mode = self.current_instruction.unwrap().access_mode();
+                let access_mode = self.current_instruction().unwrap().access_mode();
                 let rmw_operand = if access_mode == AccessMode::Imp {
                     &mut self.a
                 } else {
@@ -295,7 +294,7 @@ impl Cpu {
                 };
 
                 use OpCode::*;
-                match self.current_instruction.unwrap().op_code() {
+                match self.mode_state.current_instruction().unwrap().op_code() {
                     // Implicit (and Accumulator) op codes.
                     INX => self.x = self.nz(self.x.wrapping_add(1)),
                     INY => self.y = self.nz(self.y.wrapping_add(1)),
@@ -450,7 +449,7 @@ impl Cpu {
 
                     JAM => self.jammed = true,
 
-                    _ => todo!("{:X?}", self.current_instruction.unwrap()),
+                    _ => todo!("{:X?}", self.current_instruction().unwrap()),
                 }
             }
 
@@ -496,7 +495,7 @@ impl Cpu {
                     } else if self.irq_status != IrqStatus::Inactive {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to IRQ.");
                         Some(InterruptVector::Irq)
-                    } else if let Some(instruction) = self.current_instruction && instruction.op_code() == OpCode::BRK {
+                    } else if let Some(instruction) = self.current_instruction() && instruction.op_code() == OpCode::BRK {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to BRK.");
                         Some(InterruptVector::Irq)
                     } else {
@@ -610,7 +609,7 @@ impl Cpu {
                     self.status.to_instruction_byte()
                 }
             }
-            OpRegister => match self.current_instruction.unwrap().op_code() {
+            OpRegister => match self.current_instruction().unwrap().op_code() {
                 OpCode::STA => self.a,
                 OpCode::STX => self.x,
                 OpCode::STY => self.y,

@@ -5,7 +5,7 @@ use strum_macros::EnumString;
 use crate::cpu::step::*;
 
 #[rustfmt::skip]
-pub static INSTRUCTIONS: LazyLock<[Instruction; 256]> = LazyLock::new(|| {
+static INSTRUCTIONS: LazyLock<[Instruction; 256]> = LazyLock::new(|| {
     use OpCode::*;
     use AccessMode::*;
 
