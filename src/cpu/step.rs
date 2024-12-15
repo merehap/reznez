@@ -48,7 +48,7 @@ pub const IMMEDIATE_ADDRESSING_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 pub const RELATIVE_ADDRESSING_STEPS: &[Step] = &[
-    Read(From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter, PollInterrupts]),
+    ReadField(RelativeAddressOffset, From::ProgramCounterTarget, &[InterpretOpCode, IncrementProgramCounter, PollInterrupts]),
     Read(From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementProgramCounter]),
 ];
 

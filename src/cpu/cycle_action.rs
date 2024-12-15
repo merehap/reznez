@@ -73,5 +73,6 @@ pub enum Field {
     Accumulator,
     Status,
 
+    RelativeAddressOffset,
     OpRegister,
 }

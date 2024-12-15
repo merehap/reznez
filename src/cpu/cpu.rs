@@ -40,6 +40,7 @@ pub struct Cpu {
     previous_data_bus_value: u8,
     pending_address_low: u8,
     address_carry: i8,
+    relative_address_offset: i8,
 }
 
 impl Cpu {
@@ -71,6 +72,7 @@ impl Cpu {
             previous_data_bus_value: 0,
             pending_address_low: 0,
             address_carry: 0,
+            relative_address_offset: 0,
         }
     }
 
@@ -549,6 +551,7 @@ impl Cpu {
                     self.status.to_instruction_byte()
                 }
             }
+            RelativeAddressOffset => self.relative_address_offset as u8,
             OpRegister => match self.mode_state.current_instruction().unwrap().op_code() {
                 OpCode::STA => self.a,
                 OpCode::STX => self.x,
@@ -585,6 +588,7 @@ impl Cpu {
 
             Accumulator => self.a = self.data_bus,
             Status => self.status = status::Status::from_byte(self.data_bus),
+            RelativeAddressOffset => self.relative_address_offset = self.data_bus as i8,
             OpRegister => panic!(),
         }
     }
@@ -666,7 +670,7 @@ impl Cpu {
     }
 
     fn branch(&mut self) {
-        self.address_carry = self.program_counter.offset_with_carry(self.previous_data_bus_value as i8);
+        self.address_carry = self.program_counter.offset_with_carry(self.relative_address_offset);
         self.mode_state.branch_taken();
     }
 }
