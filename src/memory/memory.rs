@@ -164,8 +164,12 @@ impl<'a> CpuMemory<'a> {
         &self.memory.ports
     }
 
-    pub fn take_dmc_dma_pending_address(&mut self) -> Option<CpuAddress> {
-        self.memory.apu_registers.dmc.take_dma_pending_address()
+    pub fn take_dmc_dma_pending(&mut self) -> bool {
+        self.memory.apu_registers.dmc.take_dma_pending()
+    }
+
+    pub fn dmc_dma_address(&self) -> CpuAddress {
+        self.memory.apu_registers.dmc.dma_address()
     }
 
     pub fn set_dmc_sample_buffer(&mut self, value: u8) {

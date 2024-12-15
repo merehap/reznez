@@ -168,7 +168,8 @@ impl Cpu {
         }
 
         let mut dma_address = None;
-        if step.is_read() && let Some(address) = memory.take_dmc_dma_pending_address() {
+        if step.is_read() && memory.take_dmc_dma_pending() {
+            let address = memory.dmc_dma_address();
             info!(target: "cpuflowcontrol", "Reading DMC DMA byte at {address}.");
             dma_address = Some(address);
             //self.mode_state.dmc_dma();

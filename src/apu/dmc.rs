@@ -10,7 +10,8 @@ pub struct Dmc {
 
     irq_enabled: bool,
     pub(super) irq_pending: bool,
-    dma_pending_address: Option<CpuAddress>,
+    dma_pending: bool,
+    dma_address: CpuAddress,
 
     should_loop: bool,
     volume: U7,
@@ -64,7 +65,8 @@ impl Dmc {
             }
 
             if self.sample_buffer.is_none() && self.sample_bytes_remaining > 0 {
-                self.dma_pending_address = Some(self.sample_address);
+                self.dma_pending = true;
+                self.dma_address = self.sample_address;
             }
         }
     }
@@ -74,11 +76,17 @@ impl Dmc {
     }
 
     pub fn dma_pending(&self) -> bool {
-        self.dma_pending_address.is_some()
+        self.dma_pending
     }
 
-    pub fn take_dma_pending_address(&mut self) -> Option<CpuAddress> {
-        self.dma_pending_address.take()
+    pub fn take_dma_pending(&mut self) -> bool {
+        let result = self.dma_pending;
+        self.dma_pending = false;
+        result
+    }
+
+    pub fn dma_address(&self) -> CpuAddress {
+        self.dma_address
     }
 
     pub fn set_sample_buffer(&mut self, value: u8) {
@@ -118,7 +126,8 @@ impl Dmc {
         if let Some(sample) = self.sample_buffer.take() {
             self.sample_shifter = sample;
             if self.sample_bytes_remaining > 0 {
-                self.dma_pending_address = Some(self.sample_address);
+                self.dma_pending = true;
+                self.dma_address = self.sample_address;
             }
         }
     }
@@ -139,7 +148,8 @@ impl Default for Dmc {
             muted: Default::default(),
             irq_enabled: Default::default(),
             irq_pending: Default::default(),
-            dma_pending_address: None,
+            dma_pending: false,
+            dma_address: CpuAddress::ZERO,
             should_loop: Default::default(),
             volume: U7::default(),
             period: Default::default(),
