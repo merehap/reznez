@@ -31,6 +31,7 @@ pub struct Dmc {
 }
 
 impl Dmc {
+    // 0x4010
     pub fn write_control_byte(&mut self, value: u8) {
         self.irq_enabled = (value & 0b1000_0000) != 0;
         self.should_loop = (value & 0b0100_0000) != 0;
@@ -40,18 +41,22 @@ impl Dmc {
         }
     }
 
+    // 0x4011
     pub fn write_volume(&mut self, value: u8) {
         self.volume = (value & 0b0111_1111).into();
     }
 
+    // 0x4012
     pub fn write_sample_start_address(&mut self, value: u8) {
         self.sample_start_address = CpuAddress::new(0xC000 | (u16::from(value) << 6));
     }
 
+    // 0x4013
     pub fn write_sample_length(&mut self, value: u8) {
         self.sample_length = (u16::from(value) << 4) | 1;
     }
 
+    // 0x4015
     pub(super) fn set_enabled(&mut self, enabled: bool) {
         self.irq_pending = false;
 
