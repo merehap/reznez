@@ -50,7 +50,6 @@ impl Apu {
 
     pub fn step(&mut self, regs: &mut ApuRegisters) {
         regs.maybe_update_step_mode();
-        regs.dmc.maybe_start_dma();
 
         match regs.clock().cycle_parity() {
             CycleParity::Get => Apu::execute_get_cycle(regs),

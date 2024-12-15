@@ -57,20 +57,20 @@ impl Dmc {
         self.enabled = enabled;
         if !self.enabled {
             self.sample_bytes_remaining = 0;
-        } else if self.sample_bytes_remaining == 0 {
-            self.sample_bytes_remaining = self.sample_length;
-            self.sample_address = self.sample_start_address;
+        } else {
+            if self.sample_bytes_remaining == 0 {
+                self.sample_bytes_remaining = self.sample_length;
+                self.sample_address = self.sample_start_address;
+            }
+
+            if self.sample_buffer.is_none() && self.sample_bytes_remaining > 0 {
+                self.dma_pending_address = Some(self.sample_address);
+            }
         }
     }
 
     pub(super) fn active(&self) -> bool {
         self.sample_bytes_remaining > 0
-    }
-
-    pub fn maybe_start_dma(&mut self) {
-        if self.sample_buffer.is_none() && self.sample_bytes_remaining > 0 {
-            self.dma_pending_address = Some(self.sample_address);
-        }
     }
 
     pub fn dma_pending(&self) -> bool {
