@@ -37,6 +37,8 @@ pub struct Cpu {
 
     address_bus: CpuAddress,
     data_bus: u8,
+    // FIXME: It doesn't seem like anything can sanely depend upon this. Any DMA interruption
+    // causes this to become corrupt, so each use-case should be broken out into separate fields.
     previous_data_bus_value: u8,
     pending_address_low: u8,
     address_carry: i8,
@@ -168,15 +170,10 @@ impl Cpu {
             }
         }
 
-        let mut dma_address = None;
         if step.is_read() && memory.take_dmc_dma_pending() {
-            let address = memory.dmc_dma_address();
-            info!(target: "cpuflowcontrol", "Reading DMC DMA byte at {address}.");
-            dma_address = Some(address);
-            //self.mode_state.dmc_dma();
-        }
-
-        if step.is_read() && self.oam_dma_port.take_page().is_some() {
+            info!(target: "cpuflowcontrol", "Reading DMC DMA byte at {}.", memory.dmc_dma_address());
+            self.mode_state.dmc_dma();
+        } else if step.is_read() && self.oam_dma_port.take_page().is_some() {
             // TODO: Strip out unused CycleActions.
             info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
                 self.oam_dma_port.current_address());
@@ -185,11 +182,6 @@ impl Cpu {
             for &action in step.actions() {
                 self.execute_cycle_action(memory, action, irq_pending);
             }
-        }
-
-        if let Some(dma_address) = dma_address {
-            let new_sample_buffer = memory.read(dma_address).unwrap_or(self.data_bus);
-            memory.set_dmc_sample_buffer(new_sample_buffer);
         }
 
         if step.has_start_new_instruction() {
@@ -473,6 +465,8 @@ impl Cpu {
                 }
             }
 
+            CycleAction::SetDmcSampleBuffer => memory.set_dmc_sample_buffer(self.data_bus),
+
             CycleAction::CheckNegativeAndZero => {
                 self.status.negative = (self.data_bus >> 7) == 1;
                 self.status.zero = self.data_bus == 0;
@@ -512,6 +506,7 @@ impl Cpu {
         match from {
             AddressBusTarget => self.address_bus,
             OamDmaAddressTarget => self.oam_dma_port.current_address(),
+            DmcDmaAddressTarget => memory.dmc_dma_address(),
             ProgramCounterTarget => self.program_counter,
             PendingAddressTarget =>
                 CpuAddress::from_low_high(self.pending_address_low, self.data_bus),

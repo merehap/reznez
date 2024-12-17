@@ -27,6 +27,20 @@ pub static ALIGNED_OAM_DMA_TRANSFER_STEPS: LazyLock<[Step; 513]> = LazyLock::new
     steps.try_into().unwrap()
 });
 
+pub static DMC_DMA_TRANSFER_STEPS: &[Step] = &[
+    // Dummy cycle.
+    Read(From::AddressBusTarget, &[]),
+    Read(From::DmcDmaAddressTarget, &[SetDmcSampleBuffer]),
+];
+
+pub static ALIGNED_DMC_DMA_TRANSFER_STEPS: &[Step] = &[
+    // Dummy cycle.
+    Read(From::AddressBusTarget, &[]),
+    // Alignment cycle.
+    Read(From::AddressBusTarget, &[]),
+    Read(From::DmcDmaAddressTarget, &[SetDmcSampleBuffer]),
+];
+
 pub const READ_OP_CODE_STEP: Step =
     Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementProgramCounter]);
 

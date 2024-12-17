@@ -18,6 +18,8 @@ pub enum CycleAction {
     ClearInterruptVector,
     PollInterrupts,
 
+    SetDmcSampleBuffer,
+
     CheckNegativeAndZero,
 
     XOffsetAddressBus,
@@ -37,6 +39,7 @@ pub enum CycleAction {
 pub enum From {
     AddressBusTarget,
     OamDmaAddressTarget,
+    DmcDmaAddressTarget,
 
     ProgramCounterTarget,
     PendingAddressTarget,

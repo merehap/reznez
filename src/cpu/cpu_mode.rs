@@ -12,6 +12,11 @@ enum CpuMode {
         suspended_steps: &'static [Step],
         suspended_step_index: usize,
     },
+    DmcDma {
+        suspended_mode: Box<CpuMode>,
+        suspended_steps: &'static [Step],
+        suspended_step_index: usize,
+    },
 
     Jammed,
     StartNext,
@@ -117,6 +122,16 @@ impl CpuModeState {
         });
     }
 
+    pub fn dmc_dma(&mut self) {
+        assert!(self.mode != CpuMode::InterruptSequence { reset: true });
+
+        self.next_mode = Some(CpuMode::DmcDma {
+            suspended_mode: Box::new(self.mode.clone()),
+            suspended_steps: self.steps,
+            suspended_step_index: self.step_index,
+        });
+    }
+
     pub fn jammed(&mut self) {
         assert_eq!(self.next_mode, None, "next_mode should not already be set");
         self.next_mode = Some(CpuMode::Jammed);
@@ -156,6 +171,12 @@ impl CpuModeState {
                         CycleParity::Put => &*ALIGNED_OAM_DMA_TRANSFER_STEPS,
                     };
                 }
+                CpuMode::DmcDma {..} => {
+                    self.steps = match cycle_parity {
+                        CycleParity::Get => DMC_DMA_TRANSFER_STEPS,
+                        CycleParity::Put => ALIGNED_DMC_DMA_TRANSFER_STEPS,
+                    };
+                }
                 CpuMode::InterruptSequence { reset: false } => self.steps = BRK_STEPS,
                 CpuMode::InterruptSequence { reset: true } => self.steps = RESET_STEPS,
                 CpuMode::Instruction {..} => { /* steps will be set by the caller in this case. */ }
@@ -189,11 +210,17 @@ impl CpuModeState {
                 self.step_index = suspended_step_index;
                 *suspended_mode
             }
+            CpuMode::DmcDma { suspended_mode, suspended_steps, suspended_step_index } => {
+                self.was_current_step_suspended = true;
+                self.steps = suspended_steps;
+                self.step_index = suspended_step_index;
+                *suspended_mode
+            }
 
             CpuMode::Jammed => CpuMode::Jammed,
             CpuMode::StartNext {..} => panic!(),
-            CpuMode::BranchTaken => todo!(),
-            CpuMode::BranchOops => todo!(),
+            CpuMode::BranchTaken => panic!(),
+            CpuMode::BranchOops => panic!(),
             CpuMode::Oops { suspended_steps, suspended_step_index } => {
                 self.steps = suspended_steps;
                 self.step_index = suspended_step_index;
