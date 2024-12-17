@@ -62,18 +62,14 @@ impl Dmc {
 
         if !enabled {
             self.sample_bytes_remaining = 0;
-        } else {
-            if self.sample_bytes_remaining == 0 {
-                println!("Reloading sample bytes remaining from 0 to {}", self.sample_length);
-                self.sample_bytes_remaining = self.sample_length;
-                self.sample_address = self.sample_start_address;
-            }
+        } else if self.sample_bytes_remaining == 0 {
+            println!("Reloading sample bytes remaining from 0 to {}", self.sample_length);
+            self.sample_bytes_remaining = self.sample_length;
+            self.sample_address = self.sample_start_address;
 
-            if self.sample_buffer.is_none() && self.sample_bytes_remaining > 0 {
-                println!("Attempting to load sample buffer soon.");
-                self.dma_pending = true;
-                self.dma_address = self.sample_address;
-            }
+            println!("Attempting to load sample buffer soon.");
+            self.dma_pending = true;
+            self.dma_address = self.sample_address;
         }
     }
 
