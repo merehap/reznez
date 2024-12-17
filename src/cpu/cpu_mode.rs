@@ -185,7 +185,6 @@ impl CpuModeState {
                 CpuMode::StartNext
             }
             CpuMode::OamDma { suspended_mode, suspended_steps, suspended_step_index } => {
-                self.was_current_step_suspended = true;
                 self.steps = suspended_steps;
                 self.step_index = suspended_step_index;
                 *suspended_mode
