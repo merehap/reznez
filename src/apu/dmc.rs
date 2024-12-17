@@ -5,7 +5,6 @@ const NTSC_PERIODS: [u16; 16] =
     [428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106,  84,  72,  54];
 
 pub struct Dmc {
-    enabled: bool,
     muted: bool,
 
     irq_enabled: bool,
@@ -60,8 +59,7 @@ impl Dmc {
     pub(super) fn set_enabled(&mut self, enabled: bool) {
         self.irq_pending = false;
 
-        self.enabled = enabled;
-        if !self.enabled {
+        if !enabled {
             self.sample_bytes_remaining = 0;
         } else {
             if self.sample_bytes_remaining == 0 {
@@ -149,15 +147,14 @@ impl Dmc {
 impl Default for Dmc {
     fn default() -> Self {
         Dmc {
-            enabled: Default::default(),
-            muted: Default::default(),
-            irq_enabled: Default::default(),
-            irq_pending: Default::default(),
+            muted: true,
+            irq_enabled: false,
+            irq_pending: false,
             dma_pending: false,
             dma_address: CpuAddress::ZERO,
-            should_loop: Default::default(),
+            should_loop: false,
             volume: U7::default(),
-            period: Default::default(),
+            period: 0,
             cycles_remaining: 0,
             sample_start_address: CpuAddress::new(0xC000),
             sample_address: CpuAddress::new(0xC000),
