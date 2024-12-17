@@ -89,7 +89,9 @@ impl CpuModeState {
     }
 
     pub fn set_current_instruction_with_address(&mut self, instruction: Instruction, address: CpuAddress) {
-        self.current_instruction = Some(instruction);
+        if !matches!(self.next_mode, Some(CpuMode::DmcDma {..})) {
+            self.current_instruction = Some(instruction);
+        }
 
         if !self.was_current_step_suspended {
             self.new_instruction_with_address = Some((instruction, address));
