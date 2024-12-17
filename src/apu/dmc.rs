@@ -53,6 +53,7 @@ impl Dmc {
     // 0x4013
     pub fn write_sample_length(&mut self, value: u8) {
         self.sample_length = (u16::from(value) << 4) | 1;
+        println!("Setting sample length to {}", self.sample_length);
     }
 
     // 0x4015
@@ -63,11 +64,13 @@ impl Dmc {
             self.sample_bytes_remaining = 0;
         } else {
             if self.sample_bytes_remaining == 0 {
+                println!("Reloading sample bytes remaining from 0 to {}", self.sample_length);
                 self.sample_bytes_remaining = self.sample_length;
                 self.sample_address = self.sample_start_address;
             }
 
             if self.sample_buffer.is_none() && self.sample_bytes_remaining > 0 {
+                println!("Attempting to load sample buffer soon.");
                 self.dma_pending = true;
                 self.dma_address = self.sample_address;
             }
@@ -75,7 +78,9 @@ impl Dmc {
     }
 
     pub fn set_sample_buffer(&mut self, value: u8) {
+        println!("Checking if sample buffer should be loaded.");
         if self.sample_bytes_remaining > 0 {
+            println!("Loading sample buffer.");
             self.sample_buffer = Some(value);
             self.sample_address.inc();
             if self.sample_address == CpuAddress::ZERO {
@@ -84,6 +89,7 @@ impl Dmc {
 
             self.sample_bytes_remaining -= 1;
             if self.sample_bytes_remaining == 0 {
+                println!("No sample bytes remaining. Should loop? {}", self.should_loop);
                 if self.should_loop {
                     self.sample_bytes_remaining = self.sample_length;
                     self.sample_address = self.sample_start_address;
@@ -109,8 +115,10 @@ impl Dmc {
         self.bits_remaining = 8;
         self.muted = self.sample_buffer.is_none();
         if let Some(sample) = self.sample_buffer.take() {
+            println!("Taking sample buffer.");
             self.sample_shifter = sample;
             if self.sample_bytes_remaining > 0 {
+                println!("Attempting to RELOAD sample buffer soon.");
                 self.dma_pending = true;
                 self.dma_address = self.sample_address;
             }
@@ -154,16 +162,17 @@ impl Default for Dmc {
             dma_address: CpuAddress::ZERO,
             should_loop: false,
             volume: U7::default(),
-            period: 0,
-            cycles_remaining: 0,
+            // TODO: Verify if this needs to be one less.
+            period: NTSC_PERIODS[0],
+            cycles_remaining: NTSC_PERIODS[0],
             sample_start_address: CpuAddress::new(0xC000),
             sample_address: CpuAddress::new(0xC000),
             sample_buffer: None,
             sample_shifter: 0,
-            sample_length: 0,
+            sample_length: 1,
             sample_bytes_remaining: 0,
 
-            bits_remaining: 0,
+            bits_remaining: 8,
         }
     }
 }
