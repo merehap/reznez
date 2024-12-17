@@ -74,24 +74,6 @@ impl Dmc {
         }
     }
 
-    pub(super) fn active(&self) -> bool {
-        self.sample_bytes_remaining > 0
-    }
-
-    pub fn dma_pending(&self) -> bool {
-        self.dma_pending
-    }
-
-    pub fn take_dma_pending(&mut self) -> bool {
-        let result = self.dma_pending;
-        self.dma_pending = false;
-        result
-    }
-
-    pub fn dma_address(&self) -> CpuAddress {
-        self.dma_address
-    }
-
     pub fn set_sample_buffer(&mut self, value: u8) {
         if self.sample_bytes_remaining > 0 {
             self.sample_buffer = Some(value);
@@ -141,6 +123,24 @@ impl Dmc {
         } else {
             f32::from(self.volume.to_u8())
         }
+    }
+
+    pub(super) fn active(&self) -> bool {
+        self.sample_bytes_remaining > 0
+    }
+
+    pub fn dma_pending(&self) -> bool {
+        self.dma_pending
+    }
+
+    pub fn take_dma_pending(&mut self) -> bool {
+        let result = self.dma_pending;
+        self.dma_pending = false;
+        result
+    }
+
+    pub fn dma_address(&self) -> CpuAddress {
+        self.dma_address
     }
 }
 
