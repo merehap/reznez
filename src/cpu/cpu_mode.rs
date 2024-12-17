@@ -30,7 +30,10 @@ pub struct CpuModeState {
     step_index: usize,
     mode: CpuMode,
     next_mode: Option<CpuMode>,
-    current_instruction_with_address: Option<(Instruction, CpuAddress)>,
+    current_instruction: Option<Instruction>,
+
+    new_instruction_with_address: Option<(Instruction, CpuAddress)>,
+    was_current_step_suspended: bool,
 }
 
 impl CpuModeState {
@@ -40,7 +43,10 @@ impl CpuModeState {
             step_index: 0,
             mode: CpuMode::InterruptSequence { reset: true },
             next_mode: None,
-            current_instruction_with_address: None,
+            current_instruction: None,
+
+            new_instruction_with_address: None,
+            was_current_step_suspended: false,
         }
     }
 
@@ -62,26 +68,36 @@ impl CpuModeState {
     }
 
     pub fn current_instruction(&self) -> Option<Instruction> {
-        self.current_instruction_with_address
-            .map(|(instruction, _)| instruction)
+        self.current_instruction
     }
 
-    pub fn current_instruction_with_address(&self) -> Option<(Instruction, CpuAddress)> {
-        self.current_instruction_with_address
+    pub fn new_instruction_with_address(&self) -> Option<(Instruction, CpuAddress)> {
+        if self.mode == CpuMode::BranchTaken || self.mode == CpuMode::BranchOops {
+            return None;
+        }
+
+        self.new_instruction_with_address
     }
 
-    pub fn is_instruction_starting(&self) -> bool {
-        matches!(self.mode, CpuMode::Instruction {..}) && self.step_index == 0
+    pub fn clear_new_instruction(&mut self) {
+        self.new_instruction_with_address = None;
+    }
+
+    pub fn set_current_instruction_with_address(&mut self, instruction: Instruction, address: CpuAddress) {
+        self.current_instruction = Some(instruction);
+
+        if !self.was_current_step_suspended {
+            self.new_instruction_with_address = Some((instruction, address));
+        }
     }
 
     pub fn reset(&mut self) {
         assert_eq!(self.next_mode, None, "next_mode should not already be set");
         self.next_mode = Some(CpuMode::InterruptSequence { reset: true });
-        self.current_instruction_with_address = None;
+        self.current_instruction = None;
     }
 
-    pub fn instruction(&mut self, instruction: Instruction, address: CpuAddress) {
-        self.current_instruction_with_address = Some((instruction, address));
+    pub fn instruction(&mut self, instruction: Instruction) {
         self.steps = instruction.steps();
         self.next_mode = Some(CpuMode::Instruction);
     }
@@ -89,7 +105,7 @@ impl CpuModeState {
     pub fn interrupt_sequence(&mut self) {
         assert_eq!(self.next_mode, None, "next_mode should not already be set");
         self.next_mode = Some(CpuMode::InterruptSequence { reset: false });
-        self.current_instruction_with_address = None;
+        self.current_instruction = None;
     }
 
     pub fn oam_dma(&mut self) {
@@ -127,6 +143,8 @@ impl CpuModeState {
     }
 
     pub fn step(&mut self, cycle_parity: CycleParity) {
+        self.was_current_step_suspended = false;
+
         if let Some(next_mode) = self.next_mode.take() {
             match next_mode {
                 CpuMode::StartNext {..} => unreachable!(),
@@ -167,6 +185,7 @@ impl CpuModeState {
                 CpuMode::StartNext
             }
             CpuMode::OamDma { suspended_mode, suspended_steps, suspended_step_index } => {
+                self.was_current_step_suspended = true;
                 self.steps = suspended_steps;
                 self.step_index = suspended_step_index;
                 *suspended_mode

@@ -139,6 +139,7 @@ impl Cpu {
     }
 
     pub fn step(&mut self, memory: &mut CpuMemory, cycle_parity: CycleParity, irq_pending: bool) -> Option<Step> {
+        self.mode_state.clear_new_instruction();
         if self.mode_state.is_jammed() {
             return None;
         }
@@ -191,6 +192,13 @@ impl Cpu {
             memory.set_dmc_sample_buffer(new_sample_buffer);
         }
 
+        if step.has_start_new_instruction() {
+            self.mode_state.set_current_instruction_with_address(
+                Instruction::from_code_point(self.data_bus),
+                self.address_bus,
+            )
+        }
+
         memory.process_end_of_cpu_cycle();
 
         self.mode_state.step(cycle_parity);
@@ -225,7 +233,7 @@ impl Cpu {
                     self.data_bus = 0x00;
                     self.mode_state.interrupt_sequence();
                 } else {
-                    self.mode_state.instruction(Instruction::from_code_point(self.data_bus), self.address_bus);
+                    self.mode_state.instruction(Instruction::from_code_point(self.data_bus));
                 }
             }
 

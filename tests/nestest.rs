@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use reznez::config::{Config, GuiType, Opt};
-use reznez::cpu::instruction::OpCode;
+use reznez::cpu::instruction::{Instruction, OpCode};
 use reznez::cpu::status::Status;
 use reznez::memory::cpu::cpu_address::CpuAddress;
 use reznez::nes::Nes;
@@ -85,12 +85,16 @@ fn nestest() {
             let ppu_cycle;
             let ppu_scanline;
 
+            let current_instruction: Instruction;
             loop {
-                if nes.step().step.is_some() && nes.cpu().mode_state().is_instruction_starting() {
-                    c = nes.memory().cpu_cycle();
-                    ppu_cycle = nes.ppu().clock().cycle();
-                    ppu_scanline = nes.ppu().clock().scanline();
-                    break;
+                if nes.step().step.is_some() {
+                    if let Some((instruction, _)) = nes.cpu_mut().mode_state().new_instruction_with_address() {
+                        current_instruction = instruction;
+                        c = nes.memory().cpu_cycle();
+                        ppu_cycle = nes.ppu().clock().cycle();
+                        ppu_scanline = nes.ppu().clock().scanline();
+                        break;
+                    }
                 }
             }
 
@@ -113,12 +117,10 @@ fn nestest() {
                 }
             }
 
-            let template = nes.cpu().mode_state().current_instruction().unwrap();
-
             let state = State {
                 program_counter,
-                code_point: template.code_point(),
-                op_code: template.op_code(),
+                code_point: current_instruction.code_point(),
+                op_code: current_instruction.op_code(),
                 a,
                 x,
                 y,

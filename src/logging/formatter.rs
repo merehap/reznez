@@ -1,20 +1,31 @@
-use crate::cpu::instruction::{OpCode, AccessMode};
+use crate::cpu::instruction::{Instruction, OpCode, AccessMode};
 use crate::memory::mapper::CpuAddress;
 use crate::nes::Nes;
 
 pub trait Formatter {
-    fn format_instruction(&self, nes: &Nes, interrupt_text: String) -> String;
+    fn format_instruction(
+        &self,
+        nes: &Nes,
+        instruction: Instruction,
+        start_address: CpuAddress,
+        interrupt_text: String,
+    ) -> String;
 }
 
 pub struct MinimalFormatter;
 
 impl Formatter for MinimalFormatter {
-    fn format_instruction(&self, nes: &Nes, _interrupt_text: String) -> String {
+    fn format_instruction(
+        &self,
+        nes: &Nes,
+        instruction: Instruction,
+        start_address: CpuAddress,
+        _interrupt_text: String,
+    ) -> String {
         let peek = |address| nes.memory().cpu_peek(address).unwrap_or(0);
 
         let cpu = nes.cpu();
 
-        let (instruction, start_address) = nes.cpu().mode_state().current_instruction_with_address().unwrap();
         let low = peek(start_address.offset(1));
         let high = peek(start_address.offset(2));
 
@@ -89,13 +100,18 @@ impl Formatter for MinimalFormatter {
 pub struct Nintendulator0980Formatter;
 
 impl Formatter for Nintendulator0980Formatter {
-    fn format_instruction(&self, nes: &Nes, _interrupt_text: String) -> String {
+    fn format_instruction(
+        &self,
+        nes: &Nes,
+        instruction: Instruction,
+        start_address: CpuAddress,
+        _interrupt_text: String,
+    ) -> String {
         let cpu_cycle = nes.memory().cpu_cycle();
         let peek = |address| nes.memory().cpu_peek(address).unwrap_or(0);
 
         let cpu = nes.cpu();
 
-        let (instruction, start_address) = nes.cpu().mode_state().current_instruction_with_address().unwrap();
         let low = peek(start_address.offset(1));
         let high = peek(start_address.offset(2));
 
@@ -201,12 +217,17 @@ impl Formatter for Nintendulator0980Formatter {
 pub struct MesenFormatter;
 
 impl Formatter for MesenFormatter {
-    fn format_instruction(&self, nes: &Nes, interrupt_text: String) -> String {
+    fn format_instruction(
+        &self,
+        nes: &Nes,
+        instruction: Instruction,
+        start_address: CpuAddress,
+        interrupt_text: String,
+    ) -> String {
         let peek = |address| nes.memory().cpu_peek(address).unwrap_or(0);
 
         let cpu = nes.cpu();
 
-        let (instruction, start_address) = nes.cpu().mode_state().current_instruction_with_address().unwrap();
         let low = peek(start_address.offset(1));
         let high = peek(start_address.offset(2));
 

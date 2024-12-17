@@ -74,6 +74,10 @@ impl Nes {
         &self.cpu
     }
 
+    pub fn cpu_mut(&mut self) -> &mut Cpu {
+        &mut self.cpu
+    }
+
     pub fn ppu(&self) -> &Ppu {
         &self.ppu
     }
@@ -191,8 +195,15 @@ impl Nes {
         }
 
         let step = self.cpu.step(&mut self.memory.as_cpu_memory(), cycle_parity, irq_pending);
-        if log_enabled!(target: "cpuinstructions", Info) && self.cpu.mode_state().is_instruction_starting() {
-            info!("{}", self.log_formatter.format_instruction(self, interrupt_text));
+        if log_enabled!(target: "cpuinstructions", Info)  {
+            if let Some((current_instruction, start_address)) = self.cpu.mode_state().new_instruction_with_address() {
+                let formatted_instruction = self.log_formatter.format_instruction(
+                    self,
+                    current_instruction,
+                    start_address,
+                    interrupt_text);
+                info!("{formatted_instruction}");
+            }
         }
 
         if log_enabled!(target: "timings", Info) {
@@ -203,8 +214,13 @@ impl Nes {
             self.snapshots.current().cpu_cycle(self.memory.cpu_cycle());
             self.snapshots.current().irq_status(self.cpu.irq_status());
             self.snapshots.current().nmi_status(self.cpu.nmi_status());
-            if self.cpu.mode_state().is_instruction_starting() {
-                let formatted_instruction = self.minimal_formatter.format_instruction(self, String::new());
+            if let Some((current_instruction, start_address)) = self.cpu.mode_state().new_instruction_with_address() {
+                let formatted_instruction = self.minimal_formatter.format_instruction(
+                    self,
+                    current_instruction,
+                    start_address,
+                    String::new(),
+                );
                 self.snapshots.current().instruction(formatted_instruction);
             }
         }
