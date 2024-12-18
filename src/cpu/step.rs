@@ -417,4 +417,14 @@ impl Step {
     pub fn is_read(&self) -> bool {
         matches!(&self, Step::Read(..) | Step::ReadField(..))
     }
+
+    // TODO: Should this also convert ReadField to Read and WriteField to Write? Probably?
+    pub fn with_actions_removed(&self) -> Step {
+        match *self {
+            Step::Read(from, _) => Step::Read(from, &[]),
+            Step::Write(to, _) => Step::Write(to, &[]),
+            Step::ReadField(field, from, _) => Step::ReadField(field, from, &[]),
+            Step::WriteField(field, to, _) => Step::WriteField(field, to, &[]),
+        }
+    }
 }
