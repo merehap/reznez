@@ -75,11 +75,9 @@ pub enum Field {
     Accumulator,
     Status,
 
-    // Called "Data" in the manual.
-    // TODO: Rename to Operand?
+    // Called "Data" or "Operand" in the manual.
     Argument,
     PendingAddressLow,
     PendingAddressHigh,
-    RelativeAddressOffset,
     OpRegister,
 }

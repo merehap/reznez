@@ -40,8 +40,6 @@ pub struct Cpu {
     pending_address_low: u8,
     pending_address_high: u8,
     address_carry: i8,
-    // TODO: Remove in favor of argument.
-    relative_address_offset: i8,
     argument: u8,
 }
 
@@ -74,7 +72,6 @@ impl Cpu {
             pending_address_low: 0,
             pending_address_high: 0,
             address_carry: 0,
-            relative_address_offset: 0,
             argument: 0,
         }
     }
@@ -560,7 +557,6 @@ impl Cpu {
             Argument => self.argument,
             PendingAddressLow => self.pending_address_low,
             PendingAddressHigh => self.pending_address_high,
-            RelativeAddressOffset => self.relative_address_offset as u8,
             OpRegister => match self.mode_state.current_instruction().unwrap().op_code() {
                 OpCode::STA => self.a,
                 OpCode::STX => self.x,
@@ -600,7 +596,6 @@ impl Cpu {
             Argument => self.argument = self.data_bus,
             PendingAddressLow => self.pending_address_low = self.data_bus,
             PendingAddressHigh => self.pending_address_high = self.data_bus,
-            RelativeAddressOffset => self.relative_address_offset = self.data_bus as i8,
             OpRegister => panic!(),
         }
     }
@@ -682,7 +677,7 @@ impl Cpu {
     }
 
     fn branch(&mut self) {
-        self.address_carry = self.program_counter.offset_with_carry(self.relative_address_offset);
+        self.address_carry = self.program_counter.offset_with_carry(self.argument as i8);
         self.mode_state.branch_taken();
     }
 }
