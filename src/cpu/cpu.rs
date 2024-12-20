@@ -37,12 +37,12 @@ pub struct Cpu {
 
     address_bus: CpuAddress,
     data_bus: u8,
-    // FIXME: It doesn't seem like anything can sanely depend upon this. Any DMA interruption
-    // causes this to become corrupt, so each use-case should be broken out into separate fields.
-    previous_data_bus_value: u8,
     pending_address_low: u8,
+    pending_address_high: u8,
     address_carry: i8,
+    // TODO: Remove in favor of argument.
     relative_address_offset: i8,
+    argument: u8,
 }
 
 impl Cpu {
@@ -71,10 +71,11 @@ impl Cpu {
 
             address_bus: CpuAddress::new(0x0000),
             data_bus: 0,
-            previous_data_bus_value: 0,
             pending_address_low: 0,
+            pending_address_high: 0,
             address_carry: 0,
             relative_address_offset: 0,
+            argument: 0,
         }
     }
 
@@ -149,7 +150,6 @@ impl Cpu {
         let original_program_counter = self.program_counter;
 
         let mut step = self.mode_state.current_step();
-        self.previous_data_bus_value = self.data_bus;
         match step {
             Step::Read(from, _) => {
                 self.address_bus = self.lookup_from_address(memory, from);
@@ -236,7 +236,6 @@ impl Cpu {
 
             CycleAction::InterpretOpCode => {}
             CycleAction::ExecuteOpCode => {
-                let value = self.previous_data_bus_value;
                 let access_mode = self.mode_state.current_instruction().unwrap().access_mode();
                 let rmw_operand = if access_mode == AccessMode::Imp {
                     &mut self.a
@@ -257,8 +256,8 @@ impl Cpu {
                     TXS => *memory.stack_pointer_mut() = self.x,
                     TXA => self.a = self.nz(self.x),
                     TYA => self.a = self.nz(self.y),
-                    PLA => self.a = self.nz(value),
-                    PLP => self.status = Status::from_byte(value),
+                    PLA => self.a = self.nz(self.argument),
+                    PLP => self.status = Status::from_byte(self.argument),
                     CLC => self.status.carry = false,
                     SEC => self.status.carry = true,
                     CLD => self.status.decimal = false,
@@ -269,47 +268,47 @@ impl Cpu {
                     NOP => { /* Do nothing. */ }
 
                     // Immediate op codes.
-                    LDA => self.a = self.nz(value),
-                    LDX => self.x = self.nz(value),
-                    LDY => self.y = self.nz(value),
-                    CMP => self.cmp(value),
-                    CPX => self.cpx(value),
-                    CPY => self.cpy(value),
-                    ORA => self.a = self.nz(self.a | value),
-                    AND => self.a = self.nz(self.a & value),
-                    EOR => self.a = self.nz(self.a ^ value),
-                    ADC => self.a = self.adc(value),
-                    SBC => self.a = self.sbc(value),
+                    LDA => self.a = self.nz(self.argument),
+                    LDX => self.x = self.nz(self.argument),
+                    LDY => self.y = self.nz(self.argument),
+                    CMP => self.cmp(self.argument),
+                    CPX => self.cpx(self.argument),
+                    CPY => self.cpy(self.argument),
+                    ORA => self.a = self.nz(self.a | self.argument),
+                    AND => self.a = self.nz(self.a & self.argument),
+                    EOR => self.a = self.nz(self.a ^ self.argument),
+                    ADC => self.a = self.adc(self.argument),
+                    SBC => self.a = self.sbc(self.argument),
                     LAX => {
-                        self.a = value;
-                        self.x = value;
-                        self.nz(value);
+                        self.a = self.argument;
+                        self.x = self.argument;
+                        self.nz(self.argument);
                     }
                     ANC => {
-                        self.a = self.nz(self.a & value);
+                        self.a = self.nz(self.a & self.argument);
                         self.status.carry = self.status.negative;
                     }
                     ALR => {
-                        self.a = self.nz(self.a & value);
+                        self.a = self.nz(self.a & self.argument);
                         Cpu::lsr(&mut self.status, &mut self.a);
                     }
                     ARR => {
                         // TODO: What a mess.
-                        let value = (self.a & value) >> 1;
+                        let value = (self.a & self.argument) >> 1;
                         self.a = self.nz(value | if self.status.carry {0x80} else {0x00});
                         self.status.carry = self.a & 0x40 != 0;
                         self.status.overflow =
                             (u8::from(self.status.carry) ^ ((self.a >> 5) & 0x01)) != 0;
                     }
                     AXS => {
-                        self.status.carry = self.a & self.x >= value;
-                        self.x = self.nz((self.a & self.x).wrapping_sub(value));
+                        self.status.carry = self.a & self.x >= self.argument;
+                        self.x = self.nz((self.a & self.x).wrapping_sub(self.argument));
                     }
 
                     BIT => {
-                        self.status.negative = value & 0b1000_0000 != 0;
-                        self.status.overflow = value & 0b0100_0000 != 0;
-                        self.status.zero = value & self.a == 0;
+                        self.status.negative = self.argument & 0b1000_0000 != 0;
+                        self.status.overflow = self.argument & 0b0100_0000 != 0;
+                        self.status.zero = self.argument & self.a == 0;
                     }
 
                     // Write op codes.
@@ -415,23 +414,6 @@ impl Cpu {
             CycleAction::IncrementAddressBus => { self.address_bus.inc(); }
             CycleAction::IncrementAddressBusLow => { self.address_bus.offset_low(1); }
             CycleAction::IncrementOamDmaAddress => self.oam_dma_port.increment_current_address(),
-            CycleAction::StorePendingAddressLowByte => self.pending_address_low = self.previous_data_bus_value,
-            CycleAction::StorePendingAddressLowByteWithXOffset => {
-                let carry;
-                (self.pending_address_low, carry) =
-                    self.previous_data_bus_value.overflowing_add(self.x);
-                if carry {
-                    self.address_carry = 1;
-                }
-            }
-            CycleAction::StorePendingAddressLowByteWithYOffset => {
-                let carry;
-                (self.pending_address_low, carry) =
-                    self.previous_data_bus_value.overflowing_add(self.y);
-                if carry {
-                    self.address_carry = 1;
-                }
-            }
 
             CycleAction::IncrementStackPointer => memory.stack().increment_stack_pointer(),
             CycleAction::DecrementStackPointer => memory.stack().decrement_stack_pointer(),
@@ -477,6 +459,22 @@ impl Cpu {
                 self.status.zero = self.data_bus == 0;
             }
 
+            CycleAction::XOffsetPendingAddressLow => {
+                let carry;
+                (self.pending_address_low, carry) =
+                    self.pending_address_low.overflowing_add(self.x);
+                if carry {
+                    self.address_carry = 1;
+                }
+            }
+            CycleAction::YOffsetPendingAddressLow => {
+                let carry;
+                (self.pending_address_low, carry) =
+                    self.pending_address_low.overflowing_add(self.y);
+                if carry {
+                    self.address_carry = 1;
+                }
+            }
             CycleAction::XOffsetAddressBus => { self.address_bus.offset_low(self.x); }
             CycleAction::YOffsetAddressBus => { self.address_bus.offset_low(self.y); }
             CycleAction::MaybeInsertOopsStep => {
@@ -513,10 +511,9 @@ impl Cpu {
             OamDmaAddressTarget => self.oam_dma_port.current_address(),
             DmcDmaAddressTarget => memory.dmc_dma_address(),
             ProgramCounterTarget => self.program_counter,
-            PendingAddressTarget =>
-                CpuAddress::from_low_high(self.pending_address_low, self.data_bus),
+            PendingAddressTarget => CpuAddress::from_low_high(self.pending_address_low, self.pending_address_high),
             PendingZeroPageTarget =>
-                CpuAddress::from_low_high(self.data_bus, 0),
+                CpuAddress::from_low_high(self.pending_address_low, 0),
             TopOfStack => memory.stack_pointer_address(),
             InterruptVectorLow => match self.current_interrupt_vector.unwrap() {
                 InterruptVector::Nmi => NMI_VECTOR_LOW,
@@ -539,9 +536,9 @@ impl Cpu {
             OamDmaAddressTarget => self.oam_dma_port.current_address(),
             ProgramCounterTarget => self.program_counter,
             PendingAddressTarget =>
-                CpuAddress::from_low_high(self.pending_address_low, self.data_bus),
+                CpuAddress::from_low_high(self.pending_address_low, self.pending_address_high),
             PendingZeroPageTarget =>
-                CpuAddress::from_low_high(self.data_bus, 0),
+                CpuAddress::from_low_high(self.pending_address_low, 0),
             TopOfStack => memory.stack_pointer_address(),
             AddressTarget(address) => address,
         }
@@ -560,6 +557,9 @@ impl Cpu {
                     self.status.to_instruction_byte()
                 }
             }
+            Argument => self.argument,
+            PendingAddressLow => self.pending_address_low,
+            PendingAddressHigh => self.pending_address_high,
             RelativeAddressOffset => self.relative_address_offset as u8,
             OpRegister => match self.mode_state.current_instruction().unwrap().op_code() {
                 OpCode::STA => self.a,
@@ -590,13 +590,16 @@ impl Cpu {
             ProgramCounterLowByte => unreachable!(),
             ProgramCounterHighByte => {
                 self.program_counter = CpuAddress::from_low_high(
-                    self.previous_data_bus_value,
+                    self.argument,
                     self.data_bus,
                 );
             }
 
             Accumulator => self.a = self.data_bus,
             Status => self.status = status::Status::from_byte(self.data_bus),
+            Argument => self.argument = self.data_bus,
+            PendingAddressLow => self.pending_address_low = self.data_bus,
+            PendingAddressHigh => self.pending_address_high = self.data_bus,
             RelativeAddressOffset => self.relative_address_offset = self.data_bus as i8,
             OpRegister => panic!(),
         }

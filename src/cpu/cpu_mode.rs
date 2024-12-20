@@ -185,7 +185,7 @@ impl CpuModeState {
                 CpuMode::BranchTaken => self.steps = &[BRANCH_TAKEN_STEP],
                 CpuMode::Oops {..} => {
                     assert_eq!(self.mode, CpuMode::Instruction);
-                    self.steps = &[ADDRESS_BUS_READ_STEP];
+                    self.steps = &[OOPS_STEP];
                 }
                 CpuMode::BranchOops => self.steps = &[READ_OP_CODE_STEP],
             }

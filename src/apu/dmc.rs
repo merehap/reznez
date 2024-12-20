@@ -53,7 +53,7 @@ impl Dmc {
     // 0x4013
     pub fn write_sample_length(&mut self, value: u8) {
         self.sample_length = (u16::from(value) << 4) | 1;
-        println!("Setting sample length to {}", self.sample_length);
+        //println!("Setting sample length to {}", self.sample_length);
     }
 
     // 0x4015
@@ -63,20 +63,20 @@ impl Dmc {
         if !enabled {
             self.sample_bytes_remaining = 0;
         } else if self.sample_bytes_remaining == 0 {
-            println!("Reloading sample bytes remaining from 0 to {}", self.sample_length);
+            //println!("Reloading sample bytes remaining from 0 to {}", self.sample_length);
             self.sample_bytes_remaining = self.sample_length;
             self.sample_address = self.sample_start_address;
 
-            println!("Attempting to load sample buffer soon.");
+            //println!("Attempting to load sample buffer soon.");
             self.dma_pending = true;
             self.dma_address = self.sample_address;
         }
     }
 
     pub fn set_sample_buffer(&mut self, value: u8) {
-        println!("Checking if sample buffer should be loaded.");
+        //println!("Checking if sample buffer should be loaded.");
         if self.sample_bytes_remaining > 0 {
-            println!("Loading sample buffer.");
+            //println!("Loading sample buffer.");
             self.sample_buffer = Some(value);
             self.sample_address.inc();
             if self.sample_address == CpuAddress::ZERO {
@@ -85,7 +85,7 @@ impl Dmc {
 
             self.sample_bytes_remaining -= 1;
             if self.sample_bytes_remaining == 0 {
-                println!("No sample bytes remaining. Should loop? {}", self.should_loop);
+                //println!("No sample bytes remaining. Should loop? {}", self.should_loop);
                 if self.should_loop {
                     self.sample_bytes_remaining = self.sample_length;
                     self.sample_address = self.sample_start_address;
@@ -111,10 +111,10 @@ impl Dmc {
         self.bits_remaining = 8;
         self.muted = self.sample_buffer.is_none();
         if let Some(sample) = self.sample_buffer.take() {
-            println!("Taking sample buffer.");
+            //println!("Taking sample buffer.");
             self.sample_shifter = sample;
             if self.sample_bytes_remaining > 0 {
-                println!("Attempting to RELOAD sample buffer soon.");
+                //println!("Attempting to RELOAD sample buffer soon.");
                 self.dma_pending = true;
                 self.dma_address = self.sample_address;
             }

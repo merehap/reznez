@@ -6,9 +6,6 @@ pub enum CycleAction {
     IncrementAddressBus,
     IncrementAddressBusLow,
     IncrementOamDmaAddress,
-    StorePendingAddressLowByte,
-    StorePendingAddressLowByteWithXOffset,
-    StorePendingAddressLowByteWithYOffset,
 
     IncrementStackPointer,
     DecrementStackPointer,
@@ -22,6 +19,8 @@ pub enum CycleAction {
 
     CheckNegativeAndZero,
 
+    XOffsetPendingAddressLow,
+    YOffsetPendingAddressLow,
     XOffsetAddressBus,
     YOffsetAddressBus,
     MaybeInsertOopsStep,
@@ -76,6 +75,11 @@ pub enum Field {
     Accumulator,
     Status,
 
+    // Called "Data" in the manual.
+    // TODO: Rename to Operand?
+    Argument,
+    PendingAddressLow,
+    PendingAddressHigh,
     RelativeAddressOffset,
     OpRegister,
 }
