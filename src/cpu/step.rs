@@ -18,7 +18,7 @@ pub static OAM_DMA_TRANSFER_STEPS: LazyLock<[Step; 512]> = LazyLock::new(|| {
 
 pub static ALIGNED_OAM_DMA_TRANSFER_STEPS: LazyLock<[Step; 513]> = LazyLock::new(|| {
     let mut steps = Vec::new();
-    steps.push(ADDRESS_BUS_READ_STEP);
+    steps.push(Read(From::AddressBusTarget, &[]));
     for _ in 0..256 {
         steps.push(Read(From::OamDmaAddressTarget, &[]));
         steps.push(Write(To::OAM_DATA, &[IncrementOamDmaAddress]));
@@ -43,9 +43,6 @@ pub static ALIGNED_DMC_DMA_TRANSFER_STEPS: &[Step] = &[
 
 pub const READ_OP_CODE_STEP: Step =
     Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementProgramCounter]);
-
-pub const ADDRESS_BUS_READ_STEP: Step =
-    Read(From::AddressBusTarget, &[]);
 
 pub const OOPS_STEP: Step =
     ReadField(Field::Argument, From::AddressBusTarget, &[]);
