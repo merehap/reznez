@@ -66,8 +66,10 @@ impl Dmc {
             self.sample_bytes_remaining = self.sample_length;
             self.sample_address = self.sample_start_address;
 
-            //println!("Attempting to load sample buffer soon.");
-            self.dma_pending = true;
+            if self.sample_buffer.is_none() {
+                //println!("Attempting to load sample buffer soon.");
+                self.dma_pending = true;
+            }
         }
     }
 
