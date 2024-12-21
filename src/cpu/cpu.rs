@@ -39,6 +39,7 @@ pub struct Cpu {
     data_bus: u8,
     pending_address_low: u8,
     pending_address_high: u8,
+    computed_address: CpuAddress,
     address_carry: i8,
     argument: u8,
 }
@@ -52,8 +53,8 @@ impl Cpu {
             a: 0,
             x: 0,
             y: 0,
-            // The Start sequence will set this properly.
-            program_counter: CpuAddress::new(0x0000),
+            // The RESET sequence will set this properly.
+            program_counter: CpuAddress::ZERO,
             status: Status::startup(),
 
             mode_state: CpuModeState::startup(),
@@ -67,10 +68,11 @@ impl Cpu {
             // The initial value probably doesn't matter.
             current_interrupt_vector: None,
 
-            address_bus: CpuAddress::new(0x0000),
+            address_bus: CpuAddress::ZERO,
             data_bus: 0,
             pending_address_low: 0,
             pending_address_high: 0,
+            computed_address: CpuAddress::ZERO,
             address_carry: 0,
             argument: 0,
         }
@@ -408,8 +410,8 @@ impl Cpu {
                 }
             }
             // TODO: Make sure this isn't supposed to wrap within the same page.
-            CycleAction::IncrementAddressBus => { self.address_bus.inc(); }
-            CycleAction::IncrementAddressBusLow => { self.address_bus.offset_low(1); }
+            CycleAction::IncrementAddress => self.computed_address = self.address_bus.inc(),
+            CycleAction::IncrementAddressLow => self.computed_address = self.address_bus.offset_low(1).0,
             CycleAction::IncrementOamDmaAddress => self.oam_dma_port.increment_current_address(),
 
             CycleAction::IncrementStackPointer => memory.stack().increment_stack_pointer(),
@@ -472,8 +474,8 @@ impl Cpu {
                     self.address_carry = 1;
                 }
             }
-            CycleAction::XOffsetAddressBus => { self.address_bus.offset_low(self.x); }
-            CycleAction::YOffsetAddressBus => { self.address_bus.offset_low(self.y); }
+            CycleAction::XOffsetAddress => self.computed_address = self.address_bus.offset_low(self.x).0,
+            CycleAction::YOffsetAddress => self.computed_address = self.address_bus.offset_low(self.y).0,
             CycleAction::MaybeInsertOopsStep => {
                 if self.address_carry != 0 {
                     self.mode_state.oops();
@@ -488,13 +490,13 @@ impl Cpu {
             CycleAction::CopyAddressToPC => {
                 self.program_counter = self.address_bus;
             }
-            CycleAction::AddCarryToAddressBus => {
-                self.address_bus.offset_high(self.address_carry);
+            CycleAction::AddCarryToAddress => {
+                self.computed_address = self.address_bus.offset_high(self.address_carry);
                 self.address_carry = 0;
             }
             CycleAction::AddCarryToProgramCounter => {
                 if self.address_carry != 0 {
-                    self.program_counter.offset_high(self.address_carry);
+                    self.program_counter = self.program_counter.offset_high(self.address_carry);
                     self.address_carry = 0;
                 }
             }
@@ -511,6 +513,7 @@ impl Cpu {
             PendingAddressTarget => CpuAddress::from_low_high(self.pending_address_low, self.pending_address_high),
             PendingZeroPageTarget =>
                 CpuAddress::from_low_high(self.pending_address_low, 0),
+            ComputedTarget => self.computed_address,
             TopOfStack => memory.stack_pointer_address(),
             InterruptVectorLow => match self.current_interrupt_vector.unwrap() {
                 InterruptVector::Nmi => NMI_VECTOR_LOW,
@@ -525,7 +528,6 @@ impl Cpu {
         }
     }
 
-    // A copy of from_address, unfortunately.
     fn lookup_to_address(&self, memory: &CpuMemory, to: To) -> CpuAddress {
         use self::To::*;
         match to {
@@ -536,6 +538,7 @@ impl Cpu {
                 CpuAddress::from_low_high(self.pending_address_low, self.pending_address_high),
             PendingZeroPageTarget =>
                 CpuAddress::from_low_high(self.pending_address_low, 0),
+            ComputedTarget => self.computed_address,
             TopOfStack => memory.stack_pointer_address(),
             AddressTarget(address) => address,
         }
@@ -677,7 +680,7 @@ impl Cpu {
     }
 
     fn branch(&mut self) {
-        self.address_carry = self.program_counter.offset_with_carry(self.argument as i8);
+        (self.program_counter, self.address_carry) = self.program_counter.offset_with_carry(self.argument as i8);
         self.mode_state.branch_taken();
     }
 }

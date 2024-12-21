@@ -3,12 +3,22 @@ use crate::memory::mapper::CpuAddress;
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum CycleAction {
     IncrementProgramCounter,
-    IncrementAddressBus,
-    IncrementAddressBusLow,
-    IncrementOamDmaAddress,
+    AddCarryToProgramCounter,
+    CopyAddressToPC,
+
+    IncrementAddress,
+    IncrementAddressLow,
+    XOffsetAddress,
+    YOffsetAddress,
+    AddCarryToAddress,
+
+    XOffsetPendingAddressLow,
+    YOffsetPendingAddressLow,
 
     IncrementStackPointer,
     DecrementStackPointer,
+
+    IncrementOamDmaAddress,
 
     DisableInterrupts,
     SetInterruptVector,
@@ -19,15 +29,8 @@ pub enum CycleAction {
 
     CheckNegativeAndZero,
 
-    XOffsetPendingAddressLow,
-    YOffsetPendingAddressLow,
-    XOffsetAddressBus,
-    YOffsetAddressBus,
     MaybeInsertOopsStep,
     MaybeInsertBranchOopsStep,
-    CopyAddressToPC,
-    AddCarryToAddressBus,
-    AddCarryToProgramCounter,
 
     StartNextInstruction,
     InterpretOpCode,
@@ -43,6 +46,7 @@ pub enum From {
     ProgramCounterTarget,
     PendingAddressTarget,
     PendingZeroPageTarget,
+    ComputedTarget,
 
     TopOfStack,
 
@@ -58,6 +62,7 @@ pub enum To {
     ProgramCounterTarget,
     PendingAddressTarget,
     PendingZeroPageTarget,
+    ComputedTarget,
 
     TopOfStack,
 
