@@ -168,7 +168,8 @@ impl Mapper for Mapper005 {
             0x4020..=0x500F => ReadResult::OPEN_BUS,
             0x5010 => /* TODO: Implement properly. */ ReadResult::full(0x01),
             0x5011..=0x5014 => ReadResult::OPEN_BUS,
-            0x5015 => todo!(),
+            // TODO
+            0x5015 => ReadResult::full(0),
             0x5016..=0x5203 => ReadResult::OPEN_BUS,
             0x5204 => ReadResult::full(self.scanline_irq_status()),
             0x5205 => ReadResult::full((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),

@@ -99,7 +99,10 @@ impl CpuModeState {
     }
 
     pub fn reset(&mut self) {
-        assert_eq!(self.next_mode, None, "next_mode should not already be set");
+        if self.next_mode != Some(CpuMode::Jammed) {
+            assert_eq!(self.next_mode, None, "next_mode should not already be set");
+        }
+
         self.next_mode = Some(CpuMode::InterruptSequence { reset: true });
         self.current_instruction = None;
     }
@@ -110,6 +113,10 @@ impl CpuModeState {
     }
 
     pub fn interrupt_sequence(&mut self) {
+        if self.next_mode == Some(CpuMode::Jammed) {
+            return;
+        }
+
         assert_eq!(self.next_mode, None, "next_mode should not already be set");
         self.next_mode = Some(CpuMode::InterruptSequence { reset: false });
         self.current_instruction = None;
