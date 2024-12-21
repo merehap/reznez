@@ -77,7 +77,7 @@ impl CpuModeState {
     }
 
     pub fn new_instruction_with_address(&self) -> Option<(Instruction, CpuAddress)> {
-        if self.mode == CpuMode::BranchTaken || self.mode == CpuMode::BranchOops {
+        if self.mode != CpuMode::StartNext && self.mode != CpuMode::Instruction {
             return None;
         }
 
