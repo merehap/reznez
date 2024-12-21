@@ -169,7 +169,7 @@ impl<'a> CpuMemory<'a> {
     }
 
     pub fn dmc_dma_address(&self) -> CpuAddress {
-        self.memory.apu_registers.dmc.dma_address()
+        self.memory.apu_registers.dmc.dma_sample_address()
     }
 
     pub fn set_dmc_sample_buffer(&mut self, value: u8) {

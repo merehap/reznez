@@ -10,7 +10,6 @@ pub struct Dmc {
     irq_enabled: bool,
     pub(super) irq_pending: bool,
     dma_pending: bool,
-    dma_address: CpuAddress,
 
     should_loop: bool,
     volume: U7,
@@ -69,7 +68,6 @@ impl Dmc {
 
             //println!("Attempting to load sample buffer soon.");
             self.dma_pending = true;
-            self.dma_address = self.sample_address;
         }
     }
 
@@ -116,7 +114,6 @@ impl Dmc {
             if self.sample_bytes_remaining > 0 {
                 //println!("Attempting to RELOAD sample buffer soon.");
                 self.dma_pending = true;
-                self.dma_address = self.sample_address;
             }
         }
     }
@@ -143,8 +140,8 @@ impl Dmc {
         result
     }
 
-    pub fn dma_address(&self) -> CpuAddress {
-        self.dma_address
+    pub fn dma_sample_address(&self) -> CpuAddress {
+        self.sample_address
     }
 }
 
@@ -155,7 +152,6 @@ impl Default for Dmc {
             irq_enabled: false,
             irq_pending: false,
             dma_pending: false,
-            dma_address: CpuAddress::ZERO,
             should_loop: false,
             volume: U7::default(),
             // TODO: Verify if this needs to be one less.
