@@ -1,4 +1,5 @@
-use log::info;
+use log::{info, log_enabled};
+use log::Level::Info;
 
 use crate::apu::apu_registers::CycleParity;
 use crate::cpu::cpu_mode::CpuModeState;
@@ -187,7 +188,11 @@ impl Cpu {
             self.execute_cycle_action(memory, action, irq_pending);
         }
 
-        info!(target: "cpustep", "\tPC: {}, Cycle: {}, {:?}", original_program_counter, memory.cpu_cycle(), step);
+        if log_enabled!(target: "cpustep", Info) {
+            let step_name = self.mode_state.step_name();
+            let cpu_cycle = memory.cpu_cycle();
+            info!(target: "cpustep", "\t {step_name} PC: {original_program_counter}, Cycle: {cpu_cycle}, {step:?}");
+        }
 
         if start_new_instruction {
             self.mode_state.set_current_instruction_with_address(

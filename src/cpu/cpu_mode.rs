@@ -237,4 +237,39 @@ impl CpuModeState {
             }
         };
     }
+
+    pub fn step_name(&self) -> String {
+        let name: String = match (&self.mode, &self.next_mode) {
+            (_, Some(CpuMode::OamDma {..})) =>
+                "OAM0".into(),
+            (_, Some(CpuMode::DmcDma {..})) =>
+                "DMC0".into(),
+            (CpuMode::Oops {..}, _) =>
+                "OOPS".into(),
+            (CpuMode::BranchTaken, _) =>
+                "BTAKEN".into(),
+            (CpuMode::BranchOops, _) =>
+                "BOOPS".into(),
+            (CpuMode::Jammed, _) =>
+                "JAMMED".into(),
+            (CpuMode::StartNext, Some(CpuMode::Instruction)) =>
+                "INSTR0".into(),
+            (CpuMode::StartNext, Some(CpuMode::InterruptSequence { reset: false })) =>
+                "INT0".into(),
+            (CpuMode::StartNext, _) =>
+                unreachable!(),
+            (CpuMode::Instruction, _) =>
+                format!("INSTR{}", self.step_index + 1),
+            (CpuMode::InterruptSequence { reset: false }, _) =>
+                format!("INT{}", self.step_index + 1),
+            (CpuMode::InterruptSequence { reset: true }, _) =>
+                format!("RESET{}", self.step_index),
+            (CpuMode::OamDma {..}, _) =>
+                format!("OAM{}", self.step_index + 1),
+            (CpuMode::DmcDma {..} , _) =>
+                format!("DMC{}", self.step_index + 1),
+        };
+
+        format!("{name:<6}")
+    }
 }
