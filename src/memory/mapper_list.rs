@@ -286,6 +286,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // HES NTD-8
         113 => m::mapper113::Mapper113.supported(),
 
+        // Monty on the Run (Whirlwind Manu's FDS conversion)
+        125 => m::mapper125::Mapper125.supported(),
+
         // Sachen 3009
         133 => m::mapper133::Mapper133.supported(),
 
