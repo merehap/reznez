@@ -281,6 +281,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         101 => m::mapper101::MAPPER101.supported(),
         102 => UnassignedMapper,
 
+        // Magic Dragon
+        107 => m::mapper107::Mapper107.supported(),
+
         // Huang Di and San Guo Zhi - Qun Xiong Zheng Ba
         112 => m::mapper112::Mapper112::new().supported(),
         // HES NTD-8
