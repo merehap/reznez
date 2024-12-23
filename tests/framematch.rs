@@ -1,6 +1,6 @@
 extern crate reznez;
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::fs;
 use std::fs::File;
@@ -20,10 +20,11 @@ use reznez::util::hash_util::calculate_hash;
 
 #[test]
 fn framematch() {
-    let frames = Frames::load("tests/expected_frames").entries_by_directory;
+    let frames = Frames::load("tests/expected_frames").entries_by_rom_id;
 
     let failed = Arc::new(AtomicBool::new(false));
-    frames.par_iter().for_each(|(frame_directory, frame_entries)| {
+    frames.par_iter().for_each(|(_rom_id, frame_entries)| {
+        let frame_directory = frame_entries[0].directory();
         let mut rom_path_vec: Vec<_> = frame_directory.into_iter().collect();
         rom_path_vec[1] = OsStr::new("roms");
         let mut rom_path: PathBuf = rom_path_vec.into_iter().collect();
@@ -34,10 +35,8 @@ fn framematch() {
         }
 
         let mut frame_hashes = BTreeMap::new();
-        for FrameEntry { full_path, frame_index } in frame_entries {
-            let ppm = Ppm::from_bytes(&fs::read(full_path).unwrap()).unwrap();
-            let hash = calculate_hash(&ppm);
-            frame_hashes.insert(frame_index, hash);
+        for FrameEntry { frame_index, ppm_hash, .. } in frame_entries {
+            frame_hashes.insert(frame_index, ppm_hash);
         }
 
         if frame_hashes.is_empty() {
@@ -85,7 +84,7 @@ fn framematch() {
                 let mask = nes.memory_mut().as_ppu_memory().regs().mask();
                 let actual_ppm = &nes.frame().to_ppm(mask);
                 let actual_hash = calculate_hash(&actual_ppm);
-                if actual_hash != *expected_hash {
+                if actual_hash != **expected_hash {
                     failed.store(true, Ordering::Relaxed);
 
                     let directory: PathBuf = frame_directory.components().skip(2).collect();
@@ -106,34 +105,40 @@ fn framematch() {
 }
 
 struct Frames {
-    entries_by_directory: BTreeMap<PathBuf, Vec<FrameEntry>>,
+    entries_by_rom_id: BTreeMap<String, Vec<FrameEntry>>,
 }
 
 impl Frames {
     fn load(expected_frames_path: &str) -> Frames {
-        let frame_paths = WalkDir::new("tests/expected_frames")
+        let frame_paths = WalkDir::new(expected_frames_path)
             .into_iter()
             .map(|entry| entry.unwrap().path().to_path_buf())
             .filter(|path| path.extension() == Some(OsStr::new("ppm")));
 
-        let mut entries_by_directory: BTreeMap<PathBuf, Vec<FrameEntry>> = BTreeMap::new();
+        let mut entries_by_rom_id: BTreeMap<String, Vec<FrameEntry>> = BTreeMap::new();
         for frame_path in frame_paths {
-            let directory = frame_path.parent().unwrap().to_path_buf();
             let entry = FrameEntry::new(frame_path);
-            if let Some(entries) = entries_by_directory.get_mut(&directory) {
+            let rom_id = entry.directory();
+            let rom_id: Vec<_> = rom_id.into_iter()
+                .skip(2)
+                .map(|id| id.to_str().unwrap())
+                .collect();
+            let rom_id = rom_id.join("/");
+            if let Some(entries) = entries_by_rom_id.get_mut(&rom_id) {
                 entries.push(entry);
             } else {
-                entries_by_directory.insert(directory, vec![entry]);
+                entries_by_rom_id.insert(rom_id, vec![entry]);
             }
         }
 
-        Frames { entries_by_directory }
+        Frames { entries_by_rom_id }
     }
 }
 
 struct FrameEntry {
     full_path: PathBuf,
     frame_index: u32,
+    ppm_hash: u64,
 }
 
 impl FrameEntry {
@@ -141,6 +146,13 @@ impl FrameEntry {
         let file_name = full_path.file_name().unwrap().to_str().unwrap();
         let frame_index = sscanf::scanf!(file_name, "frame{}.ppm", u32)
             .expect("PPM frame must have a number in the file name");
-        FrameEntry { full_path, frame_index }
+        let ppm = Ppm::from_bytes(&fs::read(&full_path).unwrap()).unwrap();
+        let ppm_hash = calculate_hash(&ppm);
+
+        FrameEntry { full_path, frame_index, ppm_hash }
+    }
+
+    fn directory(&self) -> PathBuf {
+        self.full_path.parent().unwrap().to_path_buf()
     }
 }
