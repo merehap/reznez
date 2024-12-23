@@ -20,15 +20,10 @@ use reznez::util::hash_util::calculate_hash;
 
 #[test]
 fn framematch() {
-    let frame_directories: BTreeSet<_> = WalkDir::new("tests/expected_frames")
-        .into_iter()
-        .map(|entry| entry.unwrap().path().to_path_buf())
-        .filter(|path| path.extension() == Some(OsStr::new("ppm")))
-        .map(|path| path.parent().unwrap().to_path_buf())
-        .collect();
+    let frames = Frames::load("tests/expected_frames").entries_by_directory;
 
     let failed = Arc::new(AtomicBool::new(false));
-    frame_directories.par_iter().for_each(|frame_directory| {
+    frames.par_iter().for_each(|(frame_directory, frame_entries)| {
         let mut rom_path_vec: Vec<_> = frame_directory.into_iter().collect();
         rom_path_vec[1] = OsStr::new("roms");
         let mut rom_path: PathBuf = rom_path_vec.into_iter().collect();
@@ -39,16 +34,10 @@ fn framematch() {
         }
 
         let mut frame_hashes = BTreeMap::new();
-        for ppm_entry in fs::read_dir(frame_directory.clone()).unwrap() {
-            let ppm_path = ppm_entry.unwrap().path();
-            let ppm_file_name = ppm_path.file_name().unwrap().to_str().unwrap();
-            let frame_index = sscanf::scanf!(ppm_file_name, "frame{}.ppm", u16);
-
-            if let Some(frame_index) = frame_index {
-                let ppm = Ppm::from_bytes(&fs::read(ppm_path).unwrap()).unwrap();
-                let hash = calculate_hash(&ppm);
-                frame_hashes.insert(frame_index, hash);
-            }
+        for FrameEntry { full_path, frame_index } in frame_entries {
+            let ppm = Ppm::from_bytes(&fs::read(full_path).unwrap()).unwrap();
+            let hash = calculate_hash(&ppm);
+            frame_hashes.insert(frame_index, hash);
         }
 
         if frame_hashes.is_empty() {
@@ -90,7 +79,7 @@ fn framematch() {
             .to_string();
 
         let max_frame_index = frame_hashes.keys().last().unwrap();
-        for frame_index in 0..=*max_frame_index {
+        for frame_index in 0..=**max_frame_index {
             nes.step_frame();
             if let Some(expected_hash) = frame_hashes.get(&frame_index) {
                 let mask = nes.memory_mut().as_ppu_memory().regs().mask();
@@ -114,4 +103,44 @@ fn framematch() {
     });
 
     assert!(!failed.load(Ordering::Relaxed));
+}
+
+struct Frames {
+    entries_by_directory: BTreeMap<PathBuf, Vec<FrameEntry>>,
+}
+
+impl Frames {
+    fn load(expected_frames_path: &str) -> Frames {
+        let frame_paths = WalkDir::new("tests/expected_frames")
+            .into_iter()
+            .map(|entry| entry.unwrap().path().to_path_buf())
+            .filter(|path| path.extension() == Some(OsStr::new("ppm")));
+
+        let mut entries_by_directory: BTreeMap<PathBuf, Vec<FrameEntry>> = BTreeMap::new();
+        for frame_path in frame_paths {
+            let directory = frame_path.parent().unwrap().to_path_buf();
+            let entry = FrameEntry::new(frame_path);
+            if let Some(entries) = entries_by_directory.get_mut(&directory) {
+                entries.push(entry);
+            } else {
+                entries_by_directory.insert(directory, vec![entry]);
+            }
+        }
+
+        Frames { entries_by_directory }
+    }
+}
+
+struct FrameEntry {
+    full_path: PathBuf,
+    frame_index: u32,
+}
+
+impl FrameEntry {
+    fn new(full_path: PathBuf) -> FrameEntry {
+        let file_name = full_path.file_name().unwrap().to_str().unwrap();
+        let frame_index = sscanf::scanf!(file_name, "frame{}.ppm", u32)
+            .expect("PPM frame must have a number in the file name");
+        FrameEntry { full_path, frame_index }
+    }
 }
