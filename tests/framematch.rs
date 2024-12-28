@@ -67,20 +67,24 @@ impl TestSummary {
                 nes.mute();
 
                 let frame_directory = frame_entries[0].directory();
-                let mut frame_hashes = BTreeMap::new();
-                for FrameEntry { frame_index, ppm_hash, .. } in frame_entries {
-                    frame_hashes.insert(frame_index, ppm_hash);
-                }
+                let frame_entries: BTreeMap<_, _> = frame_entries.iter()
+                    .map(|entry| (entry.frame_index, entry))
+                    .collect();
 
-                let max_frame_index = frame_hashes.keys().last().unwrap();
+                let max_frame_index = frame_entries.keys().last().unwrap();
                 for frame_index in 0..=*max_frame_index {
                     nes.step_frame();
-                    if let Some(expected_hash) = frame_hashes.get(&frame_index) {
+                    if let Some(frame_entry) = frame_entries.get(&frame_index) {
+                        let expected_hash = frame_entry.ppm_hash;
                         let mask = nes.memory_mut().as_ppu_memory().regs().mask();
                         let actual_ppm = &nes.frame().to_ppm(mask);
                         let actual_hash = calculate_hash(&actual_ppm);
-                        if actual_hash == *expected_hash {
-                            test_results.insert(rom_id.clone(), TestStatus::Pass);
+                        if actual_hash == expected_hash {
+                            if frame_entry.is_known_bad() {
+                                test_results.insert(rom_id.clone(), TestStatus::KnownBad);
+                            } else {
+                                test_results.insert(rom_id.clone(), TestStatus::Pass);
+                            }
                         } else {
                             test_results.insert(rom_id.clone(), TestStatus::Fail);
                             let directory: PathBuf = frame_directory.components().skip(2).collect();
@@ -119,9 +123,16 @@ impl TestSummary {
 
 #[derive(PartialEq, Eq, Debug)]
 enum TestStatus {
+    // The actual frame matched the expected frame, and the expected frame wasn't marked known bad.
     Pass,
+    // The actual frame did not match the expected frame.
     Fail,
+    // The actual frame matched the expected frame, but was marked known bad.
+    KnownBad,
+    // ROM exists, but there are not expected frames to match the actual frames against.
     ExpectedFramesMissing,
+    // Expected frames exist for a ROM, but the ROM itself doesn't exist. May indicate a
+    // copyrighted ROM that won't be committed.
     RomMissing,
 }
 
@@ -190,19 +201,28 @@ impl ExpectedFrames {
 #[derive(Clone)]
 struct FrameEntry {
     full_path: PathBuf,
+    tag: Option<String>,
     frame_index: u32,
     ppm_hash: u64,
 }
 
 impl FrameEntry {
     fn new(full_path: PathBuf) -> FrameEntry {
-        let file_name = full_path.file_name().unwrap().to_str().unwrap();
-        let frame_index = sscanf::scanf!(file_name, "frame{}.ppm", u32)
-            .expect("PPM frame must have a number in the file name");
         let ppm = Ppm::from_bytes(&fs::read(&full_path).unwrap()).unwrap();
         let ppm_hash = calculate_hash(&ppm);
 
-        FrameEntry { full_path, frame_index, ppm_hash }
+        let file_stem = full_path.file_stem().unwrap();
+        let mut stem_segments = file_stem.to_str().unwrap().split('#');
+        let (start, tag) = match (stem_segments.next(), stem_segments.next(), stem_segments.next()) {
+            (Some(start), None          , None   ) => (start, None),
+            (Some(start), Some(file_tag), None   ) => (start, Some(file_tag.to_string())),
+            (Some(_)    , Some(_)       , Some(_)) => panic!("There should only be one tag ('#' character) per test frame."),
+            _ => unreachable!(),
+        };
+
+        let frame_index = sscanf::scanf!(start, "frame{}", u32)
+            .expect("PPM frame must have a number in the file name");
+        FrameEntry { full_path, frame_index, tag, ppm_hash }
     }
 
     fn directory(&self) -> PathBuf {
@@ -216,6 +236,11 @@ impl FrameEntry {
             .map(|id| id.to_str().unwrap())
             .collect();
         rom_id.join("/")
+    }
+
+    // If the current frame is known to be a non-success as the result of a known reznez bug.
+    fn is_known_bad(&self) -> bool {
+        self.tag == Some("bad".to_string())
     }
 }
 
