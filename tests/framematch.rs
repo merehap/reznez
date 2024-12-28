@@ -1,13 +1,9 @@
 extern crate reznez;
 
 use std::collections::BTreeMap;
-use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
-use std::fs::File;
 use std::path::PathBuf;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 use dashmap::DashMap;
 use rayon::prelude::*;
@@ -108,11 +104,13 @@ impl TestSummary {
         TestSummary { test_results }
     }
 
+    /*
     fn passed(&self) -> bool {
         self.test_results.iter()
             .find(|(_, status)| **status == TestStatus::Fail)
             .is_none()
     }
+    */
 
     fn print(&self) {
         for (rom_id, test_status) in &self.test_results {
@@ -127,12 +125,6 @@ enum TestStatus {
     Fail,
     ExpectedFramesMissing,
     RomMissing,
-}
-
-struct TestEntry {
-    rom_id: RomId,
-    rom_path: PathBuf,
-    expected_frames: FrameEntry,
 }
 
 struct Roms {
