@@ -137,12 +137,7 @@ impl Roms {
             .filter(|path| path.extension() == Some(OsStr::new("nes")))
             .map(|path| {
                 let entry = RomEntry { path: path.clone() };
-                let path = path.with_extension("");
-                let rom_id: Vec<_> = path.into_iter()
-                    .skip(2)
-                    .map(|id| id.to_str().unwrap())
-                    .collect();
-                (rom_id.join("/"), entry)
+                (entry.rom_id(), entry)
             })
             .collect();
 
@@ -152,6 +147,17 @@ impl Roms {
 
 struct RomEntry {
     path: PathBuf,
+}
+
+impl RomEntry {
+    fn rom_id(&self) -> RomId {
+        let path = self.path.with_extension("");
+        let rom_id: Vec<_> = path.into_iter()
+            .skip(2)
+            .map(|id| id.to_str().unwrap())
+            .collect();
+        rom_id.join("/")
+    }
 }
 
 #[derive(Clone)]
@@ -169,12 +175,7 @@ impl ExpectedFrames {
         let mut entries_by_rom_id: BTreeMap<String, Vec<FrameEntry>> = BTreeMap::new();
         for frame_path in frame_paths {
             let entry = FrameEntry::new(frame_path);
-            let rom_id = entry.directory();
-            let rom_id: Vec<_> = rom_id.into_iter()
-                .skip(2)
-                .map(|id| id.to_str().unwrap())
-                .collect();
-            let rom_id = rom_id.join("/");
+            let rom_id = entry.rom_id();
             if let Some(entries) = entries_by_rom_id.get_mut(&rom_id) {
                 entries.push(entry);
             } else {
@@ -206,6 +207,15 @@ impl FrameEntry {
 
     fn directory(&self) -> PathBuf {
         self.full_path.parent().unwrap().to_path_buf()
+    }
+
+    fn rom_id(&self) -> RomId {
+        let rom_id = self.directory();
+        let rom_id: Vec<_> = rom_id.into_iter()
+            .skip(2)
+            .map(|id| id.to_str().unwrap())
+            .collect();
+        rom_id.join("/")
     }
 }
 
