@@ -106,6 +106,10 @@ impl TestSummary {
             };
         });
 
+        for entry in expected_frames.iter() {
+            test_results.insert(entry.key().clone(), TestStatus::RomMissing);
+        }
+
         let test_results = test_results.into_iter().collect();
         TestSummary { test_results }
     }
