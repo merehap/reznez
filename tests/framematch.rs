@@ -36,7 +36,9 @@ impl TestSummary {
         let expected_frames: DashMap<RomId, Vec<FrameEntry>> =
             expected_frames.entries_by_rom_id.clone().into_iter().collect();
         roms.entries_by_rom_id.par_iter().for_each(|(rom_id, rom_entry)| {
-            if let Some((rom_id, frame_entries)) = expected_frames.remove(rom_id) {
+            if rom_entry.is_ignored() {
+                test_results.insert(rom_id.clone(), TestStatus::RomIgnored);
+            } else if let Some((rom_id, frame_entries)) = expected_frames.remove(rom_id) {
                 assert!(!frame_entries.is_empty());
 
                 let opt = Opt {
@@ -110,7 +112,7 @@ impl TestSummary {
 
     fn passed(&self) -> bool {
         self.test_results.iter()
-            .find(|(_, status)| **status == TestStatus::Fail)
+            .find(|(_, status)| **status == TestStatus::Fail || **status == TestStatus::ExpectedFramesMissing)
             .is_none()
     }
 
@@ -134,6 +136,9 @@ enum TestStatus {
     // Expected frames exist for a ROM, but the ROM itself doesn't exist. May indicate a
     // copyrighted ROM that won't be committed.
     RomMissing,
+    // ROM was intentionally marked as ignored. Either it requires joypad input, or it tests a
+    // mapper that hasn't been implemented yet.
+    RomIgnored,
 }
 
 struct Roms {
@@ -147,7 +152,7 @@ impl Roms {
             .map(|entry| entry.unwrap().path().to_path_buf())
             .filter(|path| path.extension() == Some(OsStr::new("nes")))
             .map(|path| {
-                let entry = RomEntry { path: path.clone() };
+                let entry = RomEntry::new(path.clone());
                 (entry.rom_id(), entry)
             })
             .collect();
@@ -158,9 +163,23 @@ impl Roms {
 
 struct RomEntry {
     path: PathBuf,
+    tag: Option<String>,
 }
 
 impl RomEntry {
+    fn new(path: PathBuf) -> Self {
+        let file_stem = path.file_stem().unwrap();
+        let mut stem_segments = file_stem.to_str().unwrap().split('#');
+        let tag = match (stem_segments.next(), stem_segments.next(), stem_segments.next()) {
+            (Some(_), None          , None   ) => None,
+            (Some(_), Some(file_tag), None   ) => Some(file_tag.to_string()),
+            (Some(_), Some(_)       , Some(_)) => panic!("There should only be one tag ('#' character) per rom name."),
+            _ => unreachable!(),
+        };
+
+        Self { path, tag }
+    }
+
     fn rom_id(&self) -> RomId {
         let path = self.path.with_extension("");
         let rom_id: Vec<_> = path.into_iter()
@@ -168,6 +187,11 @@ impl RomEntry {
             .map(|id| id.to_str().unwrap())
             .collect();
         rom_id.join("/")
+    }
+
+    // If the current ROM should be ignored for frame matching.
+    fn is_ignored(&self) -> bool {
+        self.tag == Some("ignored".to_string())
     }
 }
 
@@ -207,7 +231,7 @@ struct FrameEntry {
 }
 
 impl FrameEntry {
-    fn new(full_path: PathBuf) -> FrameEntry {
+    fn new(full_path: PathBuf) -> Self {
         let ppm = Ppm::from_bytes(&fs::read(&full_path).unwrap()).unwrap();
         let ppm_hash = calculate_hash(&ppm);
 
@@ -222,7 +246,7 @@ impl FrameEntry {
 
         let frame_index = sscanf::scanf!(start, "frame{}", u32)
             .expect("PPM frame must have a number in the file name");
-        FrameEntry { full_path, frame_index, tag, ppm_hash }
+        Self { full_path, frame_index, tag, ppm_hash }
     }
 
     fn directory(&self) -> PathBuf {

@@ -15,6 +15,12 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     (3745301915, 3498657192, 3, 1),
     // read_joy3/thorough_test.nes
     (4081207045, 0068811153, 3, 1),
+    // read_joy3/count_errors.nes
+    (2480941058, 571989249, 3, 1),
+    // read_joy3/count_errors_fast.nes
+    (401642813, 392036799, 3, 1),
+    // read_joy3/test_buttons.nes
+    (3991554801, 3461020892, 3, 1),
 
     // 2_test/2_test_0.nes
     (2392242790, 3901840109, 2, 1),
@@ -48,6 +54,8 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     (0403828385, 3300419450, 3, 1),
     // holydiverbatman/M7_P128K.nes
     (0656988303, 3161185153, 7, 1),
+    // holydiverbatman/M34_P128K_H.nes
+    (0819388560, 3161185153, 34, 1),
     // holydiverbatman/M78.3_P128K_C64K.nes
     (2751966167, 3161185153, 78, 3),
 
