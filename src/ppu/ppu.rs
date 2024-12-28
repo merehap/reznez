@@ -235,13 +235,11 @@ impl Ppu {
                 if self.all_sprites_evaluated {
                     // TODO: Reading and incrementing still happen after sprite evaluation is
                     // complete, but writes fail (i.e. they don't happen).
+                    self.oam_data_read = self.secondary_oam.read();
                     return;
                 }
 
-                if self.secondary_oam.is_full() {
-                    // TODO: self.all_sprites_evaluated?
-                    self.oam_data_read = self.secondary_oam.read();
-                } else {
+                if !self.secondary_oam.is_full() {
                     self.secondary_oam.write(self.oam_data_read);
                 }
 
