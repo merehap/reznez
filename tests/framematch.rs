@@ -22,7 +22,7 @@ fn framematch() {
     let roms = Roms::load("tests/roms");
     let test_summary = TestSummary::load(roms, expected_frames);
     test_summary.print();
-    //assert!(test_summary.passed());
+    assert!(test_summary.passed());
 }
 
 struct TestSummary {
@@ -89,7 +89,7 @@ impl TestSummary {
                                 format!("tests/actual_frames/{}/frame{:03}.ppm", directory.display(), frame_index);
                             fs::write(actual_ppm_path.clone(), actual_ppm.to_bytes()).unwrap();
                             println!(
-                                "\t\tROM {} didn't match expected hash at frame {}. See '{}' .",
+                                "\t\tROM {} didn't match expected hash at frame {}. See '{}'",
                                 rom_id, frame_index, actual_ppm_path,
                             );
                         }
@@ -104,13 +104,11 @@ impl TestSummary {
         TestSummary { test_results }
     }
 
-    /*
     fn passed(&self) -> bool {
         self.test_results.iter()
             .find(|(_, status)| **status == TestStatus::Fail)
             .is_none()
     }
-    */
 
     fn print(&self) {
         for (rom_id, test_status) in &self.test_results {
