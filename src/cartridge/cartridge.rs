@@ -164,18 +164,7 @@ impl Cartridge {
             info!("Using override submapper for this ROM. Data hash: {data_hash} , PRG hash: {prg_hash}");
             cartridge.submapper_number = submapper_number;
         } else if let Some(Header { prg_rom_size, prg_ram_size, chr_rom_size, chr_ram_size, mapper_number, submapper_number }) =
-                header_db.header_from_data(rom) {
-            if cartridge.mapper_number != mapper_number {
-                warn!("Mapper number in ROM ({}) does not match the one in the DB {mapper_number}.", cartridge.mapper_number);
-            }
-
-            assert_eq!(prg_rom.size(), prg_rom_size);
-            assert_eq!(chr_rom.size(), chr_rom_size);
-            cartridge.submapper_number = submapper_number;
-            cartridge.prg_ram_size = prg_ram_size;
-            cartridge.chr_ram_size = chr_ram_size;
-        } else if let Some(Header { prg_rom_size, prg_ram_size, chr_rom_size, chr_ram_size, mapper_number, submapper_number }) =
-                header_db.header_from_prg_rom(&prg_rom) {
+                header_db.header_from_db(rom, &prg_rom, mapper_number, submapper_number) {
             if cartridge.mapper_number != mapper_number {
                 warn!("Mapper number in ROM ({}) does not match the one in the DB {mapper_number}.", cartridge.mapper_number);
             }

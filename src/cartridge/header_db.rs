@@ -62,6 +62,13 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     // mmc3_test/6-MMC6.nes
     (2669308141, 2914571485, 4, 1),
 
+    // shxing1.nes
+    (1996547387, 408545878, 7, 1),
+    // shxing2.nes
+    (675601020, 1193137425, 7, 1),
+    // shxdma.nes
+    (4274158895, 2442883650, 7, 1),
+
     // mmc3_irq_tests/5.MMC3_rev_A.nes (no submapper number has been officially assigned)
     (495013157, 4078096862, 4, 99),
     // Crystalis (no submapper number has been officially assigned)
@@ -115,21 +122,23 @@ impl HeaderDb {
         header_db
     }
 
-    pub fn header_from_data(&self, data: &RawMemory) -> Option<Header> {
-        let hash = crc32fast::hash(data.as_slice());
-        let result = self.data_by_crc32.get(&crc32fast::hash(data.as_slice())).copied();
-        if result.is_none() {
-            info!("ROM with full file hash {hash} not found in DB.");
+    pub fn header_from_db(
+        &self,
+        data: &RawMemory,
+        prg_rom: &RawMemorySlice,
+        mapper_number: u16,
+        submapper_number: u8,
+    ) -> Option<Header> {
+        let full_hash = crc32fast::hash(data.as_slice());
+        let result = self.data_by_crc32.get(&full_hash).copied();
+        if result.is_some() {
+            return result;
         }
 
-        result
-    }
-
-    pub fn header_from_prg_rom(&self, prg_rom: &RawMemorySlice) -> Option<Header> {
-        let hash = crc32fast::hash(prg_rom.to_raw());
-        let result = self.prg_rom_by_crc32.get(&hash).copied();
+        let prg_hash = crc32fast::hash(prg_rom.to_raw());
+        let result = self.prg_rom_by_crc32.get(&prg_hash).copied();
         if result.is_none() {
-            info!("ROM with PRG hash {hash} not found in DB.");
+            info!("ROM not found in DB. ({full_hash}, {prg_hash}, {mapper_number}, {submapper_number})");
         }
 
         result
