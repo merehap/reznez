@@ -1,5 +1,4 @@
 ROADMAP
-Fix workram writes to work without manually coding it in each mapper.
 Fix remaining issue with apu_test DMC basics.
 Remove GetSpritePatternHack in ppu.rs.
 Verify when the IRQ flag is supposed to be cleared. An update to the location of ClearIrq caused the apu_test jitter to have a different result.
@@ -8,12 +7,10 @@ Verify when the IRQ flag is supposed to be cleared. An update to the location of
 Wide pixels.
 Move nestest over to new formatting system.
 Disable OAMDATA writes (other than address increment) during rendering
-Work out priorities for WorkRam vs registers. Why does WorkRam need to be explicitly written to by each mapper?
 Move CPU bus into CpuMemory
 Audio
 Rename CycleAction to StepAction.
 Don't display bottom tiles of screen by default (see Aladdin junk tiles)
-Separate attribute table from name table?
 Proper encapsulation for PPU registers
 Improve cycle accuracy of undocumented instructions
 Open Bus for joysticks.
