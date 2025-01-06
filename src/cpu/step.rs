@@ -1,10 +1,10 @@
 use std::sync::LazyLock;
 
-use crate::cpu::cycle_action::Field;
-use crate::cpu::cycle_action::Field::*;
-use crate::cpu::cycle_action::{From, To};
-use crate::cpu::cycle_action::CycleAction;
-use crate::cpu::cycle_action::CycleAction::*;
+use crate::cpu::step_action::Field;
+use crate::cpu::step_action::Field::*;
+use crate::cpu::step_action::{From, To};
+use crate::cpu::step_action::StepAction;
+use crate::cpu::step_action::StepAction::*;
 use crate::cpu::step::Step::{Read, ReadField, Write, WriteField};
 
 pub static OAM_DMA_TRANSFER_STEPS: LazyLock<[Step; 512]> = LazyLock::new(|| {
@@ -378,14 +378,14 @@ pub const TAS_STEPS: &[Step] = &[
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Step {
-    Read(From, &'static [CycleAction]),
-    Write(To, &'static [CycleAction]),
-    ReadField(Field, From, &'static [CycleAction]),
-    WriteField(Field, To, &'static [CycleAction]),
+    Read(From, &'static [StepAction]),
+    Write(To, &'static [StepAction]),
+    ReadField(Field, From, &'static [StepAction]),
+    WriteField(Field, To, &'static [StepAction]),
 }
 
 impl Step {
-    pub fn actions(&self) -> &'static [CycleAction] {
+    pub fn actions(&self) -> &'static [StepAction] {
         match *self {
             Step::Read(_, actions) => actions,
             Step::Write(_, actions) => actions,
@@ -396,7 +396,7 @@ impl Step {
 
     pub fn has_start_new_instruction(&self) -> bool {
         for action in self.actions() {
-            if matches!(action, CycleAction::StartNextInstruction) {
+            if matches!(action, StepAction::StartNextInstruction) {
                 return true;
             }
         }
@@ -406,7 +406,7 @@ impl Step {
 
     pub fn has_interpret_op_code(&self) -> bool {
         for action in self.actions() {
-            if matches!(action, CycleAction::InterpretOpCode) {
+            if matches!(action, StepAction::InterpretOpCode) {
                 return true;
             }
         }

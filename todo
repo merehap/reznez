@@ -9,7 +9,6 @@ Move nestest over to new formatting system.
 Disable OAMDATA writes (other than address increment) during rendering
 Move CPU bus into CpuMemory
 Audio
-Rename CycleAction to StepAction.
 Don't display bottom tiles of screen by default (see Aladdin junk tiles)
 Proper encapsulation for PPU registers
 Improve cycle accuracy of undocumented instructions

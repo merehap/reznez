@@ -1,7 +1,7 @@
 use crate::memory::mapper::CpuAddress;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum CycleAction {
+pub enum StepAction {
     IncrementProgramCounter,
     AddCarryToProgramCounter,
     CopyAddressToPC,

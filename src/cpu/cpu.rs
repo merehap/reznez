@@ -3,7 +3,7 @@ use log::Level::Info;
 
 use crate::apu::apu_registers::CycleParity;
 use crate::cpu::cpu_mode::CpuModeState;
-use crate::cpu::cycle_action::{CycleAction, From, To, Field};
+use crate::cpu::step_action::{StepAction, From, To, Field};
 use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
 use crate::cpu::status;
 use crate::cpu::status::Status;
@@ -185,7 +185,7 @@ impl Cpu {
         }
 
         for &action in step.actions() {
-            self.execute_cycle_action(memory, action, irq_pending);
+            self.execute_step_action(memory, action, irq_pending);
         }
 
         if log_enabled!(target: "cpustep", Info) {
@@ -207,14 +207,14 @@ impl Cpu {
         Some(step)
     }
 
-    fn execute_cycle_action(
+    fn execute_step_action(
         &mut self,
         memory: &mut CpuMemory,
-        action: CycleAction,
+        action: StepAction,
         irq_pending: bool,
     ) {
         match action {
-            CycleAction::StartNextInstruction => {
+            StepAction::StartNextInstruction => {
                 if self.mode_state.should_suppress_next_instruction_start() {
                     return;
                 }
@@ -239,8 +239,8 @@ impl Cpu {
                 }
             }
 
-            CycleAction::InterpretOpCode => {}
-            CycleAction::ExecuteOpCode => {
+            StepAction::InterpretOpCode => {}
+            StepAction::ExecuteOpCode => {
                 let access_mode = self.mode_state.current_instruction().unwrap().access_mode();
                 let rmw_operand = if access_mode == AccessMode::Imp {
                     &mut self.a
@@ -408,23 +408,23 @@ impl Cpu {
                 }
             }
 
-            CycleAction::IncrementProgramCounter => {
-                // FIXME : Rather than suppressing this here, this CycleAction should have been
+            StepAction::IncrementProgramCounter => {
+                // FIXME : Rather than suppressing this here, this StepAction should have been
                 // stripped out earlier.
                 if !self.mode_state.should_suppress_next_instruction_start() && !self.mode_state.is_interrupt_sequence_active() {
                     self.program_counter.inc();
                 }
             }
             // TODO: Make sure this isn't supposed to wrap within the same page.
-            CycleAction::IncrementAddress => self.computed_address = self.address_bus.inc(),
-            CycleAction::IncrementAddressLow => self.computed_address = self.address_bus.offset_low(1).0,
-            CycleAction::IncrementOamDmaAddress => self.oam_dma_port.increment_current_address(),
+            StepAction::IncrementAddress => self.computed_address = self.address_bus.inc(),
+            StepAction::IncrementAddressLow => self.computed_address = self.address_bus.offset_low(1).0,
+            StepAction::IncrementOamDmaAddress => self.oam_dma_port.increment_current_address(),
 
-            CycleAction::IncrementStackPointer => memory.stack().increment_stack_pointer(),
-            CycleAction::DecrementStackPointer => memory.stack().decrement_stack_pointer(),
+            StepAction::IncrementStackPointer => memory.stack().increment_stack_pointer(),
+            StepAction::DecrementStackPointer => memory.stack().decrement_stack_pointer(),
 
-            CycleAction::DisableInterrupts => self.status.interrupts_disabled = true,
-            CycleAction::SetInterruptVector => {
+            StepAction::DisableInterrupts => self.status.interrupts_disabled = true,
+            StepAction::SetInterruptVector => {
                 self.current_interrupt_vector =
                     if self.reset_status != ResetStatus::Inactive {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to RESET.");
@@ -446,8 +446,8 @@ impl Cpu {
                 self.irq_status = IrqStatus::Inactive;
                 self.reset_status = ResetStatus::Inactive;
             }
-            CycleAction::ClearInterruptVector => self.current_interrupt_vector = None,
-            CycleAction::PollInterrupts => {
+            StepAction::ClearInterruptVector => self.current_interrupt_vector = None,
+            StepAction::PollInterrupts => {
                 if self.nmi_status == NmiStatus::Pending {
                     info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
                     self.nmi_status = NmiStatus::Ready;
@@ -457,14 +457,14 @@ impl Cpu {
                 }
             }
 
-            CycleAction::SetDmcSampleBuffer => memory.set_dmc_sample_buffer(self.data_bus),
+            StepAction::SetDmcSampleBuffer => memory.set_dmc_sample_buffer(self.data_bus),
 
-            CycleAction::CheckNegativeAndZero => {
+            StepAction::CheckNegativeAndZero => {
                 self.status.negative = (self.data_bus >> 7) == 1;
                 self.status.zero = self.data_bus == 0;
             }
 
-            CycleAction::XOffsetPendingAddressLow => {
+            StepAction::XOffsetPendingAddressLow => {
                 let carry;
                 (self.pending_address_low, carry) =
                     self.pending_address_low.overflowing_add(self.x);
@@ -472,7 +472,7 @@ impl Cpu {
                     self.address_carry = 1;
                 }
             }
-            CycleAction::YOffsetPendingAddressLow => {
+            StepAction::YOffsetPendingAddressLow => {
                 let carry;
                 (self.pending_address_low, carry) =
                     self.pending_address_low.overflowing_add(self.y);
@@ -480,27 +480,27 @@ impl Cpu {
                     self.address_carry = 1;
                 }
             }
-            CycleAction::XOffsetAddress => self.computed_address = self.address_bus.offset_low(self.x).0,
-            CycleAction::YOffsetAddress => self.computed_address = self.address_bus.offset_low(self.y).0,
-            CycleAction::MaybeInsertOopsStep => {
+            StepAction::XOffsetAddress => self.computed_address = self.address_bus.offset_low(self.x).0,
+            StepAction::YOffsetAddress => self.computed_address = self.address_bus.offset_low(self.y).0,
+            StepAction::MaybeInsertOopsStep => {
                 if self.address_carry != 0 {
                     self.mode_state.oops();
                 }
             }
-            CycleAction::MaybeInsertBranchOopsStep => {
+            StepAction::MaybeInsertBranchOopsStep => {
                 if self.address_carry != 0 {
                     self.mode_state.branch_oops();
                 }
             }
 
-            CycleAction::CopyAddressToPC => {
+            StepAction::CopyAddressToPC => {
                 self.program_counter = self.address_bus;
             }
-            CycleAction::AddCarryToAddress => {
+            StepAction::AddCarryToAddress => {
                 self.computed_address = self.address_bus.offset_high(self.address_carry);
                 self.address_carry = 0;
             }
-            CycleAction::AddCarryToProgramCounter => {
+            StepAction::AddCarryToProgramCounter => {
                 if self.address_carry != 0 {
                     self.program_counter = self.program_counter.offset_high(self.address_carry);
                     self.address_carry = 0;
@@ -571,14 +571,14 @@ impl Cpu {
                 OpCode::STX => self.x,
                 OpCode::STY => self.y,
                 OpCode::SAX => self.a & self.x,
-                // FIXME: Calculations should be done as part of an earlier CycleAction.
+                // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::SHX => {
                     let (low, high) = self.address_bus.to_low_high();
                     self.address_bus = CpuAddress::from_low_high(low, high & self.x);
                     self.x & high.wrapping_add(1)
                 }
 
-                // FIXME: Calculations should be done as part of an earlier CycleAction.
+                // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::SHY => {
                     let (low, high) = self.address_bus.to_low_high();
                     self.address_bus = CpuAddress::from_low_high(low, high & self.y);
