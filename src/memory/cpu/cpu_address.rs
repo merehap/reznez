@@ -35,6 +35,25 @@ impl CpuAddress {
         (self.0 as u8, (self.0 >> 8) as u8)
     }
 
+    pub fn to_mesen_string(self) -> String {
+        match self.0 {
+            0x2000 => "PpuControl_2000".to_owned(),
+            0x2001 => "PpuMask_2001".to_owned(),
+            0x2002 => "PpuStatus_2002".to_owned(),
+            0x2003 => "OamAddr_2003".to_owned(),
+            0x2004 => "PpuData_2004".to_owned(),
+            0x2005 => "PpuScroll_2005".to_owned(),
+            0x2006 => "PpuAddr_2006".to_owned(),
+            0x2007 => "PpuData_2007".to_owned(),
+            0x4011 => "DmcCounter_4011".to_owned(),
+            0x4014 => "SpriteDma_4014".to_owned(),
+            0x4015 => "ApuStatus_4015".to_owned(),
+            0x4016 => "Ctrl1_4016".to_owned(),
+            0x4017 => "Ctrl2_FrameCtr_4017".to_owned(),
+            addr => format!("${:04X}", addr),
+        }
+    }
+
     pub fn low_byte(self) -> u8 {
         u8::try_from(self.0 & 0x00FF).unwrap()
     }

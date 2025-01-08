@@ -222,7 +222,7 @@ impl Formatter for MesenFormatter {
         nes: &Nes,
         instruction: Instruction,
         start_address: CpuAddress,
-        interrupt_text: String,
+        _interrupt_text: String,
     ) -> String {
         let peek = |address| nes.memory().cpu_peek(address).unwrap_or(0);
 
@@ -234,14 +234,18 @@ impl Formatter for MesenFormatter {
         let mut argument_string = String::new();
         use AccessMode::*;
         match instruction.access_mode() {
-            Imp => {}
+            Imp => {
+                if matches!(instruction.op_code(), OpCode::LSR | OpCode::ROL | OpCode::ASL) {
+                    argument_string.push_str("A");
+                }
+            }
             Imm => {
                 argument_string.push_str(&format!("#${low:02X}"));
             }
             ZP => {
                 let address = CpuAddress::zero_page(low);
                 let value = peek(address);
-                argument_string.push_str(&format!("${low:02X} = {value:02X}"));
+                argument_string.push_str(&format!("${low:02X} = ${value:02X}"));
             }
             ZPX => {
                 argument_string.push_str(&format!("${low:02X},X"));
@@ -253,29 +257,35 @@ impl Formatter for MesenFormatter {
             }
             Abs => {
                 let address = CpuAddress::from_low_high(low, high);
-                argument_string.push_str(&format!("${high:02X}{low:02X}"));
-                if instruction.op_code() != OpCode::JMP {
-                    let value = peek(address);
-                    argument_string.push_str(&format!(" = {value:02X}"));
+                argument_string.push_str(&address.to_mesen_string());
+                match instruction.op_code() {
+                    OpCode::JMP | OpCode::JSR => {}
+                    _ => argument_string.push_str(&format!(" = ${:02X}", peek(address))),
                 }
             }
             AbX => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(cpu.x_index());
                 let value = peek(address);
-                argument_string.push_str(&format!("${high:02X}{low:02X},X = {value:02X}"));
+                argument_string.push_str(&format!(
+                        "{},X [{}] = ${value:02X}",
+                        start_address.to_mesen_string(),
+                        address.to_mesen_string()));
             }
             AbY => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(cpu.y_index());
                 let value = peek(address);
-                argument_string.push_str(&format!("${high:02X}{low:02X},Y = {value:02X}"));
+                argument_string.push_str(&format!(
+                        "{},Y [{}] = ${value:02X}",
+                        start_address.to_mesen_string(),
+                        address.to_mesen_string()));
             }
             Rel => {
                 let address = start_address
                     .offset(low as i8)
                     .advance(instruction.access_mode().instruction_length());
-                argument_string.push_str(&format!("${:04X}", address.to_raw()));
+                argument_string.push_str(&address.to_mesen_string());
             }
             Ind => {
                 let first = CpuAddress::from_low_high(low, high);
@@ -284,6 +294,8 @@ impl Formatter for MesenFormatter {
                     peek(first),
                     peek(second),
                 );
+
+                argument_string.push_str(&format!("({})", &first.to_mesen_string()));
             }
             IzX => {
                 argument_string.push_str(&format!("(${low:02X}),X ="));
@@ -294,13 +306,14 @@ impl Formatter for MesenFormatter {
                 );
             }
             IzY => {
-                argument_string.push_str(&format!("(${low:02X}),Y ="));
+                argument_string.push_str(&format!("(${low:02X}),Y "));
                 let start_address = CpuAddress::from_low_high(
                     peek(CpuAddress::zero_page(low)),
                     peek(CpuAddress::zero_page(low.wrapping_add(1))),
                 );
                 // TODO: Should this wrap around just the current page?
-                let _address = start_address.advance(cpu.y_index());
+                let address = start_address.advance(cpu.y_index());
+                argument_string.push_str(&format!("[{}] = ${:02X}", address.to_mesen_string(), peek(address)));
             }
         };
 
@@ -310,11 +323,10 @@ impl Formatter for MesenFormatter {
         }
 
         format!(
-            "{:04X}  {:?} {:28}{} A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} V:{:<3} H:{:<3} Cycle:{}",
+            "{:04X}  {:?} {:28} A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} V:{:<3} H:{:<3} Cycle:{}",
             start_address.to_raw(),
             instruction.op_code(),
             argument_string,
-            interrupt_text,
             cpu.accumulator(),
             cpu.x_index(),
             cpu.y_index(),
