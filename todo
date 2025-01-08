@@ -7,7 +7,6 @@ Verify when the IRQ flag is supposed to be cleared. An update to the location of
 Wide pixels.
 Move nestest over to new formatting system.
 Disable OAMDATA writes (other than address increment) during rendering
-Move CPU bus into CpuMemory
 Audio
 Don't display bottom tiles of screen by default (see Aladdin junk tiles)
 Proper encapsulation for PPU registers

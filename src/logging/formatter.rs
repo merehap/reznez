@@ -22,7 +22,7 @@ impl Formatter for MinimalFormatter {
         start_address: CpuAddress,
         _interrupt_text: String,
     ) -> String {
-        let peek = |address| nes.memory().cpu_peek(address).unwrap_or(0);
+        let peek = |address| nes.memory().cpu_peek(address);
 
         let cpu = nes.cpu();
 
@@ -108,7 +108,7 @@ impl Formatter for Nintendulator0980Formatter {
         _interrupt_text: String,
     ) -> String {
         let cpu_cycle = nes.memory().cpu_cycle();
-        let peek = |address| nes.memory().cpu_peek(address).unwrap_or(0);
+        let peek = |address| nes.memory().cpu_peek(address);
 
         let cpu = nes.cpu();
 
@@ -224,7 +224,7 @@ impl Formatter for MesenFormatter {
         start_address: CpuAddress,
         _interrupt_text: String,
     ) -> String {
-        let peek = |address| nes.memory().cpu_peek(address).unwrap_or(0);
+        let peek = |address| nes.memory().cpu_peek(address);
 
         let cpu = nes.cpu();
 

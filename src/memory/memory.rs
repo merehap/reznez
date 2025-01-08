@@ -6,7 +6,6 @@ use crate::memory::cpu::stack::Stack;
 use crate::memory::mapper::{Mapper, MapperParams};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
-use crate::memory::read_result::ReadResult;
 use crate::ppu::name_table::name_table::NameTable;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
@@ -33,6 +32,7 @@ pub struct Memory {
     ppu_registers: PpuRegisters,
     apu_registers: ApuRegisters,
     system_palette: SystemPalette,
+    cpu_data_bus: u8,
     cpu_cycle: i64,
 }
 
@@ -53,6 +53,7 @@ impl Memory {
             ppu_registers: PpuRegisters::new(),
             apu_registers: ApuRegisters::new(),
             system_palette,
+            cpu_data_bus: 0,
             cpu_cycle: 0,
         }
     }
@@ -98,7 +99,7 @@ impl Memory {
         self.cpu_cycle
     }
 
-    pub fn cpu_peek(&self, address: CpuAddress) -> ReadResult {
+    pub fn cpu_peek(&self, address: CpuAddress) -> u8 {
         self.mapper.cpu_peek(
             &self.mapper_params,
             &self.cpu_internal_ram,
@@ -108,7 +109,7 @@ impl Memory {
             &self.ppu_registers,
             &self.apu_registers,
             address,
-        )
+        ).resolve(self.cpu_data_bus)
     }
 }
 
@@ -118,7 +119,7 @@ pub struct CpuMemory<'a> {
 
 impl<'a> CpuMemory<'a> {
     #[inline]
-    pub fn peek(&self, address: CpuAddress) -> ReadResult {
+    pub fn peek(&self, address: CpuAddress) -> u8 {
         self.memory.mapper.cpu_peek(
             &self.memory.mapper_params,
             &self.memory.cpu_internal_ram,
@@ -128,12 +129,12 @@ impl<'a> CpuMemory<'a> {
             &self.memory.ppu_registers,
             &self.memory.apu_registers,
             address,
-        )
+        ).resolve(self.memory.cpu_data_bus)
     }
 
     #[inline]
-    pub fn read(&mut self, address: CpuAddress) -> ReadResult {
-        self.memory.mapper.cpu_read(
+    pub fn read(&mut self, address: CpuAddress) {
+        self.memory.cpu_data_bus = self.memory.mapper.cpu_read(
             &mut self.memory.mapper_params,
             &self.memory.cpu_internal_ram,
             &self.memory.ppu_internal_ram,
@@ -142,11 +143,11 @@ impl<'a> CpuMemory<'a> {
             &mut self.memory.ppu_registers,
             &mut self.memory.apu_registers,
             address,
-        )
+        ).resolve(self.memory.cpu_data_bus);
     }
 
     #[inline]
-    pub fn write(&mut self, address: CpuAddress, value: u8) {
+    pub fn write(&mut self, address: CpuAddress) {
         self.memory.mapper.cpu_write(
             &mut self.memory.mapper_params,
             &mut self.memory.cpu_internal_ram,
@@ -156,7 +157,7 @@ impl<'a> CpuMemory<'a> {
             &mut self.memory.ppu_registers,
             &mut self.memory.apu_registers,
             address,
-            value,
+            self.memory.cpu_data_bus,
         );
     }
 
@@ -207,6 +208,14 @@ impl<'a> CpuMemory<'a> {
         self.address_from_vector(IRQ_VECTOR_LOW)
     }
 
+    pub fn data_bus(&self) -> u8 {
+        self.memory.cpu_data_bus
+    }
+
+    pub fn data_bus_mut(&mut self) -> &mut u8 {
+        &mut self.memory.cpu_data_bus
+    }
+
     pub fn cpu_cycle(&self) -> i64 {
         self.memory.cpu_cycle
     }
@@ -225,8 +234,8 @@ impl<'a> CpuMemory<'a> {
 
     fn address_from_vector(&mut self, mut vector: CpuAddress) -> CpuAddress {
         CpuAddress::from_low_high(
-            self.read(vector).expect("Read open bus."),
-            self.read(vector.inc()).expect("Read open bus."),
+            self.peek(vector),
+            self.peek(vector.inc()),
         )
     }
 }
