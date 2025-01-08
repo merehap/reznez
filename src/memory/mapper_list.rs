@@ -195,6 +195,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // Rumble Station
         46 => m::mapper046::Mapper046::new().supported(),
 
+        // N-32 conversion of Super Mario Bros. 2 (J). PCB code 761214.
+        50 => m::mapper050::Mapper050::new().supported(),
+
         // BTL-MARIO1-MALEE2
         55 => m::mapper055::Mapper055.supported(),
 
