@@ -96,7 +96,8 @@ impl CpuModeState {
             self.current_instruction = Some(instruction);
         }
 
-        if !self.was_current_step_suspended {
+        // Hack to match Mesen's DMC DMA-interrupted instruction logging.
+        if !self.was_current_step_suspended || self.step_index != 0 {
             self.new_instruction_with_address = Some((instruction, address));
         }
     }
