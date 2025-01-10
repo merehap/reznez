@@ -224,6 +224,7 @@ impl Formatter for MesenFormatter {
         start_address: CpuAddress,
         _interrupt_text: String,
     ) -> String {
+        let maybe_peek = |address| nes.memory().maybe_cpu_peek(address);
         let peek = |address| nes.memory().cpu_peek(address);
 
         let cpu = nes.cpu();
@@ -244,7 +245,7 @@ impl Formatter for MesenFormatter {
             }
             ZP => {
                 let address = CpuAddress::zero_page(low);
-                let value = peek(address);
+                let value = maybe_peek(address).resolve(low);
                 argument_string.push_str(&format!("${low:02X} = ${value:02X}"));
             }
             ZPX => {
@@ -260,7 +261,7 @@ impl Formatter for MesenFormatter {
                 argument_string.push_str(&address.to_mesen_string());
                 match instruction.op_code() {
                     OpCode::JMP | OpCode::JSR => {}
-                    _ => argument_string.push_str(&format!(" = ${:02X}", peek(address))),
+                    _ => argument_string.push_str(&format!(" = ${:02X}", maybe_peek(address).resolve(high))),
                 }
             }
             AbX => {

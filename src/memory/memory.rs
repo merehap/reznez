@@ -6,6 +6,7 @@ use crate::memory::cpu::stack::Stack;
 use crate::memory::mapper::{Mapper, MapperParams};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
+use crate::memory::read_result::ReadResult;
 use crate::ppu::name_table::name_table::NameTable;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
@@ -110,6 +111,19 @@ impl Memory {
             &self.apu_registers,
             address,
         ).resolve(self.cpu_data_bus)
+    }
+
+    pub fn maybe_cpu_peek(&self, address: CpuAddress) -> ReadResult {
+        self.mapper.cpu_peek(
+            &self.mapper_params,
+            &self.cpu_internal_ram,
+            &self.ppu_internal_ram,
+            &self.oam,
+            &self.ports,
+            &self.ppu_registers,
+            &self.apu_registers,
+            address,
+        )
     }
 }
 
