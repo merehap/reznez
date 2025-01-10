@@ -250,11 +250,13 @@ impl Formatter for MesenFormatter {
             }
             ZPX => {
                 argument_string.push_str(&format!("${low:02X},X"));
-                let _address = CpuAddress::zero_page(low.wrapping_add(cpu.x_index()));
+                let address = CpuAddress::zero_page(low.wrapping_add(cpu.x_index()));
+                argument_string.push_str(&format!(" [{}] = ${:02X}", address.to_mesen_string(), peek(address)));
             }
             ZPY => {
                 argument_string.push_str(&format!("${low:02X},Y"));
-                let _address = CpuAddress::zero_page(low.wrapping_add(cpu.y_index()));
+                let address = CpuAddress::zero_page(low.wrapping_add(cpu.y_index()));
+                argument_string.push_str(&format!(" [{}] = ${:02X}", address.to_mesen_string(), peek(address)));
             }
             Abs => {
                 let address = CpuAddress::from_low_high(low, high);
@@ -267,7 +269,7 @@ impl Formatter for MesenFormatter {
             AbX => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(cpu.x_index());
-                let value = peek(address);
+                let value = maybe_peek(address).resolve(high);
                 argument_string.push_str(&format!(
                         "{},X [{}] = ${value:02X}",
                         start_address.to_mesen_string(),
