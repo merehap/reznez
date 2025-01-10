@@ -33,7 +33,7 @@ impl Dmc {
     pub fn write_control_byte(&mut self, value: u8) {
         self.irq_enabled = (value & 0b1000_0000) != 0;
         self.should_loop = (value & 0b0100_0000) != 0;
-        self.period = NTSC_PERIODS[(value & 0b0000_1111) as usize];
+        self.period = NTSC_PERIODS[(value & 0b0000_1111) as usize] - 1;
         if !self.irq_enabled {
             self.irq_pending = false;
         }
@@ -157,8 +157,8 @@ impl Default for Dmc {
             should_loop: false,
             volume: U7::default(),
             // TODO: Verify if this needs to be one less.
-            period: NTSC_PERIODS[0],
-            cycles_remaining: NTSC_PERIODS[0],
+            period: NTSC_PERIODS[0] - 1,
+            cycles_remaining: NTSC_PERIODS[0] - 1,
             sample_start_address: CpuAddress::new(0xC000),
             sample_address: CpuAddress::new(0xC000),
             sample_buffer: None,
