@@ -43,7 +43,7 @@ Automatically add registers from every layout? Maybe not since certain layouts w
 FAILING TESTS
 SHX/SXA: https://forums.nesdev.org/viewtopic.php?p=297765
 
-cpu_interrupts_v2
+cpu_interrupts_v2: Are these failures caused by when process_end_of_cpu_cycle is called?
 
 sprdma_and_dmc_dma
 tvpassfail/tv
