@@ -1,11 +1,13 @@
 use crate::apu::apu_registers::CycleParity;
 use crate::cpu::step::*;
-use crate::cpu::instruction::Instruction;
+use crate::cpu::instruction::{Instruction, OpCode};
 use crate::memory::cpu::cpu_address::CpuAddress;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 enum CpuMode {
-    Instruction,
+    Instruction {
+        op_code: OpCode,
+    },
     InterruptSequence { reset: bool },
     OamDma {
         suspended_mode: Box<CpuMode>,
@@ -24,6 +26,7 @@ enum CpuMode {
     BranchOops,
     // FIXME: If pending, OAM DMA should be triggered on Oops steps.
     Oops {
+        suspended_mode: Box<CpuMode>,
         suspended_steps: &'static [Step],
         suspended_step_index: usize,
     },
@@ -77,7 +80,7 @@ impl CpuModeState {
     }
 
     pub fn new_instruction_with_address(&self) -> Option<(Instruction, CpuAddress)> {
-        if self.mode != CpuMode::StartNext && self.mode != CpuMode::Instruction {
+        if !matches!(self.mode, CpuMode::StartNext | CpuMode::Instruction {..}) {
             return None;
         }
 
@@ -109,7 +112,7 @@ impl CpuModeState {
 
     pub fn instruction(&mut self, instruction: Instruction) {
         self.steps = instruction.steps();
-        self.next_mode = Some(CpuMode::Instruction);
+        self.next_mode = Some(CpuMode::Instruction { op_code: instruction.op_code() });
     }
 
     pub fn interrupt_sequence(&mut self) {
@@ -159,8 +162,9 @@ impl CpuModeState {
     // FIXME: If pending, OAM DMA should be triggered on Oops steps.
     pub fn oops(&mut self) {
         assert_eq!(self.next_mode, None, "next_mode should not already be set");
-        assert_eq!(self.mode, CpuMode::Instruction);
+        assert!(matches!(self.mode, CpuMode::Instruction {..}));
         self.next_mode = Some(CpuMode::Oops {
+            suspended_mode: Box::new(self.mode.clone()),
             suspended_steps: self.steps,
             suspended_step_index: self.step_index + 1,
         });
@@ -191,7 +195,7 @@ impl CpuModeState {
                 CpuMode::Instruction {..} => { /* steps will be set by the caller in this case. */ }
                 CpuMode::BranchTaken => self.steps = &[BRANCH_TAKEN_STEP],
                 CpuMode::Oops {..} => {
-                    assert_eq!(self.mode, CpuMode::Instruction);
+                    assert!(matches!(self.mode, CpuMode::Instruction {..}));
                     self.steps = &[OOPS_STEP];
                 }
                 CpuMode::BranchOops => self.steps = &[READ_OP_CODE_STEP],
@@ -209,7 +213,7 @@ impl CpuModeState {
 
         // Transition to a new mode since we're at the last index of the current one.
         self.mode = match self.mode.clone() {
-            CpuMode::Instruction | CpuMode::InterruptSequence {..} => {
+            CpuMode::Instruction {..} | CpuMode::InterruptSequence {..} => {
                 self.steps = &[READ_OP_CODE_STEP];
                 self.step_index = 0;
                 CpuMode::StartNext
@@ -230,10 +234,10 @@ impl CpuModeState {
             CpuMode::StartNext {..} => panic!(),
             CpuMode::BranchTaken => panic!(),
             CpuMode::BranchOops => panic!(),
-            CpuMode::Oops { suspended_steps, suspended_step_index } => {
+            CpuMode::Oops { suspended_mode, suspended_steps, suspended_step_index } => {
                 self.steps = suspended_steps;
                 self.step_index = suspended_step_index;
-                CpuMode::Instruction
+                *suspended_mode
             }
         };
     }
@@ -252,14 +256,14 @@ impl CpuModeState {
                 "BOOPS".into(),
             (CpuMode::Jammed, _) =>
                 "JAMMED".into(),
-            (CpuMode::StartNext, Some(CpuMode::Instruction)) =>
-                "INSTR0".into(),
+            (CpuMode::StartNext, Some(CpuMode::Instruction { op_code } )) =>
+                format!("{op_code:?}0"),
             (CpuMode::StartNext, Some(CpuMode::InterruptSequence { reset: false })) =>
                 "INT0".into(),
             (CpuMode::StartNext, _) =>
                 unreachable!(),
-            (CpuMode::Instruction, _) =>
-                format!("INSTR{}", self.step_index + 1),
+            (CpuMode::Instruction { op_code }, _) =>
+                format!("{:?}{}", op_code, self.step_index + 1),
             (CpuMode::InterruptSequence { reset: false }, _) =>
                 format!("INT{}", self.step_index + 1),
             (CpuMode::InterruptSequence { reset: true }, _) =>
