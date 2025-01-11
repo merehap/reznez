@@ -26,6 +26,7 @@ pub struct Config {
     pub stop_frame: Option<i64>,
     pub frame_dump: bool,
     pub joypad_enabled: bool,
+    pub cpu_step_formatting: CpuStepFormatting,
 }
 
 impl Config {
@@ -53,6 +54,7 @@ impl Config {
             stop_frame: opt.stop_frame,
             frame_dump: opt.frame_dump,
             joypad_enabled: !opt.disable_controllers,
+            cpu_step_formatting: opt.cpu_step_formatting,
         }
     }
 
@@ -124,6 +126,9 @@ pub struct Opt {
     #[structopt(name = "logtimings", long)]
     pub log_timings: bool,
 
+    #[structopt(name = "cpustepformatting", long, default_value = "data")]
+    pub cpu_step_formatting: CpuStepFormatting,
+
     #[structopt(name = "framedump", long)]
     pub frame_dump: bool,
 
@@ -143,11 +148,29 @@ pub enum GuiType {
 impl FromStr for GuiType {
     type Err = String;
 
-    fn from_str(value: &str) -> Result<GuiType, String> {
+    fn from_str(value: &str) -> Result<Self, String> {
         match value.to_lowercase().as_str() {
             "nogui" => Ok(GuiType::NoGui),
             "egui" => Ok(GuiType::Egui),
             _ => Err(format!("Invalid gui type: {value}")),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum CpuStepFormatting {
+    NoData,
+    Data,
+}
+
+impl FromStr for CpuStepFormatting {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, String> {
+        match value.to_lowercase().as_str() {
+            "nodata" => Ok(CpuStepFormatting::NoData),
+            "data" => Ok(CpuStepFormatting::Data),
+            _ => Err(format!("Invalid cpu step formatting: {value}")),
         }
     }
 }
