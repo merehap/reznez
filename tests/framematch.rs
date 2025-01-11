@@ -10,7 +10,7 @@ use rayon::prelude::*;
 use sscanf;
 use walkdir::WalkDir;
 
-use reznez::config::{Config, GuiType, Opt};
+use reznez::config::{Config, GuiType, Opt, CpuStepFormatting};
 use reznez::nes::Nes;
 use reznez::ppu::render::frame_rate::TargetFrameRate;
 use reznez::ppu::render::ppm::Ppm;
@@ -61,6 +61,7 @@ impl TestSummary {
                     log_apu_cycles: false,
                     log_apu_events: false,
                     log_timings: false,
+                    cpu_step_formatting: CpuStepFormatting::Data,
                     frame_dump: false,
                     analysis: false,
                     disable_controllers: false,

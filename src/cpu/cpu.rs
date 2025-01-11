@@ -2,6 +2,7 @@ use log::{info, log_enabled};
 use log::Level::Info;
 
 use crate::apu::apu_registers::CycleParity;
+use crate::config::CpuStepFormatting;
 use crate::cpu::cpu_mode::CpuModeState;
 use crate::cpu::step_action::{StepAction, From, To, Field};
 use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
@@ -42,11 +43,13 @@ pub struct Cpu {
     computed_address: CpuAddress,
     address_carry: i8,
     argument: u8,
+
+    step_formatting: CpuStepFormatting,
 }
 
 impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
-    pub fn new(memory: &mut CpuMemory, starting_cycle: i64) -> Cpu {
+    pub fn new(memory: &mut CpuMemory, starting_cycle: i64, step_formatting: CpuStepFormatting) -> Cpu {
         memory.set_cpu_cycle(starting_cycle);
 
         Cpu {
@@ -74,6 +77,8 @@ impl Cpu {
             computed_address: CpuAddress::ZERO,
             address_carry: 0,
             argument: 0,
+
+            step_formatting,
         }
     }
 
@@ -182,6 +187,9 @@ impl Cpu {
             }
         }
 
+        let rw_data_bus_value = memory.data_bus();
+        let rw_address_bus_value = self.address_bus;
+
         for &action in step.actions() {
             self.execute_step_action(memory, action, irq_pending);
         }
@@ -189,7 +197,15 @@ impl Cpu {
         if log_enabled!(target: "cpustep", Info) {
             let step_name = self.mode_state.step_name();
             let cpu_cycle = memory.cpu_cycle();
-            info!(target: "cpustep", "\t {step_name} PC: {original_program_counter}, Cycle: {cpu_cycle}, {step:?}");
+            match self.step_formatting {
+                CpuStepFormatting::NoData => {
+                    info!(target: "cpustep", "\t {step_name} PC: {original_program_counter}, Cycle: {cpu_cycle}, {step:?}");
+                }
+                CpuStepFormatting::Data => {
+                    info!(target: "cpustep", "  {step_name} PC: {original_program_counter}, Cycle: {cpu_cycle}, {}",
+                        step.format_with_bus_values(rw_address_bus_value, rw_data_bus_value));
+                }
+            }
         }
 
         if start_new_instruction {

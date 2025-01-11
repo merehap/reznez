@@ -53,7 +53,7 @@ impl Nes {
         let mut memory = Memory::new(mapper, mapper_params, ports, config.system_palette.clone());
 
         Nes {
-            cpu: Cpu::new(&mut memory.as_cpu_memory(), config.starting_cpu_cycle),
+            cpu: Cpu::new(&mut memory.as_cpu_memory(), config.starting_cpu_cycle, config.cpu_step_formatting),
             ppu: Ppu::new(config.ppu_clock),
             apu: Apu::new(config.disable_audio),
             memory,

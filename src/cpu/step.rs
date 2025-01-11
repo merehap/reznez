@@ -6,6 +6,7 @@ use crate::cpu::step_action::{From, To};
 use crate::cpu::step_action::StepAction;
 use crate::cpu::step_action::StepAction::*;
 use crate::cpu::step::Step::{Read, ReadField, Write, WriteField};
+use crate::memory::mapper::CpuAddress;
 
 pub static OAM_DMA_TRANSFER_STEPS: LazyLock<[Step; 512]> = LazyLock::new(|| {
     let read_write = &[
@@ -424,6 +425,24 @@ impl Step {
             Step::Write(to, _) => Step::Write(to, &[]),
             Step::ReadField(_field, from, _) => Step::Read(from, &[]),
             Step::WriteField(_field, to, _) => Step::Write(to, &[]),
+        }
+    }
+
+    pub fn format_with_bus_values(&self, address_bus: CpuAddress, data_bus: u8) -> String {
+        let address_bus = address_bus.to_mesen_string();
+        match *self {
+            Step::Read(from, cycle_actions) =>
+                format!("READ  [{address_bus}]=${data_bus:02X}  {:21} -> {:^18} {cycle_actions:?}",
+                    format!("{from:?}"), "(data bus)"),
+            Step::ReadField(field, from, cycle_actions) =>
+                format!("READ  [{address_bus}]=${data_bus:02X}  {:21} -> {:18} {cycle_actions:?}",
+                    format!("{from:?}"), format!("{field:?}")),
+            Step::Write(to, cycle_actions) =>
+                format!("WRITE [{address_bus}]=${data_bus:02X}  {:^21} -> {:18} {cycle_actions:?}",
+                    "(data bus)", format!("{to:?}")),
+            Step::WriteField(field, to, cycle_actions) =>
+                format!("WRITE [{address_bus}]=${data_bus:02X}  {:21} -> {:18} {cycle_actions:?}",
+                    format!("{field:?}"), format!("{to:?}")),
         }
     }
 }

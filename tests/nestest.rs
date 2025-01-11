@@ -7,7 +7,7 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use reznez::config::{Config, GuiType, Opt};
+use reznez::config::{Config, GuiType, Opt, CpuStepFormatting};
 use reznez::cpu::instruction::{Instruction, OpCode};
 use reznez::cpu::status::Status;
 use reznez::memory::cpu::cpu_address::CpuAddress;
@@ -44,6 +44,7 @@ fn nestest() {
         log_apu_events: false,
         log_oam_addr: false,
         log_timings: false,
+        cpu_step_formatting: CpuStepFormatting::Data,
         frame_dump: false,
         analysis: false,
         disable_controllers: false,
