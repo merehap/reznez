@@ -26,18 +26,18 @@ impl Mapper for Mapper050 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         match cpu_address & 0x4120 {
             0x4020 => {
-                println!("Setting PRG bank. Value: {value:b} . Address: 0x{cpu_address:04X}");
+                //println!("Setting PRG bank. Value: {value:b} . Address: 0x{cpu_address:04X}");
                 let prg_bank = splitbits_then_combine!(value, "....hllm",
                                                               "0000hmll");
 
                 let prg_bank2 = (value & 0x08) | ((value & 0x01) << 2) | ((value & 0x06) >> 1);
                 assert_eq!(prg_bank, prg_bank2);
 
-                println!("\tActual value : {prg_bank:b}");
+                //println!("\tActual value : {prg_bank:b}");
                 params.set_bank_register(P0, prg_bank);
             }
             0x4120 => {
-                println!("Setting IRQ. Value: {value}");
+                //println!("Setting IRQ. Value: {value}");
                 self.irq_enabled = value & 1 == 1;
                 if !self.irq_enabled {
                     self.irq_counter = 0;
