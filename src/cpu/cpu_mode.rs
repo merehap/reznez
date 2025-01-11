@@ -41,7 +41,6 @@ pub struct CpuModeState {
     current_instruction: Option<Instruction>,
 
     new_instruction_with_address: Option<(Instruction, CpuAddress)>,
-    was_current_step_suspended: bool,
 }
 
 impl CpuModeState {
@@ -54,7 +53,6 @@ impl CpuModeState {
             current_instruction: None,
 
             new_instruction_with_address: None,
-            was_current_step_suspended: false,
         }
     }
 
@@ -96,10 +94,7 @@ impl CpuModeState {
             self.current_instruction = Some(instruction);
         }
 
-        // Hack to match Mesen's DMC DMA-interrupted instruction logging.
-        if !self.was_current_step_suspended || self.step_index != 0 {
-            self.new_instruction_with_address = Some((instruction, address));
-        }
+        self.new_instruction_with_address = Some((instruction, address));
     }
 
     pub fn reset(&mut self) {
@@ -172,8 +167,6 @@ impl CpuModeState {
     }
 
     pub fn step(&mut self, cycle_parity: CycleParity) {
-        self.was_current_step_suspended = false;
-
         if let Some(next_mode) = self.next_mode.take() {
             match next_mode {
                 CpuMode::StartNext {..} => unreachable!(),
@@ -225,7 +218,6 @@ impl CpuModeState {
                 *suspended_mode
             }
             CpuMode::DmcDma { suspended_mode, suspended_steps, suspended_step_index } => {
-                self.was_current_step_suspended = true;
                 self.steps = suspended_steps;
                 self.step_index = suspended_step_index;
                 *suspended_mode
