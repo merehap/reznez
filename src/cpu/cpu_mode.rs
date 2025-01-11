@@ -180,8 +180,8 @@ impl CpuModeState {
                 }
                 CpuMode::DmcDma {..} => {
                     self.steps = match cycle_parity {
-                        CycleParity::Get => DMC_DMA_TRANSFER_STEPS,
-                        CycleParity::Put => ALIGNED_DMC_DMA_TRANSFER_STEPS,
+                        CycleParity::Get => ALIGNED_DMC_DMA_TRANSFER_STEPS,
+                        CycleParity::Put => DMC_DMA_TRANSFER_STEPS,
                     };
                 }
                 CpuMode::InterruptSequence { reset: false } => self.steps = BRK_STEPS,
