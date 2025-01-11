@@ -1,5 +1,4 @@
 ROADMAP
-Fix remaining issue with apu_test DMC basics.
 Remove GetSpritePatternHack in ppu.rs.
 Verify when the IRQ flag is supposed to be cleared. An update to the location of ClearIrq caused the apu_test jitter to have a different result.
        See newoutput: E24C  AND #$40                        A:10 X:00 Y:00 S:FD P:nv--dIzc V:242 H:117 Fr:4 Cycle:1
