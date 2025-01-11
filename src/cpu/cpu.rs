@@ -202,7 +202,7 @@ impl Cpu {
                     info!(target: "cpustep", "\t {step_name} PC: {original_program_counter}, Cycle: {cpu_cycle}, {step:?}");
                 }
                 CpuStepFormatting::Data => {
-                    info!(target: "cpustep", "  {step_name} PC: {original_program_counter}, Cycle: {cpu_cycle}, {}",
+                    info!(target: "cpustep", "  {step_name} PC: {original_program_counter}, Cycle: {cpu_cycle:>5}, {}",
                         step.format_with_bus_values(rw_address_bus_value, rw_data_bus_value));
                 }
             }
@@ -422,7 +422,7 @@ impl Cpu {
                 }
             }
 
-            StepAction::IncrementProgramCounter => {
+            StepAction::IncrementPC => {
                 // FIXME : Rather than suppressing this here, this StepAction should have been
                 // stripped out earlier.
                 if !self.mode_state.should_suppress_next_instruction_start() && !self.mode_state.is_interrupt_sequence_active() {
@@ -514,7 +514,7 @@ impl Cpu {
                 self.computed_address = self.address_bus.offset_high(self.address_carry);
                 self.address_carry = 0;
             }
-            StepAction::AddCarryToProgramCounter => {
+            StepAction::AddCarryToPC => {
                 if self.address_carry != 0 {
                     self.program_counter = self.program_counter.offset_high(self.address_carry);
                     self.address_carry = 0;
