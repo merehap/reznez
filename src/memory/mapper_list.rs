@@ -294,6 +294,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // HES NTD-8
         113 => m::mapper113::Mapper113.supported(),
 
+        // Duplicate
+        122 => m::mapper184::Mapper184.supported(),
+
         // Monty on the Run (Whirlwind Manu's FDS conversion)
         125 => m::mapper125::Mapper125.supported(),
 
@@ -313,17 +316,23 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // Sachen SA-0036 (Taiwan Mahjong 16)
         149 => m::mapper149::Mapper149.supported(),
 
+        // Duplicate
+        151 => m::mapper075::Mapper075::new().supported(),
         // TAITO-74*161/161/32 and BANDAI-74*161/161/32
         152 => m::mapper152::Mapper152.supported(),
 
         // NAMCOT-3453 (only Devil Man)
         154 => m::mapper154::Mapper154::new(cartridge).supported(),
 
+        // Duplicate. Hanjuku Eiyuu (J).
+        161 => m::mapper001_0::Mapper001_0::new(cartridge).supported(),
+
         // Hengedianzi (恒格电子) two-screen mirroring
         177 => m::mapper177::Mapper177.supported(),
 
         // UNROM 74HC08 (only Crazy Climber)
         180 => m::mapper180::Mapper180.supported(),
+        181 => UnassignedMapper,
 
         // Sunsoft-1
         184 => m::mapper184::Mapper184.supported(),
