@@ -36,6 +36,7 @@ const LAYOUT: Layout = Layout::builder()
 
 // Konami VRC7a
 // TODO: Expansion audio.
+#[derive(Default)]
 pub struct Mapper085_2 {
     irq_state: VrcIrqState,
 }
@@ -80,11 +81,5 @@ impl Mapper for Mapper085_2 {
 
     fn layout(&self) -> Layout {
         LAYOUT
-    }
-}
-
-impl Mapper085_2 {
-    pub fn new() -> Self {
-        Self { irq_state: VrcIrqState::new() }
     }
 }

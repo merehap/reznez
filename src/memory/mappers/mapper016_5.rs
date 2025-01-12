@@ -27,6 +27,7 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // LZ93D50 ASIC
+#[derive(Default)]
 pub struct Mapper016_5 {
     irq_pending: bool,
     irq_counter_enabled: bool,
@@ -84,16 +85,5 @@ impl Mapper for Mapper016_5 {
 
     fn layout(&self) -> Layout {
         LAYOUT
-    }
-}
-
-impl Mapper016_5 {
-    pub fn new() -> Self {
-        Self {
-            irq_pending: false,
-            irq_counter_enabled: false,
-            irq_counter_latch: 0,
-            irq_counter: 0,
-        }
     }
 }

@@ -29,6 +29,7 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // SEROM. MMC1 that doesn't support PRG bank switching.
+#[derive(Default)]
 pub struct Mapper001_5 {
     shift_register: ShiftRegister,
 }
@@ -63,11 +64,5 @@ impl Mapper for Mapper001_5 {
 
     fn layout(&self) -> Layout {
         LAYOUT
-    }
-}
-
-impl Mapper001_5 {
-    pub fn new() -> Self {
-        Self { shift_register: ShiftRegister::new() }
     }
 }

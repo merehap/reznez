@@ -5,10 +5,6 @@ pub struct ShiftRegister {
 }
 
 impl ShiftRegister {
-    pub fn new() -> Self {
-        Self { value: EMPTY_SHIFT_REGISTER }
-    }
-
     pub fn shift(&mut self, write_value: u8) -> ShiftStatus {
         if write_value & 0b1000_0000 != 0 {
             self.value = EMPTY_SHIFT_REGISTER;
@@ -27,6 +23,12 @@ impl ShiftRegister {
         let finished_value = self.value;
         self.value = EMPTY_SHIFT_REGISTER;
         ShiftStatus::Done { finished_value }
+    }
+}
+
+impl Default for ShiftRegister {
+    fn default() -> Self {
+        Self { value: EMPTY_SHIFT_REGISTER }
     }
 }
 

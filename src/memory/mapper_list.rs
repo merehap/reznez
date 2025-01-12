@@ -42,7 +42,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
             1 | 2 | 4 => ReassignedSubmapper { correct_mapper: 1, correct_submapper: 0 },
             3 => ReassignedSubmapper { correct_mapper: 155, correct_submapper: 0 },
             // SEROM, SHROM, SH1ROM
-            5 => m::mapper001_5::Mapper001_5::new().supported(),
+            5 => m::mapper001_5::Mapper001_5::default().supported(),
             // 2ME
             6 => TodoSubmapper,
             _ => UnassignedSubmapper,
@@ -114,14 +114,14 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
             2 => ReassignedSubmapper { correct_mapper: 157, correct_submapper: 0 },
             3 => ReassignedSubmapper { correct_mapper: 153, correct_submapper: 0 },
             // FCG-1
-            4 => m::mapper016_4::Mapper016_4::new().supported(),
+            4 => m::mapper016_4::Mapper016_4::default().supported(),
             // LZ93D50
-            5 => m::mapper016_5::Mapper016_5::new().supported(),
+            5 => m::mapper016_5::Mapper016_5::default().supported(),
             _ => UnassignedSubmapper,
         }
 
         // Jaleco SS 88006
-        18 => m::mapper018::Mapper018::new().supported(),
+        18 => m::mapper018::Mapper018::default().supported(),
 
         // Famicom Disk System
         20 => panic!("Mapper 20 is only used for testing FDS images."),
@@ -192,13 +192,13 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // FDS games hacked into cartridge form
         42 => m::mapper042::Mapper042::new(cartridge.chr_ram_size()).supported(),
         // TONY-I and YS-612 (FDS games in cartridge form)
-        43 => m::mapper043::Mapper043::new().supported(),
+        43 => m::mapper043::Mapper043::default().supported(),
 
         // Rumble Station
-        46 => m::mapper046::Mapper046::new().supported(),
+        46 => m::mapper046::Mapper046::default().supported(),
 
         // N-32 conversion of Super Mario Bros. 2 (J). PCB code 761214.
-        50 => m::mapper050::Mapper050::new().supported(),
+        50 => m::mapper050::Mapper050::default().supported(),
 
         // BTL-MARIO1-MALEE2
         55 => m::mapper055::Mapper055.supported(),
@@ -217,7 +217,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // RAMBO-1
         64 => m::mapper064::Mapper064::new().supported(),
         // Irem's H3001
-        65 => m::mapper065::Mapper065::new().supported(),
+        65 => m::mapper065::Mapper065::default().supported(),
         // GxROM (GNROM and MHROM)
         66 => m::mapper066::Mapper066.supported(),
 
@@ -237,7 +237,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         }
 
         // Konami VRC1
-        75 => m::mapper075::Mapper075::new().supported(),
+        75 => m::mapper075::Mapper075::default().supported(),
         // NAMCOT-3446
         76 => m::mapper076::Mapper076::new().supported(),
 
@@ -260,8 +260,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         84 => UnassignedMapper,
         85 => match submapper_number {
             0 => UnspecifiedSubmapper,
-            1 => m::mapper085_1::Mapper085_1::new().supported(),
-            2 => m::mapper085_2::Mapper085_2::new().supported(),
+            1 => m::mapper085_1::Mapper085_1::default().supported(),
+            2 => m::mapper085_2::Mapper085_2::default().supported(),
             _ => UnassignedSubmapper,
         }
         // Jaleco JF-13
@@ -317,7 +317,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         149 => m::mapper149::Mapper149.supported(),
 
         // Duplicate
-        151 => m::mapper075::Mapper075::new().supported(),
+        151 => m::mapper075::Mapper075::default().supported(),
         // TAITO-74*161/161/32 and BANDAI-74*161/161/32
         152 => m::mapper152::Mapper152.supported(),
 
@@ -338,7 +338,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         184 => m::mapper184::Mapper184.supported(),
         // CNROM with CHR RAM disable
         185 => match submapper_number {
-            0 => m::mapper185_0::Mapper185_0::new().supported(),
+            0 => m::mapper185_0::Mapper185_0::default().supported(),
             4 => m::mapper185_4::MAPPER185_4.supported(),
             5 => m::mapper185_5::MAPPER185_5.supported(),
             6 => m::mapper185_6::MAPPER185_6.supported(),

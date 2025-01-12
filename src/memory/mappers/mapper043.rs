@@ -22,6 +22,7 @@ const LAYOUT: Layout = Layout::builder()
 
 // TONY-I and YS-612 (FDS games in cartridge form).
 // TODO: Untested. Need test ROM. In particular, the 0x5000 ROM window might not work.
+#[derive(Default)]
 pub struct Mapper043 {
     irq_enabled: bool,
     irq_pending: bool,
@@ -71,15 +72,5 @@ impl Mapper for Mapper043 {
 
     fn layout(&self) -> Layout {
         LAYOUT
-    }
-}
-
-impl Mapper043 {
-    pub fn new() -> Self {
-        Self {
-            irq_enabled: false,
-            irq_pending: false,
-            irq_counter: 0.into(),
-        }
     }
 }

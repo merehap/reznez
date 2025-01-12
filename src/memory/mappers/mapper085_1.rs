@@ -35,6 +35,7 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // Konami VRC7b
+#[derive(Default)]
 pub struct Mapper085_1 {
     irq_state: VrcIrqState,
 }
@@ -77,11 +78,5 @@ impl Mapper for Mapper085_1 {
 
     fn layout(&self) -> Layout {
         LAYOUT
-    }
-}
-
-impl Mapper085_1 {
-    pub fn new() -> Self {
-        Self { irq_state: VrcIrqState::new() }
     }
 }

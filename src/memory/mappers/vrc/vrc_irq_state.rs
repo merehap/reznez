@@ -85,6 +85,12 @@ impl VrcIrqState {
     }
 }
 
+impl Default for VrcIrqState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(PartialEq, Debug)]
 enum IrqMode {
     Scanline,

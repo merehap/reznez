@@ -27,6 +27,7 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // FCG-1 ASIC
+#[derive(Default)]
 pub struct Mapper016_4 {
     irq_pending: bool,
     irq_counter_enabled: bool,
@@ -80,15 +81,5 @@ impl Mapper for Mapper016_4 {
 
     fn layout(&self) -> Layout {
         LAYOUT
-    }
-}
-
-impl Mapper016_4 {
-    pub fn new() -> Self {
-        Self {
-            irq_pending: false,
-            irq_counter_enabled: false,
-            irq_counter: 0,
-        }
     }
 }

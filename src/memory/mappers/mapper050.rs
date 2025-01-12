@@ -16,6 +16,7 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // N-32 conversion of Super Mario Bros. 2 (J). PCB code 761214.
+#[derive(Default)]
 pub struct Mapper050 {
     irq_enabled: bool,
     irq_counter: u16,
@@ -66,15 +67,5 @@ impl Mapper for Mapper050 {
 
     fn layout(&self) -> Layout {
         LAYOUT
-    }
-}
-
-impl Mapper050 {
-    pub fn new() -> Self {
-        Mapper050 {
-            irq_enabled: false,
-            irq_counter: 0,
-            irq_pending: false,
-        }
     }
 }

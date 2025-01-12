@@ -21,6 +21,7 @@ const DISABLED_CHR_ROM: u8 = 0;
 const READABLE_CHR_ROM: u8 = 1;
 
 // CNROM with CHR disable
+#[derive(Default)]
 pub struct Mapper185_0 {
     ppu_data_read_count: u8,
 }
@@ -46,11 +47,5 @@ impl Mapper for Mapper185_0 {
 
     fn layout(&self) -> Layout {
         LAYOUT
-    }
-}
-
-impl Mapper185_0 {
-    pub fn new() -> Self {
-        Self { ppu_data_read_count: 0 }
     }
 }

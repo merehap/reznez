@@ -104,7 +104,7 @@ impl Mapper001_0 {
 
         assert_eq!(board, Board::Standard, "MMC1 {board:?} is not yet supported.");
 
-        Self { shift_register: ShiftRegister::new() }
+        Self { shift_register: ShiftRegister::default() }
     }
 }
 

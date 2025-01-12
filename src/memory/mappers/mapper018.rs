@@ -31,6 +31,8 @@ const LAYOUT: Layout = Layout::builder()
 // Jaleco SS 88006
 // TODO: Expansion Audio
 // TODO: PRG RAM chip enable/disable (remove work_ram_write_enabled)
+// TODO: Verify work_ram_write_enabled = false at power-on.
+#[derive(Default)]
 pub struct Mapper018 {
     work_ram_write_enabled: bool,
 
@@ -128,21 +130,6 @@ impl Mapper for Mapper018 {
 
     fn layout(&self) -> Layout {
         LAYOUT
-    }
-}
-
-impl Mapper018 {
-    pub fn new() -> Self {
-        Self {
-            // TODO: Verify this power-on value.
-            work_ram_write_enabled: false,
-
-            irq_enabled: false,
-            irq_pending: false,
-            irq_counter: 0,
-            irq_counter_mask: 0,
-            irq_reload_value: 0,
-        }
     }
 }
 

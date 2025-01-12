@@ -21,6 +21,7 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // VRC1
+#[derive(Default)]
 pub struct Mapper075 {
     chr_left_high_bit: u8,
     chr_right_high_bit: u8,
@@ -58,14 +59,5 @@ impl Mapper for Mapper075 {
 
     fn layout(&self) -> Layout {
         LAYOUT
-    }
-}
-
-impl Mapper075 {
-    pub fn new() -> Self {
-        Self {
-            chr_left_high_bit: 0b0000_0000,
-            chr_right_high_bit: 0b0000_0000,
-        }
     }
 }

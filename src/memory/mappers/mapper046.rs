@@ -14,6 +14,7 @@ const LAYOUT: Layout = Layout::builder()
 
 // Rumble Station (Color Dreams).
 // NOTE: Untested.
+#[derive(Default)]
 pub struct Mapper046 {
     prg_high_bits: u8,
     chr_high_bits: u8,
@@ -41,14 +42,5 @@ impl Mapper for Mapper046 {
 
     fn layout(&self) -> Layout {
         LAYOUT
-    }
-}
-
-impl Mapper046 {
-    pub fn new() -> Self {
-        Self {
-            prg_high_bits: 0b0000_0000,
-            chr_high_bits: 0b0000_0000,
-        }
     }
 }

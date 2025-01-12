@@ -41,6 +41,7 @@ const CHR_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
 
 // Irem's H3001
 // FIXME: Daiku no Gen San 2 - small scanline flickering during intro.
+#[derive(Default)]
 pub struct Mapper065 {
     irq_enabled: bool,
     irq_pending: bool,
@@ -98,16 +99,5 @@ impl Mapper for Mapper065 {
 
     fn layout(&self) -> Layout {
         LAYOUT
-    }
-}
-
-impl Mapper065 {
-    pub fn new() -> Self {
-        Self {
-            irq_enabled: false,
-            irq_pending: false,
-            irq_counter: 0,
-            irq_reload_value: 0,
-        }
     }
 }

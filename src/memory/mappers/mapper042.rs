@@ -70,7 +70,7 @@ impl Mapper for Mapper042 {
 }
 
 impl Mapper042 {
-    pub fn new(chr_ram_size: u32) -> Mapper042 {
+    pub fn new(chr_ram_size: u32) -> Self {
         const CHR_RAM_SIZE: u32 = 8 * KIBIBYTE;
 
         let chr_board = match chr_ram_size {
@@ -79,7 +79,7 @@ impl Mapper042 {
             _ => panic!("Bad CHR RAM size for mapper 42: {chr_ram_size}"),
         };
 
-        Mapper042 {
+        Self {
             chr_board,
             irq_enabled: false,
             irq_counter: 0.into(),
