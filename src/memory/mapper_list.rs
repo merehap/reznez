@@ -188,7 +188,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         39 => m::mapper039::Mapper039::new().supported(),
         // NTDEC 2722 and NTDEC 2752 PCB and imitations
         40 => m::mapper040::Mapper040::default().supported(),
-
+        // Caltron 6-in-1
+        41 => m::mapper041::Mapper041::default().supported(),
         // FDS games hacked into cartridge form
         42 => m::mapper042::Mapper042::new(cartridge.chr_ram_size()).supported(),
         // TONY-I and YS-612 (FDS games in cartridge form)
