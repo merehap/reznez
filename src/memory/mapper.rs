@@ -17,6 +17,7 @@ pub use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 pub use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 pub use crate::util::unit::KIBIBYTE;
 
+use log::info;
 use num_traits::FromPrimitive;
 
 use crate::apu::apu_registers::ApuRegisters;
@@ -498,6 +499,9 @@ impl MapperParams {
 
     pub fn set_name_table_mirroring(&mut self, mirroring_index: u8) {
         self.name_table_mirroring = self.name_table_mirrorings[usize::from(mirroring_index)];
+        info!(target: "mapperupdates",
+            "Setting NameTableMirroring to {:?} (index {mirroring_index}).",
+            self.name_table_mirroring);
     }
 
     pub fn prg_memory(&self) -> &PrgMemory {
@@ -505,6 +509,7 @@ impl MapperParams {
     }
 
     pub fn set_prg_layout(&mut self, index: u8) {
+        info!(target: "mapperupdates", "Updating PRG layout to index {index}.");
         self.prg_memory.set_layout(index);
     }
 
@@ -517,7 +522,10 @@ impl MapperParams {
     }
 
     pub fn set_ram_status(&mut self, id: RamStatusRegisterId, index: u8) {
-        self.bank_registers.set_ram_status(id, self.ram_statuses[index as usize]);
+        let ram_status = self.ram_statuses[index as usize];
+        self.bank_registers.set_ram_status(id, ram_status);
+        info!(target: "mapperupdates",
+            "Setting RamStatus register {id:?} to {ram_status:?} (index {index}).");
     }
 
     pub fn chr_memory(&self) -> &ChrMemory {
@@ -529,6 +537,7 @@ impl MapperParams {
     }
 
     pub fn set_chr_layout(&mut self, index: u8) {
+        info!(target: "mapperupdates", "Setting CHR layout to index {index}.");
         self.chr_memory.set_layout(index);
     }
 
@@ -545,16 +554,21 @@ impl MapperParams {
         id: BankRegisterId,
         value: INDEX,
     ) {
-        self.bank_registers.set(id, BankIndex::from_u16(value.into()));
+        let value = value.into();
+        info!(target: "mapperupdates", "Setting BankRegister {id:?} to {}.", value);
+        self.bank_registers.set(id, BankIndex::from_u16(value));
     }
 
     pub fn set_bank_register_bits(
         &mut self, id: BankRegisterId, new_value: u16, mask: u16) {
 
         self.bank_registers.set_bits(id, new_value, mask);
+        info!(target: "mapperupdates", "Setting bits of BankRegister {id:?}. New value: {:?}.",
+            self.bank_registers.get(id));
     }
 
     pub fn set_meta_register(&mut self, id: MetaRegisterId, value: BankRegisterId) {
+        info!(target: "mapperupdates", "Setting Meta BankRegister {id:?} to {value:?}.");
         self.bank_registers.set_meta(id, value);
     }
 
@@ -564,6 +578,8 @@ impl MapperParams {
         updater: &dyn Fn(u16) -> u16,
     ) {
         self.bank_registers.update(id, updater);
+        info!(target: "mapperupdates", "Updating BankRegister {id:?} to {:?}.",
+            self.bank_registers.get(id));
     }
 }
 

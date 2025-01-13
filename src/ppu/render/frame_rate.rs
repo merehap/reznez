@@ -6,10 +6,10 @@ pub struct FrameRate(f64);
 
 #[rustfmt::skip]
 impl FrameRate {
-    const NTSC:  FrameRate = FrameRate(60.0988);
-    const PAL:   FrameRate = FrameRate(50.0070);
-    const DENDY: FrameRate = FrameRate(50.0070);
-    const RGB:   FrameRate = FrameRate(60.0985);
+    pub const NTSC:  FrameRate = FrameRate(60.0988);
+    pub const PAL:   FrameRate = FrameRate(50.0070);
+    pub const DENDY: FrameRate = FrameRate(50.0070);
+    pub const RGB:   FrameRate = FrameRate(60.0985);
 
     pub fn new(value: f64) -> Result<FrameRate, String> {
         if value.is_normal() {

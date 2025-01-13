@@ -74,6 +74,7 @@ fn logger(opt: &Opt) -> Logger {
         log_apu_cycles,
         log_apu_events,
         log_oam_addr: opt.log_oam_addr,
+        log_mapper_updates: opt.log_mapper_updates,
         log_timings: opt.log_timings,
     }
 }

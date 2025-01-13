@@ -14,7 +14,7 @@ use crate::gui::no_gui::NoGui;
 use crate::memory::raw_memory::RawMemory;
 use crate::ppu::clock::Clock;
 use crate::ppu::palette::system_palette::SystemPalette;
-use crate::ppu::render::frame_rate::TargetFrameRate;
+use crate::ppu::render::frame_rate::{FrameRate, TargetFrameRate};
 
 pub struct Config {
     pub cartridge: Cartridge,
@@ -66,7 +66,7 @@ impl Config {
     }
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Clone, Debug, StructOpt)]
 #[structopt(name = "REZNEZ", about = "The ultra-accurate NES emulator.")]
 pub struct Opt {
     #[structopt(name = "ROM", parse(from_os_str))]
@@ -123,6 +123,9 @@ pub struct Opt {
     #[structopt(name = "logoamaddr", long)]
     pub log_oam_addr: bool,
 
+    #[structopt(name = "logmapperupdates", long)]
+    pub log_mapper_updates: bool,
+
     #[structopt(name = "logtimings", long)]
     pub log_timings: bool,
 
@@ -139,7 +142,38 @@ pub struct Opt {
     pub disable_controllers: bool,
 }
 
-#[derive(Debug)]
+impl Opt {
+    pub fn new(rom_path: PathBuf) -> Self {
+        Self {
+            rom_path,
+            gui: GuiType::Egui,
+            stop_frame: None,
+            target_frame_rate: TargetFrameRate::Value(FrameRate::NTSC),
+            disable_audio: false,
+            log_frames: false,
+            log_cpu_all: false,
+            log_ppu_all: false,
+            log_apu_all: false,
+            log_cpu_instructions: false,
+            log_cpu_flow_control: false,
+            log_cpu_steps: false,
+            log_ppu_stages: false,
+            log_ppu_flags: false,
+            log_ppu_steps: false,
+            log_oam_addr: false,
+            log_apu_cycles: false,
+            log_apu_events: false,
+            log_mapper_updates: false,
+            log_timings: false,
+            cpu_step_formatting: CpuStepFormatting::Data,
+            frame_dump: false,
+            analysis: false,
+            disable_controllers: false,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum GuiType {
     NoGui,
     Egui,

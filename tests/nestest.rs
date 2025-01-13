@@ -7,7 +7,7 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use reznez::config::{Config, GuiType, Opt, CpuStepFormatting};
+use reznez::config::{Config, GuiType, Opt};
 use reznez::cpu::instruction::{Instruction, OpCode};
 use reznez::cpu::status::Status;
 use reznez::memory::cpu::cpu_address::CpuAddress;
@@ -25,43 +25,18 @@ fn nestest() {
         .map(|line| State::from_text(line.unwrap()));
 
     let opt = Opt {
-        rom_path: PathBuf::from("tests/roms/nestest.nes"),
         gui: GuiType::NoGui,
-        stop_frame: None,
         target_frame_rate: TargetFrameRate::Unbounded,
         disable_audio: true,
-        log_frames: false,
         log_cpu_all: true,
-        log_ppu_all: false,
-        log_apu_all: false,
-        log_cpu_instructions: false,
-        log_cpu_flow_control: false,
-        log_cpu_steps: false,
-        log_ppu_stages: false,
-        log_ppu_flags: false,
-        log_ppu_steps: false,
-        log_apu_cycles: false,
-        log_apu_events: false,
-        log_oam_addr: false,
-        log_timings: false,
-        cpu_step_formatting: CpuStepFormatting::Data,
-        frame_dump: false,
-        analysis: false,
-        disable_controllers: false,
+        ..Opt::new(PathBuf::from("tests/roms/nestest.nes"))
     };
 
     logger::init(Logger {
-        log_frames: false,
         log_cpu_instructions: true,
         log_cpu_flow_control: true,
         log_cpu_steps: true,
-        log_ppu_stages: false,
-        log_ppu_flags: false,
-        log_ppu_steps: false,
-        log_apu_cycles: false,
-        log_apu_events: false,
-        log_oam_addr: false,
-        log_timings: false,
+        ..Logger::default()
     }).unwrap();
 
     let mut config = Config::new(&opt);

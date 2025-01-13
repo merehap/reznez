@@ -10,7 +10,7 @@ use rayon::prelude::*;
 use sscanf;
 use walkdir::WalkDir;
 
-use reznez::config::{Config, GuiType, Opt, CpuStepFormatting};
+use reznez::config::{Config, GuiType, Opt};
 use reznez::nes::Nes;
 use reznez::ppu::render::frame_rate::TargetFrameRate;
 use reznez::ppu::render::ppm::Ppm;
@@ -42,30 +42,12 @@ impl TestSummary {
                 assert!(!frame_entries.is_empty());
 
                 let opt = Opt {
-                    rom_path: rom_entry.path.clone(),
                     gui: GuiType::NoGui,
-                    stop_frame: None,
                     target_frame_rate: TargetFrameRate::Unbounded,
                     disable_audio: true,
-                    log_frames: false,
-                    log_cpu_all: false,
-                    log_ppu_all: false,
-                    log_apu_all: false,
-                    log_cpu_instructions: false,
-                    log_cpu_flow_control: false,
-                    log_cpu_steps: false,
-                    log_ppu_stages: false,
-                    log_ppu_flags: false,
-                    log_ppu_steps: false,
-                    log_oam_addr: false,
-                    log_apu_cycles: false,
-                    log_apu_events: false,
-                    log_timings: false,
-                    cpu_step_formatting: CpuStepFormatting::Data,
-                    frame_dump: false,
-                    analysis: false,
-                    disable_controllers: false,
+                    ..Opt::new(rom_entry.path.clone())
                 };
+
                 let mut nes = Nes::new(&Config::new(&opt));
                 nes.mute();
 

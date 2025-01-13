@@ -5,6 +5,7 @@ pub fn init(logger: Logger) -> Result<(), SetLoggerError> {
         .map(|()| log::set_max_level(LevelFilter::Info))
 }
 
+#[derive(Default)]
 pub struct Logger {
     pub log_frames: bool,
     pub log_cpu_instructions: bool,
@@ -16,6 +17,7 @@ pub struct Logger {
     pub log_apu_cycles: bool,
     pub log_apu_events: bool,
     pub log_oam_addr: bool,
+    pub log_mapper_updates: bool,
     pub log_timings: bool,
 }
 
@@ -33,6 +35,7 @@ impl log::Log for Logger {
             "apucycles" => self.log_apu_cycles,
             "apuevents" => self.log_apu_events,
             "oamaddr" => self.log_oam_addr,
+            "mapperupdates" => self.log_mapper_updates,
             "timings" => self.log_timings,
             target => {
                 let chunks: Vec<&str> = target.split("::").collect();
