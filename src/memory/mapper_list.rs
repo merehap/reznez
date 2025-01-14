@@ -204,6 +204,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // BTL-MARIO1-MALEE2
         55 => m::mapper055::Mapper055.supported(),
 
+        // NROM-/CNROM-based multicarts
+        58 => m::mapper058::Mapper058.supported(),
+
         // NTDEC 0324 PCB
         61 => m::mapper061::Mapper061::new(cartridge.chr_ram_size()).supported(),
         // Super 700-in-1
@@ -365,6 +368,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
             2 => m::mapper210_2::Mapper210_2.supported(),
             _ => UnassignedSubmapper,
         }
+
+        // Duplicate
+        213 => m::mapper058::Mapper058.supported(),
 
         // Quattro
         232 => match submapper_number {

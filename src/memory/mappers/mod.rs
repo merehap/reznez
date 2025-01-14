@@ -63,6 +63,8 @@ pub mod mapper050;
 
 pub mod mapper055;
 
+pub mod mapper058;
+
 pub mod mapper061;
 pub mod mapper062;
 pub mod mapper063_0;
