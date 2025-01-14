@@ -73,17 +73,13 @@ impl Gui for EguiGui {
         let mut pause = false;
         event_loop.run(move |event, event_loop_window_target, control_flow| {
             if world.input.update(&event) {
-                if world.input.key_pressed(VirtualKeyCode::Escape) {
-                    *control_flow = ControlFlow::Exit;
-                    return;
-                }
-
                 if world.input.key_pressed(VirtualKeyCode::F12) {
                     world.nes.reset();
                 }
 
                 if world.input.key_pressed(VirtualKeyCode::Pause)
                     || world.input.key_pressed(VirtualKeyCode::P)
+                    || world.input.key_pressed(VirtualKeyCode::Escape)
                 {
                     pause = !pause;
                 }

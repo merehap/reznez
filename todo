@@ -50,7 +50,6 @@ tvpassfail/tv
 apu_mixer
 dmc_dma_during_read4
 dmc_tests
-dpcmletterbox
 
 MMC3
 MMC5
