@@ -256,7 +256,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         }
         // NINA-03 and NINA-06
         79 => m::mapper079::Mapper079.supported(),
-
+        // Taito's X1-005
+        80 => m::mapper080::Mapper080.supported(),
+        // Super Gun from NTDEC
         81 => m::mapper081::Mapper081.supported(),
         // Taito X1-017
         82 => m::mapper082::Mapper082.supported(),

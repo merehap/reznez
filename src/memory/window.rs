@@ -13,7 +13,8 @@ pub struct Window {
 impl Window {
     pub const fn new(start: u16, end: u16, size: u32, bank: Bank) -> Window {
         assert!(end > start);
-        assert!(end as u32 - start as u32 + 1 == size);
+        let actual_size = end as u32 - start as u32 + 1;
+        assert!(actual_size == size);
 
         Window { start, end, bank }
     }
