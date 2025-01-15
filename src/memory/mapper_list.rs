@@ -330,6 +330,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // NAMCOT-3453 (only Devil Man)
         154 => m::mapper154::Mapper154::new(cartridge).supported(),
 
+        // Almost a duplicate, but has different EEPROM behavior (not implemented yet).
+        159 => m::mapper016_4::Mapper016_4::default().supported(),
+
         // Duplicate. Hanjuku Eiyuu (J).
         161 => m::mapper001_0::Mapper001_0::new(cartridge).supported(),
 

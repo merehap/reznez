@@ -76,6 +76,9 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
 
     // Lagrange Point
     (2905171667, 869154800, 85, 2),
+
+    // Dragon Ball Z - Kyoushuu! Saiya Jin (J)
+    (3020245841, 1651092634, 16, 5)
 ];
 
 pub struct HeaderDb {

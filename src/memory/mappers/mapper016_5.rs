@@ -27,6 +27,8 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // LZ93D50 ASIC
+// FIXME: Dragon Ball Z - Kyoushuu! Saiya Jin (J) freezes after joypad input. Possibly
+// EEPROM-related since it's supposed to be mapper 159, not 16.
 #[derive(Default)]
 pub struct Mapper016_5 {
     irq_pending: bool,
@@ -68,7 +70,7 @@ impl Mapper for Mapper016_5 {
                 self.irq_counter_latch &= 0b0000_0000_1111_1111;
                 self.irq_counter_latch |= u16::from(value) << 8;
             }
-            0x800D => todo!("Submapper 5 EEPROM Control."),
+            0x800D => { /* TODO: Submapper 5 EEPROM Control. */ },
             0x800E..=0x9FFF => { /* Do nothing. */ }
             0xA000..=0xFFFF => { /* Do nothing. */ }
         }
