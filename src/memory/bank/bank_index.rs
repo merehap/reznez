@@ -1,4 +1,5 @@
 use crate::memory::bank::bank::RamStatusRegisterId;
+use crate::memory::ppu::vram::VramSide;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct BankIndex(u16);
@@ -45,41 +46,47 @@ impl From<u8> for BankIndex {
 
 #[derive(Debug)]
 pub struct BankRegisters {
-    registers: [BankIndex; 18],
+    registers: [BankLocation; 18],
     meta_registers: [BankRegisterId; 2],
-    ram_statuses: [RamStatus; 3],
+    ram_statuses: [RamStatus; 15],
 }
 
 impl BankRegisters {
-    pub fn new() -> BankRegisters {
-        BankRegisters {
-            registers: [BankIndex::FIRST; 18],
+    pub fn new() -> Self {
+        Self {
+            registers: [BankLocation::Index(BankIndex(0)); 18],
             // Meta registers are only used for CHR currently.
             meta_registers: [BankRegisterId::C0, BankRegisterId::C0],
-            ram_statuses: [RamStatus::ReadWrite, RamStatus::ReadWrite, RamStatus::ReadWrite],
+            ram_statuses: [RamStatus::ReadWrite; 15],
         }
     }
 
-    pub fn get(&self, id: BankRegisterId) -> BankIndex {
+    pub fn get(&self, id: BankRegisterId) -> BankLocation {
         self.registers[id as usize]
     }
 
     pub fn set(&mut self, id: BankRegisterId, bank_index: BankIndex) {
-        self.registers[id as usize] = bank_index;
+        self.registers[id as usize] = BankLocation::Index(bank_index);
     }
 
     pub fn set_bits(&mut self, id: BankRegisterId, new_value: u16, mask: u16) {
-        let value = self.registers[id as usize].0;
-        let updated_value = (value & !mask) | (new_value & mask);
-        self.registers[id as usize] = BankIndex(updated_value);
+        let value = self.registers[id as usize].index()
+            .expect(&format!("bank location at id {id:?} to not be in VRAM"));
+        let updated_value = (value.0 & !mask) | (new_value & mask);
+        self.registers[id as usize] = BankLocation::Index(BankIndex(updated_value));
     }
 
     pub fn update(&mut self, id: BankRegisterId, updater: &dyn Fn(u16) -> u16) {
-        let value = self.registers[id as usize].0;
-        self.registers[id as usize] = BankIndex(updater(value));
+        let value = self.registers[id as usize].index()
+            .expect(&format!("bank location at id {id:?} to not be in VRAM"));
+        self.registers[id as usize] = BankLocation::Index(BankIndex(updater(value.0)));
     }
 
-    pub fn get_from_meta(&self, id: MetaRegisterId) -> BankIndex {
+    pub fn set_to_vram_side(&mut self, id: BankRegisterId, vram_side: VramSide) {
+        self.registers[id as usize] = BankLocation::Vram(vram_side);
+    }
+
+    pub fn get_from_meta(&self, id: MetaRegisterId) -> BankLocation {
         self.get(self.meta_registers[id as usize])
     }
 
@@ -93,6 +100,22 @@ impl BankRegisters {
 
     pub fn set_ram_status(&mut self, id: RamStatusRegisterId, status: RamStatus) {
         self.ram_statuses[id as usize] = status;
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum BankLocation {
+    Index(BankIndex),
+    Vram(VramSide),
+}
+
+impl BankLocation {
+    pub fn index(self) -> Option<BankIndex> {
+        if let BankLocation::Index(index) = self {
+            Some(index)
+        } else {
+            None
+        }
     }
 }
 

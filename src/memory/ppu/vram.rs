@@ -31,79 +31,21 @@ impl Vram {
     }
 }
 
-/*
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::memory::ppu_address::PpuAddress;
-    use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
-
-    #[test]
-    fn horizontal_mirror_mapping_low() {
-        let vram = Vram::new(NameTableMirroring::Horizontal);
-        let result = vram.map_if_name_table_address(PpuAddress::from_u16(0x2C00));
-        assert_eq!(result, PpuAddress::from_u16(0x2800));
-    }
-
-    #[test]
-    fn horizontal_mirror_mapping_high() {
-        let vram = Vram::new(NameTableMirroring::Horizontal);
-        let result = vram.map_if_name_table_address(PpuAddress::from_u16(0x2FFF));
-        assert_eq!(result, PpuAddress::from_u16(0x2BFF));
-    }
-
-    #[test]
-    fn vertical_mirror_mapping_low() {
-        let vram = Vram::new(NameTableMirroring::Vertical);
-        let result = vram.map_if_name_table_address(PpuAddress::from_u16(0x2C00));
-        assert_eq!(result, PpuAddress::from_u16(0x2400));
-    }
-
-    #[test]
-    fn vertical_mirror_mapping_high() {
-        let vram = Vram::new(NameTableMirroring::Vertical);
-        let result = vram.map_if_name_table_address(PpuAddress::from_u16(0x2FFF));
-        assert_eq!(result, PpuAddress::from_u16(0x27FF));
-    }
-
-    #[test]
-    fn no_mapping_for_non_name_table_address_low() {
-        let vram = Vram::new(NameTableMirroring::Horizontal);
-        let result = vram.map_if_name_table_address(PpuAddress::from_u16(0x1FFF));
-        assert_eq!(result, PpuAddress::from_u16(0x1FFF));
-
-        let vram = Vram::new(NameTableMirroring::Vertical);
-        let result = vram.map_if_name_table_address(PpuAddress::from_u16(0x1FFF));
-        assert_eq!(result, PpuAddress::from_u16(0x1FFF));
-    }
-
-    #[test]
-    fn no_mapping_for_palette_index() {
-        let vram = Vram::new(NameTableMirroring::Horizontal);
-        let result = vram.map_if_name_table_address(PpuAddress::from_u16(0x3F00));
-        assert_eq!(result, PpuAddress::from_u16(0x3F00));
-
-        let vram = Vram::new(NameTableMirroring::Vertical);
-        let result = vram.map_if_name_table_address(PpuAddress::from_u16(0x3F00));
-        assert_eq!(result, PpuAddress::from_u16(0x3F00));
-    }
-}
-*/
-
-impl Index<usize> for Vram {
+impl Index<u16> for Vram {
     type Output = u8;
 
-    fn index(&self, idx: usize) -> &u8 {
-        &self.0[idx]
+    fn index(&self, idx: u16) -> &u8 {
+        &self.0[idx as usize]
     }
 }
 
-impl IndexMut<usize> for Vram {
-    fn index_mut(&mut self, idx: usize) -> &mut u8 {
-        &mut self.0[idx]
+impl IndexMut<u16> for Vram {
+    fn index_mut(&mut self, idx: u16) -> &mut u8 {
+        &mut self.0[idx as usize]
     }
 }
 
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum VramSide {
     Left = 0,
     Right = CHUNK_SIZE as isize,

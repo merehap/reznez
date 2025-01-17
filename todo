@@ -7,6 +7,7 @@ ROADMAP
 6. Remaining test ROMs.
 7. Joypad support
 8. PPU Mask support
+9. See if BankIndex can be resolved immediately. Late resolution is causing a lot of clutter.
 
 Remove GetSpritePatternHack in ppu.rs.
 Verify when the IRQ flag is supposed to be cleared. An update to the location of ClearIrq caused the apu_test jitter to have a different result.

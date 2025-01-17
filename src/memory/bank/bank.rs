@@ -1,5 +1,7 @@
 use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId, MetaRegisterId, RamStatus};
 
+use super::bank_index::BankLocation;
+
 #[derive(Clone, Copy, Debug)]
 pub enum Bank {
     Empty,
@@ -16,8 +18,7 @@ impl Bank {
     pub const RAM: Bank = Bank::Ram(Location::Fixed(BankIndex::FIRST), None);
 
     pub const fn fixed_index(self, index: i16) -> Self {
-        self.set_location(Location::Fixed(BankIndex::from_i16(index)))
-    }
+        self.set_location(Location::Fixed(BankIndex::from_i16(index))) }
 
     pub const fn switchable(self, register_id: BankRegisterId) -> Self {
         self.set_location(Location::Switchable(register_id))
@@ -43,9 +44,9 @@ impl Bank {
         matches!(self, Bank::WorkRam(_))
     }
 
-    pub fn bank_index(self, registers: &BankRegisters) -> Option<BankIndex> {
+    pub fn bank_location(self, registers: &BankRegisters) -> Option<BankLocation> {
         if let Bank::Rom(location) | Bank::Ram(location, _) = self {
-            Some(location.bank_index(registers))
+            Some(location.bank_location(registers))
         } else {
             None
         }
@@ -81,9 +82,9 @@ pub enum Location {
 }
 
 impl Location {
-    pub fn bank_index(self, registers: &BankRegisters) -> BankIndex {
+    pub fn bank_location(self, registers: &BankRegisters) -> BankLocation {
         match self {
-            Self::Fixed(bank_index) => bank_index,
+            Self::Fixed(bank_index) => BankLocation::Index(bank_index),
             Self::Switchable(register_id) => registers.get(register_id),
             Self::MetaSwitchable(_) => todo!(),
         }
@@ -95,4 +96,17 @@ pub enum RamStatusRegisterId {
     S0,
     S1,
     S2,
+    S3,
+    S4,
+    S5,
+    S6,
+    S7,
+    S8,
+    S9,
+    S10,
+    S11,
+    S12,
+    S13,
+    S14,
+    S15,
 }

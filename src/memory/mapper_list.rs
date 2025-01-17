@@ -122,7 +122,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
 
         // Jaleco SS 88006
         18 => m::mapper018::Mapper018::default().supported(),
-
+        // Namco 129 and Namco 163
+        19 => m::mapper019::Mapper019::new().supported(),
         // Famicom Disk System
         20 => panic!("Mapper 20 is only used for testing FDS images."),
         21 => match submapper_number {

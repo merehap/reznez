@@ -25,7 +25,7 @@ use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
-use crate::memory::ppu::vram::VramSide;
+use crate::memory::ppu::vram::{Vram, VramSide};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
 use crate::ppu::sprite::oam::Oam;
@@ -243,7 +243,7 @@ pub trait Mapper {
     ) -> u8 {
         let palette_ram = &ppu_internal_ram.palette_ram;
         match address.to_u16() {
-            0x0000..=0x1FFF => params.peek_chr(address),
+            0x0000..=0x1FFF => params.peek_chr(&ppu_internal_ram.vram, address),
             0x2000..=0x3EFF => self.peek_name_table_byte(params.name_table_mirroring(), ppu_internal_ram, address),
             0x3F00..=0x3FFF => self.peek_palette_table_byte(palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
@@ -276,7 +276,7 @@ pub trait Mapper {
         value: u8,
     ) {
         match address.to_u16() {
-            0x0000..=0x1FFF => params.write_chr(address, value),
+            0x0000..=0x1FFF => params.write_chr(&mut internal_ram.vram, address, value),
             0x2000..=0x3EFF => self.write_name_table_byte(params.name_table_mirroring(), internal_ram, address, value),
             0x3F00..=0x3FFF => self.write_palette_table_byte(
                 &mut internal_ram.palette_ram,
@@ -532,8 +532,8 @@ impl MapperParams {
         &self.chr_memory
     }
 
-    pub fn pattern_table(&self, side: PatternTableSide) -> PatternTable {
-        self.chr_memory.pattern_table(&self.bank_registers, side)
+    pub fn pattern_table<'a>(&'a self, vram: &'a Vram, side: PatternTableSide) -> PatternTable<'a> {
+        self.chr_memory.pattern_table(&self.bank_registers, vram, side)
     }
 
     pub fn set_chr_layout(&mut self, index: u8) {
@@ -541,12 +541,12 @@ impl MapperParams {
         self.chr_memory.set_layout(index);
     }
 
-    pub fn peek_chr(&self, address: PpuAddress) -> u8 {
-        self.chr_memory.peek(&self.bank_registers, address)
+    pub fn peek_chr(&self, vram: &Vram, address: PpuAddress) -> u8 {
+        self.chr_memory.peek(&self.bank_registers, vram, address)
     }
 
-    pub fn write_chr(&mut self, address: PpuAddress, value: u8) {
-        self.chr_memory.write(&self.bank_registers, address, value);
+    pub fn write_chr(&mut self, vram: &mut Vram, address: PpuAddress, value: u8) {
+        self.chr_memory.write(&self.bank_registers, vram, address, value);
     }
 
     pub fn set_bank_register<INDEX: Into<u16>>(
@@ -580,6 +580,14 @@ impl MapperParams {
         self.bank_registers.update(id, updater);
         info!(target: "mapperupdates", "Updating BankRegister {id:?} to {:?}.",
             self.bank_registers.get(id));
+    }
+
+    pub fn set_bank_register_to_vram_side(
+        &mut self,
+        id: BankRegisterId,
+        vram_side: VramSide,
+    ) {
+        self.bank_registers.set_to_vram_side(id, vram_side);
     }
 }
 

@@ -251,7 +251,7 @@ impl Mapper for Mapper005 {
         address: PpuAddress,
     ) -> u8 {
         match address.to_u16() {
-            0x0000..=0x1FFF => params.peek_chr(address),
+            0x0000..=0x1FFF => params.peek_chr(&ppu_internal_ram.vram, address),
             0x2000..=0x3EFF
                 if address.is_in_attribute_table() && self.extended_attribute_mode_enabled() => {
                     let (_, index) = address.name_table_location().unwrap();

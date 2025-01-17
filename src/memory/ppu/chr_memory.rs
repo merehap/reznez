@@ -2,16 +2,20 @@ use crate::memory::bank::bank::Bank;
 use crate::memory::bank::bank_index::BankRegisters;
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
+use crate::memory::ppu::vram::Vram;
 use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
-use crate::memory::window::Window;
+use crate::memory::window::{ChrLocation, Window};
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
+
+use super::vram::VramSide;
 
 pub struct ChrMemory {
     layouts: Vec<ChrLayout>,
     layout_index: u8,
     bank_size: u16,
     align_large_chr_layouts: bool,
+    max_pattern_table_index: u16,
     override_write_protection: bool,
     raw_memory: RawMemory,
 }
@@ -36,7 +40,13 @@ impl ChrMemory {
             }
         }
 
-        let bank_size = bank_size.expect("at least one ROM or RAM window");
+        let bank_size = bank_size.expect("at least one CHR ROM or CHR RAM window");
+
+        let max_pattern_table_index = layouts[0].max_window_index();
+        for layout in &layouts {
+            assert_eq!(layout.max_window_index(), max_pattern_table_index,
+                "The max CHR window index must be the same between all layouts.");
+        }
 
         // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only layouts.
         let mut override_write_protection = false;
@@ -50,6 +60,7 @@ impl ChrMemory {
             layout_index,
             bank_size,
             align_large_chr_layouts,
+            max_pattern_table_index,
             override_write_protection,
             raw_memory,
         };
@@ -81,15 +92,21 @@ impl ChrMemory {
         self.current_layout().windows().len().try_into().unwrap()
     }
 
-    pub fn peek(&self, registers: &BankRegisters, address: PpuAddress) -> u8 {
-        let (index, _) = self.address_to_chr_index(registers, address.to_u16());
-        self.raw_memory[index]
+    pub fn peek(&self, registers: &BankRegisters, vram: &Vram, address: PpuAddress) -> u8 {
+        let (chr_index, _) = self.address_to_chr_index(registers, address.to_u16());
+        match chr_index {
+            ChrIndex::Normal(index) => self.raw_memory[index],
+            ChrIndex::Vram(side, index, ) => vram.side(side)[index as usize],
+        }
     }
 
-    pub fn write(&mut self, registers: &BankRegisters, address: PpuAddress, value: u8) {
-        let (index, writable) = self.address_to_chr_index(registers, address.to_u16());
+    pub fn write(&mut self, registers: &BankRegisters, vram: &mut Vram, address: PpuAddress, value: u8) {
+        let (chr_index, writable) = self.address_to_chr_index(registers, address.to_u16());
         if writable || self.override_write_protection {
-            self.raw_memory[index] = value;
+            match chr_index {
+                ChrIndex::Normal(index) => self.raw_memory[index] = value,
+                ChrIndex::Vram(side, index, ) => vram.side_mut(side)[index as usize] = value,
+            }
         }
     }
 
@@ -112,29 +129,36 @@ impl ChrMemory {
         self.layout_index = index;
     }
 
-    pub fn pattern_table(&self, registers: &BankRegisters, side: PatternTableSide) -> PatternTable {
+    pub fn pattern_table<'a>(&'a self, registers: &BankRegisters, vram: &'a Vram, side: PatternTableSide) -> PatternTable<'a> {
         match side {
-            PatternTableSide::Left => PatternTable::new(self.left_chunks(registers)),
-            PatternTableSide::Right => PatternTable::new(self.right_chunks(registers)),
+            PatternTableSide::Left => PatternTable::new(self.left_chunks(registers, vram)),
+            PatternTableSide::Right => PatternTable::new(self.right_chunks(registers, vram)),
         }
     }
 
-    fn address_to_chr_index(&self, registers: &BankRegisters, address: u16) -> (u32, bool) {
-        assert!(address < 0x2000);
-
+    fn address_to_chr_index(&self, registers: &BankRegisters, address: u16) -> (ChrIndex, bool) {
+        assert!(address <= self.max_pattern_table_index);
         for window in self.current_layout().windows() {
             if let Some(bank_offset) = window.offset(address) {
-                let raw_bank_index = window.resolved_bank_index(
+                let location= window.resolved_bank_location(
                     registers,
                     window.location().unwrap(),
                     self.bank_size,
                     self.bank_count(),
                     self.align_large_chr_layouts,
                 );
-                let index = u32::from(raw_bank_index) *
-                    u32::from(self.bank_size) +
-                    u32::from(bank_offset);
-                return (index, window.is_writable(registers));
+
+                match location {
+                    ChrLocation::BankIndex(raw_bank_index) => {
+                        let index = u32::from(raw_bank_index) *
+                            u32::from(self.bank_size) +
+                            u32::from(bank_offset);
+                        return (ChrIndex::Normal(index), window.is_writable(registers));
+                    }
+                    ChrLocation::Vram(side ) => {
+                        return (ChrIndex::Vram(side, bank_offset), true);
+                    }
+                }
             }
         }
 
@@ -142,19 +166,29 @@ impl ChrMemory {
     }
 
     #[inline]
-    fn left_chunks(&self, registers: &BankRegisters) -> [RawMemorySlice; 4] {
+    fn left_chunks<'a>(&'a self, registers: &BankRegisters, vram: &'a Vram) -> [RawMemorySlice<'a>; 4] {
         self.left_indexes(registers)
-            .map(|index| self.raw_memory.slice(index..index + 0x400))
+            .map(move |chr_index| {
+                match chr_index {
+                    ChrIndex::Normal(index) => self.raw_memory.slice(index..index + 1 * KIBIBYTE),
+                    ChrIndex::Vram(side, ..) => RawMemorySlice::from_raw(vram.side(side)),
+                }
+        })
     }
 
     #[inline]
-    fn right_chunks(&self, registers: &BankRegisters) -> [RawMemorySlice; 4] {
+    fn right_chunks<'a>(&'a self, registers: &BankRegisters, vram: &'a Vram) -> [RawMemorySlice<'a>; 4] {
         self.right_indexes(registers)
-            .map(|index| self.raw_memory.slice(index..index + 0x400))
+            .map(move |chr_index| {
+                match chr_index {
+                    ChrIndex::Normal(index) => self.raw_memory.slice(index..index + 1 * KIBIBYTE),
+                    ChrIndex::Vram(side, ..) => RawMemorySlice::from_raw(vram.side(side)),
+                }
+        })
     }
 
     #[inline]
-    fn left_indexes(&self, registers: &BankRegisters) -> [u32; 4] {
+    fn left_indexes(&self, registers: &BankRegisters) -> [ChrIndex; 4] {
         [
             self.address_to_chr_index(registers, 0x0000).0,
             self.address_to_chr_index(registers, 0x0400).0,
@@ -164,7 +198,7 @@ impl ChrMemory {
     }
 
     #[inline]
-    fn right_indexes(&self, registers: &BankRegisters) -> [u32; 4] {
+    fn right_indexes(&self, registers: &BankRegisters) -> [ChrIndex; 4] {
         [
             self.address_to_chr_index(registers, 0x1000).0,
             self.address_to_chr_index(registers, 0x1400).0,
@@ -172,4 +206,9 @@ impl ChrMemory {
             self.address_to_chr_index(registers, 0x1C00).0,
         ]
     }
+}
+
+pub enum ChrIndex {
+    Normal(u32),
+    Vram(VramSide, u16),
 }

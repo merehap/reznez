@@ -84,6 +84,10 @@ impl <const SIZE: u32> IndexMut<u32> for RawMemoryArray<SIZE> {
 pub struct RawMemorySlice<'a>(&'a [u8]);
 
 impl<'a> RawMemorySlice<'a> {
+    pub fn from_raw(raw: &'a [u8]) -> RawMemorySlice<'a> {
+        RawMemorySlice(raw)
+    }
+
     pub fn to_raw(&'a self) -> &'a [u8] {
         self.0
     }
