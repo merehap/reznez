@@ -2,12 +2,11 @@ ROADMAP
 1. Fully passing DMC tests.
 2. Fully passing IRQ tests.
 3. Fully working MMC5.
-4. Fully working mapper 19
-5. Expansion Audio
-6. Remaining test ROMs.
-7. Joypad support
-8. PPU Mask support
-9. See if BankIndex can be resolved immediately. Late resolution is causing a lot of clutter.
+4. Expansion Audio
+5. Remaining test ROMs.
+6. Joypad support
+7. PPU Mask support
+8. See if BankIndex can be resolved immediately. Late resolution is causing a lot of clutter.
 
 Remove GetSpritePatternHack in ppu.rs.
 Verify when the IRQ flag is supposed to be cleared. An update to the location of ClearIrq caused the apu_test jitter to have a different result.
