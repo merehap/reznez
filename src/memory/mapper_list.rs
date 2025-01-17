@@ -122,8 +122,18 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
 
         // Jaleco SS 88006
         18 => m::mapper018::Mapper018::default().supported(),
-        // Namco 129 and Namco 163
-        19 => m::mapper019::Mapper019::new().supported(),
+        // Namco 129 and Namco 163.
+        // (Expansion Audio isn't supported yet, so all submappers are the same for now.)
+        19 => match submapper_number {
+            0 => UnspecifiedSubmapper,
+            // Duplicate of submapper 2.
+            1 => m::mapper019::Mapper019::new().supported(),
+            2 => m::mapper019::Mapper019::new().supported(),
+            3 => m::mapper019::Mapper019::new().supported(),
+            4 => m::mapper019::Mapper019::new().supported(),
+            5 => m::mapper019::Mapper019::new().supported(),
+            _ => UnassignedSubmapper,
+        }
         // Famicom Disk System
         20 => panic!("Mapper 20 is only used for testing FDS images."),
         21 => match submapper_number {

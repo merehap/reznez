@@ -1,8 +1,9 @@
 use crate::memory::mapper::*;
+use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu::vram::VramSide;
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_max_size(128 * KIBIBYTE)
+    .prg_max_size(512 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x67FF, 2 * KIBIBYTE, Bank::WORK_RAM.status_register(S12)),
         Window::new(0x6800, 0x6FFF, 2 * KIBIBYTE, Bank::WORK_RAM.status_register(S13)),
@@ -13,7 +14,7 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),
         Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
     ])
-    .chr_max_size(32 * KIBIBYTE)
+    .chr_max_size(256 * KIBIBYTE)
     .chr_layout(&[
         Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::RAM.switchable(C0).status_register(S0)),
         Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::RAM.switchable(C1).status_register(S1)),
@@ -43,8 +44,8 @@ pub struct Mapper019 {
     irq_counter: u16,
     irq_pending: bool,
 
-    allow_vram_in_lower_chr: bool,
-    allow_vram_in_upper_chr: bool,
+    allow_vram_in_low_chr: bool,
+    allow_vram_in_high_chr: bool,
 }
 
 impl Mapper for Mapper019 {
@@ -54,7 +55,7 @@ impl Mapper for Mapper019 {
             0x4020..=0x47FF => ReadResult::OPEN_BUS,
             0x4800..=0x4FFF => /* TODO: Expansion Audio */ ReadResult::full(0),
             0x5000..=0x57FF => ReadResult::full((self.irq_counter & 0b0000_0000_1111_1111) as u8),
-            0x5800..=0x5FFF => ReadResult::full((self.irq_counter >> 8 & 0b0111_1111) as u8),
+            0x5800..=0x5FFF => ReadResult::full(((self.irq_counter >> 8) & 0b0111_1111) as u8),
             0x6000..=0xFFFF => params.peek_prg(cpu_address),
         }
     }
@@ -77,14 +78,14 @@ impl Mapper for Mapper019 {
                 self.irq_counter |= u16::from(value << 1) << 7;
             }
             0x6000..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x87FF => set_chr_register(params, self.allow_vram_in_lower_chr, C0, S0, value),
-            0x8800..=0x8FFF => set_chr_register(params, self.allow_vram_in_lower_chr, C1, S1, value),
-            0x9000..=0x97FF => set_chr_register(params, self.allow_vram_in_lower_chr, C2, S2, value),
-            0x9800..=0x9FFF => set_chr_register(params, self.allow_vram_in_lower_chr, C3, S3, value),
-            0xA000..=0xA7FF => set_chr_register(params, self.allow_vram_in_upper_chr, C4, S4, value),
-            0xA800..=0xAFFF => set_chr_register(params, self.allow_vram_in_upper_chr, C5, S5, value),
-            0xB000..=0xB7FF => set_chr_register(params, self.allow_vram_in_upper_chr, C6, S6, value),
-            0xB800..=0xBFFF => set_chr_register(params, self.allow_vram_in_upper_chr, C7, S7, value),
+            0x8000..=0x87FF => set_chr_register(params, self.allow_vram_in_low_chr, C0, S0, value),
+            0x8800..=0x8FFF => set_chr_register(params, self.allow_vram_in_low_chr, C1, S1, value),
+            0x9000..=0x97FF => set_chr_register(params, self.allow_vram_in_low_chr, C2, S2, value),
+            0x9800..=0x9FFF => set_chr_register(params, self.allow_vram_in_low_chr, C3, S3, value),
+            0xA000..=0xA7FF => set_chr_register(params, self.allow_vram_in_high_chr, C4, S4, value),
+            0xA800..=0xAFFF => set_chr_register(params, self.allow_vram_in_high_chr, C5, S5, value),
+            0xB000..=0xB7FF => set_chr_register(params, self.allow_vram_in_high_chr, C6, S6, value),
+            0xB800..=0xBFFF => set_chr_register(params, self.allow_vram_in_high_chr, C7, S7, value),
             0xC000..=0xC7FF => set_chr_register(params, true, C8, S8, value),
             0xC800..=0xCFFF => set_chr_register(params, true, C9, S9, value),
             0xD000..=0xD7FF => set_chr_register(params, true, C10, S10, value),
@@ -95,8 +96,10 @@ impl Mapper for Mapper019 {
                 params.set_bank_register(P0, value & 0b0011_1111);
             }
             0xE800..=0xEFFF => {
-                // TODO: NT CHR RAM
-                params.set_bank_register(P1, value & 0b0011_1111);
+                let fields = splitbits!(value, "hlpp pppp");
+                self.allow_vram_in_high_chr = !fields.h;
+                self.allow_vram_in_low_chr = !fields.l;
+                params.set_bank_register(P1, fields.p);
             }
             0xF000..=0xF7FF => {
                 // TODO: Pin 44 and PPU A12, A13
@@ -117,6 +120,53 @@ impl Mapper for Mapper019 {
                     params.set_ram_status(S3, 0);
                 }
             }
+        }
+    }
+
+    fn ppu_peek(
+        &self,
+        params: &MapperParams,
+        ppu_internal_ram: &PpuInternalRam,
+        mut address: PpuAddress,
+    ) -> u8 {
+        let palette_ram = &ppu_internal_ram.palette_ram;
+        match address.to_u16() {
+            0x0000..=0x3EFF => {
+                if address.to_u16() >= 0x3000 {
+                    // Mirror down, just like normal ppu_peek.
+                    address = PpuAddress::from_u16(address.to_u16() - 0x1000);
+                }
+
+                params.peek_chr(&ppu_internal_ram.vram, address)
+            }
+            0x3F00..=0x3FFF => self.peek_palette_table_byte(palette_ram, address),
+            0x4000..=0xFFFF => unreachable!(),
+        }
+    }
+
+    #[inline]
+    fn ppu_write(
+        &mut self,
+        params: &mut MapperParams,
+        internal_ram: &mut PpuInternalRam,
+        mut address: PpuAddress,
+        value: u8,
+    ) {
+        match address.to_u16() {
+            0x0000..=0x3EFF => {
+                if address.to_u16() >= 0x3000 {
+                    // Mirror down, just like normal ppu_write.
+                    address = PpuAddress::from_u16(address.to_u16() - 0x1000);
+                }
+
+                params.write_chr(&mut internal_ram.vram, address, value);
+            }
+            0x3F00..=0x3FFF => self.write_palette_table_byte(
+                &mut internal_ram.palette_ram,
+                address,
+                value,
+            ),
+            0x4000..=0xFFFF => unreachable!(),
         }
     }
 
@@ -146,7 +196,7 @@ fn set_chr_register(
     value: u8,
 ) {
     if allow_vram_in_chr && value >= 0xE0 {
-        let vram_side = if value % 2 == 0 { VramSide::Left } else { VramSide::Right };
+        let vram_side = if value & 1 == 0 { VramSide::Left } else { VramSide::Right };
         params.set_bank_register_to_vram_side(reg_id, vram_side);
         params.set_ram_status(status_reg_id, READ_WRITE);
     } else {
@@ -161,8 +211,8 @@ impl Mapper019 {
             irq_counter: 0,
             irq_pending: false,
 
-            allow_vram_in_lower_chr: true,
-            allow_vram_in_upper_chr: true,
+            allow_vram_in_low_chr: true,
+            allow_vram_in_high_chr: true,
         }
     }
 }
