@@ -267,7 +267,7 @@ impl Snapshots {
             active: false,
             snapshots: Vec::new(),
             builder: SnapshotBuilder::new(),
-            max_count: 29832 + 6,
+            max_count: 29832 + 10,
         }
     }
 
@@ -309,7 +309,7 @@ impl Snapshots {
         let mut cpu_cycle   = "CPU Cycle   ".to_string();
         let mut apu_cycle   = "APU Cycle   ".to_string();
         let mut cycle_count = "Cycle Offset".to_string();
-        let mut apu_parity  = "Parity      ".to_string();
+        let mut apu_parity  = "APU Parity  ".to_string();
         let mut instr       = "CPU         ".to_string();
         let mut fcw_status  = "FRM Count   ".to_string();
         let mut nmi_status  = "NMI Status  ".to_string();
@@ -347,7 +347,7 @@ impl Snapshots {
         append_cycle(1, true);
 
         let len = self.snapshots.len();
-        for index in len - 9..len {
+        for index in len - 13..len {
             append_cycle(index, false);
         }
 
