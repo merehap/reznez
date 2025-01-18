@@ -59,7 +59,9 @@ impl CpuModeState {
     pub fn state_label(&self) -> String {
         match self.mode {
             CpuMode::Instruction { op_code } => format!("{op_code:?}"),
-            CpuMode::InterruptSequence {..} => "INT".to_owned(),
+            CpuMode::InterruptSequence(InterruptType::Reset) => "RESET".to_owned(),
+            CpuMode::InterruptSequence(InterruptType::Irq) => "IRQ".to_owned(),
+            CpuMode::InterruptSequence(InterruptType::Nmi) => "NMI".to_owned(),
             CpuMode::OamDma {..} => "OAMDMA".to_owned(),
             CpuMode::DmcDma {..} => "DMCDMA".to_owned(),
             CpuMode::Jammed => "JAM".to_owned(),
@@ -169,6 +171,13 @@ impl CpuModeState {
             suspended_steps: self.steps,
             suspended_step_index: self.step_index + 1,
         });
+    }
+
+    pub fn interrupt_vector_set(&mut self, interrupt_vector: Option<InterruptType>) {
+        // FIXME: This doesn't currently let RESET hijack properly since RESET has an extra step.
+        if let Some(new_interrupt_type) = interrupt_vector {
+            self.mode = CpuMode::InterruptSequence(new_interrupt_type);
+        }
     }
 
     pub fn step(&mut self, cycle_parity: CycleParity) {

@@ -455,6 +455,8 @@ impl Cpu {
                     } else {
                         None
                     };
+                self.mode_state.interrupt_vector_set(self.current_interrupt_vector);
+
                 // We no longer need to track interrupt statuses now that the vector is set.
                 self.nmi_status = NmiStatus::Inactive;
                 self.irq_status = IrqStatus::Inactive;
