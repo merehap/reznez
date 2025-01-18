@@ -150,6 +150,12 @@ impl Cpu {
             return None;
         }
 
+        // Keep irq_pending and irq_status in sync
+        // FIXME: There shouldn't be two separate variables for this.
+        if !irq_pending && self.irq_status == IrqStatus::Pending {
+            self.irq_status = IrqStatus::Inactive;
+        }
+
         let original_program_counter = self.program_counter;
         let mut step = self.mode_state.current_step();
 
@@ -191,7 +197,7 @@ impl Cpu {
         let rw_address_bus_value = self.address_bus;
 
         for &action in step.actions() {
-            self.execute_step_action(memory, action, irq_pending);
+            self.execute_step_action(memory, action);
         }
 
         if log_enabled!(target: "cpustep", Info) {
@@ -215,6 +221,14 @@ impl Cpu {
             )
         }
 
+        // Keep irq_pending and irq_status in sync
+        // FIXME: There shouldn't be two separate variables for this.
+        if irq_pending {
+            if self.irq_status == IrqStatus::Inactive && !self.status.interrupts_disabled {
+                self.irq_status = IrqStatus::Pending;
+            }
+        }
+
         memory.process_end_of_cpu_cycle();
 
         self.mode_state.step(cycle_parity);
@@ -225,7 +239,6 @@ impl Cpu {
         &mut self,
         memory: &mut CpuMemory,
         action: StepAction,
-        irq_pending: bool,
     ) {
         match action {
             StepAction::StartNextInstruction => {
@@ -467,7 +480,7 @@ impl Cpu {
                 if self.nmi_status == NmiStatus::Pending {
                     info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
                     self.nmi_status = NmiStatus::Ready;
-                } else if irq_pending && !self.status.interrupts_disabled {
+                } else if self.irq_status == IrqStatus::Pending && !self.status.interrupts_disabled {
                     info!(target: "cpuflowcontrol", "IRQ will start after the current instruction completes.");
                     self.irq_status = IrqStatus::Ready;
                 }
@@ -724,6 +737,7 @@ pub enum NmiStatus {
 pub enum IrqStatus {
     #[default]
     Inactive,
+    Pending,
     Ready,
     Active,
 }
