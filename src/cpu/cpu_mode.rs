@@ -284,3 +284,11 @@ impl CpuModeState {
         format!("{name:<6}")
     }
 }
+
+
+#[derive(Clone, Copy, Debug)]
+pub enum InterruptType {
+    Nmi,
+    Reset,
+    Irq,
+}

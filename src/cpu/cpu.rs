@@ -3,7 +3,7 @@ use log::Level::Info;
 
 use crate::apu::apu_registers::CycleParity;
 use crate::config::CpuStepFormatting;
-use crate::cpu::cpu_mode::CpuModeState;
+use crate::cpu::cpu_mode::{CpuModeState, InterruptType};
 use crate::cpu::step_action::{StepAction, From, To, Field};
 use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
 use crate::cpu::status;
@@ -35,7 +35,7 @@ pub struct Cpu {
 
     oam_dma_port: OamDmaPort,
 
-    current_interrupt_vector: Option<InterruptVector>,
+    current_interrupt_vector: Option<InterruptType>,
 
     address_bus: CpuAddress,
     pending_address_low: u8,
@@ -442,16 +442,16 @@ impl Cpu {
                 self.current_interrupt_vector =
                     if self.reset_status != ResetStatus::Inactive {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to RESET.");
-                        Some(InterruptVector::Reset)
+                        Some(InterruptType::Reset)
                     } else if self.nmi_status != NmiStatus::Inactive {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to NMI.");
-                        Some(InterruptVector::Nmi)
+                        Some(InterruptType::Nmi)
                     } else if self.irq_status != IrqStatus::Inactive {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to IRQ.");
-                        Some(InterruptVector::Irq)
+                        Some(InterruptType::Irq)
                     } else if let Some(instruction) = self.mode_state.current_instruction() && instruction.op_code() == OpCode::BRK {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to BRK.");
-                        Some(InterruptVector::Irq)
+                        Some(InterruptType::Irq)
                     } else {
                         None
                     };
@@ -536,14 +536,14 @@ impl Cpu {
             ComputedTarget => self.computed_address,
             TopOfStack => memory.stack_pointer_address(),
             InterruptVectorLow => match self.current_interrupt_vector.unwrap() {
-                InterruptVector::Nmi => NMI_VECTOR_LOW,
-                InterruptVector::Reset => RESET_VECTOR_LOW,
-                InterruptVector::Irq => IRQ_VECTOR_LOW,
+                InterruptType::Nmi => NMI_VECTOR_LOW,
+                InterruptType::Reset => RESET_VECTOR_LOW,
+                InterruptType::Irq => IRQ_VECTOR_LOW,
             }
             InterruptVectorHigh => match self.current_interrupt_vector.unwrap() {
-                InterruptVector::Nmi => NMI_VECTOR_HIGH,
-                InterruptVector::Reset => RESET_VECTOR_HIGH,
-                InterruptVector::Irq => IRQ_VECTOR_HIGH,
+                InterruptType::Nmi => NMI_VECTOR_HIGH,
+                InterruptType::Reset => RESET_VECTOR_HIGH,
+                InterruptType::Irq => IRQ_VECTOR_HIGH,
             }
         }
     }
@@ -731,11 +731,4 @@ pub enum ResetStatus {
     Inactive,
     Ready,
     Active,
-}
-
-#[derive(Clone, Copy, Debug)]
-enum InterruptVector {
-    Nmi,
-    Reset,
-    Irq,
 }
