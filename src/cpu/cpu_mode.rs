@@ -8,7 +8,7 @@ enum CpuMode {
     Instruction {
         op_code: OpCode,
     },
-    InterruptSequence { reset: bool },
+    InterruptSequence(InterruptType),
     OamDma {
         suspended_mode: Box<CpuMode>,
         suspended_steps: &'static [Step],
@@ -48,7 +48,7 @@ impl CpuModeState {
         Self {
             steps: RESET_STEPS,
             step_index: 0,
-            mode: CpuMode::InterruptSequence { reset: true },
+            mode: CpuMode::InterruptSequence(InterruptType::Reset),
             next_mode: None,
             current_instruction: None,
 
@@ -111,32 +111,23 @@ impl CpuModeState {
         self.new_instruction_with_address = Some((instruction, address));
     }
 
-    pub fn reset(&mut self) {
-        if self.next_mode != Some(CpuMode::Jammed) {
-            assert_eq!(self.next_mode, None, "next_mode should not already be set");
-        }
-
-        self.next_mode = Some(CpuMode::InterruptSequence { reset: true });
-        self.current_instruction = None;
-    }
-
     pub fn instruction(&mut self, instruction: Instruction) {
         self.steps = instruction.steps();
         self.next_mode = Some(CpuMode::Instruction { op_code: instruction.op_code() });
     }
 
-    pub fn interrupt_sequence(&mut self) {
+    pub fn interrupt_sequence(&mut self, interrupt_type: InterruptType) {
         if self.next_mode == Some(CpuMode::Jammed) {
             return;
         }
 
         assert_eq!(self.next_mode, None, "next_mode should not already be set");
-        self.next_mode = Some(CpuMode::InterruptSequence { reset: false });
+        self.next_mode = Some(CpuMode::InterruptSequence(interrupt_type));
         self.current_instruction = None;
     }
 
     pub fn oam_dma(&mut self) {
-        assert!(self.mode != CpuMode::InterruptSequence { reset: true });
+        assert!(self.mode != CpuMode::InterruptSequence(InterruptType::Reset));
         self.next_mode = Some(CpuMode::OamDma {
             suspended_mode: Box::new(self.mode.clone()),
             suspended_steps: self.steps,
@@ -145,7 +136,7 @@ impl CpuModeState {
     }
 
     pub fn dmc_dma(&mut self) {
-        assert!(self.mode != CpuMode::InterruptSequence { reset: true });
+        assert!(self.mode != CpuMode::InterruptSequence(InterruptType::Reset));
 
         self.next_mode = Some(CpuMode::DmcDma {
             suspended_mode: Box::new(self.mode.clone()),
@@ -198,8 +189,8 @@ impl CpuModeState {
                         CycleParity::Put => DMC_DMA_TRANSFER_STEPS,
                     };
                 }
-                CpuMode::InterruptSequence { reset: false } => self.steps = BRK_STEPS,
-                CpuMode::InterruptSequence { reset: true } => self.steps = RESET_STEPS,
+                CpuMode::InterruptSequence(InterruptType::Reset) => self.steps = RESET_STEPS,
+                CpuMode::InterruptSequence(_) => self.steps = BRK_STEPS,
                 CpuMode::Instruction {..} => { /* steps will be set by the caller in this case. */ }
                 CpuMode::BranchTaken => self.steps = &[BRANCH_TAKEN_STEP],
                 CpuMode::Oops {..} => {
@@ -265,15 +256,17 @@ impl CpuModeState {
                 "JAMMED".into(),
             (CpuMode::StartNext, Some(CpuMode::Instruction { op_code } )) =>
                 format!("{op_code:?}0"),
-            (CpuMode::StartNext, Some(CpuMode::InterruptSequence { reset: false })) =>
-                "INT0".into(),
-            (CpuMode::StartNext, _) =>
-                unreachable!(),
+            (CpuMode::StartNext, Some(CpuMode::InterruptSequence(InterruptType::Irq))) => "IRQ0".into(),
+            (CpuMode::StartNext, Some(CpuMode::InterruptSequence(InterruptType::Nmi))) => "NMI0".into(),
+            (CpuMode::StartNext, Some(CpuMode::InterruptSequence(InterruptType::Reset))) => "RESET0".into(),
+            (CpuMode::StartNext, _) => unreachable!(),
             (CpuMode::Instruction { op_code }, _) =>
                 format!("{:?}{}", op_code, self.step_index + 1),
-            (CpuMode::InterruptSequence { reset: false }, _) =>
-                format!("INT{}", self.step_index + 1),
-            (CpuMode::InterruptSequence { reset: true }, _) =>
+            (CpuMode::InterruptSequence(InterruptType::Irq), _) =>
+                format!("IRQ{}", self.step_index + 1),
+            (CpuMode::InterruptSequence(InterruptType::Nmi), _) =>
+                format!("NMI{}", self.step_index + 1),
+            (CpuMode::InterruptSequence(InterruptType::Reset), _) =>
                 format!("RESET{}", self.step_index),
             (CpuMode::OamDma {..}, _) =>
                 format!("OAM{}", self.step_index + 1),
@@ -285,8 +278,7 @@ impl CpuModeState {
     }
 }
 
-
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum InterruptType {
     Nmi,
     Reset,

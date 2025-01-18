@@ -237,17 +237,17 @@ impl Cpu {
                     info!(target: "cpuflowcontrol", "Starting system reset");
                     self.reset_status = ResetStatus::Active;
                     *memory.data_bus_mut() = 0x00;
-                    self.mode_state.reset();
+                    self.mode_state.interrupt_sequence(InterruptType::Reset);
                 } else if self.nmi_status == NmiStatus::Ready {
                     info!(target: "cpuflowcontrol", "Starting NMI");
                     self.nmi_status = NmiStatus::Active;
                     *memory.data_bus_mut() = 0x00;
-                    self.mode_state.interrupt_sequence();
+                    self.mode_state.interrupt_sequence(InterruptType::Nmi);
                 } else if self.irq_status == IrqStatus::Ready && self.nmi_status == NmiStatus::Inactive {
                     info!(target: "cpuflowcontrol", "Starting IRQ");
                     self.irq_status = IrqStatus::Active;
                     *memory.data_bus_mut() = 0x00;
-                    self.mode_state.interrupt_sequence();
+                    self.mode_state.interrupt_sequence(InterruptType::Irq);
                 } else {
                     self.mode_state.instruction(Instruction::from_code_point(memory.data_bus()));
                 }
