@@ -35,7 +35,6 @@ pub struct Nes {
     cycle: u64,
 
     log_formatter: Box<dyn Formatter>,
-    minimal_formatter: MinimalFormatter,
     snapshots: Snapshots,
 }
 
@@ -65,7 +64,6 @@ impl Nes {
             cycle: 0,
 
             log_formatter: Box::new(MesenFormatter),
-            minimal_formatter: MinimalFormatter,
             snapshots: Snapshots::new(),
         }
     }
@@ -185,6 +183,10 @@ impl Nes {
         let cycle_parity = self.memory.apu_regs().clock().cycle_parity();
         self.memory.as_cpu_memory().increment_cpu_cycle();
 
+        if log_enabled!(target: "timings", Info) {
+            self.snapshots.current().instruction(self.cpu.mode_state().state_label());
+        }
+
         let irq_pending =
             self.memory.apu_regs().frame_irq_pending()
             || self.memory.apu_regs().dmc_irq_pending()
@@ -214,15 +216,6 @@ impl Nes {
             self.snapshots.current().cpu_cycle(self.memory.cpu_cycle());
             self.snapshots.current().irq_status(self.cpu.irq_status());
             self.snapshots.current().nmi_status(self.cpu.nmi_status());
-            if let Some((current_instruction, start_address)) = self.cpu.mode_state().new_instruction_with_address() {
-                let formatted_instruction = self.minimal_formatter.format_instruction(
-                    self,
-                    current_instruction,
-                    start_address,
-                    String::new(),
-                );
-                self.snapshots.current().instruction(formatted_instruction);
-            }
         }
 
         step
@@ -354,7 +347,7 @@ impl Snapshots {
         append_cycle(1, true);
 
         let len = self.snapshots.len();
-        for index in len - 10..len {
+        for index in len - 9..len {
             append_cycle(index, false);
         }
 

@@ -56,6 +56,20 @@ impl CpuModeState {
         }
     }
 
+    pub fn state_label(&self) -> String {
+        match self.mode {
+            CpuMode::Instruction { op_code } => format!("{op_code:?}"),
+            CpuMode::InterruptSequence {..} => "INT".to_owned(),
+            CpuMode::OamDma {..} => "OAMDMA".to_owned(),
+            CpuMode::DmcDma {..} => "DMCDMA".to_owned(),
+            CpuMode::Jammed => "JAM".to_owned(),
+            CpuMode::StartNext => "STARTNEXT".to_owned(),
+            CpuMode::BranchTaken => "BTAKEN".to_owned(),
+            CpuMode::BranchOops => "BOOPS".to_owned(),
+            CpuMode::Oops {..} => "OOPS".to_owned(),
+        }
+    }
+
     pub fn is_jammed(&self) -> bool {
         self.mode == CpuMode::Jammed
     }
