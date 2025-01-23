@@ -235,6 +235,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         65 => m::mapper065::Mapper065::default().supported(),
         // GxROM (GNROM and MHROM)
         66 => m::mapper066::Mapper066.supported(),
+        // Sunsoft-3
+        67 => m::mapper067::Mapper067::default().supported(),
 
         // Sunsoft FME-7
         69 => m::mapper069::Mapper069::new().supported(),
