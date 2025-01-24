@@ -253,6 +253,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
             _ => UnassignedSubmapper,
         }
 
+        // VRC3
+        73 => m::mapper073::Mapper073::default().supported(),
+
         // Konami VRC1
         75 => m::mapper075::Mapper075::default().supported(),
         // NAMCOT-3446
