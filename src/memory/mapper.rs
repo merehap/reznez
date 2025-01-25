@@ -24,7 +24,6 @@ use crate::apu::apu_registers::ApuRegisters;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::ppu::palette_ram::PaletteRam;
-use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
 use crate::memory::ppu::vram::{Vram, VramSide};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
@@ -72,7 +71,8 @@ pub trait Mapper {
         &self,
         params: &MapperParams,
         cpu_internal_ram: &CpuInternalRam,
-        ppu_internal_ram: &PpuInternalRam,
+        vram: &Vram,
+        palette_ram: &PaletteRam,
         oam: &Oam,
         ports: &Ports,
         ppu_registers: &PpuRegisters,
@@ -92,7 +92,7 @@ pub trait Mapper {
                     0x2005 => ppu_registers.peek_ppu_io_bus(),
                     0x2006 => ppu_registers.peek_ppu_io_bus(),
                     0x2007 => {
-                        let peeker = |ppu_address| self.ppu_peek(params, ppu_internal_ram, ppu_address);
+                        let peeker = |ppu_address| self.ppu_peek(params, vram, palette_ram, ppu_address);
                         ppu_registers.peek_ppu_data(peeker)
                     }
                     _ => unreachable!(),
@@ -116,7 +116,8 @@ pub trait Mapper {
         &mut self,
         params: &mut MapperParams,
         cpu_internal_ram: &CpuInternalRam,
-        ppu_internal_ram: &PpuInternalRam,
+        vram: &Vram,
+        palette_ram: &PaletteRam,
         oam: &Oam,
         ports: &mut Ports,
         ppu_registers: &mut PpuRegisters,
@@ -137,7 +138,7 @@ pub trait Mapper {
                     0x2005 => ppu_registers.peek_ppu_io_bus(),
                     0x2006 => ppu_registers.peek_ppu_io_bus(),
                     0x2007 => {
-                        let reader = |ppu_address| self.ppu_read(params, ppu_internal_ram, ppu_address, false);
+                        let reader = |ppu_address| self.ppu_read(params, vram, palette_ram, ppu_address, false);
                         let data = ppu_registers.read_ppu_data(reader);
                         self.process_current_ppu_address(ppu_registers.current_address());
                         data
@@ -163,7 +164,8 @@ pub trait Mapper {
         &mut self,
         params: &mut MapperParams,
         cpu_internal_ram: &mut CpuInternalRam,
-        ppu_internal_ram: &mut PpuInternalRam,
+        vram: &mut Vram,
+        palette_ram: &mut PaletteRam,
         oam: &mut Oam,
         ports: &mut Ports,
         ppu_registers: &mut PpuRegisters,
@@ -189,7 +191,7 @@ pub trait Mapper {
                     }
                 }
                 0x2007 => {
-                    self.ppu_write(params, ppu_internal_ram, ppu_registers.current_address(), value);
+                    self.ppu_write(params, vram, palette_ram, ppu_registers.current_address(), value);
                     ppu_registers.write_ppu_data(value);
                     self.process_current_ppu_address(ppu_registers.current_address());
                 }
@@ -222,7 +224,7 @@ pub trait Mapper {
             0x4018..=0x401F => { /* CPU Test Mode not yet supported. */ }
             0x4020..=0xFFFF => {
                 let value = if self.has_bus_conflicts() == HasBusConflicts::Yes {
-                    let rom_value = self.cpu_peek(params, cpu_internal_ram, ppu_internal_ram, oam,
+                    let rom_value = self.cpu_peek(params, cpu_internal_ram, vram, palette_ram, oam,
                         ports, ppu_registers, apu_registers, address);
                     rom_value.bus_conflict(value)
                 } else {
@@ -238,13 +240,13 @@ pub trait Mapper {
     fn ppu_peek(
         &self,
         params: &MapperParams,
-        ppu_internal_ram: &PpuInternalRam,
+        vram: &Vram,
+        palette_ram: &PaletteRam,
         address: PpuAddress,
     ) -> u8 {
-        let palette_ram = &ppu_internal_ram.palette_ram;
         match address.to_u16() {
-            0x0000..=0x1FFF => params.peek_chr(&ppu_internal_ram.vram, address),
-            0x2000..=0x3EFF => self.peek_name_table_byte(params.name_table_mirroring(), ppu_internal_ram, address),
+            0x0000..=0x1FFF => params.peek_chr(vram, address),
+            0x2000..=0x3EFF => self.peek_name_table_byte(params.name_table_mirroring(), vram, address),
             0x3F00..=0x3FFF => self.peek_palette_table_byte(palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
         }
@@ -254,7 +256,8 @@ pub trait Mapper {
     fn ppu_read(
         &mut self,
         params: &mut MapperParams,
-        ppu_internal_ram: &PpuInternalRam,
+        vram: &Vram,
+        palette_ram: &PaletteRam,
         address: PpuAddress,
         rendering: bool,
     ) -> u8 {
@@ -262,7 +265,7 @@ pub trait Mapper {
             self.process_current_ppu_address(address);
         }
 
-        let value = self.ppu_peek(params, ppu_internal_ram, address);
+        let value = self.ppu_peek(params, vram, palette_ram, address);
         self.on_ppu_read(params, address, value);
         value
     }
@@ -271,18 +274,15 @@ pub trait Mapper {
     fn ppu_write(
         &mut self,
         params: &mut MapperParams,
-        internal_ram: &mut PpuInternalRam,
+        vram: &mut Vram,
+        palette_ram: &mut PaletteRam,
         address: PpuAddress,
         value: u8,
     ) {
         match address.to_u16() {
-            0x0000..=0x1FFF => params.write_chr(&mut internal_ram.vram, address, value),
-            0x2000..=0x3EFF => self.write_name_table_byte(params.name_table_mirroring(), internal_ram, address, value),
-            0x3F00..=0x3FFF => self.write_palette_table_byte(
-                &mut internal_ram.palette_ram,
-                address,
-                value,
-            ),
+            0x0000..=0x1FFF => params.write_chr(vram, address, value),
+            0x2000..=0x3EFF => self.write_name_table_byte(params.name_table_mirroring(), vram, address, value),
+            0x3F00..=0x3FFF => self.write_palette_table_byte(palette_ram, address, value),
             0x4000..=0xFFFF => unreachable!(),
         }
     }
@@ -291,45 +291,45 @@ pub trait Mapper {
     fn raw_name_table<'a>(
         &'a self,
         name_table_mirroring: NameTableMirroring,
-        ppu_internal_ram: &'a PpuInternalRam,
+        vram: &'a Vram,
         quadrant: NameTableQuadrant,
     ) -> &'a [u8; KIBIBYTE as usize] {
         let side = vram_side(quadrant, name_table_mirroring);
-        ppu_internal_ram.vram.side(side)
+        vram.side(side)
     }
 
     #[inline]
     fn raw_name_table_mut<'a>(
         &'a mut self,
         name_table_mirroring: NameTableMirroring,
-        ppu_internal_ram: &'a mut PpuInternalRam,
+        vram: &'a mut Vram,
         position: NameTableQuadrant,
     ) -> &'a mut [u8; KIBIBYTE as usize] {
         let side = vram_side(position, name_table_mirroring);
-        ppu_internal_ram.vram.side_mut(side)
+        vram.side_mut(side)
     }
 
     #[inline]
     fn peek_name_table_byte(
         &self,
         name_table_mirroring: NameTableMirroring,
-        ppu_internal_ram: &PpuInternalRam,
+        vram: &Vram,
         address: PpuAddress,
     ) -> u8 {
         let (name_table_quadrant, index) = address_to_name_table_index(address);
-        self.raw_name_table(name_table_mirroring, ppu_internal_ram, name_table_quadrant)[index as usize]
+        self.raw_name_table(name_table_mirroring, vram, name_table_quadrant)[index as usize]
     }
 
     #[inline]
     fn write_name_table_byte(
         &mut self,
         name_table_mirroring: NameTableMirroring,
-        ppu_internal_ram: &mut PpuInternalRam,
+        vram: &mut Vram,
         address: PpuAddress,
         value: u8,
     ) {
         let (name_table_quadrant, index) = address_to_name_table_index(address);
-        self.raw_name_table_mut(name_table_mirroring, ppu_internal_ram, name_table_quadrant)[index as usize] = value;
+        self.raw_name_table_mut(name_table_mirroring, vram, name_table_quadrant)[index as usize] = value;
     }
 
     #[inline]

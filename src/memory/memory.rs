@@ -4,8 +4,9 @@ use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::cpu::stack::Stack;
 use crate::memory::mapper::{Mapper, MapperParams};
+use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ppu_address::PpuAddress;
-use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
+use crate::memory::ppu::vram::Vram;
 use crate::memory::read_result::ReadResult;
 use crate::ppu::name_table::name_table::NameTable;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
@@ -27,7 +28,8 @@ pub struct Memory {
     mapper: Box<dyn Mapper>,
     mapper_params: MapperParams,
     cpu_internal_ram: CpuInternalRam,
-    ppu_internal_ram: PpuInternalRam,
+    vram: Vram,
+    palette_ram: PaletteRam,
     oam: Oam,
     ports: Ports,
     ppu_registers: PpuRegisters,
@@ -48,7 +50,8 @@ impl Memory {
             mapper,
             mapper_params,
             cpu_internal_ram: CpuInternalRam::new(),
-            ppu_internal_ram: PpuInternalRam::new(),
+            vram: Vram::new(),
+            palette_ram: PaletteRam::new(),
             oam: Oam::new(),
             ports,
             ppu_registers: PpuRegisters::new(),
@@ -104,7 +107,8 @@ impl Memory {
         self.mapper.cpu_peek(
             &self.mapper_params,
             &self.cpu_internal_ram,
-            &self.ppu_internal_ram,
+            &self.vram,
+            &self.palette_ram,
             &self.oam,
             &self.ports,
             &self.ppu_registers,
@@ -117,7 +121,8 @@ impl Memory {
         self.mapper.cpu_peek(
             &self.mapper_params,
             &self.cpu_internal_ram,
-            &self.ppu_internal_ram,
+            &self.vram,
+            &self.palette_ram,
             &self.oam,
             &self.ports,
             &self.ppu_registers,
@@ -137,7 +142,8 @@ impl<'a> CpuMemory<'a> {
         self.memory.mapper.cpu_peek(
             &self.memory.mapper_params,
             &self.memory.cpu_internal_ram,
-            &self.memory.ppu_internal_ram,
+            &self.memory.vram,
+            &self.memory.palette_ram,
             &self.memory.oam,
             &self.memory.ports,
             &self.memory.ppu_registers,
@@ -151,7 +157,8 @@ impl<'a> CpuMemory<'a> {
         self.memory.cpu_data_bus = self.memory.mapper.cpu_read(
             &mut self.memory.mapper_params,
             &self.memory.cpu_internal_ram,
-            &self.memory.ppu_internal_ram,
+            &self.memory.vram,
+            &self.memory.palette_ram,
             &self.memory.oam,
             &mut self.memory.ports,
             &mut self.memory.ppu_registers,
@@ -165,7 +172,8 @@ impl<'a> CpuMemory<'a> {
         self.memory.mapper.cpu_write(
             &mut self.memory.mapper_params,
             &mut self.memory.cpu_internal_ram,
-            &mut self.memory.ppu_internal_ram,
+            &mut self.memory.vram,
+            &mut self.memory.palette_ram,
             &mut self.memory.oam,
             &mut self.memory.ports,
             &mut self.memory.ppu_registers,
@@ -261,12 +269,14 @@ pub struct PpuMemory<'a> {
 impl<'a> PpuMemory<'a> {
     #[inline]
     pub fn read(&mut self, address: PpuAddress) -> u8 {
-        self.memory.mapper.ppu_read(&mut self.memory.mapper_params, &self.memory.ppu_internal_ram, address, true)
+        self.memory.mapper.ppu_read(
+            &mut self.memory.mapper_params, &self.memory.vram, &self.memory.palette_ram, address, true)
     }
 
     #[inline]
     pub fn write(&mut self, address: PpuAddress, value: u8) {
-        self.memory.mapper.ppu_write(&mut self.memory.mapper_params, &mut self.memory.ppu_internal_ram, address, value);
+        self.memory.mapper.ppu_write(
+            &mut self.memory.mapper_params, &mut self.memory.vram, &mut self.memory.palette_ram, address, value);
     }
 
     pub fn oam(&self) -> &Oam {
@@ -301,7 +311,7 @@ impl<'a> PpuMemory<'a> {
 
     #[inline]
     pub fn pattern_table(&self, side: PatternTableSide) -> PatternTable {
-        self.memory.mapper_params.pattern_table(&self.memory.ppu_internal_ram.vram, side)
+        self.memory.mapper_params.pattern_table(&self.memory.vram, side)
     }
 
     #[inline]
@@ -319,14 +329,14 @@ impl<'a> PpuMemory<'a> {
         NameTable::new(
             self.memory
                 .mapper
-                .raw_name_table(self.memory.mapper_params.name_table_mirroring(), &self.memory.ppu_internal_ram, quadrant),
+                .raw_name_table(self.memory.mapper_params.name_table_mirroring(), &self.memory.vram, quadrant),
         )
     }
 
     #[inline]
     pub fn palette_table(&self) -> PaletteTable {
         PaletteTable::new(
-            self.memory.ppu_internal_ram.palette_ram.to_slice(),
+            self.memory.palette_ram.to_slice(),
             &self.memory.system_palette,
         )
     }

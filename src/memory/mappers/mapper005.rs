@@ -5,8 +5,8 @@ use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::memory::mapper::*;
 use crate::memory::memory::{NMI_VECTOR_LOW, NMI_VECTOR_HIGH};
 use crate::memory::raw_memory::RawMemoryArray;
-use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
-use crate::memory::ppu::vram::VramSide;
+use crate::memory::ppu::palette_ram::PaletteRam;
+use crate::memory::ppu::vram::{Vram, VramSide};
 
 const LAYOUT: Layout = Layout::builder()
     .override_bank_register(P4, -1)
@@ -247,11 +247,12 @@ impl Mapper for Mapper005 {
     fn ppu_peek(
         &self,
         params: &MapperParams, 
-        ppu_internal_ram: &PpuInternalRam,
+        vram: &Vram,
+        palette_ram: &PaletteRam,
         address: PpuAddress,
     ) -> u8 {
         match address.to_u16() {
-            0x0000..=0x1FFF => params.peek_chr(&ppu_internal_ram.vram, address),
+            0x0000..=0x1FFF => params.peek_chr(&vram, address),
             0x2000..=0x3EFF
                 if address.is_in_attribute_table() && self.extended_attribute_mode_enabled() => {
                     let (_, index) = address.name_table_location().unwrap();
@@ -262,16 +263,16 @@ impl Mapper for Mapper005 {
                 let (name_table_quadrant, index) = address.name_table_location().unwrap();
                 match self.name_table_sources[name_table_quadrant as usize] {
                     NameTableSource::CiramLeft =>
-                        ppu_internal_ram.vram.side(VramSide::Left)[index as usize],
+                        vram.side(VramSide::Left)[index as usize],
                     NameTableSource::CiramRight =>
-                        ppu_internal_ram.vram.side(VramSide::Right)[index as usize],
+                        vram.side(VramSide::Right)[index as usize],
                     NameTableSource::ExtendedRam =>
                         self.extended_ram[index],
                     NameTableSource::Fill =>
                         self.fill_mode_tile,
                 }
             }
-            0x3F00..=0x3FFF => self.peek_palette_table_byte(&ppu_internal_ram.palette_ram, address),
+            0x3F00..=0x3FFF => self.peek_palette_table_byte(&palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
         }
     }

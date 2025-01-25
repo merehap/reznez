@@ -21,6 +21,7 @@ Improve cycle accuracy of undocumented instructions
 Open Bus for joysticks.
 Other input devices.
 Auto-mirror undersized CHR (for mapper 99 and maybe others).
+Separate Sprite debug window code from regular code.
 
 FANCY NICE-TO-HAVES
 APU frequency correction

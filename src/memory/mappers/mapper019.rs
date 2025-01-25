@@ -1,6 +1,6 @@
 use crate::memory::mapper::*;
-use crate::memory::ppu::ppu_internal_ram::PpuInternalRam;
-use crate::memory::ppu::vram::VramSide;
+use crate::memory::ppu::palette_ram::PaletteRam;
+use crate::memory::ppu::vram::{Vram, VramSide};
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(512 * KIBIBYTE)
@@ -126,10 +126,10 @@ impl Mapper for Mapper019 {
     fn ppu_peek(
         &self,
         params: &MapperParams,
-        ppu_internal_ram: &PpuInternalRam,
+        vram: &Vram,
+        palette_ram: &PaletteRam,
         mut address: PpuAddress,
     ) -> u8 {
-        let palette_ram = &ppu_internal_ram.palette_ram;
         match address.to_u16() {
             0x0000..=0x3EFF => {
                 if address.to_u16() >= 0x3000 {
@@ -137,7 +137,7 @@ impl Mapper for Mapper019 {
                     address = PpuAddress::from_u16(address.to_u16() - 0x1000);
                 }
 
-                params.peek_chr(&ppu_internal_ram.vram, address)
+                params.peek_chr(vram, address)
             }
             0x3F00..=0x3FFF => self.peek_palette_table_byte(palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
@@ -148,7 +148,8 @@ impl Mapper for Mapper019 {
     fn ppu_write(
         &mut self,
         params: &mut MapperParams,
-        internal_ram: &mut PpuInternalRam,
+        vram: &mut Vram,
+        palette_ram: &mut PaletteRam,
         mut address: PpuAddress,
         value: u8,
     ) {
@@ -159,13 +160,9 @@ impl Mapper for Mapper019 {
                     address = PpuAddress::from_u16(address.to_u16() - 0x1000);
                 }
 
-                params.write_chr(&mut internal_ram.vram, address, value);
+                params.write_chr(vram, address, value);
             }
-            0x3F00..=0x3FFF => self.write_palette_table_byte(
-                &mut internal_ram.palette_ram,
-                address,
-                value,
-            ),
+            0x3F00..=0x3FFF => self.write_palette_table_byte(palette_ram, address, value),
             0x4000..=0xFFFF => unreachable!(),
         }
     }
