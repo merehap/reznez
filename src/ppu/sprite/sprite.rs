@@ -11,6 +11,9 @@ use crate::ppu::sprite::sprite_half::SpriteHalf;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::ppu::sprite::sprite_y::SpriteY;
 
+/**
+ * FOR DEBUG WINDOWS ONLY. Sprites never actual exist in this form during PPU rendering.
+ */
 #[derive(Clone, Copy, Debug)]
 pub struct Sprite {
     x_coordinate: PixelColumn,

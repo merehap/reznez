@@ -37,7 +37,47 @@ impl<'a> NameTable<'a> {
         &self.attribute_table
     }
 
-    // For debug screen use only.
+    pub fn tile_entry_for_pixel(
+        &self,
+        pixel_column: PixelColumn,
+        pixel_row: PixelRow,
+        x_scroll: XScroll,
+        y_scroll: YScroll,
+    ) -> (PatternIndex, PaletteTableIndex, ColumnInTile, RowInTile) {
+        let (tile_column, column_in_tile) = x_scroll.tile_column(pixel_column);
+        let (tile_row, row_in_tile) = y_scroll.tile_row(pixel_row);
+        let background_tile_index =
+            BackgroundTileIndex::from_tile_column_row(tile_column, tile_row);
+
+        let (pattern_index, palette_table_index) =
+            self.tile_entry_at(background_tile_index);
+        (
+            pattern_index,
+            palette_table_index,
+            column_in_tile,
+            row_in_tile,
+        )
+    }
+
+    #[inline]
+    fn tile_entry_at(
+        &self,
+        background_tile_index: BackgroundTileIndex,
+    ) -> (PatternIndex, PaletteTableIndex) {
+        let pattern_index =
+            PatternIndex::new(self.tiles[background_tile_index.to_usize()]);
+        let palette_table_index = self
+            .attribute_table
+            .palette_table_index(background_tile_index.tile_column(), background_tile_index.tile_row());
+
+        (pattern_index, palette_table_index)
+    }
+}
+
+/**
+ * DEBUG WINDOW METHODS
+ */
+impl NameTable<'_> {
     pub fn render(
         &self,
         pattern_table: &PatternTable,
@@ -111,41 +151,6 @@ impl<'a> NameTable<'a> {
         );
     }
 
-    pub fn tile_entry_for_pixel(
-        &self,
-        pixel_column: PixelColumn,
-        pixel_row: PixelRow,
-        x_scroll: XScroll,
-        y_scroll: YScroll,
-    ) -> (PatternIndex, PaletteTableIndex, ColumnInTile, RowInTile) {
-        let (tile_column, column_in_tile) = x_scroll.tile_column(pixel_column);
-        let (tile_row, row_in_tile) = y_scroll.tile_row(pixel_row);
-        let background_tile_index =
-            BackgroundTileIndex::from_tile_column_row(tile_column, tile_row);
-
-        let (pattern_index, palette_table_index) =
-            self.tile_entry_at(background_tile_index);
-        (
-            pattern_index,
-            palette_table_index,
-            column_in_tile,
-            row_in_tile,
-        )
-    }
-
-    #[inline]
-    fn tile_entry_at(
-        &self,
-        background_tile_index: BackgroundTileIndex,
-    ) -> (PatternIndex, PaletteTableIndex) {
-        let pattern_index =
-            PatternIndex::new(self.tiles[background_tile_index.to_usize()]);
-        let palette_table_index = self
-            .attribute_table
-            .palette_table_index(background_tile_index.tile_column(), background_tile_index.tile_row());
-
-        (pattern_index, palette_table_index)
-    }
 }
 
 impl fmt::Display for NameTable<'_> {

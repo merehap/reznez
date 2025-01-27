@@ -18,6 +18,35 @@ impl Oam {
         Oam([0; 256])
     }
 
+    pub fn peek(&self, address: OamAddress) -> u8 {
+        self.0[address.to_u8() as usize]
+    }
+
+    pub fn write(&mut self, address: OamAddress, value: u8) {
+        let address = address.to_u8();
+        // The three unimplemented attribute bits should never be set.
+        // FIXME: Use method, not mod.
+        let value = if address % 4 == ATTRIBUTE_BYTE_INDEX {
+            value & 0b1110_0011
+        } else {
+            value
+        };
+        self.0[address as usize] = value;
+    }
+
+    pub fn maybe_corrupt_starting_byte(&mut self, address: OamAddress, cycle: u16) {
+        let index = cycle as usize - 1;
+        let address = address.to_u8();
+        if address >= 0x08 {
+            self.0[index] = self.0[(address & 0xF8) as usize + index];
+        }
+    }
+}
+
+/**
+ * DEBUG WINDOW METHODS
+ */
+impl Oam {
     pub fn only_front_sprites(&self) -> Oam {
         let mut result = self.clone();
         for chunk in result.0.array_chunks_mut::<4>() {
@@ -50,31 +79,6 @@ impl Oam {
         })
     }
 
-    pub fn peek(&self, address: OamAddress) -> u8 {
-        self.0[address.to_u8() as usize]
-    }
-
-    pub fn write(&mut self, address: OamAddress, value: u8) {
-        let address = address.to_u8();
-        // The three unimplemented attribute bits should never be set.
-        // FIXME: Use method, not mod.
-        let value = if address % 4 == ATTRIBUTE_BYTE_INDEX {
-            value & 0b1110_0011
-        } else {
-            value
-        };
-        self.0[address as usize] = value;
-    }
-
-    pub fn maybe_corrupt_starting_byte(&mut self, address: OamAddress, cycle: u16) {
-        let index = cycle as usize - 1;
-        let address = address.to_u8();
-        if address >= 0x08 {
-            self.0[index] = self.0[(address & 0xF8) as usize + index];
-        }
-    }
-
-    // For debug windows only.
     pub fn render(&self, mem: &PpuMemory, frame: &mut Frame) {
         for pixel_row in PixelRow::iter() {
             self.render_scanline(pixel_row, mem, frame);

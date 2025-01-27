@@ -24,17 +24,6 @@ impl<'a> PatternTable<'a> {
         PatternTable(raw)
     }
 
-    pub fn read_pattern_data_at(
-        &self,
-        pattern_index: PatternIndex,
-        row_in_tile: RowInTile,
-    ) -> (u8, u8) {
-        (
-            self.read(pattern_index.to_low_index(row_in_tile)),
-            self.read(pattern_index.to_high_index(row_in_tile)),
-        )
-    }
-
     pub fn read_low_byte(
         &self,
         pattern_index: PatternIndex,
@@ -51,7 +40,40 @@ impl<'a> PatternTable<'a> {
         self.read(pattern_index.to_high_index(row_in_tile))
     }
 
-    // Used for debug windows only.
+    pub fn render_pixel(
+        &self,
+        pattern_index: PatternIndex,
+        column_in_tile: ColumnInTile,
+        row_in_tile: RowInTile,
+        palette: Palette,
+        pixel: &mut Rgbt,
+    ) {
+        let index = PATTERN_SIZE * u32::from(pattern_index);
+        let low_index = index + row_in_tile as u32;
+        let high_index = low_index + 8;
+
+        let low_byte = self.read(low_index);
+        let high_byte = self.read(high_index);
+
+        let low_bit = get_bit(low_byte, column_in_tile as u32);
+        let high_bit = get_bit(high_byte, column_in_tile as u32);
+        *pixel = palette.rgbt_from_low_high(low_bit, high_bit);
+    }
+
+    fn read(&self, index: u32) -> u8 {
+        let quadrant = index / KIBIBYTE;
+        assert!(quadrant < 5);
+
+        let offset = index % KIBIBYTE;
+
+        self.0[quadrant as usize][offset]
+    }
+}
+
+/**
+ * DEBUG WINDOW METHODS
+ */
+impl PatternTable<'_> {
     pub fn render_background_tile(
         &self,
         pattern_index: PatternIndex,
@@ -89,35 +111,6 @@ impl<'a> PatternTable<'a> {
             let high_bit = get_bit(high_byte, column_in_tile as u32);
             *pixel = palette.rgbt_from_low_high(low_bit, high_bit);
         }
-    }
-
-    pub fn render_pixel(
-        &self,
-        pattern_index: PatternIndex,
-        column_in_tile: ColumnInTile,
-        row_in_tile: RowInTile,
-        palette: Palette,
-        pixel: &mut Rgbt,
-    ) {
-        let index = PATTERN_SIZE * u32::from(pattern_index);
-        let low_index = index + row_in_tile as u32;
-        let high_index = low_index + 8;
-
-        let low_byte = self.read(low_index);
-        let high_byte = self.read(high_index);
-
-        let low_bit = get_bit(low_byte, column_in_tile as u32);
-        let high_bit = get_bit(high_byte, column_in_tile as u32);
-        *pixel = palette.rgbt_from_low_high(low_bit, high_bit);
-    }
-
-    fn read(&self, index: u32) -> u8 {
-        let quadrant = index / KIBIBYTE;
-        assert!(quadrant < 5);
-
-        let offset = index % KIBIBYTE;
-
-        self.0[quadrant as usize][offset]
     }
 }
 
