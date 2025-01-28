@@ -372,6 +372,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         }
         186 => UnassignedMapper,
 
+        // NTDEC's TC-112
+        193 => m::mapper193::Mapper193.supported(),
+
         // DxROM, Tengen MIMIC-1, Namcot 118
         206 => match submapper_number {
             // Normal PRG banking

@@ -8,6 +8,7 @@ ROADMAP
 7. PPU Mask support
 8. See if BankIndex can be resolved immediately. Late resolution is causing a lot of clutter.
 
+Add CHR bank viewer. Allow overriding the selected bank for the game rendering.
 Remove GetSpritePatternHack in ppu.rs.
 Verify when the IRQ flag is supposed to be cleared. An update to the location of ClearIrq caused the apu_test jitter to have a different result.
        See newoutput: E24C  AND #$40                        A:10 X:00 Y:00 S:FD P:nv--dIzc V:242 H:117 Fr:4 Cycle:1
@@ -129,6 +130,11 @@ Ge ge ge no Kitarou 2: Game freezes.
 MAPPER 180
 Crazy Climber: Verify operation.
 
+MAPPER 193
+Fighting Hero: Background fails to render properly except for the demo.
+	Proper name table is briefly populated on input, but then is blanked again.
+Deep Dungeon 4: Accesses CHR RAM outside of the default provided 8KiB. Need mirroring?
+
 Total games implemented:
 000: 247
 001: 680
@@ -196,12 +202,13 @@ Total games implemented:
 177: 0
 180: 1
 184: 3
+193: 2
 206: 45
 210: 12
 232: 5
 240: 0
 241: 0
-2365 / 2447
+2367 / 2447
 
 To implement:
 5:  25
