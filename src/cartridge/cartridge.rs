@@ -1,7 +1,7 @@
 use std::fmt;
 
 use log::{info, warn, error};
-use splitbits::splitbits;
+use splitbits::{splitbits, splitbits_named};
 
 use crate::cartridge::header_db::{HeaderDb, Header};
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
@@ -50,16 +50,11 @@ impl Cartridge {
         let prg_rom_chunk_count = rom[4] as u32;
         let chr_rom_chunk_count = rom[5] as u32;
 
-        let lower_mapper_number   = rom[6] & 0b1111_0000;
-        let four_screen           = rom[6] & 0b0000_1000 != 0;
-        let trainer_enabled       = rom[6] & 0b0000_0100 != 0;
-        let has_persistent_memory = rom[6] & 0b0000_0010 != 0;
-        let vertical_mirroring    = rom[6] & 0b0000_0001 != 0;
-
-        let upper_mapper_number   = rom[7] & 0b1111_0000;
-        let ines2_present         = rom[7] & 0b0000_1100 == 0b0000_1000;
-        let play_choice_enabled   = rom[7] & 0b0000_0010 != 0;
-        let vs_unisystem_enabled  = rom[7] & 0b0000_0001 != 0;
+        let (lower_mapper_number, four_screen, trainer_enabled, has_persistent_memory, vertical_mirroring) =
+            splitbits_named!(rom[6], "llllftpv");
+        let (upper_mapper_number, ines2, play_choice_enabled, vs_unisystem_enabled) =
+            splitbits_named!(rom[7], "uuuuiipv");
+        let ines2_present = ines2 == 0b10;
 
         let ripper_name: String = std::str::from_utf8(rom.slice(8..15).to_raw())
             .map_err(|err| err.to_string())?
@@ -71,7 +66,7 @@ impl Cartridge {
             return Err("Trainer isn't implemented yet.".to_string());
         }
 
-        let mut mapper_number = u16::from(upper_mapper_number | (lower_mapper_number >> 4));
+        let mut mapper_number = u16::from((upper_mapper_number << 4) | lower_mapper_number);
         let mut submapper_number = 0;
         let mut prg_ram_size = 0;
         let mut chr_ram_size = 0;
