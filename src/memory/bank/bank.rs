@@ -14,8 +14,8 @@ pub enum Bank {
 impl Bank {
     pub const EMPTY: Bank = Bank::Empty;
     pub const WORK_RAM: Bank = Bank::WorkRam(None);
-    pub const ROM: Bank = Bank::Rom(Location::Fixed(BankIndex::FIRST));
-    pub const RAM: Bank = Bank::Ram(Location::Fixed(BankIndex::FIRST), None);
+    pub const ROM: Bank = Bank::Rom(Location::Fixed(BankIndex::from_u8(0)));
+    pub const RAM: Bank = Bank::Ram(Location::Fixed(BankIndex::from_u8(0)), None);
 
     pub const fn fixed_index(self, index: i16) -> Self {
         self.set_location(Location::Fixed(BankIndex::from_i16(index))) }
