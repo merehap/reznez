@@ -328,6 +328,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // Jaleco J-11 and J-14
         140 => m::mapper140::Mapper140.supported(),
 
+        // Kaiser KS202 (UNL-KS7032)
+        142 => m::mapper142::Mapper142::default().supported(),
+
         // SA-72007 (only Sidewinder)
         145 => m::mapper145::Mapper145.supported(),
         // Duplicate of mapper 79, specifically for the Sachen 3015 board.
