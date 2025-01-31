@@ -150,12 +150,6 @@ impl Cpu {
             return None;
         }
 
-        // Keep irq_pending and irq_status in sync
-        // FIXME: There shouldn't be two separate variables for this.
-        if !irq_pending && self.irq_status == IrqStatus::Pending {
-            self.irq_status = IrqStatus::Inactive;
-        }
-
         let original_program_counter = self.program_counter;
         let mut step = self.mode_state.current_step();
 
@@ -222,11 +216,12 @@ impl Cpu {
         }
 
         // Keep irq_pending and irq_status in sync
-        // FIXME: There shouldn't be two separate variables for this.
         if irq_pending {
             if self.irq_status == IrqStatus::Inactive && !self.status.interrupts_disabled {
                 self.irq_status = IrqStatus::Pending;
             }
+        } else if self.irq_status == IrqStatus::Pending {
+            self.irq_status = IrqStatus::Inactive;
         }
 
         memory.process_end_of_cpu_cycle();
