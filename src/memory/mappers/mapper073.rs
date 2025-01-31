@@ -53,6 +53,10 @@ impl Mapper for Mapper073 {
                 self.irq_mode = if fields.m { IrqMode::EightBit } else { IrqMode::SixteenBit };
                 self.irq_enabled = fields.e;
                 self.irq_enabled_on_acknowledgement = fields.a;
+
+                if self.irq_enabled {
+                    self.irq_counter = self.irq_counter_reload_value;
+                }
             }
             0xD000..=0xDFFF => {
                 self.irq_pending = false;
