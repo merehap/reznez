@@ -480,6 +480,17 @@ impl Cpu {
                     self.irq_status = IrqStatus::Ready;
                 }
             }
+            StepAction::MaybePollInterrupts => {
+                if self.address_carry != 0 {
+                    if self.nmi_status == NmiStatus::Pending {
+                        info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
+                        self.nmi_status = NmiStatus::Ready;
+                    } else if self.irq_status == IrqStatus::Pending && !self.status.interrupts_disabled {
+                        info!(target: "cpuflowcontrol", "IRQ will start after the current instruction completes.");
+                        self.irq_status = IrqStatus::Ready;
+                    }
+                }
+            }
 
             StepAction::SetDmcSampleBuffer => memory.set_dmc_sample_buffer(memory.data_bus()),
 

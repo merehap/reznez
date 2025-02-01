@@ -24,6 +24,7 @@ pub enum StepAction {
     SetInterruptVector,
     ClearInterruptVector,
     PollInterrupts,
+    MaybePollInterrupts,
 
     SetDmcSampleBuffer,
 

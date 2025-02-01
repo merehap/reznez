@@ -50,7 +50,7 @@ pub const OOPS_STEP: Step =
 
 pub const BRANCH_TAKEN_STEP: Step =
     Read(From::ProgramCounterTarget,
-        &[MaybeInsertBranchOopsStep, AddCarryToPC, StartNextInstruction, IncrementPC]);
+        &[MaybeInsertBranchOopsStep, MaybePollInterrupts, AddCarryToPC, StartNextInstruction, IncrementPC]);
 
 pub const IMPLICIT_ADDRESSING_STEPS: &[Step] = &[
     Read(From::ProgramCounterTarget, &[InterpretOpCode, PollInterrupts]),
