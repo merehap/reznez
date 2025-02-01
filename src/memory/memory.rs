@@ -291,10 +291,6 @@ impl<'a> PpuMemory<'a> {
         self.memory.mapper.on_end_of_ppu_cycle();
     }
 
-    pub fn process_current_ppu_address(&mut self, address: PpuAddress) {
-        self.memory.mapper.process_current_ppu_address(address);
-    }
-
     #[inline]
     pub fn regs(&self) -> &PpuRegisters {
         &self.memory.ppu_registers

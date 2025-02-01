@@ -1,6 +1,9 @@
 ROADMAP
 1. Fully passing DMC tests.
 2. Fully passing IRQ tests.
+    mmc3_test/4-scanline off-by-1 due to incorrectly handled interrupted branch?
+    irq_and_dma
+    irq_and_branch
 3. Fully working MMC5.
 4. Expansion Audio
 5. Remaining test ROMs.
