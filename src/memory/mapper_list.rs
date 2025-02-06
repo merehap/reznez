@@ -373,10 +373,20 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
             7 => m::mapper185_7::MAPPER185_7.supported(),
             _ => UnassignedSubmapper,
         }
+        // Used when running the BIOS of the Fukutake Study Box.
         186 => UnassignedMapper,
 
         // NTDEC's TC-112
         193 => m::mapper193::Mapper193.supported(),
+
+        // NROM-128 multicarts
+        200 => match submapper_number {
+            // More PRG/CHR banks
+            0 => m::mapper200_0::Mapper200_0.supported(),
+            // Fewer PRG/CHR banks
+            1 => m::mapper200_1::Mapper200_1.supported(),
+            _ => UnassignedSubmapper,
+        }
 
         // DxROM, Tengen MIMIC-1, Namcot 118
         206 => match submapper_number {
