@@ -67,8 +67,8 @@ impl ChrMemory {
 
         let bank_count = chr_memory.bank_count();
         assert_eq!(u32::from(bank_count) * u32::from(chr_memory.bank_size), chr_memory.raw_memory.size() as u32);
-        // Power of 2.
-        assert_eq!(bank_count & (bank_count - 1), 0);
+        // Power of 2. FIXME: What's the correct behavior when accessing the high banks? Open bus?
+        // assert_eq!(bank_count & (bank_count - 1), 0, "Bank count ({bank_count}) must be a power of 2.");
 
         chr_memory
     }

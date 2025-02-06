@@ -142,6 +142,7 @@ pub mod mapper193;
 pub mod mapper200_0;
 pub mod mapper200_1;
 pub mod mapper201;
+pub mod mapper202;
 
 pub mod mapper206;
 

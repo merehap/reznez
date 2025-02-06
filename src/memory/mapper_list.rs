@@ -389,6 +389,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         }
         // NROM-256 multicarts
         201 => m::mapper201::Mapper201.supported(),
+        // 150-in-1 pirate cart
+        202 => m::mapper202::Mapper202.supported(),
 
         // DxROM, Tengen MIMIC-1, Namcot 118
         206 => match submapper_number {
