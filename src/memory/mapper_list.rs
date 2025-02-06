@@ -387,6 +387,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
             1 => m::mapper200_1::Mapper200_1.supported(),
             _ => UnassignedSubmapper,
         }
+        // NROM-256 multicarts
+        201 => m::mapper201::Mapper201.supported(),
 
         // DxROM, Tengen MIMIC-1, Namcot 118
         206 => match submapper_number {
