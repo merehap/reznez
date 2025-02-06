@@ -24,4 +24,12 @@ impl Rgb {
     pub fn blue(self) -> u8 {
         self.blue
     }
+
+    pub fn to_greyscale(self) -> Self {
+        Self {
+            red: self.red & 0x30,
+            green: self.green & 0x30,
+            blue: self.blue & 0x30,
+        }
+    }
 }

@@ -64,7 +64,7 @@ impl Frame {
 
         // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
         use Priority::{Behind, InFront};
-        match (background_pixel, sprite_pixel, sprite_priority, column) {
+        let (mut rgb, sprite_0_hit) = match (background_pixel, sprite_pixel, sprite_priority, column) {
             (Transparent, Transparent, _, _) => (self.universal_background_rgb, Miss),
             (Transparent, Opaque(rgb), _, _) => (rgb, Miss),
             (Opaque(rgb), Transparent, _, _) => (rgb, Miss),
@@ -72,7 +72,13 @@ impl Frame {
             (Opaque(rgb), Opaque(_), Behind, PixelColumn::MAX) => (rgb, Miss),
             (Opaque(_), Opaque(rgb), InFront, _) => (rgb, sprite_0_hit),
             (Opaque(rgb), Opaque(_), Behind, _) => (rgb, sprite_0_hit),
+        };
+
+        if mask.greyscale_enabled() {
+            rgb = rgb.to_greyscale();
         }
+
+        (rgb, sprite_0_hit)
     }
 
     pub fn set_universal_background_rgb(&mut self, rgb: Rgb) {
