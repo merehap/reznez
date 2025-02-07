@@ -15,10 +15,10 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C3)),
     ])
     .name_table_mirrorings(&[
-        NameTableMirroring::Vertical,
-        NameTableMirroring::Horizontal,
-        NameTableMirroring::OneScreenLeftBank,
-        NameTableMirroring::OneScreenRightBank,
+        NameTableMirroring::VERTICAL,
+        NameTableMirroring::HORIZONTAL,
+        NameTableMirroring::ONE_SCREEN_LEFT_BANK,
+        NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
     ])
     .build();
 

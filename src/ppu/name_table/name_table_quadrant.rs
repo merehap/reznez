@@ -10,10 +10,10 @@ use crate::util::bit_util::get_bit;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, BitfieldSpecifier)]
 pub enum NameTableQuadrant {
-    TopLeft,
-    TopRight,
-    BottomLeft,
-    BottomRight,
+    TopLeft = 0,
+    TopRight = 1,
+    BottomLeft = 2,
+    BottomRight = 3,
 }
 
 #[rustfmt::skip]

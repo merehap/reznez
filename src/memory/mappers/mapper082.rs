@@ -32,8 +32,8 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C1)),
     ])
     .name_table_mirrorings(&[
-        NameTableMirroring::Horizontal,
-        NameTableMirroring::Vertical,
+        NameTableMirroring::HORIZONTAL,
+        NameTableMirroring::VERTICAL,
     ])
     .ram_statuses(&[
         RamStatus::ReadOnlyZeros,

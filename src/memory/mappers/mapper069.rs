@@ -21,10 +21,10 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
     ])
     .name_table_mirrorings(&[
-        NameTableMirroring::Vertical,
-        NameTableMirroring::Horizontal,
-        NameTableMirroring::OneScreenLeftBank,
-        NameTableMirroring::OneScreenRightBank,
+        NameTableMirroring::VERTICAL,
+        NameTableMirroring::HORIZONTAL,
+        NameTableMirroring::ONE_SCREEN_LEFT_BANK,
+        NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
     ])
     .ram_statuses(&[
         RamStatus::ReadOnly,

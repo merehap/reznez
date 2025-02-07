@@ -9,8 +9,8 @@ pub const LAYOUT: Layout = Layout::builder()
     .chr_layout(CHR_BIG_WINDOWS_FIRST)
     .chr_layout(CHR_SMALL_WINDOWS_FIRST)
     .name_table_mirrorings(&[
-        NameTableMirroring::Vertical,
-        NameTableMirroring::Horizontal,
+        NameTableMirroring::VERTICAL,
+        NameTableMirroring::HORIZONTAL,
     ])
     .ram_statuses(&[
         RamStatus::Disabled,
@@ -141,10 +141,8 @@ pub fn set_bank_index(
 }
 
 pub fn set_mirroring(params: &mut MapperParams, value: u8) {
-    use NameTableMirroring::*;
-
     // Cartridge hard-coded 4-screen mirroring cannot be changed.
-    if matches!(params.name_table_mirroring(), Vertical | Horizontal) {
+    if params.name_table_mirroring().is_vertical() || params.name_table_mirroring().is_horizontal() {
         params.set_name_table_mirroring(value & 1);
     }
 }

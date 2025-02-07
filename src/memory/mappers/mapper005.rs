@@ -463,16 +463,16 @@ impl Mapper005 {
 
     fn vertical_split_mode(&mut self, value: u8) {
         if value & 0b1000_0000 != 0 {
-            todo!("Vertical split mode");
+            todo!("VERTICAL split mode");
         }
     }
 
     fn vertical_split_scroll(&mut self, _value: u8) {
-        todo!("Vertical split scroll");
+        todo!("VERTICAL split scroll");
     }
 
     fn vertical_split_bank(&mut self, _value: u8) {
-        todo!("Vertical split bank");
+        todo!("VERTICAL split bank");
     }
 
     fn set_target_irq_scanline(&mut self, value: u8) {

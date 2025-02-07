@@ -15,8 +15,8 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C1)),
     ])
     .name_table_mirrorings(&[
-        NameTableMirroring::Vertical,
-        NameTableMirroring::Horizontal,
+        NameTableMirroring::VERTICAL,
+        NameTableMirroring::HORIZONTAL,
     ])
     .build();
 
@@ -38,8 +38,10 @@ impl Mapper for Mapper075 {
 
                 self.chr_right_high_bit = fields.r << 4;
                 self.chr_left_high_bit = fields.l << 4;
-                if params.name_table_mirroring() != NameTableMirroring::FourScreen {
+                if !params.name_table_mirroring().is_four_screen() {
                     params.set_name_table_mirroring(fields.m);
+                } else {
+                    todo!("Handle four screen mirroring");
                 }
             }
             0xA000..=0xAFFF => params.set_bank_register(P1, value & 0b0000_1111),

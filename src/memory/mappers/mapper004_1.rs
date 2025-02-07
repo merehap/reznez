@@ -41,8 +41,8 @@ const LAYOUT: Layout = Layout::builder()
     .chr_layout(mmc3::CHR_BIG_WINDOWS_FIRST)
     .chr_layout(mmc3::CHR_SMALL_WINDOWS_FIRST)
     .name_table_mirrorings(&[
-        NameTableMirroring::Vertical,
-        NameTableMirroring::Horizontal,
+        NameTableMirroring::VERTICAL,
+        NameTableMirroring::HORIZONTAL,
     ])
     .ram_statuses(&[
         RamStatus::ReadOnly,
@@ -103,10 +103,8 @@ impl Mapper004_1 {
     }
 
     pub fn set_mirroring(params: &mut MapperParams, value: u8) {
-        use NameTableMirroring::*;
-
         // Hard-coded 4-screen mirroring cannot be overridden.
-        if matches!(params.name_table_mirroring, Vertical | Horizontal) {
+        if params.name_table_mirroring().is_vertical() || params.name_table_mirroring().is_horizontal() {
             params.set_name_table_mirroring(value & 1);
         }
     }

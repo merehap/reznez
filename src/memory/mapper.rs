@@ -294,7 +294,7 @@ pub trait Mapper {
         vram: &'a Vram,
         quadrant: NameTableQuadrant,
     ) -> &'a [u8; KIBIBYTE as usize] {
-        let side = vram_side(quadrant, name_table_mirroring);
+        let side = name_table_mirroring.vram_side_at_quadrant(quadrant);
         vram.side(side)
     }
 
@@ -303,9 +303,9 @@ pub trait Mapper {
         &'a mut self,
         name_table_mirroring: NameTableMirroring,
         vram: &'a mut Vram,
-        position: NameTableQuadrant,
+        quadrant: NameTableQuadrant,
     ) -> &'a mut [u8; KIBIBYTE as usize] {
-        let side = vram_side(position, name_table_mirroring);
+        let side = name_table_mirroring.vram_side_at_quadrant(quadrant);
         vram.side_mut(side)
     }
 
@@ -459,27 +459,6 @@ fn address_to_palette_ram_index(address: PpuAddress) -> u32 {
     }
 
     address
-}
-
-#[inline]
-#[rustfmt::skip]
-fn vram_side(
-    name_table_quadrant: NameTableQuadrant,
-    mirroring: NameTableMirroring,
-) -> VramSide {
-    use NameTableQuadrant::*;
-    use NameTableMirroring::*;
-    match (name_table_quadrant, mirroring) {
-        (_          , FourScreen) => todo!("FourScreen isn't supported yet."),
-        (_          , OneScreenLeftBank) => VramSide::Left,
-        (_          , OneScreenRightBank) => VramSide::Right,
-        (TopLeft    , _         ) => VramSide::Left,
-        (TopRight   , Horizontal) => VramSide::Left,
-        (BottomLeft , Horizontal) => VramSide::Right,
-        (TopRight   , Vertical  ) => VramSide::Right,
-        (BottomLeft , Vertical  ) => VramSide::Left,
-        (BottomRight, _         ) => VramSide::Right,
-    }
 }
 
 pub struct MapperParams {

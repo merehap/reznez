@@ -12,8 +12,8 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(0)),
     ])
     .name_table_mirrorings(&[
-        NameTableMirroring::Horizontal,
-        NameTableMirroring::Vertical,
+        NameTableMirroring::HORIZONTAL,
+        NameTableMirroring::VERTICAL,
     ])
     .build();
 

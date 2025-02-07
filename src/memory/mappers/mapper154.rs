@@ -7,8 +7,8 @@ const LAYOUT: Layout = Layout::builder()
     .chr_max_size(128 * KIBIBYTE)
     .chr_layout(CHR_WINDOWS)
     .name_table_mirrorings(&[
-        NameTableMirroring::OneScreenLeftBank,
-        NameTableMirroring::OneScreenRightBank,
+        NameTableMirroring::ONE_SCREEN_LEFT_BANK,
+        NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
     ])
     .build();
 

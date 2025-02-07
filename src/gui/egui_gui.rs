@@ -540,10 +540,7 @@ impl Renderer for StatusRenderer {
                     ui.label(format!("{:?}", nes.cartridge().mapper_number()));
                     ui.end_row();
                     ui.label("Name Table Mirroring");
-                    ui.label(format!(
-                        "{:?}",
-                        mapper_params.name_table_mirroring()
-                    ));
+                    ui.label(format!("{}", mapper_params.name_table_mirroring()));
                     ui.end_row();
                     ui.label("PRG ROM banks");
                     ui.label(nes.memory().mapper().prg_rom_bank_string(mapper_params));

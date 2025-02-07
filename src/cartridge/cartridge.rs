@@ -99,9 +99,9 @@ impl Cartridge {
         }
 
         let name_table_mirroring = match (four_screen, vertical_mirroring) {
-            (true, _) => NameTableMirroring::FourScreen,
-            (_, false) => NameTableMirroring::Horizontal,
-            (_, true) => NameTableMirroring::Vertical,
+            (true, _) => todo!("Four screen mirroring."),
+            (_, false) => NameTableMirroring::HORIZONTAL,
+            (_, true) => NameTableMirroring::VERTICAL,
         };
 
         let prg_rom_start = 0x10;
@@ -221,7 +221,7 @@ impl fmt::Display for Cartridge {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Mapper: {}", self.mapper_number)?;
         writeln!(f, "Submapper: {}", self.submapper_number)?;
-        writeln!(f, "Nametable mirroring: {:?}", self.name_table_mirroring)?;
+        writeln!(f, "Nametable mirroring: {}", self.name_table_mirroring)?;
         writeln!(f, "Persistent memory: {}", self.has_persistent_memory)?;
         writeln!(f, "Ripper: {}", self.ripper_name)?;
         writeln!(f, "iNES2 present: {}", self.ines2.is_some())?;
@@ -275,7 +275,7 @@ pub mod test_data {
             name: "Test".to_string(),
             mapper_number: 0,
             submapper_number: 0,
-            name_table_mirroring: NameTableMirroring::Horizontal,
+            name_table_mirroring: NameTableMirroring::HORIZONTAL,
             has_persistent_memory: false,
             ripper_name: "Test Ripper".to_string(),
             ines2: None,

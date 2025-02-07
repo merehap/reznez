@@ -15,12 +15,12 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C0)),
         Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C1)),
     ])
-    .override_initial_name_table_mirroring(NameTableMirroring::OneScreenRightBank)
+    .override_initial_name_table_mirroring(NameTableMirroring::ONE_SCREEN_RIGHT_BANK)
     .name_table_mirrorings(&[
-        NameTableMirroring::OneScreenRightBank,
-        NameTableMirroring::OneScreenLeftBank,
-        NameTableMirroring::Vertical,
-        NameTableMirroring::Horizontal,
+        NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
+        NameTableMirroring::ONE_SCREEN_LEFT_BANK,
+        NameTableMirroring::VERTICAL,
+        NameTableMirroring::HORIZONTAL,
     ])
     .ram_statuses(&[
         RamStatus::ReadWrite,

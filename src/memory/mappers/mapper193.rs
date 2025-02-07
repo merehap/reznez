@@ -18,8 +18,8 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .do_not_align_large_chr_windows()
     .name_table_mirrorings(&[
-        NameTableMirroring::Vertical,
-        NameTableMirroring::Horizontal,
+        NameTableMirroring::VERTICAL,
+        NameTableMirroring::HORIZONTAL,
     ])
     .build();
 
