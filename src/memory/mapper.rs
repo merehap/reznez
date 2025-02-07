@@ -12,7 +12,9 @@ pub use crate::memory::layout::Layout;
 pub use crate::memory::ppu::chr_memory::ChrMemory;
 pub use crate::memory::ppu::ppu_address::PpuAddress;
 pub use crate::memory::read_result::ReadResult;
+pub use crate::memory::ppu::vram::VramSide;
 pub use crate::memory::window::Window;
+pub use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 pub use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 pub use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 pub use crate::util::unit::KIBIBYTE;
@@ -24,8 +26,7 @@ use crate::apu::apu_registers::ApuRegisters;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::ppu::palette_ram::PaletteRam;
-use crate::memory::ppu::vram::{Vram, VramSide};
-use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
+use crate::memory::ppu::vram::Vram;
 use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
 use crate::ppu::sprite::oam::Oam;
 
@@ -474,6 +475,10 @@ pub struct MapperParams {
 impl MapperParams {
     pub fn name_table_mirroring(&self) -> NameTableMirroring {
         self.name_table_mirroring
+    }
+
+    pub fn name_table_mirroring_mut(&mut self) -> &mut NameTableMirroring {
+        &mut self.name_table_mirroring
     }
 
     pub fn set_name_table_mirroring(&mut self, mirroring_index: u8) {

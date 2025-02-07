@@ -20,31 +20,41 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
         Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
     ])
-    .name_table_mirrorings(&[
-        NameTableMirroring::HORIZONTAL,
-        NameTableMirroring::VERTICAL,
-    ])
     .ram_statuses(&[
         RamStatus::Disabled,
         RamStatus::ReadWrite,
     ])
     .build();
 
-// Taito's X1-005
-pub struct Mapper080;
+// Taito's X1-005 (alternate name table mirrorings)
+pub struct Mapper207;
 
-impl Mapper for Mapper080 {
+impl Mapper for Mapper207 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7EEF => { /* Do nothing. */ }
-            0x7EF0 => params.set_bank_register(C0, value),
-            0x7EF1 => params.set_bank_register(C1, value),
+            0x7EF0 => {
+                println!("Setting upper name table quadrants.");
+                let (vram_right, chr_bank) = splitbits_named!(value, "vccc cccc");
+                let vram_side = if vram_right { VramSide::Right } else { VramSide::Left };
+                params.name_table_mirroring_mut().set_quadrant(NameTableQuadrant::TopLeft, vram_side);
+                params.name_table_mirroring_mut().set_quadrant(NameTableQuadrant::TopRight, vram_side);
+                params.set_bank_register(C0, chr_bank);
+            }
+            0x7EF1 => {
+                println!("Setting lower name table quadrants.");
+                let (vram_right, chr_bank) = splitbits_named!(value, "vccc cccc");
+                let vram_side = if vram_right { VramSide::Right } else { VramSide::Left };
+                params.name_table_mirroring_mut().set_quadrant(NameTableQuadrant::BottomLeft, vram_side);
+                params.name_table_mirroring_mut().set_quadrant(NameTableQuadrant::BottomRight, vram_side);
+                params.set_bank_register(C1, chr_bank);
+            }
             0x7EF2 => params.set_bank_register(C2, value),
             0x7EF3 => params.set_bank_register(C3, value),
             0x7EF4 => params.set_bank_register(C4, value),
             0x7EF5 => params.set_bank_register(C5, value),
-            0x7EF6..=0x7EF7 => params.set_name_table_mirroring(value & 1),
+            0x7EF6..=0x7EF7 => { /* Do nothing. (In mapper 80, this controls mirroring). */ }
             0x7EF8..=0x7EF9 => {
                 let ram_enabled = value == 0xA3;
                 params.set_ram_status(S0, ram_enabled as u8);

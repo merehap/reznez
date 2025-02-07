@@ -402,6 +402,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
             1 => TodoSubmapper,
             _ => UnassignedSubmapper,
         }
+        // Taito's X1-005 (alternate name table mirrorings)
+        207 => m::mapper207::Mapper207.supported(),
 
         210 => match submapper_number {
             0 => UnspecifiedSubmapper,

@@ -23,6 +23,10 @@ impl NameTableMirroring {
         self.quadrants[quadrant as usize]
     }
 
+    pub fn set_quadrant(&mut self, quadrant: NameTableQuadrant, side: VramSide) {
+        self.quadrants[quadrant as usize] = side;
+    }
+
     pub fn is_vertical(self) -> bool {
         self == NameTableMirroring::VERTICAL
     }
