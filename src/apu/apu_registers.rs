@@ -214,13 +214,14 @@ impl ApuRegisters {
     }
 
     fn decrement_length_counters(&mut self) {
-        let p1 = self.pulse_1.length_counter.decrement_towards_zero();
-        let p2 = self.pulse_2.length_counter.decrement_towards_zero();
-        let t = self.triangle.length_counter.decrement_towards_zero();
-        let n = self.noise.length_counter.decrement_towards_zero();
+        self.pulse_1.length_counter.decrement_towards_zero();
+        self.pulse_2.length_counter.decrement_towards_zero();
+        self.triangle.length_counter.decrement_towards_zero();
+        self.noise.length_counter.decrement_towards_zero();
 
         info!(target: "apuevents", "Decremented length counters. P1: {}, P2: {}, T: {}, N: {}. APU Cycle: {}",
-            p1, p2, t, n, self.clock.cycle(),
+            self.pulse_1.length_counter, self.pulse_2.length_counter, self.triangle.length_counter,
+            self.noise.length_counter, self.clock.cycle(),
         );
     }
 

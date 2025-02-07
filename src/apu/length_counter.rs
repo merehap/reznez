@@ -24,15 +24,9 @@ impl LengthCounter {
         self.count = 0;
     }
 
-    pub fn decrement_towards_zero(&mut self) -> DecrementResult {
-        if self.halt {
-            DecrementResult::Halted
-        } else {
-            if self.count > 0 {
-                self.count -= 1;
-            }
-
-            DecrementResult::Count(self.count)
+    pub fn decrement_towards_zero(&mut self) {
+        if !self.halt && self.count > 0 {
+            self.count -= 1;
         }
     }
 
@@ -41,16 +35,12 @@ impl LengthCounter {
     }
 }
 
-pub enum DecrementResult {
-    Halted,
-    Count(u8),
-}
-
-impl fmt::Display for DecrementResult {
+impl fmt::Display for LengthCounter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        match *self {
-            Self::Halted => write!(f, "HALTED"),
-            Self::Count(count) => write!(f, "{count}"),
+        if self.halt {
+            write!(f, "({}, HALTED)", self.count)
+        } else {
+            write!(f, "({})", self.count)
         }
     }
 }
