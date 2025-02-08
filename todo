@@ -10,7 +10,6 @@ ROADMAP
 7. PPU Mask support
 8. See if BankIndex can be resolved immediately. Late resolution is causing a lot of clutter.
 
-Rename VRAM to CIRAM.
 Add CHR bank viewer. Allow overriding the selected bank for the game rendering.
 Remove GetSpritePatternHack in ppu.rs.
 Verify when the IRQ flag is supposed to be cleared. An update to the location of ClearIrq caused the apu_test jitter to have a different result.

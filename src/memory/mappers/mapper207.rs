@@ -36,18 +36,18 @@ impl Mapper for Mapper207 {
             0x4020..=0x7EEF => { /* Do nothing. */ }
             0x7EF0 => {
                 println!("Setting upper name table quadrants.");
-                let (vram_right, chr_bank) = splitbits_named!(value, "vccc cccc");
-                let vram_side = if vram_right { VramSide::Right } else { VramSide::Left };
-                params.name_table_mirroring_mut().set_quadrant(NameTableQuadrant::TopLeft, vram_side);
-                params.name_table_mirroring_mut().set_quadrant(NameTableQuadrant::TopRight, vram_side);
+                let (ciram_right, chr_bank) = splitbits_named!(value, "vccc cccc");
+                let ciram_side = if ciram_right { CiramSide::Right } else { CiramSide::Left };
+                params.name_table_mirroring_mut().set_quadrant(NameTableQuadrant::TopLeft, ciram_side);
+                params.name_table_mirroring_mut().set_quadrant(NameTableQuadrant::TopRight, ciram_side);
                 params.set_bank_register(C0, chr_bank);
             }
             0x7EF1 => {
                 println!("Setting lower name table quadrants.");
-                let (vram_right, chr_bank) = splitbits_named!(value, "vccc cccc");
-                let vram_side = if vram_right { VramSide::Right } else { VramSide::Left };
-                params.name_table_mirroring_mut().set_quadrant(NameTableQuadrant::BottomLeft, vram_side);
-                params.name_table_mirroring_mut().set_quadrant(NameTableQuadrant::BottomRight, vram_side);
+                let (ciram_right, chr_bank) = splitbits_named!(value, "vccc cccc");
+                let ciram_side = if ciram_right { CiramSide::Right } else { CiramSide::Left };
+                params.name_table_mirroring_mut().set_quadrant(NameTableQuadrant::BottomLeft, ciram_side);
+                params.name_table_mirroring_mut().set_quadrant(NameTableQuadrant::BottomRight, ciram_side);
                 params.set_bank_register(C1, chr_bank);
             }
             0x7EF2 => params.set_bank_register(C2, value),

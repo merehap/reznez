@@ -6,7 +6,7 @@ use crate::memory::mapper::*;
 use crate::memory::memory::{NMI_VECTOR_LOW, NMI_VECTOR_HIGH};
 use crate::memory::raw_memory::RawMemoryArray;
 use crate::memory::ppu::palette_ram::PaletteRam;
-use crate::memory::ppu::vram::{Vram, VramSide};
+use crate::memory::ppu::ciram::{Ciram, CiramSide};
 
 const LAYOUT: Layout = Layout::builder()
     .override_bank_register(P4, -1)
@@ -247,12 +247,12 @@ impl Mapper for Mapper005 {
     fn ppu_peek(
         &self,
         params: &MapperParams, 
-        vram: &Vram,
+        ciram: &Ciram,
         palette_ram: &PaletteRam,
         address: PpuAddress,
     ) -> u8 {
         match address.to_u16() {
-            0x0000..=0x1FFF => params.peek_chr(vram, address),
+            0x0000..=0x1FFF => params.peek_chr(ciram, address),
             0x2000..=0x3EFF
                 if address.is_in_attribute_table() && self.extended_attribute_mode_enabled() => {
                     let (_, index) = address.name_table_location().unwrap();
@@ -263,9 +263,9 @@ impl Mapper for Mapper005 {
                 let (name_table_quadrant, index) = address.name_table_location().unwrap();
                 match self.name_table_sources[name_table_quadrant as usize] {
                     NameTableSource::CiramLeft =>
-                        vram.side(VramSide::Left)[index as usize],
+                        ciram.side(CiramSide::Left)[index as usize],
                     NameTableSource::CiramRight =>
-                        vram.side(VramSide::Right)[index as usize],
+                        ciram.side(CiramSide::Right)[index as usize],
                     NameTableSource::ExtendedRam =>
                         self.extended_ram[index],
                     NameTableSource::Fill =>

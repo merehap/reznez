@@ -1,29 +1,29 @@
 use std::fmt;
 
-use crate::memory::ppu::vram::VramSide;
+use crate::memory::ppu::ciram::CiramSide;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct NameTableMirroring {
     // TopLeft, TopRight, BottomLeft, BottomRight
-    quadrants: [VramSide; 4],
+    quadrants: [CiramSide; 4],
 }
 
 impl NameTableMirroring {
     pub const VERTICAL: NameTableMirroring =
-        build([VramSide::Left, VramSide::Right, VramSide::Left, VramSide::Right]);
+        build([CiramSide::Left, CiramSide::Right, CiramSide::Left, CiramSide::Right]);
     pub const HORIZONTAL: NameTableMirroring =
-        build([VramSide::Left, VramSide::Left, VramSide::Right, VramSide::Right]);
+        build([CiramSide::Left, CiramSide::Left, CiramSide::Right, CiramSide::Right]);
     pub const ONE_SCREEN_LEFT_BANK: NameTableMirroring =
-        build([VramSide::Left, VramSide::Left, VramSide::Left, VramSide::Left]);
+        build([CiramSide::Left, CiramSide::Left, CiramSide::Left, CiramSide::Left]);
     pub const ONE_SCREEN_RIGHT_BANK: NameTableMirroring =
-        build([VramSide::Right, VramSide::Right, VramSide::Right, VramSide::Right]);
+        build([CiramSide::Right, CiramSide::Right, CiramSide::Right, CiramSide::Right]);
 
-    pub fn vram_side_at_quadrant(self, quadrant: NameTableQuadrant) -> VramSide {
+    pub fn ciram_side_at_quadrant(self, quadrant: NameTableQuadrant) -> CiramSide {
         self.quadrants[quadrant as usize]
     }
 
-    pub fn set_quadrant(&mut self, quadrant: NameTableQuadrant, side: VramSide) {
+    pub fn set_quadrant(&mut self, quadrant: NameTableQuadrant, side: CiramSide) {
         self.quadrants[quadrant as usize] = side;
     }
 
@@ -41,7 +41,7 @@ impl NameTableMirroring {
     }
 }
 
-const fn build(quadrants: [VramSide; 4]) -> NameTableMirroring {
+const fn build(quadrants: [CiramSide; 4]) -> NameTableMirroring {
     NameTableMirroring { quadrants }
 }
 

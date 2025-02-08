@@ -1,5 +1,5 @@
 use crate::memory::bank::bank::RamStatusRegisterId;
-use crate::memory::ppu::vram::VramSide;
+use crate::memory::ppu::ciram::CiramSide;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct BankIndex(u16);
@@ -70,8 +70,8 @@ impl BankRegisters {
         self.registers[id as usize] = BankLocation::Index(BankIndex(updater(value.0)));
     }
 
-    pub fn set_to_vram_side(&mut self, id: BankRegisterId, vram_side: VramSide) {
-        self.registers[id as usize] = BankLocation::Vram(vram_side);
+    pub fn set_to_ciram_side(&mut self, id: BankRegisterId, ciram_side: CiramSide) {
+        self.registers[id as usize] = BankLocation::Ciram(ciram_side);
     }
 
     pub fn get_from_meta(&self, id: MetaRegisterId) -> BankLocation {
@@ -94,7 +94,7 @@ impl BankRegisters {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum BankLocation {
     Index(BankIndex),
-    Vram(VramSide),
+    Ciram(CiramSide),
 }
 
 impl BankLocation {

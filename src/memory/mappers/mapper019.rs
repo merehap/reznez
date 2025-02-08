@@ -1,6 +1,6 @@
 use crate::memory::mapper::*;
 use crate::memory::ppu::palette_ram::PaletteRam;
-use crate::memory::ppu::vram::{Vram, VramSide};
+use crate::memory::ppu::ciram::{Ciram, CiramSide};
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(512 * KIBIBYTE)
@@ -44,8 +44,8 @@ pub struct Mapper019 {
     irq_counter: u16,
     irq_pending: bool,
 
-    allow_vram_in_low_chr: bool,
-    allow_vram_in_high_chr: bool,
+    allow_ciram_in_low_chr: bool,
+    allow_ciram_in_high_chr: bool,
 }
 
 impl Mapper for Mapper019 {
@@ -78,14 +78,14 @@ impl Mapper for Mapper019 {
                 self.irq_counter |= u16::from(value << 1) << 7;
             }
             0x6000..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x87FF => set_chr_register(params, self.allow_vram_in_low_chr, C0, S0, value),
-            0x8800..=0x8FFF => set_chr_register(params, self.allow_vram_in_low_chr, C1, S1, value),
-            0x9000..=0x97FF => set_chr_register(params, self.allow_vram_in_low_chr, C2, S2, value),
-            0x9800..=0x9FFF => set_chr_register(params, self.allow_vram_in_low_chr, C3, S3, value),
-            0xA000..=0xA7FF => set_chr_register(params, self.allow_vram_in_high_chr, C4, S4, value),
-            0xA800..=0xAFFF => set_chr_register(params, self.allow_vram_in_high_chr, C5, S5, value),
-            0xB000..=0xB7FF => set_chr_register(params, self.allow_vram_in_high_chr, C6, S6, value),
-            0xB800..=0xBFFF => set_chr_register(params, self.allow_vram_in_high_chr, C7, S7, value),
+            0x8000..=0x87FF => set_chr_register(params, self.allow_ciram_in_low_chr, C0, S0, value),
+            0x8800..=0x8FFF => set_chr_register(params, self.allow_ciram_in_low_chr, C1, S1, value),
+            0x9000..=0x97FF => set_chr_register(params, self.allow_ciram_in_low_chr, C2, S2, value),
+            0x9800..=0x9FFF => set_chr_register(params, self.allow_ciram_in_low_chr, C3, S3, value),
+            0xA000..=0xA7FF => set_chr_register(params, self.allow_ciram_in_high_chr, C4, S4, value),
+            0xA800..=0xAFFF => set_chr_register(params, self.allow_ciram_in_high_chr, C5, S5, value),
+            0xB000..=0xB7FF => set_chr_register(params, self.allow_ciram_in_high_chr, C6, S6, value),
+            0xB800..=0xBFFF => set_chr_register(params, self.allow_ciram_in_high_chr, C7, S7, value),
             0xC000..=0xC7FF => set_chr_register(params, true, C8, S8, value),
             0xC800..=0xCFFF => set_chr_register(params, true, C9, S9, value),
             0xD000..=0xD7FF => set_chr_register(params, true, C10, S10, value),
@@ -97,8 +97,8 @@ impl Mapper for Mapper019 {
             }
             0xE800..=0xEFFF => {
                 let fields = splitbits!(value, "hlpp pppp");
-                self.allow_vram_in_high_chr = !fields.h;
-                self.allow_vram_in_low_chr = !fields.l;
+                self.allow_ciram_in_high_chr = !fields.h;
+                self.allow_ciram_in_low_chr = !fields.l;
                 params.set_bank_register(P1, fields.p);
             }
             0xF000..=0xF7FF => {
@@ -126,7 +126,7 @@ impl Mapper for Mapper019 {
     fn ppu_peek(
         &self,
         params: &MapperParams,
-        vram: &Vram,
+        ciram: &Ciram,
         palette_ram: &PaletteRam,
         mut address: PpuAddress,
     ) -> u8 {
@@ -137,7 +137,7 @@ impl Mapper for Mapper019 {
                     address = PpuAddress::from_u16(address.to_u16() - 0x1000);
                 }
 
-                params.peek_chr(vram, address)
+                params.peek_chr(ciram, address)
             }
             0x3F00..=0x3FFF => self.peek_palette_table_byte(palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
@@ -148,7 +148,7 @@ impl Mapper for Mapper019 {
     fn ppu_write(
         &mut self,
         params: &mut MapperParams,
-        vram: &mut Vram,
+        ciram: &mut Ciram,
         palette_ram: &mut PaletteRam,
         mut address: PpuAddress,
         value: u8,
@@ -160,7 +160,7 @@ impl Mapper for Mapper019 {
                     address = PpuAddress::from_u16(address.to_u16() - 0x1000);
                 }
 
-                params.write_chr(vram, address, value);
+                params.write_chr(ciram, address, value);
             }
             0x3F00..=0x3FFF => self.write_palette_table_byte(palette_ram, address, value),
             0x4000..=0xFFFF => unreachable!(),
@@ -187,14 +187,14 @@ impl Mapper for Mapper019 {
 
 fn set_chr_register(
     params: &mut MapperParams,
-    allow_vram_in_chr: bool,
+    allow_ciram_in_chr: bool,
     reg_id: BankRegisterId,
     status_reg_id: RamStatusRegisterId,
     value: u8,
 ) {
-    if allow_vram_in_chr && value >= 0xE0 {
-        let vram_side = if value & 1 == 0 { VramSide::Left } else { VramSide::Right };
-        params.set_bank_register_to_vram_side(reg_id, vram_side);
+    if allow_ciram_in_chr && value >= 0xE0 {
+        let ciram_side = if value & 1 == 0 { CiramSide::Left } else { CiramSide::Right };
+        params.set_bank_register_to_ciram_side(reg_id, ciram_side);
         params.set_ram_status(status_reg_id, READ_WRITE);
     } else {
         params.set_bank_register(reg_id, value);
@@ -208,8 +208,8 @@ impl Mapper019 {
             irq_counter: 0,
             irq_pending: false,
 
-            allow_vram_in_low_chr: true,
-            allow_vram_in_high_chr: true,
+            allow_ciram_in_low_chr: true,
+            allow_ciram_in_high_chr: true,
         }
     }
 }

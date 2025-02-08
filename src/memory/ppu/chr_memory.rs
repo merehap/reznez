@@ -2,13 +2,13 @@ use crate::memory::bank::bank::Bank;
 use crate::memory::bank::bank_index::BankRegisters;
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
-use crate::memory::ppu::vram::Vram;
+use crate::memory::ppu::ciram::Ciram;
 use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
 use crate::memory::window::{ChrLocation, Window};
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
 
-use super::vram::VramSide;
+use super::ciram::CiramSide;
 
 pub struct ChrMemory {
     layouts: Vec<ChrLayout>,
@@ -92,20 +92,20 @@ impl ChrMemory {
         self.current_layout().windows().len().try_into().unwrap()
     }
 
-    pub fn peek(&self, registers: &BankRegisters, vram: &Vram, address: PpuAddress) -> u8 {
+    pub fn peek(&self, registers: &BankRegisters, ciram: &Ciram, address: PpuAddress) -> u8 {
         let (chr_index, _) = self.address_to_chr_index(registers, address.to_u16());
         match chr_index {
             ChrIndex::Normal(index) => self.raw_memory[index],
-            ChrIndex::Vram(side, index, ) => vram.side(side)[index as usize],
+            ChrIndex::Ciram(side, index, ) => ciram.side(side)[index as usize],
         }
     }
 
-    pub fn write(&mut self, registers: &BankRegisters, vram: &mut Vram, address: PpuAddress, value: u8) {
+    pub fn write(&mut self, registers: &BankRegisters, ciram: &mut Ciram, address: PpuAddress, value: u8) {
         let (chr_index, writable) = self.address_to_chr_index(registers, address.to_u16());
         if writable || self.override_write_protection {
             match chr_index {
                 ChrIndex::Normal(index) => self.raw_memory[index] = value,
-                ChrIndex::Vram(side, index, ) => vram.side_mut(side)[index as usize] = value,
+                ChrIndex::Ciram(side, index, ) => ciram.side_mut(side)[index as usize] = value,
             }
         }
     }
@@ -129,10 +129,10 @@ impl ChrMemory {
         self.layout_index = index;
     }
 
-    pub fn pattern_table<'a>(&'a self, registers: &BankRegisters, vram: &'a Vram, side: PatternTableSide) -> PatternTable<'a> {
+    pub fn pattern_table<'a>(&'a self, registers: &BankRegisters, ciram: &'a Ciram, side: PatternTableSide) -> PatternTable<'a> {
         match side {
-            PatternTableSide::Left => PatternTable::new(self.left_chunks(registers, vram)),
-            PatternTableSide::Right => PatternTable::new(self.right_chunks(registers, vram)),
+            PatternTableSide::Left => PatternTable::new(self.left_chunks(registers, ciram)),
+            PatternTableSide::Right => PatternTable::new(self.right_chunks(registers, ciram)),
         }
     }
 
@@ -155,8 +155,8 @@ impl ChrMemory {
                             u32::from(bank_offset);
                         return (ChrIndex::Normal(index), window.is_writable(registers));
                     }
-                    ChrLocation::Vram(side ) => {
-                        return (ChrIndex::Vram(side, bank_offset), true);
+                    ChrLocation::Ciram(side ) => {
+                        return (ChrIndex::Ciram(side, bank_offset), true);
                     }
                 }
             }
@@ -166,23 +166,23 @@ impl ChrMemory {
     }
 
     #[inline]
-    fn left_chunks<'a>(&'a self, registers: &BankRegisters, vram: &'a Vram) -> [RawMemorySlice<'a>; 4] {
+    fn left_chunks<'a>(&'a self, registers: &BankRegisters, ciram: &'a Ciram) -> [RawMemorySlice<'a>; 4] {
         self.left_indexes(registers)
             .map(move |chr_index| {
                 match chr_index {
                     ChrIndex::Normal(index) => self.raw_memory.slice(index..index + 1 * KIBIBYTE),
-                    ChrIndex::Vram(side, ..) => RawMemorySlice::from_raw(vram.side(side)),
+                    ChrIndex::Ciram(side, ..) => RawMemorySlice::from_raw(ciram.side(side)),
                 }
         })
     }
 
     #[inline]
-    fn right_chunks<'a>(&'a self, registers: &BankRegisters, vram: &'a Vram) -> [RawMemorySlice<'a>; 4] {
+    fn right_chunks<'a>(&'a self, registers: &BankRegisters, ciram: &'a Ciram) -> [RawMemorySlice<'a>; 4] {
         self.right_indexes(registers)
             .map(move |chr_index| {
                 match chr_index {
                     ChrIndex::Normal(index) => self.raw_memory.slice(index..index + 1 * KIBIBYTE),
-                    ChrIndex::Vram(side, ..) => RawMemorySlice::from_raw(vram.side(side)),
+                    ChrIndex::Ciram(side, ..) => RawMemorySlice::from_raw(ciram.side(side)),
                 }
         })
     }
@@ -210,5 +210,5 @@ impl ChrMemory {
 
 pub enum ChrIndex {
     Normal(u32),
-    Vram(VramSide, u16),
+    Ciram(CiramSide, u16),
 }

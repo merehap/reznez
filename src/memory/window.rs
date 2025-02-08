@@ -3,7 +3,7 @@ use std::fmt;
 use crate::memory::bank::bank::{Bank, Location};
 use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId};
 
-use crate::memory::ppu::vram::VramSide;
+use crate::memory::ppu::ciram::CiramSide;
 
 use super::bank::bank_index::BankLocation;
 
@@ -83,8 +83,8 @@ impl Window {
                 let bank_index = self.resolve_bank_index(index, bank_size, bank_count, align_large_layouts);
                 ChrLocation::BankIndex(bank_index)
             }
-            BankLocation::Vram(vram_side) => {
-                ChrLocation::Vram(vram_side)
+            BankLocation::Ciram(ciram_side) => {
+                ChrLocation::Ciram(ciram_side)
             }
         }
     }
@@ -148,15 +148,15 @@ impl Window {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum ChrLocation {
     BankIndex(u16),
-    Vram(VramSide),
+    Ciram(CiramSide),
 }
 
 impl fmt::Display for ChrLocation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ChrLocation::BankIndex(index) => write!(f, "{index}"),
-            ChrLocation::Vram(VramSide::Left) => write!(f, "LNT"),
-            ChrLocation::Vram(VramSide::Right) => write!(f, "RNT"),
+            ChrLocation::Ciram(CiramSide::Left) => write!(f, "LNT"),
+            ChrLocation::Ciram(CiramSide::Right) => write!(f, "RNT"),
         }
     }
 }
