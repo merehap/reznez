@@ -1,7 +1,7 @@
 ROADMAP
 1. Fully passing DMC tests.
 2. Fully passing IRQ tests.
-    mmc3_test/4-scanline off-by-1 due to incorrectly handled interrupted branch?
+    mmc3_test/4-scanline off-by-1
     irq_and_dma
 3. Fully working MMC5.
 4. Expansion Audio
@@ -10,6 +10,7 @@ ROADMAP
 7. PPU Mask support
 8. See if BankIndex can be resolved immediately. Late resolution is causing a lot of clutter.
 
+Rename VRAM to CIRAM.
 Add CHR bank viewer. Allow overriding the selected bank for the game rendering.
 Remove GetSpritePatternHack in ppu.rs.
 Verify when the IRQ flag is supposed to be cleared. An update to the location of ClearIrq caused the apu_test jitter to have a different result.
@@ -24,7 +25,6 @@ Improve cycle accuracy of undocumented instructions
 Open Bus for joysticks.
 Other input devices.
 Auto-mirror undersized CHR (for mapper 99 and maybe others).
-Separate Sprite debug window code from regular code.
 
 FANCY NICE-TO-HAVES
 APU frequency correction
