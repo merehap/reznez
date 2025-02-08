@@ -43,14 +43,31 @@ impl LengthCounter {
             self.next_halt_value = None;
         }
     }
+
+    fn status(self) -> Status {
+        match (self.halt, self.next_halt_value) {
+            (false, None | Some(false)) => Status::Normal,
+            (true , None | Some(true) ) => Status::Halted,
+            (false,        Some(true) ) => Status::HaltPending,
+            (true ,        Some(false)) => Status::UnhaltPending,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Debug)]
+enum Status {
+    Normal,
+    Halted,
+    HaltPending,
+    UnhaltPending,
 }
 
 impl fmt::Display for LengthCounter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        if self.halt {
-            write!(f, "({}, HALTED)", self.count)
-        } else {
+        if self.status() == Status::Normal {
             write!(f, "({})", self.count)
+        } else {
+            write!(f, "({}, {:?})", self.count, self.status())
         }
     }
 }
