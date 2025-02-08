@@ -7,7 +7,10 @@ const TABLE: [u8; 0x20] = [
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]
 pub struct LengthCounter {
+    count_decremented: bool,
     count: u8,
+    pending_count: Option<u8>,
+
     halt: bool,
     pending_halt_value: Option<bool>,
 }
@@ -20,7 +23,30 @@ impl LengthCounter {
 
     // Write $4003 (pulse 1), $4007 (pulse 2), 0x400B (triangle) or 0x400F (noise).
     pub fn set_count_from_lookup(&mut self, index: u8) {
-        self.count = TABLE[usize::from(index)];
+        self.pending_count = Some(TABLE[usize::from(index)]);
+        self.count_decremented = false;
+    }
+
+    pub fn decrement_towards_zero(&mut self) {
+        if !self.halt && self.count > 0 {
+            self.count -= 1;
+            self.count_decremented = true;
+        }
+    }
+
+    pub fn apply_halt(&mut self) {
+        if let Some(pending_count) = self.pending_count.take() {
+            // 11-len_reload_timing.nes: "Reload during length clock when ctr > 0 should be ignored".
+            // Additionally, we assume that "Reload during length clock when HALTED should be ignored",
+            // though there is no test that verifies this.
+            if !self.count_decremented {
+                self.count = pending_count;
+            }
+        }
+
+        if let Some(pending_halt_value) = self.pending_halt_value.take() {
+            self.halt = pending_halt_value;
+        }
     }
 
     pub fn is_zero(self) -> bool {
@@ -29,19 +55,6 @@ impl LengthCounter {
 
     pub fn set_to_zero(&mut self) {
         self.count = 0;
-    }
-
-    pub fn decrement_towards_zero(&mut self) {
-        if !self.halt && self.count > 0 {
-            self.count -= 1;
-        }
-    }
-
-    pub fn apply_halt(&mut self) {
-        if let Some(pending_halt_value) = self.pending_halt_value {
-            self.halt = pending_halt_value;
-            self.pending_halt_value = None;
-        }
     }
 
     fn status(self) -> Status {
