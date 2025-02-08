@@ -218,9 +218,11 @@ impl Cpu {
         // Keep irq_pending and irq_status in sync
         if irq_pending {
             if self.irq_status == IrqStatus::Inactive && !self.status.interrupts_disabled {
+                info!(target: "cpuflowcontrol", "IRQ pending in CPU. Cycle: {}", memory.cpu_cycle());
                 self.irq_status = IrqStatus::Pending;
             }
         } else if self.irq_status == IrqStatus::Pending {
+            info!(target: "cpuflowcontrol", "IRQ acknowledged in CPU. Cycle: {}", memory.cpu_cycle());
             self.irq_status = IrqStatus::Inactive;
         }
 
