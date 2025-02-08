@@ -356,22 +356,22 @@ impl Cpu {
                         Cpu::nz_status(&mut self.status, memory.data_bus());
                     }
                     SLO => {
-                        Cpu::asl(&mut self.status, &mut memory.data_bus_mut());
+                        Cpu::asl(&mut self.status, memory.data_bus_mut());
                         self.a |= memory.data_bus();
                         self.nz(self.a);
                     }
                     SRE => {
-                        Cpu::lsr(&mut self.status, &mut memory.data_bus_mut());
+                        Cpu::lsr(&mut self.status, memory.data_bus_mut());
                         self.a ^= memory.data_bus();
                         self.nz(self.a);
                     }
                     RLA => {
-                        Cpu::rol(&mut self.status, &mut memory.data_bus_mut());
+                        Cpu::rol(&mut self.status, memory.data_bus_mut());
                         self.a &= memory.data_bus();
                         self.nz(self.a);
                     },
                     RRA => {
-                        Cpu::ror(&mut self.status, &mut memory.data_bus_mut());
+                        Cpu::ror(&mut self.status, memory.data_bus_mut());
                         self.a = self.adc(memory.data_bus());
                         self.nz(self.a);
                     }

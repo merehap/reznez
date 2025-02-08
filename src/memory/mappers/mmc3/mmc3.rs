@@ -20,7 +20,7 @@ pub const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-pub const PRG_WINDOWS_8000_SWITCHABLE: &'static [Window] = &[
+pub const PRG_WINDOWS_8000_SWITCHABLE: &[Window] = &[
     Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
     Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
@@ -28,7 +28,7 @@ pub const PRG_WINDOWS_8000_SWITCHABLE: &'static [Window] = &[
     Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
 ];
 
-pub const PRG_WINDOWS_C000_SWITCHABLE: &'static [Window] = &[
+pub const PRG_WINDOWS_C000_SWITCHABLE: &[Window] = &[
     Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
     Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-2)),
     Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
@@ -36,7 +36,7 @@ pub const PRG_WINDOWS_C000_SWITCHABLE: &'static [Window] = &[
     Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
 ];
 
-pub const CHR_BIG_WINDOWS_FIRST: &'static [Window] = &[
+pub const CHR_BIG_WINDOWS_FIRST: &[Window] = &[
     // Big windows.
     Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::ROM.switchable(C0)),
     Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C1)),
@@ -47,7 +47,7 @@ pub const CHR_BIG_WINDOWS_FIRST: &'static [Window] = &[
     Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
 ];
 
-pub const CHR_SMALL_WINDOWS_FIRST: &'static [Window] = &[
+pub const CHR_SMALL_WINDOWS_FIRST: &[Window] = &[
     // Small windows.
     Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::ROM.switchable(C2)),
     Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::ROM.switchable(C3)),

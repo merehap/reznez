@@ -18,11 +18,11 @@ impl RawMemory {
         &self.0[..]
     }
 
-    pub fn slice<'a>(&'a self, range: Range<u32>) -> RawMemorySlice<'a> {
+    pub fn slice(&self, range: Range<u32>) -> RawMemorySlice {
         RawMemorySlice(&self.0[range.start as usize..range.end as usize])
     }
 
-    pub fn maybe_slice<'a>(&'a self, range: Range<u32>) -> Option<RawMemorySlice<'a>> {
+    pub fn maybe_slice(&self, range: Range<u32>) -> Option<RawMemorySlice> {
         self.0.get(range.start as usize..range.end as usize)
             .map(RawMemorySlice)
     }
@@ -105,7 +105,7 @@ impl<'a> RawMemorySlice<'a> {
     }
 }
 
-impl<'a> Index<u32> for RawMemorySlice<'a> {
+impl Index<u32> for RawMemorySlice<'_> {
     type Output = u8;
 
     fn index(&self, index: u32) -> &u8 {

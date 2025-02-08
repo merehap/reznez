@@ -7,7 +7,6 @@ use std::path::PathBuf;
 
 use dashmap::DashMap;
 use rayon::prelude::*;
-use sscanf;
 use walkdir::WalkDir;
 
 use reznez::config::{Config, GuiType, Opt};
@@ -98,9 +97,8 @@ impl TestSummary {
     }
 
     fn passed(&self) -> bool {
-        self.test_results.iter()
-            .find(|(_, status)| **status == TestStatus::Fail || **status == TestStatus::ExpectedFramesMissing)
-            .is_none()
+        !self.test_results.iter()
+            .any(|(_, status)| *status == TestStatus::Fail || *status == TestStatus::ExpectedFramesMissing)
     }
 
     fn print(&self) {
@@ -169,7 +167,7 @@ impl RomEntry {
 
     fn rom_id(&self) -> RomId {
         let path = self.path.with_extension("");
-        let rom_id: Vec<_> = path.into_iter()
+        let rom_id: Vec<_> = path.iter()
             .skip(2)
             .map(|id| id.to_str().unwrap())
             .collect();
@@ -242,7 +240,7 @@ impl FrameEntry {
 
     fn rom_id(&self) -> RomId {
         let rom_id = self.directory();
-        let rom_id: Vec<_> = rom_id.into_iter()
+        let rom_id: Vec<_> = rom_id.iter()
             .skip(2)
             .map(|id| id.to_str().unwrap())
             .collect();

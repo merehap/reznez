@@ -136,7 +136,7 @@ pub struct CpuMemory<'a> {
     memory: &'a mut Memory,
 }
 
-impl<'a> CpuMemory<'a> {
+impl CpuMemory<'_> {
     #[inline]
     pub fn peek(&self, address: CpuAddress) -> u8 {
         self.memory.mapper.cpu_peek(
@@ -266,7 +266,7 @@ pub struct PpuMemory<'a> {
     memory: &'a mut Memory,
 }
 
-impl<'a> PpuMemory<'a> {
+impl PpuMemory<'_> {
     #[inline]
     pub fn read(&mut self, address: PpuAddress) -> u8 {
         self.memory.mapper.ppu_read(

@@ -20,7 +20,7 @@ use reznez::logging::logger::Logger;
 #[test]
 fn nestest() {
     let f = File::open("tests/data/nestest_expected").expect("Test data not found!");
-    let mut expected_states = BufReader::new(f)
+    let expected_states = BufReader::new(f)
         .lines()
         .map(|line| State::from_text(line.unwrap()));
 
@@ -55,66 +55,62 @@ fn nestest() {
         nes.step();
     }
 
-    loop {
-        if let Some(expected_state) = expected_states.next() {
-            let c;
-            let ppu_cycle;
-            let ppu_scanline;
+    for expected_state in expected_states {
+        let c;
+        let ppu_cycle;
+        let ppu_scanline;
 
-            let current_instruction: Instruction;
-            loop {
-                if nes.step().step.is_some() {
-                    if let Some((instruction, _)) = nes.cpu_mut().mode_state().new_instruction_with_address() {
-                        current_instruction = instruction;
-                        c = nes.memory().cpu_cycle();
-                        ppu_cycle = nes.ppu().clock().cycle();
-                        ppu_scanline = nes.ppu().clock().scanline();
-                        break;
-                    }
-                }
-            }
-
-            let program_counter = nes.cpu().address_bus();
-
-            let mut a;
-            let mut x;
-            let mut y;
-            let mut p;
-            let mut s;
-            loop {
-                a = nes.cpu().accumulator();
-                x = nes.cpu().x_index();
-                y = nes.cpu().y_index();
-                p = nes.cpu().status();
-                s = nes.stack_pointer();
-
-                if let Some(step) = nes.step().step && step.has_interpret_op_code() {
+        let current_instruction: Instruction;
+        loop {
+            if nes.step().step.is_some() {
+                if let Some((instruction, _)) = nes.cpu_mut().mode_state().new_instruction_with_address() {
+                    current_instruction = instruction;
+                    c = nes.memory().cpu_cycle();
+                    ppu_cycle = nes.ppu().clock().cycle();
+                    ppu_scanline = nes.ppu().clock().scanline();
                     break;
                 }
             }
+        }
 
-            let state = State {
-                program_counter,
-                code_point: current_instruction.code_point(),
-                op_code: current_instruction.op_code(),
-                a,
-                x,
-                y,
-                p,
-                s,
-                ppu_cycle,
-                ppu_scanline,
-                c,
-            };
+        let program_counter = nes.cpu().address_bus();
 
-            if state != expected_state {
-                panic!(
-                    "State diverged from expected state!\nExpected:\n{}\nActual:\n{}",
-                    expected_state, state
-                );
+        let mut a;
+        let mut x;
+        let mut y;
+        let mut p;
+        let mut s;
+        loop {
+            a = nes.cpu().accumulator();
+            x = nes.cpu().x_index();
+            y = nes.cpu().y_index();
+            p = nes.cpu().status();
+            s = nes.stack_pointer();
+
+            if let Some(step) = nes.step().step && step.has_interpret_op_code() {
+                break;
             }
-        } else {
-            break;
+        }
+
+        let state = State {
+            program_counter,
+            code_point: current_instruction.code_point(),
+            op_code: current_instruction.op_code(),
+            a,
+            x,
+            y,
+            p,
+            s,
+            ppu_cycle,
+            ppu_scanline,
+            c,
+        };
+
+        if state != expected_state {
+            panic!(
+                "State diverged from expected state!\nExpected:\n{}\nActual:\n{}",
+                expected_state, state
+            );
         }
     }
 }
@@ -153,17 +149,17 @@ impl State {
             y: u8::from_str_radix(&line[60..62], 16).unwrap(),
             p: Status::from_byte(u8::from_str_radix(&line[65..67], 16).unwrap()),
             s: u8::from_str_radix(&line[71..73], 16).unwrap(),
-            ppu_cycle: u16::from_str_radix(&line[78..81].trim(), 10).unwrap(),
-            ppu_scanline: u16::from_str_radix(&line[82..85].trim(), 10).unwrap(),
-            c: i64::from_str_radix(&line[90..], 10).unwrap(),
+            ppu_cycle: str::parse(line[78..81].trim()).unwrap(),
+            ppu_scanline: str::parse(line[82..85].trim()).unwrap(),
+            c: str::parse(&line[90..]).unwrap(),
         }
     }
 }
 
 impl fmt::Display for State {
-    fn fmt<'a>(&self, f: &mut std::fmt::Formatter<'a>) -> fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> fmt::Result {
         write!(f, "State {{PC:{}, CodePoint:0x{:02X}, OpCode:{:?}, A:0x{:02X}, X:0x{:02X}, Y:0x{:02X}, P:{} (0x{:02X}), S:0x{:02X}, C:{:05}, PPUC:{:03}, PPUS:{:03}}}",
                self.program_counter, self.code_point, self.op_code, self.a,
-               self.x, self.y, self.p.to_string(), self.p.to_register_byte(), self.s, self.c, self.ppu_cycle, self.ppu_scanline)
+               self.x, self.y, self.p, self.p.to_register_byte(), self.s, self.c, self.ppu_cycle, self.ppu_scanline)
     }
 }

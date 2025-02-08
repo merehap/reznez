@@ -237,7 +237,7 @@ impl Formatter for MesenFormatter {
         match instruction.access_mode() {
             Imp => {
                 if matches!(instruction.op_code(), OpCode::LSR | OpCode::ROR | OpCode::ROL | OpCode::ASL) {
-                    argument_string.push_str("A");
+                    argument_string.push('A');
                 }
             }
             Imm => {

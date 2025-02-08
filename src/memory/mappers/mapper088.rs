@@ -7,7 +7,7 @@ const LAYOUT: Layout = Layout::builder()
     .chr_layout(CHR_WINDOWS)
     .build();
 
-pub const PRG_WINDOWS: &'static [Window] = &[
+pub const PRG_WINDOWS: &[Window] = &[
     Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
     Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
     Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
@@ -15,7 +15,7 @@ pub const PRG_WINDOWS: &'static [Window] = &[
     Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
 ];
 
-pub const CHR_WINDOWS: &'static [Window] = &[
+pub const CHR_WINDOWS: &[Window] = &[
     Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::ROM.switchable(C0)),
     Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C1)),
     Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::ROM.switchable(C2)),

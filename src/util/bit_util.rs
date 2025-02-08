@@ -80,12 +80,12 @@ mod tests {
 
     #[test]
     fn get_bit_0_true() {
-        assert_eq!(get_bit(0b10100110, 0), true);
+        assert!(get_bit(0b10100110, 0));
     }
 
     #[test]
     fn get_bit_7_false() {
-        assert_eq!(get_bit(0b10100110, 7), false);
+        assert!(!get_bit(0b10100110, 7));
     }
 
     #[test]

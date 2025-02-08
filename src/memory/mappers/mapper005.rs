@@ -252,7 +252,7 @@ impl Mapper for Mapper005 {
         address: PpuAddress,
     ) -> u8 {
         match address.to_u16() {
-            0x0000..=0x1FFF => params.peek_chr(&vram, address),
+            0x0000..=0x1FFF => params.peek_chr(vram, address),
             0x2000..=0x3EFF
                 if address.is_in_attribute_table() && self.extended_attribute_mode_enabled() => {
                     let (_, index) = address.name_table_location().unwrap();
@@ -272,7 +272,7 @@ impl Mapper for Mapper005 {
                         self.fill_mode_tile,
                 }
             }
-            0x3F00..=0x3FFF => self.peek_palette_table_byte(&palette_ram, address),
+            0x3F00..=0x3FFF => self.peek_palette_table_byte(palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
         }
     }

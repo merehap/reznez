@@ -59,14 +59,14 @@ impl BankRegisters {
 
     pub fn set_bits(&mut self, id: BankRegisterId, new_value: u16, mask: u16) {
         let value = self.registers[id as usize].index()
-            .expect(&format!("bank location at id {id:?} to not be in VRAM"));
+            .unwrap_or_else(|| panic!("bank location at id {id:?} to not be in VRAM"));
         let updated_value = (value.0 & !mask) | (new_value & mask);
         self.registers[id as usize] = BankLocation::Index(BankIndex(updated_value));
     }
 
     pub fn update(&mut self, id: BankRegisterId, updater: &dyn Fn(u16) -> u16) {
         let value = self.registers[id as usize].index()
-            .expect(&format!("bank location at id {id:?} to not be in VRAM"));
+            .unwrap_or_else(|| panic!("bank location at id {id:?} to not be in VRAM"));
         self.registers[id as usize] = BankLocation::Index(BankIndex(updater(value.0)));
     }
 

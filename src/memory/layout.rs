@@ -43,13 +43,13 @@ impl Layout {
         assert!(chr_size <= self.chr_max_size, "CHR size of {}KiB is too large for this mapper.", chr_size / KIBIBYTE);
 
         let prg_memory = PrgMemory::new(
-            self.prg_layouts.into_iter().collect(),
+            self.prg_layouts.as_iter().collect(),
             self.prg_layout_index,
             self.prg_bank_size_override,
             cartridge.prg_rom().clone(),
         );
         let chr_memory = ChrMemory::new(
-            self.chr_layouts.into_iter().collect(),
+            self.chr_layouts.as_iter().collect(),
             self.chr_layout_index,
             self.align_large_chr_windows,
             cartridge.chr_rom().clone(),
@@ -61,11 +61,11 @@ impl Layout {
         };
 
         let mut bank_registers = BankRegisters::new();
-        for (register_id, bank_index) in self.bank_register_overrides.into_iter() {
+        for (register_id, bank_index) in self.bank_register_overrides.as_iter() {
             bank_registers.set(register_id, bank_index);
         }
 
-        for (meta_id, register_id) in self.meta_register_overrides.into_iter() {
+        for (meta_id, register_id) in self.meta_register_overrides.as_iter() {
             bank_registers.set_meta(meta_id, register_id);
         }
 
