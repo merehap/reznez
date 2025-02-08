@@ -9,13 +9,13 @@ const TABLE: [u8; 0x20] = [
 pub struct LengthCounter {
     count: u8,
     halt: bool,
-    next_halt_value: Option<bool>,
+    pending_halt_value: Option<bool>,
 }
 
 impl LengthCounter {
     // Write $4000 (pulse 1), $4004 (pulse 2), 0x4008 (triangle) or 0x400C (noise).
     pub fn set_halt(&mut self, halt: bool) {
-        self.next_halt_value = Some(halt);
+        self.pending_halt_value = Some(halt);
     }
 
     // Write $4003 (pulse 1), $4007 (pulse 2), 0x400B (triangle) or 0x400F (noise).
@@ -38,14 +38,14 @@ impl LengthCounter {
     }
 
     pub fn apply_halt(&mut self) {
-        if let Some(next_halt_value) = self.next_halt_value {
-            self.halt = next_halt_value;
-            self.next_halt_value = None;
+        if let Some(pending_halt_value) = self.pending_halt_value {
+            self.halt = pending_halt_value;
+            self.pending_halt_value = None;
         }
     }
 
     fn status(self) -> Status {
-        match (self.halt, self.next_halt_value) {
+        match (self.halt, self.pending_halt_value) {
             (false, None | Some(false)) => Status::Normal,
             (true , None | Some(true) ) => Status::Halted,
             (false,        Some(true) ) => Status::HaltPending,
