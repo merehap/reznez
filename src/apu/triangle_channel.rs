@@ -27,7 +27,7 @@ impl TriangleChannel {
         self.counter_control =     (value & 0b1000_0000) != 0;
         self.linear_counter = (value & 0b0111_1111).into();
 
-        self.length_counter.set_halt(self.counter_control);
+        self.length_counter.start_halt(self.counter_control);
     }
 
     pub fn write_timer_low_byte(&mut self, value: u8) {
@@ -37,7 +37,7 @@ impl TriangleChannel {
     // Write 0x400B
     pub fn write_length_and_timer_high_byte(&mut self, value: u8) {
         if self.enabled {
-            self.length_counter.set_count_from_lookup((value & 0b1111_1000) >> 3);
+            self.length_counter.start_reload((value & 0b1111_1000) >> 3);
         }
 
         self.timer.set_period_high_and_reset_index(value & 0b0000_0111);

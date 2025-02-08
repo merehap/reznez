@@ -63,7 +63,7 @@ impl Apu {
 
         regs.maybe_set_frame_irq_pending();
         regs.maybe_decrement_counters();
-        regs.apply_length_counter_halts();
+        regs.apply_length_counter_pending_values();
         regs.execute_put_cycle();
 
         if regs.clock().raw_cycle() % 20 == 0 {
@@ -80,7 +80,7 @@ impl Apu {
         let cycle = regs.clock().cycle();
         info!(target: "apucycles", "APU cycle: {cycle} (GET)");
         regs.maybe_set_frame_irq_pending();
-        regs.apply_length_counter_halts();
+        regs.apply_length_counter_pending_values();
         regs.execute_get_cycle();
     }
 

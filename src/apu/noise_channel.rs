@@ -5,6 +5,7 @@ use crate::util::integer::U4;
 const NTSC_PERIODS: [u16; 16] =
     [4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068];
 
+// TODO: splitbits
 pub struct NoiseChannel {
     pub(super) enabled: bool,
 
@@ -37,9 +38,9 @@ impl Default for NoiseChannel {
 
 impl NoiseChannel {
     pub fn write_control_byte(&mut self, value: u8) {
-        self.length_counter.set_halt((value & 0b0010_0000) != 0);
-        self.constant_volume =       (value & 0b0001_0000) != 0;
-        self.volume_or_envelope =    (value & 0b0000_1111).into();
+        self.length_counter.start_halt((value & 0b0010_0000) != 0);
+        self.constant_volume =         (value & 0b0001_0000) != 0;
+        self.volume_or_envelope =      (value & 0b0000_1111).into();
     }
 
     pub fn write_loop_and_period_byte(&mut self, value: u8) {
@@ -51,7 +52,7 @@ impl NoiseChannel {
     // Write 0x400F
     pub fn write_length_byte(&mut self, value: u8) {
         if self.enabled {
-            self.length_counter.set_count_from_lookup((value & 0b1111_1000) >> 3);
+            self.length_counter.start_reload((value & 0b1111_1000) >> 3);
         }
     }
 

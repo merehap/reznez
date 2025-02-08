@@ -21,10 +21,10 @@ pub struct PulseChannel {
 impl PulseChannel {
     // Write $4000 or $4004
     pub fn write_control_byte(&mut self, value: u8) {
-        self.duty =                 ((value & 0b1100_0000) >> 6).into();
-        self.length_counter.set_halt((value & 0b0010_0000) != 0);
-        self.constant_volume =       (value & 0b0001_0000) != 0;
-        self.volume_or_envelope =    (value & 0b0000_1111).into();
+        self.duty =                   ((value & 0b1100_0000) >> 6).into();
+        self.length_counter.start_halt((value & 0b0010_0000) != 0);
+        self.constant_volume =         (value & 0b0001_0000) != 0;
+        self.volume_or_envelope =      (value & 0b0000_1111).into();
     }
 
     // Write $4001 or $4005
@@ -41,7 +41,7 @@ impl PulseChannel {
     // Write $4003 or $4007
     pub fn write_length_and_timer_high_byte(&mut self, value: u8) {
         if self.enabled {
-            self.length_counter.set_count_from_lookup((value & 0b1111_1000) >> 3);
+            self.length_counter.start_reload((value & 0b1111_1000) >> 3);
         }
 
         self.sequence_index = 0;
