@@ -225,6 +225,13 @@ impl ApuRegisters {
         );
     }
 
+    pub fn apply_length_counter_halts(&mut self) {
+        self.pulse_1.length_counter.apply_halt();
+        self.pulse_2.length_counter.apply_halt();
+        self.triangle.length_counter.apply_halt();
+        self.noise.length_counter.apply_halt();
+    }
+
     pub fn frame_irq_pending(&self) -> bool {
         self.frame_irq_pending
     }

@@ -9,9 +9,16 @@ const TABLE: [u8; 0x20] = [
 pub struct LengthCounter {
     count: u8,
     halt: bool,
+    next_halt_value: Option<bool>,
 }
 
 impl LengthCounter {
+    // Write $4000 (pulse 1), $4004 (pulse 2), 0x4008 (triangle) or 0x400C (noise).
+    pub fn set_halt(&mut self, halt: bool) {
+        self.next_halt_value = Some(halt);
+    }
+
+    // Write $4003 (pulse 1), $4007 (pulse 2), 0x400B (triangle) or 0x400F (noise).
     pub fn set_count_from_lookup(&mut self, index: u8) {
         self.count = TABLE[usize::from(index)];
     }
@@ -30,8 +37,11 @@ impl LengthCounter {
         }
     }
 
-    pub fn set_halt(&mut self, halt: bool) {
-        self.halt = halt;
+    pub fn apply_halt(&mut self) {
+        if let Some(next_halt_value) = self.next_halt_value {
+            self.halt = next_halt_value;
+            self.next_halt_value = None;
+        }
     }
 }
 

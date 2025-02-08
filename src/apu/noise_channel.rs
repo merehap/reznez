@@ -48,6 +48,7 @@ impl NoiseChannel {
         self.timer.set_period_and_reset_index(period);
     }
 
+    // Write 0x400F
     pub fn write_length_byte(&mut self, value: u8) {
         if self.enabled {
             self.length_counter.set_count_from_lookup((value & 0b1111_1000) >> 3);

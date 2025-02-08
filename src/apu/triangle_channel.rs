@@ -34,6 +34,7 @@ impl TriangleChannel {
         self.timer.set_period_low(value);
     }
 
+    // Write 0x400B
     pub fn write_length_and_timer_high_byte(&mut self, value: u8) {
         if self.enabled {
             self.length_counter.set_count_from_lookup((value & 0b1111_1000) >> 3);

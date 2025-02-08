@@ -19,6 +19,7 @@ pub struct PulseChannel {
 }
 
 impl PulseChannel {
+    // Write $4000 or $4004
     pub fn write_control_byte(&mut self, value: u8) {
         self.duty =                 ((value & 0b1100_0000) >> 6).into();
         self.length_counter.set_halt((value & 0b0010_0000) != 0);
@@ -26,15 +27,18 @@ impl PulseChannel {
         self.volume_or_envelope =    (value & 0b0000_1111).into();
     }
 
+    // Write $4001 or $4005
     #[allow(clippy::unused_self)]
     pub fn write_sweep_byte(&mut self, _value: u8) {
         //self.sweep = Sweep::from_u8(value);
     }
 
+    // Write $4002 or $4006
     pub fn write_timer_low_byte(&mut self, value: u8) {
         self.timer.set_period_low(value);
     }
 
+    // Write $4003 or $4007
     pub fn write_length_and_timer_high_byte(&mut self, value: u8) {
         if self.enabled {
             self.length_counter.set_count_from_lookup((value & 0b1111_1000) >> 3);
@@ -44,6 +48,7 @@ impl PulseChannel {
         self.timer.set_period_high_and_reset_index(value & 0b0000_0111);
     }
 
+    // Write 0x4015
     pub(super) fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
         if !self.enabled {
