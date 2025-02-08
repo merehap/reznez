@@ -221,7 +221,7 @@ impl Cpu {
                 info!(target: "cpuflowcontrol", "IRQ pending in CPU. Cycle: {}", memory.cpu_cycle());
                 self.irq_status = IrqStatus::Pending;
             }
-        } else if self.irq_status == IrqStatus::Pending {
+        } else if self.irq_status != IrqStatus::Inactive {
             info!(target: "cpuflowcontrol", "IRQ acknowledged in CPU. Cycle: {}", memory.cpu_cycle());
             self.irq_status = IrqStatus::Inactive;
         }
@@ -467,7 +467,7 @@ impl Cpu {
                     };
                 self.mode_state.interrupt_vector_set(self.current_interrupt_vector);
 
-                // We no longer need to track interrupt statuses now that the vector is set.
+                // Clear interrupt statuses now that the vector is set.
                 self.nmi_status = NmiStatus::Inactive;
                 self.irq_status = IrqStatus::Inactive;
                 self.reset_status = ResetStatus::Inactive;
