@@ -177,6 +177,7 @@ impl EguiWindow {
         .unwrap();
 
         EguiWindow::new(
+            event_loop,
             window_size.width,
             window_size.height,
             scale_factor,
@@ -187,6 +188,7 @@ impl EguiWindow {
     }
 
     fn new(
+        event_loop: &EventLoopWindowTarget<()>,
         width: u32,
         height: u32,
         scale_factor: f32,
@@ -194,11 +196,8 @@ impl EguiWindow {
         pixels: pixels::Pixels,
         renderer: Box<dyn Renderer>,
     ) -> Self {
-        let max_texture_size = pixels.device().limits().max_texture_dimension_2d as usize;
-
         let egui_ctx = Context::default();
-        let egui_state =
-            egui_winit::State::from_pixels_per_point(max_texture_size, scale_factor);
+        let egui_state = egui_winit::State::new(event_loop);
         let screen_descriptor = ScreenDescriptor {
             physical_width: width,
             physical_height: height,
@@ -222,7 +221,7 @@ impl EguiWindow {
 
     /// Handle input events from the window manager.
     fn handle_event(&mut self, event: &winit::event::WindowEvent) {
-        self.egui_state.on_event(&self.egui_ctx, event);
+        let _event_response = self.egui_state.on_event(&self.egui_ctx, event);
     }
 
     fn draw(&mut self, world: &mut World) -> Result<Option<WindowArgs>, String> {
@@ -440,7 +439,7 @@ impl Renderer for PrimaryRenderer {
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         let display_frame = |frame: &Frame, mask, _frame_index| {
-            frame.copy_to_rgba_buffer(mask, pixels.get_frame_mut().try_into().unwrap());
+            frame.copy_to_rgba_buffer(mask, pixels.frame_mut().try_into().unwrap());
         };
         execute_frame(
             &mut world.nes,
@@ -614,7 +613,7 @@ impl Renderer for LayersRenderer {
         self.buffer
             .place_frame(261, 245 + TOP_MENU_BAR_HEIGHT, &self.frame);
 
-        self.buffer.copy_to_rgba_buffer(pixels.get_frame_mut());
+        self.buffer.copy_to_rgba_buffer(pixels.frame_mut());
     }
 
     fn width(&self) -> usize {
@@ -688,7 +687,7 @@ impl Renderer for NameTableRenderer {
         self.buffer.place_wrapping_vertical_line(x, y, y + 241, Rgb::new(255, 0, 0));
         self.buffer.place_wrapping_vertical_line(x + 257, y, y + 241, Rgb::new(255, 0, 0));
 
-        self.buffer.copy_to_rgba_buffer(pixels.get_frame_mut());
+        self.buffer.copy_to_rgba_buffer(pixels.frame_mut());
     }
 
     fn width(&self) -> usize {
@@ -736,7 +735,7 @@ impl Renderer for SpritesRenderer {
             );
         }
 
-        self.buffer.copy_to_rgba_buffer(pixels.get_frame_mut());
+        self.buffer.copy_to_rgba_buffer(pixels.frame_mut());
     }
 
     fn width(&self) -> usize {
@@ -802,7 +801,7 @@ impl Renderer for PatternTableRenderer {
             offset += (8 + 1) * 16 + 10;
         }
 
-        self.buffer.copy_to_rgba_buffer(pixels.get_frame_mut());
+        self.buffer.copy_to_rgba_buffer(pixels.frame_mut());
     }
 
     fn width(&self) -> usize {
@@ -899,7 +898,7 @@ impl Renderer for ChrBanksRenderer {
         }
         */
 
-        self.buffer.copy_to_rgba_buffer(pixels.get_frame_mut());
+        self.buffer.copy_to_rgba_buffer(pixels.frame_mut());
     }
 
     fn width(&self) -> usize {
