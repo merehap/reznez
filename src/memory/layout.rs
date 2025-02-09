@@ -76,6 +76,7 @@ impl Layout {
             name_table_mirroring,
             name_table_mirrorings: self.name_table_mirrorings,
             ram_statuses: self.ram_statuses,
+            irq_pending: false,
         }
     }
 }

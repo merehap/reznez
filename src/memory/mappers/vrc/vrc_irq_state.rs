@@ -1,8 +1,9 @@
 use splitbits::splitbits_named;
 
+use crate::memory::mapper::MapperParams;
+
 pub struct VrcIrqState {
     enabled: bool,
-    pending: bool,
     enable_upon_acknowledgement: bool,
     mode: IrqMode,
     counter_reload_low_value: u8,
@@ -16,7 +17,6 @@ impl VrcIrqState {
     pub fn new() -> Self {
         Self {
             enabled: false,
-            pending: false,
             enable_upon_acknowledgement: false,
             mode: IrqMode::Scanline,
             counter_reload_low_value: 0,
@@ -26,7 +26,7 @@ impl VrcIrqState {
         }
     }
 
-    pub fn step(&mut self) {
+    pub fn step(&mut self, params: &mut MapperParams) {
         if !self.enabled {
             return;
         }
@@ -43,7 +43,7 @@ impl VrcIrqState {
         }
 
         if self.counter == 0xFF {
-            self.pending = true;
+            params.set_irq_pending(true);
             self.counter = self.counter_reload_value;
         } else {
             self.counter += 1;
@@ -62,8 +62,8 @@ impl VrcIrqState {
         self.counter_reload_value = (value & 0b0000_1111) << 4 | self.counter_reload_low_value;
     }
 
-    pub fn set_mode(&mut self, value: u8) {
-        self.pending = false;
+    pub fn set_mode(&mut self, params: &mut MapperParams, value: u8) {
+        params.set_irq_pending(false);
 
         let mode;
         (mode, self.enable_upon_acknowledgement, self.enabled) = splitbits_named!(value, ".....mae");
@@ -73,15 +73,11 @@ impl VrcIrqState {
         }
     }
 
-    pub fn acknowledge(&mut self) {
-        self.pending = false;
+    pub fn acknowledge(&mut self, params: &mut MapperParams) {
+        params.set_irq_pending(false);
         if self.enable_upon_acknowledgement {
             self.enabled = true;
         }
-    }
-
-    pub fn pending(&self) -> bool {
-        self.pending
     }
 }
 

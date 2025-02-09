@@ -26,7 +26,6 @@ const LAYOUT: Layout = Layout::builder()
 #[derive(Default)]
 pub struct Mapper067 {
     irq_enabled: bool,
-    irq_pending: bool,
     irq_counter: u16,
     irq_load_low: bool,
 }
@@ -36,7 +35,7 @@ impl Mapper for Mapper067 {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x87FF => self.irq_pending = false,
+            0x8000..=0x87FF => params.set_irq_pending(false),
             0x8800..=0x97FF => params.set_bank_register(C0, value & 0b0011_1111),
             0x9800..=0xA7FF => params.set_bank_register(C1, value & 0b0011_1111),
             0xA800..=0xB7FF => params.set_bank_register(C2, value & 0b0011_1111),
@@ -62,20 +61,16 @@ impl Mapper for Mapper067 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
         if !self.irq_enabled {
             return;
         }
 
         self.irq_counter = self.irq_counter.wrapping_sub(1);
         if self.irq_counter == 0xFFFF {
-            self.irq_pending = true;
+            params.set_irq_pending(true);
             self.irq_enabled = false;
         }
-    }
-
-    fn irq_pending(&self) -> bool {
-        self.irq_pending
     }
 
     fn layout(&self) -> Layout {

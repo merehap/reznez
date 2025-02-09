@@ -25,7 +25,6 @@ const LAYOUT: Layout = Layout::builder()
 #[derive(Default)]
 pub struct Mapper043 {
     irq_enabled: bool,
-    irq_pending: bool,
     irq_counter: u12,
 }
 
@@ -51,7 +50,7 @@ impl Mapper for Mapper043 {
             0x4122 | 0x8122 => {
                 self.irq_enabled = value & 1 == 1;
                 if !self.irq_enabled {
-                    self.irq_pending = false;
+                    params.set_irq_pending(false);
                     self.irq_counter = 0.into();
                 }
             }
@@ -59,15 +58,11 @@ impl Mapper for Mapper043 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
         if self.irq_enabled {
             self.irq_counter = self.irq_counter.wrapping_add(1.into());
-            self.irq_pending = self.irq_counter == 0.into();
+            params.set_irq_pending(self.irq_counter == 0.into());
         }
-    }
-
-    fn irq_pending(&self) -> bool {
-        self.irq_pending
     }
 
     fn layout(&self) -> Layout {

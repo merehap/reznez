@@ -190,7 +190,7 @@ impl Nes {
         let irq_pending =
             self.memory.apu_regs().frame_irq_pending()
             || self.memory.apu_regs().dmc_irq_pending()
-            || self.memory.mapper().irq_pending();
+            || self.memory.mapper_params().irq_pending;
         let mut interrupt_text = String::new();
         if log_enabled!(target: "cpuinstructions", Info) {
             interrupt_text = formatter::interrupts(self);

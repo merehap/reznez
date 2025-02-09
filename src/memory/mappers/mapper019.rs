@@ -42,7 +42,6 @@ const READ_WRITE: u8 = 1;
 pub struct Mapper019 {
     // Actually a u15, but that's not ergonomic enough to use.
     irq_counter: u16,
-    irq_pending: bool,
 
     allow_ciram_in_low_chr: bool,
     allow_ciram_in_high_chr: bool,
@@ -66,13 +65,13 @@ impl Mapper for Mapper019 {
             0x4020..=0x47FF => { /* Do nothing. */ }
             0x4800..=0x4FFF => { /* TODO: Expansion Audio. */ }
             0x5000..=0x57FF => {
-                self.irq_pending = false;
+                params.set_irq_pending(false);
                 // Set the low bits of the IRQ counter.
                 self.irq_counter &= 0b0000_0000_1111_1111;
                 self.irq_counter |= u16::from(value);
             }
             0x5800..=0x5FFF => {
-                self.irq_pending = false;
+                params.set_irq_pending(false);
                 // Set the high bits of the IRQ counter.
                 self.irq_counter &= 0b0111_1111_0000_0000;
                 self.irq_counter |= u16::from(value << 1) << 7;
@@ -167,17 +166,13 @@ impl Mapper for Mapper019 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
         if self.irq_counter < 0x7FFF {
             self.irq_counter += 1;
             if self.irq_counter == 0x7FFF {
-                self.irq_pending = true;
+                params.set_irq_pending(true);
             }
         }
-    }
-
-    fn irq_pending(&self) -> bool {
-        self.irq_pending
     }
 
     fn layout(&self) -> Layout {
@@ -206,7 +201,6 @@ impl Mapper019 {
     pub fn new() -> Self {
         Self {
             irq_counter: 0,
-            irq_pending: false,
 
             allow_ciram_in_low_chr: true,
             allow_ciram_in_high_chr: true,

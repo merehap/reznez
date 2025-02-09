@@ -145,7 +145,6 @@ pub struct Mapper005 {
     scanline_irq_enabled: bool,
     irq_scanline: u8,
     current_scanline: u8,
-    irq_pending: bool,
     in_frame: bool,
     previous_ppu_address_read: Option<PpuAddress>,
     consecutive_reads_of_same_address: u8,
@@ -171,7 +170,7 @@ impl Mapper for Mapper005 {
             // TODO
             0x5015 => ReadResult::full(0),
             0x5016..=0x5203 => ReadResult::OPEN_BUS,
-            0x5204 => ReadResult::full(self.scanline_irq_status()),
+            0x5204 => ReadResult::full(self.scanline_irq_status(params)),
             0x5205 => ReadResult::full((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
             0x5206 => ReadResult::full(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
             0x5207..=0x5BFF => ReadResult::OPEN_BUS,
@@ -186,7 +185,7 @@ impl Mapper for Mapper005 {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5203 => {}
-            0x5204 => self.irq_pending = false,
+            0x5204 => params.set_irq_pending(false),
             0x5205..=0xFFFF => {}
             // FIXME: Shouldn't we have this here?
             // 0x6000..=0xFFFF => params.read_prg(address),
@@ -277,7 +276,7 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, _params: &mut MapperParams, _cycle: i64) {
         if self.ppu_read_occurred_since_last_cpu_cycle {
             self.cpu_cycles_since_last_ppu_read = 0;
         } else {
@@ -344,8 +343,8 @@ impl Mapper for Mapper005 {
             if self.consecutive_reads_of_same_address == 2 {
                 if self.in_frame {
                     self.current_scanline += 1;
-                    if self.current_scanline == self.irq_scanline {
-                        self.irq_pending = true;
+                    if self.current_scanline == self.irq_scanline && self.scanline_irq_enabled {
+                        params.set_irq_pending(true);
                     }
                 } else {
                     // Starting new frame.
@@ -361,10 +360,6 @@ impl Mapper for Mapper005 {
 
         self.previous_ppu_address_read = Some(address);
         self.ppu_read_occurred_since_last_cpu_cycle = true;
-    }
-
-    fn irq_pending(&self) -> bool {
-        self.scanline_irq_enabled && self.irq_pending
     }
 
     fn layout(&self) -> Layout {
@@ -390,7 +385,6 @@ impl Mapper005 {
             scanline_irq_enabled: false,
             irq_scanline: 0,
             current_scanline: 0,
-            irq_pending: false,
             in_frame: false,
             previous_ppu_address_read: None,
             consecutive_reads_of_same_address: 0,
@@ -504,9 +498,9 @@ impl Mapper005 {
         self.extended_ram[cpu_address as u32 - 0x5C00] = value;
     }
 
-    fn scanline_irq_status(&self) -> u8 {
+    fn scanline_irq_status(&self, params: &MapperParams) -> u8 {
         let mut result = 0;
-        if self.irq_pending {
+        if params.irq_pending() {
             result |= 0b1000_0000;
         }
 

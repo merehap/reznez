@@ -251,7 +251,7 @@ impl CpuMemory<'_> {
     }
 
     pub fn process_end_of_cpu_cycle(&mut self) {
-        self.memory.mapper.on_end_of_cpu_cycle(self.memory.cpu_cycle);
+        self.memory.mapper.on_end_of_cpu_cycle(&mut self.memory.mapper_params, self.memory.cpu_cycle);
     }
 
     fn address_from_vector(&mut self, mut vector: CpuAddress) -> CpuAddress {

@@ -53,15 +53,11 @@ impl Mapper for Mapper042 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
         if self.irq_enabled {
             self.irq_counter = self.irq_counter.wrapping_add(1.into());
+            params.set_irq_pending(u16::from(self.irq_counter) >= 0x6000u16);
         }
-    }
-
-    fn irq_pending(&self) -> bool {
-        // 0x6000 == 24576
-        u16::from(self.irq_counter) >= 0x6000u16
     }
 
     fn layout(&self) -> Layout {

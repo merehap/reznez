@@ -53,7 +53,7 @@ pub trait Mapper {
     // provides a relief valve for the rare settings that can't be expressed in a Layout.
     fn init_mapper_params(&self, _params: &mut MapperParams) {}
     // Most mappers don't care about CPU cycles.
-    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {}
+    fn on_end_of_cpu_cycle(&mut self, _params: &mut MapperParams, _cycle: i64) {}
     fn on_cpu_read(&mut self, _params: &mut MapperParams, _address: CpuAddress) {}
     fn on_cpu_write(&mut self, _params: &mut MapperParams, _address: CpuAddress, _value: u8) {}
     // Most mappers don't care about PPU cycles.
@@ -61,9 +61,7 @@ pub trait Mapper {
     // Most mappers don't trigger anything based upon ppu reads.
     fn on_ppu_read(&mut self, _params: &mut MapperParams, _address: PpuAddress, _value: u8) {}
     // Most mappers don't care about the current PPU address.
-    fn process_current_ppu_address(&mut self, _address: PpuAddress) {}
-    // Most mappers don't trigger custom IRQs.
-    fn irq_pending(&self) -> bool { false }
+    fn process_current_ppu_address(&mut self, _params: &mut MapperParams, _address: PpuAddress) {}
     // Most mappers don't have bus conflicts.
     fn has_bus_conflicts(&self) -> HasBusConflicts { HasBusConflicts::No }
 
@@ -141,7 +139,7 @@ pub trait Mapper {
                     0x2007 => {
                         let reader = |ppu_address| self.ppu_read(params, ciram, palette_ram, ppu_address, false);
                         let data = ppu_registers.read_ppu_data(reader);
-                        self.process_current_ppu_address(ppu_registers.current_address());
+                        self.process_current_ppu_address(params, ppu_registers.current_address());
                         data
                     }
                     _ => unreachable!(),
@@ -188,13 +186,13 @@ pub trait Mapper {
                 0x2006 => {
                     ppu_registers.write_ppu_addr(value);
                     if ppu_registers.write_toggle() == WriteToggle::FirstByte {
-                        self.process_current_ppu_address(ppu_registers.current_address());
+                        self.process_current_ppu_address(params, ppu_registers.current_address());
                     }
                 }
                 0x2007 => {
                     self.ppu_write(params, ciram, palette_ram, ppu_registers.current_address(), value);
                     ppu_registers.write_ppu_data(value);
-                    self.process_current_ppu_address(ppu_registers.current_address());
+                    self.process_current_ppu_address(params, ppu_registers.current_address());
                 }
                 _ => unreachable!(),
             }
@@ -263,7 +261,7 @@ pub trait Mapper {
         rendering: bool,
     ) -> u8 {
         if rendering {
-            self.process_current_ppu_address(address);
+            self.process_current_ppu_address(params, address);
         }
 
         let value = self.ppu_peek(params, ciram, palette_ram, address);
@@ -468,6 +466,7 @@ pub struct MapperParams {
     pub name_table_mirroring: NameTableMirroring,
     pub name_table_mirrorings: &'static [NameTableMirroring],
     pub ram_statuses: &'static [RamStatus],
+    pub irq_pending: bool,
 }
 
 impl MapperParams {
@@ -570,6 +569,14 @@ impl MapperParams {
         ciram_side: CiramSide,
     ) {
         self.bank_registers.set_to_ciram_side(id, ciram_side);
+    }
+
+    pub fn irq_pending(&self) -> bool {
+        self.irq_pending
+    }
+
+    pub fn set_irq_pending(&mut self, irq_pending: bool) {
+        self.irq_pending = irq_pending;
     }
 }
 

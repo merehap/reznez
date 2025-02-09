@@ -68,7 +68,7 @@ impl Mapper for Mapper004_1 {
             (0xA000..=0xBFFF, false) => Self::prg_ram_protect(params, value),
             (0xC000..=0xDFFF, true ) => self.irq_state.set_counter_reload_value(value),
             (0xC000..=0xDFFF, false) => self.irq_state.reload_counter(),
-            (0xE000..=0xFFFF, true ) => self.irq_state.disable(),
+            (0xE000..=0xFFFF, true ) => self.irq_state.disable(params),
             (0xE000..=0xFFFF, false) => self.irq_state.enable(),
         }
     }
@@ -77,12 +77,8 @@ impl Mapper for Mapper004_1 {
         self.irq_state.decrement_suppression_cycle_count();
     }
 
-    fn process_current_ppu_address(&mut self, address: PpuAddress) {
-        self.irq_state.tick_counter(address);
-    }
-
-    fn irq_pending(&self) -> bool {
-        self.irq_state.pending()
+    fn process_current_ppu_address(&mut self, params: &mut MapperParams, address: PpuAddress) {
+        self.irq_state.tick_counter(params, address);
     }
 
     fn layout(&self) -> Layout {

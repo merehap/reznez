@@ -70,7 +70,7 @@ impl Mapper for Mapper016_4 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, _params: &mut MapperParams, _cycle: i64) {
         if self.irq_counter_enabled && self.irq_counter > 0 {
             self.irq_counter -= 1;
             if self.irq_counter == 0 {

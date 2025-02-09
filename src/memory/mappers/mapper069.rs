@@ -42,25 +42,20 @@ const PRG_ROM_REGISTER_IDS: [BankRegisterId; 3] = [P1, P2, P3];
 pub struct Mapper069 {
     command: Command,
 
-    irq_pending: bool,
     irq_enabled: bool,
     irq_counter_enabled: bool,
     irq_counter: u16,
 }
 
 impl Mapper for Mapper069 {
-    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
         if self.irq_counter_enabled {
             if self.irq_enabled && self.irq_counter == 0 {
-                self.irq_pending = true;
+                params.set_irq_pending(true);
             }
 
             self.irq_counter = self.irq_counter.wrapping_sub(1);
         }
-    }
-
-    fn irq_pending(&self) -> bool {
-        self.irq_pending
     }
 
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
@@ -84,7 +79,6 @@ impl Mapper069 {
             // TODO: Verify that this is the correct startup value.
             command: Command::ChrRomBank(C0),
 
-            irq_pending: false,
             irq_enabled: false,
             irq_counter_enabled: false,
             irq_counter: 0,
@@ -119,7 +113,7 @@ impl Mapper069 {
             Command::NameTableMirroring =>
                 params.set_name_table_mirroring(value & 0b11),
             Command::IrqControl => {
-                self.irq_pending = false;
+                params.set_irq_pending(false);
                 (self.irq_counter_enabled, self.irq_enabled) = splitbits_named!(value, "c......i");
             }
             Command::IrqCounterLowByte =>

@@ -73,7 +73,6 @@ pub struct Mapper064 {
     selected_register_id: BankRegisterId,
 
     irq_enabled: bool,
-    irq_pending: bool,
     irq_pending_delay_cycles: u8,
 
     irq_counter: u8,
@@ -96,16 +95,16 @@ impl Mapper for Mapper064 {
             0xA000..=0xBFFF => {/* Do nothing. No use of these registers has been found. */}
             0xC000..=0xDFFF if is_even_address => self.set_irq_counter_reload_value(value), 
             0xC000..=0xDFFF => self.set_irq_reload_mode(value),
-            0xE000..=0xFFFF if is_even_address => self.acknowledge_irq(),
+            0xE000..=0xFFFF if is_even_address => self.acknowledge_irq(params),
             0xE000..=0xFFFF => self.enabled_irq()
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, cycle: i64) {
         if self.irq_pending_delay_cycles > 0 {
             self.irq_pending_delay_cycles -= 1;
             if self.irq_pending_delay_cycles == 0 {
-                self.irq_pending = true;
+                params.set_irq_pending(true);
             }
         }
 
@@ -122,7 +121,7 @@ impl Mapper for Mapper064 {
     }
 
     // When in scanline reload mode, this is the same as MMC3's IRQ triggering except delayed a bit.
-    fn process_current_ppu_address(&mut self, address: PpuAddress) {
+    fn process_current_ppu_address(&mut self, _params: &mut MapperParams, address: PpuAddress) {
         if self.irq_counter_reload_mode != IrqCounterReloadMode::Scanline {
             return;
         }
@@ -148,10 +147,6 @@ impl Mapper for Mapper064 {
         self.pattern_table_side = next_side;
     }
 
-    fn irq_pending(&self) -> bool {
-        self.irq_pending
-    }
-
     fn layout(&self) -> Layout {
         LAYOUT
     }
@@ -163,7 +158,6 @@ impl Mapper064 {
             selected_register_id: C0,
 
             irq_enabled: false,
-            irq_pending: false,
             irq_pending_delay_cycles: 0,
 
             irq_counter: 0,
@@ -206,9 +200,9 @@ impl Mapper064 {
         };
     }
 
-    fn acknowledge_irq(&mut self) {
+    fn acknowledge_irq(&mut self, params: &mut MapperParams) {
         self.irq_enabled = false;
-        self.irq_pending = false;
+        params.set_irq_pending(false);
     }
 
     fn enabled_irq(&mut self) {

@@ -44,7 +44,6 @@ const CHR_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
 #[derive(Default)]
 pub struct Mapper065 {
     irq_enabled: bool,
-    irq_pending: bool,
     irq_counter: u16,
     irq_reload_value: u16,
 }
@@ -66,11 +65,11 @@ impl Mapper for Mapper065 {
 
             0x9003 => {
                 self.irq_enabled = splitbits_named!(value, "i.......");
-                self.irq_pending = false;
+                params.set_irq_pending(false);
             }
             0x9004 => {
                 self.irq_counter = self.irq_reload_value;
-                self.irq_pending = false;
+                params.set_irq_pending(false);
             }
             0x9005 => {
                 self.irq_reload_value &= 0x00FF;
@@ -84,17 +83,13 @@ impl Mapper for Mapper065 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
         if self.irq_enabled && self.irq_counter > 0 {
             self.irq_counter -= 1;
             if self.irq_counter == 0 {
-                self.irq_pending = true;
+                params.set_irq_pending(true);
             }
         }
-    }
-
-    fn irq_pending(&self) -> bool {
-        self.irq_pending
     }
 
     fn layout(&self) -> Layout {

@@ -24,7 +24,6 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper040 {
     irq_enabled: bool,
     irq_counter: u12,
-    irq_pending: bool,
 }
 
 impl Mapper for Mapper040 {
@@ -33,11 +32,11 @@ impl Mapper for Mapper040 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x9FFF => {
-                self.irq_pending = false;
+                params.set_irq_pending(false);
                 self.irq_enabled = false;
             }
             0xA000..=0xBFFF => {
-                self.irq_pending = true;
+                params.set_irq_pending(true);
             }
             0xC000..=0xDFFF => { /* TODO: NTDEC 2752 outer bank register. Test ROM needed. */ }
             0xE000..=0xFFFF => {
@@ -46,20 +45,16 @@ impl Mapper for Mapper040 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
         if !self.irq_enabled {
             return;
         }
 
         self.irq_counter = self.irq_counter.wrapping_add(1.into());
         if self.irq_counter == 0.into() {
-            self.irq_pending = true;
+            params.set_irq_pending(true);
             self.irq_enabled = false;
         }
-    }
-
-    fn irq_pending(&self) -> bool {
-        self.irq_pending
     }
 
     fn layout(&self) -> Layout {

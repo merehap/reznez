@@ -1,9 +1,9 @@
+use crate::memory::mapper::MapperParams;
 use crate::memory::mappers::mmc3::irq_state::IrqState;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table::PatternTableSide;
 
 pub struct NecIrqState {
-    pending: bool,
     enabled: bool,
     counter: u8,
     force_reload_counter: bool,
@@ -15,7 +15,6 @@ pub struct NecIrqState {
 impl NecIrqState {
     pub fn new() -> Self {
         Self {
-            pending: false,
             enabled: false,
             counter: 0,
             force_reload_counter: false,
@@ -27,11 +26,7 @@ impl NecIrqState {
 }
 
 impl IrqState for NecIrqState {
-    fn pending(&self) -> bool {
-        self.pending
-    }
-
-    fn tick_counter(&mut self, address: PpuAddress) {
+    fn tick_counter(&mut self, params: &mut MapperParams, address: PpuAddress) {
         if address.to_scroll_u16() >= 0x2000 {
             return;
         }
@@ -57,7 +52,7 @@ impl IrqState for NecIrqState {
             // NEC triggers an IRQ when the counter transitions from 1 to 0,
             // whether from decrement or forced reload.
             if self.enabled && self.counter == 0 && old_counter_value == 1 {
-                self.pending = true;
+                params.set_irq_pending(true);
             }
         }
 
@@ -79,9 +74,9 @@ impl IrqState for NecIrqState {
         self.force_reload_counter = true;
     }
 
-    fn disable(&mut self) {
+    fn disable(&mut self, params: &mut MapperParams) {
         self.enabled = false;
-        self.pending = false;
+        params.set_irq_pending(false);
     }
 
     fn enable(&mut self) {

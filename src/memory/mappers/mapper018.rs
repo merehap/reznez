@@ -37,29 +37,24 @@ pub struct Mapper018 {
     work_ram_write_enabled: bool,
 
     irq_enabled: bool,
-    irq_pending: bool,
     irq_counter: u16,
     irq_counter_mask: u16,
     irq_reload_value: u16,
 }
 
 impl Mapper for Mapper018 {
-    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
         // Disch: When enabled, the IRQ counter counts down every CPU cycle.
         //        When it wraps, an IRQ is generated.
         if self.irq_enabled {
             let mut new_counter = self.irq_counter & self.irq_counter_mask;
             if new_counter == 0 {
-                self.irq_pending = true;
+                params.set_irq_pending(true);
             }
 
             new_counter -= 1;
             set_bits(&mut self.irq_counter, new_counter, self.irq_counter_mask);
         }
-    }
-
-    fn irq_pending(&self) -> bool {
-        self.irq_pending
     }
 
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
@@ -106,7 +101,7 @@ impl Mapper for Mapper018 {
             0xE003 => set_bits(&mut self.irq_reload_value, value << 12, 0b1111_0000_0000_0000),
             0xF000 => {
                 self.irq_counter = self.irq_reload_value;
-                self.irq_pending = false;
+                params.set_irq_pending(false);
             }
             0xF001 => {
                 if value & 0b0000_1000 != 0 {
@@ -120,7 +115,7 @@ impl Mapper for Mapper018 {
                 }
 
                 self.irq_enabled = value & 0b0000_0001 != 0;
-                self.irq_pending = false;
+                params.set_irq_pending(false);
             }
             0xF002 => params.set_name_table_mirroring(value as u8 & 0b11),
             0xF003 => todo!("Expansion audio."),

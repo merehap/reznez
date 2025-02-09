@@ -19,7 +19,6 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper073 {
     irq_enabled: bool,
     irq_enabled_on_acknowledgement: bool,
-    irq_pending: bool,
     irq_mode: IrqMode,
     irq_counter: u16,
     irq_counter_reload_value: u16,
@@ -47,7 +46,7 @@ impl Mapper for Mapper073 {
                 self.irq_counter_reload_value |= (u16::from(value) & 0xF) << 12;
             }
             0xC000..=0xCFFF => {
-                self.irq_pending = false;
+                params.set_irq_pending(false);
 
                 let fields = splitbits!(value, ".....mea");
                 self.irq_mode = if fields.m { IrqMode::EightBit } else { IrqMode::SixteenBit };
@@ -59,7 +58,7 @@ impl Mapper for Mapper073 {
                 }
             }
             0xD000..=0xDFFF => {
-                self.irq_pending = false;
+                params.set_irq_pending(false);
                 self.irq_enabled = self.irq_enabled_on_acknowledgement;
             }
             0xE000..=0xEFFF => { /* Do nothing. */ }
@@ -67,25 +66,21 @@ impl Mapper for Mapper073 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
         if !self.irq_enabled {
             return;
         }
 
         if self.irq_mode == IrqMode::SixteenBit && self.irq_counter == 0xFFFF {
-            self.irq_pending = true;
+            params.set_irq_pending(true);
             self.irq_counter = self.irq_counter_reload_value;
         } else if self.irq_mode == IrqMode::EightBit && self.irq_counter & 0xFF == 0xFF {
-            self.irq_pending = true;
+            params.set_irq_pending(true);
             self.irq_counter &= 0xFF00;
             self.irq_counter |= self.irq_counter_reload_value & 0x00FF;
         } else {
             self.irq_counter += 1;
         }
-    }
-
-    fn irq_pending(&self) -> bool {
-        self.irq_pending
     }
 
     fn layout(&self) -> Layout {

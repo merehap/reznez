@@ -21,7 +21,6 @@ const LAYOUT: Layout = Layout::builder()
 #[derive(Default)]
 pub struct Mapper142 {
     irq_enabled: bool,
-    irq_pending: bool,
     irq_counter: u16,
     irq_counter_reload_value: u16,
 
@@ -50,14 +49,14 @@ impl Mapper for Mapper142 {
                 self.irq_counter_reload_value |= (u16::from(value) & 0xF) << 12;
             }
             0xC000..=0xCFFF => {
-                self.irq_pending = false;
+                params.set_irq_pending(false);
                 self.irq_enabled = value & 0b11 != 0;
                 if self.irq_enabled {
                     self.irq_counter = self.irq_counter_reload_value;
                 }
             }
             0xD000..=0xDFFF => {
-                self.irq_pending = false;
+                params.set_irq_pending(false);
             }
             0xE000..=0xEFFF => {
                 match value & 0b111 {
@@ -82,7 +81,7 @@ impl Mapper for Mapper142 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
         if !self.irq_enabled {
             return;
         }
@@ -90,13 +89,9 @@ impl Mapper for Mapper142 {
         // It's not clear if this is supposed to match VRC3's behavior or not. This is off-by-1.
         self.irq_counter += 1;
         if self.irq_counter == 0xFFFF {
-            self.irq_pending = true;
+            params.set_irq_pending(true);
             self.irq_counter = self.irq_counter_reload_value;
         }
-    }
-
-    fn irq_pending(&self) -> bool {
-        self.irq_pending
     }
 
     fn layout(&self) -> Layout {

@@ -42,12 +42,8 @@ pub struct Mapper085_2 {
 }
 
 impl Mapper for Mapper085_2 {
-    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {
-        self.irq_state.step();
-    }
-
-    fn irq_pending(&self) -> bool {
-        self.irq_state.pending()
+    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
+        self.irq_state.step(params);
     }
 
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
@@ -72,8 +68,8 @@ impl Mapper for Mapper085_2 {
                 params.set_name_table_mirroring(fields.m);
             }
             0xE010 => self.irq_state.set_reload_value(value),
-            0xF000 => self.irq_state.set_mode(value),
-            0xF010 => self.irq_state.acknowledge(),
+            0xF000 => self.irq_state.set_mode(params, value),
+            0xF010 => self.irq_state.acknowledge(params),
 
             _ => { /* Do nothing. */ }
         }

@@ -1,9 +1,9 @@
+use crate::memory::mapper::MapperParams;
 use crate::memory::mappers::mmc3::irq_state::IrqState;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table::PatternTableSide;
 
 pub struct McAccIrqState {
-    pending: bool,
     enabled: bool,
     counter: u8,
     force_reload_counter: bool,
@@ -15,7 +15,6 @@ pub struct McAccIrqState {
 impl McAccIrqState {
     pub fn new() -> Self {
         Self {
-            pending: false,
             enabled: false,
             counter: 0,
             force_reload_counter: false,
@@ -27,11 +26,7 @@ impl McAccIrqState {
 }
 
 impl IrqState for McAccIrqState {
-    fn pending(&self) -> bool {
-        self.pending
-    }
-
-    fn tick_counter(&mut self, address: PpuAddress) {
+    fn tick_counter(&mut self, params: &mut MapperParams, address: PpuAddress) {
         if address.to_scroll_u16() >= 0x2000 {
             return;
         }
@@ -54,7 +49,7 @@ impl IrqState for McAccIrqState {
             }
 
             if self.enabled && self.counter == 0 {
-                self.pending = true;
+                params.set_irq_pending(true);
             }
         }
 
@@ -76,9 +71,9 @@ impl IrqState for McAccIrqState {
         self.force_reload_counter = true;
     }
 
-    fn disable(&mut self) {
+    fn disable(&mut self, params: &mut MapperParams) {
         self.enabled = false;
-        self.pending = false;
+        params.set_irq_pending(false);
     }
 
     fn enable(&mut self) {

@@ -51,12 +51,8 @@ pub struct Vrc4 {
 }
 
 impl Mapper for Vrc4 {
-    fn on_end_of_cpu_cycle(&mut self, _cycle: i64) {
-        self.irq_state.step();
-    }
-
-    fn irq_pending(&self) -> bool {
-        self.irq_state.pending()
+    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
+        self.irq_state.step(params);
     }
 
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
@@ -97,8 +93,8 @@ impl Mapper for Vrc4 {
 
             0xF000 => self.irq_state.set_reload_value_low_bits(value),
             0xF001 => self.irq_state.set_reload_value_high_bits(value),
-            0xF002 => self.irq_state.set_mode(value),
-            0xF003 => self.irq_state.acknowledge(),
+            0xF002 => self.irq_state.set_mode(params, value),
+            0xF003 => self.irq_state.acknowledge(params),
             0x4020..=0xFFFF => { /* All other writes do nothing. */ }
         }
     }
