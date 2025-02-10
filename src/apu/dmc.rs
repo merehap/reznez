@@ -1,3 +1,4 @@
+use crate::memory::irq_source::IrqSource;
 use crate::memory::mapper::CpuAddress;
 use crate::util::integer::U7;
 
@@ -8,7 +9,7 @@ pub struct Dmc {
     muted: bool,
 
     irq_enabled: bool,
-    pub(super) irq_pending: bool,
+    irq: IrqSource,
     dma_pending: bool,
 
     should_loop: bool,
@@ -35,7 +36,7 @@ impl Dmc {
         self.should_loop = (value & 0b0100_0000) != 0;
         self.period = NTSC_PERIODS[(value & 0b0000_1111) as usize] - 1;
         if !self.irq_enabled {
-            self.irq_pending = false;
+            self.irq.set_pending(false);
         }
     }
 
@@ -57,7 +58,7 @@ impl Dmc {
 
     // 0x4015
     pub(super) fn set_enabled(&mut self, enabled: bool) {
-        self.irq_pending = false;
+        self.irq.set_pending(false);
 
         if !enabled {
             self.sample_bytes_remaining = 0;
@@ -90,7 +91,7 @@ impl Dmc {
                     self.sample_bytes_remaining = self.sample_length;
                     self.sample_address = self.sample_start_address;
                 } else if self.irq_enabled {
-                    self.irq_pending = true;
+                    self.irq.set_pending(true);
                 }
             }
         }
@@ -132,6 +133,14 @@ impl Dmc {
         self.sample_bytes_remaining > 0
     }
 
+    pub fn irq(&self) -> &IrqSource {
+        &self.irq
+    }
+
+    pub fn irq_mut(&mut self) -> &mut IrqSource {
+        &mut self.irq
+    }
+
     pub fn dma_pending(&self) -> bool {
         self.dma_pending
     }
@@ -152,7 +161,7 @@ impl Default for Dmc {
         Dmc {
             muted: true,
             irq_enabled: false,
-            irq_pending: false,
+            irq: IrqSource::new(),
             dma_pending: false,
             should_loop: false,
             volume: U7::default(),

@@ -188,9 +188,23 @@ impl Nes {
         }
 
         let irq_pending =
-            self.memory.apu_regs().frame_irq_pending()
-            || self.memory.apu_regs().dmc_irq_pending()
-            || self.memory.mapper_params().irq_pending;
+            self.memory.apu_regs().frame_irq().pending()
+            || self.memory.apu_regs().dmc_irq().pending()
+            || self.memory.mapper_params().irq().pending();
+        if log_enabled!(target: "cpuflowcontrol", Info) {
+            if self.memory.apu_regs_mut().frame_irq_mut().take_just_went_pending() {
+                info!("APU Frame IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
+            }
+
+            if self.memory.apu_regs_mut().dmc_irq_mut().take_just_went_pending() {
+                info!("DMC IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
+            }
+
+            if self.memory.mapper_params_mut().irq_mut().take_just_went_pending() {
+                info!("Mapper IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
+            }
+        }
+
         let mut interrupt_text = String::new();
         if log_enabled!(target: "cpuinstructions", Info) {
             interrupt_text = formatter::interrupts(self);
@@ -429,7 +443,7 @@ impl SnapshotBuilder {
     }
 
     fn frame_irq(&mut self, regs: &ApuRegisters, cpu: &Cpu) {
-        self.frame_irq = Some(regs.frame_irq_pending() && !cpu.status().interrupts_disabled);
+        self.frame_irq = Some(regs.frame_irq().pending() && !cpu.status().interrupts_disabled);
     }
 
     fn add_ppu_position(&mut self, clock: &Clock) {

@@ -82,6 +82,10 @@ impl Memory {
         &self.mapper_params
     }
 
+    pub fn mapper_params_mut(&mut self) -> &mut MapperParams {
+        &mut self.mapper_params
+    }
+
     pub fn stack_pointer(&self) -> u8 {
         self.cpu_internal_ram.stack_pointer
     }
