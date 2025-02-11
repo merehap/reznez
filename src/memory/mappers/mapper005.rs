@@ -1,10 +1,262 @@
+use crate::memory::mapper::*;
+use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
+
+const LAYOUT: Layout = Layout::builder()
+    .prg_max_size(1024 * KIBIBYTE)
+    // Mode 0
+    .prg_layout(&[
+        Window::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
+        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
+        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P4)),
+    ])
+    // Mode 1
+    .prg_layout(&[
+        Window::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
+        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
+        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::RAM.switchable(P2).status_register(S1)),
+        Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P4)),
+    ])
+    // Mode 2
+    .prg_layout(&[
+        Window::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
+        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
+        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::RAM.switchable(P2).status_register(S1)),
+        Window::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::RAM.switchable(P3).status_register(S1)),
+        Window::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Bank::ROM.switchable(P4)),
+    ])
+    // Mode 3
+    .prg_layout(&[
+        Window::new(0x5C00, 0x5FFF, 1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
+        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::RAM.switchable(P0)),
+        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::RAM.switchable(P1).status_register(S1)),
+        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::RAM.switchable(P2).status_register(S1)),
+        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::RAM.switchable(P3).status_register(S1)),
+        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P4)),
+    ])
+    .prg_layout_index(3)
+    .override_bank_register(P4, -1)
+
+    .chr_max_size(1024 * KIBIBYTE)
+    // Mode 0
+    .chr_layout(&[
+        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.switchable(C7)),
+    ])
+    // Mode 1
+    .chr_layout(&[
+        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::RAM.switchable(C3)),
+        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::RAM.switchable(C7)),
+    ])
+    // Mode 2
+    .chr_layout(&[
+        Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::RAM.switchable(C1)),
+        Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::RAM.switchable(C3)),
+        Window::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::RAM.switchable(C5)),
+        Window::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::RAM.switchable(C7)),
+    ])
+    // Mode 3
+    .chr_layout(&[
+        Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::RAM.switchable(C0)),
+        Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::RAM.switchable(C1)),
+        Window::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::RAM.switchable(C2)),
+        Window::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::RAM.switchable(C3)),
+        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::RAM.switchable(C4)),
+        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::RAM.switchable(C5)),
+        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::RAM.switchable(C6)),
+        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::RAM.switchable(C7)),
+    ])
+    .do_not_align_large_chr_windows()
+    .ram_statuses(&[
+        RamStatus::ReadOnly,
+        RamStatus::ReadWrite,
+        // Write-only is only used by Extended RAM (S0).
+        RamStatus::WriteOnly,
+    ])
+    .build();
+
+// Indexes into the above RAM statuses.
+const READ_ONLY: u8 = 0;
+const READ_WRITE: u8 = 1;
+const WRITE_ONLY: u8 = 2;
+
+const EXTENDED_RAM_MODES: [ExtendedRamMode; 4] = [
+    ExtendedRamMode::WriteOnly,
+    ExtendedRamMode::ExtendedAttributes,
+    ExtendedRamMode::ReadWrite,
+    ExtendedRamMode::ReadOnly,
+];
+
+// MMC5
+// TODO: Expansion Audio
+// TODO: MMC5A registers
+pub struct Mapper005 {
+    ram_enabled_1: bool,
+    ram_enabled_2: bool,
+
+    extended_ram_mode: ExtendedRamMode,
+}
+
+impl Mapper for Mapper005 {
+    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+        match cpu_address {
+            0x0000..=0x401F => unreachable!(),
+            0x4020..=0x4FFF => { /* Do nothing. */ }
+            0x5000..=0x5015 => { /* TODO: MMC5 audio */ }
+            0x5016..=0x50FF => { /* Do nothing. */ }
+            0x5100 => params.set_prg_layout(value & 0b11),
+            0x5101 => params.set_chr_layout(value & 0b11),
+            0x5102 => {
+                self.ram_enabled_1 = value & 0b11 == 0b10;
+                if !self.ram_enabled_1 {
+                    params.set_ram_status(S1, READ_ONLY);
+                }
+            }
+            0x5103 => {
+                self.ram_enabled_2 = value & 0b11 == 0b01;
+                if !self.ram_enabled_2 {
+                    params.set_ram_status(S1, READ_ONLY);
+                }
+            }
+            0x5104 => {
+                self.extended_ram_mode = EXTENDED_RAM_MODES[usize::from(value & 0b11)];
+                let ram_status = match self.extended_ram_mode {
+                    // FIXME: These are only write-only during rendering. They are supposed to be
+                    // cause corruption during VBlank.
+                    ExtendedRamMode::WriteOnly | ExtendedRamMode::ExtendedAttributes => WRITE_ONLY,
+                    ExtendedRamMode::ReadWrite => READ_WRITE,
+                    ExtendedRamMode::ReadOnly => READ_ONLY,
+                };
+                params.set_ram_status(S0, ram_status);
+            }
+            0x5105 => {
+                fn source(raw: u8) -> NameTableSource {
+                    match raw {
+                        0 => NameTableSource::Ciram(CiramSide::Left),
+                        1 => NameTableSource::Ciram(CiramSide::Right),
+                        2 => NameTableSource::ExtendedRam,
+                        3 => todo!("Fill-mode name table"),
+                        _ => unreachable!(),
+                    }
+                }
+
+                let name_tables = splitbits!(value, "ddccbbaa");
+                params.name_table_mirroring_mut().set_quadrant_to_source(NameTableQuadrant::TopLeft, source(name_tables.a));
+                params.name_table_mirroring_mut().set_quadrant_to_source(NameTableQuadrant::TopRight, source(name_tables.b));
+                params.name_table_mirroring_mut().set_quadrant_to_source(NameTableQuadrant::BottomLeft, source(name_tables.c));
+                params.name_table_mirroring_mut().set_quadrant_to_source(NameTableQuadrant::BottomRight, source(name_tables.d));
+            }
+            0x5106 => todo!("Fill-mode tile"),
+            0x5107 => todo!("Fill-mode color"),
+            0x5108..=0x5112 => { /* Do nothing. */ }
+            0x5113 => {
+                let prg_bank = splitbits_named!(value, ".ppppppp");
+                params.set_bank_register(P0, prg_bank);
+            }
+            0x5114 => {
+                let (ram_writable, prg_bank) = splitbits_named!(min=u8, value, "wppppppp");
+                params.set_bank_register(P1, prg_bank);
+                if self.ram_enabled_1 && self.ram_enabled_2 {
+                    params.set_ram_status(S1, ram_writable);
+                }
+            }
+            0x5115 => {
+                let (ram_writable, prg_bank) = splitbits_named!(min=u8, value, "wppppppp");
+                params.set_bank_register(P2, prg_bank);
+                if self.ram_enabled_1 && self.ram_enabled_2 {
+                    params.set_ram_status(S1, ram_writable);
+                }
+            }
+            0x5116 => {
+                let (ram_writable, prg_bank) = splitbits_named!(min=u8, value, "wppppppp");
+                params.set_bank_register(P3, prg_bank);
+                if self.ram_enabled_1 && self.ram_enabled_2 {
+                    params.set_ram_status(S1, ram_writable);
+                }
+            }
+            0x5117 => {
+                let prg_bank = splitbits_named!(value, ".ppppppp");
+                params.set_bank_register(P4, prg_bank);
+            }
+            0x5118..=0x511F => { /* Do nothing. */ }
+            0x5120 => params.set_bank_register(C0, value),
+            0x5121 => params.set_bank_register(C1, value),
+            0x5122 => params.set_bank_register(C2, value),
+            0x5123 => params.set_bank_register(C3, value),
+            0x5124 => params.set_bank_register(C4, value),
+            0x5125 => params.set_bank_register(C5, value),
+            0x5126 => params.set_bank_register(C6, value),
+            0x5127 => params.set_bank_register(C7, value),
+            0x5128 => {
+                params.set_bank_register(C0, value);
+                params.set_bank_register(C4, value);
+                todo!("Tall sprite support");
+            }
+            0x5129 => {
+                params.set_bank_register(C1, value);
+                params.set_bank_register(C5, value);
+                todo!("Tall sprite support");
+            }
+            0x512A => {
+                params.set_bank_register(C2, value);
+                params.set_bank_register(C6, value);
+                todo!("Tall sprite support");
+            }
+            0x512B => {
+                params.set_bank_register(C3, value);
+                params.set_bank_register(C7, value);
+                todo!("Tall sprite support");
+            }
+            0x512C..=0x512F => { /* Do nothing. */ }
+            0x5130 => todo!("Upper CHR Bank bits"),
+            0x5131..=0x51FF => { /* Do nothing. */ }
+            0x5200 => {
+                let fields = splitbits!(value, "es.ccccc");
+                if fields.e {
+                    todo!("Vertical split mode");
+                }
+            }
+            0x5201 => todo!("Vertical split scroll"),
+            0x5202 => todo!("Vertical split bank"),
+            0x5203 => todo!("IRQ Scanline Compare Value"),
+            0x5204 => todo!("Scanline IRQ Status"),
+            0x5205 => todo!("Big multiplication"),
+            0x5206 => todo!("Big multiplication"),
+            0x5207..=0x5BFF => { /* Do nothing. */ }
+            0x5C00..=0x5FFF => todo!("Extended RAM"),
+            0x6000..=0xFFFF => { /* Do nothing. */ }
+        }
+    }
+
+    fn layout(&self) -> Layout {
+        LAYOUT
+    }
+}
+
+impl Mapper005 {
+    pub fn new() -> Self {
+         Self {
+            ram_enabled_1: false,
+            ram_enabled_2: false,
+
+            extended_ram_mode: ExtendedRamMode::WriteOnly,
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+enum ExtendedRamMode {
+    WriteOnly,
+    ExtendedAttributes,
+    ReadWrite,
+    ReadOnly,
+}
+
+/*
 use crate::apu::pulse_channel::PulseChannel;
 use crate::ppu::palette::palette_index::PaletteIndex;
 use crate::ppu::register::registers::ctrl::Ctrl;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::memory::mapper::*;
 use crate::memory::memory::{NMI_VECTOR_LOW, NMI_VECTOR_HIGH};
-use crate::memory::raw_memory::RawMemoryArray;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::{Ciram, CiramSide};
 
@@ -577,3 +829,4 @@ impl ExtendedRamMode {
         }
     }
 }
+*/

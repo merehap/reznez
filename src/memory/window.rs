@@ -35,6 +35,7 @@ impl Window {
         match self.bank {
             Bank::Empty => "E".into(),
             Bank::WorkRam(_) => "W".into(),
+            Bank::ExtendedRam(_) => "X".into(),
             Bank::Rom(location) | Bank::Ram(location, _) =>
                 self.resolved_bank_location(
                     registers,
@@ -119,7 +120,7 @@ impl Window {
     pub fn location(self) -> Result<Location, String> {
         match self.bank {
             Bank::Rom(location) | Bank::Ram(location, _) => Ok(location),
-            Bank::Empty | Bank::WorkRam(_) | Bank::MirrorOf(_) =>
+            Bank::Empty | Bank::WorkRam(_) | Bank::ExtendedRam(_) | Bank::MirrorOf(_) =>
                 Err(format!("Bank type {:?} does not have a bank location.", self.bank)),
         }
     }

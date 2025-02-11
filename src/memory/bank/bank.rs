@@ -6,6 +6,7 @@ use super::bank_index::BankLocation;
 pub enum Bank {
     Empty,
     WorkRam(Option<RamStatusRegisterId>),
+    ExtendedRam(Option<RamStatusRegisterId>),
     Rom(Location),
     Ram(Location, Option<RamStatusRegisterId>),
     MirrorOf(u16),
@@ -14,6 +15,7 @@ pub enum Bank {
 impl Bank {
     pub const EMPTY: Bank = Bank::Empty;
     pub const WORK_RAM: Bank = Bank::WorkRam(None);
+    pub const EXTENDED_RAM: Bank = Bank::ExtendedRam(None);
     pub const ROM: Bank = Bank::Rom(Location::Fixed(BankIndex::from_u8(0)));
     pub const RAM: Bank = Bank::Ram(Location::Fixed(BankIndex::from_u8(0)), None);
 
@@ -35,6 +37,7 @@ impl Bank {
     pub const fn status_register(self, id: RamStatusRegisterId) -> Self {
         match self {
             Bank::WorkRam(None) => Bank::WorkRam(Some(id)),
+            Bank::ExtendedRam(None) => Bank::ExtendedRam(Some(id)),
             Bank::Ram(location, None) => Bank::Ram(location, Some(id)),
             _ => panic!("Only RAM and Work RAM support status registers."),
         }
@@ -58,8 +61,8 @@ impl Bank {
             Bank::Rom(_) => false,
             Bank::MirrorOf(_) => todo!("Writability of MirrorOf"),
             // RAM with no status register is always writable.
-            Bank::Ram(_, None) | Bank::WorkRam(None) => true,
-            Bank::Ram(_, Some(status_register_id)) | Bank::WorkRam(Some(status_register_id)) =>
+            Bank::Ram(_, None) | Bank::WorkRam(None) | Bank::ExtendedRam(None) => true,
+            Bank::Ram(_, Some(status_register_id)) | Bank::WorkRam(Some(status_register_id)) | Bank::ExtendedRam(Some(status_register_id)) =>
                 registers.ram_status(status_register_id) == RamStatus::ReadWrite,
         }
     }

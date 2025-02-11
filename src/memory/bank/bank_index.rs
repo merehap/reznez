@@ -164,4 +164,11 @@ pub enum RamStatus {
     ReadOnlyZeros,
     ReadOnly,
     ReadWrite,
+    WriteOnly,
+}
+
+impl RamStatus {
+    pub fn is_writable(self) -> bool {
+        matches!(self, RamStatus::ReadWrite | RamStatus::WriteOnly)
+    }
 }

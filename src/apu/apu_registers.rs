@@ -242,7 +242,7 @@ impl ApuRegisters {
     }
 
     pub fn dmc_irq(&self) -> &IrqSource {
-        &self.dmc.irq()
+        self.dmc.irq()
     }
 
     pub fn dmc_irq_mut(&mut self) -> &mut IrqSource {

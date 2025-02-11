@@ -28,7 +28,6 @@ use crate::memory::cpu::ports::Ports;
 use crate::memory::irq_source::IrqSource;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::Ciram;
-use crate::memory::raw_memory::RawMemoryArray;
 use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
 use crate::ppu::sprite::oam::Oam;
 
@@ -66,13 +65,6 @@ pub trait Mapper {
     fn process_current_ppu_address(&mut self, _params: &mut MapperParams, _address: PpuAddress) {}
     // Most mappers don't have bus conflicts.
     fn has_bus_conflicts(&self) -> HasBusConflicts { HasBusConflicts::No }
-    // Most mappers don't use or provide extended RAM.
-    fn extended_ram(&self) -> &RawMemoryArray<KIBIBYTE> {
-        unimplemented!("Extended RAM (mappers must provide their own)");
-    }
-    fn extended_ram_mut(&mut self) -> &mut RawMemoryArray<KIBIBYTE> {
-        unimplemented!("Mutable Extended RAM (mappers must provide their own)");
-    }
 
     #[allow(clippy::too_many_arguments)]
     fn cpu_peek(
@@ -254,7 +246,7 @@ pub trait Mapper {
     ) -> u8 {
         match address.to_u16() {
             0x0000..=0x1FFF => params.peek_chr(ciram, address),
-            0x2000..=0x3EFF => self.peek_name_table_byte(params.name_table_mirroring(), ciram, address),
+            0x2000..=0x3EFF => self.peek_name_table_byte(params, ciram, address),
             0x3F00..=0x3FFF => self.peek_palette_table_byte(palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
         }
@@ -289,7 +281,7 @@ pub trait Mapper {
     ) {
         match address.to_u16() {
             0x0000..=0x1FFF => params.write_chr(ciram, address, value),
-            0x2000..=0x3EFF => self.write_name_table_byte(params.name_table_mirroring(), ciram, address, value),
+            0x2000..=0x3EFF => self.write_name_table_byte(params, ciram, address, value),
             0x3F00..=0x3FFF => self.write_palette_table_byte(palette_ram, address, value),
             0x4000..=0xFFFF => unreachable!(),
         }
@@ -298,50 +290,50 @@ pub trait Mapper {
     #[inline]
     fn raw_name_table<'a>(
         &'a self,
-        name_table_mirroring: NameTableMirroring,
+        params: &'a MapperParams,
         ciram: &'a Ciram,
         quadrant: NameTableQuadrant,
     ) -> &'a [u8; KIBIBYTE as usize] {
-        match name_table_mirroring.name_table_source_in_quadrant(quadrant) {
+        match params.name_table_mirroring.name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) => ciram.side(side),
-            NameTableSource::ExtendedRam => self.extended_ram().to_raw_slice().try_into().unwrap(),
+            NameTableSource::ExtendedRam => params.prg_memory.extended_ram().as_raw_slice().try_into().unwrap(),
         }
     }
 
     #[inline]
     fn raw_name_table_mut<'a>(
         &'a mut self,
-        name_table_mirroring: NameTableMirroring,
+        params: &'a mut MapperParams,
         ciram: &'a mut Ciram,
         quadrant: NameTableQuadrant,
     ) -> &'a mut [u8; KIBIBYTE as usize] {
-        match name_table_mirroring.name_table_source_in_quadrant(quadrant) {
+        match params.name_table_mirroring.name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) => ciram.side_mut(side),
-            NameTableSource::ExtendedRam => self.extended_ram_mut().to_raw_mut_slice().try_into().unwrap(),
+            NameTableSource::ExtendedRam => params.prg_memory.extended_ram_mut().as_raw_mut_slice().try_into().unwrap(),
         }
     }
 
     #[inline]
     fn peek_name_table_byte(
         &self,
-        name_table_mirroring: NameTableMirroring,
+        params: &MapperParams,
         ciram: &Ciram,
         address: PpuAddress,
     ) -> u8 {
         let (name_table_quadrant, index) = address_to_name_table_index(address);
-        self.raw_name_table(name_table_mirroring, ciram, name_table_quadrant)[index as usize]
+        self.raw_name_table(params, ciram, name_table_quadrant)[index as usize]
     }
 
     #[inline]
     fn write_name_table_byte(
         &mut self,
-        name_table_mirroring: NameTableMirroring,
+        params: &mut MapperParams,
         ciram: &mut Ciram,
         address: PpuAddress,
         value: u8,
     ) {
         let (name_table_quadrant, index) = address_to_name_table_index(address);
-        self.raw_name_table_mut(name_table_mirroring, ciram, name_table_quadrant)[index as usize] = value;
+        self.raw_name_table_mut(params, ciram, name_table_quadrant)[index as usize] = value;
     }
 
     #[inline]

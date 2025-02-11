@@ -65,12 +65,12 @@ impl <const SIZE: u32> RawMemoryArray<SIZE> {
         RawMemoryArray(vec![0; SIZE as usize].into_boxed_slice())
     }
 
-    pub fn to_raw_slice(&self) -> &[u8] {
-        &*self.0
+    pub fn as_raw_slice(&self) -> &[u8] {
+        &self.0
     }
 
-    pub fn to_raw_mut_slice(&mut self) -> &mut [u8] {
-        &mut *self.0
+    pub fn as_raw_mut_slice(&mut self) -> &mut [u8] {
+        &mut self.0
     }
 }
 

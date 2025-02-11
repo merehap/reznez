@@ -2,9 +2,10 @@ use crate::memory::bank::bank::Bank;
 use crate::memory::bank::bank_index::{BankRegisters, RamStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
-use crate::memory::raw_memory::RawMemory;
+use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
 use crate::memory::read_result::ReadResult;
 use crate::memory::window::Window;
+use crate::util::unit::KIBIBYTE;
 
 pub struct PrgMemory {
     layouts: Vec<PrgLayout>,
@@ -13,6 +14,7 @@ pub struct PrgMemory {
     bank_count: u16,
     raw_memory: RawMemory,
     work_ram_sections: Vec<WorkRam>,
+    extended_ram: RawMemoryArray<KIBIBYTE>,
 }
 
 impl PrgMemory {
@@ -58,6 +60,7 @@ impl PrgMemory {
             bank_count,
             raw_memory,
             work_ram_sections: Vec::new(),
+            extended_ram: RawMemoryArray::new(),
         };
 
         prg_memory.work_ram_sections = prg_memory.current_layout().windows().iter()
@@ -90,13 +93,21 @@ impl PrgMemory {
         self.bank_count() - 1
     }
 
+    pub fn extended_ram(&self) -> &RawMemoryArray<KIBIBYTE> {
+        &self.extended_ram
+    }
+
+    pub fn extended_ram_mut(&mut self) -> &mut RawMemoryArray<KIBIBYTE> {
+        &mut self.extended_ram
+    }
+
     pub fn peek(&self, registers: &BankRegisters, address: CpuAddress) -> ReadResult {
         match self.address_to_prg_index(registers, address) {
             PrgMemoryIndex::None => ReadResult::OPEN_BUS,
             PrgMemoryIndex::MappedMemory {index, ram_status } => {
                 use RamStatus::*;
                 match ram_status {
-                    Disabled =>
+                    Disabled | WriteOnly =>
                         ReadResult::OPEN_BUS,
                     ReadOnlyZeros =>
                         ReadResult::full(0),
@@ -108,12 +119,23 @@ impl PrgMemory {
                 let work_ram = &self.work_ram_sections[section_id];
                 use RamStatus::*;
                 match ram_status {
-                    Disabled =>
+                    Disabled | WriteOnly =>
                         ReadResult::OPEN_BUS,
                     ReadOnlyZeros =>
                         ReadResult::full(0),
                     ReadOnly | ReadWrite =>
                         ReadResult::full(work_ram.data[index as usize]),
+                }
+            }
+            PrgMemoryIndex::ExtendedRam { index, ram_status} => {
+                use RamStatus::*;
+                match ram_status {
+                    Disabled | WriteOnly =>
+                        ReadResult::OPEN_BUS,
+                    ReadOnlyZeros =>
+                        ReadResult::full(0),
+                    ReadOnly | ReadWrite =>
+                        ReadResult::full(self.extended_ram[index]),
                 }
             }
         }
@@ -129,14 +151,19 @@ impl PrgMemory {
         match self.address_to_prg_index(registers, address) {
             PrgMemoryIndex::None => {}
             PrgMemoryIndex::MappedMemory { index, ram_status } => {
-                if ram_status == RamStatus::ReadWrite {
+                if ram_status.is_writable() {
                     self.raw_memory[index] = value;
                 }
             }
             PrgMemoryIndex::WorkRam { section_id, index, ram_status} => {
                 let work_ram = &mut self.work_ram_sections[section_id];
-                if ram_status == RamStatus::ReadWrite {
+                if ram_status.is_writable() {
                     work_ram.data[index as usize] = value;
+                }
+            }
+            PrgMemoryIndex::ExtendedRam { index, ram_status} => {
+                if ram_status.is_writable() {
+                    self.extended_ram[index] = value;
                 }
             }
         }
@@ -207,6 +234,12 @@ impl PrgMemory {
 
                         result.unwrap()
                     }
+                    Bank::ExtendedRam(status_register_id) => {
+                        let index = u32::from(bank_offset);
+                        let ram_status: RamStatus = status_register_id
+                            .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
+                        PrgMemoryIndex::ExtendedRam { index, ram_status }
+                    }
                 };
                 return prg_memory_index;
             }
@@ -229,6 +262,7 @@ impl PrgMemory {
 enum PrgMemoryIndex {
     None,
     WorkRam { section_id: usize, index: u32, ram_status: RamStatus },
+    ExtendedRam { index: u32, ram_status: RamStatus },
     MappedMemory { index: u32, ram_status: RamStatus },
 }
 

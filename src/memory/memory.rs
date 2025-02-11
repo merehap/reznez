@@ -329,7 +329,7 @@ impl PpuMemory<'_> {
         NameTable::new(
             self.memory
                 .mapper
-                .raw_name_table(self.memory.mapper_params.name_table_mirroring(), &self.memory.ciram, quadrant),
+                .raw_name_table(self.memory.mapper_params(), &self.memory.ciram, quadrant),
         )
     }
 

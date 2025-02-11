@@ -24,7 +24,11 @@ impl NameTableMirroring {
     }
 
     pub fn set_quadrant(&mut self, quadrant: NameTableQuadrant, side: CiramSide) {
-        self.quadrants[quadrant as usize] = NameTableSource::Ciram(side);
+        self.set_quadrant_to_source(quadrant, NameTableSource::Ciram(side));
+    }
+
+    pub fn set_quadrant_to_source(&mut self, quadrant: NameTableQuadrant, source: NameTableSource) {
+        self.quadrants[quadrant as usize] = source;
     }
 
     pub fn is_vertical(self) -> bool {
