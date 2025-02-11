@@ -93,9 +93,22 @@ pub struct Mapper005 {
     ram_enabled_2: bool,
 
     extended_ram_mode: ExtendedRamMode,
+
+    multiplicand: u8,
+    multiplier: u8,
 }
 
 impl Mapper for Mapper005 {
+    fn peek_cartridge_space(&self, params: &MapperParams, cpu_address: u16) -> ReadResult {
+        match cpu_address {
+            0x0000..=0x401F => unreachable!(),
+            0x5205 => ReadResult::full((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
+            0x5206 => ReadResult::full(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
+            0x4020..=0x5FFF => ReadResult::OPEN_BUS,
+            0x6000..=0xFFFF => params.peek_prg(cpu_address),
+        }
+    }
+
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
@@ -218,10 +231,10 @@ impl Mapper for Mapper005 {
             0x5202 => todo!("Vertical split bank"),
             0x5203 => todo!("IRQ Scanline Compare Value"),
             0x5204 => todo!("Scanline IRQ Status"),
-            0x5205 => todo!("Big multiplication"),
-            0x5206 => todo!("Big multiplication"),
+            0x5205 => self.multiplicand = value,
+            0x5206 => self.multiplier = value,
             0x5207..=0x5BFF => { /* Do nothing. */ }
-            0x5C00..=0x5FFF => todo!("Extended RAM"),
+            0x5C00..=0x5FFF => { /* Do nothing. */ }
             0x6000..=0xFFFF => { /* Do nothing. */ }
         }
     }
@@ -238,6 +251,9 @@ impl Mapper005 {
             ram_enabled_2: false,
 
             extended_ram_mode: ExtendedRamMode::WriteOnly,
+
+            multiplicand: 0xFF,
+            multiplier: 0xFF,
         }
     }
 }
