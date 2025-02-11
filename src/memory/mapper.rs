@@ -15,7 +15,7 @@ pub use crate::memory::read_result::ReadResult;
 pub use crate::memory::ppu::ciram::CiramSide;
 pub use crate::memory::window::Window;
 pub use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
-pub use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
+pub use crate::ppu::name_table::name_table_mirroring::{NameTableMirroring, NameTableSource};
 pub use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 pub use crate::util::unit::KIBIBYTE;
 
@@ -28,6 +28,7 @@ use crate::memory::cpu::ports::Ports;
 use crate::memory::irq_source::IrqSource;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::Ciram;
+use crate::memory::raw_memory::RawMemoryArray;
 use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
 use crate::ppu::sprite::oam::Oam;
 
@@ -65,6 +66,13 @@ pub trait Mapper {
     fn process_current_ppu_address(&mut self, _params: &mut MapperParams, _address: PpuAddress) {}
     // Most mappers don't have bus conflicts.
     fn has_bus_conflicts(&self) -> HasBusConflicts { HasBusConflicts::No }
+    // Most mappers don't use or provide extended RAM.
+    fn extended_ram(&self) -> &RawMemoryArray<KIBIBYTE> {
+        unimplemented!("Extended RAM (mappers must provide their own)");
+    }
+    fn extended_ram_mut(&mut self) -> &mut RawMemoryArray<KIBIBYTE> {
+        unimplemented!("Mutable Extended RAM (mappers must provide their own)");
+    }
 
     #[allow(clippy::too_many_arguments)]
     fn cpu_peek(
@@ -294,8 +302,10 @@ pub trait Mapper {
         ciram: &'a Ciram,
         quadrant: NameTableQuadrant,
     ) -> &'a [u8; KIBIBYTE as usize] {
-        let side = name_table_mirroring.ciram_side_at_quadrant(quadrant);
-        ciram.side(side)
+        match name_table_mirroring.name_table_source_in_quadrant(quadrant) {
+            NameTableSource::Ciram(side) => ciram.side(side),
+            NameTableSource::ExtendedRam => self.extended_ram().to_raw_slice().try_into().unwrap(),
+        }
     }
 
     #[inline]
@@ -305,8 +315,10 @@ pub trait Mapper {
         ciram: &'a mut Ciram,
         quadrant: NameTableQuadrant,
     ) -> &'a mut [u8; KIBIBYTE as usize] {
-        let side = name_table_mirroring.ciram_side_at_quadrant(quadrant);
-        ciram.side_mut(side)
+        match name_table_mirroring.name_table_source_in_quadrant(quadrant) {
+            NameTableSource::Ciram(side) => ciram.side_mut(side),
+            NameTableSource::ExtendedRam => self.extended_ram_mut().to_raw_mut_slice().try_into().unwrap(),
+        }
     }
 
     #[inline]

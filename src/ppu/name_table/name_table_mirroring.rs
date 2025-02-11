@@ -6,7 +6,7 @@ use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct NameTableMirroring {
     // TopLeft, TopRight, BottomLeft, BottomRight
-    quadrants: [CiramSide; 4],
+    quadrants: [NameTableSource; 4],
 }
 
 impl NameTableMirroring {
@@ -19,12 +19,12 @@ impl NameTableMirroring {
     pub const ONE_SCREEN_RIGHT_BANK: NameTableMirroring =
         build([CiramSide::Right, CiramSide::Right, CiramSide::Right, CiramSide::Right]);
 
-    pub fn ciram_side_at_quadrant(self, quadrant: NameTableQuadrant) -> CiramSide {
+    pub fn name_table_source_in_quadrant(self, quadrant: NameTableQuadrant) -> NameTableSource {
         self.quadrants[quadrant as usize]
     }
 
     pub fn set_quadrant(&mut self, quadrant: NameTableQuadrant, side: CiramSide) {
-        self.quadrants[quadrant as usize] = side;
+        self.quadrants[quadrant as usize] = NameTableSource::Ciram(side);
     }
 
     pub fn is_vertical(self) -> bool {
@@ -42,7 +42,14 @@ impl NameTableMirroring {
 }
 
 const fn build(quadrants: [CiramSide; 4]) -> NameTableMirroring {
-    NameTableMirroring { quadrants }
+    NameTableMirroring {
+        quadrants: [
+            NameTableSource::Ciram(quadrants[0]),
+            NameTableSource::Ciram(quadrants[1]),
+            NameTableSource::Ciram(quadrants[2]),
+            NameTableSource::Ciram(quadrants[3]),
+        ]
+    }
 }
 
 impl fmt::Display for NameTableMirroring {
@@ -57,4 +64,10 @@ impl fmt::Display for NameTableMirroring {
 
         write!(f, "{text}")
     }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum NameTableSource {
+    Ciram(CiramSide),
+    ExtendedRam
 }
