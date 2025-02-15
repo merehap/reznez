@@ -65,6 +65,8 @@ pub trait Mapper {
     fn process_current_ppu_address(&mut self, _params: &mut MapperParams, _address: PpuAddress) {}
     // Most mappers don't have bus conflicts.
     fn has_bus_conflicts(&self) -> HasBusConflicts { HasBusConflicts::No }
+    // Most mappers don't use a fill-mode name table.
+    fn fill_mode_name_table(&self) -> &[u8; KIBIBYTE as usize] { unimplemented!() }
 
     #[allow(clippy::too_many_arguments)]
     fn cpu_peek(
@@ -297,19 +299,7 @@ pub trait Mapper {
         match params.name_table_mirroring.name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) => ciram.side(side),
             NameTableSource::ExtendedRam => params.prg_memory.extended_ram().as_raw_slice().try_into().unwrap(),
-        }
-    }
-
-    #[inline]
-    fn raw_name_table_mut<'a>(
-        &'a mut self,
-        params: &'a mut MapperParams,
-        ciram: &'a mut Ciram,
-        quadrant: NameTableQuadrant,
-    ) -> &'a mut [u8; KIBIBYTE as usize] {
-        match params.name_table_mirroring.name_table_source_in_quadrant(quadrant) {
-            NameTableSource::Ciram(side) => ciram.side_mut(side),
-            NameTableSource::ExtendedRam => params.prg_memory.extended_ram_mut().as_raw_mut_slice().try_into().unwrap(),
+            NameTableSource::FillModeTile => self.fill_mode_name_table(),
         }
     }
 
@@ -332,8 +322,15 @@ pub trait Mapper {
         address: PpuAddress,
         value: u8,
     ) {
-        let (name_table_quadrant, index) = address_to_name_table_index(address);
-        self.raw_name_table_mut(params, ciram, name_table_quadrant)[index as usize] = value;
+        let (quadrant, index) = address_to_name_table_index(address);
+        match params.name_table_mirroring.name_table_source_in_quadrant(quadrant) {
+            NameTableSource::Ciram(side) =>
+                ciram.side_mut(side)[index as usize] = value,
+            NameTableSource::ExtendedRam =>
+                params.prg_memory.extended_ram_mut().as_raw_mut_slice()[index as usize] = value,
+            NameTableSource::FillModeTile =>
+                { /* The fill mode tile can't be overwritten through normal memory writes. */ }
+        }
     }
 
     #[inline]

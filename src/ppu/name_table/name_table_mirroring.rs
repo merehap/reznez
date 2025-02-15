@@ -73,5 +73,6 @@ impl fmt::Display for NameTableMirroring {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum NameTableSource {
     Ciram(CiramSide),
-    ExtendedRam
+    ExtendedRam,
+    FillModeTile,
 }

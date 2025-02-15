@@ -1,4 +1,5 @@
 use crate::memory::mapper::*;
+use crate::ppu::name_table::name_table;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 
 const LAYOUT: Layout = Layout::builder()
@@ -96,6 +97,11 @@ pub struct Mapper005 {
 
     multiplicand: u8,
     multiplier: u8,
+
+    // In fill mode, all of the name table values are the same so this is an inefficient
+    // representation. However, it's necessary in order to work with the NameTable type that
+    // requires stores a slice.
+    fill_mode_name_table: [u8; KIBIBYTE as usize],
 }
 
 impl Mapper for Mapper005 {
@@ -146,7 +152,7 @@ impl Mapper for Mapper005 {
                         0 => NameTableSource::Ciram(CiramSide::Left),
                         1 => NameTableSource::Ciram(CiramSide::Right),
                         2 => NameTableSource::ExtendedRam,
-                        3 => todo!("Fill-mode name table"),
+                        3 => NameTableSource::FillModeTile,
                         _ => unreachable!(),
                     }
                 }
@@ -157,8 +163,22 @@ impl Mapper for Mapper005 {
                 params.name_table_mirroring_mut().set_quadrant_to_source(NameTableQuadrant::BottomLeft, source(name_tables.c));
                 params.name_table_mirroring_mut().set_quadrant_to_source(NameTableQuadrant::BottomRight, source(name_tables.d));
             }
-            0x5106 => todo!("Fill-mode tile"),
-            0x5107 => todo!("Fill-mode color"),
+            0x5106 => {
+                //println!("Setting fill mode tile.");
+                // Set the fill-mode name table bytes but not the attribute table bytes.
+                for i in 0..name_table::ATTRIBUTE_START_INDEX as usize {
+                    self.fill_mode_name_table[i] = value;
+                }
+            }
+            0x5107 => {
+                //println!("Setting fill mode color.");
+                // Set the fill-mode attribute table bytes.
+                let attribute = value & 0b11;
+                let attribute_byte = (attribute << 6) | (attribute << 4) | (attribute << 2) | attribute;
+                for i in name_table::ATTRIBUTE_START_INDEX as usize..self.fill_mode_name_table.len() {
+                    self.fill_mode_name_table[i] = attribute_byte;
+                }
+            }
             0x5108..=0x5112 => { /* Do nothing. */ }
             0x5113 => {
                 let prg_bank = splitbits_named!(value, ".ppppppp");
@@ -239,6 +259,10 @@ impl Mapper for Mapper005 {
         }
     }
 
+    fn fill_mode_name_table(&self) -> &[u8; KIBIBYTE as usize] {
+        &self.fill_mode_name_table
+    }
+
     fn layout(&self) -> Layout {
         LAYOUT
     }
@@ -254,6 +278,8 @@ impl Mapper005 {
 
             multiplicand: 0xFF,
             multiplier: 0xFF,
+
+            fill_mode_name_table: [0; KIBIBYTE as usize],
         }
     }
 }
@@ -275,6 +301,7 @@ use crate::memory::mapper::*;
 use crate::memory::memory::{NMI_VECTOR_LOW, NMI_VECTOR_HIGH};
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::{Ciram, CiramSide};
+use crate::memory::raw_memory::RawMemoryArray;
 
 const LAYOUT: Layout = Layout::builder()
     .override_bank_register(P4, -1)

@@ -15,7 +15,7 @@ use crate::util::unit::KIBIBYTE;
 const NAME_TABLE_SIZE: u32 = KIBIBYTE;
 const ATTRIBUTE_TABLE_SIZE: u32 = 64;
 // 0x3C0
-const ATTRIBUTE_START_INDEX: u32 = NAME_TABLE_SIZE - ATTRIBUTE_TABLE_SIZE;
+pub const ATTRIBUTE_START_INDEX: u32 = NAME_TABLE_SIZE - ATTRIBUTE_TABLE_SIZE;
 
 #[derive(Debug)]
 pub struct NameTable<'a> {
