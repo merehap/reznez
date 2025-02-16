@@ -145,6 +145,8 @@ pub struct Mapper005 {
     previous_ppu_address_read: Option<PpuAddress>,
     ppu_read_occurred_since_last_cpu_cycle: bool,
     cpu_cycles_since_last_ppu_read: u8,
+
+    irq_enabled: bool,
 }
 
 impl Mapper for Mapper005 {
@@ -173,6 +175,7 @@ impl Mapper for Mapper005 {
     fn on_ppu_read(&mut self, params: &mut MapperParams, address: PpuAddress, _value: u8) {
         match address.to_u16() {
             (0x0000..=0x1FFF) => {
+                self.consecutive_reads_of_same_address = 0;
                 self.pattern_fetch_count += 1;
                 if self.pattern_fetch_count == SPRITE_PATTERN_FETCH_START
                     || self.pattern_fetch_count == BACKGROUND_PATTERN_FETCH_START {
@@ -345,7 +348,7 @@ impl Mapper for Mapper005 {
             0x5201 => todo!("Vertical split scroll"),
             0x5202 => todo!("Vertical split bank"),
             0x5203 => todo!("IRQ Scanline Compare Value"),
-            0x5204 => todo!("Scanline IRQ Status"),
+            0x5204 => self.irq_enabled = value >> 7 == 1,
             0x5205 => self.multiplicand = value,
             0x5206 => self.multiplier = value,
             0x5207..=0x5BFF => { /* Do nothing. */ }
@@ -384,6 +387,8 @@ impl Mapper005 {
             previous_ppu_address_read: None,
             ppu_read_occurred_since_last_cpu_cycle: false,
             cpu_cycles_since_last_ppu_read: 0,
+
+            irq_enabled: false,
         }
     }
 
