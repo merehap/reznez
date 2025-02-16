@@ -1,6 +1,8 @@
 use crate::memory::mapper::*;
 use crate::ppu::name_table::name_table;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
+use crate::ppu::sprite::sprite_height::SpriteHeight;
+use crate::ppu::register::registers::ctrl::Ctrl;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(1024 * KIBIBYTE)
@@ -38,23 +40,20 @@ const LAYOUT: Layout = Layout::builder()
     .override_bank_register(P4, -1)
 
     .chr_max_size(1024 * KIBIBYTE)
-    // Mode 0
+    // Normal sprite height layouts
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.switchable(C7)),
     ])
-    // Mode 1
     .chr_layout(&[
         Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::RAM.switchable(C3)),
         Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::RAM.switchable(C7)),
     ])
-    // Mode 2
     .chr_layout(&[
         Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::RAM.switchable(C1)),
         Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::RAM.switchable(C3)),
         Window::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::RAM.switchable(C5)),
         Window::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::RAM.switchable(C7)),
     ])
-    // Mode 3
     .chr_layout(&[
         Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::RAM.switchable(C0)),
         Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::RAM.switchable(C1)),
@@ -64,6 +63,31 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::RAM.switchable(C5)),
         Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::RAM.switchable(C6)),
         Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::RAM.switchable(C7)),
+    ])
+
+    // Tall sprite height layouts
+    .chr_layout(&[
+        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C11)),
+    ])
+    .chr_layout(&[
+        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C11)),
+        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C11)),
+    ])
+    .chr_layout(&[
+        Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::ROM.switchable(C9)),
+        Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C11)),
+        Window::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::ROM.switchable(C9)),
+        Window::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C11)),
+    ])
+    .chr_layout(&[
+        Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::ROM.switchable(C8)),
+        Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::ROM.switchable(C9)),
+        Window::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C10)),
+        Window::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C11)),
+        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::ROM.switchable(C8)),
+        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::ROM.switchable(C9)),
+        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C10)),
+        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C11)),
     ])
     .do_not_align_large_chr_windows()
     .ram_statuses(&[
@@ -86,6 +110,16 @@ const EXTENDED_RAM_MODES: [ExtendedRamMode; 4] = [
     ExtendedRamMode::ReadOnly,
 ];
 
+const CHR_WINDOW_MODES: [ChrWindowMode; 4] = [
+    ChrWindowMode::One8K,
+    ChrWindowMode::Two4K,
+    ChrWindowMode::Four2K,
+    ChrWindowMode::Eight1K,
+];
+
+const SPRITE_PATTERN_FETCH_START: u8 = 64;
+const BACKGROUND_PATTERN_FETCH_START: u8 = 81;
+
 // MMC5
 // TODO: Expansion Audio
 // TODO: MMC5A registers
@@ -102,17 +136,73 @@ pub struct Mapper005 {
     // representation. However, it's necessary in order to work with the NameTable type that
     // requires stores a slice.
     fill_mode_name_table: [u8; KIBIBYTE as usize],
+
+    chr_window_mode: ChrWindowMode,
+    sprite_height: SpriteHeight,
+
+    pattern_fetch_count: u8,
+    consecutive_reads_of_same_address: u8,
+    previous_ppu_address_read: Option<PpuAddress>,
+    ppu_read_occurred_since_last_cpu_cycle: bool,
+    cpu_cycles_since_last_ppu_read: u8,
 }
 
 impl Mapper for Mapper005 {
     fn peek_cartridge_space(&self, params: &MapperParams, cpu_address: u16) -> ReadResult {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
+            0x5204 => todo!("Read scanline IRQ status."),
             0x5205 => ReadResult::full((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
             0x5206 => ReadResult::full(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
             0x4020..=0x5FFF => ReadResult::OPEN_BUS,
             0x6000..=0xFFFF => params.peek_prg(cpu_address),
         }
+    }
+
+    fn on_cpu_write(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
+        match address.to_raw() {
+            // PPU Ctrl
+            0x2000 => {
+                self.sprite_height = Ctrl::from_u8(value).sprite_height();
+                self.update_chr_layout(params);
+            }
+            _ => { /* Do nothing. */ }
+        }
+    }
+
+    fn on_ppu_read(&mut self, params: &mut MapperParams, address: PpuAddress, _value: u8) {
+        if (0x0000..=0x1FFF).contains(&address.to_u16()) {
+            self.pattern_fetch_count += 1;
+            if self.pattern_fetch_count == SPRITE_PATTERN_FETCH_START
+                || self.pattern_fetch_count == BACKGROUND_PATTERN_FETCH_START {
+                self.update_chr_layout(params);
+            }
+        } else if (0x2000..=0x2FFF).contains(&address.to_u16())
+            && self.previous_ppu_address_read == Some(address) {
+
+            self.consecutive_reads_of_same_address += 1;
+            if self.consecutive_reads_of_same_address == 2 {
+                self.pattern_fetch_count = 0;
+            }
+        } else {
+            self.consecutive_reads_of_same_address = 0;
+        }
+
+        self.previous_ppu_address_read = Some(address);
+        self.ppu_read_occurred_since_last_cpu_cycle = true;
+    }
+
+    fn on_end_of_cpu_cycle(&mut self, _params: &mut MapperParams, _cycle: i64) {
+        if self.ppu_read_occurred_since_last_cpu_cycle {
+            self.cpu_cycles_since_last_ppu_read = 0;
+        } else {
+            self.cpu_cycles_since_last_ppu_read += 1;
+            if self.cpu_cycles_since_last_ppu_read == 3 {
+                self.previous_ppu_address_read = None;
+            }
+        }
+
+        self.ppu_read_occurred_since_last_cpu_cycle = false;
     }
 
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
@@ -122,7 +212,10 @@ impl Mapper for Mapper005 {
             0x5000..=0x5015 => { /* TODO: MMC5 audio */ }
             0x5016..=0x50FF => { /* Do nothing. */ }
             0x5100 => params.set_prg_layout(value & 0b11),
-            0x5101 => params.set_chr_layout(value & 0b11),
+            0x5101 => {
+                self.chr_window_mode = CHR_WINDOW_MODES[usize::from(value & 0b11)];
+                self.update_chr_layout(params);
+            }
             0x5102 => {
                 self.ram_enabled_1 = value & 0b11 == 0b10;
                 if !self.ram_enabled_1 {
@@ -219,27 +312,27 @@ impl Mapper for Mapper005 {
             0x5126 => params.set_bank_register(C6, value),
             0x5127 => params.set_bank_register(C7, value),
             0x5128 => {
-                params.set_bank_register(C0, value);
-                params.set_bank_register(C4, value);
-                todo!("Tall sprite support");
+                if self.sprite_height == SpriteHeight::Tall {
+                    params.set_bank_register(C8, value);
+                }
             }
             0x5129 => {
-                params.set_bank_register(C1, value);
-                params.set_bank_register(C5, value);
-                todo!("Tall sprite support");
+                if self.sprite_height == SpriteHeight::Tall {
+                    params.set_bank_register(C9, value);
+                }
             }
             0x512A => {
-                params.set_bank_register(C2, value);
-                params.set_bank_register(C6, value);
-                todo!("Tall sprite support");
+                if self.sprite_height == SpriteHeight::Tall {
+                    params.set_bank_register(C10, value);
+                }
             }
             0x512B => {
-                params.set_bank_register(C3, value);
-                params.set_bank_register(C7, value);
-                todo!("Tall sprite support");
+                if self.sprite_height == SpriteHeight::Tall {
+                    params.set_bank_register(C11, value);
+                }
             }
             0x512C..=0x512F => { /* Do nothing. */ }
-            0x5130 => todo!("Upper CHR Bank bits"),
+            0x5130 => { /* TODO. No official game relies on Upper CHR Bank bits, but a few initialize them. */ }
             0x5131..=0x51FF => { /* Do nothing. */ }
             0x5200 => {
                 let fields = splitbits!(value, "es.ccccc");
@@ -280,7 +373,32 @@ impl Mapper005 {
             multiplier: 0xFF,
 
             fill_mode_name_table: [0; KIBIBYTE as usize],
+
+            chr_window_mode: ChrWindowMode::One8K,
+            sprite_height: SpriteHeight::Normal,
+
+            pattern_fetch_count: 0,
+            consecutive_reads_of_same_address: 0,
+            previous_ppu_address_read: None,
+            ppu_read_occurred_since_last_cpu_cycle: false,
+            cpu_cycles_since_last_ppu_read: 0,
         }
+    }
+
+
+    fn update_chr_layout(&mut self, params: &mut MapperParams) {
+        let mut layout_index = self.chr_window_mode as u8;
+        let special_background_mode = self.sprite_height == SpriteHeight::Tall && !self.ppu_is_fetching_sprites();
+        if special_background_mode {
+            layout_index |= 0b100;
+        }
+
+        params.set_chr_layout(layout_index);
+    }
+
+    fn ppu_is_fetching_sprites(&self) -> bool {
+        (SPRITE_PATTERN_FETCH_START..BACKGROUND_PATTERN_FETCH_START)
+            .contains(&self.pattern_fetch_count)
     }
 }
 
@@ -290,6 +408,14 @@ enum ExtendedRamMode {
     ExtendedAttributes,
     ReadWrite,
     ReadOnly,
+}
+
+#[derive(Clone, Copy)]
+enum ChrWindowMode {
+    One8K = 0,
+    Two4K = 1,
+    Four2K = 2,
+    Eight1K = 3,
 }
 
 /*
