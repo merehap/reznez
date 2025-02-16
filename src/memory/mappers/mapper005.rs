@@ -171,21 +171,23 @@ impl Mapper for Mapper005 {
     }
 
     fn on_ppu_read(&mut self, params: &mut MapperParams, address: PpuAddress, _value: u8) {
-        if (0x0000..=0x1FFF).contains(&address.to_u16()) {
-            self.pattern_fetch_count += 1;
-            if self.pattern_fetch_count == SPRITE_PATTERN_FETCH_START
-                || self.pattern_fetch_count == BACKGROUND_PATTERN_FETCH_START {
-                self.update_chr_layout(params);
+        match address.to_u16() {
+            (0x0000..=0x1FFF) => {
+                self.pattern_fetch_count += 1;
+                if self.pattern_fetch_count == SPRITE_PATTERN_FETCH_START
+                    || self.pattern_fetch_count == BACKGROUND_PATTERN_FETCH_START {
+                    self.update_chr_layout(params);
+                }
             }
-        } else if (0x2000..=0x2FFF).contains(&address.to_u16())
-            && self.previous_ppu_address_read == Some(address) {
-
-            self.consecutive_reads_of_same_address += 1;
-            if self.consecutive_reads_of_same_address == 2 {
-                self.pattern_fetch_count = 0;
+            (0x2000..=0x2FFF) if self.previous_ppu_address_read == Some(address) => {
+                self.consecutive_reads_of_same_address += 1;
+                if self.consecutive_reads_of_same_address == 2 {
+                    self.pattern_fetch_count = 0;
+                }
             }
-        } else {
-            self.consecutive_reads_of_same_address = 0;
+            _ => {
+                self.consecutive_reads_of_same_address = 0;
+            }
         }
 
         self.previous_ppu_address_read = Some(address);
