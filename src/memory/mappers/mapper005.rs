@@ -147,13 +147,28 @@ pub struct Mapper005 {
     cpu_cycles_since_last_ppu_read: u8,
 
     irq_enabled: bool,
+    irq_pending: bool,
+    in_frame: bool,
+    irq_scanline_target: u8,
 }
 
 impl Mapper for Mapper005 {
     fn peek_cartridge_space(&self, params: &MapperParams, cpu_address: u16) -> ReadResult {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
-            0x5204 => todo!("Read scanline IRQ status."),
+            0x5204 => {
+                let mut status = 0;
+                if self.irq_pending {
+                    status |= 0b1000_0000;
+                }
+
+                if self.in_frame {
+                    status |= 0b0100_0000;
+                }
+
+                // TODO: Should the last 6 bits be open bus?
+                ReadResult::full(status)
+            }
             0x5205 => ReadResult::full((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
             0x5206 => ReadResult::full(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
             0x4020..=0x5BFF => ReadResult::OPEN_BUS,
@@ -347,7 +362,7 @@ impl Mapper for Mapper005 {
             }
             0x5201 => todo!("Vertical split scroll"),
             0x5202 => todo!("Vertical split bank"),
-            0x5203 => todo!("IRQ Scanline Compare Value"),
+            0x5203 => self.irq_scanline_target = value,
             0x5204 => self.irq_enabled = value >> 7 == 1,
             0x5205 => self.multiplicand = value,
             0x5206 => self.multiplier = value,
@@ -389,6 +404,9 @@ impl Mapper005 {
             cpu_cycles_since_last_ppu_read: 0,
 
             irq_enabled: false,
+            irq_pending: false,
+            in_frame: false,
+            irq_scanline_target: 0,
         }
     }
 
