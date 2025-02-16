@@ -184,10 +184,15 @@ impl PrgMemory {
 
     fn address_to_prg_index(&self, registers: &BankRegisters, address: CpuAddress) -> PrgMemoryIndex {
         let address = address.to_raw();
+        assert!(address >= 0x4020);
 
         let windows = &self.current_layout().windows();
         assert!(!windows.is_empty());
-        assert!(address >= windows[0].start());
+        if address < windows[0].start() {
+            // Translates to open bus for reads, and an ignored write for writes.
+            // Necessary to support mappers that configure memory between 0x4020 and 0x5FFF.
+            return PrgMemoryIndex::None;
+        }
 
         for i in 0..windows.len() {
             if i == windows.len() - 1 || address < windows[i + 1].start() {

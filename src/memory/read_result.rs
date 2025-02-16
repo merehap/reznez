@@ -1,4 +1,4 @@
-#[derive(Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct ReadResult {
     value: u8,
     mask: u8,

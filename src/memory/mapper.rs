@@ -41,8 +41,7 @@ pub trait Mapper {
     fn peek_cartridge_space(&self, params: &MapperParams, cpu_address: u16) -> ReadResult {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
-            0x4020..=0x5FFF => ReadResult::OPEN_BUS,
-            0x6000..=0xFFFF => params.peek_prg(cpu_address),
+            0x4020..=0xFFFF => params.peek_prg(cpu_address),
         }
     }
 

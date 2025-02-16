@@ -154,8 +154,8 @@ impl Mapper for Mapper005 {
             0x5204 => todo!("Read scanline IRQ status."),
             0x5205 => ReadResult::full((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
             0x5206 => ReadResult::full(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
-            0x4020..=0x5FFF => ReadResult::OPEN_BUS,
-            0x6000..=0xFFFF => params.peek_prg(cpu_address),
+            0x4020..=0x5BFF => ReadResult::OPEN_BUS,
+            0x5C00..=0xFFFF => params.peek_prg(cpu_address),
         }
     }
 
