@@ -61,9 +61,10 @@ impl fmt::Display for NameTableMirroring {
         let text = match *self {
             NameTableMirroring::VERTICAL => "Vertical".to_string(),
             NameTableMirroring::HORIZONTAL => "Horizontal".to_string(),
-            NameTableMirroring::ONE_SCREEN_LEFT_BANK => "ONE_SCREEN_LEFT_BANK".to_string(),
-            NameTableMirroring::ONE_SCREEN_RIGHT_BANK => "ONE_SCREEN_RIGHT_BANK".to_string(),
-            _ => todo!("Other NameTableMirrorings including custom."),
+            NameTableMirroring::ONE_SCREEN_LEFT_BANK => "OneScreenLeftBank".to_string(),
+            NameTableMirroring::ONE_SCREEN_RIGHT_BANK => "OneScreenRightBank".to_string(),
+            NameTableMirroring { quadrants: [top_left, top_right, bottom_left, bottom_right] } =>
+                format!("[{top_left}, {top_right}, {bottom_left}, {bottom_right}]"),
         };
 
         write!(f, "{text}")
@@ -75,4 +76,17 @@ pub enum NameTableSource {
     Ciram(CiramSide),
     ExtendedRam,
     FillModeTile,
+}
+
+impl fmt::Display for NameTableSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let text = match self {
+            NameTableSource::Ciram(CiramSide::Left) => "CIRAM(A)",
+            NameTableSource::Ciram(CiramSide::Right) => "CIRAM(B)",
+            NameTableSource::ExtendedRam => "ExtRAM",
+            NameTableSource::FillModeTile => "FillMode",
+        };
+
+        write!(f, "{text}")
+    }
 }
