@@ -141,28 +141,23 @@ pub struct Mapper005 {
     sprite_height: SpriteHeight,
 
     pattern_fetch_count: u8,
-    consecutive_reads_of_same_address: u8,
-    previous_ppu_address_read: Option<PpuAddress>,
-    ppu_read_occurred_since_last_cpu_cycle: bool,
-    cpu_cycles_since_last_ppu_read: u8,
 
     irq_enabled: bool,
-    irq_pending: bool,
-    in_frame: bool,
-    irq_scanline_target: u8,
+    frame_state: FrameState,
 }
 
 impl Mapper for Mapper005 {
-    fn peek_cartridge_space(&self, params: &MapperParams, cpu_address: u16) -> ReadResult {
-        match cpu_address {
+    fn peek_cartridge_space(&self, params: &MapperParams, cpu_addr: u16) -> ReadResult {
+        match cpu_addr {
             0x0000..=0x401F => unreachable!(),
             0x5204 => {
+                // TODO: Move this formatting to a FrameState method.
                 let mut status = 0;
-                if self.irq_pending {
+                if self.frame_state.irq_pending() {
                     status |= 0b1000_0000;
                 }
 
-                if self.in_frame {
+                if self.frame_state.in_frame() {
                     status |= 0b0100_0000;
                 }
 
@@ -172,7 +167,23 @@ impl Mapper for Mapper005 {
             0x5205 => ReadResult::full((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
             0x5206 => ReadResult::full(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
             0x4020..=0x5BFF => ReadResult::OPEN_BUS,
-            0x5C00..=0xFFFF => params.peek_prg(cpu_address),
+            0x5C00..=0xFFFF => params.peek_prg(cpu_addr),
+        }
+    }
+
+    fn on_cpu_read(&mut self, params: &mut MapperParams, addr: CpuAddress) {
+        match addr.to_raw() {
+            0x5204 => {
+                params.set_irq_pending(false);
+                self.frame_state.acknowledge_irq();
+            }
+            // NMI vector low and high
+            0xFFFA | 0xFFFB => {
+                params.set_irq_pending(false);
+                self.frame_state.acknowledge_irq();
+                self.frame_state.force_end_frame();
+            }
+            _ => { /* Do nothing. */ }
         }
     }
 
@@ -183,46 +194,27 @@ impl Mapper for Mapper005 {
                 self.sprite_height = Ctrl::from_u8(value).sprite_height();
                 self.update_chr_layout(params);
             }
+            // PPU Mask
+            0x2001 => {
+                if value & 0b00011000 == 0 {
+                    // Mesen doesn't do this but the wiki says to.
+                    self.frame_state.force_end_frame();
+                    // TODO: Disable substitutions.
+                }
+            }
             _ => { /* Do nothing. */ }
         }
     }
 
-    fn on_ppu_read(&mut self, params: &mut MapperParams, address: PpuAddress, _value: u8) {
-        match address.to_u16() {
-            (0x0000..=0x1FFF) => {
-                self.consecutive_reads_of_same_address = 0;
-                self.pattern_fetch_count += 1;
-                if self.pattern_fetch_count == SPRITE_PATTERN_FETCH_START
-                    || self.pattern_fetch_count == BACKGROUND_PATTERN_FETCH_START {
-                    self.update_chr_layout(params);
-                }
-            }
-            (0x2000..=0x2FFF) if self.previous_ppu_address_read == Some(address) => {
-                self.consecutive_reads_of_same_address += 1;
-                if self.consecutive_reads_of_same_address == 2 {
-                    self.pattern_fetch_count = 0;
-                }
-            }
-            _ => {
-                self.consecutive_reads_of_same_address = 0;
-            }
+    fn on_ppu_read(&mut self, params: &mut MapperParams, addr: PpuAddress, _value: u8) {
+        self.frame_state.sync_frame_status(addr);
+        if self.irq_enabled && self.frame_state.irq_pending() {
+            params.set_irq_pending(true);
         }
-
-        self.previous_ppu_address_read = Some(address);
-        self.ppu_read_occurred_since_last_cpu_cycle = true;
     }
 
     fn on_end_of_cpu_cycle(&mut self, _params: &mut MapperParams, _cycle: i64) {
-        if self.ppu_read_occurred_since_last_cpu_cycle {
-            self.cpu_cycles_since_last_ppu_read = 0;
-        } else {
-            self.cpu_cycles_since_last_ppu_read += 1;
-            if self.cpu_cycles_since_last_ppu_read == 3 {
-                self.previous_ppu_address_read = None;
-            }
-        }
-
-        self.ppu_read_occurred_since_last_cpu_cycle = false;
+        self.frame_state.maybe_end_frame();
     }
 
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
@@ -251,7 +243,7 @@ impl Mapper for Mapper005 {
             0x5104 => {
                 self.extended_ram_mode = EXTENDED_RAM_MODES[usize::from(value & 0b11)];
                 let ram_status = match self.extended_ram_mode {
-                    // FIXME: These are only write-only during rendering. They are supposed to be
+                    // FIXME: These are only write-only during rendering. They are supposed to
                     // cause corruption during VBlank.
                     ExtendedRamMode::WriteOnly | ExtendedRamMode::ExtendedAttributes => WRITE_ONLY,
                     ExtendedRamMode::ReadWrite => READ_WRITE,
@@ -271,10 +263,14 @@ impl Mapper for Mapper005 {
                 }
 
                 let name_tables = splitbits!(value, "ddccbbaa");
-                params.name_table_mirroring_mut().set_quadrant_to_source(NameTableQuadrant::TopLeft, source(name_tables.a));
-                params.name_table_mirroring_mut().set_quadrant_to_source(NameTableQuadrant::TopRight, source(name_tables.b));
-                params.name_table_mirroring_mut().set_quadrant_to_source(NameTableQuadrant::BottomLeft, source(name_tables.c));
-                params.name_table_mirroring_mut().set_quadrant_to_source(NameTableQuadrant::BottomRight, source(name_tables.d));
+                params.name_table_mirroring_mut().set_quadrant_to_source(
+                    NameTableQuadrant::TopLeft, source(name_tables.a));
+                params.name_table_mirroring_mut().set_quadrant_to_source(
+                    NameTableQuadrant::TopRight, source(name_tables.b));
+                params.name_table_mirroring_mut().set_quadrant_to_source(
+                    NameTableQuadrant::BottomLeft, source(name_tables.c));
+                params.name_table_mirroring_mut().set_quadrant_to_source(
+                    NameTableQuadrant::BottomRight, source(name_tables.d));
             }
             0x5106 => {
                 //println!("Setting fill mode tile.");
@@ -362,8 +358,16 @@ impl Mapper for Mapper005 {
             }
             0x5201 => todo!("Vertical split scroll"),
             0x5202 => todo!("Vertical split bank"),
-            0x5203 => self.irq_scanline_target = value,
-            0x5204 => self.irq_enabled = value >> 7 == 1,
+            0x5203 => self.frame_state.set_target_irq_scanline(value),
+            0x5204 => {
+                self.irq_enabled = value >> 7 == 1;
+                if !self.irq_enabled {
+                    params.set_irq_pending(false);
+                } else if self.frame_state.irq_pending() {
+                    params.set_irq_pending(true);
+                }
+
+            }
             0x5205 => self.multiplicand = value,
             0x5206 => self.multiplier = value,
             0x5207..=0x5BFF => { /* Do nothing. */ }
@@ -398,15 +402,9 @@ impl Mapper005 {
             sprite_height: SpriteHeight::Normal,
 
             pattern_fetch_count: 0,
-            consecutive_reads_of_same_address: 0,
-            previous_ppu_address_read: None,
-            ppu_read_occurred_since_last_cpu_cycle: false,
-            cpu_cycles_since_last_ppu_read: 0,
 
             irq_enabled: false,
-            irq_pending: false,
-            in_frame: false,
-            irq_scanline_target: 0,
+            frame_state: FrameState::new(),
         }
     }
 
@@ -441,6 +439,126 @@ enum ChrWindowMode {
     Two4K = 1,
     Four2K = 2,
     Eight1K = 3,
+}
+
+struct FrameState {
+    stage: FrameStage,
+    lock_state: FrameLockState,
+    ppu_is_reading: bool,
+    scanline: u8,
+    irq_target_scanline: u8,
+    irq_pending: bool,
+}
+
+impl FrameState {
+    fn new() -> Self {
+        Self {
+            stage: FrameStage::OutOfFrame,
+            lock_state: FrameLockState::Unlocked,
+            ppu_is_reading: false,
+            scanline: 0,
+            // A target of 0 means IRQs are disabled (unless one was already pending).
+            irq_target_scanline: 0,
+            irq_pending: false,
+        }
+    }
+
+    fn in_frame(&self) -> bool {
+        self.stage != FrameStage::OutOfFrame
+    }
+
+    fn irq_pending(&self) -> bool {
+        self.irq_pending
+    }
+
+    fn sync_frame_status(&mut self, addr: PpuAddress) {
+        self.ppu_is_reading = true;
+
+        use FrameStage::*;
+        self.stage = match self.stage {
+            InFrame0 | InFrame1 | InFrame2 => InFrame0,
+            OutOfFrame if self.lock_state.unlocked() => InFrame0,
+            OutOfFrame => OutOfFrame,
+        };
+
+        self.lock_state.step(addr);
+
+        if self.lock_state.unlocked() {
+            if self.in_frame() {
+                self.scanline += 1;
+                if self.scanline == self.irq_target_scanline {
+                    self.irq_pending = true;
+                }
+            } else {
+                self.scanline = 0;
+                self.irq_pending = false;
+            }
+        }
+    }
+
+    fn maybe_end_frame(&mut self) {
+        use FrameStage::*;
+        self.stage = match self.stage {
+            // Advance the stage.
+            InFrame0 if self.ppu_is_reading => InFrame1,
+            InFrame1 if self.ppu_is_reading => InFrame2,
+            InFrame2 if self.ppu_is_reading => OutOfFrame,
+            // Stay at the same stage.
+            _ => self.stage,
+        };
+
+        self.ppu_is_reading = false;
+    }
+
+    fn force_end_frame(&mut self) {
+        self.stage = FrameStage::OutOfFrame
+    }
+
+    fn set_target_irq_scanline(&mut self, target: u8) {
+        self.irq_target_scanline = target;
+    }
+
+    fn acknowledge_irq(&mut self) {
+        self.irq_pending = false;
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+enum FrameStage {
+    InFrame0,
+    InFrame1,
+    InFrame2,
+    OutOfFrame,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+enum FrameLockState {
+    Locked0,
+    Locked1(PpuAddress),
+    Locked2(PpuAddress),
+    Unlocked,
+}
+
+impl FrameLockState {
+    fn unlocked(&self) -> bool {
+        *self == FrameLockState::Unlocked
+    }
+
+    fn step(&mut self, addr: PpuAddress) {
+        let is_in_name_table = matches!(addr.to_u16(), 0x2000..=0x2FFF);
+
+        use FrameLockState::*;
+        *self = match *self {
+            Locked0 => Locked1(addr),
+            // Address out of range, go back to the beginning.
+            Locked1(_) | Locked2(_) | Unlocked if !is_in_name_table => Locked0,
+            Locked1(prev_addr) if prev_addr == addr => Locked2(addr),
+            Locked2(prev_addr) if prev_addr == addr => Unlocked,
+            // Addresses didn't match, go back to the beginning.
+            Locked1(_) | Locked2(_) => Locked0,
+            Unlocked => Unlocked,
+        };
+    }
 }
 
 /*
