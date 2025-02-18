@@ -1,5 +1,6 @@
 pub mod common;
 pub mod mmc3;
+pub mod mmc5;
 pub mod vrc;
 
 pub mod mapper000;
