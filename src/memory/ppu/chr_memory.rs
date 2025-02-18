@@ -120,6 +120,10 @@ impl ChrMemory {
         panic!("No window exists at {start:X}");
     }
 
+    pub fn layout_index(&self) -> u8 {
+        self.layout_index
+    }
+
     pub fn current_layout(&self) -> &ChrLayout {
         &self.layouts[self.layout_index as usize]
     }

@@ -523,6 +523,13 @@ impl MapperParams {
         self.chr_memory.set_layout(index);
     }
 
+    pub fn set_chr_layout_dedup_logging(&mut self, index: u8) {
+        if index != self.chr_memory.layout_index() {
+            info!(target: "mapperupdates", "Setting CHR layout to index {index}.");
+            self.chr_memory.set_layout(index);
+        }
+    }
+
     pub fn peek_chr(&self, ciram: &Ciram, address: PpuAddress) -> u8 {
         self.chr_memory.peek(&self.bank_registers, ciram, address)
     }

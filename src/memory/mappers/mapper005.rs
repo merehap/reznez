@@ -117,9 +117,6 @@ const CHR_WINDOW_MODES: [ChrWindowMode; 4] = [
     ChrWindowMode::Eight1K,
 ];
 
-const SPRITE_PATTERN_FETCH_START: u8 = 64;
-const BACKGROUND_PATTERN_FETCH_START: u8 = 81;
-
 // MMC5
 // TODO: Expansion Audio
 // TODO: MMC5A registers
@@ -139,8 +136,6 @@ pub struct Mapper005 {
 
     chr_window_mode: ChrWindowMode,
     sprite_height: SpriteHeight,
-
-    pattern_fetch_count: u8,
 
     irq_enabled: bool,
     frame_state: FrameState,
@@ -192,7 +187,7 @@ impl Mapper for Mapper005 {
             // PPU Ctrl
             0x2000 => {
                 self.sprite_height = Ctrl::from_u8(value).sprite_height();
-                self.update_chr_layout(params);
+                self.update_chr_layout(params, false);
             }
             // PPU Mask
             0x2001 => {
@@ -208,6 +203,10 @@ impl Mapper for Mapper005 {
 
     fn on_ppu_read(&mut self, params: &mut MapperParams, addr: PpuAddress, _value: u8) {
         self.frame_state.sync_frame_status(addr);
+
+        // Syncing the frame status may have switched in or out of special background banking mode.
+        self.update_chr_layout(params, true);
+
         if self.irq_enabled && self.frame_state.irq_pending() {
             params.set_irq_pending(true);
         }
@@ -226,7 +225,7 @@ impl Mapper for Mapper005 {
             0x5100 => params.set_prg_layout(value & 0b11),
             0x5101 => {
                 self.chr_window_mode = CHR_WINDOW_MODES[usize::from(value & 0b11)];
-                self.update_chr_layout(params);
+                self.update_chr_layout(params, false);
             }
             0x5102 => {
                 self.ram_enabled_1 = value & 0b11 == 0b10;
@@ -401,27 +400,25 @@ impl Mapper005 {
             chr_window_mode: ChrWindowMode::One8K,
             sprite_height: SpriteHeight::Normal,
 
-            pattern_fetch_count: 0,
-
             irq_enabled: false,
             frame_state: FrameState::new(),
         }
     }
 
 
-    fn update_chr_layout(&mut self, params: &mut MapperParams) {
+    fn update_chr_layout(&mut self, params: &mut MapperParams, dedup_logging: bool) {
         let mut layout_index = self.chr_window_mode as u8;
-        let special_background_mode = self.sprite_height == SpriteHeight::Tall && !self.ppu_is_fetching_sprites();
+        let special_background_mode =
+            self.sprite_height == SpriteHeight::Tall && !self.frame_state.sprite_fetching();
         if special_background_mode {
             layout_index |= 0b100;
         }
 
-        params.set_chr_layout(layout_index);
-    }
-
-    fn ppu_is_fetching_sprites(&self) -> bool {
-        (SPRITE_PATTERN_FETCH_START..BACKGROUND_PATTERN_FETCH_START)
-            .contains(&self.pattern_fetch_count)
+        if dedup_logging {
+            params.set_chr_layout_dedup_logging(layout_index);
+        } else {
+            params.set_chr_layout(layout_index);
+        }
     }
 }
 
@@ -441,6 +438,9 @@ enum ChrWindowMode {
     Eight1K = 3,
 }
 
+const SPRITE_PATTERN_FETCH_START: u8 = 64;
+const BACKGROUND_PATTERN_FETCH_START: u8 = 81;
+
 struct FrameState {
     stage: FrameStage,
     lock_state: FrameLockState,
@@ -448,6 +448,8 @@ struct FrameState {
     scanline: u8,
     irq_target_scanline: u8,
     irq_pending: bool,
+
+    pattern_fetch_count: u8,
 }
 
 impl FrameState {
@@ -460,6 +462,8 @@ impl FrameState {
             // A target of 0 means IRQs are disabled (unless one was already pending).
             irq_target_scanline: 0,
             irq_pending: false,
+
+            pattern_fetch_count: 0,
         }
     }
 
@@ -471,6 +475,12 @@ impl FrameState {
         self.irq_pending
     }
 
+    fn sprite_fetching(&self) -> bool {
+        (SPRITE_PATTERN_FETCH_START..BACKGROUND_PATTERN_FETCH_START)
+            .contains(&self.pattern_fetch_count)
+    }
+
+    // Called every PPU read.
     fn sync_frame_status(&mut self, addr: PpuAddress) {
         self.ppu_is_reading = true;
 
@@ -493,9 +503,14 @@ impl FrameState {
                 self.scanline = 0;
                 self.irq_pending = false;
             }
+
+            self.pattern_fetch_count = 0;
+        } else if addr.to_u16() < 0x2000 {
+            self.pattern_fetch_count += 1;
         }
     }
 
+    // Called every CPU read.
     fn maybe_end_frame(&mut self) {
         use FrameStage::*;
         self.stage = match self.stage {
@@ -510,14 +525,17 @@ impl FrameState {
         self.ppu_is_reading = false;
     }
 
+    // Called on PPU mask (0x2001) write, and on NMI vector (0xFFFA or 0xFFFB) read.
     fn force_end_frame(&mut self) {
         self.stage = FrameStage::OutOfFrame
     }
 
+    // Called on 0x5203 write.
     fn set_target_irq_scanline(&mut self, target: u8) {
         self.irq_target_scanline = target;
     }
 
+    // Called on 0x5204 read, and on NMI vector (0xFFFA or 0xFFFB) read.
     fn acknowledge_irq(&mut self) {
         self.irq_pending = false;
     }
