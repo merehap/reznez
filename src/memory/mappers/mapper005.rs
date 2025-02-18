@@ -435,7 +435,7 @@ const BACKGROUND_PATTERN_FETCH_START: u8 = 81;
 
 struct FrameState {
     stage: FrameStage,
-    lock_state: FrameLockState,
+    lock_state: ScanlineDetector,
     ppu_is_reading: bool,
     scanline: u8,
     irq_target_scanline: u8,
@@ -448,7 +448,7 @@ impl FrameState {
     fn new() -> Self {
         Self {
             stage: FrameStage::OutOfFrame,
-            lock_state: FrameLockState::Unlocked,
+            lock_state: ScanlineDetector::ScanlineDetected,
             ppu_is_reading: false,
             scanline: 0,
             // A target of 0 means IRQs are disabled (unless one was already pending).
@@ -479,7 +479,7 @@ impl FrameState {
         use FrameStage::*;
         self.stage = match self.stage {
             InFrame0 | InFrame1 | InFrame2 => InFrame0,
-            OutOfFrame if self.lock_state.unlocked() => InFrame0,
+            OutOfFrame if self.lock_state.scanline_detected() => InFrame0,
             OutOfFrame => OutOfFrame,
         };
 
@@ -544,37 +544,47 @@ enum FrameStage {
 }
 
 // Determines when a new scanline is detected, if rendering is enabled.
-// Indicates that the "in frame" state may occur when Unlocked.
+// Indicates that the "in frame" state may occur when ScanlineDetected.
 #[derive(PartialEq, Eq, Debug)]
-enum FrameLockState {
-    Locked0,
-    Locked1(PpuAddress),
-    Locked2(PpuAddress),
-    Unlocked,
+enum ScanlineDetector {
+    // The last PPU read was NOT from a name table.
+    DidNotMatch,
+    // The last PPU read was from a name table entry.
+    FirstMatch(PpuAddress),
+    // The last TWO PPU reads were from the same name table entry. 
+    SecondMatch(PpuAddress),
+    // There were THREE consecutive PPU reads of the same name table entry, and no subsequent reads
+    // outside of the name table memory range have occurred.
+    ScanlineDetected,
 }
 
-impl FrameLockState {
-    fn unlocked(&self) -> bool {
-        *self == FrameLockState::Unlocked
+impl ScanlineDetector {
+    fn scanline_detected(&self) -> bool {
+        *self == ScanlineDetector::ScanlineDetected
     }
 
     fn step(&mut self, addr: PpuAddress) -> bool {
-        let is_in_name_table = matches!(addr.to_u16(), 0x2000..=0x2FFF);
+        use ScanlineDetector::*;
 
         let mut new_scanline_detected = false;
-        use FrameLockState::*;
-        *self = match *self {
+
+        let is_in_name_table = matches!(addr.to_u16(), 0x2000..=0x2FFF);
+        if !is_in_name_table {
             // Address out of range, go back to the beginning.
-            Locked0 | Unlocked if !is_in_name_table => Locked0,
-            Locked0 => Locked1(addr),
-            Locked1(prev_addr) if prev_addr == addr => Locked2(addr),
-            Locked2(prev_addr) if prev_addr == addr => {
+            *self = DidNotMatch;
+            return new_scanline_detected;
+        }
+
+        *self = match *self {
+            DidNotMatch => FirstMatch(addr),
+            FirstMatch(prev_addr) if prev_addr == addr => SecondMatch(addr),
+            SecondMatch(prev_addr) if prev_addr == addr => {
                 new_scanline_detected = true;
-                Unlocked
+                ScanlineDetected
             }
             // Addresses didn't match, go back to the beginning.
-            Locked1(_) | Locked2(_) => Locked0,
-            Unlocked => Unlocked,
+            FirstMatch(_) | SecondMatch(_) => DidNotMatch,
+            ScanlineDetected => ScanlineDetected,
         };
 
         new_scanline_detected
