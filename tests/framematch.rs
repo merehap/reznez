@@ -64,10 +64,14 @@ impl TestSummary {
                         let actual_ppm = &nes.frame().to_ppm(mask);
                         let actual_hash = calculate_hash(&actual_ppm);
                         if actual_hash == expected_hash {
-                            if frame_entry.is_known_bad() {
-                                test_results.insert(rom_id.clone(), TestStatus::KnownBad);
-                            } else {
-                                test_results.insert(rom_id.clone(), TestStatus::Pass);
+                            // FIXME: Hack until we allow different TestStatuses per frame for a
+                            // single ROM.
+                            if test_results.get(&rom_id.clone()).is_none() {
+                                if frame_entry.is_known_bad() {
+                                    test_results.insert(rom_id.clone(), TestStatus::KnownBad);
+                                } else {
+                                    test_results.insert(rom_id.clone(), TestStatus::Pass);
+                                }
                             }
                         } else {
                             test_results.insert(rom_id.clone(), TestStatus::Fail);
