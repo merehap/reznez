@@ -436,7 +436,7 @@ const BACKGROUND_PATTERN_FETCH_START: u8 = 81;
 
 struct FrameState {
     stage: FrameStage,
-    lock_state: ScanlineDetector,
+    scanline_detector: ScanlineDetector,
     ppu_is_reading: bool,
     scanline: u8,
     irq_target_scanline: u8,
@@ -449,7 +449,7 @@ impl FrameState {
     fn new() -> Self {
         Self {
             stage: FrameStage::OutOfFrame,
-            lock_state: ScanlineDetector::new(),
+            scanline_detector: ScanlineDetector::new(),
             ppu_is_reading: false,
             scanline: 0,
             // A target of 0 means IRQs are disabled (unless one was already pending).
@@ -480,11 +480,11 @@ impl FrameState {
         use FrameStage::*;
         self.stage = match self.stage {
             InFrame0 | InFrame1 | InFrame2 => InFrame0,
-            OutOfFrame if self.lock_state.scanline_detected() => InFrame0,
+            OutOfFrame if self.scanline_detector.scanline_detected() => InFrame0,
             OutOfFrame => OutOfFrame,
         };
 
-        let new_scanline_detected = self.lock_state.step(addr);
+        let new_scanline_detected = self.scanline_detector.step(addr);
         if new_scanline_detected {
             if self.in_frame() {
                 self.scanline += 1;
