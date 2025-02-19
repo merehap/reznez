@@ -501,17 +501,20 @@ impl FrameState {
         }
     }
 
-    // Called every CPU read.
+    // Called every CPU cycle.
     fn maybe_end_frame(&mut self) {
+        if !self.ppu_is_reading {
+            return;
+        }
+
         use FrameStage::*;
         self.stage = match self.stage {
             // Advance the stage.
-            InFrame0 if self.ppu_is_reading => InFrame1,
-            InFrame1 if self.ppu_is_reading => InFrame2,
+            InFrame0 => InFrame1,
+            InFrame1 => InFrame2,
             // No PPU reads occurred for 3 PPU cycles, rendering must have been disabled.
-            InFrame2 if self.ppu_is_reading => OutOfFrame,
-            // Stay at the same stage.
-            _ => self.stage,
+            InFrame2 => OutOfFrame,
+            OutOfFrame => OutOfFrame,
         };
 
         self.ppu_is_reading = false;
