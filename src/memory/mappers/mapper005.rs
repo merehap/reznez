@@ -435,7 +435,9 @@ const SPRITE_PATTERN_FETCH_START: u8 = 64;
 const BACKGROUND_PATTERN_FETCH_START: u8 = 81;
 
 struct FrameState {
-    stage: FrameStage,
+    in_frame: bool,
+    idle_count: u8,
+
     scanline_detector: ScanlineDetector,
     ppu_is_reading: bool,
     scanline: u8,
@@ -448,7 +450,9 @@ struct FrameState {
 impl FrameState {
     fn new() -> Self {
         Self {
-            stage: FrameStage::OutOfFrame,
+            in_frame: false,
+            idle_count: 0,
+
             scanline_detector: ScanlineDetector::new(),
             ppu_is_reading: false,
             scanline: 0,
@@ -461,7 +465,7 @@ impl FrameState {
     }
 
     fn in_frame(&self) -> bool {
-        self.stage != FrameStage::OutOfFrame
+        self.in_frame
     }
 
     fn irq_pending(&self) -> bool {
@@ -477,52 +481,45 @@ impl FrameState {
     fn sync_frame_status(&mut self, addr: PpuAddress) {
         self.ppu_is_reading = true;
 
-        if self.in_frame() || self.scanline_detector.scanline_detected() {
-            self.stage = FrameStage::InFrame0;
-        }
-
         let new_scanline_detected = self.scanline_detector.step(addr);
         if new_scanline_detected {
-            if self.in_frame() {
+            if self.in_frame {
                 self.scanline += 1;
                 if self.scanline == self.irq_target_scanline {
                     self.irq_pending = true;
                 }
             } else {
+                self.in_frame = true;
                 self.scanline = 0;
                 self.irq_pending = false;
             }
 
             self.pattern_fetch_count = 0;
-        }
-
-        if addr.to_u16() < 0x2000 {
+        } else if addr.to_u16() < 0x2000 {
             self.pattern_fetch_count += 1;
         }
     }
 
     // Called every CPU cycle.
     fn maybe_end_frame(&mut self) {
-        if !self.ppu_is_reading {
+        if self.ppu_is_reading {
+            self.ppu_is_reading = false;
+            self.idle_count = 0;
             return;
         }
 
-        use FrameStage::*;
-        self.stage = match self.stage {
-            // Advance the stage.
-            InFrame0 => InFrame1,
-            InFrame1 => InFrame2,
-            // No PPU reads occurred for 3 PPU cycles, rendering must have been disabled.
-            InFrame2 => OutOfFrame,
-            OutOfFrame => OutOfFrame,
-        };
+        if self.idle_count < 3 {
+            self.idle_count += 1;
+        }
 
-        self.ppu_is_reading = false;
+        if self.idle_count == 3 {
+            self.in_frame = false;
+        }
     }
 
     // Called on PPU mask (0x2001) write, and on NMI vector (0xFFFA or 0xFFFB) read.
     fn force_end_frame(&mut self) {
-        self.stage = FrameStage::OutOfFrame
+        self.in_frame = false;
     }
 
     // Called on 0x5203 write.
@@ -534,12 +531,4 @@ impl FrameState {
     fn acknowledge_irq(&mut self) {
         self.irq_pending = false;
     }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy)]
-enum FrameStage {
-    InFrame0,
-    InFrame1,
-    InFrame2,
-    OutOfFrame,
 }
