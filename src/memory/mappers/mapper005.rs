@@ -477,12 +477,9 @@ impl FrameState {
     fn sync_frame_status(&mut self, addr: PpuAddress) {
         self.ppu_is_reading = true;
 
-        use FrameStage::*;
-        self.stage = match self.stage {
-            InFrame0 | InFrame1 | InFrame2 => InFrame0,
-            OutOfFrame if self.scanline_detector.scanline_detected() => InFrame0,
-            OutOfFrame => OutOfFrame,
-        };
+        if self.in_frame() || self.scanline_detector.scanline_detected() {
+            self.stage = FrameStage::InFrame0;
+        }
 
         let new_scanline_detected = self.scanline_detector.step(addr);
         if new_scanline_detected {
