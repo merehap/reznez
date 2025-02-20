@@ -19,21 +19,26 @@ impl ScanlineDetector {
         }
     }
 
-    pub fn scanline_detected(&self) -> bool {
-        self.match_count >= 3
-    }
-
-    pub fn step(&mut self, addr: PpuAddress) -> bool {
+    pub fn step(&mut self, addr: PpuAddress) -> DetectedEvent {
         let prev_match_count = self.match_count;
 
-        let is_in_name_table = matches!(addr.to_u16(), 0x2000..=0x2FFF);
-        // If match_count == 0 or a scanline has been detected, then ignore address mismatches.
-        let mismatched_addrs = matches!(self.match_count, 1 | 2) && self.prev_addr != addr;
-        if !is_in_name_table || mismatched_addrs {
-            // Address out of range or doesn't match the previous one, go back to the beginning.
+        let region = Region::from_address(addr);
+        if region != Region::NameTable {
+            // Address out of range, go back to the beginning.
             self.match_count = 0;
-            // No scanline detected.
-            return false;
+            let detected = if region == Region::PatternTable {
+                DetectedEvent::PatternFetch
+            } else {
+                DetectedEvent::Other
+            };
+            return detected;
+        }
+
+        // Address mismatches are ignored if match_count == 0 or a scanline has already been detected.
+        if self.prev_addr != addr && matches!(self.match_count, 1 | 2) {
+            // Address doesn't match the previous one, go back to the beginning.
+            self.match_count = 0;
+            return DetectedEvent::Other;
         }
 
         if self.match_count < 3 {
@@ -42,7 +47,35 @@ impl ScanlineDetector {
 
         self.prev_addr = addr;
 
-        let new_scanline_detected = prev_match_count == 2 && self.match_count == 3;
-        new_scanline_detected
+        if prev_match_count == 2 && self.match_count == 3 {
+            DetectedEvent::ScanlineStart
+        } else {
+            DetectedEvent::Other
+        }
     }
+}
+
+#[derive(PartialEq, Eq)]
+enum Region {
+    PatternTable,
+    NameTable,
+    Other,
+}
+
+impl Region {
+    fn from_address(addr: PpuAddress) -> Self {
+        match addr.to_u16() {
+            0x0000..=0x1FFF => Region::PatternTable,
+            0x2000..=0x2FFF => Region::NameTable,
+            // Name table mirrors and the palette table.
+            0x3000..=0x3FFF => Region::Other,
+            0x4000..=0xFFFF => unreachable!(),
+        }
+    }
+}
+
+pub enum DetectedEvent {
+    ScanlineStart,
+    PatternFetch,
+    Other,
 }

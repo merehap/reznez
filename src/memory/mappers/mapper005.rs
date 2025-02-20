@@ -1,5 +1,5 @@
 use crate::memory::mapper::*;
-use crate::memory::mappers::mmc5::scanline_detector::ScanlineDetector;
+use crate::memory::mappers::mmc5::scanline_detector::{ScanlineDetector, DetectedEvent};
 use crate::ppu::name_table::name_table;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
@@ -436,14 +436,14 @@ const BACKGROUND_PATTERN_FETCH_START: u8 = 81;
 
 struct FrameState {
     in_frame: bool,
-    idle_count: u8,
-
-    scanline_detector: ScanlineDetector,
-    ppu_is_reading: bool,
-    scanline: u8,
-    irq_target_scanline: u8,
     irq_pending: bool,
 
+    scanline_detector: ScanlineDetector,
+    irq_target_scanline: u8,
+    scanline: u8,
+
+    ppu_is_reading: bool,
+    idle_count: u8,
     pattern_fetch_count: u8,
 }
 
@@ -451,15 +451,15 @@ impl FrameState {
     fn new() -> Self {
         Self {
             in_frame: false,
-            idle_count: 0,
-
-            scanline_detector: ScanlineDetector::new(),
-            ppu_is_reading: false,
-            scanline: 0,
-            // A target of 0 means IRQs are disabled (unless one was already pending).
-            irq_target_scanline: 0,
             irq_pending: false,
 
+            scanline_detector: ScanlineDetector::new(),
+            // A target of 0 means IRQs are disabled (except an already pending one).
+            irq_target_scanline: 0,
+            scanline: 0,
+
+            ppu_is_reading: false,
+            idle_count: 0,
             pattern_fetch_count: 0,
         }
     }
@@ -481,22 +481,29 @@ impl FrameState {
     fn sync_frame_status(&mut self, addr: PpuAddress) {
         self.ppu_is_reading = true;
 
-        let new_scanline_detected = self.scanline_detector.step(addr);
-        if new_scanline_detected {
-            if self.in_frame {
+        match self.scanline_detector.step(addr) {
+            // A new frame is starting.
+            DetectedEvent::ScanlineStart if !self.in_frame => {
+                self.in_frame = true;
+                self.scanline = 0;
+                self.irq_pending = false;
+                self.pattern_fetch_count = 0;
+            }
+            // A new scanline is starting in the ongoing frame.
+            DetectedEvent::ScanlineStart => {
                 self.scanline += 1;
                 if self.scanline == self.irq_target_scanline {
                     self.irq_pending = true;
                 }
-            } else {
-                self.in_frame = true;
-                self.scanline = 0;
-                self.irq_pending = false;
-            }
 
-            self.pattern_fetch_count = 0;
-        } else if addr.to_u16() < 0x2000 {
-            self.pattern_fetch_count += 1;
+                self.pattern_fetch_count = 0;
+            }
+            // A new pattern was read.
+            DetectedEvent::PatternFetch => {
+                self.pattern_fetch_count += 1;
+            }
+            // Nothing interesting happened.
+            DetectedEvent::Other => {}
         }
     }
 
@@ -513,6 +520,7 @@ impl FrameState {
         }
 
         if self.idle_count == 3 {
+            // No PPU reads occurred over 3 CPU cycles so rendering must be disabled: end the frame.
             self.in_frame = false;
         }
     }
