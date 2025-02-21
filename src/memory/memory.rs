@@ -338,6 +338,7 @@ impl PpuMemory<'_> {
         PaletteTable::new(
             self.memory.palette_ram.to_slice(),
             &self.memory.system_palette,
+            self.memory.ppu_registers.mask(),
         )
     }
 }

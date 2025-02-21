@@ -3,6 +3,7 @@ use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::palette::system_palette::SystemPalette;
+use crate::ppu::register::registers::mask::Mask;
 
 // TODO: Support https://wiki.nesdev.org/w/index.php?title=PPU_palettes#The_background_palette_hack
 #[derive(Debug)]
@@ -13,9 +14,9 @@ pub struct PaletteTable {
 }
 
 impl PaletteTable {
-    pub fn new(raw: &[u8; 0x20], system_palette: &SystemPalette) -> PaletteTable {
+    pub fn new(raw: &[u8; 0x20], system_palette: &SystemPalette, mask: Mask) -> PaletteTable {
         let rgb = |raw_color: u8| -> Rgb {
-            system_palette.lookup_rgb(Color::from_u8(raw_color))
+            system_palette.lookup_rgb(Color::from_u8(raw_color), mask)
         };
 
         let background_palettes = [

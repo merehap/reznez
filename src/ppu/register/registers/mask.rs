@@ -28,6 +28,12 @@ impl Mask {
             .with_left_background_columns_enabled(true)
     }
 
+    pub fn emphasis_index(self) -> usize {
+        ((self.emphasize_blue() as usize) << 2)
+            | ((self.emphasize_green() as usize) << 1)
+            | (self.emphasize_red() as usize)
+    }
+
     pub fn set(&mut self, value: u8) {
         let old_mask = *self;
         *self = Mask::from_bytes([value]);
