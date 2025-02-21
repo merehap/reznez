@@ -17,15 +17,15 @@ const LAYOUT: Layout = Layout::builder()
     .prg_layout(&[
         Window::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
-        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::RAM.switchable(P2).status_register(S1)),
+        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::RAM.switchable(P2).status_register(S2)),
         Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
     // Mode 2
     .prg_layout(&[
         Window::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
-        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::RAM.switchable(P2).status_register(S1)),
-        Window::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::RAM.switchable(P3).status_register(S1)),
+        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::RAM.switchable(P2).status_register(S2)),
+        Window::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::RAM.switchable(P3).status_register(S3)),
         Window::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
     // Mode 3
@@ -33,8 +33,8 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x5C00, 0x5FFF, 1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
         Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::RAM.switchable(P0)),
         Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::RAM.switchable(P1).status_register(S1)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::RAM.switchable(P2).status_register(S1)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::RAM.switchable(P3).status_register(S1)),
+        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::RAM.switchable(P2).status_register(S2)),
+        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::RAM.switchable(P3).status_register(S3)),
         Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
     .prg_layout_index(3)
@@ -220,98 +220,19 @@ impl Mapper for Mapper005 {
             0x5000..=0x5015 => { /* TODO: MMC5 audio */ }
             0x5016..=0x50FF => { /* Do nothing. */ }
             0x5100 => params.set_prg_layout(value & 0b11),
-            0x5101 => {
-                self.chr_window_mode = CHR_WINDOW_MODES[usize::from(value & 0b11)];
-                self.update_chr_layout(params, false);
-            }
-            0x5102 => {
-                self.ram_enabled_1 = value & 0b11 == 0b10;
-                if !self.ram_enabled_1 {
-                    params.set_ram_status(S1, READ_ONLY);
-                }
-            }
-            0x5103 => {
-                self.ram_enabled_2 = value & 0b11 == 0b01;
-                if !self.ram_enabled_2 {
-                    params.set_ram_status(S1, READ_ONLY);
-                }
-            }
-            0x5104 => {
-                self.extended_ram_mode = EXTENDED_RAM_MODES[usize::from(value & 0b11)];
-                let ram_status = match self.extended_ram_mode {
-                    // FIXME: These are only write-only during rendering. They are supposed to
-                    // cause corruption during VBlank.
-                    ExtendedRamMode::WriteOnly | ExtendedRamMode::ExtendedAttributes => WRITE_ONLY,
-                    ExtendedRamMode::ReadWrite => READ_WRITE,
-                    ExtendedRamMode::ReadOnly => READ_ONLY,
-                };
-                params.set_ram_status(S0, ram_status);
-            }
-            0x5105 => {
-                fn source(raw: u8) -> NameTableSource {
-                    match raw {
-                        0 => NameTableSource::Ciram(CiramSide::Left),
-                        1 => NameTableSource::Ciram(CiramSide::Right),
-                        2 => NameTableSource::ExtendedRam,
-                        3 => NameTableSource::FillModeTile,
-                        _ => unreachable!(),
-                    }
-                }
-
-                let name_tables = splitbits!(value, "ddccbbaa");
-                params.name_table_mirroring_mut().set_quadrant_to_source(
-                    NameTableQuadrant::TopLeft, source(name_tables.a));
-                params.name_table_mirroring_mut().set_quadrant_to_source(
-                    NameTableQuadrant::TopRight, source(name_tables.b));
-                params.name_table_mirroring_mut().set_quadrant_to_source(
-                    NameTableQuadrant::BottomLeft, source(name_tables.c));
-                params.name_table_mirroring_mut().set_quadrant_to_source(
-                    NameTableQuadrant::BottomRight, source(name_tables.d));
-            }
-            0x5106 => {
-                // Set the fill-mode name table bytes but not the attribute table bytes.
-                for i in 0..name_table::ATTRIBUTE_START_INDEX as usize {
-                    self.fill_mode_name_table[i] = value;
-                }
-            }
-            0x5107 => {
-                // Set the fill-mode attribute table bytes.
-                let attribute = value & 0b11;
-                let attribute_byte = (attribute << 6) | (attribute << 4) | (attribute << 2) | attribute;
-                for i in name_table::ATTRIBUTE_START_INDEX as usize..self.fill_mode_name_table.len() {
-                    self.fill_mode_name_table[i] = attribute_byte;
-                }
-            }
+            0x5101 => self.set_chr_layout(params, value),
+            0x5102 => Self::set_ram_enabled(params, &mut self.ram_enabled_1, value),
+            0x5103 => Self::set_ram_enabled(params, &mut self.ram_enabled_2, value),
+            0x5104 => self.set_extended_ram_mode(params, value),
+            0x5105 => Self::set_name_table_mirroring(params, value),
+            0x5106 => self.set_fill_mode_name_table_byte(value),
+            0x5107 => self.set_fill_mode_attribute_table_byte(value),
             0x5108..=0x5112 => { /* Do nothing. */ }
-            0x5113 => {
-                let prg_bank = splitbits_named!(value, ".ppppppp");
-                params.set_bank_register(P0, prg_bank);
-            }
-            0x5114 => {
-                let (ram_writable, prg_bank) = splitbits_named!(min=u8, value, "wppppppp");
-                params.set_bank_register(P1, prg_bank);
-                if self.ram_enabled_1 && self.ram_enabled_2 {
-                    params.set_ram_status(S1, ram_writable);
-                }
-            }
-            0x5115 => {
-                let (ram_writable, prg_bank) = splitbits_named!(min=u8, value, "wppppppp");
-                params.set_bank_register(P2, prg_bank);
-                if self.ram_enabled_1 && self.ram_enabled_2 {
-                    params.set_ram_status(S1, ram_writable);
-                }
-            }
-            0x5116 => {
-                let (ram_writable, prg_bank) = splitbits_named!(min=u8, value, "wppppppp");
-                params.set_bank_register(P3, prg_bank);
-                if self.ram_enabled_1 && self.ram_enabled_2 {
-                    params.set_ram_status(S1, ram_writable);
-                }
-            }
-            0x5117 => {
-                let prg_bank = splitbits_named!(value, ".ppppppp");
-                params.set_bank_register(P4, prg_bank);
-            }
+            0x5113 => self.set_prg_bank_register(params, P0, None, value),
+            0x5114 => self.set_prg_bank_register(params, P1, Some(S1), value),
+            0x5115 => self.set_prg_bank_register(params, P2, Some(S2), value),
+            0x5116 => self.set_prg_bank_register(params, P3, Some(S3), value),
+            0x5117 => self.set_prg_bank_register(params, P4, None, value),
             0x5118..=0x511F => { /* Do nothing. */ }
             0x5120 => params.set_bank_register(C0, value),
             0x5121 => params.set_bank_register(C1, value),
@@ -321,47 +242,18 @@ impl Mapper for Mapper005 {
             0x5125 => params.set_bank_register(C5, value),
             0x5126 => params.set_bank_register(C6, value),
             0x5127 => params.set_bank_register(C7, value),
-            0x5128 => {
-                if self.sprite_height == SpriteHeight::Tall {
-                    params.set_bank_register(C8, value);
-                }
-            }
-            0x5129 => {
-                if self.sprite_height == SpriteHeight::Tall {
-                    params.set_bank_register(C9, value);
-                }
-            }
-            0x512A => {
-                if self.sprite_height == SpriteHeight::Tall {
-                    params.set_bank_register(C10, value);
-                }
-            }
-            0x512B => {
-                if self.sprite_height == SpriteHeight::Tall {
-                    params.set_bank_register(C11, value);
-                }
-            }
+            0x5128 => params.set_bank_register(C8, value),
+            0x5129 => params.set_bank_register(C9, value),
+            0x512A => params.set_bank_register(C10, value),
+            0x512B => params.set_bank_register(C11, value),
             0x512C..=0x512F => { /* Do nothing. */ }
             0x5130 => { /* TODO. No official game relies on Upper CHR Bank bits, but a few initialize them. */ }
             0x5131..=0x51FF => { /* Do nothing. */ }
-            0x5200 => {
-                let fields = splitbits!(value, "es.ccccc");
-                if fields.e {
-                    todo!("Vertical split mode");
-                }
-            }
+            0x5200 => self.enable_vertical_split_mode(value),
             0x5201 => todo!("Vertical split scroll"),
             0x5202 => todo!("Vertical split bank"),
             0x5203 => self.frame_state.set_target_irq_scanline(value),
-            0x5204 => {
-                self.irq_enabled = value >> 7 == 1;
-                if !self.irq_enabled {
-                    params.set_irq_pending(false);
-                } else if self.frame_state.irq_pending() {
-                    params.set_irq_pending(true);
-                }
-
-            }
+            0x5204 => self.enable_irq(params, value),
             0x5205 => self.multiplicand = value,
             0x5206 => self.multiplier = value,
             0x5207..=0xFFFF => { /* Do nothing. */ }
@@ -398,6 +290,108 @@ impl Mapper005 {
         }
     }
 
+
+    // Write 0x5101
+    fn set_chr_layout(&mut self, params: &mut MapperParams, value: u8) {
+        self.chr_window_mode = CHR_WINDOW_MODES[usize::from(value & 0b11)];
+        self.update_chr_layout(params, false);
+    }
+    
+    // Write 0x5102 and 0x5103
+    fn set_ram_enabled(params: &mut MapperParams, ram_enabled: &mut bool, value: u8) {
+        *ram_enabled = value & 0b11 == 0b10;
+        if !*ram_enabled {
+            params.set_ram_status(S1, READ_ONLY);
+        }
+    }
+
+    // Write 0x5104
+    fn set_extended_ram_mode(&mut self, params: &mut MapperParams, value: u8) {
+        self.extended_ram_mode = EXTENDED_RAM_MODES[usize::from(value & 0b11)];
+        let ram_status = match self.extended_ram_mode {
+            // FIXME: These are only write-only during rendering. They are supposed to
+            // cause corruption during VBlank.
+            ExtendedRamMode::WriteOnly | ExtendedRamMode::ExtendedAttributes => WRITE_ONLY,
+            ExtendedRamMode::ReadWrite => READ_WRITE,
+            ExtendedRamMode::ReadOnly => READ_ONLY,
+        };
+        params.set_ram_status(S0, ram_status);
+    }
+
+    // Write 0x5105
+    fn set_name_table_mirroring(params: &mut MapperParams, value: u8) {
+        fn source(raw: u8) -> NameTableSource {
+            match raw {
+                0 => NameTableSource::Ciram(CiramSide::Left),
+                1 => NameTableSource::Ciram(CiramSide::Right),
+                2 => NameTableSource::ExtendedRam,
+                3 => NameTableSource::FillModeTile,
+                _ => unreachable!(),
+            }
+        }
+
+        let name_tables = splitbits!(value, "ddccbbaa");
+        params.name_table_mirroring_mut().set_quadrant_to_source(
+            NameTableQuadrant::TopLeft, source(name_tables.a));
+        params.name_table_mirroring_mut().set_quadrant_to_source(
+            NameTableQuadrant::TopRight, source(name_tables.b));
+        params.name_table_mirroring_mut().set_quadrant_to_source(
+            NameTableQuadrant::BottomLeft, source(name_tables.c));
+        params.name_table_mirroring_mut().set_quadrant_to_source(
+            NameTableQuadrant::BottomRight, source(name_tables.d));
+    }
+
+    // Write 0x5106
+    fn set_fill_mode_name_table_byte(&mut self, value: u8) {
+        // Set the fill-mode name table bytes but not the attribute table bytes.
+        for i in 0..name_table::ATTRIBUTE_START_INDEX as usize {
+            self.fill_mode_name_table[i] = value;
+        }
+    }
+
+    // Write 0x5107
+    fn set_fill_mode_attribute_table_byte(&mut self, value: u8) {
+        let attribute = value & 0b11;
+        let attribute_byte = (attribute << 6) | (attribute << 4) | (attribute << 2) | attribute;
+        for i in name_table::ATTRIBUTE_START_INDEX as usize..self.fill_mode_name_table.len() {
+            self.fill_mode_name_table[i] = attribute_byte;
+        }
+    }
+
+    // Write 0x5113 through 0x5117
+    fn set_prg_bank_register(
+        &self,
+        params: &mut MapperParams,
+        id: BankRegisterId,
+        status_id: Option<RamStatusRegisterId>,
+        value: u8,
+    ) {
+
+        let (ram_writable, prg_bank) = splitbits_named!(min=u8, value, "wppppppp");
+        params.set_bank_register(id, prg_bank);
+        if let Some(status_id) = status_id && self.ram_enabled_1 && self.ram_enabled_2 {
+            params.set_ram_status(status_id, ram_writable);
+        }
+    }
+
+    // Write 0x5200
+    fn enable_vertical_split_mode(&mut self, value: u8) {
+        let fields = splitbits!(value, "es.ccccc");
+        if fields.e {
+            todo!("Vertical split mode");
+        }
+    }
+
+    // Write 0x5204
+    fn enable_irq(&mut self, params: &mut MapperParams, value: u8) {
+        self.irq_enabled = value >> 7 == 1;
+        if !self.irq_enabled {
+            params.set_irq_pending(false);
+        } else if self.frame_state.irq_pending() {
+            params.set_irq_pending(true);
+        }
+
+    }
 
     fn update_chr_layout(&mut self, params: &mut MapperParams, dedup_logging: bool) {
         let mut layout_index = self.chr_window_mode as u8;

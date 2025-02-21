@@ -9,6 +9,7 @@ ROADMAP
 6. Joypad support
 7. PPU Mask support
 8. See if BankIndex can be resolved immediately. Late resolution is causing a lot of clutter.
+9. Proper sounding audio.
 
 Add CHR bank viewer. Allow overriding the selected bank for the game rendering.
 Remove GetSpritePatternHack in ppu.rs.
