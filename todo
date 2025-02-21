@@ -62,9 +62,6 @@ apu_mixer
 dmc_dma_during_read4
 dmc_tests
 
-MMC3
-MMC5
-
 PaddleTest3/PaddleTest
 
 full_palette
@@ -95,6 +92,9 @@ Athletic World (Freezes on nestopia too. Freezes at the beginning of the Hurdles
 
 MAPPER 4
 Crystalis - Junk on scanline above status bar.
+
+MAPPER 5
+Romance of The Three Kingdoms II - Sprite tiles are used instead of background tiles. Somehow MMC5 is supposed to be reading from the left pattern table even though PPUCTRL specifies the right table for background rendering.
 
 MAPPER 7
 Aladdin - Corrupted sprites, gets stuck in a loop writing to PPUDATA, JAMs.
