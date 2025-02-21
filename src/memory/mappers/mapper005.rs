@@ -146,20 +146,7 @@ impl Mapper for Mapper005 {
     fn peek_cartridge_space(&self, params: &MapperParams, cpu_addr: u16) -> ReadResult {
         match cpu_addr {
             0x0000..=0x401F => unreachable!(),
-            0x5204 => {
-                // TODO: Move this formatting to a FrameState method.
-                let mut status = 0;
-                if self.frame_state.irq_pending() {
-                    status |= 0b1000_0000;
-                }
-
-                if self.frame_state.in_frame() {
-                    status |= 0b0100_0000;
-                }
-
-                // TODO: Should the last 6 bits be open bus?
-                ReadResult::full(status)
-            }
+            0x5204 => ReadResult::full(self.frame_state.to_status_byte()),
             0x5205 => ReadResult::full((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
             0x5206 => ReadResult::full(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
             0x4020..=0x5BFF => ReadResult::OPEN_BUS,

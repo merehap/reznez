@@ -34,12 +34,21 @@ impl FrameState {
         }
     }
 
-    pub fn in_frame(&self) -> bool {
-        self.in_frame
-    }
-
     pub fn irq_pending(&self) -> bool {
         self.irq_pending
+    }
+
+    pub fn to_status_byte(&self) -> u8 {
+        let mut status = 0;
+        if self.irq_pending {
+            status |= 0b1000_0000;
+        }
+
+        if self.in_frame {
+            status |= 0b0100_0000;
+        }
+
+        status
     }
 
     pub fn sprite_fetching(&self) -> bool {
