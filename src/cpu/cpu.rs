@@ -150,6 +150,14 @@ impl Cpu {
             return None;
         }
 
+        if self.nmi_status == NmiStatus::Pending {
+            info!(target: "cpuflowcontrol", "NMI ready in CPU. Cycle: {}", memory.cpu_cycle());
+            self.nmi_status = NmiStatus::Ready;
+        } else if self.irq_status == IrqStatus::Pending && !self.status.interrupts_disabled {
+            info!(target: "cpuflowcontrol", "IRQ ready in CPU. Cycle: {}", memory.cpu_cycle());
+            self.irq_status = IrqStatus::Ready;
+        }
+
         let original_program_counter = self.program_counter;
         let mut step = self.mode_state.current_step();
 
@@ -248,14 +256,12 @@ impl Cpu {
                     self.reset_status = ResetStatus::Active;
                     *memory.data_bus_mut() = 0x00;
                     self.mode_state.interrupt_sequence(InterruptType::Reset);
-                } else if self.nmi_status == NmiStatus::Ready {
+                } else if self.nmi_status == NmiStatus::Active {
                     info!(target: "cpuflowcontrol", "Starting NMI");
-                    self.nmi_status = NmiStatus::Active;
                     *memory.data_bus_mut() = 0x00;
                     self.mode_state.interrupt_sequence(InterruptType::Nmi);
-                } else if self.irq_status == IrqStatus::Ready && self.nmi_status == NmiStatus::Inactive {
+                } else if self.irq_status == IrqStatus::Active && self.nmi_status == NmiStatus::Inactive {
                     info!(target: "cpuflowcontrol", "Starting IRQ");
-                    self.irq_status = IrqStatus::Active;
                     *memory.data_bus_mut() = 0x00;
                     self.mode_state.interrupt_sequence(InterruptType::Irq);
                 } else {
@@ -474,22 +480,22 @@ impl Cpu {
             }
             StepAction::ClearInterruptVector => self.current_interrupt_vector = None,
             StepAction::PollInterrupts => {
-                if self.nmi_status == NmiStatus::Pending {
-                    info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
-                    self.nmi_status = NmiStatus::Ready;
-                } else if self.irq_status == IrqStatus::Pending && !self.status.interrupts_disabled {
-                    info!(target: "cpuflowcontrol", "IRQ will start after the current instruction completes.");
-                    self.irq_status = IrqStatus::Ready;
+                if self.nmi_status == NmiStatus::Ready {
+                    info!(target: "cpuflowcontrol", "NMI will start on the next cycle.");
+                    self.nmi_status = NmiStatus::Active;
+                } else if self.irq_status == IrqStatus::Ready && !self.status.interrupts_disabled {
+                    info!(target: "cpuflowcontrol", "IRQ will start on the next cycle.");
+                    self.irq_status = IrqStatus::Active;
                 }
             }
             StepAction::MaybePollInterrupts => {
                 if self.address_carry != 0 {
-                    if self.nmi_status == NmiStatus::Pending {
-                        info!(target: "cpuflowcontrol", "NMI will start after the current instruction completes.");
+                    if self.nmi_status == NmiStatus::Ready {
+                        info!(target: "cpuflowcontrol", "NMI will start on the next cycle.");
                         self.nmi_status = NmiStatus::Ready;
-                    } else if self.irq_status == IrqStatus::Pending && !self.status.interrupts_disabled {
-                        info!(target: "cpuflowcontrol", "IRQ will start after the current instruction completes.");
-                        self.irq_status = IrqStatus::Ready;
+                    } else if self.irq_status == IrqStatus::Ready && !self.status.interrupts_disabled {
+                        info!(target: "cpuflowcontrol", "IRQ will start on the next cycle.");
+                        self.irq_status = IrqStatus::Active;
                     }
                 }
             }
