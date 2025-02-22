@@ -49,6 +49,7 @@ pub const OOPS_STEP: Step =
     ReadField(Field::Argument, From::ComputedTarget, &[]);
 
 pub const BRANCH_TAKEN_STEP: Step =
+    // TODO: Double check that MaybePollInterrupts shouldn't be a cycle earlier.
     Read(From::ProgramCounterTarget,
         &[MaybeInsertBranchOopsStep, MaybePollInterrupts, AddCarryToPC, StartNextInstruction, IncrementPC]);
 
@@ -130,11 +131,13 @@ pub const INDIRECT_INDEXED_READ_STEPS: &[Step] = &[
 
 pub const ABSOLUTE_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
+    // TODO: Should PollInterrupts be on the next line?
     ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[IncrementPC, PollInterrupts]),
     WriteField(OpRegister, To::PendingAddressTarget, &[]),
 ];
 
 pub const ZERO_PAGE_WRITE_STEPS: &[Step] = &[
+    // TODO: Should PollInterrupts be on the next line?
     ReadField(PendingAddressLow, From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC, PollInterrupts]),
     WriteField(OpRegister      , To::PendingZeroPageTarget , &[]),
 ];
@@ -142,12 +145,14 @@ pub const ZERO_PAGE_WRITE_STEPS: &[Step] = &[
 pub const ABSOLUTE_X_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
     ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[XOffsetPendingAddressLow, IncrementPC]),
+    // TODO: Should PollInterrupts be on the next line?
     Read(                         From::PendingAddressTarget, &[AddCarryToAddress, PollInterrupts]),
     WriteField(OpRegister       , To::ComputedTarget        , &[]),
 ];
 
 pub const ZERO_PAGE_X_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow, From::ProgramCounterTarget , &[InterpretOpCode, IncrementPC]),
+    // TODO: Should PollInterrupts be on the next line?
     Read(                        From::PendingZeroPageTarget, &[XOffsetAddress, PollInterrupts]),
     WriteField(OpRegister      , To::ComputedTarget         , &[]),
 ];
@@ -155,12 +160,14 @@ pub const ZERO_PAGE_X_WRITE_STEPS: &[Step] = &[
 pub const ABSOLUTE_Y_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
     ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[YOffsetPendingAddressLow, IncrementPC]),
+    // TODO: Should PollInterrupts be on the next line?
     Read(                         From::PendingAddressTarget, &[AddCarryToAddress, PollInterrupts]),
     WriteField(OpRegister,        To::ComputedTarget        , &[]),
 ];
 
 pub const ZERO_PAGE_Y_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow, From::ProgramCounterTarget , &[InterpretOpCode, IncrementPC]),
+    // TODO: Should PollInterrupts be on the next line?
     Read(                        From::PendingZeroPageTarget, &[YOffsetAddress, PollInterrupts]),
     WriteField(OpRegister,       To::ComputedTarget         , &[]),
 ];
@@ -169,6 +176,7 @@ pub const INDEXED_INDIRECT_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ProgramCounterTarget , &[InterpretOpCode, IncrementPC]),
     Read(                         From::PendingZeroPageTarget, &[XOffsetAddress]),
     ReadField(PendingAddressLow , From::ComputedTarget       , &[IncrementAddressLow]),
+    // TODO: Should PollInterrupts be on the next line?
     ReadField(PendingAddressHigh, From::ComputedTarget       , &[PollInterrupts]),
     WriteField(OpRegister       , To::PendingAddressTarget   , &[]),
 ];
@@ -177,6 +185,7 @@ pub const INDIRECT_INDEXED_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ProgramCounterTarget , &[InterpretOpCode, IncrementPC]),
     ReadField(PendingAddressLow , From::PendingZeroPageTarget, &[IncrementAddressLow]),
     ReadField(PendingAddressHigh, From::ComputedTarget       , &[YOffsetPendingAddressLow]),
+    // TODO: Should PollInterrupts be on the next line?
     Read(                         From::PendingAddressTarget , &[AddCarryToAddress, PollInterrupts]),
     WriteField(OpRegister       , To::ComputedTarget         , &[]),
 ];
@@ -186,6 +195,7 @@ pub const ABSOLUTE_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[IncrementPC]),
     Read(                         From::PendingAddressTarget, &[]),
     // TODO: Should PollInterrupts be on the previous step instead?
+    // TODO: Should PollInterrupts be on the next line?
     Write(To::PendingAddressTarget, &[ExecuteOpCode, PollInterrupts]),
     Write(To::PendingAddressTarget, &[]),
 ];
@@ -193,6 +203,7 @@ pub const ABSOLUTE_READ_MODIFY_WRITE_STEPS: &[Step] = &[
 pub const ZERO_PAGE_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow, From::ProgramCounterTarget , &[InterpretOpCode, IncrementPC]),
     Read(                        From::PendingZeroPageTarget, &[]),
+    // TODO: Should PollInterrupts be on the next line?
     Write(                       To::PendingZeroPageTarget  , &[ExecuteOpCode, PollInterrupts]),
     Write(                       To::PendingZeroPageTarget  , &[]),
 ];
@@ -202,6 +213,7 @@ pub const ABSOLUTE_X_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[XOffsetPendingAddressLow, IncrementPC]),
     Read(                         From::PendingAddressTarget, &[AddCarryToAddress]),
     Read(                         From::ComputedTarget      , &[]),
+    // TODO: Should PollInterrupts be on the next line?
     Write(                        To::ComputedTarget        , &[ExecuteOpCode, PollInterrupts]),
     Write(                        To::ComputedTarget        , &[]),
 ];
@@ -210,6 +222,7 @@ pub const ZERO_PAGE_X_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow, From::ProgramCounterTarget , &[InterpretOpCode, IncrementPC]),
     Read(                        From::PendingZeroPageTarget, &[XOffsetAddress]),
     Read(                        From::ComputedTarget       , &[]),
+    // TODO: Should PollInterrupts be on the next line?
     Write(                       To::ComputedTarget         , &[ExecuteOpCode, PollInterrupts]),
     Write(                       To::ComputedTarget         , &[]),
 ];
@@ -219,6 +232,7 @@ pub const ABSOLUTE_Y_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[YOffsetPendingAddressLow, IncrementPC]),
     Read(                         From::PendingAddressTarget, &[AddCarryToAddress]),
     Read(                         From::ComputedTarget      , &[]),
+    // TODO: Should PollInterrupts be on the next line?
     Write(                        To::ComputedTarget        , &[ExecuteOpCode, PollInterrupts]),
     Write(                        To::ComputedTarget        , &[]),
 ];
@@ -227,6 +241,7 @@ pub const ZERO_PAGE_Y_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow, From::ProgramCounterTarget , &[InterpretOpCode, IncrementPC]),
     Read(                        From::PendingZeroPageTarget, &[YOffsetAddress]),
     Read(                        From::ComputedTarget       , &[]),
+    // TODO: Should PollInterrupts be on the next line?
     Write(                       To::ComputedTarget         , &[ExecuteOpCode, PollInterrupts]),
     Write(                       To::ComputedTarget         , &[]),
 ];
@@ -237,6 +252,7 @@ pub const INDEXED_INDIRECT_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ComputedTarget       , &[IncrementAddressLow]),
     ReadField(PendingAddressHigh, From::ComputedTarget       , &[]),
     Read(                         From::PendingAddressTarget , &[]),
+    // TODO: Should PollInterrupts be on the next line?
     Write(                        To::PendingAddressTarget   , &[ExecuteOpCode, PollInterrupts]),
     Write(                        To::PendingAddressTarget   , &[]),
 ];
@@ -247,6 +263,7 @@ pub const INDIRECT_INDEXED_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressHigh, From::ComputedTarget       , &[YOffsetPendingAddressLow]),
     Read(                         From::PendingAddressTarget , &[AddCarryToAddress]),
     Read(                         From::ComputedTarget       , &[]),
+    // TODO: Should PollInterrupts be on the next line?
     Write(                        To::ComputedTarget         , &[ExecuteOpCode, PollInterrupts]),
     Write(                        To::ComputedTarget         , &[]),
 ];
@@ -277,6 +294,7 @@ pub const RTI_STEPS: &[Step] = &[
     // Dummy read.
     Read(                             From::TopOfStack, &[IncrementStackPointer]),
     ReadField(Status,                 From::TopOfStack, &[IncrementStackPointer]),
+    // TODO: Should PollInterrupts be on the next line?
     ReadField(Argument,               From::TopOfStack, &[IncrementStackPointer, PollInterrupts]),
     ReadField(ProgramCounterHighByte, From::TopOfStack, &[]),
 ];
@@ -287,16 +305,19 @@ pub const RTS_STEPS: &[Step] = &[
     Read(                             From::TopOfStack          , &[IncrementStackPointer]),
     // Read low byte of next program counter.
     ReadField(Argument,               From::TopOfStack          , &[IncrementStackPointer]),
+    // TODO: Should PollInterrupts be on the next line?
     ReadField(ProgramCounterHighByte, From::TopOfStack          , &[PollInterrupts]),
     // TODO: Make sure this dummy read is correct.
     Read(                             From::ProgramCounterTarget, &[IncrementPC]),
 ];
 
 pub const PHA_STEPS: &[Step] = &[
+    // TODO: Should PollInterrupts be on the next line?
     Read(From::ProgramCounterTarget, &[InterpretOpCode, PollInterrupts]),
     WriteField(Accumulator         , To::TopOfStack, &[DecrementStackPointer]),
 ];
 pub const PHP_STEPS: &[Step] = &[
+    // TODO: Should PollInterrupts be on the next line?
     Read(From::ProgramCounterTarget, &[InterpretOpCode, PollInterrupts]),
     WriteField(Status              , To::TopOfStack, &[DecrementStackPointer]),
 ];
@@ -328,7 +349,6 @@ pub const JSR_STEPS: &[Step] = &[
 
 pub const JMP_ABS_STEPS: &[Step] = &[
     ReadField(Argument, From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
-    // For some reason, JMP seems to poll interrupts on the last step. scanline.nes fails otherwise.
     ReadField(ProgramCounterHighByte, From::ProgramCounterTarget, &[PollInterrupts]),
 ];
 
@@ -350,6 +370,7 @@ pub const JMP_IND_STEPS: &[Step] = &[
 pub const ABSOLUTE_Y_AHX_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
     ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[YOffsetPendingAddressLow, IncrementPC]),
+    // It's weird and presumably incorrect that PollInterrupts isn't on the cycle preceding StartNextInstruction.
     Read(                         From::PendingAddressTarget, &[AddCarryToAddress, PollInterrupts]),
     // Hackily add an extra cycle.
     Read(                         From::ComputedTarget      , &[]),
@@ -372,6 +393,7 @@ pub const INDIRECT_INDEXED_AHX_STEPS: &[Step] = &[
 pub const TAS_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
     ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[YOffsetPendingAddressLow, IncrementPC]),
+    // It's weird and presumably incorrect that PollInterrupts isn't on the cycle preceding StartNextInstruction.
     Read(                         From::PendingAddressTarget, &[AddCarryToAddress, PollInterrupts]),
     Read(                         From::ComputedTarget      , &[]),
     Read(                         From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementPC]),
