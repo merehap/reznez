@@ -65,6 +65,7 @@ impl IrqState for NecIrqState {
         }
     }
 
+    // Write 0xC000
     fn set_counter_reload_value(&mut self, value: u8) {
         self.counter_reload_value = value;
     }

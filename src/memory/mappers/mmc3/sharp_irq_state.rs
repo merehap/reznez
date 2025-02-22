@@ -26,6 +26,7 @@ impl SharpIrqState {
 }
 
 impl IrqState for SharpIrqState {
+    // Every PPU cycle.
     fn tick_counter(&mut self, params: &mut MapperParams, address: PpuAddress) {
         if address.to_scroll_u16() >= 0x2000 {
             return;
@@ -62,20 +63,24 @@ impl IrqState for SharpIrqState {
         }
     }
 
+    // Write 0xC000 (even addresses)
     fn set_counter_reload_value(&mut self, value: u8) {
         self.counter_reload_value = value;
     }
 
+    // Write 0xC001 (odd addresses)
     fn reload_counter(&mut self) {
         self.counter = 0;
         self.force_reload_counter = true;
     }
 
+    // Write 0xE000 (even addresses)
     fn disable(&mut self, params: &mut MapperParams) {
         self.enabled = false;
         params.set_irq_pending(false);
     }
 
+    // Write 0xE001 (odd addresses)
     fn enable(&mut self) {
         self.enabled = true;
     }

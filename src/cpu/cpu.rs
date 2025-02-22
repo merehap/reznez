@@ -144,7 +144,7 @@ impl Cpu {
         self.nmi_status = NmiStatus::Pending;
     }
 
-    pub fn step(&mut self, memory: &mut CpuMemory, cycle_parity: CycleParity, irq_pending: bool) -> Option<Step> {
+    pub fn step(&mut self, memory: &mut CpuMemory, cycle_parity: CycleParity) -> Option<Step> {
         self.mode_state.clear_new_instruction();
         if self.mode_state.is_jammed() {
             return None;
@@ -216,7 +216,7 @@ impl Cpu {
         }
 
         // Keep irq_pending and irq_status in sync
-        if irq_pending {
+        if memory.irq_pending() {
             if self.irq_status == IrqStatus::Inactive && !self.status.interrupts_disabled {
                 info!(target: "cpuflowcontrol", "IRQ pending in CPU. Cycle: {}", memory.cpu_cycle());
                 self.irq_status = IrqStatus::Pending;

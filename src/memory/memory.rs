@@ -1,3 +1,6 @@
+use log::{info, log_enabled};
+use log::Level::Info;
+
 use crate::apu::apu_registers::ApuRegisters;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
@@ -189,6 +192,28 @@ impl CpuMemory<'_> {
 
     pub fn ports(&self) -> &Ports {
         &self.memory.ports
+    }
+
+    pub fn irq_pending(&mut self) -> bool {
+        let irq_pending =
+            self.memory.apu_regs().frame_irq().pending()
+            || self.memory.apu_regs().dmc_irq().pending()
+            || self.memory.mapper_params().irq().pending();
+        if log_enabled!(target: "cpuflowcontrol", Info) {
+            if self.memory.apu_regs_mut().frame_irq_mut().take_just_went_pending() {
+                info!("APU Frame IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
+            }
+
+            if self.memory.apu_regs_mut().dmc_irq_mut().take_just_went_pending() {
+                info!("DMC IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
+            }
+
+            if self.memory.mapper_params_mut().irq_mut().take_just_went_pending() {
+                info!("Mapper IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
+            }
+        }
+
+        irq_pending
     }
 
     pub fn take_dmc_dma_pending(&mut self) -> bool {

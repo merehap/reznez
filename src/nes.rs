@@ -187,30 +187,12 @@ impl Nes {
             self.snapshots.current().instruction(self.cpu.mode_state().state_label());
         }
 
-        let irq_pending =
-            self.memory.apu_regs().frame_irq().pending()
-            || self.memory.apu_regs().dmc_irq().pending()
-            || self.memory.mapper_params().irq().pending();
-        if log_enabled!(target: "cpuflowcontrol", Info) {
-            if self.memory.apu_regs_mut().frame_irq_mut().take_just_went_pending() {
-                info!("APU Frame IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
-            }
-
-            if self.memory.apu_regs_mut().dmc_irq_mut().take_just_went_pending() {
-                info!("DMC IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
-            }
-
-            if self.memory.mapper_params_mut().irq_mut().take_just_went_pending() {
-                info!("Mapper IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
-            }
-        }
-
         let mut interrupt_text = String::new();
         if log_enabled!(target: "cpuinstructions", Info) {
             interrupt_text = formatter::interrupts(self);
         }
 
-        let step = self.cpu.step(&mut self.memory.as_cpu_memory(), cycle_parity, irq_pending);
+        let step = self.cpu.step(&mut self.memory.as_cpu_memory(), cycle_parity);
         if log_enabled!(target: "cpuinstructions", Info)  {
             if let Some((current_instruction, start_address)) = self.cpu.mode_state().new_instruction_with_address() {
                 let formatted_instruction = self.log_formatter.format_instruction(
