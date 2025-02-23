@@ -3,6 +3,7 @@ use crate::memory::mappers::mmc3::irq_state::IrqState;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table::PatternTableSide;
 
+// Submapper 1 (MMC6). Submapper 99 (MMC3). No submapper offically assigned for the MMC3 variant.
 pub struct RevAIrqState {
     enabled: bool,
     counter: u8,

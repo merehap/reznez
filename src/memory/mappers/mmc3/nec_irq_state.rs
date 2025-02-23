@@ -3,6 +3,7 @@ use crate::memory::mappers::mmc3::irq_state::IrqState;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table::PatternTableSide;
 
+// Submapper 4
 pub struct NecIrqState {
     enabled: bool,
     counter: u8,

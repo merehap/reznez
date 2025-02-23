@@ -3,6 +3,7 @@ use crate::memory::mappers::mmc3::irq_state::IrqState;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table::PatternTableSide;
 
+// Submapper 0
 pub struct SharpIrqState {
     enabled: bool,
     counter: u8,
@@ -38,15 +39,19 @@ impl IrqState for SharpIrqState {
             && next_side == PatternTableSide::Right
             && self.counter_suppression_cycles == 0;
         if next_side == PatternTableSide::Right {
+            println!("Resetting counter suppression cycles to 16");
             self.counter_suppression_cycles = 16;
         }
 
         if should_tick_irq_counter {
+            println!("Ticking IRQ counter. Current value: {}", self.counter);
             if self.counter == 0 || self.force_reload_counter {
+                println!("IRQ counter reloaded to {}", self.counter);
                 self.counter = self.counter_reload_value;
                 self.force_reload_counter = false;
             } else {
                 self.counter -= 1;
+                println!("IRQ counter decremented to {}", self.counter);
             }
 
             if self.enabled && self.counter == 0 {
