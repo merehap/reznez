@@ -17,6 +17,8 @@ pub struct Frame {
     buffer: FrameBuffer<Rgbt>,
     sprite_buffer: FrameBuffer<(Rgbt, Priority, bool)>,
     universal_background_rgb: Rgb,
+
+    show_overscan: bool,
 }
 
 impl Frame {
@@ -29,6 +31,8 @@ impl Frame {
                 false,
             )),
             universal_background_rgb: Rgb::BLACK,
+
+            show_overscan: false,
         }
     }
 
@@ -39,6 +43,10 @@ impl Frame {
             FrameBuffer::filled((Rgbt::Transparent, Priority::Behind, false));
         frame.universal_background_rgb = Rgb::BLACK;
         frame
+    }
+
+    pub fn show_overscan_mut(&mut self) -> &mut bool {
+        &mut self.show_overscan
     }
 
     pub fn pixel(
@@ -76,6 +84,10 @@ impl Frame {
 
         if mask.greyscale_enabled() {
             rgb = rgb.to_greyscale();
+        }
+
+        if !self.show_overscan && (column.is_in_overscan_region() || row.is_in_overscan_region()) {
+            rgb = Rgb::BLACK;
         }
 
         (rgb, sprite_0_hit)
@@ -137,22 +149,6 @@ impl Frame {
         }
 
         data
-    }
-
-    pub fn update_pixel_data(
-        &self,
-        mask: Mask,
-        data: &mut [u8; 3 * PixelIndex::PIXEL_COUNT],
-    ) {
-        for pixel_index in PixelIndex::iter() {
-            let (column, row) = pixel_index.to_column_row();
-            let (pixel, _) = self.pixel(mask, column, row);
-
-            let index = 3 * pixel_index.to_usize();
-            data[index] = pixel.red();
-            data[index + 1] = pixel.green();
-            data[index + 2] = pixel.blue();
-        }
     }
 
     pub fn copy_to_rgba_buffer(

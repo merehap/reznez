@@ -49,6 +49,7 @@ impl TestSummary {
 
                 let mut nes = Nes::new(&Config::new(&opt));
                 nes.mute();
+                *nes.frame_mut().show_overscan_mut() = true;
 
                 let frame_directory = frame_entries[0].directory();
                 let frame_entries: BTreeMap<_, _> = frame_entries.iter()

@@ -100,6 +100,10 @@ impl Nes {
         &self.frame
     }
 
+    pub fn frame_mut(&mut self) -> &mut Frame {
+        &mut self.frame
+    }
+
     pub fn cycle(&self) -> u64 {
         self.cycle
     }

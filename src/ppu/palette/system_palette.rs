@@ -58,7 +58,7 @@ impl SystemPalette {
 
         let mut emphasized_palettes = Vec::new();
         for emphasis_factors in ALL_EMPHASIS_FACTORS {
-            let emphasized_palette = unemphasized_palette.clone().map(|rgb| {
+            let emphasized_palette = unemphasized_palette.map(|rgb| {
                 rgb.emphasized(emphasis_factors)
             });
             emphasized_palettes.push(emphasized_palette);

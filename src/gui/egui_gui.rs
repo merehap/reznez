@@ -358,7 +358,7 @@ impl WindowManager {
 
 trait Renderer {
     fn name(&self) -> String;
-    fn ui(&mut self, ctx: &Context, world: &World) -> Option<WindowArgs>;
+    fn ui(&mut self, ctx: &Context, world: &mut World) -> Option<WindowArgs>;
     fn render(&mut self, world: &mut World, pixels: &mut Pixels);
     fn width(&self) -> usize;
     fn height(&self) -> usize;
@@ -377,10 +377,22 @@ impl Renderer for PrimaryRenderer {
         "REZNEZ".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, _world: &World) -> Option<WindowArgs> {
+    fn ui(&mut self, ctx: &Context, _world: &mut World) -> Option<WindowArgs> {
         let mut result = None;
         egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
+
+                ui.menu_button("Settings", |ui| {
+                    if ui.button("Display").clicked() {
+                        ui.close_menu();
+                        result = Some((
+                            Box::new(DisplaySettingsRenderer::new()) as Box<dyn Renderer>,
+                            Position::Physical(PhysicalPosition { x: 850, y: 360 }),
+                            2,
+                        ));
+                    }
+                });
+
                 ui.menu_button("Debug Windows", |ui| {
                     if ui.button("Status").clicked() {
                         ui.close_menu();
@@ -458,6 +470,48 @@ impl Renderer for PrimaryRenderer {
     }
 }
 
+struct DisplaySettingsRenderer;
+
+impl DisplaySettingsRenderer {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl Renderer for DisplaySettingsRenderer {
+    fn name(&self) -> String {
+        "Display Settings".to_string()
+    }
+
+    fn ui(&mut self, ctx: &Context, world: &mut World) -> Option<WindowArgs> {
+        let nes = &mut world.nes;
+        egui::CentralPanel::default().show(ctx, |ui| {
+            egui::Grid::new("my_grid")
+                .num_columns(2)
+                .spacing([40.0, 4.0])
+                .striped(true)
+                .show(ui, |ui| {
+                    ui.checkbox(nes.frame_mut().show_overscan_mut(), "Show overscan?");
+                    ui.end_row();
+                });
+        });
+
+        None
+    }
+
+    fn render(&mut self, _world: &mut World, _pixels: &mut Pixels) {
+        // Do nothing yet.
+    }
+
+    fn width(&self) -> usize {
+        StatusRenderer::WIDTH
+    }
+
+    fn height(&self) -> usize {
+        StatusRenderer::HEIGHT
+    }
+}
+
 struct StatusRenderer {}
 
 impl StatusRenderer {
@@ -474,7 +528,7 @@ impl Renderer for StatusRenderer {
         "Status".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, world: &World) -> Option<WindowArgs> {
+    fn ui(&mut self, ctx: &Context, world: &mut World) -> Option<WindowArgs> {
         let nes = &world.nes;
         let clock = nes.ppu().clock();
         let ppu_regs = nes.memory().ppu_regs();
@@ -587,7 +641,7 @@ impl Renderer for LayersRenderer {
         "Layers".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<WindowArgs> {
+    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> Option<WindowArgs> {
         None
     }
 
@@ -647,7 +701,7 @@ impl Renderer for NameTableRenderer {
         "Name Tables".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<WindowArgs> {
+    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> Option<WindowArgs> {
         None
     }
 
@@ -717,7 +771,7 @@ impl Renderer for SpritesRenderer {
         "Sprites".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<WindowArgs> {
+    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> Option<WindowArgs> {
         None
     }
 
@@ -770,7 +824,7 @@ impl Renderer for PatternTableRenderer {
         "Pattern Table".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<WindowArgs> {
+    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> Option<WindowArgs> {
         None
     }
 
@@ -835,7 +889,7 @@ impl Renderer for ChrBanksRenderer {
         "CHR Banks".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &World) -> Option<WindowArgs> {
+    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> Option<WindowArgs> {
         None
     }
 
