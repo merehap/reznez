@@ -172,7 +172,7 @@ impl Cpu {
         if !dma_started && step.is_read() && self.oam_dma_port.take_page().is_some() {
             info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
                 self.oam_dma_port.current_address());
-            self.mode_state.oam_dma();
+            self.mode_state.oam_dma(cycle_parity);
             step = step.with_actions_removed();
         }
 

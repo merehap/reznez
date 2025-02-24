@@ -9,8 +9,8 @@ enum CpuMode {
     InterruptSequence(InterruptType),
     OamDma {
         suspended_mode: Box<CpuMode>,
-        suspended_steps: &'static [Step],
-        suspended_step_index: usize,
+        steps: &'static [Step],
+        step_index: usize,
     },
     DmcDma {
         suspended_mode: Box<CpuMode>,
@@ -84,6 +84,7 @@ impl CpuModeState {
     pub fn current_step(&self) -> Step {
         match self.mode {
             CpuMode::Oops {..} => OOPS_STEP,
+            CpuMode::OamDma { steps, step_index, .. } => steps[step_index],
             _ => self.steps[self.step_index],
         }
     }
@@ -127,12 +128,17 @@ impl CpuModeState {
         self.current_instruction = None;
     }
 
-    pub fn oam_dma(&mut self) {
+    pub fn oam_dma(&mut self, cycle_parity: CycleParity) {
         assert!(self.mode != CpuMode::InterruptSequence(InterruptType::Reset));
+        let steps: &[Step] = match cycle_parity {
+            CycleParity::Get => &*OAM_DMA_TRANSFER_STEPS,
+            CycleParity::Put => &*ALIGNED_OAM_DMA_TRANSFER_STEPS,
+        };
+
         self.next_mode = Some(CpuMode::OamDma {
             suspended_mode: Box::new(self.mode.clone()),
-            suspended_steps: self.steps,
-            suspended_step_index: self.step_index,
+            steps,
+            step_index: 0,
         });
     }
 
@@ -168,6 +174,7 @@ impl CpuModeState {
             unreachable!("Oops steps can only occur during Instructions");
         };
 
+        // Don't repeat the last instruction step when we resume.
         self.step_index += 1;
         self.next_mode = Some(CpuMode::Oops {
             suspended_op_code: op_code,
@@ -187,12 +194,7 @@ impl CpuModeState {
                 CpuMode::StartNext {..} => unreachable!(),
                 CpuMode::Jammed => self.steps = &[],
 
-                CpuMode::OamDma {..} => {
-                    self.steps = match cycle_parity {
-                        CycleParity::Get => &*OAM_DMA_TRANSFER_STEPS,
-                        CycleParity::Put => &*ALIGNED_OAM_DMA_TRANSFER_STEPS,
-                    };
-                }
+                CpuMode::OamDma {..} => {}
                 CpuMode::DmcDma {..} => {
                     self.steps = match cycle_parity {
                         CycleParity::Get => ALIGNED_DMC_DMA_TRANSFER_STEPS,
@@ -217,8 +219,8 @@ impl CpuModeState {
             return;
         }
 
-        if self.step_index < self.steps.len() - 1 {
-            self.step_index += 1;
+        if !self.is_last_step() {
+            self.increment_step_index();
             return;
         }
 
@@ -229,9 +231,7 @@ impl CpuModeState {
                 self.step_index = 0;
                 CpuMode::StartNext
             }
-            CpuMode::OamDma { suspended_mode, suspended_steps, suspended_step_index } => {
-                self.steps = suspended_steps;
-                self.step_index = suspended_step_index;
+            CpuMode::OamDma { suspended_mode, .. } => {
                 *suspended_mode
             }
             CpuMode::DmcDma { suspended_mode, suspended_steps, suspended_step_index } => {
@@ -285,6 +285,21 @@ impl CpuModeState {
         };
 
         format!("{name:<6}")
+    }
+
+    fn is_last_step(&self) -> bool {
+        match self.mode {
+            CpuMode::OamDma { steps, step_index, .. } => step_index == steps.len() - 1,
+            _ => self.step_index == self.steps.len() - 1,
+        }
+    }
+
+    fn increment_step_index(&mut self) {
+        match self.mode.clone() {
+            CpuMode::OamDma { suspended_mode, steps, step_index } =>
+                self.mode = CpuMode::OamDma { suspended_mode, steps, step_index: step_index + 1 },
+            _ => self.step_index += 1,
+        }
     }
 }
 
