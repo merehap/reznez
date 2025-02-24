@@ -10,7 +10,7 @@ pub struct Dmc {
 
     irq_enabled: bool,
     irq: IrqSource,
-    dma_pending: bool,
+    dma_status: DmaStatus,
 
     should_loop: bool,
     volume: U7,
@@ -69,7 +69,7 @@ impl Dmc {
 
             if self.sample_buffer.is_none() {
                 //println!("Attempting to load sample buffer soon.");
-                self.dma_pending = true;
+                self.dma_status = DmaStatus::LoadPending;
             }
         }
     }
@@ -116,7 +116,7 @@ impl Dmc {
             self.sample_shifter = sample;
             if self.sample_bytes_remaining > 0 {
                 //println!("Attempting to RELOAD sample buffer soon.");
-                self.dma_pending = true;
+                self.dma_status = DmaStatus::ReloadPending;
             }
         }
     }
@@ -141,13 +141,13 @@ impl Dmc {
         &mut self.irq
     }
 
-    pub fn dma_pending(&self) -> bool {
-        self.dma_pending
+    pub fn dma_status(&self) -> DmaStatus {
+        self.dma_status
     }
 
-    pub fn take_dma_pending(&mut self) -> bool {
-        let result = self.dma_pending;
-        self.dma_pending = false;
+    pub fn take_dma_status(&mut self) -> DmaStatus {
+        let result = self.dma_status;
+        self.dma_status = DmaStatus::Inactive;
         result
     }
 
@@ -162,7 +162,7 @@ impl Default for Dmc {
             muted: true,
             irq_enabled: false,
             irq: IrqSource::new(),
-            dma_pending: false,
+            dma_status: DmaStatus::Inactive,
             should_loop: false,
             volume: U7::default(),
             // TODO: Verify if this needs to be one less.
@@ -178,4 +178,11 @@ impl Default for Dmc {
             bits_remaining: 8,
         }
     }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub enum DmaStatus {
+    Inactive,
+    LoadPending,
+    ReloadPending,
 }
