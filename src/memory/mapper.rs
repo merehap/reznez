@@ -358,9 +358,7 @@ pub trait Mapper {
         for window in prg_memory.current_layout().windows() {
             let bank_string = window.bank_string(
                 &params.bank_registers,
-                prg_memory.bank_size(),
-                prg_memory.bank_count(),
-                true,
+                prg_memory.bank_configuration(),
             );
             let window_size = window.size() / KIBIBYTE as u16;
 
@@ -392,9 +390,7 @@ pub trait Mapper {
         for window in chr_memory.current_layout().windows() {
             let bank_string = window.bank_string(
                 &params.bank_registers,
-                chr_memory.bank_size(),
-                chr_memory.bank_count(),
-                chr_memory.align_large_layouts(),
+                chr_memory.bank_configuration(),
             );
             let window_size = window.size() / KIBIBYTE as u16;
 

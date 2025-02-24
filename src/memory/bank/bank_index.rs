@@ -17,18 +17,42 @@ impl BankIndex {
         BankIndex(value as u16)
     }
 
-    pub fn to_u16(self, bank_count: u16) -> u16 {
-        self.0 % bank_count
-    }
+    pub fn to_u16(self, bank_configuration: BankConfiguration, window_size: u16) -> u16 {
+        let mut resolved_bank_index = self.0 % bank_configuration.bank_count;
+        if bank_configuration.align_large_layouts {
+            let window_multiple = window_size / bank_configuration.bank_size;
+            // Clear low bits for large windows.
+            resolved_bank_index &= !(window_multiple - 1);
+        }
 
-    pub fn to_u32(self, bank_count: u16) -> u32 {
-        self.to_u16(bank_count).into()
+        resolved_bank_index
     }
 }
 
 impl From<u8> for BankIndex {
     fn from(value: u8) -> Self {
         BankIndex(value.into())
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct BankConfiguration {
+    bank_size: u16,
+    bank_count: u16,
+    align_large_layouts: bool,
+}
+
+impl BankConfiguration {
+    pub fn new(bank_size: u16, bank_count: u16, align_large_layouts: bool) -> Self {
+        Self { bank_size, bank_count, align_large_layouts }
+    }
+
+    pub fn bank_size(self) -> u16 {
+        self.bank_size
+    }
+
+    pub fn bank_count(self) -> u16 {
+        self.bank_count
     }
 }
 

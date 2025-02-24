@@ -1,5 +1,5 @@
 use crate::memory::bank::bank::Bank;
-use crate::memory::bank::bank_index::BankRegisters;
+use crate::memory::bank::bank_index::{BankConfiguration, BankRegisters};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ciram::Ciram;
@@ -13,8 +13,7 @@ use super::ciram::CiramSide;
 pub struct ChrMemory {
     layouts: Vec<ChrLayout>,
     layout_index: u8,
-    bank_size: u16,
-    align_large_chr_layouts: bool,
+    bank_configuration: BankConfiguration,
     max_pattern_table_index: u16,
     override_write_protection: bool,
     raw_memory: RawMemory,
@@ -55,37 +54,38 @@ impl ChrMemory {
             override_write_protection = true;
         }
 
+        let bank_count = (raw_memory.size() / u32::from(bank_size))
+            .try_into()
+            .expect("Way too many CHR banks.");
+        let bank_configuration = BankConfiguration::new(bank_size, bank_count, align_large_chr_layouts);
         let chr_memory = ChrMemory {
             layouts,
             layout_index,
-            bank_size,
-            align_large_chr_layouts,
+            bank_configuration,
             max_pattern_table_index,
             override_write_protection,
             raw_memory,
         };
 
         let bank_count = chr_memory.bank_count();
-        assert_eq!(u32::from(bank_count) * u32::from(chr_memory.bank_size), chr_memory.raw_memory.size());
+        assert_eq!(u32::from(bank_count) * u32::from(chr_memory.bank_size()), chr_memory.raw_memory.size());
         // Power of 2. FIXME: What's the correct behavior when accessing the high banks? Open bus?
         // assert_eq!(bank_count & (bank_count - 1), 0, "Bank count ({bank_count}) must be a power of 2.");
 
         chr_memory
     }
 
+    pub fn bank_configuration(&self) -> BankConfiguration {
+        self.bank_configuration
+    }
+
     #[inline]
     pub fn bank_count(&self) -> u16 {
-        (self.raw_memory.size() / u32::from(self.bank_size))
-            .try_into()
-            .expect("Way too many CHR banks.")
+        self.bank_configuration.bank_count()
     }
 
     pub fn bank_size(&self) -> u16 {
-        self.bank_size
-    }
-
-    pub fn align_large_layouts(&self) -> bool {
-        self.align_large_chr_layouts
+        self.bank_configuration.bank_size()
     }
 
     pub fn window_count(&self) -> u8 {
@@ -147,15 +147,13 @@ impl ChrMemory {
                 let location= window.resolved_bank_location(
                     registers,
                     window.location().unwrap(),
-                    self.bank_size,
-                    self.bank_count(),
-                    self.align_large_chr_layouts,
+                    self.bank_configuration(),
                 );
 
                 match location {
                     ChrLocation::BankIndex(raw_bank_index) => {
                         let index = u32::from(raw_bank_index) *
-                            u32::from(self.bank_size) +
+                            u32::from(self.bank_size()) +
                             u32::from(bank_offset);
                         return (ChrIndex::Normal(index), window.is_writable(registers));
                     }

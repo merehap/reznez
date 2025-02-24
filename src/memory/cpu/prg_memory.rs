@@ -1,5 +1,5 @@
 use crate::memory::bank::bank::Bank;
-use crate::memory::bank::bank_index::{BankRegisters, RamStatus};
+use crate::memory::bank::bank_index::{BankConfiguration, BankRegisters, RamStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
@@ -10,8 +10,7 @@ use crate::util::unit::KIBIBYTE;
 pub struct PrgMemory {
     layouts: Vec<PrgLayout>,
     layout_index: u8,
-    bank_size: u16,
-    bank_count: u16,
+    bank_configuration: BankConfiguration,
     raw_memory: RawMemory,
     work_ram_sections: Vec<WorkRam>,
     extended_ram: RawMemoryArray<KIBIBYTE>,
@@ -53,11 +52,11 @@ impl PrgMemory {
             panic!("Bad PRG length: {} . Bank size: {} .", raw_memory.size(), bank_size);
         }
 
+        let bank_configuration = BankConfiguration::new(bank_size, bank_count, true);
         let mut prg_memory = PrgMemory {
             layouts,
             layout_index,
-            bank_size,
-            bank_count,
+            bank_configuration,
             raw_memory,
             work_ram_sections: Vec::new(),
             extended_ram: RawMemoryArray::new(),
@@ -81,12 +80,16 @@ impl PrgMemory {
         prg_memory
     }
 
+    pub fn bank_configuration(&self) -> BankConfiguration {
+        self.bank_configuration
+    }
+
     pub fn bank_size(&self) -> u16 {
-        self.bank_size
+        self.bank_configuration.bank_size()
     }
 
     pub fn bank_count(&self) -> u16 {
-        self.bank_count
+        self.bank_configuration.bank_count()
     }
 
     pub fn last_bank_index(&self) -> u16 {
@@ -210,14 +213,14 @@ impl PrgMemory {
                     Bank::MirrorOf(_) => panic!("A mirrored bank must mirror a non-mirrored bank."),
                     Bank::Rom(location) => {
                         let resolved_bank_index =
-                            window.resolved_bank_index(registers, location, self.bank_size, self.bank_count(), true);
-                        let index = resolved_bank_index as u32 * self.bank_size as u32 + bank_offset as u32;
+                            window.resolved_bank_index(registers, location, self.bank_configuration);
+                        let index = resolved_bank_index as u32 * self.bank_configuration.bank_size() as u32 + bank_offset as u32;
                         PrgMemoryIndex::MappedMemory { index, ram_status: RamStatus::ReadOnly }
                     }
                     Bank::Ram(location, status_register_id) => {
                         let resolved_bank_index =
-                            window.resolved_bank_index(registers, location, self.bank_size, self.bank_count(), true);
-                        let index = resolved_bank_index as u32 * self.bank_size as u32 + bank_offset as u32;
+                            window.resolved_bank_index(registers, location, self.bank_configuration);
+                        let index = resolved_bank_index as u32 * self.bank_configuration.bank_size() as u32 + bank_offset as u32;
 
                         let ram_status: RamStatus = status_register_id
                             .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));

@@ -1,11 +1,11 @@
 use std::fmt;
 
 use crate::memory::bank::bank::{Bank, Location};
-use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId};
+use crate::memory::bank::bank_index::{BankRegisters, BankRegisterId};
 
 use crate::memory::ppu::ciram::CiramSide;
 
-use super::bank::bank_index::BankLocation;
+use super::bank::bank_index::{BankConfiguration, BankLocation};
 
 // A Window is a range within addressable memory.
 // If the specified bank cannot fill the window, adjacent banks will be included too.
@@ -28,22 +28,14 @@ impl Window {
     pub fn bank_string(
         &self,
         registers: &BankRegisters,
-        bank_size: u16,
-        bank_count: u16,
-        align_large_layouts: bool,
+        bank_configuration: BankConfiguration,
     ) -> String {
         match self.bank {
             Bank::Empty => "E".into(),
             Bank::WorkRam(_) => "W".into(),
             Bank::ExtendedRam(_) => "X".into(),
             Bank::Rom(location) | Bank::Ram(location, _) =>
-                self.resolved_bank_location(
-                    registers,
-                    location,
-                    bank_size,
-                    bank_count,
-                    align_large_layouts,
-                ).to_string(),
+                self.resolved_bank_location(registers, location, bank_configuration).to_string(),
             Bank::MirrorOf(_) => "M".into(),
         }
     }
@@ -52,9 +44,7 @@ impl Window {
         &self,
         registers: &BankRegisters,
         location: Location,
-        bank_size: u16,
-        bank_count: u16,
-        align_large_layouts: bool,
+        bank_configuration: BankConfiguration,
     ) -> u16 {
         let stored_bank_index = match location {
             Location::Fixed(bank_index) => bank_index,
@@ -62,16 +52,14 @@ impl Window {
             Location::MetaSwitchable(meta_id) => registers.get_from_meta(meta_id).index().unwrap(),
         };
 
-        self.resolve_bank_index(stored_bank_index, bank_size, bank_count, align_large_layouts)
+        stored_bank_index.to_u16(bank_configuration, self.size())
     }
 
     pub fn resolved_bank_location(
         &self,
         registers: &BankRegisters,
         location: Location,
-        bank_size: u16,
-        bank_count: u16,
-        align_large_layouts: bool,
+        bank_configuration: BankConfiguration,
     ) -> ChrLocation {
         let bank_location: BankLocation = match location {
             Location::Fixed(bank_index) => BankLocation::Index(bank_index),
@@ -81,24 +69,13 @@ impl Window {
 
         match bank_location {
             BankLocation::Index(index) => {
-                let bank_index = self.resolve_bank_index(index, bank_size, bank_count, align_large_layouts);
-                ChrLocation::BankIndex(bank_index)
+                let raw_bank_index = index.to_u16(bank_configuration, self.size());
+                ChrLocation::BankIndex(raw_bank_index)
             }
             BankLocation::Ciram(ciram_side) => {
                 ChrLocation::Ciram(ciram_side)
             }
         }
-    }
-
-    fn resolve_bank_index(&self, bank_index: BankIndex, bank_size: u16, bank_count: u16, align_large_layouts: bool) -> u16 {
-        let mut resolved_bank_index = bank_index.to_u16(bank_count);
-        if align_large_layouts {
-            let window_multiple = self.size() / bank_size;
-            // Clear low bits for large windows.
-            resolved_bank_index &= !(window_multiple - 1);
-        }
-
-        resolved_bank_index
     }
 
     pub const fn start(self) -> u16 {
