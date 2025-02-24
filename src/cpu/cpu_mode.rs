@@ -25,8 +25,6 @@ enum CpuMode {
     // FIXME: If pending, OAM DMA should be triggered on Oops steps.
     Oops {
         suspended_op_code: OpCode,
-        suspended_steps: &'static [Step],
-        suspended_step_index: usize,
     },
 }
 
@@ -84,7 +82,10 @@ impl CpuModeState {
     }
 
     pub fn current_step(&self) -> Step {
-        self.steps[self.step_index]
+        match self.mode {
+            CpuMode::Oops {..} => OOPS_STEP,
+            _ => self.steps[self.step_index],
+        }
     }
 
     pub fn current_instruction(&self) -> Option<Instruction> {
@@ -167,10 +168,9 @@ impl CpuModeState {
             unreachable!("Oops steps can only occur during Instructions");
         };
 
+        self.step_index += 1;
         self.next_mode = Some(CpuMode::Oops {
             suspended_op_code: op_code,
-            suspended_steps: self.steps,
-            suspended_step_index: self.step_index + 1,
         });
     }
 
@@ -205,13 +205,15 @@ impl CpuModeState {
                 CpuMode::BranchTaken => self.steps = &[BRANCH_TAKEN_STEP],
                 CpuMode::Oops {..} => {
                     assert!(matches!(self.mode, CpuMode::Instruction {..}));
-                    self.steps = &[OOPS_STEP];
                 }
                 CpuMode::BranchOops => self.steps = &[READ_OP_CODE_STEP],
             }
 
             self.mode = next_mode;
-            self.step_index = 0;
+            if !matches!(self.mode, CpuMode::Oops {..}) {
+                self.step_index = 0;
+            }
+
             return;
         }
 
@@ -242,9 +244,7 @@ impl CpuModeState {
             CpuMode::StartNext {..} => panic!(),
             CpuMode::BranchTaken => panic!(),
             CpuMode::BranchOops => panic!(),
-            CpuMode::Oops { suspended_op_code, suspended_steps, suspended_step_index } => {
-                self.steps = suspended_steps;
-                self.step_index = suspended_step_index;
+            CpuMode::Oops { suspended_op_code } => {
                 CpuMode::Instruction(suspended_op_code)
             }
         };
