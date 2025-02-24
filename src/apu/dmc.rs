@@ -122,27 +122,18 @@ impl Dmc {
         }
     }
 
-    pub fn maybe_start_dma<F>(&mut self, is_cpu_read_step: bool, _: CycleParity, mut dma: F) -> bool
+    pub fn maybe_start_dma<F>(
+        &mut self,
+        is_cpu_read_step: bool,
+        parity: CycleParity,
+        mut dma: F,
+    ) -> bool
         where F: FnMut() {
 
-        let mut dma_starting = false;
-        match self.pending_dma_operation {
-            PendingDmaOperation::None => {}
-            PendingDmaOperation::Load(_) => {
-                if is_cpu_read_step {
-                    dma();
-                    dma_starting = true;
-                    self.pending_dma_operation = PendingDmaOperation::None;
-                }
-            }
-            PendingDmaOperation::Reload => {
-                if is_cpu_read_step {
-                    dma();
-                    dma_starting = true;
-                    self.pending_dma_operation = PendingDmaOperation::None;
-                }
-            }
-        };
+        let dma_starting = self.pending_dma_operation.step(is_cpu_read_step, parity);
+        if dma_starting {
+            dma();
+        }
 
         dma_starting
     }
@@ -206,10 +197,57 @@ pub enum PendingDmaOperation {
     Reload,
 }
 
+impl PendingDmaOperation {
+    fn step(&mut self, is_cpu_read_step: bool, parity: CycleParity) -> bool {
+        let mut dma_starting = false;
+        match self {
+            PendingDmaOperation::None => {}
+            PendingDmaOperation::Load(status) => {
+                if let Some(next_status) = status.next(is_cpu_read_step, parity) {
+                    *self = PendingDmaOperation::Load(next_status);
+                } else {
+                    dma_starting = true;
+                    *self = PendingDmaOperation::None;
+                }
+            }
+            PendingDmaOperation::Reload => {
+                if is_cpu_read_step {
+                    dma_starting = true;
+                    *self = PendingDmaOperation::None;
+                }
+            }
+        };
+
+        dma_starting
+    }
+}
+
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum LoadPendingStatus {
     WaitingForGet,
     FirstSkip,
     SecondSkip,
     WaitingForRead,
+}
+
+impl LoadPendingStatus {
+    fn next(self, is_cpu_read_step: bool, parity: CycleParity) -> Option<Self> {
+        let mut next = Some(self);
+        match self {
+            Self::WaitingForGet => {
+                if parity == CycleParity::Get {
+                    next = Some(Self::FirstSkip);
+                }
+            }
+            Self::FirstSkip => next = Some(Self::SecondSkip),
+            Self::SecondSkip => next = Some(Self::WaitingForRead),
+            Self::WaitingForRead => {
+                if is_cpu_read_step {
+                    next = None;
+                }
+            }
+        }
+
+        next
+    }
 }
