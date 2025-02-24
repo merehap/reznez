@@ -2,7 +2,6 @@ use log::{info, log_enabled};
 use log::Level::Info;
 
 use crate::apu::apu_registers::CycleParity;
-use crate::apu::dmc::DmaStatus;
 use crate::config::CpuStepFormatting;
 use crate::cpu::cpu_mode::{CpuModeState, InterruptType};
 use crate::cpu::step_action::{StepAction, From, To, Field};
@@ -163,12 +162,14 @@ impl Cpu {
         let mut step = self.mode_state.current_step();
 
         let start_new_instruction = step.has_start_new_instruction();
-        if step.is_read() && memory.take_dmc_dma_status() != DmaStatus::Inactive {
-            info!(target: "cpuflowcontrol", "Starting DMC DMA transfer at {}.",
-                memory.dmc_dma_address());
+        let dmc_dma_address = memory.dmc_dma_address();
+        let dma_started = memory.maybe_start_dmc_dma(step.is_read(), cycle_parity, || {
+            info!(target: "cpuflowcontrol", "Starting DMC DMA transfer at {}.", dmc_dma_address);
             self.mode_state.dmc_dma();
             step = step.with_actions_removed();
-        } else if step.is_read() && self.oam_dma_port.take_page().is_some() {
+        });
+
+        if !dma_started && step.is_read() && self.oam_dma_port.take_page().is_some() {
             info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
                 self.oam_dma_port.current_address());
             self.mode_state.oam_dma();
