@@ -2,6 +2,7 @@ use log::{info, log_enabled};
 use log::Level::Info;
 
 use crate::apu::apu_registers::CycleParity;
+use crate::apu::dmc::DmcDmaAction;
 use crate::config::CpuStepFormatting;
 use crate::cpu::cpu_mode::{CpuModeState, InterruptType};
 use crate::cpu::step_action::{StepAction, From, To, Field};
@@ -18,6 +19,48 @@ use crate::memory::memory::{CpuMemory,
     NMI_VECTOR_LOW, NMI_VECTOR_HIGH,
 };
 
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum DmcDmaStage {
+    Idle,
+    WaitingForGet,
+    FirstSkip,
+    SecondSkip,
+    WaitingForRead,
+}
+
+impl DmcDmaStage {
+    fn start(&mut self, action: DmcDmaAction) {
+        assert_eq!(*self, Self::Idle);
+        *self = match action {
+            DmcDmaAction::Load => Self::WaitingForGet,
+            DmcDmaAction::Reload => Self::WaitingForRead,
+        };
+    }
+
+    fn step(&mut self, is_cpu_read_step: bool, parity: CycleParity) -> bool {
+        let mut dma_starting = false;
+
+        let still_waiting_for_get = *self == Self::WaitingForGet && parity == CycleParity::Put;
+        let still_waiting_for_read = *self == Self::WaitingForRead && !is_cpu_read_step;
+        if still_waiting_for_get || still_waiting_for_read {
+            return dma_starting;
+        }
+
+        *self = match *self {
+            Self::Idle => Self::Idle,
+            Self::WaitingForGet => Self::FirstSkip,
+            Self::FirstSkip => Self::SecondSkip,
+            Self::SecondSkip => Self::WaitingForRead,
+            Self::WaitingForRead => {
+                dma_starting = true;
+                Self::Idle
+            }
+        };
+
+        dma_starting
+    }
+}
+
 pub struct Cpu {
     // Accumulator
     a: u8,
@@ -29,6 +72,7 @@ pub struct Cpu {
     status: Status,
 
     mode_state: CpuModeState,
+    dmc_dma_stage: DmcDmaStage,
     oam_dma_stage: OamDmaStage,
 
     nmi_status: NmiStatus,
@@ -63,6 +107,7 @@ impl Cpu {
             status: Status::startup(),
 
             mode_state: CpuModeState::startup(),
+            dmc_dma_stage: DmcDmaStage::Idle,
             oam_dma_stage: OamDmaStage::WAIT,
 
             nmi_status: NmiStatus::Inactive,
@@ -130,6 +175,10 @@ impl Cpu {
         self.oam_dma_port.page_present()
     }
 
+    pub fn dmc_dma_stage(&self) -> DmcDmaStage {
+        self.dmc_dma_stage
+    }
+
     pub fn nmi_status(&self) -> NmiStatus {
         self.nmi_status
     }
@@ -165,11 +214,16 @@ impl Cpu {
         let mut step = self.mode_state.current_step();
 
         let dmc_dma_address = memory.dmc_dma_address();
-        let dma_started = memory.maybe_start_dmc_dma(step.is_read(), cycle_parity, || {
+        if let Some(dmc_dma_action) = memory.take_pending_dmc_dma_action() {
+            self.dmc_dma_stage.start(dmc_dma_action);
+        }
+
+        let dma_started = self.dmc_dma_stage.step(step.is_read(), cycle_parity);
+        if dma_started {
             info!(target: "cpuflowcontrol", "Starting DMC DMA transfer at {}.", dmc_dma_address);
             self.mode_state.dmc_dma();
             step = step.with_actions_removed();
-        });
+        }
 
         if self.oam_dma_port.take_page().is_some() {
             self.oam_dma_stage.try_halt();

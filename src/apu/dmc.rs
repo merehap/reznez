@@ -1,4 +1,3 @@
-use crate::apu::apu_registers::CycleParity;
 use crate::memory::irq_source::IrqSource;
 use crate::memory::mapper::CpuAddress;
 use crate::util::integer::U7;
@@ -11,7 +10,7 @@ pub struct Dmc {
 
     irq_enabled: bool,
     irq: IrqSource,
-    dma_status: DmaStatus,
+    dma_action: Option<DmcDmaAction>,
 
     should_loop: bool,
     volume: U7,
@@ -70,7 +69,7 @@ impl Dmc {
 
             if self.sample_buffer.is_none() {
                 //println!("Attempting to load sample buffer soon.");
-                self.dma_status = DmaStatus::WaitingForGet;
+                self.dma_action = Some(DmcDmaAction::Load);
             }
         }
     }
@@ -117,27 +116,9 @@ impl Dmc {
             self.sample_shifter = sample;
             if self.sample_bytes_remaining > 0 {
                 //println!("Attempting to RELOAD sample buffer soon.");
-                self.dma_status = DmaStatus::WaitingForRead;
+                self.dma_action = Some(DmcDmaAction::Reload);
             }
         }
-    }
-
-    pub fn maybe_start_dma<F>(
-        &mut self,
-        is_cpu_read_step: bool,
-        parity: CycleParity,
-        mut dma: F,
-    ) -> bool
-        where F: FnMut() {
-
-        let next_dma_status = self.dma_status.next(is_cpu_read_step, parity);
-        let dma_starting = self.dma_status != DmaStatus::Idle && next_dma_status == DmaStatus::Idle;
-        if dma_starting {
-            dma();
-        }
-
-        self.dma_status = next_dma_status;
-        dma_starting
     }
 
     pub(super) fn sample_volume(&self) -> f32 {
@@ -160,8 +141,8 @@ impl Dmc {
         &mut self.irq
     }
 
-    pub fn dma_status(&self) -> DmaStatus {
-        self.dma_status
+    pub fn take_pending_dma_action(&mut self) -> Option<DmcDmaAction> {
+        self.dma_action.take()
     }
 
     pub fn dma_sample_address(&self) -> CpuAddress {
@@ -175,7 +156,7 @@ impl Default for Dmc {
             muted: true,
             irq_enabled: false,
             irq: IrqSource::new(),
-            dma_status: DmaStatus::Idle,
+            dma_action: None,
             should_loop: false,
             volume: U7::default(),
             period: NTSC_PERIODS[0] - 1,
@@ -192,34 +173,8 @@ impl Default for Dmc {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
-pub enum DmaStatus {
-    Idle,
-    WaitingForGet,
-    FirstSkip,
-    SecondSkip,
-    WaitingForRead,
-}
-
-impl DmaStatus {
-    fn next(self, is_cpu_read_step: bool, parity: CycleParity) -> Self {
-        let mut next = self;
-        match self {
-            Self::Idle => {}
-            Self::WaitingForGet => {
-                if parity == CycleParity::Get {
-                    next = Self::FirstSkip;
-                }
-            }
-            Self::FirstSkip => next = Self::SecondSkip,
-            Self::SecondSkip => next = Self::WaitingForRead,
-            Self::WaitingForRead => {
-                if is_cpu_read_step {
-                    next = Self::Idle;
-                }
-            }
-        }
-
-        next
-    }
+#[derive(Clone, Copy)]
+pub enum DmcDmaAction {
+    Load,
+    Reload,
 }
