@@ -161,7 +161,6 @@ impl Cpu {
         let original_program_counter = self.program_counter;
         let mut step = self.mode_state.current_step();
 
-        let start_new_instruction = step.has_start_new_instruction();
         let dmc_dma_address = memory.dmc_dma_address();
         let dma_started = memory.maybe_start_dmc_dma(step.is_read(), cycle_parity, || {
             info!(target: "cpuflowcontrol", "Starting DMC DMA transfer at {}.", dmc_dma_address);
@@ -218,7 +217,7 @@ impl Cpu {
             }
         }
 
-        if start_new_instruction {
+        if step.has_start_new_instruction() {
             self.mode_state.set_current_instruction_with_address(
                 Instruction::from_code_point(memory.data_bus()),
                 self.address_bus,
