@@ -1,5 +1,3 @@
-use std::sync::LazyLock;
-
 use crate::cpu::step_action::Field;
 use crate::cpu::step_action::Field::*;
 use crate::cpu::step_action::{From, To};
@@ -8,25 +6,8 @@ use crate::cpu::step_action::StepAction::*;
 use crate::cpu::step::Step::{Read, ReadField, Write, WriteField};
 use crate::memory::mapper::CpuAddress;
 
-pub static OAM_DMA_TRANSFER_STEPS: LazyLock<[Step; 512]> = LazyLock::new(|| {
-    let read_write = &[
-        Read(From::OamDmaAddressTarget, &[]),
-        Write(To::OAM_DATA, &[IncrementOamDmaAddress]),
-    ];
-
-    read_write.repeat(256).try_into().unwrap()
-});
-
-pub static ALIGNED_OAM_DMA_TRANSFER_STEPS: LazyLock<[Step; 513]> = LazyLock::new(|| {
-    let mut steps = Vec::new();
-    steps.push(Read(From::AddressBusTarget, &[]));
-    for _ in 0..256 {
-        steps.push(Read(From::OamDmaAddressTarget, &[]));
-        steps.push(Write(To::OAM_DATA, &[IncrementOamDmaAddress]));
-    }
-
-    steps.try_into().unwrap()
-});
+pub static OAM_READ_STEP: Step = Read(From::OamDmaAddressTarget, &[]);
+pub static OAM_WRITE_STEP: Step = Write(To::OAM_DATA, &[IncrementOamDmaAddress]);
 
 pub static DMC_DMA_TRANSFER_STEPS: &[Step] = &[
     // Dummy cycle.

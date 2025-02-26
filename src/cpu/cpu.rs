@@ -6,6 +6,7 @@ use crate::config::CpuStepFormatting;
 use crate::cpu::cpu_mode::{CpuModeState, InterruptType};
 use crate::cpu::step_action::{StepAction, From, To, Field};
 use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
+use crate::cpu::oam_dma::{OamDmaStage, DmaAction};
 use crate::cpu::status;
 use crate::cpu::status::Status;
 use crate::cpu::step::*;
@@ -28,6 +29,7 @@ pub struct Cpu {
     status: Status,
 
     mode_state: CpuModeState,
+    oam_dma_stage: OamDmaStage,
 
     nmi_status: NmiStatus,
     irq_status: IrqStatus,
@@ -61,6 +63,7 @@ impl Cpu {
             status: Status::startup(),
 
             mode_state: CpuModeState::startup(),
+            oam_dma_stage: OamDmaStage::WAIT,
 
             nmi_status: NmiStatus::Inactive,
             irq_status: IrqStatus::Inactive,
@@ -168,11 +171,26 @@ impl Cpu {
             step = step.with_actions_removed();
         });
 
-        if !dma_started && step.is_read() && self.oam_dma_port.take_page().is_some() {
-            info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
-                self.oam_dma_port.current_address());
-            self.mode_state.oam_dma(cycle_parity);
-            step = step.with_actions_removed();
+        if self.oam_dma_port.take_page().is_some() {
+            self.oam_dma_stage.try_halt();
+        }
+
+        let mut halted = false;
+        if !dma_started {
+            let action = self.oam_dma_stage.step(step, cycle_parity);
+            step = match action {
+                DmaAction::DoNothing => step,
+                DmaAction::Halt => {
+                    info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
+                        self.oam_dma_port.current_address());
+                    step.with_actions_removed()
+                }
+                DmaAction::Align => step.with_actions_removed(),
+                DmaAction::Read => OAM_READ_STEP,
+                DmaAction::Write => OAM_WRITE_STEP,
+            };
+
+            halted = action != DmaAction::DoNothing;
         }
 
         match step {
@@ -204,7 +222,7 @@ impl Cpu {
         }
 
         if log_enabled!(target: "cpustep", Info) {
-            let step_name = self.mode_state.step_name();
+            let step_name = if halted { "HALTED".to_string() } else { self.mode_state.step_name() };
             let cpu_cycle = memory.cpu_cycle();
             match self.step_formatting {
                 CpuStepFormatting::NoData => {
@@ -237,7 +255,10 @@ impl Cpu {
 
         memory.process_end_of_cpu_cycle();
 
-        self.mode_state.step(cycle_parity);
+        if !halted {
+            self.mode_state.step(cycle_parity);
+        }
+
         Some(step)
     }
 
