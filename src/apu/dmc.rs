@@ -11,7 +11,7 @@ pub struct Dmc {
 
     irq_enabled: bool,
     irq: IrqSource,
-    pending_dma_operation: PendingDmaOperation,
+    dma_status: DmaStatus,
 
     should_loop: bool,
     volume: U7,
@@ -70,7 +70,7 @@ impl Dmc {
 
             if self.sample_buffer.is_none() {
                 //println!("Attempting to load sample buffer soon.");
-                self.pending_dma_operation = PendingDmaOperation::Load(LoadPendingStatus::WaitingForGet);
+                self.dma_status = DmaStatus::WaitingForGet;
             }
         }
     }
@@ -117,7 +117,7 @@ impl Dmc {
             self.sample_shifter = sample;
             if self.sample_bytes_remaining > 0 {
                 //println!("Attempting to RELOAD sample buffer soon.");
-                self.pending_dma_operation = PendingDmaOperation::Reload;
+                self.dma_status = DmaStatus::WaitingForRead;
             }
         }
     }
@@ -130,11 +130,13 @@ impl Dmc {
     ) -> bool
         where F: FnMut() {
 
-        let dma_starting = self.pending_dma_operation.step(is_cpu_read_step, parity);
+        let next_dma_status = self.dma_status.next(is_cpu_read_step, parity);
+        let dma_starting = self.dma_status != DmaStatus::Idle && next_dma_status == DmaStatus::Idle;
         if dma_starting {
             dma();
         }
 
+        self.dma_status = next_dma_status;
         dma_starting
     }
 
@@ -158,8 +160,8 @@ impl Dmc {
         &mut self.irq
     }
 
-    pub fn dma_status(&self) -> PendingDmaOperation {
-        self.pending_dma_operation
+    pub fn dma_status(&self) -> DmaStatus {
+        self.dma_status
     }
 
     pub fn dma_sample_address(&self) -> CpuAddress {
@@ -173,7 +175,7 @@ impl Default for Dmc {
             muted: true,
             irq_enabled: false,
             irq: IrqSource::new(),
-            pending_dma_operation: PendingDmaOperation::None,
+            dma_status: DmaStatus::Idle,
             should_loop: false,
             volume: U7::default(),
             period: NTSC_PERIODS[0] - 1,
@@ -191,59 +193,29 @@ impl Default for Dmc {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy)]
-pub enum PendingDmaOperation {
-    None,
-    Load(LoadPendingStatus),
-    Reload,
-}
-
-impl PendingDmaOperation {
-    fn step(&mut self, is_cpu_read_step: bool, parity: CycleParity) -> bool {
-        let mut dma_starting = false;
-        match self {
-            PendingDmaOperation::None => {}
-            PendingDmaOperation::Load(status) => {
-                if let Some(next_status) = status.next(is_cpu_read_step, parity) {
-                    *self = PendingDmaOperation::Load(next_status);
-                } else {
-                    dma_starting = true;
-                    *self = PendingDmaOperation::None;
-                }
-            }
-            PendingDmaOperation::Reload => {
-                if is_cpu_read_step {
-                    dma_starting = true;
-                    *self = PendingDmaOperation::None;
-                }
-            }
-        };
-
-        dma_starting
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy)]
-pub enum LoadPendingStatus {
+pub enum DmaStatus {
+    Idle,
     WaitingForGet,
     FirstSkip,
     SecondSkip,
     WaitingForRead,
 }
 
-impl LoadPendingStatus {
-    fn next(self, is_cpu_read_step: bool, parity: CycleParity) -> Option<Self> {
-        let mut next = Some(self);
+impl DmaStatus {
+    fn next(self, is_cpu_read_step: bool, parity: CycleParity) -> Self {
+        let mut next = self;
         match self {
+            Self::Idle => {}
             Self::WaitingForGet => {
                 if parity == CycleParity::Get {
-                    next = Some(Self::FirstSkip);
+                    next = Self::FirstSkip;
                 }
             }
-            Self::FirstSkip => next = Some(Self::SecondSkip),
-            Self::SecondSkip => next = Some(Self::WaitingForRead),
+            Self::FirstSkip => next = Self::SecondSkip,
+            Self::SecondSkip => next = Self::WaitingForRead,
             Self::WaitingForRead => {
                 if is_cpu_read_step {
-                    next = None;
+                    next = Self::Idle;
                 }
             }
         }
