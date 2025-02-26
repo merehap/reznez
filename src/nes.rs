@@ -137,7 +137,7 @@ impl Nes {
     pub fn step(&mut self) -> StepResult {
         let mut step = None;
         let is_last_cycle_of_frame;
-        match self.cycle % 6 {
+        match self.cycle % 3 {
             0 => {
                 self.apu_step();
                 step = self.cpu_step();
@@ -145,16 +145,6 @@ impl Nes {
             }
             1 => is_last_cycle_of_frame = self.ppu_step(),
             2 => {
-                is_last_cycle_of_frame = self.ppu_step();
-                self.snapshots.start_next();
-            }
-            3 => {
-                self.apu_step();
-                step = self.cpu_step();
-                is_last_cycle_of_frame = self.ppu_step();
-            }
-            4 => is_last_cycle_of_frame = self.ppu_step(),
-            5 => {
                 is_last_cycle_of_frame = self.ppu_step();
                 self.snapshots.start_next();
             }
