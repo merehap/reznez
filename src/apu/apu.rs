@@ -66,7 +66,7 @@ impl Apu {
         regs.apply_length_counter_pending_values();
         regs.execute_put_cycle();
 
-        if regs.clock().raw_cycle() % 20 == 0 {
+        if regs.clock().raw_cycle() % 40 == 0 {
             let mut queue = self.pulse_queue
                 .lock()
                 .unwrap();
