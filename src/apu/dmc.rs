@@ -10,7 +10,7 @@ pub struct Dmc {
 
     irq_enabled: bool,
     irq: IrqSource,
-    dma_action: Option<DmcDmaAction>,
+    dma_action: Option<DmcDmaTrigger>,
 
     should_loop: bool,
     volume: U7,
@@ -69,7 +69,7 @@ impl Dmc {
 
             if self.sample_buffer.is_none() {
                 //println!("Attempting to load sample buffer soon.");
-                self.dma_action = Some(DmcDmaAction::Load);
+                self.dma_action = Some(DmcDmaTrigger::Load);
             }
         }
     }
@@ -116,7 +116,7 @@ impl Dmc {
             self.sample_shifter = sample;
             if self.sample_bytes_remaining > 0 {
                 //println!("Attempting to RELOAD sample buffer soon.");
-                self.dma_action = Some(DmcDmaAction::Reload);
+                self.dma_action = Some(DmcDmaTrigger::Reload);
             }
         }
     }
@@ -141,7 +141,7 @@ impl Dmc {
         &mut self.irq
     }
 
-    pub fn take_pending_dma_action(&mut self) -> Option<DmcDmaAction> {
+    pub fn take_pending_dma_action(&mut self) -> Option<DmcDmaTrigger> {
         self.dma_action.take()
     }
 
@@ -174,7 +174,7 @@ impl Default for Dmc {
 }
 
 #[derive(Clone, Copy)]
-pub enum DmcDmaAction {
+pub enum DmcDmaTrigger {
     Load,
     Reload,
 }

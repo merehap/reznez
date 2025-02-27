@@ -1,4 +1,3 @@
-use crate::apu::apu_registers::CycleParity;
 use crate::cpu::step::*;
 use crate::cpu::instruction::{Instruction, OpCode};
 use crate::memory::cpu::cpu_address::CpuAddress;
@@ -7,11 +6,6 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 enum CpuMode {
     Instruction(OpCode),
     InterruptSequence(InterruptType),
-    DmcDma {
-        suspended_mode: Box<CpuMode>,
-        suspended_steps: &'static [Step],
-        suspended_step_index: usize,
-    },
 
     Jammed,
     StartNext,
@@ -54,7 +48,6 @@ impl CpuModeState {
             CpuMode::InterruptSequence(InterruptType::Reset) => "RESET".to_owned(),
             CpuMode::InterruptSequence(InterruptType::Irq) => "IRQ".to_owned(),
             CpuMode::InterruptSequence(InterruptType::Nmi) => "NMI".to_owned(),
-            CpuMode::DmcDma {..} => "DMCDMA".to_owned(),
             CpuMode::Jammed => "JAM".to_owned(),
             CpuMode::StartNext => "STARTNEXT".to_owned(),
             CpuMode::BranchTaken => "BTAKEN".to_owned(),
@@ -100,10 +93,7 @@ impl CpuModeState {
     }
 
     pub fn set_current_instruction_with_address(&mut self, instruction: Instruction, address: CpuAddress) {
-        if !matches!(self.next_mode, Some(CpuMode::DmcDma {..})) {
-            self.current_instruction = Some(instruction);
-        }
-
+        self.current_instruction = Some(instruction);
         self.new_instruction_with_address = Some((instruction, address));
     }
 
@@ -120,16 +110,6 @@ impl CpuModeState {
         assert_eq!(self.next_mode, None, "next_mode should not already be set");
         self.next_mode = Some(CpuMode::InterruptSequence(interrupt_type));
         self.current_instruction = None;
-    }
-
-    pub fn dmc_dma(&mut self) {
-        assert!(self.mode != CpuMode::InterruptSequence(InterruptType::Reset));
-
-        self.next_mode = Some(CpuMode::DmcDma {
-            suspended_mode: Box::new(self.mode.clone()),
-            suspended_steps: self.steps,
-            suspended_step_index: self.step_index,
-        });
     }
 
     pub fn jammed(&mut self) {
@@ -168,18 +148,12 @@ impl CpuModeState {
         }
     }
 
-    pub fn step(&mut self, cycle_parity: CycleParity) {
+    pub fn step(&mut self) {
         if let Some(next_mode) = self.next_mode.take() {
             match next_mode {
                 CpuMode::StartNext {..} => unreachable!(),
                 CpuMode::Jammed => self.steps = &[],
 
-                CpuMode::DmcDma {..} => {
-                    self.steps = match cycle_parity {
-                        CycleParity::Get => ALIGNED_DMC_DMA_TRANSFER_STEPS,
-                        CycleParity::Put => DMC_DMA_TRANSFER_STEPS,
-                    };
-                }
                 CpuMode::InterruptSequence(InterruptType::Reset) => self.steps = RESET_STEPS,
                 CpuMode::InterruptSequence(_) => self.steps = BRK_STEPS,
                 CpuMode::Instruction {..} => { /* steps will be set by the caller in this case. */ }
@@ -210,11 +184,6 @@ impl CpuModeState {
                 self.step_index = 0;
                 CpuMode::StartNext
             }
-            CpuMode::DmcDma { suspended_mode, suspended_steps, suspended_step_index } => {
-                self.steps = suspended_steps;
-                self.step_index = suspended_step_index;
-                *suspended_mode
-            }
 
             CpuMode::Jammed => CpuMode::Jammed,
             CpuMode::StartNext {..} => panic!(),
@@ -228,8 +197,6 @@ impl CpuModeState {
 
     pub fn step_name(&self) -> String {
         let name: String = match (&self.mode, &self.next_mode) {
-            (_, Some(CpuMode::DmcDma {..})) =>
-                "DMC0".into(),
             (CpuMode::Oops {..}, _) =>
                 "OOPS".into(),
             (CpuMode::BranchTaken, _) =>
@@ -252,8 +219,6 @@ impl CpuModeState {
                 format!("NMI{}", self.step_index + 1),
             (CpuMode::InterruptSequence(InterruptType::Reset), _) =>
                 format!("RESET{}", self.step_index),
-            (CpuMode::DmcDma {..} , _) =>
-                format!("DMC{}", self.step_index + 1),
         };
 
         format!("{name:<6}")

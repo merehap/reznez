@@ -16,29 +16,29 @@ impl OamDmaStage {
         *self = OamDmaStage::TryHalt;
     }
 
-    pub fn step(&mut self, cpu_step: Step, parity: CycleParity) -> DmaAction {
+    pub fn step(&mut self, cpu_step: Step, parity: CycleParity) -> OamDmaAction {
         // DMA can't halt until the CPU is reading.
         if *self == Self::TryHalt && !cpu_step.is_read() {
-            return DmaAction::DoNothing;
+            return OamDmaAction::DoNothing;
         }
 
         // DMA can't read on PUT steps.
         // TODO: This should fail on PUTs, not GETS, but somehow the parity tracking is off.
         if matches!(*self, Self::TryRead(_)) && parity == CycleParity::Get {
-            return DmaAction::Align;
+            return OamDmaAction::Align;
         }
 
         let (step_result, next_stage) = match *self {
             Self::Wait =>
-                (DmaAction::DoNothing, Self::Wait),
+                (OamDmaAction::DoNothing, Self::Wait),
             Self::TryHalt =>
-                (DmaAction::Halt, Self::TryRead(0)),
+                (OamDmaAction::Halt, Self::TryRead(0)),
             Self::TryRead(n) =>
-                (DmaAction::Read, Self::Write(n)),
+                (OamDmaAction::Read, Self::Write(n)),
             Self::Write(n@0..=254) =>
-                (DmaAction::Write, Self::TryRead(n + 1)),
+                (OamDmaAction::Write, Self::TryRead(n + 1)),
             Self::Write(255) =>
-                (DmaAction::Write, Self::Wait),
+                (OamDmaAction::Write, Self::Wait),
         };
 
         *self = next_stage;
@@ -47,7 +47,7 @@ impl OamDmaStage {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum DmaAction {
+pub enum OamDmaAction {
     DoNothing,
     Halt,
     Align,

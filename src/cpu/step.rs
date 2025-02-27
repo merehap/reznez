@@ -9,19 +9,7 @@ use crate::memory::mapper::CpuAddress;
 pub static OAM_READ_STEP: Step = Read(From::OamDmaAddressTarget, &[]);
 pub static OAM_WRITE_STEP: Step = Write(To::OAM_DATA, &[IncrementOamDmaAddress]);
 
-pub static DMC_DMA_TRANSFER_STEPS: &[Step] = &[
-    // Dummy cycle.
-    Read(From::AddressBusTarget, &[]),
-    Read(From::DmcDmaAddressTarget, &[SetDmcSampleBuffer]),
-];
-
-pub static ALIGNED_DMC_DMA_TRANSFER_STEPS: &[Step] = &[
-    // Dummy cycle.
-    Read(From::AddressBusTarget, &[]),
-    // Alignment cycle.
-    Read(From::AddressBusTarget, &[]),
-    Read(From::DmcDmaAddressTarget, &[SetDmcSampleBuffer]),
-];
+pub static DMC_READ_STEP: Step = Read(From::DmcDmaAddressTarget, &[SetDmcSampleBuffer]);
 
 pub const READ_OP_CODE_STEP: Step =
     Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]);

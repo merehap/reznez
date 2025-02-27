@@ -2,7 +2,7 @@ use log::{info, log_enabled};
 use log::Level::Info;
 
 use crate::apu::apu_registers::ApuRegisters;
-use crate::apu::dmc::DmcDmaAction;
+use crate::apu::dmc::DmcDmaTrigger;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
@@ -217,7 +217,7 @@ impl CpuMemory<'_> {
         irq_pending
     }
 
-    pub fn take_pending_dmc_dma_action(&mut self) -> Option<DmcDmaAction> {
+    pub fn take_pending_dmc_dma_action(&mut self) -> Option<DmcDmaTrigger> {
         self.memory.apu_registers.dmc.take_pending_dma_action()
     }
 
