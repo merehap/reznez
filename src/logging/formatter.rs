@@ -1,4 +1,4 @@
-use crate::cpu::cpu::DmcDmaStage;
+use crate::cpu::dmc_dma::DmcDmaStage;
 use crate::cpu::instruction::{Instruction, OpCode, AccessMode};
 use crate::memory::mapper::CpuAddress;
 use crate::nes::Nes;

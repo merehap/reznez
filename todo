@@ -51,7 +51,6 @@ Automatically add registers from every layout? Maybe not since certain layouts w
 FAILING TESTS
 SHX/SXA: https://forums.nesdev.org/viewtopic.php?p=297765
 
-sprdma_and_dmc_dma
 tvpassfail/tv
 
 apu_mixer

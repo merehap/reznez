@@ -2,9 +2,9 @@ use log::{info, log_enabled};
 use log::Level::Info;
 
 use crate::apu::apu_registers::CycleParity;
-use crate::apu::dmc::DmcDmaTrigger;
 use crate::config::CpuStepFormatting;
 use crate::cpu::cpu_mode::{CpuModeState, InterruptType};
+use crate::cpu::dmc_dma::{DmcDmaStage, DmcDmaAction};
 use crate::cpu::step_action::{StepAction, From, To, Field};
 use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
 use crate::cpu::oam_dma::{OamDmaStage, OamDmaAction};
@@ -18,61 +18,6 @@ use crate::memory::memory::{CpuMemory,
     RESET_VECTOR_LOW, RESET_VECTOR_HIGH,
     NMI_VECTOR_LOW, NMI_VECTOR_HIGH,
 };
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum DmcDmaStage {
-    Idle,
-    WaitingForGet,
-    FirstSkip,
-    SecondSkip,
-    TryHalt,
-    Dummy,
-    TryRead,
-}
-
-impl DmcDmaStage {
-    fn start(&mut self, action: DmcDmaTrigger) {
-        assert_eq!(*self, Self::Idle);
-        *self = match action {
-            DmcDmaTrigger::Load => Self::WaitingForGet,
-            DmcDmaTrigger::Reload => Self::TryHalt,
-        };
-    }
-
-    fn step(&mut self, is_cpu_read_step: bool, parity: CycleParity) -> DmcDmaAction {
-        let still_waiting_for_get = *self == Self::WaitingForGet && parity == CycleParity::Put;
-        let still_waiting_to_halt = *self == Self::TryHalt && !is_cpu_read_step;
-        if still_waiting_for_get || still_waiting_to_halt {
-            return DmcDmaAction::DoNothing;
-        }
-
-        if *self == Self::TryRead && parity == CycleParity::Get {
-            return DmcDmaAction::Align;
-        }
-
-        let (action, next_stage) = match *self {
-            Self::Idle => (DmcDmaAction::DoNothing, Self::Idle),
-            Self::WaitingForGet => (DmcDmaAction::DoNothing, Self::FirstSkip),
-            Self::FirstSkip => (DmcDmaAction::DoNothing, Self::SecondSkip),
-            Self::SecondSkip => (DmcDmaAction::DoNothing, Self::TryHalt),
-            Self::TryHalt => (DmcDmaAction::Halt, Self::Dummy),
-            Self::Dummy => (DmcDmaAction::Dummy, Self::TryRead),
-            Self::TryRead => (DmcDmaAction::Read, Self::Idle),
-        };
-
-        *self = next_stage;
-        action
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum DmcDmaAction {
-    DoNothing,
-    Halt,
-    Dummy,
-    Align,
-    Read,
-}
 
 pub struct Cpu {
     // Accumulator
@@ -242,28 +187,23 @@ impl Cpu {
             DmcDmaAction::Read => step = DMC_READ_STEP,
         }
 
-        let mut halted = dmc_dma_action != DmcDmaAction::DoNothing;
-
         if self.oam_dma_port.take_page().is_some() {
             self.oam_dma_stage.try_halt();
         }
 
-        if !halted {
-            let action = self.oam_dma_stage.step(step, cycle_parity);
-            step = match action {
-                OamDmaAction::DoNothing => step,
-                OamDmaAction::Halt => {
-                    info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
-                        self.oam_dma_port.current_address());
-                    step.with_actions_removed()
-                }
-                OamDmaAction::Align => step.with_actions_removed(),
-                OamDmaAction::Read => OAM_READ_STEP,
-                OamDmaAction::Write => OAM_WRITE_STEP,
-            };
-
-            halted = action != OamDmaAction::DoNothing;
-        }
+        let block_oam_dma_memory_access = dmc_dma_action == DmcDmaAction::Read;
+        let oam_dma_action = self.oam_dma_stage.step(step, cycle_parity, block_oam_dma_memory_access);
+        step = match oam_dma_action {
+            OamDmaAction::DoNothing => step,
+            OamDmaAction::Halt => {
+                info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
+                    self.oam_dma_port.current_address());
+                step.with_actions_removed()
+            }
+            OamDmaAction::Align => step.with_actions_removed(),
+            OamDmaAction::Read => OAM_READ_STEP,
+            OamDmaAction::Write => OAM_WRITE_STEP,
+        };
 
         match step {
             Step::Read(from, _) => {
@@ -293,6 +233,7 @@ impl Cpu {
             self.execute_step_action(memory, action);
         }
 
+        let halted = dmc_dma_action != DmcDmaAction::DoNothing || oam_dma_action != OamDmaAction::DoNothing;
         if log_enabled!(target: "cpustep", Info) {
             let step_name = if halted { "HALTED".to_string() } else { self.mode_state.step_name() };
             let cpu_cycle = memory.cpu_cycle();

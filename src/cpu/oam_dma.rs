@@ -16,7 +16,7 @@ impl OamDmaStage {
         *self = OamDmaStage::TryHalt;
     }
 
-    pub fn step(&mut self, cpu_step: Step, parity: CycleParity) -> OamDmaAction {
+    pub fn step(&mut self, cpu_step: Step, parity: CycleParity, block_memory_access: bool) -> OamDmaAction {
         // DMA can't halt until the CPU is reading.
         if *self == Self::TryHalt && !cpu_step.is_read() {
             return OamDmaAction::DoNothing;
@@ -26,6 +26,10 @@ impl OamDmaStage {
         // TODO: This should fail on PUTs, not GETS, but somehow the parity tracking is off.
         if matches!(*self, Self::TryRead(_)) && parity == CycleParity::Get {
             return OamDmaAction::Align;
+        }
+
+        if block_memory_access && matches!(*self, Self::TryRead(_) | Self::Write(_)) {
+            return OamDmaAction::DoNothing;
         }
 
         let (step_result, next_stage) = match *self {
