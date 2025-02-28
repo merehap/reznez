@@ -66,7 +66,9 @@ impl Region {
     fn from_address(addr: PpuAddress) -> Self {
         match addr.to_u16() {
             0x0000..=0x1FFF => Region::PatternTable,
-            0x2000..=0x2FFF => Region::NameTable,
+            0x2000..=0x2FFF if addr.to_u16() & 0x3FF < 0x3C0 => Region::NameTable,
+            // Attribute tables.
+            0x2000..=0x2FFF => Region::Other,
             // Name table mirrors and the palette table.
             0x3000..=0x3FFF => Region::Other,
             0x4000..=0xFFFF => unreachable!(),

@@ -6,8 +6,7 @@ ROADMAP
 4. Expansion Audio
 5. Remaining test ROMs.
 6. Joypad support
-7. See if BankIndex can be resolved immediately. Late resolution is causing a lot of clutter.
-8. Proper sounding audio.
+7. Proper sounding audio.
 
 Add CHR bank viewer. Allow overriding the selected bank for the game rendering.
 Remove GetSpritePatternHack in ppu.rs.
@@ -42,7 +41,6 @@ Tatakai no Banka: Flickering sprites.
 Fire Emblem Gaiden: Blank screen.
 Kaiketsu Yanchamaru 2: PRG bank switching bug leads to JAM.
 Mission Impossible 2: JAMs. Need to mirror CHR ROM due to it being too short?
-mmc5test: black screen.
 Dragon Ball Dai Maou Fukkatsu: infinite loop.
 
 IMPROVEMENTS TO PRG/CHR LAYOUTS
