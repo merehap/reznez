@@ -12,7 +12,6 @@ use crate::cpu::status;
 use crate::cpu::status::Status;
 use crate::cpu::step::*;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::cpu::ports::OamDmaPort;
 use crate::memory::memory::{CpuMemory,
     IRQ_VECTOR_LOW, IRQ_VECTOR_HIGH,
     RESET_VECTOR_LOW, RESET_VECTOR_HIGH,
@@ -34,8 +33,6 @@ pub struct Cpu {
     nmi_status: NmiStatus,
     irq_status: IrqStatus,
     reset_status: ResetStatus,
-
-    oam_dma_port: OamDmaPort,
 
     current_interrupt_vector: Option<InterruptType>,
 
@@ -67,8 +64,6 @@ impl Cpu {
             nmi_status: NmiStatus::Inactive,
             irq_status: IrqStatus::Inactive,
             reset_status: ResetStatus::Active,
-
-            oam_dma_port: memory.ports().oam_dma.clone(),
 
             // The initial value probably doesn't matter.
             current_interrupt_vector: None,
@@ -125,10 +120,6 @@ impl Cpu {
         &self.mode_state
     }
 
-    pub fn oam_dma_pending(&self) -> bool {
-        self.oam_dma_port.page_present()
-    }
-
     pub fn nmi_status(&self) -> NmiStatus {
         self.nmi_status
     }
@@ -160,7 +151,6 @@ impl Cpu {
             self.irq_status = IrqStatus::Ready;
         }
 
-        let original_program_counter = self.program_counter;
         let mut step = self.mode_state.current_step();
 
         let dmc_dma_action = memory.dmc_dma_mut().step(step.is_read(), cycle_parity);
@@ -175,17 +165,13 @@ impl Cpu {
             DmcDmaAction::Read => step = DMC_READ_STEP,
         }
 
-        if self.oam_dma_port.take_page().is_some() {
-            memory.oam_dma_mut().prepare_to_start();
-        }
-
         let block_oam_dma_memory_access = dmc_dma_action == DmcDmaAction::Read;
-        let oam_dma_action = memory.oam_dma_mut().step(step, cycle_parity, block_oam_dma_memory_access);
+        let oam_dma_action = memory.oam_dma_mut().step(step.is_read(), cycle_parity, block_oam_dma_memory_access);
         step = match oam_dma_action {
             OamDmaAction::DoNothing => step,
             OamDmaAction::Halt => {
                 info!(target: "cpuflowcontrol", "Halting CPU for OAM DMA transfer at {}.",
-                    self.oam_dma_port.current_address());
+                    memory.oam_dma().address());
                 step.with_actions_removed()
             }
             OamDmaAction::Align => step.with_actions_removed(),
@@ -217,6 +203,7 @@ impl Cpu {
         let rw_data_bus_value = memory.data_bus();
         let rw_address_bus_value = self.address_bus;
 
+        let original_program_counter = self.program_counter;
         for &action in step.actions() {
             self.execute_step_action(memory, action);
         }
@@ -471,7 +458,7 @@ impl Cpu {
             // TODO: Make sure this isn't supposed to wrap within the same page.
             StepAction::IncrementAddress => self.computed_address = self.address_bus.inc(),
             StepAction::IncrementAddressLow => self.computed_address = self.address_bus.offset_low(1).0,
-            StepAction::IncrementOamDmaAddress => self.oam_dma_port.increment_current_address(),
+            StepAction::IncrementOamDmaAddress => memory.oam_dma_mut().increment_address(),
 
             StepAction::IncrementStackPointer => memory.stack().increment_stack_pointer(),
             StepAction::DecrementStackPointer => memory.stack().decrement_stack_pointer(),
@@ -579,7 +566,7 @@ impl Cpu {
         use self::From::*;
         match from {
             AddressBusTarget => self.address_bus,
-            OamDmaAddressTarget => self.oam_dma_port.current_address(),
+            OamDmaAddressTarget => memory.oam_dma().address(),
             DmcDmaAddressTarget => memory.dmc_dma_address(),
             ProgramCounterTarget => self.program_counter,
             PendingAddressTarget => CpuAddress::from_low_high(self.pending_address_low, self.pending_address_high),
@@ -604,7 +591,7 @@ impl Cpu {
         use self::To::*;
         match to {
             AddressBusTarget => self.address_bus,
-            OamDmaAddressTarget => self.oam_dma_port.current_address(),
+            OamDmaAddressTarget => memory.oam_dma().address(),
             ProgramCounterTarget => self.program_counter,
             PendingAddressTarget =>
                 CpuAddress::from_low_high(self.pending_address_low, self.pending_address_high),

@@ -1,24 +1,51 @@
 use crate::apu::apu_registers::CycleParity;
-use crate::cpu::step::Step;
+use crate::memory::cpu::cpu_address::CpuAddress;
+
+pub struct OamDma {
+    state: OamDmaState,
+    address: CpuAddress,
+}
+
+impl OamDma {
+    pub const IDLE: Self = Self {
+        state: OamDmaState::Idle,
+        address: CpuAddress::ZERO,
+    };
+
+    pub fn dma_pending(&self) -> bool {
+        self.state == OamDmaState::TryHalt
+    }
+
+    pub fn address(&self) -> CpuAddress {
+        self.address
+    }
+
+    pub fn increment_address(&mut self) {
+        self.address.inc();
+    }
+
+    pub fn prepare_to_start(&mut self, page: u8) {
+        self.state = OamDmaState::TryHalt;
+        self.address = CpuAddress::from_low_high(0, page);
+    }
+
+    pub fn step(&mut self, is_read_step: bool, parity: CycleParity, block_memory_access: bool) -> OamDmaAction {
+        self.state.step(is_read_step, parity, block_memory_access)
+    }
+}
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum OamDma {
+pub enum OamDmaState {
     Idle,
     TryHalt,
     TryRead(u8),
     Write(u8),
 }
 
-impl OamDma {
-    pub const IDLE: Self = Self::Idle;
-
-    pub fn prepare_to_start(&mut self) {
-        *self = OamDma::TryHalt;
-    }
-
-    pub fn step(&mut self, cpu_step: Step, parity: CycleParity, block_memory_access: bool) -> OamDmaAction {
+impl OamDmaState {
+    fn step(&mut self, is_read_step: bool, parity: CycleParity, block_memory_access: bool) -> OamDmaAction {
         // DMA can't halt until the CPU is reading.
-        if *self == Self::TryHalt && !cpu_step.is_read() {
+        if *self == Self::TryHalt && !is_read_step {
             return OamDmaAction::DoNothing;
         }
 
@@ -32,7 +59,7 @@ impl OamDma {
             return OamDmaAction::DoNothing;
         }
 
-        let (step_result, next_stage) = match *self {
+        let (step_result, next_state) = match *self {
             Self::Idle =>
                 (OamDmaAction::DoNothing, Self::Idle),
             Self::TryHalt =>
@@ -45,10 +72,11 @@ impl OamDma {
                 (OamDmaAction::Write, Self::Idle),
         };
 
-        *self = next_stage;
+        *self = next_state;
         step_result
     }
 }
+
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum OamDmaAction {

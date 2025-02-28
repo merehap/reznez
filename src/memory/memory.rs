@@ -124,6 +124,10 @@ impl Memory {
         (&mut self.apu_registers, &mut self.dmc_dma)
     }
 
+    pub fn oam_dma(&self) -> &OamDma {
+        &self.oam_dma
+    }
+
     pub fn cpu_cycle(&self) -> i64 {
         self.cpu_cycle
     }
@@ -201,6 +205,7 @@ impl CpuMemory<'_> {
             &mut self.memory.palette_ram,
             &mut self.memory.dmc_dma,
             &mut self.memory.oam,
+            &mut self.memory.oam_dma,
             &mut self.memory.ports,
             &mut self.memory.ppu_registers,
             &mut self.memory.apu_registers,
@@ -241,6 +246,10 @@ impl CpuMemory<'_> {
 
     pub fn dmc_dma_mut(&mut self) -> &mut DmcDma {
         &mut self.memory.dmc_dma
+    }
+
+    pub fn oam_dma(&self) -> &OamDma {
+        &self.memory.oam_dma
     }
 
     pub fn oam_dma_mut(&mut self) -> &mut OamDma {

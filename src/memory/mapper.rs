@@ -2,6 +2,7 @@ pub use splitbits::{splitbits, splitbits_named, combinebits, splitbits_then_comb
 
 pub use crate::cartridge::cartridge::Cartridge;
 use crate::cpu::dmc_dma::DmcDma;
+use crate::cpu::oam_dma::OamDma;
 pub use crate::memory::bank::bank_index::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters, RamStatus};
 pub use crate::memory::bank::bank_index::BankRegisterId::*;
 pub use crate::memory::bank::bank_index::MetaRegisterId::*;
@@ -170,6 +171,7 @@ pub trait Mapper {
         palette_ram: &mut PaletteRam,
         dmc_dma: &mut DmcDma,
         oam: &mut Oam,
+        oam_dma: &mut OamDma,
         ports: &mut Ports,
         ppu_registers: &mut PpuRegisters,
         apu_registers: &mut ApuRegisters,
@@ -220,7 +222,7 @@ pub trait Mapper {
             0x4011          => apu_registers.dmc.write_volume(value),
             0x4012          => apu_registers.dmc.write_sample_start_address(value),
             0x4013          => apu_registers.dmc.write_sample_length(value),
-            0x4014          => ports.oam_dma.set_page(value),
+            0x4014          => oam_dma.prepare_to_start(value),
             0x4015          => apu_registers.write_status_byte(dmc_dma, value),
             0x4016          => ports.change_strobe(value),
             0x4017          => apu_registers.write_frame_counter(value),
