@@ -2,7 +2,8 @@ use log::{info, log_enabled};
 use log::Level::Info;
 
 use crate::apu::apu_registers::ApuRegisters;
-use crate::apu::dmc::DmcDmaTrigger;
+use crate::cpu::dmc_dma::DmcDma;
+use crate::cpu::oam_dma::OamDma;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
@@ -39,6 +40,8 @@ pub struct Memory {
     ppu_registers: PpuRegisters,
     apu_registers: ApuRegisters,
     system_palette: SystemPalette,
+    dmc_dma: DmcDma,
+    oam_dma: OamDma,
     cpu_data_bus: u8,
     cpu_cycle: i64,
 }
@@ -61,6 +64,8 @@ impl Memory {
             ppu_registers: PpuRegisters::new(),
             apu_registers: ApuRegisters::new(),
             system_palette,
+            dmc_dma: DmcDma::IDLE,
+            oam_dma: OamDma::IDLE,
             cpu_data_bus: 0,
             cpu_cycle: 0,
         }
@@ -105,6 +110,18 @@ impl Memory {
 
     pub fn apu_regs_mut(&mut self) -> &mut ApuRegisters {
         &mut self.apu_registers
+    }
+
+    pub fn dmc_dma(&self) -> &DmcDma {
+        &self.dmc_dma
+    }
+
+    pub fn dmc_dma_mut(&mut self) -> &mut DmcDma {
+        &mut self.dmc_dma
+    }
+
+    pub fn apu_regs_and_dmc_dma_mut(&mut self) -> (&mut ApuRegisters, &mut DmcDma) {
+        (&mut self.apu_registers, &mut self.dmc_dma)
     }
 
     pub fn cpu_cycle(&self) -> i64 {
@@ -182,6 +199,7 @@ impl CpuMemory<'_> {
             &mut self.memory.cpu_internal_ram,
             &mut self.memory.ciram,
             &mut self.memory.palette_ram,
+            &mut self.memory.dmc_dma,
             &mut self.memory.oam,
             &mut self.memory.ports,
             &mut self.memory.ppu_registers,
@@ -217,12 +235,16 @@ impl CpuMemory<'_> {
         irq_pending
     }
 
-    pub fn take_pending_dmc_dma_action(&mut self) -> Option<DmcDmaTrigger> {
-        self.memory.apu_registers.dmc.take_pending_dma_action()
-    }
-
     pub fn dmc_dma_address(&self) -> CpuAddress {
         self.memory.apu_registers.dmc.dma_sample_address()
+    }
+
+    pub fn dmc_dma_mut(&mut self) -> &mut DmcDma {
+        &mut self.memory.dmc_dma
+    }
+
+    pub fn oam_dma_mut(&mut self) -> &mut OamDma {
+        &mut self.memory.oam_dma
     }
 
     pub fn set_dmc_sample_buffer(&mut self, value: u8) {

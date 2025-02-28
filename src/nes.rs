@@ -164,7 +164,8 @@ impl Nes {
             self.snapshots.current().apu_regs(self.memory.apu_regs());
         }
 
-        self.apu.step(self.memory.apu_regs_mut());
+        let (apu_regs, dmc_dma) = self.memory.apu_regs_and_dmc_dma_mut();
+        self.apu.step(apu_regs, dmc_dma);
 
         if log_enabled!(target: "timings", Info) {
             self.snapshots.current().frame_irq(self.memory.apu_regs(), &self.cpu);

@@ -4,10 +4,10 @@ use log::Level::Info;
 use crate::apu::apu_registers::CycleParity;
 use crate::config::CpuStepFormatting;
 use crate::cpu::cpu_mode::{CpuModeState, InterruptType};
-use crate::cpu::dmc_dma::{DmcDmaStage, DmcDmaAction};
+use crate::cpu::dmc_dma::DmcDmaAction;
 use crate::cpu::step_action::{StepAction, From, To, Field};
 use crate::cpu::instruction::{Instruction, AccessMode, OpCode};
-use crate::cpu::oam_dma::{OamDmaStage, OamDmaAction};
+use crate::cpu::oam_dma::OamDmaAction;
 use crate::cpu::status;
 use crate::cpu::status::Status;
 use crate::cpu::step::*;
@@ -30,8 +30,6 @@ pub struct Cpu {
     status: Status,
 
     mode_state: CpuModeState,
-    dmc_dma_stage: DmcDmaStage,
-    oam_dma_stage: OamDmaStage,
 
     nmi_status: NmiStatus,
     irq_status: IrqStatus,
@@ -65,8 +63,6 @@ impl Cpu {
             status: Status::startup(),
 
             mode_state: CpuModeState::startup(),
-            dmc_dma_stage: DmcDmaStage::Idle,
-            oam_dma_stage: OamDmaStage::WAIT,
 
             nmi_status: NmiStatus::Inactive,
             irq_status: IrqStatus::Inactive,
@@ -133,10 +129,6 @@ impl Cpu {
         self.oam_dma_port.page_present()
     }
 
-    pub fn dmc_dma_stage(&self) -> DmcDmaStage {
-        self.dmc_dma_stage
-    }
-
     pub fn nmi_status(&self) -> NmiStatus {
         self.nmi_status
     }
@@ -171,16 +163,12 @@ impl Cpu {
         let original_program_counter = self.program_counter;
         let mut step = self.mode_state.current_step();
 
-        let dmc_dma_address = memory.dmc_dma_address();
-        if let Some(dmc_dma_action) = memory.take_pending_dmc_dma_action() {
-            self.dmc_dma_stage.start(dmc_dma_action);
-        }
-
-        let dmc_dma_action = self.dmc_dma_stage.step(step.is_read(), cycle_parity);
+        let dmc_dma_action = memory.dmc_dma_mut().step(step.is_read(), cycle_parity);
         match dmc_dma_action {
             DmcDmaAction::DoNothing => {}
             DmcDmaAction::Halt => {
-                info!(target: "cpuflowcontrol", "Starting DMC DMA transfer at {}.", dmc_dma_address);
+                info!(target: "cpuflowcontrol", "Halting CPU for DMC DMA transfer at {}.",
+                    memory.dmc_dma_address());
                 step = step.with_actions_removed();
             }
             DmcDmaAction::Dummy | DmcDmaAction::Align => step = step.with_actions_removed(),
@@ -188,15 +176,15 @@ impl Cpu {
         }
 
         if self.oam_dma_port.take_page().is_some() {
-            self.oam_dma_stage.try_halt();
+            memory.oam_dma_mut().prepare_to_start();
         }
 
         let block_oam_dma_memory_access = dmc_dma_action == DmcDmaAction::Read;
-        let oam_dma_action = self.oam_dma_stage.step(step, cycle_parity, block_oam_dma_memory_access);
+        let oam_dma_action = memory.oam_dma_mut().step(step, cycle_parity, block_oam_dma_memory_access);
         step = match oam_dma_action {
             OamDmaAction::DoNothing => step,
             OamDmaAction::Halt => {
-                info!(target: "cpuflowcontrol", "Starting OAM DMA transfer at {}.",
+                info!(target: "cpuflowcontrol", "Halting CPU for OAM DMA transfer at {}.",
                     self.oam_dma_port.current_address());
                 step.with_actions_removed()
             }

@@ -8,6 +8,7 @@ use rodio::{OutputStream, Sink};
 use rodio::source::Source;
 
 use crate::apu::apu_registers::{ApuRegisters, CycleParity};
+use crate::cpu::dmc_dma::DmcDma;
 
 const SAMPLE_RATE: u32 = 44100;
 const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
@@ -48,23 +49,23 @@ impl Apu {
         *self.muted.lock().unwrap() = true;
     }
 
-    pub fn step(&mut self, regs: &mut ApuRegisters) {
+    pub fn step(&mut self, regs: &mut ApuRegisters, dmc_dma: &mut DmcDma) {
         regs.maybe_update_step_mode();
 
         match regs.clock().cycle_parity() {
             CycleParity::Get => Apu::execute_get_cycle(regs),
-            CycleParity::Put => self.execute_put_cycle(regs),
+            CycleParity::Put => self.execute_put_cycle(regs, dmc_dma),
         }
     }
 
-    fn execute_put_cycle(&mut self, regs: &mut ApuRegisters) {
+    fn execute_put_cycle(&mut self, regs: &mut ApuRegisters, dmc_dma: &mut DmcDma) {
         let cycle = regs.clock().cycle();
         info!(target: "apucycles", "APU cycle: {cycle} (PUT)");
 
         regs.maybe_set_frame_irq_pending();
         regs.maybe_decrement_counters();
         regs.apply_length_counter_pending_values();
-        regs.execute_put_cycle();
+        regs.execute_put_cycle(dmc_dma);
 
         if regs.clock().raw_cycle() % 40 == 0 {
             let mut queue = self.pulse_queue

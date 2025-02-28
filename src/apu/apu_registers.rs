@@ -7,6 +7,7 @@ use crate::apu::pulse_channel::PulseChannel;
 use crate::apu::triangle_channel::TriangleChannel;
 use crate::apu::noise_channel::NoiseChannel;
 use crate::apu::dmc::Dmc;
+use crate::cpu::dmc_dma::DmcDma;
 use crate::memory::irq_source::IrqSource;
 use crate::util::bit_util;
 
@@ -53,7 +54,7 @@ impl ApuRegisters {
     pub fn reset(&mut self) {
         // At reset, $4015 should be cleared
         // FIXME: Just write out the actual field writes.
-        self.write_status_byte(0b0000_0000);
+        self.disable_channels();
         // At reset, $4017 should should be rewritten with last value written
         self.frame_counter_write_status = FrameCounterWriteStatus::Initialized;
         self.frame_irq.set_pending(false);
@@ -99,15 +100,24 @@ impl ApuRegisters {
     }
 
     // Write 0x4015
-    pub fn write_status_byte(&mut self, value: u8) {
+    pub fn write_status_byte(&mut self, dmc_dma: &mut DmcDma, value: u8) {
         info!(target: "apuevents", "APU status write: {value:05b} . APU Cycle: {}", self.clock.cycle());
 
         let enabled_channels = splitbits!(value, "...dntqp");
-        self.dmc.set_enabled(enabled_channels.d);
+        self.dmc.set_enabled(dmc_dma, enabled_channels.d);
         self.noise.set_enabled(enabled_channels.n);
         self.triangle.set_enabled(enabled_channels.t);
         self.pulse_2.set_enabled(enabled_channels.q);
         self.pulse_1.set_enabled(enabled_channels.p);
+    }
+
+    // Upon RESET
+    pub fn disable_channels(&mut self) {
+        self.dmc.disable();
+        self.noise.set_enabled(false);
+        self.triangle.set_enabled(false);
+        self.pulse_2.set_enabled(false);
+        self.pulse_1.set_enabled(false);
     }
 
     // Write 0x4017
@@ -163,12 +173,12 @@ impl ApuRegisters {
         }
     }
 
-    pub fn execute_put_cycle(&mut self) {
+    pub fn execute_put_cycle(&mut self, dmc_dma: &mut DmcDma) {
         self.pulse_1.execute_put_cycle();
         self.pulse_2.execute_put_cycle();
         self.triangle.execute_put_cycle();
         self.noise.execute_put_cycle();
-        self.dmc.execute_put_cycle();
+        self.dmc.execute_put_cycle(dmc_dma);
     }
 
     pub fn execute_get_cycle(&mut self) {

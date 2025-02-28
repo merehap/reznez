@@ -2,18 +2,18 @@ use crate::apu::apu_registers::CycleParity;
 use crate::cpu::step::Step;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum OamDmaStage {
-    Wait,
+pub enum OamDma {
+    Idle,
     TryHalt,
     TryRead(u8),
     Write(u8),
 }
 
-impl OamDmaStage {
-    pub const WAIT: Self = Self::Wait;
+impl OamDma {
+    pub const IDLE: Self = Self::Idle;
 
-    pub fn try_halt(&mut self) {
-        *self = OamDmaStage::TryHalt;
+    pub fn prepare_to_start(&mut self) {
+        *self = OamDma::TryHalt;
     }
 
     pub fn step(&mut self, cpu_step: Step, parity: CycleParity, block_memory_access: bool) -> OamDmaAction {
@@ -33,8 +33,8 @@ impl OamDmaStage {
         }
 
         let (step_result, next_stage) = match *self {
-            Self::Wait =>
-                (OamDmaAction::DoNothing, Self::Wait),
+            Self::Idle =>
+                (OamDmaAction::DoNothing, Self::Idle),
             Self::TryHalt =>
                 (OamDmaAction::Halt, Self::TryRead(0)),
             Self::TryRead(n) =>
@@ -42,7 +42,7 @@ impl OamDmaStage {
             Self::Write(n@0..=254) =>
                 (OamDmaAction::Write, Self::TryRead(n + 1)),
             Self::Write(255) =>
-                (OamDmaAction::Write, Self::Wait),
+                (OamDmaAction::Write, Self::Idle),
         };
 
         *self = next_stage;

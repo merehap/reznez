@@ -1,3 +1,4 @@
+use crate::cpu::dmc_dma::DmcDma;
 use crate::memory::irq_source::IrqSource;
 use crate::memory::mapper::CpuAddress;
 use crate::util::integer::U7;
@@ -10,7 +11,6 @@ pub struct Dmc {
 
     irq_enabled: bool,
     irq: IrqSource,
-    dma_action: Option<DmcDmaTrigger>,
 
     should_loop: bool,
     volume: U7,
@@ -57,7 +57,7 @@ impl Dmc {
     }
 
     // 0x4015
-    pub(super) fn set_enabled(&mut self, enabled: bool) {
+    pub(super) fn set_enabled(&mut self, dma: &mut DmcDma, enabled: bool) {
         self.irq.set_pending(false);
 
         if !enabled {
@@ -69,9 +69,15 @@ impl Dmc {
 
             if self.sample_buffer.is_none() {
                 //println!("Attempting to load sample buffer soon.");
-                self.dma_action = Some(DmcDmaTrigger::Load);
+                dma.start_load();
             }
         }
+    }
+
+    // Upon RESET
+    pub(super) fn disable(&mut self) {
+        self.irq.set_pending(false);
+        self.sample_bytes_remaining = 0;
     }
 
     pub fn set_sample_buffer(&mut self, value: u8) {
@@ -97,7 +103,7 @@ impl Dmc {
         }
     }
 
-    pub(super) fn execute_put_cycle(&mut self) {
+    pub(super) fn execute_put_cycle(&mut self, dmc_dma: &mut DmcDma) {
         if self.cycles_remaining >= 2 {
             self.cycles_remaining -= 2;
             return;
@@ -116,7 +122,7 @@ impl Dmc {
             self.sample_shifter = sample;
             if self.sample_bytes_remaining > 0 {
                 //println!("Attempting to RELOAD sample buffer soon.");
-                self.dma_action = Some(DmcDmaTrigger::Reload);
+                dmc_dma.start_reload();
             }
         }
     }
@@ -141,10 +147,6 @@ impl Dmc {
         &mut self.irq
     }
 
-    pub fn take_pending_dma_action(&mut self) -> Option<DmcDmaTrigger> {
-        self.dma_action.take()
-    }
-
     pub fn dma_sample_address(&self) -> CpuAddress {
         self.sample_address
     }
@@ -156,7 +158,6 @@ impl Default for Dmc {
             muted: true,
             irq_enabled: false,
             irq: IrqSource::new(),
-            dma_action: None,
             should_loop: false,
             volume: U7::default(),
             period: NTSC_PERIODS[0] - 1,
@@ -171,10 +172,4 @@ impl Default for Dmc {
             bits_remaining: 8,
         }
     }
-}
-
-#[derive(Clone, Copy)]
-pub enum DmcDmaTrigger {
-    Load,
-    Reload,
 }
