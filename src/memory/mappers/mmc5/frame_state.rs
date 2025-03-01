@@ -34,6 +34,10 @@ impl FrameState {
         }
     }
 
+    pub fn in_frame(&self) -> bool {
+        self.in_frame
+    }
+
     pub fn irq_pending(&self) -> bool {
         self.irq_pending
     }

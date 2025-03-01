@@ -137,6 +137,7 @@ pub struct Mapper005 {
 
     chr_window_mode: ChrWindowMode,
     sprite_height: SpriteHeight,
+    tall_sprite_background_enabled: bool,
 
     irq_enabled: bool,
     frame_state: FrameState,
@@ -221,18 +222,30 @@ impl Mapper for Mapper005 {
             0x5116 => self.set_prg_bank_register(params, P3, Some(S3), value),
             0x5117 => self.set_prg_bank_register(params, P4, None, value),
             0x5118..=0x511F => { /* Do nothing. */ }
-            0x5120 => params.set_bank_register(C0, value),
-            0x5121 => params.set_bank_register(C1, value),
-            0x5122 => params.set_bank_register(C2, value),
-            0x5123 => params.set_bank_register(C3, value),
-            0x5124 => params.set_bank_register(C4, value),
-            0x5125 => params.set_bank_register(C5, value),
-            0x5126 => params.set_bank_register(C6, value),
-            0x5127 => params.set_bank_register(C7, value),
-            0x5128 => params.set_bank_register(C8, value),
-            0x5129 => params.set_bank_register(C9, value),
-            0x512A => params.set_bank_register(C10, value),
-            0x512B => params.set_bank_register(C11, value),
+            0x5120 => self.set_chr_bank_register(params, C0, value),
+            0x5121 => self.set_chr_bank_register(params, C1, value),
+            0x5122 => self.set_chr_bank_register(params, C2, value),
+            0x5123 => self.set_chr_bank_register(params, C3, value),
+            0x5124 => self.set_chr_bank_register(params, C4, value),
+            0x5125 => self.set_chr_bank_register(params, C5, value),
+            0x5126 => self.set_chr_bank_register(params, C6, value),
+            0x5127 => self.set_chr_bank_register(params, C7, value),
+            0x5128 => {
+                self.tall_sprite_background_enabled = true;
+                self.set_chr_bank_register(params, C8, value);
+            }
+            0x5129 => {
+                self.tall_sprite_background_enabled = true;
+                self.set_chr_bank_register(params, C9, value);
+            }
+            0x512A => {
+                self.tall_sprite_background_enabled = true;
+                self.set_chr_bank_register(params, C10, value);
+            }
+            0x512B => {
+                self.tall_sprite_background_enabled = true;
+                self.set_chr_bank_register(params, C11, value);
+            }
             0x512C..=0x512F => { /* Do nothing. */ }
             0x5130 => { /* TODO. No official game relies on Upper CHR Bank bits, but a few initialize them. */ }
             0x5131..=0x51FF => { /* Do nothing. */ }
@@ -271,6 +284,7 @@ impl Mapper005 {
 
             chr_window_mode: ChrWindowMode::One8K,
             sprite_height: SpriteHeight::Normal,
+            tall_sprite_background_enabled: false,
 
             irq_enabled: false,
             frame_state: FrameState::new(),
@@ -361,6 +375,11 @@ impl Mapper005 {
         }
     }
 
+    fn set_chr_bank_register(&mut self, params: &mut MapperParams, id: BankRegisterId, value: u8) {
+        params.set_bank_register(id, value);
+        self.update_chr_layout(params, true);
+    }
+
     // Write 0x5200
     fn enable_vertical_split_mode(&mut self, value: u8) {
         let fields = splitbits!(value, "es.ccccc");
@@ -381,10 +400,17 @@ impl Mapper005 {
     }
 
     fn update_chr_layout(&mut self, params: &mut MapperParams, dedup_logging: bool) {
+        if self.sprite_height == SpriteHeight::Normal {
+            self.tall_sprite_background_enabled = false;
+        }
+
+        let normal_background_mode =
+            self.sprite_height == SpriteHeight::Normal ||
+            self.frame_state.sprite_fetching() ||
+            (!self.frame_state.in_frame() && !self.tall_sprite_background_enabled);
+
         let mut layout_index = self.chr_window_mode as u8;
-        let special_background_mode =
-            self.sprite_height == SpriteHeight::Tall && !self.frame_state.sprite_fetching();
-        if special_background_mode {
+        if !normal_background_mode {
             layout_index |= 0b100;
         }
 
