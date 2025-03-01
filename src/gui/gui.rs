@@ -46,6 +46,9 @@ where
 }
 
 fn dump_frame(frame: &Frame, mask: Mask, frame_index: i64) {
+    let mut frame = frame.clone();
+    *frame.show_overscan_mut() = true;
+
     if let Err(err) = fs::create_dir(FRAME_DUMP_DIRECTORY) {
         assert!(err.kind() == ErrorKind::AlreadyExists, "{:?}", err.kind());
     }
