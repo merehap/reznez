@@ -1,8 +1,8 @@
 use crate::memory::mappers::mmc5::scanline_detector::{ScanlineDetector, DetectedEvent};
 use crate::memory::ppu::ppu_address::PpuAddress;
 
-const SPRITE_PATTERN_FETCH_START: u8 = 64;
-const BACKGROUND_PATTERN_FETCH_START: u8 = 81;
+const SPRITE_TILE_FETCH_START: u8 = 32;
+const BACKGROUND_TILE_FETCH_START: u8 = 40;
 
 pub struct FrameState {
     in_frame: bool,
@@ -14,7 +14,7 @@ pub struct FrameState {
 
     ppu_is_reading: bool,
     idle_count: u8,
-    pattern_fetch_count: u8,
+    tile_fetch_count: u8,
 }
 
 impl FrameState {
@@ -30,7 +30,7 @@ impl FrameState {
 
             ppu_is_reading: false,
             idle_count: 0,
-            pattern_fetch_count: 0,
+            tile_fetch_count: 0,
         }
     }
 
@@ -52,8 +52,8 @@ impl FrameState {
     }
 
     pub fn sprite_fetching(&self) -> bool {
-        (SPRITE_PATTERN_FETCH_START..BACKGROUND_PATTERN_FETCH_START)
-            .contains(&self.pattern_fetch_count)
+        (SPRITE_TILE_FETCH_START..BACKGROUND_TILE_FETCH_START)
+            .contains(&self.tile_fetch_count)
     }
 
     // Called on PPU mask (0x2001) write, and on NMI vector (0xFFFA or 0xFFFB) read.
@@ -81,7 +81,7 @@ impl FrameState {
                 self.in_frame = true;
                 self.scanline = 0;
                 self.irq_pending = false;
-                self.pattern_fetch_count = 0;
+                self.tile_fetch_count = 0;
             }
             // A new scanline is starting in the ongoing frame.
             DetectedEvent::ScanlineStart => {
@@ -90,11 +90,11 @@ impl FrameState {
                     self.irq_pending = true;
                 }
 
-                self.pattern_fetch_count = 0;
+                self.tile_fetch_count = 0;
             }
             // A new pattern was read.
-            DetectedEvent::PatternFetch => {
-                self.pattern_fetch_count += 1;
+            DetectedEvent::TileFetch => {
+                self.tile_fetch_count += 1;
             }
             // Nothing interesting happened.
             DetectedEvent::Other => {}

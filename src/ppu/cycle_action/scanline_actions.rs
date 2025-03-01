@@ -52,7 +52,7 @@ pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|
         line.add(cycle + 0, vec![                                               ReadSpriteY           , ResetOamAddress             ]);
         line.add(cycle + 1, vec![GetPatternIndex          ,                     ReadSpritePatternIndex, ResetOamAddress             ]);
         line.add(cycle + 2, vec![                                               ReadSpriteAttributes  , ResetOamAddress             ]);
-        line.add(cycle + 3, vec![GetPatternIndex          ,                     ReadSpriteX           , ResetOamAddress             ]);
+        line.add(cycle + 3, vec![GetPaletteIndex          ,                     ReadSpriteX           , ResetOamAddress             ]);
         line.add(cycle + 4, vec![                                               DummyReadSpriteX      , ResetOamAddress             ]);
         line.add(cycle + 5, vec![GetSpritePatternLowByte  ,                     DummyReadSpriteX      , ResetOamAddress             ]);
         line.add(cycle + 6, vec![                                               DummyReadSpriteX      , ResetOamAddress             ]);

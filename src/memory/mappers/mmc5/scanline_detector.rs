@@ -23,22 +23,23 @@ impl ScanlineDetector {
         let prev_match_count = self.match_count;
 
         let region = Region::from_address(addr);
-        if region != Region::NameTable {
+        if region != Region::NameTable && region != Region::AttributeTable {
             // Address out of range, go back to the beginning.
             self.match_count = 0;
-            let detected = if region == Region::PatternTable {
-                DetectedEvent::PatternFetch
-            } else {
-                DetectedEvent::Other
-            };
-            return detected;
+            return DetectedEvent::Other;
         }
+
+        let mut detected_event = if region == Region::NameTable {
+            DetectedEvent::TileFetch
+        } else {
+            DetectedEvent::Other
+        };
 
         // Address mismatches are ignored if match_count == 0 or a scanline has already been detected.
         if self.prev_addr != addr && matches!(self.match_count, 1 | 2) {
             // Address doesn't match the previous one, go back to the beginning.
             self.match_count = 0;
-            return DetectedEvent::Other;
+            return detected_event;
         }
 
         if self.match_count < 3 {
@@ -48,10 +49,10 @@ impl ScanlineDetector {
         self.prev_addr = addr;
 
         if prev_match_count == 2 && self.match_count == 3 {
-            DetectedEvent::ScanlineStart
-        } else {
-            DetectedEvent::Other
+            detected_event = DetectedEvent::ScanlineStart;
         }
+
+        detected_event
     }
 }
 
@@ -59,6 +60,7 @@ impl ScanlineDetector {
 enum Region {
     PatternTable,
     NameTable,
+    AttributeTable,
     Other,
 }
 
@@ -68,7 +70,7 @@ impl Region {
             0x0000..=0x1FFF => Region::PatternTable,
             0x2000..=0x2FFF if addr.to_u16() & 0x3FF < 0x3C0 => Region::NameTable,
             // Attribute tables.
-            0x2000..=0x2FFF => Region::Other,
+            0x2000..=0x2FFF => Region::AttributeTable,
             // Name table mirrors and the palette table.
             0x3000..=0x3FFF => Region::Other,
             0x4000..=0xFFFF => unreachable!(),
@@ -78,6 +80,6 @@ impl Region {
 
 pub enum DetectedEvent {
     ScanlineStart,
-    PatternFetch,
+    TileFetch,
     Other,
 }
