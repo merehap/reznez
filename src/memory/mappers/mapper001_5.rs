@@ -36,17 +36,15 @@ pub struct Mapper001_5 {
 
 impl Mapper for Mapper001_5 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        if matches!(cpu_address, 0x6000..=0x7FFF) {
-            // Work RAM writes don't trigger shifter logic.
+        // Only writes of 0x8000 to 0xFFFF trigger shifter logic.
+        if cpu_address < 0x8000 {
             return;
         }
 
         match self.shift_register.shift(value) {
             ShiftStatus::Clear | ShiftStatus::Continue => { /* Do nothing additional. */ }
             ShiftStatus::Done { finished_value } => match cpu_address {
-                0x0000..=0x401F => unreachable!(),
-                0x4020..=0x5FFF => { /* Do nothing. */ }
-                0x6000..=0x7FFF => unreachable!(),
+                0x0000..=0x7FFF => unreachable!(),
                 0x8000..=0x9FFF => {
                     let fields = splitbits!(min=u8, finished_value, "...c..mm");
                     params.set_chr_layout(fields.c);
