@@ -482,7 +482,7 @@ impl MapperParams {
     pub fn set_name_table_mirroring(&mut self, mirroring_index: u8) {
         self.name_table_mirroring = self.name_table_mirrorings[usize::from(mirroring_index)];
         info!(target: "mapperupdates",
-            "Setting NameTableMirroring to {:?} (index {mirroring_index}).",
+            "Setting NameTableMirroring to {} (index {mirroring_index}).",
             self.name_table_mirroring);
     }
 
