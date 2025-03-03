@@ -17,8 +17,8 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .override_initial_name_table_mirroring(NameTableMirroring::ONE_SCREEN_RIGHT_BANK)
     .name_table_mirrorings(&[
-        NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,
+        NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
         NameTableMirroring::VERTICAL,
         NameTableMirroring::HORIZONTAL,
     ])
