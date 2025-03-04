@@ -1,5 +1,5 @@
 use crate::memory::mapper::*;
-use crate::memory::mappers::common::mmc1::{ShiftRegister, ShiftStatus};
+use crate::memory::mappers::mmc1::shift_register::{ShiftRegister, ShiftStatus};
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(32 * KIBIBYTE)
