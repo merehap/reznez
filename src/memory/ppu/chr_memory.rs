@@ -4,7 +4,7 @@ use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
-use crate::memory::window::{ChrLocation, Window};
+use crate::memory::window::{ChrLocation, RamStatusInfo, Window};
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
 
@@ -90,6 +90,15 @@ impl ChrMemory {
 
     pub fn window_count(&self) -> u8 {
         self.current_layout().windows().len().try_into().unwrap()
+    }
+
+    pub fn ram_status_infos(&self) -> Vec<RamStatusInfo> {
+        let mut ids = Vec::new();
+        for layout in &self.layouts {
+            ids.append(&mut layout.active_ram_status_register_ids());
+        }
+
+        ids
     }
 
     pub fn peek(&self, registers: &BankRegisters, ciram: &Ciram, address: PpuAddress) -> u8 {

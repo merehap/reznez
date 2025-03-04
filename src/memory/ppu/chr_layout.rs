@@ -1,12 +1,12 @@
 use crate::memory::bank::bank_index::BankRegisterId;
-use crate::memory::window::Window;
+use crate::memory::window::{RamStatusInfo, Window};
 
 #[derive(Clone, Copy)]
 pub struct ChrLayout(&'static [Window]);
 
 impl ChrLayout {
     pub const fn new(windows: &'static [Window]) -> ChrLayout {
-        assert!(!windows.is_empty(), "No PRG layouts specified.");
+        assert!(!windows.is_empty(), "No CHR windows specified.");
 
         assert!(windows[0].start() == 0x0000, "The first CHR window must start at 0x0000.");
 
@@ -36,6 +36,12 @@ impl ChrLayout {
     pub fn active_register_ids(&self) -> Vec<BankRegisterId> {
         self.0.iter()
             .filter_map(|window| window.register_id())
+            .collect()
+    }
+
+    pub fn active_ram_status_register_ids(&self) -> Vec<RamStatusInfo> {
+        self.0.iter()
+            .map(|window| window.ram_status_info())
             .collect()
     }
 }

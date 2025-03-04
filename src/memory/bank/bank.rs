@@ -94,7 +94,7 @@ impl Location {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
 pub enum RamStatusRegisterId {
     S0,
     S1,

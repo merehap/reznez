@@ -4,7 +4,7 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
 use crate::memory::read_result::ReadResult;
-use crate::memory::window::Window;
+use crate::memory::window::{RamStatusInfo, Window};
 use crate::util::unit::KIBIBYTE;
 
 pub struct PrgMemory {
@@ -102,6 +102,15 @@ impl PrgMemory {
 
     pub fn extended_ram_mut(&mut self) -> &mut RawMemoryArray<KIBIBYTE> {
         &mut self.extended_ram
+    }
+
+    pub fn ram_status_infos(&self) -> Vec<RamStatusInfo> {
+        let mut ids = Vec::new();
+        for layout in &self.layouts {
+            ids.append(&mut layout.ram_status_infos());
+        }
+
+        ids
     }
 
     pub fn peek(&self, registers: &BankRegisters, address: CpuAddress) -> ReadResult {

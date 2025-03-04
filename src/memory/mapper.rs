@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 pub use splitbits::{splitbits, splitbits_named, combinebits, splitbits_then_combine};
 
 pub use crate::cartridge::cartridge::Cartridge;
@@ -467,6 +469,7 @@ pub struct MapperParams {
     pub name_table_mirroring: NameTableMirroring,
     pub name_table_mirrorings: &'static [NameTableMirroring],
     pub ram_statuses: &'static [RamStatus],
+    pub ram_not_present: BTreeSet<RamStatusRegisterId>,
     pub irq: IrqSource,
 }
 
@@ -504,10 +507,15 @@ impl MapperParams {
     }
 
     pub fn set_ram_status(&mut self, id: RamStatusRegisterId, index: u8) {
-        let ram_status = self.ram_statuses[index as usize];
-        self.bank_registers.set_ram_status(id, ram_status);
-        info!(target: "mapperupdates",
-            "Setting RamStatus register {id:?} to {ram_status:?} (index {index}).");
+        if self.ram_not_present.contains(&id) {
+            info!(target: "mapperupdates",
+                "Ignoring update to RamStatus register {id:?} because RAM isn't present.");
+        } else {
+            let ram_status = self.ram_statuses[index as usize];
+            self.bank_registers.set_ram_status(id, ram_status);
+            info!(target: "mapperupdates",
+                "Setting RamStatus register {id:?} to {ram_status:?} (index {index}).");
+        }
     }
 
     pub fn chr_memory(&self) -> &ChrMemory {

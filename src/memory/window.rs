@@ -6,6 +6,7 @@ use crate::memory::bank::bank_index::{BankRegisters, BankRegisterId};
 use crate::memory::ppu::ciram::CiramSide;
 
 use super::bank::bank_index::{BankConfiguration, BankLocation};
+use super::mapper::{RamStatus, RamStatusRegisterId};
 
 // A Window is a range within addressable memory.
 // If the specified bank cannot fill the window, adjacent banks will be included too.
@@ -109,6 +110,18 @@ impl Window {
             None
         }
     }
+    pub fn ram_status_info(self) -> RamStatusInfo {
+        match self.bank {
+            Bank::Ram(_, Some(register_id)) =>
+                RamStatusInfo::PossiblyPresent { register_id, status_on_absent: RamStatus::ReadOnly },
+            Bank::WorkRam(Some(register_id)) =>
+                RamStatusInfo::PossiblyPresent { register_id, status_on_absent: RamStatus::Disabled },
+            Bank::ExtendedRam(Some(register_id)) =>
+                RamStatusInfo::MapperCustom { register_id },
+            Bank::Empty | Bank::Rom(..) | Bank::MirrorOf(..) | Bank::Ram(..) | Bank::ExtendedRam(..) | Bank::WorkRam(..) =>
+                RamStatusInfo::Absent,
+        }
+    }
 
     pub fn offset(self, address: u16) -> Option<u16> {
         if self.start <= address && address <= self.end {
@@ -137,4 +150,10 @@ impl fmt::Display for ChrLocation {
             ChrLocation::Ciram(CiramSide::Right) => write!(f, "RNT"),
         }
     }
+}
+
+pub enum RamStatusInfo {
+    Absent,
+    PossiblyPresent { register_id: RamStatusRegisterId, status_on_absent: RamStatus },
+    MapperCustom { register_id: RamStatusRegisterId },
 }

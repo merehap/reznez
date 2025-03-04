@@ -3,7 +3,7 @@ use std::fmt;
 use log::{info, warn, error};
 use splitbits::{splitbits, splitbits_named};
 
-use crate::cartridge::header_db::{HeaderDb, Header};
+use crate::cartridge::header_db::HeaderDb;
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::unit::KIBIBYTE;
@@ -29,8 +29,10 @@ pub struct Cartridge {
 
     prg_rom: RawMemory,
     prg_ram_size: u32,
+    prg_nvram_size: u32,
     chr_rom: RawMemory,
     chr_ram_size: u32,
+    chr_nvram_size: u32,
 
     console_type: ConsoleType,
     title: String,
@@ -69,7 +71,9 @@ impl Cartridge {
         let mut mapper_number = u16::from((upper_mapper_number << 4) | lower_mapper_number);
         let mut submapper_number = 0;
         let mut prg_ram_size = 0;
+        let mut prg_nvram_size = 0;
         let mut chr_ram_size = 0;
+        let mut chr_nvram_size = 0;
         if ines2_present {
             mapper_number |= u16::from(rom[8] & 0b1111) << 8;
             submapper_number = rom[8] >> 4;
@@ -77,7 +81,7 @@ impl Cartridge {
             match (prg_sizes.e, prg_sizes.p) {
                 (0, 0) => { /* Do nothing. */ }
                 (0, 1..) => prg_ram_size = 64 << prg_sizes.p,
-                (1.., 0) => prg_ram_size = 64 << prg_sizes.e,
+                (1.., 0) => prg_nvram_size = 64 << prg_sizes.e,
                 (1.., 1..) => panic!("Both EEPROM and PRGRAM are present. Not sure what to do."),
             }
 
@@ -85,7 +89,7 @@ impl Cartridge {
             match (chr_sizes.n, chr_sizes.p) {
                 (0, 0) => { /* Do nothing. */ }
                 (0, 1..) => chr_ram_size = 64 << chr_sizes.p,
-                (1.., 0) => chr_ram_size = 64 << chr_sizes.n,
+                (1.., 0) => chr_nvram_size = 64 << chr_sizes.n,
                 (1.., 1..) => panic!("Both CHR NVRAM and CHRRAM are present. Not sure what to do."),
             }
         }
@@ -148,29 +152,35 @@ impl Cartridge {
             trainer: None,
             prg_rom: prg_rom.to_raw_memory(),
             prg_ram_size,
+            prg_nvram_size,
             chr_rom: chr_rom.to_raw_memory(),
             chr_ram_size,
+            chr_nvram_size,
             console_type: ConsoleType::Nes,
             title,
         };
 
-        if let Some((mapper_number, submapper_number, data_hash, prg_hash)) = header_db.missing_submapper_number(rom, &prg_rom)
-                && mapper_number == cartridge.mapper_number {
-            info!("Using override submapper for this ROM. Data hash: {data_hash} , PRG hash: {prg_hash}");
-            cartridge.submapper_number = submapper_number;
-        } else if let Some(Header { prg_rom_size, prg_ram_size, chr_rom_size, chr_ram_size, mapper_number, submapper_number }) =
-                header_db.header_from_db(rom, &prg_rom, mapper_number, submapper_number) {
+        if let Some(header) = header_db.header_from_db(&cartridge, rom, &prg_rom, mapper_number, submapper_number) {
             if cartridge.mapper_number != mapper_number {
-                warn!("Mapper number in ROM ({}) does not match the one in the DB {mapper_number}.", cartridge.mapper_number);
+                warn!("Mapper number in ROM ({}) does not match the one in the DB {mapper_number}.",
+                    cartridge.mapper_number);
             }
 
-            assert_eq!(prg_rom.size(), prg_rom_size);
-            assert_eq!(chr_rom.size(), chr_rom_size);
-            cartridge.submapper_number = submapper_number;
-            cartridge.prg_ram_size = prg_ram_size;
+            assert_eq!(prg_rom.size(), header.prg_rom_size);
+            assert_eq!(chr_rom.size(), header.chr_rom_size);
+            cartridge.submapper_number = header.submapper_number;
+            cartridge.prg_ram_size = header.prg_ram_size;
+            cartridge.prg_nvram_size = header.prg_nvram_size;
             cartridge.chr_ram_size = chr_ram_size;
+            cartridge.chr_nvram_size = header.chr_nvram_size;
         } else {
             warn!("ROM not found in header database.");
+            if let Some((number, sub_number, data_hash, prg_hash)) =
+                    header_db.missing_submapper_number(rom, &prg_rom) && cartridge.mapper_number == number {
+
+                info!("Using override submapper for this ROM. Full hash: {data_hash} , PRG hash: {prg_hash}");
+                cartridge.submapper_number = sub_number;
+            }
         }
 
         Ok(cartridge)
@@ -212,8 +222,16 @@ impl Cartridge {
         self.prg_ram_size
     }
 
+    pub fn prg_nvram_size(&self) -> u32 {
+        self.prg_nvram_size
+    }
+
     pub fn chr_ram_size(&self) -> u32 {
         self.chr_ram_size
+    }
+
+    pub fn chr_nvram_size(&self) -> u32 {
+        self.chr_nvram_size
     }
 }
 
@@ -228,7 +246,11 @@ impl fmt::Display for Cartridge {
 
         writeln!(f, "Trainer present: {}", self.trainer.is_some())?;
         writeln!(f, "PRG ROM size: {}KiB", self.prg_rom.size() / KIBIBYTE)?;
+        writeln!(f, "PRG RAM size: {}KiB", self.prg_ram_size / KIBIBYTE)?;
+        writeln!(f, "PRG NVRAM size: {}KiB", self.prg_nvram_size / KIBIBYTE)?;
         writeln!(f, "CHR ROM size: {}KiB", self.chr_rom.size() / KIBIBYTE)?;
+        writeln!(f, "CHR RAM size: {}KiB", self.chr_ram_size / KIBIBYTE)?;
+        writeln!(f, "CHR NVRAM size: {}KiB", self.chr_nvram_size / KIBIBYTE)?;
         writeln!(f, "Console type: {:?}", self.console_type)?;
         writeln!(f, "Title: {:?}", self.title)?;
 
@@ -283,8 +305,10 @@ pub mod test_data {
             trainer: None,
             prg_rom: RawMemory::from_vec(prg_rom),
             prg_ram_size: 0,
+            prg_nvram_size: 0,
             chr_rom: RawMemory::new(CHR_ROM_CHUNK_LENGTH as u32),
             chr_ram_size: 0,
+            chr_nvram_size: 0,
             console_type: ConsoleType::Nes,
             title: "Test ROM".to_string(),
         }

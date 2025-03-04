@@ -20,7 +20,7 @@ pub fn lookup_mapper_with_params(cartridge: &Cartridge) -> (Box<dyn Mapper>, Map
         LookupResult::UnspecifiedSubmapper =>
             panic!("Mapper {number}, submapper {sub_number} has unspecified behavior. ROM: {cartridge_name}"),
         LookupResult::ReassignedSubmapper {correct_mapper, correct_submapper } =>
-            panic!("Mapper {number}, submapper {sub_number} has been reassigned to {correct_mapper}, {correct_submapper} ."),
+            panic!("Mapper {number}, submapper {sub_number} has been reassigned to {correct_mapper}, {correct_submapper} . ROM: {cartridge_name}"),
     };
 
     let mut mapper_params = mapper.layout().make_mapper_params(cartridge);
