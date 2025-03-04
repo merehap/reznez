@@ -22,7 +22,6 @@ pub struct Cartridge {
     submapper_number: u8,
     name_table_mirroring: NameTableMirroring,
     has_persistent_memory: bool,
-    ripper_name: String,
     ines2: Option<INes2>,
 
     trainer: Option<RawMemoryArray<512>>,
@@ -57,12 +56,6 @@ impl Cartridge {
         let (upper_mapper_number, ines2, play_choice_enabled, vs_unisystem_enabled) =
             splitbits_named!(rom[7], "uuuuiipv");
         let ines2_present = ines2 == 0b10;
-
-        let ripper_name: String = std::str::from_utf8(rom.slice(8..15).to_raw())
-            .map_err(|err| err.to_string())?
-            .chars()
-            .map(|c| if c.is_ascii_graphic() {c} else {'~'})
-            .collect();
 
         if trainer_enabled {
             return Err("Trainer isn't implemented yet.".to_string());
@@ -146,7 +139,6 @@ impl Cartridge {
             submapper_number,
             name_table_mirroring,
             has_persistent_memory,
-            ripper_name,
             ines2: None,
 
             trainer: None,
@@ -241,7 +233,6 @@ impl fmt::Display for Cartridge {
         writeln!(f, "Submapper: {}", self.submapper_number)?;
         writeln!(f, "Nametable mirroring: {}", self.name_table_mirroring)?;
         writeln!(f, "Persistent memory: {}", self.has_persistent_memory)?;
-        writeln!(f, "Ripper: {}", self.ripper_name)?;
         writeln!(f, "iNES2 present: {}", self.ines2.is_some())?;
 
         writeln!(f, "Trainer present: {}", self.trainer.is_some())?;
@@ -299,7 +290,6 @@ pub mod test_data {
             submapper_number: 0,
             name_table_mirroring: NameTableMirroring::HORIZONTAL,
             has_persistent_memory: false,
-            ripper_name: "Test Ripper".to_string(),
             ines2: None,
 
             trainer: None,
