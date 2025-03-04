@@ -1,4 +1,5 @@
 use crate::memory::mapper::*;
+use crate::memory::mappers::mmc1::board::Board;
 use crate::memory::mappers::mmc1::shift_register::{ShiftRegister, ShiftStatus};
 
 const LAYOUT: Layout = Layout::builder()
@@ -47,6 +48,7 @@ const PRG_WINDOWS_FIXED_LAST: &[Window] = &[
 
 // SxROM (MMC1, MMC1B)
 pub struct Mapper001_0 {
+    _board: Board,
     shift_register: ShiftRegister,
 }
 
@@ -88,31 +90,9 @@ impl Mapper for Mapper001_0 {
 
 impl Mapper001_0 {
     pub fn new(cartridge: &Cartridge) -> Self {
-        let prg_rom_size = cartridge.prg_rom_size() / KIBIBYTE;
-        let prg_ram_size = cartridge.prg_ram_size() / KIBIBYTE;
-        let chr_ram_size = cartridge.chr_ram_size() / KIBIBYTE;
-
-        let board = match (prg_rom_size, prg_ram_size, chr_ram_size) {
-            (128,  8, 8) => Board::Snrom,
-            (256,  8, 8) => Board::Snrom,
-            (  _, 16, _) => Board::Sorom,
-            (  _, 32, _) => Board::Sxrom,
-            _ => Board::Standard,
-        };
-
-        assert_eq!(board, Board::Standard, "MMC1 {board:?} is not yet supported.");
-
-        Self { shift_register: ShiftRegister::default() }
+        Self {
+            _board: Board::from_cartridge(cartridge),
+            shift_register: ShiftRegister::default(),
+        }
     }
-}
-
-#[derive(PartialEq, Eq, Debug)]
-enum Board {
-    Standard,
-    // PRG ROM <= 256k, CHR RAM = 8k, PRG RAM = 8k
-    Snrom,
-    // PRG RAM = 16k
-    Sorom,
-    // PRG RAM = 32k
-    Sxrom
 }

@@ -218,6 +218,10 @@ impl Cartridge {
         self.prg_nvram_size
     }
 
+    pub fn chr_rom_size(&self) -> u32 {
+        self.chr_rom.size()
+    }
+
     pub fn chr_ram_size(&self) -> u32 {
         self.chr_ram_size
     }
