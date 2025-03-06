@@ -40,6 +40,7 @@ impl Board {
     pub fn from_cartridge(cartridge: &Cartridge) -> Self {
         let prg_rom_size = cartridge.prg_rom_size() / KIBIBYTE;
         let prg_ram_size = cartridge.prg_ram_size() / KIBIBYTE;
+        let prg_nvram_size = cartridge.prg_nvram_size() / KIBIBYTE;
         let chr_rom_size = cartridge.chr_rom_size() / KIBIBYTE;
         let mut chr_ram_size = cartridge.chr_ram_size() / KIBIBYTE;
         // FIXME: Hack for ROMs that don't specify CHR sizes.
@@ -48,30 +49,30 @@ impl Board {
         }
 
         use Board::*;
-        let board = match (prg_rom_size, prg_ram_size, chr_rom_size, chr_ram_size) {
-            (64             ,  8, 16 | 32 | 64, 0) => SAROM,
-            (64             ,  0, 16 | 32 | 64, 0) => SBROM,
-            (64             ,  0,          128, 0) => SCROM_SL1ROM,
-            (32             ,  0, 16 | 32 | 64, 0) => SEROM,
-            (128            ,  0, 16 | 32 | 64, 0) => SFROM128,
-            (256            ,  0, 16 | 32 | 64, 0) => SFROM256,
-            (128            ,  0,            8, 0) => SGROM,
-            (128 | 256      ,  0,            0, 8) => SGROM,
-            (256            ,  0,            8, 0) => SGROM_SMROM,
-            (32             ,  0,          128, 0) => SHROM,
-            (32             ,  8, 16 | 32 | 64, 0) => SIROM,
-            (128 | 256      ,  8, 16 | 32 | 64, 0) => SJROM,
-            (128 | 256      ,  8,          128, 0) => SKROM,
-            (128 | 256      ,  0,          128, 0) => SLROM,
-            (128 | 256      ,  8,            8, 0) => SNROM,
-            (128 | 256      ,  8,            0, 8) => SNROM,
-            (128 | 256      , 16,            8, 0) => SOROM,
-            (128 | 256      , 16,            0, 8) => SOROM,
-            (      512      ,  8,            8, 0) => SUROM,
-            (      512      ,  8,            0, 8) => SUROM,
-            (128 | 256 | 512, 32,            8, 0) => SXROM,
-            (128 | 256 | 512, 32,            0, 8) => SXROM,
-            (128 | 256      , 16, 16 | 32 | 64, 0) => SZROM,
+        let board = match (prg_rom_size, prg_ram_size, prg_nvram_size, chr_rom_size, chr_ram_size) {
+            (64             ,  8, 0, 16 | 32 | 64, 0) => SAROM,
+            (64             ,  0, 0, 16 | 32 | 64, 0) => SBROM,
+            (64             ,  0, 0,          128, 0) => SCROM_SL1ROM,
+            (32             ,  0, 0, 16 | 32 | 64, 0) => SEROM,
+            (128            ,  0, 0, 16 | 32 | 64, 0) => SFROM128,
+            (256            ,  0, 0, 16 | 32 | 64, 0) => SFROM256,
+            (128            ,  0, 0,            8, 0) => SGROM,
+            (128 | 256      ,  0, 0,            0, 8) => SGROM,
+            (256            ,  0, 0,            8, 0) => SGROM_SMROM,
+            (32             ,  0, 0,          128, 0) => SHROM,
+            (32             ,  8, 0, 16 | 32 | 64, 0) => SIROM,
+            (128 | 256      ,  8, 0, 16 | 32 | 64, 0) => SJROM,
+            (128 | 256      ,  8, 0,          128, 0) => SKROM,
+            (128 | 256      ,  0, 0,          128, 0) => SLROM,
+            (128 | 256      ,  8, 0,            8, 0) => SNROM,
+            (128 | 256      ,  8, 0,            0, 8) => SNROM,
+            (128 | 256      , 16, 0,            8, 0) => SOROM,
+            (128 | 256      , 16, 0,            0, 8) => SOROM,
+            (      512      ,  8, 0,            8, 0) => SUROM,
+            (      512      ,  8, 0,            0, 8) => SUROM,
+            (128 | 256 | 512, 32, 0,            8, 0) => SXROM,
+            (128 | 256 | 512, 32, 0,            0, 8) => SXROM,
+            (128 | 256      ,  8, 8, 16 | 32 | 64, 0) => SZROM,
             _ => {
                 warn!("Unknown MMC1 board: ({prg_rom_size}KiB, {prg_ram_size}KiB, {chr_rom_size}KiB, {chr_ram_size}KiB)");
                 Unknown
