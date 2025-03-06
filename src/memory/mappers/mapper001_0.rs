@@ -2,33 +2,41 @@ use crate::memory::mapper::*;
 use crate::memory::mappers::mmc1::board::Board;
 use crate::memory::mappers::mmc1::shift_register::{ShiftRegister, ShiftStatus};
 
-const LAYOUT: Layout = Layout::builder()
+const BIG_CHR_WINDOW: &[Window] = &[
+    Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.switchable(C0)),
+];
+const SMALL_CHR_WINDOWS: &[Window] = &[
+    Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::RAM.switchable(C0)),
+    Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::RAM.switchable(C1)),
+];
+
+const INITIAL_NAME_TABLE_MIRRORING: NameTableMirroring = NameTableMirroring::ONE_SCREEN_LEFT_BANK;
+
+const NAME_TABLE_MIRRORINGS: &[NameTableMirroring] = &[
+    NameTableMirroring::ONE_SCREEN_LEFT_BANK,
+    NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
+    NameTableMirroring::VERTICAL,
+    NameTableMirroring::HORIZONTAL,
+];
+
+const RAM_STATUSES: &[RamStatus] = &[
+    RamStatus::ReadWrite,
+    RamStatus::Disabled,
+];
+
+const WORK_RAM_LAYOUT: Layout = Layout::builder()
     .prg_max_size(256 * KIBIBYTE)
     .prg_layout_index(3)
     .prg_layout(PRG_WINDOWS_ONE_BIG)
     .prg_layout(PRG_WINDOWS_ONE_BIG)
     .prg_layout(PRG_WINDOWS_FIXED_FIRST)
     .prg_layout(PRG_WINDOWS_FIXED_LAST)
-    // TODO: Not all boards support CHR RAM.
     .chr_max_size(128 * KIBIBYTE)
-    .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.switchable(C0)),
-    ])
-    .chr_layout(&[
-        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::RAM.switchable(C0)),
-        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::RAM.switchable(C1)),
-    ])
-    .override_initial_name_table_mirroring(NameTableMirroring::ONE_SCREEN_RIGHT_BANK)
-    .name_table_mirrorings(&[
-        NameTableMirroring::ONE_SCREEN_LEFT_BANK,
-        NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
-        NameTableMirroring::VERTICAL,
-        NameTableMirroring::HORIZONTAL,
-    ])
-    .ram_statuses(&[
-        RamStatus::ReadWrite,
-        RamStatus::Disabled,
-    ])
+    .chr_layout(BIG_CHR_WINDOW)
+    .chr_layout(SMALL_CHR_WINDOWS)
+    .override_initial_name_table_mirroring(INITIAL_NAME_TABLE_MIRRORING)
+    .name_table_mirrorings(NAME_TABLE_MIRRORINGS)
+    .ram_statuses(RAM_STATUSES)
     .build();
 
 const PRG_WINDOWS_ONE_BIG: &[Window] = &[
@@ -46,8 +54,39 @@ const PRG_WINDOWS_FIXED_LAST: &[Window] = &[
     Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
 ];
 
+const BANKED_PRG_RAM_LAYOUT: Layout = Layout::builder()
+    .prg_max_size(256 * KIBIBYTE)
+    .prg_layout_index(3)
+    .prg_layout(BANKED_RAM_PRG_WINDOWS_ONE_BIG)
+    .prg_layout(BANKED_RAM_PRG_WINDOWS_ONE_BIG)
+    .prg_layout(BANKED_RAM_PRG_WINDOWS_FIXED_FIRST)
+    .prg_layout(BANKED_RAM_PRG_WINDOWS_FIXED_LAST)
+    .chr_max_size(128 * KIBIBYTE)
+    .chr_layout(BIG_CHR_WINDOW)
+    .chr_layout(SMALL_CHR_WINDOWS)
+    .override_initial_name_table_mirroring(INITIAL_NAME_TABLE_MIRRORING)
+    .name_table_mirrorings(NAME_TABLE_MIRRORINGS)
+    .ram_statuses(RAM_STATUSES)
+    .build();
+
+const BANKED_RAM_PRG_WINDOWS_ONE_BIG: &[Window] = &[
+    Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P1).status_register(S0)),
+    Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P0)),
+];
+const BANKED_RAM_PRG_WINDOWS_FIXED_FIRST: &[Window] = &[
+    Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P1).status_register(S0)),
+    Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(0)),
+    Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P0)),
+];
+const BANKED_RAM_PRG_WINDOWS_FIXED_LAST: &[Window] = &[
+    Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P1).status_register(S0)),
+    Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P0)),
+    Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+];
+
 // SxROM (MMC1, MMC1B)
 pub struct Mapper001_0 {
+    layout: Layout,
     _board: Board,
     shift_register: ShiftRegister,
 }
@@ -84,13 +123,20 @@ impl Mapper for Mapper001_0 {
     }
 
     fn layout(&self) -> Layout {
-        LAYOUT
+        self.layout.clone()
     }
 }
 
 impl Mapper001_0 {
     pub fn new(cartridge: &Cartridge) -> Self {
+        let layout = if cartridge.prg_ram_size() >= 16 * KIBIBYTE {
+            BANKED_PRG_RAM_LAYOUT
+        } else {
+            WORK_RAM_LAYOUT
+        };
+
         Self {
+            layout,
             _board: Board::from_cartridge(cartridge),
             shift_register: ShiftRegister::default(),
         }
