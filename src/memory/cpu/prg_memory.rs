@@ -1,3 +1,5 @@
+use log::warn;
+
 use crate::memory::bank::bank::Bank;
 use crate::memory::bank::bank_index::{BankConfiguration, BankRegisters, RamStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
@@ -10,9 +12,10 @@ use crate::util::unit::KIBIBYTE;
 pub struct PrgMemory {
     layouts: Vec<PrgLayout>,
     layout_index: u8,
-    bank_configuration: BankConfiguration,
-    raw_memory: RawMemory,
-    work_ram_sections: Vec<WorkRam>,
+    prg_rom_bank_configuration: BankConfiguration,
+    work_ram_bank_configuration: Option<BankConfiguration>,
+    prg_rom: RawMemory,
+    work_ram: RawMemory,
     extended_ram: RawMemoryArray<KIBIBYTE>,
 }
 
@@ -21,7 +24,8 @@ impl PrgMemory {
         layouts: Vec<PrgLayout>,
         layout_index: u8,
         bank_size_override: Option<u16>,
-        raw_memory: RawMemory,
+        prg_rom: RawMemory,
+        work_ram_size: u32,
     ) -> PrgMemory {
 
         let mut bank_size = bank_size_override;
@@ -39,39 +43,46 @@ impl PrgMemory {
             }
         }
 
-        let bank_size = bank_size.expect("at least one ROM or RAM window");
+        let prg_rom_bank_size = bank_size.expect("at least one ROM or RAM window");
 
-        let bank_count;
-        if raw_memory.size() % u32::from(bank_size) == 0 {
-            bank_count = (raw_memory.size() / u32::from(bank_size))
+        let prg_rom_bank_count;
+        if prg_rom.size() % u32::from(prg_rom_bank_size) == 0 {
+            prg_rom_bank_count = (prg_rom.size() / u32::from(prg_rom_bank_size))
                 .try_into()
                 .expect("Way too many banks.");
-        } else if !raw_memory.is_empty() && u32::from(bank_size) % raw_memory.size() == 0 {
-            bank_count = 1;
+        } else if !prg_rom.is_empty() && u32::from(prg_rom_bank_size) % prg_rom.size() == 0 {
+            prg_rom_bank_count = 1;
         } else {
-            panic!("Bad PRG length: {} . Bank size: {} .", raw_memory.size(), bank_size);
+            panic!("Bad PRG length: {} . Bank size: {} .", prg_rom.size(), prg_rom_bank_size);
         }
 
-        let bank_configuration = BankConfiguration::new(bank_size, bank_count, true);
-        let mut prg_memory = PrgMemory {
+        let mut work_ram_bank_configuration = None;
+        let work_ram_window = layouts[layout_index as usize].windows().iter()
+            .find(|window| window.bank().is_work_ram());
+        if let Some(work_ram_window) = work_ram_window && work_ram_size > 0 {
+            let work_ram_page_size = work_ram_window.size();
+            let work_ram_bank_count: u16 = (work_ram_size / u32::from(work_ram_page_size)).try_into().unwrap();
+            work_ram_bank_configuration = Some(BankConfiguration::new(work_ram_page_size, work_ram_bank_count, true));
+        } else if work_ram_size > 0 {
+            warn!("Work RAM specified in ROM file, but not in layout.");
+        }
+
+        let prg_rom_bank_configuration = BankConfiguration::new(prg_rom_bank_size, prg_rom_bank_count, true);
+        let prg_memory = PrgMemory {
             layouts,
             layout_index,
-            bank_configuration,
-            raw_memory,
-            work_ram_sections: Vec::new(),
+            prg_rom_bank_configuration,
+            work_ram_bank_configuration,
+            prg_rom,
+            work_ram: RawMemory::new(work_ram_size),
             extended_ram: RawMemoryArray::new(),
         };
 
-        prg_memory.work_ram_sections = prg_memory.current_layout().windows().iter()
-            .filter(|window| window.bank().is_work_ram())
-            .map(|window| WorkRam::new(window.size()))
-            .collect();
-
         let bank_count = prg_memory.bank_count();
-        if prg_memory.raw_memory.size() >= bank_count as u32 * bank_size as u32 {
+        if prg_memory.prg_rom.size() >= bank_count as u32 * prg_rom_bank_size as u32 {
             assert_eq!(
-                prg_memory.raw_memory.size(),
-                bank_count as u32 * bank_size as u32,
+                prg_memory.prg_rom.size(),
+                bank_count as u32 * prg_rom_bank_size as u32,
                 "Bad PRG data size.",
             );
         }
@@ -81,15 +92,15 @@ impl PrgMemory {
     }
 
     pub fn bank_configuration(&self) -> BankConfiguration {
-        self.bank_configuration
+        self.prg_rom_bank_configuration
     }
 
     pub fn bank_size(&self) -> u16 {
-        self.bank_configuration.bank_size()
+        self.prg_rom_bank_configuration.bank_size()
     }
 
     pub fn bank_count(&self) -> u16 {
-        self.bank_configuration.bank_count()
+        self.prg_rom_bank_configuration.bank_count()
     }
 
     pub fn last_bank_index(&self) -> u16 {
@@ -124,11 +135,10 @@ impl PrgMemory {
                     ReadOnlyZeros =>
                         ReadResult::full(0),
                     ReadOnly | ReadWrite =>
-                        ReadResult::full(self.raw_memory[index % self.raw_memory.size()]),
+                        ReadResult::full(self.prg_rom[index % self.prg_rom.size()]),
                 }
             }
-            PrgMemoryIndex::WorkRam { section_id, index, ram_status} => {
-                let work_ram = &self.work_ram_sections[section_id];
+            PrgMemoryIndex::WorkRam { index, ram_status} => {
                 use RamStatus::*;
                 match ram_status {
                     Disabled | WriteOnly =>
@@ -136,7 +146,7 @@ impl PrgMemory {
                     ReadOnlyZeros =>
                         ReadResult::full(0),
                     ReadOnly | ReadWrite =>
-                        ReadResult::full(work_ram.data[index as usize]),
+                        ReadResult::full(self.work_ram[index]),
                 }
             }
             PrgMemoryIndex::ExtendedRam { index, ram_status} => {
@@ -164,13 +174,12 @@ impl PrgMemory {
             PrgMemoryIndex::None => {}
             PrgMemoryIndex::MappedMemory { index, ram_status } => {
                 if ram_status.is_writable() {
-                    self.raw_memory[index] = value;
+                    self.prg_rom[index] = value;
                 }
             }
-            PrgMemoryIndex::WorkRam { section_id, index, ram_status} => {
-                let work_ram = &mut self.work_ram_sections[section_id];
+            PrgMemoryIndex::WorkRam { index, ram_status} => {
                 if ram_status.is_writable() {
-                    work_ram.data[index as usize] = value;
+                    self.work_ram[index] = value;
                 }
             }
             PrgMemoryIndex::ExtendedRam { index, ram_status} => {
@@ -222,34 +231,29 @@ impl PrgMemory {
                     Bank::MirrorOf(_) => panic!("A mirrored bank must mirror a non-mirrored bank."),
                     Bank::Rom(location) => {
                         let resolved_bank_index =
-                            window.resolved_bank_index(registers, location, self.bank_configuration);
-                        let index = resolved_bank_index as u32 * self.bank_configuration.bank_size() as u32 + bank_offset as u32;
+                            window.resolved_bank_index(registers, location, self.prg_rom_bank_configuration);
+                        let index = resolved_bank_index as u32 * self.prg_rom_bank_configuration.bank_size() as u32 + bank_offset as u32;
                         PrgMemoryIndex::MappedMemory { index, ram_status: RamStatus::ReadOnly }
                     }
                     Bank::Ram(location, status_register_id) => {
                         let resolved_bank_index =
-                            window.resolved_bank_index(registers, location, self.bank_configuration);
-                        let index = resolved_bank_index as u32 * self.bank_configuration.bank_size() as u32 + bank_offset as u32;
-
+                            window.resolved_bank_index(registers, location, self.prg_rom_bank_configuration);
+                        let index = resolved_bank_index as u32 * self.prg_rom_bank_configuration.bank_size() as u32 + bank_offset as u32;
                         let ram_status: RamStatus = status_register_id
                             .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
                         PrgMemoryIndex::MappedMemory { index, ram_status }
                     }
-                    Bank::WorkRam(status_register_id) => {
+                    Bank::WorkRam(location, status_register_id) => {
+                        let Some(work_ram_bank_configuration) = self.work_ram_bank_configuration else {
+                            return PrgMemoryIndex::None;
+                        };
+
+                        let resolved_bank_index =
+                            window.resolved_bank_index(registers, location, work_ram_bank_configuration);
+                        let index = resolved_bank_index as u32 * work_ram_bank_configuration.bank_size() as u32 + bank_offset as u32;
                         let ram_status: RamStatus = status_register_id
                             .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
-                        let mut index = u32::from(bank_offset);
-                        let mut result = None;
-                        for (section_id, work_ram_section) in self.work_ram_sections.iter().enumerate() {
-                            if index < work_ram_section.data.len() as u32 {
-                                result = Some(PrgMemoryIndex::WorkRam { section_id, index, ram_status });
-                                break;
-                            }
-
-                            index -= work_ram_section.data.len() as u32;
-                        }
-
-                        result.unwrap()
+                        PrgMemoryIndex::WorkRam { index, ram_status }
                     }
                     Bank::ExtendedRam(status_register_id) => {
                         let index = u32::from(bank_offset);
@@ -278,20 +282,7 @@ impl PrgMemory {
 
 enum PrgMemoryIndex {
     None,
-    WorkRam { section_id: usize, index: u32, ram_status: RamStatus },
+    WorkRam { index: u32, ram_status: RamStatus },
     ExtendedRam { index: u32, ram_status: RamStatus },
     MappedMemory { index: u32, ram_status: RamStatus },
-}
-
-#[derive(Clone)]
-struct WorkRam {
-    data: Vec<u8>,
-}
-
-impl WorkRam {
-    fn new(size: u16) -> WorkRam {
-        WorkRam {
-            data: vec![0; size as usize],
-        }
-    }
 }

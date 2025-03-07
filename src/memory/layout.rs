@@ -50,6 +50,8 @@ impl Layout {
             self.prg_layout_index,
             self.prg_bank_size_override,
             cartridge.prg_rom().clone(),
+            // TODO: Work RAM and Save RAM should be separate, but are combined here.
+            cartridge.prg_ram_size() + cartridge.prg_nvram_size(),
         );
         let chr_memory = ChrMemory::new(
             self.chr_layouts.as_iter().collect(),
