@@ -8,8 +8,8 @@ const LAYOUT: Layout = Layout::builder()
     .prg_max_size(512 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x6FFF, 4 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x7000, 0x71FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S0)),
-        Window::new(0x7200, 0x73FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S1)),
+        Window::new(0x7000, 0x71FF, KIBIBYTE / 2, Bank::WORK_RAM.fixed_index(0).status_register(S0)),
+        Window::new(0x7200, 0x73FF, KIBIBYTE / 2, Bank::WORK_RAM.fixed_index(1).status_register(S1)),
         Window::new(0x7400, 0x75FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
         Window::new(0x7600, 0x77FF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
         Window::new(0x7800, 0x79FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
@@ -24,8 +24,8 @@ const LAYOUT: Layout = Layout::builder()
     // Switchable 0xC000
     .prg_layout(&[
         Window::new(0x6000, 0x6FFF, 4 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x7000, 0x71FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S0)),
-        Window::new(0x7200, 0x73FF, KIBIBYTE / 2, Bank::WORK_RAM.status_register(S1)),
+        Window::new(0x7000, 0x71FF, KIBIBYTE / 2, Bank::WORK_RAM.fixed_index(0).status_register(S0)),
+        Window::new(0x7200, 0x73FF, KIBIBYTE / 2, Bank::WORK_RAM.fixed_index(1).status_register(S1)),
         Window::new(0x7400, 0x75FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),
         Window::new(0x7600, 0x77FF, KIBIBYTE / 2, Bank::MirrorOf(0x7200)),
         Window::new(0x7800, 0x79FF, KIBIBYTE / 2, Bank::MirrorOf(0x7000)),

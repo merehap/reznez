@@ -5,10 +5,10 @@ use crate::memory::ppu::ciram::{Ciram, CiramSide};
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(512 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x67FF, 2 * KIBIBYTE, Bank::WORK_RAM.status_register(S12)),
-        Window::new(0x6800, 0x6FFF, 2 * KIBIBYTE, Bank::WORK_RAM.status_register(S13)),
-        Window::new(0x7000, 0x77FF, 2 * KIBIBYTE, Bank::WORK_RAM.status_register(S14)),
-        Window::new(0x7800, 0x7FFF, 2 * KIBIBYTE, Bank::WORK_RAM.status_register(S15)),
+        Window::new(0x6000, 0x67FF, 2 * KIBIBYTE, Bank::WORK_RAM.fixed_index(0).status_register(S12)),
+        Window::new(0x6800, 0x6FFF, 2 * KIBIBYTE, Bank::WORK_RAM.fixed_index(1).status_register(S13)),
+        Window::new(0x7000, 0x77FF, 2 * KIBIBYTE, Bank::WORK_RAM.fixed_index(2).status_register(S14)),
+        Window::new(0x7800, 0x7FFF, 2 * KIBIBYTE, Bank::WORK_RAM.fixed_index(3).status_register(S15)),
         Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
         Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
         Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),

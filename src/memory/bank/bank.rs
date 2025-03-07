@@ -48,7 +48,7 @@ impl Bank {
     }
 
     pub fn bank_location(self, registers: &BankRegisters) -> Option<BankLocation> {
-        if let Bank::Rom(location) | Bank::Ram(location, _) = self {
+        if let Bank::Rom(location) | Bank::Ram(location, _) | Bank::WorkRam(location, _) = self {
             Some(location.bank_location(registers))
         } else {
             None
@@ -71,8 +71,10 @@ impl Bank {
         match self {
             Bank::Rom(_) => Bank::Rom(location),
             Bank::Ram(_, None) => Bank::Ram(location, None),
+            Bank::WorkRam(_, None) => Bank::WorkRam(location, None),
             Bank::Ram(_, Some(_)) => panic!("RAM location must be set before RAM status register."),
-            _ => panic!("Bank indexes can only be used for ROM or RAM."),
+            Bank::WorkRam(_, Some(_)) => panic!("RAM location must be set before RAM status register."),
+            _ => panic!("Bank indexes can only be used for ROM or RAM or Work RAM."),
         }
     }
 }
