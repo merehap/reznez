@@ -7,7 +7,7 @@ const LAYOUT: Layout = Layout::builder()
     .prg_max_size(8192 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
-        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::RAM.switchable(P0)),
+        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P0)),
     ])
     // Oversize definition. The actual cartridge only uses 64KiB.
     .chr_max_size(1024 * KIBIBYTE)
