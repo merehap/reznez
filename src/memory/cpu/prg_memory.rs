@@ -1,3 +1,5 @@
+use std::u16;
+
 use log::warn;
 
 use crate::memory::bank::bank::Bank;
@@ -57,10 +59,17 @@ impl PrgMemory {
         }
 
         let mut work_ram_bank_configuration = None;
-        let work_ram_window = layouts[layout_index as usize].windows().iter()
-            .find(|window| window.bank().is_work_ram());
-        if let Some(work_ram_window) = work_ram_window && work_ram_size > 0 {
-            let work_ram_page_size = work_ram_window.size();
+        let work_ram_windows: Vec<_> = layouts[layout_index as usize].windows().iter()
+            .filter(|window| window.bank().is_work_ram())
+            .collect();
+        if !work_ram_windows.is_empty() && work_ram_size > 0 {
+            let mut work_ram_page_size = u16::MAX;
+            for window in work_ram_windows {
+                if window.size() < work_ram_page_size {
+                    work_ram_page_size = window.size();
+                }
+            }
+
             let work_ram_bank_count: u16 = (work_ram_size / u32::from(work_ram_page_size)).try_into().unwrap();
             work_ram_bank_configuration = Some(BankConfiguration::new(work_ram_page_size, work_ram_bank_count, true));
         } else if work_ram_size > 0 {
