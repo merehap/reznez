@@ -10,31 +10,31 @@ const LAYOUT: Layout = Layout::builder()
     // Mode 0
     .prg_layout(&[
         Window::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
+        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::ROM.switchable(P0)),
         Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
     // Mode 1
     .prg_layout(&[
         Window::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
-        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::RAM.switchable(P2).status_register(S2)),
+        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::ROM.switchable(P0)),
+        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P2)),
         Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
     // Mode 2
     .prg_layout(&[
         Window::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
-        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::RAM.switchable(P2).status_register(S2)),
-        Window::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::RAM.switchable(P3).status_register(S3)),
+        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::ROM.switchable(P0)),
+        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P2)),
+        Window::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::ROM.switchable(P3)),
         Window::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
     // Mode 3
     .prg_layout(&[
         Window::new(0x5C00, 0x5FFF, 1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
-        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::RAM.switchable(P0)),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::RAM.switchable(P1).status_register(S1)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::RAM.switchable(P2).status_register(S2)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::RAM.switchable(P3).status_register(S3)),
+        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
+        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
+        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),
+        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P3)),
         Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
     .prg_layout_index(3)
