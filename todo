@@ -71,6 +71,10 @@ Holy Diver Batman
 	M28_P512K.nes
 	M118_P128K_C64K.nes 
 
+---------------NEEDED FRAME TESTS----------------------
+MMC1 variants:
+	SNROM (Kid Icarus)
+
 ---------------------GAMES------------------------------------
 MAPPER 0
 Cheetah Men II [b1] (Doesn't work on nestopia either. Wrong tiles are rendered during some intro screens, probably due to the game relying on certain RAM values being present at startup)

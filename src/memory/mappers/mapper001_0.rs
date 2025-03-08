@@ -70,25 +70,45 @@ impl Mapper for Mapper001_0 {
                     params.set_name_table_mirroring(fields.m);
                 }
                 0xA000..=0xBFFF => {
-                    if self.board == Board::SZROM {
-                        let banks = splitbits!(min=u8, finished_value, "...pcccc");
-                        params.set_bank_register(P1, banks.p);
-                        params.set_bank_register(C0, banks.c);
-                    } else {
-                        params.set_bank_register(C0, finished_value);
+                    match self.board {
+                        Board::SNROM => {
+                            let fields = splitbits!(min=u8, finished_value, "...s...c");
+                            params.set_ram_status(S0, fields.s);
+                            params.set_bank_register(C0, fields.c);
+                        }
+                        Board::SZROM => {
+                            let banks = splitbits!(min=u8, finished_value, "...pcccc");
+                            params.set_bank_register(P1, banks.p);
+                            params.set_bank_register(C0, banks.c);
+                        }
+                        _ => {
+                            params.set_bank_register(C0, finished_value);
+                        }
                     }
                 }
                 0xC000..=0xDFFF => {
-                    if self.board == Board::SZROM {
-                        let banks = splitbits!(min=u8, finished_value, "...pcccc");
-                        // Only change the PRG RAM bank if we're not in big PRG window mode.
-                        if params.prg_memory().layout_index() >= 2 {
-                            params.set_bank_register(P1, banks.p);
-                        }
+                    match self.board {
+                        Board::SNROM => {
+                            let fields = splitbits!(min=u8, finished_value, "...s...c");
+                            // Only change the ram status if we're not in big CHR window mode.
+                            if params.chr_memory().layout_index() == 1 {
+                                params.set_ram_status(S0, fields.s);
+                            }
 
-                        params.set_bank_register(C1, banks.c);
-                    } else {
-                        params.set_bank_register(C1, finished_value);
+                            params.set_bank_register(C1, fields.c);
+                        }
+                        Board::SZROM => {
+                            let banks = splitbits!(min=u8, finished_value, "...pcccc");
+                            // Only change the PRG RAM bank if we're not in big CHR window mode.
+                            if params.chr_memory().layout_index() == 1 {
+                                params.set_bank_register(P1, banks.p);
+                            }
+
+                            params.set_bank_register(C1, banks.c);
+                        }
+                        _ => {
+                            params.set_bank_register(C1, finished_value);
+                        }
                     }
                 }
                 0xE000..=0xFFFF => {
