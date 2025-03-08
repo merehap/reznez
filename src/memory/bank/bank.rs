@@ -47,6 +47,10 @@ impl Bank {
         matches!(self, Bank::WorkRam(..))
     }
 
+    pub fn is_prg_ram(self) -> bool {
+        matches!(self, Bank::WorkRam(..) | Bank::Ram(..))
+    }
+
     pub fn bank_location(self, registers: &BankRegisters) -> Option<BankLocation> {
         if let Bank::Rom(location) | Bank::Ram(location, _) | Bank::WorkRam(location, _) = self {
             Some(location.bank_location(registers))

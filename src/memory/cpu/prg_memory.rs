@@ -60,7 +60,7 @@ impl PrgMemory {
 
         let mut work_ram_bank_configuration = None;
         let work_ram_windows: Vec<_> = layouts[layout_index as usize].windows().iter()
-            .filter(|window| window.bank().is_work_ram())
+            .filter(|window| window.bank().is_prg_ram())
             .collect();
         if !work_ram_windows.is_empty() && work_ram_size > 0 {
             let mut work_ram_page_size = u16::MAX;
@@ -245,9 +245,11 @@ impl PrgMemory {
                         PrgMemoryIndex::MappedMemory { index, ram_status: RamStatus::ReadOnly }
                     }
                     Bank::Ram(location, status_register_id) => {
+                        let work_ram_bank_configuration = self.work_ram_bank_configuration
+                            .expect("PRG RAM window specified in layout, but not in cartridge.");
                         let resolved_bank_index =
-                            window.resolved_bank_index(registers, location, self.prg_rom_bank_configuration);
-                        let index = resolved_bank_index as u32 * self.prg_rom_bank_configuration.bank_size() as u32 + bank_offset as u32;
+                            window.resolved_bank_index(registers, location, work_ram_bank_configuration);
+                        let index = resolved_bank_index as u32 * work_ram_bank_configuration.bank_size() as u32 + bank_offset as u32;
                         let ram_status: RamStatus = status_register_id
                             .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
                         PrgMemoryIndex::MappedMemory { index, ram_status }
