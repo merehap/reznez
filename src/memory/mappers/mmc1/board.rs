@@ -79,7 +79,7 @@ impl Board {
             }
         };
 
-        if matches!(board, SEROM | SHROM | SNROM | SOROM | SUROM | SXROM ) {
+        if matches!(board, SEROM | SHROM | SNROM | SOROM | SUROM | SXROM) {
             todo!("MMC1 {board:?} is not yet supported.");
         }
 

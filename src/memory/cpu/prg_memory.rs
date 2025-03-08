@@ -116,6 +116,10 @@ impl PrgMemory {
         self.bank_count() - 1
     }
 
+    pub fn layout_index(&self) -> u8 {
+        self.layout_index
+    }
+
     pub fn extended_ram(&self) -> &RawMemoryArray<KIBIBYTE> {
         &self.extended_ram
     }

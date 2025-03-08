@@ -47,7 +47,7 @@ const PRG_WINDOWS_FIXED_LAST: &[Window] = &[
 
 // SxROM (MMC1, MMC1B)
 pub struct Mapper001_0 {
-    _board: Board,
+    board: Board,
     shift_register: ShiftRegister,
 }
 
@@ -69,10 +69,28 @@ impl Mapper for Mapper001_0 {
                     params.set_prg_layout(fields.p);
                     params.set_name_table_mirroring(fields.m);
                 }
-                // FIXME: Handle cases for special boards.
-                0xA000..=0xBFFF => params.set_bank_register(C0, finished_value),
-                // FIXME: Handle cases for special boards.
-                0xC000..=0xDFFF => params.set_bank_register(C1, finished_value),
+                0xA000..=0xBFFF => {
+                    if self.board == Board::SZROM {
+                        let banks = splitbits!(min=u8, finished_value, "...pcccc");
+                        params.set_bank_register(P1, banks.p);
+                        params.set_bank_register(C0, banks.c);
+                    } else {
+                        params.set_bank_register(C0, finished_value);
+                    }
+                }
+                0xC000..=0xDFFF => {
+                    if self.board == Board::SZROM {
+                        let banks = splitbits!(min=u8, finished_value, "...pcccc");
+                        // Only change the PRG RAM bank if we're not in big PRG window mode.
+                        if params.prg_memory().layout_index() >= 2 {
+                            params.set_bank_register(P1, banks.p);
+                        }
+
+                        params.set_bank_register(C1, banks.c);
+                    } else {
+                        params.set_bank_register(C1, finished_value);
+                    }
+                }
                 0xE000..=0xFFFF => {
                     let fields = splitbits!(min=u8, finished_value, "...rbbbb");
                     params.set_ram_status(S0, fields.r);
@@ -90,7 +108,7 @@ impl Mapper for Mapper001_0 {
 impl Mapper001_0 {
     pub fn new(cartridge: &Cartridge) -> Self {
         Self {
-            _board: Board::from_cartridge(cartridge),
+            board: Board::from_cartridge(cartridge),
             shift_register: ShiftRegister::default(),
         }
     }
