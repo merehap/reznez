@@ -7,6 +7,7 @@ pub struct Ppm {
 
 impl Ppm {
     const METADATA: &'static [u8] = b"P6\n256 240\n255\n";
+    const WINDOWS_METADATA: &'static [u8] = b"P6\r\n256 240\r\n255\r\n";
     const DATA_SIZE: usize = 3 * 256 * 240;
 
     pub fn new(data: Vec<u8>) -> Ppm {
@@ -14,14 +15,14 @@ impl Ppm {
     }
 
     pub fn from_bytes(raw: &[u8]) -> Result<Ppm, String> {
-        if !raw.starts_with(Ppm::METADATA) {
-            return Err(format!(
-                "Bad PPM metadata: {:?}",
-                &raw[0..Ppm::METADATA.len()],
-            ));
-        }
+        let data = if raw.starts_with(Ppm::METADATA) {
+            raw[Ppm::METADATA.len()..].to_vec()
+        } else if raw.starts_with(Ppm::WINDOWS_METADATA) {
+            raw[Ppm::WINDOWS_METADATA.len()..].to_vec()
+        } else {
+            return Err(format!("Bad PPM metadata: {:?}", &raw[0..Ppm::METADATA.len()]));
+        };
 
-        let data = raw[Ppm::METADATA.len()..].to_vec();
         if data.len() != Ppm::DATA_SIZE {
             return Err(format!(
                 "Expected PPM data length to be {} but was {}.",

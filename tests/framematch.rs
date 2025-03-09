@@ -222,7 +222,8 @@ struct FrameEntry {
 
 impl FrameEntry {
     fn new(full_path: PathBuf) -> Self {
-        let ppm = Ppm::from_bytes(&fs::read(&full_path).unwrap()).unwrap();
+        let ppm = Ppm::from_bytes(&fs::read(&full_path).unwrap())
+            .unwrap_or_else(|err| panic!("Failed to open PPM {}. {err}", full_path.display()));
         let ppm_hash = calculate_hash(&ppm);
 
         let file_stem = full_path.file_stem().unwrap();
