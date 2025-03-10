@@ -115,9 +115,13 @@ impl Cartridge {
         let mut override_chr_write_protection = false;
         if let Some(chr) = rom.maybe_slice(chr_rom_start..chr_rom_end) {
             chr_rom = if chr.is_empty() {
-                // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only layouts.
-                override_chr_write_protection = true;
-                RawMemory::new(8 * KIBIBYTE)
+                if chr_ram_size > 0 || chr_nvram_size > 0 {
+                    RawMemory::new(chr_ram_size + chr_nvram_size)
+                } else {
+                    // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only layouts.
+                    override_chr_write_protection = true;
+                    RawMemory::new(8 * KIBIBYTE)
+                }
             } else {
                 chr.to_raw_memory()
             };
