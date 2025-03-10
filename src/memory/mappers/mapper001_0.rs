@@ -31,17 +31,17 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 const PRG_WINDOWS_ONE_BIG: &[Window] = &[
-    Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.switchable(P1).status_register(S0)),
-    Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P0)),
+    Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.switchable(P0).status_register(S0)),
+    Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P1)),
 ];
 const PRG_WINDOWS_FIXED_FIRST: &[Window] = &[
-    Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.switchable(P1).status_register(S0)),
+    Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.switchable(P0).status_register(S0)),
     Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(0)),
-    Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P0)),
+    Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P1)),
 ];
 const PRG_WINDOWS_FIXED_LAST: &[Window] = &[
-    Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.switchable(P1).status_register(S0)),
-    Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P0)),
+    Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.switchable(P0).status_register(S0)),
+    Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P1)),
     Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
 ];
 
@@ -70,51 +70,17 @@ impl Mapper for Mapper001_0 {
                     params.set_name_table_mirroring(fields.m);
                 }
                 0xA000..=0xBFFF => {
-                    match self.board {
-                        Board::SNROM => {
-                            let fields = splitbits!(min=u8, finished_value, "...s...c");
-                            params.set_ram_status(S0, fields.s);
-                            params.set_bank_register(C0, fields.c);
-                        }
-                        Board::SZROM => {
-                            let banks = splitbits!(min=u8, finished_value, "...pcccc");
-                            params.set_bank_register(P1, banks.p);
-                            params.set_bank_register(C0, banks.c);
-                        }
-                        _ => {
-                            params.set_bank_register(C0, finished_value);
-                        }
-                    }
+                    self.set_chr_bank_and_board_specifics(params, C0, finished_value);
                 }
                 0xC000..=0xDFFF => {
-                    match self.board {
-                        Board::SNROM => {
-                            let fields = splitbits!(min=u8, finished_value, "...s...c");
-                            // Only change the ram status if we're not in big CHR window mode.
-                            if params.chr_memory().layout_index() == 1 {
-                                params.set_ram_status(S0, fields.s);
-                            }
-
-                            params.set_bank_register(C1, fields.c);
-                        }
-                        Board::SZROM => {
-                            let banks = splitbits!(min=u8, finished_value, "...pcccc");
-                            // Only change the PRG RAM bank if we're not in big CHR window mode.
-                            if params.chr_memory().layout_index() == 1 {
-                                params.set_bank_register(P1, banks.p);
-                            }
-
-                            params.set_bank_register(C1, banks.c);
-                        }
-                        _ => {
-                            params.set_bank_register(C1, finished_value);
-                        }
+                    if params.chr_memory().layout_index() == 1 {
+                        self.set_chr_bank_and_board_specifics(params, C1, finished_value);
                     }
                 }
                 0xE000..=0xFFFF => {
                     let fields = splitbits!(min=u8, finished_value, "...rbbbb");
                     params.set_ram_status(S0, fields.r);
-                    params.set_bank_register(P0, fields.b);
+                    params.set_bank_register(P1, fields.b);
                 }
             }
         }
@@ -130,6 +96,24 @@ impl Mapper001_0 {
         Self {
             board: Board::from_cartridge(cartridge),
             shift_register: ShiftRegister::default(),
+        }
+    }
+
+    fn set_chr_bank_and_board_specifics(&self, params: &mut MapperParams, chr_id: BankRegisterId, value: u8) {
+        match self.board {
+            Board::SNROM => {
+                let fields = splitbits!(min=u8, value, "...s...c");
+                params.set_ram_status(S0, fields.s);
+                params.set_bank_register(chr_id, fields.c);
+            }
+            Board::SZROM => {
+                let banks = splitbits!(min=u8, value, "...pcccc");
+                params.set_bank_register(P0, banks.p);
+                params.set_bank_register(chr_id, banks.c);
+            }
+            _ => {
+                params.set_bank_register(chr_id, value);
+            }
         }
     }
 }
