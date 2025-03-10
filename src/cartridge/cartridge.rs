@@ -22,7 +22,7 @@ pub struct Cartridge {
     submapper_number: u8,
     name_table_mirroring: NameTableMirroring,
     has_persistent_memory: bool,
-    ines2: Option<INes2>,
+    ines2_present: bool,
 
     trainer: Option<RawMemoryArray<512>>,
 
@@ -139,7 +139,7 @@ impl Cartridge {
             submapper_number,
             name_table_mirroring,
             has_persistent_memory,
-            ines2: None,
+            ines2_present,
 
             trainer: None,
             prg_rom: prg_rom.to_raw_memory(),
@@ -237,7 +237,7 @@ impl fmt::Display for Cartridge {
         writeln!(f, "Submapper: {}", self.submapper_number)?;
         writeln!(f, "Nametable mirroring: {}", self.name_table_mirroring)?;
         writeln!(f, "Persistent memory: {}", self.has_persistent_memory)?;
-        writeln!(f, "iNES2 present: {}", self.ines2.is_some())?;
+        writeln!(f, "iNES2 present: {}", self.ines2_present)?;
 
         writeln!(f, "Trainer present: {}", self.trainer.is_some())?;
         writeln!(f, "PRG ROM size: {}KiB", self.prg_rom.size() / KIBIBYTE)?;
@@ -252,9 +252,6 @@ impl fmt::Display for Cartridge {
         Ok(())
     }
 }
-
-#[derive(Clone, Debug)]
-struct INes2 {}
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
@@ -294,7 +291,7 @@ pub mod test_data {
             submapper_number: 0,
             name_table_mirroring: NameTableMirroring::HORIZONTAL,
             has_persistent_memory: false,
-            ines2: None,
+            ines2_present: false,
 
             trainer: None,
             prg_rom: RawMemory::from_vec(prg_rom),
