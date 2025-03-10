@@ -15,7 +15,7 @@ pub struct ChrMemory {
     layout_index: u8,
     bank_configuration: BankConfiguration,
     max_pattern_table_index: u16,
-    override_write_protection: bool,
+    access_override: Option<AccessOverride>,
     raw_memory: RawMemory,
 }
 
@@ -24,7 +24,7 @@ impl ChrMemory {
         layouts: Vec<ChrLayout>,
         layout_index: u8,
         align_large_chr_layouts: bool,
-        override_write_protection: bool,
+        access_override: Option<AccessOverride>,
         raw_memory: RawMemory,
     ) -> ChrMemory {
         let mut bank_size = None;
@@ -57,7 +57,7 @@ impl ChrMemory {
             layout_index,
             bank_configuration,
             max_pattern_table_index,
-            override_write_protection,
+            access_override,
             raw_memory,
         };
 
@@ -105,7 +105,7 @@ impl ChrMemory {
 
     pub fn write(&mut self, registers: &BankRegisters, ciram: &mut Ciram, address: PpuAddress, value: u8) {
         let (chr_index, writable) = self.address_to_chr_index(registers, address.to_u16());
-        if writable || self.override_write_protection {
+        if writable || self.access_override == Some(AccessOverride::ForceRam) {
             match chr_index {
                 ChrIndex::Normal(index) => self.raw_memory[index] = value,
                 ChrIndex::Ciram(side, index, ) => ciram.side_mut(side)[index as usize] = value,
@@ -216,4 +216,10 @@ impl ChrMemory {
 pub enum ChrIndex {
     Normal(u32),
     Ciram(CiramSide, u16),
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum AccessOverride {
+    ForceRom,
+    ForceRam,
 }

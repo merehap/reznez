@@ -4,6 +4,7 @@ use log::{info, warn, error};
 use splitbits::{splitbits, splitbits_named};
 
 use crate::cartridge::header_db::HeaderDb;
+use crate::memory::ppu::chr_memory::AccessOverride;
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::unit::KIBIBYTE;
@@ -25,8 +26,7 @@ pub struct Cartridge {
     ines2_present: bool,
 
     trainer: Option<RawMemoryArray<512>>,
-
-    override_chr_write_protection: bool,
+    access_override: Option<AccessOverride>,
 
     prg_rom: RawMemory,
     prg_ram_size: u32,
@@ -112,14 +112,14 @@ impl Cartridge {
         let chr_rom_start = prg_rom_end;
         let mut chr_rom_end = chr_rom_start + CHR_ROM_CHUNK_LENGTH as u32 * chr_rom_chunk_count;
         let chr_rom;
-        let mut override_chr_write_protection = false;
+        let mut access_override = None;
         if let Some(chr) = rom.maybe_slice(chr_rom_start..chr_rom_end) {
             chr_rom = if chr.is_empty() {
                 if chr_ram_size > 0 || chr_nvram_size > 0 {
                     RawMemory::new(chr_ram_size + chr_nvram_size)
                 } else {
                     // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only layouts.
-                    override_chr_write_protection = true;
+                    access_override = Some(AccessOverride::ForceRam);
                     RawMemory::new(8 * KIBIBYTE)
                 }
             } else {
@@ -156,7 +156,7 @@ impl Cartridge {
 
             trainer: None,
 
-            override_chr_write_protection,
+            access_override,
             prg_rom: prg_rom.to_raw_memory(),
             prg_ram_size,
             prg_nvram_size,
@@ -176,7 +176,6 @@ impl Cartridge {
             assert_eq!(prg_rom.size(), header.prg_rom_size);
             assert_eq!(cartridge.chr_rom.size(), header.chr_rom_size);
             cartridge.submapper_number = header.submapper_number;
-            cartridge.prg_ram_size = header.prg_ram_size;
             cartridge.prg_nvram_size = header.prg_nvram_size;
             cartridge.chr_ram_size = chr_ram_size;
             cartridge.chr_nvram_size = header.chr_nvram_size;
@@ -245,8 +244,8 @@ impl Cartridge {
         self.chr_nvram_size
     }
 
-    pub fn override_chr_write_protection(&self) -> bool {
-        self.override_chr_write_protection
+    pub fn access_override(&self) -> Option<AccessOverride> {
+        self.access_override
     }
 }
 
@@ -314,7 +313,7 @@ pub mod test_data {
 
             trainer: None,
 
-            override_chr_write_protection: false,
+            access_override: None,
 
             prg_rom: RawMemory::from_vec(prg_rom),
             prg_ram_size: 0,
