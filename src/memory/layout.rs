@@ -57,6 +57,7 @@ impl Layout {
             self.chr_layouts.as_iter().collect(),
             self.chr_layout_index,
             self.align_large_chr_windows,
+            cartridge.override_chr_write_protection(),
             cartridge.chr_rom().clone(),
         );
 

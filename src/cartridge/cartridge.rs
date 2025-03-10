@@ -26,6 +26,8 @@ pub struct Cartridge {
 
     trainer: Option<RawMemoryArray<512>>,
 
+    override_chr_write_protection: bool,
+
     prg_rom: RawMemory,
     prg_ram_size: u32,
     prg_nvram_size: u32,
@@ -110,13 +112,20 @@ impl Cartridge {
         let chr_rom_start = prg_rom_end;
         let mut chr_rom_end = chr_rom_start + CHR_ROM_CHUNK_LENGTH as u32 * chr_rom_chunk_count;
         let chr_rom;
+        let mut override_chr_write_protection = false;
         if let Some(chr) = rom.maybe_slice(chr_rom_start..chr_rom_end) {
-            chr_rom = chr;
+            chr_rom = if chr.is_empty() {
+                // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only layouts.
+                override_chr_write_protection = true;
+                RawMemory::new(8 * KIBIBYTE)
+            } else {
+                chr.to_raw_memory()
+            };
         } else {
             error!("ROM {} claimed to have {} CHR chunks, but the ROM was too short.",
                 name, chr_rom_chunk_count);
             chr_rom_end = rom.size();
-            chr_rom = rom.slice(chr_rom_start..rom.size());
+            chr_rom = rom.slice(chr_rom_start..rom.size()).to_raw_memory();
         }
 
         let title_start = chr_rom_end;
@@ -142,10 +151,12 @@ impl Cartridge {
             ines2_present,
 
             trainer: None,
+
+            override_chr_write_protection,
             prg_rom: prg_rom.to_raw_memory(),
             prg_ram_size,
             prg_nvram_size,
-            chr_rom: chr_rom.to_raw_memory(),
+            chr_rom,
             chr_ram_size,
             chr_nvram_size,
             console_type: ConsoleType::Nes,
@@ -159,7 +170,7 @@ impl Cartridge {
             }
 
             assert_eq!(prg_rom.size(), header.prg_rom_size);
-            assert_eq!(chr_rom.size(), header.chr_rom_size);
+            assert_eq!(cartridge.chr_rom.size(), header.chr_rom_size);
             cartridge.submapper_number = header.submapper_number;
             cartridge.prg_ram_size = header.prg_ram_size;
             cartridge.prg_nvram_size = header.prg_nvram_size;
@@ -229,6 +240,10 @@ impl Cartridge {
     pub fn chr_nvram_size(&self) -> u32 {
         self.chr_nvram_size
     }
+
+    pub fn override_chr_write_protection(&self) -> bool {
+        self.override_chr_write_protection
+    }
 }
 
 impl fmt::Display for Cartridge {
@@ -294,6 +309,9 @@ pub mod test_data {
             ines2_present: false,
 
             trainer: None,
+
+            override_chr_write_protection: false,
+
             prg_rom: RawMemory::from_vec(prg_rom),
             prg_ram_size: 0,
             prg_nvram_size: 0,

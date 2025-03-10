@@ -24,7 +24,8 @@ impl ChrMemory {
         layouts: Vec<ChrLayout>,
         layout_index: u8,
         align_large_chr_layouts: bool,
-        mut raw_memory: RawMemory,
+        override_write_protection: bool,
+        raw_memory: RawMemory,
     ) -> ChrMemory {
         let mut bank_size = None;
         for layout in &layouts {
@@ -45,13 +46,6 @@ impl ChrMemory {
         for layout in &layouts {
             assert_eq!(layout.max_window_index(), max_pattern_table_index,
                 "The max CHR window index must be the same between all layouts.");
-        }
-
-        // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only layouts.
-        let mut override_write_protection = false;
-        if raw_memory.is_empty() {
-            raw_memory = RawMemory::new(8 * KIBIBYTE);
-            override_write_protection = true;
         }
 
         let bank_count = (raw_memory.size() / u32::from(bank_size))
