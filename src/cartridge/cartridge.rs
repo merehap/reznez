@@ -123,6 +123,12 @@ impl Cartridge {
 
                 RawMemory::new(chr_ram_size + chr_nvram_size)
             } else {
+                if chr_ram_size > 0 || chr_nvram_size > 0 {
+                    // It's not yet clear what to do in this case, but this passes M1_P128K_C128K_W8K.
+                    warn!("Both CHR ROM and CHR RAM were specified. Disabling writability.");
+                    access_override = Some(AccessOverride::ForceRom)
+                }
+
                 chr.to_raw_memory()
             };
         } else {

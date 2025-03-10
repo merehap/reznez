@@ -104,6 +104,10 @@ impl ChrMemory {
     }
 
     pub fn write(&mut self, registers: &BankRegisters, ciram: &mut Ciram, address: PpuAddress, value: u8) {
+        if self.access_override == Some(AccessOverride::ForceRom) {
+            return;
+        }
+
         let (chr_index, writable) = self.address_to_chr_index(registers, address.to_u16());
         if writable || self.access_override == Some(AccessOverride::ForceRam) {
             match chr_index {
