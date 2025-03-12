@@ -16,7 +16,8 @@ pub struct PrgMemory {
     layout_index: u8,
     prg_rom_bank_configuration: BankConfiguration,
     work_ram_bank_configuration: Option<BankConfiguration>,
-    prg_rom: RawMemory,
+    prg_rom_outer_banks: Vec<RawMemory>,
+    prg_rom_outer_bank_index: usize,
     work_ram: RawMemory,
     extended_ram: RawMemoryArray<KIBIBYTE>,
 }
@@ -27,6 +28,7 @@ impl PrgMemory {
         layout_index: u8,
         bank_size_override: Option<u16>,
         prg_rom: RawMemory,
+        outer_bank_count: u8,
         work_ram_size: u32,
     ) -> PrgMemory {
 
@@ -47,15 +49,18 @@ impl PrgMemory {
 
         let prg_rom_bank_size = bank_size.expect("at least one ROM or RAM window");
 
+        let prg_rom_outer_banks = prg_rom.split_n(outer_bank_count);
+        let outer_bank_0 = &prg_rom_outer_banks[0];
+
         let prg_rom_bank_count;
-        if prg_rom.size() % u32::from(prg_rom_bank_size) == 0 {
-            prg_rom_bank_count = (prg_rom.size() / u32::from(prg_rom_bank_size))
+        if outer_bank_0.size() % u32::from(prg_rom_bank_size) == 0 {
+            prg_rom_bank_count = (outer_bank_0.size() / u32::from(prg_rom_bank_size))
                 .try_into()
                 .expect("Way too many banks.");
-        } else if !prg_rom.is_empty() && u32::from(prg_rom_bank_size) % prg_rom.size() == 0 {
+        } else if !outer_bank_0.is_empty() && u32::from(prg_rom_bank_size) % outer_bank_0.size() == 0 {
             prg_rom_bank_count = 1;
         } else {
-            panic!("Bad PRG length: {} . Bank size: {} .", prg_rom.size(), prg_rom_bank_size);
+            panic!("Bad PRG length: {} . Bank size: {} .", outer_bank_0.size(), prg_rom_bank_size);
         }
 
         let mut work_ram_bank_configuration = None;
@@ -82,15 +87,16 @@ impl PrgMemory {
             layout_index,
             prg_rom_bank_configuration,
             work_ram_bank_configuration,
-            prg_rom,
+            prg_rom_outer_banks,
+            prg_rom_outer_bank_index: 0,
             work_ram: RawMemory::new(work_ram_size),
             extended_ram: RawMemoryArray::new(),
         };
 
         let bank_count = prg_memory.bank_count();
-        if prg_memory.prg_rom.size() >= bank_count as u32 * prg_rom_bank_size as u32 {
+        if prg_memory.prg_rom_outer_banks[0].size() >= bank_count as u32 * prg_rom_bank_size as u32 {
             assert_eq!(
-                prg_memory.prg_rom.size(),
+                prg_memory.prg_rom_outer_banks[0].size(),
                 bank_count as u32 * prg_rom_bank_size as u32,
                 "Bad PRG data size.",
             );
@@ -148,7 +154,7 @@ impl PrgMemory {
                     ReadOnlyZeros =>
                         ReadResult::full(0),
                     ReadOnly | ReadWrite =>
-                        ReadResult::full(self.prg_rom[index % self.prg_rom.size()]),
+                        ReadResult::full(self.current_outer_prg_rom_bank()[index % self.current_outer_prg_rom_bank().size()]),
                 }
             }
             PrgMemoryIndex::WorkRam { index, ram_status} => {
@@ -187,7 +193,7 @@ impl PrgMemory {
             PrgMemoryIndex::None => {}
             PrgMemoryIndex::MappedMemory { index, ram_status } => {
                 if ram_status.is_writable() {
-                    self.prg_rom[index] = value;
+                    self.current_outer_prg_rom_bank_mut()[index] = value;
                 }
             }
             PrgMemoryIndex::WorkRam { index, ram_status} => {
@@ -292,6 +298,14 @@ impl PrgMemory {
         }
 
         panic!("No window exists at {start:?}");
+    }
+
+    fn current_outer_prg_rom_bank(&self) -> &RawMemory {
+        &self.prg_rom_outer_banks[self.prg_rom_outer_bank_index]
+    }
+
+    fn current_outer_prg_rom_bank_mut(&mut self) -> &mut RawMemory {
+        &mut self.prg_rom_outer_banks[self.prg_rom_outer_bank_index]
     }
 }
 

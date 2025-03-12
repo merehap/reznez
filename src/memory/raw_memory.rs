@@ -27,6 +27,14 @@ impl RawMemory {
             .map(RawMemorySlice)
     }
 
+    pub fn split_n(self, count: u8) -> Vec<RawMemory> {
+        let results: Vec<_> = self.0.chunks_exact(self.0.len() / usize::from(count))
+            .map(|chunk| RawMemory(chunk.to_vec()))
+            .collect();
+        assert_eq!(results.len(), usize::from(count));
+        results
+    }
+
     pub fn size(&self) -> u32 {
         self.0.len() as u32
     }

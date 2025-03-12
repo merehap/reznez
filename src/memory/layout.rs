@@ -19,6 +19,7 @@ pub struct Layout {
     prg_bank_size_override: Option<u16>,
     prg_layout_index: u8,
     prg_layouts: ConstVec<PrgLayout, 10>,
+    outer_prg_rom_bank_count: u8,
 
     chr_max_size: u32,
     align_large_chr_windows: bool,
@@ -50,6 +51,7 @@ impl Layout {
             self.prg_layout_index,
             self.prg_bank_size_override,
             cartridge.prg_rom().clone(),
+            self.outer_prg_rom_bank_count,
             // TODO: Work RAM and Save RAM should be separate, but are combined here.
             cartridge.prg_ram_size() + cartridge.prg_nvram_size(),
         );
@@ -119,6 +121,7 @@ pub struct LayoutBuilder {
     prg_bank_size_override: Option<u16>,
     prg_layouts: ConstVec<PrgLayout, 10>,
     prg_layout_index: u8,
+    prg_outer_bank_count: u8,
 
     chr_max_size: Option<u32>,
     chr_layouts: ConstVec<ChrLayout, 10>,
@@ -141,6 +144,7 @@ impl LayoutBuilder {
             prg_bank_size_override: None,
             prg_layout_index: 0,
             prg_layouts: ConstVec::new(),
+            prg_outer_bank_count: 1,
 
             chr_max_size: None,
             align_large_chr_windows: true,
@@ -248,6 +252,7 @@ impl LayoutBuilder {
             prg_bank_size_override: self.prg_bank_size_override,
             prg_layouts: self.prg_layouts,
             prg_layout_index: self.prg_layout_index,
+            outer_prg_rom_bank_count: self.prg_outer_bank_count,
 
             chr_max_size: self.chr_max_size.unwrap(),
             chr_layouts: self.chr_layouts,
