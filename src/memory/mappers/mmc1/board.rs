@@ -86,8 +86,8 @@ impl Board {
             }
         };
 
-        if matches!(board, SEROM | SHROM | SOROM) {
-            todo!("MMC1 {board:?} is not yet supported.");
+        if matches!(board, SEROM | SHROM) {
+            todo!("MMC1 {board:?} is not a submapper 0 board, it is submapper 5.");
         }
 
         board

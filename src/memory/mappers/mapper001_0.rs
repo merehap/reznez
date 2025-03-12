@@ -112,6 +112,12 @@ impl Mapper001_0 {
                 params.set_prg_rom_outer_bank_index(banks.p);
                 params.set_bank_register(chr_id, banks.c);
             }
+            Board::SOROM => {
+                let banks = splitbits!(min=u8, value, "...pr..c");
+                params.set_prg_rom_outer_bank_index(banks.p);
+                params.set_bank_register(P0, banks.r);
+                params.set_bank_register(chr_id, banks.c);
+            }
             Board::SXROM => {
                 let banks = splitbits!(min=u8, value, "...prr.c");
                 params.set_prg_rom_outer_bank_index(banks.p);

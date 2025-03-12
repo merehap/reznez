@@ -180,7 +180,10 @@ impl Cartridge {
             }
 
             assert_eq!(prg_rom.size(), header.prg_rom_size);
-            assert_eq!(cartridge.chr_rom.size(), header.chr_rom_size);
+            if cartridge.chr_rom.size() != header.chr_rom_size {
+                warn!("CHR ROM size in cartridge did not match size in header DB.");
+            }
+
             cartridge.submapper_number = header.submapper_number;
             cartridge.prg_nvram_size = header.prg_nvram_size;
             cartridge.chr_ram_size = chr_ram_size;
