@@ -267,7 +267,7 @@ impl PrgMemory {
                         let index = resolved_bank_index as u32 * work_ram_bank_configuration.bank_size() as u32 + bank_offset as u32;
                         let ram_status: RamStatus = status_register_id
                             .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
-                        PrgMemoryIndex::MappedMemory { index, ram_status }
+                        PrgMemoryIndex::WorkRam { index, ram_status }
                     }
                     Bank::WorkRam(location, status_register_id) => {
                         let Some(work_ram_bank_configuration) = self.work_ram_bank_configuration else {
