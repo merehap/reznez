@@ -1,4 +1,4 @@
-use std::num::{NonZeroU16, NonZeroU8};
+use std::num::NonZeroU16;
 
 use crate::memory::bank::bank::RamStatusRegisterId;
 use crate::memory::ppu::ciram::CiramSide;
@@ -42,8 +42,6 @@ pub struct BankConfiguration {
     bank_size: NonZeroU16,
     bank_count: NonZeroU16,
     align_large_layouts: bool,
-    outer_bank_index: u8,
-    outer_bank_count: NonZeroU8,
 }
 
 impl BankConfiguration {
@@ -52,8 +50,6 @@ impl BankConfiguration {
             bank_size: bank_size.try_into().expect("Bank size must not be 0"),
             bank_count: bank_count.try_into().expect("Bank count must not be 0"),
             align_large_layouts,
-            outer_bank_index: 0,
-            outer_bank_count: NonZeroU8::new(1).expect("Outer bank count must not be 0"),
         }
     }
 
@@ -63,14 +59,6 @@ impl BankConfiguration {
 
     pub fn bank_count(self) -> u16 {
         self.bank_count.get()
-    }
-
-    pub fn outer_bank_index(self) -> u8 {
-        self.outer_bank_index
-    }
-
-    pub fn outer_bank_count(self) -> u8 {
-        self.outer_bank_count.get()
     }
 }
 
