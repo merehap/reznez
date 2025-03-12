@@ -77,10 +77,8 @@ impl Board {
             (      512      ,  0,  8,            8, 0) => SUROM,
             (      512      ,  8,  0,            0, 8) => SUROM,
             (      512      ,  0,  8,            0, 8) => SUROM,
-            (128 | 256 | 512, 32,  0,            8, 0) => SXROM,
-            (128 | 256 | 512,  0, 32,            8, 0) => SXROM,
-            (128 | 256 | 512, 32,  0,            0, 8) => SXROM,
-            (128 | 256 | 512,  0, 32,            0, 8) => SXROM,
+            (128 | 256 | 512, 32,  0,            _, _) => SXROM,
+            (128 | 256 | 512,  0, 32,            _, _) => SXROM,
             (128 | 256      ,  8,  8, 16 | 32 | 64, 0) => SZROM,
             _ => {
                 warn!("Unknown MMC1 board: ({prg_rom_size}KiB, {prg_ram_size}KiB, {prg_nvram_size}KiB, {chr_rom_size}KiB, {chr_ram_size}KiB)");
@@ -88,7 +86,7 @@ impl Board {
             }
         };
 
-        if matches!(board, SEROM | SHROM | SOROM | SXROM) {
+        if matches!(board, SEROM | SHROM | SOROM) {
             todo!("MMC1 {board:?} is not yet supported.");
         }
 

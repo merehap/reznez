@@ -4,6 +4,7 @@ use crate::memory::mappers::mmc1::shift_register::{ShiftRegister, ShiftStatus};
 
 const LAYOUT: Layout = Layout::builder()
     .prg_max_size(512 * KIBIBYTE)
+    .prg_rom_max_outer_bank_size(256 * KIBIBYTE)
     .prg_layout_index(3)
     .prg_layout(PRG_WINDOWS_ONE_BIG)
     .prg_layout(PRG_WINDOWS_ONE_BIG)
@@ -80,7 +81,7 @@ impl Mapper for Mapper001_0 {
                 0xE000..=0xFFFF => {
                     let fields = splitbits!(min=u8, finished_value, "...spppp");
                     params.set_ram_status(S0, fields.s);
-                    params.set_bank_register_bits(P1, fields.p.into(), 0b0000_1111);
+                    params.set_bank_register(P1, fields.p);
                 }
             }
         }
@@ -107,13 +108,19 @@ impl Mapper001_0 {
                 params.set_bank_register(chr_id, fields.c);
             }
             Board::SUROM => {
-                let banks = splitbits!(min=u16, value, "p......c");
-                params.set_bank_register_bits(P1, banks.p << 4, 0b0001_0000);
+                let banks = splitbits!(min=u8, value, "...p...c");
+                params.set_prg_rom_outer_bank_index(banks.p);
+                params.set_bank_register(chr_id, banks.c);
+            }
+            Board::SXROM => {
+                let banks = splitbits!(min=u8, value, "...prr.c");
+                params.set_prg_rom_outer_bank_index(banks.p);
+                params.set_bank_register(P0, banks.r);
                 params.set_bank_register(chr_id, banks.c);
             }
             Board::SZROM => {
-                let banks = splitbits!(min=u8, value, "...pcccc");
-                params.set_bank_register(P0, banks.p);
+                let banks = splitbits!(min=u8, value, "...rcccc");
+                params.set_bank_register(P0, banks.r);
                 params.set_bank_register(chr_id, banks.c);
             }
             _ => {

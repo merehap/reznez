@@ -17,7 +17,7 @@ pub struct PrgMemory {
     prg_rom_bank_configuration: BankConfiguration,
     work_ram_bank_configuration: Option<BankConfiguration>,
     prg_rom_outer_banks: Vec<RawMemory>,
-    prg_rom_outer_bank_index: usize,
+    prg_rom_outer_bank_index: u8,
     work_ram: RawMemory,
     extended_ram: RawMemoryArray<KIBIBYTE>,
 }
@@ -222,6 +222,11 @@ impl PrgMemory {
         self.layout_index = index;
     }
 
+    pub fn set_prg_rom_outer_bank_index(&mut self, index: u8) {
+        assert!(index < self.prg_rom_outer_banks.len().try_into().unwrap());
+        self.prg_rom_outer_bank_index = index;
+    }
+
     fn address_to_prg_index(&self, registers: &BankRegisters, address: CpuAddress) -> PrgMemoryIndex {
         let address = address.to_raw();
         assert!(address >= 0x4020);
@@ -301,11 +306,11 @@ impl PrgMemory {
     }
 
     fn current_outer_prg_rom_bank(&self) -> &RawMemory {
-        &self.prg_rom_outer_banks[self.prg_rom_outer_bank_index]
+        &self.prg_rom_outer_banks[self.prg_rom_outer_bank_index as usize]
     }
 
     fn current_outer_prg_rom_bank_mut(&mut self) -> &mut RawMemory {
-        &mut self.prg_rom_outer_banks[self.prg_rom_outer_bank_index]
+        &mut self.prg_rom_outer_banks[self.prg_rom_outer_bank_index as usize]
     }
 }
 

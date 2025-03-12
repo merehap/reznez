@@ -1,4 +1,5 @@
 use std::collections::BTreeSet;
+use std::num::NonZeroU8;
 
 use crate::cartridge::cartridge::Cartridge;
 use crate::memory::bank::bank_index::{BankIndex, BankRegisters, MetaRegisterId, BankRegisterId};
@@ -19,7 +20,7 @@ pub struct Layout {
     prg_bank_size_override: Option<u16>,
     prg_layout_index: u8,
     prg_layouts: ConstVec<PrgLayout, 10>,
-    outer_prg_rom_bank_count: u8,
+    prg_rom_outer_bank_layout: OuterBankLayout,
 
     chr_max_size: u32,
     align_large_chr_windows: bool,
@@ -51,7 +52,7 @@ impl Layout {
             self.prg_layout_index,
             self.prg_bank_size_override,
             cartridge.prg_rom().clone(),
-            self.outer_prg_rom_bank_count,
+            self.prg_rom_outer_bank_layout.prg_rom_outer_bank_count(prg_size),
             // TODO: Work RAM and Save RAM should be separate, but are combined here.
             cartridge.prg_ram_size() + cartridge.prg_nvram_size(),
         );
@@ -121,7 +122,7 @@ pub struct LayoutBuilder {
     prg_bank_size_override: Option<u16>,
     prg_layouts: ConstVec<PrgLayout, 10>,
     prg_layout_index: u8,
-    prg_outer_bank_count: u8,
+    prg_outer_bank_layout: Option<OuterBankLayout>,
 
     chr_max_size: Option<u32>,
     chr_layouts: ConstVec<ChrLayout, 10>,
@@ -144,7 +145,7 @@ impl LayoutBuilder {
             prg_bank_size_override: None,
             prg_layout_index: 0,
             prg_layouts: ConstVec::new(),
-            prg_outer_bank_count: 1,
+            prg_outer_bank_layout: None,
 
             chr_max_size: None,
             align_large_chr_windows: true,
@@ -178,6 +179,18 @@ impl LayoutBuilder {
 
     pub const fn prg_layout(&mut self, windows: &'static [Window]) -> &mut LayoutBuilder {
         self.prg_layouts.push(PrgLayout::new(windows));
+        self
+    }
+
+    pub const fn prg_outer_bank_count(&mut self, count: u8) -> &mut LayoutBuilder {
+        assert!(matches!(self.prg_outer_bank_layout, None));
+        self.prg_outer_bank_layout = Some(OuterBankLayout::ExactCount(NonZeroU8::new(count).unwrap()));
+        self
+    }
+
+    pub const fn prg_rom_max_outer_bank_size(&mut self, max_size: u32) -> &mut LayoutBuilder {
+        assert!(matches!(self.prg_outer_bank_layout, None));
+        self.prg_outer_bank_layout = Some(OuterBankLayout::MaxSize(max_size));
         self
     }
 
@@ -247,12 +260,17 @@ impl LayoutBuilder {
         assert!(!self.prg_layouts.is_empty());
         assert!(!self.chr_layouts.is_empty());
 
+        let mut prg_rom_outer_bank_layout = OuterBankLayout::SINGLE_BANK;
+        if let Some(layout) = self.prg_outer_bank_layout {
+            prg_rom_outer_bank_layout = layout;
+        }
+
         Layout {
             prg_max_size: self.prg_max_size.unwrap(),
             prg_bank_size_override: self.prg_bank_size_override,
             prg_layouts: self.prg_layouts,
             prg_layout_index: self.prg_layout_index,
-            outer_prg_rom_bank_count: self.prg_outer_bank_count,
+            prg_rom_outer_bank_layout,
 
             chr_max_size: self.chr_max_size.unwrap(),
             chr_layouts: self.chr_layouts,
@@ -279,5 +297,29 @@ pub enum NameTableMirroringSource {
 impl NameTableMirroring {
     pub const fn to_source(self) -> NameTableMirroringSource {
         NameTableMirroringSource::Direct(self)
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+enum OuterBankLayout {
+    ExactCount(NonZeroU8),
+    MaxSize(u32)
+}
+
+impl OuterBankLayout {
+    const SINGLE_BANK: Self = Self::ExactCount(NonZeroU8::new(1).unwrap());
+
+    fn prg_rom_outer_bank_count(self, memory_size: u32) -> u8 {
+        match self {
+            Self::ExactCount(count) => count.get(),
+            Self::MaxSize(max_size) => {
+                if memory_size < max_size {
+                    1
+                } else {
+                    assert_eq!(memory_size % max_size, 0);
+                    (memory_size / max_size).try_into().unwrap()
+                }
+            }
+        }
     }
 }

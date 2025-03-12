@@ -498,6 +498,10 @@ impl MapperParams {
         self.prg_memory.set_layout(index);
     }
 
+    pub fn set_prg_rom_outer_bank_index(&mut self, index: u8) {
+        self.prg_memory.set_prg_rom_outer_bank_index(index);
+    }
+
     pub fn peek_prg(&self, cpu_address: u16) -> ReadResult {
         self.prg_memory.peek(&self.bank_registers, CpuAddress::new(cpu_address))
     }

@@ -61,13 +61,6 @@ full_palette
 full_nes_palette
 
 Holy Diver Batman
-	M1_P512K_S32K.nes
-	M1_P128K_C128K.nes
-	M1_P128K_C32K_S8K.nes
-	M1_P512K_S8K.nes
-	M1_P128K_C128K_S8K.nes
-	M1_P128K_C32K_W8K.nes
-	M1_P128K_C128K_W8K.nes
 	M28_P512K.nes
 	M118_P128K_C64K.nes 
 
