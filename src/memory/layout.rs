@@ -16,13 +16,13 @@ use crate::util::unit::KIBIBYTE;
 
 #[derive(Clone)]
 pub struct Layout {
-    prg_max_size: u32,
+    prg_rom_max_size: u32,
     prg_bank_size_override: Option<u16>,
     prg_layout_index: u8,
     prg_layouts: ConstVec<PrgLayout, 10>,
     prg_rom_outer_bank_layout: OuterBankLayout,
 
-    chr_max_size: u32,
+    chr_rom_max_size: u32,
     align_large_chr_windows: bool,
     chr_layout_index: u8,
     chr_layouts: ConstVec<ChrLayout, 10>,
@@ -42,19 +42,22 @@ impl Layout {
     }
 
     pub fn make_mapper_params(self, cartridge: &Cartridge) -> MapperParams {
-        let prg_size = cartridge.prg_rom().size();
-        assert!(prg_size <= self.prg_max_size, "PRG size of {}KiB is too large for this mapper.", prg_size / KIBIBYTE);
-        let chr_size = cartridge.chr_rom().size();
-        assert!(chr_size <= self.chr_max_size, "CHR size of {}KiB is too large for this mapper.", chr_size / KIBIBYTE);
+        let prg_rom_size = cartridge.prg_rom().size();
+        assert!(prg_rom_size <= self.prg_rom_max_size,
+            "PRG ROM size of {}KiB is too large for this mapper.", prg_rom_size / KIBIBYTE);
+        let chr_rom_size = cartridge.chr_rom().size();
+        assert!(chr_rom_size <= self.chr_rom_max_size,
+            "CHR ROM size of {}KiB is too large for this mapper.", chr_rom_size / KIBIBYTE);
 
         let prg_memory = PrgMemory::new(
             self.prg_layouts.as_iter().collect(),
             self.prg_layout_index,
             self.prg_bank_size_override,
             cartridge.prg_rom().clone(),
-            self.prg_rom_outer_bank_layout.prg_rom_outer_bank_count(prg_size),
+            self.prg_rom_outer_bank_layout.prg_rom_outer_bank_count(prg_rom_size),
             // TODO: Work RAM and Save RAM should be separate, but are combined here.
             cartridge.prg_ram_size() + cartridge.prg_nvram_size(),
+            cartridge.access_override(),
         );
         let chr_memory = ChrMemory::new(
             self.chr_layouts.as_iter().collect(),
@@ -62,6 +65,7 @@ impl Layout {
             self.align_large_chr_windows,
             cartridge.access_override(),
             cartridge.chr_rom().clone(),
+            cartridge.chr_ram(),
         );
 
         let name_table_mirroring = match self.name_table_mirroring_source {
@@ -266,13 +270,13 @@ impl LayoutBuilder {
         }
 
         Layout {
-            prg_max_size: self.prg_max_size.unwrap(),
+            prg_rom_max_size: self.prg_max_size.unwrap(),
             prg_bank_size_override: self.prg_bank_size_override,
             prg_layouts: self.prg_layouts,
             prg_layout_index: self.prg_layout_index,
             prg_rom_outer_bank_layout,
 
-            chr_max_size: self.chr_max_size.unwrap(),
+            chr_rom_max_size: self.chr_max_size.unwrap(),
             chr_layouts: self.chr_layouts,
             chr_layout_index: self.chr_layout_index,
             align_large_chr_windows: self.align_large_chr_windows,

@@ -364,7 +364,10 @@ pub trait Mapper {
         for window in prg_memory.current_layout().windows() {
             let bank_string = window.bank_string(
                 &params.bank_registers,
-                prg_memory.bank_configuration(),
+                Some(prg_memory.bank_configuration()),
+                // FIXME: This needs to be Work RAM configuration, but that is an Option.
+                prg_memory.work_ram_bank_configuration(),
+                None,
             );
             let window_size = window.size() / KIBIBYTE as u16;
 
@@ -396,7 +399,9 @@ pub trait Mapper {
         for window in chr_memory.current_layout().windows() {
             let bank_string = window.bank_string(
                 &params.bank_registers,
-                chr_memory.bank_configuration(),
+                chr_memory.rom_bank_configuration(),
+                chr_memory.ram_bank_configuration(),
+                chr_memory.access_override(),
             );
             let window_size = window.size() / KIBIBYTE as u16;
 

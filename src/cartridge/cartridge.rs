@@ -26,7 +26,9 @@ pub struct Cartridge {
     ines2_present: bool,
 
     trainer: Option<RawMemoryArray<512>>,
-    access_override: Option<AccessOverride>,
+
+    prg_access_override: Option<AccessOverride>,
+    chr_access_override: Option<AccessOverride>,
 
     prg_rom: RawMemory,
     prg_ram_size: u32,
@@ -109,33 +111,36 @@ impl Cartridge {
             .unwrap_or_else(
                 || panic!("ROM {name} was too short (claimed to have {prg_rom_chunk_count} PRG chunks)."));
 
+        let mut prg_access_override = None;
+        if prg_ram_size == 0 && prg_nvram_size == 0 {
+            prg_access_override = Some(AccessOverride::ForceRom);
+        }
+
         let chr_rom_start = prg_rom_end;
         let mut chr_rom_end = chr_rom_start + CHR_ROM_CHUNK_LENGTH as u32 * chr_rom_chunk_count;
-        let chr_rom;
-        let mut access_override = None;
-        if let Some(chr) = rom.maybe_slice(chr_rom_start..chr_rom_end) {
-            chr_rom = if chr.is_empty() {
-                if chr_ram_size == 0 && chr_nvram_size == 0 {
-                    // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only layouts.
-                    access_override = Some(AccessOverride::ForceRam);
-                    chr_ram_size = 8 * KIBIBYTE;
-                }
-
-                RawMemory::new(chr_ram_size + chr_nvram_size)
-            } else {
-                if chr_ram_size > 0 || chr_nvram_size > 0 {
-                    // It's not yet clear what to do in this case, but this passes M1_P128K_C128K_W8K.
-                    warn!("Both CHR ROM and CHR RAM were specified. Disabling writability.");
-                    access_override = Some(AccessOverride::ForceRom)
-                }
-
-                chr.to_raw_memory()
-            };
+        let mut chr_access_override = None;
+        let chr_rom = if let Some(rom) = rom.maybe_slice(chr_rom_start..chr_rom_end) {
+            rom.to_raw_memory()
         } else {
-            error!("ROM {} claimed to have {} CHR chunks, but the ROM was too short.",
+            error!("ROM {} claimed to have {} CHR ROM chunks, but the ROM was too short.",
                 name, chr_rom_chunk_count);
             chr_rom_end = rom.size();
-            chr_rom = rom.slice(chr_rom_start..rom.size()).to_raw_memory();
+            rom.slice(chr_rom_start..rom.size()).to_raw_memory()
+        };
+
+        if chr_rom.is_empty() {
+            if chr_ram_size == 0 && chr_nvram_size == 0 {
+                // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only layouts.
+                chr_access_override = Some(AccessOverride::ForceRam);
+                chr_ram_size = 8 * KIBIBYTE;
+            }
+        } else if chr_ram_size > 0 || chr_nvram_size > 0 {
+            // It's not yet clear what to do in this case, but this passes M1_P128K_C128K_W8K.
+            warn!("Both CHR ROM and CHR RAM were specified. Disabling writability.");
+            chr_access_override = Some(AccessOverride::ForceRom)
+        } else {
+            // ROM provided but no RAM.
+            chr_access_override = Some(AccessOverride::ForceRom)
         }
 
         let title_start = chr_rom_end;
@@ -162,7 +167,8 @@ impl Cartridge {
 
             trainer: None,
 
-            access_override,
+            prg_access_override,
+            chr_access_override,
             prg_rom: prg_rom.to_raw_memory(),
             prg_ram_size,
             prg_nvram_size,
@@ -225,6 +231,10 @@ impl Cartridge {
         &self.chr_rom
     }
 
+    pub fn chr_ram(&self) -> RawMemory {
+        RawMemory::new(self.chr_ram_size + self.chr_nvram_size)
+    }
+
     pub fn set_prg_rom_at(&mut self, index: u32, value: u8) {
         self.prg_rom[index] = value;
     }
@@ -254,7 +264,7 @@ impl Cartridge {
     }
 
     pub fn access_override(&self) -> Option<AccessOverride> {
-        self.access_override
+        self.chr_access_override
     }
 }
 
@@ -322,7 +332,8 @@ pub mod test_data {
 
             trainer: None,
 
-            access_override: None,
+            prg_access_override: None,
+            chr_access_override: None,
 
             prg_rom: RawMemory::from_vec(prg_rom),
             prg_ram_size: 0,

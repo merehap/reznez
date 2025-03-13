@@ -6,6 +6,7 @@ use crate::memory::bank::bank::Bank;
 use crate::memory::bank::bank_index::{BankConfiguration, BankRegisters, RamStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
+use crate::memory::ppu::chr_memory::AccessOverride;
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
 use crate::memory::read_result::ReadResult;
 use crate::memory::window::{RamStatusInfo, Window};
@@ -20,6 +21,7 @@ pub struct PrgMemory {
     prg_rom_outer_bank_index: u8,
     work_ram: RawMemory,
     extended_ram: RawMemoryArray<KIBIBYTE>,
+    access_override: Option<AccessOverride>,
 }
 
 impl PrgMemory {
@@ -30,6 +32,7 @@ impl PrgMemory {
         prg_rom: RawMemory,
         outer_bank_count: u8,
         work_ram_size: u32,
+        access_override: Option<AccessOverride>,
     ) -> PrgMemory {
 
         let mut bank_size = bank_size_override;
@@ -91,6 +94,7 @@ impl PrgMemory {
             prg_rom_outer_bank_index: 0,
             work_ram: RawMemory::new(work_ram_size),
             extended_ram: RawMemoryArray::new(),
+            access_override,
         };
 
         let bank_count = prg_memory.bank_count();
@@ -108,6 +112,10 @@ impl PrgMemory {
 
     pub fn bank_configuration(&self) -> BankConfiguration {
         self.prg_rom_bank_configuration
+    }
+
+    pub fn work_ram_bank_configuration(&self) -> Option<BankConfiguration> {
+        self.work_ram_bank_configuration
     }
 
     pub fn bank_size(&self) -> u16 {
@@ -132,6 +140,10 @@ impl PrgMemory {
 
     pub fn extended_ram_mut(&mut self) -> &mut RawMemoryArray<KIBIBYTE> {
         &mut self.extended_ram
+    }
+
+    pub fn access_override(&self) -> Option<AccessOverride> {
+        self.access_override
     }
 
     pub fn ram_status_infos(&self) -> Vec<RamStatusInfo> {

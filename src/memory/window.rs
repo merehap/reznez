@@ -7,6 +7,7 @@ use crate::memory::ppu::ciram::CiramSide;
 
 use super::bank::bank_index::{BankConfiguration, BankLocation};
 use super::mapper::{RamStatus, RamStatusRegisterId};
+use super::ppu::chr_memory::AccessOverride;
 
 // A Window is a range within addressable memory.
 // If the specified bank cannot fill the window, adjacent banks will be included too.
@@ -29,7 +30,9 @@ impl Window {
     pub fn bank_string(
         &self,
         registers: &BankRegisters,
-        bank_configuration: BankConfiguration,
+        rom_bank_configuration: Option<BankConfiguration>,
+        ram_bank_configuration: Option<BankConfiguration>,
+        access_override: Option<AccessOverride>,
     ) -> String {
         match self.bank {
             Bank::Empty => "E".into(),
@@ -37,7 +40,7 @@ impl Window {
             Bank::WorkRam(_, _) => "W".into(),
             Bank::ExtendedRam(_) => "X".into(),
             Bank::Rom(location) | Bank::Ram(location, _) =>
-                self.resolved_bank_location(registers, location, bank_configuration).to_string(),
+                self.resolved_bank_location(registers, location, rom_bank_configuration, ram_bank_configuration, access_override).to_string(),
             Bank::MirrorOf(_) => "M".into(),
         }
     }
@@ -61,7 +64,9 @@ impl Window {
         &self,
         registers: &BankRegisters,
         location: Location,
-        bank_configuration: BankConfiguration,
+        chr_rom_bank_configuration: Option<BankConfiguration>,
+        chr_ram_bank_configuration: Option<BankConfiguration>,
+        access_override: Option<AccessOverride>,
     ) -> ChrLocation {
         let bank_location: BankLocation = match location {
             Location::Fixed(bank_index) => BankLocation::Index(bank_index),
@@ -69,10 +74,25 @@ impl Window {
             Location::MetaSwitchable(meta_id) => registers.get_from_meta(meta_id),
         };
 
+        let is_ram = match access_override {
+            None => match self.bank {
+                Bank::Rom(..) => false,
+                Bank::Ram(..) => true,
+                _ => panic!("Unsupported bank type for CHR: {:?}", self.bank),
+            }
+            Some(AccessOverride::ForceRom) => false,
+            Some(AccessOverride::ForceRam) => true,
+        };
+
         match bank_location {
             BankLocation::Index(index) => {
-                let raw_bank_index = index.to_u16(bank_configuration, self.size());
-                ChrLocation::BankIndex(raw_bank_index)
+                if is_ram {
+                    let raw_bank_index = index.to_u16(chr_ram_bank_configuration.unwrap(), self.size());
+                    ChrLocation::RamBankIndex(raw_bank_index)
+                } else {
+                    let raw_bank_index = index.to_u16(chr_rom_bank_configuration.unwrap(), self.size());
+                    ChrLocation::RomBankIndex(raw_bank_index)
+                }
             }
             BankLocation::Ciram(ciram_side) => {
                 ChrLocation::Ciram(ciram_side)
@@ -139,14 +159,16 @@ impl Window {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum ChrLocation {
-    BankIndex(u16),
+    RomBankIndex(u16),
+    RamBankIndex(u16),
     Ciram(CiramSide),
 }
 
 impl fmt::Display for ChrLocation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ChrLocation::BankIndex(index) => write!(f, "{index}"),
+            ChrLocation::RomBankIndex(index) => write!(f, "{index}"),
+            ChrLocation::RamBankIndex(index) => write!(f, "W{index}"),
             ChrLocation::Ciram(CiramSide::Left) => write!(f, "LNT"),
             ChrLocation::Ciram(CiramSide::Right) => write!(f, "RNT"),
         }
