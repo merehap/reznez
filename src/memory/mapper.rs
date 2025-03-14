@@ -35,6 +35,9 @@ use crate::memory::ppu::ciram::Ciram;
 use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
 use crate::ppu::sprite::oam::Oam;
 
+use super::bank::bank::RomRamModeRegisterId;
+use super::bank::bank_index::RomRamMode;
+
 pub trait Mapper {
     // Should be const, but that's not yet allowed by Rust.
     fn layout(&self) -> Layout;
@@ -525,6 +528,10 @@ impl MapperParams {
             info!(target: "mapperupdates",
                 "Setting RamStatus register {id:?} to {ram_status:?} (index {index}).");
         }
+    }
+
+    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: RomRamMode) {
+        self.bank_registers.set_rom_ram_mode(id, rom_ram_mode);
     }
 
     pub fn chr_memory(&self) -> &ChrMemory {

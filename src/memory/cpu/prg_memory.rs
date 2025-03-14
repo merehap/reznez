@@ -3,7 +3,7 @@ use std::u16;
 use log::warn;
 
 use crate::memory::bank::bank::Bank;
-use crate::memory::bank::bank_index::{BankConfiguration, BankRegisters, RamStatus};
+use crate::memory::bank::bank_index::{BankConfiguration, BankRegisters, RamStatus, RomRamMode};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::ppu::chr_memory::AccessOverride;
@@ -280,6 +280,25 @@ impl PrgMemory {
                         let ram_status: RamStatus = status_register_id
                             .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
                         PrgMemoryIndex::WorkRam { index, ram_status }
+                    }
+                    Bank::RomRam(location, status_register_id, mode_register_id) => {
+                        match registers.rom_ram_mode(mode_register_id) {
+                            RomRamMode::Ram => {
+                                let work_ram_bank_configuration = self.work_ram_bank_configuration
+                                    .expect("PRG RAM window specified in layout, but not in cartridge.");
+                                let resolved_bank_index =
+                                    window.resolved_bank_index(registers, location, work_ram_bank_configuration);
+                                let index = resolved_bank_index as u32 * work_ram_bank_configuration.bank_size() as u32 + bank_offset as u32;
+                                let ram_status: RamStatus = registers.ram_status(status_register_id);
+                                PrgMemoryIndex::WorkRam { index, ram_status }
+                            }
+                            RomRamMode::Rom => {
+                                let resolved_bank_index =
+                                    window.resolved_bank_index(registers, location, self.prg_rom_bank_configuration);
+                                let index = resolved_bank_index as u32 * self.prg_rom_bank_configuration.bank_size() as u32 + bank_offset as u32;
+                                PrgMemoryIndex::MappedMemory { index, ram_status: RamStatus::ReadOnly }
+                            }
+                        }
                     }
                     Bank::WorkRam(location, status_register_id) => {
                         let Some(work_ram_bank_configuration) = self.work_ram_bank_configuration else {

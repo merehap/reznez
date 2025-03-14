@@ -3,6 +3,8 @@ use std::num::NonZeroU16;
 use crate::memory::bank::bank::RamStatusRegisterId;
 use crate::memory::ppu::ciram::CiramSide;
 
+use super::bank::RomRamModeRegisterId;
+
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct BankIndex(u16);
 
@@ -67,6 +69,7 @@ pub struct BankRegisters {
     registers: [BankLocation; 18],
     meta_registers: [BankRegisterId; 2],
     ram_statuses: [RamStatus; 15],
+    rom_ram_modes: [RomRamMode; 3],
 }
 
 impl BankRegisters {
@@ -76,6 +79,7 @@ impl BankRegisters {
             // Meta registers are only used for CHR currently.
             meta_registers: [BankRegisterId::C0, BankRegisterId::C0],
             ram_statuses: [RamStatus::ReadWrite; 15],
+            rom_ram_modes: [RomRamMode::Ram; 3],
         }
     }
 
@@ -119,6 +123,15 @@ impl BankRegisters {
     pub fn set_ram_status(&mut self, id: RamStatusRegisterId, status: RamStatus) {
         self.ram_statuses[id as usize] = status;
     }
+
+    pub fn rom_ram_mode(&self, id: RomRamModeRegisterId) -> RomRamMode {
+        self.rom_ram_modes[id as usize]
+    }
+
+    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: RomRamMode) {
+        self.rom_ram_modes[id as usize] = rom_ram_mode;
+    }
+
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -201,4 +214,10 @@ impl RamStatus {
     pub fn is_writable(self) -> bool {
         matches!(self, RamStatus::ReadWrite | RamStatus::WriteOnly)
     }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum RomRamMode {
+    Ram,
+    Rom,
 }

@@ -39,7 +39,7 @@ impl Window {
             // TODO: Add page number when there is more than one Work RAM page.
             Bank::WorkRam(_, _) => "W".into(),
             Bank::ExtendedRam(_) => "X".into(),
-            Bank::Rom(location) | Bank::Ram(location, _) =>
+            Bank::Rom(location) | Bank::Ram(location, _) | Bank::RomRam(location, _, _) =>
                 self.resolved_bank_location(registers, location, rom_bank_configuration, ram_bank_configuration, access_override).to_string(),
             Bank::MirrorOf(_) => "M".into(),
         }
@@ -118,7 +118,7 @@ impl Window {
 
     pub fn location(self) -> Result<Location, String> {
         match self.bank {
-            Bank::Rom(location) | Bank::Ram(location, _) | Bank::WorkRam(location, _) => Ok(location),
+            Bank::Rom(location) | Bank::Ram(location, _)  | Bank::RomRam(location, _, _) | Bank::WorkRam(location, _) => Ok(location),
             Bank::Empty | Bank::ExtendedRam(_) | Bank::MirrorOf(_) =>
                 Err(format!("Bank type {:?} does not have a bank location.", self.bank)),
         }
@@ -133,7 +133,7 @@ impl Window {
     }
     pub fn ram_status_info(self) -> RamStatusInfo {
         match self.bank {
-            Bank::Ram(_, Some(register_id)) =>
+            Bank::Ram(_, Some(register_id)) | Bank::RomRam(_, register_id, _) =>
                 RamStatusInfo::PossiblyPresent { register_id, status_on_absent: RamStatus::ReadOnly },
             Bank::WorkRam(_, Some(register_id)) =>
                 RamStatusInfo::PossiblyPresent { register_id, status_on_absent: RamStatus::Disabled },

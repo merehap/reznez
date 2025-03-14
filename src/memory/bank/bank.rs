@@ -1,6 +1,6 @@
 use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId, MetaRegisterId, RamStatus};
 
-use super::bank_index::BankLocation;
+use super::bank_index::{BankLocation, RomRamMode};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Bank {
@@ -9,6 +9,7 @@ pub enum Bank {
     ExtendedRam(Option<RamStatusRegisterId>),
     Rom(Location),
     Ram(Location, Option<RamStatusRegisterId>),
+    RomRam(Location, RamStatusRegisterId, RomRamModeRegisterId),
     MirrorOf(u16),
 }
 
@@ -18,6 +19,7 @@ impl Bank {
     pub const EXTENDED_RAM: Bank = Bank::ExtendedRam(None);
     pub const ROM: Bank = Bank::Rom(Location::Fixed(BankIndex::from_u8(0)));
     pub const RAM: Bank = Bank::Ram(Location::Fixed(BankIndex::from_u8(0)), None);
+    pub const ROM_RAM: Bank = Bank::RomRam(Location::Fixed(BankIndex::from_u8(0)), RamStatusRegisterId::S0, RomRamModeRegisterId::R0);
 
     pub const fn fixed_index(self, index: i16) -> Self {
         self.set_location(Location::Fixed(BankIndex::from_i16(index))) }
@@ -39,7 +41,15 @@ impl Bank {
             Bank::WorkRam(location, None) => Bank::WorkRam(location, Some(id)),
             Bank::ExtendedRam(None) => Bank::ExtendedRam(Some(id)),
             Bank::Ram(location, None) => Bank::Ram(location, Some(id)),
+            Bank::RomRam(location, _, rom_ram) => Bank::RomRam(location, id, rom_ram),
             _ => panic!("Only RAM and Work RAM support status registers."),
+        }
+    }
+
+    pub const fn rom_ram_register(self, id: RomRamModeRegisterId) -> Self {
+        match self {
+            Bank::RomRam(location, status, _) => Bank::RomRam(location, status, id),
+            _ => panic!("Only RomRam supports RomRam registers."),
         }
     }
 
@@ -66,6 +76,8 @@ impl Bank {
             Bank::MirrorOf(_) => todo!("Writability of MirrorOf"),
             // RAM with no status register is always writable.
             Bank::Ram(_, None) | Bank::WorkRam(_, None) | Bank::ExtendedRam(None) => true,
+            Bank::RomRam(_, status, rom_ram_mode) =>
+                registers.rom_ram_mode(rom_ram_mode) == RomRamMode::Ram && registers.ram_status(status) == RamStatus::ReadWrite,
             Bank::Ram(_, Some(status_register_id)) | Bank::WorkRam(_, Some(status_register_id)) | Bank::ExtendedRam(Some(status_register_id)) =>
                 registers.ram_status(status_register_id) == RamStatus::ReadWrite,
         }
@@ -75,6 +87,7 @@ impl Bank {
         match self {
             Bank::Rom(_) => Bank::Rom(location),
             Bank::Ram(_, None) => Bank::Ram(location, None),
+            Bank::RomRam(_, status, rom_ram_mode) => Bank::RomRam(location, status, rom_ram_mode),
             Bank::WorkRam(_, None) => Bank::WorkRam(location, None),
             Bank::Ram(_, Some(_)) => panic!("RAM location must be set before RAM status register."),
             Bank::WorkRam(_, Some(_)) => panic!("RAM location must be set before RAM status register."),
@@ -118,4 +131,11 @@ pub enum RamStatusRegisterId {
     S13,
     S14,
     S15,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum RomRamModeRegisterId {
+    R0,
+    R1,
+    R2,
 }

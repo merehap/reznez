@@ -1,3 +1,6 @@
+use crate::memory::bank::bank::RomRamModeRegisterId;
+use crate::memory::bank::bank::RomRamModeRegisterId::*;
+use crate::memory::bank::bank_index::RomRamMode;
 use crate::memory::mapper::*;
 use crate::memory::mappers::mmc5::frame_state::FrameState;
 use crate::ppu::name_table::name_table;
@@ -17,24 +20,24 @@ const LAYOUT: Layout = Layout::builder()
     .prg_layout(&[
         Window::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
-        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P2)),
+        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM_RAM.switchable(P2).status_register(S1).rom_ram_register(R1)),
         Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
     // Mode 2
     .prg_layout(&[
         Window::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
-        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P2)),
-        Window::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::ROM.switchable(P3)),
+        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM_RAM.switchable(P2).status_register(S1).rom_ram_register(R1)),
+        Window::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::ROM_RAM.switchable(P3).status_register(S1).rom_ram_register(R2)),
         Window::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
     // Mode 3
     .prg_layout(&[
         Window::new(0x5C00, 0x5FFF, 1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
         Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::RAM.switchable(P0)),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P3)),
+        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM_RAM.switchable(P1).status_register(S1).rom_ram_register(R0)),
+        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM_RAM.switchable(P2).status_register(S1).rom_ram_register(R1)),
+        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM_RAM.switchable(P3).status_register(S1).rom_ram_register(R2)),
         Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
     .prg_layout_index(3)
@@ -209,17 +212,33 @@ impl Mapper for Mapper005 {
             0x5016..=0x50FF => { /* Do nothing. */ }
             0x5100 => params.set_prg_layout(value & 0b11),
             0x5101 => self.set_chr_layout(params, value),
-            0x5102 => Self::set_ram_enabled(params, &mut self.ram_enabled_1, value),
-            0x5103 => Self::set_ram_enabled(params, &mut self.ram_enabled_2, value),
+            0x5102 => {
+                self.ram_enabled_1 = value & 0b11 == 0b10;
+                let status = if self.ram_enabled_1 && self.ram_enabled_2 {
+                    READ_WRITE
+                } else {
+                    READ_ONLY
+                };
+                params.set_ram_status(S1, status);
+            }
+            0x5103 => {
+                self.ram_enabled_2 = value & 0b11 == 0b01;
+                let status = if self.ram_enabled_1 && self.ram_enabled_2 {
+                    READ_WRITE
+                } else {
+                    READ_ONLY
+                };
+                params.set_ram_status(S1, status);
+            }
             0x5104 => self.set_extended_ram_mode(params, value),
             0x5105 => Self::set_name_table_mirroring(params, value),
             0x5106 => self.set_fill_mode_name_table_byte(value),
             0x5107 => self.set_fill_mode_attribute_table_byte(value),
             0x5108..=0x5112 => { /* Do nothing. */ }
             0x5113 => self.set_prg_bank_register(params, P0, None, value),
-            0x5114 => self.set_prg_bank_register(params, P1, Some(S1), value),
-            0x5115 => self.set_prg_bank_register(params, P2, Some(S2), value),
-            0x5116 => self.set_prg_bank_register(params, P3, Some(S3), value),
+            0x5114 => self.set_prg_bank_register(params, P1, Some(R0), value),
+            0x5115 => self.set_prg_bank_register(params, P2, Some(R1), value),
+            0x5116 => self.set_prg_bank_register(params, P3, Some(R2), value),
             0x5117 => self.set_prg_bank_register(params, P4, None, value),
             0x5118..=0x511F => { /* Do nothing. */ }
             0x5120 => self.set_chr_bank_register(params, C0, value),
@@ -297,14 +316,6 @@ impl Mapper005 {
         self.chr_window_mode = CHR_WINDOW_MODES[usize::from(value & 0b11)];
         self.update_chr_layout(params, false);
     }
-    
-    // Write 0x5102 and 0x5103
-    fn set_ram_enabled(params: &mut MapperParams, ram_enabled: &mut bool, value: u8) {
-        *ram_enabled = value & 0b11 == 0b10;
-        if !*ram_enabled {
-            params.set_ram_status(S1, READ_ONLY);
-        }
-    }
 
     // Write 0x5104
     fn set_extended_ram_mode(&mut self, params: &mut MapperParams, value: u8) {
@@ -364,14 +375,15 @@ impl Mapper005 {
         &self,
         params: &mut MapperParams,
         id: BankRegisterId,
-        status_id: Option<RamStatusRegisterId>,
+        mode_reg_id: Option<RomRamModeRegisterId>,
         value: u8,
     ) {
 
-        let (ram_writable, prg_bank) = splitbits_named!(min=u8, value, "wppppppp");
+        let (rom_ram_mode, prg_bank) = splitbits_named!(value, "wppppppp");
         params.set_bank_register(id, prg_bank);
-        if let Some(status_id) = status_id && self.ram_enabled_1 && self.ram_enabled_2 {
-            params.set_ram_status(status_id, ram_writable);
+        if let Some(mode_reg_id) = mode_reg_id {
+            let rom_ram_mode = if rom_ram_mode { RomRamMode::Ram } else { RomRamMode::Rom };
+            params.set_rom_ram_mode(mode_reg_id, rom_ram_mode);
         }
     }
 
