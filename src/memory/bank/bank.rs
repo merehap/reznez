@@ -58,7 +58,7 @@ impl Bank {
     }
 
     pub fn is_prg_ram(self) -> bool {
-        matches!(self, Bank::WorkRam(..) | Bank::Ram(..))
+        matches!(self, Bank::WorkRam(..) | Bank::Ram(..) | Bank::RomRam(..))
     }
 
     pub fn bank_location(self, registers: &BankRegisters) -> Option<BankLocation> {

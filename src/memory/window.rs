@@ -5,7 +5,7 @@ use crate::memory::bank::bank_index::{BankRegisters, BankRegisterId};
 
 use crate::memory::ppu::ciram::CiramSide;
 
-use super::bank::bank_index::{BankConfiguration, BankLocation};
+use super::bank::bank_index::{BankConfiguration, BankLocation, RomRamMode};
 use super::mapper::{RamStatus, RamStatusRegisterId};
 use super::ppu::chr_memory::AccessOverride;
 
@@ -78,6 +78,7 @@ impl Window {
             None => match self.bank {
                 Bank::Rom(..) => false,
                 Bank::Ram(..) => true,
+                Bank::RomRam(_, _, rom_ram_mode) => registers.rom_ram_mode(rom_ram_mode) == RomRamMode::Ram,
                 _ => panic!("Unsupported bank type for CHR: {:?}", self.bank),
             }
             Some(AccessOverride::ForceRom) => false,

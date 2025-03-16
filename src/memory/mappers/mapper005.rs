@@ -379,10 +379,10 @@ impl Mapper005 {
         value: u8,
     ) {
 
-        let (rom_ram_mode, prg_bank) = splitbits_named!(value, "wppppppp");
+        let (is_rom_mode, prg_bank) = splitbits_named!(value, "mppppppp");
         params.set_bank_register(id, prg_bank);
         if let Some(mode_reg_id) = mode_reg_id {
-            let rom_ram_mode = if rom_ram_mode { RomRamMode::Ram } else { RomRamMode::Rom };
+            let rom_ram_mode = if is_rom_mode { RomRamMode::Rom } else { RomRamMode::Ram };
             params.set_rom_ram_mode(mode_reg_id, rom_ram_mode);
         }
     }
