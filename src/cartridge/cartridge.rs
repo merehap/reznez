@@ -191,6 +191,7 @@ impl Cartridge {
             }
 
             cartridge.submapper_number = header.submapper_number;
+            cartridge.prg_ram_size = header.prg_ram_size;
             cartridge.prg_nvram_size = header.prg_nvram_size;
             cartridge.chr_ram_size = chr_ram_size;
             cartridge.chr_nvram_size = header.chr_nvram_size;
