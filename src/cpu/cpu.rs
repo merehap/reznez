@@ -12,10 +12,7 @@ use crate::cpu::status;
 use crate::cpu::status::Status;
 use crate::cpu::step::*;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::memory::{CpuMemory,
-    IRQ_VECTOR_LOW, IRQ_VECTOR_HIGH,
-    RESET_VECTOR_LOW, RESET_VECTOR_HIGH,
-    NMI_VECTOR_LOW, NMI_VECTOR_HIGH,
+use crate::memory::memory::{CpuMemory, SignalLevel, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW
 };
 
 pub struct Cpu {
@@ -231,14 +228,19 @@ impl Cpu {
         }
 
         // Keep irq_pending and irq_status in sync
-        if memory.irq_pending() {
-            if self.irq_status == IrqStatus::Inactive && !self.status.interrupts_disabled {
-                info!(target: "cpuflowcontrol", "IRQ pending in CPU. Cycle: {}", memory.cpu_cycle());
-                self.irq_status = IrqStatus::Pending;
+        match memory.irq_line_level() {
+            SignalLevel::High => {
+                if self.irq_status != IrqStatus::Inactive {
+                    info!(target: "cpuflowcontrol", "IRQ acknowledged in CPU. Cycle: {}", memory.cpu_cycle());
+                    self.irq_status = IrqStatus::Inactive;
+                }
             }
-        } else if self.irq_status != IrqStatus::Inactive {
-            info!(target: "cpuflowcontrol", "IRQ acknowledged in CPU. Cycle: {}", memory.cpu_cycle());
-            self.irq_status = IrqStatus::Inactive;
+            SignalLevel::Low => {
+                if self.irq_status == IrqStatus::Inactive && !self.status.interrupts_disabled {
+                    info!(target: "cpuflowcontrol", "IRQ pending in CPU. Cycle: {}", memory.cpu_cycle());
+                    self.irq_status = IrqStatus::Pending;
+                }
+            }
         }
 
         memory.process_end_of_cpu_cycle();

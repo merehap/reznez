@@ -218,8 +218,8 @@ impl CpuMemory<'_> {
         &self.memory.ports
     }
 
-    pub fn irq_pending(&mut self) -> bool {
-        let irq_pending =
+    pub fn irq_line_level(&mut self) -> SignalLevel {
+        let irq_line_low =
             self.memory.apu_regs().frame_irq().pending()
             || self.memory.apu_regs().dmc_irq().pending()
             || self.memory.mapper_params().irq().pending();
@@ -237,7 +237,11 @@ impl CpuMemory<'_> {
             }
         }
 
-        irq_pending
+        if irq_line_low {
+            SignalLevel::Low
+        } else {
+            SignalLevel::High
+        }
     }
 
     pub fn dmc_dma_address(&self) -> CpuAddress {
@@ -398,6 +402,12 @@ impl PpuMemory<'_> {
             self.memory.ppu_registers.mask(),
         )
     }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum SignalLevel {
+    High,
+    Low,
 }
 
 #[cfg(test)]
