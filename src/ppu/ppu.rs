@@ -60,7 +60,6 @@ impl Ppu {
 
     pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) -> bool {
         let clock = mem.regs().clock().clone();
-        mem.regs_mut().maybe_apply_status_read(&clock);
         mem.regs_mut().maybe_toggle_rendering_enabled();
         mem.regs_mut().maybe_decay_ppu_io_bus(&clock);
 
@@ -95,7 +94,7 @@ impl Ppu {
         let background_enabled = mem.regs().background_enabled();
         let sprites_enabled = mem.regs().sprites_enabled();
 
-        let clock = mem.regs().clock().clone();
+        let clock = *mem.regs().clock();
 
         use CycleAction::*;
         match cycle_action {

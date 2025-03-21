@@ -35,7 +35,6 @@ pub struct PpuRegisters {
     rendering_enabled: bool,
     write_toggle: WriteToggle,
     rendering_toggle_state: RenderingToggleState,
-    status_read: bool,
 }
 
 impl PpuRegisters {
@@ -58,7 +57,6 @@ impl PpuRegisters {
             nmi_requested: false,
             nmi_was_enabled_last_cycle: false,
             suppress_vblank_active: false,
-            status_read: false,
             rendering_enabled: false,
             rendering_toggle_state: RenderingToggleState::Inactive,
         }
@@ -197,24 +195,19 @@ impl PpuRegisters {
 
     // 0x2002
     pub fn read_status(&mut self) -> u8 {
-        self.status_read = true;
         self.write_toggle = WriteToggle::FirstByte;
 
         let value = self.peek_status();
         self.ppu_io_bus.update_from_status_read(value);
-        self.ppu_io_bus.value()
-    }
 
-    // TODO: This should be combined into read_status, but it can't currently access the clock.
-    pub fn maybe_apply_status_read(&mut self, clock: &Clock) {
-        if self.status_read {
-            self.status_read = false;
-            self.stop_vblank(clock);
-            // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
-            if clock.scanline() == 241 && clock.cycle() == 1 {
-                self.suppress_vblank_active = true;
-            }
+        let clock = self.clock;
+        self.stop_vblank(&clock);
+        // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
+        if clock.scanline() == 241 && clock.cycle() == 0 {
+            self.suppress_vblank_active = true;
         }
+
+        self.ppu_io_bus.value()
     }
 
     pub fn peek_oam_data(&self, oam: &Oam) -> u8 {
