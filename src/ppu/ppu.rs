@@ -1,4 +1,5 @@
-use log::info;
+use log::{info, log_enabled};
+use log::Level::Info;
 
 use crate::memory::memory::PpuMemory;
 use crate::memory::ppu::ppu_address::PpuAddress;
@@ -63,13 +64,18 @@ impl Ppu {
         mem.regs_mut().maybe_toggle_rendering_enabled();
         mem.regs_mut().maybe_decay_ppu_io_bus(&clock);
 
+        if log_enabled!(target: "ppusteps", Info) {
+            info!(" {clock}\t{}", self.frame_actions.format_current_cycle_actions(&clock));
+        }
+
         // TODO: Figure out how to eliminate duplication and the index.
         let len = self.frame_actions.current_cycle_actions(&clock).len();
         for i in 0..len {
             let cycle_action = self.frame_actions.current_cycle_actions(&clock)[i];
-            info!(target: "ppusteps", " {}\t{:?}", clock, cycle_action);
             self.execute_cycle_action(mem, frame, cycle_action);
         }
+
+
 
         let should_generate_nmi = mem.regs().nmi_requested && mem.regs().can_generate_nmi();
         mem.regs_mut().nmi_requested = false;

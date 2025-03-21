@@ -44,6 +44,20 @@ impl FrameActions {
         self.all_scanline_actions[clock.scanline() as usize].actions_at_cycle(clock.cycle())
     }
 
+    pub fn format_current_cycle_actions(&self, clock: &Clock) -> String {
+        match self.current_cycle_actions(clock) {
+            [] => String::new(),
+            [first, rest @ ..] => {
+                let mut result = format!("{first:?}");
+                for action in rest {
+                    result.push_str(&format!(", {action:?}"));
+                }
+
+                result
+            }
+        }
+    }
+
     fn new() -> FrameActions {
         FrameActions {
             all_scanline_actions: Box::new(arr![EMPTY_SCANLINE_ACTIONS.clone(); 262]),
