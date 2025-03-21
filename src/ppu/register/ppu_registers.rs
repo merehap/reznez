@@ -21,6 +21,8 @@ pub struct PpuRegisters {
     pub oam_addr: OamAddress,
     pending_ppu_data: u8,
 
+    clock: Clock,
+
     pub(in crate::ppu) current_address: PpuAddress,
     pub(in crate::ppu) next_address: PpuAddress,
 
@@ -37,13 +39,15 @@ pub struct PpuRegisters {
 }
 
 impl PpuRegisters {
-    pub fn new() -> PpuRegisters {
+    pub fn new(clock: Clock) -> PpuRegisters {
         PpuRegisters {
             ctrl: Ctrl::new(),
             mask: Mask::all_disabled(),
             status: Status::new(),
             oam_addr: OamAddress::new(),
             pending_ppu_data: 0,
+
+            clock,
 
             current_address: PpuAddress::ZERO,
             next_address: PpuAddress::ZERO,
@@ -86,6 +90,14 @@ impl PpuRegisters {
 
     pub fn mask(&self) -> Mask {
         self.mask
+    }
+
+    pub fn clock(&self) -> &Clock {
+        &self.clock
+    }
+
+    pub fn clock_mut(&mut self) -> &mut Clock {
+        &mut self.clock
     }
 
     pub fn background_enabled(&self) -> bool {

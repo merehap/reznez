@@ -530,7 +530,7 @@ impl Renderer for StatusRenderer {
 
     fn ui(&mut self, ctx: &Context, world: &mut World) -> Option<WindowArgs> {
         let nes = &world.nes;
-        let clock = nes.ppu().clock();
+        let clock = nes.memory().ppu_regs().clock();
         let ppu_regs = nes.memory().ppu_regs();
         let mapper_params = nes.memory().mapper_params();
 

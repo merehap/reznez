@@ -49,11 +49,11 @@ impl Nes {
         };
 
         let ports = Ports::new(joypad1.clone(), joypad2.clone());
-        let mut memory = Memory::new(mapper, mapper_params, ports, config.system_palette.clone());
+        let mut memory = Memory::new(mapper, mapper_params, ports, config.ppu_clock, config.system_palette.clone());
 
         Nes {
             cpu: Cpu::new(&mut memory.as_cpu_memory(), config.starting_cpu_cycle, config.cpu_step_formatting),
-            ppu: Ppu::new(config.ppu_clock),
+            ppu: Ppu::new(),
             apu: Apu::new(config.disable_audio),
             memory,
             cartridge: config.cartridge.clone(),
@@ -213,9 +213,10 @@ impl Nes {
     }
 
     fn ppu_step(&mut self) -> bool {
-        let is_last_cycle_of_frame = self.ppu.clock_mut().tick(self.memory.ppu_regs().rendering_enabled());
+        let rendering_enabled = self.memory.ppu_regs().rendering_enabled();
+        let is_last_cycle_of_frame = self.memory.ppu_regs_mut().clock_mut().tick(rendering_enabled);
         if log_enabled!(target: "timings", Info) {
-            self.snapshots.current().add_ppu_position(self.ppu.clock());
+            self.snapshots.current().add_ppu_position(self.memory.ppu_regs().clock());
         }
 
         let should_generate_nmi = self

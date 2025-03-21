@@ -2,7 +2,6 @@ use log::info;
 
 use crate::memory::memory::PpuMemory;
 use crate::memory::ppu::ppu_address::PpuAddress;
-use crate::ppu::clock::Clock;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
@@ -26,8 +25,6 @@ pub struct Ppu {
     clear_oam: bool,
     all_sprites_evaluated: bool,
 
-    clock: Clock,
-
     next_pattern_index: PatternIndex,
     pattern_register: PatternRegister,
     attribute_register: AttributeRegister,
@@ -40,7 +37,7 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    pub fn new(clock: Clock) -> Ppu {
+    pub fn new() -> Ppu {
         Ppu {
             oam_data_read: 0,
             secondary_oam: SecondaryOam::new(),
@@ -48,8 +45,6 @@ impl Ppu {
             oam_register_index: 0,
             clear_oam: false,
             all_sprites_evaluated: false,
-
-            clock,
 
             next_pattern_index: PatternIndex::new(0),
             pattern_register: PatternRegister::new(),
@@ -63,24 +58,17 @@ impl Ppu {
         }
     }
 
-    pub fn clock(&self) -> &Clock {
-        &self.clock
-    }
-
-    pub fn clock_mut(&mut self) -> &mut Clock {
-        &mut self.clock
-    }
-
     pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) -> bool {
-        mem.regs_mut().maybe_apply_status_read(&self.clock);
+        let clock = mem.regs().clock().clone();
+        mem.regs_mut().maybe_apply_status_read(&clock);
         mem.regs_mut().maybe_toggle_rendering_enabled();
-        mem.regs_mut().maybe_decay_ppu_io_bus(&self.clock);
+        mem.regs_mut().maybe_decay_ppu_io_bus(&clock);
 
         // TODO: Figure out how to eliminate duplication and the index.
-        let len = self.frame_actions.current_cycle_actions(&self.clock).len();
+        let len = self.frame_actions.current_cycle_actions(&clock).len();
         for i in 0..len {
-            let cycle_action = self.frame_actions.current_cycle_actions(&self.clock)[i];
-            info!(target: "ppusteps", " {}\t{:?}", self.clock, cycle_action);
+            let cycle_action = self.frame_actions.current_cycle_actions(&clock)[i];
+            info!(target: "ppusteps", " {}\t{:?}", clock, cycle_action);
             self.execute_cycle_action(mem, frame, cycle_action);
         }
 
@@ -106,6 +94,8 @@ impl Ppu {
 
         let background_enabled = mem.regs().background_enabled();
         let sprites_enabled = mem.regs().sprites_enabled();
+
+        let clock = mem.regs().clock().clone();
 
         use CycleAction::*;
         match cycle_action {
@@ -155,7 +145,7 @@ impl Ppu {
                 self.pattern_register.load_next_palette_indexes();
             }
             SetPixel => {
-                let (pixel_column, pixel_row) = PixelIndex::try_from_clock(&self.clock).unwrap().to_column_row();
+                let (pixel_column, pixel_row) = PixelIndex::try_from_clock(&clock).unwrap().to_column_row();
                 // TODO: Verify if these need to be delayed like self.rendering_enabled.
                 if background_enabled {
                     let palette_table = mem.palette_table();
@@ -206,7 +196,8 @@ impl Ppu {
                 // Unclear if these are the correct cycles to trigger on.
                 if mem.regs().rendering_enabled() {
                     let oam_addr = mem.regs().oam_addr;
-                    mem.oam_mut().maybe_corrupt_starting_byte(oam_addr, self.clock.cycle());
+                    let cycle = mem.regs().clock().cycle();
+                    mem.oam_mut().maybe_corrupt_starting_byte(oam_addr, cycle);
                 }
             }
 
@@ -251,7 +242,7 @@ impl Ppu {
                 }
 
                 // Check if the y coordinate is on screen.
-                if let Some(pixel_row) = self.clock.scanline_pixel_row()
+                if let Some(pixel_row) = mem.regs().clock().scanline_pixel_row()
                     && let Some(top_sprite_row) = PixelRow::try_from_u8(self.oam_data_read)
                     && let Some(offset) = pixel_row.difference(top_sprite_row)
                     && offset < (mem.regs().sprite_height().to_dimension())
@@ -329,27 +320,27 @@ impl Ppu {
             }
 
             StartVisibleScanlines => {
-                info!(target: "ppustage", "{}\tVISIBLE SCANLINES", self.clock);
+                info!(target: "ppustage", "{}\tVISIBLE SCANLINES", mem.regs().clock());
             }
             StartPostRenderScanline => {
-                info!(target: "ppustage", "{}\tPOST-RENDER SCANLINE", self.clock);
+                info!(target: "ppustage", "{}\tPOST-RENDER SCANLINE", mem.regs().clock());
             }
             StartVblankScanlines => {
-                info!(target: "ppustage", "{}\tVBLANK SCANLINES", self.clock);
+                info!(target: "ppustage", "{}\tVBLANK SCANLINES", mem.regs().clock());
             }
             StartPreRenderScanline => {
-                info!(target: "ppustage", "{}\tPRE-RENDER SCANLINE", self.clock);
+                info!(target: "ppustage", "{}\tPRE-RENDER SCANLINE", mem.regs().clock());
             }
 
             StartReadingBackgroundTiles => {
-                info!(target: "ppustage", "{}\t\tREADING BACKGROUND TILES", self.clock);
+                info!(target: "ppustage", "{}\t\tREADING BACKGROUND TILES", mem.regs().clock());
             }
             StopReadingBackgroundTiles => {
-                info!(target: "ppustage", "{}\t\tENDED READING BACKGROUND TILES", self.clock);
+                info!(target: "ppustage", "{}\t\tENDED READING BACKGROUND TILES", mem.regs().clock());
             }
 
             StartClearingSecondaryOam => {
-                info!(target: "ppustage", "{}\t\tCLEARING SECONDARY OAM", self.clock);
+                info!(target: "ppustage", "{}\t\tCLEARING SECONDARY OAM", mem.regs().clock());
                 self.secondary_oam.reset_index();
                 self.clear_oam = true;
             }
@@ -373,15 +364,16 @@ impl Ppu {
 
             StartVblank => {
                 if mem.regs().suppress_vblank_active {
-                    info!(target: "ppuflags", " {}\tSuppressing vblank.", self.clock);
+                    info!(target: "ppuflags", " {}\tSuppressing vblank.", mem.regs().clock());
                 } else {
-                    mem.regs_mut().start_vblank(&self.clock);
+                    let clock = mem.regs().clock().clone();
+                    mem.regs_mut().start_vblank(&clock);
                 }
 
                 mem.regs_mut().suppress_vblank_active = false;
             }
             RequestNmi => {
-                info!(target: "ppuflags", " {}\tNMI requested.", self.clock);
+                info!(target: "ppuflags", " {}\tNMI requested.", mem.regs().clock());
                 mem.regs_mut().nmi_requested = true;
             }
             SetInitialScrollOffsets => {
@@ -397,7 +389,8 @@ impl Ppu {
             }
 
             ClearFlags => {
-                mem.regs_mut().stop_vblank(&self.clock);
+                let clock = *mem.regs().clock();
+                mem.regs_mut().stop_vblank(&clock);
                 mem.regs_mut().clear_sprite0_hit();
                 mem.regs_mut().clear_sprite_overflow();
             }
@@ -414,7 +407,7 @@ impl Ppu {
 
         let address;
         let visible;
-        if let Some(pixel_row) = self.clock.scanline_pixel_row() {
+        if let Some(pixel_row) = mem.regs().clock().scanline_pixel_row() {
             let attributes = self.oam_registers.registers[self.oam_register_index].attributes();
             if let Some((pattern_index, row_in_half, v)) = self.next_sprite_pattern_index.index_and_row(
                 self.current_sprite_y,

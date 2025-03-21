@@ -13,6 +13,7 @@ use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::read_result::ReadResult;
+use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table::NameTable;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
@@ -51,6 +52,7 @@ impl Memory {
         mapper: Box<dyn Mapper>, 
         mapper_params: MapperParams,
         ports: Ports,
+        ppu_clock: Clock,
         system_palette: SystemPalette,
     ) -> Memory {
         Memory {
@@ -61,7 +63,7 @@ impl Memory {
             palette_ram: PaletteRam::new(),
             oam: Oam::new(),
             ports,
-            ppu_registers: PpuRegisters::new(),
+            ppu_registers: PpuRegisters::new(ppu_clock),
             apu_registers: ApuRegisters::new(),
             system_palette,
             dmc_dma: DmcDma::IDLE,
@@ -102,6 +104,11 @@ impl Memory {
     #[inline]
     pub fn ppu_regs(&self) -> &PpuRegisters {
         &self.ppu_registers
+    }
+
+    #[inline]
+    pub fn ppu_regs_mut(&mut self) -> &mut PpuRegisters {
+        &mut self.ppu_registers
     }
 
     pub fn apu_regs(&self) -> &ApuRegisters {
@@ -469,6 +476,7 @@ pub mod test_data {
             Box::new(mapper),
             mapper_params,
             ports::test_data::ports(),
+            Clock::mesen_compatible(),
             system_palette::test_data::system_palette(),
         )
     }
