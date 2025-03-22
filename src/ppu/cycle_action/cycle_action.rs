@@ -41,7 +41,6 @@ pub enum CycleAction {
     StopLoadingOamRegisters,
 
     StartVblank,
-    RequestNmi,
     SetInitialScrollOffsets,
     SetInitialYScroll,
     ClearFlags,

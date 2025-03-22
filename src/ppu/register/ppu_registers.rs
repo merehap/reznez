@@ -29,8 +29,6 @@ pub struct PpuRegisters {
     ppu_io_bus: PpuIoBus,
 
     pub suppress_vblank_active: bool,
-    pub nmi_requested: bool,
-    nmi_was_enabled_last_cycle: bool,
 
     rendering_enabled: bool,
     write_toggle: WriteToggle,
@@ -54,8 +52,6 @@ impl PpuRegisters {
             ppu_io_bus: PpuIoBus::new(),
 
             write_toggle: WriteToggle::FirstByte,
-            nmi_requested: false,
-            nmi_was_enabled_last_cycle: false,
             suppress_vblank_active: false,
             rendering_enabled: false,
             rendering_toggle_state: RenderingToggleState::Inactive,
@@ -249,11 +245,7 @@ impl PpuRegisters {
     pub fn write_ctrl(&mut self, value: u8) {
         self.ppu_io_bus.update_from_write(value);
         self.ctrl = ctrl::Ctrl::from_u8(value);
-
         self.next_address.set_name_table_quadrant(NameTableQuadrant::from_last_two_bits(value));
-        // Potentially attempt to trigger the second (or higher) NMI of this frame.
-        self.nmi_requested = !self.nmi_was_enabled_last_cycle;
-        self.nmi_was_enabled_last_cycle = self.ctrl.nmi_enabled();
     }
 
     // 0x2001

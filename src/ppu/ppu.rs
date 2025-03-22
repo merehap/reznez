@@ -1,7 +1,7 @@
 use log::{info, log_enabled};
 use log::Level::Info;
 
-use crate::memory::memory::PpuMemory;
+use crate::memory::memory::{PpuMemory, SignalLevel};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
@@ -59,8 +59,8 @@ impl Ppu {
         }
     }
 
-    pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) -> bool {
-        let clock = mem.regs().clock().clone();
+    pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) {
+        let clock = *mem.regs().clock();
         mem.regs_mut().maybe_toggle_rendering_enabled();
         mem.regs_mut().maybe_decay_ppu_io_bus(&clock);
 
@@ -75,13 +75,13 @@ impl Ppu {
             self.execute_cycle_action(mem, frame, cycle_action);
         }
 
-
-
-        let should_generate_nmi = mem.regs().nmi_requested && mem.regs().can_generate_nmi();
-        mem.regs_mut().nmi_requested = false;
+        if mem.regs().can_generate_nmi() {
+            mem.set_nmi_line_level(SignalLevel::Low);
+        } else {
+            mem.set_nmi_line_level(SignalLevel::High);
+        }
 
         mem.process_end_of_ppu_cycle();
-        should_generate_nmi
     }
 
     pub fn execute_cycle_action(
@@ -371,15 +371,11 @@ impl Ppu {
                 if mem.regs().suppress_vblank_active {
                     info!(target: "ppuflags", " {}\tSuppressing vblank.", mem.regs().clock());
                 } else {
-                    let clock = mem.regs().clock().clone();
+                    let clock = *mem.regs().clock();
                     mem.regs_mut().start_vblank(&clock);
                 }
 
                 mem.regs_mut().suppress_vblank_active = false;
-            }
-            RequestNmi => {
-                info!(target: "ppuflags", " {}\tNMI requested.", mem.regs().clock());
-                mem.regs_mut().nmi_requested = true;
             }
             SetInitialScrollOffsets => {
                 // TODO: Verify if this needs to be !self.rendering_enabled, which is time-delayed.

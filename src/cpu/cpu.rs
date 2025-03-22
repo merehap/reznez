@@ -27,6 +27,7 @@ pub struct Cpu {
 
     mode_state: CpuModeState,
 
+    previous_nmi_line_level: SignalLevel,
     nmi_status: NmiStatus,
     irq_status: IrqStatus,
     reset_status: ResetStatus,
@@ -58,6 +59,7 @@ impl Cpu {
 
             mode_state: CpuModeState::startup(),
 
+            previous_nmi_line_level: SignalLevel::High,
             nmi_status: NmiStatus::Inactive,
             irq_status: IrqStatus::Inactive,
             reset_status: ResetStatus::Active,
@@ -127,11 +129,6 @@ impl Cpu {
 
     pub fn nmi_pending(&self) -> bool {
         self.nmi_status == NmiStatus::Pending
-    }
-
-    pub fn schedule_nmi(&mut self) {
-        info!(target: "cpuflowcontrol", "NMI pending in CPU.");
-        self.nmi_status = NmiStatus::Pending;
     }
 
     pub fn step_first_half(&mut self, memory: &mut CpuMemory, cycle_parity: CycleParity) -> Option<Step> {
@@ -235,6 +232,13 @@ impl Cpu {
     }
 
     pub fn step_second_half(&mut self, memory: &mut CpuMemory) {
+        if memory.nmi_line_level() == SignalLevel::Low && self.previous_nmi_line_level == SignalLevel::High {
+            info!(target: "cpuflowcontrol", "NMI pending in CPU. Cycle: {}", memory.cpu_cycle());
+            self.nmi_status = NmiStatus::Pending;
+        }
+
+        self.previous_nmi_line_level = memory.nmi_line_level();
+
         // Keep irq_pending and irq_status in sync
         match memory.irq_line_level() {
             SignalLevel::High => {

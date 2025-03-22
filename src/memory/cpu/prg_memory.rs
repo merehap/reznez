@@ -1,5 +1,3 @@
-use std::u16;
-
 use log::warn;
 
 use crate::memory::bank::bank::Bank;

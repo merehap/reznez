@@ -143,9 +143,11 @@ impl Nes {
                 step = self.cpu_step_first_half();
                 is_last_cycle_of_frame = self.ppu_step();
             }
-            1 => is_last_cycle_of_frame = self.ppu_step(),
-            2 => {
+            1 => {
                 self.cpu_step_second_half();
+                is_last_cycle_of_frame = self.ppu_step();
+            }
+            2 => {
                 is_last_cycle_of_frame = self.ppu_step();
                 self.snapshots.start_next();
             }
@@ -223,12 +225,7 @@ impl Nes {
             self.snapshots.current().add_ppu_position(self.memory.ppu_regs().clock());
         }
 
-        let should_generate_nmi = self
-            .ppu
-            .step(&mut self.memory.as_ppu_memory(), &mut self.frame);
-        if should_generate_nmi {
-            self.cpu.schedule_nmi();
-        }
+        self.ppu.step(&mut self.memory.as_ppu_memory(), &mut self.frame);
 
         is_last_cycle_of_frame
     }

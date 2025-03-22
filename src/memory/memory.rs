@@ -38,6 +38,7 @@ pub struct Memory {
     palette_ram: PaletteRam,
     oam: Oam,
     ports: Ports,
+    nmi_line_level: SignalLevel,
     ppu_registers: PpuRegisters,
     apu_registers: ApuRegisters,
     system_palette: SystemPalette,
@@ -63,6 +64,7 @@ impl Memory {
             palette_ram: PaletteRam::new(),
             oam: Oam::new(),
             ports,
+            nmi_line_level: SignalLevel::High,
             ppu_registers: PpuRegisters::new(ppu_clock),
             apu_registers: ApuRegisters::new(),
             system_palette,
@@ -225,6 +227,10 @@ impl CpuMemory<'_> {
         &self.memory.ports
     }
 
+    pub fn nmi_line_level(&mut self) -> SignalLevel {
+        self.memory.nmi_line_level
+    }
+
     pub fn irq_line_level(&mut self) -> SignalLevel {
         let irq_line_low =
             self.memory.apu_regs().frame_irq().pending()
@@ -351,6 +357,10 @@ impl PpuMemory<'_> {
             &mut self.memory.mapper_params, &mut self.memory.ciram, &mut self.memory.palette_ram, address, value);
     }
 
+    pub fn set_nmi_line_level(&mut self, level: SignalLevel) {
+        self.memory.nmi_line_level = level;
+    }
+
     pub fn oam(&self) -> &Oam {
         &self.memory.oam
     }
@@ -411,7 +421,7 @@ impl PpuMemory<'_> {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum SignalLevel {
     High,
     Low,
