@@ -134,7 +134,7 @@ impl Cpu {
         self.nmi_status = NmiStatus::Pending;
     }
 
-    pub fn step(&mut self, memory: &mut CpuMemory, cycle_parity: CycleParity) -> Option<Step> {
+    pub fn step_first_half(&mut self, memory: &mut CpuMemory, cycle_parity: CycleParity) -> Option<Step> {
         self.mode_state.clear_new_instruction();
         if self.mode_state.is_jammed() {
             return None;
@@ -227,6 +227,14 @@ impl Cpu {
             )
         }
 
+        if !halted {
+            self.mode_state.step();
+        }
+
+        Some(step)
+    }
+
+    pub fn step_second_half(&mut self, memory: &mut CpuMemory) {
         // Keep irq_pending and irq_status in sync
         match memory.irq_line_level() {
             SignalLevel::High => {
@@ -244,12 +252,6 @@ impl Cpu {
         }
 
         memory.process_end_of_cpu_cycle();
-
-        if !halted {
-            self.mode_state.step();
-        }
-
-        Some(step)
     }
 
     fn execute_step_action(

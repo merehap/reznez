@@ -140,11 +140,12 @@ impl Nes {
         match self.cycle % 3 {
             0 => {
                 self.apu_step();
-                step = self.cpu_step();
+                step = self.cpu_step_first_half();
                 is_last_cycle_of_frame = self.ppu_step();
             }
             1 => is_last_cycle_of_frame = self.ppu_step(),
             2 => {
+                self.cpu_step_second_half();
                 is_last_cycle_of_frame = self.ppu_step();
                 self.snapshots.start_next();
             }
@@ -174,20 +175,19 @@ impl Nes {
         self.memory.apu_regs_mut().clock_mut().increment();
     }
 
-    fn cpu_step(&mut self) -> Option<Step> {
+    fn cpu_step_first_half(&mut self) -> Option<Step> {
         let cycle_parity = self.memory.apu_regs().clock().cycle_parity();
         self.memory.as_cpu_memory().increment_cpu_cycle();
 
         if log_enabled!(target: "timings", Info) {
             self.snapshots.current().instruction(self.cpu.mode_state().state_label());
         }
-
         let mut interrupt_text = String::new();
         if log_enabled!(target: "cpuinstructions", Info) {
             interrupt_text = formatter::interrupts(self);
         }
 
-        let step = self.cpu.step(&mut self.memory.as_cpu_memory(), cycle_parity);
+        let step = self.cpu.step_first_half(&mut self.memory.as_cpu_memory(), cycle_parity);
         if log_enabled!(target: "cpuinstructions", Info)  {
             if let Some((current_instruction, start_address)) = self.cpu.mode_state().new_instruction_with_address() {
                 let formatted_instruction = self.log_formatter.format_instruction(
@@ -210,6 +210,10 @@ impl Nes {
         }
 
         step
+    }
+
+    fn cpu_step_second_half(&mut self) {
+        self.cpu.step_second_half(&mut self.memory.as_cpu_memory());
     }
 
     fn ppu_step(&mut self) -> bool {
