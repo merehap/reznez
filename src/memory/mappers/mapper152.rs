@@ -11,7 +11,7 @@ const LAYOUT: Layout = Layout::builder()
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),
     ])
-    .override_initial_name_table_mirroring(NameTableMirroring::ONE_SCREEN_LEFT_BANK)
+    .initial_name_table_mirroring(NameTableMirroring::ONE_SCREEN_LEFT_BANK)
     .name_table_mirrorings(&[
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,
         NameTableMirroring::ONE_SCREEN_RIGHT_BANK,

@@ -249,7 +249,7 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn override_initial_name_table_mirroring(
+    pub const fn initial_name_table_mirroring(
         &mut self,
         value: NameTableMirroring,
     ) -> &mut LayoutBuilder {

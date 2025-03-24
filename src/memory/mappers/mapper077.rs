@@ -13,7 +13,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     // Cartridges for some reason don't specify a CHR Save RAM size.
     .chr_save_ram_size(8 * KIBIBYTE)
-    .override_initial_name_table_mirroring(NameTableMirroring::new(
+    .initial_name_table_mirroring(NameTableMirroring::new(
         NameTableSource::SaveRam(0x0000),
         NameTableSource::SaveRam(0x0400),
         NameTableSource::Ciram(CiramSide::Left),
