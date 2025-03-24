@@ -9,6 +9,7 @@ use crate::memory::irq_source::IrqSource;
 use crate::memory::mapper::{MapperParams, RamStatus};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::chr_memory::ChrMemory;
+use crate::memory::raw_memory::RawMemory;
 use crate::memory::window::{RamStatusInfo, Window};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::const_vec::ConstVec;
@@ -26,6 +27,7 @@ pub struct Layout {
     align_large_chr_windows: bool,
     chr_layout_index: u8,
     chr_layouts: ConstVec<ChrLayout, 10>,
+    chr_save_ram_size: u32,
 
     name_table_mirroring_source: NameTableMirroringSource,
     name_table_mirrorings: &'static [NameTableMirroring],
@@ -59,18 +61,29 @@ impl Layout {
             cartridge.prg_ram_size() + cartridge.prg_nvram_size(),
             cartridge.access_override(),
         );
+
+        let chr_ram = if self.chr_save_ram_size > 0 {
+            match cartridge.chr_ram().size() {
+                0 => RawMemory::new(self.chr_save_ram_size),
+                size if size == self.chr_save_ram_size => RawMemory::new(self.chr_save_ram_size),
+                _ => panic!("CHR SAVE RAM size from cartridge did not match mapper override value."),
+            }
+        } else {
+            cartridge.chr_ram()
+        };
         let chr_memory = ChrMemory::new(
             self.chr_layouts.as_iter().collect(),
             self.chr_layout_index,
             self.align_large_chr_windows,
             cartridge.access_override(),
             cartridge.chr_rom().clone(),
-            cartridge.chr_ram(),
+            chr_ram,
         );
 
         let name_table_mirroring = match self.name_table_mirroring_source {
             NameTableMirroringSource::Direct(mirroring) => mirroring,
-            NameTableMirroringSource::Cartridge => cartridge.name_table_mirroring(),
+            NameTableMirroringSource::Cartridge => cartridge.name_table_mirroring()
+                .expect("This mapper must define what Four Screen mirroring is."),
         };
 
         let mut bank_registers = BankRegisters::new();
@@ -132,6 +145,7 @@ pub struct LayoutBuilder {
     chr_layouts: ConstVec<ChrLayout, 10>,
     chr_layout_index: u8,
     align_large_chr_windows: bool,
+    chr_save_ram_size: u32,
 
     name_table_mirroring_source: NameTableMirroringSource,
     name_table_mirrorings: &'static [NameTableMirroring],
@@ -155,6 +169,7 @@ impl LayoutBuilder {
             align_large_chr_windows: true,
             chr_layout_index: 0,
             chr_layouts: ConstVec::new(),
+            chr_save_ram_size: 0,
 
             name_table_mirroring_source: NameTableMirroringSource::Cartridge,
             name_table_mirrorings: &[],
@@ -187,13 +202,13 @@ impl LayoutBuilder {
     }
 
     pub const fn prg_outer_bank_count(&mut self, count: u8) -> &mut LayoutBuilder {
-        assert!(matches!(self.prg_outer_bank_layout, None));
+        assert!(self.prg_outer_bank_layout.is_none());
         self.prg_outer_bank_layout = Some(OuterBankLayout::ExactCount(NonZeroU8::new(count).unwrap()));
         self
     }
 
     pub const fn prg_rom_max_outer_bank_size(&mut self, max_size: u32) -> &mut LayoutBuilder {
-        assert!(matches!(self.prg_outer_bank_layout, None));
+        assert!(self.prg_outer_bank_layout.is_none());
         self.prg_outer_bank_layout = Some(OuterBankLayout::MaxSize(max_size));
         self
     }
@@ -215,6 +230,11 @@ impl LayoutBuilder {
 
     pub const fn do_not_align_large_chr_windows(&mut self) -> &mut LayoutBuilder {
         self.align_large_chr_windows = false;
+        self
+    }
+
+    pub const fn chr_save_ram_size(&mut self, value: u32) -> &mut LayoutBuilder {
+        self.chr_save_ram_size = value;
         self
     }
 
@@ -280,6 +300,7 @@ impl LayoutBuilder {
             chr_layouts: self.chr_layouts,
             chr_layout_index: self.chr_layout_index,
             align_large_chr_windows: self.align_large_chr_windows,
+            chr_save_ram_size: self.chr_save_ram_size,
 
             name_table_mirroring_source: self.name_table_mirroring_source,
             name_table_mirrorings: self.name_table_mirrorings,

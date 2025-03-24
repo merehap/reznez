@@ -84,7 +84,7 @@ pub mod mapper073;
 
 pub mod mapper075;
 pub mod mapper076;
-
+pub mod mapper077;
 pub mod mapper078_1;
 pub mod mapper078_3;
 pub mod mapper079;

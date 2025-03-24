@@ -21,7 +21,7 @@ pub struct Cartridge {
 
     mapper_number: u16,
     submapper_number: u8,
-    name_table_mirroring: NameTableMirroring,
+    name_table_mirroring: Option<NameTableMirroring>,
     has_persistent_memory: bool,
     ines2_present: bool,
 
@@ -99,10 +99,13 @@ impl Cartridge {
             return Err("VS Unisystem isn't implemented yet.".to_string());
         }
 
-        let name_table_mirroring = match (four_screen, vertical_mirroring) {
-            (true, _) => todo!("Four screen mirroring."),
-            (_, false) => NameTableMirroring::HORIZONTAL,
-            (_, true) => NameTableMirroring::VERTICAL,
+        let name_table_mirroring = if four_screen {
+            // Four screen mirroring isn't a real mirroring, the mapper will have to define what it means.
+            None
+        } else if vertical_mirroring {
+            Some(NameTableMirroring::VERTICAL)
+        } else {
+            Some(NameTableMirroring::HORIZONTAL)
         };
 
         let prg_rom_start = 0x10;
@@ -220,7 +223,7 @@ impl Cartridge {
         self.submapper_number
     }
 
-    pub fn name_table_mirroring(&self) -> NameTableMirroring {
+    pub fn name_table_mirroring(&self) -> Option<NameTableMirroring> {
         self.name_table_mirroring
     }
 
@@ -271,9 +274,12 @@ impl Cartridge {
 
 impl fmt::Display for Cartridge {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mirroring = self.name_table_mirroring
+            .map(|m| m.to_string())
+            .unwrap_or("FourScreen".to_string());
         writeln!(f, "Mapper: {}", self.mapper_number)?;
         writeln!(f, "Submapper: {}", self.submapper_number)?;
-        writeln!(f, "Nametable mirroring: {}", self.name_table_mirroring)?;
+        writeln!(f, "Name table mirroring: {mirroring}")?;
         writeln!(f, "Persistent memory: {}", self.has_persistent_memory)?;
         writeln!(f, "iNES2 present: {}", self.ines2_present)?;
 
@@ -327,7 +333,7 @@ pub mod test_data {
             name: "Test".to_string(),
             mapper_number: 0,
             submapper_number: 0,
-            name_table_mirroring: NameTableMirroring::HORIZONTAL,
+            name_table_mirroring: Some(NameTableMirroring::HORIZONTAL),
             has_persistent_memory: false,
             ines2_present: false,
 

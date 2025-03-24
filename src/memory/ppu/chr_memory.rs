@@ -93,7 +93,7 @@ impl ChrMemory {
     }
 
     pub fn ram_bank_configuration(&self) -> Option<BankConfiguration> {
-        self.rom_bank_configuration
+        self.ram_bank_configuration
     }
 
     #[inline]
@@ -189,6 +189,14 @@ impl ChrMemory {
             PatternTableSide::Left => PatternTable::new(self.left_chunks(registers, ciram)),
             PatternTableSide::Right => PatternTable::new(self.right_chunks(registers, ciram)),
         }
+    }
+
+    pub fn chr_ram_slice<const SIZE: usize>(&self, start: u32) -> &[u8; SIZE] {
+        self.chr_ram.sized_slice(start)
+    }
+
+    pub fn chr_ram_slice_mut<const SIZE: usize>(&mut self, start: u32) -> &mut [u8; SIZE] {
+        self.chr_ram.sized_slice_mut(start)
     }
 
     fn address_to_chr_index(&self, registers: &BankRegisters, address: u16) -> (ChrIndex, bool) {

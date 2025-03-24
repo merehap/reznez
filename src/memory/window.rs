@@ -6,7 +6,7 @@ use crate::memory::bank::bank_index::{BankRegisters, BankRegisterId};
 use crate::memory::ppu::ciram::CiramSide;
 
 use super::bank::bank_index::{BankConfiguration, BankLocation, RomRamMode};
-use super::mapper::{RamStatus, RamStatusRegisterId};
+use super::mapper::{BankIndex, RamStatus, RamStatusRegisterId};
 use super::ppu::chr_memory::AccessOverride;
 
 // A Window is a range within addressable memory.
@@ -38,6 +38,7 @@ impl Window {
             Bank::Empty => "E".into(),
             // TODO: Add page number when there is more than one Work RAM page.
             Bank::WorkRam(_, _) => "W".into(),
+            Bank::SaveRam(..) => "S".into(),
             Bank::ExtendedRam(_) => "X".into(),
             Bank::Rom(location) | Bank::Ram(location, _) | Bank::RomRam(location, _, _) =>
                 self.resolved_bank_location(registers, location, rom_bank_configuration, ram_bank_configuration, access_override).to_string(),
@@ -120,6 +121,7 @@ impl Window {
     pub fn location(self) -> Result<Location, String> {
         match self.bank {
             Bank::Rom(location) | Bank::Ram(location, _)  | Bank::RomRam(location, _, _) | Bank::WorkRam(location, _) => Ok(location),
+            Bank::SaveRam(_) => Ok(Location::Fixed(BankIndex::from_u8(0))),
             Bank::Empty | Bank::ExtendedRam(_) | Bank::MirrorOf(_) =>
                 Err(format!("Bank type {:?} does not have a bank location.", self.bank)),
         }
@@ -138,6 +140,9 @@ impl Window {
                 RamStatusInfo::PossiblyPresent { register_id, status_on_absent: RamStatus::ReadOnly },
             Bank::WorkRam(_, Some(register_id)) =>
                 RamStatusInfo::PossiblyPresent { register_id, status_on_absent: RamStatus::Disabled },
+            // TODO: SaveRam will probably need to support status registers.
+            Bank::SaveRam(..) =>
+                RamStatusInfo::Absent,
             Bank::ExtendedRam(Some(register_id)) =>
                 RamStatusInfo::MapperCustom { register_id },
             Bank::Empty | Bank::Rom(..) | Bank::MirrorOf(..) | Bank::Ram(..) | Bank::ExtendedRam(..) | Bank::WorkRam(..) =>

@@ -6,6 +6,8 @@ use super::bank_index::{BankLocation, RomRamMode};
 pub enum Bank {
     Empty,
     WorkRam(Location, Option<RamStatusRegisterId>),
+    // TODO: Add configurable writability?
+    SaveRam(u32),
     ExtendedRam(Option<RamStatusRegisterId>),
     Rom(Location),
     Ram(Location, Option<RamStatusRegisterId>),
@@ -80,6 +82,7 @@ impl Bank {
                 registers.rom_ram_mode(rom_ram_mode) == RomRamMode::Ram && registers.ram_status(status) == RamStatus::ReadWrite,
             Bank::Ram(_, Some(status_register_id)) | Bank::WorkRam(_, Some(status_register_id)) | Bank::ExtendedRam(Some(status_register_id)) =>
                 registers.ram_status(status_register_id) == RamStatus::ReadWrite,
+            Bank::SaveRam(..) => true,
         }
     }
 

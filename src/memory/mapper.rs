@@ -306,6 +306,7 @@ pub trait Mapper {
     ) -> &'a [u8; KIBIBYTE as usize] {
         match params.name_table_mirroring.name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) => ciram.side(side),
+            NameTableSource::SaveRam(start_index) => params.chr_memory.chr_ram_slice(start_index),
             NameTableSource::ExtendedRam => params.prg_memory.extended_ram().as_raw_slice().try_into().unwrap(),
             NameTableSource::FillModeTile => self.fill_mode_name_table(),
         }
@@ -334,6 +335,8 @@ pub trait Mapper {
         match params.name_table_mirroring.name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) =>
                 ciram.side_mut(side)[index as usize] = value,
+            NameTableSource::SaveRam(start_index) =>
+                params.chr_memory.chr_ram_slice_mut::<0x400>(start_index)[index as usize] = value,
             NameTableSource::ExtendedRam =>
                 params.prg_memory.extended_ram_mut().as_raw_mut_slice()[index as usize] = value,
             NameTableSource::FillModeTile =>

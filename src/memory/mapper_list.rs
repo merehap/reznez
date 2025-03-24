@@ -260,7 +260,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         75 => m::mapper075::Mapper075::default().supported(),
         // NAMCOT-3446
         76 => m::mapper076::Mapper076::new().supported(),
-
+        // Irem (Napoleon Senki)
+        77 => m::mapper077::Mapper077.supported(),
         78 => match submapper_number {
             0 => UnspecifiedSubmapper,
             // Single-screen mirroring (only Cosmo Carrier)

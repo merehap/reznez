@@ -19,6 +19,15 @@ impl NameTableMirroring {
     pub const ONE_SCREEN_RIGHT_BANK: NameTableMirroring =
         build([CiramSide::Right, CiramSide::Right, CiramSide::Right, CiramSide::Right]);
 
+    pub const fn new(
+        top_left_quadrant: NameTableSource,
+        top_right_quadrant: NameTableSource,
+        bottom_left_quadrant: NameTableSource,
+        bottom_right_quadrant: NameTableSource,
+    ) -> Self {
+        Self { quadrants: [top_left_quadrant, top_right_quadrant, bottom_left_quadrant, bottom_right_quadrant] }
+    }
+
     pub fn name_table_source_in_quadrant(self, quadrant: NameTableQuadrant) -> NameTableSource {
         self.quadrants[quadrant as usize]
     }
@@ -74,6 +83,7 @@ impl fmt::Display for NameTableMirroring {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum NameTableSource {
     Ciram(CiramSide),
+    SaveRam(u32),
     ExtendedRam,
     FillModeTile,
 }
@@ -83,6 +93,7 @@ impl fmt::Display for NameTableSource {
         let text = match self {
             NameTableSource::Ciram(CiramSide::Left) => "CIRAM(A)",
             NameTableSource::Ciram(CiramSide::Right) => "CIRAM(B)",
+            NameTableSource::SaveRam(index) => &format!("SRAM@{index:04X}"),
             NameTableSource::ExtendedRam => "ExtRAM",
             NameTableSource::FillModeTile => "FillMode",
         };

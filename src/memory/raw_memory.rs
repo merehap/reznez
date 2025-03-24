@@ -27,6 +27,16 @@ impl RawMemory {
             .map(RawMemorySlice)
     }
 
+    pub fn sized_slice<const SIZE: usize>(&self, start: u32) -> &[u8; SIZE] {
+        let start = start as usize;
+        (&self.0[start..start + SIZE]).try_into().unwrap()
+    }
+
+    pub fn sized_slice_mut<const SIZE: usize>(&mut self, start: u32) -> &mut [u8; SIZE] {
+        let start = start as usize;
+        (&mut self.0[start..start + SIZE]).try_into().unwrap()
+    }
+
     pub fn split_n(self, count: u8) -> Vec<RawMemory> {
         let results: Vec<_> = self.0.chunks_exact(self.0.len() / usize::from(count))
             .map(|chunk| RawMemory(chunk.to_vec()))
