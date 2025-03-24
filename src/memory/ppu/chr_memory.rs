@@ -150,9 +150,6 @@ impl ChrMemory {
                 ChrIndex::Rom(index) => {
                     if self.access_override == Some(AccessOverride::ForceRam) {
                         self.chr_ram[index] = value;
-                    } else {
-                        // FIXME: ROM shouldn't be writable.
-                        self.chr_rom[index] = value;
                     }
                 }
                 ChrIndex::Ram(index) => self.chr_ram[index] = value,
