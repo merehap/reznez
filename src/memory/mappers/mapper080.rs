@@ -1,7 +1,7 @@
 use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_max_size(2048 * KIBIBYTE)
+    .prg_rom_max_size(2048 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x7EFF, 7 * KIBIBYTE + 3 * KIBIBYTE / 4, Bank::EMPTY),
         Window::new(0x7F00, 0x7F7F, KIBIBYTE / 8, Bank::WORK_RAM.status_register(S0)),
@@ -11,7 +11,7 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),
         Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
     ])
-    .chr_max_size(256 * KIBIBYTE)
+    .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
         Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::ROM.switchable(C0)),
         Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C1)),

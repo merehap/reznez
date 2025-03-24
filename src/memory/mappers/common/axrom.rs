@@ -3,12 +3,12 @@ use crate::memory::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     // Oversize PRG. On real cartridges, 256KiB is the max.
     .initial_name_table_mirroring(NameTableMirroring::ONE_SCREEN_LEFT_BANK)
-    .prg_max_size(512 * KIBIBYTE)
+    .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
         Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P0)),
     ])
-    .chr_max_size(8 * KIBIBYTE)
+    .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(0)),
     ])

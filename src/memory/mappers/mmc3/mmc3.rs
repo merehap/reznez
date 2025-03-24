@@ -2,10 +2,10 @@ use crate::memory::mapper::*;
 use crate::memory::mappers::mmc3::irq_state::IrqState;
 
 pub const LAYOUT: Layout = Layout::builder()
-    .prg_max_size(512 * KIBIBYTE)
+    .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(PRG_WINDOWS_8000_SWITCHABLE)
     .prg_layout(PRG_WINDOWS_C000_SWITCHABLE)
-    .chr_max_size(256 * KIBIBYTE)
+    .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(CHR_BIG_WINDOWS_FIRST)
     .chr_layout(CHR_SMALL_WINDOWS_FIRST)
     .name_table_mirrorings(&[

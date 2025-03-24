@@ -53,7 +53,7 @@ impl Layout {
         assert!(chr_rom_size <= self.chr_rom_max_size,
             "CHR ROM size of {}KiB is too large for this mapper.", chr_rom_size / KIBIBYTE);
 
-        let mut chr_access_override = cartridge.access_override();
+        let mut chr_access_override = cartridge.chr_access_override();
         let chr_ram = if self.chr_save_ram_size > 0 {
             match cartridge.chr_ram().size() {
                 0 => {
@@ -79,7 +79,7 @@ impl Layout {
             self.prg_rom_outer_bank_layout.prg_rom_outer_bank_count(prg_rom_size),
             // TODO: Work RAM and Save RAM should be separate, but are combined here.
             cartridge.prg_ram_size() + cartridge.prg_nvram_size(),
-            cartridge.access_override(),
+            cartridge.prg_access_override(),
         );
 
         let chr_memory = ChrMemory::new(
@@ -192,7 +192,7 @@ impl LayoutBuilder {
         }
     }
 
-    pub const fn prg_max_size(&mut self, value: u32) -> &mut LayoutBuilder {
+    pub const fn prg_rom_max_size(&mut self, value: u32) -> &mut LayoutBuilder {
         self.prg_max_size = Some(value);
         self
     }
@@ -224,7 +224,7 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn chr_max_size(&mut self, value: u32) -> &mut LayoutBuilder {
+    pub const fn chr_rom_max_size(&mut self, value: u32) -> &mut LayoutBuilder {
         self.chr_max_size = Some(value);
         self
     }

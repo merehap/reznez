@@ -3,14 +3,14 @@ use crate::memory::mappers::mmc1::board::Board;
 use crate::memory::mappers::mmc1::shift_register::{ShiftRegister, ShiftStatus};
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_max_size(512 * KIBIBYTE)
+    .prg_rom_max_size(512 * KIBIBYTE)
     .prg_rom_max_outer_bank_size(256 * KIBIBYTE)
     .prg_layout_index(3)
     .prg_layout(PRG_WINDOWS_ONE_BIG)
     .prg_layout(PRG_WINDOWS_ONE_BIG)
     .prg_layout(PRG_WINDOWS_FIXED_FIRST)
     .prg_layout(PRG_WINDOWS_FIXED_LAST)
-    .chr_max_size(128 * KIBIBYTE)
+    .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.switchable(C0)),
     ])

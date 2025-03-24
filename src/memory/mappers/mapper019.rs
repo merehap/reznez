@@ -3,7 +3,7 @@ use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::{Ciram, CiramSide};
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_max_size(512 * KIBIBYTE)
+    .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x67FF, 2 * KIBIBYTE, Bank::WORK_RAM.fixed_index(0).status_register(S12)),
         Window::new(0x6800, 0x6FFF, 2 * KIBIBYTE, Bank::WORK_RAM.fixed_index(1).status_register(S13)),
@@ -14,7 +14,7 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),
         Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
     ])
-    .chr_max_size(256 * KIBIBYTE)
+    .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
         Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::RAM.switchable(C0).status_register(S0)),
         Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::RAM.switchable(C1).status_register(S1)),

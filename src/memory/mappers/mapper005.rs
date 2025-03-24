@@ -9,7 +9,7 @@ use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::ppu::register::registers::ctrl::Ctrl;
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_max_size(1024 * KIBIBYTE)
+    .prg_rom_max_size(1024 * KIBIBYTE)
     // Mode 0
     .prg_layout(&[
         Window::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
@@ -43,7 +43,7 @@ const LAYOUT: Layout = Layout::builder()
     .prg_layout_index(3)
     .override_bank_register(P4, -1)
 
-    .chr_max_size(1024 * KIBIBYTE)
+    .chr_rom_max_size(1024 * KIBIBYTE)
     // Normal sprite height layouts
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.switchable(C7)),

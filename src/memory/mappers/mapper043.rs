@@ -3,7 +3,7 @@ use ux::u12;
 use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_max_size(80 * KIBIBYTE)
+    .prg_rom_max_size(80 * KIBIBYTE)
     .prg_bank_size_override(8 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x5000, 0x57FF, 2 * KIBIBYTE, Bank::ROM.fixed_index(8)),
@@ -14,7 +14,7 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
         Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(9)),
     ])
-    .chr_max_size(8 * KIBIBYTE)
+    .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),
     ])

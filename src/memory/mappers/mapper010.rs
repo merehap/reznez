@@ -3,13 +3,13 @@ use crate::memory::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .override_meta_register(M0, C1)
     .override_meta_register(M1, C3)
-    .prg_max_size(256 * KIBIBYTE)
+    .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
         Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P0)),
         Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
     ])
-    .chr_max_size(128 * KIBIBYTE)
+    .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
         Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.meta_switchable(M0)),
         Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.meta_switchable(M1)),

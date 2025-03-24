@@ -2,13 +2,13 @@ use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     // Oversize. Actual cartridge only has 128 max.
-    .prg_max_size(4096 * KIBIBYTE)
+    .prg_rom_max_size(4096 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
         Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P0)),
     ])
     // Oversize. Actual cartridge only has 64 max.
-    .chr_max_size(2048 * KIBIBYTE)
+    .chr_rom_max_size(2048 * KIBIBYTE)
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),
     ])

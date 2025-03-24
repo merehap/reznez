@@ -1,12 +1,12 @@
 use crate::memory::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_max_size(32 * KIBIBYTE)
+    .prg_rom_max_size(32 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
         Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P0)),
     ])
-    .chr_max_size(8 * KIBIBYTE)
+    .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
         // FIXME: Marked as RAM because it needs a status register, but it's actually ROM.
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.fixed_index(0).status_register(S0)),

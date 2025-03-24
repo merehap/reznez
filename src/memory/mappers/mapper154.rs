@@ -2,9 +2,9 @@ use crate::memory::mapper::*;
 use crate::memory::mappers::mapper088::{Mapper088, PRG_WINDOWS, CHR_WINDOWS};
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_max_size(128 * KIBIBYTE)
+    .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(PRG_WINDOWS)
-    .chr_max_size(128 * KIBIBYTE)
+    .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(CHR_WINDOWS)
     .name_table_mirrorings(&[
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,

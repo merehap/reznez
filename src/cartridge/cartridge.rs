@@ -255,6 +255,10 @@ impl Cartridge {
         self.prg_nvram_size
     }
 
+    pub fn prg_access_override(&self) -> Option<AccessOverride> {
+        self.prg_access_override
+    }
+
     pub fn chr_rom_size(&self) -> u32 {
         self.chr_rom.size()
     }
@@ -267,7 +271,7 @@ impl Cartridge {
         self.chr_nvram_size
     }
 
-    pub fn access_override(&self) -> Option<AccessOverride> {
+    pub fn chr_access_override(&self) -> Option<AccessOverride> {
         self.chr_access_override
     }
 }
