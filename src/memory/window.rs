@@ -78,7 +78,7 @@ impl Window {
         let is_ram = match access_override {
             None => match self.bank {
                 Bank::Rom(..) => false,
-                Bank::Ram(..) => true,
+                Bank::Ram(..) | Bank::SaveRam(..) => true,
                 Bank::RomRam(_, _, rom_ram_mode) => registers.rom_ram_mode(rom_ram_mode) == RomRamMode::Ram,
                 _ => panic!("Unsupported bank type for CHR: {:?}", self.bank),
             }

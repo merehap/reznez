@@ -311,7 +311,10 @@ impl PrgMemory {
                         PrgMemoryIndex::WorkRam { index, ram_status }
                     }
                     // TODO: Save RAM should be separate from WorkRam.
-                    Bank::SaveRam(index) => PrgMemoryIndex::WorkRam { index, ram_status: RamStatus::ReadWrite },
+                    Bank::SaveRam(start_index) => {
+                        let index = start_index + u32::from(bank_offset);
+                        PrgMemoryIndex::WorkRam { index, ram_status: RamStatus::ReadWrite }
+                    }
                     Bank::ExtendedRam(status_register_id) => {
                         let index = u32::from(bank_offset);
                         let ram_status: RamStatus = status_register_id

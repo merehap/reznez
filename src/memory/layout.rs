@@ -1,6 +1,8 @@
 use std::collections::BTreeSet;
 use std::num::NonZeroU8;
 
+use log::warn;
+
 use crate::cartridge::cartridge::Cartridge;
 use crate::memory::bank::bank_index::{BankIndex, BankRegisters, MetaRegisterId, BankRegisterId};
 use crate::memory::cpu::prg_layout::PrgLayout;
@@ -51,6 +53,24 @@ impl Layout {
         assert!(chr_rom_size <= self.chr_rom_max_size,
             "CHR ROM size of {}KiB is too large for this mapper.", chr_rom_size / KIBIBYTE);
 
+        let mut chr_access_override = cartridge.access_override();
+        let chr_ram = if self.chr_save_ram_size > 0 {
+            match cartridge.chr_ram().size() {
+                0 => {
+                    if chr_access_override.is_some() {
+                        warn!("Removing CHR access override because mapper explicitly set CHR Save RAM.");
+                        chr_access_override = None;
+                    }
+
+                    RawMemory::new(self.chr_save_ram_size)
+                }
+                size if size == self.chr_save_ram_size => RawMemory::new(self.chr_save_ram_size),
+                _ => panic!("CHR SAVE RAM size from cartridge did not match mapper override value."),
+            }
+        } else {
+            cartridge.chr_ram()
+        };
+
         let prg_memory = PrgMemory::new(
             self.prg_layouts.as_iter().collect(),
             self.prg_layout_index,
@@ -62,20 +82,11 @@ impl Layout {
             cartridge.access_override(),
         );
 
-        let chr_ram = if self.chr_save_ram_size > 0 {
-            match cartridge.chr_ram().size() {
-                0 => RawMemory::new(self.chr_save_ram_size),
-                size if size == self.chr_save_ram_size => RawMemory::new(self.chr_save_ram_size),
-                _ => panic!("CHR SAVE RAM size from cartridge did not match mapper override value."),
-            }
-        } else {
-            cartridge.chr_ram()
-        };
         let chr_memory = ChrMemory::new(
             self.chr_layouts.as_iter().collect(),
             self.chr_layout_index,
             self.align_large_chr_windows,
-            cartridge.access_override(),
+            chr_access_override,
             cartridge.chr_rom().clone(),
             chr_ram,
         );
