@@ -183,9 +183,9 @@ impl Cartridge {
         };
 
         if let Some(header) = header_db.header_from_db(&cartridge, rom, &prg_rom, mapper_number, submapper_number) {
-            if cartridge.mapper_number != mapper_number {
-                warn!("Mapper number in ROM ({}) does not match the one in the DB {mapper_number}.",
-                    cartridge.mapper_number);
+            if cartridge.mapper_number != header.mapper_number {
+                warn!("Mapper number in ROM ({}) does not match the one in the DB ({}).",
+                    cartridge.mapper_number, header.mapper_number);
             }
 
             assert_eq!(prg_rom.size(), header.prg_rom_size);
