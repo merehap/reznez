@@ -88,9 +88,6 @@ Aladdin - Corrupted sprites, gets stuck in a loop writing to PPUDATA, JAMs.
 MAPPER 16
 Akuma-kun - Makai no Wana - Incorrect CHR ROM banks for bottom part of screen.
 
-MAPPER 18
-Magic John - Two flickering pixels on right hand side during the intro. (Possible IRQ off-by-one timing.)
-
 MAPPER 21
 Wai Wai World 2 - Severe flickering (sprites aren't drawn in time?)
 Ganbare Goemon Gaiden 2 - Partial bad pattern table on opening screen.
@@ -100,7 +97,6 @@ Tiny Toon Adventures - Status bar
 
 MAPPER 66
 Dragon Ball - Goku can't move to spots he should be able to.
-
 
 MAPPER 71
 Fantastic Adventures of Dizzy - Status bar jumps a scanline or two, some sprites flicker. Sprites over the character intros.
@@ -117,6 +113,11 @@ MAPPER 193
 Fighting Hero: Background fails to render properly except for the demo.
 	Proper name table is briefly populated on input, but then is blanked again.
 Deep Dungeon 4: Accesses CHR RAM outside of the default provided 8KiB. Need mirroring?
+
+
+Improvements over Mesen:
+Magic John - Mesen has two flickering pixels on right hand side during the intro. REZNEZ used to have this, but no longer. IRQ or NMI off-by-two?
+
 
 Total games implemented:
 000: 247
