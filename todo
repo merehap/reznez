@@ -21,6 +21,7 @@ Improve cycle accuracy of undocumented instructions
 Open Bus for joysticks.
 Other input devices.
 Auto-mirror undersized CHR (for mapper 99 and maybe others).
+Mapper switch dialog for mislabelled ROMs.
 
 FANCY NICE-TO-HAVES
 APU frequency correction
@@ -71,9 +72,6 @@ MMC1 variants:
 ---------------------GAMES------------------------------------
 MAPPER 0
 Cheetah Men II [b1] (Doesn't work on nestopia either. Wrong tiles are rendered during some intro screens, probably due to the game relying on certain RAM values being present at startup)
-
-MAPPER 1
-A Ressha de Ikou (https://www.nesdev.org/wiki/MMC1#SZROM)
 
 MAPPER 3
 Athletic World (Freezes on nestopia too. Freezes at the beginning of the Hurdles event)
