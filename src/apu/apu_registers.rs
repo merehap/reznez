@@ -8,7 +8,6 @@ use crate::apu::triangle_channel::TriangleChannel;
 use crate::apu::noise_channel::NoiseChannel;
 use crate::apu::dmc::Dmc;
 use crate::cpu::dmc_dma::DmcDma;
-use crate::memory::irq_source::IrqSource;
 use crate::util::bit_util;
 
 pub struct ApuRegisters {
@@ -20,7 +19,7 @@ pub struct ApuRegisters {
 
     pending_step_mode: StepMode,
     suppress_irq: bool,
-    frame_irq: IrqSource,
+    frame_irq_pending: bool,
     frame_counter_write_status: FrameCounterWriteStatus,
 
     // Whenever a quarter or half frame signal occurs, recurrence is suppressed for 2 cycles.
@@ -42,7 +41,7 @@ impl ApuRegisters {
 
             pending_step_mode: StepMode::FourStep,
             suppress_irq: false,
-            frame_irq: IrqSource::new(),
+            frame_irq_pending: false,
             frame_counter_write_status: FrameCounterWriteStatus::Inactive,
 
             counter_suppression_cycles: 0,
@@ -57,7 +56,7 @@ impl ApuRegisters {
         self.disable_channels();
         // At reset, $4017 should should be rewritten with last value written
         self.frame_counter_write_status = FrameCounterWriteStatus::Initialized;
-        self.frame_irq.set_pending(false);
+        self.frame_irq_pending = false;
     }
 
     pub fn step_mode(&self) -> StepMode {
@@ -78,8 +77,8 @@ impl ApuRegisters {
 
     pub fn peek_status(&self) -> Status {
         Status {
-            dmc_interrupt: self.dmc.irq().pending(),
-            frame_irq_pending: self.frame_irq.pending(),
+            dmc_interrupt: self.dmc.irq_pending(),
+            frame_irq_pending: self.frame_irq_pending,
             dmc_active: self.dmc.active(),
             noise_active: self.noise.active(),
             triangle_active: self.triangle.active(),
@@ -90,12 +89,12 @@ impl ApuRegisters {
 
     // Read 0x4015
     pub fn read_status(&mut self) -> Status {
-        if self.frame_irq.pending() {
+        if self.frame_irq_pending {
             info!(target: "apuevents", "Status read cleared pending frame IRQ. APU Cycle: {}", self.clock.cycle());
         }
 
         let status = self.peek_status();
-        self.frame_irq.set_pending(false);
+        self.frame_irq_pending = false;
         status
     }
 
@@ -126,7 +125,7 @@ impl ApuRegisters {
         self.pending_step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
         self.suppress_irq = value & 0b0100_0000 != 0;
         if self.suppress_irq {
-            self.frame_irq.set_pending(false);
+            self.frame_irq_pending = false;
         }
 
         self.frame_counter_write_status = FrameCounterWriteStatus::Initialized;
@@ -245,20 +244,12 @@ impl ApuRegisters {
         self.noise.length_counter.apply_pending_values();
     }
 
-    pub fn frame_irq(&self) -> &IrqSource {
-        &self.frame_irq
+    pub fn frame_irq_pending(&self) -> bool {
+        self.frame_irq_pending
     }
 
-    pub fn frame_irq_mut(&mut self) -> &mut IrqSource {
-        &mut self.frame_irq
-    }
-
-    pub fn dmc_irq(&self) -> &IrqSource {
-        self.dmc.irq()
-    }
-
-    pub fn dmc_irq_mut(&mut self) -> &mut IrqSource {
-        self.dmc.irq_mut()
+    pub fn dmc_irq_pending(&self) -> bool {
+        self.dmc.irq_pending()
     }
 
     pub fn maybe_set_frame_irq_pending(&mut self) {
@@ -273,13 +264,13 @@ impl ApuRegisters {
 
         if is_irq_cycle {
             info!(target: "apuevents", "Frame IRQ pending. APU Cycle: {}", self.clock.cycle());
-            self.frame_irq.set_pending(true);
+            self.frame_irq_pending = true;
         }
     }
 
     pub fn acknowledge_frame_irq(&mut self) {
         info!(target: "apuevents", "Frame IRQ acknowledged. APU Cycle: {}", self.clock.cycle());
-        self.frame_irq.set_pending(false);
+        self.frame_irq_pending = false;
     }
 }
 

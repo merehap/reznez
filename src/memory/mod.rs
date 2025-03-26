@@ -1,6 +1,5 @@
 pub mod bank;
 pub mod cpu;
-pub mod irq_source;
 pub mod layout;
 pub mod mapper;
 pub mod mapper_list;

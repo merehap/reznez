@@ -7,7 +7,6 @@ use crate::cartridge::cartridge::Cartridge;
 use crate::memory::bank::bank_index::{BankIndex, BankRegisters, MetaRegisterId, BankRegisterId};
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory::PrgMemory;
-use crate::memory::irq_source::IrqSource;
 use crate::memory::mapper::{MapperParams, RamStatus};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::chr_memory::ChrMemory;
@@ -139,7 +138,7 @@ impl Layout {
             name_table_mirrorings: self.name_table_mirrorings,
             ram_statuses: self.ram_statuses,
             ram_not_present,
-            irq: IrqSource::new(),
+            irq_pending: false,
         }
     }
 }

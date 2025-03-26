@@ -1,5 +1,4 @@
 use crate::cpu::dmc_dma::DmcDma;
-use crate::memory::irq_source::IrqSource;
 use crate::memory::mapper::CpuAddress;
 use crate::util::integer::U7;
 
@@ -10,7 +9,7 @@ pub struct Dmc {
     muted: bool,
 
     irq_enabled: bool,
-    irq: IrqSource,
+    irq_pending: bool,
 
     should_loop: bool,
     volume: U7,
@@ -36,7 +35,7 @@ impl Dmc {
         self.should_loop = (value & 0b0100_0000) != 0;
         self.period = NTSC_PERIODS[(value & 0b0000_1111) as usize] - 1;
         if !self.irq_enabled {
-            self.irq.set_pending(false);
+            self.irq_pending = false;
         }
     }
 
@@ -58,7 +57,7 @@ impl Dmc {
 
     // 0x4015
     pub(super) fn set_enabled(&mut self, dma: &mut DmcDma, enabled: bool) {
-        self.irq.set_pending(false);
+        self.irq_pending = false;
 
         if !enabled {
             self.sample_bytes_remaining = 0;
@@ -76,7 +75,7 @@ impl Dmc {
 
     // Upon RESET
     pub(super) fn disable(&mut self) {
-        self.irq.set_pending(false);
+        self.irq_pending = false;
         self.sample_bytes_remaining = 0;
     }
 
@@ -97,7 +96,7 @@ impl Dmc {
                     self.sample_bytes_remaining = self.sample_length;
                     self.sample_address = self.sample_start_address;
                 } else if self.irq_enabled {
-                    self.irq.set_pending(true);
+                    self.irq_pending = true;
                 }
             }
         }
@@ -139,12 +138,8 @@ impl Dmc {
         self.sample_bytes_remaining > 0
     }
 
-    pub fn irq(&self) -> &IrqSource {
-        &self.irq
-    }
-
-    pub fn irq_mut(&mut self) -> &mut IrqSource {
-        &mut self.irq
+    pub fn irq_pending(&self) -> bool {
+        self.irq_pending
     }
 
     pub fn dma_sample_address(&self) -> CpuAddress {
@@ -157,7 +152,7 @@ impl Default for Dmc {
         Dmc {
             muted: true,
             irq_enabled: false,
-            irq: IrqSource::new(),
+            irq_pending: false,
             should_loop: false,
             volume: U7::default(),
             period: NTSC_PERIODS[0] - 1,

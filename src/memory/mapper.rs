@@ -29,7 +29,6 @@ use num_traits::FromPrimitive;
 use crate::apu::apu_registers::ApuRegisters;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
-use crate::memory::irq_source::IrqSource;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::Ciram;
 use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
@@ -481,7 +480,7 @@ pub struct MapperParams {
     pub name_table_mirrorings: &'static [NameTableMirroring],
     pub ram_statuses: &'static [RamStatus],
     pub ram_not_present: BTreeSet<RamStatusRegisterId>,
-    pub irq: IrqSource,
+    pub irq_pending: bool,
 }
 
 impl MapperParams {
@@ -606,20 +605,12 @@ impl MapperParams {
         self.bank_registers.set_to_ciram_side(id, ciram_side);
     }
 
-    pub fn irq(&self) -> &IrqSource {
-        &self.irq
-    }
-
-    pub fn irq_mut(&mut self) -> &mut IrqSource {
-        &mut self.irq
-    }
-
     pub fn irq_pending(&self) -> bool {
-        self.irq.pending()
+        self.irq_pending
     }
 
     pub fn set_irq_pending(&mut self, pending: bool) {
-        self.irq.set_pending(pending);
+        self.irq_pending = pending;
     }
 }
 

@@ -1,6 +1,3 @@
-use log::{info, log_enabled};
-use log::Level::Info;
-
 use crate::apu::apu_registers::ApuRegisters;
 use crate::cpu::dmc_dma::DmcDma;
 use crate::cpu::oam_dma::OamDma;
@@ -233,22 +230,9 @@ impl CpuMemory<'_> {
 
     pub fn irq_line_level(&mut self) -> SignalLevel {
         let irq_line_low =
-            self.memory.apu_regs().frame_irq().pending()
-            || self.memory.apu_regs().dmc_irq().pending()
-            || self.memory.mapper_params().irq().pending();
-        if log_enabled!(target: "cpuflowcontrol", Info) {
-            if self.memory.apu_regs_mut().frame_irq_mut().take_just_went_pending() {
-                info!("APU Frame IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
-            }
-
-            if self.memory.apu_regs_mut().dmc_irq_mut().take_just_went_pending() {
-                info!("DMC IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
-            }
-
-            if self.memory.mapper_params_mut().irq_mut().take_just_went_pending() {
-                info!("Mapper IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
-            }
-        }
+            self.memory.apu_regs().frame_irq_pending()
+            || self.memory.apu_regs().dmc_irq_pending()
+            || self.memory.mapper_params().irq_pending();
 
         if irq_line_low {
             SignalLevel::Low
