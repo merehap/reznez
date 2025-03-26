@@ -8,6 +8,7 @@ use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table::PatternIndex;
+use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::pixel_index::{PixelIndex, PixelRow};
 use crate::ppu::register::registers::attribute_register::AttributeRegister;
 use crate::ppu::register::registers::pattern_register::PatternRegister;
@@ -421,12 +422,20 @@ impl Ppu {
                     sprite_table_side, pattern_index, row_in_half, select_high);
             } else {
                 // Sprite not on current scanline. TODO: what address should be here?
-                address = PpuAddress::from_u16(0x1000);
+                if sprite_table_side == PatternTableSide::Left {
+                    address = PpuAddress::from_u16(0x0000);
+                } else {
+                    address = PpuAddress::from_u16(0x1000);
+                }
                 visible = false;
             }
         } else {
             // Pre-render scanline. TODO: use correct address based upon pattern index.
-            address = PpuAddress::from_u16(0x1000);
+            if sprite_table_side == PatternTableSide::Left {
+                address = PpuAddress::from_u16(0x0000);
+            } else {
+                address = PpuAddress::from_u16(0x1000);
+            }
             visible = false;
         }
 
