@@ -121,7 +121,7 @@ impl Mapper for Mapper064 {
     }
 
     // When in scanline reload mode, this is the same as MMC3's IRQ triggering except delayed a bit.
-    fn process_current_ppu_address(&mut self, _params: &mut MapperParams, address: PpuAddress) {
+    fn on_ppu_address_change(&mut self, _params: &mut MapperParams, address: PpuAddress) {
         if self.irq_counter_reload_mode != IrqCounterReloadMode::Scanline {
             return;
         }

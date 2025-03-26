@@ -77,7 +77,7 @@ impl Mapper for Mapper004_1 {
         self.irq_state.decrement_suppression_cycle_count();
     }
 
-    fn process_current_ppu_address(&mut self, params: &mut MapperParams, address: PpuAddress) {
+    fn on_ppu_address_change(&mut self, params: &mut MapperParams, address: PpuAddress) {
         self.irq_state.tick_counter(params, address);
     }
 

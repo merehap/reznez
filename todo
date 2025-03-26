@@ -22,6 +22,7 @@ Open Bus for joysticks.
 Other input devices.
 Auto-mirror undersized CHR (for mapper 99 and maybe others).
 Mapper switch dialog for mislabelled ROMs.
+Correct PPU address during sprite rendering
 
 FANCY NICE-TO-HAVES
 APU frequency correction

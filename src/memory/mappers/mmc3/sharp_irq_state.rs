@@ -27,7 +27,7 @@ impl SharpIrqState {
 }
 
 impl IrqState for SharpIrqState {
-    // Every PPU cycle.
+    // Every time the PPU address changes.
     fn tick_counter(&mut self, params: &mut MapperParams, address: PpuAddress) {
         if address.to_scroll_u16() >= 0x2000 {
             return;

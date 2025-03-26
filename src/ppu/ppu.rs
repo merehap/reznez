@@ -299,9 +299,9 @@ impl Ppu {
             }
 
             GetSpritePatternLowByte => {
-                let select_high = false;
-                let (address, visible) = self.current_sprite_pattern_address(mem, select_high);
                 if mem.regs().rendering_enabled() {
+                    let select_high = false;
+                    let (address, visible) = self.current_sprite_pattern_address(mem, select_high);
                     let pattern_low = mem.read(address);
                     if visible {
                         self.oam_registers.registers[self.oam_register_index]
@@ -310,9 +310,9 @@ impl Ppu {
                 }
             }
             GetSpritePatternHighByte => {
-                let select_high = true;
-                let (address, visible) = self.current_sprite_pattern_address(mem, select_high);
                 if mem.regs().rendering_enabled() {
+                    let select_high = true;
+                    let (address, visible) = self.current_sprite_pattern_address(mem, select_high);
                     let pattern_high = mem.read(address);
                     if visible {
                         self.oam_registers.registers[self.oam_register_index]

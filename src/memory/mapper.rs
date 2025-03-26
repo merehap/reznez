@@ -67,8 +67,8 @@ pub trait Mapper {
     fn on_end_of_ppu_cycle(&mut self) {}
     // Most mappers don't trigger anything based upon ppu reads.
     fn on_ppu_read(&mut self, _params: &mut MapperParams, _address: PpuAddress, _value: u8) {}
-    // Most mappers don't care about the current PPU address.
-    fn process_current_ppu_address(&mut self, _params: &mut MapperParams, _address: PpuAddress) {}
+    // Most mappers don't care about changes to the current PPU address.
+    fn on_ppu_address_change(&mut self, _params: &mut MapperParams, _address: PpuAddress) {}
     // Most mappers don't have bus conflicts.
     fn has_bus_conflicts(&self) -> HasBusConflicts { HasBusConflicts::No }
     // Most mappers don't use a fill-mode name table.
@@ -148,7 +148,7 @@ pub trait Mapper {
                     0x2007 => {
                         let reader = |ppu_address| self.ppu_read(params, ciram, palette_ram, ppu_address, false);
                         let data = ppu_registers.read_ppu_data(reader);
-                        self.process_current_ppu_address(params, ppu_registers.current_address());
+                        self.on_ppu_address_change(params, ppu_registers.current_address());
                         data
                     }
                     _ => unreachable!(),
@@ -197,13 +197,13 @@ pub trait Mapper {
                 0x2006 => {
                     ppu_registers.write_ppu_addr(value);
                     if ppu_registers.write_toggle() == WriteToggle::FirstByte {
-                        self.process_current_ppu_address(params, ppu_registers.current_address());
+                        self.on_ppu_address_change(params, ppu_registers.current_address());
                     }
                 }
                 0x2007 => {
                     self.ppu_write(params, ciram, palette_ram, ppu_registers.current_address(), value);
                     ppu_registers.write_ppu_data(value);
-                    self.process_current_ppu_address(params, ppu_registers.current_address());
+                    self.on_ppu_address_change(params, ppu_registers.current_address());
                 }
                 _ => unreachable!(),
             }
@@ -272,7 +272,7 @@ pub trait Mapper {
         rendering: bool,
     ) -> u8 {
         if rendering {
-            self.process_current_ppu_address(params, address);
+            self.on_ppu_address_change(params, address);
         }
 
         let value = self.ppu_peek(params, ciram, palette_ram, address);
