@@ -193,6 +193,26 @@ impl BankRegisterId {
             _ => panic!("Bad CHR ID: {id}"),
         }
     }
+
+    pub fn to_raw_chr_id(self) -> Option<u8> {
+        use BankRegisterId::*;
+        match self {
+            C0 => Some(0),
+            C1 => Some(1),
+            C2 => Some(2),
+            C3 => Some(3),
+            C4 => Some(4),
+            C5 => Some(5),
+            C6 => Some(6),
+            C7 => Some(7),
+            C8 => Some(8),
+            C9 => Some(9),
+            C10 => Some(10),
+            C11 => Some(11),
+            C12 => Some(12),
+            _ => None,
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

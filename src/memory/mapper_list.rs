@@ -326,8 +326,14 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // Sachen 3009
         133 => m::mapper133::Mapper133.supported(),
 
+        // Sachen 8259 B (UNL-Sachen-8259B)
+        138 => m::mapper138::MAPPER138.supported(),
+        // Sachen 8259 C (UNL-Sachen-8259C)
+        139 => m::mapper139::MAPPER139.supported(),
         // Jaleco J-11 and J-14
         140 => m::mapper140::Mapper140.supported(),
+        // Sachen 8259 A TC-A003-72 (UNL-Sachen-8259A)
+        141 => m::mapper141::MAPPER141.supported(),
 
         // Kaiser KS202 (UNL-KS7032)
         142 => m::mapper142::Mapper142::default().supported(),
