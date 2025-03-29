@@ -353,6 +353,10 @@ impl PpuMemory<'_> {
         &mut self.memory.oam
     }
 
+    pub fn trigger_ppu_address_change(&mut self, address: PpuAddress) {
+        self.memory.mapper.on_ppu_address_change(&mut self.memory.mapper_params, address);
+    }
+
     pub fn process_end_of_ppu_cycle(&mut self) {
         self.memory.mapper.on_end_of_ppu_cycle();
     }

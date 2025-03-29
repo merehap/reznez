@@ -53,9 +53,9 @@ pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|
         line.add(cycle + 1, vec![GetPatternIndex          ,                     ReadSpritePatternIndex, ResetOamAddress             ]);
         line.add(cycle + 2, vec![                                               ReadSpriteAttributes  , ResetOamAddress             ]);
         line.add(cycle + 3, vec![GetPaletteIndex          ,                     ReadSpriteX           , ResetOamAddress             ]);
-        line.add(cycle + 4, vec![                                               DummyReadSpriteX      , ResetOamAddress             ]);
+        line.add(cycle + 4, vec![LoadSpritePatternLowAddress,                   DummyReadSpriteX      , ResetOamAddress             ]);
         line.add(cycle + 5, vec![GetSpritePatternLowByte  ,                     DummyReadSpriteX      , ResetOamAddress             ]);
-        line.add(cycle + 6, vec![                                               DummyReadSpriteX      , ResetOamAddress             ]);
+        line.add(cycle + 6, vec![LoadSpritePatternHighAddress,                  DummyReadSpriteX      , ResetOamAddress             ]);
         line.add(cycle + 7, vec![GetSpritePatternHighByte ,                     DummyReadSpriteX      , ResetOamAddress, IncrementOamRegisterIndex]);
     }
 
@@ -144,9 +144,9 @@ pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::ne
         scanline.add(cycle + 1, vec![                           ResetOamAddress                        ]);
         scanline.add(cycle + 2, vec![                           ResetOamAddress                        ]);
         scanline.add(cycle + 3, vec![                           ResetOamAddress                        ]);
-        scanline.add(cycle + 4, vec![                           ResetOamAddress                        ]);
+        scanline.add(cycle + 4, vec![LoadSpritePatternLowAddress, ResetOamAddress                        ]);
         scanline.add(cycle + 5, vec![GetSpritePatternLowByte  , ResetOamAddress                        ]);
-        scanline.add(cycle + 6, vec![                           ResetOamAddress                        ]);
+        scanline.add(cycle + 6, vec![LoadSpritePatternHighAddress, ResetOamAddress                        ]);
         scanline.add(cycle + 7, vec![GetSpritePatternHighByte , ResetOamAddress                        ]);
     }
 

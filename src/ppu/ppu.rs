@@ -34,6 +34,9 @@ pub struct Ppu {
     next_sprite_pattern_index: PatternIndex,
     current_sprite_y: SpriteY,
     sprite_0_present: bool,
+    // TODO: Remove this. The IO bus should be set to this instead.
+    sprite_pattern_address: PpuAddress,
+    sprite_visible: bool,
 
     frame_actions: FrameActions,
 }
@@ -55,6 +58,8 @@ impl Ppu {
             next_sprite_pattern_index: PatternIndex::new(0),
             current_sprite_y: SpriteY::new(0),
             sprite_0_present: false,
+            sprite_pattern_address: PpuAddress::ZERO,
+            sprite_visible: false,
 
             frame_actions: NTSC_FRAME_ACTIONS.clone(),
         }
@@ -299,12 +304,22 @@ impl Ppu {
                 //if !self.rendering_enabled { return; }
             }
 
+            LoadSpritePatternLowAddress => {
+                let select_high = false;
+                (self.sprite_pattern_address, self.sprite_visible) =
+                    self.current_sprite_pattern_address(mem, select_high);
+                mem.trigger_ppu_address_change(self.sprite_pattern_address);
+            }
+            LoadSpritePatternHighAddress => {
+                let select_high = true;
+                (self.sprite_pattern_address, self.sprite_visible) =
+                    self.current_sprite_pattern_address(mem, select_high);
+                mem.trigger_ppu_address_change(self.sprite_pattern_address);
+            }
             GetSpritePatternLowByte => {
                 if mem.regs().rendering_enabled() {
-                    let select_high = false;
-                    let (address, visible) = self.current_sprite_pattern_address(mem, select_high);
-                    let pattern_low = mem.read(address);
-                    if visible {
+                    let pattern_low = mem.read(self.sprite_pattern_address);
+                    if self.sprite_visible {
                         self.oam_registers.registers[self.oam_register_index]
                             .set_pattern_low(pattern_low);
                     }
@@ -312,10 +327,8 @@ impl Ppu {
             }
             GetSpritePatternHighByte => {
                 if mem.regs().rendering_enabled() {
-                    let select_high = true;
-                    let (address, visible) = self.current_sprite_pattern_address(mem, select_high);
-                    let pattern_high = mem.read(address);
-                    if visible {
+                    let pattern_high = mem.read(self.sprite_pattern_address);
+                    if self.sprite_visible {
                         self.oam_registers.registers[self.oam_register_index]
                             .set_pattern_high(pattern_high);
                     }

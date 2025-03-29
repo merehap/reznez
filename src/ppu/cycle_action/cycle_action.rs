@@ -4,6 +4,8 @@ pub enum CycleAction {
     GetPaletteIndex,
     GetPatternLowByte,
     GetPatternHighByte,
+    LoadSpritePatternLowAddress,
+    LoadSpritePatternHighAddress,
     GetSpritePatternLowByte,
     GetSpritePatternHighByte,
     IncrementOamRegisterIndex,

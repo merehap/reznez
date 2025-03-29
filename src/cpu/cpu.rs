@@ -232,7 +232,7 @@ impl Cpu {
     }
 
     pub fn step_second_half(&mut self, memory: &mut CpuMemory) {
-        if memory.nmi_line_level() == SignalLevel::Low && self.previous_nmi_line_level == SignalLevel::High {
+        if self.previous_nmi_line_level == SignalLevel::High && memory.nmi_line_level() == SignalLevel::Low {
             info!(target: "cpuflowcontrol", "NMI pending in CPU. Cycle: {}", memory.cpu_cycle());
             self.nmi_status = NmiStatus::Pending;
         }
