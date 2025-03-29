@@ -134,6 +134,10 @@ impl Memory {
         &self.oam_dma
     }
 
+    pub fn ports_mut(&mut self) -> &mut Ports {
+        &mut self.ports
+    }
+
     pub fn cpu_cycle(&self) -> i64 {
         self.cpu_cycle
     }

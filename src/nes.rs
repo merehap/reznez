@@ -1,6 +1,4 @@
-use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::rc::Rc;
 
 use log::Level::Info;
 use log::{info, log_enabled};
@@ -29,9 +27,6 @@ pub struct Nes {
     memory: Memory,
     cartridge: Cartridge,
     frame: Frame,
-
-    joypad1: Rc<RefCell<Joypad>>,
-    joypad2: Rc<RefCell<Joypad>>,
     cycle: u64,
 
     log_formatter: Box<dyn Formatter>,
@@ -44,12 +39,12 @@ impl Nes {
         let (mapper, mapper_params) = mapper_list::lookup_mapper_with_params(&config.cartridge);
         let (joypad1, joypad2) =
         if config.joypad_enabled {
-            (Rc::new(RefCell::new(Joypad::new())), Rc::new(RefCell::new(Joypad::new())))
+            (Joypad::new(), Joypad::new())
         } else {
-            (Rc::new(RefCell::new(Joypad::disabled())), Rc::new(RefCell::new(Joypad::disabled())))
+            (Joypad::disabled(), Joypad::disabled())
         };
 
-        let ports = Ports::new(joypad1.clone(), joypad2.clone());
+        let ports = Ports::new(joypad1, joypad2);
         let mut memory = Memory::new(mapper, mapper_params, ports, config.ppu_clock, config.system_palette.clone());
 
         Nes {
@@ -59,9 +54,6 @@ impl Nes {
             memory,
             cartridge: config.cartridge.clone(),
             frame: Frame::new(),
-
-            joypad1,
-            joypad2,
             cycle: 0,
 
             log_formatter: Box::new(MesenFormatter),
@@ -272,15 +264,11 @@ impl Nes {
     pub fn process_gui_events(&mut self, events: &Events) {
         for (button, status) in &events.joypad1_button_statuses {
             info!("Joypad 1: button {:?} status is {:?}", button, status);
-            self.joypad1
-                .borrow_mut()
-                .set_button_status(*button, *status);
+            self.memory.ports_mut().joypad1.set_button_status(*button, *status);
         }
 
         for (button, status) in &events.joypad2_button_statuses {
-            self.joypad2
-                .borrow_mut()
-                .set_button_status(*button, *status);
+            self.memory.ports_mut().joypad2.set_button_status(*button, *status);
         }
     }
 }
