@@ -1,12 +1,10 @@
 ROADMAP
 1. Fully passing DMC tests.
-2. Fully passing IRQ tests.
-    mmc3_test/4-scanline off-by-1
-3. Fully working MMC5.
-4. Expansion Audio
-5. Remaining test ROMs.
-6. Joypad support
-7. Proper sounding audio.
+2. Fully working MMC5.
+3. Expansion Audio
+4. Remaining test ROMs.
+5. Joypad support
+6. Proper sounding audio.
 
 Add CHR bank viewer. Allow overriding the selected bank for the game rendering.
 Remove GetSpritePatternHack in ppu.rs.
@@ -112,6 +110,9 @@ Senjou: Various including flickering.
 
 MAPPER 139
 Final Combat: Junk tiles briefly flash during intro. Bad mirroring fold during gameplay.
+
+MAPPER 141
+Q Boy: Need to support CHR RAM (with no CHR shift)
 
 MAPPER 180
 Crazy Climber: Verify operation.
