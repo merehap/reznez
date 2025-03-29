@@ -1,9 +1,6 @@
 pub mod bank;
 pub mod cpu;
 pub mod layout;
-pub mod mapper;
-pub mod mapper_list;
-pub mod mappers;
 pub mod memory;
 pub mod ppu;
 pub mod raw_memory;

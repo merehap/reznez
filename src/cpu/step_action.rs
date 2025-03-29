@@ -1,4 +1,4 @@
-use crate::memory::mapper::CpuAddress;
+use crate::memory::cpu::cpu_address::CpuAddress;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum StepAction {

@@ -4,7 +4,7 @@ use crate::cpu::step_action::{From, To};
 use crate::cpu::step_action::StepAction;
 use crate::cpu::step_action::StepAction::*;
 use crate::cpu::step::Step::{Read, ReadField, Write, WriteField};
-use crate::memory::mapper::CpuAddress;
+use crate::memory::cpu::cpu_address::CpuAddress;
 
 pub static OAM_READ_STEP: Step = Read(From::OamDmaAddressTarget, &[]);
 pub static OAM_WRITE_STEP: Step = Write(To::OAM_DATA, &[IncrementOamDmaAddress]);

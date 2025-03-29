@@ -16,7 +16,7 @@ use crate::gui::gui::Events;
 use crate::logging::formatter;
 use crate::logging::formatter::*;
 use crate::memory::cpu::ports::Ports;
-use crate::memory::mapper_list;
+use crate::mapper_list;
 use crate::memory::memory::Memory;
 use crate::ppu::clock::Clock;
 use crate::ppu::ppu::Ppu;

@@ -5,7 +5,7 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::cpu::stack::Stack;
-use crate::memory::mapper::{Mapper, MapperParams};
+use crate::mapper::{Mapper, MapperParams};
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ciram::Ciram;
@@ -458,7 +458,7 @@ pub mod test_data {
     use crate::cartridge::cartridge;
     use crate::cartridge::cartridge::Cartridge;
     use crate::memory::cpu::ports;
-    use crate::memory::mappers::mapper000::Mapper000;
+    use crate::mappers::mapper000::Mapper000;
     use crate::ppu::palette::system_palette;
 
     use super::*;

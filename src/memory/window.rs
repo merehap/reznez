@@ -5,9 +5,9 @@ use crate::memory::bank::bank_index::{BankRegisters, BankRegisterId};
 
 use crate::memory::ppu::ciram::CiramSide;
 
-use super::bank::bank_index::{BankConfiguration, BankLocation, RomRamMode};
-use super::mapper::{BankIndex, RamStatus, RamStatusRegisterId};
-use super::ppu::chr_memory::AccessOverride;
+use crate::mapper::{BankIndex, RamStatus, RamStatusRegisterId};
+use crate::memory::bank::bank_index::{BankConfiguration, BankLocation, RomRamMode};
+use crate::memory::ppu::chr_memory::AccessOverride;
 
 // A Window is a range within addressable memory.
 // If the specified bank cannot fill the window, adjacent banks will be included too.

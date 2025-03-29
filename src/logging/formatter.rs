@@ -1,6 +1,6 @@
 use crate::cpu::dmc_dma::DmcDma;
 use crate::cpu::instruction::{Instruction, OpCode, AccessMode};
-use crate::memory::mapper::CpuAddress;
+use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::nes::Nes;
 
 pub trait Formatter {

@@ -1,5 +1,5 @@
 use crate::cpu::dmc_dma::DmcDma;
-use crate::memory::mapper::CpuAddress;
+use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::util::integer::U7;
 
 const NTSC_PERIODS: [u16; 16] =
