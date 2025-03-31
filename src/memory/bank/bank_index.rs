@@ -1,5 +1,7 @@
 use std::num::NonZeroU16;
 
+use num_derive::FromPrimitive;
+
 use crate::memory::bank::bank::RamStatusRegisterId;
 use crate::memory::ppu::ciram::CiramSide;
 
@@ -83,6 +85,18 @@ impl BankRegisters {
         }
     }
 
+    pub fn registers(&self) -> &[BankLocation; 18] {
+        &self.registers
+    }
+
+    pub fn meta_registers(&self) -> &[BankRegisterId; 2] {
+        &self.meta_registers
+    }
+
+    pub fn ram_statuses(&self) -> &[RamStatus; 15] {
+        &self.ram_statuses
+    }
+
     pub fn get(&self, id: BankRegisterId) -> BankLocation {
         self.registers[id as usize]
     }
@@ -150,7 +164,7 @@ impl BankLocation {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, FromPrimitive)]
 pub enum BankRegisterId {
     C0,
     C1,

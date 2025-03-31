@@ -22,6 +22,7 @@ Unwrap review. Convert most to expect or Result.
 
 FANCY NICE-TO-HAVES
 APU frequency correction
+Allow banks to be configured to pass through PPU address bits, rather than custom logic being needed (see Sachen8259).
 
 UNTESTED
 (Nothing known, but there is plenty)

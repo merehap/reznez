@@ -494,9 +494,6 @@ impl MapperParams {
 
     pub fn set_name_table_mirroring(&mut self, mirroring_index: u8) {
         self.name_table_mirroring = self.name_table_mirrorings[usize::from(mirroring_index)];
-        info!(target: "mapperupdates",
-            "Setting NameTableMirroring to {} (index {mirroring_index}).",
-            self.name_table_mirroring);
     }
 
     pub fn prg_memory(&self) -> &PrgMemory {
@@ -504,7 +501,6 @@ impl MapperParams {
     }
 
     pub fn set_prg_layout(&mut self, index: u8) {
-        info!(target: "mapperupdates", "Updating PRG layout to index {index}.");
         self.prg_memory.set_layout(index);
     }
 
@@ -527,8 +523,6 @@ impl MapperParams {
         } else {
             let ram_status = self.ram_statuses[index as usize];
             self.bank_registers.set_ram_status(id, ram_status);
-            info!(target: "mapperupdates",
-                "Setting RamStatus register {id:?} to {ram_status:?} (index {index}).");
         }
     }
 
@@ -545,15 +539,7 @@ impl MapperParams {
     }
 
     pub fn set_chr_layout(&mut self, index: u8) {
-        info!(target: "mapperupdates", "Setting CHR layout to index {index}.");
         self.chr_memory.set_layout(index);
-    }
-
-    pub fn set_chr_layout_dedup_logging(&mut self, index: u8) {
-        if index != self.chr_memory.layout_index() {
-            info!(target: "mapperupdates", "Setting CHR layout to index {index}.");
-            self.chr_memory.set_layout(index);
-        }
     }
 
     pub fn peek_chr(&self, ciram: &Ciram, address: PpuAddress) -> u8 {

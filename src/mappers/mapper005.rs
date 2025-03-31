@@ -179,7 +179,7 @@ impl Mapper for Mapper005 {
             // PPU Ctrl
             0x2000 => {
                 self.sprite_height = Ctrl::from_u8(value).sprite_height();
-                self.update_chr_layout(params, false);
+                self.update_chr_layout(params);
             }
             // PPU Mask
             0x2001 => {
@@ -193,7 +193,7 @@ impl Mapper for Mapper005 {
         self.frame_state.sync_frame_status(addr);
 
         // Syncing the frame status may have switched in or out of special background banking mode.
-        self.update_chr_layout(params, true);
+        self.update_chr_layout(params);
 
         if self.irq_enabled && self.frame_state.irq_pending() {
             params.set_irq_pending(true);
@@ -314,7 +314,7 @@ impl Mapper005 {
     // Write 0x5101
     fn set_chr_layout(&mut self, params: &mut MapperParams, value: u8) {
         self.chr_window_mode = CHR_WINDOW_MODES[usize::from(value & 0b11)];
-        self.update_chr_layout(params, false);
+        self.update_chr_layout(params);
     }
 
     // Write 0x5104
@@ -389,7 +389,7 @@ impl Mapper005 {
 
     fn set_chr_bank_register(&mut self, params: &mut MapperParams, id: BankRegisterId, value: u8) {
         params.set_bank_register(id, value);
-        self.update_chr_layout(params, true);
+        self.update_chr_layout(params);
     }
 
     // Write 0x5200
@@ -411,7 +411,7 @@ impl Mapper005 {
 
     }
 
-    fn update_chr_layout(&mut self, params: &mut MapperParams, dedup_logging: bool) {
+    fn update_chr_layout(&mut self, params: &mut MapperParams) {
         if self.sprite_height == SpriteHeight::Normal {
             self.tall_sprite_background_enabled = false;
         }
@@ -426,11 +426,7 @@ impl Mapper005 {
             layout_index |= 0b100;
         }
 
-        if dedup_logging {
-            params.set_chr_layout_dedup_logging(layout_index);
-        } else {
-            params.set_chr_layout(layout_index);
-        }
+        params.set_chr_layout(layout_index);
     }
 }
 

@@ -13,6 +13,8 @@ use crate::cpu::step::Step;
 use crate::gui::gui::Events;
 use crate::logging::formatter;
 use crate::logging::formatter::*;
+use crate::mapper::{MapperParams, NameTableMirroring, RamStatus};
+use crate::memory::bank::bank_index::BankLocation;
 use crate::memory::cpu::ports::Ports;
 use crate::mapper_list;
 use crate::memory::memory::Memory;
@@ -44,6 +46,8 @@ impl Nes {
             (Joypad::disabled(), Joypad::disabled())
         };
 
+        let latest_values = LatestValues::new(&mapper_params);
+
         let ports = Ports::new(joypad1, joypad2);
         let mut memory = Memory::new(mapper, mapper_params, ports, config.ppu_clock, config.system_palette.clone());
 
@@ -58,7 +62,7 @@ impl Nes {
 
             log_formatter: Box::new(MesenFormatter),
             snapshots: Snapshots::new(),
-            latest_values: LatestValues::default(),
+            latest_values,
         }
     }
 
@@ -234,7 +238,6 @@ impl Nes {
         if log_enabled!(target: "cpuflowcontrol", Info) {
             let apu_regs = self.memory.apu_regs();
             let mapper_params = self.memory.mapper_params();
-
             let latest = &mut self.latest_values;
 
             if latest.apu_frame_irq_pending != apu_regs.frame_irq_pending() {
@@ -258,6 +261,54 @@ impl Nes {
                 }
             }
         }
+
+        if log_enabled!(target: "mapperupdates", Info) {
+            let mapper_params = self.memory.mapper_params();
+            let prg_memory = mapper_params.prg_memory();
+            let chr_memory = mapper_params.chr_memory();
+            let latest = &mut self.latest_values;
+
+            if latest.prg_layout_index != prg_memory.layout_index() {
+                latest.prg_layout_index = prg_memory.layout_index();
+                info!(target: "mapperupdates", "PRG layout set to index {}.", latest.prg_layout_index);
+            }
+
+            if latest.chr_layout_index != chr_memory.layout_index() {
+                latest.chr_layout_index = chr_memory.layout_index();
+                info!(target: "mapperupdates", "CHR layout set to index {}.", latest.chr_layout_index);
+            }
+
+            /*
+            let bank_registers = mapper_params.bank_registers.registers();
+            if &latest.bank_registers != bank_registers {
+                for (i, latest_bank_location) in latest.bank_registers.iter_mut().enumerate() {
+                    if *latest_bank_location != bank_registers[i] {
+                        *latest_bank_location = bank_registers[i];
+                        match *latest_bank_location {
+                            BankLocation::Index(index) =>
+                                info!("BankRegister {:?} set to {}.", FromPrimitive::from_usize(i).unwrap(), index),
+                            BankLocation::Ciram(side) => {}
+                        }
+                    }
+                }
+            }
+            */
+
+            if latest.name_table_mirroring != mapper_params.name_table_mirroring {
+                latest.name_table_mirroring = mapper_params.name_table_mirroring;
+                info!("NameTableMirroring set to {}.", mapper_params.name_table_mirroring);
+            }
+
+            let ram_statuses = mapper_params.bank_registers.ram_statuses();
+            if &latest.ram_statuses != ram_statuses {
+                for (i, latest_ram_status) in latest.ram_statuses.iter_mut().enumerate() {
+                    if *latest_ram_status != ram_statuses[i] {
+                        *latest_ram_status = ram_statuses[i];
+                        info!("RamStatus register S{i} set to {:?}.", *latest_ram_status);
+                    }
+                }
+            }
+        }
     }
 
     #[inline]
@@ -273,11 +324,32 @@ impl Nes {
     }
 }
 
-#[derive(Default)]
 struct LatestValues {
     apu_frame_irq_pending: bool,
     dmc_irq_pending: bool,
     mapper_irq_pending: bool,
+
+    prg_layout_index: u8,
+    chr_layout_index: u8,
+    bank_registers: [BankLocation; 18],
+    name_table_mirroring: NameTableMirroring,
+    ram_statuses: [RamStatus; 15],
+}
+
+impl LatestValues {
+    fn new(initial_params: &MapperParams) -> Self {
+        Self {
+            apu_frame_irq_pending: false,
+            dmc_irq_pending: false,
+            mapper_irq_pending: false,
+
+            prg_layout_index: initial_params.prg_memory.layout_index(),
+            chr_layout_index: initial_params.chr_memory.layout_index(),
+            bank_registers: *initial_params.bank_registers.registers(),
+            name_table_mirroring: initial_params.name_table_mirroring,
+            ram_statuses: *initial_params.bank_registers.ram_statuses(),
+        }
+    }
 }
 
 struct Snapshots {
