@@ -1,12 +1,12 @@
 use crate::mapper::*;
 
-const LAYOUT: Layout = Layout::builder()
+pub const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
         Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P0)),
     ])
-    // TODO: This is only the limit for board B. A and C have smaller sizes.
+    // This value is overridden by the individual boards.
     .chr_rom_max_size(512 * KIBIBYTE)
     // Normal layout.
     .chr_layout(&[
@@ -41,6 +41,8 @@ const VERTICAL: u8 = 0;
 
 // UNL-Sachen-8259A, UNL-Sachen-8259B, UNL-Sachen-8259C
 pub struct Sachen8259 {
+    layout: Layout,
+
     chr_bank_shift: u8,
     chr_outer_bank: u8,
     chr_inner_banks: [u8; 4],
@@ -95,13 +97,13 @@ impl Mapper for Sachen8259 {
     }
 
     fn layout(&self) -> Layout {
-        LAYOUT
+        self.layout.clone()
     }
 }
 
 
 impl Sachen8259 {
-    pub const fn new(board: Sachen8259Board) -> Self {
+    pub const fn new(layout: Layout, board: Sachen8259Board) -> Self {
         // The CHR bank low bits are actually the respective PPU address line bits.
         let (chr_bank_shift, chr_bank_low_bits) = match board {
             Sachen8259Board::A => (1, [0b00, 0b01, 0b00, 0b01]),
@@ -109,6 +111,8 @@ impl Sachen8259 {
             Sachen8259Board::C => (2, [0b00, 0b01, 0b10, 0b11]),
         };
         Self {
+            layout,
+
             chr_bank_shift,
             chr_outer_bank: 0,
             chr_inner_banks: [0; 4],

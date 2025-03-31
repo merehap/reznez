@@ -143,20 +143,46 @@ impl Layout {
             irq_pending: false,
         }
     }
+
+    pub const fn into_builder(self) -> LayoutBuilder {
+        LayoutBuilder {
+            prg_rom_max_size: Some(self.prg_rom_max_size),
+            prg_bank_size_override: self.prg_bank_size_override,
+            prg_layout_index: self.prg_layout_index,
+            prg_layouts: self.prg_layouts,
+            prg_rom_outer_bank_layout: Some(self.prg_rom_outer_bank_layout),
+
+            chr_rom_max_size: Some(self.chr_rom_max_size),
+            align_large_chr_windows: self.align_large_chr_windows,
+            chr_layout_index: self.chr_layout_index,
+            chr_layouts: self.chr_layouts,
+            chr_rom_outer_bank_layout: Some(self.chr_rom_outer_bank_layout),
+            chr_save_ram_size: self.chr_save_ram_size,
+
+            name_table_mirroring_source: self.name_table_mirroring_source,
+            name_table_mirrorings: self.name_table_mirrorings,
+
+            ram_statuses: self.ram_statuses,
+
+            bank_register_overrides: self.bank_register_overrides,
+            meta_register_overrides: self.meta_register_overrides,
+        }
+    }
+
 }
 
 #[derive(Clone, Copy)]
 pub struct LayoutBuilder {
-    prg_max_size: Option<u32>,
+    prg_rom_max_size: Option<u32>,
     prg_bank_size_override: Option<u16>,
     prg_layouts: ConstVec<PrgLayout, 10>,
     prg_layout_index: u8,
-    prg_outer_bank_layout: Option<OuterBankLayout>,
+    prg_rom_outer_bank_layout: Option<OuterBankLayout>,
 
-    chr_max_size: Option<u32>,
+    chr_rom_max_size: Option<u32>,
     chr_layouts: ConstVec<ChrLayout, 10>,
     chr_layout_index: u8,
-    chr_outer_bank_layout:  Option<OuterBankLayout>,
+    chr_rom_outer_bank_layout:  Option<OuterBankLayout>,
     align_large_chr_windows: bool,
     chr_save_ram_size: u32,
 
@@ -172,17 +198,17 @@ pub struct LayoutBuilder {
 impl LayoutBuilder {
     const fn new() -> LayoutBuilder {
         LayoutBuilder {
-            prg_max_size: None,
+            prg_rom_max_size: None,
             prg_bank_size_override: None,
             prg_layout_index: 0,
             prg_layouts: ConstVec::new(),
-            prg_outer_bank_layout: None,
+            prg_rom_outer_bank_layout: None,
 
-            chr_max_size: None,
+            chr_rom_max_size: None,
             align_large_chr_windows: true,
             chr_layout_index: 0,
             chr_layouts: ConstVec::new(),
-            chr_outer_bank_layout: None,
+            chr_rom_outer_bank_layout: None,
             chr_save_ram_size: 0,
 
             name_table_mirroring_source: NameTableMirroringSource::Cartridge,
@@ -196,7 +222,7 @@ impl LayoutBuilder {
     }
 
     pub const fn prg_rom_max_size(&mut self, value: u32) -> &mut LayoutBuilder {
-        self.prg_max_size = Some(value);
+        self.prg_rom_max_size = Some(value);
         self
     }
 
@@ -216,19 +242,19 @@ impl LayoutBuilder {
     }
 
     pub const fn prg_outer_bank_count(&mut self, count: u8) -> &mut LayoutBuilder {
-        assert!(self.prg_outer_bank_layout.is_none());
-        self.prg_outer_bank_layout = Some(OuterBankLayout::ExactCount(NonZeroU8::new(count).unwrap()));
+        assert!(self.prg_rom_outer_bank_layout.is_none());
+        self.prg_rom_outer_bank_layout = Some(OuterBankLayout::ExactCount(NonZeroU8::new(count).unwrap()));
         self
     }
 
     pub const fn prg_rom_outer_bank_size(&mut self, size: u32) -> &mut LayoutBuilder {
-        assert!(self.prg_outer_bank_layout.is_none());
-        self.prg_outer_bank_layout = Some(OuterBankLayout::Size(size));
+        assert!(self.prg_rom_outer_bank_layout.is_none());
+        self.prg_rom_outer_bank_layout = Some(OuterBankLayout::Size(size));
         self
     }
 
     pub const fn chr_rom_max_size(&mut self, value: u32) -> &mut LayoutBuilder {
-        self.chr_max_size = Some(value);
+        self.chr_rom_max_size = Some(value);
         self
     }
 
@@ -253,8 +279,8 @@ impl LayoutBuilder {
     }
 
     pub const fn chr_rom_outer_bank_size(&mut self, size: u32) -> &mut LayoutBuilder {
-        assert!(self.chr_outer_bank_layout.is_none());
-        self.chr_outer_bank_layout = Some(OuterBankLayout::Size(size));
+        assert!(self.chr_rom_outer_bank_layout.is_none());
+        self.chr_rom_outer_bank_layout = Some(OuterBankLayout::Size(size));
         self
     }
 
@@ -305,23 +331,23 @@ impl LayoutBuilder {
         assert!(!self.chr_layouts.is_empty());
 
         let mut prg_rom_outer_bank_layout = OuterBankLayout::SINGLE_BANK;
-        if let Some(layout) = self.prg_outer_bank_layout {
+        if let Some(layout) = self.prg_rom_outer_bank_layout {
             prg_rom_outer_bank_layout = layout;
         }
 
         let mut chr_rom_outer_bank_layout = OuterBankLayout::SINGLE_BANK;
-        if let Some(layout) = self.chr_outer_bank_layout {
+        if let Some(layout) = self.chr_rom_outer_bank_layout {
             chr_rom_outer_bank_layout = layout;
         }
 
         Layout {
-            prg_rom_max_size: self.prg_max_size.unwrap(),
+            prg_rom_max_size: self.prg_rom_max_size.unwrap(),
             prg_bank_size_override: self.prg_bank_size_override,
             prg_layouts: self.prg_layouts,
             prg_layout_index: self.prg_layout_index,
             prg_rom_outer_bank_layout,
 
-            chr_rom_max_size: self.chr_max_size.unwrap(),
+            chr_rom_max_size: self.chr_rom_max_size.unwrap(),
             chr_layouts: self.chr_layouts,
             chr_layout_index: self.chr_layout_index,
             align_large_chr_windows: self.align_large_chr_windows,
