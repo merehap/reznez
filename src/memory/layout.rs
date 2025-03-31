@@ -29,6 +29,7 @@ pub struct Layout {
     chr_layout_index: u8,
     chr_layouts: ConstVec<ChrLayout, 10>,
     chr_save_ram_size: u32,
+    chr_rom_outer_bank_layout: OuterBankLayout,
 
     name_table_mirroring_source: NameTableMirroringSource,
     name_table_mirrorings: &'static [NameTableMirroring],
@@ -75,7 +76,7 @@ impl Layout {
             self.prg_layout_index,
             self.prg_bank_size_override,
             cartridge.prg_rom().clone(),
-            self.prg_rom_outer_bank_layout.prg_rom_outer_bank_count(prg_rom_size),
+            self.prg_rom_outer_bank_layout.outer_bank_count(prg_rom_size),
             // TODO: Work RAM and Save RAM should be separate, but are combined here.
             cartridge.prg_ram_size() + cartridge.prg_nvram_size(),
             cartridge.prg_access_override(),
@@ -86,6 +87,7 @@ impl Layout {
             self.chr_layout_index,
             self.align_large_chr_windows,
             chr_access_override,
+            self.chr_rom_outer_bank_layout.outer_bank_count(chr_rom_size),
             cartridge.chr_rom().clone(),
             chr_ram,
         );
@@ -154,6 +156,7 @@ pub struct LayoutBuilder {
     chr_max_size: Option<u32>,
     chr_layouts: ConstVec<ChrLayout, 10>,
     chr_layout_index: u8,
+    chr_outer_bank_layout:  Option<OuterBankLayout>,
     align_large_chr_windows: bool,
     chr_save_ram_size: u32,
 
@@ -179,6 +182,7 @@ impl LayoutBuilder {
             align_large_chr_windows: true,
             chr_layout_index: 0,
             chr_layouts: ConstVec::new(),
+            chr_outer_bank_layout: None,
             chr_save_ram_size: 0,
 
             name_table_mirroring_source: NameTableMirroringSource::Cartridge,
@@ -217,9 +221,9 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn prg_rom_max_outer_bank_size(&mut self, max_size: u32) -> &mut LayoutBuilder {
+    pub const fn prg_rom_outer_bank_size(&mut self, size: u32) -> &mut LayoutBuilder {
         assert!(self.prg_outer_bank_layout.is_none());
-        self.prg_outer_bank_layout = Some(OuterBankLayout::MaxSize(max_size));
+        self.prg_outer_bank_layout = Some(OuterBankLayout::Size(size));
         self
     }
 
@@ -245,6 +249,12 @@ impl LayoutBuilder {
 
     pub const fn chr_save_ram_size(&mut self, value: u32) -> &mut LayoutBuilder {
         self.chr_save_ram_size = value;
+        self
+    }
+
+    pub const fn chr_rom_outer_bank_size(&mut self, size: u32) -> &mut LayoutBuilder {
+        assert!(self.chr_outer_bank_layout.is_none());
+        self.chr_outer_bank_layout = Some(OuterBankLayout::Size(size));
         self
     }
 
@@ -299,6 +309,11 @@ impl LayoutBuilder {
             prg_rom_outer_bank_layout = layout;
         }
 
+        let mut chr_rom_outer_bank_layout = OuterBankLayout::SINGLE_BANK;
+        if let Some(layout) = self.chr_outer_bank_layout {
+            chr_rom_outer_bank_layout = layout;
+        }
+
         Layout {
             prg_rom_max_size: self.prg_max_size.unwrap(),
             prg_bank_size_override: self.prg_bank_size_override,
@@ -311,6 +326,7 @@ impl LayoutBuilder {
             chr_layout_index: self.chr_layout_index,
             align_large_chr_windows: self.align_large_chr_windows,
             chr_save_ram_size: self.chr_save_ram_size,
+            chr_rom_outer_bank_layout,
 
             name_table_mirroring_source: self.name_table_mirroring_source,
             name_table_mirrorings: self.name_table_mirrorings,
@@ -338,21 +354,21 @@ impl NameTableMirroring {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 enum OuterBankLayout {
     ExactCount(NonZeroU8),
-    MaxSize(u32)
+    Size(u32),
 }
 
 impl OuterBankLayout {
     const SINGLE_BANK: Self = Self::ExactCount(NonZeroU8::new(1).unwrap());
 
-    fn prg_rom_outer_bank_count(self, memory_size: u32) -> u8 {
+    fn outer_bank_count(self, memory_size: u32) -> u8 {
         match self {
             Self::ExactCount(count) => count.get(),
-            Self::MaxSize(max_size) => {
-                if memory_size < max_size {
+            Self::Size(size) => {
+                if memory_size < size {
                     1
                 } else {
-                    assert_eq!(memory_size % max_size, 0);
-                    (memory_size / max_size).try_into().unwrap()
+                    assert_eq!(memory_size % size, 0);
+                    (memory_size / size).try_into().unwrap()
                 }
             }
         }

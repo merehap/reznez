@@ -8,9 +8,6 @@ ROADMAP
 
 Add CHR bank viewer. Allow overriding the selected bank for the game rendering.
 Remove GetSpritePatternHack in ppu.rs.
-Verify when the IRQ flag is supposed to be cleared. An update to the location of ClearIrq caused the apu_test jitter to have a different result.
-       See newoutput: E24C  AND #$40                        A:10 X:00 Y:00 S:FD P:nv--dIzc V:242 H:117 Fr:4 Cycle:1
-
 Wide pixels.
 Move nestest over to new formatting system.
 Disable OAMDATA writes (other than address increment) during rendering
@@ -21,6 +18,7 @@ Other input devices.
 Auto-mirror undersized CHR (for mapper 99 and maybe others).
 Mapper switch dialog for mislabelled ROMs.
 Correct PPU address during sprite rendering
+Unwrap review. Convert most to expect or Result.
 
 FANCY NICE-TO-HAVES
 APU frequency correction

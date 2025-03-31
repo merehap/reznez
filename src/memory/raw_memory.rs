@@ -38,6 +38,10 @@ impl RawMemory {
     }
 
     pub fn split_n(self, count: u8) -> Vec<RawMemory> {
+        if self.0.is_empty() {
+            return Vec::new();
+        }
+
         let results: Vec<_> = self.0.chunks_exact(self.0.len() / usize::from(count))
             .map(|chunk| RawMemory(chunk.to_vec()))
             .collect();

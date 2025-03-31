@@ -13,10 +13,10 @@ use crate::util::unit::KIBIBYTE;
 pub struct PrgMemory {
     layouts: Vec<PrgLayout>,
     layout_index: u8,
-    prg_rom_bank_configuration: BankConfiguration,
-    work_ram_bank_configuration: Option<BankConfiguration>,
-    prg_rom_outer_banks: Vec<RawMemory>,
-    prg_rom_outer_bank_index: u8,
+    rom_bank_configuration: BankConfiguration,
+    ram_bank_configuration: Option<BankConfiguration>,
+    rom_outer_banks: Vec<RawMemory>,
+    rom_outer_bank_index: u8,
     work_ram: RawMemory,
     extended_ram: RawMemoryArray<KIBIBYTE>,
     access_override: Option<AccessOverride>,
@@ -48,20 +48,20 @@ impl PrgMemory {
             }
         }
 
-        let prg_rom_bank_size = bank_size.expect("at least one ROM or RAM window");
+        let rom_bank_size = bank_size.expect("at least one ROM or RAM window");
 
-        let prg_rom_outer_banks = prg_rom.split_n(outer_bank_count);
-        let outer_bank_0 = &prg_rom_outer_banks[0];
+        let rom_outer_banks = prg_rom.split_n(outer_bank_count);
+        let rom_outer_bank0 = &rom_outer_banks[0];
 
-        let prg_rom_bank_count;
-        if outer_bank_0.size() % u32::from(prg_rom_bank_size) == 0 {
-            prg_rom_bank_count = (outer_bank_0.size() / u32::from(prg_rom_bank_size))
+        let rom_bank_count;
+        if rom_outer_bank0.size() % u32::from(rom_bank_size) == 0 {
+            rom_bank_count = (rom_outer_bank0.size() / u32::from(rom_bank_size))
                 .try_into()
                 .expect("Way too many banks.");
-        } else if !outer_bank_0.is_empty() && u32::from(prg_rom_bank_size) % outer_bank_0.size() == 0 {
-            prg_rom_bank_count = 1;
+        } else if !rom_outer_bank0.is_empty() && u32::from(rom_bank_size) % rom_outer_bank0.size() == 0 {
+            rom_bank_count = 1;
         } else {
-            panic!("Bad PRG length: {} . Bank size: {} .", outer_bank_0.size(), prg_rom_bank_size);
+            panic!("Bad PRG length: {} . Bank size: {} .", rom_outer_bank0.size(), rom_bank_size);
         }
 
         let mut work_ram_bank_configuration = None;
@@ -82,24 +82,24 @@ impl PrgMemory {
             warn!("Work RAM specified in ROM file, but not in layout.");
         }
 
-        let prg_rom_bank_configuration = BankConfiguration::new(prg_rom_bank_size, prg_rom_bank_count, true);
+        let prg_rom_bank_configuration = BankConfiguration::new(rom_bank_size, rom_bank_count, true);
         let prg_memory = PrgMemory {
             layouts,
             layout_index,
-            prg_rom_bank_configuration,
-            work_ram_bank_configuration,
-            prg_rom_outer_banks,
-            prg_rom_outer_bank_index: 0,
+            rom_bank_configuration: prg_rom_bank_configuration,
+            ram_bank_configuration: work_ram_bank_configuration,
+            rom_outer_banks,
+            rom_outer_bank_index: 0,
             work_ram: RawMemory::new(work_ram_size),
             extended_ram: RawMemoryArray::new(),
             access_override,
         };
 
         let bank_count = prg_memory.bank_count();
-        if prg_memory.prg_rom_outer_banks[0].size() >= bank_count as u32 * prg_rom_bank_size as u32 {
+        if prg_memory.rom_outer_banks[0].size() >= bank_count as u32 * rom_bank_size as u32 {
             assert_eq!(
-                prg_memory.prg_rom_outer_banks[0].size(),
-                bank_count as u32 * prg_rom_bank_size as u32,
+                prg_memory.rom_outer_banks[0].size(),
+                bank_count as u32 * rom_bank_size as u32,
                 "Bad PRG data size.",
             );
         }
@@ -109,19 +109,19 @@ impl PrgMemory {
     }
 
     pub fn bank_configuration(&self) -> BankConfiguration {
-        self.prg_rom_bank_configuration
+        self.rom_bank_configuration
     }
 
     pub fn work_ram_bank_configuration(&self) -> Option<BankConfiguration> {
-        self.work_ram_bank_configuration
+        self.ram_bank_configuration
     }
 
     pub fn bank_size(&self) -> u16 {
-        self.prg_rom_bank_configuration.bank_size()
+        self.rom_bank_configuration.bank_size()
     }
 
     pub fn bank_count(&self) -> u16 {
-        self.prg_rom_bank_configuration.bank_count()
+        self.rom_bank_configuration.bank_count()
     }
 
     pub fn last_bank_index(&self) -> u16 {
@@ -233,8 +233,8 @@ impl PrgMemory {
     }
 
     pub fn set_prg_rom_outer_bank_index(&mut self, index: u8) {
-        assert!(index < self.prg_rom_outer_banks.len().try_into().unwrap());
-        self.prg_rom_outer_bank_index = index;
+        assert!(index < self.rom_outer_banks.len().try_into().unwrap());
+        self.rom_outer_bank_index = index;
     }
 
     fn address_to_prg_index(&self, registers: &BankRegisters, address: CpuAddress) -> PrgMemoryIndex {
@@ -265,12 +265,12 @@ impl PrgMemory {
                     Bank::MirrorOf(_) => panic!("A mirrored bank must mirror a non-mirrored bank."),
                     Bank::Rom(location) => {
                         let resolved_bank_index =
-                            window.resolved_bank_index(registers, location, self.prg_rom_bank_configuration);
-                        let index = resolved_bank_index as u32 * self.prg_rom_bank_configuration.bank_size() as u32 + bank_offset as u32;
+                            window.resolved_bank_index(registers, location, self.rom_bank_configuration);
+                        let index = resolved_bank_index as u32 * self.rom_bank_configuration.bank_size() as u32 + bank_offset as u32;
                         PrgMemoryIndex::MappedMemory { index, ram_status: RamStatus::ReadOnly }
                     }
                     Bank::Ram(location, status_register_id) => {
-                        let work_ram_bank_configuration = self.work_ram_bank_configuration
+                        let work_ram_bank_configuration = self.ram_bank_configuration
                             .expect("PRG RAM window specified in layout, but not in cartridge.");
                         let resolved_bank_index =
                             window.resolved_bank_index(registers, location, work_ram_bank_configuration);
@@ -282,7 +282,7 @@ impl PrgMemory {
                     Bank::RomRam(location, status_register_id, mode_register_id) => {
                         match registers.rom_ram_mode(mode_register_id) {
                             RomRamMode::Ram => {
-                                let work_ram_bank_configuration = self.work_ram_bank_configuration
+                                let work_ram_bank_configuration = self.ram_bank_configuration
                                     .expect("PRG RAM window specified in layout, but not in cartridge.");
                                 let resolved_bank_index =
                                     window.resolved_bank_index(registers, location, work_ram_bank_configuration);
@@ -292,14 +292,14 @@ impl PrgMemory {
                             }
                             RomRamMode::Rom => {
                                 let resolved_bank_index =
-                                    window.resolved_bank_index(registers, location, self.prg_rom_bank_configuration);
-                                let index = resolved_bank_index as u32 * self.prg_rom_bank_configuration.bank_size() as u32 + bank_offset as u32;
+                                    window.resolved_bank_index(registers, location, self.rom_bank_configuration);
+                                let index = resolved_bank_index as u32 * self.rom_bank_configuration.bank_size() as u32 + bank_offset as u32;
                                 PrgMemoryIndex::MappedMemory { index, ram_status: RamStatus::ReadOnly }
                             }
                         }
                     }
                     Bank::WorkRam(location, status_register_id) => {
-                        let Some(work_ram_bank_configuration) = self.work_ram_bank_configuration else {
+                        let Some(work_ram_bank_configuration) = self.ram_bank_configuration else {
                             return PrgMemoryIndex::None;
                         };
 
@@ -340,11 +340,11 @@ impl PrgMemory {
     }
 
     fn current_outer_prg_rom_bank(&self) -> &RawMemory {
-        &self.prg_rom_outer_banks[self.prg_rom_outer_bank_index as usize]
+        &self.rom_outer_banks[self.rom_outer_bank_index as usize]
     }
 
     fn current_outer_prg_rom_bank_mut(&mut self) -> &mut RawMemory {
-        &mut self.prg_rom_outer_banks[self.prg_rom_outer_bank_index as usize]
+        &mut self.rom_outer_banks[self.rom_outer_bank_index as usize]
     }
 }
 

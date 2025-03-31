@@ -17,8 +17,9 @@ pub struct ChrMemory {
     ram_bank_configuration: Option<BankConfiguration>,
     max_pattern_table_index: u16,
     access_override: Option<AccessOverride>,
-    chr_rom: RawMemory,
-    chr_ram: RawMemory,
+    rom_outer_banks: Vec<RawMemory>,
+    rom_outer_bank_index: usize,
+    ram: RawMemory,
 }
 
 impl ChrMemory {
@@ -27,8 +28,9 @@ impl ChrMemory {
         layout_index: u8,
         align_large_chr_layouts: bool,
         access_override: Option<AccessOverride>,
-        chr_rom: RawMemory,
-        chr_ram: RawMemory,
+        outer_bank_count: u8,
+        rom: RawMemory,
+        ram: RawMemory,
     ) -> ChrMemory {
         let mut bank_size = None;
         for layout in &layouts {
@@ -51,15 +53,18 @@ impl ChrMemory {
                 "The max CHR window index must be the same between all layouts.");
         }
 
-        let rom_bank_count = (chr_rom.size() / u32::from(bank_size))
-            .try_into()
-            .expect("Way too many CHR ROM banks.");
-        let rom_bank_configuration = if rom_bank_count == 0 {
-            None
+        let rom_outer_banks = rom.split_n(outer_bank_count);
+
+        let rom_bank_configuration = if let Some(outer_bank_0) = rom_outer_banks.first() {
+            let bank_count = (outer_bank_0.size() / u32::from(bank_size))
+                .try_into()
+                .expect("Way too many CHR ROM banks.");
+            Some(BankConfiguration::new(bank_size, bank_count, align_large_chr_layouts))
         } else {
-            Some(BankConfiguration::new(bank_size, rom_bank_count, align_large_chr_layouts))
+            None
         };
-        let ram_bank_count = (chr_ram.size() / u32::from(bank_size))
+
+        let ram_bank_count = (ram.size() / u32::from(bank_size))
             .try_into()
             .expect("Way too many CHR RAM banks.");
         let ram_bank_configuration = if ram_bank_count == 0 {
@@ -75,12 +80,13 @@ impl ChrMemory {
             ram_bank_configuration,
             max_pattern_table_index,
             access_override,
-            chr_rom,
-            chr_ram,
+            rom_outer_banks,
+            rom_outer_bank_index: 0,
+            ram,
         };
 
         if let Some(bank_count) = chr_memory.rom_bank_count() {
-            assert_eq!(u32::from(bank_count) * u32::from(chr_memory.bank_size()), chr_memory.chr_rom.size());
+            assert_eq!(u32::from(bank_count) * u32::from(chr_memory.bank_size()), chr_memory.rom_outer_banks[0].size());
         }
         // Power of 2. FIXME: What's the correct behavior when accessing the high banks? Open bus?
         // assert_eq!(bank_count & (bank_count - 1), 0, "Bank count ({bank_count}) must be a power of 2.");
@@ -129,12 +135,12 @@ impl ChrMemory {
         match chr_index {
             ChrIndex::Rom(index) => {
                 if self.access_override == Some(AccessOverride::ForceRam) {
-                    self.chr_ram[index]
+                    self.ram[index]
                 } else {
-                    self.chr_rom[index]
+                    self.rom_outer_banks[self.rom_outer_bank_index][index]
                 }
             }
-            ChrIndex::Ram(index) => self.chr_ram[index],
+            ChrIndex::Ram(index) => self.ram[index],
             ChrIndex::Ciram(side, index, ) => ciram.side(side)[index as usize],
         }
     }
@@ -149,10 +155,10 @@ impl ChrMemory {
             match chr_index {
                 ChrIndex::Rom(index) => {
                     if self.access_override == Some(AccessOverride::ForceRam) {
-                        self.chr_ram[index] = value;
+                        self.ram[index] = value;
                     }
                 }
-                ChrIndex::Ram(index) => self.chr_ram[index] = value,
+                ChrIndex::Ram(index) => self.ram[index] = value,
                 ChrIndex::Ciram(side, index, ) => ciram.side_mut(side)[index as usize] = value,
             }
         }
@@ -189,11 +195,11 @@ impl ChrMemory {
     }
 
     pub fn chr_ram_slice<const SIZE: usize>(&self, start: u32) -> &[u8; SIZE] {
-        self.chr_ram.sized_slice(start)
+        self.ram.sized_slice(start)
     }
 
     pub fn chr_ram_slice_mut<const SIZE: usize>(&mut self, start: u32) -> &mut [u8; SIZE] {
-        self.chr_ram.sized_slice_mut(start)
+        self.ram.sized_slice_mut(start)
     }
 
     fn address_to_chr_index(&self, registers: &BankRegisters, address: u16) -> (ChrIndex, bool) {
@@ -236,8 +242,9 @@ impl ChrMemory {
         self.left_indexes(registers)
             .map(move |chr_index| {
                 match chr_index {
-                    ChrIndex::Rom(index) => self.chr_rom.slice(index..index + 1 * KIBIBYTE),
-                    ChrIndex::Ram(index) => self.chr_ram.slice(index..index + 1 * KIBIBYTE),
+                    ChrIndex::Rom(index) => self.rom_outer_banks[self.rom_outer_bank_index]
+                        .slice(index..index + 1 * KIBIBYTE),
+                    ChrIndex::Ram(index) => self.ram.slice(index..index + 1 * KIBIBYTE),
                     ChrIndex::Ciram(side, ..) => RawMemorySlice::from_raw(ciram.side(side)),
                 }
         })
@@ -248,8 +255,9 @@ impl ChrMemory {
         self.right_indexes(registers)
             .map(move |chr_index| {
                 match chr_index {
-                    ChrIndex::Rom(index) => self.chr_rom.slice(index..index + 1 * KIBIBYTE),
-                    ChrIndex::Ram(index) => self.chr_ram.slice(index..index + 1 * KIBIBYTE),
+                    ChrIndex::Rom(index) => self.rom_outer_banks[self.rom_outer_bank_index]
+                        .slice(index..index + 1 * KIBIBYTE),
+                    ChrIndex::Ram(index) => self.ram.slice(index..index + 1 * KIBIBYTE),
                     ChrIndex::Ciram(side, ..) => RawMemorySlice::from_raw(ciram.side(side)),
                 }
         })

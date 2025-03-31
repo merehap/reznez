@@ -102,6 +102,7 @@ impl Mapper for Sachen8259 {
 
 impl Sachen8259 {
     pub const fn new(board: Sachen8259Board) -> Self {
+        // The CHR bank low bits are actually the respective PPU address line bits.
         let (chr_bank_shift, chr_bank_low_bits) = match board {
             Sachen8259Board::A => (1, [0b00, 0b01, 0b00, 0b01]),
             Sachen8259Board::B => (0, [0b00, 0b00, 0b00, 0b00]),
