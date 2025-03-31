@@ -44,7 +44,6 @@ pub struct Sachen8259 {
     layout: Layout,
 
     chr_bank_shift: u8,
-    chr_outer_bank: u8,
     chr_inner_banks: [u8; 4],
     chr_bank_low_bits: [u8; 4],
     register_value: RegisterValue,
@@ -74,8 +73,7 @@ impl Mapper for Sachen8259 {
                         self.update_chr_banks(params);
                     }
                     RegisterValue::ChrOuterBank => {
-                        self.chr_outer_bank = value & 0b111;
-                        self.update_chr_banks(params);
+                        params.set_chr_rom_outer_bank_index(value & 0b111);
                     }
                     RegisterValue::PrgBank => {
                         params.set_bank_register(P0, value & 0b111);
@@ -114,7 +112,6 @@ impl Sachen8259 {
             layout,
 
             chr_bank_shift,
-            chr_outer_bank: 0,
             chr_inner_banks: [0; 4],
             chr_bank_low_bits,
             register_value: RegisterValue::ChrSelect(C0),
@@ -139,8 +136,8 @@ impl Sachen8259 {
     }
 
     fn update_chr_bank(&self, params: &mut MapperParams, cx: BankRegisterId, inner_bank_index: u8, low_bits_index: u8) {
-        let bank_base = (self.chr_outer_bank << 3) | self.chr_inner_banks[inner_bank_index as usize];
-        let bank = (bank_base << self.chr_bank_shift) | self.chr_bank_low_bits[low_bits_index as usize];
+        let bank = (self.chr_inner_banks[inner_bank_index as usize] << self.chr_bank_shift)
+            | self.chr_bank_low_bits[low_bits_index as usize];
         params.set_bank_register(cx, bank);
     }
 }

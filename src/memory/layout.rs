@@ -279,7 +279,6 @@ impl LayoutBuilder {
     }
 
     pub const fn chr_rom_outer_bank_size(&mut self, size: u32) -> &mut LayoutBuilder {
-        assert!(self.chr_rom_outer_bank_layout.is_none());
         self.chr_rom_outer_bank_layout = Some(OuterBankLayout::Size(size));
         self
     }

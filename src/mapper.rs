@@ -564,6 +564,10 @@ impl MapperParams {
         self.chr_memory.write(&self.bank_registers, ciram, address, value);
     }
 
+    pub fn set_chr_rom_outer_bank_index(&mut self, index: u8) {
+        self.chr_memory.set_chr_rom_outer_bank_index(index);
+    }
+
     pub fn set_bank_register<INDEX: Into<u16>>(
         &mut self,
         id: BankRegisterId,

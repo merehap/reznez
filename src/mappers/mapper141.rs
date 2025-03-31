@@ -6,6 +6,7 @@ use super::common::sachen8259;
 
 const LAYOUT: Layout = sachen8259::LAYOUT.into_builder()
     .chr_rom_max_size(256 * KIBIBYTE)
+    .chr_rom_outer_bank_size(32 * KIBIBYTE)
     .build();
 
 // TODO: Support Q Boy once a suitable ROM is found.

@@ -187,6 +187,11 @@ impl ChrMemory {
         self.layout_index = index;
     }
 
+    pub fn set_chr_rom_outer_bank_index(&mut self, index: u8) {
+        assert!(index < self.rom_outer_banks.len().try_into().unwrap());
+        self.rom_outer_bank_index = index as usize;
+    }
+
     pub fn pattern_table<'a>(&'a self, registers: &BankRegisters, ciram: &'a Ciram, side: PatternTableSide) -> PatternTable<'a> {
         match side {
             PatternTableSide::Left => PatternTable::new(self.left_chunks(registers, ciram)),
