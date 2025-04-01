@@ -11,9 +11,9 @@ const LAYOUT: Layout = Layout::builder()
         // FIXME: Marked as RAM because it needs a status register, but it's actually ROM.
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.fixed_index(0).status_register(S0)),
     ])
-    .ram_statuses(&[
-        RamStatus::Disabled,
-        RamStatus::ReadOnly,
+    .read_write_statuses(&[
+        ReadWriteStatus::Disabled,
+        ReadWriteStatus::ReadOnly,
     ])
     .build();
 
@@ -29,7 +29,7 @@ impl Mapper for CnromWithChrDisable {
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 let copy_protection_passed = value & 0b11 == self.correct_chip_select_value;
-                params.set_ram_status(S0, copy_protection_passed as u8);
+                params.set_read_write_status(S0, copy_protection_passed as u8);
             }
         }
     }

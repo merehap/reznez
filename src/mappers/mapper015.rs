@@ -40,9 +40,9 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::VERTICAL,
         NameTableMirroring::HORIZONTAL,
     ])
-    .ram_statuses(&[
-        RamStatus::ReadOnly,
-        RamStatus::ReadWrite,
+    .read_write_statuses(&[
+        ReadWriteStatus::ReadOnly,
+        ReadWriteStatus::ReadWrite,
     ])
     .build();
 
@@ -60,7 +60,7 @@ impl Mapper for Mapper015 {
                 let prg_layout_index = (cpu_address & 0b11) as u8;
                 params.set_prg_layout(prg_layout_index);
                 let chr_ram_writable = matches!(prg_layout_index, 1 | 2);
-                params.set_ram_status(S0, chr_ram_writable as u8);
+                params.set_read_write_status(S0, chr_ram_writable as u8);
 
                 let (s, mirroring, p) = splitbits_named!(min=u8, value, "smpppppp");
                 let prg_bank = if prg_layout_index == 2 {

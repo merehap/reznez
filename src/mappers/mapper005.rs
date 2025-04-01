@@ -94,11 +94,11 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C11)),
     ])
     .do_not_align_large_chr_windows()
-    .ram_statuses(&[
-        RamStatus::ReadOnly,
-        RamStatus::ReadWrite,
+    .read_write_statuses(&[
+        ReadWriteStatus::ReadOnly,
+        ReadWriteStatus::ReadWrite,
         // Write-only is only used by Extended RAM (S0).
-        RamStatus::WriteOnly,
+        ReadWriteStatus::WriteOnly,
     ])
     .build();
 
@@ -219,7 +219,7 @@ impl Mapper for Mapper005 {
                 } else {
                     READ_ONLY
                 };
-                params.set_ram_status(S1, status);
+                params.set_read_write_status(S1, status);
             }
             0x5103 => {
                 self.ram_enabled_2 = value & 0b11 == 0b01;
@@ -228,7 +228,7 @@ impl Mapper for Mapper005 {
                 } else {
                     READ_ONLY
                 };
-                params.set_ram_status(S1, status);
+                params.set_read_write_status(S1, status);
             }
             0x5104 => self.set_extended_ram_mode(params, value),
             0x5105 => Self::set_name_table_mirroring(params, value),
@@ -320,14 +320,14 @@ impl Mapper005 {
     // Write 0x5104
     fn set_extended_ram_mode(&mut self, params: &mut MapperParams, value: u8) {
         self.extended_ram_mode = EXTENDED_RAM_MODES[usize::from(value & 0b11)];
-        let ram_status = match self.extended_ram_mode {
+        let read_write_status = match self.extended_ram_mode {
             // FIXME: These are only write-only during rendering. They are supposed to
             // cause corruption during VBlank.
             ExtendedRamMode::WriteOnly | ExtendedRamMode::ExtendedAttributes => WRITE_ONLY,
             ExtendedRamMode::ReadWrite => READ_WRITE,
             ExtendedRamMode::ReadOnly => READ_ONLY,
         };
-        params.set_ram_status(S0, ram_status);
+        params.set_read_write_status(S0, read_write_status);
     }
 
     // Write 0x5105

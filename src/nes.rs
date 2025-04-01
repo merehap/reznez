@@ -13,7 +13,7 @@ use crate::cpu::step::Step;
 use crate::gui::gui::Events;
 use crate::logging::formatter;
 use crate::logging::formatter::*;
-use crate::mapper::{MapperParams, NameTableMirroring, RamStatus};
+use crate::mapper::{MapperParams, NameTableMirroring, ReadWriteStatus};
 use crate::memory::bank::bank_index::BankLocation;
 use crate::memory::cpu::ports::Ports;
 use crate::mapper_list;
@@ -299,12 +299,12 @@ impl Nes {
                 info!("NameTableMirroring set to {}.", mapper_params.name_table_mirroring);
             }
 
-            let ram_statuses = mapper_params.bank_registers.ram_statuses();
-            if &latest.ram_statuses != ram_statuses {
-                for (i, latest_ram_status) in latest.ram_statuses.iter_mut().enumerate() {
-                    if *latest_ram_status != ram_statuses[i] {
-                        *latest_ram_status = ram_statuses[i];
-                        info!("RamStatus register S{i} set to {:?}.", *latest_ram_status);
+            let read_write_statuses = mapper_params.bank_registers.read_write_statuses();
+            if &latest.read_write_statuses != read_write_statuses {
+                for (i, latest_read_write_status) in latest.read_write_statuses.iter_mut().enumerate() {
+                    if *latest_read_write_status != read_write_statuses[i] {
+                        *latest_read_write_status = read_write_statuses[i];
+                        info!("RamStatus register S{i} set to {:?}.", *latest_read_write_status);
                     }
                 }
             }
@@ -333,7 +333,7 @@ struct LatestValues {
     chr_layout_index: u8,
     bank_registers: [BankLocation; 18],
     name_table_mirroring: NameTableMirroring,
-    ram_statuses: [RamStatus; 15],
+    read_write_statuses: [ReadWriteStatus; 15],
 }
 
 impl LatestValues {
@@ -347,7 +347,7 @@ impl LatestValues {
             chr_layout_index: initial_params.chr_memory.layout_index(),
             bank_registers: *initial_params.bank_registers.registers(),
             name_table_mirroring: initial_params.name_table_mirroring,
-            ram_statuses: *initial_params.bank_registers.ram_statuses(),
+            read_write_statuses: *initial_params.bank_registers.read_write_statuses(),
         }
     }
 }

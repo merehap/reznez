@@ -28,9 +28,9 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,
         NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
     ])
-    .ram_statuses(&[
-        RamStatus::ReadOnly,
-        RamStatus::ReadWrite,
+    .read_write_statuses(&[
+        ReadWriteStatus::ReadOnly,
+        ReadWriteStatus::ReadWrite,
     ])
     .build();
 
@@ -64,7 +64,7 @@ impl Mapper for Mapper085_2 {
             0xE000 => {
                 // TODO: Silence expansion audio
                 let fields = splitbits!(min=u8, value, "rs....mm");
-                params.set_ram_status(S0, fields.r);
+                params.set_read_write_status(S0, fields.r);
                 params.set_name_table_mirroring(fields.m);
             }
             0xE010 => self.irq_state.set_reload_value(value),

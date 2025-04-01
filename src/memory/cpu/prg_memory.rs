@@ -1,13 +1,13 @@
 use log::warn;
 
 use crate::memory::bank::bank::Bank;
-use crate::memory::bank::bank_index::{BankConfiguration, BankRegisters, RamStatus, RomRamMode};
+use crate::memory::bank::bank_index::{BankConfiguration, BankRegisters, ReadWriteStatus, RomRamMode};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::ppu::chr_memory::AccessOverride;
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
 use crate::memory::read_result::ReadResult;
-use crate::memory::window::{RamStatusInfo, Window};
+use crate::memory::window::{ReadWriteStatusInfo, Window};
 use crate::util::unit::KIBIBYTE;
 
 pub struct PrgMemory {
@@ -144,10 +144,10 @@ impl PrgMemory {
         self.access_override
     }
 
-    pub fn ram_status_infos(&self) -> Vec<RamStatusInfo> {
+    pub fn read_write_status_infos(&self) -> Vec<ReadWriteStatusInfo> {
         let mut ids = Vec::new();
         for layout in &self.layouts {
-            ids.append(&mut layout.ram_status_infos());
+            ids.append(&mut layout.read_write_status_infos());
         }
 
         ids
@@ -156,9 +156,9 @@ impl PrgMemory {
     pub fn peek(&self, registers: &BankRegisters, address: CpuAddress) -> ReadResult {
         match self.address_to_prg_index(registers, address) {
             PrgMemoryIndex::None => ReadResult::OPEN_BUS,
-            PrgMemoryIndex::MappedMemory {index, ram_status } => {
-                use RamStatus::*;
-                match ram_status {
+            PrgMemoryIndex::MappedMemory {index, read_write_status } => {
+                use ReadWriteStatus::*;
+                match read_write_status {
                     Disabled | WriteOnly =>
                         ReadResult::OPEN_BUS,
                     ReadOnlyZeros =>
@@ -167,9 +167,9 @@ impl PrgMemory {
                         ReadResult::full(self.current_outer_prg_rom_bank()[index % self.current_outer_prg_rom_bank().size()]),
                 }
             }
-            PrgMemoryIndex::WorkRam { index, ram_status} => {
-                use RamStatus::*;
-                match ram_status {
+            PrgMemoryIndex::WorkRam { index, read_write_status} => {
+                use ReadWriteStatus::*;
+                match read_write_status {
                     Disabled | WriteOnly =>
                         ReadResult::OPEN_BUS,
                     ReadOnlyZeros =>
@@ -178,9 +178,9 @@ impl PrgMemory {
                         ReadResult::full(self.work_ram[index]),
                 }
             }
-            PrgMemoryIndex::ExtendedRam { index, ram_status} => {
-                use RamStatus::*;
-                match ram_status {
+            PrgMemoryIndex::ExtendedRam { index, read_write_status} => {
+                use ReadWriteStatus::*;
+                match read_write_status {
                     Disabled | WriteOnly =>
                         ReadResult::OPEN_BUS,
                     ReadOnlyZeros =>
@@ -201,18 +201,18 @@ impl PrgMemory {
 
         match self.address_to_prg_index(registers, address) {
             PrgMemoryIndex::None => {}
-            PrgMemoryIndex::MappedMemory { index, ram_status } => {
-                if ram_status.is_writable() {
+            PrgMemoryIndex::MappedMemory { index, read_write_status } => {
+                if read_write_status.is_writable() {
                     self.current_outer_prg_rom_bank_mut()[index] = value;
                 }
             }
-            PrgMemoryIndex::WorkRam { index, ram_status} => {
-                if ram_status.is_writable() {
+            PrgMemoryIndex::WorkRam { index, read_write_status} => {
+                if read_write_status.is_writable() {
                     self.work_ram[index] = value;
                 }
             }
-            PrgMemoryIndex::ExtendedRam { index, ram_status} => {
-                if ram_status.is_writable() {
+            PrgMemoryIndex::ExtendedRam { index, read_write_status} => {
+                if read_write_status.is_writable() {
                     self.extended_ram[index] = value;
                 }
             }
@@ -267,7 +267,7 @@ impl PrgMemory {
                         let resolved_bank_index =
                             window.resolved_bank_index(registers, location, self.rom_bank_configuration);
                         let index = resolved_bank_index as u32 * self.rom_bank_configuration.bank_size() as u32 + bank_offset as u32;
-                        PrgMemoryIndex::MappedMemory { index, ram_status: RamStatus::ReadOnly }
+                        PrgMemoryIndex::MappedMemory { index, read_write_status: ReadWriteStatus::ReadOnly }
                     }
                     Bank::Ram(location, status_register_id) => {
                         let work_ram_bank_configuration = self.ram_bank_configuration
@@ -275,9 +275,9 @@ impl PrgMemory {
                         let resolved_bank_index =
                             window.resolved_bank_index(registers, location, work_ram_bank_configuration);
                         let index = resolved_bank_index as u32 * work_ram_bank_configuration.bank_size() as u32 + bank_offset as u32;
-                        let ram_status: RamStatus = status_register_id
-                            .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
-                        PrgMemoryIndex::WorkRam { index, ram_status }
+                        let read_write_status: ReadWriteStatus = status_register_id
+                            .map_or(ReadWriteStatus::ReadWrite, |id| registers.read_write_status(id));
+                        PrgMemoryIndex::WorkRam { index, read_write_status }
                     }
                     Bank::RomRam(location, status_register_id, mode_register_id) => {
                         match registers.rom_ram_mode(mode_register_id) {
@@ -287,14 +287,14 @@ impl PrgMemory {
                                 let resolved_bank_index =
                                     window.resolved_bank_index(registers, location, work_ram_bank_configuration);
                                 let index = resolved_bank_index as u32 * work_ram_bank_configuration.bank_size() as u32 + bank_offset as u32;
-                                let ram_status: RamStatus = registers.ram_status(status_register_id);
-                                PrgMemoryIndex::WorkRam { index, ram_status }
+                                let read_write_status: ReadWriteStatus = registers.read_write_status(status_register_id);
+                                PrgMemoryIndex::WorkRam { index, read_write_status }
                             }
                             RomRamMode::Rom => {
                                 let resolved_bank_index =
                                     window.resolved_bank_index(registers, location, self.rom_bank_configuration);
                                 let index = resolved_bank_index as u32 * self.rom_bank_configuration.bank_size() as u32 + bank_offset as u32;
-                                PrgMemoryIndex::MappedMemory { index, ram_status: RamStatus::ReadOnly }
+                                PrgMemoryIndex::MappedMemory { index, read_write_status: ReadWriteStatus::ReadOnly }
                             }
                         }
                     }
@@ -306,20 +306,20 @@ impl PrgMemory {
                         let resolved_bank_index =
                             window.resolved_bank_index(registers, location, work_ram_bank_configuration);
                         let index = resolved_bank_index as u32 * work_ram_bank_configuration.bank_size() as u32 + bank_offset as u32;
-                        let ram_status: RamStatus = status_register_id
-                            .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
-                        PrgMemoryIndex::WorkRam { index, ram_status }
+                        let read_write_status: ReadWriteStatus = status_register_id
+                            .map_or(ReadWriteStatus::ReadWrite, |id| registers.read_write_status(id));
+                        PrgMemoryIndex::WorkRam { index, read_write_status }
                     }
                     // TODO: Save RAM should be separate from WorkRam.
                     Bank::SaveRam(start_index) => {
                         let index = start_index + u32::from(bank_offset);
-                        PrgMemoryIndex::WorkRam { index, ram_status: RamStatus::ReadWrite }
+                        PrgMemoryIndex::WorkRam { index, read_write_status: ReadWriteStatus::ReadWrite }
                     }
                     Bank::ExtendedRam(status_register_id) => {
                         let index = u32::from(bank_offset);
-                        let ram_status: RamStatus = status_register_id
-                            .map_or(RamStatus::ReadWrite, |id| registers.ram_status(id));
-                        PrgMemoryIndex::ExtendedRam { index, ram_status }
+                        let read_write_status: ReadWriteStatus = status_register_id
+                            .map_or(ReadWriteStatus::ReadWrite, |id| registers.read_write_status(id));
+                        PrgMemoryIndex::ExtendedRam { index, read_write_status }
                     }
                 };
                 return prg_memory_index;
@@ -350,7 +350,7 @@ impl PrgMemory {
 
 enum PrgMemoryIndex {
     None,
-    WorkRam { index: u32, ram_status: RamStatus },
-    ExtendedRam { index: u32, ram_status: RamStatus },
-    MappedMemory { index: u32, ram_status: RamStatus },
+    WorkRam { index: u32, read_write_status: ReadWriteStatus },
+    ExtendedRam { index: u32, read_write_status: ReadWriteStatus },
+    MappedMemory { index: u32, read_write_status: ReadWriteStatus },
 }

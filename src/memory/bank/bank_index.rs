@@ -2,7 +2,7 @@ use std::num::NonZeroU16;
 
 use num_derive::FromPrimitive;
 
-use crate::memory::bank::bank::RamStatusRegisterId;
+use crate::memory::bank::bank::ReadWriteStatusRegisterId;
 use crate::memory::ppu::ciram::CiramSide;
 
 use super::bank::RomRamModeRegisterId;
@@ -69,8 +69,8 @@ impl BankConfiguration {
 #[derive(Debug)]
 pub struct BankRegisters {
     registers: [BankLocation; 18],
-    meta_registers: [BankRegisterId; 2],
-    ram_statuses: [RamStatus; 15],
+    chr_meta_registers: [BankRegisterId; 2],
+    read_write_statuses: [ReadWriteStatus; 15],
     rom_ram_modes: [RomRamMode; 3],
 }
 
@@ -79,8 +79,8 @@ impl BankRegisters {
         Self {
             registers: [BankLocation::Index(BankIndex(0)); 18],
             // Meta registers are only used for CHR currently.
-            meta_registers: [BankRegisterId::C0, BankRegisterId::C0],
-            ram_statuses: [RamStatus::ReadWrite; 15],
+            chr_meta_registers: [BankRegisterId::C0, BankRegisterId::C0],
+            read_write_statuses: [ReadWriteStatus::ReadWrite; 15],
             rom_ram_modes: [RomRamMode::Ram; 3],
         }
     }
@@ -90,11 +90,11 @@ impl BankRegisters {
     }
 
     pub fn meta_registers(&self) -> &[BankRegisterId; 2] {
-        &self.meta_registers
+        &self.chr_meta_registers
     }
 
-    pub fn ram_statuses(&self) -> &[RamStatus; 15] {
-        &self.ram_statuses
+    pub fn read_write_statuses(&self) -> &[ReadWriteStatus; 15] {
+        &self.read_write_statuses
     }
 
     pub fn get(&self, id: BankRegisterId) -> BankLocation {
@@ -123,19 +123,19 @@ impl BankRegisters {
     }
 
     pub fn get_from_meta(&self, id: MetaRegisterId) -> BankLocation {
-        self.get(self.meta_registers[id as usize])
+        self.get(self.chr_meta_registers[id as usize])
     }
 
     pub fn set_meta(&mut self, id: MetaRegisterId, value: BankRegisterId) {
-        self.meta_registers[id as usize] = value;
+        self.chr_meta_registers[id as usize] = value;
     }
 
-    pub fn ram_status(&self, id: RamStatusRegisterId) -> RamStatus {
-        self.ram_statuses[id as usize]
+    pub fn read_write_status(&self, id: ReadWriteStatusRegisterId) -> ReadWriteStatus {
+        self.read_write_statuses[id as usize]
     }
 
-    pub fn set_ram_status(&mut self, id: RamStatusRegisterId, status: RamStatus) {
-        self.ram_statuses[id as usize] = status;
+    pub fn set_read_write_status(&mut self, id: ReadWriteStatusRegisterId, status: ReadWriteStatus) {
+        self.read_write_statuses[id as usize] = status;
     }
 
     pub fn rom_ram_mode(&self, id: RomRamModeRegisterId) -> RomRamMode {
@@ -236,7 +236,7 @@ pub enum MetaRegisterId {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum RamStatus {
+pub enum ReadWriteStatus {
     Disabled,
     ReadOnlyZeros,
     ReadOnly,
@@ -244,9 +244,9 @@ pub enum RamStatus {
     WriteOnly,
 }
 
-impl RamStatus {
+impl ReadWriteStatus {
     pub fn is_writable(self) -> bool {
-        matches!(self, RamStatus::ReadWrite | RamStatus::WriteOnly)
+        matches!(self, ReadWriteStatus::ReadWrite | ReadWriteStatus::WriteOnly)
     }
 }
 

@@ -11,9 +11,9 @@ const LAYOUT: Layout = Layout::builder()
         // FIXME: Marked as RAM because it needs a status register, but it's actually ROM.
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.fixed_index(0).status_register(S0)),
     ])
-    .ram_statuses(&[
-        RamStatus::Disabled,
-        RamStatus::ReadOnly,
+    .read_write_statuses(&[
+        ReadWriteStatus::Disabled,
+        ReadWriteStatus::ReadOnly,
     ])
     .build();
 
@@ -30,10 +30,10 @@ impl Mapper for Mapper185_0 {
     fn on_cpu_read(&mut self, params: &mut MapperParams, address: CpuAddress) {
         if address.to_raw() == 0x2007 {
             if self.ppu_data_read_count < 2 {
-                params.set_ram_status(S0, DISABLED_CHR_ROM);
+                params.set_read_write_status(S0, DISABLED_CHR_ROM);
                 self.ppu_data_read_count += 1;
             } else {
-                params.set_ram_status(S0, READABLE_CHR_ROM);
+                params.set_read_write_status(S0, READABLE_CHR_ROM);
             }
         }
     }

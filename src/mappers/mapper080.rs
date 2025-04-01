@@ -24,9 +24,9 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::HORIZONTAL,
         NameTableMirroring::VERTICAL,
     ])
-    .ram_statuses(&[
-        RamStatus::Disabled,
-        RamStatus::ReadWrite,
+    .read_write_statuses(&[
+        ReadWriteStatus::Disabled,
+        ReadWriteStatus::ReadWrite,
     ])
     .build();
 
@@ -47,7 +47,7 @@ impl Mapper for Mapper080 {
             0x7EF6..=0x7EF7 => params.set_name_table_mirroring(value & 1),
             0x7EF8..=0x7EF9 => {
                 let ram_enabled = value == 0xA3;
-                params.set_ram_status(S0, ram_enabled as u8);
+                params.set_read_write_status(S0, ram_enabled as u8);
             }
             0x7EFA..=0x7EFB => params.set_bank_register(P0, value),
             0x7EFC..=0x7EFD => params.set_bank_register(P1, value),

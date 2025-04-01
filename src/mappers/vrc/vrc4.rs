@@ -38,9 +38,9 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,
         NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
     ])
-    .ram_statuses(&[
-        RamStatus::Disabled,
-        RamStatus::ReadWrite,
+    .read_write_statuses(&[
+        ReadWriteStatus::Disabled,
+        ReadWriteStatus::ReadWrite,
     ])
     .build();
 
@@ -67,7 +67,7 @@ impl Mapper for Vrc4 {
             0x9002 => {
                 let fields = splitbits!(min=u8, value, "......ps");
                 params.set_prg_layout(fields.p);
-                params.set_ram_status(S0, fields.s);
+                params.set_read_write_status(S0, fields.s);
             }
             // Set bank for A000 through AFFF.
             0xA000..=0xA003 => params.set_bank_register(P1, value & 0b0001_1111),

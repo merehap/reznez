@@ -1,5 +1,5 @@
 use crate::memory::bank::bank_index::BankRegisterId;
-use crate::memory::window::{RamStatusInfo, Window};
+use crate::memory::window::{ReadWriteStatusInfo, Window};
 
 #[derive(Clone, Copy)]
 pub struct PrgLayout(&'static [Window]);
@@ -35,9 +35,9 @@ impl PrgLayout {
             .collect()
     }
 
-    pub fn ram_status_infos(&self) -> Vec<RamStatusInfo> {
+    pub fn read_write_status_infos(&self) -> Vec<ReadWriteStatusInfo> {
         self.0.iter()
-            .map(|window| window.ram_status_info())
+            .map(|window| window.read_write_status_info())
             .collect()
     }
 }

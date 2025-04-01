@@ -26,11 +26,11 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,
         NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
     ])
-    .ram_statuses(&[
-        RamStatus::ReadOnly,
-        RamStatus::Disabled,
-        RamStatus::ReadOnly,
-        RamStatus::ReadWrite,
+    .read_write_statuses(&[
+        ReadWriteStatus::ReadOnly,
+        ReadWriteStatus::Disabled,
+        ReadWriteStatus::ReadOnly,
+        ReadWriteStatus::ReadWrite,
     ])
     .build();
 
@@ -105,7 +105,7 @@ impl Mapper069 {
                 params.set_bank_register(id, value),
             Command::PrgRomRamBank => {
                 let fields = splitbits!(value, "rrpppppp");
-                params.set_ram_status(S0, fields.r);
+                params.set_read_write_status(S0, fields.r);
                 params.set_bank_register(P0, fields.p);
             }
             Command::PrgRomBank(id) =>

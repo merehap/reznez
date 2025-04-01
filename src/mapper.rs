@@ -5,11 +5,11 @@ pub use splitbits::{splitbits, splitbits_named, combinebits, splitbits_then_comb
 pub use crate::cartridge::cartridge::Cartridge;
 use crate::cpu::dmc_dma::DmcDma;
 use crate::cpu::oam_dma::OamDma;
-pub use crate::memory::bank::bank_index::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters, RamStatus};
+pub use crate::memory::bank::bank_index::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters, ReadWriteStatus};
 pub use crate::memory::bank::bank_index::BankRegisterId::*;
 pub use crate::memory::bank::bank_index::MetaRegisterId::*;
-pub use crate::memory::bank::bank::{Bank, RamStatusRegisterId};
-pub use crate::memory::bank::bank::RamStatusRegisterId::*;
+pub use crate::memory::bank::bank::{Bank, ReadWriteStatusRegisterId};
+pub use crate::memory::bank::bank::ReadWriteStatusRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::PrgMemory;
 pub use crate::memory::layout::Layout;
@@ -478,8 +478,8 @@ pub struct MapperParams {
     // TODO: Consolidate these into ChrMemory?
     pub name_table_mirroring: NameTableMirroring,
     pub name_table_mirrorings: &'static [NameTableMirroring],
-    pub ram_statuses: &'static [RamStatus],
-    pub ram_not_present: BTreeSet<RamStatusRegisterId>,
+    pub read_write_statuses: &'static [ReadWriteStatus],
+    pub ram_not_present: BTreeSet<ReadWriteStatusRegisterId>,
     pub irq_pending: bool,
 }
 
@@ -516,13 +516,13 @@ impl MapperParams {
         self.prg_memory.write(&self.bank_registers, CpuAddress::new(cpu_address), value);
     }
 
-    pub fn set_ram_status(&mut self, id: RamStatusRegisterId, index: u8) {
+    pub fn set_read_write_status(&mut self, id: ReadWriteStatusRegisterId, index: u8) {
         if self.ram_not_present.contains(&id) {
             info!(target: "mapperupdates",
                 "Ignoring update to RamStatus register {id:?} because RAM isn't present.");
         } else {
-            let ram_status = self.ram_statuses[index as usize];
-            self.bank_registers.set_ram_status(id, ram_status);
+            let read_write_status = self.read_write_statuses[index as usize];
+            self.bank_registers.set_read_write_status(id, read_write_status);
         }
     }
 

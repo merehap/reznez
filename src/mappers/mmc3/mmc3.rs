@@ -12,11 +12,11 @@ pub const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::VERTICAL,
         NameTableMirroring::HORIZONTAL,
     ])
-    .ram_statuses(&[
-        RamStatus::Disabled,
-        RamStatus::ReadOnly,
-        RamStatus::ReadWrite,
-        RamStatus::ReadOnly,
+    .read_write_statuses(&[
+        ReadWriteStatus::Disabled,
+        ReadWriteStatus::ReadOnly,
+        ReadWriteStatus::ReadWrite,
+        ReadWriteStatus::ReadOnly,
     ])
     .build();
 
@@ -144,5 +144,5 @@ pub fn set_mirroring(params: &mut MapperParams, value: u8) {
 }
 
 pub fn prg_ram_protect(params: &mut MapperParams, value: u8) {
-    params.set_ram_status(S0, value >> 6);
+    params.set_read_write_status(S0, value >> 6);
 }

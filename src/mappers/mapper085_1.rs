@@ -28,9 +28,9 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,
         NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
     ])
-    .ram_statuses(&[
-        RamStatus::ReadOnly,
-        RamStatus::ReadWrite,
+    .read_write_statuses(&[
+        ReadWriteStatus::ReadOnly,
+        ReadWriteStatus::ReadWrite,
     ])
     .build();
 
@@ -61,7 +61,7 @@ impl Mapper for Mapper085_1 {
             0xD008 => params.set_bank_register(C7, value),
             0xE000 => {
                 let fields = splitbits!(min=u8, value, "r.....mm");
-                params.set_ram_status(S0, fields.r);
+                params.set_read_write_status(S0, fields.r);
                 params.set_name_table_mirroring(fields.m);
             }
             0xE008 => self.irq_state.set_reload_value(value),

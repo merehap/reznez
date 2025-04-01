@@ -11,9 +11,9 @@ const LAYOUT: Layout = Layout::builder()
     .chr_layout(&[
         Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.fixed_index(0).status_register(S0)),
     ])
-    .ram_statuses(&[
-        RamStatus::Disabled,
-        RamStatus::ReadWrite,
+    .read_write_statuses(&[
+        ReadWriteStatus::Disabled,
+        ReadWriteStatus::ReadWrite,
     ])
     .build();
 
@@ -28,7 +28,7 @@ impl Mapper for Mapper093 {
             0x8000..=0xFFFF => {
                 let fields = splitbits!(min=u8, value, ".ppp...r");
                 params.set_bank_register(P0, fields.p);
-                params.set_ram_status(S0, fields.r);
+                params.set_read_write_status(S0, fields.r);
             }
         }
     }

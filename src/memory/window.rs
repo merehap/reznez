@@ -5,7 +5,7 @@ use crate::memory::bank::bank_index::{BankRegisters, BankRegisterId};
 
 use crate::memory::ppu::ciram::CiramSide;
 
-use crate::mapper::{BankIndex, RamStatus, RamStatusRegisterId};
+use crate::mapper::{BankIndex, ReadWriteStatus, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank_index::{BankConfiguration, BankLocation, RomRamMode};
 use crate::memory::ppu::chr_memory::AccessOverride;
 
@@ -134,19 +134,19 @@ impl Window {
             None
         }
     }
-    pub fn ram_status_info(self) -> RamStatusInfo {
+    pub fn read_write_status_info(self) -> ReadWriteStatusInfo {
         match self.bank {
             Bank::Ram(_, Some(register_id)) | Bank::RomRam(_, register_id, _) =>
-                RamStatusInfo::PossiblyPresent { register_id, status_on_absent: RamStatus::ReadOnly },
+                ReadWriteStatusInfo::PossiblyPresent { register_id, status_on_absent: ReadWriteStatus::ReadOnly },
             Bank::WorkRam(_, Some(register_id)) =>
-                RamStatusInfo::PossiblyPresent { register_id, status_on_absent: RamStatus::Disabled },
+                ReadWriteStatusInfo::PossiblyPresent { register_id, status_on_absent: ReadWriteStatus::Disabled },
             // TODO: SaveRam will probably need to support status registers.
             Bank::SaveRam(..) =>
-                RamStatusInfo::Absent,
+                ReadWriteStatusInfo::Absent,
             Bank::ExtendedRam(Some(register_id)) =>
-                RamStatusInfo::MapperCustom { register_id },
+                ReadWriteStatusInfo::MapperCustom { register_id },
             Bank::Empty | Bank::Rom(..) | Bank::MirrorOf(..) | Bank::Ram(..) | Bank::ExtendedRam(..) | Bank::WorkRam(..) =>
-                RamStatusInfo::Absent,
+                ReadWriteStatusInfo::Absent,
         }
     }
 
@@ -181,8 +181,8 @@ impl fmt::Display for ChrLocation {
     }
 }
 
-pub enum RamStatusInfo {
+pub enum ReadWriteStatusInfo {
     Absent,
-    PossiblyPresent { register_id: RamStatusRegisterId, status_on_absent: RamStatus },
-    MapperCustom { register_id: RamStatusRegisterId },
+    PossiblyPresent { register_id: ReadWriteStatusRegisterId, status_on_absent: ReadWriteStatus },
+    MapperCustom { register_id: ReadWriteStatusRegisterId },
 }

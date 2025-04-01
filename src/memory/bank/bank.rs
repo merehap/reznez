@@ -1,17 +1,17 @@
-use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId, MetaRegisterId, RamStatus};
+use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId, MetaRegisterId, ReadWriteStatus};
 
 use super::bank_index::{BankLocation, RomRamMode};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Bank {
     Empty,
-    WorkRam(Location, Option<RamStatusRegisterId>),
+    WorkRam(Location, Option<ReadWriteStatusRegisterId>),
     // TODO: Add configurable writability?
     SaveRam(u32),
-    ExtendedRam(Option<RamStatusRegisterId>),
+    ExtendedRam(Option<ReadWriteStatusRegisterId>),
     Rom(Location),
-    Ram(Location, Option<RamStatusRegisterId>),
-    RomRam(Location, RamStatusRegisterId, RomRamModeRegisterId),
+    Ram(Location, Option<ReadWriteStatusRegisterId>),
+    RomRam(Location, ReadWriteStatusRegisterId, RomRamModeRegisterId),
     MirrorOf(u16),
 }
 
@@ -21,7 +21,7 @@ impl Bank {
     pub const EXTENDED_RAM: Bank = Bank::ExtendedRam(None);
     pub const ROM: Bank = Bank::Rom(Location::Fixed(BankIndex::from_u8(0)));
     pub const RAM: Bank = Bank::Ram(Location::Fixed(BankIndex::from_u8(0)), None);
-    pub const ROM_RAM: Bank = Bank::RomRam(Location::Fixed(BankIndex::from_u8(0)), RamStatusRegisterId::S0, RomRamModeRegisterId::R0);
+    pub const ROM_RAM: Bank = Bank::RomRam(Location::Fixed(BankIndex::from_u8(0)), ReadWriteStatusRegisterId::S0, RomRamModeRegisterId::R0);
 
     pub const fn fixed_index(self, index: i16) -> Self {
         self.set_location(Location::Fixed(BankIndex::from_i16(index))) }
@@ -38,7 +38,7 @@ impl Bank {
         Bank::MirrorOf(window_address)
     }
 
-    pub const fn status_register(self, id: RamStatusRegisterId) -> Self {
+    pub const fn status_register(self, id: ReadWriteStatusRegisterId) -> Self {
         match self {
             Bank::WorkRam(location, None) => Bank::WorkRam(location, Some(id)),
             Bank::ExtendedRam(None) => Bank::ExtendedRam(Some(id)),
@@ -79,9 +79,9 @@ impl Bank {
             // RAM with no status register is always writable.
             Bank::Ram(_, None) | Bank::WorkRam(_, None) | Bank::ExtendedRam(None) => true,
             Bank::RomRam(_, status, rom_ram_mode) =>
-                registers.rom_ram_mode(rom_ram_mode) == RomRamMode::Ram && registers.ram_status(status) == RamStatus::ReadWrite,
+                registers.rom_ram_mode(rom_ram_mode) == RomRamMode::Ram && registers.read_write_status(status) == ReadWriteStatus::ReadWrite,
             Bank::Ram(_, Some(status_register_id)) | Bank::WorkRam(_, Some(status_register_id)) | Bank::ExtendedRam(Some(status_register_id)) =>
-                registers.ram_status(status_register_id) == RamStatus::ReadWrite,
+                registers.read_write_status(status_register_id) == ReadWriteStatus::ReadWrite,
             Bank::SaveRam(..) => true,
         }
     }
@@ -117,7 +117,7 @@ impl Location {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
-pub enum RamStatusRegisterId {
+pub enum ReadWriteStatusRegisterId {
     S0,
     S1,
     S2,

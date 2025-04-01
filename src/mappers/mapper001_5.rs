@@ -22,9 +22,9 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::VERTICAL,
         NameTableMirroring::HORIZONTAL,
     ])
-    .ram_statuses(&[
-        RamStatus::ReadWrite,
-        RamStatus::Disabled,
+    .read_write_statuses(&[
+        ReadWriteStatus::ReadWrite,
+        ReadWriteStatus::Disabled,
     ])
     .build();
 
@@ -54,7 +54,7 @@ impl Mapper for Mapper001_5 {
                 0xC000..=0xDFFF => params.set_bank_register(C1, finished_value),
                 0xE000..=0xFFFF => {
                     let fields = splitbits!(min=u8, finished_value, "...s....");
-                    params.set_ram_status(S0, fields.s);
+                    params.set_read_write_status(S0, fields.s);
                 }
             }
         }

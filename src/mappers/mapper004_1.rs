@@ -44,9 +44,9 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::VERTICAL,
         NameTableMirroring::HORIZONTAL,
     ])
-    .ram_statuses(&[
-        RamStatus::ReadOnly,
-        RamStatus::ReadWrite,
+    .read_write_statuses(&[
+        ReadWriteStatus::ReadOnly,
+        ReadWriteStatus::ReadWrite,
     ])
     .build();
 
@@ -93,8 +93,8 @@ impl Mapper004_1 {
         params.set_chr_layout(fields.c);
         params.set_prg_layout(fields.p);
         // FIXME: What are these actually supposed to do?
-        params.set_ram_status(S0, fields.s);
-        params.set_ram_status(S1, fields.s);
+        params.set_read_write_status(S0, fields.s);
+        params.set_read_write_status(S1, fields.s);
         self.selected_register_id = mmc3::BANK_INDEX_REGISTER_IDS[fields.b as usize];
     }
 

@@ -20,9 +20,9 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
         Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
     ])
-    .ram_statuses(&[
-        RamStatus::Disabled,
-        RamStatus::ReadWrite,
+    .read_write_statuses(&[
+        ReadWriteStatus::Disabled,
+        ReadWriteStatus::ReadWrite,
     ])
     .build();
 
@@ -57,7 +57,7 @@ impl Mapper for Mapper207 {
             0x7EF6..=0x7EF7 => { /* Do nothing. (In mapper 80, this controls mirroring). */ }
             0x7EF8..=0x7EF9 => {
                 let ram_enabled = value == 0xA3;
-                params.set_ram_status(S0, ram_enabled as u8);
+                params.set_read_write_status(S0, ram_enabled as u8);
             }
             0x7EFA..=0x7EFB => params.set_bank_register(P0, value),
             0x7EFC..=0x7EFD => params.set_bank_register(P1, value),

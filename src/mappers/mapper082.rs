@@ -35,9 +35,9 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::HORIZONTAL,
         NameTableMirroring::VERTICAL,
     ])
-    .ram_statuses(&[
-        RamStatus::ReadOnlyZeros,
-        RamStatus::ReadWrite,
+    .read_write_statuses(&[
+        ReadWriteStatus::ReadOnlyZeros,
+        ReadWriteStatus::ReadWrite,
     ])
     .build();
 
@@ -66,16 +66,16 @@ impl Mapper for Mapper082 {
                 params.set_name_table_mirroring(fields.m);
             }
             0x7EF7 => {
-                let prg_ram_status = if value == 0xCA { READ_WRITE } else { READ_ONLY_ZEROS };
-                params.set_ram_status(S0, prg_ram_status);
+                let prg_read_write_status = if value == 0xCA { READ_WRITE } else { READ_ONLY_ZEROS };
+                params.set_read_write_status(S0, prg_read_write_status);
             }
             0x7EF8 => {
-                let prg_ram_status = if value == 0x69 { READ_WRITE } else { READ_ONLY_ZEROS };
-                params.set_ram_status(S1, prg_ram_status);
+                let prg_read_write_status = if value == 0x69 { READ_WRITE } else { READ_ONLY_ZEROS };
+                params.set_read_write_status(S1, prg_read_write_status);
             }
             0x7EF9 => {
-                let prg_ram_status = if value == 0x84 { READ_WRITE } else { READ_ONLY_ZEROS };
-                params.set_ram_status(S2, prg_ram_status);
+                let prg_read_write_status = if value == 0x84 { READ_WRITE } else { READ_ONLY_ZEROS };
+                params.set_read_write_status(S2, prg_read_write_status);
             }
             0x7EFA => params.set_bank_register(P0, splitbits_named!(value, "..pppp..")),
             0x7EFB => params.set_bank_register(P1, splitbits_named!(value, "..pppp..")),

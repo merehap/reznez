@@ -4,7 +4,7 @@ use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
-use crate::memory::window::{ChrLocation, RamStatusInfo, Window};
+use crate::memory::window::{ChrLocation, ReadWriteStatusInfo, Window};
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
 
@@ -121,10 +121,10 @@ impl ChrMemory {
         self.access_override
     }
 
-    pub fn ram_status_infos(&self) -> Vec<RamStatusInfo> {
+    pub fn read_write_status_infos(&self) -> Vec<ReadWriteStatusInfo> {
         let mut ids = Vec::new();
         for layout in &self.layouts {
-            ids.append(&mut layout.active_ram_status_register_ids());
+            ids.append(&mut layout.active_read_write_status_register_ids());
         }
 
         ids

@@ -29,9 +29,9 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0x2800, 0x2BFF, 1 * KIBIBYTE, Bank::RAM.switchable(C10).status_register(S10)),
         Window::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, Bank::RAM.switchable(C11).status_register(S11)),
     ])
-    .ram_statuses(&[
-        RamStatus::ReadOnly,
-        RamStatus::ReadWrite,
+    .read_write_statuses(&[
+        ReadWriteStatus::ReadOnly,
+        ReadWriteStatus::ReadWrite,
     ])
     .build();
 
@@ -107,16 +107,16 @@ impl Mapper for Mapper019 {
             0xF800..=0xFFFF => {
                 let fields = splitbits!(min=u8, value, "ppppabcd");
                 if fields.p == 0b0100 {
-                    params.set_ram_status(S0, fields.a);
-                    params.set_ram_status(S1, fields.b);
-                    params.set_ram_status(S2, fields.c);
-                    params.set_ram_status(S3, fields.d);
+                    params.set_read_write_status(S0, fields.a);
+                    params.set_read_write_status(S1, fields.b);
+                    params.set_read_write_status(S2, fields.c);
+                    params.set_read_write_status(S3, fields.d);
                 } else {
                     // All read-only
-                    params.set_ram_status(S0, 0);
-                    params.set_ram_status(S1, 0);
-                    params.set_ram_status(S2, 0);
-                    params.set_ram_status(S3, 0);
+                    params.set_read_write_status(S0, 0);
+                    params.set_read_write_status(S1, 0);
+                    params.set_read_write_status(S2, 0);
+                    params.set_read_write_status(S3, 0);
                 }
             }
         }
@@ -184,16 +184,16 @@ fn set_chr_register(
     params: &mut MapperParams,
     allow_ciram_in_chr: bool,
     reg_id: BankRegisterId,
-    status_reg_id: RamStatusRegisterId,
+    status_reg_id: ReadWriteStatusRegisterId,
     value: u8,
 ) {
     if allow_ciram_in_chr && value >= 0xE0 {
         let ciram_side = if value & 1 == 0 { CiramSide::Left } else { CiramSide::Right };
         params.set_bank_register_to_ciram_side(reg_id, ciram_side);
-        params.set_ram_status(status_reg_id, READ_WRITE);
+        params.set_read_write_status(status_reg_id, READ_WRITE);
     } else {
         params.set_bank_register(reg_id, value);
-        params.set_ram_status(status_reg_id, READ_ONLY);
+        params.set_read_write_status(status_reg_id, READ_ONLY);
     }
 }
 
