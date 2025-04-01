@@ -263,11 +263,14 @@ impl PrgMemory {
                 let prg_memory_index = match window.bank() {
                     Bank::Empty => PrgMemoryIndex::None,
                     Bank::MirrorOf(_) => panic!("A mirrored bank must mirror a non-mirrored bank."),
-                    Bank::Rom(location) => {
+                    Bank::Rom(location, status_register_id) => {
                         let resolved_bank_index =
                             window.resolved_bank_index(registers, location, self.rom_bank_configuration);
                         let index = resolved_bank_index as u32 * self.rom_bank_configuration.bank_size() as u32 + bank_offset as u32;
-                        PrgMemoryIndex::MappedMemory { index, read_write_status: ReadWriteStatus::ReadOnly }
+                        let read_write_status: ReadWriteStatus = status_register_id
+                            .map_or(ReadWriteStatus::ReadOnly, |id| registers.read_write_status(id));
+                        assert!(!read_write_status.is_writable());
+                        PrgMemoryIndex::MappedMemory { index, read_write_status }
                     }
                     Bank::Ram(location, status_register_id) => {
                         let work_ram_bank_configuration = self.ram_bank_configuration

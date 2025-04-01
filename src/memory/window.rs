@@ -40,7 +40,7 @@ impl Window {
             Bank::WorkRam(_, _) => "W".into(),
             Bank::SaveRam(..) => "S".into(),
             Bank::ExtendedRam(_) => "X".into(),
-            Bank::Rom(location) | Bank::Ram(location, _) | Bank::RomRam(location, _, _) =>
+            Bank::Rom(location, _) | Bank::Ram(location, _) | Bank::RomRam(location, _, _) =>
                 self.resolved_bank_location(registers, location, rom_bank_configuration, ram_bank_configuration, access_override).to_string(),
             Bank::MirrorOf(_) => "M".into(),
         }
@@ -120,7 +120,7 @@ impl Window {
 
     pub fn location(self) -> Result<Location, String> {
         match self.bank {
-            Bank::Rom(location) | Bank::Ram(location, _)  | Bank::RomRam(location, _, _) | Bank::WorkRam(location, _) => Ok(location),
+            Bank::Rom(location, _) | Bank::Ram(location, _)  | Bank::RomRam(location, _, _) | Bank::WorkRam(location, _) => Ok(location),
             Bank::SaveRam(_) => Ok(Location::Fixed(BankIndex::from_u8(0))),
             Bank::Empty | Bank::ExtendedRam(_) | Bank::MirrorOf(_) =>
                 Err(format!("Bank type {:?} does not have a bank location.", self.bank)),
@@ -128,7 +128,7 @@ impl Window {
     }
 
     pub const fn register_id(self) -> Option<BankRegisterId> {
-        if let Bank::Rom(Location::Switchable(id)) | Bank::Ram(Location::Switchable(id), _) = self.bank {
+        if let Bank::Rom(Location::Switchable(id), _) | Bank::Ram(Location::Switchable(id), _) = self.bank {
             Some(id)
         } else {
             None

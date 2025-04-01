@@ -9,7 +9,7 @@ pub enum Bank {
     // TODO: Add configurable writability?
     SaveRam(u32),
     ExtendedRam(Option<ReadWriteStatusRegisterId>),
-    Rom(Location),
+    Rom(Location, Option<ReadWriteStatusRegisterId>),
     Ram(Location, Option<ReadWriteStatusRegisterId>),
     RomRam(Location, ReadWriteStatusRegisterId, RomRamModeRegisterId),
     MirrorOf(u16),
@@ -19,12 +19,13 @@ impl Bank {
     pub const EMPTY: Bank = Bank::Empty;
     pub const WORK_RAM: Bank = Bank::WorkRam(Location::Fixed(BankIndex::from_u8(0)), None);
     pub const EXTENDED_RAM: Bank = Bank::ExtendedRam(None);
-    pub const ROM: Bank = Bank::Rom(Location::Fixed(BankIndex::from_u8(0)));
+    pub const ROM: Bank = Bank::Rom(Location::Fixed(BankIndex::from_u8(0)), None);
     pub const RAM: Bank = Bank::Ram(Location::Fixed(BankIndex::from_u8(0)), None);
     pub const ROM_RAM: Bank = Bank::RomRam(Location::Fixed(BankIndex::from_u8(0)), ReadWriteStatusRegisterId::S0, RomRamModeRegisterId::R0);
 
     pub const fn fixed_index(self, index: i16) -> Self {
-        self.set_location(Location::Fixed(BankIndex::from_i16(index))) }
+        self.set_location(Location::Fixed(BankIndex::from_i16(index)))
+    }
 
     pub const fn switchable(self, register_id: BankRegisterId) -> Self {
         self.set_location(Location::Switchable(register_id))
@@ -40,11 +41,12 @@ impl Bank {
 
     pub const fn status_register(self, id: ReadWriteStatusRegisterId) -> Self {
         match self {
+            Bank::Rom(location, None) => Bank::Rom(location, Some(id)),
             Bank::WorkRam(location, None) => Bank::WorkRam(location, Some(id)),
             Bank::ExtendedRam(None) => Bank::ExtendedRam(Some(id)),
             Bank::Ram(location, None) => Bank::Ram(location, Some(id)),
             Bank::RomRam(location, _, rom_ram) => Bank::RomRam(location, id, rom_ram),
-            _ => panic!("Only RAM and Work RAM support status registers."),
+            _ => panic!("Cannot provide a status register here."),
         }
     }
 
@@ -64,7 +66,7 @@ impl Bank {
     }
 
     pub fn bank_location(self, registers: &BankRegisters) -> Option<BankLocation> {
-        if let Bank::Rom(location) | Bank::Ram(location, _) | Bank::WorkRam(location, _) = self {
+        if let Bank::Rom(location, _) | Bank::Ram(location, _) | Bank::WorkRam(location, _) = self {
             Some(location.bank_location(registers))
         } else {
             None
@@ -74,7 +76,7 @@ impl Bank {
     pub fn is_writable(self, registers: &BankRegisters) -> bool {
         match self {
             Bank::Empty => false,
-            Bank::Rom(_) => false,
+            Bank::Rom(..) => false,
             Bank::MirrorOf(_) => todo!("Writability of MirrorOf"),
             // RAM with no status register is always writable.
             Bank::Ram(_, None) | Bank::WorkRam(_, None) | Bank::ExtendedRam(None) => true,
@@ -88,10 +90,11 @@ impl Bank {
 
     const fn set_location(self, location: Location) -> Self {
         match self {
-            Bank::Rom(_) => Bank::Rom(location),
+            Bank::Rom(_, None) => Bank::Rom(location, None),
             Bank::Ram(_, None) => Bank::Ram(location, None),
             Bank::RomRam(_, status, rom_ram_mode) => Bank::RomRam(location, status, rom_ram_mode),
             Bank::WorkRam(_, None) => Bank::WorkRam(location, None),
+            Bank::Rom(_, Some(_)) => panic!("ROM location must be set before ROM status register."),
             Bank::Ram(_, Some(_)) => panic!("RAM location must be set before RAM status register."),
             Bank::WorkRam(_, Some(_)) => panic!("RAM location must be set before RAM status register."),
             _ => panic!("Bank indexes can only be used for ROM or RAM or Work RAM."),
