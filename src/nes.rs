@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 
 use log::Level::Info;
 use log::{info, log_enabled};
+use num_traits::FromPrimitive;
 
 use crate::apu::apu::Apu;
 use crate::apu::apu_registers::{ApuRegisters, FrameCounterWriteStatus};
@@ -13,7 +14,7 @@ use crate::cpu::step::Step;
 use crate::gui::gui::Events;
 use crate::logging::formatter;
 use crate::logging::formatter::*;
-use crate::mapper::{MapperParams, NameTableMirroring, ReadWriteStatus};
+use crate::mapper::{BankRegisterId, MapperParams, NameTableMirroring, ReadWriteStatus};
 use crate::memory::bank::bank_index::BankLocation;
 use crate::memory::cpu::ports::Ports;
 use crate::mapper_list;
@@ -278,21 +279,22 @@ impl Nes {
                 info!(target: "mapperupdates", "CHR layout set to index {}.", latest.chr_layout_index);
             }
 
-            /*
             let bank_registers = mapper_params.bank_registers.registers();
             if &latest.bank_registers != bank_registers {
                 for (i, latest_bank_location) in latest.bank_registers.iter_mut().enumerate() {
                     if *latest_bank_location != bank_registers[i] {
                         *latest_bank_location = bank_registers[i];
+
+                        let id: BankRegisterId = FromPrimitive::from_usize(i).unwrap();
                         match *latest_bank_location {
                             BankLocation::Index(index) =>
-                                info!("BankRegister {:?} set to {}.", FromPrimitive::from_usize(i).unwrap(), index),
-                            BankLocation::Ciram(side) => {}
+                                info!("BankRegister {id:?} set to {}.", index.to_raw()),
+                            BankLocation::Ciram(side) =>
+                                info!("BankRegister {id:?} set to Ciram{side:?}."),
                         }
                     }
                 }
             }
-            */
 
             if latest.name_table_mirroring != mapper_params.name_table_mirroring {
                 latest.name_table_mirroring = mapper_params.name_table_mirroring;

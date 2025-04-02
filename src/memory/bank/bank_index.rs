@@ -33,6 +33,10 @@ impl BankIndex {
 
         resolved_bank_index
     }
+
+    pub fn to_raw(self) -> u16 {
+        self.0
+    }
 }
 
 impl From<u8> for BankIndex {

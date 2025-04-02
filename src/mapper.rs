@@ -554,22 +554,12 @@ impl MapperParams {
         self.chr_memory.set_chr_rom_outer_bank_index(index);
     }
 
-    pub fn set_bank_register<INDEX: Into<u16>>(
-        &mut self,
-        id: BankRegisterId,
-        value: INDEX,
-    ) {
-        let value = value.into();
-        info!(target: "mapperupdates", "Setting BankRegister {id:?} to {}.", value);
-        self.bank_registers.set(id, BankIndex::from_u16(value));
+    pub fn set_bank_register<INDEX: Into<u16>>(&mut self, id: BankRegisterId, value: INDEX) {
+        self.bank_registers.set(id, BankIndex::from_u16(value.into()));
     }
 
-    pub fn set_bank_register_bits(
-        &mut self, id: BankRegisterId, new_value: u16, mask: u16) {
-
+    pub fn set_bank_register_bits(&mut self, id: BankRegisterId, new_value: u16, mask: u16) {
         self.bank_registers.set_bits(id, new_value, mask);
-        info!(target: "mapperupdates", "Setting bits of BankRegister {id:?}. New value: {:?}.",
-            self.bank_registers.get(id));
     }
 
     pub fn set_meta_register(&mut self, id: MetaRegisterId, value: BankRegisterId) {
@@ -583,8 +573,6 @@ impl MapperParams {
         updater: &dyn Fn(u16) -> u16,
     ) {
         self.bank_registers.update(id, updater);
-        info!(target: "mapperupdates", "Updating BankRegister {id:?} to {:?}.",
-            self.bank_registers.get(id));
     }
 
     pub fn set_bank_register_to_ciram_side(
