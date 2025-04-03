@@ -563,7 +563,6 @@ impl MapperParams {
     }
 
     pub fn set_meta_register(&mut self, id: MetaRegisterId, value: BankRegisterId) {
-        info!(target: "mapperupdates", "Setting Meta BankRegister {id:?} to {value:?}.");
         self.bank_registers.set_meta(id, value);
     }
 

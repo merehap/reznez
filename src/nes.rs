@@ -270,35 +270,57 @@ impl Nes {
             let latest = &mut self.latest_values;
 
             if latest.prg_layout_index != prg_memory.layout_index() {
+                info!(target: "mapperupdates", "PRG layout changed to index {}. Previously: {}.",
+                    prg_memory.layout_index(), latest.prg_layout_index);
                 latest.prg_layout_index = prg_memory.layout_index();
-                info!(target: "mapperupdates", "PRG layout set to index {}.", latest.prg_layout_index);
             }
 
             if latest.chr_layout_index != chr_memory.layout_index() {
+                info!(target: "mapperupdates", "CHR layout changed to index {}. Previously: {}.",
+                    chr_memory.layout_index(), latest.chr_layout_index);
                 latest.chr_layout_index = chr_memory.layout_index();
-                info!(target: "mapperupdates", "CHR layout set to index {}.", latest.chr_layout_index);
             }
 
             let bank_registers = mapper_params.bank_registers.registers();
             if &latest.bank_registers != bank_registers {
                 for (i, latest_bank_location) in latest.bank_registers.iter_mut().enumerate() {
                     if *latest_bank_location != bank_registers[i] {
-                        *latest_bank_location = bank_registers[i];
-
                         let id: BankRegisterId = FromPrimitive::from_usize(i).unwrap();
-                        match *latest_bank_location {
-                            BankLocation::Index(index) =>
-                                info!("BankRegister {id:?} set to {}.", index.to_raw()),
-                            BankLocation::Ciram(side) =>
-                                info!("BankRegister {id:?} set to Ciram{side:?}."),
+                        match (bank_registers[i], *latest_bank_location) {
+                            (BankLocation::Index(curr), BankLocation::Index(prev)) =>
+                                info!("BankRegister {id:?} changed to {}. Previously: {}",
+                                    curr.to_raw(), prev.to_raw()),
+                            (BankLocation::Index(curr), BankLocation::Ciram(prev)) =>
+                                info!("BankRegister {id:?} changed to {}. Previously: {prev:?}",
+                                    curr.to_raw()),
+                            (BankLocation::Ciram(curr), BankLocation::Index(prev)) =>
+                                info!("BankRegister {id:?} changed to {curr:?}. Previously: {}",
+                                    prev.to_raw()),
+                            (BankLocation::Ciram(curr), BankLocation::Ciram(prev)) =>
+                                info!("BankRegister {id:?} changed to Ciram{curr:?}. Previously: Ciram{prev:?}"),
                         }
+
+                        *latest_bank_location = bank_registers[i];
+                    }
+                }
+            }
+
+            let meta_registers = mapper_params.bank_registers.meta_registers();
+            if &latest.meta_registers != meta_registers {
+                for (i, latest_bank_register_id) in latest.meta_registers.iter_mut().enumerate() {
+                    if *latest_bank_register_id != meta_registers[i] {
+                        let id: BankRegisterId = FromPrimitive::from_usize(i).unwrap();
+                        info!("MetaRegister {id:?} changed to {:?}. Previously: {latest_bank_register_id:?}.",
+                            meta_registers[i]);
+                        *latest_bank_register_id = meta_registers[i];
                     }
                 }
             }
 
             if latest.name_table_mirroring != mapper_params.name_table_mirroring {
+                info!("NameTableMirroring changed to {}. Previously: {}",
+                    mapper_params.name_table_mirroring, latest.name_table_mirroring);
                 latest.name_table_mirroring = mapper_params.name_table_mirroring;
-                info!("NameTableMirroring set to {}.", mapper_params.name_table_mirroring);
             }
 
             let read_write_statuses = mapper_params.bank_registers.read_write_statuses();
@@ -306,7 +328,9 @@ impl Nes {
                 for (i, latest_read_write_status) in latest.read_write_statuses.iter_mut().enumerate() {
                     if *latest_read_write_status != read_write_statuses[i] {
                         *latest_read_write_status = read_write_statuses[i];
-                        info!("RamStatus register S{i} set to {:?}.", *latest_read_write_status);
+                        info!("RamStatus register S{i} changed to {:?}. Previously: {:?}",
+                            read_write_statuses[i],
+                            *latest_read_write_status);
                     }
                 }
             }
@@ -334,6 +358,7 @@ struct LatestValues {
     prg_layout_index: u8,
     chr_layout_index: u8,
     bank_registers: [BankLocation; 18],
+    meta_registers: [BankRegisterId; 2],
     name_table_mirroring: NameTableMirroring,
     read_write_statuses: [ReadWriteStatus; 15],
 }
@@ -348,6 +373,7 @@ impl LatestValues {
             prg_layout_index: initial_params.prg_memory.layout_index(),
             chr_layout_index: initial_params.chr_memory.layout_index(),
             bank_registers: *initial_params.bank_registers.registers(),
+            meta_registers: *initial_params.bank_registers.meta_registers(),
             name_table_mirroring: initial_params.name_table_mirroring,
             read_write_statuses: *initial_params.bank_registers.read_write_statuses(),
         }
