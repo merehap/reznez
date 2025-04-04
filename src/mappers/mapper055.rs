@@ -25,7 +25,7 @@ impl Mapper for Mapper055 {
     fn write_to_cartridge_space(&mut self, _params: &mut MapperParams, cpu_address: u16, _value: u8) {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
-            0x4020..=0xFFFF => { /* Only mapper 0 does nothing here. */ }
+            0x4020..=0xFFFF => { /* Do nothing here, just like NROM. */ }
         }
     }
 

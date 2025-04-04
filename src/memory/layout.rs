@@ -162,13 +162,12 @@ impl Layout {
             name_table_mirroring_source: self.name_table_mirroring_source,
             name_table_mirrorings: self.name_table_mirrorings,
 
-            ram_statuses: self.read_write_statuses,
+            read_write_statuses: self.read_write_statuses,
 
             bank_register_overrides: self.bank_register_overrides,
             meta_register_overrides: self.meta_register_overrides,
         }
     }
-
 }
 
 #[derive(Clone, Copy)]
@@ -189,7 +188,7 @@ pub struct LayoutBuilder {
     name_table_mirroring_source: NameTableMirroringSource,
     name_table_mirrorings: &'static [NameTableMirroring],
 
-    ram_statuses: &'static [ReadWriteStatus],
+    read_write_statuses: &'static [ReadWriteStatus],
 
     bank_register_overrides: ConstVec<(BankRegisterId, BankIndex), 5>,
     meta_register_overrides: ConstVec<(MetaRegisterId, BankRegisterId), 5>,
@@ -214,7 +213,7 @@ impl LayoutBuilder {
             name_table_mirroring_source: NameTableMirroringSource::Cartridge,
             name_table_mirrorings: &[],
 
-            ram_statuses: &[],
+            read_write_statuses: &[],
 
             bank_register_overrides: ConstVec::new(),
             meta_register_overrides: ConstVec::new(),
@@ -303,7 +302,7 @@ impl LayoutBuilder {
         &mut self,
         value: &'static [ReadWriteStatus],
     ) -> &mut LayoutBuilder {
-        self.ram_statuses = value;
+        self.read_write_statuses = value;
         self
     }
 
@@ -356,7 +355,7 @@ impl LayoutBuilder {
             name_table_mirroring_source: self.name_table_mirroring_source,
             name_table_mirrorings: self.name_table_mirrorings,
 
-            read_write_statuses: self.ram_statuses,
+            read_write_statuses: self.read_write_statuses,
 
             bank_register_overrides: self.bank_register_overrides,
             meta_register_overrides: self.meta_register_overrides,
