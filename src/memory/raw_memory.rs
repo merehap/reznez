@@ -1,4 +1,4 @@
-use std::ops::{Index, IndexMut, Range};
+use std::{num::{NonZeroU16, NonZeroU8}, ops::{Index, IndexMut, Range}};
 
 // A chunk of primitive memory. Allows indexing on u32s instead of usizes.
 #[derive(Clone, Debug)]
@@ -37,16 +37,29 @@ impl RawMemory {
         (&mut self.0[start..start + SIZE]).try_into().unwrap()
     }
 
-    pub fn split_n(self, count: u8) -> Vec<RawMemory> {
+    pub fn split_n(self, count: NonZeroU8) -> Vec<RawMemory> {
         if self.0.is_empty() {
             return Vec::new();
         }
 
-        let results: Vec<_> = self.0.chunks_exact(self.0.len() / usize::from(count))
+        let results: Vec<_> = self.0.chunks_exact(self.0.len() / usize::from(count.get()))
             .map(|chunk| RawMemory(chunk.to_vec()))
             .collect();
-        assert_eq!(results.len(), usize::from(count));
+        assert_eq!(results.len(), usize::from(count.get()));
         results
+    }
+
+    pub fn chunks(self, size: NonZeroU16) -> Vec<RawMemory> {
+        if self.0.is_empty() {
+            return Vec::new()
+        } else if self.0.len() < usize::from(size.get()) {
+            return vec![self];
+        }
+
+        assert_eq!(self.0.len() % usize::from(size.get()), 0);
+        self.0.chunks(size.get() as usize)
+            .map(|chunk| RawMemory(chunk.to_vec()))
+            .collect()
     }
 
     pub fn size(&self) -> u32 {

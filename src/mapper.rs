@@ -370,11 +370,10 @@ pub trait Mapper {
             let bank_string = window.bank_string(
                 &params.bank_registers,
                 Some(prg_memory.bank_configuration()),
-                // FIXME: This needs to be Work RAM configuration, but that is an Option.
                 prg_memory.work_ram_bank_configuration(),
                 None,
             );
-            let window_size = window.size() / KIBIBYTE as u16;
+            let window_size = window.size().get() / KIBIBYTE as u16;
 
             let left_padding_len;
             let right_padding_len;
@@ -408,7 +407,7 @@ pub trait Mapper {
                 chr_memory.ram_bank_configuration(),
                 chr_memory.access_override(),
             );
-            let window_size = window.size() / KIBIBYTE as u16;
+            let window_size = window.size().get() / KIBIBYTE as u16;
 
             let padding_size = 5 * window_size - 2 - u16::try_from(bank_string.len()).unwrap();
             assert!(padding_size < 100);

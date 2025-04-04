@@ -10,12 +10,12 @@ impl ChrLayout {
 
         assert!(windows[0].start() == 0x0000, "The first CHR window must start at 0x0000.");
 
-        assert!(windows[windows.len() - 1].end() >= 0x1FFF,
+        assert!(windows[windows.len() - 1].end().get() >= 0x1FFF,
             "The last CHR window must end at 0x1FFF (or later, in rare cases).");
 
         let mut i = 1;
         while i < windows.len() {
-            assert!(windows[i].start() == windows[i - 1].end() + 1,
+            assert!(windows[i].start() == windows[i - 1].end().get() + 1,
                     "There must be no gaps nor overlap between CHR layouts.");
 
             i += 1;
@@ -30,7 +30,7 @@ impl ChrLayout {
 
     // Usually 0x1FFF, but different for mapper 19, for example.
     pub fn max_window_index(&self) -> u16 {
-        self.0[self.0.len() - 1].end()
+        self.0[self.0.len() - 1].end().get()
     }
 
     pub fn active_register_ids(&self) -> Vec<BankRegisterId> {

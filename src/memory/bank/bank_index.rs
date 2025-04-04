@@ -23,10 +23,10 @@ impl BankIndex {
         BankIndex(value as u16)
     }
 
-    pub fn to_u16(self, bank_configuration: BankConfiguration, window_size: u16) -> u16 {
+    pub fn to_u16(self, bank_configuration: BankConfiguration, window_size: NonZeroU16) -> u16 {
         let mut resolved_bank_index = self.0 % bank_configuration.bank_count;
         if bank_configuration.align_large_layouts {
-            let window_multiple = window_size / bank_configuration.bank_size;
+            let window_multiple = window_size.get() / bank_configuration.bank_size;
             // Clear low bits for large windows.
             resolved_bank_index &= !(window_multiple - 1);
         }

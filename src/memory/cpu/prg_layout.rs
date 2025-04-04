@@ -11,12 +11,12 @@ impl PrgLayout {
         assert!(windows[0].start() <= 0x6000,
             "The first PRG window must start at 0x6000 at highest.");
 
-        assert!(windows[windows.len() - 1].end() == 0xFFFF,
+        assert!(windows[windows.len() - 1].end().get() == 0xFFFF,
                 "The last PRG window must end at 0xFFFF.");
 
         let mut i = 1;
         while i < windows.len() {
-            assert!(windows[i].start() == windows[i - 1].end() + 1,
+            assert!(windows[i].start() == windows[i - 1].end().get() + 1,
                 "There must be no gaps nor overlap between PRG windows.");
 
             i += 1;

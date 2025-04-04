@@ -1,4 +1,5 @@
 use std::fmt;
+use std::num::NonZeroU16;
 
 use crate::memory::bank::bank::{Bank, Location};
 use crate::memory::bank::bank_index::{BankRegisters, BankRegisterId};
@@ -14,17 +15,22 @@ use crate::memory::ppu::chr_memory::AccessOverride;
 #[derive(Clone, Copy, Debug)]
 pub struct Window {
     start: u16,
-    end: u16,
+    end: NonZeroU16,
+    size: NonZeroU16,
     bank: Bank,
 }
 
 impl Window {
     pub const fn new(start: u16, end: u16, size: u32, bank: Bank) -> Window {
         assert!(end > start);
-        let actual_size = end as u32 - start as u32 + 1;
-        assert!(actual_size == size);
+        let actual_size = end - start + 1;
 
-        Window { start, end, bank }
+        assert!(size < u16::MAX as u32, "Window size must be small enough to fit inside a u16.");
+        let size = NonZeroU16::new(size as u16).expect("Window size to not be zero.");
+        assert!(actual_size == size.get());
+
+        let end = NonZeroU16::new(end).expect("Window end index to not be zero.");
+        Window { start, end, size, bank }
     }
 
     pub fn bank_string(
@@ -106,12 +112,12 @@ impl Window {
         self.start
     }
 
-    pub const fn end(self) -> u16 {
+    pub const fn end(self) -> NonZeroU16 {
         self.end
     }
 
-    pub const fn size(self) -> u16 {
-        self.end - self.start + 1
+    pub const fn size(self) -> NonZeroU16 {
+        self.size
     }
 
     pub const fn bank(self) -> Bank {
@@ -151,7 +157,7 @@ impl Window {
     }
 
     pub fn offset(self, address: u16) -> Option<u16> {
-        if self.start <= address && address <= self.end {
+        if self.start <= address && address <= self.end.get() {
             Some(address - self.start)
         } else {
             None

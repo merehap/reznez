@@ -1,5 +1,5 @@
 use std::collections::BTreeSet;
-use std::num::NonZeroU8;
+use std::num::{NonZeroU16, NonZeroU8};
 
 use log::warn;
 
@@ -19,7 +19,7 @@ use crate::util::unit::KIBIBYTE;
 #[derive(Clone)]
 pub struct Layout {
     prg_rom_max_size: u32,
-    prg_bank_size_override: Option<u16>,
+    prg_bank_size_override: Option<NonZeroU16>,
     prg_layout_index: u8,
     prg_layouts: ConstVec<PrgLayout, 10>,
     prg_rom_outer_bank_layout: OuterBankLayout,
@@ -173,7 +173,7 @@ impl Layout {
 #[derive(Clone, Copy)]
 pub struct LayoutBuilder {
     prg_rom_max_size: Option<u32>,
-    prg_bank_size_override: Option<u16>,
+    prg_bank_size_override: Option<NonZeroU16>,
     prg_layouts: ConstVec<PrgLayout, 10>,
     prg_layout_index: u8,
     prg_rom_outer_bank_layout: Option<OuterBankLayout>,
@@ -226,7 +226,8 @@ impl LayoutBuilder {
     }
 
     pub const fn prg_bank_size_override(&mut self, value: u32) -> &mut LayoutBuilder {
-        self.prg_bank_size_override = Some(value as u16);
+        assert!(value <= u16::MAX as u32);
+        self.prg_bank_size_override = Some(NonZeroU16::new(value as u16).unwrap());
         self
     }
 
@@ -384,16 +385,17 @@ enum OuterBankLayout {
 impl OuterBankLayout {
     const SINGLE_BANK: Self = Self::ExactCount(NonZeroU8::new(1).unwrap());
 
-    fn outer_bank_count(self, memory_size: u32) -> u8 {
+    fn outer_bank_count(self, memory_size: u32) -> NonZeroU8 {
         match self {
-            Self::ExactCount(count) => count.get(),
+            Self::ExactCount(count) => count,
             Self::Size(size) => {
-                if memory_size < size {
+                let count = if memory_size < size {
                     1
                 } else {
                     assert_eq!(memory_size % size, 0);
                     (memory_size / size).try_into().unwrap()
-                }
+                };
+                NonZeroU8::new(count).unwrap()
             }
         }
     }

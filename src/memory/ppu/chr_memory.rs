@@ -1,3 +1,5 @@
+use std::num::NonZeroU8;
+
 use crate::memory::bank::bank::Bank;
 use crate::memory::bank::bank_index::{BankConfiguration, BankRegisters};
 use crate::memory::ppu::chr_layout::ChrLayout;
@@ -28,7 +30,7 @@ impl ChrMemory {
         layout_index: u8,
         align_large_chr_layouts: bool,
         access_override: Option<AccessOverride>,
-        outer_bank_count: u8,
+        outer_bank_count: NonZeroU8,
         rom: RawMemory,
         ram: RawMemory,
     ) -> ChrMemory {
@@ -56,21 +58,21 @@ impl ChrMemory {
         let rom_outer_banks = rom.split_n(outer_bank_count);
 
         let rom_bank_configuration = if let Some(outer_bank_0) = rom_outer_banks.first() {
-            let bank_count = (outer_bank_0.size() / u32::from(bank_size))
+            let bank_count = (outer_bank_0.size() / u32::from(bank_size.get()))
                 .try_into()
                 .expect("Way too many CHR ROM banks.");
-            Some(BankConfiguration::new(bank_size, bank_count, align_large_chr_layouts))
+            Some(BankConfiguration::new(bank_size.get(), bank_count, align_large_chr_layouts))
         } else {
             None
         };
 
-        let ram_bank_count = (ram.size() / u32::from(bank_size))
+        let ram_bank_count = (ram.size() / u32::from(bank_size.get()))
             .try_into()
             .expect("Way too many CHR RAM banks.");
         let ram_bank_configuration = if ram_bank_count == 0 {
             None
         } else {
-            Some(BankConfiguration::new(bank_size, ram_bank_count, align_large_chr_layouts))
+            Some(BankConfiguration::new(bank_size.get(), ram_bank_count, align_large_chr_layouts))
         };
 
         let chr_memory = ChrMemory {
