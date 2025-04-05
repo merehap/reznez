@@ -136,13 +136,13 @@ impl ChrMemory {
         let (chr_index, _) = self.address_to_chr_index(registers, address.to_u16());
         match chr_index {
             ChrIndex::Rom(index) => {
-                if self.access_override == Some(AccessOverride::ForceRam) {
-                    self.ram[index]
-                } else {
-                    self.rom_outer_banks[self.rom_outer_bank_index][index]
-                }
+                assert_ne!(self.access_override, Some(AccessOverride::ForceRam));
+                self.rom_outer_banks[self.rom_outer_bank_index][index]
             }
-            ChrIndex::Ram(index) => self.ram[index],
+            ChrIndex::Ram(index) => {
+                assert_ne!(self.access_override, Some(AccessOverride::ForceRom));
+                self.ram[index]
+            }
             ChrIndex::Ciram(side, index, ) => ciram.side(side)[index as usize],
         }
     }
