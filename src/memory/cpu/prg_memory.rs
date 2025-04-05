@@ -50,7 +50,8 @@ impl PrgMemory {
 
         let rom_page_size = rom_page_size.expect("at least one ROM or RAM window");
 
-        let rom_outer_banks = OuterPageTable::new(prg_rom, rom_outer_bank_count, rom_page_size);
+        let rom_outer_banks = OuterPageTable::new(prg_rom, rom_outer_bank_count, rom_page_size)
+            .expect("PRG ROM must not be empty.");
 
         let work_ram_windows: Vec<_> = layouts[layout_index as usize].windows().iter()
             .filter(|window| window.bank().is_prg_ram())

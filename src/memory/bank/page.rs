@@ -11,16 +11,20 @@ pub struct OuterPageTable {
 }
 
 impl OuterPageTable {
-    pub fn new(memory: RawMemory, outer_page_count: NonZeroU8, inner_page_size: NonZeroU16) -> Self {
-        let outer_pages = memory.split_n(outer_page_count).into_iter()
+    pub fn new(memory: RawMemory, outer_page_count: NonZeroU8, inner_page_size: NonZeroU16) -> Option<Self> {
+        let outer_pages: Vec<OuterPage> = memory.split_n(outer_page_count).into_iter()
             .map(|raw_outer_bank| OuterPage::new(raw_outer_bank, inner_page_size))
             .collect();
 
-        Self {
+        if outer_pages.is_empty() {
+            return None;
+        }
+
+        Some(Self {
             outer_pages,
             outer_page_count,
             outer_page_index: 0,
-        }
+        })
     }
 
     pub fn outer_page_count(&self) -> NonZeroU8 {
