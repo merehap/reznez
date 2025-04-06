@@ -11,9 +11,9 @@ pub struct OuterPageTable {
 }
 
 impl OuterPageTable {
-    pub fn new(memory: RawMemory, outer_page_count: NonZeroU8, inner_page_size: NonZeroU16) -> Option<Self> {
+    pub fn new(memory: RawMemory, outer_page_count: NonZeroU8, inner_page_size: NonZeroU16, align_large_banks: bool) -> Option<Self> {
         let outer_pages: Vec<OuterPage> = memory.split_n(outer_page_count).into_iter()
-            .map(|raw_outer_bank| OuterPage::new(raw_outer_bank, inner_page_size))
+            .map(|raw_outer_bank| OuterPage::new(raw_outer_bank, inner_page_size, align_large_banks).unwrap())
             .collect();
 
         if outer_pages.is_empty() {
@@ -57,7 +57,7 @@ impl OuterPageTable {
     }
 
     pub fn bank_configuration(&self) -> BankConfiguration {
-        BankConfiguration::new(self.page_size().get(), self.page_count().get(), true)
+        BankConfiguration::new(self.page_size().get(), self.page_count().get(), self.outer_pages[0].align_large_banks)
     }
 }
 
@@ -67,10 +67,15 @@ pub struct OuterPage {
     page_count: NonZeroU16,
     // Can be calculated from pages, but it would have to be calculated each time.
     size: NonZeroU32,
+    align_large_banks: bool,
 }
 
 impl OuterPage {
-    pub fn new(raw_outer_page: RawMemory, page_size: NonZeroU16) -> Self {
+    pub fn new(raw_outer_page: RawMemory, page_size: NonZeroU16, align_large_banks: bool) -> Option<Self> {
+        if raw_outer_page.is_empty() {
+            return None;
+        }
+
         let expected_page_count;
         if raw_outer_page.size() % u32::from(page_size.get()) == 0 {
             expected_page_count = (raw_outer_page.size() / u32::from(page_size.get()))
@@ -86,10 +91,15 @@ impl OuterPage {
         let pages: Vec<Page> = raw_outer_page.chunks(page_size).into_iter()
             .map(Page::new)
             .collect();
+
+        if pages.is_empty() {
+            return None;
+        }
+
         let page_count = NonZeroU16::new(pages.len().try_into().unwrap()).unwrap();
         assert_eq!(page_count.get(), expected_page_count);
 
-        Self { pages, page_count, size }
+        Some(Self { pages, page_count, size, align_large_banks })
     }
 
     pub fn size(&self) -> NonZeroU32 {
@@ -114,7 +124,7 @@ impl OuterPage {
     }
 
     pub fn bank_configuration(&self) -> BankConfiguration {
-        BankConfiguration::new(self.page_size().get(), self.page_count().get(), true)
+        BankConfiguration::new(self.page_size().get(), self.page_count().get(), self.align_large_banks)
     }
 }
 
@@ -140,5 +150,13 @@ impl Page {
 
     pub fn write(&mut self, index: u16, value: u8) {
         self.raw_page[u32::from(index)] = value;
+    }
+
+    pub fn as_raw_slice(&self) -> &[u8] {
+        self.raw_page.as_slice()
+    }
+
+    pub fn as_raw_mut_slice(&mut self) -> &mut [u8] {
+        self.raw_page.as_mut_slice()
     }
 }

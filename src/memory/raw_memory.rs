@@ -18,6 +18,10 @@ impl RawMemory {
         &self.0[..]
     }
 
+    pub fn as_mut_slice(&mut self) -> &mut [u8] {
+        &mut self.0[..]
+    }
+
     pub fn slice(&self, range: Range<u32>) -> RawMemorySlice {
         RawMemorySlice(&self.0[range.start as usize..range.end as usize])
     }

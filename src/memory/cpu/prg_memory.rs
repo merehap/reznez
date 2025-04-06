@@ -50,7 +50,7 @@ impl PrgMemory {
 
         let rom_page_size = rom_page_size.expect("at least one ROM or RAM window");
 
-        let rom_outer_banks = OuterPageTable::new(prg_rom, rom_outer_bank_count, rom_page_size)
+        let rom_outer_banks = OuterPageTable::new(prg_rom, rom_outer_bank_count, rom_page_size, true)
             .expect("PRG ROM must not be empty.");
 
         let work_ram_windows: Vec<_> = layouts[layout_index as usize].windows().iter()
@@ -64,7 +64,7 @@ impl PrgMemory {
                 }
             }
 
-            Some(OuterPage::new(RawMemory::new(prg_ram_size), work_ram_page_size))
+            OuterPage::new(RawMemory::new(prg_ram_size), work_ram_page_size, true)
         } else if prg_ram_size > 0 {
             warn!("Work RAM specified in ROM file, but not in layout.");
             None
