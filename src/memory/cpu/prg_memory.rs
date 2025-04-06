@@ -229,25 +229,58 @@ impl PrgMemory {
             return PrgMemoryIndex::None;
         }
 
-        for i in 0..windows.len() {
-            if i == windows.len() - 1 || address < windows[i + 1].start() {
-                let bank_offset = address - windows[i].start();
+        let window_index = (1..windows.len())
+            .find(|&i| address < windows[i].start())
+            .unwrap_or(windows.len())
+            - 1;
 
-                let window;
-                if let Bank::MirrorOf(mirrored_window_start) = windows[i].bank() {
-                    window = self.window_at(mirrored_window_start);
-                } else {
-                    window = &windows[i];
+        let mut window = &windows[window_index];
+        let bank_offset = address - window.start();
+        if let Bank::MirrorOf(mirrored_window_start) = window.bank() {
+            window = self.window_at(mirrored_window_start);
+        }
+
+        match window.bank() {
+            Bank::Empty => PrgMemoryIndex::None,
+            Bank::MirrorOf(_) => panic!("A mirrored bank must mirror a non-mirrored bank."),
+            Bank::Rom(location, status_register_id) => {
+                let read_status: ReadWriteStatus = status_register_id
+                    .map_or(ReadWriteStatus::ReadOnly, |id| registers.read_write_status(id));
+                assert!(!read_status.is_writable());
+
+                let mut page_number = window.resolved_bank_index(registers, location, self.rom_outer_banks.bank_configuration());
+                let mut index = bank_offset;
+                // For windows that are larger than the page size,
+                // indexes need to be reduced and page numbers need to be increased.
+                while index >= self.rom_outer_banks.page_size().get() {
+                    page_number += 1;
+                    index -= self.rom_outer_banks.page_size().get();
                 }
 
-                let prg_memory_index = match window.bank() {
-                    Bank::Empty => PrgMemoryIndex::None,
-                    Bank::MirrorOf(_) => panic!("A mirrored bank must mirror a non-mirrored bank."),
-                    Bank::Rom(location, status_register_id) => {
-                        let read_status: ReadWriteStatus = status_register_id
-                            .map_or(ReadWriteStatus::ReadOnly, |id| registers.read_write_status(id));
-                        assert!(!read_status.is_writable());
-
+                PrgMemoryIndex::Rom { page_number, index, read_status }
+            }
+            Bank::Ram(location, status_register_id) => {
+                let work_ram_bank_configuration = self.work_ram_bank_configuration()
+                    .expect("PRG RAM window specified in layout, but not in cartridge.");
+                let page_number =
+                    window.resolved_bank_index(registers, location, work_ram_bank_configuration);
+                let index = bank_offset;
+                let read_write_status: ReadWriteStatus = status_register_id
+                    .map_or(ReadWriteStatus::ReadWrite, |id| registers.read_write_status(id));
+                PrgMemoryIndex::Ram { page_number, index, read_write_status }
+            }
+            Bank::RomRam(location, status_register_id, mode_register_id) => {
+                match registers.rom_ram_mode(mode_register_id) {
+                    RomRamMode::Ram => {
+                        let work_ram_bank_configuration = self.work_ram_bank_configuration()
+                            .expect("PRG RAM window specified in layout, but not in cartridge.");
+                        let page_number =
+                            window.resolved_bank_index(registers, location, work_ram_bank_configuration);
+                        let index = bank_offset;
+                        let read_write_status: ReadWriteStatus = registers.read_write_status(status_register_id);
+                        PrgMemoryIndex::Ram { page_number, index, read_write_status }
+                    }
+                    RomRamMode::Rom => {
                         let mut page_number = window.resolved_bank_index(registers, location, self.rom_outer_banks.bank_configuration());
                         let mut index = bank_offset;
                         // For windows that are larger than the page size,
@@ -256,71 +289,33 @@ impl PrgMemory {
                             page_number += 1;
                             index -= self.rom_outer_banks.page_size().get();
                         }
-
-                        PrgMemoryIndex::Rom { page_number, index, read_status }
+                        PrgMemoryIndex::Rom { page_number, index, read_status: ReadWriteStatus::ReadOnly }
                     }
-                    Bank::Ram(location, status_register_id) => {
-                        let work_ram_bank_configuration = self.work_ram_bank_configuration()
-                            .expect("PRG RAM window specified in layout, but not in cartridge.");
-                        let page_number =
-                            window.resolved_bank_index(registers, location, work_ram_bank_configuration);
-                        let index = bank_offset;
-                        let read_write_status: ReadWriteStatus = status_register_id
-                            .map_or(ReadWriteStatus::ReadWrite, |id| registers.read_write_status(id));
-                        PrgMemoryIndex::Ram { page_number, index, read_write_status }
-                    }
-                    Bank::RomRam(location, status_register_id, mode_register_id) => {
-                        match registers.rom_ram_mode(mode_register_id) {
-                            RomRamMode::Ram => {
-                                let work_ram_bank_configuration = self.work_ram_bank_configuration()
-                                    .expect("PRG RAM window specified in layout, but not in cartridge.");
-                                let page_number =
-                                    window.resolved_bank_index(registers, location, work_ram_bank_configuration);
-                                let index = bank_offset;
-                                let read_write_status: ReadWriteStatus = registers.read_write_status(status_register_id);
-                                PrgMemoryIndex::Ram { page_number, index, read_write_status }
-                            }
-                            RomRamMode::Rom => {
-                                let mut page_number = window.resolved_bank_index(registers, location, self.rom_outer_banks.bank_configuration());
-                                let mut index = bank_offset;
-                                // For windows that are larger than the page size,
-                                // indexes need to be reduced and page numbers need to be increased.
-                                while index >= self.rom_outer_banks.page_size().get() {
-                                    page_number += 1;
-                                    index -= self.rom_outer_banks.page_size().get();
-                                }
-                                PrgMemoryIndex::Rom { page_number, index, read_status: ReadWriteStatus::ReadOnly }
-                            }
-                        }
-                    }
-                    Bank::WorkRam(location, status_register_id) => {
-                        let Some(work_ram_bank_configuration) = self.work_ram_bank_configuration() else {
-                            return PrgMemoryIndex::None;
-                        };
-
-                        let page_number =
-                            window.resolved_bank_index(registers, location, work_ram_bank_configuration);
-                        let index = bank_offset;
-                        let read_write_status: ReadWriteStatus = status_register_id
-                            .map_or(ReadWriteStatus::ReadWrite, |id| registers.read_write_status(id));
-                        PrgMemoryIndex::Ram { page_number, index, read_write_status }
-                    }
-                    // TODO: Save RAM should be separate from WorkRam.
-                    Bank::SaveRam(_) => {
-                        todo!("Save RAM not yet supported for PRG.");
-                    }
-                    Bank::ExtendedRam(status_register_id) => {
-                        let index = u32::from(bank_offset);
-                        let read_write_status: ReadWriteStatus = status_register_id
-                            .map_or(ReadWriteStatus::ReadWrite, |id| registers.read_write_status(id));
-                        PrgMemoryIndex::ExtendedRam { index, read_write_status }
-                    }
+                }
+            }
+            Bank::WorkRam(location, status_register_id) => {
+                let Some(work_ram_bank_configuration) = self.work_ram_bank_configuration() else {
+                    return PrgMemoryIndex::None;
                 };
-                return prg_memory_index;
+
+                let page_number =
+                    window.resolved_bank_index(registers, location, work_ram_bank_configuration);
+                let index = bank_offset;
+                let read_write_status: ReadWriteStatus = status_register_id
+                    .map_or(ReadWriteStatus::ReadWrite, |id| registers.read_write_status(id));
+                PrgMemoryIndex::Ram { page_number, index, read_write_status }
+            }
+            // TODO: Save RAM should be separate from WorkRam.
+            Bank::SaveRam(_) => {
+                todo!("Save RAM not yet supported for PRG.");
+            }
+            Bank::ExtendedRam(status_register_id) => {
+                let index = u32::from(bank_offset);
+                let read_write_status: ReadWriteStatus = status_register_id
+                    .map_or(ReadWriteStatus::ReadWrite, |id| registers.read_write_status(id));
+                PrgMemoryIndex::ExtendedRam { index, read_write_status }
             }
         }
-
-        unreachable!();
     }
 
     fn window_with_index_at(&self, start: u16) -> (&Window, u32) {

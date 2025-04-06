@@ -39,10 +39,6 @@ impl OuterPageTable {
         &self.outer_pages[self.outer_page_index as usize]
     }
 
-    pub fn current_outer_page_mut(&mut self) -> &mut OuterPage {
-        &mut self.outer_pages[self.outer_page_index as usize]
-    }
-
     pub fn page_count(&self) -> NonZeroU16 {
         self.outer_pages[0].page_count()
     }
