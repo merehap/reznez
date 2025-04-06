@@ -335,7 +335,7 @@ pub trait Mapper {
             NameTableSource::Ciram(side) =>
                 ciram.side_mut(side)[index as usize] = value,
             NameTableSource::SaveRam(start_index) =>
-                params.chr_memory.chr_ram_slice_mut(start_index)[index as usize] = value,
+                params.chr_memory.save_ram_1kib_page_mut(start_index)[index as usize] = value,
             NameTableSource::ExtendedRam =>
                 params.prg_memory.extended_ram_mut().as_raw_mut_slice()[index as usize] = value,
             NameTableSource::FillModeTile =>

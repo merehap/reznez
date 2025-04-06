@@ -16,7 +16,6 @@ use super::ciram::CiramSide;
 pub struct ChrMemory {
     layouts: Vec<ChrLayout>,
     layout_index: u8,
-    ram_bank_configuration: Option<BankConfiguration>,
     max_pattern_table_index: u16,
     access_override: Option<AccessOverride>,
     rom_outer_banks: Option<OuterPageTable>,
@@ -57,19 +56,9 @@ impl ChrMemory {
 
         let rom_outer_banks = OuterPageTable::new(rom, outer_bank_count, page_size, align_large_chr_banks);
 
-        let ram_bank_count = (ram.size() / u32::from(page_size.get()))
-            .try_into()
-            .expect("Way too many CHR RAM banks.");
-        let ram_bank_configuration = if ram_bank_count == 0 {
-            None
-        } else {
-            Some(BankConfiguration::new(page_size.get(), ram_bank_count, align_large_chr_banks))
-        };
-
         ChrMemory {
             layouts,
             layout_index,
-            ram_bank_configuration,
             max_pattern_table_index,
             access_override,
             rom_outer_banks,
@@ -82,7 +71,7 @@ impl ChrMemory {
     }
 
     pub fn ram_bank_configuration(&self) -> Option<BankConfiguration> {
-        self.ram_bank_configuration
+        self.ram.as_ref().map(|ram| ram.bank_configuration())
     }
 
     #[inline]
@@ -92,7 +81,7 @@ impl ChrMemory {
 
     pub fn bank_size(&self) -> u16 {
         self.rom_bank_configuration()
-            .unwrap_or_else(|| self.ram_bank_configuration.unwrap())
+            .unwrap_or_else(|| self.ram_bank_configuration().unwrap())
             .bank_size()
     }
 
@@ -193,7 +182,7 @@ impl ChrMemory {
         self.ram.as_ref().unwrap().page(page_number).as_raw_slice().try_into().unwrap()
     }
 
-    pub fn chr_ram_slice_mut(&mut self, start: u32) -> &mut [u8; KIBIBYTE as usize] {
+    pub fn save_ram_1kib_page_mut(&mut self, start: u32) -> &mut [u8; KIBIBYTE as usize] {
         assert_eq!(start % 0x400, 0, "Save RAM 1KiB slices must start on a 1KiB page boundary (e.g. 0x000, 0x400, 0x800).");
         assert_eq!(self.ram.as_ref().unwrap().page_size().get(), 0x400, "Save RAM page size must be 0x400 in order to take a 1KiB slice.");
         let page_number = (start / 0x400).try_into().expect("Page number too large.");
@@ -208,7 +197,7 @@ impl ChrMemory {
                     registers,
                     window.location().unwrap(),
                     self.rom_bank_configuration(),
-                    self.ram_bank_configuration,
+                    self.ram_bank_configuration(),
                     self.access_override,
                 );
 
