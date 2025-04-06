@@ -185,12 +185,7 @@ impl PrgMemory {
 
         match self.address_to_prg_index(registers, address) {
             PrgMemoryIndex::None => {}
-            PrgMemoryIndex::Rom { page_number, index, read_status: read_write_status } => {
-                // FIXME: It shouldn't be possible to write to ROM.
-                if read_write_status.is_writable() {
-                    self.rom_outer_banks.current_outer_page_mut().page_mut(page_number).write(index, value);
-                }
-            }
+            PrgMemoryIndex::Rom { .. } => { /* ROM is readonly. */}
             PrgMemoryIndex::Ram { page_number, index, read_write_status } => {
                 if read_write_status.is_writable() {
                     let work_ram = self.work_ram.as_mut().expect("PRG RAM to be present since it is being written to.");
