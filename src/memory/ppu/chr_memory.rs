@@ -191,46 +191,50 @@ impl ChrMemory {
 
     fn address_to_chr_index(&self, registers: &BankRegisters, address: u16) -> (ChrIndex, bool) {
         assert!(address <= self.max_pattern_table_index);
+
+        let mut window_and_bank_offset = None;
         for window in self.current_layout().windows() {
             if let Some(bank_offset) = window.offset(address) {
-                let location = window.resolved_bank_location(
-                    registers,
-                    window.location().unwrap(),
-                    self.rom_bank_configuration(),
-                    self.ram_bank_configuration(),
-                    self.access_override,
-                );
-
-                match location {
-                    ChrLocation::RomBankIndex(mut page_number) => {
-                        let mut index = bank_offset; 
-                        let page_size = self.rom_outer_banks.as_ref().unwrap().page_size().get();
-                        while index >= page_size {
-                            page_number += 1;
-                            index -= page_size;
-                        }
-
-                        return (ChrIndex::Rom { page_number, index }, false);
-                    }
-                    ChrLocation::RamBankIndex(mut page_number) => {
-                        let mut index = bank_offset;
-                        let page_size = self.ram.as_ref().unwrap().page_size().get();
-                        while index >= page_size {
-                            page_number += 1;
-                            index -= page_size;
-                        }
-
-                        return (ChrIndex::Ram { page_number, index }, window.is_writable(registers));
-                    }
-                    ChrLocation::Ciram(side) => {
-                        let index = bank_offset; 
-                        return (ChrIndex::Ciram { side, index }, true);
-                    }
-                }
+                window_and_bank_offset = Some((window, bank_offset));
+                break;
             }
         }
 
-        unreachable!();
+        let (window, bank_offset) = window_and_bank_offset.unwrap();
+        let location = window.resolved_bank_location(
+            registers,
+            window.location().unwrap(),
+            self.rom_bank_configuration(),
+            self.ram_bank_configuration(),
+            self.access_override,
+        );
+
+        match location {
+            ChrLocation::RomBankIndex(mut page_number) => {
+                let mut index = bank_offset; 
+                let page_size = self.rom_outer_banks.as_ref().unwrap().page_size().get();
+                while index >= page_size {
+                    page_number += 1;
+                    index -= page_size;
+                }
+
+                (ChrIndex::Rom { page_number, index }, false)
+            }
+            ChrLocation::RamBankIndex(mut page_number) => {
+                let mut index = bank_offset;
+                let page_size = self.ram.as_ref().unwrap().page_size().get();
+                while index >= page_size {
+                    page_number += 1;
+                    index -= page_size;
+                }
+
+                (ChrIndex::Ram { page_number, index }, window.is_writable(registers))
+            }
+            ChrLocation::Ciram(side) => {
+                let index = bank_offset; 
+                (ChrIndex::Ciram { side, index }, true)
+            }
+        }
     }
 
     #[inline]
