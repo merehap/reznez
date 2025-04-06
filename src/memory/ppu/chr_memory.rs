@@ -16,7 +16,6 @@ use super::ciram::CiramSide;
 pub struct ChrMemory {
     layouts: Vec<ChrLayout>,
     layout_index: u8,
-    rom_bank_configuration: Option<BankConfiguration>,
     ram_bank_configuration: Option<BankConfiguration>,
     max_pattern_table_index: u16,
     access_override: Option<AccessOverride>,
@@ -67,25 +66,19 @@ impl ChrMemory {
             Some(BankConfiguration::new(page_size.get(), ram_bank_count, align_large_chr_banks))
         };
 
-        let chr_memory = ChrMemory {
+        ChrMemory {
             layouts,
             layout_index,
-            rom_bank_configuration: rom_outer_banks.as_ref().map(|rob| rob.bank_configuration()),
             ram_bank_configuration,
             max_pattern_table_index,
             access_override,
             rom_outer_banks,
             ram: OuterPage::new(ram, page_size, align_large_chr_banks),
-        };
-
-        // Power of 2. FIXME: What's the correct behavior when accessing the high banks? Open bus?
-        // assert_eq!(bank_count & (bank_count - 1), 0, "Bank count ({bank_count}) must be a power of 2.");
-
-        chr_memory
+        }
     }
 
     pub fn rom_bank_configuration(&self) -> Option<BankConfiguration> {
-        self.rom_bank_configuration
+        self.rom_outer_banks.as_ref().map(|rob| rob.bank_configuration())
     }
 
     pub fn ram_bank_configuration(&self) -> Option<BankConfiguration> {
@@ -94,11 +87,11 @@ impl ChrMemory {
 
     #[inline]
     pub fn rom_bank_count(&self) -> Option<u16> {
-        self.rom_bank_configuration.map(|c| c.bank_count())
+        self.rom_bank_configuration().map(|c| c.bank_count())
     }
 
     pub fn bank_size(&self) -> u16 {
-        self.rom_bank_configuration
+        self.rom_bank_configuration()
             .unwrap_or_else(|| self.ram_bank_configuration.unwrap())
             .bank_size()
     }
@@ -214,7 +207,7 @@ impl ChrMemory {
                 let location = window.resolved_bank_location(
                     registers,
                     window.location().unwrap(),
-                    self.rom_bank_configuration,
+                    self.rom_bank_configuration(),
                     self.ram_bank_configuration,
                     self.access_override,
                 );
