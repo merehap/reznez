@@ -2,45 +2,49 @@ use crate::memory::bank::bank_index::BankRegisterId;
 use crate::memory::window::{ReadWriteStatusInfo, Window};
 
 #[derive(Clone, Copy)]
-pub struct ChrLayout(&'static [Window]);
+pub struct ChrLayout {
+    initial_windows: &'static [Window],
+}
 
 impl ChrLayout {
-    pub const fn new(windows: &'static [Window]) -> ChrLayout {
-        assert!(!windows.is_empty(), "No CHR windows specified.");
+    pub const fn new(initial_windows: &'static [Window]) -> ChrLayout {
+        assert!(!initial_windows.is_empty(), "No CHR windows specified.");
 
-        assert!(windows[0].start() == 0x0000, "The first CHR window must start at 0x0000.");
+        assert!(initial_windows[0].start() == 0x0000, "The first CHR window must start at 0x0000.");
 
-        assert!(windows[windows.len() - 1].end().get() >= 0x1FFF,
+        assert!(initial_windows.last().unwrap().end().get() >= 0x1FFF,
             "The last CHR window must end at 0x1FFF (or later, in rare cases).");
 
         let mut i = 1;
-        while i < windows.len() {
-            assert!(windows[i].start() == windows[i - 1].end().get() + 1,
+        while i < initial_windows.len() {
+            assert!(initial_windows[i].start() == initial_windows[i - 1].end().get() + 1,
                     "There must be no gaps nor overlap between CHR layouts.");
 
             i += 1;
         }
 
-        ChrLayout(windows)
+        ChrLayout {
+            initial_windows,
+        }
     }
 
     pub fn windows(&self) -> &[Window] {
-        self.0
+        self.initial_windows
     }
 
     // Usually 0x1FFF, but different for mapper 19, for example.
     pub fn max_window_index(&self) -> u16 {
-        self.0[self.0.len() - 1].end().get()
+        self.initial_windows.last().unwrap().end().get()
     }
 
     pub fn active_register_ids(&self) -> Vec<BankRegisterId> {
-        self.0.iter()
+        self.initial_windows.iter()
             .filter_map(|window| window.register_id())
             .collect()
     }
 
     pub fn active_read_write_status_register_ids(&self) -> Vec<ReadWriteStatusInfo> {
-        self.0.iter()
+        self.initial_windows.iter()
             .map(|window| window.read_write_status_info())
             .collect()
     }
