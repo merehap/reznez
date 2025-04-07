@@ -72,24 +72,14 @@ impl PrgMemory {
             None
         };
 
-        let prg_memory = PrgMemory {
+        PrgMemory {
             layouts,
             layout_index,
             rom_outer_banks,
             work_ram,
             extended_ram: RawMemoryArray::new(),
             access_override,
-        };
-
-        let bank_count = prg_memory.rom_bank_count();
-        let rom_outer_page_size = prg_memory.rom_outer_banks.outer_page_size().get();
-        let rom_page_size = prg_memory.rom_outer_banks.page_size().get();
-        if rom_outer_page_size >= bank_count as u32 * rom_page_size as u32 {
-            assert_eq!(rom_outer_page_size, bank_count as u32 * rom_page_size as u32, "Bad PRG data size.");
         }
-        //assert_eq!(bank_count & (bank_count - 1), 0);
-
-        prg_memory
     }
 
     pub fn bank_configuration(&self) -> BankConfiguration {

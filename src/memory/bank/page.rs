@@ -1,4 +1,4 @@
-use std::num::{NonZeroU16, NonZeroU32, NonZeroU8};
+use std::num::{NonZeroU16, NonZeroU8};
 
 use crate::memory::bank::bank_index::BankConfiguration;
 use crate::memory::raw_memory::RawMemory;
@@ -31,10 +31,6 @@ impl OuterPageTable {
         self.outer_page_count
     }
 
-    pub fn outer_page_size(&self) -> NonZeroU32 {
-        self.outer_pages[0].size()
-    }
-
     pub fn current_outer_page(&self) -> &OuterPage {
         &self.outer_pages[self.outer_page_index as usize]
     }
@@ -61,8 +57,6 @@ pub struct OuterPage {
     pages: Vec<Page>,
     // Redundant upon pages.len(), but this has the correct type.
     page_count: NonZeroU16,
-    // Can be calculated from pages, but it would have to be calculated each time.
-    size: NonZeroU32,
     align_large_banks: bool,
 }
 
@@ -83,7 +77,6 @@ impl OuterPage {
             panic!("Bad PRG length: {} . Bank size: {} .", raw_outer_page.size(), page_size);
         }
 
-        let size = NonZeroU32::new(raw_outer_page.size()).unwrap();
         let pages: Vec<Page> = raw_outer_page.chunks(page_size).into_iter()
             .map(Page::new)
             .collect();
@@ -95,11 +88,7 @@ impl OuterPage {
         let page_count = NonZeroU16::new(pages.len().try_into().unwrap()).unwrap();
         assert_eq!(page_count.get(), expected_page_count);
 
-        Some(Self { pages, page_count, size, align_large_banks })
-    }
-
-    pub fn size(&self) -> NonZeroU32 {
-        self.size
+        Some(Self { pages, page_count, align_large_banks })
     }
 
     pub fn page_size(&self) -> NonZeroU16 {
