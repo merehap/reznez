@@ -71,6 +71,15 @@ impl Layout {
             cartridge.chr_ram()
         };
 
+        let mut bank_registers = BankRegisters::new();
+        for (register_id, bank_index) in self.bank_register_overrides.as_iter() {
+            bank_registers.set(register_id, bank_index);
+        }
+
+        for (meta_id, register_id) in self.meta_register_overrides.as_iter() {
+            bank_registers.set_meta(meta_id, register_id);
+        }
+
         let prg_memory = PrgMemory::new(
             self.prg_layouts.as_iter().collect(),
             self.prg_layout_index,
@@ -82,6 +91,12 @@ impl Layout {
             cartridge.prg_access_override(),
         );
 
+        let name_table_mirroring = match self.name_table_mirroring_source {
+            NameTableMirroringSource::Direct(mirroring) => mirroring,
+            NameTableMirroringSource::Cartridge => cartridge.name_table_mirroring()
+                .expect("This mapper must define what Four Screen mirroring is."),
+        };
+
         let chr_memory = ChrMemory::new(
             self.chr_layouts.as_iter().collect(),
             self.chr_layout_index,
@@ -90,22 +105,9 @@ impl Layout {
             self.chr_rom_outer_bank_layout.outer_bank_count(chr_rom_size),
             cartridge.chr_rom().clone(),
             chr_ram,
+            name_table_mirroring,
+            &bank_registers,
         );
-
-        let name_table_mirroring = match self.name_table_mirroring_source {
-            NameTableMirroringSource::Direct(mirroring) => mirroring,
-            NameTableMirroringSource::Cartridge => cartridge.name_table_mirroring()
-                .expect("This mapper must define what Four Screen mirroring is."),
-        };
-
-        let mut bank_registers = BankRegisters::new();
-        for (register_id, bank_index) in self.bank_register_overrides.as_iter() {
-            bank_registers.set(register_id, bank_index);
-        }
-
-        for (meta_id, register_id) in self.meta_register_overrides.as_iter() {
-            bank_registers.set_meta(meta_id, register_id);
-        }
 
         let mut ram_not_present = BTreeSet::new();
         if cartridge.prg_ram_size() == 0 && cartridge.prg_nvram_size() == 0 {
@@ -131,6 +133,7 @@ impl Layout {
                 }
             }
         }
+
 
         MapperParams {
             prg_memory,

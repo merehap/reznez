@@ -32,6 +32,10 @@ impl NameTableMirroring {
         self.quadrants[quadrant as usize]
     }
 
+    pub fn quadrants(self) -> [NameTableSource; 4] {
+        self.quadrants
+    }
+
     pub fn set_quadrant(&mut self, quadrant: NameTableQuadrant, side: CiramSide) {
         self.set_quadrant_to_source(quadrant, NameTableSource::Ciram(side));
     }

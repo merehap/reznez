@@ -38,16 +38,16 @@ impl Mapper for Mapper207 {
                 println!("Setting upper name table quadrants.");
                 let (ciram_right, chr_bank) = splitbits_named!(value, "vccc cccc");
                 let ciram_side = if ciram_right { CiramSide::Right } else { CiramSide::Left };
-                params.name_table_mirroring_mut().set_quadrant(NameTableQuadrant::TopLeft, ciram_side);
-                params.name_table_mirroring_mut().set_quadrant(NameTableQuadrant::TopRight, ciram_side);
+                params.set_name_table_quadrant(NameTableQuadrant::TopLeft, ciram_side);
+                params.set_name_table_quadrant(NameTableQuadrant::TopRight, ciram_side);
                 params.set_bank_register(C0, chr_bank);
             }
             0x7EF1 => {
                 println!("Setting lower name table quadrants.");
                 let (ciram_right, chr_bank) = splitbits_named!(value, "vccc cccc");
                 let ciram_side = if ciram_right { CiramSide::Right } else { CiramSide::Left };
-                params.name_table_mirroring_mut().set_quadrant(NameTableQuadrant::BottomLeft, ciram_side);
-                params.name_table_mirroring_mut().set_quadrant(NameTableQuadrant::BottomRight, ciram_side);
+                params.set_name_table_quadrant(NameTableQuadrant::BottomLeft, ciram_side);
+                params.set_name_table_quadrant(NameTableQuadrant::BottomRight, ciram_side);
                 params.set_bank_register(C1, chr_bank);
             }
             0x7EF2 => params.set_bank_register(C2, value),

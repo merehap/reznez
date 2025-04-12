@@ -343,14 +343,10 @@ impl Mapper005 {
         }
 
         let name_tables = splitbits!(value, "ddccbbaa");
-        params.name_table_mirroring_mut().set_quadrant_to_source(
-            NameTableQuadrant::TopLeft, source(name_tables.a));
-        params.name_table_mirroring_mut().set_quadrant_to_source(
-            NameTableQuadrant::TopRight, source(name_tables.b));
-        params.name_table_mirroring_mut().set_quadrant_to_source(
-            NameTableQuadrant::BottomLeft, source(name_tables.c));
-        params.name_table_mirroring_mut().set_quadrant_to_source(
-            NameTableQuadrant::BottomRight, source(name_tables.d));
+        params.set_name_table_quadrant_to_source(NameTableQuadrant::TopLeft, source(name_tables.a));
+        params.set_name_table_quadrant_to_source(NameTableQuadrant::TopRight, source(name_tables.b));
+        params.set_name_table_quadrant_to_source(NameTableQuadrant::BottomLeft, source(name_tables.c));
+        params.set_name_table_quadrant_to_source(NameTableQuadrant::BottomRight, source(name_tables.d));
     }
 
     // Write 0x5106

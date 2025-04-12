@@ -65,6 +65,15 @@ impl Bank {
         matches!(self, Bank::WorkRam(..) | Bank::Ram(..) | Bank::RomRam(..))
     }
 
+    pub fn location(self) -> Result<Location, String> {
+        match self {
+            Bank::Rom(location, _) | Bank::Ram(location, _)  | Bank::RomRam(location, _, _) | Bank::WorkRam(location, _) => Ok(location),
+            Bank::SaveRam(_) => Ok(Location::Fixed(BankIndex::from_u8(0))),
+            Bank::Empty | Bank::ExtendedRam(_) | Bank::MirrorOf(_) =>
+                Err(format!("Bank type {:?} does not have a bank location.", self)),
+        }
+    }
+
     pub fn bank_location(self, registers: &BankRegisters) -> Option<BankLocation> {
         if let Bank::Rom(location, _) | Bank::Ram(location, _) | Bank::WorkRam(location, _) = self {
             Some(location.bank_location(registers))
@@ -85,6 +94,22 @@ impl Bank {
             Bank::Ram(_, Some(status_register_id)) | Bank::WorkRam(_, Some(status_register_id)) | Bank::ExtendedRam(Some(status_register_id)) =>
                 registers.read_write_status(status_register_id) == ReadWriteStatus::ReadWrite,
             Bank::SaveRam(..) => true,
+        }
+    }
+
+    pub fn as_rom(self) -> Bank {
+        if let Bank::Rom(location, status_register) | Bank::Ram(location, status_register) = self {
+            Bank::Rom(location, status_register)
+        } else {
+            panic!("Only RAM can be converted into ROM.");
+        }
+    }
+
+    pub fn as_ram(self) -> Bank {
+        if let Bank::Rom(location, status_register) | Bank::Ram(location, status_register) = self {
+            Bank::Ram(location, status_register)
+        } else {
+            panic!("Only ROM can be converted into RAM.");
         }
     }
 

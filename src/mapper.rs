@@ -487,12 +487,19 @@ impl MapperParams {
         self.name_table_mirroring
     }
 
-    pub fn name_table_mirroring_mut(&mut self) -> &mut NameTableMirroring {
-        &mut self.name_table_mirroring
-    }
-
     pub fn set_name_table_mirroring(&mut self, mirroring_index: u8) {
         self.name_table_mirroring = self.name_table_mirrorings[usize::from(mirroring_index)];
+        self.chr_memory.set_name_table_mirroring(self.name_table_mirroring, &self.bank_registers);
+    }
+
+    pub fn set_name_table_quadrant(&mut self, quadrant: NameTableQuadrant, ciram_side: CiramSide) {
+        self.name_table_mirroring.set_quadrant(quadrant, ciram_side);
+        self.chr_memory.set_name_table_mirroring(self.name_table_mirroring, &self.bank_registers);
+    }
+
+    pub fn set_name_table_quadrant_to_source(&mut self, quadrant: NameTableQuadrant, source: NameTableSource) {
+        self.name_table_mirroring.set_quadrant_to_source(quadrant, source);
+        self.chr_memory.set_name_table_mirroring(self.name_table_mirroring, &self.bank_registers);
     }
 
     pub fn prg_memory(&self) -> &PrgMemory {
@@ -522,11 +529,13 @@ impl MapperParams {
         } else {
             let read_write_status = self.read_write_statuses[index as usize];
             self.bank_registers.set_read_write_status(id, read_write_status);
+            self.chr_memory.update_page_ids(&self.bank_registers);
         }
     }
 
     pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: RomRamMode) {
         self.bank_registers.set_rom_ram_mode(id, rom_ram_mode);
+        self.chr_memory.update_page_ids(&self.bank_registers);
     }
 
     pub fn chr_memory(&self) -> &ChrMemory {
@@ -551,18 +560,22 @@ impl MapperParams {
 
     pub fn set_chr_rom_outer_bank_index(&mut self, index: u8) {
         self.chr_memory.set_chr_rom_outer_bank_index(index);
+        self.chr_memory.update_page_ids(&self.bank_registers);
     }
 
     pub fn set_bank_register<INDEX: Into<u16>>(&mut self, id: BankRegisterId, value: INDEX) {
         self.bank_registers.set(id, BankIndex::from_u16(value.into()));
+        self.chr_memory.update_page_ids(&self.bank_registers);
     }
 
     pub fn set_bank_register_bits(&mut self, id: BankRegisterId, new_value: u16, mask: u16) {
         self.bank_registers.set_bits(id, new_value, mask);
+        self.chr_memory.update_page_ids(&self.bank_registers);
     }
 
     pub fn set_meta_register(&mut self, id: MetaRegisterId, value: BankRegisterId) {
         self.bank_registers.set_meta(id, value);
+        self.chr_memory.update_page_ids(&self.bank_registers);
     }
 
     pub fn update_bank_register(
@@ -571,6 +584,7 @@ impl MapperParams {
         updater: &dyn Fn(u16) -> u16,
     ) {
         self.bank_registers.update(id, updater);
+        self.chr_memory.update_page_ids(&self.bank_registers);
     }
 
     pub fn set_bank_register_to_ciram_side(
@@ -579,6 +593,7 @@ impl MapperParams {
         ciram_side: CiramSide,
     ) {
         self.bank_registers.set_to_ciram_side(id, ciram_side);
+        self.chr_memory.update_page_ids(&self.bank_registers);
     }
 
     pub fn irq_pending(&self) -> bool {

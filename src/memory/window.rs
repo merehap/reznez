@@ -124,6 +124,10 @@ impl Window {
         self.bank
     }
 
+    pub fn is_in_bounds(self, address: u16) -> bool {
+        self.start <= address && address <= self.end.get()
+    }
+
     pub fn location(self) -> Result<Location, String> {
         match self.bank {
             Bank::Rom(location, _) | Bank::Ram(location, _)  | Bank::RomRam(location, _, _) | Bank::WorkRam(location, _) => Ok(location),
