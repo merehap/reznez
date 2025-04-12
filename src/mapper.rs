@@ -14,6 +14,7 @@ pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::PrgMemory;
 pub use crate::memory::layout::Layout;
 pub use crate::memory::ppu::chr_memory::ChrMemory;
+use crate::memory::ppu::chr_memory::ChrPageId;
 pub use crate::memory::ppu::ppu_address::PpuAddress;
 pub use crate::memory::read_result::ReadResult;
 pub use crate::memory::ppu::ciram::CiramSide;
@@ -400,14 +401,17 @@ pub trait Mapper {
         let chr_memory = &params.chr_memory();
 
         let mut result = String::new();
-        for window in chr_memory.current_layout().windows() {
-            let bank_string = window.bank_string(
-                &params.bank_registers,
-                chr_memory.rom_bank_configuration(),
-                chr_memory.ram_bank_configuration(),
-                chr_memory.access_override(),
-            );
-            let window_size = window.size().get() / KIBIBYTE as u16;
+        for (page_id, _) in chr_memory.current_memory_map().pattern_table_page_ids() {
+            let bank_string = match page_id {
+                ChrPageId::Rom(page_number) => page_number.to_string(),
+                ChrPageId::Ram(page_number) => format!("W{page_number}"),
+                ChrPageId::Ciram(side) => format!("C{side:?}"),
+                ChrPageId::SaveRam => "S".to_owned(),
+                ChrPageId::ExtendedRam => "X".to_owned(),
+                ChrPageId::FillModeTile => "F".to_owned(),
+            };
+
+            let window_size = 1;
 
             let padding_size = 5 * window_size - 2 - u16::try_from(bank_string.len()).unwrap();
             assert!(padding_size < 100);
@@ -543,7 +547,7 @@ impl MapperParams {
     }
 
     pub fn pattern_table<'a>(&'a self, ciram: &'a Ciram, side: PatternTableSide) -> PatternTable<'a> {
-        self.chr_memory.pattern_table(&self.bank_registers, ciram, side)
+        self.chr_memory.pattern_table(ciram, side)
     }
 
     pub fn set_chr_layout(&mut self, index: u8) {
@@ -551,11 +555,11 @@ impl MapperParams {
     }
 
     pub fn peek_chr(&self, ciram: &Ciram, address: PpuAddress) -> u8 {
-        self.chr_memory.peek(&self.bank_registers, ciram, address)
+        self.chr_memory.peek(ciram, address)
     }
 
     pub fn write_chr(&mut self, ciram: &mut Ciram, address: PpuAddress, value: u8) {
-        self.chr_memory.write(&self.bank_registers, ciram, address, value);
+        self.chr_memory.write(ciram, address, value);
     }
 
     pub fn set_chr_rom_outer_bank_index(&mut self, index: u8) {

@@ -2,13 +2,12 @@ use std::num::{NonZeroU16, NonZeroU8};
 
 use crate::mapper::{NameTableMirroring, NameTableSource, ReadWriteStatus};
 use crate::memory::bank::bank::{Bank, Location};
-use crate::memory::bank::bank_index::{BankConfiguration, BankRegisters};
-use crate::memory::bank::page::{OuterPage, OuterPageTable};
+use crate::memory::bank::bank_index::BankRegisters;
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
-use crate::memory::window::{ChrLocation, ReadWriteStatusInfo, Window};
+use crate::memory::window::{ReadWriteStatusInfo, Window};
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
 
@@ -17,7 +16,6 @@ use super::ciram::CiramSide;
 const CHR_SLOT_COUNT: usize = 12;
 
 pub struct ChrMemoryMap {
-    initial_layout: ChrLayout,
     // 0x0000 through 0x1FFF (2 pattern tables) and 0x2000 through 0x2FFF (4 name tables).
     page_mappings: [ChrMapping; CHR_SLOT_COUNT],
     page_ids: [(ChrPageId, ReadWriteStatus); CHR_SLOT_COUNT],
@@ -75,7 +73,6 @@ impl ChrMemoryMap {
         }
 
         let mut memory_map = Self {
-            initial_layout,
             page_mappings: page_mappings.try_into().unwrap(),
             page_ids: [(ChrPageId::Rom(0), ReadWriteStatus::ReadOnly); CHR_SLOT_COUNT],
         };
@@ -108,6 +105,10 @@ impl ChrMemoryMap {
         (chr_memory_index, read_write_status)
     }
 
+    pub fn pattern_table_page_ids(&self) -> &[(ChrPageId, ReadWriteStatus)] {
+        &self.page_ids[0..8]
+    }
+
     pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring, regs: &BankRegisters) {
         for (i, &quadrant) in name_table_mirroring.quadrants().iter().enumerate() {
             let mapping = match quadrant {
@@ -125,6 +126,18 @@ impl ChrMemoryMap {
     pub fn update_page_ids(&mut self, regs: &BankRegisters) {
         for i in 0..CHR_SLOT_COUNT {
             self.page_ids[i] = self.page_mappings[i].page_id(regs);
+        }
+    }
+
+    fn page_start_index(&self, mapping_index: u8) -> ChrMemoryIndex {
+        let page_id = self.page_ids[mapping_index as usize].0;
+        match page_id {
+            ChrPageId::Rom(page_number) => ChrMemoryIndex::Rom(u32::from(page_number) * KIBIBYTE),
+            ChrPageId::Ram(page_number) => ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE),
+            ChrPageId::Ciram(side) => ChrMemoryIndex::Ciram(side, 0),
+            ChrPageId::SaveRam => ChrMemoryIndex::SaveRam(0),
+            ChrPageId::ExtendedRam => ChrMemoryIndex::ExtendedRam(0),
+            ChrPageId::FillModeTile => ChrMemoryIndex::FillModeTile,
         }
     }
 }
@@ -202,11 +215,7 @@ pub struct ChrMemory {
 
     layout_index: u8,
 
-    max_pattern_table_index: u16,
     access_override: Option<AccessOverride>,
-
-    old_rom_outer_banks: Option<OuterPageTable>,
-    old_ram: Option<OuterPage>,
 }
 
 impl ChrMemory {
@@ -244,50 +253,25 @@ impl ChrMemory {
                 "The max CHR window index must be the same between all layouts.");
         }
 
-        let rom_outer_banks = OuterPageTable::new(rom.clone(), rom_outer_bank_count, bank_size, align_large_chr_banks);
-
-        let memory_maps = layouts.iter()
-            .map(|layout| ChrMemoryMap::new(
+        let memory_maps = layouts.iter().map(|layout|
+            ChrMemoryMap::new(
                 *layout,
                 name_table_mirroring,
                 bank_size,
                 bank_registers,
                 access_override,
                 align_large_chr_banks,
-            ))
-            .collect();
+        )).collect();
 
         ChrMemory {
             layouts,
             memory_maps,
             layout_index,
-            max_pattern_table_index,
             access_override,
             rom_outer_banks: rom.split_n(rom_outer_bank_count),
             rom_outer_bank_index: 0,
             ram: ram.clone(),
-            old_rom_outer_banks: rom_outer_banks,
-            old_ram: OuterPage::new(ram, bank_size, align_large_chr_banks),
         }
-    }
-
-    pub fn rom_bank_configuration(&self) -> Option<BankConfiguration> {
-        self.old_rom_outer_banks.as_ref().map(|rob| rob.bank_configuration())
-    }
-
-    pub fn ram_bank_configuration(&self) -> Option<BankConfiguration> {
-        self.old_ram.as_ref().map(|ram| ram.bank_configuration())
-    }
-
-    #[inline]
-    pub fn rom_bank_count(&self) -> Option<u16> {
-        self.rom_bank_configuration().map(|c| c.bank_count())
-    }
-
-    pub fn bank_size(&self) -> u16 {
-        self.rom_bank_configuration()
-            .unwrap_or_else(|| self.ram_bank_configuration().unwrap())
-            .bank_size()
     }
 
     pub fn window_count(&self) -> u8 {
@@ -307,22 +291,8 @@ impl ChrMemory {
         ids
     }
 
-    pub fn peek(&self, registers: &BankRegisters, ciram: &Ciram, address: PpuAddress) -> u8 {
-        let (chr_index, _) = self.address_to_chr_index(registers, address.to_u16());
-        let old_result = match chr_index {
-            ChrIndex::Rom { page_number, index } => {
-                assert_ne!(self.access_override, Some(AccessOverride::ForceRam));
-                self.old_rom_outer_banks.as_ref().expect("ROM access attempted but ROM wasn't present.")
-                    .current_outer_page().page(page_number).peek(index)
-            }
-            ChrIndex::Ram { page_number, index } => {
-                assert_ne!(self.access_override, Some(AccessOverride::ForceRom));
-                self.old_ram.as_ref().unwrap().page(page_number).peek(index)
-            }
-            ChrIndex::Ciram { side, index } => ciram.side(side)[index as usize],
-        };
-
-        let new_result = match self.current_memory_map().index_for_address(address).0 {
+    pub fn peek(&self, ciram: &Ciram, address: PpuAddress) -> u8 {
+        match self.current_memory_map().index_for_address(address).0 {
             ChrMemoryIndex::Rom(index) => {
                 self.rom_outer_banks[self.rom_outer_bank_index as usize][index % self.rom_outer_banks[0].size()]
             },
@@ -331,50 +301,27 @@ impl ChrMemory {
             ChrMemoryIndex::SaveRam(_index) => todo!(),
             ChrMemoryIndex::ExtendedRam(_index) => todo!(),
             ChrMemoryIndex::FillModeTile => todo!(),
-        };
-
-        assert_eq!(old_result, new_result, "Peeks didn't match. Address: {address} Index: {:08X?}, CHR Index: {chr_index:?}",
-            self.current_memory_map().index_for_address(address));
-
-        new_result
+        }
     }
 
-    pub fn write(&mut self, registers: &BankRegisters, ciram: &mut Ciram, address: PpuAddress, value: u8) {
-        if self.access_override == Some(AccessOverride::ForceRom) {
+    pub fn write(&mut self, ciram: &mut Ciram, address: PpuAddress, value: u8) {
+        let (chr_memory_index, read_write_status) = self.current_memory_map().index_for_address(address);
+        if !read_write_status.is_writable() {
             return;
         }
 
-        let (chr_index, writable) = self.address_to_chr_index(registers, address.to_u16());
-        // FIXME: Remove access_override check here. It should have already been handled in address_to_chr_index().
-        if writable || self.access_override == Some(AccessOverride::ForceRam) {
-            match chr_index {
-                ChrIndex::Rom {..} => {
-                    panic!("CHR ROM cannot be writable.");
-                }
-                ChrIndex::Ram { page_number, index } => {
-                    self.old_ram.as_mut().unwrap().page_mut(page_number).write(index, value);
-                }
-                ChrIndex::Ciram { side, index } => {
-                    ciram.side_mut(side)[index as usize] = value;
-                }
+        match chr_memory_index {
+            ChrMemoryIndex::Rom(_) => {}
+            ChrMemoryIndex::Ram(index) => {
+                let size = self.ram.size();
+                self.ram[index % size] = value;
             }
-
-            let (chr_memory_index, read_write_status) = self.current_memory_map().index_for_address(address);
-            if !read_write_status.is_writable() {
-                return;
+            ChrMemoryIndex::Ciram(side, index) => {
+                ciram.side_mut(side)[index as usize] = value;
             }
-
-            match chr_memory_index {
-                ChrMemoryIndex::Rom(_) => {}
-                ChrMemoryIndex::Ram(index) => {
-                    let size = self.ram.size();
-                    self.ram[index % size] = value;
-                }
-                ChrMemoryIndex::Ciram(..) => {}
-                ChrMemoryIndex::SaveRam(_index) => todo!(),
-                ChrMemoryIndex::ExtendedRam(_index) => todo!(),
-                ChrMemoryIndex::FillModeTile => todo!(),
-            }
+            ChrMemoryIndex::SaveRam(_index) => todo!(),
+            ChrMemoryIndex::ExtendedRam(_index) => todo!(),
+            ChrMemoryIndex::FillModeTile => todo!(),
         }
     }
 
@@ -406,8 +353,6 @@ impl ChrMemory {
     }
 
     pub fn set_chr_rom_outer_bank_index(&mut self, index: u8) {
-        self.old_rom_outer_banks.as_mut().expect("CHR ROM must be present in order for the CHR outer bank to be set.")
-            .set_outer_page_index(index);
         self.rom_outer_bank_index = index;
     }
 
@@ -423,141 +368,66 @@ impl ChrMemory {
         }
     }
 
-    pub fn pattern_table<'a>(&'a self, registers: &BankRegisters, ciram: &'a Ciram, side: PatternTableSide) -> PatternTable<'a> {
+    pub fn pattern_table<'a>(&'a self, ciram: &'a Ciram, side: PatternTableSide) -> PatternTable<'a> {
         match side {
-            PatternTableSide::Left => PatternTable::new(self.left_chunks(registers, ciram)),
-            PatternTableSide::Right => PatternTable::new(self.right_chunks(registers, ciram)),
+            PatternTableSide::Left => PatternTable::new(self.left_chunks(ciram)),
+            PatternTableSide::Right => PatternTable::new(self.right_chunks(ciram)),
         }
     }
 
     pub fn save_ram_1kib_page(&self, start: u32) -> &[u8; KIBIBYTE as usize] {
         assert_eq!(start % 0x400, 0, "Save RAM 1KiB slices must start on a 1KiB page boundary (e.g. 0x000, 0x400, 0x800).");
-        assert_eq!(self.old_ram.as_ref().unwrap().page_size().get(), 0x400, "Save RAM page size must be 0x400 in order to take a 1KiB slice.");
-        let page_number = (start / 0x400).try_into().expect("Page number too large.");
-        self.old_ram.as_ref().unwrap().page(page_number).as_raw_slice().try_into().unwrap()
+        let start = start as usize;
+        (&self.ram.as_slice()[start..start + 0x400]).try_into().unwrap()
     }
 
     pub fn save_ram_1kib_page_mut(&mut self, start: u32) -> &mut [u8; KIBIBYTE as usize] {
         assert_eq!(start % 0x400, 0, "Save RAM 1KiB slices must start on a 1KiB page boundary (e.g. 0x000, 0x400, 0x800).");
-        assert_eq!(self.old_ram.as_ref().unwrap().page_size().get(), 0x400, "Save RAM page size must be 0x400 in order to take a 1KiB slice.");
-        let page_number = (start / 0x400).try_into().expect("Page number too large.");
-        self.old_ram.as_mut().unwrap().page_mut(page_number).as_raw_mut_slice().try_into().unwrap()
-    }
-
-    fn address_to_chr_index(&self, registers: &BankRegisters, address: u16) -> (ChrIndex, bool) {
-        assert!(address <= self.max_pattern_table_index);
-
-        let mut window_and_bank_offset = None;
-        for window in self.current_layout().windows() {
-            if let Some(bank_offset) = window.offset(address) {
-                window_and_bank_offset = Some((window, bank_offset));
-                break;
-            }
-        }
-
-        let (window, bank_offset) = window_and_bank_offset.unwrap();
-        let location = window.resolved_bank_location(
-            registers,
-            window.location().unwrap(),
-            self.rom_bank_configuration(),
-            self.ram_bank_configuration(),
-            self.access_override,
-        );
-
-        match location {
-            ChrLocation::RomBankIndex(mut page_number) => {
-                let mut index = bank_offset; 
-                let page_size = self.old_rom_outer_banks.as_ref().unwrap().page_size().get();
-                while index >= page_size {
-                    page_number += 1;
-                    index -= page_size;
-                }
-
-                (ChrIndex::Rom { page_number, index }, false)
-            }
-            ChrLocation::RamBankIndex(mut page_number) => {
-                let mut index = bank_offset;
-                let page_size = self.old_ram.as_ref().unwrap().page_size().get();
-                while index >= page_size {
-                    page_number += 1;
-                    index -= page_size;
-                }
-
-                (ChrIndex::Ram { page_number, index }, window.is_writable(registers))
-            }
-            ChrLocation::Ciram(side) => {
-                let index = bank_offset; 
-                (ChrIndex::Ciram { side, index }, true)
-            }
-        }
+        let start = start as usize;
+        (&mut self.ram.as_mut_slice()[start..start + 0x400]).try_into().unwrap()
     }
 
     #[inline]
-    fn left_chunks<'a>(&'a self, registers: &BankRegisters, ciram: &'a Ciram) -> [RawMemorySlice<'a>; 4] {
-        self.left_indexes(registers)
+    fn left_chunks<'a>(&'a self, ciram: &'a Ciram) -> [RawMemorySlice<'a>; 4] {
+        let mem = self.current_memory_map();
+        [mem.page_start_index(0), mem.page_start_index(1), mem.page_start_index(2), mem.page_start_index(3)]
             .map(move |chr_index| {
                 match chr_index {
-                    ChrIndex::Rom { page_number, index } => {
+                    ChrMemoryIndex::Rom(index) => {
                         let index = index as usize;
-                        RawMemorySlice::from_raw(&self.old_rom_outer_banks.as_ref().unwrap()
-                            .current_outer_page().page(page_number).as_raw_slice()[index..index + 1 * KIBIBYTE as usize])
+                        RawMemorySlice::from_raw(
+                            &self.rom_outer_banks[self.rom_outer_bank_index as usize].as_slice()[index..index + 1 * KIBIBYTE as usize])
                     }
-                    ChrIndex::Ram { page_number, index } => {
+                    ChrMemoryIndex::Ram(index) => {
                         let index = index as usize;
-                        RawMemorySlice::from_raw(&self.old_ram.as_ref().unwrap()
-                            .page(page_number).as_raw_slice()[index..index + 1 * KIBIBYTE as usize])
+                        RawMemorySlice::from_raw(&self.ram.as_slice()[index..index + 1 * KIBIBYTE as usize])
                     }
-                    ChrIndex::Ciram { side, .. } => RawMemorySlice::from_raw(ciram.side(side)),
+                    ChrMemoryIndex::Ciram(side, _) => RawMemorySlice::from_raw(ciram.side(side)),
+                    _ => todo!(),
                 }
         })
     }
 
     #[inline]
-    fn right_chunks<'a>(&'a self, registers: &BankRegisters, ciram: &'a Ciram) -> [RawMemorySlice<'a>; 4] {
-        self.right_indexes(registers)
+    fn right_chunks<'a>(&'a self, ciram: &'a Ciram) -> [RawMemorySlice<'a>; 4] {
+        let mem = self.current_memory_map();
+        [mem.page_start_index(4), mem.page_start_index(5), mem.page_start_index(6), mem.page_start_index(7)]
             .map(move |chr_index| {
                 match chr_index {
-                    ChrIndex::Rom { page_number, index } => {
+                    ChrMemoryIndex::Rom(index) => {
                         let index = index as usize;
-                        RawMemorySlice::from_raw(&self.old_rom_outer_banks.as_ref().unwrap()
-                            .current_outer_page().page(page_number).as_raw_slice()[index..index + 1 * KIBIBYTE as usize])
+                        RawMemorySlice::from_raw(
+                            &self.rom_outer_banks[self.rom_outer_bank_index as usize].as_slice()[index..index + 1 * KIBIBYTE as usize])
                     }
-                    ChrIndex::Ram { page_number, index } => {
+                    ChrMemoryIndex::Ram(index) => {
                         let index = index as usize;
-                        RawMemorySlice::from_raw(&self.old_ram.as_ref().unwrap()
-                            .page(page_number).as_raw_slice()[index..index + 1 * KIBIBYTE as usize])
+                        RawMemorySlice::from_raw(&self.ram.as_slice()[index..index + 1 * KIBIBYTE as usize])
                     }
-                    ChrIndex::Ciram { side, .. } => RawMemorySlice::from_raw(ciram.side(side)),
+                    ChrMemoryIndex::Ciram(side, _) => RawMemorySlice::from_raw(ciram.side(side)),
+                    _ => todo!(),
                 }
         })
     }
-
-    #[inline]
-    fn left_indexes(&self, registers: &BankRegisters) -> [ChrIndex; 4] {
-        [
-            self.address_to_chr_index(registers, 0x0000).0,
-            self.address_to_chr_index(registers, 0x0400).0,
-            self.address_to_chr_index(registers, 0x0800).0,
-            self.address_to_chr_index(registers, 0x0C00).0,
-        ]
-    }
-
-    #[inline]
-    fn right_indexes(&self, registers: &BankRegisters) -> [ChrIndex; 4] {
-        [
-            self.address_to_chr_index(registers, 0x1000).0,
-            self.address_to_chr_index(registers, 0x1400).0,
-            self.address_to_chr_index(registers, 0x1800).0,
-            self.address_to_chr_index(registers, 0x1C00).0,
-        ]
-    }
-}
-
-#[derive(Debug)]
-pub enum ChrIndex {
-    Rom { page_number: u16, index: u16 },
-    Ram { page_number: u16, index: u16 },
-    Ciram { side: CiramSide, index: u16 },
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
