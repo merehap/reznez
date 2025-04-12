@@ -1,6 +1,6 @@
 use std::num::{NonZeroU16, NonZeroU8};
 
-use crate::mapper::{NameTableMirroring, NameTableSource};
+use crate::mapper::{NameTableMirroring, NameTableSource, ReadWriteStatus};
 use crate::memory::bank::bank::{Bank, Location};
 use crate::memory::bank::bank_index::{BankConfiguration, BankRegisters};
 use crate::memory::bank::page::{OuterPage, OuterPageTable};
@@ -20,7 +20,7 @@ pub struct ChrMemoryMap {
     initial_layout: ChrLayout,
     // 0x0000 through 0x1FFF (2 pattern tables) and 0x2000 through 0x2FFF (4 name tables).
     page_mappings: [ChrMapping; CHR_SLOT_COUNT],
-    page_ids: [ChrPageId; CHR_SLOT_COUNT],
+    page_ids: [(ChrPageId, ReadWriteStatus); CHR_SLOT_COUNT],
 }
 
 impl ChrMemoryMap {
@@ -77,14 +77,14 @@ impl ChrMemoryMap {
         let mut memory_map = Self {
             initial_layout,
             page_mappings: page_mappings.try_into().unwrap(),
-            page_ids: [ChrPageId::Rom(0); CHR_SLOT_COUNT],
+            page_ids: [(ChrPageId::Rom(0), ReadWriteStatus::ReadOnly); CHR_SLOT_COUNT],
         };
         memory_map.update_page_ids(regs);
 
         memory_map
     }
 
-    pub fn index_for_address(&self, address: PpuAddress) -> ChrMemoryIndex {
+    pub fn index_for_address(&self, address: PpuAddress) -> (ChrMemoryIndex, ReadWriteStatus) {
         let address = address.to_u16();
         match address {
             0x0000..=0x2FFF => {}
@@ -95,15 +95,17 @@ impl ChrMemoryMap {
         let mapping_index = address / (KIBIBYTE as u16);
         let offset = address % (KIBIBYTE as u16);
 
-        let page_id = self.page_ids[mapping_index as usize];
-        match page_id {
+        let (page_id, read_write_status) = self.page_ids[mapping_index as usize];
+        let chr_memory_index = match page_id {
             ChrPageId::Rom(page_number) => ChrMemoryIndex::Rom(u32::from(page_number) * KIBIBYTE + u32::from(offset)),
             ChrPageId::Ram(page_number) => ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE + u32::from(offset)),
             ChrPageId::Ciram(side) => ChrMemoryIndex::Ciram(side, offset),
             ChrPageId::SaveRam => ChrMemoryIndex::SaveRam(offset),
             ChrPageId::ExtendedRam => ChrMemoryIndex::ExtendedRam(offset),
             ChrPageId::FillModeTile => ChrMemoryIndex::FillModeTile,
-        }
+        };
+
+        (chr_memory_index, read_write_status)
     }
 
     pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring, regs: &BankRegisters) {
@@ -152,7 +154,7 @@ pub enum ChrMapping {
 }
 
 impl ChrMapping {
-    pub fn page_id(&self, registers: &BankRegisters) -> ChrPageId {
+    pub fn page_id(&self, registers: &BankRegisters) -> (ChrPageId, ReadWriteStatus) {
         match self {
             Self::Banked { bank, pages_per_bank: bank_multiple, page_offset, page_number_mask, .. } => {
                 let location = bank.location().expect("Location to be present in bank.");
@@ -164,15 +166,17 @@ impl ChrMapping {
 
                 let page_number = ((bank_multiple * bank_index.to_raw()) & page_number_mask) + page_offset;
                 match bank {
-                    Bank::Rom(..) => ChrPageId::Rom(page_number),
-                    Bank::Ram(..) => ChrPageId::Ram(page_number),
+                    Bank::Rom(_, None) => (ChrPageId::Rom(page_number), ReadWriteStatus::ReadOnly),
+                    Bank::Rom(_, Some(status_register)) => (ChrPageId::Rom(page_number), registers.read_write_status(*status_register)),
+                    Bank::Ram(_, None) => (ChrPageId::Ram(page_number), ReadWriteStatus::ReadWrite),
+                    Bank::Ram(_, Some(status_register)) => (ChrPageId::Ram(page_number), registers.read_write_status(*status_register)),
                     _ => todo!(),
                 }
             }
-            Self::Ciram(ciram_side) => ChrPageId::Ciram(*ciram_side),
-            Self::SaveRam => ChrPageId::SaveRam,
-            Self::ExtendedRam => ChrPageId::ExtendedRam,
-            Self::FillModeTile => ChrPageId::FillModeTile,
+            Self::Ciram(ciram_side) => (ChrPageId::Ciram(*ciram_side), ReadWriteStatus::ReadWrite),
+            Self::SaveRam => (ChrPageId::SaveRam, ReadWriteStatus::ReadWrite),
+            Self::ExtendedRam => (ChrPageId::ExtendedRam, ReadWriteStatus::ReadWrite),
+            Self::FillModeTile => (ChrPageId::FillModeTile, ReadWriteStatus::ReadOnly),
         }
     }
 }
@@ -318,7 +322,7 @@ impl ChrMemory {
             ChrIndex::Ciram { side, index } => ciram.side(side)[index as usize],
         };
 
-        let new_result = match self.current_memory_map().index_for_address(address) {
+        let new_result = match self.current_memory_map().index_for_address(address).0 {
             ChrMemoryIndex::Rom(index) => {
                 self.rom_outer_banks[self.rom_outer_bank_index as usize][index % self.rom_outer_banks[0].size()]
             },
@@ -355,7 +359,12 @@ impl ChrMemory {
                 }
             }
 
-            match self.current_memory_map().index_for_address(address) {
+            let (chr_memory_index, read_write_status) = self.current_memory_map().index_for_address(address);
+            if !read_write_status.is_writable() {
+                return;
+            }
+
+            match chr_memory_index {
                 ChrMemoryIndex::Rom(_) => {}
                 ChrMemoryIndex::Ram(index) => {
                     let size = self.ram.size();
