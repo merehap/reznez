@@ -1,6 +1,6 @@
 use std::num::{NonZeroU16, NonZeroU8};
 
-use crate::mapper::{ChrBank, ChrWindow, NameTableMirroring, NameTableSource, ReadWriteStatus};
+use crate::mapper::{BankIndex, ChrBank, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableSource, ReadWriteStatus, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank::ChrBankLocation;
 use crate::memory::bank::bank_index::ChrBankRegisters;
 use crate::memory::ppu::chr_layout::ChrLayout;
@@ -26,9 +26,9 @@ impl ChrMemoryMap {
         initial_layout: ChrLayout,
         name_table_mirroring: NameTableMirroring,
         bank_size: NonZeroU16,
-        regs: &ChrBankRegisters,
         access_override: Option<AccessOverride>,
         align_large_windows: bool,
+        regs: &ChrBankRegisters,
     ) -> Self {
 
         let bank_size = bank_size.get();
@@ -109,7 +109,7 @@ impl ChrMemoryMap {
         &self.page_ids[0..8]
     }
 
-    pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring, regs: &ChrBankRegisters) {
+    pub fn set_name_table_mirroring(&mut self, regs: &ChrBankRegisters, name_table_mirroring: NameTableMirroring) {
         for (i, &quadrant) in name_table_mirroring.quadrants().iter().enumerate() {
             let mapping = match quadrant {
                 NameTableSource::Ciram(ciram_side) => ChrMapping::Ciram(ciram_side),
@@ -212,10 +212,9 @@ pub struct ChrMemory {
     rom_outer_banks: Vec<RawMemory>,
     rom_outer_bank_index: u8,
     ram: RawMemory,
+    regs: ChrBankRegisters,
 
     layout_index: u8,
-
-    access_override: Option<AccessOverride>,
 }
 
 impl ChrMemory {
@@ -229,7 +228,7 @@ impl ChrMemory {
         rom: RawMemory,
         ram: RawMemory,
         name_table_mirroring: NameTableMirroring,
-        bank_registers: &ChrBankRegisters,
+        regs: ChrBankRegisters,
     ) -> ChrMemory {
         let mut bank_size = None;
         for layout in &layouts {
@@ -258,28 +257,24 @@ impl ChrMemory {
                 *layout,
                 name_table_mirroring,
                 bank_size,
-                bank_registers,
                 access_override,
                 align_large_chr_banks,
+                &regs,
         )).collect();
 
         ChrMemory {
             layouts,
             memory_maps,
             layout_index,
-            access_override,
             rom_outer_banks: rom.split_n(rom_outer_bank_count),
             rom_outer_bank_index: 0,
             ram: ram.clone(),
+            regs,
         }
     }
 
     pub fn window_count(&self) -> u8 {
         self.current_layout().windows().len().try_into().unwrap()
-    }
-
-    pub fn access_override(&self) -> Option<AccessOverride> {
-        self.access_override
     }
 
     pub fn read_write_status_infos(&self) -> Vec<ReadWriteStatusInfo> {
@@ -347,6 +342,10 @@ impl ChrMemory {
         &self.memory_maps[self.layout_index as usize]
     }
 
+    pub fn bank_registers(&self) -> &ChrBankRegisters {
+        &self.regs
+    }
+
     pub fn set_layout(&mut self, index: u8) {
         assert!(usize::from(index) < self.layouts.len());
         self.layout_index = index;
@@ -356,15 +355,53 @@ impl ChrMemory {
         self.rom_outer_bank_index = index;
     }
 
-    pub fn update_page_ids(&mut self, regs: &ChrBankRegisters) {
+    pub fn set_bank_register<INDEX: Into<u16>>(&mut self, id: ChrBankRegisterId, value: INDEX) {
+        self.regs.set(id, BankIndex::from_u16(value.into()));
+        self.update_page_ids();
+    }
+
+    pub fn set_chr_bank_register_bits(&mut self, id: ChrBankRegisterId, new_value: u16, mask: u16) {
+        self.regs.set_bits(id, new_value, mask);
+        self.update_page_ids();
+    }
+
+    pub fn set_chr_meta_register(&mut self, id: MetaRegisterId, value: ChrBankRegisterId) {
+        self.regs.set_meta_chr(id, value);
+        self.update_page_ids();
+    }
+
+    pub fn update_chr_register(
+        &mut self,
+        id: ChrBankRegisterId,
+        updater: &dyn Fn(u16) -> u16,
+    ) {
+        self.regs.update(id, updater);
+        self.update_page_ids();
+    }
+
+    pub fn set_chr_bank_register_to_ciram_side(
+        &mut self,
+        id: ChrBankRegisterId,
+        ciram_side: CiramSide,
+    ) {
+        self.regs.set_to_ciram_side(id, ciram_side);
+        self.update_page_ids();
+    }
+
+    pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring) {
         for page_mapping in &mut self.memory_maps {
-            page_mapping.update_page_ids(regs);
+            page_mapping.set_name_table_mirroring(&self.regs, name_table_mirroring);
         }
     }
 
-    pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring, regs: &ChrBankRegisters) {
+    pub fn set_read_write_status(&mut self, id: ReadWriteStatusRegisterId, read_write_status: ReadWriteStatus) {
+        self.regs.set_read_write_status(id, read_write_status);
+        self.update_page_ids();
+    }
+
+    fn update_page_ids(&mut self) {
         for page_mapping in &mut self.memory_maps {
-            page_mapping.set_name_table_mirroring(name_table_mirroring, regs);
+            page_mapping.update_page_ids(&self.regs);
         }
     }
 

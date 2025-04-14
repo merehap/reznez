@@ -136,7 +136,7 @@ impl PrgBankRegisters {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ChrBankRegisters {
     registers: [BankLocation; 18],
     chr_meta_registers: [ChrBankRegisterId; 2],

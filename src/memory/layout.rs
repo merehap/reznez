@@ -75,9 +75,9 @@ impl Layout {
             cartridge.chr_ram()
         };
 
-        let mut bank_registers = PrgBankRegisters::new();
+        let mut prg_bank_registers = PrgBankRegisters::new();
         for (register_id, bank_index) in self.bank_register_overrides.as_iter() {
-            bank_registers.set(register_id, bank_index);
+            prg_bank_registers.set(register_id, bank_index);
         }
 
         let mut chr_bank_registers = ChrBankRegisters::new();
@@ -106,7 +106,7 @@ impl Layout {
                 .expect("This mapper must define what Four Screen mirroring is."),
         };
 
-        let chr_memory = ChrMemory::new(
+        let mut chr_memory = ChrMemory::new(
             self.chr_layouts.as_iter().collect(),
             self.chr_layout_index,
             self.align_large_chr_windows,
@@ -115,7 +115,7 @@ impl Layout {
             cartridge.chr_rom().clone(),
             chr_ram,
             name_table_mirroring,
-            &chr_bank_registers,
+            chr_bank_registers,
         );
 
         let mut ram_not_present = BTreeSet::new();
@@ -124,7 +124,7 @@ impl Layout {
                 match status_info {
                     ReadWriteStatusInfo::Absent | ReadWriteStatusInfo::MapperCustom { .. } => { /* Do nothing. */ }
                     ReadWriteStatusInfo::PossiblyPresent { register_id, status_on_absent } => {
-                        bank_registers.set_read_write_status(register_id, status_on_absent);
+                        prg_bank_registers.set_read_write_status(register_id, status_on_absent);
                         ram_not_present.insert(register_id);
                     }
                 }
@@ -136,7 +136,7 @@ impl Layout {
                 match status_info {
                     ReadWriteStatusInfo::Absent | ReadWriteStatusInfo::MapperCustom { .. } => { /* Do nothing. */ }
                     ReadWriteStatusInfo::PossiblyPresent { register_id, status_on_absent } => {
-                        bank_registers.set_read_write_status(register_id, status_on_absent);
+                        chr_memory.set_read_write_status(register_id, status_on_absent);
                         ram_not_present.insert(register_id);
                     }
                 }
@@ -146,8 +146,7 @@ impl Layout {
         MapperParams {
             prg_memory,
             chr_memory,
-            prg_bank_registers: bank_registers,
-            chr_bank_registers,
+            prg_bank_registers,
             name_table_mirroring,
             name_table_mirrorings: self.name_table_mirrorings,
             read_write_statuses: self.read_write_statuses,

@@ -305,7 +305,7 @@ impl Nes {
                 }
             }
 
-            let meta_registers = mapper_params.chr_bank_registers.meta_registers();
+            let meta_registers = mapper_params.chr_memory().bank_registers().meta_registers();
             if &latest.meta_registers != meta_registers {
                 for (i, latest_bank_register_id) in latest.meta_registers.iter_mut().enumerate() {
                     if *latest_bank_register_id != meta_registers[i] {
@@ -373,7 +373,7 @@ impl LatestValues {
             prg_layout_index: initial_params.prg_memory.layout_index(),
             chr_layout_index: initial_params.chr_memory.layout_index(),
             bank_registers: *initial_params.prg_bank_registers.registers(),
-            meta_registers: *initial_params.chr_bank_registers.meta_registers(),
+            meta_registers: *initial_params.chr_memory.bank_registers().meta_registers(),
             name_table_mirroring: initial_params.name_table_mirroring,
             read_write_statuses: *initial_params.prg_bank_registers.read_write_statuses(),
         }
