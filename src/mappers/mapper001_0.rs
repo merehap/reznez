@@ -31,19 +31,19 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-const PRG_WINDOWS_ONE_BIG: &[Window] = &[
-    Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.switchable(P0).status_register(S0)),
-    Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P1)),
+const PRG_WINDOWS_ONE_BIG: &[PrgWindow] = &[
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM.switchable(P0).status_register(S0)),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
 ];
-const PRG_WINDOWS_FIXED_FIRST: &[Window] = &[
-    Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.switchable(P0).status_register(S0)),
-    Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(0)),
-    Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P1)),
+const PRG_WINDOWS_FIXED_FIRST: &[PrgWindow] = &[
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM.switchable(P0).status_register(S0)),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_index(0)),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
 ];
-const PRG_WINDOWS_FIXED_LAST: &[Window] = &[
-    Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.switchable(P0).status_register(S0)),
-    Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P1)),
-    Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+const PRG_WINDOWS_FIXED_LAST: &[PrgWindow] = &[
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM.switchable(P0).status_register(S0)),
+    PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+    PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
 ];
 
 // SxROM (MMC1, MMC1B)
@@ -81,7 +81,7 @@ impl Mapper for Mapper001_0 {
                 0xE000..=0xFFFF => {
                     let fields = splitbits!(min=u8, finished_value, "...spppp");
                     params.set_read_write_status(S0, fields.s);
-                    params.set_bank_register(P1, fields.p);
+                    params.set_prg_register(P1, fields.p);
                 }
             }
         }
@@ -115,18 +115,18 @@ impl Mapper001_0 {
             Board::SOROM => {
                 let banks = splitbits!(min=u8, value, "...pr..c");
                 params.set_prg_rom_outer_bank_index(banks.p);
-                params.set_bank_register(P0, banks.r);
+                params.set_prg_register(P0, banks.r);
                 params.set_chr_register(chr_id, banks.c);
             }
             Board::SXROM => {
                 let banks = splitbits!(min=u8, value, "...prr.c");
                 params.set_prg_rom_outer_bank_index(banks.p);
-                params.set_bank_register(P0, banks.r);
+                params.set_prg_register(P0, banks.r);
                 params.set_chr_register(chr_id, banks.c);
             }
             Board::SZROM => {
                 let banks = splitbits!(min=u8, value, "...rcccc");
-                params.set_bank_register(P0, banks.r);
+                params.set_prg_register(P0, banks.r);
                 params.set_chr_register(chr_id, banks.c);
             }
             _ => {

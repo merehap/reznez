@@ -3,9 +3,9 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::EMPTY),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
@@ -29,7 +29,7 @@ impl Mapper for Mapper071 {
             // https://www.nesdev.org/wiki/INES_Mapper_071#Mirroring_($8000-$9FFF)
             0x9000..=0x9FFF => params.set_name_table_mirroring(fields.m),
             0xA000..=0xBFFF => { /* Do nothing. */ }
-            0xC000..=0xFFFF => params.set_bank_register(P0, fields.p),
+            0xC000..=0xFFFF => params.set_prg_register(P0, fields.p),
         }
     }
 

@@ -5,8 +5,8 @@ const LAYOUT: Layout = Layout::builder()
     .initial_name_table_mirroring(NameTableMirroring::ONE_SCREEN_LEFT_BANK)
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::EMPTY),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
@@ -35,7 +35,7 @@ impl Mapper for Axrom {
             0x8000..=0xFFFF => {
                 let fields = splitbits!(min=u8, value, "...mpppp");
                 params.set_name_table_mirroring(fields.m);
-                params.set_bank_register(P0, fields.p);
+                params.set_prg_register(P0, fields.p);
             }
         }
     }

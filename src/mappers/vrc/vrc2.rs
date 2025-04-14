@@ -7,10 +7,10 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
-        Window::new(0x8000, 0x9FFF,  8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xA000, 0xBFFF,  8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-        Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(-2)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM),
+        PrgWindow::new(0x8000, 0x9FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xA000, 0xBFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_index(-2)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
@@ -42,10 +42,10 @@ impl Mapper for Vrc2 {
             // TODO: Properly implement microwire interface.
             0x6000..=0x7FFF => { /* Do nothing. */ }
             // Set bank for 8000 through 9FFF.
-            0x8000..=0x8003 => params.set_bank_register(P0, value & 0b0001_1111),
+            0x8000..=0x8003 => params.set_prg_register(P0, value & 0b0001_1111),
             0x9000 => params.set_name_table_mirroring(value & 1),
             // Set bank for A000 through AFFF.
-            0xA000..=0xA003 => params.set_bank_register(P1, value & 0b0001_1111),
+            0xA000..=0xA003 => params.set_prg_register(P1, value & 0b0001_1111),
 
             // Set a CHR bank mapping.
             0xB000..=0xEFFF => {

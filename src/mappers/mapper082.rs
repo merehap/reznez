@@ -3,14 +3,14 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x67FF, 2 * KIBIBYTE, Bank::WORK_RAM.fixed_index(0).status_register(S0)),
-        Window::new(0x6800, 0x6FFF, 2 * KIBIBYTE, Bank::WORK_RAM.fixed_index(2).status_register(S1)),
-        Window::new(0x7000, 0x73FF, 1 * KIBIBYTE, Bank::WORK_RAM.fixed_index(4).status_register(S2)),
-        Window::new(0x7400, 0x7FFF, 3 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x67FF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(0).status_register(S0)),
+        PrgWindow::new(0x6800, 0x6FFF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(2).status_register(S1)),
+        PrgWindow::new(0x7000, 0x73FF, 1 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(4).status_register(S2)),
+        PrgWindow::new(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgBank::EMPTY),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     // Large windows first.
@@ -77,9 +77,9 @@ impl Mapper for Mapper082 {
                 let prg_read_write_status = if value == 0x84 { READ_WRITE } else { READ_ONLY_ZEROS };
                 params.set_read_write_status(S2, prg_read_write_status);
             }
-            0x7EFA => params.set_bank_register(P0, splitbits_named!(value, "..pppp..")),
-            0x7EFB => params.set_bank_register(P1, splitbits_named!(value, "..pppp..")),
-            0x7EFC => params.set_bank_register(P2, splitbits_named!(value, "..pppp..")),
+            0x7EFA => params.set_prg_register(P0, splitbits_named!(value, "..pppp..")),
+            0x7EFB => params.set_prg_register(P1, splitbits_named!(value, "..pppp..")),
+            0x7EFC => params.set_prg_register(P2, splitbits_named!(value, "..pppp..")),
             0x7EFD => { /* IRQ not yet implemented. */ }
             0x7EFE => { /* IRQ not yet implemented. */ }
             0x7EFF => { /* IRQ not yet implemented. */ }

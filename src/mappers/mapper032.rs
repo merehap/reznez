@@ -3,18 +3,18 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-2)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::EMPTY),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-2)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-2)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::EMPTY),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-2)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
@@ -40,13 +40,13 @@ impl Mapper for Mapper032 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
-            0x8000..=0x8007 => params.set_bank_register(P0, value & 0b1_1111),
+            0x8000..=0x8007 => params.set_prg_register(P0, value & 0b1_1111),
             0x9000..=0x9007 => {
                 let fields = splitbits!(min=u8, value, "......pm");
                 params.set_prg_layout(fields.p);
                 params.set_name_table_mirroring(fields.m);
             }
-            0xA000..=0xA007 => params.set_bank_register(P1, value & 0b1_1111),
+            0xA000..=0xA007 => params.set_prg_register(P1, value & 0b1_1111),
             0xB000 => params.set_chr_register(C0, value),
             0xB001 => params.set_chr_register(C1, value),
             0xB002 => params.set_chr_register(C2, value),

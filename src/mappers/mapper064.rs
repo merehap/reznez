@@ -4,18 +4,18 @@ const LAYOUT: Layout = Layout::builder()
     // The wiki says 256KiB, but then doesn't mask down to just 4 banks.
     .prg_rom_max_size(8192 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::EMPTY),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::EMPTY),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
@@ -182,7 +182,7 @@ impl Mapper064 {
     fn set_bank_index(&self, params: &mut MapperParams, value: u8) {
         match self.selected_register_id {
             Chr(cx) => params.set_chr_register(cx, value),
-            Prg(px) => params.set_bank_register(px, value),
+            Prg(px) => params.set_prg_register(px, value),
         }
     }
 
@@ -241,5 +241,5 @@ enum IrqCounterReloadMode {
 #[derive(Clone, Copy)]
 enum RegId {
     Chr(ChrBankRegisterId),
-    Prg(BankRegisterId),
+    Prg(PrgBankRegisterId),
 }

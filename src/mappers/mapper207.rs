@@ -3,13 +3,13 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(2048 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7EFF, 7 * KIBIBYTE + 3 * KIBIBYTE / 4, Bank::EMPTY),
-        Window::new(0x7F00, 0x7F7F, KIBIBYTE / 8, Bank::WORK_RAM.status_register(S0)),
-        Window::new(0x7F80, 0x7FFF, KIBIBYTE / 8, Bank::MirrorOf(0x7F00)),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x7EFF, 7 * KIBIBYTE + 3 * KIBIBYTE / 4, PrgBank::EMPTY),
+        PrgWindow::new(0x7F00, 0x7F7F, KIBIBYTE / 8, PrgBank::WORK_RAM.status_register(S0)),
+        PrgWindow::new(0x7F80, 0x7FFF, KIBIBYTE / 8, PrgBank::MirrorOf(0x7F00)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
@@ -59,9 +59,9 @@ impl Mapper for Mapper207 {
                 let ram_enabled = value == 0xA3;
                 params.set_read_write_status(S0, ram_enabled as u8);
             }
-            0x7EFA..=0x7EFB => params.set_bank_register(P0, value),
-            0x7EFC..=0x7EFD => params.set_bank_register(P1, value),
-            0x7EFE..=0x7EFF => params.set_bank_register(P2, value),
+            0x7EFA..=0x7EFB => params.set_prg_register(P0, value),
+            0x7EFC..=0x7EFD => params.set_prg_register(P1, value),
+            0x7EFE..=0x7EFF => params.set_prg_register(P2, value),
             0x7F00..=0xFFFF => { /* Do nothing. */ }
         }
     }

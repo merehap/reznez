@@ -5,8 +5,8 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
@@ -38,7 +38,7 @@ impl Mapper for Mapper042 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         match cpu_address & 0xE003 {
             0x8000 => params.set_chr_register(C0, value & 0b1111),
-            0xE000 => params.set_bank_register(P0, value & 0b1111),
+            0xE000 => params.set_prg_register(P0, value & 0b1111),
             0xE001 => {
                 let mirroring = splitbits_named!(min=u8, value, "....m...");
                 params.set_name_table_mirroring(mirroring);

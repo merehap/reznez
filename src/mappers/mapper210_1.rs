@@ -4,11 +4,11 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
         // FIXME: This is supposed to be 2KiBs mirrored. Family Circuit doesn't work without it.
-        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
@@ -41,9 +41,9 @@ impl Mapper for Mapper210_1 {
             0xB800..=0xBFFF => params.set_chr_register(C7, value),
             0xC000..=0xC7FF => { /* TODO: External PRG RAM enable. */ }
             0xC800..=0xDFFF => { /* Do nothing. */ }
-            0xE000..=0xE7FF => params.set_bank_register(P0, value & 0b0011_1111),
-            0xE800..=0xEFFF => params.set_bank_register(P1, value & 0b0011_1111),
-            0xF000..=0xF7FF => params.set_bank_register(P2, value & 0b0011_1111),
+            0xE000..=0xE7FF => params.set_prg_register(P0, value & 0b0011_1111),
+            0xE800..=0xEFFF => params.set_prg_register(P1, value & 0b0011_1111),
+            0xF000..=0xF7FF => params.set_prg_register(P2, value & 0b0011_1111),
             0xF800..=0xFFFF => { /* Do nothing. */ }
         }
     }

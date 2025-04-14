@@ -1,11 +1,11 @@
-use crate::memory::bank::bank_index::BankRegisterId;
-use crate::memory::window::{ReadWriteStatusInfo, Window};
+use crate::memory::bank::bank_index::PrgBankRegisterId;
+use crate::memory::window::{ReadWriteStatusInfo, PrgWindow};
 
 #[derive(Clone, Copy)]
-pub struct PrgLayout(&'static [Window]);
+pub struct PrgLayout(&'static [PrgWindow]);
 
 impl PrgLayout {
-    pub const fn new(windows: &'static [Window]) -> PrgLayout {
+    pub const fn new(windows: &'static [PrgWindow]) -> PrgLayout {
         assert!(!windows.is_empty(), "No PRG windows specified.");
 
         assert!(windows[0].start() <= 0x6000,
@@ -25,11 +25,11 @@ impl PrgLayout {
         PrgLayout(windows)
     }
 
-    pub fn windows(&self) -> &[Window] {
+    pub fn windows(&self) -> &[PrgWindow] {
         self.0
     }
 
-    pub fn active_register_ids(&self) -> Vec<BankRegisterId> {
+    pub fn active_register_ids(&self) -> Vec<PrgBankRegisterId> {
         self.0.iter()
             .filter_map(|window| window.register_id())
             .collect()

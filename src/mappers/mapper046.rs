@@ -3,8 +3,8 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(1024 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::EMPTY),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
     ])
     .chr_rom_max_size(1024 * KIBIBYTE)
     .chr_layout(&[
@@ -33,7 +33,7 @@ impl Mapper for Mapper046 {
             0x8000..=0xFFFF => {
                 // TODO: replacebits
                 let prg_bank_index = self.prg_high_bits | (value & 0b0000_0001);
-                params.set_bank_register(P0, prg_bank_index);
+                params.set_prg_register(P0, prg_bank_index);
                 let chr_bank_index = self.chr_high_bits | ((value << 1) >> 5);
                 params.set_chr_register(C0, chr_bank_index);
             }

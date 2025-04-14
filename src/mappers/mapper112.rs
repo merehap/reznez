@@ -3,11 +3,11 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-2)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::EMPTY),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-2)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
@@ -40,7 +40,7 @@ impl Mapper for Mapper112 {
             0x8000 => self.selected_register_id = BANK_REGISTER_IDS[value as usize & 0b11],
             0xA000 => {
                 match self.selected_register_id {
-                    Prg(px) => params.set_bank_register(px, value),
+                    Prg(px) => params.set_prg_register(px, value),
                     Chr(cx) => params.set_chr_register(cx, value),
                 }
             }
@@ -62,6 +62,6 @@ impl Mapper112 {
 
 #[derive(Clone, Copy)]
 enum RegId {
-    Prg(BankRegisterId),
+    Prg(PrgBankRegisterId),
     Chr(ChrBankRegisterId),
 }

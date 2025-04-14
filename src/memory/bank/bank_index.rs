@@ -71,13 +71,13 @@ impl BankConfiguration {
 }
 
 #[derive(Debug)]
-pub struct BankRegisters {
+pub struct PrgBankRegisters {
     registers: [BankLocation; 18],
     read_write_statuses: [ReadWriteStatus; 15],
     rom_ram_modes: [RomRamMode; 3],
 }
 
-impl BankRegisters {
+impl PrgBankRegisters {
     pub fn new() -> Self {
         Self {
             registers: [BankLocation::Index(BankIndex(0)); 18],
@@ -94,28 +94,28 @@ impl BankRegisters {
         &self.read_write_statuses
     }
 
-    pub fn get(&self, id: BankRegisterId) -> BankLocation {
+    pub fn get(&self, id: PrgBankRegisterId) -> BankLocation {
         self.registers[id as usize]
     }
 
-    pub fn set(&mut self, id: BankRegisterId, bank_index: BankIndex) {
+    pub fn set(&mut self, id: PrgBankRegisterId, bank_index: BankIndex) {
         self.registers[id as usize] = BankLocation::Index(bank_index);
     }
 
-    pub fn set_bits(&mut self, id: BankRegisterId, new_value: u16, mask: u16) {
+    pub fn set_bits(&mut self, id: PrgBankRegisterId, new_value: u16, mask: u16) {
         let value = self.registers[id as usize].index()
             .unwrap_or_else(|| panic!("bank location at id {id:?} to not be in VRAM"));
         let updated_value = (value.0 & !mask) | (new_value & mask);
         self.registers[id as usize] = BankLocation::Index(BankIndex(updated_value));
     }
 
-    pub fn update(&mut self, id: BankRegisterId, updater: &dyn Fn(u16) -> u16) {
+    pub fn update(&mut self, id: PrgBankRegisterId, updater: &dyn Fn(u16) -> u16) {
         let value = self.registers[id as usize].index()
             .unwrap_or_else(|| panic!("bank location at id {id:?} to not be in VRAM"));
         self.registers[id as usize] = BankLocation::Index(BankIndex(updater(value.0)));
     }
 
-    pub fn set_to_ciram_side(&mut self, id: BankRegisterId, ciram_side: CiramSide) {
+    pub fn set_to_ciram_side(&mut self, id: PrgBankRegisterId, ciram_side: CiramSide) {
         self.registers[id as usize] = BankLocation::Ciram(ciram_side);
     }
 
@@ -234,7 +234,7 @@ impl BankLocation {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, FromPrimitive)]
-pub enum BankRegisterId {
+pub enum PrgBankRegisterId {
     P0,
     P1,
     P2,

@@ -5,9 +5,9 @@ const LAYOUT: Layout = Layout::builder()
     .override_chr_meta_register(M1, C3)
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
-        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
@@ -29,7 +29,7 @@ impl Mapper for Mapper010 {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x9FFF => { /* Do nothing. */ }
-            0xA000..=0xAFFF => params.set_bank_register(P0, bank_index & 0b0000_1111),
+            0xA000..=0xAFFF => params.set_prg_register(P0, bank_index & 0b0000_1111),
             0xB000..=0xBFFF => params.set_chr_register(C0, bank_index),
             0xC000..=0xCFFF => params.set_chr_register(C1, bank_index),
             0xD000..=0xDFFF => params.set_chr_register(C2, bank_index),
@@ -48,7 +48,7 @@ impl Mapper for Mapper010 {
             _ => return,
         };
 
-        params.set_meta_register(meta_id, bank_register_id);
+        params.set_chr_meta_register(meta_id, bank_register_id);
     }
 
     fn layout(&self) -> Layout {

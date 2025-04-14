@@ -3,11 +3,11 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::RAM.switchable(P0)),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P3)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
@@ -36,7 +36,7 @@ const LAYOUT: Layout = Layout::builder()
 
 const CHR_REGISTER_IDS: [ChrBankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
 // P0 is used by the ROM/RAM window, which gets special treatment.
-const PRG_ROM_REGISTER_IDS: [BankRegisterId; 3] = [P1, P2, P3];
+const PRG_ROM_REGISTER_IDS: [PrgBankRegisterId; 3] = [P1, P2, P3];
 
 // Sunsoft FME-7
 pub struct Mapper069 {
@@ -106,10 +106,10 @@ impl Mapper069 {
             Command::PrgRomRamBank => {
                 let fields = splitbits!(value, "rrpppppp");
                 params.set_read_write_status(S0, fields.r);
-                params.set_bank_register(P0, fields.p);
+                params.set_prg_register(P0, fields.p);
             }
             Command::PrgRomBank(id) =>
-                params.set_bank_register(id, value),
+                params.set_prg_register(id, value),
             Command::NameTableMirroring =>
                 params.set_name_table_mirroring(value & 0b11),
             Command::IrqControl => {
@@ -127,7 +127,7 @@ impl Mapper069 {
 enum Command {
     ChrRomBank(ChrBankRegisterId),
     PrgRomRamBank,
-    PrgRomBank(BankRegisterId),
+    PrgRomBank(PrgBankRegisterId),
     NameTableMirroring,
     IrqControl,
     IrqCounterLowByte,

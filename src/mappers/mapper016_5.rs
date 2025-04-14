@@ -3,9 +3,9 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::EMPTY),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
@@ -50,7 +50,7 @@ impl Mapper for Mapper016_5 {
             0x8005 => params.set_chr_register(C5, value),
             0x8006 => params.set_chr_register(C6, value),
             0x8007 => params.set_chr_register(C7, value),
-            0x8008 => params.set_bank_register(P0, value & 0b1111),
+            0x8008 => params.set_prg_register(P0, value & 0b1111),
             0x8009 => params.set_name_table_mirroring(value & 0b11),
             0x800A => {
                 self.irq_pending = false;

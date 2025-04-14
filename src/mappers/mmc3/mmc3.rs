@@ -20,20 +20,20 @@ pub const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-pub const PRG_WINDOWS_8000_SWITCHABLE: &[Window] = &[
-    Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
-    Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-    Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-    Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-2)),
-    Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+pub const PRG_WINDOWS_8000_SWITCHABLE: &[PrgWindow] = &[
+    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM.status_register(S0)),
+    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-2)),
+    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
 ];
 
-pub const PRG_WINDOWS_C000_SWITCHABLE: &[Window] = &[
-    Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
-    Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-2)),
-    Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-    Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-    Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+pub const PRG_WINDOWS_C000_SWITCHABLE: &[PrgWindow] = &[
+    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM.status_register(S0)),
+    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-2)),
+    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
 ];
 
 pub const CHR_BIG_WINDOWS_FIRST: &[ChrWindow] = &[
@@ -135,7 +135,7 @@ pub fn set_bank_index(
 
     match *selected_register_id {
         Chr(cx) => params.set_chr_register(cx, bank_index),
-        Prg(px) => params.set_bank_register(px, bank_index),
+        Prg(px) => params.set_prg_register(px, bank_index),
     }
 }
 
@@ -153,5 +153,5 @@ pub fn prg_ram_protect(params: &mut MapperParams, value: u8) {
 #[derive(Clone, Copy)]
 pub enum RegId {
     Chr(ChrBankRegisterId),
-    Prg(BankRegisterId),
+    Prg(PrgBankRegisterId),
 }

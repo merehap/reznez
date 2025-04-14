@@ -6,13 +6,13 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(80 * KIBIBYTE)
     .prg_bank_size_override(8 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x5000, 0x57FF, 2 * KIBIBYTE, Bank::ROM.fixed_index(8)),
-        Window::new(0x5800, 0x5FFF, 2 * KIBIBYTE, Bank::MirrorOf(0x5000)),
-        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(2)),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(1)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(0)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(9)),
+        PrgWindow::new(0x5000, 0x57FF, 2 * KIBIBYTE, PrgBank::ROM.fixed_index(8)),
+        PrgWindow::new(0x5800, 0x5FFF, 2 * KIBIBYTE, PrgBank::MirrorOf(0x5000)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(2)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(1)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(0)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(9)),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
@@ -45,7 +45,7 @@ impl Mapper for Mapper043 {
             0x4022 => {
                 // The bank index is scrambled for some reason.
                 let index = INDEXES[usize::from(value & 0b111)];
-                params.set_bank_register(P0, index);
+                params.set_prg_register(P0, index);
             }
             0x4122 | 0x8122 => {
                 self.irq_enabled = value & 1 == 1;

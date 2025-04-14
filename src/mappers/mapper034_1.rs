@@ -6,8 +6,8 @@ const LAYOUT: Layout = Layout::builder()
     // Oversize definition. The actual cartridge only allows 64KiB.
     .prg_rom_max_size(8192 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM),
-        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
     ])
     // Oversize definition. The actual cartridge only uses 64KiB.
     .chr_rom_max_size(1024 * KIBIBYTE)
@@ -26,7 +26,7 @@ impl Mapper for Mapper034_1 {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFC => { /* Do nothing. */ }
-            0x7FFD => params.set_bank_register(P0, value),
+            0x7FFD => params.set_prg_register(P0, value),
             0x7FFE => params.set_chr_register(C0, value),
             0x7FFF => params.set_chr_register(C1, value),
             0x8000..=0xFFFF => { /* Do nothing. */ }

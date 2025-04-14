@@ -3,11 +3,11 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P3)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
@@ -24,7 +24,7 @@ pub struct Mapper142 {
     irq_counter: u16,
     irq_counter_reload_value: u16,
 
-    selected_prg_bank: Option<BankRegisterId>,
+    selected_prg_bank: Option<PrgBankRegisterId>,
 }
 
 impl Mapper for Mapper142 {
@@ -75,7 +75,7 @@ impl Mapper for Mapper142 {
             }
             0xF000..=0xFFFF => {
                 if let Some(selected_prg_bank) = self.selected_prg_bank {
-                    params.set_bank_register(selected_prg_bank, value & 0b1111);
+                    params.set_prg_register(selected_prg_bank, value & 0b1111);
                 }
             }
         }

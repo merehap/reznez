@@ -4,11 +4,11 @@ use crate::mappers::vrc::vrc_irq_state::VrcIrqState;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM.status_register(S0)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     // TODO: Support CHR ROM and RAM
@@ -49,9 +49,9 @@ impl Mapper for Mapper085_2 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
-            0x8000 => params.set_bank_register(P0, value & 0b0011_1111),
-            0x8010 => params.set_bank_register(P1, value & 0b0011_1111),
-            0x9000 => params.set_bank_register(P2, value & 0b0011_1111),
+            0x8000 => params.set_prg_register(P0, value & 0b0011_1111),
+            0x8010 => params.set_prg_register(P1, value & 0b0011_1111),
+            0x9000 => params.set_prg_register(P2, value & 0b0011_1111),
             0x9010 | 0x9030 => { /* TODO: Expansion Audio */ }
             0xA000 => params.set_chr_register(C0, value),
             0xA010 => params.set_chr_register(C1, value),

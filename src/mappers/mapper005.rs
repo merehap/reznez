@@ -12,33 +12,33 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(1024 * KIBIBYTE)
     // Mode 0
     .prg_layout(&[
-        Window::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
-        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P4)),
+        PrgWindow::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, PrgBank::EXTENDED_RAM.status_register(S0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
     ])
     // Mode 1
     .prg_layout(&[
-        Window::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
-        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM_RAM.switchable(P2).status_register(S1).rom_ram_register(R1)),
-        Window::new(0xC000, 0xFFFF, 16 * KIBIBYTE, Bank::ROM.switchable(P4)),
+        PrgWindow::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, PrgBank::EXTENDED_RAM.status_register(S0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P2).status_register(S1).rom_ram_register(R1)),
+        PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
     ])
     // Mode 2
     .prg_layout(&[
-        Window::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::RAM.switchable(P0)),
-        Window::new(0x8000, 0xBFFF, 16 * KIBIBYTE, Bank::ROM_RAM.switchable(P2).status_register(S1).rom_ram_register(R1)),
-        Window::new(0xC000, 0xDFFF,  8 * KIBIBYTE, Bank::ROM_RAM.switchable(P3).status_register(S1).rom_ram_register(R2)),
-        Window::new(0xE000, 0xFFFF,  8 * KIBIBYTE, Bank::ROM.switchable(P4)),
+        PrgWindow::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, PrgBank::EXTENDED_RAM.status_register(S0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P2).status_register(S1).rom_ram_register(R1)),
+        PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P3).status_register(S1).rom_ram_register(R2)),
+        PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
     ])
     // Mode 3
     .prg_layout(&[
-        Window::new(0x5C00, 0x5FFF, 1 * KIBIBYTE, Bank::EXTENDED_RAM.status_register(S0)),
-        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::RAM.switchable(P0)),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM_RAM.switchable(P1).status_register(S1).rom_ram_register(R0)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM_RAM.switchable(P2).status_register(S1).rom_ram_register(R1)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM_RAM.switchable(P3).status_register(S1).rom_ram_register(R2)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P4)),
+        PrgWindow::new(0x5C00, 0x5FFF, 1 * KIBIBYTE, PrgBank::EXTENDED_RAM.status_register(S0)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P1).status_register(S1).rom_ram_register(R0)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P2).status_register(S1).rom_ram_register(R1)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P3).status_register(S1).rom_ram_register(R2)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
     ])
     .prg_layout_index(3)
     .override_prg_bank_register(P4, -1)
@@ -370,13 +370,13 @@ impl Mapper005 {
     fn set_prg_bank_register(
         &self,
         params: &mut MapperParams,
-        id: BankRegisterId,
+        id: PrgBankRegisterId,
         mode_reg_id: Option<RomRamModeRegisterId>,
         value: u8,
     ) {
 
         let (is_rom_mode, prg_bank) = splitbits_named!(value, "mppppppp");
-        params.set_bank_register(id, prg_bank);
+        params.set_prg_register(id, prg_bank);
         if let Some(mode_reg_id) = mode_reg_id {
             let rom_ram_mode = if is_rom_mode { RomRamMode::Rom } else { RomRamMode::Ram };
             params.set_rom_ram_mode(mode_reg_id, rom_ram_mode);

@@ -2,15 +2,15 @@ use std::num::{NonZeroU8, NonZeroU16};
 
 use log::warn;
 
-use crate::memory::bank::bank::Bank;
-use crate::memory::bank::bank_index::{BankConfiguration, BankRegisters, ReadWriteStatus, RomRamMode};
+use crate::memory::bank::bank::PrgBank;
+use crate::memory::bank::bank_index::{BankConfiguration, PrgBankRegisters, ReadWriteStatus, RomRamMode};
 use crate::memory::bank::page::{OuterPageTable, OuterPage};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::ppu::chr_memory::AccessOverride;
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
 use crate::memory::read_result::ReadResult;
-use crate::memory::window::{ReadWriteStatusInfo, Window};
+use crate::memory::window::{ReadWriteStatusInfo, PrgWindow};
 use crate::util::unit::KIBIBYTE;
 
 pub struct PrgMemory {
@@ -37,7 +37,7 @@ impl PrgMemory {
         if rom_page_size.is_none() {
             for layout in &layouts {
                 for window in layout.windows() {
-                    if matches!(window.bank(), Bank::Rom(..) | Bank::Ram(..)) {
+                    if matches!(window.bank(), PrgBank::Rom(..) | PrgBank::Ram(..)) {
                         if let Some(size) = rom_page_size {
                             rom_page_size = Some(std::cmp::min(window.size(), size));
                         } else {
@@ -127,7 +127,7 @@ impl PrgMemory {
         ids
     }
 
-    pub fn peek(&self, registers: &BankRegisters, address: CpuAddress) -> ReadResult {
+    pub fn peek(&self, registers: &PrgBankRegisters, address: CpuAddress) -> ReadResult {
         use ReadWriteStatus::*;
         match self.address_to_prg_index(registers, address) {
             PrgMemoryIndex::None => ReadResult::OPEN_BUS,
@@ -166,7 +166,7 @@ impl PrgMemory {
         }
     }
 
-    pub fn write(&mut self, registers: &BankRegisters, address: CpuAddress, value: u8) {
+    pub fn write(&mut self, registers: &PrgBankRegisters, address: CpuAddress, value: u8) {
         let windows = &self.current_layout().windows();
         assert!(!windows.is_empty());
         if address.to_raw() < windows[0].start() {
@@ -190,7 +190,7 @@ impl PrgMemory {
         }
     }
 
-    pub fn window_at(&self, start: u16) -> &Window {
+    pub fn window_at(&self, start: u16) -> &PrgWindow {
         self.window_with_index_at(start).0
     }
 
@@ -207,7 +207,7 @@ impl PrgMemory {
         self.rom_outer_banks.set_outer_page_index(index);
     }
 
-    fn address_to_prg_index(&self, registers: &BankRegisters, address: CpuAddress) -> PrgMemoryIndex {
+    fn address_to_prg_index(&self, registers: &PrgBankRegisters, address: CpuAddress) -> PrgMemoryIndex {
         let address = address.to_raw();
         assert!(address >= 0x4020);
 
@@ -226,14 +226,14 @@ impl PrgMemory {
 
         let mut window = &windows[window_index];
         let bank_offset = address - window.start();
-        if let Bank::MirrorOf(mirrored_window_start) = window.bank() {
+        if let PrgBank::MirrorOf(mirrored_window_start) = window.bank() {
             window = self.window_at(mirrored_window_start);
         }
 
         match window.bank() {
-            Bank::Empty => PrgMemoryIndex::None,
-            Bank::MirrorOf(_) => panic!("A mirrored bank must mirror a non-mirrored bank."),
-            Bank::Rom(location, status_register_id) => {
+            PrgBank::Empty => PrgMemoryIndex::None,
+            PrgBank::MirrorOf(_) => panic!("A mirrored bank must mirror a non-mirrored bank."),
+            PrgBank::Rom(location, status_register_id) => {
                 let read_status: ReadWriteStatus = status_register_id
                     .map_or(ReadWriteStatus::ReadOnly, |id| registers.read_write_status(id));
                 assert!(!read_status.is_writable());
@@ -249,7 +249,7 @@ impl PrgMemory {
 
                 PrgMemoryIndex::Rom { page_number, index, read_status }
             }
-            Bank::Ram(location, status_register_id) => {
+            PrgBank::Ram(location, status_register_id) => {
                 let work_ram_bank_configuration = self.work_ram_bank_configuration()
                     .expect("PRG RAM window specified in layout, but not in cartridge.");
                 let page_number =
@@ -259,7 +259,7 @@ impl PrgMemory {
                     .map_or(ReadWriteStatus::ReadWrite, |id| registers.read_write_status(id));
                 PrgMemoryIndex::Ram { page_number, index, read_write_status }
             }
-            Bank::RomRam(location, status_register_id, mode_register_id) => {
+            PrgBank::RomRam(location, status_register_id, mode_register_id) => {
                 match registers.rom_ram_mode(mode_register_id) {
                     RomRamMode::Ram => {
                         let work_ram_bank_configuration = self.work_ram_bank_configuration()
@@ -283,7 +283,7 @@ impl PrgMemory {
                     }
                 }
             }
-            Bank::WorkRam(location, status_register_id) => {
+            PrgBank::WorkRam(location, status_register_id) => {
                 let Some(work_ram_bank_configuration) = self.work_ram_bank_configuration() else {
                     return PrgMemoryIndex::None;
                 };
@@ -296,10 +296,10 @@ impl PrgMemory {
                 PrgMemoryIndex::Ram { page_number, index, read_write_status }
             }
             // TODO: Save RAM should be separate from WorkRam.
-            Bank::SaveRam(_) => {
+            PrgBank::SaveRam(_) => {
                 todo!("Save RAM not yet supported for PRG.");
             }
-            Bank::ExtendedRam(status_register_id) => {
+            PrgBank::ExtendedRam(status_register_id) => {
                 let index = u32::from(bank_offset);
                 let read_write_status: ReadWriteStatus = status_register_id
                     .map_or(ReadWriteStatus::ReadWrite, |id| registers.read_write_status(id));
@@ -308,7 +308,7 @@ impl PrgMemory {
         }
     }
 
-    fn window_with_index_at(&self, start: u16) -> (&Window, u32) {
+    fn window_with_index_at(&self, start: u16) -> (&PrgWindow, u32) {
         for (index, window) in self.current_layout().windows().iter().enumerate() {
             if window.start() == start {
                 return (window, index as u32);

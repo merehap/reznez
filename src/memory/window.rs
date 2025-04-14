@@ -1,8 +1,8 @@
 use std::fmt;
 use std::num::NonZeroU16;
 
-use crate::memory::bank::bank::{Bank, Location};
-use crate::memory::bank::bank_index::{BankRegisters, BankRegisterId};
+use crate::memory::bank::bank::{PrgBank, Location};
+use crate::memory::bank::bank_index::{PrgBankRegisters, PrgBankRegisterId};
 
 use crate::memory::ppu::ciram::CiramSide;
 
@@ -16,15 +16,15 @@ use super::bank::bank_index::{ChrBankRegisterId, ChrBankRegisters};
 // A Window is a range within addressable memory.
 // If the specified bank cannot fill the window, adjacent banks will be included too.
 #[derive(Clone, Copy, Debug)]
-pub struct Window {
+pub struct PrgWindow {
     start: u16,
     end: NonZeroU16,
     size: NonZeroU16,
-    bank: Bank,
+    bank: PrgBank,
 }
 
-impl Window {
-    pub const fn new(start: u16, end: u16, size: u32, bank: Bank) -> Window {
+impl PrgWindow {
+    pub const fn new(start: u16, end: u16, size: u32, bank: PrgBank) -> PrgWindow {
         assert!(end > start);
         let actual_size = end - start + 1;
 
@@ -33,25 +33,25 @@ impl Window {
         assert!(actual_size == size.get());
 
         let end = NonZeroU16::new(end).expect("Window end index to not be zero.");
-        Window { start, end, size, bank }
+        PrgWindow { start, end, size, bank }
     }
 
-    pub fn bank_string(&self, registers: &BankRegisters, rom_bank_configuration: BankConfiguration) -> String {
+    pub fn bank_string(&self, registers: &PrgBankRegisters, rom_bank_configuration: BankConfiguration) -> String {
         match self.bank {
-            Bank::Empty => "E".into(),
+            PrgBank::Empty => "E".into(),
             // TODO: Add page number when there is more than one Work RAM page.
-            Bank::WorkRam(_, _) => "W".into(),
-            Bank::SaveRam(..) => "S".into(),
-            Bank::ExtendedRam(_) => "X".into(),
-            Bank::Rom(location, _) | Bank::Ram(location, _) | Bank::RomRam(location, _, _) =>
+            PrgBank::WorkRam(_, _) => "W".into(),
+            PrgBank::SaveRam(..) => "S".into(),
+            PrgBank::ExtendedRam(_) => "X".into(),
+            PrgBank::Rom(location, _) | PrgBank::Ram(location, _) | PrgBank::RomRam(location, _, _) =>
                 self.resolved_bank_index(registers, location, rom_bank_configuration).to_string(),
-            Bank::MirrorOf(_) => "M".into(),
+            PrgBank::MirrorOf(_) => "M".into(),
         }
     }
 
     pub fn resolved_bank_index(
         &self,
-        registers: &BankRegisters,
+        registers: &PrgBankRegisters,
         location: Location,
         bank_configuration: BankConfiguration,
     ) -> u16 {
@@ -75,7 +75,7 @@ impl Window {
         self.size
     }
 
-    pub const fn bank(self) -> Bank {
+    pub const fn bank(self) -> PrgBank {
         self.bank
     }
 
@@ -85,15 +85,15 @@ impl Window {
 
     pub fn location(self) -> Result<Location, String> {
         match self.bank {
-            Bank::Rom(location, _) | Bank::Ram(location, _)  | Bank::RomRam(location, _, _) | Bank::WorkRam(location, _) => Ok(location),
-            Bank::SaveRam(_) => Ok(Location::Fixed(BankIndex::from_u8(0))),
-            Bank::Empty | Bank::ExtendedRam(_) | Bank::MirrorOf(_) =>
+            PrgBank::Rom(location, _) | PrgBank::Ram(location, _)  | PrgBank::RomRam(location, _, _) | PrgBank::WorkRam(location, _) => Ok(location),
+            PrgBank::SaveRam(_) => Ok(Location::Fixed(BankIndex::from_u8(0))),
+            PrgBank::Empty | PrgBank::ExtendedRam(_) | PrgBank::MirrorOf(_) =>
                 Err(format!("Bank type {:?} does not have a bank location.", self.bank)),
         }
     }
 
-    pub const fn register_id(self) -> Option<BankRegisterId> {
-        if let Bank::Rom(Location::Switchable(id), _) | Bank::Ram(Location::Switchable(id), _) = self.bank {
+    pub const fn register_id(self) -> Option<PrgBankRegisterId> {
+        if let PrgBank::Rom(Location::Switchable(id), _) | PrgBank::Ram(Location::Switchable(id), _) = self.bank {
             Some(id)
         } else {
             None
@@ -101,16 +101,16 @@ impl Window {
     }
     pub fn read_write_status_info(self) -> ReadWriteStatusInfo {
         match self.bank {
-            Bank::Ram(_, Some(register_id)) | Bank::RomRam(_, register_id, _) =>
+            PrgBank::Ram(_, Some(register_id)) | PrgBank::RomRam(_, register_id, _) =>
                 ReadWriteStatusInfo::PossiblyPresent { register_id, status_on_absent: ReadWriteStatus::ReadOnly },
-            Bank::WorkRam(_, Some(register_id)) =>
+            PrgBank::WorkRam(_, Some(register_id)) =>
                 ReadWriteStatusInfo::PossiblyPresent { register_id, status_on_absent: ReadWriteStatus::Disabled },
             // TODO: SaveRam will probably need to support status registers.
-            Bank::SaveRam(..) =>
+            PrgBank::SaveRam(..) =>
                 ReadWriteStatusInfo::Absent,
-            Bank::ExtendedRam(Some(register_id)) =>
+            PrgBank::ExtendedRam(Some(register_id)) =>
                 ReadWriteStatusInfo::MapperCustom { register_id },
-            Bank::Empty | Bank::Rom(..) | Bank::MirrorOf(..) | Bank::Ram(..) | Bank::ExtendedRam(..) | Bank::WorkRam(..) =>
+            PrgBank::Empty | PrgBank::Rom(..) | PrgBank::MirrorOf(..) | PrgBank::Ram(..) | PrgBank::ExtendedRam(..) | PrgBank::WorkRam(..) =>
                 ReadWriteStatusInfo::Absent,
         }
     }
@@ -123,7 +123,7 @@ impl Window {
         }
     }
 
-    pub fn is_writable(self, registers: &BankRegisters) -> bool {
+    pub fn is_writable(self, registers: &PrgBankRegisters) -> bool {
         self.bank.is_writable(registers)
     }
 }
@@ -295,7 +295,7 @@ impl ChrWindow {
         }
     }
 
-    pub fn is_writable(self, registers: &BankRegisters) -> bool {
+    pub fn is_writable(self, registers: &PrgBankRegisters) -> bool {
         self.bank.is_writable(registers)
     }
 }

@@ -3,11 +3,11 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::WORK_RAM),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P1)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P2)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
@@ -71,12 +71,12 @@ impl Mapper for Mapper018 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
             0x6000..=0x7FFF => unreachable!(),
-            0x8000 => params.set_bank_register_bits(P0, value     , 0b0000_1111),
-            0x8001 => params.set_bank_register_bits(P0, value << 4, 0b0011_0000),
-            0x8002 => params.set_bank_register_bits(P1, value     , 0b0000_1111),
-            0x8003 => params.set_bank_register_bits(P1, value << 4, 0b0011_0000),
-            0x9000 => params.set_bank_register_bits(P2, value     , 0b0000_1111),
-            0x9001 => params.set_bank_register_bits(P2, value << 4, 0b0011_0000),
+            0x8000 => params.set_prg_bank_register_bits(P0, value     , 0b0000_1111),
+            0x8001 => params.set_prg_bank_register_bits(P0, value << 4, 0b0011_0000),
+            0x8002 => params.set_prg_bank_register_bits(P1, value     , 0b0000_1111),
+            0x8003 => params.set_prg_bank_register_bits(P1, value << 4, 0b0011_0000),
+            0x9000 => params.set_prg_bank_register_bits(P2, value     , 0b0000_1111),
+            0x9001 => params.set_prg_bank_register_bits(P2, value << 4, 0b0011_0000),
             0x9002 => self.work_ram_write_enabled = value & 0b0000_0010 != 0,
             0x9003 => { /* Do nothing */ }
             0xA000 => params.set_chr_bank_register_bits(C0, value     , 0b0000_1111),

@@ -14,7 +14,7 @@ use crate::cpu::step::Step;
 use crate::gui::gui::Events;
 use crate::logging::formatter;
 use crate::logging::formatter::*;
-use crate::mapper::{BankRegisterId, MapperParams, NameTableMirroring, ReadWriteStatus};
+use crate::mapper::{PrgBankRegisterId, MapperParams, NameTableMirroring, ReadWriteStatus};
 use crate::memory::bank::bank_index::{BankLocation, ChrBankRegisterId};
 use crate::memory::cpu::ports::Ports;
 use crate::mapper_list;
@@ -281,11 +281,11 @@ impl Nes {
                 latest.chr_layout_index = chr_memory.layout_index();
             }
 
-            let bank_registers = mapper_params.bank_registers.registers();
+            let bank_registers = mapper_params.prg_bank_registers.registers();
             if &latest.bank_registers != bank_registers {
                 for (i, latest_bank_location) in latest.bank_registers.iter_mut().enumerate() {
                     if *latest_bank_location != bank_registers[i] {
-                        let id: BankRegisterId = FromPrimitive::from_usize(i).unwrap();
+                        let id: PrgBankRegisterId = FromPrimitive::from_usize(i).unwrap();
                         match (bank_registers[i], *latest_bank_location) {
                             (BankLocation::Index(curr), BankLocation::Index(prev)) =>
                                 info!("BankRegister {id:?} changed to {}. Previously: {}",
@@ -309,7 +309,7 @@ impl Nes {
             if &latest.meta_registers != meta_registers {
                 for (i, latest_bank_register_id) in latest.meta_registers.iter_mut().enumerate() {
                     if *latest_bank_register_id != meta_registers[i] {
-                        let id: BankRegisterId = FromPrimitive::from_usize(i).unwrap();
+                        let id: PrgBankRegisterId = FromPrimitive::from_usize(i).unwrap();
                         info!("MetaRegister {id:?} changed to {:?}. Previously: {latest_bank_register_id:?}.",
                             meta_registers[i]);
                         *latest_bank_register_id = meta_registers[i];
@@ -323,7 +323,7 @@ impl Nes {
                 latest.name_table_mirroring = mapper_params.name_table_mirroring;
             }
 
-            let read_write_statuses = mapper_params.bank_registers.read_write_statuses();
+            let read_write_statuses = mapper_params.prg_bank_registers.read_write_statuses();
             if &latest.read_write_statuses != read_write_statuses {
                 for (i, latest_read_write_status) in latest.read_write_statuses.iter_mut().enumerate() {
                     if *latest_read_write_status != read_write_statuses[i] {
@@ -372,10 +372,10 @@ impl LatestValues {
 
             prg_layout_index: initial_params.prg_memory.layout_index(),
             chr_layout_index: initial_params.chr_memory.layout_index(),
-            bank_registers: *initial_params.bank_registers.registers(),
+            bank_registers: *initial_params.prg_bank_registers.registers(),
             meta_registers: *initial_params.chr_bank_registers.meta_registers(),
             name_table_mirroring: initial_params.name_table_mirroring,
-            read_write_statuses: *initial_params.bank_registers.read_write_statuses(),
+            read_write_statuses: *initial_params.prg_bank_registers.read_write_statuses(),
         }
     }
 }

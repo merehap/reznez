@@ -3,8 +3,8 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::EMPTY),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
@@ -33,7 +33,7 @@ impl Mapper for Mapper041 {
                 params.set_name_table_mirroring(fields.m as u8);
                 params.set_chr_bank_register_bits(C0, (fields.c << 2).into(), 0b0000_1100);
                 self.inner_bank_select_enabled = fields.p & 0b100 != 0;
-                params.set_bank_register(P0, fields.p);
+                params.set_prg_register(P0, fields.p);
             }
             0x6800..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {

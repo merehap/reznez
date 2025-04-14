@@ -4,8 +4,8 @@ use crate::mappers::mmc1::shift_register::{ShiftRegister, ShiftStatus};
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(32 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::WORK_RAM.status_register(S0)),
-        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.fixed_index(0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM.status_register(S0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.fixed_index(0)),
     ])
     .chr_rom_max_size(64 * KIBIBYTE)
     .chr_layout(&[

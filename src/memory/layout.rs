@@ -4,14 +4,14 @@ use std::num::{NonZeroU16, NonZeroU8};
 use log::warn;
 
 use crate::cartridge::cartridge::Cartridge;
-use crate::memory::bank::bank_index::{BankIndex, BankRegisterId, BankRegisters, ChrBankRegisters, MetaRegisterId};
+use crate::memory::bank::bank_index::{BankIndex, PrgBankRegisterId, PrgBankRegisters, ChrBankRegisters, MetaRegisterId};
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::mapper::{MapperParams, ReadWriteStatus};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::chr_memory::ChrMemory;
 use crate::memory::raw_memory::RawMemory;
-use crate::memory::window::{ReadWriteStatusInfo, Window};
+use crate::memory::window::{ReadWriteStatusInfo, PrgWindow};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::const_vec::ConstVec;
 use crate::util::unit::KIBIBYTE;
@@ -39,7 +39,7 @@ pub struct Layout {
 
     read_write_statuses: &'static [ReadWriteStatus],
 
-    bank_register_overrides: ConstVec<(BankRegisterId, BankIndex), 5>,
+    bank_register_overrides: ConstVec<(PrgBankRegisterId, BankIndex), 5>,
     chr_bank_register_overrides: ConstVec<(ChrBankRegisterId, BankIndex), 5>,
     chr_meta_register_overrides: ConstVec<(MetaRegisterId, ChrBankRegisterId), 5>,
 }
@@ -75,7 +75,7 @@ impl Layout {
             cartridge.chr_ram()
         };
 
-        let mut bank_registers = BankRegisters::new();
+        let mut bank_registers = PrgBankRegisters::new();
         for (register_id, bank_index) in self.bank_register_overrides.as_iter() {
             bank_registers.set(register_id, bank_index);
         }
@@ -146,7 +146,7 @@ impl Layout {
         MapperParams {
             prg_memory,
             chr_memory,
-            bank_registers,
+            prg_bank_registers: bank_registers,
             chr_bank_registers,
             name_table_mirroring,
             name_table_mirrorings: self.name_table_mirrorings,
@@ -203,7 +203,7 @@ pub struct LayoutBuilder {
 
     read_write_statuses: &'static [ReadWriteStatus],
 
-    bank_register_overrides: ConstVec<(BankRegisterId, BankIndex), 5>,
+    bank_register_overrides: ConstVec<(PrgBankRegisterId, BankIndex), 5>,
     chr_bank_register_overrides: ConstVec<(ChrBankRegisterId, BankIndex), 5>,
     chr_meta_register_overrides: ConstVec<(MetaRegisterId, ChrBankRegisterId), 5>,
 }
@@ -251,7 +251,7 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn prg_layout(&mut self, windows: &'static [Window]) -> &mut LayoutBuilder {
+    pub const fn prg_layout(&mut self, windows: &'static [PrgWindow]) -> &mut LayoutBuilder {
         self.prg_layouts.push(PrgLayout::new(windows));
         self
     }
@@ -324,7 +324,7 @@ impl LayoutBuilder {
 
     pub const fn override_prg_bank_register(
         &mut self,
-        id: BankRegisterId,
+        id: PrgBankRegisterId,
         bank_index: i16,
     ) -> &mut LayoutBuilder {
         self.bank_register_overrides.push((id, BankIndex::from_i16(bank_index)));

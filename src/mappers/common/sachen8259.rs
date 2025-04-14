@@ -3,8 +3,8 @@ use crate::mapper::*;
 pub const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x8000, 0xFFFF, 32 * KIBIBYTE, Bank::ROM.switchable(P0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::EMPTY),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
     ])
     // This value is overridden by the individual boards.
     .chr_rom_max_size(512 * KIBIBYTE)
@@ -76,7 +76,7 @@ impl Mapper for Sachen8259 {
                         params.set_chr_rom_outer_bank_index(value & 0b111);
                     }
                     RegisterValue::PrgBank => {
-                        params.set_bank_register(P0, value & 0b111);
+                        params.set_prg_register(P0, value & 0b111);
                     }
                     RegisterValue::Nop => {}
                     RegisterValue::ModeSelect => {

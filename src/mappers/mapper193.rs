@@ -4,11 +4,11 @@ const LAYOUT: Layout = Layout::builder()
     // Oversize definition?
     .prg_rom_max_size(2024 * KIBIBYTE)
     .prg_layout(&[
-        Window::new(0x6000, 0x7FFF, 8 * KIBIBYTE, Bank::EMPTY),
-        Window::new(0x8000, 0x9FFF, 8 * KIBIBYTE, Bank::ROM.switchable(P0)),
-        Window::new(0xA000, 0xBFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-3)),
-        Window::new(0xC000, 0xDFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-2)),
-        Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::EMPTY),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-3)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-2)),
+        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
@@ -32,7 +32,7 @@ impl Mapper for Mapper193 {
             0x6000 => params.set_chr_register(C0, value >> 1),
             0x6001 => params.set_chr_register(C1, value >> 1),
             0x6002 => params.set_chr_register(C2, value >> 1),
-            0x6003 => params.set_bank_register(P0, value),
+            0x6003 => params.set_prg_register(P0, value),
             0x6004 => params.set_name_table_mirroring(value & 1),
             _ => { /* Do nothing. */ }
         }
