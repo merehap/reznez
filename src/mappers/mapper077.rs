@@ -8,8 +8,8 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(32 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::ROM.switchable(C0)),
-        Window::new(0x0800, 0x1FFF, 6 * KIBIBYTE, Bank::SaveRam(0x0800)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0800, 0x1FFF, 6 * KIBIBYTE, ChrBank::SaveRam(0x0800)),
     ])
     // Cartridges for some reason don't specify a CHR Save RAM size.
     .chr_save_ram_size(8 * KIBIBYTE)
@@ -31,7 +31,7 @@ impl Mapper for Mapper077 {
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 let banks = splitbits!(value, "ccccpppp");
-                params.set_bank_register(C0, banks.c);
+                params.set_chr_register(C0, banks.c);
                 params.set_bank_register(P0, banks.p);
             }
         }

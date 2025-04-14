@@ -13,12 +13,12 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::ROM.switchable(C0)),
-        Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C1)),
-        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::ROM.switchable(C2)),
-        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::ROM.switchable(C3)),
-        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
-        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
     ])
     .read_write_statuses(&[
         ReadWriteStatus::Disabled,
@@ -40,7 +40,7 @@ impl Mapper for Mapper207 {
                 let ciram_side = if ciram_right { CiramSide::Right } else { CiramSide::Left };
                 params.set_name_table_quadrant(NameTableQuadrant::TopLeft, ciram_side);
                 params.set_name_table_quadrant(NameTableQuadrant::TopRight, ciram_side);
-                params.set_bank_register(C0, chr_bank);
+                params.set_chr_register(C0, chr_bank);
             }
             0x7EF1 => {
                 println!("Setting lower name table quadrants.");
@@ -48,12 +48,12 @@ impl Mapper for Mapper207 {
                 let ciram_side = if ciram_right { CiramSide::Right } else { CiramSide::Left };
                 params.set_name_table_quadrant(NameTableQuadrant::BottomLeft, ciram_side);
                 params.set_name_table_quadrant(NameTableQuadrant::BottomRight, ciram_side);
-                params.set_bank_register(C1, chr_bank);
+                params.set_chr_register(C1, chr_bank);
             }
-            0x7EF2 => params.set_bank_register(C2, value),
-            0x7EF3 => params.set_bank_register(C3, value),
-            0x7EF4 => params.set_bank_register(C4, value),
-            0x7EF5 => params.set_bank_register(C5, value),
+            0x7EF2 => params.set_chr_register(C2, value),
+            0x7EF3 => params.set_chr_register(C3, value),
+            0x7EF4 => params.set_chr_register(C4, value),
+            0x7EF5 => params.set_chr_register(C5, value),
             0x7EF6..=0x7EF7 => { /* Do nothing. (In mapper 80, this controls mirroring). */ }
             0x7EF8..=0x7EF9 => {
                 let ram_enabled = value == 0xA3;

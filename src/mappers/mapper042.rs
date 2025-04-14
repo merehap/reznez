@@ -10,10 +10,10 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.fixed_index(0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::RAM.fixed_index(0)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -37,7 +37,7 @@ impl Mapper for Mapper042 {
 
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         match cpu_address & 0xE003 {
-            0x8000 => params.set_bank_register(C0, value & 0b1111),
+            0x8000 => params.set_chr_register(C0, value & 0b1111),
             0xE000 => params.set_bank_register(P0, value & 0b1111),
             0xE001 => {
                 let mirroring = splitbits_named!(min=u8, value, "....m...");

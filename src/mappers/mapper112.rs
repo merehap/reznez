@@ -11,12 +11,12 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::ROM.switchable(C0)),
-        Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C1)),
-        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::ROM.switchable(C2)),
-        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::ROM.switchable(C3)),
-        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
-        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -24,20 +24,26 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-const BANK_REGISTER_IDS: [BankRegisterId; 8] = [P0, P1, C0, C1, C2, C3, C4, C5];
+use RegId::{Chr, Prg};
+const BANK_REGISTER_IDS: [RegId; 8] = [Prg(P0), Prg(P1), Chr(C0), Chr(C1), Chr(C2), Chr(C3), Chr(C4), Chr(C5)];
 
 // Huang Di and San Guo Zhi - Qun Xiong Zheng Ba
 // Similar to mapper 206.
 // FIXME: Currently jams, possibly due to broken DMC implementation.
 pub struct Mapper112 {
-    selected_register_id: BankRegisterId,
+    selected_register_id: RegId,
 }
 
 impl Mapper for Mapper112 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         match cpu_address & 0xE001 {
             0x8000 => self.selected_register_id = BANK_REGISTER_IDS[value as usize & 0b11],
-            0xA000 => params.set_bank_register(self.selected_register_id, value),
+            0xA000 => {
+                match self.selected_register_id {
+                    Prg(px) => params.set_bank_register(px, value),
+                    Chr(cx) => params.set_chr_register(cx, value),
+                }
+            }
             0xE000 => params.set_name_table_mirroring(value & 1),
             _ => { /* Do nothing. */ }
         }
@@ -50,6 +56,12 @@ impl Mapper for Mapper112 {
 
 impl Mapper112 {
     pub fn new() -> Self {
-        Self { selected_register_id: P0 }
+        Self { selected_register_id: Prg(P0) }
     }
+}
+
+#[derive(Clone, Copy)]
+enum RegId {
+    Prg(BankRegisterId),
+    Chr(ChrBankRegisterId),
 }

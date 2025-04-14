@@ -10,7 +10,7 @@ const LAYOUT: Layout = Layout::builder()
     // Oversize. Actual cartridge only has 64 max.
     .chr_rom_max_size(2048 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
     ])
     .build();
 
@@ -25,7 +25,7 @@ impl Mapper for Mapper107 {
             0x8000..=0xFFFF => {
                 // The PRG and CHR registers overlap.
                 params.set_bank_register(P0, value >> 1);
-                params.set_bank_register(C0, value);
+                params.set_chr_register(C0, value);
             }
         }
     }

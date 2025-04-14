@@ -1,13 +1,13 @@
 use std::num::{NonZeroU16, NonZeroU8};
 
-use crate::mapper::{NameTableMirroring, NameTableSource, ReadWriteStatus};
-use crate::memory::bank::bank::{Bank, Location};
-use crate::memory::bank::bank_index::BankRegisters;
+use crate::mapper::{ChrBank, ChrWindow, NameTableMirroring, NameTableSource, ReadWriteStatus};
+use crate::memory::bank::bank::ChrBankLocation;
+use crate::memory::bank::bank_index::ChrBankRegisters;
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
-use crate::memory::window::{ReadWriteStatusInfo, Window};
+use crate::memory::window::ReadWriteStatusInfo;
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
 
@@ -26,7 +26,7 @@ impl ChrMemoryMap {
         initial_layout: ChrLayout,
         name_table_mirroring: NameTableMirroring,
         bank_size: NonZeroU16,
-        regs: &BankRegisters,
+        regs: &ChrBankRegisters,
         access_override: Option<AccessOverride>,
         align_large_windows: bool,
     ) -> Self {
@@ -109,7 +109,7 @@ impl ChrMemoryMap {
         &self.page_ids[0..8]
     }
 
-    pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring, regs: &BankRegisters) {
+    pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring, regs: &ChrBankRegisters) {
         for (i, &quadrant) in name_table_mirroring.quadrants().iter().enumerate() {
             let mapping = match quadrant {
                 NameTableSource::Ciram(ciram_side) => ChrMapping::Ciram(ciram_side),
@@ -123,7 +123,7 @@ impl ChrMemoryMap {
         self.update_page_ids(regs);
     }
 
-    pub fn update_page_ids(&mut self, regs: &BankRegisters) {
+    pub fn update_page_ids(&mut self, regs: &ChrBankRegisters) {
         for i in 0..CHR_SLOT_COUNT {
             self.page_ids[i] = self.page_mappings[i].page_id(regs);
         }
@@ -155,7 +155,7 @@ pub enum ChrMemoryIndex {
 #[derive(Clone, Copy, Debug)]
 pub enum ChrMapping {
     Banked {
-        bank: Bank,
+        bank: ChrBank,
         pages_per_bank: u16,
         page_offset: u16,
         page_number_mask: u16,
@@ -167,22 +167,22 @@ pub enum ChrMapping {
 }
 
 impl ChrMapping {
-    pub fn page_id(&self, registers: &BankRegisters) -> (ChrPageId, ReadWriteStatus) {
+    pub fn page_id(&self, registers: &ChrBankRegisters) -> (ChrPageId, ReadWriteStatus) {
         match self {
             Self::Banked { bank, pages_per_bank: bank_multiple, page_offset, page_number_mask, .. } => {
                 let location = bank.location().expect("Location to be present in bank.");
                 let bank_index = match location {
-                    Location::Fixed(bank_index) => bank_index,
-                    Location::Switchable(register_id) => registers.get(register_id).index().unwrap(),
-                    Location::MetaSwitchable(meta_id) => registers.get_from_meta(meta_id).index().unwrap(),
+                    ChrBankLocation::Fixed(bank_index) => bank_index,
+                    ChrBankLocation::Switchable(register_id) => registers.get(register_id).index().unwrap(),
+                    ChrBankLocation::MetaSwitchable(meta_id) => registers.get_from_meta(meta_id).index().unwrap(),
                 };
 
                 let page_number = ((bank_multiple * bank_index.to_raw()) & page_number_mask) + page_offset;
                 match bank {
-                    Bank::Rom(_, None) => (ChrPageId::Rom(page_number), ReadWriteStatus::ReadOnly),
-                    Bank::Rom(_, Some(status_register)) => (ChrPageId::Rom(page_number), registers.read_write_status(*status_register)),
-                    Bank::Ram(_, None) => (ChrPageId::Ram(page_number), ReadWriteStatus::ReadWrite),
-                    Bank::Ram(_, Some(status_register)) => (ChrPageId::Ram(page_number), registers.read_write_status(*status_register)),
+                    ChrBank::Rom(_, None) => (ChrPageId::Rom(page_number), ReadWriteStatus::ReadOnly),
+                    ChrBank::Rom(_, Some(status_register)) => (ChrPageId::Rom(page_number), registers.read_write_status(*status_register)),
+                    ChrBank::Ram(_, None) => (ChrPageId::Ram(page_number), ReadWriteStatus::ReadWrite),
+                    ChrBank::Ram(_, Some(status_register)) => (ChrPageId::Ram(page_number), registers.read_write_status(*status_register)),
                     _ => todo!(),
                 }
             }
@@ -229,12 +229,12 @@ impl ChrMemory {
         rom: RawMemory,
         ram: RawMemory,
         name_table_mirroring: NameTableMirroring,
-        bank_registers: &BankRegisters,
+        bank_registers: &ChrBankRegisters,
     ) -> ChrMemory {
         let mut bank_size = None;
         for layout in &layouts {
             for window in layout.windows() {
-                if matches!(window.bank(), Bank::Rom(..) | Bank::Ram(..)) {
+                if matches!(window.bank(), ChrBank::Rom(..) | ChrBank::Ram(..)) {
                     if let Some(size) = bank_size {
                         bank_size = Some(std::cmp::min(window.size(), size));
                     } else {
@@ -325,7 +325,7 @@ impl ChrMemory {
         }
     }
 
-    pub fn window_at(&self, start: u16) -> &Window {
+    pub fn window_at(&self, start: u16) -> &ChrWindow {
         for window in self.current_layout().windows() {
             if window.start() == start {
                 return window;
@@ -356,13 +356,13 @@ impl ChrMemory {
         self.rom_outer_bank_index = index;
     }
 
-    pub fn update_page_ids(&mut self, regs: &BankRegisters) {
+    pub fn update_page_ids(&mut self, regs: &ChrBankRegisters) {
         for page_mapping in &mut self.memory_maps {
             page_mapping.update_page_ids(regs);
         }
     }
 
-    pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring, regs: &BankRegisters) {
+    pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring, regs: &ChrBankRegisters) {
         for page_mapping in &mut self.memory_maps {
             page_mapping.set_name_table_mirroring(name_table_mirroring, regs);
         }

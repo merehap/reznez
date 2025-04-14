@@ -8,7 +8,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::HORIZONTAL,
@@ -27,7 +27,7 @@ impl Mapper for Mapper113 {
             0x4100..=0x5FFF if (cpu_address / 0x100) % 2 == 1 => {
                 let fields = splitbits!(min=u8, value, "mcpppccc");
                 params.set_name_table_mirroring(fields.m);
-                params.set_bank_register(C0, fields.c);
+                params.set_chr_register(C0, fields.c);
                 params.set_bank_register(P0, fields.p);
             }
             _ => { /* Do nothing. */ }

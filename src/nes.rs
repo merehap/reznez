@@ -15,7 +15,7 @@ use crate::gui::gui::Events;
 use crate::logging::formatter;
 use crate::logging::formatter::*;
 use crate::mapper::{BankRegisterId, MapperParams, NameTableMirroring, ReadWriteStatus};
-use crate::memory::bank::bank_index::BankLocation;
+use crate::memory::bank::bank_index::{BankLocation, ChrBankRegisterId};
 use crate::memory::cpu::ports::Ports;
 use crate::mapper_list;
 use crate::memory::memory::Memory;
@@ -305,7 +305,7 @@ impl Nes {
                 }
             }
 
-            let meta_registers = mapper_params.bank_registers.meta_registers();
+            let meta_registers = mapper_params.chr_bank_registers.meta_registers();
             if &latest.meta_registers != meta_registers {
                 for (i, latest_bank_register_id) in latest.meta_registers.iter_mut().enumerate() {
                     if *latest_bank_register_id != meta_registers[i] {
@@ -358,7 +358,7 @@ struct LatestValues {
     prg_layout_index: u8,
     chr_layout_index: u8,
     bank_registers: [BankLocation; 18],
-    meta_registers: [BankRegisterId; 2],
+    meta_registers: [ChrBankRegisterId; 2],
     name_table_mirroring: NameTableMirroring,
     read_write_statuses: [ReadWriteStatus; 15],
 }
@@ -373,7 +373,7 @@ impl LatestValues {
             prg_layout_index: initial_params.prg_memory.layout_index(),
             chr_layout_index: initial_params.chr_memory.layout_index(),
             bank_registers: *initial_params.bank_registers.registers(),
-            meta_registers: *initial_params.bank_registers.meta_registers(),
+            meta_registers: *initial_params.chr_bank_registers.meta_registers(),
             name_table_mirroring: initial_params.name_table_mirroring,
             read_write_statuses: *initial_params.bank_registers.read_write_statuses(),
         }

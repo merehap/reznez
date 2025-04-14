@@ -14,8 +14,8 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.meta_switchable(M0)),
-        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.meta_switchable(M1)),
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM.meta_switchable(M0)),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM.meta_switchable(M1)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -33,10 +33,10 @@ impl Mapper for Mapper009 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x9FFF => { /* Do nothing. */ }
             0xA000..=0xAFFF => params.set_bank_register(P0, bank_index),
-            0xB000..=0xBFFF => params.set_bank_register(C0, bank_index),
-            0xC000..=0xCFFF => params.set_bank_register(C1, bank_index),
-            0xD000..=0xDFFF => params.set_bank_register(C2, bank_index),
-            0xE000..=0xEFFF => params.set_bank_register(C3, bank_index),
+            0xB000..=0xBFFF => params.set_chr_register(C0, bank_index),
+            0xC000..=0xCFFF => params.set_chr_register(C1, bank_index),
+            0xD000..=0xDFFF => params.set_chr_register(C2, bank_index),
+            0xE000..=0xEFFF => params.set_chr_register(C3, bank_index),
             0xF000..=0xFFFF => params.set_name_table_mirroring(value & 1),
         }
     }

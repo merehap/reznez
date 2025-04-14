@@ -36,33 +36,33 @@ pub const PRG_WINDOWS_C000_SWITCHABLE: &[Window] = &[
     Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.fixed_index(-1)),
 ];
 
-pub const CHR_BIG_WINDOWS_FIRST: &[Window] = &[
+pub const CHR_BIG_WINDOWS_FIRST: &[ChrWindow] = &[
     // Big windows.
-    Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::ROM.switchable(C0)),
-    Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C1)),
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
     // Small windows.
-    Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::ROM.switchable(C2)),
-    Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::ROM.switchable(C3)),
-    Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
-    Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
+    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
+    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
+    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
 ];
 
-pub const CHR_SMALL_WINDOWS_FIRST: &[Window] = &[
+pub const CHR_SMALL_WINDOWS_FIRST: &[ChrWindow] = &[
     // Small windows.
-    Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::ROM.switchable(C2)),
-    Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::ROM.switchable(C3)),
-    Window::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
-    Window::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
+    ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+    ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
+    ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
+    ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
     // Big windows.
-    Window::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::ROM.switchable(C0)),
-    Window::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C1)),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
 ];
 
-
-pub const BANK_INDEX_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, P0, P1];
+use RegId::{Chr, Prg};
+pub const BANK_INDEX_REGISTER_IDS: [RegId; 8] = [Chr(C0), Chr(C1), Chr(C2), Chr(C3), Chr(C4), Chr(C5), Prg(P0), Prg(P1)];
 
 pub struct Mapper004Mmc3 {
-    selected_register_id: BankRegisterId,
+    selected_register_id: RegId,
     irq_state: Box<dyn IrqState>,
 }
 
@@ -99,7 +99,7 @@ impl Mapper for Mapper004Mmc3 {
 impl Mapper004Mmc3 {
     pub fn new(irq_state: Box<dyn IrqState>) -> Self {
         Self {
-            selected_register_id: C0,
+            selected_register_id: Chr(C0),
             irq_state,
         }
     }
@@ -107,7 +107,7 @@ impl Mapper004Mmc3 {
 
 pub fn bank_select(
     params: &mut MapperParams,
-    selected_register_id: &mut BankRegisterId,
+    selected_register_id: &mut RegId,
     value: u8,
 ) {
     let fields = splitbits!(min=u8, value, "cp...rrr");
@@ -118,22 +118,25 @@ pub fn bank_select(
 
 pub fn set_bank_index(
     params: &mut MapperParams,
-    selected_register_id: &mut BankRegisterId,
+    selected_register_id: &mut RegId,
     value: u8,
 ) {
     let mut bank_index = value;
-    if matches!(*selected_register_id, C0 | C1) {
+    if matches!(*selected_register_id, Chr(C0) | Chr(C1)) {
         // Double-width windows can only use even banks.
         bank_index &= 0b1111_1110;
     }
 
-    if matches!(*selected_register_id, P0 | P1) {
+    if matches!(*selected_register_id, Prg(P0) | Prg(P1)) {
         // "Some romhacks rely on an 8-bit extension of R6/7 for oversized PRG-ROM,
         // but this is deliberately not supported by many emulators."
         bank_index &= 0b0011_1111;
     }
 
-    params.set_bank_register(*selected_register_id, bank_index);
+    match *selected_register_id {
+        Chr(cx) => params.set_chr_register(cx, bank_index),
+        Prg(px) => params.set_bank_register(px, bank_index),
+    }
 }
 
 pub fn set_mirroring(params: &mut MapperParams, value: u8) {
@@ -145,4 +148,10 @@ pub fn set_mirroring(params: &mut MapperParams, value: u8) {
 
 pub fn prg_ram_protect(params: &mut MapperParams, value: u8) {
     params.set_read_write_status(S0, value >> 6);
+}
+
+#[derive(Clone, Copy)]
+pub enum RegId {
+    Chr(ChrBankRegisterId),
+    Prg(BankRegisterId),
 }

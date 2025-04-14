@@ -8,8 +8,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
-        // FIXME: Marked as RAM because it needs a status register, but it's actually ROM.
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.fixed_index(0).status_register(S0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.fixed_index(0).status_register(S0)),
     ])
     .read_write_statuses(&[
         ReadWriteStatus::Disabled,

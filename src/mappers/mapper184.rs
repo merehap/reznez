@@ -8,8 +8,8 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(64 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C0)),
-        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::ROM.switchable(C1)),
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
     ])
     .build();
 
@@ -23,8 +23,8 @@ impl Mapper for Mapper184 {
             0x4020..=0x5FFF => { /* Do nothing. */ }
             0x6000..=0x7FFF => {
                 let (high_bank, low_bank) = splitbits_named!(value, ".hhh.lll");
-                params.set_bank_register(C0, low_bank);
-                params.set_bank_register(C1, high_bank);
+                params.set_chr_register(C0, low_bank);
+                params.set_chr_register(C1, high_bank);
             }
             0x8000..=0xFFFF => { /* Do nothing. */ }
         }

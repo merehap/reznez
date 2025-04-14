@@ -11,14 +11,14 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::ROM.switchable(C0)),
-        Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::ROM.switchable(C1)),
-        Window::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C2)),
-        Window::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C3)),
-        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
-        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
-        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C6)),
-        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C6)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C7)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -34,7 +34,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-const CHR_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
+const CHR_REGISTER_IDS: [ChrBankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
 // P0 is used by the ROM/RAM window, which gets special treatment.
 const PRG_ROM_REGISTER_IDS: [BankRegisterId; 3] = [P1, P2, P3];
 
@@ -102,7 +102,7 @@ impl Mapper069 {
     fn execute_command(&mut self, params: &mut MapperParams, value: u8) {
         match self.command {
             Command::ChrRomBank(id) =>
-                params.set_bank_register(id, value),
+                params.set_chr_register(id, value),
             Command::PrgRomRamBank => {
                 let fields = splitbits!(value, "rrpppppp");
                 params.set_read_write_status(S0, fields.r);
@@ -125,7 +125,7 @@ impl Mapper069 {
 }
 
 enum Command {
-    ChrRomBank(BankRegisterId),
+    ChrRomBank(ChrBankRegisterId),
     PrgRomRamBank,
     PrgRomBank(BankRegisterId),
     NameTableMirroring,

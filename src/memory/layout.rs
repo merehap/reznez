@@ -4,7 +4,7 @@ use std::num::{NonZeroU16, NonZeroU8};
 use log::warn;
 
 use crate::cartridge::cartridge::Cartridge;
-use crate::memory::bank::bank_index::{BankIndex, BankRegisters, MetaRegisterId, BankRegisterId};
+use crate::memory::bank::bank_index::{BankIndex, BankRegisterId, BankRegisters, ChrBankRegisters, MetaRegisterId};
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::mapper::{MapperParams, ReadWriteStatus};
@@ -15,6 +15,9 @@ use crate::memory::window::{ReadWriteStatusInfo, Window};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::const_vec::ConstVec;
 use crate::util::unit::KIBIBYTE;
+
+use super::bank::bank_index::ChrBankRegisterId;
+use super::window::ChrWindow;
 
 #[derive(Clone)]
 pub struct Layout {
@@ -37,7 +40,8 @@ pub struct Layout {
     read_write_statuses: &'static [ReadWriteStatus],
 
     bank_register_overrides: ConstVec<(BankRegisterId, BankIndex), 5>,
-    meta_register_overrides: ConstVec<(MetaRegisterId, BankRegisterId), 5>,
+    chr_bank_register_overrides: ConstVec<(ChrBankRegisterId, BankIndex), 5>,
+    chr_meta_register_overrides: ConstVec<(MetaRegisterId, ChrBankRegisterId), 5>,
 }
 
 impl Layout {
@@ -76,8 +80,13 @@ impl Layout {
             bank_registers.set(register_id, bank_index);
         }
 
-        for (meta_id, register_id) in self.meta_register_overrides.as_iter() {
-            bank_registers.set_meta(meta_id, register_id);
+        let mut chr_bank_registers = ChrBankRegisters::new();
+        for (register_id, bank_index) in self.chr_bank_register_overrides.as_iter() {
+            chr_bank_registers.set(register_id, bank_index);
+        }
+
+        for (meta_id, register_id) in self.chr_meta_register_overrides.as_iter() {
+            chr_bank_registers.set_meta_chr(meta_id, register_id);
         }
 
         let prg_memory = PrgMemory::new(
@@ -106,7 +115,7 @@ impl Layout {
             cartridge.chr_rom().clone(),
             chr_ram,
             name_table_mirroring,
-            &bank_registers,
+            &chr_bank_registers,
         );
 
         let mut ram_not_present = BTreeSet::new();
@@ -138,6 +147,7 @@ impl Layout {
             prg_memory,
             chr_memory,
             bank_registers,
+            chr_bank_registers,
             name_table_mirroring,
             name_table_mirrorings: self.name_table_mirrorings,
             read_write_statuses: self.read_write_statuses,
@@ -167,7 +177,8 @@ impl Layout {
             read_write_statuses: self.read_write_statuses,
 
             bank_register_overrides: self.bank_register_overrides,
-            meta_register_overrides: self.meta_register_overrides,
+            chr_bank_register_overrides: self.chr_bank_register_overrides,
+            chr_meta_register_overrides: self.chr_meta_register_overrides,
         }
     }
 }
@@ -193,7 +204,8 @@ pub struct LayoutBuilder {
     read_write_statuses: &'static [ReadWriteStatus],
 
     bank_register_overrides: ConstVec<(BankRegisterId, BankIndex), 5>,
-    meta_register_overrides: ConstVec<(MetaRegisterId, BankRegisterId), 5>,
+    chr_bank_register_overrides: ConstVec<(ChrBankRegisterId, BankIndex), 5>,
+    chr_meta_register_overrides: ConstVec<(MetaRegisterId, ChrBankRegisterId), 5>,
 }
 
 impl LayoutBuilder {
@@ -218,7 +230,8 @@ impl LayoutBuilder {
             read_write_statuses: &[],
 
             bank_register_overrides: ConstVec::new(),
-            meta_register_overrides: ConstVec::new(),
+            chr_bank_register_overrides: ConstVec::new(),
+            chr_meta_register_overrides: ConstVec::new(),
         }
     }
 
@@ -260,7 +273,7 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn chr_layout(&mut self, windows: &'static [Window]) -> &mut LayoutBuilder {
+    pub const fn chr_layout(&mut self, windows: &'static [ChrWindow]) -> &mut LayoutBuilder {
         self.chr_layouts.push(ChrLayout::new(windows));
         self
     }
@@ -320,19 +333,19 @@ impl LayoutBuilder {
 
     pub const fn override_chr_bank_register(
         &mut self,
-        id: BankRegisterId,
+        id: ChrBankRegisterId,
         bank_index: i16,
     ) -> &mut LayoutBuilder {
-        self.bank_register_overrides.push((id, BankIndex::from_i16(bank_index)));
+        self.chr_bank_register_overrides.push((id, BankIndex::from_i16(bank_index)));
         self
     }
 
     pub const fn override_chr_meta_register(
         &mut self,
         meta_id: MetaRegisterId,
-        id: BankRegisterId,
+        id: ChrBankRegisterId,
     ) -> &mut LayoutBuilder {
-        self.meta_register_overrides.push((meta_id, id));
+        self.chr_meta_register_overrides.push((meta_id, id));
         self
     }
 
@@ -370,7 +383,8 @@ impl LayoutBuilder {
             read_write_statuses: self.read_write_statuses,
 
             bank_register_overrides: self.bank_register_overrides,
-            meta_register_overrides: self.meta_register_overrides,
+            chr_bank_register_overrides: self.chr_bank_register_overrides,
+            chr_meta_register_overrides: self.chr_meta_register_overrides,
         }
     }
 }

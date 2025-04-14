@@ -3,6 +3,8 @@ use crate::mappers::mmc3::mmc3;
 use crate::mappers::mmc3::irq_state::IrqState;
 use crate::mappers::mmc3::rev_a_irq_state::RevAIrqState;
 
+use super::mmc3::mmc3::RegId;
+
 const LAYOUT: Layout = Layout::builder()
     // Switchable 0x8000
     .prg_rom_max_size(512 * KIBIBYTE)
@@ -52,7 +54,7 @@ const LAYOUT: Layout = Layout::builder()
 
 // MMC6. Similar to MMC3 with Sharp IRQs, but with Work RAM protection.
 pub struct Mapper004_1 {
-    selected_register_id: BankRegisterId,
+    selected_register_id: RegId,
     irq_state: RevAIrqState,
 }
 
@@ -133,7 +135,7 @@ impl Mapper004_1 {
 
     pub fn new() -> Self {
         Self {
-            selected_register_id: C0,
+            selected_register_id: RegId::Chr(C0),
             irq_state: RevAIrqState::new(),
         }
     }

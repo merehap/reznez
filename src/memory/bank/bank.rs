@@ -1,6 +1,8 @@
 use crate::memory::bank::bank_index::{BankIndex, BankRegisters, BankRegisterId, MetaRegisterId, ReadWriteStatus};
 
-use super::bank_index::{BankLocation, RomRamMode};
+use crate::memory::bank::bank_index::{BankLocation, RomRamMode};
+
+use super::bank_index::{ChrBankRegisterId, ChrBankRegisters};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Bank {
@@ -29,10 +31,6 @@ impl Bank {
 
     pub const fn switchable(self, register_id: BankRegisterId) -> Self {
         self.set_location(Location::Switchable(register_id))
-    }
-
-    pub const fn meta_switchable(self, meta_id: MetaRegisterId) -> Self {
-        self.set_location(Location::MetaSwitchable(meta_id))
     }
 
     pub const fn mirror_of(window_address: u16) -> Self {
@@ -97,22 +95,6 @@ impl Bank {
         }
     }
 
-    pub fn as_rom(self) -> Bank {
-        if let Bank::Rom(location, status_register) | Bank::Ram(location, status_register) = self {
-            Bank::Rom(location, status_register)
-        } else {
-            panic!("Only RAM can be converted into ROM.");
-        }
-    }
-
-    pub fn as_ram(self) -> Bank {
-        if let Bank::Rom(location, status_register) | Bank::Ram(location, status_register) = self {
-            Bank::Ram(location, status_register)
-        } else {
-            panic!("Only ROM can be converted into RAM.");
-        }
-    }
-
     const fn set_location(self, location: Location) -> Self {
         match self {
             Bank::Rom(_, None) => Bank::Rom(location, None),
@@ -131,7 +113,6 @@ impl Bank {
 pub enum Location {
     Fixed(BankIndex),
     Switchable(BankRegisterId),
-    MetaSwitchable(MetaRegisterId),
 }
 
 impl Location {
@@ -139,7 +120,6 @@ impl Location {
         match self {
             Self::Fixed(bank_index) => BankLocation::Index(bank_index),
             Self::Switchable(register_id) => registers.get(register_id),
-            Self::MetaSwitchable(_) => todo!(),
         }
     }
 }
@@ -169,4 +149,106 @@ pub enum RomRamModeRegisterId {
     R0,
     R1,
     R2,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum ChrBank {
+    // TODO: Add configurable writability?
+    SaveRam(u32),
+    Rom(ChrBankLocation, Option<ReadWriteStatusRegisterId>),
+    Ram(ChrBankLocation, Option<ReadWriteStatusRegisterId>),
+}
+
+impl ChrBank {
+    pub const ROM: ChrBank = ChrBank::Rom(ChrBankLocation::Fixed(BankIndex::from_u8(0)), None);
+    pub const RAM: ChrBank = ChrBank::Ram(ChrBankLocation::Fixed(BankIndex::from_u8(0)), None);
+
+    pub const fn fixed_index(self, index: i16) -> Self {
+        self.set_location(ChrBankLocation::Fixed(BankIndex::from_i16(index)))
+    }
+
+    pub const fn switchable(self, register_id: ChrBankRegisterId) -> Self {
+        self.set_location(ChrBankLocation::Switchable(register_id))
+    }
+
+    pub const fn meta_switchable(self, meta_id: MetaRegisterId) -> Self {
+        self.set_location(ChrBankLocation::MetaSwitchable(meta_id))
+    }
+
+    pub fn is_writable(self, registers: &BankRegisters) -> bool {
+        match self {
+            Self::Rom(..) => false,
+            // RAM with no status register is always writable.
+            Self::Ram(_, None) => true,
+            Self::Ram(_, Some(status_register_id)) =>
+                registers.read_write_status(status_register_id) == ReadWriteStatus::ReadWrite,
+            Self::SaveRam(..) => true,
+        }
+    }
+
+    pub fn location(self) -> Result<ChrBankLocation, String> {
+        match self {
+            ChrBank::Rom(location, _) | ChrBank::Ram(location, _) => Ok(location),
+            ChrBank::SaveRam(_) => Ok(ChrBankLocation::Fixed(BankIndex::from_u8(0))),
+        }
+    }
+
+    pub fn bank_location(self, registers: &ChrBankRegisters) -> Option<BankLocation> {
+        if let ChrBank::Rom(location, _) | ChrBank::Ram(location, _) = self {
+            Some(location.bank_location(registers))
+        } else {
+            None
+        }
+    }
+
+    pub const fn status_register(self, id: ReadWriteStatusRegisterId) -> Self {
+        match self {
+            ChrBank::Rom(location, None) => ChrBank::Rom(location, Some(id)),
+            ChrBank::Ram(location, None) => ChrBank::Ram(location, Some(id)),
+            _ => panic!("Cannot provide a status register here."),
+        }
+    }
+
+    pub fn as_rom(self) -> ChrBank {
+        if let ChrBank::Rom(location, status_register) | ChrBank::Ram(location, status_register) = self {
+            ChrBank::Rom(location, status_register)
+        } else {
+            panic!("Only RAM can be converted into ROM.");
+        }
+    }
+
+    pub fn as_ram(self) -> ChrBank {
+        if let ChrBank::Rom(location, status_register) | ChrBank::Ram(location, status_register) = self {
+            ChrBank::Ram(location, status_register)
+        } else {
+            panic!("Only ROM can be converted into RAM.");
+        }
+    }
+
+    const fn set_location(self, location: ChrBankLocation) -> Self {
+        match self {
+            Self::Rom(_, None) => Self::Rom(location, None),
+            Self::Ram(_, None) => Self::Ram(location, None),
+            Self::Rom(_, Some(_)) => panic!("ROM location must be set before ROM status register."),
+            Self::Ram(_, Some(_)) => panic!("RAM location must be set before RAM status register."),
+            _ => panic!("Bank indexes can only be used for ROM or RAM or Work RAM."),
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum ChrBankLocation {
+    Fixed(BankIndex),
+    Switchable(ChrBankRegisterId),
+    MetaSwitchable(MetaRegisterId),
+}
+
+impl ChrBankLocation {
+    pub fn bank_location(self, registers: &ChrBankRegisters) -> BankLocation {
+        match self {
+            Self::Fixed(bank_index) => BankLocation::Index(bank_index),
+            Self::Switchable(register_id) => registers.get(register_id),
+            Self::MetaSwitchable(meta_id) => registers.get_from_meta(meta_id),
+        }
+    }
 }

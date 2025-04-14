@@ -16,18 +16,18 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::RAM.switchable(C0).status_register(S0)),
-        Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::RAM.switchable(C1).status_register(S1)),
-        Window::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::RAM.switchable(C2).status_register(S2)),
-        Window::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::RAM.switchable(C3).status_register(S3)),
-        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::RAM.switchable(C4).status_register(S4)),
-        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::RAM.switchable(C5).status_register(S5)),
-        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::RAM.switchable(C6).status_register(S6)),
-        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::RAM.switchable(C7).status_register(S7)),
-        Window::new(0x2000, 0x23FF, 1 * KIBIBYTE, Bank::RAM.switchable(C8).status_register(S8)),
-        Window::new(0x2400, 0x27FF, 1 * KIBIBYTE, Bank::RAM.switchable(C9).status_register(S9)),
-        Window::new(0x2800, 0x2BFF, 1 * KIBIBYTE, Bank::RAM.switchable(C10).status_register(S10)),
-        Window::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, Bank::RAM.switchable(C11).status_register(S11)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C0).status_register(S0)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C1).status_register(S1)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C2).status_register(S2)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C3).status_register(S3)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C4).status_register(S4)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C5).status_register(S5)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C6).status_register(S6)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C7).status_register(S7)),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C8).status_register(S8)),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C9).status_register(S9)),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C10).status_register(S10)),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C11).status_register(S11)),
     ])
     .read_write_statuses(&[
         ReadWriteStatus::ReadOnly,
@@ -183,16 +183,16 @@ impl Mapper for Mapper019 {
 fn set_chr_register(
     params: &mut MapperParams,
     allow_ciram_in_chr: bool,
-    reg_id: BankRegisterId,
+    reg_id: ChrBankRegisterId,
     status_reg_id: ReadWriteStatusRegisterId,
     value: u8,
 ) {
     if allow_ciram_in_chr && value >= 0xE0 {
         let ciram_side = if value & 1 == 0 { CiramSide::Left } else { CiramSide::Right };
-        params.set_bank_register_to_ciram_side(reg_id, ciram_side);
+        params.set_chr_bank_register_to_ciram_side(reg_id, ciram_side);
         params.set_read_write_status(status_reg_id, READ_WRITE);
     } else {
-        params.set_bank_register(reg_id, value);
+        params.set_chr_register(reg_id, value);
         params.set_read_write_status(status_reg_id, READ_ONLY);
     }
 }

@@ -11,21 +11,22 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(64 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::ROM.switchable(C0)),
-        Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C1)),
-        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::ROM.switchable(C2)),
-        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::ROM.switchable(C3)),
-        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
-        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
     ])
     .build();
 
-const BANK_INDEX_REGISTER_IDS: [BankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, P0, P1];
+use RegId::{Chr, Prg};
+const BANK_INDEX_REGISTER_IDS: [RegId; 8] = [Chr(C0), Chr(C1), Chr(C2), Chr(C3), Chr(C4), Chr(C5), Prg(P0), Prg(P1)];
 
 // DxROM, Tengen MIMIC-1, Namco 118
 // A much simpler predecessor to MMC3.
 pub struct Mapper206 {
-    selected_register_id: BankRegisterId,
+    selected_register_id: RegId,
 }
 
 impl Mapper for Mapper206 {
@@ -51,7 +52,7 @@ impl Mapper for Mapper206 {
 
 impl Mapper206 {
     pub fn new() -> Self {
-        Self { selected_register_id: C0 }
+        Self { selected_register_id: Chr(C0) }
     }
 
     fn bank_select(&mut self, _params: &mut MapperParams, value: u8) {
@@ -61,9 +62,9 @@ impl Mapper206 {
     fn set_bank_index(&mut self, params: &mut MapperParams, value: u8) {
         let mask = match self.selected_register_id {
             // Double-width windows can only use even banks.
-            C0 | C1 => 0b0011_1110,
-            C2 | C3 | C4 | C5 => 0b0011_1111,
-            P0 | P1 => 0b0000_1111,
+            Chr(C0) | Chr(C1) => 0b0011_1110,
+            Chr(C2) | Chr(C3) | Chr(C4) | Chr(C5) => 0b0011_1111,
+            Prg(P0) | Prg(P1) => 0b0000_1111,
             _ => unreachable!(
                 "Bank Index Register ID {:?} is not used by this mapper.",
                 self.selected_register_id
@@ -71,6 +72,15 @@ impl Mapper206 {
         };
 
         let bank_index = value & mask;
-        params.set_bank_register(self.selected_register_id, bank_index);
+        match self.selected_register_id {
+            Chr(cx) => params.set_chr_register(cx, bank_index),
+            Prg(px) => params.set_bank_register(px, bank_index),
+        }
     }
+}
+
+#[derive(Clone, Copy, Debug)]
+enum RegId {
+    Chr(ChrBankRegisterId),
+    Prg(BankRegisterId),
 }

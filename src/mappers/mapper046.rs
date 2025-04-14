@@ -8,7 +8,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(1024 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
     ])
     .build();
 
@@ -35,7 +35,7 @@ impl Mapper for Mapper046 {
                 let prg_bank_index = self.prg_high_bits | (value & 0b0000_0001);
                 params.set_bank_register(P0, prg_bank_index);
                 let chr_bank_index = self.chr_high_bits | ((value << 1) >> 5);
-                params.set_bank_register(C0, chr_bank_index);
+                params.set_chr_register(C0, chr_bank_index);
             }
         }
     }

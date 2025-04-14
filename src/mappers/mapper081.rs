@@ -9,7 +9,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(32 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
     ])
     .build();
 
@@ -25,7 +25,7 @@ impl Mapper for Mapper081 {
             0x8000..=0xFFFF => {
                 let fields = splitbits!(cpu_address, ".... .... .... ppcc");
                 params.set_bank_register(P0, fields.p);
-                params.set_bank_register(C0, fields.c);
+                params.set_chr_register(C0, fields.c);
             }
         }
     }

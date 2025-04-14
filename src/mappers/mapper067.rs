@@ -9,10 +9,10 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::ROM.switchable(C0)),
-        Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C1)),
-        Window::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::ROM.switchable(C2)),
-        Window::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C3)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -36,10 +36,10 @@ impl Mapper for Mapper067 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x87FF => params.set_irq_pending(false),
-            0x8800..=0x97FF => params.set_bank_register(C0, value & 0b0011_1111),
-            0x9800..=0xA7FF => params.set_bank_register(C1, value & 0b0011_1111),
-            0xA800..=0xB7FF => params.set_bank_register(C2, value & 0b0011_1111),
-            0xB800..=0xC7FF => params.set_bank_register(C3, value & 0b0011_1111),
+            0x8800..=0x97FF => params.set_chr_register(C0, value & 0b0011_1111),
+            0x9800..=0xA7FF => params.set_chr_register(C1, value & 0b0011_1111),
+            0xA800..=0xB7FF => params.set_chr_register(C2, value & 0b0011_1111),
+            0xB800..=0xC7FF => params.set_chr_register(C3, value & 0b0011_1111),
             0xC800..=0xD7FF => {
                 if self.irq_load_low {
                     self.irq_counter &= 0xFF00;

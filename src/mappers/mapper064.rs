@@ -19,40 +19,40 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::ROM.switchable(C0)),
-        Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C1)),
-        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::ROM.switchable(C2)),
-        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::ROM.switchable(C3)),
-        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
-        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::ROM.switchable(C0)),
-        Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::ROM.switchable(C6)),
-        Window::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C1)),
-        Window::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
-        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::ROM.switchable(C2)),
-        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::ROM.switchable(C3)),
-        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
-        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C6)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C7)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::ROM.switchable(C2)),
-        Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::ROM.switchable(C3)),
-        Window::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
-        Window::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
-        Window::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::ROM.switchable(C0)),
-        Window::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C1)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::ROM.switchable(C2)),
-        Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::ROM.switchable(C3)),
-        Window::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
-        Window::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
-        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::ROM.switchable(C0)),
-        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::ROM.switchable(C6)),
-        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C1)),
-        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C6)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C7)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -63,14 +63,15 @@ const LAYOUT: Layout = Layout::builder()
 const CPU_CYCLE_MODE_IRQ_PENDING_DELAY: u8 = 1;
 const SCANLINE_MODE_IRQ_PENDING_DELAY: u8 = 4;
 
-const BANK_INDEX_REGISTER_IDS: [Option<BankRegisterId>; 16] =
-    [Some(C0), Some(C1), Some(C2), Some(C3), Some(C4), Some(C5), Some(P0), Some(P1),
-     Some(C6), Some(C7),     None,     None,     None,     None,     None, Some(P2),
+use RegId::{Chr, Prg};
+const BANK_INDEX_REGISTER_IDS: [Option<RegId>; 16] =
+    [Some(Chr(C0)), Some(Chr(C1)), Some(Chr(C2)), Some(Chr(C3)), Some(Chr(C4)), Some(Chr(C5)), Some(Prg(P0)), Some(Prg(P1)),
+     Some(Chr(C6)), Some(Chr(C7)),          None,          None,          None,          None,          None, Some(Prg(P2)),
     ];
 
 // RAMBO-1 (Similar to MMC3)
 pub struct Mapper064 {
-    selected_register_id: BankRegisterId,
+    selected_register_id: RegId,
 
     irq_enabled: bool,
     irq_pending_delay_cycles: u8,
@@ -155,7 +156,7 @@ impl Mapper for Mapper064 {
 impl Mapper064 {
     pub fn new() -> Self {
         Self {
-            selected_register_id: C0,
+            selected_register_id: Chr(C0),
 
             irq_enabled: false,
             irq_pending_delay_cycles: 0,
@@ -179,7 +180,10 @@ impl Mapper064 {
     }
 
     fn set_bank_index(&self, params: &mut MapperParams, value: u8) {
-        params.set_bank_register(self.selected_register_id, value);
+        match self.selected_register_id {
+            Chr(cx) => params.set_chr_register(cx, value),
+            Prg(px) => params.set_bank_register(px, value),
+        }
     }
 
     fn set_name_table_mirroring(params: &mut MapperParams, value: u8) {
@@ -232,4 +236,10 @@ impl Mapper064 {
 enum IrqCounterReloadMode {
     Scanline,
     CpuCycle,
+}
+
+#[derive(Clone, Copy)]
+enum RegId {
+    Chr(ChrBankRegisterId),
+    Prg(BankRegisterId),
 }

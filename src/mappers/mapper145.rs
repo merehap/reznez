@@ -8,7 +8,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(16 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
     ])
     .build();
 
@@ -19,7 +19,7 @@ impl Mapper for Mapper145 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         match cpu_address & 0xE100 {
             0x0000..=0x401F => unreachable!(),
-            0x4100 => params.set_bank_register(C0, splitbits_named!(value, "c.......")),
+            0x4100 => params.set_chr_register(C0, splitbits_named!(value, "c.......")),
             _ => { /* Do nothing. */ }
         }
     }

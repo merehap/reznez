@@ -11,20 +11,21 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::ROM.switchable(C0)),
-        Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C1)),
-        Window::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::ROM.switchable(C2)),
-        Window::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C3)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
     ])
     .build();
 
-const BANK_INDEX_REGISTER_IDS: [Option<BankRegisterId>; 8] =
-    [None, None, Some(C0), Some(C1), Some(C2), Some(C3), Some(P0), Some(P1)];
+use RegId::{Chr, Prg};
+const BANK_INDEX_REGISTER_IDS: [Option<RegId>; 8] =
+    [None, None, Some(Chr(C0)), Some(Chr(C1)), Some(Chr(C2)), Some(Chr(C3)), Some(Prg(P0)), Some(Prg(P1))];
 
 // NAMCOT-3446 
 // Similar to Namcot 108, but with only large CHR windows and more PRG and CHR.
 pub struct Mapper076 {
-    selected_register_id: BankRegisterId,
+    selected_register_id: RegId,
 }
 
 impl Mapper for Mapper076 {
@@ -51,7 +52,7 @@ impl Mapper for Mapper076 {
 impl Mapper076 {
     pub fn new() -> Self {
         Self {
-            selected_register_id: C0,
+            selected_register_id: Chr(C0),
         }
     }
 
@@ -63,6 +64,15 @@ impl Mapper076 {
 
     fn set_bank_index(&mut self, params: &mut MapperParams, value: u8) {
         let bank_index = u16::from(value & 0b0011_1111);
-        params.set_bank_register(self.selected_register_id, bank_index);
+        match self.selected_register_id {
+            Chr(cx) => params.set_chr_register(cx, bank_index),
+            Prg(px) => params.set_bank_register(px, bank_index),
+        }
     }
+}
+
+#[derive(Clone, Copy)]
+enum RegId {
+    Chr(ChrBankRegisterId),
+    Prg(BankRegisterId),
 }

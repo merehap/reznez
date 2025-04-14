@@ -14,11 +14,11 @@ const LAYOUT: Layout = Layout::builder()
     .chr_rom_max_size(128 * KIBIBYTE)
     // NTDEC 0324
     .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
     ])
     // GS-2017
     .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.fixed_index(0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::RAM.fixed_index(0)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -45,7 +45,7 @@ impl Mapper for Mapper061 {
                 let prg_index = combinebits!(fields.p, fields.q, "000ppppq");
 
                 params.set_bank_register(P0, prg_index);
-                params.set_bank_register(C0, fields.c);
+                params.set_chr_register(C0, fields.c);
                 params.set_name_table_mirroring(fields.m);
                 params.set_prg_layout(fields.l);
             }

@@ -14,14 +14,14 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::ROM.switchable(C0)),
-        Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::ROM.switchable(C1)),
-        Window::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C2)),
-        Window::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C3)),
-        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
-        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
-        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C6)),
-        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C6)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C7)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -30,8 +30,8 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 pub struct Vrc2 {
-    low_address_bank_register_ids: BTreeMap<u16, BankRegisterId>,
-    high_address_bank_register_ids: BTreeMap<u16, BankRegisterId>,
+    low_address_bank_register_ids: BTreeMap<u16, ChrBankRegisterId>,
+    high_address_bank_register_ids: BTreeMap<u16, ChrBankRegisterId>,
     chr_bank_low_bit_behavior: BankLowBitBehavior,
 }
 
@@ -67,7 +67,7 @@ impl Mapper for Vrc2 {
                         mask >>= 1;
                     }
 
-                    params.set_bank_register_bits(register_id, bank, mask);
+                    params.set_chr_bank_register_bits(register_id, bank, mask);
                 }
             }
 
@@ -82,7 +82,7 @@ impl Mapper for Vrc2 {
 
 impl Vrc2 {
     pub fn new(
-        bank_registers: &[(u16, u16, BankRegisterId)],
+        bank_registers: &[(u16, u16, ChrBankRegisterId)],
         chr_bank_low_bit_behavior: BankLowBitBehavior,
     ) -> Self {
         // Convert the address-to-register mappings to maps for easy lookup.

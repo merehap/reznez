@@ -5,10 +5,11 @@ pub use splitbits::{splitbits, splitbits_named, combinebits, splitbits_then_comb
 pub use crate::cartridge::cartridge::Cartridge;
 use crate::cpu::dmc_dma::DmcDma;
 use crate::cpu::oam_dma::OamDma;
-pub use crate::memory::bank::bank_index::{BankIndex, BankRegisterId, MetaRegisterId, BankRegisters, ReadWriteStatus};
-pub use crate::memory::bank::bank_index::BankRegisterId::*;
+pub use crate::memory::bank::bank_index::{BankIndex, BankRegisterId, ChrBankRegisterId, MetaRegisterId, BankRegisters, ReadWriteStatus};
+pub use crate::memory::bank::bank_index::BankRegisterId::{P0, P1, P2, P3, P4};
+pub use crate::memory::bank::bank_index::ChrBankRegisterId::*;
 pub use crate::memory::bank::bank_index::MetaRegisterId::*;
-pub use crate::memory::bank::bank::{Bank, ReadWriteStatusRegisterId};
+pub use crate::memory::bank::bank::{Bank, ChrBank, ReadWriteStatusRegisterId};
 pub use crate::memory::bank::bank::ReadWriteStatusRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::PrgMemory;
@@ -18,7 +19,7 @@ use crate::memory::ppu::chr_memory::ChrPageId;
 pub use crate::memory::ppu::ppu_address::PpuAddress;
 pub use crate::memory::read_result::ReadResult;
 pub use crate::memory::ppu::ciram::CiramSide;
-pub use crate::memory::window::Window;
+pub use crate::memory::window::{Window, ChrWindow};
 pub use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 pub use crate::ppu::name_table::name_table_mirroring::{NameTableMirroring, NameTableSource};
 pub use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
@@ -36,7 +37,7 @@ use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
 use crate::ppu::sprite::oam::Oam;
 
 use crate::memory::bank::bank::RomRamModeRegisterId;
-use crate::memory::bank::bank_index::RomRamMode;
+use crate::memory::bank::bank_index::{ChrBankRegisters, RomRamMode};
 
 pub trait Mapper {
     // Should be const, but that's not yet allowed by Rust.
@@ -368,12 +369,7 @@ pub trait Mapper {
 
         let mut result = String::new();
         for window in prg_memory.current_layout().windows() {
-            let bank_string = window.bank_string(
-                &params.bank_registers,
-                Some(prg_memory.bank_configuration()),
-                prg_memory.work_ram_bank_configuration(),
-                None,
-            );
+            let bank_string = window.bank_string(&params.bank_registers, prg_memory.bank_configuration());
             let window_size = window.size().get() / KIBIBYTE as u16;
 
             let left_padding_len;
@@ -478,6 +474,7 @@ pub struct MapperParams {
     pub prg_memory: PrgMemory,
     pub chr_memory: ChrMemory,
     pub bank_registers: BankRegisters,
+    pub chr_bank_registers: ChrBankRegisters,
     // TODO: Consolidate these into ChrMemory?
     pub name_table_mirroring: NameTableMirroring,
     pub name_table_mirrorings: &'static [NameTableMirroring],
@@ -493,17 +490,17 @@ impl MapperParams {
 
     pub fn set_name_table_mirroring(&mut self, mirroring_index: u8) {
         self.name_table_mirroring = self.name_table_mirrorings[usize::from(mirroring_index)];
-        self.chr_memory.set_name_table_mirroring(self.name_table_mirroring, &self.bank_registers);
+        self.chr_memory.set_name_table_mirroring(self.name_table_mirroring, &self.chr_bank_registers);
     }
 
     pub fn set_name_table_quadrant(&mut self, quadrant: NameTableQuadrant, ciram_side: CiramSide) {
         self.name_table_mirroring.set_quadrant(quadrant, ciram_side);
-        self.chr_memory.set_name_table_mirroring(self.name_table_mirroring, &self.bank_registers);
+        self.chr_memory.set_name_table_mirroring(self.name_table_mirroring, &self.chr_bank_registers);
     }
 
     pub fn set_name_table_quadrant_to_source(&mut self, quadrant: NameTableQuadrant, source: NameTableSource) {
         self.name_table_mirroring.set_quadrant_to_source(quadrant, source);
-        self.chr_memory.set_name_table_mirroring(self.name_table_mirroring, &self.bank_registers);
+        self.chr_memory.set_name_table_mirroring(self.name_table_mirroring, &self.chr_bank_registers);
     }
 
     pub fn prg_memory(&self) -> &PrgMemory {
@@ -533,13 +530,13 @@ impl MapperParams {
         } else {
             let read_write_status = self.read_write_statuses[index as usize];
             self.bank_registers.set_read_write_status(id, read_write_status);
-            self.chr_memory.update_page_ids(&self.bank_registers);
+            self.chr_memory.update_page_ids(&self.chr_bank_registers);
         }
     }
 
     pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: RomRamMode) {
         self.bank_registers.set_rom_ram_mode(id, rom_ram_mode);
-        self.chr_memory.update_page_ids(&self.bank_registers);
+        self.chr_memory.update_page_ids(&self.chr_bank_registers);
     }
 
     pub fn chr_memory(&self) -> &ChrMemory {
@@ -564,22 +561,22 @@ impl MapperParams {
 
     pub fn set_chr_rom_outer_bank_index(&mut self, index: u8) {
         self.chr_memory.set_chr_rom_outer_bank_index(index);
-        self.chr_memory.update_page_ids(&self.bank_registers);
+        self.chr_memory.update_page_ids(&self.chr_bank_registers);
     }
 
     pub fn set_bank_register<INDEX: Into<u16>>(&mut self, id: BankRegisterId, value: INDEX) {
         self.bank_registers.set(id, BankIndex::from_u16(value.into()));
-        self.chr_memory.update_page_ids(&self.bank_registers);
+        self.chr_memory.update_page_ids(&self.chr_bank_registers);
     }
 
     pub fn set_bank_register_bits(&mut self, id: BankRegisterId, new_value: u16, mask: u16) {
         self.bank_registers.set_bits(id, new_value, mask);
-        self.chr_memory.update_page_ids(&self.bank_registers);
+        self.chr_memory.update_page_ids(&self.chr_bank_registers);
     }
 
-    pub fn set_meta_register(&mut self, id: MetaRegisterId, value: BankRegisterId) {
-        self.bank_registers.set_meta(id, value);
-        self.chr_memory.update_page_ids(&self.bank_registers);
+    pub fn set_meta_register(&mut self, id: MetaRegisterId, value: ChrBankRegisterId) {
+        self.chr_bank_registers.set_meta_chr(id, value);
+        self.chr_memory.update_page_ids(&self.chr_bank_registers);
     }
 
     pub fn update_bank_register(
@@ -588,16 +585,40 @@ impl MapperParams {
         updater: &dyn Fn(u16) -> u16,
     ) {
         self.bank_registers.update(id, updater);
-        self.chr_memory.update_page_ids(&self.bank_registers);
+        self.chr_memory.update_page_ids(&self.chr_bank_registers);
     }
 
-    pub fn set_bank_register_to_ciram_side(
+    pub fn set_chr_register<INDEX: Into<u16>>(&mut self, id: ChrBankRegisterId, value: INDEX) {
+        self.chr_bank_registers.set(id, BankIndex::from_u16(value.into()));
+        self.chr_memory.update_page_ids(&self.chr_bank_registers);
+    }
+
+    pub fn set_chr_bank_register_bits(&mut self, id: ChrBankRegisterId, new_value: u16, mask: u16) {
+        self.chr_bank_registers.set_bits(id, new_value, mask);
+        self.chr_memory.update_page_ids(&self.chr_bank_registers);
+    }
+
+    pub fn set_chr_meta_register(&mut self, id: MetaRegisterId, value: ChrBankRegisterId) {
+        self.chr_bank_registers.set_meta_chr(id, value);
+        self.chr_memory.update_page_ids(&self.chr_bank_registers);
+    }
+
+    pub fn update_chr_register(
         &mut self,
-        id: BankRegisterId,
+        id: ChrBankRegisterId,
+        updater: &dyn Fn(u16) -> u16,
+    ) {
+        self.chr_bank_registers.update(id, updater);
+        self.chr_memory.update_page_ids(&self.chr_bank_registers);
+    }
+
+    pub fn set_chr_bank_register_to_ciram_side(
+        &mut self,
+        id: ChrBankRegisterId,
         ciram_side: CiramSide,
     ) {
-        self.bank_registers.set_to_ciram_side(id, ciram_side);
-        self.chr_memory.update_page_ids(&self.bank_registers);
+        self.chr_bank_registers.set_to_ciram_side(id, ciram_side);
+        self.chr_memory.update_page_ids(&self.chr_bank_registers);
     }
 
     pub fn irq_pending(&self) -> bool {

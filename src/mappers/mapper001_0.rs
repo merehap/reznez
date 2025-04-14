@@ -12,11 +12,11 @@ const LAYOUT: Layout = Layout::builder()
     .prg_layout(PRG_WINDOWS_FIXED_LAST)
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::RAM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::RAM.switchable(C0)),
     ])
     .chr_layout(&[
-        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::RAM.switchable(C0)),
-        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::RAM.switchable(C1)),
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::RAM.switchable(C0)),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::RAM.switchable(C1)),
     ])
     .initial_name_table_mirroring(NameTableMirroring::ONE_SCREEN_LEFT_BANK)
     .name_table_mirrorings(&[
@@ -100,37 +100,37 @@ impl Mapper001_0 {
         }
     }
 
-    fn set_chr_bank_and_board_specifics(&self, params: &mut MapperParams, chr_id: BankRegisterId, value: u8) {
+    fn set_chr_bank_and_board_specifics(&self, params: &mut MapperParams, chr_id: ChrBankRegisterId, value: u8) {
         match self.board {
             Board::SNROM => {
                 let fields = splitbits!(min=u8, value, "...s...c");
                 params.set_read_write_status(S0, fields.s);
-                params.set_bank_register(chr_id, fields.c);
+                params.set_chr_register(chr_id, fields.c);
             }
             Board::SUROM => {
                 let banks = splitbits!(min=u8, value, "...p...c");
                 params.set_prg_rom_outer_bank_index(banks.p);
-                params.set_bank_register(chr_id, banks.c);
+                params.set_chr_register(chr_id, banks.c);
             }
             Board::SOROM => {
                 let banks = splitbits!(min=u8, value, "...pr..c");
                 params.set_prg_rom_outer_bank_index(banks.p);
                 params.set_bank_register(P0, banks.r);
-                params.set_bank_register(chr_id, banks.c);
+                params.set_chr_register(chr_id, banks.c);
             }
             Board::SXROM => {
                 let banks = splitbits!(min=u8, value, "...prr.c");
                 params.set_prg_rom_outer_bank_index(banks.p);
                 params.set_bank_register(P0, banks.r);
-                params.set_bank_register(chr_id, banks.c);
+                params.set_chr_register(chr_id, banks.c);
             }
             Board::SZROM => {
                 let banks = splitbits!(min=u8, value, "...rcccc");
                 params.set_bank_register(P0, banks.r);
-                params.set_bank_register(chr_id, banks.c);
+                params.set_chr_register(chr_id, banks.c);
             }
             _ => {
-                params.set_bank_register(chr_id, value);
+                params.set_chr_register(chr_id, value);
             }
         }
     }

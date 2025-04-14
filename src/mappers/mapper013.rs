@@ -8,8 +8,8 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(16 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x0FFF, 4 * KIBIBYTE, Bank::RAM.fixed_index(0)),
-        Window::new(0x1000, 0x1FFF, 4 * KIBIBYTE, Bank::RAM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::RAM.fixed_index(0)),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::RAM.switchable(C0)),
     ])
     .build();
 
@@ -21,7 +21,7 @@ impl Mapper for Mapper013 {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
-            0x8000..=0xFFFF => params.set_bank_register(C0, value & 0b11),
+            0x8000..=0xFFFF => params.set_chr_register(C0, value & 0b11),
         }
     }
 

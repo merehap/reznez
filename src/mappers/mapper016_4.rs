@@ -9,14 +9,14 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x03FF, 1 * KIBIBYTE, Bank::ROM.switchable(C0)),
-        Window::new(0x0400, 0x07FF, 1 * KIBIBYTE, Bank::ROM.switchable(C1)),
-        Window::new(0x0800, 0x0BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C2)),
-        Window::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C3)),
-        Window::new(0x1000, 0x13FF, 1 * KIBIBYTE, Bank::ROM.switchable(C4)),
-        Window::new(0x1400, 0x17FF, 1 * KIBIBYTE, Bank::ROM.switchable(C5)),
-        Window::new(0x1800, 0x1BFF, 1 * KIBIBYTE, Bank::ROM.switchable(C6)),
-        Window::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, Bank::ROM.switchable(C7)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C6)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C7)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -39,14 +39,14 @@ impl Mapper for Mapper016_4 {
         match cpu_address & 0xE00F {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
-            0x6000 => params.set_bank_register(C0, value),
-            0x6001 => params.set_bank_register(C1, value),
-            0x6002 => params.set_bank_register(C2, value),
-            0x6003 => params.set_bank_register(C3, value),
-            0x6004 => params.set_bank_register(C4, value),
-            0x6005 => params.set_bank_register(C5, value),
-            0x6006 => params.set_bank_register(C6, value),
-            0x6007 => params.set_bank_register(C7, value),
+            0x6000 => params.set_chr_register(C0, value),
+            0x6001 => params.set_chr_register(C1, value),
+            0x6002 => params.set_chr_register(C2, value),
+            0x6003 => params.set_chr_register(C3, value),
+            0x6004 => params.set_chr_register(C4, value),
+            0x6005 => params.set_chr_register(C5, value),
+            0x6006 => params.set_chr_register(C6, value),
+            0x6007 => params.set_chr_register(C7, value),
             0x6008 => params.set_bank_register(P0, value & 0b1111),
             0x6009 => params.set_name_table_mirroring(value & 0b11),
             0x600A => {

@@ -9,7 +9,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(64 * KIBIBYTE)
     .chr_layout(&[
-        Window::new(0x0000, 0x1FFF, 8 * KIBIBYTE, Bank::ROM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -28,7 +28,7 @@ impl Mapper for Mapper200_1 {
             0x8000..=0xFFFF => {
                 let bank_index = cpu_address & 0x0007;
                 params.set_bank_register(P0, bank_index);
-                params.set_bank_register(C0, bank_index);
+                params.set_chr_register(C0, bank_index);
                 params.set_name_table_mirroring((cpu_address >> 2) as u8 & 1);
             }
         }

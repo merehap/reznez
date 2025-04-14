@@ -136,12 +136,4 @@ impl Page {
     pub fn write(&mut self, index: u16, value: u8) {
         self.raw_page[u32::from(index)] = value;
     }
-
-    pub fn as_raw_slice(&self) -> &[u8] {
-        self.raw_page.as_slice()
-    }
-
-    pub fn as_raw_mut_slice(&mut self) -> &mut [u8] {
-        self.raw_page.as_mut_slice()
-    }
 }

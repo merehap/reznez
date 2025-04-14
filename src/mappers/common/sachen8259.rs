@@ -10,17 +10,17 @@ pub const LAYOUT: Layout = Layout::builder()
     .chr_rom_max_size(512 * KIBIBYTE)
     // Normal layout.
     .chr_layout(&[
-        Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::ROM.switchable(C0)),
-        Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C1)),
-        Window::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::ROM.switchable(C2)),
-        Window::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C3)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
     ])
     // "Simple" layout. C4, C5, and C6 are the same as C0, except for their low bits.
     .chr_layout(&[
-        Window::new(0x0000, 0x07FF, 2 * KIBIBYTE, Bank::ROM.switchable(C0)),
-        Window::new(0x0800, 0x0FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C4)),
-        Window::new(0x1000, 0x17FF, 2 * KIBIBYTE, Bank::ROM.switchable(C5)),
-        Window::new(0x1800, 0x1FFF, 2 * KIBIBYTE, Bank::ROM.switchable(C6)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C6)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -69,7 +69,7 @@ impl Mapper for Sachen8259 {
             0x4101 => {
                 match self.register_value {
                     RegisterValue::ChrSelect(reg_id) => {
-                        self.chr_inner_banks[reg_id.to_raw_chr_id().unwrap() as usize] = value & 0b111;
+                        self.chr_inner_banks[reg_id.to_raw_chr_id() as usize] = value & 0b111;
                         self.update_chr_banks(params);
                     }
                     RegisterValue::ChrOuterBank => {
@@ -135,15 +135,15 @@ impl Sachen8259 {
         }
     }
 
-    fn update_chr_bank(&self, params: &mut MapperParams, cx: BankRegisterId, inner_bank_index: u8, low_bits_index: u8) {
+    fn update_chr_bank(&self, params: &mut MapperParams, cx: ChrBankRegisterId, inner_bank_index: u8, low_bits_index: u8) {
         let bank = (self.chr_inner_banks[inner_bank_index as usize] << self.chr_bank_shift)
             | self.chr_bank_low_bits[low_bits_index as usize];
-        params.set_bank_register(cx, bank);
+        params.set_chr_register(cx, bank);
     }
 }
 
 enum RegisterValue {
-    ChrSelect(BankRegisterId),
+    ChrSelect(ChrBankRegisterId),
     ChrOuterBank,
     PrgBank,
     Nop,

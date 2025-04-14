@@ -1,13 +1,13 @@
-use crate::memory::bank::bank_index::BankRegisterId;
-use crate::memory::window::{ReadWriteStatusInfo, Window};
+use crate::memory::bank::bank_index::ChrBankRegisterId;
+use crate::memory::window::{ReadWriteStatusInfo, ChrWindow};
 
 #[derive(Clone, Copy)]
 pub struct ChrLayout {
-    initial_windows: &'static [Window],
+    initial_windows: &'static [ChrWindow],
 }
 
 impl ChrLayout {
-    pub const fn new(initial_windows: &'static [Window]) -> ChrLayout {
+    pub const fn new(initial_windows: &'static [ChrWindow]) -> ChrLayout {
         assert!(!initial_windows.is_empty(), "No CHR windows specified.");
 
         assert!(initial_windows[0].start() == 0x0000, "The first CHR window must start at 0x0000.");
@@ -28,7 +28,7 @@ impl ChrLayout {
         }
     }
 
-    pub fn windows(&self) -> &[Window] {
+    pub fn windows(&self) -> &[ChrWindow] {
         self.initial_windows
     }
 
@@ -37,7 +37,7 @@ impl ChrLayout {
         self.initial_windows.last().unwrap().end().get()
     }
 
-    pub fn active_register_ids(&self) -> Vec<BankRegisterId> {
+    pub fn active_register_ids(&self) -> Vec<ChrBankRegisterId> {
         self.initial_windows.iter()
             .filter_map(|window| window.register_id())
             .collect()
