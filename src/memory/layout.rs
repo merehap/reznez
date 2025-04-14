@@ -134,7 +134,6 @@ impl Layout {
             }
         }
 
-
         MapperParams {
             prg_memory,
             chr_memory,
@@ -310,7 +309,7 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn override_bank_register(
+    pub const fn override_prg_bank_register(
         &mut self,
         id: BankRegisterId,
         bank_index: i16,
@@ -319,7 +318,16 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn override_meta_register(
+    pub const fn override_chr_bank_register(
+        &mut self,
+        id: BankRegisterId,
+        bank_index: i16,
+    ) -> &mut LayoutBuilder {
+        self.bank_register_overrides.push((id, BankIndex::from_i16(bank_index)));
+        self
+    }
+
+    pub const fn override_chr_meta_register(
         &mut self,
         meta_id: MetaRegisterId,
         id: BankRegisterId,

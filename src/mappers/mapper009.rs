@@ -1,8 +1,8 @@
 use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
-    .override_meta_register(M0, C1)
-    .override_meta_register(M1, C3)
+    .override_chr_meta_register(M0, C1)
+    .override_chr_meta_register(M1, C3)
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
         // TODO: PlayChoice uses this window.

@@ -1,8 +1,8 @@
 use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
-    .override_bank_register(P1, 0b10)
-    .override_bank_register(P2, 0b1110)
+    .override_prg_bank_register(P1, 0b10)
+    .override_prg_bank_register(P2, 0b1110)
     // NROM-256
     .prg_rom_max_size(1024 * KIBIBYTE)
     .prg_layout(&[

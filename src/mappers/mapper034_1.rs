@@ -2,7 +2,7 @@ use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     // TODO: Verify if this is necessary. Might only be used for BxROM.
-    .override_bank_register(C1, -1)
+    .override_chr_bank_register(C1, -1)
     // Oversize definition. The actual cartridge only allows 64KiB.
     .prg_rom_max_size(8192 * KIBIBYTE)
     .prg_layout(&[

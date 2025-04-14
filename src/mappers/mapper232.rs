@@ -2,7 +2,7 @@ use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     // The last bank for any of the mapper 232 PRG "blocks".
-    .override_bank_register(P1, 0b11)
+    .override_prg_bank_register(P1, 0b11)
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
         Window::new(0x6000, 0x7FFF,  8 * KIBIBYTE, Bank::EMPTY),

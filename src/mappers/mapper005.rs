@@ -41,7 +41,7 @@ const LAYOUT: Layout = Layout::builder()
         Window::new(0xE000, 0xFFFF, 8 * KIBIBYTE, Bank::ROM.switchable(P4)),
     ])
     .prg_layout_index(3)
-    .override_bank_register(P4, -1)
+    .override_prg_bank_register(P4, -1)
 
     .chr_rom_max_size(1024 * KIBIBYTE)
     // Normal sprite height layouts
