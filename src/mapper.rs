@@ -5,7 +5,7 @@ pub use splitbits::{splitbits, splitbits_named, combinebits, splitbits_then_comb
 pub use crate::cartridge::cartridge::Cartridge;
 use crate::cpu::dmc_dma::DmcDma;
 use crate::cpu::oam_dma::OamDma;
-pub use crate::memory::bank::bank_index::{BankIndex, PrgBankRegisterId, ChrBankRegisterId, MetaRegisterId, PrgBankRegisters, ReadWriteStatus};
+pub use crate::memory::bank::bank_index::{BankIndex, PrgBankRegisterId, ChrBankRegisterId, MetaRegisterId, ReadWriteStatus};
 pub use crate::memory::bank::bank_index::PrgBankRegisterId::{P0, P1, P2, P3, P4};
 pub use crate::memory::bank::bank_index::ChrBankRegisterId::*;
 pub use crate::memory::bank::bank_index::MetaRegisterId::*;
@@ -242,7 +242,7 @@ pub trait Mapper {
                     value
                 };
 
-                params.prg_memory.write(&params.prg_bank_registers, address, value);
+                params.prg_memory.write(address, value);
                 self.write_to_cartridge_space(params, address.to_raw(), value);
             }
         }
@@ -369,7 +369,7 @@ pub trait Mapper {
 
         let mut result = String::new();
         for window in prg_memory.current_layout().windows() {
-            let bank_string = window.bank_string(&params.prg_bank_registers, prg_memory.bank_configuration());
+            let bank_string = window.bank_string(params.prg_memory().bank_registers(), prg_memory.bank_configuration());
             let window_size = window.size().get() / KIBIBYTE as u16;
 
             let left_padding_len;
@@ -473,7 +473,6 @@ fn address_to_palette_ram_index(address: PpuAddress) -> u32 {
 pub struct MapperParams {
     pub prg_memory: PrgMemory,
     pub chr_memory: ChrMemory,
-    pub prg_bank_registers: PrgBankRegisters,
     pub name_table_mirrorings: &'static [NameTableMirroring],
     pub read_write_statuses: &'static [ReadWriteStatus],
     pub ram_not_present: BTreeSet<ReadWriteStatusRegisterId>,
@@ -510,11 +509,11 @@ impl MapperParams {
     }
 
     pub fn peek_prg(&self, cpu_address: u16) -> ReadResult {
-        self.prg_memory.peek(&self.prg_bank_registers, CpuAddress::new(cpu_address))
+        self.prg_memory.peek(CpuAddress::new(cpu_address))
     }
 
     pub fn write_prg(&mut self, cpu_address: u16, value: u8) {
-        self.prg_memory.write(&self.prg_bank_registers, CpuAddress::new(cpu_address), value);
+        self.prg_memory.write(CpuAddress::new(cpu_address), value);
     }
 
     pub fn set_read_write_status(&mut self, id: ReadWriteStatusRegisterId, index: u8) {
@@ -523,13 +522,13 @@ impl MapperParams {
                 "Ignoring update to RamStatus register {id:?} because RAM isn't present.");
         } else {
             let read_write_status = self.read_write_statuses[index as usize];
-            self.prg_bank_registers.set_read_write_status(id, read_write_status);
+            self.prg_memory.set_read_write_status(id, read_write_status);
             self.chr_memory.set_read_write_status(id, read_write_status);
         }
     }
 
     pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: RomRamMode) {
-        self.prg_bank_registers.set_rom_ram_mode(id, rom_ram_mode);
+        self.prg_memory.set_rom_ram_mode(id, rom_ram_mode);
     }
 
     pub fn chr_memory(&self) -> &ChrMemory {
@@ -557,19 +556,19 @@ impl MapperParams {
     }
 
     pub fn set_prg_register<INDEX: Into<u16>>(&mut self, id: PrgBankRegisterId, value: INDEX) {
-        self.prg_bank_registers.set(id, BankIndex::from_u16(value.into()));
+        self.prg_memory.set_bank_register(id, value.into());
     }
 
     pub fn set_prg_bank_register_bits(&mut self, id: PrgBankRegisterId, new_value: u16, mask: u16) {
-        self.prg_bank_registers.set_bits(id, new_value, mask);
+        self.prg_memory.set_bank_register_bits(id, new_value, mask);
     }
 
-    pub fn update_bank_register(
+    pub fn update_prg_register(
         &mut self,
         id: PrgBankRegisterId,
         updater: &dyn Fn(u16) -> u16,
     ) {
-        self.prg_bank_registers.update(id, updater);
+        self.prg_memory.update_bank_register(id, updater);
     }
 
     pub fn set_chr_register<INDEX: Into<u16>>(&mut self, id: ChrBankRegisterId, value: INDEX) {
@@ -577,11 +576,11 @@ impl MapperParams {
     }
 
     pub fn set_chr_bank_register_bits(&mut self, id: ChrBankRegisterId, new_value: u16, mask: u16) {
-        self.chr_memory.set_chr_bank_register_bits(id, new_value, mask);
+        self.chr_memory.set_bank_register_bits(id, new_value, mask);
     }
 
     pub fn set_chr_meta_register(&mut self, id: MetaRegisterId, value: ChrBankRegisterId) {
-        self.chr_memory.set_chr_meta_register(id, value);
+        self.chr_memory.set_meta_register(id, value);
     }
 
     pub fn update_chr_register(
@@ -589,7 +588,7 @@ impl MapperParams {
         id: ChrBankRegisterId,
         updater: &dyn Fn(u16) -> u16,
     ) {
-        self.chr_memory.update_chr_register(id, updater);
+        self.chr_memory.update_bank_register(id, updater);
     }
 
     pub fn set_chr_bank_register_to_ciram_side(

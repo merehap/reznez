@@ -89,7 +89,7 @@ impl Layout {
             chr_bank_registers.set_meta_chr(meta_id, register_id);
         }
 
-        let prg_memory = PrgMemory::new(
+        let mut prg_memory = PrgMemory::new(
             self.prg_layouts.as_iter().collect(),
             self.prg_layout_index,
             self.prg_bank_size_override,
@@ -98,6 +98,7 @@ impl Layout {
             // TODO: Work RAM and Save RAM should be separate, but are combined here.
             cartridge.prg_ram_size() + cartridge.prg_nvram_size(),
             cartridge.prg_access_override(),
+            prg_bank_registers,
         );
 
         let name_table_mirroring = match self.name_table_mirroring_source {
@@ -124,7 +125,7 @@ impl Layout {
                 match status_info {
                     ReadWriteStatusInfo::Absent | ReadWriteStatusInfo::MapperCustom { .. } => { /* Do nothing. */ }
                     ReadWriteStatusInfo::PossiblyPresent { register_id, status_on_absent } => {
-                        prg_bank_registers.set_read_write_status(register_id, status_on_absent);
+                        prg_memory.set_read_write_status(register_id, status_on_absent);
                         ram_not_present.insert(register_id);
                     }
                 }
@@ -146,7 +147,6 @@ impl Layout {
         MapperParams {
             prg_memory,
             chr_memory,
-            prg_bank_registers,
             name_table_mirrorings: self.name_table_mirrorings,
             read_write_statuses: self.read_write_statuses,
             ram_not_present,

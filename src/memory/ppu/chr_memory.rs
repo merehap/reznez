@@ -371,17 +371,17 @@ impl ChrMemory {
         self.update_page_ids();
     }
 
-    pub fn set_chr_bank_register_bits(&mut self, id: ChrBankRegisterId, new_value: u16, mask: u16) {
+    pub fn set_bank_register_bits(&mut self, id: ChrBankRegisterId, new_value: u16, mask: u16) {
         self.regs.set_bits(id, new_value, mask);
         self.update_page_ids();
     }
 
-    pub fn set_chr_meta_register(&mut self, id: MetaRegisterId, value: ChrBankRegisterId) {
+    pub fn set_meta_register(&mut self, id: MetaRegisterId, value: ChrBankRegisterId) {
         self.regs.set_meta_chr(id, value);
         self.update_page_ids();
     }
 
-    pub fn update_chr_register(
+    pub fn update_bank_register(
         &mut self,
         id: ChrBankRegisterId,
         updater: &dyn Fn(u16) -> u16,
