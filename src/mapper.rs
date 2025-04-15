@@ -15,7 +15,7 @@ pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::PrgMemory;
 pub use crate::memory::layout::Layout;
 pub use crate::memory::ppu::chr_memory::ChrMemory;
-use crate::memory::ppu::chr_memory::ChrPageId;
+use crate::memory::ppu::chr_memory_map::ChrPageId;
 pub use crate::memory::ppu::ppu_address::PpuAddress;
 pub use crate::memory::read_result::ReadResult;
 pub use crate::memory::ppu::ciram::CiramSide;
