@@ -1,6 +1,6 @@
 use std::num::{NonZeroU16, NonZeroU8};
 
-use crate::mapper::{BankIndex, ChrBank, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableSource, ReadWriteStatus, ReadWriteStatusRegisterId};
+use crate::mapper::{BankIndex, ChrBank, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank::ChrBankLocation;
 use crate::memory::bank::bank_index::ChrBankRegisters;
 use crate::memory::ppu::chr_layout::ChrLayout;
@@ -69,7 +69,7 @@ impl ChrMemoryMap {
                 panic!("Only CIRAM is supported so far.");
             };
 
-            page_mappings.push(ChrMapping::Ciram(ciram_side));
+            page_mappings.push(ChrMapping::NameTableSource(NameTableSource::Ciram(ciram_side)));
         }
 
         let mut memory_map = Self {
@@ -111,14 +111,16 @@ impl ChrMemoryMap {
 
     pub fn set_name_table_mirroring(&mut self, regs: &ChrBankRegisters, name_table_mirroring: NameTableMirroring) {
         for (i, &quadrant) in name_table_mirroring.quadrants().iter().enumerate() {
-            let mapping = match quadrant {
-                NameTableSource::Ciram(ciram_side) => ChrMapping::Ciram(ciram_side),
-                NameTableSource::SaveRam(_) => ChrMapping::SaveRam,
-                NameTableSource::ExtendedRam => ChrMapping::ExtendedRam,
-                NameTableSource::FillModeTile => ChrMapping::FillModeTile,
-            };
-            self.page_mappings[8 + i] = mapping;
+            self.page_mappings[8 + i] = ChrMapping::NameTableSource(quadrant);
         }
+
+        self.update_page_ids(regs);
+    }
+
+    pub fn set_name_table_quadrant(
+        &mut self, regs: &ChrBankRegisters, quadrant: NameTableQuadrant, source: NameTableSource) {
+
+        self.page_mappings[8 + quadrant as usize] = ChrMapping::NameTableSource(source);
 
         self.update_page_ids(regs);
     }
@@ -160,10 +162,7 @@ pub enum ChrMapping {
         page_offset: u16,
         page_number_mask: u16,
     },
-    Ciram(CiramSide),
-    SaveRam,
-    ExtendedRam,
-    FillModeTile,
+    NameTableSource(NameTableSource),
 }
 
 impl ChrMapping {
@@ -186,10 +185,12 @@ impl ChrMapping {
                     _ => todo!(),
                 }
             }
-            Self::Ciram(ciram_side) => (ChrPageId::Ciram(*ciram_side), ReadWriteStatus::ReadWrite),
-            Self::SaveRam => (ChrPageId::SaveRam, ReadWriteStatus::ReadWrite),
-            Self::ExtendedRam => (ChrPageId::ExtendedRam, ReadWriteStatus::ReadWrite),
-            Self::FillModeTile => (ChrPageId::FillModeTile, ReadWriteStatus::ReadOnly),
+            Self::NameTableSource(source) => match source {
+                NameTableSource::Ciram(ciram_side) => (ChrPageId::Ciram(*ciram_side), ReadWriteStatus::ReadWrite),
+                NameTableSource::SaveRam(_) => (ChrPageId::SaveRam, ReadWriteStatus::ReadWrite),
+                NameTableSource::ExtendedRam => (ChrPageId::ExtendedRam, ReadWriteStatus::ReadWrite),
+                NameTableSource::FillModeTile => (ChrPageId::FillModeTile, ReadWriteStatus::ReadOnly),
+            }
         }
     }
 }
@@ -342,6 +343,16 @@ impl ChrMemory {
         &self.memory_maps[self.layout_index as usize]
     }
 
+    pub fn name_table_mirroring(&self) -> NameTableMirroring {
+        let quadrants = &self.memory_maps[0].page_mappings[8..12];
+        use ChrMapping::*;
+        match (quadrants[0], quadrants[1], quadrants[2], quadrants[3]) {
+            (NameTableSource(top_left), NameTableSource(top_right), NameTableSource(bottom_left), NameTableSource(bottom_right)) =>
+                NameTableMirroring::new(top_left, top_right, bottom_left, bottom_right),
+            _ => panic!("Unexpected NameTable source."),
+        }
+    }
+
     pub fn bank_registers(&self) -> &ChrBankRegisters {
         &self.regs
     }
@@ -389,8 +400,14 @@ impl ChrMemory {
     }
 
     pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring) {
-        for page_mapping in &mut self.memory_maps {
-            page_mapping.set_name_table_mirroring(&self.regs, name_table_mirroring);
+        for memory_map in &mut self.memory_maps {
+            memory_map.set_name_table_mirroring(&self.regs, name_table_mirroring);
+        }
+    }
+
+    pub fn set_name_table_quadrant(&mut self, quadrant: NameTableQuadrant, source: NameTableSource) {
+        for memory_map in &mut self.memory_maps {
+            memory_map.set_name_table_quadrant(&self.regs, quadrant, source);
         }
     }
 

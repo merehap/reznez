@@ -317,10 +317,10 @@ impl Nes {
                 }
             }
 
-            if latest.name_table_mirroring != mapper_params.name_table_mirroring {
+            if latest.name_table_mirroring != mapper_params.name_table_mirroring() {
                 info!("NameTableMirroring changed to {}. Previously: {}",
-                    mapper_params.name_table_mirroring, latest.name_table_mirroring);
-                latest.name_table_mirroring = mapper_params.name_table_mirroring;
+                    mapper_params.name_table_mirroring(), latest.name_table_mirroring);
+                latest.name_table_mirroring = mapper_params.name_table_mirroring();
             }
 
             let read_write_statuses = mapper_params.prg_bank_registers.read_write_statuses();
@@ -374,7 +374,7 @@ impl LatestValues {
             chr_layout_index: initial_params.chr_memory.layout_index(),
             bank_registers: *initial_params.prg_bank_registers.registers(),
             meta_registers: *initial_params.chr_memory.bank_registers().meta_registers(),
-            name_table_mirroring: initial_params.name_table_mirroring,
+            name_table_mirroring: initial_params.chr_memory().name_table_mirroring(),
             read_write_statuses: *initial_params.prg_bank_registers.read_write_statuses(),
         }
     }

@@ -305,7 +305,7 @@ pub trait Mapper {
         ciram: &'a Ciram,
         quadrant: NameTableQuadrant,
     ) -> &'a [u8; KIBIBYTE as usize] {
-        match params.name_table_mirroring.name_table_source_in_quadrant(quadrant) {
+        match params.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) => ciram.side(side),
             NameTableSource::SaveRam(start_index) => params.chr_memory.save_ram_1kib_page(start_index),
             NameTableSource::ExtendedRam => params.prg_memory.extended_ram().as_raw_slice().try_into().unwrap(),
@@ -333,7 +333,7 @@ pub trait Mapper {
         value: u8,
     ) {
         let (quadrant, index) = address_to_name_table_index(address);
-        match params.name_table_mirroring.name_table_source_in_quadrant(quadrant) {
+        match params.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) =>
                 ciram.side_mut(side)[index as usize] = value,
             NameTableSource::SaveRam(start_index) =>
@@ -474,8 +474,6 @@ pub struct MapperParams {
     pub prg_memory: PrgMemory,
     pub chr_memory: ChrMemory,
     pub prg_bank_registers: PrgBankRegisters,
-    // TODO: Consolidate these into ChrMemory?
-    pub name_table_mirroring: NameTableMirroring,
     pub name_table_mirrorings: &'static [NameTableMirroring],
     pub read_write_statuses: &'static [ReadWriteStatus],
     pub ram_not_present: BTreeSet<ReadWriteStatusRegisterId>,
@@ -484,22 +482,19 @@ pub struct MapperParams {
 
 impl MapperParams {
     pub fn name_table_mirroring(&self) -> NameTableMirroring {
-        self.name_table_mirroring
+        self.chr_memory().name_table_mirroring()
     }
 
     pub fn set_name_table_mirroring(&mut self, mirroring_index: u8) {
-        self.name_table_mirroring = self.name_table_mirrorings[usize::from(mirroring_index)];
-        self.chr_memory.set_name_table_mirroring(self.name_table_mirroring);
+        self.chr_memory.set_name_table_mirroring(self.name_table_mirrorings[usize::from(mirroring_index)]);
     }
 
     pub fn set_name_table_quadrant(&mut self, quadrant: NameTableQuadrant, ciram_side: CiramSide) {
-        self.name_table_mirroring.set_quadrant(quadrant, ciram_side);
-        self.chr_memory.set_name_table_mirroring(self.name_table_mirroring);
+        self.chr_memory.set_name_table_quadrant(quadrant, NameTableSource::Ciram(ciram_side));
     }
 
     pub fn set_name_table_quadrant_to_source(&mut self, quadrant: NameTableQuadrant, source: NameTableSource) {
-        self.name_table_mirroring.set_quadrant_to_source(quadrant, source);
-        self.chr_memory.set_name_table_mirroring(self.name_table_mirroring);
+        self.chr_memory.set_name_table_quadrant(quadrant, source);
     }
 
     pub fn prg_memory(&self) -> &PrgMemory {

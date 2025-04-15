@@ -147,7 +147,6 @@ impl Layout {
             prg_memory,
             chr_memory,
             prg_bank_registers,
-            name_table_mirroring,
             name_table_mirrorings: self.name_table_mirrorings,
             read_write_statuses: self.read_write_statuses,
             ram_not_present,
