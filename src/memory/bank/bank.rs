@@ -7,30 +7,30 @@ use super::bank_index::{ChrBankRegisterId, ChrBankRegisters};
 #[derive(Clone, Copy, Debug)]
 pub enum PrgBank {
     Empty,
-    WorkRam(Location, Option<ReadWriteStatusRegisterId>),
+    WorkRam(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
     // TODO: Add configurable writability?
     SaveRam(u32),
     ExtendedRam(Option<ReadWriteStatusRegisterId>),
-    Rom(Location, Option<ReadWriteStatusRegisterId>),
-    Ram(Location, Option<ReadWriteStatusRegisterId>),
-    RomRam(Location, ReadWriteStatusRegisterId, RomRamModeRegisterId),
+    Rom(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
+    Ram(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
+    RomRam(PrgBankLocation, ReadWriteStatusRegisterId, RomRamModeRegisterId),
     MirrorOf(u16),
 }
 
 impl PrgBank {
     pub const EMPTY: PrgBank = PrgBank::Empty;
-    pub const WORK_RAM: PrgBank = PrgBank::WorkRam(Location::Fixed(BankIndex::from_u8(0)), None);
+    pub const WORK_RAM: PrgBank = PrgBank::WorkRam(PrgBankLocation::Fixed(BankIndex::from_u8(0)), None);
     pub const EXTENDED_RAM: PrgBank = PrgBank::ExtendedRam(None);
-    pub const ROM: PrgBank = PrgBank::Rom(Location::Fixed(BankIndex::from_u8(0)), None);
-    pub const RAM: PrgBank = PrgBank::Ram(Location::Fixed(BankIndex::from_u8(0)), None);
-    pub const ROM_RAM: PrgBank = PrgBank::RomRam(Location::Fixed(BankIndex::from_u8(0)), ReadWriteStatusRegisterId::S0, RomRamModeRegisterId::R0);
+    pub const ROM: PrgBank = PrgBank::Rom(PrgBankLocation::Fixed(BankIndex::from_u8(0)), None);
+    pub const RAM: PrgBank = PrgBank::Ram(PrgBankLocation::Fixed(BankIndex::from_u8(0)), None);
+    pub const ROM_RAM: PrgBank = PrgBank::RomRam(PrgBankLocation::Fixed(BankIndex::from_u8(0)), ReadWriteStatusRegisterId::S0, RomRamModeRegisterId::R0);
 
     pub const fn fixed_index(self, index: i16) -> Self {
-        self.set_location(Location::Fixed(BankIndex::from_i16(index)))
+        self.set_location(PrgBankLocation::Fixed(BankIndex::from_i16(index)))
     }
 
     pub const fn switchable(self, register_id: PrgBankRegisterId) -> Self {
-        self.set_location(Location::Switchable(register_id))
+        self.set_location(PrgBankLocation::Switchable(register_id))
     }
 
     pub const fn mirror_of(window_address: u16) -> Self {
@@ -63,10 +63,10 @@ impl PrgBank {
         matches!(self, PrgBank::WorkRam(..) | PrgBank::Ram(..) | PrgBank::RomRam(..))
     }
 
-    pub fn location(self) -> Result<Location, String> {
+    pub fn location(self) -> Result<PrgBankLocation, String> {
         match self {
             PrgBank::Rom(location, _) | PrgBank::Ram(location, _)  | PrgBank::RomRam(location, _, _) | PrgBank::WorkRam(location, _) => Ok(location),
-            PrgBank::SaveRam(_) => Ok(Location::Fixed(BankIndex::from_u8(0))),
+            PrgBank::SaveRam(_) => Ok(PrgBankLocation::Fixed(BankIndex::from_u8(0))),
             PrgBank::Empty | PrgBank::ExtendedRam(_) | PrgBank::MirrorOf(_) =>
                 Err(format!("Bank type {:?} does not have a bank location.", self)),
         }
@@ -77,6 +77,14 @@ impl PrgBank {
             Some(location.bank_location(registers))
         } else {
             None
+        }
+    }
+
+    pub fn is_rom(self, regs: &PrgBankRegisters) -> bool {
+        match self {
+            PrgBank::Rom(..) => true,
+            PrgBank::RomRam(_, _, mode) => regs.rom_ram_mode(mode) == RomRamMode::Rom,
+            _ => false,
         }
     }
 
@@ -95,7 +103,22 @@ impl PrgBank {
         }
     }
 
-    const fn set_location(self, location: Location) -> Self {
+    pub fn as_rom(self) -> PrgBank {
+        match self {
+            PrgBank::Rom(loc, status) | PrgBank::Ram(loc, status) =>
+                PrgBank::Rom(loc, status),
+            PrgBank::RomRam(loc, status, _) =>
+                PrgBank::Rom(loc, Some(status)),
+            PrgBank::Empty | PrgBank::WorkRam(..) =>
+                PrgBank::Empty,
+            PrgBank::SaveRam(_) =>
+                todo!(),
+            PrgBank::ExtendedRam(_) | PrgBank::MirrorOf(_) =>
+                self,
+        }
+    }
+
+    const fn set_location(self, location: PrgBankLocation) -> Self {
         match self {
             PrgBank::Rom(_, None) => PrgBank::Rom(location, None),
             PrgBank::Ram(_, None) => PrgBank::Ram(location, None),
@@ -110,12 +133,12 @@ impl PrgBank {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum Location {
+pub enum PrgBankLocation {
     Fixed(BankIndex),
     Switchable(PrgBankRegisterId),
 }
 
-impl Location {
+impl PrgBankLocation {
     pub fn bank_location(self, registers: &PrgBankRegisters) -> BankLocation {
         match self {
             Self::Fixed(bank_index) => BankLocation::Index(bank_index),

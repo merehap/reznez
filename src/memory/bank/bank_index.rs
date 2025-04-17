@@ -281,6 +281,11 @@ pub enum ReadWriteStatus {
 }
 
 impl ReadWriteStatus {
+    pub fn is_readable(self) -> bool {
+        // ReadOnlyZeros is excluded since actual memory can't be read.
+        matches!(self, ReadWriteStatus::ReadWrite | ReadWriteStatus::ReadOnly)
+    }
+
     pub fn is_writable(self) -> bool {
         matches!(self, ReadWriteStatus::ReadWrite | ReadWriteStatus::WriteOnly)
     }

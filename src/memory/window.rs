@@ -1,7 +1,7 @@
 use std::fmt;
 use std::num::NonZeroU16;
 
-use crate::memory::bank::bank::{PrgBank, Location};
+use crate::memory::bank::bank::{PrgBank, PrgBankLocation};
 use crate::memory::bank::bank_index::{PrgBankRegisters, PrgBankRegisterId};
 
 use crate::memory::ppu::ciram::CiramSide;
@@ -52,12 +52,12 @@ impl PrgWindow {
     pub fn resolved_bank_index(
         &self,
         registers: &PrgBankRegisters,
-        location: Location,
+        location: PrgBankLocation,
         bank_configuration: BankConfiguration,
     ) -> u16 {
         let stored_bank_index = match location {
-            Location::Fixed(bank_index) => bank_index,
-            Location::Switchable(register_id) => registers.get(register_id).index().unwrap(),
+            PrgBankLocation::Fixed(bank_index) => bank_index,
+            PrgBankLocation::Switchable(register_id) => registers.get(register_id).index().unwrap(),
         };
 
         stored_bank_index.to_u16(bank_configuration, self.size())
@@ -83,17 +83,17 @@ impl PrgWindow {
         self.start <= address && address <= self.end.get()
     }
 
-    pub fn location(self) -> Result<Location, String> {
+    pub fn location(self) -> Result<PrgBankLocation, String> {
         match self.bank {
             PrgBank::Rom(location, _) | PrgBank::Ram(location, _)  | PrgBank::RomRam(location, _, _) | PrgBank::WorkRam(location, _) => Ok(location),
-            PrgBank::SaveRam(_) => Ok(Location::Fixed(BankIndex::from_u8(0))),
+            PrgBank::SaveRam(_) => Ok(PrgBankLocation::Fixed(BankIndex::from_u8(0))),
             PrgBank::Empty | PrgBank::ExtendedRam(_) | PrgBank::MirrorOf(_) =>
                 Err(format!("Bank type {:?} does not have a bank location.", self.bank)),
         }
     }
 
     pub const fn register_id(self) -> Option<PrgBankRegisterId> {
-        if let PrgBank::Rom(Location::Switchable(id), _) | PrgBank::Ram(Location::Switchable(id), _) = self.bank {
+        if let PrgBank::Rom(PrgBankLocation::Switchable(id), _) | PrgBank::Ram(PrgBankLocation::Switchable(id), _) = self.bank {
             Some(id)
         } else {
             None
