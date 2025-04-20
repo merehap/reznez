@@ -114,11 +114,6 @@ impl Cartridge {
             .unwrap_or_else(
                 || panic!("ROM {name} was too short (claimed to have {prg_rom_chunk_count} PRG chunks)."));
 
-        let mut prg_access_override = None;
-        if prg_ram_size == 0 && prg_nvram_size == 0 {
-            prg_access_override = Some(AccessOverride::ForceRom);
-        }
-
         let chr_rom_start = prg_rom_end;
         let mut chr_rom_end = chr_rom_start + CHR_ROM_CHUNK_LENGTH as u32 * chr_rom_chunk_count;
         let mut chr_access_override = None;
@@ -139,7 +134,7 @@ impl Cartridge {
             }
         } else if chr_ram_size > 0 || chr_nvram_size > 0 {
             // It's not yet clear what to do in this case, but this passes M1_P128K_C128K_W8K.
-            warn!("Both CHR ROM and CHR RAM were specified. Disabling writability.");
+            warn!("Both CHR RAM and CHR NVRAM were specified. Disabling writability.");
             chr_access_override = Some(AccessOverride::ForceRom)
         } else {
             // ROM provided but no RAM.
@@ -170,7 +165,7 @@ impl Cartridge {
 
             trainer: None,
 
-            prg_access_override,
+            prg_access_override: None,
             chr_access_override,
             prg_rom: prg_rom.to_raw_memory(),
             prg_ram_size,
@@ -206,6 +201,10 @@ impl Cartridge {
                 info!("Using override submapper for this ROM. Full hash: {data_hash} , PRG hash: {prg_hash}");
                 cartridge.submapper_number = sub_number;
             }
+        }
+
+        if cartridge.prg_ram_size == 0 && cartridge.prg_nvram_size == 0 {
+            cartridge.prg_access_override = Some(AccessOverride::ForceRom);
         }
 
         Ok(cartridge)

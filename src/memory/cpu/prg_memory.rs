@@ -19,6 +19,7 @@ const PRG_SUB_SLOT_COUNT: usize = 64;
 const PAGE_SIZE: u16 = 8 * KIBIBYTE as u16;
 
 pub struct PrgMemoryMap {
+    // 0x6000 through 0xFFFF
     page_mappings: [PrgMapping; PRG_SLOT_COUNT],
     page_ids: [(PrgPageId, ReadWriteStatus); PRG_SLOT_COUNT],
 }
@@ -28,6 +29,7 @@ impl PrgMemoryMap {
         initial_layout: PrgLayout,
         rom_size: u32,
         rom_bank_size: NonZeroU16,
+        ram_size: u32,
         access_override: Option<AccessOverride>,
         regs: &PrgBankRegisters,
     ) -> Self {
@@ -36,7 +38,8 @@ impl PrgMemoryMap {
         assert_eq!(rom_bank_size % PAGE_SIZE, 0);
         let pages_per_bank = rom_bank_size / PAGE_SIZE;
         assert_eq!(rom_size % u32::from(PAGE_SIZE), 0);
-        let page_count: u16 = (rom_size / u32::from(PAGE_SIZE)).try_into().unwrap();
+        let rom_page_count: u16 = (rom_size / u32::from(PAGE_SIZE)).try_into().unwrap();
+        let ram_page_count: u16 = (ram_size / u32::from(PAGE_SIZE)).try_into().unwrap();
 
         let mut page_mappings = Vec::with_capacity(PRG_SLOT_COUNT);
 
@@ -55,8 +58,17 @@ impl PrgMemoryMap {
             let mut page_number_mask = 0b1111_1111_1111_1111;
             if bank.is_rom(regs) {
                 assert_eq!(window.size().get() % rom_bank_size, 0);
+                assert_eq!(window.size().get() % PAGE_SIZE, 0);
                 let pages_per_window = window.size().get() / PAGE_SIZE;
                 page_number_mask &= !(pages_per_window - 1);
+                assert_eq!(rom_page_count & (rom_page_count - 1), 0);
+                page_number_mask &= rom_page_count - 1;
+            } else if bank.is_prg_ram() {
+                assert_eq!(window.size().get(), PAGE_SIZE);
+                let pages_per_window = window.size().get() / PAGE_SIZE;
+                page_number_mask &= !(pages_per_window - 1);
+                assert_eq!(ram_page_count & (ram_page_count - 1), 0);
+                page_number_mask &= ram_page_count - 1;
             } else {
                 assert_eq!(window.size().get(), PAGE_SIZE);
             }
@@ -68,7 +80,7 @@ impl PrgMemoryMap {
                 address += PAGE_SIZE;
                 page_offset += 1;
                 // Mirror high pages to low ones if there isn't enough ROM.
-                page_offset %= page_count;
+                page_offset %= rom_page_count;
             }
         }
 
@@ -85,7 +97,10 @@ impl PrgMemoryMap {
     pub fn index_for_address(&self, address: CpuAddress) -> (PrgIndex, ReadWriteStatus) {
         let address = address.to_raw();
         assert!(matches!(address, 0x4020..=0xFFFF));
-        assert!(matches!(address, 0x6000..=0xFFFF));
+        if !matches!(address, 0x6000..=0xFFFF) {
+            println!("Low PRG address treated as empty memory for now.");
+            return (PrgIndex::None, ReadWriteStatus::Disabled);
+        }
 
         let address = address - 0x6000;
         let mapping_index = address / PAGE_SIZE;
@@ -144,7 +159,7 @@ pub enum PrgMapping {
 impl PrgMapping {
     pub fn page_id(&self, registers: &PrgBankRegisters) -> (PrgPageId, ReadWriteStatus) {
         match self {
-            Self::Banked { bank, pages_per_bank: bank_multiple, page_offset, page_number_mask, .. } => {
+            Self::Banked { bank, pages_per_bank, page_offset, page_number_mask, .. } => {
                 let page_number = || {
                     let location = bank.location().expect("Location to be present in bank.");
                     let bank_index = match location {
@@ -152,15 +167,20 @@ impl PrgMapping {
                         PrgBankLocation::Switchable(register_id) => registers.get(register_id).index().unwrap(),
                     };
 
-                    ((bank_multiple * bank_index.to_raw()) & page_number_mask) + page_offset
+                    ((pages_per_bank * bank_index.to_raw()) & page_number_mask) + page_offset
                 };
 
                 match bank {
-                    PrgBank::Empty => (PrgPageId::Empty, ReadWriteStatus::Disabled),
-                    PrgBank::Rom(_, None) => (PrgPageId::Rom(page_number()), ReadWriteStatus::ReadOnly),
-                    PrgBank::Rom(_, Some(status_register)) => (PrgPageId::Rom(page_number()), registers.read_write_status(*status_register)),
-                    PrgBank::Ram(_, None) => (PrgPageId::Ram(page_number()), ReadWriteStatus::ReadWrite),
-                    PrgBank::Ram(_, Some(status_register)) => (PrgPageId::Ram(page_number()), registers.read_write_status(*status_register)),
+                    PrgBank::Empty =>
+                        (PrgPageId::Empty, ReadWriteStatus::Disabled),
+                    PrgBank::Rom(_, None) =>
+                        (PrgPageId::Rom(page_number()), ReadWriteStatus::ReadOnly),
+                    PrgBank::Rom(_, Some(status_register)) =>
+                        (PrgPageId::Rom(page_number()), registers.read_write_status(*status_register)),
+                    PrgBank::Ram(_, None) | PrgBank::WorkRam(_, None) =>
+                        (PrgPageId::Ram(page_number()), ReadWriteStatus::ReadWrite),
+                    PrgBank::Ram(_, Some(status_register)) | PrgBank::WorkRam(_, Some(status_register)) =>
+                        (PrgPageId::Ram(page_number()), registers.read_write_status(*status_register)),
                     _ => todo!(),
                 }
             }
@@ -244,7 +264,7 @@ impl PrgMemory {
         };
 
         let memory_maps = layouts.iter().map(|initial_layout| PrgMemoryMap::new(
-            *initial_layout, rom.size(), rom_bank_size, access_override, &regs,
+            *initial_layout, rom.size(), rom_bank_size, ram_size,  access_override, &regs,
         )).collect();
 
         PrgMemory {
@@ -257,7 +277,7 @@ impl PrgMemory {
             ram: RawMemory::new(ram_size),
             extended_ram: RawMemoryArray::new(),
             access_override,
-            regs, 
+            regs,
         }
     }
 
@@ -350,9 +370,8 @@ impl PrgMemory {
             ReadResult::full(0)
         } else {
             match prg_index {
-                PrgIndex::Rom(index) if read_write_status.is_readable() => {
-                    ReadResult::full(self.rom[index])
-                }
+                PrgIndex::Rom(index) if read_write_status.is_readable() =>
+                    ReadResult::full(self.rom[index]),
                 PrgIndex::Ram(index) if read_write_status.is_readable() =>
                     ReadResult::full(self.ram[index]),
                 PrgIndex::ExtendedRam(index) if read_write_status.is_readable() =>
@@ -389,14 +408,26 @@ impl PrgMemory {
                 }
             }
         }
+
+        let (prg_index, read_write_status) =
+            self.memory_maps[self.layout_index as usize].index_for_address(address);
+        if read_write_status.is_writable() {
+            match prg_index {
+                PrgIndex::None | PrgIndex::Rom(_) => unreachable!(),
+                PrgIndex::Ram(index) => self.ram[index] = value,
+                PrgIndex::ExtendedRam(index) => self.extended_ram[index] = value,
+            }
+        }
     }
 
     pub fn set_bank_register<INDEX: Into<u16>>(&mut self, id: PrgBankRegisterId, value: INDEX) {
         self.regs.set(id, BankIndex::from_u16(value.into()));
+        self.update_page_ids();
     }
 
     pub fn set_bank_register_bits(&mut self, id: PrgBankRegisterId, new_value: u16, mask: u16) {
         self.regs.set_bits(id, new_value, mask);
+        self.update_page_ids();
     }
 
     pub fn update_bank_register(
@@ -405,6 +436,7 @@ impl PrgMemory {
         updater: &dyn Fn(u16) -> u16,
     ) {
         self.regs.update(id, updater);
+        self.update_page_ids();
     }
 
     pub fn set_read_write_status(&mut self, id: ReadWriteStatusRegisterId, read_write_status: ReadWriteStatus) {
@@ -434,6 +466,12 @@ impl PrgMemory {
 
     pub fn set_prg_rom_outer_bank_index(&mut self, index: u8) {
         self.rom_outer_banks.set_outer_page_index(index);
+    }
+
+    fn update_page_ids(&mut self) {
+        for memory_map in &mut self.memory_maps {
+            memory_map.update_page_ids(&self.regs);
+        }
     }
 
     fn address_to_prg_index(&self, address: CpuAddress) -> PrgMemoryIndex {
