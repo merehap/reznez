@@ -10,7 +10,6 @@ pub enum PrgBank {
     WorkRam(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
     // TODO: Add configurable writability?
     SaveRam(u32),
-    ExtendedRam(Option<ReadWriteStatusRegisterId>),
     Rom(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
     Ram(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
     RomRam(PrgBankLocation, ReadWriteStatusRegisterId, RomRamModeRegisterId),
@@ -20,7 +19,6 @@ pub enum PrgBank {
 impl PrgBank {
     pub const EMPTY: PrgBank = PrgBank::Empty;
     pub const WORK_RAM: PrgBank = PrgBank::WorkRam(PrgBankLocation::Fixed(BankIndex::from_u8(0)), None);
-    pub const EXTENDED_RAM: PrgBank = PrgBank::ExtendedRam(None);
     pub const ROM: PrgBank = PrgBank::Rom(PrgBankLocation::Fixed(BankIndex::from_u8(0)), None);
     pub const RAM: PrgBank = PrgBank::Ram(PrgBankLocation::Fixed(BankIndex::from_u8(0)), None);
     pub const ROM_RAM: PrgBank = PrgBank::RomRam(PrgBankLocation::Fixed(BankIndex::from_u8(0)), ReadWriteStatusRegisterId::S0, RomRamModeRegisterId::R0);
@@ -41,7 +39,6 @@ impl PrgBank {
         match self {
             PrgBank::Rom(location, None) => PrgBank::Rom(location, Some(id)),
             PrgBank::WorkRam(location, None) => PrgBank::WorkRam(location, Some(id)),
-            PrgBank::ExtendedRam(None) => PrgBank::ExtendedRam(Some(id)),
             PrgBank::Ram(location, None) => PrgBank::Ram(location, Some(id)),
             PrgBank::RomRam(location, _, rom_ram) => PrgBank::RomRam(location, id, rom_ram),
             _ => panic!("Cannot provide a status register here."),
@@ -67,7 +64,7 @@ impl PrgBank {
         match self {
             PrgBank::Rom(location, _) | PrgBank::Ram(location, _)  | PrgBank::RomRam(location, _, _) | PrgBank::WorkRam(location, _) => Ok(location),
             PrgBank::SaveRam(_) => Ok(PrgBankLocation::Fixed(BankIndex::from_u8(0))),
-            PrgBank::Empty | PrgBank::ExtendedRam(_) | PrgBank::MirrorOf(_) =>
+            PrgBank::Empty | PrgBank::MirrorOf(_) =>
                 Err(format!("Bank type {:?} does not have a bank location.", self)),
         }
     }
@@ -94,10 +91,10 @@ impl PrgBank {
             PrgBank::Rom(..) => false,
             PrgBank::MirrorOf(_) => todo!("Writability of MirrorOf"),
             // RAM with no status register is always writable.
-            PrgBank::Ram(_, None) | PrgBank::WorkRam(_, None) | PrgBank::ExtendedRam(None) => true,
+            PrgBank::Ram(_, None) | PrgBank::WorkRam(_, None) => true,
             PrgBank::RomRam(_, status, rom_ram_mode) =>
                 registers.rom_ram_mode(rom_ram_mode) == RomRamMode::Ram && registers.read_write_status(status) == ReadWriteStatus::ReadWrite,
-            PrgBank::Ram(_, Some(status_register_id)) | PrgBank::WorkRam(_, Some(status_register_id)) | PrgBank::ExtendedRam(Some(status_register_id)) =>
+            PrgBank::Ram(_, Some(status_register_id)) | PrgBank::WorkRam(_, Some(status_register_id)) =>
                 registers.read_write_status(status_register_id) == ReadWriteStatus::ReadWrite,
             PrgBank::SaveRam(..) => true,
         }
@@ -113,7 +110,7 @@ impl PrgBank {
                 PrgBank::Empty,
             PrgBank::SaveRam(_) =>
                 todo!(),
-            PrgBank::ExtendedRam(_) | PrgBank::MirrorOf(_) =>
+            PrgBank::MirrorOf(_) =>
                 self,
         }
     }

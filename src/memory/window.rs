@@ -42,7 +42,6 @@ impl PrgWindow {
             // TODO: Add page number when there is more than one Work RAM page.
             PrgBank::WorkRam(_, _) => "W".into(),
             PrgBank::SaveRam(..) => "S".into(),
-            PrgBank::ExtendedRam(_) => "X".into(),
             PrgBank::Rom(location, _) | PrgBank::Ram(location, _) | PrgBank::RomRam(location, _, _) =>
                 self.resolved_bank_index(registers, location, rom_bank_configuration).to_string(),
             PrgBank::MirrorOf(_) => "M".into(),
@@ -87,7 +86,7 @@ impl PrgWindow {
         match self.bank {
             PrgBank::Rom(location, _) | PrgBank::Ram(location, _)  | PrgBank::RomRam(location, _, _) | PrgBank::WorkRam(location, _) => Ok(location),
             PrgBank::SaveRam(_) => Ok(PrgBankLocation::Fixed(BankIndex::from_u8(0))),
-            PrgBank::Empty | PrgBank::ExtendedRam(_) | PrgBank::MirrorOf(_) =>
+            PrgBank::Empty | PrgBank::MirrorOf(_) =>
                 Err(format!("Bank type {:?} does not have a bank location.", self.bank)),
         }
     }
@@ -108,9 +107,7 @@ impl PrgWindow {
             // TODO: SaveRam will probably need to support status registers.
             PrgBank::SaveRam(..) =>
                 ReadWriteStatusInfo::Absent,
-            PrgBank::ExtendedRam(Some(register_id)) =>
-                ReadWriteStatusInfo::MapperCustom { register_id },
-            PrgBank::Empty | PrgBank::Rom(..) | PrgBank::MirrorOf(..) | PrgBank::Ram(..) | PrgBank::ExtendedRam(..) | PrgBank::WorkRam(..) =>
+            PrgBank::Empty | PrgBank::Rom(..) | PrgBank::MirrorOf(..) | PrgBank::Ram(..) | PrgBank::WorkRam(..) =>
                 ReadWriteStatusInfo::Absent,
         }
     }

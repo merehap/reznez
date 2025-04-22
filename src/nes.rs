@@ -281,7 +281,7 @@ impl Nes {
                 latest.chr_layout_index = chr_memory.layout_index();
             }
 
-            let prg_registers = mapper_params.chr_memory().bank_registers().registers();
+            let prg_registers = mapper_params.prg_memory().bank_registers().registers();
             if &latest.prg_registers != prg_registers {
                 for (i, latest_bank_location) in latest.prg_registers.iter_mut().enumerate() {
                     if *latest_bank_location != prg_registers[i] {
@@ -411,8 +411,8 @@ impl LatestValues {
             prg_layout_index: initial_params.prg_memory.layout_index(),
             chr_layout_index: initial_params.chr_memory.layout_index(),
             prg_registers: *initial_params.prg_memory().bank_registers().registers(),
-            chr_registers: *initial_params.prg_memory().bank_registers().registers(),
-            meta_registers: *initial_params.chr_memory.bank_registers().meta_registers(),
+            chr_registers: *initial_params.chr_memory().bank_registers().registers(),
+            meta_registers: *initial_params.chr_memory().bank_registers().meta_registers(),
             name_table_mirroring: initial_params.chr_memory().name_table_mirroring(),
             prg_read_write_statuses: *initial_params.prg_memory().bank_registers().read_write_statuses(),
             chr_read_write_statuses: *initial_params.chr_memory().bank_registers().read_write_statuses(),

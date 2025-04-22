@@ -3,6 +3,7 @@ use crate::memory::bank::bank::RomRamModeRegisterId::*;
 use crate::memory::bank::bank_index::RomRamMode;
 use crate::mapper::*;
 use crate::mappers::mmc5::frame_state::FrameState;
+use crate::memory::raw_memory::RawMemoryArray;
 use crate::ppu::name_table::name_table;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
@@ -12,20 +13,17 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(1024 * KIBIBYTE)
     // Mode 0
     .prg_layout(&[
-        PrgWindow::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, PrgBank::EXTENDED_RAM.status_register(S0)),
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
         PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
     ])
     // Mode 1
     .prg_layout(&[
-        PrgWindow::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, PrgBank::EXTENDED_RAM.status_register(S0)),
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
         PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P2).status_register(S1).rom_ram_register(R1)),
         PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
     ])
     // Mode 2
     .prg_layout(&[
-        PrgWindow::new(0x5C00, 0x5FFF,  1 * KIBIBYTE, PrgBank::EXTENDED_RAM.status_register(S0)),
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
         PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P2).status_register(S1).rom_ram_register(R1)),
         PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P3).status_register(S1).rom_ram_register(R2)),
@@ -33,7 +31,6 @@ const LAYOUT: Layout = Layout::builder()
     ])
     // Mode 3
     .prg_layout(&[
-        PrgWindow::new(0x5C00, 0x5FFF, 1 * KIBIBYTE, PrgBank::EXTENDED_RAM.status_register(S0)),
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P1).status_register(S1).rom_ram_register(R0)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P2).status_register(S1).rom_ram_register(R1)),
@@ -144,6 +141,8 @@ pub struct Mapper005 {
 
     irq_enabled: bool,
     frame_state: FrameState,
+
+    extended_ram: RawMemoryArray<KIBIBYTE>,
 }
 
 impl Mapper for Mapper005 {
@@ -154,7 +153,9 @@ impl Mapper for Mapper005 {
             0x5205 => ReadResult::full((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
             0x5206 => ReadResult::full(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
             0x4020..=0x5BFF => ReadResult::OPEN_BUS,
-            0x5C00..=0xFFFF => params.peek_prg(cpu_addr),
+            // TODO: ReadWriteStatus
+            0x5C00..=0x5FFF => ReadResult::full(self.extended_ram[u32::from(cpu_addr - 0x5C00)]),
+            0x6000..=0xFFFF => params.peek_prg(cpu_addr),
         }
     }
 
@@ -275,7 +276,10 @@ impl Mapper for Mapper005 {
             0x5204 => self.enable_irq(params, value),
             0x5205 => self.multiplicand = value,
             0x5206 => self.multiplier = value,
-            0x5207..=0xFFFF => { /* Do nothing. */ }
+            0x5207..=0x5BFF => { /* Do nothing. */ }
+            // TODO: ReadWriteStatus
+            0x5C00..=0x5FFF => self.extended_ram[u32::from(cpu_address - 0x5C00)] = value,
+            0x6000..=0xFFFF => { /* Do nothing. */ }
         }
     }
 
@@ -307,6 +311,8 @@ impl Mapper005 {
 
             irq_enabled: false,
             frame_state: FrameState::new(),
+
+            extended_ram: RawMemoryArray::new(),
         }
     }
 
@@ -374,7 +380,6 @@ impl Mapper005 {
         mode_reg_id: Option<RomRamModeRegisterId>,
         value: u8,
     ) {
-
         let (is_rom_mode, prg_bank) = splitbits_named!(value, "mppppppp");
         params.set_prg_register(id, prg_bank);
         if let Some(mode_reg_id) = mode_reg_id {
