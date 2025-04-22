@@ -36,7 +36,7 @@ impl PrgMemoryMap {
 
         let rom_bank_size = rom_bank_size.get();
         assert_eq!(rom_bank_size % PAGE_SIZE, 0);
-        let pages_per_bank = rom_bank_size / PAGE_SIZE;
+        let rom_pages_per_bank = rom_bank_size / PAGE_SIZE;
         assert_eq!(rom_size % u32::from(PAGE_SIZE), 0);
         let rom_page_count: u16 = (rom_size / u32::from(PAGE_SIZE)).try_into().unwrap();
         let ram_page_count: u16 = (ram_size / u32::from(PAGE_SIZE)).try_into().unwrap();
@@ -70,14 +70,12 @@ impl PrgMemoryMap {
             rom_page_number_mask &= !(rom_pages_per_window - 1);
             rom_page_number_mask &= rom_page_count - 1;
 
-            let ram_pages_per_window = window.size().get() / PAGE_SIZE;
             let mut ram_page_number_mask = 0b1111_1111_1111_1111;
-            ram_page_number_mask &= !(ram_pages_per_window - 1);
             ram_page_number_mask &= ram_page_count - 1;
 
             let mut page_offset = 0;
             while window.is_in_bounds(address) {
-                let mapping = PrgMapping::Banked { bank, pages_per_bank, rom_page_number_mask, ram_page_number_mask, page_offset };
+                let mapping = PrgMapping::Banked { bank, rom_pages_per_bank, rom_page_number_mask, ram_page_number_mask, page_offset };
                 page_mappings.push(mapping);
                 address += PAGE_SIZE;
                 page_offset += 1;
@@ -129,6 +127,7 @@ impl PrgMemoryMap {
     pub fn update_page_ids(&mut self, regs: &PrgBankRegisters) {
         for i in 0..PRG_SLOT_COUNT {
             self.page_ids[i] = self.page_mappings[i].page_id(regs);
+            //println!("Page {i}: {:?}", self.page_ids[i]);
         }
     }
 
@@ -153,7 +152,7 @@ pub enum PrgIndex {
 pub enum PrgMapping {
     Banked {
         bank: PrgBank,
-        pages_per_bank: u16,
+        rom_pages_per_bank: u16,
         page_offset: u16,
         rom_page_number_mask: u16,
         ram_page_number_mask: u16,
@@ -163,7 +162,7 @@ pub enum PrgMapping {
 impl PrgMapping {
     pub fn page_id(&self, registers: &PrgBankRegisters) -> (PrgPageId, ReadWriteStatus) {
         match self {
-            Self::Banked { bank, pages_per_bank, page_offset, rom_page_number_mask, ram_page_number_mask, .. } => {
+            Self::Banked { bank, rom_pages_per_bank, page_offset, rom_page_number_mask, ram_page_number_mask, .. } => {
                 let page_number = || {
                     let location = bank.location().expect("Location to be present in bank.");
                     let bank_index = match location {
@@ -172,9 +171,9 @@ impl PrgMapping {
                     };
 
                     if bank.is_rom(registers) {
-                        ((pages_per_bank * bank_index.to_raw()) & rom_page_number_mask) + page_offset
+                        ((rom_pages_per_bank * bank_index.to_raw()) & rom_page_number_mask) + page_offset
                     } else {
-                        ((pages_per_bank * bank_index.to_raw()) & ram_page_number_mask) + page_offset
+                        (bank_index.to_raw() & ram_page_number_mask) + page_offset
                     }
                 };
 
@@ -217,7 +216,8 @@ pub struct PrgMemory {
     layout_index: u8,
     rom_outer_banks: OuterPageTable,
     work_ram: Option<OuterPage>,
-    rom: RawMemory,
+    rom: Vec<RawMemory>,
+    rom_outer_bank_index: u8,
     ram: RawMemory,
     extended_ram: RawMemoryArray<KIBIBYTE>,
     access_override: Option<AccessOverride>,
@@ -276,8 +276,9 @@ impl PrgMemory {
             None
         };
 
+        let rom_outer_bank_size = rom.size() / rom_outer_bank_count.get() as u32;
         let memory_maps = layouts.iter().map(|initial_layout| PrgMemoryMap::new(
-            *initial_layout, rom.size(), rom_bank_size, ram_size,  access_override, &regs,
+            *initial_layout, rom_outer_bank_size, rom_bank_size, ram_size, access_override, &regs,
         )).collect();
 
         PrgMemory {
@@ -286,7 +287,8 @@ impl PrgMemory {
             layout_index,
             rom_outer_banks,
             work_ram,
-            rom,
+            rom: rom.split_n(rom_outer_bank_count),
+            rom_outer_bank_index: 0,
             ram: RawMemory::new(ram_size),
             extended_ram: RawMemoryArray::new(),
             access_override,
@@ -374,7 +376,7 @@ impl PrgMemory {
         } else {
             match prg_index {
                 PrgIndex::Rom(index) if read_write_status.is_readable() =>
-                    ReadResult::full(self.rom[index]),
+                    ReadResult::full(self.rom[self.rom_outer_bank_index as usize][index]),
                 PrgIndex::Ram(index) if read_write_status.is_readable() =>
                     ReadResult::full(self.ram[index]),
                 PrgIndex::None | PrgIndex::Rom(_) | PrgIndex::Ram(_) =>
@@ -462,6 +464,7 @@ impl PrgMemory {
 
     pub fn set_prg_rom_outer_bank_index(&mut self, index: u8) {
         self.rom_outer_banks.set_outer_page_index(index);
+        self.rom_outer_bank_index = index;
     }
 
     fn update_page_ids(&mut self) {
