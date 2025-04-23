@@ -72,7 +72,7 @@ impl BankConfiguration {
 
 #[derive(Debug)]
 pub struct PrgBankRegisters {
-    registers: [BankLocation; 18],
+    registers: [BankLocation; 5],
     read_write_statuses: [ReadWriteStatus; 15],
     rom_ram_modes: [RomRamMode; 3],
 }
@@ -80,13 +80,13 @@ pub struct PrgBankRegisters {
 impl PrgBankRegisters {
     pub fn new() -> Self {
         Self {
-            registers: [BankLocation::Index(BankIndex(0)); 18],
+            registers: [BankLocation::Index(BankIndex(0)); 5],
             read_write_statuses: [ReadWriteStatus::ReadWrite; 15],
             rom_ram_modes: [RomRamMode::Ram; 3],
         }
     }
 
-    pub fn registers(&self) -> &[BankLocation; 18] {
+    pub fn registers(&self) -> &[BankLocation; 5] {
         &self.registers
     }
 

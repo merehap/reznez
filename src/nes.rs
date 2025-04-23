@@ -309,7 +309,7 @@ impl Nes {
             if &latest.chr_registers != chr_registers {
                 for (i, latest_bank_location) in latest.prg_registers.iter_mut().enumerate() {
                     if *latest_bank_location != chr_registers[i] {
-                        let id: PrgBankRegisterId = FromPrimitive::from_usize(i).unwrap();
+                        let id: ChrBankRegisterId = FromPrimitive::from_usize(i).unwrap();
                         match (chr_registers[i], *latest_bank_location) {
                             (BankLocation::Index(curr), BankLocation::Index(prev)) =>
                                 info!("BankRegister {id:?} changed to {}. Previously: {}",
@@ -393,7 +393,7 @@ struct LatestValues {
 
     prg_layout_index: u8,
     chr_layout_index: u8,
-    prg_registers: [BankLocation; 18],
+    prg_registers: [BankLocation; 5],
     chr_registers: [BankLocation; 18],
     meta_registers: [ChrBankRegisterId; 2],
     name_table_mirroring: NameTableMirroring,
