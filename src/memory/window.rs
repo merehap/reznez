@@ -1,17 +1,12 @@
-use std::fmt;
 use std::num::NonZeroU16;
 
 use crate::memory::bank::bank::{PrgBank, PrgBankLocation};
 use crate::memory::bank::bank_index::{PrgBankRegisters, PrgBankRegisterId};
 
-use crate::memory::ppu::ciram::CiramSide;
-
 use crate::mapper::{BankIndex, ReadWriteStatus, ReadWriteStatusRegisterId};
-use crate::memory::bank::bank_index::{BankConfiguration, BankLocation};
-use crate::memory::ppu::chr_memory::AccessOverride;
 
 use super::bank::bank::{ChrBank, ChrBankLocation};
-use super::bank::bank_index::{ChrBankRegisterId, ChrBankRegisters};
+use super::bank::bank_index::ChrBankRegisterId;
 
 // A Window is a range within addressable memory.
 // If the specified bank cannot fill the window, adjacent banks will be included too.
@@ -34,32 +29,6 @@ impl PrgWindow {
 
         let end = NonZeroU16::new(end).expect("Window end index to not be zero.");
         PrgWindow { start, end, size, bank }
-    }
-
-    pub fn bank_string(&self, registers: &PrgBankRegisters, rom_bank_configuration: BankConfiguration) -> String {
-        match self.bank {
-            PrgBank::Empty => "E".into(),
-            // TODO: Add page number when there is more than one Work RAM page.
-            PrgBank::WorkRam(_, _) => "W".into(),
-            PrgBank::SaveRam(..) => "S".into(),
-            PrgBank::Rom(location, _) | PrgBank::Ram(location, _) | PrgBank::RomRam(location, _, _) =>
-                self.resolved_bank_index(registers, location, rom_bank_configuration).to_string(),
-            PrgBank::MirrorOf(_) => "M".into(),
-        }
-    }
-
-    pub fn resolved_bank_index(
-        &self,
-        registers: &PrgBankRegisters,
-        location: PrgBankLocation,
-        bank_configuration: BankConfiguration,
-    ) -> u16 {
-        let stored_bank_index = match location {
-            PrgBankLocation::Fixed(bank_index) => bank_index,
-            PrgBankLocation::Switchable(register_id) => registers.get(register_id).index().unwrap(),
-        };
-
-        stored_bank_index.to_u16(bank_configuration, self.size())
     }
 
     pub const fn start(self) -> u16 {
@@ -125,24 +94,6 @@ impl PrgWindow {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum ChrLocation {
-    RomBankIndex(u16),
-    RamBankIndex(u16),
-    Ciram(CiramSide),
-}
-
-impl fmt::Display for ChrLocation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ChrLocation::RomBankIndex(index) => write!(f, "{index}"),
-            ChrLocation::RamBankIndex(index) => write!(f, "W{index}"),
-            ChrLocation::Ciram(CiramSide::Left) => write!(f, "LNT"),
-            ChrLocation::Ciram(CiramSide::Right) => write!(f, "RNT"),
-        }
-    }
-}
-
 pub enum ReadWriteStatusInfo {
     Absent,
     PossiblyPresent { register_id: ReadWriteStatusRegisterId, status_on_absent: ReadWriteStatus },
@@ -168,74 +119,6 @@ impl ChrWindow {
 
         let end = NonZeroU16::new(end).expect("Window end index to not be zero.");
         Self { start, end, size, bank }
-    }
-
-    pub fn bank_string(
-        &self,
-        registers: &ChrBankRegisters,
-        rom_bank_configuration: Option<BankConfiguration>,
-        ram_bank_configuration: Option<BankConfiguration>,
-        access_override: Option<AccessOverride>,
-    ) -> String {
-        match self.bank {
-            ChrBank::SaveRam(..) => "S".into(),
-            ChrBank::Rom(location, _) | ChrBank::Ram(location, _) =>
-                self.resolved_bank_location(registers, location, rom_bank_configuration, ram_bank_configuration, access_override).to_string(),
-        }
-    }
-
-    pub fn resolved_bank_index(
-        &self,
-        registers: &ChrBankRegisters,
-        location: ChrBankLocation,
-        bank_configuration: BankConfiguration,
-    ) -> u16 {
-        let stored_bank_index = match location {
-            ChrBankLocation::Fixed(bank_index) => bank_index,
-            ChrBankLocation::Switchable(register_id) => registers.get(register_id).index().unwrap(),
-            ChrBankLocation::MetaSwitchable(meta_id) => registers.get_from_meta(meta_id).index().unwrap(),
-        };
-
-        stored_bank_index.to_u16(bank_configuration, self.size())
-    }
-
-    pub fn resolved_bank_location(
-        &self,
-        registers: &ChrBankRegisters,
-        location: ChrBankLocation,
-        chr_rom_bank_configuration: Option<BankConfiguration>,
-        chr_ram_bank_configuration: Option<BankConfiguration>,
-        access_override: Option<AccessOverride>,
-    ) -> ChrLocation {
-        let bank_location: BankLocation = match location {
-            ChrBankLocation::Fixed(bank_index) => BankLocation::Index(bank_index),
-            ChrBankLocation::Switchable(register_id) => registers.get(register_id),
-            ChrBankLocation::MetaSwitchable(meta_id) => registers.get_from_meta(meta_id),
-        };
-
-        let is_ram = match access_override {
-            None => match self.bank {
-                ChrBank::Rom(..) => false,
-                ChrBank::Ram(..) | ChrBank::SaveRam(..) => true,
-            }
-            Some(AccessOverride::ForceRom) => false,
-            Some(AccessOverride::ForceRam) => true,
-        };
-
-        match bank_location {
-            BankLocation::Index(index) => {
-                if is_ram {
-                    let raw_bank_index = index.to_u16(chr_ram_bank_configuration.unwrap(), self.size());
-                    ChrLocation::RamBankIndex(raw_bank_index)
-                } else {
-                    let raw_bank_index = index.to_u16(chr_rom_bank_configuration.unwrap(), self.size());
-                    ChrLocation::RomBankIndex(raw_bank_index)
-                }
-            }
-            BankLocation::Ciram(ciram_side) => {
-                ChrLocation::Ciram(ciram_side)
-            }
-        }
     }
 
     pub const fn start(self) -> u16 {

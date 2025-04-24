@@ -1,5 +1,3 @@
-use std::num::NonZeroU16;
-
 use num_derive::FromPrimitive;
 
 use crate::memory::bank::bank::ReadWriteStatusRegisterId;
@@ -23,17 +21,6 @@ impl BankIndex {
         BankIndex(value as u16)
     }
 
-    pub fn to_u16(self, bank_configuration: BankConfiguration, window_size: NonZeroU16) -> u16 {
-        let mut resolved_bank_index = self.0 % bank_configuration.bank_count;
-        if bank_configuration.align_large_layouts {
-            let window_multiple = window_size.get() / bank_configuration.bank_size;
-            // Clear low bits for large windows.
-            resolved_bank_index &= !(window_multiple - 1);
-        }
-
-        resolved_bank_index
-    }
-
     pub fn to_raw(self) -> u16 {
         self.0
     }
@@ -42,31 +29,6 @@ impl BankIndex {
 impl From<u8> for BankIndex {
     fn from(value: u8) -> Self {
         BankIndex(value.into())
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct BankConfiguration {
-    bank_size: NonZeroU16,
-    bank_count: NonZeroU16,
-    align_large_layouts: bool,
-}
-
-impl BankConfiguration {
-    pub fn new(bank_size: u16, bank_count: u16, align_large_layouts: bool) -> Self {
-        Self {
-            bank_size: bank_size.try_into().expect("Bank size must not be 0"),
-            bank_count: bank_count.try_into().expect("Bank count must not be 0"),
-            align_large_layouts,
-        }
-    }
-
-    pub fn bank_size(self) -> u16 {
-        self.bank_size.get()
-    }
-
-    pub fn bank_count(self) -> u16 {
-        self.bank_count.get()
     }
 }
 

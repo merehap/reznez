@@ -13,6 +13,7 @@ pub use crate::memory::bank::bank::{PrgBank, ChrBank, ReadWriteStatusRegisterId}
 pub use crate::memory::bank::bank::ReadWriteStatusRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::PrgMemory;
+use crate::memory::cpu::prg_memory::{PrgPageId, PrgPageIdSlot};
 pub use crate::memory::layout::Layout;
 pub use crate::memory::ppu::chr_memory::ChrMemory;
 use crate::memory::ppu::chr_memory_map::ChrPageId;
@@ -368,9 +369,20 @@ pub trait Mapper {
         let prg_memory = &params.prg_memory();
 
         let mut result = String::new();
-        for window in prg_memory.current_layout().windows() {
-            let bank_string = window.bank_string(params.prg_memory().bank_registers(), prg_memory.bank_configuration());
-            let window_size = window.size().get() / KIBIBYTE as u16;
+        for prg_page_id_slot in prg_memory.current_memory_map().page_id_slots() {
+            let bank_string = match prg_page_id_slot {
+                PrgPageIdSlot::Normal(page_id, _) => {
+                    match page_id {
+                        PrgPageId::Empty => "E".to_string(),
+                        // FIXME: This should be bank number, not page number.
+                        PrgPageId::Rom(page_number) => page_number.to_string(),
+                        PrgPageId::Ram(page_number) => format!("W{page_number}"),
+                    }
+                }
+                PrgPageIdSlot::Multi(_) => "M".to_string(),
+            };
+
+            let window_size = 8;
 
             let left_padding_len;
             let right_padding_len;

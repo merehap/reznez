@@ -1,11 +1,8 @@
 use std::num::{NonZeroU8, NonZeroU16};
 
-use log::warn;
-
 use crate::mapper::{BankIndex, PrgBankRegisterId, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank::{PrgBank, PrgBankLocation, RomRamModeRegisterId};
-use crate::memory::bank::bank_index::{BankConfiguration, PrgBankRegisters, ReadWriteStatus, RomRamMode};
-use crate::memory::bank::page::{OuterPageTable, OuterPage};
+use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, RomRamMode};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::ppu::chr_memory::AccessOverride;
@@ -187,6 +184,9 @@ impl PrgMemoryMap {
         &self.page_mappings
     }
     */
+    pub fn page_id_slots(&self) -> &[PrgPageIdSlot; PRG_SLOT_COUNT] {
+        &self.page_ids
+    }
 
     pub fn update_page_ids(&mut self, regs: &PrgBankRegisters) {
         for i in 0..PRG_SLOT_COUNT {
@@ -293,8 +293,6 @@ pub struct PrgMemory {
     layouts: Vec<PrgLayout>,
     memory_maps: Vec<PrgMemoryMap>,
     layout_index: u8,
-    rom_outer_banks: OuterPageTable,
-    work_ram: Option<OuterPage>,
     rom: Vec<RawMemory>,
     rom_outer_bank_index: u8,
     ram: RawMemory,
@@ -332,29 +330,6 @@ impl PrgMemory {
         }
 
         let rom_bank_size = rom_page_size.expect("at least one ROM or RAM window");
-
-        let rom_outer_banks = OuterPageTable::new(rom.clone(), rom_outer_bank_count, rom_bank_size, true)
-            .expect("PRG ROM must not be empty.");
-
-        let work_ram_windows: Vec<_> = layouts[layout_index as usize].windows().iter()
-            .filter(|window| window.bank().is_prg_ram())
-            .collect();
-        let work_ram = if !work_ram_windows.is_empty() && ram_size > 0 {
-            let mut work_ram_page_size = NonZeroU16::MAX;
-            for window in work_ram_windows {
-                if window.size() < work_ram_page_size {
-                    work_ram_page_size = window.size();
-                }
-            }
-
-            OuterPage::new(RawMemory::new(ram_size), work_ram_page_size, true)
-        } else if ram_size > 0 {
-            warn!("Work RAM specified in ROM file, but not in layout.");
-            None
-        } else {
-            None
-        };
-
         let rom_outer_bank_size = rom.size() / rom_outer_bank_count.get() as u32;
         let memory_maps = layouts.iter().map(|initial_layout| PrgMemoryMap::new(
             *initial_layout, rom_outer_bank_size, rom_bank_size, ram_size, access_override, &regs,
@@ -364,8 +339,6 @@ impl PrgMemory {
             layouts,
             memory_maps,
             layout_index,
-            rom_outer_banks,
-            work_ram,
             rom: rom.split_n(rom_outer_bank_count),
             rom_outer_bank_index: 0,
             ram: RawMemory::new(ram_size),
@@ -373,26 +346,6 @@ impl PrgMemory {
             access_override,
             regs,
         }
-    }
-
-    pub fn bank_configuration(&self) -> BankConfiguration {
-        self.rom_outer_banks.bank_configuration()
-    }
-
-    pub fn work_ram_bank_configuration(&self) -> Option<BankConfiguration> {
-        self.work_ram.as_ref().map(|wr| wr.bank_configuration())
-    }
-
-    pub fn rom_bank_size(&self) -> u16 {
-        self.rom_outer_banks.page_size().get()
-    }
-
-    pub fn rom_bank_count(&self) -> u16 {
-        self.rom_outer_banks.page_count().get()
-    }
-
-    pub fn last_rom_bank_index(&self) -> u16 {
-        self.rom_bank_count() - 1
     }
 
     pub fn layout_index(&self) -> u8 {
@@ -421,36 +374,9 @@ impl PrgMemory {
     }
 
     pub fn peek(&self, address: CpuAddress) -> ReadResult {
-        use ReadWriteStatus::*;
-        let old_result = match self.address_to_prg_index(address) {
-            PrgMemoryIndex::None => ReadResult::OPEN_BUS,
-            PrgMemoryIndex::Rom { page_number, index, read_status: read_write_status } => {
-                match read_write_status {
-                    Disabled | WriteOnly =>
-                        ReadResult::OPEN_BUS,
-                    ReadOnlyZeros =>
-                        ReadResult::full(0),
-                    ReadOnly | ReadWrite =>
-                        ReadResult::full(self.rom_outer_banks.current_outer_page().page(page_number).peek(index)),
-                }
-            }
-            PrgMemoryIndex::Ram { page_number, index, read_write_status} => {
-                match read_write_status {
-                    Disabled | WriteOnly =>
-                        ReadResult::OPEN_BUS,
-                    ReadOnlyZeros =>
-                        ReadResult::full(0),
-                    ReadOnly | ReadWrite => {
-                        let work_ram = self.work_ram.as_ref().expect("PRG RAM to be present since it is being peeked at.");
-                        ReadResult::full(work_ram.page(page_number).peek(index))
-                    }
-                }
-            }
-        };
-
         let (prg_index, read_write_status) =
             self.memory_maps[self.layout_index as usize].index_for_address(address);
-        let new_result = if read_write_status == ReadWriteStatus::ReadOnlyZeros {
+        if read_write_status == ReadWriteStatus::ReadOnlyZeros {
             ReadResult::full(0)
         } else {
             match prg_index {
@@ -461,31 +387,10 @@ impl PrgMemory {
                 PrgIndex::None | PrgIndex::Rom(_) | PrgIndex::Ram(_) =>
                     ReadResult::OPEN_BUS,
             }
-        };
-
-        assert_eq!(old_result, new_result, "Address: {address}");
-
-        old_result
+        }
     }
 
     pub fn write(&mut self, address: CpuAddress, value: u8) {
-        let windows = &self.current_layout().windows();
-        assert!(!windows.is_empty());
-        if address.to_raw() < windows[0].start() {
-            return;
-        }
-
-        match self.address_to_prg_index(address) {
-            PrgMemoryIndex::None => {}
-            PrgMemoryIndex::Rom { .. } => { /* ROM is readonly. */}
-            PrgMemoryIndex::Ram { page_number, index, read_write_status } => {
-                if read_write_status.is_writable() {
-                    let work_ram = self.work_ram.as_mut().expect("PRG RAM to be present since it is being written to.");
-                    work_ram.page_mut(page_number).write(index, value)
-                }
-            }
-        }
-
         let (prg_index, read_write_status) =
             self.memory_maps[self.layout_index as usize].index_for_address(address);
         if read_write_status.is_writable() {
@@ -532,6 +437,10 @@ impl PrgMemory {
         &self.layouts[usize::from(self.layout_index)]
     }
 
+    pub fn current_memory_map(&self) -> &PrgMemoryMap {
+        &self.memory_maps[self.layout_index as usize]
+    }
+
     pub fn bank_registers(&self) -> &PrgBankRegisters {
         &self.regs
     }
@@ -542,109 +451,12 @@ impl PrgMemory {
     }
 
     pub fn set_prg_rom_outer_bank_index(&mut self, index: u8) {
-        self.rom_outer_banks.set_outer_page_index(index);
         self.rom_outer_bank_index = index;
     }
 
     fn update_page_ids(&mut self) {
         for memory_map in &mut self.memory_maps {
             memory_map.update_page_ids(&self.regs);
-        }
-    }
-
-    fn address_to_prg_index(&self, address: CpuAddress) -> PrgMemoryIndex {
-        let address = address.to_raw();
-        assert!(address >= 0x4020);
-
-        let windows = &self.current_layout().windows();
-        assert!(!windows.is_empty());
-        if address < windows[0].start() {
-            // Translates to open bus for reads, and an ignored write for writes.
-            // Necessary to support mappers that configure memory between 0x4020 and 0x5FFF.
-            return PrgMemoryIndex::None;
-        }
-
-        let window_index = (1..windows.len())
-            .find(|&i| address < windows[i].start())
-            .unwrap_or(windows.len())
-            - 1;
-
-        let mut window = &windows[window_index];
-        let bank_offset = address - window.start();
-        if let PrgBank::MirrorOf(mirrored_window_start) = window.bank() {
-            window = self.window_at(mirrored_window_start);
-        }
-
-        match window.bank() {
-            PrgBank::Empty => PrgMemoryIndex::None,
-            PrgBank::MirrorOf(_) => panic!("A mirrored bank must mirror a non-mirrored bank."),
-            PrgBank::Rom(location, status_register_id) => {
-                let read_status: ReadWriteStatus = status_register_id
-                    .map_or(ReadWriteStatus::ReadOnly, |id| self.regs.read_write_status(id));
-                assert!(!read_status.is_writable());
-
-                let mut page_number = window.resolved_bank_index(&self.regs, location, self.rom_outer_banks.bank_configuration());
-                let mut index = bank_offset;
-                // For windows that are larger than the page size,
-                // indexes need to be reduced and page numbers need to be increased.
-                while index >= self.rom_outer_banks.page_size().get() {
-                    page_number += 1;
-                    index -= self.rom_outer_banks.page_size().get();
-                }
-
-                PrgMemoryIndex::Rom { page_number, index, read_status }
-            }
-            PrgBank::Ram(location, status_register_id) => {
-                let work_ram_bank_configuration = self.work_ram_bank_configuration()
-                    .expect("PRG RAM window specified in layout, but not in cartridge.");
-                let page_number =
-                    window.resolved_bank_index(&self.regs, location, work_ram_bank_configuration);
-                let index = bank_offset;
-                let read_write_status: ReadWriteStatus = status_register_id
-                    .map_or(ReadWriteStatus::ReadWrite, |id| self.regs.read_write_status(id));
-                PrgMemoryIndex::Ram { page_number, index, read_write_status }
-            }
-            PrgBank::RomRam(location, status_register_id, mode_register_id) => {
-                match self.regs.rom_ram_mode(mode_register_id) {
-                    RomRamMode::Ram => {
-                        let work_ram_bank_configuration = self.work_ram_bank_configuration()
-                            .expect("PRG RAM window specified in layout, but not in cartridge.");
-                        let page_number =
-                            window.resolved_bank_index(&self.regs, location, work_ram_bank_configuration);
-                        let index = bank_offset;
-                        let read_write_status: ReadWriteStatus = self.regs.read_write_status(status_register_id);
-                        PrgMemoryIndex::Ram { page_number, index, read_write_status }
-                    }
-                    RomRamMode::Rom => {
-                        let mut page_number = window.resolved_bank_index(&self.regs, location, self.rom_outer_banks.bank_configuration());
-                        let mut index = bank_offset;
-                        // For windows that are larger than the page size,
-                        // indexes need to be reduced and page numbers need to be increased.
-                        while index >= self.rom_outer_banks.page_size().get() {
-                            page_number += 1;
-                            index -= self.rom_outer_banks.page_size().get();
-                        }
-
-                        PrgMemoryIndex::Rom { page_number, index, read_status: ReadWriteStatus::ReadOnly }
-                    }
-                }
-            }
-            PrgBank::WorkRam(location, status_register_id) => {
-                let Some(work_ram_bank_configuration) = self.work_ram_bank_configuration() else {
-                    return PrgMemoryIndex::None;
-                };
-
-                let page_number =
-                    window.resolved_bank_index(&self.regs, location, work_ram_bank_configuration);
-                let index = bank_offset;
-                let read_write_status: ReadWriteStatus = status_register_id
-                    .map_or(ReadWriteStatus::ReadWrite, |id| self.regs.read_write_status(id));
-                PrgMemoryIndex::Ram { page_number, index, read_write_status }
-            }
-            // TODO: Save RAM should be separate from WorkRam.
-            PrgBank::SaveRam(_) => {
-                todo!("Save RAM not yet supported for PRG.");
-            }
         }
     }
 
@@ -657,11 +469,4 @@ impl PrgMemory {
 
         panic!("No window exists at {start:?}");
     }
-}
-
-enum PrgMemoryIndex {
-    None,
-    // Rom's ReadWriteStatus doesn't actually allow writing.
-    Rom { page_number: u16, index: u16, read_status: ReadWriteStatus },
-    Ram { page_number: u16, index: u16, read_write_status: ReadWriteStatus },
 }
