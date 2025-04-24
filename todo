@@ -7,6 +7,7 @@ ROADMAP
 6. Proper sounding audio.
 
 Investigate if lack of MMC5 Extended Ram CHR status register is causing bad renders.
+Re-allow ReadWriteStatuses for MMC5 Extended RAM.
 Add CHR bank viewer. Allow overriding the selected bank for the game rendering.
 Remove GetSpritePatternHack in ppu.rs.
 Wide pixels.

@@ -13,7 +13,7 @@ pub use crate::memory::bank::bank::{PrgBank, ChrBank, ReadWriteStatusRegisterId}
 pub use crate::memory::bank::bank::ReadWriteStatusRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::PrgMemory;
-use crate::memory::cpu::prg_memory::{PrgPageId, PrgPageIdSlot};
+use crate::memory::cpu::prg_memory_map::{PrgPageId, PrgPageIdSlot};
 pub use crate::memory::layout::Layout;
 pub use crate::memory::ppu::chr_memory::ChrMemory;
 use crate::memory::ppu::chr_memory_map::ChrPageId;
