@@ -22,6 +22,8 @@ const LAYOUT: Layout = Layout::builder()
 
 // TONY-I and YS-612 (FDS games in cartridge form).
 // TODO: Untested. Need test ROM. In particular, the 0x5000 ROM window might not work.
+// FIXME: PrgMemory under 0x6000 is no longer supported.
+// This mapper will need to find a different way to support it.
 #[derive(Default)]
 pub struct Mapper043 {
     irq_enabled: bool,

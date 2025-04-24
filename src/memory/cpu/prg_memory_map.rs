@@ -135,11 +135,7 @@ impl PrgMemoryMap {
 
     pub fn index_for_address(&self, address: CpuAddress) -> (PrgIndex, ReadWriteStatus) {
         let address = address.to_raw();
-        assert!(matches!(address, 0x4020..=0xFFFF));
-        if !matches!(address, 0x6000..=0xFFFF) {
-            println!("Low PRG address treated as empty memory for now.");
-            return (PrgIndex::None, ReadWriteStatus::Disabled);
-        }
+        assert!(matches!(address, 0x6000..=0xFFFF));
 
         let address = address - 0x6000;
         let mapping_index = address / PAGE_SIZE;
