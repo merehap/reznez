@@ -378,11 +378,11 @@ pub trait Mapper {
             let bank_string = match prg_page_id_slot {
                 PrgPageIdSlot::Normal(page_id, _) => {
                     match page_id {
-                        PrgPageId::Empty => "E".to_string(),
+                        None => "E".to_string(),
                         // FIXME: This should be bank number, not page number.
-                        PrgPageId::Rom { page_number } => page_number.to_string(),
-                        PrgPageId::WorkRam { page_number } => format!("W{page_number}"),
-                        PrgPageId::SaveRam { page_number } => format!("S{page_number}"),
+                        Some(PrgPageId::Rom { page_number }) => page_number.to_string(),
+                        Some(PrgPageId::WorkRam { page_number }) => format!("W{page_number}"),
+                        Some(PrgPageId::SaveRam { page_number }) => format!("S{page_number}"),
                     }
                 }
                 PrgPageIdSlot::Multi(_) => "M".to_string(),

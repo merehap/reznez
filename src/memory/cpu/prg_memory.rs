@@ -106,13 +106,13 @@ impl PrgMemory {
             ReadResult::full(0)
         } else {
             match prg_index {
-                PrgIndex::Rom(index) if read_write_status.is_readable() =>
+                Some(PrgIndex::Rom(index)) if read_write_status.is_readable() =>
                     ReadResult::full(self.rom[self.rom_outer_bank_index as usize][index]),
-                PrgIndex::WorkRam(index) if read_write_status.is_readable() =>
+                Some(PrgIndex::WorkRam(index)) if read_write_status.is_readable() =>
                     ReadResult::full(self.ram[index]),
-                PrgIndex::SaveRam(index) if read_write_status.is_readable() =>
+                Some(PrgIndex::SaveRam(index)) if read_write_status.is_readable() =>
                     ReadResult::full(self.save_ram[index]),
-                PrgIndex::None | PrgIndex::Rom(_) | PrgIndex::WorkRam(_) | PrgIndex::SaveRam(_) =>
+                None | Some(PrgIndex::Rom(_) | PrgIndex::WorkRam(_) | PrgIndex::SaveRam(_)) =>
                     ReadResult::OPEN_BUS,
             }
         }
@@ -123,9 +123,9 @@ impl PrgMemory {
             self.memory_maps[self.layout_index as usize].index_for_address(address);
         if read_write_status.is_writable() {
             match prg_index {
-                PrgIndex::None | PrgIndex::Rom(_) => unreachable!(),
-                PrgIndex::WorkRam(index) => self.ram[index] = value,
-                PrgIndex::SaveRam(index) => self.save_ram[index] = value,
+                None | Some(PrgIndex::Rom(_)) => unreachable!(),
+                Some(PrgIndex::WorkRam(index)) => self.ram[index] = value,
+                Some(PrgIndex::SaveRam(index)) => self.save_ram[index] = value,
             }
         }
     }
