@@ -234,63 +234,38 @@ type PageNumberMask = u16;
 type SubPageOffset = u8;
 
 impl PrgMapping {
-    pub fn page_id(&self, registers: &PrgBankRegisters, save_ram_bank_count: u16) -> (Option<PrgPageId>, ReadWriteStatus) {
-        let page_number = || {
-            let location = self.bank.location().expect("Location to be present in bank.");
-            let bank_index = match location {
-                PrgBankLocation::Fixed(bank_index) => bank_index,
-                PrgBankLocation::Switchable(register_id) => registers.get(register_id).index().unwrap(),
-            };
-
-            let mut is_save_ram = false;
-            let page_number = if self.bank.memory_type(registers) == Some(MemoryType::Rom) {
-                ((self.rom_pages_per_bank * bank_index.to_raw()) & self.rom_page_number_mask) + self.page_offset
-            } else {
-                let page_number = (bank_index.to_raw() & self.ram_page_number_mask) + self.page_offset;
-                if page_number < save_ram_bank_count {
-                    is_save_ram = true;
-                    page_number
-                } else {
-                    page_number - save_ram_bank_count
-                }
-            };
-
-            (page_number, is_save_ram)
+    pub fn page_id(&self, regs: &PrgBankRegisters, save_ram_bank_count: u16) -> (Option<PrgPageId>, ReadWriteStatus) {
+        let (Ok(location), Some(memory_type)) = (self.bank.location(), self.bank.memory_type(regs)) else {
+            return (None, ReadWriteStatus::Disabled);
         };
 
-        match self.bank {
-            PrgBank::Empty =>
-                (None, ReadWriteStatus::Disabled),
-            PrgBank::Rom(_, None) =>
-                (Some(PrgPageId::Rom { page_number: page_number().0 }), ReadWriteStatus::ReadOnly),
-            PrgBank::Rom(_, Some(status_register)) =>
-                (Some(PrgPageId::Rom { page_number: page_number().0 }), registers.read_write_status(status_register)),
-            PrgBank::Ram(_, None) | PrgBank::WorkRam(_, None) => {
-                let (page_number, is_save_ram) = page_number();
-                if is_save_ram {
-                    (Some(PrgPageId::SaveRam { page_number }), ReadWriteStatus::ReadWrite)
+        let bank_index = location.bank_index(regs);
+
+        let default_rw_status;
+        let page_id;
+        match memory_type {
+            MemoryType::Rom => {
+                default_rw_status = ReadWriteStatus::ReadOnly;
+                let page_number = ((self.rom_pages_per_bank * bank_index.to_raw()) & self.rom_page_number_mask) + self.page_offset;
+                page_id = PrgPageId::Rom { page_number };
+            }
+            MemoryType::Ram => {
+                default_rw_status = ReadWriteStatus::ReadWrite;
+                let mut page_number = (bank_index.to_raw() & self.ram_page_number_mask) + self.page_offset;
+                if page_number < save_ram_bank_count {
+                    page_id = PrgPageId::SaveRam { page_number };
                 } else {
-                    (Some(PrgPageId::WorkRam { page_number }), ReadWriteStatus::ReadWrite)
+                    page_number -= save_ram_bank_count;
+                    page_id = PrgPageId::WorkRam { page_number };
                 }
             }
-            PrgBank::Ram(_, Some(status_register)) | PrgBank::WorkRam(_, Some(status_register)) => {
-                let rw_status = registers.read_write_status(status_register);
-                let (page_number, is_save_ram) = page_number();
-                if is_save_ram {
-                    (Some(PrgPageId::SaveRam { page_number }), rw_status)
-                } else {
-                    (Some(PrgPageId::WorkRam { page_number }), rw_status)
-                }
-            }
-            PrgBank::RomRam(_, status_register, rom_ram_register) => {
-                match registers.rom_ram_mode(rom_ram_register) {
-                    MemoryType::Rom => (Some(PrgPageId::Rom { page_number: page_number().0}), ReadWriteStatus::ReadOnly),
-                    MemoryType::Ram => (Some(PrgPageId::WorkRam { page_number: page_number().0 }), registers.read_write_status(status_register)),
-                }
-            }
-            PrgBank::MirrorOf(_) => unreachable!("Mirrored banks should have been resolved by now."),
-            _ => todo!(),
         }
+
+        let read_write_status = self.bank.status_register_id()
+            .map(|id| regs.read_write_status(id))
+            .unwrap_or(default_rw_status);
+
+        (Some(page_id), read_write_status)
     }
 }
 

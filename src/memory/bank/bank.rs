@@ -8,8 +8,6 @@ use super::bank_index::{ChrBankRegisterId, ChrBankRegisters};
 pub enum PrgBank {
     Empty,
     WorkRam(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
-    // TODO: Add configurable writability?
-    SaveRam(u32),
     Rom(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
     Ram(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
     RomRam(PrgBankLocation, ReadWriteStatusRegisterId, RomRamModeRegisterId),
@@ -63,7 +61,6 @@ impl PrgBank {
     pub fn location(self) -> Result<PrgBankLocation, String> {
         match self {
             PrgBank::Rom(location, _) | PrgBank::Ram(location, _)  | PrgBank::RomRam(location, _, _) | PrgBank::WorkRam(location, _) => Ok(location),
-            PrgBank::SaveRam(_) => Ok(PrgBankLocation::Fixed(BankIndex::from_u8(0))),
             PrgBank::Empty | PrgBank::MirrorOf(_) =>
                 Err(format!("Bank type {:?} does not have a bank location.", self)),
         }
@@ -77,11 +74,21 @@ impl PrgBank {
         }
     }
 
+    pub fn status_register_id(&self) -> Option<ReadWriteStatusRegisterId> {
+        match self {
+            PrgBank::Empty => None,
+            PrgBank::Rom(_, reg_id) => *reg_id,
+            PrgBank::Ram(_, reg_id) | PrgBank::WorkRam(_, reg_id) => *reg_id,
+            PrgBank::RomRam(_, reg_id, _) => Some(*reg_id),
+            PrgBank::MirrorOf(..) => panic!("Memory type cannot be directly determined for a Mirror bank."),
+        }
+    }
+
     pub fn memory_type(&self, regs: &PrgBankRegisters) -> Option<MemoryType> {
         match self {
             PrgBank::Empty => None,
             PrgBank::Rom(..) => Some(MemoryType::Rom),
-            PrgBank::Ram(..) | PrgBank::WorkRam(..) | PrgBank::SaveRam(..) => Some(MemoryType::Ram),
+            PrgBank::Ram(..) | PrgBank::WorkRam(..) => Some(MemoryType::Ram),
             PrgBank::RomRam(_, _, mode) => Some(regs.rom_ram_mode(*mode)),
             PrgBank::MirrorOf(..) => panic!("Memory type cannot be directly determined for a Mirror bank."),
         }
@@ -98,7 +105,6 @@ impl PrgBank {
                 registers.rom_ram_mode(rom_ram_mode) == MemoryType::Ram && registers.read_write_status(status) == ReadWriteStatus::ReadWrite,
             PrgBank::Ram(_, Some(status_register_id)) | PrgBank::WorkRam(_, Some(status_register_id)) =>
                 registers.read_write_status(status_register_id) == ReadWriteStatus::ReadWrite,
-            PrgBank::SaveRam(..) => true,
         }
     }
 
@@ -110,8 +116,6 @@ impl PrgBank {
                 PrgBank::Rom(loc, Some(status)),
             PrgBank::Empty | PrgBank::WorkRam(..) =>
                 PrgBank::Empty,
-            PrgBank::SaveRam(_) =>
-                todo!(),
             PrgBank::MirrorOf(_) =>
                 self,
         }
@@ -138,10 +142,17 @@ pub enum PrgBankLocation {
 }
 
 impl PrgBankLocation {
-    pub fn bank_location(self, registers: &PrgBankRegisters) -> BankLocation {
+    pub fn bank_location(self, regs: &PrgBankRegisters) -> BankLocation {
         match self {
             Self::Fixed(bank_index) => BankLocation::Index(bank_index),
-            Self::Switchable(register_id) => registers.get(register_id),
+            Self::Switchable(register_id) => regs.get(register_id),
+        }
+    }
+
+    pub fn bank_index(self, regs: &PrgBankRegisters) -> BankIndex {
+        match self {
+            Self::Fixed(bank_index) => bank_index,
+            Self::Switchable(register_id) => regs.get(register_id).index().unwrap(),
         }
     }
 }

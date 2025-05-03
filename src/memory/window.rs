@@ -54,7 +54,6 @@ impl PrgWindow {
     pub fn location(self) -> Result<PrgBankLocation, String> {
         match self.bank {
             PrgBank::Rom(location, _) | PrgBank::Ram(location, _)  | PrgBank::RomRam(location, _, _) | PrgBank::WorkRam(location, _) => Ok(location),
-            PrgBank::SaveRam(_) => Ok(PrgBankLocation::Fixed(BankIndex::from_u8(0))),
             PrgBank::Empty | PrgBank::MirrorOf(_) =>
                 Err(format!("Bank type {:?} does not have a bank location.", self.bank)),
         }
@@ -73,9 +72,6 @@ impl PrgWindow {
                 ReadWriteStatusInfo::PossiblyPresent { register_id, status_on_absent: ReadWriteStatus::ReadOnly },
             PrgBank::WorkRam(_, Some(register_id)) =>
                 ReadWriteStatusInfo::PossiblyPresent { register_id, status_on_absent: ReadWriteStatus::Disabled },
-            // TODO: SaveRam will probably need to support status registers.
-            PrgBank::SaveRam(..) =>
-                ReadWriteStatusInfo::Absent,
             PrgBank::Empty | PrgBank::Rom(..) | PrgBank::MirrorOf(..) | PrgBank::Ram(..) | PrgBank::WorkRam(..) =>
                 ReadWriteStatusInfo::Absent,
         }
