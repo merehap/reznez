@@ -38,7 +38,7 @@ use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
 use crate::ppu::sprite::oam::Oam;
 
 use crate::memory::bank::bank::RomRamModeRegisterId;
-use crate::memory::bank::bank_index::RomRamMode;
+use crate::memory::bank::bank_index::MemoryType;
 
 pub trait Mapper {
     // Should be const, but that's not yet allowed by Rust.
@@ -545,7 +545,7 @@ impl MapperParams {
         }
     }
 
-    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: RomRamMode) {
+    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemoryType) {
         self.prg_memory.set_rom_ram_mode(id, rom_ram_mode);
     }
 

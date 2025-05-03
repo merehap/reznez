@@ -36,7 +36,7 @@ impl From<u8> for BankIndex {
 pub struct PrgBankRegisters {
     registers: [BankLocation; 5],
     read_write_statuses: [ReadWriteStatus; 15],
-    rom_ram_modes: [RomRamMode; 3],
+    rom_ram_modes: [MemoryType; 3],
 }
 
 impl PrgBankRegisters {
@@ -44,7 +44,7 @@ impl PrgBankRegisters {
         Self {
             registers: [BankLocation::Index(BankIndex(0)); 5],
             read_write_statuses: [ReadWriteStatus::ReadWrite; 15],
-            rom_ram_modes: [RomRamMode::Ram; 3],
+            rom_ram_modes: [MemoryType::Ram; 3],
         }
     }
 
@@ -89,11 +89,11 @@ impl PrgBankRegisters {
         self.read_write_statuses[id as usize] = status;
     }
 
-    pub fn rom_ram_mode(&self, id: RomRamModeRegisterId) -> RomRamMode {
+    pub fn rom_ram_mode(&self, id: RomRamModeRegisterId) -> MemoryType {
         self.rom_ram_modes[id as usize]
     }
 
-    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: RomRamMode) {
+    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemoryType) {
         self.rom_ram_modes[id as usize] = rom_ram_mode;
     }
 }
@@ -103,7 +103,7 @@ pub struct ChrBankRegisters {
     registers: [BankLocation; 18],
     chr_meta_registers: [ChrBankRegisterId; 2],
     read_write_statuses: [ReadWriteStatus; 15],
-    rom_ram_modes: [RomRamMode; 3],
+    rom_ram_modes: [MemoryType; 3],
 }
 
 impl ChrBankRegisters {
@@ -113,7 +113,7 @@ impl ChrBankRegisters {
             // Meta registers are only used for CHR currently.
             chr_meta_registers: [ChrBankRegisterId::C0, ChrBankRegisterId::C0],
             read_write_statuses: [ReadWriteStatus::ReadWrite; 15],
-            rom_ram_modes: [RomRamMode::Ram; 3],
+            rom_ram_modes: [MemoryType::Ram; 3],
         }
     }
 
@@ -170,11 +170,11 @@ impl ChrBankRegisters {
         self.read_write_statuses[id as usize] = status;
     }
 
-    pub fn rom_ram_mode(&self, id: RomRamModeRegisterId) -> RomRamMode {
+    pub fn rom_ram_mode(&self, id: RomRamModeRegisterId) -> MemoryType {
         self.rom_ram_modes[id as usize]
     }
 
-    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: RomRamMode) {
+    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemoryType) {
         self.rom_ram_modes[id as usize] = rom_ram_mode;
     }
 }
@@ -254,7 +254,7 @@ impl ReadWriteStatus {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum RomRamMode {
+pub enum MemoryType {
     Ram,
     Rom,
 }

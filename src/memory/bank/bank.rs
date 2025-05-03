@@ -1,6 +1,6 @@
 use crate::memory::bank::bank_index::{BankIndex, PrgBankRegisters, PrgBankRegisterId, MetaRegisterId, ReadWriteStatus};
 
-use crate::memory::bank::bank_index::{BankLocation, RomRamMode};
+use crate::memory::bank::bank_index::{BankLocation, MemoryType};
 
 use super::bank_index::{ChrBankRegisterId, ChrBankRegisters};
 
@@ -77,11 +77,13 @@ impl PrgBank {
         }
     }
 
-    pub fn is_rom(self, regs: &PrgBankRegisters) -> bool {
+    pub fn memory_type(&self, regs: &PrgBankRegisters) -> Option<MemoryType> {
         match self {
-            PrgBank::Rom(..) => true,
-            PrgBank::RomRam(_, _, mode) => regs.rom_ram_mode(mode) == RomRamMode::Rom,
-            _ => false,
+            PrgBank::Empty => None,
+            PrgBank::Rom(..) => Some(MemoryType::Rom),
+            PrgBank::Ram(..) | PrgBank::WorkRam(..) | PrgBank::SaveRam(..) => Some(MemoryType::Ram),
+            PrgBank::RomRam(_, _, mode) => Some(regs.rom_ram_mode(*mode)),
+            PrgBank::MirrorOf(..) => panic!("Memory type cannot be directly determined for a Mirror bank."),
         }
     }
 
@@ -93,7 +95,7 @@ impl PrgBank {
             // RAM with no status register is always writable.
             PrgBank::Ram(_, None) | PrgBank::WorkRam(_, None) => true,
             PrgBank::RomRam(_, status, rom_ram_mode) =>
-                registers.rom_ram_mode(rom_ram_mode) == RomRamMode::Ram && registers.read_write_status(status) == ReadWriteStatus::ReadWrite,
+                registers.rom_ram_mode(rom_ram_mode) == MemoryType::Ram && registers.read_write_status(status) == ReadWriteStatus::ReadWrite,
             PrgBank::Ram(_, Some(status_register_id)) | PrgBank::WorkRam(_, Some(status_register_id)) =>
                 registers.read_write_status(status_register_id) == ReadWriteStatus::ReadWrite,
             PrgBank::SaveRam(..) => true,

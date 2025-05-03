@@ -1,7 +1,7 @@
 use std::num::NonZeroU16;
 
 use crate::memory::bank::bank::{PrgBank, PrgBankLocation};
-use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, RomRamMode};
+use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, MemoryType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::ppu::chr_memory::AccessOverride;
@@ -69,7 +69,7 @@ impl PrgMemoryMap {
                     Some(AccessOverride::ForceRam) => panic!("PRG must have some ROM."),
                 }
 
-                if bank.is_rom(regs) {
+                if bank.memory_type(regs) == Some(MemoryType::Rom) {
                     assert_eq!(window.size().get() % rom_bank_size, 0);
                     assert_eq!(window.size().get() % PAGE_SIZE, 0);
                 } else if bank.is_prg_ram() {
@@ -243,7 +243,7 @@ impl PrgMapping {
             };
 
             let mut is_save_ram = false;
-            let page_number = if self.bank.is_rom(registers) {
+            let page_number = if self.bank.memory_type(registers) == Some(MemoryType::Rom) {
                 ((self.rom_pages_per_bank * bank_index.to_raw()) & self.rom_page_number_mask) + self.page_offset
             } else {
                 let page_number = (bank_index.to_raw() & self.ram_page_number_mask) + self.page_offset;
@@ -284,8 +284,8 @@ impl PrgMapping {
             }
             PrgBank::RomRam(_, status_register, rom_ram_register) => {
                 match registers.rom_ram_mode(rom_ram_register) {
-                    RomRamMode::Rom => (Some(PrgPageId::Rom { page_number: page_number().0}), ReadWriteStatus::ReadOnly),
-                    RomRamMode::Ram => (Some(PrgPageId::WorkRam { page_number: page_number().0 }), registers.read_write_status(status_register)),
+                    MemoryType::Rom => (Some(PrgPageId::Rom { page_number: page_number().0}), ReadWriteStatus::ReadOnly),
+                    MemoryType::Ram => (Some(PrgPageId::WorkRam { page_number: page_number().0 }), registers.read_write_status(status_register)),
                 }
             }
             PrgBank::MirrorOf(_) => unreachable!("Mirrored banks should have been resolved by now."),

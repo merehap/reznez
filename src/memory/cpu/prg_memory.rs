@@ -2,7 +2,7 @@ use std::num::{NonZeroU8, NonZeroU16};
 
 use crate::mapper::{BankIndex, PrgBankRegisterId, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank::{PrgBank, RomRamModeRegisterId};
-use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, RomRamMode};
+use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, MemoryType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory_map::{PrgMemoryMap, PrgIndex};
@@ -153,7 +153,7 @@ impl PrgMemory {
         self.regs.set_read_write_status(id, read_write_status);
     }
 
-    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: RomRamMode) {
+    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemoryType) {
         self.regs.set_rom_ram_mode(id, rom_ram_mode);
         self.update_page_ids();
     }
