@@ -19,6 +19,7 @@ pub struct PrgMemory {
     rom: Vec<RawMemory>,
     rom_outer_bank_index: u8,
     ram: RawMemory,
+    save_ram: RawMemory,
     extended_ram: RawMemoryArray<KIBIBYTE>,
     access_override: Option<AccessOverride>,
     regs: PrgBankRegisters,
@@ -33,6 +34,7 @@ impl PrgMemory {
         rom: RawMemory,
         rom_outer_bank_count: NonZeroU8,
         ram_size: u32,
+        save_ram_size: u32,
         access_override: Option<AccessOverride>,
         regs: PrgBankRegisters,
     ) -> PrgMemory {
@@ -55,7 +57,7 @@ impl PrgMemory {
         let rom_bank_size = rom_page_size.expect("at least one ROM or RAM window");
         let rom_outer_bank_size = rom.size() / rom_outer_bank_count.get() as u32;
         let memory_maps = layouts.iter().map(|initial_layout| PrgMemoryMap::new(
-            *initial_layout, rom_outer_bank_size, rom_bank_size, ram_size, access_override, &regs,
+            *initial_layout, rom_outer_bank_size, rom_bank_size, ram_size, save_ram_size, access_override, &regs,
         )).collect();
 
         PrgMemory {
@@ -65,6 +67,7 @@ impl PrgMemory {
             rom: rom.split_n(rom_outer_bank_count),
             rom_outer_bank_index: 0,
             ram: RawMemory::new(ram_size),
+            save_ram: RawMemory::new(save_ram_size),
             extended_ram: RawMemoryArray::new(),
             access_override,
             regs,
@@ -105,9 +108,11 @@ impl PrgMemory {
             match prg_index {
                 PrgIndex::Rom(index) if read_write_status.is_readable() =>
                     ReadResult::full(self.rom[self.rom_outer_bank_index as usize][index]),
-                PrgIndex::Ram(index) if read_write_status.is_readable() =>
+                PrgIndex::WorkRam(index) if read_write_status.is_readable() =>
                     ReadResult::full(self.ram[index]),
-                PrgIndex::None | PrgIndex::Rom(_) | PrgIndex::Ram(_) =>
+                PrgIndex::SaveRam(index) if read_write_status.is_readable() =>
+                    ReadResult::full(self.save_ram[index]),
+                PrgIndex::None | PrgIndex::Rom(_) | PrgIndex::WorkRam(_) | PrgIndex::SaveRam(_) =>
                     ReadResult::OPEN_BUS,
             }
         }
@@ -119,7 +124,8 @@ impl PrgMemory {
         if read_write_status.is_writable() {
             match prg_index {
                 PrgIndex::None | PrgIndex::Rom(_) => unreachable!(),
-                PrgIndex::Ram(index) => self.ram[index] = value,
+                PrgIndex::WorkRam(index) => self.ram[index] = value,
+                PrgIndex::SaveRam(index) => self.save_ram[index] = value,
             }
         }
     }

@@ -236,6 +236,7 @@ pub trait Mapper {
             0x4017          => apu_registers.write_frame_counter(value),
             0x4018..=0x401F => { /* CPU Test Mode not yet supported. */ }
             0x4020..=0xFFFF => {
+                // TODO: Verify if bus conflicts only occur for address >= 0x6000.
                 let value = if self.has_bus_conflicts() == HasBusConflicts::Yes {
                     let rom_value = self.cpu_peek(params, cpu_internal_ram, ciram, palette_ram, oam,
                         ports, ppu_registers, apu_registers, address);
@@ -379,8 +380,9 @@ pub trait Mapper {
                     match page_id {
                         PrgPageId::Empty => "E".to_string(),
                         // FIXME: This should be bank number, not page number.
-                        PrgPageId::Rom(page_number) => page_number.to_string(),
-                        PrgPageId::Ram(page_number) => format!("W{page_number}"),
+                        PrgPageId::Rom { page_number } => page_number.to_string(),
+                        PrgPageId::WorkRam { page_number } => format!("W{page_number}"),
+                        PrgPageId::SaveRam { page_number } => format!("S{page_number}"),
                     }
                 }
                 PrgPageIdSlot::Multi(_) => "M".to_string(),

@@ -15,6 +15,7 @@ pub struct PrgMemoryMap {
     // 0x6000 through 0xFFFF
     page_mappings: [PrgMappingSlot; PRG_SLOT_COUNT],
     page_ids: [PrgPageIdSlot; PRG_SLOT_COUNT],
+    save_ram_size: u16,
 }
 
 impl PrgMemoryMap {
@@ -23,6 +24,7 @@ impl PrgMemoryMap {
         rom_size: u32,
         rom_bank_size: NonZeroU16,
         ram_size: u32,
+        save_ram_size: u32,
         access_override: Option<AccessOverride>,
         regs: &PrgBankRegisters,
     ) -> Self {
@@ -36,7 +38,7 @@ impl PrgMemoryMap {
         let mut rom_page_number_mask = 0b1111_1111_1111_1111;
         rom_page_number_mask &= rom_page_count - 1;
 
-        let ram_page_count: u16 = (ram_size / u32::from(PAGE_SIZE)).try_into().unwrap();
+        let ram_page_count: u16 = ((ram_size + save_ram_size) / u32::from(PAGE_SIZE)).try_into().unwrap();
         let mut ram_page_number_mask = 0b1111_1111_1111_1111;
         ram_page_number_mask &= ram_page_count - 1;
 
@@ -127,7 +129,8 @@ impl PrgMemoryMap {
 
         let mut memory_map = Self {
             page_mappings: page_mappings.try_into().unwrap(),
-            page_ids: [const { PrgPageIdSlot::Normal(PrgPageId::Rom(0), ReadWriteStatus::ReadOnly) }; PRG_SLOT_COUNT],
+            page_ids: [const { PrgPageIdSlot::Normal(PrgPageId::Rom { page_number: 0 }, ReadWriteStatus::ReadOnly) }; PRG_SLOT_COUNT],
+            save_ram_size: save_ram_size.try_into().unwrap(),
         };
         memory_map.update_page_ids(regs);
         memory_map
@@ -145,11 +148,14 @@ impl PrgMemoryMap {
             PrgPageIdSlot::Normal(page_id, read_write_status) => {
                 let prg_memory_index = match page_id {
                     PrgPageId::Empty => PrgIndex::None,
-                    PrgPageId::Rom(page_number) => {
+                    PrgPageId::Rom { page_number } => {
                         PrgIndex::Rom(u32::from(*page_number) * PAGE_SIZE as u32 + u32::from(offset))
                     }
-                    PrgPageId::Ram(page_number) => {
-                        PrgIndex::Ram(u32::from(*page_number) * PAGE_SIZE as u32 + u32::from(offset))
+                    PrgPageId::WorkRam { page_number } => {
+                        PrgIndex::WorkRam(u32::from(*page_number) * PAGE_SIZE as u32 + u32::from(offset))
+                    }
+                    PrgPageId::SaveRam { page_number } => {
+                        PrgIndex::SaveRam(u32::from(*page_number) * PAGE_SIZE as u32 + u32::from(offset))
                     }
                 };
                 (prg_memory_index, *read_write_status)
@@ -159,11 +165,14 @@ impl PrgMemoryMap {
                 let (page_id, read_write_status, sub_page_offset) = page_ids[sub_mapping_index as usize];
                 let prg_memory_index = match page_id {
                     PrgPageId::Empty => PrgIndex::None,
-                    PrgPageId::Rom(page_number) => {
+                    PrgPageId::Rom { page_number } => {
                         PrgIndex::Rom(u32::from(page_number) * PAGE_SIZE as u32 + (PAGE_SIZE as u32 / 64) * sub_page_offset as u32 + u32::from(offset))
                     }
-                    PrgPageId::Ram(page_number) => {
-                        PrgIndex::Ram(u32::from(page_number) * PAGE_SIZE as u32 + (PAGE_SIZE as u32 / 64) * sub_page_offset as u32 + u32::from(offset))
+                    PrgPageId::WorkRam { page_number } => {
+                        PrgIndex::WorkRam(u32::from(page_number) * PAGE_SIZE as u32 + (PAGE_SIZE as u32 / 64) * sub_page_offset as u32 + u32::from(offset))
+                    }
+                    PrgPageId::SaveRam { page_number } => {
+                        PrgIndex::SaveRam(u32::from(page_number) * PAGE_SIZE as u32 + (PAGE_SIZE as u32 / 64) * sub_page_offset as u32 + u32::from(offset))
                     }
                 };
                 (prg_memory_index, read_write_status)
@@ -176,16 +185,17 @@ impl PrgMemoryMap {
     }
 
     pub fn update_page_ids(&mut self, regs: &PrgBankRegisters) {
+        let save_ram_bank_count = self.save_ram_size / (8 * KIBIBYTE as u16);
         for i in 0..PRG_SLOT_COUNT {
             match &self.page_mappings[i] {
                 PrgMappingSlot::Normal(mapping) => {
-                    let (page_id, read_write_status) = mapping.page_id(regs);
+                    let (page_id, read_write_status) = mapping.page_id(regs, save_ram_bank_count);
                     self.page_ids[i] = PrgPageIdSlot::Normal(page_id, read_write_status);
                 }
                 PrgMappingSlot::Multi(mappings) => {
                     let mut page_ids = Vec::new();
                     for (mapping, offset) in mappings.iter() {
-                        let (page_id, read_write_status) = mapping.page_id(regs);
+                        let (page_id, read_write_status) = mapping.page_id(regs, save_ram_bank_count);
                         page_ids.push((page_id, read_write_status, *offset));
                     }
 
@@ -200,7 +210,8 @@ impl PrgMemoryMap {
 pub enum PrgIndex {
     None,
     Rom(u32),
-    Ram(u32),
+    WorkRam(u32),
+    SaveRam(u32),
 }
 
 #[derive(Clone, Debug)]
@@ -222,7 +233,7 @@ type PageNumberMask = u16;
 type SubPageOffset = u8;
 
 impl PrgMapping {
-    pub fn page_id(&self, registers: &PrgBankRegisters) -> (PrgPageId, ReadWriteStatus) {
+    pub fn page_id(&self, registers: &PrgBankRegisters, save_ram_bank_count: u16) -> (PrgPageId, ReadWriteStatus) {
         let page_number = || {
             let location = self.bank.location().expect("Location to be present in bank.");
             let bank_index = match location {
@@ -230,28 +241,50 @@ impl PrgMapping {
                 PrgBankLocation::Switchable(register_id) => registers.get(register_id).index().unwrap(),
             };
 
-            if self.bank.is_rom(registers) {
+            let mut is_save_ram = false;
+            let page_number = if self.bank.is_rom(registers) {
                 ((self.rom_pages_per_bank * bank_index.to_raw()) & self.rom_page_number_mask) + self.page_offset
             } else {
-                (bank_index.to_raw() & self.ram_page_number_mask) + self.page_offset
-            }
+                let page_number = (bank_index.to_raw() & self.ram_page_number_mask) + self.page_offset;
+                if page_number < save_ram_bank_count {
+                    is_save_ram = true;
+                    page_number
+                } else {
+                    page_number - save_ram_bank_count
+                }
+            };
+
+            (page_number, is_save_ram)
         };
 
         match self.bank {
             PrgBank::Empty =>
                 (PrgPageId::Empty, ReadWriteStatus::Disabled),
             PrgBank::Rom(_, None) =>
-                (PrgPageId::Rom(page_number()), ReadWriteStatus::ReadOnly),
+                (PrgPageId::Rom { page_number: page_number().0 }, ReadWriteStatus::ReadOnly),
             PrgBank::Rom(_, Some(status_register)) =>
-                (PrgPageId::Rom(page_number()), registers.read_write_status(status_register)),
-            PrgBank::Ram(_, None) | PrgBank::WorkRam(_, None) =>
-                (PrgPageId::Ram(page_number()), ReadWriteStatus::ReadWrite),
-            PrgBank::Ram(_, Some(status_register)) | PrgBank::WorkRam(_, Some(status_register)) =>
-                (PrgPageId::Ram(page_number()), registers.read_write_status(status_register)),
+                (PrgPageId::Rom { page_number: page_number().0 }, registers.read_write_status(status_register)),
+            PrgBank::Ram(_, None) | PrgBank::WorkRam(_, None) => {
+                let (page_number, is_save_ram) = page_number();
+                if is_save_ram {
+                    (PrgPageId::SaveRam { page_number }, ReadWriteStatus::ReadWrite)
+                } else {
+                    (PrgPageId::WorkRam { page_number }, ReadWriteStatus::ReadWrite)
+                }
+            }
+            PrgBank::Ram(_, Some(status_register)) | PrgBank::WorkRam(_, Some(status_register)) => {
+                let rw_status = registers.read_write_status(status_register);
+                let (page_number, is_save_ram) = page_number();
+                if is_save_ram {
+                    (PrgPageId::SaveRam { page_number }, rw_status)
+                } else {
+                    (PrgPageId::WorkRam { page_number }, rw_status)
+                }
+            }
             PrgBank::RomRam(_, status_register, rom_ram_register) => {
                 match registers.rom_ram_mode(rom_ram_register) {
-                    RomRamMode::Rom => (PrgPageId::Rom(page_number()), ReadWriteStatus::ReadOnly),
-                    RomRamMode::Ram => (PrgPageId::Ram(page_number()), registers.read_write_status(status_register)),
+                    RomRamMode::Rom => (PrgPageId::Rom { page_number: page_number().0}, ReadWriteStatus::ReadOnly),
+                    RomRamMode::Ram => (PrgPageId::WorkRam { page_number: page_number().0 }, registers.read_write_status(status_register)),
                 }
             }
             PrgBank::MirrorOf(_) => unreachable!("Mirrored banks should have been resolved by now."),
@@ -269,8 +302,7 @@ pub enum PrgPageIdSlot {
 #[derive(Clone, Copy, Debug)]
 pub enum PrgPageId {
     Empty,
-    Rom(PageNumber),
-    Ram(PageNumber),
+    Rom { page_number: u16 },
+    WorkRam { page_number: u16 },
+    SaveRam { page_number: u16 },
 }
-
-type PageNumber = u16;

@@ -95,8 +95,8 @@ impl Layout {
             self.prg_bank_size_override,
             cartridge.prg_rom().clone(),
             self.prg_rom_outer_bank_layout.outer_bank_count(prg_rom_size),
-            // TODO: Work RAM and Save RAM should be separate, but are combined here.
-            cartridge.prg_ram_size() + cartridge.prg_nvram_size(),
+            cartridge.prg_ram_size(),
+            cartridge.prg_nvram_size(),
             cartridge.prg_access_override(),
             prg_bank_registers,
         );
