@@ -25,11 +25,7 @@ impl ChrMemoryMap {
         regs: &ChrBankRegisters,
     ) -> Self {
 
-        let pages_per_bank = bank_size.page_multiple();
-
         let mut page_mappings = Vec::with_capacity(CHR_SLOT_COUNT);
-
-        let mut address = 0x0000;
         for window in initial_layout.windows() {
             let pages_per_window = window.size().page_multiple();
             let mut page_number_mask = 0b1111_1111_1111_1111;
@@ -37,13 +33,13 @@ impl ChrMemoryMap {
                 page_number_mask &= !(pages_per_window - 1);
             }
 
-            let bank = window.bank();
-            let mut page_offset = 0;
-            while window.is_in_bounds(address) {
-                let mapping = ChrMapping::Banked { bank, pages_per_bank, page_number_mask, page_offset };
-                page_mappings.push(mapping);
-                address += 0x400;
-                page_offset += 1;
+            for page_offset in 0..pages_per_window {
+                page_mappings.push(ChrMapping::Banked {
+                    bank: window.bank(),
+                    pages_per_bank: bank_size.page_multiple(),
+                    page_number_mask,
+                    page_offset,
+                });
             }
         }
 
