@@ -49,10 +49,6 @@ impl PrgWindow {
         self.bank
     }
 
-    pub fn is_in_bounds(self, address: u16) -> bool {
-        self.start.0 <= address && address <= self.end.0.get()
-    }
-
     pub fn location(self) -> Result<PrgBankLocation, String> {
         match self.bank {
             PrgBank::Rom(location, _) | PrgBank::Ram(location, _)  | PrgBank::RomRam(location, _, _) | PrgBank::WorkRam(location, _) => Ok(location),
@@ -100,22 +96,17 @@ pub enum ReadWriteStatusInfo {
 
 #[derive(Clone, Copy, Debug)]
 pub struct ChrWindow {
-    start: u16,
-    end: NonZeroU16,
-    size: NonZeroU16,
+    start: ChrWindowStart,
+    end: ChrWindowEnd,
+    size: ChrWindowSize,
     bank: ChrBank,
 }
 
 impl ChrWindow {
     pub const fn new(start: u16, end: u16, size: u32, bank: ChrBank) -> Self {
-        assert!(end > start);
-        let actual_size = end - start + 1;
-
-        assert!(size < u16::MAX as u32, "Window size must be small enough to fit inside a u16.");
-        let size = NonZeroU16::new(size as u16).expect("Window size to not be zero.");
-        assert!(actual_size == size.get());
-
-        let end = NonZeroU16::new(end).expect("Window end index to not be zero.");
+        let start = ChrWindowStart::new(start);
+        let end = ChrWindowEnd::new(end);
+        let size = ChrWindowSize::new(size, start, end);
         Self { start, end, size, bank }
     }
 
@@ -134,14 +125,14 @@ impl ChrWindow {
     }
 
     pub const fn start(self) -> u16 {
-        self.start
+        self.start.0
     }
 
     pub const fn end(self) -> NonZeroU16 {
-        self.end
+        self.end.0
     }
 
-    pub const fn size(self) -> NonZeroU16 {
+    pub const fn size(self) -> ChrWindowSize {
         self.size
     }
 
@@ -150,7 +141,7 @@ impl ChrWindow {
     }
 
     pub fn is_in_bounds(self, address: u16) -> bool {
-        self.start <= address && address <= self.end.get()
+        self.start.0 <= address && address <= self.end.0.get()
     }
 
     pub fn location(self) -> Result<ChrBankLocation, String> {
@@ -180,8 +171,8 @@ impl ChrWindow {
     }
 
     pub fn offset(self, address: u16) -> Option<u16> {
-        if self.start <= address && address <= self.end.get() {
-            Some(address - self.start)
+        if self.start.0 <= address && address <= self.end.0.get() {
+            Some(address - self.start.0)
         } else {
             None
         }
@@ -192,8 +183,8 @@ impl ChrWindow {
     }
 }
 
-const PAGE_SIZE: u16 = 8 * KIBIBYTE as u16;
-const SUB_PAGE_SIZE: u16 = KIBIBYTE as u16 / 8;
+const PRG_PAGE_SIZE: u16 = 8 * KIBIBYTE as u16;
+const PRG_SUB_PAGE_SIZE: u16 = KIBIBYTE as u16 / 8;
 
 #[derive(Clone, Copy, Debug)]
 pub struct PrgWindowStart(u16);
@@ -202,7 +193,7 @@ impl PrgWindowStart {
     const fn new(address: u16) -> Self {
         assert!(address >= 0x6000,
             "PrgWindow start address must be equal to or greater than 0x6000.");
-        assert!(address % SUB_PAGE_SIZE == 0,
+        assert!(address % PRG_SUB_PAGE_SIZE == 0,
             "PrgWindow start address must be a multiple of 0x80 (128).");
         Self(address)
     }
@@ -215,7 +206,7 @@ impl PrgWindowEnd {
     const fn new(address: u16) -> Self {
         assert!(address > 0x6000,
             "PrgWindow end address must be greater than 0x6000.");
-        assert!(address.wrapping_add(1) % SUB_PAGE_SIZE == 0,
+        assert!(address.wrapping_add(1) % PRG_SUB_PAGE_SIZE == 0,
             "PrgWindow end address must be a multiple of 0x80 (128), minus 1.");
         Self(NonZeroU16::new(address).unwrap())
     }
@@ -230,11 +221,11 @@ impl PrgWindowSize {
         assert!(size <= 32 * KIBIBYTE, "PrgWindow sizes must be at most 32 kibibytes.");
         let size = size as u16;
 
-        if size >= PAGE_SIZE {
-            assert!(size % PAGE_SIZE == 0,
+        if size >= PRG_PAGE_SIZE {
+            assert!(size % PRG_PAGE_SIZE == 0,
                 "PrgWindow sizes larger than 8KiB must be multiples of 8 kibibytes.")
         } else {
-            assert!(size % SUB_PAGE_SIZE == 0,
+            assert!(size % PRG_SUB_PAGE_SIZE == 0,
                 "PrgWindow sizes smaller than 8KiB must be multiples of 128 bytes.")
         }
 
@@ -247,11 +238,65 @@ impl PrgWindowSize {
     }
 
     pub fn page_multiple(self) -> u16 {
-        self.0 / PAGE_SIZE
+        self.0 / PRG_PAGE_SIZE
     }
 
     pub fn sub_page_multiple(self) -> u8 {
-        u8::try_from(self.0 / SUB_PAGE_SIZE).unwrap()
+        u8::try_from(self.0 / PRG_SUB_PAGE_SIZE).unwrap()
+    }
+
+    pub fn to_raw(self) -> u16 {
+        self.0
+    }
+}
+
+const CHR_PAGE_SIZE: u16 = KIBIBYTE as u16;
+
+#[derive(Clone, Copy, Debug)]
+pub struct ChrWindowStart(u16);
+
+impl ChrWindowStart {
+    const fn new(address: u16) -> Self {
+        assert!(address < 0x4000,
+            "ChrWindow start address must be less than 0x4000.");
+        assert!(address % CHR_PAGE_SIZE == 0,
+            "ChrWindow start address must be a multiple of 0x400.");
+        Self(address)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ChrWindowEnd(NonZeroU16);
+
+impl ChrWindowEnd {
+    const fn new(address: u16) -> Self {
+        assert!(address < 0x4000,
+            "ChrWindow end address must be less than 0x4000.");
+        assert!(address.wrapping_add(1) % CHR_PAGE_SIZE == 0,
+            "ChrWindow end address must be a multiple of 0x400, minus 1.");
+        Self(NonZeroU16::new(address).expect("ChrWindow end address to be greater than 0."))
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+pub struct ChrWindowSize(u16);
+
+impl ChrWindowSize {
+    const fn new(size: u32, start: ChrWindowStart, end: ChrWindowEnd) -> Self {
+        assert!(size >= KIBIBYTE, "ChrWindow sizes must be at least 1 kibibyte.");
+        assert!(size <= 8 * KIBIBYTE, "ChrWindow sizes must be at most 8 kibibytes.");
+        let size = size as u16;
+
+        assert!(end.0.get() > start.0,
+            "ChrWindow end address was less than its start address.");
+        assert!(end.0.get() - start.0 + 1 == size,
+            "ChrWindow size was must equal the end address minus the start address, plus one.");
+
+        Self(size)
+    }
+
+    pub fn page_multiple(self) -> u16 {
+        self.0 / CHR_PAGE_SIZE
     }
 
     pub fn to_raw(self) -> u16 {

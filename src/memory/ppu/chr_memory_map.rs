@@ -1,10 +1,9 @@
-use std::num::NonZeroU16;
-
 use crate::mapper::{ChrBank, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus};
 use crate::memory::bank::bank::ChrBankLocation;
 use crate::memory::bank::bank_index::ChrBankRegisters;
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
+use crate::memory::window::ChrWindowSize;
 use crate::util::unit::KIBIBYTE;
 
 use super::ciram::CiramSide;
@@ -21,21 +20,18 @@ impl ChrMemoryMap {
     pub fn new(
         initial_layout: ChrLayout,
         name_table_mirroring: NameTableMirroring,
-        bank_size: NonZeroU16,
+        bank_size: ChrWindowSize,
         align_large_windows: bool,
         regs: &ChrBankRegisters,
     ) -> Self {
 
-        let bank_size = bank_size.get();
-        assert_eq!(bank_size % 0x400, 0);
-        let pages_per_bank = bank_size / 0x400;
+        let pages_per_bank = bank_size.page_multiple();
 
         let mut page_mappings = Vec::with_capacity(CHR_SLOT_COUNT);
 
         let mut address = 0x0000;
         for window in initial_layout.windows() {
-            assert_eq!(window.size().get() % bank_size, 0);
-            let pages_per_window = window.size().get() / 0x400;
+            let pages_per_window = window.size().page_multiple();
             let mut page_number_mask = 0b1111_1111_1111_1111;
             if align_large_windows {
                 page_number_mask &= !(pages_per_window - 1);
