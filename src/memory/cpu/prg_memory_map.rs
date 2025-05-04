@@ -42,9 +42,7 @@ impl PrgMemoryMap {
         let mut page_mappings = Vec::with_capacity(PRG_SLOT_COUNT);
         let mut sub_page_mappings = Vec::with_capacity(PRG_SUB_SLOT_COUNT);
 
-        let mut address = 0x6000;
         for window in initial_layout.windows() {
-            assert!(window.start() >= 0x6000);
             let mut bank = window.bank();
             if let PrgBank::MirrorOf(mirroree_address) = bank {
                 for mirroree in initial_layout.windows() {
@@ -75,18 +73,11 @@ impl PrgMemoryMap {
                     page_mappings.push(PrgMappingSlot::Normal(mapping));
                 }
             } else {
-                let mut sub_page_offset = 0;
-                while window.is_in_bounds(address) {
+                for sub_page_offset in 0..window.size().sub_page_multiple() {
                     let mapping = PrgMapping {
-                        bank,
-                        rom_pages_per_bank: 1,
-                        rom_page_number_mask,
-                        ram_page_number_mask,
-                        page_offset: 0,
+                        bank, rom_pages_per_bank: 1, rom_page_number_mask, ram_page_number_mask, page_offset: 0,
                     };
                     sub_page_mappings.push((mapping, sub_page_offset));
-                    address += PAGE_SIZE / 64;
-                    sub_page_offset += 1;
                 }
 
                 assert!(sub_page_mappings.len() <= 64);
