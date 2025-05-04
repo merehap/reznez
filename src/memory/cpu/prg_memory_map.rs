@@ -67,19 +67,8 @@ impl PrgMemoryMap {
             }
 
             if window.size().get() >= 0x2000 {
-                assert_eq!(window.start() % 0x2000, 0, "Windows must start on a page boundary.");
-
-                match bank.memory_type(regs) {
-                    None => {
-                        assert_eq!(window.size().get(), PAGE_SIZE);
-                    }
-                    Some(MemoryType::Rom) => {
-                        assert_eq!(window.size().get() % rom_bank_size, 0);
-                        assert_eq!(window.size().get() % PAGE_SIZE, 0);
-                    }
-                    Some(MemoryType::Ram) => {
-                        assert_eq!(window.size().get() % PAGE_SIZE, 0);
-                    }
+                if let Some(MemoryType::Rom) = bank.memory_type(regs) {
+                    assert_eq!(window.size().get() % rom_bank_size, 0);
                 }
 
                 let rom_pages_per_window = window.size().get() / PAGE_SIZE;

@@ -2,7 +2,6 @@ use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(64 * KIBIBYTE)
-    .prg_bank_size_override(16 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x67FF,  2 * KIBIBYTE, PrgBank::ROM.fixed_index(2)),
         PrgWindow::new(0x6800, 0x6FFF,  2 * KIBIBYTE, PrgBank::MirrorOf(0x6000)),

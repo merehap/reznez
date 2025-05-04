@@ -4,7 +4,6 @@ use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(80 * KIBIBYTE)
-    .prg_bank_size_override(8 * KIBIBYTE)
     .prg_layout(&[
         /* FIXME: Represent these Windows manually.
         PrgWindow::new(0x5000, 0x57FF, 2 * KIBIBYTE, PrgBank::ROM.fixed_index(8)),

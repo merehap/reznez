@@ -1,5 +1,5 @@
 use std::collections::BTreeSet;
-use std::num::{NonZeroU16, NonZeroU8};
+use std::num::NonZeroU8;
 
 use log::warn;
 
@@ -22,7 +22,6 @@ use super::window::ChrWindow;
 #[derive(Clone)]
 pub struct Layout {
     prg_rom_max_size: u32,
-    prg_bank_size_override: Option<NonZeroU16>,
     prg_layout_index: u8,
     prg_layouts: ConstVec<PrgLayout, 10>,
     prg_rom_outer_bank_layout: OuterBankLayout,
@@ -92,7 +91,6 @@ impl Layout {
         let mut prg_memory = PrgMemory::new(
             self.prg_layouts.as_iter().collect(),
             self.prg_layout_index,
-            self.prg_bank_size_override,
             cartridge.prg_rom().clone(),
             self.prg_rom_outer_bank_layout.outer_bank_count(prg_rom_size),
             cartridge.prg_ram_size(),
@@ -157,7 +155,6 @@ impl Layout {
     pub const fn into_builder(self) -> LayoutBuilder {
         LayoutBuilder {
             prg_rom_max_size: Some(self.prg_rom_max_size),
-            prg_bank_size_override: self.prg_bank_size_override,
             prg_layout_index: self.prg_layout_index,
             prg_layouts: self.prg_layouts,
             prg_rom_outer_bank_layout: Some(self.prg_rom_outer_bank_layout),
@@ -184,7 +181,6 @@ impl Layout {
 #[derive(Clone, Copy)]
 pub struct LayoutBuilder {
     prg_rom_max_size: Option<u32>,
-    prg_bank_size_override: Option<NonZeroU16>,
     prg_layouts: ConstVec<PrgLayout, 10>,
     prg_layout_index: u8,
     prg_rom_outer_bank_layout: Option<OuterBankLayout>,
@@ -210,7 +206,6 @@ impl LayoutBuilder {
     const fn new() -> LayoutBuilder {
         LayoutBuilder {
             prg_rom_max_size: None,
-            prg_bank_size_override: None,
             prg_layout_index: 0,
             prg_layouts: ConstVec::new(),
             prg_rom_outer_bank_layout: None,
@@ -235,12 +230,6 @@ impl LayoutBuilder {
 
     pub const fn prg_rom_max_size(&mut self, value: u32) -> &mut LayoutBuilder {
         self.prg_rom_max_size = Some(value);
-        self
-    }
-
-    pub const fn prg_bank_size_override(&mut self, value: u32) -> &mut LayoutBuilder {
-        assert!(value <= u16::MAX as u32);
-        self.prg_bank_size_override = Some(NonZeroU16::new(value as u16).unwrap());
         self
     }
 
@@ -363,7 +352,6 @@ impl LayoutBuilder {
 
         Layout {
             prg_rom_max_size: self.prg_rom_max_size.unwrap(),
-            prg_bank_size_override: self.prg_bank_size_override,
             prg_layouts: self.prg_layouts,
             prg_layout_index: self.prg_layout_index,
             prg_rom_outer_bank_layout,

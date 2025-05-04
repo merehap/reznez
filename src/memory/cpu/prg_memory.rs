@@ -1,4 +1,4 @@
-use std::num::{NonZeroU8, NonZeroU16};
+use std::num::NonZeroU8;
 
 use crate::mapper::{BankIndex, PrgBankRegisterId, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank::{PrgBank, RomRamModeRegisterId};
@@ -30,7 +30,6 @@ impl PrgMemory {
     pub fn new(
         layouts: Vec<PrgLayout>,
         layout_index: u8,
-        rom_page_size_override: Option<NonZeroU16>,
         rom: RawMemory,
         rom_outer_bank_count: NonZeroU8,
         ram_size: u32,
@@ -39,22 +38,20 @@ impl PrgMemory {
         regs: PrgBankRegisters,
     ) -> PrgMemory {
 
-        let mut rom_page_size = rom_page_size_override;
-        if rom_page_size.is_none() {
-            for layout in &layouts {
-                for window in layout.windows() {
-                    if matches!(window.bank(), PrgBank::Rom(..) | PrgBank::RomRam(..)) {
-                        if let Some(size) = rom_page_size {
-                            rom_page_size = Some(std::cmp::min(window.size(), size));
-                        } else {
-                            rom_page_size = Some(window.size());
-                        }
+        let mut rom_bank_size = None;
+        for layout in &layouts {
+            for window in layout.windows() {
+                if matches!(window.bank(), PrgBank::Rom(..) | PrgBank::RomRam(..)) {
+                    if let Some(size) = rom_bank_size {
+                        rom_bank_size = Some(std::cmp::min(window.size(), size));
+                    } else {
+                        rom_bank_size = Some(window.size());
                     }
                 }
             }
         }
 
-        let rom_bank_size = rom_page_size.expect("at least one ROM or RAM window");
+        let rom_bank_size = rom_bank_size.expect("at least one ROM or RAM window");
         let rom_outer_bank_size = rom.size() / rom_outer_bank_count.get() as u32;
         let memory_maps = layouts.iter().map(|initial_layout| PrgMemoryMap::new(
             *initial_layout, rom_outer_bank_size, rom_bank_size, ram_size, save_ram_size, access_override, &regs,
