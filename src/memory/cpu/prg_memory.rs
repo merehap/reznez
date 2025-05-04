@@ -6,7 +6,6 @@ use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, MemoryT
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory_map::{PrgMemoryMap, PrgIndex};
-use crate::memory::ppu::chr_memory::AccessOverride;
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
 use crate::memory::read_result::ReadResult;
 use crate::memory::window::{ReadWriteStatusInfo, PrgWindow};
@@ -21,20 +20,17 @@ pub struct PrgMemory {
     ram: RawMemory,
     save_ram: RawMemory,
     extended_ram: RawMemoryArray<KIBIBYTE>,
-    access_override: Option<AccessOverride>,
     regs: PrgBankRegisters,
 }
 
 impl PrgMemory {
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
         layouts: Vec<PrgLayout>,
         layout_index: u8,
         rom: RawMemory,
         rom_outer_bank_count: NonZeroU8,
-        ram_size: u32,
+        work_ram_size: u32,
         save_ram_size: u32,
-        access_override: Option<AccessOverride>,
         regs: PrgBankRegisters,
     ) -> PrgMemory {
 
@@ -54,7 +50,7 @@ impl PrgMemory {
         let rom_bank_size = rom_bank_size.expect("at least one ROM or RAM window");
         let rom_outer_bank_size = rom.size() / rom_outer_bank_count.get() as u32;
         let memory_maps = layouts.iter().map(|initial_layout| PrgMemoryMap::new(
-            *initial_layout, rom_outer_bank_size, rom_bank_size, ram_size, save_ram_size, access_override, &regs,
+            *initial_layout, rom_outer_bank_size, rom_bank_size, work_ram_size, save_ram_size, &regs,
         )).collect();
 
         PrgMemory {
@@ -63,10 +59,9 @@ impl PrgMemory {
             layout_index,
             rom: rom.split_n(rom_outer_bank_count),
             rom_outer_bank_index: 0,
-            ram: RawMemory::new(ram_size),
+            ram: RawMemory::new(work_ram_size),
             save_ram: RawMemory::new(save_ram_size),
             extended_ram: RawMemoryArray::new(),
-            access_override,
             regs,
         }
     }
@@ -81,10 +76,6 @@ impl PrgMemory {
 
     pub fn extended_ram_mut(&mut self) -> &mut RawMemoryArray<KIBIBYTE> {
         &mut self.extended_ram
-    }
-
-    pub fn access_override(&self) -> Option<AccessOverride> {
-        self.access_override
     }
 
     pub fn read_write_status_infos(&self) -> Vec<ReadWriteStatusInfo> {

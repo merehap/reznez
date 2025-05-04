@@ -104,8 +104,9 @@ impl PrgBank {
         match self {
             PrgBank::Rom(loc, status) | PrgBank::Ram(loc, status) =>
                 PrgBank::Rom(loc, status),
-            PrgBank::RomRam(loc, status, _) =>
-                PrgBank::Rom(loc, Some(status)),
+            // RomRam status registers are for RAM, not ROM.
+            PrgBank::RomRam(loc, _, _) =>
+                PrgBank::Rom(loc, None),
             PrgBank::Empty | PrgBank::WorkRam(..) =>
                 PrgBank::Empty,
         }

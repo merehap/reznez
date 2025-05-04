@@ -2,7 +2,6 @@ use crate::memory::bank::bank::PrgBank;
 use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, MemoryType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
-use crate::memory::ppu::chr_memory::AccessOverride;
 use crate::memory::window::PrgWindowSize;
 use crate::util::unit::KIBIBYTE;
 
@@ -24,7 +23,6 @@ impl PrgMemoryMap {
         rom_bank_size: PrgWindowSize,
         ram_size: u32,
         save_ram_size: u32,
-        access_override: Option<AccessOverride>,
         regs: &PrgBankRegisters,
     ) -> Self {
 
@@ -43,13 +41,7 @@ impl PrgMemoryMap {
         let mut sub_page_mappings = Vec::with_capacity(PRG_SUB_SLOT_COUNT);
 
         for window in initial_layout.windows() {
-            let mut bank = window.bank();
-            match access_override {
-                None => {}
-                // TODO: Work RAM should become disabled, not ROM.
-                Some(AccessOverride::ForceRom) => bank = bank.as_rom(),
-                Some(AccessOverride::ForceRam) => panic!("PRG must have some ROM."),
-            }
+            let bank = window.bank();
 
             let page_multiple = window.size().page_multiple();
             if page_multiple >= 1 {

@@ -9,7 +9,7 @@ use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::mapper::{MapperParams, ReadWriteStatus};
 use crate::memory::ppu::chr_layout::ChrLayout;
-use crate::memory::ppu::chr_memory::ChrMemory;
+use crate::memory::ppu::chr_memory::{AccessOverride, ChrMemory};
 use crate::memory::raw_memory::RawMemory;
 use crate::memory::window::{ReadWriteStatusInfo, PrgWindow};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
@@ -88,14 +88,20 @@ impl Layout {
             chr_bank_registers.set_meta_chr(meta_id, register_id);
         }
 
+        let mut prg_layouts: Vec<_> = self.prg_layouts.as_iter().collect();
+        if cartridge.prg_access_override() == Some(AccessOverride::ForceRom) {
+            for layout in &mut prg_layouts {
+                *layout = layout.force_rom()
+            }
+        }
+
         let mut prg_memory = PrgMemory::new(
-            self.prg_layouts.as_iter().collect(),
+            prg_layouts,
             self.prg_layout_index,
             cartridge.prg_rom().clone(),
             self.prg_rom_outer_bank_layout.outer_bank_count(prg_rom_size),
             cartridge.prg_ram_size(),
             cartridge.prg_nvram_size(),
-            cartridge.prg_access_override(),
             prg_bank_registers,
         );
 

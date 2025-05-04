@@ -25,6 +25,13 @@ impl PrgLayout {
         PrgLayout(windows)
     }
 
+    pub fn force_rom(&self) -> Self {
+        let windows: Vec<PrgWindow> = self.0.iter()
+            .map(|window| window.force_rom())
+            .collect();
+        Self(Box::leak(Box::new(windows)))
+    }
+
     pub fn windows(&self) -> &[PrgWindow] {
         self.0
     }
