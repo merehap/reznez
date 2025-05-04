@@ -28,6 +28,20 @@ impl ChrLayout {
         }
     }
 
+    pub fn force_rom(&self) -> Self {
+        let windows: Vec<ChrWindow> = self.initial_windows.iter()
+            .map(|window| window.force_rom())
+            .collect();
+        Self { initial_windows: Box::leak(Box::new(windows)) }
+    }
+
+    pub fn force_ram(&self) -> Self {
+        let windows: Vec<ChrWindow> = self.initial_windows.iter()
+            .map(|window| window.force_ram())
+            .collect();
+        Self { initial_windows: Box::leak(Box::new(windows)) }
+    }
+
     pub fn windows(&self) -> &[ChrWindow] {
         self.initial_windows
     }

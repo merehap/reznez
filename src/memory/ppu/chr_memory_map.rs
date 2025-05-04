@@ -4,7 +4,6 @@ use crate::mapper::{ChrBank, NameTableMirroring, NameTableQuadrant, NameTableSou
 use crate::memory::bank::bank::ChrBankLocation;
 use crate::memory::bank::bank_index::ChrBankRegisters;
 use crate::memory::ppu::chr_layout::ChrLayout;
-use crate::memory::ppu::chr_memory::AccessOverride;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::util::unit::KIBIBYTE;
 
@@ -23,7 +22,6 @@ impl ChrMemoryMap {
         initial_layout: ChrLayout,
         name_table_mirroring: NameTableMirroring,
         bank_size: NonZeroU16,
-        access_override: Option<AccessOverride>,
         align_large_windows: bool,
         regs: &ChrBankRegisters,
     ) -> Self {
@@ -43,13 +41,7 @@ impl ChrMemoryMap {
                 page_number_mask &= !(pages_per_window - 1);
             }
 
-            let mut bank = window.bank();
-            match access_override {
-                None => {}
-                Some(AccessOverride::ForceRom) => bank = bank.as_rom(),
-                Some(AccessOverride::ForceRam) => bank = bank.as_ram(),
-            }
-
+            let bank = window.bank();
             let mut page_offset = 0;
             while window.is_in_bounds(address) {
                 let mapping = ChrMapping::Banked { bank, pages_per_bank, page_number_mask, page_offset };

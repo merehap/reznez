@@ -30,13 +30,13 @@ impl ChrMemory {
         layouts: Vec<ChrLayout>,
         layout_index: u8,
         align_large_chr_banks: bool,
-        access_override: Option<AccessOverride>,
         rom_outer_bank_count: NonZeroU8,
         rom: RawMemory,
         ram: RawMemory,
         name_table_mirroring: NameTableMirroring,
         regs: ChrBankRegisters,
     ) -> ChrMemory {
+
         let mut bank_size = None;
         for layout in &layouts {
             for window in layout.windows() {
@@ -64,7 +64,6 @@ impl ChrMemory {
                 *layout,
                 name_table_mirroring,
                 bank_size,
-                access_override,
                 align_large_chr_banks,
                 &regs,
         )).collect();

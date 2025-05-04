@@ -111,11 +111,25 @@ impl Layout {
                 .expect("This mapper must define what Four Screen mirroring is."),
         };
 
+        let mut chr_layouts: Vec<_> = self.chr_layouts.as_iter().collect();
+        match chr_access_override {
+            None => {}
+            Some(AccessOverride::ForceRom) => {
+                for layout in &mut chr_layouts {
+                    *layout = layout.force_rom()
+                }
+            }
+            Some(AccessOverride::ForceRam) => {
+                for layout in &mut chr_layouts {
+                    *layout = layout.force_ram()
+                }
+            }
+        }
+
         let mut chr_memory = ChrMemory::new(
-            self.chr_layouts.as_iter().collect(),
+            chr_layouts,
             self.chr_layout_index,
             self.align_large_chr_windows,
-            chr_access_override,
             self.chr_rom_outer_bank_layout.outer_bank_count(chr_rom_size),
             cartridge.chr_rom().clone(),
             chr_ram,

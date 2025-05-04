@@ -119,6 +119,20 @@ impl ChrWindow {
         Self { start, end, size, bank }
     }
 
+    pub fn force_rom(self) -> Self {
+        Self {
+            bank: self.bank.as_rom(),
+            .. self
+        }
+    }
+
+    pub fn force_ram(self) -> Self {
+        Self {
+            bank: self.bank.as_ram(),
+            .. self
+        }
+    }
+
     pub const fn start(self) -> u16 {
         self.start
     }
