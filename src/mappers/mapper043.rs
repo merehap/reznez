@@ -6,8 +6,10 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(80 * KIBIBYTE)
     .prg_bank_size_override(8 * KIBIBYTE)
     .prg_layout(&[
+        /* FIXME: Represent these Windows manually.
         PrgWindow::new(0x5000, 0x57FF, 2 * KIBIBYTE, PrgBank::ROM.fixed_index(8)),
         PrgWindow::new(0x5800, 0x5FFF, 2 * KIBIBYTE, PrgBank::MirrorOf(0x5000)),
+        */
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(2)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(1)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(0)),

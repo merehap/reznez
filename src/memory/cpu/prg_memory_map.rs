@@ -1,6 +1,6 @@
 use std::num::NonZeroU16;
 
-use crate::memory::bank::bank::{PrgBank, PrgBankLocation};
+use crate::memory::bank::bank::PrgBank;
 use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, MemoryType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
@@ -59,23 +59,27 @@ impl PrgMemoryMap {
                 assert!(!matches!(bank, PrgBank::MirrorOf(_)), "Invalid mirror window.")
             }
 
+            match access_override {
+                None => {}
+                // TODO: Work RAM should become disabled, not ROM.
+                Some(AccessOverride::ForceRom) => bank = bank.as_rom(),
+                Some(AccessOverride::ForceRam) => panic!("PRG must have some ROM."),
+            }
+
             if window.size().get() >= 0x2000 {
                 assert_eq!(window.start() % 0x2000, 0, "Windows must start on a page boundary.");
 
-                match access_override {
-                    None => {}
-                    // TODO: Work RAM should become disabled, not ROM.
-                    Some(AccessOverride::ForceRom) => bank = bank.as_rom(),
-                    Some(AccessOverride::ForceRam) => panic!("PRG must have some ROM."),
-                }
-
-                if bank.memory_type(regs) == Some(MemoryType::Rom) {
-                    assert_eq!(window.size().get() % rom_bank_size, 0);
-                    assert_eq!(window.size().get() % PAGE_SIZE, 0);
-                } else if bank.is_prg_ram() {
-                    assert_eq!(window.size().get() % PAGE_SIZE, 0);
-                } else {
-                    assert_eq!(window.size().get(), PAGE_SIZE);
+                match bank.memory_type(regs) {
+                    None => {
+                        assert_eq!(window.size().get(), PAGE_SIZE);
+                    }
+                    Some(MemoryType::Rom) => {
+                        assert_eq!(window.size().get() % rom_bank_size, 0);
+                        assert_eq!(window.size().get() % PAGE_SIZE, 0);
+                    }
+                    Some(MemoryType::Ram) => {
+                        assert_eq!(window.size().get() % PAGE_SIZE, 0);
+                    }
                 }
 
                 let rom_pages_per_window = window.size().get() / PAGE_SIZE;
@@ -97,13 +101,6 @@ impl PrgMemoryMap {
                     page_offset %= rom_page_count;
                 }
             } else {
-                match access_override {
-                    None => {}
-                    // TODO: Work RAM should become disabled, not ROM.
-                    Some(AccessOverride::ForceRom) => bank = bank.as_rom(),
-                    Some(AccessOverride::ForceRam) => panic!("PRG must have some ROM."),
-                }
-
                 let mut sub_page_offset = 0;
                 while window.is_in_bounds(address) {
                     let mapping = PrgMapping {
@@ -118,6 +115,7 @@ impl PrgMemoryMap {
                     sub_page_offset += 1;
                 }
 
+                assert!(sub_page_mappings.len() <= 64);
                 if sub_page_mappings.len() == 64 {
                     page_mappings.push(PrgMappingSlot::Multi(Box::new(sub_page_mappings.try_into().unwrap())));
                     sub_page_mappings = Vec::new();

@@ -3,7 +3,7 @@ use std::num::NonZeroU16;
 use crate::memory::bank::bank::{PrgBank, PrgBankLocation};
 use crate::memory::bank::bank_index::{PrgBankRegisters, PrgBankRegisterId};
 
-use crate::mapper::{BankIndex, ReadWriteStatus, ReadWriteStatusRegisterId};
+use crate::mapper::{BankIndex, ReadWriteStatus, ReadWriteStatusRegisterId, KIBIBYTE};
 
 use super::bank::bank::{ChrBank, ChrBankLocation};
 use super::bank::bank_index::ChrBankRegisterId;
@@ -12,35 +12,30 @@ use super::bank::bank_index::ChrBankRegisterId;
 // If the specified bank cannot fill the window, adjacent banks will be included too.
 #[derive(Clone, Copy, Debug)]
 pub struct PrgWindow {
-    start: u16,
-    end: NonZeroU16,
-    size: NonZeroU16,
+    start: PrgWindowStart,
+    end: PrgWindowEnd,
+    size: PrgWindowSize,
     bank: PrgBank,
 }
 
 impl PrgWindow {
     pub const fn new(start: u16, end: u16, size: u32, bank: PrgBank) -> PrgWindow {
-        assert!(end > start);
-        let actual_size = end - start + 1;
-
-        assert!(size < u16::MAX as u32, "Window size must be small enough to fit inside a u16.");
-        let size = NonZeroU16::new(size as u16).expect("Window size to not be zero.");
-        assert!(actual_size == size.get());
-
-        let end = NonZeroU16::new(end).expect("Window end index to not be zero.");
+        let start = PrgWindowStart::new(start);
+        let end = PrgWindowEnd::new(end);
+        let size = PrgWindowSize::new(size, start, end);
         PrgWindow { start, end, size, bank }
     }
 
     pub const fn start(self) -> u16 {
-        self.start
+        self.start.0
     }
 
     pub const fn end(self) -> NonZeroU16 {
-        self.end
+        self.end.0
     }
 
     pub const fn size(self) -> NonZeroU16 {
-        self.size
+        self.size.0
     }
 
     pub const fn bank(self) -> PrgBank {
@@ -48,7 +43,7 @@ impl PrgWindow {
     }
 
     pub fn is_in_bounds(self, address: u16) -> bool {
-        self.start <= address && address <= self.end.get()
+        self.start.0 <= address && address <= self.end.0.get()
     }
 
     pub fn location(self) -> Result<PrgBankLocation, String> {
@@ -78,8 +73,8 @@ impl PrgWindow {
     }
 
     pub fn offset(self, address: u16) -> Option<u16> {
-        if self.start <= address && address <= self.end.get() {
-            Some(address - self.start)
+        if self.start.0 <= address && address <= self.end.0.get() {
+            Some(address - self.start.0)
         } else {
             None
         }
@@ -173,5 +168,59 @@ impl ChrWindow {
 
     pub fn is_writable(self, registers: &PrgBankRegisters) -> bool {
         self.bank.is_writable(registers)
+    }
+}
+
+const PAGE_SIZE: u16 = 8 * KIBIBYTE as u16;
+const SUB_PAGE_SIZE: u16 = KIBIBYTE as u16 / 8;
+
+#[derive(Clone, Copy, Debug)]
+pub struct PrgWindowStart(u16);
+
+impl PrgWindowStart {
+    const fn new(address: u16) -> Self {
+        assert!(address >= 0x6000,
+            "PrgWindow start address must be equal to or greater than 0x6000.");
+        assert!(address % SUB_PAGE_SIZE == 0,
+            "PrgWindow start address must be a multiple of 0x80 (128).");
+        Self(address)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PrgWindowEnd(NonZeroU16);
+
+impl PrgWindowEnd {
+    const fn new(address: u16) -> Self {
+        assert!(address > 0x6000,
+            "PrgWindow end address must be greater than 0x6000.");
+        assert!(address.wrapping_add(1) % SUB_PAGE_SIZE == 0,
+            "PrgWindow end address must be a multiple of 0x80 (128), minus 1.");
+        Self(NonZeroU16::new(address).unwrap())
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PrgWindowSize(NonZeroU16);
+
+impl PrgWindowSize {
+    const fn new(size: u32, start: PrgWindowStart, end: PrgWindowEnd) -> Self {
+        assert!(size <= 32 * KIBIBYTE, "PrgWindow sizes must be at most 32 kibibytes.");
+        let size = size as u16;
+
+        if size >= PAGE_SIZE {
+            assert!(size % PAGE_SIZE == 0,
+                "PrgWindow sizes larger than 8KiB must be multiples of 8 kibibytes.")
+        } else {
+            assert!(size % SUB_PAGE_SIZE == 0,
+                "PrgWindow sizes smaller than 8KiB must be multiples of 128 bytes.")
+        }
+
+        assert!(end.0.get() > start.0,
+            "A PrgWindow's end address was less than its start address.");
+        assert!(end.0.get() - start.0 + 1 == size,
+            "A PrgWindow's size was must equal the end address minus the start address, plus one.");
+
+        Self(NonZeroU16::new(size).unwrap())
     }
 }
