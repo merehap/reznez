@@ -11,7 +11,6 @@ pub enum PrgBank {
     Rom(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
     Ram(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
     RomRam(PrgBankLocation, ReadWriteStatusRegisterId, RomRamModeRegisterId),
-    MirrorOf(u16),
 }
 
 impl PrgBank {
@@ -27,10 +26,6 @@ impl PrgBank {
 
     pub const fn switchable(self, register_id: PrgBankRegisterId) -> Self {
         self.set_location(PrgBankLocation::Switchable(register_id))
-    }
-
-    pub const fn mirror_of(window_address: u16) -> Self {
-        PrgBank::MirrorOf(window_address)
     }
 
     pub const fn status_register(self, id: ReadWriteStatusRegisterId) -> Self {
@@ -61,8 +56,8 @@ impl PrgBank {
     pub fn location(self) -> Result<PrgBankLocation, String> {
         match self {
             PrgBank::Rom(location, _) | PrgBank::Ram(location, _)  | PrgBank::RomRam(location, _, _) | PrgBank::WorkRam(location, _) => Ok(location),
-            PrgBank::Empty | PrgBank::MirrorOf(_) =>
-                Err(format!("Bank type {:?} does not have a bank location.", self)),
+            PrgBank::Empty =>
+                Err(format!("Empty banks {:?} don't have a bank location.", self)),
         }
     }
 
@@ -80,7 +75,6 @@ impl PrgBank {
             PrgBank::Rom(_, reg_id) => *reg_id,
             PrgBank::Ram(_, reg_id) | PrgBank::WorkRam(_, reg_id) => *reg_id,
             PrgBank::RomRam(_, reg_id, _) => Some(*reg_id),
-            PrgBank::MirrorOf(..) => panic!("Memory type cannot be directly determined for a Mirror bank."),
         }
     }
 
@@ -90,7 +84,6 @@ impl PrgBank {
             PrgBank::Rom(..) => Some(MemoryType::Rom),
             PrgBank::Ram(..) | PrgBank::WorkRam(..) => Some(MemoryType::Ram),
             PrgBank::RomRam(_, _, mode) => Some(regs.rom_ram_mode(*mode)),
-            PrgBank::MirrorOf(..) => panic!("Memory type cannot be directly determined for a Mirror bank."),
         }
     }
 
@@ -98,7 +91,6 @@ impl PrgBank {
         match self {
             PrgBank::Empty => false,
             PrgBank::Rom(..) => false,
-            PrgBank::MirrorOf(_) => todo!("Writability of MirrorOf"),
             // RAM with no status register is always writable.
             PrgBank::Ram(_, None) | PrgBank::WorkRam(_, None) => true,
             PrgBank::RomRam(_, status, rom_ram_mode) =>
@@ -116,8 +108,6 @@ impl PrgBank {
                 PrgBank::Rom(loc, Some(status)),
             PrgBank::Empty | PrgBank::WorkRam(..) =>
                 PrgBank::Empty,
-            PrgBank::MirrorOf(_) =>
-                self,
         }
     }
 

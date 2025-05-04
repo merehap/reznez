@@ -4,10 +4,9 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(64 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x67FF,  2 * KIBIBYTE, PrgBank::ROM.fixed_index(2)),
-        PrgWindow::new(0x6800, 0x6FFF,  2 * KIBIBYTE, PrgBank::MirrorOf(0x6000)),
+        PrgWindow::new(0x6800, 0x6FFF,  2 * KIBIBYTE, PrgBank::ROM.fixed_index(2)),
         PrgWindow::new(0x7000, 0x77FF,  2 * KIBIBYTE, PrgBank::ROM.fixed_index(3)),
-        PrgWindow::new(0x7800, 0x7FFF,  2 * KIBIBYTE, PrgBank::MirrorOf(0x7000)),
-        // These two could be a single 32KiB bank, but the bank indexes are clearer this way.
+        PrgWindow::new(0x7800, 0x7FFF,  2 * KIBIBYTE, PrgBank::ROM.fixed_index(3)),
         PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_index(0)),
         PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_index(1)),
     ])

@@ -44,16 +44,6 @@ impl PrgMemoryMap {
 
         for window in initial_layout.windows() {
             let mut bank = window.bank();
-            if let PrgBank::MirrorOf(mirroree_address) = bank {
-                for mirroree in initial_layout.windows() {
-                    if mirroree.start() == mirroree_address {
-                        bank = mirroree.bank();
-                    }
-                }
-
-                assert!(!matches!(bank, PrgBank::MirrorOf(_)), "Invalid mirror window.")
-            }
-
             match access_override {
                 None => {}
                 // TODO: Work RAM should become disabled, not ROM.
