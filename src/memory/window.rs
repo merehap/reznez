@@ -34,8 +34,8 @@ impl PrgWindow {
         self.end.0
     }
 
-    pub const fn size(self) -> NonZeroU16 {
-        self.size.0
+    pub const fn size(self) -> PrgWindowSize {
+        self.size
     }
 
     pub const fn bank(self) -> PrgBank {
@@ -200,11 +200,12 @@ impl PrgWindowEnd {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct PrgWindowSize(NonZeroU16);
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+pub struct PrgWindowSize(u16);
 
 impl PrgWindowSize {
     const fn new(size: u32, start: PrgWindowStart, end: PrgWindowEnd) -> Self {
+        assert!(size >= KIBIBYTE / 8, "PrgWindow sizes must be at least 128 (0x80) bytes.");
         assert!(size <= 32 * KIBIBYTE, "PrgWindow sizes must be at most 32 kibibytes.");
         let size = size as u16;
 
@@ -217,10 +218,18 @@ impl PrgWindowSize {
         }
 
         assert!(end.0.get() > start.0,
-            "A PrgWindow's end address was less than its start address.");
+            "PrgWindow end address was less than its start address.");
         assert!(end.0.get() - start.0 + 1 == size,
-            "A PrgWindow's size was must equal the end address minus the start address, plus one.");
+            "PrgWindow size was must equal the end address minus the start address, plus one.");
 
-        Self(NonZeroU16::new(size).unwrap())
+        Self(size)
+    }
+
+    pub fn page_multiple(self) -> u16 {
+        self.0 / PAGE_SIZE
+    }
+
+    pub fn to_raw(self) -> u16 {
+        self.0
     }
 }

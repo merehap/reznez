@@ -1,10 +1,9 @@
-use std::num::NonZeroU16;
-
 use crate::memory::bank::bank::PrgBank;
 use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, MemoryType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::ppu::chr_memory::AccessOverride;
+use crate::memory::window::PrgWindowSize;
 use crate::util::unit::KIBIBYTE;
 
 const PRG_SLOT_COUNT: usize = 5;
@@ -22,16 +21,14 @@ impl PrgMemoryMap {
     pub fn new(
         initial_layout: PrgLayout,
         rom_size: u32,
-        rom_bank_size: NonZeroU16,
+        rom_bank_size: PrgWindowSize,
         ram_size: u32,
         save_ram_size: u32,
         access_override: Option<AccessOverride>,
         regs: &PrgBankRegisters,
     ) -> Self {
 
-        let rom_bank_size = rom_bank_size.get();
-        assert_eq!(rom_bank_size % PAGE_SIZE, 0);
-        let rom_pages_per_bank = rom_bank_size / PAGE_SIZE;
+        let rom_pages_per_bank = rom_bank_size.page_multiple();
         assert_eq!(rom_size % u32::from(PAGE_SIZE), 0);
 
         let rom_page_count: u16 = (rom_size / u32::from(PAGE_SIZE)).try_into().unwrap();
@@ -66,28 +63,16 @@ impl PrgMemoryMap {
                 Some(AccessOverride::ForceRam) => panic!("PRG must have some ROM."),
             }
 
-            if window.size().get() >= 0x2000 {
-                if let Some(MemoryType::Rom) = bank.memory_type(regs) {
-                    assert_eq!(window.size().get() % rom_bank_size, 0);
-                }
-
-                let rom_pages_per_window = window.size().get() / PAGE_SIZE;
-                let rom_page_number_mask = rom_page_number_mask & !(rom_pages_per_window - 1);
-
-                let mut page_offset = 0;
-                while window.is_in_bounds(address) {
-                    let mapping = PrgMappingSlot::Normal(PrgMapping {
-                        bank,
-                        rom_pages_per_bank,
-                        rom_page_number_mask,
-                        ram_page_number_mask,
-                        page_offset,
-                    });
-                    page_mappings.push(mapping);
-                    address += PAGE_SIZE;
-                    page_offset += 1;
+            let page_multiple = window.size().page_multiple();
+            if page_multiple >= 1 {
+                let rom_page_number_mask = rom_page_number_mask & !(page_multiple - 1);
+                for page_offset in 0..page_multiple {
                     // Mirror high pages to low ones if there isn't enough ROM.
-                    page_offset %= rom_page_count;
+                    let page_offset = page_offset % rom_page_count;
+                    let mapping = PrgMapping {
+                        bank, rom_pages_per_bank, rom_page_number_mask, ram_page_number_mask, page_offset,
+                    };
+                    page_mappings.push(PrgMappingSlot::Normal(mapping));
                 }
             } else {
                 let mut sub_page_offset = 0;
