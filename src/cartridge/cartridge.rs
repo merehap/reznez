@@ -31,11 +31,11 @@ pub struct Cartridge {
     chr_access_override: Option<AccessOverride>,
 
     prg_rom: RawMemory,
-    prg_ram_size: u32,
-    prg_nvram_size: u32,
+    prg_work_ram_size: u32,
+    prg_save_ram_size: u32,
     chr_rom: RawMemory,
-    chr_ram_size: u32,
-    chr_nvram_size: u32,
+    chr_work_ram_size: u32,
+    chr_save_ram_size: u32,
 
     console_type: ConsoleType,
     title: String,
@@ -168,11 +168,11 @@ impl Cartridge {
             prg_access_override: None,
             chr_access_override,
             prg_rom: prg_rom.to_raw_memory(),
-            prg_ram_size,
-            prg_nvram_size,
+            prg_work_ram_size: prg_ram_size,
+            prg_save_ram_size: prg_nvram_size,
             chr_rom,
-            chr_ram_size,
-            chr_nvram_size,
+            chr_work_ram_size: chr_ram_size,
+            chr_save_ram_size: chr_nvram_size,
             console_type: ConsoleType::Nes,
             title,
         };
@@ -189,10 +189,10 @@ impl Cartridge {
             }
 
             cartridge.submapper_number = header.submapper_number;
-            cartridge.prg_ram_size = header.prg_ram_size;
-            cartridge.prg_nvram_size = header.prg_nvram_size;
-            cartridge.chr_ram_size = chr_ram_size;
-            cartridge.chr_nvram_size = header.chr_nvram_size;
+            cartridge.prg_work_ram_size = header.prg_ram_size;
+            cartridge.prg_save_ram_size = header.prg_nvram_size;
+            cartridge.chr_work_ram_size = chr_ram_size;
+            cartridge.chr_save_ram_size = header.chr_nvram_size;
         } else {
             warn!("ROM not found in header database.");
             if let Some((number, sub_number, data_hash, prg_hash)) =
@@ -203,7 +203,7 @@ impl Cartridge {
             }
         }
 
-        if cartridge.prg_ram_size == 0 && cartridge.prg_nvram_size == 0 {
+        if cartridge.prg_work_ram_size == 0 && cartridge.prg_save_ram_size == 0 {
             cartridge.prg_access_override = Some(AccessOverride::ForceRom);
         }
 
@@ -235,7 +235,7 @@ impl Cartridge {
     }
 
     pub fn chr_ram(&self) -> RawMemory {
-        RawMemory::new(self.chr_ram_size + self.chr_nvram_size)
+        RawMemory::new(self.chr_work_ram_size + self.chr_save_ram_size)
     }
 
     pub fn set_prg_rom_at(&mut self, index: u32, value: u8) {
@@ -247,11 +247,11 @@ impl Cartridge {
     }
 
     pub fn prg_ram_size(&self) -> u32 {
-        self.prg_ram_size
+        self.prg_work_ram_size
     }
 
     pub fn prg_nvram_size(&self) -> u32 {
-        self.prg_nvram_size
+        self.prg_save_ram_size
     }
 
     pub fn prg_access_override(&self) -> Option<AccessOverride> {
@@ -263,11 +263,11 @@ impl Cartridge {
     }
 
     pub fn chr_ram_size(&self) -> u32 {
-        self.chr_ram_size
+        self.chr_work_ram_size
     }
 
     pub fn chr_nvram_size(&self) -> u32 {
-        self.chr_nvram_size
+        self.chr_save_ram_size
     }
 
     pub fn chr_access_override(&self) -> Option<AccessOverride> {
@@ -277,24 +277,19 @@ impl Cartridge {
 
 impl fmt::Display for Cartridge {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mirroring = self.name_table_mirroring
-            .map(|m| m.to_string())
-            .unwrap_or("FourScreen".to_string());
         writeln!(f, "Mapper: {}", self.mapper_number)?;
         writeln!(f, "Submapper: {}", self.submapper_number)?;
-        writeln!(f, "Name table mirroring: {mirroring}")?;
-        writeln!(f, "Persistent memory: {}", self.has_persistent_memory)?;
-        writeln!(f, "iNES2 present: {}", self.ines2_present)?;
-
-        writeln!(f, "Trainer present: {}", self.trainer.is_some())?;
-        writeln!(f, "PRG ROM size: {}KiB", self.prg_rom.size() / KIBIBYTE)?;
-        writeln!(f, "PRG RAM size: {}KiB", self.prg_ram_size / KIBIBYTE)?;
-        writeln!(f, "PRG NVRAM size: {}KiB", self.prg_nvram_size / KIBIBYTE)?;
-        writeln!(f, "CHR ROM size: {}KiB", self.chr_rom.size() / KIBIBYTE)?;
-        writeln!(f, "CHR RAM size: {}KiB", self.chr_ram_size / KIBIBYTE)?;
-        writeln!(f, "CHR NVRAM size: {}KiB", self.chr_nvram_size / KIBIBYTE)?;
-        writeln!(f, "Console type: {:?}", self.console_type)?;
-        writeln!(f, "Title: {:?}", self.title)?;
+        writeln!(f, "PRG ROM: {:4}KiB, WorkRAM: {:4}KiB, SaveRAM: {:4}KiB",
+            self.prg_rom.size() / KIBIBYTE,
+            self.prg_work_ram_size / KIBIBYTE,
+            self.prg_save_ram_size / KIBIBYTE,
+        )?;
+        writeln!(f, "CHR ROM: {:4}KiB, WorkRAM: {:4}KiB, SaveRAM: {:4}KiB",
+            self.chr_rom.size() / KIBIBYTE,
+            self.chr_work_ram_size / KIBIBYTE,
+            self.chr_save_ram_size / KIBIBYTE,
+        )?;
+        writeln!(f, "Console: {}", self.console_type)?;
 
         Ok(())
     }
@@ -307,6 +302,19 @@ pub enum ConsoleType {
     VsUnisystem,
     PlayChoice10(Box<PlayChoice>),
     Extended,
+}
+
+impl fmt::Display for ConsoleType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let text = match self.clone() {
+            ConsoleType::Nes => "NES",
+            ConsoleType::VsUnisystem => "VS Unisystem",
+            ConsoleType::PlayChoice10(_) => "Play Choice 10",
+            ConsoleType::Extended => "Extended",
+        };
+
+        write!(f, "{text}")
+    }
 }
 
 #[allow(dead_code)]
@@ -346,11 +354,11 @@ pub mod test_data {
             chr_access_override: None,
 
             prg_rom: RawMemory::from_vec(prg_rom),
-            prg_ram_size: 0,
-            prg_nvram_size: 0,
+            prg_work_ram_size: 0,
+            prg_save_ram_size: 0,
             chr_rom: RawMemory::new(CHR_ROM_CHUNK_LENGTH as u32),
-            chr_ram_size: 0,
-            chr_nvram_size: 0,
+            chr_work_ram_size: 0,
+            chr_save_ram_size: 0,
             console_type: ConsoleType::Nes,
             title: "Test ROM".to_string(),
         }
