@@ -27,8 +27,6 @@ pub struct Cartridge {
 
     trainer: Option<RawMemoryArray<512>>,
 
-    chr_access_override: Option<AccessOverride>,
-
     prg_rom: RawMemory,
     prg_work_ram: RawMemory,
     prg_save_ram: RawMemory,
@@ -116,7 +114,6 @@ impl Cartridge {
 
         let chr_rom_start = prg_rom_end;
         let mut chr_rom_end = chr_rom_start + CHR_ROM_CHUNK_LENGTH as u32 * chr_rom_chunk_count;
-        let mut chr_access_override = None;
         let chr_rom = if let Some(rom) = rom.maybe_slice(chr_rom_start..chr_rom_end) {
             rom.to_raw_memory()
         } else {
@@ -127,18 +124,8 @@ impl Cartridge {
         };
 
         if chr_rom.is_empty() {
-            if chr_work_ram_size == 0 && chr_save_ram_size == 0 {
-                // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only layouts.
-                chr_access_override = Some(AccessOverride::ForceRam);
-                chr_work_ram_size = 8 * KIBIBYTE;
-            }
-        } else if chr_work_ram_size > 0 || chr_save_ram_size > 0 {
-            // It's not yet clear what to do in this case, but this passes M1_P128K_C128K_W8K.
-            warn!("Both CHR RAM and CHR NVRAM were specified. Disabling writability.");
-            chr_access_override = Some(AccessOverride::ForceRom)
-        } else {
-            // ROM provided but no RAM.
-            chr_access_override = Some(AccessOverride::ForceRom)
+            // If no CHR data is provided, add 8KiB of CHR RAM.
+            chr_work_ram_size = 8 * KIBIBYTE;
         }
 
         let title_start = chr_rom_end;
@@ -165,13 +152,13 @@ impl Cartridge {
 
             trainer: None,
 
-            chr_access_override,
             prg_rom: prg_rom.to_raw_memory(),
             prg_work_ram: RawMemory::new(prg_work_ram_size),
             prg_save_ram: RawMemory::new(prg_save_ram_size),
             chr_rom,
             chr_work_ram: RawMemory::new(chr_work_ram_size),
             chr_save_ram: RawMemory::new(chr_save_ram_size),
+
             console_type: ConsoleType::Nes,
             title,
         };
@@ -203,10 +190,6 @@ impl Cartridge {
         }
 
         Ok(cartridge)
-    }
-
-    pub fn prg_rom_forced(&self) -> bool {
-        self.prg_work_ram.is_empty() && self.prg_save_ram.is_empty()
     }
 
     pub fn name(&self) -> &str {
@@ -254,6 +237,10 @@ impl Cartridge {
         self.prg_save_ram.size()
     }
 
+    pub fn prg_rom_forced(&self) -> bool {
+        self.prg_work_ram.is_empty() && self.prg_save_ram.is_empty()
+    }
+
     pub fn chr_rom_size(&self) -> u32 {
         self.chr_rom.size()
     }
@@ -267,7 +254,17 @@ impl Cartridge {
     }
 
     pub fn chr_access_override(&self) -> Option<AccessOverride> {
-        self.chr_access_override
+        if self.chr_rom.is_empty() {
+            Some(AccessOverride::ForceRam)
+        } else if !self.chr_work_ram.is_empty() || !self.chr_save_ram.is_empty() {
+            // FIXME: Hack to pass M1_P128K_C128K_W8K.
+            warn!("CHR RAM or CHR NVRAM was specified by NES2.0 header. Disabling writability.");
+            Some(AccessOverride::ForceRom)
+        } else if self.chr_work_ram.is_empty() && self.chr_save_ram.is_empty() {
+            Some(AccessOverride::ForceRom)
+        } else {
+            None
+        }
     }
 }
 
@@ -346,14 +343,13 @@ pub mod test_data {
 
             trainer: None,
 
-            chr_access_override: None,
-
             prg_rom: RawMemory::from_vec(prg_rom),
             prg_work_ram: RawMemory::new(0),
             prg_save_ram: RawMemory::new(0),
             chr_rom: RawMemory::new(CHR_ROM_CHUNK_LENGTH as u32),
             chr_work_ram: RawMemory::new(0),
             chr_save_ram: RawMemory::new(0),
+
             console_type: ConsoleType::Nes,
             title: "Test ROM".to_string(),
         }
