@@ -31,11 +31,11 @@ pub struct Cartridge {
     chr_access_override: Option<AccessOverride>,
 
     prg_rom: RawMemory,
-    prg_work_ram_size: u32,
-    prg_save_ram_size: u32,
+    prg_work_ram: RawMemory,
+    prg_save_ram: RawMemory,
     chr_rom: RawMemory,
-    chr_work_ram_size: u32,
-    chr_save_ram_size: u32,
+    chr_work_ram: RawMemory,
+    chr_save_ram: RawMemory,
 
     console_type: ConsoleType,
     title: String,
@@ -168,11 +168,11 @@ impl Cartridge {
             prg_access_override: None,
             chr_access_override,
             prg_rom: prg_rom.to_raw_memory(),
-            prg_work_ram_size,
-            prg_save_ram_size,
+            prg_work_ram: RawMemory::new(prg_work_ram_size),
+            prg_save_ram: RawMemory::new(prg_save_ram_size),
             chr_rom,
-            chr_work_ram_size,
-            chr_save_ram_size,
+            chr_work_ram: RawMemory::new(chr_work_ram_size),
+            chr_save_ram: RawMemory::new(chr_save_ram_size),
             console_type: ConsoleType::Nes,
             title,
         };
@@ -189,10 +189,10 @@ impl Cartridge {
             }
 
             cartridge.submapper_number = header.submapper_number;
-            cartridge.prg_work_ram_size = header.prg_ram_size;
-            cartridge.prg_save_ram_size = header.prg_nvram_size;
-            cartridge.chr_work_ram_size = chr_work_ram_size;
-            cartridge.chr_save_ram_size = header.chr_nvram_size;
+            cartridge.prg_work_ram = RawMemory::new(header.prg_ram_size);
+            cartridge.prg_save_ram = RawMemory::new(header.prg_nvram_size);
+            cartridge.chr_work_ram = RawMemory::new(chr_work_ram_size);
+            cartridge.chr_save_ram = RawMemory::new(header.chr_nvram_size);
         } else {
             warn!("ROM not found in header database.");
             if let Some((number, sub_number, data_hash, prg_hash)) =
@@ -203,7 +203,7 @@ impl Cartridge {
             }
         }
 
-        if cartridge.prg_work_ram_size == 0 && cartridge.prg_save_ram_size == 0 {
+        if cartridge.prg_work_ram.size() == 0 && cartridge.prg_save_ram.size() == 0 {
             cartridge.prg_access_override = Some(AccessOverride::ForceRom);
         }
 
@@ -235,7 +235,8 @@ impl Cartridge {
     }
 
     pub fn chr_ram(&self) -> RawMemory {
-        RawMemory::new(self.chr_work_ram_size + self.chr_save_ram_size)
+        // FIXME
+        RawMemory::new(self.chr_work_ram.size() + self.chr_save_ram.size())
     }
 
     pub fn set_prg_rom_at(&mut self, index: u32, value: u8) {
@@ -247,11 +248,11 @@ impl Cartridge {
     }
 
     pub fn prg_ram_size(&self) -> u32 {
-        self.prg_work_ram_size
+        self.prg_work_ram.size()
     }
 
     pub fn prg_nvram_size(&self) -> u32 {
-        self.prg_save_ram_size
+        self.prg_save_ram.size()
     }
 
     pub fn prg_access_override(&self) -> Option<AccessOverride> {
@@ -263,11 +264,11 @@ impl Cartridge {
     }
 
     pub fn chr_ram_size(&self) -> u32 {
-        self.chr_work_ram_size
+        self.chr_work_ram.size()
     }
 
     pub fn chr_nvram_size(&self) -> u32 {
-        self.chr_save_ram_size
+        self.chr_save_ram.size()
     }
 
     pub fn chr_access_override(&self) -> Option<AccessOverride> {
@@ -281,13 +282,13 @@ impl fmt::Display for Cartridge {
         writeln!(f, "Submapper: {}", self.submapper_number)?;
         writeln!(f, "PRG ROM: {:4}KiB, WorkRAM: {:4}KiB, SaveRAM: {:4}KiB",
             self.prg_rom.size() / KIBIBYTE,
-            self.prg_work_ram_size / KIBIBYTE,
-            self.prg_save_ram_size / KIBIBYTE,
+            self.prg_work_ram.size() / KIBIBYTE,
+            self.prg_save_ram.size() / KIBIBYTE,
         )?;
         writeln!(f, "CHR ROM: {:4}KiB, WorkRAM: {:4}KiB, SaveRAM: {:4}KiB",
             self.chr_rom.size() / KIBIBYTE,
-            self.chr_work_ram_size / KIBIBYTE,
-            self.chr_save_ram_size / KIBIBYTE,
+            self.chr_work_ram.size() / KIBIBYTE,
+            self.chr_save_ram.size() / KIBIBYTE,
         )?;
         writeln!(f, "Console: {}", self.console_type)?;
 
@@ -354,11 +355,11 @@ pub mod test_data {
             chr_access_override: None,
 
             prg_rom: RawMemory::from_vec(prg_rom),
-            prg_work_ram_size: 0,
-            prg_save_ram_size: 0,
+            prg_work_ram: RawMemory::new(0),
+            prg_save_ram: RawMemory::new(0),
             chr_rom: RawMemory::new(CHR_ROM_CHUNK_LENGTH as u32),
-            chr_work_ram_size: 0,
-            chr_save_ram_size: 0,
+            chr_work_ram: RawMemory::new(0),
+            chr_save_ram: RawMemory::new(0),
             console_type: ConsoleType::Nes,
             title: "Test ROM".to_string(),
         }
