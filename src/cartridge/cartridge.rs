@@ -125,7 +125,8 @@ impl Cartridge {
             rom.slice(chr_rom_start..rom.size()).to_raw_memory()
         };
 
-        if chr_rom.is_empty() {
+        let no_chr_specified = chr_rom.is_empty() && chr_work_ram_size == 0 && chr_save_ram_size == 0;
+        if no_chr_specified {
             // If no CHR data is provided, add 8KiB of CHR RAM.
             chr_work_ram_size = 8 * KIBIBYTE;
         }
