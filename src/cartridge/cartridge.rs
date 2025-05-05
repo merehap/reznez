@@ -71,21 +71,23 @@ impl Cartridge {
         if ines2_present {
             mapper_number |= u16::from(rom[8] & 0b1111) << 8;
             submapper_number = rom[8] >> 4;
-            let prg_sizes = splitbits!(min=u32, rom[10], "eeeepppp");
-            match (prg_sizes.e, prg_sizes.p) {
-                (0, 0) => { /* Do nothing. */ }
-                (0, 1..) => prg_work_ram_size = 64 << prg_sizes.p,
-                (1.., 0) => prg_save_ram_size = 64 << prg_sizes.e,
-                (1.., 1..) => panic!("Both EEPROM and PRGRAM are present. Not sure what to do."),
+            let prg_sizes = splitbits!(min=u32, rom[10], "sssswwww");
+            if prg_sizes.w > 0 {
+                prg_work_ram_size = 64 << prg_sizes.w;
+            }
+
+            if prg_sizes.s > 0 {
+                prg_save_ram_size = 64 << prg_sizes.s;
             }
 
             // FIXME: This should be from rom[11], not rom[10].
-            let chr_sizes = splitbits!(min=u32, rom[10], "nnnnpppp");
-            match (chr_sizes.n, chr_sizes.p) {
-                (0, 0) => { /* Do nothing. */ }
-                (0, 1..) => chr_work_ram_size = 64 << chr_sizes.p,
-                (1.., 0) => chr_save_ram_size = 64 << chr_sizes.n,
-                (1.., 1..) => panic!("Both CHR NVRAM and CHRRAM are present. Not sure what to do."),
+            let chr_sizes = splitbits!(min=u32, rom[10], "sssswwww");
+            if chr_sizes.w > 0 {
+                chr_work_ram_size = 64 << chr_sizes.w;
+            }
+
+            if chr_sizes.s > 0 {
+                chr_save_ram_size = 64 << chr_sizes.s;
             }
         }
 
