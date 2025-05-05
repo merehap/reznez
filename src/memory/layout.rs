@@ -89,7 +89,7 @@ impl Layout {
         }
 
         let mut prg_layouts: Vec<_> = self.prg_layouts.as_iter().collect();
-        if cartridge.prg_access_override() == Some(AccessOverride::ForceRom) {
+        if cartridge.prg_rom_forced() {
             for layout in &mut prg_layouts {
                 *layout = layout.force_rom()
             }

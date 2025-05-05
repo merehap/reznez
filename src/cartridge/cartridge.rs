@@ -27,7 +27,6 @@ pub struct Cartridge {
 
     trainer: Option<RawMemoryArray<512>>,
 
-    prg_access_override: Option<AccessOverride>,
     chr_access_override: Option<AccessOverride>,
 
     prg_rom: RawMemory,
@@ -82,6 +81,7 @@ impl Cartridge {
                 (1.., 1..) => panic!("Both EEPROM and PRGRAM are present. Not sure what to do."),
             }
 
+            // FIXME: This should be from rom[11], not rom[10].
             let chr_sizes = splitbits!(min=u32, rom[10], "nnnnpppp");
             match (chr_sizes.n, chr_sizes.p) {
                 (0, 0) => { /* Do nothing. */ }
@@ -165,7 +165,6 @@ impl Cartridge {
 
             trainer: None,
 
-            prg_access_override: None,
             chr_access_override,
             prg_rom: prg_rom.to_raw_memory(),
             prg_work_ram: RawMemory::new(prg_work_ram_size),
@@ -203,11 +202,11 @@ impl Cartridge {
             }
         }
 
-        if cartridge.prg_work_ram.size() == 0 && cartridge.prg_save_ram.size() == 0 {
-            cartridge.prg_access_override = Some(AccessOverride::ForceRom);
-        }
-
         Ok(cartridge)
+    }
+
+    pub fn prg_rom_forced(&self) -> bool {
+        self.prg_work_ram.is_empty() && self.prg_save_ram.is_empty()
     }
 
     pub fn name(&self) -> &str {
@@ -253,10 +252,6 @@ impl Cartridge {
 
     pub fn prg_nvram_size(&self) -> u32 {
         self.prg_save_ram.size()
-    }
-
-    pub fn prg_access_override(&self) -> Option<AccessOverride> {
-        self.prg_access_override
     }
 
     pub fn chr_rom_size(&self) -> u32 {
@@ -351,7 +346,6 @@ pub mod test_data {
 
             trainer: None,
 
-            prg_access_override: None,
             chr_access_override: None,
 
             prg_rom: RawMemory::from_vec(prg_rom),
