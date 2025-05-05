@@ -67,26 +67,26 @@ impl Cartridge {
 
         let mut mapper_number = u16::from((upper_mapper_number << 4) | lower_mapper_number);
         let mut submapper_number = 0;
-        let mut prg_ram_size = 0;
-        let mut prg_nvram_size = 0;
-        let mut chr_ram_size = 0;
-        let mut chr_nvram_size = 0;
+        let mut prg_work_ram_size = 0;
+        let mut prg_save_ram_size = 0;
+        let mut chr_work_ram_size = 0;
+        let mut chr_save_ram_size = 0;
         if ines2_present {
             mapper_number |= u16::from(rom[8] & 0b1111) << 8;
             submapper_number = rom[8] >> 4;
             let prg_sizes = splitbits!(min=u32, rom[10], "eeeepppp");
             match (prg_sizes.e, prg_sizes.p) {
                 (0, 0) => { /* Do nothing. */ }
-                (0, 1..) => prg_ram_size = 64 << prg_sizes.p,
-                (1.., 0) => prg_nvram_size = 64 << prg_sizes.e,
+                (0, 1..) => prg_work_ram_size = 64 << prg_sizes.p,
+                (1.., 0) => prg_save_ram_size = 64 << prg_sizes.e,
                 (1.., 1..) => panic!("Both EEPROM and PRGRAM are present. Not sure what to do."),
             }
 
             let chr_sizes = splitbits!(min=u32, rom[10], "nnnnpppp");
             match (chr_sizes.n, chr_sizes.p) {
                 (0, 0) => { /* Do nothing. */ }
-                (0, 1..) => chr_ram_size = 64 << chr_sizes.p,
-                (1.., 0) => chr_nvram_size = 64 << chr_sizes.n,
+                (0, 1..) => chr_work_ram_size = 64 << chr_sizes.p,
+                (1.., 0) => chr_save_ram_size = 64 << chr_sizes.n,
                 (1.., 1..) => panic!("Both CHR NVRAM and CHRRAM are present. Not sure what to do."),
             }
         }
@@ -127,12 +127,12 @@ impl Cartridge {
         };
 
         if chr_rom.is_empty() {
-            if chr_ram_size == 0 && chr_nvram_size == 0 {
+            if chr_work_ram_size == 0 && chr_save_ram_size == 0 {
                 // If no CHR data is provided, add 8KiB of CHR RAM and allow writing to read-only layouts.
                 chr_access_override = Some(AccessOverride::ForceRam);
-                chr_ram_size = 8 * KIBIBYTE;
+                chr_work_ram_size = 8 * KIBIBYTE;
             }
-        } else if chr_ram_size > 0 || chr_nvram_size > 0 {
+        } else if chr_work_ram_size > 0 || chr_save_ram_size > 0 {
             // It's not yet clear what to do in this case, but this passes M1_P128K_C128K_W8K.
             warn!("Both CHR RAM and CHR NVRAM were specified. Disabling writability.");
             chr_access_override = Some(AccessOverride::ForceRom)
@@ -168,11 +168,11 @@ impl Cartridge {
             prg_access_override: None,
             chr_access_override,
             prg_rom: prg_rom.to_raw_memory(),
-            prg_work_ram_size: prg_ram_size,
-            prg_save_ram_size: prg_nvram_size,
+            prg_work_ram_size,
+            prg_save_ram_size,
             chr_rom,
-            chr_work_ram_size: chr_ram_size,
-            chr_save_ram_size: chr_nvram_size,
+            chr_work_ram_size,
+            chr_save_ram_size,
             console_type: ConsoleType::Nes,
             title,
         };
@@ -191,7 +191,7 @@ impl Cartridge {
             cartridge.submapper_number = header.submapper_number;
             cartridge.prg_work_ram_size = header.prg_ram_size;
             cartridge.prg_save_ram_size = header.prg_nvram_size;
-            cartridge.chr_work_ram_size = chr_ram_size;
+            cartridge.chr_work_ram_size = chr_work_ram_size;
             cartridge.chr_save_ram_size = header.chr_nvram_size;
         } else {
             warn!("ROM not found in header database.");
