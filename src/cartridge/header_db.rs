@@ -5,8 +5,6 @@ use std::collections::BTreeMap;
 
 use log::info;
 
-use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
-
 use crate::cartridge::cartridge::Cartridge;
 
 // Submapper numbers for ROMs that aren't in the NES Header DB (mostly test ROMs).
@@ -61,8 +59,37 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     // holydiverbatman/M78.3_P128K_C64K.nes
     (2751966167, 3161185153, 78, 3),
 
+    // instr_misc.nes
+    (1160500958, 3165947151, 1, 0),
+    // instr_timing.nes
+    (2178783783, 1558157791, 1, 0),
+    // all_instrs.nes
+    (2755660131, 036867474, 1, 0),
+
+    // mmc3_test/1-clocking.nes
+    (0840815252, 4211641636, 4, 0),
+    // mmc3_test/2-details.nes
+    (1461067563, 4091089803, 4, 0),
+    // mmc3_test/3-A12_clocking.nes
+    (3522479107, 1525174205, 4, 0),
+    // mmc3_test/4-scanline_timing.nes
+    (3213815090, 2170500801, 4, 0),
+    // mmc3_test/5-MMC3.nes
+    (3729061091, 3319686763, 4, 0),
     // mmc3_test/6-MMC6.nes
     (2669308141, 2914571485, 4, 1),
+    // mmc3_irq_tests/1.Clocking.nes
+    (1372524753, 3210513450, 4, 0),
+    // mmc3_irq_tests/2.Details.nes
+    (2314296442, 1734525057, 4, 0),
+    // mmc3_irq_tests/3.A12_clocking.nes
+    (0515143863, 4029146188, 4, 0),
+    // mmc3_irq_tests/4.Scanline_timing.nes
+    (0440252636, 4105053223, 4, 0),
+    // mmc3_irq_tests/5.MMC3_rev_A.nes (no submapper number has been officially assigned)
+    (0495013157, 4078096862, 4, 99),
+    // mmc3_irq_tests/6.MMC3_rev_B.nes
+    (2174952589, 1865463926, 4, 0),
 
     // shxing1.nes
     (1996547387, 408545878, 7, 1),
@@ -71,8 +98,6 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     // shxdma.nes
     (4274158895, 2442883650, 7, 1),
 
-    // mmc3_irq_tests/5.MMC3_rev_A.nes (no submapper number has been officially assigned)
-    (495013157, 4078096862, 4, 99),
     // Crystalis (no submapper number has been officially assigned)
     (656187357, 1661724784, 4, 99),
 
@@ -136,14 +161,11 @@ impl HeaderDb {
     pub fn header_from_db(
         &self,
         cartridge: &Cartridge,
-        data: &RawMemory,
-        prg_rom: &RawMemorySlice,
+        full_hash: u32,
+        prg_hash: u32,
         mapper_number: u16,
-        submapper_number: u8,
+        submapper_number: Option<u8>,
     ) -> Option<Header> {
-
-        let full_hash = crc32fast::hash(data.as_slice());
-        let prg_hash = crc32fast::hash(prg_rom.to_raw());
 
         let mut override_submapper_number = None;
         if let Some((number, sub_number)) = self.missing_data_submapper_numbers.get(&full_hash).copied()
@@ -172,7 +194,11 @@ impl HeaderDb {
 
         let result = self.prg_rom_by_crc32.get(&prg_hash).copied();
         if result.is_none() {
-            info!("ROM not found in DB. ({full_hash}, {prg_hash}, {mapper_number}, {submapper_number})");
+            if let Some(submapper_number) = submapper_number {
+                info!("ROM not found in DB. ({full_hash}, {prg_hash}, {mapper_number}, {submapper_number})");
+            } else {
+                info!("ROM not found in DB. ({full_hash}, {prg_hash}, {mapper_number}, ???)");
+            }
         }
 
         if let Some(mut header) = result && let Some(override_submapper_number) = override_submapper_number {
@@ -183,9 +209,7 @@ impl HeaderDb {
         }
     }
 
-    pub fn missing_submapper_number(&self, data: &RawMemory, prg_rom: &RawMemorySlice) -> Option<(u16, u8, u32, u32)> {
-        let data_hash = crc32fast::hash(data.as_slice());
-        let prg_hash = crc32fast::hash(prg_rom.to_raw());
+    pub fn missing_submapper_number(&self, data_hash: u32, prg_hash: u32) -> Option<(u16, u8, u32, u32)> {
         if let Some((number, sub_number)) = self.missing_data_submapper_numbers.get(&data_hash).copied() {
             Some((number, sub_number, data_hash, prg_hash))
         } else if let Some((number, sub_number)) = self.missing_prg_rom_submapper_numbers.get(&prg_hash).copied() {

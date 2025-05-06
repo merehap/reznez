@@ -12,15 +12,15 @@ pub fn lookup_mapper_with_params(cartridge: &Cartridge) -> (Box<dyn Mapper>, Map
         LookupResult::UnassignedMapper =>
             panic!("Mapper {number} is not in use. ROM: {cartridge_name}"),
         LookupResult::UnassignedSubmapper =>
-            panic!("Submapper {sub_number} of mapper {number} is not in use. ROM: {cartridge_name}"),
+            panic!("Submapper {} of mapper {number} is not in use. ROM: {cartridge_name}", sub_number.unwrap()),
         LookupResult::TodoMapper =>
             todo!("Mapper {number}. ROM: {cartridge_name}"),
         LookupResult::TodoSubmapper =>
-            todo!("Submapper {sub_number}. ROM: {cartridge_name}"),
+            todo!("Submapper {}. ROM: {cartridge_name}", sub_number.unwrap()),
         LookupResult::UnspecifiedSubmapper =>
-            panic!("Mapper {number}, submapper {sub_number} has unspecified behavior. ROM: {cartridge_name}"),
+            panic!("Mapper {number} must have a submapper number with specified behavior. ROM: {cartridge_name}"),
         LookupResult::ReassignedSubmapper {correct_mapper, correct_submapper } =>
-            panic!("Mapper {number}, submapper {sub_number} has been reassigned to {correct_mapper}, {correct_submapper} . ROM: {cartridge_name}"),
+            panic!("Mapper {number}, submapper {} has been reassigned to {correct_mapper}, {correct_submapper} . ROM: {cartridge_name}", sub_number.unwrap()),
     };
 
     let mut mapper_params = mapper.layout().make_mapper_params(cartridge);
@@ -36,19 +36,20 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         0 => m::mapper000::Mapper000.supported(),
         // MMC1
         1 => match submapper_number {
+            None => UnspecifiedSubmapper,
             // Normal behavior
-            0 => m::mapper001_0::Mapper001_0::new(cartridge).supported(),
+            Some(0) => m::mapper001_0::Mapper001_0::new(cartridge).supported(),
             // SUROM, SOROM, SXROM
-            1 | 2 | 4 => ReassignedSubmapper { correct_mapper: 1, correct_submapper: 0 },
-            3 => ReassignedSubmapper { correct_mapper: 155, correct_submapper: 0 },
+            Some(1 | 2 | 4) => ReassignedSubmapper { correct_mapper: 1, correct_submapper: 0 },
+            Some(3) => ReassignedSubmapper { correct_mapper: 155, correct_submapper: 0 },
             // SEROM, SHROM, SH1ROM
-            5 => m::mapper001_5::Mapper001_5::default().supported(),
+            Some(5) => m::mapper001_5::Mapper001_5::default().supported(),
             // 2ME
-            6 => TodoSubmapper,
+            Some(6) => TodoSubmapper,
             _ => UnassignedSubmapper,
         }
         // UxROM
-        2 => match submapper_number {
+        2 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
             // No bus conflicts
             1 => m::mapper002_1::MAPPER002_1.supported(),
@@ -57,7 +58,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
             _ => UnassignedSubmapper,
         }
         // CNROM
-        3 => match submapper_number {
+        3 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
             // No bus conflicts
             1 => m::mapper003_1::MAPPER003_1.supported(),
@@ -67,26 +68,27 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         }
         // MMC3
         4 => match submapper_number {
+            None => UnspecifiedSubmapper,
             // Sharp IRQs
-            0 => m::mapper004_0::mapper004_0().supported(),
+            Some(0) => m::mapper004_0::mapper004_0().supported(),
             // MMC6
-            1 => m::mapper004_1::Mapper004_1::new().supported(),
-            2 => UnassignedSubmapper,
+            Some(1) => m::mapper004_1::Mapper004_1::new().supported(),
+            Some(2) => UnassignedSubmapper,
             // MC-ACC IRQs
-            3 => m::mapper004_3::mapper004_3().supported(),
+            Some(3) => m::mapper004_3::mapper004_3().supported(),
             // NEC IRQs
-            4 => m::mapper004_4::mapper004_4().supported(),
+            Some(4) => m::mapper004_4::mapper004_4().supported(),
             // T9552 scrambling chip
-            5 => TodoSubmapper,
+            Some(5) => TodoSubmapper,
             // Rev A IRQ doesn't have a submapper assigned to it, despite being incompatible.
-            99 => m::mapper004_rev_a::mapper004_rev_a().supported(),
+            Some(99) => m::mapper004_rev_a::mapper004_rev_a().supported(),
             _ => UnassignedSubmapper,
         }
         // MMC5
         5 => m::mapper005::Mapper005::new().supported(),
 
         // AxROM
-        7 => match submapper_number {
+        7 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
             // No bus conflicts
             1 => m::mapper007_1::MAPPER007_1.supported(),
@@ -108,7 +110,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // K-1029 and K-1030P
         15 => m::mapper015::Mapper015.supported(),
 
-        16 => match submapper_number {
+        16 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
             1 => ReassignedSubmapper { correct_mapper: 159, correct_submapper: 0 },
             2 => ReassignedSubmapper { correct_mapper: 157, correct_submapper: 0 },
@@ -124,7 +126,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         18 => m::mapper018::Mapper018::default().supported(),
         // Namco 129 and Namco 163.
         // (Expansion Audio isn't supported yet, so all submappers are the same for now.)
-        19 => match submapper_number {
+        19 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
             // Duplicate of submapper 2.
             1 => m::mapper019::Mapper019::new().supported(),
@@ -136,7 +138,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         }
         // Famicom Disk System
         20 => panic!("Mapper 20 is only used for testing FDS images."),
-        21 => match submapper_number {
+        21 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
             // VRC4a
             1 => m::mapper021_1::mapper021_1().supported(),
@@ -146,7 +148,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         }
         // VRC2a
         22 => m::mapper022::mapper022().supported(),
-        23 => match submapper_number {
+        23 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
             // VRC4f
             1 => m::mapper023_1::mapper023_1().supported(),
@@ -157,7 +159,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
             _ => UnassignedSubmapper,
         }
 
-        25 => match submapper_number {
+        25 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
             // VRC4b
             1 => m::mapper025_1::mapper025_1().supported(),
@@ -176,15 +178,16 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
 
         // Irem G101
         32 => match submapper_number {
+            None => UnspecifiedSubmapper,
             // Normal behavior
-            0 => m::mapper032::Mapper032.supported(),
+            Some(0) => m::mapper032::Mapper032.supported(),
             // One-screen mirroring, fixed PRG banks (only Major League)
-            1 => TodoSubmapper,
+            Some(1) => TodoSubmapper,
             _ => UnassignedSubmapper,
         }
         // Taito's TC0190
         33 => m::mapper033::Mapper033.supported(),
-        34 => match submapper_number {
+        34 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
             // NINA-001
             1 => m::mapper034_1::Mapper034_1.supported(),
@@ -223,10 +226,11 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // Super 700-in-1
         62 => m::mapper062::Mapper062.supported(),
         63 => match submapper_number {
+            None => UnspecifiedSubmapper,
             // TH2291-3 and CH-011
-            0 => m::mapper063_0::Mapper063_0.supported(),
+            Some(0) => m::mapper063_0::Mapper063_0.supported(),
             // 82AB
-            1 => m::mapper063_1::Mapper063_1.supported(),
+            Some(1) => m::mapper063_1::Mapper063_1.supported(),
             _ => UnassignedSubmapper,
         }
         // RAMBO-1
@@ -244,12 +248,13 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         70 => m::mapper070::Mapper070.supported(),
         // Codemasters
         71 => match submapper_number {
+            None => UnspecifiedSubmapper,
             // Hardwired mirroring
             // FIXME: Implement specific submapper.
-            0 => m::mapper071::Mapper071.supported(),
+            Some(0) => m::mapper071::Mapper071.supported(),
             // Mapper-controlled mirroring (only Fire Hawk)
             // FIXME: Implement specific submapper.
-            1 => m::mapper071::Mapper071.supported(),
+            Some(1) => m::mapper071::Mapper071.supported(),
             _ => UnassignedSubmapper,
         }
 
@@ -262,7 +267,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         76 => m::mapper076::Mapper076::new().supported(),
         // Irem (Napoleon Senki)
         77 => m::mapper077::Mapper077.supported(),
-        78 => match submapper_number {
+        78 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
             // Single-screen mirroring (only Cosmo Carrier)
             1 => m::mapper078_1::Mapper078_1.supported(),
@@ -281,7 +286,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         82 => m::mapper082::Mapper082.supported(),
 
         84 => UnassignedMapper,
-        85 => match submapper_number {
+        85 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
             1 => m::mapper085_1::Mapper085_1::default().supported(),
             2 => m::mapper085_2::Mapper085_2::default().supported(),
@@ -373,11 +378,12 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         184 => m::mapper184::Mapper184.supported(),
         // CNROM with CHR RAM disable
         185 => match submapper_number {
-            0 => m::mapper185_0::Mapper185_0::default().supported(),
-            4 => m::mapper185_4::MAPPER185_4.supported(),
-            5 => m::mapper185_5::MAPPER185_5.supported(),
-            6 => m::mapper185_6::MAPPER185_6.supported(),
-            7 => m::mapper185_7::MAPPER185_7.supported(),
+            None => UnspecifiedSubmapper,
+            Some(0) => m::mapper185_0::Mapper185_0::default().supported(),
+            Some(4) => m::mapper185_4::MAPPER185_4.supported(),
+            Some(5) => m::mapper185_5::MAPPER185_5.supported(),
+            Some(6) => m::mapper185_6::MAPPER185_6.supported(),
+            Some(7) => m::mapper185_7::MAPPER185_7.supported(),
             _ => UnassignedSubmapper,
         }
         // Used when running the BIOS of the Fukutake Study Box.
@@ -388,10 +394,11 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
 
         // NROM-128 multicarts
         200 => match submapper_number {
+            None => UnspecifiedSubmapper,
             // More PRG/CHR banks
-            0 => m::mapper200_0::Mapper200_0.supported(),
+            Some(0) => m::mapper200_0::Mapper200_0.supported(),
             // Fewer PRG/CHR banks
-            1 => m::mapper200_1::Mapper200_1.supported(),
+            Some(1) => m::mapper200_1::Mapper200_1.supported(),
             _ => UnassignedSubmapper,
         }
         // NROM-256 multicarts
@@ -403,16 +410,17 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
 
         // DxROM, Tengen MIMIC-1, Namcot 118
         206 => match submapper_number {
+            None => UnspecifiedSubmapper,
             // Normal PRG banking
-            0 => m::mapper206::Mapper206::new().supported(),
+            Some(0) => m::mapper206::Mapper206::new().supported(),
             // Fixed 32KiB PRG bank
-            1 => TodoSubmapper,
+            Some(1) => TodoSubmapper,
             _ => UnassignedSubmapper,
         }
         // Taito's X1-005 (alternate name table mirrorings)
         207 => m::mapper207::Mapper207.supported(),
 
-        210 => match submapper_number {
+        210 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
             // Namco 175
             1 => m::mapper210_1::Mapper210_1.supported(),
@@ -426,10 +434,11 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
 
         // Quattro
         232 => match submapper_number {
+            None => UnspecifiedSubmapper,
             // Normal behavior
-            0 => m::mapper232::Mapper232.supported(),
+            Some(0) => m::mapper232::Mapper232.supported(),
             // Aladdin Deck Enhancer
-            1 => TodoSubmapper,
+            Some(1) => TodoSubmapper,
             _ => UnassignedSubmapper,
         }
 

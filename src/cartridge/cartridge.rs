@@ -13,49 +13,46 @@ const INES_HEADER_CONSTANT: &[u8] = &[b'N', b'E', b'S', 0x1A];
 const PRG_ROM_CHUNK_LENGTH: usize = 16 * KIBIBYTE as usize;
 const CHR_ROM_CHUNK_LENGTH: usize = 8 * KIBIBYTE as usize;
 
-// See https://wiki.nesdev.org/w/index.php?title=INES
-#[allow(dead_code)]
 #[derive(Clone, Debug)]
-pub struct Cartridge {
-    name: String,
-
-    mapper_number: u16,
+pub struct Nes2Fields {
     submapper_number: u8,
-    name_table_mirroring: Option<NameTableMirroring>,
-    has_persistent_memory: bool,
-    ines2_present: bool,
 
-    trainer: Option<RawMemoryArray<512>>,
-
-    prg_rom: RawMemory,
-    prg_work_ram: RawMemory,
-    prg_save_ram: RawMemory,
-    chr_rom: RawMemory,
-    chr_work_ram: RawMemory,
-    chr_save_ram: RawMemory,
-
-    console_type: ConsoleType,
-    title: String,
+    prg_work: u32,
+    prg_save: u32,
+    chr_work: u32,
+    chr_save: u32,
 }
 
-impl Cartridge {
-    #[rustfmt::skip]
-    pub fn load(name: String, rom: &RawMemory, header_db: &HeaderDb) -> Result<Cartridge, String> {
-        if rom.slice(0..4).to_raw() != INES_HEADER_CONSTANT {
+#[allow(dead_code)]
+#[derive(Clone, Debug)]
+pub struct RomHeader {
+    mapper_number: u16,
+    name_table_mirroring: Option<NameTableMirroring>,
+    has_persistent_memory: bool,
+    console_type: ConsoleType,
+
+    prg_rom_size: u32,
+    nes2_fields: Option<Nes2Fields>,
+    chr_rom_size: u32,
+}
+
+impl RomHeader {
+    pub fn parse(header: [u8; 16]) -> Result<Self, String> {
+        if &header[0..4] != INES_HEADER_CONSTANT {
             return Err(format!(
                 "Cannot load non-iNES ROM. Found {:?} but need {:?}.",
-                rom.slice(0..4),
+                &header[0..4],
                 INES_HEADER_CONSTANT,
             ));
         }
 
-        let prg_rom_chunk_count = rom[4] as u32;
-        let chr_rom_chunk_count = rom[5] as u32;
+        let prg_rom_chunk_count = header[4] as u32;
+        let chr_rom_chunk_count = header[5] as u32;
 
         let (lower_mapper_number, four_screen, trainer_enabled, has_persistent_memory, vertical_mirroring) =
-            splitbits_named!(rom[6], "llllftpv");
+            splitbits_named!(header[6], "llllftpv");
         let (upper_mapper_number, ines2, play_choice_enabled, vs_unisystem_enabled) =
-            splitbits_named!(rom[7], "uuuuiipv");
+            splitbits_named!(header[7], "uuuuiipv");
         let ines2_present = ines2 == 0b10;
 
         if trainer_enabled {
@@ -63,32 +60,20 @@ impl Cartridge {
         }
 
         let mut mapper_number = u16::from((upper_mapper_number << 4) | lower_mapper_number);
-        let mut submapper_number = 0;
-        let mut prg_work_ram_size = 0;
-        let mut prg_save_ram_size = 0;
-        let mut chr_work_ram_size = 0;
-        let mut chr_save_ram_size = 0;
+        let mut ram_sizes = None;
         if ines2_present {
-            mapper_number |= u16::from(rom[8] & 0b1111) << 8;
-            submapper_number = rom[8] >> 4;
-            let prg_sizes = splitbits!(min=u32, rom[10], "sssswwww");
-            if prg_sizes.w > 0 {
-                prg_work_ram_size = 64 << prg_sizes.w;
-            }
-
-            if prg_sizes.s > 0 {
-                prg_save_ram_size = 64 << prg_sizes.s;
-            }
+            mapper_number |= u16::from(header[8] & 0b1111) << 8;
+            let submapper_number = header[8] >> 4;
+            let prg_sizes = splitbits!(min=u32, header[10], "sssswwww");
+            let prg_work = if prg_sizes.w > 0 { 64 << prg_sizes.w } else { 0 };
+            let prg_save = if prg_sizes.s > 0 { 64 << prg_sizes.s } else { 0 };
 
             // FIXME: This should be from rom[11], not rom[10].
-            let chr_sizes = splitbits!(min=u32, rom[10], "sssswwww");
-            if chr_sizes.w > 0 {
-                chr_work_ram_size = 64 << chr_sizes.w;
-            }
+            let chr_sizes = splitbits!(min=u32, header[10], "sssswwww");
+            let chr_work = if chr_sizes.w > 0 { 64 << chr_sizes.w } else { 0 };
+            let chr_save = if chr_sizes.s > 0 { 64 << chr_sizes.s } else { 0 };
 
-            if chr_sizes.s > 0 {
-                chr_save_ram_size = 64 << chr_sizes.s;
-            }
+            ram_sizes = Some(Nes2Fields { submapper_number, prg_work, prg_save, chr_work, chr_save })
         }
 
         if play_choice_enabled {
@@ -108,25 +93,87 @@ impl Cartridge {
             Some(NameTableMirroring::HORIZONTAL)
         };
 
+        Ok(RomHeader {
+            mapper_number,
+            name_table_mirroring,
+            has_persistent_memory,
+            console_type: ConsoleType::Nes,
+            prg_rom_size: prg_rom_chunk_count * PRG_ROM_CHUNK_LENGTH as u32,
+            chr_rom_size: chr_rom_chunk_count * CHR_ROM_CHUNK_LENGTH as u32,
+            nes2_fields: ram_sizes,
+        })
+    }
+
+    fn chr_present(&self) -> bool {
+        if self.chr_rom_size > 0 {
+            return true;
+        }
+
+        if let Some(ram_sizes) = &self.nes2_fields {
+            ram_sizes.chr_work > 0 || ram_sizes.chr_save > 0
+        } else {
+            false
+        }
+    }
+}
+
+// See https://wiki.nesdev.org/w/index.php?title=INES
+#[allow(dead_code)]
+#[derive(Clone, Debug)]
+pub struct Cartridge {
+    name: String,
+    header: RomHeader,
+    submapper_number: Option<u8>,
+    title: String,
+
+    trainer: Option<RawMemoryArray<512>>,
+    prg_rom: RawMemory,
+    prg_work_ram: RawMemory,
+    prg_save_ram: RawMemory,
+    chr_rom: RawMemory,
+    chr_work_ram: RawMemory,
+    chr_save_ram: RawMemory,
+}
+
+impl Cartridge {
+    #[rustfmt::skip]
+    pub fn load(name: String, rom: &RawMemory, header_db: &HeaderDb) -> Result<Cartridge, String> {
+        let raw_header = rom.slice(0x0..0x10).to_raw().try_into()
+            .map_err(|err| format!("ROM file to have a 16 byte header. {err}"))?;
+        let header = RomHeader::parse(raw_header)?;
+
         let prg_rom_start = 0x10;
-        let prg_rom_end = prg_rom_start + PRG_ROM_CHUNK_LENGTH as u32 * prg_rom_chunk_count;
+        let prg_rom_end = prg_rom_start + header.prg_rom_size;
         let prg_rom = rom.maybe_slice(prg_rom_start..prg_rom_end)
-            .unwrap_or_else(
-                || panic!("ROM {name} was too short (claimed to have {prg_rom_chunk_count} PRG chunks)."));
+            .unwrap_or_else(|| {
+                panic!("ROM {name} was too short (claimed to have {}KiB PRG ROM).", header.prg_rom_size / KIBIBYTE);
+            })
+            .to_raw_memory();
 
         let chr_rom_start = prg_rom_end;
-        let mut chr_rom_end = chr_rom_start + CHR_ROM_CHUNK_LENGTH as u32 * chr_rom_chunk_count;
+        let mut chr_rom_end = chr_rom_start + header.chr_rom_size;
         let chr_rom = if let Some(rom) = rom.maybe_slice(chr_rom_start..chr_rom_end) {
             rom.to_raw_memory()
         } else {
-            error!("ROM {} claimed to have {} CHR ROM chunks, but the ROM was too short.",
-                name, chr_rom_chunk_count);
+            error!("ROM {name} claimed to have {}KiB CHR ROM, but the ROM was too short.", header.chr_rom_size);
             chr_rom_end = rom.size();
             rom.slice(chr_rom_start..rom.size()).to_raw_memory()
         };
 
-        let no_chr_specified = chr_rom.is_empty() && chr_work_ram_size == 0 && chr_save_ram_size == 0;
-        if no_chr_specified {
+        let mut submapper_number = None;
+        let mut prg_work_ram_size = 0;
+        let mut prg_save_ram_size = 0;
+        let mut chr_work_ram_size = 0;
+        let mut chr_save_ram_size = 0;
+        if let Some(nes2_fields) = &header.nes2_fields {
+            submapper_number = Some(nes2_fields.submapper_number);
+            prg_work_ram_size = nes2_fields.prg_work;
+            prg_save_ram_size = nes2_fields.prg_save;
+            chr_work_ram_size = nes2_fields.chr_work;
+            chr_save_ram_size = nes2_fields.chr_save;
+        }
+
+        if !header.chr_present() {
             // If no CHR data is provided, add 8KiB of CHR RAM.
             chr_work_ram_size = 8 * KIBIBYTE;
         }
@@ -146,38 +193,33 @@ impl Cartridge {
 
         let mut cartridge = Cartridge {
             name,
-
-            mapper_number,
+            header,
             submapper_number,
-            name_table_mirroring,
-            has_persistent_memory,
-            ines2_present,
+            title,
 
             trainer: None,
-
-            prg_rom: prg_rom.to_raw_memory(),
+            prg_rom,
             prg_work_ram: RawMemory::new(prg_work_ram_size),
             prg_save_ram: RawMemory::new(prg_save_ram_size),
             chr_rom,
             chr_work_ram: RawMemory::new(chr_work_ram_size),
             chr_save_ram: RawMemory::new(chr_save_ram_size),
-
-            console_type: ConsoleType::Nes,
-            title,
         };
 
-        if let Some(header) = header_db.header_from_db(&cartridge, rom, &prg_rom, mapper_number, submapper_number) {
-            if cartridge.mapper_number != header.mapper_number {
+        let full_hash = crc32fast::hash(rom.as_slice());
+        let prg_hash = crc32fast::hash(cartridge.prg_rom.as_slice());
+        if let Some(header) = header_db.header_from_db(&cartridge, full_hash, prg_hash, cartridge.header.mapper_number, cartridge.submapper_number) {
+            if cartridge.header.mapper_number != header.mapper_number {
                 warn!("Mapper number in ROM ({}) does not match the one in the DB ({}).",
-                    cartridge.mapper_number, header.mapper_number);
+                    cartridge.header.mapper_number, header.mapper_number);
             }
 
-            assert_eq!(prg_rom.size(), header.prg_rom_size);
+            assert_eq!(cartridge.prg_rom.size(), header.prg_rom_size);
             if cartridge.chr_rom.size() != header.chr_rom_size {
                 warn!("CHR ROM size in cartridge did not match size in header DB.");
             }
 
-            cartridge.submapper_number = header.submapper_number;
+            cartridge.submapper_number = Some(header.submapper_number);
             cartridge.prg_work_ram = RawMemory::new(header.prg_ram_size);
             cartridge.prg_save_ram = RawMemory::new(header.prg_nvram_size);
             cartridge.chr_work_ram = RawMemory::new(chr_work_ram_size);
@@ -185,10 +227,10 @@ impl Cartridge {
         } else {
             warn!("ROM not found in header database.");
             if let Some((number, sub_number, data_hash, prg_hash)) =
-                    header_db.missing_submapper_number(rom, &prg_rom) && cartridge.mapper_number == number {
+                    header_db.missing_submapper_number(full_hash, prg_hash) && cartridge.header.mapper_number == number {
 
                 info!("Using override submapper for this ROM. Full hash: {data_hash} , PRG hash: {prg_hash}");
-                cartridge.submapper_number = sub_number;
+                cartridge.submapper_number = Some(sub_number);
             }
         }
 
@@ -200,15 +242,15 @@ impl Cartridge {
     }
 
     pub fn mapper_number(&self) -> u16 {
-        self.mapper_number
+        self.header.mapper_number
     }
 
-    pub fn submapper_number(&self) -> u8 {
+    pub fn submapper_number(&self) -> Option<u8> {
         self.submapper_number
     }
 
     pub fn name_table_mirroring(&self) -> Option<NameTableMirroring> {
-        self.name_table_mirroring
+        self.header.name_table_mirroring
     }
 
     pub fn prg_rom(&self) -> &RawMemory {
@@ -273,8 +315,12 @@ impl Cartridge {
 
 impl fmt::Display for Cartridge {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Mapper: {}", self.mapper_number)?;
-        writeln!(f, "Submapper: {}", self.submapper_number)?;
+        write!(f, "Mapper: {}", self.header.mapper_number)?;
+        if let Some(submapper_number) = self.submapper_number {
+            write!(f, " (Submapper: {submapper_number})")?;
+        }
+
+        writeln!(f)?;
         writeln!(f, "PRG ROM: {:4}KiB, WorkRAM: {:4}KiB, SaveRAM: {:4}KiB",
             self.prg_rom.size() / KIBIBYTE,
             self.prg_work_ram.size() / KIBIBYTE,
@@ -285,7 +331,7 @@ impl fmt::Display for Cartridge {
             self.chr_work_ram.size() / KIBIBYTE,
             self.chr_save_ram.size() / KIBIBYTE,
         )?;
-        writeln!(f, "Console: {}", self.console_type)?;
+        writeln!(f, "Console: {}", self.header.console_type)?;
 
         Ok(())
     }
@@ -338,11 +384,16 @@ pub mod test_data {
 
         Cartridge {
             name: "Test".to_string(),
-            mapper_number: 0,
-            submapper_number: 0,
-            name_table_mirroring: Some(NameTableMirroring::HORIZONTAL),
-            has_persistent_memory: false,
-            ines2_present: false,
+            header: RomHeader {
+                mapper_number: 0,
+                name_table_mirroring: Some(NameTableMirroring::HORIZONTAL),
+                has_persistent_memory: false,
+                console_type: ConsoleType::Nes,
+                prg_rom_size: prg_rom.len() as u32,
+                chr_rom_size: CHR_ROM_CHUNK_LENGTH as u32,
+                nes2_fields: None,
+            },
+            submapper_number: None,
 
             trainer: None,
 
@@ -353,7 +404,6 @@ pub mod test_data {
             chr_work_ram: RawMemory::new(0),
             chr_save_ram: RawMemory::new(0),
 
-            console_type: ConsoleType::Nes,
             title: "Test ROM".to_string(),
         }
     }
