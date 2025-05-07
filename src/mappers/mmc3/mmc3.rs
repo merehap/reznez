@@ -103,6 +103,10 @@ impl Mapper004Mmc3 {
             irq_state,
         }
     }
+
+    pub fn selected_register_id(&self) -> RegId {
+        self.selected_register_id
+    }
 }
 
 pub fn bank_select(
