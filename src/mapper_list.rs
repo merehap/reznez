@@ -211,6 +211,8 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
 
         // Rumble Station
         46 => m::mapper046::Mapper046::default().supported(),
+        // Super Spike V'Ball + Nintendo World Cup
+        47 => m::mapper047::Mapper047::new().supported(),
 
         // N-32 conversion of Super Mario Bros. 2 (J). PCB code 761214.
         50 => m::mapper050::Mapper050::default().supported(),

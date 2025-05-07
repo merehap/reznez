@@ -21,6 +21,7 @@ Auto-mirror undersized CHR (for mapper 99 and maybe others).
 Mapper switch dialog for mislabelled ROMs.
 Correct PPU address during sprite rendering
 Unwrap review. Convert most to expect or Result.
+Add {PRG,CHR} rom exact size as layout option?
 
 FANCY NICE-TO-HAVES
 APU frequency correction
@@ -156,6 +157,7 @@ Total games implemented:
 042: 0
 043: 0
 046: 0
+047: 1
 064: 5
 065: 3
 066: 17
@@ -199,4 +201,4 @@ Total games implemented:
 232: 5
 240: 0
 241: 0
-2393 / 2447
+2394 / 2447

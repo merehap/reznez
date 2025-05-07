@@ -93,8 +93,9 @@ impl PrgBank {
             PrgBank::Rom(..) => false,
             // RAM with no status register is always writable.
             PrgBank::Ram(_, None) | PrgBank::WorkRam(_, None) => true,
-            PrgBank::RomRam(_, status, rom_ram_mode) =>
-                registers.rom_ram_mode(rom_ram_mode) == MemoryType::Ram && registers.read_write_status(status) == ReadWriteStatus::ReadWrite,
+            PrgBank::RomRam(_, status_register_id, rom_ram_mode) =>
+                registers.rom_ram_mode(rom_ram_mode) == MemoryType::Ram &&
+                    registers.read_write_status(status_register_id) == ReadWriteStatus::ReadWrite,
             PrgBank::Ram(_, Some(status_register_id)) | PrgBank::WorkRam(_, Some(status_register_id)) =>
                 registers.read_write_status(status_register_id) == ReadWriteStatus::ReadWrite,
         }
