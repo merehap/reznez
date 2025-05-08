@@ -301,10 +301,6 @@ impl Cartridge {
     pub fn chr_access_override(&self) -> Option<AccessOverride> {
         if self.chr_rom.is_empty() {
             Some(AccessOverride::ForceRam)
-        } else if !self.chr_work_ram.is_empty() || !self.chr_save_ram.is_empty() {
-            // FIXME: Hack to pass M1_P128K_C128K_W8K.
-            warn!("CHR RAM or CHR NVRAM was specified by NES2.0 header. Disabling writability.");
-            Some(AccessOverride::ForceRom)
         } else if self.chr_work_ram.is_empty() && self.chr_save_ram.is_empty() {
             Some(AccessOverride::ForceRom)
         } else {
