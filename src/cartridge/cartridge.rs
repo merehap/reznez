@@ -161,21 +161,16 @@ impl Cartridge {
         };
 
         let mut submapper_number = None;
-        let mut prg_work_ram_size = 0;
-        let mut prg_save_ram_size = 0;
-        let mut chr_work_ram_size = 0;
-        let mut chr_save_ram_size = 0;
+        let mut prg_work_ram_size = None;
+        let mut prg_save_ram_size = None;
+        let mut chr_work_ram_size = None;
+        let mut chr_save_ram_size = None;
         if let Some(nes2_fields) = &header.nes2_fields {
             submapper_number = Some(nes2_fields.submapper_number);
-            prg_work_ram_size = nes2_fields.prg_work;
-            prg_save_ram_size = nes2_fields.prg_save;
-            chr_work_ram_size = nes2_fields.chr_work;
-            chr_save_ram_size = nes2_fields.chr_save;
-        }
-
-        if !header.chr_present() {
-            // If no CHR data is provided, add 8KiB of CHR RAM.
-            chr_work_ram_size = 8 * KIBIBYTE;
+            prg_work_ram_size = Some(nes2_fields.prg_work);
+            prg_save_ram_size = Some(nes2_fields.prg_save);
+            chr_work_ram_size = Some(nes2_fields.chr_work);
+            chr_save_ram_size = Some(nes2_fields.chr_save);
         }
 
         let title_start = chr_rom_end;
@@ -199,11 +194,11 @@ impl Cartridge {
 
             trainer: None,
             prg_rom,
-            prg_work_ram: RawMemory::new(prg_work_ram_size),
-            prg_save_ram: RawMemory::new(prg_save_ram_size),
+            prg_work_ram: RawMemory::new(prg_work_ram_size.unwrap_or(0)),
+            prg_save_ram: RawMemory::new(prg_save_ram_size.unwrap_or(0)),
             chr_rom,
-            chr_work_ram: RawMemory::new(chr_work_ram_size),
-            chr_save_ram: RawMemory::new(chr_save_ram_size),
+            chr_work_ram: RawMemory::new(chr_work_ram_size.unwrap_or(0)),
+            chr_save_ram: RawMemory::new(chr_save_ram_size.unwrap_or(0)),
         };
 
         let full_hash = crc32fast::hash(rom.as_slice());
@@ -222,10 +217,15 @@ impl Cartridge {
             cartridge.submapper_number = Some(header.submapper_number);
             cartridge.prg_work_ram = RawMemory::new(header.prg_ram_size);
             cartridge.prg_save_ram = RawMemory::new(header.prg_nvram_size);
-            cartridge.chr_work_ram = RawMemory::new(chr_work_ram_size);
+            cartridge.chr_work_ram = RawMemory::new(header.chr_ram_size);
             cartridge.chr_save_ram = RawMemory::new(header.chr_nvram_size);
         } else {
             warn!("ROM not found in header database.");
+            if !cartridge.header.chr_present() {
+                // If no CHR data is provided, add 8KiB of CHR RAM.
+                cartridge.chr_work_ram = RawMemory::new(8 * KIBIBYTE);
+            }
+
             if let Some((number, sub_number, data_hash, prg_hash)) =
                     header_db.missing_submapper_number(full_hash, prg_hash) && cartridge.header.mapper_number == number {
 
