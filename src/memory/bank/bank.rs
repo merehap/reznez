@@ -45,11 +45,15 @@ impl PrgBank {
         }
     }
 
+    pub fn is_rom(self) -> bool {
+        matches!(self, PrgBank::Rom(..) | PrgBank::RomRam(..))
+    }
+
     pub fn is_work_ram(self) -> bool {
         matches!(self, PrgBank::WorkRam(..))
     }
 
-    pub fn is_prg_ram(self) -> bool {
+    pub fn is_ram(self) -> bool {
         matches!(self, PrgBank::WorkRam(..) | PrgBank::Ram(..) | PrgBank::RomRam(..))
     }
 
@@ -198,6 +202,14 @@ impl ChrBank {
 
     pub const fn meta_switchable(self, meta_id: MetaRegisterId) -> Self {
         self.set_location(ChrBankLocation::MetaSwitchable(meta_id))
+    }
+
+    pub fn is_rom(self) -> bool {
+        matches!(self, ChrBank::Rom(..))
+    }
+
+    pub fn is_ram(self) -> bool {
+        matches!(self, ChrBank::Ram(..))
     }
 
     pub fn is_writable(self, registers: &PrgBankRegisters) -> bool {

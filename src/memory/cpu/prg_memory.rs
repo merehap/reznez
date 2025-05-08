@@ -1,5 +1,7 @@
 use std::num::NonZeroU8;
 
+use log::warn;
+
 use crate::mapper::{BankIndex, PrgBankRegisterId, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank::{PrgBank, RomRamModeRegisterId};
 use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, MemoryType};
@@ -35,6 +37,7 @@ impl PrgMemory {
     ) -> PrgMemory {
 
         let mut rom_bank_size = None;
+        let mut ram_present_in_layout = false;
         for layout in &layouts {
             for window in layout.windows() {
                 if matches!(window.bank(), PrgBank::Rom(..) | PrgBank::RomRam(..)) {
@@ -44,10 +47,20 @@ impl PrgMemory {
                         rom_bank_size = Some(window.size());
                     }
                 }
+
+                if window.bank().is_ram() {
+                    ram_present_in_layout = true;
+                }
             }
         }
 
-        let rom_bank_size = rom_bank_size.expect("at least one ROM or RAM window");
+        let rom_bank_size = rom_bank_size.expect("at least one ROM window");
+        if (work_ram_size > 0 || save_ram_size > 0) && !ram_present_in_layout {
+            warn!("The PRG RAM that was specified in the rom file will be ignored since it is not \
+                    configured in the Layout for this mapper.");
+        }
+
+
         let rom_outer_bank_size = rom.size() / rom_outer_bank_count.get() as u32;
         let memory_maps = layouts.iter().map(|initial_layout| PrgMemoryMap::new(
             *initial_layout, rom_outer_bank_size, rom_bank_size, work_ram_size, save_ram_size, &regs,

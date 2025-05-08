@@ -1,5 +1,7 @@
 use std::num::NonZeroU8;
 
+use log::warn;
+
 use crate::mapper::{BankIndex, ChrBank, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank_index::ChrBankRegisters;
 use crate::memory::ppu::chr_layout::ChrLayout;
@@ -38,6 +40,8 @@ impl ChrMemory {
     ) -> ChrMemory {
 
         let mut bank_size = None;
+        let mut rom_present_in_layout = false;
+        let mut ram_present_in_layout = false;
         for layout in &layouts {
             for window in layout.windows() {
                 if matches!(window.bank(), ChrBank::Rom(..) | ChrBank::Ram(..)) {
@@ -47,11 +51,30 @@ impl ChrMemory {
                         bank_size = Some(window.size());
                     }
                 }
+
+                if window.bank().is_rom() {
+                    rom_present_in_layout = true;
+                }
+
+                if window.bank().is_ram() {
+                    ram_present_in_layout = true;
+                }
             }
         }
 
         // The page size for CHR ROM and CHR RAM appear to always match each other.
         let bank_size = bank_size.expect("at least one CHR ROM or CHR RAM window");
+        if !rom.is_empty() && !ram.is_empty() {
+            if !rom_present_in_layout {
+                warn!("The CHR ROM that was specified in the rom file will be ignored since it is not \
+                        configured in the Layout for this mapper.");
+            }
+
+            if !ram_present_in_layout {
+                warn!("The CHR RAM that was specified in the rom file will be ignored since it is not \
+                        configured in the Layout for this mapper.");
+            }
+        }
 
         let max_pattern_table_index = layouts[0].max_window_index();
         for layout in &layouts {
