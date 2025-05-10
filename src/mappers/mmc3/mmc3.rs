@@ -126,11 +126,6 @@ pub fn set_bank_index(
     value: u8,
 ) {
     let mut bank_index = value;
-    if matches!(*selected_register_id, Chr(C0) | Chr(C1)) {
-        // Double-width windows can only use even banks.
-        bank_index &= 0b1111_1110;
-    }
-
     if matches!(*selected_register_id, Prg(P0) | Prg(P1)) {
         // "Some romhacks rely on an 8-bit extension of R6/7 for oversized PRG-ROM,
         // but this is deliberately not supported by many emulators."
