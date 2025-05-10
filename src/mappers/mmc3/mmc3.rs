@@ -125,16 +125,9 @@ pub fn set_bank_index(
     selected_register_id: &mut RegId,
     value: u8,
 ) {
-    let mut bank_index = value;
-    if matches!(*selected_register_id, Prg(P0) | Prg(P1)) {
-        // "Some romhacks rely on an 8-bit extension of R6/7 for oversized PRG-ROM,
-        // but this is deliberately not supported by many emulators."
-        bank_index &= 0b0011_1111;
-    }
-
     match *selected_register_id {
-        Chr(cx) => params.set_chr_register(cx, bank_index),
-        Prg(px) => params.set_prg_register(px, bank_index),
+        Chr(cx) => params.set_chr_register(cx, value),
+        Prg(px) => params.set_prg_register(px, value),
     }
 }
 
