@@ -1,62 +1,84 @@
-const LEVELS: [u16; 9] = [3, 6, 12, 24, 48, 96, 192, 384, 768];
+use std::num::NonZeroU8;
 
-pub fn spectrum(count: u16) -> Vec<u8> {
-    let mut granularity = None;
-    for i in 0..LEVELS.len() {
-        if count < LEVELS[i] {
-            granularity = Some(i);
-            break;
+use super::rgb::Rgb;
+
+pub fn spectrum(step_count: u16) -> Vec<Rgb> {
+    RawColor::spectrum(step_count).iter()
+        .map(|color| color.to_rgb())
+        .collect()
+}
+
+pub fn grey_scale(step_count: u16) -> Vec<Rgb> {
+    let step_count: u32 = step_count.into();
+
+    let mut scale = Vec::new();
+    for step in 0..step_count {
+        let value: u8 = (256 * step / step_count).try_into().unwrap();
+        scale.push(Rgb::new(value, value, value));
+    }
+
+    scale
+}
+
+#[derive(Clone, Copy)]
+struct RawColor {
+    range: Range,
+    index: NonZeroU8,
+}
+
+impl RawColor {
+    const FULL_RANGE: u16 = 6 * 254;
+
+    fn spectrum(step_count: u16) -> Vec<RawColor> {
+        let step_count: u32 = step_count.into();
+
+        let mut spectrum = Vec::new();
+        for step in 0..step_count {
+            let full_index = u32::from(RawColor::FULL_RANGE) * step / step_count;
+            let full_index: u16 = full_index.try_into().unwrap();
+            spectrum.push(RawColor::from_full_index(full_index));
+        }
+
+        spectrum
+    }
+
+    fn from_full_index(full_index: u16) -> RawColor {
+        assert!(full_index < RawColor::FULL_RANGE);
+        let range = match full_index / 6 {
+            0 => Range::RedYellow,
+            1 => Range::YellowGreen,
+            2 => Range::GreenCyan,
+            3 => Range::CyanBlue,
+            4 => Range::BlueMagenta,
+            5 => Range::MagentaRed,
+            _ => unreachable!(),
+        };
+
+        RawColor {
+            range,
+            index: NonZeroU8::new((full_index % 254 + 1).try_into().unwrap()).unwrap(),
         }
     }
 
-    let granularity = granularity.unwrap_or(8);
-
-    //let alt_granularity = 
-    unreachable!()
-}
-
-fn spectrum_granularity(count: u16) -> u8 {
-    let mut granularity = None;
-    for i in 0..LEVELS.len() {
-        if count <= LEVELS[i] {
-            granularity = Some(i as u8);
-            break;
+    fn to_rgb(self) -> Rgb {
+        let index = self.index.get();
+        match self.range {
+            Range::RedYellow => Rgb::new(0xFF, index, 0x00),
+            Range::YellowGreen => Rgb::new(index, 0xFF, 0x00),
+            Range::GreenCyan => Rgb::new(0x00, 0xFF, index),
+            Range::CyanBlue => Rgb::new(0x00, index, 0xFF),
+            Range::BlueMagenta => Rgb::new(index, 0x00, 0xFF),
+            Range::MagentaRed => Rgb::new(0xFF, 0x00, index),
         }
     }
-
-    let old_value = granularity.unwrap_or(8);
-
-    //let new_value = (1.5 * f64::from(count)).log2().trunc() as u8 - 1;
-    //assert_eq!(old_value, new_value);
-
-    old_value
 }
 
-#[cfg(test)]
-pub mod test_data {
-    use super::*;
-
-    #[test]
-    fn spectrum_lengths() {
-        assert_eq!(spectrum_granularity(0), 0);
-        assert_eq!(spectrum_granularity(1), 0);
-        assert_eq!(spectrum_granularity(2), 0);
-        assert_eq!(spectrum_granularity(3), 0);
-        assert_eq!(spectrum_granularity(4), 1);
-        assert_eq!(spectrum_granularity(5), 1);
-        assert_eq!(spectrum_granularity(6), 1);
-        assert_eq!(spectrum_granularity(7), 2);
-
-        assert_eq!(spectrum_granularity(12), 2);
-        assert_eq!(spectrum_granularity(13), 3);
-
-        assert_eq!(spectrum_granularity(384), 7);
-        assert_eq!(spectrum_granularity(385), 8);
-
-        assert_eq!(spectrum_granularity(768), 8);
-        assert_eq!(spectrum_granularity(769), 8);
-
-        assert_eq!(spectrum_granularity(1024), 8);
-        assert_eq!(spectrum_granularity(1025), 8);
-    }
+#[derive(Clone, Copy)]
+enum Range {
+    RedYellow,
+    YellowGreen,
+    GreenCyan,
+    CyanBlue,
+    BlueMagenta,
+    MagentaRed,
 }
