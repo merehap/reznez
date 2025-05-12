@@ -113,12 +113,12 @@ impl Ppu {
             GetPatternIndex => {
                 if !mem.regs().rendering_enabled() { return; }
                 let address = PpuAddress::in_name_table(name_table_quadrant, tile_column, tile_row);
-                self.next_pattern_index = PatternIndex::new(mem.read(address));
+                self.next_pattern_index = PatternIndex::new(mem.read(address).value());
             }
             GetPaletteIndex => {
                 if !mem.regs().rendering_enabled() { return; }
                 let address = PpuAddress::in_attribute_table(name_table_quadrant, tile_column, tile_row);
-                let attribute_byte = mem.read(address);
+                let attribute_byte = mem.read(address).value();
                 let palette_table_index =
                     PaletteTableIndex::from_attribute_byte(attribute_byte, tile_column, tile_row);
                 self.attribute_register.set_pending_palette_table_index(palette_table_index);
@@ -135,11 +135,11 @@ impl Ppu {
             }
             GetPatternLowByte => {
                 if !mem.regs().rendering_enabled() { return; }
-                self.pattern_register.set_pending_low_byte(mem.read(self.pattern_address));
+                self.pattern_register.set_pending_low_byte(mem.read(self.pattern_address).value());
             }
             GetPatternHighByte => {
                 if !mem.regs().rendering_enabled() { return; }
-                self.pattern_register.set_pending_high_byte(mem.read(self.pattern_address));
+                self.pattern_register.set_pending_high_byte(mem.read(self.pattern_address).value());
             }
 
             GotoNextTileColumn => {
@@ -176,7 +176,8 @@ impl Ppu {
                         self.attribute_register.current_palette_table_index(column_in_tile);
                     let palette = palette_table.background_palette(current_palette_table_index);
 
-                    let current_background_pixel = self.pattern_register.palette_index(column_in_tile)
+                    let current_background_pixel = self.pattern_register
+                        .palette_index(column_in_tile)
                         .map_or(Rgbt::Transparent, |palette_index| Rgbt::Opaque(palette[palette_index]));
 
                     frame.set_background_pixel(pixel_column, pixel_row, current_background_pixel);
@@ -324,7 +325,7 @@ impl Ppu {
             }
             GetSpritePatternLowByte => {
                 if mem.regs().rendering_enabled() {
-                    let pattern_low = mem.read(self.pattern_address);
+                    let pattern_low = mem.read(self.pattern_address).value();
                     if self.sprite_visible {
                         self.oam_registers.registers[self.oam_register_index]
                             .set_pattern_low(pattern_low);
@@ -333,7 +334,7 @@ impl Ppu {
             }
             GetSpritePatternHighByte => {
                 if mem.regs().rendering_enabled() {
-                    let pattern_high = mem.read(self.pattern_address);
+                    let pattern_high = mem.read(self.pattern_address).value();
                     if self.sprite_visible {
                         self.oam_registers.registers[self.oam_register_index]
                             .set_pattern_high(pattern_high);

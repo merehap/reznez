@@ -115,13 +115,20 @@ impl ChrMemory {
         ids
     }
 
-    pub fn peek(&self, ciram: &Ciram, address: PpuAddress) -> u8 {
+    pub fn peek(&self, ciram: &Ciram, address: PpuAddress) -> PpuPeek {
         match self.current_memory_map().index_for_address(address).0 {
             ChrMemoryIndex::Rom(index) => {
-                self.rom_outer_banks[self.rom_outer_bank_index as usize][index % self.rom_outer_banks[0].size()]
+                let value = self.rom_outer_banks[self.rom_outer_bank_index as usize][index % self.rom_outer_banks[0].size()];
+                PpuPeek::new(value)
             },
-            ChrMemoryIndex::Ram(index) => self.ram[index % self.ram.size()],
-            ChrMemoryIndex::Ciram(side, index) => ciram.side(side)[index as usize],
+            ChrMemoryIndex::Ram(index) => {
+                let value = self.ram[index % self.ram.size()];
+                PpuPeek::new(value)
+            }
+            ChrMemoryIndex::Ciram(side, index) => {
+                let value = ciram.side(side)[index as usize];
+                PpuPeek::new(value)
+            }
             ChrMemoryIndex::SaveRam(_index) => todo!(),
             ChrMemoryIndex::ExtendedRam(_index) => todo!(),
             ChrMemoryIndex::FillModeTile => todo!(),
@@ -316,4 +323,19 @@ impl ChrMemory {
 pub enum AccessOverride {
     ForceRom,
     ForceRam,
+}
+
+#[derive(Clone, Copy)]
+pub struct PpuPeek {
+    value: u8,
+}
+
+impl PpuPeek {
+    pub fn new(value: u8) -> Self {
+        Self { value }
+    }
+
+    pub fn value(self) -> u8 {
+        self.value
+    }
 }

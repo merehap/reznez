@@ -1,4 +1,4 @@
-use crate::mapper::{ChrBank, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus};
+use crate::mapper::{BankIndex, ChrBank, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus};
 use crate::memory::bank::bank::ChrBankLocation;
 use crate::memory::bank::bank_index::ChrBankRegisters;
 use crate::memory::ppu::chr_layout::ChrLayout;
@@ -55,7 +55,7 @@ impl ChrMemoryMap {
 
         let mut memory_map = Self {
             page_mappings: page_mappings.try_into().unwrap(),
-            page_ids: [(ChrPageId::Rom(0), ReadWriteStatus::ReadOnly); CHR_SLOT_COUNT],
+            page_ids: [(ChrPageId::Rom { page_number: 0, bank_index: BankIndex::from_u8(0) }, ReadWriteStatus::ReadOnly); CHR_SLOT_COUNT],
         };
         memory_map.update_page_ids(regs);
 
@@ -75,8 +75,8 @@ impl ChrMemoryMap {
 
         let (page_id, read_write_status) = self.page_ids[mapping_index as usize];
         let chr_memory_index = match page_id {
-            ChrPageId::Rom(page_number) => ChrMemoryIndex::Rom(u32::from(page_number) * KIBIBYTE + u32::from(offset)),
-            ChrPageId::Ram(page_number) => ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE + u32::from(offset)),
+            ChrPageId::Rom { page_number, .. } => ChrMemoryIndex::Rom(u32::from(page_number) * KIBIBYTE + u32::from(offset)),
+            ChrPageId::Ram { page_number, .. } => ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE + u32::from(offset)),
             ChrPageId::Ciram(side) => ChrMemoryIndex::Ciram(side, offset),
             ChrPageId::SaveRam => ChrMemoryIndex::SaveRam(offset),
             ChrPageId::ExtendedRam => ChrMemoryIndex::ExtendedRam(offset),
@@ -119,8 +119,8 @@ impl ChrMemoryMap {
     pub fn page_start_index(&self, mapping_index: u8) -> ChrMemoryIndex {
         let page_id = self.page_ids[mapping_index as usize].0;
         match page_id {
-            ChrPageId::Rom(page_number) => ChrMemoryIndex::Rom(u32::from(page_number) * KIBIBYTE),
-            ChrPageId::Ram(page_number) => ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE),
+            ChrPageId::Rom { page_number, .. } => ChrMemoryIndex::Rom(u32::from(page_number) * KIBIBYTE),
+            ChrPageId::Ram { page_number, .. } => ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE),
             ChrPageId::Ciram(side) => ChrMemoryIndex::Ciram(side, 0),
             ChrPageId::SaveRam => ChrMemoryIndex::SaveRam(0),
             ChrPageId::ExtendedRam => ChrMemoryIndex::ExtendedRam(0),
@@ -163,10 +163,10 @@ impl ChrMapping {
 
                 let page_number = ((bank_multiple * bank_index.to_raw()) & page_number_mask) + page_offset;
                 match bank {
-                    ChrBank::Rom(_, None) => (ChrPageId::Rom(page_number), ReadWriteStatus::ReadOnly),
-                    ChrBank::Rom(_, Some(status_register)) => (ChrPageId::Rom(page_number), registers.read_write_status(*status_register)),
-                    ChrBank::Ram(_, None) => (ChrPageId::Ram(page_number), ReadWriteStatus::ReadWrite),
-                    ChrBank::Ram(_, Some(status_register)) => (ChrPageId::Ram(page_number), registers.read_write_status(*status_register)),
+                    ChrBank::Rom(_, None) => (ChrPageId::Rom { page_number, bank_index }, ReadWriteStatus::ReadOnly),
+                    ChrBank::Rom(_, Some(status_register)) => (ChrPageId::Rom { page_number, bank_index }, registers.read_write_status(*status_register)),
+                    ChrBank::Ram(_, None) => (ChrPageId::Ram { page_number, bank_index }, ReadWriteStatus::ReadWrite),
+                    ChrBank::Ram(_, Some(status_register)) => (ChrPageId::Ram { page_number, bank_index }, registers.read_write_status(*status_register)),
                     _ => todo!(),
                 }
             }
@@ -182,8 +182,8 @@ impl ChrMapping {
 
 #[derive(Clone, Copy, Debug)]
 pub enum ChrPageId {
-    Rom(PageNumber),
-    Ram(PageNumber),
+    Rom { page_number: PageNumber, bank_index: BankIndex },
+    Ram { page_number: PageNumber, bank_index: BankIndex },
     Ciram(CiramSide),
     SaveRam,
     ExtendedRam,

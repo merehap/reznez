@@ -20,6 +20,8 @@ use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::sprite::oam::Oam;
 
+use super::ppu::chr_memory::PpuPeek;
+
 pub const NMI_VECTOR_LOW: CpuAddress     = CpuAddress::new(0xFFFA);
 pub const NMI_VECTOR_HIGH: CpuAddress    = CpuAddress::new(0xFFFB);
 pub const RESET_VECTOR_LOW: CpuAddress   = CpuAddress::new(0xFFFC);
@@ -334,7 +336,7 @@ pub struct PpuMemory<'a> {
 
 impl PpuMemory<'_> {
     #[inline]
-    pub fn read(&mut self, address: PpuAddress) -> u8 {
+    pub fn read(&mut self, address: PpuAddress) -> PpuPeek {
         self.memory.mapper.ppu_read(
             &mut self.memory.mapper_params, &self.memory.ciram, &self.memory.palette_ram, address, true)
     }
@@ -433,8 +435,8 @@ mod tests {
         let mut value = 1;
         while address < PpuAddress::from_u16(0x2F00) {
             memory.write(address, value);
-            let low_value = memory.read(address);
-            let high_value = memory.read(PpuAddress::from_u16(address.to_u16() + 0x1000));
+            let low_value = memory.read(address).value();
+            let high_value = memory.read(PpuAddress::from_u16(address.to_u16() + 0x1000)).value();
             assert_eq!(low_value, value);
             assert_eq!(low_value, high_value);
 
@@ -446,8 +448,8 @@ mod tests {
         let mut value = 111;
         while address < PpuAddress::from_u16(0x3F00) {
             memory.write(address, value);
-            let high_value = memory.read(address);
-            let low_value = memory.read(PpuAddress::from_u16(address.to_u16() - 0x1000));
+            let high_value = memory.read(address).value();
+            let low_value = memory.read(PpuAddress::from_u16(address.to_u16() - 0x1000)).value();
             assert_eq!(low_value, value);
             assert_eq!(low_value, high_value);
 

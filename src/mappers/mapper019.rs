@@ -1,4 +1,5 @@
 use crate::mapper::*;
+use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::{Ciram, CiramSide};
 
@@ -128,7 +129,7 @@ impl Mapper for Mapper019 {
         ciram: &Ciram,
         palette_ram: &PaletteRam,
         mut address: PpuAddress,
-    ) -> u8 {
+    ) -> PpuPeek {
         match address.to_u16() {
             0x0000..=0x3EFF => {
                 if address.to_u16() >= 0x3000 {

@@ -33,6 +33,7 @@ use crate::apu::apu_registers::ApuRegisters;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::ppu::palette_ram::PaletteRam;
+use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::ciram::Ciram;
 use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
 use crate::ppu::sprite::oam::Oam;
@@ -103,7 +104,7 @@ pub trait Mapper {
                     0x2005 => ppu_registers.peek_ppu_io_bus(),
                     0x2006 => ppu_registers.peek_ppu_io_bus(),
                     0x2007 => {
-                        let peeker = |ppu_address| self.ppu_peek(params, ciram, palette_ram, ppu_address);
+                        let peeker = |ppu_address| self.ppu_peek(params, ciram, palette_ram, ppu_address).value();
                         ppu_registers.peek_ppu_data(peeker)
                     }
                     _ => unreachable!(),
@@ -149,7 +150,7 @@ pub trait Mapper {
                     0x2005 => ppu_registers.peek_ppu_io_bus(),
                     0x2006 => ppu_registers.peek_ppu_io_bus(),
                     0x2007 => {
-                        let reader = |ppu_address| self.ppu_read(params, ciram, palette_ram, ppu_address, false);
+                        let reader = |ppu_address| self.ppu_read(params, ciram, palette_ram, ppu_address, false).value();
                         let data = ppu_registers.read_ppu_data(reader);
                         self.on_ppu_address_change(params, ppu_registers.current_address());
                         data
@@ -260,7 +261,7 @@ pub trait Mapper {
         ciram: &Ciram,
         palette_ram: &PaletteRam,
         address: PpuAddress,
-    ) -> u8 {
+    ) -> PpuPeek {
         match address.to_u16() {
             0x0000..=0x1FFF => params.peek_chr(ciram, address),
             0x2000..=0x3EFF => self.peek_name_table_byte(params, ciram, address),
@@ -277,14 +278,14 @@ pub trait Mapper {
         palette_ram: &PaletteRam,
         address: PpuAddress,
         rendering: bool,
-    ) -> u8 {
+    ) -> PpuPeek {
         if rendering {
             self.on_ppu_address_change(params, address);
         }
 
-        let value = self.ppu_peek(params, ciram, palette_ram, address);
-        self.on_ppu_read(params, address, value);
-        value
+        let result = self.ppu_peek(params, ciram, palette_ram, address);
+        self.on_ppu_read(params, address, result.value());
+        result
     }
 
     #[inline]
@@ -325,9 +326,10 @@ pub trait Mapper {
         params: &MapperParams,
         ciram: &Ciram,
         address: PpuAddress,
-    ) -> u8 {
+    ) -> PpuPeek {
         let (name_table_quadrant, index) = address_to_name_table_index(address);
-        self.raw_name_table(params, ciram, name_table_quadrant)[index as usize]
+        let value = self.raw_name_table(params, ciram, name_table_quadrant)[index as usize];
+        PpuPeek::new(value)
     }
 
     #[inline]
@@ -356,8 +358,9 @@ pub trait Mapper {
         &self,
         palette_ram: &PaletteRam,
         address: PpuAddress,
-    ) -> u8 {
-        palette_ram.read(address_to_palette_ram_index(address))
+    ) -> PpuPeek {
+        let value = palette_ram.read(address_to_palette_ram_index(address));
+        PpuPeek::new(value)
     }
 
     #[inline]
@@ -417,8 +420,8 @@ pub trait Mapper {
         let mut result = String::new();
         for (page_id, _) in chr_memory.current_memory_map().pattern_table_page_ids() {
             let bank_string = match page_id {
-                ChrPageId::Rom(page_number) => page_number.to_string(),
-                ChrPageId::Ram(page_number) => format!("W{page_number}"),
+                ChrPageId::Rom { page_number, .. } => page_number.to_string(),
+                ChrPageId::Ram { page_number, .. } => format!("W{page_number}"),
                 ChrPageId::Ciram(side) => format!("C{side:?}"),
                 ChrPageId::SaveRam => "S".to_owned(),
                 ChrPageId::ExtendedRam => "X".to_owned(),
@@ -561,7 +564,7 @@ impl MapperParams {
         self.chr_memory.set_layout(index);
     }
 
-    pub fn peek_chr(&self, ciram: &Ciram, address: PpuAddress) -> u8 {
+    pub fn peek_chr(&self, ciram: &Ciram, address: PpuAddress) -> PpuPeek {
         self.chr_memory.peek(ciram, address)
     }
 
