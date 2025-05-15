@@ -1,3 +1,4 @@
+use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::sprite::sprite_attributes::{SpriteAttributes, Priority};
@@ -34,7 +35,9 @@ impl OamRegisters {
 #[derive(Clone, Copy)]
 pub struct SpriteRegisters {
     low_pattern: u8,
+    low_pattern_info: PpuPeek,
     high_pattern: u8,
+    high_pattern_info: PpuPeek,
     attributes: SpriteAttributes,
     x_counter: u8,
     is_sprite_0: bool,
@@ -44,19 +47,23 @@ impl SpriteRegisters {
     pub fn new() -> SpriteRegisters {
         SpriteRegisters {
             low_pattern: 0,
+            low_pattern_info: PpuPeek::new(0),
             high_pattern: 0,
+            high_pattern_info: PpuPeek::new(0),
             attributes: SpriteAttributes::new(),
             x_counter: 0,
             is_sprite_0: false,
         }
     }
 
-    pub fn set_pattern_low(&mut self, low_pattern: u8) {
-        self.low_pattern = low_pattern;
+    pub fn set_pattern_low(&mut self, low_pattern: PpuPeek) {
+        self.low_pattern = low_pattern.value();
+        self.low_pattern_info = low_pattern;
     }
 
-    pub fn set_pattern_high(&mut self, high_pattern: u8) {
-        self.high_pattern = high_pattern;
+    pub fn set_pattern_high(&mut self, high_pattern: PpuPeek) {
+        self.high_pattern = high_pattern.value();
+        self.high_pattern_info = high_pattern;
     }
 
     pub fn attributes(self) -> SpriteAttributes {
