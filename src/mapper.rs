@@ -33,7 +33,7 @@ use crate::apu::apu_registers::ApuRegisters;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::ppu::palette_ram::PaletteRam;
-use crate::memory::ppu::chr_memory::PpuPeek;
+use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ciram::Ciram;
 use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
 use crate::ppu::sprite::oam::Oam;
@@ -329,7 +329,7 @@ pub trait Mapper {
     ) -> PpuPeek {
         let (name_table_quadrant, index) = address_to_name_table_index(address);
         let value = self.raw_name_table(params, ciram, name_table_quadrant)[index as usize];
-        PpuPeek::new(value)
+        PpuPeek::new(value, PeekSource::from_name_table_source(params.name_table_mirroring().name_table_source_in_quadrant(name_table_quadrant)))
     }
 
     #[inline]
@@ -360,7 +360,7 @@ pub trait Mapper {
         address: PpuAddress,
     ) -> PpuPeek {
         let value = palette_ram.read(address_to_palette_ram_index(address));
-        PpuPeek::new(value)
+        PpuPeek::new(value, PeekSource::PaletteTable)
     }
 
     #[inline]

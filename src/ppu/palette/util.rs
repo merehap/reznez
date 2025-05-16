@@ -8,7 +8,7 @@ pub fn spectrum(step_count: u16) -> Vec<Rgb> {
         .collect()
 }
 
-pub fn grey_scale(step_count: u16) -> Vec<Rgb> {
+pub fn greyscale(step_count: u16) -> Vec<Rgb> {
     let step_count: u32 = step_count.into();
 
     let mut scale = Vec::new();
@@ -44,7 +44,7 @@ impl RawColor {
 
     fn from_full_index(full_index: u16) -> RawColor {
         assert!(full_index < RawColor::FULL_RANGE);
-        let range = match full_index / 6 {
+        let range = match full_index / 254 {
             0 => Range::RedYellow,
             1 => Range::YellowGreen,
             2 => Range::GreenCyan,

@@ -413,6 +413,14 @@ impl PpuMemory<'_> {
             self.memory.ppu_registers.mask(),
         )
     }
+
+    pub fn rom_bank_count(&self) -> u16 {
+        self.memory.mapper_params.chr_memory.rom_bank_count()
+    }
+
+    pub fn ram_bank_count(&self) -> u16 {
+        self.memory.mapper_params.chr_memory.ram_bank_count()
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

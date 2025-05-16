@@ -1,3 +1,4 @@
+pub mod bank_color_assigner;
 pub mod color;
 pub mod palette;
 pub mod palette_index;

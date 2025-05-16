@@ -19,6 +19,8 @@ use crate::ppu::sprite::oam_registers::OamRegisters;
 use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 
+use super::palette::bank_color_assigner::BankColorAssigner;
+
 pub struct Ppu {
     oam_data_read: u8,
     secondary_oam: SecondaryOam,
@@ -39,10 +41,13 @@ pub struct Ppu {
     sprite_visible: bool,
 
     frame_actions: FrameActions,
+
+    pattern_source_frame: Frame,
+    bank_color_assigner: BankColorAssigner,
 }
 
 impl Ppu {
-    pub fn new() -> Ppu {
+    pub fn new(memory: &PpuMemory) -> Ppu {
         Ppu {
             oam_data_read: 0,
             secondary_oam: SecondaryOam::new(),
@@ -62,6 +67,9 @@ impl Ppu {
             sprite_visible: false,
 
             frame_actions: NTSC_FRAME_ACTIONS.clone(),
+
+            pattern_source_frame: Frame::new(),
+            bank_color_assigner: BankColorAssigner::new(memory),
         }
     }
 
@@ -135,11 +143,11 @@ impl Ppu {
             }
             GetPatternLowByte => {
                 if !mem.regs().rendering_enabled() { return; }
-                self.pattern_register.set_pending_low_byte(mem.read(self.pattern_address).value());
+                self.pattern_register.set_pending_low_byte(mem.read(self.pattern_address));
             }
             GetPatternHighByte => {
                 if !mem.regs().rendering_enabled() { return; }
-                self.pattern_register.set_pending_high_byte(mem.read(self.pattern_address).value());
+                self.pattern_register.set_pending_high_byte(mem.read(self.pattern_address));
             }
 
             GotoNextTileColumn => {
@@ -165,33 +173,53 @@ impl Ppu {
                 let (pixel_column, pixel_row) = PixelIndex::try_from_clock(&clock).unwrap().to_column_row();
                 // TODO: Verify if these need to be delayed like self.rendering_enabled.
                 if background_enabled {
-                    let palette_table = mem.palette_table();
                     // TODO: Figure out where this goes. Maybe have frame call palette_table when displaying.
                     frame.set_universal_background_rgb(
-                        palette_table.universal_background_rgb(),
+                        mem.palette_table().universal_background_rgb(),
                     );
 
                     let column_in_tile = mem.regs_mut().current_address.x_scroll().fine();
-                    let current_palette_table_index =
-                        self.attribute_register.current_palette_table_index(column_in_tile);
-                    let palette = palette_table.background_palette(current_palette_table_index);
+                    let palette_table_index = self.attribute_register.palette_table_index(column_in_tile);
+                    let palette = mem.palette_table().background_palette(palette_table_index);
 
-                    let current_background_pixel = self.pattern_register
+                    let background_pixel = self.pattern_register
                         .palette_index(column_in_tile)
                         .map_or(Rgbt::Transparent, |palette_index| Rgbt::Opaque(palette[palette_index]));
 
-                    frame.set_background_pixel(pixel_column, pixel_row, current_background_pixel);
+                    frame.set_background_pixel(pixel_column, pixel_row, background_pixel);
+
+                    let bank_pixel = if background_pixel.is_transparent() {
+                        Rgbt::Transparent
+                    } else {
+                        let rgb = self.bank_color_assigner.rgb_for_source(self.pattern_register.current_peek().source());
+                        Rgbt::Opaque(rgb)
+                    };
+                    self.pattern_source_frame.set_background_pixel(pixel_column, pixel_row, bank_pixel);
                 }
 
                 // TODO: Verify if this need to be delayed like self.rendering_enabled.
                 if sprites_enabled {
-                    let (sprite_pixel, priority, is_sprite_0) = self.oam_registers.step(&mem.palette_table());
+                    let (sprite_pixel, priority, is_sprite_0, ppu_peek) = self.oam_registers.step(&mem.palette_table());
                     frame.set_sprite_pixel(
                         pixel_column,
                         pixel_row,
                         sprite_pixel,
                         priority,
                         is_sprite_0,
+                    );
+
+                    let bank_pixel = if sprite_pixel.is_transparent() {
+                        Rgbt::Transparent
+                    } else {
+                        let rgb = self.bank_color_assigner.rgb_for_source(ppu_peek.source());
+                        Rgbt::Opaque(rgb)
+                    };
+                    self.pattern_source_frame.set_sprite_pixel(
+                        pixel_column,
+                        pixel_row,
+                        bank_pixel,
+                        priority,
+                        false,
                     );
                 }
 
@@ -417,6 +445,10 @@ impl Ppu {
                 mem.regs_mut().clear_sprite_overflow();
             }
         }
+    }
+
+    pub fn pattern_source_frame(&self) -> &Frame {
+        &self.pattern_source_frame
     }
 
     fn current_sprite_pattern_address(&self, mem: &PpuMemory, select_high: bool) -> (PpuAddress, bool) {

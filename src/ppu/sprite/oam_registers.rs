@@ -19,10 +19,10 @@ impl OamRegisters {
         self.registers[0].is_sprite_0 = present;
     }
 
-    pub fn step(&mut self, palette_table: &PaletteTable) -> (Rgbt, Priority, bool) {
-        let mut result = (Rgbt::Transparent, Priority::Behind, false);
+    pub fn step(&mut self, palette_table: &PaletteTable) -> (Rgbt, Priority, bool, PpuPeek) {
+        let mut result = (Rgbt::Transparent, Priority::Behind, false, PpuPeek::ZERO);
         for register in self.registers.iter_mut().rev() {
-            let candidate@(rgbt, _, _) = register.step(palette_table);
+            let candidate@(rgbt, _, _, _) = register.step(palette_table);
             if let Rgbt::Opaque(_) = rgbt {
                 result = candidate;
             }
@@ -47,9 +47,9 @@ impl SpriteRegisters {
     pub fn new() -> SpriteRegisters {
         SpriteRegisters {
             low_pattern: 0,
-            low_pattern_info: PpuPeek::new(0),
+            low_pattern_info: PpuPeek::ZERO,
             high_pattern: 0,
-            high_pattern_info: PpuPeek::new(0),
+            high_pattern_info: PpuPeek::ZERO,
             attributes: SpriteAttributes::new(),
             x_counter: 0,
             is_sprite_0: false,
@@ -78,12 +78,12 @@ impl SpriteRegisters {
         self.x_counter = initial_value;
     }
 
-    pub fn step(&mut self, palette_table: &PaletteTable) -> (Rgbt, Priority, bool) {
+    pub fn step(&mut self, palette_table: &PaletteTable) -> (Rgbt, Priority, bool, PpuPeek) {
         if self.x_counter > 0 {
             // This sprite is still inactive.
             self.x_counter -= 1;
 
-            return (Rgbt::Transparent, Priority::Behind, false);
+            return (Rgbt::Transparent, Priority::Behind, false, self.low_pattern_info);
         }
 
         // Ugly :-(
@@ -103,6 +103,6 @@ impl SpriteRegisters {
 
         let palette = palette_table.sprite_palette(self.attributes.palette_table_index());
         let rgbt = palette.rgbt_from_low_high(low_bit, high_bit);
-        (rgbt, self.attributes.priority(), self.is_sprite_0)
+        (rgbt, self.attributes.priority(), self.is_sprite_0, self.low_pattern_info)
     }
 }

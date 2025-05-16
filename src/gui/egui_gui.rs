@@ -442,6 +442,14 @@ impl Renderer for PrimaryRenderer {
                             2,
                         ));
                     }
+                    if ui.button("Pattern Sources").clicked() {
+                        ui.close_menu();
+                        result = Some((
+                            Box::new(PatternSourceRenderer::new()),
+                            Position::Physical(PhysicalPosition { x: 600, y: 200 }),
+                            1,
+                        ));
+                    }
                 })
             });
         });
@@ -961,6 +969,41 @@ impl Renderer for ChrBanksRenderer {
 
     fn height(&self) -> usize {
         ChrBanksRenderer::HEIGHT
+    }
+}
+
+struct PatternSourceRenderer {
+    buffer: DebugBuffer<{ PixelColumn::COLUMN_COUNT }, { PixelRow::ROW_COUNT }>,
+}
+
+impl PatternSourceRenderer {
+    fn new() -> Self {
+        Self {
+            buffer: DebugBuffer::new(Rgb::WHITE),
+        }
+    }
+}
+
+impl Renderer for PatternSourceRenderer {
+    fn name(&self) -> String {
+        "Pattern Source".to_string()
+    }
+
+    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> Option<WindowArgs> {
+        None
+    }
+
+    fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
+        self.buffer.place_frame(0, 0, world.nes.ppu().pattern_source_frame());
+        self.buffer.copy_to_rgba_buffer(pixels.frame_mut());
+    }
+
+    fn width(&self) -> usize {
+        PixelColumn::COLUMN_COUNT
+    }
+
+    fn height(&self) -> usize {
+        PixelRow::ROW_COUNT
     }
 }
 

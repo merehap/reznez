@@ -29,7 +29,7 @@ impl AttributeRegister {
         self.current_indexes.push(self.next_index);
     }
 
-    pub fn current_palette_table_index(&self, column_in_tile: ColumnInTile) -> PaletteTableIndex {
+    pub fn palette_table_index(&self, column_in_tile: ColumnInTile) -> PaletteTableIndex {
         self.current_indexes[column_in_tile]
     }
 }

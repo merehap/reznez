@@ -6,6 +6,7 @@ use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::window::ChrWindowSize;
 use crate::util::unit::KIBIBYTE;
 
+use super::chr_memory::PeekSource;
 use super::ciram::CiramSide;
 
 const CHR_SLOT_COUNT: usize = 12;
@@ -62,7 +63,7 @@ impl ChrMemoryMap {
         memory_map
     }
 
-    pub fn index_for_address(&self, address: PpuAddress) -> (ChrMemoryIndex, ReadWriteStatus) {
+    pub fn index_for_address(&self, address: PpuAddress) -> (ChrMemoryIndex, PeekSource, ReadWriteStatus) {
         let address = address.to_u16();
         match address {
             0x0000..=0x2FFF => {}
@@ -74,16 +75,28 @@ impl ChrMemoryMap {
         let offset = address % (KIBIBYTE as u16);
 
         let (page_id, read_write_status) = self.page_ids[mapping_index as usize];
-        let chr_memory_index = match page_id {
-            ChrPageId::Rom { page_number, .. } => ChrMemoryIndex::Rom(u32::from(page_number) * KIBIBYTE + u32::from(offset)),
-            ChrPageId::Ram { page_number, .. } => ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE + u32::from(offset)),
-            ChrPageId::Ciram(side) => ChrMemoryIndex::Ciram(side, offset),
-            ChrPageId::SaveRam => ChrMemoryIndex::SaveRam(offset),
-            ChrPageId::ExtendedRam => ChrMemoryIndex::ExtendedRam(offset),
-            ChrPageId::FillModeTile => ChrMemoryIndex::FillModeTile,
+        let (chr_memory_index, peek_source) = match page_id {
+            ChrPageId::Rom { page_number, bank_index } => {
+                (ChrMemoryIndex::Rom(u32::from(page_number) * KIBIBYTE + u32::from(offset)), PeekSource::Rom(bank_index))
+            }
+            ChrPageId::Ram { page_number, bank_index } => {
+                (ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE + u32::from(offset)), PeekSource::Ram(bank_index))
+            }
+            ChrPageId::Ciram(side) => {
+                (ChrMemoryIndex::Ciram(side, offset), PeekSource::Ciram(side))
+            }
+            ChrPageId::SaveRam => {
+                (ChrMemoryIndex::SaveRam(offset), PeekSource::SaveRam)
+            }
+            ChrPageId::ExtendedRam => {
+                (ChrMemoryIndex::ExtendedRam(offset), PeekSource::ExtendedRam)
+            }
+            ChrPageId::FillModeTile => {
+                (ChrMemoryIndex::FillModeTile, PeekSource::FillModeTile)
+            }
         };
 
-        (chr_memory_index, read_write_status)
+        (chr_memory_index, peek_source, read_write_status)
     }
 
     pub fn page_mappings(&self) -> &[ChrMapping; CHR_SLOT_COUNT] {

@@ -54,7 +54,7 @@ impl Nes {
 
         Nes {
             cpu: Cpu::new(&mut memory.as_cpu_memory(), config.starting_cpu_cycle, config.cpu_step_formatting),
-            ppu: Ppu::new(),
+            ppu: Ppu::new(&memory.as_ppu_memory()),
             apu: Apu::new(config.disable_audio),
             memory,
             cartridge: config.cartridge.clone(),

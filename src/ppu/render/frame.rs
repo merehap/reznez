@@ -49,12 +49,7 @@ impl Frame {
         &mut self.show_overscan
     }
 
-    pub fn pixel(
-        &self,
-        mask: Mask,
-        column: PixelColumn,
-        row: PixelRow,
-    ) -> (Rgb, Sprite0Hit) {
+    pub fn pixel(&self, mask: Mask, column: PixelColumn, row: PixelRow) -> (Rgb, Sprite0Hit) {
         use Rgbt::{Opaque, Transparent};
         let mut background_pixel = self.buffer[(column, row)];
         if !mask.left_background_columns_enabled() && column.is_in_left_margin() {

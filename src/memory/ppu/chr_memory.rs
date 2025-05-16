@@ -9,7 +9,7 @@ use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::chr_memory_map::{ChrMemoryMap, ChrMapping, ChrMemoryIndex};
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
-use crate::memory::window::ReadWriteStatusInfo;
+use crate::memory::window::{ChrWindowSize, ReadWriteStatusInfo};
 use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
 use crate::util::unit::KIBIBYTE;
 
@@ -21,6 +21,7 @@ pub struct ChrMemory {
     rom_outer_banks: Vec<RawMemory>,
     rom_outer_bank_index: u8,
     ram: RawMemory,
+    bank_size: ChrWindowSize,
     regs: ChrBankRegisters,
 
     layout_index: u8,
@@ -98,6 +99,7 @@ impl ChrMemory {
             rom_outer_banks: rom.split_n(rom_outer_bank_count),
             rom_outer_bank_index: 0,
             ram: ram.clone(),
+            bank_size,
             regs,
         }
     }
@@ -116,27 +118,28 @@ impl ChrMemory {
     }
 
     pub fn peek(&self, ciram: &Ciram, address: PpuAddress) -> PpuPeek {
-        match self.current_memory_map().index_for_address(address).0 {
+        let (index, source, _read_write_status) = self.current_memory_map().index_for_address(address);
+
+        let value = match index {
             ChrMemoryIndex::Rom(index) => {
-                let value = self.rom_outer_banks[self.rom_outer_bank_index as usize][index % self.rom_outer_banks[0].size()];
-                PpuPeek::new(value)
+                self.rom_outer_banks[self.rom_outer_bank_index as usize][index % self.rom_outer_banks[0].size()]
             },
             ChrMemoryIndex::Ram(index) => {
-                let value = self.ram[index % self.ram.size()];
-                PpuPeek::new(value)
+                self.ram[index % self.ram.size()]
             }
             ChrMemoryIndex::Ciram(side, index) => {
-                let value = ciram.side(side)[index as usize];
-                PpuPeek::new(value)
+                ciram.side(side)[index as usize]
             }
             ChrMemoryIndex::SaveRam(_index) => todo!(),
             ChrMemoryIndex::ExtendedRam(_index) => todo!(),
             ChrMemoryIndex::FillModeTile => todo!(),
-        }
+        };
+
+        PpuPeek { value, source }
     }
 
     pub fn write(&mut self, ciram: &mut Ciram, address: PpuAddress, value: u8) {
-        let (chr_memory_index, read_write_status) = self.current_memory_map().index_for_address(address);
+        let (chr_memory_index, _, read_write_status) = self.current_memory_map().index_for_address(address);
         if !read_write_status.is_writable() {
             return;
         }
@@ -164,6 +167,22 @@ impl ChrMemory {
         }
 
         panic!("No window exists at {start:X}");
+    }
+
+    pub fn rom_bank_count(&self) -> u16 {
+        if self.rom_outer_banks.is_empty() {
+            return 0;
+        }
+
+        let bank_size = u32::from(self.bank_size.to_raw());
+        assert_eq!(self.rom_outer_banks[0].size() % bank_size, 0);
+        (self.rom_outer_banks[0].size() / bank_size).try_into().unwrap()
+    }
+
+    pub fn ram_bank_count(&self) -> u16 {
+        let bank_size = u32::from(self.bank_size.to_raw());
+        assert_eq!(self.ram.size() % bank_size, 0);
+        (self.ram.size() / bank_size).try_into().unwrap()
     }
 
     pub fn layout_index(&self) -> u8 {
@@ -328,14 +347,44 @@ pub enum AccessOverride {
 #[derive(Clone, Copy)]
 pub struct PpuPeek {
     value: u8,
+    source: PeekSource,
 }
 
 impl PpuPeek {
-    pub fn new(value: u8) -> Self {
-        Self { value }
+    pub const ZERO: PpuPeek = PpuPeek { value: 0, source: PeekSource::Rom(BankIndex::from_u8(0)) };
+
+    pub fn new(value: u8, source: PeekSource) -> Self {
+        Self { value, source }
     }
 
     pub fn value(self) -> u8 {
         self.value
+    }
+
+    pub fn source(self) -> PeekSource {
+        self.source
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum PeekSource {
+    Rom(BankIndex),
+    Ram(BankIndex),
+    SaveRam,
+    Ciram(CiramSide),
+    PaletteTable,
+    ExtendedRam,
+    FillModeTile,
+}
+
+impl PeekSource {
+    pub fn from_name_table_source(name_table_source: NameTableSource) -> Self {
+        match name_table_source {
+            NameTableSource::Ciram(side) => Self::Ciram(side),
+            // TODO: Use SaveRam with pages.
+            NameTableSource::SaveRam(_) => Self::SaveRam,
+            NameTableSource::ExtendedRam => Self::ExtendedRam,
+            NameTableSource::FillModeTile => Self::FillModeTile,
+        }
     }
 }
