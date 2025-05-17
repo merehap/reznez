@@ -36,7 +36,7 @@ impl From<u8> for BankIndex {
 pub struct PrgBankRegisters {
     registers: [BankLocation; 5],
     read_write_statuses: [ReadWriteStatus; 15],
-    rom_ram_modes: [MemoryType; 3],
+    rom_ram_modes: [MemoryType; 12],
 }
 
 impl PrgBankRegisters {
@@ -44,7 +44,7 @@ impl PrgBankRegisters {
         Self {
             registers: [BankLocation::Index(BankIndex(0)); 5],
             read_write_statuses: [ReadWriteStatus::ReadWrite; 15],
-            rom_ram_modes: [MemoryType::Ram; 3],
+            rom_ram_modes: [MemoryType::Ram; 12],
         }
     }
 
@@ -103,7 +103,7 @@ pub struct ChrBankRegisters {
     registers: [BankLocation; 18],
     chr_meta_registers: [ChrBankRegisterId; 2],
     read_write_statuses: [ReadWriteStatus; 15],
-    rom_ram_modes: [MemoryType; 3],
+    rom_ram_modes: [MemoryType; 12],
 }
 
 impl ChrBankRegisters {
@@ -113,7 +113,7 @@ impl ChrBankRegisters {
             // Meta registers are only used for CHR currently.
             chr_meta_registers: [ChrBankRegisterId::C0, ChrBankRegisterId::C0],
             read_write_statuses: [ReadWriteStatus::ReadWrite; 15],
-            rom_ram_modes: [MemoryType::Ram; 3],
+            rom_ram_modes: [MemoryType::Ram; 12],
         }
     }
 

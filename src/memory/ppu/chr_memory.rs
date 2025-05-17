@@ -3,7 +3,8 @@ use std::num::NonZeroU8;
 use log::warn;
 
 use crate::mapper::{BankIndex, ChrBank, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus, ReadWriteStatusRegisterId};
-use crate::memory::bank::bank_index::ChrBankRegisters;
+use crate::memory::bank::bank::RomRamModeRegisterId;
+use crate::memory::bank::bank_index::{ChrBankRegisters, MemoryType};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::chr_memory_map::{ChrMemoryMap, ChrMapping, ChrMemoryIndex};
@@ -45,7 +46,7 @@ impl ChrMemory {
         let mut ram_present_in_layout = false;
         for layout in &layouts {
             for window in layout.windows() {
-                if matches!(window.bank(), ChrBank::Rom(..) | ChrBank::Ram(..)) {
+                if matches!(window.bank(), ChrBank::Rom(..) | ChrBank::Ram(..) | ChrBank::RomRam(..)) {
                     if let Some(size) = bank_size {
                         bank_size = Some(std::cmp::min(window.size(), size));
                     } else {
@@ -157,6 +158,11 @@ impl ChrMemory {
             ChrMemoryIndex::ExtendedRam(_index) => todo!(),
             ChrMemoryIndex::FillModeTile => todo!(),
         }
+    }
+
+    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemoryType) {
+        self.regs.set_rom_ram_mode(id, rom_ram_mode);
+        self.update_page_ids();
     }
 
     pub fn window_at(&self, start: u16) -> &ChrWindow {

@@ -13,7 +13,7 @@ pub fn greyscale(step_count: u16) -> Vec<Rgb> {
 
     let mut scale = Vec::new();
     for step in 0..step_count {
-        let value: u8 = (256 * step / step_count).try_into().unwrap();
+        let value: u8 = (255 * (step + 1) / step_count).try_into().unwrap();
         scale.push(Rgb::new(value, value, value));
     }
 

@@ -8,16 +8,8 @@ pub const LAYOUT: Layout = Layout::builder()
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(CHR_BIG_WINDOWS_FIRST)
     .chr_layout(CHR_SMALL_WINDOWS_FIRST)
-    .name_table_mirrorings(&[
-        NameTableMirroring::VERTICAL,
-        NameTableMirroring::HORIZONTAL,
-    ])
-    .read_write_statuses(&[
-        ReadWriteStatus::Disabled,
-        ReadWriteStatus::ReadOnly,
-        ReadWriteStatus::ReadWrite,
-        ReadWriteStatus::ReadOnly,
-    ])
+    .name_table_mirrorings(NAME_TABLE_MIRRORINGS)
+    .read_write_statuses(READ_WRITE_STATUSES)
     .build();
 
 pub const PRG_WINDOWS_8000_SWITCHABLE: &[PrgWindow] = &[
@@ -56,6 +48,18 @@ pub const CHR_SMALL_WINDOWS_FIRST: &[ChrWindow] = &[
     // Big windows.
     ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
     ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+];
+
+pub const NAME_TABLE_MIRRORINGS: &[NameTableMirroring] = &[
+    NameTableMirroring::VERTICAL,
+    NameTableMirroring::HORIZONTAL,
+];
+
+pub const READ_WRITE_STATUSES: &[ReadWriteStatus] = &[
+    ReadWriteStatus::Disabled,
+    ReadWriteStatus::ReadOnly,
+    ReadWriteStatus::ReadWrite,
+    ReadWriteStatus::ReadOnly,
 ];
 
 use RegId::{Chr, Prg};

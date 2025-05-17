@@ -3,6 +3,14 @@ use crate::mapper::*;
 use crate::mappers::mmc3::mmc3::{Mapper004Mmc3, RegId};
 use crate::mappers::mmc3::sharp_irq_state::SharpIrqState;
 
+use super::mmc3::mmc3;
+
+pub const LAYOUT: Layout = mmc3::LAYOUT.into_builder()
+    // NameTableMirrorings in this mapper are set manually, rather than selected from MMC3's list.
+    .name_table_mirrorings(&[])
+    .build();
+
+// TxSROM
 pub struct Mapper118 {
     mmc3: Mapper004Mmc3,
 }
@@ -10,7 +18,7 @@ pub struct Mapper118 {
 impl Mapper for Mapper118 {
     fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         if matches!(cpu_address, 0xA000..=0xBFFF) && cpu_address % 2 == 0 {
-            // Don't use the standard MMC3 NameTableMirroring setting.
+            // Don't set NameTableMirroring from MMC3's standard list.
             return;
         }
 
@@ -18,7 +26,7 @@ impl Mapper for Mapper118 {
             let selected_layout = params.chr_memory().layout_index();
             let selected_register = self.mmc3.selected_register_id();
             use NameTableQuadrant::*;
-            let quadrants: &[NameTableQuadrant] = match (selected_layout, selected_register) {
+            let quadrants: &[_] = match (selected_layout, selected_register) {
                 (0, RegId::Chr(C0)) => &[TopLeft, TopRight],
                 (0, RegId::Chr(C1)) => &[BottomLeft, BottomRight],
                 (1, RegId::Chr(C2)) => &[TopLeft],
@@ -46,7 +54,7 @@ impl Mapper for Mapper118 {
     }
 
     fn layout(&self) -> Layout {
-        self.mmc3.layout()
+        LAYOUT
     }
 }
 

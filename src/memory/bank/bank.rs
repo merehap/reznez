@@ -178,6 +178,15 @@ pub enum RomRamModeRegisterId {
     R0,
     R1,
     R2,
+    R3,
+    R4,
+    R5,
+    R6,
+    R7,
+    R8,
+    R9,
+    R10,
+    R11,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -186,11 +195,13 @@ pub enum ChrBank {
     SaveRam(u32),
     Rom(ChrBankLocation, Option<ReadWriteStatusRegisterId>),
     Ram(ChrBankLocation, Option<ReadWriteStatusRegisterId>),
+    RomRam(ChrBankLocation, RomRamModeRegisterId),
 }
 
 impl ChrBank {
     pub const ROM: ChrBank = ChrBank::Rom(ChrBankLocation::Fixed(BankIndex::from_u8(0)), None);
     pub const RAM: ChrBank = ChrBank::Ram(ChrBankLocation::Fixed(BankIndex::from_u8(0)), None);
+    pub const ROM_RAM: ChrBank = ChrBank::RomRam(ChrBankLocation::Fixed(BankIndex::from_u8(0)), RomRamModeRegisterId::R0);
 
     pub const fn fixed_index(self, index: i16) -> Self {
         self.set_location(ChrBankLocation::Fixed(BankIndex::from_i16(index)))
@@ -205,18 +216,18 @@ impl ChrBank {
     }
 
     pub fn is_rom(self) -> bool {
-        matches!(self, ChrBank::Rom(..))
+        matches!(self, ChrBank::Rom(..) | ChrBank::RomRam(..))
     }
 
     pub fn is_ram(self) -> bool {
-        matches!(self, ChrBank::Ram(..))
+        matches!(self, ChrBank::Ram(..) | ChrBank::RomRam(..) | ChrBank::SaveRam(..))
     }
 
     pub fn is_writable(self, registers: &PrgBankRegisters) -> bool {
         match self {
             Self::Rom(..) => false,
             // RAM with no status register is always writable.
-            Self::Ram(_, None) => true,
+            Self::Ram(_, None) | Self::RomRam(_, _) => true,
             Self::Ram(_, Some(status_register_id)) =>
                 registers.read_write_status(status_register_id) == ReadWriteStatus::ReadWrite,
             Self::SaveRam(..) => true,
@@ -225,7 +236,7 @@ impl ChrBank {
 
     pub fn location(self) -> Result<ChrBankLocation, String> {
         match self {
-            ChrBank::Rom(location, _) | ChrBank::Ram(location, _) => Ok(location),
+            ChrBank::Rom(location, _) | ChrBank::Ram(location, _) | ChrBank::RomRam(location, _) => Ok(location),
             ChrBank::SaveRam(_) => Ok(ChrBankLocation::Fixed(BankIndex::from_u8(0))),
         }
     }
@@ -235,6 +246,13 @@ impl ChrBank {
             Some(location.bank_location(registers))
         } else {
             None
+        }
+    }
+
+    pub const fn rom_ram_register(self, id: RomRamModeRegisterId) -> Self {
+        match self {
+            ChrBank::RomRam(location, _) => ChrBank::RomRam(location, id),
+            _ => panic!("Only RomRam supports RomRam registers."),
         }
     }
 
@@ -268,7 +286,8 @@ impl ChrBank {
             Self::Ram(_, None) => Self::Ram(location, None),
             Self::Rom(_, Some(_)) => panic!("ROM location must be set before ROM status register."),
             Self::Ram(_, Some(_)) => panic!("RAM location must be set before RAM status register."),
-            _ => panic!("Bank indexes can only be used for ROM or RAM or Work RAM."),
+            Self::RomRam(_, id) => Self::RomRam(location, id),
+            _ => todo!(),
         }
     }
 }

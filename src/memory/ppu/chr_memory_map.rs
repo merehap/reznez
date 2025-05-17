@@ -1,6 +1,6 @@
 use crate::mapper::{BankIndex, ChrBank, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus};
 use crate::memory::bank::bank::ChrBankLocation;
-use crate::memory::bank::bank_index::ChrBankRegisters;
+use crate::memory::bank::bank_index::{ChrBankRegisters, MemoryType};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::window::ChrWindowSize;
@@ -164,23 +164,29 @@ pub enum ChrMapping {
 }
 
 impl ChrMapping {
-    pub fn page_id(&self, registers: &ChrBankRegisters) -> (ChrPageId, ReadWriteStatus) {
+    pub fn page_id(&self, regs: &ChrBankRegisters) -> (ChrPageId, ReadWriteStatus) {
         match self {
             Self::Banked { bank, pages_per_bank: bank_multiple, page_offset, page_number_mask, .. } => {
                 let location = bank.location().expect("Location to be present in bank.");
                 let bank_index = match location {
                     ChrBankLocation::Fixed(bank_index) => bank_index,
-                    ChrBankLocation::Switchable(register_id) => registers.get(register_id).index().unwrap(),
-                    ChrBankLocation::MetaSwitchable(meta_id) => registers.get_from_meta(meta_id).index().unwrap(),
+                    ChrBankLocation::Switchable(register_id) => regs.get(register_id).index().unwrap(),
+                    ChrBankLocation::MetaSwitchable(meta_id) => regs.get_from_meta(meta_id).index().unwrap(),
                 };
 
                 let page_number = ((bank_multiple * bank_index.to_raw()) & page_number_mask) + page_offset;
                 match bank {
                     ChrBank::Rom(_, None) => (ChrPageId::Rom { page_number, bank_index }, ReadWriteStatus::ReadOnly),
-                    ChrBank::Rom(_, Some(status_register)) => (ChrPageId::Rom { page_number, bank_index }, registers.read_write_status(*status_register)),
+                    ChrBank::Rom(_, Some(status_register)) => (ChrPageId::Rom { page_number, bank_index }, regs.read_write_status(*status_register)),
                     ChrBank::Ram(_, None) => (ChrPageId::Ram { page_number, bank_index }, ReadWriteStatus::ReadWrite),
-                    ChrBank::Ram(_, Some(status_register)) => (ChrPageId::Ram { page_number, bank_index }, registers.read_write_status(*status_register)),
-                    _ => todo!(),
+                    ChrBank::Ram(_, Some(status_register)) => (ChrPageId::Ram { page_number, bank_index }, regs.read_write_status(*status_register)),
+                    ChrBank::RomRam(_, rom_ram_register_id) => {
+                        match regs.rom_ram_mode(*rom_ram_register_id) {
+                            MemoryType::Rom => (ChrPageId::Rom { page_number, bank_index }, ReadWriteStatus::ReadOnly),
+                            MemoryType::Ram => (ChrPageId::Ram { page_number, bank_index }, ReadWriteStatus::ReadWrite),
+                        }
+                    }
+                    ChrBank::SaveRam(_) => todo!(),
                 }
             }
             Self::NameTableSource(source) => match source {

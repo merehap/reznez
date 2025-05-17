@@ -60,7 +60,6 @@ impl PrgMemory {
                     configured in the Layout for this mapper.");
         }
 
-
         let rom_outer_bank_size = rom.size() / rom_outer_bank_count.get() as u32;
         let memory_maps = layouts.iter().map(|initial_layout| PrgMemoryMap::new(
             *initial_layout, rom_outer_bank_size, rom_bank_size, work_ram_size, save_ram_size, &regs,

@@ -11,6 +11,7 @@ pub use crate::memory::bank::bank_index::ChrBankRegisterId::*;
 pub use crate::memory::bank::bank_index::MetaRegisterId::*;
 pub use crate::memory::bank::bank::{PrgBank, ChrBank, ReadWriteStatusRegisterId};
 pub use crate::memory::bank::bank::ReadWriteStatusRegisterId::*;
+pub use crate::memory::bank::bank::RomRamModeRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::memory::cpu::prg_memory_map::{PrgPageId, PrgPageIdSlot};
@@ -550,6 +551,7 @@ impl MapperParams {
 
     pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemoryType) {
         self.prg_memory.set_rom_ram_mode(id, rom_ram_mode);
+        self.chr_memory.set_rom_ram_mode(id, rom_ram_mode);
     }
 
     pub fn chr_memory(&self) -> &ChrMemory {

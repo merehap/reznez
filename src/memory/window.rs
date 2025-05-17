@@ -146,7 +146,7 @@ impl ChrWindow {
 
     pub fn location(self) -> Result<ChrBankLocation, String> {
         match self.bank {
-            ChrBank::Rom(location, _) | ChrBank::Ram(location, _) => Ok(location),
+            ChrBank::Rom(location, _) | ChrBank::Ram(location, _) | ChrBank::RomRam(location, _) => Ok(location),
             ChrBank::SaveRam(_) => Ok(ChrBankLocation::Fixed(BankIndex::from_u8(0))),
         }
     }
@@ -158,6 +158,7 @@ impl ChrWindow {
             None
         }
     }
+
     pub fn read_write_status_info(self) -> ReadWriteStatusInfo {
         match self.bank {
             ChrBank::Ram(_, Some(register_id)) =>
@@ -165,7 +166,7 @@ impl ChrWindow {
             // TODO: SaveRam will probably need to support status registers.
             ChrBank::SaveRam(..) =>
                 ReadWriteStatusInfo::Absent,
-            ChrBank::Rom(..) | ChrBank::Ram(..) =>
+            ChrBank::Rom(..) | ChrBank::Ram(..) | ChrBank::RomRam(..) =>
                 ReadWriteStatusInfo::Absent,
         }
     }

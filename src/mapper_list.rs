@@ -324,8 +324,10 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // HES NTD-8
         113 => m::mapper113::Mapper113.supported(),
 
-        // TKSROM and TLSROM
+        // TxSROM
         118 => m::mapper118::Mapper118::new().supported(),
+        // TQROM
+        119 => m::mapper119::Mapper119::new().supported(),
 
         // Duplicate
         122 => m::mapper184::Mapper184.supported(),
