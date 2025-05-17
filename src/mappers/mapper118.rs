@@ -16,7 +16,7 @@ pub struct Mapper118 {
 }
 
 impl Mapper for Mapper118 {
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         if matches!(cpu_address, 0xA000..=0xBFFF) && cpu_address % 2 == 0 {
             // Don't set NameTableMirroring from MMC3's standard list.
             return;
@@ -42,7 +42,7 @@ impl Mapper for Mapper118 {
             }
         }
 
-        self.mmc3.write_to_cartridge_space(params, cpu_address, value);
+        self.mmc3.write_register(params, cpu_address, value);
     }
 
     fn on_end_of_ppu_cycle(&mut self) {

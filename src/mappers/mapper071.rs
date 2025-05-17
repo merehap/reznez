@@ -21,7 +21,7 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper071;
 
 impl Mapper for Mapper071 {
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         let fields = splitbits!(min=u8, value, "...mpppp");
         match cpu_address {
             0x0000..=0x401F => unreachable!(),

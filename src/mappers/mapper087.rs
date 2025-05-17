@@ -16,7 +16,7 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper087;
 
 impl Mapper for Mapper087 {
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         // Swap the low two bits, ignore the rest.
         let bank_index = splitbits_then_combine!(value, "......lh",
                                                         "000000hl");

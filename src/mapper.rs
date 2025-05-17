@@ -46,9 +46,10 @@ pub trait Mapper {
     // Should be const, but that's not yet allowed by Rust.
     fn layout(&self) -> Layout;
 
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8);
+    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8);
 
     // Most mappers don't override the default cartridge peeking/reading behavior.
+    // TODO: Rename this to peek_register once params.peek_prg() is handled separately.
     fn peek_cartridge_space(&self, params: &MapperParams, cpu_address: u16) -> ReadResult {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
@@ -57,6 +58,7 @@ pub trait Mapper {
         }
     }
 
+    // TODO: Rename this to read_register once params.peek_prg() is handled separately.
     fn read_from_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16) -> ReadResult {
         self.peek_cartridge_space(params, cpu_address)
     }
@@ -251,7 +253,7 @@ pub trait Mapper {
                     params.prg_memory.write(address, value);
                 }
 
-                self.write_to_cartridge_space(params, address.to_raw(), value);
+                self.write_register(params, address.to_raw(), value);
             }
         }
     }

@@ -204,7 +204,7 @@ impl Mapper for Mapper005 {
         self.frame_state.maybe_end_frame();
     }
 
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         match cpu_address {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x4FFF => { /* Do nothing. */ }

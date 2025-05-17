@@ -27,7 +27,7 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper193;
 
 impl Mapper for Mapper193 {
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         match cpu_address & 0xE007 {
             0x6000 => params.set_chr_register(C0, value >> 1),
             0x6001 => params.set_chr_register(C1, value >> 1),

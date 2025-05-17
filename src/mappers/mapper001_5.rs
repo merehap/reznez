@@ -35,7 +35,7 @@ pub struct Mapper001_5 {
 }
 
 impl Mapper for Mapper001_5 {
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         // Only writes of 0x8000 to 0xFFFF trigger shifter logic.
         if cpu_address < 0x8000 {
             return;

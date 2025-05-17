@@ -71,7 +71,7 @@ pub struct Mapper004Mmc3 {
 }
 
 impl Mapper for Mapper004Mmc3 {
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         let is_even_address = cpu_address % 2 == 0;
         match (cpu_address, is_even_address) {
             (0x0000..=0x401F, _) => unreachable!(),

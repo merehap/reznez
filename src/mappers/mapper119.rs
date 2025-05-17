@@ -41,7 +41,7 @@ pub struct Mapper119 {
 }
 
 impl Mapper for Mapper119 {
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         if matches!(cpu_address, 0x8001..=0x9FFF)
                 && cpu_address % 2 == 1
                 && let RegId::Chr(chr_id) = self.mmc3.selected_register_id() {
@@ -53,7 +53,7 @@ impl Mapper for Mapper119 {
             params.set_rom_ram_mode(rom_ram_reg_id, memory_type);
         } else {
             // Use standard MMC3 behaviors.
-            self.mmc3.write_to_cartridge_space(params, cpu_address, value);
+            self.mmc3.write_register(params, cpu_address, value);
         }
     }
 

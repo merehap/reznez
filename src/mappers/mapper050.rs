@@ -23,7 +23,7 @@ pub struct Mapper050 {
 }
 
 impl Mapper for Mapper050 {
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         match cpu_address & 0x4120 {
             0x4020 => {
                 //println!("Setting PRG bank. Value: {value:b} . Address: 0x{cpu_address:04X}");

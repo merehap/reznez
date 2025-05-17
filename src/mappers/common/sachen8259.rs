@@ -50,7 +50,7 @@ pub struct Sachen8259 {
 }
 
 impl Mapper for Sachen8259 {
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         match cpu_address & 0xC101 {
             0x4100 => {
                 let value = value & 0b111;

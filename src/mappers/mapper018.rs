@@ -57,7 +57,7 @@ impl Mapper for Mapper018 {
         }
     }
 
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         if matches!(cpu_address, 0x6000..=0x7FFF) {
             if self.work_ram_write_enabled {
                 params.write_prg(cpu_address, value);

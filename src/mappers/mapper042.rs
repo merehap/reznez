@@ -35,7 +35,7 @@ impl Mapper for Mapper042 {
         params.set_chr_layout(self.chr_board as u8);
     }
 
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         match cpu_address & 0xE003 {
             0x8000 => params.set_chr_register(C0, value & 0b1111),
             0xE000 => params.set_prg_register(P0, value & 0b1111),

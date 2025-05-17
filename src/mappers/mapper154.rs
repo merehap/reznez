@@ -19,13 +19,13 @@ pub struct Mapper154 {
 }
 
 impl Mapper for Mapper154 {
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         if matches!(cpu_address, 0x8000..=0xFFFF) {
             let mirroring_index = splitbits_named!(min=u8, value, ".m......");
             params.set_name_table_mirroring(mirroring_index);
         }
 
-        self.mapper088.write_to_cartridge_space(params, cpu_address, value);
+        self.mapper088.write_register(params, cpu_address, value);
     }
 
     fn layout(&self) -> Layout {

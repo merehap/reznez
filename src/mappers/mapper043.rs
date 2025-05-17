@@ -41,7 +41,7 @@ impl Mapper for Mapper043 {
         }
     }
 
-    fn write_to_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
         const INDEXES: [u8; 8] = [4, 3, 4, 4, 4, 7, 5, 6];
 
         match cpu_address & 0x71FF {
