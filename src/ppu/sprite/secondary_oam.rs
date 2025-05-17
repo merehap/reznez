@@ -17,7 +17,7 @@ impl SecondaryOam {
         self.is_full
     }
 
-    pub fn read(&self) -> u8 {
+    pub fn peek(&self) -> u8 {
         self.data[self.index]
     }
 

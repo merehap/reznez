@@ -9,25 +9,22 @@ use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table::PatternIndex;
 use crate::ppu::pattern_table::PatternTableSide;
-use crate::ppu::pixel_index::{PixelIndex, PixelRow};
+use crate::ppu::pixel_index::PixelIndex;
 use crate::ppu::register::registers::attribute_register::AttributeRegister;
 use crate::ppu::register::registers::pattern_register::PatternRegister;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::sprite_attributes::SpriteAttributes;
-use crate::ppu::sprite::secondary_oam::SecondaryOam;
 use crate::ppu::sprite::oam_registers::OamRegisters;
 use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 
 use super::palette::bank_color_assigner::BankColorAssigner;
+use super::sprite::sprite_evaluator::SpriteEvaluator;
 
 pub struct Ppu {
-    oam_data_read: u8,
-    secondary_oam: SecondaryOam,
     oam_registers: OamRegisters,
     oam_register_index: usize,
-    clear_oam: bool,
-    all_sprites_evaluated: bool,
+    sprite_evaluator: SpriteEvaluator,
 
     next_pattern_index: PatternIndex,
     pattern_register: PatternRegister,
@@ -35,7 +32,6 @@ pub struct Ppu {
 
     next_sprite_pattern_index: PatternIndex,
     current_sprite_y: SpriteY,
-    sprite_0_present: bool,
     // TODO: Remove this. The IO bus should be set to this instead.
     pattern_address: PpuAddress,
     sprite_visible: bool,
@@ -49,12 +45,9 @@ pub struct Ppu {
 impl Ppu {
     pub fn new(memory: &PpuMemory) -> Ppu {
         Ppu {
-            oam_data_read: 0,
-            secondary_oam: SecondaryOam::new(),
             oam_registers: OamRegisters::new(),
             oam_register_index: 0,
-            clear_oam: false,
-            all_sprites_evaluated: false,
+            sprite_evaluator: SpriteEvaluator::new(),
 
             next_pattern_index: PatternIndex::new(0),
             pattern_register: PatternRegister::new(),
@@ -62,7 +55,6 @@ impl Ppu {
 
             next_sprite_pattern_index: PatternIndex::new(0),
             current_sprite_y: SpriteY::new(0),
-            sprite_0_present: false,
             pattern_address: PpuAddress::ZERO,
             sprite_visible: false,
 
@@ -252,86 +244,50 @@ impl Ppu {
                 mem.regs_mut().oam_addr.reset();
             }
 
+            StartClearingSecondaryOam => {
+                info!(target: "ppustage", "{}\t\tCLEARING SECONDARY OAM", mem.regs().clock());
+                self.sprite_evaluator.start_clearing_secondary_oam();
+            }
+            StartSpriteEvaluation => {
+                info!(target: "ppustage", "\t\tSPRITE EVALUATION");
+                self.sprite_evaluator.start_sprite_evaluation();
+                self.oam_register_index = 0;
+            }
+            StartLoadingOamRegisters => {
+                info!(target: "ppustage", "\t\tLoading OAM registers.");
+                self.sprite_evaluator.start_loading_oam_registers();
+                self.oam_registers.set_sprite_0_presence(self.sprite_evaluator.sprite_0_present());
+            }
+            StopLoadingOamRegisters => {
+                info!(target: "ppustage", "\t\tLoading OAM registers ended.");
+            }
             ReadOamByte => {
                 if !mem.regs().rendering_enabled() { return; }
-                // This is a dummy read if OAM clear is active. TODO: Can this be removed?
-                self.oam_data_read = mem.oam().peek(mem.regs().oam_addr);
-                if self.clear_oam {
-                    self.oam_data_read = 0xFF;
-                }
+                self.sprite_evaluator.read_oam(mem);
             }
             WriteSecondaryOamByte => {
                 if !mem.regs().rendering_enabled() { return; }
+                self.sprite_evaluator.write_secondary_oam(mem);
 
-                if self.clear_oam {
-                    self.secondary_oam.write(self.oam_data_read);
-                    self.secondary_oam.advance();
-                    return;
-                }
-
-                if self.all_sprites_evaluated {
-                    // TODO: Reading and incrementing still happen after sprite evaluation is
-                    // complete, but writes fail (i.e. they don't happen).
-                    self.oam_data_read = self.secondary_oam.read();
-                    return;
-                }
-
-                if !self.secondary_oam.is_full() {
-                    self.secondary_oam.write(self.oam_data_read);
-                }
-
-                if !mem.regs().oam_addr.new_sprite_started() {
-                    // The current sprite is in range, copy one more byte of its data over.
-                    self.secondary_oam.advance();
-                    self.all_sprites_evaluated = mem.regs_mut().oam_addr.next_field();
-                    return;
-                }
-
-                // Check if the y coordinate is on screen.
-                if let Some(pixel_row) = mem.regs().clock().scanline_pixel_row()
-                    && let Some(top_sprite_row) = PixelRow::try_from_u8(self.oam_data_read)
-                    && let Some(offset) = pixel_row.difference(top_sprite_row)
-                    && offset < (mem.regs().sprite_height().to_dimension())
-                {
-                    if mem.regs().oam_addr.is_at_sprite_0() {
-                        self.sprite_0_present = true;
-                    }
-
-                    if self.secondary_oam.is_full() {
-                        mem.regs_mut().set_sprite_overflow();
-                    }
-
-                    self.secondary_oam.advance();
-                    self.all_sprites_evaluated = mem.regs_mut().oam_addr.next_field();
-                    return;
-                }
-
-                if self.secondary_oam.is_full() {
-                    // Sprite overflow hardware bug
-                    // https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
-                    mem.regs_mut().oam_addr.corrupt_sprite_y_index();
-                }
-
-                self.all_sprites_evaluated = mem.regs_mut().oam_addr.next_sprite();
             }
             ReadSpriteY => {
                 if !mem.regs().rendering_enabled() { return; }
-                self.current_sprite_y = SpriteY::new(self.secondary_oam.read_and_advance());
+                self.current_sprite_y = SpriteY::new(self.sprite_evaluator.read_secondary_oam_and_advance());
             }
             ReadSpritePatternIndex => {
                 if !mem.regs().rendering_enabled() { return; }
-                self.next_sprite_pattern_index = PatternIndex::new(self.secondary_oam.read_and_advance());
+                self.next_sprite_pattern_index = PatternIndex::new(self.sprite_evaluator.read_secondary_oam_and_advance());
             }
             ReadSpriteAttributes => {
                 if !mem.regs().rendering_enabled() { return; }
 
-                let attributes = SpriteAttributes::from_u8(self.secondary_oam.read_and_advance());
+                let attributes = SpriteAttributes::from_u8(self.sprite_evaluator.read_secondary_oam_and_advance());
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
                 if !mem.regs().rendering_enabled() { return; }
 
-                let x_counter = self.secondary_oam.read_and_advance();
+                let x_counter = self.sprite_evaluator.read_secondary_oam_and_advance();
                 self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
             }
             DummyReadSpriteX => {
@@ -352,22 +308,29 @@ impl Ppu {
                 mem.trigger_ppu_address_change(self.pattern_address);
             }
             GetSpritePatternLowByte => {
-                if mem.regs().rendering_enabled() {
-                    let pattern_low = mem.read(self.pattern_address);
-                    if self.sprite_visible {
-                        self.oam_registers.registers[self.oam_register_index]
-                            .set_pattern_low(pattern_low);
-                    }
+                if !mem.regs().rendering_enabled() {
+                    return;
                 }
+
+                let pattern_low = mem.read(self.pattern_address);
+                if !self.sprite_visible {
+                    return;
+                }
+
+                self.oam_registers.registers[self.oam_register_index]
+                    .set_pattern_low(pattern_low);
             }
             GetSpritePatternHighByte => {
-                if mem.regs().rendering_enabled() {
-                    let pattern_high = mem.read(self.pattern_address);
-                    if self.sprite_visible {
-                        self.oam_registers.registers[self.oam_register_index]
-                            .set_pattern_high(pattern_high);
-                    }
+                if !mem.regs().rendering_enabled() {
+                    return;
                 }
+
+                let pattern_high = mem.read(self.pattern_address);
+                if !self.sprite_visible {
+                    return;
+                }
+
+                self.oam_registers.registers[self.oam_register_index].set_pattern_high(pattern_high);
             }
             IncrementOamRegisterIndex => {
                 self.oam_register_index += 1;
@@ -391,29 +354,6 @@ impl Ppu {
             }
             StopReadingBackgroundTiles => {
                 info!(target: "ppustage", "{}\t\tENDED READING BACKGROUND TILES", mem.regs().clock());
-            }
-
-            StartClearingSecondaryOam => {
-                info!(target: "ppustage", "{}\t\tCLEARING SECONDARY OAM", mem.regs().clock());
-                self.secondary_oam.reset_index();
-                self.clear_oam = true;
-            }
-            StartSpriteEvaluation => {
-                info!(target: "ppustage", "\t\tSPRITE EVALUATION");
-                self.secondary_oam.reset_index();
-                self.clear_oam = false;
-                self.oam_register_index = 0;
-                self.sprite_0_present = false;
-            }
-            StartLoadingOamRegisters => {
-                info!(target: "ppustage", "\t\tLoading OAM registers.");
-                self.all_sprites_evaluated = false;
-                // TODO: Determine if this needs to occur on cycle 256 instead.
-                self.secondary_oam.reset_index();
-                self.oam_registers.set_sprite_0_presence(self.sprite_0_present);
-            }
-            StopLoadingOamRegisters => {
-                info!(target: "ppustage", "\t\tLoading OAM registers ended.");
             }
 
             StartVblank => {
