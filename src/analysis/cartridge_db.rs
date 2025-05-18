@@ -28,7 +28,7 @@ pub fn analyze(rom_base_path: &Path) {
             .read_to_end(&mut rom)
             .unwrap();
         let rom = RawMemory::from_vec(rom);
-        match Cartridge::load(&rom_path, &rom, &HeaderDb::load()) {
+        match Cartridge::load(&rom_path, &rom, &HeaderDb::load(), false) {
             Err(err) => error!("Failed to load rom {}. {}", rom_path.display(), err),
             Ok(cartridge) => cartridges.push(cartridge),
         }

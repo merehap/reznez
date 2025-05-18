@@ -44,6 +44,7 @@ impl TestSummary {
                     gui: GuiType::NoGui,
                     target_frame_rate: TargetFrameRate::Unbounded,
                     disable_audio: true,
+                    prevent_saving: true,
                     ..Opt::new(rom_entry.path.clone())
                 };
 

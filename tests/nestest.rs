@@ -29,6 +29,7 @@ fn nestest() {
         target_frame_rate: TargetFrameRate::Unbounded,
         disable_audio: true,
         log_cpu_all: true,
+        prevent_saving: true,
         ..Opt::new(PathBuf::from("tests/roms/nestest.nes"))
     };
 

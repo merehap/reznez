@@ -171,9 +171,13 @@ pub struct SaveRam {
 }
 
 impl SaveRam {
-    pub fn open(path: &Path, size: u32) -> Self {
+    pub fn open(path: &Path, size: u32, allow_saving: bool) -> Self {
         if size == 0 {
             return SaveRam { mode_state: SaveRamModeState::Empty };
+        }
+
+        if !allow_saving {
+            return SaveRam { mode_state: SaveRamModeState::NonSaving(vec![0; size as usize]) }
         }
 
         let file = OpenOptions::new()
@@ -193,6 +197,18 @@ impl SaveRam {
             .unwrap_or(SaveRamModeState::NonSaving(vec![0; size as usize]));
 
         SaveRam { mode_state }
+    }
+
+    pub fn size(&self) -> u32 {
+        match &self.mode_state {
+            SaveRamModeState::Empty => 0,
+            SaveRamModeState::NonSaving(vec) => vec.len() as u32,
+            SaveRamModeState::Saving(mmap) => mmap.len() as u32,
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        matches!(self.mode_state, SaveRamModeState::Empty)
     }
 }
 

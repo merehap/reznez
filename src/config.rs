@@ -37,7 +37,7 @@ impl Config {
         let mut rom = Vec::new();
         File::open(rom_path).unwrap().read_to_end(&mut rom).unwrap();
         let rom = RawMemory::from_vec(rom);
-        let cartridge = Cartridge::load(rom_path, &rom, &HeaderDb::load()).unwrap();
+        let cartridge = Cartridge::load(rom_path, &rom, &HeaderDb::load(), !opt.prevent_saving).unwrap();
         info!("ROM loaded.\n{}", cartridge);
 
         let system_palette =
@@ -139,6 +139,9 @@ pub struct Opt {
 
     #[structopt(name = "disablecontrollers", long)]
     pub disable_controllers: bool,
+
+    #[structopt(name = "preventsaving", long)]
+    pub prevent_saving: bool,
 }
 
 impl Opt {
@@ -168,6 +171,7 @@ impl Opt {
             frame_dump: false,
             analysis: false,
             disable_controllers: false,
+            prevent_saving: false,
         }
     }
 }

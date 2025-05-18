@@ -10,7 +10,7 @@ use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::mapper::{MapperParams, ReadWriteStatus};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::chr_memory::{AccessOverride, ChrMemory};
-use crate::memory::raw_memory::RawMemory;
+use crate::memory::raw_memory::{RawMemory, SaveRam};
 use crate::memory::window::{ReadWriteStatusInfo, PrgWindow};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::const_vec::ConstVec;
@@ -100,9 +100,8 @@ impl Layout {
             self.prg_layout_index,
             cartridge.prg_rom().clone(),
             self.prg_rom_outer_bank_layout.outer_bank_count(prg_rom_size),
-            cartridge.prg_ram_size(),
-            cartridge.prg_nvram_size(),
-            &cartridge.path().to_prg_save_ram_file_path(),
+            RawMemory::new(cartridge.prg_work_ram_size()),
+            SaveRam::open(&cartridge.path().to_prg_save_ram_file_path(), cartridge.prg_save_ram_size(), cartridge.allow_saving()),
             prg_bank_registers,
         );
 
@@ -139,7 +138,7 @@ impl Layout {
         );
 
         let mut ram_not_present = BTreeSet::new();
-        if cartridge.prg_ram_size() == 0 && cartridge.prg_nvram_size() == 0 {
+        if cartridge.prg_work_ram_size() == 0 && cartridge.prg_save_ram_size() == 0 {
             for status_info in prg_memory.read_write_status_infos() {
                 match status_info {
                     ReadWriteStatusInfo::Absent | ReadWriteStatusInfo::MapperCustom { .. } => { /* Do nothing. */ }
@@ -151,7 +150,7 @@ impl Layout {
             }
         }
 
-        if cartridge.chr_ram_size() == 0 && cartridge.chr_nvram_size() == 0 {
+        if cartridge.chr_work_ram_size() == 0 && cartridge.chr_save_ram_size() == 0 {
             for status_info in chr_memory.read_write_status_infos() {
                 match status_info {
                     ReadWriteStatusInfo::Absent | ReadWriteStatusInfo::MapperCustom { .. } => { /* Do nothing. */ }

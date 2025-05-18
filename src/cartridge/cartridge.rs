@@ -134,11 +134,12 @@ pub struct Cartridge {
     chr_rom: RawMemory,
     chr_work_ram: RawMemory,
     chr_save_ram: RawMemory,
+    allow_saving: bool,
 }
 
 impl Cartridge {
     #[rustfmt::skip]
-    pub fn load(path: &Path, rom: &RawMemory, header_db: &HeaderDb) -> Result<Cartridge, String> {
+    pub fn load(path: &Path, rom: &RawMemory, header_db: &HeaderDb, allow_saving: bool) -> Result<Cartridge, String> {
         let path = CartridgePath(path.to_path_buf());
 
         let raw_header = rom.slice(0x0..0x10).to_raw().try_into()
@@ -202,6 +203,7 @@ impl Cartridge {
             chr_rom,
             chr_work_ram: RawMemory::new(chr_work_ram_size.unwrap_or(0)),
             chr_save_ram: RawMemory::new(chr_save_ram_size.unwrap_or(0)),
+            allow_saving,
         };
 
         let full_hash = crc32fast::hash(rom.as_slice());
@@ -264,6 +266,10 @@ impl Cartridge {
         &self.prg_rom
     }
 
+    pub fn prg_work_ram(&self) -> &RawMemory {
+        &self.prg_work_ram
+    }
+
     pub fn chr_rom(&self) -> &RawMemory {
         &self.chr_rom
     }
@@ -281,11 +287,11 @@ impl Cartridge {
         self.prg_rom.size()
     }
 
-    pub fn prg_ram_size(&self) -> u32 {
+    pub fn prg_work_ram_size(&self) -> u32 {
         self.prg_work_ram.size()
     }
 
-    pub fn prg_nvram_size(&self) -> u32 {
+    pub fn prg_save_ram_size(&self) -> u32 {
         self.prg_save_ram.size()
     }
 
@@ -297,11 +303,11 @@ impl Cartridge {
         self.chr_rom.size()
     }
 
-    pub fn chr_ram_size(&self) -> u32 {
+    pub fn chr_work_ram_size(&self) -> u32 {
         self.chr_work_ram.size()
     }
 
-    pub fn chr_nvram_size(&self) -> u32 {
+    pub fn chr_save_ram_size(&self) -> u32 {
         self.chr_save_ram.size()
     }
 
@@ -313,6 +319,10 @@ impl Cartridge {
         } else {
             None
         }
+    }
+
+    pub fn allow_saving(&self) -> bool {
+        self.allow_saving
     }
 }
 
@@ -431,6 +441,7 @@ pub mod test_data {
             chr_rom: RawMemory::new(CHR_ROM_CHUNK_LENGTH as u32),
             chr_work_ram: RawMemory::new(0),
             chr_save_ram: RawMemory::new(0),
+            allow_saving: true,
 
             title: "Test ROM".to_string(),
         }

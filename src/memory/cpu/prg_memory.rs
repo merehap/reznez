@@ -1,5 +1,4 @@
 use std::num::NonZeroU8;
-use std::path::Path;
 
 use log::warn;
 
@@ -20,7 +19,7 @@ pub struct PrgMemory {
     layout_index: u8,
     rom: Vec<RawMemory>,
     rom_outer_bank_index: u8,
-    ram: RawMemory,
+    work_ram: RawMemory,
     save_ram: SaveRam,
     extended_ram: RawMemoryArray<KIBIBYTE>,
     regs: PrgBankRegisters,
@@ -33,9 +32,8 @@ impl PrgMemory {
         layout_index: u8,
         rom: RawMemory,
         rom_outer_bank_count: NonZeroU8,
-        work_ram_size: u32,
-        save_ram_size: u32,
-        save_ram_file_path: &Path,
+        work_ram: RawMemory,
+        save_ram: SaveRam,
         regs: PrgBankRegisters,
     ) -> PrgMemory {
 
@@ -58,14 +56,14 @@ impl PrgMemory {
         }
 
         let rom_bank_size = rom_bank_size.expect("at least one ROM window");
-        if (work_ram_size > 0 || save_ram_size > 0) && !ram_present_in_layout {
+        if (!work_ram.is_empty() || !save_ram.is_empty()) && !ram_present_in_layout {
             warn!("The PRG RAM that was specified in the rom file will be ignored since it is not \
                     configured in the Layout for this mapper.");
         }
 
         let rom_outer_bank_size = rom.size() / rom_outer_bank_count.get() as u32;
         let memory_maps = layouts.iter().map(|initial_layout| PrgMemoryMap::new(
-            *initial_layout, rom_outer_bank_size, rom_bank_size, work_ram_size, save_ram_size, &regs,
+            *initial_layout, rom_outer_bank_size, rom_bank_size, work_ram.size(), save_ram.size(), &regs,
         )).collect();
 
         PrgMemory {
@@ -74,8 +72,8 @@ impl PrgMemory {
             layout_index,
             rom: rom.split_n(rom_outer_bank_count),
             rom_outer_bank_index: 0,
-            ram: RawMemory::new(work_ram_size),
-            save_ram: SaveRam::open(save_ram_file_path, save_ram_size),
+            work_ram,
+            save_ram,
             extended_ram: RawMemoryArray::new(),
             regs,
         }
@@ -112,7 +110,7 @@ impl PrgMemory {
                 Some(PrgIndex::Rom(index)) if read_write_status.is_readable() =>
                     ReadResult::full(self.rom[self.rom_outer_bank_index as usize][index]),
                 Some(PrgIndex::WorkRam(index)) if read_write_status.is_readable() =>
-                    ReadResult::full(self.ram[index]),
+                    ReadResult::full(self.work_ram[index]),
                 Some(PrgIndex::SaveRam(index)) if read_write_status.is_readable() =>
                     ReadResult::full(self.save_ram[index]),
                 None | Some(PrgIndex::Rom(_) | PrgIndex::WorkRam(_) | PrgIndex::SaveRam(_)) =>
@@ -127,7 +125,7 @@ impl PrgMemory {
         if read_write_status.is_writable() {
             match prg_index {
                 None | Some(PrgIndex::Rom(_)) => unreachable!(),
-                Some(PrgIndex::WorkRam(index)) => self.ram[index] = value,
+                Some(PrgIndex::WorkRam(index)) => self.work_ram[index] = value,
                 Some(PrgIndex::SaveRam(index)) => self.save_ram[index] = value,
             }
         }

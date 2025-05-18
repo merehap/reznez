@@ -205,7 +205,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // Caltron 6-in-1
         41 => m::mapper041::Mapper041::default().supported(),
         // FDS games hacked into cartridge form
-        42 => m::mapper042::Mapper042::new(cartridge.chr_ram_size()).supported(),
+        42 => m::mapper042::Mapper042::new(cartridge.chr_work_ram_size()).supported(),
         // TONY-I and YS-612 (FDS games in cartridge form)
         43 => m::mapper043::Mapper043::default().supported(),
 
@@ -224,7 +224,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         58 => m::mapper058::Mapper058.supported(),
 
         // NTDEC 0324 PCB
-        61 => m::mapper061::Mapper061::new(cartridge.chr_ram_size()).supported(),
+        61 => m::mapper061::Mapper061::new(cartridge.chr_work_ram_size()).supported(),
         // Super 700-in-1
         62 => m::mapper062::Mapper062.supported(),
         63 => match submapper_number {
