@@ -37,8 +37,7 @@ impl Config {
         let mut rom = Vec::new();
         File::open(rom_path).unwrap().read_to_end(&mut rom).unwrap();
         let rom = RawMemory::from_vec(rom);
-        let file_name = rom_path.file_name().unwrap().to_str().unwrap().to_string();
-        let cartridge = Cartridge::load(file_name, &rom, &HeaderDb::load()).unwrap();
+        let cartridge = Cartridge::load(rom_path, &rom, &HeaderDb::load()).unwrap();
         info!("ROM loaded.\n{}", cartridge);
 
         let system_palette =

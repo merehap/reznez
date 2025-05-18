@@ -1,4 +1,10 @@
-use std::{num::{NonZeroU16, NonZeroU8}, ops::{Index, IndexMut, Range}};
+use std::fs::OpenOptions;
+use std::num::{NonZeroU16, NonZeroU8};
+use std::ops::{Index, IndexMut, Range};
+use std::path::Path;
+
+use log::warn;
+use memmap2::MmapMut;
 
 // A chunk of primitive memory. Allows indexing on u32s instead of usizes.
 #[derive(Clone, Debug)]
@@ -158,4 +164,62 @@ impl Index<u32> for RawMemorySlice<'_> {
     fn index(&self, index: u32) -> &u8 {
         &self.0[index as usize]
     }
+}
+
+pub struct SaveRam {
+    mode_state: SaveRamModeState,
+}
+
+impl SaveRam {
+    pub fn open(path: &Path, size: u32) -> Self {
+        if size == 0 {
+            return SaveRam { mode_state: SaveRamModeState::Empty };
+        }
+
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(path);
+        let mode_state = file
+            .and_then(|file| {
+                file.set_len(size as u64)?;
+                // SAFETY: Unsafe. We can't guarantee that another process doesn't modify the file.
+                unsafe { MmapMut::map_mut(&file) }
+            })
+            .map_err(|err| warn!("Failed to load or create Save RAM at {}. RAM will be lost upon exit. {err}", path.display()))
+            .map(SaveRamModeState::Saving)
+            .unwrap_or(SaveRamModeState::NonSaving(vec![0; size as usize]));
+
+        SaveRam { mode_state }
+    }
+}
+
+impl Index<u32> for SaveRam {
+    type Output = u8;
+
+    fn index(&self, index: u32) -> &u8 {
+        match &self.mode_state {
+            SaveRamModeState::Empty => panic!("Can't read from empty Save RAM."),
+            SaveRamModeState::NonSaving(vec) => &vec[index as usize],
+            SaveRamModeState::Saving(mmap) => &mmap[index as usize],
+        }
+    }
+}
+
+impl IndexMut<u32> for SaveRam {
+    fn index_mut(&mut self, index: u32) -> &mut u8 {
+        match &mut self.mode_state {
+            SaveRamModeState::Empty => panic!("Can't read from empty Save RAM."),
+            SaveRamModeState::NonSaving(vec) => &mut vec[index as usize],
+            SaveRamModeState::Saving(mmap) => &mut mmap[index as usize],
+        }
+    }
+}
+
+enum SaveRamModeState {
+    Empty,
+    NonSaving(Vec<u8>),
+    Saving(MmapMut),
 }

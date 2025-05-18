@@ -1,4 +1,5 @@
 use std::fmt;
+use std::path::{Path, PathBuf};
 
 use log::{info, warn, error};
 use splitbits::{splitbits, splitbits_named};
@@ -121,7 +122,7 @@ impl RomHeader {
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct Cartridge {
-    name: String,
+    path: CartridgePath,
     header: RomHeader,
     submapper_number: Option<u8>,
     title: String,
@@ -137,7 +138,9 @@ pub struct Cartridge {
 
 impl Cartridge {
     #[rustfmt::skip]
-    pub fn load(name: String, rom: &RawMemory, header_db: &HeaderDb) -> Result<Cartridge, String> {
+    pub fn load(path: &Path, rom: &RawMemory, header_db: &HeaderDb) -> Result<Cartridge, String> {
+        let path = CartridgePath(path.to_path_buf());
+
         let raw_header = rom.slice(0x0..0x10).to_raw().try_into()
             .map_err(|err| format!("ROM file to have a 16 byte header. {err}"))?;
         let header = RomHeader::parse(raw_header)?;
@@ -146,7 +149,7 @@ impl Cartridge {
         let prg_rom_end = prg_rom_start + header.prg_rom_size;
         let prg_rom = rom.maybe_slice(prg_rom_start..prg_rom_end)
             .unwrap_or_else(|| {
-                panic!("ROM {name} was too short (claimed to have {}KiB PRG ROM).", header.prg_rom_size / KIBIBYTE);
+                panic!("ROM {} was too short (claimed to have {}KiB PRG ROM).", path.rom_file_name(), header.prg_rom_size / KIBIBYTE);
             })
             .to_raw_memory();
 
@@ -155,7 +158,7 @@ impl Cartridge {
         let chr_rom = if let Some(rom) = rom.maybe_slice(chr_rom_start..chr_rom_end) {
             rom.to_raw_memory()
         } else {
-            error!("ROM {name} claimed to have {}KiB CHR ROM, but the ROM was too short.", header.chr_rom_size);
+            error!("ROM {} claimed to have {}KiB CHR ROM, but the ROM was too short.", path.rom_file_name(), header.chr_rom_size);
             chr_rom_end = rom.size();
             rom.slice(chr_rom_start..rom.size()).to_raw_memory()
         };
@@ -187,7 +190,7 @@ impl Cartridge {
             .collect();
 
         let mut cartridge = Cartridge {
-            name,
+            path,
             header,
             submapper_number,
             title,
@@ -237,8 +240,12 @@ impl Cartridge {
         Ok(cartridge)
     }
 
-    pub fn name(&self) -> &str {
-        &self.name
+    pub fn name(&self) -> String {
+        self.path.rom_name()
+    }
+
+    pub fn path(&self) -> &CartridgePath {
+        &self.path
     }
 
     pub fn mapper_number(&self) -> u16 {
@@ -333,6 +340,27 @@ impl fmt::Display for Cartridge {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct CartridgePath(PathBuf);
+
+impl CartridgePath {
+    pub fn rom_name(&self) -> String {
+        self.0.file_stem().unwrap().to_str().unwrap().to_string()
+    }
+
+    pub fn rom_file_name(&self) -> String {
+        self.0.file_name().unwrap().to_str().unwrap().to_string()
+    }
+
+    pub fn to_prg_save_ram_file_path(&self) -> PathBuf {
+        let mut save_path = PathBuf::new();
+        save_path.push("saveram");
+        save_path.push(self.0.file_stem().unwrap());
+        save_path.set_extension("prg.saveram");
+        save_path
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub enum ConsoleType {
@@ -378,8 +406,12 @@ pub mod test_data {
         prg_rom[PRG_ROM_CHUNK_LENGTH - 2] = 0x00;
         prg_rom[PRG_ROM_CHUNK_LENGTH - 1] = 0x02;
 
+        let mut path = PathBuf::new();
+        path.set_file_name("Test");
+        let path = CartridgePath(path);
+
         Cartridge {
-            name: "Test".to_string(),
+            path,
             header: RomHeader {
                 mapper_number: 0,
                 name_table_mirroring: Some(NameTableMirroring::HORIZONTAL),

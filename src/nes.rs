@@ -1,7 +1,8 @@
 use std::collections::VecDeque;
+use std::fs::DirBuilder;
 
 use log::Level::Info;
-use log::{info, log_enabled};
+use log::{info, log_enabled, warn};
 use num_traits::FromPrimitive;
 
 use crate::apu::apu::Apu;
@@ -39,6 +40,10 @@ pub struct Nes {
 
 impl Nes {
     pub fn new(config: &Config) -> Nes {
+        if let Err(err) = DirBuilder::new().recursive(true).create("saveram") {
+            warn!("Failed to create saveram directory. {err}");
+        }
+
         let (mapper, mapper_params) = mapper_list::lookup_mapper_with_params(&config.cartridge);
         let (joypad1, joypad2) =
         if config.joypad_enabled {

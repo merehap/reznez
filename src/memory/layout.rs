@@ -102,6 +102,7 @@ impl Layout {
             self.prg_rom_outer_bank_layout.outer_bank_count(prg_rom_size),
             cartridge.prg_ram_size(),
             cartridge.prg_nvram_size(),
+            &cartridge.path().to_prg_save_ram_file_path(),
             prg_bank_registers,
         );
 

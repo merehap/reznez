@@ -1,4 +1,5 @@
 use std::num::NonZeroU8;
+use std::path::Path;
 
 use log::warn;
 
@@ -8,7 +9,7 @@ use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, MemoryT
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory_map::{PrgMemoryMap, PrgIndex};
-use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
+use crate::memory::raw_memory::{RawMemory, RawMemoryArray, SaveRam};
 use crate::memory::read_result::ReadResult;
 use crate::memory::window::{ReadWriteStatusInfo, PrgWindow};
 use crate::util::unit::KIBIBYTE;
@@ -20,12 +21,13 @@ pub struct PrgMemory {
     rom: Vec<RawMemory>,
     rom_outer_bank_index: u8,
     ram: RawMemory,
-    save_ram: RawMemory,
+    save_ram: SaveRam,
     extended_ram: RawMemoryArray<KIBIBYTE>,
     regs: PrgBankRegisters,
 }
 
 impl PrgMemory {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         layouts: Vec<PrgLayout>,
         layout_index: u8,
@@ -33,6 +35,7 @@ impl PrgMemory {
         rom_outer_bank_count: NonZeroU8,
         work_ram_size: u32,
         save_ram_size: u32,
+        save_ram_file_path: &Path,
         regs: PrgBankRegisters,
     ) -> PrgMemory {
 
@@ -72,7 +75,7 @@ impl PrgMemory {
             rom: rom.split_n(rom_outer_bank_count),
             rom_outer_bank_index: 0,
             ram: RawMemory::new(work_ram_size),
-            save_ram: RawMemory::new(save_ram_size),
+            save_ram: SaveRam::open(save_ram_file_path, save_ram_size),
             extended_ram: RawMemoryArray::new(),
             regs,
         }

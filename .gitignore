@@ -4,6 +4,7 @@ Cargo.lock
 /logs
 /mesen_dumps
 /misc
+/saveram
 /target
 /tests/roms
 /tests/actual_frames
