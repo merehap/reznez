@@ -15,14 +15,12 @@ categories = ["emulators", "games"]
 arr_macro = "0.2.1"
 bitvec = "1.0.1"
 crc32fast = "1.4.2"
-dashmap = "6.1.0"
 enum-iterator = "0.6"
 itertools = "0.14.0"
 memmap2 = "0.9.5"
 modular-bitfield = "0.11.2"
 num-derive = "0.4.2"
 num-traits = "0.2.19"
-rayon = "1.10.0"
 rodio = "0.20.1"
 roxmltree = "0.20.0"
 rusqlite = {version = "0.33.0", features = ["bundled"]}
@@ -49,3 +47,7 @@ debug = true
 [dependencies.log]
 version = "0.4.25"
 features = ["std"]
+
+[dev-dependencies]
+dashmap = "6.1.0"
+rayon = "1.10.0"
