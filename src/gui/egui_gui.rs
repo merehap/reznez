@@ -3,6 +3,7 @@ use std::sync::LazyLock;
 
 use egui::{ClippedPrimitive, Context, TexturesDelta};
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
+use gilrs::{self, GamepadId};
 use log::error;
 use pixels::{Pixels, SurfaceTexture};
 use winit::dpi::{LogicalSize, PhysicalPosition, Position};
@@ -26,7 +27,7 @@ use crate::ppu::render::frame::{DebugBuffer, Frame};
 const TOP_MENU_BAR_HEIGHT: usize = 24;
 
 #[rustfmt::skip]
-static JOY_1_BUTTON_MAPPINGS: LazyLock<HashMap<VirtualKeyCode, Button>> = LazyLock::new(|| {
+static JOY_1_KEYBOARD_MAPPINGS: LazyLock<HashMap<VirtualKeyCode, Button>> = LazyLock::new(|| {
     let mut mappings = HashMap::new();
     mappings.insert(VirtualKeyCode::Space,  Button::A);
     mappings.insert(VirtualKeyCode::F,      Button::B);
@@ -40,7 +41,7 @@ static JOY_1_BUTTON_MAPPINGS: LazyLock<HashMap<VirtualKeyCode, Button>> = LazyLo
 });
 
 #[rustfmt::skip]
-static JOY_2_BUTTON_MAPPINGS: LazyLock<HashMap<VirtualKeyCode, Button>> = LazyLock::new(|| {
+static JOY_2_KEYBOARD_MAPPINGS: LazyLock<HashMap<VirtualKeyCode, Button>> = LazyLock::new(|| {
     let mut mappings = HashMap::new();
     mappings.insert(VirtualKeyCode::Numpad0,        Button::A);
     mappings.insert(VirtualKeyCode::NumpadEnter,    Button::B);
@@ -53,18 +54,47 @@ static JOY_2_BUTTON_MAPPINGS: LazyLock<HashMap<VirtualKeyCode, Button>> = LazyLo
     mappings
 });
 
-pub struct EguiGui;
+static JOY_1_JOYPAD_MAPPINGS: LazyLock<HashMap<u32, Button>> = LazyLock::new(|| {
+    let mut mappings = HashMap::new();
+    mappings.insert(65824, Button::A);
+    mappings.insert(65825, Button::B);
+    mappings.insert(65830, Button::Select);
+    mappings.insert(65831, Button::Start);
+    mappings.insert(66080, Button::Up);
+    mappings.insert(66081, Button::Down);
+    mappings.insert(66082, Button::Left);
+    mappings.insert(66083, Button::Right);
+    mappings
+});
 
-impl EguiGui {
-    pub fn new() -> EguiGui {
-        EguiGui
-    }
-}
+/*
+#[rustfmt::skip]
+static JOY_2_JOYPAD_MAPPINGS: LazyLock<HashMap<u32, Button>> = LazyLock::new(|| {
+    let mut mappings = HashMap::new();
+    mappings.insert(VirtualKeyCode::Numpad0,        Button::A);
+    mappings.insert(VirtualKeyCode::NumpadEnter,    Button::B);
+    mappings.insert(VirtualKeyCode::NumpadSubtract, Button::Select);
+    mappings.insert(VirtualKeyCode::NumpadAdd,      Button::Start);
+    mappings.insert(VirtualKeyCode::Numpad8,        Button::Up);
+    mappings.insert(VirtualKeyCode::Numpad5,        Button::Down);
+    mappings.insert(VirtualKeyCode::Numpad4,        Button::Left);
+    mappings.insert(VirtualKeyCode::Numpad6,        Button::Right);
+    mappings
+});
+*/
+
+pub struct EguiGui;
 
 impl Gui for EguiGui {
     fn run(&mut self, nes: Nes, config: Config) {
         let input = WinitInputHelper::new();
-        let mut world = World { nes, config, input };
+
+        let gilrs = gilrs::Gilrs::new().unwrap();
+        let gamepads: Vec<(gilrs::GamepadId, gilrs::Gamepad)> = gilrs.gamepads().collect();
+        assert!(gamepads.len() < 2, "There must not be more than one gamepad connected at a time.");
+        let active_gamepad_id = gamepads.first().map(|(id, _)| *id);
+
+        let mut world = World { nes, config, input, gilrs, active_gamepad_id };
         let event_loop = EventLoop::new();
 
         let mut window_manager =
@@ -283,6 +313,8 @@ struct World {
     nes: Nes,
     config: Config,
     input: WinitInputHelper,
+    gilrs: gilrs::Gilrs,
+    active_gamepad_id: Option<gilrs::GamepadId>,
 }
 
 struct WindowManager {
@@ -464,7 +496,7 @@ impl Renderer for PrimaryRenderer {
         execute_frame(
             &mut world.nes,
             &world.config,
-            &events(&world.input),
+            &events(&world.input, &mut world.gilrs, world.active_gamepad_id),
             display_frame,
         );
     }
@@ -1007,11 +1039,28 @@ impl Renderer for PatternSourceRenderer {
     }
 }
 
-fn events(input: &WinitInputHelper) -> Events {
+fn events(input: &WinitInputHelper, gilrs: &mut gilrs::Gilrs, active_gamepad_id: Option<GamepadId>) -> Events {
     let mut joypad1_button_statuses = BTreeMap::new();
     let mut joypad2_button_statuses = BTreeMap::new();
 
-    for (&key, &button) in JOY_1_BUTTON_MAPPINGS.iter() {
+    while let Some(gilrs::Event { id, event, .. }) = gilrs.next_event() {
+        assert_eq!(Some(id), active_gamepad_id);
+        match event {
+            gilrs::EventType::ButtonPressed(_, code) => {
+                if let Some(button) = JOY_1_JOYPAD_MAPPINGS.get(&code.into_u32()) {
+                    joypad1_button_statuses.insert(*button, ButtonStatus::Pressed);
+                }
+            }
+            gilrs::EventType::ButtonReleased(_, code) => {
+                if let Some(button) = JOY_1_JOYPAD_MAPPINGS.get(&code.into_u32()) {
+                    joypad1_button_statuses.insert(*button, ButtonStatus::Unpressed);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    for (&key, &button) in JOY_1_KEYBOARD_MAPPINGS.iter() {
         if input.key_pressed(key) {
             joypad1_button_statuses.insert(button, ButtonStatus::Pressed);
         } else if input.key_released(key) {
@@ -1019,7 +1068,7 @@ fn events(input: &WinitInputHelper) -> Events {
         };
     }
 
-    for (&key, &button) in JOY_2_BUTTON_MAPPINGS.iter() {
+    for (&key, &button) in JOY_2_KEYBOARD_MAPPINGS.iter() {
         if input.key_pressed(key) {
             joypad2_button_statuses.insert(button, ButtonStatus::Pressed);
         } else if input.key_released(key) {
@@ -1034,3 +1083,9 @@ fn events(input: &WinitInputHelper) -> Events {
         joypad2_button_statuses,
     }
 }
+
+/*
+fn button_pressed(key: input: &WinitInputHelper, gilrs: gilrs::Gilrs, active_gamepad_id: Option<GamepadId>) -> bool {
+
+}
+*/

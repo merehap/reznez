@@ -44,6 +44,7 @@ impl log::Log for Logger {
                     ["winit", ..] => false,
                     ["wgpu_hal", ..] => false,
                     ["wgpu_core", ..] => false,
+                    ["gilrs_core", ..] => true,
                     _ => panic!("Unexpected logger target: {target}"),
                 }
             }

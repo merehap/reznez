@@ -60,7 +60,7 @@ impl Config {
     pub fn gui(opt: &Opt) -> Box<dyn Gui> {
         match opt.gui {
             GuiType::NoGui => Box::new(NoGui::new()) as Box<dyn Gui>,
-            GuiType::Egui => Box::new(EguiGui::new()),
+            GuiType::Egui => Box::new(EguiGui),
         }
     }
 }

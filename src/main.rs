@@ -31,6 +31,7 @@ use crate::logging::logger;
 use crate::nes::Nes;
 use crate::logging::logger::Logger;
 
+
 fn main() {
     let opt = Opt::from_args();
     logger::init(logger(&opt)).unwrap();
