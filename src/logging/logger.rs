@@ -1,3 +1,6 @@
+use std::io::Write;
+use std::sync::{Arc, Mutex};
+
 use log::{Level, LevelFilter, Metadata, Record, SetLoggerError};
 
 pub fn init(logger: Logger) -> Result<(), SetLoggerError> {
@@ -19,6 +22,8 @@ pub struct Logger {
     pub log_oam_addr: bool,
     pub log_mapper_updates: bool,
     pub log_timings: bool,
+
+    pub buffer: Arc<Mutex<String>>,
 }
 
 impl log::Log for Logger {
@@ -53,20 +58,28 @@ impl log::Log for Logger {
 
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
+            let mut buffer = self.buffer.lock().unwrap();
             if record.level() < Level::Info {
-                print!("{} - ", record.level());
+                buffer.push_str(&record.level().to_string());
+                buffer.push_str(" - ");
             }
 
             match record.target() {
-                "ppustage" => print!("PPU STAGE "),
-                "ppuflags" => print!("PPU FLAGS "),
-                "ppusteps" => print!("PPU STEPS "),
+                "ppustage" => buffer.push_str("PPU STAGE "),
+                "ppuflags" => buffer.push_str("PPU FLAGS "),
+                "ppusteps" => buffer.push_str("PPU STEPS "),
                 _ => {}
             }
 
-            println!("{}", record.args());
+            buffer.push_str(&record.args().to_string());
+            buffer.push('\n');
         }
     }
 
-    fn flush(&self) {}
+    fn flush(&self) {
+        let mut buffer = self.buffer.lock().unwrap();
+        print!("{}", buffer);
+        std::io::stdout().flush().unwrap();
+        buffer.clear();
+    }
 }

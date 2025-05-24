@@ -24,6 +24,8 @@ pub mod nes;
 mod ppu;
 mod util;
 
+use std::sync::{Arc, Mutex};
+
 use structopt::StructOpt;
 
 use crate::config::{Config, Opt};
@@ -80,5 +82,7 @@ fn logger(opt: &Opt) -> Logger {
         log_oam_addr: opt.log_oam_addr,
         log_mapper_updates: opt.log_mapper_updates,
         log_timings: opt.log_timings,
+
+        buffer: Arc::new(Mutex::new(String::new())),
     }
 }

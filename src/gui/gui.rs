@@ -38,6 +38,9 @@ where
         dump_frame(nes.frame(), mask, frame_index);
     }
 
+    log::logger().flush();
+    std::io::stdout().flush().unwrap();
+
     end_frame(frame_index, start_time, intended_frame_end_time);
 
     if events.should_quit || Some(frame_index) == config.stop_frame {
