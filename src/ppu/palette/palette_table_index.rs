@@ -1,8 +1,6 @@
-use enum_iterator::IntoEnumIterator;
-
 use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
 
-#[derive(Clone, Copy, Debug, Default, IntoEnumIterator)]
+#[derive(Clone, Copy, Debug, Default)]
 pub enum PaletteTableIndex {
     #[default]
     Zero,

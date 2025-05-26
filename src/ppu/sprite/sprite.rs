@@ -1,4 +1,4 @@
-use enum_iterator::IntoEnumIterator;
+use enum_iterator::all;
 use num_traits::FromPrimitive;
 
 use crate::ppu::palette::palette_table::PaletteTable;
@@ -123,7 +123,7 @@ impl Sprite {
         palette_table: &PaletteTable,
     ) -> Tile {
         let mut tile = Tile::new();
-        for row in RowInTile::into_enum_iter() {
+        for row in all::<RowInTile>() {
             self.render_sliver_from_sprite_half(
                 sprite_height,
                 sprite_half,

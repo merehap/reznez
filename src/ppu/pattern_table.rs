@@ -1,7 +1,7 @@
 // modular_bitfield pedantic clippy warnings
 #![allow(clippy::cast_lossless, clippy::no_effect_underscore_binding, clippy::map_unwrap_or)]
 
-use enum_iterator::IntoEnumIterator;
+use enum_iterator::all;
 use modular_bitfield::BitfieldSpecifier;
 
 use crate::memory::raw_memory::RawMemorySlice;
@@ -80,7 +80,7 @@ impl PatternTable<'_> {
         palette: Palette,
         tile: &mut Tile,
     ) {
-        for row_in_tile in RowInTile::into_enum_iter() {
+        for row_in_tile in all::<RowInTile>() {
             self.render_pixel_sliver(
                 pattern_index,
                 row_in_tile,

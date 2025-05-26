@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use enum_iterator::IntoEnumIterator;
+use enum_iterator::all;
 
 use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::palette::rgbt::Rgbt;
@@ -235,8 +235,8 @@ impl<const WIDTH: usize, const HEIGHT: usize> DebugBuffer<WIDTH, HEIGHT> {
     }
 
     pub fn place_tile(&mut self, left_column: usize, top_row: usize, tile: &Tile) {
-        for row_in_tile in RowInTile::into_enum_iter() {
-            for column_in_tile in ColumnInTile::into_enum_iter() {
+        for row_in_tile in all::<RowInTile>() {
+            for column_in_tile in all::<ColumnInTile>() {
                 let column_in_tile = column_in_tile as usize;
                 let row_in_tile = row_in_tile as usize;
                 self.write_rgbt(

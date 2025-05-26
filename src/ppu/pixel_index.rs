@@ -1,4 +1,4 @@
-use enum_iterator::IntoEnumIterator;
+use enum_iterator::Sequence;
 use itertools::structs::Product;
 use itertools::Itertools;
 use num_derive::FromPrimitive;
@@ -195,9 +195,7 @@ impl Iterator for PixelRowIterator {
     }
 }
 
-#[derive(
-    PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, IntoEnumIterator,
-)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, Sequence)]
 pub enum ColumnInTile {
     Zero,
     One,
@@ -228,7 +226,7 @@ impl From<ColumnInTile> for u8 {
 }
 
 #[derive(
-    PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, IntoEnumIterator,
+    PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, Sequence,
 )]
 pub enum RowInTile {
     Zero,

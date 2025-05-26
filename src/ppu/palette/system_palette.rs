@@ -1,4 +1,4 @@
-use enum_iterator::IntoEnumIterator;
+use enum_iterator::all;
 use num_traits::FromPrimitive;
 
 use crate::ppu::palette::color::{Brightness, Color, Hue};
@@ -96,7 +96,7 @@ impl SystemPalette {
             ));
         }
 
-        for hue in Hue::into_enum_iter() {
+        for hue in all::<Hue>() {
             let i = hue as usize;
             let color = Color::new(hue, brightness);
             let rgb = Rgb::new(nums[3 * i], nums[3 * i + 1], nums[3 * i + 2]);

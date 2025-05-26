@@ -1,4 +1,4 @@
-use enum_iterator::IntoEnumIterator;
+use enum_iterator::Sequence;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
@@ -37,7 +37,7 @@ impl Color {
     Copy,
     Debug,
     FromPrimitive,
-    IntoEnumIterator,
+    Sequence,
 )]
 pub enum Hue {
     Gray,
@@ -68,7 +68,6 @@ pub enum Hue {
     Copy,
     Debug,
     FromPrimitive,
-    IntoEnumIterator,
 )]
 pub enum Brightness {
     Minimum,

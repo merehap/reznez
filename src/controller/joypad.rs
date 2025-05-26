@@ -1,6 +1,5 @@
 use std::ops::{Index, IndexMut};
 
-use enum_iterator::IntoEnumIterator;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
@@ -77,9 +76,7 @@ pub enum StrobeMode {
     On,
 }
 
-#[derive(
-    PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, IntoEnumIterator,
-)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive)]
 pub enum Button {
     A,
     B,
