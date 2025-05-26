@@ -29,10 +29,15 @@ const TOP_MENU_BAR_HEIGHT: usize = 24;
 #[rustfmt::skip]
 static JOY_1_KEYBOARD_MAPPINGS: LazyLock<HashMap<VirtualKeyCode, Button>> = LazyLock::new(|| {
     let mut mappings = HashMap::new();
-    mappings.insert(VirtualKeyCode::Space,  Button::A);
-    mappings.insert(VirtualKeyCode::F,      Button::B);
-    mappings.insert(VirtualKeyCode::RShift, Button::Select);
-    mappings.insert(VirtualKeyCode::Return, Button::Start);
+    mappings.insert(VirtualKeyCode::J,      Button::B);
+    mappings.insert(VirtualKeyCode::K,      Button::A);
+    mappings.insert(VirtualKeyCode::U,      Button::Select);
+    mappings.insert(VirtualKeyCode::I,      Button::Start);
+
+    mappings.insert(VirtualKeyCode::W,      Button::Up);
+    mappings.insert(VirtualKeyCode::S,      Button::Down);
+    mappings.insert(VirtualKeyCode::A,      Button::Left);
+    mappings.insert(VirtualKeyCode::D,      Button::Right);
     mappings.insert(VirtualKeyCode::Up,     Button::Up);
     mappings.insert(VirtualKeyCode::Down,   Button::Down);
     mappings.insert(VirtualKeyCode::Left,   Button::Left);
