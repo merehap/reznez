@@ -2,7 +2,7 @@
 #![allow(clippy::cast_lossless, clippy::no_effect_underscore_binding, clippy::map_unwrap_or)]
 
 use enum_iterator::all;
-use modular_bitfield::BitfieldSpecifier;
+use modular_bitfield::Specifier;
 
 use crate::memory::raw_memory::RawMemorySlice;
 use crate::ppu::palette::palette::Palette;
@@ -114,7 +114,7 @@ impl PatternTable<'_> {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug, BitfieldSpecifier)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Specifier)]
 pub enum PatternTableSide {
     Left,
     Right,

@@ -1,11 +1,11 @@
 // modular_bitfield pedantic clippy warnings
 #![allow(clippy::cast_lossless, clippy::no_effect_underscore_binding)]
 
-use modular_bitfield::BitfieldSpecifier;
+use modular_bitfield::Specifier;
 
 use crate::ppu::sprite::sprite_half::SpriteHalf;
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug, BitfieldSpecifier)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Specifier)]
 pub enum SpriteHeight {
     Normal,
     Tall,

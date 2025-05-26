@@ -1,7 +1,7 @@
 // modular_bitfield pedantic clippy warnings
 #![allow(clippy::cast_lossless, clippy::no_effect_underscore_binding, clippy::map_unwrap_or, clippy::semicolon_if_nothing_returned)]
 
-use modular_bitfield::{bitfield, BitfieldSpecifier};
+use modular_bitfield::{bitfield, Specifier};
 
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pattern_table::PatternTableSide;
@@ -31,13 +31,13 @@ impl Ctrl {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug, BitfieldSpecifier)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Specifier)]
 pub enum ExtPinRole {
     Read,
     Write,
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug, BitfieldSpecifier)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Specifier)]
 pub enum AddressIncrement {
     Right,
     Down,

@@ -1,14 +1,14 @@
 // modular_bitfield pedantic clippy warnings
 #![allow(clippy::cast_lossless, clippy::no_effect_underscore_binding, clippy::map_unwrap_or)]
 
-use modular_bitfield::BitfieldSpecifier;
+use modular_bitfield::Specifier;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use ux::u2;
 
 use crate::util::bit_util::get_bit;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, BitfieldSpecifier)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, Specifier)]
 pub enum NameTableQuadrant {
     TopLeft = 0,
     TopRight = 1,
