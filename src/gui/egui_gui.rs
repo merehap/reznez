@@ -1,14 +1,15 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 
-use egui::{ClippedPrimitive, Context, TexturesDelta};
+use egui::{ClippedPrimitive, Context, TexturesDelta, ViewportId};
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
 use gilrs::{self, GamepadId};
 use log::error;
 use pixels::{Pixels, SurfaceTexture};
 use winit::dpi::{LogicalSize, PhysicalPosition, Position};
-use winit::event::{Event, VirtualKeyCode, WindowEvent};
-use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
+use winit::event::{Event, WindowEvent};
+use winit::event_loop::{EventLoop, EventLoopWindowTarget};
+use winit::keyboard::KeyCode;
 use winit::window::Window;
 use winit::window::{WindowBuilder, WindowId};
 use winit_input_helper::WinitInputHelper;
@@ -27,35 +28,35 @@ use crate::ppu::render::frame::{DebugBuffer, Frame};
 const TOP_MENU_BAR_HEIGHT: usize = 24;
 
 #[rustfmt::skip]
-static JOY_1_KEYBOARD_MAPPINGS: LazyLock<HashMap<VirtualKeyCode, Button>> = LazyLock::new(|| {
+static JOY_1_KEYBOARD_MAPPINGS: LazyLock<HashMap<KeyCode, Button>> = LazyLock::new(|| {
     let mut mappings = HashMap::new();
-    mappings.insert(VirtualKeyCode::J,      Button::B);
-    mappings.insert(VirtualKeyCode::K,      Button::A);
-    mappings.insert(VirtualKeyCode::U,      Button::Select);
-    mappings.insert(VirtualKeyCode::I,      Button::Start);
+    mappings.insert(KeyCode::KeyJ,   Button::B);
+    mappings.insert(KeyCode::KeyK,   Button::A);
+    mappings.insert(KeyCode::KeyU,   Button::Select);
+    mappings.insert(KeyCode::KeyI,   Button::Start);
 
-    mappings.insert(VirtualKeyCode::W,      Button::Up);
-    mappings.insert(VirtualKeyCode::S,      Button::Down);
-    mappings.insert(VirtualKeyCode::A,      Button::Left);
-    mappings.insert(VirtualKeyCode::D,      Button::Right);
-    mappings.insert(VirtualKeyCode::Up,     Button::Up);
-    mappings.insert(VirtualKeyCode::Down,   Button::Down);
-    mappings.insert(VirtualKeyCode::Left,   Button::Left);
-    mappings.insert(VirtualKeyCode::Right,  Button::Right);
+    mappings.insert(KeyCode::KeyW,   Button::Up);
+    mappings.insert(KeyCode::KeyS,   Button::Down);
+    mappings.insert(KeyCode::KeyA,   Button::Left);
+    mappings.insert(KeyCode::KeyD,   Button::Right);
+    mappings.insert(KeyCode::ArrowUp,    Button::Up);
+    mappings.insert(KeyCode::ArrowDown,  Button::Down);
+    mappings.insert(KeyCode::ArrowLeft,  Button::Left);
+    mappings.insert(KeyCode::ArrowRight, Button::Right);
     mappings
 });
 
 #[rustfmt::skip]
-static JOY_2_KEYBOARD_MAPPINGS: LazyLock<HashMap<VirtualKeyCode, Button>> = LazyLock::new(|| {
+static JOY_2_KEYBOARD_MAPPINGS: LazyLock<HashMap<KeyCode, Button>> = LazyLock::new(|| {
     let mut mappings = HashMap::new();
-    mappings.insert(VirtualKeyCode::Numpad0,        Button::A);
-    mappings.insert(VirtualKeyCode::NumpadEnter,    Button::B);
-    mappings.insert(VirtualKeyCode::NumpadSubtract, Button::Select);
-    mappings.insert(VirtualKeyCode::NumpadAdd,      Button::Start);
-    mappings.insert(VirtualKeyCode::Numpad8,        Button::Up);
-    mappings.insert(VirtualKeyCode::Numpad5,        Button::Down);
-    mappings.insert(VirtualKeyCode::Numpad4,        Button::Left);
-    mappings.insert(VirtualKeyCode::Numpad6,        Button::Right);
+    mappings.insert(KeyCode::Numpad0,        Button::A);
+    mappings.insert(KeyCode::NumpadEnter,    Button::B);
+    mappings.insert(KeyCode::NumpadSubtract, Button::Select);
+    mappings.insert(KeyCode::NumpadAdd,      Button::Start);
+    mappings.insert(KeyCode::Numpad8,        Button::Up);
+    mappings.insert(KeyCode::Numpad5,        Button::Down);
+    mappings.insert(KeyCode::Numpad4,        Button::Left);
+    mappings.insert(KeyCode::Numpad6,        Button::Right);
     mappings
 });
 
@@ -100,21 +101,28 @@ impl Gui for EguiGui {
         let active_gamepad_id = gamepads.first().map(|(id, _)| *id);
 
         let mut world = World { nes, config, input, gilrs, active_gamepad_id };
-        let event_loop = EventLoop::new();
+        let event_loop = EventLoop::new().unwrap();
 
-        let mut window_manager =
-            WindowManager::new(&event_loop, Box::new(PrimaryRenderer::new()));
+        let primary_renderer = Box::new(PrimaryRenderer::new());
+        let primary_window_name = primary_renderer.name();
+        let primary_window = EguiWindow::from_event_loop(
+            &event_loop,
+            3,
+            Position::Physical(PhysicalPosition { x: 50, y: 50 }),
+            primary_renderer,
+        );
+        let mut window_manager = WindowManager::new(primary_window, primary_window_name);
 
         let mut pause = false;
-        event_loop.run(move |event, event_loop_window_target, control_flow| {
+        event_loop.run(move |event, event_loop_window_target| {
             if world.input.update(&event) {
-                if world.input.key_pressed(VirtualKeyCode::F12) {
+                if world.input.key_pressed(KeyCode::F12) {
                     world.nes.reset();
                 }
 
-                if world.input.key_pressed(VirtualKeyCode::Pause)
-                    || world.input.key_pressed(VirtualKeyCode::P)
-                    || world.input.key_pressed(VirtualKeyCode::Escape)
+                if world.input.key_pressed(KeyCode::Pause)
+                    || world.input.key_pressed(KeyCode::KeyP)
+                    || world.input.key_pressed(KeyCode::Escape)
                 {
                     pause = !pause;
                 }
@@ -124,12 +132,28 @@ impl Gui for EguiGui {
                 }
             }
 
-            match event {
-                Event::WindowEvent { event, window_id } => match event {
+            if let Event::WindowEvent { event, window_id } = event {
+                match event {
                     WindowEvent::CloseRequested => {
                         let primary_removed = window_manager.remove_window(&window_id);
                         if primary_removed {
-                            *control_flow = ControlFlow::Exit;
+                            event_loop_window_target.exit();
+                        }
+                    }
+                    WindowEvent::RedrawRequested => {
+                        match window_manager.draw(&mut world, &window_id) {
+                            Ok(Some((renderer, position, scale))) => window_manager
+                                .create_window_from_renderer(
+                                    event_loop_window_target,
+                                    renderer,
+                                    position,
+                                    scale,
+                                ),
+                            Ok(None) => {}
+                            Err(e) => {
+                                error!("pixels.render() failed: {}", e);
+                                event_loop_window_target.exit();
+                            }
                         }
                     }
                     _ => {
@@ -137,35 +161,16 @@ impl Gui for EguiGui {
                             window.handle_event(&event);
                         }
                     }
-                },
-                Event::RedrawRequested(window_id) => {
-                    let window = window_manager.window_mut(&window_id).unwrap();
-                    match window.draw(&mut world) {
-                        Ok(Some((renderer, position, scale))) => window_manager
-                            .create_window_from_renderer(
-                                event_loop_window_target,
-                                renderer,
-                                position,
-                                scale,
-                            ),
-                        Ok(None) => {}
-                        Err(e) => {
-                            error!("pixels.render() failed: {}", e);
-                            *control_flow = ControlFlow::Exit;
-                        }
-                    }
                 }
-                _ => (),
             }
-        });
+        }).unwrap();
     }
 }
 
 type WindowArgs = (Box<dyn Renderer>, Position, u64);
 
 /// Manages all state required for rendering egui over `Pixels`.
-struct EguiWindow {
-    egui_ctx: Context,
+struct EguiWindow<'a> {
     egui_state: egui_winit::State,
     screen_descriptor: ScreenDescriptor,
     rpass: RenderPass,
@@ -173,12 +178,12 @@ struct EguiWindow {
     textures: TexturesDelta,
 
     // State for the GUI
-    window: Window,
-    pixels: Pixels,
+    window: Arc<Window>,
+    pixels: Pixels<'a>,
     renderer: Box<dyn Renderer>,
 }
 
-impl EguiWindow {
+impl <'a> EguiWindow<'a> {
     fn from_event_loop(
         event_loop: &EventLoopWindowTarget<()>,
         scale_factor: u64,
@@ -202,8 +207,9 @@ impl EguiWindow {
 
         let window_size = window.inner_size();
         let scale_factor = window.scale_factor() as f32;
+        let window = Arc::new(window);
         let surface_texture =
-            SurfaceTexture::new(window_size.width, window_size.height, &window);
+            SurfaceTexture::new(window_size.width, window_size.height, window.clone());
         let pixels = Pixels::new(
             renderer.width() as u32,
             renderer.height() as u32,
@@ -212,27 +218,25 @@ impl EguiWindow {
         .unwrap();
 
         EguiWindow::new(
-            event_loop,
             window_size.width,
             window_size.height,
             scale_factor,
-            window,
+            window.clone(),
             pixels,
             renderer,
         )
     }
 
     fn new(
-        event_loop: &EventLoopWindowTarget<()>,
         width: u32,
         height: u32,
         scale_factor: f32,
-        window: Window,
-        pixels: pixels::Pixels,
+        window: Arc<Window>,
+        pixels: pixels::Pixels<'a>,
         renderer: Box<dyn Renderer>,
     ) -> Self {
         let egui_ctx = Context::default();
-        let egui_state = egui_winit::State::new(event_loop);
+        let egui_state = egui_winit::State::new(egui_ctx, ViewportId::ROOT, &window, None, None);
         let screen_descriptor = ScreenDescriptor {
             physical_width: width,
             physical_height: height,
@@ -242,7 +246,6 @@ impl EguiWindow {
         let textures = TexturesDelta::default();
 
         Self {
-            egui_ctx,
             egui_state,
             screen_descriptor,
             rpass,
@@ -256,7 +259,7 @@ impl EguiWindow {
 
     /// Handle input events from the window manager.
     fn handle_event(&mut self, event: &winit::event::WindowEvent) {
-        let _event_response = self.egui_state.on_event(&self.egui_ctx, event);
+        let _event_response = self.egui_state.on_window_event(&self.window, event);
     }
 
     fn draw(&mut self, world: &mut World) -> Result<Option<WindowArgs>, String> {
@@ -265,17 +268,16 @@ impl EguiWindow {
         // Run the egui frame and create all paint jobs to prepare for rendering.
         let raw_input = self.egui_state.take_egui_input(&self.window);
         let mut result = None;
-        let output = self.egui_ctx.run(raw_input, |egui_ctx| {
+        let output = self.egui_state.egui_ctx().run(raw_input, |egui_ctx| {
             result = self.renderer.ui(egui_ctx, world);
         });
 
         self.textures.append(output.textures_delta);
         self.egui_state.handle_platform_output(
             &self.window,
-            &self.egui_ctx,
             output.platform_output,
         );
-        self.paint_jobs = self.egui_ctx.tessellate(output.shapes);
+        self.paint_jobs = self.egui_state.egui_ctx().tessellate(output.shapes, 1.0);
 
         self.pixels
             .render_with(|encoder, render_target, context| {
@@ -322,24 +324,14 @@ struct World {
     active_gamepad_id: Option<gilrs::GamepadId>,
 }
 
-struct WindowManager {
+struct WindowManager<'a> {
     primary_window_id: WindowId,
-    windows_by_id: BTreeMap<WindowId, (String, EguiWindow)>,
+    windows_by_id: BTreeMap<WindowId, (String, EguiWindow<'a>)>,
     window_names: BTreeSet<String>,
 }
 
-impl WindowManager {
-    pub fn new(
-        event_loop: &EventLoopWindowTarget<()>,
-        primary_renderer: Box<dyn Renderer>,
-    ) -> WindowManager {
-        let name = primary_renderer.name();
-        let primary_window = EguiWindow::from_event_loop(
-            event_loop,
-            3,
-            Position::Physical(PhysicalPosition { x: 50, y: 50 }),
-            primary_renderer,
-        );
+impl <'a> WindowManager<'a> {
+    pub fn new(primary_window: EguiWindow<'a>, name: String) -> WindowManager<'a> {
         let mut manager = WindowManager {
             primary_window_id: primary_window.window.id(),
             windows_by_id: BTreeMap::new(),
@@ -386,7 +378,12 @@ impl WindowManager {
         }
     }
 
-    pub fn window_mut(&mut self, window_id: &WindowId) -> Option<&mut EguiWindow> {
+    pub fn draw(&mut self, world: &mut World, window_id: &WindowId) -> Result<Option<WindowArgs>, String> {
+        let window = self.window_mut(window_id).ok_or("Failed to create window")?;
+        window.draw(world)
+    }
+
+    pub fn window_mut(&mut self, window_id: &WindowId) -> Option<&mut EguiWindow<'a>> {
         self.windows_by_id
             .get_mut(window_id)
             .map(|(_, window)| window)

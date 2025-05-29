@@ -33,14 +33,14 @@ strum_macros = "0.27.1"
 walkdir = "2.5.0"
 ux = "0.1.6"
 
-egui = "0.23.0"
-egui_wgpu_backend = "0.26"
-egui-winit = { version = "0.23", default-features = false, features = ["links"] }
+egui = "0.26.2"
+egui_wgpu_backend = "0.28.0"
+egui-winit = { version = "0.26.2", default-features = false, features = ["links"] }
 
-pixels = "0.14.0"
+pixels = "0.15.0"
 
-winit = "0.28.7"
-winit_input_helper = "0.14"
+winit = "0.29.15"
+winit_input_helper = "0.16"
 
 [profile.release]
 debug = true
