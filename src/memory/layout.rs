@@ -204,6 +204,14 @@ impl Layout {
         builder.prg_layouts = ConstVec::new();
         builder
     }
+
+    pub const fn into_builder_with_chr_layouts_cleared(self) -> LayoutBuilder {
+        assert!(self.chr_layout_index == 0, "CHR Layout Index must be zero.");
+
+        let mut builder = self.into_builder();
+        builder.chr_layouts = ConstVec::new();
+        builder
+    }
 }
 
 #[derive(Clone, Copy)]

@@ -3,7 +3,7 @@ use crate::mappers::mmc3::mmc3;
 
 use super::mmc3::sharp_irq_state::SharpIrqState;
 
-const LAYOUT: Layout = mmc3::LAYOUT.into_builder()
+const LAYOUT: Layout = mmc3::LAYOUT.into_builder_with_prg_layouts_cleared()
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_rom_outer_bank_size(128 * KIBIBYTE)
     // Same PRG layouts as MMC3, except no RAM allowed.

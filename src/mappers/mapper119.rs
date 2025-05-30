@@ -5,12 +5,8 @@ use crate::mappers::mmc3::sharp_irq_state::SharpIrqState;
 use crate::memory::bank::bank::RomRamModeRegisterId;
 use crate::memory::bank::bank_index::MemoryType;
 
-use super::mmc3::mmc3::{NAME_TABLE_MIRRORINGS, READ_WRITE_STATUSES};
-
-pub const LAYOUT: Layout = Layout::builder()
+pub const LAYOUT: Layout = mmc3::LAYOUT.into_builder_with_chr_layouts_cleared()
     .prg_rom_max_size(128 * KIBIBYTE)
-    .prg_layout(mmc3::PRG_WINDOWS_8000_SWITCHABLE)
-    .prg_layout(mmc3::PRG_WINDOWS_C000_SWITCHABLE)
     .chr_rom_max_size(64 * KIBIBYTE)
     // Same CHR layouts as standard MMC3, except the banks can switch between ROM and RAM memory spaces.
     .chr_layout(&[
@@ -29,8 +25,6 @@ pub const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C0).rom_ram_register(R0)),
         ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C1).rom_ram_register(R1)),
     ])
-    .name_table_mirrorings(NAME_TABLE_MIRRORINGS)
-    .read_write_statuses(READ_WRITE_STATUSES)
     .build();
 
 const ROM_RAM_REGISTER_IDS: [RomRamModeRegisterId; 6] = [R0, R1, R2, R3, R4, R5];
