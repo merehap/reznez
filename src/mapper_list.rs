@@ -396,6 +396,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // Used when running the BIOS of the Fukutake Study Box.
         186 => UnassignedMapper,
 
+        // TXC-PT8154
+        189 => m::mapper189::Mapper189::new().supported(),
+
         // NTDEC's TC-112
         193 => m::mapper193::Mapper193.supported(),
 

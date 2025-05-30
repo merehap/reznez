@@ -196,6 +196,14 @@ impl Layout {
             chr_meta_register_overrides: self.chr_meta_register_overrides,
         }
     }
+
+    pub const fn into_builder_with_prg_layouts_cleared(self) -> LayoutBuilder {
+        assert!(self.prg_layout_index == 0, "PRG Layout Index must be zero.");
+
+        let mut builder = self.into_builder();
+        builder.prg_layouts = ConstVec::new();
+        builder
+    }
 }
 
 #[derive(Clone, Copy)]

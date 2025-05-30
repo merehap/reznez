@@ -544,7 +544,7 @@ impl MapperParams {
         if self.ram_not_present.contains(&id) {
             info!(target: "mapperupdates",
                 "Ignoring update to RamStatus register {id:?} because RAM isn't present.");
-        } else {
+        } else if !self.read_write_statuses.is_empty() {
             let read_write_status = self.read_write_statuses[index as usize];
             self.prg_memory.set_read_write_status(id, read_write_status);
             self.chr_memory.set_read_write_status(id, read_write_status);

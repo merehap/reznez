@@ -30,6 +30,8 @@ impl <T: Clone + Copy, const CAPACITY: usize> ConstVec<T, CAPACITY> {
     pub fn as_iter(self) -> impl Iterator<Item = T> {
         self.backing.into_iter()
             .take(self.index as usize)
+            // SAFETY: Values before the index have already been set.
+            // TODO: Remove unsafe by implementing Default or similar.
             .map(|value| unsafe { value.assume_init() })
     }
 }
