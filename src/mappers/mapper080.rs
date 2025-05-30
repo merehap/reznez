@@ -1,6 +1,6 @@
 use crate::mapper::*;
 
-const LAYOUT: Layout = Layout::builder()
+pub const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(2048 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7EFF, 7 * KIBIBYTE + 3 * KIBIBYTE / 4, PrgBank::EMPTY),
