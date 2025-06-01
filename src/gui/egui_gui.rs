@@ -398,11 +398,11 @@ trait Renderer {
     fn height(&self) -> usize;
 }
 
-struct PrimaryRenderer {}
+struct PrimaryRenderer;
 
 impl PrimaryRenderer {
     fn new() -> Self {
-        PrimaryRenderer {}
+        Self
     }
 }
 
@@ -415,6 +415,20 @@ impl Renderer for PrimaryRenderer {
         let mut result = None;
         egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
+                ui.menu_button("File", |ui| {
+                    if ui.button("Open").clicked() {
+                        ui.close_menu();
+
+                        egui::CentralPanel::default().show(ctx, |_| {
+                            let mut file_dialog = egui_file::FileDialog::open_file(None);
+                            file_dialog.open();
+                            file_dialog.show(ctx);
+                            if let Some(rom_path) = file_dialog.path() {
+                                println!("Path: {}", rom_path.display());
+                            }
+                        });
+                    }
+                });
 
                 ui.menu_button("Settings", |ui| {
                     if ui.button("Display").clicked() {
@@ -515,6 +529,9 @@ impl Renderer for PrimaryRenderer {
 struct DisplaySettingsRenderer;
 
 impl DisplaySettingsRenderer {
+    const WIDTH: usize = 300;
+    const HEIGHT: usize = 300;
+
     pub fn new() -> Self {
         Self
     }
@@ -546,11 +563,11 @@ impl Renderer for DisplaySettingsRenderer {
     }
 
     fn width(&self) -> usize {
-        StatusRenderer::WIDTH
+        Self::WIDTH
     }
 
     fn height(&self) -> usize {
-        StatusRenderer::HEIGHT
+        Self::HEIGHT
     }
 }
 
@@ -653,11 +670,11 @@ impl Renderer for StatusRenderer {
     }
 
     fn width(&self) -> usize {
-        StatusRenderer::WIDTH
+        Self::WIDTH
     }
 
     fn height(&self) -> usize {
-        StatusRenderer::HEIGHT
+        Self::HEIGHT
     }
 }
 
@@ -713,11 +730,11 @@ impl Renderer for LayersRenderer {
     }
 
     fn width(&self) -> usize {
-        LayersRenderer::WIDTH
+        Self::WIDTH
     }
 
     fn height(&self) -> usize {
-        LayersRenderer::HEIGHT
+        Self::HEIGHT
     }
 }
 
@@ -787,11 +804,11 @@ impl Renderer for NameTableRenderer {
     }
 
     fn width(&self) -> usize {
-        NameTableRenderer::WIDTH
+        Self::WIDTH
     }
 
     fn height(&self) -> usize {
-        NameTableRenderer::HEIGHT
+        Self::HEIGHT
     }
 }
 
@@ -835,11 +852,11 @@ impl Renderer for SpritesRenderer {
     }
 
     fn width(&self) -> usize {
-        SpritesRenderer::WIDTH
+        Self::WIDTH
     }
 
     fn height(&self) -> usize {
-        SpritesRenderer::HEIGHT
+        Self::HEIGHT
     }
 }
 
@@ -901,11 +918,11 @@ impl Renderer for PatternTableRenderer {
     }
 
     fn width(&self) -> usize {
-        PatternTableRenderer::WIDTH
+        Self::WIDTH
     }
 
     fn height(&self) -> usize {
-        PatternTableRenderer::HEIGHT
+        Self::HEIGHT
     }
 }
 
@@ -998,11 +1015,11 @@ impl Renderer for ChrBanksRenderer {
     }
 
     fn width(&self) -> usize {
-        ChrBanksRenderer::WIDTH
+        Self::WIDTH
     }
 
     fn height(&self) -> usize {
-        ChrBanksRenderer::HEIGHT
+        Self::HEIGHT
     }
 }
 

@@ -34,8 +34,9 @@ walkdir = "2.5.0"
 ux = "0.1.6"
 
 egui = "0.26.2"
-egui_wgpu_backend = "0.28.0"
 egui-winit = { version = "0.26.2", default-features = false, features = ["links"] }
+egui_file = "0.16.3"
+egui_wgpu_backend = "0.28.0"
 
 pixels = "0.15.0"
 
