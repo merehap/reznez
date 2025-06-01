@@ -206,6 +206,7 @@ impl CpuMemory<'_> {
             &mut self.memory.apu_registers,
             address,
         ).resolve(self.memory.cpu_data_bus);
+        self.memory.mapper.on_cpu_read(&mut self.memory.mapper_params, address, self.memory.cpu_data_bus);
     }
 
     #[inline]

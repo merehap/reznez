@@ -452,6 +452,9 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
             _ => UnassignedSubmapper,
         }
 
+        // Maxi 15 multicart
+        234 => m::mapper234::Mapper234::default().supported(),
+
         239 => UnassignedMapper,
         240 => m::mapper240::Mapper240.supported(),
         // Hengedianzi (恒格电子) hard-wired mirroring, and mapper hacks (m 164, 178, 227)

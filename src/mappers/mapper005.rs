@@ -158,7 +158,7 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_cpu_read(&mut self, params: &mut MapperParams, addr: CpuAddress) {
+    fn on_cpu_read(&mut self, params: &mut MapperParams, addr: CpuAddress, _value: u8) {
         match addr.to_raw() {
             0x5204 => {
                 params.set_irq_pending(false);
