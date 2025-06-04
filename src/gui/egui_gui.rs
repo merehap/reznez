@@ -114,7 +114,6 @@ impl Gui for EguiGui {
         );
         let mut window_manager = WindowManager::new(primary_window, primary_window_name);
 
-        let mut pause = false;
         event_loop.run(move |event, event_loop_window_target| {
             if world.input.update(&event) {
                 if world.input.key_pressed(KeyCode::F12) {
@@ -125,12 +124,10 @@ impl Gui for EguiGui {
                     || world.input.key_pressed(KeyCode::KeyP)
                     || world.input.key_pressed(KeyCode::Escape)
                 {
-                    pause = !pause;
+                    window_manager.toggle_pause();
                 }
 
-                if !pause {
-                    window_manager.request_redraws();
-                }
+                window_manager.request_redraws();
             }
 
             if let Event::WindowEvent { event, window_id } = event {
@@ -376,6 +373,10 @@ impl <'a> WindowManager<'a> {
         false
     }
 
+    pub fn toggle_pause(&mut self) {
+        self.windows_by_id.get_mut(&self.primary_window_id).unwrap().1.renderer.toggle_pause();
+    }
+
     pub fn request_redraws(&self) {
         for (_id, window) in self.windows_by_id.values() {
             window.window.request_redraw();
@@ -398,15 +399,20 @@ trait Renderer {
     fn name(&self) -> String;
     fn ui(&mut self, ctx: &Context, world: &mut World) -> Option<WindowArgs>;
     fn render(&mut self, world: &mut World, pixels: &mut Pixels);
+    fn toggle_pause(&mut self) {}
     fn width(&self) -> usize;
     fn height(&self) -> usize;
 }
 
-struct PrimaryRenderer;
+struct PrimaryRenderer {
+    paused: bool,
+}
 
 impl PrimaryRenderer {
     fn new() -> Self {
-        Self
+        Self {
+            paused: false,
+        }
     }
 }
 
@@ -518,6 +524,10 @@ impl Renderer for PrimaryRenderer {
     }
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
+        if self.paused {
+            return;
+        }
+
         let display_frame = |frame: &Frame, mask, _frame_index| {
             frame.copy_to_rgba_buffer(mask, pixels.frame_mut().try_into().unwrap());
         };
@@ -527,6 +537,10 @@ impl Renderer for PrimaryRenderer {
             &events(&world.input, &mut world.gilrs, world.active_gamepad_id),
             display_frame,
         );
+    }
+
+    fn toggle_pause(&mut self) {
+        self.paused = !self.paused;
     }
 
     fn width(&self) -> usize {
