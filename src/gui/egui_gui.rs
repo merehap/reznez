@@ -4,7 +4,7 @@ use std::sync::{Arc, LazyLock};
 use egui::{ClippedPrimitive, Context, TexturesDelta, ViewportId};
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
 use gilrs::{self, GamepadId};
-use log::error;
+use log::{error, info};
 use pixels::{Pixels, SurfaceTexture};
 use winit::dpi::{LogicalSize, PhysicalPosition, Position};
 use winit::event::{Event, WindowEvent};
@@ -152,8 +152,10 @@ impl Gui for EguiGui {
                                 ),
                             Ok(None) => {}
                             Err(e) => {
-                                error!("pixels.render() failed: {}", e);
-                                event_loop_window_target.exit();
+                                if window_id == window_manager.primary_window_id {
+                                    info!("Closing REZNEZ due to redraw failure. {e}");
+                                    event_loop_window_target.exit();
+                                }
                             }
                         }
                     }
@@ -365,12 +367,13 @@ impl <'a> WindowManager<'a> {
     }
 
     pub fn remove_window(&mut self, window_id: &WindowId) -> bool {
-        let primary_removed = *window_id == self.primary_window_id;
         if let Some((name, _)) = self.windows_by_id.remove(window_id) {
             self.window_names.remove(&name);
+            let primary_removed = *window_id == self.primary_window_id;
+            return primary_removed;
         }
 
-        primary_removed
+        false
     }
 
     pub fn request_redraws(&self) {
