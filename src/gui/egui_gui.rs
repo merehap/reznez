@@ -17,6 +17,7 @@ use winit_input_helper::WinitInputHelper;
 use crate::config::Config;
 use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::gui::{execute_frame, Events, Gui};
+use crate::mapper::CpuAddress;
 use crate::nes::Nes;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
@@ -494,6 +495,14 @@ impl Renderer for PrimaryRenderer {
                         ui.close_menu();
                         result = Some((
                             Box::new(PatternSourceRenderer::new()),
+                            Position::Physical(PhysicalPosition { x: 600, y: 200 }),
+                            1,
+                        ));
+                    }
+                    if ui.button("Memory Viewer").clicked() {
+                        ui.close_menu();
+                        result = Some((
+                            Box::new(MemoryViewerRenderer),
                             Position::Physical(PhysicalPosition { x: 600, y: 200 }),
                             1,
                         ));
@@ -1055,6 +1064,54 @@ impl Renderer for PatternSourceRenderer {
 
     fn height(&self) -> usize {
         PixelRow::ROW_COUNT
+    }
+}
+
+struct MemoryViewerRenderer;
+
+impl MemoryViewerRenderer {
+    const WIDTH: usize = 700;
+    const HEIGHT: usize = 400;
+}
+
+impl Renderer for MemoryViewerRenderer {
+    fn name(&self) -> String {
+        "Memory Viewer".to_string()
+    }
+
+    fn ui(&mut self, ctx: &Context, world: &mut World) -> Option<WindowArgs> {
+        let nes = &mut world.nes;
+        egui::CentralPanel::default().show(ctx, |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                egui::Grid::new("my_grid")
+                    .num_columns(16)
+                    .spacing([0.0, 0.0])
+                    .striped(true)
+                    .show(ui, |ui| {
+                        for mem_index in 0..=u16::MAX {
+                            let value = nes.memory_mut().as_cpu_memory().peek(CpuAddress::new(mem_index));
+                            let _ = ui.button(format!("{value:02X}"));
+                            if mem_index % 0x10 == 0x0F {
+                                ui.end_row();
+                            }
+                        }
+                    });
+            })
+        });
+
+        None
+    }
+
+    fn render(&mut self, _world: &mut World, _pixels: &mut Pixels) {
+        // Do nothing yet.
+    }
+
+    fn width(&self) -> usize {
+        Self::WIDTH
+    }
+
+    fn height(&self) -> usize {
+        Self::HEIGHT
     }
 }
 
