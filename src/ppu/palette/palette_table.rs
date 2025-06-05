@@ -14,6 +14,7 @@ pub struct PaletteTable {
 }
 
 impl PaletteTable {
+    // FIXME: This is called once per frame, but there should be a way to cache the lookup_rgb calls.
     pub fn new(raw: &[u8; 0x20], system_palette: &SystemPalette, mask: Mask) -> PaletteTable {
         let rgb = |raw_color: u8| -> Rgb {
             system_palette.lookup_rgb(Color::from_u8(raw_color), mask)
