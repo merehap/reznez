@@ -116,6 +116,10 @@ impl Nes {
         self.memory.stack_pointer()
     }
 
+    pub fn load_new_config(&mut self, config: &Config) {
+        *self = Nes::new(config);
+    }
+
     pub fn mute(&mut self) {
         self.apu.mute();
     }

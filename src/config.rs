@@ -31,15 +31,7 @@ pub struct Config {
 
 impl Config {
     pub fn new(opt: &Opt) -> Config {
-        let rom_path = Path::new(&opt.rom_path);
-
-        info!("Loading ROM '{}'.", rom_path.display());
-        let mut rom = Vec::new();
-        File::open(rom_path).unwrap().read_to_end(&mut rom).unwrap();
-        let rom = RawMemory::from_vec(rom);
-        let cartridge = Cartridge::load(rom_path, &rom, &HeaderDb::load(), !opt.prevent_saving).unwrap();
-        info!("ROM loaded.\n{}", cartridge);
-
+        let cartridge = Config::load_rom(&opt.rom_path, !opt.prevent_saving);
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
 
@@ -62,6 +54,24 @@ impl Config {
             GuiType::NoGui => Box::new(NoGui::new()) as Box<dyn Gui>,
             GuiType::Egui => Box::new(EguiGui),
         }
+    }
+
+    pub fn with_new_rom(&self, path: &Path) -> Config {
+        Config {
+            cartridge: Self::load_rom(path, self.cartridge.allow_saving()),
+            system_palette: self.system_palette.clone(),
+            .. *self
+        }
+    }
+
+    fn load_rom(path: &Path, allow_saving: bool) -> Cartridge {
+        info!("Loading ROM '{}'.", path.display());
+        let mut rom = Vec::new();
+        File::open(path).unwrap().read_to_end(&mut rom).unwrap();
+        let rom = RawMemory::from_vec(rom);
+        let cartridge = Cartridge::load(path, &rom, &HeaderDb::load(), allow_saving).unwrap();
+        info!("ROM loaded.\n{}", cartridge);
+        cartridge
     }
 }
 

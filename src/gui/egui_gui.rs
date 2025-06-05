@@ -2,9 +2,10 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::{Arc, LazyLock};
 
 use egui::{ClippedPrimitive, Context, TexturesDelta, ViewportId};
+use egui_file::FileDialog;
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
 use gilrs::{self, GamepadId};
-use log::{error, info};
+use log::info;
 use pixels::{Pixels, SurfaceTexture};
 use winit::dpi::{LogicalSize, PhysicalPosition, Position};
 use winit::event::{Event, WindowEvent};
@@ -140,14 +141,20 @@ impl Gui for EguiGui {
                     }
                     WindowEvent::RedrawRequested => {
                         match window_manager.draw(&mut world, &window_id) {
-                            Ok(Some((renderer, position, scale))) => window_manager
-                                .create_window_from_renderer(
-                                    event_loop_window_target,
-                                    renderer,
-                                    position,
-                                    scale,
-                                ),
-                            Ok(None) => {}
+                            Ok(FlowControl { window_args, should_close_window }) => {
+                                if let Some((renderer, position, scale)) = window_args {
+                                    window_manager.create_window_from_renderer(
+                                        event_loop_window_target,
+                                        renderer,
+                                        position,
+                                        scale,
+                                    );
+                                }
+
+                                if should_close_window {
+                                    window_manager.remove_window(&window_id);
+                                }
+                            }
                             Err(e) => {
                                 if window_id == window_manager.primary_window_id {
                                     info!("Closing REZNEZ due to redraw failure. {e}");
@@ -262,12 +269,12 @@ impl <'a> EguiWindow<'a> {
         let _event_response = self.egui_state.on_window_event(&self.window, event);
     }
 
-    fn draw(&mut self, world: &mut World) -> Result<Option<WindowArgs>, String> {
+    fn draw(&mut self, world: &mut World) -> Result<FlowControl, String> {
         self.renderer.render(world, &mut self.pixels);
 
         // Run the egui frame and create all paint jobs to prepare for rendering.
         let raw_input = self.egui_state.take_egui_input(&self.window);
-        let mut result = None;
+        let mut result = FlowControl::CONTINUE;
         let output = self.egui_state.egui_ctx().run(raw_input, |egui_ctx| {
             result = self.renderer.ui(egui_ctx, world);
         });
@@ -313,6 +320,29 @@ impl <'a> EguiWindow<'a> {
             .map_err(|err| err.to_string())?;
 
         Ok(result)
+    }
+}
+
+struct FlowControl {
+    window_args: Option<WindowArgs>,
+    should_close_window: bool,
+}
+
+impl FlowControl {
+    const CONTINUE: Self = Self {
+        window_args: None,
+        should_close_window: false,
+    };
+    const CLOSE: Self = Self {
+        window_args: None,
+        should_close_window: true,
+    };
+
+    fn spawn_window(window_args: WindowArgs) -> Self {
+        Self {
+            window_args: Some(window_args),
+            should_close_window: false,
+        }
     }
 }
 
@@ -383,7 +413,7 @@ impl <'a> WindowManager<'a> {
         }
     }
 
-    pub fn draw(&mut self, world: &mut World, window_id: &WindowId) -> Result<Option<WindowArgs>, String> {
+    pub fn draw(&mut self, world: &mut World, window_id: &WindowId) -> Result<FlowControl, String> {
         let window = self.window_mut(window_id).ok_or("Failed to create window")?;
         window.draw(world)
     }
@@ -397,7 +427,7 @@ impl <'a> WindowManager<'a> {
 
 trait Renderer {
     fn name(&self) -> String;
-    fn ui(&mut self, ctx: &Context, world: &mut World) -> Option<WindowArgs>;
+    fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl;
     fn render(&mut self, world: &mut World, pixels: &mut Pixels);
     fn toggle_pause(&mut self) {}
     fn width(&self) -> usize;
@@ -421,29 +451,27 @@ impl Renderer for PrimaryRenderer {
         "REZNEZ".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, _world: &mut World) -> Option<WindowArgs> {
-        let mut result = None;
+    fn ui(&mut self, ctx: &Context, _world: &mut World) -> FlowControl {
+        let mut result = FlowControl::CONTINUE;
         egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("File", |ui| {
                     if ui.button("Open").clicked() {
                         ui.close_menu();
-
-                        egui::CentralPanel::default().show(ctx, |_| {
-                            let mut file_dialog = egui_file::FileDialog::open_file(None);
-                            file_dialog.open();
-                            file_dialog.show(ctx);
-                            if let Some(rom_path) = file_dialog.path() {
-                                println!("Path: {}", rom_path.display());
-                            }
-                        });
+                        let mut file_dialog = egui_file::FileDialog::open_file(None);
+                        file_dialog.open();
+                        result = FlowControl::spawn_window((
+                            Box::new(LoadRomRenderer::new(file_dialog)) as Box<dyn Renderer>,
+                            Position::Physical(PhysicalPosition { x: 850, y: 360 }),
+                            2,
+                        ));
                     }
                 });
 
                 ui.menu_button("Settings", |ui| {
                     if ui.button("Display").clicked() {
                         ui.close_menu();
-                        result = Some((
+                        result = FlowControl::spawn_window((
                             Box::new(DisplaySettingsRenderer::new()) as Box<dyn Renderer>,
                             Position::Physical(PhysicalPosition { x: 850, y: 360 }),
                             2,
@@ -454,7 +482,7 @@ impl Renderer for PrimaryRenderer {
                 ui.menu_button("Debug Windows", |ui| {
                     if ui.button("Status").clicked() {
                         ui.close_menu();
-                        result = Some((
+                        result = FlowControl::spawn_window((
                             Box::new(StatusRenderer::new()) as Box<dyn Renderer>,
                             Position::Physical(PhysicalPosition { x: 850, y: 360 }),
                             2,
@@ -462,7 +490,7 @@ impl Renderer for PrimaryRenderer {
                     }
                     if ui.button("Layers").clicked() {
                         ui.close_menu();
-                        result = Some((
+                        result = FlowControl::spawn_window((
                             Box::new(LayersRenderer::new()),
                             Position::Physical(PhysicalPosition { x: 850, y: 50 }),
                             1,
@@ -470,7 +498,7 @@ impl Renderer for PrimaryRenderer {
                     }
                     if ui.button("Name Tables").clicked() {
                         ui.close_menu();
-                        result = Some((
+                        result = FlowControl::spawn_window((
                             Box::new(NameTableRenderer::new()),
                             Position::Physical(PhysicalPosition { x: 1400, y: 50 }),
                             1,
@@ -478,7 +506,7 @@ impl Renderer for PrimaryRenderer {
                     }
                     if ui.button("Sprites").clicked() {
                         ui.close_menu();
-                        result = Some((
+                        result = FlowControl::spawn_window((
                             Box::new(SpritesRenderer::new()),
                             Position::Physical(PhysicalPosition { x: 1400, y: 660 }),
                             6,
@@ -486,7 +514,7 @@ impl Renderer for PrimaryRenderer {
                     }
                     if ui.button("Pattern Tables").clicked() {
                         ui.close_menu();
-                        result = Some((
+                        result = FlowControl::spawn_window((
                             Box::new(PatternTableRenderer::new()),
                             Position::Physical(PhysicalPosition { x: 850, y: 660 }),
                             3,
@@ -494,7 +522,7 @@ impl Renderer for PrimaryRenderer {
                     }
                     if ui.button("CHR Banks").clicked() {
                         ui.close_menu();
-                        result = Some((
+                        result = FlowControl::spawn_window((
                             Box::new(ChrBanksRenderer::new()),
                             Position::Physical(PhysicalPosition { x: 50, y: 50 }),
                             2,
@@ -502,7 +530,7 @@ impl Renderer for PrimaryRenderer {
                     }
                     if ui.button("Pattern Sources").clicked() {
                         ui.close_menu();
-                        result = Some((
+                        result = FlowControl::spawn_window((
                             Box::new(PatternSourceRenderer::new()),
                             Position::Physical(PhysicalPosition { x: 600, y: 200 }),
                             1,
@@ -510,7 +538,7 @@ impl Renderer for PrimaryRenderer {
                     }
                     if ui.button("Memory Viewer").clicked() {
                         ui.close_menu();
-                        result = Some((
+                        result = FlowControl::spawn_window((
                             Box::new(MemoryViewerRenderer),
                             Position::Physical(PhysicalPosition { x: 600, y: 200 }),
                             1,
@@ -552,6 +580,52 @@ impl Renderer for PrimaryRenderer {
     }
 }
 
+struct LoadRomRenderer {
+    file_dialog: FileDialog,
+}
+
+impl LoadRomRenderer {
+    const WIDTH: usize = 300;
+    const HEIGHT: usize = 300;
+
+    pub fn new(file_dialog: FileDialog) -> Self {
+        Self {
+            file_dialog,
+        }
+    }
+}
+
+impl Renderer for LoadRomRenderer {
+    fn name(&self) -> String {
+        "Load ROM".to_string()
+    }
+
+    fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
+        let mut result = FlowControl::CONTINUE;
+        egui::CentralPanel::default().show(ctx, |_ui| {
+            self.file_dialog.show(ctx);
+            if let Some(rom_path) = self.file_dialog.path() && !rom_path.is_dir() {
+                world.nes.load_new_config(&Config::with_new_rom(&world.config, rom_path));
+                result = FlowControl::CLOSE;
+            }
+        });
+
+        result
+    }
+
+    fn render(&mut self, _world: &mut World, _pixels: &mut Pixels) {
+        // Do nothing yet.
+    }
+
+    fn width(&self) -> usize {
+        Self::WIDTH
+    }
+
+    fn height(&self) -> usize {
+        Self::HEIGHT
+    }
+}
+
 struct DisplaySettingsRenderer;
 
 impl DisplaySettingsRenderer {
@@ -568,7 +642,7 @@ impl Renderer for DisplaySettingsRenderer {
         "Display Settings".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, world: &mut World) -> Option<WindowArgs> {
+    fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
         let nes = &mut world.nes;
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::Grid::new("my_grid")
@@ -581,7 +655,7 @@ impl Renderer for DisplaySettingsRenderer {
                 });
         });
 
-        None
+        FlowControl::CONTINUE
     }
 
     fn render(&mut self, _world: &mut World, _pixels: &mut Pixels) {
@@ -613,7 +687,7 @@ impl Renderer for StatusRenderer {
         "Status".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, world: &mut World) -> Option<WindowArgs> {
+    fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
         let nes = &world.nes;
         let clock = nes.memory().ppu_regs().clock();
         let ppu_regs = nes.memory().ppu_regs();
@@ -688,7 +762,7 @@ impl Renderer for StatusRenderer {
                 });
         });
 
-        None
+        FlowControl::CONTINUE
     }
 
     fn render(&mut self, _world: &mut World, _pixels: &mut Pixels) {
@@ -726,8 +800,8 @@ impl Renderer for LayersRenderer {
         "Layers".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> Option<WindowArgs> {
-        None
+    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> FlowControl {
+        FlowControl::CONTINUE
     }
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
@@ -786,8 +860,8 @@ impl Renderer for NameTableRenderer {
         "Name Tables".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> Option<WindowArgs> {
-        None
+    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> FlowControl {
+        FlowControl::CONTINUE
     }
 
     #[rustfmt::skip]
@@ -856,8 +930,8 @@ impl Renderer for SpritesRenderer {
         "Sprites".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> Option<WindowArgs> {
-        None
+    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> FlowControl {
+        FlowControl::CONTINUE
     }
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
@@ -909,8 +983,8 @@ impl Renderer for PatternTableRenderer {
         "Pattern Table".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> Option<WindowArgs> {
-        None
+    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> FlowControl {
+        FlowControl::CONTINUE
     }
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
@@ -974,8 +1048,8 @@ impl Renderer for ChrBanksRenderer {
         "CHR Banks".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> Option<WindowArgs> {
-        None
+    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> FlowControl {
+        FlowControl::CONTINUE
     }
 
     fn render(&mut self, _world: &mut World, pixels: &mut Pixels) {
@@ -1066,8 +1140,8 @@ impl Renderer for PatternSourceRenderer {
         "Pattern Source".to_string()
     }
 
-    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> Option<WindowArgs> {
-        None
+    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> FlowControl {
+        FlowControl::CONTINUE
     }
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
@@ -1096,7 +1170,7 @@ impl Renderer for MemoryViewerRenderer {
         "Memory Viewer".to_string()
     }
 
-    fn ui(&mut self, ctx: &Context, world: &mut World) -> Option<WindowArgs> {
+    fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
         let nes = &mut world.nes;
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
@@ -1116,7 +1190,7 @@ impl Renderer for MemoryViewerRenderer {
             })
         });
 
-        None
+        FlowControl::CONTINUE
     }
 
     fn render(&mut self, _world: &mut World, _pixels: &mut Pixels) {
