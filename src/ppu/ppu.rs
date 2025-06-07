@@ -165,14 +165,13 @@ impl Ppu {
                 let (pixel_column, pixel_row) = PixelIndex::try_from_clock(&clock).unwrap().to_column_row();
                 // TODO: Verify if these need to be delayed like self.rendering_enabled.
                 if background_enabled {
+                    let palette_table = mem.palette_table();
                     // TODO: Figure out where this goes. Maybe have frame call palette_table when displaying.
-                    frame.set_universal_background_rgb(
-                        mem.palette_table().universal_background_rgb(),
-                    );
+                    frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
                     let column_in_tile = mem.regs_mut().current_address.x_scroll().fine();
                     let palette_table_index = self.attribute_register.palette_table_index(column_in_tile);
-                    let palette = mem.palette_table().background_palette(palette_table_index);
+                    let palette = palette_table.background_palette(palette_table_index);
 
                     let background_pixel = self.pattern_register
                         .palette_index(column_in_tile)
