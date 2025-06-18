@@ -114,6 +114,8 @@ fn nestest() {
             );
         }
     }
+
+    log::logger().flush();
 }
 
 #[derive(PartialEq, Eq, Debug)]

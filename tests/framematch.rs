@@ -94,6 +94,8 @@ impl TestSummary {
             };
         });
 
+        log::logger().flush();
+
         for entry in expected_frames.iter() {
             test_results.insert(entry.key().clone(), TestStatus::RomMissing);
         }

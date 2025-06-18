@@ -136,6 +136,7 @@ impl Gui for EguiGui {
                     WindowEvent::CloseRequested => {
                         let primary_removed = window_manager.remove_window(&window_id);
                         if primary_removed {
+                            log::logger().flush();
                             event_loop_window_target.exit();
                         }
                     }
