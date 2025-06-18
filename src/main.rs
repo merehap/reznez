@@ -4,6 +4,7 @@
 #![feature(let_chains)]
 #![feature(type_ascription)]
 #![feature(const_for)]
+#![feature(panic_update_hook)]
 #![allow(clippy::module_inception)]
 #![allow(clippy::new_without_default)]
 #![allow(clippy::identity_op)]
@@ -24,19 +25,24 @@ pub mod nes;
 mod ppu;
 mod util;
 
+use std::panic;
 use std::sync::{Arc, Mutex};
 
 use structopt::StructOpt;
 
 use crate::config::{Config, Opt};
 use crate::logging::logger;
-use crate::nes::Nes;
 use crate::logging::logger::Logger;
+use crate::nes::Nes;
 
 
 fn main() {
     let opt = Opt::from_args();
     logger::init(logger(&opt)).unwrap();
+    panic::update_hook(|prev, info| {
+        log::logger().flush();
+        prev(info);
+    });
 
     if opt.analysis {
         analysis::cartridge_db::analyze(&opt.rom_path);

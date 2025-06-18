@@ -1,4 +1,6 @@
 #![feature(let_chains)]
+#![feature(panic_update_hook)]
+
 extern crate reznez;
 
 use std::fmt;
@@ -39,6 +41,11 @@ fn nestest() {
         log_cpu_steps: true,
         ..Logger::default()
     }).unwrap();
+
+    std::panic::update_hook(|prev, info| {
+        log::logger().flush();
+        prev(info);
+    });
 
     let mut config = Config::new(&opt);
     // Override the RESET vector to point to where the headless nestest starts.

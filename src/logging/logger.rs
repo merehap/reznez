@@ -46,6 +46,8 @@ impl log::Log for Logger {
                 let chunks: Vec<&str> = target.split("::").collect();
                 match chunks[..] {
                     ["reznez", ..] => true,
+                    ["nestest", ..] => true,
+                    ["framematch", ..] => true,
                     ["winit", ..] => false,
                     ["wgpu_hal", ..] => false,
                     ["wgpu_core", ..] => false,

@@ -1,3 +1,5 @@
+#![feature(panic_update_hook)]
+
 extern crate reznez;
 
 use std::collections::BTreeMap;
@@ -51,6 +53,11 @@ impl TestSummary {
                 let mut nes = Nes::new(&Config::new(&opt));
                 nes.mute();
                 *nes.frame_mut().show_overscan_mut() = true;
+
+                std::panic::update_hook(|prev, info| {
+                    log::logger().flush();
+                    prev(info);
+                });
 
                 let frame_directory = frame_entries[0].directory();
                 let frame_entries: BTreeMap<_, _> = frame_entries.iter()
