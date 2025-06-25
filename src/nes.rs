@@ -278,8 +278,7 @@ impl Nes {
                 latest.dmc_dma_action = self.memory.dmc_dma().latest_action();
                 let currently_halted = latest.dmc_dma_action.cpu_should_be_halted();
                 if !previously_halted && currently_halted {
-                    info!(target: "cpuflowcontrol", "CPU halted for DMC DMA transfer at {}.",
-                        self.memory.as_cpu_memory().dmc_dma_address());
+                    info!("CPU halted for DMC DMA transfer at {}.", self.memory.as_cpu_memory().dmc_dma_address());
                 }
             }
 
@@ -288,8 +287,7 @@ impl Nes {
                 latest.oam_dma_action = self.memory.oam_dma().latest_action();
                 let currently_halted = latest.oam_dma_action.cpu_should_be_halted();
                 if !previously_halted && currently_halted {
-                    info!(target: "cpuflowcontrol", "CPU halted for OAM DMA transfer at {}.",
-                        self.memory.as_cpu_memory().oam_dma().address());
+                    info!("CPU halted for OAM DMA transfer at {}.", self.memory.as_cpu_memory().oam_dma().address());
                 }
             }
         }
@@ -301,14 +299,12 @@ impl Nes {
             let latest = &mut self.latest_values;
 
             if latest.prg_layout_index != prg_memory.layout_index() {
-                info!(target: "mapperupdates", "PRG layout changed to index {}. Previously: {}.",
-                    prg_memory.layout_index(), latest.prg_layout_index);
+                info!("PRG layout changed to index {}. Previously: {}.", prg_memory.layout_index(), latest.prg_layout_index);
                 latest.prg_layout_index = prg_memory.layout_index();
             }
 
             if latest.chr_layout_index != chr_memory.layout_index() {
-                info!(target: "mapperupdates", "CHR layout changed to index {}. Previously: {}.",
-                    chr_memory.layout_index(), latest.chr_layout_index);
+                info!("CHR layout changed to index {}. Previously: {}.", chr_memory.layout_index(), latest.chr_layout_index);
                 latest.chr_layout_index = chr_memory.layout_index();
             }
 
@@ -319,14 +315,11 @@ impl Nes {
                         let id: PrgBankRegisterId = FromPrimitive::from_usize(i).unwrap();
                         match (prg_registers[i], *latest_bank_location) {
                             (BankLocation::Index(curr), BankLocation::Index(prev)) =>
-                                info!("BankRegister {id:?} changed to {}. Previously: {}",
-                                    curr.to_raw(), prev.to_raw()),
+                                info!("BankRegister {id:?} changed to {}. Previously: {}", curr.to_raw(), prev.to_raw()),
                             (BankLocation::Index(curr), BankLocation::Ciram(prev)) =>
-                                info!("BankRegister {id:?} changed to {}. Previously: {prev:?}",
-                                    curr.to_raw()),
+                                info!("BankRegister {id:?} changed to {}. Previously: {prev:?}", curr.to_raw()),
                             (BankLocation::Ciram(curr), BankLocation::Index(prev)) =>
-                                info!("BankRegister {id:?} changed to {curr:?}. Previously: {}",
-                                    prev.to_raw()),
+                                info!("BankRegister {id:?} changed to {curr:?}. Previously: {}", prev.to_raw()),
                             (BankLocation::Ciram(curr), BankLocation::Ciram(prev)) =>
                                 info!("BankRegister {id:?} changed to Ciram{curr:?}. Previously: Ciram{prev:?}"),
                         }
@@ -343,14 +336,11 @@ impl Nes {
                         let id: ChrBankRegisterId = FromPrimitive::from_usize(i).unwrap();
                         match (chr_registers[i], *latest_bank_location) {
                             (BankLocation::Index(curr), BankLocation::Index(prev)) =>
-                                info!("BankRegister {id:?} changed to {}. Previously: {}",
-                                    curr.to_raw(), prev.to_raw()),
+                                info!("BankRegister {id:?} changed to {}. Previously: {}", curr.to_raw(), prev.to_raw()),
                             (BankLocation::Index(curr), BankLocation::Ciram(prev)) =>
-                                info!("BankRegister {id:?} changed to {}. Previously: {prev:?}",
-                                    curr.to_raw()),
+                                info!("BankRegister {id:?} changed to {}. Previously: {prev:?}", curr.to_raw()),
                             (BankLocation::Ciram(curr), BankLocation::Index(prev)) =>
-                                info!("BankRegister {id:?} changed to {curr:?}. Previously: {}",
-                                    prev.to_raw()),
+                                info!("BankRegister {id:?} changed to {curr:?}. Previously: {}", prev.to_raw()),
                             (BankLocation::Ciram(curr), BankLocation::Ciram(prev)) =>
                                 info!("BankRegister {id:?} changed to Ciram{curr:?}. Previously: Ciram{prev:?}"),
                         }
@@ -365,8 +355,7 @@ impl Nes {
                 for (i, latest_bank_register_id) in latest.meta_registers.iter_mut().enumerate() {
                     if *latest_bank_register_id != meta_registers[i] {
                         let id: PrgBankRegisterId = FromPrimitive::from_usize(i).unwrap();
-                        info!("MetaRegister {id:?} changed to {:?}. Previously: {latest_bank_register_id:?}.",
-                            meta_registers[i]);
+                        info!("MetaRegister {id:?} changed to {:?}. Previously: {latest_bank_register_id:?}.", meta_registers[i]);
                         *latest_bank_register_id = meta_registers[i];
                     }
                 }
