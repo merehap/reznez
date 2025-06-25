@@ -80,7 +80,6 @@ impl Cpu {
 
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
     pub fn reset(&mut self) {
-        info!(target: "cpuflowcontrol", "System reset will start after current instruction.");
         self.reset_status = ResetStatus::Ready;
 
         self.mode_state = CpuModeState::startup();
@@ -127,6 +126,10 @@ impl Cpu {
         self.irq_status
     }
 
+    pub fn reset_status(&self) -> ResetStatus {
+        self.reset_status
+    }
+
     pub fn nmi_pending(&self) -> bool {
         self.nmi_status == NmiStatus::Pending
     }
@@ -138,10 +141,8 @@ impl Cpu {
         }
 
         if self.nmi_status == NmiStatus::Pending {
-            info!(target: "cpuflowcontrol", "NMI ready in CPU. Cycle: {}", memory.cpu_cycle());
             self.nmi_status = NmiStatus::Ready;
         } else if self.irq_status == IrqStatus::Pending && !self.status.interrupts_disabled {
-            info!(target: "cpuflowcontrol", "IRQ ready in CPU. Cycle: {}", memory.cpu_cycle());
             self.irq_status = IrqStatus::Ready;
         }
 
@@ -223,7 +224,6 @@ impl Cpu {
 
     pub fn step_second_half(&mut self, memory: &mut CpuMemory) {
         if self.previous_nmi_line_level == SignalLevel::High && memory.nmi_line_level() == SignalLevel::Low {
-            info!(target: "cpuflowcontrol", "NMI pending in CPU. Cycle: {}", memory.cpu_cycle());
             self.nmi_status = NmiStatus::Pending;
         }
 
@@ -233,13 +233,11 @@ impl Cpu {
         match memory.irq_line_level() {
             SignalLevel::High => {
                 if self.irq_status != IrqStatus::Inactive {
-                    info!(target: "cpuflowcontrol", "IRQ acknowledged in CPU. Cycle: {}", memory.cpu_cycle());
                     self.irq_status = IrqStatus::Inactive;
                 }
             }
             SignalLevel::Low => {
                 if self.irq_status == IrqStatus::Inactive && !self.status.interrupts_disabled {
-                    info!(target: "cpuflowcontrol", "IRQ pending in CPU. Cycle: {}", memory.cpu_cycle());
                     self.irq_status = IrqStatus::Pending;
                 }
             }
@@ -260,16 +258,13 @@ impl Cpu {
                 }
 
                 if self.reset_status == ResetStatus::Ready {
-                    info!(target: "cpuflowcontrol", "Starting system reset");
                     self.reset_status = ResetStatus::Active;
                     *memory.data_bus_mut() = 0x00;
                     self.mode_state.interrupt_sequence(InterruptType::Reset);
                 } else if self.nmi_status == NmiStatus::Active {
-                    info!(target: "cpuflowcontrol", "Starting NMI");
                     *memory.data_bus_mut() = 0x00;
                     self.mode_state.interrupt_sequence(InterruptType::Nmi);
                 } else if self.irq_status == IrqStatus::Active && self.nmi_status == NmiStatus::Inactive {
-                    info!(target: "cpuflowcontrol", "Starting IRQ");
                     *memory.data_bus_mut() = 0x00;
                     self.mode_state.interrupt_sequence(InterruptType::Irq);
                 } else {
@@ -489,20 +484,16 @@ impl Cpu {
             StepAction::ClearInterruptVector => self.current_interrupt_vector = None,
             StepAction::PollInterrupts => {
                 if self.nmi_status == NmiStatus::Ready {
-                    info!(target: "cpuflowcontrol", "NMI will start on the next cycle.");
                     self.nmi_status = NmiStatus::Active;
                 } else if self.irq_status == IrqStatus::Ready && !self.status.interrupts_disabled {
-                    info!(target: "cpuflowcontrol", "IRQ will start on the next cycle.");
                     self.irq_status = IrqStatus::Active;
                 }
             }
             StepAction::MaybePollInterrupts => {
                 if self.address_carry != 0 {
                     if self.nmi_status == NmiStatus::Ready {
-                        info!(target: "cpuflowcontrol", "NMI will start on the next cycle.");
                         self.nmi_status = NmiStatus::Ready;
                     } else if self.irq_status == IrqStatus::Ready && !self.status.interrupts_disabled {
-                        info!(target: "cpuflowcontrol", "IRQ will start on the next cycle.");
                         self.irq_status = IrqStatus::Active;
                     }
                 }
@@ -764,8 +755,9 @@ pub enum IrqStatus {
     Active,
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]
 pub enum ResetStatus {
+    #[default]
     Inactive,
     Ready,
     Active,

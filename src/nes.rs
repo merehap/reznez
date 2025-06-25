@@ -10,7 +10,7 @@ use crate::apu::apu_registers::{ApuRegisters, FrameCounterWriteStatus};
 use crate::cartridge::cartridge::Cartridge;
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
-use crate::cpu::cpu::{Cpu, NmiStatus, IrqStatus};
+use crate::cpu::cpu::{Cpu, IrqStatus, NmiStatus, ResetStatus};
 use crate::cpu::dmc_dma::DmcDmaAction;
 use crate::cpu::oam_dma::OamDmaAction;
 use crate::cpu::step::Step;
@@ -273,6 +273,21 @@ impl Nes {
                 }
             }
 
+            if latest.irq_status != self.cpu.irq_status() {
+                latest.irq_status = self.cpu.irq_status();
+                info!("IRQ status in CPU: {:?}. Cycle: {}", latest.irq_status, self.memory.cpu_cycle());
+            }
+
+            if latest.nmi_status != self.cpu.nmi_status() {
+                latest.nmi_status = self.cpu.nmi_status();
+                info!("NMI status: {:?}. Cycle: {}", latest.nmi_status, self.memory.cpu_cycle());
+            }
+
+            if latest.reset_status != self.cpu.reset_status() {
+                latest.reset_status = self.cpu.reset_status();
+                info!("RESET status: {:?}. Cycle: {}", latest.reset_status, self.memory.cpu_cycle());
+            }
+
             if latest.dmc_dma_action != self.memory.dmc_dma().latest_action() {
                 let previously_halted = latest.dmc_dma_action.cpu_should_be_halted();
                 latest.dmc_dma_action = self.memory.dmc_dma().latest_action();
@@ -411,6 +426,10 @@ struct LatestValues {
     dmc_irq_pending: bool,
     mapper_irq_pending: bool,
 
+    irq_status: IrqStatus,
+    nmi_status: NmiStatus,
+    reset_status: ResetStatus,
+
     dmc_dma_action: DmcDmaAction,
     oam_dma_action: OamDmaAction,
 
@@ -430,6 +449,10 @@ impl LatestValues {
             apu_frame_irq_pending: false,
             dmc_irq_pending: false,
             mapper_irq_pending: false,
+
+            irq_status: IrqStatus::Inactive,
+            nmi_status: NmiStatus::Inactive,
+            reset_status: ResetStatus::Inactive,
 
             dmc_dma_action: DmcDmaAction::DoNothing,
             oam_dma_action: OamDmaAction::DoNothing,
