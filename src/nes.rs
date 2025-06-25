@@ -11,6 +11,8 @@ use crate::cartridge::cartridge::Cartridge;
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::{Cpu, NmiStatus, IrqStatus};
+use crate::cpu::dmc_dma::DmcDmaAction;
+use crate::cpu::oam_dma::OamDmaAction;
 use crate::cpu::step::Step;
 use crate::gui::gui::Events;
 use crate::logging::formatter;
@@ -270,6 +272,26 @@ impl Nes {
                     info!("Mapper IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
                 }
             }
+
+            if latest.dmc_dma_action != self.memory.dmc_dma().latest_action() {
+                let previously_halted = latest.dmc_dma_action.cpu_should_be_halted();
+                latest.dmc_dma_action = self.memory.dmc_dma().latest_action();
+                let currently_halted = latest.dmc_dma_action.cpu_should_be_halted();
+                if !previously_halted && currently_halted {
+                    info!(target: "cpuflowcontrol", "CPU halted for DMC DMA transfer at {}.",
+                        self.memory.as_cpu_memory().dmc_dma_address());
+                }
+            }
+
+            if latest.oam_dma_action != self.memory.oam_dma().latest_action() {
+                let previously_halted = latest.oam_dma_action.cpu_should_be_halted();
+                latest.oam_dma_action = self.memory.oam_dma().latest_action();
+                let currently_halted = latest.oam_dma_action.cpu_should_be_halted();
+                if !previously_halted && currently_halted {
+                    info!(target: "cpuflowcontrol", "CPU halted for OAM DMA transfer at {}.",
+                        self.memory.as_cpu_memory().oam_dma().address());
+                }
+            }
         }
 
         if log_enabled!(target: "mapperupdates", Info) {
@@ -400,6 +422,9 @@ struct LatestValues {
     dmc_irq_pending: bool,
     mapper_irq_pending: bool,
 
+    dmc_dma_action: DmcDmaAction,
+    oam_dma_action: OamDmaAction,
+
     prg_layout_index: u8,
     chr_layout_index: u8,
     prg_registers: [BankLocation; 5],
@@ -416,6 +441,9 @@ impl LatestValues {
             apu_frame_irq_pending: false,
             dmc_irq_pending: false,
             mapper_irq_pending: false,
+
+            dmc_dma_action: DmcDmaAction::DoNothing,
+            oam_dma_action: OamDmaAction::DoNothing,
 
             prg_layout_index: initial_params.prg_memory.layout_index(),
             chr_layout_index: initial_params.chr_memory.layout_index(),

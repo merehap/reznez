@@ -20,7 +20,7 @@ impl DmcDma {
     }
 
     pub fn cpu_should_be_halted(&self) -> bool {
-        self.latest_action != DmcDmaAction::DoNothing
+        self.latest_action.cpu_should_be_halted()
     }
 
     pub fn start_load(&mut self) {
@@ -89,4 +89,10 @@ pub enum DmcDmaAction {
     Dummy,
     Align,
     Read,
+}
+
+impl DmcDmaAction {
+    pub fn cpu_should_be_halted(self) -> bool {
+        self != DmcDmaAction::DoNothing
+    }
 }

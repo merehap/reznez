@@ -150,12 +150,7 @@ impl Cpu {
         memory.dmc_dma_mut().step(step.is_read(), cycle_parity);
         match memory.dmc_dma().latest_action() {
             DmcDmaAction::DoNothing => {}
-            DmcDmaAction::Halt => {
-                info!(target: "cpuflowcontrol", "Halting CPU for DMC DMA transfer at {}.",
-                    memory.dmc_dma_address());
-                step = step.with_actions_removed();
-            }
-            DmcDmaAction::Dummy | DmcDmaAction::Align => step = step.with_actions_removed(),
+            DmcDmaAction::Halt | DmcDmaAction::Dummy | DmcDmaAction::Align => step = step.with_actions_removed(),
             DmcDmaAction::Read => step = DMC_READ_STEP,
         }
 
@@ -163,13 +158,7 @@ impl Cpu {
         memory.oam_dma_mut().step(step.is_read(), cycle_parity, block_oam_dma_memory_access);
         step = match memory.oam_dma().latest_action() {
             OamDmaAction::DoNothing => step,
-            OamDmaAction::Halt => {
-                // TODO: Move this to the "detect changes" logging section.
-                info!(target: "cpuflowcontrol", "Halting CPU for OAM DMA transfer at {}.",
-                    memory.oam_dma().address());
-                step.with_actions_removed()
-            }
-            OamDmaAction::Align => step.with_actions_removed(),
+            OamDmaAction::Halt | OamDmaAction::Align => step.with_actions_removed(),
             OamDmaAction::Read => OAM_READ_STEP,
             OamDmaAction::Write => OAM_WRITE_STEP,
         };

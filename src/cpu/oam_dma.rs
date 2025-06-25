@@ -23,7 +23,7 @@ impl OamDma {
     }
 
     pub fn cpu_should_be_halted(&self) -> bool {
-        self.latest_action != OamDmaAction::DoNothing
+        self.latest_action.cpu_should_be_halted()
     }
 
     pub fn address(&self) -> CpuAddress {
@@ -94,4 +94,10 @@ pub enum OamDmaAction {
     Align,
     Read,
     Write,
+}
+
+impl OamDmaAction {
+    pub fn cpu_should_be_halted(self) -> bool {
+        self != OamDmaAction::DoNothing
+    }
 }
