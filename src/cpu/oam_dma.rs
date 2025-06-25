@@ -3,17 +3,27 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 
 pub struct OamDma {
     state: OamDmaState,
+    action: OamDmaAction,
     address: CpuAddress,
 }
 
 impl OamDma {
     pub const IDLE: Self = Self {
         state: OamDmaState::Idle,
+        action: OamDmaAction::DoNothing,
         address: CpuAddress::ZERO,
     };
 
     pub fn dma_pending(&self) -> bool {
         self.state == OamDmaState::TryHalt
+    }
+
+    pub fn action(&self) -> OamDmaAction {
+        self.action
+    }
+
+    pub fn cpu_should_be_halted(&self) -> bool {
+        self.action != OamDmaAction::DoNothing
     }
 
     pub fn address(&self) -> CpuAddress {
@@ -29,8 +39,8 @@ impl OamDma {
         self.address = CpuAddress::from_low_high(0, page);
     }
 
-    pub fn step(&mut self, is_read_step: bool, parity: CycleParity, block_memory_access: bool) -> OamDmaAction {
-        self.state.step(is_read_step, parity, block_memory_access)
+    pub fn step(&mut self, is_read_step: bool, parity: CycleParity, block_memory_access: bool) {
+        self.action = self.state.step(is_read_step, parity, block_memory_access);
     }
 }
 
@@ -76,7 +86,6 @@ impl OamDmaState {
         step_result
     }
 }
-
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum OamDmaAction {

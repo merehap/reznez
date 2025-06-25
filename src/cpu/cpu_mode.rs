@@ -141,7 +141,6 @@ impl CpuModeState {
         self.next_mode = Some(CpuMode::Instruction(op_code, InstructionMode::BranchOops));
     }
 
-    // FIXME: If pending, OAM DMA should be triggered on Oops steps.
     pub fn oops(&mut self) {
         assert_eq!(self.next_mode, None, "next_mode should not already be set");
         let CpuMode::Instruction(op_code, InstructionMode::Normal) = self.mode else {
