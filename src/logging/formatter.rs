@@ -1,4 +1,4 @@
-use crate::cpu::dmc_dma::DmcDma;
+use crate::cpu::dmc_dma::DmcDmaState;
 use crate::cpu::instruction::{Instruction, OpCode, AccessMode};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::nes::Nes;
@@ -350,7 +350,7 @@ pub fn interrupts(nes: &Nes) -> String {
     interrupts.push(if nes.memory().mapper_params().irq_pending() { 'M' } else {'-'});
     interrupts.push(if nes.cpu().nmi_pending() { 'N' } else {'-'});
     interrupts.push(if nes.memory().oam_dma().dma_pending() { 'O' } else {'-'});
-    interrupts.push(if *nes.memory().dmc_dma() != DmcDma::IDLE { 'D' } else {'-'});
+    interrupts.push(if nes.memory().dmc_dma().state() != DmcDmaState::Idle { 'D' } else {'-'});
 
     interrupts
 }

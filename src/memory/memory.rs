@@ -252,6 +252,10 @@ impl CpuMemory<'_> {
         self.memory.apu_registers.dmc.dma_sample_address()
     }
 
+    pub fn dmc_dma(&mut self) -> &DmcDma {
+        &self.memory.dmc_dma
+    }
+
     pub fn dmc_dma_mut(&mut self) -> &mut DmcDma {
         &mut self.memory.dmc_dma
     }

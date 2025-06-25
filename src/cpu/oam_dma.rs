@@ -3,14 +3,14 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 
 pub struct OamDma {
     state: OamDmaState,
-    action: OamDmaAction,
+    latest_action: OamDmaAction,
     address: CpuAddress,
 }
 
 impl OamDma {
     pub const IDLE: Self = Self {
         state: OamDmaState::Idle,
-        action: OamDmaAction::DoNothing,
+        latest_action: OamDmaAction::DoNothing,
         address: CpuAddress::ZERO,
     };
 
@@ -18,12 +18,12 @@ impl OamDma {
         self.state == OamDmaState::TryHalt
     }
 
-    pub fn action(&self) -> OamDmaAction {
-        self.action
+    pub fn latest_action(&self) -> OamDmaAction {
+        self.latest_action
     }
 
     pub fn cpu_should_be_halted(&self) -> bool {
-        self.action != OamDmaAction::DoNothing
+        self.latest_action != OamDmaAction::DoNothing
     }
 
     pub fn address(&self) -> CpuAddress {
@@ -40,7 +40,7 @@ impl OamDma {
     }
 
     pub fn step(&mut self, is_read_step: bool, parity: CycleParity, block_memory_access: bool) {
-        self.action = self.state.step(is_read_step, parity, block_memory_access);
+        self.latest_action = self.state.step(is_read_step, parity, block_memory_access);
     }
 }
 

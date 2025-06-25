@@ -147,8 +147,8 @@ impl Cpu {
 
         let mut step = self.mode_state.current_step();
 
-        let dmc_dma_action = memory.dmc_dma_mut().step(step.is_read(), cycle_parity);
-        match dmc_dma_action {
+        memory.dmc_dma_mut().step(step.is_read(), cycle_parity);
+        match memory.dmc_dma().latest_action() {
             DmcDmaAction::DoNothing => {}
             DmcDmaAction::Halt => {
                 info!(target: "cpuflowcontrol", "Halting CPU for DMC DMA transfer at {}.",
@@ -159,9 +159,9 @@ impl Cpu {
             DmcDmaAction::Read => step = DMC_READ_STEP,
         }
 
-        let block_oam_dma_memory_access = dmc_dma_action == DmcDmaAction::Read;
+        let block_oam_dma_memory_access = memory.dmc_dma().latest_action() == DmcDmaAction::Read;
         memory.oam_dma_mut().step(step.is_read(), cycle_parity, block_oam_dma_memory_access);
-        step = match memory.oam_dma().action() {
+        step = match memory.oam_dma().latest_action() {
             OamDmaAction::DoNothing => step,
             OamDmaAction::Halt => {
                 // TODO: Move this to the "detect changes" logging section.
@@ -203,7 +203,7 @@ impl Cpu {
             self.execute_step_action(memory, action);
         }
 
-        let halted = dmc_dma_action != DmcDmaAction::DoNothing || memory.oam_dma().cpu_should_be_halted();
+        let halted = memory.dmc_dma().cpu_should_be_halted() || memory.oam_dma().cpu_should_be_halted();
         if log_enabled!(target: "cpustep", Info) {
             let step_name = if halted { "HALTED".to_string() } else { self.mode_state.step_name() };
             let cpu_cycle = memory.cpu_cycle();
