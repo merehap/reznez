@@ -11,6 +11,7 @@ use crate::cartridge::cartridge::Cartridge;
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::{Cpu, IrqStatus, NmiStatus, ResetStatus};
+use crate::cpu::cpu_mode::CpuMode;
 use crate::cpu::dmc_dma::DmcDmaAction;
 use crate::cpu::oam_dma::OamDmaAction;
 use crate::cpu::step::Step;
@@ -307,6 +308,24 @@ impl Nes {
             }
         }
 
+        if log_enabled!(target: "cpumode", Info) {
+            let latest = &mut self.latest_values;
+            let latest_cpu_mode = self.cpu.mode_state().mode();
+            if latest.cpu_mode != latest_cpu_mode {
+                match (latest.cpu_mode, latest_cpu_mode) {
+                    (_, CpuMode::StartNext) => {}
+                    (prev, curr) if prev == curr => {}
+                    (CpuMode::Instruction(_, _), CpuMode::Instruction(_, _)) => {
+                        latest.cpu_mode = latest_cpu_mode;
+                    }
+                    (_, _) => {
+                        latest.cpu_mode = latest_cpu_mode;
+                        info!("CPU Cycle: {:>7} *** CPU Mode = {:<11} ***", self.memory.cpu_cycle(), latest_cpu_mode.to_string());
+                    }
+                }
+            }
+        }
+
         if log_enabled!(target: "mapperupdates", Info) {
             let mapper_params = self.memory.mapper_params();
             let prg_memory = mapper_params.prg_memory();
@@ -430,6 +449,7 @@ struct LatestValues {
     nmi_status: NmiStatus,
     reset_status: ResetStatus,
 
+    cpu_mode: CpuMode,
     dmc_dma_action: DmcDmaAction,
     oam_dma_action: OamDmaAction,
 
@@ -454,6 +474,7 @@ impl LatestValues {
             nmi_status: NmiStatus::Inactive,
             reset_status: ResetStatus::Inactive,
 
+            cpu_mode: CpuMode::StartNext,
             dmc_dma_action: DmcDmaAction::DoNothing,
             oam_dma_action: OamDmaAction::DoNothing,
 

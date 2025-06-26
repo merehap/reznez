@@ -1,17 +1,32 @@
+use std::fmt;
+
 use crate::cpu::step::*;
 use crate::cpu::instruction::{Instruction, OpCode};
 use crate::memory::cpu::cpu_address::CpuAddress;
 
-#[derive(PartialEq, Eq, Clone, Debug)]
-enum CpuMode {
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum CpuMode {
     StartNext,
     Instruction(OpCode, InstructionMode),
     InterruptSequence(InterruptType),
     Jammed,
 }
 
+impl fmt::Display for CpuMode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Self::StartNext => write!(f, "StartNext"),
+            Self::Instruction(.. ) => write!(f, "Instruction"),
+            Self::InterruptSequence(InterruptType::Reset) => write!(f, "RESET"),
+            Self::InterruptSequence(InterruptType::Nmi) => write!(f, "NMI"),
+            Self::InterruptSequence(InterruptType::Irq) => write!(f, "IRQ"),
+            Self::Jammed => write!(f, "Jammed"),
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-enum InstructionMode {
+pub enum InstructionMode {
     Normal,
     Oops,
     BranchTaken,
@@ -59,6 +74,10 @@ impl CpuModeState {
             CpuMode::Jammed => "JAM".to_owned(),
             CpuMode::StartNext => "STARTNEXT".to_owned(),
         }
+    }
+
+    pub fn mode(&self) -> CpuMode {
+        self.mode
     }
 
     pub fn is_jammed(&self) -> bool {
@@ -187,7 +206,7 @@ impl CpuModeState {
         }
 
         // Transition to a new mode since we're at the last index of the current one.
-        self.mode = match self.mode.clone() {
+        self.mode = match self.mode {
             CpuMode::StartNext | CpuMode::Instruction(_, InstructionMode::BranchTaken | InstructionMode::BranchOops) => panic!(),
             CpuMode::Instruction(op_code, InstructionMode::Oops) => {
                 CpuMode::Instruction(op_code, InstructionMode::Normal)
