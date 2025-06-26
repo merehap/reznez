@@ -289,19 +289,19 @@ impl Nes {
                 info!("RESET status: {:?}. Cycle: {}", latest.reset_status, self.memory.cpu_cycle());
             }
 
-            if latest.dmc_dma_action != self.memory.dmc_dma().latest_action() {
-                let previously_halted = latest.dmc_dma_action.cpu_should_be_halted();
-                latest.dmc_dma_action = self.memory.dmc_dma().latest_action();
-                let currently_halted = latest.dmc_dma_action.cpu_should_be_halted();
+            if latest.extended_cpu_mode.dmc_dma_action != self.memory.dmc_dma().latest_action() {
+                let previously_halted = latest.extended_cpu_mode.dmc_dma_action.cpu_should_be_halted();
+                latest.extended_cpu_mode.dmc_dma_action = self.memory.dmc_dma().latest_action();
+                let currently_halted = latest.extended_cpu_mode.dmc_dma_action.cpu_should_be_halted();
                 if !previously_halted && currently_halted {
                     info!("CPU halted for DMC DMA transfer at {}.", self.memory.as_cpu_memory().dmc_dma_address());
                 }
             }
 
-            if latest.oam_dma_action != self.memory.oam_dma().latest_action() {
-                let previously_halted = latest.oam_dma_action.cpu_should_be_halted();
-                latest.oam_dma_action = self.memory.oam_dma().latest_action();
-                let currently_halted = latest.oam_dma_action.cpu_should_be_halted();
+            if latest.extended_cpu_mode.oam_dma_action != self.memory.oam_dma().latest_action() {
+                let previously_halted = latest.extended_cpu_mode.oam_dma_action.cpu_should_be_halted();
+                latest.extended_cpu_mode.oam_dma_action = self.memory.oam_dma().latest_action();
+                let currently_halted = latest.extended_cpu_mode.oam_dma_action.cpu_should_be_halted();
                 if !previously_halted && currently_halted {
                     info!("CPU halted for OAM DMA transfer at {}.", self.memory.as_cpu_memory().oam_dma().address());
                 }
@@ -311,15 +311,15 @@ impl Nes {
         if log_enabled!(target: "cpumode", Info) {
             let latest = &mut self.latest_values;
             let latest_cpu_mode = self.cpu.mode_state().mode();
-            if latest.cpu_mode != latest_cpu_mode {
-                match (latest.cpu_mode, latest_cpu_mode) {
+            if latest.extended_cpu_mode.cpu_mode != latest_cpu_mode {
+                match (latest.extended_cpu_mode.cpu_mode, latest_cpu_mode) {
                     (_, CpuMode::StartNext) => {}
                     (prev, curr) if prev == curr => {}
                     (CpuMode::Instruction(_, _), CpuMode::Instruction(_, _)) => {
-                        latest.cpu_mode = latest_cpu_mode;
+                        latest.extended_cpu_mode.cpu_mode = latest_cpu_mode;
                     }
                     (_, _) => {
-                        latest.cpu_mode = latest_cpu_mode;
+                        latest.extended_cpu_mode.cpu_mode = latest_cpu_mode;
                         info!("CPU Cycle: {:>7} *** CPU Mode = {:<11} ***", self.memory.cpu_cycle(), latest_cpu_mode.to_string());
                     }
                 }
@@ -449,9 +449,7 @@ struct LatestValues {
     nmi_status: NmiStatus,
     reset_status: ResetStatus,
 
-    cpu_mode: CpuMode,
-    dmc_dma_action: DmcDmaAction,
-    oam_dma_action: OamDmaAction,
+    extended_cpu_mode: ExtendedCpuMode,
 
     prg_layout_index: u8,
     chr_layout_index: u8,
@@ -474,9 +472,7 @@ impl LatestValues {
             nmi_status: NmiStatus::Inactive,
             reset_status: ResetStatus::Inactive,
 
-            cpu_mode: CpuMode::StartNext,
-            dmc_dma_action: DmcDmaAction::DoNothing,
-            oam_dma_action: OamDmaAction::DoNothing,
+            extended_cpu_mode: ExtendedCpuMode::new(),
 
             prg_layout_index: initial_params.prg_memory.layout_index(),
             chr_layout_index: initial_params.chr_memory.layout_index(),
@@ -486,6 +482,22 @@ impl LatestValues {
             name_table_mirroring: initial_params.chr_memory().name_table_mirroring(),
             prg_read_write_statuses: *initial_params.prg_memory().bank_registers().read_write_statuses(),
             chr_read_write_statuses: *initial_params.chr_memory().bank_registers().read_write_statuses(),
+        }
+    }
+}
+
+struct ExtendedCpuMode {
+    cpu_mode: CpuMode,
+    dmc_dma_action: DmcDmaAction,
+    oam_dma_action: OamDmaAction,
+}
+
+impl ExtendedCpuMode {
+    pub fn new() -> Self {
+        Self {
+            cpu_mode: CpuMode::StartNext,
+            dmc_dma_action: DmcDmaAction::DoNothing,
+            oam_dma_action: OamDmaAction::DoNothing,
         }
     }
 }
