@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::fmt;
 use std::fs::DirBuilder;
 
 use log::Level::Info;
@@ -289,19 +290,19 @@ impl Nes {
                 info!("RESET status: {:?}. Cycle: {}", latest.reset_status, self.memory.cpu_cycle());
             }
 
-            if latest.extended_cpu_mode.dmc_dma_action != self.memory.dmc_dma().latest_action() {
-                let previously_halted = latest.extended_cpu_mode.dmc_dma_action.cpu_should_be_halted();
-                latest.extended_cpu_mode.dmc_dma_action = self.memory.dmc_dma().latest_action();
-                let currently_halted = latest.extended_cpu_mode.dmc_dma_action.cpu_should_be_halted();
+            if latest.dmc_dma_action != self.memory.dmc_dma().latest_action() {
+                let previously_halted = latest.dmc_dma_action.cpu_should_be_halted();
+                latest.dmc_dma_action = self.memory.dmc_dma().latest_action();
+                let currently_halted = latest.dmc_dma_action.cpu_should_be_halted();
                 if !previously_halted && currently_halted {
                     info!("CPU halted for DMC DMA transfer at {}.", self.memory.as_cpu_memory().dmc_dma_address());
                 }
             }
 
             if latest.extended_cpu_mode.oam_dma_action != self.memory.oam_dma().latest_action() {
-                let previously_halted = latest.extended_cpu_mode.oam_dma_action.cpu_should_be_halted();
-                latest.extended_cpu_mode.oam_dma_action = self.memory.oam_dma().latest_action();
-                let currently_halted = latest.extended_cpu_mode.oam_dma_action.cpu_should_be_halted();
+                let previously_halted = latest.oam_dma_action.cpu_should_be_halted();
+                latest.oam_dma_action = self.memory.oam_dma().latest_action();
+                let currently_halted = latest.oam_dma_action.cpu_should_be_halted();
                 if !previously_halted && currently_halted {
                     info!("CPU halted for OAM DMA transfer at {}.", self.memory.as_cpu_memory().oam_dma().address());
                 }
@@ -310,19 +311,16 @@ impl Nes {
 
         if log_enabled!(target: "cpumode", Info) {
             let latest = &mut self.latest_values;
-            let latest_cpu_mode = self.cpu.mode_state().mode();
-            if latest.extended_cpu_mode.cpu_mode != latest_cpu_mode {
-                match (latest.extended_cpu_mode.cpu_mode, latest_cpu_mode) {
-                    (_, CpuMode::StartNext) => {}
-                    (prev, curr) if prev == curr => {}
-                    (CpuMode::Instruction(_, _), CpuMode::Instruction(_, _)) => {
-                        latest.extended_cpu_mode.cpu_mode = latest_cpu_mode;
-                    }
-                    (_, _) => {
-                        latest.extended_cpu_mode.cpu_mode = latest_cpu_mode;
-                        info!("CPU Cycle: {:>7} *** CPU Mode = {:<11} ***", self.memory.cpu_cycle(), latest_cpu_mode.to_string());
-                    }
-                }
+            let latest_extended_cpu_mode = ExtendedCpuMode {
+                cpu_mode: self.cpu.mode_state().mode(),
+                oam_dma_action: self.memory.oam_dma().latest_action(),
+                dmc_dma_action: self.memory.dmc_dma().latest_action(),
+            };
+
+            if latest_extended_cpu_mode.coarse_change_occurred(&latest.extended_cpu_mode) {
+                latest.extended_cpu_mode = latest_extended_cpu_mode.clone();
+                info!("CPU Cycle: {:>7} *** CPU Mode = {:<11} ***",
+                    self.memory.cpu_cycle(), latest_extended_cpu_mode.to_string());
             }
         }
 
@@ -450,6 +448,8 @@ struct LatestValues {
     reset_status: ResetStatus,
 
     extended_cpu_mode: ExtendedCpuMode,
+    dmc_dma_action: DmcDmaAction,
+    oam_dma_action: OamDmaAction,
 
     prg_layout_index: u8,
     chr_layout_index: u8,
@@ -473,6 +473,8 @@ impl LatestValues {
             reset_status: ResetStatus::Inactive,
 
             extended_cpu_mode: ExtendedCpuMode::new(),
+            dmc_dma_action: DmcDmaAction::DoNothing,
+            oam_dma_action: OamDmaAction::DoNothing,
 
             prg_layout_index: initial_params.prg_memory.layout_index(),
             chr_layout_index: initial_params.chr_memory.layout_index(),
@@ -486,6 +488,7 @@ impl LatestValues {
     }
 }
 
+#[derive(Clone, Debug)]
 struct ExtendedCpuMode {
     cpu_mode: CpuMode,
     dmc_dma_action: DmcDmaAction,
@@ -493,11 +496,42 @@ struct ExtendedCpuMode {
 }
 
 impl ExtendedCpuMode {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             cpu_mode: CpuMode::StartNext,
             dmc_dma_action: DmcDmaAction::DoNothing,
             oam_dma_action: OamDmaAction::DoNothing,
+        }
+    }
+
+    fn coarse_change_occurred(&self, prev: &ExtendedCpuMode) -> bool {
+        if (prev.dmc_dma_action == DmcDmaAction::DoNothing && self.dmc_dma_action != DmcDmaAction::DoNothing) ||
+                (prev.dmc_dma_action != DmcDmaAction::DoNothing && self.dmc_dma_action == DmcDmaAction::DoNothing) ||
+                (prev.oam_dma_action == OamDmaAction::DoNothing && self.oam_dma_action != OamDmaAction::DoNothing) ||
+                (prev.oam_dma_action != OamDmaAction::DoNothing && self.oam_dma_action == OamDmaAction::DoNothing) {
+            return true;
+        }
+
+        if self.dmc_dma_action.cpu_should_be_halted() || self.oam_dma_action.cpu_should_be_halted() {
+            return false;
+        }
+
+        match (prev.cpu_mode, self.cpu_mode) {
+            (_, CpuMode::StartNext) => false,
+            (prev, curr) if prev == curr => false,
+            (CpuMode::Instruction(_, _), CpuMode::Instruction(_, _)) => false,
+            (_, _) => true,
+        }
+    }
+}
+
+impl fmt::Display for ExtendedCpuMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match (self.dmc_dma_action.cpu_should_be_halted(), self.oam_dma_action.cpu_should_be_halted()) {
+            (false, false) => write!(f, "{}", self.cpu_mode),
+            (false, true ) => write!(f, "OAM DMA"),
+            (true , false) => write!(f, "DMC DMA"),
+            (true , true ) => write!(f, "DMC and OAM DMA"),
         }
     }
 }
