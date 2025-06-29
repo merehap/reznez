@@ -13,8 +13,8 @@ use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::{Cpu, IrqStatus, NmiStatus, ResetStatus};
 use crate::cpu::cpu_mode::CpuMode;
-use crate::cpu::dmc_dma::DmcDmaAction;
-use crate::cpu::oam_dma::OamDmaAction;
+use crate::cpu::dmc_dma::{DmcDmaAction, DmcDmaState};
+use crate::cpu::oam_dma::{OamDmaAction, OamDmaState};
 use crate::cpu::step::Step;
 use crate::gui::gui::Events;
 use crate::logging::formatter;
@@ -316,8 +316,10 @@ impl Nes {
             let latest = &mut self.latest_values;
             let latest_extended_cpu_mode = ExtendedCpuMode {
                 cpu_mode: self.cpu.mode_state().mode(),
-                oam_dma_action: self.memory.oam_dma().latest_action(),
+                dmc_dma_state: self.memory.dmc_dma().state(),
                 dmc_dma_action: self.memory.dmc_dma().latest_action(),
+                oam_dma_state: self.memory.oam_dma().state(),
+                oam_dma_action: self.memory.oam_dma().latest_action(),
             };
 
             if latest_extended_cpu_mode.coarse_change_occurred(&latest.extended_cpu_mode) {
@@ -331,25 +333,39 @@ impl Nes {
             let latest = &mut self.latest_values;
             let latest_extended_cpu_mode = ExtendedCpuMode {
                 cpu_mode: self.cpu.mode_state().mode(),
-                oam_dma_action: self.memory.oam_dma().latest_action(),
+                dmc_dma_state: self.memory.dmc_dma().state(),
                 dmc_dma_action: self.memory.dmc_dma().latest_action(),
+                oam_dma_state: self.memory.oam_dma().state(),
+                oam_dma_action: self.memory.oam_dma().latest_action(),
             };
 
-            let (_fine_mode_changed, coarse_mode_changed, dmc_changed, oam_changed) =
+            let (fine_mode_changed, coarse_mode_changed, dmc_changed, oam_changed) =
                 latest_extended_cpu_mode.fine_change_occurred(&latest.extended_cpu_mode);
             if coarse_mode_changed || dmc_changed || oam_changed {
-                let dmc = latest_extended_cpu_mode.dmc_dma_action;
-                let oam = latest_extended_cpu_mode.oam_dma_action;
-                let mode = if dmc == DmcDmaAction::DoNothing && oam == OamDmaAction::DoNothing {
+                let ExtendedCpuMode { dmc_dma_action, oam_dma_action, .. } = latest_extended_cpu_mode;
+                let ExtendedCpuMode { dmc_dma_state, oam_dma_state, .. } = latest.extended_cpu_mode;
+                let mode = if dmc_dma_action == DmcDmaAction::DoNothing && oam_dma_action == OamDmaAction::DoNothing {
                     latest_extended_cpu_mode.cpu_mode.to_string()
                 } else {
                     "".to_owned()
                 };
-                let dmc = if dmc == DmcDmaAction::DoNothing { "               ".to_owned() } else { format!("DMC = {:?}", dmc) };
-                let oam = if oam == OamDmaAction::DoNothing { "               ".to_owned() } else { format!("OAM = {:?}", oam) };
+                let dmc_action = if dmc_changed || oam_changed {
+                    let state = format!("{dmc_dma_state:?}");
+                    let action = format!("({dmc_dma_action:?})");
+                    format!("DMC = {state:<13} {action:<11}  ")
+                } else {
+                    " ".repeat(33)
+                };
+                let oam_action = if dmc_changed || oam_changed {
+                    let state = format!("{oam_dma_state:?}");
+                    let action = format!("({oam_dma_action:?})");
+                    format!("OAM = {state:<15} {action:<11}  ")
+                } else {
+                    " ".repeat(35)
+                };
 
                 latest.extended_cpu_mode = latest_extended_cpu_mode.clone();
-                info!("CPU Cycle: {:>7} *** {:<11} {dmc:<15} {oam:<15}***", self.memory.cpu_cycle(), mode);
+                info!("CPU Cycle: {:>7} *** {:<11} {dmc_action} {oam_action}", self.memory.cpu_cycle(), mode);
             }
         }
 
@@ -520,7 +536,9 @@ impl LatestValues {
 #[derive(Clone, Debug)]
 struct ExtendedCpuMode {
     cpu_mode: CpuMode,
+    dmc_dma_state: DmcDmaState,
     dmc_dma_action: DmcDmaAction,
+    oam_dma_state: OamDmaState,
     oam_dma_action: OamDmaAction,
 }
 
@@ -528,7 +546,9 @@ impl ExtendedCpuMode {
     fn new() -> Self {
         Self {
             cpu_mode: CpuMode::StartNext,
+            dmc_dma_state: DmcDmaState::Idle,
             dmc_dma_action: DmcDmaAction::DoNothing,
+            oam_dma_state: OamDmaState::Idle,
             oam_dma_action: OamDmaAction::DoNothing,
         }
     }
@@ -568,8 +588,8 @@ impl ExtendedCpuMode {
             fine_cpu_mode_changed
         };
 
-        let dmc_changed = prev.dmc_dma_action != self.dmc_dma_action;
-        let oam_changed = prev.oam_dma_action != self.oam_dma_action;
+        let dmc_changed = prev.dmc_dma_state != self.dmc_dma_state || prev.dmc_dma_action != self.dmc_dma_action;
+        let oam_changed = prev.oam_dma_state != self.oam_dma_state || prev.oam_dma_action != self.oam_dma_action;
 
         (fine_cpu_mode_changed, coarse_cpu_mode_changed, dmc_changed, oam_changed)
     }

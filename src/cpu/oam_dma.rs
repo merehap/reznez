@@ -18,6 +18,10 @@ impl OamDma {
         self.state == OamDmaState::TryHalt
     }
 
+    pub fn state(&self) -> OamDmaState {
+        self.state
+    }
+
     pub fn latest_action(&self) -> OamDmaAction {
         self.latest_action
     }
