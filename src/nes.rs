@@ -365,7 +365,12 @@ impl Nes {
                 };
 
                 latest.extended_cpu_mode = latest_extended_cpu_mode.clone();
-                info!("CPU Cycle: {:>7} *** {:<11} {dmc_action} {oam_action}", self.memory.cpu_cycle(), mode);
+                if dmc_dma_state == DmcDmaState::Idle && dmc_dma_action == DmcDmaAction::DoNothing &&
+                        oam_dma_state == OamDmaState::Idle && oam_dma_action == OamDmaAction::DoNothing {
+                    info!("");
+                } else {
+                    info!("CPU Cycle: {:>7} *** {:<11} {dmc_action} {oam_action}", self.memory.cpu_cycle(), mode);
+                }
             }
         }
 
