@@ -355,21 +355,22 @@ impl Nes {
                 };
                 let dmc_action = if dmc_changed || oam_changed {
                     let state = format!("{dmc_dma_state:?}");
-                    let action = format!("({dmc_dma_action:?})");
-                    format!("DMC = {state:<13} {action:<11}  ")
+                    let action = format!("{dmc_dma_action:?}");
+                    format!("DMC = {state:<13} -> {action:<9} ")
                 } else {
                     " ".repeat(33)
                 };
                 let oam_action = if dmc_changed || oam_changed {
                     let state = format!("{oam_dma_state:?}");
-                    let action = format!("({oam_dma_action:?})");
-                    format!("OAM = {state:<15} {action:<11}  ")
+                    let action = format!("{oam_dma_action:?}");
+                    format!(" | OAM = {state:<15} -> {action:<9}  ")
                 } else {
-                    " ".repeat(35)
+                    " ".repeat(39)
                 };
 
                 latest.extended_cpu_mode = latest_extended_cpu_mode.clone();
-                if dmc_dma_state == DmcDmaState::Idle && dmc_dma_action == DmcDmaAction::DoNothing &&
+                if !mode_changed &&
+                        dmc_dma_state == DmcDmaState::Idle && dmc_dma_action == DmcDmaAction::DoNothing &&
                         oam_dma_state == OamDmaState::Idle && oam_dma_action == OamDmaAction::DoNothing {
                     info!("");
                 } else {
