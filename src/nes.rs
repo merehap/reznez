@@ -339,13 +339,17 @@ impl Nes {
                 oam_dma_action: self.memory.oam_dma().latest_action(),
             };
 
-            let (fine_mode_changed, coarse_mode_changed, dmc_changed, oam_changed) =
+            let (mode_changed, dmc_changed, oam_changed) =
                 latest_extended_cpu_mode.fine_change_occurred(&latest.extended_cpu_mode);
-            if coarse_mode_changed || dmc_changed || oam_changed {
+            if mode_changed || dmc_changed || oam_changed {
                 let ExtendedCpuMode { dmc_dma_action, oam_dma_action, .. } = latest_extended_cpu_mode;
                 let ExtendedCpuMode { dmc_dma_state, oam_dma_state, .. } = latest.extended_cpu_mode;
                 let mode = if dmc_dma_action == DmcDmaAction::DoNothing && oam_dma_action == OamDmaAction::DoNothing {
-                    latest_extended_cpu_mode.cpu_mode.to_string()
+                    if dmc_dma_state == DmcDmaState::Idle && oam_dma_state == OamDmaState::Idle {
+                        latest_extended_cpu_mode.cpu_mode.to_string()
+                    } else {
+                        latest_extended_cpu_mode.cpu_mode.to_instruction_mode_string()
+                    }
                 } else {
                     "".to_owned()
                 };
@@ -578,7 +582,7 @@ impl ExtendedCpuMode {
         }
     }
 
-    fn fine_change_occurred(&self, prev: &ExtendedCpuMode) -> (bool, bool, bool, bool) {
+    fn fine_change_occurred(&self, prev: &ExtendedCpuMode) -> (bool, bool, bool) {
         let fine_cpu_mode_changed = match (prev.cpu_mode, self.cpu_mode) {
             (_, CpuMode::StartNext) => false,
             (prev, curr) if prev == curr => false,
@@ -587,7 +591,7 @@ impl ExtendedCpuMode {
             (_, _) => true,
         };
 
-        let coarse_cpu_mode_changed = if matches!((prev.cpu_mode, self.cpu_mode), (CpuMode::Instruction(..), CpuMode::Instruction(..))) {
+        let mode_changed = if matches!((prev.cpu_mode, self.cpu_mode), (CpuMode::Instruction(..), CpuMode::Instruction(..))) {
             false
         } else {
             fine_cpu_mode_changed
@@ -596,7 +600,7 @@ impl ExtendedCpuMode {
         let dmc_changed = prev.dmc_dma_state != self.dmc_dma_state || prev.dmc_dma_action != self.dmc_dma_action;
         let oam_changed = prev.oam_dma_state != self.oam_dma_state || prev.oam_dma_action != self.oam_dma_action;
 
-        (fine_cpu_mode_changed, coarse_cpu_mode_changed, dmc_changed, oam_changed)
+        (mode_changed, dmc_changed, oam_changed)
     }
 }
 

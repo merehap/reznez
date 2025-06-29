@@ -15,12 +15,7 @@ pub enum CpuMode {
 impl CpuMode {
     pub fn to_instruction_mode_string(self) -> String {
         if let Self::Instruction(_, instruction_mode) = self {
-            match instruction_mode {
-                InstructionMode::Normal => "Instruction",
-                InstructionMode::Oops => "Oops",
-                InstructionMode::BranchTaken => "BranchTaken",
-                InstructionMode::BranchOops => "BranchOops",
-            }.to_owned()
+            format!("{instruction_mode:?}")
         } else {
             self.to_string()
         }
@@ -31,7 +26,7 @@ impl fmt::Display for CpuMode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Self::StartNext => write!(f, "StartNext"),
-            Self::Instruction(.. ) => write!(f, "Instruction"),
+            Self::Instruction(..) => write!(f, "Instruction"),
             Self::InterruptSequence(InterruptType::Reset) => write!(f, "RESET"),
             Self::InterruptSequence(InterruptType::Nmi) => write!(f, "NMI"),
             Self::InterruptSequence(InterruptType::Irq) => write!(f, "IRQ"),
