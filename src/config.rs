@@ -105,6 +105,9 @@ pub struct Opt {
     #[structopt(name = "logcpumode", long)]
     pub log_cpu_mode: bool,
 
+    #[structopt(name = "logdetailedcpumode", long)]
+    pub log_detailed_cpu_mode: bool,
+
     #[structopt(name = "logframes", long)]
     pub log_frames: bool,
 
@@ -172,6 +175,7 @@ impl Opt {
             log_cpu_instructions: false,
             log_cpu_flow_control: false,
             log_cpu_mode: false,
+            log_detailed_cpu_mode: false,
             log_cpu_steps: false,
             log_ppu_stages: false,
             log_ppu_flags: false,

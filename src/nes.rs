@@ -309,6 +309,9 @@ impl Nes {
             }
         }
 
+        assert!(!log_enabled!(target: "cpumode", Info) || !log_enabled!(target: "detailedcpumode", Info),
+                "Either cpumode OR detailedcpumode can be specified, but not both.");
+
         if log_enabled!(target: "cpumode", Info) {
             let latest = &mut self.latest_values;
             let latest_extended_cpu_mode = ExtendedCpuMode {
@@ -321,6 +324,32 @@ impl Nes {
                 latest.extended_cpu_mode = latest_extended_cpu_mode.clone();
                 info!("CPU Cycle: {:>7} *** CPU Mode = {:<11} ***",
                     self.memory.cpu_cycle(), latest_extended_cpu_mode.to_string());
+            }
+        }
+
+        if log_enabled!(target: "detailedcpumode", Info) {
+            let latest = &mut self.latest_values;
+            let latest_extended_cpu_mode = ExtendedCpuMode {
+                cpu_mode: self.cpu.mode_state().mode(),
+                oam_dma_action: self.memory.oam_dma().latest_action(),
+                dmc_dma_action: self.memory.dmc_dma().latest_action(),
+            };
+
+            let (_fine_mode_changed, coarse_mode_changed, dmc_changed, oam_changed) =
+                latest_extended_cpu_mode.fine_change_occurred(&latest.extended_cpu_mode);
+            if coarse_mode_changed || dmc_changed || oam_changed {
+                let dmc = latest_extended_cpu_mode.dmc_dma_action;
+                let oam = latest_extended_cpu_mode.oam_dma_action;
+                let mode = if dmc == DmcDmaAction::DoNothing && oam == OamDmaAction::DoNothing {
+                    latest_extended_cpu_mode.cpu_mode.to_string()
+                } else {
+                    "".to_owned()
+                };
+                let dmc = if dmc == DmcDmaAction::DoNothing { "               ".to_owned() } else { format!("DMC = {:?}", dmc) };
+                let oam = if oam == OamDmaAction::DoNothing { "               ".to_owned() } else { format!("OAM = {:?}", oam) };
+
+                latest.extended_cpu_mode = latest_extended_cpu_mode.clone();
+                info!("CPU Cycle: {:>7} *** {:<11} {dmc:<15} {oam:<15}***", self.memory.cpu_cycle(), mode);
             }
         }
 
@@ -522,6 +551,27 @@ impl ExtendedCpuMode {
             (CpuMode::Instruction(_, _), CpuMode::Instruction(_, _)) => false,
             (_, _) => true,
         }
+    }
+
+    fn fine_change_occurred(&self, prev: &ExtendedCpuMode) -> (bool, bool, bool, bool) {
+        let fine_cpu_mode_changed = match (prev.cpu_mode, self.cpu_mode) {
+            (_, CpuMode::StartNext) => false,
+            (prev, curr) if prev == curr => false,
+            (CpuMode::Instruction(_, prev_instr_mode), CpuMode::Instruction(_, curr_instr_mode))
+                if prev_instr_mode == curr_instr_mode => false,
+            (_, _) => true,
+        };
+
+        let coarse_cpu_mode_changed = if matches!((prev.cpu_mode, self.cpu_mode), (CpuMode::Instruction(..), CpuMode::Instruction(..))) {
+            false
+        } else {
+            fine_cpu_mode_changed
+        };
+
+        let dmc_changed = prev.dmc_dma_action != self.dmc_dma_action;
+        let oam_changed = prev.oam_dma_action != self.oam_dma_action;
+
+        (fine_cpu_mode_changed, coarse_cpu_mode_changed, dmc_changed, oam_changed)
     }
 }
 

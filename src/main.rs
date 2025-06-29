@@ -81,6 +81,7 @@ fn logger(opt: &Opt) -> Logger {
         log_cpu_steps,
         log_cpu_flow_control,
         log_cpu_mode: opt.log_cpu_mode,
+        log_detailed_cpu_mode: opt.log_detailed_cpu_mode,
         log_ppu_stages,
         log_ppu_flags,
         log_ppu_steps,
