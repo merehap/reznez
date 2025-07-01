@@ -356,7 +356,8 @@ impl ApuClock {
     }
 
     pub fn raw_cycle(self) -> u64 {
-        self.cycle
+        // FIXME: Remove the "/ 2" and fix this on the caller's side.
+        self.cycle / 2
     }
 
     pub fn is_forced_reset_cycle(&self) -> bool {
