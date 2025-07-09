@@ -16,7 +16,7 @@ pub struct Joypad {
 impl Joypad {
     pub fn new() -> Joypad {
         Joypad {
-            strobe_mode: StrobeMode::Off,
+            strobe_mode: StrobeMode::On,
             selected_button: None,
             button_statuses: ButtonStatuses::ALL_UNPRESSED,
             enabled: true,
@@ -25,7 +25,7 @@ impl Joypad {
 
     pub fn disabled() -> Joypad {
         Joypad {
-            strobe_mode: StrobeMode::Off,
+            strobe_mode: StrobeMode::On,
             selected_button: None,
             button_statuses: ButtonStatuses::ALL_UNPRESSED,
             enabled: false,
