@@ -351,7 +351,7 @@ impl Nes {
                         latest_extended_cpu_mode.cpu_mode.to_instruction_mode_string()
                     }
                 } else {
-                    "".to_owned()
+                    "HALTED".to_owned()
                 };
                 let dmc_action = if dmc_changed || oam_changed {
                     let state = format!("{dmc_dma_state:?}");
