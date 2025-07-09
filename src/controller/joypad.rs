@@ -9,8 +9,6 @@ pub struct Joypad {
     strobe_mode: StrobeMode,
     selected_button: Option<Button>,
     button_statuses: ButtonStatuses,
-    // TODO: Make a Controller trait with a Disconnected implementor instead.
-    enabled: bool,
 }
 
 impl Joypad {
@@ -19,24 +17,10 @@ impl Joypad {
             strobe_mode: StrobeMode::On,
             selected_button: None,
             button_statuses: ButtonStatuses::ALL_UNPRESSED,
-            enabled: true,
-        }
-    }
-
-    pub fn disabled() -> Joypad {
-        Joypad {
-            strobe_mode: StrobeMode::On,
-            selected_button: None,
-            button_statuses: ButtonStatuses::ALL_UNPRESSED,
-            enabled: false,
         }
     }
 
     pub fn peek_status(&self) -> ButtonStatus {
-        if !self.enabled {
-            return ButtonStatus::Unpressed;
-        }
-
         if let Some(selected_button) = self.selected_button {
             self.button_statuses[selected_button]
         } else {

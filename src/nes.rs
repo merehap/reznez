@@ -49,12 +49,7 @@ impl Nes {
         }
 
         let (mapper, mapper_params) = mapper_list::lookup_mapper_with_params(&config.cartridge);
-        let (joypad1, joypad2) =
-        if config.joypad_enabled {
-            (Joypad::new(), Joypad::new())
-        } else {
-            (Joypad::disabled(), Joypad::disabled())
-        };
+        let (joypad1, joypad2) = (Joypad::new(), Joypad::new());
 
         let latest_values = LatestValues::new(&mapper_params);
 

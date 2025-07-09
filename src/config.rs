@@ -25,7 +25,6 @@ pub struct Config {
     pub disable_audio: bool,
     pub stop_frame: Option<i64>,
     pub frame_dump: bool,
-    pub joypad_enabled: bool,
     pub cpu_step_formatting: CpuStepFormatting,
 }
 
@@ -44,7 +43,6 @@ impl Config {
             disable_audio: opt.disable_audio,
             stop_frame: opt.stop_frame,
             frame_dump: opt.frame_dump,
-            joypad_enabled: !opt.disable_controllers,
             cpu_step_formatting: opt.cpu_step_formatting,
         }
     }
@@ -153,9 +151,6 @@ pub struct Opt {
     #[structopt(long)]
     pub analysis: bool,
 
-    #[structopt(name = "disablecontrollers", long)]
-    pub disable_controllers: bool,
-
     #[structopt(name = "preventsaving", long)]
     pub prevent_saving: bool,
 }
@@ -188,7 +183,6 @@ impl Opt {
             cpu_step_formatting: CpuStepFormatting::Data,
             frame_dump: false,
             analysis: false,
-            disable_controllers: false,
             prevent_saving: false,
         }
     }
