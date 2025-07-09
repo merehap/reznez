@@ -24,9 +24,7 @@ impl Joypad {
         if let Some(selected_button) = self.selected_button {
             self.button_statuses[selected_button]
         } else {
-            // The wiki says this should be Pressed after all 8 bits are read, but
-            // test_cpu_exec_space_apu.nes fails unless this is Unpressed.
-            ButtonStatus::Unpressed
+            ButtonStatus::Pressed
         }
     }
 
