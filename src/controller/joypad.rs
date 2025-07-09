@@ -15,7 +15,7 @@ impl Joypad {
     pub fn new() -> Joypad {
         Joypad {
             strobe_mode: StrobeMode::On,
-            selected_button: None,
+            selected_button: Some(Button::A),
             button_statuses: ButtonStatuses::ALL_UNPRESSED,
         }
     }
