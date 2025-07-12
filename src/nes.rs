@@ -450,25 +450,13 @@ impl Nes {
             }
 
             let prg_read_write_statuses = mapper_params.prg_memory.bank_registers().read_write_statuses();
-            if &latest.prg_read_write_statuses != prg_read_write_statuses {
-                for (i, latest_read_write_status) in latest.prg_read_write_statuses.iter_mut().enumerate() {
+            if &latest.read_write_statuses != prg_read_write_statuses {
+                for (i, latest_read_write_status) in latest.read_write_statuses.iter_mut().enumerate() {
                     if *latest_read_write_status != prg_read_write_statuses[i] {
-                        *latest_read_write_status = prg_read_write_statuses[i];
                         info!("RamStatus register S{i} changed to {:?}. Previously: {:?}",
                             prg_read_write_statuses[i],
                             *latest_read_write_status);
-                    }
-                }
-            }
-
-            let chr_read_write_statuses = mapper_params.chr_memory.bank_registers().read_write_statuses();
-            if &latest.chr_read_write_statuses != chr_read_write_statuses {
-                for (i, latest_read_write_status) in latest.chr_read_write_statuses.iter_mut().enumerate() {
-                    if *latest_read_write_status != chr_read_write_statuses[i] {
-                        *latest_read_write_status = chr_read_write_statuses[i];
-                        info!("RamStatus register S{i} changed to {:?}. Previously: {:?}",
-                            chr_read_write_statuses[i],
-                            *latest_read_write_status);
+                        *latest_read_write_status = prg_read_write_statuses[i];
                     }
                 }
             }
@@ -507,8 +495,7 @@ struct LatestValues {
     chr_registers: [BankLocation; 18],
     meta_registers: [ChrBankRegisterId; 2],
     name_table_mirroring: NameTableMirroring,
-    prg_read_write_statuses: [ReadWriteStatus; 15],
-    chr_read_write_statuses: [ReadWriteStatus; 15],
+    read_write_statuses: [ReadWriteStatus; 15],
 }
 
 impl LatestValues {
@@ -532,8 +519,7 @@ impl LatestValues {
             chr_registers: *initial_params.chr_memory().bank_registers().registers(),
             meta_registers: *initial_params.chr_memory().bank_registers().meta_registers(),
             name_table_mirroring: initial_params.chr_memory().name_table_mirroring(),
-            prg_read_write_statuses: *initial_params.prg_memory().bank_registers().read_write_statuses(),
-            chr_read_write_statuses: *initial_params.chr_memory().bank_registers().read_write_statuses(),
+            read_write_statuses: *initial_params.prg_memory().bank_registers().read_write_statuses(),
         }
     }
 }
