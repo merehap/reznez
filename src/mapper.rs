@@ -357,22 +357,13 @@ pub trait Mapper {
     }
 
     #[inline]
-    fn peek_palette_table_byte(
-        &self,
-        palette_ram: &PaletteRam,
-        address: PpuAddress,
-    ) -> PpuPeek {
+    fn peek_palette_table_byte(&self, palette_ram: &PaletteRam, address: PpuAddress) -> PpuPeek {
         let value = palette_ram.read(address_to_palette_ram_index(address));
         PpuPeek::new(value, PeekSource::PaletteTable)
     }
 
     #[inline]
-    fn write_palette_table_byte(
-        &self,
-        palette_ram: &mut PaletteRam,
-        address: PpuAddress,
-        value: u8,
-    ) {
+    fn write_palette_table_byte(&self, palette_ram: &mut PaletteRam, address: PpuAddress, value: u8) {
         palette_ram.write(address_to_palette_ram_index(address), value);
     }
 

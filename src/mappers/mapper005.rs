@@ -141,6 +141,8 @@ pub struct Mapper005 {
     irq_enabled: bool,
     frame_state: FrameState,
 
+    substitutions_enabled: bool,
+
     extended_ram: RawMemoryArray<KIBIBYTE>,
 }
 
@@ -183,7 +185,7 @@ impl Mapper for Mapper005 {
             }
             // PPU Mask
             0x2001 => {
-                // TODO: Disable substitutions.
+                self.substitutions_enabled = value & 0b11 != 0;
             }
             _ => { /* Do nothing. */ }
         }
@@ -310,6 +312,8 @@ impl Mapper005 {
 
             irq_enabled: false,
             frame_state: FrameState::new(),
+
+            substitutions_enabled: false,
 
             extended_ram: RawMemoryArray::new(),
         }
