@@ -131,13 +131,13 @@ impl PpuRegisters {
     }
 
     pub(in crate::ppu) fn start_vblank(&mut self, clock: &Clock) {
-        info!(target: "ppuflags", " {}\tStarting vblank.", clock);
+        info!(target: "ppuflags", " {clock}\tStarting vblank.");
         self.status.set_vblank_active(true);
     }
 
     pub(in crate::ppu) fn stop_vblank(&mut self, clock: &Clock) {
         if self.status.vblank_active() {
-            info!(target: "ppuflags", " {}\tStopping vblank.", clock);
+            info!(target: "ppuflags", " {clock}\tStopping vblank.");
         }
 
         self.status.set_vblank_active(false);

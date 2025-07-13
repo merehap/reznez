@@ -194,7 +194,7 @@ impl PrgWindowStart {
     const fn new(address: u16) -> Self {
         assert!(address >= 0x6000,
             "PrgWindow start address must be equal to or greater than 0x6000.");
-        assert!(address % PRG_SUB_PAGE_SIZE == 0,
+        assert!(address.is_multiple_of(PRG_SUB_PAGE_SIZE),
             "PrgWindow start address must be a multiple of 0x80 (128).");
         Self(address)
     }
@@ -207,7 +207,7 @@ impl PrgWindowEnd {
     const fn new(address: u16) -> Self {
         assert!(address > 0x6000,
             "PrgWindow end address must be greater than 0x6000.");
-        assert!(address.wrapping_add(1) % PRG_SUB_PAGE_SIZE == 0,
+        assert!(address.wrapping_add(1).is_multiple_of(PRG_SUB_PAGE_SIZE),
             "PrgWindow end address must be a multiple of 0x80 (128), minus 1.");
         Self(NonZeroU16::new(address).unwrap())
     }
@@ -223,10 +223,10 @@ impl PrgWindowSize {
         let size = size as u16;
 
         if size >= PRG_PAGE_SIZE {
-            assert!(size % PRG_PAGE_SIZE == 0,
+            assert!(size.is_multiple_of(PRG_PAGE_SIZE),
                 "PrgWindow sizes larger than 8KiB must be multiples of 8 kibibytes.")
         } else {
-            assert!(size % PRG_SUB_PAGE_SIZE == 0,
+            assert!(size.is_multiple_of(PRG_SUB_PAGE_SIZE),
                 "PrgWindow sizes smaller than 8KiB must be multiples of 128 bytes.")
         }
 
@@ -260,7 +260,7 @@ impl ChrWindowStart {
     const fn new(address: u16) -> Self {
         assert!(address < 0x4000,
             "ChrWindow start address must be less than 0x4000.");
-        assert!(address % CHR_PAGE_SIZE == 0,
+        assert!(address.is_multiple_of(CHR_PAGE_SIZE),
             "ChrWindow start address must be a multiple of 0x400.");
         Self(address)
     }
@@ -273,7 +273,7 @@ impl ChrWindowEnd {
     const fn new(address: u16) -> Self {
         assert!(address < 0x4000,
             "ChrWindow end address must be less than 0x4000.");
-        assert!(address.wrapping_add(1) % CHR_PAGE_SIZE == 0,
+        assert!(address.wrapping_add(1).is_multiple_of(CHR_PAGE_SIZE),
             "ChrWindow end address must be a multiple of 0x400, minus 1.");
         Self(NonZeroU16::new(address).expect("ChrWindow end address to be greater than 0."))
     }

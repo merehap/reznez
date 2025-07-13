@@ -1,5 +1,3 @@
-#[rustfmt::skip]
-
 use std::fmt;
 
 use splitbits::{splitbits_named, splitbits_named_into_ux, splitbits_named_ux, combinebits, replacebits};

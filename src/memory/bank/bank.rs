@@ -61,7 +61,7 @@ impl PrgBank {
         match self {
             PrgBank::Rom(location, _) | PrgBank::Ram(location, _)  | PrgBank::RomRam(location, _, _) | PrgBank::WorkRam(location, _) => Ok(location),
             PrgBank::Empty =>
-                Err(format!("Empty banks {:?} don't have a bank location.", self)),
+                Err(format!("Empty banks {self:?} don't have a bank location.")),
         }
     }
 

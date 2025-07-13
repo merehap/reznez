@@ -60,7 +60,7 @@ pub struct Mapper004_1 {
 
 impl Mapper for Mapper004_1 {
     fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        let is_even_address = cpu_address % 2 == 0;
+        let is_even_address = cpu_address.is_multiple_of(2);
         match (cpu_address, is_even_address) {
             (0x0000..=0x401F, _) => unreachable!(),
             (0x4020..=0x7FFF, _) => { /* Do nothing. */ }

@@ -34,7 +34,7 @@ impl Mapper for Mapper076 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x9FFF => {
-                if cpu_address % 2 == 0 {
+                if cpu_address.is_multiple_of(2) {
                     self.bank_select(params, value);
                 } else {
                     self.set_bank_index(params, value);

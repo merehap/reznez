@@ -83,9 +83,9 @@ pub fn analyze(rom_base_path: &Path) {
         .into_iter()
         .collect();
     for (mapper_number, group) in &grouped_cartridges {
-        info!("{}", mapper_number);
+        info!("{mapper_number}");
         for (name, _, mirroring) in group {
-            info!("\t{}: {} mirroring", name, mirroring);
+            info!("\t{name}: {mirroring} mirroring");
         }
     }
 }

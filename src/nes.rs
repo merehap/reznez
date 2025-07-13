@@ -199,15 +199,15 @@ impl Nes {
         }
 
         let step = self.cpu.step_first_half(&mut self.memory.as_cpu_memory(), cycle_parity);
-        if log_enabled!(target: "cpuinstructions", Info)  {
-            if let Some((current_instruction, start_address)) = self.cpu.mode_state().new_instruction_with_address() {
-                let formatted_instruction = self.log_formatter.format_instruction(
-                    self,
-                    current_instruction,
-                    start_address,
-                    interrupt_text);
-                info!("{formatted_instruction}");
-            }
+        if log_enabled!(target: "cpuinstructions", Info) &&
+                let Some((current_instruction, start_address)) = self.cpu.mode_state().new_instruction_with_address() {
+
+            let formatted_instruction = self.log_formatter.format_instruction(
+                self,
+                current_instruction,
+                start_address,
+                interrupt_text);
+            info!("{formatted_instruction}");
         }
 
         if log_enabled!(target: "timings", Info) {
@@ -466,7 +466,7 @@ impl Nes {
     #[inline]
     pub fn process_gui_events(&mut self, events: &Events) {
         for (button, status) in &events.joypad1_button_statuses {
-            info!("Joypad 1: button {:?} status is {:?}", button, status);
+            info!("Joypad 1: button {button:?} status is {status:?}");
             self.memory.ports_mut().joypad1.set_button_status(*button, *status);
         }
 

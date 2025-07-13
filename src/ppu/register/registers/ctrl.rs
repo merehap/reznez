@@ -1,5 +1,6 @@
 // modular_bitfield pedantic clippy warnings
 #![allow(clippy::cast_lossless, clippy::no_effect_underscore_binding, clippy::map_unwrap_or, clippy::semicolon_if_nothing_returned)]
+#![allow(unused_parens)]
 
 use modular_bitfield::{bitfield, Specifier};
 

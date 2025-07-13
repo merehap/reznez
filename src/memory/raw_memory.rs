@@ -28,11 +28,11 @@ impl RawMemory {
         &mut self.0[..]
     }
 
-    pub fn slice(&self, range: Range<u32>) -> RawMemorySlice {
+    pub fn slice<'a>(&'a self, range: Range<u32>) -> RawMemorySlice<'a> {
         RawMemorySlice(&self.0[range.start as usize..range.end as usize])
     }
 
-    pub fn maybe_slice(&self, range: Range<u32>) -> Option<RawMemorySlice> {
+    pub fn maybe_slice<'a>(&'a self, range: Range<u32>) -> Option<RawMemorySlice<'a>> {
         self.0.get(range.start as usize..range.end as usize)
             .map(RawMemorySlice)
     }

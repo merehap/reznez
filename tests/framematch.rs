@@ -89,10 +89,7 @@ impl TestSummary {
                             let actual_ppm_path =
                                 format!("tests/actual_frames/{}/frame{:03}.ppm", directory.display(), frame_index);
                             fs::write(actual_ppm_path.clone(), actual_ppm.to_bytes()).unwrap();
-                            println!(
-                                "\t\tROM {} didn't match expected hash at frame {}. See '{}'",
-                                rom_id, frame_index, actual_ppm_path,
-                            );
+                            println!("\t\tROM {rom_id} didn't match expected hash at frame {frame_index}. See '{actual_ppm_path}'");
                         }
                     }
                 }
@@ -118,7 +115,7 @@ impl TestSummary {
 
     fn print(&self) {
         for (rom_id, test_status) in &self.test_results {
-            println!("{:?}: {}", test_status, rom_id);
+            println!("{test_status:?}: {rom_id}");
         }
     }
 }

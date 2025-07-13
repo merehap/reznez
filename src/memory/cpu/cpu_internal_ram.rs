@@ -25,7 +25,7 @@ impl CpuInternalRam {
         }
     }
 
-    pub fn stack(&mut self) -> Stack {
+    pub fn stack<'a>(&'a mut self) -> Stack<'a> {
         Stack::new(
             (&mut self.memory[STACK_START..=STACK_END])
                 .try_into()

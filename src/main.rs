@@ -1,7 +1,5 @@
 #![feature(array_chunks)]
-#![feature(slice_as_chunks)]
 #![feature(if_let_guard)]
-#![feature(let_chains)]
 #![feature(type_ascription)]
 #![feature(const_for)]
 #![feature(panic_update_hook)]

@@ -84,7 +84,7 @@ impl log::Log for Logger {
 
     fn flush(&self) {
         let mut buffer = self.buffer.lock().unwrap();
-        print!("{}", buffer);
+        print!("{buffer}");
         std::io::stdout().flush().unwrap();
         buffer.clear();
     }

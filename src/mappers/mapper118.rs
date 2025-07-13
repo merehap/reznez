@@ -17,7 +17,7 @@ pub struct Mapper118 {
 
 impl Mapper for Mapper118 {
     fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        if matches!(cpu_address, 0xA000..=0xBFFF) && cpu_address % 2 == 0 {
+        if matches!(cpu_address, 0xA000..=0xBFFF) && cpu_address.is_multiple_of(2) {
             // Don't set NameTableMirroring from MMC3's standard list.
             return;
         }

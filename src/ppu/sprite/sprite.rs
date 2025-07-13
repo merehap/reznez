@@ -99,18 +99,14 @@ impl Sprite {
 
         for (column_in_sprite, &pixel) in sprite_sliver.iter().enumerate() {
             let column_in_sprite = ColumnInTile::from_usize(column_in_sprite).unwrap();
-            if let Rgbt::Opaque(_) = pixel {
-                if let Some(column) =
-                    self.x_coordinate.add_column_in_tile(column_in_sprite)
-                {
-                    frame.set_sprite_pixel(
-                        column,
-                        row,
-                        pixel,
-                        self.priority(),
-                        is_sprite_0,
-                    );
-                }
+            if let Rgbt::Opaque(_) = pixel && let Some(column) = self.x_coordinate.add_column_in_tile(column_in_sprite) {
+                frame.set_sprite_pixel(
+                    column,
+                    row,
+                    pixel,
+                    self.priority(),
+                    is_sprite_0,
+                );
             }
         }
     }

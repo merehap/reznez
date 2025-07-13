@@ -1,4 +1,3 @@
-#![feature(let_chains)]
 #![feature(panic_update_hook)]
 
 extern crate reznez;
@@ -70,14 +69,13 @@ fn nestest() {
 
         let current_instruction: Instruction;
         loop {
-            if nes.step().step.is_some() {
-                if let Some((instruction, _)) = nes.cpu_mut().mode_state().new_instruction_with_address() {
-                    current_instruction = instruction;
-                    c = nes.memory().cpu_cycle();
-                    ppu_cycle = nes.memory().ppu_regs().clock().cycle();
-                    ppu_scanline = nes.memory().ppu_regs().clock().scanline();
-                    break;
-                }
+            if nes.step().step.is_some()
+                    && let Some((instruction, _)) = nes.cpu_mut().mode_state().new_instruction_with_address() {
+                current_instruction = instruction;
+                c = nes.memory().cpu_cycle();
+                ppu_cycle = nes.memory().ppu_regs().clock().cycle();
+                ppu_scanline = nes.memory().ppu_regs().clock().scanline();
+                break;
             }
         }
 
@@ -115,10 +113,7 @@ fn nestest() {
         };
 
         if state != expected_state {
-            panic!(
-                "State diverged from expected state!\nExpected:\n{}\nActual:\n{}",
-                expected_state, state
-            );
+            panic!("State diverged from expected state!\nExpected:\n{expected_state}\nActual:\n{state}");
         }
     }
 
@@ -143,7 +138,7 @@ struct State {
 impl State {
     fn from_text(line: String) -> State {
         let mut raw_op_code = &line[16..19];
-        // nestest uses a diffent moniker for ISC.
+        // nestest uses a different moniker for ISC.
         if raw_op_code == "ISB" {
             raw_op_code = "ISC";
         }

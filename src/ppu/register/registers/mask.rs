@@ -1,5 +1,6 @@
 // modular_bitfield pedantic clippy warnings
 #![allow(clippy::cast_lossless, clippy::no_effect_underscore_binding, clippy::map_unwrap_or)]
+#![allow(unused_parens)]
 
 use log::info;
 use modular_bitfield::bitfield;
@@ -64,5 +65,5 @@ fn log_change(old: bool, new: bool, message_prefix: &str) {
         (true, false) => format!("\t{message_prefix} disabled."),
         _ => return,
     };
-    info!(target: "ppuflags", "{}", message);
+    info!(target: "ppuflags", "{message}");
 }

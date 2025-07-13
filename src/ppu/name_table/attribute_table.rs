@@ -23,8 +23,8 @@ impl<'a> AttributeTable<'a> {
         let attribute = self.0[attribute_index as usize];
         let palette_table_indexes = PaletteTableIndex::unpack_byte(attribute);
         let index_selection =
-            2 * usize::from(tile_row / 2 % 2 == 0) +
-            usize::from(tile_column / 2 % 2 == 0);
+            2 * usize::from((tile_row / 2).is_multiple_of(2)) +
+            usize::from((tile_column / 2).is_multiple_of(2));
         palette_table_indexes[index_selection]
     }
 }

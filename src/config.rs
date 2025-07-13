@@ -68,7 +68,7 @@ impl Config {
         File::open(path).unwrap().read_to_end(&mut rom).unwrap();
         let rom = RawMemory::from_vec(rom);
         let cartridge = Cartridge::load(path, &rom, &HeaderDb::load(), allow_saving).unwrap();
-        info!("ROM loaded.\n{}", cartridge);
+        info!("ROM loaded.\n{cartridge}");
         cartridge
     }
 }

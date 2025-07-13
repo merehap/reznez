@@ -74,11 +74,11 @@ impl Memory {
         }
     }
 
-    pub fn as_cpu_memory(&mut self) -> CpuMemory {
+    pub fn as_cpu_memory<'a>(&'a mut self) -> CpuMemory<'a> {
         CpuMemory { memory: self }
     }
 
-    pub fn as_ppu_memory(&mut self) -> PpuMemory {
+    pub fn as_ppu_memory<'a>(&'a mut self) -> PpuMemory<'a> {
         PpuMemory { memory: self }
     }
 
@@ -273,7 +273,7 @@ impl CpuMemory<'_> {
     }
 
     #[inline]
-    pub fn stack(&mut self) -> Stack {
+    pub fn stack<'a>(&'a mut self) -> Stack<'a> {
         self.memory.cpu_internal_ram.stack()
     }
 
@@ -387,22 +387,22 @@ impl PpuMemory<'_> {
     }
 
     #[inline]
-    pub fn pattern_table(&self, side: PatternTableSide) -> PatternTable {
+    pub fn pattern_table<'a>(&'a self, side: PatternTableSide) -> PatternTable<'a> {
         self.memory.mapper_params.pattern_table(&self.memory.ciram, side)
     }
 
     #[inline]
-    pub fn background_pattern_table(&self) -> PatternTable {
+    pub fn background_pattern_table<'a>(&'a self) -> PatternTable<'a> {
         self.pattern_table(self.regs().background_table_side())
     }
 
     #[inline]
-    pub fn sprite_pattern_table(&self) -> PatternTable {
+    pub fn sprite_pattern_table<'a>(&'a self) -> PatternTable<'a> {
         self.pattern_table(self.regs().sprite_table_side())
     }
 
     #[inline]
-    pub fn name_table(&self, quadrant: NameTableQuadrant) -> NameTable {
+    pub fn name_table<'a>(&'a self, quadrant: NameTableQuadrant) -> NameTable<'a> {
         NameTable::new(
             self.memory
                 .mapper

@@ -191,7 +191,7 @@ impl CpuModeState {
     pub fn step(&mut self) {
         if let Some(next_mode) = self.next_mode.take() {
             match next_mode {
-                CpuMode::StartNext {..} => unreachable!(),
+                CpuMode::StartNext => unreachable!(),
                 CpuMode::Jammed => self.steps = &[],
 
                 CpuMode::InterruptSequence(InterruptType::Reset) => self.steps = RESET_STEPS,

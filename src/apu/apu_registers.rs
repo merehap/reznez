@@ -344,7 +344,7 @@ impl ApuClock {
     }
 
     pub fn cycle_parity(self) -> CycleParity {
-        if self.cycle % 2 == 0 {
+        if self.cycle.is_multiple_of(2) {
             CycleParity::Get
         } else {
             CycleParity::Put
