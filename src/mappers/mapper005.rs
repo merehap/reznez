@@ -146,6 +146,7 @@ pub struct Mapper005 {
 
     substitutions_enabled: bool,
     name_table_index: u16,
+    upper_chr_bank_bits: u8,
 
     extended_ram: RawMemoryArray<KIBIBYTE>,
 }
@@ -171,7 +172,8 @@ impl Mapper for Mapper005 {
 
         match address.to_u16() {
             0x0000..=0x1FFF if should_substitute => {
-                let pattern_bank = self.extended_ram[u32::from(self.name_table_index)] & 0b0011_0000;
+                let lower_chr_bank_bits = self.extended_ram[u32::from(self.name_table_index)] & 0b0011_1111;
+                let pattern_bank = (self.upper_chr_bank_bits << 6) | lower_chr_bank_bits;
                 let raw_chr_index = 4 * KIBIBYTE * u32::from(pattern_bank) * KIBIBYTE + u32::from(address.to_u16() % 0x1000);
                 params.chr_memory().peek_raw(raw_chr_index)
             }
@@ -300,7 +302,7 @@ impl Mapper for Mapper005 {
                 self.set_chr_bank_register(params, C11, value);
             }
             0x512C..=0x512F => { /* Do nothing. */ }
-            0x5130 => { /* TODO. No official game relies on Upper CHR Bank bits, but a few initialize them. */ }
+            0x5130 => self.upper_chr_bank_bits = value & 0b11,
             0x5131..=0x51FF => { /* Do nothing. */ }
             0x5200 => self.enable_vertical_split_mode(value),
             0x5201 => todo!("Vertical split scroll"),
@@ -347,6 +349,7 @@ impl Mapper005 {
 
             substitutions_enabled: false,
             name_table_index: 0,
+            upper_chr_bank_bits: 0b0000_0000,
 
             extended_ram: RawMemoryArray::new(),
         }
