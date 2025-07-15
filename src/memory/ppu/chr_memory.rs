@@ -139,6 +139,25 @@ impl ChrMemory {
         PpuPeek { value, source }
     }
 
+    pub fn peek_raw(&self, index: u32) -> PpuPeek {
+        match (self.rom_present(), self.ram_present()) {
+            (false, false) => panic!("CHR ROM or RAM must be present for peek_raw."),
+            (true , true ) => panic!("CHR ROM and RAM must not both be present for peek_raw."),
+            (true , false) => {
+                PpuPeek::new(
+                    self.rom_outer_banks[self.rom_outer_bank_index as usize][index % self.rom_outer_banks[0].size()],
+                    PeekSource::Rom(0.into()),
+                )
+            }
+            (false, true ) => {
+                PpuPeek::new(
+                    self.ram[index % self.ram.size()],
+                    PeekSource::Ram(0.into()),
+                )
+            }
+        }
+    }
+
     pub fn write(&mut self, ciram: &mut Ciram, address: PpuAddress, value: u8) {
         let (chr_memory_index, _, read_write_status) = self.current_memory_map().index_for_address(address);
         if !read_write_status.is_writable() {
@@ -299,6 +318,14 @@ impl ChrMemory {
         assert_eq!(start % 0x400, 0, "Save RAM 1KiB slices must start on a 1KiB page boundary (e.g. 0x000, 0x400, 0x800).");
         let start = start as usize;
         (&mut self.ram.as_mut_slice()[start..start + 0x400]).try_into().unwrap()
+    }
+
+    fn rom_present(&self) -> bool {
+        !self.rom_outer_banks.is_empty()
+    }
+
+    fn ram_present(&self) -> bool {
+        !self.ram.is_empty()
     }
 
     #[inline]

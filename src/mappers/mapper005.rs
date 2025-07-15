@@ -2,6 +2,9 @@ use crate::memory::bank::bank::RomRamModeRegisterId;
 use crate::memory::bank::bank_index::MemoryType;
 use crate::mapper::*;
 use crate::mappers::mmc5::frame_state::FrameState;
+use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
+use crate::memory::ppu::ciram::Ciram;
+use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::raw_memory::RawMemoryArray;
 use crate::ppu::name_table::name_table;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
@@ -142,6 +145,7 @@ pub struct Mapper005 {
     frame_state: FrameState,
 
     substitutions_enabled: bool,
+    name_table_index: u16,
 
     extended_ram: RawMemoryArray<KIBIBYTE>,
 }
@@ -157,6 +161,30 @@ impl Mapper for Mapper005 {
             // TODO: ReadWriteStatus
             0x5C00..=0x5FFF => ReadResult::full(self.extended_ram[u32::from(cpu_addr - 0x5C00)]),
             0x6000..=0xFFFF => params.peek_prg(cpu_addr),
+        }
+    }
+
+    fn ppu_peek(&self, params: &MapperParams, ciram: &Ciram, palette_ram: &PaletteRam, address: PpuAddress) -> PpuPeek {
+        let should_substitute = self.substitutions_enabled
+            && self.extended_ram_mode == ExtendedRamMode::ExtendedAttributes
+            && !self.frame_state.sprite_fetching();
+
+        match address.to_u16() {
+            0x0000..=0x1FFF if should_substitute => {
+                let pattern_bank = self.extended_ram[u32::from(self.name_table_index)] & 0b0011_0000;
+                let raw_chr_index = 4 * KIBIBYTE * u32::from(pattern_bank) * KIBIBYTE + u32::from(address.to_u16() % 0x1000);
+                params.chr_memory().peek_raw(raw_chr_index)
+            }
+            0x0000..=0x1FFF => params.chr_memory().peek(ciram, address),
+            0x2000..=0x3EFF => self.peek_name_table_byte(params, ciram, address),
+            0x3F00..=0x3FFF if should_substitute => {
+                let palette = self.extended_ram[u32::from(self.name_table_index)] >> 6;
+                // The same palette is used for all 4 corners.
+                let palette_byte = palette << 6 | palette << 4 | palette << 2 | palette;
+                PpuPeek::new(palette_byte, PeekSource::ExtendedRam)
+            }
+            0x3F00..=0x3FFF => self.peek_palette_table_byte(palette_ram, address),
+            0x4000..=0xFFFF => unreachable!(),
         }
     }
 
@@ -199,6 +227,10 @@ impl Mapper for Mapper005 {
 
         if self.irq_enabled && self.frame_state.irq_pending() {
             params.set_irq_pending(true);
+        }
+
+        if addr.is_in_name_table_proper() {
+            self.name_table_index = addr.to_u16() % 0x400;
         }
     }
 
@@ -314,6 +346,7 @@ impl Mapper005 {
             frame_state: FrameState::new(),
 
             substitutions_enabled: false,
+            name_table_index: 0,
 
             extended_ram: RawMemoryArray::new(),
         }

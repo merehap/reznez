@@ -79,6 +79,7 @@ Crystalis - Junk on scanline above status bar.
 
 MAPPER 5
 Romance of The Three Kingdoms II - Sprite tiles are used instead of background tiles. Somehow MMC5 is supposed to be reading from the left pattern table even though PPUCTRL specifies the right table for background rendering.
+Daikoukai Jidai - Game attempts to write to ROM(?) when pressing SELECT at the beginning of the first level
 
 MAPPER 7
 Aladdin - Corrupted sprites, gets stuck in a loop writing to PPUDATA, JAMs.
@@ -127,6 +128,7 @@ Deep Dungeon 4: Accesses CHR RAM outside of the default provided 8KiB. Need mirr
 
 Improvements over Mesen:
 Magic John - Mesen has two flickering pixels on right hand side during the intro. REZNEZ used to have this, but no longer. IRQ or NMI off-by-two?
+Daikoukai\ Jidai - Mesen has flickering pixels a the top left during the initial scroll sequence.
 
 
 Total games implemented:

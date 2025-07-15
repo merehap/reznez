@@ -8,7 +8,7 @@ use crate::util::unit::KIBIBYTE;
 const VRAM_SIZE: usize = 2 * KIBIBYTE as usize;
 const CHUNK_SIZE: usize = KIBIBYTE as usize;
 
-// CIRAM
+// Console-internal name table memory.
 pub struct Ciram(Box<[u8; VRAM_SIZE]>);
 
 impl Ciram {
