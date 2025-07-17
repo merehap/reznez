@@ -23,7 +23,7 @@ use crate::nes::Nes;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgb::Rgb;
-use crate::ppu::pattern_table::{PatternIndex, PatternTableSide, Tile};
+use crate::ppu::pattern_table::{TileNumber, PatternTableSide, Tile};
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::render::frame::{DebugBuffer, Frame};
 
@@ -1001,7 +1001,7 @@ impl Renderer for PatternTableRenderer {
             };
             for index in 0..=255 {
                 mem.pattern_table(side).render_background_tile(
-                    PatternIndex::new(index),
+                    TileNumber::new(index),
                     palette,
                     &mut self.tile,
                 );

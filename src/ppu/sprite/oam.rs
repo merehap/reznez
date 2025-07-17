@@ -107,7 +107,7 @@ impl Oam {
             let sprite = sprites[i];
             if sprite_height == SpriteHeight::Tall {
                 pattern_table =
-                    mem.pattern_table(sprite.pattern_index().tall_sprite_pattern_table_side());
+                    mem.pattern_table(sprite.tile_number().tall_sprite_pattern_table_side());
             }
 
             sprite.render_sliver(

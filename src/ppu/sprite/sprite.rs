@@ -3,7 +3,7 @@ use num_traits::FromPrimitive;
 
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pattern_table::{PatternIndex, PatternTable, Tile};
+use crate::ppu::pattern_table::{TileNumber, PatternTable, Tile};
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::sprite_attributes::{SpriteAttributes, Priority};
@@ -18,20 +18,20 @@ use crate::ppu::sprite::sprite_y::SpriteY;
 pub struct Sprite {
     x_coordinate: PixelColumn,
     y_coordinate: SpriteY,
-    pattern_index: PatternIndex,
+    tile_number: TileNumber,
     attributes: SpriteAttributes,
 }
 
 impl Sprite {
     #[inline]
     pub fn from_u32(value: u32) -> Sprite {
-        let [y_coordinate, raw_pattern_index, attributes, x_coordinate] =
+        let [y_coordinate, raw_tile_number, attributes, x_coordinate] =
             value.to_be_bytes();
 
         Sprite {
             x_coordinate: PixelColumn::new(x_coordinate),
             y_coordinate: SpriteY::new(y_coordinate),
-            pattern_index: PatternIndex::new(raw_pattern_index),
+            tile_number: TileNumber::new(raw_tile_number),
             attributes: SpriteAttributes::from_u8(attributes),
         }
     }
@@ -40,8 +40,8 @@ impl Sprite {
         self.attributes.priority()
     }
 
-    pub fn pattern_index(self) -> PatternIndex {
-        self.pattern_index
+    pub fn tile_number(self) -> TileNumber {
+        self.tile_number
     }
 
     // For debug screens only.
@@ -143,11 +143,11 @@ impl Sprite {
         sprite_sliver: &mut [Rgbt; 8],
     ) {
         #[rustfmt::skip]
-        let pattern_index = match (sprite_height, sprite_half) {
-            (SpriteHeight::Normal, SpriteHalf::Top) => self.pattern_index,
+        let tile_number = match (sprite_height, sprite_half) {
+            (SpriteHeight::Normal, SpriteHalf::Top) => self.tile_number,
             (SpriteHeight::Normal, SpriteHalf::Bottom) => unreachable!(),
-            (SpriteHeight::Tall,   SpriteHalf::Top) => self.pattern_index.to_tall_indexes().0,
-            (SpriteHeight::Tall,   SpriteHalf::Bottom) => self.pattern_index.to_tall_indexes().1,
+            (SpriteHeight::Tall,   SpriteHalf::Top) => self.tile_number.to_tall_tile_numbers().0,
+            (SpriteHeight::Tall,   SpriteHalf::Bottom) => self.tile_number.to_tall_tile_numbers().1,
         };
 
         if self.attributes.flip_vertically() {
@@ -156,7 +156,7 @@ impl Sprite {
 
         let sprite_palette = palette_table.sprite_palette(self.attributes.palette_table_index());
         pattern_table.render_pixel_sliver(
-            pattern_index,
+            tile_number,
             row_in_half,
             sprite_palette,
             sprite_sliver,

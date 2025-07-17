@@ -4,7 +4,7 @@ use splitbits::{splitbits_named, splitbits_named_into_ux, splitbits_named_ux, co
 
 use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
-use crate::ppu::pattern_table::{PatternTableSide, PatternIndex};
+use crate::ppu::pattern_table::{PatternTableSide, TileNumber};
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::register::registers::ctrl::AddressIncrement;
 
@@ -50,7 +50,7 @@ impl PpuAddress {
         PpuAddress::from_u16(combinebits!("0010 nn 1111r rrccc"))
     }
 
-    pub fn in_pattern_table(s: PatternTableSide, p: PatternIndex, r: RowInTile, select_high: bool) -> PpuAddress {
+    pub fn in_pattern_table(s: PatternTableSide, p: TileNumber, r: RowInTile, select_high: bool) -> PpuAddress {
         let h = select_high;
         PpuAddress::from_u16(combinebits!("000s pppp pppp hrrr"))
     }

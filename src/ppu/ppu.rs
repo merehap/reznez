@@ -7,7 +7,7 @@ use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pattern_table::PatternIndex;
+use crate::ppu::pattern_table::TileNumber;
 use crate::ppu::pattern_table::PatternTableSide;
 use crate::ppu::pixel_index::PixelIndex;
 use crate::ppu::register::registers::attribute_register::AttributeRegister;
@@ -26,11 +26,11 @@ pub struct Ppu {
     oam_register_index: usize,
     sprite_evaluator: SpriteEvaluator,
 
-    next_pattern_index: PatternIndex,
+    next_tile_number: TileNumber,
     pattern_register: PatternRegister,
     attribute_register: AttributeRegister,
 
-    next_sprite_pattern_index: PatternIndex,
+    next_sprite_tile_number: TileNumber,
     current_sprite_y: SpriteY,
     // TODO: Remove this. The IO bus should be set to this instead.
     pattern_address: PpuAddress,
@@ -49,11 +49,11 @@ impl Ppu {
             oam_register_index: 0,
             sprite_evaluator: SpriteEvaluator::new(),
 
-            next_pattern_index: PatternIndex::new(0),
+            next_tile_number: TileNumber::new(0),
             pattern_register: PatternRegister::new(),
             attribute_register: AttributeRegister::new(),
 
-            next_sprite_pattern_index: PatternIndex::new(0),
+            next_sprite_tile_number: TileNumber::new(0),
             current_sprite_y: SpriteY::new(0),
             pattern_address: PpuAddress::ZERO,
             sprite_visible: false,
@@ -113,7 +113,7 @@ impl Ppu {
             GetPatternIndex => {
                 if !mem.regs().rendering_enabled() { return; }
                 let address = PpuAddress::in_name_table(name_table_quadrant, tile_column, tile_row);
-                self.next_pattern_index = PatternIndex::new(mem.read(address).value());
+                self.next_tile_number = TileNumber::new(mem.read(address).value());
             }
             GetPaletteIndex => {
                 if !mem.regs().rendering_enabled() { return; }
@@ -125,12 +125,12 @@ impl Ppu {
             }
             LoadPatternLowAddress => {
                 self.pattern_address = PpuAddress::in_pattern_table(
-                    background_table_side, self.next_pattern_index, row_in_tile, false);
+                    background_table_side, self.next_tile_number, row_in_tile, false);
                 mem.trigger_ppu_address_change(self.pattern_address);
             }
             LoadPatternHighAddress => {
                 self.pattern_address = PpuAddress::in_pattern_table(
-                    background_table_side, self.next_pattern_index, row_in_tile, true);
+                    background_table_side, self.next_tile_number, row_in_tile, true);
                 mem.trigger_ppu_address_change(self.pattern_address);
             }
             GetPatternLowByte => {
@@ -275,7 +275,7 @@ impl Ppu {
             }
             ReadSpritePatternIndex => {
                 if !mem.regs().rendering_enabled() { return; }
-                self.next_sprite_pattern_index = PatternIndex::new(self.sprite_evaluator.read_secondary_oam_and_advance());
+                self.next_sprite_tile_number = TileNumber::new(self.sprite_evaluator.read_secondary_oam_and_advance());
             }
             ReadSpriteAttributes => {
                 if !mem.regs().rendering_enabled() { return; }
@@ -395,14 +395,14 @@ impl Ppu {
         let sprite_height = mem.regs().sprite_height();
         let sprite_table_side = match sprite_height {
             SpriteHeight::Normal => sprite_table_side,
-            SpriteHeight::Tall => self.next_sprite_pattern_index.tall_sprite_pattern_table_side(),
+            SpriteHeight::Tall => self.next_sprite_tile_number.tall_sprite_pattern_table_side(),
         };
 
         let address;
         let visible;
         if let Some(pixel_row) = mem.regs().clock().scanline_pixel_row() {
             let attributes = self.oam_registers.registers[self.oam_register_index].attributes();
-            if let Some((pattern_index, row_in_half, v)) = self.next_sprite_pattern_index.index_and_row(
+            if let Some((tile_number, row_in_half, v)) = self.next_sprite_tile_number.number_and_row(
                 self.current_sprite_y,
                 attributes.flip_vertically(),
                 sprite_height,
@@ -410,7 +410,7 @@ impl Ppu {
             ) {
                 visible = v;
                 address = PpuAddress::in_pattern_table(
-                    sprite_table_side, pattern_index, row_in_half, select_high);
+                    sprite_table_side, tile_number, row_in_half, select_high);
             } else {
                 // Sprite not on current scanline. TODO: what address should be here?
                 if sprite_table_side == PatternTableSide::Left {

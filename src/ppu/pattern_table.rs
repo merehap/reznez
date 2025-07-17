@@ -14,9 +14,10 @@ use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::util::bit_util::get_bit;
 use crate::util::unit::KIBIBYTE;
 
-const PATTERN_TABLE_SIZE: u32 = 0x1000;
+const PATTERN_TABLE_SIZE: u32 = 4 * KIBIBYTE;
 const PATTERN_SIZE: u32 = 16;
 
+// Used for debug window purposes only. The actual rendering pipeline deals with unabstracted bytes.
 pub struct PatternTable<'a>([RawMemorySlice<'a>; 4]);
 
 impl<'a> PatternTable<'a> {
@@ -24,31 +25,15 @@ impl<'a> PatternTable<'a> {
         PatternTable(raw)
     }
 
-    pub fn read_low_byte(
-        &self,
-        pattern_index: PatternIndex,
-        row_in_tile: RowInTile,
-    ) -> u8 {
-        self.read(pattern_index.to_low_index(row_in_tile))
-    }
-
-    pub fn read_high_byte(
-        &self,
-        pattern_index: PatternIndex,
-        row_in_tile: RowInTile,
-    ) -> u8 {
-        self.read(pattern_index.to_high_index(row_in_tile))
-    }
-
     pub fn render_pixel(
         &self,
-        pattern_index: PatternIndex,
+        tile_number: TileNumber,
         column_in_tile: ColumnInTile,
         row_in_tile: RowInTile,
         palette: Palette,
         pixel: &mut Rgbt,
     ) {
-        let index = PATTERN_SIZE * u32::from(pattern_index);
+        let index = PATTERN_SIZE * u32::from(tile_number);
         let low_index = index + row_in_tile as u32;
         let high_index = low_index + 8;
 
@@ -68,21 +53,16 @@ impl<'a> PatternTable<'a> {
 
         self.0[quadrant as usize][offset]
     }
-}
 
-/**
- * DEBUG WINDOW METHODS
- */
-impl PatternTable<'_> {
     pub fn render_background_tile(
         &self,
-        pattern_index: PatternIndex,
+        tile_number: TileNumber,
         palette: Palette,
         tile: &mut Tile,
     ) {
         for row_in_tile in all::<RowInTile>() {
             self.render_pixel_sliver(
-                pattern_index,
+                tile_number,
                 row_in_tile,
                 palette,
                 &mut tile.0[row_in_tile as usize],
@@ -94,12 +74,12 @@ impl PatternTable<'_> {
     #[rustfmt::skip]
     pub fn render_pixel_sliver(
         &self,
-        pattern_index: PatternIndex,
+        tile_number: TileNumber,
         row_in_tile: RowInTile,
         palette: Palette,
         tile_sliver: &mut [Rgbt; 8],
     ) {
-        let index = PATTERN_SIZE * u32::from(pattern_index);
+        let index = PATTERN_SIZE * u32::from(tile_number);
         let low_index = index + row_in_tile as u32;
         let high_index = low_index + 8;
 
@@ -155,38 +135,38 @@ impl From<PatternTableSide> for u16 {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct PatternIndex(u8);
+pub struct TileNumber(u8);
 
-impl PatternIndex {
-    pub fn new(value: u8) -> PatternIndex {
-        PatternIndex(value)
+impl TileNumber {
+    pub fn new(value: u8) -> TileNumber {
+        TileNumber(value)
     }
 
-    pub fn index_and_row(
+    pub fn number_and_row(
         self,
         sprite_top_row: SpriteY,
         flip_vertically: bool,
         sprite_height: SpriteHeight,
         pixel_row: PixelRow,
-    ) -> Option<(PatternIndex, RowInTile, bool)> {
+    ) -> Option<(TileNumber, RowInTile, bool)> {
         let (sprite_half, row_in_half, visible) =
             sprite_top_row.row_in_sprite(flip_vertically, sprite_height, pixel_row)?;
 
         #[rustfmt::skip]
-        let pattern_index = match (sprite_height, sprite_half) {
+        let tile_number = match (sprite_height, sprite_half) {
             (SpriteHeight::Normal, SpriteHalf::Top   ) => self,
             (SpriteHeight::Normal, SpriteHalf::Bottom) => unreachable!(),
-            (SpriteHeight::Tall  , SpriteHalf::Top   ) => self.to_tall_indexes().0,
-            (SpriteHeight::Tall  , SpriteHalf::Bottom) => self.to_tall_indexes().1,
+            (SpriteHeight::Tall  , SpriteHalf::Top   ) => self.to_tall_tile_numbers().0,
+            (SpriteHeight::Tall  , SpriteHalf::Bottom) => self.to_tall_tile_numbers().1,
         };
 
-        Some((pattern_index, row_in_half, visible))
+        Some((tile_number, row_in_half, visible))
     }
 
-    pub fn to_tall_indexes(self) -> (PatternIndex, PatternIndex) {
+    pub fn to_tall_tile_numbers(self) -> (TileNumber, TileNumber) {
         let first  = self.0 & 0b1111_1110;
         let second = self.0 | 0b0000_0001;
-        (PatternIndex(first), PatternIndex(second))
+        (TileNumber(first), TileNumber(second))
     }
 
     #[inline]
@@ -197,30 +177,22 @@ impl PatternIndex {
             PatternTableSide::Right
         }
     }
-
-    fn to_low_index(self, row_in_tile: RowInTile) -> u32 {
-        PATTERN_SIZE * u32::from(self) + row_in_tile as u32
-    }
-
-    fn to_high_index(self, row_in_tile: RowInTile) -> u32 {
-        PATTERN_SIZE * u32::from(self) + row_in_tile as u32 + 8
-    }
 }
 
-impl From<PatternIndex> for u16 {
-    fn from(value: PatternIndex) -> Self {
+impl From<TileNumber> for u16 {
+    fn from(value: TileNumber) -> Self {
         value.0.into()
     }
 }
 
-impl From<PatternIndex> for u32 {
-    fn from(value: PatternIndex) -> Self {
+impl From<TileNumber> for u32 {
+    fn from(value: TileNumber) -> Self {
         value.0.into()
     }
 }
 
-impl From<PatternIndex> for usize {
-    fn from(value: PatternIndex) -> Self {
+impl From<TileNumber> for usize {
+    fn from(value: TileNumber) -> Self {
         value.0.into()
     }
 }
