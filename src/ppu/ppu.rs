@@ -7,8 +7,7 @@ use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pattern_table::TileNumber;
-use crate::ppu::pattern_table::PatternTableSide;
+use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::PixelIndex;
 use crate::ppu::register::registers::attribute_register::AttributeRegister;
 use crate::ppu::register::registers::pattern_register::PatternRegister;
@@ -17,6 +16,7 @@ use crate::ppu::sprite::sprite_attributes::SpriteAttributes;
 use crate::ppu::sprite::oam_registers::OamRegisters;
 use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
+use crate::ppu::tile_number::TileNumber;
 
 use super::palette::bank_color_assigner::BankColorAssigner;
 use super::sprite::sprite_evaluator::SpriteEvaluator;

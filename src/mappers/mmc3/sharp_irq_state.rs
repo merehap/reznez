@@ -1,7 +1,7 @@
 use crate::mapper::MapperParams;
 use crate::mappers::mmc3::irq_state::IrqState;
 use crate::memory::ppu::ppu_address::PpuAddress;
-use crate::ppu::pattern_table::PatternTableSide;
+use crate::ppu::pattern_table_side::PatternTableSide;
 
 // Submapper 0
 pub struct SharpIrqState {

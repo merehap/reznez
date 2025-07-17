@@ -16,7 +16,8 @@ use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
-use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
+use crate::ppu::pattern_table::PatternTable;
+use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::sprite::oam::Oam;
 

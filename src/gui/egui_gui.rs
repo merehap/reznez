@@ -23,9 +23,11 @@ use crate::nes::Nes;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgb::Rgb;
-use crate::ppu::pattern_table::{TileNumber, PatternTableSide, Tile};
+use crate::ppu::pattern_table::Tile;
+use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::render::frame::{DebugBuffer, Frame};
+use crate::ppu::tile_number::TileNumber;
 
 const TOP_MENU_BAR_HEIGHT: usize = 24;
 

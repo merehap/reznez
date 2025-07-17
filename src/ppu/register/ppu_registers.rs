@@ -3,7 +3,7 @@ use log::info;
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
-use crate::ppu::pattern_table::PatternTableSide;
+use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::register::ppu_io_bus::PpuIoBus;
 use crate::ppu::register::registers::ctrl;
 use crate::ppu::register::registers::ctrl::{AddressIncrement, Ctrl};

@@ -4,9 +4,10 @@ use splitbits::{splitbits_named, splitbits_named_into_ux, splitbits_named_ux, co
 
 use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
-use crate::ppu::pattern_table::{PatternTableSide, TileNumber};
+use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::register::registers::ctrl::AddressIncrement;
+use crate::ppu::tile_number::TileNumber;
 
 /*
  * 0 123 45 6789A BCDEF

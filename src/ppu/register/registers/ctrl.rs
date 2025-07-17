@@ -5,7 +5,7 @@
 use modular_bitfield::{bitfield, Specifier};
 
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
-use crate::ppu::pattern_table::PatternTableSide;
+use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 
 #[bitfield]

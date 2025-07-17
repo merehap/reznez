@@ -6,9 +6,10 @@ use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pattern_table::{TileNumber, PatternTable};
+use crate::ppu::pattern_table::PatternTable;
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::render::frame::Frame;
+use crate::ppu::tile_number::TileNumber;
 use crate::util::unit::KIBIBYTE;
 
 // The size of the name table proper plus attribute table.

@@ -11,7 +11,8 @@ use crate::memory::ppu::chr_memory_map::{ChrMemoryMap, ChrMapping, ChrMemoryInde
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
 use crate::memory::window::{ChrWindowSize, ReadWriteStatusInfo};
-use crate::ppu::pattern_table::{PatternTable, PatternTableSide};
+use crate::ppu::pattern_table::PatternTable;
+use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::util::unit::KIBIBYTE;
 
 use super::ciram::CiramSide;

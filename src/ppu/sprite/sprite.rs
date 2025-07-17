@@ -3,13 +3,14 @@ use num_traits::FromPrimitive;
 
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pattern_table::{TileNumber, PatternTable, Tile};
+use crate::ppu::pattern_table::{PatternTable, Tile};
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::sprite_attributes::{SpriteAttributes, Priority};
 use crate::ppu::sprite::sprite_half::SpriteHalf;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::ppu::sprite::sprite_y::SpriteY;
+use crate::ppu::tile_number::TileNumber;
 
 /**
  * FOR DEBUG WINDOWS ONLY. Sprites never actual exist in this form during PPU rendering.
