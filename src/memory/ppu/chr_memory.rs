@@ -11,8 +11,6 @@ use crate::memory::ppu::chr_memory_map::{ChrMemoryMap, ChrMapping, ChrMemoryInde
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
 use crate::memory::window::{ChrWindowSize, ReadWriteStatusInfo};
-use crate::ppu::pattern_table::PatternTable;
-use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::util::unit::KIBIBYTE;
 
 use super::ciram::CiramSide;
@@ -302,13 +300,6 @@ impl ChrMemory {
         }
     }
 
-    pub fn pattern_table<'a>(&'a self, ciram: &'a Ciram, side: PatternTableSide) -> PatternTable<'a> {
-        match side {
-            PatternTableSide::Left => PatternTable::new(self.left_chunks(ciram)),
-            PatternTableSide::Right => PatternTable::new(self.right_chunks(ciram)),
-        }
-    }
-
     pub fn save_ram_1kib_page(&self, start: u32) -> &[u8; KIBIBYTE as usize] {
         assert_eq!(start % 0x400, 0, "Save RAM 1KiB slices must start on a 1KiB page boundary (e.g. 0x000, 0x400, 0x800).");
         let start = start as usize;
@@ -330,7 +321,7 @@ impl ChrMemory {
     }
 
     #[inline]
-    fn left_chunks<'a>(&'a self, ciram: &'a Ciram) -> [RawMemorySlice<'a>; 4] {
+    pub fn left_chunks<'a>(&'a self, ciram: &'a Ciram) -> [RawMemorySlice<'a>; 4] {
         let mem = self.current_memory_map();
         [mem.page_start_index(0), mem.page_start_index(1), mem.page_start_index(2), mem.page_start_index(3)]
             .map(move |chr_index| {
@@ -351,7 +342,7 @@ impl ChrMemory {
     }
 
     #[inline]
-    fn right_chunks<'a>(&'a self, ciram: &'a Ciram) -> [RawMemorySlice<'a>; 4] {
+    pub fn right_chunks<'a>(&'a self, ciram: &'a Ciram) -> [RawMemorySlice<'a>; 4] {
         let mem = self.current_memory_map();
         [mem.page_start_index(4), mem.page_start_index(5), mem.page_start_index(6), mem.page_start_index(7)]
             .map(move |chr_index| {

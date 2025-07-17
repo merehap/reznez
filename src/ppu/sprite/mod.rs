@@ -2,7 +2,6 @@ pub mod oam;
 pub mod oam_address;
 pub mod oam_registers;
 pub mod secondary_oam;
-pub mod sprite;
 pub mod sprite_attributes;
 pub mod sprite_evaluator;
 pub mod sprite_half;

@@ -24,7 +24,6 @@ pub use crate::memory::ppu::ciram::CiramSide;
 pub use crate::memory::window::{PrgWindow, ChrWindow};
 pub use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 pub use crate::ppu::name_table::name_table_mirroring::{NameTableMirroring, NameTableSource};
-pub use crate::ppu::pattern_table::PatternTable;
 pub use crate::ppu::pattern_table_side::PatternTableSide;
 pub use crate::util::unit::KIBIBYTE;
 
@@ -550,10 +549,6 @@ impl MapperParams {
 
     pub fn chr_memory(&self) -> &ChrMemory {
         &self.chr_memory
-    }
-
-    pub fn pattern_table<'a>(&'a self, ciram: &'a Ciram, side: PatternTableSide) -> PatternTable<'a> {
-        self.chr_memory.pattern_table(ciram, side)
     }
 
     pub fn set_chr_layout(&mut self, index: u8) {

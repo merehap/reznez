@@ -1,8 +1,8 @@
 pub mod clock;
+pub mod constants;
 pub mod cycle_action;
 pub mod name_table;
 pub mod palette;
-pub mod pattern_table;
 pub mod pattern_table_side;
 pub mod pixel_index;
 pub mod ppu;

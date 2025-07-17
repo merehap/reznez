@@ -6,7 +6,7 @@ use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::raw_memory::RawMemoryArray;
-use crate::ppu::name_table::name_table;
+use crate::ppu::constants::ATTRIBUTE_START_INDEX;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::ppu::register::registers::ctrl::Ctrl;
@@ -397,7 +397,7 @@ impl Mapper005 {
     // Write 0x5106
     fn set_fill_mode_name_table_byte(&mut self, value: u8) {
         // Set the fill-mode name table bytes but not the attribute table bytes.
-        for i in 0..name_table::ATTRIBUTE_START_INDEX as usize {
+        for i in 0..ATTRIBUTE_START_INDEX as usize {
             self.fill_mode_name_table[i] = value;
         }
     }
@@ -406,7 +406,7 @@ impl Mapper005 {
     fn set_fill_mode_attribute_table_byte(&mut self, value: u8) {
         let attribute = value & 0b11;
         let attribute_byte = (attribute << 6) | (attribute << 4) | (attribute << 2) | attribute;
-        for i in name_table::ATTRIBUTE_START_INDEX as usize..self.fill_mode_name_table.len() {
+        for i in ATTRIBUTE_START_INDEX as usize..self.fill_mode_name_table.len() {
             self.fill_mode_name_table[i] = attribute_byte;
         }
     }

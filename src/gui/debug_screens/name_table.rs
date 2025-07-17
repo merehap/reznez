@@ -1,22 +1,18 @@
 use std::fmt;
 
+use crate::mapper::NameTableQuadrant;
+use crate::memory::memory::PpuMemory;
 use crate::memory::ppu::ppu_address::{XScroll, YScroll};
-use crate::ppu::name_table::attribute_table::AttributeTable;
+use crate::gui::debug_screens::attribute_table::AttributeTable;
+use crate::ppu::constants::{ATTRIBUTE_START_INDEX, NAME_TABLE_SIZE};
 use crate::ppu::name_table::background_tile_index::BackgroundTileIndex;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pattern_table::PatternTable;
+use crate::gui::debug_screens::pattern_table::PatternTable;
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::render::frame::Frame;
 use crate::ppu::tile_number::TileNumber;
-use crate::util::unit::KIBIBYTE;
-
-// The size of the name table proper plus attribute table.
-const NAME_TABLE_SIZE: u32 = KIBIBYTE;
-const ATTRIBUTE_TABLE_SIZE: u32 = 64;
-// 0x3C0
-pub const ATTRIBUTE_START_INDEX: u32 = NAME_TABLE_SIZE - ATTRIBUTE_TABLE_SIZE;
 
 // Used for debug window purposes only. The actual rendering pipeline deals with unabstracted bytes.
 #[derive(Debug)]
@@ -33,8 +29,10 @@ impl<'a> NameTable<'a> {
         }
     }
 
-    pub fn attribute_table(&self) -> &AttributeTable<'a> {
-        &self.attribute_table
+    pub fn from_mem(mem: &'a PpuMemory, quadrant: NameTableQuadrant) -> NameTable<'a> {
+        let mapper_params = mem.memory().mapper_params();
+        let ciram = mem.memory().ciram();
+        NameTable::new(mem.memory().mapper().raw_name_table(mapper_params, ciram, quadrant))
     }
 
     pub fn render(&self, pattern_table: &PatternTable, palette_table: &PaletteTable, frame: &mut Frame) {

@@ -17,13 +17,14 @@ use winit_input_helper::WinitInputHelper;
 
 use crate::config::Config;
 use crate::controller::joypad::{Button, ButtonStatus};
+use crate::gui::debug_screens::name_table::NameTable;
+use crate::gui::debug_screens::pattern_table::{PatternTable, Tile};
 use crate::gui::gui::{execute_frame, Events, Gui};
 use crate::mapper::CpuAddress;
 use crate::nes::Nes;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgb::Rgb;
-use crate::ppu::pattern_table::Tile;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::{PixelColumn, PixelRow};
 use crate::ppu::render::frame::{DebugBuffer, Frame};
@@ -885,17 +886,18 @@ impl Renderer for NameTableRenderer {
         self.buffer.place_wrapping_vertical_line(width, 0, height, Rgb::new(255, 255, 255));
 
         self.frame.set_universal_background_rgb(mem.palette_table().universal_background_rgb());
-        mem.name_table(NameTableQuadrant::TopLeft)
-            .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
+        let background_table = PatternTable::background_side(&mem);
+        NameTable::from_mem(&mem, NameTableQuadrant::TopLeft)
+            .render(&background_table, &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(1, 1, &self.frame);
-        mem.name_table(NameTableQuadrant::TopRight)
-            .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
+        NameTable::from_mem(&mem, NameTableQuadrant::TopRight)
+            .render(&background_table, &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(257, 1, &self.frame);
-        mem.name_table(NameTableQuadrant::BottomLeft)
-            .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
+        NameTable::from_mem(&mem, NameTableQuadrant::BottomLeft)
+            .render(&background_table, &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(1, 241, &self.frame);
-        mem.name_table(NameTableQuadrant::BottomRight)
-            .render(&mem.background_pattern_table(), &mem.palette_table(), &mut self.frame);
+        NameTable::from_mem(&mem, NameTableQuadrant::BottomRight)
+            .render(&background_table, &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(257, 241, &self.frame);
 
         self.buffer.place_wrapping_horizontal_line(y, x, x + 257, Rgb::new(255, 0, 0));
@@ -942,8 +944,7 @@ impl Renderer for SpritesRenderer {
         let mem = world.nes.memory_mut().as_ppu_memory();
 
         for (index, sprite) in sprites.iter().enumerate() {
-            let tile = sprite
-                .render_normal_height(&mem.sprite_pattern_table(), &mem.palette_table());
+            let tile = sprite.render_normal_height(&PatternTable::sprite_side(&mem), &mem.palette_table());
             self.buffer.place_tile(
                 (8 + 1) * (index % 8),
                 (8 + 1) * (index / 8),
@@ -1002,7 +1003,7 @@ impl Renderer for PatternTableRenderer {
                     .background_palette(PaletteTableIndex::Zero)
             };
             for index in 0..=255 {
-                mem.pattern_table(side).render_background_tile(
+                PatternTable::from_mem(&mem, side).render_background_tile(
                     TileNumber::new(index),
                     palette,
                     &mut self.tile,

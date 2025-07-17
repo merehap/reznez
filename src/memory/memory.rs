@@ -11,13 +11,9 @@ use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::read_result::ReadResult;
 use crate::ppu::clock::Clock;
-use crate::ppu::name_table::name_table::NameTable;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
-use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
-use crate::ppu::pattern_table::PatternTable;
-use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::sprite::oam::Oam;
 
@@ -119,6 +115,10 @@ impl Memory {
 
     pub fn apu_regs_mut(&mut self) -> &mut ApuRegisters {
         &mut self.apu_registers
+    }
+
+    pub fn ciram(&self) -> &Ciram {
+        &self.ciram
     }
 
     pub fn dmc_dma(&self) -> &DmcDma {
@@ -373,6 +373,10 @@ impl PpuMemory<'_> {
         self.memory.mapper.on_end_of_ppu_cycle();
     }
 
+    pub fn memory(&self) -> &Memory {
+        self.memory
+    }
+
     #[inline]
     pub fn regs(&self) -> &PpuRegisters {
         &self.memory.ppu_registers
@@ -385,30 +389,6 @@ impl PpuMemory<'_> {
 
     pub fn name_table_mirroring(&self) -> NameTableMirroring {
         self.memory.mapper_params.name_table_mirroring()
-    }
-
-    #[inline]
-    pub fn pattern_table<'a>(&'a self, side: PatternTableSide) -> PatternTable<'a> {
-        self.memory.mapper_params.pattern_table(&self.memory.ciram, side)
-    }
-
-    #[inline]
-    pub fn background_pattern_table<'a>(&'a self) -> PatternTable<'a> {
-        self.pattern_table(self.regs().background_table_side())
-    }
-
-    #[inline]
-    pub fn sprite_pattern_table<'a>(&'a self) -> PatternTable<'a> {
-        self.pattern_table(self.regs().sprite_table_side())
-    }
-
-    #[inline]
-    pub fn name_table<'a>(&'a self, quadrant: NameTableQuadrant) -> NameTable<'a> {
-        NameTable::new(
-            self.memory
-                .mapper
-                .raw_name_table(self.memory.mapper_params(), &self.memory.ciram, quadrant),
-        )
     }
 
     #[inline]

@@ -3,7 +3,7 @@ use num_traits::FromPrimitive;
 
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pattern_table::{PatternTable, Tile};
+use crate::gui::debug_screens::pattern_table::{PatternTable, Tile};
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::render::frame::Frame;
 use crate::ppu::sprite::sprite_attributes::{SpriteAttributes, Priority};

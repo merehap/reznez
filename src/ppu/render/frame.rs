@@ -4,7 +4,7 @@ use enum_iterator::all;
 
 use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::palette::rgbt::Rgbt;
-use crate::ppu::pattern_table::Tile;
+use crate::gui::debug_screens::pattern_table::Tile;
 use crate::ppu::pixel_index::{
     ColumnInTile, PixelColumn, PixelIndex, PixelRow, RowInTile,
 };
