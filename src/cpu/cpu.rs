@@ -176,12 +176,12 @@ impl Cpu {
             }
             Step::Write(to, _) => {
                 self.address_bus = self.lookup_to_address(memory, to);
-                memory.write(self.address_bus);
+                memory.memory_mut().cpu_write(self.address_bus);
             }
             Step::WriteField(field, to, _) => {
                 self.address_bus = self.lookup_to_address(memory, to);
                 *memory.data_bus_mut() = self.field_value(field);
-                memory.write(self.address_bus);
+                memory.memory_mut().cpu_write(self.address_bus);
             }
         }
 

@@ -5,6 +5,7 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::cpu::stack::Stack;
+use crate::mapper;
 use crate::mapper::{Mapper, MapperParams};
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ppu_address::PpuAddress;
@@ -27,19 +28,19 @@ pub const IRQ_VECTOR_LOW: CpuAddress     = CpuAddress::new(0xFFFE);
 pub const IRQ_VECTOR_HIGH: CpuAddress    = CpuAddress::new(0xFFFF);
 
 pub struct Memory {
-    mapper: Box<dyn Mapper>,
-    mapper_params: MapperParams,
-    cpu_internal_ram: CpuInternalRam,
-    ciram: Ciram,
-    palette_ram: PaletteRam,
-    oam: Oam,
-    ports: Ports,
+    pub mapper: Box<dyn Mapper>,
+    pub mapper_params: MapperParams,
+    pub cpu_internal_ram: CpuInternalRam,
+    pub ciram: Ciram,
+    pub palette_ram: PaletteRam,
+    pub oam: Oam,
+    pub ports: Ports,
     nmi_line_level: SignalLevel,
-    ppu_registers: PpuRegisters,
-    apu_registers: ApuRegisters,
+    pub ppu_regs: PpuRegisters,
+    pub apu_regs: ApuRegisters,
     system_palette: SystemPalette,
-    dmc_dma: DmcDma,
-    oam_dma: OamDma,
+    pub dmc_dma: DmcDma,
+    pub oam_dma: OamDma,
     cpu_data_bus: u8,
     cpu_cycle: i64,
 }
@@ -61,8 +62,8 @@ impl Memory {
             oam: Oam::new(),
             ports,
             nmi_line_level: SignalLevel::High,
-            ppu_registers: PpuRegisters::new(ppu_clock),
-            apu_registers: ApuRegisters::new(),
+            ppu_regs: PpuRegisters::new(ppu_clock),
+            apu_regs: ApuRegisters::new(),
             system_palette,
             dmc_dma: DmcDma::IDLE,
             oam_dma: OamDma::IDLE,
@@ -101,24 +102,28 @@ impl Memory {
 
     #[inline]
     pub fn ppu_regs(&self) -> &PpuRegisters {
-        &self.ppu_registers
+        &self.ppu_regs
     }
 
     #[inline]
     pub fn ppu_regs_mut(&mut self) -> &mut PpuRegisters {
-        &mut self.ppu_registers
+        &mut self.ppu_regs
     }
 
     pub fn apu_regs(&self) -> &ApuRegisters {
-        &self.apu_registers
+        &self.apu_regs
     }
 
     pub fn apu_regs_mut(&mut self) -> &mut ApuRegisters {
-        &mut self.apu_registers
+        &mut self.apu_regs
     }
 
     pub fn ciram(&self) -> &Ciram {
         &self.ciram
+    }
+
+    pub fn ciram_mut(&mut self) -> &mut Ciram {
+        &mut self.ciram
     }
 
     pub fn dmc_dma(&self) -> &DmcDma {
@@ -130,11 +135,15 @@ impl Memory {
     }
 
     pub fn apu_regs_and_dmc_dma_mut(&mut self) -> (&mut ApuRegisters, &mut DmcDma) {
-        (&mut self.apu_registers, &mut self.dmc_dma)
+        (&mut self.apu_regs, &mut self.dmc_dma)
     }
 
     pub fn oam_dma(&self) -> &OamDma {
         &self.oam_dma
+    }
+
+    pub fn ports(&self) -> &Ports {
+        &self.ports
     }
 
     pub fn ports_mut(&mut self) -> &mut Ports {
@@ -145,32 +154,39 @@ impl Memory {
         self.cpu_cycle
     }
 
+    pub fn cpu_internal_ram(&self) -> &CpuInternalRam {
+        &self.cpu_internal_ram
+    }
+
+    pub fn palette_ram(&self) -> &PaletteRam {
+        &self.palette_ram
+    }
+
+    pub fn palette_ram_mut(&mut self) -> &mut PaletteRam {
+        &mut self.palette_ram
+    }
+
+    pub fn oam(&self) -> &Oam {
+        &self.oam
+    }
+
+    pub fn oam_mut(&mut self) -> &mut Oam {
+        &mut self.oam
+    }
+
+    #[inline]
     pub fn cpu_peek(&self, address: CpuAddress) -> u8 {
-        self.mapper.cpu_peek(
-            &self.mapper_params,
-            &self.cpu_internal_ram,
-            &self.ciram,
-            &self.palette_ram,
-            &self.oam,
-            &self.ports,
-            &self.ppu_registers,
-            &self.apu_registers,
-            address,
-        ).resolve(self.cpu_data_bus)
+        self.mapper.cpu_peek(self, address).resolve(self.cpu_data_bus)
     }
 
     pub fn maybe_cpu_peek(&self, address: CpuAddress) -> ReadResult {
-        self.mapper.cpu_peek(
-            &self.mapper_params,
-            &self.cpu_internal_ram,
-            &self.ciram,
-            &self.palette_ram,
-            &self.oam,
-            &self.ports,
-            &self.ppu_registers,
-            &self.apu_registers,
-            address,
-        )
+        self.mapper.cpu_peek(self, address)
+    }
+
+    #[inline]
+    pub fn cpu_write(&mut self, address: CpuAddress) {
+        let bus_value = self.cpu_data_bus;
+        mapper::cpu_write(self, address, bus_value);
     }
 }
 
@@ -180,21 +196,6 @@ pub struct CpuMemory<'a> {
 
 impl CpuMemory<'_> {
     #[inline]
-    pub fn peek(&self, address: CpuAddress) -> u8 {
-        self.memory.mapper.cpu_peek(
-            &self.memory.mapper_params,
-            &self.memory.cpu_internal_ram,
-            &self.memory.ciram,
-            &self.memory.palette_ram,
-            &self.memory.oam,
-            &self.memory.ports,
-            &self.memory.ppu_registers,
-            &self.memory.apu_registers,
-            address,
-        ).resolve(self.memory.cpu_data_bus)
-    }
-
-    #[inline]
     pub fn read(&mut self, address: CpuAddress) {
         self.memory.cpu_data_bus = self.memory.mapper.cpu_read(
             &mut self.memory.mapper_params,
@@ -203,29 +204,11 @@ impl CpuMemory<'_> {
             &self.memory.palette_ram,
             &self.memory.oam,
             &mut self.memory.ports,
-            &mut self.memory.ppu_registers,
-            &mut self.memory.apu_registers,
+            &mut self.memory.ppu_regs,
+            &mut self.memory.apu_regs,
             address,
         ).resolve(self.memory.cpu_data_bus);
         self.memory.mapper.on_cpu_read(&mut self.memory.mapper_params, address, self.memory.cpu_data_bus);
-    }
-
-    #[inline]
-    pub fn write(&mut self, address: CpuAddress) {
-        self.memory.mapper.cpu_write(
-            &mut self.memory.mapper_params,
-            &mut self.memory.cpu_internal_ram,
-            &mut self.memory.ciram,
-            &mut self.memory.palette_ram,
-            &mut self.memory.dmc_dma,
-            &mut self.memory.oam,
-            &mut self.memory.oam_dma,
-            &mut self.memory.ports,
-            &mut self.memory.ppu_registers,
-            &mut self.memory.apu_registers,
-            address,
-            self.memory.cpu_data_bus,
-        );
     }
 
     pub fn ports(&self) -> &Ports {
@@ -250,7 +233,7 @@ impl CpuMemory<'_> {
     }
 
     pub fn dmc_dma_address(&self) -> CpuAddress {
-        self.memory.apu_registers.dmc.dma_sample_address()
+        self.memory.apu_regs.dmc.dma_sample_address()
     }
 
     pub fn dmc_dma(&mut self) -> &DmcDma {
@@ -270,7 +253,7 @@ impl CpuMemory<'_> {
     }
 
     pub fn set_dmc_sample_buffer(&mut self, value: u8) {
-        self.memory.apu_registers.dmc.set_sample_buffer(value);
+        self.memory.apu_regs.dmc.set_sample_buffer(value);
     }
 
     #[inline]
@@ -328,10 +311,18 @@ impl CpuMemory<'_> {
         self.memory.mapper.on_end_of_cpu_cycle(&mut self.memory.mapper_params, self.memory.cpu_cycle);
     }
 
+    pub fn memory(&self) -> &Memory {
+        self.memory
+    }
+
+    pub fn memory_mut(&mut self) -> &mut Memory {
+        self.memory
+    }
+
     fn address_from_vector(&mut self, mut vector: CpuAddress) -> CpuAddress {
         CpuAddress::from_low_high(
-            self.peek(vector),
-            self.peek(vector.inc()),
+            self.memory.cpu_peek(vector),
+            self.memory.cpu_peek(vector.inc()),
         )
     }
 }
@@ -379,12 +370,12 @@ impl PpuMemory<'_> {
 
     #[inline]
     pub fn regs(&self) -> &PpuRegisters {
-        &self.memory.ppu_registers
+        &self.memory.ppu_regs
     }
 
     #[inline]
     pub fn regs_mut(&mut self) -> &mut PpuRegisters {
-        &mut self.memory.ppu_registers
+        &mut self.memory.ppu_regs
     }
 
     pub fn name_table_mirroring(&self) -> NameTableMirroring {
@@ -396,7 +387,7 @@ impl PpuMemory<'_> {
         PaletteTable::new(
             self.memory.palette_ram.to_slice(),
             &self.memory.system_palette,
-            self.memory.ppu_registers.mask(),
+            self.memory.ppu_regs.mask(),
         )
     }
 

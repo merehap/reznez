@@ -3,8 +3,6 @@ use std::collections::BTreeSet;
 pub use splitbits::{splitbits, splitbits_named, combinebits, splitbits_then_combine};
 
 pub use crate::cartridge::cartridge::Cartridge;
-use crate::cpu::dmc_dma::DmcDma;
-use crate::cpu::oam_dma::OamDma;
 pub use crate::memory::bank::bank_index::{BankIndex, PrgBankRegisterId, ChrBankRegisterId, MetaRegisterId, ReadWriteStatus};
 pub use crate::memory::bank::bank_index::PrgBankRegisterId::{P0, P1, P2, P3, P4};
 pub use crate::memory::bank::bank_index::ChrBankRegisterId::*;
@@ -16,6 +14,7 @@ pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::memory::cpu::prg_memory_map::{PrgPageId, PrgPageIdSlot};
 pub use crate::memory::layout::Layout;
+use crate::memory::memory::Memory;
 pub use crate::memory::ppu::chr_memory::ChrMemory;
 use crate::memory::ppu::chr_memory_map::ChrPageId;
 pub use crate::memory::ppu::ppu_address::PpuAddress;
@@ -82,45 +81,34 @@ pub trait Mapper {
     fn fill_mode_name_table(&self) -> &[u8; KIBIBYTE as usize] { unimplemented!() }
 
     #[allow(clippy::too_many_arguments)]
-    fn cpu_peek(
-        &self,
-        params: &MapperParams,
-        cpu_internal_ram: &CpuInternalRam,
-        ciram: &Ciram,
-        palette_ram: &PaletteRam,
-        oam: &Oam,
-        ports: &Ports,
-        ppu_registers: &PpuRegisters,
-        apu_registers: &ApuRegisters,
-        address: CpuAddress,
-    ) -> ReadResult {
+    fn cpu_peek(&self, mem: &Memory, address: CpuAddress) -> ReadResult {
         match address.to_raw() {
-            0x0000..=0x07FF => ReadResult::full(cpu_internal_ram[address.to_usize()]),
-            0x0800..=0x1FFF => ReadResult::full(cpu_internal_ram[address.to_usize() & 0x07FF]),
+            0x0000..=0x07FF => ReadResult::full(mem.cpu_internal_ram()[address.to_usize()]),
+            0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[address.to_usize() & 0x07FF]),
             0x2000..=0x3FFF => {
                 ReadResult::full(match address.to_raw() & 0x2007 {
-                    0x2000 => ppu_registers.peek_ppu_io_bus(),
-                    0x2001 => ppu_registers.peek_ppu_io_bus(),
-                    0x2002 => ppu_registers.peek_status(),
-                    0x2003 => ppu_registers.peek_ppu_io_bus(),
-                    0x2004 => ppu_registers.peek_oam_data(oam),
-                    0x2005 => ppu_registers.peek_ppu_io_bus(),
-                    0x2006 => ppu_registers.peek_ppu_io_bus(),
+                    0x2000 => mem.ppu_regs().peek_ppu_io_bus(),
+                    0x2001 => mem.ppu_regs().peek_ppu_io_bus(),
+                    0x2002 => mem.ppu_regs().peek_status(),
+                    0x2003 => mem.ppu_regs().peek_ppu_io_bus(),
+                    0x2004 => mem.ppu_regs().peek_oam_data(mem.oam()),
+                    0x2005 => mem.ppu_regs().peek_ppu_io_bus(),
+                    0x2006 => mem.ppu_regs().peek_ppu_io_bus(),
                     0x2007 => {
-                        let peeker = |ppu_address| self.ppu_peek(params, ciram, palette_ram, ppu_address).value();
-                        ppu_registers.peek_ppu_data(peeker)
+                        let peeker = |ppu_address| self.ppu_peek(mem.mapper_params(), mem.ciram(), mem.palette_ram(), ppu_address).value();
+                        mem.ppu_regs().peek_ppu_data(peeker)
                     }
                     _ => unreachable!(),
                 })
             }
             0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
             0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
-            0x4015          => ReadResult::full(apu_registers.peek_status().to_u8()),
+            0x4015          => ReadResult::full(mem.apu_regs().peek_status().to_u8()),
             // TODO: Move ReadResult/mask specification into the controller.
-            0x4016          => ReadResult::partial_open_bus(ports.joypad1.peek_status() as u8, 0b0000_0001),
-            0x4017          => ReadResult::partial_open_bus(ports.joypad2.peek_status() as u8, 0b0000_0001),
+            0x4016          => ReadResult::partial_open_bus(mem.ports().joypad1.peek_status() as u8, 0b0000_0001),
+            0x4017          => ReadResult::partial_open_bus(mem.ports().joypad2.peek_status() as u8, 0b0000_0001),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
-            0x4020..=0xFFFF => self.peek_cartridge_space(params, address.to_raw()),
+            0x4020..=0xFFFF => self.peek_cartridge_space(mem.mapper_params(), address.to_raw()),
         }
     }
 
@@ -168,93 +156,6 @@ pub trait Mapper {
             0x4017          => ReadResult::partial_open_bus(ports.joypad2.read_status() as u8, 0b0000_0001),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
             0x4020..=0xFFFF => self.read_from_cartridge_space(params, address.to_raw()),
-        }
-    }
-
-    #[inline]
-    #[rustfmt::skip]
-    #[allow(clippy::too_many_arguments)]
-    fn cpu_write(
-        &mut self,
-        params: &mut MapperParams,
-        cpu_internal_ram: &mut CpuInternalRam,
-        ciram: &mut Ciram,
-        palette_ram: &mut PaletteRam,
-        dmc_dma: &mut DmcDma,
-        oam: &mut Oam,
-        oam_dma: &mut OamDma,
-        ports: &mut Ports,
-        ppu_registers: &mut PpuRegisters,
-        apu_registers: &mut ApuRegisters,
-        address: CpuAddress,
-        value: u8,
-    ) {
-        // TODO: Move this into mapper, right after cpu_write() is called?
-        self.on_cpu_write(params, address, value);
-        match address.to_raw() {
-            0x0000..=0x07FF => cpu_internal_ram[address.to_usize()] = value,
-            0x0800..=0x1FFF => cpu_internal_ram[address.to_usize() & 0x07FF] = value,
-            0x2000..=0x3FFF => match address.to_raw() & 0x2007 {
-                0x2000 => ppu_registers.write_ctrl(value),
-                0x2001 => ppu_registers.write_mask(value),
-                0x2002 => ppu_registers.write_ppu_io_bus(value),
-                0x2003 => ppu_registers.write_oam_addr(value),
-                0x2004 => ppu_registers.write_oam_data(oam, value),
-                0x2005 => ppu_registers.write_scroll(value),
-                0x2006 => {
-                    ppu_registers.write_ppu_addr(value);
-                    if ppu_registers.write_toggle() == WriteToggle::FirstByte {
-                        self.on_ppu_address_change(params, ppu_registers.current_address());
-                    }
-                }
-                0x2007 => {
-                    self.ppu_write(params, ciram, palette_ram, ppu_registers.current_address(), value);
-                    ppu_registers.write_ppu_data(value);
-                    self.on_ppu_address_change(params, ppu_registers.current_address());
-                }
-                _ => unreachable!(),
-            }
-            0x4000          => apu_registers.pulse_1.write_control_byte(value),
-            0x4001          => apu_registers.pulse_1.write_sweep_byte(value),
-            0x4002          => apu_registers.pulse_1.write_timer_low_byte(value),
-            0x4003          => apu_registers.pulse_1.write_length_and_timer_high_byte(value),
-            0x4004          => apu_registers.pulse_2.write_control_byte(value),
-            0x4005          => apu_registers.pulse_2.write_sweep_byte(value),
-            0x4006          => apu_registers.pulse_2.write_timer_low_byte(value),
-            0x4007          => apu_registers.pulse_2.write_length_and_timer_high_byte(value),
-            0x4008          => apu_registers.triangle.write_control_byte(value),
-            0x4009          => { /* Unused. */ }
-            0x400A          => apu_registers.triangle.write_timer_low_byte(value),
-            0x400B          => apu_registers.triangle.write_length_and_timer_high_byte(value),
-            0x400C          => apu_registers.noise.write_control_byte(value),
-            0x400D          => { /* Unused. */ }
-            0x400E          => apu_registers.noise.write_loop_and_period_byte(value),
-            0x400F          => apu_registers.noise.write_length_byte(value),
-            0x4010          => apu_registers.dmc.write_control_byte(value),
-            0x4011          => apu_registers.dmc.write_volume(value),
-            0x4012          => apu_registers.dmc.write_sample_start_address(value),
-            0x4013          => apu_registers.dmc.write_sample_length(value),
-            0x4014          => oam_dma.prepare_to_start(value),
-            0x4015          => apu_registers.write_status_byte(dmc_dma, value),
-            0x4016          => ports.change_strobe(value),
-            0x4017          => apu_registers.write_frame_counter(value),
-            0x4018..=0x401F => { /* CPU Test Mode not yet supported. */ }
-            0x4020..=0xFFFF => {
-                // TODO: Verify if bus conflicts only occur for address >= 0x6000.
-                let value = if self.has_bus_conflicts() == HasBusConflicts::Yes {
-                    let rom_value = self.cpu_peek(params, cpu_internal_ram, ciram, palette_ram, oam,
-                        ports, ppu_registers, apu_registers, address);
-                    rom_value.bus_conflict(value)
-                } else {
-                    value
-                };
-
-                if matches!(address.to_raw(), 0x6000..=0xFFFF) {
-                    params.prg_memory.write(address, value);
-                }
-
-                self.write_register(params, address.to_raw(), value);
-            }
         }
     }
 
@@ -441,6 +342,78 @@ pub trait Mapper {
 
     fn supported(self) -> LookupResult where Self: Sized, Self: 'static {
         LookupResult::Supported(Box::new(self))
+    }
+}
+
+#[inline]
+#[rustfmt::skip]
+#[allow(clippy::too_many_arguments)]
+pub fn cpu_write(mem: &mut Memory, address: CpuAddress, value: u8) {
+    // TODO: Move this into mapper, right after cpu_write() is called?
+    mem.mapper.on_cpu_write(&mut mem.mapper_params, address, value);
+    match address.to_raw() {
+        0x0000..=0x07FF => mem.cpu_internal_ram[address.to_usize()] = value,
+        0x0800..=0x1FFF => mem.cpu_internal_ram[address.to_usize() & 0x07FF] = value,
+        0x2000..=0x3FFF => match address.to_raw() & 0x2007 {
+            0x2000 => mem.ppu_regs.write_ctrl(value),
+            0x2001 => mem.ppu_regs.write_mask(value),
+            0x2002 => mem.ppu_regs.write_ppu_io_bus(value),
+            0x2003 => mem.ppu_regs.write_oam_addr(value),
+            0x2004 => mem.ppu_regs.write_oam_data(&mut mem.oam, value),
+            0x2005 => mem.ppu_regs.write_scroll(value),
+            0x2006 => {
+                mem.ppu_regs.write_ppu_addr(value);
+                if mem.ppu_regs().write_toggle() == WriteToggle::FirstByte {
+                    mem.mapper.on_ppu_address_change(&mut mem.mapper_params, mem.ppu_regs.current_address());
+                }
+            }
+            0x2007 => {
+                mem.mapper.ppu_write(&mut mem.mapper_params, &mut mem.ciram, &mut mem.palette_ram, mem.ppu_regs.current_address(), value);
+                mem.ppu_regs.write_ppu_data(value);
+                mem.mapper.on_ppu_address_change(&mut mem.mapper_params, mem.ppu_regs.current_address());
+            }
+            _ => unreachable!(),
+        }
+        0x4000          => mem.apu_regs.pulse_1.write_control_byte(value),
+        0x4001          => mem.apu_regs.pulse_1.write_sweep_byte(value),
+        0x4002          => mem.apu_regs.pulse_1.write_timer_low_byte(value),
+        0x4003          => mem.apu_regs.pulse_1.write_length_and_timer_high_byte(value),
+        0x4004          => mem.apu_regs.pulse_2.write_control_byte(value),
+        0x4005          => mem.apu_regs.pulse_2.write_sweep_byte(value),
+        0x4006          => mem.apu_regs.pulse_2.write_timer_low_byte(value),
+        0x4007          => mem.apu_regs.pulse_2.write_length_and_timer_high_byte(value),
+        0x4008          => mem.apu_regs.triangle.write_control_byte(value),
+        0x4009          => { /* Unused. */ }
+        0x400A          => mem.apu_regs.triangle.write_timer_low_byte(value),
+        0x400B          => mem.apu_regs.triangle.write_length_and_timer_high_byte(value),
+        0x400C          => mem.apu_regs.noise.write_control_byte(value),
+        0x400D          => { /* Unused. */ }
+        0x400E          => mem.apu_regs.noise.write_loop_and_period_byte(value),
+        0x400F          => mem.apu_regs.noise.write_length_byte(value),
+        0x4010          => mem.apu_regs.dmc.write_control_byte(value),
+        0x4011          => mem.apu_regs.dmc.write_volume(value),
+        0x4012          => mem.apu_regs.dmc.write_sample_start_address(value),
+        0x4013          => mem.apu_regs.dmc.write_sample_length(value),
+        0x4014          => mem.oam_dma.prepare_to_start(value),
+        0x4015          => mem.apu_regs.write_status_byte(&mut mem.dmc_dma, value),
+        0x4016          => mem.ports_mut().change_strobe(value),
+        0x4017          => mem.apu_regs_mut().write_frame_counter(value),
+        0x4018..=0x401F => { /* CPU Test Mode not yet supported. */ }
+        0x4020..=0xFFFF => {
+            // TODO: Verify if bus conflicts only occur for address >= 0x6000.
+            let value = if mem.mapper().has_bus_conflicts() == HasBusConflicts::Yes {
+                let rom_value = mem.mapper().cpu_peek(mem, address);
+                rom_value.bus_conflict(value)
+            } else {
+                value
+            };
+
+            if matches!(address.to_raw(), 0x6000..=0xFFFF) {
+                mem.mapper_params_mut().prg_memory.write(address, value);
+            }
+
+            mem.mapper.write_register(&mut mem.mapper_params, address.to_raw(), value);
+        }
     }
 }
 
