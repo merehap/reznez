@@ -182,6 +182,11 @@ impl Memory {
     pub fn maybe_cpu_peek(&self, address: CpuAddress) -> ReadResult {
         self.mapper.cpu_peek(self, address)
     }
+    #[inline]
+    pub fn cpu_read(&mut self, address: CpuAddress) {
+        self.cpu_data_bus = mapper::cpu_read(self, address).resolve(self.cpu_data_bus);
+        self.mapper.on_cpu_read(&mut self.mapper_params, address, self.cpu_data_bus);
+    }
 
     #[inline]
     pub fn cpu_write(&mut self, address: CpuAddress) {
@@ -195,22 +200,6 @@ pub struct CpuMemory<'a> {
 }
 
 impl CpuMemory<'_> {
-    #[inline]
-    pub fn read(&mut self, address: CpuAddress) {
-        self.memory.cpu_data_bus = self.memory.mapper.cpu_read(
-            &mut self.memory.mapper_params,
-            &self.memory.cpu_internal_ram,
-            &self.memory.ciram,
-            &self.memory.palette_ram,
-            &self.memory.oam,
-            &mut self.memory.ports,
-            &mut self.memory.ppu_regs,
-            &mut self.memory.apu_regs,
-            address,
-        ).resolve(self.memory.cpu_data_bus);
-        self.memory.mapper.on_cpu_read(&mut self.memory.mapper_params, address, self.memory.cpu_data_bus);
-    }
-
     pub fn ports(&self) -> &Ports {
         &self.memory.ports
     }

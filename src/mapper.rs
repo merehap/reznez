@@ -29,14 +29,10 @@ pub use crate::util::unit::KIBIBYTE;
 use log::info;
 use num_traits::FromPrimitive;
 
-use crate::apu::apu_registers::ApuRegisters;
-use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
-use crate::memory::cpu::ports::Ports;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ciram::Ciram;
-use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
-use crate::ppu::sprite::oam::Oam;
+use crate::ppu::register::ppu_registers::WriteToggle;
 
 use crate::memory::bank::bank::RomRamModeRegisterId;
 use crate::memory::bank::bank_index::MemoryType;
@@ -109,53 +105,6 @@ pub trait Mapper {
             0x4017          => ReadResult::partial_open_bus(mem.ports().joypad2.peek_status() as u8, 0b0000_0001),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
             0x4020..=0xFFFF => self.peek_cartridge_space(mem.mapper_params(), address.to_raw()),
-        }
-    }
-
-    #[inline]
-    #[rustfmt::skip]
-    #[allow(clippy::too_many_arguments)]
-    fn cpu_read(
-        &mut self,
-        params: &mut MapperParams,
-        cpu_internal_ram: &CpuInternalRam,
-        ciram: &Ciram,
-        palette_ram: &PaletteRam,
-        oam: &Oam,
-        ports: &mut Ports,
-        ppu_registers: &mut PpuRegisters,
-        apu_registers: &mut ApuRegisters,
-        address: CpuAddress,
-    ) -> ReadResult {
-        match address.to_raw() {
-            0x0000..=0x07FF => ReadResult::full(cpu_internal_ram[address.to_usize()]),
-            0x0800..=0x1FFF => ReadResult::full(cpu_internal_ram[address.to_usize() & 0x07FF]),
-            0x2000..=0x3FFF => {
-                ReadResult::full(match address.to_raw() & 0x2007 {
-                    0x2000 => ppu_registers.peek_ppu_io_bus(),
-                    0x2001 => ppu_registers.peek_ppu_io_bus(),
-                    0x2002 => ppu_registers.read_status(),
-                    0x2003 => ppu_registers.peek_ppu_io_bus(),
-                    0x2004 => ppu_registers.read_oam_data(oam),
-                    0x2005 => ppu_registers.peek_ppu_io_bus(),
-                    0x2006 => ppu_registers.peek_ppu_io_bus(),
-                    0x2007 => {
-                        let reader = |ppu_address| self.ppu_read(params, ciram, palette_ram, ppu_address, false).value();
-                        let data = ppu_registers.read_ppu_data(reader);
-                        self.on_ppu_address_change(params, ppu_registers.current_address());
-                        data
-                    }
-                    _ => unreachable!(),
-                })
-            }
-            0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
-            0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
-            0x4015          => ReadResult::full(apu_registers.read_status().to_u8()),
-            // TODO: Move ReadResult/mask specification into the controller.
-            0x4016          => ReadResult::partial_open_bus(ports.joypad1.read_status() as u8, 0b0000_0001),
-            0x4017          => ReadResult::partial_open_bus(ports.joypad2.read_status() as u8, 0b0000_0001),
-            0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
-            0x4020..=0xFFFF => self.read_from_cartridge_space(params, address.to_raw()),
         }
     }
 
@@ -344,6 +293,42 @@ pub trait Mapper {
         LookupResult::Supported(Box::new(self))
     }
 }
+
+#[inline]
+#[rustfmt::skip]
+pub fn cpu_read(mem: &mut Memory, address: CpuAddress) -> ReadResult {
+    match address.to_raw() {
+        0x0000..=0x07FF => ReadResult::full(mem.cpu_internal_ram()[address.to_usize()]),
+        0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[address.to_usize() & 0x07FF]),
+        0x2000..=0x3FFF => {
+            ReadResult::full(match address.to_raw() & 0x2007 {
+                0x2000 => mem.ppu_regs.peek_ppu_io_bus(),
+                0x2001 => mem.ppu_regs.peek_ppu_io_bus(),
+                0x2002 => mem.ppu_regs.read_status(),
+                0x2003 => mem.ppu_regs.peek_ppu_io_bus(),
+                0x2004 => mem.ppu_regs.read_oam_data(&mem.oam),
+                0x2005 => mem.ppu_regs.peek_ppu_io_bus(),
+                0x2006 => mem.ppu_regs.peek_ppu_io_bus(),
+                0x2007 => {
+                    let reader = |ppu_address| mem.mapper.ppu_read(&mut mem.mapper_params, &mem.ciram, &mem.palette_ram, ppu_address, false).value();
+                    let data = mem.ppu_regs.read_ppu_data(reader);
+                    mem.mapper.on_ppu_address_change(&mut mem.mapper_params, mem.ppu_regs.current_address());
+                    data
+                }
+                _ => unreachable!(),
+            })
+        }
+        0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
+        0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
+        0x4015          => ReadResult::full(mem.apu_regs.read_status().to_u8()),
+        // TODO: Move ReadResult/mask specification into the controller.
+        0x4016          => ReadResult::partial_open_bus(mem.ports.joypad1.read_status() as u8, 0b0000_0001),
+        0x4017          => ReadResult::partial_open_bus(mem.ports.joypad2.read_status() as u8, 0b0000_0001),
+        0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
+        0x4020..=0xFFFF => mem.mapper.read_from_cartridge_space(&mut mem.mapper_params, address.to_raw()),
+    }
+}
+
 
 #[inline]
 #[rustfmt::skip]

@@ -167,11 +167,11 @@ impl Cpu {
         match step {
             Step::Read(from, _) => {
                 self.address_bus = self.lookup_from_address(memory, from);
-                memory.read(self.address_bus);
+                memory.memory_mut().cpu_read(self.address_bus);
             }
             Step::ReadField(field, from, _) => {
                 self.address_bus = self.lookup_from_address(memory, from);
-                memory.read(self.address_bus);
+                memory.memory_mut().cpu_read(self.address_bus);
                 self.set_field_value(memory, field);
             }
             Step::Write(to, _) => {
@@ -403,7 +403,7 @@ impl Cpu {
                         //memory.write(self.address_bus, value);
                     }
                     LAS => {
-                        memory.read(self.address_bus);
+                        memory.memory_mut().cpu_read(self.address_bus);
                         let value = memory.data_bus() & memory.stack_pointer();
                         self.a = value;
                         self.x = value;
