@@ -19,14 +19,14 @@ pub struct PpuRegisters {
     mask: Mask,
     status: Status,
     pub oam_addr: OamAddress,
-    pending_ppu_data: u8,
+    pub pending_ppu_data: u8,
 
     clock: Clock,
 
-    pub(in crate::ppu) current_address: PpuAddress,
+    pub current_address: PpuAddress,
     pub(in crate::ppu) next_address: PpuAddress,
 
-    ppu_io_bus: PpuIoBus,
+    pub ppu_io_bus: PpuIoBus,
 
     pub suppress_vblank_active: bool,
 
@@ -74,7 +74,7 @@ impl PpuRegisters {
         self.ctrl.sprite_table_side()
     }
 
-    pub(in crate::ppu) fn current_address_increment(&self) -> AddressIncrement {
+    pub fn current_address_increment(&self) -> AddressIncrement {
         self.ctrl.current_address_increment()
     }
 
@@ -216,23 +216,20 @@ impl PpuRegisters {
         value
     }
 
-    pub fn peek_ppu_data(&self, mut peeker: impl FnMut(PpuAddress) -> u8) -> u8 {
+    pub fn peek_ppu_data(&self, old_value: u8) -> u8 {
         if self.current_address >= PpuAddress::PALETTE_TABLE_START {
             // When reading palette data only, read the current data pointed to
             // by self.current_address, not what was previously pointed to.
-            let value = peeker(self.current_address);
             // Retain the previous ppu_io_bus values for the unused bits of palette data.
             let high_ppu_io_bus = self.ppu_io_bus.value() & 0b1100_0000;
-            value | high_ppu_io_bus
+            old_value | high_ppu_io_bus
         } else {
             self.pending_ppu_data
         }
     }
 
-    pub fn read_ppu_data(&mut self, mut reader: impl FnMut(PpuAddress) -> u8) -> u8 {
-        let value = self.peek_ppu_data(&mut reader);
-        self.ppu_io_bus.update_from_read(value);
-        self.pending_ppu_data = reader(self.current_address.to_pending_data_source());
+    pub fn read_ppu_data(&mut self, new_pending_ppu_data: u8) -> u8 {
+        self.pending_ppu_data = new_pending_ppu_data;
         self.current_address.advance(self.current_address_increment());
         self.ppu_io_bus.value()
     }
