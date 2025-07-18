@@ -328,8 +328,7 @@ impl PpuMemory<'_> {
 
     #[inline]
     pub fn write(&mut self, address: PpuAddress, value: u8) {
-        self.memory.mapper.ppu_write(
-            &mut self.memory.mapper_params, &mut self.memory.ciram, &mut self.memory.palette_ram, address, value);
+        mapper::ppu_write(self.memory, address, value);
     }
 
     pub fn set_nmi_line_level(&mut self, level: SignalLevel) {

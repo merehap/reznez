@@ -118,23 +118,6 @@ pub trait Mapper {
     }
 
     #[inline]
-    fn ppu_write(
-        &mut self,
-        params: &mut MapperParams,
-        ciram: &mut Ciram,
-        palette_ram: &mut PaletteRam,
-        address: PpuAddress,
-        value: u8,
-    ) {
-        match address.to_u16() {
-            0x0000..=0x1FFF => params.write_chr(ciram, address, value),
-            0x2000..=0x3EFF => self.write_name_table_byte(params, ciram, address, value),
-            0x3F00..=0x3FFF => self.write_palette_table_byte(palette_ram, address, value),
-            0x4000..=0xFFFF => unreachable!(),
-        }
-    }
-
-    #[inline]
     fn raw_name_table<'a>(
         &'a self,
         params: &'a MapperParams,
@@ -333,7 +316,7 @@ pub fn cpu_write(mem: &mut Memory, address: CpuAddress, value: u8) {
                 }
             }
             0x2007 => {
-                mem.mapper.ppu_write(&mut mem.mapper_params, &mut mem.ciram, &mut mem.palette_ram, mem.ppu_regs.current_address(), value);
+                ppu_write(mem, mem.ppu_regs.current_address(), value);
                 mem.ppu_regs.write_ppu_data(value);
                 mem.mapper.on_ppu_address_change(&mut mem.mapper_params, mem.ppu_regs.current_address());
             }
@@ -391,6 +374,16 @@ pub fn ppu_read(mem: &mut Memory, address: PpuAddress, rendering: bool) -> PpuPe
     let result = mem.mapper.ppu_peek(mem, address);
     mem.mapper.on_ppu_read(&mut mem.mapper_params, address, result.value());
     result
+}
+
+#[inline]
+pub fn ppu_write(mem: &mut Memory, address: PpuAddress, value: u8) {
+    match address.to_u16() {
+        0x0000..=0x1FFF => mem.mapper_params.write_chr(&mut mem.ciram, address, value),
+        0x2000..=0x3EFF => mem.mapper.write_name_table_byte(&mut mem.mapper_params, &mut mem.ciram, address, value),
+        0x3F00..=0x3FFF => mem.mapper.write_palette_table_byte(&mut mem.palette_ram, address, value),
+        0x4000..=0xFFFF => unreachable!(),
+    }
 }
 
 #[inline]

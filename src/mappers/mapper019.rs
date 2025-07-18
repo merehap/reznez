@@ -1,8 +1,7 @@
 use crate::mapper::*;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::chr_memory::PpuPeek;
-use crate::memory::ppu::palette_ram::PaletteRam;
-use crate::memory::ppu::ciram::{Ciram, CiramSide};
+use crate::memory::ppu::ciram::CiramSide;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
@@ -139,6 +138,7 @@ impl Mapper for Mapper019 {
         }
     }
 
+    /* TODO: Restore this upon completion of Memory/Mapper refactor.
     #[inline]
     fn ppu_write(
         &mut self,
@@ -161,6 +161,7 @@ impl Mapper for Mapper019 {
             0x4000..=0xFFFF => unreachable!(),
         }
     }
+    */
 
     fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
         if self.irq_counter < 0x7FFF {
