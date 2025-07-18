@@ -323,8 +323,7 @@ pub struct PpuMemory<'a> {
 impl PpuMemory<'_> {
     #[inline]
     pub fn read(&mut self, address: PpuAddress) -> PpuPeek {
-        self.memory.mapper.ppu_read(
-            &mut self.memory.mapper_params, &self.memory.ciram, &self.memory.palette_ram, address, true)
+        mapper::ppu_read(self.memory, address, true)
     }
 
     #[inline]

@@ -1,4 +1,5 @@
 use crate::mapper::*;
+use crate::memory::memory::Memory;
 use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::{Ciram, CiramSide};
@@ -123,13 +124,7 @@ impl Mapper for Mapper019 {
         }
     }
 
-    fn ppu_peek(
-        &self,
-        params: &MapperParams,
-        ciram: &Ciram,
-        palette_ram: &PaletteRam,
-        mut address: PpuAddress,
-    ) -> PpuPeek {
+    fn ppu_peek(&self, mem: &Memory, mut address: PpuAddress) -> PpuPeek {
         match address.to_u16() {
             0x0000..=0x3EFF => {
                 if address.to_u16() >= 0x3000 {
@@ -137,9 +132,9 @@ impl Mapper for Mapper019 {
                     address = PpuAddress::from_u16(address.to_u16() - 0x1000);
                 }
 
-                params.peek_chr(ciram, address)
+                mem.mapper_params.peek_chr(&mem.ciram, address)
             }
-            0x3F00..=0x3FFF => self.peek_palette_table_byte(palette_ram, address),
+            0x3F00..=0x3FFF => self.peek_palette_table_byte(&mem.palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
         }
     }

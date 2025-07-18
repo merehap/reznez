@@ -91,12 +91,7 @@ pub trait Mapper {
                     0x2005 => mem.ppu_regs().peek_ppu_io_bus(),
                     0x2006 => mem.ppu_regs().peek_ppu_io_bus(),
                     0x2007 => {
-                        let old_value = self.ppu_peek(
-                            mem.mapper_params(),
-                            mem.ciram(),
-                            mem.palette_ram(),
-                            mem.ppu_regs.current_address(),
-                        ).value();
+                        let old_value = self.ppu_peek(mem, mem.ppu_regs.current_address()).value();
                         mem.ppu_regs().peek_ppu_data(old_value)
                     }
                     _ => unreachable!(),
@@ -113,37 +108,13 @@ pub trait Mapper {
         }
     }
 
-    fn ppu_peek(
-        &self,
-        params: &MapperParams,
-        ciram: &Ciram,
-        palette_ram: &PaletteRam,
-        address: PpuAddress,
-    ) -> PpuPeek {
+    fn ppu_peek(&self, mem: &Memory, address: PpuAddress) -> PpuPeek {
         match address.to_u16() {
-            0x0000..=0x1FFF => params.peek_chr(ciram, address),
-            0x2000..=0x3EFF => self.peek_name_table_byte(params, ciram, address),
-            0x3F00..=0x3FFF => self.peek_palette_table_byte(palette_ram, address),
+            0x0000..=0x1FFF => mem.mapper_params.peek_chr(&mem.ciram, address),
+            0x2000..=0x3EFF => self.peek_name_table_byte(&mem.mapper_params, &mem.ciram, address),
+            0x3F00..=0x3FFF => self.peek_palette_table_byte(&mem.palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
         }
-    }
-
-    #[inline]
-    fn ppu_read(
-        &mut self,
-        params: &mut MapperParams,
-        ciram: &Ciram,
-        palette_ram: &PaletteRam,
-        address: PpuAddress,
-        rendering: bool,
-    ) -> PpuPeek {
-        if rendering {
-            self.on_ppu_address_change(params, address);
-        }
-
-        let result = self.ppu_peek(params, ciram, palette_ram, address);
-        self.on_ppu_read(params, address, result.value());
-        result
     }
 
     #[inline]
@@ -315,10 +286,11 @@ pub fn cpu_read(mem: &mut Memory, address: CpuAddress) -> ReadResult {
                 0x2005 => mem.ppu_regs.peek_ppu_io_bus(),
                 0x2006 => mem.ppu_regs.peek_ppu_io_bus(),
                 0x2007 => {
-                    let old_value = mem.mapper.ppu_read(&mut mem.mapper_params, &mem.ciram, &mem.palette_ram, mem.ppu_regs.current_address(), false).value();
+                    let current_address = mem.ppu_regs.current_address();
+                    let old_value = ppu_read(mem, current_address, false).value();
                     let old_value = mem.ppu_regs.peek_ppu_data(old_value);
                     mem.ppu_regs.ppu_io_bus.update_from_read(old_value);
-                    let data = mem.mapper.ppu_read(&mut mem.mapper_params, &mem.ciram, &mem.palette_ram, mem.ppu_regs.current_address().to_pending_data_source(), false).value();
+                    let data = ppu_read(mem, mem.ppu_regs.current_address().to_pending_data_source(), false).value();
                     let data = mem.ppu_regs.read_ppu_data(data);
                     mem.mapper.on_ppu_address_change(&mut mem.mapper_params, mem.ppu_regs.current_address());
                     data
@@ -408,6 +380,17 @@ pub fn cpu_write(mem: &mut Memory, address: CpuAddress, value: u8) {
             mem.mapper.write_register(&mut mem.mapper_params, address.to_raw(), value);
         }
     }
+}
+
+#[inline]
+pub fn ppu_read(mem: &mut Memory, address: PpuAddress, rendering: bool) -> PpuPeek {
+    if rendering {
+        mem.mapper.on_ppu_address_change(&mut mem.mapper_params, address);
+    }
+
+    let result = mem.mapper.ppu_peek(mem, address);
+    mem.mapper.on_ppu_read(&mut mem.mapper_params, address, result.value());
+    result
 }
 
 #[inline]

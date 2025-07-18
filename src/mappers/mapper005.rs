@@ -2,9 +2,8 @@ use crate::memory::bank::bank::RomRamModeRegisterId;
 use crate::memory::bank::bank_index::MemoryType;
 use crate::mapper::*;
 use crate::mappers::mmc5::frame_state::FrameState;
+use crate::memory::memory::Memory;
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
-use crate::memory::ppu::ciram::Ciram;
-use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::raw_memory::RawMemoryArray;
 use crate::ppu::constants::ATTRIBUTE_START_INDEX;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
@@ -165,7 +164,7 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn ppu_peek(&self, params: &MapperParams, ciram: &Ciram, palette_ram: &PaletteRam, address: PpuAddress) -> PpuPeek {
+    fn ppu_peek(&self, mem: &Memory, address: PpuAddress) -> PpuPeek {
         let should_substitute = self.substitutions_enabled
             && self.extended_ram_mode == ExtendedRamMode::ExtendedAttributes
             && !self.frame_state.sprite_fetching();
@@ -175,17 +174,17 @@ impl Mapper for Mapper005 {
                 let lower_chr_bank_bits = self.extended_ram[u32::from(self.name_table_index)] & 0b0011_1111;
                 let pattern_bank = (self.upper_chr_bank_bits << 6) | lower_chr_bank_bits;
                 let raw_chr_index = 4 * KIBIBYTE * u32::from(pattern_bank) * KIBIBYTE + u32::from(address.to_u16() % 0x1000);
-                params.chr_memory().peek_raw(raw_chr_index)
+                mem.mapper_params.chr_memory().peek_raw(raw_chr_index)
             }
-            0x0000..=0x1FFF => params.chr_memory().peek(ciram, address),
-            0x2000..=0x3EFF => self.peek_name_table_byte(params, ciram, address),
+            0x0000..=0x1FFF => mem.mapper_params.chr_memory().peek(&mem.ciram, address),
+            0x2000..=0x3EFF => self.peek_name_table_byte(&mem.mapper_params, &mem.ciram, address),
             0x3F00..=0x3FFF if should_substitute => {
                 let palette = self.extended_ram[u32::from(self.name_table_index)] >> 6;
                 // The same palette is used for all 4 corners.
                 let palette_byte = palette << 6 | palette << 4 | palette << 2 | palette;
                 PpuPeek::new(palette_byte, PeekSource::ExtendedRam)
             }
-            0x3F00..=0x3FFF => self.peek_palette_table_byte(palette_ram, address),
+            0x3F00..=0x3FFF => self.peek_palette_table_byte(&mem.palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
         }
     }
