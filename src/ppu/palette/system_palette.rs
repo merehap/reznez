@@ -106,12 +106,3 @@ impl SystemPalette {
         Ok(())
     }
 }
-
-#[cfg(test)]
-pub mod test_data {
-    use super::*;
-
-    pub fn system_palette() -> SystemPalette {
-        SystemPalette::parse(include_str!("../../../palettes/2C02.pal")).unwrap()
-    }
-}

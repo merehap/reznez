@@ -1,7 +1,7 @@
 use std::fmt;
 
-use crate::mapper::NameTableQuadrant;
-use crate::memory::memory::PpuMemory;
+use crate::mapper::{Mapper, NameTableQuadrant};
+use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::{XScroll, YScroll};
 use crate::gui::debug_screens::attribute_table::AttributeTable;
 use crate::ppu::constants::{ATTRIBUTE_START_INDEX, NAME_TABLE_SIZE};
@@ -29,10 +29,10 @@ impl<'a> NameTable<'a> {
         }
     }
 
-    pub fn from_mem(mem: &'a PpuMemory, quadrant: NameTableQuadrant) -> NameTable<'a> {
-        let mapper_params = mem.memory().mapper_params();
-        let ciram = mem.memory().ciram();
-        NameTable::new(mem.memory().mapper().raw_name_table(mapper_params, ciram, quadrant))
+    pub fn from_mem(mapper: &'a dyn Mapper, mem: &'a Memory, quadrant: NameTableQuadrant) -> NameTable<'a> {
+        let mapper_params = mem.mapper_params();
+        let ciram = mem.ciram();
+        NameTable::new(mapper.raw_name_table(mapper_params, ciram, quadrant))
     }
 
     pub fn render(&self, pattern_table: &PatternTable, palette_table: &PaletteTable, frame: &mut Frame) {

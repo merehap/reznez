@@ -4,7 +4,7 @@
 use enum_iterator::all;
 
 use crate::mapper::PatternTableSide;
-use crate::memory::memory::PpuMemory;
+use crate::memory::memory::Memory;
 use crate::memory::raw_memory::RawMemorySlice;
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::rgbt::Rgbt;
@@ -23,9 +23,9 @@ impl<'a> PatternTable<'a> {
         PatternTable(raw)
     }
 
-    pub fn from_mem(mem: &'a PpuMemory, side: PatternTableSide) -> PatternTable<'a> {
-        let ciram = mem.memory().ciram();
-        let chr_memory = mem.memory().mapper_params().chr_memory();
+    pub fn from_mem(mem: &'a Memory, side: PatternTableSide) -> PatternTable<'a> {
+        let ciram = mem.ciram();
+        let chr_memory = mem.mapper_params().chr_memory();
         match side {
             PatternTableSide::Left => PatternTable::new(chr_memory.left_chunks(ciram)),
             PatternTableSide::Right => PatternTable::new(chr_memory.right_chunks(ciram)),
@@ -33,13 +33,13 @@ impl<'a> PatternTable<'a> {
     }
 
     #[inline]
-    pub fn background_side(mem: &'a PpuMemory) -> PatternTable<'a> {
-        Self::from_mem(mem, mem.regs().background_table_side())
+    pub fn background_side(mem: &'a Memory) -> PatternTable<'a> {
+        Self::from_mem(mem, mem.ppu_regs.background_table_side())
     }
 
     #[inline]
-    pub fn sprite_side(mem: &'a PpuMemory) -> PatternTable<'a> {
-        Self::from_mem(mem, mem.regs().sprite_table_side())
+    pub fn sprite_side(mem: &'a Memory) -> PatternTable<'a> {
+        Self::from_mem(mem, mem.ppu_regs.sprite_table_side())
     }
 
 

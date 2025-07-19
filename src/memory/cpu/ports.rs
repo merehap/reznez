@@ -20,14 +20,3 @@ impl Ports {
         };
     }
 }
-
-#[cfg(test)]
-pub mod test_data {
-    use super::*;
-
-    pub fn ports() -> Ports {
-        let joypad1 = Joypad::new();
-        let joypad2 = Joypad::new();
-        Ports::new(joypad1, joypad2)
-    }
-}

@@ -759,10 +759,10 @@ impl Renderer for StatusRenderer {
                     ui.label(format!("{}", mapper_params.name_table_mirroring()));
                     ui.end_row();
                     ui.label("PRG ROM banks");
-                    ui.label(nes.memory().mapper().prg_rom_bank_string(mapper_params));
+                    ui.label(nes.mapper().prg_rom_bank_string(mapper_params));
                     ui.end_row();
                     ui.label("CHR ROM banks");
-                    ui.label(nes.memory().mapper().chr_rom_bank_string(mapper_params));
+                    ui.label(nes.mapper().chr_rom_bank_string(mapper_params));
                 });
         });
 
@@ -818,15 +818,14 @@ impl Renderer for LayersRenderer {
         );
 
         let (_, mem) = world.nes.ppu_and_memory_mut();
-        let mem = mem.as_ppu_memory();
 
         self.frame.clear();
-        mem.oam().only_front_sprites().render(&mem, &mut self.frame);
+        mem.oam().only_front_sprites().render(mem, &mut self.frame);
         self.buffer
             .place_frame(0, 245 + TOP_MENU_BAR_HEIGHT, &self.frame);
 
         self.frame.clear();
-        mem.oam().only_back_sprites().render(&mem, &mut self.frame);
+        mem.oam().only_back_sprites().render(mem, &mut self.frame);
         self.buffer
             .place_frame(261, 245 + TOP_MENU_BAR_HEIGHT, &self.frame);
 
@@ -872,10 +871,8 @@ impl Renderer for NameTableRenderer {
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         let x = usize::from(world.nes.memory().ppu_regs().x_scroll().to_u8());
         let y = usize::from(world.nes.memory().ppu_regs().y_scroll().to_u8());
-        let mem = world
-            .nes
-            .memory_mut()
-            .as_ppu_memory();
+        let mapper = &*world.nes.mapper;
+        let mem = &mut world.nes.memory;
 
         let width = NameTableRenderer::WIDTH;
         let height = NameTableRenderer::HEIGHT;
@@ -886,17 +883,17 @@ impl Renderer for NameTableRenderer {
         self.buffer.place_wrapping_vertical_line(width, 0, height, Rgb::new(255, 255, 255));
 
         self.frame.set_universal_background_rgb(mem.palette_table().universal_background_rgb());
-        let background_table = PatternTable::background_side(&mem);
-        NameTable::from_mem(&mem, NameTableQuadrant::TopLeft)
+        let background_table = PatternTable::background_side(mem);
+        NameTable::from_mem(mapper, mem, NameTableQuadrant::TopLeft)
             .render(&background_table, &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(1, 1, &self.frame);
-        NameTable::from_mem(&mem, NameTableQuadrant::TopRight)
+        NameTable::from_mem(mapper, mem, NameTableQuadrant::TopRight)
             .render(&background_table, &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(257, 1, &self.frame);
-        NameTable::from_mem(&mem, NameTableQuadrant::BottomLeft)
+        NameTable::from_mem(mapper, mem, NameTableQuadrant::BottomLeft)
             .render(&background_table, &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(1, 241, &self.frame);
-        NameTable::from_mem(&mem, NameTableQuadrant::BottomRight)
+        NameTable::from_mem(mapper, mem, NameTableQuadrant::BottomRight)
             .render(&background_table, &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(257, 241, &self.frame);
 
@@ -940,11 +937,11 @@ impl Renderer for SpritesRenderer {
     }
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
-        let sprites = world.nes.memory_mut().as_ppu_memory().oam().sprites();
-        let mem = world.nes.memory_mut().as_ppu_memory();
+        let sprites = world.nes.memory_mut().oam().sprites();
+        let mem = world.nes.memory_mut();
 
         for (index, sprite) in sprites.iter().enumerate() {
-            let tile = sprite.render_normal_height(&PatternTable::sprite_side(&mem), &mem.palette_table());
+            let tile = sprite.render_normal_height(&PatternTable::sprite_side(mem), &mem.palette_table());
             self.buffer.place_tile(
                 (8 + 1) * (index % 8),
                 (8 + 1) * (index / 8),
@@ -992,18 +989,18 @@ impl Renderer for PatternTableRenderer {
     }
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
-        let mem = world.nes.memory_mut().as_ppu_memory();
+        let mem = world.nes.memory_mut();
 
         let mut offset = 0;
         for side in [PatternTableSide::Left, PatternTableSide::Right] {
-            let palette = if mem.regs().sprite_table_side() == side {
+            let palette = if mem.ppu_regs.sprite_table_side() == side {
                 mem.palette_table().sprite_palette(PaletteTableIndex::Zero)
             } else {
                 mem.palette_table()
                     .background_palette(PaletteTableIndex::Zero)
             };
             for index in 0..=255 {
-                PatternTable::from_mem(&mem, side).render_background_tile(
+                PatternTable::from_mem(mem, side).render_background_tile(
                     TileNumber::new(index),
                     palette,
                     &mut self.tile,
@@ -1184,7 +1181,7 @@ impl Renderer for MemoryViewerRenderer {
                     .striped(true)
                     .show(ui, |ui| {
                         for mem_index in 0..=u16::MAX {
-                            let value = nes.memory().cpu_peek(CpuAddress::new(mem_index));
+                            let value = nes.mapper().cpu_peek(nes.memory(), CpuAddress::new(mem_index)).resolve(nes.memory().cpu_data_bus);
                             let _ = ui.button(format!("{value:02X}"));
                             if mem_index % 0x10 == 0x0F {
                                 ui.end_row();

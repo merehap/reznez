@@ -1,4 +1,5 @@
 use crate::mapper::*;
+use crate::memory::memory::Memory;
 
 const LAYOUT: Layout = Layout::builder()
     // The wiki says 256KiB, but then doesn't mask down to just 4 banks.
@@ -101,15 +102,15 @@ impl Mapper for Mapper064 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         if self.irq_pending_delay_cycles > 0 {
             self.irq_pending_delay_cycles -= 1;
             if self.irq_pending_delay_cycles == 0 {
-                params.set_irq_pending(true);
+                mem.mapper_params.set_irq_pending(true);
             }
         }
 
-        if self.irq_counter_reload_mode == IrqCounterReloadMode::CpuCycle && cycle % 4 == 0 {
+        if self.irq_counter_reload_mode == IrqCounterReloadMode::CpuCycle && mem.cpu_cycle() % 4 == 0 {
             self.tick_irq_counter(CPU_CYCLE_MODE_IRQ_PENDING_DELAY);
         }
     }

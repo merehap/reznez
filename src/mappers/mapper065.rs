@@ -1,4 +1,5 @@
 use crate::mapper::*;
+use crate::memory::memory::Memory;
 
 const LAYOUT: Layout = Layout::builder()
     .override_prg_bank_register(P1, 1)
@@ -83,11 +84,11 @@ impl Mapper for Mapper065 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         if self.irq_enabled && self.irq_counter > 0 {
             self.irq_counter -= 1;
             if self.irq_counter == 0 {
-                params.set_irq_pending(true);
+                mem.mapper_params.set_irq_pending(true);
             }
         }
     }

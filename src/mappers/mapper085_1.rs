@@ -1,5 +1,6 @@
 use crate::mapper::*;
 use crate::mappers::vrc::vrc_irq_state::VrcIrqState;
+use crate::memory::memory::Memory;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
@@ -41,8 +42,8 @@ pub struct Mapper085_1 {
 }
 
 impl Mapper for Mapper085_1 {
-    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
-        self.irq_state.step(params);
+    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
+        self.irq_state.step(&mut mem.mapper_params);
     }
 
     fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {

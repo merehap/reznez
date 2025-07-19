@@ -1,7 +1,8 @@
 use log::{info, log_enabled};
 use log::Level::Info;
 
-use crate::memory::memory::{PpuMemory, SignalLevel};
+use crate::mapper::Mapper;
+use crate::memory::memory::{Memory, SignalLevel};
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
@@ -43,7 +44,7 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    pub fn new(memory: &PpuMemory) -> Ppu {
+    pub fn new(mem: &Memory) -> Ppu {
         Ppu {
             oam_registers: OamRegisters::new(),
             oam_register_index: 0,
@@ -61,14 +62,14 @@ impl Ppu {
             frame_actions: NTSC_FRAME_ACTIONS.clone(),
 
             pattern_source_frame: Frame::new(),
-            bank_color_assigner: BankColorAssigner::new(memory),
+            bank_color_assigner: BankColorAssigner::new(mem),
         }
     }
 
-    pub fn step(&mut self, mem: &mut PpuMemory, frame: &mut Frame) {
-        let clock = *mem.regs().clock();
-        mem.regs_mut().maybe_toggle_rendering_enabled();
-        mem.regs_mut().maybe_decay_ppu_io_bus(&clock);
+    pub fn step(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, frame: &mut Frame) {
+        let clock = *mem.ppu_regs.clock();
+        mem.ppu_regs.maybe_toggle_rendering_enabled();
+        mem.ppu_regs.maybe_decay_ppu_io_bus(&clock);
 
         if log_enabled!(target: "ppusteps", Info) {
             info!(" {clock}\t{}", self.frame_actions.format_current_cycle_actions(&clock));
@@ -78,47 +79,42 @@ impl Ppu {
         let len = self.frame_actions.current_cycle_actions(&clock).len();
         for i in 0..len {
             let cycle_action = self.frame_actions.current_cycle_actions(&clock)[i];
-            self.execute_cycle_action(mem, frame, cycle_action);
+            self.execute_cycle_action(mapper, mem, frame, cycle_action);
         }
 
-        if mem.regs().can_generate_nmi() {
+        if mem.ppu_regs.can_generate_nmi() {
             mem.set_nmi_line_level(SignalLevel::Low);
         } else {
             mem.set_nmi_line_level(SignalLevel::High);
         }
 
-        mem.process_end_of_ppu_cycle();
+        mapper.on_end_of_ppu_cycle();
     }
 
-    pub fn execute_cycle_action(
-        &mut self,
-        mem: &mut PpuMemory,
-        frame: &mut Frame,
-        cycle_action: CycleAction,
-    ) {
-        let background_table_side = mem.regs().background_table_side();
+    pub fn execute_cycle_action(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, frame: &mut Frame, cycle_action: CycleAction) {
+        let background_table_side = mem.ppu_regs.background_table_side();
 
-        let tile_column = mem.regs().current_address.x_scroll().coarse();
-        let tile_row = mem.regs().current_address.y_scroll().coarse();
-        let row_in_tile = mem.regs().current_address.y_scroll().fine();
-        let name_table_quadrant = mem.regs().current_address.name_table_quadrant();
+        let tile_column = mem.ppu_regs.current_address.x_scroll().coarse();
+        let tile_row = mem.ppu_regs.current_address.y_scroll().coarse();
+        let row_in_tile = mem.ppu_regs.current_address.y_scroll().fine();
+        let name_table_quadrant = mem.ppu_regs.current_address.name_table_quadrant();
 
-        let background_enabled = mem.regs().background_enabled();
-        let sprites_enabled = mem.regs().sprites_enabled();
+        let background_enabled = mem.ppu_regs.background_enabled();
+        let sprites_enabled = mem.ppu_regs.sprites_enabled();
 
-        let clock = *mem.regs().clock();
+        let clock = *mem.ppu_regs.clock();
 
         use CycleAction::*;
         match cycle_action {
             GetPatternIndex => {
-                if !mem.regs().rendering_enabled() { return; }
+                if !mem.ppu_regs.rendering_enabled() { return; }
                 let address = PpuAddress::in_name_table(name_table_quadrant, tile_column, tile_row);
-                self.next_tile_number = TileNumber::new(mem.read(address).value());
+                self.next_tile_number = TileNumber::new(mapper.ppu_read(mem, address, true).value());
             }
             GetPaletteIndex => {
-                if !mem.regs().rendering_enabled() { return; }
+                if !mem.ppu_regs.rendering_enabled() { return; }
                 let address = PpuAddress::in_attribute_table(name_table_quadrant, tile_column, tile_row);
-                let attribute_byte = mem.read(address).value();
+                let attribute_byte = mapper.ppu_read(mem, address, true).value();
                 let palette_table_index =
                     PaletteTableIndex::from_attribute_byte(attribute_byte, tile_column, tile_row);
                 self.attribute_register.set_pending_palette_table_index(palette_table_index);
@@ -126,38 +122,38 @@ impl Ppu {
             LoadPatternLowAddress => {
                 self.pattern_address = PpuAddress::in_pattern_table(
                     background_table_side, self.next_tile_number, row_in_tile, false);
-                mem.trigger_ppu_address_change(self.pattern_address);
+                mapper.on_ppu_address_change(&mut mem.mapper_params, self.pattern_address);
             }
             LoadPatternHighAddress => {
                 self.pattern_address = PpuAddress::in_pattern_table(
                     background_table_side, self.next_tile_number, row_in_tile, true);
-                mem.trigger_ppu_address_change(self.pattern_address);
+                mapper.on_ppu_address_change(&mut mem.mapper_params, self.pattern_address);
             }
             GetPatternLowByte => {
-                if !mem.regs().rendering_enabled() { return; }
-                self.pattern_register.set_pending_low_byte(mem.read(self.pattern_address));
+                if !mem.ppu_regs.rendering_enabled() { return; }
+                self.pattern_register.set_pending_low_byte(mapper.ppu_read(mem, self.pattern_address, true));
             }
             GetPatternHighByte => {
-                if !mem.regs().rendering_enabled() { return; }
-                self.pattern_register.set_pending_high_byte(mem.read(self.pattern_address));
+                if !mem.ppu_regs.rendering_enabled() { return; }
+                self.pattern_register.set_pending_high_byte(mapper.ppu_read(mem, self.pattern_address, true));
             }
 
             GotoNextTileColumn => {
-                if !mem.regs().rendering_enabled() { return; }
-                mem.regs_mut().current_address.increment_coarse_x_scroll();
+                if !mem.ppu_regs.rendering_enabled() { return; }
+                mem.ppu_regs.current_address.increment_coarse_x_scroll();
             }
             GotoNextPixelRow => {
-                if !mem.regs().rendering_enabled() { return; }
-                mem.regs_mut().current_address.increment_fine_y_scroll();
+                if !mem.ppu_regs.rendering_enabled() { return; }
+                mem.ppu_regs.current_address.increment_fine_y_scroll();
             }
             ResetTileColumn => {
-                if !mem.regs().rendering_enabled() { return; }
-                let next_address = mem.regs().next_address;
-                mem.regs_mut().current_address.copy_x_scroll(next_address);
-                mem.regs_mut().current_address.copy_horizontal_name_table_side(next_address);
+                if !mem.ppu_regs.rendering_enabled() { return; }
+                let next_address = mem.ppu_regs.next_address;
+                mem.ppu_regs.current_address.copy_x_scroll(next_address);
+                mem.ppu_regs.current_address.copy_horizontal_name_table_side(next_address);
             }
             PrepareForNextTile => {
-                if !mem.regs().rendering_enabled() { return; }
+                if !mem.ppu_regs.rendering_enabled() { return; }
                 self.attribute_register.prepare_next_palette_table_index();
                 self.pattern_register.load_next_palette_indexes();
             }
@@ -165,11 +161,11 @@ impl Ppu {
                 let (pixel_column, pixel_row) = PixelIndex::try_from_clock(&clock).unwrap().to_column_row();
                 // TODO: Verify if these need to be delayed like self.rendering_enabled.
                 if background_enabled {
-                    let palette_table = mem.palette_table();
+                    let palette_table = &mem.palette_table();
                     // TODO: Figure out where this goes. Maybe have frame call palette_table when displaying.
                     frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
-                    let column_in_tile = mem.regs_mut().current_address.x_scroll().fine();
+                    let column_in_tile = mem.ppu_regs.current_address.x_scroll().fine();
                     let palette_table_index = self.attribute_register.palette_table_index(column_in_tile);
                     let palette = palette_table.background_palette(palette_table_index);
 
@@ -217,9 +213,9 @@ impl Ppu {
                 // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
                 // TODO: Verify if these need to be delayed like self.rendering_enabled.
                 if sprites_enabled && background_enabled
-                    && frame.pixel(mem.regs().mask(), pixel_column, pixel_row).1.hit()
+                    && frame.pixel(mem.ppu_regs.mask(), pixel_column, pixel_row).1.hit()
                 {
-                    mem.regs_mut().set_sprite0_hit();
+                    mem.ppu_regs.set_sprite0_hit();
                 }
             }
             PrepareForNextPixel => {
@@ -231,20 +227,20 @@ impl Ppu {
 
             MaybeCorruptOamStart => {
                 // Unclear if these are the correct cycles to trigger on.
-                if mem.regs().rendering_enabled() {
-                    let oam_addr = mem.regs().oam_addr;
-                    let cycle = mem.regs().clock().cycle();
+                if mem.ppu_regs.rendering_enabled() {
+                    let oam_addr = mem.ppu_regs.oam_addr;
+                    let cycle = mem.ppu_regs.clock().cycle();
                     mem.oam_mut().maybe_corrupt_starting_byte(oam_addr, cycle);
                 }
             }
 
             ResetOamAddress => {
-                if !mem.regs().rendering_enabled() { return; }
-                mem.regs_mut().oam_addr.reset();
+                if !mem.ppu_regs.rendering_enabled() { return; }
+                mem.ppu_regs.oam_addr.reset();
             }
 
             StartClearingSecondaryOam => {
-                info!(target: "ppustage", "{}\t\tCLEARING SECONDARY OAM", mem.regs().clock());
+                info!(target: "ppustage", "{}\t\tCLEARING SECONDARY OAM", mem.ppu_regs.clock());
                 self.sprite_evaluator.start_clearing_secondary_oam();
             }
             StartSpriteEvaluation => {
@@ -261,30 +257,30 @@ impl Ppu {
                 info!(target: "ppustage", "\t\tLoading OAM registers ended.");
             }
             ReadOamByte => {
-                if !mem.regs().rendering_enabled() { return; }
+                if !mem.ppu_regs.rendering_enabled() { return; }
                 self.sprite_evaluator.read_oam(mem);
             }
             WriteSecondaryOamByte => {
-                if !mem.regs().rendering_enabled() { return; }
+                if !mem.ppu_regs.rendering_enabled() { return; }
                 self.sprite_evaluator.write_secondary_oam(mem);
 
             }
             ReadSpriteY => {
-                if !mem.regs().rendering_enabled() { return; }
+                if !mem.ppu_regs.rendering_enabled() { return; }
                 self.current_sprite_y = SpriteY::new(self.sprite_evaluator.read_secondary_oam_and_advance());
             }
             ReadSpritePatternIndex => {
-                if !mem.regs().rendering_enabled() { return; }
+                if !mem.ppu_regs.rendering_enabled() { return; }
                 self.next_sprite_tile_number = TileNumber::new(self.sprite_evaluator.read_secondary_oam_and_advance());
             }
             ReadSpriteAttributes => {
-                if !mem.regs().rendering_enabled() { return; }
+                if !mem.ppu_regs.rendering_enabled() { return; }
 
                 let attributes = SpriteAttributes::from_u8(self.sprite_evaluator.read_secondary_oam_and_advance());
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
-                if !mem.regs().rendering_enabled() { return; }
+                if !mem.ppu_regs.rendering_enabled() { return; }
 
                 let x_counter = self.sprite_evaluator.read_secondary_oam_and_advance();
                 self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
@@ -298,20 +294,20 @@ impl Ppu {
                 let select_high = false;
                 (self.pattern_address, self.sprite_visible) =
                     self.current_sprite_pattern_address(mem, select_high);
-                mem.trigger_ppu_address_change(self.pattern_address);
+                mapper.on_ppu_address_change(&mut mem.mapper_params, self.pattern_address);
             }
             LoadSpritePatternHighAddress => {
                 let select_high = true;
                 (self.pattern_address, self.sprite_visible) =
                     self.current_sprite_pattern_address(mem, select_high);
-                mem.trigger_ppu_address_change(self.pattern_address);
+                mapper.on_ppu_address_change(&mut mem.mapper_params, self.pattern_address);
             }
             GetSpritePatternLowByte => {
-                if !mem.regs().rendering_enabled() {
+                if !mem.ppu_regs.rendering_enabled() {
                     return;
                 }
 
-                let pattern_low = mem.read(self.pattern_address);
+                let pattern_low = mapper.ppu_read(mem, self.pattern_address, true);
                 if !self.sprite_visible {
                     return;
                 }
@@ -320,11 +316,11 @@ impl Ppu {
                     .set_pattern_low(pattern_low);
             }
             GetSpritePatternHighByte => {
-                if !mem.regs().rendering_enabled() {
+                if !mem.ppu_regs.rendering_enabled() {
                     return;
                 }
 
-                let pattern_high = mem.read(self.pattern_address);
+                let pattern_high = mapper.ppu_read(mem, self.pattern_address, true);
                 if !self.sprite_visible {
                     return;
                 }
@@ -336,52 +332,52 @@ impl Ppu {
             }
 
             StartVisibleScanlines => {
-                info!(target: "ppustage", "{}\tVISIBLE SCANLINES", mem.regs().clock());
+                info!(target: "ppustage", "{}\tVISIBLE SCANLINES", mem.ppu_regs.clock());
             }
             StartPostRenderScanline => {
-                info!(target: "ppustage", "{}\tPOST-RENDER SCANLINE", mem.regs().clock());
+                info!(target: "ppustage", "{}\tPOST-RENDER SCANLINE", mem.ppu_regs.clock());
             }
             StartVblankScanlines => {
-                info!(target: "ppustage", "{}\tVBLANK SCANLINES", mem.regs().clock());
+                info!(target: "ppustage", "{}\tVBLANK SCANLINES", mem.ppu_regs.clock());
             }
             StartPreRenderScanline => {
-                info!(target: "ppustage", "{}\tPRE-RENDER SCANLINE", mem.regs().clock());
+                info!(target: "ppustage", "{}\tPRE-RENDER SCANLINE", mem.ppu_regs.clock());
             }
 
             StartReadingBackgroundTiles => {
-                info!(target: "ppustage", "{}\t\tREADING BACKGROUND TILES", mem.regs().clock());
+                info!(target: "ppustage", "{}\t\tREADING BACKGROUND TILES", mem.ppu_regs.clock());
             }
             StopReadingBackgroundTiles => {
-                info!(target: "ppustage", "{}\t\tENDED READING BACKGROUND TILES", mem.regs().clock());
+                info!(target: "ppustage", "{}\t\tENDED READING BACKGROUND TILES", mem.ppu_regs.clock());
             }
 
             StartVblank => {
-                if mem.regs().suppress_vblank_active {
-                    info!(target: "ppuflags", " {}\tSuppressing vblank.", mem.regs().clock());
+                if mem.ppu_regs.suppress_vblank_active {
+                    info!(target: "ppuflags", " {}\tSuppressing vblank.", mem.ppu_regs.clock());
                 } else {
-                    let clock = *mem.regs().clock();
-                    mem.regs_mut().start_vblank(&clock);
+                    let clock = *mem.ppu_regs.clock();
+                    mem.ppu_regs.start_vblank(&clock);
                 }
 
-                mem.regs_mut().suppress_vblank_active = false;
+                mem.ppu_regs.suppress_vblank_active = false;
             }
             SetInitialScrollOffsets => {
                 // TODO: Verify if this needs to be !self.rendering_enabled, which is time-delayed.
                 if !background_enabled { return; }
-                mem.regs_mut().current_address = mem.regs().next_address;
+                mem.ppu_regs.current_address = mem.ppu_regs.next_address;
             }
             SetInitialYScroll => {
                 // TODO: Verify if this needs to be !self.rendering_enabled, which is time-delayed.
                 if !background_enabled { return; }
-                let next_address = mem.regs().next_address;
-                mem.regs_mut().current_address.copy_y_scroll(next_address);
+                let next_address = mem.ppu_regs.next_address;
+                mem.ppu_regs.current_address.copy_y_scroll(next_address);
             }
 
             ClearFlags => {
-                let clock = *mem.regs().clock();
-                mem.regs_mut().stop_vblank(&clock);
-                mem.regs_mut().clear_sprite0_hit();
-                mem.regs_mut().clear_sprite_overflow();
+                let clock = *mem.ppu_regs.clock();
+                mem.ppu_regs.stop_vblank(&clock);
+                mem.ppu_regs.clear_sprite0_hit();
+                mem.ppu_regs.clear_sprite_overflow();
             }
         }
     }
@@ -390,9 +386,9 @@ impl Ppu {
         &self.pattern_source_frame
     }
 
-    fn current_sprite_pattern_address(&self, mem: &PpuMemory, select_high: bool) -> (PpuAddress, bool) {
-        let sprite_table_side = mem.regs().sprite_table_side();
-        let sprite_height = mem.regs().sprite_height();
+    fn current_sprite_pattern_address(&self, mem: &Memory, select_high: bool) -> (PpuAddress, bool) {
+        let sprite_table_side = mem.ppu_regs.sprite_table_side();
+        let sprite_height = mem.ppu_regs.sprite_height();
         let sprite_table_side = match sprite_height {
             SpriteHeight::Normal => sprite_table_side,
             SpriteHeight::Tall => self.next_sprite_tile_number.tall_sprite_pattern_table_side(),
@@ -400,7 +396,7 @@ impl Ppu {
 
         let address;
         let visible;
-        if let Some(pixel_row) = mem.regs().clock().scanline_pixel_row() {
+        if let Some(pixel_row) = mem.ppu_regs.clock().scanline_pixel_row() {
             let attributes = self.oam_registers.registers[self.oam_register_index].attributes();
             if let Some((tile_number, row_in_half, v)) = self.next_sprite_tile_number.number_and_row(
                 self.current_sprite_y,

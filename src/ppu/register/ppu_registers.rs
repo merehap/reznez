@@ -228,7 +228,7 @@ impl PpuRegisters {
         }
     }
 
-    pub fn read_ppu_data(&mut self, new_pending_ppu_data: u8) -> u8 {
+    pub fn set_pending_ppu_data(&mut self, new_pending_ppu_data: u8) -> u8 {
         self.pending_ppu_data = new_pending_ppu_data;
         self.current_address.advance(self.current_address_increment());
         self.ppu_io_bus.value()

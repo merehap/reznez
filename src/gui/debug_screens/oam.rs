@@ -1,6 +1,6 @@
 use crate::gui::debug_screens::pattern_table::PatternTable;
 use crate::gui::debug_screens::sprite::Sprite;
-use crate::memory::memory::PpuMemory;
+use crate::memory::memory::Memory;
 use crate::ppu::pixel_index::PixelRow;
 use crate::ppu::sprite::oam::Oam;
 use crate::ppu::sprite::sprite_attributes::Priority;
@@ -43,24 +43,19 @@ impl Oam {
         })
     }
 
-    pub fn render(&self, mem: &PpuMemory, frame: &mut Frame) {
+    pub fn render(&self, mem: &Memory, frame: &mut Frame) {
         for pixel_row in PixelRow::iter() {
             self.render_scanline(pixel_row, mem, frame);
         }
     }
 
-    pub fn render_scanline(
-        &self,
-        pixel_row: PixelRow,
-        mem: &PpuMemory,
-        frame: &mut Frame,
-    ) {
+    pub fn render_scanline(&self, pixel_row: PixelRow, mem: &Memory, frame: &mut Frame) {
         frame.clear_sprite_line(pixel_row);
 
-        let sprite_table_side = mem.regs().sprite_table_side();
+        let sprite_table_side = mem.ppu_regs.sprite_table_side();
         let mut pattern_table = PatternTable::from_mem(mem, sprite_table_side);
         let palette_table = mem.palette_table();
-        let sprite_height = mem.regs().sprite_height();
+        let sprite_height = mem.ppu_regs.sprite_height();
 
         // FIXME: No more sprites will be found once the end of OAM is reached,
         // effectively hiding any sprites before OAM[OAMADDR].

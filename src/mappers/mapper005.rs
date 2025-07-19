@@ -235,7 +235,7 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, _params: &mut MapperParams, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, _mem: &mut Memory) {
         self.frame_state.maybe_end_frame();
     }
 

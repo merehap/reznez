@@ -1,5 +1,5 @@
 use crate::mapper::CiramSide;
-use crate::memory::memory::PpuMemory;
+use crate::memory::memory::Memory;
 use crate::memory::ppu::chr_memory::PeekSource;
 use crate::ppu::palette::util;
 
@@ -11,10 +11,10 @@ pub struct BankColorAssigner {
 }
 
 impl BankColorAssigner {
-    pub fn new(memory: &PpuMemory) -> Self {
+    pub fn new(memory: &Memory) -> Self {
         Self {
-            rom_spectrum: util::spectrum(memory.rom_bank_count()),
-            ram_greyscale: util::greyscale(memory.ram_bank_count()),
+            rom_spectrum: util::spectrum(memory.chr_rom_bank_count()),
+            ram_greyscale: util::greyscale(memory.chr_ram_bank_count()),
         }
     }
 

@@ -25,10 +25,12 @@ impl Formatter for MinimalFormatter {
         start_address: CpuAddress,
         _interrupt_text: String,
     ) -> String {
-        let peek = |address| nes.memory().cpu_peek(address);
+        // FIXME: This isn't the correct bus value.
+        let peek = |address| nes.mapper().cpu_peek(&nes.memory, address).resolve(nes.memory.cpu_data_bus);
 
         let cpu = nes.cpu();
 
+        // FIXME: These aren't the correct bus values.
         let low = peek(start_address.offset(1));
         let high = peek(start_address.offset(2));
 
@@ -111,7 +113,7 @@ impl Formatter for Nintendulator0980Formatter {
         _interrupt_text: String,
     ) -> String {
         let cpu_cycle = nes.memory().cpu_cycle();
-        let peek = |address| nes.memory().cpu_peek(address);
+        let peek = |address| nes.mapper.cpu_peek(&nes.memory, address).resolve(nes.memory.cpu_data_bus);
 
         let cpu = nes.cpu();
 
@@ -227,8 +229,8 @@ impl Formatter for MesenFormatter {
         start_address: CpuAddress,
         _interrupt_text: String,
     ) -> String {
-        let maybe_peek = |address| nes.memory().maybe_cpu_peek(address);
-        let peek = |address| nes.memory().cpu_peek(address);
+        let maybe_peek = |address| nes.mapper().cpu_peek(&nes.memory, address);
+        let peek = |address| nes.mapper().cpu_peek(&nes.memory, address).resolve(nes.memory.cpu_data_bus);
 
         let cpu = nes.cpu();
 
@@ -351,8 +353,8 @@ pub fn interrupts(nes: &Nes) -> String {
     interrupts.push(if nes.memory().apu_regs().dmc_irq_pending() { 'D' } else {'-'});
     interrupts.push(if nes.memory().mapper_params().irq_pending() { 'M' } else {'-'});
     interrupts.push(if nes.cpu().nmi_pending() { 'N' } else {'-'});
-    interrupts.push(if nes.memory().oam_dma().dma_pending() { 'O' } else {'-'});
-    interrupts.push(if nes.memory().dmc_dma().state() != DmcDmaState::Idle { 'D' } else {'-'});
+    interrupts.push(if nes.memory().oam_dma.dma_pending() { 'O' } else {'-'});
+    interrupts.push(if nes.memory().dmc_dma.state() != DmcDmaState::Idle { 'D' } else {'-'});
 
     interrupts
 }

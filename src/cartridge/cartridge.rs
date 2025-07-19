@@ -405,6 +405,7 @@ pub struct PlayChoice {
 pub mod test_data {
     use super::*;
 
+    #[allow(dead_code)]
     pub fn cartridge() -> Cartridge {
         let mut prg_rom = vec![0xEA; PRG_ROM_CHUNK_LENGTH];
         // Overwrite the NMI/RESET/IRQ Vectors so they doesn't point to ROM.

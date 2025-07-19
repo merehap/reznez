@@ -19,7 +19,7 @@ use crate::cpu::step::Step;
 use crate::gui::gui::Events;
 use crate::logging::formatter;
 use crate::logging::formatter::*;
-use crate::mapper::{PrgBankRegisterId, MapperParams, NameTableMirroring, ReadWriteStatus};
+use crate::mapper::{Mapper, MapperParams, NameTableMirroring, PrgBankRegisterId, ReadWriteStatus};
 use crate::memory::bank::bank_index::{BankLocation, ChrBankRegisterId};
 use crate::memory::cpu::ports::Ports;
 use crate::mapper_list;
@@ -32,7 +32,8 @@ pub struct Nes {
     cpu: Cpu,
     ppu: Ppu,
     apu: Apu,
-    memory: Memory,
+    pub memory: Memory,
+    pub mapper: Box<dyn Mapper>,
     cartridge: Cartridge,
     frame: Frame,
     cycle: u64,
@@ -54,13 +55,14 @@ impl Nes {
         let latest_values = LatestValues::new(&mapper_params);
 
         let ports = Ports::new(joypad1, joypad2);
-        let mut memory = Memory::new(mapper, mapper_params, ports, config.ppu_clock, config.system_palette.clone());
+        let mut memory = Memory::new(mapper_params, ports, config.ppu_clock, config.system_palette.clone());
 
         Nes {
-            cpu: Cpu::new(&mut memory.as_cpu_memory(), config.starting_cpu_cycle, config.cpu_step_formatting),
-            ppu: Ppu::new(&memory.as_ppu_memory()),
+            cpu: Cpu::new(&mut memory, config.starting_cpu_cycle, config.cpu_step_formatting),
+            ppu: Ppu::new(&memory),
             apu: Apu::new(config.disable_audio),
             memory,
+            mapper,
             cartridge: config.cartridge.clone(),
             frame: Frame::new(),
             cycle: 0,
@@ -93,6 +95,14 @@ impl Nes {
 
     pub fn ppu_and_memory_mut(&mut self) -> (&Ppu, &mut Memory) {
         (&self.ppu, &mut self.memory)
+    }
+
+    pub fn mapper(&self) -> &dyn Mapper {
+        &*self.mapper
+    }
+
+    pub fn mapper_mut(&mut self) -> &mut dyn Mapper {
+        &mut *self.mapper
     }
 
     pub fn cartridge(&self) -> &Cartridge {
@@ -188,7 +198,7 @@ impl Nes {
 
     fn cpu_step_first_half(&mut self) -> Option<Step> {
         let cycle_parity = self.memory.apu_regs().clock().cycle_parity();
-        self.memory.as_cpu_memory().increment_cpu_cycle();
+        self.memory.increment_cpu_cycle();
 
         if log_enabled!(target: "timings", Info) {
             self.snapshots.current().instruction(self.cpu.mode_state().state_label());
@@ -198,7 +208,7 @@ impl Nes {
             interrupt_text = formatter::interrupts(self);
         }
 
-        let step = self.cpu.step_first_half(&mut self.memory.as_cpu_memory(), cycle_parity);
+        let step = self.cpu.step_first_half(&mut *self.mapper, &mut self.memory, cycle_parity);
         if log_enabled!(target: "cpuinstructions", Info) &&
                 let Some((current_instruction, start_address)) = self.cpu.mode_state().new_instruction_with_address() {
 
@@ -225,7 +235,7 @@ impl Nes {
     }
 
     fn cpu_step_second_half(&mut self) {
-        self.cpu.step_second_half(&mut self.memory.as_cpu_memory());
+        self.cpu.step_second_half(&mut *self.mapper, &mut self.memory);
         self.detect_changes();
     }
 
@@ -236,7 +246,7 @@ impl Nes {
             self.snapshots.current().add_ppu_position(self.memory.ppu_regs().clock());
         }
 
-        self.ppu.step(&mut self.memory.as_ppu_memory(), &mut self.frame);
+        self.ppu.step(&mut *self.mapper, &mut self.memory, &mut self.frame);
 
         self.detect_changes();
 
@@ -285,21 +295,21 @@ impl Nes {
                 info!("RESET status: {:?}. Cycle: {}", latest.reset_status, self.memory.cpu_cycle());
             }
 
-            if latest.dmc_dma_action != self.memory.dmc_dma().latest_action() {
+            if latest.dmc_dma_action != self.memory.dmc_dma.latest_action() {
                 let previously_halted = latest.dmc_dma_action.cpu_should_be_halted();
-                latest.dmc_dma_action = self.memory.dmc_dma().latest_action();
+                latest.dmc_dma_action = self.memory.dmc_dma.latest_action();
                 let currently_halted = latest.dmc_dma_action.cpu_should_be_halted();
                 if !previously_halted && currently_halted {
-                    info!("CPU halted for DMC DMA transfer at {}.", self.memory.as_cpu_memory().dmc_dma_address());
+                    info!("CPU halted for DMC DMA transfer at {}.", self.memory.dmc_dma_address());
                 }
             }
 
-            if latest.extended_cpu_mode.oam_dma_action != self.memory.oam_dma().latest_action() {
+            if latest.extended_cpu_mode.oam_dma_action != self.memory.oam_dma.latest_action() {
                 let previously_halted = latest.oam_dma_action.cpu_should_be_halted();
-                latest.oam_dma_action = self.memory.oam_dma().latest_action();
+                latest.oam_dma_action = self.memory.oam_dma.latest_action();
                 let currently_halted = latest.oam_dma_action.cpu_should_be_halted();
                 if !previously_halted && currently_halted {
-                    info!("CPU halted for OAM DMA transfer at {}.", self.memory.as_cpu_memory().oam_dma().address());
+                    info!("CPU halted for OAM DMA transfer at {}.", self.memory.oam_dma.address());
                 }
             }
         }
@@ -311,10 +321,10 @@ impl Nes {
             let latest = &mut self.latest_values;
             let latest_extended_cpu_mode = ExtendedCpuMode {
                 cpu_mode: self.cpu.mode_state().mode(),
-                dmc_dma_state: self.memory.dmc_dma().state(),
-                dmc_dma_action: self.memory.dmc_dma().latest_action(),
-                oam_dma_state: self.memory.oam_dma().state(),
-                oam_dma_action: self.memory.oam_dma().latest_action(),
+                dmc_dma_state: self.memory.dmc_dma.state(),
+                dmc_dma_action: self.memory.dmc_dma.latest_action(),
+                oam_dma_state: self.memory.oam_dma.state(),
+                oam_dma_action: self.memory.oam_dma.latest_action(),
             };
 
             if latest_extended_cpu_mode.coarse_change_occurred(&latest.extended_cpu_mode) {
@@ -328,10 +338,10 @@ impl Nes {
             let latest = &mut self.latest_values;
             let latest_extended_cpu_mode = ExtendedCpuMode {
                 cpu_mode: self.cpu.mode_state().mode(),
-                dmc_dma_state: self.memory.dmc_dma().state(),
-                dmc_dma_action: self.memory.dmc_dma().latest_action(),
-                oam_dma_state: self.memory.oam_dma().state(),
-                oam_dma_action: self.memory.oam_dma().latest_action(),
+                dmc_dma_state: self.memory.dmc_dma.state(),
+                dmc_dma_action: self.memory.dmc_dma.latest_action(),
+                oam_dma_state: self.memory.oam_dma.state(),
+                oam_dma_action: self.memory.oam_dma.latest_action(),
             };
 
             let (mode_changed, dmc_changed, oam_changed) =

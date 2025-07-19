@@ -138,16 +138,8 @@ impl Mapper for Mapper019 {
         }
     }
 
-    /* TODO: Restore this upon completion of Memory/Mapper refactor.
     #[inline]
-    fn ppu_write(
-        &mut self,
-        params: &mut MapperParams,
-        ciram: &mut Ciram,
-        palette_ram: &mut PaletteRam,
-        mut address: PpuAddress,
-        value: u8,
-    ) {
+    fn ppu_write(&mut self, mem: &mut Memory, mut address: PpuAddress, value: u8) {
         match address.to_u16() {
             0x0000..=0x3EFF => {
                 if address.to_u16() >= 0x3000 {
@@ -155,19 +147,18 @@ impl Mapper for Mapper019 {
                     address = PpuAddress::from_u16(address.to_u16() - 0x1000);
                 }
 
-                params.write_chr(ciram, address, value);
+                mem.mapper_params.write_chr(&mut mem.ciram, address, value);
             }
-            0x3F00..=0x3FFF => self.write_palette_table_byte(palette_ram, address, value),
+            0x3F00..=0x3FFF => self.write_palette_table_byte(&mut mem.palette_ram, address, value),
             0x4000..=0xFFFF => unreachable!(),
         }
     }
-    */
 
-    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         if self.irq_counter < 0x7FFF {
             self.irq_counter += 1;
             if self.irq_counter == 0x7FFF {
-                params.set_irq_pending(true);
+                mem.mapper_params.set_irq_pending(true);
             }
         }
     }

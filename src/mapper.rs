@@ -41,8 +41,6 @@ pub trait Mapper {
     // Should be const, but that's not yet allowed by Rust.
     fn layout(&self) -> Layout;
 
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8);
-
     // Most mappers don't override the default cartridge peeking/reading behavior.
     // TODO: Rename this to peek_register once params.peek_prg() is handled separately.
     fn peek_cartridge_space(&self, params: &MapperParams, cpu_address: u16) -> ReadResult {
@@ -58,11 +56,13 @@ pub trait Mapper {
         self.peek_cartridge_space(params, cpu_address)
     }
 
+    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8);
+
     // Most mappers don't need to modify the MapperParams before ROM execution begins, but this
     // provides a relief valve for the rare settings that can't be expressed in a Layout.
     fn init_mapper_params(&self, _params: &mut MapperParams) {}
     // Most mappers don't care about CPU cycles.
-    fn on_end_of_cpu_cycle(&mut self, _params: &mut MapperParams, _cycle: i64) {}
+    fn on_end_of_cpu_cycle(&mut self, _mem: &mut Memory) {}
     fn on_cpu_read(&mut self, _params: &mut MapperParams, _address: CpuAddress, _value: u8) {}
     fn on_cpu_write(&mut self, _params: &mut MapperParams, _address: CpuAddress, _value: u8) {}
     // Most mappers don't care about PPU cycles.
@@ -108,11 +108,142 @@ pub trait Mapper {
         }
     }
 
+    #[inline]
+    #[rustfmt::skip]
+    fn cpu_read(&mut self, mem: &mut Memory, address: CpuAddress) -> ReadResult {
+        match address.to_raw() {
+            0x0000..=0x07FF => ReadResult::full(mem.cpu_internal_ram()[address.to_usize()]),
+            0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[address.to_usize() & 0x07FF]),
+            0x2000..=0x3FFF => {
+                ReadResult::full(match address.to_raw() & 0x2007 {
+                    0x2000 => mem.ppu_regs.peek_ppu_io_bus(),
+                    0x2001 => mem.ppu_regs.peek_ppu_io_bus(),
+                    0x2002 => mem.ppu_regs.read_status(),
+                    0x2003 => mem.ppu_regs.peek_ppu_io_bus(),
+                    0x2004 => mem.ppu_regs.read_oam_data(&mem.oam),
+                    0x2005 => mem.ppu_regs.peek_ppu_io_bus(),
+                    0x2006 => mem.ppu_regs.peek_ppu_io_bus(),
+                    0x2007 => {
+                        let old_value = self.ppu_read(mem, mem.ppu_regs.current_address(), false).value();
+                        let old_value = mem.ppu_regs.peek_ppu_data(old_value);
+                        mem.ppu_regs.ppu_io_bus.update_from_read(old_value);
+                        let data = self.ppu_read(mem, mem.ppu_regs.current_address().to_pending_data_source(), false).value();
+                        let data = mem.ppu_regs.set_pending_ppu_data(data);
+                        self.on_ppu_address_change(&mut mem.mapper_params, mem.ppu_regs.current_address());
+                        data
+                    }
+                    _ => unreachable!(),
+                })
+            }
+            0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
+            0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
+            0x4015          => ReadResult::full(mem.apu_regs.read_status().to_u8()),
+            // TODO: Move ReadResult/mask specification into the controller.
+            0x4016          => ReadResult::partial_open_bus(mem.ports.joypad1.read_status() as u8, 0b0000_0001),
+            0x4017          => ReadResult::partial_open_bus(mem.ports.joypad2.read_status() as u8, 0b0000_0001),
+            0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
+            0x4020..=0xFFFF => self.read_from_cartridge_space(&mut mem.mapper_params, address.to_raw()),
+        }
+    }
+
+    #[inline]
+    #[rustfmt::skip]
+    #[allow(clippy::too_many_arguments)]
+    fn cpu_write(&mut self, mem: &mut Memory, address: CpuAddress, value: u8) {
+        // TODO: Move this into mapper, right after cpu_write() is called?
+        self.on_cpu_write(&mut mem.mapper_params, address, value);
+        match address.to_raw() {
+            0x0000..=0x07FF => mem.cpu_internal_ram[address.to_usize()] = value,
+            0x0800..=0x1FFF => mem.cpu_internal_ram[address.to_usize() & 0x07FF] = value,
+            0x2000..=0x3FFF => match address.to_raw() & 0x2007 {
+                0x2000 => mem.ppu_regs.write_ctrl(value),
+                0x2001 => mem.ppu_regs.write_mask(value),
+                0x2002 => mem.ppu_regs.write_ppu_io_bus(value),
+                0x2003 => mem.ppu_regs.write_oam_addr(value),
+                0x2004 => mem.ppu_regs.write_oam_data(&mut mem.oam, value),
+                0x2005 => mem.ppu_regs.write_scroll(value),
+                0x2006 => {
+                    mem.ppu_regs.write_ppu_addr(value);
+                    if mem.ppu_regs().write_toggle() == WriteToggle::FirstByte {
+                        self.on_ppu_address_change(&mut mem.mapper_params, mem.ppu_regs.current_address());
+                    }
+                }
+                0x2007 => {
+                    self.ppu_write(mem, mem.ppu_regs.current_address(), value);
+                    mem.ppu_regs.write_ppu_data(value);
+                    self.on_ppu_address_change(&mut mem.mapper_params, mem.ppu_regs.current_address());
+                }
+                _ => unreachable!(),
+            }
+            0x4000          => mem.apu_regs.pulse_1.write_control_byte(value),
+            0x4001          => mem.apu_regs.pulse_1.write_sweep_byte(value),
+            0x4002          => mem.apu_regs.pulse_1.write_timer_low_byte(value),
+            0x4003          => mem.apu_regs.pulse_1.write_length_and_timer_high_byte(value),
+            0x4004          => mem.apu_regs.pulse_2.write_control_byte(value),
+            0x4005          => mem.apu_regs.pulse_2.write_sweep_byte(value),
+            0x4006          => mem.apu_regs.pulse_2.write_timer_low_byte(value),
+            0x4007          => mem.apu_regs.pulse_2.write_length_and_timer_high_byte(value),
+            0x4008          => mem.apu_regs.triangle.write_control_byte(value),
+            0x4009          => { /* Unused. */ }
+            0x400A          => mem.apu_regs.triangle.write_timer_low_byte(value),
+            0x400B          => mem.apu_regs.triangle.write_length_and_timer_high_byte(value),
+            0x400C          => mem.apu_regs.noise.write_control_byte(value),
+            0x400D          => { /* Unused. */ }
+            0x400E          => mem.apu_regs.noise.write_loop_and_period_byte(value),
+            0x400F          => mem.apu_regs.noise.write_length_byte(value),
+            0x4010          => mem.apu_regs.dmc.write_control_byte(value),
+            0x4011          => mem.apu_regs.dmc.write_volume(value),
+            0x4012          => mem.apu_regs.dmc.write_sample_start_address(value),
+            0x4013          => mem.apu_regs.dmc.write_sample_length(value),
+            0x4014          => mem.oam_dma.prepare_to_start(value),
+            0x4015          => mem.apu_regs.write_status_byte(&mut mem.dmc_dma, value),
+            0x4016          => mem.ports_mut().change_strobe(value),
+            0x4017          => mem.apu_regs_mut().write_frame_counter(value),
+            0x4018..=0x401F => { /* CPU Test Mode not yet supported. */ }
+            0x4020..=0xFFFF => {
+                // TODO: Verify if bus conflicts only occur for address >= 0x6000.
+                let value = if self.has_bus_conflicts() == HasBusConflicts::Yes {
+                    let rom_value = self.cpu_peek(mem, address);
+                    rom_value.bus_conflict(value)
+                } else {
+                    value
+                };
+
+                if matches!(address.to_raw(), 0x6000..=0xFFFF) {
+                    mem.mapper_params_mut().prg_memory.write(address, value);
+                }
+
+                self.write_register(&mut mem.mapper_params, address.to_raw(), value);
+            }
+        }
+    }
+
     fn ppu_peek(&self, mem: &Memory, address: PpuAddress) -> PpuPeek {
         match address.to_u16() {
             0x0000..=0x1FFF => mem.mapper_params.peek_chr(&mem.ciram, address),
             0x2000..=0x3EFF => self.peek_name_table_byte(&mem.mapper_params, &mem.ciram, address),
             0x3F00..=0x3FFF => self.peek_palette_table_byte(&mem.palette_ram, address),
+            0x4000..=0xFFFF => unreachable!(),
+        }
+    }
+
+    #[inline]
+    fn ppu_read(&mut self, mem: &mut Memory, address: PpuAddress, rendering: bool) -> PpuPeek {
+        if rendering {
+            self.on_ppu_address_change(&mut mem.mapper_params, address);
+        }
+
+        let result = self.ppu_peek(mem, address);
+        self.on_ppu_read(&mut mem.mapper_params, address, result.value());
+        result
+    }
+
+    #[inline]
+    fn ppu_write(&mut self, mem: &mut Memory, address: PpuAddress, value: u8) {
+        match address.to_u16() {
+            0x0000..=0x1FFF => mem.mapper_params.write_chr(&mut mem.ciram, address, value),
+            0x2000..=0x3EFF => self.write_name_table_byte(&mut mem.mapper_params, &mut mem.ciram, address, value),
+            0x3F00..=0x3FFF => self.write_palette_table_byte(&mut mem.palette_ram, address, value),
             0x4000..=0xFFFF => unreachable!(),
         }
     }
@@ -250,139 +381,6 @@ pub trait Mapper {
 
     fn supported(self) -> LookupResult where Self: Sized, Self: 'static {
         LookupResult::Supported(Box::new(self))
-    }
-}
-
-#[inline]
-#[rustfmt::skip]
-pub fn cpu_read(mem: &mut Memory, address: CpuAddress) -> ReadResult {
-    match address.to_raw() {
-        0x0000..=0x07FF => ReadResult::full(mem.cpu_internal_ram()[address.to_usize()]),
-        0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[address.to_usize() & 0x07FF]),
-        0x2000..=0x3FFF => {
-            ReadResult::full(match address.to_raw() & 0x2007 {
-                0x2000 => mem.ppu_regs.peek_ppu_io_bus(),
-                0x2001 => mem.ppu_regs.peek_ppu_io_bus(),
-                0x2002 => mem.ppu_regs.read_status(),
-                0x2003 => mem.ppu_regs.peek_ppu_io_bus(),
-                0x2004 => mem.ppu_regs.read_oam_data(&mem.oam),
-                0x2005 => mem.ppu_regs.peek_ppu_io_bus(),
-                0x2006 => mem.ppu_regs.peek_ppu_io_bus(),
-                0x2007 => {
-                    let current_address = mem.ppu_regs.current_address();
-                    let old_value = ppu_read(mem, current_address, false).value();
-                    let old_value = mem.ppu_regs.peek_ppu_data(old_value);
-                    mem.ppu_regs.ppu_io_bus.update_from_read(old_value);
-                    let data = ppu_read(mem, mem.ppu_regs.current_address().to_pending_data_source(), false).value();
-                    let data = mem.ppu_regs.read_ppu_data(data);
-                    mem.mapper.on_ppu_address_change(&mut mem.mapper_params, mem.ppu_regs.current_address());
-                    data
-                }
-                _ => unreachable!(),
-            })
-        }
-        0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
-        0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
-        0x4015          => ReadResult::full(mem.apu_regs.read_status().to_u8()),
-        // TODO: Move ReadResult/mask specification into the controller.
-        0x4016          => ReadResult::partial_open_bus(mem.ports.joypad1.read_status() as u8, 0b0000_0001),
-        0x4017          => ReadResult::partial_open_bus(mem.ports.joypad2.read_status() as u8, 0b0000_0001),
-        0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
-        0x4020..=0xFFFF => mem.mapper.read_from_cartridge_space(&mut mem.mapper_params, address.to_raw()),
-    }
-}
-
-
-#[inline]
-#[rustfmt::skip]
-#[allow(clippy::too_many_arguments)]
-pub fn cpu_write(mem: &mut Memory, address: CpuAddress, value: u8) {
-    // TODO: Move this into mapper, right after cpu_write() is called?
-    mem.mapper.on_cpu_write(&mut mem.mapper_params, address, value);
-    match address.to_raw() {
-        0x0000..=0x07FF => mem.cpu_internal_ram[address.to_usize()] = value,
-        0x0800..=0x1FFF => mem.cpu_internal_ram[address.to_usize() & 0x07FF] = value,
-        0x2000..=0x3FFF => match address.to_raw() & 0x2007 {
-            0x2000 => mem.ppu_regs.write_ctrl(value),
-            0x2001 => mem.ppu_regs.write_mask(value),
-            0x2002 => mem.ppu_regs.write_ppu_io_bus(value),
-            0x2003 => mem.ppu_regs.write_oam_addr(value),
-            0x2004 => mem.ppu_regs.write_oam_data(&mut mem.oam, value),
-            0x2005 => mem.ppu_regs.write_scroll(value),
-            0x2006 => {
-                mem.ppu_regs.write_ppu_addr(value);
-                if mem.ppu_regs().write_toggle() == WriteToggle::FirstByte {
-                    mem.mapper.on_ppu_address_change(&mut mem.mapper_params, mem.ppu_regs.current_address());
-                }
-            }
-            0x2007 => {
-                ppu_write(mem, mem.ppu_regs.current_address(), value);
-                mem.ppu_regs.write_ppu_data(value);
-                mem.mapper.on_ppu_address_change(&mut mem.mapper_params, mem.ppu_regs.current_address());
-            }
-            _ => unreachable!(),
-        }
-        0x4000          => mem.apu_regs.pulse_1.write_control_byte(value),
-        0x4001          => mem.apu_regs.pulse_1.write_sweep_byte(value),
-        0x4002          => mem.apu_regs.pulse_1.write_timer_low_byte(value),
-        0x4003          => mem.apu_regs.pulse_1.write_length_and_timer_high_byte(value),
-        0x4004          => mem.apu_regs.pulse_2.write_control_byte(value),
-        0x4005          => mem.apu_regs.pulse_2.write_sweep_byte(value),
-        0x4006          => mem.apu_regs.pulse_2.write_timer_low_byte(value),
-        0x4007          => mem.apu_regs.pulse_2.write_length_and_timer_high_byte(value),
-        0x4008          => mem.apu_regs.triangle.write_control_byte(value),
-        0x4009          => { /* Unused. */ }
-        0x400A          => mem.apu_regs.triangle.write_timer_low_byte(value),
-        0x400B          => mem.apu_regs.triangle.write_length_and_timer_high_byte(value),
-        0x400C          => mem.apu_regs.noise.write_control_byte(value),
-        0x400D          => { /* Unused. */ }
-        0x400E          => mem.apu_regs.noise.write_loop_and_period_byte(value),
-        0x400F          => mem.apu_regs.noise.write_length_byte(value),
-        0x4010          => mem.apu_regs.dmc.write_control_byte(value),
-        0x4011          => mem.apu_regs.dmc.write_volume(value),
-        0x4012          => mem.apu_regs.dmc.write_sample_start_address(value),
-        0x4013          => mem.apu_regs.dmc.write_sample_length(value),
-        0x4014          => mem.oam_dma.prepare_to_start(value),
-        0x4015          => mem.apu_regs.write_status_byte(&mut mem.dmc_dma, value),
-        0x4016          => mem.ports_mut().change_strobe(value),
-        0x4017          => mem.apu_regs_mut().write_frame_counter(value),
-        0x4018..=0x401F => { /* CPU Test Mode not yet supported. */ }
-        0x4020..=0xFFFF => {
-            // TODO: Verify if bus conflicts only occur for address >= 0x6000.
-            let value = if mem.mapper().has_bus_conflicts() == HasBusConflicts::Yes {
-                let rom_value = mem.mapper().cpu_peek(mem, address);
-                rom_value.bus_conflict(value)
-            } else {
-                value
-            };
-
-            if matches!(address.to_raw(), 0x6000..=0xFFFF) {
-                mem.mapper_params_mut().prg_memory.write(address, value);
-            }
-
-            mem.mapper.write_register(&mut mem.mapper_params, address.to_raw(), value);
-        }
-    }
-}
-
-#[inline]
-pub fn ppu_read(mem: &mut Memory, address: PpuAddress, rendering: bool) -> PpuPeek {
-    if rendering {
-        mem.mapper.on_ppu_address_change(&mut mem.mapper_params, address);
-    }
-
-    let result = mem.mapper.ppu_peek(mem, address);
-    mem.mapper.on_ppu_read(&mut mem.mapper_params, address, result.value());
-    result
-}
-
-#[inline]
-pub fn ppu_write(mem: &mut Memory, address: PpuAddress, value: u8) {
-    match address.to_u16() {
-        0x0000..=0x1FFF => mem.mapper_params.write_chr(&mut mem.ciram, address, value),
-        0x2000..=0x3EFF => mem.mapper.write_name_table_byte(&mut mem.mapper_params, &mut mem.ciram, address, value),
-        0x3F00..=0x3FFF => mem.mapper.write_palette_table_byte(&mut mem.palette_ram, address, value),
-        0x4000..=0xFFFF => unreachable!(),
     }
 }
 

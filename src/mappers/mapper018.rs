@@ -1,4 +1,5 @@
 use crate::mapper::*;
+use crate::memory::memory::Memory;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
@@ -43,13 +44,13 @@ pub struct Mapper018 {
 }
 
 impl Mapper for Mapper018 {
-    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         // Disch: When enabled, the IRQ counter counts down every CPU cycle.
         //        When it wraps, an IRQ is generated.
         if self.irq_enabled {
             let mut new_counter = self.irq_counter & self.irq_counter_mask;
             if new_counter == 0 {
-                params.set_irq_pending(true);
+                mem.mapper_params.set_irq_pending(true);
             }
 
             new_counter -= 1;

@@ -1,6 +1,7 @@
 use ux::u12;
 
 use crate::mapper::*;
+use crate::memory::memory::Memory;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(80 * KIBIBYTE)
@@ -61,10 +62,10 @@ impl Mapper for Mapper043 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, params: &mut MapperParams, _cycle: i64) {
+    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         if self.irq_enabled {
             self.irq_counter = self.irq_counter.wrapping_add(1.into());
-            params.set_irq_pending(self.irq_counter == 0.into());
+            mem.mapper_params.set_irq_pending(self.irq_counter == 0.into());
         }
     }
 
