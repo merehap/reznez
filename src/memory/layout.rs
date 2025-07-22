@@ -99,7 +99,7 @@ impl Layout {
             prg_layouts,
             self.prg_layout_index,
             cartridge.prg_rom().clone(),
-            self.prg_rom_outer_bank_layout.outer_bank_count(prg_rom_size),
+            self.prg_rom_outer_bank_layout,
             RawMemory::new(cartridge.prg_work_ram_size()),
             SaveRam::open(&cartridge.path().to_prg_save_ram_file_path(), cartridge.prg_save_ram_size(), cartridge.allow_saving()),
             prg_bank_registers,
@@ -422,7 +422,7 @@ impl NameTableMirroring {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-enum OuterBankLayout {
+pub enum OuterBankLayout {
     ExactCount(NonZeroU8),
     Size(u32),
 }
@@ -430,7 +430,7 @@ enum OuterBankLayout {
 impl OuterBankLayout {
     const SINGLE_BANK: Self = Self::ExactCount(NonZeroU8::new(1).unwrap());
 
-    fn outer_bank_count(self, memory_size: u32) -> NonZeroU8 {
+    pub fn outer_bank_count(self, memory_size: u32) -> NonZeroU8 {
         match self {
             Self::ExactCount(count) => count,
             Self::Size(size) => {

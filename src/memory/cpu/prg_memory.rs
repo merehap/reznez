@@ -1,5 +1,3 @@
-use std::num::NonZeroU8;
-
 use log::warn;
 
 use crate::mapper::{BankIndex, PrgBankRegisterId, ReadWriteStatusRegisterId};
@@ -8,6 +6,7 @@ use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, MemoryT
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory_map::{PrgMemoryMap, PrgIndex};
+use crate::memory::layout::OuterBankLayout;
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray, SaveRam};
 use crate::memory::read_result::ReadResult;
 use crate::memory::window::{ReadWriteStatusInfo, PrgWindow};
@@ -31,7 +30,7 @@ impl PrgMemory {
         layouts: Vec<PrgLayout>,
         layout_index: u8,
         rom: RawMemory,
-        rom_outer_bank_count: NonZeroU8,
+        rom_outer_bank_layout: OuterBankLayout,
         work_ram: RawMemory,
         save_ram: SaveRam,
         regs: PrgBankRegisters,
@@ -61,6 +60,7 @@ impl PrgMemory {
                     configured in the Layout for this mapper.");
         }
 
+        let rom_outer_bank_count = rom_outer_bank_layout.outer_bank_count(rom.size());
         let rom_outer_bank_size = rom.size() / rom_outer_bank_count.get() as u32;
         let memory_maps = layouts.iter().map(|initial_layout| PrgMemoryMap::new(
             *initial_layout, rom_outer_bank_size, rom_bank_size, work_ram.size(), save_ram.size(), &regs,
