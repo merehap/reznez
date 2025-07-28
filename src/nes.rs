@@ -415,10 +415,10 @@ impl Nes {
                             (BankLocation::Ciram(curr), BankLocation::Ciram(prev)) =>
                                 info!("BankRegister {id:?} changed to Ciram{curr:?}. Previously: Ciram{prev:?}"),
                         }
-
-                        *latest_bank_location = prg_registers[i];
                     }
                 }
+
+                latest.prg_registers = *prg_registers;
             }
 
             let chr_registers = mapper_params.chr_memory().bank_registers().registers();
@@ -436,10 +436,10 @@ impl Nes {
                             (BankLocation::Ciram(curr), BankLocation::Ciram(prev)) =>
                                 info!("BankRegister {id:?} changed to Ciram{curr:?}. Previously: Ciram{prev:?}"),
                         }
-
-                        *latest_bank_location = chr_registers[i];
                     }
                 }
+
+                latest.chr_registers = *chr_registers;
             }
 
             let meta_registers = mapper_params.chr_memory().bank_registers().meta_registers();
