@@ -1,8 +1,6 @@
 use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
-    // TODO: Verify if this is necessary. Might only be used for NINA-001.
-    .override_chr_bank_register(C1, -1)
     // Oversize definition for BxROM. The actual BNROM cartridge only supports 128KiB.
     .prg_rom_max_size(8192 * KIBIBYTE)
     .prg_layout(&[
