@@ -333,7 +333,7 @@ pub trait Mapper {
                 left_padding_len = 0;
                 right_padding_len = 0;
             } else {
-                let padding_size = window_size - 2 - u16::try_from(bank_string.len()).unwrap();
+                let padding_size = window_size - 2u16.saturating_sub(u16::try_from(bank_string.len()).unwrap());
                 left_padding_len = padding_size / 2;
                 right_padding_len = padding_size - left_padding_len;
             }
@@ -364,7 +364,7 @@ pub trait Mapper {
 
             let window_size = 1;
 
-            let padding_size = 5 * window_size - 2 - u16::try_from(bank_string.len()).unwrap();
+            let padding_size = 5 * window_size - 2u16.saturating_sub(u16::try_from(bank_string.len()).unwrap());
             assert!(padding_size < 100);
             let left_padding_len = padding_size / 2;
             let right_padding_len = padding_size - left_padding_len;
