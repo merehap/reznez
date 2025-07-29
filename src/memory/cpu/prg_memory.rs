@@ -119,6 +119,11 @@ impl PrgMemory {
         }
     }
 
+    pub fn peek_raw_rom(&self, index: u32) -> ReadResult {
+        assert_eq!(self.rom.len(), 1);
+        ReadResult::full(self.rom[0][index % self.rom[0].size()])
+    }
+
     pub fn write(&mut self, address: CpuAddress, value: u8) {
         let (prg_index, read_write_status) =
             self.memory_maps[self.layout_index as usize].index_for_address(address);

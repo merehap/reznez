@@ -354,7 +354,6 @@ impl Mapper005 {
         }
     }
 
-
     // Write 0x5101
     fn set_chr_layout(&mut self, params: &mut MapperParams, value: u8) {
         self.chr_window_mode = CHR_WINDOW_MODES[usize::from(value & 0b11)];

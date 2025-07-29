@@ -45,11 +45,15 @@ impl NameTableMirroring {
     }
 
     pub fn is_vertical(self) -> bool {
-        self == NameTableMirroring::VERTICAL
+        self == Self::VERTICAL
     }
 
     pub fn is_horizontal(self) -> bool {
-        self == NameTableMirroring::HORIZONTAL
+        self == Self::HORIZONTAL
+    }
+
+    pub fn is_regular_one_screen(self) -> bool {
+        self == Self::ONE_SCREEN_LEFT_BANK || self == Self::ONE_SCREEN_RIGHT_BANK
     }
 
     pub fn is_four_screen(self) -> bool {
