@@ -2,10 +2,10 @@ use log::warn;
 
 use crate::mapper::{BankIndex, PrgBankRegisterId, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank::{PrgBank, RomRamModeRegisterId};
-use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, MemoryType};
+use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, MemType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
-use crate::memory::cpu::prg_memory_map::{PrgMemoryMap, PrgIndex};
+use crate::memory::cpu::prg_memory_map::PrgMemoryMap;
 use crate::memory::layout::OuterBankLayout;
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray, SaveRam};
 use crate::memory::read_result::ReadResult;
@@ -101,19 +101,19 @@ impl PrgMemory {
     }
 
     pub fn peek(&self, address: CpuAddress) -> ReadResult {
-        let (prg_index, read_write_status) =
+        let (prg_source_and_index, read_write_status) =
             self.memory_maps[self.layout_index as usize].index_for_address(address);
         if read_write_status == ReadWriteStatus::ReadOnlyZeros {
             ReadResult::full(0)
         } else {
-            match prg_index {
-                Some(PrgIndex::Rom(index)) if read_write_status.is_readable() =>
+            match prg_source_and_index {
+                Some((MemType::Rom, index)) if read_write_status.is_readable() =>
                     ReadResult::full(self.rom[self.rom_outer_bank_index as usize][index]),
-                Some(PrgIndex::WorkRam(index)) if read_write_status.is_readable() =>
+                Some((MemType::WorkRam, index)) if read_write_status.is_readable() =>
                     ReadResult::full(self.work_ram[index]),
-                Some(PrgIndex::SaveRam(index)) if read_write_status.is_readable() =>
+                Some((MemType::SaveRam, index)) if read_write_status.is_readable() =>
                     ReadResult::full(self.save_ram[index]),
-                None | Some(PrgIndex::Rom(_) | PrgIndex::WorkRam(_) | PrgIndex::SaveRam(_)) =>
+                None | Some((MemType::Rom | MemType::WorkRam | MemType::SaveRam, _)) =>
                     ReadResult::OPEN_BUS,
             }
         }
@@ -125,13 +125,13 @@ impl PrgMemory {
     }
 
     pub fn write(&mut self, address: CpuAddress, value: u8) {
-        let (prg_index, read_write_status) =
+        let (prg_source_and_index, read_write_status) =
             self.memory_maps[self.layout_index as usize].index_for_address(address);
         if read_write_status.is_writable() {
-            match prg_index {
-                None | Some(PrgIndex::Rom(_)) => unreachable!(),
-                Some(PrgIndex::WorkRam(index)) => self.work_ram[index] = value,
-                Some(PrgIndex::SaveRam(index)) => self.save_ram[index] = value,
+            match prg_source_and_index {
+                None | Some((MemType::Rom, _)) => unreachable!(),
+                Some((MemType::WorkRam, index)) => self.work_ram[index] = value,
+                Some((MemType::SaveRam, index)) => self.save_ram[index] = value,
             }
         }
     }
@@ -159,7 +159,7 @@ impl PrgMemory {
         self.regs.set_read_write_status(id, read_write_status);
     }
 
-    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemoryType) {
+    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemType) {
         self.regs.set_rom_ram_mode(id, rom_ram_mode);
         self.update_page_ids();
     }

@@ -1,6 +1,6 @@
 use crate::memory::bank::bank_index::{BankIndex, PrgBankRegisters, PrgBankRegisterId, MetaRegisterId, ReadWriteStatus};
 
-use crate::memory::bank::bank_index::{BankLocation, MemoryType};
+use crate::memory::bank::bank_index::{BankLocation, MemType};
 
 use super::bank_index::{ChrBankRegisterId, ChrBankRegisters};
 
@@ -82,11 +82,11 @@ impl PrgBank {
         }
     }
 
-    pub fn memory_type(&self, regs: &PrgBankRegisters) -> Option<MemoryType> {
+    pub fn memory_type(&self, regs: &PrgBankRegisters) -> Option<MemType> {
         match self {
             PrgBank::Empty => None,
-            PrgBank::Rom(..) => Some(MemoryType::Rom),
-            PrgBank::Ram(..) | PrgBank::WorkRam(..) => Some(MemoryType::Ram),
+            PrgBank::Rom(..) => Some(MemType::Rom),
+            PrgBank::Ram(..) | PrgBank::WorkRam(..) => Some(MemType::WorkRam),
             PrgBank::RomRam(_, _, mode) => Some(regs.rom_ram_mode(*mode)),
         }
     }
@@ -98,7 +98,7 @@ impl PrgBank {
             // RAM with no status register is always writable.
             PrgBank::Ram(_, None) | PrgBank::WorkRam(_, None) => true,
             PrgBank::RomRam(_, status_register_id, rom_ram_mode) =>
-                registers.rom_ram_mode(rom_ram_mode) == MemoryType::Ram &&
+                registers.rom_ram_mode(rom_ram_mode) == MemType::WorkRam &&
                     registers.read_write_status(status_register_id) == ReadWriteStatus::ReadWrite,
             PrgBank::Ram(_, Some(status_register_id)) | PrgBank::WorkRam(_, Some(status_register_id)) =>
                 registers.read_write_status(status_register_id) == ReadWriteStatus::ReadWrite,

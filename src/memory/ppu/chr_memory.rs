@@ -4,7 +4,7 @@ use log::warn;
 
 use crate::mapper::{BankIndex, ChrBank, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank::RomRamModeRegisterId;
-use crate::memory::bank::bank_index::{ChrBankRegisters, MemoryType};
+use crate::memory::bank::bank_index::{ChrBankRegisters, MemType};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::chr_memory_map::{ChrMemoryMap, ChrMapping, ChrMemoryIndex};
@@ -178,7 +178,7 @@ impl ChrMemory {
         }
     }
 
-    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemoryType) {
+    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemType) {
         self.regs.set_rom_ram_mode(id, rom_ram_mode);
         self.update_page_ids();
     }

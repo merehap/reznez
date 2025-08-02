@@ -1,6 +1,6 @@
 use crate::mapper::{BankIndex, ChrBank, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus};
 use crate::memory::bank::bank::ChrBankLocation;
-use crate::memory::bank::bank_index::{ChrBankRegisters, MemoryType};
+use crate::memory::bank::bank_index::{ChrBankRegisters, MemType};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::window::ChrWindowSize;
@@ -182,8 +182,9 @@ impl ChrMapping {
                     ChrBank::Ram(_, Some(status_register)) => (ChrPageId::Ram { page_number, bank_index }, regs.read_write_status(*status_register)),
                     ChrBank::RomRam(_, rom_ram_register_id) => {
                         match regs.rom_ram_mode(*rom_ram_register_id) {
-                            MemoryType::Rom => (ChrPageId::Rom { page_number, bank_index }, ReadWriteStatus::ReadOnly),
-                            MemoryType::Ram => (ChrPageId::Ram { page_number, bank_index }, ReadWriteStatus::ReadWrite),
+                            MemType::Rom => (ChrPageId::Rom { page_number, bank_index }, ReadWriteStatus::ReadOnly),
+                            MemType::WorkRam => (ChrPageId::Ram { page_number, bank_index }, ReadWriteStatus::ReadWrite),
+                            MemType::SaveRam => unimplemented!("SaveRam is not currently supported in RomRam banks."),
                         }
                     }
                     ChrBank::SaveRam(_) => todo!(),

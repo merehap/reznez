@@ -3,7 +3,7 @@ use crate::mapper::*;
 use crate::mappers::mmc3::mmc3::{self, Mapper004Mmc3, RegId};
 use crate::mappers::mmc3::sharp_irq_state::SharpIrqState;
 use crate::memory::bank::bank::RomRamModeRegisterId;
-use crate::memory::bank::bank_index::MemoryType;
+use crate::memory::bank::bank_index::MemType;
 
 pub const LAYOUT: Layout = mmc3::LAYOUT.into_builder_with_chr_layouts_cleared()
     .prg_rom_max_size(128 * KIBIBYTE)
@@ -41,7 +41,7 @@ impl Mapper for Mapper119 {
                 && let RegId::Chr(chr_id) = self.mmc3.selected_register_id() {
             let (use_ram, bank_index) = splitbits_named!(value, ".rbbbbbb");
             let rom_ram_reg_id = ROM_RAM_REGISTER_IDS[chr_id as usize];
-            let memory_type = if use_ram { MemoryType::Ram } else { MemoryType::Rom };
+            let memory_type = if use_ram { MemType::WorkRam } else { MemType::Rom };
 
             params.set_chr_register(chr_id, bank_index);
             params.set_rom_ram_mode(rom_ram_reg_id, memory_type);

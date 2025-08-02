@@ -1,5 +1,5 @@
 use crate::memory::bank::bank::PrgBank;
-use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, MemoryType};
+use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, MemType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::window::PrgWindowSize;
@@ -81,7 +81,7 @@ impl PrgMemoryMap {
         memory_map
     }
 
-    pub fn index_for_address(&self, address: CpuAddress) -> (Option<PrgIndex>, ReadWriteStatus) {
+    pub fn index_for_address(&self, address: CpuAddress) -> (Option<(MemType, PrgIndex)>, ReadWriteStatus) {
         let address = address.to_raw();
         assert!(matches!(address, 0x6000..=0xFFFF));
 
@@ -90,37 +90,19 @@ impl PrgMemoryMap {
         let offset = address % PAGE_SIZE;
 
         match &self.page_ids[mapping_index as usize] {
-            PrgPageIdSlot::Normal(page_id, read_write_status) => {
-                let prg_memory_index = page_id.map(|id| {
-                    match id {
-                        PrgPageId::Rom { page_number } => {
-                            PrgIndex::Rom(u32::from(page_number) * PAGE_SIZE as u32 + u32::from(offset))
-                        }
-                        PrgPageId::WorkRam { page_number } => {
-                            PrgIndex::WorkRam(u32::from(page_number) * PAGE_SIZE as u32 + u32::from(offset))
-                        }
-                        PrgPageId::SaveRam { page_number } => {
-                            PrgIndex::SaveRam(u32::from(page_number) * PAGE_SIZE as u32 + u32::from(offset))
-                        }
-                    }
+            PrgPageIdSlot::Normal(prg_source_and_page_number, read_write_status) => {
+                let prg_memory_index = prg_source_and_page_number.map(|(prg_source, page_number)| {
+                    let index = u32::from(page_number) * PAGE_SIZE as u32 + u32::from(offset);
+                    (prg_source, index)
                 });
                 (prg_memory_index, *read_write_status)
             }
             PrgPageIdSlot::Multi(page_ids) => {
                 let sub_mapping_index = offset / (KIBIBYTE as u16 / 8);
-                let (page_id, read_write_status, sub_page_offset) = page_ids[sub_mapping_index as usize];
-                let prg_memory_index = page_id.map(|id| {
-                    match id {
-                        PrgPageId::Rom { page_number } => {
-                            PrgIndex::Rom(u32::from(page_number) * PAGE_SIZE as u32 + (PAGE_SIZE as u32 / 64) * sub_page_offset as u32 + u32::from(offset))
-                        }
-                        PrgPageId::WorkRam { page_number } => {
-                            PrgIndex::WorkRam(u32::from(page_number) * PAGE_SIZE as u32 + (PAGE_SIZE as u32 / 64) * sub_page_offset as u32 + u32::from(offset))
-                        }
-                        PrgPageId::SaveRam { page_number } => {
-                            PrgIndex::SaveRam(u32::from(page_number) * PAGE_SIZE as u32 + (PAGE_SIZE as u32 / 64) * sub_page_offset as u32 + u32::from(offset))
-                        }
-                    }
+                let (prg_source_and_page_number, read_write_status, sub_page_offset) = page_ids[sub_mapping_index as usize];
+                let prg_memory_index = prg_source_and_page_number.map(|(source, page_number)| {
+                    let index = u32::from(page_number) * PAGE_SIZE as u32 + (PAGE_SIZE as u32 / 64) * sub_page_offset as u32 + u32::from(offset);
+                    (source, index)
                 });
                 (prg_memory_index, read_write_status)
             }
@@ -153,13 +135,6 @@ impl PrgMemoryMap {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum PrgIndex {
-    Rom(u32),
-    WorkRam(u32),
-    SaveRam(u32),
-}
-
 #[derive(Clone, Debug)]
 pub enum PrgMappingSlot {
     Normal(PrgMapping),
@@ -179,7 +154,7 @@ type PageNumberMask = u16;
 type SubPageOffset = u8;
 
 impl PrgMapping {
-    pub fn page_id(&self, regs: &PrgBankRegisters, save_ram_bank_count: u16) -> (Option<PrgPageId>, ReadWriteStatus) {
+    pub fn page_id(&self, regs: &PrgBankRegisters, save_ram_bank_count: u16) -> (Option<(MemType, PageNumber)>, ReadWriteStatus) {
         let (Ok(location), Some(memory_type)) = (self.bank.location(), self.bank.memory_type(regs)) else {
             return (None, ReadWriteStatus::Disabled);
         };
@@ -187,21 +162,22 @@ impl PrgMapping {
         let bank_index = location.bank_index(regs);
 
         let default_rw_status;
-        let page_id;
+        let prg_source_and_page_number;
         match memory_type {
-            MemoryType::Rom => {
+            MemType::Rom => {
                 default_rw_status = ReadWriteStatus::ReadOnly;
                 let page_number = ((self.rom_pages_per_bank * bank_index.to_raw()) & self.rom_page_number_mask) + self.page_offset;
-                page_id = PrgPageId::Rom { page_number };
+                prg_source_and_page_number = (MemType::Rom, page_number);
             }
-            MemoryType::Ram => {
+            // FIXME: Pull these out into separate cases, and handle the splitting earlier?
+            MemType::WorkRam | MemType::SaveRam => {
                 default_rw_status = ReadWriteStatus::ReadWrite;
                 let mut page_number = (bank_index.to_raw() & self.ram_page_number_mask) + self.page_offset;
                 if page_number < save_ram_bank_count {
-                    page_id = PrgPageId::SaveRam { page_number };
+                    prg_source_and_page_number = (MemType::SaveRam, page_number);
                 } else {
                     page_number -= save_ram_bank_count;
-                    page_id = PrgPageId::WorkRam { page_number };
+                    prg_source_and_page_number = (MemType::WorkRam, page_number);
                 }
             }
         }
@@ -210,19 +186,16 @@ impl PrgMapping {
             .map(|id| regs.read_write_status(id))
             .unwrap_or(default_rw_status);
 
-        (Some(page_id), read_write_status)
+        (Some(prg_source_and_page_number), read_write_status)
     }
 }
 
 #[derive(Clone, Debug)]
 pub enum PrgPageIdSlot {
-    Normal(Option<PrgPageId>, ReadWriteStatus),
-    Multi(Box<[(Option<PrgPageId>, ReadWriteStatus, SubPageOffset); PRG_SUB_SLOT_COUNT]>),
+    Normal(Option<PrgSourceAndPageNumber>, ReadWriteStatus),
+    Multi(Box<[(Option<PrgSourceAndPageNumber>, ReadWriteStatus, SubPageOffset); PRG_SUB_SLOT_COUNT]>),
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum PrgPageId {
-    Rom { page_number: u16 },
-    WorkRam { page_number: u16 },
-    SaveRam { page_number: u16 },
-}
+type PageNumber = u16;
+type PrgIndex = u32;
+type PrgSourceAndPageNumber = (MemType, PageNumber);

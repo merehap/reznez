@@ -12,7 +12,7 @@ pub use crate::memory::bank::bank::ReadWriteStatusRegisterId::*;
 pub use crate::memory::bank::bank::RomRamModeRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::PrgMemory;
-use crate::memory::cpu::prg_memory_map::{PrgPageId, PrgPageIdSlot};
+use crate::memory::cpu::prg_memory_map::PrgPageIdSlot;
 pub use crate::memory::layout::Layout;
 use crate::memory::memory::Memory;
 pub use crate::memory::ppu::chr_memory::ChrMemory;
@@ -35,7 +35,7 @@ use crate::memory::ppu::ciram::Ciram;
 use crate::ppu::register::ppu_registers::WriteToggle;
 
 use crate::memory::bank::bank::RomRamModeRegisterId;
-use crate::memory::bank::bank_index::MemoryType;
+use crate::memory::bank::bank_index::MemType;
 
 pub trait Mapper {
     // Should be const, but that's not yet allowed by Rust.
@@ -313,13 +313,13 @@ pub trait Mapper {
         let mut result = String::new();
         for prg_page_id_slot in prg_memory.current_memory_map().page_id_slots() {
             let bank_string = match prg_page_id_slot {
-                PrgPageIdSlot::Normal(page_id, _) => {
-                    match page_id {
+                PrgPageIdSlot::Normal(prg_source_and_page_number, _) => {
+                    match prg_source_and_page_number {
                         None => "E".to_string(),
                         // FIXME: This should be bank number, not page number.
-                        Some(PrgPageId::Rom { page_number }) => page_number.to_string(),
-                        Some(PrgPageId::WorkRam { page_number }) => format!("W{page_number}"),
-                        Some(PrgPageId::SaveRam { page_number }) => format!("S{page_number}"),
+                        Some((MemType::Rom, page_number)) => page_number.to_string(),
+                        Some((MemType::WorkRam, page_number)) => format!("W{page_number}"),
+                        Some((MemType::SaveRam, page_number)) => format!("S{page_number}"),
                     }
                 }
                 PrgPageIdSlot::Multi(_) => "M".to_string(),
@@ -482,7 +482,7 @@ impl MapperParams {
         }
     }
 
-    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemoryType) {
+    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemType) {
         self.prg_memory.set_rom_ram_mode(id, rom_ram_mode);
         self.chr_memory.set_rom_ram_mode(id, rom_ram_mode);
     }
