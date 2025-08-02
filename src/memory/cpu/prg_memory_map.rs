@@ -34,8 +34,7 @@ impl PrgMemoryMap {
         rom_page_number_mask &= rom_page_count - 1;
 
         let ram_page_count: u16 = ((ram_size + save_ram_size) / u32::from(PAGE_SIZE)).try_into().unwrap();
-        let mut ram_page_number_mask = 0b1111_1111_1111_1111;
-        ram_page_number_mask &= ram_page_count - 1;
+        let ram_page_number_mask = ram_page_count.saturating_sub(1);
 
         let mut page_mappings = Vec::with_capacity(PRG_SLOT_COUNT);
         let mut sub_page_mappings = Vec::with_capacity(PRG_SUB_SLOT_COUNT);
@@ -114,7 +113,12 @@ impl PrgMemoryMap {
     }
 
     pub fn update_page_ids(&mut self, regs: &PrgBankRegisters) {
-        let save_ram_bank_count = self.save_ram_size / (8 * KIBIBYTE as u16);
+        let save_ram_bank_count = if self.save_ram_size > 0 && (self.save_ram_size as u32) < 8 * KIBIBYTE {
+            1
+        } else {
+            self.save_ram_size / (8 * KIBIBYTE as u16)
+        };
+
         for i in 0..PRG_SLOT_COUNT {
             match &self.page_mappings[i] {
                 PrgMappingSlot::Normal(mapping) => {
@@ -155,7 +159,7 @@ type SubPageOffset = u8;
 
 impl PrgMapping {
     pub fn page_id(&self, regs: &PrgBankRegisters, save_ram_bank_count: u16) -> (Option<(MemType, PageNumber)>, ReadWriteStatus) {
-        let (Ok(location), Some(memory_type)) = (self.bank.location(), self.bank.memory_type(regs)) else {
+        let (Ok(location), Some(mem_type)) = (self.bank.location(), self.bank.memory_type(regs)) else {
             return (None, ReadWriteStatus::Disabled);
         };
 
@@ -163,7 +167,7 @@ impl PrgMapping {
 
         let default_rw_status;
         let prg_source_and_page_number;
-        match memory_type {
+        match mem_type {
             MemType::Rom => {
                 default_rw_status = ReadWriteStatus::ReadOnly;
                 let page_number = ((self.rom_pages_per_bank * bank_index.to_raw()) & self.rom_page_number_mask) + self.page_offset;

@@ -112,7 +112,7 @@ impl PrgMemory {
                 Some((MemType::WorkRam, index)) if read_write_status.is_readable() =>
                     ReadResult::full(self.work_ram[index]),
                 Some((MemType::SaveRam, index)) if read_write_status.is_readable() =>
-                    ReadResult::full(self.save_ram[index]),
+                    ReadResult::full(self.save_ram[index % self.save_ram.size()]),
                 None | Some((MemType::Rom | MemType::WorkRam | MemType::SaveRam, _)) =>
                     ReadResult::OPEN_BUS,
             }
@@ -131,7 +131,10 @@ impl PrgMemory {
             match prg_source_and_index {
                 None | Some((MemType::Rom, _)) => unreachable!(),
                 Some((MemType::WorkRam, index)) => self.work_ram[index] = value,
-                Some((MemType::SaveRam, index)) => self.save_ram[index] = value,
+                Some((MemType::SaveRam, index)) => {
+                    let index = index % self.save_ram.size();
+                    self.save_ram[index] = value;
+                }
             }
         }
     }

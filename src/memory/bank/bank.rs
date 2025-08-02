@@ -8,6 +8,7 @@ use super::bank_index::{ChrBankRegisterId, ChrBankRegisters};
 pub enum PrgBank {
     Empty,
     WorkRam(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
+    SaveRam(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
     Rom(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
     Ram(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
     RomRam(PrgBankLocation, ReadWriteStatusRegisterId, RomRamModeRegisterId),
@@ -16,6 +17,7 @@ pub enum PrgBank {
 impl PrgBank {
     pub const EMPTY: PrgBank = PrgBank::Empty;
     pub const WORK_RAM: PrgBank = PrgBank::WorkRam(PrgBankLocation::Fixed(BankIndex::from_u8(0)), None);
+    pub const SAVE_RAM: PrgBank = PrgBank::SaveRam(PrgBankLocation::Fixed(BankIndex::from_u8(0)), None);
     pub const ROM: PrgBank = PrgBank::Rom(PrgBankLocation::Fixed(BankIndex::from_u8(0)), None);
     pub const RAM: PrgBank = PrgBank::Ram(PrgBankLocation::Fixed(BankIndex::from_u8(0)), None);
     pub const ROM_RAM: PrgBank = PrgBank::RomRam(PrgBankLocation::Fixed(BankIndex::from_u8(0)), ReadWriteStatusRegisterId::S0, RomRamModeRegisterId::R0);
@@ -58,10 +60,10 @@ impl PrgBank {
     }
 
     pub fn location(self) -> Result<PrgBankLocation, String> {
+        use PrgBank::*;
         match self {
-            PrgBank::Rom(location, _) | PrgBank::Ram(location, _)  | PrgBank::RomRam(location, _, _) | PrgBank::WorkRam(location, _) => Ok(location),
-            PrgBank::Empty =>
-                Err(format!("Empty banks {self:?} don't have a bank location.")),
+            Rom(location, ..) | Ram(location, ..) | RomRam(location, ..) | WorkRam(location, ..) | SaveRam(location, ..) => Ok(location),
+            Empty => Err(format!("Empty banks {self:?} don't have a bank location.")),
         }
     }
 
@@ -77,7 +79,7 @@ impl PrgBank {
         match self {
             PrgBank::Empty => None,
             PrgBank::Rom(_, reg_id) => *reg_id,
-            PrgBank::Ram(_, reg_id) | PrgBank::WorkRam(_, reg_id) => *reg_id,
+            PrgBank::Ram(_, reg_id) | PrgBank::WorkRam(_, reg_id) | PrgBank::SaveRam(_, reg_id) => *reg_id,
             PrgBank::RomRam(_, reg_id, _) => Some(*reg_id),
         }
     }
@@ -87,20 +89,22 @@ impl PrgBank {
             PrgBank::Empty => None,
             PrgBank::Rom(..) => Some(MemType::Rom),
             PrgBank::Ram(..) | PrgBank::WorkRam(..) => Some(MemType::WorkRam),
+            PrgBank::SaveRam(..) => Some(MemType::SaveRam),
             PrgBank::RomRam(_, _, mode) => Some(regs.rom_ram_mode(*mode)),
         }
     }
 
     pub fn is_writable(self, registers: &PrgBankRegisters) -> bool {
+        use PrgBank::*;
         match self {
-            PrgBank::Empty => false,
-            PrgBank::Rom(..) => false,
+            Empty => false,
+            Rom(..) => false,
             // RAM with no status register is always writable.
-            PrgBank::Ram(_, None) | PrgBank::WorkRam(_, None) => true,
-            PrgBank::RomRam(_, status_register_id, rom_ram_mode) =>
+            Ram(_, None) | PrgBank::WorkRam(_, None) | PrgBank::SaveRam(_, None) => true,
+            RomRam(_, status_register_id, rom_ram_mode) =>
                 registers.rom_ram_mode(rom_ram_mode) == MemType::WorkRam &&
                     registers.read_write_status(status_register_id) == ReadWriteStatus::ReadWrite,
-            PrgBank::Ram(_, Some(status_register_id)) | PrgBank::WorkRam(_, Some(status_register_id)) =>
+            Ram(_, Some(status_register_id)) | WorkRam(_, Some(status_register_id)) | SaveRam(_, Some(status_register_id)) =>
                 registers.read_write_status(status_register_id) == ReadWriteStatus::ReadWrite,
         }
     }
@@ -112,7 +116,7 @@ impl PrgBank {
             // RomRam status registers are for RAM, not ROM.
             PrgBank::RomRam(loc, _, _) =>
                 PrgBank::Rom(loc, None),
-            PrgBank::Empty | PrgBank::WorkRam(..) =>
+            PrgBank::Empty | PrgBank::WorkRam(..) | PrgBank::SaveRam(..) =>
                 PrgBank::Empty,
         }
     }
