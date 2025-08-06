@@ -37,11 +37,9 @@ impl PrgMemoryMap {
         let ram_page_number_mask = ram_page_count.saturating_sub(1);
 
         let mut page_mappings = Vec::with_capacity(PRG_SLOT_COUNT);
-        let mut sub_page_mappings = Vec::with_capacity(PRG_SUB_SLOT_COUNT);
 
-        for window in initial_layout.windows() {
-            let bank = window.bank();
-
+        let mut windows = initial_layout.windows().iter();
+        while let Some(mut window) = windows.next() {
             let page_multiple = window.size().page_multiple();
             if page_multiple >= 1 {
                 let rom_page_number_mask = rom_page_number_mask & !(page_multiple - 1);
@@ -49,23 +47,29 @@ impl PrgMemoryMap {
                     // Mirror high pages to low ones if there isn't enough ROM.
                     let page_offset = page_offset % rom_page_count;
                     let mapping = PrgMapping {
-                        bank, rom_pages_per_bank, rom_page_number_mask, ram_page_number_mask, page_offset,
+                        bank: window.bank(), rom_pages_per_bank, rom_page_number_mask, ram_page_number_mask, page_offset,
                     };
                     page_mappings.push(PrgMappingSlot::Normal(mapping));
                 }
             } else {
-                for sub_page_offset in 0..window.size().sub_page_multiple() {
-                    let mapping = PrgMapping {
-                        bank, rom_pages_per_bank: 1, rom_page_number_mask, ram_page_number_mask, page_offset: 0,
-                    };
-                    sub_page_mappings.push((mapping, sub_page_offset));
+                let mut sub_page_mappings = Vec::with_capacity(PRG_SUB_SLOT_COUNT);
+                loop {
+                    for sub_page_offset in 0..window.size().sub_page_multiple() {
+                        let mapping = PrgMapping {
+                            bank: window.bank(), rom_pages_per_bank: 1, rom_page_number_mask, ram_page_number_mask, page_offset: 0,
+                        };
+                        sub_page_mappings.push((mapping, sub_page_offset));
+                    }
+
+                    if sub_page_mappings.len() >= PRG_SUB_SLOT_COUNT {
+                        break;
+                    }
+
+                    window = windows.next().unwrap();
                 }
 
-                assert!(sub_page_mappings.len() <= 64);
-                if sub_page_mappings.len() == 64 {
-                    page_mappings.push(PrgMappingSlot::Multi(Box::new(sub_page_mappings.try_into().unwrap())));
-                    sub_page_mappings = Vec::new();
-                }
+                assert_eq!(sub_page_mappings.len(), 64);
+                page_mappings.push(PrgMappingSlot::Multi(Box::new(sub_page_mappings.try_into().unwrap())));
             }
         }
 
