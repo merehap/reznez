@@ -243,7 +243,7 @@ impl PrgWindowSize {
     }
 
     pub fn sub_page_multiple(self) -> u8 {
-        u8::try_from(self.0 / PRG_SUB_PAGE_SIZE).unwrap()
+        u8::try_from((self.0 % PRG_PAGE_SIZE) / PRG_SUB_PAGE_SIZE).unwrap()
     }
 
     pub fn to_raw(self) -> u16 {
