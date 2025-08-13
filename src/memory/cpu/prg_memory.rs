@@ -1,4 +1,4 @@
-use log::warn;
+use log::{info, warn};
 
 use crate::mapper::{BankIndex, PrgBankRegisterId, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank::{PrgBank, RomRamModeRegisterId};
@@ -9,7 +9,7 @@ use crate::memory::cpu::prg_memory_map::PrgMemoryMap;
 use crate::memory::layout::OuterBankLayout;
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray, SaveRam};
 use crate::memory::read_result::ReadResult;
-use crate::memory::window::{ReadWriteStatusInfo, PrgWindow};
+use crate::memory::window::{PrgWindow, PrgWindowSize, ReadWriteStatusInfo};
 use crate::util::unit::KIBIBYTE;
 
 pub struct PrgMemory {
@@ -31,6 +31,7 @@ impl PrgMemory {
         layout_index: u8,
         rom: RawMemory,
         rom_outer_bank_layout: OuterBankLayout,
+        rom_bank_size_override: Option<PrgWindowSize>,
         work_ram: RawMemory,
         save_ram: SaveRam,
         regs: PrgBankRegisters,
@@ -54,7 +55,16 @@ impl PrgMemory {
             }
         }
 
-        let rom_bank_size = rom_bank_size.expect("at least one ROM window");
+        let mut rom_bank_size = rom_bank_size.expect("at least one ROM window");
+        if rom_bank_size < PrgWindowSize::MIN {
+            assert!(rom_bank_size_override.is_some());
+        }
+
+        if let Some(rom_bank_size_override) = rom_bank_size_override {
+            rom_bank_size = rom_bank_size_override;
+            println!("Overriding bank size to: {rom_bank_size:?}");
+        }
+
         if (!work_ram.is_empty() || !save_ram.is_empty()) && !ram_present_in_layout {
             warn!("The PRG RAM that was specified in the rom file will be ignored since it is not \
                     configured in the Layout for this mapper.");
@@ -107,8 +117,10 @@ impl PrgMemory {
             ReadResult::full(0)
         } else {
             match prg_source_and_index {
-                Some((MemType::Rom, index)) if read_write_status.is_readable() =>
-                    ReadResult::full(self.rom[self.rom_outer_bank_index as usize][index]),
+                Some((MemType::Rom, index)) if read_write_status.is_readable() => {
+                    //log::info!("ROM length: {:X} Index: {index:X}", self.rom[0].size());
+                    ReadResult::full(self.rom[self.rom_outer_bank_index as usize][index])
+                }
                 Some((MemType::WorkRam, index)) if read_write_status.is_readable() =>
                     ReadResult::full(self.work_ram[index]),
                 Some((MemType::SaveRam, index)) if read_write_status.is_readable() =>

@@ -3,6 +3,12 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     // Oversize definition. The actual cartridge only allows 64KiB.
     .prg_rom_max_size(8192 * KIBIBYTE)
+    .prg_rom_bank_size_override(32 * KIBIBYTE)
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM),
+        PrgWindow::new(0x8000, 0xEFFF, 28 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0xF000, 0xFFFF,  4 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
+    ])
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM),
         PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),

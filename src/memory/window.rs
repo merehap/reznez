@@ -52,13 +52,13 @@ impl PrgWindow {
     pub fn location(self) -> Result<PrgBankLocation, String> {
         use PrgBank::*;
         match self.bank {
-            Rom(location, _) | Ram(location, _) | RomRam(location, _, _) | WorkRam(location, _) | SaveRam(location, _) => Ok(location),
+            Rom(location, ..) | Ram(location, _) | RomRam(location, _, _) | WorkRam(location, _) | SaveRam(location, _) => Ok(location),
             Empty => Err(format!("Empty banks {:?} don't have a bank location.", self.bank)),
         }
     }
 
     pub const fn register_id(self) -> Option<PrgBankRegisterId> {
-        if let PrgBank::Rom(PrgBankLocation::Switchable(id), _) | PrgBank::Ram(PrgBankLocation::Switchable(id), _) = self.bank {
+        if let PrgBank::Rom(PrgBankLocation::Switchable(id), ..) | PrgBank::Ram(PrgBankLocation::Switchable(id), _) = self.bank {
             Some(id)
         } else {
             None
@@ -217,25 +217,26 @@ impl PrgWindowEnd {
 pub struct PrgWindowSize(u16);
 
 impl PrgWindowSize {
-    const fn new(size: u32, start: PrgWindowStart, end: PrgWindowEnd) -> Self {
+    pub const MIN: Self = Self(8 * KIBIBYTE as u16);
+
+    pub const fn from_raw(size: u32) -> Self {
         assert!(size >= KIBIBYTE / 8, "PrgWindow sizes must be at least 128 (0x80) bytes.");
         assert!(size <= 32 * KIBIBYTE, "PrgWindow sizes must be at most 32 kibibytes.");
+
         let size = size as u16;
-
-        if size >= PRG_PAGE_SIZE {
-            assert!(size.is_multiple_of(PRG_PAGE_SIZE),
-                "PrgWindow sizes larger than 8KiB must be multiples of 8 kibibytes.")
-        } else {
-            assert!(size.is_multiple_of(PRG_SUB_PAGE_SIZE),
-                "PrgWindow sizes smaller than 8KiB must be multiples of 128 bytes.")
-        }
-
-        assert!(end.0.get() > start.0,
-            "PrgWindow end address was less than its start address.");
-        assert!(end.0.get() - start.0 + 1 == size,
-            "PrgWindow size was must equal the end address minus the start address, plus one.");
+        assert!(size.is_multiple_of(PRG_SUB_PAGE_SIZE),
+            "PrgWindow sizes must be multiples of 128 bytes.");
 
         Self(size)
+    }
+
+    const fn new(size: u32, start: PrgWindowStart, end: PrgWindowEnd) -> Self {
+        assert!(end.0.get() > start.0,
+            "PrgWindow end address was less than its start address.");
+        assert!(end.0.get() - start.0 + 1 == size as u16,
+            "PrgWindow size was must equal the end address minus the start address, plus one.");
+
+        Self::from_raw(size)
     }
 
     pub fn page_multiple(self) -> u16 {

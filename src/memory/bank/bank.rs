@@ -5,11 +5,19 @@ use crate::memory::bank::bank_index::{BankLocation, MemType};
 use super::bank_index::{ChrBankRegisterId, ChrBankRegisters};
 
 #[derive(Clone, Copy, Debug)]
+pub enum TruncationSide {
+    // Ignore from the start of the bank if the window is not a multiple of the bank size.
+    Start,
+    // [Typical] Ignore from the end of the bank if the window is not a multiple of the bank size.
+    End,
+}
+
+#[derive(Clone, Copy, Debug)]
 pub enum PrgBank {
     Empty,
     WorkRam(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
     SaveRam(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
-    Rom(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
+    Rom(PrgBankLocation, Option<ReadWriteStatusRegisterId>, TruncationSide),
     Ram(PrgBankLocation, Option<ReadWriteStatusRegisterId>),
     RomRam(PrgBankLocation, ReadWriteStatusRegisterId, RomRamModeRegisterId),
 }
@@ -18,7 +26,7 @@ impl PrgBank {
     pub const EMPTY: PrgBank = PrgBank::Empty;
     pub const WORK_RAM: PrgBank = PrgBank::WorkRam(PrgBankLocation::Fixed(BankIndex::from_u8(0)), None);
     pub const SAVE_RAM: PrgBank = PrgBank::SaveRam(PrgBankLocation::Fixed(BankIndex::from_u8(0)), None);
-    pub const ROM: PrgBank = PrgBank::Rom(PrgBankLocation::Fixed(BankIndex::from_u8(0)), None);
+    pub const ROM: PrgBank = PrgBank::Rom(PrgBankLocation::Fixed(BankIndex::from_u8(0)), None, TruncationSide::End);
     pub const RAM: PrgBank = PrgBank::Ram(PrgBankLocation::Fixed(BankIndex::from_u8(0)), None);
     pub const ROM_RAM: PrgBank = PrgBank::RomRam(PrgBankLocation::Fixed(BankIndex::from_u8(0)), ReadWriteStatusRegisterId::S0, RomRamModeRegisterId::R0);
 
@@ -32,7 +40,7 @@ impl PrgBank {
 
     pub const fn status_register(self, id: ReadWriteStatusRegisterId) -> Self {
         match self {
-            PrgBank::Rom(location, None) => PrgBank::Rom(location, Some(id)),
+            PrgBank::Rom(location, None, truncation_side) => PrgBank::Rom(location, Some(id), truncation_side),
             PrgBank::WorkRam(location, None) => PrgBank::WorkRam(location, Some(id)),
             PrgBank::Ram(location, None) => PrgBank::Ram(location, Some(id)),
             PrgBank::RomRam(location, _, rom_ram) => PrgBank::RomRam(location, id, rom_ram),
@@ -67,20 +75,12 @@ impl PrgBank {
         }
     }
 
-    pub fn bank_location(self, registers: &PrgBankRegisters) -> Option<BankLocation> {
-        if let PrgBank::Rom(location, _) | PrgBank::Ram(location, _) | PrgBank::WorkRam(location, _) = self {
-            Some(location.bank_location(registers))
-        } else {
-            None
-        }
-    }
-
     pub fn status_register_id(&self) -> Option<ReadWriteStatusRegisterId> {
         match self {
             PrgBank::Empty => None,
-            PrgBank::Rom(_, reg_id) => *reg_id,
+            PrgBank::Rom(_, reg_id, ..) => *reg_id,
             PrgBank::Ram(_, reg_id) | PrgBank::WorkRam(_, reg_id) | PrgBank::SaveRam(_, reg_id) => *reg_id,
-            PrgBank::RomRam(_, reg_id, _) => Some(*reg_id),
+            PrgBank::RomRam(_, reg_id, ..) => Some(*reg_id),
         }
     }
 
@@ -91,6 +91,14 @@ impl PrgBank {
             PrgBank::Ram(..) | PrgBank::WorkRam(..) => Some(MemType::WorkRam),
             PrgBank::SaveRam(..) => Some(MemType::SaveRam),
             PrgBank::RomRam(_, _, mode) => Some(regs.rom_ram_mode(*mode)),
+        }
+    }
+
+    pub fn truncation_side(&self) -> TruncationSide {
+        if let PrgBank::Rom(_, _, truncation_side) = self {
+            *truncation_side
+        } else {
+            TruncationSide::End
         }
     }
 
@@ -111,11 +119,13 @@ impl PrgBank {
 
     pub fn as_rom(self) -> PrgBank {
         match self {
-            PrgBank::Rom(loc, status) | PrgBank::Ram(loc, status) =>
-                PrgBank::Rom(loc, status),
+            PrgBank::Rom(loc, status, truncation_side) =>
+                PrgBank::Rom(loc, status, truncation_side),
+            PrgBank::Ram(loc, status) =>
+                PrgBank::Rom(loc, status, TruncationSide::End),
             // RomRam status registers are for RAM, not ROM.
             PrgBank::RomRam(loc, _, _) =>
-                PrgBank::Rom(loc, None),
+                PrgBank::Rom(loc, None, TruncationSide::End),
             PrgBank::Empty | PrgBank::WorkRam(..) | PrgBank::SaveRam(..) =>
                 PrgBank::Empty,
         }
@@ -123,11 +133,11 @@ impl PrgBank {
 
     const fn set_location(self, location: PrgBankLocation) -> Self {
         match self {
-            PrgBank::Rom(_, None) => PrgBank::Rom(location, None),
+            PrgBank::Rom(_, None, truncation_side) => PrgBank::Rom(location, None, truncation_side),
             PrgBank::Ram(_, None) => PrgBank::Ram(location, None),
             PrgBank::RomRam(_, status, rom_ram_mode) => PrgBank::RomRam(location, status, rom_ram_mode),
             PrgBank::WorkRam(_, None) => PrgBank::WorkRam(location, None),
-            PrgBank::Rom(_, Some(_)) => panic!("ROM location must be set before ROM status register."),
+            PrgBank::Rom(_, Some(_), ..) => panic!("ROM location must be set before ROM status register."),
             PrgBank::Ram(_, Some(_)) => panic!("RAM location must be set before RAM status register."),
             PrgBank::WorkRam(_, Some(_)) => panic!("RAM location must be set before RAM status register."),
             _ => panic!("Bank indexes can only be used for ROM or RAM or Work RAM."),

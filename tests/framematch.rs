@@ -36,7 +36,8 @@ impl TestSummary {
 
         let expected_frames: DashMap<RomId, Vec<FrameEntry>> =
             expected_frames.entries_by_rom_id.clone().into_iter().collect();
-        roms.entries_by_rom_id.par_iter().for_each(|(rom_id, rom_entry)| {
+        roms.entries_by_rom_id.iter().for_each(|(rom_id, rom_entry)| {
+            log::info!("Testing {rom_id}");
             if rom_entry.is_ignored() {
                 test_results.insert(rom_id.clone(), TestStatus::RomIgnored);
             } else if let Some((rom_id, frame_entries)) = expected_frames.remove(rom_id) {

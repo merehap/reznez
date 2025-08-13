@@ -1,4 +1,4 @@
-use crate::memory::bank::bank::PrgBank;
+use crate::memory::bank::bank::{PrgBank, TruncationSide};
 use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, MemType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
@@ -8,6 +8,7 @@ use crate::util::unit::KIBIBYTE;
 const PRG_SLOT_COUNT: usize = 5;
 const PRG_SUB_SLOT_COUNT: usize = 64;
 const PAGE_SIZE: u16 = 8 * KIBIBYTE as u16;
+const SUB_PAGE_SIZE: u16 = PAGE_SIZE / 64;
 
 pub struct PrgMemoryMap {
     // 0x6000 through 0xFFFF
@@ -55,13 +56,19 @@ impl PrgMemoryMap {
                 }
 
                 page_offset = (page_offset + 1) % rom_page_count;
+                //println!("Page offset: {page_offset}");
             }
 
             let mut sub_page_mappings = Vec::with_capacity(PRG_SUB_SLOT_COUNT);
             loop {
-                for sub_page_offset in 0..window.size().sub_page_multiple() {
+                let starting_sub_page_offset = match window.bank().truncation_side() {
+                    TruncationSide::Start => 64 - window.size().sub_page_multiple(),
+                    TruncationSide::End => 0,
+                };
+                for sub_page_offset in starting_sub_page_offset..starting_sub_page_offset + window.size().sub_page_multiple() {
+                    //println!("Using page offset: {page_offset}");
                     let mapping = PrgMapping {
-                        bank: window.bank(), rom_pages_per_bank: 1, rom_page_number_mask, ram_page_number_mask, page_offset,
+                        bank: window.bank(), rom_pages_per_bank, rom_page_number_mask, ram_page_number_mask, page_offset,
                     };
                     sub_page_mappings.push((mapping, sub_page_offset));
                 }
@@ -102,6 +109,7 @@ impl PrgMemoryMap {
             PrgPageIdSlot::Normal(prg_source_and_page_number, read_write_status) => {
                 let prg_memory_index = prg_source_and_page_number.map(|(prg_source, page_number)| {
                     let index = u32::from(page_number) * PAGE_SIZE as u32 + u32::from(offset);
+                    //log::info!("Normal slot. Index: {index}, Page number: {page_number}");
                     (prg_source, index)
                 });
                 (prg_memory_index, *read_write_status)
@@ -109,8 +117,11 @@ impl PrgMemoryMap {
             PrgPageIdSlot::Multi(page_ids) => {
                 let sub_mapping_index = offset / (KIBIBYTE as u16 / 8);
                 let (prg_source_and_page_number, read_write_status, sub_page_offset) = page_ids[sub_mapping_index as usize];
+                let offset = offset % SUB_PAGE_SIZE;
                 let prg_memory_index = prg_source_and_page_number.map(|(source, page_number)| {
-                    let index = u32::from(page_number) * PAGE_SIZE as u32 + (PAGE_SIZE as u32 / 64) * sub_page_offset as u32 + u32::from(offset);
+                    let index = u32::from(page_number) * PAGE_SIZE as u32 + SUB_PAGE_SIZE as u32 * sub_page_offset as u32 + u32::from(offset);
+                    //log::info!("Sub slot. Index: {index:X}, Page number: {page_number:X}, Sub page: {sub_page_offset:X} Offset: {offset:X}");
+                    //log::info!("    Page block: {:X}, Sub page block: {:X}", u32::from(page_number) * PAGE_SIZE as u32, SUB_PAGE_SIZE as u32 * sub_page_offset as u32);
                     (source, index)
                 });
                 (prg_memory_index, read_write_status)
@@ -134,6 +145,7 @@ impl PrgMemoryMap {
                 PrgMappingSlot::Normal(mapping) => {
                     let (page_id, read_write_status) = mapping.page_id(regs, save_ram_bank_count);
                     self.page_ids[i] = PrgPageIdSlot::Normal(page_id, read_write_status);
+                    //log::info!("Page ID: {:?}", self.page_ids[i]);
                 }
                 PrgMappingSlot::Multi(mappings) => {
                     let mut page_ids = Vec::new();
@@ -143,6 +155,7 @@ impl PrgMemoryMap {
                     }
 
                     self.page_ids[i] = PrgPageIdSlot::Multi(Box::new(page_ids.try_into().unwrap()));
+                    //log::info!("Page ID: {:?}", self.page_ids[i]);
                 }
             }
         }
@@ -181,6 +194,7 @@ impl PrgMapping {
             MemType::Rom => {
                 default_rw_status = ReadWriteStatus::ReadOnly;
                 let page_number = ((self.rom_pages_per_bank * bank_index.to_raw()) & self.rom_page_number_mask) + self.page_offset;
+                //println!("Page number within mapping: {page_number}. Bank Index: {}. Page offset: {}", bank_index.to_raw(), self.page_offset);
                 prg_source_and_page_number = (MemType::Rom, page_number);
             }
             // FIXME: Pull these out into separate cases, and handle the splitting earlier?
