@@ -9,16 +9,6 @@ pub const PRG_ROM_CHUNK_LENGTH: usize = 16 * KIBIBYTE as usize;
 pub const CHR_ROM_CHUNK_LENGTH: usize = 8 * KIBIBYTE as usize;
 const INES_HEADER_CONSTANT: &[u8] = &[b'N', b'E', b'S', 0x1A];
 
-#[derive(Clone, Copy, Debug)]
-pub struct Nes2Fields {
-    pub submapper_number: u8,
-
-    pub prg_work: u32,
-    pub prg_save: u32,
-    pub chr_work: u32,
-    pub chr_save: u32,
-}
-
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct CartridgeHeader {
@@ -28,8 +18,14 @@ pub struct CartridgeHeader {
     console_type: ConsoleType,
 
     prg_rom_size: u32,
-    nes2_fields: Option<Nes2Fields>,
-    chr_rom_size: u32,
+    chr_rom_size: Option<u32>,
+
+    submapper_number: Option<u8>,
+
+    prg_work: Option<u32>,
+    prg_save: Option<u32>,
+    chr_work: Option<u32>,
+    chr_save: Option<u32>,
 }
 
 impl CartridgeHeader {
@@ -56,20 +52,22 @@ impl CartridgeHeader {
         }
 
         let mut mapper_number = u16::from((upper_mapper_number << 4) | lower_mapper_number);
-        let mut ram_sizes = None;
+        let mut submapper_number = None;
+        let mut prg_work = None;
+        let mut prg_save = None;
+        let mut chr_work = None;
+        let mut chr_save = None;
         if ines2_present {
             mapper_number |= u16::from(header[8] & 0b1111) << 8;
-            let submapper_number = header[8] >> 4;
+            submapper_number = Some(header[8] >> 4);
             let prg_sizes = splitbits!(min=u32, header[10], "sssswwww");
-            let prg_work = if prg_sizes.w > 0 { 64 << prg_sizes.w } else { 0 };
-            let prg_save = if prg_sizes.s > 0 { 64 << prg_sizes.s } else { 0 };
+            prg_work = Some(if prg_sizes.w > 0 { 64 << prg_sizes.w } else { 0 });
+            prg_save = Some(if prg_sizes.s > 0 { 64 << prg_sizes.s } else { 0 });
 
             // FIXME: This should be from rom[11], not rom[10].
             let chr_sizes = splitbits!(min=u32, header[10], "sssswwww");
-            let chr_work = if chr_sizes.w > 0 { 64 << chr_sizes.w } else { 0 };
-            let chr_save = if chr_sizes.s > 0 { 64 << chr_sizes.s } else { 0 };
-
-            ram_sizes = Some(Nes2Fields { submapper_number, prg_work, prg_save, chr_work, chr_save })
+            chr_work = Some(if chr_sizes.w > 0 { 64 << chr_sizes.w } else { 0 });
+            chr_save = Some(if chr_sizes.s > 0 { 64 << chr_sizes.s } else { 0 });
         }
 
         if play_choice_enabled {
@@ -91,12 +89,17 @@ impl CartridgeHeader {
 
         Ok(CartridgeHeader {
             mapper_number,
+            submapper_number,
             name_table_mirroring,
             has_persistent_memory,
             console_type: ConsoleType::Nes,
             prg_rom_size: prg_rom_chunk_count * PRG_ROM_CHUNK_LENGTH as u32,
-            chr_rom_size: chr_rom_chunk_count * CHR_ROM_CHUNK_LENGTH as u32,
-            nes2_fields: ram_sizes,
+            chr_rom_size: Some(chr_rom_chunk_count * CHR_ROM_CHUNK_LENGTH as u32),
+
+            prg_work,
+            prg_save,
+            chr_work,
+            chr_save,
         })
     }
 
@@ -104,12 +107,32 @@ impl CartridgeHeader {
         Some(self.mapper_number)
     }
 
+    pub fn submapper_number(&self) -> Option<u8> {
+        self.submapper_number
+    }
+
     pub fn prg_rom_size(&self) -> Option<u32> {
         Some(self.prg_rom_size)
     }
 
+    pub fn prg_work_ram_size(&self) -> Option<u32> {
+        self.prg_work
+    }
+
+    pub fn prg_save_ram_size(&self) -> Option<u32> {
+        self.prg_save
+    }
+
     pub fn chr_rom_size(&self) -> Option<u32> {
-        Some(self.chr_rom_size)
+        self.chr_rom_size
+    }
+
+    pub fn chr_work_ram_size(&self) -> Option<u32> {
+        self.chr_work
+    }
+
+    pub fn chr_save_ram_size(&self) -> Option<u32> {
+        self.chr_save
     }
 
     // FIXME: This returns None if there is no mirroring specified OR if the cartridge specifies FourScreen.
@@ -121,20 +144,20 @@ impl CartridgeHeader {
         Some(self.console_type)
     }
 
-    pub fn nes2_fields(&self) -> Option<Nes2Fields> {
-        self.nes2_fields
-    }
-
     pub fn chr_present(&self) -> bool {
-        if self.chr_rom_size > 0 {
+        if let Some(chr_rom) = self.chr_rom_size && chr_rom > 0 {
             return true;
         }
 
-        if let Some(ram_sizes) = &self.nes2_fields {
-            ram_sizes.chr_work > 0 || ram_sizes.chr_save > 0
-        } else {
-            false
+        if let Some(chr_work) = self.chr_work && chr_work > 0 {
+            return true;
         }
+
+        if let Some(chr_save) = self.chr_save && chr_save > 0 {
+            return true;
+        }
+
+        false
     }
 }
 

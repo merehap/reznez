@@ -57,18 +57,11 @@ impl Cartridge {
             rom.slice(chr_rom_start..rom.size()).to_raw_memory()
         };
 
-        let mut submapper_number = None;
-        let mut prg_work_ram_size = None;
-        let mut prg_save_ram_size = None;
-        let mut chr_work_ram_size = None;
-        let mut chr_save_ram_size = None;
-        if let Some(nes2_fields) = &header.nes2_fields() {
-            submapper_number = Some(nes2_fields.submapper_number);
-            prg_work_ram_size = Some(nes2_fields.prg_work);
-            prg_save_ram_size = Some(nes2_fields.prg_save);
-            chr_work_ram_size = Some(nes2_fields.chr_work);
-            chr_save_ram_size = Some(nes2_fields.chr_save);
-        }
+        let submapper_number = header.submapper_number();
+        let prg_work_ram_size = header.prg_work_ram_size();
+        let prg_save_ram_size = header.prg_save_ram_size();
+        let chr_work_ram_size = header.chr_work_ram_size();
+        let chr_save_ram_size = header.chr_save_ram_size();
 
         let title_start = chr_rom_end;
         let title = rom.slice(title_start..rom.size()).to_raw().to_vec();
