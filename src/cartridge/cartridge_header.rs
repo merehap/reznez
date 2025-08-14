@@ -64,8 +64,7 @@ impl CartridgeHeader {
             prg_work = Some(if prg_sizes.w > 0 { 64 << prg_sizes.w } else { 0 });
             prg_save = Some(if prg_sizes.s > 0 { 64 << prg_sizes.s } else { 0 });
 
-            // FIXME: This should be from rom[11], not rom[10].
-            let chr_sizes = splitbits!(min=u32, header[10], "sssswwww");
+            let chr_sizes = splitbits!(min=u32, header[11], "sssswwww");
             chr_work = Some(if chr_sizes.w > 0 { 64 << chr_sizes.w } else { 0 });
             chr_save = Some(if chr_sizes.s > 0 { 64 << chr_sizes.s } else { 0 });
         }
