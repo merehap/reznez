@@ -1,4 +1,4 @@
-use log::{info, warn};
+use log::warn;
 
 use crate::mapper::{BankIndex, PrgBankRegisterId, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank::{PrgBank, RomRamModeRegisterId};
