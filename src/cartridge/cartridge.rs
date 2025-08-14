@@ -32,7 +32,6 @@ pub struct Cartridge {
 impl Cartridge {
     #[rustfmt::skip]
     pub fn load(path: &Path, rom: &RawMemory, header_db: &HeaderDb, allow_saving: bool) -> Result<Cartridge, String> {
-        println!("Loading {}", path.display());
         let path = CartridgePath(path.to_path_buf());
 
         let raw_header = rom.slice(0x0..0x10).to_raw().try_into()

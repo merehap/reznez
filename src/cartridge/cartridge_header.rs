@@ -12,20 +12,19 @@ const INES_HEADER_CONSTANT: &[u8] = &[b'N', b'E', b'S', 0x1A];
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct CartridgeHeader {
-    mapper_number: u16,
-    name_table_mirroring: Option<NameTableMirroring>,
-    has_persistent_memory: bool,
-    console_type: ConsoleType,
-
-    prg_rom_size: u32,
-    chr_rom_size: Option<u32>,
-
+    mapper_number: Option<u16>,
     submapper_number: Option<u8>,
 
-    prg_work: Option<u32>,
-    prg_save: Option<u32>,
-    chr_work: Option<u32>,
-    chr_save: Option<u32>,
+    name_table_mirroring: Option<NameTableMirroring>,
+    has_persistent_memory: Option<bool>,
+    console_type: Option<ConsoleType>,
+
+    prg_rom_size: Option<u32>,
+    prg_work_ram_size: Option<u32>,
+    prg_save_ram_size: Option<u32>,
+    chr_rom_size: Option<u32>,
+    chr_work_ram_size: Option<u32>,
+    chr_save_ram_size: Option<u32>,
 }
 
 impl CartridgeHeader {
@@ -87,23 +86,23 @@ impl CartridgeHeader {
         };
 
         Ok(CartridgeHeader {
-            mapper_number,
+            mapper_number: Some(mapper_number),
             submapper_number,
             name_table_mirroring,
-            has_persistent_memory,
-            console_type: ConsoleType::Nes,
-            prg_rom_size: prg_rom_chunk_count * PRG_ROM_CHUNK_LENGTH as u32,
+            has_persistent_memory: Some(has_persistent_memory),
+            console_type: Some(ConsoleType::Nes),
+            prg_rom_size: Some(prg_rom_chunk_count * PRG_ROM_CHUNK_LENGTH as u32),
             chr_rom_size: Some(chr_rom_chunk_count * CHR_ROM_CHUNK_LENGTH as u32),
 
-            prg_work,
-            prg_save,
-            chr_work,
-            chr_save,
+            prg_work_ram_size: prg_work,
+            prg_save_ram_size: prg_save,
+            chr_work_ram_size: chr_work,
+            chr_save_ram_size: chr_save,
         })
     }
 
     pub fn mapper_number(&self) -> Option<u16> {
-        Some(self.mapper_number)
+        self.mapper_number
     }
 
     pub fn submapper_number(&self) -> Option<u8> {
@@ -111,15 +110,15 @@ impl CartridgeHeader {
     }
 
     pub fn prg_rom_size(&self) -> Option<u32> {
-        Some(self.prg_rom_size)
+        self.prg_rom_size
     }
 
     pub fn prg_work_ram_size(&self) -> Option<u32> {
-        self.prg_work
+        self.prg_work_ram_size
     }
 
     pub fn prg_save_ram_size(&self) -> Option<u32> {
-        self.prg_save
+        self.prg_save_ram_size
     }
 
     pub fn chr_rom_size(&self) -> Option<u32> {
@@ -127,11 +126,11 @@ impl CartridgeHeader {
     }
 
     pub fn chr_work_ram_size(&self) -> Option<u32> {
-        self.chr_work
+        self.chr_work_ram_size
     }
 
     pub fn chr_save_ram_size(&self) -> Option<u32> {
-        self.chr_save
+        self.chr_save_ram_size
     }
 
     // FIXME: This returns None if there is no mirroring specified OR if the cartridge specifies FourScreen.
@@ -140,7 +139,7 @@ impl CartridgeHeader {
     }
 
     pub fn console_type(&self) -> Option<ConsoleType> {
-        Some(self.console_type)
+        self.console_type
     }
 
     pub fn chr_present(&self) -> bool {
@@ -148,11 +147,11 @@ impl CartridgeHeader {
             return true;
         }
 
-        if let Some(chr_work) = self.chr_work && chr_work > 0 {
+        if let Some(chr_work) = self.chr_work_ram_size && chr_work > 0 {
             return true;
         }
 
-        if let Some(chr_save) = self.chr_save && chr_save > 0 {
+        if let Some(chr_save) = self.chr_save_ram_size && chr_save > 0 {
             return true;
         }
 
@@ -171,7 +170,7 @@ pub enum ConsoleType {
 
 impl fmt::Display for ConsoleType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let text = match self.clone() {
+        let text = match self {
             ConsoleType::Nes => "NES",
             ConsoleType::VsUnisystem => "VS Unisystem",
             ConsoleType::PlayChoice10 => "Play Choice 10",
