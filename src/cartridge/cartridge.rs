@@ -26,7 +26,7 @@ pub struct Nes2Fields {
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
-pub struct RomHeader {
+pub struct CartridgeHeader {
     mapper_number: u16,
     name_table_mirroring: Option<NameTableMirroring>,
     has_persistent_memory: bool,
@@ -37,7 +37,7 @@ pub struct RomHeader {
     chr_rom_size: u32,
 }
 
-impl RomHeader {
+impl CartridgeHeader {
     pub fn parse(header: [u8; 16]) -> Result<Self, String> {
         if &header[0..4] != INES_HEADER_CONSTANT {
             return Err(format!(
@@ -94,7 +94,7 @@ impl RomHeader {
             Some(NameTableMirroring::HORIZONTAL)
         };
 
-        Ok(RomHeader {
+        Ok(CartridgeHeader {
             mapper_number,
             name_table_mirroring,
             has_persistent_memory,
@@ -123,7 +123,7 @@ impl RomHeader {
 #[derive(Clone, Debug)]
 pub struct Cartridge {
     path: CartridgePath,
-    header: RomHeader,
+    header: CartridgeHeader,
     submapper_number: Option<u8>,
     title: String,
 
@@ -145,7 +145,7 @@ impl Cartridge {
 
         let raw_header = rom.slice(0x0..0x10).to_raw().try_into()
             .map_err(|err| format!("ROM file to have a 16 byte header. {err}"))?;
-        let header = RomHeader::parse(raw_header)?;
+        let header = CartridgeHeader::parse(raw_header)?;
 
         let prg_rom_start = 0x10;
         let prg_rom_end = prg_rom_start + header.prg_rom_size;
@@ -424,7 +424,7 @@ pub mod test_data {
 
         Cartridge {
             path,
-            header: RomHeader {
+            header: CartridgeHeader {
                 mapper_number: 0,
                 name_table_mirroring: Some(NameTableMirroring::HORIZONTAL),
                 has_persistent_memory: false,
