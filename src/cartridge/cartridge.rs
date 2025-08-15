@@ -34,9 +34,10 @@ impl Cartridge {
     pub fn load(path: &Path, rom: &RawMemory, header_db: &HeaderDb, allow_saving: bool) -> Result<Cartridge, String> {
         let path = CartridgePath(path.to_path_buf());
 
+        let full_hash = crc32fast::hash(rom.as_slice());
         let raw_header = rom.slice(0x0..0x10).to_raw().try_into()
             .map_err(|err| format!("ROM file to have a 16 byte header. {err}"))?;
-        let header = CartridgeHeader::parse(raw_header)?;
+        let mut header = CartridgeHeader::parse(raw_header, full_hash)?;
 
         let prg_rom_start = 0x10;
         let prg_rom_end = prg_rom_start + header.prg_rom_size().unwrap();
@@ -45,6 +46,8 @@ impl Cartridge {
                 panic!("ROM {} was too short (claimed to have {}KiB PRG ROM).", path.rom_file_name(), header.prg_rom_size().unwrap() / KIBIBYTE);
             })
             .to_raw_memory();
+        let prg_rom_hash = crc32fast::hash(prg_rom.as_slice());
+        header.set_prg_rom_hash(prg_rom_hash);
 
         let chr_rom_start = prg_rom_end;
         let mut chr_rom_end = chr_rom_start + header.chr_rom_size().unwrap();
@@ -91,10 +94,8 @@ impl Cartridge {
             allow_saving,
         };
 
-        let full_hash = crc32fast::hash(rom.as_slice());
-        let prg_hash = crc32fast::hash(cartridge.prg_rom.as_slice());
         let cartridge_mapper_number = cartridge.header.mapper_number().unwrap();
-        if let Some(header) = header_db.header_from_db(&cartridge, full_hash, prg_hash, cartridge_mapper_number, cartridge.submapper_number) {
+        if let Some(header) = header_db.header_from_db(&cartridge, full_hash, prg_rom_hash, cartridge_mapper_number, cartridge.submapper_number) {
             if cartridge_mapper_number != header.mapper_number {
                 warn!("Mapper number in ROM ({}) does not match the one in the DB ({}).",
                     cartridge_mapper_number, header.mapper_number);
@@ -118,7 +119,7 @@ impl Cartridge {
             }
 
             if let Some((number, sub_number, data_hash, prg_hash)) =
-                    header_db.missing_submapper_number(full_hash, prg_hash) && cartridge_mapper_number == number {
+                    header_db.missing_submapper_number(full_hash, prg_rom_hash) && cartridge_mapper_number == number {
 
                 info!("Using override submapper for this ROM. Full hash: {data_hash} , PRG hash: {prg_hash}");
                 cartridge.submapper_number = Some(sub_number);

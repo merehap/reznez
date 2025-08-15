@@ -19,16 +19,20 @@ pub struct CartridgeHeader {
     has_persistent_memory: Option<bool>,
     console_type: Option<ConsoleType>,
 
+    full_hash: Option<u32>,
+    prg_rom_hash: Option<u32>,
+
     prg_rom_size: Option<u32>,
     prg_work_ram_size: Option<u32>,
     prg_save_ram_size: Option<u32>,
+
     chr_rom_size: Option<u32>,
     chr_work_ram_size: Option<u32>,
     chr_save_ram_size: Option<u32>,
 }
 
 impl CartridgeHeader {
-    pub fn parse(header: [u8; 16]) -> Result<Self, String> {
+    pub fn parse(header: [u8; 16], data_hash: u32) -> Result<Self, String> {
         if &header[0..4] != INES_HEADER_CONSTANT {
             return Err(format!(
                 "Cannot load non-iNES ROM. Found {:?} but need {:?}.",
@@ -91,11 +95,16 @@ impl CartridgeHeader {
             name_table_mirroring,
             has_persistent_memory: Some(has_persistent_memory),
             console_type: Some(ConsoleType::Nes),
-            prg_rom_size: Some(prg_rom_chunk_count * PRG_ROM_CHUNK_LENGTH as u32),
-            chr_rom_size: Some(chr_rom_chunk_count * CHR_ROM_CHUNK_LENGTH as u32),
 
+            full_hash: Some(data_hash),
+            // Hashes have to be set afterwards since they depend on the data, which isn't in the header proper.
+            prg_rom_hash: None,
+
+            prg_rom_size: Some(prg_rom_chunk_count * PRG_ROM_CHUNK_LENGTH as u32),
             prg_work_ram_size: prg_work,
             prg_save_ram_size: prg_save,
+
+            chr_rom_size: Some(chr_rom_chunk_count * CHR_ROM_CHUNK_LENGTH as u32),
             chr_work_ram_size: chr_work,
             chr_save_ram_size: chr_save,
         })
@@ -156,6 +165,10 @@ impl CartridgeHeader {
         }
 
         false
+    }
+
+    pub fn set_prg_rom_hash(&mut self, prg_rom_hash: u32) {
+        self.prg_rom_hash = Some(prg_rom_hash);
     }
 }
 

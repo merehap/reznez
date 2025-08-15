@@ -134,13 +134,13 @@ impl HeaderDb {
         };
 
         for game in games {
-            let rom_crc32 = read_attribute(game, "rom", "crc32").unwrap();
-            let rom_crc32 = u32::from_str_radix(rom_crc32, 16).unwrap();
-            let prg_rom_crc32 = read_attribute(game, "prgrom", "crc32").unwrap();
-            let prg_rom_crc32 = u32::from_str_radix(prg_rom_crc32, 16).unwrap();
+            let data_hash = read_attribute(game, "rom", "crc32").unwrap();
+            let data_hash = u32::from_str_radix(data_hash, 16).unwrap();
+            let prg_rom_hash = read_attribute(game, "prgrom", "crc32").unwrap();
+            let prg_rom_hash = u32::from_str_radix(prg_rom_hash, 16).unwrap();
             let header = Header {
-                data_hash: rom_crc32,
-                prg_hash: prg_rom_crc32,
+                full_hash: data_hash,
+                prg_rom_hash,
                 prg_rom_size: read_attribute(game, "prgrom", "size").unwrap().parse().unwrap(),
                 prg_ram_size: read_attribute(game, "prgram", "size").unwrap_or("0").parse().unwrap(),
                 prg_nvram_size: read_attribute(game, "prgnvram", "size").unwrap_or("0").parse().unwrap(),
@@ -151,8 +151,8 @@ impl HeaderDb {
                 submapper_number: read_attribute(game, "pcb", "submapper").unwrap().parse().unwrap(),
             };
 
-            header_db.data_by_crc32.insert(rom_crc32, header);
-            header_db.prg_rom_by_crc32.insert(prg_rom_crc32, header);
+            header_db.data_by_crc32.insert(data_hash, header);
+            header_db.prg_rom_by_crc32.insert(prg_rom_hash, header);
         }
 
         header_db
@@ -230,8 +230,8 @@ fn read_attribute<'a>(node: roxmltree::Node<'a, 'a>, child_name: &str, attribute
 
 #[derive(Clone, Copy, Debug)]
 pub struct Header {
-    pub data_hash: u32,
-    pub prg_hash: u32,
+    pub full_hash: u32,
+    pub prg_rom_hash: u32,
     pub prg_rom_size: u32,
     pub prg_ram_size: u32,
     pub prg_nvram_size: u32,
