@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use log::info;
 
-use crate::cartridge::cartridge::Cartridge;
+use crate::cartridge::{cartridge::Cartridge, cartridge_header::{CartridgeHeader, CartridgeHeaderBuilder}};
 
 // Submapper numbers for ROMs that aren't in the NES Header DB (mostly test ROMs).
 const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
@@ -109,8 +109,8 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
 ];
 
 pub struct HeaderDb {
-    data_by_crc32: BTreeMap<u32, Header>,
-    prg_rom_by_crc32: BTreeMap<u32, Header>,
+    data_by_crc32: BTreeMap<u32, CartridgeHeader>,
+    prg_rom_by_crc32: BTreeMap<u32, CartridgeHeader>,
     missing_data_submapper_numbers: BTreeMap<u32, (u16, u8)>,
     missing_prg_rom_submapper_numbers: BTreeMap<u32, (u16, u8)>,
 }
@@ -135,23 +135,23 @@ impl HeaderDb {
 
         for game in games {
             let data_hash = read_attribute(game, "rom", "crc32").unwrap();
-            let data_hash = u32::from_str_radix(data_hash, 16).unwrap();
+            let full_hash = u32::from_str_radix(data_hash, 16).unwrap();
             let prg_rom_hash = read_attribute(game, "prgrom", "crc32").unwrap();
             let prg_rom_hash = u32::from_str_radix(prg_rom_hash, 16).unwrap();
-            let header = Header {
-                full_hash: data_hash,
-                prg_rom_hash,
-                prg_rom_size: read_attribute(game, "prgrom", "size").unwrap().parse().unwrap(),
-                prg_ram_size: read_attribute(game, "prgram", "size").unwrap_or("0").parse().unwrap(),
-                prg_nvram_size: read_attribute(game, "prgnvram", "size").unwrap_or("0").parse().unwrap(),
-                chr_rom_size: read_attribute(game, "chrrom", "size").unwrap_or("0").parse().unwrap(),
-                chr_ram_size: read_attribute(game, "chrram", "size").unwrap_or("0").parse().unwrap(),
-                chr_nvram_size: read_attribute(game, "chrnvram", "size").unwrap_or("0").parse().unwrap(),
-                mapper_number: read_attribute(game, "pcb", "mapper").unwrap().parse().unwrap(),
-                submapper_number: read_attribute(game, "pcb", "submapper").unwrap().parse().unwrap(),
-            };
+            let header = CartridgeHeaderBuilder::new()
+                .full_hash(full_hash)
+                .prg_rom_hash(prg_rom_hash)
+                .prg_rom_size(read_attribute(game, "prgrom", "size").unwrap().parse().unwrap())
+                .prg_work_ram_size(read_attribute(game, "prgram", "size").unwrap_or("0").parse().unwrap())
+                .prg_save_ram_size(read_attribute(game, "prgnvram", "size").unwrap_or("0").parse().unwrap())
+                .chr_rom_size(read_attribute(game, "chrrom", "size").unwrap_or("0").parse().unwrap())
+                .chr_work_ram_size(read_attribute(game, "chrram", "size").unwrap_or("0").parse().unwrap())
+                .chr_save_ram_size(read_attribute(game, "chrnvram", "size").unwrap_or("0").parse().unwrap())
+                .mapper_number(read_attribute(game, "pcb", "mapper").unwrap().parse().unwrap())
+                .submapper_number(read_attribute(game, "pcb", "submapper").unwrap().parse().unwrap())
+                .build();
 
-            header_db.data_by_crc32.insert(data_hash, header);
+            header_db.data_by_crc32.insert(full_hash, header.clone());
             header_db.prg_rom_by_crc32.insert(prg_rom_hash, header);
         }
 
@@ -165,7 +165,7 @@ impl HeaderDb {
         prg_hash: u32,
         mapper_number: u16,
         submapper_number: Option<u8>,
-    ) -> Option<Header> {
+    ) -> Option<CartridgeHeader> {
 
         let mut override_submapper_number = None;
         if let Some((number, sub_number)) = self.missing_data_submapper_numbers.get(&full_hash).copied()
@@ -178,11 +178,11 @@ impl HeaderDb {
             override_submapper_number = Some(sub_number);
         }
 
-        let result = self.data_by_crc32.get(&full_hash).copied();
-        if let Some(mut header) = result {
+        let mut result = self.data_by_crc32.get(&full_hash).cloned();
+        if let Some(ref mut header) = result {
             if let Some(override_submapper_number) = override_submapper_number {
-                header.submapper_number = override_submapper_number;
-                return Some(header);
+                header.set_submapper_number(override_submapper_number);
+                return Some(header.clone());
             } else {
                 return result;
             }
@@ -192,7 +192,7 @@ impl HeaderDb {
             return result;
         }
 
-        let result = self.prg_rom_by_crc32.get(&prg_hash).copied();
+        let mut result = self.prg_rom_by_crc32.get(&prg_hash).cloned();
         if result.is_none() {
             if let Some(submapper_number) = submapper_number {
                 info!("ROM not found in DB. ({full_hash}, {prg_hash}, {mapper_number}, {submapper_number})");
@@ -201,9 +201,9 @@ impl HeaderDb {
             }
         }
 
-        if let Some(mut header) = result && let Some(override_submapper_number) = override_submapper_number {
-            header.submapper_number = override_submapper_number;
-            Some(header)
+        if let Some(ref mut header) = result && let Some(override_submapper_number) = override_submapper_number {
+            header.set_submapper_number(override_submapper_number);
+            Some(header.clone())
         } else {
             result
         }
@@ -226,18 +226,4 @@ fn read_attribute<'a>(node: roxmltree::Node<'a, 'a>, child_name: &str, attribute
         .attribute(attribute_name)
         .unwrap()
     )
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct Header {
-    pub full_hash: u32,
-    pub prg_rom_hash: u32,
-    pub prg_rom_size: u32,
-    pub prg_ram_size: u32,
-    pub prg_nvram_size: u32,
-    pub chr_rom_size: u32,
-    pub chr_ram_size: u32,
-    pub chr_nvram_size: u32,
-    pub mapper_number: u16,
-    pub submapper_number: u8,
 }

@@ -96,21 +96,21 @@ impl Cartridge {
 
         let cartridge_mapper_number = cartridge.header.mapper_number().unwrap();
         if let Some(header) = header_db.header_from_db(&cartridge, full_hash, prg_rom_hash, cartridge_mapper_number, cartridge.submapper_number) {
-            if cartridge_mapper_number != header.mapper_number {
+            if cartridge_mapper_number != header.mapper_number().unwrap() {
                 warn!("Mapper number in ROM ({}) does not match the one in the DB ({}).",
-                    cartridge_mapper_number, header.mapper_number);
+                    cartridge_mapper_number, header.mapper_number().unwrap());
             }
 
-            assert_eq!(cartridge.prg_rom.size(), header.prg_rom_size);
-            if cartridge.chr_rom.size() != header.chr_rom_size {
+            assert_eq!(cartridge.prg_rom.size(), header.prg_rom_size().unwrap());
+            if cartridge.chr_rom.size() != header.chr_rom_size().unwrap_or(0) {
                 warn!("CHR ROM size in cartridge did not match size in header DB.");
             }
 
-            cartridge.submapper_number = Some(header.submapper_number);
-            cartridge.prg_work_ram = RawMemory::new(header.prg_ram_size);
-            cartridge.prg_save_ram = RawMemory::new(header.prg_nvram_size);
-            cartridge.chr_work_ram = RawMemory::new(header.chr_ram_size);
-            cartridge.chr_save_ram = RawMemory::new(header.chr_nvram_size);
+            cartridge.submapper_number = Some(header.submapper_number().unwrap_or(0));
+            cartridge.prg_work_ram = RawMemory::new(header.prg_work_ram_size().unwrap_or(0));
+            cartridge.prg_save_ram = RawMemory::new(header.prg_save_ram_size().unwrap_or(0));
+            cartridge.chr_work_ram = RawMemory::new(header.chr_work_ram_size().unwrap_or(0));
+            cartridge.chr_save_ram = RawMemory::new(header.chr_save_ram_size().unwrap_or(0));
         } else {
             warn!("ROM not found in header database.");
             if !cartridge.header.chr_present() {

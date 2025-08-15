@@ -160,6 +160,10 @@ impl CartridgeHeader {
     pub fn set_prg_rom_hash(&mut self, prg_rom_hash: u32) {
         self.prg_rom_hash = Some(prg_rom_hash);
     }
+
+    pub fn set_submapper_number(&mut self, submapper_number: u8) {
+        self.submapper_number = Some(submapper_number);
+    }
 }
 
 pub struct CartridgeHeaderBuilder {
@@ -270,7 +274,7 @@ impl CartridgeHeaderBuilder {
         self
     }
 
-    pub fn build(self) -> CartridgeHeader {
+    pub fn build(&mut self) -> CartridgeHeader {
         CartridgeHeader {
             mapper_number: self.mapper_number,
             submapper_number: self.submapper_number,
