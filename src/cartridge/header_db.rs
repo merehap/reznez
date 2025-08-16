@@ -111,8 +111,8 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
 pub struct HeaderDb {
     data_by_crc32: BTreeMap<u32, CartridgeHeader>,
     prg_rom_by_crc32: BTreeMap<u32, CartridgeHeader>,
-    missing_data_submapper_numbers: BTreeMap<u32, (u16, u8)>,
-    missing_prg_rom_submapper_numbers: BTreeMap<u32, (u16, u8)>,
+    missing_data_submapper_numbers: BTreeMap<u32, (u16, CartridgeHeader)>,
+    missing_prg_rom_submapper_numbers: BTreeMap<u32, (u16, CartridgeHeader)>,
 }
 
 impl HeaderDb {
@@ -121,10 +121,16 @@ impl HeaderDb {
         let doc = roxmltree::Document::parse(text).unwrap();
         let games = doc.root().descendants().filter(|n| n.tag_name().name() == "game");
 
-        let missing_data_submapper_numbers: BTreeMap<u32, (u16, u8)> =
-            MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(k, _, m, s)| (*k, (*m, *s))).collect();
-        let missing_prg_rom_submapper_numbers: BTreeMap<u32, (u16, u8)> =
-            MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(_, k, m, s)| (*k, (*m, *s))).collect();
+        let missing_data_submapper_numbers: BTreeMap<u32, (u16, CartridgeHeader)> =
+            MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(k, _, m, s)| {
+                let header = CartridgeHeaderBuilder::new().submapper_number(*s).build();
+                (*k, (*m, header))
+            }).collect();
+        let missing_prg_rom_submapper_numbers: BTreeMap<u32, (u16, CartridgeHeader)> =
+            MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(_, k, m, s)| {
+                let header = CartridgeHeaderBuilder::new().submapper_number(*s).build();
+                (*k, (*m, header))
+            }).collect();
 
         let mut header_db = HeaderDb {
             data_by_crc32: BTreeMap::new(),
@@ -170,14 +176,14 @@ impl HeaderDb {
     ) -> Option<CartridgeHeader> {
 
         let mut override_submapper_number = None;
-        if let Some((number, sub_number)) = self.missing_data_submapper_numbers.get(&full_hash).copied()
+        if let Some((number, header)) = self.missing_data_submapper_numbers.get(&full_hash).cloned()
                 && number == cartridge.mapper_number() {
             info!("Using override submapper for this ROM. Full hash: {full_hash} , PRG hash: {prg_hash}");
-            override_submapper_number = Some(sub_number);
-        } else if let Some((number, sub_number)) = self.missing_prg_rom_submapper_numbers.get(&prg_hash).copied()
+            override_submapper_number = header.submapper_number();
+        } else if let Some((number, header)) = self.missing_prg_rom_submapper_numbers.get(&prg_hash).cloned()
                 && number == cartridge.mapper_number() {
             info!("Using override submapper for this ROM. Full hash: {full_hash} , PRG hash: {prg_hash}");
-            override_submapper_number = Some(sub_number);
+            override_submapper_number = header.submapper_number();
         }
 
         let mut result = self.data_by_crc32.get(&full_hash).cloned();
@@ -212,10 +218,10 @@ impl HeaderDb {
     }
 
     pub fn missing_submapper_number(&self, data_hash: u32, prg_hash: u32) -> Option<(u16, u8, u32, u32)> {
-        if let Some((number, sub_number)) = self.missing_data_submapper_numbers.get(&data_hash).copied() {
-            Some((number, sub_number, data_hash, prg_hash))
-        } else if let Some((number, sub_number)) = self.missing_prg_rom_submapper_numbers.get(&prg_hash).copied() {
-            Some((number, sub_number, data_hash, prg_hash))
+        if let Some((number, header)) = self.missing_data_submapper_numbers.get(&data_hash).cloned() {
+            Some((number, header.submapper_number().unwrap(), data_hash, prg_hash))
+        } else if let Some((number, header)) = self.missing_prg_rom_submapper_numbers.get(&prg_hash).cloned() {
+            Some((number, header.submapper_number().unwrap(), data_hash, prg_hash))
         } else {
             None
         }
