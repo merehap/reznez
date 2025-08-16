@@ -138,19 +138,21 @@ impl HeaderDb {
             let full_hash = u32::from_str_radix(data_hash, 16).unwrap();
             let prg_rom_hash = read_attribute(game, "prgrom", "crc32").unwrap();
             let prg_rom_hash = u32::from_str_radix(prg_rom_hash, 16).unwrap();
-            let header = CartridgeHeaderBuilder::new()
+            let mut header_builder = CartridgeHeaderBuilder::new();
+            header_builder
                 .full_hash(full_hash)
                 .prg_rom_hash(prg_rom_hash)
                 .prg_rom_size(read_attribute(game, "prgrom", "size").unwrap().parse().unwrap())
-                .prg_work_ram_size(read_attribute(game, "prgram", "size").unwrap_or("0").parse().unwrap())
-                .prg_save_ram_size(read_attribute(game, "prgnvram", "size").unwrap_or("0").parse().unwrap())
-                .chr_rom_size(read_attribute(game, "chrrom", "size").unwrap_or("0").parse().unwrap())
-                .chr_work_ram_size(read_attribute(game, "chrram", "size").unwrap_or("0").parse().unwrap())
-                .chr_save_ram_size(read_attribute(game, "chrnvram", "size").unwrap_or("0").parse().unwrap())
                 .mapper_number(read_attribute(game, "pcb", "mapper").unwrap().parse().unwrap())
-                .submapper_number(read_attribute(game, "pcb", "submapper").unwrap().parse().unwrap())
-                .build();
+                .submapper_number(read_attribute(game, "pcb", "submapper").unwrap().parse().unwrap());
 
+            read_attribute(game, "prgram", "size").inspect(|s| { header_builder.prg_work_ram_size(s.parse().unwrap()); });
+            read_attribute(game, "prgnvram", "size").inspect(|s| { header_builder.prg_save_ram_size(s.parse().unwrap()); });
+            read_attribute(game, "chrrom", "size").inspect(|s| { header_builder.chr_rom_size(s.parse().unwrap()); });
+            read_attribute(game, "chrram", "size").inspect(|s| { header_builder.chr_work_ram_size(s.parse().unwrap()); });
+            read_attribute(game, "chrnvram", "size").inspect(|s| { header_builder.chr_save_ram_size(s.parse().unwrap()); });
+
+            let header = header_builder.build();
             header_db.data_by_crc32.insert(full_hash, header.clone());
             header_db.prg_rom_by_crc32.insert(prg_rom_hash, header);
         }
