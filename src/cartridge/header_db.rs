@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use log::info;
 
-use crate::cartridge::cartridge_header::{CartridgeHeader, CartridgeHeaderBuilder};
+use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeHeaderBuilder};
 
 // Submapper numbers for ROMs that aren't in the NES Header DB (mostly test ROMs).
 const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
@@ -109,10 +109,10 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
 ];
 
 pub struct HeaderDb {
-    data_by_crc32: BTreeMap<u32, CartridgeHeader>,
-    prg_rom_by_crc32: BTreeMap<u32, CartridgeHeader>,
-    missing_data_submapper_numbers: BTreeMap<u32, (u16, CartridgeHeader)>,
-    missing_prg_rom_submapper_numbers: BTreeMap<u32, (u16, CartridgeHeader)>,
+    data_by_crc32: BTreeMap<u32, CartridgeMetadata>,
+    prg_rom_by_crc32: BTreeMap<u32, CartridgeMetadata>,
+    missing_data_submapper_numbers: BTreeMap<u32, (u16, CartridgeMetadata)>,
+    missing_prg_rom_submapper_numbers: BTreeMap<u32, (u16, CartridgeMetadata)>,
 }
 
 impl HeaderDb {
@@ -121,12 +121,12 @@ impl HeaderDb {
         let doc = roxmltree::Document::parse(text).unwrap();
         let games = doc.root().descendants().filter(|n| n.tag_name().name() == "game");
 
-        let missing_data_submapper_numbers: BTreeMap<u32, (u16, CartridgeHeader)> =
+        let missing_data_submapper_numbers: BTreeMap<u32, (u16, CartridgeMetadata)> =
             MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(k, _, m, s)| {
                 let header = CartridgeHeaderBuilder::new().submapper_number(*s).build();
                 (*k, (*m, header))
             }).collect();
-        let missing_prg_rom_submapper_numbers: BTreeMap<u32, (u16, CartridgeHeader)> =
+        let missing_prg_rom_submapper_numbers: BTreeMap<u32, (u16, CartridgeMetadata)> =
             MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(_, k, m, s)| {
                 let header = CartridgeHeaderBuilder::new().submapper_number(*s).build();
                 (*k, (*m, header))
@@ -168,12 +168,12 @@ impl HeaderDb {
 
     pub fn header_from_db(
         &self,
-        header_from_cartridge: &CartridgeHeader,
+        header_from_cartridge: &CartridgeMetadata,
         full_hash: u32,
         prg_hash: u32,
         mapper_number: u16,
         submapper_number: Option<u8>,
-    ) -> Option<CartridgeHeader> {
+    ) -> Option<CartridgeMetadata> {
 
         let mut override_submapper_number = None;
         if let Some((number, header)) = self.missing_data_submapper_numbers.get(&full_hash).cloned()

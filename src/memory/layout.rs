@@ -4,7 +4,7 @@ use std::num::NonZeroU8;
 use log::warn;
 
 use crate::cartridge::cartridge::Cartridge;
-use crate::cartridge::cartridge_header::{CartridgeHeader, CartridgeHeaderBuilder};
+use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeHeaderBuilder};
 use crate::memory::bank::bank_index::{BankIndex, PrgBankRegisterId, PrgBankRegisters, ChrBankRegisters, MetaRegisterId};
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory::PrgMemory;
@@ -39,7 +39,7 @@ pub struct Layout {
 
     read_write_statuses: &'static [ReadWriteStatus],
     
-    header_override: CartridgeHeader,
+    header_override: CartridgeMetadata,
 
     bank_register_overrides: ConstVec<(PrgBankRegisterId, BankIndex), 5>,
     chr_bank_register_overrides: ConstVec<(ChrBankRegisterId, BankIndex), 5>,
@@ -51,7 +51,7 @@ impl Layout {
         LayoutBuilder::new()
     }
 
-    pub fn make_mapper_params(self, header: &CartridgeHeader, cartridge: &Cartridge) -> MapperParams {
+    pub fn make_mapper_params(self, header: &CartridgeMetadata, cartridge: &Cartridge) -> MapperParams {
         let prg_rom_size = cartridge.prg_rom().size();
         assert!(prg_rom_size <= self.prg_rom_max_size,
             "PRG ROM size of {}KiB is too large for this mapper.", prg_rom_size / KIBIBYTE);

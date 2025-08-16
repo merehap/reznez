@@ -1,9 +1,9 @@
-use crate::cartridge::cartridge_header::CartridgeHeader;
+use crate::cartridge::cartridge_metadata::CartridgeMetadata;
 use crate::mapper::Cartridge;
 use crate::mapper::{Mapper, MapperParams, LookupResult};
 use crate::mappers as m;
 
-pub fn lookup_mapper_with_params(header: &CartridgeHeader, cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
+pub fn lookup_mapper_with_params(header: &CartridgeMetadata, cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
     let number = cartridge.mapper_number();
     let sub_number = cartridge.submapper_number();
     let cartridge_name = cartridge.name();

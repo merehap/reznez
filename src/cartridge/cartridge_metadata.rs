@@ -12,7 +12,7 @@ const INES_HEADER_CONSTANT: &[u8] = &[b'N', b'E', b'S', 0x1A];
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
-pub struct CartridgeHeader {
+pub struct CartridgeMetadata {
     mapper_number: Option<u16>,
     submapper_number: Option<u8>,
 
@@ -32,8 +32,8 @@ pub struct CartridgeHeader {
     chr_save_ram_size: Option<u32>,
 }
 
-impl CartridgeHeader {
-    pub fn parse(raw_header_and_data: &RawMemory) -> Result<CartridgeHeader, String> {
+impl CartridgeMetadata {
+    pub fn parse(raw_header_and_data: &RawMemory) -> Result<CartridgeMetadata, String> {
         let full_hash = crc32fast::hash(raw_header_and_data.as_slice());
         let raw_header: [u8; 0x10] = raw_header_and_data.as_slice()[0x0..0x10].try_into()
             .map_err(|err| format!("ROM file to have a 16 byte header. {err}"))?;
@@ -330,8 +330,8 @@ impl CartridgeHeaderBuilder {
         self
     }
 
-    pub const fn build(&mut self) -> CartridgeHeader {
-        CartridgeHeader {
+    pub const fn build(&mut self) -> CartridgeMetadata {
+        CartridgeMetadata {
             mapper_number: self.mapper_number,
             submapper_number: self.submapper_number,
             name_table_mirroring: self.name_table_mirroring,

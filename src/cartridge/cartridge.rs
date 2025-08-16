@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use log::{info, warn, error};
 
-use crate::cartridge::cartridge_header::CartridgeHeader;
+use crate::cartridge::cartridge_metadata::CartridgeMetadata;
 use crate::cartridge::header_db::HeaderDb;
 use crate::memory::ppu::chr_memory::AccessOverride;
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
@@ -33,7 +33,7 @@ pub struct Cartridge {
 
 impl Cartridge {
     #[rustfmt::skip]
-    pub fn load(path: &Path, header: &CartridgeHeader, raw_header_and_data: &RawMemory, header_db: &HeaderDb, allow_saving: bool) -> Result<Cartridge, String> {
+    pub fn load(path: &Path, header: &CartridgeMetadata, raw_header_and_data: &RawMemory, header_db: &HeaderDb, allow_saving: bool) -> Result<Cartridge, String> {
         let path = CartridgePath(path.to_path_buf());
 
         let prg_rom_start = 0x10;
@@ -85,7 +85,7 @@ impl Cartridge {
         };
 
         let cartridge_mapper_number = header.mapper_number().unwrap();
-        if let Some(header) = header_db.header_from_db(&header, header.full_hash().unwrap(), prg_rom_hash, cartridge_mapper_number, cartridge.submapper_number) {
+        if let Some(header) = header_db.header_from_db(header, header.full_hash().unwrap(), prg_rom_hash, cartridge_mapper_number, cartridge.submapper_number) {
             if cartridge_mapper_number != header.mapper_number().unwrap() {
                 warn!("Mapper number in ROM ({}) does not match the one in the DB ({}).",
                     cartridge_mapper_number, header.mapper_number().unwrap());
@@ -105,8 +105,8 @@ impl Cartridge {
             warn!("ROM not found in header database.");
             if !header.chr_present() {
                 // If no CHR data is provided, add 8KiB of CHR RAM.
-                cartridge.chr_work_ram = RawMemory::new(CartridgeHeader::defaults().chr_work_ram_size().unwrap());
-                cartridge.chr_save_ram = RawMemory::new(CartridgeHeader::defaults().chr_save_ram_size().unwrap());
+                cartridge.chr_work_ram = RawMemory::new(CartridgeMetadata::defaults().chr_work_ram_size().unwrap());
+                cartridge.chr_save_ram = RawMemory::new(CartridgeMetadata::defaults().chr_save_ram_size().unwrap());
             }
 
             if let Some((number, sub_number, data_hash, prg_hash)) =
