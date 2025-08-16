@@ -13,6 +13,8 @@ const LAYOUT: Layout = Layout::builder()
     ])
     // Cartridges for some reason don't specify a CHR Save RAM size.
     // TODO: The above is probably not true (it was probably caused by a bug). Verify that this line isn't needed.
+    // TODO: I'm not seeing where this mapper is specified to use CHR Save RAM at all. Is it CHR Work RAM instead? That's what Mesen does.
+    // TODO: Verify that NameTableSource::WorkRam actually works (SaveRam is panicking).
     .chr_save_ram_size(8 * KIBIBYTE)
     .initial_name_table_mirroring(NameTableMirroring::new(
         NameTableSource::SaveRam(0x0000),

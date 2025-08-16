@@ -110,7 +110,7 @@ impl Layout {
         );
 
         let name_table_mirroring = self.header_override.name_table_mirroring()
-            .unwrap_or(cartridge.name_table_mirroring().expect("This mapper must define what Four Screen mirroring is."));
+            .unwrap_or_else(|| cartridge.name_table_mirroring().expect("This mapper must define what Four Screen mirroring is."));
 
         let mut chr_layouts: Vec<_> = self.chr_layouts.as_iter().collect();
         match chr_access_override {

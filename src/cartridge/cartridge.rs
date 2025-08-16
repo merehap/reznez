@@ -59,12 +59,6 @@ impl Cartridge {
             rom.slice(chr_rom_start..rom.size()).to_raw_memory()
         };
 
-        let submapper_number = header.submapper_number();
-        let prg_work_ram_size = header.prg_work_ram_size();
-        let prg_save_ram_size = header.prg_save_ram_size();
-        let chr_work_ram_size = header.chr_work_ram_size();
-        let chr_save_ram_size = header.chr_save_ram_size();
-
         let title_start = chr_rom_end;
         let title = rom.slice(title_start..rom.size()).to_raw().to_vec();
         let title_length_is_proper = title.is_empty() || title.len() == 127 || title.len() == 128;
@@ -80,17 +74,17 @@ impl Cartridge {
 
         let mut cartridge = Cartridge {
             path,
-            header,
-            submapper_number,
+            header: header.clone(),
+            submapper_number: header.submapper_number(),
             title,
 
             trainer: None,
             prg_rom,
-            prg_work_ram: RawMemory::new(prg_work_ram_size.unwrap_or(0)),
-            prg_save_ram: RawMemory::new(prg_save_ram_size.unwrap_or(0)),
+            prg_work_ram: RawMemory::new(header.prg_work_ram_size().unwrap_or(0)),
+            prg_save_ram: RawMemory::new(header.prg_save_ram_size().unwrap_or(0)),
             chr_rom,
-            chr_work_ram: RawMemory::new(chr_work_ram_size.unwrap_or(0)),
-            chr_save_ram: RawMemory::new(chr_save_ram_size.unwrap_or(0)),
+            chr_work_ram: RawMemory::new(header.chr_work_ram_size().unwrap_or(0)),
+            chr_save_ram: RawMemory::new(header.chr_save_ram_size().unwrap_or(0)),
             allow_saving,
         };
 
@@ -115,7 +109,8 @@ impl Cartridge {
             warn!("ROM not found in header database.");
             if !cartridge.header.chr_present() {
                 // If no CHR data is provided, add 8KiB of CHR RAM.
-                cartridge.chr_work_ram = RawMemory::new(8 * KIBIBYTE);
+                cartridge.chr_work_ram = RawMemory::new(CartridgeHeader::defaults().chr_work_ram_size().unwrap());
+                cartridge.chr_save_ram = RawMemory::new(CartridgeHeader::defaults().chr_save_ram_size().unwrap());
             }
 
             if let Some((number, sub_number, data_hash, prg_hash)) =
@@ -125,6 +120,8 @@ impl Cartridge {
                 cartridge.submapper_number = Some(sub_number);
             }
         }
+
+        cartridge.header.set_console_type(CartridgeHeader::defaults().console_type().unwrap());
 
         Ok(cartridge)
     }
