@@ -7,7 +7,6 @@ use crate::cartridge::cartridge_header::CartridgeHeader;
 use crate::cartridge::header_db::HeaderDb;
 use crate::memory::ppu::chr_memory::AccessOverride;
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
-use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::unit::KIBIBYTE;
 
 // See https://wiki.nesdev.org/w/index.php?title=INES
@@ -15,8 +14,11 @@ use crate::util::unit::KIBIBYTE;
 #[derive(Clone, Debug)]
 pub struct Cartridge {
     path: CartridgePath,
-    header: CartridgeHeader,
+
+    // TODO: Remove these. The Display impl should be moved to CartridgeHeader.
+    mapper_number: u16,
     submapper_number: Option<u8>,
+
     title: String,
 
     trainer: Option<RawMemoryArray<512>>,
@@ -31,36 +33,30 @@ pub struct Cartridge {
 
 impl Cartridge {
     #[rustfmt::skip]
-    pub fn load(path: &Path, rom: &RawMemory, header_db: &HeaderDb, allow_saving: bool) -> Result<Cartridge, String> {
+    pub fn load(path: &Path, header: &CartridgeHeader, raw_header_and_data: &RawMemory, header_db: &HeaderDb, allow_saving: bool) -> Result<Cartridge, String> {
         let path = CartridgePath(path.to_path_buf());
-
-        let full_hash = crc32fast::hash(rom.as_slice());
-        let raw_header = rom.slice(0x0..0x10).to_raw().try_into()
-            .map_err(|err| format!("ROM file to have a 16 byte header. {err}"))?;
-        let mut header = CartridgeHeader::parse(raw_header, full_hash)?;
 
         let prg_rom_start = 0x10;
         let prg_rom_end = prg_rom_start + header.prg_rom_size().unwrap();
-        let prg_rom = rom.maybe_slice(prg_rom_start..prg_rom_end)
+        let prg_rom = raw_header_and_data.maybe_slice(prg_rom_start..prg_rom_end)
             .unwrap_or_else(|| {
                 panic!("ROM {} was too short (claimed to have {}KiB PRG ROM).", path.rom_file_name(), header.prg_rom_size().unwrap() / KIBIBYTE);
             })
             .to_raw_memory();
         let prg_rom_hash = crc32fast::hash(prg_rom.as_slice());
-        header.set_prg_rom_hash(prg_rom_hash);
 
         let chr_rom_start = prg_rom_end;
         let mut chr_rom_end = chr_rom_start + header.chr_rom_size().unwrap();
-        let chr_rom = if let Some(rom) = rom.maybe_slice(chr_rom_start..chr_rom_end) {
+        let chr_rom = if let Some(rom) = raw_header_and_data.maybe_slice(chr_rom_start..chr_rom_end) {
             rom.to_raw_memory()
         } else {
             error!("ROM {} claimed to have {}KiB CHR ROM, but the ROM was too short.", path.rom_file_name(), header.chr_rom_size().unwrap());
-            chr_rom_end = rom.size();
-            rom.slice(chr_rom_start..rom.size()).to_raw_memory()
+            chr_rom_end = raw_header_and_data.size();
+            raw_header_and_data.slice(chr_rom_start..raw_header_and_data.size()).to_raw_memory()
         };
 
         let title_start = chr_rom_end;
-        let title = rom.slice(title_start..rom.size()).to_raw().to_vec();
+        let title = raw_header_and_data.slice(title_start..raw_header_and_data.size()).to_raw().to_vec();
         let title_length_is_proper = title.is_empty() || title.len() == 127 || title.len() == 128;
         if !title_length_is_proper {
             return Err(format!("Title must be empty or 127 or 128 bytes, but was {} bytes.", title.len()));
@@ -74,7 +70,7 @@ impl Cartridge {
 
         let mut cartridge = Cartridge {
             path,
-            header: header.clone(),
+            mapper_number: header.mapper_number().unwrap(),
             submapper_number: header.submapper_number(),
             title,
 
@@ -88,8 +84,8 @@ impl Cartridge {
             allow_saving,
         };
 
-        let cartridge_mapper_number = cartridge.header.mapper_number().unwrap();
-        if let Some(header) = header_db.header_from_db(&cartridge, full_hash, prg_rom_hash, cartridge_mapper_number, cartridge.submapper_number) {
+        let cartridge_mapper_number = header.mapper_number().unwrap();
+        if let Some(header) = header_db.header_from_db(&header, header.full_hash().unwrap(), prg_rom_hash, cartridge_mapper_number, cartridge.submapper_number) {
             if cartridge_mapper_number != header.mapper_number().unwrap() {
                 warn!("Mapper number in ROM ({}) does not match the one in the DB ({}).",
                     cartridge_mapper_number, header.mapper_number().unwrap());
@@ -107,21 +103,19 @@ impl Cartridge {
             cartridge.chr_save_ram = RawMemory::new(header.chr_save_ram_size().unwrap_or(0));
         } else {
             warn!("ROM not found in header database.");
-            if !cartridge.header.chr_present() {
+            if !header.chr_present() {
                 // If no CHR data is provided, add 8KiB of CHR RAM.
                 cartridge.chr_work_ram = RawMemory::new(CartridgeHeader::defaults().chr_work_ram_size().unwrap());
                 cartridge.chr_save_ram = RawMemory::new(CartridgeHeader::defaults().chr_save_ram_size().unwrap());
             }
 
             if let Some((number, sub_number, data_hash, prg_hash)) =
-                    header_db.missing_submapper_number(full_hash, prg_rom_hash) && cartridge_mapper_number == number {
+                    header_db.missing_submapper_number(header.full_hash().unwrap(), prg_rom_hash) && cartridge_mapper_number == number {
 
                 info!("Using override submapper for this ROM. Full hash: {data_hash} , PRG hash: {prg_hash}");
                 cartridge.submapper_number = Some(sub_number);
             }
         }
-
-        cartridge.header.set_console_type(CartridgeHeader::defaults().console_type().unwrap());
 
         Ok(cartridge)
     }
@@ -135,15 +129,11 @@ impl Cartridge {
     }
 
     pub fn mapper_number(&self) -> u16 {
-        self.header.mapper_number().unwrap()
+        self.mapper_number
     }
 
     pub fn submapper_number(&self) -> Option<u8> {
         self.submapper_number
-    }
-
-    pub fn name_table_mirroring(&self) -> Option<NameTableMirroring> {
-        self.header.name_table_mirroring()
     }
 
     pub fn prg_rom(&self) -> &RawMemory {
@@ -212,7 +202,7 @@ impl Cartridge {
 
 impl fmt::Display for Cartridge {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Mapper: {}", self.header.mapper_number().unwrap())?;
+        write!(f, "Mapper: {}", self.mapper_number)?;
         if let Some(submapper_number) = self.submapper_number {
             write!(f, " (Submapper: {submapper_number})")?;
         }
@@ -228,7 +218,6 @@ impl fmt::Display for Cartridge {
             self.chr_work_ram.size() / KIBIBYTE,
             self.chr_save_ram.size() / KIBIBYTE,
         )?;
-        writeln!(f, "Console: {}", self.header.console_type().unwrap())?;
 
         Ok(())
     }

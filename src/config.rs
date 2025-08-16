@@ -7,6 +7,7 @@ use log::info;
 use structopt::StructOpt;
 
 use crate::cartridge::cartridge::Cartridge;
+use crate::cartridge::cartridge_header::CartridgeHeader;
 use crate::cartridge::header_db::HeaderDb;
 use crate::gui::egui_gui::EguiGui;
 use crate::gui::gui::Gui;
@@ -17,6 +18,7 @@ use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::render::frame_rate::{FrameRate, TargetFrameRate};
 
 pub struct Config {
+    pub header: CartridgeHeader,
     pub cartridge: Cartridge,
     pub starting_cpu_cycle: i64,
     pub ppu_clock: Clock,
@@ -30,11 +32,12 @@ pub struct Config {
 
 impl Config {
     pub fn new(opt: &Opt) -> Config {
-        let cartridge = Config::load_rom(&opt.rom_path, !opt.prevent_saving);
+        let (header, cartridge) = Config::load_rom(&opt.rom_path, !opt.prevent_saving);
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
 
         Config {
+            header,
             cartridge,
             starting_cpu_cycle: 0,
             ppu_clock: Clock::mesen_compatible(),
@@ -55,21 +58,27 @@ impl Config {
     }
 
     pub fn with_new_rom(&self, path: &Path) -> Config {
+        let (header, cartridge) = Self::load_rom(path, self.cartridge.allow_saving());
         Config {
-            cartridge: Self::load_rom(path, self.cartridge.allow_saving()),
+            header,
+            cartridge,
             system_palette: self.system_palette.clone(),
             .. *self
         }
     }
 
-    fn load_rom(path: &Path, allow_saving: bool) -> Cartridge {
+    fn load_rom(path: &Path, allow_saving: bool) -> (CartridgeHeader, Cartridge) {
         info!("Loading ROM '{}'.", path.display());
-        let mut rom = Vec::new();
-        File::open(path).unwrap().read_to_end(&mut rom).unwrap();
-        let rom = RawMemory::from_vec(rom);
-        let cartridge = Cartridge::load(path, &rom, &HeaderDb::load(), allow_saving).unwrap();
+        let mut raw_header_and_data = Vec::new();
+        File::open(path).unwrap().read_to_end(&mut raw_header_and_data).unwrap();
+        let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
+        let mut header = CartridgeHeader::parse(&raw_header_and_data).unwrap();
+        header.set_console_type(CartridgeHeader::defaults().console_type().unwrap());
+        let cartridge = Cartridge::load(path, &header, &raw_header_and_data, &HeaderDb::load(), allow_saving).unwrap();
+        let prg_rom_hash = crc32fast::hash(cartridge.prg_rom().as_slice());
+        header.set_prg_rom_hash(prg_rom_hash);
         info!("ROM loaded.\n{cartridge}");
-        cartridge
+        (header, cartridge)
     }
 }
 

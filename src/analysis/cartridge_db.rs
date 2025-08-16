@@ -10,6 +10,7 @@ use rusqlite::{params, Connection, MappedRows};
 use walkdir::WalkDir;
 
 use crate::cartridge::cartridge::Cartridge;
+use crate::cartridge::cartridge_header::CartridgeHeader;
 use crate::cartridge::header_db::HeaderDb;
 use crate::memory::raw_memory::RawMemory;
 
@@ -20,17 +21,19 @@ pub fn analyze(rom_base_path: &Path) {
         .filter(|path| path.extension() == Some(OsStr::new("nes")))
         .collect();
 
-    let mut cartridges = Vec::new();
+    let mut headers_and_cartridges = Vec::new();
     for rom_path in rom_paths {
-        let mut rom = Vec::new();
+        let mut raw_header_and_data = Vec::new();
         File::open(rom_path.clone())
             .unwrap()
-            .read_to_end(&mut rom)
+            .read_to_end(&mut raw_header_and_data)
             .unwrap();
-        let rom = RawMemory::from_vec(rom);
-        match Cartridge::load(&rom_path, &rom, &HeaderDb::load(), false) {
+        let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
+        let mut header = CartridgeHeader::parse(&raw_header_and_data).unwrap();
+        header.set_console_type(CartridgeHeader::defaults().console_type().unwrap());
+        match Cartridge::load(&rom_path, &header, &raw_header_and_data, &HeaderDb::load(), false) {
             Err(err) => error!("Failed to load rom {}. {}", rom_path.display(), err),
-            Ok(cartridge) => cartridges.push(cartridge),
+            Ok(cartridge) => headers_and_cartridges.push((header, cartridge)),
         }
     }
 
@@ -45,14 +48,14 @@ pub fn analyze(rom_base_path: &Path) {
             [],
         )
         .unwrap();
-    for cartridge in cartridges {
+    for (header, cartridge) in headers_and_cartridges {
         connection
             .execute(
                 "INSERT INTO cartridges VALUES (?1, ?2, ?3)",
                 params![
                     cartridge.name(),
-                    cartridge.mapper_number(),
-                    format!("{:?}", cartridge.name_table_mirroring()),
+                    header.mapper_number().unwrap(),
+                    format!("{:?}", header.name_table_mirroring()),
                 ],
             )
             .unwrap();

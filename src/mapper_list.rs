@@ -1,8 +1,9 @@
+use crate::cartridge::cartridge_header::CartridgeHeader;
 use crate::mapper::Cartridge;
 use crate::mapper::{Mapper, MapperParams, LookupResult};
 use crate::mappers as m;
 
-pub fn lookup_mapper_with_params(cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
+pub fn lookup_mapper_with_params(header: &CartridgeHeader, cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
     let number = cartridge.mapper_number();
     let sub_number = cartridge.submapper_number();
     let cartridge_name = cartridge.name();
@@ -23,7 +24,7 @@ pub fn lookup_mapper_with_params(cartridge: &Cartridge) -> (Box<dyn Mapper>, Map
             panic!("Mapper {number}, submapper {} has been reassigned to {correct_mapper}, {correct_submapper} . ROM: {cartridge_name}", sub_number.unwrap()),
     };
 
-    let mut mapper_params = mapper.layout().make_mapper_params(cartridge);
+    let mut mapper_params = mapper.layout().make_mapper_params(header, cartridge);
     mapper.init_mapper_params(&mut mapper_params);
     (mapper, mapper_params)
 }

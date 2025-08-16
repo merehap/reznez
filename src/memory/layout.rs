@@ -51,7 +51,7 @@ impl Layout {
         LayoutBuilder::new()
     }
 
-    pub fn make_mapper_params(self, cartridge: &Cartridge) -> MapperParams {
+    pub fn make_mapper_params(self, header: &CartridgeHeader, cartridge: &Cartridge) -> MapperParams {
         let prg_rom_size = cartridge.prg_rom().size();
         assert!(prg_rom_size <= self.prg_rom_max_size,
             "PRG ROM size of {}KiB is too large for this mapper.", prg_rom_size / KIBIBYTE);
@@ -110,7 +110,7 @@ impl Layout {
         );
 
         let name_table_mirroring = self.header_override.name_table_mirroring()
-            .unwrap_or_else(|| cartridge.name_table_mirroring().expect("This mapper must define what Four Screen mirroring is."));
+            .unwrap_or_else(|| header.name_table_mirroring().expect("This mapper must define what Four Screen mirroring is."));
 
         let mut chr_layouts: Vec<_> = self.chr_layouts.as_iter().collect();
         match chr_access_override {

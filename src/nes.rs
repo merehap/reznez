@@ -49,7 +49,7 @@ impl Nes {
             warn!("Failed to create saveram directory. {err}");
         }
 
-        let (mapper, mapper_params) = mapper_list::lookup_mapper_with_params(&config.cartridge);
+        let (mapper, mapper_params) = mapper_list::lookup_mapper_with_params(&config.header, &config.cartridge);
         let (joypad1, joypad2) = (Joypad::new(), Joypad::new());
 
         let latest_values = LatestValues::new(&mapper_params);

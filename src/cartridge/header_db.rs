@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use log::info;
 
-use crate::cartridge::{cartridge::Cartridge, cartridge_header::{CartridgeHeader, CartridgeHeaderBuilder}};
+use crate::cartridge::cartridge_header::{CartridgeHeader, CartridgeHeaderBuilder};
 
 // Submapper numbers for ROMs that aren't in the NES Header DB (mostly test ROMs).
 const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
@@ -168,7 +168,7 @@ impl HeaderDb {
 
     pub fn header_from_db(
         &self,
-        cartridge: &Cartridge,
+        header_from_cartridge: &CartridgeHeader,
         full_hash: u32,
         prg_hash: u32,
         mapper_number: u16,
@@ -177,11 +177,11 @@ impl HeaderDb {
 
         let mut override_submapper_number = None;
         if let Some((number, header)) = self.missing_data_submapper_numbers.get(&full_hash).cloned()
-                && number == cartridge.mapper_number() {
+                && number == header_from_cartridge.mapper_number().unwrap() {
             info!("Using override submapper for this ROM. Full hash: {full_hash} , PRG hash: {prg_hash}");
             override_submapper_number = header.submapper_number();
         } else if let Some((number, header)) = self.missing_prg_rom_submapper_numbers.get(&prg_hash).cloned()
-                && number == cartridge.mapper_number() {
+                && number == header_from_cartridge.mapper_number().unwrap() {
             info!("Using override submapper for this ROM. Full hash: {full_hash} , PRG hash: {prg_hash}");
             override_submapper_number = header.submapper_number();
         }

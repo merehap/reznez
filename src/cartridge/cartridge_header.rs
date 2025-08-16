@@ -2,6 +2,7 @@ use std::fmt;
 
 use splitbits::{combinebits, splitbits, splitbits_named};
 
+use crate::memory::raw_memory::RawMemory;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::unit::KIBIBYTE;
 
@@ -32,26 +33,29 @@ pub struct CartridgeHeader {
 }
 
 impl CartridgeHeader {
-    pub fn parse(header: [u8; 16], full_hash: u32) -> Result<CartridgeHeader, String> {
+    pub fn parse(raw_header_and_data: &RawMemory) -> Result<CartridgeHeader, String> {
+        let full_hash = crc32fast::hash(raw_header_and_data.as_slice());
+        let raw_header: [u8; 0x10] = raw_header_and_data.as_slice()[0x0..0x10].try_into()
+            .map_err(|err| format!("ROM file to have a 16 byte header. {err}"))?;
         let mut builder = CartridgeHeaderBuilder::new();
         builder.full_hash(full_hash);
 
-        if &header[0..4] != INES_HEADER_CONSTANT {
+        if &raw_header[0..4] != INES_HEADER_CONSTANT {
             return Err(format!(
                 "Cannot load non-iNES ROM. Found {:?} but need {:?}.",
-                &header[0..4],
+                &raw_header[0..4],
                 INES_HEADER_CONSTANT,
             ));
         }
 
         builder
-            .prg_rom_size(header[4] as u32 * PRG_ROM_CHUNK_LENGTH as u32)
-            .chr_rom_size(header[5] as u32 * CHR_ROM_CHUNK_LENGTH as u32);
+            .prg_rom_size(raw_header[4] as u32 * PRG_ROM_CHUNK_LENGTH as u32)
+            .chr_rom_size(raw_header[5] as u32 * CHR_ROM_CHUNK_LENGTH as u32);
 
         let (low_mapper_number, four_screen, trainer_enabled, has_persistent_memory, vertical_mirroring) =
-            splitbits_named!(header[6], "llllftpv");
+            splitbits_named!(raw_header[6], "llllftpv");
         let (mid_mapper_number, ines2, play_choice_enabled, vs_unisystem_enabled) =
-            splitbits_named!(header[7], "mmmmiipv");
+            splitbits_named!(raw_header[7], "mmmmiipv");
 
         builder.has_persistent_memory(has_persistent_memory);
         let ines2_present = ines2 == 0b10;
@@ -61,15 +65,15 @@ impl CartridgeHeader {
 
         let mut high_mapper_number = 0b0000;
         if ines2_present {
-            high_mapper_number = header[8] & 0b1111;
-            builder.submapper_number(header[8] >> 4);
-            let prg_sizes = splitbits!(min=u32, header[10], "sssswwww");
+            high_mapper_number = raw_header[8] & 0b1111;
+            builder.submapper_number(raw_header[8] >> 4);
+            let prg_sizes = splitbits!(min=u32, raw_header[10], "sssswwww");
             let prg_work = if prg_sizes.w > 0 { 64 << prg_sizes.w } else { 0 };
             builder.prg_work_ram_size(prg_work);
             let prg_save = if prg_sizes.s > 0 { 64 << prg_sizes.s } else { 0 };
             builder.prg_save_ram_size(prg_save);
 
-            let chr_sizes = splitbits!(min=u32, header[11], "sssswwww");
+            let chr_sizes = splitbits!(min=u32, raw_header[11], "sssswwww");
             let chr_work = if chr_sizes.w > 0 { 64 << chr_sizes.w } else { 0 };
             builder.chr_work_ram_size(chr_work);
             let chr_save = if chr_sizes.s > 0 { 64 << chr_sizes.s } else { 0 };
@@ -115,6 +119,14 @@ impl CartridgeHeader {
             prg_save_ram_size: None,
             chr_rom_size: None,
         }
+    }
+
+    pub fn full_hash(&self) -> Option<u32> {
+        self.full_hash
+    }
+
+    pub fn prg_rom_hash(&self) -> Option<u32> {
+        self.prg_rom_hash
     }
 
     pub fn mapper_number(&self) -> Option<u16> {
