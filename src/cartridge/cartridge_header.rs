@@ -164,8 +164,31 @@ impl CartridgeHeader {
     pub fn set_submapper_number(&mut self, submapper_number: u8) {
         self.submapper_number = Some(submapper_number);
     }
+
+    pub const fn into_builder(self) -> CartridgeHeaderBuilder {
+        CartridgeHeaderBuilder {
+            mapper_number: self.mapper_number,
+            submapper_number: self.submapper_number,
+
+            name_table_mirroring: self.name_table_mirroring,
+            has_persistent_memory: self.has_persistent_memory,
+            console_type: self.console_type,
+
+            full_hash: self.full_hash,
+            prg_rom_hash: self.prg_rom_hash,
+
+            prg_rom_size: self.prg_rom_size,
+            prg_work_ram_size: self.prg_work_ram_size,
+            prg_save_ram_size: self.prg_save_ram_size,
+
+            chr_rom_size: self.chr_rom_size,
+            chr_work_ram_size: self.chr_work_ram_size,
+            chr_save_ram_size: self.chr_save_ram_size,
+        }
+    }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct CartridgeHeaderBuilder {
     mapper_number: Option<u16>,
     submapper_number: Option<u8>,
@@ -187,7 +210,7 @@ pub struct CartridgeHeaderBuilder {
 }
 
 impl CartridgeHeaderBuilder {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             mapper_number: None,
             submapper_number: None,
@@ -209,72 +232,72 @@ impl CartridgeHeaderBuilder {
         }
     }
 
-    pub fn mapper_number(&mut self, mapper_number: u16) -> &mut Self {
+    pub const fn mapper_number(&mut self, mapper_number: u16) -> &mut Self {
         self.mapper_number = Some(mapper_number);
         self
     }
 
-    pub fn submapper_number(&mut self, submapper_number: u8) -> &mut Self {
+    pub const fn submapper_number(&mut self, submapper_number: u8) -> &mut Self {
         self.submapper_number = Some(submapper_number);
         self
     }
 
-    pub fn name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring) -> &mut Self {
+    pub const fn name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring) -> &mut Self {
         self.name_table_mirroring = Some(name_table_mirroring);
         self
     }
 
-    pub fn has_persistent_memory(&mut self, has_persistent_memory: bool) -> &mut Self {
+    pub const fn has_persistent_memory(&mut self, has_persistent_memory: bool) -> &mut Self {
         self.has_persistent_memory = Some(has_persistent_memory);
         self
     }
 
-    pub fn console_type(&mut self, console_type: ConsoleType) -> &mut Self {
+    pub const fn console_type(&mut self, console_type: ConsoleType) -> &mut Self {
         self.console_type = Some(console_type);
         self
     }
 
-    pub fn full_hash(&mut self, full_hash: u32) -> &mut Self {
+    pub const fn full_hash(&mut self, full_hash: u32) -> &mut Self {
         self.full_hash = Some(full_hash);
         self
     }
 
-    pub fn prg_rom_hash(&mut self, prg_rom_hash: u32) -> &mut Self {
+    pub const fn prg_rom_hash(&mut self, prg_rom_hash: u32) -> &mut Self {
         self.prg_rom_hash = Some(prg_rom_hash);
         self
     }
 
-    pub fn prg_rom_size(&mut self, prg_rom_size: u32) -> &mut Self {
+    pub const fn prg_rom_size(&mut self, prg_rom_size: u32) -> &mut Self {
         self.prg_rom_size = Some(prg_rom_size);
         self
     }
 
-    pub fn prg_work_ram_size(&mut self, prg_work_ram_size: u32) -> &mut Self {
+    pub const fn prg_work_ram_size(&mut self, prg_work_ram_size: u32) -> &mut Self {
         self.prg_work_ram_size = Some(prg_work_ram_size);
         self
     }
 
-    pub fn prg_save_ram_size(&mut self, prg_save_ram_size: u32) -> &mut Self {
+    pub const fn prg_save_ram_size(&mut self, prg_save_ram_size: u32) -> &mut Self {
         self.prg_save_ram_size = Some(prg_save_ram_size);
         self
     }
 
-    pub fn chr_rom_size(&mut self, chr_rom_size: u32) -> &mut Self {
+    pub const fn chr_rom_size(&mut self, chr_rom_size: u32) -> &mut Self {
         self.chr_rom_size = Some(chr_rom_size);
         self
     }
 
-    pub fn chr_work_ram_size(&mut self, chr_work_ram_size: u32) -> &mut Self {
+    pub const fn chr_work_ram_size(&mut self, chr_work_ram_size: u32) -> &mut Self {
         self.chr_work_ram_size = Some(chr_work_ram_size);
         self
     }
 
-    pub fn chr_save_ram_size(&mut self, chr_save_ram_size: u32) -> &mut Self {
+    pub const fn chr_save_ram_size(&mut self, chr_save_ram_size: u32) -> &mut Self {
         self.chr_save_ram_size = Some(chr_save_ram_size);
         self
     }
 
-    pub fn build(&mut self) -> CartridgeHeader {
+    pub const fn build(&mut self) -> CartridgeHeader {
         CartridgeHeader {
             mapper_number: self.mapper_number,
             submapper_number: self.submapper_number,

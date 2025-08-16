@@ -4,6 +4,7 @@ use std::num::NonZeroU8;
 use log::warn;
 
 use crate::cartridge::cartridge::Cartridge;
+use crate::cartridge::cartridge_header::{CartridgeHeader, CartridgeHeaderBuilder};
 use crate::memory::bank::bank_index::{BankIndex, PrgBankRegisterId, PrgBankRegisters, ChrBankRegisters, MetaRegisterId};
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory::PrgMemory;
@@ -34,10 +35,11 @@ pub struct Layout {
     chr_save_ram_size: u32,
     chr_rom_outer_bank_layout: OuterBankLayout,
 
-    name_table_mirroring_source: NameTableMirroringSource,
     name_table_mirrorings: &'static [NameTableMirroring],
 
     read_write_statuses: &'static [ReadWriteStatus],
+    
+    header_override: CartridgeHeader,
 
     bank_register_overrides: ConstVec<(PrgBankRegisterId, BankIndex), 5>,
     chr_bank_register_overrides: ConstVec<(ChrBankRegisterId, BankIndex), 5>,
@@ -107,11 +109,8 @@ impl Layout {
             prg_bank_registers,
         );
 
-        let name_table_mirroring = match self.name_table_mirroring_source {
-            NameTableMirroringSource::Direct(mirroring) => mirroring,
-            NameTableMirroringSource::Cartridge => cartridge.name_table_mirroring()
-                .expect("This mapper must define what Four Screen mirroring is."),
-        };
+        let name_table_mirroring = self.header_override.name_table_mirroring()
+            .unwrap_or(cartridge.name_table_mirroring().expect("This mapper must define what Four Screen mirroring is."));
 
         let mut chr_layouts: Vec<_> = self.chr_layouts.as_iter().collect();
         match chr_access_override {
@@ -189,10 +188,11 @@ impl Layout {
             chr_rom_outer_bank_layout: Some(self.chr_rom_outer_bank_layout),
             chr_save_ram_size: self.chr_save_ram_size,
 
-            name_table_mirroring_source: self.name_table_mirroring_source,
             name_table_mirrorings: self.name_table_mirrorings,
 
             read_write_statuses: self.read_write_statuses,
+
+            header_override_builder: self.header_override.into_builder(),
 
             bank_register_overrides: self.bank_register_overrides,
             chr_bank_register_overrides: self.chr_bank_register_overrides,
@@ -232,10 +232,11 @@ pub struct LayoutBuilder {
     align_large_chr_windows: bool,
     chr_save_ram_size: u32,
 
-    name_table_mirroring_source: NameTableMirroringSource,
     name_table_mirrorings: &'static [NameTableMirroring],
 
     read_write_statuses: &'static [ReadWriteStatus],
+
+    header_override_builder: CartridgeHeaderBuilder,
 
     bank_register_overrides: ConstVec<(PrgBankRegisterId, BankIndex), 5>,
     chr_bank_register_overrides: ConstVec<(ChrBankRegisterId, BankIndex), 5>,
@@ -258,10 +259,11 @@ impl LayoutBuilder {
             chr_rom_outer_bank_layout: None,
             chr_save_ram_size: 0,
 
-            name_table_mirroring_source: NameTableMirroringSource::Cartridge,
             name_table_mirrorings: &[],
 
             read_write_statuses: &[],
+
+            header_override_builder: CartridgeHeaderBuilder::new(),
 
             bank_register_overrides: ConstVec::new(),
             chr_bank_register_overrides: ConstVec::new(),
@@ -329,11 +331,8 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn initial_name_table_mirroring(
-        &mut self,
-        value: NameTableMirroring,
-    ) -> &mut LayoutBuilder {
-        self.name_table_mirroring_source = NameTableMirroringSource::Direct(value);
+    pub const fn initial_name_table_mirroring(&mut self, value: NameTableMirroring) -> &mut LayoutBuilder {
+        self.header_override_builder.name_table_mirroring(value);
         self
     }
 
@@ -380,7 +379,7 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn build(self) -> Layout {
+    pub const fn build(mut self) -> Layout {
         assert!(!self.prg_layouts.is_empty());
         assert!(!self.chr_layouts.is_empty());
 
@@ -408,27 +407,16 @@ impl LayoutBuilder {
             chr_save_ram_size: self.chr_save_ram_size,
             chr_rom_outer_bank_layout,
 
-            name_table_mirroring_source: self.name_table_mirroring_source,
             name_table_mirrorings: self.name_table_mirrorings,
 
             read_write_statuses: self.read_write_statuses,
+
+            header_override: self.header_override_builder.build(),
 
             bank_register_overrides: self.bank_register_overrides,
             chr_bank_register_overrides: self.chr_bank_register_overrides,
             chr_meta_register_overrides: self.chr_meta_register_overrides,
         }
-    }
-}
-
-#[derive(Clone, Copy)]
-pub enum NameTableMirroringSource {
-    Direct(NameTableMirroring),
-    Cartridge,
-}
-
-impl NameTableMirroring {
-    pub const fn to_source(self) -> NameTableMirroringSource {
-        NameTableMirroringSource::Direct(self)
     }
 }
 
