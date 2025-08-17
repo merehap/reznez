@@ -4,7 +4,8 @@ use std::num::NonZeroU8;
 use log::warn;
 
 use crate::cartridge::cartridge::Cartridge;
-use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeHeaderBuilder};
+use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder};
+use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::memory::bank::bank_index::{BankIndex, PrgBankRegisterId, PrgBankRegisters, ChrBankRegisters, MetaRegisterId};
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory::PrgMemory;
@@ -51,7 +52,7 @@ impl Layout {
         LayoutBuilder::new()
     }
 
-    pub fn make_mapper_params(self, header: &CartridgeMetadata, cartridge: &Cartridge) -> MapperParams {
+    pub fn make_mapper_params(self, metadata: &ResolvedMetadata, cartridge: &Cartridge) -> MapperParams {
         let prg_rom_size = cartridge.prg_rom().size();
         assert!(prg_rom_size <= self.prg_rom_max_size,
             "PRG ROM size of {}KiB is too large for this mapper.", prg_rom_size / KIBIBYTE);
@@ -59,9 +60,16 @@ impl Layout {
         assert!(chr_rom_size <= self.chr_rom_max_size,
             "CHR ROM size of {}KiB is too large for this mapper.", chr_rom_size / KIBIBYTE);
 
-        let mut chr_access_override = cartridge.chr_access_override();
+        let mut chr_access_override = if metadata.chr_rom_size == 0 {
+            Some(AccessOverride::ForceRam)
+        } else if metadata.chr_work_ram_size == 0 && metadata.chr_save_ram_size == 0 {
+            Some(AccessOverride::ForceRom)
+        } else {
+            None
+        };
+
         let chr_ram = if self.chr_save_ram_size > 0 {
-            match cartridge.chr_ram().size() {
+            match metadata.chr_work_ram_size + metadata.chr_save_ram_size {
                 0 => {
                     if chr_access_override.is_some() {
                         warn!("Removing CHR access override because mapper explicitly set CHR Save RAM.");
@@ -74,7 +82,7 @@ impl Layout {
                 _ => panic!("CHR SAVE RAM size from cartridge did not match mapper override value."),
             }
         } else {
-            cartridge.chr_ram()
+            RawMemory::new(metadata.chr_work_ram_size + metadata.chr_save_ram_size)
         };
 
         let mut prg_bank_registers = PrgBankRegisters::new();
@@ -92,7 +100,7 @@ impl Layout {
         }
 
         let mut prg_layouts: Vec<_> = self.prg_layouts.as_iter().collect();
-        if cartridge.prg_rom_forced() {
+        if metadata.prg_work_ram_size == 0 && metadata.prg_save_ram_size == 0 {
             for layout in &mut prg_layouts {
                 *layout = layout.force_rom()
             }
@@ -104,13 +112,12 @@ impl Layout {
             cartridge.prg_rom().clone(),
             self.prg_rom_outer_bank_layout,
             self.prg_rom_bank_size_override,
-            RawMemory::new(cartridge.prg_work_ram_size()),
-            SaveRam::open(&cartridge.path().to_prg_save_ram_file_path(), cartridge.prg_save_ram_size(), cartridge.allow_saving()),
+            RawMemory::new(metadata.prg_work_ram_size),
+            SaveRam::open(&cartridge.path().to_prg_save_ram_file_path(), metadata.prg_save_ram_size, cartridge.allow_saving()),
             prg_bank_registers,
         );
 
-        let name_table_mirroring = self.header_override.name_table_mirroring()
-            .unwrap_or_else(|| header.name_table_mirroring().expect("This mapper must define what Four Screen mirroring is."));
+        let name_table_mirroring = metadata.name_table_mirroring;
 
         let mut chr_layouts: Vec<_> = self.chr_layouts.as_iter().collect();
         match chr_access_override {
@@ -139,7 +146,7 @@ impl Layout {
         );
 
         let mut ram_not_present = BTreeSet::new();
-        if cartridge.prg_work_ram_size() == 0 && cartridge.prg_save_ram_size() == 0 {
+        if metadata.prg_work_ram_size == 0 && metadata.prg_save_ram_size == 0 {
             for status_info in prg_memory.read_write_status_infos() {
                 match status_info {
                     ReadWriteStatusInfo::Absent | ReadWriteStatusInfo::MapperCustom { .. } => { /* Do nothing. */ }
@@ -151,7 +158,7 @@ impl Layout {
             }
         }
 
-        if cartridge.chr_work_ram_size() == 0 && cartridge.chr_save_ram_size() == 0 {
+        if metadata.chr_work_ram_size == 0 && metadata.chr_save_ram_size == 0 {
             for status_info in chr_memory.read_write_status_infos() {
                 match status_info {
                     ReadWriteStatusInfo::Absent | ReadWriteStatusInfo::MapperCustom { .. } => { /* Do nothing. */ }
@@ -171,6 +178,10 @@ impl Layout {
             ram_not_present,
             irq_pending: false,
         }
+    }
+
+    pub fn cartridge_metadata_override(&self) -> CartridgeMetadata {
+        self.header_override.clone()
     }
 
     pub const fn into_builder(self) -> LayoutBuilder {
@@ -236,7 +247,7 @@ pub struct LayoutBuilder {
 
     read_write_statuses: &'static [ReadWriteStatus],
 
-    header_override_builder: CartridgeHeaderBuilder,
+    header_override_builder: CartridgeMetadataBuilder,
 
     bank_register_overrides: ConstVec<(PrgBankRegisterId, BankIndex), 5>,
     chr_bank_register_overrides: ConstVec<(ChrBankRegisterId, BankIndex), 5>,
@@ -263,7 +274,7 @@ impl LayoutBuilder {
 
             read_write_statuses: &[],
 
-            header_override_builder: CartridgeHeaderBuilder::new(),
+            header_override_builder: CartridgeMetadataBuilder::new(),
 
             bank_register_overrides: ConstVec::new(),
             chr_bank_register_overrides: ConstVec::new(),

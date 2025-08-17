@@ -37,7 +37,7 @@ impl CartridgeMetadata {
         let full_hash = crc32fast::hash(raw_header_and_data.as_slice());
         let raw_header: [u8; 0x10] = raw_header_and_data.as_slice()[0x0..0x10].try_into()
             .map_err(|err| format!("ROM file to have a 16 byte header. {err}"))?;
-        let mut builder = CartridgeHeaderBuilder::new();
+        let mut builder = CartridgeMetadataBuilder::new();
         builder.full_hash(full_hash);
 
         if &raw_header[0..4] != INES_HEADER_CONSTANT {
@@ -105,7 +105,10 @@ impl CartridgeMetadata {
     pub fn defaults() -> Self {
         Self {
             console_type: Some(ConsoleType::Nes),
-            chr_work_ram_size: Some(8 * KIBIBYTE),
+            // FIXME: Should be 8KiB
+            prg_work_ram_size: Some(0),
+            prg_save_ram_size: Some(0),
+            chr_work_ram_size: Some(0),
             chr_save_ram_size: Some(0),
 
             mapper_number: None,
@@ -115,8 +118,6 @@ impl CartridgeMetadata {
             full_hash: None,
             prg_rom_hash: None,
             prg_rom_size: None,
-            prg_work_ram_size: None,
-            prg_save_ram_size: None,
             chr_rom_size: None,
         }
     }
@@ -135,6 +136,10 @@ impl CartridgeMetadata {
 
     pub fn submapper_number(&self) -> Option<u8> {
         self.submapper_number
+    }
+
+    pub fn has_persistent_memory(&self) -> Option<bool> {
+        self.has_persistent_memory
     }
 
     pub fn prg_rom_size(&self) -> Option<u32> {
@@ -198,8 +203,8 @@ impl CartridgeMetadata {
         self.console_type = Some(console_type);
     }
 
-    pub const fn into_builder(self) -> CartridgeHeaderBuilder {
-        CartridgeHeaderBuilder {
+    pub const fn into_builder(self) -> CartridgeMetadataBuilder {
+        CartridgeMetadataBuilder {
             mapper_number: self.mapper_number,
             submapper_number: self.submapper_number,
 
@@ -222,7 +227,7 @@ impl CartridgeMetadata {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct CartridgeHeaderBuilder {
+pub struct CartridgeMetadataBuilder {
     mapper_number: Option<u16>,
     submapper_number: Option<u8>,
 
@@ -242,7 +247,7 @@ pub struct CartridgeHeaderBuilder {
     chr_save_ram_size: Option<u32>,
 }
 
-impl CartridgeHeaderBuilder {
+impl CartridgeMetadataBuilder {
     pub const fn new() -> Self {
         Self {
             mapper_number: None,

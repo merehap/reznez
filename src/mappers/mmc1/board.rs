@@ -1,6 +1,6 @@
 use log::warn;
 
-use crate::cartridge::cartridge::Cartridge;
+use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::util::unit::KIBIBYTE;
 
 #[allow(non_camel_case_types)]
@@ -35,15 +35,14 @@ pub enum Board {
     SZROM,
 }
 
-
 impl Board {
-    pub fn from_cartridge(cartridge: &Cartridge) -> Self {
-        let prg_rom_size = cartridge.prg_rom_size() / KIBIBYTE;
-        let prg_ram_size = cartridge.prg_work_ram_size() / KIBIBYTE;
-        let prg_nvram_size = cartridge.prg_save_ram_size() / KIBIBYTE;
-        let chr_rom_size = cartridge.chr_rom_size() / KIBIBYTE;
-        let mut chr_ram_size = cartridge.chr_work_ram_size() / KIBIBYTE;
-        // FIXME: Hack for ROMs that don't specify CHR sizes.
+    pub fn from_cartridge_metadata(metadata: &ResolvedMetadata) -> Self {
+        let prg_rom_size = metadata.prg_rom_size / KIBIBYTE;
+        let prg_ram_size = metadata.prg_work_ram_size / KIBIBYTE;
+        let prg_nvram_size = metadata.prg_save_ram_size / KIBIBYTE;
+        let chr_rom_size = metadata.chr_rom_size / KIBIBYTE;
+        let mut chr_ram_size = metadata.chr_work_ram_size / KIBIBYTE;
+        // FIXME: Hack for ROMs that don't specify CHR sizes. This should now be removable, but needs to be tested.
         if chr_rom_size == 0 && chr_ram_size == 0 {
             chr_ram_size = 8;
         }

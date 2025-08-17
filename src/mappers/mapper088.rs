@@ -1,3 +1,4 @@
+use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
@@ -56,10 +57,10 @@ impl Mapper for Mapper088 {
 }
 
 impl Mapper088 {
-    pub fn new(cartridge: &Cartridge) -> Self {
+    pub fn new(metadata: &ResolvedMetadata) -> Self {
         Self {
             selected_register_id: Chr(C0),
-            extended_chr_present: cartridge.chr_rom().size() > 64 * KIBIBYTE,
+            extended_chr_present: metadata.chr_rom_size > 64 * KIBIBYTE,
         }
     }
 

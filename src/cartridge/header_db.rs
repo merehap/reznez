@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use log::info;
 
-use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeHeaderBuilder};
+use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder};
 
 // Submapper numbers for ROMs that aren't in the NES Header DB (mostly test ROMs).
 const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
@@ -123,12 +123,12 @@ impl HeaderDb {
 
         let missing_data_submapper_numbers: BTreeMap<u32, (u16, CartridgeMetadata)> =
             MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(k, _, m, s)| {
-                let header = CartridgeHeaderBuilder::new().submapper_number(*s).build();
+                let header = CartridgeMetadataBuilder::new().submapper_number(*s).build();
                 (*k, (*m, header))
             }).collect();
         let missing_prg_rom_submapper_numbers: BTreeMap<u32, (u16, CartridgeMetadata)> =
             MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(_, k, m, s)| {
-                let header = CartridgeHeaderBuilder::new().submapper_number(*s).build();
+                let header = CartridgeMetadataBuilder::new().submapper_number(*s).build();
                 (*k, (*m, header))
             }).collect();
 
@@ -144,7 +144,7 @@ impl HeaderDb {
             let full_hash = u32::from_str_radix(data_hash, 16).unwrap();
             let prg_rom_hash = read_attribute(game, "prgrom", "crc32").unwrap();
             let prg_rom_hash = u32::from_str_radix(prg_rom_hash, 16).unwrap();
-            let mut header_builder = CartridgeHeaderBuilder::new();
+            let mut header_builder = CartridgeMetadataBuilder::new();
             header_builder
                 .full_hash(full_hash)
                 .prg_rom_hash(prg_rom_hash)

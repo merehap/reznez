@@ -1,3 +1,4 @@
+use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::mapper::*;
 use crate::mappers::mmc1::board::Board;
 use crate::mappers::mmc1::shift_register::{ShiftRegister, ShiftStatus};
@@ -93,9 +94,9 @@ impl Mapper for Mapper001_0 {
 }
 
 impl Mapper001_0 {
-    pub fn new(cartridge: &Cartridge) -> Self {
+    pub fn new(metadata: &ResolvedMetadata) -> Self {
         Self {
-            board: Board::from_cartridge(cartridge),
+            board: Board::from_cartridge_metadata(metadata),
             shift_register: ShiftRegister::default(),
         }
     }

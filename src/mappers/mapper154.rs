@@ -1,3 +1,4 @@
+use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::mapper::*;
 use crate::mappers::mapper088::{Mapper088, PRG_WINDOWS, CHR_WINDOWS};
 
@@ -34,7 +35,7 @@ impl Mapper for Mapper154 {
 }
 
 impl Mapper154 {
-    pub fn new(cartridge: &Cartridge) -> Self {
-        Self { mapper088: Mapper088::new(cartridge) }
+    pub fn new(metadata: &ResolvedMetadata) -> Self {
+        Self { mapper088: Mapper088::new(metadata) }
     }
 }

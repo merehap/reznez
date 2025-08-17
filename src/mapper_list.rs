@@ -1,14 +1,17 @@
-use crate::cartridge::cartridge_metadata::CartridgeMetadata;
+use log::info;
+
+use crate::cartridge::resolved_metadata::{MetadataResolver, ResolvedMetadata};
 use crate::mapper::Cartridge;
 use crate::mapper::{Mapper, MapperParams, LookupResult};
 use crate::mappers as m;
 
-pub fn lookup_mapper_with_params(header: &CartridgeMetadata, cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
-    let number = cartridge.mapper_number();
-    let sub_number = cartridge.submapper_number();
+pub fn lookup_mapper_with_params(mut metadata_resolver: MetadataResolver, cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams, ResolvedMetadata) {
+    let metadata = metadata_resolver.resolve();
+    let number = metadata.mapper_number;
+    let sub_number = metadata.submapper_number;
     let cartridge_name = cartridge.name();
 
-    let mapper = match lookup_mapper(cartridge) {
+    let mapper = match lookup_mapper(&metadata) {
         LookupResult::Supported(supported_mapper) => supported_mapper,
         LookupResult::UnassignedMapper =>
             panic!("Mapper {number} is not in use. ROM: {cartridge_name}"),
@@ -24,22 +27,26 @@ pub fn lookup_mapper_with_params(header: &CartridgeMetadata, cartridge: &Cartrid
             panic!("Mapper {number}, submapper {} has been reassigned to {correct_mapper}, {correct_submapper} . ROM: {cartridge_name}", sub_number.unwrap()),
     };
 
-    let mut mapper_params = mapper.layout().make_mapper_params(header, cartridge);
+    metadata_resolver.mapper = mapper.layout().cartridge_metadata_override();
+    let metadata = metadata_resolver.resolve();
+    info!("ROM loaded.\n{metadata}");
+
+    let mut mapper_params = mapper.layout().make_mapper_params(&metadata, cartridge);
     mapper.init_mapper_params(&mut mapper_params);
-    (mapper, mapper_params)
+    (mapper, mapper_params, metadata)
 }
 
-fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
+fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
     use LookupResult::*;
-    let submapper_number = cartridge.submapper_number();
-    match cartridge.mapper_number() {
+    let submapper_number = metadata.submapper_number;
+    match metadata.mapper_number {
         // NROM
         0 => m::mapper000::Mapper000.supported(),
         // MMC1
         1 => match submapper_number {
             None => UnspecifiedSubmapper,
             // Normal behavior
-            Some(0) => m::mapper001_0::Mapper001_0::new(cartridge).supported(),
+            Some(0) => m::mapper001_0::Mapper001_0::new(metadata).supported(),
             // SUROM, SOROM, SXROM
             Some(1 | 2 | 4) => ReassignedSubmapper { correct_mapper: 1, correct_submapper: 0 },
             Some(3) => ReassignedSubmapper { correct_mapper: 155, correct_submapper: 0 },
@@ -207,7 +214,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // Caltron 6-in-1
         41 => m::mapper041::Mapper041::default().supported(),
         // FDS games hacked into cartridge form
-        42 => m::mapper042::Mapper042::new(cartridge.chr_work_ram_size()).supported(),
+        42 => m::mapper042::Mapper042::new(metadata.chr_work_ram_size).supported(),
         // TONY-I and YS-612 (FDS games in cartridge form)
         43 => m::mapper043::Mapper043::default().supported(),
 
@@ -228,7 +235,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         58 => m::mapper058::Mapper058.supported(),
 
         // NTDEC 0324 PCB
-        61 => m::mapper061::Mapper061::new(cartridge.chr_work_ram_size()).supported(),
+        61 => m::mapper061::Mapper061::new(metadata.chr_work_ram_size).supported(),
         // Super 700-in-1
         62 => m::mapper062::Mapper062.supported(),
         63 => match submapper_number {
@@ -303,7 +310,7 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         // Jaleco J87
         87 => m::mapper087::Mapper087.supported(),
         // NAMCOT-3443
-        88 => m::mapper088::Mapper088::new(cartridge).supported(),
+        88 => m::mapper088::Mapper088::new(metadata).supported(),
         // Sunsoft (Tenka no Goikenban: Mito Koumon (J))
         89 => m::mapper089::Mapper089.supported(),
 
@@ -370,13 +377,13 @@ fn lookup_mapper(cartridge: &Cartridge) -> LookupResult {
         152 => m::mapper152::Mapper152.supported(),
 
         // NAMCOT-3453 (only Devil Man)
-        154 => m::mapper154::Mapper154::new(cartridge).supported(),
+        154 => m::mapper154::Mapper154::new(metadata).supported(),
 
         // Almost a duplicate, but has different EEPROM behavior (not implemented yet).
         159 => m::mapper016_4::Mapper016_4::default().supported(),
 
         // Duplicate. Hanjuku Eiyuu (J).
-        161 => m::mapper001_0::Mapper001_0::new(cartridge).supported(),
+        161 => m::mapper001_0::Mapper001_0::new(metadata).supported(),
 
         // Hengedianzi (恒格电子) two-screen mirroring
         177 => m::mapper177::Mapper177.supported(),

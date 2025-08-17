@@ -1,39 +1,29 @@
-use std::fmt;
 use std::path::{Path, PathBuf};
 
-use log::{info, warn, error};
+use log::error;
 
 use crate::cartridge::cartridge_metadata::CartridgeMetadata;
-use crate::cartridge::header_db::HeaderDb;
-use crate::memory::ppu::chr_memory::AccessOverride;
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray};
 use crate::util::unit::KIBIBYTE;
 
+// TODO: Move path and allow_saving elsewhere.
+// TODO: Rename? To CartridgeRom? Name depends on if the trainer can be called ROM or not.
 // See https://wiki.nesdev.org/w/index.php?title=INES
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct Cartridge {
     path: CartridgePath,
-
-    // TODO: Remove these. The Display impl should be moved to CartridgeHeader.
-    mapper_number: u16,
-    submapper_number: Option<u8>,
-
     title: String,
-
-    trainer: Option<RawMemoryArray<512>>,
-    prg_rom: RawMemory,
-    prg_work_ram: RawMemory,
-    prg_save_ram: RawMemory,
-    chr_rom: RawMemory,
-    chr_work_ram: RawMemory,
-    chr_save_ram: RawMemory,
     allow_saving: bool,
+
+    prg_rom: RawMemory,
+    chr_rom: RawMemory,
+    trainer: Option<RawMemoryArray<512>>,
 }
 
 impl Cartridge {
     #[rustfmt::skip]
-    pub fn load(path: &Path, header: &CartridgeMetadata, raw_header_and_data: &RawMemory, header_db: &HeaderDb, allow_saving: bool) -> Result<Cartridge, String> {
+    pub fn load(path: &Path, header: &CartridgeMetadata, raw_header_and_data: &RawMemory, allow_saving: bool) -> Result<Cartridge, String> {
         let path = CartridgePath(path.to_path_buf());
 
         let prg_rom_start = 0x10;
@@ -43,7 +33,6 @@ impl Cartridge {
                 panic!("ROM {} was too short (claimed to have {}KiB PRG ROM).", path.rom_file_name(), header.prg_rom_size().unwrap() / KIBIBYTE);
             })
             .to_raw_memory();
-        let prg_rom_hash = crc32fast::hash(prg_rom.as_slice());
 
         let chr_rom_start = prg_rom_end;
         let mut chr_rom_end = chr_rom_start + header.chr_rom_size().unwrap();
@@ -68,56 +57,7 @@ impl Cartridge {
             .take_while(|&c| c != '\u{0}')
             .collect();
 
-        let mut cartridge = Cartridge {
-            path,
-            mapper_number: header.mapper_number().unwrap(),
-            submapper_number: header.submapper_number(),
-            title,
-
-            trainer: None,
-            prg_rom,
-            prg_work_ram: RawMemory::new(header.prg_work_ram_size().unwrap_or(0)),
-            prg_save_ram: RawMemory::new(header.prg_save_ram_size().unwrap_or(0)),
-            chr_rom,
-            chr_work_ram: RawMemory::new(header.chr_work_ram_size().unwrap_or(0)),
-            chr_save_ram: RawMemory::new(header.chr_save_ram_size().unwrap_or(0)),
-            allow_saving,
-        };
-
-        let cartridge_mapper_number = header.mapper_number().unwrap();
-        if let Some(header) = header_db.header_from_db(header, header.full_hash().unwrap(), prg_rom_hash, cartridge_mapper_number, cartridge.submapper_number) {
-            if cartridge_mapper_number != header.mapper_number().unwrap() {
-                warn!("Mapper number in ROM ({}) does not match the one in the DB ({}).",
-                    cartridge_mapper_number, header.mapper_number().unwrap());
-            }
-
-            assert_eq!(cartridge.prg_rom.size(), header.prg_rom_size().unwrap());
-            if cartridge.chr_rom.size() != header.chr_rom_size().unwrap_or(0) {
-                warn!("CHR ROM size in cartridge did not match size in header DB.");
-            }
-
-            cartridge.submapper_number = Some(header.submapper_number().unwrap_or(0));
-            cartridge.prg_work_ram = RawMemory::new(header.prg_work_ram_size().unwrap_or(0));
-            cartridge.prg_save_ram = RawMemory::new(header.prg_save_ram_size().unwrap_or(0));
-            cartridge.chr_work_ram = RawMemory::new(header.chr_work_ram_size().unwrap_or(0));
-            cartridge.chr_save_ram = RawMemory::new(header.chr_save_ram_size().unwrap_or(0));
-        } else {
-            warn!("ROM not found in header database.");
-            if !header.chr_present() {
-                // If no CHR data is provided, add 8KiB of CHR RAM.
-                cartridge.chr_work_ram = RawMemory::new(CartridgeMetadata::defaults().chr_work_ram_size().unwrap());
-                cartridge.chr_save_ram = RawMemory::new(CartridgeMetadata::defaults().chr_save_ram_size().unwrap());
-            }
-
-            if let Some((number, sub_number, data_hash, prg_hash)) =
-                    header_db.missing_submapper_number(header.full_hash().unwrap(), prg_rom_hash) && cartridge_mapper_number == number {
-
-                info!("Using override submapper for this ROM. Full hash: {data_hash} , PRG hash: {prg_hash}");
-                cartridge.submapper_number = Some(sub_number);
-            }
-        }
-
-        Ok(cartridge)
+        Ok(Cartridge { path, title, trainer: None, prg_rom, chr_rom, allow_saving })
     }
 
     pub fn name(&self) -> String {
@@ -128,29 +68,12 @@ impl Cartridge {
         &self.path
     }
 
-    pub fn mapper_number(&self) -> u16 {
-        self.mapper_number
-    }
-
-    pub fn submapper_number(&self) -> Option<u8> {
-        self.submapper_number
-    }
-
     pub fn prg_rom(&self) -> &RawMemory {
         &self.prg_rom
     }
 
-    pub fn prg_work_ram(&self) -> &RawMemory {
-        &self.prg_work_ram
-    }
-
     pub fn chr_rom(&self) -> &RawMemory {
         &self.chr_rom
-    }
-
-    pub fn chr_ram(&self) -> RawMemory {
-        // FIXME
-        RawMemory::new(self.chr_work_ram.size() + self.chr_save_ram.size())
     }
 
     pub fn set_prg_rom_at(&mut self, index: u32, value: u8) {
@@ -161,65 +84,12 @@ impl Cartridge {
         self.prg_rom.size()
     }
 
-    pub fn prg_work_ram_size(&self) -> u32 {
-        self.prg_work_ram.size()
-    }
-
-    pub fn prg_save_ram_size(&self) -> u32 {
-        self.prg_save_ram.size()
-    }
-
-    pub fn prg_rom_forced(&self) -> bool {
-        self.prg_work_ram.is_empty() && self.prg_save_ram.is_empty()
-    }
-
     pub fn chr_rom_size(&self) -> u32 {
         self.chr_rom.size()
     }
 
-    pub fn chr_work_ram_size(&self) -> u32 {
-        self.chr_work_ram.size()
-    }
-
-    pub fn chr_save_ram_size(&self) -> u32 {
-        self.chr_save_ram.size()
-    }
-
-    pub fn chr_access_override(&self) -> Option<AccessOverride> {
-        if self.chr_rom.is_empty() {
-            Some(AccessOverride::ForceRam)
-        } else if self.chr_work_ram.is_empty() && self.chr_save_ram.is_empty() {
-            Some(AccessOverride::ForceRom)
-        } else {
-            None
-        }
-    }
-
     pub fn allow_saving(&self) -> bool {
         self.allow_saving
-    }
-}
-
-impl fmt::Display for Cartridge {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Mapper: {}", self.mapper_number)?;
-        if let Some(submapper_number) = self.submapper_number {
-            write!(f, " (Submapper: {submapper_number})")?;
-        }
-
-        writeln!(f)?;
-        writeln!(f, "PRG ROM: {:4}KiB, WorkRAM: {:4}KiB, SaveRAM: {:4}KiB",
-            self.prg_rom.size() / KIBIBYTE,
-            self.prg_work_ram.size() / KIBIBYTE,
-            self.prg_save_ram.size() / KIBIBYTE,
-        )?;
-        writeln!(f, "CHR ROM: {:4}KiB, WorkRAM: {:4}KiB, SaveRAM: {:4}KiB",
-            self.chr_rom.size() / KIBIBYTE,
-            self.chr_work_ram.size() / KIBIBYTE,
-            self.chr_save_ram.size() / KIBIBYTE,
-        )?;
-
-        Ok(())
     }
 }
 

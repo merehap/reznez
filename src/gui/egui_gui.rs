@@ -753,7 +753,7 @@ impl Renderer for StatusRenderer {
                     ui.label("");
                     ui.end_row();
                     ui.label("Mapper");
-                    ui.label(format!("{:?}", nes.cartridge().mapper_number()));
+                    ui.label(format!("{:?}", nes.resolved_metadata().mapper_number));
                     ui.end_row();
                     ui.label("Name Table Mirroring");
                     ui.label(format!("{}", mapper_params.name_table_mirroring()));

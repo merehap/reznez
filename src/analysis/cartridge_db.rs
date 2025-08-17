@@ -11,9 +11,9 @@ use walkdir::WalkDir;
 
 use crate::cartridge::cartridge::Cartridge;
 use crate::cartridge::cartridge_metadata::CartridgeMetadata;
-use crate::cartridge::header_db::HeaderDb;
 use crate::memory::raw_memory::RawMemory;
 
+// TODO: Extend this with header DB metadata.
 pub fn analyze(rom_base_path: &Path) {
     let rom_paths: BTreeSet<_> = WalkDir::new(rom_base_path)
         .into_iter()
@@ -31,7 +31,7 @@ pub fn analyze(rom_base_path: &Path) {
         let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
         let mut header = CartridgeMetadata::parse(&raw_header_and_data).unwrap();
         header.set_console_type(CartridgeMetadata::defaults().console_type().unwrap());
-        match Cartridge::load(&rom_path, &header, &raw_header_and_data, &HeaderDb::load(), false) {
+        match Cartridge::load(&rom_path, &header, &raw_header_and_data, false) {
             Err(err) => error!("Failed to load rom {}. {}", rom_path.display(), err),
             Ok(cartridge) => headers_and_cartridges.push((header, cartridge)),
         }

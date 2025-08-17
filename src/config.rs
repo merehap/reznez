@@ -3,12 +3,13 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use log::info;
+use log::{info, warn};
 use structopt::StructOpt;
 
 use crate::cartridge::cartridge::Cartridge;
-use crate::cartridge::cartridge_metadata::CartridgeMetadata;
+use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder};
 use crate::cartridge::header_db::HeaderDb;
+use crate::cartridge::resolved_metadata::MetadataResolver;
 use crate::gui::egui_gui::EguiGui;
 use crate::gui::gui::Gui;
 use crate::gui::no_gui::NoGui;
@@ -18,8 +19,8 @@ use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::render::frame_rate::{FrameRate, TargetFrameRate};
 
 pub struct Config {
-    pub header: CartridgeMetadata,
     pub cartridge: Cartridge,
+    pub metadata_resolver: MetadataResolver,
     pub starting_cpu_cycle: i64,
     pub ppu_clock: Clock,
     pub system_palette: SystemPalette,
@@ -32,13 +33,13 @@ pub struct Config {
 
 impl Config {
     pub fn new(opt: &Opt) -> Config {
-        let (header, cartridge) = Config::load_rom(&opt.rom_path, !opt.prevent_saving);
+        let (cartridge, metadata_resolver) = Config::load_rom(&opt.rom_path, !opt.prevent_saving);
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
 
         Config {
-            header,
             cartridge,
+            metadata_resolver,
             starting_cpu_cycle: 0,
             ppu_clock: Clock::mesen_compatible(),
             system_palette,
@@ -58,27 +59,60 @@ impl Config {
     }
 
     pub fn with_new_rom(&self, path: &Path) -> Config {
-        let (header, cartridge) = Self::load_rom(path, self.cartridge.allow_saving());
+        let (cartridge, metadata_resolver) = Self::load_rom(path, self.cartridge.allow_saving());
         Config {
-            header,
             cartridge,
+            metadata_resolver,
             system_palette: self.system_palette.clone(),
             .. *self
         }
     }
 
-    fn load_rom(path: &Path, allow_saving: bool) -> (CartridgeMetadata, Cartridge) {
+    fn load_rom(path: &Path, allow_saving: bool) -> (Cartridge, MetadataResolver) {
         info!("Loading ROM '{}'.", path.display());
         let mut raw_header_and_data = Vec::new();
         File::open(path).unwrap().read_to_end(&mut raw_header_and_data).unwrap();
         let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
         let mut header = CartridgeMetadata::parse(&raw_header_and_data).unwrap();
         header.set_console_type(CartridgeMetadata::defaults().console_type().unwrap());
-        let cartridge = Cartridge::load(path, &header, &raw_header_and_data, &HeaderDb::load(), allow_saving).unwrap();
+        let cartridge = Cartridge::load(path, &header, &raw_header_and_data, allow_saving).unwrap();
         let prg_rom_hash = crc32fast::hash(cartridge.prg_rom().as_slice());
         header.set_prg_rom_hash(prg_rom_hash);
-        info!("ROM loaded.\n{cartridge}");
-        (header, cartridge)
+
+        let header_db = HeaderDb::load();
+        let cartridge_mapper_number = header.mapper_number().unwrap();
+        let mut db_header = CartridgeMetadataBuilder::new().build();
+        let mut db_extension_metadata = CartridgeMetadataBuilder::new();
+        if let Some(db_cartridge_metadata) = header_db.header_from_db(&header, header.full_hash().unwrap(), prg_rom_hash, cartridge_mapper_number, header.submapper_number()) {
+            db_header = db_cartridge_metadata;
+            if cartridge_mapper_number != db_header.mapper_number().unwrap() {
+                warn!("Mapper number in ROM ({}) does not match the one in the DB ({}).",
+                    cartridge_mapper_number, header.mapper_number().unwrap());
+            }
+
+            assert_eq!(header.prg_rom_size().unwrap(), db_header.prg_rom_size().unwrap());
+            if header.chr_rom_size().unwrap() != db_header.chr_rom_size().unwrap_or(0) {
+                warn!("CHR ROM size in cartridge did not match size in header DB.");
+            }
+        } else {
+            warn!("ROM not found in header database.");
+            if let Some((number, sub_number, data_hash, prg_hash)) =
+                    header_db.missing_submapper_number(header.full_hash().unwrap(), prg_rom_hash) && cartridge_mapper_number == number {
+
+                info!("Using override submapper {sub_number} for this ROM. Full hash: {data_hash} , PRG hash: {prg_hash}");
+                db_extension_metadata.submapper_number(sub_number);
+            }
+        }
+
+        let metadata_resolver = MetadataResolver {
+            cartridge: header,
+            database: db_header,
+            database_extension: db_extension_metadata.build(),
+            mapper: CartridgeMetadataBuilder::new().build(),
+            default: CartridgeMetadata::defaults(),
+        };
+
+        (cartridge, metadata_resolver)
     }
 }
 
