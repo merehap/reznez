@@ -5,7 +5,6 @@ ROADMAP
 4. Remaining test ROMs
 5. Joypad support
 6. Proper sounding audio
-7. Default PRG RAM size to 8KiB for non-NES2.0 iNES files
 
 Investigate if lack of MMC5 Extended Ram CHR status register is causing bad renders.
 Re-allow ReadWriteStatuses for MMC5 Extended RAM.

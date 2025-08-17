@@ -105,8 +105,7 @@ impl CartridgeMetadata {
     pub fn defaults() -> Self {
         Self {
             console_type: Some(ConsoleType::Nes),
-            // FIXME: Should be 8KiB
-            prg_work_ram_size: Some(0),
+            prg_work_ram_size: Some(8 * KIBIBYTE),
             prg_save_ram_size: Some(0),
             chr_work_ram_size: Some(0),
             chr_save_ram_size: Some(0),
@@ -173,22 +172,6 @@ impl CartridgeMetadata {
 
     pub fn console_type(&self) -> Option<ConsoleType> {
         self.console_type
-    }
-
-    pub fn chr_present(&self) -> bool {
-        if let Some(chr_rom) = self.chr_rom_size && chr_rom > 0 {
-            return true;
-        }
-
-        if let Some(chr_work) = self.chr_work_ram_size && chr_work > 0 {
-            return true;
-        }
-
-        if let Some(chr_save) = self.chr_save_ram_size && chr_save > 0 {
-            return true;
-        }
-
-        false
     }
 
     pub fn set_prg_rom_hash(&mut self, prg_rom_hash: u32) {
