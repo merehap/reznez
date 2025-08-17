@@ -41,11 +41,7 @@ impl Board {
         let prg_ram_size = metadata.prg_work_ram_size / KIBIBYTE;
         let prg_nvram_size = metadata.prg_save_ram_size / KIBIBYTE;
         let chr_rom_size = metadata.chr_rom_size / KIBIBYTE;
-        let mut chr_ram_size = metadata.chr_work_ram_size / KIBIBYTE;
-        // FIXME: Hack for ROMs that don't specify CHR sizes. This should now be removable, but needs to be tested.
-        if chr_rom_size == 0 && chr_ram_size == 0 {
-            chr_ram_size = 8;
-        }
+        let chr_ram_size = metadata.chr_work_ram_size / KIBIBYTE;
 
         use Board::*;
         let board = match (prg_rom_size, prg_ram_size, prg_nvram_size, chr_rom_size, chr_ram_size) {
