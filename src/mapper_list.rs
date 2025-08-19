@@ -94,7 +94,7 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         }
         // MMC5
         5 => m::mapper005::Mapper005::new().supported(),
-
+        6 => TodoMapper,
         // AxROM
         7 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
@@ -104,20 +104,19 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
             2 => m::mapper007_2::MAPPER007_2.supported(),
             _ => UnassignedSubmapper,
         }
-
+        8 => TodoMapper,
         // MMC2
         9 => m::mapper009::Mapper009.supported(),
         // MMC4
         10 => m::mapper010::Mapper010.supported(),
         // Color Dreams
         11 => m::mapper011::Mapper011.supported(),
-
+        12 => TodoMapper,
         // NES CPROM
         13 => m::mapper013::Mapper013.supported(),
-
+        14 => TodoMapper,
         // K-1029 and K-1030P
         15 => m::mapper015::Mapper015.supported(),
-
         16 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
             1 => ReassignedSubmapper { correct_mapper: 159, correct_submapper: 0 },
@@ -129,7 +128,7 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
             5 => m::mapper016_5::Mapper016_5::default().supported(),
             _ => UnassignedSubmapper,
         }
-
+        17 => TodoMapper,
         // Jaleco SS 88006
         18 => m::mapper018::Mapper018::default().supported(),
         // Namco 129 and Namco 163.
@@ -166,7 +165,7 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
             3 => m::mapper023_3::mapper023_3().supported(),
             _ => UnassignedSubmapper,
         }
-
+        24 => TodoMapper,
         25 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
             // VRC4b
@@ -177,14 +176,15 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
             3 => m::mapper025_3::mapper025_3().supported(),
             _ => UnassignedSubmapper,
         }
-
+        26 => TodoMapper,
         // Duplicate of 23, most likely.
         27 => m::mapper023_1::mapper023_1().supported(),
         // Action 53
         28 => m::mapper028::Mapper028::new().supported(),
         // Homebrew. Sealie Computing - RET-CUFROM revD
         29 => m::mapper029::Mapper029.supported(),
-
+        30 => TodoMapper,
+        31 => TodoMapper,
         // Irem G101
         32 => match submapper_number {
             None => UnspecifiedSubmapper,
@@ -204,7 +204,7 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
             2 => m::mapper034_2::Mapper034_2.supported(),
             _ => UnassignedSubmapper,
         }
-
+        35..=37 => TodoMapper,
         // Bit Corp.'s Crime Busters
         38 => m::mapper038::Mapper038.supported(),
         // Duplicate of 241.
@@ -217,23 +217,26 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         42 => m::mapper042::Mapper042::new(metadata.chr_work_ram_size).supported(),
         // TONY-I and YS-612 (FDS games in cartridge form)
         43 => m::mapper043::Mapper043::default().supported(),
-
+        44 => TodoMapper,
+        45 => TodoMapper,
         // Rumble Station
         46 => m::mapper046::Mapper046::default().supported(),
         // Super Spike V'Ball + Nintendo World Cup
         47 => m::mapper047::Mapper047::new().supported(),
         // Taito TC0690
         48 => m::mapper048::Mapper048::new().supported(),
-
+        49 => TodoMapper,
         // N-32 conversion of Super Mario Bros. 2 (J). PCB code 761214.
         50 => m::mapper050::Mapper050::default().supported(),
-
+        51..=54 => TodoMapper,
         // BTL-MARIO1-MALEE2
         55 => m::mapper055::Mapper055.supported(),
-
+        56 => TodoMapper,
+        57 => TodoMapper,
         // NROM-/CNROM-based multicarts
         58 => m::mapper058::Mapper058.supported(),
-
+        59 => TodoMapper,
+        60 => TodoMapper,
         // NTDEC 0324 PCB
         61 => m::mapper061::Mapper061::new(metadata.chr_work_ram_size).supported(),
         // Super 700-in-1
@@ -254,7 +257,7 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         66 => m::mapper066::Mapper066.supported(),
         // Sunsoft-3
         67 => m::mapper067::Mapper067::default().supported(),
-
+        68 => TodoMapper,
         // Sunsoft FME-7
         69 => m::mapper069::Mapper069::new().supported(),
         // Family Trainer and others
@@ -270,10 +273,10 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
             Some(1) => m::mapper071::Mapper071.supported(),
             _ => UnassignedSubmapper,
         }
-
+        72 => TodoMapper,
         // VRC3
         73 => m::mapper073::Mapper073::default().supported(),
-
+        74 => TodoMapper,
         // Konami VRC1
         75 => m::mapper075::Mapper075::default().supported(),
         // NAMCOT-3446
@@ -297,7 +300,7 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         81 => m::mapper081::Mapper081.supported(),
         // Taito X1-017
         82 => m::mapper082::Mapper082.supported(),
-
+        83 => TodoMapper,
         84 => UnassignedMapper,
         85 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
@@ -313,42 +316,46 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         88 => m::mapper088::Mapper088::new(metadata).supported(),
         // Sunsoft (Tenka no Goikenban: Mito Koumon (J))
         89 => m::mapper089::Mapper089.supported(),
-
+        90..=92 => TodoMapper,
         // Sunsoft-2 IC on the Sunsoft-3R board
         93 => m::mapper093::Mapper093.supported(),
         // HVC-UN1ROM
         94 => m::mapper094::Mapper094.supported(),
-
+        95 => TodoMapper,
+        96 => TodoMapper,
         // Irem TAM-S1 (Kaiketsu Yanchamaru)
         97 => m::mapper097::Mapper097.supported(),
         98 => UnassignedMapper,
-
+        99 => TodoMapper,
+        100 => TodoMapper,
         // JF-10 misdump (only Urusei Yatsura - Lum no Wedding Bell)
         101 => m::mapper101::MAPPER101.supported(),
         102 => UnassignedMapper,
-
+        103..=106 => TodoMapper,
         // Magic Dragon
         107 => m::mapper107::Mapper107.supported(),
-
+        108..=111 => TodoMapper,
         // Huang Di and San Guo Zhi - Qun Xiong Zheng Ba
         112 => m::mapper112::Mapper112::new().supported(),
         // HES NTD-8
         113 => m::mapper113::Mapper113.supported(),
-
+        114..=117 => TodoMapper,
         // TxSROM
         118 => m::mapper118::Mapper118::new().supported(),
         // TQROM
         119 => m::mapper119::Mapper119::new().supported(),
-
+        120 => TodoMapper,
+        121 => TodoMapper,
         // Duplicate
         122 => m::mapper184::Mapper184.supported(),
-
+        123 => TodoMapper,
+        124 => TodoMapper,
         // Monty on the Run (Whirlwind Manu's FDS conversion)
         125 => m::mapper125::Mapper125.supported(),
-
+        126..=132 => TodoMapper,
         // Sachen 3009
         133 => m::mapper133::Mapper133.supported(),
-
+        134..=137 => TodoMapper,
         // Sachen 8259 B (UNL-Sachen-8259B)
         138 => m::mapper138::MAPPER138.supported(),
         // Sachen 8259 C (UNL-Sachen-8259C)
@@ -357,41 +364,43 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         140 => m::mapper140::Mapper140.supported(),
         // Sachen 8259 A TC-A003-72 (UNL-Sachen-8259A)
         141 => m::mapper141::MAPPER141.supported(),
-
         // Kaiser KS202 (UNL-KS7032)
         142 => m::mapper142::Mapper142::default().supported(),
-
+        143 => TodoMapper,
+        144 => TodoMapper,
         // SA-72007 (only Sidewinder)
         145 => m::mapper145::Mapper145.supported(),
         // Duplicate of mapper 79, specifically for the Sachen 3015 board.
         146 => m::mapper079::Mapper079.supported(),
-
+        147 => TodoMapper,
         // Sachen SA-008-A and Tengen 800008
         148 => m::mapper148::Mapper148.supported(),
         // Sachen SA-0036 (Taiwan Mahjong 16)
         149 => m::mapper149::Mapper149.supported(),
-
+        150 => TodoMapper,
         // Duplicate
         151 => m::mapper075::Mapper075::default().supported(),
         // TAITO-74*161/161/32 and BANDAI-74*161/161/32
         152 => m::mapper152::Mapper152.supported(),
-
+        153 => TodoMapper,
         // NAMCOT-3453 (only Devil Man)
         154 => m::mapper154::Mapper154::new(metadata).supported(),
-
+        155..=158 => TodoMapper,
         // Almost a duplicate, but has different EEPROM behavior (not implemented yet).
         159 => m::mapper016_4::Mapper016_4::default().supported(),
-
+        160 => TodoMapper,
         // Duplicate. Hanjuku Eiyuu (J).
         161 => m::mapper001_0::Mapper001_0::new(metadata).supported(),
-
+        162..=176 => TodoMapper,
         // Hengedianzi (恒格电子) two-screen mirroring
         177 => m::mapper177::Mapper177.supported(),
-
+        178 => TodoMapper,
+        179 => TodoMapper,
         // UNROM 74HC08 (only Crazy Climber)
         180 => m::mapper180::Mapper180.supported(),
         181 => UnassignedMapper,
-
+        182 => TodoMapper,
+        183 => TodoMapper,
         // Sunsoft-1
         184 => m::mapper184::Mapper184.supported(),
         // CNROM with CHR RAM disable
@@ -406,13 +415,14 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         }
         // Used when running the BIOS of the Fukutake Study Box.
         186 => UnassignedMapper,
-
+        187 => TodoMapper,
+        188 => TodoMapper,
         // TXC-PT8154
         189 => m::mapper189::Mapper189::new().supported(),
-
+        190..=192 => TodoMapper,
         // NTDEC's TC-112
         193 => m::mapper193::Mapper193.supported(),
-
+        194..=199 => TodoMapper,
         // NROM-128 multicarts
         200 => match submapper_number {
             None => UnspecifiedSubmapper,
@@ -428,7 +438,8 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         202 => m::mapper202::Mapper202.supported(),
         // 35-in-1
         203 => m::mapper203::Mapper203.supported(),
-
+        204 => TodoMapper,
+        205 => TodoMapper,
         // DxROM, Tengen MIMIC-1, Namcot 118
         206 => match submapper_number {
             None => UnspecifiedSubmapper,
@@ -440,7 +451,8 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         }
         // Taito's X1-005 (alternate name table mirrorings)
         207 => m::mapper207::Mapper207::new().supported(),
-
+        208 => TodoMapper,
+        209 => TodoMapper,
         210 => match submapper_number.unwrap_or(0) {
             0 => UnspecifiedSubmapper,
             // Namco 175
@@ -449,10 +461,11 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
             2 => m::mapper210_2::Mapper210_2.supported(),
             _ => UnassignedSubmapper,
         }
-
+        211 => TodoMapper,
+        212 => TodoMapper,
         // Duplicate
         213 => m::mapper058::Mapper058.supported(),
-
+        214..=231 => TodoMapper,
         // Quattro
         232 => match submapper_number {
             None => UnspecifiedSubmapper,
@@ -462,17 +475,32 @@ fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
             Some(1) => TodoSubmapper,
             _ => UnassignedSubmapper,
         }
-
+        233 => TodoMapper,
         // Maxi 15 multicart
         234 => m::mapper234::Mapper234::default().supported(),
-
+        235..=238 => TodoMapper,
         239 => UnassignedMapper,
         240 => m::mapper240::Mapper240.supported(),
         // Hengedianzi (恒格电子) hard-wired mirroring, and mapper hacks (m 164, 178, 227)
         241 => m::mapper241::Mapper241.supported(),
-
+        242..=246 => TodoMapper,
         247 => UnassignedMapper,
+        248..=255 => TodoMapper,
 
-        _ => TodoMapper,
+        464..=466 => UnassignedMapper,
+        475 => UnassignedMapper,
+        477..=478 => UnassignedMapper,
+        480 => UnassignedMapper,
+        482..=486 => UnassignedMapper,
+        488..=492 => UnassignedMapper,
+        494 => UnassignedMapper,
+        496 => UnassignedMapper,
+        498..=511 => UnassignedMapper,
+        559..=560 => UnassignedMapper,
+        563..=681 => UnassignedMapper,
+        683..=767 => UnassignedMapper,
+        256..=767 => TodoMapper,
+        // Assigning these numbers would require further extension of the iNES/NES2.0 format.
+        768..=65535 => UnassignedMapper,
     }
 }
