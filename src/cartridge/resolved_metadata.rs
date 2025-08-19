@@ -1,7 +1,9 @@
+use std::collections::BTreeSet;
 use std::fmt;
 
 use crate::cartridge::cartridge_metadata::{CartridgeMetadata, ConsoleType};
-use crate::mapper::NameTableMirroring;
+use crate::mapper::{NameTableMirroring, LookupResult};
+use crate::mapper_list;
 
 use crate::util::unit::KIBIBYTE;
 
@@ -49,7 +51,7 @@ impl fmt::Display for ResolvedMetadata {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MetadataResolver {
     pub cartridge: CartridgeMetadata,
     pub database: CartridgeMetadata,
@@ -62,10 +64,51 @@ pub struct MetadataResolver {
 
 impl MetadataResolver {
     pub fn resolve(&self) -> ResolvedMetadata {
+        let mut submapperless_mappers = BTreeSet::new();
+        for mapper_number in 0..u16::MAX {
+            let metadata = ResolvedMetadata {
+                mapper_number,
+                submapper_number: Some(0),
+
+                name_table_mirroring: NameTableMirroring::HORIZONTAL,
+                has_persistent_memory: false,
+                console_type: ConsoleType::Nes,
+
+                full_hash: 0,
+                prg_rom_hash: 0,
+
+                prg_rom_size: 0,
+                prg_work_ram_size: 0,
+                prg_save_ram_size: 0,
+
+                chr_rom_size: 0,
+                chr_work_ram_size: 0,
+                chr_save_ram_size: 0,
+            };
+
+            if matches!(mapper_list::lookup_mapper(&metadata), LookupResult::UnassignedSubmapper) {
+                submapperless_mappers.insert(mapper_number);
+            }
+        }
+
         let all_metadata = [&self.cartridge, &self.database, &self.database_extension, &self.mapper, &self.default];
 
-        // FIXME: Remove this hack. Database extension needs to be split into DB ext and overrides.
-        let submapper_number = if self.database_extension.submapper_number().is_some() {
+        // The header DB sets submapper to 0 even for mappers that don't have any submappers,
+        // So we only set submapper when it's meaningful.
+        let mut remove_submapper_number = false;
+        if submapperless_mappers.contains(&self.cartridge.mapper_number().unwrap()) {
+            for metadata in all_metadata {
+                match metadata.submapper_number() {
+                    None | Some(0) => remove_submapper_number = true,
+                    Some(_) => panic!(),
+                }
+            }
+        }
+
+        let submapper_number = if remove_submapper_number {
+            None
+        } else if self.database_extension.submapper_number().is_some() {
+            // FIXME: Remove this hack. Database extension needs to be split into DB ext and overrides.
             self.database_extension.submapper_number()
         } else {
             all_metadata.iter().map(|m| m.submapper_number()).find(|s| s.is_some()).flatten()
