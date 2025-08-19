@@ -74,7 +74,6 @@ impl Config {
         File::open(path).unwrap().read_to_end(&mut raw_header_and_data).unwrap();
         let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
         let mut header = CartridgeMetadata::parse(&raw_header_and_data).unwrap();
-        header.set_console_type(CartridgeMetadata::defaults().console_type().unwrap());
         let cartridge = Cartridge::load(path, &header, &raw_header_and_data, allow_saving).unwrap();
         let prg_rom_hash = crc32fast::hash(cartridge.prg_rom().as_slice());
         header.set_prg_rom_hash(prg_rom_hash);

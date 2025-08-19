@@ -182,10 +182,6 @@ impl CartridgeMetadata {
         self.submapper_number = Some(submapper_number);
     }
 
-    pub fn set_console_type(&mut self, console_type: ConsoleType) {
-        self.console_type = Some(console_type);
-    }
-
     pub const fn into_builder(self) -> CartridgeMetadataBuilder {
         CartridgeMetadataBuilder {
             mapper_number: self.mapper_number,

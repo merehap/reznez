@@ -9,7 +9,7 @@ use num_traits::FromPrimitive;
 use crate::apu::apu::Apu;
 use crate::apu::apu_registers::{ApuRegisters, FrameCounterWriteStatus};
 use crate::cartridge::cartridge::Cartridge;
-use crate::cartridge::resolved_metadata::ResolvedMetadata;
+use crate::cartridge::resolved_metadata::{MetadataResolver, ResolvedMetadata};
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::{Cpu, IrqStatus, NmiStatus, ResetStatus};
@@ -36,6 +36,7 @@ pub struct Nes {
     pub memory: Memory,
     pub mapper: Box<dyn Mapper>,
     resolved_metadata: ResolvedMetadata,
+    metadata_resolver: MetadataResolver,
     cartridge: Cartridge,
     frame: Frame,
     cycle: u64,
@@ -51,7 +52,8 @@ impl Nes {
             warn!("Failed to create saveram directory. {err}");
         }
 
-        let (mapper, mapper_params, resolved_metadata) = mapper_list::lookup_mapper_with_params(config.metadata_resolver.clone(), &config.cartridge);
+        let mut metadata_resolver = config.metadata_resolver.clone();
+        let (mapper, mapper_params) = mapper_list::lookup_mapper_with_params(&mut metadata_resolver, &config.cartridge);
 
         let (joypad1, joypad2) = (Joypad::new(), Joypad::new());
 
@@ -66,7 +68,8 @@ impl Nes {
             apu: Apu::new(config.disable_audio),
             memory,
             mapper,
-            resolved_metadata,
+            resolved_metadata: metadata_resolver.resolve(),
+            metadata_resolver,
             cartridge: config.cartridge.clone(),
             frame: Frame::new(),
             cycle: 0,
@@ -109,8 +112,12 @@ impl Nes {
         &mut *self.mapper
     }
 
-    pub fn resolved_metadata(&self) -> &ResolvedMetadata {
+    pub fn resolved_metadata(&self) -> &ResolvedMetadata{
         &self.resolved_metadata
+    }
+
+    pub fn metadata_resolver(&self) -> &MetadataResolver {
+        &self.metadata_resolver
     }
 
     pub fn cartridge(&self) -> &Cartridge {

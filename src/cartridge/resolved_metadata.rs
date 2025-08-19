@@ -78,7 +78,6 @@ impl MetadataResolver {
                    .flatten()
             ).expect("This mapper must define what Four Screen mirroring is.");
 
-        println!("CHRRAM: {:?}", all_metadata.iter().map(|m| m.chr_work_ram_size()).collect::<Vec<_>>());
         let chr_rom_size = self.cartridge.chr_rom_size().unwrap();
         let mut chr_work_ram_size = resolve_field(&all_metadata, |m| m.chr_work_ram_size());
         let chr_save_ram_size = resolve_field(&all_metadata, |m| m.chr_save_ram_size());

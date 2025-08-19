@@ -5,7 +5,7 @@ use crate::mapper::Cartridge;
 use crate::mapper::{Mapper, MapperParams, LookupResult};
 use crate::mappers as m;
 
-pub fn lookup_mapper_with_params(mut metadata_resolver: MetadataResolver, cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams, ResolvedMetadata) {
+pub fn lookup_mapper_with_params(metadata_resolver: &mut MetadataResolver, cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
     let metadata = metadata_resolver.resolve();
     let number = metadata.mapper_number;
     let sub_number = metadata.submapper_number;
@@ -33,7 +33,7 @@ pub fn lookup_mapper_with_params(mut metadata_resolver: MetadataResolver, cartri
 
     let mut mapper_params = mapper.layout().make_mapper_params(&metadata, cartridge);
     mapper.init_mapper_params(&mut mapper_params);
-    (mapper, mapper_params, metadata)
+    (mapper, mapper_params)
 }
 
 fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {

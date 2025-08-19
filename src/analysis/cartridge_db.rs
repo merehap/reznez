@@ -29,8 +29,7 @@ pub fn analyze(rom_base_path: &Path) {
             .read_to_end(&mut raw_header_and_data)
             .unwrap();
         let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
-        let mut header = CartridgeMetadata::parse(&raw_header_and_data).unwrap();
-        header.set_console_type(CartridgeMetadata::defaults().console_type().unwrap());
+        let header = CartridgeMetadata::parse(&raw_header_and_data).unwrap();
         match Cartridge::load(&rom_path, &header, &raw_header_and_data, false) {
             Err(err) => error!("Failed to load rom {}. {}", rom_path.display(), err),
             Ok(cartridge) => headers_and_cartridges.push((header, cartridge)),

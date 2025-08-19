@@ -15,12 +15,13 @@ use winit::window::Window;
 use winit::window::{WindowBuilder, WindowId};
 use winit_input_helper::WinitInputHelper;
 
+use crate::cartridge::cartridge_metadata::CartridgeMetadataBuilder;
 use crate::config::Config;
 use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::debug_screens::name_table::NameTable;
 use crate::gui::debug_screens::pattern_table::{PatternTable, Tile};
 use crate::gui::gui::{execute_frame, Events, Gui};
-use crate::mapper::CpuAddress;
+use crate::mapper::{CpuAddress, KIBIBYTE};
 use crate::nes::Nes;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
@@ -487,7 +488,7 @@ impl Renderer for PrimaryRenderer {
                     if ui.button("Status").clicked() {
                         ui.close_menu();
                         result = FlowControl::spawn_window((
-                            Box::new(StatusRenderer::new()) as Box<dyn Renderer>,
+                            Box::new(StatusRenderer) as Box<dyn Renderer>,
                             Position::Physical(PhysicalPosition { x: 850, y: 360 }),
                             2,
                         ));
@@ -546,6 +547,14 @@ impl Renderer for PrimaryRenderer {
                             Box::new(MemoryViewerRenderer),
                             Position::Physical(PhysicalPosition { x: 600, y: 200 }),
                             1,
+                        ));
+                    }
+                    if ui.button("Cartridge Metadata").clicked() {
+                        ui.close_menu();
+                        result = FlowControl::spawn_window((
+                            Box::new(CartridgeMetadataRenderer),
+                            Position::Physical(PhysicalPosition { x: 600, y: 200 }),
+                            2,
                         ));
                     }
                 })
@@ -675,15 +684,11 @@ impl Renderer for DisplaySettingsRenderer {
     }
 }
 
-struct StatusRenderer {}
+struct StatusRenderer;
 
 impl StatusRenderer {
     const WIDTH: usize = 300;
     const HEIGHT: usize = 300;
-
-    pub fn new() -> StatusRenderer {
-        StatusRenderer {}
-    }
 }
 
 impl Renderer for StatusRenderer {
@@ -1189,6 +1194,150 @@ impl Renderer for MemoryViewerRenderer {
                         }
                     });
             })
+        });
+
+        FlowControl::CONTINUE
+    }
+
+    fn render(&mut self, _world: &mut World, _pixels: &mut Pixels) {
+        // Do nothing yet.
+    }
+
+    fn width(&self) -> usize {
+        Self::WIDTH
+    }
+
+    fn height(&self) -> usize {
+        Self::HEIGHT
+    }
+}
+struct CartridgeMetadataRenderer;
+
+impl CartridgeMetadataRenderer {
+    const WIDTH: usize = 550;
+    const HEIGHT: usize = 300;
+}
+
+impl Renderer for CartridgeMetadataRenderer {
+    fn name(&self) -> String {
+        "Status".to_string()
+    }
+
+    fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
+        let nes = &world.nes;
+        let resolver = nes.metadata_resolver();
+        let final_values = resolver.resolve();
+        let metadata_sources = [
+            &resolver.cartridge,
+            &resolver.database,
+            &resolver.database_extension,
+            &CartridgeMetadataBuilder::new().build(),
+            &resolver.mapper,
+            &resolver.default,
+        ];
+
+        egui::CentralPanel::default().show(ctx, |ui| {
+            fn kib_string(value: u32) -> String {
+                if value < KIBIBYTE {
+                    value.to_string()
+                } else {
+                    assert_eq!(value % KIBIBYTE, 0);
+                    format!("{}KiB", value / KIBIBYTE)
+                }
+            }
+
+            egui::Grid::new("my_grid")
+                .num_columns(7)
+                .spacing([40.0, 4.0])
+                .striped(true)
+                .show(ui, |ui| {
+                    ui.label("Field");
+                    ui.label("ACTUAL");
+                    ui.label("Cartridge");
+                    ui.label("Header Database");
+                    ui.label("Database Extension");
+                    ui.label("Database Overrides");
+                    ui.label("Mapper");
+                    ui.label("Defaults");
+                    ui.end_row();
+
+                    ui.label("Mapper");
+                    ui.label(final_values.mapper_number.to_string());
+                    for metadata in metadata_sources {
+                        ui.label(metadata.mapper_number().map(|m| m.to_string()).unwrap_or("".to_owned()));
+                    }
+                    ui.end_row();
+
+                    ui.label("Submapper");
+                    ui.label(final_values.submapper_number.map(|s| s.to_string()).unwrap_or("N/A".to_owned()));
+                    for metadata in metadata_sources {
+                        ui.label(metadata.submapper_number().map(|m| m.to_string()).unwrap_or("".to_owned()));
+                    }
+                    ui.end_row();
+
+                    ui.label("Name Table Mirroring");
+                    ui.label(final_values.name_table_mirroring.to_string());
+                    for metadata in metadata_sources {
+                        ui.label(metadata.name_table_mirroring().map(|m| m.to_string()).unwrap_or("".to_owned()));
+                    }
+                    ui.end_row();
+
+                    ui.label("Has Persistent Memory");
+                    ui.label(final_values.has_persistent_memory.to_string());
+                    for metadata in metadata_sources {
+                        ui.label(metadata.has_persistent_memory().map(|m| m.to_string()).unwrap_or("".to_owned()));
+                    }
+                    ui.end_row();
+
+                    ui.label("Console Type");
+                    ui.label(final_values.console_type.to_string());
+                    for metadata in metadata_sources {
+                        ui.label(metadata.console_type().map(|m| m.to_string()).unwrap_or("".to_owned()));
+                    }
+                    ui.end_row();
+
+                    ui.label("PRG ROM Size");
+                    ui.label(kib_string(final_values.prg_rom_size));
+                    for metadata in metadata_sources {
+                        ui.label(metadata.prg_rom_size().map(kib_string).unwrap_or("".to_owned()));
+                    }
+                    ui.end_row();
+
+                    ui.label("PRG Work RAM Size");
+                    ui.label(kib_string(final_values.prg_work_ram_size));
+                    for metadata in metadata_sources {
+                        ui.label(metadata.prg_work_ram_size().map(kib_string).unwrap_or("".to_owned()));
+                    }
+                    ui.end_row();
+
+                    ui.label("PRG Save RAM Size");
+                    ui.label(kib_string(final_values.prg_save_ram_size));
+                    for metadata in metadata_sources {
+                        ui.label(metadata.prg_save_ram_size().map(kib_string).unwrap_or("".to_owned()));
+                    }
+                    ui.end_row();
+
+                    ui.label("CHR ROM Size");
+                    ui.label(kib_string(final_values.chr_rom_size));
+                    for metadata in metadata_sources {
+                        ui.label(metadata.chr_rom_size().map(kib_string).unwrap_or("".to_owned()));
+                    }
+                    ui.end_row();
+
+                    ui.label("CHR Work RAM Size");
+                    ui.label(kib_string(final_values.chr_work_ram_size));
+                    for metadata in metadata_sources {
+                        ui.label(metadata.chr_work_ram_size().map(kib_string).unwrap_or("".to_owned()));
+                    }
+                    ui.end_row();
+
+                    ui.label("CHR Save RAM Size");
+                    ui.label(kib_string(final_values.chr_save_ram_size));
+                    for metadata in metadata_sources {
+                        ui.label(metadata.chr_save_ram_size().map(kib_string).unwrap_or("".to_owned()));
+                    }
+                    ui.end_row();
+                });
         });
 
         FlowControl::CONTINUE
