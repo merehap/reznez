@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::cartridge::cartridge_metadata::{CartridgeMetadata, ConsoleType};
+use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder, ConsoleType};
 use crate::mapper::NameTableMirroring;
 
 use crate::util::unit::KIBIBYTE;
@@ -56,13 +56,12 @@ pub struct MetadataResolver {
     // TODO: Split this into database_override_source.
     pub database_extension: CartridgeMetadata,
     pub mapper: CartridgeMetadata,
-    pub default: CartridgeMetadata,
     // TODO: Add user overrides.
 }
 
 impl MetadataResolver {
     pub fn resolve(&self) -> ResolvedMetadata {
-        let all_metadata = [&self.cartridge, &self.database, &self.database_extension, &self.mapper, &self.default];
+        let all_metadata = [&self.cartridge, &self.database, &self.database_extension, &self.mapper, &self.defaults()];
 
         let submapper_number = if self.database_extension.submapper_number().is_some() {
             // FIXME: Remove this hack. Database extension needs to be split into DB ext and overrides.
@@ -79,19 +78,19 @@ impl MetadataResolver {
             ).expect("This mapper must define what Four Screen mirroring is.");
 
         let chr_rom_size = self.cartridge.chr_rom_size().unwrap();
-        let mut chr_work_ram_size = resolve_field(&all_metadata, |m| m.chr_work_ram_size());
-        let chr_save_ram_size = resolve_field(&all_metadata, |m| m.chr_save_ram_size());
+        let mut chr_work_ram_size = resolve_field(&all_metadata, |m| m.chr_work_ram_size()).unwrap();
+        let chr_save_ram_size = resolve_field(&all_metadata, |m| m.chr_save_ram_size()).unwrap();
         if chr_rom_size == 0 && chr_work_ram_size == 0 && chr_save_ram_size == 0 {
             chr_work_ram_size = 8 * KIBIBYTE;
         }
 
         ResolvedMetadata {
-            mapper_number: resolve_field(&all_metadata, |m| m.mapper_number()),
+            mapper_number: resolve_field(&all_metadata, |m| m.mapper_number()).unwrap(),
             submapper_number,
 
             name_table_mirroring,
-            has_persistent_memory: resolve_field(&all_metadata, |m| m.has_persistent_memory()),
-            console_type: resolve_field(&all_metadata, |m| m.console_type()),
+            has_persistent_memory: resolve_field(&all_metadata, |m| m.has_persistent_memory()).unwrap(),
+            console_type: resolve_field(&all_metadata, |m| m.console_type()).unwrap(),
 
             // TODO: Verify that all hashes match.
             full_hash: self.cartridge.full_hash().unwrap(),
@@ -99,8 +98,8 @@ impl MetadataResolver {
 
             // TODO: Verify that all PRG ROM sizes match.
             prg_rom_size: self.cartridge.prg_rom_size().unwrap(),
-            prg_work_ram_size: resolve_field(&all_metadata, |m| m.prg_work_ram_size()),
-            prg_save_ram_size: resolve_field(&all_metadata, |m| m.prg_save_ram_size()),
+            prg_work_ram_size: resolve_field(&all_metadata, |m| m.prg_work_ram_size()).unwrap(),
+            prg_save_ram_size: resolve_field(&all_metadata, |m| m.prg_save_ram_size()).unwrap(),
 
             // TODO: Verify that all CHR ROM sizes match.
             chr_rom_size,
@@ -108,9 +107,30 @@ impl MetadataResolver {
             chr_save_ram_size,
         }
     }
+
+    pub fn defaults(&self) -> CartridgeMetadata {
+        let all_metadata = [&self.cartridge, &self.database, &self.database_extension, &self.mapper];
+
+        let chr_rom_size = self.cartridge.chr_rom_size();
+        let chr_work_ram_size = resolve_field(&all_metadata, |m| m.chr_work_ram_size());
+        let chr_save_ram_size = resolve_field(&all_metadata, |m| m.chr_save_ram_size());
+        let chr_work_ram_size = if chr_rom_size.is_none() && chr_work_ram_size.is_none() && chr_save_ram_size.is_none() {
+            8 * KIBIBYTE
+        } else {
+            0
+        };
+
+        CartridgeMetadataBuilder::new()
+            .console_type(ConsoleType::Nes)
+            .prg_work_ram_size(8 * KIBIBYTE)
+            .prg_save_ram_size(0)
+            .chr_work_ram_size(chr_work_ram_size)
+            .chr_save_ram_size(0)
+            .build()
+    }
 }
 
-fn resolve_field<F, T>(all_metadata: &[&CartridgeMetadata; 5], field_extractor: F) -> T
+fn resolve_field<F, T>(all_metadata: &[&CartridgeMetadata], field_extractor: F) -> Option<T>
 where F: Fn(&&CartridgeMetadata) -> Option<T> {
-    all_metadata.iter().map(field_extractor).find(|v| v.is_some()).flatten().unwrap()
+    all_metadata.iter().map(field_extractor).find(|v| v.is_some()).flatten()
 }

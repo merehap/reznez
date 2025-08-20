@@ -108,7 +108,6 @@ impl Config {
             database: db_header,
             database_extension: db_extension_metadata.build(),
             mapper: CartridgeMetadataBuilder::new().build(),
-            default: CartridgeMetadata::defaults(),
         };
 
         (cartridge, metadata_resolver)

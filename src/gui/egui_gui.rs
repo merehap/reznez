@@ -1233,7 +1233,7 @@ impl Renderer for CartridgeMetadataRenderer {
             &resolver.database_extension,
             &CartridgeMetadataBuilder::new().build(),
             &resolver.mapper,
-            &resolver.default,
+            &resolver.defaults(),
         ];
 
         egui::CentralPanel::default().show(ctx, |ui| {

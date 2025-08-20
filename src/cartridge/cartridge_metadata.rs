@@ -104,25 +104,6 @@ impl CartridgeMetadata {
         Ok(builder.build())
     }
 
-    pub fn defaults() -> Self {
-        Self {
-            console_type: Some(ConsoleType::Nes),
-            prg_work_ram_size: Some(8 * KIBIBYTE),
-            prg_save_ram_size: Some(0),
-            chr_work_ram_size: Some(0),
-            chr_save_ram_size: Some(0),
-
-            mapper_number: None,
-            submapper_number: None,
-            name_table_mirroring: None,
-            has_persistent_memory: None,
-            full_hash: None,
-            prg_rom_hash: None,
-            prg_rom_size: None,
-            chr_rom_size: None,
-        }
-    }
-
     pub fn full_hash(&self) -> Option<u32> {
         self.full_hash
     }
