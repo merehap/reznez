@@ -1,9 +1,44 @@
+use std::collections::BTreeSet;
+use std::sync::LazyLock;
+
 use log::info;
 
+use crate::cartridge::cartridge_metadata::ConsoleType;
 use crate::cartridge::resolved_metadata::{MetadataResolver, ResolvedMetadata};
-use crate::mapper::Cartridge;
+use crate::mapper::{Cartridge, NameTableMirroring};
 use crate::mapper::{Mapper, MapperParams, LookupResult};
 use crate::mappers as m;
+
+pub static SUBMAPPERLESS_MAPPER_NUMBERS: LazyLock<BTreeSet<u16>> = LazyLock::new(|| {
+    let mut submapperless_mappers = BTreeSet::new();
+    for mapper_number in 0..u16::MAX {
+        let metadata = ResolvedMetadata {
+            mapper_number,
+            submapper_number: Some(0),
+
+            name_table_mirroring: NameTableMirroring::HORIZONTAL,
+            has_persistent_memory: false,
+            console_type: ConsoleType::Nes,
+
+            full_hash: 0,
+            prg_rom_hash: 0,
+
+            prg_rom_size: 0,
+            prg_work_ram_size: 0,
+            prg_save_ram_size: 0,
+
+            chr_rom_size: 0,
+            chr_work_ram_size: 0,
+            chr_save_ram_size: 0,
+        };
+
+        if matches!(lookup_mapper(&metadata), LookupResult::UnassignedSubmapper) {
+            submapperless_mappers.insert(mapper_number);
+        }
+    }
+
+    submapperless_mappers
+});
 
 pub fn lookup_mapper_with_params(metadata_resolver: &mut MetadataResolver, cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
     let metadata = metadata_resolver.resolve();

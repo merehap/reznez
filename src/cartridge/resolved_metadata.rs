@@ -1,9 +1,8 @@
-use std::collections::BTreeSet;
 use std::fmt;
 
 use crate::cartridge::cartridge_metadata::{CartridgeMetadata, ConsoleType};
-use crate::mapper::{NameTableMirroring, LookupResult};
-use crate::mapper_list;
+use crate::mapper::NameTableMirroring;
+use crate::mapper_list::SUBMAPPERLESS_MAPPER_NUMBERS;
 
 use crate::util::unit::KIBIBYTE;
 
@@ -64,39 +63,12 @@ pub struct MetadataResolver {
 
 impl MetadataResolver {
     pub fn resolve(&self) -> ResolvedMetadata {
-        let mut submapperless_mappers = BTreeSet::new();
-        for mapper_number in 0..u16::MAX {
-            let metadata = ResolvedMetadata {
-                mapper_number,
-                submapper_number: Some(0),
-
-                name_table_mirroring: NameTableMirroring::HORIZONTAL,
-                has_persistent_memory: false,
-                console_type: ConsoleType::Nes,
-
-                full_hash: 0,
-                prg_rom_hash: 0,
-
-                prg_rom_size: 0,
-                prg_work_ram_size: 0,
-                prg_save_ram_size: 0,
-
-                chr_rom_size: 0,
-                chr_work_ram_size: 0,
-                chr_save_ram_size: 0,
-            };
-
-            if matches!(mapper_list::lookup_mapper(&metadata), LookupResult::UnassignedSubmapper) {
-                submapperless_mappers.insert(mapper_number);
-            }
-        }
-
         let all_metadata = [&self.cartridge, &self.database, &self.database_extension, &self.mapper, &self.default];
 
         // The header DB sets submapper to 0 even for mappers that don't have any submappers,
         // So we only set submapper when it's meaningful.
         let mut remove_submapper_number = false;
-        if submapperless_mappers.contains(&self.cartridge.mapper_number().unwrap()) {
+        if SUBMAPPERLESS_MAPPER_NUMBERS.contains(&self.cartridge.mapper_number().unwrap()) {
             for metadata in all_metadata {
                 match metadata.submapper_number() {
                     None | Some(0) => remove_submapper_number = true,
