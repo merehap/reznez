@@ -149,8 +149,10 @@ impl HeaderDb {
                 .full_hash(full_hash)
                 .prg_rom_hash(prg_rom_hash)
                 .prg_rom_size(read_attribute(game, "prgrom", "size").unwrap().parse().unwrap())
-                .mapper_number(read_attribute(game, "pcb", "mapper").unwrap().parse().unwrap())
-                .submapper_number(read_attribute(game, "pcb", "submapper").unwrap().parse().unwrap());
+                .mapper_and_submapper_number(
+                    read_attribute(game, "pcb", "mapper").unwrap().parse().unwrap(),
+                    read_attribute(game, "pcb", "submapper").unwrap().parse().ok()
+                );
 
             read_attribute(game, "prgram", "size").inspect(|s| { header_builder.prg_work_ram_size(s.parse().unwrap()); });
             read_attribute(game, "prgnvram", "size").inspect(|s| { header_builder.prg_save_ram_size(s.parse().unwrap()); });

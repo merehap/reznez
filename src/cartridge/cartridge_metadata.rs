@@ -2,6 +2,7 @@ use std::fmt;
 
 use splitbits::{combinebits, splitbits, splitbits_named};
 
+use crate::mapper_list::SUBMAPPERLESS_MAPPER_NUMBERS;
 use crate::memory::raw_memory::RawMemory;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::unit::KIBIBYTE;
@@ -64,9 +65,10 @@ impl CartridgeMetadata {
         }
 
         let mut high_mapper_number = 0b0000;
+        let mut submapper_number = None;
         if ines2_present {
             high_mapper_number = raw_header[8] & 0b1111;
-            builder.submapper_number(raw_header[8] >> 4);
+            submapper_number = Some(raw_header[8] >> 4);
             let prg_sizes = splitbits!(min=u32, raw_header[10], "sssswwww");
             let prg_work = if prg_sizes.w > 0 { 64 << prg_sizes.w } else { 0 };
             builder.prg_work_ram_size(prg_work);
@@ -81,7 +83,7 @@ impl CartridgeMetadata {
         }
 
         let mapper_number = combinebits!(high_mapper_number, mid_mapper_number, low_mapper_number, "0000uuuummmmllll");
-        builder.mapper_number(mapper_number);
+        builder.mapper_and_submapper_number(mapper_number, submapper_number);
 
         if play_choice_enabled {
             return Err("PlayChoice isn't implemented yet.".to_string());
@@ -249,8 +251,16 @@ impl CartridgeMetadataBuilder {
         }
     }
 
-    pub const fn mapper_number(&mut self, mapper_number: u16) -> &mut Self {
+    pub fn mapper_and_submapper_number(&mut self, mapper_number: u16, submapper_number: Option<u8>) -> &mut Self {
+        assert!(self.mapper_number.is_none(), "Can't set mapper number twice.");
+
         self.mapper_number = Some(mapper_number);
+        if SUBMAPPERLESS_MAPPER_NUMBERS.contains(&mapper_number) && submapper_number == Some(0) {
+            self.submapper_number = None;
+        } else {
+            self.submapper_number = submapper_number;
+        }
+
         self
     }
 
@@ -334,8 +344,9 @@ impl CartridgeMetadataBuilder {
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub enum ConsoleType {
+    #[default]
     Nes,
     VsUnisystem,
     PlayChoice10,

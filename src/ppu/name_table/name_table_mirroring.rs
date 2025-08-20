@@ -73,6 +73,12 @@ const fn build(quadrants: [CiramSide; 4]) -> NameTableMirroring {
     }
 }
 
+impl Default for NameTableMirroring {
+    fn default() -> Self {
+        Self::VERTICAL
+    }
+}
+
 impl fmt::Display for NameTableMirroring {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let text = match *self {

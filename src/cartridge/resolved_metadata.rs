@@ -2,11 +2,10 @@ use std::fmt;
 
 use crate::cartridge::cartridge_metadata::{CartridgeMetadata, ConsoleType};
 use crate::mapper::NameTableMirroring;
-use crate::mapper_list::SUBMAPPERLESS_MAPPER_NUMBERS;
 
 use crate::util::unit::KIBIBYTE;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ResolvedMetadata {
     pub mapper_number: u16,
     pub submapper_number: Option<u8>,
@@ -65,21 +64,7 @@ impl MetadataResolver {
     pub fn resolve(&self) -> ResolvedMetadata {
         let all_metadata = [&self.cartridge, &self.database, &self.database_extension, &self.mapper, &self.default];
 
-        // The header DB sets submapper to 0 even for mappers that don't have any submappers,
-        // So we only set submapper when it's meaningful.
-        let mut remove_submapper_number = false;
-        if SUBMAPPERLESS_MAPPER_NUMBERS.contains(&self.cartridge.mapper_number().unwrap()) {
-            for metadata in all_metadata {
-                match metadata.submapper_number() {
-                    None | Some(0) => remove_submapper_number = true,
-                    Some(_) => panic!(),
-                }
-            }
-        }
-
-        let submapper_number = if remove_submapper_number {
-            None
-        } else if self.database_extension.submapper_number().is_some() {
+        let submapper_number = if self.database_extension.submapper_number().is_some() {
             // FIXME: Remove this hack. Database extension needs to be split into DB ext and overrides.
             self.database_extension.submapper_number()
         } else {
