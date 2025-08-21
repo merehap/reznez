@@ -1,5 +1,3 @@
-use log::warn;
-
 use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::util::unit::KIBIBYTE;
 
@@ -75,10 +73,7 @@ impl Board {
             (128 | 256 | 512, 32,  0,            _, _) => SXROM,
             (128 | 256 | 512,  0, 32,            _, _) => SXROM,
             (128 | 256      ,  8,  8, 16 | 32 | 64, 0) => SZROM,
-            _ => {
-                warn!("Unknown MMC1 board: ({prg_rom_size}KiB, {prg_ram_size}KiB, {prg_nvram_size}KiB, {chr_rom_size}KiB, {chr_ram_size}KiB)");
-                Unknown
-            }
+            _ => Unknown,
         };
 
         if matches!(board, SEROM | SHROM) {

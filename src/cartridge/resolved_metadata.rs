@@ -62,34 +62,13 @@ pub struct MetadataResolver {
 
 impl MetadataResolver {
     pub fn resolve(&self) -> ResolvedMetadata {
-        let all_metadata = [&self.cartridge, &self.database, &self.database_extension, &self.mapper, &self.defaults()];
-
-        let submapper_number = if self.database_extension.submapper_number().is_some() {
-            // FIXME: Remove this hack. Database extension needs to be split into DB ext and overrides.
-            self.database_extension.submapper_number()
-        } else {
-            all_metadata.iter().map(|m| m.submapper_number()).find(|s| s.is_some()).flatten()
-        };
-
-        let name_table_mirroring = self.mapper.name_table_mirroring()
-            .or(all_metadata.iter()
-                   .map(|m| m.name_table_mirroring())
-                   .find(|s| s.is_some())
-                   .flatten()
-            ).expect("This mapper must define what Four Screen mirroring is.");
-
-        let chr_rom_size = self.cartridge.chr_rom_size().unwrap();
-        let mut chr_work_ram_size = resolve_field(&all_metadata, |m| m.chr_work_ram_size()).unwrap();
-        let chr_save_ram_size = resolve_field(&all_metadata, |m| m.chr_save_ram_size()).unwrap();
-        if chr_rom_size == 0 && chr_work_ram_size == 0 && chr_save_ram_size == 0 {
-            chr_work_ram_size = 8 * KIBIBYTE;
-        }
+        let all_metadata = [&self.mapper, &self.database_extension, &self.cartridge, &self.database, &self.defaults()];
 
         ResolvedMetadata {
             mapper_number: resolve_field(&all_metadata, |m| m.mapper_number()).unwrap(),
-            submapper_number,
+            submapper_number: resolve_field(&all_metadata, |m| m.submapper_number()),
 
-            name_table_mirroring,
+            name_table_mirroring: resolve_field(&all_metadata, |m| m.name_table_mirroring()).expect("This mapper must define what Four Screen mirroring is."),
             has_persistent_memory: resolve_field(&all_metadata, |m| m.has_persistent_memory()).unwrap(),
             console_type: resolve_field(&all_metadata, |m| m.console_type()).unwrap(),
 
@@ -103,21 +82,21 @@ impl MetadataResolver {
             prg_save_ram_size: resolve_field(&all_metadata, |m| m.prg_save_ram_size()).unwrap(),
 
             // TODO: Verify that all CHR ROM sizes match.
-            chr_rom_size,
-            chr_work_ram_size,
-            chr_save_ram_size,
+            chr_rom_size: self.cartridge.chr_rom_size().unwrap(),
+            chr_work_ram_size: resolve_field(&all_metadata, |m| m.chr_work_ram_size()).unwrap(),
+            chr_save_ram_size: resolve_field(&all_metadata, |m| m.chr_save_ram_size()).unwrap(),
         }
     }
 
     pub fn defaults(&self) -> CartridgeMetadata {
-        let all_metadata = [&self.cartridge, &self.database, &self.database_extension, &self.mapper];
+        let all_metadata = [&self.mapper, &self.database_extension, &self.cartridge, &self.database];
 
         let prg_work_ram_size = if self.layout_has_prg_ram { 8 * KIBIBYTE } else { 0 };
 
         let chr_rom_size = self.cartridge.chr_rom_size();
         let chr_work_ram_size = resolve_field(&all_metadata, |m| m.chr_work_ram_size());
         let chr_save_ram_size = resolve_field(&all_metadata, |m| m.chr_save_ram_size());
-        let chr_work_ram_size = if chr_rom_size.is_none() && chr_work_ram_size.is_none() && chr_save_ram_size.is_none() {
+        let chr_work_ram_size = if matches!(chr_rom_size, None | Some(0)) && chr_work_ram_size.is_none() && chr_save_ram_size.is_none() {
             8 * KIBIBYTE
         } else {
             0
