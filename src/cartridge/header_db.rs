@@ -154,11 +154,11 @@ impl HeaderDb {
                     read_attribute(game, "pcb", "submapper").unwrap().parse().ok()
                 );
 
-            read_attribute(game, "prgram", "size").inspect(|s| { header_builder.prg_work_ram_size(s.parse().unwrap()); });
-            read_attribute(game, "prgnvram", "size").inspect(|s| { header_builder.prg_save_ram_size(s.parse().unwrap()); });
-            read_attribute(game, "chrrom", "size").inspect(|s| { header_builder.chr_rom_size(s.parse().unwrap()); });
-            read_attribute(game, "chrram", "size").inspect(|s| { header_builder.chr_work_ram_size(s.parse().unwrap()); });
-            read_attribute(game, "chrnvram", "size").inspect(|s| { header_builder.chr_save_ram_size(s.parse().unwrap()); });
+            header_builder.prg_work_ram_size(read_attribute(game, "prgram", "size").map(|s| s.parse().unwrap()).unwrap_or(0));
+            header_builder.prg_save_ram_size(read_attribute(game, "prgnvram", "size").map(|s| s.parse().unwrap()).unwrap_or(0));
+            header_builder.chr_rom_size(read_attribute(game, "chrrom", "size").map(|s| s.parse().unwrap()).unwrap_or(0));
+            header_builder.chr_work_ram_size(read_attribute(game, "chrram", "size").map(|s| s.parse().unwrap()).unwrap_or(0));
+            header_builder.chr_save_ram_size(read_attribute(game, "chrnvram", "size").map(|s| s.parse().unwrap()).unwrap_or(0));
 
             let header = header_builder.build();
             header_db.data_by_crc32.insert(full_hash, header.clone());
