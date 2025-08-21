@@ -48,6 +48,7 @@ pub fn lookup_mapper_with_params(metadata_resolver: &mut MetadataResolver, cartr
     };
 
     metadata_resolver.mapper = mapper.layout().cartridge_metadata_override();
+    metadata_resolver.layout_has_prg_ram = mapper.layout().has_prg_ram();
     let metadata = metadata_resolver.resolve();
     info!("ROM loaded.\n{metadata}");
 

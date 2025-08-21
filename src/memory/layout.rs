@@ -184,6 +184,10 @@ impl Layout {
         self.header_override.clone()
     }
 
+    pub fn has_prg_ram(&self) -> bool {
+        self.prg_layouts.as_iter().any(|prg_layout| prg_layout.has_ram())
+    }
+
     pub const fn into_builder(self) -> LayoutBuilder {
         LayoutBuilder {
             prg_rom_max_size: Some(self.prg_rom_max_size),

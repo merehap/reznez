@@ -25,6 +25,10 @@ impl PrgLayout {
         PrgLayout(windows)
     }
 
+    pub fn has_ram(&self) -> bool {
+        self.0.iter().any(|window| window.bank().is_ram())
+    }
+
     pub fn force_rom(&self) -> Self {
         let windows: Vec<PrgWindow> = self.0.iter()
             .map(|window| window.force_rom())
