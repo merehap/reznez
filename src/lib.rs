@@ -1,4 +1,3 @@
-#![feature(array_chunks)]
 #![feature(if_let_guard)]
 #![feature(type_ascription)]
 #![feature(const_for)]

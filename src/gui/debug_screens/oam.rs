@@ -13,7 +13,7 @@ use crate::ppu::sprite::sprite_height::SpriteHeight;
 impl Oam {
     pub fn only_front_sprites(&self) -> Oam {
         let mut result = self.clone();
-        for chunk in result.to_bytes_mut().array_chunks_mut::<4>() {
+        for chunk in result.to_bytes_mut().as_chunks_mut().0.iter_mut() {
             let sprite = Sprite::from_u32(u32::from_be_bytes(*chunk));
             if sprite.priority() == Priority::Behind {
                 *chunk = [0xFF, 0, 0, 0];
@@ -25,7 +25,7 @@ impl Oam {
 
     pub fn only_back_sprites(&self) -> Oam {
         let mut result = self.clone();
-        for chunk in result.to_bytes_mut().array_chunks_mut::<4>() {
+        for chunk in result.to_bytes_mut().as_chunks_mut().0.iter_mut() {
             let sprite = Sprite::from_u32(u32::from_be_bytes(*chunk));
             if sprite.priority() == Priority::InFront {
                 *chunk = [0xFF, 0, 0, 0];
@@ -36,7 +36,7 @@ impl Oam {
     }
 
     pub fn sprites(&self) -> [Sprite; 64] {
-        let mut iter = self.to_bytes().array_chunks::<4>();
+        let mut iter = self.to_bytes().as_chunks().0.iter();
         [(); 64].map(|()| {
             let raw = u32::from_be_bytes(*iter.next().unwrap());
             Sprite::from_u32(raw)
