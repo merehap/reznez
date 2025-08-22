@@ -8,7 +8,6 @@ use num_traits::FromPrimitive;
 
 use crate::apu::apu::Apu;
 use crate::apu::apu_registers::{ApuRegisters, FrameCounterWriteStatus};
-use crate::cartridge::cartridge::Cartridge;
 use crate::cartridge::resolved_metadata::{MetadataResolver, ResolvedMetadata};
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
@@ -37,7 +36,6 @@ pub struct Nes {
     pub mapper: Box<dyn Mapper>,
     resolved_metadata: ResolvedMetadata,
     metadata_resolver: MetadataResolver,
-    cartridge: Cartridge,
     frame: Frame,
     cycle: u64,
 
@@ -70,7 +68,6 @@ impl Nes {
             mapper,
             resolved_metadata: metadata_resolver.resolve(),
             metadata_resolver,
-            cartridge: config.cartridge.clone(),
             frame: Frame::new(),
             cycle: 0,
 
@@ -118,10 +115,6 @@ impl Nes {
 
     pub fn metadata_resolver(&self) -> &MetadataResolver {
         &self.metadata_resolver
-    }
-
-    pub fn cartridge(&self) -> &Cartridge {
-        &self.cartridge
     }
 
     pub fn frame(&self) -> &Frame {
