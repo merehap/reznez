@@ -245,7 +245,7 @@ impl CartridgeMetadataBuilder {
         self
     }
 
-    pub const fn submapper_number(&mut self, submapper_number: u8) -> &mut Self {
+    pub fn submapper_number(&mut self, submapper_number: u8) -> &mut Self {
         self.submapper_number = Some(submapper_number);
         self
     }

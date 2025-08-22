@@ -82,7 +82,7 @@ impl Config {
         let cartridge_mapper_number = header.mapper_number().unwrap();
         let mut db_header = CartridgeMetadataBuilder::new().build();
         let mut db_extension_metadata = CartridgeMetadataBuilder::new();
-        if let Some(db_cartridge_metadata) = header_db.header_from_db(&header, header.full_hash().unwrap(), prg_rom_hash, cartridge_mapper_number, header.submapper_number()) {
+        if let Some(db_cartridge_metadata) = header_db.header_from_db(header.full_hash().unwrap(), prg_rom_hash, cartridge_mapper_number, header.submapper_number()) {
             db_header = db_cartridge_metadata;
             if cartridge_mapper_number != db_header.mapper_number().unwrap() {
                 warn!("Mapper number in ROM ({}) does not match the one in the DB ({}).",
@@ -95,18 +95,20 @@ impl Config {
             }
         } else {
             warn!("ROM not found in header database.");
-            if let Some((number, sub_number, data_hash, prg_hash)) =
-                    header_db.missing_submapper_number(header.full_hash().unwrap(), prg_rom_hash) && cartridge_mapper_number == number {
+        }
 
-                info!("Using override submapper {sub_number} for this ROM. Full hash: {data_hash} , PRG hash: {prg_hash}");
-                db_extension_metadata.submapper_number(sub_number);
-            }
+        if let Some((number, sub_number, data_hash, prg_hash)) =
+                header_db.missing_submapper_number(header.full_hash().unwrap(), prg_rom_hash) && cartridge_mapper_number == number {
+
+            info!("Using override submapper {sub_number} for this ROM. Full hash: {data_hash} , PRG hash: {prg_hash}");
+            db_extension_metadata.submapper_number(sub_number);
         }
 
         let metadata_resolver = MetadataResolver {
             cartridge: header,
             database: db_header,
             database_extension: db_extension_metadata.build(),
+            // Metadata from the mapper is populated a little later.
             mapper: CartridgeMetadataBuilder::new().build(),
             layout_has_prg_ram: false,
         };

@@ -170,39 +170,18 @@ impl HeaderDb {
 
     pub fn header_from_db(
         &self,
-        header_from_cartridge: &CartridgeMetadata,
         full_hash: u32,
         prg_hash: u32,
         mapper_number: u16,
         submapper_number: Option<u8>,
     ) -> Option<CartridgeMetadata> {
 
-        let mut override_submapper_number = None;
-        if let Some((number, header)) = self.missing_data_submapper_numbers.get(&full_hash).cloned()
-                && number == header_from_cartridge.mapper_number().unwrap() {
-            info!("Using override submapper for this ROM. Full hash: {full_hash} , PRG hash: {prg_hash}");
-            override_submapper_number = header.submapper_number();
-        } else if let Some((number, header)) = self.missing_prg_rom_submapper_numbers.get(&prg_hash).cloned()
-                && number == header_from_cartridge.mapper_number().unwrap() {
-            info!("Using override submapper for this ROM. Full hash: {full_hash} , PRG hash: {prg_hash}");
-            override_submapper_number = header.submapper_number();
-        }
-
-        let mut result = self.data_by_crc32.get(&full_hash).cloned();
-        if let Some(ref mut header) = result {
-            if let Some(override_submapper_number) = override_submapper_number {
-                header.set_submapper_number(override_submapper_number);
-                return Some(header.clone());
-            } else {
-                return result;
-            }
-        }
-
+        let result = self.data_by_crc32.get(&full_hash).cloned();
         if result.is_some() {
             return result;
         }
 
-        let mut result = self.prg_rom_by_crc32.get(&prg_hash).cloned();
+        let result = self.prg_rom_by_crc32.get(&prg_hash).cloned();
         if result.is_none() {
             if let Some(submapper_number) = submapper_number {
                 info!("ROM not found in DB. ({full_hash}, {prg_hash}, {mapper_number}, {submapper_number})");
@@ -211,12 +190,7 @@ impl HeaderDb {
             }
         }
 
-        if let Some(ref mut header) = result && let Some(override_submapper_number) = override_submapper_number {
-            header.set_submapper_number(override_submapper_number);
-            Some(header.clone())
-        } else {
-            result
-        }
+        result
     }
 
     pub fn missing_submapper_number(&self, data_hash: u32, prg_hash: u32) -> Option<(u16, u8, u32, u32)> {
