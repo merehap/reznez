@@ -9,20 +9,12 @@ use crate::mapper::{Mapper, MapperParams, LookupResult};
 use crate::mappers as m;
 
 pub static SUBMAPPERLESS_MAPPER_NUMBERS: LazyLock<BTreeSet<u16>> = LazyLock::new(|| {
-    let mut submapperless_mappers = BTreeSet::new();
-    for mapper_number in 0..u16::MAX {
-        let metadata = ResolvedMetadata {
-            mapper_number,
-            submapper_number: Some(0),
-            .. ResolvedMetadata::default()
-        };
-
-        if matches!(lookup_mapper(&metadata), LookupResult::UnassignedSubmapper) {
-            submapperless_mappers.insert(mapper_number);
-        }
-    }
-
-    submapperless_mappers
+    (0..u16::MAX)
+        .filter(|&mapper_number| {
+            let metadata = ResolvedMetadata { mapper_number, submapper_number: Some(0), .. ResolvedMetadata::default()};
+            matches!(lookup_mapper(&metadata), LookupResult::UnassignedSubmapper)
+        })
+        .collect()
 });
 
 pub fn lookup_mapper_with_params(metadata_resolver: &mut MetadataResolver, cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
