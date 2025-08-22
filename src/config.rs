@@ -81,7 +81,6 @@ impl Config {
         let header_db = HeaderDb::load();
         let cartridge_mapper_number = header.mapper_number().unwrap();
         let mut db_header = CartridgeMetadataBuilder::new().build();
-        let mut db_extension_metadata = CartridgeMetadataBuilder::new();
         if let Some(db_cartridge_metadata) = header_db.header_from_db(header.full_hash().unwrap(), prg_rom_hash, cartridge_mapper_number, header.submapper_number()) {
             db_header = db_cartridge_metadata;
             if cartridge_mapper_number != db_header.mapper_number().unwrap() {
@@ -97,6 +96,15 @@ impl Config {
             warn!("ROM not found in header database.");
         }
 
+        let mut hard_coded_overrides = CartridgeMetadataBuilder::new();
+        if let Some((number, sub_number, data_hash, prg_hash)) =
+                header_db.override_submapper_number(header.full_hash().unwrap(), prg_rom_hash) && cartridge_mapper_number == number {
+
+            info!("Using override submapper {sub_number} for this ROM. Full hash: {data_hash} , PRG hash: {prg_hash}");
+            hard_coded_overrides.submapper_number(sub_number);
+        }
+
+        let mut db_extension_metadata = CartridgeMetadataBuilder::new();
         if let Some((number, sub_number, data_hash, prg_hash)) =
                 header_db.missing_submapper_number(header.full_hash().unwrap(), prg_rom_hash) && cartridge_mapper_number == number {
 
@@ -105,11 +113,12 @@ impl Config {
         }
 
         let metadata_resolver = MetadataResolver {
+            // Metadata from the mapper is populated a little later.
+            mapper: CartridgeMetadataBuilder::new().build(),
+            hard_coded_overrides: hard_coded_overrides.build(),
             cartridge: header,
             database: db_header,
             database_extension: db_extension_metadata.build(),
-            // Metadata from the mapper is populated a little later.
-            mapper: CartridgeMetadataBuilder::new().build(),
             layout_has_prg_ram: false,
         };
 

@@ -51,18 +51,18 @@ impl fmt::Display for ResolvedMetadata {
 
 #[derive(Clone, Debug)]
 pub struct MetadataResolver {
+    pub mapper: CartridgeMetadata,
+    pub hard_coded_overrides: CartridgeMetadata,
     pub cartridge: CartridgeMetadata,
     pub database: CartridgeMetadata,
-    // TODO: Split this into database_override_source.
     pub database_extension: CartridgeMetadata,
-    pub mapper: CartridgeMetadata,
     pub layout_has_prg_ram: bool,
     // TODO: Add user overrides.
 }
 
 impl MetadataResolver {
     pub fn resolve(&self) -> ResolvedMetadata {
-        let all_metadata = [&self.mapper, &self.database_extension, &self.cartridge, &self.database, &self.defaults()];
+        let all_metadata = [&self.mapper, &self.hard_coded_overrides, &self.database_extension, &self.cartridge, &self.database, &self.defaults()];
 
         ResolvedMetadata {
             mapper_number: resolve_field(&all_metadata, |m| m.mapper_number()).unwrap(),

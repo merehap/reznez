@@ -15,7 +15,6 @@ use winit::window::Window;
 use winit::window::{WindowBuilder, WindowId};
 use winit_input_helper::WinitInputHelper;
 
-use crate::cartridge::cartridge_metadata::CartridgeMetadataBuilder;
 use crate::config::Config;
 use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::debug_screens::name_table::NameTable;
@@ -1229,10 +1228,10 @@ impl Renderer for CartridgeMetadataRenderer {
         let final_values = resolver.resolve();
         let metadata_sources = [
             &resolver.mapper,
-            &resolver.database_extension,
+            &resolver.hard_coded_overrides,
             &resolver.cartridge,
             &resolver.database,
-            &CartridgeMetadataBuilder::new().build(),
+            &resolver.database_extension,
             &resolver.defaults(),
         ];
 

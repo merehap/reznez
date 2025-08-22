@@ -7,6 +7,11 @@ use log::info;
 
 use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder};
 
+const OVERRIDE_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
+    // Crystalis (no submapper number has been officially assigned for MMC3 with Sharp Rev A IRQ)
+    (656187357, 1661724784, 4, 99),
+];
+
 // Submapper numbers for ROMs that aren't in the NES Header DB (mostly test ROMs).
 const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     // ppu_read_buffer/test_ppu_read_buffer.nes
@@ -98,9 +103,6 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     // shxdma.nes
     (4274158895, 2442883650, 7, 1),
 
-    // Crystalis (no submapper number has been officially assigned)
-    (656187357, 1661724784, 4, 99),
-
     // Lagrange Point
     (2905171667, 869154800, 85, 2),
 
@@ -109,10 +111,14 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
 ];
 
 pub struct HeaderDb {
-    data_by_crc32: BTreeMap<u32, CartridgeMetadata>,
-    prg_rom_by_crc32: BTreeMap<u32, CartridgeMetadata>,
-    missing_data_submapper_numbers: BTreeMap<u32, (u16, CartridgeMetadata)>,
-    missing_prg_rom_submapper_numbers: BTreeMap<u32, (u16, CartridgeMetadata)>,
+    metadata_by_full_crc32: BTreeMap<u32, CartridgeMetadata>,
+    metadata_by_prg_rom_crc32: BTreeMap<u32, CartridgeMetadata>,
+
+    missing_submapper_numbers_by_full_hash: BTreeMap<u32, (u16, CartridgeMetadata)>,
+    missing_submapper_numbers_by_prg_rom_hash: BTreeMap<u32, (u16, CartridgeMetadata)>,
+
+    override_submapper_numbers_by_full_hash: BTreeMap<u32, (u16, CartridgeMetadata)>,
+    override_submapper_numbers_by_prg_rom_hash: BTreeMap<u32, (u16, CartridgeMetadata)>,
 }
 
 impl HeaderDb {
@@ -121,29 +127,15 @@ impl HeaderDb {
         let doc = roxmltree::Document::parse(text).unwrap();
         let games = doc.root().descendants().filter(|n| n.tag_name().name() == "game");
 
-        let missing_data_submapper_numbers: BTreeMap<u32, (u16, CartridgeMetadata)> =
-            MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(k, _, m, s)| {
-                let header = CartridgeMetadataBuilder::new().submapper_number(*s).build();
-                (*k, (*m, header))
-            }).collect();
-        let missing_prg_rom_submapper_numbers: BTreeMap<u32, (u16, CartridgeMetadata)> =
-            MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(_, k, m, s)| {
-                let header = CartridgeMetadataBuilder::new().submapper_number(*s).build();
-                (*k, (*m, header))
-            }).collect();
-
-        let mut header_db = HeaderDb {
-            data_by_crc32: BTreeMap::new(),
-            prg_rom_by_crc32: BTreeMap::new(),
-            missing_data_submapper_numbers,
-            missing_prg_rom_submapper_numbers,
-        };
-
+        let mut metadata_by_full_crc32 = BTreeMap::new();
+        let mut metadata_by_prg_rom_crc32 = BTreeMap::new();
         for game in games {
-            let data_hash = read_attribute(game, "rom", "crc32").unwrap();
-            let full_hash = u32::from_str_radix(data_hash, 16).unwrap();
             let prg_rom_hash = read_attribute(game, "prgrom", "crc32").unwrap();
             let prg_rom_hash = u32::from_str_radix(prg_rom_hash, 16).unwrap();
+
+            let full_hash = read_attribute(game, "rom", "crc32").unwrap();
+            let full_hash = u32::from_str_radix(full_hash, 16).unwrap();
+
             let mut header_builder = CartridgeMetadataBuilder::new();
             header_builder
                 .full_hash(full_hash)
@@ -161,11 +153,44 @@ impl HeaderDb {
             header_builder.chr_save_ram_size(read_attribute(game, "chrnvram", "size").map(|s| s.parse().unwrap()).unwrap_or(0));
 
             let header = header_builder.build();
-            header_db.data_by_crc32.insert(full_hash, header.clone());
-            header_db.prg_rom_by_crc32.insert(prg_rom_hash, header);
+            metadata_by_full_crc32.insert(full_hash, header.clone());
+            metadata_by_prg_rom_crc32.insert(prg_rom_hash, header);
         }
 
-        header_db
+        let missing_submapper_numbers_by_full_hash: BTreeMap<u32, (u16, CartridgeMetadata)> =
+            MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(k, _, m, s)| {
+                assert!(!metadata_by_full_crc32.contains_key(k),
+                    "ROM must NOT be in both header DB and DB extension. Full hash: {k}");
+                let header = CartridgeMetadataBuilder::new().submapper_number(*s).build();
+                (*k, (*m, header))
+            }).collect();
+        let missing_submapper_numbers_by_prg_rom_hash: BTreeMap<u32, (u16, CartridgeMetadata)> =
+            MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(_, k, m, s)| {
+                assert!(!metadata_by_prg_rom_crc32.contains_key(k),
+                    "ROM must NOT be in both header DB and DB extension. PRG ROM hash: {k}");
+                let header = CartridgeMetadataBuilder::new().submapper_number(*s).build();
+                (*k, (*m, header))
+            }).collect();
+
+        let override_submapper_numbers_by_full_hash: BTreeMap<u32, (u16, CartridgeMetadata)> =
+            OVERRIDE_SUBMAPPER_NUMBERS.iter().map(|(k, _, m, s)| {
+                let header = CartridgeMetadataBuilder::new().submapper_number(*s).build();
+                (*k, (*m, header))
+            }).collect();
+        let override_submapper_numbers_by_prg_rom_hash: BTreeMap<u32, (u16, CartridgeMetadata)> =
+            OVERRIDE_SUBMAPPER_NUMBERS.iter().map(|(_, k, m, s)| {
+                let header = CartridgeMetadataBuilder::new().submapper_number(*s).build();
+                (*k, (*m, header))
+            }).collect();
+
+        HeaderDb {
+            metadata_by_full_crc32,
+            metadata_by_prg_rom_crc32,
+            missing_submapper_numbers_by_full_hash,
+            missing_submapper_numbers_by_prg_rom_hash,
+            override_submapper_numbers_by_full_hash,
+            override_submapper_numbers_by_prg_rom_hash,
+        }
     }
 
     pub fn header_from_db(
@@ -176,12 +201,12 @@ impl HeaderDb {
         submapper_number: Option<u8>,
     ) -> Option<CartridgeMetadata> {
 
-        let result = self.data_by_crc32.get(&full_hash).cloned();
+        let result = self.metadata_by_full_crc32.get(&full_hash).cloned();
         if result.is_some() {
             return result;
         }
 
-        let result = self.prg_rom_by_crc32.get(&prg_hash).cloned();
+        let result = self.metadata_by_prg_rom_crc32.get(&prg_hash).cloned();
         if result.is_none() {
             if let Some(submapper_number) = submapper_number {
                 info!("ROM not found in DB. ({full_hash}, {prg_hash}, {mapper_number}, {submapper_number})");
@@ -193,10 +218,20 @@ impl HeaderDb {
         result
     }
 
-    pub fn missing_submapper_number(&self, data_hash: u32, prg_hash: u32) -> Option<(u16, u8, u32, u32)> {
-        if let Some((number, header)) = self.missing_data_submapper_numbers.get(&data_hash).cloned() {
+    pub fn override_submapper_number(&self, data_hash: u32, prg_hash: u32) -> Option<(u16, u8, u32, u32)> {
+        if let Some((number, header)) = self.override_submapper_numbers_by_full_hash.get(&data_hash).cloned() {
             Some((number, header.submapper_number().unwrap(), data_hash, prg_hash))
-        } else if let Some((number, header)) = self.missing_prg_rom_submapper_numbers.get(&prg_hash).cloned() {
+        } else if let Some((number, header)) = self.override_submapper_numbers_by_prg_rom_hash.get(&prg_hash).cloned() {
+            Some((number, header.submapper_number().unwrap(), data_hash, prg_hash))
+        } else {
+            None
+        }
+    }
+
+    pub fn missing_submapper_number(&self, data_hash: u32, prg_hash: u32) -> Option<(u16, u8, u32, u32)> {
+        if let Some((number, header)) = self.missing_submapper_numbers_by_full_hash.get(&data_hash).cloned() {
+            Some((number, header.submapper_number().unwrap(), data_hash, prg_hash))
+        } else if let Some((number, header)) = self.missing_submapper_numbers_by_prg_rom_hash.get(&prg_hash).cloned() {
             Some((number, header.submapper_number().unwrap(), data_hash, prg_hash))
         } else {
             None
