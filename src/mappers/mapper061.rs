@@ -1,3 +1,4 @@
+use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
@@ -58,13 +59,13 @@ impl Mapper for Mapper061 {
 }
 
 impl Mapper061 {
-    pub fn new(chr_ram_size: u32) -> Self {
+    pub fn new(metadata: &ResolvedMetadata) -> Self {
         const CHR_RAM_SIZE: u32 = 8 * KIBIBYTE;
 
-        let chr_board = match chr_ram_size {
+        let chr_board = match metadata.chr_work_ram_size {
             0 => ChrBoard::SwitchableRom,
             CHR_RAM_SIZE => ChrBoard::FixedRam,
-            _ => panic!("Bad CHR RAM size for mapper 64: {chr_ram_size}"),
+            _ => panic!("Bad CHR RAM size for mapper 64: {}", metadata.chr_work_ram_size),
         };
 
         Self { chr_board }

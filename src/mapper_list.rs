@@ -214,7 +214,7 @@ pub fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // Caltron 6-in-1
         (41, None) => m::mapper041::Mapper041::default().supported(),
         // FDS games hacked into cartridge form
-        (42, None) => m::mapper042::Mapper042::new(metadata.chr_work_ram_size).supported(),
+        (42, None) => m::mapper042::Mapper042::new(metadata).supported(),
         // TONY-I and YS-612 (FDS games in cartridge form)
         (43, None) => m::mapper043::Mapper043::default().supported(),
         (44, _) => TodoMapper,
@@ -238,7 +238,7 @@ pub fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (59, _) => TodoMapper,
         (60, _) => TodoMapper,
         // NTDEC 0324 PCB
-        (61, None) => m::mapper061::Mapper061::new(metadata.chr_work_ram_size).supported(),
+        (61, None) => m::mapper061::Mapper061::new(metadata).supported(),
         // Super 700-in-1
         (62, None) => m::mapper062::Mapper062.supported(),
 
