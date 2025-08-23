@@ -2,7 +2,6 @@ use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
     // Oversize PRG. On real cartridges, 256KiB is the max.
-    .initial_name_table_mirroring(NameTableMirroring::ONE_SCREEN_LEFT_BANK)
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::EMPTY),
@@ -12,6 +11,8 @@ const LAYOUT: Layout = Layout::builder()
     .chr_layout(&[
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.fixed_index(0)),
     ])
+    // TODO: Restore this once the alternative mirroring bit is properly supported.
+    .initial_name_table_mirroring(NameTableMirroring::ONE_SCREEN_LEFT_BANK)
     .name_table_mirrorings(&[
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,
         NameTableMirroring::ONE_SCREEN_RIGHT_BANK,

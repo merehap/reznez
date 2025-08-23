@@ -8,11 +8,11 @@ use crate::mapper::Cartridge;
 use crate::mapper::{Mapper, MapperParams, LookupResult};
 use crate::mappers as m;
 
-pub static SUBMAPPERLESS_MAPPER_NUMBERS: LazyLock<BTreeSet<u16>> = LazyLock::new(|| {
+pub static MAPPERS_WITHOUT_SUBMAPPER_0: LazyLock<BTreeSet<u16>> = LazyLock::new(|| {
     (0..u16::MAX)
         .filter(|&mapper_number| {
             let metadata = ResolvedMetadata { mapper_number, submapper_number: Some(0), .. ResolvedMetadata::default()};
-            matches!(lookup_mapper(&metadata), LookupResult::UnassignedSubmapper)
+            matches!(lookup_mapper(&metadata), LookupResult::UnassignedSubmapper | LookupResult::UnspecifiedSubmapper)
         })
         .collect()
 });

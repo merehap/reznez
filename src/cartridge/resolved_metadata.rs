@@ -62,13 +62,18 @@ pub struct MetadataResolver {
 
 impl MetadataResolver {
     pub fn resolve(&self) -> ResolvedMetadata {
-        let all_metadata = [&self.mapper, &self.hard_coded_overrides, &self.database_extension, &self.cartridge, &self.database, &self.defaults()];
+        let all_metadata = [&self.hard_coded_overrides, &self.cartridge, &self.mapper, &self.database, &self.database_extension, &self.defaults()];
+
+        if let (None, Some(mapper_mirroring), Some(database_mirroring)) =
+                (self.cartridge.name_table_mirroring(), self.mapper.name_table_mirroring(), self.database.name_table_mirroring()) {
+            assert_eq!(mapper_mirroring, database_mirroring, "NameTableMirroring should match between the Mapper and the header DB.");
+        }
 
         ResolvedMetadata {
             mapper_number: resolve_field(&all_metadata, |m| m.mapper_number()).unwrap(),
             submapper_number: resolve_field(&all_metadata, |m| m.submapper_number()),
 
-            name_table_mirroring: resolve_field(&all_metadata, |m| m.name_table_mirroring()).expect("This mapper must define what Four Screen mirroring is."),
+            name_table_mirroring: resolve_field(&all_metadata, |m| m.name_table_mirroring()).expect("This mapper must define what the alternate mirroring is."),
             has_persistent_memory: resolve_field(&all_metadata, |m| m.has_persistent_memory()).unwrap(),
             console_type: resolve_field(&all_metadata, |m| m.console_type()).unwrap(),
 

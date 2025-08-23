@@ -19,6 +19,7 @@ const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
         ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
     ])
+    // TODO: Restore this once the alternative mirroring bit is properly supported.
     .initial_name_table_mirroring(NameTableMirroring::ONE_SCREEN_LEFT_BANK)
     .name_table_mirrorings(&[
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,

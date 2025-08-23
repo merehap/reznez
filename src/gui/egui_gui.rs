@@ -1227,9 +1227,9 @@ impl Renderer for CartridgeMetadataRenderer {
         let resolver = nes.metadata_resolver();
         let final_values = resolver.resolve();
         let metadata_sources = [
-            &resolver.mapper,
             &resolver.hard_coded_overrides,
             &resolver.cartridge,
+            &resolver.mapper,
             &resolver.database,
             &resolver.database_extension,
             &resolver.defaults(),
@@ -1252,9 +1252,9 @@ impl Renderer for CartridgeMetadataRenderer {
                 .show(ui, |ui| {
                     ui.label("Field");
                     ui.label("ACTUAL");
-                    ui.label("Mapper");
                     ui.label("Hard-coded Overrides");
                     ui.label("Cartridge");
+                    ui.label("Mapper");
                     ui.label("Header Database");
                     ui.label("Database Extension");
                     ui.label("Defaults");

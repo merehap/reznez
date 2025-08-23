@@ -101,7 +101,7 @@ impl Config {
                 header_db.override_submapper_number(header.full_hash().unwrap(), prg_rom_hash) && cartridge_mapper_number == number {
 
             info!("Using override submapper {sub_number} for this ROM. Full hash: {data_hash} , PRG hash: {prg_hash}");
-            hard_coded_overrides.submapper_number(sub_number);
+            hard_coded_overrides.mapper_and_submapper_number(number, Some(sub_number));
         }
 
         let mut db_extension_metadata = CartridgeMetadataBuilder::new();
@@ -109,14 +109,14 @@ impl Config {
                 header_db.missing_submapper_number(header.full_hash().unwrap(), prg_rom_hash) && cartridge_mapper_number == number {
 
             info!("Using override submapper {sub_number} for this ROM. Full hash: {data_hash} , PRG hash: {prg_hash}");
-            db_extension_metadata.submapper_number(sub_number);
+            db_extension_metadata.mapper_and_submapper_number(number, Some(sub_number));
         }
 
         let metadata_resolver = MetadataResolver {
-            // Metadata from the mapper is populated a little later.
-            mapper: CartridgeMetadataBuilder::new().build(),
             hard_coded_overrides: hard_coded_overrides.build(),
             cartridge: header,
+            // Metadata from the mapper is populated a little later.
+            mapper: CartridgeMetadataBuilder::new().build(),
             database: db_header,
             database_extension: db_extension_metadata.build(),
             layout_has_prg_ram: false,

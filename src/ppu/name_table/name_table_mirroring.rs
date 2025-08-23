@@ -28,6 +28,16 @@ impl NameTableMirroring {
         Self { quadrants: [top_left_quadrant, top_right_quadrant, bottom_left_quadrant, bottom_right_quadrant] }
     }
 
+    pub fn from_short_string(raw: &str) -> Result<Option<NameTableMirroring>, String> {
+        match raw {
+            "V" => Ok(Some(NameTableMirroring::VERTICAL)),
+            "H" => Ok(Some(NameTableMirroring::HORIZONTAL)),
+            "1" => Ok(Some(NameTableMirroring::ONE_SCREEN_LEFT_BANK)),
+            "4" => Ok(None),
+            _ => Err(format!("Text \"{raw}\" does not represent a valid NameTableMirroring.")),
+        }
+    }
+
     pub fn name_table_source_in_quadrant(self, quadrant: NameTableQuadrant) -> NameTableSource {
         self.quadrants[quadrant as usize]
     }

@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use log::info;
 
-use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder};
+use crate::{cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder}, mapper::NameTableMirroring};
 
 const OVERRIDE_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     // Crystalis (no submapper number has been officially assigned for MMC3 with Sharp Rev A IRQ)
@@ -145,6 +145,9 @@ impl HeaderDb {
                     read_attribute(game, "pcb", "mapper").unwrap().parse().unwrap(),
                     read_attribute(game, "pcb", "submapper").unwrap().parse().ok()
                 );
+            if let Some(name_table_mirroring) = NameTableMirroring::from_short_string(read_attribute(game, "pcb", "mirroring").unwrap()).unwrap() {
+                header_builder.name_table_mirroring(name_table_mirroring);
+            }
 
             header_builder.prg_work_ram_size(read_attribute(game, "prgram", "size").map(|s| s.parse().unwrap()).unwrap_or(0));
             header_builder.prg_save_ram_size(read_attribute(game, "prgnvram", "size").map(|s| s.parse().unwrap()).unwrap_or(0));
@@ -161,25 +164,25 @@ impl HeaderDb {
             MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(k, _, m, s)| {
                 assert!(!metadata_by_full_crc32.contains_key(k),
                     "ROM must NOT be in both header DB and DB extension. Full hash: {k}");
-                let header = CartridgeMetadataBuilder::new().submapper_number(*s).build();
+                let header = CartridgeMetadataBuilder::new().mapper_and_submapper_number(*m, Some(*s)).build();
                 (*k, (*m, header))
             }).collect();
         let missing_submapper_numbers_by_prg_rom_hash: BTreeMap<u32, (u16, CartridgeMetadata)> =
             MISSING_ROM_SUBMAPPER_NUMBERS.iter().map(|(_, k, m, s)| {
                 assert!(!metadata_by_prg_rom_crc32.contains_key(k),
                     "ROM must NOT be in both header DB and DB extension. PRG ROM hash: {k}");
-                let header = CartridgeMetadataBuilder::new().submapper_number(*s).build();
+                let header = CartridgeMetadataBuilder::new().mapper_and_submapper_number(*m, Some(*s)).build();
                 (*k, (*m, header))
             }).collect();
 
         let override_submapper_numbers_by_full_hash: BTreeMap<u32, (u16, CartridgeMetadata)> =
             OVERRIDE_SUBMAPPER_NUMBERS.iter().map(|(k, _, m, s)| {
-                let header = CartridgeMetadataBuilder::new().submapper_number(*s).build();
+                let header = CartridgeMetadataBuilder::new().mapper_and_submapper_number(*m, Some(*s)).build();
                 (*k, (*m, header))
             }).collect();
         let override_submapper_numbers_by_prg_rom_hash: BTreeMap<u32, (u16, CartridgeMetadata)> =
             OVERRIDE_SUBMAPPER_NUMBERS.iter().map(|(_, k, m, s)| {
-                let header = CartridgeMetadataBuilder::new().submapper_number(*s).build();
+                let header = CartridgeMetadataBuilder::new().mapper_and_submapper_number(*m, Some(*s)).build();
                 (*k, (*m, header))
             }).collect();
 

@@ -2,7 +2,7 @@ use std::fmt;
 
 use splitbits::{combinebits, splitbits, splitbits_named};
 
-use crate::mapper_list::SUBMAPPERLESS_MAPPER_NUMBERS;
+use crate::mapper_list::MAPPERS_WITHOUT_SUBMAPPER_0;
 use crate::memory::raw_memory::RawMemory;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::unit::KIBIBYTE;
@@ -161,10 +161,6 @@ impl CartridgeMetadata {
         self.prg_rom_hash = Some(prg_rom_hash);
     }
 
-    pub fn set_submapper_number(&mut self, submapper_number: u8) {
-        self.submapper_number = Some(submapper_number);
-    }
-
     pub const fn into_builder(self) -> CartridgeMetadataBuilder {
         CartridgeMetadataBuilder {
             mapper_number: self.mapper_number,
@@ -236,17 +232,12 @@ impl CartridgeMetadataBuilder {
         assert!(self.mapper_number.is_none(), "Can't set mapper number twice.");
 
         self.mapper_number = Some(mapper_number);
-        if SUBMAPPERLESS_MAPPER_NUMBERS.contains(&mapper_number) && submapper_number == Some(0) {
+        if MAPPERS_WITHOUT_SUBMAPPER_0.contains(&mapper_number) && submapper_number == Some(0) {
             self.submapper_number = None;
         } else {
             self.submapper_number = submapper_number;
         }
 
-        self
-    }
-
-    pub fn submapper_number(&mut self, submapper_number: u8) -> &mut Self {
-        self.submapper_number = Some(submapper_number);
         self
     }
 
