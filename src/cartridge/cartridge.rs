@@ -76,10 +76,6 @@ impl Cartridge {
         &self.chr_rom
     }
 
-    pub fn set_prg_rom_at(&mut self, index: u32, value: u8) {
-        self.prg_rom[index] = value;
-    }
-
     pub fn prg_rom_size(&self) -> u32 {
         self.prg_rom.size()
     }

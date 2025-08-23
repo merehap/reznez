@@ -50,7 +50,8 @@ impl TestSummary {
                     ..Opt::new(rom_entry.path.clone())
                 };
 
-                let mut nes = Nes::new(&Config::new(&opt));
+                let (config, mapper, mapper_params) = Config::new(&opt);
+                let mut nes = Nes::new(&config, mapper, mapper_params);
                 nes.mute();
                 *nes.frame_mut().show_overscan_mut() = true;
 

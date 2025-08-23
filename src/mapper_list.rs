@@ -1,8 +1,6 @@
 use std::collections::BTreeSet;
 use std::sync::LazyLock;
 
-use log::info;
-
 use crate::cartridge::resolved_metadata::{MetadataResolver, ResolvedMetadata};
 use crate::mapper::Cartridge;
 use crate::mapper::{Mapper, MapperParams, LookupResult};
@@ -17,7 +15,7 @@ pub static MAPPERS_WITHOUT_SUBMAPPER_0: LazyLock<BTreeSet<u16>> = LazyLock::new(
         .collect()
 });
 
-pub fn lookup_mapper_with_params(metadata_resolver: &mut MetadataResolver, cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
+pub fn lookup_mapper_with_params(metadata_resolver: &MetadataResolver, cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
     let metadata = metadata_resolver.resolve();
     let number = metadata.mapper_number;
     let sub_number = metadata.submapper_number;
@@ -39,11 +37,7 @@ pub fn lookup_mapper_with_params(metadata_resolver: &mut MetadataResolver, cartr
             panic!("Mapper {number}, submapper {} has been reassigned to {correct_mapper}, {correct_submapper} . ROM: {cartridge_name}", sub_number.unwrap()),
     };
 
-    metadata_resolver.mapper = mapper.layout().cartridge_metadata_override();
-    metadata_resolver.layout_has_prg_ram = mapper.layout().has_prg_ram();
     let metadata = metadata_resolver.resolve();
-    info!("ROM loaded.\n{metadata}");
-
     let mut mapper_params = mapper.layout().make_mapper_params(&metadata, cartridge);
     mapper.init_mapper_params(&mut mapper_params);
     (mapper, mapper_params)

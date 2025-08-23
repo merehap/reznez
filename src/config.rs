@@ -13,6 +13,8 @@ use crate::cartridge::resolved_metadata::MetadataResolver;
 use crate::gui::egui_gui::EguiGui;
 use crate::gui::gui::Gui;
 use crate::gui::no_gui::NoGui;
+use crate::mapper::{Mapper, MapperParams};
+use crate::mapper_list;
 use crate::memory::raw_memory::RawMemory;
 use crate::ppu::clock::Clock;
 use crate::ppu::palette::system_palette::SystemPalette;
@@ -32,12 +34,12 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(opt: &Opt) -> Config {
-        let (cartridge, metadata_resolver) = Config::load_rom(&opt.rom_path, !opt.prevent_saving);
+    pub fn new(opt: &Opt) -> (Config, Box<dyn Mapper>, MapperParams) {
+        let (cartridge, mapper, mapper_params, metadata_resolver) = Config::load_rom(&opt.rom_path, !opt.prevent_saving);
         let system_palette =
             SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
 
-        Config {
+        let config = Config {
             cartridge,
             metadata_resolver,
             starting_cpu_cycle: 0,
@@ -48,7 +50,9 @@ impl Config {
             stop_frame: opt.stop_frame,
             frame_dump: opt.frame_dump,
             cpu_step_formatting: opt.cpu_step_formatting,
-        }
+        };
+
+        (config, mapper, mapper_params)
     }
 
     pub fn gui(opt: &Opt) -> Box<dyn Gui> {
@@ -58,17 +62,7 @@ impl Config {
         }
     }
 
-    pub fn with_new_rom(&self, path: &Path) -> Config {
-        let (cartridge, metadata_resolver) = Self::load_rom(path, self.cartridge.allow_saving());
-        Config {
-            cartridge,
-            metadata_resolver,
-            system_palette: self.system_palette.clone(),
-            .. *self
-        }
-    }
-
-    fn load_rom(path: &Path, allow_saving: bool) -> (Cartridge, MetadataResolver) {
+    pub fn load_rom(path: &Path, allow_saving: bool) -> (Cartridge, Box<dyn Mapper>, MapperParams, MetadataResolver) {
         info!("Loading ROM '{}'.", path.display());
         let mut raw_header_and_data = Vec::new();
         File::open(path).unwrap().read_to_end(&mut raw_header_and_data).unwrap();
@@ -112,7 +106,7 @@ impl Config {
             db_extension_metadata.mapper_and_submapper_number(number, Some(sub_number));
         }
 
-        let metadata_resolver = MetadataResolver {
+        let mut metadata_resolver = MetadataResolver {
             hard_coded_overrides: hard_coded_overrides.build(),
             cartridge: header,
             // Metadata from the mapper is populated a little later.
@@ -122,7 +116,13 @@ impl Config {
             layout_has_prg_ram: false,
         };
 
-        (cartridge, metadata_resolver)
+        let (mapper, mapper_params) = mapper_list::lookup_mapper_with_params(&metadata_resolver, &cartridge);
+        metadata_resolver.mapper = mapper.layout().cartridge_metadata_override();
+        metadata_resolver.layout_has_prg_ram = mapper.layout().has_prg_ram();
+        let metadata = metadata_resolver.resolve();
+        info!("ROM loaded.\n{metadata}");
+
+        (cartridge, mapper, mapper_params, metadata_resolver)
     }
 }
 

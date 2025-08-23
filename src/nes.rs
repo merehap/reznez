@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 use std::fmt;
 use std::fs::DirBuilder;
+use std::path::Path;
 
 use log::Level::Info;
 use log::{info, log_enabled, warn};
@@ -22,7 +23,6 @@ use crate::logging::formatter::*;
 use crate::mapper::{Mapper, MapperParams, NameTableMirroring, PrgBankRegisterId, ReadWriteStatus};
 use crate::memory::bank::bank_index::{BankLocation, ChrBankRegisterId};
 use crate::memory::cpu::ports::Ports;
-use crate::mapper_list;
 use crate::memory::memory::Memory;
 use crate::ppu::clock::Clock;
 use crate::ppu::ppu::Ppu;
@@ -45,13 +45,12 @@ pub struct Nes {
 }
 
 impl Nes {
-    pub fn new(config: &Config) -> Nes {
+    pub fn new(config: &Config, mapper: Box<dyn Mapper>, mapper_params: MapperParams) -> Nes {
         if let Err(err) = DirBuilder::new().recursive(true).create("saveram") {
             warn!("Failed to create saveram directory. {err}");
         }
 
-        let mut metadata_resolver = config.metadata_resolver.clone();
-        let (mapper, mapper_params) = mapper_list::lookup_mapper_with_params(&mut metadata_resolver, &config.cartridge);
+        let metadata_resolver = config.metadata_resolver.clone();
 
         let (joypad1, joypad2) = (Joypad::new(), Joypad::new());
 
@@ -133,8 +132,16 @@ impl Nes {
         self.memory.stack_pointer()
     }
 
-    pub fn load_new_config(&mut self, config: &Config) {
-        *self = Nes::new(config);
+    pub fn load_new_config(&mut self, old_config: &Config, path: &Path) {
+        let (cartridge, mapper, mapper_params, metadata_resolver) = Config::load_rom(path, old_config.cartridge.allow_saving());
+        let config = Config {
+            cartridge,
+            metadata_resolver,
+            system_palette: old_config.system_palette.clone(),
+            .. *old_config
+        };
+
+        *self = Nes::new(&config, mapper, mapper_params);
     }
 
     pub fn mute(&mut self) {
