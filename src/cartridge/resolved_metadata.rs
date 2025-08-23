@@ -10,7 +10,7 @@ pub struct ResolvedMetadata {
     pub mapper_number: u16,
     pub submapper_number: Option<u8>,
 
-    pub name_table_mirroring: NameTableMirroring,
+    pub name_table_mirroring: Option<NameTableMirroring>,
     pub has_persistent_memory: bool,
     pub console_type: ConsoleType,
 
@@ -73,7 +73,7 @@ impl MetadataResolver {
             mapper_number: resolve_field(&all_metadata, |m| m.mapper_number()).unwrap(),
             submapper_number: resolve_field(&all_metadata, |m| m.submapper_number()),
 
-            name_table_mirroring: resolve_field(&all_metadata, |m| m.name_table_mirroring()).expect("This mapper must define what the alternate mirroring is."),
+            name_table_mirroring: resolve_field(&all_metadata, |m| m.name_table_mirroring()),
             has_persistent_memory: resolve_field(&all_metadata, |m| m.has_persistent_memory()).unwrap(),
             console_type: resolve_field(&all_metadata, |m| m.console_type()).unwrap(),
 

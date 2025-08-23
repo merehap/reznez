@@ -67,7 +67,7 @@ impl Config {
         let mut raw_header_and_data = Vec::new();
         File::open(path).unwrap().read_to_end(&mut raw_header_and_data).unwrap();
         let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
-        let mut header = CartridgeMetadata::parse(&raw_header_and_data).unwrap();
+        let (mut header, cartridge_selected_mirroring) = CartridgeMetadata::parse(&raw_header_and_data).unwrap();
         let cartridge = Cartridge::load(path, &header, &raw_header_and_data, allow_saving).unwrap();
         let prg_rom_hash = crc32fast::hash(cartridge.prg_rom().as_slice());
         header.set_prg_rom_hash(prg_rom_hash);
@@ -116,7 +116,15 @@ impl Config {
             layout_has_prg_ram: false,
         };
 
-        let (mapper, mapper_params) = mapper_list::lookup_mapper_with_params(&metadata_resolver, &cartridge);
+        let mapper = mapper_list::lookup_mapper(&metadata_resolver, &cartridge);
+        if let Some(mirroring) = mapper.layout().cartridge_selection_name_table_mirrorings()[cartridge_selected_mirroring as usize] {
+            metadata_resolver.cartridge.set_name_table_mirroring(mirroring);
+        }
+
+        let metadata = metadata_resolver.resolve();
+        let mut mapper_params = mapper.layout().make_mapper_params(&metadata, &cartridge);
+        mapper.init_mapper_params(&mut mapper_params);
+
         metadata_resolver.mapper = mapper.layout().cartridge_metadata_override();
         metadata_resolver.layout_has_prg_ram = mapper.layout().has_prg_ram();
         let metadata = metadata_resolver.resolve();

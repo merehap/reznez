@@ -1275,7 +1275,7 @@ impl Renderer for CartridgeMetadataRenderer {
                     ui.end_row();
 
                     ui.label("Name Table Mirroring");
-                    ui.label(final_values.name_table_mirroring.to_string());
+                    ui.label(final_values.name_table_mirroring.unwrap().to_string());
                     for metadata in metadata_sources {
                         ui.label(metadata.name_table_mirroring().map(|m| m.to_string()).unwrap_or("".to_owned()));
                     }

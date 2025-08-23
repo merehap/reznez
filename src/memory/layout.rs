@@ -36,6 +36,7 @@ pub struct Layout {
     chr_save_ram_size: u32,
     chr_rom_outer_bank_layout: OuterBankLayout,
 
+    cartridge_selection_name_table_mirrorings: [Option<NameTableMirroring>; 4],
     name_table_mirrorings: &'static [NameTableMirroring],
 
     read_write_statuses: &'static [ReadWriteStatus],
@@ -117,7 +118,7 @@ impl Layout {
             prg_bank_registers,
         );
 
-        let name_table_mirroring = metadata.name_table_mirroring;
+        let name_table_mirroring = metadata.name_table_mirroring.unwrap();
 
         let mut chr_layouts: Vec<_> = self.chr_layouts.as_iter().collect();
         match chr_access_override {
@@ -180,6 +181,10 @@ impl Layout {
         }
     }
 
+    pub fn cartridge_selection_name_table_mirrorings(&self) -> [Option<NameTableMirroring>; 4] {
+        self.cartridge_selection_name_table_mirrorings
+    }
+
     pub fn cartridge_metadata_override(&self) -> CartridgeMetadata {
         self.header_override.clone()
     }
@@ -203,6 +208,7 @@ impl Layout {
             chr_rom_outer_bank_layout: Some(self.chr_rom_outer_bank_layout),
             chr_save_ram_size: self.chr_save_ram_size,
 
+            cartridge_selection_name_table_mirrorings: self.cartridge_selection_name_table_mirrorings,
             name_table_mirrorings: self.name_table_mirrorings,
 
             read_write_statuses: self.read_write_statuses,
@@ -247,6 +253,7 @@ pub struct LayoutBuilder {
     align_large_chr_windows: bool,
     chr_save_ram_size: u32,
 
+    cartridge_selection_name_table_mirrorings: [Option<NameTableMirroring>; 4],
     name_table_mirrorings: &'static [NameTableMirroring],
 
     read_write_statuses: &'static [ReadWriteStatus],
@@ -274,6 +281,13 @@ impl LayoutBuilder {
             chr_rom_outer_bank_layout: None,
             chr_save_ram_size: 0,
 
+            // The vast majority of mappers associate these values with iNES mirroring bits.
+            cartridge_selection_name_table_mirrorings: [
+                Some(NameTableMirroring::HORIZONTAL),
+                Some(NameTableMirroring::VERTICAL),
+                None,
+                None,
+            ],
             name_table_mirrorings: &[],
 
             read_write_statuses: &[],
@@ -351,6 +365,11 @@ impl LayoutBuilder {
         self
     }
 
+    pub const fn cartridge_selection_name_table_mirrorings(&mut self, value: [Option<NameTableMirroring>; 4]) -> &mut LayoutBuilder {
+        self.cartridge_selection_name_table_mirrorings = value;
+        self
+    }
+
     pub const fn name_table_mirrorings(
         &mut self,
         value: &'static [NameTableMirroring],
@@ -422,6 +441,7 @@ impl LayoutBuilder {
             chr_save_ram_size: self.chr_save_ram_size,
             chr_rom_outer_bank_layout,
 
+            cartridge_selection_name_table_mirrorings: self.cartridge_selection_name_table_mirrorings,
             name_table_mirrorings: self.name_table_mirrorings,
 
             read_write_statuses: self.read_write_statuses,

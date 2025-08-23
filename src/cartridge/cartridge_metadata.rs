@@ -34,7 +34,7 @@ pub struct CartridgeMetadata {
 }
 
 impl CartridgeMetadata {
-    pub fn parse(raw_header_and_data: &RawMemory) -> Result<CartridgeMetadata, String> {
+    pub fn parse(raw_header_and_data: &RawMemory) -> Result<(CartridgeMetadata, MirroringSelection), String> {
         let full_hash = crc32fast::hash(raw_header_and_data.as_slice());
         let raw_header: [u8; 0x10] = raw_header_and_data.as_slice()[0x0..0x10].try_into()
             .map_err(|err| format!("ROM file to have a 16 byte header. {err}"))?;
@@ -53,8 +53,8 @@ impl CartridgeMetadata {
             .prg_rom_size(raw_header[4] as u32 * PRG_ROM_CHUNK_LENGTH as u32)
             .chr_rom_size(raw_header[5] as u32 * CHR_ROM_CHUNK_LENGTH as u32);
 
-        let (low_mapper_number, four_screen, trainer_enabled, has_persistent_memory, vertical_mirroring) =
-            splitbits_named!(raw_header[6], "llllftpv");
+        let (low_mapper_number, mirroring_selection, trainer_enabled, has_persistent_memory) =
+            splitbits_named!(raw_header[6], "llllmtpm");
         let (mid_mapper_number, ines2, play_choice_enabled, vs_unisystem_enabled) =
             splitbits_named!(raw_header[7], "mmmmiipv");
 
@@ -93,15 +93,7 @@ impl CartridgeMetadata {
             return Err("VS Unisystem isn't implemented yet.".to_string());
         }
 
-        if four_screen {
-            // Four screen mirroring isn't a real mirroring, the mapper will have to define what it means.
-        } else if vertical_mirroring {
-            builder.name_table_mirroring(NameTableMirroring::VERTICAL);
-        } else {
-            builder.name_table_mirroring(NameTableMirroring::HORIZONTAL);
-        };
-
-        Ok(builder.build())
+        Ok((builder.build(), mirroring_selection as usize))
     }
 
     pub fn full_hash(&self) -> Option<u32> {
@@ -148,13 +140,17 @@ impl CartridgeMetadata {
         self.chr_save_ram_size
     }
 
+    pub fn console_type(&self) -> Option<ConsoleType> {
+        self.console_type
+    }
+
     // FIXME: This returns None if there is no mirroring specified OR if the cartridge specifies FourScreen.
     pub fn name_table_mirroring(&self) -> Option<NameTableMirroring> {
         self.name_table_mirroring
     }
 
-    pub fn console_type(&self) -> Option<ConsoleType> {
-        self.console_type
+    pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring) {
+        self.name_table_mirroring = Some(name_table_mirroring);
     }
 
     pub fn set_prg_rom_hash(&mut self, prg_rom_hash: u32) {
@@ -183,6 +179,8 @@ impl CartridgeMetadata {
         }
     }
 }
+
+type MirroringSelection = usize;
 
 #[derive(Clone, Copy, Debug)]
 pub struct CartridgeMetadataBuilder {

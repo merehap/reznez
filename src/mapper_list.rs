@@ -3,25 +3,25 @@ use std::sync::LazyLock;
 
 use crate::cartridge::resolved_metadata::{MetadataResolver, ResolvedMetadata};
 use crate::mapper::Cartridge;
-use crate::mapper::{Mapper, MapperParams, LookupResult};
+use crate::mapper::{Mapper, LookupResult};
 use crate::mappers as m;
 
 pub static MAPPERS_WITHOUT_SUBMAPPER_0: LazyLock<BTreeSet<u16>> = LazyLock::new(|| {
     (0..u16::MAX)
         .filter(|&mapper_number| {
             let metadata = ResolvedMetadata { mapper_number, submapper_number: Some(0), .. ResolvedMetadata::default()};
-            matches!(lookup_mapper(&metadata), LookupResult::UnassignedSubmapper | LookupResult::UnspecifiedSubmapper)
+            matches!(try_lookup_mapper(&metadata), LookupResult::UnassignedSubmapper | LookupResult::UnspecifiedSubmapper)
         })
         .collect()
 });
 
-pub fn lookup_mapper_with_params(metadata_resolver: &MetadataResolver, cartridge: &Cartridge) -> (Box<dyn Mapper>, MapperParams) {
+pub fn lookup_mapper(metadata_resolver: &MetadataResolver, cartridge: &Cartridge) -> Box<dyn Mapper> {
     let metadata = metadata_resolver.resolve();
     let number = metadata.mapper_number;
     let sub_number = metadata.submapper_number;
     let cartridge_name = cartridge.name();
 
-    let mapper = match lookup_mapper(&metadata) {
+    match try_lookup_mapper(&metadata) {
         LookupResult::Supported(supported_mapper) => supported_mapper,
         LookupResult::UnassignedMapper =>
             panic!("Mapper {number} is not in use. ROM: {cartridge_name}"),
@@ -35,15 +35,10 @@ pub fn lookup_mapper_with_params(metadata_resolver: &MetadataResolver, cartridge
             panic!("Submapper {sub_number:?} of mapper {number} has unspecified behavior. ROM: {cartridge_name}"),
         LookupResult::ReassignedSubmapper {correct_mapper, correct_submapper } =>
             panic!("Mapper {number}, submapper {} has been reassigned to {correct_mapper}, {correct_submapper} . ROM: {cartridge_name}", sub_number.unwrap()),
-    };
-
-    let metadata = metadata_resolver.resolve();
-    let mut mapper_params = mapper.layout().make_mapper_params(&metadata, cartridge);
-    mapper.init_mapper_params(&mut mapper_params);
-    (mapper, mapper_params)
+    }
 }
 
-pub fn lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
+pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
     use LookupResult::*;
     match (metadata.mapper_number, metadata.submapper_number) {
         // NROM
