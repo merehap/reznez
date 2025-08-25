@@ -15,8 +15,17 @@ const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
         ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
     ])
-    // TODO: Restore this once the alternative mirroring bit is properly supported.
-    .initial_name_table_mirroring(NameTableMirroring::ONE_SCREEN_RIGHT_BANK)
+    // TODO: Reconcile these values with nes20db.xml
+    .cartridge_selection_name_table_mirrorings([
+        // Verified against nes20db.xml, but unknown if that has been verified against an actual cartridge.
+        Some(NameTableMirroring::HORIZONTAL),
+        // Contradicts nes20db.xml.
+        Some(NameTableMirroring::VERTICAL),
+        // Contradicts nes20db.xml.
+        Some(NameTableMirroring::ONE_SCREEN_LEFT_BANK),
+        // Contradicts nes20db.xml.
+        Some(NameTableMirroring::ONE_SCREEN_LEFT_BANK),
+    ])
     .name_table_mirrorings(&[
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,
         NameTableMirroring::ONE_SCREEN_RIGHT_BANK,

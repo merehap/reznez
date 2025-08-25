@@ -11,7 +11,16 @@ const LAYOUT: Layout = Layout::builder()
     .chr_layout(&[
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
     ])
-    .initial_name_table_mirroring(NameTableMirroring::ONE_SCREEN_LEFT_BANK)
+    .cartridge_selection_name_table_mirrorings([
+        // All mapper 152 entries in nes20db.xml have horizontal mirroring.
+        Some(NameTableMirroring::HORIZONTAL),
+        // Unverified, no entries in nes20db.xml, no ROMs found.
+        Some(NameTableMirroring::VERTICAL),
+        // Unverified, no entries in nes20db.xml, no ROMs found.
+        Some(NameTableMirroring::ONE_SCREEN_LEFT_BANK),
+        // Unverified, no entries in nes20db.xml, no ROMs found.
+        Some(NameTableMirroring::ONE_SCREEN_LEFT_BANK),
+    ])
     .name_table_mirrorings(&[
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,
         NameTableMirroring::ONE_SCREEN_RIGHT_BANK,

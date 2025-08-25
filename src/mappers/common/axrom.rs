@@ -14,9 +14,9 @@ const LAYOUT: Layout = Layout::builder()
     // It's not clear that AxROM can actually have horizontal or vertical mirroring,
     // but these are necessary to match nes20db.xml.
     .cartridge_selection_name_table_mirrorings([
-        // Verified against nes20db.xml, but unknown if that has been verified against an actual cartridge., but unknown if that has been verified against an actual cartridge.
+        // Verified against nes20db.xml, but unknown if that has been verified against an actual cartridge.
         Some(NameTableMirroring::HORIZONTAL),
-        // Verified against nes20db.xml, but unknown if that has been verified against an actual cartridge., but unknown if that has been verified against an actual cartridge.
+        // Verified against nes20db.xml, but unknown if that has been verified against an actual cartridge.
         Some(NameTableMirroring::VERTICAL),
         // Unverified, but at least one ROM uses this index.
         Some(NameTableMirroring::ONE_SCREEN_LEFT_BANK),
