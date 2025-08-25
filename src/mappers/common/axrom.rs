@@ -11,8 +11,18 @@ const LAYOUT: Layout = Layout::builder()
     .chr_layout(&[
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.fixed_index(0)),
     ])
-    // TODO: Restore this once the alternative mirroring bit is properly supported.
-    .initial_name_table_mirroring(NameTableMirroring::ONE_SCREEN_LEFT_BANK)
+    // It's not clear that AxROM can actually have horizontal or vertical mirroring,
+    // but these are necessary to match nes20db.xml.
+    .cartridge_selection_name_table_mirrorings([
+        // Verified against nes20db.xml, but unknown if that has been verified against an actual cartridge., but unknown if that has been verified against an actual cartridge.
+        Some(NameTableMirroring::HORIZONTAL),
+        // Verified against nes20db.xml, but unknown if that has been verified against an actual cartridge., but unknown if that has been verified against an actual cartridge.
+        Some(NameTableMirroring::VERTICAL),
+        // Unverified, but at least one ROM uses this index.
+        Some(NameTableMirroring::ONE_SCREEN_LEFT_BANK),
+        // Unverified: no ROMs found that use this value.
+        Some(NameTableMirroring::ONE_SCREEN_LEFT_BANK),
+    ])
     .name_table_mirrorings(&[
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,
         NameTableMirroring::ONE_SCREEN_RIGHT_BANK,

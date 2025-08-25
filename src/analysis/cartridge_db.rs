@@ -29,9 +29,20 @@ pub fn analyze(rom_base_path: &Path) {
             .read_to_end(&mut raw_header_and_data)
             .unwrap();
         let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
-        let (header, mirroring_selection) = CartridgeMetadata::parse(&raw_header_and_data).unwrap();
+
+        let header = match CartridgeMetadata::parse(&rom_path, &raw_header_and_data) {
+            Err(err) => {
+                error!("Failed to load rom metadata {}. {}", rom_path.display(), err);
+                continue;
+            }
+            // FIXME: Use mirroring_selection here.
+            Ok((metadata, _mirroring_selection)) => {
+                metadata
+            }
+        };
+
         match Cartridge::load(&rom_path, &header, &raw_header_and_data, false) {
-            Err(err) => error!("Failed to load rom {}. {}", rom_path.display(), err),
+            Err(err) => error!("Failed to load rom contents {}. {}", rom_path.display(), err),
             Ok(cartridge) => headers_and_cartridges.push((header, cartridge)),
         }
     }

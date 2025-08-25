@@ -1,4 +1,5 @@
 use std::fmt;
+use std::path::Path;
 
 use splitbits::{combinebits, splitbits, splitbits_named};
 
@@ -34,10 +35,10 @@ pub struct CartridgeMetadata {
 }
 
 impl CartridgeMetadata {
-    pub fn parse(raw_header_and_data: &RawMemory) -> Result<(CartridgeMetadata, MirroringSelection), String> {
+    pub fn parse(path: &Path, raw_header_and_data: &RawMemory) -> Result<(CartridgeMetadata, MirroringSelection), String> {
         let full_hash = crc32fast::hash(raw_header_and_data.as_slice());
         let raw_header: [u8; 0x10] = raw_header_and_data.as_slice()[0x0..0x10].try_into()
-            .map_err(|err| format!("ROM file to have a 16 byte header. {err}"))?;
+            .map_err(|err| format!("ROM file to have a 16 byte header. ROM: {} {err}", path.display()))?;
         let mut builder = CartridgeMetadataBuilder::new();
         builder.full_hash(full_hash);
 
@@ -61,7 +62,7 @@ impl CartridgeMetadata {
         builder.has_persistent_memory(has_persistent_memory);
         let ines2_present = ines2 == 0b10;
         if trainer_enabled {
-            return Err("Trainer isn't implemented yet.".to_string());
+            return Err(format!("Trainer isn't implemented yet. ROM: {}", path.display()));
         }
 
         let mut high_mapper_number = 0b0000;
@@ -86,11 +87,11 @@ impl CartridgeMetadata {
         builder.mapper_and_submapper_number(mapper_number, submapper_number);
 
         if play_choice_enabled {
-            return Err("PlayChoice isn't implemented yet.".to_string());
+            return Err(format!("PlayChoice isn't implemented yet. ROM: {}", path.display()));
         }
 
         if vs_unisystem_enabled {
-            return Err("VS Unisystem isn't implemented yet.".to_string());
+            return Err(format!("VS Unisystem isn't implemented yet. ROM: {}", path.display()));
         }
 
         Ok((builder.build(), mirroring_selection as usize))

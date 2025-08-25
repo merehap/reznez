@@ -67,7 +67,7 @@ impl Config {
         let mut raw_header_and_data = Vec::new();
         File::open(path).unwrap().read_to_end(&mut raw_header_and_data).unwrap();
         let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
-        let (mut header, cartridge_selected_mirroring) = CartridgeMetadata::parse(&raw_header_and_data).unwrap();
+        let (mut header, cartridge_selected_mirroring) = CartridgeMetadata::parse(path, &raw_header_and_data).unwrap();
         let cartridge = Cartridge::load(path, &header, &raw_header_and_data, allow_saving).unwrap();
         let prg_rom_hash = crc32fast::hash(cartridge.prg_rom().as_slice());
         header.set_prg_rom_hash(prg_rom_hash);
@@ -79,7 +79,7 @@ impl Config {
             db_header = db_cartridge_metadata;
             if cartridge_mapper_number != db_header.mapper_number().unwrap() {
                 warn!("Mapper number in ROM ({}) does not match the one in the DB ({}).",
-                    cartridge_mapper_number, header.mapper_number().unwrap());
+                    cartridge_mapper_number, db_header.mapper_number().unwrap());
             }
 
             assert_eq!(header.prg_rom_size().unwrap(), db_header.prg_rom_size().unwrap());
@@ -117,7 +117,7 @@ impl Config {
         };
 
         let mapper = mapper_list::lookup_mapper(&metadata_resolver, &cartridge);
-        if let Some(mirroring) = mapper.layout().cartridge_selection_name_table_mirrorings()[cartridge_selected_mirroring as usize] {
+        if let Some(mirroring) = mapper.layout().cartridge_selection_name_table_mirrorings()[cartridge_selected_mirroring] {
             metadata_resolver.cartridge.set_name_table_mirroring(mirroring);
         }
 

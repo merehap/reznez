@@ -64,12 +64,7 @@ impl MetadataResolver {
     pub fn resolve(&self) -> ResolvedMetadata {
         let all_metadata = [&self.hard_coded_overrides, &self.cartridge, &self.mapper, &self.database, &self.database_extension, &self.defaults()];
 
-        if let (None, Some(mapper_mirroring), Some(database_mirroring)) =
-                (self.cartridge.name_table_mirroring(), self.mapper.name_table_mirroring(), self.database.name_table_mirroring()) {
-            assert_eq!(mapper_mirroring, database_mirroring, "NameTableMirroring should match between the Mapper and the header DB.");
-        }
-
-        ResolvedMetadata {
+        let resolved_metadata = ResolvedMetadata {
             mapper_number: resolve_field(&all_metadata, |m| m.mapper_number()).unwrap(),
             submapper_number: resolve_field(&all_metadata, |m| m.submapper_number()),
 
@@ -90,7 +85,14 @@ impl MetadataResolver {
             chr_rom_size: self.cartridge.chr_rom_size().unwrap(),
             chr_work_ram_size: resolve_field(&all_metadata, |m| m.chr_work_ram_size()).unwrap(),
             chr_save_ram_size: resolve_field(&all_metadata, |m| m.chr_save_ram_size()).unwrap(),
+        };
+
+        if self.database.name_table_mirroring().is_some() {
+            assert_eq!(resolved_metadata.name_table_mirroring, self.database.name_table_mirroring(),
+                "NameTableMirroring doesn't match the nes20db.xml entry.");
         }
+
+        resolved_metadata
     }
 
     pub fn defaults(&self) -> CartridgeMetadata {
