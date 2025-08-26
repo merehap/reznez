@@ -56,7 +56,7 @@ impl CartridgeMetadata {
 
         let (low_mapper_number, mirroring_selection, trainer_enabled, has_persistent_memory) =
             splitbits_named!(raw_header[6], "llllmtpm");
-        let (mid_mapper_number, ines2, mut console_type) =
+        let (mid_mapper_number, ines2, basic_console_type) =
             splitbits_named!(raw_header[7], "mmmmiicc");
 
         builder.has_persistent_memory(has_persistent_memory);
@@ -89,34 +89,7 @@ impl CartridgeMetadata {
         let mapper_number = combinebits!(high_mapper_number, mid_mapper_number, low_mapper_number, "0000uuuummmmllll");
         builder.mapper_and_submapper_number(mapper_number, submapper_number);
 
-        if console_type == 3 {
-            if let Some(extended_console_type) = extended_console_type {
-                console_type = extended_console_type;
-            } else {
-                panic!("Extended console type specified, but NES2.0 headers aren't present.");
-            }
-        }
-
-        let console_type = match console_type {
-            0x0 => ConsoleType::NesFamiconDendy,
-            0x1 => ConsoleType::VsUnisystem,
-            0x2 => ConsoleType::PlayChoice10,
-            0x3 => ConsoleType::DecimalModeFamiclone,
-            0x4 => ConsoleType::NesFamiconWithEpsm,
-            0x5 => ConsoleType::Vt01,
-            0x6 => ConsoleType::Vt02,
-            0x7 => ConsoleType::Vt03,
-            0x8 => ConsoleType::Vt09,
-            0x9 => ConsoleType::Vt32,
-            0xA => ConsoleType::Vt369,
-            0xB => ConsoleType::UmcUm6578,
-            0xC => ConsoleType::FamiconNetworkSystem,
-            0xD..=0xF => todo!(),
-            _ => unreachable!(),
-        };
-
-        assert_eq!(console_type, ConsoleType::NesFamiconDendy);
-        builder.console_type(console_type);
+        builder.console_type(ConsoleType::from_header_values(basic_console_type, extended_console_type));
 
         Ok((builder.build(), mirroring_selection as usize))
     }
@@ -355,6 +328,42 @@ pub enum ConsoleType {
     Vt369,
     UmcUm6578,
     FamiconNetworkSystem,
+}
+
+impl ConsoleType {
+    fn from_header_values(basic_console_type: u8, extended_console_type: Option<u8>) -> Self {
+        let console_type = match (basic_console_type, extended_console_type) {
+            (0..=2, _) => basic_console_type,
+            (3    , Some(extended_console_type)) => extended_console_type,
+            (3    , None) => panic!("Extended console type specified, but this isn't a NES2.0 header."),
+            _ => unreachable!(),
+        };
+
+        Self::from_u8(console_type)
+    }
+
+    fn from_u8(value: u8) -> Self {
+        let console_type = match value {
+            0x0 => ConsoleType::NesFamiconDendy,
+            0x1 => ConsoleType::VsUnisystem,
+            0x2 => ConsoleType::PlayChoice10,
+            0x3 => ConsoleType::DecimalModeFamiclone,
+            0x4 => ConsoleType::NesFamiconWithEpsm,
+            0x5 => ConsoleType::Vt01,
+            0x6 => ConsoleType::Vt02,
+            0x7 => ConsoleType::Vt03,
+            0x8 => ConsoleType::Vt09,
+            0x9 => ConsoleType::Vt32,
+            0xA => ConsoleType::Vt369,
+            0xB => ConsoleType::UmcUm6578,
+            0xC => ConsoleType::FamiconNetworkSystem,
+            0xD..=0xF => todo!(),
+            _ => unreachable!(),
+        };
+
+        assert_eq!(console_type, ConsoleType::NesFamiconDendy);
+        console_type
+    }
 }
 
 impl fmt::Display for ConsoleType {
