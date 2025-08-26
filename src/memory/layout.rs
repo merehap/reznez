@@ -4,7 +4,6 @@ use std::num::NonZeroU8;
 use log::warn;
 
 use crate::cartridge::cartridge::Cartridge;
-use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder};
 use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::memory::bank::bank_index::{BankIndex, PrgBankRegisterId, PrgBankRegisters, ChrBankRegisters, MetaRegisterId};
 use crate::memory::cpu::prg_layout::PrgLayout;
@@ -42,8 +41,6 @@ pub struct Layout {
 
     read_write_statuses: &'static [ReadWriteStatus],
     
-    header_override: CartridgeMetadata,
-
     bank_register_overrides: ConstVec<(PrgBankRegisterId, BankIndex), 5>,
     chr_bank_register_overrides: ConstVec<(ChrBankRegisterId, BankIndex), 5>,
     chr_meta_register_overrides: ConstVec<(MetaRegisterId, ChrBankRegisterId), 5>,
@@ -192,10 +189,6 @@ impl Layout {
         self.four_screen_mirroring_definition
     }
 
-    pub fn cartridge_metadata_override(&self) -> CartridgeMetadata {
-        self.header_override.clone()
-    }
-
     pub fn has_prg_ram(&self) -> bool {
         self.prg_layouts.as_iter().any(|prg_layout| prg_layout.has_ram())
     }
@@ -220,8 +213,6 @@ impl Layout {
             four_screen_mirroring_definition: None,
 
             read_write_statuses: self.read_write_statuses,
-
-            header_override_builder: self.header_override.into_builder(),
 
             bank_register_overrides: self.bank_register_overrides,
             chr_bank_register_overrides: self.chr_bank_register_overrides,
@@ -267,8 +258,6 @@ pub struct LayoutBuilder {
 
     read_write_statuses: &'static [ReadWriteStatus],
 
-    header_override_builder: CartridgeMetadataBuilder,
-
     bank_register_overrides: ConstVec<(PrgBankRegisterId, BankIndex), 5>,
     chr_bank_register_overrides: ConstVec<(ChrBankRegisterId, BankIndex), 5>,
     chr_meta_register_overrides: ConstVec<(MetaRegisterId, ChrBankRegisterId), 5>,
@@ -303,8 +292,6 @@ impl LayoutBuilder {
             four_screen_mirroring_definition: None,
 
             read_write_statuses: &[],
-
-            header_override_builder: CartridgeMetadataBuilder::new(),
 
             bank_register_overrides: ConstVec::new(),
             chr_bank_register_overrides: ConstVec::new(),
@@ -422,7 +409,7 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn build(mut self) -> Layout {
+    pub const fn build(self) -> Layout {
         assert!(!self.prg_layouts.is_empty());
         assert!(!self.chr_layouts.is_empty());
 
@@ -455,8 +442,6 @@ impl LayoutBuilder {
             four_screen_mirroring_definition: self.four_screen_mirroring_definition,
 
             read_write_statuses: self.read_write_statuses,
-
-            header_override: self.header_override_builder.build(),
 
             bank_register_overrides: self.bank_register_overrides,
             chr_bank_register_overrides: self.chr_bank_register_overrides,

@@ -51,7 +51,6 @@ impl fmt::Display for ResolvedMetadata {
 
 #[derive(Clone, Debug)]
 pub struct MetadataResolver {
-    pub mapper: CartridgeMetadata,
     pub hard_coded_overrides: CartridgeMetadata,
     pub cartridge: CartridgeMetadata,
     pub database: CartridgeMetadata,
@@ -62,7 +61,7 @@ pub struct MetadataResolver {
 
 impl MetadataResolver {
     pub fn resolve(&self) -> ResolvedMetadata {
-        let all_metadata = [&self.hard_coded_overrides, &self.cartridge, &self.mapper, &self.database, &self.database_extension, &self.defaults()];
+        let all_metadata = [&self.hard_coded_overrides, &self.cartridge, &self.database, &self.database_extension, &self.defaults()];
 
         let resolved_metadata = ResolvedMetadata {
             mapper_number: resolve_field(&all_metadata, |m| m.mapper_number()).unwrap(),
@@ -96,7 +95,7 @@ impl MetadataResolver {
     }
 
     pub fn defaults(&self) -> CartridgeMetadata {
-        let all_metadata = [&self.mapper, &self.database_extension, &self.cartridge, &self.database];
+        let all_metadata = [&self.hard_coded_overrides, &self.database_extension, &self.cartridge, &self.database];
 
         let prg_work_ram_size = if self.layout_has_prg_ram { 8 * KIBIBYTE } else { 0 };
 

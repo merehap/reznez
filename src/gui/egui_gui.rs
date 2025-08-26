@@ -1229,7 +1229,6 @@ impl Renderer for CartridgeMetadataRenderer {
         let metadata_sources = [
             &resolver.hard_coded_overrides,
             &resolver.cartridge,
-            &resolver.mapper,
             &resolver.database,
             &resolver.database_extension,
             &resolver.defaults(),
@@ -1254,7 +1253,6 @@ impl Renderer for CartridgeMetadataRenderer {
                     ui.label("ACTUAL");
                     ui.label("Hard-coded Overrides");
                     ui.label("Cartridge");
-                    ui.label("Mapper");
                     ui.label("Header Database");
                     ui.label("Database Extension");
                     ui.label("Defaults");
@@ -1334,6 +1332,20 @@ impl Renderer for CartridgeMetadataRenderer {
                     ui.label(kib_string(final_values.chr_save_ram_size));
                     for metadata in metadata_sources {
                         ui.label(metadata.chr_save_ram_size().map(kib_string).unwrap_or("".to_owned()));
+                    }
+                    ui.end_row();
+
+                    ui.label("Full CRC");
+                    ui.label("");
+                    for metadata in metadata_sources {
+                        ui.label(metadata.full_hash().map_or("".to_owned(), |crc| format!("{crc:X}")));
+                    }
+                    ui.end_row();
+
+                    ui.label("PRG ROM CRC");
+                    ui.label("");
+                    for metadata in metadata_sources {
+                        ui.label(metadata.prg_rom_hash().map_or("".to_owned(), |crc| format!("{crc:X}")));
                     }
                     ui.end_row();
                 });

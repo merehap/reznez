@@ -216,9 +216,9 @@ impl HeaderDb {
         let result = self.metadata_by_prg_rom_crc32.get(&prg_hash).cloned();
         if result.is_none() {
             if let Some(submapper_number) = submapper_number {
-                info!("ROM not found in DB. ({full_hash}, {prg_hash}, {mapper_number}, {submapper_number})");
+                info!("ROM not found in DB. ({full_hash:X}, {prg_hash:X}, {mapper_number}, {submapper_number})");
             } else {
-                info!("ROM not found in DB. ({full_hash}, {prg_hash}, {mapper_number}, ???)");
+                info!("ROM not found in DB. ({full_hash:X}, {prg_hash:X}, {mapper_number}, ???)");
             }
         }
 
