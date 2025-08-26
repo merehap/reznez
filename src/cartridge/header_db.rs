@@ -9,109 +9,109 @@ use crate::{cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadata
 
 const OVERRIDE_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     // Crystalis (no submapper number has been officially assigned for MMC3 with Sharp Rev A IRQ)
-    (656187357, 1661724784, 4, 99),
+    (0x271C9FDD, 0x630BE870, 4, 99),
 ];
 
 // Submapper numbers for ROMs that aren't in the NES Header DB (mostly test ROMs).
 const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     // ppu_read_buffer/test_ppu_read_buffer.nes
-    (1731018083, 3047829474, 3, 1),
+    (0x672D3D63, 0xB5AA2FE2, 3, 1),
     // cpu_dummy_reads.nes
-    (3745301915, 3498657192, 3, 1),
+    (0xDF3CC59B, 0xD08945A8, 3, 1),
     // read_joy3/thorough_test.nes
-    (4081207045, 0068811153, 3, 1),
+    (0xF3424705, 0x0419F991, 3, 1),
     // read_joy3/count_errors.nes
-    (2480941058, 571989249, 3, 1),
+    (0x93E02802, 0x2217DD01, 3, 1),
     // read_joy3/count_errors_fast.nes
-    (401642813, 392036799, 3, 1),
+    (0x17F0953D, 0x175E01BF, 3, 1),
     // read_joy3/test_buttons.nes
-    (3991554801, 3461020892, 3, 1),
+    (0xEDEA4AF1, 0xCE4AFCDC, 3, 1),
 
     // 2_test/2_test_0.nes
-    (2392242790, 3901840109, 2, 1),
+    (0x8E96BA66, 0xE8915AED, 2, 1),
     // 2_test/2_test_1.nes
-    (0922356069, 3901840109, 2, 1),
+    (0x36FA0965, 0xE8915AED, 2, 1),
     // 2_test/2_test_2.nes
-    (0624876065, 3901840109, 2, 2),
+    (0x253EDA21, 0xE8915AED, 2, 2),
     // 3_test/3_test_0.nes
-    (2333203173, 3631928862, 3, 1),
+    (0x8B11DAE5, 0xD87AD61E, 3, 1),
     // 3_test/3_test_1.nes
-    (2768833268, 3631928862, 3, 1),
+    (0xA5090AF4, 0xD87AD61E, 3, 1),
     // 3_test/3_test_2.nes
-    (3609230023, 3631928862, 3, 2),
+    (0xD7207AC7, 0xD87AD61E, 3, 2),
     // 7_test/7_test_0.nes
-    (1196595180, 1718968027, 7, 1),
+    (0x475297EC, 0x66755EDB, 7, 1),
     // 7_test/7_test_1.nes
-    (4282262767, 1718968027, 7, 1),
+    (0xFF3E24EF, 0x66755EDB, 7, 1),
     // 7_test/7_test_2.nes
-    (3975870379, 1718968027, 7, 2),
+    (0xECFAF7AB, 0x66755EDB, 7, 2),
 
     // bntest/bntest_aorom.nes
-    (0271080456, 3417935230, 7, 1),
+    (0x10285C08, 0xCBB98D7E, 7, 1),
     // bntest/bntest_h.nes
-    (2219365086, 3417935230, 34, 2),
+    (0x8448D2DE, 0xCBB98D7E, 34, 2),
     // bntest/bntest_v.nes
-    (0180120094, 3417935230, 34, 2),
+    (0x0ABC6A1E, 0xCBB98D7E, 34, 2),
 
     // holydiverbatman/M2_P128K_V.nes
-    (3834536932, 3161185153, 2, 1),
+    (0xE48E63E4, 0xBC6BDB81, 2, 1),
     // holydiverbatman/M3_P32K_C32K_H.nes
-    (0403828385, 3300419450, 3, 1),
+    (0x1811EEA1, 0xC4B8677A, 3, 1),
     // holydiverbatman/M7_P128K.nes
-    (0656988303, 3161185153, 7, 1),
+    (0x2728D88F, 0xBC6BDB81, 7, 1),
     // holydiverbatman/M34_P128K_H.nes
-    (0819388560, 3161185153, 34, 1),
+    (0x30D6E090, 0xBC6BDB81, 34, 1),
     // holydiverbatman/M78.3_P128K_C64K.nes
-    (2751966167, 3161185153, 78, 3),
+    (0xA407ABD7, 0xBC6BDB81, 78, 3),
 
     // instr_misc.nes
-    (1160500958, 3165947151, 1, 0),
+    (0x452BD6DE, 0xBCB4850F, 1, 0),
     // instr_timing.nes
-    (2178783783, 1558157791, 1, 0),
+    (0x81DD9A27, 0x5CDF99DF, 1, 0),
     // all_instrs.nes
-    (2755660131, 036867474, 1, 0),
+    (0xA4400963, 0x2328D92, 1, 0),
 
     // mmc3_test/1-clocking.nes
-    (0840815252, 4211641636, 4, 0),
+    (0x321DD294, 0xFB088D24, 4, 0),
     // mmc3_test/2-details.nes
-    (1461067563, 4091089803, 4, 0),
+    (0x57161F2B, 0xF3D9138B, 4, 0),
     // mmc3_test/3-A12_clocking.nes
-    (3522479107, 1525174205, 4, 0),
+    (0xD1F4C403, 0x5AE84FBD, 4, 0),
     // mmc3_test/4-scanline_timing.nes
-    (3213815090, 2170500801, 4, 0),
+    (0xBF8EED32, 0x815F36C1, 4, 0),
     // mmc3_test/5-MMC3.nes
-    (3729061091, 3319686763, 4, 0),
+    (0xDE44F4E3, 0xC5DE666B, 4, 0),
     // mmc3_test/6-MMC6.nes
-    (2669308141, 2914571485, 4, 1),
+    (0x9F1A68ED, 0xADB8D4DD, 4, 1),
     // mmc3_irq_tests/1.Clocking.nes
-    (1372524753, 3210513450, 4, 0),
+    (0x51CF10D1, 0xBF5C8C2A, 4, 0),
     // mmc3_irq_tests/2.Details.nes
-    (2314296442, 1734525057, 4, 0),
+    (0x89F15C7A, 0x6762C081, 4, 0),
     // mmc3_irq_tests/3.A12_clocking.nes
-    (0515143863, 4029146188, 4, 0),
+    (0x1EB478B7, 0xF027E44C, 4, 0),
     // mmc3_irq_tests/4.Scanline_timing.nes
-    (0440252636, 4105053223, 4, 0),
+    (0x1A3DB8DC, 0xF4AE2427, 4, 0),
     // mmc3_irq_tests/5.MMC3_rev_A.nes (no submapper number has been officially assigned)
-    (0495013157, 4078096862, 4, 99),
+    (0x1D814D25, 0xF312D1DE, 4, 99),
     // mmc3_irq_tests/6.MMC3_rev_B.nes
-    (2174952589, 1865463926, 4, 0),
+    (0x81A3248D, 0x6F30B876, 4, 0),
 
     // shxing1.nes
-    (1996547387, 408545878, 7, 1),
+    (0x7700E53B, 0x1859EA56, 7, 1),
     // shxing2.nes
-    (675601020, 1193137425, 7, 1),
+    (0x2844DA7C, 0x471DD511, 7, 1),
     // shxdma.nes
-    (4274158895, 2442883650, 7, 1),
+    (0xFEC27D2F, 0x919B7242, 7, 1),
 
     // Lagrange Point
-    (2905171667, 869154800, 85, 2),
+    (0xAD2966D3, 0x33CE3FF0, 85, 2),
 
     // Dragon Ball Z - Kyoushuu! Saiya Jin (J)
-    (3020245841, 1651092634, 16, 5),
+    (0xB4054B51, 0x6269AC9A, 10, 5),
 
     // Commando (U) [b1][T+Bra_BRGames]
     // Not necessarily the correct submapper number.
-    (4099416620, 3091485179, 7, 1),
+    (0xF458222C, 0xB84451FB, 7, 1),
 ];
 
 pub struct HeaderDb {
@@ -216,9 +216,9 @@ impl HeaderDb {
         let result = self.metadata_by_prg_rom_crc32.get(&prg_hash).cloned();
         if result.is_none() {
             if let Some(submapper_number) = submapper_number {
-                info!("ROM not found in DB. ({full_hash:X}, {prg_hash:X}, {mapper_number}, {submapper_number})");
+                info!("ROM not found in DB. (0x{full_hash:X}, 0x{prg_hash:X}, {mapper_number}, {submapper_number})");
             } else {
-                info!("ROM not found in DB. ({full_hash:X}, {prg_hash:X}, {mapper_number}, ???)");
+                info!("ROM not found in DB. (0x{full_hash:X}, 0x{prg_hash:X}, {mapper_number}, ???)");
             }
         }
 
