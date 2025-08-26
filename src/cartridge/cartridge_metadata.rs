@@ -56,7 +56,7 @@ impl CartridgeMetadata {
 
         let (low_mapper_number, mirroring_selection, trainer_enabled, has_persistent_memory) =
             splitbits_named!(raw_header[6], "llllmtpm");
-        let (mid_mapper_number, ines2, console_type) =
+        let (mid_mapper_number, ines2, mut console_type) =
             splitbits_named!(raw_header[7], "mmmmiicc");
 
         builder.has_persistent_memory(has_persistent_memory);
@@ -67,6 +67,7 @@ impl CartridgeMetadata {
 
         let mut high_mapper_number = 0b0000;
         let mut submapper_number = None;
+        let mut extended_console_type = None;
         if ines2_present {
             high_mapper_number = raw_header[8] & 0b1111;
             submapper_number = Some(raw_header[8] >> 4);
@@ -81,16 +82,37 @@ impl CartridgeMetadata {
             builder.chr_work_ram_size(chr_work);
             let chr_save = if chr_sizes.s > 0 { 64 << chr_sizes.s } else { 0 };
             builder.chr_save_ram_size(chr_save);
+
+            extended_console_type = Some(raw_header[13] & 0b1111);
         }
 
         let mapper_number = combinebits!(high_mapper_number, mid_mapper_number, low_mapper_number, "0000uuuummmmllll");
         builder.mapper_and_submapper_number(mapper_number, submapper_number);
 
+        if console_type == 3 {
+            if let Some(extended_console_type) = extended_console_type {
+                console_type = extended_console_type;
+            } else {
+                panic!("Extended console type specified, but NES2.0 headers aren't present.");
+            }
+        }
+
         let console_type = match console_type {
-            0 => ConsoleType::NesFamiconDendy,
-            1 => ConsoleType::VsUnisystem,
-            2 => ConsoleType::PlayChoice10,
-            _ => todo!(),
+            0x0 => ConsoleType::NesFamiconDendy,
+            0x1 => ConsoleType::VsUnisystem,
+            0x2 => ConsoleType::PlayChoice10,
+            0x3 => ConsoleType::DecimalModeFamiclone,
+            0x4 => ConsoleType::NesFamiconWithEpsm,
+            0x5 => ConsoleType::Vt01,
+            0x6 => ConsoleType::Vt02,
+            0x7 => ConsoleType::Vt03,
+            0x8 => ConsoleType::Vt09,
+            0x9 => ConsoleType::Vt32,
+            0xA => ConsoleType::Vt369,
+            0xB => ConsoleType::UmcUm6578,
+            0xC => ConsoleType::FamiconNetworkSystem,
+            0xD..=0xF => todo!(),
+            _ => unreachable!(),
         };
 
         assert_eq!(console_type, ConsoleType::NesFamiconDendy);
@@ -323,16 +345,34 @@ pub enum ConsoleType {
     NesFamiconDendy,
     VsUnisystem,
     PlayChoice10,
-    Extended,
+    DecimalModeFamiclone,
+    NesFamiconWithEpsm,
+    Vt01,
+    Vt02,
+    Vt03,
+    Vt09,
+    Vt32,
+    Vt369,
+    UmcUm6578,
+    FamiconNetworkSystem,
 }
 
 impl fmt::Display for ConsoleType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let text = match self {
-            ConsoleType::NesFamiconDendy => "NES",
+            ConsoleType::NesFamiconDendy => "NES/Famicon/Dendy",
             ConsoleType::VsUnisystem => "VS Unisystem",
             ConsoleType::PlayChoice10 => "Play Choice 10",
-            ConsoleType::Extended => "Extended",
+            ConsoleType::DecimalModeFamiclone => "Famicon with Decimal Mode CPU",
+            ConsoleType::NesFamiconWithEpsm => "NES/Famicon with EPSM module",
+            ConsoleType::Vt01 => "V.R. Technology VT01",
+            ConsoleType::Vt02 => "V.R. Technology VT02",
+            ConsoleType::Vt03 => "V.R. Technology VT03",
+            ConsoleType::Vt09 => "V.R. Technology VT09",
+            ConsoleType::Vt32 => "V.R. Technology VT32",
+            ConsoleType::Vt369 => "V.R. Technology VT369",
+            ConsoleType::UmcUm6578 => "V.R. Technology VT01",
+            ConsoleType::FamiconNetworkSystem => "Famicon Network System",
         };
 
         write!(f, "{text}")
