@@ -65,11 +65,6 @@ impl NameTableMirroring {
     pub fn is_regular_one_screen(self) -> bool {
         self == Self::ONE_SCREEN_LEFT_BANK || self == Self::ONE_SCREEN_RIGHT_BANK
     }
-
-    pub fn is_four_screen(self) -> bool {
-        // TODO
-        false
-    }
 }
 
 const fn build(quadrants: [CiramSide; 4]) -> NameTableMirroring {

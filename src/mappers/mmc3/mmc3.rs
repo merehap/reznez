@@ -65,6 +65,7 @@ pub const READ_WRITE_STATUSES: &[ReadWriteStatus] = &[
 use RegId::{Chr, Prg};
 pub const BANK_INDEX_REGISTER_IDS: [RegId; 8] = [Chr(C0), Chr(C1), Chr(C2), Chr(C3), Chr(C4), Chr(C5), Prg(P0), Prg(P1)];
 
+// TODO: Support VS System (and its 4-screen mirroring).
 pub struct Mapper004Mmc3 {
     selected_register_id: RegId,
     irq_state: Box<dyn IrqState>,

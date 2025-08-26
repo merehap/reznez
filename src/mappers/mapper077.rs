@@ -16,7 +16,7 @@ const LAYOUT: Layout = Layout::builder()
     // TODO: I'm not seeing where this mapper is specified to use CHR Save RAM at all. Is it CHR Work RAM instead? That's what Mesen does.
     // TODO: Verify that NameTableSource::WorkRam actually works (SaveRam is panicking).
     .chr_save_ram_size(8 * KIBIBYTE)
-    .initial_name_table_mirroring(NameTableMirroring::new(
+    .four_screen_mirroring_definition(NameTableMirroring::new(
         NameTableSource::SaveRam(0x0000),
         NameTableSource::SaveRam(0x0400),
         NameTableSource::Ciram(CiramSide::Left),

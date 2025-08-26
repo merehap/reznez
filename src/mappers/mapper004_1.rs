@@ -53,6 +53,7 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // MMC6. Similar to MMC3 with Sharp IRQs, but with Work RAM protection.
+// TODO: Support VS System (and its 4-screen mirroring).
 pub struct Mapper004_1 {
     selected_register_id: RegId,
     irq_state: RevAIrqState,

@@ -21,6 +21,7 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // VRC1
+// TODO: Support VS System (and its 4-screen mirroring).
 #[derive(Default)]
 pub struct Mapper075 {
     chr_left_high_bit: u8,
@@ -38,7 +39,7 @@ impl Mapper for Mapper075 {
 
                 self.chr_right_high_bit = fields.r << 4;
                 self.chr_left_high_bit = fields.l << 4;
-                if !params.name_table_mirroring().is_four_screen() {
+                if matches!(params.name_table_mirroring(), NameTableMirroring::VERTICAL | NameTableMirroring::HORIZONTAL) {
                     params.set_name_table_mirroring(fields.m);
                 } else {
                     todo!("Handle four screen mirroring");

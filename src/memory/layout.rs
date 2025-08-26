@@ -38,6 +38,7 @@ pub struct Layout {
 
     cartridge_selection_name_table_mirrorings: [Option<NameTableMirroring>; 4],
     name_table_mirrorings: &'static [NameTableMirroring],
+    four_screen_mirroring_definition: Option<NameTableMirroring>,
 
     read_write_statuses: &'static [ReadWriteStatus],
     
@@ -118,7 +119,9 @@ impl Layout {
             prg_bank_registers,
         );
 
-        let name_table_mirroring = metadata.name_table_mirroring.unwrap();
+        let name_table_mirroring = metadata.name_table_mirroring
+            .or(self.four_screen_mirroring_definition())
+            .unwrap_or_else(|| panic!("Mapper must provide a definition of four screen mirroring. ROM: {}", cartridge.path().rom_file_name()));
 
         let mut chr_layouts: Vec<_> = self.chr_layouts.as_iter().collect();
         match chr_access_override {
@@ -185,6 +188,10 @@ impl Layout {
         self.cartridge_selection_name_table_mirrorings
     }
 
+    pub fn four_screen_mirroring_definition(&self) -> Option<NameTableMirroring> {
+        self.four_screen_mirroring_definition
+    }
+
     pub fn cartridge_metadata_override(&self) -> CartridgeMetadata {
         self.header_override.clone()
     }
@@ -210,6 +217,7 @@ impl Layout {
 
             cartridge_selection_name_table_mirrorings: self.cartridge_selection_name_table_mirrorings,
             name_table_mirrorings: self.name_table_mirrorings,
+            four_screen_mirroring_definition: None,
 
             read_write_statuses: self.read_write_statuses,
 
@@ -255,6 +263,7 @@ pub struct LayoutBuilder {
 
     cartridge_selection_name_table_mirrorings: [Option<NameTableMirroring>; 4],
     name_table_mirrorings: &'static [NameTableMirroring],
+    four_screen_mirroring_definition: Option<NameTableMirroring>,
 
     read_write_statuses: &'static [ReadWriteStatus],
 
@@ -285,10 +294,13 @@ impl LayoutBuilder {
             cartridge_selection_name_table_mirrorings: [
                 Some(NameTableMirroring::HORIZONTAL),
                 Some(NameTableMirroring::VERTICAL),
+                // Four screen
                 None,
+                // Four screen
                 None,
             ],
             name_table_mirrorings: &[],
+            four_screen_mirroring_definition: None,
 
             read_write_statuses: &[],
 
@@ -360,21 +372,18 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn initial_name_table_mirroring(&mut self, value: NameTableMirroring) -> &mut LayoutBuilder {
-        self.header_override_builder.name_table_mirroring(value);
-        self
-    }
-
     pub const fn cartridge_selection_name_table_mirrorings(&mut self, value: [Option<NameTableMirroring>; 4]) -> &mut LayoutBuilder {
         self.cartridge_selection_name_table_mirrorings = value;
         self
     }
 
-    pub const fn name_table_mirrorings(
-        &mut self,
-        value: &'static [NameTableMirroring],
-    ) -> &mut LayoutBuilder {
+    pub const fn name_table_mirrorings(&mut self, value: &'static [NameTableMirroring]) -> &mut LayoutBuilder {
         self.name_table_mirrorings = value;
+        self
+    }
+
+    pub const fn four_screen_mirroring_definition(&mut self, value: NameTableMirroring) -> &mut LayoutBuilder {
+        self.four_screen_mirroring_definition = Some(value);
         self
     }
 
@@ -443,6 +452,7 @@ impl LayoutBuilder {
 
             cartridge_selection_name_table_mirrorings: self.cartridge_selection_name_table_mirrorings,
             name_table_mirrorings: self.name_table_mirrorings,
+            four_screen_mirroring_definition: self.four_screen_mirroring_definition,
 
             read_write_statuses: self.read_write_statuses,
 
