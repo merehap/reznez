@@ -56,8 +56,8 @@ impl CartridgeMetadata {
 
         let (low_mapper_number, mirroring_selection, trainer_enabled, has_persistent_memory) =
             splitbits_named!(raw_header[6], "llllmtpm");
-        let (mid_mapper_number, ines2, play_choice_enabled, vs_unisystem_enabled) =
-            splitbits_named!(raw_header[7], "mmmmiipv");
+        let (mid_mapper_number, ines2, console_type) =
+            splitbits_named!(raw_header[7], "mmmmiicc");
 
         builder.has_persistent_memory(has_persistent_memory);
         let ines2_present = ines2 == 0b10;
@@ -86,13 +86,15 @@ impl CartridgeMetadata {
         let mapper_number = combinebits!(high_mapper_number, mid_mapper_number, low_mapper_number, "0000uuuummmmllll");
         builder.mapper_and_submapper_number(mapper_number, submapper_number);
 
-        if play_choice_enabled {
-            return Err(format!("PlayChoice isn't implemented yet. ROM: {}", path.display()));
-        }
+        let console_type = match console_type {
+            0 => ConsoleType::NesFamiconDendy,
+            1 => ConsoleType::VsUnisystem,
+            2 => ConsoleType::PlayChoice10,
+            _ => todo!(),
+        };
 
-        if vs_unisystem_enabled {
-            return Err(format!("VS Unisystem isn't implemented yet. ROM: {}", path.display()));
-        }
+        assert_eq!(console_type, ConsoleType::NesFamiconDendy);
+        builder.console_type(console_type);
 
         Ok((builder.build(), mirroring_selection as usize))
     }
@@ -315,10 +317,10 @@ impl CartridgeMetadataBuilder {
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]
 pub enum ConsoleType {
     #[default]
-    Nes,
+    NesFamiconDendy,
     VsUnisystem,
     PlayChoice10,
     Extended,
@@ -327,7 +329,7 @@ pub enum ConsoleType {
 impl fmt::Display for ConsoleType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let text = match self {
-            ConsoleType::Nes => "NES",
+            ConsoleType::NesFamiconDendy => "NES",
             ConsoleType::VsUnisystem => "VS Unisystem",
             ConsoleType::PlayChoice10 => "Play Choice 10",
             ConsoleType::Extended => "Extended",

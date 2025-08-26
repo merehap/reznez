@@ -109,7 +109,6 @@ impl MetadataResolver {
         };
 
         CartridgeMetadataBuilder::new()
-            .console_type(ConsoleType::Nes)
             .prg_work_ram_size(prg_work_ram_size)
             .prg_save_ram_size(0)
             .chr_work_ram_size(chr_work_ram_size)
