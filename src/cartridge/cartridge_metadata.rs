@@ -1,6 +1,8 @@
 use std::fmt;
 use std::path::Path;
 
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 use splitbits::{combinebits, splitbits};
 
 use crate::mapper_list::MAPPERS_WITHOUT_SUBMAPPER_0;
@@ -21,10 +23,11 @@ pub struct CartridgeMetadata {
 
     name_table_mirroring: Option<NameTableMirroring>,
     has_persistent_memory: Option<bool>,
-    console_type: Option<ConsoleType>,
 
     full_hash: Option<u32>,
     prg_rom_hash: Option<u32>,
+    chr_rom_hash: Option<u32>,
+    trainer_hash: Option<u32>,
 
     prg_rom_size: Option<u32>,
     prg_work_ram_size: Option<u32>,
@@ -33,6 +36,12 @@ pub struct CartridgeMetadata {
     chr_rom_size: Option<u32>,
     chr_work_ram_size: Option<u32>,
     chr_save_ram_size: Option<u32>,
+
+    console_type: Option<ConsoleType>,
+    timing_mode: Option<TimingMode>,
+    vs_hardware_type: Option<VsHardwareType>,
+    vs_ppu_type: Option<VsPpuType>,
+    default_expansion_device: Option<ExpansionDevice>,
 }
 
 impl CartridgeMetadata {
@@ -60,17 +69,27 @@ impl CartridgeMetadata {
                 return Err(format!("ROM file should have a 16 byte header. ROM: {}", path.display()));
             };
             let high_header = splitbits!(high_header, "ssssmmmm ccccpppp ffffgggg hhhhiiii ......tt vvvvxxxx ......rr ..dddddd");
+            assert!(high_header.c != 0xF, "CHR exponent notation not yet supported.");
+            assert!(high_header.p != 0xF, "PRG exponent notation not yet supported.");
 
             let mapper_number = combinebits!(high_header.m, low_header.m, low_header.l, "0000hhhh mmmmllll");
             builder
                 .mapper_and_submapper_number(mapper_number, Some(high_header.s))
                 .prg_rom_size(combinebits!(high_header.p, low_header.p, "000000hh hhllllll ll000000 00000000"))
                 .chr_rom_size(combinebits!(high_header.c, low_header.c, "0000000h hhhlllll lll00000 00000000"))
-                .console_type(ConsoleType::extended(low_header.x, high_header.x))
                 .prg_save_ram_size(if high_header.f == 0 { 0 } else { 64 << high_header.f })
                 .prg_work_ram_size(if high_header.g == 0 { 0 } else { 64 << high_header.g })
                 .chr_save_ram_size(if high_header.h == 0 { 0 } else { 64 << high_header.h })
-                .chr_work_ram_size(if high_header.i == 0 { 0 } else { 64 << high_header.i });
+                .chr_work_ram_size(if high_header.i == 0 { 0 } else { 64 << high_header.i })
+                .console_type(ConsoleType::extended(low_header.x, high_header.x))
+                .timing_mode(FromPrimitive::from_u8(high_header.t).unwrap())
+                .default_expansion_device(FromPrimitive::from_u8(high_header.d).unwrap());
+
+                if low_header.x == ConsoleType::Vs as u8 {
+                    builder
+                        .vs_hardware_type(FromPrimitive::from_u8(high_header.v).unwrap())
+                        .vs_ppu_type(FromPrimitive::from_u8(high_header.x).unwrap());
+                }
         } else {
             // iNES only (*no* NES2.0 fields)
             let mapper_number = combinebits!(low_header.m, low_header.l, "00000000 mmmmllll");
@@ -91,6 +110,10 @@ impl CartridgeMetadata {
 
     pub fn prg_rom_hash(&self) -> Option<u32> {
         self.prg_rom_hash
+    }
+
+    pub fn chr_rom_hash(&self) -> Option<u32> {
+        self.chr_rom_hash
     }
 
     pub fn mapper_number(&self) -> Option<u16> {
@@ -129,13 +152,29 @@ impl CartridgeMetadata {
         self.chr_save_ram_size
     }
 
+    // FIXME: This returns None if there is no mirroring specified OR if the cartridge specifies FourScreen.
+    pub fn name_table_mirroring(&self) -> Option<NameTableMirroring> {
+        self.name_table_mirroring
+    }
+
     pub fn console_type(&self) -> Option<ConsoleType> {
         self.console_type
     }
 
-    // FIXME: This returns None if there is no mirroring specified OR if the cartridge specifies FourScreen.
-    pub fn name_table_mirroring(&self) -> Option<NameTableMirroring> {
-        self.name_table_mirroring
+    pub fn timing_mode(&self) -> Option<TimingMode> {
+        self.timing_mode
+    }
+
+    pub fn vs_hardware_type(&self) -> Option<VsHardwareType> {
+        self.vs_hardware_type
+    }
+
+    pub fn vs_ppu_type(&self) -> Option<VsPpuType> {
+        self.vs_ppu_type
+    }
+
+    pub fn default_expansion_device(&self) -> Option<ExpansionDevice> {
+        self.default_expansion_device
     }
 
     pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring) {
@@ -146,6 +185,10 @@ impl CartridgeMetadata {
         self.prg_rom_hash = Some(prg_rom_hash);
     }
 
+    pub fn set_chr_rom_hash(&mut self, chr_rom_hash: u32) {
+        self.chr_rom_hash = Some(chr_rom_hash);
+    }
+
     pub const fn into_builder(self) -> CartridgeMetadataBuilder {
         CartridgeMetadataBuilder {
             mapper_number: self.mapper_number,
@@ -153,10 +196,11 @@ impl CartridgeMetadata {
 
             name_table_mirroring: self.name_table_mirroring,
             has_persistent_memory: self.has_persistent_memory,
-            console_type: self.console_type,
 
             full_hash: self.full_hash,
             prg_rom_hash: self.prg_rom_hash,
+            chr_rom_hash: self.chr_rom_hash,
+            trainer_hash: self.trainer_hash,
 
             prg_rom_size: self.prg_rom_size,
             prg_work_ram_size: self.prg_work_ram_size,
@@ -165,6 +209,12 @@ impl CartridgeMetadata {
             chr_rom_size: self.chr_rom_size,
             chr_work_ram_size: self.chr_work_ram_size,
             chr_save_ram_size: self.chr_save_ram_size,
+
+            console_type: self.console_type,
+            timing_mode: self.timing_mode,
+            vs_hardware_type: self.vs_hardware_type,
+            vs_ppu_type: self.vs_ppu_type,
+            default_expansion_device: self.default_expansion_device,
         }
     }
 }
@@ -178,10 +228,11 @@ pub struct CartridgeMetadataBuilder {
 
     name_table_mirroring: Option<NameTableMirroring>,
     has_persistent_memory: Option<bool>,
-    console_type: Option<ConsoleType>,
 
     full_hash: Option<u32>,
     prg_rom_hash: Option<u32>,
+    chr_rom_hash: Option<u32>,
+    trainer_hash: Option<u32>,
 
     prg_rom_size: Option<u32>,
     prg_work_ram_size: Option<u32>,
@@ -190,6 +241,12 @@ pub struct CartridgeMetadataBuilder {
     chr_rom_size: Option<u32>,
     chr_work_ram_size: Option<u32>,
     chr_save_ram_size: Option<u32>,
+
+    console_type: Option<ConsoleType>,
+    timing_mode: Option<TimingMode>,
+    vs_hardware_type: Option<VsHardwareType>,
+    vs_ppu_type: Option<VsPpuType>,
+    default_expansion_device: Option<ExpansionDevice>,
 }
 
 impl CartridgeMetadataBuilder {
@@ -200,10 +257,11 @@ impl CartridgeMetadataBuilder {
 
             name_table_mirroring: None,
             has_persistent_memory: None,
-            console_type: None,
 
             full_hash: None,
             prg_rom_hash: None,
+            chr_rom_hash: None,
+            trainer_hash: None,
 
             prg_rom_size: None,
             prg_work_ram_size: None,
@@ -212,6 +270,12 @@ impl CartridgeMetadataBuilder {
             chr_rom_size: None,
             chr_work_ram_size: None,
             chr_save_ram_size: None,
+
+            console_type: None,
+            timing_mode: None,
+            vs_hardware_type: None,
+            vs_ppu_type: None,
+            default_expansion_device: None,
         }
     }
 
@@ -238,11 +302,6 @@ impl CartridgeMetadataBuilder {
         self
     }
 
-    pub const fn console_type(&mut self, console_type: ConsoleType) -> &mut Self {
-        self.console_type = Some(console_type);
-        self
-    }
-
     pub const fn full_hash(&mut self, full_hash: u32) -> &mut Self {
         self.full_hash = Some(full_hash);
         self
@@ -250,6 +309,11 @@ impl CartridgeMetadataBuilder {
 
     pub const fn prg_rom_hash(&mut self, prg_rom_hash: u32) -> &mut Self {
         self.prg_rom_hash = Some(prg_rom_hash);
+        self
+    }
+
+    pub const fn chr_rom_hash(&mut self, chr_rom_hash: u32) -> &mut Self {
+        self.chr_rom_hash = Some(chr_rom_hash);
         self
     }
 
@@ -283,21 +347,52 @@ impl CartridgeMetadataBuilder {
         self
     }
 
+    pub const fn console_type(&mut self, console_type: ConsoleType) -> &mut Self {
+        self.console_type = Some(console_type);
+        self
+    }
+
+    pub const fn timing_mode(&mut self, timing_mode: TimingMode) -> &mut Self {
+        self.timing_mode = Some(timing_mode);
+        self
+    }
+
+    pub const fn vs_hardware_type(&mut self, vs_hardware_type: VsHardwareType) -> &mut Self {
+        self.vs_hardware_type = Some(vs_hardware_type);
+        self
+    }
+
+    pub const fn vs_ppu_type(&mut self, vs_ppu_type: VsPpuType) -> &mut Self {
+        self.vs_ppu_type = Some(vs_ppu_type);
+        self
+    }
+
+    pub const fn default_expansion_device(&mut self, default_expansion_device: ExpansionDevice) -> &mut Self {
+        self.default_expansion_device = Some(default_expansion_device);
+        self
+    }
+
     pub const fn build(&mut self) -> CartridgeMetadata {
         CartridgeMetadata {
             mapper_number: self.mapper_number,
             submapper_number: self.submapper_number,
             name_table_mirroring: self.name_table_mirroring,
             has_persistent_memory: self.has_persistent_memory,
-            console_type: self.console_type,
             full_hash: self.full_hash,
             prg_rom_hash: self.prg_rom_hash,
+            chr_rom_hash: self.chr_rom_hash,
+            trainer_hash: self.trainer_hash,
             prg_rom_size: self.prg_rom_size,
             prg_work_ram_size: self.prg_work_ram_size,
             prg_save_ram_size: self.prg_save_ram_size,
             chr_rom_size: self.chr_rom_size,
             chr_work_ram_size: self.chr_work_ram_size,
             chr_save_ram_size: self.chr_save_ram_size,
+            console_type: self.console_type,
+            timing_mode: self.timing_mode,
+            vs_hardware_type: self.vs_hardware_type,
+            vs_ppu_type: self.vs_ppu_type,
+            default_expansion_device: self.default_expansion_device,
         }
     }
 }
@@ -307,7 +402,7 @@ impl CartridgeMetadataBuilder {
 pub enum ConsoleType {
     #[default]
     NesFamiconDendy,
-    VsUnisystem,
+    Vs,
     PlayChoice10,
     DecimalModeFamiclone,
     NesFamiconWithEpsm,
@@ -341,7 +436,7 @@ impl ConsoleType {
     fn from_u8(value: u8) -> Self {
         let console_type = match value {
             0x0 => ConsoleType::NesFamiconDendy,
-            0x1 => ConsoleType::VsUnisystem,
+            0x1 => ConsoleType::Vs,
             0x2 => ConsoleType::PlayChoice10,
             0x3 => ConsoleType::DecimalModeFamiclone,
             0x4 => ConsoleType::NesFamiconWithEpsm,
@@ -366,7 +461,7 @@ impl fmt::Display for ConsoleType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let text = match self {
             ConsoleType::NesFamiconDendy => "NES/Famicon/Dendy",
-            ConsoleType::VsUnisystem => "VS Unisystem",
+            ConsoleType::Vs => "VS",
             ConsoleType::PlayChoice10 => "Play Choice 10",
             ConsoleType::DecimalModeFamiclone => "Famicon with Decimal Mode CPU",
             ConsoleType::NesFamiconWithEpsm => "NES/Famicon with EPSM module",
@@ -382,4 +477,121 @@ impl fmt::Display for ConsoleType {
 
         write!(f, "{text}")
     }
+}
+
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+pub enum TimingMode {
+    Ntsc,
+    Pal,
+    MultiRegion,
+    Dendy,
+}
+
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+pub enum VsHardwareType {
+    Unisystem,
+    UnisystemRbiBaseballProtection,
+    UnisystemTkoBoxingProtection,
+    UnisystemSuperXeviousProtection,
+    UnisystemIceClimberProtection,
+    DualSystem,
+    DualSystemRaidOnBungelingBayProtection,
+}
+
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+pub enum VsPpuType {
+    Rp2c03Rc2c03 = 0,
+    // 1 is reserved
+    Rp2c04_0001 = 2,
+    Rp2c04_0002,
+    Rp2c04_0003,
+    Rp2c04_0004,
+    // 6 and 7 are reserved
+    Rc2c05_01 = 8,
+    Rc2c05_02,
+    Rc2c05_03,
+    Rc2c05_04,
+}
+
+#[derive(Clone, Copy, Debug, FromPrimitive)]
+pub enum ExpansionDevice {
+    Unspecified,
+    StandardNesFamicomControllers,
+    NesFourScoreSatellite,
+    FamicomFourPlayersAdapter,
+    VsSystem4016,
+    VsSystem4017,
+    // 0x06 is reserved
+    VsZapper = 0x07,
+    Zapper4017,
+    TwoZappers,
+    BandaiHyperShotLightgun,
+    PowerPadSideA,
+    PowerPadSideB,
+    FamilyTrainerSideA,
+    FamilyTrainerSideB,
+    ArkanoidVausControllerNes,
+    ArkanoidVausControllerFamicom,
+    TwoVausControllersPlusFamicomDataRecorder,
+    KonamiHyperShotController,
+    CoconutsPachinkoController,
+    ExcitingBoxingPunchingBagBlowupDoll,
+    JissenMahjongController,
+    PartyTap,
+    OekaKidsTablet,
+    SunsoftBarcodeBattler,
+    MiraclePianoKeyboard,
+    PokkunMoguraa,
+    TopRider,
+    DoubleFisted,
+    Famicom3DSystem,
+    DoremikkoKeyboard,
+    RobGyroSet,
+    FamicomDataRecorder,
+    AsciiTurboFile,
+    IgsStorageBattleBox,
+    FamilyBasicKeyboardPlusFamicomDataRecorder,
+    PecKeyboard,
+    Bit79Keyboard,
+    SuborKeyboard,
+    SuborKeyboardPlusMacroWinnersMouse,
+    SuborKeyboardPlusSuborMouse,
+    SnesMouse4016,
+    Multicart,
+    TwoSnesControllers,
+    RacerMateBicycle,
+    UForce,
+    RobStackUp,
+    CityPatrolmanLightgun,
+    SharpC1CassetteInterface,
+    StandardControllerWithSwappedButtons,
+    ExcaliburSudokuPad,
+    AblPinball,
+    GoldenNuggetCasinoExtraButtons,
+    KedaKeyboard,
+    SuborKeyboardPlusSuborMouse4017,
+    PortTestController,
+    BandaiMultiGamePlayerGamepadButtons,
+    VenomTVDanceMat,
+    LgTvRemoteControl,
+    FamicomNetworkController,
+    KingFishingController,
+    CroakyKaraokeController,
+    KingwonKeyboard,
+    ZechengKeyboard,
+    SuborKeyboardPlusL90RotatedPs2Mouse4017,
+    Ps2KeyboardPlusPs2Mouse4017,
+    Ps2Mouse,
+    YuxingMouse4016,
+    SuborKeyboardPlusYuxingMouse4016,
+    GigggleTvPump,
+    BbkKeyboardPlusPs2Mouse4017,
+    MagicalCooking,
+    SnesMouse4017,
+    Zapper4016,
+    ArkanoidVausControllerPrototype,
+    TVMahjongGameController,
+    MahjongGekitouDensetsuController,
+    SuborKeyboardPlusPs2Mouse4017,
+    IbmPcXtKeyboard,
 }

@@ -1348,6 +1348,13 @@ impl Renderer for CartridgeMetadataRenderer {
                         ui.label(metadata.prg_rom_hash().map_or("".to_owned(), |crc| format!("{crc:X}")));
                     }
                     ui.end_row();
+
+                    ui.label("CHR ROM CRC");
+                    ui.label("");
+                    for metadata in metadata_sources {
+                        ui.label(metadata.chr_rom_hash().map_or("".to_owned(), |crc| format!("{crc:X}")));
+                    }
+                    ui.end_row();
                 });
         });
 

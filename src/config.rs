@@ -71,6 +71,8 @@ impl Config {
         let cartridge = Cartridge::load(path, &header, &raw_header_and_data, allow_saving).unwrap();
         let prg_rom_hash = crc32fast::hash(cartridge.prg_rom().as_slice());
         header.set_prg_rom_hash(prg_rom_hash);
+        let chr_rom_hash = crc32fast::hash(cartridge.chr_rom().as_slice());
+        header.set_chr_rom_hash(chr_rom_hash);
 
         let header_db = HeaderDb::load();
         let cartridge_mapper_number = header.mapper_number().unwrap();
