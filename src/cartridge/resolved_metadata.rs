@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder, ConsoleType};
+use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder, ConsoleType, ExpansionDevice, TimingMode, VsHardwareType, VsPpuType};
 use crate::mapper::NameTableMirroring;
 
 use crate::util::unit::KIBIBYTE;
@@ -10,9 +10,9 @@ pub struct ResolvedMetadata {
     pub mapper_number: u16,
     pub submapper_number: Option<u8>,
 
+    // FIXME: This should no longer be Optional.
     pub name_table_mirroring: Option<NameTableMirroring>,
     pub has_persistent_memory: bool,
-    pub console_type: ConsoleType,
 
     pub full_hash: u32,
     pub prg_rom_hash: u32,
@@ -24,6 +24,11 @@ pub struct ResolvedMetadata {
     pub chr_rom_size: u32,
     pub chr_work_ram_size: u32,
     pub chr_save_ram_size: u32,
+
+    pub console_type: ConsoleType,
+    pub region_timing_mode: TimingMode,
+    pub default_expansion_device: ExpansionDevice,
+    pub vs: Option<Vs>,
 }
 
 impl fmt::Display for ResolvedMetadata {
@@ -63,6 +68,12 @@ impl MetadataResolver {
     pub fn resolve(&self) -> ResolvedMetadata {
         let all_metadata = [&self.hard_coded_overrides, &self.cartridge, &self.database, &self.database_extension, &self.defaults()];
 
+        let mut vs = None;
+        if let (Some(hardware_type), Some(ppu_type))
+                = (resolve_field(&all_metadata, |m| m.vs_hardware_type()), resolve_field(&all_metadata, |m| m.vs_ppu_type())) {
+            vs = Some(Vs { hardware_type, ppu_type });
+        }
+
         let resolved_metadata = ResolvedMetadata {
             mapper_number: resolve_field(&all_metadata, |m| m.mapper_number()).unwrap(),
             submapper_number: resolve_field(&all_metadata, |m| m.submapper_number()),
@@ -84,6 +95,10 @@ impl MetadataResolver {
             chr_rom_size: self.cartridge.chr_rom_size().unwrap(),
             chr_work_ram_size: resolve_field(&all_metadata, |m| m.chr_work_ram_size()).unwrap(),
             chr_save_ram_size: resolve_field(&all_metadata, |m| m.chr_save_ram_size()).unwrap(),
+
+            region_timing_mode: resolve_field(&all_metadata, |m| m.timing_mode()).unwrap(),
+            default_expansion_device: resolve_field(&all_metadata, |m| m.default_expansion_device()).unwrap(),
+            vs,
         };
 
         if self.database.name_table_mirroring().is_some() {
@@ -108,16 +123,33 @@ impl MetadataResolver {
             0
         };
 
-        CartridgeMetadataBuilder::new()
+        let mut builder = CartridgeMetadataBuilder::new();
+        builder
             .prg_work_ram_size(prg_work_ram_size)
             .prg_save_ram_size(0)
             .chr_work_ram_size(chr_work_ram_size)
             .chr_save_ram_size(0)
-            .build()
+            .timing_mode(TimingMode::Ntsc)
+            .default_expansion_device(ExpansionDevice::StandardNesFamicomControllers);
+
+        let console_type = resolve_field(&all_metadata, |m| m.console_type()).unwrap();
+        if console_type == ConsoleType::PlayChoice10 {
+            builder
+                .vs_hardware_type(VsHardwareType::Unisystem)
+                .vs_ppu_type(VsPpuType::Rp2c03Rc2c03);
+        }
+
+        builder.build()
     }
 }
 
 fn resolve_field<F, T>(all_metadata: &[&CartridgeMetadata], field_extractor: F) -> Option<T>
 where F: Fn(&&CartridgeMetadata) -> Option<T> {
     all_metadata.iter().map(field_extractor).find(|v| v.is_some()).flatten()
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct Vs {
+    pub hardware_type: VsHardwareType,
+    pub ppu_type: VsPpuType,
 }

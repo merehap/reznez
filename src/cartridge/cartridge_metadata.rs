@@ -39,9 +39,9 @@ pub struct CartridgeMetadata {
 
     console_type: Option<ConsoleType>,
     timing_mode: Option<TimingMode>,
+    default_expansion_device: Option<ExpansionDevice>,
     vs_hardware_type: Option<VsHardwareType>,
     vs_ppu_type: Option<VsPpuType>,
-    default_expansion_device: Option<ExpansionDevice>,
 }
 
 impl CartridgeMetadata {
@@ -73,6 +73,7 @@ impl CartridgeMetadata {
             assert!(high_header.p != 0xF, "PRG exponent notation not yet supported.");
 
             let mapper_number = combinebits!(high_header.m, low_header.m, low_header.l, "0000hhhh mmmmllll");
+            let console_type = ConsoleType::extended(low_header.x, high_header.x);
             builder
                 .mapper_and_submapper_number(mapper_number, Some(high_header.s))
                 .prg_rom_size(combinebits!(high_header.p, low_header.p, "000000hh hhllllll ll000000 00000000"))
@@ -81,11 +82,11 @@ impl CartridgeMetadata {
                 .prg_work_ram_size(if high_header.g == 0 { 0 } else { 64 << high_header.g })
                 .chr_save_ram_size(if high_header.h == 0 { 0 } else { 64 << high_header.h })
                 .chr_work_ram_size(if high_header.i == 0 { 0 } else { 64 << high_header.i })
-                .console_type(ConsoleType::extended(low_header.x, high_header.x))
+                .console_type(console_type)
                 .timing_mode(FromPrimitive::from_u8(high_header.t).unwrap())
                 .default_expansion_device(FromPrimitive::from_u8(high_header.d).unwrap());
 
-                if low_header.x == ConsoleType::Vs as u8 {
+                if console_type == ConsoleType::Vs {
                     builder
                         .vs_hardware_type(FromPrimitive::from_u8(high_header.v).unwrap())
                         .vs_ppu_type(FromPrimitive::from_u8(high_header.x).unwrap());
@@ -165,16 +166,16 @@ impl CartridgeMetadata {
         self.timing_mode
     }
 
+    pub fn default_expansion_device(&self) -> Option<ExpansionDevice> {
+        self.default_expansion_device
+    }
+
     pub fn vs_hardware_type(&self) -> Option<VsHardwareType> {
         self.vs_hardware_type
     }
 
     pub fn vs_ppu_type(&self) -> Option<VsPpuType> {
         self.vs_ppu_type
-    }
-
-    pub fn default_expansion_device(&self) -> Option<ExpansionDevice> {
-        self.default_expansion_device
     }
 
     pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring) {
@@ -244,9 +245,9 @@ pub struct CartridgeMetadataBuilder {
 
     console_type: Option<ConsoleType>,
     timing_mode: Option<TimingMode>,
+    default_expansion_device: Option<ExpansionDevice>,
     vs_hardware_type: Option<VsHardwareType>,
     vs_ppu_type: Option<VsPpuType>,
-    default_expansion_device: Option<ExpansionDevice>,
 }
 
 impl CartridgeMetadataBuilder {
@@ -273,9 +274,9 @@ impl CartridgeMetadataBuilder {
 
             console_type: None,
             timing_mode: None,
+            default_expansion_device: None,
             vs_hardware_type: None,
             vs_ppu_type: None,
-            default_expansion_device: None,
         }
     }
 
@@ -357,6 +358,11 @@ impl CartridgeMetadataBuilder {
         self
     }
 
+    pub const fn default_expansion_device(&mut self, default_expansion_device: ExpansionDevice) -> &mut Self {
+        self.default_expansion_device = Some(default_expansion_device);
+        self
+    }
+
     pub const fn vs_hardware_type(&mut self, vs_hardware_type: VsHardwareType) -> &mut Self {
         self.vs_hardware_type = Some(vs_hardware_type);
         self
@@ -364,11 +370,6 @@ impl CartridgeMetadataBuilder {
 
     pub const fn vs_ppu_type(&mut self, vs_ppu_type: VsPpuType) -> &mut Self {
         self.vs_ppu_type = Some(vs_ppu_type);
-        self
-    }
-
-    pub const fn default_expansion_device(&mut self, default_expansion_device: ExpansionDevice) -> &mut Self {
-        self.default_expansion_device = Some(default_expansion_device);
         self
     }
 
@@ -479,16 +480,18 @@ impl fmt::Display for ConsoleType {
     }
 }
 
-#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive)]
 pub enum TimingMode {
+    #[default]
     Ntsc,
     Pal,
     MultiRegion,
     Dendy,
 }
 
-#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive)]
 pub enum VsHardwareType {
+    #[default]
     Unisystem,
     UnisystemRbiBaseballProtection,
     UnisystemTkoBoxingProtection,
@@ -498,8 +501,9 @@ pub enum VsHardwareType {
     DualSystemRaidOnBungelingBayProtection,
 }
 
-#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive)]
 pub enum VsPpuType {
+    #[default]
     Rp2c03Rc2c03 = 0,
     // 1 is reserved
     Rp2c04_0001 = 2,
@@ -513,9 +517,10 @@ pub enum VsPpuType {
     Rc2c05_04,
 }
 
-#[derive(Clone, Copy, Debug, FromPrimitive)]
+#[derive(Clone, Copy, Debug, Default, FromPrimitive)]
 pub enum ExpansionDevice {
     Unspecified,
+    #[default]
     StandardNesFamicomControllers,
     NesFourScoreSatellite,
     FamicomFourPlayersAdapter,

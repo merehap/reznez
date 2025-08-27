@@ -1213,7 +1213,7 @@ impl Renderer for MemoryViewerRenderer {
 struct CartridgeMetadataRenderer;
 
 impl CartridgeMetadataRenderer {
-    const WIDTH: usize = 550;
+    const WIDTH: usize = 650;
     const HEIGHT: usize = 300;
 }
 
@@ -1332,6 +1332,34 @@ impl Renderer for CartridgeMetadataRenderer {
                     ui.label(kib_string(final_values.chr_save_ram_size));
                     for metadata in metadata_sources {
                         ui.label(metadata.chr_save_ram_size().map(kib_string).unwrap_or("".to_owned()));
+                    }
+                    ui.end_row();
+
+                    ui.label("Region Timing Mode");
+                    ui.label(format!("{:?}", final_values.region_timing_mode));
+                    for metadata in metadata_sources {
+                        ui.label(metadata.timing_mode().map_or("".to_owned(), |region| format!("{region:?}")));
+                    }
+                    ui.end_row();
+
+                    ui.label("Default Expansion Device");
+                    ui.label(format!("{:?}", final_values.default_expansion_device));
+                    for metadata in metadata_sources {
+                        ui.label(metadata.default_expansion_device().map_or("".to_owned(), |device| format!("{device:?}")));
+                    }
+                    ui.end_row();
+
+                    ui.label("VS Hardware Type");
+                    ui.label(final_values.clone().vs.map_or("".to_owned(), |vs| format!("{:?}", vs.hardware_type)));
+                    for metadata in metadata_sources {
+                        ui.label(metadata.vs_hardware_type().map_or("".to_owned(), |hardware| format!("{hardware:?}")));
+                    }
+                    ui.end_row();
+
+                    ui.label("VS PPU Type");
+                    ui.label(final_values.vs.map_or("".to_owned(), |vs| format!("{:?}", vs.ppu_type)));
+                    for metadata in metadata_sources {
+                        ui.label(metadata.vs_ppu_type().map_or("".to_owned(), |ppu| format!("{ppu:?}")));
                     }
                     ui.end_row();
 
