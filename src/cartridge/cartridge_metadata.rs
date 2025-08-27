@@ -11,7 +11,7 @@ use crate::util::unit::KIBIBYTE;
 pub const PRG_ROM_CHUNK_LENGTH: u32 = 16 * KIBIBYTE;
 pub const CHR_ROM_CHUNK_LENGTH: u32 = 8 * KIBIBYTE;
 const INES_HEADER_CONSTANT: u32 = u32::from_be_bytes([b'N', b'E', b'S', 0x1A]);
-const NES2_HEADER_CONSTANT: u8 = 0b10;
+const NES2_0_HEADER_CONSTANT: u8 = 0b10;
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
@@ -54,7 +54,7 @@ impl CartridgeMetadata {
             .has_persistent_memory(low_header.b)
             .full_hash(crc32fast::hash(raw_header_and_data.as_slice()));
 
-        if low_header.v == NES2_HEADER_CONSTANT {
+        if low_header.v == NES2_0_HEADER_CONSTANT {
             // NES2.0 fields
             let Some(high_header) = raw_header_and_data.peek_u64(8..=15) else {
                 return Err(format!("ROM file should have a 16 byte header. ROM: {}", path.display()));
@@ -66,7 +66,7 @@ impl CartridgeMetadata {
                 .mapper_and_submapper_number(mapper_number, Some(high_header.s))
                 .prg_rom_size(combinebits!(high_header.p, low_header.p, "000000hh hhllllll ll000000 00000000"))
                 .chr_rom_size(combinebits!(high_header.c, low_header.c, "0000000h hhhlllll lll00000 00000000"))
-                .console_type(ConsoleType::from_header_values(low_header.x, Some(high_header.x)))
+                .console_type(ConsoleType::extended(low_header.x, high_header.x))
                 .prg_save_ram_size(if high_header.f == 0 { 0 } else { 64 << high_header.f })
                 .prg_work_ram_size(if high_header.g == 0 { 0 } else { 64 << high_header.g })
                 .chr_save_ram_size(if high_header.h == 0 { 0 } else { 64 << high_header.h })
@@ -78,7 +78,7 @@ impl CartridgeMetadata {
                 .mapper_and_submapper_number(mapper_number, None)
                 .prg_rom_size(u32::from(low_header.p) * PRG_ROM_CHUNK_LENGTH)
                 .chr_rom_size(u32::from(low_header.c) * CHR_ROM_CHUNK_LENGTH)
-                .console_type(ConsoleType::from_header_values(low_header.x, None));
+                .console_type(ConsoleType::basic(low_header.x));
         }
 
         let name_table_mirroring_selection = low_header.n;
@@ -322,15 +322,20 @@ pub enum ConsoleType {
 }
 
 impl ConsoleType {
-    fn from_header_values(basic_console_type: u8, extended_console_type: Option<u8>) -> Self {
-        let console_type = match (basic_console_type, extended_console_type) {
-            (0..=2, _) => basic_console_type,
-            (3    , Some(extended_console_type)) => extended_console_type,
-            (3    , None) => panic!("Extended console type specified, but this isn't a NES2.0 header."),
-            _ => unreachable!(),
-        };
+    fn basic(basic_console_type: u8) -> Self {
+        assert!(basic_console_type < 3);
+        Self::from_u8(basic_console_type)
+    }
 
-        Self::from_u8(console_type)
+    fn extended(basic_console_type: u8, extended_console_type: u8) -> Self {
+        match basic_console_type {
+            0..=2 => Self::from_u8(basic_console_type),
+            3 => {
+                assert!(extended_console_type > 3);
+                Self::from_u8(extended_console_type)
+            }
+            _ => panic!("Basic console type must be less than 4."),
+        }
     }
 
     fn from_u8(value: u8) -> Self {
@@ -348,7 +353,7 @@ impl ConsoleType {
             0xA => ConsoleType::Vt369,
             0xB => ConsoleType::UmcUm6578,
             0xC => ConsoleType::FamiconNetworkSystem,
-            0xD..=0xF => todo!(),
+            0xD..=0xF => panic!("Reserved"),
             _ => unreachable!(),
         };
 
