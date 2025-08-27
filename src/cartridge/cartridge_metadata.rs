@@ -399,7 +399,7 @@ impl CartridgeMetadataBuilder {
 }
 
 #[allow(dead_code)]
-#[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, FromPrimitive)]
 pub enum ConsoleType {
     #[default]
     NesFamiconDendy,
@@ -510,7 +510,9 @@ pub enum VsPpuType {
     Rp2c04_0002,
     Rp2c04_0003,
     Rp2c04_0004,
-    // 6 and 7 are reserved
+    // 6 is supposed to be reserved per the wiki, but Stroke & Golf uses it in nes20db.xml.
+    StrokeAndGolf,
+    // 7 is reserved
     Rc2c05_01 = 8,
     Rc2c05_02,
     Rc2c05_03,
@@ -526,8 +528,9 @@ pub enum ExpansionDevice {
     FamicomFourPlayersAdapter,
     VsSystem4016,
     VsSystem4017,
-    // 0x06 is reserved
-    VsZapper = 0x07,
+    // The wiki says 0x06 is reserved, but nes20db.xml has a VS Pinball entry that uses this.
+    VsPinballController,
+    VsZapper,
     Zapper4017,
     TwoZappers,
     BandaiHyperShotLightgun,

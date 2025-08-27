@@ -4,6 +4,7 @@
 use std::collections::BTreeMap;
 
 use log::info;
+use num_traits::FromPrimitive;
 
 use crate::{cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder}, mapper::NameTableMirroring};
 
@@ -134,30 +135,45 @@ impl HeaderDb {
         let mut metadata_by_full_crc32 = BTreeMap::new();
         let mut metadata_by_prg_rom_crc32 = BTreeMap::new();
         for game in games {
-            let prg_rom_hash = read_attribute(game, "prgrom", "crc32").unwrap();
-            let prg_rom_hash = u32::from_str_radix(prg_rom_hash, 16).unwrap();
-
             let full_hash = read_attribute(game, "rom", "crc32").unwrap();
             let full_hash = u32::from_str_radix(full_hash, 16).unwrap();
+
+            let prg_rom_hash = read_attribute(game, "prgrom", "crc32").unwrap();
+            let prg_rom_hash = u32::from_str_radix(prg_rom_hash, 16).unwrap();
 
             let mut header_builder = CartridgeMetadataBuilder::new();
             header_builder
                 .full_hash(full_hash)
                 .prg_rom_hash(prg_rom_hash)
-                .prg_rom_size(read_attribute(game, "prgrom", "size").unwrap().parse().unwrap())
                 .mapper_and_submapper_number(
                     read_attribute(game, "pcb", "mapper").unwrap().parse().unwrap(),
                     read_attribute(game, "pcb", "submapper").unwrap().parse().ok()
-                );
+                )
+                .has_persistent_memory(read_attribute(game, "pcb", "battery").unwrap() == "1")
+                .prg_rom_size(read_attribute(game, "prgrom", "size").unwrap().parse().unwrap())
+                .prg_work_ram_size(read_attribute(game, "prgram", "size").map(|s| s.parse().unwrap()).unwrap_or(0))
+                .prg_save_ram_size(read_attribute(game, "prgnvram", "size").map(|s| s.parse().unwrap()).unwrap_or(0))
+                .chr_rom_size(read_attribute(game, "chrrom", "size").map(|s| s.parse().unwrap()).unwrap_or(0))
+                .chr_work_ram_size(read_attribute(game, "chrram", "size").map(|s| s.parse().unwrap()).unwrap_or(0))
+                .chr_save_ram_size(read_attribute(game, "chrnvram", "size").map(|s| s.parse().unwrap()).unwrap_or(0))
+                .console_type(read_attribute(game, "console", "type").map(|c| FromPrimitive::from_u8(c.parse().unwrap()).unwrap()).unwrap())
+                .timing_mode(read_attribute(game, "console", "region").map(|t| FromPrimitive::from_u8(t.parse().unwrap()).unwrap()).unwrap())
+                .default_expansion_device(read_attribute(game, "expansion", "type").map(|d| FromPrimitive::from_u8(d.parse().unwrap()).unwrap()).unwrap());
+
+            if let Some(chr_rom_hash) = read_attribute(game, "chrrom", "crc32") {
+                let chr_rom_hash = u32::from_str_radix(chr_rom_hash, 16).unwrap();
+                header_builder.chr_rom_hash(chr_rom_hash);
+            }
+
+            if let (Some(hardware_type), Some(ppu_type)) = (read_attribute(game, "vs", "hardware"), read_attribute(game, "vs", "ppu")) {
+                header_builder
+                    .vs_hardware_type(FromPrimitive::from_u8(hardware_type.parse().unwrap()).unwrap())
+                    .vs_ppu_type(FromPrimitive::from_u8(ppu_type.parse().unwrap()).unwrap());
+            }
+
             if let Some(name_table_mirroring) = NameTableMirroring::from_short_string(read_attribute(game, "pcb", "mirroring").unwrap()).unwrap() {
                 header_builder.name_table_mirroring(name_table_mirroring);
             }
-
-            header_builder.prg_work_ram_size(read_attribute(game, "prgram", "size").map(|s| s.parse().unwrap()).unwrap_or(0));
-            header_builder.prg_save_ram_size(read_attribute(game, "prgnvram", "size").map(|s| s.parse().unwrap()).unwrap_or(0));
-            header_builder.chr_rom_size(read_attribute(game, "chrrom", "size").map(|s| s.parse().unwrap()).unwrap_or(0));
-            header_builder.chr_work_ram_size(read_attribute(game, "chrram", "size").map(|s| s.parse().unwrap()).unwrap_or(0));
-            header_builder.chr_save_ram_size(read_attribute(game, "chrnvram", "size").map(|s| s.parse().unwrap()).unwrap_or(0));
 
             let header = header_builder.build();
             metadata_by_full_crc32.insert(full_hash, header.clone());
