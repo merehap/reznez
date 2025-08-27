@@ -1,16 +1,17 @@
 use std::fmt;
 use std::path::Path;
 
-use splitbits::{combinebits, splitbits, splitbits_named};
+use splitbits::{combinebits, splitbits};
 
 use crate::mapper_list::MAPPERS_WITHOUT_SUBMAPPER_0;
 use crate::memory::raw_memory::RawMemory;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::unit::KIBIBYTE;
 
-pub const PRG_ROM_CHUNK_LENGTH: usize = 16 * KIBIBYTE as usize;
-pub const CHR_ROM_CHUNK_LENGTH: usize = 8 * KIBIBYTE as usize;
-const INES_HEADER_CONSTANT: &[u8] = &[b'N', b'E', b'S', 0x1A];
+pub const PRG_ROM_CHUNK_LENGTH: u32 = 16 * KIBIBYTE;
+pub const CHR_ROM_CHUNK_LENGTH: u32 = 8 * KIBIBYTE;
+const INES_HEADER_CONSTANT: u32 = u32::from_be_bytes([b'N', b'E', b'S', 0x1A]);
+const NES2_HEADER_CONSTANT: u8 = 0b10;
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
@@ -36,62 +37,52 @@ pub struct CartridgeMetadata {
 
 impl CartridgeMetadata {
     pub fn parse(path: &Path, raw_header_and_data: &RawMemory) -> Result<(CartridgeMetadata, MirroringSelection), String> {
-        let full_hash = crc32fast::hash(raw_header_and_data.as_slice());
-        let raw_header: [u8; 0x10] = raw_header_and_data.as_slice()[0x0..0x10].try_into()
-            .map_err(|err| format!("ROM file to have a 16 byte header. ROM: {} {err}", path.display()))?;
-        let mut builder = CartridgeMetadataBuilder::new();
-        builder.full_hash(full_hash);
-
-        if &raw_header[0..4] != INES_HEADER_CONSTANT {
-            return Err(format!(
-                "Cannot load non-iNES ROM. Found {:?} but need {:?}.",
-                &raw_header[0..4],
-                INES_HEADER_CONSTANT,
-            ));
+        let Some(low_header) = raw_header_and_data.peek_u64(0..=7) else {
+            return Err(format!("ROM file should have a 16 byte header. ROM: {}", path.display()));
+        };
+        let low_header = splitbits!(low_header, "iiiiiiii iiiiiiii iiiiiiii iiiiiiii pppppppp cccccccc llllntbn mmmmvvxx");
+        if low_header.i != INES_HEADER_CONSTANT {
+            return Err(format!("Cannot load non-iNES ROM. Found {:08X} but need {INES_HEADER_CONSTANT:08X}.", low_header.i));
         }
 
-        builder
-            .prg_rom_size(raw_header[4] as u32 * PRG_ROM_CHUNK_LENGTH as u32)
-            .chr_rom_size(raw_header[5] as u32 * CHR_ROM_CHUNK_LENGTH as u32);
-
-        let (low_mapper_number, mirroring_selection, trainer_enabled, has_persistent_memory) =
-            splitbits_named!(raw_header[6], "llllmtpm");
-        let (mid_mapper_number, ines2, basic_console_type) =
-            splitbits_named!(raw_header[7], "mmmmiicc");
-
-        builder.has_persistent_memory(has_persistent_memory);
-        let ines2_present = ines2 == 0b10;
-        if trainer_enabled {
+        if low_header.t {
             return Err(format!("Trainer isn't implemented yet. ROM: {}", path.display()));
         }
 
-        let mut high_mapper_number = 0b0000;
-        let mut submapper_number = None;
-        let mut extended_console_type = None;
-        if ines2_present {
-            high_mapper_number = raw_header[8] & 0b1111;
-            submapper_number = Some(raw_header[8] >> 4);
-            let prg_sizes = splitbits!(min=u32, raw_header[10], "sssswwww");
-            let prg_work = if prg_sizes.w > 0 { 64 << prg_sizes.w } else { 0 };
-            builder.prg_work_ram_size(prg_work);
-            let prg_save = if prg_sizes.s > 0 { 64 << prg_sizes.s } else { 0 };
-            builder.prg_save_ram_size(prg_save);
+        let mut builder = CartridgeMetadataBuilder::new();
+        builder
+            .has_persistent_memory(low_header.b)
+            .full_hash(crc32fast::hash(raw_header_and_data.as_slice()));
 
-            let chr_sizes = splitbits!(min=u32, raw_header[11], "sssswwww");
-            let chr_work = if chr_sizes.w > 0 { 64 << chr_sizes.w } else { 0 };
-            builder.chr_work_ram_size(chr_work);
-            let chr_save = if chr_sizes.s > 0 { 64 << chr_sizes.s } else { 0 };
-            builder.chr_save_ram_size(chr_save);
+        if low_header.v == NES2_HEADER_CONSTANT {
+            // NES2.0 fields
+            let Some(high_header) = raw_header_and_data.peek_u64(8..=15) else {
+                return Err(format!("ROM file should have a 16 byte header. ROM: {}", path.display()));
+            };
+            let high_header = splitbits!(high_header, "ssssmmmm ccccpppp ffffgggg hhhhiiii ......tt vvvvxxxx ......rr ..dddddd");
 
-            extended_console_type = Some(raw_header[13] & 0b1111);
+            let mapper_number = combinebits!(high_header.m, low_header.m, low_header.l, "0000hhhh mmmmllll");
+            builder
+                .mapper_and_submapper_number(mapper_number, Some(high_header.s))
+                .prg_rom_size(combinebits!(high_header.p, low_header.p, "000000hh hhllllll ll000000 00000000"))
+                .chr_rom_size(combinebits!(high_header.c, low_header.c, "0000000h hhhlllll lll00000 00000000"))
+                .console_type(ConsoleType::from_header_values(low_header.x, Some(high_header.x)))
+                .prg_save_ram_size(if high_header.f == 0 { 0 } else { 64 << high_header.f })
+                .prg_work_ram_size(if high_header.g == 0 { 0 } else { 64 << high_header.g })
+                .chr_save_ram_size(if high_header.h == 0 { 0 } else { 64 << high_header.h })
+                .chr_work_ram_size(if high_header.i == 0 { 0 } else { 64 << high_header.i });
+        } else {
+            // iNES only (*no* NES2.0 fields)
+            let mapper_number = combinebits!(low_header.m, low_header.l, "00000000 mmmmllll");
+            builder
+                .mapper_and_submapper_number(mapper_number, None)
+                .prg_rom_size(u32::from(low_header.p) * PRG_ROM_CHUNK_LENGTH)
+                .chr_rom_size(u32::from(low_header.c) * CHR_ROM_CHUNK_LENGTH)
+                .console_type(ConsoleType::from_header_values(low_header.x, None));
         }
 
-        let mapper_number = combinebits!(high_mapper_number, mid_mapper_number, low_mapper_number, "0000uuuummmmllll");
-        builder.mapper_and_submapper_number(mapper_number, submapper_number);
-
-        builder.console_type(ConsoleType::from_header_values(basic_console_type, extended_console_type));
-
-        Ok((builder.build(), mirroring_selection as usize))
+        let name_table_mirroring_selection = low_header.n;
+        Ok((builder.build(), name_table_mirroring_selection as usize))
     }
 
     pub fn full_hash(&self) -> Option<u32> {

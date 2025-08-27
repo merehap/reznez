@@ -1,6 +1,6 @@
 use std::fs::OpenOptions;
 use std::num::{NonZeroU16, NonZeroU8};
-use std::ops::{Index, IndexMut, Range};
+use std::ops::{Index, IndexMut, Range, RangeInclusive};
 use std::path::Path;
 
 use log::warn;
@@ -18,6 +18,12 @@ impl RawMemory {
     pub fn from_vec(vec: Vec<u8>) -> Self {
         assert!(vec.len() <= u32::MAX.try_into().unwrap());
         Self(vec)
+    }
+
+    pub fn peek_u64(&self, range: RangeInclusive<u32>) -> Option<u64> {
+        assert_eq!(range.end() - range.start(), 7);
+        self.0.get(*range.start() as usize..=*range.end() as usize)
+            .map(|slice| u64::from_be_bytes(slice.try_into().unwrap()))
     }
 
     pub fn as_slice(&self) -> &[u8] {
