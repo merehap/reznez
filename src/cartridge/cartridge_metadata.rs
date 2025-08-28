@@ -39,6 +39,7 @@ pub struct CartridgeMetadata {
 
     console_type: Option<ConsoleType>,
     timing_mode: Option<TimingMode>,
+    miscellaneous_rom_count: Option<u8>,
     default_expansion_device: Option<ExpansionDevice>,
     vs_hardware_type: Option<VsHardwareType>,
     vs_ppu_type: Option<VsPpuType>,
@@ -84,6 +85,7 @@ impl CartridgeMetadata {
                 .chr_work_ram_size(if high_header.i == 0 { 0 } else { 64 << high_header.i })
                 .console_type(console_type)
                 .timing_mode(FromPrimitive::from_u8(high_header.t).unwrap())
+                .miscellaneous_rom_count(high_header.r)
                 .default_expansion_device(FromPrimitive::from_u8(high_header.d).unwrap());
 
                 if console_type == ConsoleType::Vs {
@@ -166,6 +168,10 @@ impl CartridgeMetadata {
         self.timing_mode
     }
 
+    pub fn miscellaneous_rom_count(&self) -> Option<u8> {
+        self.miscellaneous_rom_count
+    }
+
     pub fn default_expansion_device(&self) -> Option<ExpansionDevice> {
         self.default_expansion_device
     }
@@ -213,9 +219,10 @@ impl CartridgeMetadata {
 
             console_type: self.console_type,
             timing_mode: self.timing_mode,
+            miscellaneous_rom_count: self.miscellaneous_rom_count,
+            default_expansion_device: self.default_expansion_device,
             vs_hardware_type: self.vs_hardware_type,
             vs_ppu_type: self.vs_ppu_type,
-            default_expansion_device: self.default_expansion_device,
         }
     }
 }
@@ -245,6 +252,7 @@ pub struct CartridgeMetadataBuilder {
 
     console_type: Option<ConsoleType>,
     timing_mode: Option<TimingMode>,
+    miscellaneous_rom_count: Option<u8>,
     default_expansion_device: Option<ExpansionDevice>,
     vs_hardware_type: Option<VsHardwareType>,
     vs_ppu_type: Option<VsPpuType>,
@@ -274,6 +282,7 @@ impl CartridgeMetadataBuilder {
 
             console_type: None,
             timing_mode: None,
+            miscellaneous_rom_count: None,
             default_expansion_device: None,
             vs_hardware_type: None,
             vs_ppu_type: None,
@@ -358,6 +367,11 @@ impl CartridgeMetadataBuilder {
         self
     }
 
+    pub const fn miscellaneous_rom_count(&mut self, miscellaneous_rom_count: u8) -> &mut Self {
+        self.miscellaneous_rom_count = Some(miscellaneous_rom_count);
+        self
+    }
+
     pub const fn default_expansion_device(&mut self, default_expansion_device: ExpansionDevice) -> &mut Self {
         self.default_expansion_device = Some(default_expansion_device);
         self
@@ -391,9 +405,10 @@ impl CartridgeMetadataBuilder {
             chr_save_ram_size: self.chr_save_ram_size,
             console_type: self.console_type,
             timing_mode: self.timing_mode,
+            miscellaneous_rom_count: self.miscellaneous_rom_count,
+            default_expansion_device: self.default_expansion_device,
             vs_hardware_type: self.vs_hardware_type,
             vs_ppu_type: self.vs_ppu_type,
-            default_expansion_device: self.default_expansion_device,
         }
     }
 }

@@ -165,6 +165,10 @@ impl HeaderDb {
                 header_builder.chr_rom_hash(chr_rom_hash);
             }
 
+            if let Some(miscellaneous_rom_count) = read_attribute(game, "miscrom", "number") {
+                header_builder.miscellaneous_rom_count(miscellaneous_rom_count.parse().unwrap());
+            }
+
             if let (Some(hardware_type), Some(ppu_type)) = (read_attribute(game, "vs", "hardware"), read_attribute(game, "vs", "ppu")) {
                 header_builder
                     .vs_hardware_type(FromPrimitive::from_u8(hardware_type.parse().unwrap()).unwrap())
