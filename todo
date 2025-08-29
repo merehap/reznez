@@ -25,6 +25,7 @@ Add {PRG,CHR} rom exact size as layout option?
 Detangle Mapper::cpu_read
 Fix Legend of Zelda pauses (joypad conflicting with DMC DMA samples?)
 CPU mode debug screen, including DMAs
+Use has_persistent_memory correctly (mostly for cases without NES2.0 metadata)
 
 FANCY NICE-TO-HAVES
 APU frequency correction

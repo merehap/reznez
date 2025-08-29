@@ -4,6 +4,7 @@ use std::path::Path;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use splitbits::{combinebits, splitbits};
+use ux::u2;
 
 use crate::mapper_list::MAPPERS_WITHOUT_SUBMAPPER_0;
 use crate::memory::raw_memory::RawMemory;
@@ -21,6 +22,7 @@ pub struct CartridgeMetadata {
     mapper_number: Option<u16>,
     submapper_number: Option<u8>,
 
+    name_table_mirroring_index: Option<u2>,
     name_table_mirroring: Option<NameTableMirroring>,
     has_persistent_memory: Option<bool>,
 
@@ -46,7 +48,7 @@ pub struct CartridgeMetadata {
 }
 
 impl CartridgeMetadata {
-    pub fn parse(path: &Path, raw_header_and_data: &RawMemory) -> Result<(CartridgeMetadata, MirroringSelection), String> {
+    pub fn parse(path: &Path, raw_header_and_data: &RawMemory) -> Result<CartridgeMetadata, String> {
         let Some(low_header) = raw_header_and_data.peek_u64(0..=7) else {
             return Err(format!("ROM file should have a 16 byte header. ROM: {}", path.display()));
         };
@@ -62,6 +64,7 @@ impl CartridgeMetadata {
         let mut builder = CartridgeMetadataBuilder::new();
         builder
             .has_persistent_memory(low_header.b)
+            .name_table_mirroring_index(u2::new(low_header.n))
             .full_hash(crc32fast::hash(raw_header_and_data.as_slice()));
 
         if low_header.v == NES2_0_HEADER_CONSTANT {
@@ -103,8 +106,7 @@ impl CartridgeMetadata {
                 .console_type(ConsoleType::basic(low_header.x));
         }
 
-        let name_table_mirroring_selection = low_header.n;
-        Ok((builder.build(), name_table_mirroring_selection as usize))
+        Ok(builder.build())
     }
 
     pub fn full_hash(&self) -> Option<u32> {
@@ -155,6 +157,10 @@ impl CartridgeMetadata {
         self.chr_save_ram_size
     }
 
+    pub fn name_table_mirroring_index(&self) -> Option<u2> {
+        self.name_table_mirroring_index
+    }
+
     // FIXME: This returns None if there is no mirroring specified OR if the cartridge specifies FourScreen.
     pub fn name_table_mirroring(&self) -> Option<NameTableMirroring> {
         self.name_table_mirroring
@@ -201,6 +207,7 @@ impl CartridgeMetadata {
             mapper_number: self.mapper_number,
             submapper_number: self.submapper_number,
 
+            name_table_mirroring_index: self.name_table_mirroring_index,
             name_table_mirroring: self.name_table_mirroring,
             has_persistent_memory: self.has_persistent_memory,
 
@@ -227,13 +234,12 @@ impl CartridgeMetadata {
     }
 }
 
-type MirroringSelection = usize;
-
 #[derive(Clone, Copy, Debug)]
 pub struct CartridgeMetadataBuilder {
     mapper_number: Option<u16>,
     submapper_number: Option<u8>,
 
+    name_table_mirroring_index: Option<u2>,
     name_table_mirroring: Option<NameTableMirroring>,
     has_persistent_memory: Option<bool>,
 
@@ -264,6 +270,7 @@ impl CartridgeMetadataBuilder {
             mapper_number: None,
             submapper_number: None,
 
+            name_table_mirroring_index: None,
             name_table_mirroring: None,
             has_persistent_memory: None,
 
@@ -299,6 +306,11 @@ impl CartridgeMetadataBuilder {
             self.submapper_number = submapper_number;
         }
 
+        self
+    }
+
+    pub const fn name_table_mirroring_index(&mut self, index: u2) -> &mut Self {
+        self.name_table_mirroring_index = Some(index);
         self
     }
 
@@ -391,6 +403,7 @@ impl CartridgeMetadataBuilder {
         CartridgeMetadata {
             mapper_number: self.mapper_number,
             submapper_number: self.submapper_number,
+            name_table_mirroring_index: self.name_table_mirroring_index,
             name_table_mirroring: self.name_table_mirroring,
             has_persistent_memory: self.has_persistent_memory,
             full_hash: self.full_hash,

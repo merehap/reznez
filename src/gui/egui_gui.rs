@@ -1275,7 +1275,16 @@ impl Renderer for CartridgeMetadataRenderer {
                     ui.label("Name Table Mirroring");
                     ui.label(final_values.name_table_mirroring.unwrap().to_string());
                     for metadata in metadata_sources {
-                        ui.label(metadata.name_table_mirroring().map(|m| m.to_string()).unwrap_or("".to_owned()));
+                        let mut text = String::new();
+                        if let Some(mirroring) = metadata.name_table_mirroring() {
+                            text.push_str(&format!("{mirroring}"));
+                        }
+
+                        if let Some(index) = metadata.name_table_mirroring_index() {
+                            text.push_str(&format!(" (index = {index})"));
+                        }
+
+                        ui.label(text);
                     }
                     ui.end_row();
 

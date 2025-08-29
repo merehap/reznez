@@ -36,7 +36,7 @@ pub fn analyze(rom_base_path: &Path) {
                 continue;
             }
             // FIXME: Use mirroring_selection here.
-            Ok((metadata, _mirroring_selection)) => {
+            Ok(metadata) => {
                 metadata
             }
         };
