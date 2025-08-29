@@ -49,7 +49,7 @@ impl Config {
 #[structopt(name = "REZNEZ", about = "The ultra-accurate NES emulator.")]
 pub struct Opt {
     #[structopt(name = "ROM", parse(from_os_str))]
-    pub rom_path: PathBuf,
+    pub rom_path: Option<PathBuf>,
 
     #[structopt(short, long, default_value = "egui")]
     pub gui: GuiType,
@@ -128,7 +128,7 @@ pub struct Opt {
 }
 
 impl Opt {
-    pub fn new(rom_path: PathBuf) -> Self {
+    pub fn new(rom_path: Option<PathBuf>) -> Self {
         Self {
             rom_path,
             gui: GuiType::Egui,

@@ -47,11 +47,11 @@ impl TestSummary {
                     target_frame_rate: TargetFrameRate::Unbounded,
                     disable_audio: true,
                     prevent_saving: true,
-                    ..Opt::new(rom_entry.path.clone())
+                    ..Opt::new(Some(rom_entry.path.clone()))
                 };
 
                 let config = Config::new(&opt);
-                let mut nes = Nes::new(&config, &opt.rom_path);
+                let mut nes = Nes::new(&config, &opt.rom_path.unwrap());
                 nes.mute();
                 *nes.frame_mut().show_overscan_mut() = true;
 

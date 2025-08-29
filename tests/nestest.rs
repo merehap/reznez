@@ -31,8 +31,8 @@ fn nestest() {
         disable_audio: true,
         log_cpu_all: true,
         prevent_saving: true,
-        // This ROM has the RESET vector overriddden to point to where the headless nestest starts.
-        ..Opt::new(PathBuf::from("tests/roms/nestest#ignored.nes"))
+        // This ROM has the RESET vector overridden to point to where the headless nestest starts.
+        ..Opt::new(Some(PathBuf::from("tests/roms/nestest#ignored.nes")))
     };
 
     logger::init(Logger {
@@ -53,7 +53,7 @@ fn nestest() {
     // Nestest starts the first instruction on cycle 0, but PPU stuff happens before that.
     config.ppu_clock = Clock::starting_at(-1, MAX_SCANLINE, MAX_CYCLE - 21);
 
-    let mut nes = Nes::new(&config, &opt.rom_path);
+    let mut nes = Nes::new(&config, &opt.rom_path.unwrap());
 
     // Step past the Start sequence.
     for _ in 0..21 {

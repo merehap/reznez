@@ -97,7 +97,7 @@ static JOY_2_JOYPAD_MAPPINGS: LazyLock<HashMap<u32, Button>> = LazyLock::new(|| 
 pub struct EguiGui;
 
 impl Gui for EguiGui {
-    fn run(&mut self, nes: Nes, config: Config) {
+    fn run(&mut self, nes: Option<Nes>, config: Config) {
         let input = WinitInputHelper::new();
 
         let gilrs = gilrs::Gilrs::new().unwrap();
@@ -120,8 +120,8 @@ impl Gui for EguiGui {
 
         event_loop.run(move |event, event_loop_window_target| {
             if world.input.update(&event) {
-                if world.input.key_pressed(KeyCode::F12) {
-                    world.nes.reset();
+                if world.input.key_pressed(KeyCode::F12) && let Some(nes) = &mut world.nes {
+                    nes.reset();
                 }
 
                 if world.input.key_pressed(KeyCode::Pause)
@@ -351,7 +351,7 @@ impl FlowControl {
 }
 
 struct World {
-    nes: Nes,
+    nes: Option<Nes>,
     config: Config,
     input: WinitInputHelper,
     gilrs: gilrs::Gilrs,
@@ -563,12 +563,15 @@ impl Renderer for PrimaryRenderer {
         let display_frame = |frame: &Frame, mask, _frame_index| {
             frame.copy_to_rgba_buffer(mask, pixels.frame_mut().try_into().unwrap());
         };
-        execute_frame(
-            &mut world.nes,
-            &world.config,
-            &events(&world.input, &mut world.gilrs, world.active_gamepad_id),
-            display_frame,
-        );
+
+        if let Some(nes) = &mut world.nes {
+            execute_frame(
+                nes,
+                &world.config,
+                &events(&world.input, &mut world.gilrs, world.active_gamepad_id),
+                display_frame,
+            );
+        }
     }
 
     fn toggle_pause(&mut self) {
@@ -609,7 +612,7 @@ impl Renderer for LoadRomRenderer {
         egui::CentralPanel::default().show(ctx, |_ui| {
             self.file_dialog.show(ctx);
             if let Some(rom_path) = self.file_dialog.path() && !rom_path.is_dir() {
-                world.nes = Nes::new(&world.config, rom_path);
+                world.nes = Some(Nes::new(&world.config, rom_path));
                 result = FlowControl::CLOSE;
             }
         });
@@ -647,17 +650,18 @@ impl Renderer for DisplaySettingsRenderer {
     }
 
     fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
-        let nes = &mut world.nes;
-        egui::CentralPanel::default().show(ctx, |ui| {
-            egui::Grid::new("my_grid")
-                .num_columns(2)
-                .spacing([40.0, 4.0])
-                .striped(true)
-                .show(ui, |ui| {
-                    ui.checkbox(nes.frame_mut().show_overscan_mut(), "Show overscan?");
-                    ui.end_row();
-                });
-        });
+        if let Some(nes) = &mut world.nes {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                egui::Grid::new("my_grid")
+                    .num_columns(2)
+                    .spacing([40.0, 4.0])
+                    .striped(true)
+                    .show(ui, |ui| {
+                        ui.checkbox(nes.frame_mut().show_overscan_mut(), "Show overscan?");
+                        ui.end_row();
+                    });
+            });
+        }
 
         FlowControl::CONTINUE
     }
@@ -688,7 +692,10 @@ impl Renderer for StatusRenderer {
     }
 
     fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
-        let nes = &world.nes;
+        let Some(nes) = &world.nes else {
+            return FlowControl::CONTINUE;
+        };
+
         let clock = nes.memory().ppu_regs().clock();
         let ppu_regs = nes.memory().ppu_regs();
         let mapper_params = nes.memory().mapper_params();
@@ -805,15 +812,19 @@ impl Renderer for LayersRenderer {
     }
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
+        let Some(nes) = &world.nes else {
+            return;
+        };
+
         self.buffer
-            .place_frame(0, TOP_MENU_BAR_HEIGHT, world.nes.frame());
+            .place_frame(0, TOP_MENU_BAR_HEIGHT, nes.frame());
         self.buffer.place_frame(
             261,
             TOP_MENU_BAR_HEIGHT,
-            &world.nes.frame().to_background_only(),
+            &nes.frame().to_background_only(),
         );
 
-        let mem = world.nes.memory();
+        let mem = nes.memory();
 
         self.frame.clear();
         mem.oam().only_front_sprites().render(mem, &mut self.frame);
@@ -865,10 +876,14 @@ impl Renderer for NameTableRenderer {
 
     #[rustfmt::skip]
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
-        let x = usize::from(world.nes.memory().ppu_regs().x_scroll().to_u8());
-        let y = usize::from(world.nes.memory().ppu_regs().y_scroll().to_u8());
-        let mapper = world.nes.mapper();
-        let mem = &mut world.nes.memory();
+        let Some(nes) = &world.nes else {
+            return;
+        };
+
+        let x = usize::from(nes.memory().ppu_regs().x_scroll().to_u8());
+        let y = usize::from(nes.memory().ppu_regs().y_scroll().to_u8());
+        let mapper = nes.mapper();
+        let mem = &mut nes.memory();
 
         let width = NameTableRenderer::WIDTH;
         let height = NameTableRenderer::HEIGHT;
@@ -933,8 +948,12 @@ impl Renderer for SpritesRenderer {
     }
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
-        let sprites = world.nes.memory().oam().sprites();
-        let mem = world.nes.memory();
+        let Some(nes) = &world.nes else {
+            return;
+        };
+
+        let sprites = nes.memory().oam().sprites();
+        let mem = nes.memory();
 
         for (index, sprite) in sprites.iter().enumerate() {
             let tile = sprite.render_normal_height(&PatternTable::sprite_side(mem), &mem.palette_table());
@@ -985,7 +1004,11 @@ impl Renderer for PatternTableRenderer {
     }
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
-        let mem = world.nes.memory();
+        let Some(nes) = &world.nes else {
+            return;
+        };
+
+        let mem = nes.memory();
 
         let mut offset = 0;
         for side in [PatternTableSide::Left, PatternTableSide::Right] {
@@ -1045,7 +1068,11 @@ impl Renderer for PatternSourceRenderer {
     }
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
-        self.buffer.place_frame(0, 0, world.nes.ppu().pattern_source_frame());
+        let Some(nes) = &world.nes else {
+            return;
+        };
+
+        self.buffer.place_frame(0, 0, nes.ppu().pattern_source_frame());
         self.buffer.copy_to_rgba_buffer(pixels.frame_mut());
     }
 
@@ -1071,7 +1098,10 @@ impl Renderer for MemoryViewerRenderer {
     }
 
     fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
-        let nes = &mut world.nes;
+        let Some(nes) = &world.nes else {
+            return FlowControl::CONTINUE;
+        };
+
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 egui::Grid::new("my_grid")
@@ -1118,7 +1148,10 @@ impl Renderer for CartridgeMetadataRenderer {
     }
 
     fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl {
-        let nes = &world.nes;
+        let Some(nes) = &world.nes else {
+            return FlowControl::CONTINUE;
+        };
+
         let resolver = nes.metadata_resolver();
         let final_values = resolver.resolve();
         let metadata_sources = [

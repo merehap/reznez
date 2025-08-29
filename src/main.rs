@@ -42,11 +42,13 @@ fn main() {
     });
 
     if opt.analysis {
-        analysis::cartridge_db::analyze(&opt.rom_path);
+        if let Some(rom_path) = &opt.rom_path {
+            analysis::cartridge_db::analyze(rom_path);
+        }
     } else {
         let config = Config::new(&opt);
         let mut gui = Config::gui(&opt);
-        let nes = Nes::new(&config, &opt.rom_path);
+        let nes = opt.rom_path.map(|path| Nes::new(&config, &path));
 
         gui.run(nes, config);
     }

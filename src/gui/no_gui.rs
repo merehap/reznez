@@ -11,7 +11,8 @@ impl NoGui {
 }
 
 impl Gui for NoGui {
-    fn run(&mut self, mut nes: Nes, _config: Config) {
+    fn run(&mut self, nes: Option<Nes>, _config: Config) {
+        let mut nes = nes.expect("ROM to be specified when nogui mode is specified.");
         loop {
             nes.step_frame();
         }

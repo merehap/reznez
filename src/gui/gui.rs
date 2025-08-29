@@ -17,7 +17,7 @@ use crate::ppu::render::frame_rate::TargetFrameRate;
 const FRAME_DUMP_DIRECTORY: &str = "framedump";
 
 pub trait Gui {
-    fn run(&mut self, nes: Nes, config: Config);
+    fn run(&mut self, nes: Option<Nes>, config: Config);
 }
 
 pub fn execute_frame<F>(nes: &mut Nes, config: &Config, events: &Events, display_frame: F)
