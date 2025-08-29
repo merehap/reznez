@@ -51,7 +51,8 @@ impl TestSummary {
                 };
 
                 let config = Config::new(&opt);
-                let mut nes = Nes::new(&config, &opt.rom_path.unwrap());
+                let (header, cartridge) = Nes::load_header_and_cartridge(&opt.rom_path.unwrap());
+                let mut nes = Nes::new(&config, header, cartridge);
                 nes.mute();
                 *nes.frame_mut().show_overscan_mut() = true;
 

@@ -52,8 +52,23 @@ pub struct Nes {
 }
 
 impl Nes {
-    pub fn new(config: &Config, path: &Path) -> Nes {
-        let (mapper, mapper_params, metadata_resolver) = Nes::load_rom(config, path);
+    pub fn load_header_and_cartridge(path: &Path) -> (CartridgeMetadata, Cartridge) {
+        info!("Loading ROM '{}'.", path.display());
+        let mut raw_header_and_data = Vec::new();
+        File::open(path).unwrap().read_to_end(&mut raw_header_and_data).unwrap();
+        let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
+        let mut header = CartridgeMetadata::parse(path, &raw_header_and_data).unwrap();
+        let cartridge = Cartridge::load(path, &header, &raw_header_and_data).unwrap();
+        let prg_rom_hash = crc32fast::hash(cartridge.prg_rom().as_slice());
+        header.set_prg_rom_hash(prg_rom_hash);
+        let chr_rom_hash = crc32fast::hash(cartridge.chr_rom().as_slice());
+        header.set_chr_rom_hash(chr_rom_hash);
+
+        (header, cartridge)
+    }
+
+    pub fn new(config: &Config, header: CartridgeMetadata, cartridge: Cartridge) -> Nes {
+        let (mapper, mapper_params, metadata_resolver) = Nes::load_rom(config, header, cartridge);
 
         if let Err(err) = DirBuilder::new().recursive(true).create("saveram") {
             warn!("Failed to create saveram directory. {err}");
@@ -123,22 +138,13 @@ impl Nes {
         self.memory.stack_pointer()
     }
 
-    fn load_rom(config: &Config, path: &Path) -> (Box<dyn Mapper>, MapperParams, MetadataResolver) {
-        info!("Loading ROM '{}'.", path.display());
-        let mut raw_header_and_data = Vec::new();
-        File::open(path).unwrap().read_to_end(&mut raw_header_and_data).unwrap();
-        let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
-        let mut header = CartridgeMetadata::parse(path, &raw_header_and_data).unwrap();
-        let cartridge = Cartridge::load(path, &header, &raw_header_and_data).unwrap();
-        let prg_rom_hash = crc32fast::hash(cartridge.prg_rom().as_slice());
-        header.set_prg_rom_hash(prg_rom_hash);
-        let chr_rom_hash = crc32fast::hash(cartridge.chr_rom().as_slice());
-        header.set_chr_rom_hash(chr_rom_hash);
-
+    fn load_rom(config: &Config, header: CartridgeMetadata, cartridge: Cartridge) -> (Box<dyn Mapper>, MapperParams, MetadataResolver) {
         let header_db = HeaderDb::load();
         let cartridge_mapper_number = header.mapper_number().unwrap();
+        let prg_rom_hash = header.prg_rom_hash().unwrap();
         let mut db_header = CartridgeMetadataBuilder::new().build();
-        if let Some(db_cartridge_metadata) = header_db.header_from_db(header.full_hash().unwrap(), prg_rom_hash, cartridge_mapper_number, header.submapper_number()) {
+        if let Some(db_cartridge_metadata) = header_db.header_from_db(
+                header.full_hash().unwrap(), prg_rom_hash, cartridge_mapper_number, header.submapper_number()) {
             db_header = db_cartridge_metadata;
             if cartridge_mapper_number != db_header.mapper_number().unwrap() {
                 warn!("Mapper number in ROM ({}) does not match the one in the DB ({}).",

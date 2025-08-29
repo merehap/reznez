@@ -612,7 +612,8 @@ impl Renderer for LoadRomRenderer {
         egui::CentralPanel::default().show(ctx, |_ui| {
             self.file_dialog.show(ctx);
             if let Some(rom_path) = self.file_dialog.path() && !rom_path.is_dir() {
-                world.nes = Some(Nes::new(&world.config, rom_path));
+                let (header, cartridge) = Nes::load_header_and_cartridge(rom_path);
+                world.nes = Some(Nes::new(&world.config, header, cartridge));
                 result = FlowControl::CLOSE;
             }
         });
