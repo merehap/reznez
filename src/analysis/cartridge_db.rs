@@ -47,7 +47,23 @@ pub fn analyze(rom_base_path: &Path) {
             "CREATE TABLE cartridges (
             name TEXT NOT NULL,
             mapper INTEGER NOT NULL,
-            mirroring TEXT NOT NULL
+            submapper INTEGER,
+            name_table_mirroring TEXT NOT NULL,
+            full_hash TEXT NOT NULL,
+            prg_rom_hash TEXT NOT NULL,
+            chr_rom_hash TEXT NOT NULL,
+            prg_rom_size INTEGER NOT NULL,
+            prg_work_ram_size INTEGER NOT NULL,
+            prg_save_ram_size INTEGER NOT NULL,
+            chr_rom_size INTEGER NOT NULL,
+            chr_work_ram_size INTEGER NOT NULL,
+            chr_save_ram_size INTEGER NOT NULL,
+            console_type TEXT NOT NULL,
+            region_timing_mode TEXT NOT NULL,
+            miscellaneous_rom_count INTEGER NOT NULL,
+            default_expansion_device TEXT NOT NULL,
+            vs_hardware_type TEXT,
+            vs_ppu_type TEXT,
         )",
             [],
         )
@@ -91,8 +107,8 @@ pub fn analyze(rom_base_path: &Path) {
         .collect();
     for (mapper_number, group) in &grouped_cartridges {
         info!("{mapper_number}");
-        for (name, _, mirroring) in group {
-            info!("\t{name}: {mirroring} mirroring");
+        for (name, _, name_table_mirroring) in group {
+            info!("\t{name}: {name_table_mirroring} mirroring");
         }
     }
 }
