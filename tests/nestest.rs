@@ -68,7 +68,7 @@ fn nestest() {
         let current_instruction: Instruction;
         loop {
             if nes.step().step.is_some()
-                    && let Some((instruction, _)) = nes.cpu_mut().mode_state().new_instruction_with_address() {
+                    && let Some((instruction, _)) = nes.cpu().mode_state().new_instruction_with_address() {
                 current_instruction = instruction;
                 c = nes.memory().cpu_cycle();
                 ppu_cycle = nes.memory().ppu_regs().clock().cycle();

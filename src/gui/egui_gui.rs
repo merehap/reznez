@@ -813,7 +813,7 @@ impl Renderer for LayersRenderer {
             &world.nes.frame().to_background_only(),
         );
 
-        let (_, mem) = world.nes.ppu_and_memory_mut();
+        let mem = world.nes.memory();
 
         self.frame.clear();
         mem.oam().only_front_sprites().render(mem, &mut self.frame);
@@ -933,8 +933,8 @@ impl Renderer for SpritesRenderer {
     }
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
-        let sprites = world.nes.memory_mut().oam().sprites();
-        let mem = world.nes.memory_mut();
+        let sprites = world.nes.memory().oam().sprites();
+        let mem = world.nes.memory();
 
         for (index, sprite) in sprites.iter().enumerate() {
             let tile = sprite.render_normal_height(&PatternTable::sprite_side(mem), &mem.palette_table());
@@ -985,7 +985,7 @@ impl Renderer for PatternTableRenderer {
     }
 
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
-        let mem = world.nes.memory_mut();
+        let mem = world.nes.memory();
 
         let mut offset = 0;
         for side in [PatternTableSide::Left, PatternTableSide::Right] {

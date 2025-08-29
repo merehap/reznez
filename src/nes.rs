@@ -91,10 +91,6 @@ impl Nes {
         &self.cpu
     }
 
-    pub fn cpu_mut(&mut self) -> &mut Cpu {
-        &mut self.cpu
-    }
-
     pub fn ppu(&self) -> &Ppu {
         &self.ppu
     }
@@ -103,20 +99,8 @@ impl Nes {
         &self.memory
     }
 
-    pub fn memory_mut(&mut self) -> &mut Memory {
-        &mut self.memory
-    }
-
-    pub fn ppu_and_memory_mut(&mut self) -> (&Ppu, &mut Memory) {
-        (&self.ppu, &mut self.memory)
-    }
-
     pub fn mapper(&self) -> &dyn Mapper {
         &*self.mapper
-    }
-
-    pub fn mapper_mut(&mut self) -> &mut dyn Mapper {
-        &mut *self.mapper
     }
 
     pub fn resolved_metadata(&self) -> &ResolvedMetadata{
