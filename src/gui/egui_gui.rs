@@ -609,7 +609,7 @@ impl Renderer for LoadRomRenderer {
         egui::CentralPanel::default().show(ctx, |_ui| {
             self.file_dialog.show(ctx);
             if let Some(rom_path) = self.file_dialog.path() && !rom_path.is_dir() {
-                world.nes.load_new_config(&world.config, rom_path);
+                world.nes = Nes::new(&world.config, rom_path);
                 result = FlowControl::CLOSE;
             }
         });
@@ -867,8 +867,8 @@ impl Renderer for NameTableRenderer {
     fn render(&mut self, world: &mut World, pixels: &mut Pixels) {
         let x = usize::from(world.nes.memory().ppu_regs().x_scroll().to_u8());
         let y = usize::from(world.nes.memory().ppu_regs().y_scroll().to_u8());
-        let mapper = &*world.nes.mapper;
-        let mem = &mut world.nes.memory;
+        let mapper = world.nes.mapper();
+        let mem = &mut world.nes.memory();
 
         let width = NameTableRenderer::WIDTH;
         let height = NameTableRenderer::HEIGHT;

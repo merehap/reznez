@@ -39,8 +39,8 @@ pub struct Nes {
     cpu: Cpu,
     ppu: Ppu,
     apu: Apu,
-    pub memory: Memory,
-    pub mapper: Box<dyn Mapper>,
+    memory: Memory,
+    mapper: Box<dyn Mapper>,
     resolved_metadata: ResolvedMetadata,
     metadata_resolver: MetadataResolver,
     frame: Frame,
@@ -58,8 +58,6 @@ impl Nes {
         if let Err(err) = DirBuilder::new().recursive(true).create("saveram") {
             warn!("Failed to create saveram directory. {err}");
         }
-
-        let metadata_resolver = metadata_resolver.clone();
 
         let (joypad1, joypad2) = (Joypad::new(), Joypad::new());
 
@@ -101,7 +99,7 @@ impl Nes {
         &*self.mapper
     }
 
-    pub fn resolved_metadata(&self) -> &ResolvedMetadata{
+    pub fn resolved_metadata(&self) -> &ResolvedMetadata {
         &self.resolved_metadata
     }
 
@@ -123,10 +121,6 @@ impl Nes {
 
     pub fn stack_pointer(&self) -> u8 {
         self.memory.stack_pointer()
-    }
-
-    pub fn load_new_config(&mut self, config: &Config, path: &Path) {
-        *self = Nes::new(config, path);
     }
 
     fn load_rom(config: &Config, path: &Path) -> (Box<dyn Mapper>, MapperParams, MetadataResolver) {
