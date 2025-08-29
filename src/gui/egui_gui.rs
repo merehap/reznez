@@ -524,14 +524,6 @@ impl Renderer for PrimaryRenderer {
                             3,
                         ));
                     }
-                    if ui.button("CHR Banks").clicked() {
-                        ui.close_menu();
-                        result = FlowControl::spawn_window((
-                            Box::new(ChrBanksRenderer::new()),
-                            Position::Physical(PhysicalPosition { x: 50, y: 50 }),
-                            2,
-                        ));
-                    }
                     if ui.button("Pattern Sources").clicked() {
                         ui.close_menu();
                         result = FlowControl::spawn_window((
@@ -1018,103 +1010,6 @@ impl Renderer for PatternTableRenderer {
 
             offset += (8 + 1) * 16 + 10;
         }
-
-        self.buffer.copy_to_rgba_buffer(pixels.frame_mut());
-    }
-
-    fn width(&self) -> usize {
-        Self::WIDTH
-    }
-
-    fn height(&self) -> usize {
-        Self::HEIGHT
-    }
-}
-
-struct ChrBanksRenderer {
-    //tile: Tile,
-    buffer: DebugBuffer<{ ChrBanksRenderer::WIDTH }, { ChrBanksRenderer::HEIGHT }>,
-}
-
-impl ChrBanksRenderer {
-    const WIDTH: usize = (8 + 1) * 256;
-    const HEIGHT: usize = (8 + 1) * 32;
-
-    fn new() -> ChrBanksRenderer {
-        ChrBanksRenderer {
-            //tile: Tile::new(),
-            buffer: DebugBuffer::new(Rgb::WHITE),
-        }
-    }
-}
-
-impl Renderer for ChrBanksRenderer {
-    fn name(&self) -> String {
-        "CHR Banks".to_string()
-    }
-
-    fn ui(&mut self, _ctx: &Context, _world: &mut World) -> FlowControl {
-        FlowControl::CONTINUE
-    }
-
-    fn render(&mut self, _world: &mut World, pixels: &mut Pixels) {
-        // TODO: See if this can be re-enabled or if it isn't generalizable (most likely).
-        /*
-        let palette = world
-            .nes
-            .memory_mut()
-            .as_ppu_memory()
-            .palette_table()
-            .sprite_palette(PaletteTableIndex::Zero);
-
-        let chunks = world.nes.memory().mapper().chr_bank_chunks();
-        if chunks.is_empty() {
-            return;
-        }
-
-        assert_eq!(chunks[0].len(), 4);
-
-        let mut y_offset = 0;
-        for raw_pattern_table in chunks {
-            let mut x_offset = 0;
-            let raw_pattern_table: MappedArray<4> =
-                MappedArray::from_chunks(raw_pattern_table.try_into().unwrap());
-            let pattern_table = PatternTable::new(&raw_pattern_table);
-            for index in 0..=255 {
-                pattern_table.render_background_tile(
-                    PatternIndex::new(index),
-                    palette,
-                    &mut self.tile,
-                );
-                self.buffer.place_tile(x_offset, y_offset, &self.tile);
-                x_offset += 9;
-            }
-
-            y_offset += 9;
-        }
-        */
-
-        // TODO: Add ability to switch between the normal display and the following one.
-        /*
-        let odd_offset = 9 * chunks.len() / 2 + 10;
-        let mut y_offset = 0;
-        for (i, raw_pattern_table) in chunks.into_iter().enumerate() {
-            let mut x_offset = 0;
-            let odd_offset = if i % 2 == 0 {0} else {odd_offset};
-            let raw_pattern_table: MappedArray<4> = MappedArray::from_chunks(raw_pattern_table.try_into().unwrap());
-            let pattern_table = PatternTable::new(&raw_pattern_table);
-            for index in 0..=255 {
-                pattern_table.render_background_tile(
-                    PatternIndex::new(index), palette, &mut self.tile);
-                self.buffer.place_tile(x_offset, y_offset + odd_offset, &self.tile);
-                x_offset += 9;
-            }
-
-            if i % 2 == 0 {
-                y_offset += 9;
-            }
-        }
-        */
 
         self.buffer.copy_to_rgba_buffer(pixels.frame_mut());
     }
