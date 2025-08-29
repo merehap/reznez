@@ -47,13 +47,13 @@ fn nestest() {
         prev(info);
     });
 
-    let (mut config, mapper, mapper_params) = Config::new(&opt);
+    let mut config = Config::new(&opt);
     // Nestest starts the first instruction a cycle early compared to the NES Manual and Mesen.
     config.starting_cpu_cycle = -1;
     // Nestest starts the first instruction on cycle 0, but PPU stuff happens before that.
     config.ppu_clock = Clock::starting_at(-1, MAX_SCANLINE, MAX_CYCLE - 21);
 
-    let mut nes = Nes::new(&config, mapper, mapper_params);
+    let mut nes = Nes::new(&config, &opt.rom_path, false);
 
     // Step past the Start sequence.
     for _ in 0..21 {

@@ -1,7 +1,9 @@
 use std::collections::VecDeque;
 use std::fmt;
-use std::fs::DirBuilder;
+use std::fs::{DirBuilder, File};
+use std::io::Read;
 use std::path::Path;
+
 
 use log::Level::Info;
 use log::{info, log_enabled, warn};
@@ -9,6 +11,9 @@ use num_traits::FromPrimitive;
 
 use crate::apu::apu::Apu;
 use crate::apu::apu_registers::{ApuRegisters, FrameCounterWriteStatus};
+use crate::cartridge::cartridge::Cartridge;
+use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder};
+use crate::cartridge::header_db::HeaderDb;
 use crate::cartridge::resolved_metadata::{MetadataResolver, ResolvedMetadata};
 use crate::config::Config;
 use crate::controller::joypad::Joypad;
@@ -21,6 +26,8 @@ use crate::gui::gui::Events;
 use crate::logging::formatter;
 use crate::logging::formatter::*;
 use crate::mapper::{Mapper, MapperParams, NameTableMirroring, PrgBankRegisterId, ReadWriteStatus};
+use crate::mapper_list;
+use crate::memory::raw_memory::RawMemory;
 use crate::memory::bank::bank_index::{BankLocation, ChrBankRegisterId};
 use crate::memory::cpu::ports::Ports;
 use crate::memory::memory::Memory;
@@ -34,6 +41,7 @@ pub struct Nes {
     apu: Apu,
     pub memory: Memory,
     pub mapper: Box<dyn Mapper>,
+    cartridge: Cartridge,
     resolved_metadata: ResolvedMetadata,
     metadata_resolver: MetadataResolver,
     frame: Frame,
@@ -45,12 +53,14 @@ pub struct Nes {
 }
 
 impl Nes {
-    pub fn new(config: &Config, mapper: Box<dyn Mapper>, mapper_params: MapperParams) -> Nes {
+    pub fn new(config: &Config, path: &Path, allow_saving: bool) -> Nes {
+        let (cartridge, mapper, mapper_params, metadata_resolver) = Nes::load_rom(path, allow_saving);
+
         if let Err(err) = DirBuilder::new().recursive(true).create("saveram") {
             warn!("Failed to create saveram directory. {err}");
         }
 
-        let metadata_resolver = config.metadata_resolver.clone();
+        let metadata_resolver = metadata_resolver.clone();
 
         let (joypad1, joypad2) = (Joypad::new(), Joypad::new());
 
@@ -65,6 +75,7 @@ impl Nes {
             apu: Apu::new(config.disable_audio),
             memory,
             mapper,
+            cartridge,
             resolved_metadata: metadata_resolver.resolve(),
             metadata_resolver,
             frame: Frame::new(),
@@ -132,16 +143,87 @@ impl Nes {
         self.memory.stack_pointer()
     }
 
-    pub fn load_new_config(&mut self, old_config: &Config, path: &Path) {
-        let (cartridge, mapper, mapper_params, metadata_resolver) = Config::load_rom(path, old_config.cartridge.allow_saving());
-        let config = Config {
-            cartridge,
-            metadata_resolver,
-            system_palette: old_config.system_palette.clone(),
-            .. *old_config
+    pub fn load_new_config(&mut self, config: &Config, path: &Path) {
+        *self = Nes::new(config, path, self.cartridge.allow_saving());
+    }
+
+    fn load_rom(path: &Path, allow_saving: bool) -> (Cartridge, Box<dyn Mapper>, MapperParams, MetadataResolver) {
+        info!("Loading ROM '{}'.", path.display());
+        let mut raw_header_and_data = Vec::new();
+        File::open(path).unwrap().read_to_end(&mut raw_header_and_data).unwrap();
+        let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
+        let mut header = CartridgeMetadata::parse(path, &raw_header_and_data).unwrap();
+        let cartridge = Cartridge::load(path, &header, &raw_header_and_data, allow_saving).unwrap();
+        let prg_rom_hash = crc32fast::hash(cartridge.prg_rom().as_slice());
+        header.set_prg_rom_hash(prg_rom_hash);
+        let chr_rom_hash = crc32fast::hash(cartridge.chr_rom().as_slice());
+        header.set_chr_rom_hash(chr_rom_hash);
+
+        let header_db = HeaderDb::load();
+        let cartridge_mapper_number = header.mapper_number().unwrap();
+        let mut db_header = CartridgeMetadataBuilder::new().build();
+        if let Some(db_cartridge_metadata) = header_db.header_from_db(header.full_hash().unwrap(), prg_rom_hash, cartridge_mapper_number, header.submapper_number()) {
+            db_header = db_cartridge_metadata;
+            if cartridge_mapper_number != db_header.mapper_number().unwrap() {
+                warn!("Mapper number in ROM ({}) does not match the one in the DB ({}).",
+                    cartridge_mapper_number, db_header.mapper_number().unwrap());
+            }
+
+            assert_eq!(header.prg_rom_size().unwrap(), db_header.prg_rom_size().unwrap());
+            if header.chr_rom_size().unwrap() != db_header.chr_rom_size().unwrap_or(0) {
+                warn!("CHR ROM size in cartridge did not match size in header DB.");
+            }
+        } else {
+            warn!("ROM not found in header database.");
+        }
+
+        let mut hard_coded_overrides = CartridgeMetadataBuilder::new();
+        if let Some((number, sub_number, full_hash, prg_hash)) =
+                header_db.override_submapper_number(header.full_hash().unwrap(), prg_rom_hash) && cartridge_mapper_number == number {
+
+            info!("Using override submapper {sub_number} for this ROM. Full hash: {full_hash:X} , PRG hash: {prg_hash:X}");
+            hard_coded_overrides
+                .mapper_and_submapper_number(number, Some(sub_number))
+                .full_hash(full_hash)
+                .prg_rom_hash(prg_hash);
+        }
+
+        let mut db_extension_metadata = CartridgeMetadataBuilder::new();
+        if let Some((number, sub_number, full_hash, prg_hash)) =
+                header_db.missing_submapper_number(header.full_hash().unwrap(), prg_rom_hash) && cartridge_mapper_number == number {
+
+            info!("Using submapper {sub_number} from the database extension for this ROM. Full hash: {full_hash:X} , PRG hash: {prg_hash:X}");
+            db_extension_metadata
+                .mapper_and_submapper_number(number, Some(sub_number))
+                .full_hash(full_hash)
+                .prg_rom_hash(prg_hash);
+        }
+
+        let mut metadata_resolver = MetadataResolver {
+            hard_coded_overrides: hard_coded_overrides.build(),
+            cartridge: header,
+            database: db_header,
+            database_extension: db_extension_metadata.build(),
+            // This can only be set correctly once the mapper has been looked up.
+            layout_has_prg_ram: false,
         };
 
-        *self = Nes::new(&config, mapper, mapper_params);
+        let mapper = mapper_list::lookup_mapper(&metadata_resolver, &cartridge);
+
+        let name_table_mirroring_index = usize::try_from(metadata_resolver.cartridge.name_table_mirroring_index().unwrap()).unwrap();
+        if let Some(mirroring) = mapper.layout().cartridge_selection_name_table_mirrorings()[name_table_mirroring_index] {
+            metadata_resolver.cartridge.set_name_table_mirroring(mirroring);
+        }
+
+        let metadata = metadata_resolver.resolve();
+        let mut mapper_params = mapper.layout().make_mapper_params(&metadata, &cartridge);
+        mapper.init_mapper_params(&mut mapper_params);
+
+        metadata_resolver.layout_has_prg_ram = mapper.layout().has_prg_ram();
+        let metadata = metadata_resolver.resolve();
+        info!("ROM loaded.\n{metadata}");
+
+        (cartridge, mapper, mapper_params, metadata_resolver)
     }
 
     pub fn mute(&mut self) {

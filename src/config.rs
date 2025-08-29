@@ -1,28 +1,16 @@
-use std::fs::File;
-use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::str::FromStr;
 
-use log::{info, warn};
 use structopt::StructOpt;
 
-use crate::cartridge::cartridge::Cartridge;
-use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder};
-use crate::cartridge::header_db::HeaderDb;
-use crate::cartridge::resolved_metadata::MetadataResolver;
 use crate::gui::egui_gui::EguiGui;
 use crate::gui::gui::Gui;
 use crate::gui::no_gui::NoGui;
-use crate::mapper::{Mapper, MapperParams};
-use crate::mapper_list;
-use crate::memory::raw_memory::RawMemory;
 use crate::ppu::clock::Clock;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::render::frame_rate::{FrameRate, TargetFrameRate};
 
 pub struct Config {
-    pub cartridge: Cartridge,
-    pub metadata_resolver: MetadataResolver,
     pub starting_cpu_cycle: i64,
     pub ppu_clock: Clock,
     pub system_palette: SystemPalette,
@@ -34,25 +22,17 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(opt: &Opt) -> (Config, Box<dyn Mapper>, MapperParams) {
-        let (cartridge, mapper, mapper_params, metadata_resolver) = Config::load_rom(&opt.rom_path, !opt.prevent_saving);
-        let system_palette =
-            SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap();
-
-        let config = Config {
-            cartridge,
-            metadata_resolver,
+    pub fn new(opt: &Opt) -> Config {
+        Config {
             starting_cpu_cycle: 0,
             ppu_clock: Clock::mesen_compatible(),
-            system_palette,
+            system_palette: SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap(),
             target_frame_rate: opt.target_frame_rate,
             disable_audio: opt.disable_audio,
             stop_frame: opt.stop_frame,
             frame_dump: opt.frame_dump,
             cpu_step_formatting: opt.cpu_step_formatting,
-        };
-
-        (config, mapper, mapper_params)
+        }
     }
 
     pub fn gui(opt: &Opt) -> Box<dyn Gui> {
@@ -60,85 +40,6 @@ impl Config {
             GuiType::NoGui => Box::new(NoGui::new()) as Box<dyn Gui>,
             GuiType::Egui => Box::new(EguiGui),
         }
-    }
-
-    pub fn load_rom(path: &Path, allow_saving: bool) -> (Cartridge, Box<dyn Mapper>, MapperParams, MetadataResolver) {
-        info!("Loading ROM '{}'.", path.display());
-        let mut raw_header_and_data = Vec::new();
-        File::open(path).unwrap().read_to_end(&mut raw_header_and_data).unwrap();
-        let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
-        let mut header = CartridgeMetadata::parse(path, &raw_header_and_data).unwrap();
-        let cartridge = Cartridge::load(path, &header, &raw_header_and_data, allow_saving).unwrap();
-        let prg_rom_hash = crc32fast::hash(cartridge.prg_rom().as_slice());
-        header.set_prg_rom_hash(prg_rom_hash);
-        let chr_rom_hash = crc32fast::hash(cartridge.chr_rom().as_slice());
-        header.set_chr_rom_hash(chr_rom_hash);
-
-        let header_db = HeaderDb::load();
-        let cartridge_mapper_number = header.mapper_number().unwrap();
-        let mut db_header = CartridgeMetadataBuilder::new().build();
-        if let Some(db_cartridge_metadata) = header_db.header_from_db(header.full_hash().unwrap(), prg_rom_hash, cartridge_mapper_number, header.submapper_number()) {
-            db_header = db_cartridge_metadata;
-            if cartridge_mapper_number != db_header.mapper_number().unwrap() {
-                warn!("Mapper number in ROM ({}) does not match the one in the DB ({}).",
-                    cartridge_mapper_number, db_header.mapper_number().unwrap());
-            }
-
-            assert_eq!(header.prg_rom_size().unwrap(), db_header.prg_rom_size().unwrap());
-            if header.chr_rom_size().unwrap() != db_header.chr_rom_size().unwrap_or(0) {
-                warn!("CHR ROM size in cartridge did not match size in header DB.");
-            }
-        } else {
-            warn!("ROM not found in header database.");
-        }
-
-        let mut hard_coded_overrides = CartridgeMetadataBuilder::new();
-        if let Some((number, sub_number, full_hash, prg_hash)) =
-                header_db.override_submapper_number(header.full_hash().unwrap(), prg_rom_hash) && cartridge_mapper_number == number {
-
-            info!("Using override submapper {sub_number} for this ROM. Full hash: {full_hash:X} , PRG hash: {prg_hash:X}");
-            hard_coded_overrides
-                .mapper_and_submapper_number(number, Some(sub_number))
-                .full_hash(full_hash)
-                .prg_rom_hash(prg_hash);
-        }
-
-        let mut db_extension_metadata = CartridgeMetadataBuilder::new();
-        if let Some((number, sub_number, full_hash, prg_hash)) =
-                header_db.missing_submapper_number(header.full_hash().unwrap(), prg_rom_hash) && cartridge_mapper_number == number {
-
-            info!("Using submapper {sub_number} from the database extension for this ROM. Full hash: {full_hash:X} , PRG hash: {prg_hash:X}");
-            db_extension_metadata
-                .mapper_and_submapper_number(number, Some(sub_number))
-                .full_hash(full_hash)
-                .prg_rom_hash(prg_hash);
-        }
-
-        let mut metadata_resolver = MetadataResolver {
-            hard_coded_overrides: hard_coded_overrides.build(),
-            cartridge: header,
-            database: db_header,
-            database_extension: db_extension_metadata.build(),
-            // This can only be set correctly once the mapper has been looked up.
-            layout_has_prg_ram: false,
-        };
-
-        let mapper = mapper_list::lookup_mapper(&metadata_resolver, &cartridge);
-
-        let name_table_mirroring_index = usize::try_from(metadata_resolver.cartridge.name_table_mirroring_index().unwrap()).unwrap();
-        if let Some(mirroring) = mapper.layout().cartridge_selection_name_table_mirrorings()[name_table_mirroring_index] {
-            metadata_resolver.cartridge.set_name_table_mirroring(mirroring);
-        }
-
-        let metadata = metadata_resolver.resolve();
-        let mut mapper_params = mapper.layout().make_mapper_params(&metadata, &cartridge);
-        mapper.init_mapper_params(&mut mapper_params);
-
-        metadata_resolver.layout_has_prg_ram = mapper.layout().has_prg_ram();
-        let metadata = metadata_resolver.resolve();
-        info!("ROM loaded.\n{metadata}");
-
-        (cartridge, mapper, mapper_params, metadata_resolver)
     }
 }
 

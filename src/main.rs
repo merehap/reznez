@@ -44,9 +44,9 @@ fn main() {
     if opt.analysis {
         analysis::cartridge_db::analyze(&opt.rom_path);
     } else {
-        let (config, mapper, mapper_params) = Config::new(&opt);
+        let config = Config::new(&opt);
         let mut gui = Config::gui(&opt);
-        let nes = Nes::new(&config, mapper, mapper_params);
+        let nes = Nes::new(&config, &opt.rom_path, !opt.prevent_saving);
 
         gui.run(nes, config);
     }
