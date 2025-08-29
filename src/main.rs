@@ -46,7 +46,7 @@ fn main() {
     } else {
         let config = Config::new(&opt);
         let mut gui = Config::gui(&opt);
-        let nes = Nes::new(&config, &opt.rom_path, !opt.prevent_saving);
+        let nes = Nes::new(&config, &opt.rom_path);
 
         gui.run(nes, config);
     }

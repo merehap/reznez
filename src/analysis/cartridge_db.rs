@@ -41,7 +41,7 @@ pub fn analyze(rom_base_path: &Path) {
             }
         };
 
-        match Cartridge::load(&rom_path, &header, &raw_header_and_data, false) {
+        match Cartridge::load(&rom_path, &header, &raw_header_and_data) {
             Err(err) => error!("Failed to load rom contents {}. {}", rom_path.display(), err),
             Ok(cartridge) => headers_and_cartridges.push((header, cartridge)),
         }

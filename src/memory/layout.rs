@@ -51,7 +51,7 @@ impl Layout {
         LayoutBuilder::new()
     }
 
-    pub fn make_mapper_params(self, metadata: &ResolvedMetadata, cartridge: &Cartridge) -> MapperParams {
+    pub fn make_mapper_params(self, metadata: &ResolvedMetadata, cartridge: &Cartridge, allow_saving: bool) -> MapperParams {
         let prg_rom_size = cartridge.prg_rom().size();
         assert!(prg_rom_size <= self.prg_rom_max_size,
             "PRG ROM size of {}KiB is too large for this mapper.", prg_rom_size / KIBIBYTE);
@@ -112,7 +112,7 @@ impl Layout {
             self.prg_rom_outer_bank_layout,
             self.prg_rom_bank_size_override,
             RawMemory::new(metadata.prg_work_ram_size),
-            SaveRam::open(&cartridge.path().to_prg_save_ram_file_path(), metadata.prg_save_ram_size, cartridge.allow_saving()),
+            SaveRam::open(&cartridge.path().to_prg_save_ram_file_path(), metadata.prg_save_ram_size, allow_saving),
             prg_bank_registers,
         );
 

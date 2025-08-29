@@ -41,7 +41,6 @@ pub struct Nes {
     apu: Apu,
     pub memory: Memory,
     pub mapper: Box<dyn Mapper>,
-    cartridge: Cartridge,
     resolved_metadata: ResolvedMetadata,
     metadata_resolver: MetadataResolver,
     frame: Frame,
@@ -53,8 +52,8 @@ pub struct Nes {
 }
 
 impl Nes {
-    pub fn new(config: &Config, path: &Path, allow_saving: bool) -> Nes {
-        let (cartridge, mapper, mapper_params, metadata_resolver) = Nes::load_rom(path, allow_saving);
+    pub fn new(config: &Config, path: &Path) -> Nes {
+        let (mapper, mapper_params, metadata_resolver) = Nes::load_rom(config, path);
 
         if let Err(err) = DirBuilder::new().recursive(true).create("saveram") {
             warn!("Failed to create saveram directory. {err}");
@@ -75,7 +74,6 @@ impl Nes {
             apu: Apu::new(config.disable_audio),
             memory,
             mapper,
-            cartridge,
             resolved_metadata: metadata_resolver.resolve(),
             metadata_resolver,
             frame: Frame::new(),
@@ -128,16 +126,16 @@ impl Nes {
     }
 
     pub fn load_new_config(&mut self, config: &Config, path: &Path) {
-        *self = Nes::new(config, path, self.cartridge.allow_saving());
+        *self = Nes::new(config, path);
     }
 
-    fn load_rom(path: &Path, allow_saving: bool) -> (Cartridge, Box<dyn Mapper>, MapperParams, MetadataResolver) {
+    fn load_rom(config: &Config, path: &Path) -> (Box<dyn Mapper>, MapperParams, MetadataResolver) {
         info!("Loading ROM '{}'.", path.display());
         let mut raw_header_and_data = Vec::new();
         File::open(path).unwrap().read_to_end(&mut raw_header_and_data).unwrap();
         let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
         let mut header = CartridgeMetadata::parse(path, &raw_header_and_data).unwrap();
-        let cartridge = Cartridge::load(path, &header, &raw_header_and_data, allow_saving).unwrap();
+        let cartridge = Cartridge::load(path, &header, &raw_header_and_data).unwrap();
         let prg_rom_hash = crc32fast::hash(cartridge.prg_rom().as_slice());
         header.set_prg_rom_hash(prg_rom_hash);
         let chr_rom_hash = crc32fast::hash(cartridge.chr_rom().as_slice());
@@ -200,14 +198,14 @@ impl Nes {
         }
 
         let metadata = metadata_resolver.resolve();
-        let mut mapper_params = mapper.layout().make_mapper_params(&metadata, &cartridge);
+        let mut mapper_params = mapper.layout().make_mapper_params(&metadata, &cartridge, config.allow_saving);
         mapper.init_mapper_params(&mut mapper_params);
 
         metadata_resolver.layout_has_prg_ram = mapper.layout().has_prg_ram();
         let metadata = metadata_resolver.resolve();
         info!("ROM loaded.\n{metadata}");
 
-        (cartridge, mapper, mapper_params, metadata_resolver)
+        (mapper, mapper_params, metadata_resolver)
     }
 
     pub fn mute(&mut self) {

@@ -14,7 +14,6 @@ use crate::util::unit::KIBIBYTE;
 pub struct Cartridge {
     path: CartridgePath,
     title: String,
-    allow_saving: bool,
 
     prg_rom: RawMemory,
     chr_rom: RawMemory,
@@ -23,7 +22,7 @@ pub struct Cartridge {
 
 impl Cartridge {
     #[rustfmt::skip]
-    pub fn load(path: &Path, header: &CartridgeMetadata, raw_header_and_data: &RawMemory, allow_saving: bool) -> Result<Cartridge, String> {
+    pub fn load(path: &Path, header: &CartridgeMetadata, raw_header_and_data: &RawMemory) -> Result<Cartridge, String> {
         let path = CartridgePath(path.to_path_buf());
 
         let prg_rom_start = 0x10;
@@ -56,7 +55,7 @@ impl Cartridge {
             .take_while(|&c| c != '\u{0}')
             .collect();
 
-        Ok(Cartridge { path, title, trainer: None, prg_rom, chr_rom, allow_saving })
+        Ok(Cartridge { path, title, trainer: None, prg_rom, chr_rom })
     }
 
     pub fn name(&self) -> String {
@@ -81,10 +80,6 @@ impl Cartridge {
 
     pub fn chr_rom_size(&self) -> u32 {
         self.chr_rom.size()
-    }
-
-    pub fn allow_saving(&self) -> bool {
-        self.allow_saving
     }
 }
 

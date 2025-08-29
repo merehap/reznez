@@ -53,7 +53,7 @@ fn nestest() {
     // Nestest starts the first instruction on cycle 0, but PPU stuff happens before that.
     config.ppu_clock = Clock::starting_at(-1, MAX_SCANLINE, MAX_CYCLE - 21);
 
-    let mut nes = Nes::new(&config, &opt.rom_path, false);
+    let mut nes = Nes::new(&config, &opt.rom_path);
 
     // Step past the Start sequence.
     for _ in 0..21 {

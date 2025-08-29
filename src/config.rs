@@ -19,6 +19,7 @@ pub struct Config {
     pub stop_frame: Option<i64>,
     pub frame_dump: bool,
     pub cpu_step_formatting: CpuStepFormatting,
+    pub allow_saving: bool,
 }
 
 impl Config {
@@ -32,6 +33,7 @@ impl Config {
             stop_frame: opt.stop_frame,
             frame_dump: opt.frame_dump,
             cpu_step_formatting: opt.cpu_step_formatting,
+            allow_saving: !opt.prevent_saving,
         }
     }
 

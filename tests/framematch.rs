@@ -51,7 +51,7 @@ impl TestSummary {
                 };
 
                 let config = Config::new(&opt);
-                let mut nes = Nes::new(&config, &opt.rom_path, false);
+                let mut nes = Nes::new(&config, &opt.rom_path);
                 nes.mute();
                 *nes.frame_mut().show_overscan_mut() = true;
 
