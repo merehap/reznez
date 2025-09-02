@@ -10,7 +10,6 @@ use rusqlite::{params, Connection, MappedRows};
 use walkdir::WalkDir;
 
 use crate::cartridge::cartridge::Cartridge;
-use crate::cartridge::cartridge_metadata::CartridgeMetadata;
 use crate::memory::raw_memory::RawMemory;
 
 // TODO: Extend this with header DB metadata.
@@ -21,7 +20,7 @@ pub fn analyze(rom_base_path: &Path) {
         .filter(|path| path.extension() == Some(OsStr::new("nes")))
         .collect();
 
-    let mut headers_and_cartridges = Vec::new();
+    let mut cartridges = Vec::new();
     for rom_path in rom_paths {
         let mut raw_header_and_data = Vec::new();
         File::open(rom_path.clone())
@@ -30,15 +29,10 @@ pub fn analyze(rom_base_path: &Path) {
             .unwrap();
         let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
 
-        CartridgeMetadata::parse(&rom_path, &raw_header_and_data)
-            .map_err(|err| error!("Failed to load rom metadata {}. {}", rom_path.display(), err))
-            .iter()
-            .for_each(|metadata| {
-                match Cartridge::load(&rom_path, metadata, &raw_header_and_data) {
-                    Ok(cartridge) => headers_and_cartridges.push((metadata.clone(), cartridge)),
-                    Err(err) => error!("Failed to load rom contents {}. {}", rom_path.display(), err),
-                }
-            });
+        match Cartridge::load(&rom_path, &raw_header_and_data) {
+            Ok(cartridge) => cartridges.push(cartridge),
+            Err(err) => error!("Failed to load rom {}. {}", rom_path.display(), err),
+        }
     }
 
     let connection = Connection::open_in_memory().unwrap();
@@ -68,14 +62,14 @@ pub fn analyze(rom_base_path: &Path) {
             [],
         )
         .unwrap();
-    for (header, cartridge) in headers_and_cartridges {
+    for cartridge in cartridges {
         connection
             .execute(
                 "INSERT INTO cartridges VALUES (?1, ?2, ?3)",
                 params![
                     cartridge.name(),
-                    header.mapper_number().unwrap(),
-                    format!("{:?}", header.name_table_mirroring()),
+                    cartridge.header().mapper_number().unwrap(),
+                    format!("{:?}", cartridge.header().name_table_mirroring()),
                 ],
             )
             .unwrap();

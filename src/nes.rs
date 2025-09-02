@@ -12,7 +12,7 @@ use num_traits::FromPrimitive;
 use crate::apu::apu::Apu;
 use crate::apu::apu_registers::{ApuRegisters, FrameCounterWriteStatus};
 use crate::cartridge::cartridge::Cartridge;
-use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder};
+use crate::cartridge::cartridge_metadata::CartridgeMetadataBuilder;
 use crate::cartridge::header_db::HeaderDb;
 use crate::cartridge::resolved_metadata::{MetadataResolver, ResolvedMetadata};
 use crate::config::Config;
@@ -52,23 +52,16 @@ pub struct Nes {
 }
 
 impl Nes {
-    pub fn load_header_and_cartridge(path: &Path) -> (CartridgeMetadata, Cartridge) {
+    pub fn load_cartridge(path: &Path) -> Cartridge {
         info!("Loading ROM '{}'.", path.display());
         let mut raw_header_and_data = Vec::new();
         File::open(path).unwrap().read_to_end(&mut raw_header_and_data).unwrap();
         let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
-        let mut header = CartridgeMetadata::parse(path, &raw_header_and_data).unwrap();
-        let cartridge = Cartridge::load(path, &header, &raw_header_and_data).unwrap();
-        let prg_rom_hash = crc32fast::hash(cartridge.prg_rom().as_slice());
-        header.set_prg_rom_hash(prg_rom_hash);
-        let chr_rom_hash = crc32fast::hash(cartridge.chr_rom().as_slice());
-        header.set_chr_rom_hash(chr_rom_hash);
-
-        (header, cartridge)
+        Cartridge::load(path, &raw_header_and_data).unwrap()
     }
 
-    pub fn new(config: &Config, header: CartridgeMetadata, cartridge: Cartridge) -> Nes {
-        let (mapper, mapper_params, metadata_resolver) = Nes::load_rom(config, header, cartridge);
+    pub fn new(config: &Config, cartridge: Cartridge) -> Nes {
+        let (mapper, mapper_params, metadata_resolver) = Nes::load_rom(config, cartridge);
 
         if let Err(err) = DirBuilder::new().recursive(true).create("saveram") {
             warn!("Failed to create saveram directory. {err}");
@@ -138,7 +131,8 @@ impl Nes {
         self.memory.stack_pointer()
     }
 
-    fn load_rom(config: &Config, header: CartridgeMetadata, cartridge: Cartridge) -> (Box<dyn Mapper>, MapperParams, MetadataResolver) {
+    fn load_rom(config: &Config, cartridge: Cartridge) -> (Box<dyn Mapper>, MapperParams, MetadataResolver) {
+        let header = cartridge.header();
         let header_db = HeaderDb::load();
         let cartridge_mapper_number = header.mapper_number().unwrap();
         let prg_rom_hash = header.prg_rom_hash().unwrap();
@@ -183,7 +177,7 @@ impl Nes {
 
         let mut metadata_resolver = MetadataResolver {
             hard_coded_overrides: hard_coded_overrides.build(),
-            cartridge: header,
+            cartridge: header.clone(),
             database: db_header,
             database_extension: db_extension_metadata.build(),
             // This can only be set correctly once the mapper has been looked up.

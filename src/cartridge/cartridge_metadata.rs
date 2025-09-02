@@ -1,20 +1,10 @@
 use std::fmt;
-use std::path::Path;
 
 use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
-use splitbits::{combinebits, splitbits};
 use ux::u2;
 
 use crate::mapper_list::MAPPERS_WITHOUT_SUBMAPPER_0;
-use crate::memory::raw_memory::RawMemory;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
-use crate::util::unit::KIBIBYTE;
-
-pub const PRG_ROM_CHUNK_LENGTH: u32 = 16 * KIBIBYTE;
-pub const CHR_ROM_CHUNK_LENGTH: u32 = 8 * KIBIBYTE;
-const INES_HEADER_CONSTANT: u32 = u32::from_be_bytes([b'N', b'E', b'S', 0x1A]);
-const NES2_0_HEADER_CONSTANT: u8 = 0b10;
 
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
@@ -48,67 +38,6 @@ pub struct CartridgeMetadata {
 }
 
 impl CartridgeMetadata {
-    pub fn parse(path: &Path, raw_header_and_data: &RawMemory) -> Result<CartridgeMetadata, String> {
-        let Some(low_header) = raw_header_and_data.peek_u64(0..=7) else {
-            return Err(format!("ROM file should have a 16 byte header. ROM: {}", path.display()));
-        };
-        let low_header = splitbits!(low_header, "iiiiiiii iiiiiiii iiiiiiii iiiiiiii pppppppp cccccccc llllntbn mmmmvvxx");
-        if low_header.i != INES_HEADER_CONSTANT {
-            return Err(format!("Cannot load non-iNES ROM. Found {:08X} but need {INES_HEADER_CONSTANT:08X}.", low_header.i));
-        }
-
-        if low_header.t {
-            return Err(format!("Trainer isn't implemented yet. ROM: {}", path.display()));
-        }
-
-        let mut builder = CartridgeMetadataBuilder::new();
-        builder
-            .has_persistent_memory(low_header.b)
-            .name_table_mirroring_index(u2::new(low_header.n))
-            .full_hash(crc32fast::hash(raw_header_and_data.as_slice()));
-
-        if low_header.v == NES2_0_HEADER_CONSTANT {
-            // NES2.0 fields
-            let Some(high_header) = raw_header_and_data.peek_u64(8..=15) else {
-                return Err(format!("ROM file should have a 16 byte header. ROM: {}", path.display()));
-            };
-            let high_header = splitbits!(high_header, "ssssmmmm ccccpppp ffffgggg hhhhiiii ......tt vvvvxxxx ......rr ..dddddd");
-            assert!(high_header.c != 0xF, "CHR exponent notation not yet supported.");
-            assert!(high_header.p != 0xF, "PRG exponent notation not yet supported.");
-
-            let mapper_number = combinebits!(high_header.m, low_header.m, low_header.l, "0000hhhh mmmmllll");
-            let console_type = ConsoleType::extended(low_header.x, high_header.x);
-            builder
-                .mapper_and_submapper_number(mapper_number, Some(high_header.s))
-                .prg_rom_size(combinebits!(high_header.p, low_header.p, "000000hh hhllllll ll000000 00000000"))
-                .chr_rom_size(combinebits!(high_header.c, low_header.c, "0000000h hhhlllll lll00000 00000000"))
-                .prg_save_ram_size(if high_header.f == 0 { 0 } else { 64 << high_header.f })
-                .prg_work_ram_size(if high_header.g == 0 { 0 } else { 64 << high_header.g })
-                .chr_save_ram_size(if high_header.h == 0 { 0 } else { 64 << high_header.h })
-                .chr_work_ram_size(if high_header.i == 0 { 0 } else { 64 << high_header.i })
-                .console_type(console_type)
-                .timing_mode(FromPrimitive::from_u8(high_header.t).unwrap())
-                .miscellaneous_rom_count(high_header.r)
-                .default_expansion_device(FromPrimitive::from_u8(high_header.d).unwrap());
-
-                if console_type == ConsoleType::Vs {
-                    builder
-                        .vs_hardware_type(FromPrimitive::from_u8(high_header.v).unwrap())
-                        .vs_ppu_type(FromPrimitive::from_u8(high_header.x).unwrap());
-                }
-        } else {
-            // iNES only (*no* NES2.0 fields)
-            let mapper_number = combinebits!(low_header.m, low_header.l, "00000000 mmmmllll");
-            builder
-                .mapper_and_submapper_number(mapper_number, None)
-                .prg_rom_size(u32::from(low_header.p) * PRG_ROM_CHUNK_LENGTH)
-                .chr_rom_size(u32::from(low_header.c) * CHR_ROM_CHUNK_LENGTH)
-                .console_type(ConsoleType::basic(low_header.x));
-        }
-
-        Ok(builder.build())
-    }
-
     pub fn full_hash(&self) -> Option<u32> {
         self.full_hash
     }
@@ -446,12 +375,12 @@ pub enum ConsoleType {
 }
 
 impl ConsoleType {
-    fn basic(basic_console_type: u8) -> Self {
+    pub fn basic(basic_console_type: u8) -> Self {
         assert!(basic_console_type < 3);
         Self::from_u8(basic_console_type)
     }
 
-    fn extended(basic_console_type: u8, extended_console_type: u8) -> Self {
+    pub fn extended(basic_console_type: u8, extended_console_type: u8) -> Self {
         match basic_console_type {
             0..=2 => Self::from_u8(basic_console_type),
             3 => {

@@ -49,8 +49,8 @@ fn main() {
         let config = Config::new(&opt);
         let mut gui = Config::gui(&opt);
         let nes = opt.rom_path.map(|path| {
-            let (header, cartridge) = Nes::load_header_and_cartridge(&path);
-            Nes::new(&config, header, cartridge)
+            let cartridge = Nes::load_cartridge(&path);
+            Nes::new(&config, cartridge)
         });
 
         gui.run(nes, config);
