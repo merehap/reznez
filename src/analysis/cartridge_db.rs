@@ -1,16 +1,13 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::ffi::OsStr;
-use std::fs::File;
-use std::io::Read;
 use std::path::Path;
 
-use itertools::Itertools;
-use log::{error, info};
+use log::info;
 use rusqlite::{params, Connection, MappedRows};
 use walkdir::WalkDir;
 
-use crate::cartridge::cartridge::Cartridge;
-use crate::memory::raw_memory::RawMemory;
+use crate::config::{Config, GuiType, Opt};
+use crate::nes::Nes;
 
 // TODO: Extend this with header DB metadata.
 pub fn analyze(rom_base_path: &Path) {
@@ -20,19 +17,20 @@ pub fn analyze(rom_base_path: &Path) {
         .filter(|path| path.extension() == Some(OsStr::new("nes")))
         .collect();
 
-    let mut cartridges = Vec::new();
+    let mut all_metadata = Vec::new();
     for rom_path in rom_paths {
-        let mut raw_header_and_data = Vec::new();
-        File::open(rom_path.clone())
-            .unwrap()
-            .read_to_end(&mut raw_header_and_data)
-            .unwrap();
-        let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
+        let opt = Opt {
+            gui: GuiType::NoGui,
+            disable_audio: true,
+            prevent_saving: true,
+            ..Opt::new(None)
+        };
 
-        match Cartridge::load(&rom_path, &raw_header_and_data) {
-            Ok(cartridge) => cartridges.push(cartridge),
-            Err(err) => error!("Failed to load rom {}. {}", rom_path.display(), err),
-        }
+        let config = Config::new(&opt);
+
+        let cartridge = Nes::load_cartridge(&rom_path);
+        let nes = Nes::new(&config, cartridge);
+        all_metadata.push((rom_path, nes.resolved_metadata().clone()));
     }
 
     let connection = Connection::open_in_memory().unwrap();
@@ -57,19 +55,35 @@ pub fn analyze(rom_base_path: &Path) {
             miscellaneous_rom_count INTEGER NOT NULL,
             default_expansion_device TEXT NOT NULL,
             vs_hardware_type TEXT,
-            vs_ppu_type TEXT,
+            vs_ppu_type TEXT
         )",
             [],
         )
         .unwrap();
-    for cartridge in cartridges {
+    for (path, metadata) in all_metadata {
         connection
             .execute(
-                "INSERT INTO cartridges VALUES (?1, ?2, ?3)",
+                "INSERT INTO cartridges VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)",
                 params![
-                    cartridge.name(),
-                    cartridge.header().mapper_number().unwrap(),
-                    format!("{:?}", cartridge.header().name_table_mirroring()),
+                    path.file_stem().unwrap().to_str().unwrap(),
+                    metadata.mapper_number,
+                    metadata.submapper_number,
+                    metadata.name_table_mirroring.unwrap().to_string(),
+                    metadata.full_hash.to_string(),
+                    metadata.prg_rom_hash.to_string(),
+                    metadata.chr_rom_hash.to_string(),
+                    metadata.prg_rom_size.to_string(),
+                    metadata.prg_work_ram_size.to_string(),
+                    metadata.prg_save_ram_size.to_string(),
+                    metadata.chr_rom_size.to_string(),
+                    metadata.chr_work_ram_size.to_string(),
+                    metadata.chr_save_ram_size.to_string(),
+                    metadata.console_type.to_string(),
+                    format!("{:?}", metadata.region_timing_mode),
+                    metadata.miscellaneous_rom_count.to_string(),
+                    format!("{:?}", metadata.default_expansion_device),
+                    metadata.vs.clone().map(|vs| format!("{:?}", vs.hardware_type)),
+                    metadata.vs.map(|vs| format!("{:?}", vs.ppu_type)),
                 ],
             )
             .unwrap();
@@ -78,33 +92,22 @@ pub fn analyze(rom_base_path: &Path) {
     let db = CartridgeDB { connection };
     let mut select = db
         .connection
-        .prepare("SELECT name, mapper, mirroring FROM cartridges ORDER BY mapper ASC")
+        .prepare("SELECT * FROM cartridges ORDER BY mapper ASC")
         .unwrap();
 
     let cartridge_iter: MappedRows<_> = select
         .query_map([], |row| {
-            let r0: String = row.get(0).unwrap();
-            let r1: i32 = row.get(1).unwrap();
-            let r2: String = row.get(2).unwrap();
+            let r0: String = row.get("name").unwrap();
+            let r1: i32 = row.get("mapper").unwrap();
+            let r2: String = row.get("name_table_mirroring").unwrap();
             Ok((r0, r1, r2))
         })
         .unwrap();
 
-    let cartridge_iter = cartridge_iter.map(|entry| {
+    cartridge_iter.for_each(|entry| {
         let entry = entry.as_ref().unwrap();
-        (entry.0.clone(), entry.1, entry.2.clone())
+        info!("{} {} {}", entry.0.clone(), entry.1, entry.2.clone());
     });
-
-    let grouped_cartridges: BTreeMap<i32, Vec<(String, i32, String)>> = cartridge_iter
-        .into_group_map_by(|(_, mapper_number, _)| *mapper_number)
-        .into_iter()
-        .collect();
-    for (mapper_number, group) in &grouped_cartridges {
-        info!("{mapper_number}");
-        for (name, _, name_table_mirroring) in group {
-            info!("\t{name}: {name_table_mirroring} mirroring");
-        }
-    }
 }
 
 struct CartridgeDB {

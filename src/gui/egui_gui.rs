@@ -15,7 +15,7 @@ use winit::window::Window;
 use winit::window::{WindowBuilder, WindowId};
 use winit_input_helper::WinitInputHelper;
 
-use crate::cartridge::resolved_metadata::ResolvedMetadata;
+use crate::cartridge::resolved_metadata::{ResolvedMetadata, Vs};
 use crate::config::Config;
 use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::debug_screens::name_table::NameTable;
@@ -1158,9 +1158,16 @@ impl Renderer for CartridgeMetadataRenderer {
         // Explicitly spell out each field so that if a new one is added, a compile error occurs so it becomes apparent that the
         // field needs to be added to the GUI.
         let ResolvedMetadata { mapper_number, submapper_number, name_table_mirroring, has_persistent_memory,
-            full_hash: _, prg_rom_hash: _, prg_rom_size, prg_work_ram_size, prg_save_ram_size,
+            full_hash: _, prg_rom_hash: _, chr_rom_hash: _, prg_rom_size, prg_work_ram_size, prg_save_ram_size,
             chr_rom_size, chr_work_ram_size, chr_save_ram_size, console_type, region_timing_mode, miscellaneous_rom_count,
             default_expansion_device, vs } = resolver.resolve();
+        let mut vs_hardware_type = None;
+        let mut vs_ppu_type = None;
+        if let Some(Vs { hardware_type, ppu_type}) = vs {
+            vs_hardware_type = Some(hardware_type);
+            vs_ppu_type = Some(ppu_type);
+        }
+
         let metadata_sources = [
             &resolver.hard_coded_overrides,
             &resolver.cartridge,
@@ -1301,14 +1308,14 @@ impl Renderer for CartridgeMetadataRenderer {
                     ui.end_row();
 
                     ui.label("VS Hardware Type");
-                    ui.label(vs.clone().map_or("".to_owned(), |vs| format!("{:?}", vs.hardware_type)));
+                    ui.label(vs_hardware_type.map_or("".to_owned(), |hardware| format!("{hardware:?}")));
                     for metadata in metadata_sources {
                         ui.label(metadata.vs_hardware_type().map_or("".to_owned(), |hardware| format!("{hardware:?}")));
                     }
                     ui.end_row();
 
                     ui.label("VS PPU Type");
-                    ui.label(vs.map_or("".to_owned(), |vs| format!("{:?}", vs.ppu_type)));
+                    ui.label(vs_ppu_type.map_or("".to_owned(), |ppu| format!("{ppu:?}")));
                     for metadata in metadata_sources {
                         ui.label(metadata.vs_ppu_type().map_or("".to_owned(), |ppu| format!("{ppu:?}")));
                     }

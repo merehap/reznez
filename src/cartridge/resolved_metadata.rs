@@ -16,6 +16,7 @@ pub struct ResolvedMetadata {
 
     pub full_hash: u32,
     pub prg_rom_hash: u32,
+    pub chr_rom_hash: u32,
 
     pub prg_rom_size: u32,
     pub prg_work_ram_size: u32,
@@ -89,6 +90,7 @@ impl MetadataResolver {
             // TODO: Verify that all hashes match.
             full_hash: self.cartridge.full_hash().unwrap(),
             prg_rom_hash: self.cartridge.prg_rom_hash().unwrap(),
+            chr_rom_hash: self.cartridge.chr_rom_hash().unwrap(),
 
             // TODO: Verify that all PRG ROM sizes match.
             prg_rom_size: self.cartridge.prg_rom_size().unwrap(),
