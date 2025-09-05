@@ -181,7 +181,7 @@ impl Gui for EguiGui {
     }
 }
 
-type WindowArgs = (Box<dyn Renderer>, Position, u64);
+type WindowArgs = (Box<dyn WindowRenderer>, Position, u64);
 
 /// Manages all state required for rendering egui over `Pixels`.
 struct EguiWindow<'a> {
@@ -194,7 +194,7 @@ struct EguiWindow<'a> {
     // State for the GUI
     window: Arc<Window>,
     pixels: Pixels<'a>,
-    renderer: Box<dyn Renderer>,
+    renderer: Box<dyn WindowRenderer>,
 }
 
 impl <'a> EguiWindow<'a> {
@@ -202,7 +202,7 @@ impl <'a> EguiWindow<'a> {
         event_loop: &EventLoopWindowTarget<()>,
         scale_factor: u64,
         initial_position: Position,
-        renderer: Box<dyn Renderer>,
+        renderer: Box<dyn WindowRenderer>,
     ) -> Self {
         let window = {
             let size = LogicalSize::new(
@@ -247,7 +247,7 @@ impl <'a> EguiWindow<'a> {
         scale_factor: f32,
         window: Arc<Window>,
         pixels: pixels::Pixels<'a>,
-        renderer: Box<dyn Renderer>,
+        renderer: Box<dyn WindowRenderer>,
     ) -> Self {
         let egui_ctx = Context::default();
         let egui_state = egui_winit::State::new(egui_ctx, ViewportId::ROOT, &window, None, None);
@@ -384,7 +384,7 @@ impl <'a> WindowManager<'a> {
     pub fn create_window_from_renderer(
         &mut self,
         event_loop: &EventLoopWindowTarget<()>,
-        renderer: Box<dyn Renderer>,
+        renderer: Box<dyn WindowRenderer>,
         position: Position,
         scale: u64,
     ) {
@@ -432,7 +432,7 @@ impl <'a> WindowManager<'a> {
     }
 }
 
-trait Renderer {
+trait WindowRenderer {
     fn name(&self) -> String;
     fn ui(&mut self, ctx: &Context, world: &mut World) -> FlowControl;
     fn render(&mut self, world: &mut World, pixels: &mut Pixels);
@@ -453,7 +453,7 @@ impl PrimaryRenderer {
     }
 }
 
-impl Renderer for PrimaryRenderer {
+impl WindowRenderer for PrimaryRenderer {
     fn name(&self) -> String {
         "REZNEZ".to_string()
     }
@@ -468,7 +468,7 @@ impl Renderer for PrimaryRenderer {
                         let mut file_dialog = egui_file::FileDialog::open_file(None);
                         file_dialog.open();
                         result = FlowControl::spawn_window((
-                            Box::new(LoadRomRenderer::new(file_dialog)) as Box<dyn Renderer>,
+                            Box::new(LoadRomRenderer::new(file_dialog)) as Box<dyn WindowRenderer>,
                             Position::Physical(PhysicalPosition { x: 850, y: 360 }),
                             2,
                         ));
@@ -478,7 +478,7 @@ impl Renderer for PrimaryRenderer {
                         let mut file_dialog = egui_file::FileDialog::select_folder(None);
                         file_dialog.open();
                         result = FlowControl::spawn_window((
-                            Box::new(CartridgeQueryRenderer::new(file_dialog)) as Box<dyn Renderer>,
+                            Box::new(CartridgeQueryRenderer::new(file_dialog)) as Box<dyn WindowRenderer>,
                             Position::Physical(PhysicalPosition { x: 850, y: 360 }),
                             2,
                         ));
@@ -489,7 +489,7 @@ impl Renderer for PrimaryRenderer {
                     if ui.button("Display").clicked() {
                         ui.close_menu();
                         result = FlowControl::spawn_window((
-                            Box::new(DisplaySettingsRenderer::new()) as Box<dyn Renderer>,
+                            Box::new(DisplaySettingsRenderer::new()) as Box<dyn WindowRenderer>,
                             Position::Physical(PhysicalPosition { x: 850, y: 360 }),
                             2,
                         ));
@@ -500,7 +500,7 @@ impl Renderer for PrimaryRenderer {
                     if ui.button("Status").clicked() {
                         ui.close_menu();
                         result = FlowControl::spawn_window((
-                            Box::new(StatusRenderer) as Box<dyn Renderer>,
+                            Box::new(StatusRenderer) as Box<dyn WindowRenderer>,
                             Position::Physical(PhysicalPosition { x: 850, y: 360 }),
                             2,
                         ));
@@ -615,7 +615,7 @@ impl LoadRomRenderer {
     }
 }
 
-impl Renderer for LoadRomRenderer {
+impl WindowRenderer for LoadRomRenderer {
     fn name(&self) -> String {
         "Load ROM".to_string()
     }
@@ -663,7 +663,7 @@ impl CartridgeQueryRenderer {
     }
 }
 
-impl Renderer for CartridgeQueryRenderer {
+impl WindowRenderer for CartridgeQueryRenderer {
     fn name(&self) -> String {
         "ROM Query".to_string()
     }
@@ -781,7 +781,7 @@ impl DisplaySettingsRenderer {
     }
 }
 
-impl Renderer for DisplaySettingsRenderer {
+impl WindowRenderer for DisplaySettingsRenderer {
     fn name(&self) -> String {
         "Display Settings".to_string()
     }
@@ -823,7 +823,7 @@ impl StatusRenderer {
     const HEIGHT: usize = 300;
 }
 
-impl Renderer for StatusRenderer {
+impl WindowRenderer for StatusRenderer {
     fn name(&self) -> String {
         "Status".to_string()
     }
@@ -939,7 +939,7 @@ impl LayersRenderer {
     }
 }
 
-impl Renderer for LayersRenderer {
+impl WindowRenderer for LayersRenderer {
     fn name(&self) -> String {
         "Layers".to_string()
     }
@@ -1002,7 +1002,7 @@ impl NameTableRenderer {
     }
 }
 
-impl Renderer for NameTableRenderer {
+impl WindowRenderer for NameTableRenderer {
     fn name(&self) -> String {
         "Name Tables".to_string()
     }
@@ -1075,7 +1075,7 @@ impl SpritesRenderer {
     }
 }
 
-impl Renderer for SpritesRenderer {
+impl WindowRenderer for SpritesRenderer {
     fn name(&self) -> String {
         "Sprites".to_string()
     }
@@ -1131,7 +1131,7 @@ impl PatternTableRenderer {
     }
 }
 
-impl Renderer for PatternTableRenderer {
+impl WindowRenderer for PatternTableRenderer {
     fn name(&self) -> String {
         "Pattern Table".to_string()
     }
@@ -1195,7 +1195,7 @@ impl PatternSourceRenderer {
     }
 }
 
-impl Renderer for PatternSourceRenderer {
+impl WindowRenderer for PatternSourceRenderer {
     fn name(&self) -> String {
         "Pattern Source".to_string()
     }
@@ -1229,7 +1229,7 @@ impl MemoryViewerRenderer {
     const HEIGHT: usize = 400;
 }
 
-impl Renderer for MemoryViewerRenderer {
+impl WindowRenderer for MemoryViewerRenderer {
     fn name(&self) -> String {
         "Memory Viewer".to_string()
     }
@@ -1279,7 +1279,7 @@ impl CartridgeMetadataRenderer {
     const HEIGHT: usize = 300;
 }
 
-impl Renderer for CartridgeMetadataRenderer {
+impl WindowRenderer for CartridgeMetadataRenderer {
     fn name(&self) -> String {
         "Status".to_string()
     }
