@@ -1,21 +1,25 @@
 use std::collections::BTreeSet;
 use std::ffi::OsStr;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use log::info;
 use rusqlite::{params, Connection, MappedRows};
 use walkdir::WalkDir;
 
+use crate::cartridge::header_db::HeaderDb;
+use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::config::{Config, GuiType, Opt};
 use crate::nes::Nes;
 
-// TODO: Extend this with header DB metadata.
-pub fn analyze(rom_base_path: &Path) {
+pub fn analyze(rom_base_path: &Path) -> Vec<(PathBuf, ResolvedMetadata)> {
     let rom_paths: BTreeSet<_> = WalkDir::new(rom_base_path)
         .into_iter()
         .map(|entry| entry.unwrap().path().to_path_buf())
-        .filter(|path| path.extension() == Some(OsStr::new("nes")))
+        .filter(|path| path.extension() == Some(OsStr::new("nes"))
+            && !path.file_stem().unwrap().to_string_lossy().ends_with("#ignored"))
         .collect();
+
+    let header_db = HeaderDb::load();
 
     let mut all_metadata = Vec::new();
     for rom_path in rom_paths {
@@ -29,7 +33,8 @@ pub fn analyze(rom_base_path: &Path) {
         let config = Config::new(&opt);
 
         let cartridge = Nes::load_cartridge(&rom_path);
-        let nes = Nes::new(&config, cartridge);
+        let nes = Nes::new(&header_db, &config, cartridge);
+        log::logger().flush();
         all_metadata.push((rom_path, nes.resolved_metadata().clone()));
     }
 
@@ -60,7 +65,7 @@ pub fn analyze(rom_base_path: &Path) {
             [],
         )
         .unwrap();
-    for (path, metadata) in all_metadata {
+    for (path, metadata) in &all_metadata {
         connection
             .execute(
                 "INSERT INTO cartridges VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)",
@@ -83,7 +88,7 @@ pub fn analyze(rom_base_path: &Path) {
                     metadata.miscellaneous_rom_count.to_string(),
                     format!("{:?}", metadata.default_expansion_device),
                     metadata.vs.clone().map(|vs| format!("{:?}", vs.hardware_type)),
-                    metadata.vs.map(|vs| format!("{:?}", vs.ppu_type)),
+                    metadata.vs.as_ref().map(|vs| format!("{:?}", vs.ppu_type)),
                 ],
             )
             .unwrap();
@@ -108,6 +113,8 @@ pub fn analyze(rom_base_path: &Path) {
         let entry = entry.as_ref().unwrap();
         info!("{} {} {}", entry.0.clone(), entry.1, entry.2.clone());
     });
+
+    all_metadata
 }
 
 struct CartridgeDB {

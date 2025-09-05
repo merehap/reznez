@@ -9,6 +9,7 @@ use std::path::PathBuf;
 
 use dashmap::DashMap;
 use rayon::prelude::*;
+use reznez::cartridge::header_db::HeaderDb;
 use walkdir::WalkDir;
 
 use reznez::config::{Config, GuiType, Opt};
@@ -34,6 +35,7 @@ impl TestSummary {
     fn load(roms: Roms, expected_frames: ExpectedFrames) -> Self {
         let test_results = DashMap::new();
 
+        let header_db = HeaderDb::load();
         let expected_frames: DashMap<RomId, Vec<FrameEntry>> =
             expected_frames.entries_by_rom_id.clone().into_iter().collect();
         roms.entries_by_rom_id.par_iter().for_each(|(rom_id, rom_entry)| {
@@ -52,7 +54,7 @@ impl TestSummary {
 
                 let config = Config::new(&opt);
                 let cartridge = Nes::load_cartridge(&opt.rom_path.unwrap());
-                let mut nes = Nes::new(&config, cartridge);
+                let mut nes = Nes::new(&header_db, &config, cartridge);
                 nes.mute();
                 *nes.frame_mut().show_overscan_mut() = true;
 

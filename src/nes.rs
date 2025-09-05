@@ -60,8 +60,8 @@ impl Nes {
         Cartridge::load(path, &raw_header_and_data).unwrap()
     }
 
-    pub fn new(config: &Config, cartridge: Cartridge) -> Nes {
-        let (mapper, mapper_params, metadata_resolver) = Nes::load_rom(config, cartridge);
+    pub fn new(header_db: &HeaderDb, config: &Config, cartridge: Cartridge) -> Nes {
+        let (mapper, mapper_params, metadata_resolver) = Nes::load_rom(header_db, config, cartridge);
 
         if let Err(err) = DirBuilder::new().recursive(true).create("saveram") {
             warn!("Failed to create saveram directory. {err}");
@@ -131,9 +131,8 @@ impl Nes {
         self.memory.stack_pointer()
     }
 
-    fn load_rom(config: &Config, cartridge: Cartridge) -> (Box<dyn Mapper>, MapperParams, MetadataResolver) {
+    fn load_rom(header_db: &HeaderDb, config: &Config, cartridge: Cartridge) -> (Box<dyn Mapper>, MapperParams, MetadataResolver) {
         let header = cartridge.header();
-        let header_db = HeaderDb::load();
         let cartridge_mapper_number = header.mapper_number().unwrap();
         let prg_rom_hash = header.prg_rom_hash().unwrap();
         let mut db_header = CartridgeMetadataBuilder::new().build();

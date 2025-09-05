@@ -8,6 +8,7 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::str::FromStr;
 
+use reznez::cartridge::header_db::HeaderDb;
 use reznez::config::{Config, GuiType, Opt};
 use reznez::cpu::instruction::{Instruction, OpCode};
 use reznez::cpu::status::Status;
@@ -54,7 +55,7 @@ fn nestest() {
     config.ppu_clock = Clock::starting_at(-1, MAX_SCANLINE, MAX_CYCLE - 21);
 
     let cartridge = Nes::load_cartridge(&opt.rom_path.unwrap());
-    let mut nes = Nes::new(&config, cartridge);
+    let mut nes = Nes::new(&HeaderDb::load(), &config, cartridge);
 
     // Step past the Start sequence.
     for _ in 0..21 {

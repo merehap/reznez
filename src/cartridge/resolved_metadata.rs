@@ -1,5 +1,7 @@
 use std::fmt;
 
+use log::warn;
+
 use crate::cartridge::cartridge_metadata::{CartridgeMetadata, CartridgeMetadataBuilder, ConsoleType, ExpansionDevice, TimingMode, VsHardwareType, VsPpuType};
 use crate::mapper::NameTableMirroring;
 
@@ -109,8 +111,12 @@ impl MetadataResolver {
         };
 
         if self.database.name_table_mirroring().is_some() {
-            assert_eq!(resolved_metadata.name_table_mirroring, self.database.name_table_mirroring(),
-                "NameTableMirroring doesn't match the nes20db.xml entry.");
+            if resolved_metadata.name_table_mirroring != self.database.name_table_mirroring() {
+                warn!("NameTableMirroring {} doesn't match the nes20db.xml entry {}. DB PRG ROM hash: {:X}",
+                    resolved_metadata.name_table_mirroring.unwrap(),
+                    self.database.name_table_mirroring().unwrap(),
+                    self.database.prg_rom_hash().unwrap());
+            }
         }
 
         resolved_metadata

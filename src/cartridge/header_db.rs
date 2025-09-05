@@ -113,6 +113,10 @@ const MISSING_ROM_SUBMAPPER_NUMBERS: &[(u32, u32, u16, u8)] = &[
     // Commando (U) [b1][T+Bra_BRGames]
     // Not necessarily the correct submapper number.
     (0xF458222C, 0xB84451FB, 7, 1),
+
+    // Dragon Ball Z - Kyoushuu! Saiya Jin (J)
+    // Not necessarily the correct submapper number.
+    (0xB4054B51, 0x6269AC9A, 16, 4),
 ];
 
 pub struct HeaderDb {

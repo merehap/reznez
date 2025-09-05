@@ -27,6 +27,7 @@ use std::sync::{Arc, Mutex};
 
 use structopt::StructOpt;
 
+use crate::cartridge::header_db::HeaderDb;
 use crate::config::{Config, Opt};
 use crate::logging::logger;
 use crate::logging::logger::Logger;
@@ -50,7 +51,7 @@ fn main() {
         let mut gui = Config::gui(&opt);
         let nes = opt.rom_path.map(|path| {
             let cartridge = Nes::load_cartridge(&path);
-            Nes::new(&config, cartridge)
+            Nes::new(&HeaderDb::load(), &config, cartridge)
         });
 
         gui.run(nes, config);
