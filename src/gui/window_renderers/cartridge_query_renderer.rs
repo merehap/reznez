@@ -33,9 +33,9 @@ impl WindowRenderer for CartridgeQueryPopupRenderer {
         let mut result = FlowControl::CONTINUE;
         egui::CentralPanel::default().show(ctx, |_ui| {
             self.file_dialog.show(ctx);
-            if let Some(roms_directory) = self.file_dialog.path() && roms_directory.is_dir() {
+            if self.file_dialog.selected() {
                 let cartridge_query_renderer = CartridgeQueryRenderer {
-                    metadata_by_path: cartridge_db::analyze(roms_directory),
+                    metadata_by_path: cartridge_db::analyze(self.file_dialog.directory()),
                 };
                 result = FlowControl {
                     should_close_window: true,
@@ -68,8 +68,8 @@ pub struct CartridgeQueryRenderer {
 }
 
 impl CartridgeQueryRenderer {
-    const WIDTH: usize = 950;
-    const HEIGHT: usize = 400;
+    const WIDTH: usize = 1900;
+    const HEIGHT: usize = 800;
 }
 
 impl WindowRenderer for CartridgeQueryRenderer {
