@@ -120,9 +120,6 @@ pub struct Opt {
     #[structopt(name = "framedump", long)]
     pub frame_dump: bool,
 
-    #[structopt(long)]
-    pub analysis: bool,
-
     #[structopt(name = "preventsaving", long)]
     pub prevent_saving: bool,
 }
@@ -154,7 +151,6 @@ impl Opt {
             log_timings: false,
             cpu_step_formatting: CpuStepFormatting::Data,
             frame_dump: false,
-            analysis: false,
             prevent_saving: false,
         }
     }

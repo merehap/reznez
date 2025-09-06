@@ -42,20 +42,14 @@ fn main() {
         prev(info);
     });
 
-    if opt.analysis {
-        if let Some(rom_path) = &opt.rom_path {
-            analysis::cartridge_db::analyze(rom_path);
-        }
-    } else {
-        let config = Config::new(&opt);
-        let mut gui = Config::gui(&opt);
-        let nes = opt.rom_path.map(|path| {
-            let cartridge = Nes::load_cartridge(&path);
-            Nes::new(&HeaderDb::load(), &config, cartridge)
-        });
+    let config = Config::new(&opt);
+    let mut gui = Config::gui(&opt);
+    let nes = opt.rom_path.map(|path| {
+        let cartridge = Nes::load_cartridge(&path);
+        Nes::new(&HeaderDb::load(), &config, cartridge)
+    });
 
-        gui.run(nes, config);
-    }
+    gui.run(nes, config);
 }
 
 #[allow(clippy::similar_names)]

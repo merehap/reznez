@@ -23,7 +23,7 @@ Correct PPU address during sprite rendering
 Unwrap review. Convert most to expect or Result.
 Add {PRG,CHR} rom exact size as layout option?
 Detangle Mapper::cpu_read
-Fix Legend of Zelda pauses (joypad conflicting with DMC DMA samples?)
+Fix Legend of Zelda pauses (Probably because of non-NTSC ROM) (Old potential reason: joypad conflicting with DMC DMA samples?)
 CPU mode debug screen, including DMAs
 Use has_persistent_memory correctly (mostly for cases without NES2.0 metadata)
 
