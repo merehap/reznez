@@ -27,6 +27,7 @@ use std::sync::{Arc, Mutex};
 
 use structopt::StructOpt;
 
+use crate::cartridge::cartridge_metadata::{ConsoleType, TimingMode};
 use crate::cartridge::header_db::HeaderDb;
 use crate::config::{Config, Opt};
 use crate::logging::logger;
@@ -46,7 +47,12 @@ fn main() {
     let mut gui = Config::gui(&opt);
     let nes = opt.rom_path.map(|path| {
         let cartridge = Nes::load_cartridge(&path);
-        Nes::new(&HeaderDb::load(), &config, cartridge)
+        let nes = Nes::new(&HeaderDb::load(), &config, cartridge);
+        assert_eq!(nes.resolved_metadata().console_type, ConsoleType::NesFamiconDendy);
+        assert!(matches!(nes.resolved_metadata().region_timing_mode, TimingMode::Ntsc | TimingMode::MultiRegion));
+        assert!(nes.resolved_metadata().vs.is_none());
+
+        nes
     });
 
     gui.run(nes, config);
