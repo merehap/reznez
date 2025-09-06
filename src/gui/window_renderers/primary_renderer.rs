@@ -12,7 +12,7 @@ use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::gui::{execute_frame, Events};
 pub use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::gui::window_renderers::cartridge_metadata_renderer::CartridgeMetadataRenderer;
-use crate::gui::window_renderers::cartridge_query_renderer::CartridgeQueryRenderer;
+use crate::gui::window_renderers::cartridge_query_renderer::CartridgeQueryPopupRenderer;
 use crate::gui::window_renderers::display_settings_renderer::DisplaySettingsRenderer;
 use crate::gui::window_renderers::layers_renderer::LayersRenderer;
 pub use crate::gui::window_renderers::load_rom_renderer::LoadRomRenderer;
@@ -125,7 +125,7 @@ impl WindowRenderer for PrimaryRenderer {
                         let mut file_dialog = egui_file::FileDialog::select_folder(None);
                         file_dialog.open();
                         result = FlowControl::spawn_window((
-                            Box::new(CartridgeQueryRenderer::new(file_dialog)) as Box<dyn WindowRenderer>,
+                            Box::new(CartridgeQueryPopupRenderer::new(file_dialog)) as Box<dyn WindowRenderer>,
                             Position::Physical(PhysicalPosition { x: 850, y: 360 }),
                             2,
                         ));
