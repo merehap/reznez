@@ -1,6 +1,6 @@
 use std::num::NonZeroU8;
 
-use log::warn;
+use log::{error, warn};
 
 use crate::mapper::{BankIndex, ChrBank, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank::RomRamModeRegisterId;
@@ -34,8 +34,8 @@ impl ChrMemory {
         layout_index: u8,
         align_large_chr_banks: bool,
         rom_outer_bank_count: NonZeroU8,
-        rom: RawMemory,
-        ram: RawMemory,
+        mut rom: RawMemory,
+        mut ram: RawMemory,
         name_table_mirroring: NameTableMirroring,
         regs: ChrBankRegisters,
     ) -> ChrMemory {
@@ -69,11 +69,13 @@ impl ChrMemory {
             if !rom_present_in_layout {
                 warn!("The CHR ROM that was specified in the rom file will be ignored since it is not \
                         configured in the Layout for this mapper.");
+                rom = RawMemory::new(0);
             }
 
             if !ram_present_in_layout {
                 warn!("The CHR RAM that was specified in the rom file will be ignored since it is not \
                         configured in the Layout for this mapper.");
+                ram = RawMemory::new(0);
             }
         }
 
@@ -227,7 +229,10 @@ impl ChrMemory {
         match (quadrants[0], quadrants[1], quadrants[2], quadrants[3]) {
             (NameTableSource(top_left), NameTableSource(top_right), NameTableSource(bottom_left), NameTableSource(bottom_right)) =>
                 NameTableMirroring::new(top_left, top_right, bottom_left, bottom_right),
-            _ => panic!("Unexpected NameTable source."),
+            _ => {
+                error!("Unexpected NameTable source! This mapper is not properly supported. Using an incorrect NameTableMirroring in order to proceed.");
+                NameTableMirroring::HORIZONTAL
+            }
         }
     }
 

@@ -72,9 +72,6 @@ impl MetadataResolver {
     pub fn resolve(&self) -> ResolvedMetadata {
         let all_metadata = [&self.hard_coded_overrides, &self.cartridge, &self.database, &self.database_extension, &self.defaults()];
 
-        let miscellaneous_rom_count = resolve_field(&all_metadata, |m| m.miscellaneous_rom_count()).unwrap();
-        assert_eq!(miscellaneous_rom_count, 0);
-
         let mut vs = None;
         if let (Some(hardware_type), Some(ppu_type))
                 = (resolve_field(&all_metadata, |m| m.vs_hardware_type()), resolve_field(&all_metadata, |m| m.vs_ppu_type())) {
@@ -105,7 +102,7 @@ impl MetadataResolver {
             chr_save_ram_size: resolve_field(&all_metadata, |m| m.chr_save_ram_size()).unwrap(),
 
             region_timing_mode: resolve_field(&all_metadata, |m| m.timing_mode()).unwrap(),
-            miscellaneous_rom_count,
+            miscellaneous_rom_count: resolve_field(&all_metadata, |m| m.miscellaneous_rom_count()).unwrap(),
             default_expansion_device: resolve_field(&all_metadata, |m| m.default_expansion_device()).unwrap(),
             vs,
         };

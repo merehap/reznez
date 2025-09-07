@@ -375,19 +375,24 @@ pub enum ConsoleType {
 }
 
 impl ConsoleType {
-    pub fn basic(basic_console_type: u8) -> Self {
-        assert!(basic_console_type < 3);
-        Self::from_u8(basic_console_type)
+    pub fn basic(basic_console_type: u8) -> Result<Self, String> {
+        if basic_console_type >= 3 {
+            return Err(format!("Extended Console Type is invalid without a NES2.0 header. Value: {basic_console_type}"));
+        }
+
+        Ok(Self::from_u8(basic_console_type))
     }
 
-    pub fn extended(basic_console_type: u8, extended_console_type: u8) -> Self {
+    pub fn extended(basic_console_type: u8, extended_console_type: u8) -> Result<Self, String> {
         match basic_console_type {
-            0..=2 => Self::from_u8(basic_console_type),
-            3 => {
-                assert!(extended_console_type > 3);
-                Self::from_u8(extended_console_type)
-            }
-            _ => panic!("Basic console type must be less than 4."),
+            0..=2 =>
+                Ok(Self::from_u8(basic_console_type)),
+            3 if extended_console_type <= 3 =>
+                Err(format!("Extended console type was less than 3 (value: {extended_console_type}) while basic console type was 3.")),
+            3 =>
+                Ok(Self::from_u8(extended_console_type)),
+            _ =>
+                unreachable!("Basic console type must be less than 4."),
         }
     }
 
@@ -410,7 +415,6 @@ impl ConsoleType {
             _ => unreachable!(),
         };
 
-        assert_eq!(console_type, ConsoleType::NesFamiconDendy);
         console_type
     }
 }

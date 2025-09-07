@@ -46,9 +46,14 @@ fn main() {
     let config = Config::new(&opt);
     let mut gui = Config::gui(&opt);
     let nes = opt.rom_path.map(|path| {
-        let cartridge = Nes::load_cartridge(&path);
-        let nes = Nes::new(&HeaderDb::load(), &config, cartridge);
+        let cartridge = Nes::load_cartridge(&path)
+            .map_err(|err| format!("Failed to start REZNEZ. {err}"))
+            .unwrap();
+        let nes = Nes::new(&HeaderDb::load(), &config, cartridge)
+            .map_err(|err| format!("Failed to start REZNEZ. {err}"))
+            .unwrap();
         assert_eq!(nes.resolved_metadata().console_type, ConsoleType::NesFamiconDendy);
+        assert_eq!(nes.resolved_metadata().miscellaneous_rom_count, 0);
         assert!(matches!(nes.resolved_metadata().region_timing_mode, TimingMode::Ntsc | TimingMode::MultiRegion));
         assert!(nes.resolved_metadata().vs.is_none());
 

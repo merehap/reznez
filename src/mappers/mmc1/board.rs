@@ -1,3 +1,5 @@
+use log::error;
+
 use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::util::unit::KIBIBYTE;
 
@@ -34,7 +36,7 @@ pub enum Board {
 }
 
 impl Board {
-    pub fn from_cartridge_metadata(metadata: &ResolvedMetadata) -> Self {
+    pub fn from_cartridge_metadata(metadata: &ResolvedMetadata) -> Result<Self, String> {
         let prg_rom_size = metadata.prg_rom_size / KIBIBYTE;
         let prg_ram_size = metadata.prg_work_ram_size / KIBIBYTE;
         let prg_nvram_size = metadata.prg_save_ram_size / KIBIBYTE;
@@ -77,9 +79,11 @@ impl Board {
         };
 
         if matches!(board, SEROM | SHROM) {
-            todo!("MMC1 {board:?} is not a submapper 0 board, it is submapper 5.");
+            let err = format!("MMC1 {board:?} is not a submapper 0 board, it is submapper 5.");
+            error!("{err}");
+            return Err(err);
         }
 
-        board
+        Ok(board)
     }
 }

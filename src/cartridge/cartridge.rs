@@ -1,6 +1,5 @@
 use std::path::{Path, PathBuf};
 
-use log::error;
 use num_traits::FromPrimitive;
 use splitbits::{combinebits, splitbits};
 use ux::u2;
@@ -44,13 +43,17 @@ impl Cartridge {
         let prg_rom = prg_rom.to_raw_memory();
 
         let chr_rom_start = prg_rom_end;
-        let mut chr_rom_end = chr_rom_start + header.chr_rom_size().unwrap();
+        let chr_rom_end = chr_rom_start + header.chr_rom_size().unwrap();
         let chr_rom = if let Some(rom) = raw_header_and_data.maybe_slice(chr_rom_start..chr_rom_end) {
             rom.to_raw_memory()
         } else {
-            error!("ROM {} claimed to have {}KiB CHR ROM, but the ROM was too short.", path.rom_file_name(), header.chr_rom_size().unwrap());
-            chr_rom_end = raw_header_and_data.size();
-            raw_header_and_data.slice(chr_rom_start..raw_header_and_data.size()).to_raw_memory()
+            return Err(format!("ROM {} claimed to have {}KiB CHR ROM, but the CHR ROM section was too short ({}KiB)).",
+                path.rom_file_name(),
+                header.chr_rom_size().unwrap() / KIBIBYTE,
+                (raw_header_and_data.size() - chr_rom_start) / KIBIBYTE,
+            ));
+            //chr_rom_end = raw_header_and_data.size();
+            //raw_header_and_data.slice(chr_rom_start..raw_header_and_data.size()).to_raw_memory()
         };
 
         let prg_rom_hash = crc32fast::hash(prg_rom.as_slice());
@@ -131,7 +134,7 @@ impl Cartridge {
             assert!(high_header.p != 0xF, "PRG exponent notation not yet supported.");
 
             let mapper_number = combinebits!(high_header.m, low_header.m, low_header.l, "0000hhhh mmmmllll");
-            let console_type = ConsoleType::extended(low_header.x, high_header.x);
+            let console_type = ConsoleType::extended(low_header.x, high_header.x)?;
             builder
                 .mapper_and_submapper_number(mapper_number, Some(high_header.s))
                 .prg_rom_size(combinebits!(high_header.p, low_header.p, "000000hh hhllllll ll000000 00000000"))
@@ -157,7 +160,7 @@ impl Cartridge {
                 .mapper_and_submapper_number(mapper_number, None)
                 .prg_rom_size(u32::from(low_header.p) * PRG_ROM_CHUNK_LENGTH)
                 .chr_rom_size(u32::from(low_header.c) * CHR_ROM_CHUNK_LENGTH)
-                .console_type(ConsoleType::basic(low_header.x));
+                .console_type(ConsoleType::basic(low_header.x)?);
         }
 
         Ok(builder.build())

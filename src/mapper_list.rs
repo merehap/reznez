@@ -15,26 +15,26 @@ pub static MAPPERS_WITHOUT_SUBMAPPER_0: LazyLock<BTreeSet<u16>> = LazyLock::new(
         .collect()
 });
 
-pub fn lookup_mapper(metadata_resolver: &MetadataResolver, cartridge: &Cartridge) -> Box<dyn Mapper> {
+pub fn lookup_mapper(metadata_resolver: &MetadataResolver, cartridge: &Cartridge) -> Result<Box<dyn Mapper>, String> {
     let metadata = metadata_resolver.resolve();
     let number = metadata.mapper_number;
     let sub_number = metadata.submapper_number;
     let cartridge_name = cartridge.name();
 
     match try_lookup_mapper(&metadata) {
-        LookupResult::Supported(supported_mapper) => supported_mapper,
+        LookupResult::Supported(supported_mapper) => Ok(supported_mapper),
         LookupResult::UnassignedMapper =>
-            panic!("Mapper {number} is not in use. ROM: {cartridge_name}"),
+            Err(format!("Mapper {number} is not in use. ROM: {cartridge_name}")),
         LookupResult::UnassignedSubmapper =>
-            panic!("Submapper {} of mapper {number} is not in use. ROM: {cartridge_name}", sub_number.unwrap()),
+            Err(format!("Submapper {} of mapper {number} is not in use. ROM: {cartridge_name}", sub_number.unwrap())),
         LookupResult::TodoMapper =>
-            todo!("Mapper {number}. ROM: {cartridge_name}"),
+            Err(format!("Mapper {number}. ROM: {cartridge_name}")),
         LookupResult::TodoSubmapper =>
-            todo!("Submapper {}. ROM: {cartridge_name}", sub_number.unwrap()),
+            Err(format!("Submapper {}. ROM: {cartridge_name}", sub_number.unwrap())),
         LookupResult::UnspecifiedSubmapper =>
-            panic!("Submapper {sub_number:?} of mapper {number} has unspecified behavior. ROM: {cartridge_name}"),
+            Err(format!("Submapper {sub_number:?} of mapper {number} has unspecified behavior. ROM: {cartridge_name}")),
         LookupResult::ReassignedSubmapper {correct_mapper, correct_submapper } =>
-            panic!("Mapper {number}, submapper {} has been reassigned to {correct_mapper}, {correct_submapper} . ROM: {cartridge_name}", sub_number.unwrap()),
+            Err(format!("Mapper {number}, submapper {} has been reassigned to {correct_mapper}, {correct_submapper} . ROM: {cartridge_name}", sub_number.unwrap())),
     }
 }
 
@@ -47,7 +47,10 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // MMC1 submappers
         (1, None) => UnspecifiedSubmapper,
         // Normal behavior
-        (1, Some(0)) => m::mapper001_0::Mapper001_0::new(metadata).supported(),
+        (1, Some(0)) => match m::mapper001_0::Mapper001_0::new(metadata) {
+            Ok(mapper) => mapper.supported(),
+            Err(_) => ReassignedSubmapper { correct_mapper: 1, correct_submapper: 5 },
+        }
         // SUROM, SOROM, SXROM
         (1, Some(1 | 2 | 4)) => ReassignedSubmapper { correct_mapper: 1, correct_submapper: 0 },
         (1, Some(3)) => ReassignedSubmapper { correct_mapper: 155, correct_submapper: 0 },
@@ -379,7 +382,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (159, None) => m::mapper016_4::Mapper016_4::default().supported(),
         (160, _) => TodoMapper,
         // Duplicate. Hanjuku Eiyuu (J).
-        (161, None) => m::mapper001_0::Mapper001_0::new(metadata).supported(),
+        (161, None) => m::mapper001_0::Mapper001_0::new(metadata).unwrap().supported(),
         (162..=176, _) => TodoMapper,
         // Hengedianzi (恒格电子) two-screen mirroring
         (177, None) => m::mapper177::Mapper177.supported(),

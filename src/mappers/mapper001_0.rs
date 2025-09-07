@@ -104,11 +104,11 @@ impl Mapper for Mapper001_0 {
 }
 
 impl Mapper001_0 {
-    pub fn new(metadata: &ResolvedMetadata) -> Self {
-        Self {
-            board: Board::from_cartridge_metadata(metadata),
+    pub fn new(metadata: &ResolvedMetadata) -> Result<Self, String> {
+        Ok(Self {
+            board: Board::from_cartridge_metadata(metadata)?,
             shift_register: ShiftRegister::default(),
-        }
+        })
     }
 
     fn set_chr_bank_and_board_specifics(&self, params: &mut MapperParams, chr_id: ChrBankRegisterId, value: u8) {

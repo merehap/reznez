@@ -146,7 +146,7 @@ impl ChrWindow {
 
     pub fn location(self) -> Result<ChrBankLocation, String> {
         match self.bank {
-            ChrBank::Rom(location, _) | ChrBank::Ram(location, _) | ChrBank::RomRam(location, _) => Ok(location),
+            ChrBank::Rom(location, _) | ChrBank::Ram(location, _) | ChrBank::RomRam(location, ..) => Ok(location),
             ChrBank::SaveRam(_) => Ok(ChrBankLocation::Fixed(BankIndex::from_u8(0))),
         }
     }

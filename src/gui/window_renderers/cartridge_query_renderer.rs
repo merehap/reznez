@@ -112,6 +112,12 @@ impl WindowRenderer for CartridgeQueryRenderer {
                                 full_hash, prg_rom_hash, chr_rom_hash, prg_rom_size, prg_work_ram_size, prg_save_ram_size,
                                 chr_rom_size, chr_work_ram_size, chr_save_ram_size, console_type, region_timing_mode, miscellaneous_rom_count,
                                 default_expansion_device, vs } = metadata;
+                                /*
+                            if *mapper_number != 5 {
+                                continue;
+                            }
+                            */
+
                             let mut vs_hardware_type = None;
                             let mut vs_ppu_type = None;
                             if let Some(Vs { hardware_type, ppu_type}) = vs {

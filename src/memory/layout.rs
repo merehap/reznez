@@ -51,13 +51,16 @@ impl Layout {
         LayoutBuilder::new()
     }
 
-    pub fn make_mapper_params(self, metadata: &ResolvedMetadata, cartridge: &Cartridge, allow_saving: bool) -> MapperParams {
+    pub fn make_mapper_params(self, metadata: &ResolvedMetadata, cartridge: &Cartridge, allow_saving: bool) -> Result<MapperParams, String> {
         let prg_rom_size = cartridge.prg_rom().size();
-        assert!(prg_rom_size <= self.prg_rom_max_size,
-            "PRG ROM size of {}KiB is too large for this mapper.", prg_rom_size / KIBIBYTE);
+        if prg_rom_size > self.prg_rom_max_size {
+            return Err(format!("PRG ROM size of {}KiB is too large for this mapper.", prg_rom_size / KIBIBYTE));
+        }
+
         let chr_rom_size = cartridge.chr_rom().size();
-        assert!(chr_rom_size <= self.chr_rom_max_size,
-            "CHR ROM size of {}KiB is too large for this mapper.", chr_rom_size / KIBIBYTE);
+        if chr_rom_size > self.chr_rom_max_size {
+            return Err(format!("CHR ROM size of {}KiB is too large for this mapper.", chr_rom_size / KIBIBYTE));
+        }
 
         let mut chr_access_override = if metadata.chr_rom_size == 0 {
             Some(AccessOverride::ForceRam)
@@ -118,7 +121,7 @@ impl Layout {
 
         let name_table_mirroring = metadata.name_table_mirroring
             .or(self.four_screen_mirroring_definition())
-            .unwrap_or_else(|| panic!("Mapper must provide a definition of four screen mirroring. ROM: {}", cartridge.path().rom_file_name()));
+            .ok_or(format!("Mapper must provide a definition of four screen mirroring. ROM: {}", cartridge.path().rom_file_name()))?;
 
         let mut chr_layouts: Vec<_> = self.chr_layouts.as_iter().collect();
         match chr_access_override {
@@ -171,14 +174,14 @@ impl Layout {
             }
         }
 
-        MapperParams {
+        Ok(MapperParams {
             prg_memory,
             chr_memory,
             name_table_mirrorings: self.name_table_mirrorings,
             read_write_statuses: self.read_write_statuses,
             ram_not_present,
             irq_pending: false,
-        }
+        })
     }
 
     pub fn cartridge_selection_name_table_mirrorings(&self) -> [Option<NameTableMirroring>; 4] {

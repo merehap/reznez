@@ -1,8 +1,12 @@
+use std::path::Path;
+
 use egui::Context;
 use egui_file::FileDialog;
+use log::error;
 use pixels::Pixels;
 
 use crate::cartridge::header_db::HeaderDb;
+use crate::config::Config;
 use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::gui::world::World;
 use crate::nes::Nes;
@@ -34,8 +38,14 @@ impl WindowRenderer for LoadRomRenderer {
             self.file_dialog.show(ctx);
             if let Some(rom_path) = self.file_dialog.path() && !rom_path.is_dir() {
                 result = FlowControl::CLOSE;
-                let cartridge = Nes::load_cartridge(rom_path);
-                world.nes = Some(Nes::new(&header_db, &world.config, cartridge));
+
+                world.nes = match load_nes(&header_db, &world.config, rom_path) {
+                    Ok(nes) => Some(nes),
+                    Err(err) => {
+                        error!("Failed to load ROM {}. {err}", rom_path.to_string_lossy());
+                        None
+                    }
+                };
             }
         });
 
@@ -53,4 +63,9 @@ impl WindowRenderer for LoadRomRenderer {
     fn height(&self) -> usize {
         Self::HEIGHT
     }
+}
+
+fn load_nes(header_db: &HeaderDb, config: &Config, rom_path: &Path) -> Result<Nes, String> {
+    let cartridge = Nes::load_cartridge(rom_path)?;
+    Ok(Nes::new(header_db, config, cartridge)?)
 }

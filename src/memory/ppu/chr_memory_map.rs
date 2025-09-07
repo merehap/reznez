@@ -44,15 +44,21 @@ impl ChrMemoryMap {
             }
         }
 
-        assert_eq!(page_mappings.len(), 8);
+        assert!(matches!(page_mappings.len(), 8 | 12));
 
-        for quadrant in name_table_mirroring.quadrants() {
-            let NameTableSource::Ciram(ciram_side) = quadrant else {
-                panic!("Only CIRAM is supported so far.");
-            };
-
-            page_mappings.push(ChrMapping::NameTableSource(NameTableSource::Ciram(ciram_side)));
+        // Most mappers only map 0x0000..=0x1FFF for pattern data, but some map up through 0x2FFF.
+        if page_mappings.len() == 8 {
+            for quadrant in name_table_mirroring.quadrants() {
+                let mapping = match quadrant {
+                    NameTableSource::Ciram(ciram_side) => ChrMapping::NameTableSource(NameTableSource::Ciram(ciram_side)),
+                    NameTableSource::SaveRam(index) => ChrMapping::NameTableSource(NameTableSource::SaveRam(index)),
+                    _ =>  panic!("{quadrant:?} is not yet supported for high PPU memory mapping."),
+                };
+                page_mappings.push(mapping);
+            }
         }
+
+        assert_eq!(page_mappings.len(), 12);
 
         let mut memory_map = Self {
             page_mappings: page_mappings.try_into().unwrap(),
@@ -180,14 +186,18 @@ impl ChrMapping {
                     ChrBank::Rom(_, Some(status_register)) => (ChrPageId::Rom { page_number, bank_index }, regs.read_write_status(*status_register)),
                     ChrBank::Ram(_, None) => (ChrPageId::Ram { page_number, bank_index }, ReadWriteStatus::ReadWrite),
                     ChrBank::Ram(_, Some(status_register)) => (ChrPageId::Ram { page_number, bank_index }, regs.read_write_status(*status_register)),
-                    ChrBank::RomRam(_, rom_ram_register_id) => {
+                    ChrBank::RomRam(_, status_register, rom_ram_register_id) => {
+                        let read_write_status = status_register.map(|reg| regs.read_write_status(reg));
                         match regs.rom_ram_mode(*rom_ram_register_id) {
-                            MemType::Rom => (ChrPageId::Rom { page_number, bank_index }, ReadWriteStatus::ReadOnly),
-                            MemType::WorkRam => (ChrPageId::Ram { page_number, bank_index }, ReadWriteStatus::ReadWrite),
+                            MemType::Rom => (ChrPageId::Rom { page_number, bank_index }, read_write_status.unwrap_or(ReadWriteStatus::ReadOnly)),
+                            MemType::WorkRam => (ChrPageId::Ram { page_number, bank_index }, read_write_status.unwrap_or(ReadWriteStatus::ReadWrite)),
                             MemType::SaveRam => unimplemented!("SaveRam is not currently supported in RomRam banks."),
                         }
                     }
-                    ChrBank::SaveRam(_) => todo!(),
+                    ChrBank::SaveRam(index) => {
+                        // FIXME: Implement this properly? Hack so that the ROM Query page doesn't crash on Napoleon Senki.
+                        (ChrPageId::Ram { page_number: 0, bank_index: BankIndex::from_u16((*index).try_into().unwrap()) }, ReadWriteStatus::ReadWrite)
+                    }
                 }
             }
             Self::NameTableSource(source) => match source {

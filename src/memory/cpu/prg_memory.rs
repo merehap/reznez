@@ -32,8 +32,8 @@ impl PrgMemory {
         rom: RawMemory,
         rom_outer_bank_layout: OuterBankLayout,
         rom_bank_size_override: Option<PrgWindowSize>,
-        work_ram: RawMemory,
-        save_ram: SaveRam,
+        mut work_ram: RawMemory,
+        mut save_ram: SaveRam,
         regs: PrgBankRegisters,
     ) -> PrgMemory {
 
@@ -68,6 +68,8 @@ impl PrgMemory {
         if (!work_ram.is_empty() || !save_ram.is_empty()) && !ram_present_in_layout {
             warn!("The PRG RAM that was specified in the rom file will be ignored since it is not \
                     configured in the Layout for this mapper.");
+            work_ram = RawMemory::new(0);
+            save_ram = SaveRam::empty();
         }
 
         let rom_outer_bank_count = rom_outer_bank_layout.outer_bank_count(rom.size());

@@ -35,7 +35,7 @@ impl From<u8> for BankIndex {
 #[derive(Debug)]
 pub struct PrgBankRegisters {
     registers: [BankLocation; 5],
-    read_write_statuses: [ReadWriteStatus; 15],
+    read_write_statuses: [ReadWriteStatus; 16],
     rom_ram_modes: [MemType; 12],
 }
 
@@ -43,7 +43,7 @@ impl PrgBankRegisters {
     pub fn new() -> Self {
         Self {
             registers: [BankLocation::Index(BankIndex(0)); 5],
-            read_write_statuses: [ReadWriteStatus::ReadWrite; 15],
+            read_write_statuses: [ReadWriteStatus::ReadWrite; 16],
             rom_ram_modes: [MemType::WorkRam; 12],
         }
     }
@@ -52,7 +52,7 @@ impl PrgBankRegisters {
         &self.registers
     }
 
-    pub fn read_write_statuses(&self) -> &[ReadWriteStatus; 15] {
+    pub fn read_write_statuses(&self) -> &[ReadWriteStatus; 16] {
         &self.read_write_statuses
     }
 

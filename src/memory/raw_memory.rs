@@ -177,6 +177,10 @@ pub struct SaveRam {
 }
 
 impl SaveRam {
+    pub fn empty() -> Self {
+        SaveRam { mode_state: SaveRamModeState::NonSaving(vec![0; 0]) }
+    }
+
     pub fn open(path: &Path, size: u32, allow_saving: bool) -> Self {
         if size == 0 {
             return SaveRam { mode_state: SaveRamModeState::Empty };

@@ -52,16 +52,16 @@ pub struct Nes {
 }
 
 impl Nes {
-    pub fn load_cartridge(path: &Path) -> Cartridge {
+    pub fn load_cartridge(path: &Path) -> Result<Cartridge, String> {
         info!("Loading ROM '{}'.", path.display());
         let mut raw_header_and_data = Vec::new();
         File::open(path).unwrap().read_to_end(&mut raw_header_and_data).unwrap();
         let raw_header_and_data = RawMemory::from_vec(raw_header_and_data);
-        Cartridge::load(path, &raw_header_and_data).unwrap()
+        Cartridge::load(path, &raw_header_and_data)
     }
 
-    pub fn new(header_db: &HeaderDb, config: &Config, cartridge: Cartridge) -> Nes {
-        let (mapper, mapper_params, metadata_resolver) = Nes::load_rom(header_db, config, cartridge);
+    pub fn new(header_db: &HeaderDb, config: &Config, cartridge: Cartridge) -> Result<Nes, String> {
+        let (mapper, mapper_params, metadata_resolver) = Nes::load_rom(header_db, config, cartridge)?;
 
         if let Err(err) = DirBuilder::new().recursive(true).create("saveram") {
             warn!("Failed to create saveram directory. {err}");
@@ -74,7 +74,7 @@ impl Nes {
         let ports = Ports::new(joypad1, joypad2);
         let mut memory = Memory::new(mapper_params, ports, config.ppu_clock, config.system_palette.clone());
 
-        Nes {
+        Ok(Nes {
             cpu: Cpu::new(&mut memory, config.starting_cpu_cycle, config.cpu_step_formatting),
             ppu: Ppu::new(&memory),
             apu: Apu::new(config.disable_audio),
@@ -88,7 +88,7 @@ impl Nes {
             log_formatter: Box::new(MesenFormatter),
             snapshots: Snapshots::new(),
             latest_values,
-        }
+        })
     }
 
     pub fn cpu(&self) -> &Cpu {
@@ -131,7 +131,7 @@ impl Nes {
         self.memory.stack_pointer()
     }
 
-    fn load_rom(header_db: &HeaderDb, config: &Config, cartridge: Cartridge) -> (Box<dyn Mapper>, MapperParams, MetadataResolver) {
+    fn load_rom(header_db: &HeaderDb, config: &Config, cartridge: Cartridge) -> Result<(Box<dyn Mapper>, MapperParams, MetadataResolver), String> {
         let header = cartridge.header();
         let cartridge_mapper_number = header.mapper_number().unwrap();
         let prg_rom_hash = header.prg_rom_hash().unwrap();
@@ -183,7 +183,7 @@ impl Nes {
             layout_has_prg_ram: false,
         };
 
-        let mapper = mapper_list::lookup_mapper(&metadata_resolver, &cartridge);
+        let mapper = mapper_list::lookup_mapper(&metadata_resolver, &cartridge)?;
 
         let name_table_mirroring_index = usize::try_from(metadata_resolver.cartridge.name_table_mirroring_index().unwrap()).unwrap();
         if let Some(mirroring) = mapper.layout().cartridge_selection_name_table_mirrorings()[name_table_mirroring_index] {
@@ -191,14 +191,14 @@ impl Nes {
         }
 
         let metadata = metadata_resolver.resolve();
-        let mut mapper_params = mapper.layout().make_mapper_params(&metadata, &cartridge, config.allow_saving);
+        let mut mapper_params = mapper.layout().make_mapper_params(&metadata, &cartridge, config.allow_saving)?;
         mapper.init_mapper_params(&mut mapper_params);
 
         metadata_resolver.layout_has_prg_ram = mapper.layout().has_prg_ram();
         let metadata = metadata_resolver.resolve();
         info!("ROM loaded.\n{metadata}");
 
-        (mapper, mapper_params, metadata_resolver)
+        Ok((mapper, mapper_params, metadata_resolver))
     }
 
     pub fn mute(&mut self) {
@@ -577,7 +577,7 @@ struct LatestValues {
     chr_registers: [BankLocation; 18],
     meta_registers: [ChrBankRegisterId; 2],
     name_table_mirroring: NameTableMirroring,
-    read_write_statuses: [ReadWriteStatus; 15],
+    read_write_statuses: [ReadWriteStatus; 16],
 }
 
 impl LatestValues {

@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
-use log::info;
+use log::{error, info};
 use rusqlite::{params, Connection, MappedRows};
 use walkdir::WalkDir;
 
@@ -10,6 +10,13 @@ use crate::cartridge::header_db::HeaderDb;
 use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::config::{Config, GuiType, Opt};
 use crate::nes::Nes;
+
+fn load_nes(header_db: &HeaderDb, config: &Config, rom_path: &Path) -> Result<Nes, String> {
+    let cartridge = Nes::load_cartridge(&rom_path)?;
+    let nes = Nes::new(&header_db, &config, cartridge)?;
+    log::logger().flush();
+    Ok(nes)
+}
 
 pub fn analyze(rom_base_path: &Path) -> Vec<(PathBuf, ResolvedMetadata)> {
     let rom_paths: BTreeSet<_> = WalkDir::new(rom_base_path)
@@ -32,10 +39,15 @@ pub fn analyze(rom_base_path: &Path) -> Vec<(PathBuf, ResolvedMetadata)> {
 
         let config = Config::new(&opt);
 
-        let cartridge = Nes::load_cartridge(&rom_path);
-        let nes = Nes::new(&header_db, &config, cartridge);
-        log::logger().flush();
-        all_metadata.push((rom_path, nes.resolved_metadata().clone()));
+        match load_nes(&header_db, &config, &rom_path) {
+            Ok(nes) => {
+                all_metadata.push((rom_path, nes.resolved_metadata().clone()));
+            }
+            Err(err) => {
+                error!("Failed to load ROM {}. {err}", rom_path.to_string_lossy());
+                continue;
+            }
+        }
     }
 
     let connection = Connection::open_in_memory().unwrap();
@@ -73,7 +85,7 @@ pub fn analyze(rom_base_path: &Path) -> Vec<(PathBuf, ResolvedMetadata)> {
                     path.file_stem().unwrap().to_str().unwrap(),
                     metadata.mapper_number,
                     metadata.submapper_number,
-                    metadata.name_table_mirroring.unwrap().to_string(),
+                    metadata.name_table_mirroring.expect(&format!("{}", path.to_string_lossy())).to_string(),
                     metadata.full_hash.to_string(),
                     metadata.prg_rom_hash.to_string(),
                     metadata.chr_rom_hash.to_string(),
