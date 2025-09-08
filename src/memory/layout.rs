@@ -120,8 +120,7 @@ impl Layout {
         );
 
         let name_table_mirroring = metadata.name_table_mirroring
-            .or(self.four_screen_mirroring_definition())
-            .ok_or(format!("Mapper must provide a definition of four screen mirroring. ROM: {}", cartridge.path().rom_file_name()))?;
+            .expect("Four screen mirroring specified, but mapper didn't a definition of four screen mirroring.");
 
         let mut chr_layouts: Vec<_> = self.chr_layouts.as_iter().collect();
         match chr_access_override {

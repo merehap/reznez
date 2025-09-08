@@ -186,9 +186,10 @@ impl Nes {
         let mapper = mapper_list::lookup_mapper(&metadata_resolver, &cartridge)?;
 
         let name_table_mirroring_index = usize::try_from(metadata_resolver.cartridge.name_table_mirroring_index().unwrap()).unwrap();
-        if let Some(mirroring) = mapper.layout().cartridge_selection_name_table_mirrorings()[name_table_mirroring_index] {
-            metadata_resolver.cartridge.set_name_table_mirroring(mirroring);
-        }
+        let name_table_mirroring = mapper.layout().cartridge_selection_name_table_mirrorings()[name_table_mirroring_index]
+            .or(mapper.layout().four_screen_mirroring_definition())
+            .ok_or(format!("Mapper must provide a definition of four screen mirroring. ROM: {}", cartridge.path().rom_file_name()))?;
+        metadata_resolver.cartridge.set_name_table_mirroring(name_table_mirroring);
 
         let metadata = metadata_resolver.resolve();
         let mut mapper_params = mapper.layout().make_mapper_params(&metadata, &cartridge, config.allow_saving)?;
