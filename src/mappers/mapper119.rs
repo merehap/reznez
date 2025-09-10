@@ -39,12 +39,12 @@ impl Mapper for Mapper119 {
         if matches!(cpu_address, 0x8001..=0x9FFF)
                 && cpu_address % 2 == 1
                 && let RegId::Chr(chr_id) = self.mmc3.selected_register_id() {
-            let (use_ram, bank_index) = splitbits_named!(value, ".rbbbbbb");
-            let rom_ram_reg_id = ROM_RAM_REGISTER_IDS[chr_id as usize];
-            let memory_type = if use_ram { MemType::WorkRam } else { MemType::Rom };
 
-            params.set_chr_register(chr_id, bank_index);
-            params.set_rom_ram_mode(rom_ram_reg_id, memory_type);
+            let fields = splitbits!(value, ".mcccccc");
+            params.set_chr_register(chr_id, fields.c);
+            let rom_ram_reg_id = ROM_RAM_REGISTER_IDS[chr_id as usize];
+            let mem_type = [MemType::Rom, MemType::WorkRam][fields.m as usize];
+            params.set_rom_ram_mode(rom_ram_reg_id, mem_type);
         } else {
             // Use standard MMC3 behaviors.
             self.mmc3.write_register(params, cpu_address, value);

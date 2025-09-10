@@ -417,10 +417,10 @@ impl Mapper005 {
         mode_reg_id: Option<RomRamModeRegisterId>,
         value: u8,
     ) {
-        let (is_rom_mode, prg_bank) = splitbits_named!(value, "mppppppp");
-        params.set_prg_register(id, prg_bank);
+        let fields = splitbits!(value, "mppppppp");
+        params.set_prg_register(id, fields.p);
         if let Some(mode_reg_id) = mode_reg_id {
-            let rom_ram_mode = if is_rom_mode { MemType::Rom } else { MemType::WorkRam };
+            let rom_ram_mode = [MemType::WorkRam, MemType::Rom][fields.m as usize];
             params.set_rom_ram_mode(mode_reg_id, rom_ram_mode);
         }
     }

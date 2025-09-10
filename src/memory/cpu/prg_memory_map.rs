@@ -188,42 +188,49 @@ impl PrgMapping {
 
         let bank_index = location.bank_index(regs);
 
-        let default_rw_status;
-        let prg_source_and_page_number;
+        let read_write_status;
+        let mem_type_and_page_number;
         match mem_type {
             MemType::Rom => {
-                default_rw_status = ReadWriteStatus::ReadOnly;
                 let page_number = ((self.rom_pages_per_bank * bank_index.to_raw()) & self.rom_page_number_mask) + self.page_offset;
                 //println!("Page number within mapping: {page_number}. Bank Index: {}. Page offset: {}", bank_index.to_raw(), self.page_offset);
-                prg_source_and_page_number = (MemType::Rom, page_number);
+                mem_type_and_page_number = (MemType::Rom, page_number);
+
+                read_write_status = if self.bank.is_rom_ram() {
+                    // The status register for RomRam banks only controls the RAM status, not the ROM status.
+                    ReadWriteStatus::ReadOnly
+                } else {
+                    self.bank.status_register_id()
+                        .map(|id| regs.read_write_status(id))
+                        .unwrap_or(ReadWriteStatus::ReadOnly)
+                }
             }
             // FIXME: Pull these out into separate cases, and handle the splitting earlier?
             MemType::WorkRam | MemType::SaveRam => {
-                default_rw_status = ReadWriteStatus::ReadWrite;
                 let mut page_number = (bank_index.to_raw() & self.ram_page_number_mask) + self.page_offset;
                 if page_number < save_ram_bank_count {
-                    prg_source_and_page_number = (MemType::SaveRam, page_number);
+                    mem_type_and_page_number = (MemType::SaveRam, page_number);
                 } else {
                     page_number -= save_ram_bank_count;
-                    prg_source_and_page_number = (MemType::WorkRam, page_number);
+                    mem_type_and_page_number = (MemType::WorkRam, page_number);
                 }
+
+                read_write_status = self.bank.status_register_id()
+                    .map(|id| regs.read_write_status(id))
+                    .unwrap_or(ReadWriteStatus::ReadWrite);
             }
         }
 
-        let read_write_status = self.bank.status_register_id()
-            .map(|id| regs.read_write_status(id))
-            .unwrap_or(default_rw_status);
-
-        (Some(prg_source_and_page_number), read_write_status)
+        (Some(mem_type_and_page_number), read_write_status)
     }
 }
 
 #[derive(Clone, Debug)]
 pub enum PrgPageIdSlot {
-    Normal(Option<PrgSourceAndPageNumber>, ReadWriteStatus),
-    Multi(Box<[(Option<PrgSourceAndPageNumber>, ReadWriteStatus, SubPageOffset); PRG_SUB_SLOT_COUNT]>),
+    Normal(Option<MemTypeAndPageNumber>, ReadWriteStatus),
+    Multi(Box<[(Option<MemTypeAndPageNumber>, ReadWriteStatus, SubPageOffset); PRG_SUB_SLOT_COUNT]>),
 }
 
 type PageNumber = u16;
 type PrgIndex = u32;
-type PrgSourceAndPageNumber = (MemType, PageNumber);
+type MemTypeAndPageNumber = (MemType, PageNumber);

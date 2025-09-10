@@ -67,6 +67,10 @@ impl PrgBank {
         matches!(self, PrgBank::WorkRam(..) | PrgBank::Ram(..) | PrgBank::RomRam(..))
     }
 
+    pub fn is_rom_ram(self) -> bool {
+        matches!(self, PrgBank::RomRam(..))
+    }
+
     pub fn location(self) -> Result<PrgBankLocation, String> {
         use PrgBank::*;
         match self {

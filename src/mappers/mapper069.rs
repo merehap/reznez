@@ -1,10 +1,11 @@
 use crate::mapper::*;
+use crate::memory::bank::bank_index::MemType;
 use crate::memory::memory::Memory;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P0).status_register(S0).rom_ram_register(R0)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P3)),
@@ -28,9 +29,7 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
     ])
     .read_write_statuses(&[
-        ReadWriteStatus::ReadOnly,
         ReadWriteStatus::Disabled,
-        ReadWriteStatus::ReadOnly,
         ReadWriteStatus::ReadWrite,
     ])
     .build();
@@ -105,8 +104,10 @@ impl Mapper069 {
             Command::ChrRomBank(id) =>
                 params.set_chr_register(id, value),
             Command::PrgRomRamBank => {
-                let fields = splitbits!(value, "rrpppppp");
-                params.set_read_write_status(S0, fields.r);
+                let fields = splitbits!(value, "smpppppp");
+                params.set_read_write_status(S0, fields.s as u8);
+                let rom_ram_mode = [MemType::Rom, MemType::WorkRam][fields.m as usize];
+                params.set_rom_ram_mode(R0, rom_ram_mode);
                 params.set_prg_register(P0, fields.p);
             }
             Command::PrgRomBank(id) =>
