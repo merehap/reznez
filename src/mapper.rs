@@ -146,6 +146,7 @@ pub trait Mapper {
         };
 
         mem.cpu_data_bus = read_result.resolve(mem.cpu_data_bus);
+        self.on_cpu_read(&mut mem.mapper_params, address, mem.cpu_data_bus);
 
         mem.cpu_data_bus
     }
