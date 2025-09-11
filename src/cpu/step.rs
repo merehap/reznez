@@ -154,14 +154,14 @@ pub const INDIRECT_INDEXED_WRITE_STEPS: &[Step] = &[
 pub const ABSOLUTE_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
     ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[IncrementPC]),
-    Read(                         From::PendingAddressTarget, &[]),
+    ReadField(Argument          , From::PendingAddressTarget, &[]),
     Write(To::PendingAddressTarget, &[ExecuteOpCode]),
     Write(To::PendingAddressTarget, &[PollInterrupts]),
 ];
 
 pub const ZERO_PAGE_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow, From::ProgramCounterTarget , &[InterpretOpCode, IncrementPC]),
-    Read(                        From::PendingZeroPageTarget, &[]),
+    ReadField(Argument         , From::PendingZeroPageTarget, &[]),
     Write(                       To::PendingZeroPageTarget  , &[ExecuteOpCode]),
     Write(                       To::PendingZeroPageTarget  , &[PollInterrupts]),
 ];
@@ -170,7 +170,7 @@ pub const ABSOLUTE_X_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
     ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[XOffsetPendingAddressLow, IncrementPC]),
     Read(                         From::PendingAddressTarget, &[AddCarryToAddress]),
-    Read(                         From::ComputedTarget      , &[]),
+    ReadField(Argument          , From::ComputedTarget      , &[]),
     Write(                        To::ComputedTarget        , &[ExecuteOpCode]),
     Write(                        To::ComputedTarget        , &[PollInterrupts]),
 ];
@@ -178,7 +178,7 @@ pub const ABSOLUTE_X_READ_MODIFY_WRITE_STEPS: &[Step] = &[
 pub const ZERO_PAGE_X_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow, From::ProgramCounterTarget , &[InterpretOpCode, IncrementPC]),
     Read(                        From::PendingZeroPageTarget, &[XOffsetAddress]),
-    Read(                        From::ComputedTarget       , &[]),
+    ReadField(Argument         , From::ComputedTarget       , &[]),
     Write(                       To::ComputedTarget         , &[ExecuteOpCode]),
     Write(                       To::ComputedTarget         , &[PollInterrupts]),
 ];
@@ -187,7 +187,7 @@ pub const ABSOLUTE_Y_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
     ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[YOffsetPendingAddressLow, IncrementPC]),
     Read(                         From::PendingAddressTarget, &[AddCarryToAddress]),
-    Read(                         From::ComputedTarget      , &[]),
+    ReadField(Argument          , From::ComputedTarget      , &[]),
     Write(                        To::ComputedTarget        , &[ExecuteOpCode]),
     Write(                        To::ComputedTarget        , &[PollInterrupts]),
 ];
@@ -195,7 +195,7 @@ pub const ABSOLUTE_Y_READ_MODIFY_WRITE_STEPS: &[Step] = &[
 pub const ZERO_PAGE_Y_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow, From::ProgramCounterTarget , &[InterpretOpCode, IncrementPC]),
     Read(                        From::PendingZeroPageTarget, &[YOffsetAddress]),
-    Read(                        From::ComputedTarget       , &[]),
+    ReadField(Argument         , From::ComputedTarget       , &[]),
     Write(                       To::ComputedTarget         , &[ExecuteOpCode]),
     Write(                       To::ComputedTarget         , &[PollInterrupts]),
 ];
@@ -205,7 +205,7 @@ pub const INDEXED_INDIRECT_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     Read(                         From::PendingZeroPageTarget, &[XOffsetAddress]),
     ReadField(PendingAddressLow , From::ComputedTarget       , &[IncrementAddressLow]),
     ReadField(PendingAddressHigh, From::ComputedTarget       , &[]),
-    Read(                         From::PendingAddressTarget , &[]),
+    ReadField(Argument          , From::PendingAddressTarget , &[]),
     Write(                        To::PendingAddressTarget   , &[ExecuteOpCode]),
     Write(                        To::PendingAddressTarget   , &[PollInterrupts]),
 ];
@@ -215,7 +215,7 @@ pub const INDIRECT_INDEXED_READ_MODIFY_WRITE_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::PendingZeroPageTarget, &[IncrementAddressLow]),
     ReadField(PendingAddressHigh, From::ComputedTarget       , &[YOffsetPendingAddressLow]),
     Read(                         From::PendingAddressTarget , &[AddCarryToAddress]),
-    Read(                         From::ComputedTarget       , &[]),
+    ReadField(Argument          , From::ComputedTarget       , &[]),
     Write(                        To::ComputedTarget         , &[ExecuteOpCode]),
     Write(                        To::ComputedTarget         , &[PollInterrupts]),
 ];
