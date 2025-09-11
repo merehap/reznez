@@ -178,12 +178,12 @@ impl Cpu {
             }
             Step::Write(to, _) => {
                 self.address_bus = self.lookup_to_address(mem, to);
-                mapper.cpu_write(mem, self.address_bus, mem.cpu_data_bus);
+                mapper.cpu_write(mem, self.address_bus);
             }
             Step::WriteField(field, to, _) => {
                 self.address_bus = self.lookup_to_address(mem, to);
                 mem.cpu_data_bus = self.field_value(field);
-                mapper.cpu_write(mem, self.address_bus, mem.cpu_data_bus);
+                mapper.cpu_write(mem, self.address_bus);
             }
         }
 

@@ -154,7 +154,8 @@ pub trait Mapper {
     #[inline]
     #[rustfmt::skip]
     #[allow(clippy::too_many_arguments)]
-    fn cpu_write(&mut self, mem: &mut Memory, address: CpuAddress, value: u8) {
+    fn cpu_write(&mut self, mem: &mut Memory, address: CpuAddress) {
+        let value = mem.cpu_data_bus;
         // TODO: Move this into mapper, right after cpu_write() is called?
         self.on_cpu_write(&mut mem.mapper_params, address, value);
         match address.to_raw() {
