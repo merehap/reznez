@@ -137,7 +137,7 @@ pub trait Mapper {
             }
             0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
             0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
-            0x4015          => ReadResult::full(mem.apu_regs.read_status().to_u8()),
+            0x4015          => ReadResult::no_bus_update(mem.apu_regs.read_status().to_u8()),
             // TODO: Move ReadResult/mask specification into the controller.
             0x4016          => ReadResult::partial_open_bus(mem.ports.joypad1.read_status() as u8, 0b0000_0001),
             0x4017          => ReadResult::partial_open_bus(mem.ports.joypad2.read_status() as u8, 0b0000_0001),
@@ -145,10 +145,14 @@ pub trait Mapper {
             0x4020..=0xFFFF => self.read_from_cartridge_space(&mut mem.mapper_params, address.to_raw()),
         };
 
-        mem.cpu_data_bus = read_result.resolve(mem.cpu_data_bus);
-        self.on_cpu_read(&mut mem.mapper_params, address, mem.cpu_data_bus);
+        let (value, bus_update_needed) = read_result.resolve(mem.cpu_data_bus);
+        if bus_update_needed {
+            mem.cpu_data_bus = value;
+        }
 
-        mem.cpu_data_bus
+        self.on_cpu_read(&mut mem.mapper_params, address, value);
+
+        value
     }
 
     #[inline]
