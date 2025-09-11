@@ -110,8 +110,8 @@ pub trait Mapper {
 
     #[inline]
     #[rustfmt::skip]
-    fn cpu_read(&mut self, mem: &mut Memory, address: CpuAddress) -> ReadResult {
-        match address.to_raw() {
+    fn cpu_read(&mut self, mem: &mut Memory, address: CpuAddress) -> u8 {
+        let read_result = match address.to_raw() {
             0x0000..=0x07FF => ReadResult::full(mem.cpu_internal_ram()[address.to_usize()]),
             0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[address.to_usize() & 0x07FF]),
             0x2000..=0x3FFF => {
@@ -143,7 +143,11 @@ pub trait Mapper {
             0x4017          => ReadResult::partial_open_bus(mem.ports.joypad2.read_status() as u8, 0b0000_0001),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
             0x4020..=0xFFFF => self.read_from_cartridge_space(&mut mem.mapper_params, address.to_raw()),
-        }
+        };
+
+        mem.cpu_data_bus = read_result.resolve(mem.cpu_data_bus);
+
+        mem.cpu_data_bus
     }
 
     #[inline]

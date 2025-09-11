@@ -167,12 +167,12 @@ impl Cpu {
         match step {
             Step::Read(from, _) => {
                 self.address_bus = self.lookup_from_address(mem, from);
-                mem.cpu_data_bus = mapper.cpu_read(mem, self.address_bus).resolve(mem.cpu_data_bus);
+                mapper.cpu_read(mem, self.address_bus);
                 mapper.on_cpu_read(&mut mem.mapper_params, self.address_bus, mem.cpu_data_bus);
             }
             Step::ReadField(field, from, _) => {
                 self.address_bus = self.lookup_from_address(mem, from);
-                mem.cpu_data_bus = mapper.cpu_read(mem, self.address_bus).resolve(mem.cpu_data_bus);
+                mapper.cpu_read(mem, self.address_bus);
                 mapper.on_cpu_read(&mut mem.mapper_params, self.address_bus, mem.cpu_data_bus);
                 self.set_field_value(mem, field);
             }
