@@ -272,12 +272,6 @@ impl Cpu {
             StepAction::InterpretOpCode => {}
             StepAction::ExecuteOpCode => {
                 let access_mode = self.mode_state.current_instruction().unwrap().access_mode();
-                let rmw_operand = if access_mode == AccessMode::Imp {
-                    &mut self.a
-                } else {
-                    &mut mem.cpu_data_bus
-                };
-
                 use OpCode::*;
                 match self.mode_state.current_instruction().unwrap().op_code() {
                     // Implicit (and Accumulator) op codes.
@@ -351,45 +345,50 @@ impl Cpu {
 
 
                     // Read-Modify-Write op codes.
-                    ASL => Cpu::asl(&mut self.status, rmw_operand),
-                    ROL => Cpu::rol(&mut self.status, rmw_operand),
-                    LSR => Cpu::lsr(&mut self.status, rmw_operand),
-                    ROR => Cpu::ror(&mut self.status, rmw_operand),
+                    ASL if access_mode == AccessMode::Imp => Cpu::asl(&mut self.status, &mut self.a),
+                    ROL if access_mode == AccessMode::Imp => Cpu::rol(&mut self.status, &mut self.a),
+                    LSR if access_mode == AccessMode::Imp => Cpu::lsr(&mut self.status, &mut self.a),
+                    ROR if access_mode == AccessMode::Imp => Cpu::ror(&mut self.status, &mut self.a),
+                    ASL => Cpu::asl(&mut self.status, &mut self.argument),
+                    ROL => Cpu::rol(&mut self.status, &mut self.argument),
+                    LSR => Cpu::lsr(&mut self.status, &mut self.argument),
+                    ROR => Cpu::ror(&mut self.status, &mut self.argument),
+
                     INC => {
-                        mem.cpu_data_bus = mem.cpu_data_bus.wrapping_add(1);
-                        Cpu::nz_status(&mut self.status, mem.cpu_data_bus);
+                        self.argument = self.argument.wrapping_add(1);
+                        Cpu::nz_status(&mut self.status, self.argument);
                     }
                     DEC => {
-                        mem.cpu_data_bus = mem.cpu_data_bus.wrapping_sub(1);
-                        Cpu::nz_status(&mut self.status, mem.cpu_data_bus);
+                        self.argument = self.argument.wrapping_sub(1);
+                        Cpu::nz_status(&mut self.status, self.argument);
                     }
                     SLO => {
-                        Cpu::asl(&mut self.status, &mut mem.cpu_data_bus);
-                        self.a |= mem.cpu_data_bus;
+                        Cpu::asl(&mut self.status, &mut self.argument);
+                        self.a |= self.argument;
                         self.nz(self.a);
                     }
                     SRE => {
-                        Cpu::lsr(&mut self.status, &mut mem.cpu_data_bus);
-                        self.a ^= mem.cpu_data_bus;
+                        Cpu::lsr(&mut self.status, &mut self.argument);
+                        self.a ^= self.argument;
                         self.nz(self.a);
                     }
                     RLA => {
-                        Cpu::rol(&mut self.status, &mut mem.cpu_data_bus);
-                        self.a &= mem.cpu_data_bus;
+                        Cpu::rol(&mut self.status, &mut self.argument);
+                        self.a &= self.argument;
                         self.nz(self.a);
                     },
                     RRA => {
-                        Cpu::ror(&mut self.status, &mut mem.cpu_data_bus);
-                        self.a = self.adc(mem.cpu_data_bus);
+                        Cpu::ror(&mut self.status, &mut self.argument);
+                        self.a = self.adc(self.argument);
                         self.nz(self.a);
                     }
                     ISC => {
-                        mem.cpu_data_bus = mem.cpu_data_bus.wrapping_add(1);
-                        self.a = self.sbc(mem.cpu_data_bus);
+                        self.argument = self.argument.wrapping_add(1);
+                        self.a = self.sbc(self.argument);
                     }
                     DCP => {
-                        mem.cpu_data_bus = mem.cpu_data_bus.wrapping_sub(1);
-                        self.cmp(mem.cpu_data_bus);
+                        self.argument = self.argument.wrapping_sub(1);
+                        self.cmp(self.argument);
                     }
 
                     TAS => {
@@ -401,7 +400,7 @@ impl Cpu {
                     }
                     LAS => {
                         mapper.cpu_read(mem, self.address_bus);
-                        let value = mem.cpu_data_bus & mem.stack_pointer();
+                        let value = self.argument & mem.stack_pointer();
                         self.a = value;
                         self.x = value;
                         *mem.cpu_stack_pointer_mut() = value;
