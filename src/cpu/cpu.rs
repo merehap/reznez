@@ -40,6 +40,7 @@ pub struct Cpu {
     computed_address: CpuAddress,
     address_carry: i8,
     argument: u8,
+    value_read: u8,
 
     step_formatting: CpuStepFormatting,
 }
@@ -73,6 +74,7 @@ impl Cpu {
             computed_address: CpuAddress::ZERO,
             address_carry: 0,
             argument: 0,
+            value_read: 0,
 
             step_formatting,
         }
@@ -167,12 +169,12 @@ impl Cpu {
         match step {
             Step::Read(from, _) => {
                 self.address_bus = self.lookup_from_address(mem, from);
-                mapper.cpu_read(mem, self.address_bus);
+                self.value_read = mapper.cpu_read(mem, self.address_bus);
             }
             Step::ReadField(field, from, _) => {
                 self.address_bus = self.lookup_from_address(mem, from);
-                mapper.cpu_read(mem, self.address_bus);
-                self.set_field_value(mem, field);
+                self.value_read = mapper.cpu_read(mem, self.address_bus);
+                self.set_field_value(field);
             }
             Step::Write(to, _) => {
                 self.address_bus = self.lookup_to_address(mem, to);
@@ -185,7 +187,6 @@ impl Cpu {
             }
         }
 
-        let rw_data_bus_value = mem.cpu_data_bus;
         let rw_address_bus_value = self.address_bus;
 
         let original_program_counter = self.program_counter;
@@ -203,14 +204,14 @@ impl Cpu {
                 }
                 CpuStepFormatting::Data => {
                     info!(target: "cpustep", "  {step_name} PC: {original_program_counter}, Cycle: {cpu_cycle:>5}, {}",
-                        step.format_with_bus_values(rw_address_bus_value, rw_data_bus_value));
+                        step.format_with_bus_values(rw_address_bus_value, self.value_read));
                 }
             }
         }
 
         if step.has_start_new_instruction() {
             self.mode_state.set_current_instruction_with_address(
-                Instruction::from_code_point(mem.cpu_data_bus),
+                Instruction::from_code_point(self.value_read),
                 self.address_bus,
             )
         }
@@ -264,7 +265,7 @@ impl Cpu {
                     mem.cpu_data_bus = 0x00;
                     self.mode_state.interrupt_sequence(InterruptType::Irq);
                 } else {
-                    self.mode_state.instruction(Instruction::from_code_point(mem.cpu_data_bus));
+                    self.mode_state.instruction(Instruction::from_code_point(self.value_read));
                 }
             }
 
@@ -495,12 +496,7 @@ impl Cpu {
                 }
             }
 
-            StepAction::SetDmcSampleBuffer => mem.set_dmc_sample_buffer(mem.cpu_data_bus),
-
-            StepAction::CheckNegativeAndZero => {
-                self.status.negative = (mem.cpu_data_bus >> 7) == 1;
-                self.status.zero = mem.cpu_data_bus == 0;
-            }
+            StepAction::SetDmcSampleBuffer => mem.set_dmc_sample_buffer(self.value_read),
 
             StepAction::XOffsetPendingAddressLow => {
                 let carry;
@@ -627,22 +623,17 @@ impl Cpu {
         }
     }
 
-    fn set_field_value(&mut self, memory: &Memory, field: Field) {
+    fn set_field_value(&mut self, field: Field) {
         use Field::*;
         match field {
             ProgramCounterLowByte => unreachable!(),
-            ProgramCounterHighByte => {
-                self.program_counter = CpuAddress::from_low_high(
-                    self.argument,
-                    memory.cpu_data_bus,
-                );
-            }
+            ProgramCounterHighByte => self.program_counter = CpuAddress::from_low_high(self.argument, self.value_read),
 
-            Accumulator => self.a = memory.cpu_data_bus,
-            Status => self.status = status::Status::from_byte(memory.cpu_data_bus),
-            Argument => self.argument = memory.cpu_data_bus,
-            PendingAddressLow => self.pending_address_low = memory.cpu_data_bus,
-            PendingAddressHigh => self.pending_address_high = memory.cpu_data_bus,
+            Accumulator => self.a = self.value_read,
+            Status => self.status = status::Status::from_byte(self.value_read),
+            Argument => self.argument = self.value_read,
+            PendingAddressLow => self.pending_address_low = self.value_read,
+            PendingAddressHigh => self.pending_address_high = self.value_read,
             OpRegister => panic!(),
         }
     }

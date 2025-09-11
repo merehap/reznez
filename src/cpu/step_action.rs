@@ -28,8 +28,6 @@ pub enum StepAction {
 
     SetDmcSampleBuffer,
 
-    CheckNegativeAndZero,
-
     MaybeInsertOopsStep,
     MaybeInsertBranchOopsStep,
 
