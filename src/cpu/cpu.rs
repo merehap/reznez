@@ -39,7 +39,7 @@ pub struct Cpu {
     pending_address_high: u8,
     computed_address: CpuAddress,
     address_carry: i8,
-    argument: u8,
+    operand: u8,
     value_read: u8,
 
     step_formatting: CpuStepFormatting,
@@ -73,7 +73,7 @@ impl Cpu {
             pending_address_high: 0,
             computed_address: CpuAddress::ZERO,
             address_carry: 0,
-            argument: 0,
+            operand: 0,
             value_read: 0,
 
             step_formatting,
@@ -285,8 +285,8 @@ impl Cpu {
                     TXS => *mem.cpu_stack_pointer_mut() = self.x,
                     TXA => self.a = self.nz(self.x),
                     TYA => self.a = self.nz(self.y),
-                    PLA => self.a = self.nz(self.argument),
-                    PLP => self.status = Status::from_byte(self.argument),
+                    PLA => self.a = self.nz(self.operand),
+                    PLP => self.status = Status::from_byte(self.operand),
                     CLC => self.status.carry = false,
                     SEC => self.status.carry = true,
                     CLD => self.status.decimal = false,
@@ -297,109 +297,108 @@ impl Cpu {
                     NOP => { /* Do nothing. */ }
 
                     // Immediate op codes.
-                    LDA => self.a = self.nz(self.argument),
-                    LDX => self.x = self.nz(self.argument),
-                    LDY => self.y = self.nz(self.argument),
-                    CMP => self.cmp(self.argument),
-                    CPX => self.cpx(self.argument),
-                    CPY => self.cpy(self.argument),
-                    ORA => self.a = self.nz(self.a | self.argument),
-                    AND => self.a = self.nz(self.a & self.argument),
-                    EOR => self.a = self.nz(self.a ^ self.argument),
-                    ADC => self.a = self.adc(self.argument),
-                    SBC => self.a = self.sbc(self.argument),
+                    LDA => self.a = self.nz(self.operand),
+                    LDX => self.x = self.nz(self.operand),
+                    LDY => self.y = self.nz(self.operand),
+                    CMP => self.cmp(self.operand),
+                    CPX => self.cpx(self.operand),
+                    CPY => self.cpy(self.operand),
+                    ORA => self.a = self.nz(self.a | self.operand),
+                    AND => self.a = self.nz(self.a & self.operand),
+                    EOR => self.a = self.nz(self.a ^ self.operand),
+                    ADC => self.a = self.adc(self.operand),
+                    SBC => self.a = self.sbc(self.operand),
                     LAX => {
-                        self.a = self.argument;
-                        self.x = self.argument;
-                        self.nz(self.argument);
+                        self.a = self.operand;
+                        self.x = self.operand;
+                        self.nz(self.operand);
                     }
                     ANC => {
-                        self.a = self.nz(self.a & self.argument);
+                        self.a = self.nz(self.a & self.operand);
                         self.status.carry = self.status.negative;
                     }
                     ALR => {
-                        self.a = self.nz(self.a & self.argument);
+                        self.a = self.nz(self.a & self.operand);
                         Cpu::lsr(&mut self.status, &mut self.a);
                     }
                     ARR => {
                         // TODO: What a mess.
-                        let value = (self.a & self.argument) >> 1;
+                        let value = (self.a & self.operand) >> 1;
                         self.a = self.nz(value | if self.status.carry {0x80} else {0x00});
                         self.status.carry = self.a & 0x40 != 0;
                         self.status.overflow =
                             (u8::from(self.status.carry) ^ ((self.a >> 5) & 0x01)) != 0;
                     }
                     AXS => {
-                        self.status.carry = self.a & self.x >= self.argument;
-                        self.x = self.nz((self.a & self.x).wrapping_sub(self.argument));
+                        self.status.carry = self.a & self.x >= self.operand;
+                        self.x = self.nz((self.a & self.x).wrapping_sub(self.operand));
                     }
 
                     BIT => {
-                        self.status.negative = self.argument & 0b1000_0000 != 0;
-                        self.status.overflow = self.argument & 0b0100_0000 != 0;
-                        self.status.zero = self.argument & self.a == 0;
+                        self.status.negative = self.operand & 0b1000_0000 != 0;
+                        self.status.overflow = self.operand & 0b0100_0000 != 0;
+                        self.status.zero = self.operand & self.a == 0;
                     }
 
                     // Write op codes.
-                    STA | STX | STY | SAX | SHX | SHY => unreachable!(),
-
+                    STA | STX | STY | SAX | SHX | SHY | TAS | AHX => panic!("ExecuteOpCode must not be implemented for {:?}", instruction.op_code()),
 
                     // Read-Modify-Write op codes.
                     ASL if instruction.access_mode() == AccessMode::Imp => Cpu::asl(&mut self.status, &mut self.a),
                     ROL if instruction.access_mode() == AccessMode::Imp => Cpu::rol(&mut self.status, &mut self.a),
                     LSR if instruction.access_mode() == AccessMode::Imp => Cpu::lsr(&mut self.status, &mut self.a),
                     ROR if instruction.access_mode() == AccessMode::Imp => Cpu::ror(&mut self.status, &mut self.a),
-                    ASL => Cpu::asl(&mut self.status, &mut self.argument),
-                    ROL => Cpu::rol(&mut self.status, &mut self.argument),
-                    LSR => Cpu::lsr(&mut self.status, &mut self.argument),
-                    ROR => Cpu::ror(&mut self.status, &mut self.argument),
+                    ASL => Cpu::asl(&mut self.status, &mut self.operand),
+                    ROL => Cpu::rol(&mut self.status, &mut self.operand),
+                    LSR => Cpu::lsr(&mut self.status, &mut self.operand),
+                    ROR => Cpu::ror(&mut self.status, &mut self.operand),
 
                     INC => {
-                        self.argument = self.argument.wrapping_add(1);
-                        Cpu::nz_status(&mut self.status, self.argument);
+                        self.operand = self.operand.wrapping_add(1);
+                        Cpu::nz_status(&mut self.status, self.operand);
                     }
                     DEC => {
-                        self.argument = self.argument.wrapping_sub(1);
-                        Cpu::nz_status(&mut self.status, self.argument);
+                        self.operand = self.operand.wrapping_sub(1);
+                        Cpu::nz_status(&mut self.status, self.operand);
                     }
                     SLO => {
-                        Cpu::asl(&mut self.status, &mut self.argument);
-                        self.a |= self.argument;
+                        Cpu::asl(&mut self.status, &mut self.operand);
+                        self.a |= self.operand;
                         self.nz(self.a);
                     }
                     SRE => {
-                        Cpu::lsr(&mut self.status, &mut self.argument);
-                        self.a ^= self.argument;
+                        Cpu::lsr(&mut self.status, &mut self.operand);
+                        self.a ^= self.operand;
                         self.nz(self.a);
                     }
                     RLA => {
-                        Cpu::rol(&mut self.status, &mut self.argument);
-                        self.a &= self.argument;
+                        Cpu::rol(&mut self.status, &mut self.operand);
+                        self.a &= self.operand;
                         self.nz(self.a);
                     },
                     RRA => {
-                        Cpu::ror(&mut self.status, &mut self.argument);
-                        self.a = self.adc(self.argument);
+                        Cpu::ror(&mut self.status, &mut self.operand);
+                        self.a = self.adc(self.operand);
                         self.nz(self.a);
                     }
                     ISC => {
-                        self.argument = self.argument.wrapping_add(1);
-                        self.a = self.sbc(self.argument);
+                        self.operand = self.operand.wrapping_add(1);
+                        self.a = self.sbc(self.operand);
                     }
                     DCP => {
-                        self.argument = self.argument.wrapping_sub(1);
-                        self.cmp(self.argument);
+                        self.operand = self.operand.wrapping_sub(1);
+                        self.cmp(self.operand);
                     }
 
                     LAS => {
                         mapper.cpu_read(mem, self.address_bus);
-                        let value = self.argument & mem.stack_pointer();
+                        let value = self.operand & mem.stack_pointer();
                         self.a = value;
                         self.x = value;
                         *mem.cpu_stack_pointer_mut() = value;
                     }
                     XAA => {
-                        self.a = self.nz(self.a & self.x & self.argument);
+                        self.a = self.nz(self.a & self.x & self.operand);
                     }
 
                     // Relative op codes.
@@ -413,8 +412,6 @@ impl Cpu {
                     BEQ => if self.status.zero { self.branch(); }
 
                     JAM => self.mode_state.jammed(),
-
-                    TAS | AHX => panic!("ExecuteOpCode must not be implemented for {:?}", instruction.op_code()),
                     _ => todo!("{instruction:X?}"),
                 }
             }
@@ -578,7 +575,7 @@ impl Cpu {
                     self.status.to_instruction_byte()
                 }
             }
-            Argument => self.argument,
+            Operand => self.operand,
             PendingAddressLow => self.pending_address_low,
             PendingAddressHigh => self.pending_address_high,
             OpRegister => match self.mode_state.current_instruction().unwrap().op_code() {
@@ -620,11 +617,11 @@ impl Cpu {
         use Field::*;
         match field {
             ProgramCounterLowByte => unreachable!(),
-            ProgramCounterHighByte => self.program_counter = CpuAddress::from_low_high(self.argument, self.value_read),
+            ProgramCounterHighByte => self.program_counter = CpuAddress::from_low_high(self.operand, self.value_read),
 
             Accumulator => self.a = self.value_read,
             Status => self.status = status::Status::from_byte(self.value_read),
-            Argument => self.argument = self.value_read,
+            Operand => self.operand = self.value_read,
             PendingAddressLow => self.pending_address_low = self.value_read,
             PendingAddressHigh => self.pending_address_high = self.value_read,
             OpRegister => panic!(),
@@ -708,7 +705,7 @@ impl Cpu {
     }
 
     fn branch(&mut self) {
-        (self.program_counter, self.address_carry) = self.program_counter.offset_with_carry(self.argument as i8);
+        (self.program_counter, self.address_carry) = self.program_counter.offset_with_carry(self.operand as i8);
         self.mode_state.branch_taken();
     }
 }

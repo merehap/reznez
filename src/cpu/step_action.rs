@@ -80,7 +80,7 @@ pub enum Field {
     Status,
 
     // Called "Data" or "Operand" in the manual.
-    Argument,
+    Operand,
     PendingAddressLow,
     PendingAddressHigh,
     OpRegister,
