@@ -599,12 +599,15 @@ impl Cpu {
                     self.address_bus = CpuAddress::from_low_high(low, high & self.x);
                     self.x & high.wrapping_add(1)
                 }
-
                 // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::SHY => {
                     let (low, high) = self.address_bus.to_low_high();
                     self.address_bus = CpuAddress::from_low_high(low, high & self.y);
                     self.y & high.wrapping_add(1)
+                }
+                // FIXME: Calculations should be done as part of an earlier StepAction.
+                OpCode::AHX => {
+                    self.a & self.x & self.address_bus.high_byte()
                 }
                 op_code => todo!("{:?}", op_code),
             }

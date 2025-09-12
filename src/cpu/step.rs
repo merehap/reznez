@@ -313,27 +313,19 @@ pub const JMP_IND_STEPS: &[Step] = &[
     Read(                         From::PendingAddressTarget, &[CopyAddressToPC, StartNextInstruction, IncrementPC]),
 ];
 
-// FIXME: These certainly aren't the real AHX steps. Somehow AHX must take 5 cycles but is
-// classified as absolute y (and is a write operation which generally don't take 5 cycles).
 pub const ABSOLUTE_Y_AHX_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
     ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[YOffsetPendingAddressLow, IncrementPC]),
     Read(                         From::PendingAddressTarget, &[AddCarryToAddress]),
-    // Hackily add an extra cycle.
-    Read(                         From::ComputedTarget      , &[PollInterrupts]),
-    Read(                         From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementPC]),
+    WriteField(OpRegister,        To::ComputedTarget        , &[PollInterrupts]),
 ];
 
-// FIXME: These certainly aren't the real AHX steps. Somehow AHX must take 6 cycles but is
-// classified as INDIRECT_INDEXED (and is a write operation which generally don't take 6 cycles).
 pub const INDIRECT_INDEXED_AHX_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ProgramCounterTarget , &[InterpretOpCode, IncrementPC]),
     ReadField(PendingAddressLow , From::PendingZeroPageTarget, &[IncrementAddressLow]),
     ReadField(PendingAddressHigh, From::ComputedTarget       , &[YOffsetPendingAddressLow]),
-    // Hackily add an extra cycle.
-    Read(                         From::ComputedTarget       , &[]),
-    Read(                         From::PendingAddressTarget , &[AddCarryToAddress, PollInterrupts]),
-    Read(                         From::ProgramCounterTarget , &[ExecuteOpCode, StartNextInstruction, IncrementPC]),
+    Read(                         From::PendingAddressTarget , &[AddCarryToAddress]),
+    WriteField(OpRegister       , To::ComputedTarget         , &[PollInterrupts]),
 ];
 
 // Same as Absolute Y Read Steps, except for some reason the 'oops' cycle is always taken.
