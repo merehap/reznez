@@ -313,6 +313,7 @@ pub const JMP_IND_STEPS: &[Step] = &[
     Read(                         From::PendingAddressTarget, &[CopyAddressToPC, StartNextInstruction, IncrementPC]),
 ];
 
+/*
 // Same as Absolute Y Read Steps, except for some reason the 'oops' cycle is always taken.
 pub const TAS_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
@@ -321,6 +322,7 @@ pub const TAS_STEPS: &[Step] = &[
     Read(                         From::ComputedTarget      , &[PollInterrupts]),
     Read(                         From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementPC]),
 ];
+*/
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Step {

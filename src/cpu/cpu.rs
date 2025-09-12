@@ -182,7 +182,7 @@ impl Cpu {
             }
             Step::WriteField(field, to, _) => {
                 self.address_bus = self.lookup_to_address(mem, to);
-                mem.cpu_data_bus = self.field_value(field);
+                mem.cpu_data_bus = self.field_value(mem, field);
                 mapper.cpu_write(mem, self.address_bus);
             }
         }
@@ -572,7 +572,7 @@ impl Cpu {
         }
     }
 
-    fn field_value(&mut self, field: Field) -> u8 {
+    fn field_value(&mut self, mem: &mut Memory, field: Field) -> u8 {
         use Field::*;
         match field {
             ProgramCounterLowByte => self.program_counter.low_byte(),
@@ -608,6 +608,11 @@ impl Cpu {
                 // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::AHX => {
                     self.a & self.x & self.address_bus.high_byte()
+                }
+                OpCode::TAS => {
+                    let sp = self.x & self.a;
+                    *mem.cpu_stack_pointer_mut() = sp;
+                    self.x & self.address_bus.high_byte()
                 }
                 op_code => todo!("{:?}", op_code),
             }

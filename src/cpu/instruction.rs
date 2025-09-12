@@ -111,7 +111,6 @@ impl Instruction {
             // TODO: Remove the unused combos.
             (AbX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP) => ABSOLUTE_X_READ_STEPS,
             (AbY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP | LAS) => ABSOLUTE_Y_READ_STEPS,
-            (AbY, TAS) => TAS_STEPS,
             (ZP , LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | CPX | CPY | BIT | LAX | NOP) => ZERO_PAGE_READ_STEPS,
             (ZPX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP) => ZERO_PAGE_X_READ_STEPS,
             (ZPY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP) => ZERO_PAGE_Y_READ_STEPS,
@@ -122,7 +121,7 @@ impl Instruction {
             (Abs, STA | STX | STY | SAX) => ABSOLUTE_WRITE_STEPS,
             // TODO: Remove the unused combos.
             (AbX, STA | STX | STY |     SHY) => ABSOLUTE_X_WRITE_STEPS,
-            (AbY, STA | STX | STY |     SHX | AHX) => ABSOLUTE_Y_WRITE_STEPS,
+            (AbY, STA | STX | STY |     SHX | AHX | TAS) => ABSOLUTE_Y_WRITE_STEPS,
             (ZP , STA | STX | STY | SAX) => ZERO_PAGE_WRITE_STEPS,
             (ZPX, STA | STX | STY | SAX) => ZERO_PAGE_X_WRITE_STEPS,
             (ZPY, STA | STX | STY | SAX) => ZERO_PAGE_Y_WRITE_STEPS,
@@ -243,7 +242,7 @@ pub enum OpCode {
     SHY,
     // a.k.a. SXA
     SHX,
-    // a.k.a. ANE
+    // a.k.a. SHS or XAS
     TAS,
     LAS,
 
