@@ -236,6 +236,7 @@ pub enum OpCode {
     ANC,
     ALR,
     ARR,
+    // a.k.a. ANE
     XAA,
     AXS,
     // a.k.a. SHA

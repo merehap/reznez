@@ -405,20 +405,9 @@ impl Cpu {
                         self.x = value;
                         *mem.cpu_stack_pointer_mut() = value;
                     }
-
-                    AHX => {
-                        // TODO: Implement properly.
-                        /*
-                        let high_inc = self.address_bus.high_byte().wrapping_add(1);
-                        let value = self.a & self.x & high_inc;
-                        // TODO: Consolidate this write into the standardized location.
-                        memory.write(self.address_bus, value);
-                        */
-                    }
-
+                    AHX => {}
                     XAA => {
-                        // TODO: Implement properly.
-                        //self.a = self.nz(self.x & value);
+                        self.a = self.a & self.x & self.argument;
                     }
 
                     // Relative op codes.
