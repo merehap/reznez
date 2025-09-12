@@ -313,21 +313,6 @@ pub const JMP_IND_STEPS: &[Step] = &[
     Read(                         From::PendingAddressTarget, &[CopyAddressToPC, StartNextInstruction, IncrementPC]),
 ];
 
-pub const ABSOLUTE_Y_AHX_STEPS: &[Step] = &[
-    ReadField(PendingAddressLow , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
-    ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[YOffsetPendingAddressLow, IncrementPC]),
-    Read(                         From::PendingAddressTarget, &[AddCarryToAddress]),
-    WriteField(OpRegister,        To::ComputedTarget        , &[PollInterrupts]),
-];
-
-pub const INDIRECT_INDEXED_AHX_STEPS: &[Step] = &[
-    ReadField(PendingAddressLow , From::ProgramCounterTarget , &[InterpretOpCode, IncrementPC]),
-    ReadField(PendingAddressLow , From::PendingZeroPageTarget, &[IncrementAddressLow]),
-    ReadField(PendingAddressHigh, From::ComputedTarget       , &[YOffsetPendingAddressLow]),
-    Read(                         From::PendingAddressTarget , &[AddCarryToAddress]),
-    WriteField(OpRegister       , To::ComputedTarget         , &[PollInterrupts]),
-];
-
 // Same as Absolute Y Read Steps, except for some reason the 'oops' cycle is always taken.
 pub const TAS_STEPS: &[Step] = &[
     ReadField(PendingAddressLow , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),

@@ -112,24 +112,22 @@ impl Instruction {
             (AbX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP) => ABSOLUTE_X_READ_STEPS,
             (AbY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP | LAS) => ABSOLUTE_Y_READ_STEPS,
             (AbY, TAS) => TAS_STEPS,
-            (AbY, AHX) => ABSOLUTE_Y_AHX_STEPS,
             (ZP , LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP | CPX | CPY | BIT | LAX | NOP) => ZERO_PAGE_READ_STEPS,
             (ZPX, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP) => ZERO_PAGE_X_READ_STEPS,
             (ZPY, LDA | LDX | LDY | EOR | AND | ORA | ADC | SBC | CMP |                   LAX | NOP) => ZERO_PAGE_Y_READ_STEPS,
             (IzX, LDA |             EOR | AND | ORA | ADC | SBC | CMP |                   LAX) => INDEXED_INDIRECT_READ_STEPS,
             (IzY, LDA |             EOR | AND | ORA | ADC | SBC | CMP |                   LAX) => INDIRECT_INDEXED_READ_STEPS,
-            (IzY, AHX) => INDIRECT_INDEXED_AHX_STEPS,
 
             // Write operations.
             (Abs, STA | STX | STY | SAX) => ABSOLUTE_WRITE_STEPS,
             // TODO: Remove the unused combos.
             (AbX, STA | STX | STY |     SHY) => ABSOLUTE_X_WRITE_STEPS,
-            (AbY, STA | STX | STY |     SHX) => ABSOLUTE_Y_WRITE_STEPS,
+            (AbY, STA | STX | STY |     SHX | AHX) => ABSOLUTE_Y_WRITE_STEPS,
             (ZP , STA | STX | STY | SAX) => ZERO_PAGE_WRITE_STEPS,
             (ZPX, STA | STX | STY | SAX) => ZERO_PAGE_X_WRITE_STEPS,
             (ZPY, STA | STX | STY | SAX) => ZERO_PAGE_Y_WRITE_STEPS,
             (IzX, STA |             SAX) => INDEXED_INDIRECT_WRITE_STEPS,
-            (IzY, STA) => INDIRECT_INDEXED_WRITE_STEPS,
+            (IzY, STA | AHX) => INDIRECT_INDEXED_WRITE_STEPS,
 
             // Read-modify-write operations.
             (Abs, ASL | LSR | ROL | ROR | INC | DEC | SLO | SRE | RLA | RRA | ISC | DCP) => ABSOLUTE_READ_MODIFY_WRITE_STEPS,
