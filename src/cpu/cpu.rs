@@ -589,21 +589,25 @@ impl Cpu {
                 // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::SHX => {
                     let (low, high) = self.address_bus.to_low_high();
-                    self.address_bus = CpuAddress::from_low_high(low, high & self.x);
+                    self.address_bus = CpuAddress::from_low_high(low, self.x & high);
                     self.x & high
                 }
                 // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::SHY => {
                     let (low, high) = self.address_bus.to_low_high();
-                    self.address_bus = CpuAddress::from_low_high(low, high & self.y);
+                    self.address_bus = CpuAddress::from_low_high(low, self.y & high);
                     self.y
                 }
                 // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::AHX => {
-                    self.a & self.x & self.address_bus.high_byte()
+                    let (low, high) = self.address_bus.to_low_high();
+                    // This is using later revision logic.
+                    // For early revision logic, use self.a & self.x & self.a
+                    self.address_bus = CpuAddress::from_low_high(low, self.x & high);
+                    self.a & self.x & high
                 }
                 OpCode::TAS => {
-                    let sp = self.x & self.a;
+                    let sp = self.a & self.x;
                     *mem.cpu_stack_pointer_mut() = sp;
                     self.x & self.address_bus.high_byte()
                 }
