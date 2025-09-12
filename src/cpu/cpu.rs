@@ -597,7 +597,7 @@ impl Cpu {
                 OpCode::SHX => {
                     let (low, high) = self.address_bus.to_low_high();
                     self.address_bus = CpuAddress::from_low_high(low, high & self.x);
-                    self.x & high.wrapping_add(1)
+                    self.x & high
                 }
                 // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::SHY => {
