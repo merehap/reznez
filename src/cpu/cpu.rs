@@ -399,7 +399,7 @@ impl Cpu {
                         *mem.cpu_stack_pointer_mut() = value;
                     }
                     XAA => {
-                        self.a = self.a & self.x & self.argument;
+                        self.a = self.nz(self.a & self.x & self.argument);
                     }
 
                     // Relative op codes.
