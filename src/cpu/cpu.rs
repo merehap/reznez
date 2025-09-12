@@ -271,9 +271,9 @@ impl Cpu {
 
             StepAction::InterpretOpCode => {}
             StepAction::ExecuteOpCode => {
-                let access_mode = self.mode_state.current_instruction().unwrap().access_mode();
+                let instruction = self.mode_state.current_instruction().unwrap();
                 use OpCode::*;
-                match self.mode_state.current_instruction().unwrap().op_code() {
+                match instruction.op_code() {
                     // Implicit (and Accumulator) op codes.
                     INX => self.x = self.nz(self.x.wrapping_add(1)),
                     INY => self.y = self.nz(self.y.wrapping_add(1)),
@@ -345,10 +345,10 @@ impl Cpu {
 
 
                     // Read-Modify-Write op codes.
-                    ASL if access_mode == AccessMode::Imp => Cpu::asl(&mut self.status, &mut self.a),
-                    ROL if access_mode == AccessMode::Imp => Cpu::rol(&mut self.status, &mut self.a),
-                    LSR if access_mode == AccessMode::Imp => Cpu::lsr(&mut self.status, &mut self.a),
-                    ROR if access_mode == AccessMode::Imp => Cpu::ror(&mut self.status, &mut self.a),
+                    ASL if instruction.access_mode() == AccessMode::Imp => Cpu::asl(&mut self.status, &mut self.a),
+                    ROL if instruction.access_mode() == AccessMode::Imp => Cpu::rol(&mut self.status, &mut self.a),
+                    LSR if instruction.access_mode() == AccessMode::Imp => Cpu::lsr(&mut self.status, &mut self.a),
+                    ROR if instruction.access_mode() == AccessMode::Imp => Cpu::ror(&mut self.status, &mut self.a),
                     ASL => Cpu::asl(&mut self.status, &mut self.argument),
                     ROL => Cpu::rol(&mut self.status, &mut self.argument),
                     LSR => Cpu::lsr(&mut self.status, &mut self.argument),
@@ -391,13 +391,6 @@ impl Cpu {
                         self.cmp(self.argument);
                     }
 
-                    TAS => {
-                        let sp = self.x & self.a;
-                        *mem.cpu_stack_pointer_mut() = sp;
-                        // TODO: Implement this write properly.
-                        //let value = (u16::from(sp) & ((self.address_bus.to_raw() >> 8) + 1)) as u8;
-                        //memory.write(self.address_bus, value);
-                    }
                     LAS => {
                         mapper.cpu_read(mem, self.address_bus);
                         let value = self.argument & mem.stack_pointer();
@@ -405,7 +398,6 @@ impl Cpu {
                         self.x = value;
                         *mem.cpu_stack_pointer_mut() = value;
                     }
-                    AHX => {}
                     XAA => {
                         self.a = self.a & self.x & self.argument;
                     }
@@ -422,7 +414,8 @@ impl Cpu {
 
                     JAM => self.mode_state.jammed(),
 
-                    _ => todo!("{:X?}", self.mode_state.current_instruction().unwrap()),
+                    TAS | AHX => panic!("ExecuteOpCode must not be implemented for {:?}", instruction.op_code()),
+                    _ => todo!("{instruction:X?}"),
                 }
             }
 
