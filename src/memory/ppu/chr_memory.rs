@@ -11,6 +11,7 @@ use crate::memory::ppu::chr_memory_map::{ChrMemoryMap, ChrMapping, ChrMemoryInde
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
 use crate::memory::window::{ChrWindowSize, ReadWriteStatusInfo};
+use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::util::unit::KIBIBYTE;
 
 use super::ciram::CiramSide;
@@ -159,7 +160,7 @@ impl ChrMemory {
         }
     }
 
-    pub fn write(&mut self, ciram: &mut Ciram, address: PpuAddress, value: u8) {
+    pub fn write(&mut self, regs: &PpuRegisters, ciram: &mut Ciram, address: PpuAddress, value: u8) {
         let (chr_memory_index, _, read_write_status) = self.current_memory_map().index_for_address(address);
         if !read_write_status.is_writable() {
             return;
@@ -172,7 +173,7 @@ impl ChrMemory {
                 self.ram[index % size] = value;
             }
             ChrMemoryIndex::Ciram(side, index) => {
-                ciram.write(side, index, value);
+                ciram.write(regs, side, index, value);
             }
             ChrMemoryIndex::SaveRam(_index) => todo!(),
             ChrMemoryIndex::ExtendedRam(_index) => todo!(),

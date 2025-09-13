@@ -1,6 +1,7 @@
 // Clippy bug.
 #![allow(clippy::needless_borrow)]
 
+use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::util::unit::KIBIBYTE;
 
 const CIRAM_SIZE: usize = 2 * KIBIBYTE as usize;
@@ -21,8 +22,10 @@ impl Ciram {
             .unwrap()
     }
 
-    pub fn write(&mut self, side: CiramSide, index: u16, value: u8) {
-        self.0[usize::from(side as u16 + index)] = value;
+    pub fn write(&mut self, regs: &PpuRegisters, side: CiramSide, index: u16, value: u8) {
+        if !regs.reset_recently() {
+            self.0[usize::from(side as u16 + index)] = value;
+        }
     }
 }
 

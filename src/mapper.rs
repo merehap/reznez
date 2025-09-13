@@ -32,7 +32,7 @@ use num_traits::FromPrimitive;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ciram::Ciram;
-use crate::ppu::register::ppu_registers::WriteToggle;
+use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
 
 use crate::memory::bank::bank::RomRamModeRegisterId;
 use crate::memory::bank::bank_index::MemType;
@@ -251,8 +251,8 @@ pub trait Mapper {
     #[inline]
     fn ppu_write(&mut self, mem: &mut Memory, address: PpuAddress, value: u8) {
         match address.to_u16() {
-            0x0000..=0x1FFF => mem.mapper_params.write_chr(&mut mem.ciram, address, value),
-            0x2000..=0x3EFF => self.write_name_table_byte(&mut mem.mapper_params, &mut mem.ciram, address, value),
+            0x0000..=0x1FFF => mem.mapper_params.write_chr(&mem.ppu_regs, &mut mem.ciram, address, value),
+            0x2000..=0x3EFF => self.write_name_table_byte(mem, address, value),
             0x3F00..=0x3FFF => self.write_palette_table_byte(&mut mem.palette_ram, address, value),
             0x4000..=0xFFFF => unreachable!(),
         }
@@ -286,21 +286,16 @@ pub trait Mapper {
     }
 
     #[inline]
-    fn write_name_table_byte(
-        &mut self,
-        params: &mut MapperParams,
-        ciram: &mut Ciram,
-        address: PpuAddress,
-        value: u8,
-    ) {
+    fn write_name_table_byte(&mut self, mut mem: &mut Memory, address: PpuAddress, value: u8) {
+        let Memory {ciram, ppu_regs, mapper_params, ..} = &mut mem;
         let (quadrant, index) = address_to_name_table_index(address);
-        match params.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
+        match mapper_params.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) =>
-                ciram.write(side, index, value),
+                ciram.write(ppu_regs, side, index, value),
             NameTableSource::SaveRam(start_index) =>
-                params.chr_memory.save_ram_1kib_page_mut(start_index)[index as usize] = value,
+                mapper_params.chr_memory.save_ram_1kib_page_mut(start_index)[index as usize] = value,
             NameTableSource::ExtendedRam =>
-                params.prg_memory.extended_ram_mut().as_raw_mut_slice()[index as usize] = value,
+                mapper_params.prg_memory.extended_ram_mut().as_raw_mut_slice()[index as usize] = value,
             NameTableSource::FillModeTile =>
                 { /* The fill mode tile can't be overwritten through normal memory writes. */ }
         }
@@ -508,8 +503,8 @@ impl MapperParams {
         self.chr_memory.peek(ciram, address)
     }
 
-    pub fn write_chr(&mut self, ciram: &mut Ciram, address: PpuAddress, value: u8) {
-        self.chr_memory.write(ciram, address, value);
+    pub fn write_chr(&mut self, regs: &PpuRegisters, ciram: &mut Ciram, address: PpuAddress, value: u8) {
+        self.chr_memory.write(&regs, ciram, address, value);
     }
 
     pub fn set_chr_rom_outer_bank_index(&mut self, index: u8) {

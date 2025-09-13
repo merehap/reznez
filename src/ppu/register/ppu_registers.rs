@@ -33,7 +33,7 @@ pub struct PpuRegisters {
     rendering_enabled: bool,
     write_toggle: WriteToggle,
     rendering_toggle_state: RenderingToggleState,
-    reset: bool,
+    reset_recently: bool,
 }
 
 impl PpuRegisters {
@@ -56,7 +56,7 @@ impl PpuRegisters {
             suppress_vblank_active: false,
             rendering_enabled: false,
             rendering_toggle_state: RenderingToggleState::Inactive,
-            reset: true,
+            reset_recently: true,
         }
     }
 
@@ -162,7 +162,7 @@ impl PpuRegisters {
     }
 
     pub(in crate::ppu) fn clear_reset(&mut self) {
-        self.reset = false;
+        self.reset_recently = false;
     }
 
     pub(in crate::ppu) fn maybe_decay_ppu_io_bus(&mut self, clock: &Clock) {
@@ -185,6 +185,10 @@ impl PpuRegisters {
 
     pub fn can_generate_nmi(&self) -> bool {
         self.status.vblank_active() && self.ctrl.nmi_enabled()
+    }
+
+    pub fn reset_recently(&self) -> bool {
+        self.reset_recently
     }
 
     pub fn peek_ppu_io_bus(&self) -> u8 {

@@ -147,7 +147,7 @@ impl Mapper for Mapper019 {
                     address = PpuAddress::from_u16(address.to_u16() - 0x1000);
                 }
 
-                mem.mapper_params.write_chr(&mut mem.ciram, address, value);
+                mem.mapper_params.write_chr(&mem.ppu_regs, &mut mem.ciram, address, value);
             }
             0x3F00..=0x3FFF => self.write_palette_table_byte(&mut mem.palette_ram, address, value),
             0x4000..=0xFFFF => unreachable!(),
