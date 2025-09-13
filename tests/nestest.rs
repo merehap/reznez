@@ -13,6 +13,7 @@ use reznez::config::{Config, GuiType, Opt};
 use reznez::cpu::instruction::{Instruction, OpCode};
 use reznez::cpu::status::Status;
 use reznez::memory::cpu::cpu_address::CpuAddress;
+use reznez::memory::memory::AddressBusType;
 use reznez::nes::Nes;
 use reznez::ppu::clock::{Clock, MAX_SCANLINE, MAX_CYCLE};
 use reznez::ppu::render::frame_rate::TargetFrameRate;
@@ -79,7 +80,7 @@ fn nestest() {
             }
         }
 
-        let program_counter = nes.cpu().address_bus();
+        let program_counter = nes.memory().address_bus(AddressBusType::Cpu);
 
         let mut a;
         let mut x;

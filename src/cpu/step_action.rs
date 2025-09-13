@@ -38,7 +38,6 @@ pub enum StepAction {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum From {
-    AddressBusTarget,
     OamDmaAddressTarget,
     DmcDmaAddressTarget,
 
@@ -55,7 +54,6 @@ pub enum From {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum To {
-    AddressBusTarget,
     OamDmaAddressTarget,
 
     ProgramCounterTarget,

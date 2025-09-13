@@ -34,6 +34,9 @@ pub struct Memory {
     system_palette: SystemPalette,
     pub dmc_dma: DmcDma,
     pub oam_dma: OamDma,
+    pub cpu_address_bus: CpuAddress,
+    pub oam_dma_address_bus: CpuAddress,
+    pub dmc_dma_address_bus: CpuAddress,
     pub cpu_data_bus: u8,
     cpu_cycle: i64,
 }
@@ -58,6 +61,9 @@ impl Memory {
             system_palette,
             dmc_dma: DmcDma::IDLE,
             oam_dma: OamDma::IDLE,
+            cpu_address_bus: CpuAddress::ZERO,
+            oam_dma_address_bus: CpuAddress::ZERO,
+            dmc_dma_address_bus: CpuAddress::ZERO,
             cpu_data_bus: 0,
             cpu_cycle: 0,
         }
@@ -158,6 +164,22 @@ impl Memory {
         }
     }
 
+    pub fn address_bus(&self, address_bus_type: AddressBusType) -> CpuAddress {
+        match address_bus_type {
+            AddressBusType::Cpu => self.cpu_address_bus,
+            AddressBusType::OamDma => self.oam_dma_address_bus,
+            AddressBusType::DmcDma => self.dmc_dma_address_bus,
+        }
+    }
+
+    pub fn set_address_bus(&mut self, address_bus_type: AddressBusType, address: CpuAddress) {
+        match address_bus_type {
+            AddressBusType::Cpu => self.cpu_address_bus = address,
+            AddressBusType::OamDma => self.oam_dma_address_bus = address,
+            AddressBusType::DmcDma => self.dmc_dma_address_bus = address,
+        }
+    }
+
     pub fn dmc_dma_address(&self) -> CpuAddress {
         self.apu_regs.dmc.dma_sample_address()
     }
@@ -210,4 +232,11 @@ impl Memory {
 pub enum SignalLevel {
     High,
     Low,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum AddressBusType {
+    Cpu,
+    OamDma,
+    DmcDma,
 }

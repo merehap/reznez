@@ -14,7 +14,7 @@ pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::memory::cpu::prg_memory_map::PrgPageIdSlot;
 pub use crate::memory::layout::Layout;
-use crate::memory::memory::Memory;
+use crate::memory::memory::{AddressBusType, Memory};
 pub use crate::memory::ppu::chr_memory::ChrMemory;
 use crate::memory::ppu::chr_memory_map::ChrPageId;
 pub use crate::memory::ppu::ppu_address::PpuAddress;
@@ -110,7 +110,8 @@ pub trait Mapper {
 
     #[inline]
     #[rustfmt::skip]
-    fn cpu_read(&mut self, mem: &mut Memory, address: CpuAddress) -> u8 {
+    fn cpu_read(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) -> u8 {
+        let address = mem.address_bus(address_bus_type);
         let read_result = match address.to_raw() {
             0x0000..=0x07FF => ReadResult::full(mem.cpu_internal_ram()[address.to_usize()]),
             0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[address.to_usize() & 0x07FF]),
@@ -158,7 +159,8 @@ pub trait Mapper {
     #[inline]
     #[rustfmt::skip]
     #[allow(clippy::too_many_arguments)]
-    fn cpu_write(&mut self, mem: &mut Memory, address: CpuAddress) {
+    fn cpu_write(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) {
+        let address = mem.address_bus(address_bus_type);
         let value = mem.cpu_data_bus;
         // TODO: Move this into mapper, right after cpu_write() is called?
         self.on_cpu_write(&mut mem.mapper_params, address, value);
