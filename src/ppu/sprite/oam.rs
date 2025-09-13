@@ -16,6 +16,7 @@ impl Oam {
         &self.0
     }
 
+    // FIXME: For debug screens only. Figure out how to change the debug screen to not require mutability.
     pub fn to_bytes_mut(&mut self) -> &mut [u8; 256] {
         &mut self.0
     }

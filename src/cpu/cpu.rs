@@ -35,11 +35,14 @@ pub struct Cpu {
     current_interrupt_vector: Option<InterruptType>,
 
     address_bus: CpuAddress,
+    oam_dma_address_bus: CpuAddress,
+    dmc_dma_address_bus: CpuAddress,
     pending_address_low: u8,
     pending_address_high: u8,
     computed_address: CpuAddress,
     address_carry: i8,
     operand: u8,
+    // FIXME: This temp variable probably shouldn't be a member variable unless it is needed for some debug screen purpose.
     value_read: u8,
 
     step_formatting: CpuStepFormatting,
@@ -69,6 +72,8 @@ impl Cpu {
             current_interrupt_vector: None,
 
             address_bus: CpuAddress::ZERO,
+            oam_dma_address_bus: CpuAddress::ZERO,
+            dmc_dma_address_bus: CpuAddress::ZERO,
             pending_address_low: 0,
             pending_address_high: 0,
             computed_address: CpuAddress::ZERO,
@@ -185,9 +190,23 @@ impl Cpu {
                 mem.cpu_data_bus = self.field_value(mem, field);
                 mapper.cpu_write(mem, self.address_bus);
             }
+            Step::OamRead(from, _) => {
+                self.oam_dma_address_bus = self.lookup_from_address(mem, from);
+                self.value_read = mapper.cpu_read(mem, self.oam_dma_address_bus);
+            }
+            Step::OamWrite(to, _) => {
+                self.oam_dma_address_bus = self.lookup_to_address(mem, to);
+                mapper.cpu_write(mem, self.oam_dma_address_bus);
+            }
+            Step::DmcRead(from, _) => {
+                self.dmc_dma_address_bus = self.lookup_from_address(mem, from);
+                self.value_read = mapper.cpu_read(mem, self.dmc_dma_address_bus);
+            }
         }
 
         let rw_address_bus_value = self.address_bus;
+        let rw_oam_address_bus_value = self.oam_dma_address_bus;
+        let rw_dmc_address_bus_value = self.dmc_dma_address_bus;
 
         let original_program_counter = self.program_counter;
         for &action in step.actions() {
@@ -204,7 +223,7 @@ impl Cpu {
                 }
                 CpuStepFormatting::Data => {
                     info!(target: "cpustep", "  {step_name} PC: {original_program_counter}, Cycle: {cpu_cycle:>5}, {}",
-                        step.format_with_bus_values(rw_address_bus_value, self.value_read));
+                        step.format_with_bus_values(rw_address_bus_value, rw_oam_address_bus_value, rw_dmc_address_bus_value, self.value_read));
                 }
             }
         }
@@ -529,8 +548,7 @@ impl Cpu {
             DmcDmaAddressTarget => mem.dmc_dma_address(),
             ProgramCounterTarget => self.program_counter,
             PendingAddressTarget => CpuAddress::from_low_high(self.pending_address_low, self.pending_address_high),
-            PendingZeroPageTarget =>
-                CpuAddress::from_low_high(self.pending_address_low, 0),
+            PendingZeroPageTarget => CpuAddress::from_low_high(self.pending_address_low, 0),
             ComputedTarget => self.computed_address,
             TopOfStack => mem.cpu_stack_pointer_address(),
             InterruptVectorLow => match self.current_interrupt_vector.unwrap() {

@@ -3,13 +3,13 @@ use crate::cpu::step_action::Field::*;
 use crate::cpu::step_action::{From, To};
 use crate::cpu::step_action::StepAction;
 use crate::cpu::step_action::StepAction::*;
-use crate::cpu::step::Step::{Read, ReadField, Write, WriteField};
+use crate::cpu::step::Step::{Read, ReadField, WriteField, OamRead, OamWrite, DmcRead};
 use crate::memory::cpu::cpu_address::CpuAddress;
 
-pub static OAM_READ_STEP: Step = Read(From::OamDmaAddressTarget, &[]);
-pub static OAM_WRITE_STEP: Step = Write(To::OAM_DATA, &[IncrementOamDmaAddress]);
+pub static OAM_READ_STEP: Step = OamRead(From::OamDmaAddressTarget, &[]);
+pub static OAM_WRITE_STEP: Step = OamWrite(To::OAM_DATA, &[IncrementOamDmaAddress]);
 
-pub static DMC_READ_STEP: Step = Read(From::DmcDmaAddressTarget, &[SetDmcSampleBuffer]);
+pub static DMC_READ_STEP: Step = DmcRead(From::DmcDmaAddressTarget, &[SetDmcSampleBuffer]);
 
 pub const READ_OP_CODE_STEP: Step =
     Read(From::ProgramCounterTarget, &[StartNextInstruction, IncrementPC]);
@@ -330,6 +330,9 @@ pub enum Step {
     Write(To, &'static [StepAction]),
     ReadField(Field, From, &'static [StepAction]),
     WriteField(Field, To, &'static [StepAction]),
+    OamRead(From, &'static [StepAction]),
+    OamWrite(To, &'static [StepAction]),
+    DmcRead(From, &'static [StepAction]),
 }
 
 impl Step {
@@ -339,6 +342,9 @@ impl Step {
             Step::Write(_, actions) => actions,
             Step::ReadField(_, _, actions) => actions,
             Step::WriteField(_, _, actions) => actions,
+            Step::OamRead(_, actions) => actions,
+            Step::OamWrite(_, actions) => actions,
+            Step::DmcRead(_, actions) => actions,
         }
     }
 
@@ -372,10 +378,19 @@ impl Step {
             Step::Write(to, _) => Step::Write(to, &[]),
             Step::ReadField(_field, from, _) => Step::Read(from, &[]),
             Step::WriteField(_field, to, _) => Step::Write(to, &[]),
+            Step::OamRead(from, _) => Step::OamRead(from, &[]),
+            Step::OamWrite(to, _) => Step::OamWrite(to, &[]),
+            Step::DmcRead(from, _) => Step::DmcRead(from, &[]),
         }
     }
 
-    pub fn format_with_bus_values(&self, address_bus: CpuAddress, data_bus: u8) -> String {
+    pub fn format_with_bus_values(
+        &self,
+        address_bus: CpuAddress,
+        oam_address_bus: CpuAddress,
+        dmc_address_bus: CpuAddress,
+        data_bus: u8,
+    ) -> String {
         match *self {
             Step::Read(from, cycle_actions) =>
                 format!("READ  [{address_bus}]=${data_bus:02X}  {:22} -> {:^18} {cycle_actions:?}",
@@ -389,6 +404,15 @@ impl Step {
             Step::WriteField(field, to, cycle_actions) =>
                 format!("WRITE [{address_bus}]=${data_bus:02X}  {:22} -> {:18} {cycle_actions:?}",
                     format!("{field:?}"), format!("{to:?}")),
+            Step::OamRead(from, cycle_actions) =>
+                format!("OAMREAD  [{oam_address_bus}]=${data_bus:02X}  {:22} -> {:^18} {cycle_actions:?}",
+                    format!("{from:?}"), "(bus)"),
+            Step::OamWrite(to, cycle_actions) =>
+                format!("OAMWRITE [{oam_address_bus}]=${data_bus:02X}  {:^22} -> {:18} {cycle_actions:?}",
+                    "(bus)", format!("{to:?}")),
+            Step::DmcRead(from, cycle_actions) =>
+                format!("OAMREAD  [{dmc_address_bus}]=${data_bus:02X}  {:22} -> {:^18} {cycle_actions:?}",
+                    format!("{from:?}"), "(bus)"),
         }
     }
 }
