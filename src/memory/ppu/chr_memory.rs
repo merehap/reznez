@@ -172,7 +172,7 @@ impl ChrMemory {
                 self.ram[index % size] = value;
             }
             ChrMemoryIndex::Ciram(side, index) => {
-                ciram.side_mut(side)[index as usize] = value;
+                ciram.write(side, index, value);
             }
             ChrMemoryIndex::SaveRam(_index) => todo!(),
             ChrMemoryIndex::ExtendedRam(_index) => todo!(),

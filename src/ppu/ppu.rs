@@ -378,6 +378,7 @@ impl Ppu {
                 mem.ppu_regs.stop_vblank(&clock);
                 mem.ppu_regs.clear_sprite0_hit();
                 mem.ppu_regs.clear_sprite_overflow();
+                mem.ppu_regs.clear_reset();
             }
         }
     }

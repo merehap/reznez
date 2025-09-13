@@ -33,6 +33,7 @@ pub struct PpuRegisters {
     rendering_enabled: bool,
     write_toggle: WriteToggle,
     rendering_toggle_state: RenderingToggleState,
+    reset: bool,
 }
 
 impl PpuRegisters {
@@ -55,6 +56,7 @@ impl PpuRegisters {
             suppress_vblank_active: false,
             rendering_enabled: false,
             rendering_toggle_state: RenderingToggleState::Inactive,
+            reset: true,
         }
     }
 
@@ -157,6 +159,10 @@ impl PpuRegisters {
 
     pub(in crate::ppu) fn clear_sprite_overflow(&mut self) {
         self.status.set_sprite_overflow(false);
+    }
+
+    pub(in crate::ppu) fn clear_reset(&mut self) {
+        self.reset = false;
     }
 
     pub(in crate::ppu) fn maybe_decay_ppu_io_bus(&mut self, clock: &Clock) {

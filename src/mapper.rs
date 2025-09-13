@@ -24,7 +24,7 @@ pub use crate::memory::window::{PrgWindow, ChrWindow};
 pub use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 pub use crate::ppu::name_table::name_table_mirroring::{NameTableMirroring, NameTableSource};
 pub use crate::ppu::pattern_table_side::PatternTableSide;
-pub use crate::util::unit::KIBIBYTE;
+pub use crate::util::unit::{KIBIBYTE, KIBIBYTE_U16};
 
 use log::info;
 use num_traits::FromPrimitive;
@@ -296,7 +296,7 @@ pub trait Mapper {
         let (quadrant, index) = address_to_name_table_index(address);
         match params.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) =>
-                ciram.side_mut(side)[index as usize] = value,
+                ciram.write(side, index, value),
             NameTableSource::SaveRam(start_index) =>
                 params.chr_memory.save_ram_1kib_page_mut(start_index)[index as usize] = value,
             NameTableSource::ExtendedRam =>
@@ -396,12 +396,12 @@ pub trait Mapper {
 
 #[inline]
 #[rustfmt::skip]
-fn address_to_name_table_index(address: PpuAddress) -> (NameTableQuadrant, u32) {
-    const NAME_TABLE_START:    u32 = 0x2000;
-    const MIRROR_START:        u32 = 0x3000;
-    const PALETTE_TABLE_START: u32 = 0x3F00;
+fn address_to_name_table_index(address: PpuAddress) -> (NameTableQuadrant, u16) {
+    const NAME_TABLE_START:    u16 = 0x2000;
+    const MIRROR_START:        u16 = 0x3000;
+    const PALETTE_TABLE_START: u16 = 0x3F00;
 
-    let address = address.to_u32();
+    let address = address.to_u16();
     assert!(address >= NAME_TABLE_START);
     assert!(address < PALETTE_TABLE_START);
 
@@ -412,9 +412,8 @@ fn address_to_name_table_index(address: PpuAddress) -> (NameTableQuadrant, u32) 
 
     let index = index - NAME_TABLE_START;
 
-    let name_table_quadrant =
-        NameTableQuadrant::from_u32(index / KIBIBYTE).unwrap();
-    let index = index % KIBIBYTE;
+    let name_table_quadrant = NameTableQuadrant::from_u16(index / KIBIBYTE_U16).unwrap();
+    let index = index % KIBIBYTE_U16;
     (name_table_quadrant, index)
 }
 
