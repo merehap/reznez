@@ -33,8 +33,8 @@ impl Mapper for Mapper234 {
         HasBusConflicts::Yes
     }
 
-    fn on_cpu_read(&mut self, params: &mut MapperParams, cpu_address: CpuAddress, value: u8) {
-        self.set_register(params, cpu_address.to_raw(), value);
+    fn on_cpu_read(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+        self.set_register(params, cpu_address, value);
     }
 
     fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {

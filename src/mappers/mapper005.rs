@@ -189,8 +189,8 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_cpu_read(&mut self, params: &mut MapperParams, addr: CpuAddress, _value: u8) {
-        match addr.to_raw() {
+    fn on_cpu_read(&mut self, params: &mut MapperParams, addr: u16, _value: u8) {
+        match addr {
             0x5204 => {
                 params.set_irq_pending(false);
                 self.frame_state.acknowledge_irq();

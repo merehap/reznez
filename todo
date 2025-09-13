@@ -26,6 +26,7 @@ Detangle Mapper::cpu_read
 CPU mode debug screen, including DMAs
 Use has_persistent_memory correctly (mostly for cases without NES2.0 metadata)
 Why does Sunsoft FME7 (mapper 69) have a holymapperel result of 0010? Mesen behaves the same.
+Add a Deref impl for converting CpuAddress to u16.
 
 FANCY NICE-TO-HAVES
 APU frequency correction

@@ -388,25 +388,25 @@ impl Step {
         match *self {
             Step::Read(from, cycle_actions) =>
                 format!("READ  [{}]=${data_bus:02X}  {:22} -> {:^18} {cycle_actions:?}",
-                    mem.cpu_address_bus, format!("{from:?}"), "(bus)"),
+                    mem.cpu_address_bus, format!("{from:?}"), "(CPU address bus)"),
             Step::ReadField(field, from, cycle_actions) =>
                 format!("READ  [{}]=${data_bus:02X}  {:22} -> {:18} {cycle_actions:?}",
                     mem.cpu_address_bus, format!("{from:?}"), format!("{field:?}")),
             Step::Write(to, cycle_actions) =>
                 format!("WRITE [{}]=${data_bus:02X}  {:^22} -> {:18} {cycle_actions:?}",
-                    mem.cpu_address_bus, "(bus)", format!("{to:?}")),
+                    mem.cpu_address_bus, "(CPU address bus)", format!("{to:?}")),
             Step::WriteField(field, to, cycle_actions) =>
                 format!("WRITE [{}]=${data_bus:02X}  {:22} -> {:18} {cycle_actions:?}",
                     mem.cpu_address_bus, format!("{field:?}"), format!("{to:?}")),
             Step::OamRead(from, cycle_actions) =>
-                format!("OAMREAD  [{}]=${data_bus:02X}  {:22} -> {:^18} {cycle_actions:?}",
-                    mem.oam_dma_address_bus, format!("{from:?}"), "(bus)"),
+                format!("OAMRD [{}]=${data_bus:02X}  {:22} -> {:^18} {cycle_actions:?}",
+                    mem.oam_dma_address_bus, format!("{from:?}"), "(OAM address bus)"),
             Step::OamWrite(to, cycle_actions) =>
-                format!("OAMWRITE [{}]=${data_bus:02X}  {:^22} -> {:18} {cycle_actions:?}",
-                    mem.oam_dma_address_bus, "(bus)", format!("{to:?}")),
+                format!("OAMWR [{}]=${data_bus:02X}  {:^22} -> {:18} {cycle_actions:?}",
+                    mem.oam_dma_address_bus, "(OAM address bus)", format!("{to:?}")),
             Step::DmcRead(from, cycle_actions) =>
-                format!("OAMREAD  [{}]=${data_bus:02X}  {:22} -> {:^18} {cycle_actions:?}",
-                    mem.dmc_dma_address_bus, format!("{from:?}"), "(bus)"),
+                format!("DMCRD [{}]=${data_bus:02X}  {:22} -> {:^18} {cycle_actions:?}",
+                    mem.dmc_dma_address_bus, format!("{from:?}"), "(DMC address bus)"),
         }
     }
 }

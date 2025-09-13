@@ -63,7 +63,7 @@ pub trait Mapper {
     fn init_mapper_params(&self, _params: &mut MapperParams) {}
     // Most mappers don't care about CPU cycles.
     fn on_end_of_cpu_cycle(&mut self, _mem: &mut Memory) {}
-    fn on_cpu_read(&mut self, _params: &mut MapperParams, _address: CpuAddress, _value: u8) {}
+    fn on_cpu_read(&mut self, _params: &mut MapperParams, _address: u16, _value: u8) {}
     fn on_cpu_write(&mut self, _params: &mut MapperParams, _address: CpuAddress, _value: u8) {}
     // Most mappers don't care about PPU cycles.
     fn on_end_of_ppu_cycle(&mut self) {}
@@ -111,12 +111,23 @@ pub trait Mapper {
     #[inline]
     #[rustfmt::skip]
     fn cpu_read(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) -> u8 {
-        let address = mem.address_bus(address_bus_type);
-        let read_result = match address.to_raw() {
-            0x0000..=0x07FF => ReadResult::full(mem.cpu_internal_ram()[address.to_usize()]),
-            0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[address.to_usize() & 0x07FF]),
+        let mut address = mem.address_bus(address_bus_type).to_raw();
+
+        // See "APU Register Activation" in the README and asm file here: https://github.com/100thCoin/AccuracyCoin
+        let apu_registers_active = matches!(mem.address_bus(AddressBusType::Cpu).to_raw(), 0x4000..=0x401F);
+        // TODO: I assume that the mirrors occur over the whole address space, but need bus conflicts emulated to actually work.
+        // Limit the range for now to just 0x4000 to 0x40FF to pass the relevant AccuracyCoin test.
+        if apu_registers_active && address_bus_type != AddressBusType::Cpu && address >= 0x4000 && address < 0x4100 {
+            // The APU registers are mirrored over the whole address space, but the mirrors are usually not accessible.
+            // When the mirrors are accessible, convert them to the normal APU register range for processing below.
+            address = 0x4000 + address % 0x20;
+        }
+
+        let read_result = match address {
+            0x0000..=0x07FF => ReadResult::full(mem.cpu_internal_ram()[address as usize]),
+            0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[address as usize & 0x07FF]),
             0x2000..=0x3FFF => {
-                ReadResult::full(match address.to_raw() & 0x2007 {
+                ReadResult::full(match address & 0x2007 {
                     0x2000 => mem.ppu_regs.peek_ppu_io_bus(),
                     0x2001 => mem.ppu_regs.peek_ppu_io_bus(),
                     0x2002 => mem.ppu_regs.read_status(),
@@ -136,14 +147,21 @@ pub trait Mapper {
                     _ => unreachable!(),
                 })
             }
-            0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
-            0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
-            0x4015          => ReadResult::no_bus_update(mem.apu_regs.read_status().to_u8()),
+            // APU registers can only be read if the current address bus AND the CPU address bus are in the correct range.
+            0x4000..=0x401F if !apu_registers_active => ReadResult::OPEN_BUS,
+            // Most APU registers are write-only.
+            0x4000..=0x4013 => ReadResult::OPEN_BUS,
+            // OAM DMA is write-only.
+            0x4014 => ReadResult::OPEN_BUS,
+            0x4015 if address_bus_type == AddressBusType::Cpu => ReadResult::no_bus_update(mem.apu_regs.read_status().to_u8()),
+            // DMA values must always be copied to the bus, unlike with the normal CPU address bus.
+            0x4015 => ReadResult::partial_open_bus(mem.apu_regs.read_status().to_u8(), 0b1101_1111),
             // TODO: Move ReadResult/mask specification into the controller.
-            0x4016          => ReadResult::partial_open_bus(mem.ports.joypad1.read_status() as u8, 0b0000_0001),
-            0x4017          => ReadResult::partial_open_bus(mem.ports.joypad2.read_status() as u8, 0b0000_0001),
-            0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
-            0x4020..=0xFFFF => self.read_from_cartridge_space(&mut mem.mapper_params, address.to_raw()),
+            0x4016 => ReadResult::partial_open_bus(mem.ports.joypad1.read_status() as u8, 0b0000_0001),
+            0x4017 => ReadResult::partial_open_bus(mem.ports.joypad2.read_status() as u8, 0b0000_0001),
+            // CPU Test Mode not yet supported.
+            0x4018..=0x401F => ReadResult::OPEN_BUS,
+            0x4020..=0xFFFF => self.read_from_cartridge_space(&mut mem.mapper_params, address),
         };
 
         let (value, bus_update_needed) = read_result.resolve(mem.cpu_data_bus);
