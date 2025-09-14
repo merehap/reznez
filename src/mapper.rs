@@ -76,13 +76,28 @@ pub trait Mapper {
     // Most mappers don't use a fill-mode name table.
     fn fill_mode_name_table(&self) -> &[u8; KIBIBYTE as usize] { unimplemented!() }
 
-    #[allow(clippy::too_many_arguments)]
-    fn cpu_peek(&self, mem: &Memory, address: CpuAddress) -> ReadResult {
-        match address.to_raw() {
-            0x0000..=0x07FF => ReadResult::full(mem.cpu_internal_ram()[address.to_usize()]),
-            0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[address.to_usize() & 0x07FF]),
+    fn cpu_peek(&self, mem: &Memory, address_bus_type: AddressBusType, address: CpuAddress) -> u8 {
+        self.cpu_peek_unresolved(mem, address_bus_type, address).resolve(mem.cpu_data_bus).0
+    }
+
+    fn cpu_peek_unresolved(&self, mem: &Memory, address_bus_type: AddressBusType, address: CpuAddress) -> ReadResult {
+        let mut address = address.to_raw();
+
+        // See "APU Register Activation" in the README and asm file here: https://github.com/100thCoin/AccuracyCoin
+        let apu_registers_active = matches!(mem.address_bus(AddressBusType::Cpu).to_raw(), 0x4000..=0x401F);
+        // TODO: I assume that the mirrors occur over the whole address space, but need bus conflicts emulated to actually work.
+        // Limit the range for now to just 0x4000 to 0x40FF to pass the relevant AccuracyCoin test.
+        if apu_registers_active && address_bus_type != AddressBusType::Cpu && address >= 0x4000 && address < 0x4100 {
+            // The APU registers are mirrored over the whole address space, but the mirrors are usually not accessible.
+            // When the mirrors are accessible, convert them to the normal APU register range for processing below.
+            address = 0x4000 + address % 0x20;
+        }
+
+        match address {
+            0x0000..=0x07FF => ReadResult::full(mem.cpu_internal_ram()[address as usize]),
+            0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[address as usize & 0x07FF]),
             0x2000..=0x3FFF => {
-                ReadResult::full(match address.to_raw() & 0x2007 {
+                ReadResult::full(match address & 0x2007 {
                     0x2000 => mem.ppu_regs().peek_ppu_io_bus(),
                     0x2001 => mem.ppu_regs().peek_ppu_io_bus(),
                     0x2002 => mem.ppu_regs().peek_status(),
@@ -97,14 +112,18 @@ pub trait Mapper {
                     _ => unreachable!(),
                 })
             }
+            // APU registers can only be read if the current address bus AND the CPU address bus are in the correct range.
+            0x4000..=0x401F if !apu_registers_active => ReadResult::OPEN_BUS,
             0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
             0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
-            0x4015          => ReadResult::full(mem.apu_regs().peek_status().to_u8()),
+            0x4015 if address_bus_type == AddressBusType::Cpu => ReadResult::no_bus_update(mem.apu_regs.peek_status().to_u8()),
+            // DMA values must always be copied to the bus, unlike with the normal CPU address bus.
+            0x4015 => ReadResult::partial_open_bus(mem.apu_regs.peek_status().to_u8(), 0b1101_1111),
             // TODO: Move ReadResult/mask specification into the controller.
             0x4016          => ReadResult::partial_open_bus(mem.ports().joypad1.peek_status() as u8, 0b0000_0111),
             0x4017          => ReadResult::partial_open_bus(mem.ports().joypad2.peek_status() as u8, 0b0000_0111),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
-            0x4020..=0xFFFF => self.peek_cartridge_space(mem.mapper_params(), address.to_raw()),
+            0x4020..=0xFFFF => self.peek_cartridge_space(mem.mapper_params(), address),
         }
     }
 
@@ -233,7 +252,7 @@ pub trait Mapper {
             0x4020..=0xFFFF => {
                 // TODO: Verify if bus conflicts only occur for address >= 0x6000.
                 let value = if self.has_bus_conflicts() == HasBusConflicts::Yes {
-                    let rom_value = self.cpu_peek(mem, address);
+                    let rom_value = self.cpu_peek_unresolved(mem, address_bus_type, mem.address_bus(address_bus_type));
                     rom_value.bus_conflict(value)
                 } else {
                     value

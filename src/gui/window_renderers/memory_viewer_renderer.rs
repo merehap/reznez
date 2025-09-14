@@ -4,6 +4,7 @@ use pixels::Pixels;
 use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::gui::world::World;
 use crate::mapper::CpuAddress;
+use crate::memory::memory::AddressBusType;
 
 pub struct MemoryViewerRenderer;
 
@@ -30,7 +31,7 @@ impl WindowRenderer for MemoryViewerRenderer {
                     .striped(true)
                     .show(ui, |ui| {
                         for mem_index in 0..=u16::MAX {
-                            let value = nes.mapper().cpu_peek(nes.memory(), CpuAddress::new(mem_index)).resolve(nes.memory().cpu_data_bus).0;
+                            let value = nes.mapper().cpu_peek(nes.memory(), AddressBusType::Cpu, CpuAddress::new(mem_index));
                             let _ = ui.button(format!("{value:02X}"));
                             if mem_index % 0x10 == 0x0F {
                                 ui.end_row();

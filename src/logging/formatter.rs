@@ -3,6 +3,7 @@
 use crate::cpu::dmc_dma::DmcDmaState;
 use crate::cpu::instruction::{Instruction, OpCode, AccessMode};
 use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::memory::AddressBusType;
 use crate::nes::Nes;
 
 pub trait Formatter {
@@ -26,7 +27,7 @@ impl Formatter for MinimalFormatter {
         _interrupt_text: String,
     ) -> String {
         // FIXME: This isn't the correct bus value.
-        let peek = |address| nes.mapper().cpu_peek(nes.memory(), address).resolve(nes.memory().cpu_data_bus).0;
+        let peek = |address| nes.mapper().cpu_peek(nes.memory(), AddressBusType::Cpu, address);
 
         let cpu = nes.cpu();
 
@@ -113,7 +114,7 @@ impl Formatter for Nintendulator0980Formatter {
         _interrupt_text: String,
     ) -> String {
         let cpu_cycle = nes.memory().cpu_cycle();
-        let peek = |address| nes.mapper().cpu_peek(nes.memory(), address).resolve(nes.memory().cpu_data_bus).0;
+        let peek = |address| nes.mapper().cpu_peek(nes.memory(), AddressBusType::Cpu, address);
 
         let cpu = nes.cpu();
 
@@ -229,8 +230,8 @@ impl Formatter for MesenFormatter {
         start_address: CpuAddress,
         _interrupt_text: String,
     ) -> String {
-        let maybe_peek = |address| nes.mapper().cpu_peek(nes.memory(), address);
-        let peek = |address| nes.mapper().cpu_peek(nes.memory(), address).resolve(nes.memory().cpu_data_bus).0;
+        let maybe_peek = |address| nes.mapper().cpu_peek_unresolved(nes.memory(), AddressBusType::Cpu, address);
+        let peek = |address| nes.mapper().cpu_peek(nes.memory(), AddressBusType::Cpu, address);
 
         let cpu = nes.cpu();
 
