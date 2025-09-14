@@ -101,8 +101,8 @@ pub trait Mapper {
             0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
             0x4015          => ReadResult::full(mem.apu_regs().peek_status().to_u8()),
             // TODO: Move ReadResult/mask specification into the controller.
-            0x4016          => ReadResult::partial_open_bus(mem.ports().joypad1.peek_status() as u8, 0b0000_0001),
-            0x4017          => ReadResult::partial_open_bus(mem.ports().joypad2.peek_status() as u8, 0b0000_0001),
+            0x4016          => ReadResult::partial_open_bus(mem.ports().joypad1.peek_status() as u8, 0b0000_0111),
+            0x4017          => ReadResult::partial_open_bus(mem.ports().joypad2.peek_status() as u8, 0b0000_0111),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
             0x4020..=0xFFFF => self.peek_cartridge_space(mem.mapper_params(), address.to_raw()),
         }
@@ -157,8 +157,8 @@ pub trait Mapper {
             // DMA values must always be copied to the bus, unlike with the normal CPU address bus.
             0x4015 => ReadResult::partial_open_bus(mem.apu_regs.read_status().to_u8(), 0b1101_1111),
             // TODO: Move ReadResult/mask specification into the controller.
-            0x4016 => ReadResult::partial_open_bus(mem.ports.joypad1.read_status() as u8, 0b0000_0001),
-            0x4017 => ReadResult::partial_open_bus(mem.ports.joypad2.read_status() as u8, 0b0000_0001),
+            0x4016 => ReadResult::partial_open_bus(mem.ports.joypad1.read_status() as u8, 0b0000_0111),
+            0x4017 => ReadResult::partial_open_bus(mem.ports.joypad2.read_status() as u8, 0b0000_0111),
             // CPU Test Mode not yet supported.
             0x4018..=0x401F => ReadResult::OPEN_BUS,
             0x4020..=0xFFFF => self.read_from_cartridge_space(&mut mem.mapper_params, address),
