@@ -384,28 +384,28 @@ impl Step {
         }
     }
 
-    pub fn format_with_bus_values(&self, mem: &Memory, data_bus: u8) -> String {
+    pub fn format_with_read_write_values(&self, mem: &Memory, value: u8) -> String {
         match *self {
             Step::Read(from, cycle_actions) =>
-                format!("READ  [{}]=${data_bus:02X}  {:22} -> {:^18} {cycle_actions:?}",
+                format!("READ  [{}]=${value:02X}  {:22} -> {:^18} {cycle_actions:?}",
                     mem.cpu_address_bus, format!("{from:?}"), "(CPU address bus)"),
             Step::ReadField(field, from, cycle_actions) =>
-                format!("READ  [{}]=${data_bus:02X}  {:22} -> {:18} {cycle_actions:?}",
+                format!("READ  [{}]=${value:02X}  {:22} -> {:18} {cycle_actions:?}",
                     mem.cpu_address_bus, format!("{from:?}"), format!("{field:?}")),
             Step::Write(to, cycle_actions) =>
-                format!("WRITE [{}]=${data_bus:02X}  {:^22} -> {:18} {cycle_actions:?}",
+                format!("WRITE [{}]=${value:02X}  {:^22} -> {:18} {cycle_actions:?}",
                     mem.cpu_address_bus, "(CPU address bus)", format!("{to:?}")),
             Step::WriteField(field, to, cycle_actions) =>
-                format!("WRITE [{}]=${data_bus:02X}  {:22} -> {:18} {cycle_actions:?}",
+                format!("WRITE [{}]=${value:02X}  {:22} -> {:18} {cycle_actions:?}",
                     mem.cpu_address_bus, format!("{field:?}"), format!("{to:?}")),
             Step::OamRead(from, cycle_actions) =>
-                format!("OAMRD [{}]=${data_bus:02X}  {:22} -> {:^18} {cycle_actions:?}",
+                format!("OAMRD [{}]=${value:02X}  {:22} -> {:^18} {cycle_actions:?}",
                     mem.oam_dma_address_bus, format!("{from:?}"), "(OAM address bus)"),
             Step::OamWrite(to, cycle_actions) =>
-                format!("OAMWR [{}]=${data_bus:02X}  {:^22} -> {:18} {cycle_actions:?}",
+                format!("OAMWR [{}]=${value:02X}  {:^22} -> {:18} {cycle_actions:?}",
                     mem.oam_dma_address_bus, "(OAM address bus)", format!("{to:?}")),
             Step::DmcRead(from, cycle_actions) =>
-                format!("DMCRD [{}]=${data_bus:02X}  {:22} -> {:^18} {cycle_actions:?}",
+                format!("DMCRD [{}]=${value:02X}  {:22} -> {:^18} {cycle_actions:?}",
                     mem.dmc_dma_address_bus, format!("{from:?}"), "(DMC address bus)"),
         }
     }

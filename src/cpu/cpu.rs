@@ -39,8 +39,6 @@ pub struct Cpu {
     computed_address: CpuAddress,
     address_carry: i8,
     operand: u8,
-    // FIXME: This temp variable probably shouldn't be a member variable unless it is needed for some debug screen purpose.
-    value_read: u8,
 
     step_formatting: CpuStepFormatting,
 }
@@ -73,7 +71,6 @@ impl Cpu {
             computed_address: CpuAddress::ZERO,
             address_carry: 0,
             operand: 0,
-            value_read: 0,
 
             step_formatting,
         }
@@ -161,43 +158,47 @@ impl Cpu {
             OamDmaAction::Write => OAM_WRITE_STEP,
         };
 
+        let value;
         match step {
             Step::Read(from, _) => {
                 mem.set_address_bus(AddressBusType::Cpu, self.lookup_from_address(mem, from));
-                self.value_read = mapper.cpu_read(mem, AddressBusType::Cpu);
+                value = mapper.cpu_read(mem, AddressBusType::Cpu);
             }
             Step::ReadField(field, from, _) => {
                 mem.set_address_bus(AddressBusType::Cpu, self.lookup_from_address(mem, from));
-                self.value_read = mapper.cpu_read(mem, AddressBusType::Cpu);
-                self.set_field_value(field);
+                value = mapper.cpu_read(mem, AddressBusType::Cpu);
+                self.set_field_value(field, value);
             }
             Step::Write(to, _) => {
                 mem.set_address_bus(AddressBusType::Cpu, self.lookup_to_address(mem, to));
+                value = mem.cpu_data_bus;
                 mapper.cpu_write(mem, AddressBusType::Cpu);
             }
             Step::WriteField(field, to, _) => {
                 mem.set_address_bus(AddressBusType::Cpu, self.lookup_to_address(mem, to));
                 mem.cpu_data_bus = self.field_value(mem, field);
+                value = mem.cpu_data_bus;
                 mapper.cpu_write(mem, AddressBusType::Cpu);
             }
             Step::OamRead(from, _) => {
                 mem.set_address_bus(AddressBusType::OamDma, self.lookup_from_address(mem, from));
-                self.value_read = mapper.cpu_read(mem, AddressBusType::OamDma);
+                value = mapper.cpu_read(mem, AddressBusType::OamDma);
             }
             Step::OamWrite(to, _) => {
                 mem.set_address_bus(AddressBusType::OamDma, self.lookup_to_address(mem, to));
+                value = mem.cpu_data_bus;
                 mapper.cpu_write(mem, AddressBusType::OamDma);
             }
             Step::DmcRead(from, _) => {
                 mem.set_address_bus(AddressBusType::DmcDma, self.lookup_from_address(mem, from));
-                self.value_read = mapper.cpu_read(mem, AddressBusType::DmcDma);
+                value = mapper.cpu_read(mem, AddressBusType::DmcDma);
             }
         }
 
         let formatted_step = if log_enabled!(target: "cpustep", Info) {
             match self.step_formatting {
                 CpuStepFormatting::NoData => format!("{step:?}"),
-                CpuStepFormatting::Data => step.format_with_bus_values(mem, self.value_read),
+                CpuStepFormatting::Data => step.format_with_read_write_values(mem, value),
             }
         } else {
             "".to_owned()
@@ -205,7 +206,7 @@ impl Cpu {
 
         let original_program_counter = self.program_counter;
         for &action in step.actions() {
-            self.execute_step_action(mapper, mem, action);
+            self.execute_step_action(mapper, mem, action, value);
         }
 
         let halted = mem.dmc_dma.cpu_should_be_halted() || mem.oam_dma.cpu_should_be_halted();
@@ -217,7 +218,7 @@ impl Cpu {
 
         if step.has_start_new_instruction() {
             self.mode_state.set_current_instruction_with_address(
-                Instruction::from_code_point(self.value_read),
+                Instruction::from_code_point(value),
                 mem.cpu_address_bus,
             )
         }
@@ -253,7 +254,7 @@ impl Cpu {
         mapper.on_end_of_cpu_cycle(mem);
     }
 
-    fn execute_step_action(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, action: StepAction) {
+    fn execute_step_action(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, action: StepAction, value: u8) {
         match action {
             StepAction::StartNextInstruction => {
                 if self.mode_state.should_suppress_next_instruction_start() {
@@ -271,7 +272,7 @@ impl Cpu {
                     mem.cpu_data_bus = 0x00;
                     self.mode_state.interrupt_sequence(InterruptType::Irq);
                 } else {
-                    self.mode_state.instruction(Instruction::from_code_point(self.value_read));
+                    self.mode_state.instruction(Instruction::from_code_point(value));
                 }
             }
 
@@ -481,7 +482,7 @@ impl Cpu {
                 }
             }
 
-            StepAction::SetDmcSampleBuffer => mem.set_dmc_sample_buffer(self.value_read),
+            StepAction::SetDmcSampleBuffer => mem.set_dmc_sample_buffer(value),
 
             StepAction::XOffsetPendingAddressLow => {
                 let carry;
@@ -617,17 +618,17 @@ impl Cpu {
         }
     }
 
-    fn set_field_value(&mut self, field: Field) {
+    fn set_field_value(&mut self, field: Field, value: u8) {
         use Field::*;
         match field {
             ProgramCounterLowByte => unreachable!(),
-            ProgramCounterHighByte => self.program_counter = CpuAddress::from_low_high(self.operand, self.value_read),
+            ProgramCounterHighByte => self.program_counter = CpuAddress::from_low_high(self.operand, value),
 
-            Accumulator => self.a = self.value_read,
-            Status => self.status = status::Status::from_byte(self.value_read),
-            Operand => self.operand = self.value_read,
-            PendingAddressLow => self.pending_address_low = self.value_read,
-            PendingAddressHigh => self.pending_address_high = self.value_read,
+            Accumulator => self.a = value,
+            Status => self.status = status::Status::from_byte(value),
+            Operand => self.operand = value,
+            PendingAddressLow => self.pending_address_low = value,
+            PendingAddressHigh => self.pending_address_high = value,
             OpRegister => panic!(),
         }
     }
