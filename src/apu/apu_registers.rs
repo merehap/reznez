@@ -20,6 +20,7 @@ pub struct ApuRegisters {
     pending_step_mode: StepMode,
     suppress_irq: bool,
     frame_irq_pending: bool,
+    should_clear_frame_irq_pending: bool,
     frame_counter_write_status: FrameCounterWriteStatus,
 
     // Whenever a quarter or half frame signal occurs, recurrence is suppressed for 2 cycles.
@@ -42,6 +43,7 @@ impl ApuRegisters {
             pending_step_mode: StepMode::FourStep,
             suppress_irq: false,
             frame_irq_pending: false,
+            should_clear_frame_irq_pending: false,
             frame_counter_write_status: FrameCounterWriteStatus::Inactive,
 
             counter_suppression_cycles: 0,
@@ -90,11 +92,12 @@ impl ApuRegisters {
     // Read 0x4015
     pub fn read_status(&mut self) -> Status {
         if self.frame_irq_pending {
-            info!(target: "apuevents", "Status read cleared pending frame IRQ. APU Cycle: {}", self.clock.cycle());
+            info!(target: "apuevents", "Frame IRQ flag will be cleared during the next GET cycle due to APUStatus read. APU Cycle: {}", self.clock.cycle());
         }
 
         let status = self.peek_status();
-        self.frame_irq_pending = false;
+        // Clearing Frame IRQ pending must be delayed until the next GET cycle.
+        self.should_clear_frame_irq_pending = true;
         status
     }
 
@@ -253,6 +256,11 @@ impl ApuRegisters {
     }
 
     pub fn maybe_set_frame_irq_pending(&mut self) {
+        if self.should_clear_frame_irq_pending && self.clock.cycle_parity() == CycleParity::Get {
+            self.frame_irq_pending = false;
+            self.should_clear_frame_irq_pending = false;
+        }
+
         if self.suppress_irq || self.clock.step_mode != StepMode::FourStep {
             return;
         }
