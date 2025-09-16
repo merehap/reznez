@@ -29,16 +29,16 @@ const PRG32: u8 = 1;
 pub struct Mapper202;
 
 impl Mapper for Mapper202 {
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, _value: u8) {
-        match cpu_address {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, _value: u8) {
+        match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 // Overlapping fields.
                 let layout = splitbits_named!(
-                    cpu_address, ".... .... .... l..l");
+                    *addr, ".... .... .... l..l");
                 let (bank_index, mirroring) = splitbits_named!(min=u8,
-                    cpu_address, ".... .... .... rrrm");
+                    *addr, ".... .... .... rrrm");
 
                 if layout == 3 {
                     params.set_prg_layout(PRG32);

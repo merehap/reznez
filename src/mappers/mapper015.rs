@@ -54,12 +54,12 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper015;
 
 impl Mapper for Mapper015 {
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        match cpu_address {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                let prg_layout_index = (cpu_address & 0b11) as u8;
+                let prg_layout_index = (*addr & 0b11) as u8;
                 params.set_prg_layout(prg_layout_index);
                 let chr_ram_writable = matches!(prg_layout_index, 1 | 2);
                 params.set_read_write_status(S0, chr_ram_writable as u8);

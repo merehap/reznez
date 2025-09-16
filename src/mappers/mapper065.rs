@@ -50,15 +50,15 @@ pub struct Mapper065 {
 }
 
 impl Mapper for Mapper065 {
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        match cpu_address {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
 
             0x8000 => params.set_prg_register(P0, value),
             0xA000 => params.set_prg_register(P1, value),
             0xB000..=0xB007 => {
-                let reg_id = CHR_REGISTER_IDS[usize::from(cpu_address - 0xB000)];
+                let reg_id = CHR_REGISTER_IDS[usize::from(*addr - 0xB000)];
                 params.set_chr_register(reg_id, value);
             }
             0x9000 => params.set_prg_layout(value >> 7),

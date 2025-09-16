@@ -1,4 +1,5 @@
 use std::fmt;
+use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
@@ -19,16 +20,8 @@ impl CpuAddress {
         CpuAddress::new(u16::from(low))
     }
 
-    pub const fn to_raw(self) -> u16 {
-        self.0
-    }
-
     pub const fn to_u32(self) -> u32 {
         self.0 as u32
-    }
-
-    pub fn to_usize(self) -> usize {
-        usize::from(self.0)
     }
 
     pub fn to_low_high(self) -> (u8, u8) {
@@ -145,5 +138,19 @@ impl FromStr for CpuAddress {
     fn from_str(value: &str) -> Result<CpuAddress, String> {
         let raw = u16::from_str(value).map_err(|err| err.to_string())?;
         Ok(CpuAddress(raw))
+    }
+}
+
+impl Deref for CpuAddress {
+    type Target = u16;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for CpuAddress {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }

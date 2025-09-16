@@ -45,15 +45,15 @@ pub struct Mapper001_5 {
 }
 
 impl Mapper for Mapper001_5 {
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
         // Only writes of 0x8000 to 0xFFFF trigger shifter logic.
-        if cpu_address < 0x8000 {
+        if *addr < 0x8000 {
             return;
         }
 
         match self.shift_register.shift(value) {
             ShiftStatus::Clear | ShiftStatus::Continue => { /* Do nothing additional. */ }
-            ShiftStatus::Done { finished_value } => match cpu_address {
+            ShiftStatus::Done { finished_value } => match *addr {
                 0x0000..=0x7FFF => unreachable!(),
                 0x8000..=0x9FFF => {
                     let fields = splitbits!(min=u8, finished_value, "...c..mm");

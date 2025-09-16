@@ -35,8 +35,8 @@ pub struct Mapper112 {
 }
 
 impl Mapper for Mapper112 {
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        match cpu_address & 0xE001 {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        match *addr & 0xE001 {
             0x8000 => self.selected_register_id = BANK_REGISTER_IDS[value as usize & 0b11],
             0xA000 => {
                 match self.selected_register_id {

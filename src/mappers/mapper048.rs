@@ -33,9 +33,9 @@ pub struct Mapper048 {
 }
 
 impl Mapper for Mapper048 {
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
         let bank_index = u16::from(value);
-        match cpu_address & 0xE003 {
+        match *addr & 0xE003 {
             0x8000 => params.set_prg_register(P0, bank_index),
             0x8001 => params.set_prg_register(P1, bank_index),
             0x8002 => params.set_chr_register(C0, 2 * bank_index),

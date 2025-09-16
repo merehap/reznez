@@ -33,12 +33,12 @@ impl Mapper for Mapper234 {
         HasBusConflicts::Yes
     }
 
-    fn on_cpu_read(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        self.set_register(params, cpu_address, value);
+    fn on_cpu_read(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        self.set_register(params, addr, value);
     }
 
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        self.set_register(params, cpu_address, value);
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        self.set_register(params, addr, value);
     }
 
     fn layout(&self) -> Layout {
@@ -47,8 +47,8 @@ impl Mapper for Mapper234 {
 }
 
 impl Mapper234 {
-    fn set_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        match cpu_address {
+    fn set_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        match *addr {
             0xFF80..=0xFF9F => {
                 let fields = splitbits!(value, "nmsdbbbb");
                 params.set_name_table_mirroring(fields.n as u8);

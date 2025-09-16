@@ -72,9 +72,9 @@ pub struct Mapper004Mmc3 {
 }
 
 impl Mapper for Mapper004Mmc3 {
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        let is_even_address = cpu_address.is_multiple_of(2);
-        match (cpu_address, is_even_address) {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        let is_even_address = addr.is_multiple_of(2);
+        match (*addr, is_even_address) {
             (0x0000..=0x401F, _) => unreachable!(),
             (0x4020..=0x7FFF, _) => { /* Do nothing. */ }
             (0x8000..=0x9FFF, true ) => bank_select(params, &mut self.selected_register_id, value),

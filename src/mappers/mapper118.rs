@@ -16,13 +16,13 @@ pub struct Mapper118 {
 }
 
 impl Mapper for Mapper118 {
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        if matches!(cpu_address, 0xA000..=0xBFFF) && cpu_address.is_multiple_of(2) {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        if matches!(*addr, 0xA000..=0xBFFF) && addr.is_multiple_of(2) {
             // Don't set NameTableMirroring from MMC3's standard list.
             return;
         }
 
-        if matches!(cpu_address, 0x8000..=0x9FFF) && cpu_address % 2 == 1 {
+        if matches!(*addr, 0x8000..=0x9FFF) && *addr % 2 == 1 {
             let selected_layout = params.chr_memory().layout_index();
             let selected_register = self.mmc3.selected_register_id();
             use NameTableQuadrant::*;
@@ -42,7 +42,7 @@ impl Mapper for Mapper118 {
             }
         }
 
-        self.mmc3.write_register(params, cpu_address, value);
+        self.mmc3.write_register(params, addr, value);
     }
 
     fn on_end_of_ppu_cycle(&mut self) {

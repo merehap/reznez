@@ -20,11 +20,11 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper113;
 
 impl Mapper for Mapper113 {
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        match cpu_address {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        match *addr {
             0x0000..=0x401F => unreachable!(),
             // 0x41XX, 0x43XX, ... $5DXX, $5FXX
-            0x4100..=0x5FFF if (cpu_address / 0x100) % 2 == 1 => {
+            0x4100..=0x5FFF if (*addr / 0x100) % 2 == 1 => {
                 let fields = splitbits!(min=u8, value, "mcpppccc");
                 params.set_name_table_mirroring(fields.m);
                 params.set_chr_register(C0, fields.c);

@@ -97,13 +97,12 @@ impl PrgMemoryMap {
         memory_map
     }
 
-    pub fn index_for_address(&self, address: CpuAddress) -> (Option<(MemType, PrgIndex)>, ReadWriteStatus) {
-        let address = address.to_raw();
-        assert!(matches!(address, 0x6000..=0xFFFF));
+    pub fn index_for_address(&self, addr: CpuAddress) -> (Option<(MemType, PrgIndex)>, ReadWriteStatus) {
+        assert!(matches!(*addr, 0x6000..=0xFFFF));
 
-        let address = address - 0x6000;
-        let mapping_index = address / PAGE_SIZE;
-        let offset = address % PAGE_SIZE;
+        let addr = *addr - 0x6000;
+        let mapping_index = addr / PAGE_SIZE;
+        let offset = addr % PAGE_SIZE;
 
         match &self.page_ids[mapping_index as usize] {
             PrgPageIdSlot::Normal(prg_source_and_page_number, read_write_status) => {

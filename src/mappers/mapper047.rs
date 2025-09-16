@@ -30,8 +30,8 @@ pub struct Mapper047 {
 }
 
 impl Mapper for Mapper047 {
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        if matches!(cpu_address, 0x6000..=0x7FFF) {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        if matches!(*addr, 0x6000..=0x7FFF) {
             // S0 isn't hooked up to any window, but its value is still set by MMC3 and used for this mapper.
             if params.prg_memory().bank_registers().read_write_status(S0) == ReadWriteStatus::ReadWrite {
                 let index = value & 1;
@@ -39,7 +39,7 @@ impl Mapper for Mapper047 {
                 params.set_chr_rom_outer_bank_index(index);
             }
         } else {
-            self.mmc3.write_register(params, cpu_address, value);
+            self.mmc3.write_register(params, addr, value);
         }
     }
 

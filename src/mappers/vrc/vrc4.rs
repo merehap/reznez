@@ -46,8 +46,8 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 pub struct Vrc4 {
-    low_address_bank_register_ids: BTreeMap<u16, ChrBankRegisterId>,
-    high_address_bank_register_ids: BTreeMap<u16, ChrBankRegisterId>,
+    low_address_bank_register_ids: BTreeMap<CpuAddress, ChrBankRegisterId>,
+    high_address_bank_register_ids: BTreeMap<CpuAddress, ChrBankRegisterId>,
     irq_state: VrcIrqState,
 }
 
@@ -56,8 +56,8 @@ impl Mapper for Vrc4 {
         self.irq_state.step(&mut mem.mapper_params);
     }
 
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        match cpu_address {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        match *addr {
             0x0000..=0x401F => unreachable!(),
             0x6000..=0x7FFF => { /* Do nothing. */ }
             // Set bank for 8000 through 9FFF (or C000 through DFFF).
@@ -77,12 +77,12 @@ impl Mapper for Vrc4 {
             0xB000..=0xEFFF => {
                 let bank;
                 let mask;
-                let mut register_id = self.low_address_bank_register_ids.get(&cpu_address);
+                let mut register_id = self.low_address_bank_register_ids.get(&addr);
                 if register_id.is_some() {
                     bank = u16::from(value);
                     mask = Some(0b0_0000_1111);
                 } else {
-                    register_id = self.high_address_bank_register_ids.get(&cpu_address);
+                    register_id = self.high_address_bank_register_ids.get(&addr);
                     bank = u16::from(value) << 4;
                     mask = Some(0b1_1111_0000);
                 }
@@ -111,8 +111,8 @@ impl Vrc4 {
         let mut low_address_bank_register_ids = BTreeMap::new();
         let mut high_address_bank_register_ids = BTreeMap::new();
         for &(low, high, register_id) in bank_registers {
-            low_address_bank_register_ids.insert(low, register_id);
-            high_address_bank_register_ids.insert(high, register_id);
+            low_address_bank_register_ids.insert(CpuAddress::new(low), register_id);
+            high_address_bank_register_ids.insert(CpuAddress::new(high), register_id);
         }
 
         Self {

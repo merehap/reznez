@@ -59,18 +59,18 @@ impl Formatter for MinimalFormatter {
             AbX => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(cpu.x_index());
-                argument_string.push_str(&format!("${:04X}", address.to_raw()));
+                argument_string.push_str(&format!("${:04X}", *address));
             }
             AbY => {
                 let start_address = CpuAddress::from_low_high(low, high);
                 let address = start_address.advance(cpu.y_index());
-                argument_string.push_str(&format!("${:04X}", address.to_raw()));
+                argument_string.push_str(&format!("${:04X}", *address));
             }
             Rel => {
                 let address = start_address
                     .offset(low as i8)
                     .advance(instruction.access_mode().instruction_length());
-                argument_string.push_str(&format!("${:04X}", address.to_raw()));
+                argument_string.push_str(&format!("${:04X}", *address));
             }
             Ind => {
                 let first = CpuAddress::from_low_high(low, high);
@@ -79,7 +79,7 @@ impl Formatter for MinimalFormatter {
                     peek(first),
                     peek(second),
                 );
-                argument_string.push_str(&format!("${:04X}", address.to_raw()));
+                argument_string.push_str(&format!("${:04X}", *address));
             }
             IzX => {
                 let low = low.wrapping_add(cpu.x_index());
@@ -87,7 +87,7 @@ impl Formatter for MinimalFormatter {
                     peek(CpuAddress::zero_page(low)),
                     peek(CpuAddress::zero_page(low.wrapping_add(1))),
                 );
-                argument_string.push_str(&format!("${:04X}", address.to_raw()));
+                argument_string.push_str(&format!("${:04X}", *address));
             }
             IzY => {
                 let start_address = CpuAddress::from_low_high(
@@ -95,7 +95,7 @@ impl Formatter for MinimalFormatter {
                     peek(CpuAddress::zero_page(low.wrapping_add(1))),
                 );
                 let address = start_address.advance(cpu.y_index());
-                argument_string.push_str(&format!("${:04X}", address.to_raw()));
+                argument_string.push_str(&format!("${:04X}", *address));
             }
         };
 
@@ -165,7 +165,7 @@ impl Formatter for Nintendulator0980Formatter {
                 let address = start_address
                     .offset(low as i8)
                     .advance(instruction.access_mode().instruction_length());
-                argument_string.push_str(&format!("${:04X}", address.to_raw()));
+                argument_string.push_str(&format!("${:04X}", *address));
             }
             Ind => {
                 let first = CpuAddress::from_low_high(low, high);
@@ -203,7 +203,7 @@ impl Formatter for Nintendulator0980Formatter {
 
         format!(
             "{:04X}  {:<9} {:?} {:28}{} A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} PPU:{:>3},{:>3} CYC:{}",
-            start_address.to_raw(),
+            *start_address,
             instr_bytes,
             instruction.op_code(),
             argument_string,
@@ -333,7 +333,7 @@ impl Formatter for MesenFormatter {
 
         format!(
             "{:04X}  {:?} {:28} A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} V:{:<3} H:{:<3} Cycle:{}",
-            start_address.to_raw(),
+            *start_address,
             instruction.op_code(),
             argument_string,
             cpu.accumulator(),

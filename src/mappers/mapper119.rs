@@ -35,9 +35,9 @@ pub struct Mapper119 {
 }
 
 impl Mapper for Mapper119 {
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        if matches!(cpu_address, 0x8001..=0x9FFF)
-                && cpu_address % 2 == 1
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        if matches!(*addr, 0x8001..=0x9FFF)
+                && !addr.is_multiple_of(2)
                 && let RegId::Chr(chr_id) = self.mmc3.selected_register_id() {
 
             let fields = splitbits!(value, ".mcccccc");
@@ -47,7 +47,7 @@ impl Mapper for Mapper119 {
             params.set_rom_ram_mode(rom_ram_reg_id, mem_type);
         } else {
             // Use standard MMC3 behaviors.
-            self.mmc3.write_register(params, cpu_address, value);
+            self.mmc3.write_register(params, addr, value);
         }
     }
 

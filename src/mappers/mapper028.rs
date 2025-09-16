@@ -29,22 +29,22 @@ pub struct Mapper028 {
 }
 
 impl Mapper for Mapper028 {
-    fn peek_cartridge_space(&self, params: &MapperParams, addr: u16) -> ReadResult {
-        if addr < 0x4020 {
+    fn peek_cartridge_space(&self, params: &MapperParams, addr: CpuAddress) -> ReadResult {
+        if *addr < 0x4020 {
             unreachable!();
         }
 
-        if addr < 0x8000 {
+        if *addr < 0x8000 {
             return ReadResult::OPEN_BUS;
         }
 
-        let bank_side = if addr < 0xC000 { BankSide::Low } else { BankSide::High };
+        let bank_side = if *addr < 0xC000 { BankSide::Low } else { BankSide::High };
         let bank_mask = Self::bank_mask(self.action53_layout, self.prg_outer_bank_size, bank_side);
         params.prg_memory.peek_raw_rom(self.create_memory_index(bank_mask, addr))
     }
 
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        match cpu_address {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x4FFF => { /* Do nothing. */ }
             0x5000..=0x5FFF => {
@@ -116,9 +116,9 @@ impl Mapper028 {
         }
     }
 
-    fn create_memory_index(&self, bank_mask: BankMask, addr: u16) -> u32 {
+    fn create_memory_index(&self, bank_mask: BankMask, addr: CpuAddress) -> u32 {
         let address_clear_count = bank_mask.total_count() - 7;
-        let mut index: u32 = u32::from((addr << address_clear_count) >> address_clear_count);
+        let mut index: u32 = u32::from((*addr << address_clear_count) >> address_clear_count);
 
         let inner_mask = 0b0000_1111 >> (4 - bank_mask.inner_bit_count);
         let inner_bank = self.inner_bank_bits & inner_mask;

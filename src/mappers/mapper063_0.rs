@@ -30,12 +30,12 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper063_0;
 
 impl Mapper for Mapper063_0 {
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, _value: u8) {
-        match cpu_address {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, _value: u8) {
+        match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                let fields = splitbits!(min=u8, cpu_address, ".... .rpp pppp pplm");
+                let fields = splitbits!(min=u8, *addr, ".... .rpp pppp pplm");
                 params.set_read_write_status(S0, fields.r);
                 params.set_prg_register(P0, fields.p);
                 params.set_prg_layout(fields.l);

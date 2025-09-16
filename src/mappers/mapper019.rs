@@ -49,19 +49,19 @@ pub struct Mapper019 {
 }
 
 impl Mapper for Mapper019 {
-    fn peek_cartridge_space(&self, params: &MapperParams, cpu_address: u16) -> ReadResult {
-        match cpu_address {
+    fn peek_cartridge_space(&self, params: &MapperParams, addr: CpuAddress) -> ReadResult {
+        match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x47FF => ReadResult::OPEN_BUS,
             0x4800..=0x4FFF => /* TODO: Expansion Audio */ ReadResult::full(0),
             0x5000..=0x57FF => ReadResult::full((self.irq_counter & 0b0000_0000_1111_1111) as u8),
             0x5800..=0x5FFF => ReadResult::full(((self.irq_counter >> 8) & 0b0111_1111) as u8),
-            0x6000..=0xFFFF => params.peek_prg(cpu_address),
+            0x6000..=0xFFFF => params.peek_prg(addr),
         }
     }
 
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        match cpu_address {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x47FF => { /* Do nothing. */ }
             0x4800..=0x4FFF => { /* TODO: Expansion Audio. */ }

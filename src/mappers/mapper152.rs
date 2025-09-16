@@ -35,8 +35,8 @@ impl Mapper for Mapper152 {
         HasBusConflicts::Yes
     }
 
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        match cpu_address {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ },
             0x8000..=0xFFFF => {

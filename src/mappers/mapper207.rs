@@ -14,11 +14,11 @@ pub struct Mapper207 {
 }
 
 impl Mapper for Mapper207 {
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        match cpu_address {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        match *addr {
             0x7EF0 => self.set_mirroring_and_bank(params, value, C0, NameTableQuadrant::TopLeft, NameTableQuadrant::TopRight),
             0x7EF1 => self.set_mirroring_and_bank(params, value, C1, NameTableQuadrant::BottomLeft, NameTableQuadrant::BottomRight),
-            _ => self.mapper080.write_register(params, cpu_address, value),
+            _ => self.mapper080.write_register(params, addr, value),
         }
     }
 

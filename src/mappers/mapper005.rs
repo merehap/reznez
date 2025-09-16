@@ -151,16 +151,16 @@ pub struct Mapper005 {
 }
 
 impl Mapper for Mapper005 {
-    fn peek_cartridge_space(&self, params: &MapperParams, cpu_addr: u16) -> ReadResult {
-        match cpu_addr {
+    fn peek_cartridge_space(&self, params: &MapperParams, addr: CpuAddress) -> ReadResult {
+        match *addr {
             0x0000..=0x401F => unreachable!(),
             0x5204 => ReadResult::full(self.frame_state.to_status_byte()),
             0x5205 => ReadResult::full((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
             0x5206 => ReadResult::full(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
             0x4020..=0x5BFF => ReadResult::OPEN_BUS,
             // TODO: ReadWriteStatus
-            0x5C00..=0x5FFF => ReadResult::full(self.extended_ram[u32::from(cpu_addr - 0x5C00)]),
-            0x6000..=0xFFFF => params.peek_prg(cpu_addr),
+            0x5C00..=0x5FFF => ReadResult::full(self.extended_ram[u32::from(*addr - 0x5C00)]),
+            0x6000..=0xFFFF => params.peek_prg(addr),
         }
     }
 
@@ -189,8 +189,8 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_cpu_read(&mut self, params: &mut MapperParams, addr: u16, _value: u8) {
-        match addr {
+    fn on_cpu_read(&mut self, params: &mut MapperParams, addr: CpuAddress, _value: u8) {
+        match *addr {
             0x5204 => {
                 params.set_irq_pending(false);
                 self.frame_state.acknowledge_irq();
@@ -205,8 +205,8 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_cpu_write(&mut self, params: &mut MapperParams, address: CpuAddress, value: u8) {
-        match address.to_raw() {
+    fn on_cpu_write(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        match *addr {
             // PPU Ctrl
             0x2000 => {
                 self.sprite_height = Ctrl::from_u8(value).sprite_height();
@@ -239,8 +239,8 @@ impl Mapper for Mapper005 {
         self.frame_state.maybe_end_frame();
     }
 
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        match cpu_address {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x4FFF => { /* Do nothing. */ }
             0x5000..=0x5015 => { /* TODO: MMC5 audio */ }
@@ -312,7 +312,7 @@ impl Mapper for Mapper005 {
             0x5206 => self.multiplier = value,
             0x5207..=0x5BFF => { /* Do nothing. */ }
             // TODO: ReadWriteStatus
-            0x5C00..=0x5FFF => self.extended_ram[u32::from(cpu_address - 0x5C00)] = value,
+            0x5C00..=0x5FFF => self.extended_ram[u32::from(*addr - 0x5C00)] = value,
             0x6000..=0xFFFF => { /* Do nothing. */ }
         }
     }

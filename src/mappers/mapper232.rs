@@ -19,9 +19,9 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper232;
 
 impl Mapper for Mapper232 {
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
         let value = u16::from(value);
-        match cpu_address {
+        match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xBFFF => {

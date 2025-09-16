@@ -43,28 +43,28 @@ pub trait Mapper {
 
     // Most mappers don't override the default cartridge peeking/reading behavior.
     // TODO: Rename this to peek_register once params.peek_prg() is handled separately.
-    fn peek_cartridge_space(&self, params: &MapperParams, cpu_address: u16) -> ReadResult {
-        match cpu_address {
+    fn peek_cartridge_space(&self, params: &MapperParams, addr: CpuAddress) -> ReadResult {
+        match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => ReadResult::OPEN_BUS,
-            0x6000..=0xFFFF => params.peek_prg(cpu_address),
+            0x6000..=0xFFFF => params.peek_prg(addr),
         }
     }
 
     // TODO: Rename this to read_register once params.peek_prg() is handled separately.
-    fn read_from_cartridge_space(&mut self, params: &mut MapperParams, cpu_address: u16) -> ReadResult {
-        self.peek_cartridge_space(params, cpu_address)
+    fn read_from_cartridge_space(&mut self, params: &mut MapperParams, addr: CpuAddress) -> ReadResult {
+        self.peek_cartridge_space(params, addr)
     }
 
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8);
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8);
 
     // Most mappers don't need to modify the MapperParams before ROM execution begins, but this
     // provides a relief valve for the rare settings that can't be expressed in a Layout.
     fn init_mapper_params(&self, _params: &mut MapperParams) {}
     // Most mappers don't care about CPU cycles.
     fn on_end_of_cpu_cycle(&mut self, _mem: &mut Memory) {}
-    fn on_cpu_read(&mut self, _params: &mut MapperParams, _address: u16, _value: u8) {}
-    fn on_cpu_write(&mut self, _params: &mut MapperParams, _address: CpuAddress, _value: u8) {}
+    fn on_cpu_read(&mut self, _params: &mut MapperParams, _addr: CpuAddress, _value: u8) {}
+    fn on_cpu_write(&mut self, _params: &mut MapperParams, _addr: CpuAddress, _value: u8) {}
     // Most mappers don't care about PPU cycles.
     fn on_end_of_ppu_cycle(&mut self) {}
     // Most mappers don't trigger anything based upon ppu reads.
@@ -76,28 +76,26 @@ pub trait Mapper {
     // Most mappers don't use a fill-mode name table.
     fn fill_mode_name_table(&self) -> &[u8; KIBIBYTE as usize] { unimplemented!() }
 
-    fn cpu_peek(&self, mem: &Memory, address_bus_type: AddressBusType, address: CpuAddress) -> u8 {
-        self.cpu_peek_unresolved(mem, address_bus_type, address).resolve(mem.cpu_data_bus).0
+    fn cpu_peek(&self, mem: &Memory, address_bus_type: AddressBusType, addr: CpuAddress) -> u8 {
+        self.cpu_peek_unresolved(mem, address_bus_type, addr).resolve(mem.cpu_data_bus).0
     }
 
-    fn cpu_peek_unresolved(&self, mem: &Memory, address_bus_type: AddressBusType, address: CpuAddress) -> ReadResult {
-        let mut address = address.to_raw();
-
+    fn cpu_peek_unresolved(&self, mem: &Memory, address_bus_type: AddressBusType, mut addr: CpuAddress) -> ReadResult {
         // See "APU Register Activation" in the README and asm file here: https://github.com/100thCoin/AccuracyCoin
-        let apu_registers_active = matches!(mem.address_bus(AddressBusType::Cpu).to_raw(), 0x4000..=0x401F);
+        let apu_registers_active = matches!(*mem.address_bus(AddressBusType::Cpu), 0x4000..=0x401F);
         // TODO: I assume that the mirrors occur over the whole address space, but need bus conflicts emulated to actually work.
         // Limit the range for now to just 0x4000 to 0x40FF to pass the relevant AccuracyCoin test.
-        if apu_registers_active && address_bus_type != AddressBusType::Cpu && address >= 0x4000 && address < 0x4100 {
+        if apu_registers_active && address_bus_type != AddressBusType::Cpu && *addr >= 0x4000 && *addr < 0x4100 {
             // The APU registers are mirrored over the whole address space, but the mirrors are usually not accessible.
             // When the mirrors are accessible, convert them to the normal APU register range for processing below.
-            address = 0x4000 + address % 0x20;
+            addr = CpuAddress::new(0x4000 + *addr % 0x20);
         }
 
-        match address {
-            0x0000..=0x07FF => ReadResult::full(mem.cpu_internal_ram()[address as usize]),
-            0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[address as usize & 0x07FF]),
+        match *addr {
+            0x0000..=0x07FF => ReadResult::full(mem.cpu_internal_ram()[*addr as usize]),
+            0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[*addr as usize & 0x07FF]),
             0x2000..=0x3FFF => {
-                ReadResult::full(match address & 0x2007 {
+                ReadResult::full(match *addr & 0x2007 {
                     0x2000 => mem.ppu_regs().peek_ppu_io_bus(),
                     0x2001 => mem.ppu_regs().peek_ppu_io_bus(),
                     0x2002 => mem.ppu_regs().peek_status(),
@@ -123,30 +121,30 @@ pub trait Mapper {
             0x4016          => ReadResult::partial_open_bus(mem.ports().joypad1.peek_status() as u8, 0b0000_0111),
             0x4017          => ReadResult::partial_open_bus(mem.ports().joypad2.peek_status() as u8, 0b0000_0111),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
-            0x4020..=0xFFFF => self.peek_cartridge_space(mem.mapper_params(), address),
+            0x4020..=0xFFFF => self.peek_cartridge_space(mem.mapper_params(), addr),
         }
     }
 
     #[inline]
     #[rustfmt::skip]
     fn cpu_read(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) -> u8 {
-        let mut address = mem.address_bus(address_bus_type).to_raw();
+        let mut addr = mem.address_bus(address_bus_type);
 
         // See "APU Register Activation" in the README and asm file here: https://github.com/100thCoin/AccuracyCoin
-        let apu_registers_active = matches!(mem.address_bus(AddressBusType::Cpu).to_raw(), 0x4000..=0x401F);
+        let apu_registers_active = matches!(*mem.address_bus(AddressBusType::Cpu), 0x4000..=0x401F);
         // TODO: I assume that the mirrors occur over the whole address space, but need bus conflicts emulated to actually work.
         // Limit the range for now to just 0x4000 to 0x40FF to pass the relevant AccuracyCoin test.
-        if apu_registers_active && address_bus_type != AddressBusType::Cpu && address >= 0x4000 && address < 0x4100 {
+        if apu_registers_active && address_bus_type != AddressBusType::Cpu && *addr >= 0x4000 && *addr < 0x4100 {
             // The APU registers are mirrored over the whole address space, but the mirrors are usually not accessible.
             // When the mirrors are accessible, convert them to the normal APU register range for processing below.
-            address = 0x4000 + address % 0x20;
+            addr = CpuAddress::new(0x4000 + *addr % 0x20);
         }
 
-        let read_result = match address {
-            0x0000..=0x07FF => ReadResult::full(mem.cpu_internal_ram()[address as usize]),
-            0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[address as usize & 0x07FF]),
+        let read_result = match *addr {
+            0x0000..=0x07FF => ReadResult::full(mem.cpu_internal_ram()[*addr as usize]),
+            0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[*addr as usize & 0x07FF]),
             0x2000..=0x3FFF => {
-                ReadResult::full(match address & 0x2007 {
+                ReadResult::full(match *addr & 0x2007 {
                     0x2000 => mem.ppu_regs.peek_ppu_io_bus(),
                     0x2001 => mem.ppu_regs.peek_ppu_io_bus(),
                     0x2002 => mem.ppu_regs.read_status(),
@@ -180,7 +178,7 @@ pub trait Mapper {
             0x4017 => ReadResult::partial_open_bus(mem.ports.joypad2.read_status() as u8, 0b0000_0111),
             // CPU Test Mode not yet supported.
             0x4018..=0x401F => ReadResult::OPEN_BUS,
-            0x4020..=0xFFFF => self.read_from_cartridge_space(&mut mem.mapper_params, address),
+            0x4020..=0xFFFF => self.read_from_cartridge_space(&mut mem.mapper_params, addr),
         };
 
         let (value, bus_update_needed) = read_result.resolve(mem.cpu_data_bus);
@@ -188,7 +186,7 @@ pub trait Mapper {
             mem.cpu_data_bus = value;
         }
 
-        self.on_cpu_read(&mut mem.mapper_params, address, value);
+        self.on_cpu_read(&mut mem.mapper_params, addr, value);
 
         value
     }
@@ -197,14 +195,14 @@ pub trait Mapper {
     #[rustfmt::skip]
     #[allow(clippy::too_many_arguments)]
     fn cpu_write(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) {
-        let address = mem.address_bus(address_bus_type);
+        let addr = mem.address_bus(address_bus_type);
         let value = mem.cpu_data_bus;
         // TODO: Move this into mapper, right after cpu_write() is called?
-        self.on_cpu_write(&mut mem.mapper_params, address, value);
-        match address.to_raw() {
-            0x0000..=0x07FF => mem.cpu_internal_ram[address.to_usize()] = value,
-            0x0800..=0x1FFF => mem.cpu_internal_ram[address.to_usize() & 0x07FF] = value,
-            0x2000..=0x3FFF => match address.to_raw() & 0x2007 {
+        self.on_cpu_write(&mut mem.mapper_params, addr, value);
+        match *addr {
+            0x0000..=0x07FF => mem.cpu_internal_ram[*addr as usize] = value,
+            0x0800..=0x1FFF => mem.cpu_internal_ram[*addr as usize & 0x07FF] = value,
+            0x2000..=0x3FFF => match *addr & 0x2007 {
                 0x2000 => mem.ppu_regs.write_ctrl(value),
                 0x2001 => mem.ppu_regs.write_mask(value),
                 0x2002 => mem.ppu_regs.write_ppu_io_bus(value),
@@ -258,11 +256,11 @@ pub trait Mapper {
                     value
                 };
 
-                if matches!(address.to_raw(), 0x6000..=0xFFFF) {
-                    mem.mapper_params_mut().prg_memory.write(address, value);
+                if matches!(*addr, 0x6000..=0xFFFF) {
+                    mem.mapper_params_mut().prg_memory.write(addr, value);
                 }
 
-                self.write_register(&mut mem.mapper_params, address.to_raw(), value);
+                self.write_register(&mut mem.mapper_params, addr, value);
             }
         }
     }
@@ -506,12 +504,12 @@ impl MapperParams {
         self.prg_memory.set_prg_rom_outer_bank_index(index);
     }
 
-    pub fn peek_prg(&self, cpu_address: u16) -> ReadResult {
-        self.prg_memory.peek(CpuAddress::new(cpu_address))
+    pub fn peek_prg(&self, addr: CpuAddress) -> ReadResult {
+        self.prg_memory.peek(addr)
     }
 
-    pub fn write_prg(&mut self, cpu_address: u16, value: u8) {
-        self.prg_memory.write(CpuAddress::new(cpu_address), value);
+    pub fn write_prg(&mut self, addr: CpuAddress, value: u8) {
+        self.prg_memory.write(addr, value);
     }
 
     pub fn set_read_write_status(&mut self, id: ReadWriteStatusRegisterId, index: u8) {

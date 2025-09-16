@@ -50,8 +50,8 @@ pub struct Sachen8259 {
 }
 
 impl Mapper for Sachen8259 {
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        match cpu_address & 0xC101 {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        match *addr & 0xC101 {
             0x4100 => {
                 let value = value & 0b111;
                 self.register_value = match value {

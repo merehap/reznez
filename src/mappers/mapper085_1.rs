@@ -46,8 +46,8 @@ impl Mapper for Mapper085_1 {
         self.irq_state.step(&mut mem.mapper_params);
     }
 
-    fn write_register(&mut self, params: &mut MapperParams, cpu_address: u16, value: u8) {
-        match cpu_address {
+    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+        match *addr {
             0x0000..=0x401F => unreachable!(),
             0x8000 => params.set_prg_register(P0, value & 0b0011_1111),
             0x8008 => params.set_prg_register(P1, value & 0b0011_1111),
