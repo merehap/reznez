@@ -15,7 +15,6 @@ Move nestest over to new formatting system.
 Disable OAMDATA writes (other than address increment) during rendering
 Proper encapsulation for PPU registers
 Improve cycle accuracy of undocumented instructions
-Open Bus for joysticks.
 Other input devices.
 Auto-mirror undersized CHR (for mapper 99 and maybe others).
 Mapper switch dialog for mislabelled ROMs.

@@ -13,7 +13,8 @@ use crate::cpu::status::Status;
 use crate::cpu::step::*;
 use crate::mapper::Mapper;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::memory::{AddressBusType, Memory, SignalLevel, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
+use crate::memory::memory::{AddressBusType, Memory, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
+use crate::util::signal_detector::SignalLevel;
 
 pub struct Cpu {
     // Accumulator
@@ -27,7 +28,6 @@ pub struct Cpu {
 
     mode_state: CpuModeState,
 
-    previous_nmi_line_level: SignalLevel,
     nmi_status: NmiStatus,
     irq_status: IrqStatus,
     reset_status: ResetStatus,
@@ -58,7 +58,6 @@ impl Cpu {
 
             mode_state: CpuModeState::startup(),
 
-            previous_nmi_line_level: SignalLevel::High,
             nmi_status: NmiStatus::Inactive,
             irq_status: IrqStatus::Inactive,
             reset_status: ResetStatus::Active,
@@ -231,11 +230,10 @@ impl Cpu {
     }
 
     pub fn step_second_half(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory) {
-        if self.previous_nmi_line_level == SignalLevel::High && mem.nmi_line_level() == SignalLevel::Low {
+        let edge_detected = mem.nmi_signal_detector.detect_edge();
+        if edge_detected {
             self.nmi_status = NmiStatus::Pending;
         }
-
-        self.previous_nmi_line_level = mem.nmi_line_level();
 
         // Keep irq_pending and irq_status in sync
         match mem.irq_line_level() {

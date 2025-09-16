@@ -13,6 +13,7 @@ use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::sprite::oam::Oam;
+use crate::util::signal_detector::{EdgeDetector, SignalLevel};
 
 pub const NMI_VECTOR_LOW: CpuAddress     = CpuAddress::new(0xFFFA);
 pub const NMI_VECTOR_HIGH: CpuAddress    = CpuAddress::new(0xFFFB);
@@ -28,7 +29,7 @@ pub struct Memory {
     pub palette_ram: PaletteRam,
     pub oam: Oam,
     pub ports: Ports,
-    nmi_line_level: SignalLevel,
+    pub nmi_signal_detector: EdgeDetector,
     pub ppu_regs: PpuRegisters,
     pub apu_regs: ApuRegisters,
     system_palette: SystemPalette,
@@ -55,7 +56,7 @@ impl Memory {
             palette_ram: PaletteRam::new(),
             oam: Oam::new(),
             ports,
-            nmi_line_level: SignalLevel::High,
+            nmi_signal_detector: EdgeDetector::new(),
             ppu_regs: PpuRegisters::new(ppu_clock),
             apu_regs: ApuRegisters::new(),
             system_palette,
@@ -143,14 +144,6 @@ impl Memory {
         &mut self.oam
     }
 
-    pub fn nmi_line_level(&mut self) -> SignalLevel {
-        self.nmi_line_level
-    }
-
-    pub fn set_nmi_line_level(&mut self, level: SignalLevel) {
-        self.nmi_line_level = level;
-    }
-
     pub fn irq_line_level(&mut self) -> SignalLevel {
         let irq_line_low =
             self.apu_regs().frame_irq_pending()
@@ -226,12 +219,6 @@ impl Memory {
             self.ppu_regs.mask(),
         )
     }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum SignalLevel {
-    High,
-    Low,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

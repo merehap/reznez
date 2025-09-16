@@ -2,7 +2,7 @@ use log::{info, log_enabled};
 use log::Level::Info;
 
 use crate::mapper::Mapper;
-use crate::memory::memory::{Memory, SignalLevel};
+use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
@@ -83,9 +83,9 @@ impl Ppu {
         }
 
         if mem.ppu_regs.can_generate_nmi() {
-            mem.set_nmi_line_level(SignalLevel::Low);
+            mem.nmi_signal_detector.pull_low();
         } else {
-            mem.set_nmi_line_level(SignalLevel::High);
+            mem.nmi_signal_detector.reset_to_high();
         }
 
         mapper.on_end_of_ppu_cycle();
@@ -379,6 +379,7 @@ impl Ppu {
                 mem.ppu_regs.clear_sprite0_hit();
                 mem.ppu_regs.clear_sprite_overflow();
                 mem.ppu_regs.clear_reset();
+
             }
         }
     }
