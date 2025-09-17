@@ -26,18 +26,18 @@ pub struct Mapper185_0 {
 }
 
 impl Mapper for Mapper185_0 {
-    fn on_cpu_read(&mut self, params: &mut MapperParams, addr: CpuAddress, _value: u8) {
+    fn on_cpu_read(&mut self, mem: &mut Memory, addr: CpuAddress, _value: u8) {
         if *addr == 0x2007 {
             if self.ppu_data_read_count < 2 {
-                params.set_read_write_status(S0, DISABLED_CHR_ROM);
+                mem.set_read_write_status(S0, DISABLED_CHR_ROM);
                 self.ppu_data_read_count += 1;
             } else {
-                params.set_read_write_status(S0, READABLE_CHR_ROM);
+                mem.set_read_write_status(S0, READABLE_CHR_ROM);
             }
         }
     }
 
-    fn write_register(&mut self, _params: &mut MapperParams, addr: CpuAddress, _value: u8) {
+    fn write_register(&mut self, _mem: &mut Memory, addr: CpuAddress, _value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0xFFFF => { /* Do nothing. */ }

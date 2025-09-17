@@ -33,28 +33,28 @@ pub struct Mapper043 {
 }
 
 impl Mapper for Mapper043 {
-    fn peek_cartridge_space(&self, params: &MapperParams, addr: CpuAddress) -> ReadResult {
+    fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x4FFF => ReadResult::OPEN_BUS,
             // Normally only PRG >= 0x6000 can be peeked.
-            0x5000..=0xFFFF => params.peek_prg(addr),
+            0x5000..=0xFFFF => mem.peek_prg(addr),
         }
     }
 
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         const INDEXES: [u8; 8] = [4, 3, 4, 4, 4, 7, 5, 6];
 
         match *addr & 0x71FF {
             0x4022 => {
                 // The bank index is scrambled for some reason.
                 let index = INDEXES[usize::from(value & 0b111)];
-                params.set_prg_register(P0, index);
+                mem.set_prg_register(P0, index);
             }
             0x4122 | 0x8122 => {
                 self.irq_enabled = value & 1 == 1;
                 if !self.irq_enabled {
-                    params.set_irq_pending(false);
+                    mem.mapper_irq_pending = false;
                     self.irq_counter = 0.into();
                 }
             }
@@ -65,7 +65,7 @@ impl Mapper for Mapper043 {
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         if self.irq_enabled {
             self.irq_counter = self.irq_counter.wrapping_add(1.into());
-            mem.mapper_params.set_irq_pending(self.irq_counter == 0.into());
+            mem.mapper_irq_pending = self.irq_counter == 0.into();
         }
     }
 

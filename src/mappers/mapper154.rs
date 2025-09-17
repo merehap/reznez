@@ -20,13 +20,13 @@ pub struct Mapper154 {
 }
 
 impl Mapper for Mapper154 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         if matches!(*addr, 0x8000..=0xFFFF) {
             let mirroring_index = splitbits_named!(min=u8, value, ".m......");
-            params.set_name_table_mirroring(mirroring_index);
+            mem.set_name_table_mirroring(mirroring_index);
         }
 
-        self.mapper088.write_register(params, addr, value);
+        self.mapper088.write_register(mem, addr, value);
     }
 
     fn layout(&self) -> Layout {

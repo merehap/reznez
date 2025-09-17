@@ -28,23 +28,23 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper033;
 
 impl Mapper for Mapper033 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x8000 => {
                 let fields = splitbits!(min=u8, value, ".mpppppp");
-                params.set_name_table_mirroring(fields.m);
-                params.set_prg_register(P0, fields.p);
+                mem.set_name_table_mirroring(fields.m);
+                mem.set_prg_register(P0, fields.p);
             }
-            0x8001 => params.set_prg_register(P1, value & 0b0011_1111),
+            0x8001 => mem.set_prg_register(P1, value & 0b0011_1111),
             // Large CHR windows: this allows accessing 512KiB CHR by doubling the bank indexes.
-            0x8002 => params.set_chr_register(C0, 2 * u16::from(value)),
-            0x8003 => params.set_chr_register(C1, 2 * u16::from(value)),
+            0x8002 => mem.set_chr_register(C0, 2 * u16::from(value)),
+            0x8003 => mem.set_chr_register(C1, 2 * u16::from(value)),
             // Small CHR windows.
-            0xA000 => params.set_chr_register(C2, value),
-            0xA001 => params.set_chr_register(C3, value),
-            0xA002 => params.set_chr_register(C4, value),
-            0xA003 => params.set_chr_register(C5, value),
+            0xA000 => mem.set_chr_register(C2, value),
+            0xA001 => mem.set_chr_register(C3, value),
+            0xA002 => mem.set_chr_register(C4, value),
+            0xA003 => mem.set_chr_register(C5, value),
             _ => { /* Do nothing. */ }
         }
     }

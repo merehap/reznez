@@ -1,6 +1,6 @@
 use splitbits::splitbits_named;
 
-use crate::mapper::MapperParams;
+use crate::mapper::Memory;
 
 pub struct VrcIrqState {
     enabled: bool,
@@ -26,7 +26,7 @@ impl VrcIrqState {
         }
     }
 
-    pub fn step(&mut self, params: &mut MapperParams) {
+    pub fn step(&mut self, mem: &mut Memory) {
         if !self.enabled {
             return;
         }
@@ -43,7 +43,7 @@ impl VrcIrqState {
         }
 
         if self.counter == 0xFF {
-            params.set_irq_pending(true);
+            mem.mapper_irq_pending = true;
             self.counter = self.counter_reload_value;
         } else {
             self.counter += 1;
@@ -62,8 +62,8 @@ impl VrcIrqState {
         self.counter_reload_value = (value & 0b0000_1111) << 4 | self.counter_reload_low_value;
     }
 
-    pub fn set_mode(&mut self, params: &mut MapperParams, value: u8) {
-        params.set_irq_pending(false);
+    pub fn set_mode(&mut self, mem: &mut Memory, value: u8) {
+        mem.mapper_irq_pending = false;
 
         let mode;
         (mode, self.enable_upon_acknowledgement, self.enabled) = splitbits_named!(value, ".....mae");
@@ -73,8 +73,8 @@ impl VrcIrqState {
         }
     }
 
-    pub fn acknowledge(&mut self, params: &mut MapperParams) {
-        params.set_irq_pending(false);
+    pub fn acknowledge(&mut self, mem: &mut Memory) {
+        mem.mapper_irq_pending = false;
         if self.enable_upon_acknowledgement {
             self.enabled = true;
         }

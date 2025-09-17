@@ -37,13 +37,13 @@ impl Mapper for Mapper042 {
         params.set_chr_layout(self.chr_board as u8);
     }
 
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr & 0xE003 {
-            0x8000 => params.set_chr_register(C0, value & 0b1111),
-            0xE000 => params.set_prg_register(P0, value & 0b1111),
+            0x8000 => mem.set_chr_register(C0, value & 0b1111),
+            0xE000 => mem.set_prg_register(P0, value & 0b1111),
             0xE001 => {
                 let mirroring = splitbits_named!(min=u8, value, "....m...");
-                params.set_name_table_mirroring(mirroring);
+                mem.set_name_table_mirroring(mirroring);
             }
             0xE002 => {
                 self.irq_enabled = splitbits_named!(value, "......e.");
@@ -58,7 +58,7 @@ impl Mapper for Mapper042 {
     fn on_end_of_cpu_cycle(&mut self, memory: &mut Memory) {
         if self.irq_enabled {
             self.irq_counter = self.irq_counter.wrapping_add(1.into());
-            memory.mapper_params.set_irq_pending(u16::from(self.irq_counter) >= 0x6000u16);
+            memory.mapper_irq_pending = u16::from(self.irq_counter) >= 0x6000u16;
         }
     }
 

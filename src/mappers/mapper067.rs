@@ -32,15 +32,15 @@ pub struct Mapper067 {
 }
 
 impl Mapper for Mapper067 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x87FF => params.set_irq_pending(false),
-            0x8800..=0x97FF => params.set_chr_register(C0, value & 0b0011_1111),
-            0x9800..=0xA7FF => params.set_chr_register(C1, value & 0b0011_1111),
-            0xA800..=0xB7FF => params.set_chr_register(C2, value & 0b0011_1111),
-            0xB800..=0xC7FF => params.set_chr_register(C3, value & 0b0011_1111),
+            0x8000..=0x87FF => mem.mapper_irq_pending = false,
+            0x8800..=0x97FF => mem.set_chr_register(C0, value & 0b0011_1111),
+            0x9800..=0xA7FF => mem.set_chr_register(C1, value & 0b0011_1111),
+            0xA800..=0xB7FF => mem.set_chr_register(C2, value & 0b0011_1111),
+            0xB800..=0xC7FF => mem.set_chr_register(C3, value & 0b0011_1111),
             0xC800..=0xD7FF => {
                 if self.irq_load_low {
                     self.irq_counter &= 0xFF00;
@@ -57,8 +57,8 @@ impl Mapper for Mapper067 {
                 self.irq_load_low = false;
                 self.irq_enabled = value & 0b0001_0000 != 0;
             }
-            0xE800..=0xF7FF => params.set_name_table_mirroring(value & 0b11),
-            0xF800..=0xFFFF => params.set_prg_register(P0, value & 0b1111),
+            0xE800..=0xF7FF => mem.set_name_table_mirroring(value & 0b11),
+            0xF800..=0xFFFF => mem.set_prg_register(P0, value & 0b1111),
         }
     }
 
@@ -69,7 +69,7 @@ impl Mapper for Mapper067 {
 
         self.irq_counter = self.irq_counter.wrapping_sub(1);
         if self.irq_counter == 0xFFFF {
-            mem.mapper_params.set_irq_pending(true);
+            mem.mapper_irq_pending = true;
             self.irq_enabled = false;
         }
     }

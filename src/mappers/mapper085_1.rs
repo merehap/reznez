@@ -43,31 +43,31 @@ pub struct Mapper085_1 {
 
 impl Mapper for Mapper085_1 {
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        self.irq_state.step(&mut mem.mapper_params);
+        self.irq_state.step(mem);
     }
 
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
-            0x8000 => params.set_prg_register(P0, value & 0b0011_1111),
-            0x8008 => params.set_prg_register(P1, value & 0b0011_1111),
-            0x9000 => params.set_prg_register(P2, value & 0b0011_1111),
-            0xA000 => params.set_chr_register(C0, value),
-            0xA008 => params.set_chr_register(C1, value),
-            0xB000 => params.set_chr_register(C2, value),
-            0xB008 => params.set_chr_register(C3, value),
-            0xC000 => params.set_chr_register(C4, value),
-            0xC008 => params.set_chr_register(C5, value),
-            0xD000 => params.set_chr_register(C6, value),
-            0xD008 => params.set_chr_register(C7, value),
+            0x8000 => mem.set_prg_register(P0, value & 0b0011_1111),
+            0x8008 => mem.set_prg_register(P1, value & 0b0011_1111),
+            0x9000 => mem.set_prg_register(P2, value & 0b0011_1111),
+            0xA000 => mem.set_chr_register(C0, value),
+            0xA008 => mem.set_chr_register(C1, value),
+            0xB000 => mem.set_chr_register(C2, value),
+            0xB008 => mem.set_chr_register(C3, value),
+            0xC000 => mem.set_chr_register(C4, value),
+            0xC008 => mem.set_chr_register(C5, value),
+            0xD000 => mem.set_chr_register(C6, value),
+            0xD008 => mem.set_chr_register(C7, value),
             0xE000 => {
                 let fields = splitbits!(min=u8, value, "r.....mm");
-                params.set_read_write_status(S0, fields.r);
-                params.set_name_table_mirroring(fields.m);
+                mem.set_read_write_status(S0, fields.r);
+                mem.set_name_table_mirroring(fields.m);
             }
             0xE008 => self.irq_state.set_reload_value(value),
-            0xF000 => self.irq_state.set_mode(params, value),
-            0xF008 => self.irq_state.acknowledge(params),
+            0xF000 => self.irq_state.set_mode(mem, value),
+            0xF008 => self.irq_state.acknowledge(mem),
 
             _ => { /* Do nothing. */ }
         }

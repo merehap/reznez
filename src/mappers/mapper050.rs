@@ -24,7 +24,7 @@ pub struct Mapper050 {
 }
 
 impl Mapper for Mapper050 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr & 0x4120 {
             0x4020 => {
                 //println!("Setting PRG bank. Value: {value:b} . Address: 0x{cpu_address:04X}");
@@ -35,14 +35,14 @@ impl Mapper for Mapper050 {
                 assert_eq!(prg_bank, prg_bank2);
 
                 //println!("\tActual value : {prg_bank:b}");
-                params.set_prg_register(P0, prg_bank);
+                mem.set_prg_register(P0, prg_bank);
             }
             0x4120 => {
                 //println!("Setting IRQ. Value: {value}");
                 self.irq_enabled = value & 1 == 1;
                 if !self.irq_enabled {
                     self.irq_counter = 0;
-                    params.set_irq_pending(false);
+                    mem.mapper_irq_pending = false;
                 }
             }
             _ => { /* Do nothing. */ }
@@ -56,7 +56,7 @@ impl Mapper for Mapper050 {
 
         self.irq_counter = self.irq_counter.wrapping_add(1);
         if self.irq_counter == 0x1000 {
-            mem.mapper_params.set_irq_pending(true);
+            mem.mapper_irq_pending = true;
             self.irq_enabled = false;
         }
     }

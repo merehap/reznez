@@ -18,14 +18,14 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper081;
 
 impl Mapper for Mapper081 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, _value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, _value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 let fields = splitbits!(*addr, ".... .... .... ppcc");
-                params.set_prg_register(P0, fields.p);
-                params.set_chr_register(C0, fields.c);
+                mem.set_prg_register(P0, fields.p);
+                mem.set_chr_register(C0, fields.c);
             }
         }
     }

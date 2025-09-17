@@ -26,7 +26,7 @@ pub struct Mapper073 {
 }
 
 impl Mapper for Mapper073 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
@@ -47,7 +47,7 @@ impl Mapper for Mapper073 {
                 self.irq_counter_reload_value |= (u16::from(value) & 0xF) << 12;
             }
             0xC000..=0xCFFF => {
-                params.set_irq_pending(false);
+                mem.mapper_irq_pending = false;
 
                 let fields = splitbits!(value, ".....mea");
                 self.irq_mode = if fields.m { IrqMode::EightBit } else { IrqMode::SixteenBit };
@@ -59,11 +59,11 @@ impl Mapper for Mapper073 {
                 }
             }
             0xD000..=0xDFFF => {
-                params.set_irq_pending(false);
+                mem.mapper_irq_pending = false;
                 self.irq_enabled = self.irq_enabled_on_acknowledgement;
             }
             0xE000..=0xEFFF => { /* Do nothing. */ }
-            0xF000..=0xFFFF => params.set_prg_register(P0, value & 0b111),
+            0xF000..=0xFFFF => mem.set_prg_register(P0, value & 0b111),
         }
     }
 
@@ -73,10 +73,10 @@ impl Mapper for Mapper073 {
         }
 
         if self.irq_mode == IrqMode::SixteenBit && self.irq_counter == 0xFFFF {
-            mem.mapper_params.set_irq_pending(true);
+            mem.mapper_irq_pending = true;
             self.irq_counter = self.irq_counter_reload_value;
         } else if self.irq_mode == IrqMode::EightBit && self.irq_counter & 0xFF == 0xFF {
-            mem.mapper_params.set_irq_pending(true);
+            mem.mapper_irq_pending = true;
             self.irq_counter &= 0xFF00;
             self.irq_counter |= self.irq_counter_reload_value & 0x00FF;
         } else {

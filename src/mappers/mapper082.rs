@@ -50,36 +50,36 @@ const READ_WRITE: u8 = 1;
 pub struct Mapper082;
 
 impl Mapper for Mapper082 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7EEF => { /* Do nothing. */ }
-            0x7EF0 => params.set_chr_register(C0, value & 0b1111_1110),
-            0x7EF1 => params.set_chr_register(C1, value & 0b1111_1110),
-            0x7EF2 => params.set_chr_register(C2, value),
-            0x7EF3 => params.set_chr_register(C3, value),
-            0x7EF4 => params.set_chr_register(C4, value),
-            0x7EF5 => params.set_chr_register(C5, value),
+            0x7EF0 => mem.set_chr_register(C0, value & 0b1111_1110),
+            0x7EF1 => mem.set_chr_register(C1, value & 0b1111_1110),
+            0x7EF2 => mem.set_chr_register(C2, value),
+            0x7EF3 => mem.set_chr_register(C3, value),
+            0x7EF4 => mem.set_chr_register(C4, value),
+            0x7EF5 => mem.set_chr_register(C5, value),
             0x7EF6 => {
                 let fields = splitbits!(min=u8, value, "......lm");
-                params.set_chr_layout(fields.l);
-                params.set_name_table_mirroring(fields.m);
+                mem.set_chr_layout(fields.l);
+                mem.set_name_table_mirroring(fields.m);
             }
             0x7EF7 => {
                 let prg_read_write_status = if value == 0xCA { READ_WRITE } else { READ_ONLY_ZEROS };
-                params.set_read_write_status(S0, prg_read_write_status);
+                mem.set_read_write_status(S0, prg_read_write_status);
             }
             0x7EF8 => {
                 let prg_read_write_status = if value == 0x69 { READ_WRITE } else { READ_ONLY_ZEROS };
-                params.set_read_write_status(S1, prg_read_write_status);
+                mem.set_read_write_status(S1, prg_read_write_status);
             }
             0x7EF9 => {
                 let prg_read_write_status = if value == 0x84 { READ_WRITE } else { READ_ONLY_ZEROS };
-                params.set_read_write_status(S2, prg_read_write_status);
+                mem.set_read_write_status(S2, prg_read_write_status);
             }
-            0x7EFA => params.set_prg_register(P0, splitbits_named!(value, "..pppp..")),
-            0x7EFB => params.set_prg_register(P1, splitbits_named!(value, "..pppp..")),
-            0x7EFC => params.set_prg_register(P2, splitbits_named!(value, "..pppp..")),
+            0x7EFA => mem.set_prg_register(P0, splitbits_named!(value, "..pppp..")),
+            0x7EFB => mem.set_prg_register(P1, splitbits_named!(value, "..pppp..")),
+            0x7EFC => mem.set_prg_register(P2, splitbits_named!(value, "..pppp..")),
             0x7EFD => { /* IRQ not yet implemented. */ }
             0x7EFE => { /* IRQ not yet implemented. */ }
             0x7EFF => { /* IRQ not yet implemented. */ }

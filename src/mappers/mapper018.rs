@@ -50,7 +50,7 @@ impl Mapper for Mapper018 {
         if self.irq_enabled {
             let mut new_counter = self.irq_counter & self.irq_counter_mask;
             if new_counter == 0 {
-                mem.mapper_params.set_irq_pending(true);
+                mem.mapper_irq_pending = true;
             }
 
             new_counter -= 1;
@@ -58,10 +58,10 @@ impl Mapper for Mapper018 {
         }
     }
 
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         if matches!(*addr, 0x6000..=0x7FFF) {
             if self.work_ram_write_enabled {
-                params.write_prg(addr, value);
+                mem.write_prg(addr, value);
             }
 
             return;
@@ -72,37 +72,37 @@ impl Mapper for Mapper018 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
             0x6000..=0x7FFF => unreachable!(),
-            0x8000 => params.set_prg_bank_register_bits(P0, value     , 0b0000_1111),
-            0x8001 => params.set_prg_bank_register_bits(P0, value << 4, 0b0011_0000),
-            0x8002 => params.set_prg_bank_register_bits(P1, value     , 0b0000_1111),
-            0x8003 => params.set_prg_bank_register_bits(P1, value << 4, 0b0011_0000),
-            0x9000 => params.set_prg_bank_register_bits(P2, value     , 0b0000_1111),
-            0x9001 => params.set_prg_bank_register_bits(P2, value << 4, 0b0011_0000),
+            0x8000 => mem.set_prg_bank_register_bits(P0, value     , 0b0000_1111),
+            0x8001 => mem.set_prg_bank_register_bits(P0, value << 4, 0b0011_0000),
+            0x8002 => mem.set_prg_bank_register_bits(P1, value     , 0b0000_1111),
+            0x8003 => mem.set_prg_bank_register_bits(P1, value << 4, 0b0011_0000),
+            0x9000 => mem.set_prg_bank_register_bits(P2, value     , 0b0000_1111),
+            0x9001 => mem.set_prg_bank_register_bits(P2, value << 4, 0b0011_0000),
             0x9002 => self.work_ram_write_enabled = value & 0b0000_0010 != 0,
             0x9003 => { /* Do nothing */ }
-            0xA000 => params.set_chr_bank_register_bits(C0, value     , 0b0000_1111),
-            0xA001 => params.set_chr_bank_register_bits(C0, value << 4, 0b1111_0000),
-            0xA002 => params.set_chr_bank_register_bits(C1, value     , 0b0000_1111),
-            0xA003 => params.set_chr_bank_register_bits(C1, value << 4, 0b1111_0000),
-            0xB000 => params.set_chr_bank_register_bits(C2, value     , 0b0000_1111),
-            0xB001 => params.set_chr_bank_register_bits(C2, value << 4, 0b1111_0000),
-            0xB002 => params.set_chr_bank_register_bits(C3, value     , 0b0000_1111),
-            0xB003 => params.set_chr_bank_register_bits(C3, value << 4, 0b1111_0000),
-            0xC000 => params.set_chr_bank_register_bits(C4, value     , 0b0000_1111),
-            0xC001 => params.set_chr_bank_register_bits(C4, value << 4, 0b1111_0000),
-            0xC002 => params.set_chr_bank_register_bits(C5, value     , 0b0000_1111),
-            0xC003 => params.set_chr_bank_register_bits(C5, value << 4, 0b1111_0000),
-            0xD000 => params.set_chr_bank_register_bits(C6, value     , 0b0000_1111),
-            0xD001 => params.set_chr_bank_register_bits(C6, value << 4, 0b1111_0000),
-            0xD002 => params.set_chr_bank_register_bits(C7, value     , 0b0000_1111),
-            0xD003 => params.set_chr_bank_register_bits(C7, value << 4, 0b1111_0000),
+            0xA000 => mem.set_chr_bank_register_bits(C0, value     , 0b0000_1111),
+            0xA001 => mem.set_chr_bank_register_bits(C0, value << 4, 0b1111_0000),
+            0xA002 => mem.set_chr_bank_register_bits(C1, value     , 0b0000_1111),
+            0xA003 => mem.set_chr_bank_register_bits(C1, value << 4, 0b1111_0000),
+            0xB000 => mem.set_chr_bank_register_bits(C2, value     , 0b0000_1111),
+            0xB001 => mem.set_chr_bank_register_bits(C2, value << 4, 0b1111_0000),
+            0xB002 => mem.set_chr_bank_register_bits(C3, value     , 0b0000_1111),
+            0xB003 => mem.set_chr_bank_register_bits(C3, value << 4, 0b1111_0000),
+            0xC000 => mem.set_chr_bank_register_bits(C4, value     , 0b0000_1111),
+            0xC001 => mem.set_chr_bank_register_bits(C4, value << 4, 0b1111_0000),
+            0xC002 => mem.set_chr_bank_register_bits(C5, value     , 0b0000_1111),
+            0xC003 => mem.set_chr_bank_register_bits(C5, value << 4, 0b1111_0000),
+            0xD000 => mem.set_chr_bank_register_bits(C6, value     , 0b0000_1111),
+            0xD001 => mem.set_chr_bank_register_bits(C6, value << 4, 0b1111_0000),
+            0xD002 => mem.set_chr_bank_register_bits(C7, value     , 0b0000_1111),
+            0xD003 => mem.set_chr_bank_register_bits(C7, value << 4, 0b1111_0000),
             0xE000 => set_bits(&mut self.irq_reload_value, value      , 0b0000_0000_0000_1111),
             0xE001 => set_bits(&mut self.irq_reload_value, value <<  4, 0b0000_0000_1111_0000),
             0xE002 => set_bits(&mut self.irq_reload_value, value <<  8, 0b0000_1111_0000_0000),
             0xE003 => set_bits(&mut self.irq_reload_value, value << 12, 0b1111_0000_0000_0000),
             0xF000 => {
                 self.irq_counter = self.irq_reload_value;
-                params.set_irq_pending(false);
+                mem.mapper_irq_pending = false;
             }
             0xF001 => {
                 if value & 0b0000_1000 != 0 {
@@ -116,9 +116,9 @@ impl Mapper for Mapper018 {
                 }
 
                 self.irq_enabled = value & 0b0000_0001 != 0;
-                params.set_irq_pending(false);
+                mem.mapper_irq_pending = false;
             }
-            0xF002 => params.set_name_table_mirroring(value as u8 & 0b11),
+            0xF002 => mem.set_name_table_mirroring(value as u8 & 0b11),
             0xF003 => todo!("Expansion audio."),
             _ => unreachable!(),
         }

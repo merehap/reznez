@@ -1,11 +1,18 @@
+use std::collections::BTreeSet;
+
+use log::info;
+
 use crate::apu::apu_registers::ApuRegisters;
 use crate::cpu::dmc_dma::DmcDma;
 use crate::cpu::oam_dma::OamDma;
+use crate::memory::bank::bank::RomRamModeRegisterId;
+use crate::memory::bank::bank_index::MemType;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::cpu::stack::Stack;
-use crate::mapper::MapperParams;
+use crate::mapper::{ChrBankRegisterId, ChrMemory, CiramSide, MapperParams, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, PpuAddress, PrgBankRegisterId, PrgMemory, ReadResult, ReadWriteStatus, ReadWriteStatusRegisterId};
+use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::Ciram;
 use crate::ppu::clock::Clock;
@@ -23,7 +30,6 @@ pub const IRQ_VECTOR_LOW: CpuAddress     = CpuAddress::new(0xFFFE);
 pub const IRQ_VECTOR_HIGH: CpuAddress    = CpuAddress::new(0xFFFF);
 
 pub struct Memory {
-    pub mapper_params: MapperParams,
     pub cpu_internal_ram: CpuInternalRam,
     pub ciram: Ciram,
     pub palette_ram: PaletteRam,
@@ -40,6 +46,13 @@ pub struct Memory {
     pub dmc_dma_address_bus: CpuAddress,
     pub cpu_data_bus: u8,
     cpu_cycle: i64,
+
+    pub prg_memory: PrgMemory,
+    pub chr_memory: ChrMemory,
+    pub name_table_mirrorings: &'static [NameTableMirroring],
+    pub read_write_statuses: &'static [ReadWriteStatus],
+    pub ram_not_present: BTreeSet<ReadWriteStatusRegisterId>,
+    pub mapper_irq_pending: bool,
 }
 
 impl Memory {
@@ -50,7 +63,6 @@ impl Memory {
         system_palette: SystemPalette,
     ) -> Memory {
         Memory {
-            mapper_params,
             cpu_internal_ram: CpuInternalRam::new(),
             ciram: Ciram::new(),
             palette_ram: PaletteRam::new(),
@@ -67,15 +79,14 @@ impl Memory {
             dmc_dma_address_bus: CpuAddress::ZERO,
             cpu_data_bus: 0,
             cpu_cycle: 0,
+
+            prg_memory: mapper_params.prg_memory,
+            chr_memory: mapper_params.chr_memory,
+            name_table_mirrorings: mapper_params.name_table_mirrorings,
+            read_write_statuses: mapper_params.read_write_statuses,
+            ram_not_present: mapper_params.ram_not_present,
+            mapper_irq_pending: mapper_params.mapper_irq_pending,
         }
-    }
-
-    pub fn mapper_params(&self) -> &MapperParams {
-        &self.mapper_params
-    }
-
-    pub fn mapper_params_mut(&mut self) -> &mut MapperParams {
-        &mut self.mapper_params
     }
 
     pub fn stack_pointer(&self) -> u8 {
@@ -148,7 +159,7 @@ impl Memory {
         let irq_line_low =
             self.apu_regs().frame_irq_pending()
             || self.apu_regs().dmc_irq_pending()
-            || self.mapper_params().irq_pending();
+            || self.mapper_irq_pending;
 
         if irq_line_low {
             SignalLevel::Low
@@ -204,11 +215,11 @@ impl Memory {
     }
 
     pub fn chr_rom_bank_count(&self) -> u16 {
-        self.mapper_params.chr_memory.rom_bank_count()
+        self.chr_memory.rom_bank_count()
     }
 
     pub fn chr_ram_bank_count(&self) -> u16 {
-        self.mapper_params.chr_memory.ram_bank_count()
+        self.chr_memory.ram_bank_count()
     }
 
     #[inline]
@@ -218,6 +229,119 @@ impl Memory {
             &self.system_palette,
             self.ppu_regs.mask(),
         )
+    }
+
+
+    pub fn name_table_mirroring(&self) -> NameTableMirroring {
+        self.chr_memory().name_table_mirroring()
+    }
+
+    pub fn set_name_table_mirroring(&mut self, mirroring_index: u8) {
+        self.chr_memory.set_name_table_mirroring(self.name_table_mirrorings[usize::from(mirroring_index)]);
+    }
+
+    pub fn set_name_table_quadrant(&mut self, quadrant: NameTableQuadrant, ciram_side: CiramSide) {
+        self.chr_memory.set_name_table_quadrant(quadrant, NameTableSource::Ciram(ciram_side));
+    }
+
+    pub fn set_name_table_quadrant_to_source(&mut self, quadrant: NameTableQuadrant, source: NameTableSource) {
+        self.chr_memory.set_name_table_quadrant(quadrant, source);
+    }
+
+    pub fn prg_memory(&self) -> &PrgMemory {
+        &self.prg_memory
+    }
+
+    pub fn set_prg_layout(&mut self, index: u8) {
+        self.prg_memory.set_layout(index);
+    }
+
+    pub fn set_prg_rom_outer_bank_index(&mut self, index: u8) {
+        self.prg_memory.set_prg_rom_outer_bank_index(index);
+    }
+
+    pub fn peek_prg(&self, addr: CpuAddress) -> ReadResult {
+        self.prg_memory.peek(addr)
+    }
+
+    pub fn write_prg(&mut self, addr: CpuAddress, value: u8) {
+        self.prg_memory.write(addr, value);
+    }
+
+    pub fn set_read_write_status(&mut self, id: ReadWriteStatusRegisterId, index: u8) {
+        if self.ram_not_present.contains(&id) {
+            info!(target: "mapperupdates",
+                "Ignoring update to RamStatus register {id:?} because RAM isn't present.");
+        } else if !self.read_write_statuses.is_empty() {
+            let read_write_status = self.read_write_statuses[index as usize];
+            self.prg_memory.set_read_write_status(id, read_write_status);
+            self.chr_memory.set_read_write_status(id, read_write_status);
+        }
+    }
+
+    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemType) {
+        self.prg_memory.set_rom_ram_mode(id, rom_ram_mode);
+        self.chr_memory.set_rom_ram_mode(id, rom_ram_mode);
+    }
+
+    pub fn chr_memory(&self) -> &ChrMemory {
+        &self.chr_memory
+    }
+
+    pub fn set_chr_layout(&mut self, index: u8) {
+        self.chr_memory.set_layout(index);
+    }
+
+    pub fn peek_chr(&self, ciram: &Ciram, address: PpuAddress) -> PpuPeek {
+        self.chr_memory.peek(ciram, address)
+    }
+
+    pub fn write_chr(&mut self, regs: &PpuRegisters, ciram: &mut Ciram, address: PpuAddress, value: u8) {
+        self.chr_memory.write(&regs, ciram, address, value);
+    }
+
+    pub fn set_chr_rom_outer_bank_index(&mut self, index: u8) {
+        self.chr_memory.set_chr_rom_outer_bank_index(index);
+    }
+
+    pub fn set_prg_register<INDEX: Into<u16>>(&mut self, id: PrgBankRegisterId, value: INDEX) {
+        self.prg_memory.set_bank_register(id, value.into());
+    }
+
+    pub fn set_prg_bank_register_bits(&mut self, id: PrgBankRegisterId, new_value: u16, mask: u16) {
+        self.prg_memory.set_bank_register_bits(id, new_value, mask);
+    }
+
+    pub fn update_prg_register(&mut self, id: PrgBankRegisterId, updater: &dyn Fn(u16) -> u16) {
+        self.prg_memory.update_bank_register(id, updater);
+    }
+
+    pub fn set_chr_register<INDEX: Into<u16>>(&mut self, id: ChrBankRegisterId, value: INDEX) {
+        self.chr_memory.set_bank_register(id, value);
+    }
+
+    pub fn set_chr_bank_register_bits(&mut self, id: ChrBankRegisterId, new_value: u16, mask: u16) {
+        self.chr_memory.set_bank_register_bits(id, new_value, mask);
+    }
+
+    pub fn set_chr_meta_register(&mut self, id: MetaRegisterId, value: ChrBankRegisterId) {
+        self.chr_memory.set_meta_register(id, value);
+    }
+
+    pub fn update_chr_register(&mut self, id: ChrBankRegisterId, updater: &dyn Fn(u16) -> u16) {
+        self.chr_memory.update_bank_register(id, updater);
+    }
+
+    pub fn set_chr_bank_register_to_ciram_side(&mut self, id: ChrBankRegisterId, ciram_side: CiramSide) {
+        self.chr_memory.set_chr_bank_register_to_ciram_side(id, ciram_side);
+    }
+
+    pub fn irq_pending(&self) -> bool {
+        self.mapper_irq_pending
+    }
+
+    pub fn set_irq_pending(&mut self, pending: bool) {
+        self.mapper_irq_pending = pending;
     }
 }
 

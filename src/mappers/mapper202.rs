@@ -29,7 +29,7 @@ const PRG32: u8 = 1;
 pub struct Mapper202;
 
 impl Mapper for Mapper202 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, _value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, _value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
@@ -41,14 +41,14 @@ impl Mapper for Mapper202 {
                     *addr, ".... .... .... rrrm");
 
                 if layout == 3 {
-                    params.set_prg_layout(PRG32);
+                    mem.set_prg_layout(PRG32);
                 } else {
-                    params.set_prg_layout(PRG16);
+                    mem.set_prg_layout(PRG16);
                 }
 
-                params.set_prg_register(P0, bank_index);
-                params.set_chr_register(C0, bank_index);
-                params.set_name_table_mirroring(mirroring);
+                mem.set_prg_register(P0, bank_index);
+                mem.set_chr_register(C0, bank_index);
+                mem.set_name_table_mirroring(mirroring);
             }
         }
     }

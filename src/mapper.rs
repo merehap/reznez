@@ -14,7 +14,7 @@ pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::memory::cpu::prg_memory_map::PrgPageIdSlot;
 pub use crate::memory::layout::Layout;
-use crate::memory::memory::{AddressBusType, Memory};
+pub use crate::memory::memory::{AddressBusType, Memory};
 pub use crate::memory::ppu::chr_memory::ChrMemory;
 use crate::memory::ppu::chr_memory_map::ChrPageId;
 pub use crate::memory::ppu::ppu_address::PpuAddress;
@@ -26,15 +26,13 @@ pub use crate::ppu::name_table::name_table_mirroring::{NameTableMirroring, NameT
 pub use crate::ppu::pattern_table_side::PatternTableSide;
 pub use crate::util::unit::{KIBIBYTE, KIBIBYTE_U16};
 
-use log::info;
 use num_traits::FromPrimitive;
 
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ciram::Ciram;
-use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
+use crate::ppu::register::ppu_registers::WriteToggle;
 
-use crate::memory::bank::bank::RomRamModeRegisterId;
 use crate::memory::bank::bank_index::MemType;
 
 pub trait Mapper {
@@ -43,34 +41,34 @@ pub trait Mapper {
 
     // Most mappers don't override the default cartridge peeking/reading behavior.
     // TODO: Rename this to peek_register once params.peek_prg() is handled separately.
-    fn peek_cartridge_space(&self, params: &MapperParams, addr: CpuAddress) -> ReadResult {
+    fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => ReadResult::OPEN_BUS,
-            0x6000..=0xFFFF => params.peek_prg(addr),
+            0x6000..=0xFFFF => mem.peek_prg(addr),
         }
     }
 
     // TODO: Rename this to read_register once params.peek_prg() is handled separately.
-    fn read_from_cartridge_space(&mut self, params: &mut MapperParams, addr: CpuAddress) -> ReadResult {
-        self.peek_cartridge_space(params, addr)
+    fn read_from_cartridge_space(&mut self, mem: &mut Memory, addr: CpuAddress) -> ReadResult {
+        self.peek_cartridge_space(mem, addr)
     }
 
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8);
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8);
 
     // Most mappers don't need to modify the MapperParams before ROM execution begins, but this
     // provides a relief valve for the rare settings that can't be expressed in a Layout.
-    fn init_mapper_params(&self, _params: &mut MapperParams) {}
+    fn init_mapper_params(&self, _mem: &mut MapperParams) {}
     // Most mappers don't care about CPU cycles.
     fn on_end_of_cpu_cycle(&mut self, _mem: &mut Memory) {}
-    fn on_cpu_read(&mut self, _params: &mut MapperParams, _addr: CpuAddress, _value: u8) {}
-    fn on_cpu_write(&mut self, _params: &mut MapperParams, _addr: CpuAddress, _value: u8) {}
+    fn on_cpu_read(&mut self, _mem: &mut Memory, _addr: CpuAddress, _value: u8) {}
+    fn on_cpu_write(&mut self, _mem: &mut Memory, _addr: CpuAddress, _value: u8) {}
     // Most mappers don't care about PPU cycles.
     fn on_end_of_ppu_cycle(&mut self) {}
     // Most mappers don't trigger anything based upon ppu reads.
-    fn on_ppu_read(&mut self, _params: &mut MapperParams, _address: PpuAddress, _value: u8) {}
+    fn on_ppu_read(&mut self, _mem: &mut Memory, _address: PpuAddress, _value: u8) {}
     // Most mappers don't care about changes to the current PPU address.
-    fn on_ppu_address_change(&mut self, _params: &mut MapperParams, _address: PpuAddress) {}
+    fn on_ppu_address_change(&mut self, _mem: &mut Memory, _address: PpuAddress) {}
     // Most mappers don't have bus conflicts.
     fn has_bus_conflicts(&self) -> HasBusConflicts { HasBusConflicts::No }
     // Most mappers don't use a fill-mode name table.
@@ -121,7 +119,7 @@ pub trait Mapper {
             0x4016          => ReadResult::partial_open_bus(mem.ports().joypad1.peek_status() as u8, 0b0000_0111),
             0x4017          => ReadResult::partial_open_bus(mem.ports().joypad2.peek_status() as u8, 0b0000_0111),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
-            0x4020..=0xFFFF => self.peek_cartridge_space(mem.mapper_params(), addr),
+            0x4020..=0xFFFF => self.peek_cartridge_space(mem, addr),
         }
     }
 
@@ -158,7 +156,7 @@ pub trait Mapper {
                         mem.ppu_regs.ppu_io_bus.update_from_read(old_value);
                         let data = self.ppu_read(mem, mem.ppu_regs.current_address().to_pending_data_source(), false).value();
                         let data = mem.ppu_regs.set_pending_ppu_data(data);
-                        self.on_ppu_address_change(&mut mem.mapper_params, mem.ppu_regs.current_address());
+                        self.on_ppu_address_change(mem, mem.ppu_regs.current_address());
                         data
                     }
                     _ => unreachable!(),
@@ -178,7 +176,7 @@ pub trait Mapper {
             0x4017 => ReadResult::partial_open_bus(mem.ports.joypad2.read_status() as u8, 0b0000_0111),
             // CPU Test Mode not yet supported.
             0x4018..=0x401F => ReadResult::OPEN_BUS,
-            0x4020..=0xFFFF => self.read_from_cartridge_space(&mut mem.mapper_params, addr),
+            0x4020..=0xFFFF => self.read_from_cartridge_space(mem, addr),
         };
 
         let (value, bus_update_needed) = read_result.resolve(mem.cpu_data_bus);
@@ -186,7 +184,7 @@ pub trait Mapper {
             mem.cpu_data_bus = value;
         }
 
-        self.on_cpu_read(&mut mem.mapper_params, addr, value);
+        self.on_cpu_read(mem, addr, value);
 
         value
     }
@@ -198,7 +196,7 @@ pub trait Mapper {
         let addr = mem.address_bus(address_bus_type);
         let value = mem.cpu_data_bus;
         // TODO: Move this into mapper, right after cpu_write() is called?
-        self.on_cpu_write(&mut mem.mapper_params, addr, value);
+        self.on_cpu_write(mem, addr, value);
         match *addr {
             0x0000..=0x07FF => mem.cpu_internal_ram[*addr as usize] = value,
             0x0800..=0x1FFF => mem.cpu_internal_ram[*addr as usize & 0x07FF] = value,
@@ -212,13 +210,13 @@ pub trait Mapper {
                 0x2006 => {
                     mem.ppu_regs.write_ppu_addr(value);
                     if mem.ppu_regs().write_toggle() == WriteToggle::FirstByte {
-                        self.on_ppu_address_change(&mut mem.mapper_params, mem.ppu_regs.current_address());
+                        self.on_ppu_address_change(mem, mem.ppu_regs.current_address());
                     }
                 }
                 0x2007 => {
                     self.ppu_write(mem, mem.ppu_regs.current_address(), value);
                     mem.ppu_regs.write_ppu_data(value);
-                    self.on_ppu_address_change(&mut mem.mapper_params, mem.ppu_regs.current_address());
+                    self.on_ppu_address_change(mem, mem.ppu_regs.current_address());
                 }
                 _ => unreachable!(),
             }
@@ -257,18 +255,18 @@ pub trait Mapper {
                 };
 
                 if matches!(*addr, 0x6000..=0xFFFF) {
-                    mem.mapper_params_mut().prg_memory.write(addr, value);
+                    mem.prg_memory.write(addr, value);
                 }
 
-                self.write_register(&mut mem.mapper_params, addr, value);
+                self.write_register(mem, addr, value);
             }
         }
     }
 
     fn ppu_peek(&self, mem: &Memory, address: PpuAddress) -> PpuPeek {
         match address.to_u16() {
-            0x0000..=0x1FFF => mem.mapper_params.peek_chr(&mem.ciram, address),
-            0x2000..=0x3EFF => self.peek_name_table_byte(&mem.mapper_params, &mem.ciram, address),
+            0x0000..=0x1FFF => mem.peek_chr(&mem.ciram, address),
+            0x2000..=0x3EFF => self.peek_name_table_byte(&mem, &mem.ciram, address),
             0x3F00..=0x3FFF => self.peek_palette_table_byte(&mem.palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
         }
@@ -277,18 +275,18 @@ pub trait Mapper {
     #[inline]
     fn ppu_read(&mut self, mem: &mut Memory, address: PpuAddress, rendering: bool) -> PpuPeek {
         if rendering {
-            self.on_ppu_address_change(&mut mem.mapper_params, address);
+            self.on_ppu_address_change(mem, address);
         }
 
         let result = self.ppu_peek(mem, address);
-        self.on_ppu_read(&mut mem.mapper_params, address, result.value());
+        self.on_ppu_read(mem, address, result.value());
         result
     }
 
     #[inline]
     fn ppu_write(&mut self, mem: &mut Memory, address: PpuAddress, value: u8) {
         match address.to_u16() {
-            0x0000..=0x1FFF => mem.mapper_params.write_chr(&mem.ppu_regs, &mut mem.ciram, address, value),
+            0x0000..=0x1FFF => mem.chr_memory.write(&mem.ppu_regs, &mut mem.ciram, address, value),
             0x2000..=0x3EFF => self.write_name_table_byte(mem, address, value),
             0x3F00..=0x3FFF => self.write_palette_table_byte(&mut mem.palette_ram, address, value),
             0x4000..=0xFFFF => unreachable!(),
@@ -298,14 +296,14 @@ pub trait Mapper {
     #[inline]
     fn raw_name_table<'a>(
         &'a self,
-        params: &'a MapperParams,
+        mem: &'a Memory,
         ciram: &'a Ciram,
         quadrant: NameTableQuadrant,
     ) -> &'a [u8; KIBIBYTE as usize] {
-        match params.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
+        match mem.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) => ciram.side(side),
-            NameTableSource::SaveRam(start_index) => params.chr_memory.save_ram_1kib_page(start_index),
-            NameTableSource::ExtendedRam => params.prg_memory.extended_ram().as_raw_slice().try_into().unwrap(),
+            NameTableSource::SaveRam(start_index) => mem.chr_memory.save_ram_1kib_page(start_index),
+            NameTableSource::ExtendedRam => mem.prg_memory.extended_ram().as_raw_slice().try_into().unwrap(),
             NameTableSource::FillModeTile => self.fill_mode_name_table(),
         }
     }
@@ -313,26 +311,25 @@ pub trait Mapper {
     #[inline]
     fn peek_name_table_byte(
         &self,
-        params: &MapperParams,
+        mem: &Memory,
         ciram: &Ciram,
         address: PpuAddress,
     ) -> PpuPeek {
         let (name_table_quadrant, index) = address_to_name_table_index(address);
-        let value = self.raw_name_table(params, ciram, name_table_quadrant)[index as usize];
-        PpuPeek::new(value, PeekSource::from_name_table_source(params.name_table_mirroring().name_table_source_in_quadrant(name_table_quadrant)))
+        let value = self.raw_name_table(mem, ciram, name_table_quadrant)[index as usize];
+        PpuPeek::new(value, PeekSource::from_name_table_source(mem.name_table_mirroring().name_table_source_in_quadrant(name_table_quadrant)))
     }
 
     #[inline]
-    fn write_name_table_byte(&mut self, mut mem: &mut Memory, address: PpuAddress, value: u8) {
-        let Memory {ciram, ppu_regs, mapper_params, ..} = &mut mem;
+    fn write_name_table_byte(&mut self, mem: &mut Memory, address: PpuAddress, value: u8) {
         let (quadrant, index) = address_to_name_table_index(address);
-        match mapper_params.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
+        match mem.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) =>
-                ciram.write(ppu_regs, side, index, value),
+                mem.ciram.write(&mem.ppu_regs, side, index, value),
             NameTableSource::SaveRam(start_index) =>
-                mapper_params.chr_memory.save_ram_1kib_page_mut(start_index)[index as usize] = value,
+                mem.chr_memory.save_ram_1kib_page_mut(start_index)[index as usize] = value,
             NameTableSource::ExtendedRam =>
-                mapper_params.prg_memory.extended_ram_mut().as_raw_mut_slice()[index as usize] = value,
+                mem.prg_memory.extended_ram_mut().as_raw_mut_slice()[index as usize] = value,
             NameTableSource::FillModeTile =>
                 { /* The fill mode tile can't be overwritten through normal memory writes. */ }
         }
@@ -349,8 +346,8 @@ pub trait Mapper {
         palette_ram.write(address_to_palette_ram_index(address), value);
     }
 
-    fn prg_rom_bank_string(&self, params: &MapperParams) -> String {
-        let prg_memory = &params.prg_memory();
+    fn prg_rom_bank_string(&self, mem: &Memory) -> String {
+        let prg_memory = &mem.prg_memory();
 
         let mut result = String::new();
         for prg_page_id_slot in prg_memory.current_memory_map().page_id_slots() {
@@ -390,8 +387,8 @@ pub trait Mapper {
         result
     }
 
-    fn chr_rom_bank_string(&self, params: &MapperParams) -> String {
-        let chr_memory = &params.chr_memory();
+    fn chr_rom_bank_string(&self, mem: &Memory) -> String {
+        let chr_memory = &mem.chr_memory();
 
         let mut result = String::new();
         for (page_id, _) in chr_memory.current_memory_map().pattern_table_page_ids() {
@@ -472,132 +469,12 @@ pub struct MapperParams {
     pub name_table_mirrorings: &'static [NameTableMirroring],
     pub read_write_statuses: &'static [ReadWriteStatus],
     pub ram_not_present: BTreeSet<ReadWriteStatusRegisterId>,
-    pub irq_pending: bool,
+    pub mapper_irq_pending: bool,
 }
 
 impl MapperParams {
-    pub fn name_table_mirroring(&self) -> NameTableMirroring {
-        self.chr_memory().name_table_mirroring()
-    }
-
-    pub fn set_name_table_mirroring(&mut self, mirroring_index: u8) {
-        self.chr_memory.set_name_table_mirroring(self.name_table_mirrorings[usize::from(mirroring_index)]);
-    }
-
-    pub fn set_name_table_quadrant(&mut self, quadrant: NameTableQuadrant, ciram_side: CiramSide) {
-        self.chr_memory.set_name_table_quadrant(quadrant, NameTableSource::Ciram(ciram_side));
-    }
-
-    pub fn set_name_table_quadrant_to_source(&mut self, quadrant: NameTableQuadrant, source: NameTableSource) {
-        self.chr_memory.set_name_table_quadrant(quadrant, source);
-    }
-
-    pub fn prg_memory(&self) -> &PrgMemory {
-        &self.prg_memory
-    }
-
-    pub fn set_prg_layout(&mut self, index: u8) {
-        self.prg_memory.set_layout(index);
-    }
-
-    pub fn set_prg_rom_outer_bank_index(&mut self, index: u8) {
-        self.prg_memory.set_prg_rom_outer_bank_index(index);
-    }
-
-    pub fn peek_prg(&self, addr: CpuAddress) -> ReadResult {
-        self.prg_memory.peek(addr)
-    }
-
-    pub fn write_prg(&mut self, addr: CpuAddress, value: u8) {
-        self.prg_memory.write(addr, value);
-    }
-
-    pub fn set_read_write_status(&mut self, id: ReadWriteStatusRegisterId, index: u8) {
-        if self.ram_not_present.contains(&id) {
-            info!(target: "mapperupdates",
-                "Ignoring update to RamStatus register {id:?} because RAM isn't present.");
-        } else if !self.read_write_statuses.is_empty() {
-            let read_write_status = self.read_write_statuses[index as usize];
-            self.prg_memory.set_read_write_status(id, read_write_status);
-            self.chr_memory.set_read_write_status(id, read_write_status);
-        }
-    }
-
-    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemType) {
-        self.prg_memory.set_rom_ram_mode(id, rom_ram_mode);
-        self.chr_memory.set_rom_ram_mode(id, rom_ram_mode);
-    }
-
-    pub fn chr_memory(&self) -> &ChrMemory {
-        &self.chr_memory
-    }
-
     pub fn set_chr_layout(&mut self, index: u8) {
         self.chr_memory.set_layout(index);
-    }
-
-    pub fn peek_chr(&self, ciram: &Ciram, address: PpuAddress) -> PpuPeek {
-        self.chr_memory.peek(ciram, address)
-    }
-
-    pub fn write_chr(&mut self, regs: &PpuRegisters, ciram: &mut Ciram, address: PpuAddress, value: u8) {
-        self.chr_memory.write(&regs, ciram, address, value);
-    }
-
-    pub fn set_chr_rom_outer_bank_index(&mut self, index: u8) {
-        self.chr_memory.set_chr_rom_outer_bank_index(index);
-    }
-
-    pub fn set_prg_register<INDEX: Into<u16>>(&mut self, id: PrgBankRegisterId, value: INDEX) {
-        self.prg_memory.set_bank_register(id, value.into());
-    }
-
-    pub fn set_prg_bank_register_bits(&mut self, id: PrgBankRegisterId, new_value: u16, mask: u16) {
-        self.prg_memory.set_bank_register_bits(id, new_value, mask);
-    }
-
-    pub fn update_prg_register(
-        &mut self,
-        id: PrgBankRegisterId,
-        updater: &dyn Fn(u16) -> u16,
-    ) {
-        self.prg_memory.update_bank_register(id, updater);
-    }
-
-    pub fn set_chr_register<INDEX: Into<u16>>(&mut self, id: ChrBankRegisterId, value: INDEX) {
-        self.chr_memory.set_bank_register(id, value);
-    }
-
-    pub fn set_chr_bank_register_bits(&mut self, id: ChrBankRegisterId, new_value: u16, mask: u16) {
-        self.chr_memory.set_bank_register_bits(id, new_value, mask);
-    }
-
-    pub fn set_chr_meta_register(&mut self, id: MetaRegisterId, value: ChrBankRegisterId) {
-        self.chr_memory.set_meta_register(id, value);
-    }
-
-    pub fn update_chr_register(
-        &mut self,
-        id: ChrBankRegisterId,
-        updater: &dyn Fn(u16) -> u16,
-    ) {
-        self.chr_memory.update_bank_register(id, updater);
-    }
-
-    pub fn set_chr_bank_register_to_ciram_side(
-        &mut self,
-        id: ChrBankRegisterId,
-        ciram_side: CiramSide,
-    ) {
-        self.chr_memory.set_chr_bank_register_to_ciram_side(id, ciram_side);
-    }
-
-    pub fn irq_pending(&self) -> bool {
-        self.irq_pending
-    }
-
-    pub fn set_irq_pending(&mut self, pending: bool) {
-        self.irq_pending = pending;
     }
 }
 

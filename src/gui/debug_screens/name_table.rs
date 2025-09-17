@@ -30,9 +30,8 @@ impl<'a> NameTable<'a> {
     }
 
     pub fn from_mem(mapper: &'a dyn Mapper, mem: &'a Memory, quadrant: NameTableQuadrant) -> NameTable<'a> {
-        let mapper_params = mem.mapper_params();
         let ciram = mem.ciram();
-        NameTable::new(mapper.raw_name_table(mapper_params, ciram, quadrant))
+        NameTable::new(mapper.raw_name_table(mem, ciram, quadrant))
     }
 
     pub fn render(&self, pattern_table: &PatternTable, palette_table: &PaletteTable, frame: &mut Frame) {

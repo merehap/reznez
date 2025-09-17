@@ -22,13 +22,13 @@ pub struct CnromWithChrDisable {
 }
 
 impl Mapper for CnromWithChrDisable {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 let copy_protection_passed = value & 0b11 == self.correct_chip_select_value;
-                params.set_read_write_status(S0, copy_protection_passed as u8);
+                mem.set_read_write_status(S0, copy_protection_passed as u8);
             }
         }
     }

@@ -60,18 +60,18 @@ pub struct Mapper004_1 {
 }
 
 impl Mapper for Mapper004_1 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         let is_even_address = addr.is_multiple_of(2);
         match (*addr, is_even_address) {
             (0x0000..=0x401F, _) => unreachable!(),
             (0x4020..=0x7FFF, _) => { /* Do nothing. */ }
-            (0x8000..=0x9FFF, true ) => self.bank_select(params, value),
-            (0x8000..=0x9FFF, false) => mmc3::set_bank_index(params, &mut self.selected_register_id, value),
-            (0xA000..=0xBFFF, true ) => Self::set_mirroring(params, value),
-            (0xA000..=0xBFFF, false) => Self::prg_ram_protect(params, value),
+            (0x8000..=0x9FFF, true ) => self.bank_select(mem, value),
+            (0x8000..=0x9FFF, false) => mmc3::set_bank_index(mem, &mut self.selected_register_id, value),
+            (0xA000..=0xBFFF, true ) => Self::set_mirroring(mem, value),
+            (0xA000..=0xBFFF, false) => Self::prg_ram_protect(mem, value),
             (0xC000..=0xDFFF, true ) => self.irq_state.set_counter_reload_value(value),
             (0xC000..=0xDFFF, false) => self.irq_state.reload_counter(),
-            (0xE000..=0xFFFF, true ) => self.irq_state.disable(params),
+            (0xE000..=0xFFFF, true ) => self.irq_state.disable(mem),
             (0xE000..=0xFFFF, false) => self.irq_state.enable(),
         }
     }
@@ -80,8 +80,8 @@ impl Mapper for Mapper004_1 {
         self.irq_state.decrement_suppression_cycle_count();
     }
 
-    fn on_ppu_address_change(&mut self, params: &mut MapperParams, address: PpuAddress) {
-        self.irq_state.tick_counter(params, address);
+    fn on_ppu_address_change(&mut self, mem: &mut Memory, address: PpuAddress) {
+        self.irq_state.tick_counter(mem, address);
     }
 
     fn layout(&self) -> Layout {
@@ -91,25 +91,25 @@ impl Mapper for Mapper004_1 {
 
 impl Mapper004_1 {
     // Same as MMC3 except for PRG RAM enable and slightly different PRG layouts.
-    pub fn bank_select(&mut self, params: &mut MapperParams, value: u8) {
+    pub fn bank_select(&mut self, mem: &mut Memory, value: u8) {
         let fields = splitbits!(min=u8, value, "cps..bbb");
-        params.set_chr_layout(fields.c);
-        params.set_prg_layout(fields.p);
+        mem.set_chr_layout(fields.c);
+        mem.set_prg_layout(fields.p);
         // FIXME: What are these actually supposed to do?
-        params.set_read_write_status(S0, fields.s);
-        params.set_read_write_status(S1, fields.s);
+        mem.set_read_write_status(S0, fields.s);
+        mem.set_read_write_status(S1, fields.s);
         self.selected_register_id = mmc3::BANK_INDEX_REGISTER_IDS[fields.b as usize];
     }
 
-    pub fn set_mirroring(params: &mut MapperParams, value: u8) {
+    pub fn set_mirroring(mem: &mut Memory, value: u8) {
         // Hard-coded 4-screen mirroring cannot be overridden.
-        if params.name_table_mirroring().is_vertical() || params.name_table_mirroring().is_horizontal() {
-            params.set_name_table_mirroring(value & 1);
+        if mem.name_table_mirroring().is_vertical() || mem.name_table_mirroring().is_horizontal() {
+            mem.set_name_table_mirroring(value & 1);
         }
     }
 
     // TODO: This should be implementable now.
-    pub fn prg_ram_protect(_params: &mut MapperParams, _value: u8) {
+    pub fn prg_ram_protect(_mem: &mut Memory, _value: u8) {
         // TODO: Once NES 2.0 is supported, then MMC3 and MMC6 can properly be supported.
         /*
         if !self.prg_ram_enabled {

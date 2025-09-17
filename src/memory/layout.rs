@@ -179,7 +179,7 @@ impl Layout {
             name_table_mirrorings: self.name_table_mirrorings,
             read_write_statuses: self.read_write_statuses,
             ram_not_present,
-            irq_pending: false,
+            mapper_irq_pending: false,
         })
     }
 

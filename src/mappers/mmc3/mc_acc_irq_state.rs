@@ -1,5 +1,5 @@
-use crate::mapper::MapperParams;
 use crate::mappers::mmc3::irq_state::IrqState;
+use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
 
@@ -27,7 +27,7 @@ impl McAccIrqState {
 }
 
 impl IrqState for McAccIrqState {
-    fn tick_counter(&mut self, params: &mut MapperParams, address: PpuAddress) {
+    fn tick_counter(&mut self, mem: &mut Memory, address: PpuAddress) {
         if address.to_scroll_u16() >= 0x2000 {
             return;
         }
@@ -50,7 +50,7 @@ impl IrqState for McAccIrqState {
             }
 
             if self.enabled && self.counter == 0 {
-                params.set_irq_pending(true);
+                mem.mapper_irq_pending = true;
             }
         }
 
@@ -72,9 +72,9 @@ impl IrqState for McAccIrqState {
         self.force_reload_counter = true;
     }
 
-    fn disable(&mut self, params: &mut MapperParams) {
+    fn disable(&mut self, mem: &mut Memory) {
         self.enabled = false;
-        params.set_irq_pending(false);
+        mem.mapper_irq_pending = false;
     }
 
     fn enable(&mut self) {

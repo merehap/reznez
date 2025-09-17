@@ -16,10 +16,10 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper145;
 
 impl Mapper for Mapper145 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr & 0xE100 {
             0x0000..=0x401F => unreachable!(),
-            0x4100 => params.set_chr_register(C0, splitbits_named!(value, "c.......")),
+            0x4100 => mem.set_chr_register(C0, splitbits_named!(value, "c.......")),
             _ => { /* Do nothing. */ }
         }
     }

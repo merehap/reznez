@@ -29,33 +29,33 @@ pub struct Mapper075 {
 }
 
 impl Mapper for Mapper075 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x8FFF => params.set_prg_register(P0, value & 0b0000_1111),
+            0x8000..=0x8FFF => mem.set_prg_register(P0, value & 0b0000_1111),
             0x9000..=0x9FFF => {
                 let fields = splitbits!(min=u8, value, ".....rlm");
 
                 self.chr_right_high_bit = fields.r << 4;
                 self.chr_left_high_bit = fields.l << 4;
-                if matches!(params.name_table_mirroring(), NameTableMirroring::VERTICAL | NameTableMirroring::HORIZONTAL) {
-                    params.set_name_table_mirroring(fields.m);
+                if matches!(mem.name_table_mirroring(), NameTableMirroring::VERTICAL | NameTableMirroring::HORIZONTAL) {
+                    mem.set_name_table_mirroring(fields.m);
                 } else {
                     todo!("Handle four screen mirroring");
                 }
             }
-            0xA000..=0xAFFF => params.set_prg_register(P1, value & 0b0000_1111),
+            0xA000..=0xAFFF => mem.set_prg_register(P1, value & 0b0000_1111),
             0xB000..=0xBFFF => { /* Do nothing. */ }
-            0xC000..=0xCFFF => params.set_prg_register(P2, value & 0b0000_1111),
+            0xC000..=0xCFFF => mem.set_prg_register(P2, value & 0b0000_1111),
             0xD000..=0xDFFF => { /* Do nothing. */ }
             0xE000..=0xEFFF => {
                 let bank_index = self.chr_left_high_bit | (value & 0b0000_1111);
-                params.set_chr_register(C0, bank_index);
+                mem.set_chr_register(C0, bank_index);
             }
             0xF000..=0xFFFF => {
                 let bank_index = self.chr_right_high_bit | (value & 0b0000_1111);
-                params.set_chr_register(C1, bank_index);
+                mem.set_chr_register(C1, bank_index);
             }
         }
     }

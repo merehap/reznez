@@ -151,7 +151,7 @@ pub struct Mapper005 {
 }
 
 impl Mapper for Mapper005 {
-    fn peek_cartridge_space(&self, params: &MapperParams, addr: CpuAddress) -> ReadResult {
+    fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x5204 => ReadResult::full(self.frame_state.to_status_byte()),
@@ -160,7 +160,7 @@ impl Mapper for Mapper005 {
             0x4020..=0x5BFF => ReadResult::OPEN_BUS,
             // TODO: ReadWriteStatus
             0x5C00..=0x5FFF => ReadResult::full(self.extended_ram[u32::from(*addr - 0x5C00)]),
-            0x6000..=0xFFFF => params.peek_prg(addr),
+            0x6000..=0xFFFF => mem.peek_prg(addr),
         }
     }
 
@@ -174,10 +174,10 @@ impl Mapper for Mapper005 {
                 let lower_chr_bank_bits = self.extended_ram[u32::from(self.name_table_index)] & 0b0011_1111;
                 let pattern_bank = (self.upper_chr_bank_bits << 6) | lower_chr_bank_bits;
                 let raw_chr_index = 4 * KIBIBYTE * u32::from(pattern_bank) * KIBIBYTE + u32::from(address.to_u16() % 0x1000);
-                mem.mapper_params.chr_memory().peek_raw(raw_chr_index)
+                mem.chr_memory().peek_raw(raw_chr_index)
             }
-            0x0000..=0x1FFF => mem.mapper_params.chr_memory().peek(&mem.ciram, address),
-            0x2000..=0x3EFF => self.peek_name_table_byte(&mem.mapper_params, &mem.ciram, address),
+            0x0000..=0x1FFF => mem.chr_memory().peek(&mem.ciram, address),
+            0x2000..=0x3EFF => self.peek_name_table_byte(&mem, &mem.ciram, address),
             0x3F00..=0x3FFF if should_substitute => {
                 let palette = self.extended_ram[u32::from(self.name_table_index)] >> 6;
                 // The same palette is used for all 4 corners.
@@ -189,15 +189,15 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_cpu_read(&mut self, params: &mut MapperParams, addr: CpuAddress, _value: u8) {
+    fn on_cpu_read(&mut self, mem: &mut Memory, addr: CpuAddress, _value: u8) {
         match *addr {
             0x5204 => {
-                params.set_irq_pending(false);
+                mem.mapper_irq_pending = false;
                 self.frame_state.acknowledge_irq();
             }
             // NMI vector low and high
             0xFFFA | 0xFFFB => {
-                params.set_irq_pending(false);
+                mem.mapper_irq_pending = false;
                 self.frame_state.acknowledge_irq();
                 self.frame_state.force_end_frame();
             }
@@ -205,12 +205,12 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_cpu_write(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn on_cpu_write(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr {
             // PPU Ctrl
             0x2000 => {
                 self.sprite_height = Ctrl::from_u8(value).sprite_height();
-                self.update_chr_layout(params);
+                self.update_chr_layout(mem);
             }
             // PPU Mask
             0x2001 => {
@@ -220,14 +220,14 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_ppu_read(&mut self, params: &mut MapperParams, addr: PpuAddress, _value: u8) {
+    fn on_ppu_read(&mut self, mem: &mut Memory, addr: PpuAddress, _value: u8) {
         self.frame_state.sync_frame_status(addr);
 
         // Syncing the frame status may have switched in or out of special background banking mode.
-        self.update_chr_layout(params);
+        self.update_chr_layout(mem);
 
         if self.irq_enabled && self.frame_state.irq_pending() {
-            params.set_irq_pending(true);
+            mem.mapper_irq_pending = true;
         }
 
         if addr.is_in_name_table_proper() {
@@ -239,14 +239,14 @@ impl Mapper for Mapper005 {
         self.frame_state.maybe_end_frame();
     }
 
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x4FFF => { /* Do nothing. */ }
             0x5000..=0x5015 => { /* TODO: MMC5 audio */ }
             0x5016..=0x50FF => { /* Do nothing. */ }
-            0x5100 => params.set_prg_layout(value & 0b11),
-            0x5101 => self.set_chr_layout(params, value),
+            0x5100 => mem.set_prg_layout(value & 0b11),
+            0x5101 => self.set_chr_layout(mem, value),
             0x5102 => {
                 self.ram_enabled_1 = value & 0b11 == 0b10;
                 let status = if self.ram_enabled_1 && self.ram_enabled_2 {
@@ -254,7 +254,7 @@ impl Mapper for Mapper005 {
                 } else {
                     READ_ONLY
                 };
-                params.set_read_write_status(S1, status);
+                mem.set_read_write_status(S1, status);
             }
             0x5103 => {
                 self.ram_enabled_2 = value & 0b11 == 0b01;
@@ -263,42 +263,42 @@ impl Mapper for Mapper005 {
                 } else {
                     READ_ONLY
                 };
-                params.set_read_write_status(S1, status);
+                mem.set_read_write_status(S1, status);
             }
-            0x5104 => self.set_extended_ram_mode(params, value),
-            0x5105 => Self::set_name_table_mirroring(params, value),
+            0x5104 => self.set_extended_ram_mode(mem, value),
+            0x5105 => Self::set_name_table_mirroring(mem, value),
             0x5106 => self.set_fill_mode_name_table_byte(value),
             0x5107 => self.set_fill_mode_attribute_table_byte(value),
             0x5108..=0x5112 => { /* Do nothing. */ }
-            0x5113 => self.set_prg_bank_register(params, P0, None, value),
-            0x5114 => self.set_prg_bank_register(params, P1, Some(R0), value),
-            0x5115 => self.set_prg_bank_register(params, P2, Some(R1), value),
-            0x5116 => self.set_prg_bank_register(params, P3, Some(R2), value),
-            0x5117 => self.set_prg_bank_register(params, P4, None, value),
+            0x5113 => self.set_prg_bank_register(mem, P0, None, value),
+            0x5114 => self.set_prg_bank_register(mem, P1, Some(R0), value),
+            0x5115 => self.set_prg_bank_register(mem, P2, Some(R1), value),
+            0x5116 => self.set_prg_bank_register(mem, P3, Some(R2), value),
+            0x5117 => self.set_prg_bank_register(mem, P4, None, value),
             0x5118..=0x511F => { /* Do nothing. */ }
-            0x5120 => self.set_chr_bank_register(params, C0, value),
-            0x5121 => self.set_chr_bank_register(params, C1, value),
-            0x5122 => self.set_chr_bank_register(params, C2, value),
-            0x5123 => self.set_chr_bank_register(params, C3, value),
-            0x5124 => self.set_chr_bank_register(params, C4, value),
-            0x5125 => self.set_chr_bank_register(params, C5, value),
-            0x5126 => self.set_chr_bank_register(params, C6, value),
-            0x5127 => self.set_chr_bank_register(params, C7, value),
+            0x5120 => self.set_chr_bank_register(mem, C0, value),
+            0x5121 => self.set_chr_bank_register(mem, C1, value),
+            0x5122 => self.set_chr_bank_register(mem, C2, value),
+            0x5123 => self.set_chr_bank_register(mem, C3, value),
+            0x5124 => self.set_chr_bank_register(mem, C4, value),
+            0x5125 => self.set_chr_bank_register(mem, C5, value),
+            0x5126 => self.set_chr_bank_register(mem, C6, value),
+            0x5127 => self.set_chr_bank_register(mem, C7, value),
             0x5128 => {
                 self.tall_sprite_background_enabled = true;
-                self.set_chr_bank_register(params, C8, value);
+                self.set_chr_bank_register(mem, C8, value);
             }
             0x5129 => {
                 self.tall_sprite_background_enabled = true;
-                self.set_chr_bank_register(params, C9, value);
+                self.set_chr_bank_register(mem, C9, value);
             }
             0x512A => {
                 self.tall_sprite_background_enabled = true;
-                self.set_chr_bank_register(params, C10, value);
+                self.set_chr_bank_register(mem, C10, value);
             }
             0x512B => {
                 self.tall_sprite_background_enabled = true;
-                self.set_chr_bank_register(params, C11, value);
+                self.set_chr_bank_register(mem, C11, value);
             }
             0x512C..=0x512F => { /* Do nothing. */ }
             0x5130 => self.upper_chr_bank_bits = value & 0b11,
@@ -307,7 +307,7 @@ impl Mapper for Mapper005 {
             0x5201 => todo!("Vertical split scroll"),
             0x5202 => todo!("Vertical split bank"),
             0x5203 => self.frame_state.set_target_irq_scanline(value),
-            0x5204 => self.enable_irq(params, value),
+            0x5204 => self.enable_irq(mem, value),
             0x5205 => self.multiplicand = value,
             0x5206 => self.multiplier = value,
             0x5207..=0x5BFF => { /* Do nothing. */ }
@@ -355,13 +355,13 @@ impl Mapper005 {
     }
 
     // Write 0x5101
-    fn set_chr_layout(&mut self, params: &mut MapperParams, value: u8) {
+    fn set_chr_layout(&mut self, mem: &mut Memory, value: u8) {
         self.chr_window_mode = CHR_WINDOW_MODES[usize::from(value & 0b11)];
-        self.update_chr_layout(params);
+        self.update_chr_layout(mem);
     }
 
     // Write 0x5104
-    fn set_extended_ram_mode(&mut self, params: &mut MapperParams, value: u8) {
+    fn set_extended_ram_mode(&mut self, mem: &mut Memory, value: u8) {
         self.extended_ram_mode = EXTENDED_RAM_MODES[usize::from(value & 0b11)];
         let read_write_status = match self.extended_ram_mode {
             // FIXME: These are only write-only during rendering. They are supposed to
@@ -370,11 +370,11 @@ impl Mapper005 {
             ExtendedRamMode::ReadWrite => READ_WRITE,
             ExtendedRamMode::ReadOnly => READ_ONLY,
         };
-        params.set_read_write_status(S0, read_write_status);
+        mem.set_read_write_status(S0, read_write_status);
     }
 
     // Write 0x5105
-    fn set_name_table_mirroring(params: &mut MapperParams, value: u8) {
+    fn set_name_table_mirroring(mem: &mut Memory, value: u8) {
         fn source(raw: u8) -> NameTableSource {
             match raw {
                 0 => NameTableSource::Ciram(CiramSide::Left),
@@ -386,10 +386,10 @@ impl Mapper005 {
         }
 
         let name_tables = splitbits!(value, "ddccbbaa");
-        params.set_name_table_quadrant_to_source(NameTableQuadrant::TopLeft, source(name_tables.a));
-        params.set_name_table_quadrant_to_source(NameTableQuadrant::TopRight, source(name_tables.b));
-        params.set_name_table_quadrant_to_source(NameTableQuadrant::BottomLeft, source(name_tables.c));
-        params.set_name_table_quadrant_to_source(NameTableQuadrant::BottomRight, source(name_tables.d));
+        mem.set_name_table_quadrant_to_source(NameTableQuadrant::TopLeft, source(name_tables.a));
+        mem.set_name_table_quadrant_to_source(NameTableQuadrant::TopRight, source(name_tables.b));
+        mem.set_name_table_quadrant_to_source(NameTableQuadrant::BottomLeft, source(name_tables.c));
+        mem.set_name_table_quadrant_to_source(NameTableQuadrant::BottomRight, source(name_tables.d));
     }
 
     // Write 0x5106
@@ -412,22 +412,22 @@ impl Mapper005 {
     // Write 0x5113 through 0x5117
     fn set_prg_bank_register(
         &self,
-        params: &mut MapperParams,
+        mem: &mut Memory,
         id: PrgBankRegisterId,
         mode_reg_id: Option<RomRamModeRegisterId>,
         value: u8,
     ) {
         let fields = splitbits!(value, "mppppppp");
-        params.set_prg_register(id, fields.p);
+        mem.set_prg_register(id, fields.p);
         if let Some(mode_reg_id) = mode_reg_id {
             let rom_ram_mode = [MemType::WorkRam, MemType::Rom][fields.m as usize];
-            params.set_rom_ram_mode(mode_reg_id, rom_ram_mode);
+            mem.set_rom_ram_mode(mode_reg_id, rom_ram_mode);
         }
     }
 
-    fn set_chr_bank_register(&mut self, params: &mut MapperParams, id: ChrBankRegisterId, value: u8) {
-        params.set_chr_register(id, value);
-        self.update_chr_layout(params);
+    fn set_chr_bank_register(&mut self, mem: &mut Memory, id: ChrBankRegisterId, value: u8) {
+        mem.set_chr_register(id, value);
+        self.update_chr_layout(mem);
     }
 
     // Write 0x5200
@@ -439,17 +439,17 @@ impl Mapper005 {
     }
 
     // Write 0x5204
-    fn enable_irq(&mut self, params: &mut MapperParams, value: u8) {
+    fn enable_irq(&mut self, mem: &mut Memory, value: u8) {
         self.irq_enabled = value >> 7 == 1;
         if !self.irq_enabled {
-            params.set_irq_pending(false);
+            mem.mapper_irq_pending = false;
         } else if self.frame_state.irq_pending() {
-            params.set_irq_pending(true);
+            mem.mapper_irq_pending = true;
         }
 
     }
 
-    fn update_chr_layout(&mut self, params: &mut MapperParams) {
+    fn update_chr_layout(&mut self, mem: &mut Memory) {
         if self.sprite_height == SpriteHeight::Normal {
             self.tall_sprite_background_enabled = false;
         }
@@ -464,7 +464,7 @@ impl Mapper005 {
             layout_index |= 0b100;
         }
 
-        params.set_chr_layout(layout_index);
+        mem.set_chr_layout(layout_index);
     }
 }
 

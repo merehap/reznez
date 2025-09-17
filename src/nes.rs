@@ -69,10 +69,10 @@ impl Nes {
 
         let (joypad1, joypad2) = (Joypad::new(), Joypad::new());
 
-        let latest_values = LatestValues::new(&mapper_params);
 
         let ports = Ports::new(joypad1, joypad2);
         let mut memory = Memory::new(mapper_params, ports, config.ppu_clock, config.system_palette.clone());
+        let latest_values = LatestValues::new(&memory);
 
         Ok(Nes {
             cpu: Cpu::new(&mut memory, config.starting_cpu_cycle, config.cpu_step_formatting),
@@ -329,7 +329,6 @@ impl Nes {
     fn detect_changes(&mut self) {
         if log_enabled!(target: "cpuflowcontrol", Info) {
             let apu_regs = self.memory.apu_regs();
-            let mapper_params = self.memory.mapper_params();
             let latest = &mut self.latest_values;
 
             if latest.apu_frame_irq_pending != apu_regs.frame_irq_pending() {
@@ -346,8 +345,8 @@ impl Nes {
                 }
             }
 
-            if latest.mapper_irq_pending != mapper_params.irq_pending() {
-                latest.mapper_irq_pending = mapper_params.irq_pending();
+            if latest.mapper_irq_pending != self.memory.mapper_irq_pending {
+                latest.mapper_irq_pending = self.memory.mapper_irq_pending;
                 if latest.mapper_irq_pending {
                     info!("Mapper IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
                 }
@@ -458,9 +457,8 @@ impl Nes {
         }
 
         if log_enabled!(target: "mapperupdates", Info) {
-            let mapper_params = self.memory.mapper_params();
-            let prg_memory = mapper_params.prg_memory();
-            let chr_memory = mapper_params.chr_memory();
+            let prg_memory = &self.memory.prg_memory;
+            let chr_memory = &self.memory.chr_memory;
             let latest = &mut self.latest_values;
 
             if latest.prg_layout_index != prg_memory.layout_index() {
@@ -473,7 +471,7 @@ impl Nes {
                 latest.chr_layout_index = chr_memory.layout_index();
             }
 
-            let prg_registers = mapper_params.prg_memory().bank_registers().registers();
+            let prg_registers = prg_memory.bank_registers().registers();
             if &latest.prg_registers != prg_registers {
                 for (i, latest_bank_location) in latest.prg_registers.iter_mut().enumerate() {
                     if *latest_bank_location != prg_registers[i] {
@@ -494,7 +492,7 @@ impl Nes {
                 latest.prg_registers = *prg_registers;
             }
 
-            let chr_registers = mapper_params.chr_memory().bank_registers().registers();
+            let chr_registers = chr_memory.bank_registers().registers();
             if &latest.chr_registers != chr_registers {
                 for (i, latest_bank_location) in latest.prg_registers.iter_mut().enumerate() {
                     if *latest_bank_location != chr_registers[i] {
@@ -515,7 +513,7 @@ impl Nes {
                 latest.chr_registers = *chr_registers;
             }
 
-            let meta_registers = mapper_params.chr_memory().bank_registers().meta_registers();
+            let meta_registers = chr_memory.bank_registers().meta_registers();
             if &latest.meta_registers != meta_registers {
                 for (i, latest_bank_register_id) in latest.meta_registers.iter_mut().enumerate() {
                     if *latest_bank_register_id != meta_registers[i] {
@@ -526,13 +524,13 @@ impl Nes {
                 }
             }
 
-            if latest.name_table_mirroring != mapper_params.name_table_mirroring() {
+            if latest.name_table_mirroring != chr_memory.name_table_mirroring() {
                 info!("NameTableMirroring changed to {}. Previously: {}",
-                    mapper_params.name_table_mirroring(), latest.name_table_mirroring);
-                latest.name_table_mirroring = mapper_params.name_table_mirroring();
+                    chr_memory.name_table_mirroring(), latest.name_table_mirroring);
+                latest.name_table_mirroring = chr_memory.name_table_mirroring();
             }
 
-            let prg_read_write_statuses = mapper_params.prg_memory.bank_registers().read_write_statuses();
+            let prg_read_write_statuses = prg_memory.bank_registers().read_write_statuses();
             if &latest.read_write_statuses != prg_read_write_statuses {
                 for (i, latest_read_write_status) in latest.read_write_statuses.iter_mut().enumerate() {
                     if *latest_read_write_status != prg_read_write_statuses[i] {
@@ -582,7 +580,7 @@ struct LatestValues {
 }
 
 impl LatestValues {
-    fn new(initial_params: &MapperParams) -> Self {
+    fn new(initial_mem: &Memory) -> Self {
         Self {
             apu_frame_irq_pending: false,
             dmc_irq_pending: false,
@@ -596,13 +594,13 @@ impl LatestValues {
             dmc_dma_action: DmcDmaAction::DoNothing,
             oam_dma_action: OamDmaAction::DoNothing,
 
-            prg_layout_index: initial_params.prg_memory.layout_index(),
-            chr_layout_index: initial_params.chr_memory.layout_index(),
-            prg_registers: *initial_params.prg_memory().bank_registers().registers(),
-            chr_registers: *initial_params.chr_memory().bank_registers().registers(),
-            meta_registers: *initial_params.chr_memory().bank_registers().meta_registers(),
-            name_table_mirroring: initial_params.chr_memory().name_table_mirroring(),
-            read_write_statuses: *initial_params.prg_memory().bank_registers().read_write_statuses(),
+            prg_layout_index: initial_mem.prg_memory.layout_index(),
+            chr_layout_index: initial_mem.chr_memory.layout_index(),
+            prg_registers: *initial_mem.prg_memory().bank_registers().registers(),
+            chr_registers: *initial_mem.chr_memory().bank_registers().registers(),
+            meta_registers: *initial_mem.chr_memory().bank_registers().meta_registers(),
+            name_table_mirroring: initial_mem.chr_memory().name_table_mirroring(),
+            read_write_statuses: *initial_mem.prg_memory().bank_registers().read_write_statuses(),
         }
     }
 }

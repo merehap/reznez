@@ -64,35 +64,35 @@ pub struct Mapper001_0 {
 }
 
 impl Mapper for Mapper001_0 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         // Only writes of 0x8000 to 0xFFFF trigger shifter logic.
         if *addr < 0x8000 {
             return;
         }
 
         match self.shift_register.shift(value) {
-            ShiftStatus::Clear => params.set_prg_layout(3),
+            ShiftStatus::Clear => mem.set_prg_layout(3),
             ShiftStatus::Continue => { /* Do nothing additional. */ }
             ShiftStatus::Done { finished_value } => match *addr {
                 0x0000..=0x7FFF => unreachable!(),
                 0x8000..=0x9FFF => {
                     let fields = splitbits!(min=u8, finished_value, "...cppmm");
-                    params.set_chr_layout(fields.c);
-                    params.set_prg_layout(fields.p);
-                    params.set_name_table_mirroring(fields.m);
+                    mem.set_chr_layout(fields.c);
+                    mem.set_prg_layout(fields.p);
+                    mem.set_name_table_mirroring(fields.m);
                 }
                 0xA000..=0xBFFF => {
-                    self.set_chr_bank_and_board_specifics(params, C0, finished_value);
+                    self.set_chr_bank_and_board_specifics(mem, C0, finished_value);
                 }
                 0xC000..=0xDFFF => {
-                    if params.chr_memory().layout_index() == 1 {
-                        self.set_chr_bank_and_board_specifics(params, C1, finished_value);
+                    if mem.chr_memory().layout_index() == 1 {
+                        self.set_chr_bank_and_board_specifics(mem, C1, finished_value);
                     }
                 }
                 0xE000..=0xFFFF => {
                     let fields = splitbits!(min=u8, finished_value, "...spppp");
-                    params.set_read_write_status(S0, fields.s);
-                    params.set_prg_register(P1, fields.p);
+                    mem.set_read_write_status(S0, fields.s);
+                    mem.set_prg_register(P1, fields.p);
                 }
             }
         }
@@ -111,37 +111,37 @@ impl Mapper001_0 {
         })
     }
 
-    fn set_chr_bank_and_board_specifics(&self, params: &mut MapperParams, chr_id: ChrBankRegisterId, value: u8) {
+    fn set_chr_bank_and_board_specifics(&self, mem: &mut Memory, chr_id: ChrBankRegisterId, value: u8) {
         match self.board {
             Board::SNROM => {
                 let fields = splitbits!(min=u8, value, "...s...c");
-                params.set_read_write_status(S0, fields.s);
-                params.set_chr_register(chr_id, fields.c);
+                mem.set_read_write_status(S0, fields.s);
+                mem.set_chr_register(chr_id, fields.c);
             }
             Board::SUROM => {
                 let banks = splitbits!(min=u8, value, "...p...c");
-                params.set_prg_rom_outer_bank_index(banks.p);
-                params.set_chr_register(chr_id, banks.c);
+                mem.set_prg_rom_outer_bank_index(banks.p);
+                mem.set_chr_register(chr_id, banks.c);
             }
             Board::SOROM => {
                 let banks = splitbits!(min=u8, value, "...pr..c");
-                params.set_prg_rom_outer_bank_index(banks.p);
-                params.set_prg_register(P0, banks.r);
-                params.set_chr_register(chr_id, banks.c);
+                mem.set_prg_rom_outer_bank_index(banks.p);
+                mem.set_prg_register(P0, banks.r);
+                mem.set_chr_register(chr_id, banks.c);
             }
             Board::SXROM => {
                 let banks = splitbits!(min=u8, value, "...prr.c");
-                params.set_prg_rom_outer_bank_index(banks.p);
-                params.set_prg_register(P0, banks.r);
-                params.set_chr_register(chr_id, banks.c);
+                mem.set_prg_rom_outer_bank_index(banks.p);
+                mem.set_prg_register(P0, banks.r);
+                mem.set_chr_register(chr_id, banks.c);
             }
             Board::SZROM => {
                 let banks = splitbits!(min=u8, value, "...rcccc");
-                params.set_prg_register(P0, banks.r);
-                params.set_chr_register(chr_id, banks.c);
+                mem.set_prg_register(P0, banks.r);
+                mem.set_chr_register(chr_id, banks.c);
             }
             _ => {
-                params.set_chr_register(chr_id, value);
+                mem.set_chr_register(chr_id, value);
             }
         }
     }

@@ -53,25 +53,25 @@ pub struct Vrc4 {
 
 impl Mapper for Vrc4 {
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        self.irq_state.step(&mut mem.mapper_params);
+        self.irq_state.step(mem);
     }
 
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x6000..=0x7FFF => { /* Do nothing. */ }
             // Set bank for 8000 through 9FFF (or C000 through DFFF).
-            0x8000..=0x8003 => params.set_prg_register(P0, value & 0b0001_1111),
+            0x8000..=0x8003 => mem.set_prg_register(P0, value & 0b0001_1111),
             0x9000 => {
-                params.set_name_table_mirroring(value & 0b11);
+                mem.set_name_table_mirroring(value & 0b11);
             }
             0x9002 => {
                 let fields = splitbits!(min=u8, value, "......ps");
-                params.set_prg_layout(fields.p);
-                params.set_read_write_status(S0, fields.s);
+                mem.set_prg_layout(fields.p);
+                mem.set_read_write_status(S0, fields.s);
             }
             // Set bank for A000 through AFFF.
-            0xA000..=0xA003 => params.set_prg_register(P1, value & 0b0001_1111),
+            0xA000..=0xA003 => mem.set_prg_register(P1, value & 0b0001_1111),
 
             // Set a CHR bank mapping.
             0xB000..=0xEFFF => {
@@ -88,14 +88,14 @@ impl Mapper for Vrc4 {
                 }
 
                 if let (Some(&register_id), Some(mask)) = (register_id, mask) {
-                    params.set_chr_bank_register_bits(register_id, bank, mask);
+                    mem.set_chr_bank_register_bits(register_id, bank, mask);
                 }
             }
 
             0xF000 => self.irq_state.set_reload_value_low_bits(value),
             0xF001 => self.irq_state.set_reload_value_high_bits(value),
-            0xF002 => self.irq_state.set_mode(params, value),
-            0xF003 => self.irq_state.acknowledge(params),
+            0xF002 => self.irq_state.set_mode(mem, value),
+            0xF003 => self.irq_state.acknowledge(mem),
             0x4020..=0xFFFF => { /* All other writes do nothing. */ }
         }
     }

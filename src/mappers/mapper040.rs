@@ -28,20 +28,20 @@ pub struct Mapper040 {
 }
 
 impl Mapper for Mapper040 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x9FFF => {
-                params.set_irq_pending(false);
+                mem.mapper_irq_pending = false;
                 self.irq_enabled = false;
             }
             0xA000..=0xBFFF => {
-                params.set_irq_pending(true);
+                mem.mapper_irq_pending = true;
             }
             0xC000..=0xDFFF => { /* TODO: NTDEC 2752 outer bank register. Test ROM needed. */ }
             0xE000..=0xFFFF => {
-                params.set_prg_register(P0, value)
+                mem.set_prg_register(P0, value)
             }
         }
     }
@@ -53,7 +53,7 @@ impl Mapper for Mapper040 {
 
         self.irq_counter = self.irq_counter.wrapping_add(1.into());
         if self.irq_counter == 0.into() {
-            mem.mapper_params.set_irq_pending(true);
+            mem.mapper_irq_pending = true;
             self.irq_enabled = false;
         }
     }

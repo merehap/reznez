@@ -22,15 +22,15 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper200_1;
 
 impl Mapper for Mapper200_1 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, _value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, _value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 let bank_index = *addr & 0x0007;
-                params.set_prg_register(P0, bank_index);
-                params.set_chr_register(C0, bank_index);
-                params.set_name_table_mirroring((*addr >> 2) as u8 & 1);
+                mem.set_prg_register(P0, bank_index);
+                mem.set_chr_register(C0, bank_index);
+                mem.set_name_table_mirroring((*addr >> 2) as u8 & 1);
             }
         }
     }

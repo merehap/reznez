@@ -39,20 +39,20 @@ pub struct Mapper016_5 {
 }
 
 impl Mapper for Mapper016_5 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr & 0x800F {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000 => params.set_chr_register(C0, value),
-            0x8001 => params.set_chr_register(C1, value),
-            0x8002 => params.set_chr_register(C2, value),
-            0x8003 => params.set_chr_register(C3, value),
-            0x8004 => params.set_chr_register(C4, value),
-            0x8005 => params.set_chr_register(C5, value),
-            0x8006 => params.set_chr_register(C6, value),
-            0x8007 => params.set_chr_register(C7, value),
-            0x8008 => params.set_prg_register(P0, value & 0b1111),
-            0x8009 => params.set_name_table_mirroring(value & 0b11),
+            0x8000 => mem.set_chr_register(C0, value),
+            0x8001 => mem.set_chr_register(C1, value),
+            0x8002 => mem.set_chr_register(C2, value),
+            0x8003 => mem.set_chr_register(C3, value),
+            0x8004 => mem.set_chr_register(C4, value),
+            0x8005 => mem.set_chr_register(C5, value),
+            0x8006 => mem.set_chr_register(C6, value),
+            0x8007 => mem.set_chr_register(C7, value),
+            0x8008 => mem.set_prg_register(P0, value & 0b1111),
+            0x8009 => mem.set_name_table_mirroring(value & 0b11),
             0x800A => {
                 self.irq_pending = false;
                 self.irq_counter_enabled = value & 1 == 1;

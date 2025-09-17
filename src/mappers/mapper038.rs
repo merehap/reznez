@@ -17,15 +17,15 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper038;
 
 impl Mapper for Mapper038 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 let banks = splitbits!(value, "....ccpp");
                 // Oversize CHR, matching FCEUX's implementation.
-                params.set_chr_register(C0, banks.c);
-                params.set_prg_register(P0, banks.p);
+                mem.set_chr_register(C0, banks.c);
+                mem.set_prg_register(P0, banks.p);
             }
         }
     }

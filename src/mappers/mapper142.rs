@@ -29,7 +29,7 @@ pub struct Mapper142 {
 }
 
 impl Mapper for Mapper142 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
@@ -50,14 +50,14 @@ impl Mapper for Mapper142 {
                 self.irq_counter_reload_value |= (u16::from(value) & 0xF) << 12;
             }
             0xC000..=0xCFFF => {
-                params.set_irq_pending(false);
+                mem.mapper_irq_pending = false;
                 self.irq_enabled = value & 0b11 != 0;
                 if self.irq_enabled {
                     self.irq_counter = self.irq_counter_reload_value;
                 }
             }
             0xD000..=0xDFFF => {
-                params.set_irq_pending(false);
+                mem.mapper_irq_pending = false;
             }
             0xE000..=0xEFFF => {
                 match value & 0b111 {
@@ -76,7 +76,7 @@ impl Mapper for Mapper142 {
             }
             0xF000..=0xFFFF => {
                 if let Some(selected_prg_bank) = self.selected_prg_bank {
-                    params.set_prg_register(selected_prg_bank, value & 0b1111);
+                    mem.set_prg_register(selected_prg_bank, value & 0b1111);
                 }
             }
         }
@@ -90,7 +90,7 @@ impl Mapper for Mapper142 {
         // It's not clear if this is supposed to match VRC3's behavior or not. This is off-by-1.
         self.irq_counter += 1;
         if self.irq_counter == 0xFFFF {
-            mem.mapper_params.set_irq_pending(true);
+            mem.mapper_irq_pending = true;
             self.irq_counter = self.irq_counter_reload_value;
         }
     }

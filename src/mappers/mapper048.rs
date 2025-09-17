@@ -33,22 +33,22 @@ pub struct Mapper048 {
 }
 
 impl Mapper for Mapper048 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         let bank_index = u16::from(value);
         match *addr & 0xE003 {
-            0x8000 => params.set_prg_register(P0, bank_index),
-            0x8001 => params.set_prg_register(P1, bank_index),
-            0x8002 => params.set_chr_register(C0, 2 * bank_index),
-            0x8003 => params.set_chr_register(C1, 2 * bank_index),
-            0xA000 => params.set_chr_register(C2, bank_index),
-            0xA001 => params.set_chr_register(C3, bank_index),
-            0xA002 => params.set_chr_register(C4, bank_index),
-            0xA003 => params.set_chr_register(C5, bank_index),
+            0x8000 => mem.set_prg_register(P0, bank_index),
+            0x8001 => mem.set_prg_register(P1, bank_index),
+            0x8002 => mem.set_chr_register(C0, 2 * bank_index),
+            0x8003 => mem.set_chr_register(C1, 2 * bank_index),
+            0xA000 => mem.set_chr_register(C2, bank_index),
+            0xA001 => mem.set_chr_register(C3, bank_index),
+            0xA002 => mem.set_chr_register(C4, bank_index),
+            0xA003 => mem.set_chr_register(C5, bank_index),
             0xC000 => self.irq_state.set_counter_reload_value(value ^ 0xFF),
             0xC001 => self.irq_state.reload_counter(),
             0xC002 => self.irq_state.enable(),
-            0xC003 => self.irq_state.disable(params),
-            0xE000 => params.set_name_table_mirroring((value << 1) >> 7),
+            0xC003 => self.irq_state.disable(mem),
+            0xE000 => mem.set_name_table_mirroring((value << 1) >> 7),
             _ => { /* Do nothing. */ }
         }
     }
@@ -58,8 +58,8 @@ impl Mapper for Mapper048 {
         self.irq_state.decrement_suppression_cycle_count();
     }
 
-    fn on_ppu_address_change(&mut self, params: &mut MapperParams, address: PpuAddress) {
-        self.irq_state.tick_counter(params, address);
+    fn on_ppu_address_change(&mut self, mem: &mut Memory, address: PpuAddress) {
+        self.irq_state.tick_counter(mem, address);
     }
 
     fn layout(&self) -> Layout {

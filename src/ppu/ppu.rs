@@ -91,7 +91,7 @@ impl Ppu {
         mapper.on_end_of_ppu_cycle();
     }
 
-    pub fn execute_cycle_action(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, frame: &mut Frame, cycle_action: CycleAction) {
+    pub fn execute_cycle_action(&mut self, mapper: &mut dyn Mapper, mut mem: &mut Memory, frame: &mut Frame, cycle_action: CycleAction) {
         let background_table_side = mem.ppu_regs.background_table_side();
 
         let tile_column = mem.ppu_regs.current_address.x_scroll().coarse();
@@ -122,12 +122,12 @@ impl Ppu {
             LoadPatternLowAddress => {
                 self.pattern_address = PpuAddress::in_pattern_table(
                     background_table_side, self.next_tile_number, row_in_tile, false);
-                mapper.on_ppu_address_change(&mut mem.mapper_params, self.pattern_address);
+                mapper.on_ppu_address_change(&mut mem, self.pattern_address);
             }
             LoadPatternHighAddress => {
                 self.pattern_address = PpuAddress::in_pattern_table(
                     background_table_side, self.next_tile_number, row_in_tile, true);
-                mapper.on_ppu_address_change(&mut mem.mapper_params, self.pattern_address);
+                mapper.on_ppu_address_change(&mut mem, self.pattern_address);
             }
             GetPatternLowByte => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
@@ -294,13 +294,13 @@ impl Ppu {
                 let select_high = false;
                 (self.pattern_address, self.sprite_visible) =
                     self.current_sprite_pattern_address(mem, select_high);
-                mapper.on_ppu_address_change(&mut mem.mapper_params, self.pattern_address);
+                mapper.on_ppu_address_change(&mut mem, self.pattern_address);
             }
             LoadSpritePatternHighAddress => {
                 let select_high = true;
                 (self.pattern_address, self.sprite_visible) =
                     self.current_sprite_pattern_address(mem, select_high);
-                mapper.on_ppu_address_change(&mut mem.mapper_params, self.pattern_address);
+                mapper.on_ppu_address_change(&mut mem, self.pattern_address);
             }
             GetSpritePatternLowByte => {
                 if !mem.ppu_regs.rendering_enabled() {

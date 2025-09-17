@@ -25,7 +25,7 @@ impl<'a> PatternTable<'a> {
 
     pub fn from_mem(mem: &'a Memory, side: PatternTableSide) -> PatternTable<'a> {
         let ciram = mem.ciram();
-        let chr_memory = mem.mapper_params().chr_memory();
+        let chr_memory = mem.chr_memory();
         match side {
             PatternTableSide::Left => PatternTable::new(chr_memory.left_chunks(ciram)),
             PatternTableSide::Right => PatternTable::new(chr_memory.right_chunks(ciram)),

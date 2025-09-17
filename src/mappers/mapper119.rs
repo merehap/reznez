@@ -35,19 +35,19 @@ pub struct Mapper119 {
 }
 
 impl Mapper for Mapper119 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         if matches!(*addr, 0x8001..=0x9FFF)
                 && !addr.is_multiple_of(2)
                 && let RegId::Chr(chr_id) = self.mmc3.selected_register_id() {
 
             let fields = splitbits!(value, ".mcccccc");
-            params.set_chr_register(chr_id, fields.c);
+            mem.set_chr_register(chr_id, fields.c);
             let rom_ram_reg_id = ROM_RAM_REGISTER_IDS[chr_id as usize];
             let mem_type = [MemType::Rom, MemType::WorkRam][fields.m as usize];
-            params.set_rom_ram_mode(rom_ram_reg_id, mem_type);
+            mem.set_rom_ram_mode(rom_ram_reg_id, mem_type);
         } else {
             // Use standard MMC3 behaviors.
-            self.mmc3.write_register(params, addr, value);
+            self.mmc3.write_register(mem, addr, value);
         }
     }
 
@@ -55,8 +55,8 @@ impl Mapper for Mapper119 {
         self.mmc3.on_end_of_ppu_cycle();
     }
 
-    fn on_ppu_address_change(&mut self, params: &mut MapperParams, address: PpuAddress) {
-        self.mmc3.on_ppu_address_change(params, address);
+    fn on_ppu_address_change(&mut self, mem: &mut Memory, address: PpuAddress) {
+        self.mmc3.on_ppu_address_change(mem, address);
     }
 
     fn layout(&self) -> Layout {

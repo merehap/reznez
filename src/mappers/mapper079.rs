@@ -16,14 +16,14 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper079;
 
 impl Mapper for Mapper079 {
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             // 0x41XX, 0x43XX, ... $5DXX, $5FXX
             0x4100..=0x5FFF if (*addr / 0x100) % 2 == 1 => {
                 let banks = splitbits!(value, "....pccc");
-                params.set_prg_register(P0, banks.p as u8);
-                params.set_chr_register(C0, banks.c);
+                mem.set_prg_register(P0, banks.p as u8);
+                mem.set_chr_register(C0, banks.c);
             }
             _ => { /* Do nothing. */ }
         }

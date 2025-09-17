@@ -49,75 +49,75 @@ pub struct Mapper019 {
 }
 
 impl Mapper for Mapper019 {
-    fn peek_cartridge_space(&self, params: &MapperParams, addr: CpuAddress) -> ReadResult {
+    fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x47FF => ReadResult::OPEN_BUS,
             0x4800..=0x4FFF => /* TODO: Expansion Audio */ ReadResult::full(0),
             0x5000..=0x57FF => ReadResult::full((self.irq_counter & 0b0000_0000_1111_1111) as u8),
             0x5800..=0x5FFF => ReadResult::full(((self.irq_counter >> 8) & 0b0111_1111) as u8),
-            0x6000..=0xFFFF => params.peek_prg(addr),
+            0x6000..=0xFFFF => mem.peek_prg(addr),
         }
     }
 
-    fn write_register(&mut self, params: &mut MapperParams, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x47FF => { /* Do nothing. */ }
             0x4800..=0x4FFF => { /* TODO: Expansion Audio. */ }
             0x5000..=0x57FF => {
-                params.set_irq_pending(false);
+                mem.mapper_irq_pending = false;
                 // Set the low bits of the IRQ counter.
                 self.irq_counter &= 0b0000_0000_1111_1111;
                 self.irq_counter |= u16::from(value);
             }
             0x5800..=0x5FFF => {
-                params.set_irq_pending(false);
+                mem.mapper_irq_pending = false;
                 // Set the high bits of the IRQ counter.
                 self.irq_counter &= 0b0111_1111_0000_0000;
                 self.irq_counter |= u16::from(value << 1) << 7;
             }
             0x6000..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x87FF => set_chr_register(params, self.allow_ciram_in_low_chr, C0, S0, value),
-            0x8800..=0x8FFF => set_chr_register(params, self.allow_ciram_in_low_chr, C1, S1, value),
-            0x9000..=0x97FF => set_chr_register(params, self.allow_ciram_in_low_chr, C2, S2, value),
-            0x9800..=0x9FFF => set_chr_register(params, self.allow_ciram_in_low_chr, C3, S3, value),
-            0xA000..=0xA7FF => set_chr_register(params, self.allow_ciram_in_high_chr, C4, S4, value),
-            0xA800..=0xAFFF => set_chr_register(params, self.allow_ciram_in_high_chr, C5, S5, value),
-            0xB000..=0xB7FF => set_chr_register(params, self.allow_ciram_in_high_chr, C6, S6, value),
-            0xB800..=0xBFFF => set_chr_register(params, self.allow_ciram_in_high_chr, C7, S7, value),
-            0xC000..=0xC7FF => set_chr_register(params, true, C8, S8, value),
-            0xC800..=0xCFFF => set_chr_register(params, true, C9, S9, value),
-            0xD000..=0xD7FF => set_chr_register(params, true, C10, S10, value),
-            0xD800..=0xDFFF => set_chr_register(params, true, C11, S11, value),
+            0x8000..=0x87FF => set_chr_register(mem, self.allow_ciram_in_low_chr, C0, S0, value),
+            0x8800..=0x8FFF => set_chr_register(mem, self.allow_ciram_in_low_chr, C1, S1, value),
+            0x9000..=0x97FF => set_chr_register(mem, self.allow_ciram_in_low_chr, C2, S2, value),
+            0x9800..=0x9FFF => set_chr_register(mem, self.allow_ciram_in_low_chr, C3, S3, value),
+            0xA000..=0xA7FF => set_chr_register(mem, self.allow_ciram_in_high_chr, C4, S4, value),
+            0xA800..=0xAFFF => set_chr_register(mem, self.allow_ciram_in_high_chr, C5, S5, value),
+            0xB000..=0xB7FF => set_chr_register(mem, self.allow_ciram_in_high_chr, C6, S6, value),
+            0xB800..=0xBFFF => set_chr_register(mem, self.allow_ciram_in_high_chr, C7, S7, value),
+            0xC000..=0xC7FF => set_chr_register(mem, true, C8, S8, value),
+            0xC800..=0xCFFF => set_chr_register(mem, true, C9, S9, value),
+            0xD000..=0xD7FF => set_chr_register(mem, true, C10, S10, value),
+            0xD800..=0xDFFF => set_chr_register(mem, true, C11, S11, value),
             0xE000..=0xE7FF => {
                 // TODO: Pin 22 logic
                 // TODO: Disable sound
-                params.set_prg_register(P0, value & 0b0011_1111);
+                mem.set_prg_register(P0, value & 0b0011_1111);
             }
             0xE800..=0xEFFF => {
                 let fields = splitbits!(value, "hlpp pppp");
                 self.allow_ciram_in_high_chr = !fields.h;
                 self.allow_ciram_in_low_chr = !fields.l;
-                params.set_prg_register(P1, fields.p);
+                mem.set_prg_register(P1, fields.p);
             }
             0xF000..=0xF7FF => {
                 // TODO: Pin 44 and PPU A12, A13
-                params.set_prg_register(P2, value & 0b0011_1111);
+                mem.set_prg_register(P2, value & 0b0011_1111);
             }
             0xF800..=0xFFFF => {
                 let fields = splitbits!(min=u8, value, "ppppabcd");
                 if fields.p == 0b0100 {
-                    params.set_read_write_status(S0, fields.a);
-                    params.set_read_write_status(S1, fields.b);
-                    params.set_read_write_status(S2, fields.c);
-                    params.set_read_write_status(S3, fields.d);
+                    mem.set_read_write_status(S0, fields.a);
+                    mem.set_read_write_status(S1, fields.b);
+                    mem.set_read_write_status(S2, fields.c);
+                    mem.set_read_write_status(S3, fields.d);
                 } else {
                     // All read-only
-                    params.set_read_write_status(S0, 0);
-                    params.set_read_write_status(S1, 0);
-                    params.set_read_write_status(S2, 0);
-                    params.set_read_write_status(S3, 0);
+                    mem.set_read_write_status(S0, 0);
+                    mem.set_read_write_status(S1, 0);
+                    mem.set_read_write_status(S2, 0);
+                    mem.set_read_write_status(S3, 0);
                 }
             }
         }
@@ -131,7 +131,7 @@ impl Mapper for Mapper019 {
                     address = PpuAddress::from_u16(address.to_u16() - 0x1000);
                 }
 
-                mem.mapper_params.peek_chr(&mem.ciram, address)
+                mem.peek_chr(&mem.ciram, address)
             }
             0x3F00..=0x3FFF => self.peek_palette_table_byte(&mem.palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
@@ -147,7 +147,7 @@ impl Mapper for Mapper019 {
                     address = PpuAddress::from_u16(address.to_u16() - 0x1000);
                 }
 
-                mem.mapper_params.write_chr(&mem.ppu_regs, &mut mem.ciram, address, value);
+                mem.chr_memory.write(&mem.ppu_regs, &mut mem.ciram, address, value);
             }
             0x3F00..=0x3FFF => self.write_palette_table_byte(&mut mem.palette_ram, address, value),
             0x4000..=0xFFFF => unreachable!(),
@@ -158,7 +158,7 @@ impl Mapper for Mapper019 {
         if self.irq_counter < 0x7FFF {
             self.irq_counter += 1;
             if self.irq_counter == 0x7FFF {
-                mem.mapper_params.set_irq_pending(true);
+                mem.mapper_irq_pending = true;
             }
         }
     }
@@ -169,7 +169,7 @@ impl Mapper for Mapper019 {
 }
 
 fn set_chr_register(
-    params: &mut MapperParams,
+    mem: &mut Memory,
     allow_ciram_in_chr: bool,
     reg_id: ChrBankRegisterId,
     status_reg_id: ReadWriteStatusRegisterId,
@@ -177,11 +177,11 @@ fn set_chr_register(
 ) {
     if allow_ciram_in_chr && value >= 0xE0 {
         let ciram_side = if value & 1 == 0 { CiramSide::Left } else { CiramSide::Right };
-        params.set_chr_bank_register_to_ciram_side(reg_id, ciram_side);
-        params.set_read_write_status(status_reg_id, READ_WRITE);
+        mem.set_chr_bank_register_to_ciram_side(reg_id, ciram_side);
+        mem.set_read_write_status(status_reg_id, READ_WRITE);
     } else {
-        params.set_chr_register(reg_id, value);
-        params.set_read_write_status(status_reg_id, READ_ONLY);
+        mem.set_chr_register(reg_id, value);
+        mem.set_read_write_status(status_reg_id, READ_ONLY);
     }
 }
 
