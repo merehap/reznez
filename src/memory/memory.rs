@@ -9,6 +9,7 @@ use crate::memory::bank::bank::RomRamModeRegisterId;
 use crate::memory::bank::bank_index::MemType;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
+use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::cpu::stack::Stack;
 use crate::mapper::{ChrBankRegisterId, ChrMemory, CiramSide, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, PpuAddress, PrgBankRegisterId, PrgMemory, ReadResult, ReadWriteStatus, ReadWriteStatusRegisterId};
@@ -41,10 +42,9 @@ pub struct Memory {
     system_palette: SystemPalette,
     pub dmc_dma: DmcDma,
     pub oam_dma: OamDma,
-    pub cpu_address_bus: CpuAddress,
+    pub cpu_pinout: CpuPinout,
     pub oam_dma_address_bus: CpuAddress,
     pub dmc_dma_address_bus: CpuAddress,
-    pub cpu_data_bus: u8,
     cpu_cycle: i64,
 
     pub prg_memory: PrgMemory,
@@ -78,10 +78,9 @@ impl Memory {
             system_palette,
             dmc_dma: DmcDma::IDLE,
             oam_dma: OamDma::IDLE,
-            cpu_address_bus: CpuAddress::ZERO,
+            cpu_pinout: CpuPinout::new(),
             oam_dma_address_bus: CpuAddress::ZERO,
             dmc_dma_address_bus: CpuAddress::ZERO,
-            cpu_data_bus: 0,
             cpu_cycle: 0,
 
             prg_memory,
@@ -174,7 +173,7 @@ impl Memory {
 
     pub fn address_bus(&self, address_bus_type: AddressBusType) -> CpuAddress {
         match address_bus_type {
-            AddressBusType::Cpu => self.cpu_address_bus,
+            AddressBusType::Cpu => self.cpu_pinout.address_bus,
             AddressBusType::OamDma => self.oam_dma_address_bus,
             AddressBusType::DmcDma => self.dmc_dma_address_bus,
         }
@@ -182,7 +181,7 @@ impl Memory {
 
     pub fn set_address_bus(&mut self, address_bus_type: AddressBusType, address: CpuAddress) {
         match address_bus_type {
-            AddressBusType::Cpu => self.cpu_address_bus = address,
+            AddressBusType::Cpu => self.cpu_pinout.address_bus = address,
             AddressBusType::OamDma => self.oam_dma_address_bus = address,
             AddressBusType::DmcDma => self.dmc_dma_address_bus = address,
         }

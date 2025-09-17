@@ -73,7 +73,7 @@ pub trait Mapper {
     fn fill_mode_name_table(&self) -> &[u8; KIBIBYTE as usize] { unimplemented!() }
 
     fn cpu_peek(&self, mem: &Memory, address_bus_type: AddressBusType, addr: CpuAddress) -> u8 {
-        self.cpu_peek_unresolved(mem, address_bus_type, addr).resolve(mem.cpu_data_bus).0
+        self.cpu_peek_unresolved(mem, address_bus_type, addr).resolve(mem.cpu_pinout.data_bus).0
     }
 
     fn cpu_peek_unresolved(&self, mem: &Memory, address_bus_type: AddressBusType, mut addr: CpuAddress) -> ReadResult {
@@ -177,9 +177,9 @@ pub trait Mapper {
             0x4020..=0xFFFF => self.read_from_cartridge_space(mem, addr),
         };
 
-        let (value, bus_update_needed) = read_result.resolve(mem.cpu_data_bus);
+        let (value, bus_update_needed) = read_result.resolve(mem.cpu_pinout.data_bus);
         if bus_update_needed {
-            mem.cpu_data_bus = value;
+            mem.cpu_pinout.data_bus = value;
         }
 
         self.on_cpu_read(mem, addr, value);
@@ -192,7 +192,7 @@ pub trait Mapper {
     #[allow(clippy::too_many_arguments)]
     fn cpu_write(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) {
         let addr = mem.address_bus(address_bus_type);
-        let value = mem.cpu_data_bus;
+        let value = mem.cpu_pinout.data_bus;
         // TODO: Move this into mapper, right after cpu_write() is called?
         self.on_cpu_write(mem, addr, value);
         match *addr {

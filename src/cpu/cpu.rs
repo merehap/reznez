@@ -170,13 +170,13 @@ impl Cpu {
             }
             Step::Write(to, _) => {
                 mem.set_address_bus(AddressBusType::Cpu, self.lookup_to_address(mem, to));
-                value = mem.cpu_data_bus;
+                value = mem.cpu_pinout.data_bus;
                 mapper.cpu_write(mem, AddressBusType::Cpu);
             }
             Step::WriteField(field, to, _) => {
                 mem.set_address_bus(AddressBusType::Cpu, self.lookup_to_address(mem, to));
-                mem.cpu_data_bus = self.field_value(mem, field);
-                value = mem.cpu_data_bus;
+                mem.cpu_pinout.data_bus = self.field_value(mem, field);
+                value = mem.cpu_pinout.data_bus;
                 mapper.cpu_write(mem, AddressBusType::Cpu);
             }
             Step::OamRead(from, _) => {
@@ -185,7 +185,7 @@ impl Cpu {
             }
             Step::OamWrite(to, _) => {
                 mem.set_address_bus(AddressBusType::OamDma, self.lookup_to_address(mem, to));
-                value = mem.cpu_data_bus;
+                value = mem.cpu_pinout.data_bus;
                 mapper.cpu_write(mem, AddressBusType::OamDma);
             }
             Step::DmcRead(from, _) => {
@@ -218,7 +218,7 @@ impl Cpu {
         if step.has_start_new_instruction() {
             self.mode_state.set_current_instruction_with_address(
                 Instruction::from_code_point(value),
-                mem.cpu_address_bus,
+                mem.cpu_pinout.address_bus,
             )
         }
 
@@ -261,13 +261,13 @@ impl Cpu {
 
                 if self.reset_status == ResetStatus::Ready {
                     self.reset_status = ResetStatus::Active;
-                    mem.cpu_data_bus = 0x00;
+                    mem.cpu_pinout.data_bus = 0x00;
                     self.mode_state.interrupt_sequence(InterruptType::Reset);
                 } else if self.nmi_status == NmiStatus::Active {
-                    mem.cpu_data_bus = 0x00;
+                    mem.cpu_pinout.data_bus = 0x00;
                     self.mode_state.interrupt_sequence(InterruptType::Nmi);
                 } else if self.irq_status == IrqStatus::Active && self.nmi_status == NmiStatus::Inactive {
-                    mem.cpu_data_bus = 0x00;
+                    mem.cpu_pinout.data_bus = 0x00;
                     self.mode_state.interrupt_sequence(InterruptType::Irq);
                 } else {
                     self.mode_state.instruction(Instruction::from_code_point(value));
@@ -430,8 +430,8 @@ impl Cpu {
                 }
             }
             // TODO: Make sure this isn't supposed to wrap within the same page.
-            StepAction::IncrementAddress => self.computed_address = mem.cpu_address_bus.inc(),
-            StepAction::IncrementAddressLow => self.computed_address = mem.cpu_address_bus.offset_low(1).0,
+            StepAction::IncrementAddress => self.computed_address = mem.cpu_pinout.address_bus.inc(),
+            StepAction::IncrementAddressLow => self.computed_address = mem.cpu_pinout.address_bus.offset_low(1).0,
             StepAction::IncrementOamDmaAddress => mem.oam_dma.increment_address(),
 
             StepAction::IncrementStackPointer => mem.cpu_stack().increment_stack_pointer(),
@@ -498,8 +498,8 @@ impl Cpu {
                     self.address_carry = 1;
                 }
             }
-            StepAction::XOffsetAddress => self.computed_address = mem.cpu_address_bus.offset_low(self.x).0,
-            StepAction::YOffsetAddress => self.computed_address = mem.cpu_address_bus.offset_low(self.y).0,
+            StepAction::XOffsetAddress => self.computed_address = mem.cpu_pinout.address_bus.offset_low(self.x).0,
+            StepAction::YOffsetAddress => self.computed_address = mem.cpu_pinout.address_bus.offset_low(self.y).0,
             StepAction::MaybeInsertOopsStep => {
                 if self.address_carry != 0 {
                     self.mode_state.oops();
@@ -512,10 +512,10 @@ impl Cpu {
             }
 
             StepAction::CopyAddressToPC => {
-                self.program_counter = mem.cpu_address_bus;
+                self.program_counter = mem.cpu_pinout.address_bus;
             }
             StepAction::AddCarryToAddress => {
-                self.computed_address = mem.cpu_address_bus.offset_high(self.address_carry);
+                self.computed_address = mem.cpu_pinout.address_bus.offset_high(self.address_carry);
                 self.address_carry = 0;
             }
             StepAction::AddCarryToPC => {
@@ -588,28 +588,28 @@ impl Cpu {
                 OpCode::SAX => self.a & self.x,
                 // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::SHX => {
-                    let (low, high) = mem.cpu_address_bus.to_low_high();
-                    mem.cpu_address_bus = CpuAddress::from_low_high(low, self.x & high);
+                    let (low, high) = mem.cpu_pinout.address_bus.to_low_high();
+                    mem.cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
                     self.x & high
                 }
                 // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::SHY => {
-                    let (low, high) = mem.cpu_address_bus.to_low_high();
-                    mem.cpu_address_bus = CpuAddress::from_low_high(low, self.y & high);
+                    let (low, high) = mem.cpu_pinout.address_bus.to_low_high();
+                    mem.cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.y & high);
                     self.y
                 }
                 // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::AHX => {
-                    let (low, high) = mem.cpu_address_bus.to_low_high();
+                    let (low, high) = mem.cpu_pinout.address_bus.to_low_high();
                     // This is using later revision logic.
                     // For early revision logic, use self.a & self.x & self.a
-                    mem.cpu_address_bus = CpuAddress::from_low_high(low, self.x & high);
+                    mem.cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
                     self.a & self.x & high
                 }
                 OpCode::TAS => {
                     let sp = self.a & self.x;
                     *mem.cpu_stack_pointer_mut() = sp;
-                    self.x & mem.cpu_address_bus.high_byte()
+                    self.x & mem.cpu_pinout.address_bus.high_byte()
                 }
                 op_code => todo!("{:?}", op_code),
             }

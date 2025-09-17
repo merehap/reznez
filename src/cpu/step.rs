@@ -388,16 +388,16 @@ impl Step {
         match *self {
             Step::Read(from, cycle_actions) =>
                 format!("READ  [{}]=${value:02X}  {:22} -> {:^18} {cycle_actions:?}",
-                    mem.cpu_address_bus, format!("{from:?}"), "(CPU address bus)"),
+                    mem.cpu_pinout.address_bus, format!("{from:?}"), "(CPU address bus)"),
             Step::ReadField(field, from, cycle_actions) =>
                 format!("READ  [{}]=${value:02X}  {:22} -> {:18} {cycle_actions:?}",
-                    mem.cpu_address_bus, format!("{from:?}"), format!("{field:?}")),
+                    mem.cpu_pinout.address_bus, format!("{from:?}"), format!("{field:?}")),
             Step::Write(to, cycle_actions) =>
                 format!("WRITE [{}]=${value:02X}  {:^22} -> {:18} {cycle_actions:?}",
-                    mem.cpu_address_bus, "(CPU address bus)", format!("{to:?}")),
+                    mem.cpu_pinout.address_bus, "(CPU address bus)", format!("{to:?}")),
             Step::WriteField(field, to, cycle_actions) =>
                 format!("WRITE [{}]=${value:02X}  {:22} -> {:18} {cycle_actions:?}",
-                    mem.cpu_address_bus, format!("{field:?}"), format!("{to:?}")),
+                    mem.cpu_pinout.address_bus, format!("{field:?}"), format!("{to:?}")),
             Step::OamRead(from, cycle_actions) =>
                 format!("OAMRD [{}]=${value:02X}  {:22} -> {:^18} {cycle_actions:?}",
                     mem.oam_dma_address_bus, format!("{from:?}"), "(OAM address bus)"),
