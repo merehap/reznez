@@ -8,7 +8,7 @@ use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::memory::bank::bank_index::{BankIndex, PrgBankRegisterId, PrgBankRegisters, ChrBankRegisters, MetaRegisterId};
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory::PrgMemory;
-use crate::mapper::{MapperParams, ReadWriteStatus};
+use crate::mapper::{ReadWriteStatus, ReadWriteStatusRegisterId};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::chr_memory::{AccessOverride, ChrMemory};
 use crate::memory::raw_memory::{RawMemory, SaveRam};
@@ -51,7 +51,8 @@ impl Layout {
         LayoutBuilder::new()
     }
 
-    pub fn make_mapper_params(self, metadata: &ResolvedMetadata, cartridge: &Cartridge, allow_saving: bool) -> Result<MapperParams, String> {
+    pub fn make_mapper_params(self, metadata: &ResolvedMetadata, cartridge: &Cartridge, allow_saving: bool)
+            -> Result<(PrgMemory, ChrMemory, &'static [NameTableMirroring], &'static [ReadWriteStatus], BTreeSet<ReadWriteStatusRegisterId>), String> {
         let prg_rom_size = cartridge.prg_rom().size();
         if prg_rom_size > self.prg_rom_max_size {
             return Err(format!("PRG ROM size of {}KiB is too large for this mapper.", prg_rom_size / KIBIBYTE));
@@ -173,14 +174,7 @@ impl Layout {
             }
         }
 
-        Ok(MapperParams {
-            prg_memory,
-            chr_memory,
-            name_table_mirrorings: self.name_table_mirrorings,
-            read_write_statuses: self.read_write_statuses,
-            ram_not_present,
-            mapper_irq_pending: false,
-        })
+        Ok((prg_memory, chr_memory, self.name_table_mirrorings, self.read_write_statuses, ram_not_present))
     }
 
     pub fn cartridge_selection_name_table_mirrorings(&self) -> [Option<NameTableMirroring>; 4] {

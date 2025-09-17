@@ -11,7 +11,7 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::ports::Ports;
 use crate::memory::cpu::stack::Stack;
-use crate::mapper::{ChrBankRegisterId, ChrMemory, CiramSide, MapperParams, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, PpuAddress, PrgBankRegisterId, PrgMemory, ReadResult, ReadWriteStatus, ReadWriteStatusRegisterId};
+use crate::mapper::{ChrBankRegisterId, ChrMemory, CiramSide, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, PpuAddress, PrgBankRegisterId, PrgMemory, ReadResult, ReadWriteStatus, ReadWriteStatusRegisterId};
 use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::Ciram;
@@ -57,7 +57,11 @@ pub struct Memory {
 
 impl Memory {
     pub fn new(
-        mapper_params: MapperParams,
+        prg_memory: PrgMemory,
+        chr_memory: ChrMemory,
+        name_table_mirrorings: &'static [NameTableMirroring],
+        read_write_statuses: &'static [ReadWriteStatus],
+        ram_not_present: BTreeSet<ReadWriteStatusRegisterId>,
         ports: Ports,
         ppu_clock: Clock,
         system_palette: SystemPalette,
@@ -80,12 +84,12 @@ impl Memory {
             cpu_data_bus: 0,
             cpu_cycle: 0,
 
-            prg_memory: mapper_params.prg_memory,
-            chr_memory: mapper_params.chr_memory,
-            name_table_mirrorings: mapper_params.name_table_mirrorings,
-            read_write_statuses: mapper_params.read_write_statuses,
-            ram_not_present: mapper_params.ram_not_present,
-            mapper_irq_pending: mapper_params.mapper_irq_pending,
+            prg_memory,
+            chr_memory,
+            name_table_mirrorings,
+            read_write_statuses,
+            ram_not_present,
+            mapper_irq_pending: false,
         }
     }
 

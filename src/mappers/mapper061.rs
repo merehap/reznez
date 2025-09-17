@@ -33,7 +33,7 @@ pub struct Mapper061 {
 }
 
 impl Mapper for Mapper061 {
-    fn init_mapper_params(&self, params: &mut MapperParams) {
+    fn init_mapper_params(&self, params: &mut Memory) {
         params.set_chr_layout(self.chr_board as u8);
     }
 

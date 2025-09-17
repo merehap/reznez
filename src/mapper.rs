@@ -1,5 +1,3 @@
-use std::collections::BTreeSet;
-
 pub use splitbits::{splitbits, splitbits_named, combinebits, splitbits_then_combine};
 
 pub use crate::cartridge::cartridge::Cartridge;
@@ -58,7 +56,7 @@ pub trait Mapper {
 
     // Most mappers don't need to modify the MapperParams before ROM execution begins, but this
     // provides a relief valve for the rare settings that can't be expressed in a Layout.
-    fn init_mapper_params(&self, _mem: &mut MapperParams) {}
+    fn init_mapper_params(&self, _mem: &mut Memory) {}
     // Most mappers don't care about CPU cycles.
     fn on_end_of_cpu_cycle(&mut self, _mem: &mut Memory) {}
     fn on_cpu_read(&mut self, _mem: &mut Memory, _addr: CpuAddress, _value: u8) {}
@@ -461,21 +459,6 @@ fn address_to_palette_ram_index(address: PpuAddress) -> u32 {
     }
 
     address
-}
-
-pub struct MapperParams {
-    pub prg_memory: PrgMemory,
-    pub chr_memory: ChrMemory,
-    pub name_table_mirrorings: &'static [NameTableMirroring],
-    pub read_write_statuses: &'static [ReadWriteStatus],
-    pub ram_not_present: BTreeSet<ReadWriteStatusRegisterId>,
-    pub mapper_irq_pending: bool,
-}
-
-impl MapperParams {
-    pub fn set_chr_layout(&mut self, index: u8) {
-        self.chr_memory.set_layout(index);
-    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

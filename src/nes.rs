@@ -25,7 +25,7 @@ use crate::cpu::step::Step;
 use crate::gui::gui::Events;
 use crate::logging::formatter;
 use crate::logging::formatter::*;
-use crate::mapper::{Mapper, MapperParams, NameTableMirroring, PrgBankRegisterId, ReadWriteStatus};
+use crate::mapper::{Mapper, NameTableMirroring, PrgBankRegisterId, ReadWriteStatus};
 use crate::mapper_list;
 use crate::memory::raw_memory::RawMemory;
 use crate::memory::bank::bank_index::{BankLocation, ChrBankRegisterId};
@@ -61,17 +61,12 @@ impl Nes {
     }
 
     pub fn new(header_db: &HeaderDb, config: &Config, cartridge: Cartridge) -> Result<Nes, String> {
-        let (mapper, mapper_params, metadata_resolver) = Nes::load_rom(header_db, config, cartridge)?;
+        let (mapper, mut memory, metadata_resolver) = Nes::load_rom(header_db, config, cartridge)?;
 
         if let Err(err) = DirBuilder::new().recursive(true).create("saveram") {
             warn!("Failed to create saveram directory. {err}");
         }
 
-        let (joypad1, joypad2) = (Joypad::new(), Joypad::new());
-
-
-        let ports = Ports::new(joypad1, joypad2);
-        let mut memory = Memory::new(mapper_params, ports, config.ppu_clock, config.system_palette.clone());
         let latest_values = LatestValues::new(&memory);
 
         Ok(Nes {
@@ -131,7 +126,7 @@ impl Nes {
         self.memory.stack_pointer()
     }
 
-    fn load_rom(header_db: &HeaderDb, config: &Config, cartridge: Cartridge) -> Result<(Box<dyn Mapper>, MapperParams, MetadataResolver), String> {
+    fn load_rom(header_db: &HeaderDb, config: &Config, cartridge: Cartridge) -> Result<(Box<dyn Mapper>, Memory, MetadataResolver), String> {
         let header = cartridge.header();
         let cartridge_mapper_number = header.mapper_number().unwrap();
         let prg_rom_hash = header.prg_rom_hash().unwrap();
@@ -192,14 +187,21 @@ impl Nes {
         metadata_resolver.cartridge.set_name_table_mirroring(name_table_mirroring);
 
         let metadata = metadata_resolver.resolve();
-        let mut mapper_params = mapper.layout().make_mapper_params(&metadata, &cartridge, config.allow_saving)?;
-        mapper.init_mapper_params(&mut mapper_params);
+        let (prg_memory, chr_memory, name_table_mirrorings, read_write_statuses, ram_not_present) =
+            mapper.layout().make_mapper_params(&metadata, &cartridge, config.allow_saving)?;
+        let (joypad1, joypad2) = (Joypad::new(), Joypad::new());
+
+        let ports = Ports::new(joypad1, joypad2);
+        let mut memory = Memory::new(
+            prg_memory, chr_memory, name_table_mirrorings, read_write_statuses, ram_not_present,
+            ports, config.ppu_clock, config.system_palette.clone());
+        mapper.init_mapper_params(&mut memory);
 
         metadata_resolver.layout_has_prg_ram = mapper.layout().has_prg_ram();
         let metadata = metadata_resolver.resolve();
         info!("ROM loaded.\n{metadata}");
 
-        Ok((mapper, mapper_params, metadata_resolver))
+        Ok((mapper, memory, metadata_resolver))
     }
 
     pub fn mute(&mut self) {

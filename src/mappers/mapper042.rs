@@ -33,8 +33,8 @@ pub struct Mapper042 {
 }
 
 impl Mapper for Mapper042 {
-    fn init_mapper_params(&self, params: &mut MapperParams) {
-        params.set_chr_layout(self.chr_board as u8);
+    fn init_mapper_params(&self, mem: &mut Memory) {
+        mem.set_chr_layout(self.chr_board as u8);
     }
 
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
