@@ -83,9 +83,9 @@ impl Ppu {
         }
 
         if mem.ppu_regs.can_generate_nmi() {
-            mem.nmi_signal_detector.pull_low();
+            mem.cpu_pinout.nmi_signal_detector.pull_low();
         } else {
-            mem.nmi_signal_detector.reset_to_high();
+            mem.cpu_pinout.nmi_signal_detector.reset_to_high();
         }
 
         mapper.on_end_of_ppu_cycle();

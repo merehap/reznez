@@ -229,7 +229,7 @@ impl Cpu {
     }
 
     pub fn step_second_half(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory) {
-        let edge_detected = mem.nmi_signal_detector.detect_edge();
+        let edge_detected = mem.cpu_pinout.nmi_signal_detector.detect_edge();
         if edge_detected {
             self.nmi_status = NmiStatus::Pending;
         }

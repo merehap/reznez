@@ -1,4 +1,5 @@
 use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::util::signal_detector::EdgeDetector;
 
 pub struct CpuPinout {
     // AD1 (Audio Pinout: Both pulse waves)
@@ -14,6 +15,7 @@ pub struct CpuPinout {
     // M2 (CPU phase)
     // IRQ - only available as a method, not a field.
     // NMI
+    pub nmi_signal_detector: EdgeDetector,
     // R/W (Read/Write signal)
     // OE2 (Controller 2 enable)
     // OE1 (Controller 1 enable)
@@ -29,6 +31,7 @@ impl CpuPinout {
         Self {
             address_bus: CpuAddress::ZERO,
             data_bus: 0,
+            nmi_signal_detector: EdgeDetector::new(),
 
             mapper_irq_pending: false,
             frame_irq_pending: false,

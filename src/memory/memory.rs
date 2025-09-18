@@ -21,7 +21,6 @@ use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::sprite::oam::Oam;
-use crate::util::signal_detector::EdgeDetector;
 
 pub const NMI_VECTOR_LOW: CpuAddress     = CpuAddress::new(0xFFFA);
 pub const NMI_VECTOR_HIGH: CpuAddress    = CpuAddress::new(0xFFFB);
@@ -36,7 +35,6 @@ pub struct Memory {
     pub palette_ram: PaletteRam,
     pub oam: Oam,
     pub ports: Ports,
-    pub nmi_signal_detector: EdgeDetector,
     pub ppu_regs: PpuRegisters,
     pub apu_regs: ApuRegisters,
     system_palette: SystemPalette,
@@ -71,7 +69,6 @@ impl Memory {
             palette_ram: PaletteRam::new(),
             oam: Oam::new(),
             ports,
-            nmi_signal_detector: EdgeDetector::new(),
             ppu_regs: PpuRegisters::new(ppu_clock),
             apu_regs: ApuRegisters::new(),
             system_palette,
