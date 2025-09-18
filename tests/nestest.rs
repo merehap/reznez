@@ -94,6 +94,7 @@ fn nestest() {
             p = nes.cpu().status();
             s = nes.stack_pointer();
 
+            // FIXME: Find another way to break that doesn't involve checking for InterpretOpCode.
             if let Some(step) = nes.step().step && step.has_interpret_op_code() {
                 break;
             }

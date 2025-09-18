@@ -1,6 +1,7 @@
 #![feature(if_let_guard)]
 #![feature(type_ascription)]
 #![feature(const_for)]
+#![feature(adt_const_params)]
 #![allow(clippy::module_inception)]
 #![allow(clippy::new_without_default)]
 #![allow(clippy::identity_op)]

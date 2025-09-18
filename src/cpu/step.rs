@@ -238,7 +238,7 @@ pub const BRK_STEPS: &[Step] = &[
     WriteField(ProgramCounterLowByte , To::TopOfStack, &[DecrementStackPointer]),
     WriteField(Status                , To::TopOfStack, &[DecrementStackPointer, SetInterruptVector]),
     ReadField(Operand                , From::InterruptVectorLow , &[DisableInterrupts]),
-    ReadField(ProgramCounterHighByte ,  From::InterruptVectorHigh, &[ClearInterruptVector]),
+    ReadField(ProgramCounterHighByte , From::InterruptVectorHigh, &[ClearInterruptVector]),
 ];
 
 pub const RTI_STEPS: &[Step] = &[
@@ -312,17 +312,6 @@ pub const JMP_IND_STEPS: &[Step] = &[
     // Jump to next instruction.
     Read(                         From::PendingAddressTarget, &[CopyAddressToPC, StartNextInstruction, IncrementPC]),
 ];
-
-/*
-// Same as Absolute Y Read Steps, except for some reason the 'oops' cycle is always taken.
-pub const TAS_STEPS: &[Step] = &[
-    ReadField(PendingAddressLow , From::ProgramCounterTarget, &[InterpretOpCode, IncrementPC]),
-    ReadField(PendingAddressHigh, From::ProgramCounterTarget, &[YOffsetPendingAddressLow, IncrementPC]),
-    Read(                         From::PendingAddressTarget, &[AddCarryToAddress]),
-    Read(                         From::ComputedTarget      , &[PollInterrupts]),
-    Read(                         From::ProgramCounterTarget, &[ExecuteOpCode, StartNextInstruction, IncrementPC]),
-];
-*/
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Step {

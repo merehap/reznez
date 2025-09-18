@@ -14,6 +14,7 @@ use crate::cpu::step::*;
 use crate::mapper::Mapper;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::memory::{AddressBusType, Memory, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
+use crate::util::signal_detector::SignalLevel;
 
 pub struct Cpu {
     // Accumulator
@@ -127,6 +128,11 @@ impl Cpu {
     }
 
     pub fn step_first_half(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, cycle_parity: CycleParity) -> Option<Step> {
+        if mem.cpu_pinout.reset.level() == SignalLevel::Low {
+            // The CPU doesn't do anything while the RESET button is held down.
+            return None;
+        }
+
         self.mode_state.clear_new_instruction();
         if self.mode_state.is_jammed() {
             return None;
@@ -229,6 +235,11 @@ impl Cpu {
     }
 
     pub fn step_second_half(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory) {
+        if mem.cpu_pinout.reset.level() == SignalLevel::Low {
+            // The CPU doesn't do anything while the RESET button is held down.
+            return;
+        }
+
         let edge_detected = mem.cpu_pinout.nmi_signal_detector.detect_edge();
         if edge_detected {
             self.nmi_status = NmiStatus::Pending;

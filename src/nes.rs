@@ -34,6 +34,7 @@ use crate::memory::memory::Memory;
 use crate::ppu::clock::Clock;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::render::frame::Frame;
+use crate::util::signal_detector::SignalLevel;
 
 pub struct Nes {
     cpu: Cpu,
@@ -208,15 +209,24 @@ impl Nes {
         self.apu.mute();
     }
 
-    pub fn reset(&mut self) {
-        self.cpu.reset();
-        self.memory.apu_regs.reset(&mut self.memory.cpu_pinout);
+    pub fn set_reset_signal(&mut self) {
+        self.memory.cpu_pinout.reset.pull_low();
     }
 
     pub fn step_frame(&mut self) {
         loop {
+            if self.memory.cpu_pinout.reset.detect_edge() {
+                // Complete the CPU reset, if one is in progress and nearing completion.
+                self.cpu.reset();
+                self.memory.apu_regs.reset(&mut self.memory.cpu_pinout);
+            }
+
             let step_result = self.step();
             if step_result.is_last_cycle_of_frame {
+                if self.memory.cpu_pinout.reset.level() == SignalLevel::Low {
+                    self.memory.cpu_pinout.reset.reset_to_high();
+                }
+
                 if self.cpu.mode_state().is_jammed() {
                     info!("CPU is jammed!");
                 }
