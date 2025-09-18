@@ -210,7 +210,7 @@ impl Nes {
 
     pub fn reset(&mut self) {
         self.cpu.reset();
-        self.memory.apu_regs_mut().reset();
+        self.memory.apu_regs.reset(&mut self.memory.cpu_pinout);
     }
 
     pub fn step_frame(&mut self) {
@@ -259,11 +259,10 @@ impl Nes {
             self.snapshots.current().apu_regs(self.memory.apu_regs());
         }
 
-        let (apu_regs, dmc_dma) = self.memory.apu_regs_and_dmc_dma_mut();
-        self.apu.step(apu_regs, dmc_dma);
+        self.apu.step(&mut self.memory);
 
         if log_enabled!(target: "timings", Info) {
-            self.snapshots.current().frame_irq(self.memory.apu_regs(), &self.cpu);
+            self.snapshots.current().frame_irq(&mut self.memory, &self.cpu);
         }
 
         self.detect_changes();
@@ -330,25 +329,24 @@ impl Nes {
 
     fn detect_changes(&mut self) {
         if log_enabled!(target: "cpuflowcontrol", Info) {
-            let apu_regs = self.memory.apu_regs();
             let latest = &mut self.latest_values;
 
-            if latest.apu_frame_irq_pending != apu_regs.frame_irq_pending() {
-                latest.apu_frame_irq_pending = apu_regs.frame_irq_pending();
+            if latest.apu_frame_irq_pending != self.memory.cpu_pinout.frame_irq_pending() {
+                latest.apu_frame_irq_pending = self.memory.cpu_pinout.frame_irq_pending();
                 if latest.apu_frame_irq_pending {
                     info!("APU Frame IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
                 }
             }
 
-            if latest.dmc_irq_pending != apu_regs.dmc_irq_pending() {
-                latest.dmc_irq_pending = apu_regs.dmc_irq_pending();
+            if latest.dmc_irq_pending != self.memory.cpu_pinout.dmc_irq_pending() {
+                latest.dmc_irq_pending = self.memory.cpu_pinout.dmc_irq_pending();
                 if latest.dmc_irq_pending {
                     info!("DMC IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
                 }
             }
 
-            if latest.mapper_irq_pending != self.memory.mapper_irq_pending {
-                latest.mapper_irq_pending = self.memory.mapper_irq_pending;
+            if latest.mapper_irq_pending != self.memory.cpu_pinout.mapper_irq_pending() {
+                latest.mapper_irq_pending = self.memory.cpu_pinout.mapper_irq_pending();
                 if latest.mapper_irq_pending {
                     info!("Mapper IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
                 }
@@ -854,8 +852,8 @@ impl SnapshotBuilder {
         self.frame_counter_write_status = Some(regs.frame_counter_write_status());
     }
 
-    fn frame_irq(&mut self, regs: &ApuRegisters, cpu: &Cpu) {
-        self.frame_irq = Some(regs.frame_irq_pending() && !cpu.status().interrupts_disabled);
+    fn frame_irq(&mut self, mem: &Memory, cpu: &Cpu) {
+        self.frame_irq = Some(mem.cpu_pinout.frame_irq_pending() && !cpu.status().interrupts_disabled);
     }
 
     fn add_ppu_position(&mut self, clock: &Clock) {

@@ -8,7 +8,7 @@ use rodio::{OutputStream, Sink};
 use rodio::source::Source;
 
 use crate::apu::apu_registers::{ApuRegisters, CycleParity};
-use crate::cpu::dmc_dma::DmcDma;
+use crate::memory::memory::Memory;
 
 const SAMPLE_RATE: u32 = 44100;
 const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
@@ -49,40 +49,40 @@ impl Apu {
         *self.muted.lock().unwrap() = true;
     }
 
-    pub fn step(&mut self, regs: &mut ApuRegisters, dmc_dma: &mut DmcDma) {
-        regs.maybe_update_step_mode();
+    pub fn step(&mut self, mem: &mut Memory) {
+        mem.apu_regs.maybe_update_step_mode();
 
-        match regs.clock().cycle_parity() {
-            CycleParity::Get => Apu::execute_get_cycle(regs),
-            CycleParity::Put => self.execute_put_cycle(regs, dmc_dma),
+        match mem.apu_regs.clock().cycle_parity() {
+            CycleParity::Get => Apu::execute_get_cycle(mem),
+            CycleParity::Put => self.execute_put_cycle(mem),
         }
     }
 
-    fn execute_put_cycle(&mut self, regs: &mut ApuRegisters, dmc_dma: &mut DmcDma) {
-        let cycle = regs.clock().cycle();
+    fn execute_put_cycle(&mut self, mem: &mut Memory) {
+        let cycle = mem.apu_regs.clock().cycle();
         info!(target: "apucycles", "APU cycle: {cycle} (PUT)");
 
-        regs.maybe_set_frame_irq_pending();
-        regs.maybe_decrement_counters();
-        regs.apply_length_counter_pending_values();
-        regs.execute_put_cycle(dmc_dma);
+        mem.apu_regs.maybe_set_frame_irq_pending(&mut mem.cpu_pinout);
+        mem.apu_regs.maybe_decrement_counters();
+        mem.apu_regs.apply_length_counter_pending_values();
+        mem.apu_regs.execute_put_cycle(&mut mem.dmc_dma);
 
-        if regs.clock().raw_cycle().is_multiple_of(20) {
+        if mem.apu_regs.clock().raw_cycle().is_multiple_of(20) {
             let mut queue = self.pulse_queue
                 .lock()
                 .unwrap();
             if queue.len() < MAX_QUEUE_LENGTH {
-                queue.push_back(Apu::mix_samples(regs));
+                queue.push_back(Apu::mix_samples(&mut mem.apu_regs));
             }
         }
     }
 
-    fn execute_get_cycle(regs: &mut ApuRegisters) {
-        let cycle = regs.clock().cycle();
+    fn execute_get_cycle(mem: &mut Memory) {
+        let cycle = mem.apu_regs.clock().cycle();
         info!(target: "apucycles", "APU cycle: {cycle} (GET)");
-        regs.maybe_set_frame_irq_pending();
-        regs.apply_length_counter_pending_values();
-        regs.execute_get_cycle();
+        mem.apu_regs.maybe_set_frame_irq_pending(&mut mem.cpu_pinout);
+        mem.apu_regs.apply_length_counter_pending_values();
+        mem.apu_regs.execute_get_cycle();
     }
 
     fn mix_samples(regs: &ApuRegisters) -> f32 {

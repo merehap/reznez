@@ -33,11 +33,11 @@ impl Mapper for Mapper040 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x9FFF => {
-                mem.mapper_irq_pending = false;
+                mem.cpu_pinout.clear_mapper_irq_pending();
                 self.irq_enabled = false;
             }
             0xA000..=0xBFFF => {
-                mem.mapper_irq_pending = true;
+                mem.cpu_pinout.set_mapper_irq_pending();
             }
             0xC000..=0xDFFF => { /* TODO: NTDEC 2752 outer bank register. Test ROM needed. */ }
             0xE000..=0xFFFF => {
@@ -53,7 +53,7 @@ impl Mapper for Mapper040 {
 
         self.irq_counter = self.irq_counter.wrapping_add(1.into());
         if self.irq_counter == 0.into() {
-            mem.mapper_irq_pending = true;
+            mem.cpu_pinout.set_mapper_irq_pending();
             self.irq_enabled = false;
         }
     }

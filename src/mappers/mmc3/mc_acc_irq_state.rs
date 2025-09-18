@@ -50,7 +50,7 @@ impl IrqState for McAccIrqState {
             }
 
             if self.enabled && self.counter == 0 {
-                mem.mapper_irq_pending = true;
+                mem.cpu_pinout.set_mapper_irq_pending();
             }
         }
 
@@ -74,7 +74,7 @@ impl IrqState for McAccIrqState {
 
     fn disable(&mut self, mem: &mut Memory) {
         self.enabled = false;
-        mem.mapper_irq_pending = false;
+        mem.cpu_pinout.clear_mapper_irq_pending();
     }
 
     fn enable(&mut self) {

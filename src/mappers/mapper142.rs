@@ -50,14 +50,14 @@ impl Mapper for Mapper142 {
                 self.irq_counter_reload_value |= (u16::from(value) & 0xF) << 12;
             }
             0xC000..=0xCFFF => {
-                mem.mapper_irq_pending = false;
+                mem.cpu_pinout.clear_mapper_irq_pending();
                 self.irq_enabled = value & 0b11 != 0;
                 if self.irq_enabled {
                     self.irq_counter = self.irq_counter_reload_value;
                 }
             }
             0xD000..=0xDFFF => {
-                mem.mapper_irq_pending = false;
+                mem.cpu_pinout.clear_mapper_irq_pending();
             }
             0xE000..=0xEFFF => {
                 match value & 0b111 {
@@ -90,7 +90,7 @@ impl Mapper for Mapper142 {
         // It's not clear if this is supposed to match VRC3's behavior or not. This is off-by-1.
         self.irq_counter += 1;
         if self.irq_counter == 0xFFFF {
-            mem.mapper_irq_pending = true;
+            mem.cpu_pinout.set_mapper_irq_pending();
             self.irq_counter = self.irq_counter_reload_value;
         }
     }

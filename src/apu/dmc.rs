@@ -1,5 +1,6 @@
 use crate::cpu::dmc_dma::DmcDma;
 use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::util::integer::U7;
 
 const NTSC_PERIODS: [u16; 16] =
@@ -9,7 +10,6 @@ pub struct Dmc {
     muted: bool,
 
     irq_enabled: bool,
-    irq_pending: bool,
 
     should_loop: bool,
     volume: U7,
@@ -30,12 +30,12 @@ pub struct Dmc {
 
 impl Dmc {
     // 0x4010
-    pub fn write_control_byte(&mut self, value: u8) {
+    pub fn write_control_byte(&mut self, cpu_pinout: &mut CpuPinout, value: u8) {
         self.irq_enabled = (value & 0b1000_0000) != 0;
         self.should_loop = (value & 0b0100_0000) != 0;
         self.period = NTSC_PERIODS[(value & 0b0000_1111) as usize] - 1;
         if !self.irq_enabled {
-            self.irq_pending = false;
+            cpu_pinout.clear_dmc_irq_pending();
         }
     }
 
@@ -56,8 +56,8 @@ impl Dmc {
     }
 
     // 0x4015
-    pub(super) fn set_enabled(&mut self, dma: &mut DmcDma, enabled: bool) {
-        self.irq_pending = false;
+    pub(super) fn set_enabled(&mut self, cpu_pinout: &mut CpuPinout, dma: &mut DmcDma, enabled: bool) {
+        cpu_pinout.clear_dmc_irq_pending();
 
         if !enabled {
             self.sample_bytes_remaining = 0;
@@ -74,12 +74,12 @@ impl Dmc {
     }
 
     // Upon RESET
-    pub(super) fn disable(&mut self) {
-        self.irq_pending = false;
+    pub(super) fn disable(&mut self, cpu_pinout: &mut CpuPinout) {
+        cpu_pinout.clear_dmc_irq_pending();
         self.sample_bytes_remaining = 0;
     }
 
-    pub fn set_sample_buffer(&mut self, value: u8) {
+    pub fn set_sample_buffer(&mut self, cpu_pinout: &mut CpuPinout, value: u8) {
         //println!("Checking if sample buffer should be loaded.");
         if self.sample_bytes_remaining > 0 {
             //println!("Loading sample buffer.");
@@ -96,7 +96,7 @@ impl Dmc {
                     self.sample_bytes_remaining = self.sample_length;
                     self.sample_address = self.sample_start_address;
                 } else if self.irq_enabled {
-                    self.irq_pending = true;
+                    cpu_pinout.set_dmc_irq_pending();
                 }
             }
         }
@@ -138,10 +138,6 @@ impl Dmc {
         self.sample_bytes_remaining > 0
     }
 
-    pub fn irq_pending(&self) -> bool {
-        self.irq_pending
-    }
-
     pub fn dma_sample_address(&self) -> CpuAddress {
         self.sample_address
     }
@@ -152,7 +148,6 @@ impl Default for Dmc {
         Dmc {
             muted: true,
             irq_enabled: false,
-            irq_pending: false,
             should_loop: false,
             volume: U7::default(),
             period: NTSC_PERIODS[0] - 1,

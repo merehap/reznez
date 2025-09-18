@@ -42,7 +42,7 @@ impl Mapper for Mapper050 {
                 self.irq_enabled = value & 1 == 1;
                 if !self.irq_enabled {
                     self.irq_counter = 0;
-                    mem.mapper_irq_pending = false;
+                    mem.cpu_pinout.clear_mapper_irq_pending();
                 }
             }
             _ => { /* Do nothing. */ }
@@ -56,7 +56,7 @@ impl Mapper for Mapper050 {
 
         self.irq_counter = self.irq_counter.wrapping_add(1);
         if self.irq_counter == 0x1000 {
-            mem.mapper_irq_pending = true;
+            mem.cpu_pinout.set_mapper_irq_pending();
             self.irq_enabled = false;
         }
     }

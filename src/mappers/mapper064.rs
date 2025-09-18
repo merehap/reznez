@@ -106,7 +106,7 @@ impl Mapper for Mapper064 {
         if self.irq_pending_delay_cycles > 0 {
             self.irq_pending_delay_cycles -= 1;
             if self.irq_pending_delay_cycles == 0 {
-                mem.mapper_irq_pending = true;
+                mem.cpu_pinout.set_mapper_irq_pending();
             }
         }
 
@@ -207,7 +207,7 @@ impl Mapper064 {
 
     fn acknowledge_irq(&mut self, mem: &mut Memory) {
         self.irq_enabled = false;
-        mem.mapper_irq_pending = false;
+        mem.cpu_pinout.clear_mapper_irq_pending();
     }
 
     fn enabled_irq(&mut self) {

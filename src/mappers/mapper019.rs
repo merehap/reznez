@@ -66,13 +66,13 @@ impl Mapper for Mapper019 {
             0x4020..=0x47FF => { /* Do nothing. */ }
             0x4800..=0x4FFF => { /* TODO: Expansion Audio. */ }
             0x5000..=0x57FF => {
-                mem.mapper_irq_pending = false;
+                mem.cpu_pinout.clear_mapper_irq_pending();
                 // Set the low bits of the IRQ counter.
                 self.irq_counter &= 0b0000_0000_1111_1111;
                 self.irq_counter |= u16::from(value);
             }
             0x5800..=0x5FFF => {
-                mem.mapper_irq_pending = false;
+                mem.cpu_pinout.clear_mapper_irq_pending();
                 // Set the high bits of the IRQ counter.
                 self.irq_counter &= 0b0111_1111_0000_0000;
                 self.irq_counter |= u16::from(value << 1) << 7;
@@ -158,7 +158,7 @@ impl Mapper for Mapper019 {
         if self.irq_counter < 0x7FFF {
             self.irq_counter += 1;
             if self.irq_counter == 0x7FFF {
-                mem.mapper_irq_pending = true;
+                mem.cpu_pinout.set_mapper_irq_pending();
             }
         }
     }

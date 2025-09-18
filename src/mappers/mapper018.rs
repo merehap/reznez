@@ -50,7 +50,7 @@ impl Mapper for Mapper018 {
         if self.irq_enabled {
             let mut new_counter = self.irq_counter & self.irq_counter_mask;
             if new_counter == 0 {
-                mem.mapper_irq_pending = true;
+                mem.cpu_pinout.set_mapper_irq_pending();
             }
 
             new_counter -= 1;
@@ -102,7 +102,7 @@ impl Mapper for Mapper018 {
             0xE003 => set_bits(&mut self.irq_reload_value, value << 12, 0b1111_0000_0000_0000),
             0xF000 => {
                 self.irq_counter = self.irq_reload_value;
-                mem.mapper_irq_pending = false;
+                mem.cpu_pinout.clear_mapper_irq_pending();
             }
             0xF001 => {
                 if value & 0b0000_1000 != 0 {
@@ -116,7 +116,7 @@ impl Mapper for Mapper018 {
                 }
 
                 self.irq_enabled = value & 0b0000_0001 != 0;
-                mem.mapper_irq_pending = false;
+                mem.cpu_pinout.clear_mapper_irq_pending();
             }
             0xF002 => mem.set_name_table_mirroring(value as u8 & 0b11),
             0xF003 => todo!("Expansion audio."),

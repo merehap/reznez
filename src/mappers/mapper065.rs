@@ -66,11 +66,11 @@ impl Mapper for Mapper065 {
 
             0x9003 => {
                 self.irq_enabled = splitbits_named!(value, "i.......");
-                mem.mapper_irq_pending = false;
+                mem.cpu_pinout.clear_mapper_irq_pending();
             }
             0x9004 => {
                 self.irq_counter = self.irq_reload_value;
-                mem.mapper_irq_pending = false;
+                mem.cpu_pinout.clear_mapper_irq_pending();
             }
             0x9005 => {
                 self.irq_reload_value &= 0x00FF;
@@ -88,7 +88,7 @@ impl Mapper for Mapper065 {
         if self.irq_enabled && self.irq_counter > 0 {
             self.irq_counter -= 1;
             if self.irq_counter == 0 {
-                mem.mapper_irq_pending = true;
+                mem.cpu_pinout.set_mapper_irq_pending();
             }
         }
     }

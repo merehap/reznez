@@ -21,7 +21,7 @@ use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::sprite::oam::Oam;
-use crate::util::signal_detector::{EdgeDetector, SignalLevel};
+use crate::util::signal_detector::EdgeDetector;
 
 pub const NMI_VECTOR_LOW: CpuAddress     = CpuAddress::new(0xFFFA);
 pub const NMI_VECTOR_HIGH: CpuAddress    = CpuAddress::new(0xFFFB);
@@ -52,7 +52,6 @@ pub struct Memory {
     pub name_table_mirrorings: &'static [NameTableMirroring],
     pub read_write_statuses: &'static [ReadWriteStatus],
     pub ram_not_present: BTreeSet<ReadWriteStatusRegisterId>,
-    pub mapper_irq_pending: bool,
 }
 
 impl Memory {
@@ -88,7 +87,6 @@ impl Memory {
             name_table_mirrorings,
             read_write_statuses,
             ram_not_present,
-            mapper_irq_pending: false,
         }
     }
 
@@ -120,10 +118,6 @@ impl Memory {
 
     pub fn ciram_mut(&mut self) -> &mut Ciram {
         &mut self.ciram
-    }
-
-    pub fn apu_regs_and_dmc_dma_mut(&mut self) -> (&mut ApuRegisters, &mut DmcDma) {
-        (&mut self.apu_regs, &mut self.dmc_dma)
     }
 
     pub fn ports(&self) -> &Ports {
@@ -158,19 +152,6 @@ impl Memory {
         &mut self.oam
     }
 
-    pub fn irq_line_level(&mut self) -> SignalLevel {
-        let irq_line_low =
-            self.apu_regs().frame_irq_pending()
-            || self.apu_regs().dmc_irq_pending()
-            || self.mapper_irq_pending;
-
-        if irq_line_low {
-            SignalLevel::Low
-        } else {
-            SignalLevel::High
-        }
-    }
-
     pub fn address_bus(&self, address_bus_type: AddressBusType) -> CpuAddress {
         match address_bus_type {
             AddressBusType::Cpu => self.cpu_pinout.address_bus,
@@ -192,7 +173,7 @@ impl Memory {
     }
 
     pub fn set_dmc_sample_buffer(&mut self, value: u8) {
-        self.apu_regs.dmc.set_sample_buffer(value);
+        self.apu_regs.dmc.set_sample_buffer(&mut self.cpu_pinout, value);
     }
 
     #[inline]
@@ -337,14 +318,6 @@ impl Memory {
 
     pub fn set_chr_bank_register_to_ciram_side(&mut self, id: ChrBankRegisterId, ciram_side: CiramSide) {
         self.chr_memory.set_chr_bank_register_to_ciram_side(id, ciram_side);
-    }
-
-    pub fn irq_pending(&self) -> bool {
-        self.mapper_irq_pending
-    }
-
-    pub fn set_irq_pending(&mut self, pending: bool) {
-        self.mapper_irq_pending = pending;
     }
 }
 

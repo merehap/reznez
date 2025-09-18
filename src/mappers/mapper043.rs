@@ -54,7 +54,7 @@ impl Mapper for Mapper043 {
             0x4122 | 0x8122 => {
                 self.irq_enabled = value & 1 == 1;
                 if !self.irq_enabled {
-                    mem.mapper_irq_pending = false;
+                    mem.cpu_pinout.clear_mapper_irq_pending();
                     self.irq_counter = 0.into();
                 }
             }
@@ -65,7 +65,11 @@ impl Mapper for Mapper043 {
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         if self.irq_enabled {
             self.irq_counter = self.irq_counter.wrapping_add(1.into());
-            mem.mapper_irq_pending = self.irq_counter == 0.into();
+            if self.irq_counter == 0.into() {
+                mem.cpu_pinout.set_mapper_irq_pending();
+            } else {
+                mem.cpu_pinout.clear_mapper_irq_pending();
+            }
         }
     }
 

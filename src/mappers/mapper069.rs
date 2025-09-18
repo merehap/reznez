@@ -51,7 +51,7 @@ impl Mapper for Mapper069 {
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         if self.irq_counter_enabled {
             if self.irq_enabled && self.irq_counter == 0 {
-                mem.mapper_irq_pending = true;
+                mem.cpu_pinout.set_mapper_irq_pending();
             }
 
             self.irq_counter = self.irq_counter.wrapping_sub(1);
@@ -115,7 +115,7 @@ impl Mapper069 {
             Command::NameTableMirroring =>
                 mem.set_name_table_mirroring(value & 0b11),
             Command::IrqControl => {
-                mem.mapper_irq_pending = false;
+                mem.cpu_pinout.clear_mapper_irq_pending();
                 (self.irq_counter_enabled, self.irq_enabled) = splitbits_named!(value, "c......i");
             }
             Command::IrqCounterLowByte =>

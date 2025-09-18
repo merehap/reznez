@@ -110,9 +110,9 @@ pub trait Mapper {
             0x4000..=0x401F if !apu_registers_active => ReadResult::OPEN_BUS,
             0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
             0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
-            0x4015 if address_bus_type == AddressBusType::Cpu => ReadResult::no_bus_update(mem.apu_regs.peek_status().to_u8()),
+            0x4015 if address_bus_type == AddressBusType::Cpu => ReadResult::no_bus_update(mem.apu_regs.peek_status(&mem.cpu_pinout).to_u8()),
             // DMA values must always be copied to the bus, unlike with the normal CPU address bus.
-            0x4015 => ReadResult::partial_open_bus(mem.apu_regs.peek_status().to_u8(), 0b1101_1111),
+            0x4015 => ReadResult::partial_open_bus(mem.apu_regs.peek_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
             // TODO: Move ReadResult/mask specification into the controller.
             0x4016          => ReadResult::partial_open_bus(mem.ports().joypad1.peek_status() as u8, 0b0000_0111),
             0x4017          => ReadResult::partial_open_bus(mem.ports().joypad2.peek_status() as u8, 0b0000_0111),
@@ -166,9 +166,9 @@ pub trait Mapper {
             0x4000..=0x4013 => ReadResult::OPEN_BUS,
             // OAM DMA is write-only.
             0x4014 => ReadResult::OPEN_BUS,
-            0x4015 if address_bus_type == AddressBusType::Cpu => ReadResult::no_bus_update(mem.apu_regs.read_status().to_u8()),
+            0x4015 if address_bus_type == AddressBusType::Cpu => ReadResult::no_bus_update(mem.apu_regs.read_status(&mem.cpu_pinout).to_u8()),
             // DMA values must always be copied to the bus, unlike with the normal CPU address bus.
-            0x4015 => ReadResult::partial_open_bus(mem.apu_regs.read_status().to_u8(), 0b1101_1111),
+            0x4015 => ReadResult::partial_open_bus(mem.apu_regs.read_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
             // TODO: Move ReadResult/mask specification into the controller.
             0x4016 => ReadResult::partial_open_bus(mem.ports.joypad1.read_status() as u8, 0b0000_0111),
             0x4017 => ReadResult::partial_open_bus(mem.ports.joypad2.read_status() as u8, 0b0000_0111),
@@ -234,14 +234,14 @@ pub trait Mapper {
             0x400D          => { /* Unused. */ }
             0x400E          => mem.apu_regs.noise.write_loop_and_period_byte(value),
             0x400F          => mem.apu_regs.noise.write_length_byte(value),
-            0x4010          => mem.apu_regs.dmc.write_control_byte(value),
+            0x4010          => mem.apu_regs.dmc.write_control_byte(&mut mem.cpu_pinout, value),
             0x4011          => mem.apu_regs.dmc.write_volume(value),
             0x4012          => mem.apu_regs.dmc.write_sample_start_address(value),
             0x4013          => mem.apu_regs.dmc.write_sample_length(value),
             0x4014          => mem.oam_dma.prepare_to_start(value),
-            0x4015          => mem.apu_regs.write_status_byte(&mut mem.dmc_dma, value),
+            0x4015          => mem.apu_regs.write_status_byte(&mut mem.cpu_pinout, &mut mem.dmc_dma, value),
             0x4016          => mem.ports_mut().change_strobe(value),
-            0x4017          => mem.apu_regs_mut().write_frame_counter(value),
+            0x4017          => mem.apu_regs.write_frame_counter(&mut mem.cpu_pinout, value),
             0x4018..=0x401F => { /* CPU Test Mode not yet supported. */ }
             0x4020..=0xFFFF => {
                 // TODO: Verify if bus conflicts only occur for address >= 0x6000.

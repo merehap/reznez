@@ -12,12 +12,16 @@ pub struct CpuPinout {
     // CLK (Clock)
     // TST
     // M2 (CPU phase)
-    // IRQ
+    // IRQ - only available as a method, not a field.
     // NMI
     // R/W (Read/Write signal)
     // OE2 (Controller 2 enable)
     // OE1 (Controller 1 enable)
     // OUT0..OUT2 (Controller outputs)
+
+    mapper_irq_pending: bool,
+    frame_irq_pending: bool,
+    dmc_irq_pending: bool,
 }
 
 impl CpuPinout {
@@ -25,6 +29,50 @@ impl CpuPinout {
         Self {
             address_bus: CpuAddress::ZERO,
             data_bus: 0,
+
+            mapper_irq_pending: false,
+            frame_irq_pending: false,
+            dmc_irq_pending: false,
         }
+    }
+
+    pub fn irq_pending(&self) -> bool {
+        self.mapper_irq_pending || self.frame_irq_pending || self.dmc_irq_pending
+    }
+
+    pub fn mapper_irq_pending(&self) -> bool {
+        self.mapper_irq_pending
+    }
+
+    pub fn clear_mapper_irq_pending(&mut self) {
+        self.mapper_irq_pending = false;
+    }
+
+    pub fn set_mapper_irq_pending(&mut self) {
+        self.mapper_irq_pending = true;
+    }
+
+    pub fn frame_irq_pending(&self) -> bool {
+        self.frame_irq_pending
+    }
+
+    pub fn clear_frame_irq_pending(&mut self) {
+        self.frame_irq_pending = false;
+    }
+
+    pub fn set_frame_irq_pending(&mut self) {
+        self.frame_irq_pending = true;
+    }
+
+    pub fn dmc_irq_pending(&self) -> bool {
+        self.dmc_irq_pending
+    }
+
+    pub fn clear_dmc_irq_pending(&mut self) {
+        self.dmc_irq_pending = false;
+    }
+
+    pub fn set_dmc_irq_pending(&mut self) {
+        self.dmc_irq_pending = true;
     }
 }

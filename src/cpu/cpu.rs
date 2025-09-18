@@ -14,7 +14,6 @@ use crate::cpu::step::*;
 use crate::mapper::Mapper;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::memory::{AddressBusType, Memory, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
-use crate::util::signal_detector::SignalLevel;
 
 pub struct Cpu {
     // Accumulator
@@ -236,17 +235,12 @@ impl Cpu {
         }
 
         // Keep irq_pending and irq_status in sync
-        match mem.irq_line_level() {
-            SignalLevel::High => {
-                if self.irq_status != IrqStatus::Inactive {
-                    self.irq_status = IrqStatus::Inactive;
-                }
+        if mem.cpu_pinout.irq_pending() {
+            if self.irq_status == IrqStatus::Inactive && !self.status.interrupts_disabled {
+                self.irq_status = IrqStatus::Pending;
             }
-            SignalLevel::Low => {
-                if self.irq_status == IrqStatus::Inactive && !self.status.interrupts_disabled {
-                    self.irq_status = IrqStatus::Pending;
-                }
-            }
+        } else {
+            self.irq_status = IrqStatus::Inactive;
         }
 
         mapper.on_end_of_cpu_cycle(mem);
