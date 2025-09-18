@@ -44,7 +44,7 @@ impl SpriteEvaluator {
     }
 
     pub fn read_oam(&mut self, mem: &Memory) {
-        self.oam_data_read = mem.oam().peek(mem.ppu_regs.oam_addr);
+        self.oam_data_read = mem.oam.peek(mem.ppu_regs.oam_addr);
         if self.clear_oam {
             self.oam_data_read = 0xFF;
         }

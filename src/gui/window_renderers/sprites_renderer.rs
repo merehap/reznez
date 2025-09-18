@@ -34,7 +34,7 @@ impl WindowRenderer for SpritesRenderer {
             return;
         };
 
-        let sprites = nes.memory().oam().sprites();
+        let sprites = nes.memory().oam.sprites();
         let mem = nes.memory();
 
         for (index, sprite) in sprites.iter().enumerate() {

@@ -94,38 +94,8 @@ impl Memory {
         self.cpu_internal_ram.stack_pointer
     }
 
-    #[inline]
-    pub fn ppu_regs(&self) -> &PpuRegisters {
-        &self.ppu_regs
-    }
-
-    #[inline]
-    pub fn ppu_regs_mut(&mut self) -> &mut PpuRegisters {
-        &mut self.ppu_regs
-    }
-
-    pub fn apu_regs(&self) -> &ApuRegisters {
-        &self.apu_regs
-    }
-
-    pub fn apu_regs_mut(&mut self) -> &mut ApuRegisters {
-        &mut self.apu_regs
-    }
-
     pub fn ciram(&self) -> &Ciram {
         &self.ciram
-    }
-
-    pub fn ciram_mut(&mut self) -> &mut Ciram {
-        &mut self.ciram
-    }
-
-    pub fn ports(&self) -> &Ports {
-        &self.ports
-    }
-
-    pub fn ports_mut(&mut self) -> &mut Ports {
-        &mut self.ports
     }
 
     pub fn cpu_cycle(&self) -> i64 {
@@ -134,22 +104,6 @@ impl Memory {
 
     pub fn cpu_internal_ram(&self) -> &CpuInternalRam {
         &self.cpu_internal_ram
-    }
-
-    pub fn palette_ram(&self) -> &PaletteRam {
-        &self.palette_ram
-    }
-
-    pub fn palette_ram_mut(&mut self) -> &mut PaletteRam {
-        &mut self.palette_ram
-    }
-
-    pub fn oam(&self) -> &Oam {
-        &self.oam
-    }
-
-    pub fn oam_mut(&mut self) -> &mut Oam {
-        &mut self.oam
     }
 
     pub fn address_bus(&self, address_bus_type: AddressBusType) -> CpuAddress {

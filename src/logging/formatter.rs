@@ -213,8 +213,8 @@ impl Formatter for Nintendulator0980Formatter {
             cpu.y_index(),
             cpu.status().to_register_byte() | 0b0010_0000,
             nes.memory().stack_pointer(),
-            nes.memory().ppu_regs().clock().cycle(),
-            nes.memory().ppu_regs().clock().scanline(),
+            nes.memory().ppu_regs.clock().cycle(),
+            nes.memory().ppu_regs.clock().scanline(),
             cpu_cycle,
         )
     }
@@ -326,7 +326,7 @@ impl Formatter for MesenFormatter {
             }
         };
 
-        let mut scanline = nes.memory().ppu_regs().clock().scanline() as i16;
+        let mut scanline = nes.memory().ppu_regs.clock().scanline() as i16;
         if scanline == 261 {
             scanline = -1;
         }
@@ -342,7 +342,7 @@ impl Formatter for MesenFormatter {
             nes.memory().stack_pointer(),
             cpu.status().to_mesen_string(),
             scanline,
-            nes.memory().ppu_regs().clock().cycle(),
+            nes.memory().ppu_regs.clock().cycle(),
             nes.memory().cpu_cycle(),
         )
     }

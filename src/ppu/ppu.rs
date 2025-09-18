@@ -230,7 +230,7 @@ impl Ppu {
                 if mem.ppu_regs.rendering_enabled() {
                     let oam_addr = mem.ppu_regs.oam_addr;
                     let cycle = mem.ppu_regs.clock().cycle();
-                    mem.oam_mut().maybe_corrupt_starting_byte(oam_addr, cycle);
+                    mem.oam.maybe_corrupt_starting_byte(oam_addr, cycle);
                 }
             }
 

@@ -41,8 +41,8 @@ impl WindowRenderer for NameTableRenderer {
             return;
         };
 
-        let x = usize::from(nes.memory().ppu_regs().x_scroll().to_u8());
-        let y = usize::from(nes.memory().ppu_regs().y_scroll().to_u8());
+        let x = usize::from(nes.memory().ppu_regs.x_scroll().to_u8());
+        let y = usize::from(nes.memory().ppu_regs.y_scroll().to_u8());
         let mapper = nes.mapper();
         let mem = &mut nes.memory();
 

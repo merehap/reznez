@@ -21,8 +21,8 @@ impl WindowRenderer for StatusRenderer {
             return FlowControl::CONTINUE;
         };
 
-        let clock = nes.memory().ppu_regs().clock();
-        let ppu_regs = nes.memory().ppu_regs();
+        let clock = nes.memory().ppu_regs.clock();
+        let ppu_regs = &nes.memory().ppu_regs;
         let mem = nes.memory();
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -61,7 +61,7 @@ impl WindowRenderer for StatusRenderer {
                     ui.label(format!("{:?}", ppu_regs.base_name_table_quadrant()));
                     ui.end_row();
                     ui.label("Active Name Table");
-                    ui.label(format!("{:?}", nes.memory().ppu_regs().active_name_table_quadrant()));
+                    ui.label(format!("{:?}", nes.memory().ppu_regs.active_name_table_quadrant()));
                     ui.end_row();
                     ui.label("Background");
                     ui.label(format!(

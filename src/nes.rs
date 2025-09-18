@@ -256,7 +256,7 @@ impl Nes {
 
     fn apu_step(&mut self) {
         if log_enabled!(target: "timings", Info) {
-            self.snapshots.current().apu_regs(self.memory.apu_regs());
+            self.snapshots.current().apu_regs(&self.memory.apu_regs);
         }
 
         self.apu.step(&mut self.memory);
@@ -267,11 +267,11 @@ impl Nes {
 
         self.detect_changes();
 
-        self.memory.apu_regs_mut().clock_mut().increment();
+        self.memory.apu_regs.clock_mut().increment();
     }
 
     fn cpu_step_first_half(&mut self) -> Option<Step> {
-        let cycle_parity = self.memory.apu_regs().clock().cycle_parity();
+        let cycle_parity = self.memory.apu_regs.clock().cycle_parity();
         self.memory.increment_cpu_cycle();
 
         if log_enabled!(target: "timings", Info) {
@@ -295,7 +295,7 @@ impl Nes {
         }
 
         if log_enabled!(target: "timings", Info) {
-            if self.memory.apu_regs().frame_counter_write_status() == FrameCounterWriteStatus::Initialized {
+            if self.memory.apu_regs.frame_counter_write_status() == FrameCounterWriteStatus::Initialized {
                 self.snapshots.start();
             }
 
@@ -314,10 +314,10 @@ impl Nes {
     }
 
     fn ppu_step(&mut self) -> bool {
-        let rendering_enabled = self.memory.ppu_regs().rendering_enabled();
-        let is_last_cycle_of_frame = self.memory.ppu_regs_mut().clock_mut().tick(rendering_enabled);
+        let rendering_enabled = self.memory.ppu_regs.rendering_enabled();
+        let is_last_cycle_of_frame = self.memory.ppu_regs.clock_mut().tick(rendering_enabled);
         if log_enabled!(target: "timings", Info) {
-            self.snapshots.current().add_ppu_position(self.memory.ppu_regs().clock());
+            self.snapshots.current().add_ppu_position(self.memory.ppu_regs.clock());
         }
 
         self.ppu.step(&mut *self.mapper, &mut self.memory, &mut self.frame);
@@ -548,11 +548,11 @@ impl Nes {
     pub fn process_gui_events(&mut self, events: &Events) {
         for (button, status) in &events.joypad1_button_statuses {
             info!("Joypad 1: button {button:?} status is {status:?}");
-            self.memory.ports_mut().joypad1.set_button_status(*button, *status);
+            self.memory.ports.joypad1.set_button_status(*button, *status);
         }
 
         for (button, status) in &events.joypad2_button_statuses {
-            self.memory.ports_mut().joypad2.set_button_status(*button, *status);
+            self.memory.ports.joypad2.set_button_status(*button, *status);
         }
     }
 }
