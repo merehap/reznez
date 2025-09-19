@@ -121,7 +121,8 @@ impl PrgMemory {
             match prg_source_and_index {
                 Some((MemType::Rom, index)) if read_write_status.is_readable() => {
                     //log::info!("ROM length: {:X} Index: {index:X}", self.rom[0].size());
-                    ReadResult::full(self.rom[self.rom_outer_bank_index as usize][index])
+                    let outer_bank_index = self.rom_outer_bank_index as usize % self.rom.len();
+                    ReadResult::full(self.rom[outer_bank_index][index])
                 }
                 Some((MemType::WorkRam, index)) if read_write_status.is_readable() =>
                     ReadResult::full(self.work_ram[index]),

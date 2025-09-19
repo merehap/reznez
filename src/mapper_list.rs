@@ -308,7 +308,10 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (88, None) => m::mapper088::Mapper088::new(metadata).supported(),
         // Sunsoft (Tenka no Goikenban: Mito Koumon (J))
         (89, None) => m::mapper089::Mapper089.supported(),
-        (90..=92, _) => TodoMapper,
+        (90, _) => TodoMapper,
+        (91, Some(0)) => m::mapper091_0::Mapper091_0::default().supported(),
+        (91, _) => TodoMapper,
+        (92, _) => TodoMapper,
         // Sunsoft-2 IC on the Sunsoft-3R board
         (93, None) => m::mapper093::Mapper093.supported(),
         // HVC-UN1ROM

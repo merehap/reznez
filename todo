@@ -26,6 +26,7 @@ CPU mode debug screen, including DMAs
 Use has_persistent_memory correctly (mostly for cases without NES2.0 metadata)
 Why does Sunsoft FME7 (mapper 69) have a holymapperel result of 0010? Mesen behaves the same.
 Add a Deref impl for converting CpuAddress to u16.
+Detect PpuAddress changes better, then clean up MMC3 and Mapper 91 IRQ logic.
 
 FANCY NICE-TO-HAVES
 APU frequency correction
@@ -102,6 +103,9 @@ MAPPER 71
 Fantastic Adventures of Dizzy - Status bar jumps a scanline or two, some sprites flicker. Sprites over the character intros.
 Fire Hawk: Can't move helicopter. Broken name table display. Need better DMC implementation.
 Micro Machines: Junk scanlines through the middle. See wiki.
+
+MAPPER 91, submapper 0
+Street Fighter III - fists disappear every other frame (test frame included)
 
 MAPPER 94
 Senjou: Various including flickering.

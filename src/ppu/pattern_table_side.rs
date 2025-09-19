@@ -4,8 +4,9 @@ use crate::mapper::KIBIBYTE;
 
 const PATTERN_TABLE_SIZE: u32 = 4 * KIBIBYTE;
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug, Specifier)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, Specifier)]
 pub enum PatternTableSide {
+    #[default]
     Left,
     Right,
 }
