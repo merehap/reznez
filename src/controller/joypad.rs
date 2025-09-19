@@ -20,6 +20,7 @@ impl Joypad {
         }
     }
 
+    // Peek 0x4016 and 0x4017
     pub fn peek_status(&self) -> ButtonStatus {
         if let Some(selected_button) = self.selected_button {
             self.button_statuses[selected_button]
@@ -28,6 +29,7 @@ impl Joypad {
         }
     }
 
+    // Read 0x4016 and 0x4017
     pub fn read_status(&mut self) -> ButtonStatus {
         let status = self.peek_status();
         if self.strobe_mode == StrobeMode::Off {

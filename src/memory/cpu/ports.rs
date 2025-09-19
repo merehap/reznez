@@ -10,6 +10,7 @@ impl Ports {
         Ports { joypad1, joypad2 }
     }
 
+    // Write 0x4016
     pub fn change_strobe(&mut self, value: u8) {
         if value & 1 == 1 {
             self.joypad1.strobe_on();
