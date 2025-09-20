@@ -31,10 +31,10 @@ use crate::memory::raw_memory::RawMemory;
 use crate::memory::bank::bank_index::{BankLocation, ChrBankRegisterId};
 use crate::memory::cpu::ports::Ports;
 use crate::memory::memory::Memory;
+use crate::memory::signal_level::SignalLevel;
 use crate::ppu::clock::Clock;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::render::frame::Frame;
-use crate::util::signal_detector::SignalLevel;
 
 pub struct Nes {
     cpu: Cpu,

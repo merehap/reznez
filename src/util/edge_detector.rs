@@ -1,4 +1,4 @@
-use std::marker::{ConstParamTy, ConstParamTy_};
+use std::marker::ConstParamTy_;
 
 pub struct EdgeDetector<V: ConstParamTy_, const TARGET: V> {
     previous_value: V,
@@ -26,11 +26,4 @@ impl <V: PartialEq + Eq + Clone + Copy + Default + ConstParamTy_, const TARGET: 
         self.previous_value = self.value;
         edge_detected
     }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, ConstParamTy)]
-pub enum SignalLevel {
-    #[default]
-    High,
-    Low,
 }

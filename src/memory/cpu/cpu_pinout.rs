@@ -1,5 +1,6 @@
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::util::signal_detector::{EdgeDetector, SignalLevel};
+use crate::memory::signal_level::SignalLevel;
+use crate::util::edge_detector::EdgeDetector;
 
 pub struct CpuPinout {
     // AD1 (Audio Pinout: Both pulse waves)

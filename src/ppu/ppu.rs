@@ -4,6 +4,7 @@ use log::Level::Info;
 use crate::mapper::Mapper;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::PpuAddress;
+use crate::memory::signal_level::SignalLevel;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
@@ -18,7 +19,6 @@ use crate::ppu::sprite::oam_registers::OamRegisters;
 use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::ppu::tile_number::TileNumber;
-use crate::util::signal_detector::SignalLevel;
 
 use super::palette::bank_color_assigner::BankColorAssigner;
 use super::sprite::sprite_evaluator::SpriteEvaluator;
