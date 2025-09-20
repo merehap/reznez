@@ -1,10 +1,12 @@
+use std::marker::ConstParamTy;
+
 use modular_bitfield::Specifier;
 
 use crate::mapper::KIBIBYTE;
 
 const PATTERN_TABLE_SIZE: u32 = 4 * KIBIBYTE;
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, Specifier)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, ConstParamTy, Specifier)]
 pub enum PatternTableSide {
     #[default]
     Left,

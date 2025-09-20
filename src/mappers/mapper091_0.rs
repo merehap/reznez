@@ -1,4 +1,5 @@
 use crate::mapper::*;
+use crate::util::edge_detector::EdgeDetector;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
@@ -29,8 +30,8 @@ const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
 
 // J.Y. Company JY830623C and YY840238C
 pub struct Mapper091_0 {
-    counter: DecrementingCounter,
-    pattern_table_side: PatternTableSide,
+    irq_counter: DecrementingCounter,
+    pattern_table_transition_detector: EdgeDetector<PatternTableSide, { PatternTableSide::Right }>,
 }
 
 impl Mapper for Mapper091_0 {
@@ -43,12 +44,12 @@ impl Mapper for Mapper091_0 {
             0x7000 => mem.set_prg_register(P0, value & 0b00001111),
             0x7001 => mem.set_prg_register(P1, value & 0b00001111),
             0x7002 => {
-                self.counter.disable();
+                self.irq_counter.disable();
                 mem.cpu_pinout.clear_mapper_irq_pending();
             }
             0x7003 => {
-                self.counter.enable();
-                self.counter.force_reload();
+                self.irq_counter.enable();
+                self.irq_counter.force_reload();
             }
             0x8000..=0x9FFF => {
                 let outer_banks = splitbits!(min=u8, *addr, ".... .... .... .pcc");
@@ -60,13 +61,10 @@ impl Mapper for Mapper091_0 {
     }
 
     fn on_ppu_address_change(&mut self, mem: &mut Memory, address: PpuAddress) {
-        let next_side = address.pattern_table_side();
-        let should_tick_irq_counter = self.pattern_table_side == PatternTableSide::Left
-            && next_side == PatternTableSide::Right;
-        self.pattern_table_side = next_side;
-
+        self.pattern_table_transition_detector.set_value(address.pattern_table_side());
+        let should_tick_irq_counter = self.pattern_table_transition_detector.detect_edge();
         if should_tick_irq_counter {
-            let should_trigger_irq = self.counter.decrement();
+            let should_trigger_irq = self.irq_counter.decrement();
             if should_trigger_irq {
                 mem.cpu_pinout.set_mapper_irq_pending();
             }
@@ -81,8 +79,8 @@ impl Mapper for Mapper091_0 {
 impl Mapper091_0 {
     pub fn new() -> Self {
         Self {
-            counter: IRQ_COUNTER,
-            pattern_table_side: PatternTableSide::Left,
+            irq_counter: IRQ_COUNTER,
+            pattern_table_transition_detector: EdgeDetector::new(),
         }
     }
 }
