@@ -24,7 +24,7 @@ const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
     .when_disabled(DisabledBehavior::Tick)
     .trigger_when(TriggerWhen::DecrementingToZero)
     .reload_when_triggered(true)
-    // The reload value is never changed from this for this mapper.
+    // The reload value is never changed from the initial value for this submapper.
     .initial_reload_value(64)
     .build();
 
@@ -61,9 +61,8 @@ impl Mapper for Mapper091_0 {
     }
 
     fn on_ppu_address_change(&mut self, mem: &mut Memory, address: PpuAddress) {
-        self.pattern_table_transition_detector.set_value(address.pattern_table_side());
-        let should_tick_irq_counter = self.pattern_table_transition_detector.detect_edge();
-        if should_tick_irq_counter {
+        let should_tick = self.pattern_table_transition_detector.set_value_then_detect_edge(address.pattern_table_side());
+        if should_tick {
             let should_trigger_irq = self.irq_counter.decrement();
             if should_trigger_irq {
                 mem.cpu_pinout.set_mapper_irq_pending();
