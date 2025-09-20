@@ -1,4 +1,5 @@
 use crate::mapper::*;
+use crate::util::counter::{DecrementingCounter, DecrementingCounterBuilder, DisabledBehavior, TriggerWhen};
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
@@ -21,15 +22,21 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
+
 const HORIZONTAL: u8 = 0;
 const VERTICAL: u8 = 1;
 
+const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
+    .when_disabled(DisabledBehavior::Tick)
+    .trigger_when(TriggerWhen::DecrementedToZero)
+    .reload_when_triggered(false)
+    .initial_reload_value(0)
+    .decrement_size(5)
+    .build();
+
 // J.Y. Company JY830623C and YY840238C
-#[derive(Default)]
 pub struct Mapper091_1 {
-    irq_enabled: bool,
-    irq_counter: u16,
-    irq_counter_reload_value: u16,
+    irq_counter: DecrementingCounter,
     irq_sub_counter: u8,
 }
 
@@ -42,28 +49,29 @@ impl Mapper for Mapper091_1 {
             0x6003 => mem.set_chr_register(C3, value),
             0x6004 => mem.set_name_table_mirroring(HORIZONTAL),
             0x6005 => mem.set_name_table_mirroring(VERTICAL),
-            0x6006 => {
-                self.irq_counter_reload_value = (self.irq_counter_reload_value & 0xFF00) | u16::from(value);
-                self.irq_counter = self.irq_counter_reload_value;
-            }
-            0x6007 => {
-                self.irq_counter_reload_value = (self.irq_counter_reload_value & 0x00FF) | (u16::from(value) << 8);
-            }
             0x7000 => mem.set_prg_register(P0, value & 0b00001111),
             0x7001 => mem.set_prg_register(P1, value & 0b00001111),
+
+            0x6006 => {
+                self.irq_counter.set_reload_value_low_byte(value);
+                self.irq_counter.force_reload();
+            }
+            0x6007 => {
+                self.irq_counter.set_reload_value_high_byte(value);
+            }
             0x7006 => {
-                self.irq_enabled = false;
+                self.irq_counter.disable();
                 mem.cpu_pinout.clear_mapper_irq_pending();
             }
             0x7007 => {
-                self.irq_enabled = true;
+                self.irq_counter.enable();
             }
             _ => { /* Do nothing. */ }
         }
     }
 
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        if !self.irq_enabled {
+        if !self.irq_counter.enabled() {
             return;
         }
 
@@ -75,10 +83,9 @@ impl Mapper for Mapper091_1 {
 
         self.irq_sub_counter = 0;
 
-        self.irq_counter = self.irq_counter.saturating_sub(5);
-
-        if self.irq_counter == 0 {
-            // TODO: Is this reload necessary? Super Fighters 3 works the same without it.
+        let triggered = self.irq_counter.decrement();
+        if triggered {
+            // TODO: Is this commented-out reload necessary? Super Fighters 3 works the same without it.
             // SF3 is constantly force-reloading the IRQ counter, presumably because this isn't automatically done.
             // self.irq_counter = self.irq_counter_reload_value;
             mem.cpu_pinout.set_mapper_irq_pending();
@@ -87,5 +94,14 @@ impl Mapper for Mapper091_1 {
 
     fn layout(&self) -> Layout {
         LAYOUT
+    }
+}
+
+impl Mapper091_1 {
+    pub fn default() -> Self {
+        Self {
+            irq_counter: IRQ_COUNTER,
+            irq_sub_counter: 0,
+        }
     }
 }
