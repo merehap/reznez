@@ -223,9 +223,9 @@ impl Nes {
 
             let step_result = self.step();
             if step_result.is_last_cycle_of_frame {
-                if self.memory.cpu_pinout.reset.level() == SignalLevel::Low {
-                    self.memory.cpu_pinout.reset.set_value(SignalLevel::High);
-                }
+                // Release the RESET button on the console after some time has passed,
+                // allowing the PPU to run for a while the RESET button was held down.
+                self.memory.cpu_pinout.reset.set_value(SignalLevel::High);
 
                 if self.cpu.mode_state().is_jammed() {
                     info!("CPU is jammed!");

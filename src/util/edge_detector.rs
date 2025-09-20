@@ -13,7 +13,7 @@ impl <V: PartialEq + Eq + Clone + Copy + Default + ConstParamTy_, const TARGET: 
         }
     }
 
-    pub fn level(&self) -> V {
+    pub fn current_value(&self) -> V {
         self.value
     }
 

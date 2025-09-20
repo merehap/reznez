@@ -128,7 +128,7 @@ impl Cpu {
     }
 
     pub fn step_first_half(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, cycle_parity: CycleParity) -> Option<Step> {
-        if mem.cpu_pinout.reset.level() == SignalLevel::Low {
+        if mem.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
             return None;
         }
@@ -235,7 +235,7 @@ impl Cpu {
     }
 
     pub fn step_second_half(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory) {
-        if mem.cpu_pinout.reset.level() == SignalLevel::Low {
+        if mem.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
             return;
         }

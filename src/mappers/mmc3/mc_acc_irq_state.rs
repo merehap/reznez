@@ -2,6 +2,7 @@ use crate::mappers::mmc3::irq_state::IrqState;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
+use crate::util::edge_detector::EdgeDetector;
 
 // Submapper 3
 pub struct McAccIrqState {
@@ -10,7 +11,7 @@ pub struct McAccIrqState {
     force_reload_counter: bool,
     counter_reload_value: u8,
     counter_suppression_cycles: u8,
-    pattern_table_side: PatternTableSide,
+    pattern_table_transition_detector: EdgeDetector<PatternTableSide, { PatternTableSide::Right }>,
 }
 
 impl McAccIrqState {
@@ -21,7 +22,7 @@ impl McAccIrqState {
             force_reload_counter: false,
             counter_reload_value: 0,
             counter_suppression_cycles: 0,
-            pattern_table_side: PatternTableSide::Left,
+            pattern_table_transition_detector: EdgeDetector::new(),
         }
     }
 }
@@ -32,12 +33,9 @@ impl IrqState for McAccIrqState {
             return;
         }
 
-        let next_side = address.pattern_table_side();
-        let should_tick_irq_counter =
-            self.pattern_table_side == PatternTableSide::Right
-            && next_side == PatternTableSide::Left
-            && self.counter_suppression_cycles == 0;
-        if next_side == PatternTableSide::Left {
+        let edge_detected = self.pattern_table_transition_detector.set_value_then_detect_edge(address.pattern_table_side());
+        let should_tick_irq_counter = edge_detected && self.counter_suppression_cycles == 0;
+        if address.pattern_table_side() == PatternTableSide::Left {
             self.counter_suppression_cycles = 16;
         }
 
@@ -53,8 +51,6 @@ impl IrqState for McAccIrqState {
                 mem.cpu_pinout.set_mapper_irq_pending();
             }
         }
-
-        self.pattern_table_side = next_side;
     }
 
     fn decrement_suppression_cycle_count(&mut self) {
