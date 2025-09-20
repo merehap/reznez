@@ -47,7 +47,7 @@ impl DecrementingCounter {
                     self.count = self.count.saturating_sub(self.decrement_size);
                 }
             }
-            TriggerWhen::DecrementedToZero => {
+            TriggerWhen::DecrementingToZero => {
                 self.count = self.count.saturating_sub(self.decrement_size);
                 if self.count == 0 {
                     maybe_triggered = true;
@@ -131,6 +131,6 @@ pub enum DisabledBehavior {
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum TriggerWhen {
-    DecrementedToZero,
+    DecrementingToZero,
     AlreadyZero,
 }

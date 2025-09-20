@@ -1,5 +1,4 @@
 use crate::mapper::*;
-use crate::util::counter::{DecrementingCounter, DecrementingCounterBuilder, DisabledBehavior, TriggerWhen};
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
@@ -28,7 +27,7 @@ const VERTICAL: u8 = 1;
 
 const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
     .when_disabled(DisabledBehavior::Tick)
-    .trigger_when(TriggerWhen::DecrementedToZero)
+    .trigger_when(TriggerWhen::DecrementingToZero)
     .reload_when_triggered(false)
     .initial_reload_value(0)
     .decrement_size(5)
@@ -83,8 +82,8 @@ impl Mapper for Mapper091_1 {
 
         self.irq_sub_counter = 0;
 
-        let triggered = self.irq_counter.decrement();
-        if triggered {
+        let should_trigger_irq = self.irq_counter.decrement();
+        if should_trigger_irq {
             // TODO: Is this commented-out reload necessary? Super Fighters 3 works the same without it.
             // SF3 is constantly force-reloading the IRQ counter, presumably because this isn't automatically done.
             // self.irq_counter = self.irq_counter_reload_value;
@@ -98,7 +97,7 @@ impl Mapper for Mapper091_1 {
 }
 
 impl Mapper091_1 {
-    pub fn default() -> Self {
+    pub fn new() -> Self {
         Self {
             irq_counter: IRQ_COUNTER,
             irq_sub_counter: 0,

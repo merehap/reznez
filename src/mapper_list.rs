@@ -313,9 +313,9 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // J.Y. Company clone boards and Super Fighter III submappers.
         (91, None) => UnspecifiedSubmapper,
         // J.Y. Company clone boards
-        (91, Some(0)) => m::mapper091_0::Mapper091_0::default().supported(),
+        (91, Some(0)) => m::mapper091_0::Mapper091_0::new().supported(),
         // Super Fighter III
-        (91, Some(1)) => m::mapper091_1::Mapper091_1::default().supported(),
+        (91, Some(1)) => m::mapper091_1::Mapper091_1::new().supported(),
 
         (92, _) => TodoMapper,
         // Sunsoft-2 IC on the Sunsoft-3R board

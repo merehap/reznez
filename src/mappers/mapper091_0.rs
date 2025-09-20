@@ -19,13 +19,17 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-const IRQ_COUNTER_RELOAD_VALUE: u8 = 64;
+const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
+    .when_disabled(DisabledBehavior::Tick)
+    .trigger_when(TriggerWhen::DecrementingToZero)
+    .reload_when_triggered(true)
+    // The reload value is never changed from this for this mapper.
+    .initial_reload_value(64)
+    .build();
 
 // J.Y. Company JY830623C and YY840238C
-#[derive(Default)]
 pub struct Mapper091_0 {
-    irq_enabled: bool,
-    irq_counter: u8,
+    counter: DecrementingCounter,
     pattern_table_side: PatternTableSide,
 }
 
@@ -39,12 +43,12 @@ impl Mapper for Mapper091_0 {
             0x7000 => mem.set_prg_register(P0, value & 0b00001111),
             0x7001 => mem.set_prg_register(P1, value & 0b00001111),
             0x7002 => {
-                self.irq_enabled = false;
+                self.counter.disable();
                 mem.cpu_pinout.clear_mapper_irq_pending();
             }
             0x7003 => {
-                self.irq_enabled = true;
-                self.irq_counter = IRQ_COUNTER_RELOAD_VALUE;
+                self.counter.enable();
+                self.counter.force_reload();
             }
             0x8000..=0x9FFF => {
                 let outer_banks = splitbits!(min=u8, *addr, ".... .... .... .pcc");
@@ -57,17 +61,13 @@ impl Mapper for Mapper091_0 {
 
     fn on_ppu_address_change(&mut self, mem: &mut Memory, address: PpuAddress) {
         let next_side = address.pattern_table_side();
-        let should_tick_irq_counter = self.irq_enabled
-            && self.pattern_table_side == PatternTableSide::Left
+        let should_tick_irq_counter = self.pattern_table_side == PatternTableSide::Left
             && next_side == PatternTableSide::Right;
         self.pattern_table_side = next_side;
 
         if should_tick_irq_counter {
-            self.irq_counter = self.irq_counter
-                .checked_sub(1)
-                .unwrap_or(IRQ_COUNTER_RELOAD_VALUE);
-
-            if self.irq_counter == 0 {
+            let should_trigger_irq = self.counter.decrement();
+            if should_trigger_irq {
                 mem.cpu_pinout.set_mapper_irq_pending();
             }
         }
@@ -75,5 +75,14 @@ impl Mapper for Mapper091_0 {
 
     fn layout(&self) -> Layout {
         LAYOUT
+    }
+}
+
+impl Mapper091_0 {
+    pub fn new() -> Self {
+        Self {
+            counter: IRQ_COUNTER,
+            pattern_table_side: PatternTableSide::Left,
+        }
     }
 }
