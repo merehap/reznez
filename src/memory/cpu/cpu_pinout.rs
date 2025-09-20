@@ -5,7 +5,7 @@ pub struct CpuPinout {
     // AD1 (Audio Pinout: Both pulse waves)
     // AD2 (Audio Pinout: Triangle, Noise, DPCM)
     // RST (CPU Reset)
-    pub reset: EdgeDetector<{SignalLevel::High}>,
+    pub reset: EdgeDetector<SignalLevel, {SignalLevel::High}>,
     // Axx
     pub address_bus: CpuAddress,
     // GND (Ground)
@@ -16,7 +16,7 @@ pub struct CpuPinout {
     // M2 (CPU phase)
     // IRQ - only available as a method, not a field.
     // NMI
-    pub nmi_signal_detector: EdgeDetector<{SignalLevel::Low}>,
+    pub nmi_signal_detector: EdgeDetector<SignalLevel, {SignalLevel::Low}>,
     // R/W (Read/Write signal)
     // OE2 (Controller 2 enable)
     // OE1 (Controller 1 enable)

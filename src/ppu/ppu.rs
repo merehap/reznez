@@ -18,6 +18,7 @@ use crate::ppu::sprite::oam_registers::OamRegisters;
 use crate::ppu::sprite::sprite_y::SpriteY;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::ppu::tile_number::TileNumber;
+use crate::util::signal_detector::SignalLevel;
 
 use super::palette::bank_color_assigner::BankColorAssigner;
 use super::sprite::sprite_evaluator::SpriteEvaluator;
@@ -83,9 +84,9 @@ impl Ppu {
         }
 
         if mem.ppu_regs.can_generate_nmi() {
-            mem.cpu_pinout.nmi_signal_detector.pull_low();
+            mem.cpu_pinout.nmi_signal_detector.set_value(SignalLevel::Low);
         } else {
-            mem.cpu_pinout.nmi_signal_detector.reset_to_high();
+            mem.cpu_pinout.nmi_signal_detector.set_value(SignalLevel::High);
         }
 
         mapper.on_end_of_ppu_cycle();

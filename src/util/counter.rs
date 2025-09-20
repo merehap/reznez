@@ -5,6 +5,7 @@ pub struct DecrementingCounter {
     reload_when_triggered: bool,
     count: u16,
     reload_value: u16,
+    forced_reload_pending: bool,
     decrement_size: u16,
 }
 
@@ -30,6 +31,7 @@ impl DecrementingCounter {
     }
 
     pub fn force_reload(&mut self) {
+        self.forced_reload_pending = true;
         self.count = self.reload_value;
     }
 
@@ -118,6 +120,7 @@ impl DecrementingCounterBuilder {
             reload_when_triggered: self.reload_when_triggered.expect("reload_when_triggered must be set."),
             count: reload_value,
             reload_value,
+            forced_reload_pending: false,
             decrement_size: self.decrement_size,
         }
     }

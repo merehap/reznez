@@ -1,39 +1,36 @@
-use std::marker::ConstParamTy;
+use std::marker::{ConstParamTy, ConstParamTy_};
 
-pub struct EdgeDetector<const DETECTION_LEVEL: SignalLevel> {
-    previous_level: SignalLevel,
-    level: SignalLevel,
+pub struct EdgeDetector<V: ConstParamTy_, const TARGET: V> {
+    previous_value: V,
+    value: V,
 }
 
-impl <const DETECTION_LEVEL: SignalLevel> EdgeDetector<DETECTION_LEVEL> {
+impl <V: PartialEq + Eq + Clone + Copy + Default + ConstParamTy_, const TARGET: V> EdgeDetector<V, TARGET> {
     pub fn new() -> Self {
         Self {
-            previous_level: SignalLevel::High,
-            level: SignalLevel::High,
+            previous_value: V::default(),
+            value: V::default(),
         }
     }
 
-    pub fn level(&self) -> SignalLevel {
-        self.level
+    pub fn level(&self) -> V {
+        self.value
     }
 
-    pub fn pull_low(&mut self) {
-        self.level = SignalLevel::Low;
-    }
-
-    pub fn reset_to_high(&mut self) {
-        self.level = SignalLevel::High;
+    pub fn set_value(&mut self, value: V) {
+        self.value = value;
     }
 
     pub fn detect_edge(&mut self) -> bool {
-        let edge_detected = self.level == DETECTION_LEVEL && self.previous_level != self.level;
-        self.previous_level = self.level;
+        let edge_detected = self.value == TARGET && self.previous_value != self.value;
+        self.previous_value = self.value;
         edge_detected
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug, ConstParamTy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, ConstParamTy)]
 pub enum SignalLevel {
+    #[default]
     High,
     Low,
 }

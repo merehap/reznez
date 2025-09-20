@@ -210,7 +210,7 @@ impl Nes {
     }
 
     pub fn set_reset_signal(&mut self) {
-        self.memory.cpu_pinout.reset.pull_low();
+        self.memory.cpu_pinout.reset.set_value(SignalLevel::Low);
     }
 
     pub fn step_frame(&mut self) {
@@ -224,7 +224,7 @@ impl Nes {
             let step_result = self.step();
             if step_result.is_last_cycle_of_frame {
                 if self.memory.cpu_pinout.reset.level() == SignalLevel::Low {
-                    self.memory.cpu_pinout.reset.reset_to_high();
+                    self.memory.cpu_pinout.reset.set_value(SignalLevel::High);
                 }
 
                 if self.cpu.mode_state().is_jammed() {
