@@ -27,7 +27,7 @@ impl <V: PartialEq + Eq + Clone + Copy + Default + ConstParamTy_, const TARGET: 
         edge_detected
     }
 
-    pub fn set_value_then_detect_edge(&mut self, value: V) -> bool {
+    pub fn set_value_then_detect(&mut self, value: V) -> bool {
         self.set_value(value);
         self.detect()
     }

@@ -34,7 +34,7 @@ impl IrqState for SharpIrqState {
             return;
         }
 
-        let edge_detected = self.pattern_table_transition_detector.set_value_then_detect_edge(address.pattern_table_side());
+        let edge_detected = self.pattern_table_transition_detector.set_value_then_detect(address.pattern_table_side());
         let should_tick_irq_counter = edge_detected && self.counter_suppression_cycles == 0;
         if address.pattern_table_side() == PatternTableSide::Right {
             //println!("Resetting counter suppression cycles to 16");
