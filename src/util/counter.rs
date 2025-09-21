@@ -3,6 +3,7 @@ use std::sync::LazyLock;
 pub struct DecrementingCounter {
     // Immutable settings determined at compile time
     auto_reload: bool,
+    forced_reload_behavior: ForcedReloadBehavior,
     decrement_size: u16,
     decrementer: &'static LazyLock<Box<dyn DecrementingBehavior + Send + Sync + 'static>>,
 
@@ -10,7 +11,6 @@ pub struct DecrementingCounter {
     triggering_enabled: bool,
     reload_value: u16,
     count: u16,
-    forced_reload_pending: bool,
 }
 
 impl DecrementingCounter {
@@ -35,8 +35,10 @@ impl DecrementingCounter {
     }
 
     pub fn force_reload(&mut self) {
-        self.forced_reload_pending = true;
-        self.count = self.reload_value;
+        match self.forced_reload_behavior {
+            //ForcedReloadBehavior::Disabled => panic!("forced_reload_timing must be specified in DecrementingCounterBuilder in order to call forced_reload"),
+            ForcedReloadBehavior::Immediate => self.count = self.reload_value,
+        }
     }
 
     pub fn decrement(&mut self) -> bool {
@@ -56,8 +58,8 @@ struct TriggerOnDecrementingToZero;
 impl DecrementingBehavior for TriggerOnDecrementingToZero {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
         counter.count = counter.count.saturating_sub(counter.decrement_size);
-
-        if counter.count == 0 && counter.auto_reload {
+        let should_auto_reload = counter.count == 0 && counter.auto_reload;
+        if should_auto_reload {
             counter.count = counter.reload_value;
         }
 
@@ -71,8 +73,7 @@ struct TriggerOnAlreadyZero;
 impl DecrementingBehavior for TriggerOnAlreadyZero {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
         let already_on_zero = counter.count == 0;
-
-        counter.count = if already_on_zero && counter.auto_reload {
+        counter.count = if counter.auto_reload && already_on_zero {
             counter.reload_value
         } else {
             counter.count.saturating_sub(counter.decrement_size)
@@ -86,7 +87,8 @@ impl DecrementingBehavior for TriggerOnAlreadyZero {
 #[derive(Clone, Copy)]
 pub struct DecrementingCounterBuilder {
     trigger_when: Option<TriggerWhen>,
-    reload_when_triggered: Option<bool>,
+    auto_reload: Option<bool>,
+    forced_reload_behavior: Option<ForcedReloadBehavior>,
     initial_reload_value: Option<u16>,
     decrement_size: u16,
 }
@@ -95,7 +97,8 @@ impl DecrementingCounterBuilder {
     pub const fn new() -> Self {
         Self {
             trigger_when: None,
-            reload_when_triggered: None,
+            auto_reload: None,
+            forced_reload_behavior: None,
             initial_reload_value: None,
             decrement_size: 1,
         }
@@ -106,8 +109,13 @@ impl DecrementingCounterBuilder {
         self
     }
 
-    pub const fn reload_when_triggered(&mut self, reload_when_triggered: bool) -> &mut Self {
-        self.reload_when_triggered = Some(reload_when_triggered);
+    pub const fn auto_reload(&mut self, auto_reload: bool) -> &mut Self {
+        self.auto_reload = Some(auto_reload);
+        self
+    }
+
+    pub const fn forced_reload_behavior(&mut self, forced_reload_behavior: ForcedReloadBehavior) -> &mut Self {
+        self.forced_reload_behavior = Some(forced_reload_behavior);
         self
     }
 
@@ -129,13 +137,13 @@ impl DecrementingCounterBuilder {
         };
 
         DecrementingCounter {
-            auto_reload: self.reload_when_triggered.expect("reload_when_triggered must be set."),
+            auto_reload: self.auto_reload.expect("auto_reload must be set."),
+            forced_reload_behavior: self.forced_reload_behavior.expect("forced_reload_behavior must be set"),
             decrement_size: self.decrement_size,
             decrementer,
             triggering_enabled: false,
             reload_value,
             count: reload_value,
-            forced_reload_pending: false,
         }
     }
 }
@@ -144,4 +152,10 @@ impl DecrementingCounterBuilder {
 pub enum TriggerWhen {
     DecrementingToZero,
     AlreadyZero,
+}
+
+#[derive(Clone, Copy)]
+pub enum ForcedReloadBehavior {
+    //Disabled,
+    Immediate
 }
