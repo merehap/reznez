@@ -22,7 +22,7 @@ pub use crate::memory::window::{PrgWindow, ChrWindow};
 pub use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 pub use crate::ppu::name_table::name_table_mirroring::{NameTableMirroring, NameTableSource};
 pub use crate::ppu::pattern_table_side::PatternTableSide;
-pub use crate::util::counter::{DecrementingCounter, DecrementingCounterBuilder, DisabledBehavior, TriggerWhen};
+pub use crate::util::counter::{DecrementingCounter, DecrementingCounterBuilder, TriggerWhen};
 pub use crate::util::unit::{KIBIBYTE, KIBIBYTE_U16};
 
 use num_traits::FromPrimitive;

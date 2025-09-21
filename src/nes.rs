@@ -215,7 +215,7 @@ impl Nes {
 
     pub fn step_frame(&mut self) {
         loop {
-            if self.memory.cpu_pinout.reset.detect_edge() {
+            if self.memory.cpu_pinout.reset.detect() {
                 // Complete the CPU reset, if one is in progress and nearing completion.
                 self.cpu.reset();
                 self.memory.apu_regs.reset(&mut self.memory.cpu_pinout);

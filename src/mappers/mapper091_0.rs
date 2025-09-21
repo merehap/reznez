@@ -21,7 +21,6 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
-    .when_disabled(DisabledBehavior::Tick)
     .trigger_when(TriggerWhen::DecrementingToZero)
     .reload_when_triggered(true)
     // The reload value is never changed from the initial value for this submapper.
@@ -44,11 +43,11 @@ impl Mapper for Mapper091_0 {
             0x7000 => mem.set_prg_register(P0, value & 0b00001111),
             0x7001 => mem.set_prg_register(P1, value & 0b00001111),
             0x7002 => {
-                self.irq_counter.disable();
+                self.irq_counter.disable_triggering();
                 mem.cpu_pinout.clear_mapper_irq_pending();
             }
             0x7003 => {
-                self.irq_counter.enable();
+                self.irq_counter.enable_triggering();
                 self.irq_counter.force_reload();
             }
             0x8000..=0x9FFF => {

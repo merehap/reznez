@@ -26,7 +26,6 @@ const HORIZONTAL: u8 = 0;
 const VERTICAL: u8 = 1;
 
 const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
-    .when_disabled(DisabledBehavior::Tick)
     .trigger_when(TriggerWhen::DecrementingToZero)
     .reload_when_triggered(false)
     .initial_reload_value(0)
@@ -59,11 +58,11 @@ impl Mapper for Mapper091_1 {
                 self.irq_counter.set_reload_value_high_byte(value);
             }
             0x7006 => {
-                self.irq_counter.disable();
+                self.irq_counter.disable_triggering();
                 mem.cpu_pinout.clear_mapper_irq_pending();
             }
             0x7007 => {
-                self.irq_counter.enable();
+                self.irq_counter.enable_triggering();
             }
             _ => { /* Do nothing. */ }
         }

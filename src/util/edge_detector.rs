@@ -21,7 +21,7 @@ impl <V: PartialEq + Eq + Clone + Copy + Default + ConstParamTy_, const TARGET: 
         self.value = value;
     }
 
-    pub fn detect_edge(&mut self) -> bool {
+    pub fn detect(&mut self) -> bool {
         let edge_detected = self.value == TARGET && self.previous_value != self.value;
         self.previous_value = self.value;
         edge_detected
@@ -29,6 +29,6 @@ impl <V: PartialEq + Eq + Clone + Copy + Default + ConstParamTy_, const TARGET: 
 
     pub fn set_value_then_detect_edge(&mut self, value: V) -> bool {
         self.set_value(value);
-        self.detect_edge()
+        self.detect()
     }
 }

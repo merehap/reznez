@@ -240,7 +240,7 @@ impl Cpu {
             return;
         }
 
-        let edge_detected = mem.cpu_pinout.nmi_signal_detector.detect_edge();
+        let edge_detected = mem.cpu_pinout.nmi_signal_detector.detect();
         if edge_detected {
             self.nmi_status = NmiStatus::Pending;
         }

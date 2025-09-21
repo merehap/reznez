@@ -1,25 +1,26 @@
+use std::sync::LazyLock;
+
 pub struct DecrementingCounter {
-    enabled: bool,
-    disabled_behavior: DisabledBehavior,
-    trigger_when: TriggerWhen,
+    triggering_enabled: bool,
     reload_when_triggered: bool,
     count: u16,
     reload_value: u16,
     forced_reload_pending: bool,
     decrement_size: u16,
+    decrementer: &'static LazyLock<Box<dyn DecrementingBehavior + Send + Sync + 'static>>,
 }
 
 impl DecrementingCounter {
     pub fn enabled(&self) -> bool {
-        self.enabled
+        self.triggering_enabled
     }
 
-    pub fn enable(&mut self) {
-        self.enabled = true;
+    pub fn enable_triggering(&mut self) {
+        self.triggering_enabled = true;
     }
 
-    pub fn disable(&mut self) {
-        self.enabled = false;
+    pub fn disable_triggering(&mut self) {
+        self.triggering_enabled = false;
     }
 
     pub fn set_reload_value_low_byte(&mut self, value: u8) {
@@ -36,39 +37,59 @@ impl DecrementingCounter {
     }
 
     pub fn decrement(&mut self) -> bool {
-        if !self.enabled && self.disabled_behavior == DisabledBehavior::DoNothing {
-            return false;
+        self.decrementer.decrement(self)
+    }
+}
+
+trait DecrementingBehavior {
+    fn decrement(&self, counter: &mut DecrementingCounter) -> bool;
+}
+
+static DECREMENTING_TO_ZERO: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(DecrementingToZero));
+static ALREADY_ZERO: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(AlreadyZero));
+
+struct DecrementingToZero;
+
+impl DecrementingBehavior for DecrementingToZero {
+    fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
+        counter.count = counter.count.saturating_sub(counter.decrement_size);
+
+        let mut trigger_if_enabled = false;
+        if counter.count == 0 {
+            trigger_if_enabled = true;
         }
 
-        let mut maybe_triggered = false;
-        match self.trigger_when {
-            TriggerWhen::AlreadyZero => {
-                if self.count == 0 {
-                    maybe_triggered = true;
-                } else {
-                    self.count = self.count.saturating_sub(self.decrement_size);
-                }
-            }
-            TriggerWhen::DecrementingToZero => {
-                self.count = self.count.saturating_sub(self.decrement_size);
-                if self.count == 0 {
-                    maybe_triggered = true;
-                }
-            }
+        if trigger_if_enabled && counter.reload_when_triggered {
+            counter.count = counter.reload_value;
         }
 
-        if maybe_triggered && self.reload_when_triggered {
-            self.count = self.reload_value;
+        let triggered = counter.triggering_enabled && trigger_if_enabled;
+        triggered
+    }
+}
+
+struct AlreadyZero;
+
+impl DecrementingBehavior for AlreadyZero {
+    fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
+        let mut trigger_if_enabled = false;
+        if counter.count == 0 {
+            trigger_if_enabled = true;
+        } else {
+            counter.count = counter.count.saturating_sub(counter.decrement_size);
         }
 
-        let triggered = self.enabled && maybe_triggered;
+        if trigger_if_enabled && counter.reload_when_triggered {
+            counter.count = counter.reload_value;
+        }
+
+        let triggered = counter.triggering_enabled && trigger_if_enabled;
         triggered
     }
 }
 
 #[derive(Clone, Copy)]
 pub struct DecrementingCounterBuilder {
-    disabled_behavior: Option<DisabledBehavior>,
     trigger_when: Option<TriggerWhen>,
     reload_when_triggered: Option<bool>,
     initial_reload_value: Option<u16>,
@@ -78,17 +99,11 @@ pub struct DecrementingCounterBuilder {
 impl DecrementingCounterBuilder {
     pub const fn new() -> Self {
         Self {
-            disabled_behavior: None,
             trigger_when: None,
             reload_when_triggered: None,
             initial_reload_value: None,
             decrement_size: 1,
         }
-    }
-
-    pub const fn when_disabled(&mut self, disabled_behavior: DisabledBehavior) -> &mut Self {
-        self.disabled_behavior = Some(disabled_behavior);
-        self
     }
 
     pub const fn trigger_when(&mut self, trigger_when: TriggerWhen) -> &mut Self {
@@ -113,23 +128,21 @@ impl DecrementingCounterBuilder {
 
     pub const fn build(self) -> DecrementingCounter {
         let reload_value = self.initial_reload_value.expect("initial_counter_reload_value must be set.");
+        let decrementer: &LazyLock<Box<dyn DecrementingBehavior + Send + Sync + 'static>> = match self.trigger_when.expect("trigger_when must be set") {
+            TriggerWhen::DecrementingToZero => &DECREMENTING_TO_ZERO,
+            TriggerWhen::AlreadyZero => &ALREADY_ZERO,
+        };
+
         DecrementingCounter {
-            enabled: false,
-            disabled_behavior: self.disabled_behavior.expect("when_disabled must be set."),
-            trigger_when: self.trigger_when.expect("trigger_when must be set."),
+            triggering_enabled: false,
             reload_when_triggered: self.reload_when_triggered.expect("reload_when_triggered must be set."),
             count: reload_value,
             reload_value,
             forced_reload_pending: false,
             decrement_size: self.decrement_size,
+            decrementer,
         }
     }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy)]
-pub enum DisabledBehavior {
-    DoNothing,
-    Tick,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy)]
