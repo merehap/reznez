@@ -45,32 +45,27 @@ trait DecrementingBehavior {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool;
 }
 
-static DECREMENTING_TO_ZERO: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(DecrementingToZero));
-static ALREADY_ZERO: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(AlreadyZero));
+static DECREMENTING_TO_ZERO: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(TriggerOnDecrementingToZero));
+static ALREADY_ZERO: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(TriggerOnAlreadyZero));
 
-struct DecrementingToZero;
+struct TriggerOnDecrementingToZero;
 
-impl DecrementingBehavior for DecrementingToZero {
+impl DecrementingBehavior for TriggerOnDecrementingToZero {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
         counter.count = counter.count.saturating_sub(counter.decrement_size);
 
-        let mut trigger_if_enabled = false;
-        if counter.count == 0 {
-            trigger_if_enabled = true;
-        }
-
-        if trigger_if_enabled && counter.reload_when_triggered {
+        let triggered = counter.triggering_enabled && counter.count == 0;
+        if triggered && counter.reload_when_triggered {
             counter.count = counter.reload_value;
         }
 
-        let triggered = counter.triggering_enabled && trigger_if_enabled;
         triggered
     }
 }
 
-struct AlreadyZero;
+struct TriggerOnAlreadyZero;
 
-impl DecrementingBehavior for AlreadyZero {
+impl DecrementingBehavior for TriggerOnAlreadyZero {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
         let mut trigger_if_enabled = false;
         if counter.count == 0 {
