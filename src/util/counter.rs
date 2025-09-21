@@ -1,13 +1,16 @@
 use std::sync::LazyLock;
 
 pub struct DecrementingCounter {
-    triggering_enabled: bool,
-    reload_when_triggered: bool,
-    count: u16,
-    reload_value: u16,
-    forced_reload_pending: bool,
+    // Immutable settings determined at compile time
+    auto_reload: bool,
     decrement_size: u16,
     decrementer: &'static LazyLock<Box<dyn DecrementingBehavior + Send + Sync + 'static>>,
+
+    // State
+    triggering_enabled: bool,
+    reload_value: u16,
+    count: u16,
+    forced_reload_pending: bool,
 }
 
 impl DecrementingCounter {
@@ -54,7 +57,7 @@ impl DecrementingBehavior for TriggerOnDecrementingToZero {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
         counter.count = counter.count.saturating_sub(counter.decrement_size);
 
-        if counter.count == 0 && counter.reload_when_triggered {
+        if counter.count == 0 && counter.auto_reload {
             counter.count = counter.reload_value;
         }
 
@@ -69,7 +72,7 @@ impl DecrementingBehavior for TriggerOnAlreadyZero {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
         let already_on_zero = counter.count == 0;
 
-        counter.count = if already_on_zero && counter.reload_when_triggered {
+        counter.count = if already_on_zero && counter.auto_reload {
             counter.reload_value
         } else {
             counter.count.saturating_sub(counter.decrement_size)
@@ -126,13 +129,13 @@ impl DecrementingCounterBuilder {
         };
 
         DecrementingCounter {
-            triggering_enabled: false,
-            reload_when_triggered: self.reload_when_triggered.expect("reload_when_triggered must be set."),
-            count: reload_value,
-            reload_value,
-            forced_reload_pending: false,
+            auto_reload: self.reload_when_triggered.expect("reload_when_triggered must be set."),
             decrement_size: self.decrement_size,
             decrementer,
+            triggering_enabled: false,
+            reload_value,
+            count: reload_value,
+            forced_reload_pending: false,
         }
     }
 }
