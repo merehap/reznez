@@ -70,7 +70,8 @@ impl Mapper for Mapper091_1 {
     }
 
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        if !self.irq_counter.enabled() {
+        // TODO: Check if this should call ticking_enabled() instead.
+        if !self.irq_counter.triggering_enabled() {
             return;
         }
 

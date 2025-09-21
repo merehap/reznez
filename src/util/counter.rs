@@ -14,7 +14,7 @@ pub struct DecrementingCounter {
 }
 
 impl DecrementingCounter {
-    pub fn enabled(&self) -> bool {
+    pub fn triggering_enabled(&self) -> bool {
         self.triggering_enabled
     }
 
