@@ -54,11 +54,11 @@ impl DecrementingBehavior for TriggerOnDecrementingToZero {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
         counter.count = counter.count.saturating_sub(counter.decrement_size);
 
-        let triggered = counter.triggering_enabled && counter.count == 0;
-        if triggered && counter.reload_when_triggered {
+        if counter.count == 0 && counter.reload_when_triggered {
             counter.count = counter.reload_value;
         }
 
+        let triggered = counter.count == 0 && counter.triggering_enabled;
         triggered
     }
 }
@@ -67,18 +67,15 @@ struct TriggerOnAlreadyZero;
 
 impl DecrementingBehavior for TriggerOnAlreadyZero {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
-        let mut trigger_if_enabled = false;
-        if counter.count == 0 {
-            trigger_if_enabled = true;
+        let already_on_zero = counter.count == 0;
+
+        counter.count = if already_on_zero && counter.reload_when_triggered {
+            counter.reload_value
         } else {
-            counter.count = counter.count.saturating_sub(counter.decrement_size);
-        }
+            counter.count.saturating_sub(counter.decrement_size)
+        };
 
-        if trigger_if_enabled && counter.reload_when_triggered {
-            counter.count = counter.reload_value;
-        }
-
-        let triggered = counter.triggering_enabled && trigger_if_enabled;
+        let triggered = already_on_zero && counter.triggering_enabled;
         triggered
     }
 }
