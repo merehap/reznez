@@ -11,6 +11,7 @@ pub struct DecrementingCounter {
     triggering_enabled: bool,
     reload_value: u16,
     count: u16,
+    forced_reload_pending: bool,
 }
 
 impl DecrementingCounter {
@@ -26,6 +27,10 @@ impl DecrementingCounter {
         self.triggering_enabled = false;
     }
 
+    pub fn set_reload_value(&mut self, value: u8) {
+        self.reload_value = u16::from(value);
+    }
+
     pub fn set_reload_value_low_byte(&mut self, value: u8) {
         self.reload_value = (self.reload_value & 0xFF00) | u16::from(value);
     }
@@ -38,11 +43,14 @@ impl DecrementingCounter {
         match self.forced_reload_behavior {
             //ForcedReloadBehavior::Disabled => panic!("forced_reload_timing must be specified in DecrementingCounterBuilder in order to call forced_reload"),
             ForcedReloadBehavior::Immediate => self.count = self.reload_value,
+            ForcedReloadBehavior::OnNextTick => self.forced_reload_pending = true,
         }
     }
 
-    pub fn decrement(&mut self) -> bool {
-        self.decrementer.decrement(self)
+    pub fn tick(&mut self) -> bool {
+        let triggered = self.decrementer.decrement(self);
+        self.forced_reload_pending = false;
+        triggered
     }
 }
 
@@ -58,7 +66,7 @@ struct TriggerOnDecrementingToZero;
 impl DecrementingBehavior for TriggerOnDecrementingToZero {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
         let zero_counter_reload = counter.count == 0 && counter.auto_reload;
-        counter.count = if zero_counter_reload {
+        counter.count = if zero_counter_reload || counter.forced_reload_pending {
             counter.reload_value
         } else {
             counter.count.saturating_sub(counter.decrement_size)
@@ -75,7 +83,7 @@ impl DecrementingBehavior for TriggerOnAlreadyZero {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
         let triggered = counter.triggering_enabled && counter.count == 0;
         let zero_counter_reload = counter.auto_reload && counter.count == 0;
-        counter.count = if zero_counter_reload {
+        counter.count = if zero_counter_reload || counter.forced_reload_pending {
             counter.reload_value
         } else {
             counter.count.saturating_sub(counter.decrement_size)
@@ -145,6 +153,7 @@ impl DecrementingCounterBuilder {
             triggering_enabled: false,
             reload_value,
             count: reload_value,
+            forced_reload_pending: false,
         }
     }
 }
@@ -158,5 +167,6 @@ pub enum TriggerWhen {
 #[derive(Clone, Copy)]
 pub enum ForcedReloadBehavior {
     //Disabled,
-    Immediate
+    Immediate,
+    OnNextTick,
 }

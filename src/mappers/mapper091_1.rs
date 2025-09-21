@@ -83,7 +83,7 @@ impl Mapper for Mapper091_1 {
 
         self.irq_sub_counter = 0;
 
-        let should_trigger_irq = self.irq_counter.decrement();
+        let should_trigger_irq = self.irq_counter.tick();
         if should_trigger_irq {
             // TODO: Is this commented-out reload necessary? Super Fighters 3 works the same without it.
             // SF3 is constantly force-reloading the IRQ counter, presumably because this isn't automatically done.

@@ -63,7 +63,7 @@ impl Mapper for Mapper091_0 {
     fn on_ppu_address_change(&mut self, mem: &mut Memory, address: PpuAddress) {
         let should_tick = self.pattern_table_transition_detector.set_value_then_detect(address.pattern_table_side());
         if should_tick {
-            let should_trigger_irq = self.irq_counter.decrement();
+            let should_trigger_irq = self.irq_counter.tick();
             if should_trigger_irq {
                 mem.cpu_pinout.set_mapper_irq_pending();
             }

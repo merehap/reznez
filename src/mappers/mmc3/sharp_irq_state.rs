@@ -1,15 +1,20 @@
+use crate::mapper::{DecrementingCounter, DecrementingCounterBuilder, ForcedReloadBehavior, TriggerWhen};
 use crate::mappers::mmc3::irq_state::IrqState;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::util::edge_detector::EdgeDetector;
 
+const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
+    .trigger_when(TriggerWhen::DecrementingToZero)
+    .auto_reload(true)
+    .forced_reload_behavior(ForcedReloadBehavior::OnNextTick)
+    .initial_reload_value(0)
+    .build();
+
 // Submapper 0
 pub struct SharpIrqState {
-    enabled: bool,
-    counter: u8,
-    force_reload_counter: bool,
-    counter_reload_value: u8,
+    irq_counter: DecrementingCounter,
     counter_suppression_cycles: u8,
     pattern_table_transition_detector: EdgeDetector<PatternTableSide, { PatternTableSide::Right }>,
 }
@@ -17,10 +22,7 @@ pub struct SharpIrqState {
 impl SharpIrqState {
     pub fn new() -> Self {
         Self {
-            enabled: false,
-            counter: 0,
-            force_reload_counter: false,
-            counter_reload_value: 0,
+            irq_counter: IRQ_COUNTER,
             counter_suppression_cycles: 0,
             pattern_table_transition_detector: EdgeDetector::new(),
         }
@@ -42,17 +44,8 @@ impl IrqState for SharpIrqState {
         }
 
         if should_tick_irq_counter {
-            //println!("Ticking IRQ counter. Current value: {}", self.counter);
-            if self.counter == 0 || self.force_reload_counter {
-                //println!("IRQ counter reloaded to {}", self.counter);
-                self.counter = self.counter_reload_value;
-                self.force_reload_counter = false;
-            } else {
-                self.counter -= 1;
-                //println!("IRQ counter decremented to {}", self.counter);
-            }
-
-            if self.enabled && self.counter == 0 {
+            let triggered = self.irq_counter.tick();
+            if triggered {
                 mem.cpu_pinout.set_mapper_irq_pending();
             }
         }
@@ -66,23 +59,22 @@ impl IrqState for SharpIrqState {
 
     // Write 0xC000 (even addresses)
     fn set_counter_reload_value(&mut self, value: u8) {
-        self.counter_reload_value = value;
+        self.irq_counter.set_reload_value(value);
     }
 
     // Write 0xC001 (odd addresses)
     fn reload_counter(&mut self) {
-        self.counter = 0;
-        self.force_reload_counter = true;
+        self.irq_counter.force_reload();
     }
 
     // Write 0xE000 (even addresses)
     fn disable(&mut self, mem: &mut Memory) {
-        self.enabled = false;
+        self.irq_counter.disable_triggering();
         mem.cpu_pinout.clear_mapper_irq_pending();
     }
 
     // Write 0xE001 (odd addresses)
     fn enable(&mut self) {
-        self.enabled = true;
+        self.irq_counter.enable_triggering();
     }
 }
