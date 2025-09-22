@@ -1,4 +1,4 @@
-use crate::mapper::{DecrementingCounter, DecrementingCounterBuilder, ForcedReloadBehavior, TriggerWhen};
+use crate::mapper::{DecrementingCounter, DecrementingCounterBuilder, ForcedReloadBehavior, TriggerOn};
 use crate::mappers::mmc3::irq_state::IrqState;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::PpuAddress;
@@ -6,10 +6,9 @@ use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::util::edge_detector::EdgeDetector;
 
 const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
-    .trigger_when(TriggerWhen::DecrementingToZero)
+    .trigger_on(TriggerOn::AnyTransitionToZero)
     .auto_reload(true)
     .forced_reload_behavior(ForcedReloadBehavior::OnNextTick)
-    .initial_reload_value(0)
     .build();
 
 // Submapper 0

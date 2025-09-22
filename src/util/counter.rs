@@ -58,12 +58,13 @@ trait DecrementingBehavior {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool;
 }
 
-static DECREMENTING_TO_ZERO: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(TriggerOnDecrementingToZero));
+static ANY_TRANSITION_TO_ZERO: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(TriggerOnAnyTransitionToZero));
+static ONE_TO_ZERO_TRANSITION: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(TriggerOnOneToZeroTransition));
 static ALREADY_ZERO: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(TriggerOnAlreadyZero));
 
-struct TriggerOnDecrementingToZero;
+struct TriggerOnAnyTransitionToZero;
 
-impl DecrementingBehavior for TriggerOnDecrementingToZero {
+impl DecrementingBehavior for TriggerOnAnyTransitionToZero {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
         let zero_counter_reload = counter.count == 0 && counter.auto_reload;
         counter.count = if zero_counter_reload || counter.forced_reload_pending {
@@ -77,10 +78,30 @@ impl DecrementingBehavior for TriggerOnDecrementingToZero {
     }
 }
 
+struct TriggerOnOneToZeroTransition;
+
+impl DecrementingBehavior for TriggerOnOneToZeroTransition {
+    fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
+        let zero_counter_reload = counter.count == 0 && counter.auto_reload;
+        let old_count = counter.count;
+        counter.count = if zero_counter_reload || counter.forced_reload_pending {
+            counter.reload_value
+        } else {
+            counter.count.saturating_sub(counter.decrement_size)
+        };
+
+        let triggered = counter.triggering_enabled && old_count == 1 && counter.count == 0;
+        triggered
+    }
+}
+
 struct TriggerOnAlreadyZero;
 
 impl DecrementingBehavior for TriggerOnAlreadyZero {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
+        // TODO: Determine if a forced reload needs to clear the counter before the actual reload occurs.
+        // Some documentation claims this. This would only be relevant for AlreadyZero behavior since it
+        // affects whether the counter is triggered or not during a forced reload.
         let triggered = counter.triggering_enabled && counter.count == 0;
         let zero_counter_reload = counter.auto_reload && counter.count == 0;
         counter.count = if zero_counter_reload || counter.forced_reload_pending {
@@ -95,26 +116,26 @@ impl DecrementingBehavior for TriggerOnAlreadyZero {
 
 #[derive(Clone, Copy)]
 pub struct DecrementingCounterBuilder {
-    trigger_when: Option<TriggerWhen>,
+    trigger_on: Option<TriggerOn>,
     auto_reload: Option<bool>,
     forced_reload_behavior: Option<ForcedReloadBehavior>,
-    initial_reload_value: Option<u16>,
+    initial_reload_value: u16,
     decrement_size: u16,
 }
 
 impl DecrementingCounterBuilder {
     pub const fn new() -> Self {
         Self {
-            trigger_when: None,
+            trigger_on: None,
             auto_reload: None,
             forced_reload_behavior: None,
-            initial_reload_value: None,
+            initial_reload_value: 0,
             decrement_size: 1,
         }
     }
 
-    pub const fn trigger_when(&mut self, trigger_when: TriggerWhen) -> &mut Self {
-        self.trigger_when = Some(trigger_when);
+    pub const fn trigger_on(&mut self, trigger_on: TriggerOn) -> &mut Self {
+        self.trigger_on = Some(trigger_on);
         self
     }
 
@@ -129,7 +150,7 @@ impl DecrementingCounterBuilder {
     }
 
     pub const fn initial_reload_value(&mut self, value: u16) -> &mut Self {
-        self.initial_reload_value = Some(value);
+        self.initial_reload_value = value;
         self
     }
 
@@ -139,10 +160,11 @@ impl DecrementingCounterBuilder {
     }
 
     pub const fn build(self) -> DecrementingCounter {
-        let reload_value = self.initial_reload_value.expect("initial_counter_reload_value must be set.");
-        let decrementer: &LazyLock<Box<dyn DecrementingBehavior + Send + Sync + 'static>> = match self.trigger_when.expect("trigger_when must be set") {
-            TriggerWhen::DecrementingToZero => &DECREMENTING_TO_ZERO,
-            TriggerWhen::AlreadyZero => &ALREADY_ZERO,
+        let reload_value = self.initial_reload_value;
+        let decrementer: &LazyLock<Box<dyn DecrementingBehavior + Send + Sync + 'static>> = match self.trigger_on.expect("trigger_when must be set") {
+            TriggerOn::AnyTransitionToZero => &ANY_TRANSITION_TO_ZERO,
+            TriggerOn::OneToZeroTransition => &ONE_TO_ZERO_TRANSITION,
+            TriggerOn::AlreadyZero => &ALREADY_ZERO,
         };
 
         DecrementingCounter {
@@ -159,8 +181,9 @@ impl DecrementingCounterBuilder {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy)]
-pub enum TriggerWhen {
-    DecrementingToZero,
+pub enum TriggerOn {
+    AnyTransitionToZero,
+    OneToZeroTransition,
     AlreadyZero,
 }
 

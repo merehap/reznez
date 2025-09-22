@@ -28,7 +28,7 @@ pub fn lookup_mapper(metadata_resolver: &MetadataResolver, cartridge: &Cartridge
         LookupResult::UnassignedSubmapper =>
             Err(format!("Submapper {} of mapper {number} is not in use. ROM: {cartridge_name}", sub_number.unwrap())),
         LookupResult::TodoMapper =>
-            Err(format!("Mapper {number}. ROM: {cartridge_name}")),
+            Err(format!("Mapper {number} is not supported yet. ROM: {cartridge_name}")),
         LookupResult::TodoSubmapper =>
             Err(format!("Submapper {}. ROM: {cartridge_name}", sub_number.unwrap())),
         LookupResult::UnspecifiedSubmapper =>

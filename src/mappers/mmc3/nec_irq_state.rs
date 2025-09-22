@@ -1,15 +1,22 @@
+use crate::mapper::{DecrementingCounter, DecrementingCounterBuilder, ForcedReloadBehavior, TriggerOn};
 use crate::mappers::mmc3::irq_state::IrqState;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::util::edge_detector::EdgeDetector;
 
+const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
+    // NEC triggers an IRQ when the counter transitions from 1 to 0,
+    // whether from decrement or forced reload.
+    .trigger_on(TriggerOn::OneToZeroTransition)
+    .auto_reload(true)
+    .forced_reload_behavior(ForcedReloadBehavior::OnNextTick)
+    .build();
+
 // Submapper 4
+// No test ROM exists to verify this behavior, but Super Game's Aladdin seems to work fine.
 pub struct NecIrqState {
-    enabled: bool,
-    counter: u8,
-    force_reload_counter: bool,
-    counter_reload_value: u8,
+    irq_counter: DecrementingCounter,
     counter_suppression_cycles: u8,
     pattern_table_transition_detector: EdgeDetector<PatternTableSide, { PatternTableSide::Right }>,
 }
@@ -17,10 +24,7 @@ pub struct NecIrqState {
 impl NecIrqState {
     pub fn new() -> Self {
         Self {
-            enabled: false,
-            counter: 0,
-            force_reload_counter: false,
-            counter_reload_value: 0,
+            irq_counter: IRQ_COUNTER,
             counter_suppression_cycles: 0,
             pattern_table_transition_detector: EdgeDetector::new(),
         }
@@ -40,17 +44,8 @@ impl IrqState for NecIrqState {
         }
 
         if should_tick_irq_counter {
-            let old_counter_value = self.counter;
-            if self.counter == 0 || self.force_reload_counter {
-                self.counter = self.counter_reload_value;
-                self.force_reload_counter = false;
-            } else {
-                self.counter -= 1;
-            }
-
-            // NEC triggers an IRQ when the counter transitions from 1 to 0,
-            // whether from decrement or forced reload.
-            if self.enabled && self.counter == 0 && old_counter_value == 1 {
+            let triggered = self.irq_counter.tick();
+            if triggered {
                 mem.cpu_pinout.set_mapper_irq_pending();
             }
         }
@@ -64,20 +59,24 @@ impl IrqState for NecIrqState {
 
     // Write 0xC000
     fn set_counter_reload_value(&mut self, value: u8) {
-        self.counter_reload_value = value;
+        if value == 0 {
+            // Unique behavior to NEC.
+            self.irq_counter.disable_triggering();
+        }
+
+        self.irq_counter.set_reload_value(value);
     }
 
     fn reload_counter(&mut self) {
-        self.counter = 0;
-        self.force_reload_counter = true;
+        self.irq_counter.force_reload();
     }
 
     fn disable(&mut self, mem: &mut Memory) {
-        self.enabled = false;
+        self.irq_counter.disable_triggering();
         mem.cpu_pinout.clear_mapper_irq_pending();
     }
 
     fn enable(&mut self) {
-        self.enabled = true;
+        self.irq_counter.enable_triggering();
     }
 }
