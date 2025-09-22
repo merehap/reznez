@@ -40,14 +40,14 @@ impl IrqState for RevAIrqState {
         }
 
         if should_tick_irq_counter {
-            let counter_started_positive = self.counter > 0;
+            let old_count = self.counter;
             if self.counter == 0 || self.force_reload_counter {
                 self.counter = self.counter_reload_value;
             } else {
                 self.counter -= 1;
             }
 
-            if self.enabled && self.counter == 0 && (counter_started_positive || self.force_reload_counter) {
+            if self.enabled && self.counter == 0 && (old_count == 1 || self.force_reload_counter) {
                 mem.cpu_pinout.set_mapper_irq_pending();
             }
 

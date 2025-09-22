@@ -5,6 +5,7 @@ use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::util::edge_detector::EdgeDetector;
 
 // Submapper 3
+// TODO: Testing. No test ROM exists for this submapper.
 pub struct McAccIrqState {
     enabled: bool,
     counter: u8,
