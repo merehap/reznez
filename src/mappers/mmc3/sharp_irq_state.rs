@@ -6,7 +6,7 @@ use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::util::edge_detector::EdgeDetector;
 
 const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
-    .trigger_on(TriggerOn::AnyTransitionToZero)
+    .trigger_on(TriggerOn::TransitionToZero)
     .auto_reload(true)
     .forced_reload_behavior(ForcedReloadBehavior::OnNextTick)
     .build();
