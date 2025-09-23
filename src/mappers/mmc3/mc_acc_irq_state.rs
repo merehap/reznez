@@ -11,8 +11,8 @@ pub struct McAccIrqState {
     counter: u8,
     force_reload_counter: bool,
     counter_reload_value: u8,
-    counter_suppression_cycles: u8,
-    pattern_table_transition_detector: EdgeDetector<PatternTableSide, { PatternTableSide::Right }>,
+    prescaler: u8,
+    pattern_table_transition_detector: EdgeDetector<PatternTableSide, { PatternTableSide::Left }>,
 }
 
 impl McAccIrqState {
@@ -22,7 +22,7 @@ impl McAccIrqState {
             counter: 0,
             force_reload_counter: false,
             counter_reload_value: 0,
-            counter_suppression_cycles: 0,
+            prescaler: 0,
             pattern_table_transition_detector: EdgeDetector::new(),
         }
     }
@@ -30,34 +30,35 @@ impl McAccIrqState {
 
 impl IrqState for McAccIrqState {
     fn tick_counter(&mut self, mem: &mut Memory, address: PpuAddress) {
-        if address.to_scroll_u16() >= 0x2000 {
+        let pattern_table_side_transitioned = self.pattern_table_transition_detector.set_value_then_detect(address.pattern_table_side());
+        if !pattern_table_side_transitioned {
             return;
         }
 
-        let edge_detected = self.pattern_table_transition_detector.set_value_then_detect(address.pattern_table_side());
-        let should_tick_irq_counter = edge_detected && self.counter_suppression_cycles == 0;
-        if address.pattern_table_side() == PatternTableSide::Left {
-            self.counter_suppression_cycles = 16;
+        if self.prescaler < 8 {
+            self.prescaler += 1;
+        } else {
+            self.prescaler = 0;
         }
 
-        if should_tick_irq_counter {
-            if self.counter == 0 || self.force_reload_counter {
-                self.counter = self.counter_reload_value;
-                self.force_reload_counter = false;
-            } else {
-                self.counter -= 1;
-            }
+        if self.prescaler != 1 {
+            return;
+        }
 
-            if self.enabled && self.counter == 0 {
-                mem.cpu_pinout.set_mapper_irq_pending();
-            }
+        if self.counter == 0 || self.force_reload_counter {
+            self.counter = self.counter_reload_value;
+            self.force_reload_counter = false;
+        } else {
+            self.counter -= 1;
+        }
+
+        if self.enabled && self.counter == 0 {
+            mem.cpu_pinout.set_mapper_irq_pending();
         }
     }
 
     fn decrement_suppression_cycle_count(&mut self) {
-        if self.counter_suppression_cycles > 0 {
-            self.counter_suppression_cycles -= 1;
-        }
+        // Nothing to do here for MC-ACC
     }
 
     fn set_counter_reload_value(&mut self, value: u8) {
@@ -65,7 +66,7 @@ impl IrqState for McAccIrqState {
     }
 
     fn reload_counter(&mut self) {
-        self.counter = 0;
+        self.prescaler = 0;
         self.force_reload_counter = true;
     }
 
