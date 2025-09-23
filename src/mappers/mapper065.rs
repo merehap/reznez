@@ -37,16 +37,18 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
+const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
+    .trigger_on(TriggerOn::EndingOnZero)
+    .auto_reload(false)
+    .forced_reload_behavior(ForcedReloadBehavior::Immediate)
+    .when_disabled(WhenDisabled::PreventTicking)
+    .build();
 
 const CHR_REGISTER_IDS: [ChrBankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
 
 // Irem's H3001
-// FIXME: Daiku no Gen San 2 - small scanline flickering during intro.
-#[derive(Default)]
 pub struct Mapper065 {
-    irq_enabled: bool,
-    irq_counter: u16,
-    irq_reload_value: u16,
+    irq_counter: DecrementingCounter,
 }
 
 impl Mapper for Mapper065 {
@@ -65,35 +67,40 @@ impl Mapper for Mapper065 {
             0x9001 => mem.set_name_table_mirroring(value >> 6),
 
             0x9003 => {
-                self.irq_enabled = splitbits_named!(value, "i.......");
-                mem.cpu_pinout.clear_mapper_irq_pending();
+                if value >> 7 == 1 {
+                    self.irq_counter.enable();
+                } else {
+                    self.irq_counter.disable();
+                }
             }
             0x9004 => {
-                self.irq_counter = self.irq_reload_value;
+                self.irq_counter.force_reload();
                 mem.cpu_pinout.clear_mapper_irq_pending();
             }
             0x9005 => {
-                self.irq_reload_value &= 0x00FF;
-                self.irq_reload_value |= u16::from(value) << 8;
+                self.irq_counter.set_reload_value_high_byte(value);
             }
             0x9006 => {
-                self.irq_reload_value &= 0xFF00;
-                self.irq_reload_value |= u16::from(value);
+                self.irq_counter.set_reload_value_low_byte(value);
             }
             _ => { /* Do nothing. */ }
         }
     }
 
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        if self.irq_enabled && self.irq_counter > 0 {
-            self.irq_counter -= 1;
-            if self.irq_counter == 0 {
-                mem.cpu_pinout.set_mapper_irq_pending();
-            }
+        let triggered = self.irq_counter.tick();
+        if triggered {
+            mem.cpu_pinout.set_mapper_irq_pending();
         }
     }
 
     fn layout(&self) -> Layout {
         LAYOUT
+    }
+}
+
+impl Mapper065 {
+    pub fn new() -> Self {
+        Self { irq_counter: IRQ_COUNTER }
     }
 }

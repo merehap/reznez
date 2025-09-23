@@ -244,7 +244,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // RAMBO-1
         (64, None) => m::mapper064::Mapper064::new().supported(),
         // Irem's H3001
-        (65, None) => m::mapper065::Mapper065::default().supported(),
+        (65, None) => m::mapper065::Mapper065::new().supported(),
         // GxROM (GNROM and MHROM)
         (66, None) => m::mapper066::Mapper066.supported(),
         // Sunsoft-3
