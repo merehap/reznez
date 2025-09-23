@@ -1,16 +1,21 @@
+use crate::mapper::{DecrementingCounter, DecrementingCounterBuilder, ForcedReloadBehavior, TriggerOn};
 use crate::mappers::mmc3::irq_state::IrqState;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::util::edge_detector::EdgeDetector;
 
+const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
+    .trigger_on(TriggerOn::EndingOnZero)
+    .auto_reload(true)
+    .forced_reload_behavior(ForcedReloadBehavior::OnNextTick)
+    .build();
+
 // Submapper 3
 // TODO: Testing. No test ROM exists for this submapper.
+// FIXME: IRQ is still a bit off.
 pub struct McAccIrqState {
-    enabled: bool,
-    counter: u8,
-    force_reload_counter: bool,
-    counter_reload_value: u8,
+    irq_counter: DecrementingCounter,
     prescaler: u8,
     pattern_table_transition_detector: EdgeDetector<PatternTableSide, { PatternTableSide::Left }>,
 }
@@ -18,10 +23,7 @@ pub struct McAccIrqState {
 impl McAccIrqState {
     pub fn new() -> Self {
         Self {
-            enabled: false,
-            counter: 0,
-            force_reload_counter: false,
-            counter_reload_value: 0,
+            irq_counter: IRQ_COUNTER,
             prescaler: 0,
             pattern_table_transition_detector: EdgeDetector::new(),
         }
@@ -35,25 +37,14 @@ impl IrqState for McAccIrqState {
             return;
         }
 
-        if self.prescaler < 8 {
-            self.prescaler += 1;
-        } else {
-            self.prescaler = 0;
-        }
+        self.prescaler += 1;
+        self.prescaler %= 8;
 
-        if self.prescaler != 1 {
-            return;
-        }
-
-        if self.counter == 0 || self.force_reload_counter {
-            self.counter = self.counter_reload_value;
-            self.force_reload_counter = false;
-        } else {
-            self.counter -= 1;
-        }
-
-        if self.enabled && self.counter == 0 {
-            mem.cpu_pinout.set_mapper_irq_pending();
+        if self.prescaler == 1 {
+            let triggered = self.irq_counter.tick();
+            if triggered {
+                mem.cpu_pinout.set_mapper_irq_pending();
+            }
         }
     }
 
@@ -62,20 +53,20 @@ impl IrqState for McAccIrqState {
     }
 
     fn set_counter_reload_value(&mut self, value: u8) {
-        self.counter_reload_value = value;
+        self.irq_counter.set_reload_value(value);
     }
 
     fn reload_counter(&mut self) {
         self.prescaler = 0;
-        self.force_reload_counter = true;
+        self.irq_counter.force_reload();
     }
 
     fn disable(&mut self, mem: &mut Memory) {
-        self.enabled = false;
+        self.irq_counter.disable_triggering();
         mem.cpu_pinout.clear_mapper_irq_pending();
     }
 
     fn enable(&mut self) {
-        self.enabled = true;
+        self.irq_counter.enable_triggering();
     }
 }

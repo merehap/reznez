@@ -67,7 +67,7 @@ trait DecrementingBehavior {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool;
 }
 
-static TRANSITION_TO_ZERO: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(TriggerOnTransitionToZero));
+static ENDING_ON_ZERO: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(TriggerOnTransitionToZero));
 static ONE_TO_ZERO_TRANSITION: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(TriggerOnOneToZeroTransition));
 static ALREADY_ZERO: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(TriggerOnAlreadyZero));
 
@@ -192,7 +192,7 @@ impl DecrementingCounterBuilder {
     pub const fn build(self) -> DecrementingCounter {
         let reload_value = self.initial_reload_value;
         let decrementer: &LazyLock<Box<dyn DecrementingBehavior + Send + Sync + 'static>> = match self.trigger_on.expect("trigger_when must be set") {
-            TriggerOn::TransitionToZero => &TRANSITION_TO_ZERO,
+            TriggerOn::EndingOnZero => &ENDING_ON_ZERO,
             TriggerOn::OneToZeroTransition => &ONE_TO_ZERO_TRANSITION,
             TriggerOn::AlreadyZero => &ALREADY_ZERO,
         };
@@ -214,7 +214,7 @@ impl DecrementingCounterBuilder {
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum TriggerOn {
-    TransitionToZero,
+    EndingOnZero,
     OneToZeroTransition,
     AlreadyZero,
 }
