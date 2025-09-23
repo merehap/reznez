@@ -1,4 +1,5 @@
 use crate::mapper::*;
+use crate::util::counter::WhenDisabled;
 use crate::util::edge_detector::EdgeDetector;
 
 const LAYOUT: Layout = Layout::builder()
@@ -26,6 +27,7 @@ const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
     .forced_reload_behavior(ForcedReloadBehavior::Immediate)
     // The reload value is never changed from the initial value for this submapper.
     .initial_reload_value(64)
+    .when_disabled(WhenDisabled::PreventTriggering)
     .build();
 
 // J.Y. Company JY830623C and YY840238C

@@ -3,12 +3,14 @@ use crate::mappers::mmc3::irq_state::IrqState;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
+use crate::util::counter::WhenDisabled;
 use crate::util::edge_detector::EdgeDetector;
 
 const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
     .trigger_on(TriggerOn::EndingOnZero)
     .auto_reload(true)
     .forced_reload_behavior(ForcedReloadBehavior::OnNextTick)
+    .when_disabled(WhenDisabled::PreventTriggering)
     .build();
 
 // Submapper 0

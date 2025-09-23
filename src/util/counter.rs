@@ -5,11 +5,13 @@ pub struct DecrementingCounter {
     trigger_on_forced_reload_of_zero: bool,
     forced_reload_behavior: ForcedReloadBehavior,
     auto_reload: bool,
+    when_disabled: WhenDisabled,
     decrement_size: u16,
     decrementer: &'static LazyLock<Box<dyn DecrementingBehavior + Send + Sync + 'static>>,
 
     // State
     triggering_enabled: bool,
+    ticking_enabled: bool,
     reload_value: u16,
     count: u16,
     forced_reload_pending: bool,
@@ -17,16 +19,21 @@ pub struct DecrementingCounter {
 }
 
 impl DecrementingCounter {
+    // TODO: Try to stop exposing this publicly.
     pub fn triggering_enabled(&self) -> bool {
         self.triggering_enabled
     }
 
     pub fn enable(&mut self) {
         self.triggering_enabled = true;
+        self.ticking_enabled = true;
     }
 
     pub fn disable(&mut self) {
-        self.triggering_enabled = false;
+        match self.when_disabled {
+            WhenDisabled::PreventTriggering => self.triggering_enabled = false,
+            WhenDisabled::PreventTicking => self.ticking_enabled = false,
+        }
     }
 
     pub fn set_reload_value(&mut self, value: u8) {
@@ -75,14 +82,15 @@ struct TriggerOnTransitionToZero;
 
 impl DecrementingBehavior for TriggerOnTransitionToZero {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
-        let zero_counter_reload = counter.count == 0 && counter.auto_reload;
-
-        let should_reload = zero_counter_reload || counter.forced_reload_pending;
-        counter.count = if should_reload {
-            counter.reload_value
-        } else {
-            counter.count.saturating_sub(counter.decrement_size)
-        };
+        if counter.ticking_enabled {
+            let zero_counter_reload = counter.count == 0 && counter.auto_reload;
+            let should_reload = zero_counter_reload || counter.forced_reload_pending;
+            counter.count = if should_reload {
+                counter.reload_value
+            } else {
+                counter.count.saturating_sub(counter.decrement_size)
+            };
+        }
 
         let triggered_by_zero_result = counter.count == 0;
         let mut triggered_by_forcing = counter.trigger_on_forced_reload_of_zero && counter.forced_reload_pending && counter.reload_value == 0;
@@ -97,13 +105,16 @@ struct TriggerOnOneToZeroTransition;
 impl DecrementingBehavior for TriggerOnOneToZeroTransition {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
         let old_count = counter.count;
-        let zero_counter_reload = old_count == 0 && counter.auto_reload;
-        let should_reload = zero_counter_reload || counter.forced_reload_pending;
-        counter.count = if should_reload {
-            counter.reload_value
-        } else {
-            counter.count.saturating_sub(counter.decrement_size)
-        };
+
+        if counter.ticking_enabled {
+            let zero_counter_reload = old_count == 0 && counter.auto_reload;
+            let should_reload = zero_counter_reload || counter.forced_reload_pending;
+            counter.count = if should_reload {
+                counter.reload_value
+            } else {
+                counter.count.saturating_sub(counter.decrement_size)
+            };
+        }
 
         let triggered_by_one_to_zero_transition = old_count == 1 && counter.count == 0;
         let mut triggered_by_forcing = counter.trigger_on_forced_reload_of_zero && counter.forced_reload_pending && counter.reload_value == 0;
@@ -119,13 +130,15 @@ impl DecrementingBehavior for TriggerOnAlreadyZero {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
         let triggered_by_already_zero = counter.count == 0;
 
-        let zero_counter_reload = counter.count == 0 && counter.auto_reload;
-        let should_reload = zero_counter_reload || counter.forced_reload_pending;
-        counter.count = if should_reload {
-            counter.reload_value
-        } else {
-            counter.count.saturating_sub(counter.decrement_size)
-        };
+        if counter.ticking_enabled {
+            let zero_counter_reload = counter.count == 0 && counter.auto_reload;
+            let should_reload = zero_counter_reload || counter.forced_reload_pending;
+            counter.count = if should_reload {
+                counter.reload_value
+            } else {
+                counter.count.saturating_sub(counter.decrement_size)
+            };
+        }
 
         // TODO: Determine if a forced reload needs to clear the counter before the reloading actually occurs.
         // Some documentation claims this. This would only be relevant for AlreadyZero behavior since it
@@ -143,6 +156,7 @@ pub struct DecrementingCounterBuilder {
     trigger_on_forced_reload_of_zero: bool,
     auto_reload: Option<bool>,
     forced_reload_behavior: Option<ForcedReloadBehavior>,
+    when_disabled: Option<WhenDisabled>,
     initial_reload_value: u16,
     decrement_size: u16,
 }
@@ -154,6 +168,7 @@ impl DecrementingCounterBuilder {
             trigger_on_forced_reload_of_zero: false,
             auto_reload: None,
             forced_reload_behavior: None,
+            when_disabled: None,
             initial_reload_value: 0,
             decrement_size: 1,
         }
@@ -179,6 +194,11 @@ impl DecrementingCounterBuilder {
         self
     }
 
+    pub const fn when_disabled(&mut self, when_disabled: WhenDisabled) -> &mut Self {
+        self.when_disabled = Some(when_disabled);
+        self
+    }
+
     pub const fn initial_reload_value(&mut self, value: u16) -> &mut Self {
         self.initial_reload_value = value;
         self
@@ -197,13 +217,23 @@ impl DecrementingCounterBuilder {
             TriggerOn::AlreadyZero => &ALREADY_ZERO,
         };
 
+        let when_disabled = self.when_disabled.expect("when_disabled must be set");
+        let ticking_enabled = match when_disabled {
+            // Counters that CANNOT disable ticking will always have ticking enabled.
+            WhenDisabled::PreventTriggering => true,
+            // Counters that CAN disable ticking should START with ticking disabled.
+            WhenDisabled::PreventTicking => false,
+        };
+
         DecrementingCounter {
             forced_reload_behavior: self.forced_reload_behavior.expect("forced_reload_behavior must be set"),
             trigger_on_forced_reload_of_zero: self.trigger_on_forced_reload_of_zero,
-            auto_reload: self.auto_reload.expect("auto_reload must be set."),
+            auto_reload: self.auto_reload.expect("auto_reload must be set"),
+            when_disabled,
             decrement_size: self.decrement_size,
             decrementer,
             triggering_enabled: false,
+            ticking_enabled,
             reload_value,
             count: reload_value,
             forced_reload_pending: false,
@@ -219,9 +249,15 @@ pub enum TriggerOn {
     AlreadyZero,
 }
 
-#[derive(Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum ForcedReloadBehavior {
     //Disabled,
     Immediate,
     OnNextTick,
+}
+
+#[derive(Clone, Copy)]
+pub enum WhenDisabled {
+    PreventTriggering,
+    PreventTicking,
 }
