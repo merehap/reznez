@@ -6,8 +6,6 @@ use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::util::edge_detector::EdgeDetector;
 
 const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
-    // NEC triggers an IRQ when the counter transitions from 1 to 0,
-    // whether from decrement or forced reload.
     .trigger_on(TriggerOn::OneToZeroTransition)
     .auto_reload(true)
     .forced_reload_behavior(ForcedReloadBehavior::OnNextTick)
@@ -61,7 +59,7 @@ impl IrqState for NecIrqState {
     fn set_counter_reload_value(&mut self, value: u8) {
         if value == 0 {
             // Unique behavior to NEC.
-            self.irq_counter.disable_triggering();
+            self.irq_counter.disable();
         }
 
         self.irq_counter.set_reload_value(value);
@@ -72,11 +70,11 @@ impl IrqState for NecIrqState {
     }
 
     fn disable(&mut self, mem: &mut Memory) {
-        self.irq_counter.disable_triggering();
+        self.irq_counter.disable();
         mem.cpu_pinout.clear_mapper_irq_pending();
     }
 
     fn enable(&mut self) {
-        self.irq_counter.enable_triggering();
+        self.irq_counter.enable();
     }
 }

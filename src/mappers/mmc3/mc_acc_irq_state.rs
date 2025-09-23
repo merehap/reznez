@@ -62,11 +62,11 @@ impl IrqState for McAccIrqState {
     }
 
     fn disable(&mut self, mem: &mut Memory) {
-        self.irq_counter.disable_triggering();
+        self.irq_counter.disable();
         mem.cpu_pinout.clear_mapper_irq_pending();
     }
 
     fn enable(&mut self) {
-        self.irq_counter.enable_triggering();
+        self.irq_counter.enable();
     }
 }

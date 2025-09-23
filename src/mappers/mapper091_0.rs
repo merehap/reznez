@@ -44,11 +44,11 @@ impl Mapper for Mapper091_0 {
             0x7000 => mem.set_prg_register(P0, value & 0b00001111),
             0x7001 => mem.set_prg_register(P1, value & 0b00001111),
             0x7002 => {
-                self.irq_counter.disable_triggering();
+                self.irq_counter.disable();
                 mem.cpu_pinout.clear_mapper_irq_pending();
             }
             0x7003 => {
-                self.irq_counter.enable_triggering();
+                self.irq_counter.enable();
                 self.irq_counter.force_reload();
             }
             0x8000..=0x9FFF => {

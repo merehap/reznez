@@ -21,11 +21,11 @@ impl DecrementingCounter {
         self.triggering_enabled
     }
 
-    pub fn enable_triggering(&mut self) {
+    pub fn enable(&mut self) {
         self.triggering_enabled = true;
     }
 
-    pub fn disable_triggering(&mut self) {
+    pub fn disable(&mut self) {
         self.triggering_enabled = false;
     }
 

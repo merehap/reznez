@@ -68,12 +68,12 @@ impl IrqState for SharpIrqState {
 
     // Write 0xE000 (even addresses)
     fn disable(&mut self, mem: &mut Memory) {
-        self.irq_counter.disable_triggering();
+        self.irq_counter.disable();
         mem.cpu_pinout.clear_mapper_irq_pending();
     }
 
     // Write 0xE001 (odd addresses)
     fn enable(&mut self) {
-        self.irq_counter.enable_triggering();
+        self.irq_counter.enable();
     }
 }
