@@ -66,8 +66,46 @@ impl Mapper for Mapper069 {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x9FFF => self.set_command(value),
-            0xA000..=0xBFFF => self.execute_command(mem, value),
+            0x8000..=0x9FFF => {
+                let value = usize::from(value) & 0b0000_1111;
+                self.command = match value {
+                    0x0..=0x7 => Command::ChrRomBank(CHR_REGISTER_IDS[value]),
+                    0x8       => Command::PrgRomRamBank,
+                    0x9..=0xB => Command::PrgRomBank(PRG_ROM_REGISTER_IDS[value - 0x9]),
+                    0xC       => Command::NameTableMirroring,
+                    0xD       => Command::IrqControl,
+                    0xE       => Command::IrqCounterLowByte,
+                    0xF       => Command::IrqCounterHighByte,
+                    _ => unreachable!(),
+                }
+            }
+            0xA000..=0xBFFF => {
+                match self.command {
+                    Command::ChrRomBank(id) =>
+                        mem.set_chr_register(id, value),
+                    Command::PrgRomRamBank => {
+                        let fields = splitbits!(value, "smpppppp");
+                        mem.set_read_write_status(S0, fields.s as u8);
+                        let rom_ram_mode = [MemType::Rom, MemType::WorkRam][fields.m as usize];
+                        mem.set_rom_ram_mode(R0, rom_ram_mode);
+                        mem.set_prg_register(P0, fields.p);
+                    }
+                    Command::PrgRomBank(id) =>
+                        mem.set_prg_register(id, value),
+                    Command::NameTableMirroring =>
+                        mem.set_name_table_mirroring(value & 0b11),
+                    Command::IrqControl => {
+                        mem.cpu_pinout.clear_mapper_irq_pending();
+                        let (counter_ticking_enabled, irq_triggering_enabled) = splitbits_named!(value, "c......i");
+                        self.irq_counter.set_ticking_enabled(counter_ticking_enabled);
+                        self.irq_counter.set_triggering_enabled(irq_triggering_enabled);
+                    }
+                    Command::IrqCounterLowByte =>
+                        self.irq_counter.set_count_low_byte(value),
+                    Command::IrqCounterHighByte =>
+                        self.irq_counter.set_count_high_byte(value),
+                }
+            }
             0xC000..=0xFFFF => { /* Do nothing. */ }
         }
     }
@@ -83,48 +121,6 @@ impl Mapper069 {
             irq_counter: IRQ_COUNTER,
             // TODO: Verify that this is the correct startup value.
             command: Command::ChrRomBank(C0),
-        }
-    }
-
-    fn set_command(&mut self, value: u8) {
-        let value = usize::from(value) & 0b0000_1111;
-        self.command = match value {
-            0x0..=0x7 => Command::ChrRomBank(CHR_REGISTER_IDS[value]),
-            0x8       => Command::PrgRomRamBank,
-            0x9..=0xB => Command::PrgRomBank(PRG_ROM_REGISTER_IDS[value - 0x9]),
-            0xC       => Command::NameTableMirroring,
-            0xD       => Command::IrqControl,
-            0xE       => Command::IrqCounterLowByte,
-            0xF       => Command::IrqCounterHighByte,                       
-            _ => unreachable!(),
-        }
-    }
-
-    fn execute_command(&mut self, mem: &mut Memory, value: u8) {
-        match self.command {
-            Command::ChrRomBank(id) =>
-                mem.set_chr_register(id, value),
-            Command::PrgRomRamBank => {
-                let fields = splitbits!(value, "smpppppp");
-                mem.set_read_write_status(S0, fields.s as u8);
-                let rom_ram_mode = [MemType::Rom, MemType::WorkRam][fields.m as usize];
-                mem.set_rom_ram_mode(R0, rom_ram_mode);
-                mem.set_prg_register(P0, fields.p);
-            }
-            Command::PrgRomBank(id) =>
-                mem.set_prg_register(id, value),
-            Command::NameTableMirroring =>
-                mem.set_name_table_mirroring(value & 0b11),
-            Command::IrqControl => {
-                mem.cpu_pinout.clear_mapper_irq_pending();
-                let (counter_ticking_enabled, irq_triggering_enabled) = splitbits_named!(value, "c......i");
-                self.irq_counter.set_ticking_enabled(counter_ticking_enabled);
-                self.irq_counter.set_triggering_enabled(irq_triggering_enabled);
-            }
-            Command::IrqCounterLowByte =>
-                self.irq_counter.set_count_low_byte(value),
-            Command::IrqCounterHighByte =>
-                self.irq_counter.set_count_high_byte(value),
         }
     }
 }
