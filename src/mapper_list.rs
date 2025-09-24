@@ -248,7 +248,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // GxROM (GNROM and MHROM)
         (66, None) => m::mapper066::Mapper066.supported(),
         // Sunsoft-3
-        (67, None) => m::mapper067::Mapper067::default().supported(),
+        (67, None) => m::mapper067::Mapper067::new().supported(),
         (68, _) => TodoMapper,
         // Sunsoft FME-7
         (69, None) => m::mapper069::Mapper069::new().supported(),

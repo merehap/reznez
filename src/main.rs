@@ -1,6 +1,8 @@
 #![feature(if_let_guard)]
 #![feature(type_ascription)]
 #![feature(const_for)]
+#![feature(const_option_ops)]
+#![feature(const_trait_impl)]
 #![feature(generic_const_parameter_types)]
 #![feature(adt_const_params)]
 #![feature(unsized_const_params)]
@@ -57,7 +59,7 @@ fn main() {
             .map_err(|err| format!("Failed to start REZNEZ. {err}"))
             .unwrap();
         assert_eq!(nes.resolved_metadata().console_type, ConsoleType::NesFamiconDendy);
-        assert_eq!(nes.resolved_metadata().miscellaneous_rom_count, 0);
+        assert_eq!(nes.resolved_metadata().miscellaneous_rom_count, 0, "Miscellaneous ROM sections not yet supported.");
         assert!(matches!(nes.resolved_metadata().region_timing_mode, TimingMode::Ntsc | TimingMode::MultiRegion));
         assert!(nes.resolved_metadata().vs.is_none());
 

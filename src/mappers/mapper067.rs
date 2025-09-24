@@ -23,11 +23,21 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
+// Sunsoft-3 IRQ both auto-reloads (by wrapping around), and has its count set directly,
+// rather through modifying a reload value and copying that to the count.
+const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
+    .trigger_on(TriggerOn::AlreadyZero)
+    .auto_reload(true)
+    .forced_reload_behavior(ForcedReloadBehavior::DirectlySetCount)
+    .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
+    // This value is never changed. Reloading to 0xFFFF is the same thing as just letting the count wrap around.
+    .initial_reload_value(0xFFFF)
+    .initial_count(0)
+    .build();
+
 // Sunsoft-3
-#[derive(Default)]
 pub struct Mapper067 {
-    irq_enabled: bool,
-    irq_counter: u16,
+    irq_counter: DecrementingCounter,
     irq_load_low: bool,
 }
 
@@ -41,40 +51,46 @@ impl Mapper for Mapper067 {
             0x9800..=0xA7FF => mem.set_chr_register(C1, value & 0b0011_1111),
             0xA800..=0xB7FF => mem.set_chr_register(C2, value & 0b0011_1111),
             0xB800..=0xC7FF => mem.set_chr_register(C3, value & 0b0011_1111),
+            0xE800..=0xF7FF => mem.set_name_table_mirroring(value & 0b11),
+            0xF800..=0xFFFF => mem.set_prg_register(P0, value & 0b1111),
+
             0xC800..=0xD7FF => {
                 if self.irq_load_low {
-                    self.irq_counter &= 0xFF00;
-                    self.irq_counter |= u16::from(value);
+                    self.irq_counter.set_count_low_byte(value);
                 } else {
-                    // Load high byte.
-                    self.irq_counter &= 0x00FF;
-                    self.irq_counter |= u16::from(value) << 8;
+                    self.irq_counter.set_count_high_byte(value);
                 }
 
                 self.irq_load_low = !self.irq_load_low;
             }
             0xD800..=0xE7FF => {
                 self.irq_load_low = false;
-                self.irq_enabled = value & 0b0001_0000 != 0;
+                if value & 0b0001_0000 == 0 {
+                    self.irq_counter.disable();
+                } else {
+                    self.irq_counter.enable();
+                }
             }
-            0xE800..=0xF7FF => mem.set_name_table_mirroring(value & 0b11),
-            0xF800..=0xFFFF => mem.set_prg_register(P0, value & 0b1111),
         }
     }
 
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        if !self.irq_enabled {
-            return;
-        }
-
-        self.irq_counter = self.irq_counter.wrapping_sub(1);
-        if self.irq_counter == 0xFFFF {
+        let triggered = self.irq_counter.tick();
+        if triggered {
             mem.cpu_pinout.set_mapper_irq_pending();
-            self.irq_enabled = false;
         }
     }
 
     fn layout(&self) -> Layout {
         LAYOUT
+    }
+}
+
+impl Mapper067 {
+    pub fn new() -> Self {
+        Self {
+            irq_counter: IRQ_COUNTER,
+            irq_load_low: false,
+        }
     }
 }

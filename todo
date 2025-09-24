@@ -99,6 +99,9 @@ Don Doko Don 2 (SMB 8) and others: Fix IRQ behavior to prevent flickering
 MAPPER 66
 Dragon Ball - Goku can't move to spots he should be able to.
 
+MAPPER 67
+Fantasy Zone 2 - The Teardrop of Opa-Opa: Flickering scanline during intro (Mesen has the same problem)
+
 MAPPER 71
 Fantastic Adventures of Dizzy - Status bar jumps a scanline or two, some sprites flicker. Sprites over the character intros.
 Fire Hawk: Can't move helicopter. Broken name table display. Need better DMC implementation.

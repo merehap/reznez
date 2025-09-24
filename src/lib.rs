@@ -1,6 +1,8 @@
 #![feature(if_let_guard)]
 #![feature(type_ascription)]
 #![feature(const_for)]
+#![feature(const_option_ops)]
+#![feature(const_trait_impl)]
 #![feature(generic_const_parameter_types)]
 #![feature(adt_const_params)]
 #![feature(unsized_const_params)]

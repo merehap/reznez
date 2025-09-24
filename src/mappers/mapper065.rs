@@ -40,8 +40,8 @@ const LAYOUT: Layout = Layout::builder()
 const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
     .trigger_on(TriggerOn::EndingOnZero)
     .auto_reload(false)
-    .forced_reload_behavior(ForcedReloadBehavior::Immediate)
-    .when_disabled(WhenDisabled::PreventTicking)
+    .forced_reload_behavior(ForcedReloadBehavior::ImmediatelySetReloadValue)
+    .when_disabled_prevent(WhenDisabledPrevent::Ticking)
     .build();
 
 const CHR_REGISTER_IDS: [ChrBankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];

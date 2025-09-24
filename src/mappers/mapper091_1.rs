@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::util::counter::WhenDisabled;
+use crate::util::counter::WhenDisabledPrevent;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
@@ -29,9 +29,9 @@ const VERTICAL: u8 = 1;
 const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
     .trigger_on(TriggerOn::EndingOnZero)
     .auto_reload(false)
-    .forced_reload_behavior(ForcedReloadBehavior::Immediate)
+    .forced_reload_behavior(ForcedReloadBehavior::ImmediatelySetReloadValue)
     .decrement_size(5)
-    .when_disabled(WhenDisabled::PreventTriggering)
+    .when_disabled_prevent(WhenDisabledPrevent::Triggering)
     .build();
 
 // J.Y. Company JY830623C and YY840238C
