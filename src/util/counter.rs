@@ -114,19 +114,8 @@ struct TriggerOnTransitionToZero;
 
 impl DecrementingBehavior for TriggerOnTransitionToZero {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
-        if counter.ticking_enabled {
-            let zero_counter_reload = counter.count == 0 && counter.auto_reload;
-            let should_reload = zero_counter_reload || counter.forced_reload_pending;
-            counter.count = if should_reload {
-                counter.reload_value
-            } else {
-                counter.count.saturating_sub(counter.decrement_size)
-            };
-        }
-
+        let triggered_by_forcing = decrement(counter);
         let triggered_by_zero_result = counter.count == 0;
-        let mut triggered_by_forcing = counter.trigger_on_forced_reload_of_zero && counter.forced_reload_pending && counter.reload_value == 0;
-        triggered_by_forcing |= counter.forced_trigger_pending;
         let trigger_if_enabled = triggered_by_zero_result || triggered_by_forcing;
         trigger_if_enabled && counter.triggering_enabled
     }
@@ -137,20 +126,9 @@ struct TriggerOnOneToZeroTransition;
 impl DecrementingBehavior for TriggerOnOneToZeroTransition {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
         let old_count = counter.count;
-
-        if counter.ticking_enabled {
-            let zero_counter_reload = old_count == 0 && counter.auto_reload;
-            let should_reload = zero_counter_reload || counter.forced_reload_pending;
-            counter.count = if should_reload {
-                counter.reload_value
-            } else {
-                counter.count.saturating_sub(counter.decrement_size)
-            };
-        }
-
-        let triggered_by_one_to_zero_transition = old_count == 1 && counter.count == 0;
-        let mut triggered_by_forcing = counter.trigger_on_forced_reload_of_zero && counter.forced_reload_pending && counter.reload_value == 0;
-        triggered_by_forcing |= counter.forced_trigger_pending;
+        let triggered_by_forcing = decrement(counter);
+        let new_count = counter.count;
+        let triggered_by_one_to_zero_transition = old_count == 1 && new_count == 0;
         let trigger_if_enabled = triggered_by_one_to_zero_transition || triggered_by_forcing;
         trigger_if_enabled && counter.triggering_enabled
     }
@@ -161,25 +139,29 @@ struct TriggerOnAlreadyZero;
 impl DecrementingBehavior for TriggerOnAlreadyZero {
     fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
         let triggered_by_already_zero = counter.count == 0;
-
-        if counter.ticking_enabled {
-            let zero_counter_reload = counter.count == 0 && counter.auto_reload;
-            let should_reload = zero_counter_reload || counter.forced_reload_pending;
-            counter.count = if should_reload {
-                counter.reload_value
-            } else {
-                counter.count.saturating_sub(counter.decrement_size)
-            };
-        }
-
-        // TODO: Determine if a forced reload needs to clear the counter before the reloading actually occurs.
-        // Some documentation claims this. This would only be relevant for AlreadyZero behavior since it
-        // affects whether the counter is triggered or not during a forced reload.
-        let mut triggered_by_forcing = counter.trigger_on_forced_reload_of_zero && counter.forced_reload_pending && counter.reload_value == 0;
-        triggered_by_forcing |= counter.forced_trigger_pending;
+        let triggered_by_forcing = decrement(counter);
         let trigger_if_enabled = triggered_by_already_zero || triggered_by_forcing;
         trigger_if_enabled && counter.triggering_enabled
     }
+}
+
+fn decrement(counter: &mut DecrementingCounter) -> bool {
+    if counter.ticking_enabled {
+        let zero_counter_reload = counter.count == 0 && counter.auto_reload;
+        let should_reload = zero_counter_reload || counter.forced_reload_pending;
+        counter.count = if should_reload {
+            counter.reload_value
+        } else {
+            counter.count.saturating_sub(counter.decrement_size)
+        };
+    }
+
+    // TODO: Determine if a forced reload needs to clear the counter before the reloading actually occurs.
+    // Some documentation claims this. This would only be relevant for AlreadyZero behavior since it
+    // affects whether the counter is triggered or not during a forced reload.
+    let mut triggered_by_forcing = counter.trigger_on_forced_reload_of_zero && counter.forced_reload_pending && counter.reload_value == 0;
+    triggered_by_forcing |= counter.forced_trigger_pending;
+    triggered_by_forcing
 }
 
 #[derive(Clone, Copy)]
