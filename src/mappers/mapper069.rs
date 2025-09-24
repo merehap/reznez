@@ -35,9 +35,9 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
-    .trigger_on(TriggerOn::AlreadyZero)
+    .auto_trigger_on(AutoTriggeredBy::AlreadyZero)
     .auto_reload(true)
-    .forced_reload_behavior(ForcedReloadBehavior::DirectlySetCount)
+    .forced_reload_behavior(ForcedReloadBehavior::SetCountDirectly)
     .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
     // This value is never changed. Reloading to 0xFFFF is the same thing as just letting the count wrap around.
     .initial_reload_value(0xFFFF)

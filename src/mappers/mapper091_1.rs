@@ -27,9 +27,9 @@ const HORIZONTAL: u8 = 0;
 const VERTICAL: u8 = 1;
 
 const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
-    .trigger_on(TriggerOn::EndingOnZero)
+    .auto_trigger_on(AutoTriggeredBy::EndingOnZero)
     .auto_reload(false)
-    .forced_reload_behavior(ForcedReloadBehavior::ImmediatelySetReloadValue)
+    .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueImmediately)
     .decrement_size(5)
     .when_disabled_prevent(WhenDisabledPrevent::Triggering)
     .build();

@@ -1,13 +1,11 @@
-use std::sync::LazyLock;
-
 pub struct DecrementingCounter {
     // Immutable settings determined at compile time
+    trigger_on: AutoTriggeredBy,
     trigger_on_forced_reload_of_zero: bool,
     forced_reload_behavior: ForcedReloadBehavior,
     auto_reload: bool,
     when_disabled_prevent: WhenDisabledPrevent,
     decrement_size: u16,
-    decrementer: &'static LazyLock<Box<dyn DecrementingBehavior + Send + Sync + 'static>>,
 
     // State
     triggering_enabled: bool,
@@ -51,39 +49,39 @@ impl DecrementingCounter {
     }
 
     pub fn set_reload_value(&mut self, value: u8) {
-        assert!(self.forced_reload_behavior != ForcedReloadBehavior::DirectlySetCount,
+        assert!(self.forced_reload_behavior != ForcedReloadBehavior::SetCountDirectly,
             "When forced_reload_behavior == DirectlySetCount, use set_count_X() instead of set_reload_value_X()");
         self.reload_value = u16::from(value);
     }
 
     pub fn set_reload_value_low_byte(&mut self, value: u8) {
-        assert!(self.forced_reload_behavior != ForcedReloadBehavior::DirectlySetCount,
+        assert!(self.forced_reload_behavior != ForcedReloadBehavior::SetCountDirectly,
             "When forced_reload_behavior == DirectlySetCount, use set_count_X() instead of set_reload_value_X()");
         self.reload_value = (self.reload_value & 0xFF00) | u16::from(value);
     }
 
     pub fn set_reload_value_high_byte(&mut self, value: u8) {
-        assert!(self.forced_reload_behavior != ForcedReloadBehavior::DirectlySetCount,
+        assert!(self.forced_reload_behavior != ForcedReloadBehavior::SetCountDirectly,
             "When forced_reload_behavior == DirectlySetCount, use set_count_X() instead of set_reload_value_X()");
         self.reload_value = (self.reload_value & 0x00FF) | (u16::from(value) << 8);
     }
 
     pub fn set_count_low_byte(&mut self, value: u8) {
-        assert_eq!(self.forced_reload_behavior, ForcedReloadBehavior::DirectlySetCount,
+        assert_eq!(self.forced_reload_behavior, ForcedReloadBehavior::SetCountDirectly,
             "Must use forced_reload_behavior == DirectlySetCount in order to call set_count_X()");
         self.count = (self.count & 0xFF00) | u16::from(value);
     }
 
     pub fn set_count_high_byte(&mut self, value: u8) {
-        assert_eq!(self.forced_reload_behavior, ForcedReloadBehavior::DirectlySetCount,
+        assert_eq!(self.forced_reload_behavior, ForcedReloadBehavior::SetCountDirectly,
             "Must use forced_reload_behavior == DirectlySetCount in order to call set_count_X()");
         self.count = (self.count & 0x00FF) | (u16::from(value) << 8);
     }
 
     pub fn force_reload(&mut self) {
         match self.forced_reload_behavior {
-            ForcedReloadBehavior::DirectlySetCount => panic!("forced_reload_timing must be specified in DecrementingCounterBuilder in order to call forced_reload"),
-            ForcedReloadBehavior::ImmediatelySetReloadValue => {
+            ForcedReloadBehavior::SetCountDirectly => panic!("forced_reload_timing must be specified in DecrementingCounterBuilder in order to call forced_reload"),
+            ForcedReloadBehavior::SetReloadValueImmediately => {
                 self.count = self.reload_value;
                 // Untested behavior, not sure if it exists in the wild. Should forced_trigger_pending be set if !triggering_enabled?
                 if self.trigger_on_forced_reload_of_zero && self.reload_value == 0 {
@@ -95,78 +93,42 @@ impl DecrementingCounter {
     }
 
     pub fn tick(&mut self) -> bool {
-        let triggered = self.decrementer.decrement(self);
+        let old_count = self.count;
+        if self.ticking_enabled {
+            let zero_counter_reload = old_count == 0 && self.auto_reload;
+            let should_reload = zero_counter_reload || self.forced_reload_pending;
+            self.count = if should_reload {
+                self.reload_value
+            } else {
+                self.count.saturating_sub(self.decrement_size)
+            };
+        }
+
+        let new_count = self.count;
+        // The triggering behavior is fixed at compile time, so the same branch will be taken every time here.
+        let auto_triggered = match self.trigger_on {
+            AutoTriggeredBy::AlreadyZero => old_count == 0,
+            AutoTriggeredBy::EndingOnZero => new_count == 0,
+            AutoTriggeredBy::OneToZeroTransition => old_count == 1 && new_count == 0,
+        };
+        // TODO: Determine if a forced reload needs to clear the counter before the reloading actually occurs for some cases.
+        // Some documentation claims this. This would only be relevant for AlreadyZero behavior since it
+        // affects whether the counter is triggered or not during a forced reload.
+        let mut triggered_by_forcing = self.trigger_on_forced_reload_of_zero && self.forced_reload_pending && self.reload_value == 0;
+        triggered_by_forcing |= self.forced_trigger_pending;
+
+        let trigger_if_enabled = auto_triggered || triggered_by_forcing;
+        let triggered = trigger_if_enabled && self.triggering_enabled;
+
         self.forced_reload_pending = false;
         self.forced_trigger_pending = false;
         triggered
     }
 }
 
-trait DecrementingBehavior {
-    fn decrement(&self, counter: &mut DecrementingCounter) -> bool;
-}
-
-static ENDING_ON_ZERO: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(TriggerOnTransitionToZero));
-static ONE_TO_ZERO_TRANSITION: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(TriggerOnOneToZeroTransition));
-static ALREADY_ZERO: LazyLock<Box<dyn DecrementingBehavior + Send + Sync>> = LazyLock::new(|| Box::new(TriggerOnAlreadyZero));
-
-struct TriggerOnTransitionToZero;
-
-impl DecrementingBehavior for TriggerOnTransitionToZero {
-    fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
-        let triggered_by_forcing = decrement(counter);
-        let triggered_by_zero_result = counter.count == 0;
-        let trigger_if_enabled = triggered_by_zero_result || triggered_by_forcing;
-        trigger_if_enabled && counter.triggering_enabled
-    }
-}
-
-struct TriggerOnOneToZeroTransition;
-
-impl DecrementingBehavior for TriggerOnOneToZeroTransition {
-    fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
-        let old_count = counter.count;
-        let triggered_by_forcing = decrement(counter);
-        let new_count = counter.count;
-        let triggered_by_one_to_zero_transition = old_count == 1 && new_count == 0;
-        let trigger_if_enabled = triggered_by_one_to_zero_transition || triggered_by_forcing;
-        trigger_if_enabled && counter.triggering_enabled
-    }
-}
-
-struct TriggerOnAlreadyZero;
-
-impl DecrementingBehavior for TriggerOnAlreadyZero {
-    fn decrement(&self, counter: &mut DecrementingCounter) -> bool {
-        let triggered_by_already_zero = counter.count == 0;
-        let triggered_by_forcing = decrement(counter);
-        let trigger_if_enabled = triggered_by_already_zero || triggered_by_forcing;
-        trigger_if_enabled && counter.triggering_enabled
-    }
-}
-
-fn decrement(counter: &mut DecrementingCounter) -> bool {
-    if counter.ticking_enabled {
-        let zero_counter_reload = counter.count == 0 && counter.auto_reload;
-        let should_reload = zero_counter_reload || counter.forced_reload_pending;
-        counter.count = if should_reload {
-            counter.reload_value
-        } else {
-            counter.count.saturating_sub(counter.decrement_size)
-        };
-    }
-
-    // TODO: Determine if a forced reload needs to clear the counter before the reloading actually occurs.
-    // Some documentation claims this. This would only be relevant for AlreadyZero behavior since it
-    // affects whether the counter is triggered or not during a forced reload.
-    let mut triggered_by_forcing = counter.trigger_on_forced_reload_of_zero && counter.forced_reload_pending && counter.reload_value == 0;
-    triggered_by_forcing |= counter.forced_trigger_pending;
-    triggered_by_forcing
-}
-
 #[derive(Clone, Copy)]
 pub struct DecrementingCounterBuilder {
-    trigger_on: Option<TriggerOn>,
+    trigger_on: Option<AutoTriggeredBy>,
     trigger_on_forced_reload_of_zero: bool,
     auto_reload: Option<bool>,
     forced_reload_behavior: Option<ForcedReloadBehavior>,
@@ -191,7 +153,7 @@ impl DecrementingCounterBuilder {
         }
     }
 
-    pub const fn trigger_on(&mut self, trigger_on: TriggerOn) -> &mut Self {
+    pub const fn auto_trigger_on(&mut self, trigger_on: AutoTriggeredBy) -> &mut Self {
         self.trigger_on = Some(trigger_on);
         self
     }
@@ -233,12 +195,6 @@ impl DecrementingCounterBuilder {
 
     pub const fn build(self) -> DecrementingCounter {
         let reload_value = self.initial_reload_value;
-        let decrementer: &LazyLock<Box<dyn DecrementingBehavior + Send + Sync + 'static>> = match self.trigger_on.expect("trigger_when must be set") {
-            TriggerOn::EndingOnZero => &ENDING_ON_ZERO,
-            TriggerOn::OneToZeroTransition => &ONE_TO_ZERO_TRANSITION,
-            TriggerOn::AlreadyZero => &ALREADY_ZERO,
-        };
-
         let when_disabled_prevent = self.when_disabled_prevent.expect("when_disabled must be set");
         let ticking_enabled = match when_disabled_prevent {
             // Counters that CANNOT disable ticking will always have ticking enabled.
@@ -248,12 +204,12 @@ impl DecrementingCounterBuilder {
         };
 
         DecrementingCounter {
-            forced_reload_behavior: self.forced_reload_behavior.expect("forced_reload_behavior must be set"),
+            trigger_on: self.trigger_on.expect("trigger_on must be set"),
             trigger_on_forced_reload_of_zero: self.trigger_on_forced_reload_of_zero,
+            forced_reload_behavior: self.forced_reload_behavior.expect("forced_reload_behavior must be set"),
             auto_reload: self.auto_reload.expect("auto_reload must be set"),
             when_disabled_prevent,
             decrement_size: self.decrement_size,
-            decrementer,
             triggering_enabled: false,
             ticking_enabled,
             reload_value,
@@ -265,16 +221,16 @@ impl DecrementingCounterBuilder {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum TriggerOn {
+pub enum AutoTriggeredBy {
+    AlreadyZero,
     EndingOnZero,
     OneToZeroTransition,
-    AlreadyZero,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum ForcedReloadBehavior {
-    DirectlySetCount,
-    ImmediatelySetReloadValue,
+    SetCountDirectly,
+    SetReloadValueImmediately,
     SetReloadValueOnNextTick,
 }
 
