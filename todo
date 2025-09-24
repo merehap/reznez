@@ -102,6 +102,9 @@ Dragon Ball - Goku can't move to spots he should be able to.
 MAPPER 67
 Fantasy Zone 2 - The Teardrop of Opa-Opa: Flickering scanline during intro (Mesen has the same problem)
 
+MAPPER 69
+Batman - Return of the Joker: Flickering pixels in both intro and game (Mesen has the same problem). May be a problem on the actual console.
+
 MAPPER 71
 Fantastic Adventures of Dizzy - Status bar jumps a scanline or two, some sprites flicker. Sprites over the character intros.
 Fire Hawk: Can't move helicopter. Broken name table display. Need better DMC implementation.

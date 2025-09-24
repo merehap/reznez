@@ -34,27 +34,31 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
+const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
+    .trigger_on(TriggerOn::AlreadyZero)
+    .auto_reload(true)
+    .forced_reload_behavior(ForcedReloadBehavior::DirectlySetCount)
+    .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
+    // This value is never changed. Reloading to 0xFFFF is the same thing as just letting the count wrap around.
+    .initial_reload_value(0xFFFF)
+    .initial_count(0)
+    .build();
+
 const CHR_REGISTER_IDS: [ChrBankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
 // P0 is used by the ROM/RAM window, which gets special treatment.
 const PRG_ROM_REGISTER_IDS: [PrgBankRegisterId; 3] = [P1, P2, P3];
 
 // Sunsoft FME-7
 pub struct Mapper069 {
+    irq_counter: DecrementingCounter,
     command: Command,
-
-    irq_enabled: bool,
-    irq_counter_enabled: bool,
-    irq_counter: u16,
 }
 
 impl Mapper for Mapper069 {
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        if self.irq_counter_enabled {
-            if self.irq_enabled && self.irq_counter == 0 {
-                mem.cpu_pinout.set_mapper_irq_pending();
-            }
-
-            self.irq_counter = self.irq_counter.wrapping_sub(1);
+        let triggered = self.irq_counter.tick();
+        if triggered {
+            mem.cpu_pinout.set_mapper_irq_pending();
         }
     }
 
@@ -76,12 +80,9 @@ impl Mapper for Mapper069 {
 impl Mapper069 {
     pub fn new() -> Self {
         Self {
+            irq_counter: IRQ_COUNTER,
             // TODO: Verify that this is the correct startup value.
             command: Command::ChrRomBank(C0),
-
-            irq_enabled: false,
-            irq_counter_enabled: false,
-            irq_counter: 0,
         }
     }
 
@@ -116,12 +117,14 @@ impl Mapper069 {
                 mem.set_name_table_mirroring(value & 0b11),
             Command::IrqControl => {
                 mem.cpu_pinout.clear_mapper_irq_pending();
-                (self.irq_counter_enabled, self.irq_enabled) = splitbits_named!(value, "c......i");
+                let (counter_ticking_enabled, irq_triggering_enabled) = splitbits_named!(value, "c......i");
+                self.irq_counter.set_ticking_enabled(counter_ticking_enabled);
+                self.irq_counter.set_triggering_enabled(irq_triggering_enabled);
             }
             Command::IrqCounterLowByte =>
-                set_bits(&mut self.irq_counter, u16::from(value)     , 0b0000_0000_1111_1111),
+                self.irq_counter.set_count_low_byte(value),
             Command::IrqCounterHighByte =>
-                set_bits(&mut self.irq_counter, u16::from(value) << 8, 0b1111_1111_0000_0000),
+                self.irq_counter.set_count_high_byte(value),
         }
     }
 }
@@ -134,8 +137,4 @@ enum Command {
     IrqControl,
     IrqCounterLowByte,
     IrqCounterHighByte,
-}
-
-fn set_bits(value: &mut u16, new_bits: u16, mask: u16) {
-    *value = (*value & !mask) | (new_bits & mask);
 }

@@ -40,28 +40,43 @@ impl DecrementingCounter {
         }
     }
 
+    // The vast majority of use-cases should just call enable/disable instead of this.
+    pub fn set_triggering_enabled(&mut self, triggering_enabled: bool) {
+        self.triggering_enabled = triggering_enabled;
+    }
+
+    // The vast majority of use-cases should just call enable/disable instead of this.
+    pub fn set_ticking_enabled(&mut self, ticking_enabled: bool) {
+        self.ticking_enabled = ticking_enabled;
+    }
+
     pub fn set_reload_value(&mut self, value: u8) {
-        assert!(self.forced_reload_behavior != ForcedReloadBehavior::DirectlySetCount);
+        assert!(self.forced_reload_behavior != ForcedReloadBehavior::DirectlySetCount,
+            "When forced_reload_behavior == DirectlySetCount, use set_count_X() instead of set_reload_value_X()");
         self.reload_value = u16::from(value);
     }
 
     pub fn set_reload_value_low_byte(&mut self, value: u8) {
-        assert!(self.forced_reload_behavior != ForcedReloadBehavior::DirectlySetCount);
+        assert!(self.forced_reload_behavior != ForcedReloadBehavior::DirectlySetCount,
+            "When forced_reload_behavior == DirectlySetCount, use set_count_X() instead of set_reload_value_X()");
         self.reload_value = (self.reload_value & 0xFF00) | u16::from(value);
     }
 
     pub fn set_reload_value_high_byte(&mut self, value: u8) {
-        assert!(self.forced_reload_behavior != ForcedReloadBehavior::DirectlySetCount);
+        assert!(self.forced_reload_behavior != ForcedReloadBehavior::DirectlySetCount,
+            "When forced_reload_behavior == DirectlySetCount, use set_count_X() instead of set_reload_value_X()");
         self.reload_value = (self.reload_value & 0x00FF) | (u16::from(value) << 8);
     }
 
     pub fn set_count_low_byte(&mut self, value: u8) {
-        assert_eq!(self.forced_reload_behavior, ForcedReloadBehavior::DirectlySetCount);
+        assert_eq!(self.forced_reload_behavior, ForcedReloadBehavior::DirectlySetCount,
+            "Must use forced_reload_behavior == DirectlySetCount in order to call set_count_X()");
         self.count = (self.count & 0xFF00) | u16::from(value);
     }
 
     pub fn set_count_high_byte(&mut self, value: u8) {
-        assert_eq!(self.forced_reload_behavior, ForcedReloadBehavior::DirectlySetCount);
+        assert_eq!(self.forced_reload_behavior, ForcedReloadBehavior::DirectlySetCount,
+            "Must use forced_reload_behavior == DirectlySetCount in order to call set_count_X()");
         self.count = (self.count & 0x00FF) | (u16::from(value) << 8);
     }
 
