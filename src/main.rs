@@ -8,6 +8,7 @@
 #![feature(unsized_const_params)]
 #![feature(panic_update_hook)]
 #![allow(incomplete_features)]
+#![allow(const_item_mutation)]
 #![allow(clippy::module_inception)]
 #![allow(clippy::new_without_default)]
 #![allow(clippy::identity_op)]

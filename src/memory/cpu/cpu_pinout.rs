@@ -5,8 +5,8 @@ use crate::util::edge_detector::EdgeDetector;
 pub struct CpuPinout {
     // AD1 (Audio Pinout: Both pulse waves)
     // AD2 (Audio Pinout: Triangle, Noise, DPCM)
-    // RST (CPU Reset)
-    pub reset: EdgeDetector<SignalLevel, {SignalLevel::High}>,
+    // RST (CPU Reset). Triggers when the signal goes high.
+    pub reset: EdgeDetector<SignalLevel>,
     // Axx
     pub address_bus: CpuAddress,
     // GND (Ground)
@@ -16,8 +16,8 @@ pub struct CpuPinout {
     // TST
     // M2 (CPU phase)
     // IRQ - only available as a method, not a field.
-    // NMI
-    pub nmi_signal_detector: EdgeDetector<SignalLevel, {SignalLevel::Low}>,
+    // NMI. Triggers when the signal goes low.
+    pub nmi_signal_detector: EdgeDetector<SignalLevel>,
     // R/W (Read/Write signal)
     // OE2 (Controller 2 enable)
     // OE1 (Controller 1 enable)
@@ -31,10 +31,10 @@ pub struct CpuPinout {
 impl CpuPinout {
     pub fn new() -> Self {
         Self {
-            reset: EdgeDetector::new(),
+            reset: EdgeDetector::new(SignalLevel::High),
             address_bus: CpuAddress::ZERO,
             data_bus: 0,
-            nmi_signal_detector: EdgeDetector::new(),
+            nmi_signal_detector: EdgeDetector::new(SignalLevel::Low),
 
             mapper_irq_pending: false,
             frame_irq_pending: false,

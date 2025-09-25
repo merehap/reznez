@@ -33,7 +33,7 @@ const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
 // J.Y. Company JY830623C and YY840238C
 pub struct Mapper091_0 {
     irq_counter: DecrementingCounter,
-    pattern_table_transition_detector: EdgeDetector<PatternTableSide, { PatternTableSide::Right }>,
+    pattern_table_transition_detector: EdgeDetector<PatternTableSide>,
 }
 
 impl Mapper for Mapper091_0 {
@@ -81,7 +81,7 @@ impl Mapper091_0 {
     pub fn new() -> Self {
         Self {
             irq_counter: IRQ_COUNTER,
-            pattern_table_transition_detector: EdgeDetector::new(),
+            pattern_table_transition_detector: EdgeDetector::new(PatternTableSide::Right),
         }
     }
 }

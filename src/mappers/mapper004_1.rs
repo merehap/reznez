@@ -1,7 +1,6 @@
 use crate::mapper::*;
 use crate::mappers::mmc3::mmc3;
 use crate::mappers::mmc3::irq_state::IrqState;
-use crate::mappers::mmc3::rev_a_irq_state::RevAIrqState;
 
 use super::mmc3::mmc3::RegId;
 
@@ -52,11 +51,11 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-// MMC6. Similar to MMC3 with Sharp IRQs, but with Work RAM protection.
+// MMC6. Similar to MMC3 with Rev A IRQs, but with Work RAM protection.
 // TODO: Support VS System (and its 4-screen mirroring).
 pub struct Mapper004_1 {
     selected_register_id: RegId,
-    irq_state: RevAIrqState,
+    irq_state: IrqState,
 }
 
 impl Mapper for Mapper004_1 {
@@ -137,7 +136,7 @@ impl Mapper004_1 {
     pub fn new() -> Self {
         Self {
             selected_register_id: RegId::Chr(C0),
-            irq_state: RevAIrqState::new(),
+            irq_state: IrqState::REV_A_IRQ_STATE,
         }
     }
 }

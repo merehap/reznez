@@ -68,7 +68,7 @@ pub const BANK_INDEX_REGISTER_IDS: [RegId; 8] = [Chr(C0), Chr(C1), Chr(C2), Chr(
 // TODO: Support VS System (and its 4-screen mirroring).
 pub struct Mapper004Mmc3 {
     selected_register_id: RegId,
-    irq_state: Box<dyn IrqState>,
+    irq_state: IrqState,
 }
 
 impl Mapper for Mapper004Mmc3 {
@@ -84,7 +84,7 @@ impl Mapper for Mapper004Mmc3 {
             (0xC000..=0xDFFF, true ) => self.irq_state.set_counter_reload_value(value),
             (0xC000..=0xDFFF, false) => self.irq_state.reload_counter(),
             (0xE000..=0xFFFF, true ) => self.irq_state.disable(mem),
-            (0xE000..=0xFFFF, false) => self.irq_state.enable(),
+            (0xE000..=0xFFFF, false) => self.irq_state.counter.enable(),
         }
     }
 
@@ -102,7 +102,7 @@ impl Mapper for Mapper004Mmc3 {
 }
 
 impl Mapper004Mmc3 {
-    pub fn new(irq_state: Box<dyn IrqState>) -> Self {
+    pub fn new(irq_state: IrqState) -> Self {
         Self {
             selected_register_id: Chr(C0),
             irq_state,

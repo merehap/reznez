@@ -1,6 +1,6 @@
 use crate::mapper::*;
 
-use super::mmc3::{irq_state::IrqState, sharp_irq_state::SharpIrqState};
+use super::mmc3::irq_state::IrqState;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(2048 * KIBIBYTE)
@@ -29,7 +29,7 @@ const LAYOUT: Layout = Layout::builder()
 
 // Taito's TC0690
 pub struct Mapper048 {
-    irq_state: SharpIrqState,
+    irq_state: IrqState,
 }
 
 impl Mapper for Mapper048 {
@@ -69,6 +69,6 @@ impl Mapper for Mapper048 {
 
 impl Mapper048 {
     pub fn new() -> Self {
-        Self { irq_state: SharpIrqState::new() }
+        Self { irq_state: IrqState::SHARP_IRQ_STATE }
     }
 }

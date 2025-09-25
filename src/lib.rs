@@ -10,6 +10,7 @@
 #![allow(clippy::module_inception)]
 #![allow(clippy::new_without_default)]
 #![allow(clippy::identity_op)]
+#![allow(const_item_mutation)]
 
 pub mod apu;
 pub mod analysis;

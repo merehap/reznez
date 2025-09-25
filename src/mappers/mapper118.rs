@@ -1,7 +1,7 @@
 use crate::mapper::*;
 
+use crate::mappers::mmc3::irq_state::IrqState;
 use crate::mappers::mmc3::mmc3::{Mapper004Mmc3, RegId};
-use crate::mappers::mmc3::sharp_irq_state::SharpIrqState;
 
 use super::mmc3::mmc3;
 
@@ -61,7 +61,7 @@ impl Mapper for Mapper118 {
 impl Mapper118 {
     pub fn new() -> Self {
         Self {
-            mmc3: Mapper004Mmc3::new(Box::new(SharpIrqState::new())),
+            mmc3: Mapper004Mmc3::new(IrqState::SHARP_IRQ_STATE),
         }
     }
 }

@@ -1,10 +1,11 @@
 use crate::mapper::*;
 
 use crate::mappers::mmc3::mmc3::{Mapper004Mmc3, RegId};
-use crate::mappers::mmc3::sharp_irq_state::SharpIrqState;
+use crate::mappers::mmc3::irq_state::IrqState;
 
 use super::mmc3::mmc3;
 
+// FIXME: Just write out the full layout. No need to same a few lines of code.
 pub const LAYOUT: Layout = mmc3::LAYOUT.into_builder_with_prg_layouts_cleared()
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::EMPTY),
@@ -50,7 +51,7 @@ impl Mapper for Mapper189 {
 impl Mapper189 {
     pub fn new() -> Self {
         Self {
-            mmc3: Mapper004Mmc3::new(Box::new(SharpIrqState::new())),
+            mmc3: Mapper004Mmc3::new(IrqState::SHARP_IRQ_STATE),
         }
     }
 }
