@@ -1,18 +1,24 @@
 use crate::mapper::*;
 
 use crate::mappers::mmc3::irq_state::IrqState;
-use crate::mappers::mmc3::mmc3::{Mapper004Mmc3, RegId};
+use crate::mappers::mmc3::mmc3;
 
-use super::mmc3::mmc3;
 
-pub const LAYOUT: Layout = mmc3::LAYOUT.into_builder()
+pub const LAYOUT: Layout = Layout::builder()
+    .prg_rom_max_size(512 * KIBIBYTE)
+    .prg_layout(mmc3::PRG_WINDOWS_8000_SWITCHABLE)
+    .prg_layout(mmc3::PRG_WINDOWS_C000_SWITCHABLE)
+    .chr_rom_max_size(256 * KIBIBYTE)
+    .chr_layout(mmc3::CHR_BIG_WINDOWS_FIRST)
+    .chr_layout(mmc3::CHR_SMALL_WINDOWS_FIRST)
     // NameTableMirrorings in this mapper are set manually, rather than selected from MMC3's list.
     .name_table_mirrorings(&[])
+    .read_write_statuses(mmc3::READ_WRITE_STATUSES)
     .build();
 
 // TxSROM
 pub struct Mapper118 {
-    mmc3: Mapper004Mmc3,
+    mmc3: mmc3::Mapper004Mmc3,
 }
 
 impl Mapper for Mapper118 {
@@ -27,12 +33,12 @@ impl Mapper for Mapper118 {
             let selected_register = self.mmc3.selected_register_id();
             use NameTableQuadrant::*;
             let quadrants: &[_] = match (selected_layout, selected_register) {
-                (0, RegId::Chr(C0)) => &[TopLeft, TopRight],
-                (0, RegId::Chr(C1)) => &[BottomLeft, BottomRight],
-                (1, RegId::Chr(C2)) => &[TopLeft],
-                (1, RegId::Chr(C3)) => &[TopRight],
-                (1, RegId::Chr(C4)) => &[BottomLeft],
-                (1, RegId::Chr(C5)) => &[BottomRight],
+                (0, mmc3::RegId::Chr(C0)) => &[TopLeft, TopRight],
+                (0, mmc3::RegId::Chr(C1)) => &[BottomLeft, BottomRight],
+                (1, mmc3::RegId::Chr(C2)) => &[TopLeft],
+                (1, mmc3::RegId::Chr(C3)) => &[TopRight],
+                (1, mmc3::RegId::Chr(C4)) => &[BottomLeft],
+                (1, mmc3::RegId::Chr(C5)) => &[BottomRight],
                 _ => &[],
             };
 
@@ -61,7 +67,7 @@ impl Mapper for Mapper118 {
 impl Mapper118 {
     pub fn new() -> Self {
         Self {
-            mmc3: Mapper004Mmc3::new(IrqState::SHARP_IRQ_STATE),
+            mmc3: mmc3::Mapper004Mmc3::new(IrqState::SHARP_IRQ_STATE),
         }
     }
 }

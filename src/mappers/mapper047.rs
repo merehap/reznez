@@ -2,9 +2,8 @@ use crate::mapper::*;
 use crate::mappers::mmc3::irq_state::IrqState;
 use crate::mappers::mmc3::mmc3;
 
-const LAYOUT: Layout = mmc3::LAYOUT.into_builder_with_prg_layouts_cleared()
+pub const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
-    .prg_rom_outer_bank_size(128 * KIBIBYTE)
     // Same PRG layouts as MMC3, except no RAM allowed.
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::EMPTY),
@@ -20,8 +19,12 @@ const LAYOUT: Layout = mmc3::LAYOUT.into_builder_with_prg_layouts_cleared()
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
-    .chr_rom_max_size(256 * KIBIBYTE)
-    .chr_rom_outer_bank_size(128 * KIBIBYTE)
+    .chr_rom_max_size(128 * KIBIBYTE)
+    .chr_layout(mmc3::CHR_BIG_WINDOWS_FIRST)
+    .chr_layout(mmc3::CHR_SMALL_WINDOWS_FIRST)
+    // NameTableMirrorings in this mapper are set manually, rather than selected from MMC3's list.
+    .name_table_mirrorings(mmc3::NAME_TABLE_MIRRORINGS)
+    .read_write_statuses(mmc3::READ_WRITE_STATUSES)
     .build();
 
 pub struct Mapper047 {

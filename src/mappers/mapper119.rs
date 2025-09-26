@@ -1,12 +1,14 @@
 use crate::mapper::*;
 
-use crate::mappers::mmc3::mmc3::{self, Mapper004Mmc3, RegId};
+use crate::mappers::mmc3::mmc3;
 use crate::mappers::mmc3::irq_state::IrqState;
 use crate::memory::bank::bank::RomRamModeRegisterId;
 use crate::memory::bank::bank_index::MemType;
 
-pub const LAYOUT: Layout = mmc3::LAYOUT.into_builder_with_chr_layouts_cleared()
+pub const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
+    .prg_layout(mmc3::PRG_WINDOWS_8000_SWITCHABLE)
+    .prg_layout(mmc3::PRG_WINDOWS_C000_SWITCHABLE)
     .chr_rom_max_size(64 * KIBIBYTE)
     // Same CHR layouts as standard MMC3, except the banks can switch between ROM and RAM memory spaces.
     .chr_layout(&[
@@ -25,20 +27,22 @@ pub const LAYOUT: Layout = mmc3::LAYOUT.into_builder_with_chr_layouts_cleared()
         ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C0).rom_ram_register(R0)),
         ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C1).rom_ram_register(R1)),
     ])
+    .name_table_mirrorings(mmc3::NAME_TABLE_MIRRORINGS)
+    .read_write_statuses(mmc3::READ_WRITE_STATUSES)
     .build();
 
 const ROM_RAM_REGISTER_IDS: [RomRamModeRegisterId; 6] = [R0, R1, R2, R3, R4, R5];
 
 // TQROM
 pub struct Mapper119 {
-    mmc3: Mapper004Mmc3,
+    mmc3: mmc3::Mapper004Mmc3,
 }
 
 impl Mapper for Mapper119 {
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         if matches!(*addr, 0x8001..=0x9FFF)
                 && !addr.is_multiple_of(2)
-                && let RegId::Chr(chr_id) = self.mmc3.selected_register_id() {
+                && let mmc3::RegId::Chr(chr_id) = self.mmc3.selected_register_id() {
 
             let fields = splitbits!(value, ".mcccccc");
             mem.set_chr_register(chr_id, fields.c);
@@ -67,7 +71,7 @@ impl Mapper for Mapper119 {
 impl Mapper119 {
     pub fn new() -> Self {
         Self {
-            mmc3: Mapper004Mmc3::new(IrqState::SHARP_IRQ_STATE),
+            mmc3: mmc3::Mapper004Mmc3::new(IrqState::SHARP_IRQ_STATE),
         }
     }
 }

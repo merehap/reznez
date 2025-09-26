@@ -64,10 +64,51 @@ impl Mapper for Mapper004_1 {
         match (*addr, is_even_address) {
             (0x0000..=0x401F, _) => unreachable!(),
             (0x4020..=0x7FFF, _) => { /* Do nothing. */ }
-            (0x8000..=0x9FFF, true ) => self.bank_select(mem, value),
-            (0x8000..=0x9FFF, false) => mmc3::set_bank_index(mem, &mut self.selected_register_id, value),
-            (0xA000..=0xBFFF, true ) => Self::set_mirroring(mem, value),
-            (0xA000..=0xBFFF, false) => Self::prg_ram_protect(mem, value),
+            (0x8000..=0x9FFF, true ) => {
+                let fields = splitbits!(min=u8, value, "cps..bbb");
+                mem.set_chr_layout(fields.c);
+                mem.set_prg_layout(fields.p);
+                // FIXME: What are these actually supposed to do?
+                mem.set_read_write_status(S0, fields.s);
+                mem.set_read_write_status(S1, fields.s);
+                self.selected_register_id = mmc3::BANK_INDEX_REGISTER_IDS[fields.b as usize];
+            }
+            (0x8000..=0x9FFF, false) => {
+                match self.selected_register_id {
+                    RegId::Chr(cx) => mem.set_chr_register(cx, value),
+                    RegId::Prg(px) => mem.set_prg_register(px, value),
+                }
+            },
+            (0xA000..=0xBFFF, true ) => {
+                // Hard-coded 4-screen mirroring cannot be overridden.
+                if mem.name_table_mirroring().is_vertical() || mem.name_table_mirroring().is_horizontal() {
+                    mem.set_name_table_mirroring(value & 1);
+                }
+            }
+            (0xA000..=0xBFFF, false) => {
+                // TODO: This should be implementable now.
+                /*
+                if !self.prg_ram_enabled {
+                    return;
+                }
+
+                // MMC6 logic only here since MMC3 logic conflicts:
+                // https://www.nesdev.org/wiki/MMC3#iNES_Mapper_004_and_MMC6
+                // TODO: Attempt to support Low G Man.
+                let mut status_7000 = Mapper004::work_ram_status_from_bits(value & 0b1100_0000 >> 6);
+                let mut status_7200 = Mapper004::work_ram_status_from_bits(value & 0b0011_0000 >> 4);
+
+                // "If only one bank is enabled for reading, the other reads back as zero."
+                use WorkRamStatus::*;
+                match (status_7000, status_7200) {
+                    (ReadOnly | ReadWrite, Disabled            ) => status_7200 = ReadOnlyZeros,
+                    (Disabled            , ReadOnly | ReadWrite) => status_7000 = ReadOnlyZeros,
+                }
+
+                self.prg_memory.set_work_ram_status_at(0x7000, status_7000);
+                self.prg_memory.set_work_ram_status_at(0x7200, status_7200);
+                */
+            }
             (0xC000..=0xDFFF, true ) => self.irq_state.set_counter_reload_value(value),
             (0xC000..=0xDFFF, false) => self.irq_state.reload_counter(),
             (0xE000..=0xFFFF, true ) => self.irq_state.disable(mem),
@@ -89,50 +130,6 @@ impl Mapper for Mapper004_1 {
 }
 
 impl Mapper004_1 {
-    // Same as MMC3 except for PRG RAM enable and slightly different PRG layouts.
-    pub fn bank_select(&mut self, mem: &mut Memory, value: u8) {
-        let fields = splitbits!(min=u8, value, "cps..bbb");
-        mem.set_chr_layout(fields.c);
-        mem.set_prg_layout(fields.p);
-        // FIXME: What are these actually supposed to do?
-        mem.set_read_write_status(S0, fields.s);
-        mem.set_read_write_status(S1, fields.s);
-        self.selected_register_id = mmc3::BANK_INDEX_REGISTER_IDS[fields.b as usize];
-    }
-
-    pub fn set_mirroring(mem: &mut Memory, value: u8) {
-        // Hard-coded 4-screen mirroring cannot be overridden.
-        if mem.name_table_mirroring().is_vertical() || mem.name_table_mirroring().is_horizontal() {
-            mem.set_name_table_mirroring(value & 1);
-        }
-    }
-
-    // TODO: This should be implementable now.
-    pub fn prg_ram_protect(_mem: &mut Memory, _value: u8) {
-        // TODO: Once NES 2.0 is supported, then MMC3 and MMC6 can properly be supported.
-        /*
-        if !self.prg_ram_enabled {
-            return;
-        }
-
-        // MMC6 logic only here since MMC3 logic conflicts:
-        // https://www.nesdev.org/wiki/MMC3#iNES_Mapper_004_and_MMC6
-        // TODO: Attempt to support Low G Man.
-        let mut status_7000 = Mapper004::work_ram_status_from_bits(value & 0b1100_0000 >> 6);
-        let mut status_7200 = Mapper004::work_ram_status_from_bits(value & 0b0011_0000 >> 4);
-
-        // "If only one bank is enabled for reading, the other reads back as zero."
-        use WorkRamStatus::*;
-        match (status_7000, status_7200) {
-            (ReadOnly | ReadWrite, Disabled            ) => status_7200 = ReadOnlyZeros,
-            (Disabled            , ReadOnly | ReadWrite) => status_7000 = ReadOnlyZeros,
-        }
-
-        self.prg_memory.set_work_ram_status_at(0x7000, status_7000);
-        self.prg_memory.set_work_ram_status_at(0x7200, status_7200);
-        */
-    }
-
     pub fn new() -> Self {
         Self {
             selected_register_id: RegId::Chr(C0),

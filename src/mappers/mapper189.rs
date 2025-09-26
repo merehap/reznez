@@ -1,21 +1,25 @@
 use crate::mapper::*;
 
-use crate::mappers::mmc3::mmc3::{Mapper004Mmc3, RegId};
+use crate::mappers::mmc3::mmc3;
 use crate::mappers::mmc3::irq_state::IrqState;
 
-use super::mmc3::mmc3;
-
-// FIXME: Just write out the full layout. No need to same a few lines of code.
-pub const LAYOUT: Layout = mmc3::LAYOUT.into_builder_with_prg_layouts_cleared()
+pub const LAYOUT: Layout = Layout::builder()
+    .prg_rom_max_size(256 * KIBIBYTE)
+    // Single layout with a 32KiB window instead of normal MMC3's two layouts with 8KiB windows.
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::EMPTY),
         PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
     ])
+    .chr_rom_max_size(256 * KIBIBYTE)
+    .chr_layout(mmc3::CHR_BIG_WINDOWS_FIRST)
+    .chr_layout(mmc3::CHR_SMALL_WINDOWS_FIRST)
+    .name_table_mirrorings(mmc3::NAME_TABLE_MIRRORINGS)
+    .read_write_statuses(mmc3::READ_WRITE_STATUSES)
     .build();
 
 // TXC-PT8154
 pub struct Mapper189 {
-    mmc3: Mapper004Mmc3,
+    mmc3: mmc3::Mapper004Mmc3,
 }
 
 impl Mapper for Mapper189 {
@@ -25,7 +29,7 @@ impl Mapper for Mapper189 {
                 let bank_index = (value >> 4) | (value & 0b1111);
                 mem.set_prg_register(P0, bank_index);
             }
-            (0x8000..=0xBFFF, RegId::Prg(_)) if *addr % 2 == 1 => {
+            (0x8000..=0xBFFF, mmc3::RegId::Prg(_)) if *addr % 2 == 1 => {
                 // Do nothing here: PRG registers are not set by the standard MMC3 process.
             }
             _ => {
@@ -51,7 +55,7 @@ impl Mapper for Mapper189 {
 impl Mapper189 {
     pub fn new() -> Self {
         Self {
-            mmc3: Mapper004Mmc3::new(IrqState::SHARP_IRQ_STATE),
+            mmc3: mmc3::Mapper004Mmc3::new(IrqState::SHARP_IRQ_STATE),
         }
     }
 }

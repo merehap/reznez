@@ -77,10 +77,27 @@ impl Mapper for Mapper004Mmc3 {
         match (*addr, is_even_address) {
             (0x0000..=0x401F, _) => unreachable!(),
             (0x4020..=0x7FFF, _) => { /* Do nothing. */ }
-            (0x8000..=0x9FFF, true ) => bank_select(mem, &mut self.selected_register_id, value),
-            (0x8000..=0x9FFF, false) => set_bank_index(mem, &mut self.selected_register_id, value),
-            (0xA000..=0xBFFF, true ) => set_mirroring(mem, value),
-            (0xA000..=0xBFFF, false) => prg_ram_protect(mem, value),
+            (0x8000..=0x9FFF, true ) => {
+                let fields = splitbits!(min=u8, value, "cp...rrr");
+                mem.set_chr_layout(fields.c);
+                mem.set_prg_layout(fields.p);
+                self.selected_register_id = BANK_INDEX_REGISTER_IDS[fields.r as usize];
+            }
+            (0x8000..=0x9FFF, false) => {
+                match self.selected_register_id {
+                    Chr(cx) => mem.set_chr_register(cx, value),
+                    Prg(px) => mem.set_prg_register(px, value),
+                }
+            }
+            (0xA000..=0xBFFF, true ) => {
+                // Cartridge hard-coded 4-screen mirroring cannot be changed.
+                if mem.name_table_mirroring().is_vertical() || mem.name_table_mirroring().is_horizontal() {
+                    mem.set_name_table_mirroring(value & 1);
+                }
+            }
+            (0xA000..=0xBFFF, false) => {
+                mem.set_read_write_status(S0, value >> 6);
+            }
             (0xC000..=0xDFFF, true ) => self.irq_state.set_counter_reload_value(value),
             (0xC000..=0xDFFF, false) => self.irq_state.reload_counter(),
             (0xE000..=0xFFFF, true ) => self.irq_state.disable(mem),
@@ -112,39 +129,6 @@ impl Mapper004Mmc3 {
     pub fn selected_register_id(&self) -> RegId {
         self.selected_register_id
     }
-}
-
-pub fn bank_select(
-    mem: &mut Memory,
-    selected_register_id: &mut RegId,
-    value: u8,
-) {
-    let fields = splitbits!(min=u8, value, "cp...rrr");
-    mem.set_chr_layout(fields.c);
-    mem.set_prg_layout(fields.p);
-    *selected_register_id = BANK_INDEX_REGISTER_IDS[fields.r as usize];
-}
-
-pub fn set_bank_index(
-    mem: &mut Memory,
-    selected_register_id: &mut RegId,
-    value: u8,
-) {
-    match *selected_register_id {
-        Chr(cx) => mem.set_chr_register(cx, value),
-        Prg(px) => mem.set_prg_register(px, value),
-    }
-}
-
-pub fn set_mirroring(mem: &mut Memory, value: u8) {
-    // Cartridge hard-coded 4-screen mirroring cannot be changed.
-    if mem.name_table_mirroring().is_vertical() || mem.name_table_mirroring().is_horizontal() {
-        mem.set_name_table_mirroring(value & 1);
-    }
-}
-
-pub fn prg_ram_protect(mem: &mut Memory, value: u8) {
-    mem.set_read_write_status(S0, value >> 6);
 }
 
 #[derive(Clone, Copy)]
