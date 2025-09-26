@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::util::counter::WhenDisabledPrevent;
+use crate::util::counter::{PrescalerTriggeredBy, WhenDisabledPrevent};
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
@@ -31,13 +31,13 @@ const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
     .auto_reload(false)
     .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueImmediately)
     .decrement_size(5)
-    .when_disabled_prevent(WhenDisabledPrevent::Triggering)
+    .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
+    .prescaler(4, PrescalerTriggeredBy::WrappingToZero)
     .build();
 
 // J.Y. Company JY830623C and YY840238C
 pub struct Mapper091_1 {
     irq_counter: DecrementingCounter,
-    irq_sub_counter: u8,
 }
 
 impl Mapper for Mapper091_1 {
@@ -71,24 +71,8 @@ impl Mapper for Mapper091_1 {
     }
 
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        // TODO: Check if this should call ticking_enabled() instead.
-        if !self.irq_counter.triggering_enabled() {
-            return;
-        }
-
-        // Only tick the actual IRQ counter every 4 cycles.
-        self.irq_sub_counter += 1;
-        if self.irq_sub_counter < 4 {
-            return;
-        }
-
-        self.irq_sub_counter = 0;
-
         let should_trigger_irq = self.irq_counter.tick();
         if should_trigger_irq {
-            // TODO: Is this commented-out reload necessary? Super Fighters 3 works the same without it.
-            // SF3 is constantly force-reloading the IRQ counter, presumably because this isn't automatically done.
-            // self.irq_counter = self.irq_counter_reload_value;
             mem.cpu_pinout.set_mapper_irq_pending();
         }
     }
@@ -100,9 +84,6 @@ impl Mapper for Mapper091_1 {
 
 impl Mapper091_1 {
     pub fn new() -> Self {
-        Self {
-            irq_counter: IRQ_COUNTER,
-            irq_sub_counter: 0,
-        }
+        Self { irq_counter: IRQ_COUNTER }
     }
 }

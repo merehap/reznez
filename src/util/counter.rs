@@ -1,3 +1,5 @@
+use std::num::{NonZeroU16, NonZeroU8};
+
 pub struct DecrementingCounter {
     // Immutable settings determined at compile time
     trigger_on: AutoTriggeredBy,
@@ -5,25 +7,19 @@ pub struct DecrementingCounter {
     forced_reload_behavior: ForcedReloadBehavior,
     auto_reload: bool,
     when_disabled_prevent: WhenDisabledPrevent,
-    decrement_size: u16,
-    prescaler_multiple: u8,
+    decrement_size: NonZeroU16,
 
     // State
     triggering_enabled: bool,
     ticking_enabled: bool,
     reload_value: u16,
     count: u16,
-    prescaler: u8,
     forced_reload_pending: bool,
     forced_trigger_pending: bool,
+    prescaler: Prescaler,
 }
 
 impl DecrementingCounter {
-    // TODO: Try to stop exposing this publicly.
-    pub fn triggering_enabled(&self) -> bool {
-        self.triggering_enabled
-    }
-
     pub fn enable(&mut self) {
         self.triggering_enabled = true;
         self.ticking_enabled = true;
@@ -81,7 +77,7 @@ impl DecrementingCounter {
     }
 
     pub fn force_reload(&mut self) {
-        self.prescaler = 0;
+        self.prescaler.count = 0;
         match self.forced_reload_behavior {
             ForcedReloadBehavior::SetCountDirectly => panic!("forced_reload_timing must be specified in DecrementingCounterBuilder in order to call forced_reload"),
             ForcedReloadBehavior::SetReloadValueImmediately => {
@@ -96,10 +92,8 @@ impl DecrementingCounter {
     }
 
     pub fn tick(&mut self) -> bool {
-        let prescaler_triggered = self.prescaler == 0;
-        self.prescaler += 1;
-        self.prescaler %= self.prescaler_multiple;
-
+        // ASSUMPTION: Forced reloads and triggers (auto and forced) are delayed by the prescaler, not just actual counter ticks.
+        let prescaler_triggered = self.prescaler.tick();
         if !prescaler_triggered {
             // The prescaler didn't trigger yet, so don't tick nor trigger the actual counter.
             return false;
@@ -112,7 +106,7 @@ impl DecrementingCounter {
             self.count = if should_reload {
                 self.reload_value
             } else {
-                self.count.saturating_sub(self.decrement_size)
+                self.count.saturating_sub(self.decrement_size.get())
             };
         }
 
@@ -147,8 +141,8 @@ pub struct DecrementingCounterBuilder {
     when_disabled_prevent: Option<WhenDisabledPrevent>,
     initial_reload_value: u16,
     initial_count: Option<u16>,
-    decrement_size: u16,
-    prescaler_multiple: u8,
+    decrement_size: NonZeroU16,
+    prescaler: Prescaler,
 }
 
 impl DecrementingCounterBuilder {
@@ -162,9 +156,9 @@ impl DecrementingCounterBuilder {
             initial_reload_value: 0,
             // Normally initial_reload_value is assigned to initial_count in build().
             initial_count: None,
-            decrement_size: 1,
-            // A value of 1 here effectively means the prescaler is inactive.
-            prescaler_multiple: 1,
+            decrement_size: NonZeroU16::new(1).unwrap(),
+            // A prescaler that doesn't actually delay anything.
+            prescaler: Prescaler::DEFAULT,
         }
     }
 
@@ -204,12 +198,16 @@ impl DecrementingCounterBuilder {
     }
 
     pub const fn decrement_size(&mut self, size: u16) -> &mut Self {
-        self.decrement_size = size;
+        self.decrement_size = NonZeroU16::new(size).expect("decrement_size must be positive");
         self
     }
 
-    pub const fn prescaler_multiple(&mut self, multiple: u8) -> &mut Self {
-        self.prescaler_multiple = multiple;
+    pub const fn prescaler(&mut self, multiple: u8, triggered_by: PrescalerTriggeredBy) -> &mut Self {
+        self.prescaler = Prescaler {
+            multiple: NonZeroU8::new(multiple).expect("prescaler multiple must be positive"),
+            triggered_by,
+            count: 0,
+        };
         self
     }
 
@@ -230,12 +228,11 @@ impl DecrementingCounterBuilder {
             auto_reload: self.auto_reload.expect("auto_reload must be set"),
             when_disabled_prevent,
             decrement_size: self.decrement_size,
-            prescaler_multiple: self.prescaler_multiple,
+            prescaler: self.prescaler,
             triggering_enabled: false,
             ticking_enabled,
             reload_value,
             count: self.initial_count.unwrap_or(reload_value),
-            prescaler: 0,
             forced_reload_pending: false,
             forced_trigger_pending: false,
         }
@@ -261,4 +258,43 @@ pub enum WhenDisabledPrevent {
     Ticking,
     Triggering,
     TickingAndTriggering,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Prescaler {
+    // Immutable settings determined at compile time
+    multiple: NonZeroU8,
+    triggered_by: PrescalerTriggeredBy,
+
+    // State
+    count: u8,
+}
+
+impl Prescaler {
+    // A multiple of 1 effectively means the prescaler has no effect, regardless of which triggered_by behavior is used.
+    const DEFAULT: Self = Self {
+        multiple: NonZeroU8::new(1).unwrap(),
+        triggered_by: PrescalerTriggeredBy::AlreadyZero,
+        count: 0,
+    };
+
+    fn tick(&mut self) -> bool {
+        let old_count = self.count;
+        self.count += 1;
+        self.count %= self.multiple;
+        let new_count = self.count;
+
+        let triggered = match self.triggered_by {
+            PrescalerTriggeredBy::AlreadyZero => old_count == 0,
+            PrescalerTriggeredBy::WrappingToZero => new_count == 0,
+        };
+
+        triggered
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum PrescalerTriggeredBy {
+    AlreadyZero,
+    WrappingToZero,
 }
