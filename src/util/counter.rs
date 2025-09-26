@@ -6,12 +6,14 @@ pub struct DecrementingCounter {
     auto_reload: bool,
     when_disabled_prevent: WhenDisabledPrevent,
     decrement_size: u16,
+    prescaler_multiple: u8,
 
     // State
     triggering_enabled: bool,
     ticking_enabled: bool,
     reload_value: u16,
     count: u16,
+    prescaler: u8,
     forced_reload_pending: bool,
     forced_trigger_pending: bool,
 }
@@ -79,6 +81,7 @@ impl DecrementingCounter {
     }
 
     pub fn force_reload(&mut self) {
+        self.prescaler = 0;
         match self.forced_reload_behavior {
             ForcedReloadBehavior::SetCountDirectly => panic!("forced_reload_timing must be specified in DecrementingCounterBuilder in order to call forced_reload"),
             ForcedReloadBehavior::SetReloadValueImmediately => {
@@ -93,6 +96,15 @@ impl DecrementingCounter {
     }
 
     pub fn tick(&mut self) -> bool {
+        let prescaler_triggered = self.prescaler == 0;
+        self.prescaler += 1;
+        self.prescaler %= self.prescaler_multiple;
+
+        if !prescaler_triggered {
+            // The prescaler didn't trigger yet, so don't tick nor trigger the actual counter.
+            return false;
+        }
+
         let old_count = self.count;
         if self.ticking_enabled {
             let zero_counter_reload = old_count == 0 && self.auto_reload;
@@ -128,7 +140,7 @@ impl DecrementingCounter {
 
 #[derive(Clone, Copy)]
 pub struct DecrementingCounterBuilder {
-    trigger_on: Option<AutoTriggeredBy>,
+    auto_triggered_by: Option<AutoTriggeredBy>,
     trigger_on_forced_reload_of_zero: bool,
     auto_reload: Option<bool>,
     forced_reload_behavior: Option<ForcedReloadBehavior>,
@@ -136,12 +148,13 @@ pub struct DecrementingCounterBuilder {
     initial_reload_value: u16,
     initial_count: Option<u16>,
     decrement_size: u16,
+    prescaler_multiple: u8,
 }
 
 impl DecrementingCounterBuilder {
     pub const fn new() -> Self {
         Self {
-            trigger_on: None,
+            auto_triggered_by: None,
             trigger_on_forced_reload_of_zero: false,
             auto_reload: None,
             forced_reload_behavior: None,
@@ -150,11 +163,13 @@ impl DecrementingCounterBuilder {
             // Normally initial_reload_value is assigned to initial_count in build().
             initial_count: None,
             decrement_size: 1,
+            // A value of 1 here effectively means the prescaler is inactive.
+            prescaler_multiple: 1,
         }
     }
 
-    pub const fn auto_trigger_on(&mut self, trigger_on: AutoTriggeredBy) -> &mut Self {
-        self.trigger_on = Some(trigger_on);
+    pub const fn auto_triggered_by(&mut self, auto_triggered_by: AutoTriggeredBy) -> &mut Self {
+        self.auto_triggered_by = Some(auto_triggered_by);
         self
     }
 
@@ -193,6 +208,11 @@ impl DecrementingCounterBuilder {
         self
     }
 
+    pub const fn prescaler_multiple(&mut self, multiple: u8) -> &mut Self {
+        self.prescaler_multiple = multiple;
+        self
+    }
+
     pub const fn build(self) -> DecrementingCounter {
         let reload_value = self.initial_reload_value;
         let when_disabled_prevent = self.when_disabled_prevent.expect("when_disabled must be set");
@@ -204,16 +224,18 @@ impl DecrementingCounterBuilder {
         };
 
         DecrementingCounter {
-            trigger_on: self.trigger_on.expect("trigger_on must be set"),
+            trigger_on: self.auto_triggered_by.expect("trigger_on must be set"),
             trigger_on_forced_reload_of_zero: self.trigger_on_forced_reload_of_zero,
             forced_reload_behavior: self.forced_reload_behavior.expect("forced_reload_behavior must be set"),
             auto_reload: self.auto_reload.expect("auto_reload must be set"),
             when_disabled_prevent,
             decrement_size: self.decrement_size,
+            prescaler_multiple: self.prescaler_multiple,
             triggering_enabled: false,
             ticking_enabled,
             reload_value,
             count: self.initial_count.unwrap_or(reload_value),
+            prescaler: 0,
             forced_reload_pending: false,
             forced_trigger_pending: false,
         }

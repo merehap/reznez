@@ -35,7 +35,7 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
-    .auto_trigger_on(AutoTriggeredBy::AlreadyZero)
+    .auto_triggered_by(AutoTriggeredBy::AlreadyZero)
     .auto_reload(true)
     .forced_reload_behavior(ForcedReloadBehavior::SetCountDirectly)
     .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)

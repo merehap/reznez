@@ -26,7 +26,7 @@ const LAYOUT: Layout = Layout::builder()
 // Sunsoft-3 IRQ both auto-reloads (by wrapping around), and has its count set directly,
 // rather through modifying a reload value and copying that to the count.
 const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
-    .auto_trigger_on(AutoTriggeredBy::AlreadyZero)
+    .auto_triggered_by(AutoTriggeredBy::AlreadyZero)
     .auto_reload(true)
     .forced_reload_behavior(ForcedReloadBehavior::SetCountDirectly)
     .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)

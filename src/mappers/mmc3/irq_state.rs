@@ -12,8 +12,6 @@ pub struct IrqState {
     pub suppression_cycle_reload_value: u8,
     pub suppression_cycle_count: u8,
     pub pattern_table_side_detector: EdgeDetector<PatternTableSide>,
-    pub prescaler_multiple: u8,
-    pub prescaler: u8,
 }
 
 impl IrqState {
@@ -26,8 +24,6 @@ impl IrqState {
         suppression_cycle_reload_value: 0,
         suppression_cycle_count: 0,
         pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Left),
-        prescaler_multiple: 8,
-        prescaler: 0,
     };
 
     const fn normal(counter: DecrementingCounter) -> Self {
@@ -37,8 +33,6 @@ impl IrqState {
             suppression_cycle_reload_value: 16,
             suppression_cycle_count: 0,
             pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Right),
-            prescaler_multiple: 1,
-            prescaler: 0,
         }
     }
 
@@ -50,12 +44,7 @@ impl IrqState {
 
         let not_suppressed = self.suppression_cycle_count == 0;
         let edge_detected = self.pattern_table_side_detector.set_value_then_detect(address.pattern_table_side());
-        let should_tick_irq_counter = edge_detected && not_suppressed && self.prescaler == 0;
-
-        if edge_detected {
-            self.prescaler += 1;
-            self.prescaler %= self.prescaler_multiple;
-        }
+        let should_tick_irq_counter = edge_detected && not_suppressed;
 
         if address.pattern_table_side() == self.pattern_table_side_detector.target_value() {
             self.suppression_cycle_count = self.suppression_cycle_reload_value;
@@ -82,7 +71,6 @@ impl IrqState {
 
     // Write 0xC001 (odd addresses)
     pub fn reload_counter(&mut self) {
-        self.prescaler = 0;
         self.counter.force_reload();
     }
 
@@ -98,26 +86,38 @@ impl IrqState {
     }
 }
 
-const SHARP_IRQ_COUNTER: DecrementingCounter = IRQ_COUNTER_BUILDER
-    .auto_trigger_on(AutoTriggeredBy::EndingOnZero)
-    .build();
+// ForcedReloadBehavior and WhenDisabledPrevent are the same for all MMC3 IRQs.
 
-// TODO: Verify that the MC-ACC counter actually is the same as SHARP.
-// Alternately, move prescaler logic into DecrementingCounter.
-const MC_ACC_IRQ_COUNTER: DecrementingCounter = IRQ_COUNTER_BUILDER
-    .auto_trigger_on(AutoTriggeredBy::EndingOnZero)
-    .build();
-
-const NEC_IRQ_COUNTER: DecrementingCounter = IRQ_COUNTER_BUILDER
-    .auto_trigger_on(AutoTriggeredBy::OneToZeroTransition)
-    .build();
-
-const REV_A_IRQ_COUNTER: DecrementingCounter = IRQ_COUNTER_BUILDER
-    .auto_trigger_on(AutoTriggeredBy::OneToZeroTransition)
-    .also_trigger_on_forced_reload_of_zero()
-    .build();
-
-const IRQ_COUNTER_BUILDER: DecrementingCounterBuilder = *DecrementingCounterBuilder::new()
+const SHARP_IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
+    .auto_triggered_by(AutoTriggeredBy::EndingOnZero)
     .auto_reload(true)
+
     .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
-    .when_disabled_prevent(WhenDisabledPrevent::Triggering);
+    .when_disabled_prevent(WhenDisabledPrevent::Triggering)
+    .build();
+
+const MC_ACC_IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
+    .auto_triggered_by(AutoTriggeredBy::EndingOnZero)
+    .auto_reload(true)
+    .prescaler_multiple(8)
+
+    .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
+    .when_disabled_prevent(WhenDisabledPrevent::Triggering)
+    .build();
+
+const NEC_IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
+    .auto_triggered_by(AutoTriggeredBy::OneToZeroTransition)
+    .auto_reload(true)
+
+    .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
+    .when_disabled_prevent(WhenDisabledPrevent::Triggering)
+    .build();
+
+const REV_A_IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
+    .auto_triggered_by(AutoTriggeredBy::OneToZeroTransition)
+    .also_trigger_on_forced_reload_of_zero()
+    .auto_reload(true)
+
+    .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
+    .when_disabled_prevent(WhenDisabledPrevent::Triggering)
+    .build();
