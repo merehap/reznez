@@ -3,7 +3,7 @@ use std::ops::RangeInclusive;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
-use crate::util::counter::{AutoTriggeredBy, DecrementingCounter, DecrementingCounterBuilder, ForcedReloadBehavior, PrescalerTriggeredBy, WhenDisabledPrevent};
+use crate::util::counter::{AutoTriggeredBy, DecrementingCounter, DecrementingCounterBuilder, ForcedReloadBehavior, PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};
 use crate::util::edge_detector::EdgeDetector;
 
 pub struct IrqState {
@@ -99,7 +99,7 @@ const SHARP_IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
 const MC_ACC_IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
     .auto_triggered_by(AutoTriggeredBy::EndingOnZero)
     .auto_reload(true)
-    .prescaler(8, PrescalerTriggeredBy::AlreadyZero)
+    .prescaler(8, PrescalerTriggeredBy::AlreadyZero, PrescalerBehaviorOnForcedReload::ClearCount)
 
     .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
     .when_disabled_prevent(WhenDisabledPrevent::Triggering)

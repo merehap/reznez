@@ -112,7 +112,7 @@ Micro Machines: Junk scanlines through the middle. See wiki.
 
 MAPPER 91, submapper 0/1
 Street Fighter III/Super Fighter III - fists disappear every other frame (test frames included)
-Street Fighter III/Super Fighter III - flickering scanline (need joypad input to create test)
+Street Fighter III/Super Fighter III - flickering pixels (need joypad input to create test, otherwise too many demo frames are required to get there)
 
 MAPPER 94
 Senjou: Various including flickering.

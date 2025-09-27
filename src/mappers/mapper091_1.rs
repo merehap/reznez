@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::util::counter::{PrescalerTriggeredBy, WhenDisabledPrevent};
+use crate::util::counter::{PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
@@ -32,7 +32,7 @@ const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
     .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueImmediately)
     .decrement_size(5)
     .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
-    .prescaler(4, PrescalerTriggeredBy::WrappingToZero)
+    .prescaler(4, PrescalerTriggeredBy::WrappingToZero, PrescalerBehaviorOnForcedReload::DoNothing)
     .build();
 
 // J.Y. Company JY830623C and YY840238C
