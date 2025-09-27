@@ -7,11 +7,11 @@ use crate::util::counter::{AutoTriggeredBy, DecrementingCounter, DecrementingCou
 use crate::util::edge_detector::EdgeDetector;
 
 pub struct IrqState {
-    pub counter: DecrementingCounter,
-    pub allowed_address_range: RangeInclusive<u16>,
-    pub suppression_cycle_reload_value: u8,
-    pub suppression_cycle_count: u8,
-    pub pattern_table_side_detector: EdgeDetector<PatternTableSide>,
+    counter: DecrementingCounter,
+    allowed_address_range: RangeInclusive<u16>,
+    suppression_cycle_reload_value: u8,
+    suppression_cycle_count: u8,
+    pattern_table_side_detector: EdgeDetector<PatternTableSide>,
 }
 
 impl IrqState {

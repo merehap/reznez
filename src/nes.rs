@@ -339,6 +339,13 @@ impl Nes {
     }
 
     fn detect_changes(&mut self) {
+        if log_enabled!(target: "cpuflowcontrol", Info) || log_enabled!(target: "mapperirqcounter", Info) {
+            let latest = &mut self.latest_values;
+            if latest.mapper_irq_pending_detector.set_value_then_detect(self.memory.cpu_pinout.mapper_irq_pending()) {
+                info!("Mapper IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
+            }
+        }
+
         if log_enabled!(target: "cpuflowcontrol", Info) {
             let latest = &mut self.latest_values;
             if latest.apu_frame_irq_pending_detector.set_value_then_detect(self.memory.cpu_pinout.frame_irq_pending()) {
@@ -346,9 +353,6 @@ impl Nes {
             }
             if latest.dmc_irq_pending_detector.set_value_then_detect(self.memory.cpu_pinout.dmc_irq_pending()) {
                 info!("DMC IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
-            }
-            if latest.mapper_irq_pending_detector.set_value_then_detect(self.memory.cpu_pinout.mapper_irq_pending()) {
-                info!("Mapper IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
             }
             if latest.irq_status_detector.set_value_then_detect(self.cpu.irq_status()) {
                 info!("IRQ status in CPU: {:?}. Cycle: {}", self.cpu.irq_status(), self.memory.cpu_cycle());

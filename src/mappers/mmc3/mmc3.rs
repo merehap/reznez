@@ -101,7 +101,7 @@ impl Mapper for Mapper004Mmc3 {
             (0xC000..=0xDFFF, true ) => self.irq_state.set_counter_reload_value(value),
             (0xC000..=0xDFFF, false) => self.irq_state.reload_counter(),
             (0xE000..=0xFFFF, true ) => self.irq_state.disable(mem),
-            (0xE000..=0xFFFF, false) => self.irq_state.counter.enable(),
+            (0xE000..=0xFFFF, false) => self.irq_state.enable(),
         }
     }
 
