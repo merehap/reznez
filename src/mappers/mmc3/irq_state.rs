@@ -10,8 +10,7 @@ use crate::util::edge_detector::EdgeDetector;
 pub struct IrqState {
     counter: DecrementingCounter,
     allowed_address_range: RangeInclusive<u16>,
-    suppression_cycle_reload_value: u8,
-    suppression_cycle_count: u8,
+    suppressor: Suppressor,
     pattern_table_side_detector: EdgeDetector<PatternTableSide>,
 }
 
@@ -22,8 +21,7 @@ impl IrqState {
     pub const MC_ACC_IRQ_STATE: Self = Self {
         counter: MC_ACC_IRQ_COUNTER,
         allowed_address_range: 0..=0xFFFF,
-        suppression_cycle_reload_value: 0,
-        suppression_cycle_count: 0,
+        suppressor: Suppressor::NEVER_SUPPRESS,
         pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Left),
     };
 
@@ -31,24 +29,23 @@ impl IrqState {
         IrqState {
             counter,
             allowed_address_range: 0..=0x1FFF,
-            suppression_cycle_reload_value: 16,
-            suppression_cycle_count: 0,
+            suppressor: Suppressor::SUPPRESS_FOR_16_CYCLES,
             pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Right),
         }
     }
 
-    // Note: There's no current cases that use both a prescaler and suppression cycles, so that combination is untested.
     pub fn tick_counter(&mut self, mem: &mut Memory, address: PpuAddress) {
         if !self.allowed_address_range.contains(&address.to_scroll_u16()) {
             return;
         }
 
-        let not_suppressed = self.suppression_cycle_count == 0;
-        let edge_detected = self.pattern_table_side_detector.set_value_then_detect(address.pattern_table_side());
-        let should_tick_irq_counter = edge_detected && not_suppressed;
+        let switched_to_target_side = self.pattern_table_side_detector.set_value_then_detect(address.pattern_table_side());
+        let should_tick_irq_counter = switched_to_target_side && !self.suppressor.suppressed();
 
+        // Keep re-suppressing ticks for as long as we are on the target pattern table side.
+        // If NEVER_SUPPRESS is specified, this does nothing.
         if self.pattern_table_side_detector.matches_target(address.pattern_table_side()) {
-            self.suppression_cycle_count = self.suppression_cycle_reload_value;
+            self.suppressor.suppress();
         }
 
         if should_tick_irq_counter {
@@ -60,9 +57,7 @@ impl IrqState {
     }
 
     pub fn decrement_suppression_cycle_count(&mut self) {
-        if self.suppression_cycle_count > 0 {
-            self.suppression_cycle_count -= 1;
-        }
+        self.suppressor.decrement();
     }
 
     // Write 0xC000 (even addresses)
@@ -88,6 +83,34 @@ impl IrqState {
 
     pub fn irq_counter_info(&self) -> IrqCounterInfo {
         self.counter.to_irq_counter_info()
+    }
+}
+
+struct Suppressor {
+    reload_value: u8,
+    cycles_remaining: u8,
+}
+
+impl Suppressor {
+    const NEVER_SUPPRESS: Self = Self {
+        reload_value: 0,
+        cycles_remaining: 0,
+    };
+    const SUPPRESS_FOR_16_CYCLES: Self = Self {
+        reload_value: 16,
+        cycles_remaining: 0,
+    };
+
+    fn suppressed(&self) -> bool {
+        self.cycles_remaining > 0
+    }
+
+    fn suppress(&mut self) {
+        self.cycles_remaining = self.reload_value;
+    }
+
+    fn decrement(&mut self) {
+        self.cycles_remaining = self.cycles_remaining.saturating_sub(1);
     }
 }
 
