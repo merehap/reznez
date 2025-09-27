@@ -1,5 +1,7 @@
 use std::num::{NonZeroU16, NonZeroU8};
 
+use crate::counter::irq_counter_info::IrqCounterInfo;
+
 pub struct DecrementingCounter {
     // Immutable settings determined at compile time
     trigger_on: AutoTriggeredBy,
@@ -133,6 +135,14 @@ impl DecrementingCounter {
         self.forced_reload_pending = false;
         self.forced_trigger_pending = false;
         triggered
+    }
+
+    pub fn to_irq_counter_info(&self) -> IrqCounterInfo {
+        IrqCounterInfo {
+            ticking_enabled: self.ticking_enabled,
+            triggering_enabled: self.triggering_enabled,
+            count: self.count,
+        }
     }
 }
 

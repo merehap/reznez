@@ -1,3 +1,4 @@
+use crate::counter::irq_counter_info::IrqCounterInfo;
 use crate::mappers::mmc5::scanline_detector::{ScanlineDetector, DetectedEvent};
 use crate::memory::ppu::ppu_address::PpuAddress;
 
@@ -6,7 +7,8 @@ const BACKGROUND_TILE_FETCH_START: u8 = 40;
 
 pub struct FrameState {
     in_frame: bool,
-    irq_pending: bool,
+    irq_pending_if_enabled: bool,
+    irq_enabled: bool,
 
     scanline_detector: ScanlineDetector,
     irq_target_scanline: u8,
@@ -21,7 +23,8 @@ impl FrameState {
     pub fn new() -> Self {
         Self {
             in_frame: false,
-            irq_pending: false,
+            irq_pending_if_enabled: false,
+            irq_enabled: false,
 
             scanline_detector: ScanlineDetector::new(),
             // A target of 0 means IRQs are disabled (except an already pending one).
@@ -39,12 +42,16 @@ impl FrameState {
     }
 
     pub fn irq_pending(&self) -> bool {
-        self.irq_pending
+        self.irq_enabled && self.irq_pending_if_enabled
+    }
+
+    pub fn set_irq_enabled(&mut self, enabled: bool) {
+        self.irq_enabled = enabled;
     }
 
     pub fn to_status_byte(&self) -> u8 {
         let mut status = 0;
-        if self.irq_pending {
+        if self.irq_pending_if_enabled {
             status |= 0b1000_0000;
         }
 
@@ -72,7 +79,7 @@ impl FrameState {
 
     // Called on 0x5204 read, and on NMI vector (0xFFFA or 0xFFFB) read.
     pub fn acknowledge_irq(&mut self) {
-        self.irq_pending = false;
+        self.irq_pending_if_enabled = false;
     }
 
     // Called every PPU read.
@@ -84,14 +91,14 @@ impl FrameState {
             DetectedEvent::ScanlineStart if !self.in_frame => {
                 self.in_frame = true;
                 self.scanline = 0;
-                self.irq_pending = false;
+                self.irq_pending_if_enabled = false;
                 self.tile_fetch_count = 0;
             }
             // A new scanline is starting in the ongoing frame.
             DetectedEvent::ScanlineStart => {
                 self.scanline += 1;
                 if self.scanline == self.irq_target_scanline {
-                    self.irq_pending = true;
+                    self.irq_pending_if_enabled = true;
                 }
 
                 self.tile_fetch_count = 0;
@@ -120,6 +127,14 @@ impl FrameState {
         if self.idle_count == 3 {
             // No PPU reads occurred over 3 CPU cycles so rendering must be disabled: end the frame.
             self.in_frame = false;
+        }
+    }
+
+    pub fn to_irq_counter_info(&self) -> IrqCounterInfo {
+        IrqCounterInfo {
+            ticking_enabled: true,
+            triggering_enabled: self.irq_enabled,
+            count: u16::from(self.scanline),
         }
     }
 }

@@ -72,6 +72,10 @@ impl Mapper for Mapper091_0 {
         }
     }
 
+    fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
+        Some(self.irq_counter.to_irq_counter_info())
+    }
+
     fn layout(&self) -> Layout {
         LAYOUT
     }

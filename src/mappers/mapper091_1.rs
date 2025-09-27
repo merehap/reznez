@@ -22,7 +22,6 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-
 const HORIZONTAL: u8 = 0;
 const VERTICAL: u8 = 1;
 
@@ -75,6 +74,10 @@ impl Mapper for Mapper091_1 {
         if should_trigger_irq {
             mem.cpu_pinout.set_mapper_irq_pending();
         }
+    }
+
+    fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
+        Some(self.irq_counter.to_irq_counter_info())
     }
 
     fn layout(&self) -> Layout {

@@ -149,6 +149,10 @@ impl Mapper for Mapper064 {
         self.pattern_table_side = next_side;
     }
 
+    fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
+        Some(IrqCounterInfo { ticking_enabled: true, triggering_enabled: self.irq_enabled, count: self.irq_counter.into() })
+    }
+
     fn layout(&self) -> Layout {
         LAYOUT
     }

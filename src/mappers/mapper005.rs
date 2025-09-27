@@ -140,7 +140,6 @@ pub struct Mapper005 {
     sprite_height: SpriteHeight,
     tall_sprite_background_enabled: bool,
 
-    irq_enabled: bool,
     frame_state: FrameState,
 
     substitutions_enabled: bool,
@@ -226,7 +225,7 @@ impl Mapper for Mapper005 {
         // Syncing the frame status may have switched in or out of special background banking mode.
         self.update_chr_layout(mem);
 
-        if self.irq_enabled && self.frame_state.irq_pending() {
+        if self.frame_state.irq_pending() {
             mem.cpu_pinout.set_mapper_irq_pending();
         }
 
@@ -321,6 +320,10 @@ impl Mapper for Mapper005 {
         &self.fill_mode_name_table
     }
 
+    fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
+        Some(self.frame_state.to_irq_counter_info())
+    }
+
     fn layout(&self) -> Layout {
         LAYOUT
     }
@@ -343,7 +346,6 @@ impl Mapper005 {
             sprite_height: SpriteHeight::Normal,
             tall_sprite_background_enabled: false,
 
-            irq_enabled: false,
             frame_state: FrameState::new(),
 
             substitutions_enabled: false,
@@ -440,13 +442,13 @@ impl Mapper005 {
 
     // Write 0x5204
     fn enable_irq(&mut self, mem: &mut Memory, value: u8) {
-        self.irq_enabled = value >> 7 == 1;
-        if !self.irq_enabled {
+        let irq_enabled = value >> 7 == 1;
+        self.frame_state.set_irq_enabled(irq_enabled);
+        if !irq_enabled {
             mem.cpu_pinout.clear_mapper_irq_pending();
         } else if self.frame_state.irq_pending() {
             mem.cpu_pinout.set_mapper_irq_pending();
         }
-
     }
 
     fn update_chr_layout(&mut self, mem: &mut Memory) {

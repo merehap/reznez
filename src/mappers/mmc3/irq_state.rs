@@ -1,5 +1,6 @@
 use std::ops::RangeInclusive;
 
+use crate::mapper::IrqCounterInfo;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
@@ -83,6 +84,10 @@ impl IrqState {
     // Write 0xE001 (odd addresses)
     pub fn enable(&mut self) {
         self.counter.enable();
+    }
+
+    pub fn irq_counter_info(&self) -> IrqCounterInfo {
+        self.counter.to_irq_counter_info()
     }
 }
 

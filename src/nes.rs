@@ -25,7 +25,7 @@ use crate::cpu::step::Step;
 use crate::gui::gui::Events;
 use crate::logging::formatter;
 use crate::logging::formatter::*;
-use crate::mapper::{Mapper, NameTableMirroring, PrgBankRegisterId, ReadWriteStatus};
+use crate::mapper::{IrqCounterInfo, Mapper, NameTableMirroring, PrgBankRegisterId, ReadWriteStatus};
 use crate::mapper_list;
 use crate::memory::raw_memory::RawMemory;
 use crate::memory::bank::bank_index::{BankLocation, ChrBankRegisterId};
@@ -371,6 +371,20 @@ impl Nes {
             }
         }
 
+        if log_enabled!(target: "mapperirqcounter", Info)
+                && let Some(IrqCounterInfo { ticking_enabled, triggering_enabled, count }) = self.mapper.irq_counter_info() {
+            let latest = &mut self.latest_values;
+            if latest.mapper_irq_ticking_enabled_detector.set_value_then_detect(ticking_enabled) {
+                info!("Mapper IRQ counter ticking enabled: {ticking_enabled}");
+            }
+            if latest.mapper_irq_triggering_enabled_detector.set_value_then_detect(ticking_enabled) {
+                info!("Mapper IRQ counter triggering enabled: {triggering_enabled}");
+            }
+            if latest.mapper_irq_count_detector.set_value_then_detect(count) {
+                info!("Mapper IRQ counter changed to: {count}");
+            }
+        }
+
         assert!(!log_enabled!(target: "cpumode", Info) || !log_enabled!(target: "detailedcpumode", Info),
                 "Either cpumode OR detailedcpumode can be specified, but not both.");
 
@@ -555,6 +569,10 @@ struct LatestValues {
     dmc_cpu_halt_detector: EdgeDetector<bool>,
     oam_cpu_halt_detector: EdgeDetector<bool>,
 
+    mapper_irq_ticking_enabled_detector: EdgeDetector<bool>,
+    mapper_irq_triggering_enabled_detector: EdgeDetector<bool>,
+    mapper_irq_count_detector: EdgeDetector<u16>,
+
     prg_layout_index_detector: EdgeDetector<u8>,
     chr_layout_index_detector: EdgeDetector<u8>,
     prg_registers: [BankLocation; 5],
@@ -578,6 +596,10 @@ impl LatestValues {
             extended_cpu_mode: ExtendedCpuMode::new(),
             dmc_cpu_halt_detector: EdgeDetector::target_value(true),
             oam_cpu_halt_detector: EdgeDetector::target_value(true),
+
+            mapper_irq_ticking_enabled_detector: EdgeDetector::any_edge(),
+            mapper_irq_triggering_enabled_detector: EdgeDetector::any_edge(),
+            mapper_irq_count_detector: EdgeDetector::any_edge(),
 
             prg_layout_index_detector: EdgeDetector::starting_value(initial_mem.prg_memory.layout_index()),
             chr_layout_index_detector: EdgeDetector::starting_value(initial_mem.chr_memory.layout_index()),

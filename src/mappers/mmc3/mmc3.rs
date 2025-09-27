@@ -113,6 +113,10 @@ impl Mapper for Mapper004Mmc3 {
         self.irq_state.tick_counter(mem, address);
     }
 
+    fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
+        Some(self.irq_state.irq_counter_info())
+    }
+
     fn layout(&self) -> Layout {
         LAYOUT
     }

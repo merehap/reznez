@@ -1,6 +1,8 @@
 pub use splitbits::{splitbits, splitbits_named, combinebits, splitbits_then_combine};
 
 pub use crate::cartridge::cartridge::Cartridge;
+pub use crate::counter::irq_counter_info::IrqCounterInfo;
+pub use crate::counter::decrementing_counter::{DecrementingCounter, DecrementingCounterBuilder, AutoTriggeredBy, ForcedReloadBehavior, WhenDisabledPrevent};
 pub use crate::memory::bank::bank_index::{BankIndex, PrgBankRegisterId, ChrBankRegisterId, MetaRegisterId, ReadWriteStatus};
 pub use crate::memory::bank::bank_index::PrgBankRegisterId::{P0, P1, P2, P3, P4};
 pub use crate::memory::bank::bank_index::ChrBankRegisterId::*;
@@ -22,7 +24,6 @@ pub use crate::memory::window::{PrgWindow, ChrWindow};
 pub use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 pub use crate::ppu::name_table::name_table_mirroring::{NameTableMirroring, NameTableSource};
 pub use crate::ppu::pattern_table_side::PatternTableSide;
-pub use crate::counter::decrementing_counter::{DecrementingCounter, DecrementingCounterBuilder, AutoTriggeredBy, ForcedReloadBehavior, WhenDisabledPrevent};
 pub use crate::util::unit::{KIBIBYTE, KIBIBYTE_U16};
 
 use num_traits::FromPrimitive;
@@ -70,6 +71,8 @@ pub trait Mapper {
     fn on_ppu_address_change(&mut self, _mem: &mut Memory, _address: PpuAddress) {}
     // Most mappers don't have bus conflicts.
     fn has_bus_conflicts(&self) -> HasBusConflicts { HasBusConflicts::No }
+    // Used for debug screens.
+    fn irq_counter_info(&self) -> Option<IrqCounterInfo> { None }
     // Most mappers don't use a fill-mode name table.
     fn fill_mode_name_table(&self) -> &[u8; KIBIBYTE as usize] { unimplemented!() }
 
