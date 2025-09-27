@@ -17,6 +17,7 @@ mod analysis;
 mod cartridge;
 mod config;
 mod controller;
+mod counter;
 mod cpu;
 mod gui;
 mod logging;

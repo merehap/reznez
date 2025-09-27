@@ -16,6 +16,7 @@ pub mod analysis;
 pub mod cartridge;
 pub mod config;
 pub mod controller;
+pub mod counter;
 pub mod cpu;
 pub mod gui;
 pub mod logging;

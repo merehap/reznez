@@ -3,7 +3,7 @@ use std::ops::RangeInclusive;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
-use crate::util::counter::{AutoTriggeredBy, DecrementingCounter, DecrementingCounterBuilder, ForcedReloadBehavior, PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};
+use crate::counter::decrementing_counter::{AutoTriggeredBy, DecrementingCounter, DecrementingCounterBuilder, ForcedReloadBehavior, PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};
 use crate::util::edge_detector::EdgeDetector;
 
 pub struct IrqState {

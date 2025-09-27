@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::util::counter::WhenDisabledPrevent;
+use crate::counter::decrementing_counter::WhenDisabledPrevent;
 use crate::util::edge_detector::EdgeDetector;
 
 const LAYOUT: Layout = Layout::builder()
