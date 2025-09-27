@@ -1,3 +1,5 @@
+use std::marker::ConstParamTy;
+
 use log::{info, log_enabled};
 use log::Level::Info;
 
@@ -722,7 +724,7 @@ fn is_neg(value: u8) -> bool {
     (value >> 7) == 1
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, ConstParamTy)]
 pub enum NmiStatus {
     #[default]
     Inactive,
@@ -731,7 +733,7 @@ pub enum NmiStatus {
     Active,
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, ConstParamTy)]
 pub enum IrqStatus {
     #[default]
     Inactive,
@@ -740,7 +742,7 @@ pub enum IrqStatus {
     Active,
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, ConstParamTy)]
 pub enum ResetStatus {
     #[default]
     Inactive,

@@ -31,10 +31,10 @@ pub struct CpuPinout {
 impl CpuPinout {
     pub fn new() -> Self {
         Self {
-            reset: EdgeDetector::new(SignalLevel::High),
+            reset: EdgeDetector::target_value(SignalLevel::High),
             address_bus: CpuAddress::ZERO,
             data_bus: 0,
-            nmi_signal_detector: EdgeDetector::new(SignalLevel::Low),
+            nmi_signal_detector: EdgeDetector::target_value(SignalLevel::Low),
 
             mapper_irq_pending: false,
             frame_irq_pending: false,

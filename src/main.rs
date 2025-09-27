@@ -103,6 +103,7 @@ fn logger(opt: &Opt) -> Logger {
         log_apu_events,
         log_oam_addr: opt.log_oam_addr,
         log_mapper_updates: opt.log_mapper_updates,
+        log_mapper_irq_counter: opt.log_mapper_irq_counter,
         log_timings: opt.log_timings,
 
         buffer: Arc::new(Mutex::new(String::new())),

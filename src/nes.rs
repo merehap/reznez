@@ -35,6 +35,7 @@ use crate::memory::signal_level::SignalLevel;
 use crate::ppu::clock::Clock;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::render::frame::Frame;
+use crate::util::edge_detector::EdgeDetector;
 
 pub struct Nes {
     cpu: Cpu,
@@ -340,59 +341,29 @@ impl Nes {
     fn detect_changes(&mut self) {
         if log_enabled!(target: "cpuflowcontrol", Info) {
             let latest = &mut self.latest_values;
-
-            if latest.apu_frame_irq_pending != self.memory.cpu_pinout.frame_irq_pending() {
-                latest.apu_frame_irq_pending = self.memory.cpu_pinout.frame_irq_pending();
-                if latest.apu_frame_irq_pending {
-                    info!("APU Frame IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
-                }
+            if latest.apu_frame_irq_pending_detector.set_value_then_detect(self.memory.cpu_pinout.frame_irq_pending()) {
+                info!("APU Frame IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
             }
-
-            if latest.dmc_irq_pending != self.memory.cpu_pinout.dmc_irq_pending() {
-                latest.dmc_irq_pending = self.memory.cpu_pinout.dmc_irq_pending();
-                if latest.dmc_irq_pending {
-                    info!("DMC IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
-                }
+            if latest.dmc_irq_pending_detector.set_value_then_detect(self.memory.cpu_pinout.dmc_irq_pending()) {
+                info!("DMC IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
             }
-
-            if latest.mapper_irq_pending != self.memory.cpu_pinout.mapper_irq_pending() {
-                latest.mapper_irq_pending = self.memory.cpu_pinout.mapper_irq_pending();
-                if latest.mapper_irq_pending {
-                    info!("Mapper IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
-                }
+            if latest.mapper_irq_pending_detector.set_value_then_detect(self.memory.cpu_pinout.mapper_irq_pending()) {
+                info!("Mapper IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
             }
-
-            if latest.irq_status != self.cpu.irq_status() {
-                latest.irq_status = self.cpu.irq_status();
-                info!("IRQ status in CPU: {:?}. Cycle: {}", latest.irq_status, self.memory.cpu_cycle());
+            if latest.irq_status_detector.set_value_then_detect(self.cpu.irq_status()) {
+                info!("IRQ status in CPU: {:?}. Cycle: {}", self.cpu.irq_status(), self.memory.cpu_cycle());
             }
-
-            if latest.nmi_status != self.cpu.nmi_status() {
-                latest.nmi_status = self.cpu.nmi_status();
-                info!("NMI status: {:?}. Cycle: {}", latest.nmi_status, self.memory.cpu_cycle());
+            if latest.nmi_status_detector.set_value_then_detect(self.cpu.nmi_status()) {
+                info!("NMI status: {:?}. Cycle: {}", self.cpu.nmi_status(), self.memory.cpu_cycle());
             }
-
-            if latest.reset_status != self.cpu.reset_status() {
-                latest.reset_status = self.cpu.reset_status();
-                info!("RESET status: {:?}. Cycle: {}", latest.reset_status, self.memory.cpu_cycle());
+            if latest.reset_status_detector.set_value_then_detect(self.cpu.reset_status()) {
+                info!("RESET status: {:?}. Cycle: {}", self.cpu.reset_status(), self.memory.cpu_cycle());
             }
-
-            if latest.dmc_dma_action != self.memory.dmc_dma.latest_action() {
-                let previously_halted = latest.dmc_dma_action.cpu_should_be_halted();
-                latest.dmc_dma_action = self.memory.dmc_dma.latest_action();
-                let currently_halted = latest.dmc_dma_action.cpu_should_be_halted();
-                if !previously_halted && currently_halted {
-                    info!("CPU halted for DMC DMA transfer at {}.", self.memory.dmc_dma_address());
-                }
+            if latest.dmc_cpu_halt_detector.set_value_then_detect(self.memory.dmc_dma.latest_action().cpu_should_be_halted()) {
+                info!("CPU halted for DMC DMA transfer at {}.", self.memory.dmc_dma_address());
             }
-
-            if latest.extended_cpu_mode.oam_dma_action != self.memory.oam_dma.latest_action() {
-                let previously_halted = latest.oam_dma_action.cpu_should_be_halted();
-                latest.oam_dma_action = self.memory.oam_dma.latest_action();
-                let currently_halted = latest.oam_dma_action.cpu_should_be_halted();
-                if !previously_halted && currently_halted {
-                    info!("CPU halted for OAM DMA transfer at {}.", self.memory.oam_dma.address());
-                }
+            if latest.oam_cpu_halt_detector.set_value_then_detect(self.memory.oam_dma.latest_action().cpu_should_be_halted()) {
+                info!("CPU halted for OAM DMA transfer at {}.", self.memory.oam_dma.address());
             }
         }
 
@@ -471,14 +442,14 @@ impl Nes {
             let chr_memory = &self.memory.chr_memory;
             let latest = &mut self.latest_values;
 
-            if latest.prg_layout_index != prg_memory.layout_index() {
-                info!("PRG layout changed to index {}. Previously: {}.", prg_memory.layout_index(), latest.prg_layout_index);
-                latest.prg_layout_index = prg_memory.layout_index();
+            let prev_prg_layout_index = latest.prg_layout_index_detector.current_value();
+            if latest.prg_layout_index_detector.set_value_then_detect(prg_memory.layout_index()) {
+                info!("PRG layout changed to index {}. Previously: {}.", prg_memory.layout_index(), prev_prg_layout_index);
             }
 
-            if latest.chr_layout_index != chr_memory.layout_index() {
-                info!("CHR layout changed to index {}. Previously: {}.", chr_memory.layout_index(), latest.chr_layout_index);
-                latest.chr_layout_index = chr_memory.layout_index();
+            let prev_chr_layout_index = latest.chr_layout_index_detector.current_value();
+            if latest.chr_layout_index_detector.set_value_then_detect(chr_memory.layout_index()) {
+                info!("CHR layout changed to index {}. Previously: {}.", chr_memory.layout_index(), prev_chr_layout_index);
             }
 
             let prg_registers = prg_memory.bank_registers().registers();
@@ -568,20 +539,20 @@ impl Nes {
 }
 
 struct LatestValues {
-    apu_frame_irq_pending: bool,
-    dmc_irq_pending: bool,
-    mapper_irq_pending: bool,
+    apu_frame_irq_pending_detector: EdgeDetector<bool>,
+    dmc_irq_pending_detector: EdgeDetector<bool>,
+    mapper_irq_pending_detector: EdgeDetector<bool>,
 
-    irq_status: IrqStatus,
-    nmi_status: NmiStatus,
-    reset_status: ResetStatus,
+    irq_status_detector: EdgeDetector<IrqStatus>,
+    nmi_status_detector: EdgeDetector<NmiStatus>,
+    reset_status_detector: EdgeDetector<ResetStatus>,
 
     extended_cpu_mode: ExtendedCpuMode,
-    dmc_dma_action: DmcDmaAction,
-    oam_dma_action: OamDmaAction,
+    dmc_cpu_halt_detector: EdgeDetector<bool>,
+    oam_cpu_halt_detector: EdgeDetector<bool>,
 
-    prg_layout_index: u8,
-    chr_layout_index: u8,
+    prg_layout_index_detector: EdgeDetector<u8>,
+    chr_layout_index_detector: EdgeDetector<u8>,
     prg_registers: [BankLocation; 5],
     chr_registers: [BankLocation; 18],
     meta_registers: [ChrBankRegisterId; 2],
@@ -592,20 +563,20 @@ struct LatestValues {
 impl LatestValues {
     fn new(initial_mem: &Memory) -> Self {
         Self {
-            apu_frame_irq_pending: false,
-            dmc_irq_pending: false,
-            mapper_irq_pending: false,
+            apu_frame_irq_pending_detector: EdgeDetector::target_value(true),
+            dmc_irq_pending_detector: EdgeDetector::target_value(true),
+            mapper_irq_pending_detector: EdgeDetector::target_value(true),
 
-            irq_status: IrqStatus::Inactive,
-            nmi_status: NmiStatus::Inactive,
-            reset_status: ResetStatus::Inactive,
+            irq_status_detector: EdgeDetector::any_edge(),
+            nmi_status_detector: EdgeDetector::any_edge(),
+            reset_status_detector: EdgeDetector::any_edge(),
 
             extended_cpu_mode: ExtendedCpuMode::new(),
-            dmc_dma_action: DmcDmaAction::DoNothing,
-            oam_dma_action: OamDmaAction::DoNothing,
+            dmc_cpu_halt_detector: EdgeDetector::target_value(true),
+            oam_cpu_halt_detector: EdgeDetector::target_value(true),
 
-            prg_layout_index: initial_mem.prg_memory.layout_index(),
-            chr_layout_index: initial_mem.chr_memory.layout_index(),
+            prg_layout_index_detector: EdgeDetector::starting_value(initial_mem.prg_memory.layout_index()),
+            chr_layout_index_detector: EdgeDetector::starting_value(initial_mem.chr_memory.layout_index()),
             prg_registers: *initial_mem.prg_memory().bank_registers().registers(),
             chr_registers: *initial_mem.chr_memory().bank_registers().registers(),
             meta_registers: *initial_mem.chr_memory().bank_registers().meta_registers(),

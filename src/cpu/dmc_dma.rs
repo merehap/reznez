@@ -1,3 +1,5 @@
+use std::marker::ConstParamTy;
+
 use crate::apu::apu_registers::CycleParity;
 
 pub struct DmcDma {
@@ -82,8 +84,9 @@ impl DmcDmaState {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, ConstParamTy)]
 pub enum DmcDmaAction {
+    #[default]
     DoNothing,
     Halt,
     Dummy,

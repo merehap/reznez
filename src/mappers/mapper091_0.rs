@@ -81,7 +81,7 @@ impl Mapper091_0 {
     pub fn new() -> Self {
         Self {
             irq_counter: IRQ_COUNTER,
-            pattern_table_transition_detector: EdgeDetector::new(PatternTableSide::Right),
+            pattern_table_transition_detector: EdgeDetector::target_value(PatternTableSide::Right),
         }
     }
 }

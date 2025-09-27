@@ -1,3 +1,5 @@
+use std::marker::ConstParamTy;
+
 use crate::apu::apu_registers::CycleParity;
 use crate::memory::cpu::cpu_address::CpuAddress;
 
@@ -91,8 +93,9 @@ impl OamDmaState {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, ConstParamTy)]
 pub enum OamDmaAction {
+    #[default]
     DoNothing,
     Halt,
     Align,

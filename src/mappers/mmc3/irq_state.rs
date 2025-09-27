@@ -46,7 +46,7 @@ impl IrqState {
         let edge_detected = self.pattern_table_side_detector.set_value_then_detect(address.pattern_table_side());
         let should_tick_irq_counter = edge_detected && not_suppressed;
 
-        if address.pattern_table_side() == self.pattern_table_side_detector.target_value() {
+        if self.pattern_table_side_detector.matches_target(address.pattern_table_side()) {
             self.suppression_cycle_count = self.suppression_cycle_reload_value;
         }
 

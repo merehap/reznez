@@ -111,6 +111,9 @@ pub struct Opt {
     #[structopt(name = "logmapperupdates", long)]
     pub log_mapper_updates: bool,
 
+    #[structopt(name = "logmapperirqcounter", long)]
+    pub log_mapper_irq_counter: bool,
+
     #[structopt(name = "logtimings", long)]
     pub log_timings: bool,
 
@@ -148,6 +151,7 @@ impl Opt {
             log_apu_cycles: false,
             log_apu_events: false,
             log_mapper_updates: false,
+            log_mapper_irq_counter: false,
             log_timings: false,
             cpu_step_formatting: CpuStepFormatting::Data,
             frame_dump: false,
