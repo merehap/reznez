@@ -39,10 +39,14 @@ const LAYOUT: Layout = Layout::builder()
 const READ_ONLY: u8 = 0;
 const READ_WRITE: u8 = 1;
 
+const IRQ_COUNTER: IncrementingCounter = IncrementingCounterBuilder::new()
+    .trigger_target(0x7FFF)
+    .build();
+
 // Namco 129 and Namco 163
+// Needs testing, its IRQ was horribly broken when I found it, but might be fixed now.
 pub struct Mapper019 {
-    // Actually a u15, but that's not ergonomic enough to use.
-    irq_counter: u16,
+    irq_counter: IncrementingCounter,
 
     allow_ciram_in_low_chr: bool,
     allow_ciram_in_high_chr: bool,
@@ -54,8 +58,8 @@ impl Mapper for Mapper019 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x47FF => ReadResult::OPEN_BUS,
             0x4800..=0x4FFF => /* TODO: Expansion Audio */ ReadResult::full(0),
-            0x5000..=0x57FF => ReadResult::full((self.irq_counter & 0b0000_0000_1111_1111) as u8),
-            0x5800..=0x5FFF => ReadResult::full(((self.irq_counter >> 8) & 0b0111_1111) as u8),
+            0x5000..=0x57FF => ReadResult::full(self.irq_counter.count_low_byte()),
+            0x5800..=0x5FFF => ReadResult::full(self.irq_counter.count_high_byte()),
             0x6000..=0xFFFF => mem.peek_prg(addr),
         }
     }
@@ -67,15 +71,11 @@ impl Mapper for Mapper019 {
             0x4800..=0x4FFF => { /* TODO: Expansion Audio. */ }
             0x5000..=0x57FF => {
                 mem.cpu_pinout.clear_mapper_irq_pending();
-                // Set the low bits of the IRQ counter.
-                self.irq_counter &= 0b0000_0000_1111_1111;
-                self.irq_counter |= u16::from(value);
+                self.irq_counter.set_count_low_byte(value);
             }
             0x5800..=0x5FFF => {
                 mem.cpu_pinout.clear_mapper_irq_pending();
-                // Set the high bits of the IRQ counter.
-                self.irq_counter &= 0b0111_1111_0000_0000;
-                self.irq_counter |= u16::from(value << 1) << 7;
+                self.irq_counter.set_count_high_byte(value & 0b0111_1111);
             }
             0x6000..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x87FF => set_chr_register(mem, self.allow_ciram_in_low_chr, C0, S0, value),
@@ -155,16 +155,14 @@ impl Mapper for Mapper019 {
     }
 
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        if self.irq_counter < 0x7FFF {
-            self.irq_counter += 1;
-            if self.irq_counter == 0x7FFF {
-                mem.cpu_pinout.set_mapper_irq_pending();
-            }
+        let triggered = self.irq_counter.tick();
+        if triggered {
+            mem.cpu_pinout.set_mapper_irq_pending();
         }
     }
 
     fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
-        Some(IrqCounterInfo { ticking_enabled: true, triggering_enabled: true, count: self.irq_counter })
+        Some(self.irq_counter.to_irq_counter_info())
     }
 
     fn layout(&self) -> Layout {
@@ -192,8 +190,7 @@ fn set_chr_register(
 impl Mapper019 {
     pub fn new() -> Self {
         Self {
-            irq_counter: 0,
-
+            irq_counter: IRQ_COUNTER,
             allow_ciram_in_low_chr: true,
             allow_ciram_in_high_chr: true,
         }
