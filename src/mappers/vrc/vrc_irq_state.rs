@@ -1,6 +1,7 @@
 use splitbits::splitbits_named;
 
-use crate::mapper::Memory;
+use crate::counter::irq_counter_info::IrqCounterInfo;
+use crate::memory::memory::Memory;
 
 pub struct VrcIrqState {
     enabled: bool,
@@ -78,6 +79,10 @@ impl VrcIrqState {
         if self.enable_upon_acknowledgement {
             self.enabled = true;
         }
+    }
+
+    pub fn to_irq_counter_info(&self) -> IrqCounterInfo {
+        IrqCounterInfo { ticking_enabled: self.enabled, triggering_enabled: self.enabled, count: self.counter as u16 }
     }
 }
 

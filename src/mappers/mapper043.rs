@@ -73,6 +73,10 @@ impl Mapper for Mapper043 {
         }
     }
 
+    fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
+        Some(IrqCounterInfo { ticking_enabled: self.irq_enabled, triggering_enabled: self.irq_enabled, count: self.irq_counter.into() })
+    }
+
     fn layout(&self) -> Layout {
         LAYOUT
     }

@@ -21,6 +21,7 @@ const LAYOUT: Layout = Layout::builder()
 
 // NTDEC 2722 and NTDEC 2752 PCB and imitations.
 // Used for conversions of the Japanese version of Super Mario Bros. 2
+// TODO: Test this mapper. The IRQ was broken last time checked, but potential fix was added, just not tested.
 #[derive(Default)]
 pub struct Mapper040 {
     irq_enabled: bool,
@@ -37,7 +38,7 @@ impl Mapper for Mapper040 {
                 self.irq_enabled = false;
             }
             0xA000..=0xBFFF => {
-                mem.cpu_pinout.set_mapper_irq_pending();
+                self.irq_enabled = true;
             }
             0xC000..=0xDFFF => { /* TODO: NTDEC 2752 outer bank register. Test ROM needed. */ }
             0xE000..=0xFFFF => {
@@ -56,6 +57,10 @@ impl Mapper for Mapper040 {
             mem.cpu_pinout.set_mapper_irq_pending();
             self.irq_enabled = false;
         }
+    }
+
+    fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
+        Some(IrqCounterInfo { ticking_enabled: self.irq_enabled, triggering_enabled: self.irq_enabled, count: self.irq_counter.into() })
     }
 
     fn layout(&self) -> Layout {

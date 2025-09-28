@@ -88,11 +88,16 @@ impl Mapper for Mapper142 {
         }
 
         // It's not clear if this is supposed to match VRC3's behavior or not. This is off-by-1.
+        // TODO: Test behavior when the reload value is 0xFFFF, since that will cause a wrap-around without setting IRQ pending.
         self.irq_counter += 1;
         if self.irq_counter == 0xFFFF {
             mem.cpu_pinout.set_mapper_irq_pending();
             self.irq_counter = self.irq_counter_reload_value;
         }
+    }
+
+    fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
+        Some(IrqCounterInfo { ticking_enabled: self.irq_enabled, triggering_enabled: self.irq_enabled, count: self.irq_counter })
     }
 
     fn layout(&self) -> Layout {
