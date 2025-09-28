@@ -15,24 +15,59 @@ pub struct IrqState {
 }
 
 impl IrqState {
-    pub const SHARP_IRQ_STATE: Self = Self::normal(SHARP_IRQ_COUNTER);
-    pub const NEC_IRQ_STATE: Self = Self::normal(NEC_IRQ_COUNTER);
-    pub const REV_A_IRQ_STATE: Self = Self::normal(REV_A_IRQ_COUNTER);
+    // ForcedReloadBehavior and WhenDisabledPrevent are the same for all MMC3 IRQ varities.
+
+    // The standard MMC3 IRQ behavior.
+    pub const SHARP_IRQ_STATE: Self = Self {
+        counter: DecrementingCounterBuilder::new()
+            .auto_triggered_by(AutoTriggeredBy::EndingOnZero)
+            .auto_reload(true)
+            .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
+            .when_disabled_prevent(WhenDisabledPrevent::Triggering)
+            .build(),
+        allowed_address_range: 0..=0x1FFF,
+        suppressor: Suppressor::SUPPRESS_FOR_16_CYCLES,
+        pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Right),
+    };
+    // Same as Sharp except that automatic IRQs are ONLY triggered on a 1 to 0 transition of the count, not when it was already 0.
+    pub const NEC_IRQ_STATE: Self = Self {
+        counter: DecrementingCounterBuilder::new()
+            .auto_triggered_by(AutoTriggeredBy::OneToZeroTransition)
+            .auto_reload(true)
+            .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
+            .when_disabled_prevent(WhenDisabledPrevent::Triggering)
+            .build(),
+        allowed_address_range: 0..=0x1FFF,
+        suppressor: Suppressor::SUPPRESS_FOR_16_CYCLES,
+        pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Right),
+    };
+    // Same as NEC except that forcing a reload of 0 will also trigger an IRQ.
+    pub const REV_A_IRQ_STATE: Self = Self {
+        counter: DecrementingCounterBuilder::new()
+            .auto_triggered_by(AutoTriggeredBy::OneToZeroTransition)
+            .also_trigger_on_forced_reload_of_zero()
+            .auto_reload(true)
+            .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
+            .when_disabled_prevent(WhenDisabledPrevent::Triggering)
+            .build(),
+        allowed_address_range: 0..=0x1FFF,
+        suppressor: Suppressor::SUPPRESS_FOR_16_CYCLES,
+        pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Right),
+    };
+    // Very different from the other MMC3 IRQs since it has a prescaler, doesn't filter PPU addresses,
+    // triggers on pattern table side transitions to the LEFT not the right, and doesn't suppress repeats on transition.
     pub const MC_ACC_IRQ_STATE: Self = Self {
-        counter: MC_ACC_IRQ_COUNTER,
+        counter: DecrementingCounterBuilder::new()
+            .auto_triggered_by(AutoTriggeredBy::EndingOnZero)
+            .auto_reload(true)
+            .prescaler(8, PrescalerTriggeredBy::AlreadyZero, PrescalerBehaviorOnForcedReload::ClearCount)
+            .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
+            .when_disabled_prevent(WhenDisabledPrevent::Triggering)
+            .build(),
         allowed_address_range: 0..=0xFFFF,
         suppressor: Suppressor::NEVER_SUPPRESS,
         pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Left),
     };
-
-    const fn normal(counter: DecrementingCounter) -> Self {
-        IrqState {
-            counter,
-            allowed_address_range: 0..=0x1FFF,
-            suppressor: Suppressor::SUPPRESS_FOR_16_CYCLES,
-            pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Right),
-        }
-    }
 
     pub fn tick_counter(&mut self, mem: &mut Memory, address: PpuAddress) {
         if !self.allowed_address_range.contains(&address.to_scroll_u16()) {
@@ -113,39 +148,3 @@ impl Suppressor {
         self.cycles_remaining = self.cycles_remaining.saturating_sub(1);
     }
 }
-
-// ForcedReloadBehavior and WhenDisabledPrevent are the same for all MMC3 IRQs.
-
-const SHARP_IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
-    .auto_triggered_by(AutoTriggeredBy::EndingOnZero)
-    .auto_reload(true)
-
-    .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
-    .when_disabled_prevent(WhenDisabledPrevent::Triggering)
-    .build();
-
-const MC_ACC_IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
-    .auto_triggered_by(AutoTriggeredBy::EndingOnZero)
-    .auto_reload(true)
-    .prescaler(8, PrescalerTriggeredBy::AlreadyZero, PrescalerBehaviorOnForcedReload::ClearCount)
-
-    .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
-    .when_disabled_prevent(WhenDisabledPrevent::Triggering)
-    .build();
-
-const NEC_IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
-    .auto_triggered_by(AutoTriggeredBy::OneToZeroTransition)
-    .auto_reload(true)
-
-    .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
-    .when_disabled_prevent(WhenDisabledPrevent::Triggering)
-    .build();
-
-const REV_A_IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
-    .auto_triggered_by(AutoTriggeredBy::OneToZeroTransition)
-    .also_trigger_on_forced_reload_of_zero()
-    .auto_reload(true)
-
-    .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
-    .when_disabled_prevent(WhenDisabledPrevent::Triggering)
-    .build();

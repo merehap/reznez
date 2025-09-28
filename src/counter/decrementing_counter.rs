@@ -4,7 +4,7 @@ use crate::counter::irq_counter_info::IrqCounterInfo;
 
 pub struct DecrementingCounter {
     // Immutable settings determined at compile time
-    trigger_on: AutoTriggeredBy,
+    auto_triggered_by: AutoTriggeredBy,
     trigger_on_forced_reload_of_zero: bool,
     forced_reload_behavior: ForcedReloadBehavior,
     auto_reload: bool,
@@ -118,7 +118,7 @@ impl DecrementingCounter {
 
         let new_count = self.count;
         // The triggering behavior is fixed at compile time, so the same branch will be taken every time here.
-        let auto_triggered = match self.trigger_on {
+        let auto_triggered = match self.auto_triggered_by {
             AutoTriggeredBy::AlreadyZero => old_count == 0,
             AutoTriggeredBy::EndingOnZero => new_count == 0,
             AutoTriggeredBy::OneToZeroTransition => old_count == 1 && new_count == 0,
@@ -232,6 +232,11 @@ impl DecrementingCounterBuilder {
     }
 
     pub const fn build(self) -> DecrementingCounter {
+        let auto_triggered_by = self.auto_triggered_by.expect("auto_triggered_by must be set");
+        if matches!(auto_triggered_by, AutoTriggeredBy::OneToZeroTransition) && self.decrement_size.get() > 1 {
+            panic!("AutoTriggeredBy::OneToZeroTransition must not be specified when decrement_size is greater than 1.");
+        }
+
         let reload_value = self.initial_reload_value;
         let when_disabled_prevent = self.when_disabled_prevent.expect("when_disabled must be set");
         let ticking_enabled = match when_disabled_prevent {
@@ -246,7 +251,7 @@ impl DecrementingCounterBuilder {
         }
 
         DecrementingCounter {
-            trigger_on: self.auto_triggered_by.expect("trigger_on must be set"),
+            auto_triggered_by,
             trigger_on_forced_reload_of_zero: self.trigger_on_forced_reload_of_zero,
             forced_reload_behavior: self.forced_reload_behavior.expect("forced_reload_behavior must be set"),
             auto_reload: self.auto_reload.expect("auto_reload must be set"),
