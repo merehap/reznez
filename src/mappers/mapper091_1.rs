@@ -28,7 +28,7 @@ const VERTICAL: u8 = 1;
 const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
     .auto_triggered_by(AutoTriggeredBy::EndingOnZero)
     .auto_reload(false)
-    .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueImmediately)
+    .on_forced_reload_set_count(ForcedReloadTiming::Immediate)
     .decrement_size(5)
     .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
     .prescaler(4, PrescalerTriggeredBy::WrappingToZero, PrescalerBehaviorOnForcedReload::DoNothing)

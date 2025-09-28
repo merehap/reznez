@@ -7,7 +7,7 @@ pub struct DecrementingCounter {
     // Immutable settings determined at compile time
     auto_triggered_by: AutoTriggeredBy,
     trigger_on_forced_reload_of_zero: bool,
-    forced_reload_behavior: ForcedReloadBehavior,
+    forced_reload_timing: ForcedReloadTiming,
     auto_reload: bool,
     when_disabled_prevent: WhenDisabledPrevent,
     decrement_size: NonZeroU16,
@@ -39,44 +39,16 @@ impl DecrementingCounter {
         }
     }
 
-    // The vast majority of use-cases should just call enable/disable instead of this.
-    pub fn set_triggering_enabled(&mut self, triggering_enabled: bool) {
-        self.triggering_enabled = triggering_enabled;
-    }
-
-    // The vast majority of use-cases should just call enable/disable instead of this.
-    pub fn set_ticking_enabled(&mut self, ticking_enabled: bool) {
-        self.ticking_enabled = ticking_enabled;
-    }
-
     pub fn set_reload_value(&mut self, value: u8) {
-        assert!(self.forced_reload_behavior != ForcedReloadBehavior::SetCountDirectly,
-            "When forced_reload_behavior == DirectlySetCount, use set_count_X() instead of set_reload_value_X()");
         self.reload_value = u16::from(value);
     }
 
     pub fn set_reload_value_low_byte(&mut self, value: u8) {
-        assert!(self.forced_reload_behavior != ForcedReloadBehavior::SetCountDirectly,
-            "When forced_reload_behavior == DirectlySetCount, use set_count_X() instead of set_reload_value_X()");
         self.reload_value = (self.reload_value & 0xFF00) | u16::from(value);
     }
 
     pub fn set_reload_value_high_byte(&mut self, value: u8) {
-        assert!(self.forced_reload_behavior != ForcedReloadBehavior::SetCountDirectly,
-            "When forced_reload_behavior == DirectlySetCount, use set_count_X() instead of set_reload_value_X()");
         self.reload_value = (self.reload_value & 0x00FF) | (u16::from(value) << 8);
-    }
-
-    pub fn set_count_low_byte(&mut self, value: u8) {
-        assert_eq!(self.forced_reload_behavior, ForcedReloadBehavior::SetCountDirectly,
-            "Must use forced_reload_behavior == DirectlySetCount in order to call set_count_X()");
-        self.count = (self.count & 0xFF00) | u16::from(value);
-    }
-
-    pub fn set_count_high_byte(&mut self, value: u8) {
-        assert_eq!(self.forced_reload_behavior, ForcedReloadBehavior::SetCountDirectly,
-            "Must use forced_reload_behavior == DirectlySetCount in order to call set_count_X()");
-        self.count = (self.count & 0x00FF) | (u16::from(value) << 8);
     }
 
     pub fn force_reload(&mut self) {
@@ -84,16 +56,15 @@ impl DecrementingCounter {
             self.prescaler.count = 0;
         }
 
-        match self.forced_reload_behavior {
-            ForcedReloadBehavior::SetCountDirectly => panic!("forced_reload_timing must be specified in DecrementingCounterBuilder in order to call forced_reload"),
-            ForcedReloadBehavior::SetReloadValueImmediately => {
+        match self.forced_reload_timing {
+            ForcedReloadTiming::Immediate => {
                 self.count = self.reload_value;
                 // Untested behavior, not sure if it exists in the wild. Should forced_trigger_pending be set if !triggering_enabled?
                 if self.trigger_on_forced_reload_of_zero && self.reload_value == 0 {
                     self.forced_trigger_pending = true;
                 }
             }
-            ForcedReloadBehavior::SetReloadValueOnNextTick => self.forced_reload_pending = true,
+            ForcedReloadTiming::OnNextTick => self.forced_reload_pending = true,
         }
     }
 
@@ -147,12 +118,43 @@ impl DecrementingCounter {
     }
 }
 
+// A decrementing counter where the count can be set directly, and can't be force-reloaded.
+pub struct DirectlySetDecrementingCounter(DecrementingCounter);
+
+impl DirectlySetDecrementingCounter {
+    // Used instead of set_reload_value_low_byte().
+    pub fn set_count_low_byte(&mut self, value: u8) {
+        self.0.count = (self.0.count & 0xFF00) | u16::from(value);
+    }
+
+    // Used instead of set_reload_value_high_byte().
+    pub fn set_count_high_byte(&mut self, value: u8) {
+        self.0.count = (self.0.count & 0x00FF) | (u16::from(value) << 8);
+    }
+
+    // force_reload() intentionally omitted from this list.
+    pub fn enable(&mut self) { self.0.enable(); }
+    pub fn disable(&mut self) { self.0.disable(); }
+    pub fn tick(&mut self) -> bool { self.0.tick() }
+    pub fn to_irq_counter_info(&self) -> IrqCounterInfo { self.0.to_irq_counter_info() }
+
+    // The vast majority of use-cases should just call enable/disable instead of this.
+    pub fn set_triggering_enabled(&mut self, triggering_enabled: bool) {
+        self.0.triggering_enabled = triggering_enabled;
+    }
+
+    // The vast majority of use-cases should just call enable/disable instead of this.
+    pub fn set_ticking_enabled(&mut self, ticking_enabled: bool) {
+        self.0.ticking_enabled = ticking_enabled;
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct DecrementingCounterBuilder {
     auto_triggered_by: Option<AutoTriggeredBy>,
     trigger_on_forced_reload_of_zero: bool,
     auto_reload: Option<bool>,
-    forced_reload_behavior: Option<ForcedReloadBehavior>,
+    forced_reload_timing: Option<ForcedReloadTiming>,
     when_disabled_prevent: Option<WhenDisabledPrevent>,
     initial_reload_value: u16,
     initial_count: Option<u16>,
@@ -166,7 +168,7 @@ impl DecrementingCounterBuilder {
             auto_triggered_by: None,
             trigger_on_forced_reload_of_zero: false,
             auto_reload: None,
-            forced_reload_behavior: None,
+            forced_reload_timing: None,
             when_disabled_prevent: None,
             initial_reload_value: 0,
             // Normally initial_reload_value is assigned to initial_count in build().
@@ -187,8 +189,8 @@ impl DecrementingCounterBuilder {
         self
     }
 
-    pub const fn forced_reload_behavior(&mut self, forced_reload_behavior: ForcedReloadBehavior) -> &mut Self {
-        self.forced_reload_behavior = Some(forced_reload_behavior);
+    pub const fn on_forced_reload_set_count(&mut self, forced_reload_behavior: ForcedReloadTiming) -> &mut Self {
+        self.forced_reload_timing = Some(forced_reload_behavior);
         self
     }
 
@@ -233,6 +235,18 @@ impl DecrementingCounterBuilder {
     }
 
     pub const fn build(self) -> DecrementingCounter {
+        assert!(self.forced_reload_timing.is_some(),
+            "forced_reload_timing must be set. If forced-reloading is not needed, use build_directly_settable() instead.");
+        self.build_reload_forceable()
+    }
+
+    pub const fn build_directly_set(mut self) -> DirectlySetDecrementingCounter {
+        // Set an unused dummy value so validation will pass.
+        self.forced_reload_timing = Some(ForcedReloadTiming::Immediate);
+        DirectlySetDecrementingCounter(self.build_reload_forceable())
+    }
+
+    const fn build_reload_forceable(self) -> DecrementingCounter {
         let auto_triggered_by = self.auto_triggered_by.expect("auto_triggered_by must be set");
         if matches!(auto_triggered_by, AutoTriggeredBy::OneToZeroTransition) && self.decrement_size.get() > 1 {
             panic!("AutoTriggeredBy::OneToZeroTransition must not be specified when decrement_size is greater than 1.");
@@ -254,7 +268,7 @@ impl DecrementingCounterBuilder {
         DecrementingCounter {
             auto_triggered_by,
             trigger_on_forced_reload_of_zero: self.trigger_on_forced_reload_of_zero,
-            forced_reload_behavior: self.forced_reload_behavior.expect("forced_reload_behavior must be set"),
+            forced_reload_timing: self.forced_reload_timing.expect("forced_reload_timing must be set"),
             auto_reload: self.auto_reload.expect("auto_reload must be set"),
             when_disabled_prevent,
             decrement_size: self.decrement_size,
@@ -276,11 +290,12 @@ pub enum AutoTriggeredBy {
     OneToZeroTransition,
 }
 
+// OnForcedReloadSetCount
+//
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum ForcedReloadBehavior {
-    SetCountDirectly,
-    SetReloadValueImmediately,
-    SetReloadValueOnNextTick,
+pub enum ForcedReloadTiming {
+    Immediate,
+    OnNextTick,
 }
 
 #[derive(Clone, Copy, Debug)]

@@ -34,15 +34,14 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
+const IRQ_COUNTER: DirectlySetDecrementingCounter = DecrementingCounterBuilder::new()
     .auto_triggered_by(AutoTriggeredBy::AlreadyZero)
     .auto_reload(true)
-    .forced_reload_behavior(ForcedReloadBehavior::SetCountDirectly)
     .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
     // This value is never changed. Reloading to 0xFFFF is the same thing as just letting the count wrap around.
     .initial_reload_value(0xFFFF)
     .initial_count(0)
-    .build();
+    .build_directly_set();
 
 const CHR_REGISTER_IDS: [ChrBankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
 // P0 is used by the ROM/RAM window, which gets special treatment.
@@ -50,7 +49,7 @@ const PRG_ROM_REGISTER_IDS: [PrgBankRegisterId; 3] = [P1, P2, P3];
 
 // Sunsoft FME-7
 pub struct Mapper069 {
-    irq_counter: DecrementingCounter,
+    irq_counter: DirectlySetDecrementingCounter,
     command: Command,
 }
 

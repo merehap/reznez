@@ -25,19 +25,18 @@ const LAYOUT: Layout = Layout::builder()
 
 // Sunsoft-3 IRQ both auto-reloads (by wrapping around), and has its count set directly,
 // rather through modifying a reload value and copying that to the count.
-const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
+const IRQ_COUNTER: DirectlySetDecrementingCounter = DecrementingCounterBuilder::new()
     .auto_triggered_by(AutoTriggeredBy::AlreadyZero)
     .auto_reload(true)
-    .forced_reload_behavior(ForcedReloadBehavior::SetCountDirectly)
     .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
     // This value is never changed. Reloading to 0xFFFF is the same thing as just letting the count wrap around.
     .initial_reload_value(0xFFFF)
     .initial_count(0)
-    .build();
+    .build_directly_set();
 
 // Sunsoft-3
 pub struct Mapper067 {
-    irq_counter: DecrementingCounter,
+    irq_counter: DirectlySetDecrementingCounter,
     irq_load_low: bool,
 }
 

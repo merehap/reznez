@@ -4,7 +4,7 @@ use crate::mapper::IrqCounterInfo;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
-use crate::counter::decrementing_counter::{AutoTriggeredBy, DecrementingCounter, DecrementingCounterBuilder, ForcedReloadBehavior, PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};
+use crate::counter::decrementing_counter::{AutoTriggeredBy, DecrementingCounter, DecrementingCounterBuilder, ForcedReloadTiming, PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};
 use crate::util::edge_detector::EdgeDetector;
 
 pub struct IrqState {
@@ -22,7 +22,7 @@ impl IrqState {
         counter: DecrementingCounterBuilder::new()
             .auto_triggered_by(AutoTriggeredBy::EndingOnZero)
             .auto_reload(true)
-            .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
+            .on_forced_reload_set_count(ForcedReloadTiming::OnNextTick)
             .when_disabled_prevent(WhenDisabledPrevent::Triggering)
             .build(),
         allowed_address_range: 0..=0x1FFF,
@@ -34,7 +34,7 @@ impl IrqState {
         counter: DecrementingCounterBuilder::new()
             .auto_triggered_by(AutoTriggeredBy::OneToZeroTransition)
             .auto_reload(true)
-            .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
+            .on_forced_reload_set_count(ForcedReloadTiming::OnNextTick)
             .when_disabled_prevent(WhenDisabledPrevent::Triggering)
             .build(),
         allowed_address_range: 0..=0x1FFF,
@@ -47,7 +47,7 @@ impl IrqState {
             .auto_triggered_by(AutoTriggeredBy::OneToZeroTransition)
             .also_trigger_on_forced_reload_of_zero()
             .auto_reload(true)
-            .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
+            .on_forced_reload_set_count(ForcedReloadTiming::OnNextTick)
             .when_disabled_prevent(WhenDisabledPrevent::Triggering)
             .build(),
         allowed_address_range: 0..=0x1FFF,
@@ -61,7 +61,7 @@ impl IrqState {
             .auto_triggered_by(AutoTriggeredBy::EndingOnZero)
             .auto_reload(true)
             .prescaler(8, PrescalerTriggeredBy::AlreadyZero, PrescalerBehaviorOnForcedReload::ClearCount)
-            .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueOnNextTick)
+            .on_forced_reload_set_count(ForcedReloadTiming::OnNextTick)
             .when_disabled_prevent(WhenDisabledPrevent::Triggering)
             .build(),
         allowed_address_range: 0..=0xFFFF,

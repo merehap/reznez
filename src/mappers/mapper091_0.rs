@@ -24,7 +24,7 @@ const LAYOUT: Layout = Layout::builder()
 const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
     .auto_triggered_by(AutoTriggeredBy::EndingOnZero)
     .auto_reload(false)
-    .forced_reload_behavior(ForcedReloadBehavior::SetReloadValueImmediately)
+    .on_forced_reload_set_count(ForcedReloadTiming::Immediate)
     // The reload value is never changed from the initial value for this submapper.
     .initial_reload_value(64)
     .when_disabled_prevent(WhenDisabledPrevent::Triggering)
