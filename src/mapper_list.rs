@@ -202,7 +202,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // Duplicate of 241.
         (39, None) => m::mapper039::Mapper039::new().supported(),
         // NTDEC 2722 and NTDEC 2752 PCB and imitations
-        (40, None) => m::mapper040::Mapper040::default().supported(),
+        (40, None) => m::mapper040::Mapper040::new().supported(),
         // Caltron 6-in-1
         (41, None) => m::mapper041::Mapper041::default().supported(),
         // FDS games hacked into cartridge form
@@ -219,7 +219,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (48, None) => m::mapper048::Mapper048::new().supported(),
         (49, _) => TodoMapper,
         // N-32 conversion of Super Mario Bros. 2 (J). PCB code 761214.
-        (50, None) => m::mapper050::Mapper050::default().supported(),
+        (50, None) => m::mapper050::Mapper050::new().supported(),
         (51..=54, _) => TodoMapper,
         // BTL-MARIO1-MALEE2
         (55, None) => m::mapper055::Mapper055.supported(),

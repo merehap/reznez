@@ -1,3 +1,4 @@
+use crate::counter::incrementing_counter::{IncAutoTriggeredBy, WhenTargetReached};
 use crate::mapper::*;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::chr_memory::PpuPeek;
@@ -40,7 +41,10 @@ const READ_ONLY: u8 = 0;
 const READ_WRITE: u8 = 1;
 
 const IRQ_COUNTER: IncrementingCounter = IncrementingCounterBuilder::new()
+    .auto_triggered_by(IncAutoTriggeredBy::EndingOnTarget)
     .trigger_target(0x7FFF)
+    .when_target_reached(WhenTargetReached::Stay)
+    .never_disabled()
     .build();
 
 // Namco 129 and Namco 163

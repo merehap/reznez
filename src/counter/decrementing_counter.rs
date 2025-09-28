@@ -1,6 +1,7 @@
 use std::num::{NonZeroU16, NonZeroU8};
 
 use crate::counter::irq_counter_info::IrqCounterInfo;
+pub use crate::counter::when_disabled_prevent::WhenDisabledPrevent;
 
 pub struct DecrementingCounter {
     // Immutable settings determined at compile time
@@ -196,8 +197,8 @@ impl DecrementingCounterBuilder {
         self
     }
 
-    pub const fn when_disabled_prevent(&mut self, when_disabled: WhenDisabledPrevent) -> &mut Self {
-        self.when_disabled_prevent = Some(when_disabled);
+    pub const fn when_disabled_prevent(&mut self, when_disabled_prevent: WhenDisabledPrevent) -> &mut Self {
+        self.when_disabled_prevent = Some(when_disabled_prevent);
         self
     }
 
@@ -280,13 +281,6 @@ pub enum ForcedReloadBehavior {
     SetCountDirectly,
     SetReloadValueImmediately,
     SetReloadValueOnNextTick,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum WhenDisabledPrevent {
-    Ticking,
-    Triggering,
-    TickingAndTriggering,
 }
 
 #[derive(Clone, Copy, Debug)]
