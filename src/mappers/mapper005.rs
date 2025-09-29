@@ -191,12 +191,12 @@ impl Mapper for Mapper005 {
     fn on_cpu_read(&mut self, mem: &mut Memory, addr: CpuAddress, _value: u8) {
         match *addr {
             0x5204 => {
-                mem.cpu_pinout.clear_mapper_irq_pending();
+                mem.cpu_pinout.acknowledge_mapper_irq();
                 self.frame_state.acknowledge_irq();
             }
             // NMI vector low and high
             0xFFFA | 0xFFFB => {
-                mem.cpu_pinout.clear_mapper_irq_pending();
+                mem.cpu_pinout.acknowledge_mapper_irq();
                 self.frame_state.acknowledge_irq();
                 self.frame_state.force_end_frame();
             }
@@ -226,7 +226,7 @@ impl Mapper for Mapper005 {
         self.update_chr_layout(mem);
 
         if self.frame_state.irq_pending() {
-            mem.cpu_pinout.set_mapper_irq_pending();
+            mem.cpu_pinout.generate_mapper_irq();
         }
 
         if addr.is_in_name_table_proper() {
@@ -445,9 +445,9 @@ impl Mapper005 {
         let irq_enabled = value >> 7 == 1;
         self.frame_state.set_irq_enabled(irq_enabled);
         if !irq_enabled {
-            mem.cpu_pinout.clear_mapper_irq_pending();
+            mem.cpu_pinout.acknowledge_mapper_irq();
         } else if self.frame_state.irq_pending() {
-            mem.cpu_pinout.set_mapper_irq_pending();
+            mem.cpu_pinout.generate_mapper_irq();
         }
     }
 

@@ -60,7 +60,7 @@ impl Mapper for Mapper091_1 {
             }
             0x7006 => {
                 self.irq_counter.disable();
-                mem.cpu_pinout.clear_mapper_irq_pending();
+                mem.cpu_pinout.acknowledge_mapper_irq();
             }
             0x7007 => {
                 self.irq_counter.enable();
@@ -72,7 +72,7 @@ impl Mapper for Mapper091_1 {
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         let should_trigger_irq = self.irq_counter.tick();
         if should_trigger_irq {
-            mem.cpu_pinout.set_mapper_irq_pending();
+            mem.cpu_pinout.generate_mapper_irq();
         }
     }
 

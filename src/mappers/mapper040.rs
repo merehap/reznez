@@ -37,7 +37,7 @@ impl Mapper for Mapper040 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x9FFF => {
-                mem.cpu_pinout.clear_mapper_irq_pending();
+                mem.cpu_pinout.acknowledge_mapper_irq();
                 self.irq_counter.disable();
             }
             0xA000..=0xBFFF => {
@@ -53,7 +53,7 @@ impl Mapper for Mapper040 {
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         let triggered = self.irq_counter.tick();
         if triggered {
-            mem.cpu_pinout.set_mapper_irq_pending();
+            mem.cpu_pinout.generate_mapper_irq();
         }
     }
 

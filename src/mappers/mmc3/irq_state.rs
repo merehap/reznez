@@ -86,7 +86,7 @@ impl IrqState {
         if should_tick_irq_counter {
             let triggered = self.counter.tick();
             if triggered {
-                mem.cpu_pinout.set_mapper_irq_pending();
+                mem.cpu_pinout.generate_mapper_irq();
             }
         }
     }
@@ -108,7 +108,7 @@ impl IrqState {
     // Write 0xE000 (even addresses)
     pub fn disable(&mut self, mem: &mut Memory) {
         self.counter.disable();
-        mem.cpu_pinout.clear_mapper_irq_pending();
+        mem.cpu_pinout.acknowledge_mapper_irq();
     }
 
     // Write 0xE001 (odd addresses)

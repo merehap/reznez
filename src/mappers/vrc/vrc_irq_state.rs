@@ -44,7 +44,7 @@ impl VrcIrqState {
         }
 
         if self.counter == 0xFF {
-            mem.cpu_pinout.set_mapper_irq_pending();
+            mem.cpu_pinout.generate_mapper_irq();
             self.counter = self.counter_reload_value;
         } else {
             self.counter += 1;
@@ -64,7 +64,7 @@ impl VrcIrqState {
     }
 
     pub fn set_mode(&mut self, mem: &mut Memory, value: u8) {
-        mem.cpu_pinout.clear_mapper_irq_pending();
+        mem.cpu_pinout.acknowledge_mapper_irq();
 
         let mode;
         (mode, self.enable_upon_acknowledgement, self.enabled) = splitbits_named!(value, ".....mae");
@@ -75,7 +75,7 @@ impl VrcIrqState {
     }
 
     pub fn acknowledge(&mut self, mem: &mut Memory) {
-        mem.cpu_pinout.clear_mapper_irq_pending();
+        mem.cpu_pinout.acknowledge_mapper_irq();
         if self.enable_upon_acknowledgement {
             self.enabled = true;
         }

@@ -49,7 +49,7 @@ impl Mapper for Mapper050 {
                 if value & 1 == 1 {
                     self.irq_counter.enable();
                 } else {
-                    mem.cpu_pinout.clear_mapper_irq_pending();
+                    mem.cpu_pinout.acknowledge_mapper_irq();
                     self.irq_counter.disable();
                     // TODO: Verify if this happens immediately or if it's delayed until the next tick.
                     self.irq_counter.clear();
@@ -62,7 +62,7 @@ impl Mapper for Mapper050 {
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         let triggered = self.irq_counter.tick();
         if triggered {
-            mem.cpu_pinout.set_mapper_irq_pending();
+            mem.cpu_pinout.generate_mapper_irq();
             // TODO: Verify if this is needed, or if the count should just stop instead.
             self.irq_counter.disable();
         }

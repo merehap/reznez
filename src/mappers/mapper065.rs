@@ -75,7 +75,7 @@ impl Mapper for Mapper065 {
             }
             0x9004 => {
                 self.irq_counter.force_reload();
-                mem.cpu_pinout.clear_mapper_irq_pending();
+                mem.cpu_pinout.acknowledge_mapper_irq();
             }
             0x9005 => {
                 self.irq_counter.set_reload_value_high_byte(value);
@@ -90,7 +90,7 @@ impl Mapper for Mapper065 {
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         let triggered = self.irq_counter.tick();
         if triggered {
-            mem.cpu_pinout.set_mapper_irq_pending();
+            mem.cpu_pinout.generate_mapper_irq();
         }
     }
 

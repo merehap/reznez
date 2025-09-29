@@ -45,7 +45,7 @@ impl Mapper for Mapper067 {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x87FF => mem.cpu_pinout.clear_mapper_irq_pending(),
+            0x8000..=0x87FF => mem.cpu_pinout.acknowledge_mapper_irq(),
             0x8800..=0x97FF => mem.set_chr_register(C0, value & 0b0011_1111),
             0x9800..=0xA7FF => mem.set_chr_register(C1, value & 0b0011_1111),
             0xA800..=0xB7FF => mem.set_chr_register(C2, value & 0b0011_1111),
@@ -76,7 +76,7 @@ impl Mapper for Mapper067 {
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         let triggered = self.irq_counter.tick();
         if triggered {
-            mem.cpu_pinout.set_mapper_irq_pending();
+            mem.cpu_pinout.generate_mapper_irq();
         }
     }
 

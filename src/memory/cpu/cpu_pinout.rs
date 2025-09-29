@@ -50,11 +50,11 @@ impl CpuPinout {
         self.mapper_irq_pending
     }
 
-    pub fn clear_mapper_irq_pending(&mut self) {
+    pub fn acknowledge_mapper_irq(&mut self) {
         self.mapper_irq_pending = false;
     }
 
-    pub fn set_mapper_irq_pending(&mut self) {
+    pub fn generate_mapper_irq(&mut self) {
         self.mapper_irq_pending = true;
     }
 

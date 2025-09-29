@@ -57,7 +57,7 @@ impl Mapper for Mapper069 {
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         let triggered = self.irq_counter.tick();
         if triggered {
-            mem.cpu_pinout.set_mapper_irq_pending();
+            mem.cpu_pinout.generate_mapper_irq();
         }
     }
 
@@ -94,7 +94,7 @@ impl Mapper for Mapper069 {
                     Command::NameTableMirroring =>
                         mem.set_name_table_mirroring(value & 0b11),
                     Command::IrqControl => {
-                        mem.cpu_pinout.clear_mapper_irq_pending();
+                        mem.cpu_pinout.acknowledge_mapper_irq();
                         let (counter_ticking_enabled, irq_triggering_enabled) = splitbits_named!(value, "c......i");
                         self.irq_counter.set_ticking_enabled(counter_ticking_enabled);
                         self.irq_counter.set_triggering_enabled(irq_triggering_enabled);

@@ -73,11 +73,11 @@ impl Mapper for Mapper019 {
             0x4020..=0x47FF => { /* Do nothing. */ }
             0x4800..=0x4FFF => { /* TODO: Expansion Audio. */ }
             0x5000..=0x57FF => {
-                mem.cpu_pinout.clear_mapper_irq_pending();
+                mem.cpu_pinout.acknowledge_mapper_irq();
                 self.irq_counter.set_count_low_byte(value);
             }
             0x5800..=0x5FFF => {
-                mem.cpu_pinout.clear_mapper_irq_pending();
+                mem.cpu_pinout.acknowledge_mapper_irq();
                 self.irq_counter.set_count_high_byte(value & 0b0111_1111);
             }
             0x6000..=0x7FFF => { /* Do nothing. */ }
@@ -160,7 +160,7 @@ impl Mapper for Mapper019 {
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         let triggered = self.irq_counter.tick();
         if triggered {
-            mem.cpu_pinout.set_mapper_irq_pending();
+            mem.cpu_pinout.generate_mapper_irq();
         }
     }
 

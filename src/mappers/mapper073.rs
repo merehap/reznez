@@ -47,7 +47,7 @@ impl Mapper for Mapper073 {
                 self.irq_counter_reload_value |= (u16::from(value) & 0xF) << 12;
             }
             0xC000..=0xCFFF => {
-                mem.cpu_pinout.clear_mapper_irq_pending();
+                mem.cpu_pinout.acknowledge_mapper_irq();
 
                 let fields = splitbits!(value, ".....mea");
                 self.irq_mode = if fields.m { IrqMode::EightBit } else { IrqMode::SixteenBit };
@@ -59,7 +59,7 @@ impl Mapper for Mapper073 {
                 }
             }
             0xD000..=0xDFFF => {
-                mem.cpu_pinout.clear_mapper_irq_pending();
+                mem.cpu_pinout.acknowledge_mapper_irq();
                 self.irq_enabled = self.irq_enabled_on_acknowledgement;
             }
             0xE000..=0xEFFF => { /* Do nothing. */ }
@@ -73,10 +73,10 @@ impl Mapper for Mapper073 {
         }
 
         if self.irq_mode == IrqMode::SixteenBit && self.irq_counter == 0xFFFF {
-            mem.cpu_pinout.set_mapper_irq_pending();
+            mem.cpu_pinout.generate_mapper_irq();
             self.irq_counter = self.irq_counter_reload_value;
         } else if self.irq_mode == IrqMode::EightBit && self.irq_counter & 0xFF == 0xFF {
-            mem.cpu_pinout.set_mapper_irq_pending();
+            mem.cpu_pinout.generate_mapper_irq();
             self.irq_counter &= 0xFF00;
             self.irq_counter |= self.irq_counter_reload_value & 0x00FF;
         } else {

@@ -47,7 +47,7 @@ impl Mapper for Mapper091_0 {
             0x7001 => mem.set_prg_register(P1, value & 0b00001111),
             0x7002 => {
                 self.irq_counter.disable();
-                mem.cpu_pinout.clear_mapper_irq_pending();
+                mem.cpu_pinout.acknowledge_mapper_irq();
             }
             0x7003 => {
                 self.irq_counter.enable();
@@ -67,7 +67,7 @@ impl Mapper for Mapper091_0 {
         if should_tick {
             let should_trigger_irq = self.irq_counter.tick();
             if should_trigger_irq {
-                mem.cpu_pinout.set_mapper_irq_pending();
+                mem.cpu_pinout.generate_mapper_irq();
             }
         }
     }

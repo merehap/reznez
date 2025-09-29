@@ -50,14 +50,14 @@ impl Mapper for Mapper142 {
                 self.irq_counter_reload_value |= (u16::from(value) & 0xF) << 12;
             }
             0xC000..=0xCFFF => {
-                mem.cpu_pinout.clear_mapper_irq_pending();
+                mem.cpu_pinout.acknowledge_mapper_irq();
                 self.irq_enabled = value & 0b11 != 0;
                 if self.irq_enabled {
                     self.irq_counter = self.irq_counter_reload_value;
                 }
             }
             0xD000..=0xDFFF => {
-                mem.cpu_pinout.clear_mapper_irq_pending();
+                mem.cpu_pinout.acknowledge_mapper_irq();
             }
             0xE000..=0xEFFF => {
                 match value & 0b111 {
@@ -91,7 +91,7 @@ impl Mapper for Mapper142 {
         // TODO: Test behavior when the reload value is 0xFFFF, since that will cause a wrap-around without setting IRQ pending.
         self.irq_counter += 1;
         if self.irq_counter == 0xFFFF {
-            mem.cpu_pinout.set_mapper_irq_pending();
+            mem.cpu_pinout.generate_mapper_irq();
             self.irq_counter = self.irq_counter_reload_value;
         }
     }
