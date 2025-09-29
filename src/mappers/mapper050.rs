@@ -1,4 +1,3 @@
-use crate::counter::incrementing_counter::{IncAutoTriggeredBy, WhenTargetReached};
 use crate::mapper::*;
 use crate::memory::memory::Memory;
 
@@ -19,12 +18,12 @@ const LAYOUT: Layout = Layout::builder()
 
 const IRQ_COUNTER: IncrementingCounter = IncrementingCounterBuilder::new()
     .auto_triggered_by(IncAutoTriggeredBy::AlreadyOnTarget)
-    .trigger_target(0xFFF)
+    .trigger_target(0x0FFF)
     // TODO: Verify this is correct. Disch's notes say it is, but it's contradicted here:
     // https://www.nesdev.org/wiki/INES_Mapper_050
     // Currently we disable IRQ manually when the target is hit. Will this continue ticking if IRQ
     // enable is called again with no IRQ acknowledge/clear in the mean time?
-    .when_target_reached(WhenTargetReached::Continue)
+    .when_target_reached(WhenTargetReached::ContinueThenClearAfter(0xFFFF))
     .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
     .build();
 

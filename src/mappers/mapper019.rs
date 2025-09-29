@@ -1,4 +1,3 @@
-use crate::counter::incrementing_counter::{IncAutoTriggeredBy, WhenTargetReached};
 use crate::mapper::*;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::chr_memory::PpuPeek;

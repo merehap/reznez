@@ -58,16 +58,21 @@ impl IncrementingCounter {
         if self.ticking_enabled {
             let target_reached = self.count == self.trigger_target;
             match (target_reached, self.when_target_reached) {
-                (true, WhenTargetReached::Stay) => { /* Stay on the old count. */ }
-                (true, WhenTargetReached::Clear) => self.count = 0,
-                (false, _) | (_, WhenTargetReached::Continue) => self.count = self.count.wrapping_add(1),
+                (true, WhenTargetReached::Stay) =>
+                    { /* Stay on the old count. */ }
+                (true, WhenTargetReached::Clear) =>
+                    self.count = 0,
+                (_, WhenTargetReached::ContinueThenClearAfter(max_count)) if self.count == max_count =>
+                    self.count = 0,
+                (false, _) | (_, WhenTargetReached::ContinueThenClearAfter(_)) =>
+                    self.count = self.count.checked_add(1).expect("count to not overflow"),
             }
         }
 
         let new_count = self.count;
         let trigger_if_enabled = match self.auto_triggered_by {
-            IncAutoTriggeredBy::AlreadyOnTarget => old_count == self.trigger_target,
-            IncAutoTriggeredBy::EndingOnTarget => new_count == self.trigger_target && old_count != new_count,
+            IncAutoTriggeredBy::AlreadyOnTarget => old_count >= self.trigger_target,
+            IncAutoTriggeredBy::EndingOnTarget => new_count >= self.trigger_target && old_count != new_count,
         };
         let triggered = trigger_if_enabled && self.triggering_enabled;
         triggered
@@ -126,8 +131,7 @@ impl IncrementingCounterBuilder {
             auto_triggered_by: self.auto_triggered_by.unwrap(),
             trigger_target: self.trigger_target.unwrap(),
             when_target_reached: self.when_target_reached.unwrap(),
-            when_disabled_prevent: self.when_disabled_prevent
-                .expect("when_disable_prevent() must be set. For IRQs that can't be disabled, use never_disabled()."),
+            when_disabled_prevent: self.when_disabled_prevent.unwrap(),
             ticking_enabled: true,
             triggering_enabled: true,
             count: 0,
@@ -145,5 +149,5 @@ pub enum IncAutoTriggeredBy {
 pub enum WhenTargetReached {
     Stay,
     Clear,
-    Continue,
+    ContinueThenClearAfter(u16),
 }
