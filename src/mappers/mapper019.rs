@@ -43,7 +43,8 @@ const IRQ_COUNTER: IncrementingCounter = IncrementingCounterBuilder::new()
     .auto_triggered_by(IncAutoTriggeredBy::EndingOnTarget)
     .trigger_target(0x7FFF)
     .when_target_reached(WhenTargetReached::Stay)
-    .never_disabled()
+    // TODO: Test if this should be just Ticking (do counter reloads to 0x7FFF while disabled trigger IRQs?)
+    .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
     .build();
 
 // Namco 129 and Namco 163
@@ -78,7 +79,14 @@ impl Mapper for Mapper019 {
             }
             0x5800..=0x5FFF => {
                 mem.cpu_pinout.acknowledge_mapper_irq();
-                self.irq_counter.set_count_high_byte(value & 0b0111_1111);
+
+                let (irq_enable, irq_count_high_byte) = splitbits_named!(value, "eccccccc");
+                self.irq_counter.set_count_high_byte(irq_count_high_byte);
+                if irq_enable {
+                    self.irq_counter.enable();
+                } else {
+                    self.irq_counter.disable();
+                }
             }
             0x6000..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x87FF => set_chr_register(mem, self.allow_ciram_in_low_chr, C0, S0, value),

@@ -5,7 +5,7 @@ pub struct IncrementingCounter {
     auto_triggered_by: IncAutoTriggeredBy,
     trigger_target: u16,
     when_target_reached: WhenTargetReached,
-    when_disabled_prevent: Option<WhenDisabledPrevent>,
+    when_disabled_prevent: WhenDisabledPrevent,
 
     // State
     ticking_enabled: bool,
@@ -15,18 +15,15 @@ pub struct IncrementingCounter {
 
 impl IncrementingCounter {
     pub fn enable(&mut self) {
-        assert!(self.when_disabled_prevent.is_some(), "This counter is configured to never be disabled, so it starts enabled.");
         self.triggering_enabled = true;
         self.ticking_enabled = true;
     }
 
     pub fn disable(&mut self) {
         match self.when_disabled_prevent {
-            // TODO: Make a wrapper type that doesn't allow enabling/disabling instead of failing at runtime.
-            None => panic!("Can't disable since this counter is configured to never be disabled."),
-            Some(WhenDisabledPrevent::Ticking) => self.ticking_enabled = false,
-            Some(WhenDisabledPrevent::Triggering) => self.triggering_enabled = false,
-            Some(WhenDisabledPrevent::TickingAndTriggering) => {
+            WhenDisabledPrevent::Ticking => self.ticking_enabled = false,
+            WhenDisabledPrevent::Triggering => self.triggering_enabled = false,
+            WhenDisabledPrevent::TickingAndTriggering => {
                 self.ticking_enabled = false;
                 self.triggering_enabled = false;
             }
@@ -88,7 +85,7 @@ pub struct IncrementingCounterBuilder {
     auto_triggered_by: Option<IncAutoTriggeredBy>,
     trigger_target: Option<u16>,
     when_target_reached: Option<WhenTargetReached>,
-    when_disabled_prevent: Option<Option<WhenDisabledPrevent>>,
+    when_disabled_prevent: Option<WhenDisabledPrevent>,
 }
 
 impl IncrementingCounterBuilder {
@@ -117,22 +114,25 @@ impl IncrementingCounterBuilder {
     }
 
     pub const fn when_disabled_prevent(&mut self, when_disabled_prevent: WhenDisabledPrevent) -> &mut Self {
-        self.when_disabled_prevent = Some(Some(when_disabled_prevent));
-        self
-    }
-
-    pub const fn never_disabled(&mut self) -> &mut Self {
-        self.when_disabled_prevent = Some(None);
+        self.when_disabled_prevent = Some(when_disabled_prevent);
         self
     }
 
     pub const fn build(self) -> IncrementingCounter {
+        let when_disabled_prevent = self.when_disabled_prevent.expect("when_disabled must be set");
+        let ticking_enabled = match when_disabled_prevent {
+            // Counters that CANNOT disable ticking will always have ticking enabled.
+            WhenDisabledPrevent::Triggering => true,
+            // Counters that CAN disable ticking should START with ticking disabled.
+            WhenDisabledPrevent::Ticking | WhenDisabledPrevent::TickingAndTriggering => false,
+        };
+
         IncrementingCounter {
             auto_triggered_by: self.auto_triggered_by.unwrap(),
             trigger_target: self.trigger_target.unwrap(),
             when_target_reached: self.when_target_reached.unwrap(),
             when_disabled_prevent: self.when_disabled_prevent.unwrap(),
-            ticking_enabled: true,
+            ticking_enabled,
             triggering_enabled: true,
             count: 0,
         }
