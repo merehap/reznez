@@ -4,7 +4,7 @@ use crate::mapper::{Direction, IrqCounterInfo};
 use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
-use crate::counter::decrementing_counter::{AutoTriggeredBy, Counter, CounterBuilder, ForcedReloadTiming, PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};
+use crate::counter::counter::{AutoTriggeredBy, Counter, CounterBuilder, ForcedReloadTiming, PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};
 use crate::util::edge_detector::EdgeDetector;
 
 pub struct IrqState {

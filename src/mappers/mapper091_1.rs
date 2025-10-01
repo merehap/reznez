@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::counter::decrementing_counter::{PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};
+use crate::counter::counter::{PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
