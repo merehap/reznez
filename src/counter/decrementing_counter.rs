@@ -1,16 +1,18 @@
-use std::num::{NonZeroU16, NonZeroU8};
+use std::num::NonZeroU8;
 
 use crate::counter::irq_counter_info::IrqCounterInfo;
 pub use crate::counter::when_disabled_prevent::WhenDisabledPrevent;
 
-pub struct DecrementingCounter {
+pub struct Counter {
     // Immutable settings determined at compile time
+    direction: Direction,
     auto_triggered_by: AutoTriggeredBy,
     trigger_on_forced_reload_of_zero: bool,
     forced_reload_timing: ForcedReloadTiming,
     auto_reload: bool,
     when_disabled_prevent: WhenDisabledPrevent,
-    decrement_size: NonZeroU16,
+    target_count: u16,
+    step_size: NonZeroU8,
 
     // State
     triggering_enabled: bool,
@@ -22,7 +24,7 @@ pub struct DecrementingCounter {
     prescaler: Prescaler,
 }
 
-impl DecrementingCounter {
+impl Counter {
     pub fn enable(&mut self) {
         self.triggering_enabled = true;
         self.ticking_enabled = true;
@@ -84,16 +86,23 @@ impl DecrementingCounter {
             self.count = if should_reload {
                 self.reload_value
             } else {
-                self.count.saturating_sub(self.decrement_size.get())
+                let new_count = old_count.saturating_add_signed(self.direction as i16 * self.step_size.get() as i16);
+                if old_count != self.target_count && new_count != self.target_count {
+                    assert_eq!(new_count > self.target_count, old_count > self.target_count, "Stepped OVER the target count.");
+                }
+
+                new_count
             };
         }
 
         let new_count = self.count;
         // The triggering behavior is fixed at compile time, so the same branch will be taken every time here.
         let auto_triggered = match self.auto_triggered_by {
-            AutoTriggeredBy::AlreadyZero => old_count == 0,
-            AutoTriggeredBy::EndingOnZero => new_count == 0,
-            AutoTriggeredBy::OneToZeroTransition => old_count == 1 && new_count == 0,
+            AutoTriggeredBy::AlreadyOnTarget => old_count == self.target_count,
+            AutoTriggeredBy::EndingOnTarget => new_count == self.target_count,
+            AutoTriggeredBy::StepSizeTransitionToTarget =>
+                i32::from(self.target_count) - i32::from(old_count) == self.direction as i32 * i32::from(self.step_size.get())
+                    && new_count == self.target_count,
         };
         // TODO: Determine if a forced reload needs to clear the counter before the reloading actually occurs for some cases.
         // Some documentation claims this. This would only be relevant for AlreadyZero behavior since it
@@ -119,9 +128,9 @@ impl DecrementingCounter {
 }
 
 // A decrementing counter where the count can be set directly, and can't be force-reloaded.
-pub struct DirectlySetDecrementingCounter(DecrementingCounter);
+pub struct DirectlySetCounter(Counter);
 
-impl DirectlySetDecrementingCounter {
+impl DirectlySetCounter {
     // Used instead of set_reload_value_low_byte().
     pub fn set_count_low_byte(&mut self, value: u8) {
         self.0.count = (self.0.count & 0xFF00) | u16::from(value);
@@ -150,7 +159,8 @@ impl DirectlySetDecrementingCounter {
 }
 
 #[derive(Clone, Copy)]
-pub struct DecrementingCounterBuilder {
+pub struct CounterBuilder {
+    direction: Option<Direction>,
     auto_triggered_by: Option<AutoTriggeredBy>,
     trigger_on_forced_reload_of_zero: bool,
     auto_reload: Option<bool>,
@@ -158,13 +168,14 @@ pub struct DecrementingCounterBuilder {
     when_disabled_prevent: Option<WhenDisabledPrevent>,
     initial_reload_value: u16,
     initial_count: Option<u16>,
-    decrement_size: NonZeroU16,
+    step_size: NonZeroU8,
     prescaler: Prescaler,
 }
 
-impl DecrementingCounterBuilder {
+impl CounterBuilder {
     pub const fn new() -> Self {
         Self {
+            direction: None,
             auto_triggered_by: None,
             trigger_on_forced_reload_of_zero: false,
             auto_reload: None,
@@ -173,10 +184,15 @@ impl DecrementingCounterBuilder {
             initial_reload_value: 0,
             // Normally initial_reload_value is assigned to initial_count in build().
             initial_count: None,
-            decrement_size: NonZeroU16::new(1).unwrap(),
+            step_size: NonZeroU8::new(1).unwrap(),
             // A prescaler that doesn't actually delay anything.
             prescaler: Prescaler::DEFAULT,
         }
+    }
+
+    pub const fn direction(&mut self, direction: Direction) -> &mut Self {
+        self.direction = Some(direction);
+        self
     }
 
     pub const fn auto_triggered_by(&mut self, auto_triggered_by: AutoTriggeredBy) -> &mut Self {
@@ -214,8 +230,8 @@ impl DecrementingCounterBuilder {
         self
     }
 
-    pub const fn decrement_size(&mut self, size: u16) -> &mut Self {
-        self.decrement_size = NonZeroU16::new(size).expect("decrement_size must be positive");
+    pub const fn step_size(&mut self, size: u8) -> &mut Self {
+        self.step_size = NonZeroU8::new(size).expect("decrement_size must be positive");
         self
     }
 
@@ -234,21 +250,21 @@ impl DecrementingCounterBuilder {
         self
     }
 
-    pub const fn build(self) -> DecrementingCounter {
+    pub const fn build(self) -> Counter {
         assert!(self.forced_reload_timing.is_some(),
             "forced_reload_timing must be set. If forced-reloading is not needed, use build_directly_settable() instead.");
         self.build_reload_forceable()
     }
 
-    pub const fn build_directly_set(mut self) -> DirectlySetDecrementingCounter {
+    pub const fn build_directly_set(mut self) -> DirectlySetCounter {
         // Set an unused dummy value so validation will pass.
         self.forced_reload_timing = Some(ForcedReloadTiming::Immediate);
-        DirectlySetDecrementingCounter(self.build_reload_forceable())
+        DirectlySetCounter(self.build_reload_forceable())
     }
 
-    const fn build_reload_forceable(self) -> DecrementingCounter {
+    const fn build_reload_forceable(self) -> Counter {
         let auto_triggered_by = self.auto_triggered_by.expect("auto_triggered_by must be set");
-        if matches!(auto_triggered_by, AutoTriggeredBy::OneToZeroTransition) && self.decrement_size.get() > 1 {
+        if matches!(auto_triggered_by, AutoTriggeredBy::StepSizeTransitionToTarget) && self.step_size.get() > 1 {
             panic!("AutoTriggeredBy::OneToZeroTransition must not be specified when decrement_size is greater than 1.");
         }
 
@@ -265,13 +281,15 @@ impl DecrementingCounterBuilder {
             panic!("WhenDisabledPrevent::Ticking must not be specified at the same as a prescaler.");
         }
 
-        DecrementingCounter {
+        Counter {
+            direction: self.direction.expect("direction must be set"),
             auto_triggered_by,
             trigger_on_forced_reload_of_zero: self.trigger_on_forced_reload_of_zero,
             forced_reload_timing: self.forced_reload_timing.expect("forced_reload_timing must be set"),
             auto_reload: self.auto_reload.expect("auto_reload must be set"),
             when_disabled_prevent,
-            decrement_size: self.decrement_size,
+            target_count: 0,
+            step_size: self.step_size,
             prescaler: self.prescaler,
             triggering_enabled: false,
             ticking_enabled,
@@ -284,10 +302,16 @@ impl DecrementingCounterBuilder {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum Direction {
+    Decrementing = -1,
+    Incrementing = 1,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum AutoTriggeredBy {
-    AlreadyZero,
-    EndingOnZero,
-    OneToZeroTransition,
+    AlreadyOnTarget,
+    EndingOnTarget,
+    StepSizeTransitionToTarget,
 }
 
 // OnForcedReloadSetCount

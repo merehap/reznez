@@ -21,8 +21,9 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
-    .auto_triggered_by(AutoTriggeredBy::EndingOnZero)
+const IRQ_COUNTER: Counter = CounterBuilder::new()
+    .direction(Direction::Decrementing)
+    .auto_triggered_by(AutoTriggeredBy::EndingOnTarget)
     .auto_reload(false)
     .on_forced_reload_set_count(ForcedReloadTiming::Immediate)
     // The reload value is never changed from the initial value for this submapper.
@@ -32,7 +33,7 @@ const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
 
 // J.Y. Company JY830623C and YY840238C
 pub struct Mapper091_0 {
-    irq_counter: DecrementingCounter,
+    irq_counter: Counter,
     pattern_table_transition_detector: EdgeDetector<PatternTableSide>,
 }
 

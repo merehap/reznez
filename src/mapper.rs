@@ -1,7 +1,7 @@
 pub use splitbits::{splitbits, splitbits_named, combinebits, splitbits_then_combine};
 
 pub use crate::cartridge::cartridge::Cartridge;
-pub use crate::counter::decrementing_counter::{DecrementingCounter, DirectlySetDecrementingCounter, DecrementingCounterBuilder, AutoTriggeredBy, ForcedReloadTiming, WhenDisabledPrevent};
+pub use crate::counter::decrementing_counter::{Counter, Direction, DirectlySetCounter, CounterBuilder, AutoTriggeredBy, ForcedReloadTiming, WhenDisabledPrevent};
 pub use crate::counter::irq_counter_info::IrqCounterInfo;
 pub use crate::counter::incrementing_counter::{IncrementingCounter, IncrementingCounterBuilder, IncAutoTriggeredBy, WhenTargetReached};
 pub use crate::memory::bank::bank_index::{BankIndex, PrgBankRegisterId, ChrBankRegisterId, MetaRegisterId, ReadWriteStatus};

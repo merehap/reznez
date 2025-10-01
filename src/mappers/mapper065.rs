@@ -37,8 +37,9 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
-    .auto_triggered_by(AutoTriggeredBy::EndingOnZero)
+const IRQ_COUNTER: Counter = CounterBuilder::new()
+    .direction(Direction::Decrementing)
+    .auto_triggered_by(AutoTriggeredBy::EndingOnTarget)
     .auto_reload(false)
     .on_forced_reload_set_count(ForcedReloadTiming::Immediate)
     .when_disabled_prevent(WhenDisabledPrevent::Ticking)
@@ -48,7 +49,7 @@ const CHR_REGISTER_IDS: [ChrBankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7
 
 // Irem's H3001
 pub struct Mapper065 {
-    irq_counter: DecrementingCounter,
+    irq_counter: Counter,
 }
 
 impl Mapper for Mapper065 {

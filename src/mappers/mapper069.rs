@@ -34,8 +34,9 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-const IRQ_COUNTER: DirectlySetDecrementingCounter = DecrementingCounterBuilder::new()
-    .auto_triggered_by(AutoTriggeredBy::AlreadyZero)
+const IRQ_COUNTER: DirectlySetCounter = CounterBuilder::new()
+    .direction(Direction::Decrementing)
+    .auto_triggered_by(AutoTriggeredBy::AlreadyOnTarget)
     .auto_reload(true)
     .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
     // This value is never changed. Reloading to 0xFFFF is the same thing as just letting the count wrap around.
@@ -49,7 +50,7 @@ const PRG_ROM_REGISTER_IDS: [PrgBankRegisterId; 3] = [P1, P2, P3];
 
 // Sunsoft FME-7
 pub struct Mapper069 {
-    irq_counter: DirectlySetDecrementingCounter,
+    irq_counter: DirectlySetCounter,
     command: Command,
 }
 

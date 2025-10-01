@@ -25,18 +25,19 @@ const LAYOUT: Layout = Layout::builder()
 const HORIZONTAL: u8 = 0;
 const VERTICAL: u8 = 1;
 
-const IRQ_COUNTER: DecrementingCounter = DecrementingCounterBuilder::new()
-    .auto_triggered_by(AutoTriggeredBy::EndingOnZero)
+const IRQ_COUNTER: Counter = CounterBuilder::new()
+    .direction(Direction::Decrementing)
+    .auto_triggered_by(AutoTriggeredBy::EndingOnTarget)
     .auto_reload(false)
     .on_forced_reload_set_count(ForcedReloadTiming::Immediate)
-    .decrement_size(5)
+    .step_size(5)
     .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
     .prescaler(4, PrescalerTriggeredBy::WrappingToZero, PrescalerBehaviorOnForcedReload::DoNothing)
     .build();
 
 // J.Y. Company JY830623C and YY840238C
 pub struct Mapper091_1 {
-    irq_counter: DecrementingCounter,
+    irq_counter: Counter,
 }
 
 impl Mapper for Mapper091_1 {
