@@ -16,20 +16,20 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-const IRQ_COUNTER: IncrementingCounter = IncrementingCounterBuilder::new()
-    .auto_triggered_by(IncAutoTriggeredBy::AlreadyOnTarget)
-    .trigger_target(0x0FFF)
-    // TODO: Verify this is correct. Disch's notes say it is, but it's contradicted here:
-    // https://www.nesdev.org/wiki/INES_Mapper_050
-    // Currently we disable IRQ manually when the target is hit. Will this continue ticking if IRQ
-    // enable is called again with no IRQ acknowledge/clear in the mean time?
-    .when_target_reached(WhenTargetReached::ContinueThenClearAfter(0xFFFF))
+const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
+    .initial_count_and_reload_value(0)
+    .step(1)
+    .auto_triggered_by(AutoTriggeredBy::StepSizedTransitionTo, 0x1000)
+    // Verify that this is correct. The wiki, Disch, and Mesen all disagree in different ways.
+    .when_target_reached(WhenTargetReached::ContinueThenReloadAfter(0x1FFF))
+    // TODO: Verify correct timing.
+    .forced_reload_timing(ForcedReloadTiming::Immediate)
     .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
-    .build();
+    .build_reload_driven_counter();
 
 // N-32 conversion of Super Mario Bros. 2 (J). PCB code 761214.
 pub struct Mapper050 {
-    irq_counter: IncrementingCounter,
+    irq_counter: ReloadDrivenCounter,
 }
 
 impl Mapper for Mapper050 {
@@ -52,7 +52,7 @@ impl Mapper for Mapper050 {
                     mem.cpu_pinout.acknowledge_mapper_irq();
                     self.irq_counter.disable();
                     // TODO: Verify if this happens immediately or if it's delayed until the next tick.
-                    self.irq_counter.clear();
+                    self.irq_counter.force_reload();
                 }
             }
             _ => { /* Do nothing. */ }
@@ -60,11 +60,14 @@ impl Mapper for Mapper050 {
     }
 
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        let triggered = self.irq_counter.tick();
-        if triggered {
+        let tick_result = self.irq_counter.tick();
+        if tick_result.triggered {
             mem.cpu_pinout.generate_mapper_irq();
-            // TODO: Verify if this is needed, or if the count should just stop instead.
-            self.irq_counter.disable();
+        }
+
+        // TODO: Verify if this is correct.
+        if tick_result.wrapped {
+            mem.cpu_pinout.acknowledge_mapper_irq();
         }
     }
 

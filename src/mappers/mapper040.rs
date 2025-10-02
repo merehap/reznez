@@ -17,18 +17,24 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-const IRQ_COUNTER: IncrementingCounter = IncrementingCounterBuilder::new()
-    .auto_triggered_by(IncAutoTriggeredBy::AlreadyOnTarget)
-    .trigger_target(0xFFF)
-    .when_target_reached(WhenTargetReached::Clear)
+// The wiki and Mesen disagree here. I'm thinking the wiki is right because it has more detailed behavior.
+const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
+    .initial_count_and_reload_value(0)
+    .step(1)
+    .auto_triggered_by(AutoTriggeredBy::AlreadyOn, 0x0FFF)
+    // Contrary to the wiki, I assume that the counter doesn't auto-acknowledge (disable) when it wraps to 0.
+    // I think it may just stop asserting an IRQ, but keep ticking.
+    .when_target_reached(WhenTargetReached::ContinueThenReloadAfter(0x1FFF))
+    // TODO: Verify correct timing.
+    .forced_reload_timing(ForcedReloadTiming::Immediate)
     .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
-    .build();
+    .build_reload_driven_counter();
 
 // NTDEC 2722 and NTDEC 2752 PCB and imitations.
 // Used for conversions of the Japanese version of Super Mario Bros. 2
 // TODO: Test this mapper. The IRQ was broken last time checked, but potential fix was added, just not tested.
 pub struct Mapper040 {
-    irq_counter: IncrementingCounter,
+    irq_counter: ReloadDrivenCounter,
 }
 
 impl Mapper for Mapper040 {
@@ -42,6 +48,7 @@ impl Mapper for Mapper040 {
             }
             0xA000..=0xBFFF => {
                 self.irq_counter.enable();
+                self.irq_counter.force_reload();
             }
             0xC000..=0xDFFF => { /* TODO: NTDEC 2752 outer bank register. Test ROM needed. */ }
             0xE000..=0xFFFF => {
@@ -51,9 +58,14 @@ impl Mapper for Mapper040 {
     }
 
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        let triggered = self.irq_counter.tick();
-        if triggered {
+        let tick_result = self.irq_counter.tick();
+        if tick_result.triggered {
             mem.cpu_pinout.generate_mapper_irq();
+        }
+
+        // TODO: Verify if this is correct.
+        if tick_result.wrapped {
+            mem.cpu_pinout.acknowledge_mapper_irq();
         }
     }
 

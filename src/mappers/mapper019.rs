@@ -39,18 +39,20 @@ const LAYOUT: Layout = Layout::builder()
 const READ_ONLY: u8 = 0;
 const READ_WRITE: u8 = 1;
 
-const IRQ_COUNTER: IncrementingCounter = IncrementingCounterBuilder::new()
-    .auto_triggered_by(IncAutoTriggeredBy::EndingOnTarget)
-    .trigger_target(0x7FFF)
+const IRQ_COUNTER: DirectlySetCounter = CounterBuilder::new()
+    .initial_count(0)
+    .step(1)
+    // TODO: should this be only triggered by TransitionTo? Is an IRQ constantly being asserted until acknowledgement?
+    .auto_triggered_by(AutoTriggeredBy::EndingOn, 0x7FFF)
     .when_target_reached(WhenTargetReached::Stay)
-    // TODO: Test if this should be just Ticking (do counter reloads to 0x7FFF while disabled trigger IRQs?)
+    // TODO: Test if this should be just Ticking. Do counter reloads to 0x7FFF while disabled trigger IRQs?
     .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
-    .build();
+    .build_directly_set_counter();
 
 // Namco 129 and Namco 163
 // Needs testing, its IRQ was horribly broken when I found it, but might be fixed now.
 pub struct Mapper019 {
-    irq_counter: IncrementingCounter,
+    irq_counter: DirectlySetCounter,
 
     allow_ciram_in_low_chr: bool,
     allow_ciram_in_high_chr: bool,
@@ -166,8 +168,7 @@ impl Mapper for Mapper019 {
     }
 
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        let triggered = self.irq_counter.tick();
-        if triggered {
+        if self.irq_counter.tick().triggered {
             mem.cpu_pinout.generate_mapper_irq();
         }
     }

@@ -1,7 +1,7 @@
 use crate::mapper::*;
 
 use crate::mappers::mmc3::mmc3;
-use crate::mappers::mmc3::irq_state::IrqState;
+use crate::mappers::mmc3::irq_state::Mmc3IrqState;
 use crate::memory::bank::bank::RomRamModeRegisterId;
 use crate::memory::bank::bank_index::MemType;
 
@@ -71,7 +71,7 @@ impl Mapper for Mapper119 {
 impl Mapper119 {
     pub fn new() -> Self {
         Self {
-            mmc3: mmc3::Mapper004Mmc3::new(IrqState::SHARP_IRQ_STATE),
+            mmc3: mmc3::Mapper004Mmc3::new(Mmc3IrqState::SHARP_IRQ_STATE),
         }
     }
 }

@@ -26,14 +26,13 @@ const LAYOUT: Layout = Layout::builder()
 // Sunsoft-3 IRQ both auto-reloads (by wrapping around), and has its count set directly,
 // rather through modifying a reload value and copying that to the count.
 const IRQ_COUNTER: DirectlySetCounter = CounterBuilder::new()
-    .direction(Direction::Decrementing)
-    .auto_triggered_by(AutoTriggeredBy::AlreadyOnTarget)
-    .auto_reload(true)
-    .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
-    // This value is never changed. Reloading to 0xFFFF is the same thing as just letting the count wrap around.
-    .initial_reload_value(0xFFFF)
+    .step(-1)
+    .auto_triggered_by(AutoTriggeredBy::AlreadyOn, 0)
     .initial_count(0)
-    .build_directly_set();
+    .when_target_reached(WhenTargetReached::Reload)
+    .initial_reload_value(0xFFFF)
+    .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
+    .build_directly_set_counter();
 
 // Sunsoft-3
 pub struct Mapper067 {
@@ -75,8 +74,7 @@ impl Mapper for Mapper067 {
     }
 
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        let triggered = self.irq_counter.tick();
-        if triggered {
+        if self.irq_counter.tick().triggered {
             mem.cpu_pinout.generate_mapper_irq();
         }
     }

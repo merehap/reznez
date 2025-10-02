@@ -21,19 +21,18 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-const IRQ_COUNTER: Counter = CounterBuilder::new()
-    .direction(Direction::Decrementing)
-    .auto_triggered_by(AutoTriggeredBy::EndingOnTarget)
-    .auto_reload(false)
-    .on_forced_reload_set_count(ForcedReloadTiming::Immediate)
-    // The reload value is never changed from the initial value for this submapper.
-    .initial_reload_value(64)
+const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
+    .initial_count_and_reload_value(64)
+    .step(-1)
+    .auto_triggered_by(AutoTriggeredBy::EndingOn, 0)
+    .when_target_reached(WhenTargetReached::Stay)
+    .forced_reload_timing(ForcedReloadTiming::Immediate)
     .when_disabled_prevent(WhenDisabledPrevent::Triggering)
-    .build();
+    .build_reload_driven_counter();
 
 // J.Y. Company JY830623C and YY840238C
 pub struct Mapper091_0 {
-    irq_counter: Counter,
+    irq_counter: ReloadDrivenCounter,
     pattern_table_transition_detector: EdgeDetector<PatternTableSide>,
 }
 
@@ -66,8 +65,7 @@ impl Mapper for Mapper091_0 {
     fn on_ppu_address_change(&mut self, mem: &mut Memory, address: PpuAddress) {
         let should_tick = self.pattern_table_transition_detector.set_value_then_detect(address.pattern_table_side());
         if should_tick {
-            let should_trigger_irq = self.irq_counter.tick();
-            if should_trigger_irq {
+            if self.irq_counter.tick().triggered {
                 mem.cpu_pinout.generate_mapper_irq();
             }
         }

@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::mappers::mmc3::irq_state::IrqState;
+use crate::mappers::mmc3::irq_state::Mmc3IrqState;
 
 pub const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
@@ -68,7 +68,7 @@ pub const BANK_INDEX_REGISTER_IDS: [RegId; 8] = [Chr(C0), Chr(C1), Chr(C2), Chr(
 // TODO: Support VS System (and its 4-screen mirroring).
 pub struct Mapper004Mmc3 {
     selected_register_id: RegId,
-    irq_state: IrqState,
+    irq_state: Mmc3IrqState,
 }
 
 impl Mapper for Mapper004Mmc3 {
@@ -123,7 +123,7 @@ impl Mapper for Mapper004Mmc3 {
 }
 
 impl Mapper004Mmc3 {
-    pub fn new(irq_state: IrqState) -> Self {
+    pub fn new(irq_state: Mmc3IrqState) -> Self {
         Self {
             selected_register_id: Chr(C0),
             irq_state,

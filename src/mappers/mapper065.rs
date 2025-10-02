@@ -37,19 +37,20 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-const IRQ_COUNTER: Counter = CounterBuilder::new()
-    .direction(Direction::Decrementing)
-    .auto_triggered_by(AutoTriggeredBy::EndingOnTarget)
-    .auto_reload(false)
-    .on_forced_reload_set_count(ForcedReloadTiming::Immediate)
+const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
+    .initial_count(0)
+    .step(-1)
+    .auto_triggered_by(AutoTriggeredBy::EndingOn, 0)
+    .when_target_reached(WhenTargetReached::Stay)
+    .forced_reload_timing(ForcedReloadTiming::Immediate)
     .when_disabled_prevent(WhenDisabledPrevent::Ticking)
-    .build();
+    .build_reload_driven_counter();
 
 const CHR_REGISTER_IDS: [ChrBankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
 
 // Irem's H3001
 pub struct Mapper065 {
-    irq_counter: Counter,
+    irq_counter: ReloadDrivenCounter,
 }
 
 impl Mapper for Mapper065 {
@@ -89,8 +90,7 @@ impl Mapper for Mapper065 {
     }
 
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        let triggered = self.irq_counter.tick();
-        if triggered {
+        if self.irq_counter.tick().triggered {
             mem.cpu_pinout.generate_mapper_irq();
         }
     }

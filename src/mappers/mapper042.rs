@@ -21,19 +21,22 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-const IRQ_COUNTER: IncrementingCounter = IncrementingCounterBuilder::new()
-    .auto_triggered_by(IncAutoTriggeredBy::EndingOnTarget)
-    .trigger_target(0x6000)
-    .when_target_reached(WhenTargetReached::ContinueThenClearAfter(0x7FFF))
+const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
+    .initial_count_and_reload_value(0)
+    .step(1)
+    .auto_triggered_by(AutoTriggeredBy::EndingOn, 0x6000)
+    .when_target_reached(WhenTargetReached::ContinueThenReloadAfter(0x7FFF))
+    // Todo: Verify timing.
+    .forced_reload_timing(ForcedReloadTiming::Immediate)
     .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
-    .build();
+    .build_reload_driven_counter();
 
 // FDS games hacked into cartridge form.
 // Unknown if subject to bus conflicts.
 // FIXME: Bottom status bar scrolls when it should be stationary in Bio Miracle Bokutte Upa.
 pub struct Mapper042 {
     chr_board: ChrBoard,
-    irq_counter: IncrementingCounter,
+    irq_counter: ReloadDrivenCounter,
 }
 
 impl Mapper for Mapper042 {
@@ -52,7 +55,7 @@ impl Mapper for Mapper042 {
             0xE002 => {
                 if value & 0b0000_0010 == 0 {
                     self.irq_counter.disable();
-                    self.irq_counter.clear();
+                    self.irq_counter.force_reload();
                     mem.cpu_pinout.acknowledge_mapper_irq();
                 } else {
                     self.irq_counter.enable();
@@ -63,9 +66,13 @@ impl Mapper for Mapper042 {
     }
 
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        let triggered = self.irq_counter.tick();
-        if triggered {
+        let tick_result = self.irq_counter.tick();
+        if tick_result.triggered {
             mem.cpu_pinout.generate_mapper_irq();
+        }
+
+        if tick_result.wrapped {
+            mem.cpu_pinout.acknowledge_mapper_irq();
         }
     }
 

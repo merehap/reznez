@@ -1,6 +1,6 @@
 use crate::mapper::*;
 use crate::mappers::mmc3::mmc3;
-use crate::mappers::mmc3::irq_state::IrqState;
+use crate::mappers::mmc3::irq_state::Mmc3IrqState;
 
 use super::mmc3::mmc3::RegId;
 
@@ -55,7 +55,7 @@ const LAYOUT: Layout = Layout::builder()
 // TODO: Support VS System (and its 4-screen mirroring).
 pub struct Mapper004_1 {
     selected_register_id: RegId,
-    irq_state: IrqState,
+    irq_state: Mmc3IrqState,
 }
 
 impl Mapper for Mapper004_1 {
@@ -133,7 +133,7 @@ impl Mapper004_1 {
     pub fn new() -> Self {
         Self {
             selected_register_id: RegId::Chr(C0),
-            irq_state: IrqState::REV_A_IRQ_STATE,
+            irq_state: Mmc3IrqState::REV_A_IRQ_STATE,
         }
     }
 }

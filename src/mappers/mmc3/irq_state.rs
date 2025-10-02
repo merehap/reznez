@@ -1,31 +1,32 @@
 use std::ops::RangeInclusive;
 
-use crate::mapper::{Direction, IrqCounterInfo};
+use crate::mapper::IrqCounterInfo;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
-use crate::counter::counter::{AutoTriggeredBy, Counter, CounterBuilder, ForcedReloadTiming, PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};
+use crate::counter::counter::{AutoTriggeredBy, ReloadDrivenCounter, CounterBuilder, WhenTargetReached, ForcedReloadTiming, PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};
 use crate::util::edge_detector::EdgeDetector;
 
-pub struct IrqState {
-    counter: Counter,
+pub struct Mmc3IrqState {
+    counter: ReloadDrivenCounter,
     allowed_address_range: RangeInclusive<u16>,
     suppressor: Suppressor,
     pattern_table_side_detector: EdgeDetector<PatternTableSide>,
 }
 
-impl IrqState {
+impl Mmc3IrqState {
     // ForcedReloadBehavior and WhenDisabledPrevent are the same for all MMC3 IRQ varities.
 
     // The standard MMC3 IRQ behavior.
     pub const SHARP_IRQ_STATE: Self = Self {
         counter: CounterBuilder::new()
-            .direction(Direction::Decrementing)
-            .auto_triggered_by(AutoTriggeredBy::EndingOnTarget)
-            .auto_reload(true)
-            .on_forced_reload_set_count(ForcedReloadTiming::OnNextTick)
+            .initial_count_and_reload_value(0)
+            .step(-1)
+            .auto_triggered_by(AutoTriggeredBy::EndingOn, 0)
+            .when_target_reached(WhenTargetReached::Reload)
+            .forced_reload_timing(ForcedReloadTiming::OnNextTick)
             .when_disabled_prevent(WhenDisabledPrevent::Triggering)
-            .build(),
+            .build_reload_driven_counter(),
         allowed_address_range: 0..=0x1FFF,
         suppressor: Suppressor::SUPPRESS_FOR_16_CYCLES,
         pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Right),
@@ -33,12 +34,13 @@ impl IrqState {
     // Same as Sharp except that automatic IRQs are ONLY triggered on a 1 to 0 transition of the count, not when it was already 0.
     pub const NEC_IRQ_STATE: Self = Self {
         counter: CounterBuilder::new()
-            .direction(Direction::Decrementing)
-            .auto_triggered_by(AutoTriggeredBy::StepSizeTransitionToTarget)
-            .auto_reload(true)
-            .on_forced_reload_set_count(ForcedReloadTiming::OnNextTick)
+            .initial_count_and_reload_value(0)
+            .step(-1)
+            .auto_triggered_by(AutoTriggeredBy::StepSizedTransitionTo, 0)
+            .when_target_reached(WhenTargetReached::Reload)
+            .forced_reload_timing(ForcedReloadTiming::OnNextTick)
             .when_disabled_prevent(WhenDisabledPrevent::Triggering)
-            .build(),
+            .build_reload_driven_counter(),
         allowed_address_range: 0..=0x1FFF,
         suppressor: Suppressor::SUPPRESS_FOR_16_CYCLES,
         pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Right),
@@ -46,13 +48,14 @@ impl IrqState {
     // Same as NEC except that forcing a reload of 0 will also trigger an IRQ.
     pub const REV_A_IRQ_STATE: Self = Self {
         counter: CounterBuilder::new()
-            .direction(Direction::Decrementing)
-            .auto_triggered_by(AutoTriggeredBy::StepSizeTransitionToTarget)
-            .also_trigger_on_forced_reload_of_zero()
-            .auto_reload(true)
-            .on_forced_reload_set_count(ForcedReloadTiming::OnNextTick)
+            .initial_count_and_reload_value(0)
+            .step(-1)
+            .auto_triggered_by(AutoTriggeredBy::StepSizedTransitionTo, 0)
+            .also_trigger_on_forced_reload_with_target_count()
+            .when_target_reached(WhenTargetReached::Reload)
+            .forced_reload_timing(ForcedReloadTiming::OnNextTick)
             .when_disabled_prevent(WhenDisabledPrevent::Triggering)
-            .build(),
+            .build_reload_driven_counter(),
         allowed_address_range: 0..=0x1FFF,
         suppressor: Suppressor::SUPPRESS_FOR_16_CYCLES,
         pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Right),
@@ -61,13 +64,14 @@ impl IrqState {
     // triggers on pattern table side transitions to the LEFT not the right, and doesn't suppress repeats on transition.
     pub const MC_ACC_IRQ_STATE: Self = Self {
         counter: CounterBuilder::new()
-            .direction(Direction::Decrementing)
-            .auto_triggered_by(AutoTriggeredBy::EndingOnTarget)
-            .auto_reload(true)
-            .prescaler(8, PrescalerTriggeredBy::AlreadyZero, PrescalerBehaviorOnForcedReload::ClearCount)
-            .on_forced_reload_set_count(ForcedReloadTiming::OnNextTick)
+            .initial_count_and_reload_value(0)
+            .step(-1)
+            .auto_triggered_by(AutoTriggeredBy::EndingOn, 0)
+            .when_target_reached(WhenTargetReached::Reload)
+            .forced_reload_timing(ForcedReloadTiming::OnNextTick)
             .when_disabled_prevent(WhenDisabledPrevent::Triggering)
-            .build(),
+            .prescaler(8, PrescalerTriggeredBy::AlreadyZero, PrescalerBehaviorOnForcedReload::ClearCount)
+            .build_reload_driven_counter(),
         allowed_address_range: 0..=0xFFFF,
         suppressor: Suppressor::NEVER_SUPPRESS,
         pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Left),
@@ -88,8 +92,7 @@ impl IrqState {
         }
 
         if should_tick_irq_counter {
-            let triggered = self.counter.tick();
-            if triggered {
+            if self.counter.tick().triggered {
                 mem.cpu_pinout.generate_mapper_irq();
             }
         }

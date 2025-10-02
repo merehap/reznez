@@ -1,7 +1,7 @@
 use crate::mapper::*;
 
 use crate::mappers::mmc3::mmc3;
-use crate::mappers::mmc3::irq_state::IrqState;
+use crate::mappers::mmc3::irq_state::Mmc3IrqState;
 
 pub const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
@@ -55,7 +55,7 @@ impl Mapper for Mapper189 {
 impl Mapper189 {
     pub fn new() -> Self {
         Self {
-            mmc3: mmc3::Mapper004Mmc3::new(IrqState::SHARP_IRQ_STATE),
+            mmc3: mmc3::Mapper004Mmc3::new(Mmc3IrqState::SHARP_IRQ_STATE),
         }
     }
 }
