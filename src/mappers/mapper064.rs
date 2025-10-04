@@ -106,7 +106,7 @@ impl Mapper for Mapper064 {
         if self.irq_pending_delay_cycles > 0 {
             self.irq_pending_delay_cycles -= 1;
             if self.irq_pending_delay_cycles == 0 {
-                mem.cpu_pinout.generate_mapper_irq();
+                mem.cpu_pinout.assert_mapper_irq();
             }
         }
 

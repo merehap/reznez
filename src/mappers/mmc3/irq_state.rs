@@ -93,7 +93,7 @@ impl Mmc3IrqState {
 
         if should_tick_irq_counter {
             if self.counter.tick().triggered {
-                mem.cpu_pinout.generate_mapper_irq();
+                mem.cpu_pinout.assert_mapper_irq();
             }
         }
     }

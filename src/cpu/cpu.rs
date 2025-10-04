@@ -248,7 +248,7 @@ impl Cpu {
         }
 
         // Keep irq_pending and irq_status in sync
-        if mem.cpu_pinout.irq_pending() {
+        if mem.cpu_pinout.irq_asserted() {
             if self.irq_status == IrqStatus::Inactive && !self.status.interrupts_disabled {
                 self.irq_status = IrqStatus::Pending;
             }

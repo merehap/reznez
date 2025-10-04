@@ -73,10 +73,10 @@ impl Mapper for Mapper073 {
         }
 
         if self.irq_mode == IrqMode::SixteenBit && self.irq_counter == 0xFFFF {
-            mem.cpu_pinout.generate_mapper_irq();
+            mem.cpu_pinout.assert_mapper_irq();
             self.irq_counter = self.irq_counter_reload_value;
         } else if self.irq_mode == IrqMode::EightBit && self.irq_counter & 0xFF == 0xFF {
-            mem.cpu_pinout.generate_mapper_irq();
+            mem.cpu_pinout.assert_mapper_irq();
             self.irq_counter &= 0xFF00;
             self.irq_counter |= self.irq_counter_reload_value & 0x00FF;
         } else {

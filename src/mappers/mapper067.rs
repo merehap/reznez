@@ -75,7 +75,7 @@ impl Mapper for Mapper067 {
 
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         if self.irq_counter.tick().triggered {
-            mem.cpu_pinout.generate_mapper_irq();
+            mem.cpu_pinout.assert_mapper_irq();
         }
     }
 

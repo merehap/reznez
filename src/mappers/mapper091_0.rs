@@ -66,7 +66,7 @@ impl Mapper for Mapper091_0 {
         let should_tick = self.pattern_table_transition_detector.set_value_then_detect(address.pattern_table_side());
         if should_tick {
             if self.irq_counter.tick().triggered {
-                mem.cpu_pinout.generate_mapper_irq();
+                mem.cpu_pinout.assert_mapper_irq();
             }
         }
     }

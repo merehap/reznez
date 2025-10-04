@@ -91,7 +91,7 @@ impl Mapper for Mapper142 {
         // TODO: Test behavior when the reload value is 0xFFFF, since that will cause a wrap-around without setting IRQ pending.
         self.irq_counter += 1;
         if self.irq_counter == 0xFFFF {
-            mem.cpu_pinout.generate_mapper_irq();
+            mem.cpu_pinout.assert_mapper_irq();
             self.irq_counter = self.irq_counter_reload_value;
         }
     }

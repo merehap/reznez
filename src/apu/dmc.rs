@@ -35,7 +35,7 @@ impl Dmc {
         self.should_loop = (value & 0b0100_0000) != 0;
         self.period = NTSC_PERIODS[(value & 0b0000_1111) as usize] - 1;
         if !self.irq_enabled {
-            cpu_pinout.clear_dmc_irq_pending();
+            cpu_pinout.acknowledge_dmc_irq();
         }
     }
 
@@ -57,7 +57,7 @@ impl Dmc {
 
     // 0x4015
     pub(super) fn set_enabled(&mut self, cpu_pinout: &mut CpuPinout, dma: &mut DmcDma, enabled: bool) {
-        cpu_pinout.clear_dmc_irq_pending();
+        cpu_pinout.acknowledge_dmc_irq();
 
         if !enabled {
             self.sample_bytes_remaining = 0;
@@ -75,7 +75,7 @@ impl Dmc {
 
     // Upon RESET
     pub(super) fn disable(&mut self, cpu_pinout: &mut CpuPinout) {
-        cpu_pinout.clear_dmc_irq_pending();
+        cpu_pinout.acknowledge_dmc_irq();
         self.sample_bytes_remaining = 0;
     }
 
@@ -96,7 +96,7 @@ impl Dmc {
                     self.sample_bytes_remaining = self.sample_length;
                     self.sample_address = self.sample_start_address;
                 } else if self.irq_enabled {
-                    cpu_pinout.set_dmc_irq_pending();
+                    cpu_pinout.assert_dmc_irq();
                 }
             }
         }

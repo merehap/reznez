@@ -22,8 +22,6 @@ const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
     .initial_count_and_reload_value(0)
     .step(1)
     .auto_triggered_by(AutoTriggeredBy::AlreadyOn, 0x0FFF)
-    // Contrary to the wiki, I assume that the counter doesn't auto-acknowledge (disable) when it wraps to 0.
-    // I think it may just stop asserting an IRQ, but keep ticking.
     .when_target_reached(WhenTargetReached::ContinueThenReloadAfter(0x1FFF))
     // TODO: Verify correct timing.
     .forced_reload_timing(ForcedReloadTiming::Immediate)
@@ -60,7 +58,7 @@ impl Mapper for Mapper040 {
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         let tick_result = self.irq_counter.tick();
         if tick_result.triggered {
-            mem.cpu_pinout.generate_mapper_irq();
+            mem.cpu_pinout.assert_mapper_irq();
         }
 
         // TODO: Verify if this is correct.

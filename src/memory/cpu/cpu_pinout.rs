@@ -23,9 +23,9 @@ pub struct CpuPinout {
     // OE1 (Controller 1 enable)
     // OUT0..OUT2 (Controller outputs)
 
-    mapper_irq_pending: bool,
-    frame_irq_pending: bool,
-    dmc_irq_pending: bool,
+    mapper_irq_asserted: bool,
+    frame_irq_asserted: bool,
+    dmc_irq_asserted: bool,
 }
 
 impl CpuPinout {
@@ -36,49 +36,49 @@ impl CpuPinout {
             data_bus: 0,
             nmi_signal_detector: EdgeDetector::target_value(SignalLevel::Low),
 
-            mapper_irq_pending: false,
-            frame_irq_pending: false,
-            dmc_irq_pending: false,
+            mapper_irq_asserted: false,
+            frame_irq_asserted: false,
+            dmc_irq_asserted: false,
         }
     }
 
-    pub fn irq_pending(&self) -> bool {
-        self.mapper_irq_pending || self.frame_irq_pending || self.dmc_irq_pending
+    pub fn irq_asserted(&self) -> bool {
+        self.mapper_irq_asserted || self.frame_irq_asserted || self.dmc_irq_asserted
     }
 
-    pub fn mapper_irq_pending(&self) -> bool {
-        self.mapper_irq_pending
+    pub fn mapper_irq_asserted(&self) -> bool {
+        self.mapper_irq_asserted
     }
 
     pub fn acknowledge_mapper_irq(&mut self) {
-        self.mapper_irq_pending = false;
+        self.mapper_irq_asserted = false;
     }
 
-    pub fn generate_mapper_irq(&mut self) {
-        self.mapper_irq_pending = true;
+    pub fn assert_mapper_irq(&mut self) {
+        self.mapper_irq_asserted = true;
     }
 
-    pub fn frame_irq_pending(&self) -> bool {
-        self.frame_irq_pending
+    pub fn frame_irq_asserted(&self) -> bool {
+        self.frame_irq_asserted
     }
 
-    pub fn clear_frame_irq_pending(&mut self) {
-        self.frame_irq_pending = false;
+    pub fn acknowledge_frame_irq(&mut self) {
+        self.frame_irq_asserted = false;
     }
 
-    pub fn set_frame_irq_pending(&mut self) {
-        self.frame_irq_pending = true;
+    pub fn assert_frame_irq(&mut self) {
+        self.frame_irq_asserted = true;
     }
 
-    pub fn dmc_irq_pending(&self) -> bool {
-        self.dmc_irq_pending
+    pub fn dmc_irq_asserted(&self) -> bool {
+        self.dmc_irq_asserted
     }
 
-    pub fn clear_dmc_irq_pending(&mut self) {
-        self.dmc_irq_pending = false;
+    pub fn acknowledge_dmc_irq(&mut self) {
+        self.dmc_irq_asserted = false;
     }
 
-    pub fn set_dmc_irq_pending(&mut self) {
-        self.dmc_irq_pending = true;
+    pub fn assert_dmc_irq(&mut self) {
+        self.dmc_irq_asserted = true;
     }
 }

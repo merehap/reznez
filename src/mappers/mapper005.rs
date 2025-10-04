@@ -226,7 +226,7 @@ impl Mapper for Mapper005 {
         self.update_chr_layout(mem);
 
         if self.frame_state.irq_pending() {
-            mem.cpu_pinout.generate_mapper_irq();
+            mem.cpu_pinout.assert_mapper_irq();
         }
 
         if addr.is_in_name_table_proper() {
@@ -447,7 +447,7 @@ impl Mapper005 {
         if !irq_enabled {
             mem.cpu_pinout.acknowledge_mapper_irq();
         } else if self.frame_state.irq_pending() {
-            mem.cpu_pinout.generate_mapper_irq();
+            mem.cpu_pinout.assert_mapper_irq();
         }
     }
 

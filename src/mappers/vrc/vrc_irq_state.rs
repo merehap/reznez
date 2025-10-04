@@ -44,7 +44,7 @@ impl VrcIrqState {
         }
 
         if self.counter == 0xFF {
-            mem.cpu_pinout.generate_mapper_irq();
+            mem.cpu_pinout.assert_mapper_irq();
             self.counter = self.counter_reload_value;
         } else {
             self.counter += 1;

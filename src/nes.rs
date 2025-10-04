@@ -339,19 +339,12 @@ impl Nes {
     }
 
     fn detect_changes(&mut self) {
-        if log_enabled!(target: "cpuflowcontrol", Info) || log_enabled!(target: "mapperirqcounter", Info) {
-            let latest = &mut self.latest_values;
-            if latest.mapper_irq_pending_detector.set_value_then_detect(self.memory.cpu_pinout.mapper_irq_pending()) {
-                info!("Mapper IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
-            }
-        }
-
         if log_enabled!(target: "cpuflowcontrol", Info) {
             let latest = &mut self.latest_values;
-            if latest.apu_frame_irq_pending_detector.set_value_then_detect(self.memory.cpu_pinout.frame_irq_pending()) {
+            if latest.apu_frame_irq_pending_detector.set_value_then_detect(self.memory.cpu_pinout.frame_irq_asserted()) {
                 info!("APU Frame IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
             }
-            if latest.dmc_irq_pending_detector.set_value_then_detect(self.memory.cpu_pinout.dmc_irq_pending()) {
+            if latest.dmc_irq_pending_detector.set_value_then_detect(self.memory.cpu_pinout.dmc_irq_asserted()) {
                 info!("DMC IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
             }
             if latest.irq_status_detector.set_value_then_detect(self.cpu.irq_status()) {
@@ -382,6 +375,16 @@ impl Nes {
             }
             if latest.mapper_irq_count_detector.set_value_then_detect(count) {
                 info!("Mapper IRQ counter changed to: {count}");
+            }
+        }
+
+        if log_enabled!(target: "cpuflowcontrol", Info) || log_enabled!(target: "mapperirqcounter", Info) {
+            let latest = &mut self.latest_values;
+            if latest.mapper_irq_detector.set_value_then_detect(self.memory.cpu_pinout.mapper_irq_asserted()) {
+                match latest.mapper_irq_detector.current_value() {
+                    true => info!("Mapper IRQ asserted. CPU cycle: {}", self.memory.cpu_cycle()),
+                    false => info!("Mapper IRQ acknowledged. CPU cycle: {}", self.memory.cpu_cycle()),
+                }
             }
         }
 
@@ -559,7 +562,7 @@ impl Nes {
 struct LatestValues {
     apu_frame_irq_pending_detector: EdgeDetector<bool>,
     dmc_irq_pending_detector: EdgeDetector<bool>,
-    mapper_irq_pending_detector: EdgeDetector<bool>,
+    mapper_irq_detector: EdgeDetector<bool>,
 
     irq_status_detector: EdgeDetector<IrqStatus>,
     nmi_status_detector: EdgeDetector<NmiStatus>,
@@ -587,7 +590,7 @@ impl LatestValues {
         Self {
             apu_frame_irq_pending_detector: EdgeDetector::target_value(true),
             dmc_irq_pending_detector: EdgeDetector::target_value(true),
-            mapper_irq_pending_detector: EdgeDetector::target_value(true),
+            mapper_irq_detector: EdgeDetector::any_edge(),
 
             irq_status_detector: EdgeDetector::any_edge(),
             nmi_status_detector: EdgeDetector::any_edge(),
@@ -860,7 +863,7 @@ impl SnapshotBuilder {
     }
 
     fn frame_irq(&mut self, mem: &Memory, cpu: &Cpu) {
-        self.frame_irq = Some(mem.cpu_pinout.frame_irq_pending() && !cpu.status().interrupts_disabled);
+        self.frame_irq = Some(mem.cpu_pinout.frame_irq_asserted() && !cpu.status().interrupts_disabled);
     }
 
     fn add_ppu_position(&mut self, clock: &Clock) {

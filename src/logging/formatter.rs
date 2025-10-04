@@ -350,9 +350,9 @@ impl Formatter for MesenFormatter {
 
 pub fn interrupts(nes: &Nes) -> String {
     let mut interrupts = String::new();
-    interrupts.push(if nes.memory().cpu_pinout.frame_irq_pending() { 'F' } else {'-'});
-    interrupts.push(if nes.memory().cpu_pinout.dmc_irq_pending() { 'D' } else {'-'});
-    interrupts.push(if nes.memory().cpu_pinout.mapper_irq_pending() { 'M' } else {'-'});
+    interrupts.push(if nes.memory().cpu_pinout.frame_irq_asserted() { 'F' } else {'-'});
+    interrupts.push(if nes.memory().cpu_pinout.dmc_irq_asserted() { 'D' } else {'-'});
+    interrupts.push(if nes.memory().cpu_pinout.mapper_irq_asserted() { 'M' } else {'-'});
     interrupts.push(if nes.cpu().nmi_pending() { 'N' } else {'-'});
     interrupts.push(if nes.memory().oam_dma.dma_pending() { 'O' } else {'-'});
     interrupts.push(if nes.memory().dmc_dma.state() != DmcDmaState::Idle { 'D' } else {'-'});

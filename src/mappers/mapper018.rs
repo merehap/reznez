@@ -50,7 +50,7 @@ impl Mapper for Mapper018 {
         if self.irq_enabled {
             let mut new_counter = self.irq_counter & self.irq_counter_mask;
             if new_counter == 0 {
-                mem.cpu_pinout.generate_mapper_irq();
+                mem.cpu_pinout.assert_mapper_irq();
             }
 
             new_counter -= 1;
