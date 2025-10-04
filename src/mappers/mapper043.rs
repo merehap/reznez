@@ -1,5 +1,3 @@
-use ux::u12;
-
 use crate::mapper::*;
 use crate::memory::memory::Memory;
 
@@ -22,14 +20,21 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
+const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
+    .initial_count_and_reload_value(0)
+    .step(1)
+    .auto_triggered_by(AutoTriggeredBy::AlreadyOn, 0xFFF)
+    .when_target_reached(WhenTargetReached::Reload)
+    .forced_reload_timing(ForcedReloadTiming::Immediate)
+    .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
+    .build_reload_driven_counter();
+
 // TONY-I and YS-612 (FDS games in cartridge form).
 // TODO: Untested. Need test ROM. In particular, the 0x5000 ROM window might not work.
 // FIXME: PrgMemory under 0x6000 is no longer supported.
 // This mapper will need to find a different way to support it.
-#[derive(Default)]
 pub struct Mapper043 {
-    irq_enabled: bool,
-    irq_counter: u12,
+    irq_counter: ReloadDrivenCounter,
 }
 
 impl Mapper for Mapper043 {
@@ -52,10 +57,13 @@ impl Mapper for Mapper043 {
                 mem.set_prg_register(P0, index);
             }
             0x4122 | 0x8122 => {
-                self.irq_enabled = value & 1 == 1;
-                if !self.irq_enabled {
+                if value & 1 == 1 {
+                    self.irq_counter.enable();
+                } else {
+                    self.irq_counter.disable();
+                    // It's not clear that this is correct since the counter already wraps. A ROM test of the hardware is needed.
+                    self.irq_counter.force_reload();
                     mem.cpu_pinout.acknowledge_mapper_irq();
-                    self.irq_counter = 0.into();
                 }
             }
             _ => { /* Do nothing. */ }
@@ -63,21 +71,28 @@ impl Mapper for Mapper043 {
     }
 
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        if self.irq_enabled {
-            self.irq_counter = self.irq_counter.wrapping_add(1.into());
-            if self.irq_counter == 0.into() {
-                mem.cpu_pinout.generate_mapper_irq();
-            } else {
-                mem.cpu_pinout.acknowledge_mapper_irq();
-            }
+        let tick_result = self.irq_counter.tick();
+        if tick_result.triggered {
+            mem.cpu_pinout.generate_mapper_irq();
+        }
+
+        if tick_result.wrapped {
+            self.irq_counter.disable();
         }
     }
 
     fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
-        Some(IrqCounterInfo { ticking_enabled: self.irq_enabled, triggering_enabled: self.irq_enabled, count: self.irq_counter.into() })
+        Some(self.irq_counter.to_irq_counter_info())
     }
 
     fn layout(&self) -> Layout {
         LAYOUT
+    }
+}
+
+
+impl Mapper043 {
+    pub fn new() -> Self {
+        Self { irq_counter: IRQ_COUNTER }
     }
 }

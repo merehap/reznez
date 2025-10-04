@@ -208,7 +208,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // FDS games hacked into cartridge form
         (42, None) => m::mapper042::Mapper042::new(metadata).supported(),
         // TONY-I and YS-612 (FDS games in cartridge form)
-        (43, None) => m::mapper043::Mapper043::default().supported(),
+        (43, None) => m::mapper043::Mapper043::new().supported(),
         (44, _) => TodoMapper,
         (45, _) => TodoMapper,
         // Rumble Station
