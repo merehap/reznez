@@ -33,7 +33,7 @@ const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
 
 // FDS games hacked into cartridge form.
 // Unknown if subject to bus conflicts.
-// FIXME: Bottom status bar scrolls when it should be stationary in Bio Miracle Bokutte Upa.
+// FIXME: Pixel flickering during first level. Need joypad input to capture test frame.
 pub struct Mapper042 {
     chr_board: ChrBoard,
     irq_counter: ReloadDrivenCounter,

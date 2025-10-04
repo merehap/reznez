@@ -25,8 +25,8 @@ Detangle Mapper::cpu_read
 CPU mode debug screen, including DMAs
 Use has_persistent_memory correctly (mostly for cases without NES2.0 metadata)
 Why does Sunsoft FME7 (mapper 69) have a holymapperel result of 0010? Mesen behaves the same.
-Add a Deref impl for converting CpuAddress to u16.
 Detect PpuAddress changes better, then clean up MMC3 and Mapper 91 IRQ logic.
+Joypad input for test frame capture.
 
 FANCY NICE-TO-HAVES
 APU frequency correction
@@ -92,6 +92,9 @@ Ganbare Goemon Gaiden 2 - Partial bad pattern table on opening screen.
 
 MAPPER 23
 Tiny Toon Adventures - Status bar
+
+MAPPER 25 (VRC4B)
+Bio Miracle - Bottom status bar scrolls when it should be stationary
 
 MAPPER 48
 Don Doko Don 2 (SMB 8) and others: Fix IRQ behavior to prevent flickering

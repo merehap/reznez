@@ -2,6 +2,7 @@ use crate::mapper::*;
 use crate::mappers::vrc::vrc4::Vrc4;
 
 // VRC4b
+// FIXME: Bottom status bar scrolls when it should be stationary in Bio Miracle Bokutte Upa.
 pub fn mapper025_1() -> Vrc4 {
     let mappings = &[
         (0xB000, 0xB002, C0),
