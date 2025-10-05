@@ -81,6 +81,9 @@ pub enum Button {
 }
 
 impl Button {
+    pub const ALL: [Button; 8] =
+        [Button::A, Button::B, Button::Select, Button::Start, Button::Up, Button::Down, Button::Left, Button::Right];
+
     pub fn next(self) -> Option<Button> {
         if self == Button::Right {
             None

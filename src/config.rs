@@ -1,8 +1,10 @@
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::str::FromStr;
 
 use structopt::StructOpt;
 
+use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::egui_gui::EguiGui;
 use crate::gui::gui::Gui;
 use crate::gui::no_gui::NoGui;
@@ -20,6 +22,7 @@ pub struct Config {
     pub frame_dump: bool,
     pub cpu_step_formatting: CpuStepFormatting,
     pub allow_saving: bool,
+    pub scheduled_button_events: BTreeMap<i64, (Button, ButtonStatus)>,
 }
 
 impl Config {
@@ -34,14 +37,35 @@ impl Config {
             frame_dump: opt.frame_dump,
             cpu_step_formatting: opt.cpu_step_formatting,
             allow_saving: !opt.prevent_saving,
+            scheduled_button_events: Config::parse_scheduled_button_events(&opt.scheduled_button_presses),
         }
     }
 
     pub fn gui(opt: &Opt) -> Box<dyn Gui> {
         match opt.gui {
-            GuiType::NoGui => Box::new(NoGui::new()) as Box<dyn Gui>,
+            GuiType::NoGui => Box::new(NoGui) as Box<dyn Gui>,
             GuiType::Egui => Box::new(EguiGui),
         }
+    }
+
+    fn parse_scheduled_button_events(raw_presses: &[String]) -> BTreeMap<i64, (Button, ButtonStatus)> {
+        let mut events = BTreeMap::new();
+        for raw_press in raw_presses {
+            for button in Button::ALL {
+                let button_text = format!("{button:?}").to_ascii_lowercase();
+                if raw_press.to_ascii_lowercase().starts_with(&button_text) {
+                    let raw_frame_number = &raw_press[button_text.len() ..];
+                    let frame_number: i64 = raw_frame_number.parse().unwrap();
+                    events.insert(frame_number, (button, ButtonStatus::Pressed));
+                    events.insert(frame_number + 1, (button, ButtonStatus::Unpressed));
+                }
+            }
+        }
+
+        // One press and one release for every raw press.
+        assert_eq!(events.len(), 2 * raw_presses.len());
+
+        events
     }
 }
 
@@ -125,6 +149,9 @@ pub struct Opt {
 
     #[structopt(name = "preventsaving", long)]
     pub prevent_saving: bool,
+
+    #[structopt(name = "press", long)]
+    pub scheduled_button_presses: Vec<String>,
 }
 
 impl Opt {
@@ -156,6 +183,7 @@ impl Opt {
             cpu_step_formatting: CpuStepFormatting::Data,
             frame_dump: false,
             prevent_saving: false,
+            scheduled_button_presses: Vec::new(),
         }
     }
 }

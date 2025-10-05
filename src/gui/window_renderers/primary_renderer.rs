@@ -228,7 +228,7 @@ impl WindowRenderer for PrimaryRenderer {
             execute_frame(
                 nes,
                 &world.config,
-                &events(&world.input, &mut world.gilrs, world.active_gamepad_id),
+                events(&world.input, &mut world.gilrs, world.active_gamepad_id),
                 display_frame,
             );
         }

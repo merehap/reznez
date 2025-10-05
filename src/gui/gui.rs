@@ -20,7 +20,7 @@ pub trait Gui {
     fn run(&mut self, nes: Option<Nes>, config: Config);
 }
 
-pub fn execute_frame<F>(nes: &mut Nes, config: &Config, events: &Events, display_frame: F)
+pub fn execute_frame<F>(nes: &mut Nes, config: &Config, mut events: Events, display_frame: F)
 where
     F: FnOnce(&Frame, Mask, i64),
 {
@@ -29,7 +29,11 @@ where
     let target_frame_rate = config.target_frame_rate;
     let intended_frame_end_time = start_time.add(frame_duration(target_frame_rate));
 
-    nes.process_gui_events(events);
+    if let Some((button, button_status)) = config.scheduled_button_events.get(&frame_index) {
+        events.joypad1_button_statuses.insert(*button, *button_status);
+    }
+
+    nes.process_gui_events(&events);
     nes.step_frame();
     let mask = nes.memory().ppu_regs.mask();
     display_frame(nes.frame(), mask, frame_index);
