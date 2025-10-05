@@ -3,6 +3,7 @@ use std::collections::BTreeSet;
 use log::info;
 
 use crate::apu::apu_registers::ApuRegisters;
+use crate::controller::joypad::Joypad;
 use crate::cpu::dmc_dma::DmcDma;
 use crate::cpu::oam_dma::OamDma;
 use crate::memory::bank::bank::RomRamModeRegisterId;
@@ -10,7 +11,6 @@ use crate::memory::bank::bank_index::MemType;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
-use crate::memory::cpu::ports::Ports;
 use crate::memory::cpu::stack::Stack;
 use crate::mapper::{ChrBankRegisterId, ChrMemory, CiramSide, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, PpuAddress, PrgBankRegisterId, PrgMemory, ReadResult, ReadWriteStatus, ReadWriteStatusRegisterId};
 use crate::memory::ppu::chr_memory::PpuPeek;
@@ -34,7 +34,8 @@ pub struct Memory {
     pub ciram: Ciram,
     pub palette_ram: PaletteRam,
     pub oam: Oam,
-    pub ports: Ports,
+    pub joypad1: Joypad,
+    pub joypad2: Joypad,
     pub ppu_regs: PpuRegisters,
     pub apu_regs: ApuRegisters,
     system_palette: SystemPalette,
@@ -59,7 +60,6 @@ impl Memory {
         name_table_mirrorings: &'static [NameTableMirroring],
         read_write_statuses: &'static [ReadWriteStatus],
         ram_not_present: BTreeSet<ReadWriteStatusRegisterId>,
-        ports: Ports,
         ppu_clock: Clock,
         system_palette: SystemPalette,
     ) -> Memory {
@@ -68,7 +68,8 @@ impl Memory {
             ciram: Ciram::new(),
             palette_ram: PaletteRam::new(),
             oam: Oam::new(),
-            ports,
+            joypad1: Joypad::new(),
+            joypad2: Joypad::new(),
             ppu_regs: PpuRegisters::new(ppu_clock),
             apu_regs: ApuRegisters::new(),
             system_palette,

@@ -16,7 +16,6 @@ use crate::cartridge::cartridge_metadata::CartridgeMetadataBuilder;
 use crate::cartridge::header_db::HeaderDb;
 use crate::cartridge::resolved_metadata::{MetadataResolver, ResolvedMetadata};
 use crate::config::Config;
-use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::{Cpu, IrqStatus, NmiStatus, ResetStatus};
 use crate::cpu::cpu_mode::CpuMode;
 use crate::cpu::dmc_dma::{DmcDmaAction, DmcDmaState};
@@ -29,7 +28,6 @@ use crate::mapper::{IrqCounterInfo, Mapper, NameTableMirroring, PrgBankRegisterI
 use crate::mapper_list;
 use crate::memory::raw_memory::RawMemory;
 use crate::memory::bank::bank_index::{BankLocation, ChrBankRegisterId};
-use crate::memory::cpu::ports::Ports;
 use crate::memory::memory::Memory;
 use crate::memory::signal_level::SignalLevel;
 use crate::ppu::clock::Clock;
@@ -191,12 +189,10 @@ impl Nes {
         let metadata = metadata_resolver.resolve();
         let (prg_memory, chr_memory, name_table_mirrorings, read_write_statuses, ram_not_present) =
             mapper.layout().make_mapper_params(&metadata, &cartridge, config.allow_saving)?;
-        let (joypad1, joypad2) = (Joypad::new(), Joypad::new());
 
-        let ports = Ports::new(joypad1, joypad2);
         let mut memory = Memory::new(
             prg_memory, chr_memory, name_table_mirrorings, read_write_statuses, ram_not_present,
-            ports, config.ppu_clock, config.system_palette.clone());
+            config.ppu_clock, config.system_palette.clone());
         mapper.init_mapper_params(&mut memory);
 
         metadata_resolver.layout_has_prg_ram = mapper.layout().has_prg_ram();
@@ -380,8 +376,8 @@ impl Nes {
 
         if log_enabled!(target: "cpuflowcontrol", Info) || log_enabled!(target: "mapperirqcounter", Info) {
             let latest = &mut self.latest_values;
-            if latest.mapper_irq_detector.set_value_then_detect(self.memory.cpu_pinout.mapper_irq_asserted()) {
-                match latest.mapper_irq_detector.current_value() {
+            if latest.mapper_irq_asserted_detector.set_value_then_detect(self.memory.cpu_pinout.mapper_irq_asserted()) {
+                match latest.mapper_irq_asserted_detector.current_value() {
                     true => info!("Mapper IRQ asserted. CPU cycle: {}", self.memory.cpu_cycle()),
                     false => info!("Mapper IRQ acknowledged. CPU cycle: {}", self.memory.cpu_cycle()),
                 }
@@ -550,11 +546,11 @@ impl Nes {
     pub fn process_gui_events(&mut self, events: &Events) {
         for (button, status) in &events.joypad1_button_statuses {
             info!("Joypad 1: button {button:?} status is {status:?}");
-            self.memory.ports.joypad1.set_button_status(*button, *status);
+            self.memory.joypad1.set_button_status(*button, *status);
         }
 
         for (button, status) in &events.joypad2_button_statuses {
-            self.memory.ports.joypad2.set_button_status(*button, *status);
+            self.memory.joypad2.set_button_status(*button, *status);
         }
     }
 }
@@ -562,7 +558,7 @@ impl Nes {
 struct LatestValues {
     apu_frame_irq_pending_detector: EdgeDetector<bool>,
     dmc_irq_pending_detector: EdgeDetector<bool>,
-    mapper_irq_detector: EdgeDetector<bool>,
+    mapper_irq_asserted_detector: EdgeDetector<bool>,
 
     irq_status_detector: EdgeDetector<IrqStatus>,
     nmi_status_detector: EdgeDetector<NmiStatus>,
@@ -590,7 +586,7 @@ impl LatestValues {
         Self {
             apu_frame_irq_pending_detector: EdgeDetector::target_value(true),
             dmc_irq_pending_detector: EdgeDetector::target_value(true),
-            mapper_irq_detector: EdgeDetector::any_edge(),
+            mapper_irq_asserted_detector: EdgeDetector::any_edge(),
 
             irq_status_detector: EdgeDetector::any_edge(),
             nmi_status_detector: EdgeDetector::any_edge(),

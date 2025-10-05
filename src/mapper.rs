@@ -118,8 +118,8 @@ pub trait Mapper {
             // DMA values must always be copied to the bus, unlike with the normal CPU address bus.
             0x4015 => ReadResult::partial_open_bus(mem.apu_regs.peek_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
             // TODO: Move ReadResult/mask specification into the controller.
-            0x4016          => ReadResult::partial_open_bus(mem.ports.joypad1.peek_status() as u8, 0b0000_0111),
-            0x4017          => ReadResult::partial_open_bus(mem.ports.joypad2.peek_status() as u8, 0b0000_0111),
+            0x4016          => ReadResult::partial_open_bus(mem.joypad1.peek_status() as u8, 0b0000_0111),
+            0x4017          => ReadResult::partial_open_bus(mem.joypad2.peek_status() as u8, 0b0000_0111),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
             0x4020..=0xFFFF => self.peek_cartridge_space(mem, addr),
         }
@@ -174,8 +174,8 @@ pub trait Mapper {
             // DMA values must always be copied to the bus, unlike with the normal CPU address bus.
             0x4015 => ReadResult::partial_open_bus(mem.apu_regs.read_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
             // TODO: Move ReadResult/mask specification into the controller.
-            0x4016 => ReadResult::partial_open_bus(mem.ports.joypad1.read_status() as u8, 0b0000_0111),
-            0x4017 => ReadResult::partial_open_bus(mem.ports.joypad2.read_status() as u8, 0b0000_0111),
+            0x4016 => ReadResult::partial_open_bus(mem.joypad1.read_status() as u8, 0b0000_0111),
+            0x4017 => ReadResult::partial_open_bus(mem.joypad2.read_status() as u8, 0b0000_0111),
             // CPU Test Mode not yet supported.
             0x4018..=0x401F => ReadResult::OPEN_BUS,
             0x4020..=0xFFFF => self.read_from_cartridge_space(mem, addr),
@@ -244,7 +244,10 @@ pub trait Mapper {
             0x4013          => mem.apu_regs.dmc.write_sample_length(value),
             0x4014          => mem.oam_dma.prepare_to_start(value),
             0x4015          => mem.apu_regs.write_status_byte(&mut mem.cpu_pinout, &mut mem.dmc_dma, value),
-            0x4016          => mem.ports.change_strobe(value),
+            0x4016          => {
+                mem.joypad1.change_strobe(value);
+                mem.joypad2.change_strobe(value);
+            }
             0x4017          => mem.apu_regs.write_frame_counter(&mut mem.cpu_pinout, value),
             0x4018..=0x401F => { /* CPU Test Mode not yet supported. */ }
             0x4020..=0xFFFF => {

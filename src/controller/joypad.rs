@@ -40,6 +40,14 @@ impl Joypad {
         status
     }
 
+    pub fn change_strobe(&mut self, value: u8) {
+        if value & 1 == 1 {
+            self.strobe_on();
+        } else {
+            self.strobe_off();
+        };
+    }
+
     pub fn strobe_on(&mut self) {
         self.strobe_mode = StrobeMode::On;
         self.selected_button = Some(Button::A);
