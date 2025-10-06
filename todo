@@ -93,9 +93,6 @@ Ganbare Goemon Gaiden 2 - Partial bad pattern table on opening screen.
 MAPPER 23
 Tiny Toon Adventures - Status bar
 
-MAPPER 25 (VRC4B)
-Bio Miracle - Bottom status bar scrolls when it should be stationary
-
 MAPPER 48
 Don Doko Don 2 (SMB 8) and others: Fix IRQ behavior to prevent flickering
 
