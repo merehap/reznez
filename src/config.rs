@@ -27,7 +27,7 @@ pub struct Config {
 
 impl Config {
     pub fn new(opt: &Opt) -> Config {
-        Config {
+        let mut config = Config {
             starting_cpu_cycle: 0,
             ppu_clock: Clock::mesen_compatible(),
             system_palette: SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap(),
@@ -37,8 +37,11 @@ impl Config {
             frame_dump: opt.frame_dump,
             cpu_step_formatting: opt.cpu_step_formatting,
             allow_saving: !opt.prevent_saving,
-            scheduled_button_events: Config::parse_scheduled_button_events(&opt.scheduled_button_presses),
-        }
+            scheduled_button_events: BTreeMap::new(),
+        };
+
+        config.parse_scheduled_button_events(&opt.scheduled_button_presses);
+        config
     }
 
     pub fn gui(opt: &Opt) -> Box<dyn Gui> {
@@ -48,24 +51,25 @@ impl Config {
         }
     }
 
-    fn parse_scheduled_button_events(raw_presses: &[String]) -> BTreeMap<i64, (Button, ButtonStatus)> {
-        let mut events = BTreeMap::new();
+    pub fn add_scheduled_button_press_and_release(&mut self, frame_number: i64, button: Button) {
+        self.scheduled_button_events.insert(frame_number, (button, ButtonStatus::Pressed));
+        self.scheduled_button_events.insert(frame_number + 1, (button, ButtonStatus::Unpressed));
+    }
+
+    fn parse_scheduled_button_events(&mut self, raw_presses: &[String]) {
         for raw_press in raw_presses {
             for button in Button::ALL {
                 let button_text = format!("{button:?}").to_ascii_lowercase();
                 if raw_press.to_ascii_lowercase().starts_with(&button_text) {
                     let raw_frame_number = &raw_press[button_text.len() ..];
                     let frame_number: i64 = raw_frame_number.parse().unwrap();
-                    events.insert(frame_number, (button, ButtonStatus::Pressed));
-                    events.insert(frame_number + 1, (button, ButtonStatus::Unpressed));
+                    self.add_scheduled_button_press_and_release(frame_number, button);
                 }
             }
         }
 
         // One press and one release for every raw press.
-        assert_eq!(events.len(), 2 * raw_presses.len());
-
-        events
+        assert_eq!(self.scheduled_button_events.len(), 2 * raw_presses.len());
     }
 }
 

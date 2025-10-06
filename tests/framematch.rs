@@ -6,10 +6,13 @@ use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
 use dashmap::DashMap;
 use rayon::prelude::*;
 use reznez::cartridge::header_db::HeaderDb;
+use reznez::controller::joypad::{Button, ButtonStatus};
+use reznez::gui::gui::Events;
 use walkdir::WalkDir;
 
 use reznez::config::{Config, GuiType, Opt};
@@ -17,6 +20,30 @@ use reznez::nes::Nes;
 use reznez::ppu::render::frame_rate::TargetFrameRate;
 use reznez::ppu::render::ppm::Ppm;
 use reznez::util::hash_util::calculate_hash;
+
+type Crc = u32;
+type FrameNumber = i64;
+
+static SCHEDULED_BUTTON_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Button, ButtonStatus)>>> = LazyLock::new(|| {
+    let mut presses_by_crc: BTreeMap<Crc, BTreeMap<FrameNumber, Button>> = BTreeMap::new();
+
+    use Button::*;
+    // Bio Miracle Bokutte Upa - [BROKEN] Status bar should be stationary.
+    presses_by_crc.insert(0xE50AD737, [(100, Start), (300, Start)].into_iter().collect());
+
+    let mut all_events = BTreeMap::new();
+    for (crc, presses) in presses_by_crc {
+        let mut events: BTreeMap<i64, (Button, ButtonStatus)> = BTreeMap::new();
+        for (frame_number, button) in presses {
+            events.insert(frame_number, (button, ButtonStatus::Pressed));
+            events.insert(frame_number + 1, (button, ButtonStatus::Unpressed));
+        }
+
+        all_events.insert(crc, events);
+    }
+
+    all_events
+});
 
 #[test]
 fn framematch() {
@@ -54,6 +81,10 @@ impl TestSummary {
 
                 let config = Config::new(&opt);
                 let cartridge = Nes::load_cartridge(&opt.rom_path.unwrap()).unwrap();
+                let scheduled_button_events = SCHEDULED_BUTTON_EVENTS.get(&cartridge.header().full_hash().unwrap())
+                    .cloned()
+                    .unwrap_or(BTreeMap::new());
+
                 let mut nes = Nes::new(&header_db, &config, cartridge).unwrap();
                 nes.mute();
                 *nes.frame_mut().show_overscan_mut() = true;
@@ -68,10 +99,17 @@ impl TestSummary {
                     .map(|entry| (entry.frame_index, entry))
                     .collect();
 
-                let max_frame_index = frame_entries.keys().last().unwrap();
-                for frame_index in 0..=*max_frame_index {
+                let max_frame_number = frame_entries.keys().last().unwrap();
+                for frame_number in 0..=*max_frame_number {
+                    let mut joypad1_button_statuses = BTreeMap::new();
+                    if let Some((button, button_status)) = scheduled_button_events.get(&(frame_number as i64)) {
+                        joypad1_button_statuses.insert(*button, *button_status);
+                    }
+
+                    let events = Events { should_quit: false, joypad1_button_statuses, joypad2_button_statuses: BTreeMap::new() };
+                    nes.process_gui_events(&events);
                     nes.step_frame();
-                    if let Some(frame_entry) = frame_entries.get(&frame_index) {
+                    if let Some(frame_entry) = frame_entries.get(&frame_number) {
                         let expected_hash = frame_entry.ppm_hash;
                         let mask = nes.memory().ppu_regs.mask();
                         let actual_ppm = &nes.frame().to_ppm(mask);
@@ -91,9 +129,9 @@ impl TestSummary {
                             let directory: PathBuf = frame_directory.components().skip(2).collect();
                             fs::create_dir_all(format!("tests/actual_frames/{}/", directory.display())).unwrap();
                             let actual_ppm_path =
-                                format!("tests/actual_frames/{}/frame{:03}.ppm", directory.display(), frame_index);
+                                format!("tests/actual_frames/{}/frame{:03}.ppm", directory.display(), frame_number);
                             fs::write(actual_ppm_path.clone(), actual_ppm.to_bytes()).unwrap();
-                            println!("\t\tROM {rom_id} didn't match expected hash at frame {frame_index}. See '{actual_ppm_path}'");
+                            println!("\t\tROM {rom_id} didn't match expected hash at frame {frame_number}. See '{actual_ppm_path}'");
                         }
                     }
                 }
