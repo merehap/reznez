@@ -32,6 +32,9 @@ static SCHEDULED_BUTTON_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Bu
     presses_by_crc.insert(0xE50AD737, [(100, Start), (300, Start)].into_iter().collect());
     // Bio Miracle Bokutte Upa (Mario Baby FDS Hack) - [BROKEN] Flickering pixels.
     presses_by_crc.insert(0x04C94E4D, [(100, Start), (300, Start)].into_iter().collect());
+    // Crystalis - [BROKEN] Flickering pixels.
+    presses_by_crc.insert(0x271C9FDD, [(147, Start), (372, Start), (453, Start), (556, Start),
+                                       (768, Start), (888, Start), (999, Start), (1124, Start)].into_iter().collect());
 
     let mut all_events = BTreeMap::new();
     for (crc, presses) in presses_by_crc {

@@ -68,13 +68,10 @@ full_nes_palette
 
 ---------------------GAMES------------------------------------
 MAPPER 0
-Cheetah Men II [b1] (Doesn't work on nestopia either. Wrong tiles are rendered during some intro screens, probably due to the game relying on certain RAM values being present at startup)
+Cheetah Men II [b1] (Doesn't work on Mesen/nestopia either. Wrong tiles are rendered during some intro screens, probably just a bad ROM hack)
 
 MAPPER 3
-Athletic World (Freezes on nestopia too. Freezes at the beginning of the Hurdles event)
-
-MAPPER 4
-Crystalis - Junk on scanline above status bar.
+Athletic World (Freezes on Mesen/nestopia too. Freezes at the beginning of the Hurdles event)
 
 MAPPER 5
 Romance of The Three Kingdoms II - Sprite tiles are used instead of background tiles. Somehow MMC5 is supposed to be reading from the left pattern table even though PPUCTRL specifies the right table for background rendering.
