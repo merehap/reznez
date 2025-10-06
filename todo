@@ -27,6 +27,7 @@ Use has_persistent_memory correctly (mostly for cases without NES2.0 metadata)
 Why does Sunsoft FME7 (mapper 69) have a holymapperel result of 0010? Mesen behaves the same.
 Detect PpuAddress changes better, then clean up MMC3 and Mapper 91 IRQ logic.
 Joypad input for test frame capture.
+Give "Fix Metadata" prompt when metadata doesn't match the DB (Test case: Dragon Ball - Shen Long no Nazo)
 
 FANCY NICE-TO-HAVES
 APU frequency correction
@@ -76,22 +77,6 @@ Athletic World (Freezes on Mesen/nestopia too. Freezes at the beginning of the H
 MAPPER 5
 Romance of The Three Kingdoms II - Sprite tiles are used instead of background tiles. Somehow MMC5 is supposed to be reading from the left pattern table even though PPUCTRL specifies the right table for background rendering.
 Daikoukai Jidai - Game attempts to write to ROM(?) when pressing SELECT at the beginning of the first level
-
-MAPPER 7
-Aladdin - Corrupted sprites, gets stuck in a loop writing to PPUDATA, JAMs.
-
-MAPPER 16
-Akuma-kun - Makai no Wana - Incorrect CHR ROM banks for bottom part of screen.
-
-MAPPER 21
-Wai Wai World 2 - Severe flickering (sprites aren't drawn in time?)
-Ganbare Goemon Gaiden 2 - Partial bad pattern table on opening screen.
-
-MAPPER 23
-Tiny Toon Adventures - Status bar
-
-MAPPER 48
-Don Doko Don 2 (SMB 8) and others: Fix IRQ behavior to prevent flickering
 
 MAPPER 66
 Dragon Ball - Goku can't move to spots he should be able to.
