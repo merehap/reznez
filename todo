@@ -39,17 +39,7 @@ BUGS
 Gracefully handle bad CHR size? ((( Argus (J) [hM03][o2].nes ))) ((( Atlantis no Nazo (J) [hM03][b3].nes )))
 Gracefully handle bad PRG size? ((( Boy and His Blob, A - Trouble on Blobolonia (U) [o5].nes )))
 (Low priority) What should happen when BankIndex > bank_count when bank_count isn't a power of 2? Open bus?
-Rollerblade Racer: Glitched status bar.
-Wizards and Warriors 3: Bad scanlines at middle of screen. Sprite flickering.
 Arkanoid: Extra sprite.
-Tatakai no Banka: Flickering sprites.
-Fire Emblem Gaiden: Blank screen.
-Kaiketsu Yanchamaru 2: PRG bank switching bug leads to JAM.
-Mission Impossible 2: JAMs. Need to mirror CHR ROM due to it being too short?
-Dragon Ball Dai Maou Fukkatsu: infinite loop.
-
-FLICKERING SCANLINE:
-Silver Eagle
 
 FAILING TESTS
 SHX/SXA: https://forums.nesdev.org/viewtopic.php?p=297765

@@ -49,6 +49,16 @@ static SCHEDULED_BUTTON_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Bu
     presses_by_crc.insert(0xF9282F28,
         vec![(51, 64, Start), (107, 119, Start), (219, 229, A), (316, 322, Up), (361, 364, Down), (426, 429, Left),
              (467, 472, Right), (504, 513, A), (594, 602, A), (759, 767, Down), (1019, 1028, Down), (1078, 1116, Down)]);
+    // Rollerblade Racer - [BROKEN] Status bar is rendered from the wrong bank.
+    presses_by_crc.insert(0xFE780BE6,
+        vec![(92, 103, Start), (151, 164, Start), (205, 215, Start), (302, 313, Start), (392, 402, Start)]);
+    // Wizards & Warriors III - [BROKEN] One extra scanline scrolls.
+    presses_by_crc.insert(0x4F505449, vec![(748, 761, Start), (1067, 1081, Start), (1215, 1261, Right)]);
+    // Dragon Ball - Dai Maou Fukkatsu - [BROKEN] Bad tiles.
+    presses_by_crc.insert(0xBEFF8C77, vec![(64, 74, Start), (119, 132, Start)]);
+    // Silver Eagle - [BROKEN] Flickering scanline
+    presses_by_crc.insert(0x16D7C36F,
+        vec![(96, 107, Start), (247, 262, Start), (340, 352, Start), (533, 544, Start), (614, 627, Start)]);
 
     let mut all_events = BTreeMap::new();
     for (crc, presses) in presses_by_crc {
