@@ -51,9 +51,9 @@ impl Config {
         }
     }
 
-    pub fn add_scheduled_button_press_and_release(&mut self, frame_number: i64, button: Button) {
-        self.scheduled_button_events.insert(frame_number, (button, ButtonStatus::Pressed));
-        self.scheduled_button_events.insert(frame_number + 1, (button, ButtonStatus::Unpressed));
+    pub fn add_scheduled_button_press_and_release(&mut self, press_frame_number: i64, unpress_frame_number: i64, button: Button) {
+        self.scheduled_button_events.insert(press_frame_number, (button, ButtonStatus::Pressed));
+        self.scheduled_button_events.insert(unpress_frame_number, (button, ButtonStatus::Unpressed));
     }
 
     fn parse_scheduled_button_events(&mut self, raw_presses: &[String]) {
@@ -62,8 +62,15 @@ impl Config {
                 let button_text = format!("{button:?}").to_ascii_lowercase();
                 if raw_press.to_ascii_lowercase().starts_with(&button_text) {
                     let raw_frame_number = &raw_press[button_text.len() ..];
-                    let frame_number: i64 = raw_frame_number.parse().unwrap();
-                    self.add_scheduled_button_press_and_release(frame_number, button);
+                    let (press_frame_number, unpress_frame_number) = if raw_frame_number.contains(':') {
+                        let mut raw_numbers = raw_frame_number.split(':');
+                        (raw_numbers.next().unwrap().parse().unwrap(), raw_numbers.next().unwrap().parse().unwrap())
+                    } else {
+                        let number = raw_frame_number.parse().unwrap();
+                        (number, number + 1)
+                    };
+
+                    self.add_scheduled_button_press_and_release(press_frame_number, unpress_frame_number, button);
                 }
             }
         }
