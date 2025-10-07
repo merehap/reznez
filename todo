@@ -39,7 +39,6 @@ BUGS
 Gracefully handle bad CHR size? ((( Argus (J) [hM03][o2].nes ))) ((( Atlantis no Nazo (J) [hM03][b3].nes )))
 Gracefully handle bad PRG size? ((( Boy and His Blob, A - Trouble on Blobolonia (U) [o5].nes )))
 (Low priority) What should happen when BankIndex > bank_count when bank_count isn't a power of 2? Open bus?
-Marble Madness: Bank-switching mid-scanline isn't working, text doesn't render.
 Rollerblade Racer: Glitched status bar.
 Wizards and Warriors 3: Bad scanlines at middle of screen. Sprite flickering.
 Arkanoid: Extra sprite.

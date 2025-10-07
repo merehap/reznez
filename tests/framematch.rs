@@ -27,29 +27,35 @@ type Crc = u32;
 type FrameNumber = i64;
 
 static SCHEDULED_BUTTON_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Button, ButtonStatus)>>> = LazyLock::new(|| {
-    let mut presses_by_crc: BTreeMap<Crc, BTreeMap<FrameNumber, Button>> = BTreeMap::new();
+    let mut presses_by_crc: BTreeMap<Crc, Vec<(FrameNumber, FrameNumber, Button)>> = BTreeMap::new();
 
     use Button::*;
     // Bio Miracle Bokutte Upa - [BROKEN] Status bar should be stationary.
-    presses_by_crc.insert(0xE50AD737, [(100, Start), (300, Start)].into_iter().collect());
+    presses_by_crc.insert(0xE50AD737, vec![(100, 101, Start), (300, 301, Start)]);
     // Bio Miracle Bokutte Upa (Mario Baby FDS Hack) - [BROKEN] Flickering pixels.
-    presses_by_crc.insert(0x04C94E4D, [(100, Start), (300, Start)].into_iter().collect());
+    presses_by_crc.insert(0x04C94E4D, vec![(100, 101, Start), (300, 301, Start)]);
     // Crystalis - [BROKEN] Flickering pixels.
-    presses_by_crc.insert(0x271C9FDD, [(147, Start), (372, Start), (453, Start), (556, Start),
-                                       (768, Start), (888, Start), (999, Start), (1124, Start)].into_iter().collect());
+    presses_by_crc.insert(0x271C9FDD,
+        vec![(147, 148, Start), (372, 373, Start), (453, 454, Start), (556, 557, Start), (768, 769, Start), (888, 889, Start),
+             (999, 1000, Start), (1124, 1125, Start)]);
     // Fantastic Adventures of Dizzy - [BROKEN] Scanline lifts by one then returns, repeating.
-    presses_by_crc.insert(0x59318584, [(364, Start), (456, Start), (570, Start)].into_iter().collect());
+    presses_by_crc.insert(0x59318584, vec![(364, 365, Start), (456, 457, Start), (570, 571, Start)]);
     // Super Fighter 3 - [BROKEN] Flickering scanline segment.
-    presses_by_crc.insert(0x520C552E, [(690, Start), (798, Start)].into_iter().collect());
+    presses_by_crc.insert(0x520C552E, vec![(690, 691, Start), (798, 799, Start)]);
     // Armadillo - [BROKEN] Flickering scanline.
-    presses_by_crc.insert(0xAE73E0C2, [(41, Start), (95, Start), (141, Start), (196, Start)].into_iter().collect());
+    presses_by_crc.insert(0xAE73E0C2, vec![(41, 42,Start), (95, 96, Start), (141, 142, Start), (196, 197, Start)]);
+    // Marble Madness - Probably nothing wrong, but the counter has a strange progression at the start,
+    // and this game requires very precise timing for mid-scanline bank switches.
+    presses_by_crc.insert(0xF9282F28,
+        vec![(51, 64, Start), (107, 119, Start), (219, 229, A), (316, 322, Up), (361, 364, Down), (426, 429, Left),
+             (467, 472, Right), (504, 513, A), (594, 602, A), (759, 767, Down), (1019, 1028, Down), (1078, 1116, Down)]);
 
     let mut all_events = BTreeMap::new();
     for (crc, presses) in presses_by_crc {
         let mut events: BTreeMap<i64, (Button, ButtonStatus)> = BTreeMap::new();
-        for (frame_number, button) in presses {
-            events.insert(frame_number, (button, ButtonStatus::Pressed));
-            events.insert(frame_number + 1, (button, ButtonStatus::Unpressed));
+        for (press_frame_number, unpress_frame_number, button) in presses {
+            events.insert(press_frame_number, (button, ButtonStatus::Pressed));
+            events.insert(unpress_frame_number, (button, ButtonStatus::Unpressed));
         }
 
         all_events.insert(crc, events);
