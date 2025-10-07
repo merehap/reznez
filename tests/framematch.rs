@@ -41,6 +41,8 @@ static SCHEDULED_BUTTON_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Bu
     presses_by_crc.insert(0x59318584, [(364, Start), (456, Start), (570, Start)].into_iter().collect());
     // Super Fighter 3 - [BROKEN] Flickering scanline segment.
     presses_by_crc.insert(0x520C552E, [(690, Start), (798, Start)].into_iter().collect());
+    // Armadillo - [BROKEN] Flickering scanline.
+    presses_by_crc.insert(0xAE73E0C2, [(41, Start), (95, Start), (141, Start), (196, Start)].into_iter().collect());
 
     let mut all_events = BTreeMap::new();
     for (crc, presses) in presses_by_crc {

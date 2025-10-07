@@ -26,7 +26,7 @@ Use has_persistent_memory correctly (mostly for cases without NES2.0 metadata)
 Why does Sunsoft FME7 (mapper 69) have a holymapperel result of 0010? Mesen behaves the same.
 Detect PpuAddress changes better, then clean up MMC3 and Mapper 91 IRQ logic.
 Joypad input for test frame capture.
-Give "Fix Metadata" prompt when metadata doesn't match the DB (Test case: mirroring for Dragon Ball - Shen Long no Nazo)
+Give "Fix Metadata" prompt when metadata doesn't match the DB (Test case: mirroring for Dragon Ball - Shen Long no Nazo, also Fighting Hero)
 
 FANCY NICE-TO-HAVES
 APU frequency correction
@@ -77,6 +77,9 @@ MAPPER 5
 Romance of The Three Kingdoms II - Sprite tiles are used instead of background tiles. Somehow MMC5 is supposed to be reading from the left pattern table even though PPUCTRL specifies the right table for background rendering.
 Daikoukai Jidai - Game attempts to write to ROM(?) when pressing SELECT at the beginning of the first level
 
+MAPPER 15
+Crazy Climber: Blank screen
+
 MAPPER 67
 Fantasy Zone 2 - The Teardrop of Opa-Opa: Flickering scanline during intro (Mesen has the same problem)
 
@@ -86,24 +89,13 @@ Batman - Return of the Joker: Flickering pixels in both intro and game (Mesen ha
 MAPPER 71
 Fire Hawk: Broken name table display.
 
-MAPPER 94
-Senjou: Various including flickering.
-
-MAPPER 118
-Armadillo: Flickering scanline pixels
-
 MAPPER 139
-Final Combat: Junk tiles briefly flash during intro. Bad mirroring fold during gameplay.
+Final Combat: Junk tiles briefly flash during intro. Broken in Mesen too.
 
 MAPPER 141
 Q Boy: Need to support CHR RAM (with no CHR shift)
 
-MAPPER 180
-Crazy Climber: Verify operation.
-
 MAPPER 193
-Fighting Hero: Background fails to render properly except for the demo.
-	Proper name table is briefly populated on input, but then is blanked again.
 Deep Dungeon 4: Accesses CHR RAM outside of the default provided 8KiB. Need mirroring?
 
 
