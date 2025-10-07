@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock, Mutex};
 
 use dashmap::DashMap;
 use rayon::prelude::*;
@@ -15,6 +15,8 @@ use reznez::controller::joypad::{Button, ButtonStatus};
 use reznez::gui::gui::Events;
 use walkdir::WalkDir;
 
+use reznez::logging::logger;
+use reznez::logging::logger::Logger;
 use reznez::config::{Config, GuiType, Opt};
 use reznez::nes::Nes;
 use reznez::ppu::render::frame_rate::TargetFrameRate;
@@ -35,6 +37,10 @@ static SCHEDULED_BUTTON_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Bu
     // Crystalis - [BROKEN] Flickering pixels.
     presses_by_crc.insert(0x271C9FDD, [(147, Start), (372, Start), (453, Start), (556, Start),
                                        (768, Start), (888, Start), (999, Start), (1124, Start)].into_iter().collect());
+    // Fantastic Adventures of Dizzy - [BROKEN] Scanline lifts by one then returns, repeating.
+    presses_by_crc.insert(0x59318584, [(364, Start), (456, Start), (570, Start)].into_iter().collect());
+    // Super Fighter 3 - [BROKEN] Flickering scanline segment.
+    presses_by_crc.insert(0x520C552E, [(690, Start), (798, Start)].into_iter().collect());
 
     let mut all_events = BTreeMap::new();
     for (crc, presses) in presses_by_crc {
@@ -65,6 +71,13 @@ struct TestSummary {
 
 impl TestSummary {
     fn load(roms: Roms, expected_frames: ExpectedFrames) -> Self {
+        // Log nothing by default, but if debugging is needed, then logging can be enabled.
+        logger::init(Logger {
+            disable_all: true,
+            buffer: Arc::new(Mutex::new(String::new())),
+            .. Logger::default()
+        }).unwrap();
+
         let test_results = DashMap::new();
 
         let header_db = HeaderDb::load();

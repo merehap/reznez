@@ -10,6 +10,7 @@ pub fn init(logger: Logger) -> Result<(), SetLoggerError> {
 
 #[derive(Default)]
 pub struct Logger {
+    pub disable_all: bool,
     pub log_frames: bool,
     pub log_cpu_instructions: bool,
     pub log_cpu_flow_control: bool,
@@ -31,6 +32,10 @@ pub struct Logger {
 
 impl log::Log for Logger {
     fn enabled(&self, metadata: &Metadata) -> bool {
+        if self.disable_all {
+            return false;
+        }
+
         match metadata.target() {
             "" => true,
             "frames" => self.log_frames,

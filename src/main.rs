@@ -91,6 +91,7 @@ fn logger(opt: &Opt) -> Logger {
     };
 
     Logger {
+        disable_all: false,
         log_frames: opt.log_frames,
         log_cpu_instructions,
         log_cpu_steps,
