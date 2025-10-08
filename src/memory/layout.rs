@@ -24,14 +24,14 @@ use super::window::ChrWindow;
 pub struct Layout {
     prg_rom_max_size: u32,
     prg_layout_index: u8,
-    prg_layouts: ConstVec<PrgLayout, 10>,
+    prg_layouts: ConstVec<PrgLayout, 16>,
     prg_rom_outer_bank_layout: OuterBankLayout,
     prg_rom_bank_size_override: Option<PrgWindowSize>,
 
     chr_rom_max_size: u32,
     align_large_chr_windows: bool,
     chr_layout_index: u8,
-    chr_layouts: ConstVec<ChrLayout, 10>,
+    chr_layouts: ConstVec<ChrLayout, 16>,
     chr_save_ram_size: u32,
     chr_rom_outer_bank_layout: OuterBankLayout,
 
@@ -236,13 +236,13 @@ impl Layout {
 #[derive(Clone, Copy)]
 pub struct LayoutBuilder {
     prg_rom_max_size: Option<u32>,
-    prg_layouts: ConstVec<PrgLayout, 10>,
+    prg_layouts: ConstVec<PrgLayout, 16>,
     prg_layout_index: u8,
     prg_rom_outer_bank_layout: Option<OuterBankLayout>,
     prg_rom_bank_size_override: Option<PrgWindowSize>,
 
     chr_rom_max_size: Option<u32>,
-    chr_layouts: ConstVec<ChrLayout, 10>,
+    chr_layouts: ConstVec<ChrLayout, 16>,
     chr_layout_index: u8,
     chr_rom_outer_bank_layout:  Option<OuterBankLayout>,
     align_large_chr_windows: bool,
@@ -420,13 +420,13 @@ impl LayoutBuilder {
         }
 
         Layout {
-            prg_rom_max_size: self.prg_rom_max_size.unwrap(),
+            prg_rom_max_size: self.prg_rom_max_size.expect("prg_rom_max_size must be set"),
             prg_layouts: self.prg_layouts,
             prg_layout_index: self.prg_layout_index,
             prg_rom_outer_bank_layout,
             prg_rom_bank_size_override: self.prg_rom_bank_size_override,
 
-            chr_rom_max_size: self.chr_rom_max_size.unwrap(),
+            chr_rom_max_size: self.chr_rom_max_size.expect("chr_rom_max_size must be set"),
             chr_layouts: self.chr_layouts,
             chr_layout_index: self.chr_layout_index,
             align_large_chr_windows: self.align_large_chr_windows,

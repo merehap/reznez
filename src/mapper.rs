@@ -4,7 +4,7 @@ pub use crate::cartridge::cartridge::Cartridge;
 pub use crate::counter::counter::{ReloadDrivenCounter, DirectlySetCounter, CounterBuilder, AutoTriggeredBy, WhenTargetReached, ForcedReloadTiming, WhenDisabledPrevent};
 pub use crate::counter::irq_counter_info::IrqCounterInfo;
 pub use crate::memory::bank::bank_index::{BankIndex, PrgBankRegisterId, ChrBankRegisterId, MetaRegisterId, ReadWriteStatus};
-pub use crate::memory::bank::bank_index::PrgBankRegisterId::{P0, P1, P2, P3, P4};
+pub use crate::memory::bank::bank_index::PrgBankRegisterId::*;
 pub use crate::memory::bank::bank_index::ChrBankRegisterId::*;
 pub use crate::memory::bank::bank_index::MetaRegisterId::*;
 pub use crate::memory::bank::bank::{PrgBank, ChrBank, ReadWriteStatusRegisterId};

@@ -18,7 +18,7 @@ impl <T: Clone + Copy, const CAPACITY: usize> ConstVec<T, CAPACITY> {
     pub const fn push(&mut self, item: T) {
         self.index = self.index.checked_add(1)
             .expect("not more than 256 items to be pushed");
-        assert!((self.index as usize) < CAPACITY);
+        assert!((self.index as usize) <= CAPACITY);
 
         self.backing[self.index as usize - 1].write(item);
     }

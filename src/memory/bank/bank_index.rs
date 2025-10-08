@@ -34,7 +34,7 @@ impl From<u8> for BankIndex {
 
 #[derive(Debug)]
 pub struct PrgBankRegisters {
-    registers: [BankLocation; 5],
+    registers: [BankLocation; 10],
     read_write_statuses: [ReadWriteStatus; 16],
     rom_ram_modes: [MemType; 12],
 }
@@ -42,13 +42,13 @@ pub struct PrgBankRegisters {
 impl PrgBankRegisters {
     pub fn new() -> Self {
         Self {
-            registers: [BankLocation::Index(BankIndex(0)); 5],
+            registers: [BankLocation::Index(BankIndex(0)); 10],
             read_write_statuses: [ReadWriteStatus::ReadWrite; 16],
             rom_ram_modes: [MemType::WorkRam; 12],
         }
     }
 
-    pub fn registers(&self) -> &[BankLocation; 5] {
+    pub fn registers(&self) -> &[BankLocation; 10] {
         &self.registers
     }
 
@@ -202,6 +202,11 @@ pub enum PrgBankRegisterId {
     P2,
     P3,
     P4,
+    P5,
+    P6,
+    P7,
+    P8,
+    P9,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, FromPrimitive)]

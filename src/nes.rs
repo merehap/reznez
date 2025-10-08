@@ -574,7 +574,7 @@ struct LatestValues {
 
     prg_layout_index_detector: EdgeDetector<u8>,
     chr_layout_index_detector: EdgeDetector<u8>,
-    prg_registers: [BankLocation; 5],
+    prg_registers: [BankLocation; 10],
     chr_registers: [BankLocation; 18],
     meta_registers: [ChrBankRegisterId; 2],
     name_table_mirroring: NameTableMirroring,
