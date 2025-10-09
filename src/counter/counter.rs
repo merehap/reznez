@@ -45,7 +45,6 @@ pub struct ReloadDrivenCounter {
     forced_reload_timing: ForcedReloadTiming,
     trigger_on_forced_reload_with_target_count: bool,
     forced_reload_pending: bool,
-    forced_trigger_pending: bool,
 }
 
 impl ReloadDrivenCounter {
@@ -71,13 +70,7 @@ impl ReloadDrivenCounter {
         }
 
         match self.forced_reload_timing {
-            ForcedReloadTiming::Immediate => {
-                self.counter.count = self.counter.reload_value;
-                // Untested behavior, not sure if it exists in the wild. Should forced_trigger_pending be set if !triggering_enabled?
-                if self.trigger_on_forced_reload_with_target_count && self.counter.reload_value == self.counter.target_count {
-                    self.forced_trigger_pending = true;
-                }
-            }
+            ForcedReloadTiming::Immediate => self.counter.count = self.counter.reload_value,
             ForcedReloadTiming::OnNextTick => self.forced_reload_pending = true,
         }
     }
@@ -86,15 +79,13 @@ impl ReloadDrivenCounter {
         // TODO: Determine if a forced reload needs to clear the counter before the reloading actually occurs for some cases.
         // Some documentation claims this. This would only be relevant for AlreadyZero behavior since it
         // affects whether the counter is triggered or not during a forced reload.
-        let mut triggered_by_forcing = self.trigger_on_forced_reload_with_target_count
+        let triggered_by_forcing = self.trigger_on_forced_reload_with_target_count
             && self.forced_reload_pending
             && self.counter.reload_value == self.counter.target_count;
-        triggered_by_forcing |= self.forced_trigger_pending;
 
         let result = self.counter.tick(self.forced_reload_pending, triggered_by_forcing);
         if !result.skipped {
             self.forced_reload_pending = false;
-            self.forced_trigger_pending = false;
         }
 
         result
@@ -298,7 +289,6 @@ impl CounterBuilder {
             trigger_on_forced_reload_with_target_count: self.trigger_on_forced_reload_with_target_count,
             forced_reload_timing: self.forced_reload_timing.expect("forced_reload_timing to be set"),
             forced_reload_pending: false,
-            forced_trigger_pending: false,
         }
     }
 
