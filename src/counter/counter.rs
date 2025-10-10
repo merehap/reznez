@@ -20,6 +20,10 @@ impl DirectlySetCounter {
         self.0.count.to_be_bytes()[0]
     }
 
+    pub fn set_count(&mut self, count: u8) {
+        self.0.count = count.into();
+    }
+
     pub fn set_count_low_byte(&mut self, value: u8) {
         self.0.count = (self.0.count & 0xFF00) | u16::from(value);
     }
@@ -28,14 +32,50 @@ impl DirectlySetCounter {
         self.0.count = (self.0.count & 0x00FF) | (u16::from(value) << 8);
     }
 
+    pub fn set_step(&mut self, step: NonZeroI8) {
+        self.0.step = step;
+    }
+
+    pub fn set_prescaler_count(&mut self, count: u8) {
+        self.0.prescaler.count = count;
+    }
+
+    pub fn set_prescaler_mask(&mut self, mask: u8) {
+        self.0.prescaler.mask = mask;
+    }
+
+    pub fn set_prescaler_step(&mut self, step: NonZeroI8) {
+        self.0.prescaler.step = step;
+    }
+
+    // The vast majority of use-cases should just call enable/disable instead of this.
+    pub fn set_counting_enabled(&mut self, counting_enabled: bool) {
+        self.0.counting_enabled = counting_enabled;
+    }
+
+    // The vast majority of use-cases should just call enable/disable instead of this.
+    pub fn enable_counting(&mut self) {
+        self.0.counting_enabled = true;
+    }
+
+    // The vast majority of use-cases should just call enable/disable instead of this.
+    pub fn disable_counting(&mut self) {
+        self.0.counting_enabled = false;
+    }
+
     // The vast majority of use-cases should just call enable/disable instead of this.
     pub fn set_triggering_enabled(&mut self, triggering_enabled: bool) {
         self.0.triggering_enabled = triggering_enabled;
     }
 
     // The vast majority of use-cases should just call enable/disable instead of this.
-    pub fn set_counting_enabled(&mut self, counting_enabled: bool) {
-        self.0.counting_enabled = counting_enabled;
+    pub fn enable_triggering(&mut self) {
+        self.0.triggering_enabled = true;
+    }
+
+    // The vast majority of use-cases should just call enable/disable instead of this.
+    pub fn disable_triggering(&mut self) {
+        self.0.triggering_enabled = false;
     }
 }
 
@@ -304,6 +344,9 @@ impl CounterBuilder {
             triggered_by: prescaler_triggered_by,
             behavior_on_forced_reload: prescaler_behavior_on_forced_reload,
             count: 0,
+            step: NonZeroI8::new(1).unwrap(),
+            mask: 0xFF,
+
         };
         self
     }
@@ -395,7 +438,7 @@ pub enum ForcedReloadTiming {
 }
 
 #[derive(Clone, Copy, Debug)]
-struct Prescaler {
+pub struct Prescaler {
     // Immutable settings determined at compile time
     multiple: NonZeroU8,
     triggered_by: PrescalerTriggeredBy,
@@ -403,6 +446,8 @@ struct Prescaler {
 
     // State
     count: u8,
+    mask: u8,
+    step: NonZeroI8,
 }
 
 impl Prescaler {
@@ -412,17 +457,19 @@ impl Prescaler {
         triggered_by: PrescalerTriggeredBy::AlreadyZero,
         behavior_on_forced_reload: PrescalerBehaviorOnForcedReload::DoNothing,
         count: 0,
+        mask: 0xFF,
+        step: NonZeroI8::new(1).unwrap(),
     };
 
     fn tick(&mut self) -> bool {
         let old_count = self.count;
-        self.count += 1;
+        self.count = self.count.wrapping_add_signed(self.step.get());
         self.count %= self.multiple;
         let new_count = self.count;
 
         let triggered = match self.triggered_by {
-            PrescalerTriggeredBy::AlreadyZero => old_count == 0,
-            PrescalerTriggeredBy::WrappingToZero => new_count == 0,
+            PrescalerTriggeredBy::AlreadyZero => old_count & self.mask == 0,
+            PrescalerTriggeredBy::WrappingToZero => new_count & self.mask == 0,
         };
 
         triggered

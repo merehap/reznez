@@ -1,3 +1,5 @@
+use std::num::NonZeroI8;
+
 use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
@@ -130,7 +132,24 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
+const IRQ_COUNTER: DirectlySetCounter = CounterBuilder::new()
+    // This might be undefined at startup, since direction is set at the same time ticking is enabled.
+    .step(1)
+    .wraps(true)
+    .full_range(0, 0xFF)
+    .initial_count(0)
+    .auto_trigger_when(AutoTriggerWhen::Wrapping)
+    .when_disabled_prevent(WhenDisabledPrevent::CountingAndTriggering)
+    .build_directly_set_counter();
+
+const ONE: NonZeroI8 = NonZeroI8::new(1).unwrap();
+const NEGATIVE_ONE: NonZeroI8 = NonZeroI8::new(-1).unwrap();
+
 pub struct Mapper209 {
+    irq_counter: DirectlySetCounter,
+    irq_ticked_by: IrqTickedBy,
+    irq_xor_value: u8,
+
     multiplicand: u8,
     multiplier: u8,
     multiplication_result: u16,
@@ -213,19 +232,57 @@ impl Mapper for Mapper209 {
             0xA003 => mem.set_chr_bank_register_bits(C7, u16::from(value) << 8, 0b1111_1111_0000_0000),
             0xB000..=0xB003 => todo!("NameTable LSB Bank Select"),
             0xB004..=0xB007 => todo!("NameTable MSB Bank Select"),
-            _ => { /* Do nothing CHR related. */}
+            _ => { /* Do nothing CHR related. */ }
         }
 
         match *addr & 0xF007 {
-            0xC000 => todo!("IRQ Enable/Disable"),
-            0xC001 => todo!("IRQ Mode Select"),
-            0xC002 => todo!("IRQ Disable"),
-            0xC003 => todo!("IRQ Enable"),
-            0xC004 => todo!("Prescaler"),
-            0xC005 => todo!("Counter"),
-            0xC006 => todo!("XOR"),
+            0xC000 => {
+                if value & 1 == 0 {
+                    self.irq_counter.enable_triggering();
+                } else {
+                    self.irq_counter.disable_triggering();
+                    mem.cpu_pinout.acknowledge_mapper_irq();
+                }
+            }
+            0xC001 => {
+                // IRQ mode
+                let (counting_mode, unknown, use_prescaler_mask, irq_ticked_by) = splitbits_named!(value, "cc..upss");
+                assert!(!unknown, "IRQ Unknown Mode Configuration is not supported yet.");
+
+                let new_step = match counting_mode {
+                    1 => Some(ONE),
+                    2 => Some(NEGATIVE_ONE),
+                    _ => None,
+                };
+                if let Some(new_step) = new_step {
+                    self.irq_counter.enable_counting();
+                    self.irq_counter.set_step(new_step);
+                    self.irq_counter.set_prescaler_step(new_step);
+                } else {
+                    self.irq_counter.disable_counting();
+                }
+
+                let prescaler_mask = if use_prescaler_mask { 0x07 } else { 0xFF };
+                self.irq_counter.set_prescaler_mask(prescaler_mask);
+
+                self.irq_ticked_by = match irq_ticked_by {
+                    0 => IrqTickedBy::CpuCycle,
+                    1 => IrqTickedBy::PpuCycle,
+                    2 => IrqTickedBy::PpuRead,
+                    3 => IrqTickedBy::CpuWrite,
+                    _ => unreachable!(),
+                };
+            }
+            0xC002 => {
+                self.irq_counter.disable_triggering();
+                mem.cpu_pinout.acknowledge_mapper_irq();
+            }
+            0xC003 => self.irq_counter.enable_triggering(),
+            0xC004 => self.irq_counter.set_prescaler_count(value & self.irq_xor_value),
+            0xC005 => self.irq_counter.set_count(value & self.irq_xor_value),
+            0xC006 => self.irq_xor_value = value,
             0xC007 => todo!("Unknown mode"),
-            _ => { /* Do nothing IRQ related. */}
+            _ => { /* Do nothing IRQ related. */ }
         }
     }
 
@@ -237,11 +294,24 @@ impl Mapper for Mapper209 {
 impl Mapper209 {
     pub fn new() -> Self {
         Self {
+            irq_counter: IRQ_COUNTER,
+            // Unused starting value.
+            irq_ticked_by: IrqTickedBy::CpuCycle,
+            irq_xor_value: 0,
+
             multiplicand: 0,
             multiplier: 0,
             multiplication_result: 0,
         }
     }
+}
+
+#[derive(PartialEq, Eq)]
+enum IrqTickedBy {
+    CpuCycle,
+    PpuCycle,
+    PpuRead,
+    CpuWrite,
 }
 
 fn reverse_lower_seven_bits(mut value: u8) -> u8 {
