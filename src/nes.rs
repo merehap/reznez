@@ -361,12 +361,12 @@ impl Nes {
         }
 
         if log_enabled!(target: "mapperirqcounter", Info)
-                && let Some(IrqCounterInfo { ticking_enabled, triggering_enabled, count }) = self.mapper.irq_counter_info() {
+                && let Some(IrqCounterInfo { counting_enabled, triggering_enabled, count }) = self.mapper.irq_counter_info() {
             let latest = &mut self.latest_values;
-            if latest.mapper_irq_ticking_enabled_detector.set_value_then_detect(ticking_enabled) {
-                info!("Mapper IRQ counter ticking enabled: {ticking_enabled}");
+            if latest.mapper_irq_counting_enabled_detector.set_value_then_detect(counting_enabled) {
+                info!("Mapper IRQ counter counting enabled: {counting_enabled}");
             }
-            if latest.mapper_irq_triggering_enabled_detector.set_value_then_detect(ticking_enabled) {
+            if latest.mapper_irq_triggering_enabled_detector.set_value_then_detect(counting_enabled) {
                 info!("Mapper IRQ counter triggering enabled: {triggering_enabled}");
             }
             if latest.mapper_irq_count_detector.set_value_then_detect(count) {
@@ -568,7 +568,7 @@ struct LatestValues {
     dmc_cpu_halt_detector: EdgeDetector<bool>,
     oam_cpu_halt_detector: EdgeDetector<bool>,
 
-    mapper_irq_ticking_enabled_detector: EdgeDetector<bool>,
+    mapper_irq_counting_enabled_detector: EdgeDetector<bool>,
     mapper_irq_triggering_enabled_detector: EdgeDetector<bool>,
     mapper_irq_count_detector: EdgeDetector<u16>,
 
@@ -596,7 +596,7 @@ impl LatestValues {
             dmc_cpu_halt_detector: EdgeDetector::target_value(true),
             oam_cpu_halt_detector: EdgeDetector::target_value(true),
 
-            mapper_irq_ticking_enabled_detector: EdgeDetector::any_edge(),
+            mapper_irq_counting_enabled_detector: EdgeDetector::any_edge(),
             mapper_irq_triggering_enabled_detector: EdgeDetector::any_edge(),
             mapper_irq_count_detector: EdgeDetector::any_edge(),
 

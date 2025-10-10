@@ -27,11 +27,11 @@ const LAYOUT: Layout = Layout::builder()
 // rather through modifying a reload value and copying that to the count.
 const IRQ_COUNTER: DirectlySetCounter = CounterBuilder::new()
     .step(-1)
-    .auto_triggered_by(AutoTriggeredBy::AlreadyOn, 0)
+    .wraps(true)
+    .full_range(0, 0xFFFF)
     .initial_count(0)
-    .when_target_reached(WhenTargetReached::Reload)
-    .initial_reload_value(0xFFFF)
-    .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
+    .auto_trigger_when(AutoTriggerWhen::Wrapping)
+    .when_disabled_prevent(WhenDisabledPrevent::CountingAndTriggering)
     .build_directly_set_counter();
 
 // Sunsoft-3

@@ -4,7 +4,7 @@ use crate::mapper::IrqCounterInfo;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
-use crate::counter::counter::{AutoTriggeredBy, ReloadDrivenCounter, CounterBuilder, WhenTargetReached, ForcedReloadTiming, PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};
+use crate::counter::counter::{AutoTriggerWhen, ReloadDrivenCounter, CounterBuilder, ForcedReloadTiming, PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};
 use crate::util::edge_detector::EdgeDetector;
 
 pub struct Mmc3IrqState {
@@ -20,10 +20,11 @@ impl Mmc3IrqState {
     // The standard MMC3 IRQ behavior.
     pub const SHARP_IRQ_STATE: Self = Self {
         counter: CounterBuilder::new()
-            .initial_count_and_reload_value(0)
+            .wraps(true)
+            .full_range(0, 0xFFFF)
+            .initial_range(0, 0)
             .step(-1)
-            .auto_triggered_by(AutoTriggeredBy::EndingOn, 0)
-            .when_target_reached(WhenTargetReached::Reload)
+            .auto_trigger_when(AutoTriggerWhen::EndingOn(0))
             .forced_reload_timing(ForcedReloadTiming::OnNextTick)
             .when_disabled_prevent(WhenDisabledPrevent::Triggering)
             .build_reload_driven_counter(),
@@ -34,10 +35,11 @@ impl Mmc3IrqState {
     // Same as Sharp except that automatic IRQs are ONLY triggered on a 1 to 0 transition of the count, not when it was already 0.
     pub const NEC_IRQ_STATE: Self = Self {
         counter: CounterBuilder::new()
-            .initial_count_and_reload_value(0)
             .step(-1)
-            .auto_triggered_by(AutoTriggeredBy::StepSizedTransitionTo, 0)
-            .when_target_reached(WhenTargetReached::Reload)
+            .wraps(true)
+            .full_range(0, 0xFFFF)
+            .initial_range(0, 0)
+            .auto_trigger_when(AutoTriggerWhen::StepSizedTransitionTo(0))
             .forced_reload_timing(ForcedReloadTiming::OnNextTick)
             .when_disabled_prevent(WhenDisabledPrevent::Triggering)
             .build_reload_driven_counter(),
@@ -48,11 +50,12 @@ impl Mmc3IrqState {
     // Same as NEC except that forcing a reload of 0 will also trigger an IRQ.
     pub const REV_A_IRQ_STATE: Self = Self {
         counter: CounterBuilder::new()
-            .initial_count_and_reload_value(0)
             .step(-1)
-            .auto_triggered_by(AutoTriggeredBy::StepSizedTransitionTo, 0)
+            .wraps(true)
+            .full_range(0, 0xFFFF)
+            .initial_range(0, 0)
+            .auto_trigger_when(AutoTriggerWhen::StepSizedTransitionTo(0))
             .also_trigger_on_forced_reload_with_target_count()
-            .when_target_reached(WhenTargetReached::Reload)
             .forced_reload_timing(ForcedReloadTiming::OnNextTick)
             .when_disabled_prevent(WhenDisabledPrevent::Triggering)
             .build_reload_driven_counter(),
@@ -64,10 +67,11 @@ impl Mmc3IrqState {
     // triggers on pattern table side transitions to the LEFT not the right, and doesn't suppress repeats on transition.
     pub const MC_ACC_IRQ_STATE: Self = Self {
         counter: CounterBuilder::new()
-            .initial_count_and_reload_value(0)
             .step(-1)
-            .auto_triggered_by(AutoTriggeredBy::EndingOn, 0)
-            .when_target_reached(WhenTargetReached::Reload)
+            .wraps(true)
+            .full_range(0, 0xFFFF)
+            .initial_range(0, 0)
+            .auto_trigger_when(AutoTriggerWhen::EndingOn(0))
             .forced_reload_timing(ForcedReloadTiming::OnNextTick)
             .when_disabled_prevent(WhenDisabledPrevent::Triggering)
             .prescaler(8, PrescalerTriggeredBy::AlreadyZero, PrescalerBehaviorOnForcedReload::ClearCount)

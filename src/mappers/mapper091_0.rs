@@ -22,10 +22,11 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
-    .initial_count_and_reload_value(64)
     .step(-1)
-    .auto_triggered_by(AutoTriggeredBy::EndingOn, 0)
-    .when_target_reached(WhenTargetReached::Stay)
+    .wraps(false)
+    .full_range(0, 64)
+    .initial_count(64)
+    .auto_trigger_when(AutoTriggerWhen::EndingOn(0))
     .forced_reload_timing(ForcedReloadTiming::Immediate)
     .when_disabled_prevent(WhenDisabledPrevent::Triggering)
     .build_reload_driven_counter();

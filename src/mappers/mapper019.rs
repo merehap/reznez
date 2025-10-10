@@ -40,13 +40,14 @@ const READ_ONLY: u8 = 0;
 const READ_WRITE: u8 = 1;
 
 const IRQ_COUNTER: DirectlySetCounter = CounterBuilder::new()
-    .initial_count(0)
     .step(1)
+    .wraps(false)
+    .full_range(0, 0x7FFF)
+    .initial_count(0)
     // TODO: should this be only triggered by TransitionTo? Is an IRQ constantly being asserted until acknowledgement?
-    .auto_triggered_by(AutoTriggeredBy::EndingOn, 0x7FFF)
-    .when_target_reached(WhenTargetReached::Stay)
-    // TODO: Test if this should be just Ticking. Do counter reloads to 0x7FFF while disabled trigger IRQs?
-    .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
+    .auto_trigger_when(AutoTriggerWhen::EndingOn(0x7FFF))
+    // TODO: Test if this should be just Counting. Do counter reloads to 0x7FFF while disabled trigger IRQs?
+    .when_disabled_prevent(WhenDisabledPrevent::CountingAndTriggering)
     .build_directly_set_counter();
 
 // Namco 129 and Namco 163

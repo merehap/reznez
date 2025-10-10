@@ -22,13 +22,14 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
-    .initial_count_and_reload_value(0)
     .step(1)
-    .auto_triggered_by(AutoTriggeredBy::EndingOn, 0x6000)
-    .when_target_reached(WhenTargetReached::ContinueThenReloadAfter(0x7FFF))
+    .wraps(true)
+    .full_range(0, 0x7FFF)
+    .initial_count(0)
+    .auto_trigger_when(AutoTriggerWhen::EndingOn(0x6000))
     // Todo: Verify timing.
     .forced_reload_timing(ForcedReloadTiming::Immediate)
-    .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
+    .when_disabled_prevent(WhenDisabledPrevent::CountingAndTriggering)
     .build_reload_driven_counter();
 
 // FDS games hacked into cartridge form.

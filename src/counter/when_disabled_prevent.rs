@@ -1,6 +1,6 @@
 #[derive(Clone, Copy, Debug)]
 pub enum WhenDisabledPrevent {
-    Ticking,
+    Counting,
     Triggering,
-    TickingAndTriggering,
+    CountingAndTriggering,
 }

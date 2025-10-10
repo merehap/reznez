@@ -132,7 +132,7 @@ impl FrameState {
 
     pub fn to_irq_counter_info(&self) -> IrqCounterInfo {
         IrqCounterInfo {
-            ticking_enabled: true,
+            counting_enabled: true,
             triggering_enabled: self.irq_enabled,
             count: u16::from(self.scanline),
         }

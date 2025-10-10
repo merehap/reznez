@@ -17,14 +17,15 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
-    .initial_count_and_reload_value(0)
     .step(1)
-    .auto_triggered_by(AutoTriggeredBy::StepSizedTransitionTo, 0x1000)
+    .wraps(true)
     // Verify that this is correct. The wiki, Disch, and Mesen all disagree in different ways.
-    .when_target_reached(WhenTargetReached::ContinueThenReloadAfter(0x1FFF))
+    .full_range(0, 0x1FFF)
+    .initial_range(0, 0)
+    .auto_trigger_when(AutoTriggerWhen::StepSizedTransitionTo(0x1000))
     // TODO: Verify correct timing.
     .forced_reload_timing(ForcedReloadTiming::Immediate)
-    .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
+    .when_disabled_prevent(WhenDisabledPrevent::CountingAndTriggering)
     .build_reload_driven_counter();
 
 // N-32 conversion of Super Mario Bros. 2 (J). PCB code 761214.

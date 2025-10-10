@@ -19,13 +19,14 @@ const LAYOUT: Layout = Layout::builder()
 
 // The wiki and Mesen disagree here. I'm thinking the wiki is right because it has more detailed behavior.
 const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
-    .initial_count_and_reload_value(0)
     .step(1)
-    .auto_triggered_by(AutoTriggeredBy::AlreadyOn, 0x0FFF)
-    .when_target_reached(WhenTargetReached::ContinueThenReloadAfter(0x1FFF))
+    .wraps(true)
+    .full_range(0, 0x1FFF)
+    .initial_range(0, 0)
+    .auto_trigger_when(AutoTriggerWhen::EndingOn(0x1000))
     // TODO: Verify correct timing.
     .forced_reload_timing(ForcedReloadTiming::Immediate)
-    .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
+    .when_disabled_prevent(WhenDisabledPrevent::CountingAndTriggering)
     .build_reload_driven_counter();
 
 // NTDEC 2722 and NTDEC 2752 PCB and imitations.

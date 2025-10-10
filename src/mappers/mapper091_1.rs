@@ -26,12 +26,13 @@ const HORIZONTAL: u8 = 0;
 const VERTICAL: u8 = 1;
 
 const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
-    .initial_count(0)
     .step(-5)
-    .auto_triggered_by(AutoTriggeredBy::EndingOn, 0)
-    .when_target_reached(WhenTargetReached::Stay)
+    .wraps(false)
+    .full_range(0, 0xFFFF)
+    .initial_count(0)
+    .auto_trigger_when(AutoTriggerWhen::EndingOn(0))
     .forced_reload_timing(ForcedReloadTiming::Immediate)
-    .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
+    .when_disabled_prevent(WhenDisabledPrevent::CountingAndTriggering)
     .prescaler(4, PrescalerTriggeredBy::WrappingToZero, PrescalerBehaviorOnForcedReload::DoNothing)
     .build_reload_driven_counter();
 

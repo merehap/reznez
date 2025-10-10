@@ -36,11 +36,11 @@ const LAYOUT: Layout = Layout::builder()
 
 const IRQ_COUNTER: DirectlySetCounter = CounterBuilder::new()
     .step(-1)
-    .auto_triggered_by(AutoTriggeredBy::AlreadyOn, 0)
+    .wraps(true)
+    .full_range(0, 0xFFFF)
     .initial_count(0)
-    .when_target_reached(WhenTargetReached::Reload)
-    .initial_reload_value(0xFFFF)
-    .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
+    .auto_trigger_when(AutoTriggerWhen::Wrapping)
+    .when_disabled_prevent(WhenDisabledPrevent::CountingAndTriggering)
     .build_directly_set_counter();
 
 const CHR_REGISTER_IDS: [ChrBankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];
@@ -94,8 +94,8 @@ impl Mapper for Mapper069 {
                         mem.set_name_table_mirroring(value & 0b11),
                     Command::IrqControl => {
                         mem.cpu_pinout.acknowledge_mapper_irq();
-                        let (counter_ticking_enabled, irq_triggering_enabled) = splitbits_named!(value, "c......i");
-                        self.irq_counter.set_ticking_enabled(counter_ticking_enabled);
+                        let (counter_counting_enabled, irq_triggering_enabled) = splitbits_named!(value, "c......i");
+                        self.irq_counter.set_counting_enabled(counter_counting_enabled);
                         self.irq_counter.set_triggering_enabled(irq_triggering_enabled);
                     }
                     Command::IrqCounterLowByte =>

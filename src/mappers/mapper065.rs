@@ -38,12 +38,13 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
-    .initial_count(0)
     .step(-1)
-    .auto_triggered_by(AutoTriggeredBy::EndingOn, 0)
-    .when_target_reached(WhenTargetReached::Stay)
+    .wraps(false)
+    .full_range(0, 0xFFFF)
+    .initial_range(0, 0)
+    .auto_trigger_when(AutoTriggerWhen::EndingOn(0))
     .forced_reload_timing(ForcedReloadTiming::Immediate)
-    .when_disabled_prevent(WhenDisabledPrevent::Ticking)
+    .when_disabled_prevent(WhenDisabledPrevent::Counting)
     .build_reload_driven_counter();
 
 const CHR_REGISTER_IDS: [ChrBankRegisterId; 8] = [C0, C1, C2, C3, C4, C5, C6, C7];

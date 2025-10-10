@@ -82,7 +82,7 @@ impl VrcIrqState {
     }
 
     pub fn to_irq_counter_info(&self) -> IrqCounterInfo {
-        IrqCounterInfo { ticking_enabled: self.enabled, triggering_enabled: self.enabled, count: self.counter as u16 }
+        IrqCounterInfo { counting_enabled: self.enabled, triggering_enabled: self.enabled, count: self.counter as u16 }
     }
 }
 

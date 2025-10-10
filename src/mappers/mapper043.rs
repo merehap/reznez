@@ -21,12 +21,13 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
-    .initial_count_and_reload_value(0)
     .step(1)
-    .auto_triggered_by(AutoTriggeredBy::AlreadyOn, 0xFFF)
-    .when_target_reached(WhenTargetReached::Reload)
+    .wraps(true)
+    .full_range(0, 0xFFF)
+    .initial_count(0)
+    .auto_trigger_when(AutoTriggerWhen::Wrapping)
     .forced_reload_timing(ForcedReloadTiming::Immediate)
-    .when_disabled_prevent(WhenDisabledPrevent::TickingAndTriggering)
+    .when_disabled_prevent(WhenDisabledPrevent::CountingAndTriggering)
     .build_reload_driven_counter();
 
 // TONY-I and YS-612 (FDS games in cartridge form).
