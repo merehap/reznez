@@ -307,7 +307,8 @@ pub trait Mapper {
     ) -> &'a [u8; KIBIBYTE as usize] {
         match mem.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) => ciram.side(side),
-            NameTableSource::SaveRam(start_index) => mem.chr_memory.save_ram_1kib_page(start_index),
+            // FIXME: Hack
+            NameTableSource::Ram { bank_index } => mem.chr_memory.work_ram_1kib_page(0x400 * u32::from(bank_index.to_raw()) ),
             NameTableSource::ExtendedRam => mem.prg_memory.extended_ram().as_raw_slice().try_into().unwrap(),
             NameTableSource::FillModeTile => self.fill_mode_name_table(),
         }
@@ -331,8 +332,8 @@ pub trait Mapper {
         match mem.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) =>
                 mem.ciram.write(&mem.ppu_regs, side, index, value),
-            NameTableSource::SaveRam(start_index) =>
-                mem.chr_memory.save_ram_1kib_page_mut(start_index)[index as usize] = value,
+            NameTableSource::Ram { bank_index } =>
+                mem.chr_memory.work_ram_1kib_page_mut(0x400 * u32::from(bank_index.to_raw()))[index as usize] = value,
             NameTableSource::ExtendedRam =>
                 mem.prg_memory.extended_ram_mut().as_raw_mut_slice()[index as usize] = value,
             NameTableSource::FillModeTile =>

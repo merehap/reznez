@@ -50,9 +50,9 @@ impl ChrMemoryMap {
         if page_mappings.len() == 8 {
             for quadrant in name_table_mirroring.quadrants() {
                 let mapping = match quadrant {
-                    NameTableSource::Ciram(ciram_side) => ChrMapping::NameTableSource(NameTableSource::Ciram(ciram_side)),
-                    NameTableSource::SaveRam(index) => ChrMapping::NameTableSource(NameTableSource::SaveRam(index)),
-                    _ =>  panic!("{quadrant:?} is not yet supported for high PPU memory mapping."),
+                    NameTableSource::Ciram(_) => ChrMapping::NameTableSource(quadrant),
+                    NameTableSource::Ram {..} => ChrMapping::NameTableSource(quadrant),
+                    _ => panic!("{quadrant:?} is not yet supported for high PPU memory mapping."),
                 };
                 page_mappings.push(mapping);
             }
@@ -202,7 +202,7 @@ impl ChrMapping {
             }
             Self::NameTableSource(source) => match source {
                 NameTableSource::Ciram(ciram_side) => (ChrPageId::Ciram(*ciram_side), ReadWriteStatus::ReadWrite),
-                NameTableSource::SaveRam(_) => (ChrPageId::SaveRam, ReadWriteStatus::ReadWrite),
+                NameTableSource::Ram {..} => (ChrPageId::SaveRam, ReadWriteStatus::ReadWrite),
                 NameTableSource::ExtendedRam => (ChrPageId::ExtendedRam, ReadWriteStatus::ReadWrite),
                 NameTableSource::FillModeTile => (ChrPageId::FillModeTile, ReadWriteStatus::ReadOnly),
             }

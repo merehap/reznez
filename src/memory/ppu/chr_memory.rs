@@ -306,13 +306,13 @@ impl ChrMemory {
         }
     }
 
-    pub fn save_ram_1kib_page(&self, start: u32) -> &[u8; KIBIBYTE as usize] {
+    pub fn work_ram_1kib_page(&self, start: u32) -> &[u8; KIBIBYTE as usize] {
         assert_eq!(start % 0x400, 0, "Save RAM 1KiB slices must start on a 1KiB page boundary (e.g. 0x000, 0x400, 0x800).");
         let start = start as usize;
         (&self.ram.as_slice()[start..start + 0x400]).try_into().unwrap()
     }
 
-    pub fn save_ram_1kib_page_mut(&mut self, start: u32) -> &mut [u8; KIBIBYTE as usize] {
+    pub fn work_ram_1kib_page_mut(&mut self, start: u32) -> &mut [u8; KIBIBYTE as usize] {
         assert_eq!(start % 0x400, 0, "Save RAM 1KiB slices must start on a 1KiB page boundary (e.g. 0x000, 0x400, 0x800).");
         let start = start as usize;
         (&mut self.ram.as_mut_slice()[start..start + 0x400]).try_into().unwrap()
@@ -412,8 +412,7 @@ impl PeekSource {
     pub fn from_name_table_source(name_table_source: NameTableSource) -> Self {
         match name_table_source {
             NameTableSource::Ciram(side) => Self::Ciram(side),
-            // TODO: Use SaveRam with pages.
-            NameTableSource::SaveRam(_) => Self::SaveRam,
+            NameTableSource::Ram { bank_index } => Self::Ram(bank_index),
             NameTableSource::ExtendedRam => Self::ExtendedRam,
             NameTableSource::FillModeTile => Self::FillModeTile,
         }

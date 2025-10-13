@@ -100,7 +100,7 @@ impl PrgBankRegisters {
 
 #[derive(Clone, Debug)]
 pub struct ChrBankRegisters {
-    registers: [BankLocation; 18],
+    registers: [BankLocation; 16],
     chr_meta_registers: [ChrBankRegisterId; 2],
     read_write_statuses: [ReadWriteStatus; 15],
     rom_ram_modes: [MemType; 12],
@@ -109,7 +109,7 @@ pub struct ChrBankRegisters {
 impl ChrBankRegisters {
     pub fn new() -> Self {
         Self {
-            registers: [BankLocation::Index(BankIndex(0)); 18],
+            registers: [BankLocation::Index(BankIndex(0)); 16],
             // Meta registers are only used for CHR currently.
             chr_meta_registers: [ChrBankRegisterId::C0, ChrBankRegisterId::C0],
             read_write_statuses: [ReadWriteStatus::ReadWrite; 15],
@@ -117,7 +117,7 @@ impl ChrBankRegisters {
         }
     }
 
-    pub fn registers(&self) -> &[BankLocation; 18] {
+    pub fn registers(&self) -> &[BankLocation; 16] {
         &self.registers
     }
 
@@ -223,7 +223,11 @@ pub enum ChrBankRegisterId {
     C9,
     C10,
     C11,
-    C12,
+
+    N0,
+    N1,
+    N2,
+    N3,
 }
 
 impl ChrBankRegisterId {

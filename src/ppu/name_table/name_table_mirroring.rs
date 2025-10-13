@@ -1,5 +1,6 @@
 use std::fmt;
 
+use crate::mapper::BankIndex;
 use crate::memory::ppu::ciram::CiramSide;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 
@@ -102,7 +103,7 @@ impl fmt::Display for NameTableMirroring {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum NameTableSource {
     Ciram(CiramSide),
-    SaveRam(u32),
+    Ram { bank_index: BankIndex },
     ExtendedRam,
     FillModeTile,
 }
@@ -112,7 +113,7 @@ impl fmt::Display for NameTableSource {
         let text = match self {
             NameTableSource::Ciram(CiramSide::Left) => "CIRAM(A)",
             NameTableSource::Ciram(CiramSide::Right) => "CIRAM(B)",
-            NameTableSource::SaveRam(index) => &format!("SRAM@{index:04X}"),
+            NameTableSource::Ram { bank_index } => &format!("WRAM@{:04X}", bank_index.to_raw()),
             NameTableSource::ExtendedRam => "ExtRAM",
             NameTableSource::FillModeTile => "FillMode",
         };

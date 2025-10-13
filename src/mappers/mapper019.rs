@@ -25,10 +25,10 @@ const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C5).status_register(S5)),
         ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C6).status_register(S6)),
         ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C7).status_register(S7)),
-        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C8).status_register(S8)),
-        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C9).status_register(S9)),
-        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C10).status_register(S10)),
-        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C11).status_register(S11)),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(N0).status_register(S8)),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(N1).status_register(S9)),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(N2).status_register(S10)),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(N3).status_register(S11)),
     ])
     .read_write_statuses(&[
         ReadWriteStatus::ReadOnly,
