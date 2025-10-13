@@ -19,7 +19,7 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 use RegId::{Chr, Prg};
-const BANK_INDEX_REGISTER_IDS: [Option<RegId>; 8] =
+const BANK_NUMBER_REGISTER_IDS: [Option<RegId>; 8] =
     [None, None, Some(Chr(C0)), Some(Chr(C1)), Some(Chr(C2)), Some(Chr(C3)), Some(Prg(P0)), Some(Prg(P1))];
 
 // NAMCOT-3446 
@@ -37,7 +37,7 @@ impl Mapper for Mapper076 {
                 if addr.is_multiple_of(2) {
                     self.bank_select(mem, value);
                 } else {
-                    self.set_bank_index(mem, value);
+                    self.set_bank_number(mem, value);
                 }
             }
             0xA000..=0xFFFF => { /* Do nothing. */ }
@@ -57,16 +57,16 @@ impl Mapper076 {
     }
 
     fn bank_select(&mut self, _mem: &mut Memory, value: u8) {
-        if let Some(reg_id) = BANK_INDEX_REGISTER_IDS[(value & 0b0000_0111) as usize] {
+        if let Some(reg_id) = BANK_NUMBER_REGISTER_IDS[(value & 0b0000_0111) as usize] {
             self.selected_register_id = reg_id;
         }
     }
 
-    fn set_bank_index(&mut self, mem: &mut Memory, value: u8) {
-        let bank_index = u16::from(value & 0b0011_1111);
+    fn set_bank_number(&mut self, mem: &mut Memory, value: u8) {
+        let bank_number = u16::from(value & 0b0011_1111);
         match self.selected_register_id {
-            Chr(cx) => mem.set_chr_register(cx, bank_index),
-            Prg(px) => mem.set_prg_register(px, bank_index),
+            Chr(cx) => mem.set_chr_register(cx, bank_number),
+            Prg(px) => mem.set_prg_register(px, bank_number),
         }
     }
 }

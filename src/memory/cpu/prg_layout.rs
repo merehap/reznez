@@ -1,4 +1,4 @@
-use crate::memory::bank::bank_index::PrgBankRegisterId;
+use crate::memory::bank::bank_number::PrgBankRegisterId;
 use crate::memory::window::{ReadWriteStatusInfo, PrgWindow};
 
 #[derive(Clone, Copy)]

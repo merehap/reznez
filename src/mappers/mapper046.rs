@@ -32,10 +32,10 @@ impl Mapper for Mapper046 {
             }
             0x8000..=0xFFFF => {
                 // TODO: replacebits
-                let prg_bank_index = self.prg_high_bits | (value & 0b0000_0001);
-                mem.set_prg_register(P0, prg_bank_index);
-                let chr_bank_index = self.chr_high_bits | ((value << 1) >> 5);
-                mem.set_chr_register(C0, chr_bank_index);
+                let prg_bank_number = self.prg_high_bits | (value & 0b0000_0001);
+                mem.set_prg_register(P0, prg_bank_number);
+                let chr_bank_number = self.chr_high_bits | ((value << 1) >> 5);
+                mem.set_chr_register(C0, chr_bank_number);
             }
         }
     }

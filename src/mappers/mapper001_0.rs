@@ -120,18 +120,18 @@ impl Mapper001_0 {
             }
             Board::SUROM => {
                 let banks = splitbits!(min=u8, value, "...p...c");
-                mem.set_prg_rom_outer_bank_index(banks.p);
+                mem.set_prg_rom_outer_bank_number(banks.p);
                 mem.set_chr_register(chr_id, banks.c);
             }
             Board::SOROM => {
                 let banks = splitbits!(min=u8, value, "...pr..c");
-                mem.set_prg_rom_outer_bank_index(banks.p);
+                mem.set_prg_rom_outer_bank_number(banks.p);
                 mem.set_prg_register(P0, banks.r);
                 mem.set_chr_register(chr_id, banks.c);
             }
             Board::SXROM => {
                 let banks = splitbits!(min=u8, value, "...prr.c");
-                mem.set_prg_rom_outer_bank_index(banks.p);
+                mem.set_prg_rom_outer_bank_number(banks.p);
                 mem.set_prg_register(P0, banks.r);
                 mem.set_chr_register(chr_id, banks.c);
             }

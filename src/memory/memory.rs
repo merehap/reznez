@@ -7,7 +7,7 @@ use crate::controller::joypad::Joypad;
 use crate::cpu::dmc_dma::DmcDma;
 use crate::cpu::oam_dma::OamDma;
 use crate::memory::bank::bank::RomRamModeRegisterId;
-use crate::memory::bank::bank_index::MemType;
+use crate::memory::bank::bank_number::MemType;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
@@ -192,8 +192,8 @@ impl Memory {
         self.prg_memory.set_layout(index);
     }
 
-    pub fn set_prg_rom_outer_bank_index(&mut self, index: u8) {
-        self.prg_memory.set_prg_rom_outer_bank_index(index);
+    pub fn set_prg_rom_outer_bank_number(&mut self, index: u8) {
+        self.prg_memory.set_prg_rom_outer_bank_number(index);
     }
 
     pub fn peek_prg(&self, addr: CpuAddress) -> ReadResult {
@@ -236,8 +236,8 @@ impl Memory {
         self.chr_memory.write(&regs, ciram, address, value);
     }
 
-    pub fn set_chr_rom_outer_bank_index(&mut self, index: u8) {
-        self.chr_memory.set_chr_rom_outer_bank_index(index);
+    pub fn set_chr_rom_outer_bank_number(&mut self, index: u8) {
+        self.chr_memory.set_chr_rom_outer_bank_number(index);
     }
 
     pub fn set_prg_register<INDEX: Into<u16>>(&mut self, id: PrgBankRegisterId, value: INDEX) {

@@ -17,8 +17,8 @@ const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::RAM.fixed_index(7)),
     ])
     .four_screen_mirroring_definition(NameTableMirroring::new(
-        NameTableSource::Ram { bank_index: BankIndex::from_u8(0) },
-        NameTableSource::Ram { bank_index: BankIndex::from_u8(1) },
+        NameTableSource::Ram { bank_number: BankNumber::from_u8(0) },
+        NameTableSource::Ram { bank_number: BankNumber::from_u8(1) },
         NameTableSource::Ciram(CiramSide::Left),
         NameTableSource::Ciram(CiramSide::Right),
     ))

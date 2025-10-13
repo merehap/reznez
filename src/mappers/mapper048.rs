@@ -34,16 +34,16 @@ pub struct Mapper048 {
 
 impl Mapper for Mapper048 {
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
-        let bank_index = u16::from(value);
+        let bank_number = u16::from(value);
         match *addr & 0xE003 {
-            0x8000 => mem.set_prg_register(P0, bank_index),
-            0x8001 => mem.set_prg_register(P1, bank_index),
-            0x8002 => mem.set_chr_register(C0, 2 * bank_index),
-            0x8003 => mem.set_chr_register(C1, 2 * bank_index),
-            0xA000 => mem.set_chr_register(C2, bank_index),
-            0xA001 => mem.set_chr_register(C3, bank_index),
-            0xA002 => mem.set_chr_register(C4, bank_index),
-            0xA003 => mem.set_chr_register(C5, bank_index),
+            0x8000 => mem.set_prg_register(P0, bank_number),
+            0x8001 => mem.set_prg_register(P1, bank_number),
+            0x8002 => mem.set_chr_register(C0, 2 * bank_number),
+            0x8003 => mem.set_chr_register(C1, 2 * bank_number),
+            0xA000 => mem.set_chr_register(C2, bank_number),
+            0xA001 => mem.set_chr_register(C3, bank_number),
+            0xA002 => mem.set_chr_register(C4, bank_number),
+            0xA003 => mem.set_chr_register(C5, bank_number),
             0xC000 => self.irq_state.set_counter_reload_value(value ^ 0xFF),
             0xC001 => self.irq_state.reload_counter(),
             0xC002 => self.irq_state.enable(),

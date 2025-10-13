@@ -37,8 +37,8 @@ impl Mapper for Mapper047 {
             // S0 isn't hooked up to any window, but its value is still set by MMC3 and used for this mapper.
             if mem.prg_memory().bank_registers().read_write_status(S0) == ReadWriteStatus::ReadWrite {
                 let index = value & 1;
-                mem.set_prg_rom_outer_bank_index(index);
-                mem.set_chr_rom_outer_bank_index(index);
+                mem.set_prg_rom_outer_bank_number(index);
+                mem.set_chr_rom_outer_bank_number(index);
             }
         } else {
             self.mmc3.write_register(mem, addr, value);

@@ -56,8 +56,8 @@ impl Mapper for Mapper091_0 {
             }
             0x8000..=0x9FFF => {
                 let outer_banks = splitbits!(min=u8, *addr, ".... .... .... .pcc");
-                mem.set_prg_rom_outer_bank_index(outer_banks.p);
-                mem.set_prg_rom_outer_bank_index(outer_banks.c);
+                mem.set_prg_rom_outer_bank_number(outer_banks.p);
+                mem.set_prg_rom_outer_bank_number(outer_banks.c);
             }
             _ => { /* Do nothing. */ }
         }

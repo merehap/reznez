@@ -71,7 +71,7 @@ impl Mapper for Mapper004_1 {
                 // FIXME: What are these actually supposed to do?
                 mem.set_read_write_status(S0, fields.s);
                 mem.set_read_write_status(S1, fields.s);
-                self.selected_register_id = mmc3::BANK_INDEX_REGISTER_IDS[fields.b as usize];
+                self.selected_register_id = mmc3::BANK_NUMBER_REGISTER_IDS[fields.b as usize];
             }
             (0x8000..=0x9FFF, false) => {
                 match self.selected_register_id {

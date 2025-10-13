@@ -21,14 +21,14 @@ impl BankColorAssigner {
     pub fn rgb_for_source(&self, source: PeekSource) -> Rgb {
         match source {
             // Middle brightness colors (the standard color wheel)
-            PeekSource::Rom(bank_index) => {
-                let bank_index = bank_index.to_raw() as usize % self.rom_spectrum.len();
-                self.rom_spectrum[bank_index]
+            PeekSource::Rom(bank_number) => {
+                let bank_number = bank_number.to_raw() as usize % self.rom_spectrum.len();
+                self.rom_spectrum[bank_number]
             }
             // Greyscale
-            PeekSource::Ram(bank_index) => {
-                let bank_index = bank_index.to_raw() as usize % self.ram_greyscale.len();
-                self.ram_greyscale[bank_index]
+            PeekSource::Ram(bank_number) => {
+                let bank_number = bank_number.to_raw() as usize % self.ram_greyscale.len();
+                self.ram_greyscale[bank_number]
             }
             // Midnight Blue
             PeekSource::Ciram(CiramSide::Left) => Rgb::new(0x26, 0x00, 0x4D),

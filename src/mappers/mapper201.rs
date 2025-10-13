@@ -21,9 +21,9 @@ impl Mapper for Mapper201 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                let bank_index = *addr & 0x00FF;
-                mem.set_prg_register(P0, bank_index);
-                mem.set_chr_register(C0, bank_index);
+                let bank_number = *addr & 0x00FF;
+                mem.set_prg_register(P0, bank_number);
+                mem.set_chr_register(C0, bank_number);
             }
         }
     }

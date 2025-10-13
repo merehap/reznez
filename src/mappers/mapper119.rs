@@ -3,7 +3,7 @@ use crate::mapper::*;
 use crate::mappers::mmc3::mmc3;
 use crate::mappers::mmc3::irq_state::Mmc3IrqState;
 use crate::memory::bank::bank::RomRamModeRegisterId;
-use crate::memory::bank::bank_index::MemType;
+use crate::memory::bank::bank_number::MemType;
 
 pub const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)

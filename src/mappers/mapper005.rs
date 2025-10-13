@@ -1,5 +1,5 @@
 use crate::memory::bank::bank::RomRamModeRegisterId;
-use crate::memory::bank::bank_index::MemType;
+use crate::memory::bank::bank_number::MemType;
 use crate::mapper::*;
 use crate::mappers::mmc5::frame_state::FrameState;
 use crate::memory::memory::Memory;

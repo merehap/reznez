@@ -50,12 +50,12 @@ impl Mapper for Mapper075 {
             0xC000..=0xCFFF => mem.set_prg_register(P2, value & 0b0000_1111),
             0xD000..=0xDFFF => { /* Do nothing. */ }
             0xE000..=0xEFFF => {
-                let bank_index = self.chr_left_high_bit | (value & 0b0000_1111);
-                mem.set_chr_register(C0, bank_index);
+                let bank_number = self.chr_left_high_bit | (value & 0b0000_1111);
+                mem.set_chr_register(C0, bank_number);
             }
             0xF000..=0xFFFF => {
-                let bank_index = self.chr_right_high_bit | (value & 0b0000_1111);
-                mem.set_chr_register(C1, bank_index);
+                let bank_number = self.chr_right_high_bit | (value & 0b0000_1111);
+                mem.set_chr_register(C1, bank_number);
             }
         }
     }

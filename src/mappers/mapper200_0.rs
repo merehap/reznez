@@ -27,9 +27,9 @@ impl Mapper for Mapper200_0 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                let bank_index = *addr & 0x000F;
-                mem.set_prg_register(P0, bank_index);
-                mem.set_chr_register(C0, bank_index);
+                let bank_number = *addr & 0x000F;
+                mem.set_prg_register(P0, bank_number);
+                mem.set_chr_register(C0, bank_number);
                 mem.set_name_table_mirroring((*addr >> 3) as u8 & 1);
             }
         }

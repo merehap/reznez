@@ -26,7 +26,7 @@ pub const CHR_WINDOWS: &[ChrWindow] = &[
 ];
 
 use RegId::{Chr, Prg};
-const BANK_INDEX_REGISTER_IDS: [RegId; 8] = [Chr(C0), Chr(C1), Chr(C2), Chr(C3), Chr(C4), Chr(C5), Prg(P0), Prg(P1)];
+const BANK_NUMBER_REGISTER_IDS: [RegId; 8] = [Chr(C0), Chr(C1), Chr(C2), Chr(C3), Chr(C4), Chr(C5), Prg(P0), Prg(P1)];
 
 // Similar to Mapper206, but allows up to 128KiB of CHR,
 // and selects the second half of CHR for C2, C3, C4, and C5 for over-sized CHR.
@@ -44,7 +44,7 @@ impl Mapper for Mapper088 {
                 if addr.is_multiple_of(2) {
                     self.bank_select(mem, value);
                 } else {
-                    self.set_bank_index(mem, value);
+                    self.set_bank_number(mem, value);
                 }
             }
             0xA000..=0xFFFF => { /* Do nothing. */ }
@@ -65,11 +65,11 @@ impl Mapper088 {
     }
 
     fn bank_select(&mut self, _mem: &mut Memory, value: u8) {
-        self.selected_register_id = BANK_INDEX_REGISTER_IDS[(value & 0b0000_0111) as usize];
+        self.selected_register_id = BANK_NUMBER_REGISTER_IDS[(value & 0b0000_0111) as usize];
     }
 
-    fn set_bank_index(&mut self, mem: &mut Memory, value: u8) {
-        let bank_index = match self.selected_register_id {
+    fn set_bank_number(&mut self, mem: &mut Memory, value: u8) {
+        let bank_number = match self.selected_register_id {
             // Double-width windows can only use even banks.
             Chr(C0) | Chr(C1) => value & 0b0011_1110,
             // Use the second 64KiB chunk of CHR.
@@ -83,8 +83,8 @@ impl Mapper088 {
         };
 
         match self.selected_register_id {
-            Chr(cx) => mem.set_chr_register(cx, bank_index),
-            Prg(px) => mem.set_prg_register(px, bank_index),
+            Chr(cx) => mem.set_chr_register(cx, bank_number),
+            Prg(px) => mem.set_prg_register(px, bank_number),
         }
     }
 }

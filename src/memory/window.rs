@@ -1,12 +1,12 @@
 use std::num::NonZeroU16;
 
 use crate::memory::bank::bank::{PrgBank, PrgBankLocation};
-use crate::memory::bank::bank_index::{PrgBankRegisters, PrgBankRegisterId};
+use crate::memory::bank::bank_number::{PrgBankRegisters, PrgBankRegisterId};
 
-use crate::mapper::{BankIndex, ReadWriteStatus, ReadWriteStatusRegisterId, KIBIBYTE};
+use crate::mapper::{BankNumber, ReadWriteStatus, ReadWriteStatusRegisterId, KIBIBYTE};
 
 use super::bank::bank::{ChrBank, ChrBankLocation};
-use super::bank::bank_index::ChrBankRegisterId;
+use super::bank::bank_number::ChrBankRegisterId;
 
 // A Window is a range within addressable memory.
 // If the specified bank cannot fill the window, adjacent banks will be included too.
@@ -147,7 +147,7 @@ impl ChrWindow {
     pub fn location(self) -> Result<ChrBankLocation, String> {
         match self.bank {
             ChrBank::Rom(location, _) | ChrBank::Ram(location, _) | ChrBank::RomRam(location, ..) => Ok(location),
-            ChrBank::SaveRam(_) => Ok(ChrBankLocation::Fixed(BankIndex::from_u8(0))),
+            ChrBank::SaveRam(_) => Ok(ChrBankLocation::Fixed(BankNumber::from_u8(0))),
         }
     }
 

@@ -3,10 +3,10 @@ pub use splitbits::{splitbits, splitbits_named, combinebits, splitbits_then_comb
 pub use crate::cartridge::cartridge::Cartridge;
 pub use crate::counter::counter::{ReloadDrivenCounter, DirectlySetCounter, CounterBuilder, AutoTriggerWhen, ForcedReloadTiming, WhenDisabledPrevent};
 pub use crate::counter::irq_counter_info::IrqCounterInfo;
-pub use crate::memory::bank::bank_index::{BankIndex, PrgBankRegisterId, ChrBankRegisterId, MetaRegisterId, ReadWriteStatus};
-pub use crate::memory::bank::bank_index::PrgBankRegisterId::*;
-pub use crate::memory::bank::bank_index::ChrBankRegisterId::*;
-pub use crate::memory::bank::bank_index::MetaRegisterId::*;
+pub use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisterId, ChrBankRegisterId, MetaRegisterId, ReadWriteStatus};
+pub use crate::memory::bank::bank_number::PrgBankRegisterId::*;
+pub use crate::memory::bank::bank_number::ChrBankRegisterId::*;
+pub use crate::memory::bank::bank_number::MetaRegisterId::*;
 pub use crate::memory::bank::bank::{PrgBank, ChrBank, ReadWriteStatusRegisterId};
 pub use crate::memory::bank::bank::ReadWriteStatusRegisterId::*;
 pub use crate::memory::bank::bank::RomRamModeRegisterId::*;
@@ -33,7 +33,7 @@ use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ciram::Ciram;
 use crate::ppu::register::ppu_registers::WriteToggle;
 
-use crate::memory::bank::bank_index::MemType;
+use crate::memory::bank::bank_number::MemType;
 
 pub trait Mapper {
     // Should be const, but that's not yet allowed by Rust.
@@ -308,7 +308,7 @@ pub trait Mapper {
         match mem.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) => ciram.side(side),
             // FIXME: Hack
-            NameTableSource::Ram { bank_index } => mem.chr_memory.work_ram_1kib_page(0x400 * u32::from(bank_index.to_raw()) ),
+            NameTableSource::Ram { bank_number } => mem.chr_memory.work_ram_1kib_page(0x400 * u32::from(bank_number.to_raw()) ),
             NameTableSource::ExtendedRam => mem.prg_memory.extended_ram().as_raw_slice().try_into().unwrap(),
             NameTableSource::FillModeTile => self.fill_mode_name_table(),
         }
@@ -332,8 +332,8 @@ pub trait Mapper {
         match mem.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) =>
                 mem.ciram.write(&mem.ppu_regs, side, index, value),
-            NameTableSource::Ram { bank_index } =>
-                mem.chr_memory.work_ram_1kib_page_mut(0x400 * u32::from(bank_index.to_raw()))[index as usize] = value,
+            NameTableSource::Ram { bank_number } =>
+                mem.chr_memory.work_ram_1kib_page_mut(0x400 * u32::from(bank_number.to_raw()))[index as usize] = value,
             NameTableSource::ExtendedRam =>
                 mem.prg_memory.extended_ram_mut().as_raw_mut_slice()[index as usize] = value,
             NameTableSource::FillModeTile =>

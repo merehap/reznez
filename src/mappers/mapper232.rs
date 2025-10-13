@@ -25,15 +25,15 @@ impl Mapper for Mapper232 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xBFFF => {
-                let set_high_bank_bits = |bank_index| {
-                    (bank_index & 0b0011) | ((value & 0b1_1000) >> 1)
+                let set_high_bank_bits = |bank_number| {
+                    (bank_number & 0b0011) | ((value & 0b1_1000) >> 1)
                 };
                 mem.update_prg_register(P0, &set_high_bank_bits);
                 mem.update_prg_register(P1, &set_high_bank_bits);
             }
             0xC000..=0xFFFF => {
-                let set_low_bank_bits = |bank_index| {
-                    (bank_index & 0b1100) | (value & 0b0011)
+                let set_low_bank_bits = |bank_number| {
+                    (bank_number & 0b1100) | (value & 0b0011)
                 };
                 mem.update_prg_register(P0, &set_low_bank_bits);
             }

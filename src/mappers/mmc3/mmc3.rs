@@ -63,7 +63,7 @@ pub const READ_WRITE_STATUSES: &[ReadWriteStatus] = &[
 ];
 
 use RegId::{Chr, Prg};
-pub const BANK_INDEX_REGISTER_IDS: [RegId; 8] = [Chr(C0), Chr(C1), Chr(C2), Chr(C3), Chr(C4), Chr(C5), Prg(P0), Prg(P1)];
+pub const BANK_NUMBER_REGISTER_IDS: [RegId; 8] = [Chr(C0), Chr(C1), Chr(C2), Chr(C3), Chr(C4), Chr(C5), Prg(P0), Prg(P1)];
 
 // TODO: Support VS System (and its 4-screen mirroring).
 pub struct Mapper004Mmc3 {
@@ -81,7 +81,7 @@ impl Mapper for Mapper004Mmc3 {
                 let fields = splitbits!(min=u8, value, "cp...rrr");
                 mem.set_chr_layout(fields.c);
                 mem.set_prg_layout(fields.p);
-                self.selected_register_id = BANK_INDEX_REGISTER_IDS[fields.r as usize];
+                self.selected_register_id = BANK_NUMBER_REGISTER_IDS[fields.r as usize];
             }
             (0x8000..=0x9FFF, false) => {
                 match self.selected_register_id {

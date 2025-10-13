@@ -1,8 +1,8 @@
 use log::warn;
 
-use crate::mapper::{BankIndex, PrgBankRegisterId, ReadWriteStatusRegisterId};
+use crate::mapper::{BankNumber, PrgBankRegisterId, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank::{PrgBank, RomRamModeRegisterId};
-use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, MemType};
+use crate::memory::bank::bank_number::{PrgBankRegisters, ReadWriteStatus, MemType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory_map::PrgMemoryMap;
@@ -17,7 +17,7 @@ pub struct PrgMemory {
     memory_maps: Vec<PrgMemoryMap>,
     layout_index: u8,
     rom: Vec<RawMemory>,
-    rom_outer_bank_index: u8,
+    rom_outer_bank_number: u8,
     work_ram: RawMemory,
     save_ram: SaveRam,
     extended_ram: RawMemoryArray<KIBIBYTE>,
@@ -83,7 +83,7 @@ impl PrgMemory {
             memory_maps,
             layout_index,
             rom: rom.split_n(rom_outer_bank_count),
-            rom_outer_bank_index: 0,
+            rom_outer_bank_number: 0,
             work_ram,
             save_ram,
             extended_ram: RawMemoryArray::new(),
@@ -121,8 +121,8 @@ impl PrgMemory {
             match prg_source_and_index {
                 Some((MemType::Rom, index)) if read_write_status.is_readable() => {
                     //log::info!("ROM length: {:X} Index: {index:X}", self.rom[0].size());
-                    let outer_bank_index = self.rom_outer_bank_index as usize % self.rom.len();
-                    ReadResult::full(self.rom[outer_bank_index][index])
+                    let outer_bank_number = self.rom_outer_bank_number as usize % self.rom.len();
+                    ReadResult::full(self.rom[outer_bank_number][index])
                 }
                 Some((MemType::WorkRam, index)) if read_write_status.is_readable() =>
                     ReadResult::full(self.work_ram[index]),
@@ -155,7 +155,7 @@ impl PrgMemory {
     }
 
     pub fn set_bank_register<INDEX: Into<u16>>(&mut self, id: PrgBankRegisterId, value: INDEX) {
-        self.regs.set(id, BankIndex::from_u16(value.into()));
+        self.regs.set(id, BankNumber::from_u16(value.into()));
         self.update_page_ids();
     }
 
@@ -203,8 +203,8 @@ impl PrgMemory {
         self.layout_index = index;
     }
 
-    pub fn set_prg_rom_outer_bank_index(&mut self, index: u8) {
-        self.rom_outer_bank_index = index;
+    pub fn set_prg_rom_outer_bank_number(&mut self, index: u8) {
+        self.rom_outer_bank_number = index;
     }
 
     fn update_page_ids(&mut self) {

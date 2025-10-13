@@ -26,8 +26,8 @@ impl Mapper for Mapper189 {
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match (*addr, self.mmc3.selected_register_id()) {
             (0x4120..=0x7FFF, _) => {
-                let bank_index = (value >> 4) | (value & 0b1111);
-                mem.set_prg_register(P0, bank_index);
+                let bank_number = (value >> 4) | (value & 0b1111);
+                mem.set_prg_register(P0, bank_number);
             }
             (0x8000..=0xBFFF, mmc3::RegId::Prg(_)) if *addr % 2 == 1 => {
                 // Do nothing here: PRG registers are not set by the standard MMC3 process.

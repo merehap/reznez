@@ -65,7 +65,7 @@ const CPU_CYCLE_MODE_IRQ_PENDING_DELAY: u8 = 1;
 const SCANLINE_MODE_IRQ_PENDING_DELAY: u8 = 4;
 
 use RegId::{Chr, Prg};
-const BANK_INDEX_REGISTER_IDS: [Option<RegId>; 16] =
+const BANK_NUMBER_REGISTER_IDS: [Option<RegId>; 16] =
     [Some(Chr(C0)), Some(Chr(C1)), Some(Chr(C2)), Some(Chr(C3)), Some(Chr(C4)), Some(Chr(C5)), Some(Prg(P0)), Some(Prg(P1)),
      Some(Chr(C6)), Some(Chr(C7)),          None,          None,          None,          None,          None, Some(Prg(P2)),
     ];
@@ -92,7 +92,7 @@ impl Mapper for Mapper064 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x9FFF if is_even_address => self.bank_select(mem, value),
-            0x8000..=0x9FFF => self.set_bank_index(mem, value),
+            0x8000..=0x9FFF => self.set_bank_number(mem, value),
             0xA000..=0xBFFF if is_even_address => Mapper064::set_name_table_mirroring(mem, value),
             0xA000..=0xBFFF => {/* Do nothing. No use of these registers has been found. */}
             0xC000..=0xDFFF if is_even_address => self.set_irq_counter_reload_value(value), 
@@ -179,12 +179,12 @@ impl Mapper064 {
         let fields = splitbits!(min=u8, value, "cpc.bbbb");
         mem.set_chr_layout(fields.c);
         mem.set_prg_layout(fields.p);
-        if let Some(reg_id) = BANK_INDEX_REGISTER_IDS[fields.b as usize] {
+        if let Some(reg_id) = BANK_NUMBER_REGISTER_IDS[fields.b as usize] {
             self.selected_register_id = reg_id;
         }
     }
 
-    fn set_bank_index(&self, mem: &mut Memory, value: u8) {
+    fn set_bank_number(&self, mem: &mut Memory, value: u8) {
         match self.selected_register_id {
             Chr(cx) => mem.set_chr_register(cx, value),
             Prg(px) => mem.set_prg_register(px, value),

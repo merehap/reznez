@@ -1,5 +1,5 @@
 use crate::memory::bank::bank::{PrgBank, TruncationSide};
-use crate::memory::bank::bank_index::{PrgBankRegisters, ReadWriteStatus, MemType};
+use crate::memory::bank::bank_number::{PrgBankRegisters, ReadWriteStatus, MemType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::window::PrgWindowSize;
@@ -185,14 +185,14 @@ impl PrgMapping {
             return (None, ReadWriteStatus::Disabled);
         };
 
-        let bank_index = location.bank_index(regs);
+        let bank_number = location.bank_number(regs);
 
         let read_write_status;
         let mem_type_and_page_number;
         match mem_type {
             MemType::Rom => {
-                let page_number = ((self.rom_pages_per_bank * bank_index.to_raw()) & self.rom_page_number_mask) + self.page_offset;
-                //println!("Page number within mapping: {page_number}. Bank Index: {}. Page offset: {}", bank_index.to_raw(), self.page_offset);
+                let page_number = ((self.rom_pages_per_bank * bank_number.to_raw()) & self.rom_page_number_mask) + self.page_offset;
+                //println!("Page number within mapping: {page_number}. Bank Index: {}. Page offset: {}", bank_number.to_raw(), self.page_offset);
                 mem_type_and_page_number = (MemType::Rom, page_number);
 
                 read_write_status = if self.bank.is_rom_ram() {
@@ -206,7 +206,7 @@ impl PrgMapping {
             }
             // FIXME: Pull these out into separate cases, and handle the splitting earlier?
             MemType::WorkRam | MemType::SaveRam => {
-                let mut page_number = (bank_index.to_raw() & self.ram_page_number_mask) + self.page_offset;
+                let mut page_number = (bank_number.to_raw() & self.ram_page_number_mask) + self.page_offset;
                 if page_number < save_ram_bank_count {
                     mem_type_and_page_number = (MemType::SaveRam, page_number);
                 } else {

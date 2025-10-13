@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::memory::bank::bank_index::MemType;
+use crate::memory::bank::bank_number::MemType;
 use crate::memory::memory::Memory;
 
 const LAYOUT: Layout = Layout::builder()

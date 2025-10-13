@@ -37,7 +37,7 @@ impl Mapper for Mapper202 {
                 // Overlapping fields.
                 let layout = splitbits_named!(
                     *addr, ".... .... .... l..l");
-                let (bank_index, mirroring) = splitbits_named!(min=u8,
+                let (bank_number, mirroring) = splitbits_named!(min=u8,
                     *addr, ".... .... .... rrrm");
 
                 if layout == 3 {
@@ -46,8 +46,8 @@ impl Mapper for Mapper202 {
                     mem.set_prg_layout(PRG16);
                 }
 
-                mem.set_prg_register(P0, bank_index);
-                mem.set_chr_register(C0, bank_index);
+                mem.set_prg_register(P0, bank_number);
+                mem.set_chr_register(C0, bank_number);
                 mem.set_name_table_mirroring(mirroring);
             }
         }

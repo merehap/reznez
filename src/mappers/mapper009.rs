@@ -28,15 +28,15 @@ pub struct Mapper009;
 
 impl Mapper for Mapper009 {
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
-        let bank_index = value & 0b0001_1111;
+        let bank_number = value & 0b0001_1111;
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x9FFF => { /* Do nothing. */ }
-            0xA000..=0xAFFF => mem.set_prg_register(P0, bank_index),
-            0xB000..=0xBFFF => mem.set_chr_register(C0, bank_index),
-            0xC000..=0xCFFF => mem.set_chr_register(C1, bank_index),
-            0xD000..=0xDFFF => mem.set_chr_register(C2, bank_index),
-            0xE000..=0xEFFF => mem.set_chr_register(C3, bank_index),
+            0xA000..=0xAFFF => mem.set_prg_register(P0, bank_number),
+            0xB000..=0xBFFF => mem.set_chr_register(C0, bank_number),
+            0xC000..=0xCFFF => mem.set_chr_register(C1, bank_number),
+            0xD000..=0xDFFF => mem.set_chr_register(C2, bank_number),
+            0xE000..=0xEFFF => mem.set_chr_register(C3, bank_number),
             0xF000..=0xFFFF => mem.set_name_table_mirroring(value & 1),
         }
     }

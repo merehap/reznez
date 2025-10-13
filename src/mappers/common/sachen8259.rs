@@ -73,7 +73,7 @@ impl Mapper for Sachen8259 {
                         self.update_chr_banks(mem);
                     }
                     RegisterValue::ChrOuterBank => {
-                        mem.set_chr_rom_outer_bank_index(value & 0b111);
+                        mem.set_chr_rom_outer_bank_number(value & 0b111);
                     }
                     RegisterValue::PrgBank => {
                         mem.set_prg_register(P0, value & 0b111);
@@ -130,13 +130,13 @@ impl Sachen8259 {
             (C6, 0, 3),
         ];
 
-        for (reg_id, inner_bank_index, low_bits_index) in meta_data {
-            self.update_chr_bank(mem, reg_id, inner_bank_index, low_bits_index);
+        for (reg_id, inner_bank_number, low_bits_index) in meta_data {
+            self.update_chr_bank(mem, reg_id, inner_bank_number, low_bits_index);
         }
     }
 
-    fn update_chr_bank(&self, mem: &mut Memory, cx: ChrBankRegisterId, inner_bank_index: u8, low_bits_index: u8) {
-        let bank = (self.chr_inner_banks[inner_bank_index as usize] << self.chr_bank_shift)
+    fn update_chr_bank(&self, mem: &mut Memory, cx: ChrBankRegisterId, inner_bank_number: u8, low_bits_index: u8) {
+        let bank = (self.chr_inner_banks[inner_bank_number as usize] << self.chr_bank_shift)
             | self.chr_bank_low_bits[low_bits_index as usize];
         mem.set_chr_register(cx, bank);
     }

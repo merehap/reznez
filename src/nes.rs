@@ -27,7 +27,7 @@ use crate::logging::formatter::*;
 use crate::mapper::{IrqCounterInfo, Mapper, NameTableMirroring, PrgBankRegisterId, ReadWriteStatus};
 use crate::mapper_list;
 use crate::memory::raw_memory::RawMemory;
-use crate::memory::bank::bank_index::{BankLocation, ChrBankRegisterId};
+use crate::memory::bank::bank_number::{BankLocation, ChrBankRegisterId};
 use crate::memory::memory::Memory;
 use crate::memory::signal_level::SignalLevel;
 use crate::ppu::clock::Clock;

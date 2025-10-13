@@ -21,7 +21,7 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 use RegId::{Chr, Prg};
-const BANK_INDEX_REGISTER_IDS: [RegId; 8] = [Chr(C0), Chr(C1), Chr(C2), Chr(C3), Chr(C4), Chr(C5), Prg(P0), Prg(P1)];
+const BANK_NUMBER_REGISTER_IDS: [RegId; 8] = [Chr(C0), Chr(C1), Chr(C2), Chr(C3), Chr(C4), Chr(C5), Prg(P0), Prg(P1)];
 
 // DxROM, Tengen MIMIC-1, Namco 118
 // A much simpler predecessor to MMC3.
@@ -38,7 +38,7 @@ impl Mapper for Mapper206 {
                 if addr.is_multiple_of(2) {
                     self.bank_select(mem, value);
                 } else {
-                    self.set_bank_index(mem, value);
+                    self.set_bank_number(mem, value);
                 }
             }
             0xA000..=0xFFFF => { /* Do nothing. */ }
@@ -56,10 +56,10 @@ impl Mapper206 {
     }
 
     fn bank_select(&mut self, _mem: &mut Memory, value: u8) {
-        self.selected_register_id = BANK_INDEX_REGISTER_IDS[(value & 0b0000_0111) as usize];
+        self.selected_register_id = BANK_NUMBER_REGISTER_IDS[(value & 0b0000_0111) as usize];
     }
 
-    fn set_bank_index(&mut self, mem: &mut Memory, value: u8) {
+    fn set_bank_number(&mut self, mem: &mut Memory, value: u8) {
         let mask = match self.selected_register_id {
             // Double-width windows can only use even banks.
             Chr(C0) | Chr(C1) => 0b0011_1110,
@@ -71,10 +71,10 @@ impl Mapper206 {
             ),
         };
 
-        let bank_index = value & mask;
+        let bank_number = value & mask;
         match self.selected_register_id {
-            Chr(cx) => mem.set_chr_register(cx, bank_index),
-            Prg(px) => mem.set_prg_register(px, bank_index),
+            Chr(cx) => mem.set_chr_register(cx, bank_number),
+            Prg(px) => mem.set_prg_register(px, bank_number),
         }
     }
 }

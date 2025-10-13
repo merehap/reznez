@@ -6,19 +6,19 @@ use crate::memory::ppu::ciram::CiramSide;
 use super::bank::RomRamModeRegisterId;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub struct BankIndex(u16);
+pub struct BankNumber(u16);
 
-impl BankIndex {
-    pub const fn from_u8(value: u8) -> BankIndex {
-        BankIndex(value as u16)
+impl BankNumber {
+    pub const fn from_u8(value: u8) -> BankNumber {
+        BankNumber(value as u16)
     }
 
-    pub const fn from_u16(value: u16) -> BankIndex {
-        BankIndex(value)
+    pub const fn from_u16(value: u16) -> BankNumber {
+        BankNumber(value)
     }
 
-    pub const fn from_i16(value: i16) -> BankIndex {
-        BankIndex(value as u16)
+    pub const fn from_i16(value: i16) -> BankNumber {
+        BankNumber(value as u16)
     }
 
     pub fn to_raw(self) -> u16 {
@@ -26,9 +26,9 @@ impl BankIndex {
     }
 }
 
-impl From<u8> for BankIndex {
+impl From<u8> for BankNumber {
     fn from(value: u8) -> Self {
-        BankIndex(value.into())
+        BankNumber(value.into())
     }
 }
 
@@ -42,7 +42,7 @@ pub struct PrgBankRegisters {
 impl PrgBankRegisters {
     pub fn new() -> Self {
         Self {
-            registers: [BankLocation::Index(BankIndex(0)); 10],
+            registers: [BankLocation::Index(BankNumber(0)); 10],
             read_write_statuses: [ReadWriteStatus::ReadWrite; 16],
             rom_ram_modes: [MemType::WorkRam; 12],
         }
@@ -60,21 +60,21 @@ impl PrgBankRegisters {
         self.registers[id as usize]
     }
 
-    pub fn set(&mut self, id: PrgBankRegisterId, bank_index: BankIndex) {
-        self.registers[id as usize] = BankLocation::Index(bank_index);
+    pub fn set(&mut self, id: PrgBankRegisterId, bank_number: BankNumber) {
+        self.registers[id as usize] = BankLocation::Index(bank_number);
     }
 
     pub fn set_bits(&mut self, id: PrgBankRegisterId, new_value: u16, mask: u16) {
         let value = self.registers[id as usize].index()
             .unwrap_or_else(|| panic!("bank location at id {id:?} to not be in VRAM"));
         let updated_value = (value.0 & !mask) | (new_value & mask);
-        self.registers[id as usize] = BankLocation::Index(BankIndex(updated_value));
+        self.registers[id as usize] = BankLocation::Index(BankNumber(updated_value));
     }
 
     pub fn update(&mut self, id: PrgBankRegisterId, updater: &dyn Fn(u16) -> u16) {
         let value = self.registers[id as usize].index()
             .unwrap_or_else(|| panic!("bank location at id {id:?} to not be in VRAM"));
-        self.registers[id as usize] = BankLocation::Index(BankIndex(updater(value.0)));
+        self.registers[id as usize] = BankLocation::Index(BankNumber(updater(value.0)));
     }
 
     pub fn set_to_ciram_side(&mut self, id: PrgBankRegisterId, ciram_side: CiramSide) {
@@ -109,7 +109,7 @@ pub struct ChrBankRegisters {
 impl ChrBankRegisters {
     pub fn new() -> Self {
         Self {
-            registers: [BankLocation::Index(BankIndex(0)); 16],
+            registers: [BankLocation::Index(BankNumber(0)); 16],
             // Meta registers are only used for CHR currently.
             chr_meta_registers: [ChrBankRegisterId::C0, ChrBankRegisterId::C0],
             read_write_statuses: [ReadWriteStatus::ReadWrite; 15],
@@ -133,21 +133,21 @@ impl ChrBankRegisters {
         self.registers[id as usize]
     }
 
-    pub fn set(&mut self, id: ChrBankRegisterId, bank_index: BankIndex) {
-        self.registers[id as usize] = BankLocation::Index(bank_index);
+    pub fn set(&mut self, id: ChrBankRegisterId, bank_number: BankNumber) {
+        self.registers[id as usize] = BankLocation::Index(bank_number);
     }
 
     pub fn set_bits(&mut self, id: ChrBankRegisterId, new_value: u16, mask: u16) {
         let value = self.registers[id as usize].index()
             .unwrap_or_else(|| panic!("bank location at id {id:?} to not be in VRAM"));
         let updated_value = (value.0 & !mask) | (new_value & mask);
-        self.registers[id as usize] = BankLocation::Index(BankIndex(updated_value));
+        self.registers[id as usize] = BankLocation::Index(BankNumber(updated_value));
     }
 
     pub fn update(&mut self, id: ChrBankRegisterId, updater: &dyn Fn(u16) -> u16) {
         let value = self.registers[id as usize].index()
             .unwrap_or_else(|| panic!("bank location at id {id:?} to not be in VRAM"));
-        self.registers[id as usize] = BankLocation::Index(BankIndex(updater(value.0)));
+        self.registers[id as usize] = BankLocation::Index(BankNumber(updater(value.0)));
     }
 
     pub fn set_to_ciram_side(&mut self, id: ChrBankRegisterId, ciram_side: CiramSide) {
@@ -181,12 +181,12 @@ impl ChrBankRegisters {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum BankLocation {
-    Index(BankIndex),
+    Index(BankNumber),
     Ciram(CiramSide),
 }
 
 impl BankLocation {
-    pub fn index(self) -> Option<BankIndex> {
+    pub fn index(self) -> Option<BankNumber> {
         if let BankLocation::Index(index) = self {
             Some(index)
         } else {

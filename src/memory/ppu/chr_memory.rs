@@ -2,9 +2,9 @@ use std::num::NonZeroU8;
 
 use log::{error, warn};
 
-use crate::mapper::{BankIndex, ChrBank, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus, ReadWriteStatusRegisterId};
+use crate::mapper::{BankNumber, ChrBank, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank::RomRamModeRegisterId;
-use crate::memory::bank::bank_index::{ChrBankRegisters, MemType};
+use crate::memory::bank::bank_number::{ChrBankRegisters, MemType};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::chr_memory_map::{ChrMemoryMap, ChrMapping, ChrMemoryIndex};
@@ -20,7 +20,7 @@ pub struct ChrMemory {
     layouts: Vec<ChrLayout>,
     memory_maps: Vec<ChrMemoryMap>,
     rom_outer_banks: Vec<RawMemory>,
-    rom_outer_bank_index: u8,
+    rom_outer_bank_number: u8,
     ram: RawMemory,
     bank_size: ChrWindowSize,
     regs: ChrBankRegisters,
@@ -100,7 +100,7 @@ impl ChrMemory {
             memory_maps,
             layout_index,
             rom_outer_banks: rom.split_n(rom_outer_bank_count),
-            rom_outer_bank_index: 0,
+            rom_outer_bank_number: 0,
             ram: ram.clone(),
             bank_size,
             regs,
@@ -125,7 +125,7 @@ impl ChrMemory {
 
         let value = match index {
             ChrMemoryIndex::Rom(index) => {
-                self.rom_outer_banks[self.rom_outer_bank_index as usize][index % self.rom_outer_banks[0].size()]
+                self.rom_outer_banks[self.rom_outer_bank_number as usize][index % self.rom_outer_banks[0].size()]
             },
             ChrMemoryIndex::Ram(index) => {
                 self.ram[index % self.ram.size()]
@@ -147,7 +147,7 @@ impl ChrMemory {
             (true , true ) => panic!("CHR ROM and RAM must not both be present for peek_raw."),
             (true , false) => {
                 PpuPeek::new(
-                    self.rom_outer_banks[self.rom_outer_bank_index as usize][index % self.rom_outer_banks[0].size()],
+                    self.rom_outer_banks[self.rom_outer_bank_number as usize][index % self.rom_outer_banks[0].size()],
                     PeekSource::Rom(0.into()),
                 )
             }
@@ -246,12 +246,12 @@ impl ChrMemory {
         self.layout_index = index;
     }
 
-    pub fn set_chr_rom_outer_bank_index(&mut self, index: u8) {
-        self.rom_outer_bank_index = index;
+    pub fn set_chr_rom_outer_bank_number(&mut self, index: u8) {
+        self.rom_outer_bank_number = index;
     }
 
     pub fn set_bank_register<INDEX: Into<u16>>(&mut self, id: ChrBankRegisterId, value: INDEX) {
-        self.regs.set(id, BankIndex::from_u16(value.into()));
+        self.regs.set(id, BankNumber::from_u16(value.into()));
         self.update_page_ids();
     }
 
@@ -335,7 +335,7 @@ impl ChrMemory {
                     ChrMemoryIndex::Rom(index) => {
                         let index = index as usize;
                         RawMemorySlice::from_raw(
-                            &self.rom_outer_banks[self.rom_outer_bank_index as usize].as_slice()[index..index + 1 * KIBIBYTE as usize])
+                            &self.rom_outer_banks[self.rom_outer_bank_number as usize].as_slice()[index..index + 1 * KIBIBYTE as usize])
                     }
                     ChrMemoryIndex::Ram(index) => {
                         let index = index as usize;
@@ -356,7 +356,7 @@ impl ChrMemory {
                     ChrMemoryIndex::Rom(index) => {
                         let index = index as usize;
                         RawMemorySlice::from_raw(
-                            &self.rom_outer_banks[self.rom_outer_bank_index as usize].as_slice()[index..index + 1 * KIBIBYTE as usize])
+                            &self.rom_outer_banks[self.rom_outer_bank_number as usize].as_slice()[index..index + 1 * KIBIBYTE as usize])
                     }
                     ChrMemoryIndex::Ram(index) => {
                         let index = index as usize;
@@ -382,7 +382,7 @@ pub struct PpuPeek {
 }
 
 impl PpuPeek {
-    pub const ZERO: PpuPeek = PpuPeek { value: 0, source: PeekSource::Rom(BankIndex::from_u8(0)) };
+    pub const ZERO: PpuPeek = PpuPeek { value: 0, source: PeekSource::Rom(BankNumber::from_u8(0)) };
 
     pub fn new(value: u8, source: PeekSource) -> Self {
         Self { value, source }
@@ -399,8 +399,8 @@ impl PpuPeek {
 
 #[derive(Clone, Copy)]
 pub enum PeekSource {
-    Rom(BankIndex),
-    Ram(BankIndex),
+    Rom(BankNumber),
+    Ram(BankNumber),
     SaveRam,
     Ciram(CiramSide),
     PaletteTable,
@@ -412,7 +412,7 @@ impl PeekSource {
     pub fn from_name_table_source(name_table_source: NameTableSource) -> Self {
         match name_table_source {
             NameTableSource::Ciram(side) => Self::Ciram(side),
-            NameTableSource::Ram { bank_index } => Self::Ram(bank_index),
+            NameTableSource::Ram { bank_number } => Self::Ram(bank_number),
             NameTableSource::ExtendedRam => Self::ExtendedRam,
             NameTableSource::FillModeTile => Self::FillModeTile,
         }
