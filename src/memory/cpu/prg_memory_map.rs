@@ -1,4 +1,4 @@
-use crate::memory::bank::bank::{PrgBank, TruncationSide};
+use crate::memory::bank::bank::PrgBank;
 use crate::memory::bank::bank_number::{PrgBankRegisters, ReadWriteStatus, MemType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
@@ -61,12 +61,7 @@ impl PrgMemoryMap {
 
             let mut sub_page_mappings = Vec::with_capacity(PRG_SUB_SLOT_COUNT);
             loop {
-                let starting_sub_page_offset = match window.bank().truncation_side() {
-                    TruncationSide::Start => 64 - window.size().sub_page_multiple(),
-                    TruncationSide::End => 0,
-                };
-                for sub_page_offset in starting_sub_page_offset..starting_sub_page_offset + window.size().sub_page_multiple() {
-                    //println!("Using page offset: {page_offset}");
+                for sub_page_offset in 0..window.size().sub_page_multiple() {
                     let mapping = PrgMapping {
                         bank: window.bank(), rom_pages_per_bank, rom_page_number_mask, ram_page_number_mask, page_offset,
                     };
