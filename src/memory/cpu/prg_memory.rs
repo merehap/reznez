@@ -1,7 +1,7 @@
 use log::warn;
 
 use crate::mapper::{BankNumber, PrgBankRegisterId, ReadWriteStatusRegisterId};
-use crate::memory::bank::bank::{PrgBank, RomRamModeRegisterId};
+use crate::memory::bank::bank::RomRamModeRegisterId;
 use crate::memory::bank::bank_number::{PrgBankRegisters, ReadWriteStatus, MemType};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
@@ -41,7 +41,8 @@ impl PrgMemory {
         let mut ram_present_in_layout = false;
         for layout in &layouts {
             for window in layout.windows() {
-                if matches!(window.bank(), PrgBank::Rom(..) | PrgBank::RomRam(..)) {
+                if window.bank().is_rom() {
+                    println!("Checking bank: {:#X} {:#X}", window.start(), window.end());
                     if let Some(size) = rom_bank_size {
                         rom_bank_size = Some(std::cmp::min(window.size(), size));
                     } else {
@@ -57,7 +58,9 @@ impl PrgMemory {
 
         let mut rom_bank_size = rom_bank_size.expect("at least one ROM window");
         if rom_bank_size < PrgWindowSize::MIN {
-            assert!(rom_bank_size_override.is_some());
+            assert!(rom_bank_size_override.is_some(),
+                "ROM window size is too small. Actual must be >= 0x{:X}, but 0x{:X} < 0x{:X}",
+                PrgWindowSize::MIN.to_raw(), rom_bank_size.to_raw(), PrgWindowSize::MIN.to_raw());
         }
 
         if let Some(rom_bank_size_override) = rom_bank_size_override {

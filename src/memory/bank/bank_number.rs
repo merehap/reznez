@@ -9,6 +9,8 @@ use super::bank::RomRamModeRegisterId;
 pub struct BankNumber(u16);
 
 impl BankNumber {
+    pub const ZERO: Self = Self(0);
+
     pub const fn from_u8(value: u8) -> BankNumber {
         BankNumber(value as u16)
     }
@@ -264,7 +266,7 @@ impl ReadWriteStatus {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum MemType {
-    WorkRam,
     Rom,
+    WorkRam,
     SaveRam,
 }

@@ -1,7 +1,7 @@
 use std::num::NonZeroU16;
 
-use crate::memory::bank::bank::{PrgBank, PrgBankLocation};
-use crate::memory::bank::bank_number::{PrgBankRegisters, PrgBankRegisterId};
+use crate::memory::bank::bank::PrgBank;
+use crate::memory::bank::bank_number::{MemType, PrgBankRegisterId, PrgBankRegisters};
 
 use crate::mapper::{BankNumber, ReadWriteStatus, ReadWriteStatusRegisterId, KIBIBYTE};
 
@@ -49,29 +49,21 @@ impl PrgWindow {
         self.bank
     }
 
-    pub fn location(self) -> Result<PrgBankLocation, String> {
-        use PrgBank::*;
-        match self.bank {
-            Rom(location, ..) | Ram(location, _) | RomRam(location, _, _) | WorkRam(location, _) | SaveRam(location, _) => Ok(location),
-            Empty => Err(format!("Empty banks {:?} don't have a bank location.", self.bank)),
-        }
+    pub const fn register_id(self) -> Option<PrgBankRegisterId> {
+        self.bank.bank_register_id()
     }
 
-    pub const fn register_id(self) -> Option<PrgBankRegisterId> {
-        if let PrgBank::Rom(PrgBankLocation::Switchable(id), ..) | PrgBank::Ram(PrgBankLocation::Switchable(id), _) = self.bank {
-            Some(id)
-        } else {
-            None
-        }
-    }
+    // FIXME: Remove this. It's now redundant.
     pub fn read_write_status_info(self) -> ReadWriteStatusInfo {
-        match self.bank {
-            PrgBank::Ram(_, Some(register_id)) | PrgBank::RomRam(_, register_id, _) =>
-                ReadWriteStatusInfo::PossiblyPresent { register_id, status_on_absent: ReadWriteStatus::ReadOnly },
-            PrgBank::WorkRam(_, Some(register_id)) | PrgBank::SaveRam(_, Some(register_id)) =>
-                ReadWriteStatusInfo::PossiblyPresent { register_id, status_on_absent: ReadWriteStatus::Disabled },
-            PrgBank::Empty | PrgBank::Rom(..) | PrgBank::Ram(..) | PrgBank::WorkRam(..) | PrgBank::SaveRam(..) =>
-                ReadWriteStatusInfo::Absent,
+        if let Some(register_id) = self.bank.status_register_id() {
+            let status_on_absent = match self.bank.missing_ram_fallback_mem_type() {
+                None => ReadWriteStatus::Disabled,
+                Some(MemType::Rom) => ReadWriteStatus::ReadOnly,
+                Some(_) => panic!(),
+            };
+            ReadWriteStatusInfo::PossiblyPresent { register_id, status_on_absent }
+        } else {
+            ReadWriteStatusInfo::Absent
         }
     }
 

@@ -176,11 +176,9 @@ type SubPageOffset = u8;
 
 impl PrgMapping {
     pub fn page_id(&self, regs: &PrgBankRegisters, save_ram_bank_count: u16) -> (Option<(MemType, PageNumber)>, ReadWriteStatus) {
-        let (Ok(location), Some(mem_type)) = (self.bank.location(), self.bank.memory_type(regs)) else {
+        let (Ok(bank_number), Some(mem_type)) = (self.bank.bank_number(regs), self.bank.memory_type(regs)) else {
             return (None, ReadWriteStatus::Disabled);
         };
-
-        let bank_number = location.bank_number(regs);
 
         let read_write_status;
         let mem_type_and_page_number;
