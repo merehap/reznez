@@ -222,26 +222,26 @@ pub enum RomRamModeRegisterId {
 pub enum ChrBank {
     // TODO: Add configurable writability?
     SaveRam(u32),
-    Rom(ChrBankLocation, Option<ReadWriteStatusRegisterId>),
-    Ram(ChrBankLocation, Option<ReadWriteStatusRegisterId>),
-    RomRam(ChrBankLocation, Option<ReadWriteStatusRegisterId>, RomRamModeRegisterId),
+    Rom(ChrBankNumberProvider, Option<ReadWriteStatusRegisterId>),
+    Ram(ChrBankNumberProvider, Option<ReadWriteStatusRegisterId>),
+    RomRam(ChrBankNumberProvider, Option<ReadWriteStatusRegisterId>, RomRamModeRegisterId),
 }
 
 impl ChrBank {
-    pub const ROM: ChrBank = ChrBank::Rom(ChrBankLocation::Fixed(BankNumber::from_u8(0)), None);
-    pub const RAM: ChrBank = ChrBank::Ram(ChrBankLocation::Fixed(BankNumber::from_u8(0)), None);
-    pub const ROM_RAM: ChrBank = ChrBank::RomRam(ChrBankLocation::Fixed(BankNumber::from_u8(0)), None, RomRamModeRegisterId::R0);
+    pub const ROM: ChrBank = ChrBank::Rom(ChrBankNumberProvider::Fixed(BankNumber::from_u8(0)), None);
+    pub const RAM: ChrBank = ChrBank::Ram(ChrBankNumberProvider::Fixed(BankNumber::from_u8(0)), None);
+    pub const ROM_RAM: ChrBank = ChrBank::RomRam(ChrBankNumberProvider::Fixed(BankNumber::from_u8(0)), None, RomRamModeRegisterId::R0);
 
     pub const fn fixed_index(self, index: i16) -> Self {
-        self.set_location(ChrBankLocation::Fixed(BankNumber::from_i16(index)))
+        self.set_location(ChrBankNumberProvider::Fixed(BankNumber::from_i16(index)))
     }
 
     pub const fn switchable(self, register_id: ChrBankRegisterId) -> Self {
-        self.set_location(ChrBankLocation::Switchable(register_id))
+        self.set_location(ChrBankNumberProvider::Switchable(register_id))
     }
 
     pub const fn meta_switchable(self, meta_id: MetaRegisterId) -> Self {
-        self.set_location(ChrBankLocation::MetaSwitchable(meta_id))
+        self.set_location(ChrBankNumberProvider::MetaSwitchable(meta_id))
     }
 
     pub fn is_rom(self) -> bool {
@@ -263,16 +263,16 @@ impl ChrBank {
         }
     }
 
-    pub fn location(self) -> Result<ChrBankLocation, String> {
+    pub fn location(self) -> Result<ChrBankNumberProvider, String> {
         match self {
             ChrBank::Rom(location, _) | ChrBank::Ram(location, _) | ChrBank::RomRam(location, ..) => Ok(location),
-            ChrBank::SaveRam(_) => Ok(ChrBankLocation::Fixed(BankNumber::from_u8(0))),
+            ChrBank::SaveRam(_) => Ok(ChrBankNumberProvider::Fixed(BankNumber::from_u8(0))),
         }
     }
 
     pub fn bank_location(self, registers: &ChrBankRegisters) -> Option<BankLocation> {
         if let ChrBank::Rom(location, _) | ChrBank::Ram(location, _) = self {
-            Some(location.bank_location(registers))
+            Some(BankLocation::Index(location.bank_location(registers)))
         } else {
             None
         }
@@ -309,7 +309,7 @@ impl ChrBank {
         }
     }
 
-    const fn set_location(self, location: ChrBankLocation) -> Self {
+    const fn set_location(self, location: ChrBankNumberProvider) -> Self {
         match self {
             Self::Rom(_, None) => Self::Rom(location, None),
             Self::Ram(_, None) => Self::Ram(location, None),
@@ -322,16 +322,16 @@ impl ChrBank {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum ChrBankLocation {
+pub enum ChrBankNumberProvider {
     Fixed(BankNumber),
     Switchable(ChrBankRegisterId),
     MetaSwitchable(MetaRegisterId),
 }
 
-impl ChrBankLocation {
-    pub fn bank_location(self, registers: &ChrBankRegisters) -> BankLocation {
+impl ChrBankNumberProvider {
+    pub fn bank_location(self, registers: &ChrBankRegisters) -> BankNumber {
         match self {
-            Self::Fixed(bank_number) => BankLocation::Index(bank_number),
+            Self::Fixed(bank_number) => bank_number,
             Self::Switchable(register_id) => registers.get(register_id),
             Self::MetaSwitchable(meta_id) => registers.get_from_meta(meta_id),
         }

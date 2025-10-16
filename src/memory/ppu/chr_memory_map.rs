@@ -1,5 +1,5 @@
 use crate::mapper::{BankNumber, ChrBank, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus};
-use crate::memory::bank::bank::ChrBankLocation;
+use crate::memory::bank::bank::ChrBankNumberProvider;
 use crate::memory::bank::bank_number::{ChrBankRegisters, MemType};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
@@ -175,9 +175,9 @@ impl ChrMapping {
             Self::Banked { bank, pages_per_bank: bank_multiple, page_offset, page_number_mask, .. } => {
                 let location = bank.location().expect("Location to be present in bank.");
                 let bank_number = match location {
-                    ChrBankLocation::Fixed(bank_number) => bank_number,
-                    ChrBankLocation::Switchable(register_id) => regs.get(register_id).index().unwrap(),
-                    ChrBankLocation::MetaSwitchable(meta_id) => regs.get_from_meta(meta_id).index().unwrap(),
+                    ChrBankNumberProvider::Fixed(bank_number) => bank_number,
+                    ChrBankNumberProvider::Switchable(register_id) => regs.get(register_id),
+                    ChrBankNumberProvider::MetaSwitchable(meta_id) => regs.get_from_meta(meta_id),
                 };
 
                 let page_number = ((bank_multiple * bank_number.to_raw()) & page_number_mask) + page_offset;

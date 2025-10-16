@@ -491,11 +491,13 @@ impl Nes {
             }
 
             let chr_registers = chr_memory.bank_registers().registers();
-            if &latest.chr_registers != chr_registers {
+            // FIXME
+            let new_regs = &chr_registers.map(|i| BankLocation::Index(i));
+            if &latest.chr_registers != new_regs {
                 for (i, latest_bank_location) in latest.prg_registers.iter_mut().enumerate() {
-                    if *latest_bank_location != chr_registers[i] {
+                    if *latest_bank_location != new_regs[i] {
                         let id: ChrBankRegisterId = FromPrimitive::from_usize(i).unwrap();
-                        match (chr_registers[i], *latest_bank_location) {
+                        match (new_regs[i], *latest_bank_location) {
                             (BankLocation::Index(curr), BankLocation::Index(prev)) =>
                                 info!("BankRegister {id:?} changed to {}. Previously: {}", curr.to_raw(), prev.to_raw()),
                             (BankLocation::Index(curr), BankLocation::Ciram(prev)) =>
@@ -508,7 +510,7 @@ impl Nes {
                     }
                 }
 
-                latest.chr_registers = *chr_registers;
+                latest.chr_registers = *new_regs;
             }
 
             let meta_registers = chr_memory.bank_registers().meta_registers();
@@ -603,7 +605,7 @@ impl LatestValues {
             prg_layout_index_detector: EdgeDetector::starting_value(initial_mem.prg_memory.layout_index()),
             chr_layout_index_detector: EdgeDetector::starting_value(initial_mem.chr_memory.layout_index()),
             prg_registers: *initial_mem.prg_memory().bank_registers().registers(),
-            chr_registers: *initial_mem.chr_memory().bank_registers().registers(),
+            chr_registers: initial_mem.chr_memory().bank_registers().registers().map(|i| BankLocation::Index(i)),
             meta_registers: *initial_mem.chr_memory().bank_registers().meta_registers(),
             name_table_mirroring: initial_mem.chr_memory().name_table_mirroring(),
             read_write_statuses: *initial_mem.prg_memory().bank_registers().read_write_statuses(),

@@ -5,7 +5,7 @@ use crate::memory::bank::bank_number::{MemType, PrgBankRegisterId, PrgBankRegist
 
 use crate::mapper::{BankNumber, ReadWriteStatus, ReadWriteStatusRegisterId, KIBIBYTE};
 
-use super::bank::bank::{ChrBank, ChrBankLocation};
+use super::bank::bank::{ChrBank, ChrBankNumberProvider};
 use super::bank::bank_number::ChrBankRegisterId;
 
 // A Window is a range within addressable memory.
@@ -136,15 +136,15 @@ impl ChrWindow {
         self.start.0 <= address && address <= self.end.0.get()
     }
 
-    pub fn location(self) -> Result<ChrBankLocation, String> {
+    pub fn location(self) -> Result<ChrBankNumberProvider, String> {
         match self.bank {
             ChrBank::Rom(location, _) | ChrBank::Ram(location, _) | ChrBank::RomRam(location, ..) => Ok(location),
-            ChrBank::SaveRam(_) => Ok(ChrBankLocation::Fixed(BankNumber::from_u8(0))),
+            ChrBank::SaveRam(_) => Ok(ChrBankNumberProvider::Fixed(BankNumber::from_u8(0))),
         }
     }
 
     pub const fn register_id(self) -> Option<ChrBankRegisterId> {
-        if let ChrBank::Rom(ChrBankLocation::Switchable(id), _) | ChrBank::Ram(ChrBankLocation::Switchable(id), _) = self.bank {
+        if let ChrBank::Rom(ChrBankNumberProvider::Switchable(id), _) | ChrBank::Ram(ChrBankNumberProvider::Switchable(id), _) = self.bank {
             Some(id)
         } else {
             None
