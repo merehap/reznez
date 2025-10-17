@@ -1,6 +1,6 @@
 use num_derive::FromPrimitive;
 
-use crate::memory::bank::bank::{ChrSourceRegisterId, ReadWriteStatusRegisterId, RomRamModeRegisterId};
+use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, ReadWriteStatusRegisterId, RomRamModeRegisterId};
 use crate::memory::ppu::ciram::CiramSide;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -103,7 +103,7 @@ pub struct ChrBankRegisters {
     registers: [BankNumber; 16],
     chr_meta_registers: [ChrBankRegisterId; 2],
     read_write_statuses: [ReadWriteStatus; 15],
-    chr_sources: [MemType; 6],
+    chr_sources: [ChrSource; 6],
 }
 
 impl ChrBankRegisters {
@@ -113,7 +113,7 @@ impl ChrBankRegisters {
             // Meta registers are only used for CHR currently.
             chr_meta_registers: [ChrBankRegisterId::C0, ChrBankRegisterId::C0],
             read_write_statuses: [ReadWriteStatus::ReadWrite; 15],
-            chr_sources: [MemType::WorkRam; 6],
+            chr_sources: [ChrSource::WorkRam; 6],
         }
     }
 
@@ -173,12 +173,12 @@ impl ChrBankRegisters {
         self.read_write_statuses[id as usize] = status;
     }
 
-    pub fn chr_source(&self, id: ChrSourceRegisterId) -> MemType {
+    pub fn chr_source(&self, id: ChrSourceRegisterId) -> ChrSource {
         self.chr_sources[id as usize]
     }
 
-    pub fn set_chr_source(&mut self, id: ChrSourceRegisterId, rom_ram_mode: MemType) {
-        self.chr_sources[id as usize] = rom_ram_mode;
+    pub fn set_chr_source(&mut self, id: ChrSourceRegisterId, chr_source: ChrSource) {
+        self.chr_sources[id as usize] = chr_source;
     }
 }
 

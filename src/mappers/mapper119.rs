@@ -2,8 +2,7 @@ use crate::mapper::*;
 
 use crate::mappers::mmc3::mmc3;
 use crate::mappers::mmc3::irq_state::Mmc3IrqState;
-use crate::memory::bank::bank::ChrSourceRegisterId;
-use crate::memory::bank::bank_number::MemType;
+use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId};
 
 pub const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
@@ -47,8 +46,8 @@ impl Mapper for Mapper119 {
             let fields = splitbits!(value, ".mcccccc");
             mem.set_chr_register(chr_id, fields.c);
             let rom_ram_reg_id = ROM_RAM_REGISTER_IDS[chr_id as usize];
-            let mem_type = [MemType::Rom, MemType::WorkRam][fields.m as usize];
-            mem.set_chr_source(rom_ram_reg_id, mem_type);
+            let chr_source = [ChrSource::Rom, ChrSource::WorkRam][fields.m as usize];
+            mem.set_chr_source(rom_ram_reg_id, chr_source);
         } else {
             // Use standard MMC3 behaviors.
             self.mmc3.write_register(mem, addr, value);

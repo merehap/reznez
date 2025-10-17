@@ -1,3 +1,4 @@
+use crate::mapper::CiramSide;
 use crate::memory::bank::bank::RomRamModeRegisterId::*;
 use crate::memory::bank::bank::ChrSourceRegisterId::*;
 use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisters, PrgBankRegisterId, MetaRegisterId, ReadWriteStatus};
@@ -29,7 +30,7 @@ impl MemTypeProvider {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 enum ChrSourceProvider {
-    Fixed(Option<MemType>),
+    Fixed(Option<ChrSource>),
     Switchable(ChrSourceRegisterId),
 }
 
@@ -37,6 +38,16 @@ impl ChrSourceProvider {
     const fn is_mapped(self) -> bool {
         !matches!(self, Self::Fixed(None))
     }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum ChrSource {
+    Rom,
+    WorkRam,
+    SaveRam,
+    Ciram(CiramSide),
+    ExtendedRam,
+    FillModeTile,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -256,24 +267,45 @@ impl ChrBank {
         missing_ram_fallback_mem_type: None,
         read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::Disabled),
     };
-    pub const ROM: ChrBank = ChrBank {
+    pub const ROM: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
-        chr_source_provider: ChrSourceProvider::Fixed(Some(MemType::Rom)),
+        chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::Rom)),
         missing_ram_fallback_mem_type: Some(MemType::Rom),
         read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadOnly),
     };
-    pub const RAM: ChrBank = ChrBank {
+    pub const RAM: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
-        chr_source_provider: ChrSourceProvider::Fixed(Some(MemType::WorkRam)),
+        chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::WorkRam)),
         missing_ram_fallback_mem_type: Some(MemType::Rom),
         read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadWrite),
     };
-    pub const ROM_RAM: ChrBank = ChrBank {
+    pub const EXT_RAM: Self = Self {
+        bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
+        chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::ExtendedRam)),
+        missing_ram_fallback_mem_type: Some(MemType::Rom),
+        read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadWrite),
+    };
+    pub const FILL_MODE_TILE: Self = Self {
+        bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
+        chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::FillModeTile)),
+        missing_ram_fallback_mem_type: Some(MemType::Rom),
+        read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadWrite),
+    };
+    pub const ROM_RAM: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Switchable(CS0),
         missing_ram_fallback_mem_type: Some(MemType::Rom),
         read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadWrite),
     };
+
+    pub const fn ciram(ciram_side: CiramSide) -> Self {
+        Self {
+            bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
+            chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::Ciram(ciram_side))),
+            missing_ram_fallback_mem_type: Some(MemType::Rom),
+            read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadWrite),
+        }
+    }
 
     pub const fn fixed_index(self, index: i16) -> Self {
         self.set_location(ChrBankNumberProvider::Fixed(BankNumber::from_i16(index)))
@@ -287,7 +319,7 @@ impl ChrBank {
         self.set_location(ChrBankNumberProvider::MetaSwitchable(meta_id))
     }
 
-    pub fn mem_type(self, regs: &ChrBankRegisters) -> Option<MemType> {
+    pub fn current_chr_source(self, regs: &ChrBankRegisters) -> Option<ChrSource> {
         match self.chr_source_provider {
             ChrSourceProvider::Fixed(mem_type) => mem_type,
             ChrSourceProvider::Switchable(reg_id) => Some(regs.chr_source(reg_id)),
@@ -295,12 +327,12 @@ impl ChrBank {
     }
 
     pub fn is_rom(self) -> bool {
-        matches!(self.chr_source_provider, ChrSourceProvider::Fixed(Some(MemType::Rom)) | ChrSourceProvider::Switchable(_))
+        matches!(self.chr_source_provider, ChrSourceProvider::Fixed(Some(ChrSource::Rom)) | ChrSourceProvider::Switchable(_))
     }
 
     pub fn is_ram(self) -> bool {
         matches!(self.chr_source_provider,
-            ChrSourceProvider::Fixed(Some(MemType::WorkRam | MemType::SaveRam)) | ChrSourceProvider::Switchable(_))
+            ChrSourceProvider::Fixed(Some(ChrSource::WorkRam | ChrSource::SaveRam)) | ChrSourceProvider::Switchable(_))
     }
 
     pub fn missing_ram_fallback_mem_type(&self) -> Option<MemType> {
@@ -346,6 +378,10 @@ impl ChrBank {
         self.location().ok().map(|provider| BankLocation::Index(provider.bank_location(regs)))
     }
 
+    pub fn bank_number(self, regs: &ChrBankRegisters) -> Option<BankNumber> {
+        self.location().ok().map(|provider| provider.bank_location(regs))
+    }
+
     pub const fn chr_source(mut self, id: ChrSourceRegisterId) -> Self {
         assert!(matches!(self.chr_source_provider, ChrSourceProvider::Switchable(_)));
         self.chr_source_provider = ChrSourceProvider::Switchable(id);
@@ -362,7 +398,7 @@ impl ChrBank {
         match self.missing_ram_fallback_mem_type {
             None => self = Self::EMPTY,
             Some(MemType::Rom) => {
-                self.chr_source_provider = ChrSourceProvider::Fixed(Some(MemType::Rom));
+                self.chr_source_provider = ChrSourceProvider::Fixed(Some(ChrSource::Rom));
                 self.read_write_status_provider = ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadOnly);
             }
             Some(_) => panic!("Non-sensical fallback mem type."),
@@ -373,7 +409,7 @@ impl ChrBank {
 
     pub fn as_work_ram(mut self) -> ChrBank {
         if self.chr_source_provider.is_mapped() {
-            self.chr_source_provider = ChrSourceProvider::Fixed(Some(MemType::WorkRam));
+            self.chr_source_provider = ChrSourceProvider::Fixed(Some(ChrSource::WorkRam));
             self.read_write_status_provider = ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadWrite);
         }
 

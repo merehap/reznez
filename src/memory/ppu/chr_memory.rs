@@ -1,13 +1,13 @@
 use std::num::NonZeroU8;
 
-use log::{error, warn};
+use log::warn;
 
 use crate::mapper::{BankNumber, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus, ReadWriteStatusRegisterId};
-use crate::memory::bank::bank::ChrSourceRegisterId;
-use crate::memory::bank::bank_number::{ChrBankRegisters, MemType};
+use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId};
+use crate::memory::bank::bank_number::ChrBankRegisters;
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
-use crate::memory::ppu::chr_memory_map::{ChrMemoryMap, ChrMapping, ChrMemoryIndex};
+use crate::memory::ppu::chr_memory_map::{ChrMemoryMap, ChrMemoryIndex};
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
 use crate::memory::window::{ChrWindowSize, ReadWriteStatusInfo};
@@ -179,7 +179,7 @@ impl ChrMemory {
         }
     }
 
-    pub fn set_chr_source(&mut self, id: ChrSourceRegisterId, chr_source: MemType) {
+    pub fn set_chr_source(&mut self, id: ChrSourceRegisterId, chr_source: ChrSource) {
         self.regs.set_chr_source(id, chr_source);
         self.update_page_ids();
     }
@@ -224,15 +224,12 @@ impl ChrMemory {
 
     pub fn name_table_mirroring(&self) -> NameTableMirroring {
         let quadrants = &self.memory_maps[0].page_mappings()[8..12];
-        use ChrMapping::*;
-        match (quadrants[0], quadrants[1], quadrants[2], quadrants[3]) {
-            (NameTableSource(top_left), NameTableSource(top_right), NameTableSource(bottom_left), NameTableSource(bottom_right)) =>
-                NameTableMirroring::new(top_left, top_right, bottom_left, bottom_right),
-            _ => {
-                error!("Unexpected NameTable source! This mapper is not properly supported. Using an incorrect NameTableMirroring in order to proceed.");
-                NameTableMirroring::HORIZONTAL
-            }
-        }
+        NameTableMirroring::new(
+            quadrants[0].to_name_table_source(&self.regs).unwrap(),
+            quadrants[1].to_name_table_source(&self.regs).unwrap(),
+            quadrants[2].to_name_table_source(&self.regs).unwrap(),
+            quadrants[3].to_name_table_source(&self.regs).unwrap(),
+        )
     }
 
     pub fn bank_registers(&self) -> &ChrBankRegisters {
