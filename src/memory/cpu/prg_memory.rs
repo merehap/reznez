@@ -42,7 +42,6 @@ impl PrgMemory {
         for layout in &layouts {
             for window in layout.windows() {
                 if window.bank().is_rom() {
-                    println!("Checking bank: {:#X} {:#X}", window.start(), window.end());
                     if let Some(size) = rom_bank_size {
                         rom_bank_size = Some(std::cmp::min(window.size(), size));
                     } else {

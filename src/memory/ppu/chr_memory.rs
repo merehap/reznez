@@ -2,7 +2,7 @@ use std::num::NonZeroU8;
 
 use log::{error, warn};
 
-use crate::mapper::{BankNumber, ChrBank, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus, ReadWriteStatusRegisterId};
+use crate::mapper::{BankNumber, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank::RomRamModeRegisterId;
 use crate::memory::bank::bank_number::{ChrBankRegisters, MemType};
 use crate::memory::ppu::chr_layout::ChrLayout;
@@ -46,12 +46,10 @@ impl ChrMemory {
         let mut ram_present_in_layout = false;
         for layout in &layouts {
             for window in layout.windows() {
-                if matches!(window.bank(), ChrBank::Rom(..) | ChrBank::Ram(..) | ChrBank::RomRam(..)) {
-                    if let Some(size) = bank_size {
-                        bank_size = Some(std::cmp::min(window.size(), size));
-                    } else {
-                        bank_size = Some(window.size());
-                    }
+                if let Some(size) = bank_size {
+                    bank_size = Some(std::cmp::min(window.size(), size));
+                } else {
+                    bank_size = Some(window.size());
                 }
 
                 if window.bank().is_rom() {

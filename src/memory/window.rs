@@ -1,9 +1,9 @@
 use std::num::NonZeroU16;
 
 use crate::memory::bank::bank::PrgBank;
-use crate::memory::bank::bank_number::{MemType, PrgBankRegisterId, PrgBankRegisters};
+use crate::memory::bank::bank_number::{ChrBankRegisters, MemType, PrgBankRegisterId, PrgBankRegisters};
 
-use crate::mapper::{BankNumber, ReadWriteStatus, ReadWriteStatusRegisterId, KIBIBYTE};
+use crate::mapper::{ReadWriteStatus, ReadWriteStatusRegisterId, KIBIBYTE};
 
 use super::bank::bank::{ChrBank, ChrBankNumberProvider};
 use super::bank::bank_number::ChrBankRegisterId;
@@ -111,7 +111,7 @@ impl ChrWindow {
 
     pub fn force_ram(self) -> Self {
         Self {
-            bank: self.bank.as_ram(),
+            bank: self.bank.as_work_ram(),
             .. self
         }
     }
@@ -137,29 +137,22 @@ impl ChrWindow {
     }
 
     pub fn location(self) -> Result<ChrBankNumberProvider, String> {
-        match self.bank {
-            ChrBank::Rom(location, _) | ChrBank::Ram(location, _) | ChrBank::RomRam(location, ..) => Ok(location),
-            ChrBank::SaveRam(_) => Ok(ChrBankNumberProvider::Fixed(BankNumber::from_u8(0))),
-        }
+        self.bank.location()
     }
 
-    pub const fn register_id(self) -> Option<ChrBankRegisterId> {
-        if let ChrBank::Rom(ChrBankNumberProvider::Switchable(id), _) | ChrBank::Ram(ChrBankNumberProvider::Switchable(id), _) = self.bank {
-            Some(id)
-        } else {
-            None
-        }
+    pub const fn register_id(self, regs: &ChrBankRegisters) -> Option<ChrBankRegisterId> {
+        self.bank.register_id(regs)
     }
 
     pub fn read_write_status_info(self) -> ReadWriteStatusInfo {
-        match self.bank {
-            ChrBank::Ram(_, Some(register_id)) =>
-                ReadWriteStatusInfo::PossiblyPresent { register_id, status_on_absent: ReadWriteStatus::ReadOnly },
-            // TODO: SaveRam will probably need to support status registers.
-            ChrBank::SaveRam(..) =>
-                ReadWriteStatusInfo::Absent,
-            ChrBank::Rom(..) | ChrBank::Ram(..) | ChrBank::RomRam(..) =>
-                ReadWriteStatusInfo::Absent,
+        let status_on_absent = match self.bank.missing_ram_fallback_mem_type() {
+            None | Some(MemType::Rom) => ReadWriteStatus::Disabled,
+            Some(MemType::WorkRam | MemType::SaveRam) => ReadWriteStatus::ReadOnly,
+        };
+        if let Some(register_id) = self.bank.read_write_status_register_id() {
+            ReadWriteStatusInfo::PossiblyPresent { register_id, status_on_absent }
+        } else {
+            ReadWriteStatusInfo::Absent
         }
     }
 
@@ -171,7 +164,7 @@ impl ChrWindow {
         }
     }
 
-    pub fn is_writable(self, registers: &PrgBankRegisters) -> bool {
+    pub fn is_writable(self, registers: &ChrBankRegisters) -> bool {
         self.bank.is_writable(registers)
     }
 }

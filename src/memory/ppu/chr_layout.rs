@@ -1,4 +1,4 @@
-use crate::memory::bank::bank_number::ChrBankRegisterId;
+use crate::memory::bank::bank_number::{ChrBankRegisterId, ChrBankRegisters};
 use crate::memory::window::{ReadWriteStatusInfo, ChrWindow};
 
 #[derive(Clone, Copy)]
@@ -51,9 +51,9 @@ impl ChrLayout {
         self.initial_windows.last().unwrap().end().get()
     }
 
-    pub fn active_register_ids(&self) -> Vec<ChrBankRegisterId> {
+    pub fn active_register_ids(&self, regs: &ChrBankRegisters) -> Vec<ChrBankRegisterId> {
         self.initial_windows.iter()
-            .filter_map(|window| window.register_id())
+            .filter_map(|window| window.register_id(regs))
             .collect()
     }
 

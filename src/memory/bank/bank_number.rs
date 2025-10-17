@@ -156,11 +156,15 @@ impl ChrBankRegisters {
     }
 
     pub fn get_from_meta(&self, id: MetaRegisterId) -> BankNumber {
-        self.get(self.chr_meta_registers[id as usize])
+        self.get(self.get_register_id_from_meta(id))
     }
 
     pub fn set_meta_chr(&mut self, id: MetaRegisterId, value: ChrBankRegisterId) {
         self.chr_meta_registers[id as usize] = value;
+    }
+
+    pub const fn get_register_id_from_meta(&self, id: MetaRegisterId) -> ChrBankRegisterId {
+        self.chr_meta_registers[id as usize]
     }
 
     pub fn read_write_status(&self, id: ReadWriteStatusRegisterId) -> ReadWriteStatus {

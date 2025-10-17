@@ -181,23 +181,13 @@ impl ChrMapping {
                 };
 
                 let page_number = ((bank_multiple * bank_number.to_raw()) & page_number_mask) + page_offset;
-                match bank {
-                    ChrBank::Rom(_, None) => (ChrPageId::Rom { page_number, bank_number }, ReadWriteStatus::ReadOnly),
-                    ChrBank::Rom(_, Some(status_register)) => (ChrPageId::Rom { page_number, bank_number }, regs.read_write_status(*status_register)),
-                    ChrBank::Ram(_, None) => (ChrPageId::Ram { page_number, bank_number }, ReadWriteStatus::ReadWrite),
-                    ChrBank::Ram(_, Some(status_register)) => (ChrPageId::Ram { page_number, bank_number }, regs.read_write_status(*status_register)),
-                    ChrBank::RomRam(_, status_register, rom_ram_register_id) => {
-                        let read_write_status = status_register.map(|reg| regs.read_write_status(reg));
-                        match regs.rom_ram_mode(*rom_ram_register_id) {
-                            MemType::Rom => (ChrPageId::Rom { page_number, bank_number }, read_write_status.unwrap_or(ReadWriteStatus::ReadOnly)),
-                            MemType::WorkRam => (ChrPageId::Ram { page_number, bank_number }, read_write_status.unwrap_or(ReadWriteStatus::ReadWrite)),
-                            MemType::SaveRam => unimplemented!("SaveRam is not currently supported in RomRam banks."),
-                        }
-                    }
-                    ChrBank::SaveRam(index) => {
-                        // FIXME: Implement this properly? Hack so that the ROM Query page doesn't crash on Napoleon Senki.
-                        (ChrPageId::Ram { page_number: 0, bank_number: BankNumber::from_u16((*index).try_into().unwrap()) }, ReadWriteStatus::ReadWrite)
-                    }
+
+                let read_write_status = bank.read_write_status(regs);
+                match bank.mem_type(regs) {
+                    None => todo!("EMPTY bank"),
+                    Some(MemType::Rom) => (ChrPageId::Rom { page_number, bank_number }, read_write_status),
+                    Some(MemType::WorkRam) => (ChrPageId::Ram { page_number, bank_number }, read_write_status),
+                    Some(MemType::SaveRam) => (ChrPageId::SaveRam, read_write_status),
                 }
             }
             Self::NameTableSource(source) => match source {
