@@ -3,7 +3,7 @@ use std::num::NonZeroU8;
 use log::{error, warn};
 
 use crate::mapper::{BankNumber, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus, ReadWriteStatusRegisterId};
-use crate::memory::bank::bank::RomRamModeRegisterId;
+use crate::memory::bank::bank::ChrSourceRegisterId;
 use crate::memory::bank::bank_number::{ChrBankRegisters, MemType};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
@@ -179,8 +179,8 @@ impl ChrMemory {
         }
     }
 
-    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemType) {
-        self.regs.set_rom_ram_mode(id, rom_ram_mode);
+    pub fn set_chr_source(&mut self, id: ChrSourceRegisterId, chr_source: MemType) {
+        self.regs.set_chr_source(id, chr_source);
         self.update_page_ids();
     }
 

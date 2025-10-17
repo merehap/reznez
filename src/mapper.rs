@@ -10,6 +10,7 @@ pub use crate::memory::bank::bank_number::MetaRegisterId::*;
 pub use crate::memory::bank::bank::{PrgBank, ChrBank, ReadWriteStatusRegisterId};
 pub use crate::memory::bank::bank::ReadWriteStatusRegisterId::*;
 pub use crate::memory::bank::bank::RomRamModeRegisterId::*;
+pub use crate::memory::bank::bank::ChrSourceRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::memory::cpu::prg_memory_map::PrgPageIdSlot;

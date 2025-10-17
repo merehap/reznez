@@ -6,7 +6,7 @@ use crate::apu::apu_registers::ApuRegisters;
 use crate::controller::joypad::Joypad;
 use crate::cpu::dmc_dma::DmcDma;
 use crate::cpu::oam_dma::OamDma;
-use crate::memory::bank::bank::RomRamModeRegisterId;
+use crate::memory::bank::bank::{ChrSourceRegisterId, RomRamModeRegisterId};
 use crate::memory::bank::bank_number::MemType;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
@@ -217,7 +217,10 @@ impl Memory {
 
     pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemType) {
         self.prg_memory.set_rom_ram_mode(id, rom_ram_mode);
-        self.chr_memory.set_rom_ram_mode(id, rom_ram_mode);
+    }
+
+    pub fn set_chr_source(&mut self, id: ChrSourceRegisterId, chr_source: MemType) {
+        self.chr_memory.set_chr_source(id, chr_source);
     }
 
     pub fn chr_memory(&self) -> &ChrMemory {

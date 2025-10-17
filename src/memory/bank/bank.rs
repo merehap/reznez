@@ -1,16 +1,9 @@
 use crate::memory::bank::bank::RomRamModeRegisterId::*;
+use crate::memory::bank::bank::ChrSourceRegisterId::*;
 use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisters, PrgBankRegisterId, MetaRegisterId, ReadWriteStatus};
 use crate::memory::bank::bank_number::{BankLocation, MemType};
 
 use super::bank_number::{ChrBankRegisterId, ChrBankRegisters};
-
-#[derive(Clone, Copy, Debug)]
-pub struct PrgBank {
-    bank_number_provider: PrgBankNumberProvider,
-    mem_type_provider: MemTypeProvider,
-    missing_ram_fallback_mem_type: Option<MemType>,
-    read_write_status_provider: ReadWriteStatusProvider,
-}
 
 #[derive(Clone, Copy, Debug)]
 enum ReadWriteStatusProvider {
@@ -32,6 +25,26 @@ impl MemTypeProvider {
     const fn is_switchable(self) -> bool {
         matches!(self, Self::Switchable(_))
     }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+enum ChrSourceProvider {
+    Fixed(Option<MemType>),
+    Switchable(ChrSourceRegisterId),
+}
+
+impl ChrSourceProvider {
+    const fn is_mapped(self) -> bool {
+        !matches!(self, Self::Fixed(None))
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PrgBank {
+    bank_number_provider: PrgBankNumberProvider,
+    mem_type_provider: MemTypeProvider,
+    missing_ram_fallback_mem_type: Option<MemType>,
+    read_write_status_provider: ReadWriteStatusProvider,
 }
 
 impl PrgBank {
@@ -218,10 +231,20 @@ pub enum RomRamModeRegisterId {
     R11,
 }
 
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum ChrSourceRegisterId {
+    CS0,
+    CS1,
+    CS2,
+    CS3,
+    CS4,
+    CS5,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct ChrBank {
     bank_number_provider: ChrBankNumberProvider,
-    mem_type_provider: MemTypeProvider,
+    chr_source_provider: ChrSourceProvider,
     missing_ram_fallback_mem_type: Option<MemType>,
     read_write_status_provider: ReadWriteStatusProvider,
 }
@@ -229,25 +252,25 @@ pub struct ChrBank {
 impl ChrBank {
     pub const EMPTY: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
-        mem_type_provider: MemTypeProvider::Fixed(None),
+        chr_source_provider: ChrSourceProvider::Fixed(None),
         missing_ram_fallback_mem_type: None,
         read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::Disabled),
     };
     pub const ROM: ChrBank = ChrBank {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
-        mem_type_provider: MemTypeProvider::Fixed(Some(MemType::Rom)),
+        chr_source_provider: ChrSourceProvider::Fixed(Some(MemType::Rom)),
         missing_ram_fallback_mem_type: Some(MemType::Rom),
         read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadOnly),
     };
     pub const RAM: ChrBank = ChrBank {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
-        mem_type_provider: MemTypeProvider::Fixed(Some(MemType::WorkRam)),
+        chr_source_provider: ChrSourceProvider::Fixed(Some(MemType::WorkRam)),
         missing_ram_fallback_mem_type: Some(MemType::Rom),
         read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadWrite),
     };
     pub const ROM_RAM: ChrBank = ChrBank {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
-        mem_type_provider: MemTypeProvider::Switchable(R0),
+        chr_source_provider: ChrSourceProvider::Switchable(CS0),
         missing_ram_fallback_mem_type: Some(MemType::Rom),
         read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadWrite),
     };
@@ -265,19 +288,19 @@ impl ChrBank {
     }
 
     pub fn mem_type(self, regs: &ChrBankRegisters) -> Option<MemType> {
-        match self.mem_type_provider {
-            MemTypeProvider::Fixed(mem_type) => mem_type,
-            MemTypeProvider::Switchable(reg_id) => Some(regs.rom_ram_mode(reg_id)),
+        match self.chr_source_provider {
+            ChrSourceProvider::Fixed(mem_type) => mem_type,
+            ChrSourceProvider::Switchable(reg_id) => Some(regs.chr_source(reg_id)),
         }
     }
 
     pub fn is_rom(self) -> bool {
-        matches!(self.mem_type_provider, MemTypeProvider::Fixed(Some(MemType::Rom)) | MemTypeProvider::Switchable(_))
+        matches!(self.chr_source_provider, ChrSourceProvider::Fixed(Some(MemType::Rom)) | ChrSourceProvider::Switchable(_))
     }
 
     pub fn is_ram(self) -> bool {
-        matches!(self.mem_type_provider,
-            MemTypeProvider::Fixed(Some(MemType::WorkRam | MemType::SaveRam)) | MemTypeProvider::Switchable(_))
+        matches!(self.chr_source_provider,
+            ChrSourceProvider::Fixed(Some(MemType::WorkRam | MemType::SaveRam)) | ChrSourceProvider::Switchable(_))
     }
 
     pub fn missing_ram_fallback_mem_type(&self) -> Option<MemType> {
@@ -312,7 +335,7 @@ impl ChrBank {
     }
 
     pub fn location(self) -> Result<ChrBankNumberProvider, String> {
-        if self.mem_type_provider.is_mapped() {
+        if self.chr_source_provider.is_mapped() {
             Ok(self.bank_number_provider)
         } else {
             Err("EMPTY banks don't have a location".to_owned())
@@ -323,14 +346,14 @@ impl ChrBank {
         self.location().ok().map(|provider| BankLocation::Index(provider.bank_location(regs)))
     }
 
-    pub const fn rom_ram_register(mut self, id: RomRamModeRegisterId) -> Self {
-        assert!(matches!(self.mem_type_provider, MemTypeProvider::Switchable(_)));
-        self.mem_type_provider = MemTypeProvider::Switchable(id);
+    pub const fn chr_source(mut self, id: ChrSourceRegisterId) -> Self {
+        assert!(matches!(self.chr_source_provider, ChrSourceProvider::Switchable(_)));
+        self.chr_source_provider = ChrSourceProvider::Switchable(id);
         self
     }
 
     pub const fn status_register(mut self, id: ReadWriteStatusRegisterId) -> Self {
-        assert!(self.mem_type_provider.is_mapped());
+        assert!(self.chr_source_provider.is_mapped());
         self.read_write_status_provider = ReadWriteStatusProvider::Switchable(id);
         self
     }
@@ -339,7 +362,7 @@ impl ChrBank {
         match self.missing_ram_fallback_mem_type {
             None => self = Self::EMPTY,
             Some(MemType::Rom) => {
-                self.mem_type_provider = MemTypeProvider::Fixed(Some(MemType::Rom));
+                self.chr_source_provider = ChrSourceProvider::Fixed(Some(MemType::Rom));
                 self.read_write_status_provider = ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadOnly);
             }
             Some(_) => panic!("Non-sensical fallback mem type."),
@@ -349,8 +372,8 @@ impl ChrBank {
     }
 
     pub fn as_work_ram(mut self) -> ChrBank {
-        if self.mem_type_provider.is_mapped() {
-            self.mem_type_provider = MemTypeProvider::Fixed(Some(MemType::WorkRam));
+        if self.chr_source_provider.is_mapped() {
+            self.chr_source_provider = ChrSourceProvider::Fixed(Some(MemType::WorkRam));
             self.read_write_status_provider = ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadWrite);
         }
 
@@ -358,7 +381,7 @@ impl ChrBank {
     }
 
     const fn set_location(mut self, location: ChrBankNumberProvider) -> Self {
-        assert!(self.mem_type_provider.is_mapped());
+        assert!(self.chr_source_provider.is_mapped());
         assert!(matches!(self.read_write_status_provider, ReadWriteStatusProvider::Fixed(_)),
             "Location must be set before ROM status register.");
         self.bank_number_provider = location;

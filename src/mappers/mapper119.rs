@@ -2,7 +2,7 @@ use crate::mapper::*;
 
 use crate::mappers::mmc3::mmc3;
 use crate::mappers::mmc3::irq_state::Mmc3IrqState;
-use crate::memory::bank::bank::RomRamModeRegisterId;
+use crate::memory::bank::bank::ChrSourceRegisterId;
 use crate::memory::bank::bank_number::MemType;
 
 pub const LAYOUT: Layout = Layout::builder()
@@ -12,26 +12,26 @@ pub const LAYOUT: Layout = Layout::builder()
     .chr_rom_max_size(64 * KIBIBYTE)
     // Same CHR layouts as standard MMC3, except the banks can switch between ROM and RAM memory spaces.
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C0).rom_ram_register(R0)),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C1).rom_ram_register(R1)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C2).rom_ram_register(R2)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C3).rom_ram_register(R3)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C4).rom_ram_register(R4)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C5).rom_ram_register(R5)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C0).chr_source(CS0)),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C1).chr_source(CS1)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C2).chr_source(CS2)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C3).chr_source(CS3)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C4).chr_source(CS4)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C5).chr_source(CS5)),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C2).rom_ram_register(R2)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C3).rom_ram_register(R3)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C4).rom_ram_register(R4)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C5).rom_ram_register(R5)),
-        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C0).rom_ram_register(R0)),
-        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C1).rom_ram_register(R1)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C2).chr_source(CS2)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C3).chr_source(CS3)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C4).chr_source(CS4)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C5).chr_source(CS5)),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C0).chr_source(CS0)),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C1).chr_source(CS1)),
     ])
     .name_table_mirrorings(mmc3::NAME_TABLE_MIRRORINGS)
     .read_write_statuses(mmc3::READ_WRITE_STATUSES)
     .build();
 
-const ROM_RAM_REGISTER_IDS: [RomRamModeRegisterId; 6] = [R0, R1, R2, R3, R4, R5];
+const ROM_RAM_REGISTER_IDS: [ChrSourceRegisterId; 6] = [CS0, CS1, CS2, CS3, CS4, CS5];
 
 // TQROM
 pub struct Mapper119 {
@@ -48,7 +48,7 @@ impl Mapper for Mapper119 {
             mem.set_chr_register(chr_id, fields.c);
             let rom_ram_reg_id = ROM_RAM_REGISTER_IDS[chr_id as usize];
             let mem_type = [MemType::Rom, MemType::WorkRam][fields.m as usize];
-            mem.set_rom_ram_mode(rom_ram_reg_id, mem_type);
+            mem.set_chr_source(rom_ram_reg_id, mem_type);
         } else {
             // Use standard MMC3 behaviors.
             self.mmc3.write_register(mem, addr, value);
