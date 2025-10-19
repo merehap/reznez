@@ -38,6 +38,7 @@ pub struct Layout {
     cartridge_selection_name_table_mirrorings: [Option<NameTableMirroring>; 4],
     name_table_mirrorings: &'static [NameTableMirroring],
     four_screen_mirroring_definition: Option<NameTableMirroring>,
+    fixed_name_table_mirroring: bool,
 
     read_write_statuses: &'static [ReadWriteStatus],
     
@@ -146,7 +147,7 @@ impl Layout {
             cartridge.chr_rom().clone(),
             chr_ram,
             name_table_mirroring,
-            self.name_table_mirrorings.is_empty(),
+            self.fixed_name_table_mirroring,
             chr_bank_registers,
         );
 
@@ -189,49 +190,6 @@ impl Layout {
     pub fn has_prg_ram(&self) -> bool {
         self.prg_layouts.as_iter().any(|prg_layout| prg_layout.has_ram())
     }
-
-    pub const fn into_builder(self) -> LayoutBuilder {
-        LayoutBuilder {
-            prg_rom_max_size: Some(self.prg_rom_max_size),
-            prg_layout_index: self.prg_layout_index,
-            prg_layouts: self.prg_layouts,
-            prg_rom_outer_bank_layout: Some(self.prg_rom_outer_bank_layout),
-            prg_rom_bank_size_override: self.prg_rom_bank_size_override,
-
-            chr_rom_max_size: Some(self.chr_rom_max_size),
-            align_large_chr_windows: self.align_large_chr_windows,
-            chr_layout_index: self.chr_layout_index,
-            chr_layouts: self.chr_layouts,
-            chr_rom_outer_bank_layout: Some(self.chr_rom_outer_bank_layout),
-            chr_save_ram_size: self.chr_save_ram_size,
-
-            cartridge_selection_name_table_mirrorings: self.cartridge_selection_name_table_mirrorings,
-            name_table_mirrorings: self.name_table_mirrorings,
-            four_screen_mirroring_definition: None,
-
-            read_write_statuses: self.read_write_statuses,
-
-            bank_register_overrides: self.bank_register_overrides,
-            chr_bank_register_overrides: self.chr_bank_register_overrides,
-            chr_meta_register_overrides: self.chr_meta_register_overrides,
-        }
-    }
-
-    pub const fn into_builder_with_prg_layouts_cleared(self) -> LayoutBuilder {
-        assert!(self.prg_layout_index == 0, "PRG Layout Index must be zero.");
-
-        let mut builder = self.into_builder();
-        builder.prg_layouts = ConstVec::new();
-        builder
-    }
-
-    pub const fn into_builder_with_chr_layouts_cleared(self) -> LayoutBuilder {
-        assert!(self.chr_layout_index == 0, "CHR Layout Index must be zero.");
-
-        let mut builder = self.into_builder();
-        builder.chr_layouts = ConstVec::new();
-        builder
-    }
 }
 
 #[derive(Clone, Copy)]
@@ -252,6 +210,7 @@ pub struct LayoutBuilder {
     cartridge_selection_name_table_mirrorings: [Option<NameTableMirroring>; 4],
     name_table_mirrorings: &'static [NameTableMirroring],
     four_screen_mirroring_definition: Option<NameTableMirroring>,
+    fixed_name_table_mirroring: Option<bool>,
 
     read_write_statuses: &'static [ReadWriteStatus],
 
@@ -276,7 +235,7 @@ impl LayoutBuilder {
             chr_rom_outer_bank_layout: None,
             chr_save_ram_size: 0,
 
-            // The vast majority of mappers associate these values with iNES mirroring bits.
+            // The vast majority of mappers associate these values with the corresponding iNES mirroring bits.
             cartridge_selection_name_table_mirrorings: [
                 Some(NameTableMirroring::HORIZONTAL),
                 Some(NameTableMirroring::VERTICAL),
@@ -287,6 +246,7 @@ impl LayoutBuilder {
             ],
             name_table_mirrorings: &[],
             four_screen_mirroring_definition: None,
+            fixed_name_table_mirroring: None,
 
             read_write_statuses: &[],
 
@@ -296,78 +256,88 @@ impl LayoutBuilder {
         }
     }
 
-    pub const fn prg_rom_max_size(&mut self, value: u32) -> &mut LayoutBuilder {
+    pub const fn prg_rom_max_size(&mut self, value: u32) -> &mut Self {
         self.prg_rom_max_size = Some(value);
         self
     }
 
-    pub const fn prg_layout_index(&mut self, value: u8) -> &mut LayoutBuilder {
+    pub const fn prg_layout_index(&mut self, value: u8) -> &mut Self  {
         self.prg_layout_index = value;
         self
     }
 
-    pub const fn prg_layout(&mut self, windows: &'static [PrgWindow]) -> &mut LayoutBuilder {
+    pub const fn prg_layout(&mut self, windows: &'static [PrgWindow]) -> &mut Self {
         self.prg_layouts.push(PrgLayout::new(windows));
         self
     }
 
-    pub const fn prg_outer_bank_count(&mut self, count: u8) -> &mut LayoutBuilder {
+    pub const fn prg_outer_bank_count(&mut self, count: u8) -> &mut Self {
         self.prg_rom_outer_bank_layout = Some(OuterBankLayout::ExactCount(NonZeroU8::new(count).unwrap()));
         self
     }
 
-    pub const fn prg_rom_outer_bank_size(&mut self, size: u32) -> &mut LayoutBuilder {
+    pub const fn prg_rom_outer_bank_size(&mut self, size: u32) -> &mut Self {
         self.prg_rom_outer_bank_layout = Some(OuterBankLayout::Size(size));
         self
     }
 
-    pub const fn prg_rom_bank_size_override(&mut self, size: u32) -> &mut LayoutBuilder {
+    pub const fn prg_rom_bank_size_override(&mut self, size: u32) -> &mut Self {
         self.prg_rom_bank_size_override = Some(PrgWindowSize::from_raw(size));
         self
     }
 
-    pub const fn chr_rom_max_size(&mut self, value: u32) -> &mut LayoutBuilder {
+    pub const fn chr_rom_max_size(&mut self, value: u32) -> &mut Self {
         self.chr_rom_max_size = Some(value);
         self
     }
 
-    pub const fn chr_layout(&mut self, windows: &'static [ChrWindow]) -> &mut LayoutBuilder {
+    pub const fn chr_layout(&mut self, windows: &'static [ChrWindow]) -> &mut Self {
         self.chr_layouts.push(ChrLayout::new(windows));
         self
     }
 
-    pub const fn chr_layout_index(&mut self, value: u8) -> &mut LayoutBuilder {
+    pub const fn chr_layout_index(&mut self, value: u8) -> &mut Self {
         self.chr_layout_index = value;
         self
     }
 
-    pub const fn do_not_align_large_chr_windows(&mut self) -> &mut LayoutBuilder {
+    pub const fn do_not_align_large_chr_windows(&mut self) -> &mut Self {
         self.align_large_chr_windows = false;
         self
     }
 
-    pub const fn chr_save_ram_size(&mut self, value: u32) -> &mut LayoutBuilder {
+    pub const fn chr_save_ram_size(&mut self, value: u32) -> &mut Self {
         self.chr_save_ram_size = value;
         self
     }
 
-    pub const fn chr_rom_outer_bank_size(&mut self, size: u32) -> &mut LayoutBuilder {
+    pub const fn chr_rom_outer_bank_size(&mut self, size: u32) -> &mut Self {
         self.chr_rom_outer_bank_layout = Some(OuterBankLayout::Size(size));
         self
     }
 
-    pub const fn cartridge_selection_name_table_mirrorings(&mut self, value: [Option<NameTableMirroring>; 4]) -> &mut LayoutBuilder {
+    pub const fn cartridge_selection_name_table_mirrorings(&mut self, value: [Option<NameTableMirroring>; 4]) -> &mut Self {
         self.cartridge_selection_name_table_mirrorings = value;
         self
     }
 
-    pub const fn name_table_mirrorings(&mut self, value: &'static [NameTableMirroring]) -> &mut LayoutBuilder {
+    pub const fn name_table_mirrorings(&mut self, value: &'static [NameTableMirroring]) -> &mut Self {
         self.name_table_mirrorings = value;
         self
     }
 
-    pub const fn four_screen_mirroring_definition(&mut self, value: NameTableMirroring) -> &mut LayoutBuilder {
+    pub const fn four_screen_mirroring_definition(&mut self, value: NameTableMirroring) -> &mut Self {
         self.four_screen_mirroring_definition = Some(value);
+        self
+    }
+
+    pub const fn fixed_name_table_mirroring(&mut self) -> &mut Self {
+        self.fixed_name_table_mirroring = Some(true);
+        self
+    }
+
+    pub const fn complicated_name_table_mirroring(&mut self) -> &mut Self {
+        self.fixed_name_table_mirroring = Some(false);
         self
     }
 
@@ -420,6 +390,12 @@ impl LayoutBuilder {
             chr_rom_outer_bank_layout = layout;
         }
 
+        let fixed_name_table_mirroring = match (self.name_table_mirrorings, self.fixed_name_table_mirroring) {
+            ([_,..], None       ) => false,
+            ([]    , Some(fixed)) => fixed,
+            _ => panic!("Must set one of name_table_mirrorings, fixed_name_table_mirroring, or complicated_name_table_mirroring"),
+        };
+
         Layout {
             prg_rom_max_size: self.prg_rom_max_size.expect("prg_rom_max_size must be set"),
             prg_layouts: self.prg_layouts,
@@ -437,6 +413,7 @@ impl LayoutBuilder {
             cartridge_selection_name_table_mirrorings: self.cartridge_selection_name_table_mirrorings,
             name_table_mirrorings: self.name_table_mirrorings,
             four_screen_mirroring_definition: self.four_screen_mirroring_definition,
+            fixed_name_table_mirroring,
 
             read_write_statuses: self.read_write_statuses,
 

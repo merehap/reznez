@@ -22,6 +22,7 @@ const LAYOUT: Layout = Layout::builder()
         NameTableSource::Ciram(CiramSide::Left),
         NameTableSource::Ciram(CiramSide::Right),
     ))
+    .fixed_name_table_mirroring()
     .build();
 
 // Irem (Napoleon Senki)

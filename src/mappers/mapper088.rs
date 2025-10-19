@@ -6,6 +6,7 @@ const LAYOUT: Layout = Layout::builder()
     .prg_layout(PRG_WINDOWS)
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(CHR_WINDOWS)
+    .fixed_name_table_mirroring()
     .build();
 
 pub const PRG_WINDOWS: &[PrgWindow] = &[

@@ -51,6 +51,17 @@ pub enum ChrSource {
     FillModeTile,
 }
 
+impl ChrSource {
+    pub fn from_name_table_source(name_table_source: NameTableSource) -> (Self, Option<BankNumber>) {
+        match name_table_source {
+            NameTableSource::Ram { bank_number } => (ChrSource::WorkRam, Some(bank_number)),
+            NameTableSource::Ciram(ciram_side) => (ChrSource::Ciram(ciram_side), None),
+            NameTableSource::ExtendedRam => (ChrSource::ExtendedRam, None),
+            NameTableSource::FillModeTile => (ChrSource::FillModeTile, None),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct PrgBank {
     bank_number_provider: PrgBankNumberProvider,

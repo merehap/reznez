@@ -14,6 +14,7 @@ const LAYOUT: Layout = Layout::builder()
         ReadWriteStatus::Disabled,
         ReadWriteStatus::ReadOnly,
     ])
+    .fixed_name_table_mirroring()
     .build();
 
 const DISABLED_CHR_ROM: u8 = 0;

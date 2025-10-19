@@ -117,18 +117,21 @@ impl ChrMemoryMap {
         &self.page_ids[0..8]
     }
 
-    pub fn set_name_table_mirroring(&mut self, regs: &ChrBankRegisters, name_table_mirroring: NameTableMirroring) {
-        for (i, &quadrant) in name_table_mirroring.quadrants().iter().enumerate() {
-            self.page_mappings[8 + i] = ChrMapping::from_name_table_source(quadrant);
-        }
-
+    pub fn set_name_table_mirroring(&mut self, regs: &mut ChrBankRegisters, name_table_mirroring: NameTableMirroring) {
+        self.set_name_table_quadrant(regs, NameTableQuadrant::TopLeft, name_table_mirroring.quadrants()[0]);
+        self.set_name_table_quadrant(regs, NameTableQuadrant::TopRight, name_table_mirroring.quadrants()[1]);
+        self.set_name_table_quadrant(regs, NameTableQuadrant::BottomLeft, name_table_mirroring.quadrants()[2]);
+        self.set_name_table_quadrant(regs, NameTableQuadrant::BottomRight, name_table_mirroring.quadrants()[3]);
         self.update_page_ids(regs);
     }
 
-    pub fn set_name_table_quadrant(
-        &mut self, regs: &ChrBankRegisters, quadrant: NameTableQuadrant, source: NameTableSource) {
-
-        self.page_mappings[8 + quadrant as usize] = ChrMapping::from_name_table_source(source);
+    pub fn set_name_table_quadrant(&mut self, regs: &mut ChrBankRegisters, quadrant: NameTableQuadrant, source: NameTableSource) {
+        let (chr_source, bank_number) = ChrSource::from_name_table_source(source);
+        let (chr_source_reg_id, chr_bank_reg_id) = quadrant.register_ids();
+        regs.set_chr_source(chr_source_reg_id, chr_source);
+        if let Some(bank_number) = bank_number {
+            regs.set(chr_bank_reg_id, bank_number);
+        }
 
         self.update_page_ids(regs);
     }

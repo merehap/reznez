@@ -38,6 +38,7 @@ impl ChrMemory {
         mut rom: RawMemory,
         mut ram: RawMemory,
         name_table_mirroring: NameTableMirroring,
+        // TODO: Warn on writes to an unused register.
         name_table_mirroring_fixed: bool,
         mut regs: ChrBankRegisters,
     ) -> ChrMemory {
@@ -282,13 +283,13 @@ impl ChrMemory {
 
     pub fn set_name_table_mirroring(&mut self, name_table_mirroring: NameTableMirroring) {
         for memory_map in &mut self.memory_maps {
-            memory_map.set_name_table_mirroring(&self.regs, name_table_mirroring);
+            memory_map.set_name_table_mirroring(&mut self.regs, name_table_mirroring);
         }
     }
 
     pub fn set_name_table_quadrant(&mut self, quadrant: NameTableQuadrant, source: NameTableSource) {
         for memory_map in &mut self.memory_maps {
-            memory_map.set_name_table_quadrant(&self.regs, quadrant, source);
+            memory_map.set_name_table_quadrant(&mut self.regs, quadrant, source);
         }
     }
 

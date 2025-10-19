@@ -14,6 +14,7 @@ const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
         ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
     ])
+    .fixed_name_table_mirroring()
     .build();
 
 

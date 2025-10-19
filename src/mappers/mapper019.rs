@@ -31,6 +31,7 @@ const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT2).switchable(N2).status_register(S10)),
         ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT3).switchable(N3).status_register(S11)),
     ])
+    .fixed_name_table_mirroring()
     .read_write_statuses(&[
         ReadWriteStatus::ReadOnly,
         ReadWriteStatus::ReadWrite,

@@ -1,41 +1,37 @@
 use crate::mapper::*;
 
-pub const LAYOUT: Layout = Layout::builder()
-    .prg_rom_max_size(128 * KIBIBYTE)
-    .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::EMPTY),
-        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-    ])
-    // This value is overridden by the individual boards.
-    .chr_rom_max_size(512 * KIBIBYTE)
-    // Normal layout.
-    .chr_layout(&[
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
-        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
-        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
-    ])
-    // "Simple" layout. C4, C5, and C6 are the same as C0, except for their low bits.
-    .chr_layout(&[
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
-        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
-        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C6)),
-    ])
-    .name_table_mirrorings(&[
-        NameTableMirroring::VERTICAL,
-        NameTableMirroring::HORIZONTAL,
-        // L R
-        // R R
-        NameTableMirroring::new(
-            NameTableSource::Ciram(CiramSide::Left),
-            NameTableSource::Ciram(CiramSide::Right),
-            NameTableSource::Ciram(CiramSide::Right),
-            NameTableSource::Ciram(CiramSide::Right),
-        ),
-        NameTableMirroring::ONE_SCREEN_LEFT_BANK,
-    ])
-    .build();
+pub const PRG_LAYOUT: &[PrgWindow] = &[
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::EMPTY),
+    PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+];
+
+pub const NORMAL_CHR_LAYOUT: &[ChrWindow] = &[
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
+];
+// C4, C5, and C6 are the same as C0, except for their low bits.
+pub const SIMPLE_CHR_LAYOUT: &[ChrWindow] = &[
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
+    ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
+    ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C6)),
+];
+
+pub const NAME_TABLE_MIRRORINGS: &[NameTableMirroring] = &[
+    NameTableMirroring::VERTICAL,
+    NameTableMirroring::HORIZONTAL,
+    // L R
+    // R R
+    NameTableMirroring::new(
+        NameTableSource::Ciram(CiramSide::Left),
+        NameTableSource::Ciram(CiramSide::Right),
+        NameTableSource::Ciram(CiramSide::Right),
+        NameTableSource::Ciram(CiramSide::Right),
+    ),
+    NameTableMirroring::ONE_SCREEN_LEFT_BANK,
+];
 
 const VERTICAL: u8 = 0;
 
@@ -68,17 +64,13 @@ impl Mapper for Sachen8259 {
             }
             0x4101 => {
                 match self.register_value {
+                    RegisterValue::Nop => {}
+                    RegisterValue::PrgBank => mem.set_prg_register(P0, value & 0b111),
+                    RegisterValue::ChrOuterBank => mem.set_chr_rom_outer_bank_number(value & 0b111),
                     RegisterValue::ChrSelect(reg_id) => {
                         self.chr_inner_banks[reg_id.to_raw_chr_id() as usize] = value & 0b111;
                         self.update_chr_banks(mem);
                     }
-                    RegisterValue::ChrOuterBank => {
-                        mem.set_chr_rom_outer_bank_number(value & 0b111);
-                    }
-                    RegisterValue::PrgBank => {
-                        mem.set_prg_register(P0, value & 0b111);
-                    }
-                    RegisterValue::Nop => {}
                     RegisterValue::ModeSelect => {
                         let (mirroring, simple_layout) = splitbits_named!(value, ".... .mms");
                         mem.set_chr_layout(simple_layout as u8);
@@ -118,6 +110,7 @@ impl Sachen8259 {
         }
     }
 
+    // TODO: Put this code directly into the caller.
     fn update_chr_banks(&self, mem: &mut Memory) {
         let meta_data = [
             (C0, 0, 0),

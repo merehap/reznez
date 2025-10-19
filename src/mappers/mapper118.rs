@@ -11,8 +11,7 @@ pub const LAYOUT: Layout = Layout::builder()
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(mmc3::CHR_BIG_WINDOWS_FIRST)
     .chr_layout(mmc3::CHR_SMALL_WINDOWS_FIRST)
-    // NameTableMirrorings in this mapper are set manually, rather than selected from MMC3's list.
-    .name_table_mirrorings(&[])
+    .complicated_name_table_mirroring()
     .read_write_statuses(mmc3::READ_WRITE_STATUSES)
     .build();
 

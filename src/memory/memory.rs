@@ -167,14 +167,13 @@ impl Memory {
         )
     }
 
-
     pub fn name_table_mirroring(&self) -> NameTableMirroring {
         self.chr_memory().name_table_mirroring()
     }
 
     pub fn set_name_table_mirroring(&mut self, mirroring_index: u8) {
-        let mirroring = *self.name_table_mirrorings.get(usize::from(mirroring_index)).expect("NameTableMirroring to not be set. \
-            No NameTableMirrorings were specified in the Layout, so the hard-coded mirroring can't be overridden.");
+        let mirroring = *self.name_table_mirrorings.get(usize::from(mirroring_index))
+            .expect("NameTableMirroring cannot be selected from the list since the list is empty.");
         self.chr_memory.set_name_table_mirroring(mirroring);
     }
 

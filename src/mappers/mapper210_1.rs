@@ -21,6 +21,7 @@ const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C6)),
         ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C7)),
     ])
+    .fixed_name_table_mirroring()
     .build();
 
 // Namco 175

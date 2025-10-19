@@ -98,6 +98,7 @@ const LAYOUT: Layout = Layout::builder()
         // Write-only is only used by Extended RAM (S0).
         ReadWriteStatus::WriteOnly,
     ])
+    .complicated_name_table_mirroring()
     .build();
 
 // Indexes into the above RAM statuses.

@@ -10,6 +10,7 @@ const LAYOUT: Layout = Layout::builder()
     .chr_layout(&[
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.fixed_index(0)),
     ])
+    .fixed_name_table_mirroring()
     .build();
 
 // NROM

@@ -2,10 +2,13 @@ use crate::mapper::*;
 
 use crate::mappers::mapper080;
 
-const LAYOUT: Layout = mapper080::LAYOUT.into_builder()
+pub const LAYOUT: Layout = Layout::builder()
+    .prg_rom_max_size(2048 * KIBIBYTE)
+    .prg_layout(mapper080::PRG_LAYOUT)
     .chr_rom_max_size(128 * KIBIBYTE)
-    // Name table quadrants are set manually.
-    .name_table_mirrorings(&[])
+    .chr_layout(mapper080::CHR_LAYOUT)
+    .complicated_name_table_mirroring()
+    .read_write_statuses(mapper080::READ_WRITE_STATUSES)
     .build();
 
 // Taito's X1-005 (alternate name table mirrorings)

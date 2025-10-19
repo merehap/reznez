@@ -2,33 +2,37 @@ use crate::mapper::*;
 
 pub const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(2048 * KIBIBYTE)
-    .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7EFF, 7 * KIBIBYTE + 3 * KIBIBYTE / 4, PrgBank::EMPTY),
-        PrgWindow::new(0x7F00, 0x7F7F, KIBIBYTE / 8, PrgBank::WORK_RAM.fixed_index(0).status_register(S0)),
-        PrgWindow::new(0x7F80, 0x7FFF, KIBIBYTE / 8, PrgBank::WORK_RAM.fixed_index(0).status_register(S0)),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
-        PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
-    ])
+    .prg_layout(PRG_LAYOUT)
     .chr_rom_max_size(256 * KIBIBYTE)
-    .chr_layout(&[
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
-    ])
+    .chr_layout(CHR_LAYOUT)
     .name_table_mirrorings(&[
         NameTableMirroring::HORIZONTAL,
         NameTableMirroring::VERTICAL,
     ])
-    .read_write_statuses(&[
-        ReadWriteStatus::Disabled,
-        ReadWriteStatus::ReadWrite,
-    ])
+    .read_write_statuses(READ_WRITE_STATUSES)
     .build();
+
+pub const PRG_LAYOUT: &[PrgWindow] = &[
+    PrgWindow::new(0x6000, 0x7EFF, 7 * KIBIBYTE + 3 * KIBIBYTE / 4, PrgBank::EMPTY),
+    PrgWindow::new(0x7F00, 0x7F7F, KIBIBYTE / 8, PrgBank::WORK_RAM.fixed_index(0).status_register(S0)),
+    PrgWindow::new(0x7F80, 0x7FFF, KIBIBYTE / 8, PrgBank::WORK_RAM.fixed_index(0).status_register(S0)),
+    PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+    PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
+    PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
+    PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
+];
+pub const CHR_LAYOUT: &[ChrWindow] = &[
+    ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+    ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+    ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
+    ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
+    ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
+    ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
+];
+pub const READ_WRITE_STATUSES: &[ReadWriteStatus] = &[
+    ReadWriteStatus::Disabled,
+    ReadWriteStatus::ReadWrite,
+];
 
 // Taito's X1-005
 pub struct Mapper080;

@@ -6,6 +6,8 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use ux::u2;
 
+use crate::mapper::ChrBankRegisterId;
+use crate::memory::bank::bank::ChrSourceRegisterId;
 use crate::util::bit_util::get_bit;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, Specifier)]
@@ -66,6 +68,16 @@ impl NameTableQuadrant {
         let different_sides = self.is_on_left() != other.is_on_left();
         if different_sides {
             *self = self.next_horizontal();
+        }
+    }
+
+    pub fn register_ids(self) -> (ChrSourceRegisterId, ChrBankRegisterId) {
+        use NameTableQuadrant::*;
+        match self {
+            TopLeft     => (ChrSourceRegisterId::NT0, ChrBankRegisterId::N0),
+            TopRight    => (ChrSourceRegisterId::NT1, ChrBankRegisterId::N1),
+            BottomLeft  => (ChrSourceRegisterId::NT2, ChrBankRegisterId::N2),
+            BottomRight => (ChrSourceRegisterId::NT3, ChrBankRegisterId::N3),
         }
     }
 

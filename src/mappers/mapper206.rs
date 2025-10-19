@@ -18,6 +18,7 @@ const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
         ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
     ])
+    .fixed_name_table_mirroring()
     .build();
 
 use RegId::{Chr, Prg};
