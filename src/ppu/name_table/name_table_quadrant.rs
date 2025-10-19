@@ -18,6 +18,8 @@ pub enum NameTableQuadrant {
 
 #[rustfmt::skip]
 impl NameTableQuadrant {
+    pub const ALL: [Self; 4] = [Self::TopLeft, Self::TopRight, Self::BottomLeft, Self::BottomRight];
+
     pub fn from_last_two_bits(value: u8) -> NameTableQuadrant {
         match (get_bit(value, 6), get_bit(value, 7)) {
             (false, false) => NameTableQuadrant::TopLeft,

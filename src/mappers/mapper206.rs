@@ -35,6 +35,7 @@ impl Mapper for Mapper206 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x9FFF => {
+                // TODO: Inline these helper functions.
                 if addr.is_multiple_of(2) {
                     self.bank_select(mem, value);
                 } else {

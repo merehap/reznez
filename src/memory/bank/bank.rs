@@ -1,4 +1,5 @@
 use crate::mapper::CiramSide;
+use crate::mapper::NameTableSource;
 use crate::memory::bank::bank::RomRamModeRegisterId::*;
 use crate::memory::bank::bank::ChrSourceRegisterId::*;
 use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisters, PrgBankRegisterId, MetaRegisterId, ReadWriteStatus};
@@ -250,6 +251,22 @@ pub enum ChrSourceRegisterId {
     CS3,
     CS4,
     CS5,
+    CS6,
+    CS7,
+
+    // Name Table Top Left
+    NT0,
+    // Name Table Top Right
+    NT1,
+    // Name Table Bottom Left
+    NT2,
+    // Name Table Bottom Right
+    NT3,
+}
+
+impl ChrSourceRegisterId {
+    pub const ALL_NAME_TABLE_SOURCE_IDS: [Self; 4] =
+        [ChrSourceRegisterId::NT0, ChrSourceRegisterId::NT1, ChrSourceRegisterId::NT2, ChrSourceRegisterId::NT3];
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -282,14 +299,16 @@ impl ChrBank {
     pub const EXT_RAM: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::ExtendedRam)),
-        missing_ram_fallback_mem_type: Some(MemType::Rom),
+        // FIXME: HACK
+        missing_ram_fallback_mem_type: Some(MemType::WorkRam),
         read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadWrite),
     };
     pub const FILL_MODE_TILE: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::FillModeTile)),
-        missing_ram_fallback_mem_type: Some(MemType::Rom),
-        read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadWrite),
+        // FIXME: HACK
+        missing_ram_fallback_mem_type: Some(MemType::WorkRam),
+        read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadOnly),
     };
     pub const ROM_RAM: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
@@ -303,6 +322,26 @@ impl ChrBank {
             bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
             chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::Ciram(ciram_side))),
             missing_ram_fallback_mem_type: Some(MemType::Rom),
+            read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadWrite),
+        }
+    }
+
+    pub const fn from_name_table_source(name_table_source: NameTableSource) -> Self {
+        match name_table_source {
+            NameTableSource::Ciram(ciram_side) => Self::ciram(ciram_side),
+            NameTableSource::ExtendedRam => Self::EXT_RAM,
+            NameTableSource::FillModeTile => Self::FILL_MODE_TILE,
+            NameTableSource::Ram { bank_number } => Self::RAM.fixed_index(bank_number.to_raw() as i16),
+        }
+    }
+
+    pub const fn with_switchable_source(source_reg_id: ChrSourceRegisterId) -> Self {
+        Self {
+            bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
+            chr_source_provider: ChrSourceProvider::Switchable(source_reg_id),
+            // FIXME: HACK
+            missing_ram_fallback_mem_type: Some(MemType::WorkRam),
+            // FIXME: HACK
             read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadWrite),
         }
     }
@@ -401,7 +440,9 @@ impl ChrBank {
                 self.chr_source_provider = ChrSourceProvider::Fixed(Some(ChrSource::Rom));
                 self.read_write_status_provider = ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadOnly);
             }
-            Some(_) => panic!("Non-sensical fallback mem type."),
+            // FIXME: HACK. Use MemType::WorkRam to signal that there this ChrSource is unaffected by the RAM availability.
+            Some(MemType::WorkRam) => { /* Do nothing. */ }
+            Some(MemType::SaveRam) => panic!("Non-sensical fallback mem type."),
         }
 
         self

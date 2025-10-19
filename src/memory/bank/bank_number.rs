@@ -21,7 +21,7 @@ impl BankNumber {
         BankNumber(value as u16)
     }
 
-    pub fn to_raw(self) -> u16 {
+    pub const fn to_raw(self) -> u16 {
         self.0
     }
 }
@@ -103,7 +103,7 @@ pub struct ChrBankRegisters {
     registers: [BankNumber; 16],
     chr_meta_registers: [ChrBankRegisterId; 2],
     read_write_statuses: [ReadWriteStatus; 15],
-    chr_sources: [ChrSource; 6],
+    chr_sources: [ChrSource; 12],
 }
 
 impl ChrBankRegisters {
@@ -113,7 +113,7 @@ impl ChrBankRegisters {
             // Meta registers are only used for CHR currently.
             chr_meta_registers: [ChrBankRegisterId::C0, ChrBankRegisterId::C0],
             read_write_statuses: [ReadWriteStatus::ReadWrite; 15],
-            chr_sources: [ChrSource::WorkRam; 6],
+            chr_sources: [ChrSource::WorkRam; 12],
         }
     }
 
@@ -148,9 +148,8 @@ impl ChrBankRegisters {
         self.registers[id as usize] = BankNumber(updater(value.0));
     }
 
-    pub fn set_to_ciram_side(&mut self, _id: ChrBankRegisterId, _ciram_side: CiramSide) {
-        // FIXME
-        //self.registers[id as usize] = BankLocation::Ciram(ciram_side);
+    pub fn set_to_ciram_side(&mut self, id: ChrSourceRegisterId, ciram_side: CiramSide) {
+        self.chr_sources[id as usize] = ChrSource::Ciram(ciram_side);
     }
 
     pub fn get_from_meta(&self, id: MetaRegisterId) -> BankNumber {
@@ -234,6 +233,8 @@ pub enum ChrBankRegisterId {
 }
 
 impl ChrBankRegisterId {
+    pub const ALL_NAME_TABLE_IDS: [Self; 4] = [Self::N0, Self::N1, Self::N2, Self::N3];
+
     pub fn to_raw_chr_id(self) -> u8 {
         self as u8
     }

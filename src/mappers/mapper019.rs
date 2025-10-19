@@ -1,4 +1,5 @@
 use crate::mapper::*;
+use crate::memory::bank::bank::ChrSourceRegisterId;
 use crate::memory::memory::Memory;
 use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::ciram::CiramSide;
@@ -17,18 +18,18 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C0).status_register(S0)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C1).status_register(S1)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C2).status_register(S2)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C3).status_register(S3)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C4).status_register(S4)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C5).status_register(S5)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C6).status_register(S6)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(C7).status_register(S7)),
-        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(N0).status_register(S8)),
-        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::RAM.switchable(N1).status_register(S9)),
-        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(N2).status_register(S10)),
-        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::RAM.switchable(N3).status_register(S11)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS0).switchable(C0).status_register(S0)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS1).switchable(C1).status_register(S1)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS2).switchable(C2).status_register(S2)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS3).switchable(C3).status_register(S3)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS4).switchable(C4).status_register(S4)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS5).switchable(C5).status_register(S5)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS6).switchable(C6).status_register(S6)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS7).switchable(C7).status_register(S7)),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT0).switchable(N0).status_register(S8)),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT1).switchable(N1).status_register(S9)),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT2).switchable(N2).status_register(S10)),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT3).switchable(N3).status_register(S11)),
     ])
     .read_write_statuses(&[
         ReadWriteStatus::ReadOnly,
@@ -92,18 +93,18 @@ impl Mapper for Mapper019 {
                 }
             }
             0x6000..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x87FF => set_chr_register(mem, self.allow_ciram_in_low_chr, C0, S0, value),
-            0x8800..=0x8FFF => set_chr_register(mem, self.allow_ciram_in_low_chr, C1, S1, value),
-            0x9000..=0x97FF => set_chr_register(mem, self.allow_ciram_in_low_chr, C2, S2, value),
-            0x9800..=0x9FFF => set_chr_register(mem, self.allow_ciram_in_low_chr, C3, S3, value),
-            0xA000..=0xA7FF => set_chr_register(mem, self.allow_ciram_in_high_chr, C4, S4, value),
-            0xA800..=0xAFFF => set_chr_register(mem, self.allow_ciram_in_high_chr, C5, S5, value),
-            0xB000..=0xB7FF => set_chr_register(mem, self.allow_ciram_in_high_chr, C6, S6, value),
-            0xB800..=0xBFFF => set_chr_register(mem, self.allow_ciram_in_high_chr, C7, S7, value),
-            0xC000..=0xC7FF => set_chr_register(mem, true, C8, S8, value),
-            0xC800..=0xCFFF => set_chr_register(mem, true, C9, S9, value),
-            0xD000..=0xD7FF => set_chr_register(mem, true, C10, S10, value),
-            0xD800..=0xDFFF => set_chr_register(mem, true, C11, S11, value),
+            0x8000..=0x87FF => set_chr_register(mem, self.allow_ciram_in_low_chr,  CS0, C0,   S0, value),
+            0x8800..=0x8FFF => set_chr_register(mem, self.allow_ciram_in_low_chr,  CS1, C1,   S1, value),
+            0x9000..=0x97FF => set_chr_register(mem, self.allow_ciram_in_low_chr,  CS2, C2,   S2, value),
+            0x9800..=0x9FFF => set_chr_register(mem, self.allow_ciram_in_low_chr,  CS3, C3,   S3, value),
+            0xA000..=0xA7FF => set_chr_register(mem, self.allow_ciram_in_high_chr, CS4, C4,   S4, value),
+            0xA800..=0xAFFF => set_chr_register(mem, self.allow_ciram_in_high_chr, CS5, C5,   S5, value),
+            0xB000..=0xB7FF => set_chr_register(mem, self.allow_ciram_in_high_chr, CS6, C6,   S6, value),
+            0xB800..=0xBFFF => set_chr_register(mem, self.allow_ciram_in_high_chr, CS7, C7,   S7, value),
+            0xC000..=0xC7FF => set_chr_register(mem, true,                         NT0, C8,   S8, value),
+            0xC800..=0xCFFF => set_chr_register(mem, true,                         NT1, C9,   S9, value),
+            0xD000..=0xD7FF => set_chr_register(mem, true,                         NT2, C10, S10, value),
+            0xD800..=0xDFFF => set_chr_register(mem, true,                         NT3, C11, S11, value),
             0xE000..=0xE7FF => {
                 // TODO: Pin 22 logic
                 // TODO: Disable sound
@@ -186,16 +187,17 @@ impl Mapper for Mapper019 {
 fn set_chr_register(
     mem: &mut Memory,
     allow_ciram_in_chr: bool,
-    reg_id: ChrBankRegisterId,
+    source_reg_id: ChrSourceRegisterId,
+    bank_reg_id: ChrBankRegisterId,
     status_reg_id: ReadWriteStatusRegisterId,
     value: u8,
 ) {
     if allow_ciram_in_chr && value >= 0xE0 {
         let ciram_side = if value & 1 == 0 { CiramSide::Left } else { CiramSide::Right };
-        mem.set_chr_bank_register_to_ciram_side(reg_id, ciram_side);
+        mem.set_chr_bank_register_to_ciram_side(source_reg_id, ciram_side);
         mem.set_read_write_status(status_reg_id, READ_WRITE);
     } else {
-        mem.set_chr_register(reg_id, value);
+        mem.set_chr_register(bank_reg_id, value);
         mem.set_read_write_status(status_reg_id, READ_ONLY);
     }
 }

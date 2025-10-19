@@ -121,7 +121,7 @@ impl Layout {
         );
 
         let name_table_mirroring = metadata.name_table_mirroring
-            .expect("Four screen mirroring specified, but mapper didn't a definition of four screen mirroring.");
+            .expect("Four screen mirroring specified, but mapper didn't provide a definition of four screen mirroring.");
 
         let mut chr_layouts: Vec<_> = self.chr_layouts.as_iter().collect();
         match chr_access_override {
@@ -146,6 +146,7 @@ impl Layout {
             cartridge.chr_rom().clone(),
             chr_ram,
             name_table_mirroring,
+            self.name_table_mirrorings.is_empty(),
             chr_bank_registers,
         );
 

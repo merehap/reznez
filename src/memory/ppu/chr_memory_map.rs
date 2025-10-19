@@ -1,5 +1,5 @@
 use crate::mapper::{BankNumber, ChrBank, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus};
-use crate::memory::bank::bank::{ChrBankNumberProvider, ChrSource};
+use crate::memory::bank::bank::{ChrBankNumberProvider, ChrSource, ChrSourceRegisterId};
 use crate::memory::bank::bank_number::ChrBankRegisters;
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
@@ -21,9 +21,10 @@ impl ChrMemoryMap {
     pub fn new(
         initial_layout: ChrLayout,
         name_table_mirroring: NameTableMirroring,
+        name_table_mirroring_fixed: bool,
         bank_size: ChrWindowSize,
         align_large_windows: bool,
-        regs: &ChrBankRegisters,
+        regs: &mut ChrBankRegisters,
     ) -> Self {
 
         let mut page_mappings = Vec::with_capacity(CHR_SLOT_COUNT);
@@ -48,23 +49,16 @@ impl ChrMemoryMap {
 
         // Most mappers only map 0x0000..=0x1FFF for pattern data, but some map up through 0x2FFF.
         if page_mappings.len() == 8 {
-            for quadrant in name_table_mirroring.quadrants() {
-                let mapping = match quadrant {
-                    NameTableSource::Ciram(ciram_side) => ChrMapping {
-                        bank: ChrBank::ciram(ciram_side),
-                        pages_per_bank: 1,
-                        page_number_mask: 0b1111_1111_1111_1111,
-                        page_offset: 0,
-                    },
-                    NameTableSource::Ram { bank_number } => ChrMapping {
-                        bank: ChrBank::RAM.fixed_index(bank_number.to_raw() as i16),
-                        pages_per_bank: 1,
-                        page_number_mask: 0b1111_1111_1111_1111,
-                        page_offset: 0,
-                    },
-                    _ => panic!("{quadrant:?} is not yet supported for high PPU memory mapping."),
-                };
-                page_mappings.push(mapping);
+            if name_table_mirroring_fixed {
+                for quadrant in name_table_mirroring.quadrants() {
+                    page_mappings.push(ChrMapping::from_name_table_source(quadrant));
+                }
+            } else {
+                let quadrants_with_source_reg_ids = name_table_mirroring.quadrants().into_iter()
+                    .zip(ChrSourceRegisterId::ALL_NAME_TABLE_SOURCE_IDS);
+                for (quadrant, reg_id) in quadrants_with_source_reg_ids {
+                    page_mappings.push(ChrMapping::from_name_table_source_with_register(quadrant, reg_id, regs));
+                }
             }
         }
 
@@ -190,6 +184,29 @@ impl ChrMapping {
             NameTableSource::ExtendedRam => ChrBank::EXT_RAM,
             NameTableSource::FillModeTile => ChrBank::FILL_MODE_TILE,
         };
+
+        mapping
+    }
+
+    pub fn from_name_table_source_with_register(
+        name_table_source: NameTableSource,
+        source_id: ChrSourceRegisterId,
+        regs: &mut ChrBankRegisters,
+    ) -> Self {
+        let mapping = Self {
+            bank: ChrBank::with_switchable_source(source_id),
+            pages_per_bank: 1,
+            page_offset: 0,
+            page_number_mask: 0b1111_1111_1111_1111,
+        };
+
+        let chr_source = match name_table_source {
+            NameTableSource::Ram {..} => ChrSource::WorkRam,
+            NameTableSource::Ciram(ciram_side) => ChrSource::Ciram(ciram_side),
+            NameTableSource::ExtendedRam => ChrSource::ExtendedRam,
+            NameTableSource::FillModeTile => ChrSource::FillModeTile,
+        };
+        regs.set_chr_source(source_id, chr_source);
 
         mapping
     }

@@ -173,7 +173,9 @@ impl Memory {
     }
 
     pub fn set_name_table_mirroring(&mut self, mirroring_index: u8) {
-        self.chr_memory.set_name_table_mirroring(self.name_table_mirrorings[usize::from(mirroring_index)]);
+        let mirroring = *self.name_table_mirrorings.get(usize::from(mirroring_index)).expect("NameTableMirroring to not be set. \
+            No NameTableMirrorings were specified in the Layout, so the hard-coded mirroring can't be overridden.");
+        self.chr_memory.set_name_table_mirroring(mirroring);
     }
 
     pub fn set_name_table_quadrant(&mut self, quadrant: NameTableQuadrant, ciram_side: CiramSide) {
@@ -271,7 +273,7 @@ impl Memory {
         self.chr_memory.update_bank_register(id, updater);
     }
 
-    pub fn set_chr_bank_register_to_ciram_side(&mut self, id: ChrBankRegisterId, ciram_side: CiramSide) {
+    pub fn set_chr_bank_register_to_ciram_side(&mut self, id: ChrSourceRegisterId, ciram_side: CiramSide) {
         self.chr_memory.set_chr_bank_register_to_ciram_side(id, ciram_side);
     }
 }

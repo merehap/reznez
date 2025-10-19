@@ -38,7 +38,8 @@ impl ChrMemory {
         mut rom: RawMemory,
         mut ram: RawMemory,
         name_table_mirroring: NameTableMirroring,
-        regs: ChrBankRegisters,
+        name_table_mirroring_fixed: bool,
+        mut regs: ChrBankRegisters,
     ) -> ChrMemory {
 
         let mut bank_size = None;
@@ -88,9 +89,10 @@ impl ChrMemory {
             ChrMemoryMap::new(
                 *layout,
                 name_table_mirroring,
+                name_table_mirroring_fixed,
                 bank_size,
                 align_large_chr_banks,
-                &regs,
+                &mut regs,
         )).collect();
 
         ChrMemory {
@@ -271,7 +273,7 @@ impl ChrMemory {
 
     pub fn set_chr_bank_register_to_ciram_side(
         &mut self,
-        id: ChrBankRegisterId,
+        id: ChrSourceRegisterId,
         ciram_side: CiramSide,
     ) {
         self.regs.set_to_ciram_side(id, ciram_side);
