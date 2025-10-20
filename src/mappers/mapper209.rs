@@ -103,32 +103,52 @@ const LAYOUT: Layout = Layout::builder()
     .chr_rom_max_size(1024 * KIBIBYTE)
     .chr_layout(&[
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT0).switchable(N0).status_register(S0)),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT1).switchable(N1).status_register(S0)),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT2).switchable(N2).status_register(S0)),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT3).switchable(N3).status_register(S0)),
     ])
     .chr_layout(&[
         ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
         ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT0).switchable(N0).status_register(S0)),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT1).switchable(N1).status_register(S0)),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT2).switchable(N2).status_register(S0)),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT3).switchable(N3).status_register(S0)),
     ])
     .chr_layout(&[
         ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
         ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
         ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
         ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM.switchable(C6)),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT0).switchable(N0).status_register(S0)),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT1).switchable(N1).status_register(S0)),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT2).switchable(N2).status_register(S0)),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT3).switchable(N3).status_register(S0)),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C2)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C3)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C6)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C7)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C0).status_register(S0)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C1).status_register(S0)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C2).status_register(S0)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C3).status_register(S0)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C4).status_register(S0)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C5).status_register(S0)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C6).status_register(S0)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM.switchable(C7).status_register(S0)),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT0).switchable(N0).status_register(S0)),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT1).switchable(N1).status_register(S0)),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT2).switchable(N2).status_register(S0)),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT3).switchable(N3).status_register(S0)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
         NameTableMirroring::HORIZONTAL,
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,
         NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
+    ])
+    .read_write_statuses(&[
+        ReadWriteStatus::ReadOnly,
+        ReadWriteStatus::ReadWrite,
     ])
     .build();
 
@@ -153,6 +173,11 @@ pub struct Mapper209 {
     multiplicand: u8,
     multiplier: u8,
     multiplication_result: u16,
+
+    extended_mode_mirroring_enabled: bool,
+    extended_mirroring: NameTableMirroring,
+    rom_name_table_mode: RomNameTableMode,
+    ciram_selection_target: bool,
 }
 
 impl Mapper for Mapper209 {
@@ -205,33 +230,93 @@ impl Mapper for Mapper209 {
                 //mem.set_prg_register(P9, reverse_lower_seven_bits(value));
             }
             0xD000 => {
-                let fields = splitbits!(value, "pgnccppp");
+                let fields = splitbits!(value, "prrccppp");
                 mem.prg_memory.set_layout(fields.p);
                 mem.chr_memory.set_layout(fields.c);
-                assert_eq!(fields.g, false, "ROM name tables not supported yet");
-                assert_eq!(fields.n, false, "ROM name tables not supported yet");
+
+                self.rom_name_table_mode = match fields.r {
+                    0 | 2 => RomNameTableMode::Disabled,
+                    1 => RomNameTableMode::SelectionsEnabled,
+                    3 => RomNameTableMode::GloballyEnabled,
+                    _ => unreachable!(),
+                };
             }
             0xD001 => {
-                let fields = splitbits!(value, "....e.mm");
-                assert!(!fields.e, "Extended mode mirroring isn't supported yet.");
-                mem.set_name_table_mirroring(fields.m);
+                let mirroring;
+                (self.extended_mode_mirroring_enabled, mirroring) = splitbits_named!(value, "....e.mm");
+
+                if self.extended_mode_mirroring_enabled {
+                    mem.set_name_table_mirroring_directly(self.extended_mirroring);
+                } else if self.rom_name_table_mode == RomNameTableMode::Disabled {
+                    mem.set_name_table_mirroring(mirroring);
+                }
             }
-            0xD002 => todo!("PPU Address Space"),
+            0xD002 => {
+                let chr_writes_enabled;
+                (self.ciram_selection_target, chr_writes_enabled) = splitbits_named!(value, "nw......");
+                mem.set_read_write_status(S0, chr_writes_enabled as u8);
+            }
             0xD003 => todo!("Outer Bank"),
             _ => { /* Do nothing multiplication, PRG bank select, or mode related. */ }
         }
 
         match *addr & 0xF807 {
-            0x9000 => mem.set_chr_bank_register_bits(C0, u16::from(value), 0b0000_0000_1111_1111),
-            0x9001 => mem.set_chr_bank_register_bits(C1, u16::from(value), 0b0000_0000_1111_1111),
-            0x9002 => mem.set_chr_bank_register_bits(C2, u16::from(value), 0b0000_0000_1111_1111),
-            0x9003 => mem.set_chr_bank_register_bits(C3, u16::from(value), 0b0000_0000_1111_1111),
-            0xA000 => mem.set_chr_bank_register_bits(C4, u16::from(value) << 8, 0b1111_1111_0000_0000),
-            0xA001 => mem.set_chr_bank_register_bits(C5, u16::from(value) << 8, 0b1111_1111_0000_0000),
-            0xA002 => mem.set_chr_bank_register_bits(C6, u16::from(value) << 8, 0b1111_1111_0000_0000),
-            0xA003 => mem.set_chr_bank_register_bits(C7, u16::from(value) << 8, 0b1111_1111_0000_0000),
-            0xB000..=0xB003 => todo!("NameTable LSB Bank Select"),
-            0xB004..=0xB007 => todo!("NameTable MSB Bank Select"),
+            0x9000 => mem.set_chr_register_low_byte(C0, value),
+            0x9001 => mem.set_chr_register_low_byte(C1, value),
+            0x9002 => mem.set_chr_register_low_byte(C2, value),
+            0x9003 => mem.set_chr_register_low_byte(C3, value),
+            0x9004 => mem.set_chr_register_low_byte(C4, value),
+            0x9005 => mem.set_chr_register_low_byte(C5, value),
+            0x9006 => mem.set_chr_register_low_byte(C6, value),
+            0x9007 => mem.set_chr_register_low_byte(C7, value),
+            0xA000 => mem.set_chr_register_high_byte(C0, value),
+            0xA001 => mem.set_chr_register_high_byte(C1, value),
+            0xA002 => mem.set_chr_register_high_byte(C2, value),
+            0xA003 => mem.set_chr_register_high_byte(C3, value),
+            0xA004 => mem.set_chr_register_high_byte(C4, value),
+            0xA005 => mem.set_chr_register_high_byte(C5, value),
+            0xA006 => mem.set_chr_register_high_byte(C6, value),
+            0xA007 => mem.set_chr_register_high_byte(C7, value),
+            0xB000..=0xB003 => {
+                let quadrant = NameTableQuadrant::ALL[usize::from(*addr & 0b11)];
+                let ciram_side = [CiramSide::Left, CiramSide::Right][usize::from(value & 1)];
+                // TODO: Determine if extended mode mirroring takes precedence over ROM name tables, or vis-a-versa.
+                if self.extended_mode_mirroring_enabled {
+                    self.extended_mirroring.set_quadrant(quadrant, ciram_side);
+                    mem.set_name_table_mirroring_directly(self.extended_mirroring);
+                } else {
+                    match self.rom_name_table_mode {
+                        RomNameTableMode::Disabled => { /* Do nothing. */ }
+                        RomNameTableMode::GloballyEnabled => {}
+                        RomNameTableMode::SelectionsEnabled => {
+                            let ciram_selection = (value >> 7) == 1;
+                            if ciram_selection == self.ciram_selection_target {
+                                self.extended_mirroring.set_quadrant(quadrant, ciram_side);
+                                mem.set_name_table_mirroring_directly(self.extended_mirroring);
+                            } else {
+                                let reg_id = [N0, N1, N2, N3][usize::from(*addr & 0b11)];
+                                // TODO: Actually switch to ROM/RAM source.
+                                mem.set_chr_register_low_byte(reg_id, value);
+                            }
+                        }
+                    }
+                }
+            }
+            0xB004..=0xB007 => {
+                if !self.extended_mode_mirroring_enabled {
+                    match self.rom_name_table_mode {
+                        RomNameTableMode::Disabled => { /* Do nothing. */ }
+                        RomNameTableMode::GloballyEnabled => {}
+                        RomNameTableMode::SelectionsEnabled => {
+                            let ciram_selection = (value >> 7) == 1;
+                            if ciram_selection != self.ciram_selection_target {
+                                let reg_id = [N0, N1, N2, N3][usize::from(*addr & 0b11)];
+                                mem.set_chr_register_high_byte(reg_id, value);
+                            }
+                        }
+                    }
+                }
+            }
             _ => { /* Do nothing CHR related. */ }
         }
 
@@ -302,6 +387,11 @@ impl Mapper209 {
             multiplicand: 0,
             multiplier: 0,
             multiplication_result: 0,
+
+            extended_mode_mirroring_enabled: false,
+            extended_mirroring: NameTableMirroring::ONE_SCREEN_LEFT_BANK,
+            rom_name_table_mode: RomNameTableMode::Disabled,
+            ciram_selection_target: false,
         }
     }
 }
@@ -312,6 +402,13 @@ enum IrqTickedBy {
     PpuCycle,
     PpuRead,
     CpuWrite,
+}
+
+#[derive(PartialEq, Eq)]
+enum RomNameTableMode {
+    Disabled,
+    SelectionsEnabled,
+    GloballyEnabled,
 }
 
 fn reverse_lower_seven_bits(mut value: u8) -> u8 {

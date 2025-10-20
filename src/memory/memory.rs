@@ -177,6 +177,11 @@ impl Memory {
         self.chr_memory.set_name_table_mirroring(mirroring);
     }
 
+    // Almost all use-cases should use set_name_table_mirroring instead of this.
+    pub fn set_name_table_mirroring_directly(&mut self, mirroring: NameTableMirroring) {
+        self.chr_memory.set_name_table_mirroring(mirroring);
+    }
+
     pub fn set_name_table_quadrant(&mut self, quadrant: NameTableQuadrant, ciram_side: CiramSide) {
         self.chr_memory.set_name_table_quadrant(quadrant, NameTableSource::Ciram(ciram_side));
     }
@@ -258,6 +263,14 @@ impl Memory {
 
     pub fn set_chr_register<INDEX: Into<u16>>(&mut self, id: ChrBankRegisterId, value: INDEX) {
         self.chr_memory.set_bank_register(id, value);
+    }
+
+    pub fn set_chr_register_low_byte(&mut self, id: ChrBankRegisterId, low_byte_value: u8) {
+        self.set_chr_bank_register_bits(id, u16::from(low_byte_value), 0b0000_0000_1111_1111);
+    }
+
+    pub fn set_chr_register_high_byte(&mut self, id: ChrBankRegisterId, high_byte_value: u8) {
+        self.set_chr_bank_register_bits(id, u16::from(high_byte_value) << 8, 0b1111_1111_0000_0000);
     }
 
     pub fn set_chr_bank_register_bits(&mut self, id: ChrBankRegisterId, new_value: u16, mask: u16) {
