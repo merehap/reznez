@@ -201,83 +201,51 @@ impl Mapper for Mapper209 {
     }
 
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
-        match *addr & 0xF803 {
-            0x5800 => self.multiplicand = value,
-            0x5801 => {
+        match (*addr & 0xF803, *addr & 0xF807, *addr & 0xF007) {
+            (0x5800, _, _) => self.multiplicand = value,
+            (0x5801, _, _) => {
                 self.multiplier = value;
                 // FIXME: This is supposed to be calculated over 6 CPU cycles, with the intermediate results being visible.
                 self.multiplication_result = u16::from(self.multiplicand) * u16::from(self.multiplier);
             }
-            0x5802 => todo!("Increase accumulator"),
-            0x5803 => todo!("Reset accumulator"),
-            0x8000 => {
+            (0x5802, _, _) => todo!("Increase accumulator"),
+            (0x5803, _, _) => todo!("Reset accumulator"),
+            (0x8000, _, _) => {
                 mem.set_prg_register(P0, value & 0b0111_1111);
                 mem.set_prg_register(P4, reverse_lower_seven_bits(value));
             }
-            0x8001 => {
+            (0x8001, _, _) => {
                 mem.set_prg_register(P1, value & 0b0111_1111);
                 mem.set_prg_register(P5, reverse_lower_seven_bits(value));
             }
-            0x8002 => {
+            (0x8002, _, _) => {
                 mem.set_prg_register(P2, value & 0b0111_1111);
                 mem.set_prg_register(P6, reverse_lower_seven_bits(value));
             }
-            0x8003 => {
+            (0x8003, _, _) => {
                 mem.set_prg_register(P3, value & 0b0111_1111);
                 mem.set_prg_register(P7, reverse_lower_seven_bits(value));
                 mem.set_prg_register(P8, (value << 1) | 0b1);
                 mem.set_prg_register(P9, (value << 2) | 0b11);
                 //mem.set_prg_register(P9, reverse_lower_seven_bits(value));
             }
-            0xD000 => {
-                let fields = splitbits!(value, "prrccppp");
-                mem.prg_memory.set_layout(fields.p);
-                mem.chr_memory.set_layout(fields.c);
-
-                self.rom_name_table_mode = match fields.r {
-                    0 | 2 => RomNameTableMode::Disabled,
-                    1 => RomNameTableMode::SelectionsEnabled,
-                    3 => RomNameTableMode::GloballyEnabled,
-                    _ => unreachable!(),
-                };
-            }
-            0xD001 => {
-                let mirroring;
-                (self.extended_mode_mirroring_enabled, mirroring) = splitbits_named!(value, "....e.mm");
-
-                if self.extended_mode_mirroring_enabled {
-                    mem.set_name_table_mirroring_directly(self.extended_mirroring);
-                } else if self.rom_name_table_mode == RomNameTableMode::Disabled {
-                    mem.set_name_table_mirroring(mirroring);
-                }
-            }
-            0xD002 => {
-                let chr_writes_enabled;
-                (self.ciram_selection_target, chr_writes_enabled) = splitbits_named!(value, "nw......");
-                mem.set_read_write_status(S0, chr_writes_enabled as u8);
-            }
-            0xD003 => todo!("Outer Bank"),
-            _ => { /* Do nothing multiplication, PRG bank select, or mode related. */ }
-        }
-
-        match *addr & 0xF807 {
-            0x9000 => mem.set_chr_register_low_byte(C0, value),
-            0x9001 => mem.set_chr_register_low_byte(C1, value),
-            0x9002 => mem.set_chr_register_low_byte(C2, value),
-            0x9003 => mem.set_chr_register_low_byte(C3, value),
-            0x9004 => mem.set_chr_register_low_byte(C4, value),
-            0x9005 => mem.set_chr_register_low_byte(C5, value),
-            0x9006 => mem.set_chr_register_low_byte(C6, value),
-            0x9007 => mem.set_chr_register_low_byte(C7, value),
-            0xA000 => mem.set_chr_register_high_byte(C0, value),
-            0xA001 => mem.set_chr_register_high_byte(C1, value),
-            0xA002 => mem.set_chr_register_high_byte(C2, value),
-            0xA003 => mem.set_chr_register_high_byte(C3, value),
-            0xA004 => mem.set_chr_register_high_byte(C4, value),
-            0xA005 => mem.set_chr_register_high_byte(C5, value),
-            0xA006 => mem.set_chr_register_high_byte(C6, value),
-            0xA007 => mem.set_chr_register_high_byte(C7, value),
-            0xB000..=0xB003 => {
+            (_, 0x9000, _) => mem.set_chr_register_low_byte(C0, value),
+            (_, 0x9001, _) => mem.set_chr_register_low_byte(C1, value),
+            (_, 0x9002, _) => mem.set_chr_register_low_byte(C2, value),
+            (_, 0x9003, _) => mem.set_chr_register_low_byte(C3, value),
+            (_, 0x9004, _) => mem.set_chr_register_low_byte(C4, value),
+            (_, 0x9005, _) => mem.set_chr_register_low_byte(C5, value),
+            (_, 0x9006, _) => mem.set_chr_register_low_byte(C6, value),
+            (_, 0x9007, _) => mem.set_chr_register_low_byte(C7, value),
+            (_, 0xA000, _) => mem.set_chr_register_high_byte(C0, value),
+            (_, 0xA001, _) => mem.set_chr_register_high_byte(C1, value),
+            (_, 0xA002, _) => mem.set_chr_register_high_byte(C2, value),
+            (_, 0xA003, _) => mem.set_chr_register_high_byte(C3, value),
+            (_, 0xA004, _) => mem.set_chr_register_high_byte(C4, value),
+            (_, 0xA005, _) => mem.set_chr_register_high_byte(C5, value),
+            (_, 0xA006, _) => mem.set_chr_register_high_byte(C6, value),
+            (_, 0xA007, _) => mem.set_chr_register_high_byte(C7, value),
+            (_, 0xB000..=0xB003, _) => {
                 let quadrant = NameTableQuadrant::ALL[usize::from(*addr & 0b11)];
                 let ciram_side = [CiramSide::Left, CiramSide::Right][usize::from(value & 1)];
                 // TODO: Determine if extended mode mirroring takes precedence over ROM name tables, or vis-a-versa.
@@ -302,7 +270,7 @@ impl Mapper for Mapper209 {
                     }
                 }
             }
-            0xB004..=0xB007 => {
+            (_, 0xB004..=0xB007, _) => {
                 if !self.extended_mode_mirroring_enabled {
                     match self.rom_name_table_mode {
                         RomNameTableMode::Disabled => { /* Do nothing. */ }
@@ -317,11 +285,7 @@ impl Mapper for Mapper209 {
                     }
                 }
             }
-            _ => { /* Do nothing CHR related. */ }
-        }
-
-        match *addr & 0xF007 {
-            0xC000 => {
+            (_, _, 0xC000) => {
                 if value & 1 == 0 {
                     self.irq_counter.enable_triggering();
                 } else {
@@ -329,7 +293,7 @@ impl Mapper for Mapper209 {
                     mem.cpu_pinout.acknowledge_mapper_irq();
                 }
             }
-            0xC001 => {
+            (_, _, 0xC001) => {
                 // IRQ mode
                 let (counting_mode, unknown, use_prescaler_mask, irq_ticked_by) = splitbits_named!(value, "cc..upss");
                 assert!(!unknown, "IRQ Unknown Mode Configuration is not supported yet.");
@@ -358,16 +322,44 @@ impl Mapper for Mapper209 {
                     _ => unreachable!(),
                 };
             }
-            0xC002 => {
+            (_, _, 0xC002) => {
                 self.irq_counter.disable_triggering();
                 mem.cpu_pinout.acknowledge_mapper_irq();
             }
-            0xC003 => self.irq_counter.enable_triggering(),
-            0xC004 => self.irq_counter.set_prescaler_count(value & self.irq_xor_value),
-            0xC005 => self.irq_counter.set_count(value & self.irq_xor_value),
-            0xC006 => self.irq_xor_value = value,
-            0xC007 => todo!("Unknown mode"),
-            _ => { /* Do nothing IRQ related. */ }
+            (_, _, 0xC003) => self.irq_counter.enable_triggering(),
+            (_, _, 0xC004) => self.irq_counter.set_prescaler_count(value & self.irq_xor_value),
+            (_, _, 0xC005) => self.irq_counter.set_count(value & self.irq_xor_value),
+            (_, _, 0xC006) => self.irq_xor_value = value,
+            (_, _, 0xC007) => todo!("Unknown mode"),
+            (0xD000, _, _) => {
+                let fields = splitbits!(value, "prrccppp");
+                mem.prg_memory.set_layout(fields.p);
+                mem.chr_memory.set_layout(fields.c);
+
+                self.rom_name_table_mode = match fields.r {
+                    0 | 2 => RomNameTableMode::Disabled,
+                    1 => RomNameTableMode::SelectionsEnabled,
+                    3 => RomNameTableMode::GloballyEnabled,
+                    _ => unreachable!(),
+                };
+            }
+            (0xD001, _, _) => {
+                let mirroring;
+                (self.extended_mode_mirroring_enabled, mirroring) = splitbits_named!(value, "....e.mm");
+
+                if self.extended_mode_mirroring_enabled {
+                    mem.set_name_table_mirroring_directly(self.extended_mirroring);
+                } else if self.rom_name_table_mode == RomNameTableMode::Disabled {
+                    mem.set_name_table_mirroring(mirroring);
+                }
+            }
+            (0xD002, _, _) => {
+                let chr_writes_enabled;
+                (self.ciram_selection_target, chr_writes_enabled) = splitbits_named!(value, "nw......");
+                mem.set_read_write_status(S0, chr_writes_enabled as u8);
+            }
+            (0xD003, _, _) => todo!("Outer Bank"),
+            _ => { /* Do nothing. */ }
         }
     }
 
