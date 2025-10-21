@@ -11,8 +11,8 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
-        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM.switchable(C1)),
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C1)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,

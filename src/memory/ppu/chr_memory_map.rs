@@ -176,7 +176,7 @@ pub struct ChrMapping {
 impl ChrMapping {
     pub fn from_name_table_source(name_table_source: NameTableSource) -> Self {
         let mut mapping = Self {
-            bank: ChrBank::RAM,
+            bank: ChrBank::ROM_OR_RAM,
             pages_per_bank: 1,
             page_offset: 0,
             page_number_mask: 0b1111_1111_1111_1111,
@@ -217,6 +217,15 @@ impl ChrMapping {
     pub fn to_name_table_source(&self, regs: &ChrBankRegisters) -> Result<NameTableSource, String> {
         let chr_source = self.bank.current_chr_source(regs).expect("NameTableSource can't come from an empty bank.");
         match chr_source {
+            ChrSource::RomOrRam => {
+                if regs.cartridge_has_rom() {
+                    Err(format!("{chr_source:?} [ROM] is not yet a supported CHR source"))
+                } else if regs.cartridge_has_ram() {
+                    Ok(NameTableSource::Ram { bank_number: self.bank.bank_number(regs).unwrap() })
+                } else {
+                    Err("Absent CHR banks are not yet supported.".to_owned())
+                }
+            }
             ChrSource::Rom | ChrSource::SaveRam => Err(format!("{chr_source:?} is not yet a supported CHR source")),
             ChrSource::Ciram(ciram_side) => Ok(NameTableSource::Ciram(ciram_side)),
             ChrSource::WorkRam => Ok(NameTableSource::Ram { bank_number: self.bank.bank_number(regs).unwrap() }),
@@ -239,6 +248,14 @@ impl ChrMapping {
         let read_write_status = bank.read_write_status(regs);
         match bank.current_chr_source(regs) {
             None => todo!("EMPTY bank"),
+            Some(ChrSource::RomOrRam) => {
+                match (regs.cartridge_has_rom(), regs.cartridge_has_ram()) {
+                    (false, false) => todo!("Absent CHR pages."),
+                    (true , true ) => panic!("Not sure what to do for a RomOrRam bank when both are present in the cartridge."),
+                    (true , false) => (ChrPageId::Rom { page_number, bank_number }, read_write_status),
+                    (false, true ) => (ChrPageId::Ram { page_number, bank_number }, read_write_status),
+                }
+            }
             Some(ChrSource::Rom) => (ChrPageId::Rom { page_number, bank_number }, read_write_status),
             Some(ChrSource::WorkRam) => (ChrPageId::Ram { page_number, bank_number }, read_write_status),
             Some(ChrSource::SaveRam) => (ChrPageId::SaveRam, read_write_status),

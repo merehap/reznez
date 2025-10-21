@@ -110,16 +110,20 @@ pub struct ChrBankRegisters {
     chr_meta_registers: [ChrBankRegisterId; 2],
     read_write_statuses: [ReadWriteStatus; 15],
     chr_sources: [ChrSource; 12],
+    cartridge_has_rom: bool,
+    cartridge_has_ram: bool,
 }
 
 impl ChrBankRegisters {
-    pub fn new() -> Self {
+    pub fn new(cartridge_has_rom: bool, cartridge_has_ram: bool) -> Self {
         Self {
             registers: [BankNumber(0); 16],
             // Meta registers are only used for CHR currently.
             chr_meta_registers: [ChrBankRegisterId::C0, ChrBankRegisterId::C0],
             read_write_statuses: [ReadWriteStatus::ReadWrite; 15],
             chr_sources: [ChrSource::WorkRam; 12],
+            cartridge_has_rom,
+            cartridge_has_ram,
         }
     }
 
@@ -133,6 +137,14 @@ impl ChrBankRegisters {
 
     pub fn read_write_statuses(&self) -> &[ReadWriteStatus; 15] {
         &self.read_write_statuses
+    }
+
+    pub fn cartridge_has_rom(&self) -> bool {
+        self.cartridge_has_rom
+    }
+
+    pub fn cartridge_has_ram(&self) -> bool {
+        self.cartridge_has_ram
     }
 
     pub fn get(&self, id: ChrBankRegisterId) -> BankNumber {

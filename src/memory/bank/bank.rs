@@ -64,6 +64,7 @@ impl ChrSourceProvider {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum ChrSource {
+    RomOrRam,
     Rom,
     WorkRam,
     SaveRam,
@@ -322,6 +323,12 @@ impl ChrBank {
         missing_ram_fallback_mem_type: None,
         read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::Disabled),
     };
+    pub const ROM_OR_RAM: Self = Self {
+        bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
+        chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::RomOrRam)),
+        missing_ram_fallback_mem_type: Some(MemType::Rom),
+        read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadWrite),
+    };
     pub const ROM: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::Rom)),
@@ -348,7 +355,7 @@ impl ChrBank {
         missing_ram_fallback_mem_type: Some(MemType::WorkRam),
         read_write_status_provider: ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadOnly),
     };
-    pub const ROM_RAM: Self = Self {
+    pub const SWITCHABLE_SOURCE: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Switchable(CS0),
         missing_ram_fallback_mem_type: Some(MemType::Rom),
@@ -369,7 +376,7 @@ impl ChrBank {
             NameTableSource::Ciram(ciram_side) => Self::ciram(ciram_side),
             NameTableSource::ExtendedRam => Self::EXT_RAM,
             NameTableSource::FillModeTile => Self::FILL_MODE_TILE,
-            NameTableSource::Ram { bank_number } => Self::RAM.fixed_index(bank_number.to_raw() as i16),
+            NameTableSource::Ram { bank_number } => Self::ROM_OR_RAM.fixed_index(bank_number.to_raw() as i16),
         }
     }
 

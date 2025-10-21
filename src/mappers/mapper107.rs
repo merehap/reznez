@@ -10,7 +10,7 @@ const LAYOUT: Layout = Layout::builder()
     // Oversize. Actual cartridge only has 64 max.
     .chr_rom_max_size(2048 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
     ])
     .fixed_name_table_mirroring()
     .build();

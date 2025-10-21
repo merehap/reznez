@@ -94,7 +94,7 @@ impl Layout {
             prg_bank_registers.set(register_id, bank_number);
         }
 
-        let mut chr_bank_registers = ChrBankRegisters::new();
+        let mut chr_bank_registers = ChrBankRegisters::new(chr_rom_size > 0, !chr_ram.is_empty());
         for (register_id, bank_number) in self.chr_bank_register_overrides.as_iter() {
             chr_bank_registers.set(register_id, bank_number);
         }

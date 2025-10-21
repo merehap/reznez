@@ -11,20 +11,20 @@ pub const LAYOUT: Layout = Layout::builder()
     .chr_rom_max_size(64 * KIBIBYTE)
     // Same CHR layouts as standard MMC3, except the banks can switch between ROM and RAM memory spaces.
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C0).chr_source(CS0)),
-        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C1).chr_source(CS1)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C2).chr_source(CS2)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C3).chr_source(CS3)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C4).chr_source(CS4)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C5).chr_source(CS5)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(C0).chr_source(CS0)),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(C1).chr_source(CS1)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(C2).chr_source(CS2)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(C3).chr_source(CS3)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(C4).chr_source(CS4)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(C5).chr_source(CS5)),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C2).chr_source(CS2)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C3).chr_source(CS3)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C4).chr_source(CS4)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C5).chr_source(CS5)),
-        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C0).chr_source(CS0)),
-        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_RAM.switchable(C1).chr_source(CS1)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(C2).chr_source(CS2)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(C3).chr_source(CS3)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(C4).chr_source(CS4)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(C5).chr_source(CS5)),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(C0).chr_source(CS0)),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(C1).chr_source(CS1)),
     ])
     .name_table_mirrorings(mmc3::NAME_TABLE_MIRRORINGS)
     .read_write_statuses(mmc3::READ_WRITE_STATUSES)

@@ -56,7 +56,6 @@ impl PrgMemoryMap {
                 }
 
                 page_offset = (page_offset + 1) % rom_page_count;
-                //println!("Page offset: {page_offset}");
             }
 
             let mut sub_page_mappings = Vec::with_capacity(PRG_SUB_SLOT_COUNT);
