@@ -1,5 +1,4 @@
-use crate::memory::bank::bank::RomRamModeRegisterId;
-use crate::memory::bank::bank_number::MemType;
+use crate::memory::bank::bank::{PrgSource, RomRamModeRegisterId};
 use crate::mapper::*;
 use crate::mappers::mmc5::frame_state::FrameState;
 use crate::memory::memory::Memory;
@@ -423,7 +422,7 @@ impl Mapper005 {
         let fields = splitbits!(value, "mppppppp");
         mem.set_prg_register(id, fields.p);
         if let Some(mode_reg_id) = mode_reg_id {
-            let rom_ram_mode = [MemType::WorkRam, MemType::Rom][fields.m as usize];
+            let rom_ram_mode = [PrgSource::WorkRamOrRom, PrgSource::Rom][fields.m as usize];
             mem.set_rom_ram_mode(mode_reg_id, rom_ram_mode);
         }
     }

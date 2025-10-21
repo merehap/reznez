@@ -1,6 +1,6 @@
 use num_derive::FromPrimitive;
 
-use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, ReadWriteStatusRegisterId, RomRamModeRegisterId};
+use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, PrgSource, ReadWriteStatusRegisterId, RomRamModeRegisterId};
 use crate::memory::ppu::ciram::CiramSide;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -36,15 +36,17 @@ impl From<u8> for BankNumber {
 pub struct PrgBankRegisters {
     registers: [BankLocation; 10],
     read_write_statuses: [ReadWriteStatus; 16],
-    rom_ram_modes: [MemType; 12],
+    rom_ram_modes: [PrgSource; 12],
+    cartridge_has_ram: bool,
 }
 
 impl PrgBankRegisters {
-    pub fn new() -> Self {
+    pub fn new(cartridge_has_ram: bool) -> Self {
         Self {
             registers: [BankLocation::Index(BankNumber(0)); 10],
             read_write_statuses: [ReadWriteStatus::ReadWrite; 16],
-            rom_ram_modes: [MemType::WorkRam; 12],
+            rom_ram_modes: [PrgSource::WorkRamOrRom; 12],
+            cartridge_has_ram,
         }
     }
 
@@ -54,6 +56,10 @@ impl PrgBankRegisters {
 
     pub fn read_write_statuses(&self) -> &[ReadWriteStatus; 16] {
         &self.read_write_statuses
+    }
+
+    pub fn cartridge_has_ram(&self) -> bool {
+        self.cartridge_has_ram
     }
 
     pub fn get(&self, id: PrgBankRegisterId) -> BankLocation {
@@ -89,11 +95,11 @@ impl PrgBankRegisters {
         self.read_write_statuses[id as usize] = status;
     }
 
-    pub fn rom_ram_mode(&self, id: RomRamModeRegisterId) -> MemType {
+    pub fn rom_ram_mode(&self, id: RomRamModeRegisterId) -> PrgSource {
         self.rom_ram_modes[id as usize]
     }
 
-    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: MemType) {
+    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: PrgSource) {
         self.rom_ram_modes[id as usize] = rom_ram_mode;
     }
 }

@@ -89,7 +89,7 @@ impl Layout {
             RawMemory::new(metadata.chr_work_ram_size + metadata.chr_save_ram_size)
         };
 
-        let mut prg_bank_registers = PrgBankRegisters::new();
+        let mut prg_bank_registers = PrgBankRegisters::new(metadata.prg_work_ram_size > 0 || metadata.prg_save_ram_size > 0);
         for (register_id, bank_number) in self.bank_register_overrides.as_iter() {
             prg_bank_registers.set(register_id, bank_number);
         }
@@ -103,15 +103,8 @@ impl Layout {
             chr_bank_registers.set_meta_chr(meta_id, register_id);
         }
 
-        let mut prg_layouts: Vec<_> = self.prg_layouts.as_iter().collect();
-        if metadata.prg_work_ram_size == 0 && metadata.prg_save_ram_size == 0 {
-            for layout in &mut prg_layouts {
-                *layout = layout.force_rom()
-            }
-        }
-
         let mut prg_memory = PrgMemory::new(
-            prg_layouts,
+            self.prg_layouts.as_iter().collect(),
             self.prg_layout_index,
             cartridge.prg_rom().clone(),
             self.prg_rom_outer_bank_layout,

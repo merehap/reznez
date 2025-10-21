@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::memory::bank::bank_number::MemType;
+use crate::memory::bank::bank::PrgSource;
 use crate::memory::memory::Memory;
 
 const LAYOUT: Layout = Layout::builder()
@@ -84,7 +84,7 @@ impl Mapper for Mapper069 {
                     Command::PrgRomRamBank => {
                         let fields = splitbits!(value, "smpppppp");
                         mem.set_read_write_status(S0, fields.s as u8);
-                        let rom_ram_mode = [MemType::Rom, MemType::WorkRam][fields.m as usize];
+                        let rom_ram_mode = [PrgSource::Rom, PrgSource::WorkRamOrRom][fields.m as usize];
                         mem.set_rom_ram_mode(R0, rom_ram_mode);
                         mem.set_prg_register(P0, fields.p);
                     }
