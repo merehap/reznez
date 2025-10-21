@@ -8,7 +8,7 @@ const LAYOUT: Layout = Layout::builder()
     // Switchable 0x8000
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgBank::EMPTY),
+        PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgBank::ABSENT),
         PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgBank::WORK_RAM.fixed_index(0).status_register(S0)),
         PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, PrgBank::WORK_RAM.fixed_index(1).status_register(S1)),
         PrgWindow::new(0x7400, 0x75FF, KIBIBYTE / 2, PrgBank::WORK_RAM.fixed_index(0).status_register(S0)),
@@ -24,7 +24,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     // Switchable 0xC000
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgBank::EMPTY),
+        PrgWindow::new(0x6000, 0x6FFF, 4 * KIBIBYTE, PrgBank::ABSENT),
         PrgWindow::new(0x7000, 0x71FF, KIBIBYTE / 2, PrgBank::WORK_RAM.fixed_index(0).status_register(S0)),
         PrgWindow::new(0x7200, 0x73FF, KIBIBYTE / 2, PrgBank::WORK_RAM.fixed_index(1).status_register(S1)),
         PrgWindow::new(0x7400, 0x75FF, KIBIBYTE / 2, PrgBank::WORK_RAM.fixed_index(0).status_register(S0)),

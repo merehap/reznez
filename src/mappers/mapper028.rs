@@ -4,7 +4,7 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(8 * KIBIBYTE * KIBIBYTE)
     // Normal banking isn't used with Action 53, so this PrgLayout is ignored.
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::EMPTY),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ABSENT),
         PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.fixed_index(0)),
     ])
     .chr_rom_max_size(32 * KIBIBYTE)

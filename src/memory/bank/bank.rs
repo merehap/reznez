@@ -92,7 +92,7 @@ pub struct PrgBank {
 }
 
 impl PrgBank {
-    pub const EMPTY: Self = Self {
+    pub const ABSENT: Self = Self {
         bank_number_provider: PrgBankNumberProvider::FIXED_ZERO,
         prg_source_provider: PrgSourceProvider::Fixed(None),
         missing_ram_fallback_mem_type: None,
@@ -211,6 +211,20 @@ impl PrgBank {
         };
 
         status.is_writable()
+    }
+
+    // FIXME: This shouldn't be necessary anymore.
+    pub fn as_rom(mut self) -> PrgBank {
+        match self.missing_ram_fallback_mem_type {
+            None => self = Self::ABSENT,
+            Some(MemType::Rom) => {
+                self.prg_source_provider = PrgSourceProvider::Fixed(Some(PrgSource::Rom));
+                self.read_write_status_provider = ReadWriteStatusProvider::Fixed(ReadWriteStatus::ReadOnly);
+            }
+            Some(_) => panic!("Non-sensical fallback mem type."),
+        }
+
+        self
     }
 }
 
