@@ -144,12 +144,12 @@ impl PrgMemory {
             None | Some((MemType::Rom, _)) => unreachable!(),
             Some((MemType::WorkRam, index)) => {
                 self.work_ram[index] = value;
-                info!(target: "mapperramwrites", "Setting PRG [{address}]=${value:02} (Work RAM @ ${index:X})");
+                info!(target: "mapperramwrites", "Setting PRG [${address}]=${value:02} (Work RAM @ ${index:X})");
             }
             Some((MemType::SaveRam, index)) => {
                 let index = index % self.save_ram.size();
                 self.save_ram[index] = value;
-                info!(target: "mapperramwrites", "Setting PRG [{address}]=${value:02} (Save RAM @ ${index:X})");
+                info!(target: "mapperramwrites", "Setting PRG [${address}]=${value:02} (Save RAM @ ${index:X})");
             }
         }
     }

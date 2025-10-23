@@ -164,13 +164,13 @@ impl ChrMemory {
             ChrMemoryIndex::Ram(index) => {
                 let index = index % self.ram.size();
                 self.ram[index] = value;
-                info!(target: "mapperramwrites", "Setting CHR [{address}]=${value:02} (Work RAM @ ${index:X})");
+                info!(target: "mapperramwrites", "Setting CHR [${address}]=${value:02} (Work RAM @ ${index:X})");
             }
             ChrMemoryIndex::Ciram(side, index) => {
                 ciram.write(regs, side, index, value);
             }
             ChrMemoryIndex::SaveRam(index) => {
-                info!(target: "mapperramwrites", "Setting CHR [{address}]=${value:02} (Save RAM @ ${index:X})");
+                info!(target: "mapperramwrites", "Setting CHR [${address}]=${value:02} (Save RAM @ ${index:X})");
                 todo!();
             }
             ChrMemoryIndex::ExtendedRam(_index) => todo!(),
