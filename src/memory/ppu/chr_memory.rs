@@ -1,6 +1,6 @@
 use std::num::NonZeroU8;
 
-use log::warn;
+use log::{info, warn};
 
 use crate::mapper::{BankNumber, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId};
@@ -170,13 +170,17 @@ impl ChrMemory {
         match chr_memory_index {
             ChrMemoryIndex::Rom(_) => {}
             ChrMemoryIndex::Ram(index) => {
-                let size = self.ram.size();
-                self.ram[index % size] = value;
+                let index = index % self.ram.size();
+                self.ram[index] = value;
+                info!(target: "mapperramwrites", "Setting CHR [{address}]=${value:02} (Work RAM @ ${index:X})");
             }
             ChrMemoryIndex::Ciram(side, index) => {
                 ciram.write(regs, side, index, value);
             }
-            ChrMemoryIndex::SaveRam(_index) => todo!(),
+            ChrMemoryIndex::SaveRam(index) => {
+                info!(target: "mapperramwrites", "Setting CHR [{address}]=${value:02} (Save RAM @ ${index:X})");
+                todo!();
+            }
             ChrMemoryIndex::ExtendedRam(_index) => todo!(),
             ChrMemoryIndex::FillModeTile => todo!(),
         }

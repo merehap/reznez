@@ -25,6 +25,7 @@ pub struct Logger {
     pub log_oam_addr: bool,
     pub log_mapper_updates: bool,
     pub log_mapper_irq_counter: bool,
+    pub log_mapper_ram_writes: bool,
     pub log_timings: bool,
 
     pub buffer: Arc<Mutex<String>>,
@@ -52,6 +53,7 @@ impl log::Log for Logger {
             "oamaddr" => self.log_oam_addr,
             "mapperupdates" => self.log_mapper_updates,
             "mapperirqcounter" => self.log_mapper_irq_counter,
+            "mapperramwrites" => self.log_mapper_ram_writes,
             "timings" => self.log_timings,
             target => {
                 let chunks: Vec<&str> = target.split("::").collect();

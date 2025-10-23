@@ -1,4 +1,4 @@
-use log::warn;
+use log::{info, warn};
 
 use crate::mapper::{BankNumber, PrgBankRegisterId, ReadWriteStatusRegisterId};
 use crate::memory::bank::bank::{PrgSource, RomRamModeRegisterId};
@@ -147,10 +147,14 @@ impl PrgMemory {
         if read_write_status.is_writable() {
             match prg_source_and_index {
                 None | Some((MemType::Rom, _)) => unreachable!(),
-                Some((MemType::WorkRam, index)) => self.work_ram[index] = value,
+                Some((MemType::WorkRam, index)) => {
+                    self.work_ram[index] = value;
+                    info!(target: "mapperramwrites", "Setting PRG [{address}]=${value:02} (Work RAM @ ${index:X})");
+                }
                 Some((MemType::SaveRam, index)) => {
                     let index = index % self.save_ram.size();
                     self.save_ram[index] = value;
+                    info!(target: "mapperramwrites", "Setting PRG [{address}]=${value:02} (Save RAM @ ${index:X})");
                 }
             }
         }
