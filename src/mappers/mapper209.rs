@@ -249,34 +249,32 @@ impl Mapper for Mapper209 {
                     self.extended_mirroring.set_quadrant(quadrant, ciram_side);
                     mem.set_name_table_mirroring_directly(self.extended_mirroring);
                 } else {
+                    let ciram_selection = (value >> 7) == 1;
                     match self.rom_name_table_mode {
                         RomNameTableMode::Disabled => { /* Do nothing. */ }
-                        RomNameTableMode::GloballyEnabled => {}
-                        RomNameTableMode::SelectionsEnabled => {
-                            let ciram_selection = (value >> 7) == 1;
-                            if ciram_selection == self.ciram_selection_target {
-                                self.extended_mirroring.set_quadrant(quadrant, ciram_side);
-                                mem.set_name_table_mirroring_directly(self.extended_mirroring);
-                            } else {
-                                let reg_id = [N0, N1, N2, N3][usize::from(*addr & 0b11)];
-                                // TODO: Actually switch to ROM/RAM source.
-                                mem.set_chr_register_low_byte(reg_id, value);
-                            }
+                        RomNameTableMode::SelectionsEnabled if ciram_selection == self.ciram_selection_target => {
+                            mem.set_name_table_quadrant(quadrant, ciram_side);
+                        }
+                        RomNameTableMode::SelectionsEnabled | RomNameTableMode::GloballyEnabled => {
+                            let bank_reg_id = [N0, N1, N2, N3][usize::from(*addr & 0b11)];
+                            let name_table_source_reg_id = [NT0, NT1, NT2, NT3][usize::from(*addr & 0b11)];
+                            mem.set_chr_register_low_byte(bank_reg_id, value);
+                            mem.set_chr_source(name_table_source_reg_id, ChrSource::RomOrRam);
                         }
                     }
                 }
             }
             (_, 0xB004..=0xB007, _) => {
                 if !self.extended_mode_mirroring_enabled {
+                    let ciram_selection = (value >> 7) == 1;
                     match self.rom_name_table_mode {
                         RomNameTableMode::Disabled => { /* Do nothing. */ }
-                        RomNameTableMode::GloballyEnabled => {}
-                        RomNameTableMode::SelectionsEnabled => {
-                            let ciram_selection = (value >> 7) == 1;
-                            if ciram_selection != self.ciram_selection_target {
-                                let reg_id = [N0, N1, N2, N3][usize::from(*addr & 0b11)];
-                                mem.set_chr_register_high_byte(reg_id, value);
-                            }
+                        RomNameTableMode::SelectionsEnabled if ciram_selection == self.ciram_selection_target => { /* Do nothing. */}
+                        RomNameTableMode::SelectionsEnabled | RomNameTableMode::GloballyEnabled => {
+                            let reg_id = [N0, N1, N2, N3][usize::from(*addr & 0b11)];
+                            let name_table_source_reg_id = [NT0, NT1, NT2, NT3][usize::from(*addr & 0b11)];
+                            mem.set_chr_register_high_byte(reg_id, value);
+                            mem.set_chr_source(name_table_source_reg_id, ChrSource::RomOrRam);
                         }
                     }
                 }
@@ -338,6 +336,13 @@ impl Mapper for Mapper209 {
                     3 => RomNameTableMode::GloballyEnabled,
                     _ => unreachable!(),
                 };
+                // TODO: Restore name tables for the SelectionsEnabled case, too?
+                if self.rom_name_table_mode == RomNameTableMode::GloballyEnabled {
+                    mem.set_chr_source(NT0, ChrSource::RomOrRam);
+                    mem.set_chr_source(NT1, ChrSource::RomOrRam);
+                    mem.set_chr_source(NT2, ChrSource::RomOrRam);
+                    mem.set_chr_source(NT3, ChrSource::RomOrRam);
+                }
             }
             (0xD001, _, _) => {
                 let mirroring;
@@ -354,7 +359,11 @@ impl Mapper for Mapper209 {
                 (self.ciram_selection_target, chr_writes_enabled) = splitbits_named!(value, "nw......");
                 mem.set_writes_enabled(W0, chr_writes_enabled);
             }
-            (0xD003, _, _) => todo!("Outer Bank"),
+            (0xD003, _, _) => {
+                let fields = splitbits!(value, "m.lccppc");
+                assert!(!fields.m, "MMC4 CHR bank-switching not supported yet.");
+                todo!();
+            }
             _ => { /* Do nothing. */ }
         }
     }

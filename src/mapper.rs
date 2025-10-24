@@ -7,7 +7,7 @@ pub use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisterId, ChrBan
 pub use crate::memory::bank::bank_number::PrgBankRegisterId::*;
 pub use crate::memory::bank::bank_number::ChrBankRegisterId::*;
 pub use crate::memory::bank::bank_number::MetaRegisterId::*;
-pub use crate::memory::bank::bank::{PrgBank, ChrBank};
+pub use crate::memory::bank::bank::{PrgBank, ChrBank, ChrSource};
 pub use crate::memory::bank::bank::PrgSourceRegisterId::*;
 pub use crate::memory::bank::bank::ChrSourceRegisterId::*;
 pub use crate::memory::bank::bank::ReadStatusRegisterId::*;
