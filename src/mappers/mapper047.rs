@@ -22,9 +22,7 @@ pub const LAYOUT: Layout = Layout::builder()
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(mmc3::CHR_BIG_WINDOWS_FIRST)
     .chr_layout(mmc3::CHR_SMALL_WINDOWS_FIRST)
-    // NameTableMirrorings in this mapper are set manually, rather than selected from MMC3's list.
     .name_table_mirrorings(mmc3::NAME_TABLE_MIRRORINGS)
-    .read_write_statuses(mmc3::READ_WRITE_STATUSES)
     .build();
 
 pub struct Mapper047 {
@@ -34,8 +32,9 @@ pub struct Mapper047 {
 impl Mapper for Mapper047 {
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         if matches!(*addr, 0x6000..=0x7FFF) {
+            let regs = mem.prg_memory().bank_registers();
             // S0 isn't hooked up to any window, but its value is still set by MMC3 and used for this mapper.
-            if mem.prg_memory().bank_registers().read_write_status(S0) == ReadWriteStatus::ReadWrite {
+            if regs.read_status(R0) == ReadStatus::Enabled && regs.write_status(W0) == WriteStatus::Enabled {
                 let index = value & 1;
                 mem.set_prg_rom_outer_bank_number(index);
                 mem.set_chr_rom_outer_bank_number(index);

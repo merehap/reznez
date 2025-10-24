@@ -9,13 +9,9 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.fixed_index(0).status_register(S0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.fixed_index(0).read_write_status(R0, W0)),
     ])
     .fixed_name_table_mirroring()
-    .read_write_statuses(&[
-        ReadWriteStatus::Disabled,
-        ReadWriteStatus::ReadWrite,
-    ])
     .build();
 
 // Sunsoft-2 IC on the Sunsoft-3R board
@@ -27,9 +23,10 @@ impl Mapper for Mapper093 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                let fields = splitbits!(min=u8, value, ".ppp...r");
-                mem.set_prg_register(P0, fields.p);
-                mem.set_read_write_status(S0, fields.r);
+                let fields = splitbits!(value, ".ppp...e");
+                mem.set_prg_register(P0, fields.p as u8);
+                mem.set_reads_enabled(R0, fields.e);
+                mem.set_writes_enabled(W0, fields.e);
             }
         }
     }

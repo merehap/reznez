@@ -2,7 +2,7 @@ use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::mapper::*;
 use crate::memory::memory::Memory;
 
-const LAYOUT: Layout = Layout::builder()
+const LAYOUT_WITH_SWITCHABLE_CHR_ROM: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
@@ -10,9 +10,21 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
-        // BLARG
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM.switchable(C0)),
     ])
+    .name_table_mirrorings(&[
+        NameTableMirroring::VERTICAL,
+        NameTableMirroring::HORIZONTAL,
+    ])
+    .build();
+
+const LAYOUT_WITH_FIXED_CHR_RAM: Layout = Layout::builder()
+    .prg_rom_max_size(128 * KIBIBYTE)
+    .prg_layout(&[
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
+        PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
+    ])
+    .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(&[
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::RAM.fixed_index(0)),
     ])
@@ -33,19 +45,25 @@ const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
     .when_disabled_prevent(WhenDisabledPrevent::CountingAndTriggering)
     .build_reload_driven_counter();
 
+pub const MAPPER042_WITH_SWITCHABLE_CHR_ROM: Mapper042 = Mapper042 {
+    layout: LAYOUT_WITH_SWITCHABLE_CHR_ROM,
+    irq_counter: IRQ_COUNTER,
+};
+
+pub const MAPPER042_WITH_FIXED_CHR_RAM: Mapper042 = Mapper042 {
+    layout: LAYOUT_WITH_FIXED_CHR_RAM,
+    irq_counter: IRQ_COUNTER,
+};
+
 // FDS games hacked into cartridge form.
 // Unknown if subject to bus conflicts.
 // FIXME: Pixel flickering during first level. Need joypad input to capture test frame.
 pub struct Mapper042 {
-    chr_board: ChrBoard,
+    layout: Layout,
     irq_counter: ReloadDrivenCounter,
 }
 
 impl Mapper for Mapper042 {
-    fn init_mapper_params(&self, mem: &mut Memory) {
-        mem.set_chr_layout(self.chr_board as u8);
-    }
-
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr & 0xE003 {
             0x8000 => mem.set_chr_register(C0, value & 0b1111),
@@ -83,31 +101,24 @@ impl Mapper for Mapper042 {
     }
 
     fn layout(&self) -> Layout {
-        LAYOUT
+        self.layout.clone()
     }
 }
 
-impl Mapper042 {
-    pub fn new(metadata: &ResolvedMetadata) -> Self {
-        const CHR_RAM_SIZE: u32 = 8 * KIBIBYTE;
+pub fn chr_board(metadata: &ResolvedMetadata) -> ChrBoard {
+    const CHR_RAM_SIZE: u32 = 8 * KIBIBYTE;
 
-        let chr_board = match metadata.chr_work_ram_size {
-            0 => ChrBoard::SwitchableRom,
-            CHR_RAM_SIZE => ChrBoard::FixedRam,
-            _ => panic!("Bad CHR RAM size for mapper 42: {}", metadata.chr_work_ram_size),
-        };
-
-        Self {
-            chr_board,
-            irq_counter: IRQ_COUNTER,
-        }
+    match metadata.chr_work_ram_size {
+        0 => ChrBoard::SwitchableRom,
+        CHR_RAM_SIZE => ChrBoard::FixedRam,
+        _ => panic!("Bad CHR RAM size for mapper 42: {}", metadata.chr_work_ram_size),
     }
 }
 
 #[derive(Clone, Copy)]
-enum ChrBoard {
+pub enum ChrBoard {
     // Ai Senshi Nicol, for example
-    SwitchableRom = 0,
+    SwitchableRom,
     // Bio Miracle Bokutte Upa, for example.
-    FixedRam = 1,
+    FixedRam,
 }

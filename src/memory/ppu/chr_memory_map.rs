@@ -1,6 +1,6 @@
-use crate::mapper::{BankNumber, ChrBank, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus};
+use crate::mapper::{BankNumber, ChrBank, NameTableMirroring, NameTableQuadrant, NameTableSource};
 use crate::memory::bank::bank::{ChrBankNumberProvider, ChrSource, ChrSourceRegisterId};
-use crate::memory::bank::bank_number::ChrBankRegisters;
+use crate::memory::bank::bank_number::{ChrBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::window::ChrWindowSize;
@@ -14,7 +14,7 @@ const CHR_SLOT_COUNT: usize = 12;
 pub struct ChrMemoryMap {
     // 0x0000 through 0x1FFF (2 pattern tables) and 0x2000 through 0x2FFF (4 name tables).
     page_mappings: [ChrMapping; CHR_SLOT_COUNT],
-    page_ids: [(ChrPageId, ReadWriteStatus); CHR_SLOT_COUNT],
+    page_ids: [(ChrPageId, ReadStatus, WriteStatus); CHR_SLOT_COUNT],
 }
 
 impl ChrMemoryMap {
@@ -66,14 +66,14 @@ impl ChrMemoryMap {
 
         let mut memory_map = Self {
             page_mappings: page_mappings.try_into().unwrap(),
-            page_ids: [(ChrPageId::Rom { page_number: 0, bank_number: BankNumber::from_u8(0) }, ReadWriteStatus::ReadOnly); CHR_SLOT_COUNT],
+            page_ids: [(ChrPageId::Rom { page_number: 0, bank_number: BankNumber::from_u8(0) }, ReadStatus::Enabled, WriteStatus::Disabled); CHR_SLOT_COUNT],
         };
         memory_map.update_page_ids(regs);
 
         memory_map
     }
 
-    pub fn index_for_address(&self, address: PpuAddress) -> (ChrMemoryIndex, PeekSource, ReadWriteStatus) {
+    pub fn index_for_address(&self, address: PpuAddress) -> (ChrMemoryIndex, PeekSource, ReadStatus, WriteStatus) {
         let address = address.to_u16();
         match address {
             0x0000..=0x2FFF => {}
@@ -84,7 +84,7 @@ impl ChrMemoryMap {
         let mapping_index = address / (KIBIBYTE as u16);
         let offset = address % (KIBIBYTE as u16);
 
-        let (page_id, read_write_status) = self.page_ids[mapping_index as usize];
+        let (page_id, read_status, write_status) = self.page_ids[mapping_index as usize];
         let (chr_memory_index, peek_source) = match page_id {
             ChrPageId::Rom { page_number, bank_number } => {
                 (ChrMemoryIndex::Rom(u32::from(page_number) * KIBIBYTE + u32::from(offset)), PeekSource::Rom(bank_number))
@@ -106,22 +106,22 @@ impl ChrMemoryMap {
             }
         };
 
-        (chr_memory_index, peek_source, read_write_status)
+        (chr_memory_index, peek_source, read_status, write_status)
     }
 
     pub fn page_mappings(&self) -> &[ChrMapping; CHR_SLOT_COUNT] {
         &self.page_mappings
     }
 
-    pub fn pattern_table_page_ids(&self) -> &[(ChrPageId, ReadWriteStatus)] {
+    pub fn pattern_table_page_ids(&self) -> &[(ChrPageId, ReadStatus, WriteStatus)] {
         &self.page_ids[0..8]
     }
 
     pub fn set_name_table_mirroring(&mut self, regs: &mut ChrBankRegisters, name_table_mirroring: NameTableMirroring) {
-        self.set_name_table_quadrant(regs, NameTableQuadrant::TopLeft, name_table_mirroring.quadrants()[0]);
-        self.set_name_table_quadrant(regs, NameTableQuadrant::TopRight, name_table_mirroring.quadrants()[1]);
-        self.set_name_table_quadrant(regs, NameTableQuadrant::BottomLeft, name_table_mirroring.quadrants()[2]);
-        self.set_name_table_quadrant(regs, NameTableQuadrant::BottomRight, name_table_mirroring.quadrants()[3]);
+        for (i, quadrant) in NameTableQuadrant::ALL.iter().enumerate() {
+            self.set_name_table_quadrant(regs, *quadrant, name_table_mirroring.quadrants()[i]);
+        }
+
         self.update_page_ids(regs);
     }
 
@@ -176,7 +176,7 @@ pub struct ChrMapping {
 impl ChrMapping {
     pub fn from_name_table_source(name_table_source: NameTableSource) -> Self {
         let mut mapping = Self {
-            bank: ChrBank::ROM_OR_RAM,
+            bank: ChrBank::ROM,
             pages_per_bank: 1,
             page_offset: 0,
             page_number_mask: 0b1111_1111_1111_1111,
@@ -234,7 +234,7 @@ impl ChrMapping {
         }
     }
 
-    pub fn page_id(&self, regs: &ChrBankRegisters) -> (ChrPageId, ReadWriteStatus) {
+    pub fn page_id(&self, regs: &ChrBankRegisters) -> (ChrPageId, ReadStatus, WriteStatus) {
         let Self { bank, pages_per_bank: bank_multiple, page_offset, page_number_mask, .. } = self;
         let location = bank.location().expect("Location to be present in bank.");
         let bank_number = match location {
@@ -245,24 +245,38 @@ impl ChrMapping {
 
         let page_number = ((bank_multiple * bank_number.to_raw()) & page_number_mask) + page_offset;
 
-        let read_write_status = bank.read_write_status(regs);
-        match bank.current_chr_source(regs) {
+        let (page_id, default_read_status, default_write_status) = match bank.current_chr_source(regs) {
             None => todo!("EMPTY bank"),
             Some(ChrSource::RomOrRam) => {
                 match (regs.cartridge_has_rom(), regs.cartridge_has_ram()) {
                     (false, false) => todo!("Absent CHR pages."),
                     (true , true ) => panic!("Not sure what to do for a RomOrRam bank when both are present in the cartridge."),
-                    (true , false) => (ChrPageId::Rom { page_number, bank_number }, read_write_status),
-                    (false, true ) => (ChrPageId::Ram { page_number, bank_number }, read_write_status),
+                    (true , false) => (ChrPageId::Rom { page_number, bank_number }, ReadStatus::Enabled, WriteStatus::Disabled),
+                    (false, true ) => (ChrPageId::Ram { page_number, bank_number }, ReadStatus::Enabled, WriteStatus::Enabled),
                 }
             }
-            Some(ChrSource::Rom) => (ChrPageId::Rom { page_number, bank_number }, read_write_status),
-            Some(ChrSource::WorkRam) => (ChrPageId::Ram { page_number, bank_number }, read_write_status),
-            Some(ChrSource::SaveRam) => (ChrPageId::SaveRam, read_write_status),
-            Some(ChrSource::Ciram(ciram_side)) => (ChrPageId::Ciram(ciram_side), ReadWriteStatus::ReadWrite),
-            Some(ChrSource::ExtendedRam) => (ChrPageId::ExtendedRam, ReadWriteStatus::ReadWrite),
-            Some(ChrSource::FillModeTile) => (ChrPageId::FillModeTile, ReadWriteStatus::ReadOnly),
-        }
+            Some(ChrSource::Rom) => {
+                assert!(regs.cartridge_has_rom());
+                (ChrPageId::Rom { page_number, bank_number }, ReadStatus::Enabled, WriteStatus::Disabled)
+            }
+            Some(ChrSource::WorkRam) => {
+                assert!(regs.cartridge_has_ram());
+                (ChrPageId::Ram { page_number, bank_number }, ReadStatus::Enabled, WriteStatus::Enabled)
+            }
+            Some(ChrSource::SaveRam) => {
+                assert!(regs.cartridge_has_ram());
+                (ChrPageId::SaveRam, ReadStatus::Enabled, WriteStatus::Enabled)
+            }
+            Some(ChrSource::Ciram(ciram_side)) => (ChrPageId::Ciram(ciram_side), ReadStatus::Enabled, WriteStatus::Enabled),
+            Some(ChrSource::ExtendedRam) => (ChrPageId::ExtendedRam, ReadStatus::Enabled, WriteStatus::Enabled),
+            Some(ChrSource::FillModeTile) => (ChrPageId::FillModeTile, ReadStatus::Enabled, WriteStatus::Disabled),
+        };
+
+        (
+            page_id,
+            bank.read_status_register_id().map(|id| regs.read_status(id)).unwrap_or(default_read_status),
+            bank.write_status_register_id().map(|id| regs.write_status(id)).unwrap_or(default_write_status),
+        )
     }
 }
 

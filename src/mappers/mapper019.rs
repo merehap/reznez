@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::memory::bank::bank::ChrSourceRegisterId;
+use crate::memory::bank::bank::{ChrSourceRegisterId, WriteStatusRegisterId};
 use crate::memory::memory::Memory;
 use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::ciram::CiramSide;
@@ -7,10 +7,10 @@ use crate::memory::ppu::ciram::CiramSide;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x67FF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(0).status_register(S12)),
-        PrgWindow::new(0x6800, 0x6FFF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(1).status_register(S13)),
-        PrgWindow::new(0x7000, 0x77FF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(2).status_register(S14)),
-        PrgWindow::new(0x7800, 0x7FFF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(3).status_register(S15)),
+        PrgWindow::new(0x6000, 0x67FF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(0).read_write_status(R12, W12)),
+        PrgWindow::new(0x6800, 0x6FFF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(1).read_write_status(R13, W13)),
+        PrgWindow::new(0x7000, 0x77FF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(2).read_write_status(R14, W14)),
+        PrgWindow::new(0x7800, 0x7FFF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(3).read_write_status(R15, W15)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
@@ -18,28 +18,21 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(256 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS0).switchable(C0).status_register(S0)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS1).switchable(C1).status_register(S1)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS2).switchable(C2).status_register(S2)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS3).switchable(C3).status_register(S3)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS4).switchable(C4).status_register(S4)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS5).switchable(C5).status_register(S5)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS6).switchable(C6).status_register(S6)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS7).switchable(C7).status_register(S7)),
-        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT0).switchable(N0).status_register(S8)),
-        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT1).switchable(N1).status_register(S9)),
-        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT2).switchable(N2).status_register(S10)),
-        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT3).switchable(N3).status_register(S11)),
+        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS0).switchable(C0).write_status(W0)),
+        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS1).switchable(C1).write_status(W1)),
+        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS2).switchable(C2).write_status(W2)),
+        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS3).switchable(C3).write_status(W3)),
+        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS4).switchable(C4).write_status(W4)),
+        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS5).switchable(C5).write_status(W5)),
+        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS6).switchable(C6).write_status(W6)),
+        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(CS7).switchable(C7).write_status(W7)),
+        ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT0).switchable(N0).write_status(W8)),
+        ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT1).switchable(N1).write_status(W9)),
+        ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT2).switchable(N2).write_status(W10)),
+        ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT3).switchable(N3).write_status(W11)),
     ])
     .fixed_name_table_mirroring()
-    .read_write_statuses(&[
-        ReadWriteStatus::ReadOnly,
-        ReadWriteStatus::ReadWrite,
-    ])
     .build();
-
-const READ_ONLY: u8 = 0;
-const READ_WRITE: u8 = 1;
 
 const IRQ_COUNTER: DirectlySetCounter = CounterBuilder::new()
     .step(1)
@@ -94,18 +87,18 @@ impl Mapper for Mapper019 {
                 }
             }
             0x6000..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x87FF => set_chr_register(mem, self.allow_ciram_in_low_chr,  CS0, C0,   S0, value),
-            0x8800..=0x8FFF => set_chr_register(mem, self.allow_ciram_in_low_chr,  CS1, C1,   S1, value),
-            0x9000..=0x97FF => set_chr_register(mem, self.allow_ciram_in_low_chr,  CS2, C2,   S2, value),
-            0x9800..=0x9FFF => set_chr_register(mem, self.allow_ciram_in_low_chr,  CS3, C3,   S3, value),
-            0xA000..=0xA7FF => set_chr_register(mem, self.allow_ciram_in_high_chr, CS4, C4,   S4, value),
-            0xA800..=0xAFFF => set_chr_register(mem, self.allow_ciram_in_high_chr, CS5, C5,   S5, value),
-            0xB000..=0xB7FF => set_chr_register(mem, self.allow_ciram_in_high_chr, CS6, C6,   S6, value),
-            0xB800..=0xBFFF => set_chr_register(mem, self.allow_ciram_in_high_chr, CS7, C7,   S7, value),
-            0xC000..=0xC7FF => set_chr_register(mem, true,                         NT0, C8,   S8, value),
-            0xC800..=0xCFFF => set_chr_register(mem, true,                         NT1, C9,   S9, value),
-            0xD000..=0xD7FF => set_chr_register(mem, true,                         NT2, C10, S10, value),
-            0xD800..=0xDFFF => set_chr_register(mem, true,                         NT3, C11, S11, value),
+            0x8000..=0x87FF => set_chr_register(mem, self.allow_ciram_in_low_chr,  CS0, C0,   W0, value),
+            0x8800..=0x8FFF => set_chr_register(mem, self.allow_ciram_in_low_chr,  CS1, C1,   W1, value),
+            0x9000..=0x97FF => set_chr_register(mem, self.allow_ciram_in_low_chr,  CS2, C2,   W2, value),
+            0x9800..=0x9FFF => set_chr_register(mem, self.allow_ciram_in_low_chr,  CS3, C3,   W3, value),
+            0xA000..=0xA7FF => set_chr_register(mem, self.allow_ciram_in_high_chr, CS4, C4,   W4, value),
+            0xA800..=0xAFFF => set_chr_register(mem, self.allow_ciram_in_high_chr, CS5, C5,   W5, value),
+            0xB000..=0xB7FF => set_chr_register(mem, self.allow_ciram_in_high_chr, CS6, C6,   W6, value),
+            0xB800..=0xBFFF => set_chr_register(mem, self.allow_ciram_in_high_chr, CS7, C7,   W7, value),
+            0xC000..=0xC7FF => set_chr_register(mem, true,                         NT0, C8,   W8, value),
+            0xC800..=0xCFFF => set_chr_register(mem, true,                         NT1, C9,   W9, value),
+            0xD000..=0xD7FF => set_chr_register(mem, true,                         NT2, C10, W10, value),
+            0xD800..=0xDFFF => set_chr_register(mem, true,                         NT3, C11, W11, value),
             0xE000..=0xE7FF => {
                 // TODO: Pin 22 logic
                 // TODO: Disable sound
@@ -122,18 +115,18 @@ impl Mapper for Mapper019 {
                 mem.set_prg_register(P2, value & 0b0011_1111);
             }
             0xF800..=0xFFFF => {
-                let fields = splitbits!(min=u8, value, "ppppabcd");
+                let fields = splitbits!(value, "ppppabcd");
                 if fields.p == 0b0100 {
-                    mem.set_read_write_status(S0, fields.a);
-                    mem.set_read_write_status(S1, fields.b);
-                    mem.set_read_write_status(S2, fields.c);
-                    mem.set_read_write_status(S3, fields.d);
+                    mem.set_writes_enabled(W0, fields.a);
+                    mem.set_writes_enabled(W1, fields.b);
+                    mem.set_writes_enabled(W2, fields.c);
+                    mem.set_writes_enabled(W3, fields.d);
                 } else {
                     // All read-only
-                    mem.set_read_write_status(S0, 0);
-                    mem.set_read_write_status(S1, 0);
-                    mem.set_read_write_status(S2, 0);
-                    mem.set_read_write_status(S3, 0);
+                    mem.set_writes_enabled(W0, false);
+                    mem.set_writes_enabled(W1, false);
+                    mem.set_writes_enabled(W2, false);
+                    mem.set_writes_enabled(W3, false);
                 }
             }
         }
@@ -190,16 +183,17 @@ fn set_chr_register(
     allow_ciram_in_chr: bool,
     source_reg_id: ChrSourceRegisterId,
     bank_reg_id: ChrBankRegisterId,
-    status_reg_id: ReadWriteStatusRegisterId,
+    status_reg_id: WriteStatusRegisterId,
     value: u8,
 ) {
     if allow_ciram_in_chr && value >= 0xE0 {
         let ciram_side = if value & 1 == 0 { CiramSide::Left } else { CiramSide::Right };
+        // FIXME: Stop setting writes enabled/disabled? CIRAM should always have writes enabled (it should ignore status regs.)
         mem.set_chr_bank_register_to_ciram_side(source_reg_id, ciram_side);
-        mem.set_read_write_status(status_reg_id, READ_WRITE);
+        mem.set_writes_enabled(status_reg_id, true);
     } else {
         mem.set_chr_register(bank_reg_id, value);
-        mem.set_read_write_status(status_reg_id, READ_ONLY);
+        mem.set_writes_enabled(status_reg_id, false);
     }
 }
 

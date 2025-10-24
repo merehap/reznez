@@ -5,7 +5,7 @@ use crate::memory::memory::Memory;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM.status_register(S0)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM.write_status(W0)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
@@ -28,10 +28,6 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::HORIZONTAL,
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,
         NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
-    ])
-    .read_write_statuses(&[
-        ReadWriteStatus::ReadOnly,
-        ReadWriteStatus::ReadWrite,
     ])
     .build();
 
@@ -61,9 +57,9 @@ impl Mapper for Mapper085_1 {
             0xD000 => mem.set_chr_register(C6, value),
             0xD008 => mem.set_chr_register(C7, value),
             0xE000 => {
-                let fields = splitbits!(min=u8, value, "r.....mm");
-                mem.set_read_write_status(S0, fields.r);
-                mem.set_name_table_mirroring(fields.m);
+                let fields = splitbits!(value, "w.....mm");
+                mem.set_writes_enabled(W0, fields.w);
+                mem.set_name_table_mirroring(fields.m as u8);
             }
             0xE008 => self.irq_state.set_reload_value(value),
             0xF000 => self.irq_state.set_mode(mem, value),

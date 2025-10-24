@@ -9,11 +9,10 @@ pub const LAYOUT: Layout = Layout::builder()
     .chr_layout(CHR_BIG_WINDOWS_FIRST)
     .chr_layout(CHR_SMALL_WINDOWS_FIRST)
     .name_table_mirrorings(NAME_TABLE_MIRRORINGS)
-    .read_write_statuses(READ_WRITE_STATUSES)
     .build();
 
 pub const PRG_WINDOWS_8000_SWITCHABLE: &[PrgWindow] = &[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM.status_register(S0)),
+    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM.read_write_status(R0, W0)),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-2)),
@@ -21,7 +20,7 @@ pub const PRG_WINDOWS_8000_SWITCHABLE: &[PrgWindow] = &[
 ];
 
 pub const PRG_WINDOWS_C000_SWITCHABLE: &[PrgWindow] = &[
-    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM.status_register(S0)),
+    PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM.read_write_status(R0, W0)),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-2)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
@@ -53,13 +52,6 @@ pub const CHR_SMALL_WINDOWS_FIRST: &[ChrWindow] = &[
 pub const NAME_TABLE_MIRRORINGS: &[NameTableMirroring] = &[
     NameTableMirroring::VERTICAL,
     NameTableMirroring::HORIZONTAL,
-];
-
-pub const READ_WRITE_STATUSES: &[ReadWriteStatus] = &[
-    ReadWriteStatus::Disabled,
-    ReadWriteStatus::ReadOnly,
-    ReadWriteStatus::ReadWrite,
-    ReadWriteStatus::ReadOnly,
 ];
 
 use RegId::{Chr, Prg};
@@ -96,7 +88,9 @@ impl Mapper for Mapper004Mmc3 {
                 }
             }
             (0xA000..=0xBFFF, false) => {
-                mem.set_read_write_status(S0, value >> 6);
+                let (enabled, disable_writes) = splitbits_named!(value, "ed......");
+                mem.set_reads_enabled(R0, enabled);
+                mem.set_writes_enabled(W0, enabled && !disable_writes);
             }
             (0xC000..=0xDFFF, true ) => self.irq_state.set_counter_reload_value(value),
             (0xC000..=0xDFFF, false) => self.irq_state.reload_counter(),

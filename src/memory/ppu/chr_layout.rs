@@ -1,5 +1,5 @@
 use crate::memory::bank::bank_number::{ChrBankRegisterId, ChrBankRegisters};
-use crate::memory::window::{ReadWriteStatusInfo, ChrWindow};
+use crate::memory::window::ChrWindow;
 
 #[derive(Clone, Copy)]
 pub struct ChrLayout {
@@ -28,20 +28,6 @@ impl ChrLayout {
         }
     }
 
-    pub fn force_rom(&self) -> Self {
-        let windows: Vec<ChrWindow> = self.initial_windows.iter()
-            .map(|window| window.force_rom())
-            .collect();
-        Self { initial_windows: Box::leak(Box::new(windows)) }
-    }
-
-    pub fn force_ram(&self) -> Self {
-        let windows: Vec<ChrWindow> = self.initial_windows.iter()
-            .map(|window| window.force_ram())
-            .collect();
-        Self { initial_windows: Box::leak(Box::new(windows)) }
-    }
-
     pub fn windows(&self) -> &[ChrWindow] {
         self.initial_windows
     }
@@ -54,12 +40,6 @@ impl ChrLayout {
     pub fn active_register_ids(&self, regs: &ChrBankRegisters) -> Vec<ChrBankRegisterId> {
         self.initial_windows.iter()
             .filter_map(|window| window.register_id(regs))
-            .collect()
-    }
-
-    pub fn active_read_write_status_register_ids(&self) -> Vec<ReadWriteStatusInfo> {
-        self.initial_windows.iter()
-            .map(|window| window.read_write_status_info())
             .collect()
     }
 }

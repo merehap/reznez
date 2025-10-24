@@ -8,17 +8,10 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.fixed_index(0).status_register(S0)),
-    ])
-    .read_write_statuses(&[
-        ReadWriteStatus::Disabled,
-        ReadWriteStatus::ReadOnly,
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.fixed_index(0).read_status(R0)),
     ])
     .fixed_name_table_mirroring()
     .build();
-
-const DISABLED_CHR_ROM: u8 = 0;
-const READABLE_CHR_ROM: u8 = 1;
 
 // CNROM with CHR disable
 #[derive(Default)]
@@ -30,10 +23,10 @@ impl Mapper for Mapper185_0 {
     fn on_cpu_read(&mut self, mem: &mut Memory, addr: CpuAddress, _value: u8) {
         if *addr == 0x2007 {
             if self.ppu_data_read_count < 2 {
-                mem.set_read_write_status(S0, DISABLED_CHR_ROM);
+                mem.set_reads_enabled(R0, false);
                 self.ppu_data_read_count += 1;
             } else {
-                mem.set_read_write_status(S0, READABLE_CHR_ROM);
+                mem.set_reads_enabled(R0, true);
             }
         }
     }

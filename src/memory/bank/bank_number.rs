@@ -1,6 +1,6 @@
 use num_derive::FromPrimitive;
 
-use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, PrgSource, ReadWriteStatusRegisterId, RomRamModeRegisterId};
+use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
 use crate::memory::ppu::ciram::CiramSide;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -35,7 +35,8 @@ impl From<u8> for BankNumber {
 #[derive(Debug)]
 pub struct PrgBankRegisters {
     registers: [BankLocation; 10],
-    read_write_statuses: [ReadWriteStatus; 16],
+    read_statuses: [ReadStatus; 16],
+    write_statuses: [WriteStatus; 16],
     rom_ram_modes: [PrgSource; 12],
     cartridge_has_ram: bool,
 }
@@ -44,7 +45,8 @@ impl PrgBankRegisters {
     pub fn new(cartridge_has_ram: bool) -> Self {
         Self {
             registers: [BankLocation::Index(BankNumber(0)); 10],
-            read_write_statuses: [ReadWriteStatus::ReadWrite; 16],
+            read_statuses: [ReadStatus::Enabled; 16],
+            write_statuses: [WriteStatus::Enabled; 16],
             rom_ram_modes: [PrgSource::WorkRamOrRom; 12],
             cartridge_has_ram,
         }
@@ -54,8 +56,12 @@ impl PrgBankRegisters {
         &self.registers
     }
 
-    pub fn read_write_statuses(&self) -> &[ReadWriteStatus; 16] {
-        &self.read_write_statuses
+    pub fn read_statuses(&self) -> &[ReadStatus; 16] {
+        &self.read_statuses
+    }
+
+    pub fn write_statuses(&self) -> &[WriteStatus; 16] {
+        &self.write_statuses
     }
 
     pub fn cartridge_has_ram(&self) -> bool {
@@ -87,19 +93,27 @@ impl PrgBankRegisters {
         self.registers[id as usize] = BankLocation::Ciram(ciram_side);
     }
 
-    pub fn read_write_status(&self, id: ReadWriteStatusRegisterId) -> ReadWriteStatus {
-        self.read_write_statuses[id as usize]
+    pub fn read_status(&self, id: ReadStatusRegisterId) -> ReadStatus {
+        self.read_statuses[id as usize]
     }
 
-    pub fn set_read_write_status(&mut self, id: ReadWriteStatusRegisterId, status: ReadWriteStatus) {
-        self.read_write_statuses[id as usize] = status;
+    pub fn set_read_status(&mut self, id: ReadStatusRegisterId, status: ReadStatus) {
+        self.read_statuses[id as usize] = status;
     }
 
-    pub fn rom_ram_mode(&self, id: RomRamModeRegisterId) -> PrgSource {
+    pub fn write_status(&self, id: WriteStatusRegisterId) -> WriteStatus {
+        self.write_statuses[id as usize]
+    }
+
+    pub fn set_write_status(&mut self, id: WriteStatusRegisterId, status: WriteStatus) {
+        self.write_statuses[id as usize] = status;
+    }
+
+    pub fn rom_ram_mode(&self, id: PrgSourceRegisterId) -> PrgSource {
         self.rom_ram_modes[id as usize]
     }
 
-    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: PrgSource) {
+    pub fn set_rom_ram_mode(&mut self, id: PrgSourceRegisterId, rom_ram_mode: PrgSource) {
         self.rom_ram_modes[id as usize] = rom_ram_mode;
     }
 }
@@ -108,7 +122,8 @@ impl PrgBankRegisters {
 pub struct ChrBankRegisters {
     registers: [BankNumber; 16],
     chr_meta_registers: [ChrBankRegisterId; 2],
-    read_write_statuses: [ReadWriteStatus; 15],
+    read_statuses: [ReadStatus; 15],
+    write_statuses: [WriteStatus; 15],
     chr_sources: [ChrSource; 12],
     cartridge_has_rom: bool,
     cartridge_has_ram: bool,
@@ -120,7 +135,8 @@ impl ChrBankRegisters {
             registers: [BankNumber(0); 16],
             // Meta registers are only used for CHR currently.
             chr_meta_registers: [ChrBankRegisterId::C0, ChrBankRegisterId::C0],
-            read_write_statuses: [ReadWriteStatus::ReadWrite; 15],
+            read_statuses: [ReadStatus::Enabled; 15],
+            write_statuses: [WriteStatus::Enabled; 15],
             chr_sources: [ChrSource::WorkRam; 12],
             cartridge_has_rom,
             cartridge_has_ram,
@@ -135,8 +151,12 @@ impl ChrBankRegisters {
         &self.chr_meta_registers
     }
 
-    pub fn read_write_statuses(&self) -> &[ReadWriteStatus; 15] {
-        &self.read_write_statuses
+    pub fn read_statuses(&self) -> &[ReadStatus; 15] {
+        &self.read_statuses
+    }
+
+    pub fn write_statuses(&self) -> &[WriteStatus; 15] {
+        &self.write_statuses
     }
 
     pub fn cartridge_has_rom(&self) -> bool {
@@ -182,12 +202,20 @@ impl ChrBankRegisters {
         self.chr_meta_registers[id as usize]
     }
 
-    pub fn read_write_status(&self, id: ReadWriteStatusRegisterId) -> ReadWriteStatus {
-        self.read_write_statuses[id as usize]
+    pub fn read_status(&self, id: ReadStatusRegisterId) -> ReadStatus {
+        self.read_statuses[id as usize]
     }
 
-    pub fn set_read_write_status(&mut self, id: ReadWriteStatusRegisterId, status: ReadWriteStatus) {
-        self.read_write_statuses[id as usize] = status;
+    pub fn set_read_status(&mut self, id: ReadStatusRegisterId, status: ReadStatus) {
+        self.read_statuses[id as usize] = status;
+    }
+
+    pub fn write_status(&self, id: WriteStatusRegisterId) -> WriteStatus {
+        self.write_statuses[id as usize]
+    }
+
+    pub fn set_write_status(&mut self, id: WriteStatusRegisterId, status: WriteStatus) {
+        self.write_statuses[id as usize] = status;
     }
 
     pub fn chr_source(&self, id: ChrSourceRegisterId) -> ChrSource {
@@ -265,23 +293,17 @@ pub enum MetaRegisterId {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum ReadWriteStatus {
+pub enum ReadStatus {
     Disabled,
+    Enabled,
+    // TODO: Probably remove this and implement it within MMC5 instead.
     ReadOnlyZeros,
-    ReadOnly,
-    ReadWrite,
-    WriteOnly,
 }
 
-impl ReadWriteStatus {
-    pub fn is_readable(self) -> bool {
-        // ReadOnlyZeros is excluded since actual memory can't be read.
-        matches!(self, ReadWriteStatus::ReadWrite | ReadWriteStatus::ReadOnly)
-    }
-
-    pub fn is_writable(self) -> bool {
-        matches!(self, ReadWriteStatus::ReadWrite | ReadWriteStatus::WriteOnly)
-    }
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum WriteStatus {
+    Disabled,
+    Enabled,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

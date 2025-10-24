@@ -24,7 +24,7 @@ use crate::cpu::step::Step;
 use crate::gui::gui::Events;
 use crate::logging::formatter;
 use crate::logging::formatter::*;
-use crate::mapper::{IrqCounterInfo, Mapper, NameTableMirroring, PrgBankRegisterId, ReadWriteStatus};
+use crate::mapper::{IrqCounterInfo, Mapper, NameTableMirroring, PrgBankRegisterId, ReadStatus, WriteStatus};
 use crate::mapper_list;
 use crate::memory::raw_memory::RawMemory;
 use crate::memory::bank::bank_number::{BankLocation, ChrBankRegisterId};
@@ -187,11 +187,11 @@ impl Nes {
         metadata_resolver.cartridge.set_name_table_mirroring(name_table_mirroring);
 
         let metadata = metadata_resolver.resolve();
-        let (prg_memory, chr_memory, name_table_mirrorings, read_write_statuses, ram_not_present) =
+        let (prg_memory, chr_memory, name_table_mirrorings) =
             mapper.layout().make_mapper_params(&metadata, &cartridge, config.allow_saving)?;
 
         let mut memory = Memory::new(
-            prg_memory, chr_memory, name_table_mirrorings, read_write_statuses, ram_not_present,
+            prg_memory, chr_memory, name_table_mirrorings,
             config.ppu_clock, config.system_palette.clone());
         mapper.init_mapper_params(&mut memory);
 
@@ -530,14 +530,26 @@ impl Nes {
                 latest.name_table_mirroring = chr_memory.name_table_mirroring();
             }
 
-            let prg_read_write_statuses = prg_memory.bank_registers().read_write_statuses();
-            if &latest.read_write_statuses != prg_read_write_statuses {
-                for (i, latest_read_write_status) in latest.read_write_statuses.iter_mut().enumerate() {
-                    if *latest_read_write_status != prg_read_write_statuses[i] {
-                        info!("RamStatus register S{i} changed to {:?}. Previously: {:?}",
-                            prg_read_write_statuses[i],
-                            *latest_read_write_status);
-                        *latest_read_write_status = prg_read_write_statuses[i];
+            let prg_read_statuses = prg_memory.bank_registers().read_statuses();
+            if &latest.read_statuses != prg_read_statuses {
+                for (i, latest_read_status) in latest.read_statuses.iter_mut().enumerate() {
+                    if *latest_read_status != prg_read_statuses[i] {
+                        info!("Read status register R{i} changed to {:?}. Previously: {:?}",
+                            prg_read_statuses[i],
+                            *latest_read_status);
+                        *latest_read_status = prg_read_statuses[i];
+                    }
+                }
+            }
+
+            let prg_write_statuses = prg_memory.bank_registers().write_statuses();
+            if &latest.write_statuses != prg_write_statuses {
+                for (i, latest_write_status) in latest.write_statuses.iter_mut().enumerate() {
+                    if *latest_write_status != prg_write_statuses[i] {
+                        info!("Write status register W{i} changed to {:?}. Previously: {:?}",
+                            prg_write_statuses[i],
+                            *latest_write_status);
+                        *latest_write_status = prg_write_statuses[i];
                     }
                 }
             }
@@ -580,7 +592,8 @@ struct LatestValues {
     chr_registers: [BankLocation; 16],
     meta_registers: [ChrBankRegisterId; 2],
     name_table_mirroring: NameTableMirroring,
-    read_write_statuses: [ReadWriteStatus; 16],
+    read_statuses: [ReadStatus; 16],
+    write_statuses: [WriteStatus; 16],
 }
 
 impl LatestValues {
@@ -608,7 +621,8 @@ impl LatestValues {
             chr_registers: initial_mem.chr_memory().bank_registers().registers().map(|i| BankLocation::Index(i)),
             meta_registers: *initial_mem.chr_memory().bank_registers().meta_registers(),
             name_table_mirroring: initial_mem.chr_memory().name_table_mirroring(),
-            read_write_statuses: *initial_mem.prg_memory().bank_registers().read_write_statuses(),
+            read_statuses: *initial_mem.prg_memory().bank_registers().read_statuses(),
+            write_statuses: *initial_mem.prg_memory().bank_registers().write_statuses(),
         }
     }
 }

@@ -9,13 +9,12 @@ pub const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::HORIZONTAL,
         NameTableMirroring::VERTICAL,
     ])
-    .read_write_statuses(READ_WRITE_STATUSES)
     .build();
 
 pub const PRG_LAYOUT: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7EFF, 7 * KIBIBYTE + 3 * KIBIBYTE / 4, PrgBank::ABSENT),
-    PrgWindow::new(0x7F00, 0x7F7F, KIBIBYTE / 8, PrgBank::WORK_RAM.fixed_index(0).status_register(S0)),
-    PrgWindow::new(0x7F80, 0x7FFF, KIBIBYTE / 8, PrgBank::WORK_RAM.fixed_index(0).status_register(S0)),
+    PrgWindow::new(0x7F00, 0x7F7F, KIBIBYTE / 8, PrgBank::WORK_RAM.fixed_index(0).read_write_status(R0, W0)),
+    PrgWindow::new(0x7F80, 0x7FFF, KIBIBYTE / 8, PrgBank::WORK_RAM.fixed_index(0).read_write_status(R0, W0)),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
@@ -28,10 +27,6 @@ pub const CHR_LAYOUT: &[ChrWindow] = &[
     ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C3)),
     ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C4)),
     ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C5)),
-];
-pub const READ_WRITE_STATUSES: &[ReadWriteStatus] = &[
-    ReadWriteStatus::Disabled,
-    ReadWriteStatus::ReadWrite,
 ];
 
 // Taito's X1-005
@@ -51,7 +46,8 @@ impl Mapper for Mapper080 {
             0x7EF6..=0x7EF7 => mem.set_name_table_mirroring(value & 1),
             0x7EF8..=0x7EF9 => {
                 let ram_enabled = value == 0xA3;
-                mem.set_read_write_status(S0, ram_enabled as u8);
+                mem.set_reads_enabled(R0, ram_enabled);
+                mem.set_writes_enabled(W0, ram_enabled);
             }
             0x7EFA..=0x7EFB => mem.set_prg_register(P0, value),
             0x7EFC..=0x7EFD => mem.set_prg_register(P1, value),

@@ -9,14 +9,14 @@ use crate::memory::memory::Memory;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM.status_register(S0)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM.read_write_status(R0, W0)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-2)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM.status_register(S0)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM.read_write_status(R0, W0)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(-2)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
@@ -38,10 +38,6 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::HORIZONTAL,
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,
         NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
-    ])
-    .read_write_statuses(&[
-        ReadWriteStatus::Disabled,
-        ReadWriteStatus::ReadWrite,
     ])
     .build();
 
@@ -66,9 +62,10 @@ impl Mapper for Vrc4 {
                 mem.set_name_table_mirroring(value & 0b11);
             }
             0x9002 => {
-                let fields = splitbits!(min=u8, value, "......ps");
-                mem.set_prg_layout(fields.p);
-                mem.set_read_write_status(S0, fields.s);
+                let fields = splitbits!(value, "......pe");
+                mem.set_prg_layout(fields.p as u8);
+                mem.set_reads_enabled(R0, fields.e);
+                mem.set_writes_enabled(W0, fields.e);
             }
             // Set bank for A000 through AFFF.
             0xA000..=0xA003 => mem.set_prg_register(P1, value & 0b0001_1111),

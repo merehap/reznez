@@ -2,15 +2,15 @@ use std::num::NonZeroU8;
 
 use log::{info, warn};
 
-use crate::mapper::{BankNumber, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, ReadWriteStatus, ReadWriteStatusRegisterId};
-use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId};
-use crate::memory::bank::bank_number::ChrBankRegisters;
+use crate::mapper::{BankNumber, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource};
+use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, ReadStatusRegisterId, WriteStatusRegisterId};
+use crate::memory::bank::bank_number::{ChrBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::chr_memory_map::{ChrMemoryMap, ChrMemoryIndex};
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
-use crate::memory::window::{ChrWindowSize, ReadWriteStatusInfo};
+use crate::memory::window::ChrWindowSize;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::util::unit::KIBIBYTE;
 
@@ -112,17 +112,9 @@ impl ChrMemory {
         self.current_layout().windows().len().try_into().unwrap()
     }
 
-    pub fn read_write_status_infos(&self) -> Vec<ReadWriteStatusInfo> {
-        let mut ids = Vec::new();
-        for layout in &self.layouts {
-            ids.append(&mut layout.active_read_write_status_register_ids());
-        }
-
-        ids
-    }
-
     pub fn peek(&self, ciram: &Ciram, address: PpuAddress) -> PpuPeek {
-        let (index, source, _read_write_status) = self.current_memory_map().index_for_address(address);
+        let (index, source, read_status, _write_status) = self.current_memory_map().index_for_address(address);
+        assert_eq!(read_status, ReadStatus::Enabled, "Peeking absent or disabled banks is not yet supported.");
 
         let value = match index {
             ChrMemoryIndex::Rom(index) => {
@@ -162,8 +154,8 @@ impl ChrMemory {
     }
 
     pub fn write(&mut self, regs: &PpuRegisters, ciram: &mut Ciram, address: PpuAddress, value: u8) {
-        let (chr_memory_index, _, read_write_status) = self.current_memory_map().index_for_address(address);
-        if !read_write_status.is_writable() {
+        let (chr_memory_index, _, _read_status, write_status) = self.current_memory_map().index_for_address(address);
+        if write_status == WriteStatus::Disabled {
             return;
         }
 
@@ -297,8 +289,13 @@ impl ChrMemory {
         }
     }
 
-    pub fn set_read_write_status(&mut self, id: ReadWriteStatusRegisterId, read_write_status: ReadWriteStatus) {
-        self.regs.set_read_write_status(id, read_write_status);
+    pub fn set_read_status(&mut self, id: ReadStatusRegisterId, read_status: ReadStatus) {
+        self.regs.set_read_status(id, read_status);
+        self.update_page_ids();
+    }
+
+    pub fn set_write_status(&mut self, id: WriteStatusRegisterId, write_status: WriteStatus) {
+        self.regs.set_write_status(id, write_status);
         self.update_page_ids();
     }
 
@@ -369,12 +366,6 @@ impl ChrMemory {
                 }
         })
     }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum AccessOverride {
-    ForceRom,
-    ForceRam,
 }
 
 #[derive(Clone, Copy)]

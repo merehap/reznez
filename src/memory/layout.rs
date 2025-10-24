@@ -1,18 +1,14 @@
-use std::collections::BTreeSet;
 use std::num::NonZeroU8;
-
-use log::warn;
 
 use crate::cartridge::cartridge::Cartridge;
 use crate::cartridge::resolved_metadata::ResolvedMetadata;
-use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisterId, PrgBankRegisters, ChrBankRegisters, MetaRegisterId};
+use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, MetaRegisterId, PrgBankRegisterId, PrgBankRegisters};
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory::PrgMemory;
-use crate::mapper::{ReadWriteStatus, ReadWriteStatusRegisterId};
 use crate::memory::ppu::chr_layout::ChrLayout;
-use crate::memory::ppu::chr_memory::{AccessOverride, ChrMemory};
+use crate::memory::ppu::chr_memory::ChrMemory;
 use crate::memory::raw_memory::{RawMemory, SaveRam};
-use crate::memory::window::{PrgWindow, PrgWindowSize, ReadWriteStatusInfo};
+use crate::memory::window::{PrgWindow, PrgWindowSize};
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::const_vec::ConstVec;
 use crate::util::unit::KIBIBYTE;
@@ -40,8 +36,6 @@ pub struct Layout {
     four_screen_mirroring_definition: Option<NameTableMirroring>,
     fixed_name_table_mirroring: bool,
 
-    read_write_statuses: &'static [ReadWriteStatus],
-    
     bank_register_overrides: ConstVec<(PrgBankRegisterId, BankNumber), 5>,
     chr_bank_register_overrides: ConstVec<(ChrBankRegisterId, BankNumber), 5>,
     chr_meta_register_overrides: ConstVec<(MetaRegisterId, ChrBankRegisterId), 5>,
@@ -53,7 +47,7 @@ impl Layout {
     }
 
     pub fn make_mapper_params(self, metadata: &ResolvedMetadata, cartridge: &Cartridge, allow_saving: bool)
-            -> Result<(PrgMemory, ChrMemory, &'static [NameTableMirroring], &'static [ReadWriteStatus], BTreeSet<ReadWriteStatusRegisterId>), String> {
+            -> Result<(PrgMemory, ChrMemory, &'static [NameTableMirroring]), String> {
         let prg_rom_size = cartridge.prg_rom().size();
         if prg_rom_size > self.prg_rom_max_size {
             return Err(format!("PRG ROM size of {}KiB is too large for this mapper.", prg_rom_size / KIBIBYTE));
@@ -64,24 +58,9 @@ impl Layout {
             return Err(format!("CHR ROM size of {}KiB is too large for this mapper.", chr_rom_size / KIBIBYTE));
         }
 
-        let mut chr_access_override = if metadata.chr_rom_size == 0 {
-            Some(AccessOverride::ForceRam)
-        } else if metadata.chr_work_ram_size == 0 && metadata.chr_save_ram_size == 0 {
-            Some(AccessOverride::ForceRom)
-        } else {
-            None
-        };
-
         let chr_ram = if self.chr_save_ram_size > 0 {
             match metadata.chr_work_ram_size + metadata.chr_save_ram_size {
-                0 => {
-                    if chr_access_override.is_some() {
-                        warn!("Removing CHR access override because mapper explicitly set CHR Save RAM.");
-                        chr_access_override = None;
-                    }
-
-                    RawMemory::new(self.chr_save_ram_size)
-                }
+                0 => RawMemory::new(self.chr_save_ram_size),
                 size if size == self.chr_save_ram_size => RawMemory::new(self.chr_save_ram_size),
                 _ => panic!("CHR SAVE RAM size from cartridge did not match mapper override value."),
             }
@@ -103,7 +82,7 @@ impl Layout {
             chr_bank_registers.set_meta_chr(meta_id, register_id);
         }
 
-        let mut prg_memory = PrgMemory::new(
+        let prg_memory = PrgMemory::new(
             self.prg_layouts.as_iter().collect(),
             self.prg_layout_index,
             cartridge.prg_rom().clone(),
@@ -117,23 +96,8 @@ impl Layout {
         let name_table_mirroring = metadata.name_table_mirroring
             .expect("Four screen mirroring specified, but mapper didn't provide a definition of four screen mirroring.");
 
-        let mut chr_layouts: Vec<_> = self.chr_layouts.as_iter().collect();
-        match chr_access_override {
-            None => {}
-            Some(AccessOverride::ForceRom) => {
-                for layout in &mut chr_layouts {
-                    *layout = layout.force_rom()
-                }
-            }
-            Some(AccessOverride::ForceRam) => {
-                for layout in &mut chr_layouts {
-                    *layout = layout.force_ram()
-                }
-            }
-        }
-
-        let mut chr_memory = ChrMemory::new(
-            chr_layouts,
+        let chr_memory = ChrMemory::new(
+            self.chr_layouts.as_iter().collect(),
             self.chr_layout_index,
             self.align_large_chr_windows,
             self.chr_rom_outer_bank_layout.outer_bank_count(chr_rom_size),
@@ -144,32 +108,7 @@ impl Layout {
             chr_bank_registers,
         );
 
-        let mut ram_not_present = BTreeSet::new();
-        if metadata.prg_work_ram_size == 0 && metadata.prg_save_ram_size == 0 {
-            for status_info in prg_memory.read_write_status_infos() {
-                match status_info {
-                    ReadWriteStatusInfo::Absent | ReadWriteStatusInfo::MapperCustom { .. } => { /* Do nothing. */ }
-                    ReadWriteStatusInfo::PossiblyPresent { register_id, status_on_absent } => {
-                        prg_memory.set_read_write_status(register_id, status_on_absent);
-                        ram_not_present.insert(register_id);
-                    }
-                }
-            }
-        }
-
-        if metadata.chr_work_ram_size == 0 && metadata.chr_save_ram_size == 0 {
-            for status_info in chr_memory.read_write_status_infos() {
-                match status_info {
-                    ReadWriteStatusInfo::Absent | ReadWriteStatusInfo::MapperCustom { .. } => { /* Do nothing. */ }
-                    ReadWriteStatusInfo::PossiblyPresent { register_id, status_on_absent } => {
-                        chr_memory.set_read_write_status(register_id, status_on_absent);
-                        ram_not_present.insert(register_id);
-                    }
-                }
-            }
-        }
-
-        Ok((prg_memory, chr_memory, self.name_table_mirrorings, self.read_write_statuses, ram_not_present))
+        Ok((prg_memory, chr_memory, self.name_table_mirrorings))
     }
 
     pub fn cartridge_selection_name_table_mirrorings(&self) -> [Option<NameTableMirroring>; 4] {
@@ -205,8 +144,6 @@ pub struct LayoutBuilder {
     four_screen_mirroring_definition: Option<NameTableMirroring>,
     fixed_name_table_mirroring: Option<bool>,
 
-    read_write_statuses: &'static [ReadWriteStatus],
-
     bank_register_overrides: ConstVec<(PrgBankRegisterId, BankNumber), 5>,
     chr_bank_register_overrides: ConstVec<(ChrBankRegisterId, BankNumber), 5>,
     chr_meta_register_overrides: ConstVec<(MetaRegisterId, ChrBankRegisterId), 5>,
@@ -240,8 +177,6 @@ impl LayoutBuilder {
             name_table_mirrorings: &[],
             four_screen_mirroring_definition: None,
             fixed_name_table_mirroring: None,
-
-            read_write_statuses: &[],
 
             bank_register_overrides: ConstVec::new(),
             chr_bank_register_overrides: ConstVec::new(),
@@ -334,14 +269,6 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn read_write_statuses(
-        &mut self,
-        value: &'static [ReadWriteStatus],
-    ) -> &mut LayoutBuilder {
-        self.read_write_statuses = value;
-        self
-    }
-
     pub const fn override_prg_bank_register(
         &mut self,
         id: PrgBankRegisterId,
@@ -407,8 +334,6 @@ impl LayoutBuilder {
             name_table_mirrorings: self.name_table_mirrorings,
             four_screen_mirroring_definition: self.four_screen_mirroring_definition,
             fixed_name_table_mirroring,
-
-            read_write_statuses: self.read_write_statuses,
 
             bank_register_overrides: self.bank_register_overrides,
             chr_bank_register_overrides: self.chr_bank_register_overrides,

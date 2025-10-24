@@ -5,7 +5,7 @@ use crate::memory::memory::Memory;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM.status_register(S0)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM.write_status(W0)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
@@ -28,10 +28,6 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::HORIZONTAL,
         NameTableMirroring::ONE_SCREEN_LEFT_BANK,
         NameTableMirroring::ONE_SCREEN_RIGHT_BANK,
-    ])
-    .read_write_statuses(&[
-        ReadWriteStatus::ReadOnly,
-        ReadWriteStatus::ReadWrite,
     ])
     .build();
 
@@ -64,8 +60,8 @@ impl Mapper for Mapper085_2 {
             0xD010 => mem.set_chr_register(C7, value),
             0xE000 => {
                 // TODO: Silence expansion audio
-                let fields = splitbits!(min=u8, value, "rs....mm");
-                mem.set_read_write_status(S0, fields.r);
+                let fields = splitbits!(value, "ws....mm");
+                mem.set_writes_enabled(W0, fields.w);
                 mem.set_name_table_mirroring(fields.m);
             }
             0xE010 => self.irq_state.set_reload_value(value),

@@ -1,17 +1,14 @@
-use std::collections::BTreeSet;
-
-use log::info;
-
 use crate::apu::apu_registers::ApuRegisters;
 use crate::controller::joypad::Joypad;
 use crate::cpu::dmc_dma::DmcDma;
 use crate::cpu::oam_dma::OamDma;
-use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, PrgSource, RomRamModeRegisterId};
+use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
+use crate::memory::bank::bank_number::{ReadStatus, WriteStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::memory::cpu::stack::Stack;
-use crate::mapper::{ChrBankRegisterId, ChrMemory, CiramSide, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, PpuAddress, PrgBankRegisterId, PrgMemory, ReadResult, ReadWriteStatus, ReadWriteStatusRegisterId};
+use crate::mapper::{ChrBankRegisterId, ChrMemory, CiramSide, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, PpuAddress, PrgBankRegisterId, PrgMemory, ReadResult};
 use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::Ciram;
@@ -48,8 +45,6 @@ pub struct Memory {
     pub prg_memory: PrgMemory,
     pub chr_memory: ChrMemory,
     pub name_table_mirrorings: &'static [NameTableMirroring],
-    pub read_write_statuses: &'static [ReadWriteStatus],
-    pub ram_not_present: BTreeSet<ReadWriteStatusRegisterId>,
 }
 
 impl Memory {
@@ -57,8 +52,6 @@ impl Memory {
         prg_memory: PrgMemory,
         chr_memory: ChrMemory,
         name_table_mirrorings: &'static [NameTableMirroring],
-        read_write_statuses: &'static [ReadWriteStatus],
-        ram_not_present: BTreeSet<ReadWriteStatusRegisterId>,
         ppu_clock: Clock,
         system_palette: SystemPalette,
     ) -> Memory {
@@ -82,8 +75,6 @@ impl Memory {
             prg_memory,
             chr_memory,
             name_table_mirrorings,
-            read_write_statuses,
-            ram_not_present,
         }
     }
 
@@ -209,18 +200,29 @@ impl Memory {
         self.prg_memory.write(addr, value);
     }
 
-    pub fn set_read_write_status(&mut self, id: ReadWriteStatusRegisterId, index: u8) {
-        if self.ram_not_present.contains(&id) {
-            info!(target: "mapperupdates",
-                "Ignoring update to RamStatus register {id:?} because RAM isn't present.");
-        } else if !self.read_write_statuses.is_empty() {
-            let read_write_status = self.read_write_statuses[index as usize];
-            self.prg_memory.set_read_write_status(id, read_write_status);
-            self.chr_memory.set_read_write_status(id, read_write_status);
-        }
+    pub fn set_reads_enabled(&mut self, id: ReadStatusRegisterId, enabled: bool) {
+        let status = if enabled { ReadStatus::Enabled } else { ReadStatus::Disabled };
+        self.prg_memory.set_read_status(id, status);
+        self.chr_memory.set_read_status(id, status);
     }
 
-    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: PrgSource) {
+    pub fn set_read_status(&mut self, id: ReadStatusRegisterId, read_status: ReadStatus) {
+        self.prg_memory.set_read_status(id, read_status);
+        self.chr_memory.set_read_status(id, read_status);
+    }
+
+    pub fn set_read_zeroes(&mut self, id: ReadStatusRegisterId) {
+        self.prg_memory.set_read_status(id, ReadStatus::ReadOnlyZeros);
+        self.chr_memory.set_read_status(id, ReadStatus::ReadOnlyZeros);
+    }
+
+    pub fn set_writes_enabled(&mut self, id: WriteStatusRegisterId, enabled: bool) {
+        let status = if enabled { WriteStatus::Enabled } else { WriteStatus::Disabled };
+        self.prg_memory.set_write_status(id, status);
+        self.chr_memory.set_write_status(id, status);
+    }
+
+    pub fn set_rom_ram_mode(&mut self, id: PrgSourceRegisterId, rom_ram_mode: PrgSource) {
         self.prg_memory.set_rom_ram_mode(id, rom_ram_mode);
     }
 

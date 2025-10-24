@@ -3,9 +3,9 @@ use crate::mapper::*;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x67FF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(0).status_register(S0)),
-        PrgWindow::new(0x6800, 0x6FFF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(2).status_register(S1)),
-        PrgWindow::new(0x7000, 0x73FF, 1 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(4).status_register(S2)),
+        PrgWindow::new(0x6000, 0x67FF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(0).read_write_status(R0, W0)),
+        PrgWindow::new(0x6800, 0x6FFF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(2).read_write_status(R1, W1)),
+        PrgWindow::new(0x7000, 0x73FF, 1 * KIBIBYTE, PrgBank::WORK_RAM.fixed_index(4).read_write_status(R2, W2)),
         PrgWindow::new(0x7400, 0x7FFF, 3 * KIBIBYTE, PrgBank::ABSENT),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
@@ -35,14 +35,7 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::HORIZONTAL,
         NameTableMirroring::VERTICAL,
     ])
-    .read_write_statuses(&[
-        ReadWriteStatus::ReadOnlyZeros,
-        ReadWriteStatus::ReadWrite,
-    ])
     .build();
-
-const READ_ONLY_ZEROS: u8 = 0;
-const READ_WRITE: u8 = 1;
 
 // Taito X1-017
 // TODO: Read back 0 instead of open bus in all cases.
@@ -66,16 +59,19 @@ impl Mapper for Mapper082 {
                 mem.set_name_table_mirroring(fields.m);
             }
             0x7EF7 => {
-                let prg_read_write_status = if value == 0xCA { READ_WRITE } else { READ_ONLY_ZEROS };
-                mem.set_read_write_status(S0, prg_read_write_status);
+                let enabled = value == 0xCA;
+                mem.set_read_status(R0, if enabled { ReadStatus::Enabled } else { ReadStatus::ReadOnlyZeros });
+                mem.set_writes_enabled(W0, enabled);
             }
             0x7EF8 => {
-                let prg_read_write_status = if value == 0x69 { READ_WRITE } else { READ_ONLY_ZEROS };
-                mem.set_read_write_status(S1, prg_read_write_status);
+                let enabled = value == 0x69;
+                mem.set_read_status(R1, if enabled { ReadStatus::Enabled } else { ReadStatus::ReadOnlyZeros });
+                mem.set_writes_enabled(W1, enabled);
             }
             0x7EF9 => {
-                let prg_read_write_status = if value == 0x84 { READ_WRITE } else { READ_ONLY_ZEROS };
-                mem.set_read_write_status(S2, prg_read_write_status);
+                let enabled = value == 0x84;
+                mem.set_read_status(R2, if enabled { ReadStatus::Enabled } else { ReadStatus::ReadOnlyZeros });
+                mem.set_writes_enabled(W2, enabled);
             }
             0x7EFA => mem.set_prg_register(P0, splitbits_named!(value, "..pppp..")),
             0x7EFB => mem.set_prg_register(P1, splitbits_named!(value, "..pppp..")),

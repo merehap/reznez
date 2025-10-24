@@ -8,11 +8,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.fixed_index(0).status_register(S0)),
-    ])
-    .read_write_statuses(&[
-        ReadWriteStatus::Disabled,
-        ReadWriteStatus::ReadOnly,
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.fixed_index(0).read_status(R0)),
     ])
     .fixed_name_table_mirroring()
     .build();
@@ -29,7 +25,7 @@ impl Mapper for CnromWithChrDisable {
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 let copy_protection_passed = value & 0b11 == self.correct_chip_select_value;
-                mem.set_read_write_status(S0, copy_protection_passed as u8);
+                mem.set_reads_enabled(R0, copy_protection_passed);
             }
         }
     }

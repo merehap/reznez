@@ -206,7 +206,10 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // Caltron 6-in-1
         (41, None) => m::mapper041::Mapper041::default().supported(),
         // FDS games hacked into cartridge form
-        (42, None) => m::mapper042::Mapper042::new(metadata).supported(),
+        (42, None) => match m::mapper042::chr_board(metadata) {
+            m::mapper042::ChrBoard::SwitchableRom => m::mapper042::MAPPER042_WITH_SWITCHABLE_CHR_ROM.supported(),
+            m::mapper042::ChrBoard::FixedRam => m::mapper042::MAPPER042_WITH_FIXED_CHR_RAM.supported(),
+        }
         // TONY-I and YS-612 (FDS games in cartridge form)
         (43, None) => m::mapper043::Mapper043::new().supported(),
         (44, _) => TodoMapper,

@@ -12,7 +12,6 @@ pub const LAYOUT: Layout = Layout::builder()
     .chr_layout(mmc3::CHR_BIG_WINDOWS_FIRST)
     .chr_layout(mmc3::CHR_SMALL_WINDOWS_FIRST)
     .complicated_name_table_mirroring()
-    .read_write_statuses(mmc3::READ_WRITE_STATUSES)
     .build();
 
 // TxSROM

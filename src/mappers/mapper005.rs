@@ -1,4 +1,4 @@
-use crate::memory::bank::bank::{PrgSource, RomRamModeRegisterId};
+use crate::memory::bank::bank::{PrgSource, PrgSourceRegisterId};
 use crate::mapper::*;
 use crate::mappers::mmc5::frame_state::FrameState;
 use crate::memory::memory::Memory;
@@ -19,22 +19,22 @@ const LAYOUT: Layout = Layout::builder()
     // Mode 1
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P2).status_register(S1).rom_ram_register(R1)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P2).write_status(W1).rom_ram_register(PS1)),
         PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
     ])
     // Mode 2
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
-        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P2).status_register(S1).rom_ram_register(R1)),
-        PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P3).status_register(S1).rom_ram_register(R2)),
+        PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P2).write_status(W1).rom_ram_register(PS1)),
+        PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P3).write_status(W1).rom_ram_register(PS2)),
         PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
     ])
     // Mode 3
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
-        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P1).status_register(S1).rom_ram_register(R0)),
-        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P2).status_register(S1).rom_ram_register(R1)),
-        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P3).status_register(S1).rom_ram_register(R2)),
+        PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P1).write_status(W1).rom_ram_register(PS0)),
+        PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P2).write_status(W1).rom_ram_register(PS1)),
+        PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P3).write_status(W1).rom_ram_register(PS2)),
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
     ])
     .prg_layout_index(3)
@@ -91,19 +91,8 @@ const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C11)),
     ])
     .do_not_align_large_chr_windows()
-    .read_write_statuses(&[
-        ReadWriteStatus::ReadOnly,
-        ReadWriteStatus::ReadWrite,
-        // Write-only is only used by Extended RAM (S0).
-        ReadWriteStatus::WriteOnly,
-    ])
     .complicated_name_table_mirroring()
     .build();
-
-// Indexes into the above RAM statuses.
-const READ_ONLY: u8 = 0;
-const READ_WRITE: u8 = 1;
-const WRITE_ONLY: u8 = 2;
 
 const EXTENDED_RAM_MODES: [ExtendedRamMode; 4] = [
     ExtendedRamMode::WriteOnly,
@@ -248,21 +237,11 @@ impl Mapper for Mapper005 {
             0x5101 => self.set_chr_layout(mem, value),
             0x5102 => {
                 self.ram_enabled_1 = value & 0b11 == 0b10;
-                let status = if self.ram_enabled_1 && self.ram_enabled_2 {
-                    READ_WRITE
-                } else {
-                    READ_ONLY
-                };
-                mem.set_read_write_status(S1, status);
+                mem.set_writes_enabled(W1, self.ram_enabled_1 && self.ram_enabled_2);
             }
             0x5103 => {
                 self.ram_enabled_2 = value & 0b11 == 0b01;
-                let status = if self.ram_enabled_1 && self.ram_enabled_2 {
-                    READ_WRITE
-                } else {
-                    READ_ONLY
-                };
-                mem.set_read_write_status(S1, status);
+                mem.set_writes_enabled(W1, self.ram_enabled_1 && self.ram_enabled_2);
             }
             0x5104 => self.set_extended_ram_mode(mem, value),
             0x5105 => Self::set_name_table_mirroring(mem, value),
@@ -270,9 +249,9 @@ impl Mapper for Mapper005 {
             0x5107 => self.set_fill_mode_attribute_table_byte(value),
             0x5108..=0x5112 => { /* Do nothing. */ }
             0x5113 => self.set_prg_bank_register(mem, P0, None, value),
-            0x5114 => self.set_prg_bank_register(mem, P1, Some(R0), value),
-            0x5115 => self.set_prg_bank_register(mem, P2, Some(R1), value),
-            0x5116 => self.set_prg_bank_register(mem, P3, Some(R2), value),
+            0x5114 => self.set_prg_bank_register(mem, P1, Some(PS0), value),
+            0x5115 => self.set_prg_bank_register(mem, P2, Some(PS1), value),
+            0x5116 => self.set_prg_bank_register(mem, P3, Some(PS2), value),
             0x5117 => self.set_prg_bank_register(mem, P4, None, value),
             0x5118..=0x511F => { /* Do nothing. */ }
             0x5120 => self.set_chr_bank_register(mem, C0, value),
@@ -365,14 +344,10 @@ impl Mapper005 {
     // Write 0x5104
     fn set_extended_ram_mode(&mut self, mem: &mut Memory, value: u8) {
         self.extended_ram_mode = EXTENDED_RAM_MODES[usize::from(value & 0b11)];
-        let read_write_status = match self.extended_ram_mode {
-            // FIXME: These are only write-only during rendering. They are supposed to
-            // cause corruption during VBlank.
-            ExtendedRamMode::WriteOnly | ExtendedRamMode::ExtendedAttributes => WRITE_ONLY,
-            ExtendedRamMode::ReadWrite => READ_WRITE,
-            ExtendedRamMode::ReadOnly => READ_ONLY,
-        };
-        mem.set_read_write_status(S0, read_write_status);
+        mem.set_reads_enabled(R0, matches!(self.extended_ram_mode, ExtendedRamMode::ReadOnly | ExtendedRamMode::ReadWrite));
+        // FIXME: WriteOnly and ExtendedAttributes are only write-only during rendering.
+        // They are supposed to cause corruption during VBlank.
+        mem.set_writes_enabled(W0, !matches!(self.extended_ram_mode, ExtendedRamMode::ReadOnly));
     }
 
     // Write 0x5105
@@ -416,14 +391,14 @@ impl Mapper005 {
         &self,
         mem: &mut Memory,
         id: PrgBankRegisterId,
-        mode_reg_id: Option<RomRamModeRegisterId>,
+        prg_source_reg_id: Option<PrgSourceRegisterId>,
         value: u8,
     ) {
         let fields = splitbits!(value, "mppppppp");
         mem.set_prg_register(id, fields.p);
-        if let Some(mode_reg_id) = mode_reg_id {
+        if let Some(prg_mode_reg_id) = prg_source_reg_id {
             let rom_ram_mode = [PrgSource::WorkRamOrRom, PrgSource::Rom][fields.m as usize];
-            mem.set_rom_ram_mode(mode_reg_id, rom_ram_mode);
+            mem.set_rom_ram_mode(prg_mode_reg_id, rom_ram_mode);
         }
     }
 

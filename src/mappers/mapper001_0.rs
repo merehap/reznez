@@ -36,23 +36,19 @@ const LAYOUT: Layout = Layout::builder()
         NameTableMirroring::VERTICAL,
         NameTableMirroring::HORIZONTAL,
     ])
-    .read_write_statuses(&[
-        ReadWriteStatus::ReadWrite,
-        ReadWriteStatus::Disabled,
-    ])
     .build();
 
 const PRG_WINDOWS_ONE_BIG: &[PrgWindow] = &[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM.switchable(P0).status_register(S0)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM.switchable(P0).read_write_status(R0, W0)),
     PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
 ];
 const PRG_WINDOWS_FIXED_FIRST: &[PrgWindow] = &[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM.switchable(P0).status_register(S0)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM.switchable(P0).read_write_status(R0, W0)),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_index(0)),
     PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
 ];
 const PRG_WINDOWS_FIXED_LAST: &[PrgWindow] = &[
-    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM.switchable(P0).status_register(S0)),
+    PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM.switchable(P0).read_write_status(R0, W0)),
     PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
     PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
 ];
@@ -90,9 +86,10 @@ impl Mapper for Mapper001_0 {
                     }
                 }
                 0xE000..=0xFFFF => {
-                    let fields = splitbits!(min=u8, finished_value, "...spppp");
-                    mem.set_read_write_status(S0, fields.s);
-                    mem.set_prg_register(P1, fields.p);
+                    let (ram_disabled, prg_bank) = splitbits_named!(finished_value, "...dpppp");
+                    mem.set_reads_enabled(R0, !ram_disabled);
+                    mem.set_writes_enabled(W0, !ram_disabled);
+                    mem.set_prg_register(P1, prg_bank);
                 }
             }
         }
@@ -114,9 +111,10 @@ impl Mapper001_0 {
     fn set_chr_bank_and_board_specifics(&self, mem: &mut Memory, chr_id: ChrBankRegisterId, value: u8) {
         match self.board {
             Board::SNROM => {
-                let fields = splitbits!(min=u8, value, "...s...c");
-                mem.set_read_write_status(S0, fields.s);
-                mem.set_chr_register(chr_id, fields.c);
+                let (ram_disabled, chr_bank) = splitbits_named!(value, "...d...c");
+                mem.set_reads_enabled(R0, !ram_disabled);
+                mem.set_writes_enabled(W0, !ram_disabled);
+                mem.set_chr_register(chr_id, chr_bank as u16);
             }
             Board::SUROM => {
                 let banks = splitbits!(min=u8, value, "...p...c");

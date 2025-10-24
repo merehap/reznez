@@ -27,7 +27,6 @@ pub const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::SWITCHABLE_SOURCE.switchable(C1).chr_source(CS1)),
     ])
     .name_table_mirrorings(mmc3::NAME_TABLE_MIRRORINGS)
-    .read_write_statuses(mmc3::READ_WRITE_STATUSES)
     .build();
 
 const ROM_RAM_REGISTER_IDS: [ChrSourceRegisterId; 6] = [CS0, CS1, CS2, CS3, CS4, CS5];

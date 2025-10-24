@@ -1,15 +1,15 @@
 use log::{info, warn};
 
-use crate::mapper::{BankNumber, PrgBankRegisterId, ReadWriteStatusRegisterId};
-use crate::memory::bank::bank::{PrgSource, RomRamModeRegisterId};
-use crate::memory::bank::bank_number::{PrgBankRegisters, ReadWriteStatus, MemType};
+use crate::mapper::{BankNumber, PrgBankRegisterId};
+use crate::memory::bank::bank::{PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
+use crate::memory::bank::bank_number::{MemType, PrgBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory_map::PrgMemoryMap;
 use crate::memory::layout::OuterBankLayout;
 use crate::memory::raw_memory::{RawMemory, RawMemoryArray, SaveRam};
 use crate::memory::read_result::ReadResult;
-use crate::memory::window::{PrgWindow, PrgWindowSize, ReadWriteStatusInfo};
+use crate::memory::window::{PrgWindow, PrgWindowSize};
 use crate::util::unit::KIBIBYTE;
 
 pub struct PrgMemory {
@@ -105,30 +105,21 @@ impl PrgMemory {
         &mut self.extended_ram
     }
 
-    pub fn read_write_status_infos(&self) -> Vec<ReadWriteStatusInfo> {
-        let mut ids = Vec::new();
-        for layout in &self.layouts {
-            ids.append(&mut layout.read_write_status_infos());
-        }
-
-        ids
-    }
-
     pub fn peek(&self, address: CpuAddress) -> ReadResult {
-        let (prg_source_and_index, read_write_status) =
+        let (prg_source_and_index, read_status, _write_status) =
             self.memory_maps[self.layout_index as usize].index_for_address(address);
-        if read_write_status == ReadWriteStatus::ReadOnlyZeros {
+        if read_status == ReadStatus::ReadOnlyZeros {
             ReadResult::full(0)
         } else {
             match prg_source_and_index {
-                Some((MemType::Rom, index)) if read_write_status.is_readable() => {
+                Some((MemType::Rom, index)) if read_status == ReadStatus::Enabled => {
                     //log::info!("ROM length: {:X} Index: {index:X}", self.rom[0].size());
                     let outer_bank_number = self.rom_outer_bank_number as usize % self.rom.len();
                     ReadResult::full(self.rom[outer_bank_number][index])
                 }
-                Some((MemType::WorkRam, index)) if read_write_status.is_readable() =>
+                Some((MemType::WorkRam, index)) if read_status == ReadStatus::Enabled =>
                     ReadResult::full(self.work_ram[index]),
-                Some((MemType::SaveRam, index)) if read_write_status.is_readable() =>
+                Some((MemType::SaveRam, index)) if read_status == ReadStatus::Enabled =>
                     ReadResult::full(self.save_ram[index % self.save_ram.size()]),
                 None | Some((MemType::Rom | MemType::WorkRam | MemType::SaveRam, _)) =>
                     ReadResult::OPEN_BUS,
@@ -142,20 +133,23 @@ impl PrgMemory {
     }
 
     pub fn write(&mut self, address: CpuAddress, value: u8) {
-        let (prg_source_and_index, read_write_status) =
+        let (prg_source_and_index, _read_status, write_status) =
             self.memory_maps[self.layout_index as usize].index_for_address(address);
-        if read_write_status.is_writable() {
-            match prg_source_and_index {
-                None | Some((MemType::Rom, _)) => unreachable!(),
-                Some((MemType::WorkRam, index)) => {
-                    self.work_ram[index] = value;
-                    info!(target: "mapperramwrites", "Setting PRG [{address}]=${value:02} (Work RAM @ ${index:X})");
-                }
-                Some((MemType::SaveRam, index)) => {
-                    let index = index % self.save_ram.size();
-                    self.save_ram[index] = value;
-                    info!(target: "mapperramwrites", "Setting PRG [{address}]=${value:02} (Save RAM @ ${index:X})");
-                }
+
+        if write_status == WriteStatus::Disabled {
+            return;
+        }
+
+        match prg_source_and_index {
+            None | Some((MemType::Rom, _)) => unreachable!(),
+            Some((MemType::WorkRam, index)) => {
+                self.work_ram[index] = value;
+                info!(target: "mapperramwrites", "Setting PRG [{address}]=${value:02} (Work RAM @ ${index:X})");
+            }
+            Some((MemType::SaveRam, index)) => {
+                let index = index % self.save_ram.size();
+                self.save_ram[index] = value;
+                info!(target: "mapperramwrites", "Setting PRG [{address}]=${value:02} (Save RAM @ ${index:X})");
             }
         }
     }
@@ -179,11 +173,15 @@ impl PrgMemory {
         self.update_page_ids();
     }
 
-    pub fn set_read_write_status(&mut self, id: ReadWriteStatusRegisterId, read_write_status: ReadWriteStatus) {
-        self.regs.set_read_write_status(id, read_write_status);
+    pub fn set_read_status(&mut self, id: ReadStatusRegisterId, read_status: ReadStatus) {
+        self.regs.set_read_status(id, read_status);
     }
 
-    pub fn set_rom_ram_mode(&mut self, id: RomRamModeRegisterId, rom_ram_mode: PrgSource) {
+    pub fn set_write_status(&mut self, id: WriteStatusRegisterId, write_status: WriteStatus) {
+        self.regs.set_write_status(id, write_status);
+    }
+
+    pub fn set_rom_ram_mode(&mut self, id: PrgSourceRegisterId, rom_ram_mode: PrgSource) {
         self.regs.set_rom_ram_mode(id, rom_ram_mode);
         self.update_page_ids();
     }

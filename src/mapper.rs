@@ -3,14 +3,15 @@ pub use splitbits::{splitbits, splitbits_named, combinebits, splitbits_then_comb
 pub use crate::cartridge::cartridge::Cartridge;
 pub use crate::counter::counter::{ReloadDrivenCounter, DirectlySetCounter, CounterBuilder, AutoTriggerWhen, ForcedReloadTiming, WhenDisabledPrevent};
 pub use crate::counter::irq_counter_info::IrqCounterInfo;
-pub use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisterId, ChrBankRegisterId, MetaRegisterId, ReadWriteStatus};
+pub use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisterId, ChrBankRegisterId, MetaRegisterId, ReadStatus, WriteStatus};
 pub use crate::memory::bank::bank_number::PrgBankRegisterId::*;
 pub use crate::memory::bank::bank_number::ChrBankRegisterId::*;
 pub use crate::memory::bank::bank_number::MetaRegisterId::*;
-pub use crate::memory::bank::bank::{PrgBank, ChrBank, ReadWriteStatusRegisterId};
-pub use crate::memory::bank::bank::ReadWriteStatusRegisterId::*;
-pub use crate::memory::bank::bank::RomRamModeRegisterId::*;
+pub use crate::memory::bank::bank::{PrgBank, ChrBank};
+pub use crate::memory::bank::bank::PrgSourceRegisterId::*;
 pub use crate::memory::bank::bank::ChrSourceRegisterId::*;
+pub use crate::memory::bank::bank::ReadStatusRegisterId::*;
+pub use crate::memory::bank::bank::WriteStatusRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::memory::cpu::prg_memory_map::PrgPageIdSlot;
@@ -359,7 +360,7 @@ pub trait Mapper {
         let mut result = String::new();
         for prg_page_id_slot in prg_memory.current_memory_map().page_id_slots() {
             let bank_string = match prg_page_id_slot {
-                PrgPageIdSlot::Normal(prg_source_and_page_number, _) => {
+                PrgPageIdSlot::Normal(prg_source_and_page_number, _, _) => {
                     match prg_source_and_page_number {
                         None => "E".to_string(),
                         // FIXME: This should be bank number, not page number.
@@ -398,7 +399,7 @@ pub trait Mapper {
         let chr_memory = &mem.chr_memory();
 
         let mut result = String::new();
-        for (page_id, _) in chr_memory.current_memory_map().pattern_table_page_ids() {
+        for (page_id, _, _) in chr_memory.current_memory_map().pattern_table_page_ids() {
             let bank_string = match page_id {
                 ChrPageId::Rom { page_number, .. } => page_number.to_string(),
                 ChrPageId::Ram { page_number, .. } => format!("W{page_number}"),

@@ -13,15 +13,11 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.fixed_index(0).status_register(S0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.fixed_index(0).write_status(W0)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
         NameTableMirroring::HORIZONTAL,
-    ])
-    .read_write_statuses(&[
-        ReadWriteStatus::ReadWrite,
-        ReadWriteStatus::ReadOnly,
     ])
     .build();
 
@@ -35,11 +31,11 @@ impl Mapper for Mapper063_0 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
-                let fields = splitbits!(min=u8, *addr, ".... .rpp pppp pplm");
-                mem.set_read_write_status(S0, fields.r);
-                mem.set_prg_register(P0, fields.p);
-                mem.set_prg_layout(fields.l);
-                mem.set_name_table_mirroring(fields.m);
+                let (disable_chr_writes, prg_bank, layout, mirroring) = splitbits_named!(*addr, ".... .dpp pppp pplm");
+                mem.set_writes_enabled(W0, !disable_chr_writes);
+                mem.set_prg_register(P0, prg_bank);
+                mem.set_prg_layout(layout as u8);
+                mem.set_name_table_mirroring(mirroring as u8);
             }
         }
     }

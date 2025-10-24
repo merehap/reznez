@@ -8,7 +8,6 @@ pub const LAYOUT: Layout = Layout::builder()
     .chr_rom_max_size(128 * KIBIBYTE)
     .chr_layout(mapper080::CHR_LAYOUT)
     .complicated_name_table_mirroring()
-    .read_write_statuses(mapper080::READ_WRITE_STATUSES)
     .build();
 
 // Taito's X1-005 (alternate name table mirrorings)

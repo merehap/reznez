@@ -36,15 +36,11 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .chr_rom_max_size(8 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.fixed_index(0).status_register(S0)),
+        ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.fixed_index(0).write_status(W0)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
         NameTableMirroring::HORIZONTAL,
-    ])
-    .read_write_statuses(&[
-        ReadWriteStatus::ReadOnly,
-        ReadWriteStatus::ReadWrite,
     ])
     .build();
 
@@ -61,8 +57,12 @@ impl Mapper for Mapper015 {
             0x8000..=0xFFFF => {
                 let prg_layout_index = (*addr & 0b11) as u8;
                 mem.set_prg_layout(prg_layout_index);
-                let chr_ram_writable = matches!(prg_layout_index, 1 | 2);
-                mem.set_read_write_status(S0, chr_ram_writable as u8);
+
+                // FIXME: The wiki says that writes are disabled for layouts 0 and 4, but this breaks Crazy Climber.
+                // (This is broken in Mesen, too.)
+                // TODO: Determine if the wiki is wrong, or if the Crazy Climber ROM is wrong.
+                // let chr_ram_writable = matches!(prg_layout_index, 1 | 2);
+                // mem.set_writes_enabled(W0, chr_ram_writable);
 
                 let (s, mirroring, p) = splitbits_named!(min=u8, value, "smpppppp");
                 let prg_bank = if prg_layout_index == 2 {
