@@ -1,5 +1,4 @@
 use log::{info, warn};
-
 use crate::mapper::{BankNumber, PrgBankRegisterId};
 use crate::memory::bank::bank::{PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
 use crate::memory::bank::bank_number::{MemType, PrgBankRegisters, ReadStatus, WriteStatus};
@@ -16,7 +15,8 @@ pub struct PrgMemory {
     layouts: Vec<PrgLayout>,
     memory_maps: Vec<PrgMemoryMap>,
     layout_index: u8,
-    rom: Vec<RawMemory>,
+    rom: RawMemory,
+    rom_outer_bank_size: u32,
     rom_outer_bank_number: u8,
     work_ram: RawMemory,
     save_ram: SaveRam,
@@ -84,7 +84,8 @@ impl PrgMemory {
             layouts,
             memory_maps,
             layout_index,
-            rom: rom.split_n(rom_outer_bank_count),
+            rom,
+            rom_outer_bank_size,
             rom_outer_bank_number: 0,
             work_ram,
             save_ram,
@@ -113,9 +114,8 @@ impl PrgMemory {
         } else {
             match prg_source_and_index {
                 Some((MemType::Rom, index)) if read_status == ReadStatus::Enabled => {
-                    //log::info!("ROM length: {:X} Index: {index:X}", self.rom[0].size());
-                    let outer_bank_number = self.rom_outer_bank_number as usize % self.rom.len();
-                    ReadResult::full(self.rom[outer_bank_number][index])
+                    let outer_bank_start = (u32::from(self.rom_outer_bank_number) * self.rom_outer_bank_size) & (self.rom.size() - 1);
+                    ReadResult::full(self.rom[outer_bank_start | index])
                 }
                 Some((MemType::WorkRam, index)) if read_status == ReadStatus::Enabled =>
                     ReadResult::full(self.work_ram[index]),
@@ -128,8 +128,7 @@ impl PrgMemory {
     }
 
     pub fn peek_raw_rom(&self, index: u32) -> ReadResult {
-        assert_eq!(self.rom.len(), 1);
-        ReadResult::full(self.rom[0][index % self.rom[0].size()])
+        ReadResult::full(self.rom[index % self.rom.size()])
     }
 
     pub fn write(&mut self, address: CpuAddress, value: u8) {
