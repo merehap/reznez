@@ -1,6 +1,7 @@
 use std::num::NonZeroI8;
 
 use crate::mapper::*;
+use crate::util::edge_detector::EdgeDetector;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(2048 * KIBIBYTE)
@@ -171,6 +172,7 @@ pub struct Mapper209 {
     irq_counter: DirectlySetCounter,
     irq_ticked_by: IrqTickedBy,
     irq_xor_value: u8,
+    pattern_table_side_detector: EdgeDetector<PatternTableSide>,
 
     multiplicand: u8,
     multiplier: u8,
@@ -318,7 +320,7 @@ impl Mapper for Mapper209 {
 
                 self.irq_ticked_by = match irq_ticked_by {
                     0 => IrqTickedBy::CpuCycle,
-                    1 => IrqTickedBy::PpuCycle,
+                    1 => IrqTickedBy::ChangedToRightSidePatternTable,
                     2 => IrqTickedBy::PpuRead,
                     3 => IrqTickedBy::CpuWrite,
                     _ => unreachable!(),
@@ -385,7 +387,29 @@ impl Mapper for Mapper209 {
         }
     }
 
+    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
+        if self.irq_ticked_by == IrqTickedBy::CpuCycle && self.irq_counter.tick().triggered {
+            mem.cpu_pinout.assert_mapper_irq();
+        }
+    }
+
+    fn on_cpu_write(&mut self, mem: &mut Memory, _addr: CpuAddress, _value: u8) {
+        if self.irq_ticked_by == IrqTickedBy::CpuWrite && self.irq_counter.tick().triggered {
+            mem.cpu_pinout.assert_mapper_irq();
+        }
+    }
+
     fn on_ppu_read(&mut self, mem: &mut Memory, address: PpuAddress, _value: u8) {
+        let switched_to_right = self.pattern_table_side_detector.set_value_then_detect(address.pattern_table_side());
+        let should_tick_from_switch_to_right =
+            self.irq_ticked_by == IrqTickedBy::ChangedToRightSidePatternTable && switched_to_right;
+        let should_tick_from_read = self.irq_ticked_by == IrqTickedBy::PpuRead;
+
+        let should_tick = should_tick_from_read || should_tick_from_switch_to_right;
+        if should_tick && self.irq_counter.tick().triggered {
+            mem.cpu_pinout.assert_mapper_irq();
+        }
+
         let (meta_id, bank_register_id) = match address.to_u16() {
             0x0FD8..=0x0FDF => (M0, C0),
             0x0FE8..=0x0FEF => (M0, C8),
@@ -410,6 +434,7 @@ impl Mapper209 {
             // Unused starting value.
             irq_ticked_by: IrqTickedBy::CpuCycle,
             irq_xor_value: 0,
+            pattern_table_side_detector: EdgeDetector::target_value(PatternTableSide::Right),
 
             multiplicand: 0,
             multiplier: 0,
@@ -428,7 +453,7 @@ impl Mapper209 {
 #[derive(PartialEq, Eq)]
 enum IrqTickedBy {
     CpuCycle,
-    PpuCycle,
+    ChangedToRightSidePatternTable,
     PpuRead,
     CpuWrite,
 }
