@@ -19,7 +19,8 @@ use super::ciram::CiramSide;
 pub struct ChrMemory {
     layouts: Vec<ChrLayout>,
     memory_maps: Vec<ChrMemoryMap>,
-    rom_outer_banks: Vec<RawMemory>,
+    rom: RawMemory,
+    rom_outer_bank_size: u32,
     rom_outer_bank_number: u8,
     ram: RawMemory,
     bank_size: ChrWindowSize,
@@ -96,11 +97,15 @@ impl ChrMemory {
                 &mut regs,
         )).collect();
 
+        let rom_outer_bank_size = rom.size() / u32::from(rom_outer_bank_count.get());
+        assert_eq!(rom.size() % u32::from(rom_outer_bank_count.get()), 0);
+
         ChrMemory {
             layouts,
             memory_maps,
             layout_index,
-            rom_outer_banks: rom.split_n(rom_outer_bank_count),
+            rom,
+            rom_outer_bank_size,
             rom_outer_bank_number: 0,
             ram: ram.clone(),
             bank_size,
@@ -118,7 +123,7 @@ impl ChrMemory {
 
         let value = match index {
             ChrMemoryIndex::Rom(index) => {
-                self.rom_outer_banks[self.rom_outer_bank_number as usize][index % self.rom_outer_banks[0].size()]
+                self.rom[(self.rom_outer_bank_number as u32 * self.rom_outer_bank_size) | (index & (self.rom_outer_bank_size - 1))]
             },
             ChrMemoryIndex::Ram(index) => {
                 self.ram[index % self.ram.size()]
@@ -139,17 +144,10 @@ impl ChrMemory {
             (false, false) => panic!("CHR ROM or RAM must be present for peek_raw."),
             (true , true ) => panic!("CHR ROM and RAM must not both be present for peek_raw."),
             (true , false) => {
-                PpuPeek::new(
-                    self.rom_outer_banks[self.rom_outer_bank_number as usize][index % self.rom_outer_banks[0].size()],
-                    PeekSource::Rom(0.into()),
-                )
+                let index = (self.rom_outer_bank_number as u32 * self.rom_outer_bank_size) | (index & (self.rom_outer_bank_size - 1));
+                PpuPeek::new(self.rom[index], PeekSource::Rom(0.into()))
             }
-            (false, true ) => {
-                PpuPeek::new(
-                    self.ram[index % self.ram.size()],
-                    PeekSource::Ram(0.into()),
-                )
-            }
+            (false, true ) => PpuPeek::new(self.ram[index % self.ram.size()], PeekSource::Ram(0.into())),
         }
     }
 
@@ -194,13 +192,13 @@ impl ChrMemory {
     }
 
     pub fn rom_bank_count(&self) -> u16 {
-        if self.rom_outer_banks.is_empty() {
+        if self.rom.is_empty() {
             return 0;
         }
 
         let bank_size = u32::from(self.bank_size.to_raw());
-        assert_eq!(self.rom_outer_banks[0].size() % bank_size, 0);
-        (self.rom_outer_banks[0].size() / bank_size).try_into().unwrap()
+        assert_eq!(self.rom_outer_bank_size % bank_size, 0);
+        (self.rom_outer_bank_size / bank_size).try_into().unwrap()
     }
 
     pub fn ram_bank_count(&self) -> u16 {
@@ -318,7 +316,7 @@ impl ChrMemory {
     }
 
     fn rom_present(&self) -> bool {
-        !self.rom_outer_banks.is_empty()
+        !self.rom.is_empty()
     }
 
     fn ram_present(&self) -> bool {
@@ -332,9 +330,8 @@ impl ChrMemory {
             .map(move |chr_index| {
                 match chr_index {
                     ChrMemoryIndex::Rom(index) => {
-                        let index = index as usize;
-                        RawMemorySlice::from_raw(
-                            &self.rom_outer_banks[self.rom_outer_bank_number as usize].as_slice()[index..index + 1 * KIBIBYTE as usize])
+                        let index = (u32::from(self.rom_outer_bank_number) * self.rom_outer_bank_size) | (index & (self.rom_outer_bank_size - 1));
+                        self.rom.slice(index..index + 1 * KIBIBYTE)
                     }
                     ChrMemoryIndex::Ram(index) => {
                         let index = index as usize;
@@ -353,9 +350,8 @@ impl ChrMemory {
             .map(move |chr_index| {
                 match chr_index {
                     ChrMemoryIndex::Rom(index) => {
-                        let index = index as usize;
-                        RawMemorySlice::from_raw(
-                            &self.rom_outer_banks[self.rom_outer_bank_number as usize].as_slice()[index..index + 1 * KIBIBYTE as usize])
+                        let index = (self.rom_outer_bank_number as u32 * self.rom_outer_bank_size) | (index & (self.rom_outer_bank_size - 1));
+                        self.rom.slice(index..index + 1 * KIBIBYTE)
                     }
                     ChrMemoryIndex::Ram(index) => {
                         let index = index as usize;
