@@ -3,7 +3,8 @@ use std::num::NonZeroI8;
 use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
-    .prg_rom_max_size(1024 * KIBIBYTE)
+    .prg_rom_max_size(2048 * KIBIBYTE)
+    .prg_rom_outer_bank_size(512 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM),
         PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
@@ -100,7 +101,8 @@ const LAYOUT: Layout = Layout::builder()
         PrgWindow::new(0xE000, 0xFFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P7)),
     ])
 
-    .chr_rom_max_size(1024 * KIBIBYTE)
+    .chr_rom_max_size(2048 * KIBIBYTE)
+    .chr_rom_outer_bank_size(256 * KIBIBYTE)
     .chr_layout(&[
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
         ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT0).switchable(N0).write_status(W0)),
@@ -362,6 +364,9 @@ impl Mapper for Mapper209 {
             (0xD003, _, _) => {
                 let fields = splitbits!(value, "m.lccppc");
                 assert!(!fields.m, "MMC4 CHR bank-switching not supported yet.");
+                assert!(!fields.l, "Large CHR outer banks are not supported yet.");
+                mem.set_chr_rom_outer_bank_number(fields.c);
+                mem.set_prg_rom_outer_bank_number(fields.p);
                 todo!();
             }
             _ => { /* Do nothing. */ }
