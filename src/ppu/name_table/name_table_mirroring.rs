@@ -103,6 +103,7 @@ impl fmt::Display for NameTableMirroring {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum NameTableSource {
     Ciram(CiramSide),
+    Rom { bank_number: BankNumber },
     Ram { bank_number: BankNumber },
     ExtendedRam,
     FillModeTile,
@@ -113,6 +114,7 @@ impl fmt::Display for NameTableSource {
         let text = match self {
             NameTableSource::Ciram(CiramSide::Left) => "CIRAM(A)",
             NameTableSource::Ciram(CiramSide::Right) => "CIRAM(B)",
+            NameTableSource::Rom { bank_number } => &format!("ROM@{:04X}", bank_number.to_raw()),
             NameTableSource::Ram { bank_number } => &format!("WRAM@{:04X}", bank_number.to_raw()),
             NameTableSource::ExtendedRam => "ExtRAM",
             NameTableSource::FillModeTile => "FillMode",

@@ -70,8 +70,9 @@ pub enum ChrSource {
 impl ChrSource {
     pub fn from_name_table_source(name_table_source: NameTableSource) -> (Self, Option<BankNumber>) {
         match name_table_source {
-            NameTableSource::Ram { bank_number } => (ChrSource::WorkRam, Some(bank_number)),
             NameTableSource::Ciram(ciram_side) => (ChrSource::Ciram(ciram_side), None),
+            NameTableSource::Rom { bank_number } => (ChrSource::Rom, Some(bank_number)),
+            NameTableSource::Ram { bank_number } => (ChrSource::WorkRam, Some(bank_number)),
             NameTableSource::ExtendedRam => (ChrSource::ExtendedRam, None),
             NameTableSource::FillModeTile => (ChrSource::FillModeTile, None),
         }
@@ -369,7 +370,8 @@ impl ChrBank {
             NameTableSource::Ciram(ciram_side) => Self::ciram(ciram_side),
             NameTableSource::ExtendedRam => Self::EXT_RAM,
             NameTableSource::FillModeTile => Self::FILL_MODE_TILE,
-            NameTableSource::Ram { bank_number } => Self::ROM_OR_RAM.fixed_index(bank_number.to_raw() as i16),
+            NameTableSource::Rom { bank_number } => Self::ROM.fixed_index(bank_number.to_raw() as i16),
+            NameTableSource::Ram { bank_number } => Self::RAM.fixed_index(bank_number.to_raw() as i16),
         }
     }
 

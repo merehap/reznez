@@ -137,7 +137,7 @@ impl ChrBankRegisters {
             chr_meta_registers: [ChrBankRegisterId::C0, ChrBankRegisterId::C0],
             read_statuses: [ReadStatus::Enabled; 15],
             write_statuses: [WriteStatus::Enabled; 15],
-            chr_sources: [ChrSource::WorkRam; 12],
+            chr_sources: [ChrSource::RomOrRam; 12],
             cartridge_has_rom,
             cartridge_has_ram,
         }

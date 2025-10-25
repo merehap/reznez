@@ -182,6 +182,7 @@ impl ChrMapping {
             page_number_mask: 0b1111_1111_1111_1111,
         };
         mapping.bank = match name_table_source {
+            NameTableSource::Rom { bank_number } => mapping.bank.fixed_index(bank_number.to_raw() as i16),
             NameTableSource::Ram { bank_number } => mapping.bank.fixed_index(bank_number.to_raw() as i16),
             NameTableSource::Ciram(ciram_side) => ChrBank::ciram(ciram_side),
             NameTableSource::ExtendedRam => ChrBank::EXT_RAM,
@@ -204,6 +205,7 @@ impl ChrMapping {
         };
 
         let chr_source = match name_table_source {
+            NameTableSource::Rom {..} => ChrSource::Rom,
             NameTableSource::Ram {..} => ChrSource::WorkRam,
             NameTableSource::Ciram(ciram_side) => ChrSource::Ciram(ciram_side),
             NameTableSource::ExtendedRam => ChrSource::ExtendedRam,
@@ -219,14 +221,15 @@ impl ChrMapping {
         match chr_source {
             ChrSource::RomOrRam => {
                 if regs.cartridge_has_rom() {
-                    Err(format!("{chr_source:?} [ROM] is not yet a supported CHR source"))
+                    Ok(NameTableSource::Rom { bank_number: self.bank.bank_number(regs).unwrap() })
                 } else if regs.cartridge_has_ram() {
                     Ok(NameTableSource::Ram { bank_number: self.bank.bank_number(regs).unwrap() })
                 } else {
                     Err("Absent CHR banks are not yet supported.".to_owned())
                 }
             }
-            ChrSource::Rom | ChrSource::SaveRam => Err(format!("{chr_source:?} is not yet a supported CHR source")),
+            ChrSource::Rom => Ok(NameTableSource::Rom { bank_number: self.bank.bank_number(regs).unwrap() }),
+            ChrSource::SaveRam => Err(format!("{chr_source:?} is not yet a supported CHR source")),
             ChrSource::Ciram(ciram_side) => Ok(NameTableSource::Ciram(ciram_side)),
             ChrSource::WorkRam => Ok(NameTableSource::Ram { bank_number: self.bank.bank_number(regs).unwrap() }),
             ChrSource::ExtendedRam => Ok(NameTableSource::ExtendedRam),

@@ -303,14 +303,20 @@ impl ChrMemory {
         }
     }
 
+    pub fn rom_1kib_page(&self, start: u32) -> &[u8; KIBIBYTE as usize] {
+        assert_eq!(start % 0x400, 0, "Work RAM 1KiB slices must start on a 1KiB page boundary (e.g. 0x000, 0x400, 0x800).");
+        let start = ((self.rom_outer_bank_number as u32 * self.rom_outer_bank_size) & (start & (self.rom_outer_bank_size - 1))) as usize;
+        (&self.rom.as_slice()[start..start + 0x400]).try_into().unwrap()
+    }
+
     pub fn work_ram_1kib_page(&self, start: u32) -> &[u8; KIBIBYTE as usize] {
-        assert_eq!(start % 0x400, 0, "Save RAM 1KiB slices must start on a 1KiB page boundary (e.g. 0x000, 0x400, 0x800).");
+        assert_eq!(start % 0x400, 0, "Work RAM 1KiB slices must start on a 1KiB page boundary (e.g. 0x000, 0x400, 0x800).");
         let start = start as usize;
         (&self.ram.as_slice()[start..start + 0x400]).try_into().unwrap()
     }
 
     pub fn work_ram_1kib_page_mut(&mut self, start: u32) -> &mut [u8; KIBIBYTE as usize] {
-        assert_eq!(start % 0x400, 0, "Save RAM 1KiB slices must start on a 1KiB page boundary (e.g. 0x000, 0x400, 0x800).");
+        assert_eq!(start % 0x400, 0, "Work RAM 1KiB slices must start on a 1KiB page boundary (e.g. 0x000, 0x400, 0x800).");
         let start = start as usize;
         (&mut self.ram.as_mut_slice()[start..start + 0x400]).try_into().unwrap()
     }
@@ -401,6 +407,7 @@ impl PeekSource {
     pub fn from_name_table_source(name_table_source: NameTableSource) -> Self {
         match name_table_source {
             NameTableSource::Ciram(side) => Self::Ciram(side),
+            NameTableSource::Rom { bank_number } => Self::Rom(bank_number),
             NameTableSource::Ram { bank_number } => Self::Ram(bank_number),
             NameTableSource::ExtendedRam => Self::ExtendedRam,
             NameTableSource::FillModeTile => Self::FillModeTile,
