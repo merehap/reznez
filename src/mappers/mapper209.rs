@@ -111,8 +111,10 @@ const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT3).switchable(N3).write_status(W0)),
     ])
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
-        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C4)),
+        // Meta register M0 used to support MMC4 bank-switching mode. Initial value: C0. Other value: C8.
+        ChrWindow::new(0x0000, 0x0FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.meta_switchable(M0)),
+        // Meta register M1 used to support MMC4 bank-switching mode. Initial value: C4. Other value: C9.
+        ChrWindow::new(0x1000, 0x1FFF, 4 * KIBIBYTE, ChrBank::ROM_OR_RAM.meta_switchable(M1)),
         ChrWindow::new(0x2000, 0x23FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT0).switchable(N0).write_status(W0)),
         ChrWindow::new(0x2400, 0x27FF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT1).switchable(N1).write_status(W0)),
         ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT2).switchable(N2).write_status(W0)),
@@ -142,6 +144,8 @@ const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x2800, 0x2BFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT2).switchable(N2).write_status(W0)),
         ChrWindow::new(0x2C00, 0x2FFF, 1 * KIBIBYTE, ChrBank::with_switchable_source(NT3).switchable(N3).write_status(W0)),
     ])
+    .override_chr_meta_register(M0, C0)
+    .override_chr_meta_register(M1, C4)
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
         NameTableMirroring::HORIZONTAL,
@@ -176,6 +180,8 @@ pub struct Mapper209 {
     extended_mirroring: NameTableMirroring,
     rom_name_table_mode: RomNameTableMode,
     ciram_selection_target: bool,
+
+    mmc4_chr_bank_switching_mode_enabled: bool,
 }
 
 impl Mapper for Mapper209 {
@@ -363,14 +369,33 @@ impl Mapper for Mapper209 {
             }
             (0xD003, _, _) => {
                 let fields = splitbits!(value, "m.lccppc");
-                assert!(!fields.m, "MMC4 CHR bank-switching not supported yet.");
+
+                self.mmc4_chr_bank_switching_mode_enabled = fields.m;
+                // TODO: If enabled, should the old values be restored? Or should it wait until the next PPU read?
+                if !self.mmc4_chr_bank_switching_mode_enabled {
+                    mem.set_chr_meta_register(M0, C0);
+                    mem.set_chr_meta_register(M1, C4);
+                }
+
                 assert!(!fields.l, "Large CHR outer banks are not supported yet.");
                 mem.set_chr_rom_outer_bank_number(fields.c);
                 mem.set_prg_rom_outer_bank_number(fields.p);
-                todo!();
             }
             _ => { /* Do nothing. */ }
         }
+    }
+
+    fn on_ppu_read(&mut self, mem: &mut Memory, address: PpuAddress, _value: u8) {
+        let (meta_id, bank_register_id) = match address.to_u16() {
+            0x0FD8..=0x0FDF => (M0, C0),
+            0x0FE8..=0x0FEF => (M0, C8),
+            0x1FD8..=0x1FDF => (M1, C4),
+            0x1FE8..=0x1FEF => (M1, C9),
+            // Skip to standard CHR memory operation.
+            _ => return,
+        };
+
+        mem.set_chr_meta_register(meta_id, bank_register_id);
     }
 
     fn layout(&self) -> Layout {
@@ -394,6 +419,8 @@ impl Mapper209 {
             extended_mirroring: NameTableMirroring::ONE_SCREEN_LEFT_BANK,
             rom_name_table_mode: RomNameTableMode::Disabled,
             ciram_selection_target: false,
+
+            mmc4_chr_bank_switching_mode_enabled: false,
         }
     }
 }
