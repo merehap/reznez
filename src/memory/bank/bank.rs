@@ -307,7 +307,6 @@ impl ChrSourceRegisterId {
 pub struct ChrBank {
     bank_number_provider: ChrBankNumberProvider,
     chr_source_provider: ChrSourceProvider,
-    missing_ram_fallback_mem_type: Option<MemType>,
     read_status_register_id: Option<ReadStatusRegisterId>,
     write_status_register_id: Option<WriteStatusRegisterId>,
 }
@@ -316,51 +315,42 @@ impl ChrBank {
     pub const EMPTY: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Fixed(None),
-        missing_ram_fallback_mem_type: None,
         read_status_register_id: None,
         write_status_register_id: None,
     };
     pub const ROM_OR_RAM: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::RomOrRam)),
-        missing_ram_fallback_mem_type: Some(MemType::Rom),
         read_status_register_id: None,
         write_status_register_id: None,
     };
     pub const ROM: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::Rom)),
-        missing_ram_fallback_mem_type: Some(MemType::Rom),
         read_status_register_id: None,
         write_status_register_id: None,
     };
     pub const RAM: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::WorkRam)),
-        missing_ram_fallback_mem_type: Some(MemType::Rom),
         read_status_register_id: None,
         write_status_register_id: None,
     };
     pub const EXT_RAM: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::ExtendedRam)),
-        // FIXME: HACK
-        missing_ram_fallback_mem_type: Some(MemType::WorkRam),
         read_status_register_id: None,
         write_status_register_id: None,
     };
     pub const FILL_MODE_TILE: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::FillModeTile)),
-        // FIXME: HACK
-        missing_ram_fallback_mem_type: Some(MemType::WorkRam),
         read_status_register_id: None,
         write_status_register_id: None,
     };
     pub const SWITCHABLE_SOURCE: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Switchable(CS0),
-        missing_ram_fallback_mem_type: Some(MemType::Rom),
         read_status_register_id: None,
         write_status_register_id: None,
     };
@@ -369,7 +359,6 @@ impl ChrBank {
         Self {
             bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
             chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::Ciram(ciram_side))),
-            missing_ram_fallback_mem_type: Some(MemType::Rom),
             read_status_register_id: None,
             write_status_register_id: None,
         }
@@ -388,8 +377,6 @@ impl ChrBank {
         Self {
             bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
             chr_source_provider: ChrSourceProvider::Switchable(source_reg_id),
-            // FIXME: HACK
-            missing_ram_fallback_mem_type: Some(MemType::WorkRam),
             read_status_register_id: None,
             write_status_register_id: None,
         }
@@ -421,10 +408,6 @@ impl ChrBank {
     pub fn is_ram(self) -> bool {
         matches!(self.chr_source_provider,
             ChrSourceProvider::Fixed(Some(ChrSource::WorkRam | ChrSource::SaveRam)) | ChrSourceProvider::Switchable(_))
-    }
-
-    pub fn missing_ram_fallback_mem_type(&self) -> Option<MemType> {
-        self.missing_ram_fallback_mem_type
     }
 
     pub const fn register_id(&self, regs: &ChrBankRegisters) -> Option<ChrBankRegisterId> {
