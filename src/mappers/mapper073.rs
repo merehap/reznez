@@ -1,3 +1,5 @@
+use ux::u4;
+
 use crate::mapper::*;
 use crate::memory::memory::Memory;
 
@@ -15,15 +17,23 @@ const LAYOUT: Layout = Layout::builder()
     .fixed_name_table_mirroring()
     .build();
 
+const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
+    .step(1)
+    .wraps(true)
+    .full_range(0, 0xFF)
+    .initial_count(0)
+    .auto_trigger_when(AutoTriggerWhen::Wrapping)
+    // TODO: Verify.
+    .forced_reload_timing(ForcedReloadTiming::Immediate)
+    .when_disabled_prevent(WhenDisabledPrevent::CountingAndTriggering)
+    .build_reload_driven_counter();
+
 // VRC3
-// FIXME: Status bar shouldn't scroll off the screen in Salamander.
-#[derive(Default)]
 pub struct Mapper073 {
-    irq_enabled: bool,
-    irq_enabled_on_acknowledgement: bool,
+    low_irq_counter: ReloadDrivenCounter,
+    high_irq_counter: ReloadDrivenCounter,
     irq_mode: IrqMode,
-    irq_counter: u16,
-    irq_counter_reload_value: u16,
+    irq_enabled_on_acknowledgement: bool,
 }
 
 impl Mapper for Mapper073 {
@@ -31,37 +41,28 @@ impl Mapper for Mapper073 {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x8FFF => {
-                self.irq_counter_reload_value &= 0x000F;
-                self.irq_counter_reload_value |= u16::from(value) & 0xF;
-            }
-            0x9000..=0x9FFF => {
-                self.irq_counter_reload_value &= 0x00F0;
-                self.irq_counter_reload_value |= (u16::from(value) & 0xF) << 4;
-            }
-            0xA000..=0xAFFF => {
-                self.irq_counter_reload_value &= 0x0F00;
-                self.irq_counter_reload_value |= (u16::from(value) & 0xF) << 8;
-            }
-            0xB000..=0xBFFF => {
-                self.irq_counter_reload_value &= 0xF000;
-                self.irq_counter_reload_value |= (u16::from(value) & 0xF) << 12;
-            }
+            0x8000..=0x8FFF => self.low_irq_counter.set_reload_value_lowest_nibble(u4::new(value & 0xF)),
+            0x9000..=0x9FFF => self.low_irq_counter.set_reload_value_second_lowest_nibble(u4::new(value & 0xF)),
+            0xA000..=0xAFFF => self.high_irq_counter.set_reload_value_lowest_nibble(u4::new(value & 0xF)),
+            0xB000..=0xBFFF => self.high_irq_counter.set_reload_value_second_lowest_nibble(u4::new(value & 0xF)),
             0xC000..=0xCFFF => {
                 mem.cpu_pinout.acknowledge_mapper_irq();
 
-                let fields = splitbits!(value, ".....mea");
-                self.irq_mode = if fields.m { IrqMode::EightBit } else { IrqMode::SixteenBit };
-                self.irq_enabled = fields.e;
-                self.irq_enabled_on_acknowledgement = fields.a;
-
-                if self.irq_enabled {
-                    self.irq_counter = self.irq_counter_reload_value;
+                let (byte_mode, enabled, enabled_on_acknowledgement) = splitbits_named!(value, ".....mea");
+                self.irq_mode = if byte_mode { IrqMode::EightBit } else { IrqMode::SixteenBit };
+                self.low_irq_counter.set_enabled(enabled);
+                self.high_irq_counter.set_enabled(enabled);
+                if enabled {
+                    self.low_irq_counter.force_reload();
+                    self.high_irq_counter.force_reload();
                 }
+
+                self.irq_enabled_on_acknowledgement = enabled_on_acknowledgement;
             }
             0xD000..=0xDFFF => {
                 mem.cpu_pinout.acknowledge_mapper_irq();
-                self.irq_enabled = self.irq_enabled_on_acknowledgement;
+                self.low_irq_counter.set_enabled(self.irq_enabled_on_acknowledgement);
+                self.high_irq_counter.set_enabled(self.irq_enabled_on_acknowledgement);
             }
             0xE000..=0xEFFF => { /* Do nothing. */ }
             0xF000..=0xFFFF => mem.set_prg_register(P0, value & 0b111),
@@ -69,24 +70,34 @@ impl Mapper for Mapper073 {
     }
 
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        if !self.irq_enabled {
-            return;
-        }
-
-        if self.irq_mode == IrqMode::SixteenBit && self.irq_counter == 0xFFFF {
-            mem.cpu_pinout.assert_mapper_irq();
-            self.irq_counter = self.irq_counter_reload_value;
-        } else if self.irq_mode == IrqMode::EightBit && self.irq_counter & 0xFF == 0xFF {
-            mem.cpu_pinout.assert_mapper_irq();
-            self.irq_counter &= 0xFF00;
-            self.irq_counter |= self.irq_counter_reload_value & 0x00FF;
-        } else {
-            self.irq_counter += 1;
+        let low_triggered = self.low_irq_counter.tick().triggered;
+        if low_triggered {
+            match self.irq_mode {
+                IrqMode::EightBit => {
+                    mem.cpu_pinout.assert_mapper_irq();
+                }
+                IrqMode::SixteenBit => {
+                    let high_triggered = self.high_irq_counter.tick().triggered;
+                    if high_triggered {
+                        mem.cpu_pinout.assert_mapper_irq();
+                    }
+                }
+            }
         }
     }
 
     fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
-        Some(IrqCounterInfo { counting_enabled: self.irq_enabled, triggering_enabled: self.irq_enabled, count: self.irq_counter })
+        let low_count = self.low_irq_counter.to_irq_counter_info().count;
+        let high_count = self.high_irq_counter.to_irq_counter_info().count;
+        let count = match self.irq_mode {
+            IrqMode::EightBit => low_count,
+            IrqMode::SixteenBit => (high_count << 8) | low_count,
+        };
+
+        Some(IrqCounterInfo {
+            count,
+            .. self.low_irq_counter.to_irq_counter_info()
+        })
     }
 
     fn layout(&self) -> Layout {
@@ -94,9 +105,19 @@ impl Mapper for Mapper073 {
     }
 }
 
-#[derive(PartialEq, Eq, Default)]
+impl Mapper073 {
+    pub fn new() -> Self {
+        Self {
+            low_irq_counter: IRQ_COUNTER,
+            high_irq_counter: IRQ_COUNTER,
+            irq_mode: IrqMode::SixteenBit,
+            irq_enabled_on_acknowledgement: false,
+        }
+    }
+}
+
+#[derive(Debug)]
 enum IrqMode {
-    #[default]
     SixteenBit,
     EightBit,
 }

@@ -1,5 +1,7 @@
 use std::num::{NonZeroI8, NonZeroU8};
 
+use ux::u4;
+
 use crate::counter::irq_counter_info::IrqCounterInfo;
 pub use crate::counter::when_disabled_prevent::WhenDisabledPrevent;
 
@@ -90,6 +92,7 @@ pub struct ReloadDrivenCounter {
 impl ReloadDrivenCounter {
     pub fn enable(&mut self) { self.counter.enable(); }
     pub fn disable(&mut self) { self.counter.disable(); }
+    pub fn set_enabled(&mut self, enabled: bool) { self.counter.set_enabled(enabled); }
     pub fn to_irq_counter_info(&self) -> IrqCounterInfo { self.counter.to_irq_counter_info() }
 
     pub fn set_reload_value(&mut self, value: u8) {
@@ -102,6 +105,24 @@ impl ReloadDrivenCounter {
 
     pub fn set_reload_value_high_byte(&mut self, high_byte: u8) {
         self.counter.modify_reload_value(|reload_value| (reload_value & 0x00FF) | (u16::from(high_byte) << 8));
+    }
+
+    pub fn set_reload_value_lowest_nibble(&mut self, nibble: u4) {
+        self.counter.modify_reload_value(|reload_value| (reload_value & 0xFFF0) | u16::from(nibble));
+    }
+
+    pub fn set_reload_value_second_lowest_nibble(&mut self, nibble: u4) {
+        self.counter.modify_reload_value(|reload_value| (reload_value & 0xFF0F) | (u16::from(nibble) << 4));
+    }
+
+    #[allow(dead_code)]
+    pub fn set_reload_value_second_highest_nibble(&mut self, nibble: u4) {
+        self.counter.modify_reload_value(|reload_value| (reload_value & 0xF0FF) | (u16::from(nibble) << 8));
+    }
+
+    #[allow(dead_code)]
+    pub fn set_reload_value_highest_nibble(&mut self, nibble: u4) {
+        self.counter.modify_reload_value(|reload_value| (reload_value & 0x0FFF) | (u16::from(nibble) << 12));
     }
 
     pub fn force_reload(&mut self) {
@@ -163,6 +184,14 @@ impl Counter {
                 self.counting_enabled = false;
                 self.triggering_enabled = false;
             }
+        }
+    }
+
+    fn set_enabled(&mut self, enabled: bool) {
+        if enabled {
+            self.enable();
+        } else {
+            self.disable();
         }
     }
 
@@ -232,7 +261,7 @@ impl Counter {
         let new_count = self.count;
         // The triggering behavior is fixed at compile time, so the same branch will be taken every time here.
         let auto_triggered = match self.auto_triggered_by {
-            AutoTriggerWhen::Wrapping => old_count == self.target_count(),
+            AutoTriggerWhen::Wrapping => wrapped,
             AutoTriggerWhen::EndingOn(_) => new_count == self.target_count(),
             AutoTriggerWhen::StepSizedTransitionTo(_) =>
                 i32::from(self.target_count()) - i32::from(old_count) == i32::from(self.step.get())
@@ -312,8 +341,8 @@ impl CounterBuilder {
         self
     }
 
-    pub const fn auto_trigger_when(&mut self, auto_triggered_by: AutoTriggerWhen) -> &mut Self {
-        self.auto_triggered_by = Some(auto_triggered_by);
+    pub const fn auto_trigger_when(&mut self, auto_triggered_when: AutoTriggerWhen) -> &mut Self {
+        self.auto_triggered_by = Some(auto_triggered_when);
         self
     }
 

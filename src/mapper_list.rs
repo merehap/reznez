@@ -269,7 +269,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
 
         (72, _) => TodoMapper,
         // VRC3
-        (73, None) => m::mapper073::Mapper073::default().supported(),
+        (73, None) => m::mapper073::Mapper073::new().supported(),
         (74, _) => TodoMapper,
         // Konami VRC1
         (75, None) => m::mapper075::Mapper075::default().supported(),
