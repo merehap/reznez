@@ -41,10 +41,10 @@ impl Mapper for Mapper073 {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x8FFF => self.low_irq_counter.set_reload_value_lowest_nibble(u4::new(value & 0xF)),
-            0x9000..=0x9FFF => self.low_irq_counter.set_reload_value_second_lowest_nibble(u4::new(value & 0xF)),
-            0xA000..=0xAFFF => self.high_irq_counter.set_reload_value_lowest_nibble(u4::new(value & 0xF)),
-            0xB000..=0xBFFF => self.high_irq_counter.set_reload_value_second_lowest_nibble(u4::new(value & 0xF)),
+            0x8000..=0x8FFF => self.low_irq_counter.set_reload_value_lowest_nybble(u4::new(value & 0xF)),
+            0x9000..=0x9FFF => self.low_irq_counter.set_reload_value_second_lowest_nybble(u4::new(value & 0xF)),
+            0xA000..=0xAFFF => self.high_irq_counter.set_reload_value_lowest_nybble(u4::new(value & 0xF)),
+            0xB000..=0xBFFF => self.high_irq_counter.set_reload_value_second_lowest_nybble(u4::new(value & 0xF)),
             0xC000..=0xCFFF => {
                 mem.cpu_pinout.acknowledge_mapper_irq();
 

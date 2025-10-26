@@ -107,21 +107,19 @@ impl ReloadDrivenCounter {
         self.counter.modify_reload_value(|reload_value| (reload_value & 0x00FF) | (u16::from(high_byte) << 8));
     }
 
-    pub fn set_reload_value_lowest_nibble(&mut self, nibble: u4) {
+    pub fn set_reload_value_lowest_nybble(&mut self, nibble: u4) {
         self.counter.modify_reload_value(|reload_value| (reload_value & 0xFFF0) | u16::from(nibble));
     }
 
-    pub fn set_reload_value_second_lowest_nibble(&mut self, nibble: u4) {
+    pub fn set_reload_value_second_lowest_nybble(&mut self, nibble: u4) {
         self.counter.modify_reload_value(|reload_value| (reload_value & 0xFF0F) | (u16::from(nibble) << 4));
     }
 
-    #[allow(dead_code)]
-    pub fn set_reload_value_second_highest_nibble(&mut self, nibble: u4) {
+    pub fn set_reload_value_second_highest_nybble(&mut self, nibble: u4) {
         self.counter.modify_reload_value(|reload_value| (reload_value & 0xF0FF) | (u16::from(nibble) << 8));
     }
 
-    #[allow(dead_code)]
-    pub fn set_reload_value_highest_nibble(&mut self, nibble: u4) {
+    pub fn set_reload_value_highest_nybble(&mut self, nibble: u4) {
         self.counter.modify_reload_value(|reload_value| (reload_value & 0x0FFF) | (u16::from(nibble) << 12));
     }
 

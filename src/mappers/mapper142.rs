@@ -1,3 +1,5 @@
+use ux::u4;
+
 use crate::mapper::*;
 use crate::memory::memory::Memory;
 
@@ -17,15 +19,22 @@ const LAYOUT: Layout = Layout::builder()
     .fixed_name_table_mirroring()
     .build();
 
+const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
+    .step(1)
+    .wraps(true)
+    .full_range(0, 0xFFFF)
+    .initial_count(0)
+    .auto_trigger_when(AutoTriggerWhen::Wrapping)
+    // TODO: Verify.
+    .forced_reload_timing(ForcedReloadTiming::Immediate)
+    .when_disabled_prevent(WhenDisabledPrevent::CountingAndTriggering)
+    .build_reload_driven_counter();
+
 // Kaiser KS202 (UNL-KS7032)
 // Similar to VRC3.
 // FIXME: Status bar isn't scrolling properly during intro.
-#[derive(Default)]
 pub struct Mapper142 {
-    irq_enabled: bool,
-    irq_counter: u16,
-    irq_counter_reload_value: u16,
-
+    irq_counter: ReloadDrivenCounter,
     selected_prg_bank: Option<PrgBankRegisterId>,
 }
 
@@ -34,27 +43,17 @@ impl Mapper for Mapper142 {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x8FFF => {
-                self.irq_counter_reload_value &= 0x000F;
-                self.irq_counter_reload_value |= u16::from(value) & 0xF;
-            }
-            0x9000..=0x9FFF => {
-                self.irq_counter_reload_value &= 0x00F0;
-                self.irq_counter_reload_value |= (u16::from(value) & 0xF) << 4;
-            }
-            0xA000..=0xAFFF => {
-                self.irq_counter_reload_value &= 0x0F00;
-                self.irq_counter_reload_value |= (u16::from(value) & 0xF) << 8;
-            }
-            0xB000..=0xBFFF => {
-                self.irq_counter_reload_value &= 0xF000;
-                self.irq_counter_reload_value |= (u16::from(value) & 0xF) << 12;
-            }
+            0x8000..=0x8FFF => self.irq_counter.set_reload_value_lowest_nybble(u4::new(value & 0xF)),
+            0x9000..=0x9FFF => self.irq_counter.set_reload_value_second_lowest_nybble(u4::new(value & 0xF)),
+            0xA000..=0xAFFF => self.irq_counter.set_reload_value_second_highest_nybble(u4::new(value & 0xF)),
+            0xB000..=0xBFFF => self.irq_counter.set_reload_value_highest_nybble(u4::new(value & 0xF)),
             0xC000..=0xCFFF => {
                 mem.cpu_pinout.acknowledge_mapper_irq();
-                self.irq_enabled = value & 0b11 != 0;
-                if self.irq_enabled {
-                    self.irq_counter = self.irq_counter_reload_value;
+
+                let enabled = value != 0;
+                self.irq_counter.set_enabled(enabled);
+                if enabled {
+                    self.irq_counter.force_reload();
                 }
             }
             0xD000..=0xDFFF => {
@@ -84,24 +83,22 @@ impl Mapper for Mapper142 {
     }
 
     fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        if !self.irq_enabled {
-            return;
-        }
-
-        // It's not clear if this is supposed to match VRC3's behavior or not. This is off-by-1.
-        // TODO: Test behavior when the reload value is 0xFFFF, since that will cause a wrap-around without setting IRQ pending.
-        self.irq_counter += 1;
-        if self.irq_counter == 0xFFFF {
+        if self.irq_counter.tick().triggered {
             mem.cpu_pinout.assert_mapper_irq();
-            self.irq_counter = self.irq_counter_reload_value;
         }
     }
 
     fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
-        Some(IrqCounterInfo { counting_enabled: self.irq_enabled, triggering_enabled: self.irq_enabled, count: self.irq_counter })
+        Some(self.irq_counter.to_irq_counter_info())
     }
 
     fn layout(&self) -> Layout {
         LAYOUT
+    }
+}
+
+impl Mapper142 {
+    pub fn new() -> Self {
+        Self { irq_counter: IRQ_COUNTER, selected_prg_bank: None }
     }
 }

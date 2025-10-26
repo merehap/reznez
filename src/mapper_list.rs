@@ -369,7 +369,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // Sachen 8259 A TC-A003-72 (UNL-Sachen-8259A)
         (141, None) => m::mapper141::MAPPER141.supported(),
         // Kaiser KS202 (UNL-KS7032)
-        (142, None) => m::mapper142::Mapper142::default().supported(),
+        (142, None) => m::mapper142::Mapper142::new().supported(),
         (143, _) => TodoMapper,
         (144, _) => TodoMapper,
         // SA-72007 (only Sidewinder)
