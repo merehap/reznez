@@ -226,7 +226,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (51..=54, _) => TodoMapper,
         // BTL-MARIO1-MALEE2
         (55, None) => m::mapper055::Mapper055.supported(),
-        (56, _) => TodoMapper,
+        (56, None) => m::mapper056::Mapper056::new().supported(),
         (57, _) => TodoMapper,
         // NROM-/CNROM-based multicarts
         (58, None) => m::mapper058::Mapper058.supported(),

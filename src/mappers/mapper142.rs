@@ -1,7 +1,8 @@
+use log::info;
 use ux::u4;
 
 use crate::mapper::*;
-use crate::memory::memory::Memory;
+use crate::mappers::common::kaiser202;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
@@ -19,20 +20,8 @@ const LAYOUT: Layout = Layout::builder()
     .fixed_name_table_mirroring()
     .build();
 
-const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
-    .step(1)
-    .wraps(true)
-    .full_range(0, 0xFFFF)
-    .initial_count(0)
-    .auto_trigger_when(AutoTriggerWhen::Wrapping)
-    // TODO: Verify.
-    .forced_reload_timing(ForcedReloadTiming::Immediate)
-    .when_disabled_prevent(WhenDisabledPrevent::CountingAndTriggering)
-    .build_reload_driven_counter();
-
 // Kaiser KS202 (UNL-KS7032)
 // Similar to VRC3.
-// FIXME: Status bar isn't scrolling properly during intro.
 pub struct Mapper142 {
     irq_counter: ReloadDrivenCounter,
     selected_prg_bank: Option<PrgBankRegisterId>,
@@ -61,15 +50,11 @@ impl Mapper for Mapper142 {
             }
             0xE000..=0xEFFF => {
                 match value & 0b111 {
-                    0 | 5 | 7 => { /* Unknown behavior. TODO: Log this occurrence. */ }
-                    // 0x8000
-                    1 => self.selected_prg_bank = Some(P1),
-                    // 0xA000
-                    2 => self.selected_prg_bank = Some(P2),
-                    // 0xC000
-                    3 => self.selected_prg_bank = Some(P3),
-                    // 0x6000
-                    4 => self.selected_prg_bank = Some(P0),
+                    0 | 5 | 7 => info!("Unknown bank select occurred: {}", value & 0b111),
+                    1 => self.selected_prg_bank = Some(P1), // 0x8000
+                    2 => self.selected_prg_bank = Some(P2), // 0xA000
+                    3 => self.selected_prg_bank = Some(P3), // 0xC000
+                    4 => self.selected_prg_bank = Some(P0), // 0x6000
                     6 => self.selected_prg_bank = None,
                     _ => unreachable!(),
                 }
@@ -99,6 +84,6 @@ impl Mapper for Mapper142 {
 
 impl Mapper142 {
     pub fn new() -> Self {
-        Self { irq_counter: IRQ_COUNTER, selected_prg_bank: None }
+        Self { irq_counter: kaiser202::IRQ_COUNTER, selected_prg_bank: None }
     }
 }
