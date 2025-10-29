@@ -488,5 +488,5 @@ pub enum LookupResult {
     TodoMapper,
     TodoSubmapper,
     UnspecifiedSubmapper,
-    ReassignedSubmapper {correct_mapper: u16, correct_submapper: u8 },
+    ReassignedMapper {correct_mapper: u16, correct_submapper: Option<u8> },
 }

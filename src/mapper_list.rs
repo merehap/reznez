@@ -5,6 +5,7 @@ use crate::cartridge::resolved_metadata::{MetadataResolver, ResolvedMetadata};
 use crate::mapper::Cartridge;
 use crate::mapper::{Mapper, LookupResult};
 use crate::mappers as m;
+use crate::mappers::mmc1::board::Mmc1BoardError;
 
 pub static MAPPERS_WITHOUT_SUBMAPPER_0: LazyLock<BTreeSet<u16>> = LazyLock::new(|| {
     (0..u16::MAX)
@@ -33,8 +34,8 @@ pub fn lookup_mapper(metadata_resolver: &MetadataResolver, cartridge: &Cartridge
             Err(format!("Submapper {}. ROM: {cartridge_name}", sub_number.unwrap())),
         LookupResult::UnspecifiedSubmapper =>
             Err(format!("Submapper {sub_number:?} of mapper {number} has unspecified behavior. ROM: {cartridge_name}")),
-        LookupResult::ReassignedSubmapper {correct_mapper, correct_submapper } =>
-            Err(format!("Mapper {number}, submapper {} has been reassigned to {correct_mapper}, {correct_submapper} . ROM: {cartridge_name}", sub_number.unwrap())),
+        LookupResult::ReassignedMapper {correct_mapper, correct_submapper } =>
+            Err(format!("Mapper {number}, submapper {sub_number:?} has been reassigned to {correct_mapper}, {correct_submapper:?} . ROM: {cartridge_name}")),
     }
 }
 
@@ -47,13 +48,13 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // MMC1 submappers
         (1, None) => UnspecifiedSubmapper,
         // Normal behavior
-        (1, Some(0)) => match m::mapper001_0::Mapper001_0::new(metadata) {
-            Ok(mapper) => mapper.supported(),
-            Err(_) => ReassignedSubmapper { correct_mapper: 1, correct_submapper: 5 },
+        (1, Some(0)) => match m::mmc1::board::Board::from_cartridge_metadata(metadata) {
+            Ok(board) => m::mapper001_0::Mapper001_0::new(board).supported(),
+            Err(Mmc1BoardError::UseSubmapper5Instead) => ReassignedMapper { correct_mapper: 1, correct_submapper: Some(5) },
         }
         // SUROM, SOROM, SXROM
-        (1, Some(1 | 2 | 4)) => ReassignedSubmapper { correct_mapper: 1, correct_submapper: 0 },
-        (1, Some(3)) => ReassignedSubmapper { correct_mapper: 155, correct_submapper: 0 },
+        (1, Some(1 | 2 | 4)) => ReassignedMapper { correct_mapper: 1, correct_submapper: Some(0) },
+        (1, Some(3)) => ReassignedMapper { correct_mapper: 155, correct_submapper: Some(0) },
         // SEROM, SHROM, SH1ROM
         (1, Some(5)) => m::mapper001_5::Mapper001_5::default().supported(),
         // 2ME
@@ -116,9 +117,9 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
 
         // Some Bandai FCG board submappers
         (16, None | Some(0)) => UnspecifiedSubmapper,
-        (16, Some(1)) => ReassignedSubmapper { correct_mapper: 159, correct_submapper: 0 },
-        (16, Some(2)) => ReassignedSubmapper { correct_mapper: 157, correct_submapper: 0 },
-        (16, Some(3)) => ReassignedSubmapper { correct_mapper: 153, correct_submapper: 0 },
+        (16, Some(1)) => ReassignedMapper { correct_mapper: 159, correct_submapper: None },
+        (16, Some(2)) => ReassignedMapper { correct_mapper: 157, correct_submapper: None },
+        (16, Some(3)) => ReassignedMapper { correct_mapper: 153, correct_submapper: None },
         // FCG-1
         (16, Some(4)) => m::mapper016_4::Mapper016_4::default().supported(),
         // LZ93D50
@@ -233,7 +234,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (59, _) => TodoMapper,
         (60, _) => TodoMapper,
         // NTDEC 0324 PCB
-        (61, None) => m::mapper061::Mapper061::new(metadata).supported(),
+        (61, None) => m::mapper061::Mapper061.supported(),
         // Super 700-in-1
         (62, None) => m::mapper062::Mapper062.supported(),
 
@@ -308,7 +309,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // Jaleco J87
         (87, None) => m::mapper087::Mapper087.supported(),
         // NAMCOT-3443
-        (88, None) => m::mapper088::Mapper088::new(metadata).supported(),
+        (88, None) => m::mapper088::Mapper088::new().supported(),
         // Sunsoft (Tenka no Goikenban: Mito Koumon (J))
         (89, None) => m::mapper089::Mapper089.supported(),
         (90, _) => TodoMapper,
@@ -388,13 +389,12 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (152, None) => m::mapper152::Mapper152.supported(),
         (153, _) => TodoMapper,
         // NAMCOT-3453 (only Devil Man)
-        (154, None) => m::mapper154::Mapper154::new(metadata).supported(),
+        (154, None) => m::mapper154::Mapper154::new().supported(),
         (155..=158, _) => TodoMapper,
         // Almost a duplicate, but has different EEPROM behavior (not implemented yet).
         (159, None) => m::mapper016_4::Mapper016_4::default().supported(),
         (160, _) => TodoMapper,
-        // Duplicate. Hanjuku Eiyuu (J).
-        (161, None) => m::mapper001_0::Mapper001_0::new(metadata).unwrap().supported(),
+        (161, None) => ReassignedMapper { correct_mapper: 1, correct_submapper: Some(0) },
         (162..=176, _) => TodoMapper,
         // Hengedianzi (恒格电子) two-screen mirroring
         (177, None) => m::mapper177::Mapper177.supported(),

@@ -1,4 +1,3 @@
-use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::mapper::*;
 
 const LAYOUT: Layout = Layout::builder()
@@ -33,7 +32,6 @@ const BANK_NUMBER_REGISTER_IDS: [RegId; 8] = [Chr(C0), Chr(C1), Chr(C2), Chr(C3)
 // and selects the second half of CHR for C2, C3, C4, and C5 for over-sized CHR.
 pub struct Mapper088 {
     selected_register_id: RegId,
-    extended_chr_present: bool,
 }
 
 impl Mapper for Mapper088 {
@@ -41,12 +39,18 @@ impl Mapper for Mapper088 {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
+            0x8000..=0x9FFF if addr.is_multiple_of(2) => {
+                self.selected_register_id = BANK_NUMBER_REGISTER_IDS[(value & 0b111) as usize];
+            }
             0x8000..=0x9FFF => {
-                if addr.is_multiple_of(2) {
-                    self.bank_select(mem, value);
-                } else {
-                    self.set_bank_number(mem, value);
-                }
+                match self.selected_register_id {
+                    // Always use only the first 64KiB of CHR for the left pattern table.
+                    Chr(id@(C0 | C1)) => mem.set_chr_register(id, value & 0b0011_1110),
+                    // If it is available, use the second 64KiB half of CHR for the right pattern table.
+                    Chr(id@(C2 | C3 | C4 | C5)) => mem.set_chr_register(id, (value & 0b0011_1111) | 0b0100_0000),
+                    Prg(id@(P0 | P1)) => mem.set_prg_register(id, value & 0b0000_1111),
+                    _ => unreachable!(),
+                };
             }
             0xA000..=0xFFFF => { /* Do nothing. */ }
         }
@@ -58,35 +62,8 @@ impl Mapper for Mapper088 {
 }
 
 impl Mapper088 {
-    pub fn new(metadata: &ResolvedMetadata) -> Self {
-        Self {
-            selected_register_id: Chr(C0),
-            extended_chr_present: metadata.chr_rom_size > 64 * KIBIBYTE,
-        }
-    }
-
-    fn bank_select(&mut self, _mem: &mut Memory, value: u8) {
-        self.selected_register_id = BANK_NUMBER_REGISTER_IDS[(value & 0b0000_0111) as usize];
-    }
-
-    fn set_bank_number(&mut self, mem: &mut Memory, value: u8) {
-        let bank_number = match self.selected_register_id {
-            // Double-width windows can only use even banks.
-            Chr(C0) | Chr(C1) => value & 0b0011_1110,
-            // Use the second 64KiB chunk of CHR.
-            Chr(C2) | Chr(C3) | Chr(C4) | Chr(C5) if self.extended_chr_present => (value & 0b0011_1111) | 0b0100_0000,
-            Chr(C2) | Chr(C3) | Chr(C4) | Chr(C5) => value & 0b0011_1111,
-            Prg(P0) | Prg(P1) => value & 0b0000_1111,
-            _ => unreachable!(
-                "Bank Index Register ID {:?} is not used by this mapper.",
-                self.selected_register_id
-            ),
-        };
-
-        match self.selected_register_id {
-            Chr(cx) => mem.set_chr_register(cx, bank_number),
-            Prg(px) => mem.set_prg_register(px, bank_number),
-        }
+    pub fn new() -> Self {
+        Self { selected_register_id: Chr(C0) }
     }
 }
 

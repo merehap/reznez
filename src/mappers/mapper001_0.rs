@@ -1,4 +1,3 @@
-use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::mapper::*;
 use crate::mappers::mmc1::board::Board;
 use crate::mappers::mmc1::shift_register::{ShiftRegister, ShiftStatus};
@@ -101,11 +100,8 @@ impl Mapper for Mapper001_0 {
 }
 
 impl Mapper001_0 {
-    pub fn new(metadata: &ResolvedMetadata) -> Result<Self, String> {
-        Ok(Self {
-            board: Board::from_cartridge_metadata(metadata)?,
-            shift_register: ShiftRegister::default(),
-        })
+    pub fn new(board: Board) -> Self {
+        Self { board, shift_register: ShiftRegister::default() }
     }
 
     fn set_chr_bank_and_board_specifics(&self, mem: &mut Memory, chr_id: ChrBankRegisterId, value: u8) {

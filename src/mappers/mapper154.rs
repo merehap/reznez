@@ -1,7 +1,7 @@
-use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::mapper::*;
 use crate::mappers::mapper088::{Mapper088, PRG_WINDOWS, CHR_WINDOWS};
 
+// Same as mapper 88 except with name table mirrorings listed.
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
     .prg_layout(PRG_WINDOWS)
@@ -35,7 +35,7 @@ impl Mapper for Mapper154 {
 }
 
 impl Mapper154 {
-    pub fn new(metadata: &ResolvedMetadata) -> Self {
-        Self { mapper088: Mapper088::new(metadata) }
+    pub fn new() -> Self {
+        Self { mapper088: Mapper088::new() }
     }
 }
