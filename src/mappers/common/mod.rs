@@ -4,6 +4,8 @@ pub mod uxrom;
 pub mod cnrom;
 // Mapper 7
 pub mod axrom;
+// Mapper 83 and 264
+pub mod cony;
 // Mapper 185
 pub mod cnrom_with_chr_disable;
 // Mapper 142 and 56 IRQ counter
