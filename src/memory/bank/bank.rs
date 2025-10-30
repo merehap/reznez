@@ -137,6 +137,12 @@ impl PrgBank {
         self
     }
 
+    pub const fn read_status(mut self, read_id: ReadStatusRegisterId) -> Self {
+        assert!(self.prg_source_provider.is_mapped(), "An EMPTY bank can't have a status register.");
+        self.read_status_register_id = Some(read_id);
+        self
+    }
+
     pub const fn write_status(mut self, write_id: WriteStatusRegisterId) -> Self {
         assert!(self.prg_source_provider.is_mapped(), "An EMPTY bank can't have a status register.");
         self.write_status_register_id = Some(write_id);

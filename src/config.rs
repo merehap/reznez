@@ -23,6 +23,7 @@ pub struct Config {
     pub cpu_step_formatting: CpuStepFormatting,
     pub allow_saving: bool,
     pub scheduled_button_events: BTreeMap<i64, (Button, ButtonStatus)>,
+    pub dip_switch: u8,
 }
 
 impl Config {
@@ -38,6 +39,7 @@ impl Config {
             cpu_step_formatting: opt.cpu_step_formatting,
             allow_saving: !opt.prevent_saving,
             scheduled_button_events: BTreeMap::new(),
+            dip_switch: opt.dip_switch,
         };
 
         config.parse_scheduled_button_events(&opt.scheduled_button_presses);
@@ -166,6 +168,9 @@ pub struct Opt {
 
     #[structopt(name = "press", long)]
     pub scheduled_button_presses: Vec<String>,
+
+    #[structopt(name = "dipswitch", long, default_value = "0")]
+    pub dip_switch: u8,
 }
 
 impl Opt {
@@ -199,6 +204,7 @@ impl Opt {
             frame_dump: false,
             prevent_saving: false,
             scheduled_button_presses: Vec::new(),
+            dip_switch: 0,
         }
     }
 }

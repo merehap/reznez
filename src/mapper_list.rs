@@ -294,6 +294,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (81, None) => m::mapper081::Mapper081.supported(),
         // Taito X1-017
         (82, None) => m::mapper082::Mapper082.supported(),
+        (83, Some(0)) => m::mapper083_0::Mapper083_0::new().supported(),
         (83, _) => TodoMapper,
         (84, _) => UnassignedMapper,
 

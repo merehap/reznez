@@ -1,6 +1,5 @@
 use crate::mapper::*;
 use crate::mappers::vrc::vrc_irq_state::VrcIrqState;
-use crate::memory::memory::Memory;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)

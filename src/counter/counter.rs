@@ -11,6 +11,7 @@ pub struct DirectlySetCounter(Counter);
 impl DirectlySetCounter {
     pub fn enable(&mut self) { self.0.enable(); }
     pub fn disable(&mut self) { self.0.disable(); }
+    pub fn set_enabled(&mut self, enabled: bool) { self.0.set_enabled(enabled); }
     pub fn tick(&mut self) -> TickResult { self.0.tick(false, false) }
     pub fn to_irq_counter_info(&self) -> IrqCounterInfo { self.0.to_irq_counter_info() }
 
@@ -283,7 +284,7 @@ impl Counter {
 
 #[derive(Clone, Copy)]
 pub struct CounterBuilder {
-    max_range: Option<Range>,
+    full_range: Option<Range>,
     initial_range: Option<Range>,
     initial_count: Option<u16>,
     wraps: Option<bool>,
@@ -299,7 +300,7 @@ pub struct CounterBuilder {
 impl CounterBuilder {
     pub const fn new() -> Self {
         Self {
-            max_range: None,
+            full_range: None,
             initial_range: None,
             initial_count: None,
             wraps: None,
@@ -315,7 +316,7 @@ impl CounterBuilder {
     }
 
     pub const fn full_range(&mut self, start: u16, end: u16) -> &mut Self {
-        self.max_range = Some(Range::new(start, end));
+        self.full_range = Some(Range::new(start, end));
         self
     }
 
@@ -417,7 +418,7 @@ impl CounterBuilder {
             assert!(wraps, "Enable wrapping in order to AutoTriggerWhen::Wrapping.");
         }
 
-        let max_range = self.max_range.unwrap();
+        let max_range = self.full_range.expect("max_range must be set");
         let current_range = self.initial_range.unwrap_or(max_range);
         if self.initial_count.is_none() && current_range.min == current_range.max {
             // We've verified that there is only one value the initial_count could be, so don't force the caller to specify it.

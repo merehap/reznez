@@ -45,6 +45,8 @@ pub struct Memory {
     pub prg_memory: PrgMemory,
     pub chr_memory: ChrMemory,
     pub name_table_mirrorings: &'static [NameTableMirroring],
+
+    pub dip_switch: u8,
 }
 
 impl Memory {
@@ -53,6 +55,7 @@ impl Memory {
         chr_memory: ChrMemory,
         name_table_mirrorings: &'static [NameTableMirroring],
         ppu_clock: Clock,
+        dip_switch: u8,
         system_palette: SystemPalette,
     ) -> Memory {
         Memory {
@@ -75,6 +78,8 @@ impl Memory {
             prg_memory,
             chr_memory,
             name_table_mirrorings,
+
+            dip_switch,
         }
     }
 

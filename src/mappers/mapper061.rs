@@ -46,11 +46,3 @@ impl Mapper for Mapper061 {
         LAYOUT
     }
 }
-
-#[derive(Clone, Copy)]
-pub enum ChrBoard {
-    // NTDEC 0324
-    SwitchableRom = 0,
-    // GS-2017
-    FixedRam = 1,
-}

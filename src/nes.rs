@@ -192,7 +192,7 @@ impl Nes {
 
         let mut memory = Memory::new(
             prg_memory, chr_memory, name_table_mirrorings,
-            config.ppu_clock, config.system_palette.clone());
+            config.ppu_clock, config.dip_switch, config.system_palette.clone());
         mapper.init_mapper_params(&mut memory);
 
         metadata_resolver.layout_has_prg_ram = mapper.layout().has_prg_ram();
