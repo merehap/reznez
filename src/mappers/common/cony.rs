@@ -40,11 +40,13 @@ impl Cony {
         }
     }
 
+    // NOTE: CHR bank registers are handled differently by different submappers, so they are not handled here.
     pub fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         if matches!(*addr & 0xDF03, 0x5100..=0x5FFF) {
             self.scratch_ram[usize::from(*addr & 0b11)] = value;
         } else if *addr & 0x8300 == 0x8000 {
-            mem.set_prg_register(P4, value & 0b1111);
+            // The left shift here is not documented on the wiki, but it is necessary.
+            mem.set_prg_register(P4, (value & 0b1111) << 1);
         } else if *addr & 0x8300 == 0x8100 {
             // The "r" flag is shown, but not used, here. Submappers 0 and 2 use it.
             let fields = splitbits!(value, "esrll.mm");
@@ -62,24 +64,17 @@ impl Cony {
             // P3 is not handled here since it is set differently in different submappers.
             let prg_id = [P0, P1, P2][usize::from(*addr & 0x8313) - 0x8300];
             mem.set_prg_register(prg_id, value);
-        } else if matches!(*addr & 0x831F, 0x8310..=0x8317) {
-            let chr_id = [C0, C1, C2, C3, C4, C5, C6, C7][usize::from(*addr & 0x831F) - 0x8310];
-            mem.set_chr_register(chr_id, value);
         }
     }
 
     pub fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
         if self.irq_counter.tick().triggered {
-            // TODO: The wiki says to also disable counting here, but this counter already doesn't wrap.
-            // Verify what is actually correct.
             mem.cpu_pinout.assert_mapper_irq();
+            self.irq_counter.disable();
         }
     }
 
     pub fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
         Some(self.irq_counter.to_irq_counter_info())
     }
-}
-
-impl Cony {
 }

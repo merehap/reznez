@@ -96,6 +96,7 @@ pub mod mapper080;
 pub mod mapper081;
 pub mod mapper082;
 pub mod mapper083_0;
+pub mod mapper083_1;
 
 pub mod mapper085_1;
 pub mod mapper085_2;

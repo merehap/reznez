@@ -294,8 +294,13 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (81, None) => m::mapper081::Mapper081.supported(),
         // Taito X1-017
         (82, None) => m::mapper082::Mapper082.supported(),
+
+        // Cony submappers
+        (83, None) => UnspecifiedSubmapper,
         (83, Some(0)) => m::mapper083_0::Mapper083_0::new().supported(),
-        (83, _) => TodoMapper,
+        (83, Some(1)) => m::mapper083_1::Mapper083_1::new().supported(),
+        (83, Some(2)) => TodoSubmapper,
+
         (84, _) => UnassignedMapper,
 
         // Konami VRC7 submappers

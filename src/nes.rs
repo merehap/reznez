@@ -197,7 +197,8 @@ impl Nes {
 
         metadata_resolver.layout_has_prg_ram = mapper.layout().has_prg_ram();
         let metadata = metadata_resolver.resolve();
-        info!("ROM loaded.\n{metadata}");
+        info!("ROM loaded (Full CRC: 0x{:X} , PRG CRC: 0x{:X})", metadata.full_hash, metadata.prg_rom_hash);
+        info!("{metadata}");
 
         Ok((mapper, memory, metadata_resolver))
     }

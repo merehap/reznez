@@ -1,6 +1,7 @@
 use crate::mapper::*;
 use crate::mappers::common::cony::Cony;
 
+// Identical to the submapper 0 layout, except with 2KiB CHR banks and twice as much CHR ROM.
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
     .prg_layout(&[
@@ -27,16 +28,12 @@ const LAYOUT: Layout = Layout::builder()
         PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
         PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::ROM.fixed_index(-1)),
     ])
-    .chr_rom_max_size(256 * KIBIBYTE)
+    .chr_rom_max_size(512 * KIBIBYTE)
     .chr_layout(&[
-        ChrWindow::new(0x0000, 0x03FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
-        ChrWindow::new(0x0400, 0x07FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C1)),
-        ChrWindow::new(0x0800, 0x0BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C2)),
-        ChrWindow::new(0x0C00, 0x0FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C3)),
-        ChrWindow::new(0x1000, 0x13FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C4)),
-        ChrWindow::new(0x1400, 0x17FF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C5)),
-        ChrWindow::new(0x1800, 0x1BFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C6)),
-        ChrWindow::new(0x1C00, 0x1FFF, 1 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C7)),
+        ChrWindow::new(0x0000, 0x07FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C0)),
+        ChrWindow::new(0x0800, 0x0FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C1)),
+        ChrWindow::new(0x1000, 0x17FF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C2)),
+        ChrWindow::new(0x1800, 0x1FFF, 2 * KIBIBYTE, ChrBank::ROM_OR_RAM.switchable(C3)),
     ])
     .name_table_mirrorings(&[
         NameTableMirroring::VERTICAL,
@@ -47,11 +44,11 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // Cony with 1 KiB CHR-ROM banking with no outer banks, and no PRG work ram (ROM at 0x6000 instead).
-pub struct Mapper083_0 {
+pub struct Mapper083_1 {
     cony: Cony,
 }
 
-impl Mapper for Mapper083_0 {
+impl Mapper for Mapper083_1 {
     fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
         self.cony.peek_cartridge_space(mem, addr)
     }
@@ -65,8 +62,14 @@ impl Mapper for Mapper083_0 {
             // P0, P1, P2, and P4 are handled in Cony.
             mem.set_prg_register(P3, value);
         } else if matches!(*addr & 0x831F, 0x8310..=0x8317) {
-            let chr_id = [C0, C1, C2, C3, C4, C5, C6, C7][usize::from(*addr & 0x831F) - 0x8310];
-            mem.set_chr_register(chr_id, value);
+            // Different CHR setup from submappers 0 and 2.
+            match *addr & 0x831F {
+                0x8310 => mem.set_chr_register(C0, value),
+                0x8311 => mem.set_chr_register(C1, value),
+                0x8316 => mem.set_chr_register(C2, value),
+                0x8317 => mem.set_chr_register(C3, value),
+                _ => { /* Do nothing. */ }
+            }
         }
 
         self.cony.write_register(mem, addr, value);
@@ -85,7 +88,7 @@ impl Mapper for Mapper083_0 {
     }
 }
 
-impl Mapper083_0 {
+impl Mapper083_1 {
     pub fn new() -> Self {
         Self { cony: Cony::new() }
     }

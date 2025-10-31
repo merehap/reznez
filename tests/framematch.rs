@@ -27,48 +27,50 @@ type Crc = u32;
 type FrameNumber = i64;
 
 static SCHEDULED_BUTTON_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Button, ButtonStatus)>>> = LazyLock::new(|| {
-    let mut presses_by_crc: BTreeMap<Crc, Vec<(FrameNumber, FrameNumber, Button)>> = BTreeMap::new();
+    let mut presses_by_full_crc: BTreeMap<Crc, Vec<(FrameNumber, FrameNumber, Button)>> = BTreeMap::new();
 
     use Button::*;
     // Bio Miracle Bokutte Upa - [BROKEN] Status bar should be stationary.
-    presses_by_crc.insert(0xE50AD737, vec![(100, 101, Start), (300, 301, Start)]);
+    presses_by_full_crc.insert(0xE50AD737, vec![(100, 101, Start), (300, 301, Start)]);
     // Bio Miracle Bokutte Upa (Mario Baby FDS Hack) - [BROKEN] Flickering pixels.
-    presses_by_crc.insert(0x04C94E4D, vec![(100, 101, Start), (300, 301, Start)]);
+    presses_by_full_crc.insert(0x04C94E4D, vec![(100, 101, Start), (300, 301, Start)]);
     // Crystalis - [BROKEN] Flickering pixels.
-    presses_by_crc.insert(0x271C9FDD,
+    presses_by_full_crc.insert(0x271C9FDD,
         vec![(147, 148, Start), (372, 373, Start), (453, 454, Start), (556, 557, Start), (768, 769, Start), (888, 889, Start),
              (999, 1000, Start), (1124, 1125, Start)]);
     // Fantastic Adventures of Dizzy - [BROKEN] Scanline lifts by one then returns, repeating.
-    presses_by_crc.insert(0x59318584, vec![(364, 365, Start), (456, 457, Start), (570, 571, Start)]);
+    presses_by_full_crc.insert(0x59318584, vec![(364, 365, Start), (456, 457, Start), (570, 571, Start)]);
     // Super Fighter 3 - [BROKEN] Flickering scanline segment.
-    presses_by_crc.insert(0x520C552E, vec![(690, 691, Start), (798, 799, Start)]);
+    presses_by_full_crc.insert(0x520C552E, vec![(690, 691, Start), (798, 799, Start)]);
     // Armadillo - [BROKEN] Flickering scanline.
-    presses_by_crc.insert(0xAE73E0C2, vec![(41, 42,Start), (95, 96, Start), (141, 142, Start), (196, 197, Start)]);
+    presses_by_full_crc.insert(0xAE73E0C2, vec![(41, 42,Start), (95, 96, Start), (141, 142, Start), (196, 197, Start)]);
     // Marble Madness - Probably nothing wrong, but the counter has a strange progression at the start,
     // and this game requires very precise timing for mid-scanline bank switches.
-    presses_by_crc.insert(0xF9282F28,
+    presses_by_full_crc.insert(0xF9282F28,
         vec![(51, 64, Start), (107, 119, Start), (219, 229, A), (316, 322, Up), (361, 364, Down), (426, 429, Left),
              (467, 472, Right), (504, 513, A), (594, 602, A), (759, 767, Down), (1019, 1028, Down), (1078, 1116, Down)]);
     // Rollerblade Racer - [BROKEN] Status bar is rendered from the wrong bank.
-    presses_by_crc.insert(0xFE780BE6,
+    presses_by_full_crc.insert(0xFE780BE6,
         vec![(92, 103, Start), (151, 164, Start), (205, 215, Start), (302, 313, Start), (392, 402, Start)]);
     // Wizards & Warriors III - [BROKEN] One extra scanline scrolls.
-    presses_by_crc.insert(0x4F505449, vec![(748, 761, Start), (1067, 1081, Start), (1215, 1261, Right)]);
+    presses_by_full_crc.insert(0x4F505449, vec![(748, 761, Start), (1067, 1081, Start), (1215, 1261, Right)]);
     // Dragon Ball - Dai Maou Fukkatsu - [BROKEN] Bad tiles.
-    presses_by_crc.insert(0xBEFF8C77, vec![(64, 74, Start), (119, 132, Start)]);
+    presses_by_full_crc.insert(0xBEFF8C77, vec![(64, 74, Start), (119, 132, Start)]);
     // Silver Eagle - [BROKEN] Flickering scanline
-    presses_by_crc.insert(0x16D7C36F,
+    presses_by_full_crc.insert(0x16D7C36F,
         vec![(96, 107, Start), (247, 262, Start), (340, 352, Start), (533, 544, Start), (614, 627, Start)]);
+    // World Heroes 2 - [BROKEN] Some sprites disappear every other frame. Much worse in Mesen.
+    presses_by_full_crc.insert(0x7BAF8149, vec![(1763, 1764, Start)]);
 
     let mut all_events = BTreeMap::new();
-    for (crc, presses) in presses_by_crc {
+    for (full_crc, presses) in presses_by_full_crc {
         let mut events: BTreeMap<i64, (Button, ButtonStatus)> = BTreeMap::new();
         for (press_frame_number, unpress_frame_number, button) in presses {
             events.insert(press_frame_number, (button, ButtonStatus::Pressed));
             events.insert(unpress_frame_number, (button, ButtonStatus::Unpressed));
         }
 
-        all_events.insert(crc, events);
+        all_events.insert(full_crc, events);
     }
 
     all_events
