@@ -43,7 +43,7 @@ const LAYOUT: Layout = Layout::builder()
     ])
     .build();
 
-// Cony with 1 KiB CHR-ROM banking with no outer banks, and no PRG work ram (ROM at 0x6000 instead).
+// Cony with 2 KiB CHR-ROM banking, no PRG work ram (ROM at 0x6000 instead), and with no outer banks.
 pub struct Mapper083_1 {
     cony: Cony,
 }

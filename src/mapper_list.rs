@@ -299,7 +299,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (83, None) => UnspecifiedSubmapper,
         (83, Some(0)) => m::mapper083_0::Mapper083_0::new().supported(),
         (83, Some(1)) => m::mapper083_1::Mapper083_1::new().supported(),
-        (83, Some(2)) => TodoSubmapper,
+        (83, Some(2)) => m::mapper083_2::Mapper083_2::new().supported(),
 
         (84, _) => UnassignedMapper,
 

@@ -45,8 +45,10 @@ impl Cony {
         if matches!(*addr & 0xDF03, 0x5100..=0x5FFF) {
             self.scratch_ram[usize::from(*addr & 0b11)] = value;
         } else if *addr & 0x8300 == 0x8000 {
+            // The w and o fields are shown, but not used, here. Only submapper 2 uses them.
+            let fields = splitbits!(value, "wwoopppp");
             // The left shift here is not documented on the wiki, but it is necessary.
-            mem.set_prg_register(P4, (value & 0b1111) << 1);
+            mem.set_prg_register(P4, fields.p << 1);
         } else if *addr & 0x8300 == 0x8100 {
             // The "r" flag is shown, but not used, here. Submappers 0 and 2 use it.
             let fields = splitbits!(value, "esrll.mm");

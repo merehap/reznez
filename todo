@@ -78,6 +78,9 @@ Batman - Return of the Joker: Flickering pixels in both intro and game (Mesen ha
 MAPPER 71
 Fire Hawk: Broken name table display.
 
+MAPPER 83, SUBMAPPER 2
+Dragon Ball Party: Flickering pixels on one scanline during the battle sequences. Too far into the game to make a test frame.
+
 MAPPER 139
 Final Combat: Junk tiles briefly flash during intro. Broken in Mesen too.
 
