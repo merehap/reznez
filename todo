@@ -55,6 +55,12 @@ PaddleTest3/PaddleTest
 full_palette
 full_nes_palette
 
+
+TRACE LOGGING DISCREPANCIES BETWEEN REZNEZ AND MESEN
+Many values that are printed for OpenBus, visible in the logs of almost all ROMs.
+Power Rangers III, Cycle:148880, Cycle:446682, (Very long divergence) Cycle:503881 - STA Instruction is printed after IRQ is complete for REZNEZ. Weird NMI/IRQ/branch interactions. Not just a logging issue in one of the emulators.
+		   Cycle:206109, Cycle:206680 - REZNEZ experiences a sprite 0 hit, Mesen doesn't. Need to investigate who is right.
+
 ---------------------GAMES------------------------------------
 MAPPER 0
 Cheetah Men II [b1] (Doesn't work on Mesen/nestopia either. Wrong tiles are rendered during some intro screens, probably just a bad ROM hack)
