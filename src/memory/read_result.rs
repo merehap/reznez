@@ -1,3 +1,4 @@
+// TODO: Rename to PeekResult.
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct ReadResult {
     value: u8,

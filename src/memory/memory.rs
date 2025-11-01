@@ -45,6 +45,7 @@ pub struct Memory {
     pub prg_memory: PrgMemory,
     pub chr_memory: ChrMemory,
     pub name_table_mirrorings: &'static [NameTableMirroring],
+    pub mapper_custom_pages: Vec<SmallPage>,
 
     pub dip_switch: u8,
 }
@@ -78,6 +79,7 @@ impl Memory {
             prg_memory,
             chr_memory,
             name_table_mirrorings,
+            mapper_custom_pages: Vec::new(),
 
             dip_switch,
         }
@@ -243,12 +245,8 @@ impl Memory {
         self.chr_memory.set_layout(index);
     }
 
-    pub fn peek_chr(&self, ciram: &Ciram, address: PpuAddress) -> PpuPeek {
-        self.chr_memory.peek(ciram, address)
-    }
-
-    pub fn write_chr(&mut self, regs: &PpuRegisters, ciram: &mut Ciram, address: PpuAddress, value: u8) {
-        self.chr_memory.write(&regs, ciram, address, value);
+    pub fn peek_chr(&self, address: PpuAddress) -> PpuPeek {
+        self.chr_memory.peek(&self.ciram, &self.mapper_custom_pages, address)
     }
 
     pub fn set_chr_rom_outer_bank_number(&mut self, index: u8) {
@@ -301,4 +299,56 @@ pub enum AddressBusType {
     Cpu,
     OamDma,
     DmcDma,
+}
+
+pub struct SmallPage {
+    _name: String,
+    page: [u8; 0x400],
+    read_status: ReadStatus,
+    write_status: WriteStatus,
+}
+
+impl SmallPage {
+    pub fn new(_name: String, read_status: ReadStatus, write_status: WriteStatus) -> Self {
+        Self {
+            _name,
+            page: [0; 0x400],
+            read_status,
+            write_status,
+        }
+    }
+
+    pub fn peek(&self, index: u16) -> ReadResult {
+        match self.read_status {
+            ReadStatus::Disabled => ReadResult::OPEN_BUS,
+            ReadStatus::ReadOnlyZeros => ReadResult::full(0),
+            ReadStatus::Enabled => ReadResult::full(self.page[index as usize]),
+        }
+    }
+
+    pub fn write(&mut self, index: u16, value: u8) {
+        match self.write_status {
+            WriteStatus::Disabled => { /* Do nothing. */ }
+            WriteStatus::Enabled => self.page[index as usize] = value,
+        }
+    }
+
+    pub fn set_read_status(&mut self, read_status: ReadStatus) {
+        self.read_status = read_status;
+    }
+
+    pub fn set_write_status(&mut self, write_status: WriteStatus) {
+        self.write_status = write_status;
+    }
+
+    pub fn to_raw_ref(&self) -> &[u8; 0x400] {
+        &self.page
+    }
+
+    pub fn to_raw_ref_mut(&mut self) -> Option<&mut [u8; 0x400]> {
+        match self.write_status {
+            WriteStatus::Disabled => None,
+            WriteStatus::Enabled => Some(&mut self.page),
+        }
+    }
 }

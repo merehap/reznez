@@ -63,8 +63,7 @@ pub enum ChrSource {
     WorkRam,
     SaveRam,
     Ciram(CiramSide),
-    ExtendedRam,
-    FillModeTile,
+    MapperCustom { page_number: u8 },
 }
 
 impl ChrSource {
@@ -73,8 +72,7 @@ impl ChrSource {
             NameTableSource::Ciram(ciram_side) => (ChrSource::Ciram(ciram_side), None),
             NameTableSource::Rom { bank_number } => (ChrSource::Rom, Some(bank_number)),
             NameTableSource::Ram { bank_number } => (ChrSource::WorkRam, Some(bank_number)),
-            NameTableSource::ExtendedRam => (ChrSource::ExtendedRam, None),
-            NameTableSource::FillModeTile => (ChrSource::FillModeTile, None),
+            NameTableSource::MapperCustom { page_number } => (ChrSource::MapperCustom { page_number }, None),
         }
     }
 }
@@ -343,18 +341,6 @@ impl ChrBank {
         read_status_register_id: None,
         write_status_register_id: None,
     };
-    pub const EXT_RAM: Self = Self {
-        bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
-        chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::ExtendedRam)),
-        read_status_register_id: None,
-        write_status_register_id: None,
-    };
-    pub const FILL_MODE_TILE: Self = Self {
-        bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
-        chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::FillModeTile)),
-        read_status_register_id: None,
-        write_status_register_id: None,
-    };
     pub const SWITCHABLE_SOURCE: Self = Self {
         bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
         chr_source_provider: ChrSourceProvider::Switchable(CS0),
@@ -371,20 +357,19 @@ impl ChrBank {
         }
     }
 
-    pub const fn from_name_table_source(name_table_source: NameTableSource) -> Self {
-        match name_table_source {
-            NameTableSource::Ciram(ciram_side) => Self::ciram(ciram_side),
-            NameTableSource::ExtendedRam => Self::EXT_RAM,
-            NameTableSource::FillModeTile => Self::FILL_MODE_TILE,
-            NameTableSource::Rom { bank_number } => Self::ROM.fixed_index(bank_number.to_raw() as i16),
-            NameTableSource::Ram { bank_number } => Self::RAM.fixed_index(bank_number.to_raw() as i16),
-        }
-    }
-
     pub const fn with_switchable_source(source_reg_id: ChrSourceRegisterId) -> Self {
         Self {
             bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
             chr_source_provider: ChrSourceProvider::Switchable(source_reg_id),
+            read_status_register_id: None,
+            write_status_register_id: None,
+        }
+    }
+
+    pub const fn mapper_sourced(page_number: u8) -> Self {
+        Self {
+            bank_number_provider: ChrBankNumberProvider::FIXED_ZERO,
+            chr_source_provider: ChrSourceProvider::Fixed(Some(ChrSource::MapperCustom { page_number })),
             read_status_register_id: None,
             write_status_register_id: None,
         }

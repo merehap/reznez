@@ -75,8 +75,6 @@ pub trait Mapper {
     fn has_bus_conflicts(&self) -> HasBusConflicts { HasBusConflicts::No }
     // Used for debug screens.
     fn irq_counter_info(&self) -> Option<IrqCounterInfo> { None }
-    // Most mappers don't use a fill-mode name table.
-    fn fill_mode_name_table(&self) -> &[u8; KIBIBYTE as usize] { unimplemented!() }
 
     fn cpu_peek(&self, mem: &Memory, address_bus_type: AddressBusType, addr: CpuAddress) -> u8 {
         self.cpu_peek_unresolved(mem, address_bus_type, addr).resolve(mem.cpu_pinout.data_bus).0
@@ -272,7 +270,7 @@ pub trait Mapper {
 
     fn ppu_peek(&self, mem: &Memory, address: PpuAddress) -> PpuPeek {
         match address.to_u16() {
-            0x0000..=0x1FFF => mem.peek_chr(&mem.ciram, address),
+            0x0000..=0x1FFF => mem.peek_chr(address),
             0x2000..=0x3EFF => self.peek_name_table_byte(&mem, &mem.ciram, address),
             0x3F00..=0x3FFF => self.peek_palette_table_byte(&mem.palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
@@ -293,7 +291,7 @@ pub trait Mapper {
     #[inline]
     fn ppu_write(&mut self, mem: &mut Memory, address: PpuAddress, value: u8) {
         match address.to_u16() {
-            0x0000..=0x1FFF => mem.chr_memory.write(&mem.ppu_regs, &mut mem.ciram, address, value),
+            0x0000..=0x1FFF => mem.chr_memory.write(&mem.ppu_regs, &mut mem.ciram, &mut mem.mapper_custom_pages, address, value),
             0x2000..=0x3EFF => self.write_name_table_byte(mem, address, value),
             0x3F00..=0x3FFF => self.write_palette_table_byte(&mut mem.palette_ram, address, value),
             0x4000..=0xFFFF => unreachable!(),
@@ -313,8 +311,7 @@ pub trait Mapper {
             NameTableSource::Rom { bank_number } => mem.chr_memory.rom_1kib_page(0x400 * u32::from(bank_number.to_raw()) ),
             // FIXME: Hack
             NameTableSource::Ram { bank_number } => mem.chr_memory.work_ram_1kib_page(0x400 * u32::from(bank_number.to_raw()) ),
-            NameTableSource::ExtendedRam => mem.prg_memory.extended_ram().as_raw_slice().try_into().unwrap(),
-            NameTableSource::FillModeTile => self.fill_mode_name_table(),
+            NameTableSource::MapperCustom { page_number, .. } => mem.mapper_custom_pages[page_number as usize].to_raw_ref(),
         }
     }
 
@@ -337,12 +334,15 @@ pub trait Mapper {
             NameTableSource::Ciram(side) =>
                 mem.ciram.write(&mem.ppu_regs, side, index, value),
             NameTableSource::Rom {..} => { /* ROM is read-only. */}
+            // FIXME: This currently ignores whether RAM writes are enabled. It shouldn't be possible to do that.
             NameTableSource::Ram { bank_number } =>
                 mem.chr_memory.work_ram_1kib_page_mut(0x400 * u32::from(bank_number.to_raw()))[index as usize] = value,
-            NameTableSource::ExtendedRam =>
-                mem.prg_memory.extended_ram_mut().as_raw_mut_slice()[index as usize] = value,
-            NameTableSource::FillModeTile =>
-                { /* The fill mode tile can't be overwritten through normal memory writes. */ }
+            NameTableSource::MapperCustom { page_number, .. } => {
+                if let Some(page) = mem.mapper_custom_pages[page_number as usize].to_raw_ref_mut() {
+                    // This page must be writeable.
+                    page[index as usize] = value;
+                }
+            }
         }
     }
 
@@ -408,8 +408,7 @@ pub trait Mapper {
                 ChrPageId::Ram { page_number, .. } => format!("W{page_number}"),
                 ChrPageId::Ciram(side) => format!("C{side:?}"),
                 ChrPageId::SaveRam => "S".to_owned(),
-                ChrPageId::ExtendedRam => "X".to_owned(),
-                ChrPageId::FillModeTile => "F".to_owned(),
+                ChrPageId::MapperCustom { page_number } => format!("M{page_number}"),
             };
 
             let window_size = 1;

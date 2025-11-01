@@ -105,8 +105,7 @@ pub enum NameTableSource {
     Ciram(CiramSide),
     Rom { bank_number: BankNumber },
     Ram { bank_number: BankNumber },
-    ExtendedRam,
-    FillModeTile,
+    MapperCustom { page_number: u8 },
 }
 
 impl fmt::Display for NameTableSource {
@@ -116,8 +115,7 @@ impl fmt::Display for NameTableSource {
             NameTableSource::Ciram(CiramSide::Right) => "CIRAM(B)",
             NameTableSource::Rom { bank_number } => &format!("ROM@{:04X}", bank_number.to_raw()),
             NameTableSource::Ram { bank_number } => &format!("WRAM@{:04X}", bank_number.to_raw()),
-            NameTableSource::ExtendedRam => "ExtRAM",
-            NameTableSource::FillModeTile => "FillMode",
+            NameTableSource::MapperCustom { page_number } => &format!("MAPPER{page_number}"),
         };
 
         write!(f, "{text}")

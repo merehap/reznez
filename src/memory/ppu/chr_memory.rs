@@ -5,6 +5,7 @@ use log::{info, warn};
 use crate::mapper::{BankNumber, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource};
 use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, ReadStatusRegisterId, WriteStatusRegisterId};
 use crate::memory::bank::bank_number::{ChrBankRegisters, ReadStatus, WriteStatus};
+use crate::memory::memory::SmallPage;
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::chr_memory_map::{ChrMemoryMap, ChrMemoryIndex};
@@ -117,7 +118,7 @@ impl ChrMemory {
         self.current_layout().windows().len().try_into().unwrap()
     }
 
-    pub fn peek(&self, ciram: &Ciram, address: PpuAddress) -> PpuPeek {
+    pub fn peek(&self, ciram: &Ciram, mapper_custom_name_tables: &[SmallPage], address: PpuAddress) -> PpuPeek {
         let (index, source, read_status, _write_status) = self.current_memory_map().index_for_address(address);
         assert_eq!(read_status, ReadStatus::Enabled, "Peeking absent or disabled banks is not yet supported.");
 
@@ -132,8 +133,9 @@ impl ChrMemory {
                 ciram.side(side)[index as usize]
             }
             ChrMemoryIndex::SaveRam(_index) => todo!(),
-            ChrMemoryIndex::ExtendedRam(_index) => todo!(),
-            ChrMemoryIndex::FillModeTile => todo!(),
+            ChrMemoryIndex::MapperCustom { page_number, index } => {
+                mapper_custom_name_tables[page_number as usize].peek(index).resolve(0).0
+            }
         };
 
         PpuPeek { value, source }
@@ -151,7 +153,14 @@ impl ChrMemory {
         }
     }
 
-    pub fn write(&mut self, regs: &PpuRegisters, ciram: &mut Ciram, address: PpuAddress, value: u8) {
+    pub fn write(
+        &mut self,
+        regs: &PpuRegisters,
+        ciram: &mut Ciram,
+        mapper_custom_name_tables: &mut [SmallPage],
+        address: PpuAddress,
+        value: u8,
+    ) {
         let (chr_memory_index, _, _read_status, write_status) = self.current_memory_map().index_for_address(address);
         if write_status == WriteStatus::Disabled {
             return;
@@ -171,8 +180,9 @@ impl ChrMemory {
                 info!(target: "mapperramwrites", "Setting CHR [${address}]=${value:02} (Save RAM @ ${index:X})");
                 todo!();
             }
-            ChrMemoryIndex::ExtendedRam(_index) => todo!(),
-            ChrMemoryIndex::FillModeTile => todo!(),
+            ChrMemoryIndex::MapperCustom { page_number, index } => {
+                mapper_custom_name_tables[page_number as usize].write(index, value);
+            }
         }
     }
 
@@ -399,8 +409,7 @@ pub enum PeekSource {
     SaveRam,
     Ciram(CiramSide),
     PaletteTable,
-    ExtendedRam,
-    FillModeTile,
+    MapperCustom { page_number: u8 },
 }
 
 impl PeekSource {
@@ -409,8 +418,7 @@ impl PeekSource {
             NameTableSource::Ciram(side) => Self::Ciram(side),
             NameTableSource::Rom { bank_number } => Self::Rom(bank_number),
             NameTableSource::Ram { bank_number } => Self::Ram(bank_number),
-            NameTableSource::ExtendedRam => Self::ExtendedRam,
-            NameTableSource::FillModeTile => Self::FillModeTile,
+            NameTableSource::MapperCustom { page_number } => Self::MapperCustom { page_number },
         }
     }
 }

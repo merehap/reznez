@@ -98,12 +98,8 @@ impl ChrMemoryMap {
             ChrPageId::SaveRam => {
                 (ChrMemoryIndex::SaveRam(offset), PeekSource::SaveRam)
             }
-            ChrPageId::ExtendedRam => {
-                (ChrMemoryIndex::ExtendedRam(offset), PeekSource::ExtendedRam)
-            }
-            ChrPageId::FillModeTile => {
-                (ChrMemoryIndex::FillModeTile, PeekSource::FillModeTile)
-            }
+            ChrPageId::MapperCustom { page_number } =>
+                (ChrMemoryIndex::MapperCustom { page_number, index: offset }, PeekSource::MapperCustom { page_number: page_number }),
         };
 
         (chr_memory_index, peek_source, read_status, write_status)
@@ -149,8 +145,7 @@ impl ChrMemoryMap {
             ChrPageId::Ram { page_number, .. } => ChrMemoryIndex::Ram(u32::from(page_number) * KIBIBYTE),
             ChrPageId::Ciram(side) => ChrMemoryIndex::Ciram(side, 0),
             ChrPageId::SaveRam => ChrMemoryIndex::SaveRam(0),
-            ChrPageId::ExtendedRam => ChrMemoryIndex::ExtendedRam(0),
-            ChrPageId::FillModeTile => ChrMemoryIndex::FillModeTile,
+            ChrPageId::MapperCustom { page_number } => ChrMemoryIndex::MapperCustom { page_number, index: 0 },
         }
     }
 }
@@ -161,8 +156,7 @@ pub enum ChrMemoryIndex {
     Ram(u32),
     Ciram(CiramSide, u16),
     SaveRam(u16),
-    ExtendedRam(u16),
-    FillModeTile,
+    MapperCustom { page_number: u8, index: u16 },
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -185,8 +179,7 @@ impl ChrMapping {
             NameTableSource::Rom { bank_number } => mapping.bank.fixed_index(bank_number.to_raw() as i16),
             NameTableSource::Ram { bank_number } => mapping.bank.fixed_index(bank_number.to_raw() as i16),
             NameTableSource::Ciram(ciram_side) => ChrBank::ciram(ciram_side),
-            NameTableSource::ExtendedRam => ChrBank::EXT_RAM,
-            NameTableSource::FillModeTile => ChrBank::FILL_MODE_TILE,
+            NameTableSource::MapperCustom { page_number } => ChrBank::mapper_sourced(page_number),
         };
 
         mapping
@@ -208,8 +201,7 @@ impl ChrMapping {
             NameTableSource::Rom {..} => ChrSource::Rom,
             NameTableSource::Ram {..} => ChrSource::WorkRam,
             NameTableSource::Ciram(ciram_side) => ChrSource::Ciram(ciram_side),
-            NameTableSource::ExtendedRam => ChrSource::ExtendedRam,
-            NameTableSource::FillModeTile => ChrSource::FillModeTile,
+            NameTableSource::MapperCustom { page_number } => ChrSource::MapperCustom { page_number },
         };
         regs.set_chr_source(source_id, chr_source);
 
@@ -232,8 +224,7 @@ impl ChrMapping {
             ChrSource::SaveRam => Err(format!("{chr_source:?} is not yet a supported CHR source")),
             ChrSource::Ciram(ciram_side) => Ok(NameTableSource::Ciram(ciram_side)),
             ChrSource::WorkRam => Ok(NameTableSource::Ram { bank_number: self.bank.bank_number(regs).unwrap() }),
-            ChrSource::ExtendedRam => Ok(NameTableSource::ExtendedRam),
-            ChrSource::FillModeTile => Ok(NameTableSource::FillModeTile),
+            ChrSource::MapperCustom { page_number } => Ok(NameTableSource::MapperCustom { page_number }),
         }
     }
 
@@ -271,8 +262,8 @@ impl ChrMapping {
                 (ChrPageId::SaveRam, ReadStatus::Enabled, WriteStatus::Enabled)
             }
             Some(ChrSource::Ciram(ciram_side)) => (ChrPageId::Ciram(ciram_side), ReadStatus::Enabled, WriteStatus::Enabled),
-            Some(ChrSource::ExtendedRam) => (ChrPageId::ExtendedRam, ReadStatus::Enabled, WriteStatus::Enabled),
-            Some(ChrSource::FillModeTile) => (ChrPageId::FillModeTile, ReadStatus::Enabled, WriteStatus::Disabled),
+            // FIXME: MMC5 ExtRAM should be writeable here, but isn't.
+            Some(ChrSource::MapperCustom { page_number }) => (ChrPageId::MapperCustom { page_number }, ReadStatus::Enabled, WriteStatus::Disabled),
         };
 
         (
@@ -289,8 +280,7 @@ pub enum ChrPageId {
     Ram { page_number: PageNumber, bank_number: BankNumber },
     Ciram(CiramSide),
     SaveRam,
-    ExtendedRam,
-    FillModeTile,
+    MapperCustom { page_number: u8 },
 }
 
 type PageNumber = u16;

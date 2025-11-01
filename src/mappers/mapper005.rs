@@ -1,9 +1,8 @@
 use crate::memory::bank::bank::{PrgSource, PrgSourceRegisterId};
 use crate::mapper::*;
 use crate::mappers::mmc5::frame_state::FrameState;
-use crate::memory::memory::Memory;
+use crate::memory::memory::{Memory, SmallPage};
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
-use crate::memory::raw_memory::RawMemoryArray;
 use crate::ppu::constants::ATTRIBUTE_START_INDEX;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
@@ -13,25 +12,25 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(1024 * KIBIBYTE)
     // Mode 0
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM.switchable(P0)),
         PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
     ])
     // Mode 1
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM.switchable(P0)),
         PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P2).write_status(W1).rom_ram_register(PS1)),
         PrgWindow::new(0xC000, 0xFFFF, 16 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
     ])
     // Mode 2
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM.switchable(P0)),
         PrgWindow::new(0x8000, 0xBFFF, 16 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P2).write_status(W1).rom_ram_register(PS1)),
         PrgWindow::new(0xC000, 0xDFFF,  8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P3).write_status(W1).rom_ram_register(PS2)),
         PrgWindow::new(0xE000, 0xFFFF,  8 * KIBIBYTE, PrgBank::ROM.switchable(P4)),
     ])
     // Mode 3
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::RAM.switchable(P0)),
+        PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::WORK_RAM.switchable(P0)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P1).write_status(W1).rom_ram_register(PS0)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P2).write_status(W1).rom_ram_register(PS1)),
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM_RAM.switchable(P3).write_status(W1).rom_ram_register(PS2)),
@@ -108,6 +107,10 @@ const CHR_WINDOW_MODES: [ChrWindowMode; 4] = [
     ChrWindowMode::Eight1K,
 ];
 
+const EXT_RAM_PAGE_INDEX: usize = 0;
+const FILL_MODE_TILE_PAGE_INDEX: usize = 1;
+const EXT_RAM_PEEK_SOURCE: PeekSource = PeekSource::MapperCustom { page_number: EXT_RAM_PAGE_INDEX as u8 };
+
 // MMC5
 // TODO: Expansion Audio
 // TODO: MMC5A registers
@@ -120,11 +123,6 @@ pub struct Mapper005 {
     multiplicand: u8,
     multiplier: u8,
 
-    // In fill mode, all of the name table values are the same so this is an inefficient
-    // representation. However, it's necessary in order to work with the NameTable type that
-    // requires stores a slice.
-    fill_mode_name_table: [u8; KIBIBYTE as usize],
-
     chr_window_mode: ChrWindowMode,
     sprite_height: SpriteHeight,
     tall_sprite_background_enabled: bool,
@@ -134,11 +132,14 @@ pub struct Mapper005 {
     substitutions_enabled: bool,
     name_table_index: u16,
     upper_chr_bank_bits: u8,
-
-    extended_ram: RawMemoryArray<KIBIBYTE>,
 }
 
 impl Mapper for Mapper005 {
+    fn init_mapper_params(&self, mem: &mut Memory) {
+        mem.mapper_custom_pages.push(SmallPage::new("ExtRAM".to_owned(), ReadStatus::Enabled, WriteStatus::Enabled));
+        mem.mapper_custom_pages.push(SmallPage::new("FillModeTile".to_owned(), ReadStatus::Enabled, WriteStatus::Disabled));
+    }
+
     fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
         match *addr {
             0x0000..=0x401F => unreachable!(),
@@ -147,7 +148,7 @@ impl Mapper for Mapper005 {
             0x5206 => ReadResult::full(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
             0x4020..=0x5BFF => ReadResult::OPEN_BUS,
             // TODO: ReadWriteStatus
-            0x5C00..=0x5FFF => ReadResult::full(self.extended_ram[u32::from(*addr - 0x5C00)]),
+            0x5C00..=0x5FFF => ReadResult::full(self.peek_ext_rom(mem, *addr - 0x5C00)),
             0x6000..=0xFFFF => mem.peek_prg(addr),
         }
     }
@@ -159,18 +160,18 @@ impl Mapper for Mapper005 {
 
         match address.to_u16() {
             0x0000..=0x1FFF if should_substitute => {
-                let lower_chr_bank_bits = self.extended_ram[u32::from(self.name_table_index)] & 0b0011_1111;
+                let lower_chr_bank_bits = self.peek_ext_rom(mem, self.name_table_index) & 0b0011_1111;
                 let pattern_bank = (self.upper_chr_bank_bits << 6) | lower_chr_bank_bits;
                 let raw_chr_index = 4 * KIBIBYTE * u32::from(pattern_bank) * KIBIBYTE + u32::from(address.to_u16() % 0x1000);
                 mem.chr_memory().peek_raw(raw_chr_index)
             }
-            0x0000..=0x1FFF => mem.chr_memory().peek(&mem.ciram, address),
+            0x0000..=0x1FFF => mem.chr_memory().peek(&mem.ciram, &mem.mapper_custom_pages, address),
             0x2000..=0x3EFF => self.peek_name_table_byte(&mem, &mem.ciram, address),
             0x3F00..=0x3FFF if should_substitute => {
-                let palette = self.extended_ram[u32::from(self.name_table_index)] >> 6;
+                let palette = self.peek_ext_rom(mem, self.name_table_index) >> 6;
                 // The same palette is used for all 4 corners.
                 let palette_byte = palette << 6 | palette << 4 | palette << 2 | palette;
-                PpuPeek::new(palette_byte, PeekSource::ExtendedRam)
+                PpuPeek::new(palette_byte, EXT_RAM_PEEK_SOURCE)
             }
             0x3F00..=0x3FFF => self.peek_palette_table_byte(&mem.palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
@@ -245,8 +246,8 @@ impl Mapper for Mapper005 {
             }
             0x5104 => self.set_extended_ram_mode(mem, value),
             0x5105 => Self::set_name_table_mirroring(mem, value),
-            0x5106 => self.set_fill_mode_name_table_byte(value),
-            0x5107 => self.set_fill_mode_attribute_table_byte(value),
+            0x5106 => self.set_fill_mode_name_table_byte(mem, value),
+            0x5107 => self.set_fill_mode_attribute_table_byte(mem, value),
             0x5108..=0x5112 => { /* Do nothing. */ }
             0x5113 => self.set_prg_bank_register(mem, P0, None, value),
             0x5114 => self.set_prg_bank_register(mem, P1, Some(PS0), value),
@@ -290,13 +291,9 @@ impl Mapper for Mapper005 {
             0x5206 => self.multiplier = value,
             0x5207..=0x5BFF => { /* Do nothing. */ }
             // TODO: ReadWriteStatus
-            0x5C00..=0x5FFF => self.extended_ram[u32::from(*addr - 0x5C00)] = value,
+            0x5C00..=0x5FFF => self.write_ext_rom(mem, *addr - 0x5C00, value),
             0x6000..=0xFFFF => { /* Do nothing. */ }
         }
-    }
-
-    fn fill_mode_name_table(&self) -> &[u8; KIBIBYTE as usize] {
-        &self.fill_mode_name_table
     }
 
     fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
@@ -319,8 +316,6 @@ impl Mapper005 {
             multiplicand: 0xFF,
             multiplier: 0xFF,
 
-            fill_mode_name_table: [0; KIBIBYTE as usize],
-
             chr_window_mode: ChrWindowMode::One8K,
             sprite_height: SpriteHeight::Normal,
             tall_sprite_background_enabled: false,
@@ -330,8 +325,6 @@ impl Mapper005 {
             substitutions_enabled: false,
             name_table_index: 0,
             upper_chr_bank_bits: 0b0000_0000,
-
-            extended_ram: RawMemoryArray::new(),
         }
     }
 
@@ -344,10 +337,15 @@ impl Mapper005 {
     // Write 0x5104
     fn set_extended_ram_mode(&mut self, mem: &mut Memory, value: u8) {
         self.extended_ram_mode = EXTENDED_RAM_MODES[usize::from(value & 0b11)];
-        mem.set_reads_enabled(R0, matches!(self.extended_ram_mode, ExtendedRamMode::ReadOnly | ExtendedRamMode::ReadWrite));
         // FIXME: WriteOnly and ExtendedAttributes are only write-only during rendering.
         // They are supposed to cause corruption during VBlank.
-        mem.set_writes_enabled(W0, !matches!(self.extended_ram_mode, ExtendedRamMode::ReadOnly));
+        let (read_status, write_status) = match self.extended_ram_mode {
+            ExtendedRamMode::ReadOnly => (ReadStatus::Enabled, WriteStatus::Disabled),
+            ExtendedRamMode::WriteOnly | ExtendedRamMode::ExtendedAttributes => (ReadStatus::ReadOnlyZeros, WriteStatus::Enabled),
+            ExtendedRamMode::ReadWrite => (ReadStatus::Enabled, WriteStatus::Enabled),
+        };
+        mem.mapper_custom_pages[EXT_RAM_PAGE_INDEX].set_read_status(read_status);
+        mem.mapper_custom_pages[EXT_RAM_PAGE_INDEX].set_write_status(write_status);
     }
 
     // Write 0x5105
@@ -356,8 +354,8 @@ impl Mapper005 {
             match raw {
                 0 => NameTableSource::Ciram(CiramSide::Left),
                 1 => NameTableSource::Ciram(CiramSide::Right),
-                2 => NameTableSource::ExtendedRam,
-                3 => NameTableSource::FillModeTile,
+                2 => NameTableSource::MapperCustom { page_number: EXT_RAM_PAGE_INDEX as u8 },
+                3 => NameTableSource::MapperCustom { page_number: FILL_MODE_TILE_PAGE_INDEX as u8 },
                 _ => unreachable!(),
             }
         }
@@ -370,20 +368,29 @@ impl Mapper005 {
     }
 
     // Write 0x5106
-    fn set_fill_mode_name_table_byte(&mut self, value: u8) {
+    fn set_fill_mode_name_table_byte(&self, mem: &mut Memory, value: u8) {
+        // The fill mode name table byte is not writeable except for right now.
+        mem.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Enabled);
         // Set the fill-mode name table bytes but not the attribute table bytes.
-        for i in 0..ATTRIBUTE_START_INDEX as usize {
-            self.fill_mode_name_table[i] = value;
+        for i in 0..ATTRIBUTE_START_INDEX as u16 {
+            mem.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].write(i, value);
         }
+
+        mem.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Disabled);
     }
 
     // Write 0x5107
-    fn set_fill_mode_attribute_table_byte(&mut self, value: u8) {
+    fn set_fill_mode_attribute_table_byte(&mut self, mem: &mut Memory, value: u8) {
+        // The fill mode attribute table byte is not writeable except for right now.
+        mem.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Enabled);
+
         let attribute = value & 0b11;
         let attribute_byte = (attribute << 6) | (attribute << 4) | (attribute << 2) | attribute;
-        for i in ATTRIBUTE_START_INDEX as usize..self.fill_mode_name_table.len() {
-            self.fill_mode_name_table[i] = attribute_byte;
+        for i in ATTRIBUTE_START_INDEX as u16 .. 0x400 {
+            mem.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].write(i, attribute_byte);
         }
+
+        mem.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Disabled);
     }
 
     // Write 0x5113 through 0x5117
@@ -442,6 +449,14 @@ impl Mapper005 {
         }
 
         mem.set_chr_layout(layout_index);
+    }
+
+    fn peek_ext_rom(&self, mem: &Memory, index: u16) -> u8 {
+        mem.mapper_custom_pages[EXT_RAM_PAGE_INDEX].peek(index).resolve(0).0
+    }
+
+    fn write_ext_rom(&self, mem: &mut Memory, index: u16, value: u8) {
+        mem.mapper_custom_pages[EXT_RAM_PAGE_INDEX].write(index, value)
     }
 }
 
