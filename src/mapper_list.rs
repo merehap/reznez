@@ -491,6 +491,9 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (247, _) => UnassignedMapper,
         (248..=255, _) => TodoMapper,
 
+        // Cony UNL-YOKO
+        (264, _) => m::mapper264::Mapper264::new().supported(),
+
         (464..=466, _) => UnassignedMapper,
         (475, _) => UnassignedMapper,
         (477..=478, _) => UnassignedMapper,

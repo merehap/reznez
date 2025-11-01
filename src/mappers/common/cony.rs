@@ -2,7 +2,7 @@ use std::num::NonZeroI8;
 
 use crate::mapper::*;
 
-const IRQ_COUNTER: DirectlySetCounter = CounterBuilder::new()
+pub const IRQ_COUNTER: DirectlySetCounter = CounterBuilder::new()
     // The step is undefined at startup since the step is set at the same time as enabling the counter.
     .step(1)
     .wraps(false)
@@ -48,6 +48,7 @@ impl Cony {
             // The w and o fields are shown, but not used, here. Only submapper 2 uses them.
             let fields = splitbits!(value, "wwoopppp");
             // The left shift here is not documented on the wiki, but it is necessary.
+            // TODO: Probably need to store the same thing with the bottom bit dropped in P5 for 32KiB mode.
             mem.set_prg_register(P4, fields.p << 1);
         } else if *addr & 0x8300 == 0x8100 {
             // The "r" flag is shown, but not used, here. Submappers 0 and 2 use it.

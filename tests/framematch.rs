@@ -61,6 +61,8 @@ static SCHEDULED_BUTTON_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Bu
         vec![(96, 107, Start), (247, 262, Start), (340, 352, Start), (533, 544, Start), (614, 627, Start)]);
     // World Heroes 2 - [BROKEN] Some sprites disappear every other frame. Much worse in Mesen.
     presses_by_full_crc.insert(0x7BAF8149, vec![(1763, 1764, Start)]);
+    // Master Fighter VI' - [BROKEN] Wrong sprites rendered on character selection. Same in Mesen.
+    presses_by_full_crc.insert(0xC2928549, vec![(52, 53, Start)]);
 
     let mut all_events = BTreeMap::new();
     for (full_crc, presses) in presses_by_full_crc {
