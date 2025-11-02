@@ -198,8 +198,10 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (34, Some(2)) => m::mapper034_2::Mapper034_2.supported(),
 
         (35, _) => TodoMapper,
+        // TXC 01-22000-400
         (36, None) => m::mapper036::Mapper036::new().supported(),
-        (37, _) => TodoMapper,
+        // Super Mario Bros. + Tetris + Nintendo World Cup
+        (37, None) => m::mapper037::Mapper037::new().supported(),
         // Bit Corp.'s Crime Busters
         (38, None) => m::mapper038::Mapper038.supported(),
         // Duplicate of 241.

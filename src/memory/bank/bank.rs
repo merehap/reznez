@@ -124,31 +124,31 @@ impl PrgBank {
     };
 
     pub const fn fixed_index(mut self, index: i16) -> Self {
-        assert!(self.prg_source_provider.is_mapped(), "An EMPTY bank can't be fixed_index.");
+        assert!(self.prg_source_provider.is_mapped(), "An ABSENT bank can't be fixed_index.");
         self.bank_number_provider = PrgBankNumberProvider::Fixed(BankNumber::from_i16(index));
         self
     }
 
     pub const fn switchable(mut self, register_id: PrgBankRegisterId) -> Self {
-        assert!(self.prg_source_provider.is_mapped(), "An EMPTY bank can't be switchable.");
+        assert!(self.prg_source_provider.is_mapped(), "An ABSENT bank can't be switchable.");
         self.bank_number_provider = PrgBankNumberProvider::Switchable(register_id);
         self
     }
 
     pub const fn read_status(mut self, read_id: ReadStatusRegisterId) -> Self {
-        assert!(self.prg_source_provider.is_mapped(), "An EMPTY bank can't have a status register.");
+        assert!(self.prg_source_provider.is_mapped(), "An ABSENT bank can't have a read status register.");
         self.read_status_register_id = Some(read_id);
         self
     }
 
     pub const fn write_status(mut self, write_id: WriteStatusRegisterId) -> Self {
-        assert!(self.prg_source_provider.is_mapped(), "An EMPTY bank can't have a status register.");
+        assert!(self.prg_source_provider.is_mapped(), "An ABSENT bank can't have a write status register.");
         self.write_status_register_id = Some(write_id);
         self
     }
 
     pub const fn read_write_status(mut self, read_id: ReadStatusRegisterId, write_id: WriteStatusRegisterId) -> Self {
-        assert!(self.prg_source_provider.is_mapped(), "An EMPTY bank can't have a status register.");
+        assert!(self.prg_source_provider.is_mapped(), "An ABSENT bank can't have a read or write status register.");
         self.read_status_register_id = Some(read_id);
         self.write_status_register_id = Some(write_id);
         self
@@ -164,7 +164,7 @@ impl PrgBank {
         matches!(self.prg_source_provider, PrgSourceProvider::Fixed(Some(PrgSource::Rom)) | PrgSourceProvider::Switchable(_))
     }
 
-    pub fn is_ram(self) -> bool {
+    pub fn supports_ram(self) -> bool {
         matches!(self.prg_source_provider,
             PrgSourceProvider::Fixed(Some(PrgSource::RamOrAbsent | PrgSource::WorkRamOrRom | PrgSource::SaveRam))
                 | PrgSourceProvider::Switchable(_))

@@ -64,7 +64,7 @@ pub struct MetadataResolver {
     pub cartridge: CartridgeMetadata,
     pub database: CartridgeMetadata,
     pub database_extension: CartridgeMetadata,
-    pub layout_has_prg_ram: bool,
+    pub layout_supports_prg_ram: bool,
     // TODO: Add user overrides.
 }
 
@@ -124,7 +124,7 @@ impl MetadataResolver {
     pub fn defaults(&self) -> CartridgeMetadata {
         let all_metadata = [&self.hard_coded_overrides, &self.database_extension, &self.cartridge, &self.database];
 
-        let prg_work_ram_size = if self.layout_has_prg_ram { 8 * KIBIBYTE } else { 0 };
+        let prg_work_ram_size = if self.layout_supports_prg_ram { 8 * KIBIBYTE } else { 0 };
 
         let chr_rom_size = self.cartridge.chr_rom_size();
         let chr_work_ram_size = resolve_field(&all_metadata, |m| m.chr_work_ram_size());

@@ -119,8 +119,8 @@ impl Layout {
         self.four_screen_mirroring_definition
     }
 
-    pub fn has_prg_ram(&self) -> bool {
-        self.prg_layouts.as_iter().any(|prg_layout| prg_layout.has_ram())
+    pub fn supports_prg_ram(&self) -> bool {
+        self.prg_layouts.as_iter().any(|prg_layout| prg_layout.supports_ram())
     }
 }
 

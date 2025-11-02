@@ -175,7 +175,7 @@ impl Nes {
             database: db_header,
             database_extension: db_extension_metadata.build(),
             // This can only be set correctly once the mapper has been looked up.
-            layout_has_prg_ram: false,
+            layout_supports_prg_ram: false,
         };
 
         let mapper = mapper_list::lookup_mapper(&metadata_resolver, &cartridge)?;
@@ -195,7 +195,7 @@ impl Nes {
             config.ppu_clock, config.dip_switch, config.system_palette.clone());
         mapper.init_mapper_params(&mut memory);
 
-        metadata_resolver.layout_has_prg_ram = mapper.layout().has_prg_ram();
+        metadata_resolver.layout_supports_prg_ram = mapper.layout().supports_prg_ram();
         let metadata = metadata_resolver.resolve();
         info!("ROM loaded (Full CRC: 0x{:X}  PRG CRC: 0x{:X})", metadata.full_hash, metadata.prg_rom_hash);
         info!("{metadata}");

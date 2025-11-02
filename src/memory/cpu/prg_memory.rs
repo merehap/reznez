@@ -6,10 +6,9 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory_map::PrgMemoryMap;
 use crate::memory::layout::OuterBankLayout;
-use crate::memory::raw_memory::{RawMemory, RawMemoryArray, SaveRam};
+use crate::memory::raw_memory::{RawMemory, SaveRam};
 use crate::memory::read_result::ReadResult;
 use crate::memory::window::{PrgWindow, PrgWindowSize};
-use crate::util::unit::KIBIBYTE;
 
 pub struct PrgMemory {
     layouts: Vec<PrgLayout>,
@@ -20,7 +19,6 @@ pub struct PrgMemory {
     rom_outer_bank_number: u8,
     work_ram: RawMemory,
     save_ram: SaveRam,
-    extended_ram: RawMemoryArray<KIBIBYTE>,
     regs: PrgBankRegisters,
 }
 
@@ -49,7 +47,7 @@ impl PrgMemory {
                     }
                 }
 
-                if window.bank().is_ram() {
+                if window.bank().supports_ram() {
                     ram_present_in_layout = true;
                 }
             }
@@ -89,21 +87,12 @@ impl PrgMemory {
             rom_outer_bank_number: 0,
             work_ram,
             save_ram,
-            extended_ram: RawMemoryArray::new(),
             regs,
         }
     }
 
     pub fn layout_index(&self) -> u8 {
         self.layout_index
-    }
-
-    pub fn extended_ram(&self) -> &RawMemoryArray<KIBIBYTE> {
-        &self.extended_ram
-    }
-
-    pub fn extended_ram_mut(&mut self) -> &mut RawMemoryArray<KIBIBYTE> {
-        &mut self.extended_ram
     }
 
     pub fn peek(&self, address: CpuAddress) -> ReadResult {
@@ -201,13 +190,21 @@ impl PrgMemory {
         &self.regs
     }
 
+    pub fn ram_present(&self) -> bool {
+        !self.work_ram.is_empty() || !self.save_ram.is_empty()
+    }
+
     pub fn set_layout(&mut self, index: u8) {
         assert!(usize::from(index) < self.layouts.len());
         self.layout_index = index;
     }
 
-    pub fn set_prg_rom_outer_bank_number(&mut self, index: u8) {
-        self.rom_outer_bank_number = index;
+    pub fn set_prg_rom_outer_bank_number(&mut self, number: u8) {
+        self.rom_outer_bank_number = number;
+    }
+
+    pub fn set_prg_rom_outer_bank_size(&mut self, new_size: u32) {
+        self.rom_outer_bank_size = new_size;
     }
 
     fn update_page_ids(&mut self) {

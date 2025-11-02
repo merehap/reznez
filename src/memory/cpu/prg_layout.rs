@@ -25,8 +25,8 @@ impl PrgLayout {
         PrgLayout(windows)
     }
 
-    pub fn has_ram(&self) -> bool {
-        self.0.iter().any(|window| window.bank().is_ram())
+    pub fn supports_ram(&self) -> bool {
+        self.0.iter().any(|window| window.bank().supports_ram())
     }
 
     pub fn windows(&self) -> &[PrgWindow] {
