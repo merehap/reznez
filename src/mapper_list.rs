@@ -197,7 +197,9 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // BNROM
         (34, Some(2)) => m::mapper034_2::Mapper034_2.supported(),
 
-        (35..=37, _) => TodoMapper,
+        (35, _) => TodoMapper,
+        (36, None) => m::mapper036::Mapper036::new().supported(),
+        (37, _) => TodoMapper,
         // Bit Corp.'s Crime Busters
         (38, None) => m::mapper038::Mapper038.supported(),
         // Duplicate of 241.
