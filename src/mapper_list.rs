@@ -381,7 +381,8 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (141, None) => m::mapper141::MAPPER141.supported(),
         // Kaiser KS202 (UNL-KS7032)
         (142, None) => m::mapper142::Mapper142::new().supported(),
-        (143, _) => TodoMapper,
+        // NROM circuit board with simple copy protection
+        (143, None) => m::mapper143::Mapper143.supported(),
         (144, _) => TodoMapper,
         // SA-72007 (only Sidewinder)
         (145, None) => m::mapper145::Mapper145.supported(),

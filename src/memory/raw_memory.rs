@@ -111,20 +111,6 @@ impl IndexMut<u32> for RawMemory {
 #[derive(Clone, Debug)]
 pub struct RawMemoryArray<const SIZE: u32>(Box<[u8]>);
 
-impl <const SIZE: u32> RawMemoryArray<SIZE> {
-    pub fn new() -> Self {
-        RawMemoryArray(vec![0; SIZE as usize].into_boxed_slice())
-    }
-
-    pub fn as_raw_slice(&self) -> &[u8] {
-        &self.0
-    }
-
-    pub fn as_raw_mut_slice(&mut self) -> &mut [u8] {
-        &mut self.0
-    }
-}
-
 impl <const SIZE: u32> Index<u32> for RawMemoryArray<SIZE> {
     type Output = u8;
 
