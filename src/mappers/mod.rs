@@ -141,6 +141,7 @@ pub mod mapper145;
 
 pub mod mapper148;
 pub mod mapper149;
+pub mod mapper150;
 
 pub mod mapper152;
 

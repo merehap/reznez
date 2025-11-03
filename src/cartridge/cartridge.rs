@@ -52,8 +52,6 @@ impl Cartridge {
                 header.chr_rom_size().unwrap() / KIBIBYTE,
                 (raw_header_and_data.size() - chr_rom_start) / KIBIBYTE,
             ));
-            //chr_rom_end = raw_header_and_data.size();
-            //raw_header_and_data.slice(chr_rom_start..raw_header_and_data.size()).to_raw_memory()
         };
 
         let prg_rom_hash = crc32fast::hash(prg_rom.as_slice());

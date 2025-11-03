@@ -393,7 +393,8 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (148, None) => m::mapper148::Mapper148.supported(),
         // Sachen SA-0036 (Taiwan Mahjong 16)
         (149, None) => m::mapper149::Mapper149.supported(),
-        (150, _) => TodoMapper,
+        // Sachen SA-015 and SA-630
+        (150, None) => m::mapper150::Mapper150::default().supported(),
         // Duplicate
         (151, None) => m::mapper075::Mapper075::default().supported(),
         // TAITO-74*161/161/32 and BANDAI-74*161/161/32
