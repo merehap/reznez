@@ -17,14 +17,12 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper143;
 
 impl Mapper for Mapper143 {
-    fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_register(&self, _mem: &Memory, addr: CpuAddress) -> ReadResult {
         if *addr & 0b1110_0001_0000_0000 == 0b0100_0001_0000_0000 {
             // A simple copy-protection measure: return the inverted low 6 bits of the address.
-            ReadResult::partial_open_bus(!*addr as u8, 0b0011_1111)
-        } else if *addr < 0x6000 {
-            ReadResult::OPEN_BUS
+            ReadResult::partial(!*addr as u8, 0b0011_1111)
         } else {
-            mem.peek_prg(addr)
+            ReadResult::OPEN_BUS
         }
     }
 

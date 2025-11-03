@@ -29,18 +29,15 @@ pub struct Mapper028 {
 }
 
 impl Mapper for Mapper028 {
-    fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
-        if *addr < 0x4020 {
-            unreachable!();
-        }
-
+    // TODO: Probably replace this with a more standardized way of handling variably-sized outer banks.
+    fn peek_prg(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
         if *addr < 0x8000 {
             return ReadResult::OPEN_BUS;
         }
 
         let bank_side = if *addr < 0xC000 { BankSide::Low } else { BankSide::High };
         let bank_mask = Self::bank_mask(self.action53_layout, self.prg_outer_bank_size, bank_side);
-        mem.prg_memory.peek_raw_rom(self.create_memory_index(bank_mask, addr))
+        ReadResult::full(mem.prg_memory.peek_raw_rom(self.create_memory_index(bank_mask, addr)))
     }
 
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {

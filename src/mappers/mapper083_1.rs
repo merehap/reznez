@@ -49,8 +49,8 @@ pub struct Mapper083_1 {
 }
 
 impl Mapper for Mapper083_1 {
-    fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
-        self.cony.peek_cartridge_space(mem, addr)
+    fn peek_register(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
+        self.cony.peek_register(mem, addr)
     }
 
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {

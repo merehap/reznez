@@ -55,15 +55,13 @@ pub struct Mapper264 {
 }
 
 impl Mapper for Mapper264 {
-    fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_register(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
         if *addr & 0xD400 == 0x5000 {
-            ReadResult::partial_open_bus(mem.dip_switch, 0b0000_0011)
+            ReadResult::partial(mem.dip_switch, 0b0000_0011)
         } else if matches!(*addr & 0xD403, 0x5400..=0x5403) {
             ReadResult::full(self.scratch_ram[usize::from((*addr & 0xD403) - 0x5400)])
-        } else if *addr < 0x6000 {
-            ReadResult::OPEN_BUS
         } else {
-            mem.peek_prg(addr)
+            ReadResult::OPEN_BUS
         }
     }
 

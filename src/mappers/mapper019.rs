@@ -55,14 +55,13 @@ pub struct Mapper019 {
 }
 
 impl Mapper for Mapper019 {
-    fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_register(&self, _mem: &Memory, addr: CpuAddress) -> ReadResult {
         match *addr {
-            0x0000..=0x401F => unreachable!(),
+            0x0000..=0x401F | 0x6000..=0xFFFF => unreachable!(),
             0x4020..=0x47FF => ReadResult::OPEN_BUS,
             0x4800..=0x4FFF => /* TODO: Expansion Audio */ ReadResult::full(0),
             0x5000..=0x57FF => ReadResult::full(self.irq_counter.count_low_byte()),
             0x5800..=0x5FFF => ReadResult::full(self.irq_counter.count_high_byte()),
-            0x6000..=0xFFFF => mem.peek_prg(addr),
         }
     }
 

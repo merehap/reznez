@@ -33,6 +33,7 @@ const LAYOUT: Layout = Layout::builder()
 // TODO: Expansion Audio
 // TODO: PRG RAM chip enable/disable (remove work_ram_write_enabled)
 // TODO: Verify work_ram_write_enabled = false at power-on.
+// TODO: Replace the custom IRQ counter with a ReloadDrivenCounter.
 #[derive(Default)]
 pub struct Mapper018 {
     work_ram_write_enabled: bool,
@@ -59,6 +60,7 @@ impl Mapper for Mapper018 {
     }
 
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+        // TODO: Remove this.
         if matches!(*addr, 0x6000..=0x7FFF) {
             if self.work_ram_write_enabled {
                 mem.write_prg(addr, value);

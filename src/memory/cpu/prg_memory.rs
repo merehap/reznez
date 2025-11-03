@@ -116,8 +116,8 @@ impl PrgMemory {
         }
     }
 
-    pub fn peek_raw_rom(&self, index: u32) -> ReadResult {
-        ReadResult::full(self.rom[index % self.rom.size()])
+    pub fn peek_raw_rom(&self, index: u32) -> u8 {
+        self.rom[index % self.rom.size()]
     }
 
     pub fn write(&mut self, address: CpuAddress, value: u8) {

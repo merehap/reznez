@@ -28,15 +28,13 @@ impl Cony {
         }
     }
 
-    pub fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
+    pub fn peek_register(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
         if *addr & 0xDF00 == 0x5000 {
-            ReadResult::partial_open_bus(mem.dip_switch, 0b0000_0011)
+            ReadResult::partial(mem.dip_switch, 0b0000_0011)
         } else if matches!(*addr & 0xDF03, 0x5100..=0x5FFF) {
             ReadResult::full(self.scratch_ram[usize::from(*addr & 0b11)])
-        } else if *addr < 0x6000 {
-            ReadResult::OPEN_BUS
         } else {
-            mem.peek_prg(addr)
+            ReadResult::OPEN_BUS
         }
     }
 

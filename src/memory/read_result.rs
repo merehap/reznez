@@ -13,7 +13,7 @@ impl ReadResult {
         Self { value, mask: 0b1111_1111, bus_update_needed: true }
     }
 
-    pub fn partial_open_bus(value: u8, mask: u8) -> Self {
+    pub fn partial(value: u8, mask: u8) -> Self {
         Self { value, mask, bus_update_needed: true }
     }
 

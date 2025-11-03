@@ -187,15 +187,13 @@ pub struct Mapper209 {
 }
 
 impl Mapper for Mapper209 {
-    fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_register(&self, _mem: &Memory, addr: CpuAddress) -> ReadResult {
         if matches!(*addr, 0x5000 | 0x5400 | 0x5C00) {
             todo!("Jumper Register");
         }
 
         match *addr {
-            0x0000..=0x401F => unreachable!(),
             0x5000 | 0x5400 | 0x5C00 => todo!("Jumper register"),
-            0x6000..=0xFFFF => mem.peek_prg(addr),
             _ => match *addr & 0xF803 {
                 0x5800 => ReadResult::full(self.multiplication_result as u8),
                 0x5801 => ReadResult::full((self.multiplication_result >> 8) as u8),

@@ -4,10 +4,9 @@ use crate::memory::memory::Memory;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(80 * KIBIBYTE)
     .prg_layout(&[
-        /* FIXME: Represent these Windows manually.
-        PrgWindow::new(0x5000, 0x57FF, 2 * KIBIBYTE, PrgBank::ROM.fixed_index(8)),
-        PrgWindow::new(0x5800, 0x5FFF, 2 * KIBIBYTE, PrgBank::MirrorOf(0x5000)),
-        */
+        // Layout doesn't support PRG banks below 0x6000, so this mapper implements the equivalent of the following manually:
+        // PrgWindow::new(0x5000, 0x57FF, 2 * KIBIBYTE, PrgBank::ROM.fixed_index(8)),
+        // PrgWindow::new(0x5800, 0x5FFF, 2 * KIBIBYTE, PrgBank::ROM.fixed_index(8)),
         PrgWindow::new(0x6000, 0x7FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(2)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(1)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.fixed_index(0)),
@@ -32,26 +31,24 @@ const IRQ_COUNTER: ReloadDrivenCounter = CounterBuilder::new()
     .build_reload_driven_counter();
 
 // TONY-I and YS-612 (FDS games in cartridge form).
-// TODO: Untested. Need test ROM. In particular, the 0x5000 ROM window might not work.
-// FIXME: PrgMemory under 0x6000 is no longer supported.
-// This mapper will need to find a different way to support it.
+// TODO: Untested. Need test ROM.
 pub struct Mapper043 {
     irq_counter: ReloadDrivenCounter,
 }
 
 impl Mapper for Mapper043 {
-    fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_register(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
         match *addr {
-            0x0000..=0x401F => unreachable!(),
-            0x4020..=0x4FFF => ReadResult::OPEN_BUS,
-            // Normally only PRG >= 0x6000 can be peeked.
-            0x5000..=0xFFFF => mem.peek_prg(addr),
+            // Manually map PRG ROM bank #8 to this address range.
+            0x5000..=0x5BFF => ReadResult::full(mem.prg_memory.peek_raw_rom(64 * KIBIBYTE + addr.to_u32() - 0x5000)),
+            // A mirror of the same 2KiB of PRG ROM above.
+            0x5C00..=0x5FFF => ReadResult::full(mem.prg_memory.peek_raw_rom(64 * KIBIBYTE + addr.to_u32() - 0x5C00)),
+            _ => ReadResult::OPEN_BUS,
         }
     }
 
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         const INDEXES: [u8; 8] = [4, 3, 4, 4, 4, 7, 5, 6];
-
         match *addr & 0x71FF {
             0x4022 => {
                 // The bank index is scrambled for some reason.

@@ -25,13 +25,11 @@ pub struct Mapper036 {
 }
 
 impl Mapper for Mapper036 {
-    fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_register(&self, _mem: &Memory, addr: CpuAddress) -> ReadResult {
         if *addr & 0xE100 == 0x4100 {
-            ReadResult::partial_open_bus(u8::from(self.rr) << 4, 0b0011_0000)
-        } else if *addr < 0x6000 {
-            ReadResult::OPEN_BUS
+            ReadResult::partial(u8::from(self.rr) << 4, 0b0011_0000)
         } else {
-            mem.peek_prg(addr)
+            ReadResult::OPEN_BUS
         }
     }
 

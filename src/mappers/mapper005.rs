@@ -140,19 +140,6 @@ impl Mapper for Mapper005 {
         mem.mapper_custom_pages.push(SmallPage::new("FillModeTile".to_owned(), ReadStatus::Enabled, WriteStatus::Disabled));
     }
 
-    fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
-        match *addr {
-            0x0000..=0x401F => unreachable!(),
-            0x5204 => ReadResult::full(self.frame_state.to_status_byte()),
-            0x5205 => ReadResult::full((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
-            0x5206 => ReadResult::full(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
-            0x4020..=0x5BFF => ReadResult::OPEN_BUS,
-            // TODO: ReadWriteStatus
-            0x5C00..=0x5FFF => ReadResult::full(self.peek_ext_rom(mem, *addr - 0x5C00)),
-            0x6000..=0xFFFF => mem.peek_prg(addr),
-        }
-    }
-
     fn ppu_peek(&self, mem: &Memory, address: PpuAddress) -> PpuPeek {
         let should_substitute = self.substitutions_enabled
             && self.extended_ram_mode == ExtendedRamMode::ExtendedAttributes
@@ -226,6 +213,16 @@ impl Mapper for Mapper005 {
 
     fn on_end_of_cpu_cycle(&mut self, _mem: &mut Memory) {
         self.frame_state.maybe_end_frame();
+    }
+
+    fn peek_register(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
+        match *addr {
+            0x5204 => ReadResult::full(self.frame_state.to_status_byte()),
+            0x5205 => ReadResult::full((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
+            0x5206 => ReadResult::full(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
+            0x5C00..=0x5FFF => ReadResult::full(self.peek_ext_rom(mem, *addr - 0x5C00)),
+            _ => ReadResult::OPEN_BUS,
+        }
     }
 
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {

@@ -37,18 +37,14 @@ pub struct Mapper150 {
 }
 
 impl Mapper for Mapper150 {
-    fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_register(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
         if *addr & 0xC101 == 0x4101 {
-            let reg_value: u8 = self.regs[self.selected_reg_type as usize].into() ;
+            let reg_value: u8 = self.regs[self.selected_reg_type as usize].into();
             let present_bits_mask = if mem.dip_switch & 1 == 1 { 0b0000_0011 } else { 0b0000_0111 };
-            return ReadResult::partial_open_bus(reg_value, present_bits_mask);
+            return ReadResult::partial(reg_value, present_bits_mask);
         }
 
-        if *addr < 0x6000 {
-            ReadResult::OPEN_BUS
-        } else {
-            mem.peek_prg(addr)
-        }
+        ReadResult::OPEN_BUS
     }
 
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, mut value: u8) {

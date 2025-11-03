@@ -199,10 +199,7 @@ impl Memory {
         self.prg_memory.set_prg_rom_outer_bank_number(index);
     }
 
-    pub fn peek_prg(&self, addr: CpuAddress) -> ReadResult {
-        self.prg_memory.peek(addr)
-    }
-
+    // TODO: Remove this.
     pub fn write_prg(&mut self, addr: CpuAddress, value: u8) {
         self.prg_memory.write(addr, value);
     }

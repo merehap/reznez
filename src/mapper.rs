@@ -39,24 +39,23 @@ use crate::memory::bank::bank_number::MemType;
 
 pub trait Mapper {
     // Should be const, but that's not yet allowed by Rust.
+    // Every mapper must define a Layout.
     fn layout(&self) -> Layout;
 
-    // Most mappers don't override the default cartridge peeking/reading behavior.
-    // TODO: Rename this to peek_register once params.peek_prg() is handled separately.
-    fn peek_cartridge_space(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
-        match *addr {
-            0x0000..=0x401F => unreachable!(),
-            0x4020..=0x5FFF => ReadResult::OPEN_BUS,
-            0x6000..=0xFFFF => mem.peek_prg(addr),
-        }
+    // Most mappers don't support peeking register values.
+    fn peek_register(&self, _mem: &Memory, addr: CpuAddress) -> ReadResult {
+        assert!(0x4020 <= *addr && *addr <= 0x5FFF);
+        ReadResult::OPEN_BUS
     }
 
-    // TODO: Rename this to read_register once params.peek_prg() is handled separately.
-    fn read_from_cartridge_space(&mut self, mem: &mut Memory, addr: CpuAddress) -> ReadResult {
-        self.peek_cartridge_space(mem, addr)
-    }
-
+    // Every mapper must implement write_register.
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8);
+
+    // Hack to allow Action 53 to use its own custom peeking logic.
+    // TODO: Provide a proper solution for Action 53.
+    fn peek_prg(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
+        mem.prg_memory.peek(addr)
+    }
 
     // Most mappers don't need to modify the MapperParams before ROM execution begins, but this
     // provides a relief valve for the rare settings that can't be expressed in a Layout.
@@ -116,12 +115,13 @@ pub trait Mapper {
             0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
             0x4015 if address_bus_type == AddressBusType::Cpu => ReadResult::no_bus_update(mem.apu_regs.peek_status(&mem.cpu_pinout).to_u8()),
             // DMA values must always be copied to the bus, unlike with the normal CPU address bus.
-            0x4015 => ReadResult::partial_open_bus(mem.apu_regs.peek_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
+            0x4015 => ReadResult::partial(mem.apu_regs.peek_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
             // TODO: Move ReadResult/mask specification into the controller.
-            0x4016          => ReadResult::partial_open_bus(mem.joypad1.peek_status() as u8, 0b0000_0111),
-            0x4017          => ReadResult::partial_open_bus(mem.joypad2.peek_status() as u8, 0b0000_0111),
+            0x4016          => ReadResult::partial(mem.joypad1.peek_status() as u8, 0b0000_0111),
+            0x4017          => ReadResult::partial(mem.joypad2.peek_status() as u8, 0b0000_0111),
             0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
-            0x4020..=0xFFFF => self.peek_cartridge_space(mem, addr),
+            0x4020..=0x5FFF => self.peek_register(mem, addr),
+            0x6000..=0xFFFF => self.peek_prg(mem, addr),
         }
     }
 
@@ -172,13 +172,14 @@ pub trait Mapper {
             0x4014 => ReadResult::OPEN_BUS,
             0x4015 if address_bus_type == AddressBusType::Cpu => ReadResult::no_bus_update(mem.apu_regs.read_status(&mem.cpu_pinout).to_u8()),
             // DMA values must always be copied to the bus, unlike with the normal CPU address bus.
-            0x4015 => ReadResult::partial_open_bus(mem.apu_regs.read_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
+            0x4015 => ReadResult::partial(mem.apu_regs.read_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
             // TODO: Move ReadResult/mask specification into the controller.
-            0x4016 => ReadResult::partial_open_bus(mem.joypad1.read_status() as u8, 0b0000_0111),
-            0x4017 => ReadResult::partial_open_bus(mem.joypad2.read_status() as u8, 0b0000_0111),
+            0x4016 => ReadResult::partial(mem.joypad1.read_status() as u8, 0b0000_0111),
+            0x4017 => ReadResult::partial(mem.joypad2.read_status() as u8, 0b0000_0111),
             // CPU Test Mode not yet supported.
             0x4018..=0x401F => ReadResult::OPEN_BUS,
-            0x4020..=0xFFFF => self.read_from_cartridge_space(mem, addr),
+            0x4020..=0x5FFF => self.peek_register(mem, addr),
+            0x6000..=0xFFFF => self.peek_prg(mem, addr),
         };
 
         let (value, bus_update_needed) = read_result.resolve(mem.cpu_pinout.data_bus);
