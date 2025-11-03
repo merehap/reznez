@@ -407,7 +407,12 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (159, None) => m::mapper016_4::Mapper016_4::default().supported(),
         (160, _) => TodoMapper,
         (161, None) => ReassignedMapper { correct_mapper: 1, correct_submapper: Some(0) },
-        (162..=176, _) => TodoMapper,
+        (162..=165, _) => TodoMapper,
+        // Used to be for Subor ROMs with incorrect bank ordering.
+        (166, None) => UnassignedMapper,
+        // Subor
+        (167, None) => m::mapper167::Mapper167::default().supported(),
+        (168..=176, _) => TodoMapper,
         // Hengedianzi (恒格电子) two-screen mirroring
         (177, None) => m::mapper177::Mapper177.supported(),
         (178, _) => TodoMapper,
