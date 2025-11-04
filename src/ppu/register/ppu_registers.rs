@@ -218,13 +218,14 @@ impl PpuRegisters {
         value
     }
 
-    pub fn peek_ppu_data(&self, old_value: u8) -> u8 {
+    pub fn peek_ppu_data(&self, old_data: u8) -> u8 {
         if self.current_address.is_in_palette_table() {
             // When reading palette data only, read the current data pointed to
             // by self.current_address, not what was previously pointed to.
             // Retain the previous ppu_io_bus values for the unused bits of palette data.
             let high_ppu_io_bus = self.ppu_io_bus.value() & 0b1100_0000;
-            old_value | high_ppu_io_bus
+            // TODO: Shoudn't the high bits of old_data be masked off?
+            high_ppu_io_bus | old_data
         } else {
             self.ppu_read_buffer
         }
@@ -236,7 +237,7 @@ impl PpuRegisters {
         value_read
     }
 
-    pub fn set_ppu_read_buffer(&mut self, new_pending_ppu_data: u8) {
+    pub fn set_ppu_read_buffer_and_advance(&mut self, new_pending_ppu_data: u8) {
         self.ppu_read_buffer = new_pending_ppu_data;
         self.current_address.advance(self.current_address_increment());
     }

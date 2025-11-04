@@ -153,14 +153,15 @@ pub trait Mapper {
                     0x2005 => mem.ppu_regs.peek_ppu_io_bus(),
                     0x2006 => mem.ppu_regs.peek_ppu_io_bus(),
                     0x2007 => {
-                        let value_read = self.ppu_peek(mem, mem.ppu_regs.current_address).value();
-                        let value_read = mem.ppu_regs.read_ppu_data(value_read);
-
-                        let value_buffered = self.ppu_read(mem, mem.ppu_regs.current_address.to_pending_data_source(), false).value();
-                        mem.ppu_regs.set_ppu_read_buffer(value_buffered);
-
+                        // TODO: Instead of peeking the old data, it must be available as part of some register.
+                        let old_data = self.ppu_peek(mem, mem.ppu_regs.current_address).value();
+                        let new_data = mem.ppu_regs.read_ppu_data(old_data);
+                        let pending_data_source = mem.ppu_regs.current_address.to_pending_data_source();
+                        let buffered_data = self.ppu_peek(mem, pending_data_source).value();
+                        self.on_ppu_read(mem, pending_data_source, buffered_data);
+                        mem.ppu_regs.set_ppu_read_buffer_and_advance(buffered_data);
                         self.on_ppu_address_change(mem, mem.ppu_regs.current_address);
-                        value_read
+                        new_data
                     }
                     _ => unreachable!(),
                 })
@@ -279,13 +280,11 @@ pub trait Mapper {
         }
     }
 
-    #[inline]
-    fn ppu_read(&mut self, mem: &mut Memory, address: PpuAddress, rendering: bool) -> PpuPeek {
+    // TODO: Should this always use current_address instead of taking a parameter?
+    fn ppu_internal_read(&mut self, mem: &mut Memory, address: PpuAddress) -> PpuPeek {
         let result = self.ppu_peek(mem, address);
         self.on_ppu_read(mem, address, result.value());
-        if rendering {
-            self.on_ppu_address_change(mem, address);
-        }
+        self.on_ppu_address_change(mem, address);
 
         result
     }
