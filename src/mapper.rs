@@ -153,7 +153,7 @@ pub trait Mapper {
                     0x2005 => mem.ppu_regs.peek_ppu_io_bus(),
                     0x2006 => mem.ppu_regs.peek_ppu_io_bus(),
                     0x2007 => {
-                        let old_value = self.ppu_read(mem, mem.ppu_regs.current_address(), false).value();
+                        let old_value = self.ppu_peek(mem, mem.ppu_regs.current_address()).value();
                         let old_value = mem.ppu_regs.peek_ppu_data(old_value);
                         mem.ppu_regs.ppu_io_bus.update_from_read(old_value);
                         let data = self.ppu_read(mem, mem.ppu_regs.current_address().to_pending_data_source(), false).value();
