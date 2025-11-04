@@ -157,7 +157,7 @@ pub trait Mapper {
                         let old_value = mem.ppu_regs.peek_ppu_data(old_value);
                         mem.ppu_regs.ppu_io_bus.update_from_read(old_value);
                         let data = self.ppu_read(mem, mem.ppu_regs.current_address().to_pending_data_source(), false).value();
-                        let data = mem.ppu_regs.set_pending_ppu_data(data);
+                        let data = mem.ppu_regs.set_ppu_read_buffer(data);
                         self.on_ppu_address_change(mem, mem.ppu_regs.current_address());
                         data
                     }

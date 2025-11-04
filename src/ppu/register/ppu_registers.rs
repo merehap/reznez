@@ -19,7 +19,7 @@ pub struct PpuRegisters {
     mask: Mask,
     status: Status,
     pub oam_addr: OamAddress,
-    pub pending_ppu_data: u8,
+    ppu_read_buffer: u8,
 
     clock: Clock,
 
@@ -43,7 +43,7 @@ impl PpuRegisters {
             mask: Mask::all_disabled(),
             status: Status::new(),
             oam_addr: OamAddress::new(),
-            pending_ppu_data: 0,
+            ppu_read_buffer: 0,
 
             clock,
 
@@ -106,10 +106,6 @@ impl PpuRegisters {
 
     pub fn rendering_enabled(&self) -> bool {
         self.rendering_enabled
-    }
-
-    pub fn pending_ppu_data(&self) -> u8 {
-        self.pending_ppu_data
     }
 
     pub fn current_address(&self) -> PpuAddress {
@@ -234,12 +230,12 @@ impl PpuRegisters {
             let high_ppu_io_bus = self.ppu_io_bus.value() & 0b1100_0000;
             old_value | high_ppu_io_bus
         } else {
-            self.pending_ppu_data
+            self.ppu_read_buffer
         }
     }
 
-    pub fn set_pending_ppu_data(&mut self, new_pending_ppu_data: u8) -> u8 {
-        self.pending_ppu_data = new_pending_ppu_data;
+    pub fn set_ppu_read_buffer(&mut self, new_pending_ppu_data: u8) -> u8 {
+        self.ppu_read_buffer = new_pending_ppu_data;
         self.current_address.advance(self.current_address_increment());
         self.ppu_io_bus.value()
     }
