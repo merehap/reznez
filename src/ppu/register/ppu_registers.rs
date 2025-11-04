@@ -108,10 +108,6 @@ impl PpuRegisters {
         self.rendering_enabled
     }
 
-    pub fn current_address(&self) -> PpuAddress {
-        self.current_address
-    }
-
     pub fn active_name_table_quadrant(&self) -> NameTableQuadrant {
         self.next_address.name_table_quadrant()
     }
@@ -232,6 +228,12 @@ impl PpuRegisters {
         } else {
             self.ppu_read_buffer
         }
+    }
+
+    pub fn read_ppu_data(&mut self, old_value: u8) -> u8 {
+        let value_read = self.peek_ppu_data(old_value);
+        self.ppu_io_bus.update_from_read(value_read);
+        value_read
     }
 
     pub fn set_ppu_read_buffer(&mut self, new_pending_ppu_data: u8) {
