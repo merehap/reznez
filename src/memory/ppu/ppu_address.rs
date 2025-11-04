@@ -149,6 +149,10 @@ impl PpuAddress {
         }
     }
 
+    pub fn is_in_palette_table(self) -> bool {
+        matches!(self.to_u16(), 0x3F00..=0x3FFF)
+    }
+
     /*
      * 0123456789ABCDEF
      * -----------01234  $SCROLL#1

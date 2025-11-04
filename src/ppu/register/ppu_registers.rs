@@ -223,7 +223,7 @@ impl PpuRegisters {
     }
 
     pub fn peek_ppu_data(&self, old_value: u8) -> u8 {
-        if self.current_address >= PpuAddress::PALETTE_TABLE_START {
+        if self.current_address.is_in_palette_table() {
             // When reading palette data only, read the current data pointed to
             // by self.current_address, not what was previously pointed to.
             // Retain the previous ppu_io_bus values for the unused bits of palette data.
@@ -234,10 +234,9 @@ impl PpuRegisters {
         }
     }
 
-    pub fn set_ppu_read_buffer(&mut self, new_pending_ppu_data: u8) -> u8 {
+    pub fn set_ppu_read_buffer(&mut self, new_pending_ppu_data: u8) {
         self.ppu_read_buffer = new_pending_ppu_data;
         self.current_address.advance(self.current_address_increment());
-        self.ppu_io_bus.value()
     }
 
     pub fn write_ppu_io_bus(&mut self, register_value: u8) {
