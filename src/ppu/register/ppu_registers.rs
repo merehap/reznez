@@ -26,7 +26,7 @@ pub struct PpuRegisters {
     pub current_address: PpuAddress,
     pub(in crate::ppu) next_address: PpuAddress,
 
-    pub ppu_io_bus: PpuIoBus,
+    ppu_io_bus: PpuIoBus,
 
     pub suppress_vblank_active: bool,
 

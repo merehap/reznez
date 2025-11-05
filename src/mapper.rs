@@ -95,13 +95,9 @@ pub trait Mapper {
             0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[*addr as usize & 0x07FF]),
             0x2000..=0x3FFF => {
                 ReadResult::full(match *addr & 0x2007 {
-                    0x2000 => mem.ppu_regs.peek_ppu_io_bus(),
-                    0x2001 => mem.ppu_regs.peek_ppu_io_bus(),
+                    0x2000 | 0x2001 | 0x2003 | 0x2005 | 0x2006 => mem.ppu_regs.peek_ppu_io_bus(),
                     0x2002 => mem.ppu_regs.peek_status(),
-                    0x2003 => mem.ppu_regs.peek_ppu_io_bus(),
                     0x2004 => mem.ppu_regs.peek_oam_data(&mem.oam),
-                    0x2005 => mem.ppu_regs.peek_ppu_io_bus(),
-                    0x2006 => mem.ppu_regs.peek_ppu_io_bus(),
                     0x2007 => {
                         let old_value = self.ppu_peek(mem, mem.ppu_regs.current_address).value();
                         mem.ppu_regs.peek_ppu_data(old_value)
@@ -145,13 +141,9 @@ pub trait Mapper {
             0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[*addr as usize & 0x07FF]),
             0x2000..=0x3FFF => {
                 ReadResult::full(match *addr & 0x2007 {
-                    0x2000 => mem.ppu_regs.peek_ppu_io_bus(),
-                    0x2001 => mem.ppu_regs.peek_ppu_io_bus(),
+                    0x2000 | 0x2001 | 0x2003 | 0x2005 | 0x2006 => mem.ppu_regs.peek_ppu_io_bus(),
                     0x2002 => mem.ppu_regs.read_status(),
-                    0x2003 => mem.ppu_regs.peek_ppu_io_bus(),
                     0x2004 => mem.ppu_regs.read_oam_data(&mem.oam),
-                    0x2005 => mem.ppu_regs.peek_ppu_io_bus(),
-                    0x2006 => mem.ppu_regs.peek_ppu_io_bus(),
                     0x2007 => {
                         // TODO: Instead of peeking the old data, it must be available as part of some register.
                         let old_data = self.ppu_peek(mem, mem.ppu_regs.current_address).value();
