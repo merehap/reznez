@@ -109,6 +109,7 @@ pub static PRE_RENDER_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::ne
     use CycleAction::*;
 
     let mut scanline = ScanlineActions::new();
+    scanline.add(            0, vec![StartPreRenderScanline                                            ]);
     // Clear vblank, sprite 0 hit, and sprite overflow.
     scanline.add(            1, vec![ClearFlags                                                        ]);
     scanline.add(          321, vec![StartReadingBackgroundTiles                                       ]);

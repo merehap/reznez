@@ -68,10 +68,9 @@ impl Ppu {
     }
 
     pub fn step(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, frame: &mut Frame) {
-        let clock = *mem.ppu_regs.clock();
-        mem.ppu_regs.maybe_toggle_rendering_enabled();
-        mem.ppu_regs.maybe_decay_ppu_io_bus(&clock);
+        mem.ppu_regs.tick();
 
+        let clock = *mem.ppu_regs.clock();
         if log_enabled!(target: "ppusteps", Info) {
             info!(" {clock}\t{}", self.frame_actions.format_current_cycle_actions(&clock));
         }
@@ -92,7 +91,7 @@ impl Ppu {
         mapper.on_end_of_ppu_cycle();
     }
 
-    pub fn execute_cycle_action(&mut self, mapper: &mut dyn Mapper, mut mem: &mut Memory, frame: &mut Frame, cycle_action: CycleAction) {
+    fn execute_cycle_action(&mut self, mapper: &mut dyn Mapper, mut mem: &mut Memory, frame: &mut Frame, cycle_action: CycleAction) {
         let background_table_side = mem.ppu_regs.background_table_side();
 
         let tile_column = mem.ppu_regs.current_address.x_scroll().coarse();

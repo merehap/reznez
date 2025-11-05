@@ -157,13 +157,18 @@ impl PpuRegisters {
         self.reset_recently = false;
     }
 
-    pub(in crate::ppu) fn maybe_decay_ppu_io_bus(&mut self, clock: &Clock) {
-        if clock.cycle() == 1 {
+    pub fn tick(&mut self) {
+        self.maybe_decay_ppu_io_bus();
+        self.maybe_toggle_rendering_enabled();
+    }
+
+    fn maybe_decay_ppu_io_bus(&mut self) {
+        if self.clock.cycle() == 1 {
             self.ppu_io_bus.maybe_decay();
         }
     }
 
-    pub fn maybe_toggle_rendering_enabled(&mut self) {
+    fn maybe_toggle_rendering_enabled(&mut self) {
         use RenderingToggleState::*;
         match self.rendering_toggle_state {
             Inactive => {}
