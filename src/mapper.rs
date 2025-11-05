@@ -156,11 +156,13 @@ pub trait Mapper {
                         // TODO: Instead of peeking the old data, it must be available as part of some register.
                         let old_data = self.ppu_peek(mem, mem.ppu_regs.current_address).value();
                         let new_data = mem.ppu_regs.read_ppu_data(old_data);
+
                         let pending_data_source = mem.ppu_regs.current_address.to_pending_data_source();
                         let buffered_data = self.ppu_peek(mem, pending_data_source).value();
                         self.on_ppu_read(mem, pending_data_source, buffered_data);
                         mem.ppu_regs.set_ppu_read_buffer_and_advance(buffered_data);
                         self.on_ppu_address_change(mem, mem.ppu_regs.current_address);
+
                         new_data
                     }
                     _ => unreachable!(),
