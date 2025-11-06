@@ -34,9 +34,9 @@ pub struct Ppu {
 
     next_sprite_tile_number: TileNumber,
     current_sprite_y: SpriteY,
-    // TODO: Remove this. The IO bus should be set to this instead.
-    pattern_address: PpuAddress,
     sprite_visible: bool,
+
+    address_bus: PpuAddress,
 
     frame_actions: FrameActions,
 
@@ -57,8 +57,9 @@ impl Ppu {
 
             next_sprite_tile_number: TileNumber::new(0),
             current_sprite_y: SpriteY::new(0),
-            pattern_address: PpuAddress::ZERO,
             sprite_visible: false,
+
+            address_bus: PpuAddress::ZERO,
 
             frame_actions: NTSC_FRAME_ACTIONS.clone(),
 
@@ -120,22 +121,22 @@ impl Ppu {
                 self.attribute_register.set_pending_palette_table_index(palette_table_index);
             }
             LoadPatternLowAddress => {
-                self.pattern_address = PpuAddress::in_pattern_table(
+                self.address_bus = PpuAddress::in_pattern_table(
                     background_table_side, self.next_tile_number, row_in_tile, false);
-                mapper.on_ppu_address_change(&mut mem, self.pattern_address);
+                mapper.on_ppu_address_change(&mut mem, self.address_bus);
             }
             LoadPatternHighAddress => {
-                self.pattern_address = PpuAddress::in_pattern_table(
+                self.address_bus = PpuAddress::in_pattern_table(
                     background_table_side, self.next_tile_number, row_in_tile, true);
-                mapper.on_ppu_address_change(&mut mem, self.pattern_address);
+                mapper.on_ppu_address_change(&mut mem, self.address_bus);
             }
             GetPatternLowByte => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                self.pattern_register.set_pending_low_byte(mapper.ppu_internal_read(mem, self.pattern_address));
+                self.pattern_register.set_pending_low_byte(mapper.ppu_internal_read(mem, self.address_bus));
             }
             GetPatternHighByte => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                self.pattern_register.set_pending_high_byte(mapper.ppu_internal_read(mem, self.pattern_address));
+                self.pattern_register.set_pending_high_byte(mapper.ppu_internal_read(mem, self.address_bus));
             }
 
             GotoNextTileColumn => {
@@ -292,22 +293,22 @@ impl Ppu {
 
             LoadSpritePatternLowAddress => {
                 let select_high = false;
-                (self.pattern_address, self.sprite_visible) =
+                (self.address_bus, self.sprite_visible) =
                     self.current_sprite_pattern_address(mem, select_high);
-                mapper.on_ppu_address_change(&mut mem, self.pattern_address);
+                mapper.on_ppu_address_change(&mut mem, self.address_bus);
             }
             LoadSpritePatternHighAddress => {
                 let select_high = true;
-                (self.pattern_address, self.sprite_visible) =
+                (self.address_bus, self.sprite_visible) =
                     self.current_sprite_pattern_address(mem, select_high);
-                mapper.on_ppu_address_change(&mut mem, self.pattern_address);
+                mapper.on_ppu_address_change(&mut mem, self.address_bus);
             }
             GetSpritePatternLowByte => {
                 if !mem.ppu_regs.rendering_enabled() {
                     return;
                 }
 
-                let pattern_low = mapper.ppu_internal_read(mem, self.pattern_address);
+                let pattern_low = mapper.ppu_internal_read(mem, self.address_bus);
                 if !self.sprite_visible {
                     return;
                 }
@@ -320,7 +321,7 @@ impl Ppu {
                     return;
                 }
 
-                let pattern_high = mapper.ppu_internal_read(mem, self.pattern_address);
+                let pattern_high = mapper.ppu_internal_read(mem, self.address_bus);
                 if !self.sprite_visible {
                     return;
                 }
