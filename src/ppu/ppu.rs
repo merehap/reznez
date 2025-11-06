@@ -109,13 +109,13 @@ impl Ppu {
         match cycle_action {
             GetPatternIndex => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                let address = PpuAddress::in_name_table(name_table_quadrant, tile_column, tile_row);
-                self.next_tile_number = TileNumber::new(mapper.ppu_internal_read(mem, address).value());
+                self.address_bus = PpuAddress::in_name_table(name_table_quadrant, tile_column, tile_row);
+                self.next_tile_number = TileNumber::new(mapper.ppu_internal_read(mem, self.address_bus).value());
             }
             GetPaletteIndex => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                let address = PpuAddress::in_attribute_table(name_table_quadrant, tile_column, tile_row);
-                let attribute_byte = mapper.ppu_internal_read(mem, address).value();
+                self.address_bus = PpuAddress::in_attribute_table(name_table_quadrant, tile_column, tile_row);
+                let attribute_byte = mapper.ppu_internal_read(mem, self.address_bus).value();
                 let palette_table_index =
                     PaletteTableIndex::from_attribute_byte(attribute_byte, tile_column, tile_row);
                 self.attribute_register.set_pending_palette_table_index(palette_table_index);
