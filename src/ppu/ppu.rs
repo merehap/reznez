@@ -107,25 +107,30 @@ impl Ppu {
 
         use CycleAction::*;
         match cycle_action {
-            GetPatternIndex => {
+            SetPatternIndexAddress => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
                 self.address_bus = PpuAddress::in_name_table(name_table_quadrant, tile_column, tile_row);
+            }
+            GetPatternIndex => {
+                if !mem.ppu_regs.rendering_enabled() { return; }
                 self.next_tile_number = TileNumber::new(mapper.ppu_internal_read(mem, self.address_bus).value());
+            }
+            SetPaletteIndexAddress => {
+                if !mem.ppu_regs.rendering_enabled() { return; }
+                self.address_bus = PpuAddress::in_attribute_table(name_table_quadrant, tile_column, tile_row);
             }
             GetPaletteIndex => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                self.address_bus = PpuAddress::in_attribute_table(name_table_quadrant, tile_column, tile_row);
                 let attribute_byte = mapper.ppu_internal_read(mem, self.address_bus).value();
-                let palette_table_index =
-                    PaletteTableIndex::from_attribute_byte(attribute_byte, tile_column, tile_row);
+                let palette_table_index = PaletteTableIndex::from_attribute_byte(attribute_byte, tile_column, tile_row);
                 self.attribute_register.set_pending_palette_table_index(palette_table_index);
             }
-            LoadPatternLowAddress => {
+            SetPatternLowAddress => {
                 self.address_bus = PpuAddress::in_pattern_table(
                     background_table_side, self.next_tile_number, row_in_tile, false);
                 mapper.on_ppu_address_change(&mut mem, self.address_bus);
             }
-            LoadPatternHighAddress => {
+            SetPatternHighAddress => {
                 self.address_bus = PpuAddress::in_pattern_table(
                     background_table_side, self.next_tile_number, row_in_tile, true);
                 mapper.on_ppu_address_change(&mut mem, self.address_bus);
@@ -291,13 +296,13 @@ impl Ppu {
                 //if !self.rendering_enabled { return; }
             }
 
-            LoadSpritePatternLowAddress => {
+            SetSpritePatternLowAddress => {
                 let select_high = false;
                 (self.address_bus, self.sprite_visible) =
                     self.current_sprite_pattern_address(mem, select_high);
                 mapper.on_ppu_address_change(&mut mem, self.address_bus);
             }
-            LoadSpritePatternHighAddress => {
+            SetSpritePatternHighAddress => {
                 let select_high = true;
                 (self.address_bus, self.sprite_visible) =
                     self.current_sprite_pattern_address(mem, select_high);
