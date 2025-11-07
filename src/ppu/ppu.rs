@@ -91,7 +91,7 @@ impl Ppu {
     fn execute_cycle_action(&mut self, mapper: &mut dyn Mapper, mut mem: &mut Memory, frame: &mut Frame, cycle_action: CycleAction) {
         let background_table_side = mem.ppu_regs.background_table_side();
 
-        let tile_column = mem.ppu_regs.current_address.x_scroll().coarse();
+        let tile_column = mem.ppu_regs.current_address.coarse_x_scroll();
         let tile_row = mem.ppu_regs.current_address.y_scroll().coarse();
         let row_in_tile = mem.ppu_regs.current_address.y_scroll().fine();
         let name_table_quadrant = mem.ppu_regs.current_address.name_table_quadrant();
@@ -157,7 +157,7 @@ impl Ppu {
             ResetTileColumn => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
                 let next_address = mem.ppu_regs.next_address;
-                mem.ppu_regs.current_address.copy_x_scroll(next_address);
+                mem.ppu_regs.copy_next_x_scroll_to_current();
                 mem.ppu_regs.current_address.copy_horizontal_name_table_side(next_address);
             }
             PrepareForNextTile => {
@@ -173,7 +173,7 @@ impl Ppu {
                     // TODO: Figure out where this goes. Maybe have frame call palette_table when displaying.
                     frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
-                    let column_in_tile = mem.ppu_regs.current_address.x_scroll().fine();
+                    let column_in_tile = mem.ppu_regs.current_fine_x;
                     let palette_table_index = self.attribute_register.palette_table_index(column_in_tile);
                     let palette = palette_table.background_palette(palette_table_index);
 

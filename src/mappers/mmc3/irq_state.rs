@@ -82,7 +82,7 @@ impl Mmc3IrqState {
     };
 
     pub fn tick_counter(&mut self, mem: &mut Memory, address: PpuAddress) {
-        if !self.allowed_address_range.contains(&address.to_scroll_u16()) {
+        if !self.allowed_address_range.contains(&address.to_u16()) {
             return;
         }
 

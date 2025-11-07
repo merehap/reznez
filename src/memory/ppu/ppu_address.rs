@@ -21,23 +21,16 @@ use crate::ppu::tile_number::TileNumber;
 #[derive(Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub struct PpuAddress {
     address: u16,
-    fine_x_scroll: ColumnInTile,
 }
 
 impl PpuAddress {
     pub const ZERO: PpuAddress = PpuAddress {
         address: 0x0000,
-        fine_x_scroll: ColumnInTile::Zero,
-    };
-    pub const PALETTE_TABLE_START: PpuAddress = PpuAddress {
-        address: 0x3F00,
-        fine_x_scroll: ColumnInTile::Zero,
     };
 
     pub const fn from_u16(value: u16) -> PpuAddress {
         PpuAddress {
             address: value & 0b0011_1111_1111_1111,
-            fine_x_scroll: ColumnInTile::Zero,
         }
     }
 
@@ -153,19 +146,7 @@ impl PpuAddress {
         matches!(self.to_u16(), 0x3F00..=0x3FFF)
     }
 
-    /*
-     * 0123456789ABCDEF
-     * -----------01234  $SCROLL#1
-     * ----67----------  $CTRL
-     */
-    pub fn x_scroll(self) -> XScroll {
-        XScroll {
-            coarse: self.coarse_x_scroll(),
-            fine: self.fine_x_scroll,
-        }
-    }
-
-    fn coarse_x_scroll(self) -> TileColumn {
+    pub fn coarse_x_scroll(self) -> TileColumn {
         splitbits_named_ux!(self.to_u16(), ".... .... ...x xxxx").into()
     }
 
@@ -182,25 +163,19 @@ impl PpuAddress {
     }
 
     fn coarse_y_scroll(self) -> TileRow {
-        splitbits_named_into_ux!(self.to_scroll_u16(), "...... yyyyy .....")
+        splitbits_named_into_ux!(self.address, "...... yyyyy .....")
     }
 
     fn fine_y_scroll(self) -> RowInTile {
-        splitbits_named_into_ux!(self.to_scroll_u16(), ". yyy ............")
+        splitbits_named_into_ux!(self.address, ". yyy ............")
     }
 
     pub fn set_name_table_quadrant(&mut self, n: NameTableQuadrant) {
-        self.address = replacebits!(self.to_scroll_u16(), "0... nn.. .... ....");
+        self.address = replacebits!(self.address, "0... nn.. .... ....");
     }
 
-    pub fn set_x_scroll(&mut self, value: u8) {
-        let value = XScroll::from_u8(value);
-        self.fine_x_scroll = value.fine();
-        self.set_coarse_x_scroll(value.coarse());
-    }
-
-    fn set_coarse_x_scroll(&mut self, x: TileColumn) {
-        self.address = replacebits!(self.to_scroll_u16(), ".... .... ...x xxxx");
+    pub fn set_coarse_x_scroll(&mut self, x: TileColumn) {
+        self.address = replacebits!(self.address, ".... .... ...x xxxx");
     }
 
     pub fn set_y_scroll(&mut self, value: u8) {
@@ -210,15 +185,11 @@ impl PpuAddress {
     }
 
     fn set_coarse_y_scroll(&mut self, y: TileRow) {
-        self.address = replacebits!(self.to_scroll_u16(), ".... ..yy yyy. ....");
+        self.address = replacebits!(self.address, ".... ..yy yyy. ....");
     }
 
     fn set_fine_y_scroll(&mut self, y: RowInTile) {
-        self.address = replacebits!(self.to_scroll_u16(), "0yyy .... .... ....");
-    }
-
-    pub fn copy_x_scroll(&mut self, other: PpuAddress) {
-        self.set_x_scroll(other.x_scroll().to_u8());
+        self.address = replacebits!(self.address, "0yyy .... .... ....");
     }
 
     pub fn copy_y_scroll(&mut self, other: PpuAddress) {
@@ -238,24 +209,20 @@ impl PpuAddress {
     pub fn set_high_byte(&mut self, h: u8) {
         // Lose the top bit of the fine y scroll.
         let h = h & 0b0011_1111;
-        self.address = replacebits!(self.to_scroll_u16(), "00hh hhhh .... ....");
+        self.address = replacebits!(self.address, "00hh hhhh .... ....");
     }
 
     pub fn set_low_byte(&mut self, l: u8) {
-        self.address = replacebits!(self.to_scroll_u16(), ".... .... llll llll");
+        self.address = replacebits!(self.address, ".... .... llll llll");
     }
 
     pub const fn to_u16(self) -> u16 {
         // Chop off the top bit of fine y to leave a 14-bit representation.
-        self.to_scroll_u16() & 0b0011_1111_1111_1111
+        self.address & 0b0011_1111_1111_1111
     }
 
     pub fn to_u32(self) -> u32 {
         u32::from(self.to_u16())
-    }
-
-    pub const fn to_scroll_u16(self) -> u16 {
-        self.address
     }
 
     pub fn pattern_table_side(self) -> PatternTableSide {
@@ -277,15 +244,15 @@ impl fmt::Display for PpuAddress {
 
 #[derive(Clone, Copy, Debug)]
 pub struct XScroll {
-    coarse: TileColumn,
-    fine: ColumnInTile,
+    pub coarse: TileColumn,
+    pub fine: ColumnInTile,
 }
 
 impl XScroll {
     pub const ZERO: XScroll =
         XScroll { coarse: TileColumn::ZERO, fine: ColumnInTile::Zero };
 
-    fn from_u8(value: u8) -> XScroll {
+    pub fn from_u8(value: u8) -> XScroll {
         let (coarse, fine) = splitbits_named_into_ux!(value, "cccccfff");
         XScroll { coarse, fine }
     }
@@ -368,7 +335,7 @@ mod tests {
     fn reduce_bit_1_from_high_byte() {
         let mut address = PpuAddress::from_u16(0);
         address.set_high_byte(0b1111_1111);
-        assert_eq!(address.to_scroll_u16(), 0b0011_1111_0000_0000);
+        assert_eq!(address.address, 0b0011_1111_0000_0000);
         assert_eq!(address.to_u16(), 0b0011_1111_0000_0000);
     }
 
@@ -376,7 +343,7 @@ mod tests {
     fn reduce_bit_1_from_y_scroll() {
         let mut address = PpuAddress::from_u16(0);
         address.set_y_scroll(0b1111_1111);
-        assert_eq!(address.to_scroll_u16(), 0b0111_0011_1110_0000);
+        assert_eq!(address.address, 0b0111_0011_1110_0000);
         assert_eq!(address.to_u16(), 0b0011_0011_1110_0000);
     }
 
@@ -384,16 +351,8 @@ mod tests {
     fn wrap_advance() {
         let mut address = PpuAddress::from_u16(0x3FFF);
         address.advance(AddressIncrement::Right);
-        assert_eq!(address.to_scroll_u16(), 0x0000);
+        assert_eq!(address.address, 0x0000);
         assert_eq!(address.to_u16(), 0x0000);
-    }
-
-    #[test]
-    fn set_x_scroll() {
-        let mut address = PpuAddress::from_u16(0);
-        assert_eq!(address.x_scroll().to_u8(), 0x00);
-        address.set_x_scroll(0xFF);
-        assert_eq!(address.x_scroll().to_u8(), 0xFF);
     }
 
     #[test]
@@ -401,17 +360,6 @@ mod tests {
         let mut address = PpuAddress::from_u16(0);
         assert_eq!(address.y_scroll().to_u8(), 0x00);
         address.set_y_scroll(0xFF);
-        assert_eq!(address.y_scroll().to_u8(), 0xFF);
-    }
-
-    #[test]
-    fn set_x_y_scroll() {
-        let mut address = PpuAddress::from_u16(0);
-        assert_eq!(address.x_scroll().to_u8(), 0x00);
-        assert_eq!(address.y_scroll().to_u8(), 0x00);
-        address.set_x_scroll(0xFD);
-        address.set_y_scroll(0xFF);
-        assert_eq!(address.x_scroll().to_u8(), 0xFD);
         assert_eq!(address.y_scroll().to_u8(), 0xFF);
     }
 }

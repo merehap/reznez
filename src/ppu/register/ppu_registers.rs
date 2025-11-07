@@ -4,6 +4,7 @@ use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pattern_table_side::PatternTableSide;
+use crate::ppu::pixel_index::ColumnInTile;
 use crate::ppu::register::ppu_io_bus::PpuIoBus;
 use crate::ppu::register::registers::ctrl;
 use crate::ppu::register::registers::ctrl::{AddressIncrement, Ctrl};
@@ -24,7 +25,9 @@ pub struct PpuRegisters {
     clock: Clock,
 
     pub current_address: PpuAddress,
+    pub current_fine_x: ColumnInTile,
     pub(in crate::ppu) next_address: PpuAddress,
+    pub next_fine_x: ColumnInTile,
 
     ppu_io_bus: PpuIoBus,
 
@@ -48,7 +51,9 @@ impl PpuRegisters {
             clock,
 
             current_address: PpuAddress::ZERO,
+            current_fine_x: ColumnInTile::Zero,
             next_address: PpuAddress::ZERO,
+            next_fine_x: ColumnInTile::Zero,
 
             ppu_io_bus: PpuIoBus::new(),
 
@@ -113,7 +118,10 @@ impl PpuRegisters {
     }
 
     pub fn x_scroll(&self) -> XScroll {
-        self.next_address.x_scroll()
+        XScroll {
+            coarse: self.next_address.coarse_x_scroll(),
+            fine: self.next_fine_x,
+        }
     }
 
     pub fn y_scroll(&self) -> YScroll {
@@ -280,7 +288,7 @@ impl PpuRegisters {
     // 0x2005
     pub fn write_scroll(&mut self, dimension: u8) {
         match self.write_toggle {
-            WriteToggle::FirstByte => self.next_address.set_x_scroll(dimension),
+            WriteToggle::FirstByte => self.set_next_address_x_scroll(dimension),
             WriteToggle::SecondByte => self.next_address.set_y_scroll(dimension),
         }
 
@@ -305,6 +313,17 @@ impl PpuRegisters {
     pub fn write_ppu_data(&mut self, value: u8) {
         self.ppu_io_bus.update_from_write(value);
         self.current_address.advance(self.current_address_increment());
+    }
+
+    pub fn set_next_address_x_scroll(&mut self, value: u8) {
+        let value = XScroll::from_u8(value);
+        self.next_fine_x = value.fine();
+        self.next_address.set_coarse_x_scroll(value.coarse());
+    }
+
+    pub fn copy_next_x_scroll_to_current(&mut self) {
+        self.current_fine_x = self.next_fine_x;
+        self.current_address.set_coarse_x_scroll(self.next_address.coarse_x_scroll());
     }
 }
 
