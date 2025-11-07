@@ -80,7 +80,7 @@ fn nestest() {
             }
         }
 
-        let program_counter = nes.memory().address_bus(AddressBusType::Cpu);
+        let program_counter = nes.memory().cpu_address_bus(AddressBusType::Cpu);
 
         let mut a;
         let mut x;

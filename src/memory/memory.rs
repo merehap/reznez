@@ -12,6 +12,7 @@ use crate::mapper::{ChrBankRegisterId, ChrMemory, CiramSide, MetaRegisterId, Nam
 use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::Ciram;
+use crate::memory::ppu::ppu_pinout::PpuPinout;
 use crate::ppu::clock::Clock;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
@@ -38,6 +39,7 @@ pub struct Memory {
     pub dmc_dma: DmcDma,
     pub oam_dma: OamDma,
     pub cpu_pinout: CpuPinout,
+    pub ppu_pinout: PpuPinout,
     pub oam_dma_address_bus: CpuAddress,
     pub dmc_dma_address_bus: CpuAddress,
     cpu_cycle: i64,
@@ -72,6 +74,7 @@ impl Memory {
             dmc_dma: DmcDma::IDLE,
             oam_dma: OamDma::IDLE,
             cpu_pinout: CpuPinout::new(),
+            ppu_pinout: PpuPinout::new(),
             oam_dma_address_bus: CpuAddress::ZERO,
             dmc_dma_address_bus: CpuAddress::ZERO,
             cpu_cycle: 0,
@@ -101,7 +104,7 @@ impl Memory {
         &self.cpu_internal_ram
     }
 
-    pub fn address_bus(&self, address_bus_type: AddressBusType) -> CpuAddress {
+    pub fn cpu_address_bus(&self, address_bus_type: AddressBusType) -> CpuAddress {
         match address_bus_type {
             AddressBusType::Cpu => self.cpu_pinout.address_bus,
             AddressBusType::OamDma => self.oam_dma_address_bus,
@@ -109,7 +112,7 @@ impl Memory {
         }
     }
 
-    pub fn set_address_bus(&mut self, address_bus_type: AddressBusType, address: CpuAddress) {
+    pub fn set_cpu_address_bus(&mut self, address_bus_type: AddressBusType, address: CpuAddress) {
         match address_bus_type {
             AddressBusType::Cpu => self.cpu_pinout.address_bus = address,
             AddressBusType::OamDma => self.oam_dma_address_bus = address,

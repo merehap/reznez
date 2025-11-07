@@ -36,8 +36,6 @@ pub struct Ppu {
     current_sprite_y: SpriteY,
     sprite_visible: bool,
 
-    address_bus: PpuAddress,
-
     frame_actions: FrameActions,
 
     pattern_source_frame: Frame,
@@ -58,8 +56,6 @@ impl Ppu {
             next_sprite_tile_number: TileNumber::new(0),
             current_sprite_y: SpriteY::new(0),
             sprite_visible: false,
-
-            address_bus: PpuAddress::ZERO,
 
             frame_actions: NTSC_FRAME_ACTIONS.clone(),
 
@@ -109,41 +105,45 @@ impl Ppu {
         match cycle_action {
             SetPatternIndexAddress => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                self.address_bus = PpuAddress::in_name_table(name_table_quadrant, tile_column, tile_row);
-                mapper.on_ppu_address_change(&mut mem, self.address_bus);
+                mem.ppu_pinout.set_address_bus(PpuAddress::in_name_table(name_table_quadrant, tile_column, tile_row));
+                let addr = mem.ppu_pinout.address_bus();
+                mapper.on_ppu_address_change(&mut mem, addr);
             }
             GetPatternIndex => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                self.next_tile_number = TileNumber::new(mapper.ppu_internal_read(mem, self.address_bus).value());
+                self.next_tile_number = TileNumber::new(mapper.ppu_internal_read(mem, mem.ppu_pinout.address_bus()).value());
             }
             SetPaletteIndexAddress => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                self.address_bus = PpuAddress::in_attribute_table(name_table_quadrant, tile_column, tile_row);
-                mapper.on_ppu_address_change(&mut mem, self.address_bus);
+                mem.ppu_pinout.set_address_bus(PpuAddress::in_attribute_table(name_table_quadrant, tile_column, tile_row));
+                let addr = mem.ppu_pinout.address_bus();
+                mapper.on_ppu_address_change(&mut mem, addr);
             }
             GetPaletteIndex => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                let attribute_byte = mapper.ppu_internal_read(mem, self.address_bus).value();
+                let attribute_byte = mapper.ppu_internal_read(mem, mem.ppu_pinout.address_bus()).value();
                 let palette_table_index = PaletteTableIndex::from_attribute_byte(attribute_byte, tile_column, tile_row);
                 self.attribute_register.set_pending_palette_table_index(palette_table_index);
             }
             SetPatternLowAddress => {
-                self.address_bus = PpuAddress::in_pattern_table(
-                    background_table_side, self.next_tile_number, row_in_tile, false);
-                mapper.on_ppu_address_change(&mut mem, self.address_bus);
+                mem.ppu_pinout.set_address_bus(
+                    PpuAddress::in_pattern_table(background_table_side, self.next_tile_number, row_in_tile, false));
+                let addr = mem.ppu_pinout.address_bus();
+                mapper.on_ppu_address_change(&mut mem, addr);
             }
             SetPatternHighAddress => {
-                self.address_bus = PpuAddress::in_pattern_table(
-                    background_table_side, self.next_tile_number, row_in_tile, true);
-                mapper.on_ppu_address_change(&mut mem, self.address_bus);
+                mem.ppu_pinout.set_address_bus(
+                    PpuAddress::in_pattern_table(background_table_side, self.next_tile_number, row_in_tile, true));
+                let addr = mem.ppu_pinout.address_bus();
+                mapper.on_ppu_address_change(&mut mem, addr);
             }
             GetPatternLowByte => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                self.pattern_register.set_pending_low_byte(mapper.ppu_internal_read(mem, self.address_bus));
+                self.pattern_register.set_pending_low_byte(mapper.ppu_internal_read(mem, mem.ppu_pinout.address_bus()));
             }
             GetPatternHighByte => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                self.pattern_register.set_pending_high_byte(mapper.ppu_internal_read(mem, self.address_bus));
+                self.pattern_register.set_pending_high_byte(mapper.ppu_internal_read(mem, mem.ppu_pinout.address_bus()));
             }
 
             GotoNextTileColumn => {
@@ -300,22 +300,24 @@ impl Ppu {
 
             SetSpritePatternLowAddress => {
                 let select_high = false;
-                (self.address_bus, self.sprite_visible) =
-                    self.current_sprite_pattern_address(mem, select_high);
-                mapper.on_ppu_address_change(&mut mem, self.address_bus);
+                let addr;
+                (addr, self.sprite_visible) = self.current_sprite_pattern_address(mem, select_high);
+                mem.ppu_pinout.set_address_bus(addr);
+                mapper.on_ppu_address_change(&mut mem, addr);
             }
             SetSpritePatternHighAddress => {
                 let select_high = true;
-                (self.address_bus, self.sprite_visible) =
-                    self.current_sprite_pattern_address(mem, select_high);
-                mapper.on_ppu_address_change(&mut mem, self.address_bus);
+                let addr;
+                (addr, self.sprite_visible) = self.current_sprite_pattern_address(mem, select_high);
+                mem.ppu_pinout.set_address_bus(addr);
+                mapper.on_ppu_address_change(&mut mem, addr);
             }
             GetSpritePatternLowByte => {
                 if !mem.ppu_regs.rendering_enabled() {
                     return;
                 }
 
-                let pattern_low = mapper.ppu_internal_read(mem, self.address_bus);
+                let pattern_low = mapper.ppu_internal_read(mem, mem.ppu_pinout.address_bus());
                 if !self.sprite_visible {
                     return;
                 }
@@ -328,7 +330,7 @@ impl Ppu {
                     return;
                 }
 
-                let pattern_high = mapper.ppu_internal_read(mem, self.address_bus);
+                let pattern_high = mapper.ppu_internal_read(mem, mem.ppu_pinout.address_bus());
                 if !self.sprite_visible {
                     return;
                 }

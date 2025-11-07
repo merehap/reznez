@@ -81,7 +81,7 @@ pub trait Mapper {
 
     fn cpu_peek_unresolved(&self, mem: &Memory, address_bus_type: AddressBusType, mut addr: CpuAddress) -> ReadResult {
         // See "APU Register Activation" in the README and asm file here: https://github.com/100thCoin/AccuracyCoin
-        let apu_registers_active = matches!(*mem.address_bus(AddressBusType::Cpu), 0x4000..=0x401F);
+        let apu_registers_active = matches!(*mem.cpu_address_bus(AddressBusType::Cpu), 0x4000..=0x401F);
         // TODO: I assume that the mirrors occur over the whole address space, but need bus conflicts emulated to actually work.
         // Limit the range for now to just 0x4000 to 0x40FF to pass the relevant AccuracyCoin test.
         if apu_registers_active && address_bus_type != AddressBusType::Cpu && *addr >= 0x4000 && *addr < 0x4100 {
@@ -124,10 +124,10 @@ pub trait Mapper {
     #[inline]
     #[rustfmt::skip]
     fn cpu_read(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) -> u8 {
-        let mut addr = mem.address_bus(address_bus_type);
+        let mut addr = mem.cpu_address_bus(address_bus_type);
 
         // See "APU Register Activation" in the README and asm file here: https://github.com/100thCoin/AccuracyCoin
-        let apu_registers_active = matches!(*mem.address_bus(AddressBusType::Cpu), 0x4000..=0x401F);
+        let apu_registers_active = matches!(*mem.cpu_address_bus(AddressBusType::Cpu), 0x4000..=0x401F);
         // TODO: I assume that the mirrors occur over the whole address space, but need bus conflicts emulated to actually work.
         // Limit the range for now to just 0x4000 to 0x40FF to pass the relevant AccuracyCoin test.
         if apu_registers_active && address_bus_type != AddressBusType::Cpu && *addr >= 0x4000 && *addr < 0x4100 {
@@ -190,9 +190,8 @@ pub trait Mapper {
 
     #[inline]
     #[rustfmt::skip]
-    #[allow(clippy::too_many_arguments)]
     fn cpu_write(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) {
-        let addr = mem.address_bus(address_bus_type);
+        let addr = mem.cpu_address_bus(address_bus_type);
         let value = mem.cpu_pinout.data_bus;
         // TODO: Move this into mapper, right after cpu_write() is called?
         self.on_cpu_write(mem, addr, value);
@@ -250,7 +249,7 @@ pub trait Mapper {
             0x4020..=0xFFFF => {
                 // TODO: Verify if bus conflicts only occur for address >= 0x6000.
                 let value = if self.has_bus_conflicts() == HasBusConflicts::Yes {
-                    let rom_value = self.cpu_peek_unresolved(mem, address_bus_type, mem.address_bus(address_bus_type));
+                    let rom_value = self.cpu_peek_unresolved(mem, address_bus_type, mem.cpu_address_bus(address_bus_type));
                     rom_value.bus_conflict(value)
                 } else {
                     value
