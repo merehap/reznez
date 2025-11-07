@@ -110,6 +110,7 @@ impl Ppu {
             SetPatternIndexAddress => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
                 self.address_bus = PpuAddress::in_name_table(name_table_quadrant, tile_column, tile_row);
+                mapper.on_ppu_address_change(&mut mem, self.address_bus);
             }
             GetPatternIndex => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
@@ -118,6 +119,7 @@ impl Ppu {
             SetPaletteIndexAddress => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
                 self.address_bus = PpuAddress::in_attribute_table(name_table_quadrant, tile_column, tile_row);
+                mapper.on_ppu_address_change(&mut mem, self.address_bus);
             }
             GetPaletteIndex => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
