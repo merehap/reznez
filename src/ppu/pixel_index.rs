@@ -1,3 +1,5 @@
+use std::marker::ConstParamTy;
+
 use enum_iterator::Sequence;
 use itertools::structs::Product;
 use itertools::Itertools;
@@ -195,7 +197,7 @@ impl Iterator for PixelRowIterator {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, Sequence)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, Sequence, ConstParamTy)]
 pub enum ColumnInTile {
     Zero,
     One,

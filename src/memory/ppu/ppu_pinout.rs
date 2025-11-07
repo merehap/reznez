@@ -1,4 +1,5 @@
-use crate::mapper::PpuAddress;
+use crate::memory::ppu::ppu_address::PpuAddress;
+use crate::util::edge_detector::EdgeDetector;
 
 pub struct PpuPinout {
     // cpu_data_bus: u8, // D0-D8
@@ -12,7 +13,7 @@ pub struct PpuPinout {
     // /RST
     // /WR
     // /RD
-    address_and_data_bus: PpuAddress,
+    address_and_data_bus_detector: EdgeDetector<PpuAddress>,
     // /ALE
     // +5V
 }
@@ -20,23 +21,25 @@ pub struct PpuPinout {
 impl PpuPinout {
     pub fn new() -> Self {
         Self {
-            address_and_data_bus: PpuAddress::ZERO,
+            address_and_data_bus_detector: EdgeDetector::any_edge(),
         }
     }
 
     pub fn address_bus(&self) -> PpuAddress {
-        self.address_and_data_bus
+        self.address_and_data_bus_detector.current_value()
     }
 
     pub fn set_address_bus(&mut self, addr: PpuAddress) {
-        self.address_and_data_bus = addr;
+        self.address_and_data_bus_detector.set_value(addr);
     }
 
     pub fn data_bus(&self) -> u8 {
-        self.address_and_data_bus.to_u16() as u8
+        self.address_and_data_bus_detector.current_value().to_u16() as u8
     }
 
     pub fn set_data_bus(&mut self, data: u8) {
-        self.address_and_data_bus.set_low_byte(data);
+        let mut current_value = self.address_and_data_bus_detector.current_value();
+        current_value.set_low_byte(data);
+        self.address_and_data_bus_detector.set_value(current_value);
     }
 }

@@ -1,4 +1,5 @@
 use std::fmt;
+use std::marker::ConstParamTy;
 
 use splitbits::{splitbits_named, splitbits_named_into_ux, splitbits_named_ux, combinebits, replacebits};
 
@@ -18,7 +19,7 @@ use crate::ppu::tile_number::TileNumber;
  * | +++----------------- Fine Y Scroll
  * +--------------------- Unused, always zero
  */
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Default, ConstParamTy)]
 pub struct PpuAddress {
     address: u16,
 }
