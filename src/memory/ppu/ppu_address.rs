@@ -18,7 +18,7 @@ use crate::ppu::tile_number::TileNumber;
  * | +++----------------- Fine Y Scroll
  * +--------------------- Unused, always zero
  */
-#[derive(Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub struct PpuAddress {
     address: u16,
 }
@@ -227,12 +227,6 @@ impl PpuAddress {
 
     pub fn pattern_table_side(self) -> PatternTableSide {
         splitbits_named!(self.to_u16(), "...p .... .... ....").into()
-    }
-}
-
-impl PartialEq for PpuAddress {
-    fn eq(&self, rhs: &PpuAddress) -> bool {
-        self.to_u16() == rhs.to_u16()
     }
 }
 
