@@ -165,9 +165,10 @@ impl PpuRegisters {
         self.reset_recently = false;
     }
 
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self) -> PpuRegistersTickResult {
         self.maybe_decay_ppu_io_bus();
-        self.maybe_toggle_rendering_enabled();
+        let rendering_toggled = self.maybe_toggle_rendering_enabled();
+        PpuRegistersTickResult { rendering_toggled }
     }
 
     fn maybe_decay_ppu_io_bus(&mut self) {
@@ -176,14 +177,18 @@ impl PpuRegisters {
         }
     }
 
-    fn maybe_toggle_rendering_enabled(&mut self) {
+    fn maybe_toggle_rendering_enabled(&mut self) -> Option<Toggle> {
         use RenderingToggleState::*;
         match self.rendering_toggle_state {
-            Inactive => {}
-            Pending => self.rendering_toggle_state = Ready,
+            Inactive => None,
+            Pending => {
+                self.rendering_toggle_state = Ready;
+                None
+            }
             Ready => {
                 self.rendering_enabled = !self.rendering_enabled;
                 self.rendering_toggle_state = Inactive;
+                Some(if self.rendering_enabled { Toggle::Enable } else { Toggle::Disable })
             }
         }
     }
@@ -348,4 +353,14 @@ pub enum RenderingToggleState {
     Inactive,
     Pending,
     Ready,
+}
+
+pub struct PpuRegistersTickResult {
+    pub rendering_toggled: Option<Toggle>,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum Toggle {
+    Enable,
+    Disable,
 }

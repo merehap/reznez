@@ -11,6 +11,7 @@ use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::PixelIndex;
+use crate::ppu::register::ppu_registers::Toggle;
 use crate::ppu::register::registers::attribute_register::AttributeRegister;
 use crate::ppu::register::registers::pattern_register::PatternRegister;
 use crate::ppu::render::frame::Frame;
@@ -65,7 +66,11 @@ impl Ppu {
     }
 
     pub fn step(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, frame: &mut Frame) {
-        mem.ppu_regs.tick();
+        let tick_result = mem.ppu_regs.tick();
+        if tick_result.rendering_toggled == Some(Toggle::Disable) {
+            // "... when rendering is disabled, the value on the PPU address bus is the current value of the v register."
+            mapper.set_ppu_address_bus(mem, mem.ppu_regs.current_address);
+        }
 
         let clock = *mem.ppu_regs.clock();
         if log_enabled!(target: "ppusteps", Info) {
@@ -357,6 +362,8 @@ impl Ppu {
                 } else {
                     let clock = *mem.ppu_regs.clock();
                     mem.ppu_regs.start_vblank(&clock);
+                    // "During VBlank ... the value on the PPU address bus is the current value of the v register."
+                    mapper.set_ppu_address_bus(mem, mem.ppu_regs.current_address);
                 }
 
                 mem.ppu_regs.suppress_vblank_active = false;
