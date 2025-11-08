@@ -88,7 +88,7 @@ impl Ppu {
         mapper.on_end_of_ppu_cycle();
     }
 
-    fn execute_cycle_action(&mut self, mapper: &mut dyn Mapper, mut mem: &mut Memory, frame: &mut Frame, cycle_action: CycleAction) {
+    fn execute_cycle_action(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, frame: &mut Frame, cycle_action: CycleAction) {
         let background_table_side = mem.ppu_regs.background_table_side();
 
         let tile_column = mem.ppu_regs.current_address.coarse_x_scroll();
@@ -124,14 +124,10 @@ impl Ppu {
             SetPatternLowAddress => {
                 mapper.set_ppu_address_bus(
                     mem, PpuAddress::in_pattern_table(background_table_side, self.next_tile_number, row_in_tile, false));
-                let addr = mem.ppu_pinout.address_bus();
-                mapper.on_ppu_address_change(&mut mem, addr);
             }
             SetPatternHighAddress => {
                 mapper.set_ppu_address_bus(
                     mem, PpuAddress::in_pattern_table(background_table_side, self.next_tile_number, row_in_tile, true));
-                let addr = mem.ppu_pinout.address_bus();
-                mapper.on_ppu_address_change(&mut mem, addr);
             }
             GetPatternLowByte => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
@@ -367,11 +363,13 @@ impl Ppu {
             }
             SetInitialScrollOffsets => {
                 // TODO: Verify if this needs to be !self.rendering_enabled, which is time-delayed.
+                // Testing has not revealed any difference, but that just means the tests are insufficient.
                 if !background_enabled { return; }
                 mem.ppu_regs.current_address = mem.ppu_regs.next_address;
             }
             SetInitialYScroll => {
                 // TODO: Verify if this needs to be !self.rendering_enabled, which is time-delayed.
+                // Testing has not revealed any difference, but that just means the tests are insufficient.
                 if !background_enabled { return; }
                 let next_address = mem.ppu_regs.next_address;
                 mem.ppu_regs.current_address.copy_y_scroll(next_address);

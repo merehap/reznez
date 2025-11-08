@@ -153,7 +153,7 @@ pub trait Mapper {
                         let buffered_data = self.ppu_peek(mem, pending_data_source).value();
                         self.on_ppu_read(mem, pending_data_source, buffered_data);
                         mem.ppu_regs.set_ppu_read_buffer_and_advance(buffered_data);
-                        self.on_ppu_address_change(mem, mem.ppu_regs.current_address);
+                        self.set_ppu_address_bus(mem, mem.ppu_regs.current_address);
 
                         new_data
                     }
@@ -207,13 +207,13 @@ pub trait Mapper {
                 0x2006 => {
                     mem.ppu_regs.write_ppu_addr(value);
                     if mem.ppu_regs.write_toggle() == WriteToggle::FirstByte {
-                        self.on_ppu_address_change(mem, mem.ppu_regs.current_address);
+                        self.set_ppu_address_bus(mem, mem.ppu_regs.current_address);
                     }
                 }
                 0x2007 => {
                     self.ppu_write(mem, mem.ppu_regs.current_address, value);
                     mem.ppu_regs.write_ppu_data(value);
-                    self.on_ppu_address_change(mem, mem.ppu_regs.current_address);
+                    self.set_ppu_address_bus(mem, mem.ppu_regs.current_address);
                 }
                 _ => unreachable!(),
             }
@@ -276,8 +276,6 @@ pub trait Mapper {
     fn ppu_internal_read(&mut self, mem: &mut Memory, address: PpuAddress) -> PpuPeek {
         let result = self.ppu_peek(mem, address);
         self.on_ppu_read(mem, address, result.value());
-        self.on_ppu_address_change(mem, address);
-
         result
     }
 
