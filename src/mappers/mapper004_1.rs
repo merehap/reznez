@@ -139,17 +139,3 @@ impl Mapper004_1 {
         }
     }
 }
-
-/*
-fn work_ram_status_from_bits(value: u8) -> WorkRamStatus {
-    assert_eq!(value & 0b1111_1100, 0);
-
-    match value {
-        0b00 => WorkRamStatus::Disabled,
-        0b01 => WorkRamStatus::Disabled,
-        0b10 => WorkRamStatus::ReadOnly,
-        0b11 => WorkRamStatus::ReadWrite,
-        _ => unreachable!(),
-    }
-}
-*/

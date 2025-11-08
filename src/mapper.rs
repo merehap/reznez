@@ -193,7 +193,6 @@ pub trait Mapper {
     fn cpu_write(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) {
         let addr = mem.cpu_address_bus(address_bus_type);
         let value = mem.cpu_pinout.data_bus;
-        // TODO: Move this into mapper, right after cpu_write() is called?
         self.on_cpu_write(mem, addr, value);
         match *addr {
             0x0000..=0x07FF => mem.cpu_internal_ram[*addr as usize] = value,
