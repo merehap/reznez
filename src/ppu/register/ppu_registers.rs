@@ -24,16 +24,19 @@ pub struct PpuRegisters {
 
     clock: Clock,
 
+    // "v"
     pub current_address: PpuAddress,
-    pub current_fine_x: ColumnInTile,
+    // "x"
+    pub fine_x_scroll: ColumnInTile,
+    // "t"
     pub(in crate::ppu) next_address: PpuAddress,
-    pub next_fine_x: ColumnInTile,
 
     ppu_io_bus: PpuIoBus,
 
     pub suppress_vblank_active: bool,
 
     rendering_enabled: bool,
+    // "w"
     write_toggle: WriteToggle,
     rendering_toggle_state: RenderingToggleState,
     reset_recently: bool,
@@ -51,9 +54,8 @@ impl PpuRegisters {
             clock,
 
             current_address: PpuAddress::ZERO,
-            current_fine_x: ColumnInTile::Zero,
+            fine_x_scroll: ColumnInTile::Zero,
             next_address: PpuAddress::ZERO,
-            next_fine_x: ColumnInTile::Zero,
 
             ppu_io_bus: PpuIoBus::new(),
 
@@ -120,7 +122,7 @@ impl PpuRegisters {
     pub fn x_scroll(&self) -> XScroll {
         XScroll {
             coarse: self.next_address.coarse_x_scroll(),
-            fine: self.next_fine_x,
+            fine: self.fine_x_scroll,
         }
     }
 
@@ -322,12 +324,11 @@ impl PpuRegisters {
 
     pub fn set_next_address_x_scroll(&mut self, value: u8) {
         let value = XScroll::from_u8(value);
-        self.next_fine_x = value.fine();
+        self.fine_x_scroll = value.fine();
         self.next_address.set_coarse_x_scroll(value.coarse());
     }
 
     pub fn copy_next_x_scroll_to_current(&mut self) {
-        self.current_fine_x = self.next_fine_x;
         self.current_address.set_coarse_x_scroll(self.next_address.coarse_x_scroll());
     }
 }

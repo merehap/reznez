@@ -170,7 +170,7 @@ impl Ppu {
                     // TODO: Figure out where this goes. Maybe have frame call palette_table when displaying.
                     frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
-                    let column_in_tile = mem.ppu_regs.current_fine_x;
+                    let column_in_tile = mem.ppu_regs.fine_x_scroll;
                     let palette_table_index = self.attribute_register.palette_table_index(column_in_tile);
                     let palette = palette_table.background_palette(palette_table_index);
 
