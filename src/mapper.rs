@@ -292,6 +292,20 @@ pub trait Mapper {
         }
     }
 
+    fn set_ppu_address_bus(&mut self, mem: &mut Memory, addr: PpuAddress) {
+        let address_changed = mem.ppu_pinout.set_address_bus(addr);
+        if address_changed {
+            self.on_ppu_address_change(mem, addr);
+        }
+    }
+
+    fn set_ppu_data_bus(&mut self, mem: &mut Memory, data: u8) {
+        let address_changed = mem.ppu_pinout.set_data_bus(data);
+        if address_changed {
+            self.on_ppu_address_change(mem, mem.ppu_pinout.address_bus());
+        }
+    }
+
     #[inline]
     fn raw_name_table<'a>(
         &'a self,
@@ -302,9 +316,9 @@ pub trait Mapper {
         match mem.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) => ciram.side(side),
             // FIXME: Hack
-            NameTableSource::Rom { bank_number } => mem.chr_memory.rom_1kib_page(0x400 * u32::from(bank_number.to_raw()) ),
+            NameTableSource::Rom { bank_number } => mem.chr_memory.rom_1kib_page(0x400 * u32::from(bank_number.to_raw())),
             // FIXME: Hack
-            NameTableSource::Ram { bank_number } => mem.chr_memory.work_ram_1kib_page(0x400 * u32::from(bank_number.to_raw()) ),
+            NameTableSource::Ram { bank_number } => mem.chr_memory.work_ram_1kib_page(0x400 * u32::from(bank_number.to_raw())),
             NameTableSource::MapperCustom { page_number, .. } => mem.mapper_custom_pages[page_number as usize].to_raw_ref(),
         }
     }

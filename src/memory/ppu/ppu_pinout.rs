@@ -29,17 +29,19 @@ impl PpuPinout {
         self.address_and_data_bus_detector.current_value()
     }
 
-    pub fn set_address_bus(&mut self, addr: PpuAddress) {
-        self.address_and_data_bus_detector.set_value(addr);
+    #[must_use]
+    pub fn set_address_bus(&mut self, addr: PpuAddress) -> bool {
+        self.address_and_data_bus_detector.set_value_then_detect(addr)
     }
 
     pub fn data_bus(&self) -> u8 {
         self.address_and_data_bus_detector.current_value().to_u16() as u8
     }
 
-    pub fn set_data_bus(&mut self, data: u8) {
-        let mut current_value = self.address_and_data_bus_detector.current_value();
-        current_value.set_low_byte(data);
-        self.address_and_data_bus_detector.set_value(current_value);
+    #[must_use]
+    pub fn set_data_bus(&mut self, data: u8) -> bool {
+        let mut value = self.address_and_data_bus_detector.current_value();
+        value.set_low_byte(data);
+        self.address_and_data_bus_detector.set_value_then_detect(value)
     }
 }
