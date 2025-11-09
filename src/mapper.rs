@@ -145,8 +145,9 @@ pub trait Mapper {
                     0x2002 => mem.ppu_regs.read_status(),
                     0x2004 => mem.ppu_regs.read_oam_data(&mem.oam),
                     0x2007 => {
+                        self.set_ppu_address_bus(mem, mem.ppu_regs.current_address);
                         // TODO: Instead of peeking the old data, it must be available as part of some register.
-                        let old_data = self.ppu_peek(mem, mem.ppu_regs.current_address).value();
+                        let old_data = self.ppu_peek(mem, mem.ppu_pinout.address()).value();
                         let new_data = mem.ppu_regs.read_ppu_data(old_data);
 
                         let pending_data_source = mem.ppu_regs.current_address.to_pending_data_source();
@@ -273,9 +274,8 @@ pub trait Mapper {
     }
 
     fn ppu_internal_read(&mut self, mem: &mut Memory) -> PpuPeek {
-        let address = mem.ppu_pinout.address();
-        let result = self.ppu_peek(mem, address);
-        self.on_ppu_read(mem, address, result.value());
+        let result = self.ppu_peek(mem, mem.ppu_pinout.address());
+        self.on_ppu_read(mem, mem.ppu_pinout.address(), result.value());
         result
     }
 
