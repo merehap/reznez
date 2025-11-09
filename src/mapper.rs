@@ -272,8 +272,8 @@ pub trait Mapper {
         }
     }
 
-    // TODO: Should this always use current_address instead of taking a parameter?
-    fn ppu_internal_read(&mut self, mem: &mut Memory, address: PpuAddress) -> PpuPeek {
+    fn ppu_internal_read(&mut self, mem: &mut Memory) -> PpuPeek {
+        let address = mem.ppu_pinout.address();
         let result = self.ppu_peek(mem, address);
         self.on_ppu_read(mem, address, result.value());
         result

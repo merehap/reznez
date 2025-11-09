@@ -114,7 +114,7 @@ impl Ppu {
             }
             GetPatternIndex => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                self.next_tile_number = TileNumber::new(mapper.ppu_internal_read(mem, mem.ppu_pinout.address()).value());
+                self.next_tile_number = TileNumber::new(mapper.ppu_internal_read(mem).value());
             }
             SetPaletteIndexAddress => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
@@ -122,7 +122,7 @@ impl Ppu {
             }
             GetPaletteIndex => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                let attribute_byte = mapper.ppu_internal_read(mem, mem.ppu_pinout.address()).value();
+                let attribute_byte = mapper.ppu_internal_read(mem).value();
                 let palette_table_index = PaletteTableIndex::from_attribute_byte(attribute_byte, tile_column, tile_row);
                 self.attribute_register.set_pending_palette_table_index(palette_table_index);
             }
@@ -136,11 +136,11 @@ impl Ppu {
             }
             GetPatternLowByte => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                self.pattern_register.set_pending_low_byte(mapper.ppu_internal_read(mem, mem.ppu_pinout.address()));
+                self.pattern_register.set_pending_low_byte(mapper.ppu_internal_read(mem));
             }
             GetPatternHighByte => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                self.pattern_register.set_pending_high_byte(mapper.ppu_internal_read(mem, mem.ppu_pinout.address()));
+                self.pattern_register.set_pending_high_byte(mapper.ppu_internal_read(mem));
             }
 
             GotoNextTileColumn => {
@@ -312,7 +312,7 @@ impl Ppu {
                     return;
                 }
 
-                let pattern_low = mapper.ppu_internal_read(mem, mem.ppu_pinout.address());
+                let pattern_low = mapper.ppu_internal_read(mem);
                 if !self.sprite_visible {
                     return;
                 }
@@ -325,7 +325,7 @@ impl Ppu {
                     return;
                 }
 
-                let pattern_high = mapper.ppu_internal_read(mem, mem.ppu_pinout.address());
+                let pattern_high = mapper.ppu_internal_read(mem);
                 if !self.sprite_visible {
                     return;
                 }
