@@ -299,7 +299,7 @@ pub trait Mapper {
     fn set_ppu_data_bus(&mut self, mem: &mut Memory, data: u8) {
         let address_changed = mem.ppu_pinout.set_data_bus(data);
         if address_changed {
-            self.on_ppu_address_change(mem, mem.ppu_pinout.address_bus());
+            self.on_ppu_address_change(mem, mem.ppu_pinout.address());
         }
     }
 

@@ -16,21 +16,28 @@ pub struct PpuPinout {
     address_and_data_bus_detector: EdgeDetector<PpuAddress>,
     // /ALE
     // +5V
+
+    address_latch: u8,
 }
 
 impl PpuPinout {
     pub fn new() -> Self {
         Self {
             address_and_data_bus_detector: EdgeDetector::any_edge(),
+            address_latch: 0,
         }
     }
 
-    pub fn address_bus(&self) -> PpuAddress {
-        self.address_and_data_bus_detector.current_value()
+    pub fn address(&self) -> PpuAddress {
+        let full_bus_value = self.address_and_data_bus_detector.current_value().to_u16();
+        PpuAddress::from_u16((full_bus_value & 0xFF00) | u16::from(self.address_latch))
     }
 
     #[must_use]
     pub fn set_address_bus(&mut self, addr: PpuAddress) -> bool {
+        // During the entire VRAM address is output on the PPU address pins and
+        // the lower eight bits stored in an external octal latch
+        self.address_latch = addr.to_u16() as u8;
         self.address_and_data_bus_detector.set_value_then_detect(addr)
     }
 
