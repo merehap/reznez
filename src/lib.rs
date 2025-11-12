@@ -13,6 +13,7 @@
 
 pub mod apu;
 pub mod analysis;
+pub mod assembler;
 pub mod cartridge;
 pub mod config;
 pub mod controller;

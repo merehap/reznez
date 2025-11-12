@@ -171,6 +171,9 @@ pub struct Opt {
 
     #[structopt(name = "dipswitch", long, default_value = "0")]
     pub dip_switch: u8,
+
+    #[structopt(name = "assemble", long, parse(from_os_str))]
+    pub assemble: Option<PathBuf>,
 }
 
 impl Opt {
@@ -205,6 +208,7 @@ impl Opt {
             prevent_saving: false,
             scheduled_button_presses: Vec::new(),
             dip_switch: 0,
+            assemble: None,
         }
     }
 }

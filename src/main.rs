@@ -14,6 +14,7 @@
 
 mod apu;
 mod analysis;
+mod assembler;
 mod cartridge;
 mod config;
 mod controller;
@@ -49,6 +50,12 @@ fn main() {
         log::logger().flush();
         prev(info);
     });
+
+    if let Some(source_code_path) = opt.assemble {
+        assert!(opt.rom_path.is_none(), "Can't specify both a ROM and code to assemble.");
+        assembler::assembler::assemble(&source_code_path);
+        return;
+    }
 
     let config = Config::new(&opt);
     let mut gui = Config::gui(&opt);

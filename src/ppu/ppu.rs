@@ -94,6 +94,7 @@ impl Ppu {
     }
 
     fn execute_cycle_action(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, frame: &mut Frame, cycle_action: CycleAction) {
+        // TODO: Remove all these aliases. Use helper functions on ppu_regs to generate the relevant bus values.
         let background_table_side = mem.ppu_regs.background_table_side();
 
         let tile_column = mem.ppu_regs.current_address.coarse_x_scroll();
