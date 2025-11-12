@@ -7,7 +7,6 @@ use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::signal_level::SignalLevel;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
-use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::PixelIndex;
@@ -95,23 +94,14 @@ impl Ppu {
 
     fn execute_cycle_action(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, frame: &mut Frame, cycle_action: CycleAction) {
         // TODO: Remove all these aliases. Use helper functions on ppu_regs to generate the relevant bus values.
-        let background_table_side = mem.ppu_regs.background_table_side();
-
-        let tile_column = mem.ppu_regs.current_address.coarse_x_scroll();
-        let tile_row = mem.ppu_regs.current_address.y_scroll().coarse();
-        let row_in_tile = mem.ppu_regs.current_address.y_scroll().fine();
-        let name_table_quadrant = mem.ppu_regs.current_address.name_table_quadrant();
-
         let background_enabled = mem.ppu_regs.background_enabled();
         let sprites_enabled = mem.ppu_regs.sprites_enabled();
-
-        let clock = *mem.ppu_regs.clock();
 
         use CycleAction::*;
         match cycle_action {
             SetPatternIndexAddress => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                mapper.set_ppu_address_bus(mem, PpuAddress::in_name_table(name_table_quadrant, tile_column, tile_row));
+                mapper.set_ppu_address_bus(mem, mem.ppu_regs.address_in_name_table());
             }
             GetPatternIndex => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
@@ -119,21 +109,18 @@ impl Ppu {
             }
             SetPaletteIndexAddress => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                mapper.set_ppu_address_bus(mem, PpuAddress::in_attribute_table(name_table_quadrant, tile_column, tile_row));
+                mapper.set_ppu_address_bus(mem, mem.ppu_regs.address_in_attribute_table());
             }
             GetPaletteIndex => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
                 let attribute_byte = mapper.ppu_internal_read(mem).value();
-                let palette_table_index = PaletteTableIndex::from_attribute_byte(attribute_byte, tile_column, tile_row);
-                self.attribute_register.set_pending_palette_table_index(palette_table_index);
+                self.attribute_register.set_pending_palette_table_index(mem.ppu_regs.palette_table_index(attribute_byte));
             }
             SetPatternLowAddress => {
-                mapper.set_ppu_address_bus(
-                    mem, PpuAddress::in_pattern_table(background_table_side, self.next_tile_number, row_in_tile, false));
+                mapper.set_ppu_address_bus(mem, mem.ppu_regs.address_for_low_pattern_byte(self.next_tile_number));
             }
             SetPatternHighAddress => {
-                mapper.set_ppu_address_bus(
-                    mem, PpuAddress::in_pattern_table(background_table_side, self.next_tile_number, row_in_tile, true));
+                mapper.set_ppu_address_bus(mem, mem.ppu_regs.address_for_high_pattern_byte(self.next_tile_number));
             }
             GetPatternLowByte => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
@@ -154,9 +141,7 @@ impl Ppu {
             }
             ResetTileColumn => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-                let next_address = mem.ppu_regs.next_address;
-                mem.ppu_regs.copy_next_x_scroll_to_current();
-                mem.ppu_regs.current_address.copy_horizontal_name_table_side(next_address);
+                mem.ppu_regs.reset_tile_column();
             }
             PrepareForNextTile => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
@@ -164,6 +149,7 @@ impl Ppu {
                 self.pattern_register.load_next_palette_indexes();
             }
             SetPixel => {
+                let clock = *mem.ppu_regs.clock();
                 let (pixel_column, pixel_row) = PixelIndex::try_from_clock(&clock).unwrap().to_column_row();
                 // TODO: Verify if these need to be delayed like self.rendering_enabled.
                 if background_enabled {
@@ -314,12 +300,9 @@ impl Ppu {
                 }
 
                 let pattern_low = mapper.ppu_internal_read(mem);
-                if !self.sprite_visible {
-                    return;
+                if self.sprite_visible {
+                    self.oam_registers.registers[self.oam_register_index].set_pattern_low(pattern_low);
                 }
-
-                self.oam_registers.registers[self.oam_register_index]
-                    .set_pattern_low(pattern_low);
             }
             GetSpritePatternHighByte => {
                 if !mem.ppu_regs.rendering_enabled() {
@@ -327,16 +310,15 @@ impl Ppu {
                 }
 
                 let pattern_high = mapper.ppu_internal_read(mem);
-                if !self.sprite_visible {
-                    return;
+                if self.sprite_visible {
+                    self.oam_registers.registers[self.oam_register_index].set_pattern_high(pattern_high);
                 }
-
-                self.oam_registers.registers[self.oam_register_index].set_pattern_high(pattern_high);
             }
             IncrementOamRegisterIndex => {
                 self.oam_register_index += 1;
             }
 
+            // TODO: Remove this section in favor of using EdgeDetectors.
             StartVisibleScanlines => {
                 info!(target: "ppustage", "{}\tVISIBLE SCANLINES", mem.ppu_regs.clock());
             }
@@ -349,7 +331,6 @@ impl Ppu {
             StartPreRenderScanline => {
                 info!(target: "ppustage", "{}\tPRE-RENDER SCANLINE", mem.ppu_regs.clock());
             }
-
             StartReadingBackgroundTiles => {
                 info!(target: "ppustage", "{}\t\tREADING BACKGROUND TILES", mem.ppu_regs.clock());
             }

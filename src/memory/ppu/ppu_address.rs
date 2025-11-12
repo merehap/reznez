@@ -151,6 +151,14 @@ impl PpuAddress {
         splitbits_named_ux!(self.to_u16(), ".... .... ...x xxxx").into()
     }
 
+    pub fn set_name_table_quadrant(&mut self, n: NameTableQuadrant) {
+        self.address = replacebits!(self.address, "0... nn.. .... ....");
+    }
+
+    pub fn set_coarse_x_scroll(&mut self, x: TileColumn) {
+        self.address = replacebits!(self.address, ".... .... ...x xxxx");
+    }
+
     /*
      * 0123456789ABCDEF
      *  567--01234-----  $SCROLL#2
@@ -163,34 +171,26 @@ impl PpuAddress {
         }
     }
 
-    fn coarse_y_scroll(self) -> TileRow {
-        splitbits_named_into_ux!(self.address, "...... yyyyy .....")
-    }
-
-    fn fine_y_scroll(self) -> RowInTile {
-        splitbits_named_into_ux!(self.address, ". yyy ............")
-    }
-
-    pub fn set_name_table_quadrant(&mut self, n: NameTableQuadrant) {
-        self.address = replacebits!(self.address, "0... nn.. .... ....");
-    }
-
-    pub fn set_coarse_x_scroll(&mut self, x: TileColumn) {
-        self.address = replacebits!(self.address, ".... .... ...x xxxx");
-    }
-
     pub fn set_y_scroll(&mut self, value: u8) {
         let value = YScroll::from_u8(value);
         self.set_coarse_y_scroll(value.coarse());
         self.set_fine_y_scroll(value.fine());
     }
 
+    pub fn coarse_y_scroll(self) -> TileRow {
+        splitbits_named_into_ux!(self.address, "...... yyyyy .....")
+    }
+
     fn set_coarse_y_scroll(&mut self, y: TileRow) {
-        self.address = replacebits!(self.address, ".... ..yy yyy. ....");
+        self.address = replacebits!(self.address, "...... yyyyy .....");
+    }
+
+    pub fn fine_y_scroll(self) -> RowInTile {
+        splitbits_named_into_ux!(self.address, ". yyy ............")
     }
 
     fn set_fine_y_scroll(&mut self, y: RowInTile) {
-        self.address = replacebits!(self.address, "0yyy .... .... ....");
+        self.address = replacebits!(self.address, ". yyy ............");
     }
 
     pub fn copy_y_scroll(&mut self, other: PpuAddress) {
@@ -199,12 +199,6 @@ impl PpuAddress {
 
     pub fn copy_name_table_quadrant(&mut self, other: PpuAddress) {
         self.set_name_table_quadrant(other.name_table_quadrant());
-    }
-
-    pub fn copy_horizontal_name_table_side(&mut self, other: PpuAddress) {
-        let mut name_table_quadrant = self.name_table_quadrant();
-        name_table_quadrant.copy_horizontal_side_from(other.name_table_quadrant());
-        self.set_name_table_quadrant(name_table_quadrant);
     }
 
     pub fn set_high_byte(&mut self, h: u8) {

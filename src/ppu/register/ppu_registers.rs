@@ -3,6 +3,7 @@ use log::info;
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::clock::Clock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
+use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::ColumnInTile;
 use crate::ppu::register::ppu_io_bus::PpuIoBus;
@@ -13,6 +14,7 @@ use crate::ppu::register::registers::status::Status;
 use crate::ppu::sprite::oam::Oam;
 use crate::ppu::sprite::oam_address::OamAddress;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
+use crate::ppu::tile_number::TileNumber;
 
 #[derive(Clone)]
 pub struct PpuRegisters {
@@ -328,8 +330,56 @@ impl PpuRegisters {
         self.next_address.set_coarse_x_scroll(value.coarse());
     }
 
-    pub fn copy_next_x_scroll_to_current(&mut self) {
+    pub fn address_in_name_table(&self) -> PpuAddress {
+        PpuAddress::in_name_table(
+            self.current_address.name_table_quadrant(),
+            self.current_address.coarse_x_scroll(),
+            self.current_address.coarse_y_scroll(),
+        )
+    }
+
+    pub fn address_in_attribute_table(&self) -> PpuAddress {
+        PpuAddress::in_attribute_table(
+            self.current_address.name_table_quadrant(),
+            self.current_address.coarse_x_scroll(),
+            self.current_address.coarse_y_scroll(),
+        )
+    }
+
+    pub fn address_for_low_pattern_byte(&self, tile_number: TileNumber) -> PpuAddress {
+        PpuAddress::in_pattern_table(
+            self.background_table_side(),
+            tile_number,
+            self.current_address.fine_y_scroll(),
+            false,
+        )
+    }
+
+    pub fn address_for_high_pattern_byte(&self, tile_number: TileNumber) -> PpuAddress {
+        PpuAddress::in_pattern_table(
+            self.background_table_side(),
+            tile_number,
+            self.current_address.y_scroll().fine(),
+            true,
+        )
+    }
+
+    pub fn palette_table_index(&self, attribute_byte: u8) -> PaletteTableIndex {
+        PaletteTableIndex::from_attribute_byte(
+            attribute_byte,
+            self.current_address.coarse_x_scroll(),
+            self.current_address.coarse_y_scroll(),
+        )
+    }
+
+    pub fn reset_tile_column(&mut self) {
+        // Reset coarse X scroll. For non-scrolling cartridges, this always means setting it to 0.
         self.current_address.set_coarse_x_scroll(self.next_address.coarse_x_scroll());
+
+        // Reset to the selected name table to be one on the left side (0x2000 or 0x2800).
+        let mut name_table_quadrant = self.current_address.name_table_quadrant();
+        name_table_quadrant.copy_horizontal_side_from(self.next_address.name_table_quadrant());
+        self.current_address.set_name_table_quadrant(name_table_quadrant);
     }
 }
 

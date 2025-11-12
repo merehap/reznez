@@ -10,6 +10,7 @@ pub static VISIBLE_SCANLINE_ACTIONS: LazyLock<ScanlineActions> = LazyLock::new(|
 
     let mut line = ScanlineActions::new();
     //           ||CYCLE||       ||---------BACKGROUND-TILE-ACTIONS---------||  ||-SPRITE--ACTIONS---||  ||-----DISPLAY-ACTIONS-----||
+    // TODO: Remove this section in favor of using EdgeDetectors.
     line.add(            1, vec![                                               StartClearingSecondaryOam                           ]);
     line.add(           65, vec![                                               StartSpriteEvaluation                               ]);
     line.add(          257, vec![StopReadingBackgroundTiles                                                                         ]);
