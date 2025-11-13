@@ -203,9 +203,7 @@ impl PrgBank {
             PrgSourceProvider::Switchable(reg_id) => Some(regs.rom_ram_mode(reg_id)),
         };
 
-        prg_source
-            .map(|source| source.to_mem_type(regs.cartridge_has_ram()))
-            .flatten()
+        prg_source.and_then(|source| source.to_mem_type(regs.cartridge_has_ram()))
     }
 }
 

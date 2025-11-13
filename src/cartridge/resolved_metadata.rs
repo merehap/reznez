@@ -107,15 +107,14 @@ impl MetadataResolver {
             vs,
         };
 
-        if self.database.name_table_mirroring().is_some() {
-            if resolved_metadata.name_table_mirroring != self.database.name_table_mirroring() {
-                warn!("NameTableMirroring {} doesn't match the nes20db.xml entry {}. DB full hash: {:X}, DB PRG ROM hash: {:X}",
-                    resolved_metadata.name_table_mirroring.unwrap(),
-                    self.database.name_table_mirroring().unwrap(),
-                    self.database.full_hash().unwrap(),
-                    self.database.prg_rom_hash().unwrap(),
-                );
-            }
+        if self.database.name_table_mirroring().is_some() &&
+                resolved_metadata.name_table_mirroring != self.database.name_table_mirroring() {
+            warn!("NameTableMirroring {} doesn't match the nes20db.xml entry {}. DB full hash: {:X}, DB PRG ROM hash: {:X}",
+                resolved_metadata.name_table_mirroring.unwrap(),
+                self.database.name_table_mirroring().unwrap(),
+                self.database.full_hash().unwrap(),
+                self.database.prg_rom_hash().unwrap(),
+            );
         }
 
         resolved_metadata

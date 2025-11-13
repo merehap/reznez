@@ -72,7 +72,7 @@ impl Apu {
                 .lock()
                 .unwrap();
             if queue.len() < MAX_QUEUE_LENGTH {
-                queue.push_back(Apu::mix_samples(&mut mem.apu_regs));
+                queue.push_back(Apu::mix_samples(&mem.apu_regs));
             }
         }
     }

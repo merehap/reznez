@@ -397,7 +397,7 @@ impl ConsoleType {
     }
 
     fn from_u8(value: u8) -> Self {
-        let console_type = match value {
+        match value {
             0x0 => ConsoleType::NesFamiconDendy,
             0x1 => ConsoleType::Vs,
             0x2 => ConsoleType::PlayChoice10,
@@ -413,9 +413,7 @@ impl ConsoleType {
             0xC => ConsoleType::FamiconNetworkSystem,
             0xD..=0xF => panic!("Reserved"),
             _ => unreachable!(),
-        };
-
-        console_type
+        }
     }
 }
 

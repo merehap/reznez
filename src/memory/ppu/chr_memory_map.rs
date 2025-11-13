@@ -99,7 +99,7 @@ impl ChrMemoryMap {
                 (ChrMemoryIndex::SaveRam(offset), PeekSource::SaveRam)
             }
             ChrPageId::MapperCustom { page_number } =>
-                (ChrMemoryIndex::MapperCustom { page_number, index: offset }, PeekSource::MapperCustom { page_number: page_number }),
+                (ChrMemoryIndex::MapperCustom { page_number, index: offset }, PeekSource::MapperCustom { page_number }),
         };
 
         (chr_memory_index, peek_source, read_status, write_status)
@@ -208,7 +208,7 @@ impl ChrMapping {
         mapping
     }
 
-    pub fn to_name_table_source(&self, regs: &ChrBankRegisters) -> Result<NameTableSource, String> {
+    pub fn to_name_table_source(self, regs: &ChrBankRegisters) -> Result<NameTableSource, String> {
         let chr_source = self.bank.current_chr_source(regs).expect("NameTableSource can't come from an empty bank.");
         match chr_source {
             ChrSource::RomOrRam => {

@@ -42,10 +42,10 @@ impl Mapper for Mapper037 {
             mem.chr_memory.set_chr_rom_outer_bank_number((value >> 2) & 1);
 
             let (new_prg_outer_bank_size, new_prg_outer_bank_number) = match value & 0b111 {
-                0 | 1 | 2 => ( 64 * KIBIBYTE, 0), // 0x00000 to 0x0FFFF
-                3         => ( 64 * KIBIBYTE, 1), // 0x10000 to 0x1FFFF
-                4 | 5 | 6 => (128 * KIBIBYTE, 1), // 0x20000 to 0x3FFFF
-                7         => ( 64 * KIBIBYTE, 3), // 0x30000 to 0x3FFFF
+                0..=2 => ( 64 * KIBIBYTE, 0), // 0x00000 to 0x0FFFF
+                3     => ( 64 * KIBIBYTE, 1), // 0x10000 to 0x1FFFF
+                4..=6 => (128 * KIBIBYTE, 1), // 0x20000 to 0x3FFFF
+                7     => ( 64 * KIBIBYTE, 3), // 0x30000 to 0x3FFFF
                 _ => unimplemented!(),
             };
             mem.prg_memory.set_prg_rom_outer_bank_size(new_prg_outer_bank_size);

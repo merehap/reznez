@@ -221,6 +221,8 @@ impl PrgMapping {
     }
 }
 
+// FIXME
+#[allow(clippy::type_complexity)]
 #[derive(Clone, Debug)]
 pub enum PrgPageIdSlot {
     Normal(Option<MemTypeAndPageNumber>, ReadStatus, WriteStatus),

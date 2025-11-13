@@ -12,8 +12,8 @@ use crate::config::{Config, GuiType, Opt};
 use crate::nes::Nes;
 
 fn load_nes(header_db: &HeaderDb, config: &Config, rom_path: &Path) -> Result<Nes, String> {
-    let cartridge = Nes::load_cartridge(&rom_path)?;
-    let nes = Nes::new(&header_db, &config, cartridge)?;
+    let cartridge = Nes::load_cartridge(rom_path)?;
+    let nes = Nes::new(header_db, config, cartridge)?;
     log::logger().flush();
     Ok(nes)
 }
@@ -85,7 +85,7 @@ pub fn analyze(rom_base_path: &Path) -> Vec<(PathBuf, ResolvedMetadata)> {
                     path.file_stem().unwrap().to_str().unwrap(),
                     metadata.mapper_number,
                     metadata.submapper_number,
-                    metadata.name_table_mirroring.expect(&format!("{}", path.to_string_lossy())).to_string(),
+                    metadata.name_table_mirroring.unwrap_or_else(|| panic!("{}", path.to_string_lossy())).to_string(),
                     metadata.full_hash.to_string(),
                     metadata.prg_rom_hash.to_string(),
                     metadata.chr_rom_hash.to_string(),

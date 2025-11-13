@@ -267,7 +267,7 @@ pub trait Mapper {
     fn ppu_peek(&self, mem: &Memory, address: PpuAddress) -> PpuPeek {
         match address.to_u16() {
             0x0000..=0x1FFF => mem.peek_chr(address),
-            0x2000..=0x3EFF => self.peek_name_table_byte(&mem, &mem.ciram, address),
+            0x2000..=0x3EFF => self.peek_name_table_byte(mem, &mem.ciram, address),
             0x3F00..=0x3FFF => self.peek_palette_table_byte(&mem.palette_ram, address),
             0x4000..=0xFFFF => unreachable!(),
         }

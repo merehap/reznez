@@ -24,7 +24,7 @@ impl Mapper for Mapper093 {
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 let fields = splitbits!(value, ".ppp...e");
-                mem.set_prg_register(P0, fields.p as u8);
+                mem.set_prg_register(P0, fields.p);
                 mem.set_reads_enabled(R0, fields.e);
                 mem.set_writes_enabled(W0, fields.e);
             }

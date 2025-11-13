@@ -26,6 +26,7 @@ use reznez::util::hash_util::calculate_hash;
 type Crc = u32;
 type FrameNumber = i64;
 
+#[allow(clippy::type_complexity)]
 static SCHEDULED_BUTTON_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Button, ButtonStatus)>>> = LazyLock::new(|| {
     let mut presses_by_full_crc: BTreeMap<Crc, Vec<(FrameNumber, FrameNumber, Button)>> = BTreeMap::new();
 

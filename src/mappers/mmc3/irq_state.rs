@@ -95,10 +95,8 @@ impl Mmc3IrqState {
             self.suppressor.suppress();
         }
 
-        if should_tick_irq_counter {
-            if self.counter.tick().triggered {
-                mem.cpu_pinout.assert_mapper_irq();
-            }
+        if should_tick_irq_counter && self.counter.tick().triggered {
+            mem.cpu_pinout.assert_mapper_irq();
         }
     }
 

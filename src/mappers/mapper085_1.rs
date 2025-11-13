@@ -58,7 +58,7 @@ impl Mapper for Mapper085_1 {
             0xE000 => {
                 let fields = splitbits!(value, "w.....mm");
                 mem.set_writes_enabled(W0, fields.w);
-                mem.set_name_table_mirroring(fields.m as u8);
+                mem.set_name_table_mirroring(fields.m);
             }
             0xE008 => self.irq_state.set_reload_value(value),
             0xF000 => self.irq_state.set_mode(mem, value),

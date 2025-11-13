@@ -270,7 +270,7 @@ impl Nes {
         self.apu.step(&mut self.memory);
 
         if log_enabled!(target: "timings", Info) {
-            self.snapshots.current().frame_irq(&mut self.memory, &self.cpu);
+            self.snapshots.current().frame_irq(&self.memory, &self.cpu);
         }
 
         self.detect_changes();
@@ -493,7 +493,7 @@ impl Nes {
 
             let chr_registers = chr_memory.bank_registers().registers();
             // FIXME
-            let new_regs = &chr_registers.map(|i| BankLocation::Index(i));
+            let new_regs = &chr_registers.map(BankLocation::Index);
             if &latest.chr_registers != new_regs {
                 for (i, latest_bank_location) in latest.prg_registers.iter_mut().enumerate() {
                     if *latest_bank_location != new_regs[i] {
@@ -619,7 +619,7 @@ impl LatestValues {
             prg_layout_index_detector: EdgeDetector::starting_value(initial_mem.prg_memory.layout_index()),
             chr_layout_index_detector: EdgeDetector::starting_value(initial_mem.chr_memory.layout_index()),
             prg_registers: *initial_mem.prg_memory().bank_registers().registers(),
-            chr_registers: initial_mem.chr_memory().bank_registers().registers().map(|i| BankLocation::Index(i)),
+            chr_registers: initial_mem.chr_memory().bank_registers().registers().map(BankLocation::Index),
             meta_registers: *initial_mem.chr_memory().bank_registers().meta_registers(),
             name_table_mirroring: initial_mem.chr_memory().name_table_mirroring(),
             read_statuses: *initial_mem.prg_memory().bank_registers().read_statuses(),
@@ -798,7 +798,7 @@ impl Snapshots {
             append_cycle(index, false);
         }
 
-        vec![cpu_cycle, apu_cycle, cycle_count, apu_parity, instr,
+        [cpu_cycle, apu_cycle, cycle_count, apu_parity, instr,
              nmi_status, irq_status, frame_irq, /*fcw_status, */ppu_vpos, ppu_hpos].join("\n")
     }
 }

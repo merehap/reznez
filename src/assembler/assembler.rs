@@ -32,8 +32,8 @@ impl Cartridge {
         Self {
             mapper: 0,
             vertical_name_table_mirroring: false,
-            prg_rom: PrgRom::new(32 * KIBIBYTE as u32),
-            chr_rom: ChrRom::new(8 * KIBIBYTE as u32),
+            prg_rom: PrgRom::new(32 * KIBIBYTE),
+            chr_rom: ChrRom::new(8 * KIBIBYTE),
         }
     }
 
@@ -47,7 +47,7 @@ impl Cartridge {
             (self.prg_rom.rom.size() / PRG_ROM_CHUNK_SIZE).try_into().unwrap(),
             (self.chr_rom.rom.size() / CHR_ROM_CHUNK_SIZE).try_into().unwrap(),
             combinebits!(self.mapper & 0b1111, self.vertical_name_table_mirroring, "mmmm000n"),
-            combinebits!(self.mapper << 4, "mmmm0000"),
+            combinebits!(self.mapper >> 4, "mmmm0000"),
             0, // 8
             0, // 9
             0, // 10

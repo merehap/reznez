@@ -495,12 +495,10 @@ impl Prescaler {
         self.count %= self.multiple;
         let new_count = self.count;
 
-        let triggered = match self.triggered_by {
+        match self.triggered_by {
             PrescalerTriggeredBy::AlreadyZero => old_count & self.mask == 0,
             PrescalerTriggeredBy::WrappingToZero => new_count & self.mask == 0,
-        };
-
-        triggered
+        }
     }
 
     const fn is_nop(&self) -> bool {
