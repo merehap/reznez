@@ -268,8 +268,8 @@ impl ChrMapping {
 
         (
             page_id,
-            bank.read_status_register_id().map(|id| regs.read_status(id)).unwrap_or(default_read_status),
-            bank.write_status_register_id().map(|id| regs.write_status(id)).unwrap_or(default_write_status),
+            bank.read_status_register_id().map_or(default_read_status, |id| regs.read_status(id)),
+            bank.write_status_register_id().map_or(default_write_status, |id| regs.write_status(id)),
         )
     }
 }

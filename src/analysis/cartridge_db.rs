@@ -13,7 +13,7 @@ use crate::nes::Nes;
 
 fn load_nes(header_db: &HeaderDb, config: &Config, rom_path: &Path) -> Result<Nes, String> {
     let cartridge = Nes::load_cartridge(rom_path)?;
-    let nes = Nes::new(header_db, config, cartridge)?;
+    let nes = Nes::new(header_db, config, &cartridge)?;
     log::logger().flush();
     Ok(nes)
 }
@@ -45,7 +45,6 @@ pub fn analyze(rom_base_path: &Path) -> Vec<(PathBuf, ResolvedMetadata)> {
             }
             Err(err) => {
                 error!("Failed to load ROM {}. {err}", rom_path.to_string_lossy());
-                continue;
             }
         }
     }

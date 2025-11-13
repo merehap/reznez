@@ -143,6 +143,7 @@ enum RegisterValue {
     ModeSelect,
 }
 
+#[derive(Clone, Copy)]
 pub enum Sachen8259Board {
     A,
     B,

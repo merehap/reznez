@@ -80,7 +80,7 @@ impl Mapper for Mapper083_1 {
     }
 
     fn irq_counter_info(&self) -> Option<IrqCounterInfo> {
-        self.cony.irq_counter_info()
+        Some(self.cony.irq_counter_info())
     }
 
     fn layout(&self) -> Layout {

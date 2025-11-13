@@ -61,10 +61,8 @@ impl <V: PartialEq + Eq + Clone + Copy + Default + ConstParamTy_> EdgeDetector<V
     }
 
     pub fn detect(&mut self) -> bool {
-        let target_value_hit = self.target_value
-            .map(|target| self.value == target)
-            // If there's no target, then target is considered always hit.
-            .unwrap_or(true);
+        // If there's no target, then target is considered always hit.
+        let target_value_hit = self.target_value.is_none_or(|target| self.value == target);
         let edge_detected = target_value_hit && self.previous_value != self.value;
         self.previous_value = self.value;
         edge_detected

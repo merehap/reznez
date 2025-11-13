@@ -129,7 +129,7 @@ impl Memory {
     }
 
     #[inline]
-    pub fn cpu_stack<'a>(&'a mut self) -> Stack<'a> {
+    pub fn cpu_stack(&mut self) -> Stack<'_> {
         self.cpu_internal_ram.stack()
     }
 
@@ -309,9 +309,9 @@ pub struct SmallPage {
 }
 
 impl SmallPage {
-    pub fn new(_name: String, read_status: ReadStatus, write_status: WriteStatus) -> Self {
+    pub fn new(name: String, read_status: ReadStatus, write_status: WriteStatus) -> Self {
         Self {
-            _name,
+            _name: name,
             page: [0; 0x400],
             read_status,
             write_status,

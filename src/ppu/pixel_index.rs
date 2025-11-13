@@ -104,7 +104,7 @@ impl PixelColumn {
         self.0 as usize
     }
 
-    pub fn is_in_overscan_region(&self) -> bool {
+    pub fn is_in_overscan_region(self) -> bool {
         self.0 < 8 || self.0 as usize > Self::COLUMN_COUNT - 1 - 8
     }
 }
@@ -179,7 +179,7 @@ impl PixelRow {
         usize::from(self.0)
     }
 
-    pub fn is_in_overscan_region(&self) -> bool {
+    pub fn is_in_overscan_region(self) -> bool {
         self.0 < 16 || self.0 as usize > Self::ROW_COUNT - 1 - 11
     }
 }

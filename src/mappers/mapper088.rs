@@ -50,7 +50,7 @@ impl Mapper for Mapper088 {
                     Chr(id@(C2 | C3 | C4 | C5)) => mem.set_chr_register(id, (value & 0b0011_1111) | 0b0100_0000),
                     Prg(id@(P0 | P1)) => mem.set_prg_register(id, value & 0b0000_1111),
                     _ => unreachable!(),
-                };
+                }
             }
             0xA000..=0xFFFF => { /* Do nothing. */ }
         }

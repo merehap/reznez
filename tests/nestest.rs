@@ -21,11 +21,12 @@ use reznez::logging::logger;
 use reznez::logging::logger::Logger;
 
 #[test]
+#[allow(clippy::many_single_char_names)]
 fn nestest() {
     let f = File::open("tests/data/nestest_expected").expect("Test data not found!");
     let expected_states = BufReader::new(f)
         .lines()
-        .map(|line| State::from_text(line.unwrap()));
+        .map(|line| State::from_text(&line.unwrap()));
 
     let opt = Opt {
         gui: GuiType::NoGui,
@@ -56,7 +57,7 @@ fn nestest() {
     config.ppu_clock = Clock::starting_at(-1, MAX_SCANLINE, MAX_CYCLE - 21);
 
     let cartridge = Nes::load_cartridge(&opt.rom_path.unwrap()).unwrap();
-    let mut nes = Nes::new(&HeaderDb::load(), &config, cartridge).unwrap();
+    let mut nes = Nes::new(&HeaderDb::load(), &config, &cartridge).unwrap();
 
     // Step past the Start sequence.
     for _ in 0..21 {
@@ -114,9 +115,7 @@ fn nestest() {
             c,
         };
 
-        if state != expected_state {
-            panic!("State diverged from expected state!\nExpected:\n{expected_state}\nActual:\n{state}");
-        }
+        assert_eq!(state, expected_state, "State diverged from expected state!\nExpected:\n{expected_state}\nActual:\n{state}");
     }
 
     log::logger().flush();
@@ -138,7 +137,7 @@ struct State {
 }
 
 impl State {
-    fn from_text(line: String) -> State {
+    fn from_text(line: &str) -> State {
         let mut raw_op_code = &line[16..19];
         // nestest uses a different moniker for ISC.
         if raw_op_code == "ISB" {

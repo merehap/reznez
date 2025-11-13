@@ -52,7 +52,7 @@ impl Mapper for Mapper040 {
             }
             0xC000..=0xDFFF => { /* TODO: NTDEC 2752 outer bank register. Test ROM needed. */ }
             0xE000..=0xFFFF => {
-                mem.set_prg_register(P0, value)
+                mem.set_prg_register(P0, value);
             }
         }
     }

@@ -26,6 +26,7 @@ use reznez::util::hash_util::calculate_hash;
 type Crc = u32;
 type FrameNumber = i64;
 
+// FIXME
 #[allow(clippy::type_complexity)]
 static SCHEDULED_BUTTON_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Button, ButtonStatus)>>> = LazyLock::new(|| {
     let mut presses_by_full_crc: BTreeMap<Crc, Vec<(FrameNumber, FrameNumber, Button)>> = BTreeMap::new();
@@ -83,7 +84,7 @@ static SCHEDULED_BUTTON_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Bu
 fn framematch() {
     let expected_frames = ExpectedFrames::load("tests/expected_frames");
     let roms = Roms::load("tests/roms");
-    let test_summary = TestSummary::load(roms, expected_frames);
+    let test_summary = TestSummary::load(&roms, &expected_frames);
     test_summary.print();
     assert!(test_summary.passed());
 }
@@ -93,7 +94,7 @@ struct TestSummary {
 }
 
 impl TestSummary {
-    fn load(roms: Roms, expected_frames: ExpectedFrames) -> Self {
+    fn load(roms: &Roms, expected_frames: &ExpectedFrames) -> Self {
         // Log nothing by default, but if debugging is needed, then logging can be enabled.
         logger::init(Logger {
             disable_all: true,
@@ -126,7 +127,7 @@ impl TestSummary {
                     .cloned()
                     .unwrap_or(BTreeMap::new());
 
-                let mut nes = Nes::new(&header_db, &config, cartridge).unwrap();
+                let mut nes = Nes::new(&header_db, &config, &cartridge).unwrap();
                 nes.mute();
                 *nes.frame_mut().show_overscan_mut() = true;
 
@@ -178,12 +179,12 @@ impl TestSummary {
                 }
             } else {
                 test_results.insert(rom_id.clone(), TestStatus::ExpectedFramesMissing);
-            };
+            }
         });
 
         log::logger().flush();
 
-        for entry in expected_frames.iter() {
+        for entry in &expected_frames {
             test_results.insert(entry.key().clone(), TestStatus::RomMissing);
         }
 
@@ -327,7 +328,7 @@ impl FrameEntry {
 
         let frame_index = sscanf::scanf!(start, "frame{}", u32)
             .expect("PPM frame must have a number in the file name");
-        Self { full_path, frame_index, tag, ppm_hash }
+        Self { full_path, tag, frame_index, ppm_hash }
     }
 
     fn directory(&self) -> PathBuf {

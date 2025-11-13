@@ -18,8 +18,8 @@ pub struct Mapper207 {
 impl Mapper for Mapper207 {
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
         match *addr {
-            0x7EF0 => self.set_mirroring_and_bank(mem, value, C0, NameTableQuadrant::TopLeft, NameTableQuadrant::TopRight),
-            0x7EF1 => self.set_mirroring_and_bank(mem, value, C1, NameTableQuadrant::BottomLeft, NameTableQuadrant::BottomRight),
+            0x7EF0 => Self::set_mirroring_and_bank(mem, value, C0, NameTableQuadrant::TopLeft, NameTableQuadrant::TopRight),
+            0x7EF1 => Self::set_mirroring_and_bank(mem, value, C1, NameTableQuadrant::BottomLeft, NameTableQuadrant::BottomRight),
             _ => self.mapper080.write_register(mem, addr, value),
         }
     }
@@ -35,7 +35,6 @@ impl Mapper207 {
     }
 
     fn set_mirroring_and_bank(
-        &self,
         mem: &mut Memory,
         value: u8,
         chr_id: ChrBankRegisterId,

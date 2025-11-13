@@ -207,7 +207,7 @@ impl Cpu {
                 CpuStepFormatting::Data => step.format_with_read_write_values(mem, value),
             }
         } else {
-            "".to_owned()
+            String::new()
         };
 
         let original_program_counter = self.program_counter;
@@ -226,7 +226,7 @@ impl Cpu {
             self.mode_state.set_current_instruction_with_address(
                 Instruction::from_code_point(value),
                 mem.cpu_pinout.address_bus,
-            )
+            );
         }
 
         if !halted {

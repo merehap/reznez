@@ -134,9 +134,9 @@ impl WindowRenderer for CartridgeQueryRenderer {
                                 }
                             }
 
-                            ui.label(path.file_stem().map(|stem| stem.to_string_lossy().into_owned()).unwrap_or("???".to_owned()));
+                            ui.label(path.file_stem().map_or("???".to_owned(), |stem| stem.to_string_lossy().into_owned()));
                             ui.label(mapper_number.to_string());
-                            ui.label(submapper_number.map(|s| s.to_string()).unwrap_or("".to_owned()));
+                            ui.label(submapper_number.map(|s| s.to_string()).unwrap_or(String::new()));
                             ui.label(name_table_mirroring.unwrap().to_string());
                             ui.label(has_persistent_memory.to_string());
                             ui.label(console_type.to_string());
@@ -149,8 +149,8 @@ impl WindowRenderer for CartridgeQueryRenderer {
                             ui.label(format!("{region_timing_mode:?}"));
                             ui.label(miscellaneous_rom_count.to_string());
                             ui.label(format!("{default_expansion_device:?}"));
-                            ui.label(vs_hardware_type.map_or("".to_owned(), |hardware| format!("{hardware:?}")));
-                            ui.label(vs_ppu_type.map_or("".to_owned(), |ppu| format!("{ppu:?}")));
+                            ui.label(vs_hardware_type.map_or(String::new(), |hardware| format!("{hardware:?}")));
+                            ui.label(vs_ppu_type.map_or(String::new(), |ppu| format!("{ppu:?}")));
                             ui.label(format!("{full_hash:X}"));
                             ui.label(format!("{prg_rom_hash:X}"));
                             ui.label(format!("{chr_rom_hash:X}"));

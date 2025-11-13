@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use crate::cpu::dmc_dma::DmcDmaState;
 use crate::cpu::instruction::{Instruction, OpCode, AccessMode};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::memory::AddressBusType;
@@ -97,7 +96,7 @@ impl Formatter for MinimalFormatter {
                 let address = start_address.advance(cpu.y_index());
                 argument_string.push_str(&format!("${:04X}", *address));
             }
-        };
+        }
 
         format!("{:?} {}", instruction.op_code(), argument_string)
     }
@@ -192,7 +191,7 @@ impl Formatter for Nintendulator0980Formatter {
                 // TODO: Should this wrap around just the current page?
                 let _address = start_address.advance(cpu.y_index());
             }
-        };
+        }
 
         let instr_bytes = match instruction.access_mode().instruction_length() {
             1 => format!("{:02X}      ", instruction.code_point()),
@@ -324,7 +323,7 @@ impl Formatter for MesenFormatter {
                 let address = start_address.advance(cpu.y_index());
                 argument_string.push_str(&format!("[{}] = ${:02X}", address.to_mesen_string(), peek(address)));
             }
-        };
+        }
 
         let mut scanline = nes.memory().ppu_regs.clock().scanline() as i16;
         if scanline == 261 {
@@ -355,7 +354,7 @@ pub fn interrupts(nes: &Nes) -> String {
     interrupts.push(if nes.memory().cpu_pinout.mapper_irq_asserted() { 'M' } else {'-'});
     interrupts.push(if nes.cpu().nmi_pending() { 'N' } else {'-'});
     interrupts.push(if nes.memory().oam_dma.dma_pending() { 'O' } else {'-'});
-    interrupts.push(if nes.memory().dmc_dma.state() != DmcDmaState::Idle { 'D' } else {'-'});
+    interrupts.push(if nes.memory().dmc_dma.state().active() { 'D' } else {'-'});
 
     interrupts
 }

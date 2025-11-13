@@ -72,14 +72,14 @@ impl WindowRenderer for CartridgeMetadataRenderer {
                     ui.label("Mapper");
                     ui.label(mapper_number.to_string());
                     for metadata in metadata_sources {
-                        ui.label(metadata.mapper_number().map(|m| m.to_string()).unwrap_or("".to_owned()));
+                        ui.label(metadata.mapper_number().map_or(String::new(), |m| m.to_string()));
                     }
                     ui.end_row();
 
                     ui.label("Submapper");
-                    ui.label(submapper_number.map(|s| s.to_string()).unwrap_or("N/A".to_owned()));
+                    ui.label(submapper_number.map_or("N/A".to_owned(), |s| s.to_string()));
                     for metadata in metadata_sources {
-                        ui.label(metadata.submapper_number().map(|m| m.to_string()).unwrap_or("".to_owned()));
+                        ui.label(metadata.submapper_number().map_or(String::new(), |m| m.to_string()));
                     }
                     ui.end_row();
 
@@ -88,11 +88,13 @@ impl WindowRenderer for CartridgeMetadataRenderer {
                     for metadata in metadata_sources {
                         let mut text = String::new();
                         if let Some(mirroring) = metadata.name_table_mirroring() {
-                            text.push_str(&format!("{mirroring}"));
+                            text.push_str(&mirroring.to_string());
                         }
 
                         if let Some(index) = metadata.name_table_mirroring_index() {
-                            text.push_str(&format!(" (index = {index})"));
+                            text.push_str(" (index = ");
+                            text.push_str(&index.to_string());
+                            text.push(')');
                         }
 
                         ui.label(text);
@@ -102,112 +104,112 @@ impl WindowRenderer for CartridgeMetadataRenderer {
                     ui.label("Has Persistent Memory");
                     ui.label(has_persistent_memory.to_string());
                     for metadata in metadata_sources {
-                        ui.label(metadata.has_persistent_memory().map(|m| m.to_string()).unwrap_or("".to_owned()));
+                        ui.label(metadata.has_persistent_memory().map_or(String::new(), |m| m.to_string()));
                     }
                     ui.end_row();
 
                     ui.label("Console Type");
                     ui.label(console_type.to_string());
                     for metadata in metadata_sources {
-                        ui.label(metadata.console_type().map(|m| m.to_string()).unwrap_or("".to_owned()));
+                        ui.label(metadata.console_type().map_or(String::new(), |m| m.to_string()));
                     }
                     ui.end_row();
 
                     ui.label("PRG ROM Size");
                     ui.label(kib_string(prg_rom_size));
                     for metadata in metadata_sources {
-                        ui.label(metadata.prg_rom_size().map(kib_string).unwrap_or("".to_owned()));
+                        ui.label(metadata.prg_rom_size().map_or(String::new(), kib_string));
                     }
                     ui.end_row();
 
                     ui.label("PRG Work RAM Size");
                     ui.label(kib_string(prg_work_ram_size));
                     for metadata in metadata_sources {
-                        ui.label(metadata.prg_work_ram_size().map(kib_string).unwrap_or("".to_owned()));
+                        ui.label(metadata.prg_work_ram_size().map_or(String::new(), kib_string));
                     }
                     ui.end_row();
 
                     ui.label("PRG Save RAM Size");
                     ui.label(kib_string(prg_save_ram_size));
                     for metadata in metadata_sources {
-                        ui.label(metadata.prg_save_ram_size().map(kib_string).unwrap_or("".to_owned()));
+                        ui.label(metadata.prg_save_ram_size().map_or(String::new(), kib_string));
                     }
                     ui.end_row();
 
                     ui.label("CHR ROM Size");
                     ui.label(kib_string(chr_rom_size));
                     for metadata in metadata_sources {
-                        ui.label(metadata.chr_rom_size().map(kib_string).unwrap_or("".to_owned()));
+                        ui.label(metadata.chr_rom_size().map_or(String::new(), kib_string));
                     }
                     ui.end_row();
 
                     ui.label("CHR Work RAM Size");
                     ui.label(kib_string(chr_work_ram_size));
                     for metadata in metadata_sources {
-                        ui.label(metadata.chr_work_ram_size().map(kib_string).unwrap_or("".to_owned()));
+                        ui.label(metadata.chr_work_ram_size().map_or(String::new(), kib_string));
                     }
                     ui.end_row();
 
                     ui.label("CHR Save RAM Size");
                     ui.label(kib_string(chr_save_ram_size));
                     for metadata in metadata_sources {
-                        ui.label(metadata.chr_save_ram_size().map(kib_string).unwrap_or("".to_owned()));
+                        ui.label(metadata.chr_save_ram_size().map_or(String::new(), kib_string));
                     }
                     ui.end_row();
 
                     ui.label("Region Timing Mode");
-                    ui.label(format!("{:?}", region_timing_mode));
+                    ui.label(format!("{region_timing_mode:?}"));
                     for metadata in metadata_sources {
-                        ui.label(metadata.timing_mode().map_or("".to_owned(), |region| format!("{region:?}")));
+                        ui.label(metadata.timing_mode().map_or(String::new(), |region| format!("{region:?}")));
                     }
                     ui.end_row();
 
                     ui.label("Miscellaneous ROM Count");
                     ui.label(miscellaneous_rom_count.to_string());
                     for metadata in metadata_sources {
-                        ui.label(metadata.miscellaneous_rom_count().map_or("".to_owned(), |count| format!("{count:?}")));
+                        ui.label(metadata.miscellaneous_rom_count().map_or(String::new(), |count| format!("{count:?}")));
                     }
                     ui.end_row();
 
                     ui.label("Default Expansion Device");
-                    ui.label(format!("{:?}", default_expansion_device));
+                    ui.label(format!("{default_expansion_device:?}"));
                     for metadata in metadata_sources {
-                        ui.label(metadata.default_expansion_device().map_or("".to_owned(), |device| format!("{device:?}")));
+                        ui.label(metadata.default_expansion_device().map_or(String::new(), |device| format!("{device:?}")));
                     }
                     ui.end_row();
 
                     ui.label("VS Hardware Type");
-                    ui.label(vs_hardware_type.map_or("".to_owned(), |hardware| format!("{hardware:?}")));
+                    ui.label(vs_hardware_type.map_or(String::new(), |hardware| format!("{hardware:?}")));
                     for metadata in metadata_sources {
-                        ui.label(metadata.vs_hardware_type().map_or("".to_owned(), |hardware| format!("{hardware:?}")));
+                        ui.label(metadata.vs_hardware_type().map_or(String::new(), |hardware| format!("{hardware:?}")));
                     }
                     ui.end_row();
 
                     ui.label("VS PPU Type");
-                    ui.label(vs_ppu_type.map_or("".to_owned(), |ppu| format!("{ppu:?}")));
+                    ui.label(vs_ppu_type.map_or(String::new(), |ppu| format!("{ppu:?}")));
                     for metadata in metadata_sources {
-                        ui.label(metadata.vs_ppu_type().map_or("".to_owned(), |ppu| format!("{ppu:?}")));
+                        ui.label(metadata.vs_ppu_type().map_or(String::new(), |ppu| format!("{ppu:?}")));
                     }
                     ui.end_row();
 
                     ui.label("Full CRC");
                     ui.label("");
                     for metadata in metadata_sources {
-                        ui.label(metadata.full_hash().map_or("".to_owned(), |crc| format!("{crc:X}")));
+                        ui.label(metadata.full_hash().map_or(String::new(), |crc| format!("{crc:X}")));
                     }
                     ui.end_row();
 
                     ui.label("PRG ROM CRC");
                     ui.label("");
                     for metadata in metadata_sources {
-                        ui.label(metadata.prg_rom_hash().map_or("".to_owned(), |crc| format!("{crc:X}")));
+                        ui.label(metadata.prg_rom_hash().map_or(String::new(), |crc| format!("{crc:X}")));
                     }
                     ui.end_row();
 
                     ui.label("CHR ROM CRC");
                     ui.label("");
                     for metadata in metadata_sources {
-                        ui.label(metadata.chr_rom_hash().map_or("".to_owned(), |crc| format!("{crc:X}")));
+                        ui.label(metadata.chr_rom_hash().map_or(String::new(), |crc| format!("{crc:X}")));
                     }
                     ui.end_row();
                 });

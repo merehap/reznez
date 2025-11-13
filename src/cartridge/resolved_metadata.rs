@@ -157,7 +157,7 @@ impl MetadataResolver {
 
 fn resolve_field<F, T>(all_metadata: &[&CartridgeMetadata], field_extractor: F) -> Option<T>
 where F: Fn(&&CartridgeMetadata) -> Option<T> {
-    all_metadata.iter().map(field_extractor).find(|v| v.is_some()).flatten()
+    all_metadata.iter().map(field_extractor).find(Option::is_some).flatten()
 }
 
 #[derive(Clone, Debug, Default)]

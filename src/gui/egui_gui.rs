@@ -64,14 +64,14 @@ impl Gui for EguiGui {
             if let Event::WindowEvent { event, window_id } = event {
                 match event {
                     WindowEvent::CloseRequested => {
-                        let primary_removed = window_manager.remove_window(&window_id);
+                        let primary_removed = window_manager.remove_window(window_id);
                         if primary_removed {
                             log::logger().flush();
                             event_loop_window_target.exit();
                         }
                     }
                     WindowEvent::RedrawRequested => {
-                        match window_manager.draw(&mut world, &window_id) {
+                        match window_manager.draw(&mut world, window_id) {
                             Ok(FlowControl { window_args, should_close_window }) => {
                                 if let Some((renderer, position, scale)) = window_args {
                                     window_manager.create_window_from_renderer(
@@ -83,7 +83,7 @@ impl Gui for EguiGui {
                                 }
 
                                 if should_close_window {
-                                    window_manager.remove_window(&window_id);
+                                    window_manager.remove_window(window_id);
                                 }
                             }
                             Err(e) => {
@@ -95,7 +95,7 @@ impl Gui for EguiGui {
                         }
                     }
                     _ => {
-                        if let Some(window) = window_manager.window_mut(&window_id) {
+                        if let Some(window) = window_manager.window_mut(window_id) {
                             window.handle_event(&event);
                         }
                     }
@@ -291,10 +291,10 @@ impl <'a> WindowManager<'a> {
             .insert(window.window.id(), (name, window));
     }
 
-    pub fn remove_window(&mut self, window_id: &WindowId) -> bool {
-        if let Some((name, _)) = self.windows_by_id.remove(window_id) {
+    pub fn remove_window(&mut self, window_id: WindowId) -> bool {
+        if let Some((name, _)) = self.windows_by_id.remove(&window_id) {
             self.window_names.remove(&name);
-            let primary_removed = *window_id == self.primary_window_id;
+            let primary_removed = window_id == self.primary_window_id;
             return primary_removed;
         }
 
@@ -311,14 +311,14 @@ impl <'a> WindowManager<'a> {
         }
     }
 
-    pub fn draw(&mut self, world: &mut World, window_id: &WindowId) -> Result<FlowControl, String> {
+    pub fn draw(&mut self, world: &mut World, window_id: WindowId) -> Result<FlowControl, String> {
         let window = self.window_mut(window_id).ok_or("Failed to create window")?;
         window.draw(world)
     }
 
-    pub fn window_mut(&mut self, window_id: &WindowId) -> Option<&mut EguiWindow<'a>> {
+    pub fn window_mut(&mut self, window_id: WindowId) -> Option<&mut EguiWindow<'a>> {
         self.windows_by_id
-            .get_mut(window_id)
+            .get_mut(&window_id)
             .map(|(_, window)| window)
     }
 }

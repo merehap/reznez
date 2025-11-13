@@ -75,7 +75,7 @@ impl NoiseChannel {
                 feedback ^= (self.shift_register & 0b100_0000) >> 6;
             } else {
                 feedback ^= (self.shift_register & 0b000_0010) >> 1;
-            };
+            }
 
             feedback <<= 14;
 

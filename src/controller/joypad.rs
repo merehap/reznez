@@ -45,7 +45,7 @@ impl Joypad {
             self.strobe_on();
         } else {
             self.strobe_off();
-        };
+        }
     }
 
     pub fn strobe_on(&mut self) {

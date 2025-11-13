@@ -60,7 +60,7 @@ impl Nes {
         Cartridge::load(path, &raw_header_and_data)
     }
 
-    pub fn new(header_db: &HeaderDb, config: &Config, cartridge: Cartridge) -> Result<Nes, String> {
+    pub fn new(header_db: &HeaderDb, config: &Config, cartridge: &Cartridge) -> Result<Nes, String> {
         let (mapper, mut memory, metadata_resolver) = Nes::load_rom(header_db, config, cartridge)?;
 
         if let Err(err) = DirBuilder::new().recursive(true).create("saveram") {
@@ -126,7 +126,7 @@ impl Nes {
         self.memory.stack_pointer()
     }
 
-    fn load_rom(header_db: &HeaderDb, config: &Config, cartridge: Cartridge) -> Result<(Box<dyn Mapper>, Memory, MetadataResolver), String> {
+    fn load_rom(header_db: &HeaderDb, config: &Config, cartridge: &Cartridge) -> Result<(Box<dyn Mapper>, Memory, MetadataResolver), String> {
         let header = cartridge.header();
         let cartridge_mapper_number = header.mapper_number().unwrap();
         let prg_rom_hash = header.prg_rom_hash().unwrap();
@@ -178,7 +178,7 @@ impl Nes {
             layout_supports_prg_ram: false,
         };
 
-        let mapper = mapper_list::lookup_mapper(&metadata_resolver, &cartridge)?;
+        let mapper = mapper_list::lookup_mapper(&metadata_resolver, cartridge)?;
 
         let name_table_mirroring_index = usize::try_from(metadata_resolver.cartridge.name_table_mirroring_index().unwrap()).unwrap();
         let name_table_mirroring = mapper.layout().cartridge_selection_name_table_mirrorings()[name_table_mirroring_index]
@@ -188,7 +188,7 @@ impl Nes {
 
         let metadata = metadata_resolver.resolve();
         let (prg_memory, chr_memory, name_table_mirrorings) =
-            mapper.layout().make_mapper_params(&metadata, &cartridge, config.allow_saving)?;
+            mapper.layout().make_mapper_params(&metadata, cartridge, config.allow_saving)?;
 
         let mut memory = Memory::new(
             prg_memory, chr_memory, name_table_mirrorings,
@@ -782,7 +782,7 @@ impl Snapshots {
             append(&mut ppu_vpos, &vpos, true, skip);
             append(&mut ppu_hpos, &hpos, true, skip);
 
-            append(&mut instr, &center(&snapshot.instruction.to_string()), true, skip);
+            append(&mut instr, &center(&snapshot.instruction.clone()), true, skip);
             append(&mut fcw_status, &center(&format!("{:?}", snapshot.frame_counter_write_status)),
                 snapshot.frame_counter_write_status != FrameCounterWriteStatus::Inactive, skip);
             append(&mut nmi_status, &center(&format!("{:?}", snapshot.nmi_status)), snapshot.nmi_status != NmiStatus::Inactive, skip);

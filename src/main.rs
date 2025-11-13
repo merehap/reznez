@@ -63,7 +63,7 @@ fn main() {
         let cartridge = Nes::load_cartridge(&path)
             .map_err(|err| format!("Failed to start REZNEZ. {err}"))
             .unwrap();
-        let nes = Nes::new(&HeaderDb::load(), &config, cartridge)
+        let nes = Nes::new(&HeaderDb::load(), &config, &cartridge)
             .map_err(|err| format!("Failed to start REZNEZ. {err}"))
             .unwrap();
         assert_eq!(nes.resolved_metadata().console_type, ConsoleType::NesFamiconDendy);

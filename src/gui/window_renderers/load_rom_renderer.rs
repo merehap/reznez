@@ -67,5 +67,5 @@ impl WindowRenderer for LoadRomRenderer {
 
 fn load_nes(header_db: &HeaderDb, config: &Config, rom_path: &Path) -> Result<Nes, String> {
     let cartridge = Nes::load_cartridge(rom_path)?;
-    Nes::new(header_db, config, cartridge)
+    Nes::new(header_db, config, &cartridge)
 }

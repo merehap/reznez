@@ -193,8 +193,7 @@ impl PrgMapping {
                     ReadStatus::Enabled
                 } else {
                     self.bank.read_status_register_id()
-                        .map(|id| regs.read_status(id))
-                        .unwrap_or(ReadStatus::Enabled)
+                        .map_or(ReadStatus::Enabled, |id| regs.read_status(id))
                 };
                 write_status = WriteStatus::Disabled;
             }
@@ -209,11 +208,9 @@ impl PrgMapping {
                 }
 
                 read_status = self.bank.read_status_register_id()
-                    .map(|id| regs.read_status(id))
-                    .unwrap_or(ReadStatus::Enabled);
+                    .map_or(ReadStatus::Enabled, |id| regs.read_status(id));
                 write_status = self.bank.write_status_register_id()
-                    .map(|id| regs.write_status(id))
-                    .unwrap_or(WriteStatus::Enabled);
+                    .map_or(WriteStatus::Enabled, |id| regs.write_status(id));
             }
         }
 

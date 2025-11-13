@@ -83,9 +83,9 @@ impl Mapper for Mapper056 {
 
         // Overlapping registers in the 0xFXXX range.
         if matches!(addr & 0xFC03, 0xF000..=0xF003) && self.selected_prg_bank.is_some() {
-            mem.set_prg_bank_register_bits(prg_id, u16::from(value & 0b0001_0000), 0b1111_0000)
+            mem.set_prg_bank_register_bits(prg_id, u16::from(value & 0b0001_0000), 0b1111_0000);
         } else if addr & 0xFC00 == 0xF800 {
-            mem.set_name_table_mirroring(value & 1)
+            mem.set_name_table_mirroring(value & 1);
         } else if matches!(addr & 0xFC07, 0xFC00..=0xFC07) {
             mem.set_chr_register(chr_id, value & 0b0111_1111);
         }

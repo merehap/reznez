@@ -182,22 +182,22 @@ impl PrgBank {
         }
     }
 
-    pub const fn bank_register_id(&self) -> Option<PrgBankRegisterId> {
+    pub const fn bank_register_id(self) -> Option<PrgBankRegisterId> {
         match self.bank_number_provider {
             PrgBankNumberProvider::Fixed(_) => None,
             PrgBankNumberProvider::Switchable(reg_id) => Some(reg_id),
         }
     }
 
-    pub fn read_status_register_id(&self) -> Option<ReadStatusRegisterId> {
+    pub fn read_status_register_id(self) -> Option<ReadStatusRegisterId> {
         self.read_status_register_id
     }
 
-    pub fn write_status_register_id(&self) -> Option<WriteStatusRegisterId> {
+    pub fn write_status_register_id(self) -> Option<WriteStatusRegisterId> {
         self.write_status_register_id
     }
 
-    pub fn memory_type(&self, regs: &PrgBankRegisters) -> Option<MemType> {
+    pub fn memory_type(self, regs: &PrgBankRegisters) -> Option<MemType> {
         let prg_source = match self.prg_source_provider {
             PrgSourceProvider::Fixed(prg_source) => prg_source,
             PrgSourceProvider::Switchable(reg_id) => Some(regs.rom_ram_mode(reg_id)),

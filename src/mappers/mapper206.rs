@@ -42,7 +42,7 @@ impl Mapper for Mapper206 {
                 match self.selected_register_id {
                     Chr(id) => mem.set_chr_register(id, value & 0b0011_1111),
                     Prg(id) => mem.set_prg_register(id, value & 0b0000_1111),
-                };
+                }
             }
             0xA000..=0xFFFF => { /* Do nothing. */ }
         }

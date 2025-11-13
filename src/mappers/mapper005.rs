@@ -147,7 +147,7 @@ impl Mapper for Mapper005 {
 
         match address.to_u16() {
             0x0000..=0x1FFF if should_substitute => {
-                let lower_chr_bank_bits = self.peek_ext_rom(mem, self.name_table_index) & 0b0011_1111;
+                let lower_chr_bank_bits = Self::peek_ext_rom(mem, self.name_table_index) & 0b0011_1111;
                 let pattern_bank = (self.upper_chr_bank_bits << 6) | lower_chr_bank_bits;
                 let raw_chr_index = 4 * KIBIBYTE * u32::from(pattern_bank) * KIBIBYTE + u32::from(address.to_u16() % 0x1000);
                 mem.chr_memory().peek_raw(raw_chr_index)
@@ -155,7 +155,7 @@ impl Mapper for Mapper005 {
             0x0000..=0x1FFF => mem.chr_memory().peek(&mem.ciram, &mem.mapper_custom_pages, address),
             0x2000..=0x3EFF => self.peek_name_table_byte(mem, &mem.ciram, address),
             0x3F00..=0x3FFF if should_substitute => {
-                let palette = self.peek_ext_rom(mem, self.name_table_index) >> 6;
+                let palette = Self::peek_ext_rom(mem, self.name_table_index) >> 6;
                 // The same palette is used for all 4 corners.
                 let palette_byte = palette << 6 | palette << 4 | palette << 2 | palette;
                 PpuPeek::new(palette_byte, EXT_RAM_PEEK_SOURCE)
@@ -220,7 +220,7 @@ impl Mapper for Mapper005 {
             0x5204 => ReadResult::full(self.frame_state.to_status_byte()),
             0x5205 => ReadResult::full((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
             0x5206 => ReadResult::full(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
-            0x5C00..=0x5FFF => ReadResult::full(self.peek_ext_rom(mem, *addr - 0x5C00)),
+            0x5C00..=0x5FFF => ReadResult::full(Self::peek_ext_rom(mem, *addr - 0x5C00)),
             _ => ReadResult::OPEN_BUS,
         }
     }
@@ -243,14 +243,14 @@ impl Mapper for Mapper005 {
             }
             0x5104 => self.set_extended_ram_mode(mem, value),
             0x5105 => Self::set_name_table_mirroring(mem, value),
-            0x5106 => self.set_fill_mode_name_table_byte(mem, value),
-            0x5107 => self.set_fill_mode_attribute_table_byte(mem, value),
+            0x5106 => Self::set_fill_mode_name_table_byte(mem, value),
+            0x5107 => Self::set_fill_mode_attribute_table_byte(mem, value),
             0x5108..=0x5112 => { /* Do nothing. */ }
-            0x5113 => self.set_prg_bank_register(mem, P0, None, value),
-            0x5114 => self.set_prg_bank_register(mem, P1, Some(PS0), value),
-            0x5115 => self.set_prg_bank_register(mem, P2, Some(PS1), value),
-            0x5116 => self.set_prg_bank_register(mem, P3, Some(PS2), value),
-            0x5117 => self.set_prg_bank_register(mem, P4, None, value),
+            0x5113 => Self::set_prg_bank_register(mem, P0, None, value),
+            0x5114 => Self::set_prg_bank_register(mem, P1, Some(PS0), value),
+            0x5115 => Self::set_prg_bank_register(mem, P2, Some(PS1), value),
+            0x5116 => Self::set_prg_bank_register(mem, P3, Some(PS2), value),
+            0x5117 => Self::set_prg_bank_register(mem, P4, None, value),
             0x5118..=0x511F => { /* Do nothing. */ }
             0x5120 => self.set_chr_bank_register(mem, C0, value),
             0x5121 => self.set_chr_bank_register(mem, C1, value),
@@ -288,7 +288,7 @@ impl Mapper for Mapper005 {
             0x5206 => self.multiplier = value,
             0x5207..=0x5BFF => { /* Do nothing. */ }
             // TODO: ReadWriteStatus
-            0x5C00..=0x5FFF => self.write_ext_rom(mem, *addr - 0x5C00, value),
+            0x5C00..=0x5FFF => Self::write_ext_rom(mem, *addr - 0x5C00, value),
             0x6000..=0xFFFF => { /* Do nothing. */ }
         }
     }
@@ -365,7 +365,7 @@ impl Mapper005 {
     }
 
     // Write 0x5106
-    fn set_fill_mode_name_table_byte(&self, mem: &mut Memory, value: u8) {
+    fn set_fill_mode_name_table_byte(mem: &mut Memory, value: u8) {
         // The fill mode name table byte is not writeable except for right now.
         mem.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Enabled);
         // Set the fill-mode name table bytes but not the attribute table bytes.
@@ -377,7 +377,7 @@ impl Mapper005 {
     }
 
     // Write 0x5107
-    fn set_fill_mode_attribute_table_byte(&mut self, mem: &mut Memory, value: u8) {
+    fn set_fill_mode_attribute_table_byte(mem: &mut Memory, value: u8) {
         // The fill mode attribute table byte is not writeable except for right now.
         mem.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Enabled);
 
@@ -392,7 +392,6 @@ impl Mapper005 {
 
     // Write 0x5113 through 0x5117
     fn set_prg_bank_register(
-        &self,
         mem: &mut Memory,
         id: PrgBankRegisterId,
         prg_source_reg_id: Option<PrgSourceRegisterId>,
@@ -412,6 +411,7 @@ impl Mapper005 {
     }
 
     // Write 0x5200
+    #[allow(clippy::unused_self)]
     fn enable_vertical_split_mode(&mut self, value: u8) {
         let fields = splitbits!(value, "es.ccccc");
         if fields.e {
@@ -448,12 +448,12 @@ impl Mapper005 {
         mem.set_chr_layout(layout_index);
     }
 
-    fn peek_ext_rom(&self, mem: &Memory, index: u16) -> u8 {
+    fn peek_ext_rom(mem: &Memory, index: u16) -> u8 {
         mem.mapper_custom_pages[EXT_RAM_PAGE_INDEX].peek(index).resolve(0).0
     }
 
-    fn write_ext_rom(&self, mem: &mut Memory, index: u16, value: u8) {
-        mem.mapper_custom_pages[EXT_RAM_PAGE_INDEX].write(index, value)
+    fn write_ext_rom(mem: &mut Memory, index: u16, value: u8) {
+        mem.mapper_custom_pages[EXT_RAM_PAGE_INDEX].write(index, value);
     }
 }
 

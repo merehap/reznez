@@ -408,9 +408,9 @@ impl CounterBuilder {
             WhenDisabledPrevent::Counting | WhenDisabledPrevent::CountingAndTriggering => false,
         };
 
-        if matches!(when_disabled_prevent, WhenDisabledPrevent::Counting) && !self.prescaler.is_nop() {
-            panic!("WhenDisabledPrevent::Counting must not be specified at the same as a prescaler.");
-        }
+        let safe_for_prescaler = !matches!(when_disabled_prevent, WhenDisabledPrevent::Counting);
+        assert!(safe_for_prescaler || !self.prescaler.enabled(),
+            "WhenDisabledPrevent::Counting must not be specified at the same as a prescaler.");
 
         let wraps = self.wraps.expect("wraps must be set");
         let auto_triggered_by =  self.auto_triggered_by.expect("auto_triggered_by must be set");
@@ -501,8 +501,8 @@ impl Prescaler {
         }
     }
 
-    const fn is_nop(&self) -> bool {
-        self.multiple.get() == 1
+    const fn enabled(self) -> bool {
+        self.multiple.get() > 1
     }
 }
 

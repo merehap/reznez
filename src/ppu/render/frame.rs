@@ -128,11 +128,7 @@ impl Frame {
         self.sprite_buffer[(column, row)] = (rgbt, priority, is_sprite_0);
     }
 
-    pub fn write_all_pixel_data(
-        &self,
-        mask: Mask,
-        mut data: [u8; 3 * PixelIndex::PIXEL_COUNT],
-    ) -> [u8; 3 * PixelIndex::PIXEL_COUNT] {
+    pub fn write_all_pixel_data(&self, mask: Mask, data: &mut [u8]) {
         for pixel_index in PixelIndex::iter() {
             let (column, row) = pixel_index.to_column_row();
             let (pixel, _) = self.pixel(mask, column, row);
@@ -142,8 +138,6 @@ impl Frame {
             data[index + 1] = pixel.green();
             data[index + 2] = pixel.blue();
         }
-
-        data
     }
 
     pub fn copy_to_rgba_buffer(
@@ -165,9 +159,9 @@ impl Frame {
     }
 
     pub fn to_ppm(&self, mask: Mask) -> Ppm {
-        let mut data = [0; 3 * PixelIndex::PIXEL_COUNT];
-        data = self.write_all_pixel_data(mask, data);
-        Ppm::new(data.to_vec())
+        let mut data = vec![0; 3 * PixelIndex::PIXEL_COUNT];
+        self.write_all_pixel_data(mask, &mut data);
+        Ppm::new(data)
     }
 }
 

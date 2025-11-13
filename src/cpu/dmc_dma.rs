@@ -58,6 +58,10 @@ pub enum DmcDmaState {
 }
 
 impl DmcDmaState {
+    pub fn active(self) -> bool {
+        self != Self::Idle
+    }
+
     pub fn step(&mut self, is_cpu_read_step: bool, parity: CycleParity) -> DmcDmaAction {
         let still_waiting_for_get = *self == Self::WaitingForGet && parity == CycleParity::Put;
         let still_trying_to_halt = *self == Self::TryHalt && !is_cpu_read_step;

@@ -273,7 +273,7 @@ fn events(input: &WinitInputHelper, gilrs: &mut gilrs::Gilrs, active_gamepad_id:
             joypad1_button_statuses.insert(button, ButtonStatus::Pressed);
         } else if input.key_released(key) {
             joypad1_button_statuses.insert(button, ButtonStatus::Unpressed);
-        };
+        }
     }
 
     for (&key, &button) in JOY_2_KEYBOARD_MAPPINGS.iter() {
@@ -281,7 +281,7 @@ fn events(input: &WinitInputHelper, gilrs: &mut gilrs::Gilrs, active_gamepad_id:
             joypad2_button_statuses.insert(button, ButtonStatus::Pressed);
         } else if input.key_released(key) {
             joypad2_button_statuses.insert(button, ButtonStatus::Unpressed);
-        };
+        }
     }
 
     Events {
