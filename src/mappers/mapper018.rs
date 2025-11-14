@@ -60,15 +60,6 @@ impl Mapper for Mapper018 {
     }
 
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
-        // TODO: Remove this.
-        if matches!(*addr, 0x6000..=0x7FFF) {
-            if self.work_ram_write_enabled {
-                mem.write_prg(addr, value);
-            }
-
-            return;
-        }
-
         let value = u16::from(value);
         match *addr & 0b1111_0000_0000_0011 {
             0x0000..=0x401F => unreachable!(),

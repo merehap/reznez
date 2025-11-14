@@ -202,11 +202,6 @@ impl Memory {
         self.prg_memory.set_prg_rom_outer_bank_number(index);
     }
 
-    // TODO: Remove this.
-    pub fn write_prg(&mut self, addr: CpuAddress, value: u8) {
-        self.prg_memory.write(addr, value);
-    }
-
     pub fn set_reads_enabled(&mut self, id: ReadStatusRegisterId, enabled: bool) {
         let status = if enabled { ReadStatus::Enabled } else { ReadStatus::Disabled };
         self.prg_memory.set_read_status(id, status);
