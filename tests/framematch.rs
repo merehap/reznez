@@ -65,6 +65,8 @@ static SCHEDULED_BUTTON_EVENTS: LazyLock<BTreeMap<Crc, BTreeMap<FrameNumber, (Bu
     presses_by_full_crc.insert(0x7BAF8149, vec![(1763, 1764, Start)]);
     // Master Fighter VI' - [BROKEN] Wrong sprites rendered on character selection. Same in Mesen.
     presses_by_full_crc.insert(0xC2928549, vec![(52, 53, Start)]);
+    // AccuracyCoin
+    presses_by_full_crc.insert(0x86475E70, vec![(59, 60, Start)]);
 
     let mut all_events = BTreeMap::new();
     for (full_crc, presses) in presses_by_full_crc {

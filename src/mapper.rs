@@ -109,7 +109,8 @@ pub trait Mapper {
             0x4000..=0x401F if !apu_registers_active => ReadResult::OPEN_BUS,
             0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
             0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
-            0x4015 if address_bus_type == AddressBusType::Cpu => ReadResult::no_bus_update(mem.apu_regs.peek_status(&mem.cpu_pinout).to_u8()),
+            0x4015 if address_bus_type == AddressBusType::Cpu =>
+                ReadResult::no_bus_update(mem.apu_regs.peek_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
             // DMA values must always be copied to the bus, unlike with the normal CPU address bus.
             0x4015 => ReadResult::partial(mem.apu_regs.peek_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
             // TODO: Move ReadResult/mask specification into the controller.
@@ -167,7 +168,8 @@ pub trait Mapper {
             0x4000..=0x4013 => ReadResult::OPEN_BUS,
             // OAM DMA is write-only.
             0x4014 => ReadResult::OPEN_BUS,
-            0x4015 if address_bus_type == AddressBusType::Cpu => ReadResult::no_bus_update(mem.apu_regs.read_status(&mem.cpu_pinout).to_u8()),
+            0x4015 if address_bus_type == AddressBusType::Cpu =>
+                ReadResult::no_bus_update(mem.apu_regs.read_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
             // DMA values must always be copied to the bus, unlike with the normal CPU address bus.
             0x4015 => ReadResult::partial(mem.apu_regs.read_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
             // TODO: Move ReadResult/mask specification into the controller.
@@ -195,6 +197,7 @@ pub trait Mapper {
         let addr = mem.cpu_address_bus(address_bus_type);
         let value = mem.cpu_pinout.data_bus;
         self.on_cpu_write(mem, addr, value);
+
         match *addr {
             0x0000..=0x07FF => mem.cpu_internal_ram[*addr as usize] = value,
             0x0800..=0x1FFF => mem.cpu_internal_ram[*addr as usize & 0x07FF] = value,

@@ -17,8 +17,8 @@ impl ReadResult {
         Self { value, mask, bus_update_needed: true }
     }
 
-    pub fn no_bus_update(value: u8) -> Self {
-        Self { value, mask: 0b1111_1111, bus_update_needed: false }
+    pub fn no_bus_update(value: u8, mask: u8) -> Self {
+        Self { value, mask, bus_update_needed: false }
     }
 
     pub fn resolve(self, data_bus_value: u8) -> (u8, bool) {
