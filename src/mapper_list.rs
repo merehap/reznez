@@ -434,6 +434,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
 
         // Used when running the BIOS of the Fukutake Study Box.
         (186, _) => UnassignedMapper,
+        // Kǎshèng A98402 and similar
         (187, _) => m::mapper187::Mapper187::new().supported(),
         (188, _) => TodoMapper,
         // TXC-PT8154

@@ -23,6 +23,11 @@ pub const LAYOUT: Layout = Layout::builder()
     .name_table_mirrorings(mmc3::NAME_TABLE_MIRRORINGS)
     .build();
 
+// Kǎshèng A98402 and similar
+// FIXME: Background rendering is mostly broken.
+// TODO: Test 512KiB CHR right side pattern table.
+// TODO: Correct values for 0x5000 protection read?
+// TODO: Figure out why Mesen has an interrupt at Cycle:658782 of Street Fighter Zero 2 but REZNEZ doesn't.
 pub struct Mapper187 {
     mmc3: mmc3::Mapper004Mmc3,
     mmc3_prg_layout_index: u8,
@@ -65,6 +70,20 @@ impl Mapper for Mapper187 {
         if self.prg_layout_mode == PrgLayoutMode::Nrom {
             // Ignore/overwrite whatever layout MMC3 just set since we're not in MMC3 PRG layout mode.
             mem.set_prg_layout(prev_prg_layout_index);
+        }
+
+        let (left_siders, right_siders) = if mem.chr_memory.layout_index() == 0 {
+            (vec![C0, C1], vec![C2, C3, C4, C5])
+        } else {
+            (vec![C2, C3, C4, C5], vec![C0, C1])
+        };
+
+        for reg_id in left_siders {
+            mem.set_chr_bank_register_bits(reg_id, 0b0000_0000_0000_0000, 0b0000_0001_0000_0000);
+        }
+
+        for reg_id in right_siders {
+            mem.set_chr_bank_register_bits(reg_id, 0b0000_0001_0000_0000, 0b0000_0001_0000_0000);
         }
     }
 
