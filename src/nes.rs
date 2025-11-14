@@ -495,7 +495,7 @@ impl Nes {
             // FIXME
             let new_regs = &chr_registers.map(BankLocation::Index);
             if &latest.chr_registers != new_regs {
-                for (i, latest_bank_location) in latest.prg_registers.iter_mut().enumerate() {
+                for (i, latest_bank_location) in latest.chr_registers.iter_mut().enumerate() {
                     if *latest_bank_location != new_regs[i] {
                         let id: ChrBankRegisterId = FromPrimitive::from_usize(i).unwrap();
                         match (new_regs[i], *latest_bank_location) {
