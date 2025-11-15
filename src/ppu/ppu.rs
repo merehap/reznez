@@ -99,36 +99,40 @@ impl Ppu {
 
         use CycleAction::*;
         match cycle_action {
-            SetPatternIndexAddress => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
-                mapper.set_ppu_address_bus(mem, mem.ppu_regs.address_in_name_table());
-            }
-            GetPatternIndex => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
-                self.next_tile_number = TileNumber::new(mapper.ppu_internal_read(mem).value());
-            }
-            SetPaletteIndexAddress => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
-                mapper.set_ppu_address_bus(mem, mem.ppu_regs.address_in_attribute_table());
-            }
-            GetPaletteIndex => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
-                let attribute_byte = mapper.ppu_internal_read(mem).value();
-                self.attribute_register.set_pending_palette_table_index(mem.ppu_regs.palette_table_index(attribute_byte));
-            }
-            SetPatternLowAddress => {
-                mapper.set_ppu_address_bus(mem, mem.ppu_regs.address_for_low_pattern_byte(self.next_tile_number));
-            }
-            SetPatternHighAddress => {
-                mapper.set_ppu_address_bus(mem, mem.ppu_regs.address_for_high_pattern_byte(self.next_tile_number));
-            }
+            SetPatternIndexAddress =>
+                mapper.set_ppu_address_bus(mem, mem.ppu_regs.address_in_name_table()),
+            SetPaletteIndexAddress =>
+                mapper.set_ppu_address_bus(mem, mem.ppu_regs.address_in_attribute_table()),
+            SetPatternLowAddress =>
+                mapper.set_ppu_address_bus(mem, mem.ppu_regs.address_for_low_pattern_byte(self.next_tile_number)),
+            SetPatternHighAddress =>
+                mapper.set_ppu_address_bus(mem, mem.ppu_regs.address_for_high_pattern_byte(self.next_tile_number)),
+
+            GetPatternIndex => self.next_tile_number = TileNumber::new(mapper.ppu_internal_read(mem).value()),
             GetPatternLowByte => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
-                self.pattern_register.set_pending_low_byte(mapper.ppu_internal_read(mem));
+                let pattern_low = mapper.ppu_internal_read(mem);
+                if !mem.ppu_regs.background_shifters_enabled() { return; }
+                self.pattern_register.set_pending_low_byte(pattern_low);
             }
             GetPatternHighByte => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
-                self.pattern_register.set_pending_high_byte(mapper.ppu_internal_read(mem));
+                let pattern_high = mapper.ppu_internal_read(mem);
+                if !mem.ppu_regs.background_shifters_enabled() { return; }
+                self.pattern_register.set_pending_high_byte(pattern_high);
+            }
+            GetPaletteIndex => {
+                let attribute_byte = mapper.ppu_internal_read(mem).value();
+                if !mem.ppu_regs.background_shifters_enabled() { return; }
+                self.attribute_register.set_pending_palette_table_index(mem.ppu_regs.palette_table_index(attribute_byte));
+            }
+            PrepareForNextTile => {
+                if !mem.ppu_regs.background_shifters_enabled() { return; }
+                self.attribute_register.prepare_next_palette_table_index();
+                self.pattern_register.load_next_palette_indexes();
+            }
+            PrepareForNextPixel => {
+                if !mem.ppu_regs.background_shifters_enabled() { return; }
+                self.pattern_register.shift_left();
+                self.attribute_register.push_next_palette_table_index();
             }
 
             GotoNextTileColumn => {
@@ -142,11 +146,6 @@ impl Ppu {
             ResetTileColumn => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
                 mem.ppu_regs.reset_tile_column();
-            }
-            PrepareForNextTile => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
-                self.attribute_register.prepare_next_palette_table_index();
-                self.pattern_register.load_next_palette_indexes();
             }
             SetPixel => {
                 let clock = *mem.ppu_regs.clock();
@@ -209,12 +208,6 @@ impl Ppu {
                 {
                     mem.ppu_regs.set_sprite0_hit();
                 }
-            }
-            PrepareForNextPixel => {
-                // TODO: Verify if this needs to be !self.rendering_enabled, which is time-delayed.
-                if !background_enabled { return; }
-                self.pattern_register.shift_left();
-                self.attribute_register.push_next_palette_table_index();
             }
 
             MaybeCorruptOamStart => {
