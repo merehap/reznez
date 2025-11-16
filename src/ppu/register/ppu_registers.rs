@@ -105,10 +105,6 @@ impl PpuRegisters {
         &mut self.clock
     }
 
-    pub fn pipeline_operations_enabled(&self) -> bool {
-        self.mask.background_enabled() || self.mask.sprites_enabled()
-    }
-
     pub fn background_enabled(&self) -> bool {
         self.mask.background_enabled()
     }

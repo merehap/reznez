@@ -107,40 +107,40 @@ impl Ppu {
             GetPatternIndex => self.next_tile_number = TileNumber::new(mapper.ppu_internal_read(mem).value()),
             GetPatternLowByte => {
                 let pattern_low = mapper.ppu_internal_read(mem);
-                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
+                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 self.pattern_register.set_pending_low_byte(pattern_low);
             }
             GetPatternHighByte => {
                 let pattern_high = mapper.ppu_internal_read(mem);
-                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
+                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 self.pattern_register.set_pending_high_byte(pattern_high);
             }
             GetPaletteIndex => {
                 let attribute_byte = mapper.ppu_internal_read(mem).value();
-                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
+                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 self.attribute_register.set_pending_palette_table_index(mem.ppu_regs.palette_table_index(attribute_byte));
             }
             PrepareForNextTile => {
-                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
+                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 self.attribute_register.prepare_next_palette_table_index();
                 self.pattern_register.load_next_palette_indexes();
             }
             PrepareForNextPixel => {
-                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
+                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 self.pattern_register.shift_left();
                 self.attribute_register.push_next_palette_table_index();
             }
 
             GotoNextTileColumn => {
-                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
+                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 mem.ppu_regs.current_address.increment_coarse_x_scroll();
             }
             GotoNextPixelRow => {
-                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
+                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 mem.ppu_regs.current_address.increment_fine_y_scroll();
             }
             ResetTileColumn => {
-                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
+                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 mem.ppu_regs.reset_tile_column();
             }
             SetPixel => {
@@ -170,7 +170,7 @@ impl Ppu {
                     self.pattern_source_frame.set_background_pixel(pixel_column, pixel_row, bank_pixel);
                 }
 
-                if mem.ppu_regs.pipeline_operations_enabled() {
+                if mem.ppu_regs.sprites_enabled() || mem.ppu_regs.background_enabled() {
                     let (sprite_pixel, priority, is_sprite_0, ppu_peek) = self.oam_registers.step(&mem.palette_table());
                     if mem.ppu_regs.sprites_enabled() {
                         frame.set_sprite_pixel(
@@ -200,16 +200,15 @@ impl Ppu {
             }
 
             MaybeCorruptOamStart => {
+                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 // Unclear if these are the correct cycles to trigger on.
-                if mem.ppu_regs.pipeline_operations_enabled() {
-                    let oam_addr = mem.ppu_regs.oam_addr;
-                    let cycle = mem.ppu_regs.clock().cycle();
-                    mem.oam.maybe_corrupt_starting_byte(oam_addr, cycle);
-                }
+                let oam_addr = mem.ppu_regs.oam_addr;
+                let cycle = mem.ppu_regs.clock().cycle();
+                mem.oam.maybe_corrupt_starting_byte(oam_addr, cycle);
             }
 
             ResetOamAddress => {
-                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
+                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 mem.ppu_regs.oam_addr.reset();
             }
 
@@ -231,29 +230,29 @@ impl Ppu {
                 info!(target: "ppustage", "\t\tLoading OAM registers ended.");
             }
             ReadOamByte => {
-                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
+                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 self.sprite_evaluator.read_oam(mem);
             }
             WriteSecondaryOamByte => {
-                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
+                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 self.sprite_evaluator.write_secondary_oam(mem);
 
             }
             ReadSpriteY => {
-                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
+                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 self.current_sprite_y = SpriteY::new(self.sprite_evaluator.read_secondary_oam_and_advance());
             }
             ReadSpritePatternIndex => {
-                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
+                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 self.next_sprite_tile_number = TileNumber::new(self.sprite_evaluator.read_secondary_oam_and_advance());
             }
             ReadSpriteAttributes => {
-                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
+                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 let attributes = SpriteAttributes::from_u8(self.sprite_evaluator.read_secondary_oam_and_advance());
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
-                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
+                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 let x_counter = self.sprite_evaluator.read_secondary_oam_and_advance();
                 self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
             }
@@ -275,13 +274,13 @@ impl Ppu {
             }
             GetSpritePatternLowByte => {
                 let pattern_low = mapper.ppu_internal_read(mem);
-                if mem.ppu_regs.pipeline_operations_enabled() && self.sprite_visible {
+                if (mem.ppu_regs.background_enabled() || mem.ppu_regs.sprites_enabled()) && self.sprite_visible {
                     self.oam_registers.registers[self.oam_register_index].set_pattern_low(pattern_low);
                 }
             }
             GetSpritePatternHighByte => {
                 let pattern_high = mapper.ppu_internal_read(mem);
-                if mem.ppu_regs.pipeline_operations_enabled() && self.sprite_visible {
+                if (mem.ppu_regs.background_enabled() || mem.ppu_regs.sprites_enabled()) && self.sprite_visible {
                     self.oam_registers.registers[self.oam_register_index].set_pattern_high(pattern_high);
                 }
             }
