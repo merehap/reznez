@@ -260,13 +260,11 @@ impl Ppu {
             }
             ReadSpriteAttributes => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-
                 let attributes = SpriteAttributes::from_u8(self.sprite_evaluator.read_secondary_oam_and_advance());
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
                 if !mem.ppu_regs.rendering_enabled() { return; }
-
                 let x_counter = self.sprite_evaluator.read_secondary_oam_and_advance();
                 self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
             }
@@ -288,22 +286,14 @@ impl Ppu {
                 mapper.set_ppu_address_bus(mem, addr);
             }
             GetSpritePatternLowByte => {
-                if !mem.ppu_regs.rendering_enabled() {
-                    return;
-                }
-
                 let pattern_low = mapper.ppu_internal_read(mem);
-                if self.sprite_visible {
+                if mem.ppu_regs.rendering_enabled() && self.sprite_visible {
                     self.oam_registers.registers[self.oam_register_index].set_pattern_low(pattern_low);
                 }
             }
             GetSpritePatternHighByte => {
-                if !mem.ppu_regs.rendering_enabled() {
-                    return;
-                }
-
                 let pattern_high = mapper.ppu_internal_read(mem);
-                if self.sprite_visible {
+                if mem.ppu_regs.rendering_enabled() && self.sprite_visible {
                     self.oam_registers.registers[self.oam_register_index].set_pattern_high(pattern_high);
                 }
             }
