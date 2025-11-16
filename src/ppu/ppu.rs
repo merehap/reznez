@@ -170,23 +170,25 @@ impl Ppu {
                     self.pattern_source_frame.set_background_pixel(pixel_column, pixel_row, bank_pixel);
                 }
 
-                if mem.ppu_regs.sprites_enabled() {
+                if mem.ppu_regs.pipeline_operations_enabled() {
                     let (sprite_pixel, priority, is_sprite_0, ppu_peek) = self.oam_registers.step(&mem.palette_table());
-                    frame.set_sprite_pixel(
-                        pixel_column,
-                        pixel_row,
-                        sprite_pixel,
-                        priority,
-                        is_sprite_0,
-                    );
+                    if mem.ppu_regs.sprites_enabled() {
+                        frame.set_sprite_pixel(
+                            pixel_column,
+                            pixel_row,
+                            sprite_pixel,
+                            priority,
+                            is_sprite_0,
+                        );
 
-                    let bank_pixel = if sprite_pixel.is_transparent() {
-                        Rgbt::Transparent
-                    } else {
-                        let rgb = self.bank_color_assigner.rgb_for_source(ppu_peek.source());
-                        Rgbt::Opaque(rgb)
-                    };
-                    self.pattern_source_frame.set_sprite_pixel(pixel_column, pixel_row, bank_pixel, priority, false);
+                        let bank_pixel = if sprite_pixel.is_transparent() {
+                            Rgbt::Transparent
+                        } else {
+                            let rgb = self.bank_color_assigner.rgb_for_source(ppu_peek.source());
+                            Rgbt::Opaque(rgb)
+                        };
+                        self.pattern_source_frame.set_sprite_pixel(pixel_column, pixel_row, bank_pixel, priority, false);
+                    }
                 }
 
                 // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
