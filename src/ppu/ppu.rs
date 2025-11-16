@@ -93,10 +93,6 @@ impl Ppu {
     }
 
     fn execute_cycle_action(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, frame: &mut Frame, cycle_action: CycleAction) {
-        // TODO: Remove all these aliases. Use helper functions on ppu_regs to generate the relevant bus values.
-        let background_enabled = mem.ppu_regs.background_enabled();
-        let sprites_enabled = mem.ppu_regs.sprites_enabled();
-
         use CycleAction::*;
         match cycle_action {
             SetPatternIndexAddress =>
@@ -111,47 +107,46 @@ impl Ppu {
             GetPatternIndex => self.next_tile_number = TileNumber::new(mapper.ppu_internal_read(mem).value()),
             GetPatternLowByte => {
                 let pattern_low = mapper.ppu_internal_read(mem);
-                if !mem.ppu_regs.background_shifters_enabled() { return; }
+                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
                 self.pattern_register.set_pending_low_byte(pattern_low);
             }
             GetPatternHighByte => {
                 let pattern_high = mapper.ppu_internal_read(mem);
-                if !mem.ppu_regs.background_shifters_enabled() { return; }
+                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
                 self.pattern_register.set_pending_high_byte(pattern_high);
             }
             GetPaletteIndex => {
                 let attribute_byte = mapper.ppu_internal_read(mem).value();
-                if !mem.ppu_regs.background_shifters_enabled() { return; }
+                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
                 self.attribute_register.set_pending_palette_table_index(mem.ppu_regs.palette_table_index(attribute_byte));
             }
             PrepareForNextTile => {
-                if !mem.ppu_regs.background_shifters_enabled() { return; }
+                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
                 self.attribute_register.prepare_next_palette_table_index();
                 self.pattern_register.load_next_palette_indexes();
             }
             PrepareForNextPixel => {
-                if !mem.ppu_regs.background_shifters_enabled() { return; }
+                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
                 self.pattern_register.shift_left();
                 self.attribute_register.push_next_palette_table_index();
             }
 
             GotoNextTileColumn => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
+                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
                 mem.ppu_regs.current_address.increment_coarse_x_scroll();
             }
             GotoNextPixelRow => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
+                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
                 mem.ppu_regs.current_address.increment_fine_y_scroll();
             }
             ResetTileColumn => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
+                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
                 mem.ppu_regs.reset_tile_column();
             }
             SetPixel => {
                 let clock = *mem.ppu_regs.clock();
                 let (pixel_column, pixel_row) = PixelIndex::try_from_clock(&clock).unwrap().to_column_row();
-                // TODO: Verify if these need to be delayed like self.rendering_enabled.
-                if background_enabled {
+                if mem.ppu_regs.background_enabled() {
                     let palette_table = &mem.palette_table();
                     // TODO: Figure out where this goes. Maybe have frame call palette_table when displaying.
                     frame.set_universal_background_rgb(palette_table.universal_background_rgb());
@@ -175,8 +170,7 @@ impl Ppu {
                     self.pattern_source_frame.set_background_pixel(pixel_column, pixel_row, bank_pixel);
                 }
 
-                // TODO: Verify if this need to be delayed like self.rendering_enabled.
-                if sprites_enabled {
+                if mem.ppu_regs.sprites_enabled() {
                     let (sprite_pixel, priority, is_sprite_0, ppu_peek) = self.oam_registers.step(&mem.palette_table());
                     frame.set_sprite_pixel(
                         pixel_column,
@@ -192,18 +186,11 @@ impl Ppu {
                         let rgb = self.bank_color_assigner.rgb_for_source(ppu_peek.source());
                         Rgbt::Opaque(rgb)
                     };
-                    self.pattern_source_frame.set_sprite_pixel(
-                        pixel_column,
-                        pixel_row,
-                        bank_pixel,
-                        priority,
-                        false,
-                    );
+                    self.pattern_source_frame.set_sprite_pixel(pixel_column, pixel_row, bank_pixel, priority, false);
                 }
 
                 // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
-                // TODO: Verify if these need to be delayed like self.rendering_enabled.
-                if sprites_enabled && background_enabled
+                if mem.ppu_regs.sprites_enabled() && mem.ppu_regs.background_enabled()
                     && frame.pixel(mem.ppu_regs.mask(), pixel_column, pixel_row).1.hit()
                 {
                     mem.ppu_regs.set_sprite0_hit();
@@ -212,7 +199,7 @@ impl Ppu {
 
             MaybeCorruptOamStart => {
                 // Unclear if these are the correct cycles to trigger on.
-                if mem.ppu_regs.rendering_enabled() {
+                if mem.ppu_regs.pipeline_operations_enabled() {
                     let oam_addr = mem.ppu_regs.oam_addr;
                     let cycle = mem.ppu_regs.clock().cycle();
                     mem.oam.maybe_corrupt_starting_byte(oam_addr, cycle);
@@ -220,7 +207,7 @@ impl Ppu {
             }
 
             ResetOamAddress => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
+                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
                 mem.ppu_regs.oam_addr.reset();
             }
 
@@ -242,35 +229,34 @@ impl Ppu {
                 info!(target: "ppustage", "\t\tLoading OAM registers ended.");
             }
             ReadOamByte => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
+                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
                 self.sprite_evaluator.read_oam(mem);
             }
             WriteSecondaryOamByte => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
+                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
                 self.sprite_evaluator.write_secondary_oam(mem);
 
             }
             ReadSpriteY => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
+                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
                 self.current_sprite_y = SpriteY::new(self.sprite_evaluator.read_secondary_oam_and_advance());
             }
             ReadSpritePatternIndex => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
+                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
                 self.next_sprite_tile_number = TileNumber::new(self.sprite_evaluator.read_secondary_oam_and_advance());
             }
             ReadSpriteAttributes => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
+                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
                 let attributes = SpriteAttributes::from_u8(self.sprite_evaluator.read_secondary_oam_and_advance());
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
-                if !mem.ppu_regs.rendering_enabled() { return; }
+                if !mem.ppu_regs.pipeline_operations_enabled() { return; }
                 let x_counter = self.sprite_evaluator.read_secondary_oam_and_advance();
                 self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
             }
             DummyReadSpriteX => {
                 // TODO
-                //if !self.rendering_enabled { return; }
             }
 
             SetSpritePatternLowAddress => {
@@ -287,13 +273,13 @@ impl Ppu {
             }
             GetSpritePatternLowByte => {
                 let pattern_low = mapper.ppu_internal_read(mem);
-                if mem.ppu_regs.rendering_enabled() && self.sprite_visible {
+                if mem.ppu_regs.pipeline_operations_enabled() && self.sprite_visible {
                     self.oam_registers.registers[self.oam_register_index].set_pattern_low(pattern_low);
                 }
             }
             GetSpritePatternHighByte => {
                 let pattern_high = mapper.ppu_internal_read(mem);
-                if mem.ppu_regs.rendering_enabled() && self.sprite_visible {
+                if mem.ppu_regs.pipeline_operations_enabled() && self.sprite_visible {
                     self.oam_registers.registers[self.oam_register_index].set_pattern_high(pattern_high);
                 }
             }
@@ -334,15 +320,11 @@ impl Ppu {
                 mem.ppu_regs.suppress_vblank_active = false;
             }
             SetInitialScrollOffsets => {
-                // TODO: Verify if this needs to be !self.rendering_enabled, which is time-delayed.
-                // Testing has not revealed any difference, but that just means the tests are insufficient.
-                if !background_enabled { return; }
+                if !mem.ppu_regs.background_enabled() { return; }
                 mem.ppu_regs.current_address = mem.ppu_regs.next_address;
             }
             SetInitialYScroll => {
-                // TODO: Verify if this needs to be !self.rendering_enabled, which is time-delayed.
-                // Testing has not revealed any difference, but that just means the tests are insufficient.
-                if !background_enabled { return; }
+                if !mem.ppu_regs.background_enabled() { return; }
                 let next_address = mem.ppu_regs.next_address;
                 mem.ppu_regs.current_address.copy_y_scroll(next_address);
             }
