@@ -56,25 +56,18 @@ impl Frame {
             background_pixel = Transparent;
         }
 
-        let (mut sprite_pixel, sprite_priority, is_sprite_0) =
-            self.sprite_buffer[(column, row)];
+        let (mut sprite_pixel, sprite_priority, is_sprite0) = self.sprite_buffer[(column, row)];
         if !mask.left_sprite_columns_enabled() && column.is_in_left_margin() {
             sprite_pixel = Transparent;
         }
 
-        use Sprite0Hit::{Hit, Miss};
-        let sprite_0_hit = if is_sprite_0 { Hit } else { Miss };
-
-        // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
         use Priority::{Behind, InFront};
-        let (mut rgb, sprite_0_hit) = match (background_pixel, sprite_pixel, sprite_priority, column) {
-            (Transparent, Transparent, _, _) => (self.universal_background_rgb, Miss),
-            (Transparent, Opaque(rgb), _, _) => (rgb, Miss),
-            (Opaque(rgb), Transparent, _, _) => (rgb, Miss),
-            (Opaque(_), Opaque(rgb), InFront, PixelColumn::MAX) => (rgb, Miss),
-            (Opaque(rgb), Opaque(_), Behind, PixelColumn::MAX) => (rgb, Miss),
-            (Opaque(_), Opaque(rgb), InFront, _) => (rgb, sprite_0_hit),
-            (Opaque(rgb), Opaque(_), Behind, _) => (rgb, sprite_0_hit),
+        let mut rgb = match (background_pixel, sprite_pixel, sprite_priority) {
+            (Transparent, Transparent, _) => self.universal_background_rgb,
+            (Transparent, Opaque(rgb), _) => rgb,
+            (Opaque(rgb), Transparent, _) => rgb,
+            (Opaque(_)  , Opaque(rgb), InFront) => rgb,
+            (Opaque(rgb), Opaque(_)  , Behind ) => rgb,
         };
 
         if mask.greyscale_enabled() {
@@ -85,7 +78,15 @@ impl Frame {
             rgb = Rgb::BLACK;
         }
 
-        (rgb, sprite_0_hit)
+        // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
+        let sprite0_hit =
+            is_sprite0 &&
+            column < PixelColumn::MAX &&
+            row <= PixelRow::MAX &&
+            background_pixel.is_opaque() &&
+            sprite_pixel.is_opaque();
+        let sprite0_hit = if sprite0_hit { Sprite0Hit::Hit } else { Sprite0Hit::Miss };
+        (rgb, sprite0_hit)
     }
 
     pub fn set_universal_background_rgb(&mut self, rgb: Rgb) {
