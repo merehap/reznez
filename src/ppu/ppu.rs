@@ -9,7 +9,7 @@ use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::frame_actions::{FrameActions, NTSC_FRAME_ACTIONS};
 use crate::ppu::palette::rgbt::Rgbt;
 use crate::ppu::pattern_table_side::PatternTableSide;
-use crate::ppu::pixel_index::PixelIndex;
+use crate::ppu::pixel_index::{PixelIndex, PixelRow};
 use crate::ppu::register::ppu_registers::Toggle;
 use crate::ppu::register::registers::attribute_register::AttributeRegister;
 use crate::ppu::register::registers::pattern_register::PatternRegister;
@@ -171,7 +171,12 @@ impl Ppu {
                 }
 
                 if mem.ppu_regs.sprites_enabled() || mem.ppu_regs.background_enabled() {
-                    let (sprite_pixel, priority, is_sprite_0, ppu_peek) = self.oam_registers.step(&mem.palette_table());
+                    let (mut sprite_pixel, priority, is_sprite_0, ppu_peek) = self.oam_registers.step(&mem.palette_table());
+                    // HACK: Transparent sprites on row 0 should be a natural consequence of the shifter pipeline instead.
+                    if pixel_row == PixelRow::ZERO {
+                        sprite_pixel = Rgbt::Transparent;
+                    }
+
                     if mem.ppu_regs.sprites_enabled() {
                         frame.set_sprite_pixel(
                             pixel_column,

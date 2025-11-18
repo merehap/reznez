@@ -127,6 +127,7 @@ pub struct PixelRow(u8);
 
 impl PixelRow {
     pub const ROW_COUNT: usize = 240;
+    pub const ZERO: PixelRow = PixelRow(0);
     pub const MAX: PixelRow = PixelRow(PixelRow::ROW_COUNT as u8 - 1);
 
     pub fn iter() -> PixelRowIterator {
