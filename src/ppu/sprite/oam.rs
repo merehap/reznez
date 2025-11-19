@@ -1,3 +1,7 @@
+use std::fmt;
+
+use itertools::Itertools;
+
 use crate::ppu::sprite::oam_address::OamAddress;
 
 const ATTRIBUTE_BYTE_INDEX: u8 = 2;
@@ -43,5 +47,19 @@ impl Oam {
         if address >= 0x08 {
             self.0[index] = self.0[(address & 0xF8) as usize + index];
         }
+    }
+}
+
+impl fmt::Display for Oam {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for chunk in &self.0.iter().chunks(16) {
+            for value in chunk {
+                write!(f, "{value:02X} ")?;
+            }
+
+            writeln!(f)?;
+        }
+
+        Ok(())
     }
 }

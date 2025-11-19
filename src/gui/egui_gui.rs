@@ -47,8 +47,14 @@ impl Gui for EguiGui {
 
         event_loop.run(move |event, event_loop_window_target| {
             if world.input.update(&event) {
-                if world.input.key_pressed(KeyCode::F12) && let Some(nes) = &mut world.nes {
-                    nes.set_reset_signal();
+                if let Some(nes) = &mut world.nes {
+                    if world.input.key_pressed(KeyCode::F1) {
+                        info!("{}", nes.memory().oam);
+                    }
+
+                    if world.input.key_pressed(KeyCode::F12) {
+                        nes.set_reset_signal();
+                    }
                 }
 
                 if world.input.key_pressed(KeyCode::Pause)
