@@ -204,6 +204,10 @@ pub trait Mapper {
             // The APU registers are mirrored over the whole address space, but the mirrors are usually not accessible.
             // When the mirrors are accessible, convert them to the normal APU register range for processing below.
             addr = CpuAddress::new(0x4000 + *addr % 0x20);
+            if self.has_bus_conflicts() == HasBusConflicts::Yes {
+                let rom_value = self.cpu_peek_unresolved(mem, address_bus_type, addr);
+                mem.cpu_pinout.data_bus = rom_value.bus_conflict(mem.cpu_pinout.data_bus);
+            }
         }
 
         let value = mem.cpu_pinout.data_bus;
