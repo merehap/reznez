@@ -194,7 +194,18 @@ pub trait Mapper {
     #[inline]
     #[rustfmt::skip]
     fn cpu_write(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) {
-        let addr = mem.cpu_address_bus(address_bus_type);
+        let mut addr = mem.cpu_address_bus(address_bus_type);
+
+        // See "APU Register Activation" in the README and asm file here: https://github.com/100thCoin/AccuracyCoin
+        let apu_registers_active = matches!(*mem.cpu_address_bus(AddressBusType::Cpu), 0x4000..=0x401F);
+        // TODO: I assume that the mirrors occur over the whole address space, but need bus conflicts emulated to actually work.
+        // Limit the range for now to just 0x4000 to 0x40FF to pass the relevant AccuracyCoin test.
+        if apu_registers_active && address_bus_type != AddressBusType::Cpu && *addr >= 0x4000 && *addr < 0x4100 {
+            // The APU registers are mirrored over the whole address space, but the mirrors are usually not accessible.
+            // When the mirrors are accessible, convert them to the normal APU register range for processing below.
+            addr = CpuAddress::new(0x4000 + *addr % 0x20);
+        }
+
         let value = mem.cpu_pinout.data_bus;
         self.on_cpu_write(mem, addr, value);
 
