@@ -80,11 +80,9 @@ pub trait Mapper {
     }
 
     fn cpu_peek_unresolved(&self, mem: &Memory, address_bus_type: AddressBusType, mut addr: CpuAddress) -> ReadResult {
-        // See "APU Register Activation" in the README and asm file here: https://github.com/100thCoin/AccuracyCoin
-        let apu_registers_active = matches!(*mem.cpu_address_bus(AddressBusType::Cpu), 0x4000..=0x401F);
         // TODO: I assume that the mirrors occur over the whole address space, but need bus conflicts emulated to actually work.
         // Limit the range for now to just 0x4000 to 0x40FF to pass the relevant AccuracyCoin test.
-        if apu_registers_active && address_bus_type != AddressBusType::Cpu && *addr >= 0x4000 && *addr < 0x4100 {
+        if mem.apu_registers_active() && address_bus_type != AddressBusType::Cpu && *addr >= 0x4000 && *addr < 0x4100 {
             // The APU registers are mirrored over the whole address space, but the mirrors are usually not accessible.
             // When the mirrors are accessible, convert them to the normal APU register range for processing below.
             addr = CpuAddress::new(0x4000 + *addr % 0x20);
@@ -106,7 +104,7 @@ pub trait Mapper {
                 })
             }
             // APU registers can only be read if the current address bus AND the CPU address bus are in the correct range.
-            0x4000..=0x401F if !apu_registers_active => ReadResult::OPEN_BUS,
+            0x4000..=0x401F if !mem.apu_registers_active() => ReadResult::OPEN_BUS,
             0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
             0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
             0x4015 if address_bus_type == AddressBusType::Cpu =>
@@ -127,11 +125,9 @@ pub trait Mapper {
     fn cpu_read(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) -> u8 {
         let mut addr = mem.cpu_address_bus(address_bus_type);
 
-        // See "APU Register Activation" in the README and asm file here: https://github.com/100thCoin/AccuracyCoin
-        let apu_registers_active = matches!(*mem.cpu_address_bus(AddressBusType::Cpu), 0x4000..=0x401F);
         // TODO: I assume that the mirrors occur over the whole address space, but need bus conflicts emulated to actually work.
         // Limit the range for now to just 0x4000 to 0x40FF to pass the relevant AccuracyCoin test.
-        if apu_registers_active && address_bus_type != AddressBusType::Cpu && *addr >= 0x4000 && *addr < 0x4100 {
+        if mem.apu_registers_active() && address_bus_type != AddressBusType::Cpu && *addr >= 0x4000 && *addr < 0x4100 {
             // The APU registers are mirrored over the whole address space, but the mirrors are usually not accessible.
             // When the mirrors are accessible, convert them to the normal APU register range for processing below.
             addr = CpuAddress::new(0x4000 + *addr % 0x20);
@@ -163,7 +159,7 @@ pub trait Mapper {
                 })
             }
             // APU registers can only be read if the current address bus AND the CPU address bus are in the correct range.
-            0x4000..=0x401F if !apu_registers_active => ReadResult::OPEN_BUS,
+            0x4000..=0x401F if !mem.apu_registers_active() => ReadResult::OPEN_BUS,
             // Most APU registers are write-only.
             0x4000..=0x4013 => ReadResult::OPEN_BUS,
             // OAM DMA is write-only.
@@ -196,11 +192,9 @@ pub trait Mapper {
     fn cpu_write(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) {
         let mut addr = mem.cpu_address_bus(address_bus_type);
 
-        // See "APU Register Activation" in the README and asm file here: https://github.com/100thCoin/AccuracyCoin
-        let apu_registers_active = matches!(*mem.cpu_address_bus(AddressBusType::Cpu), 0x4000..=0x401F);
         // TODO: I assume that the mirrors occur over the whole address space, but need bus conflicts emulated to actually work.
         // Limit the range for now to just 0x4000 to 0x40FF to pass the relevant AccuracyCoin test.
-        if apu_registers_active && address_bus_type != AddressBusType::Cpu && *addr >= 0x4000 && *addr < 0x4100 {
+        if mem.apu_registers_active() && address_bus_type != AddressBusType::Cpu && ((*addr >= 0x0200 && *addr < 0x0300) || (*addr >= 0x4000 && *addr < 0x4100)) {
             // The APU registers are mirrored over the whole address space, but the mirrors are usually not accessible.
             // When the mirrors are accessible, convert them to the normal APU register range for processing below.
             addr = CpuAddress::new(0x4000 + *addr % 0x20);

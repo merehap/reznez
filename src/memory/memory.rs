@@ -287,6 +287,11 @@ impl Memory {
     pub fn set_chr_bank_register_to_ciram_side(&mut self, id: ChrSourceRegisterId, ciram_side: CiramSide) {
         self.chr_memory.set_chr_bank_register_to_ciram_side(id, ciram_side);
     }
+
+    // See "APU Register Activation" in the README and asm file here: https://github.com/100thCoin/AccuracyCoin
+    pub fn apu_registers_active(&self) -> bool {
+        matches!(*self.cpu_pinout.address_bus, 0x4000..=0x401F)
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
