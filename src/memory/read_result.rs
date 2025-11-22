@@ -1,29 +1,30 @@
 // TODO: Rename to PeekResult.
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct ReadResult {
-    value: u8,
-    mask: u8,
-    bus_update_needed: bool,
+    pub value: u8,
+    pub mask: u8,
 }
 
 impl ReadResult {
-    pub const OPEN_BUS: Self = Self { value: 0, mask: 0b0000_0000, bus_update_needed: true };
+    pub const OPEN_BUS: Self = Self { value: 0, mask: 0b0000_0000 };
 
     pub fn full(value: u8) -> Self {
-        Self { value, mask: 0b1111_1111, bus_update_needed: true }
+        Self { value, mask: 0b1111_1111 }
     }
 
     pub fn partial(value: u8, mask: u8) -> Self {
-        Self { value, mask, bus_update_needed: true }
+        Self { value, mask }
     }
 
-    pub fn no_bus_update(value: u8, mask: u8) -> Self {
-        Self { value, mask, bus_update_needed: false }
+    pub fn conflict_with(self, other: Self) -> Self {
+        ReadResult {
+            value: (self.value & other.value) | (self.value & !other.mask) | (other.value & !self.mask),
+            mask: self.mask | other.mask,
+        }
     }
 
-    pub fn resolve(self, data_bus_value: u8) -> (u8, bool) {
-        let value = (self.value & self.mask) | (data_bus_value & !self.mask);
-        (value, self.bus_update_needed)
+    pub fn resolve(self, data_bus_value: u8) -> u8 {
+        (self.value & self.mask) | (data_bus_value & !self.mask)
     }
 
     // Bus conflicts occur when a register exists at the same address as ROM, for boards that don't

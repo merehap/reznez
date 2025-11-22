@@ -134,7 +134,7 @@ impl ChrMemory {
             }
             ChrMemoryIndex::SaveRam(_index) => todo!(),
             ChrMemoryIndex::MapperCustom { page_number, index } => {
-                mapper_custom_name_tables[page_number as usize].peek(index).resolve(0).0
+                mapper_custom_name_tables[page_number as usize].peek(index).resolve(0)
             }
         };
 

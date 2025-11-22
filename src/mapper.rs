@@ -76,19 +76,11 @@ pub trait Mapper {
     fn irq_counter_info(&self) -> Option<IrqCounterInfo> { None }
 
     fn cpu_peek(&self, mem: &Memory, address_bus_type: AddressBusType, addr: CpuAddress) -> u8 {
-        self.cpu_peek_unresolved(mem, address_bus_type, addr).resolve(mem.cpu_pinout.data_bus).0
+        self.cpu_peek_unresolved(mem, address_bus_type, addr).resolve(mem.cpu_pinout.data_bus)
     }
 
-    fn cpu_peek_unresolved(&self, mem: &Memory, address_bus_type: AddressBusType, mut addr: CpuAddress) -> ReadResult {
-        // TODO: I assume that the mirrors occur over the whole address space, but need bus conflicts emulated to actually work.
-        // Limit the range for now to just 0x4000 to 0x40FF to pass the relevant AccuracyCoin test.
-        if mem.apu_registers_active() && address_bus_type != AddressBusType::Cpu && *addr >= 0x4000 && *addr < 0x4100 {
-            // The APU registers are mirrored over the whole address space, but the mirrors are usually not accessible.
-            // When the mirrors are accessible, convert them to the normal APU register range for processing below.
-            addr = CpuAddress::new(0x4000 + *addr % 0x20);
-        }
-
-        match *addr {
+    fn cpu_peek_unresolved(&self, mem: &Memory, _address_bus_type: AddressBusType, addr: CpuAddress) -> ReadResult {
+        let normal_peek_value = match *addr {
             0x0000..=0x07FF => ReadResult::full(mem.cpu_internal_ram()[*addr as usize]),
             0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[*addr as usize & 0x07FF]),
             0x2000..=0x3FFF => {
@@ -104,36 +96,35 @@ pub trait Mapper {
                 })
             }
             // APU registers can only be read if the current address bus AND the CPU address bus are in the correct range.
-            0x4000..=0x401F if !mem.apu_registers_active() => ReadResult::OPEN_BUS,
-            0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
-            0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
-            0x4015 if address_bus_type == AddressBusType::Cpu =>
-                ReadResult::no_bus_update(mem.apu_regs.peek_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
-            // DMA values must always be copied to the bus, unlike with the normal CPU address bus.
-            0x4015 => ReadResult::partial(mem.apu_regs.peek_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
-            // TODO: Move ReadResult/mask specification into the controller.
-            0x4016          => ReadResult::partial(mem.joypad1.peek_status() as u8, 0b0000_0111),
-            0x4017          => ReadResult::partial(mem.joypad2.peek_status() as u8, 0b0000_0111),
-            0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
+            0x4000..=0x401F => ReadResult::OPEN_BUS,
             0x4020..=0x5FFF => self.peek_register(mem, addr),
             0x6000..=0xFFFF => self.peek_prg(mem, addr),
-        }
+        };
+
+        let apu_peek_value = if mem.apu_registers_active() {
+            let addr = CpuAddress::new(0x4000 + *addr % 0x20);
+            match *addr {
+                0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
+                0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
+                0x4015 => ReadResult::partial(mem.apu_regs.peek_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
+                // TODO: Move ReadResult/mask specification into the controller.
+                0x4016          => ReadResult::partial(mem.joypad1.peek_status() as u8, 0b0000_0111),
+                0x4017          => ReadResult::partial(mem.joypad2.peek_status() as u8, 0b0000_0111),
+                0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
+                _ => unreachable!()
+            }
+        } else {
+            ReadResult::OPEN_BUS
+        };
+
+        normal_peek_value.conflict_with(apu_peek_value)
     }
 
     #[inline]
     #[rustfmt::skip]
     fn cpu_read(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) -> u8 {
-        let mut addr = mem.cpu_address_bus(address_bus_type);
-
-        // TODO: I assume that the mirrors occur over the whole address space, but need bus conflicts emulated to actually work.
-        // Limit the range for now to just 0x4000 to 0x40FF to pass the relevant AccuracyCoin test.
-        if mem.apu_registers_active() && address_bus_type != AddressBusType::Cpu && *addr >= 0x4000 && *addr < 0x4100 {
-            // The APU registers are mirrored over the whole address space, but the mirrors are usually not accessible.
-            // When the mirrors are accessible, convert them to the normal APU register range for processing below.
-            addr = CpuAddress::new(0x4000 + *addr % 0x20);
-        }
-
-        let read_result = match *addr {
+        let addr = mem.cpu_address_bus(address_bus_type);
+        let normal_read_value = match *addr {
             0x0000..=0x07FF => ReadResult::full(mem.cpu_internal_ram()[*addr as usize]),
             0x0800..=0x1FFF => ReadResult::full(mem.cpu_internal_ram()[*addr as usize & 0x07FF]),
             0x2000..=0x3FFF => {
@@ -159,28 +150,41 @@ pub trait Mapper {
                 })
             }
             // APU registers can only be read if the current address bus AND the CPU address bus are in the correct range.
-            0x4000..=0x401F if !mem.apu_registers_active() => ReadResult::OPEN_BUS,
-            // Most APU registers are write-only.
-            0x4000..=0x4013 => ReadResult::OPEN_BUS,
-            // OAM DMA is write-only.
-            0x4014 => ReadResult::OPEN_BUS,
-            0x4015 if address_bus_type == AddressBusType::Cpu =>
-                ReadResult::no_bus_update(mem.apu_regs.read_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
-            // DMA values must always be copied to the bus, unlike with the normal CPU address bus.
-            0x4015 => ReadResult::partial(mem.apu_regs.read_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
-            // TODO: Move ReadResult/mask specification into the controller.
-            0x4016 => ReadResult::partial(mem.joypad1.read_status() as u8, 0b0000_0111),
-            0x4017 => ReadResult::partial(mem.joypad2.read_status() as u8, 0b0000_0111),
-            // CPU Test Mode not yet supported.
-            0x4018..=0x401F => ReadResult::OPEN_BUS,
+            0x4000..=0x401F => ReadResult::OPEN_BUS,
             0x4020..=0x5FFF => self.peek_register(mem, addr),
             0x6000..=0xFFFF => self.peek_prg(mem, addr),
         };
 
-        let (value, bus_update_needed) = read_result.resolve(mem.cpu_pinout.data_bus);
-        if bus_update_needed {
-            mem.cpu_pinout.data_bus = value;
-        }
+        let mut should_apu_read_update_data_bus = true;
+        let apu_read_value = if mem.apu_registers_active() {
+            let addr = CpuAddress::new(0x4000 + *addr % 0x20);
+            match *addr {
+                // Most APU registers are write-only.
+                0x4000..=0x4013 => ReadResult::OPEN_BUS,
+                // OAM DMA is write-only.
+                0x4014 => ReadResult::OPEN_BUS,
+                0x4015 => {
+                    // APU status reads only use the data bus when using a DMA address bus.
+                    should_apu_read_update_data_bus = address_bus_type != AddressBusType::Cpu;
+                    ReadResult::partial(mem.apu_regs.read_status(&mem.cpu_pinout).to_u8(), 0b1101_1111)
+                }
+                // TODO: Move ReadResult/mask specification into the controller.
+                0x4016 => ReadResult::partial(mem.joypad1.read_status() as u8, 0b0000_0111),
+                0x4017 => ReadResult::partial(mem.joypad2.read_status() as u8, 0b0000_0111),
+                // CPU Test Mode not yet supported.
+                0x4018..=0x401F => ReadResult::OPEN_BUS,
+                _ => unreachable!(),
+            }
+        } else {
+            ReadResult::OPEN_BUS
+        };
+
+        let value = normal_read_value.conflict_with(apu_read_value).resolve(mem.cpu_pinout.data_bus);
+        mem.cpu_pinout.data_bus = if should_apu_read_update_data_bus {
+            value
+        } else {
+            normal_read_value.resolve(mem.cpu_pinout.data_bus)
+        };
 
         self.on_cpu_read(mem, addr, value);
 
@@ -190,18 +194,17 @@ pub trait Mapper {
     #[inline]
     #[rustfmt::skip]
     fn cpu_write(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) {
-        let mut addr = mem.cpu_address_bus(address_bus_type);
-
-        // TODO: I assume that the mirrors occur over the whole address space, but need bus conflicts emulated to actually work.
-        // Limit the range for now to just 0x4000 to 0x40FF to pass the relevant AccuracyCoin test.
-        if mem.apu_registers_active() && address_bus_type != AddressBusType::Cpu && ((*addr >= 0x0200 && *addr < 0x0300) || (*addr >= 0x4000 && *addr < 0x4100)) {
+        let addr = mem.cpu_address_bus(address_bus_type);
+        if mem.apu_registers_active() && address_bus_type != AddressBusType::Cpu && (*addr >= 0x4000 && *addr < 0x4100) {
             // The APU registers are mirrored over the whole address space, but the mirrors are usually not accessible.
             // When the mirrors are accessible, convert them to the normal APU register range for processing below.
-            addr = CpuAddress::new(0x4000 + *addr % 0x20);
+            //addr = CpuAddress::new(0x4000 + *addr % 0x20);
+            /*
             if self.has_bus_conflicts() == HasBusConflicts::Yes {
                 let rom_value = self.cpu_peek_unresolved(mem, address_bus_type, addr);
                 mem.cpu_pinout.data_bus = rom_value.bus_conflict(mem.cpu_pinout.data_bus);
             }
+            */
         }
 
         let value = mem.cpu_pinout.data_bus;

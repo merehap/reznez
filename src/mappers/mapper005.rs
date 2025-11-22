@@ -449,7 +449,7 @@ impl Mapper005 {
     }
 
     fn peek_ext_rom(mem: &Memory, index: u16) -> u8 {
-        mem.mapper_custom_pages[EXT_RAM_PAGE_INDEX].peek(index).resolve(0).0
+        mem.mapper_custom_pages[EXT_RAM_PAGE_INDEX].peek(index).resolve(0)
     }
 
     fn write_ext_rom(mem: &mut Memory, index: u16, value: u8) {
