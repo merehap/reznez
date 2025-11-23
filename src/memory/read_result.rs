@@ -16,9 +16,9 @@ impl ReadResult {
         Self { value, mask }
     }
 
-    pub fn conflict_with(self, other: Self) -> Self {
+    pub fn dominate(self, other: Self) -> Self {
         ReadResult {
-            value: (self.value & other.value) | (self.value & !other.mask) | (other.value & !self.mask),
+            value: (self.value & self.mask) | (other.value & other.mask & !self.mask),
             mask: self.mask | other.mask,
         }
     }

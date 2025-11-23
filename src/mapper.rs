@@ -117,7 +117,7 @@ pub trait Mapper {
             ReadResult::OPEN_BUS
         };
 
-        normal_peek_value.conflict_with(apu_peek_value)
+        apu_peek_value.dominate(normal_peek_value)
     }
 
     #[inline]
@@ -179,7 +179,7 @@ pub trait Mapper {
             ReadResult::OPEN_BUS
         };
 
-        let value = normal_read_value.conflict_with(apu_read_value).resolve(mem.cpu_pinout.data_bus);
+        let value = apu_read_value.dominate(normal_read_value).resolve(mem.cpu_pinout.data_bus);
         mem.cpu_pinout.data_bus = if should_apu_read_update_data_bus {
             value
         } else {
