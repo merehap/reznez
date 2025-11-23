@@ -101,12 +101,16 @@ pub trait Mapper {
             0x6000..=0xFFFF => self.peek_prg(mem, addr),
         };
 
+        let mut should_apu_read_dominate_normal_read = false;
         let apu_peek_value = if mem.apu_registers_active() {
             let addr = CpuAddress::new(0x4000 + *addr % 0x20);
             match *addr {
                 0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
                 0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
-                0x4015 => ReadResult::partial(mem.apu_regs.peek_status(&mem.cpu_pinout).to_u8(), 0b1101_1111),
+                0x4015 => {
+                    should_apu_read_dominate_normal_read = true;
+                    ReadResult::partial(mem.apu_regs.peek_status(&mem.cpu_pinout).to_u8(), 0b1101_1111)
+                }
                 // TODO: Move ReadResult/mask specification into the controller.
                 0x4016          => ReadResult::partial(mem.joypad1.peek_status() as u8, 0b0000_0111),
                 0x4017          => ReadResult::partial(mem.joypad2.peek_status() as u8, 0b0000_0111),
@@ -117,7 +121,11 @@ pub trait Mapper {
             ReadResult::OPEN_BUS
         };
 
-        apu_peek_value.dominate(normal_peek_value)
+        if should_apu_read_dominate_normal_read {
+            apu_peek_value.dominate(normal_peek_value)
+        } else {
+            normal_peek_value.dominate(apu_peek_value)
+        }
     }
 
     #[inline]
@@ -155,6 +163,7 @@ pub trait Mapper {
             0x6000..=0xFFFF => self.peek_prg(mem, addr),
         };
 
+        let mut should_apu_read_dominate_normal_read = false;
         let mut should_apu_read_update_data_bus = true;
         let apu_read_value = if mem.apu_registers_active() {
             let addr = CpuAddress::new(0x4000 + *addr % 0x20);
@@ -165,6 +174,7 @@ pub trait Mapper {
                 0x4014 => ReadResult::OPEN_BUS,
                 0x4015 => {
                     // APU status reads only use the data bus when using a DMA address bus.
+                    should_apu_read_dominate_normal_read = true;
                     should_apu_read_update_data_bus = address_bus_type != AddressBusType::Cpu;
                     ReadResult::partial(mem.apu_regs.read_status(&mem.cpu_pinout).to_u8(), 0b1101_1111)
                 }
@@ -179,7 +189,12 @@ pub trait Mapper {
             ReadResult::OPEN_BUS
         };
 
-        let value = apu_read_value.dominate(normal_read_value).resolve(mem.cpu_pinout.data_bus);
+        let value = if should_apu_read_dominate_normal_read {
+            apu_read_value.dominate(normal_read_value).resolve(mem.cpu_pinout.data_bus)
+        } else {
+            normal_read_value.dominate(apu_read_value).resolve(mem.cpu_pinout.data_bus)
+        };
+
         mem.cpu_pinout.data_bus = if should_apu_read_update_data_bus {
             value
         } else {
@@ -191,22 +206,11 @@ pub trait Mapper {
         value
     }
 
+    // TODO: APU register mirroring probably affects writes (at least for $2004/$4004), so implement it.
     #[inline]
     #[rustfmt::skip]
     fn cpu_write(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) {
         let addr = mem.cpu_address_bus(address_bus_type);
-        if mem.apu_registers_active() && address_bus_type != AddressBusType::Cpu && (*addr >= 0x4000 && *addr < 0x4100) {
-            // The APU registers are mirrored over the whole address space, but the mirrors are usually not accessible.
-            // When the mirrors are accessible, convert them to the normal APU register range for processing below.
-            //addr = CpuAddress::new(0x4000 + *addr % 0x20);
-            /*
-            if self.has_bus_conflicts() == HasBusConflicts::Yes {
-                let rom_value = self.cpu_peek_unresolved(mem, address_bus_type, addr);
-                mem.cpu_pinout.data_bus = rom_value.bus_conflict(mem.cpu_pinout.data_bus);
-            }
-            */
-        }
-
         let value = mem.cpu_pinout.data_bus;
         self.on_cpu_write(mem, addr, value);
 
