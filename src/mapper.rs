@@ -211,74 +211,71 @@ pub trait Mapper {
     #[rustfmt::skip]
     fn cpu_write(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) {
         let addr = mem.cpu_address_bus(address_bus_type);
-        let value = mem.cpu_pinout.data_bus;
-        self.on_cpu_write(mem, addr, value);
+        self.on_cpu_write(mem, addr, mem.cpu_pinout.data_bus);
 
         match *addr {
-            0x0000..=0x07FF => mem.cpu_internal_ram[*addr as usize] = value,
-            0x0800..=0x1FFF => mem.cpu_internal_ram[*addr as usize & 0x07FF] = value,
+            0x0000..=0x07FF => mem.cpu_internal_ram[*addr as usize] = mem.cpu_pinout.data_bus,
+            0x0800..=0x1FFF => mem.cpu_internal_ram[*addr as usize & 0x07FF] = mem.cpu_pinout.data_bus,
             0x2000..=0x3FFF => match *addr & 0x2007 {
-                0x2000 => mem.ppu_regs.write_ctrl(value),
-                0x2001 => mem.ppu_regs.write_mask(value),
-                0x2002 => mem.ppu_regs.write_ppu_io_bus(value),
-                0x2003 => mem.ppu_regs.write_oam_addr(value),
-                0x2004 => mem.ppu_regs.write_oam_data(&mut mem.oam, value),
-                0x2005 => mem.ppu_regs.write_scroll(value),
+                0x2000 => mem.ppu_regs.write_ctrl(mem.cpu_pinout.data_bus),
+                0x2001 => mem.ppu_regs.write_mask(mem.cpu_pinout.data_bus),
+                0x2002 => mem.ppu_regs.write_ppu_io_bus(mem.cpu_pinout.data_bus),
+                0x2003 => mem.ppu_regs.write_oam_addr(mem.cpu_pinout.data_bus),
+                0x2004 => mem.ppu_regs.write_oam_data(&mut mem.oam, mem.cpu_pinout.data_bus),
+                0x2005 => mem.ppu_regs.write_scroll(mem.cpu_pinout.data_bus),
                 0x2006 => {
-                    mem.ppu_regs.write_ppu_addr(value);
+                    mem.ppu_regs.write_ppu_addr(mem.cpu_pinout.data_bus);
                     if mem.ppu_regs.write_toggle() == WriteToggle::FirstByte {
                         self.set_ppu_address_bus(mem, mem.ppu_regs.current_address);
                     }
                 }
                 0x2007 => {
-                    self.ppu_write(mem, mem.ppu_regs.current_address, value);
-                    mem.ppu_regs.write_ppu_data(value);
+                    self.ppu_write(mem, mem.ppu_regs.current_address, mem.cpu_pinout.data_bus);
+                    mem.ppu_regs.write_ppu_data(mem.cpu_pinout.data_bus);
                     self.set_ppu_address_bus(mem, mem.ppu_regs.current_address);
                 }
                 _ => unreachable!(),
             }
-            0x4000          => mem.apu_regs.pulse_1.write_control_byte(value),
-            0x4001          => mem.apu_regs.pulse_1.write_sweep_byte(value),
-            0x4002          => mem.apu_regs.pulse_1.write_timer_low_byte(value),
-            0x4003          => mem.apu_regs.pulse_1.write_length_and_timer_high_byte(value),
-            0x4004          => mem.apu_regs.pulse_2.write_control_byte(value),
-            0x4005          => mem.apu_regs.pulse_2.write_sweep_byte(value),
-            0x4006          => mem.apu_regs.pulse_2.write_timer_low_byte(value),
-            0x4007          => mem.apu_regs.pulse_2.write_length_and_timer_high_byte(value),
-            0x4008          => mem.apu_regs.triangle.write_control_byte(value),
+            0x4000          => mem.apu_regs.pulse_1.write_control_byte(mem.cpu_pinout.data_bus),
+            0x4001          => mem.apu_regs.pulse_1.write_sweep_byte(mem.cpu_pinout.data_bus),
+            0x4002          => mem.apu_regs.pulse_1.write_timer_low_byte(mem.cpu_pinout.data_bus),
+            0x4003          => mem.apu_regs.pulse_1.write_length_and_timer_high_byte(mem.cpu_pinout.data_bus),
+            0x4004          => mem.apu_regs.pulse_2.write_control_byte(mem.cpu_pinout.data_bus),
+            0x4005          => mem.apu_regs.pulse_2.write_sweep_byte(mem.cpu_pinout.data_bus),
+            0x4006          => mem.apu_regs.pulse_2.write_timer_low_byte(mem.cpu_pinout.data_bus),
+            0x4007          => mem.apu_regs.pulse_2.write_length_and_timer_high_byte(mem.cpu_pinout.data_bus),
+            0x4008          => mem.apu_regs.triangle.write_control_byte(mem.cpu_pinout.data_bus),
             0x4009          => { /* Unused. */ }
-            0x400A          => mem.apu_regs.triangle.write_timer_low_byte(value),
-            0x400B          => mem.apu_regs.triangle.write_length_and_timer_high_byte(value),
-            0x400C          => mem.apu_regs.noise.write_control_byte(value),
+            0x400A          => mem.apu_regs.triangle.write_timer_low_byte(mem.cpu_pinout.data_bus),
+            0x400B          => mem.apu_regs.triangle.write_length_and_timer_high_byte(mem.cpu_pinout.data_bus),
+            0x400C          => mem.apu_regs.noise.write_control_byte(mem.cpu_pinout.data_bus),
             0x400D          => { /* Unused. */ }
-            0x400E          => mem.apu_regs.noise.write_loop_and_period_byte(value),
-            0x400F          => mem.apu_regs.noise.write_length_byte(value),
-            0x4010          => mem.apu_regs.dmc.write_control_byte(&mut mem.cpu_pinout, value),
-            0x4011          => mem.apu_regs.dmc.write_volume(value),
-            0x4012          => mem.apu_regs.dmc.write_sample_start_address(value),
-            0x4013          => mem.apu_regs.dmc.write_sample_length(value),
-            0x4014          => mem.oam_dma.prepare_to_start(value),
-            0x4015          => mem.apu_regs.write_status_byte(&mut mem.cpu_pinout, &mut mem.dmc_dma, value),
+            0x400E          => mem.apu_regs.noise.write_loop_and_period_byte(mem.cpu_pinout.data_bus),
+            0x400F          => mem.apu_regs.noise.write_length_byte(mem.cpu_pinout.data_bus),
+            0x4010          => mem.apu_regs.dmc.write_control_byte(&mut mem.cpu_pinout),
+            0x4011          => mem.apu_regs.dmc.write_volume(mem.cpu_pinout.data_bus),
+            0x4012          => mem.apu_regs.dmc.write_sample_start_address(mem.cpu_pinout.data_bus),
+            0x4013          => mem.apu_regs.dmc.write_sample_length(mem.cpu_pinout.data_bus),
+            0x4014          => mem.oam_dma.prepare_to_start(mem.cpu_pinout.data_bus),
+            0x4015          => mem.apu_regs.write_status_byte(&mut mem.cpu_pinout, &mut mem.dmc_dma),
             0x4016          => {
-                mem.joypad1.change_strobe(value);
-                mem.joypad2.change_strobe(value);
+                mem.joypad1.change_strobe(mem.cpu_pinout.data_bus);
+                mem.joypad2.change_strobe(mem.cpu_pinout.data_bus);
             }
-            0x4017          => mem.apu_regs.write_frame_counter(&mut mem.cpu_pinout, value),
+            0x4017          => mem.apu_regs.write_frame_counter(&mut mem.cpu_pinout),
             0x4018..=0x401F => { /* CPU Test Mode not yet supported. */ }
             0x4020..=0xFFFF => {
                 // TODO: Verify if bus conflicts only occur for address >= 0x6000.
-                let value = if self.has_bus_conflicts() == HasBusConflicts::Yes {
-                    let rom_value = self.cpu_peek_unresolved(mem, address_bus_type, mem.cpu_address_bus(address_bus_type));
-                    rom_value.bus_conflict(value)
-                } else {
-                    value
-                };
-
-                if matches!(*addr, 0x6000..=0xFFFF) {
-                    mem.prg_memory.write(addr, value);
+                if self.has_bus_conflicts() == HasBusConflicts::Yes {
+                    let rom_value = self.cpu_peek_unresolved(mem, address_bus_type, addr);
+                    mem.cpu_pinout.data_bus = rom_value.bus_conflict(mem.cpu_pinout.data_bus);
                 }
 
-                self.write_register(mem, addr, value);
+                if matches!(*addr, 0x6000..=0xFFFF) {
+                    mem.prg_memory.write(addr, mem.cpu_pinout.data_bus);
+                }
+
+                self.write_register(mem, addr, mem.cpu_pinout.data_bus);
             }
         }
     }

@@ -101,7 +101,8 @@ impl ApuRegisters {
     }
 
     // Write 0x4015
-    pub fn write_status_byte(&mut self, cpu_pinout: &mut CpuPinout, dmc_dma: &mut DmcDma, value: u8) {
+    pub fn write_status_byte(&mut self, cpu_pinout: &mut CpuPinout, dmc_dma: &mut DmcDma) {
+        let value = cpu_pinout.data_bus;
         info!(target: "apuevents", "APU status write: {value:05b} . APU Cycle: {}", self.clock.cycle());
 
         let enabled_channels = splitbits!(value, "...dntqp");
@@ -122,7 +123,8 @@ impl ApuRegisters {
     }
 
     // Write 0x4017
-    pub fn write_frame_counter(&mut self, cpu_pinout: &mut CpuPinout, value: u8) {
+    pub fn write_frame_counter(&mut self, cpu_pinout: &mut CpuPinout) {
+        let value = cpu_pinout.data_bus;
         use StepMode::*;
         self.pending_step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
         self.suppress_irq = value & 0b0100_0000 != 0;

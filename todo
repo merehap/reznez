@@ -25,7 +25,6 @@ CPU mode debug screen, including DMAs
 Use has_persistent_memory correctly (mostly for cases without NES2.0 metadata)
 Why does Sunsoft FME7 (mapper 69) have a holymapperel result of 0010? Mesen behaves the same.
 Detect PpuAddress changes better, then clean up MMC3 and Mapper 91 IRQ logic.
-Joypad input for test frame capture.
 Give "Fix Metadata" prompt when metadata doesn't match the DB (Test case: mirroring for Dragon Ball - Shen Long no Nazo, also Fighting Hero)
 
 FANCY NICE-TO-HAVES

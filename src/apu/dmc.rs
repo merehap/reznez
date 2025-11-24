@@ -30,7 +30,8 @@ pub struct Dmc {
 
 impl Dmc {
     // 0x4010
-    pub fn write_control_byte(&mut self, cpu_pinout: &mut CpuPinout, value: u8) {
+    pub fn write_control_byte(&mut self, cpu_pinout: &mut CpuPinout) {
+        let value = cpu_pinout.data_bus;
         self.irq_enabled = (value & 0b1000_0000) != 0;
         self.should_loop = (value & 0b0100_0000) != 0;
         self.period = NTSC_PERIODS[(value & 0b0000_1111) as usize] - 1;
