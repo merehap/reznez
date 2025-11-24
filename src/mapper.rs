@@ -211,7 +211,6 @@ pub trait Mapper {
     #[rustfmt::skip]
     fn cpu_write(&mut self, mem: &mut Memory, address_bus_type: AddressBusType) {
         let addr = mem.cpu_address_bus(address_bus_type);
-        self.on_cpu_write(mem, addr, mem.cpu_pinout.data_bus);
 
         match *addr {
             0x0000..=0x07FF => mem.cpu_internal_ram[*addr as usize] = mem.cpu_pinout.data_bus,
@@ -265,19 +264,21 @@ pub trait Mapper {
             0x4017          => mem.apu_regs.write_frame_counter(&mut mem.cpu_pinout),
             0x4018..=0x401F => { /* CPU Test Mode not yet supported. */ }
             0x4020..=0xFFFF => {
-                // TODO: Verify if bus conflicts only occur for address >= 0x6000.
-                if self.has_bus_conflicts() == HasBusConflicts::Yes {
-                    let rom_value = self.cpu_peek_unresolved(mem, address_bus_type, addr);
-                    mem.cpu_pinout.data_bus = rom_value.bus_conflict(mem.cpu_pinout.data_bus);
-                }
-
                 if matches!(*addr, 0x6000..=0xFFFF) {
+                    // TODO: Verify if bus conflicts only occur for address >= 0x6000.
+                    if self.has_bus_conflicts() == HasBusConflicts::Yes {
+                        let rom_value = self.cpu_peek_unresolved(mem, address_bus_type, addr);
+                        mem.cpu_pinout.data_bus = rom_value.bus_conflict(mem.cpu_pinout.data_bus);
+                    }
+
                     mem.prg_memory.write(addr, mem.cpu_pinout.data_bus);
                 }
 
                 self.write_register(mem, addr, mem.cpu_pinout.data_bus);
             }
         }
+
+        self.on_cpu_write(mem, addr, mem.cpu_pinout.data_bus);
     }
 
     fn ppu_peek(&self, mem: &Memory, address: PpuAddress) -> PpuPeek {
