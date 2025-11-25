@@ -24,10 +24,6 @@ impl U7 {
             self.0 -= 1;
         }
     }
-
-    pub fn to_u8(self) -> u8 {
-        self.0
-    }
 }
 
 impl From<u8> for U7 {

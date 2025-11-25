@@ -1,7 +1,9 @@
+use splitbits::{combinebits, splitbits, splitbits_named_ux};
+use ux::u7;
+
 use crate::cpu::dmc_dma::DmcDma;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
-use crate::util::integer::U7;
 
 const NTSC_PERIODS: [u16; 16] =
     [428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106,  84,  72,  54];
@@ -12,7 +14,7 @@ pub struct Dmc {
     irq_enabled: bool,
 
     should_loop: bool,
-    volume: U7,
+    volume: u7,
 
     period: u16,
     cycles_remaining: u16,
@@ -21,6 +23,7 @@ pub struct Dmc {
     sample_address: CpuAddress,
     sample_buffer: Option<u8>,
     sample_shifter: u8,
+    // TODO: Switch to u12.
     sample_length: u16,
     sample_bytes_remaining: u16,
 
@@ -31,10 +34,10 @@ pub struct Dmc {
 impl Dmc {
     // 0x4010
     pub fn write_control_byte(&mut self, cpu_pinout: &mut CpuPinout) {
-        let value = cpu_pinout.data_bus;
-        self.irq_enabled = (value & 0b1000_0000) != 0;
-        self.should_loop = (value & 0b0100_0000) != 0;
-        self.period = NTSC_PERIODS[(value & 0b0000_1111) as usize] - 1;
+        let fields = splitbits!(cpu_pinout.data_bus, "il..pppp");
+        self.irq_enabled = fields.i;
+        self.should_loop = fields.l;
+        self.period = NTSC_PERIODS[fields.p as usize] - 1;
         if !self.irq_enabled {
             cpu_pinout.acknowledge_dmc_irq();
         }
@@ -42,17 +45,18 @@ impl Dmc {
 
     // 0x4011
     pub fn write_volume(&mut self, value: u8) {
-        self.volume = (value & 0b0111_1111).into();
+        self.volume = splitbits_named_ux!(value, ".vvvvvvv");
     }
 
     // 0x4012
-    pub fn write_sample_start_address(&mut self, value: u8) {
-        self.sample_start_address = CpuAddress::new(0xC000 | (u16::from(value) << 6));
+    pub fn write_sample_start_address(&mut self, addr: u8) {
+        // Minimum: 0xC000, Maximum: 0xFFC0
+        self.sample_start_address = CpuAddress::new(combinebits!(addr, "11aa aaaa aa00 0000"));
     }
 
     // 0x4013
-    pub fn write_sample_length(&mut self, value: u8) {
-        self.sample_length = (u16::from(value) << 4) | 1;
+    pub fn write_sample_length(&mut self, length: u8) {
+        self.sample_length = combinebits!(length, "0000 llll llll 0001");
         //println!("Setting sample length to {}", self.sample_length);
     }
 
@@ -131,7 +135,7 @@ impl Dmc {
         if self.muted {
             0.0
         } else {
-            f32::from(self.volume.to_u8())
+            f32::from(u8::from(self.volume))
         }
     }
 
@@ -150,7 +154,7 @@ impl Default for Dmc {
             muted: true,
             irq_enabled: false,
             should_loop: false,
-            volume: U7::default(),
+            volume: u7::default(),
             period: NTSC_PERIODS[0] - 1,
             cycles_remaining: NTSC_PERIODS[0] - 1,
             sample_start_address: CpuAddress::new(0xC000),
