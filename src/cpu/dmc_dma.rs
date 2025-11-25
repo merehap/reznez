@@ -13,6 +13,10 @@ impl DmcDma {
         latest_action: DmcDmaAction::DoNothing,
     };
 
+    pub fn active(&self) -> bool {
+        self.state != DmcDmaState::Idle
+    }
+
     pub fn state(&self) -> DmcDmaState {
         self.state
     }
@@ -25,6 +29,12 @@ impl DmcDma {
         self.latest_action.cpu_should_be_halted()
     }
 
+    /*
+     * Idle -> WaitingForGet -> FirstSkip -> SecondSkip -> TryHalt -> Dummy -> TryRead -> Idle
+     *             |   ^                                    |   ^               |   ^
+     *             |   |                                    |   |               |   |
+     *             +---+                                    +---+               +---+
+     */
     pub fn start_load(&mut self) {
         assert_eq!(self.state, DmcDmaState::Idle);
         *self = DmcDma {
@@ -33,6 +43,12 @@ impl DmcDma {
         };
     }
 
+    /*
+     * Idle -> TryHalt -> Dummy -> TryRead -> Idle
+     *          |   ^               |   ^
+     *          |   |               |   |
+     *          +---+               +---+
+     */
     pub fn start_reload(&mut self) {
         assert_eq!(self.state, DmcDmaState::Idle);
         *self = DmcDma {
@@ -58,11 +74,7 @@ pub enum DmcDmaState {
 }
 
 impl DmcDmaState {
-    pub fn active(self) -> bool {
-        self != Self::Idle
-    }
-
-    pub fn step(&mut self, is_cpu_read_step: bool, parity: CycleParity) -> DmcDmaAction {
+    fn step(&mut self, is_cpu_read_step: bool, parity: CycleParity) -> DmcDmaAction {
         let still_waiting_for_get = *self == Self::WaitingForGet && parity == CycleParity::Put;
         let still_trying_to_halt = *self == Self::TryHalt && !is_cpu_read_step;
         if still_waiting_for_get || still_trying_to_halt {

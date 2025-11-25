@@ -354,7 +354,7 @@ pub fn interrupts(nes: &Nes) -> String {
     interrupts.push(if nes.memory().cpu_pinout.mapper_irq_asserted() { 'M' } else {'-'});
     interrupts.push(if nes.cpu().nmi_pending() { 'N' } else {'-'});
     interrupts.push(if nes.memory().oam_dma.dma_pending() { 'O' } else {'-'});
-    interrupts.push(if nes.memory().dmc_dma.state().active() { 'D' } else {'-'});
+    interrupts.push(if nes.memory().dmc_dma.active() { 'D' } else {'-'});
 
     interrupts
 }
