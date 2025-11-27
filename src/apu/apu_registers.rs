@@ -19,8 +19,8 @@ pub struct ApuRegisters {
     pub dmc: Dmc,
 
     pending_step_mode: StepMode,
-    suppress_irq: bool,
-    should_clear_frame_irq_pending: bool,
+    suppress_frame_irq: bool,
+    should_acknowledge_frame_irq: bool,
     frame_counter_write_status: FrameCounterWriteStatus,
 
     // Whenever a quarter or half frame signal occurs, recurrence is suppressed for 2 cycles.
@@ -41,8 +41,8 @@ impl ApuRegisters {
             dmc: Dmc::default(),
 
             pending_step_mode: StepMode::FourStep,
-            suppress_irq: false,
-            should_clear_frame_irq_pending: false,
+            suppress_frame_irq: false,
+            should_acknowledge_frame_irq: false,
             frame_counter_write_status: FrameCounterWriteStatus::Inactive,
 
             counter_suppression_cycles: 0,
@@ -96,7 +96,7 @@ impl ApuRegisters {
 
         let status = self.peek_status(cpu_pinout);
         // Clearing Frame IRQ pending must be delayed until the next GET cycle.
-        self.should_clear_frame_irq_pending = true;
+        self.should_acknowledge_frame_irq = true;
         status
     }
 
@@ -127,15 +127,15 @@ impl ApuRegisters {
         let value = cpu_pinout.data_bus;
         use StepMode::*;
         self.pending_step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
-        self.suppress_irq = value & 0b0100_0000 != 0;
-        if self.suppress_irq {
+        self.suppress_frame_irq = value & 0b0100_0000 != 0;
+        if self.suppress_frame_irq {
             cpu_pinout.acknowledge_frame_irq();
         }
 
         self.frame_counter_write_status = FrameCounterWriteStatus::Initialized;
 
         info!(target: "apuevents", "Frame counter write: {:?}, Suppress IRQ: {}, Status: {:?}, APU Cycle: {}",
-            self.pending_step_mode, self.suppress_irq, self.frame_counter_write_status, self.clock.cycle());
+            self.pending_step_mode, self.suppress_frame_irq, self.frame_counter_write_status, self.clock.cycle());
     }
 
     pub fn maybe_update_step_mode(&mut self) {
@@ -249,12 +249,12 @@ impl ApuRegisters {
     }
 
     pub fn maybe_set_frame_irq_pending(&mut self, cpu_pinout: &mut CpuPinout) {
-        if self.should_clear_frame_irq_pending && self.clock.cycle_parity() == CycleParity::Get {
+        if self.should_acknowledge_frame_irq && self.clock.cycle_parity() == CycleParity::Get {
             cpu_pinout.acknowledge_frame_irq();
-            self.should_clear_frame_irq_pending = false;
+            self.should_acknowledge_frame_irq = false;
         }
 
-        if self.suppress_irq || self.clock.step_mode != StepMode::FourStep {
+        if self.suppress_frame_irq || self.clock.step_mode != StepMode::FourStep {
             return;
         }
 
