@@ -57,6 +57,7 @@ impl ApuRegisters {
         self.disable_channels(cpu_pinout);
         // At reset, $4017 should should be rewritten with last value written
         self.frame_counter_write_status = FrameCounterWriteStatus::Initialized;
+        info!(target: "apuevents", "Frame IRQ acknowledged by RESET. APU Cycle: {}", self.clock.cycle());
         cpu_pinout.acknowledge_frame_irq();
     }
 
@@ -129,6 +130,7 @@ impl ApuRegisters {
         self.pending_step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
         self.suppress_frame_irq = value & 0b0100_0000 != 0;
         if self.suppress_frame_irq {
+            info!(target: "apuevents", "Frame IRQ acknowledged by Frame Counter write. APU Cycle: {}", self.clock.cycle());
             cpu_pinout.acknowledge_frame_irq();
         }
 
@@ -250,6 +252,7 @@ impl ApuRegisters {
 
     pub fn maybe_set_frame_irq_pending(&mut self, cpu_pinout: &mut CpuPinout) {
         if self.should_acknowledge_frame_irq && self.clock.cycle_parity() == CycleParity::Get {
+            info!(target: "apuevents", "Frame IRQ acknowledged by APUSTATUS read. APU Cycle: {}", self.clock.cycle());
             cpu_pinout.acknowledge_frame_irq();
             self.should_acknowledge_frame_irq = false;
         }
@@ -267,12 +270,6 @@ impl ApuRegisters {
             info!(target: "apuevents", "Frame IRQ pending. APU Cycle: {}", self.clock.cycle());
             cpu_pinout.assert_frame_irq();
         }
-    }
-
-    // TODO: Remove. And no callers?
-    pub fn acknowledge_frame_irq(&mut self, cpu_pinout: &mut CpuPinout) {
-        info!(target: "apuevents", "Frame IRQ acknowledged. APU Cycle: {}", self.clock.cycle());
-        cpu_pinout.acknowledge_frame_irq();
     }
 }
 
