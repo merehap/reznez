@@ -19,6 +19,7 @@ pub struct ApuRegisters {
     pub dmc: Dmc,
 
     pending_step_mode: StepMode,
+    frame_irq_status: bool,
     suppress_frame_irq: bool,
     should_acknowledge_frame_irq: bool,
     frame_counter_write_status: FrameCounterWriteStatus,
@@ -41,6 +42,7 @@ impl ApuRegisters {
             dmc: Dmc::default(),
 
             pending_step_mode: StepMode::FourStep,
+            frame_irq_status: false,
             suppress_frame_irq: false,
             should_acknowledge_frame_irq: false,
             frame_counter_write_status: FrameCounterWriteStatus::Inactive,
@@ -59,6 +61,7 @@ impl ApuRegisters {
         self.frame_counter_write_status = FrameCounterWriteStatus::Initialized;
         info!(target: "apuevents", "Frame IRQ acknowledged by RESET. APU Cycle: {}", self.clock.cycle());
         cpu_pinout.acknowledge_frame_irq();
+        self.frame_irq_status = false;
     }
 
     pub fn step_mode(&self) -> StepMode {
@@ -80,7 +83,7 @@ impl ApuRegisters {
     pub fn peek_status(&self, cpu_pinout: &CpuPinout) -> Status {
         Status {
             dmc_interrupt: cpu_pinout.dmc_irq_asserted(),
-            frame_irq_pending: cpu_pinout.frame_irq_asserted(),
+            frame_irq_status: self.frame_irq_status,
             dmc_active: self.dmc.active(),
             noise_active: self.noise.active(),
             triangle_active: self.triangle.active(),
@@ -132,6 +135,7 @@ impl ApuRegisters {
         if self.suppress_frame_irq {
             info!(target: "apuevents", "Frame IRQ acknowledged by Frame Counter write. APU Cycle: {}", self.clock.cycle());
             cpu_pinout.acknowledge_frame_irq();
+            self.frame_irq_status = false;
         }
 
         self.frame_counter_write_status = FrameCounterWriteStatus::Initialized;
@@ -254,6 +258,7 @@ impl ApuRegisters {
         if self.should_acknowledge_frame_irq && self.clock.cycle_parity() == CycleParity::Get {
             info!(target: "apuevents", "Frame IRQ acknowledged by APUSTATUS read. APU Cycle: {}", self.clock.cycle());
             cpu_pinout.acknowledge_frame_irq();
+            self.frame_irq_status = false;
             self.should_acknowledge_frame_irq = false;
         }
 
@@ -269,6 +274,7 @@ impl ApuRegisters {
         if is_irq_cycle {
             info!(target: "apuevents", "Frame IRQ pending. APU Cycle: {}", self.clock.cycle());
             cpu_pinout.assert_frame_irq();
+            self.frame_irq_status = true;
         }
     }
 }
@@ -276,7 +282,7 @@ impl ApuRegisters {
 #[derive(Clone, Copy, Debug)]
 pub struct Status {
     dmc_interrupt: bool,
-    frame_irq_pending: bool,
+    frame_irq_status: bool,
     dmc_active: bool,
     noise_active: bool,
     triangle_active: bool,
@@ -289,7 +295,7 @@ impl Status {
         bit_util::pack_bools(
             [
                 self.dmc_interrupt,
-                self.frame_irq_pending,
+                self.frame_irq_status,
                 false,
                 self.dmc_active,
                 self.noise_active,
