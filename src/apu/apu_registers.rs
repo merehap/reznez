@@ -262,16 +262,16 @@ impl ApuRegisters {
             self.should_acknowledge_frame_irq = false;
         }
 
-        if self.suppress_frame_irq || self.clock.step_mode != StepMode::FourStep {
+        if self.clock.step_mode == StepMode::FiveStep || self.clock.is_forced_reset_cycle() {
             return;
         }
 
         let cycle = self.clock.cycle();
-        let is_non_skip_first_cycle = cycle == 0 && !self.clock.is_forced_reset_cycle();
+        let is_non_skip_first_cycle = cycle == 0;
         let is_last_cycle = cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1 || cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 2;
         let is_irq_cycle = is_non_skip_first_cycle || is_last_cycle;
 
-        if is_irq_cycle {
+        if is_irq_cycle && !self.suppress_frame_irq {
             info!(target: "apuevents", "Frame IRQ pending. APU Cycle: {}", self.clock.cycle());
             cpu_pinout.assert_frame_irq();
             self.frame_irq_status = true;
