@@ -267,14 +267,17 @@ impl ApuRegisters {
         }
 
         let cycle = self.clock.cycle();
-        let is_non_skip_first_cycle = cycle == 0;
         let is_last_cycle = cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1 || cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 2;
-        let is_irq_cycle = is_non_skip_first_cycle || is_last_cycle;
+        if is_last_cycle {
+            self.frame_irq_status = true;
+        } else if cycle == 0 {
+            self.frame_irq_status = !self.suppress_frame_irq;
+        }
 
+        let is_irq_cycle = is_last_cycle || cycle == 0;
         if is_irq_cycle && !self.suppress_frame_irq {
             info!(target: "apuevents", "Frame IRQ pending. APU Cycle: {}", self.clock.cycle());
             cpu_pinout.assert_frame_irq();
-            self.frame_irq_status = true;
         }
     }
 }
