@@ -1,6 +1,7 @@
 use splitbits::{combinebits, splitbits, splitbits_named_ux};
 use ux::u7;
 
+use crate::apu::apu_registers::CycleParity;
 use crate::cpu::dmc_dma::DmcDma;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
@@ -11,6 +12,9 @@ const NTSC_PERIODS: [u16; 16] =
 pub struct Dmc {
     muted: bool,
 
+    // TODO: The wiki claims there is an irq_status flag independent of frame_irq_asserted in CpuPinout.
+    // But there seem to be no tests to verify the behavior of these two flags in relationship to each other,
+    // so currently no separate flag is stored here.
     irq_enabled: bool,
 
     should_loop: bool,
@@ -61,7 +65,7 @@ impl Dmc {
     }
 
     // 0x4015
-    pub(super) fn set_enabled(&mut self, cpu_pinout: &mut CpuPinout, dma: &mut DmcDma, enabled: bool) {
+    pub(super) fn set_enabled(&mut self, cpu_pinout: &mut CpuPinout, dma: &mut DmcDma, cycle_parity: CycleParity, enabled: bool) {
         cpu_pinout.acknowledge_dmc_irq();
 
         if !enabled {
@@ -73,7 +77,7 @@ impl Dmc {
 
             if self.sample_buffer.is_none() {
                 //println!("Attempting to load sample buffer soon.");
-                dma.start_load();
+                dma.start_load(cycle_parity);
             }
         }
     }

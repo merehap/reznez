@@ -110,7 +110,7 @@ impl ApuRegisters {
         info!(target: "apuevents", "APU status write: {value:05b} . APU Cycle: {}", self.clock.cycle());
 
         let enabled_channels = splitbits!(value, "...dntqp");
-        self.dmc.set_enabled(cpu_pinout, dmc_dma, enabled_channels.d);
+        self.dmc.set_enabled(cpu_pinout, dmc_dma, self.clock.cycle_parity(), enabled_channels.d);
         self.noise.set_enabled(enabled_channels.n);
         self.triangle.set_enabled(enabled_channels.t);
         self.pulse_2.set_enabled(enabled_channels.q);

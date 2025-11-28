@@ -35,10 +35,11 @@ impl DmcDma {
      *             |   |                                    |   |               |   |
      *             +---+                                    +---+               +---+
      */
-    pub fn start_load(&mut self) {
+    pub fn start_load(&mut self, parity: CycleParity) {
         assert_eq!(self.state, DmcDmaState::Idle);
         *self = DmcDma {
-            state: DmcDmaState::WaitingForGet,
+            // If we're already on a GET, then skip WaitingForGet.
+            state: if parity == CycleParity::Get { DmcDmaState::FirstSkip } else { DmcDmaState::WaitingForGet },
             latest_action: DmcDmaAction::DoNothing,
         };
     }
