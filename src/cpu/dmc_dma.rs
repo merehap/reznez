@@ -30,6 +30,11 @@ impl DmcDma {
     }
 
     /*
+     * Load DMAs occur when the program tells the DMA unit to start a new sample.
+     * * Triggered by a write to $4015
+     * * There must be no sample bytes remaining (or nothing will happen)
+     * * The sample buffer must be empty (or nothing will happen)
+     *
      * Idle -> WaitingForGet -> FirstSkip -> SecondSkip -> TryHalt -> Dummy -> TryRead -> Idle
      *             |   ^                                    |   ^               |   ^
      *             |   |                                    |   |               |   |
@@ -45,6 +50,12 @@ impl DmcDma {
     }
 
     /*
+     * Reload DMAs occur when the current sample runs out and a new one must start.
+     * Reloads are triggered by:
+     * * Being on a PUT cycle AND
+     * * All of the sample bits are exhausted AND
+     * * There must be no more cycles remaining on the current sample bit.
+     *
      * Idle -> TryHalt -> Dummy -> TryRead -> Idle
      *          |   ^               |   ^
      *          |   |               |   |

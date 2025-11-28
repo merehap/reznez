@@ -88,29 +88,6 @@ impl Dmc {
         self.sample_bytes_remaining = 0;
     }
 
-    pub fn set_sample_buffer(&mut self, cpu_pinout: &mut CpuPinout, value: u8) {
-        //println!("Checking if sample buffer should be loaded.");
-        if self.sample_bytes_remaining > 0 {
-            //println!("Loading sample buffer.");
-            self.sample_buffer = Some(value);
-            self.sample_address.inc();
-            if self.sample_address == CpuAddress::ZERO {
-                self.sample_address = CpuAddress::new(0x8000);
-            }
-
-            self.sample_bytes_remaining -= 1;
-            if self.sample_bytes_remaining == 0 {
-                //println!("No sample bytes remaining. Should loop? {}", self.should_loop);
-                if self.should_loop {
-                    self.sample_bytes_remaining = self.sample_length;
-                    self.sample_address = self.sample_start_address;
-                } else if self.irq_enabled {
-                    cpu_pinout.assert_dmc_irq();
-                }
-            }
-        }
-    }
-
     pub(super) fn execute_put_cycle(&mut self, dmc_dma: &mut DmcDma) {
         if self.cycles_remaining >= 2 {
             self.cycles_remaining -= 2;
@@ -131,6 +108,30 @@ impl Dmc {
             if self.sample_bytes_remaining > 0 {
                 //println!("Attempting to RELOAD sample buffer soon.");
                 dmc_dma.start_reload();
+            }
+        }
+    }
+
+    // Called upon the completion of a DMC DMA (Load OR Reload).
+    pub fn set_sample_buffer(&mut self, cpu_pinout: &mut CpuPinout, value: u8) {
+        //println!("Checking if sample buffer should be loaded.");
+        if self.sample_bytes_remaining > 0 {
+            //println!("Loading sample buffer.");
+            self.sample_buffer = Some(value);
+            self.sample_address.inc();
+            if self.sample_address == CpuAddress::ZERO {
+                self.sample_address = CpuAddress::new(0x8000);
+            }
+
+            self.sample_bytes_remaining -= 1;
+            if self.sample_bytes_remaining == 0 {
+                //println!("No sample bytes remaining. Should loop? {}", self.should_loop);
+                if self.should_loop {
+                    self.sample_bytes_remaining = self.sample_length;
+                    self.sample_address = self.sample_start_address;
+                } else if self.irq_enabled {
+                    cpu_pinout.assert_dmc_irq();
+                }
             }
         }
     }
