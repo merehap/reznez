@@ -1,5 +1,6 @@
 use std::marker::ConstParamTy;
 
+use log::info;
 use splitbits::combinebits;
 
 use crate::apu::apu_registers::CycleParity;
@@ -72,6 +73,7 @@ impl DmcDma {
      *             +---+                                    +---+               +---+
      */
     pub fn start_load(&mut self, parity: CycleParity) {
+        info!(target: "apuevents", "DMC DMA Load starting. CPU will halt soon.");
         assert_eq!(self.state, DmcDmaState::Idle);
         // If we're already on a GET, then skip WaitingForGet.
         self.state = if parity == CycleParity::Get { DmcDmaState::FirstSkip } else { DmcDmaState::WaitingForGet };
@@ -91,6 +93,7 @@ impl DmcDma {
      *          +---+               +---+
      */
     pub fn start_reload(&mut self) {
+        info!(target: "apuevents", "DMC DMA Reload starting. CPU will halt soon.");
         assert_eq!(self.state, DmcDmaState::Idle);
         self.state = DmcDmaState::TryHalt;
         self.latest_action = DmcDmaAction::DoNothing;
