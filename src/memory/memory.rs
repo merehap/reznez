@@ -125,7 +125,7 @@ impl Memory {
     }
 
     pub fn set_dmc_sample_buffer(&mut self, value: u8) {
-        self.apu_regs.dmc.set_sample_buffer(&mut self.cpu_pinout, value);
+        self.apu_regs.dmc.set_sample_buffer(&mut self.cpu_pinout, &mut self.dmc_dma, value);
     }
 
     #[inline]

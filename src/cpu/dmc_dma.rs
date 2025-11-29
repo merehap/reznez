@@ -1,17 +1,42 @@
 use std::marker::ConstParamTy;
 
+use splitbits::combinebits;
+
 use crate::apu::apu_registers::CycleParity;
 
 pub struct DmcDma {
     state: DmcDmaState,
     latest_action: DmcDmaAction,
+
+    // TODO: Switch to u12.
+    sample_length: u16,
+    sample_bytes_remaining: u16,
 }
 
 impl DmcDma {
     pub const IDLE: Self = Self {
         state: DmcDmaState::Idle,
         latest_action: DmcDmaAction::DoNothing,
+
+        sample_length: 1,
+        sample_bytes_remaining: 0,
     };
+
+    pub fn enabled(&self) -> bool {
+        self.sample_bytes_remaining > 0
+    }
+
+    pub fn enable(&mut self) {
+        self.sample_bytes_remaining = self.sample_length;
+    }
+
+    pub fn disable(&mut self) {
+        self.sample_bytes_remaining = 0;
+    }
+
+    pub fn decrement_sample_bytes_remaining(&mut self) {
+        self.sample_bytes_remaining = self.sample_bytes_remaining.saturating_sub(1);
+    }
 
     pub fn active(&self) -> bool {
         self.state != DmcDmaState::Idle
@@ -29,6 +54,12 @@ impl DmcDma {
         self.latest_action.cpu_should_be_halted()
     }
 
+    // Write 0x4013
+    pub fn write_sample_length(&mut self, length: u8) {
+        self.sample_length = combinebits!(length, "0000 llll llll 0001");
+        //println!("Setting sample length to {}", self.sample_length);
+    }
+
     /*
      * Load DMAs occur when the program tells the DMA unit to start a new sample.
      * * Triggered by a write to $4015
@@ -42,11 +73,9 @@ impl DmcDma {
      */
     pub fn start_load(&mut self, parity: CycleParity) {
         assert_eq!(self.state, DmcDmaState::Idle);
-        *self = DmcDma {
-            // If we're already on a GET, then skip WaitingForGet.
-            state: if parity == CycleParity::Get { DmcDmaState::FirstSkip } else { DmcDmaState::WaitingForGet },
-            latest_action: DmcDmaAction::DoNothing,
-        };
+        // If we're already on a GET, then skip WaitingForGet.
+        self.state = if parity == CycleParity::Get { DmcDmaState::FirstSkip } else { DmcDmaState::WaitingForGet };
+        self.latest_action = DmcDmaAction::DoNothing;
     }
 
     /*
@@ -63,10 +92,8 @@ impl DmcDma {
      */
     pub fn start_reload(&mut self) {
         assert_eq!(self.state, DmcDmaState::Idle);
-        *self = DmcDma {
-            state: DmcDmaState::TryHalt,
-            latest_action: DmcDmaAction::DoNothing,
-        };
+        self.state = DmcDmaState::TryHalt;
+        self.latest_action = DmcDmaAction::DoNothing;
     }
 
     pub fn step(&mut self, is_cpu_read_step: bool, parity: CycleParity) {

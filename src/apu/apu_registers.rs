@@ -55,8 +55,8 @@ impl ApuRegisters {
 
     pub fn reset(&mut self, cpu_pinout: &mut CpuPinout) {
         // At reset, $4015 should be cleared
-        // FIXME: Just write out the actual field writes.
-        self.disable_channels(cpu_pinout);
+        self.disable_channels();
+        cpu_pinout.acknowledge_dmc_irq();
         // At reset, $4017 should should be rewritten with last value written
         self.frame_counter_write_status = FrameCounterWriteStatus::Initialized;
         info!(target: "apuevents", "Frame IRQ acknowledged by RESET. APU Cycle: {}", self.clock.cycle());
@@ -80,11 +80,11 @@ impl ApuRegisters {
         &mut self.clock
     }
 
-    pub fn peek_status(&self, cpu_pinout: &CpuPinout) -> Status {
+    pub fn peek_status(&self, cpu_pinout: &CpuPinout, dmc_dma: &DmcDma) -> Status {
         Status {
             dmc_interrupt: cpu_pinout.dmc_irq_asserted(),
             frame_irq_status: self.frame_irq_status,
-            dmc_active: self.dmc.active(),
+            dmc_active: dmc_dma.enabled(),
             noise_active: self.noise.active(),
             triangle_active: self.triangle.active(),
             pulse_2_active: self.pulse_2.active(),
@@ -93,12 +93,12 @@ impl ApuRegisters {
     }
 
     // Read 0x4015
-    pub fn read_status(&mut self, cpu_pinout: &CpuPinout) -> Status {
+    pub fn read_status(&mut self, cpu_pinout: &CpuPinout, dma: &DmcDma) -> Status {
         if cpu_pinout.frame_irq_asserted() {
             info!(target: "apuevents", "Frame IRQ flag will be cleared during the next GET cycle due to APUStatus read. APU Cycle: {}", self.clock.cycle());
         }
 
-        let status = self.peek_status(cpu_pinout);
+        let status = self.peek_status(cpu_pinout, dma);
         // Clearing Frame IRQ pending must be delayed until the next GET cycle.
         self.should_acknowledge_frame_irq = true;
         status
@@ -118,8 +118,7 @@ impl ApuRegisters {
     }
 
     // Upon RESET
-    pub fn disable_channels(&mut self, cpu_pinout: &mut CpuPinout) {
-        self.dmc.disable(cpu_pinout);
+    pub fn disable_channels(&mut self) {
         self.noise.set_enabled(false);
         self.triangle.set_enabled(false);
         self.pulse_2.set_enabled(false);

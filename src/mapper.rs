@@ -109,7 +109,7 @@ pub trait Mapper {
                 0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
                 0x4015 => {
                     should_apu_read_dominate_normal_read = true;
-                    ReadResult::partial(mem.apu_regs.peek_status(&mem.cpu_pinout).to_u8(), 0b1101_1111)
+                    ReadResult::partial(mem.apu_regs.peek_status(&mem.cpu_pinout, &mem.dmc_dma).to_u8(), 0b1101_1111)
                 }
                 // TODO: Move ReadResult/mask specification into the controller.
                 0x4016          => ReadResult::partial(mem.joypad1.peek_status() as u8, 0b0000_0111),
@@ -176,7 +176,7 @@ pub trait Mapper {
                     // APU status reads only use the data bus when using a DMA address bus.
                     should_apu_read_dominate_normal_read = true;
                     should_apu_read_update_data_bus = address_bus_type != AddressBusType::Cpu;
-                    ReadResult::partial(mem.apu_regs.read_status(&mem.cpu_pinout).to_u8(), 0b1101_1111)
+                    ReadResult::partial(mem.apu_regs.read_status(&mem.cpu_pinout, &mem.dmc_dma).to_u8(), 0b1101_1111)
                 }
                 // TODO: Move ReadResult/mask specification into the controller.
                 0x4016 => ReadResult::partial(mem.joypad1.read_status() as u8, 0b0000_0111),
@@ -254,7 +254,7 @@ pub trait Mapper {
             0x4010          => mem.apu_regs.dmc.write_control_byte(&mut mem.cpu_pinout),
             0x4011          => mem.apu_regs.dmc.write_volume(mem.cpu_pinout.data_bus),
             0x4012          => mem.apu_regs.dmc.write_sample_start_address(mem.cpu_pinout.data_bus),
-            0x4013          => mem.apu_regs.dmc.write_sample_length(mem.cpu_pinout.data_bus),
+            0x4013          => mem.dmc_dma.write_sample_length(mem.cpu_pinout.data_bus),
             0x4014          => mem.oam_dma.prepare_to_start(mem.cpu_pinout.data_bus),
             0x4015          => mem.apu_regs.write_status_byte(&mut mem.cpu_pinout, &mut mem.dmc_dma),
             0x4016          => {
