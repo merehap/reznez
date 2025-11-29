@@ -60,10 +60,10 @@ impl Dmc {
         cpu_pinout.acknowledge_dmc_irq();
 
         if !enabled {
-            dma.disable();
-        } else if !dma.enabled() {
+            dma.clear_sample_bytes_remaining();
+        } else if !dma.sample_bytes_remain() {
             //println!("Reloading sample bytes remaining from 0 to {}", self.sample_length);
-            dma.enable();
+            dma.reload_sample_bytes_remaining();
             self.sample_address = self.sample_start_address;
 
             if self.sample_buffer.is_none() {
@@ -90,7 +90,7 @@ impl Dmc {
         if let Some(sample) = self.sample_buffer.take() {
             //println!("Taking sample buffer.");
             self.sample_shifter = sample;
-            if dmc_dma.enabled() {
+            if dmc_dma.sample_bytes_remain() {
                 //println!("Attempting to RELOAD sample buffer soon.");
                 dmc_dma.start_reload();
             }
@@ -100,7 +100,7 @@ impl Dmc {
     // Called upon the completion of a DMC DMA (Load OR Reload).
     pub fn set_sample_buffer(&mut self, cpu_pinout: &mut CpuPinout, dma: &mut DmcDma, value: u8) {
         //println!("Checking if sample buffer should be loaded.");
-        if dma.enabled() {
+        if dma.sample_bytes_remain() {
             //println!("Loading sample buffer.");
             self.sample_buffer = Some(value);
             self.sample_address.inc();
@@ -109,10 +109,10 @@ impl Dmc {
             }
 
             dma.decrement_sample_bytes_remaining();
-            if !dma.enabled() {
+            if !dma.sample_bytes_remain() {
                 //println!("No sample bytes remaining. Should loop? {}", self.should_loop);
                 if self.should_loop {
-                    dma.enable();
+                    dma.reload_sample_bytes_remaining();
                     self.sample_address = self.sample_start_address;
                 } else if self.irq_enabled {
                     cpu_pinout.assert_dmc_irq();

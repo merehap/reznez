@@ -19,6 +19,7 @@ pub struct ApuRegisters {
     pub dmc: Dmc,
 
     pending_step_mode: StepMode,
+    dmc_enabled: bool,
     frame_irq_status: bool,
     suppress_frame_irq: bool,
     should_acknowledge_frame_irq: bool,
@@ -42,6 +43,7 @@ impl ApuRegisters {
             dmc: Dmc::default(),
 
             pending_step_mode: StepMode::FourStep,
+            dmc_enabled: false,
             frame_irq_status: false,
             suppress_frame_irq: false,
             should_acknowledge_frame_irq: false,
@@ -80,11 +82,11 @@ impl ApuRegisters {
         &mut self.clock
     }
 
-    pub fn peek_status(&self, cpu_pinout: &CpuPinout, dmc_dma: &DmcDma) -> Status {
+    pub fn peek_status(&self, cpu_pinout: &CpuPinout, dma: &DmcDma) -> Status {
         Status {
             dmc_interrupt: cpu_pinout.dmc_irq_asserted(),
             frame_irq_status: self.frame_irq_status,
-            dmc_active: dmc_dma.enabled(),
+            dmc_active: self.dmc_enabled && dma.sample_bytes_remain(),
             noise_active: self.noise.active(),
             triangle_active: self.triangle.active(),
             pulse_2_active: self.pulse_2.active(),
@@ -111,6 +113,9 @@ impl ApuRegisters {
 
         let enabled_channels = splitbits!(value, "...dntqp");
         self.dmc.set_enabled(cpu_pinout, dmc_dma, self.clock.cycle_parity(), enabled_channels.d);
+        // This applies immediately, unlike the similar flag within DMC.
+        self.dmc_enabled = enabled_channels.d;
+
         self.noise.set_enabled(enabled_channels.n);
         self.triangle.set_enabled(enabled_channels.t);
         self.pulse_2.set_enabled(enabled_channels.q);

@@ -22,15 +22,15 @@ impl DmcDma {
         sample_bytes_remaining: 0,
     };
 
-    pub fn enabled(&self) -> bool {
+    pub fn sample_bytes_remain(&self) -> bool {
         self.sample_bytes_remaining > 0
     }
 
-    pub fn enable(&mut self) {
+    pub fn reload_sample_bytes_remaining(&mut self) {
         self.sample_bytes_remaining = self.sample_length;
     }
 
-    pub fn disable(&mut self) {
+    pub fn clear_sample_bytes_remaining(&mut self) {
         self.sample_bytes_remaining = 0;
     }
 
