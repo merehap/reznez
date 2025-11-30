@@ -68,9 +68,13 @@ impl Dmc {
         }
     }
 
+    pub(super) fn execute_get_cycle(&mut self) {
+        self.cycles_remaining -= 1;
+    }
+
     pub(super) fn execute_put_cycle(&mut self, dmc_dma: &mut DmcDma) {
         if self.cycles_remaining >= 2 {
-            self.cycles_remaining -= 2;
+            self.cycles_remaining -= 1;
             return;
         }
 

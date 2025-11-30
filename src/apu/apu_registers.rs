@@ -196,6 +196,7 @@ impl ApuRegisters {
 
     pub fn execute_get_cycle(&mut self) {
         self.triangle.execute_get_cycle();
+        self.dmc.execute_get_cycle();
     }
 
     pub fn maybe_decrement_counters(&mut self) {
