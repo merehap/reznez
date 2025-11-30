@@ -1,3 +1,4 @@
+use crate::apu::apu_registers::CycleParity;
 use crate::apu::length_counter::LengthCounter;
 use crate::apu::timer::Timer;
 use crate::util::integer::U4;
@@ -60,11 +61,13 @@ impl PulseChannel {
         !self.length_counter.is_zero()
     }
 
-    pub(super) fn execute_put_cycle(&mut self) {
-        let wrapped_around = self.timer.tick();
-        if wrapped_around {
-            self.sequence_index += 1;
-            self.sequence_index %= 8;
+    pub(super) fn tick(&mut self, parity: CycleParity) {
+        if parity == CycleParity::Put {
+            let wrapped_around = self.timer.tick();
+            if wrapped_around {
+                self.sequence_index += 1;
+                self.sequence_index %= 8;
+            }
         }
     }
 

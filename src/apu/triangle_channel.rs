@@ -56,12 +56,12 @@ impl TriangleChannel {
         !self.length_counter.is_zero()
     }
 
-    pub(super) fn execute_get_cycle(&mut self) {
-        self.advance_timer_and_sequence_index();
-    }
-
-    pub(super) fn execute_put_cycle(&mut self) {
-        self.advance_timer_and_sequence_index();
+    pub(super) fn tick(&mut self) {
+        let wrapped_around = self.timer.tick();
+        if wrapped_around && !self.length_counter.is_zero() && self.linear_counter != U7::ZERO {
+            self.sequence_index += 1;
+            self.sequence_index %= 0x20;
+        }
     }
 
     pub(super) fn decrement_linear_counter(&mut self) {
@@ -81,14 +81,6 @@ impl TriangleChannel {
             f32::from(VOLUME_SEQUENCE[self.sequence_index])
         } else {
             0.0
-        }
-    }
-
-    fn advance_timer_and_sequence_index(&mut self) {
-        let wrapped_around = self.timer.tick();
-        if wrapped_around && !self.length_counter.is_zero() && self.linear_counter != U7::ZERO {
-            self.sequence_index += 1;
-            self.sequence_index %= 0x20;
         }
     }
 }

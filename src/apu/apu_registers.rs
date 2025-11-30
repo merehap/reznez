@@ -156,19 +156,11 @@ impl ApuRegisters {
         }
 
         self.apply_length_counter_pending_values();
-        match parity {
-            CycleParity::Get => {
-                self.triangle.execute_get_cycle();
-                self.dmc.execute_get_cycle();
-            }
-            CycleParity::Put => {
-                self.pulse_1.execute_put_cycle();
-                self.pulse_2.execute_put_cycle();
-                self.triangle.execute_put_cycle();
-                self.noise.execute_put_cycle();
-                self.dmc.execute_put_cycle(dmc_dma);
-            }
-        }
+        self.pulse_1.tick(parity);
+        self.pulse_2.tick(parity);
+        self.triangle.tick();
+        self.noise.tick(parity);
+        self.dmc.tick(dmc_dma);
     }
 
     fn maybe_update_step_mode(&mut self) {

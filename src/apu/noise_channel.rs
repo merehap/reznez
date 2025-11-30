@@ -1,3 +1,4 @@
+use crate::apu::apu_registers::CycleParity;
 use crate::apu::length_counter::LengthCounter;
 use crate::apu::timer::Timer;
 use crate::util::integer::U4;
@@ -67,20 +68,22 @@ impl NoiseChannel {
         !self.length_counter.is_zero()
     }
 
-    pub(super) fn execute_put_cycle(&mut self) {
-        let wrapped_around = self.timer.tick();
-        if wrapped_around {
-            let mut feedback = self.shift_register & 1;
-            if self.mode {
-                feedback ^= (self.shift_register & 0b100_0000) >> 6;
-            } else {
-                feedback ^= (self.shift_register & 0b000_0010) >> 1;
+    pub(super) fn tick(&mut self, parity: CycleParity) {
+        if parity == CycleParity::Put {
+            let wrapped_around = self.timer.tick();
+            if wrapped_around {
+                let mut feedback = self.shift_register & 1;
+                if self.mode {
+                    feedback ^= (self.shift_register & 0b100_0000) >> 6;
+                } else {
+                    feedback ^= (self.shift_register & 0b000_0010) >> 1;
+                }
+
+                feedback <<= 14;
+
+                self.shift_register >>= 1;
+                self.shift_register |= feedback;
             }
-
-            feedback <<= 14;
-
-            self.shift_register >>= 1;
-            self.shift_register |= feedback;
         }
     }
 
