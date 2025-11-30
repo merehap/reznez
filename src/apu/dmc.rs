@@ -10,7 +10,7 @@ const NTSC_PERIODS: [u16; 16] =
     [428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106,  84,  72,  54];
 
 pub struct Dmc {
-    muted: bool,
+    silenced: bool,
 
     // TODO: The wiki claims there is an irq_status flag independent of frame_irq_asserted in CpuPinout.
     // But there seem to be no tests to verify the behavior of these two flags in relationship to each other,
@@ -86,7 +86,7 @@ impl Dmc {
         }
 
         self.bits_remaining = 8;
-        self.muted = self.sample_buffer.is_none();
+        self.silenced = self.sample_buffer.is_none();
         if let Some(sample) = self.sample_buffer.take() {
             //println!("Taking sample buffer.");
             self.sample_shifter = sample;
@@ -122,7 +122,7 @@ impl Dmc {
     }
 
     pub(super) fn sample_volume(&self) -> f32 {
-        if self.muted {
+        if self.silenced {
             0.0
         } else {
             f32::from(u8::from(self.volume))
@@ -137,7 +137,7 @@ impl Dmc {
 impl Default for Dmc {
     fn default() -> Self {
         Dmc {
-            muted: true,
+            silenced: true,
             irq_enabled: false,
             should_loop: false,
             volume: u7::default(),
