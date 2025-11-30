@@ -10,15 +10,12 @@ const NTSC_PERIODS: [u16; 16] =
     [428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106,  84,  72,  54];
 
 pub struct Dmc {
-    silenced: bool,
-
     // TODO: The wiki claims there is an irq_status flag independent of frame_irq_asserted in CpuPinout.
     // But there seem to be no tests to verify the behavior of these two flags in relationship to each other,
     // so currently no separate flag is stored here.
     irq_enabled: bool,
 
     should_loop: bool,
-    volume: u7,
 
     period: u16,
     cycles_remaining: u16,
@@ -26,10 +23,8 @@ pub struct Dmc {
     sample_start_address: CpuAddress,
     sample_address: CpuAddress,
     sample_buffer: Option<u8>,
-    sample_shifter: u8,
 
-    // Values from 0 to 8.
-    bits_remaining: u8,
+    output_unit: OutputUnit,
 }
 
 impl Dmc {
@@ -46,7 +41,7 @@ impl Dmc {
 
     // 0x4011
     pub fn write_volume(&mut self, value: u8) {
-        self.volume = splitbits_named_ux!(value, ".vvvvvvv");
+        self.output_unit.volume = splitbits_named_ux!(value, ".vvvvvvv");
     }
 
     // 0x4012
@@ -80,16 +75,16 @@ impl Dmc {
         }
 
         self.cycles_remaining = self.period;
-        self.bits_remaining = self.bits_remaining.saturating_sub(1);
-        if self.bits_remaining > 0 {
+        self.output_unit.bits_remaining = self.output_unit.bits_remaining.saturating_sub(1);
+        if self.output_unit.bits_remaining > 0 {
             return;
         }
 
-        self.bits_remaining = 8;
-        self.silenced = self.sample_buffer.is_none();
+        self.output_unit.bits_remaining = 8;
+        self.output_unit.silenced = self.sample_buffer.is_none();
         if let Some(sample) = self.sample_buffer.take() {
             //println!("Taking sample buffer.");
-            self.sample_shifter = sample;
+            self.output_unit.sample_shifter = sample;
             if dmc_dma.sample_bytes_remain() {
                 //println!("Attempting to RELOAD sample buffer soon.");
                 dmc_dma.start_reload();
@@ -122,10 +117,10 @@ impl Dmc {
     }
 
     pub(super) fn sample_volume(&self) -> f32 {
-        if self.silenced {
+        if self.output_unit.silenced {
             0.0
         } else {
-            f32::from(u8::from(self.volume))
+            f32::from(u8::from(self.output_unit.volume))
         }
     }
 
@@ -137,17 +132,32 @@ impl Dmc {
 impl Default for Dmc {
     fn default() -> Self {
         Dmc {
-            silenced: true,
             irq_enabled: false,
             should_loop: false,
-            volume: u7::default(),
             period: NTSC_PERIODS[0] - 1,
             cycles_remaining: NTSC_PERIODS[0] - 1,
             sample_start_address: CpuAddress::new(0xC000),
             sample_address: CpuAddress::new(0xC000),
             sample_buffer: None,
-            sample_shifter: 0,
+            output_unit: OutputUnit::default(),
+        }
+    }
+}
 
+struct OutputUnit {
+    // Values from 0 to 8.
+    bits_remaining: u8,
+    sample_shifter: u8,
+    volume: u7,
+    silenced: bool,
+}
+
+impl Default for OutputUnit {
+    fn default() -> Self {
+        Self {
+            silenced: true,
+            volume: u7::default(),
+            sample_shifter: 0,
             bits_remaining: 8,
         }
     }
