@@ -50,39 +50,17 @@ impl Apu {
     }
 
     pub fn step(&mut self, mem: &mut Memory) {
-        mem.apu_regs.maybe_update_step_mode();
-
-        match mem.apu_regs.clock().cycle_parity() {
-            CycleParity::Get => Apu::execute_get_cycle(mem),
-            CycleParity::Put => self.execute_put_cycle(mem),
-        }
-    }
-
-    fn execute_put_cycle(&mut self, mem: &mut Memory) {
         let cycle = mem.apu_regs.clock().cycle();
-        info!(target: "apucycles", "APU cycle: {cycle} (PUT)");
+        let parity = mem.apu_regs.clock().cycle_parity();
+        info!(target: "apucycles", "APU cycle: {cycle} ({parity})");
 
-        mem.apu_regs.maybe_set_frame_irq_pending(&mut mem.cpu_pinout);
-        mem.apu_regs.maybe_decrement_counters();
-        mem.apu_regs.apply_length_counter_pending_values();
-        mem.apu_regs.execute_put_cycle(&mut mem.dmc_dma);
-
-        if mem.apu_regs.clock().raw_cycle().is_multiple_of(20) {
-            let mut queue = self.pulse_queue
-                .lock()
-                .unwrap();
+        mem.apu_regs.tick(&mut mem.cpu_pinout, &mut mem.dmc_dma, parity);
+        if parity == CycleParity::Put && mem.apu_regs.clock().raw_cycle().is_multiple_of(20) {
+            let mut queue = self.pulse_queue.lock().unwrap();
             if queue.len() < MAX_QUEUE_LENGTH {
                 queue.push_back(Apu::mix_samples(&mem.apu_regs));
             }
         }
-    }
-
-    fn execute_get_cycle(mem: &mut Memory) {
-        let cycle = mem.apu_regs.clock().cycle();
-        info!(target: "apucycles", "APU cycle: {cycle} (GET)");
-        mem.apu_regs.maybe_set_frame_irq_pending(&mut mem.cpu_pinout);
-        mem.apu_regs.apply_length_counter_pending_values();
-        mem.apu_regs.execute_get_cycle();
     }
 
     fn mix_samples(regs: &ApuRegisters) -> f32 {

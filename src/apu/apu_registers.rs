@@ -148,7 +148,30 @@ impl ApuRegisters {
             self.pending_step_mode, self.suppress_frame_irq, self.frame_counter_write_status, self.clock.cycle());
     }
 
-    pub fn maybe_update_step_mode(&mut self) {
+    pub fn tick(&mut self, cpu_pinout: &mut CpuPinout, dmc_dma: &mut DmcDma, parity: CycleParity) {
+        self.maybe_update_step_mode();
+        self.maybe_set_frame_irq_pending(cpu_pinout);
+        if parity == CycleParity::Put {
+            self.maybe_decrement_counters();
+        }
+
+        self.apply_length_counter_pending_values();
+        match parity {
+            CycleParity::Get => {
+                self.triangle.execute_get_cycle();
+                self.dmc.execute_get_cycle();
+            }
+            CycleParity::Put => {
+                self.pulse_1.execute_put_cycle();
+                self.pulse_2.execute_put_cycle();
+                self.triangle.execute_put_cycle();
+                self.noise.execute_put_cycle();
+                self.dmc.execute_put_cycle(dmc_dma);
+            }
+        }
+    }
+
+    fn maybe_update_step_mode(&mut self) {
         let apu_cycle = self.clock.cycle();
         if self.counter_suppression_cycles > 0 {
             self.counter_suppression_cycles -= 1;
@@ -186,20 +209,7 @@ impl ApuRegisters {
         }
     }
 
-    pub fn execute_put_cycle(&mut self, dmc_dma: &mut DmcDma) {
-        self.pulse_1.execute_put_cycle();
-        self.pulse_2.execute_put_cycle();
-        self.triangle.execute_put_cycle();
-        self.noise.execute_put_cycle();
-        self.dmc.execute_put_cycle(dmc_dma);
-    }
-
-    pub fn execute_get_cycle(&mut self) {
-        self.triangle.execute_get_cycle();
-        self.dmc.execute_get_cycle();
-    }
-
-    pub fn maybe_decrement_counters(&mut self) {
+    fn maybe_decrement_counters(&mut self) {
         const FIRST_STEP  : u16 = 2 * 3728 + 1;
         const SECOND_STEP : u16 = 2 * 7456 + 1;
         const THIRD_STEP  : u16 = 2 * 11185 + 1;
@@ -252,14 +262,14 @@ impl ApuRegisters {
         );
     }
 
-    pub fn apply_length_counter_pending_values(&mut self) {
+    fn apply_length_counter_pending_values(&mut self) {
         self.pulse_1.length_counter.apply_pending_values();
         self.pulse_2.length_counter.apply_pending_values();
         self.triangle.length_counter.apply_pending_values();
         self.noise.length_counter.apply_pending_values();
     }
 
-    pub fn maybe_set_frame_irq_pending(&mut self, cpu_pinout: &mut CpuPinout) {
+    fn maybe_set_frame_irq_pending(&mut self, cpu_pinout: &mut CpuPinout) {
         if self.should_acknowledge_frame_irq && self.clock.cycle_parity() == CycleParity::Get {
             info!(target: "apuevents", "Frame IRQ acknowledged by APUSTATUS read. APU Cycle: {}", self.clock.cycle());
             cpu_pinout.acknowledge_frame_irq();
