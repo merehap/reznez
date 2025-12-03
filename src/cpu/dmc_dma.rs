@@ -68,16 +68,19 @@ impl DmcDma {
      * * The sample buffer must be empty (or nothing will happen)
      *
      * Idle -> WaitingForGet -> FirstSkip -> SecondSkip -> TryHalt -> Dummy -> TryRead -> Idle
-     *             |   ^                                    |   ^               |   ^
-     *             |   |                                    |   |               |   |
-     *             +---+                                    +---+               +---+
+     *                                                      |   ^               |   ^
+     *                                                      |   |               |   |
+     *                                                      +---+               +---+
      */
     pub fn start_load(&mut self, parity: CycleParity) {
         info!(target: "apuevents", "DMC DMA Load starting. CPU will halt soon.");
         assert_eq!(self.state, DmcDmaState::Idle);
-        // If we're already on a GET, then skip WaitingForGet.
-        self.state = if parity == CycleParity::Get { DmcDmaState::FirstSkip } else { DmcDmaState::WaitingForGet };
         self.latest_action = DmcDmaAction::DoNothing;
+        self.state = match parity {
+            // If we're already on a GET, then skip WaitingForGet.
+            CycleParity::Get => DmcDmaState::FirstSkip,
+            CycleParity::Put => DmcDmaState::WaitingForGet,
+        };
     }
 
     /*
@@ -102,27 +105,16 @@ impl DmcDma {
     pub fn step(&mut self, is_cpu_read_step: bool, parity: CycleParity) {
         use DmcDmaAction as Action;
         use DmcDmaState as State;
-
-        let still_waiting_for_get = self.state == State::WaitingForGet && parity == CycleParity::Put;
-        let still_trying_to_halt = self.state == State::TryEnable && !is_cpu_read_step;
-        if still_waiting_for_get || still_trying_to_halt {
-            self.latest_action = Action::DoNothing;
-            return;
-        }
-
-        if self.state == State::TryRead && parity == CycleParity::Get {
-            self.latest_action = Action::Align;
-            return;
-        }
-
         (self.latest_action, self.state) = match self.state {
-            State::Idle => (Action::DoNothing, State::Idle),
-            State::WaitingForGet => (Action::DoNothing, State::FirstSkip),
-            State::FirstSkip => (Action::DoNothing, State::SecondSkip),
-            State::SecondSkip => (Action::DoNothing, State::TryEnable),
-            State::TryEnable => (Action::Halt, State::Dummy),
-            State::Dummy => (Action::Dummy, State::TryRead),
-            State::TryRead => (Action::Read, State::Idle),
+            State::Idle                                  => (Action::DoNothing, State::Idle),
+            State::WaitingForGet                         => (Action::DoNothing, State::FirstSkip),
+            State::FirstSkip                             => (Action::DoNothing, State::SecondSkip),
+            State::SecondSkip                            => (Action::DoNothing, State::TryEnable),
+            State::TryEnable if !is_cpu_read_step        => (Action::DoNothing, State::TryEnable),
+            State::TryEnable                             => (Action::Halt     , State::Dummy),
+            State::Dummy                                 => (Action::Dummy    , State::TryRead),
+            State::TryRead if parity == CycleParity::Get => (Action::Align    , State::TryRead),
+            State::TryRead                               => (Action::Read     , State::Idle),
         };
     }
 }
