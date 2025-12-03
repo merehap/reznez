@@ -151,7 +151,7 @@ impl Cpu {
         mem.dmc_dma.step(step.is_read(), cycle_parity);
         match mem.dmc_dma.latest_action() {
             DmcDmaAction::DoNothing => {}
-            DmcDmaAction::Halt | DmcDmaAction::Dummy | DmcDmaAction::Align => step = step.with_actions_removed(),
+            DmcDmaAction::Enable | DmcDmaAction::Dummy | DmcDmaAction::Align => step = step.with_actions_removed(),
             DmcDmaAction::Read => step = DMC_READ_STEP,
         }
 

@@ -217,7 +217,7 @@ impl Nes {
                 // Complete the CPU reset, if one is in progress and nearing completion.
                 self.cpu.reset();
                 self.memory.apu_regs.reset(&mut self.memory.cpu_pinout);
-                self.memory.dmc_dma.clear_sample_bytes_remaining();
+                self.memory.dmc_dma.disable(self.memory.apu_regs.clock().cycle_parity());
             }
 
             let step_result = self.step();
