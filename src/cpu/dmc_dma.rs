@@ -6,7 +6,7 @@ use splitbits::combinebits;
 use crate::apu::apu_registers::CycleParity;
 
 pub struct DmcDma {
-    disable_pending: bool,
+    ticks_until_disabled: Option<u8>,
     state: DmcDmaState,
     latest_action: DmcDmaAction,
 
@@ -17,7 +17,7 @@ pub struct DmcDma {
 
 impl DmcDma {
     pub const IDLE: Self = Self {
-        disable_pending: false,
+        ticks_until_disabled: None,
         state: DmcDmaState::Idle,
         latest_action: DmcDmaAction::DoNothing,
 
@@ -34,13 +34,12 @@ impl DmcDma {
     }
 
     pub fn disable(&mut self, parity: CycleParity) {
-        self.disable_pending = true;
-        let starting = self.enable_or_disable(parity);
-        if starting {
-            info!(target: "apuevents", "DMC DMA will be disabled soon.");
-        } else {
-            info!(target: "apuevents",
-                "DMC DMA will be disabled soon, but a Load/Reload is already in progress. State: {:?}", self.state);
+        if self.ticks_until_disabled.is_none() {
+            log::info!("Disabling DMC DMA soon.");
+            self.ticks_until_disabled = Some(match parity {
+                CycleParity::Get => 3,
+                CycleParity::Put => 4,
+            });
         }
     }
 
@@ -82,12 +81,14 @@ impl DmcDma {
      *                                                      +---+               +---+
      */
     pub fn start_load(&mut self, parity: CycleParity) {
-        let starting = self.enable_or_disable(parity);
-        if starting {
-            info!(target: "apuevents", "DMC DMA Load starting. CPU will halt soon.");
-        } else {
-            info!(target: "apuevents", "DMC DMA Load ignored: a Load/Reload is already in progress. State: {:?}", self.state);
-        }
+        assert_eq!(self.state, DmcDmaState::Idle);
+        info!(target: "apuevents", "DMC DMA Load starting. CPU will halt soon.");
+        self.latest_action = DmcDmaAction::DoNothing;
+        self.state = match parity {
+            // If we're already on a GET, then skip WaitingForGet.
+            CycleParity::Get => DmcDmaState::FirstSkip,
+            CycleParity::Put => DmcDmaState::WaitingForGet,
+        };
     }
 
     /*
@@ -103,51 +104,48 @@ impl DmcDma {
      *          +---+               +---+
      */
     pub fn start_reload(&mut self) {
-        if self.state == DmcDmaState::Idle {
-            info!(target: "apuevents", "DMC DMA Reload starting. CPU will halt soon.");
-            self.state = DmcDmaState::TryEnable;
-            self.latest_action = DmcDmaAction::DoNothing;
-        } else {
-            // TODO: Determine if it ignoring is correct.
-            info!(target: "apuevents", "DMC DMA Reload ignored: a Load/Reload is already in progress. State: {:?}", self.state);
+        assert_eq!(self.state, DmcDmaState::Idle);
+        info!(target: "apuevents", "DMC DMA Reload starting. CPU will halt soon.");
+        self.state = DmcDmaState::TryHalt;
+        self.latest_action = DmcDmaAction::DoNothing;
+        match self.ticks_until_disabled {
+            Some(0 | 1) => {
+                info!(target: "apuevents", "DMC DMA disabled instead of reloading (Explicit Abort).");
+                self.ticks_until_disabled = None;
+                self.sample_bytes_remaining = 0;
+                self.state = DmcDmaState::Idle;
+            }
+            Some(ticks@(2 | 3)) => self.ticks_until_disabled = Some(ticks - 2),
+            None | Some(_) => { /* Do nothing. */ }
         }
     }
 
     pub fn step(&mut self, is_cpu_read_step: bool, parity: CycleParity) {
         use DmcDmaAction as Action;
         use DmcDmaState as State;
+
         (self.latest_action, self.state) = match self.state {
             State::Idle                                  => (Action::DoNothing, State::Idle),
             State::WaitingForGet                         => (Action::DoNothing, State::FirstSkip),
             State::FirstSkip                             => (Action::DoNothing, State::SecondSkip),
-            State::SecondSkip                            => (Action::DoNothing, State::TryEnable),
-            State::TryEnable if !is_cpu_read_step        => (Action::DoNothing, State::TryEnable),
-            State::TryEnable if self.disable_pending     => (Action::DoNothing, State::Idle),
-            State::TryEnable                             => (Action::Enable   , State::Dummy),
+            State::SecondSkip                            => (Action::DoNothing, State::TryHalt),
+            State::TryHalt if !is_cpu_read_step          => (Action::DoNothing, State::TryHalt),
+            State::TryHalt                               => (Action::Halt     , State::Dummy),
             State::Dummy                                 => (Action::Dummy    , State::TryRead),
             State::TryRead if parity == CycleParity::Get => (Action::Align    , State::TryRead),
             State::TryRead                               => (Action::Read     , State::Idle),
         };
 
-        // TODO: This should probably be expanded to all states after Enable.
-        if self.disable_pending && self.state == State::Idle {
-            self.sample_bytes_remaining = 0;
-            self.disable_pending = false;
+        match self.ticks_until_disabled {
+            Some(0) => {
+                log::info!(target: "apuevents", "DMC DMA disabled.");
+                self.ticks_until_disabled = None;
+                self.sample_bytes_remaining = 0;
+                self.state = State::Idle;
+            }
+            Some(n) => self.ticks_until_disabled = Some(n - 1),
+            None => { /* Do nothing. */ }
         }
-    }
-
-    fn enable_or_disable(&mut self, parity: CycleParity) -> bool {
-        let starting = self.state == DmcDmaState::Idle;
-        if starting {
-            self.latest_action = DmcDmaAction::DoNothing;
-            self.state = match parity {
-                // If we're already on a GET, then skip WaitingForGet.
-                CycleParity::Get => DmcDmaState::FirstSkip,
-                CycleParity::Put => DmcDmaState::WaitingForGet,
-            };
-        }
-
-        starting
     }
 }
 
@@ -157,7 +155,7 @@ pub enum DmcDmaState {
     WaitingForGet,
     FirstSkip,
     SecondSkip,
-    TryEnable,
+    TryHalt,
     Dummy,
     TryRead,
 }
@@ -166,7 +164,7 @@ pub enum DmcDmaState {
 pub enum DmcDmaAction {
     #[default]
     DoNothing,
-    Enable,
+    Halt,
     Dummy,
     Align,
     Read,
