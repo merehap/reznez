@@ -6,7 +6,7 @@ use splitbits::combinebits;
 use crate::apu::apu_registers::CycleParity;
 
 pub struct DmcDma {
-    ticks_until_disabled: Option<u8>,
+    puts_until_disabled: Option<u8>,
     state: DmcDmaState,
     latest_action: DmcDmaAction,
 
@@ -17,7 +17,7 @@ pub struct DmcDma {
 
 impl DmcDma {
     pub const IDLE: Self = Self {
-        ticks_until_disabled: None,
+        puts_until_disabled: None,
         state: DmcDmaState::Idle,
         latest_action: DmcDmaAction::DoNothing,
 
@@ -33,13 +33,10 @@ impl DmcDma {
         self.sample_bytes_remaining = self.sample_length;
     }
 
-    pub fn disable(&mut self, parity: CycleParity) {
-        if self.ticks_until_disabled.is_none() {
-            log::info!("Disabling DMC DMA soon.");
-            self.ticks_until_disabled = Some(match parity {
-                CycleParity::Get => 3,
-                CycleParity::Put => 4,
-            });
+    pub fn disable(&mut self) {
+        if self.puts_until_disabled.is_none() {
+            log::info!(target: "apuevents", "Disabling DMC DMA soon.");
+            self.puts_until_disabled = Some(2);
         }
     }
 
@@ -108,15 +105,15 @@ impl DmcDma {
         info!(target: "apuevents", "DMC DMA Reload starting. CPU will halt soon.");
         self.state = DmcDmaState::TryHalt;
         self.latest_action = DmcDmaAction::DoNothing;
-        match self.ticks_until_disabled {
-            Some(0 | 1) => {
+        match self.puts_until_disabled {
+            Some(0) => {
                 info!(target: "apuevents", "DMC DMA disabled instead of reloading (Explicit Abort).");
-                self.ticks_until_disabled = None;
+                self.puts_until_disabled = None;
                 self.sample_bytes_remaining = 0;
                 self.state = DmcDmaState::Idle;
             }
-            Some(ticks@(2 | 3)) => self.ticks_until_disabled = Some(ticks - 2),
-            None | Some(_) => { /* Do nothing. */ }
+            Some(1) => self.puts_until_disabled = Some(0),
+            _ => { /* Do nothing. */ }
         }
     }
 
@@ -136,15 +133,15 @@ impl DmcDma {
             State::TryRead                               => (Action::Read     , State::Idle),
         };
 
-        match self.ticks_until_disabled {
+        match self.puts_until_disabled {
             Some(0) => {
                 log::info!(target: "apuevents", "DMC DMA disabled.");
-                self.ticks_until_disabled = None;
+                self.puts_until_disabled = None;
                 self.sample_bytes_remaining = 0;
                 self.state = State::Idle;
             }
-            Some(n) => self.ticks_until_disabled = Some(n - 1),
-            None => { /* Do nothing. */ }
+            Some(n) if parity == CycleParity::Put => self.puts_until_disabled = Some(n - 1),
+            _ => { /* Do nothing. */ }
         }
     }
 }

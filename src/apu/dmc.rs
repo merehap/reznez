@@ -55,7 +55,7 @@ impl Dmc {
         cpu_pinout.acknowledge_dmc_irq();
 
         if !enabled {
-            dma.disable(cycle_parity);
+            dma.disable();
         } else if !dma.sample_bytes_remain() {
             dma.reload_sample_bytes_remaining();
             self.sample_address = self.sample_start_address;
