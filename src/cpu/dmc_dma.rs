@@ -25,15 +25,15 @@ impl DmcDma {
         sample_bytes_remaining: 0,
     };
 
-    pub fn sample_bytes_remain(&self) -> bool {
+    pub fn enabled(&self) -> bool {
         self.sample_bytes_remaining > 0
     }
 
-    pub fn reload_sample_bytes_remaining(&mut self) {
+    pub fn enable(&mut self) {
         self.sample_bytes_remaining = self.sample_length;
     }
 
-    pub fn disable(&mut self) {
+    pub fn disable_soon(&mut self) {
         if self.puts_until_disabled.is_none() {
             log::info!(target: "apuevents", "Disabling DMC DMA soon.");
             self.puts_until_disabled = Some(2);
@@ -42,10 +42,6 @@ impl DmcDma {
 
     pub fn decrement_sample_bytes_remaining(&mut self) {
         self.sample_bytes_remaining = self.sample_bytes_remaining.saturating_sub(1);
-    }
-
-    pub fn active(&self) -> bool {
-        self.state != DmcDmaState::Idle
     }
 
     pub fn state(&self) -> DmcDmaState {
@@ -63,7 +59,6 @@ impl DmcDma {
     // Write 0x4013
     pub fn write_sample_length(&mut self, length: u8) {
         self.sample_length = combinebits!(length, "0000 llll llll 0001");
-        //println!("Setting sample length to {}", self.sample_length);
     }
 
     /*
@@ -105,6 +100,7 @@ impl DmcDma {
         info!(target: "apuevents", "DMC DMA Reload starting. CPU will halt soon.");
         self.state = DmcDmaState::TryHalt;
         self.latest_action = DmcDmaAction::DoNothing;
+
         match self.puts_until_disabled {
             Some(0) => {
                 info!(target: "apuevents", "DMC DMA disabled instead of reloading (Explicit Abort).");

@@ -86,7 +86,7 @@ impl ApuRegisters {
         Status {
             dmc_interrupt: cpu_pinout.dmc_irq_asserted(),
             frame_irq_status: self.frame_irq_status,
-            dmc_active: self.dmc_enabled && dma.sample_bytes_remain(),
+            dmc_active: self.dmc_enabled && dma.enabled(),
             noise_active: self.noise.active(),
             triangle_active: self.triangle.active(),
             pulse_2_active: self.pulse_2.active(),

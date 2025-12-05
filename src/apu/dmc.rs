@@ -51,13 +51,13 @@ impl Dmc {
     }
 
     // 0x4015
-    pub(super) fn set_enabled(&mut self, cpu_pinout: &mut CpuPinout, dma: &mut DmcDma, cycle_parity: CycleParity, enabled: bool) {
+    pub(super) fn set_enabled(&mut self, cpu_pinout: &mut CpuPinout, dma: &mut DmcDma, cycle_parity: CycleParity, enable: bool) {
         cpu_pinout.acknowledge_dmc_irq();
 
-        if !enabled {
-            dma.disable();
-        } else if !dma.sample_bytes_remain() {
-            dma.reload_sample_bytes_remaining();
+        if !enable {
+            dma.disable_soon();
+        } else if !dma.enabled() {
+            dma.enable();
             self.sample_address = self.sample_start_address;
 
             if self.sample_buffer.is_none() {
@@ -83,7 +83,7 @@ impl Dmc {
         self.output_unit.silenced = self.sample_buffer.is_none();
         if let Some(sample) = self.sample_buffer.take() {
             self.output_unit.sample_shifter = sample;
-            if dmc_dma.sample_bytes_remain() {
+            if dmc_dma.enabled() {
                 dmc_dma.start_reload();
             }
         }
@@ -91,7 +91,7 @@ impl Dmc {
 
     // Called upon the completion of a DMC DMA (Load OR Reload).
     pub fn set_sample_buffer(&mut self, cpu_pinout: &mut CpuPinout, dma: &mut DmcDma, value: u8) {
-        if dma.sample_bytes_remain() {
+        if dma.enabled() {
             self.sample_buffer = Some(value);
             self.sample_address.inc();
             if self.sample_address == CpuAddress::ZERO {
@@ -99,9 +99,9 @@ impl Dmc {
             }
 
             dma.decrement_sample_bytes_remaining();
-            if !dma.sample_bytes_remain() {
+            if !dma.enabled() {
                 if self.should_loop {
-                    dma.reload_sample_bytes_remaining();
+                    dma.enable();
                     self.sample_address = self.sample_start_address;
                 } else if self.irq_enabled {
                     cpu_pinout.assert_dmc_irq();
