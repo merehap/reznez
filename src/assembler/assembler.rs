@@ -13,27 +13,102 @@ pub fn assemble(source_code_path: &Path) {
     assembled_cartridge_path.set_extension("nes");
     println!("Path: {}", assembled_cartridge_path.as_os_str().to_str().unwrap());
 
-    let mut cartridge = Cartridge::nrom();
-    cartridge.prg_rom.set_next_raw_n(0xEA, 32 * KIBIBYTE);
+    let cartridge = demo_cartridge();
     let cartridge_contents = cartridge.to_bytes();
 
     fs::write(assembled_cartridge_path, cartridge_contents).unwrap();
 }
 
-struct Cartridge {
+fn demo_cartridge() -> Cartridge {
+    let mut cartridge = Cartridge::new(Metadata::NROM_NO_WRAM);
+    cartridge.prg_rom.set_next_raw_n(0xEA, 32 * KIBIBYTE);
+    cartridge
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Default)]
+enum Mirroring {
+    #[default]
+    Horizontal,
+    Vertical,
+}
+
+#[derive(Clone, Copy)]
+struct Metadata {
     mapper: u8,
-    vertical_name_table_mirroring: bool,
+    mirroring: Mirroring,
+    prg_rom_size: u32,
+    chr_rom_size: u32,
+}
+
+impl Metadata {
+    pub const NROM_NO_WRAM: Metadata = MetadataBuilder::new()
+        .mapper(0)
+        .mirroring(Mirroring::Horizontal)
+        .prg_rom_size(32 * KIBIBYTE)
+        .chr_rom_size(8 * KIBIBYTE)
+        .build();
+}
+
+#[derive(Clone, Copy)]
+struct MetadataBuilder {
+    mapper: Option<u8>,
+    mirroring: Option<Mirroring>,
+    prg_rom_size: Option<u32>,
+    chr_rom_size: Option<u32>,
+}
+
+impl MetadataBuilder {
+    const fn new() -> Self {
+        Self {
+            mapper: None,
+            mirroring: None,
+            prg_rom_size: None,
+            chr_rom_size: None,
+        }
+    }
+
+    pub const fn mapper(mut self, value: u8) -> Self {
+        self.mapper = Some(value);
+        self
+    }
+
+    pub const fn mirroring(mut self, value: Mirroring) -> Self {
+        self.mirroring = Some(value);
+        self
+    }
+
+    pub const fn prg_rom_size(mut self, value: u32) -> Self {
+        self.prg_rom_size = Some(value);
+        self
+    }
+
+    pub const fn chr_rom_size(mut self, value: u32) -> Self {
+        self.chr_rom_size = Some(value);
+        self
+    }
+
+    pub const fn build(self) -> Metadata {
+        Metadata {
+            mapper: self.mapper.expect("mapper must be set"),
+            mirroring: self.mirroring.expect("mirroring must be set"),
+            prg_rom_size: self.prg_rom_size.expect("prg_rom_size must be set"),
+            chr_rom_size: self.chr_rom_size.expect("chr_rom_size must be set"),
+        }
+    }
+}
+
+struct Cartridge {
+    metadata: Metadata,
     prg_rom: PrgRom,
     chr_rom: ChrRom,
 }
 
 impl Cartridge {
-    fn nrom() -> Self {
+    pub fn new(metadata: Metadata) -> Self {
         Self {
-            mapper: 0,
-            vertical_name_table_mirroring: false,
-            prg_rom: PrgRom::new(32 * KIBIBYTE),
-            chr_rom: ChrRom::new(8 * KIBIBYTE),
+            metadata,
+            prg_rom: PrgRom::new(metadata.prg_rom_size),
+            chr_rom: ChrRom::new(metadata.chr_rom_size),
         }
     }
 
@@ -46,8 +121,8 @@ impl Cartridge {
             0x1A,
             (self.prg_rom.rom.size() / PRG_ROM_CHUNK_SIZE).try_into().unwrap(),
             (self.chr_rom.rom.size() / CHR_ROM_CHUNK_SIZE).try_into().unwrap(),
-            combinebits!(self.mapper & 0b1111, self.vertical_name_table_mirroring, "mmmm000n"),
-            combinebits!(self.mapper >> 4, "mmmm0000"),
+            combinebits!(self.metadata.mapper & 0b1111, self.metadata.mirroring == Mirroring::Vertical, "mmmm000n"),
+            combinebits!(self.metadata.mapper >> 4, "mmmm0000"),
             0, // 8
             0, // 9
             0, // 10
