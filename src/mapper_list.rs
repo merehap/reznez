@@ -416,6 +416,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // Subor
         (167, None) => m::mapper167::Mapper167::default().supported(),
         (168..=173, _) => TodoMapper,
+        // NTDec 5-in-1
         (174, None) => m::mapper174::Mapper174.supported(),
         (175..=176, _) => TodoMapper,
         // Hengedianzi (恒格电子) two-screen mirroring
@@ -444,7 +445,9 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (188, _) => TodoMapper,
         // TXC-PT8154
         (189, None) => m::mapper189::Mapper189::new().supported(),
-        (190..=192, _) => TodoMapper,
+        // Magic Kid Googoo by Zemina
+        (190, None) => m::mapper190::Mapper190.supported(),
+        (191..=192, _) => TodoMapper,
         // NTDEC's TC-112
         (193, None) => m::mapper193::Mapper193.supported(),
         (194..=199, _) => TodoMapper,

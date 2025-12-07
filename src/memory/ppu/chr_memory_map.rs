@@ -15,6 +15,7 @@ pub struct ChrMemoryMap {
     // 0x0000 through 0x1FFF (2 pattern tables) and 0x2000 through 0x2FFF (4 name tables).
     page_mappings: [ChrMapping; CHR_SLOT_COUNT],
     page_ids: [(ChrPageId, ReadStatus, WriteStatus); CHR_SLOT_COUNT],
+    name_table_mirroring_fixed: bool,
 }
 
 impl ChrMemoryMap {
@@ -67,6 +68,7 @@ impl ChrMemoryMap {
         let mut memory_map = Self {
             page_mappings: page_mappings.try_into().unwrap(),
             page_ids: [(ChrPageId::Rom { page_number: 0, bank_number: BankNumber::from_u8(0) }, ReadStatus::Enabled, WriteStatus::Disabled); CHR_SLOT_COUNT],
+            name_table_mirroring_fixed,
         };
         memory_map.update_page_ids(regs);
 
@@ -122,6 +124,7 @@ impl ChrMemoryMap {
     }
 
     pub fn set_name_table_quadrant(&mut self, regs: &mut ChrBankRegisters, quadrant: NameTableQuadrant, source: NameTableSource) {
+        assert!(!self.name_table_mirroring_fixed);
         let (chr_source, bank_number) = ChrSource::from_name_table_source(source);
         let (chr_source_reg_id, chr_bank_reg_id) = quadrant.register_ids();
         regs.set_chr_source(chr_source_reg_id, chr_source);
