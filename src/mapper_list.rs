@@ -415,7 +415,9 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (166, None) => UnassignedMapper,
         // Subor
         (167, None) => m::mapper167::Mapper167::default().supported(),
-        (168..=176, _) => TodoMapper,
+        (168..=173, _) => TodoMapper,
+        (174, None) => m::mapper174::Mapper174.supported(),
+        (175..=176, _) => TodoMapper,
         // Hengedianzi (恒格电子) two-screen mirroring
         (177, None) => m::mapper177::Mapper177.supported(),
         (178, _) => TodoMapper,
