@@ -402,7 +402,10 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (153, _) => TodoMapper,
         // NAMCOT-3453 (only Devil Man)
         (154, None) => m::mapper154::Mapper154::new().supported(),
-        (155..=158, _) => TodoMapper,
+        (155, _) => TodoMapper,
+        // DAOU ROM Controller DIS23C01 DAOU 245
+        (156, None) => m::mapper156::Mapper156.supported(),
+        (157..=158, _) => TodoMapper,
         // Almost a duplicate, but has different EEPROM behavior (not implemented yet).
         (159, None) => m::mapper016_4::Mapper016_4::default().supported(),
         (160, _) => TodoMapper,

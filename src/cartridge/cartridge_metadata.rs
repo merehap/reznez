@@ -439,7 +439,7 @@ impl fmt::Display for ConsoleType {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, FromPrimitive)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Default, FromPrimitive)]
 pub enum TimingMode {
     #[default]
     Ntsc,
