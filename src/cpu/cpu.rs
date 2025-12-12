@@ -222,15 +222,15 @@ impl Cpu {
             info!("\t {step_name} PC: {original_program_counter}, Cycle: {cpu_cycle}, {formatted_step}");
         }
 
-        if step.has_start_new_instruction() {
-            self.mode_state.set_current_instruction_with_address(
-                Instruction::from_code_point(value),
-                mem.cpu_pinout.address_bus,
-            );
-        }
-
         if !halted {
             self.mode_state.step();
+
+            if step.has_start_new_instruction() {
+                self.mode_state.set_current_instruction_with_address(
+                    Instruction::from_code_point(value),
+                    mem.cpu_pinout.address_bus,
+                );
+            }
         }
 
         Some(step)
