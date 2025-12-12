@@ -210,8 +210,8 @@ impl CpuModeState {
             return;
         }
 
-        if !self.is_last_step() {
-            self.increment_step_index();
+        if self.step_index < self.steps.len() - 1 {
+            self.step_index += 1;
             return;
         }
 
@@ -256,14 +256,6 @@ impl CpuModeState {
         };
 
         format!("{name:<6}")
-    }
-
-    fn is_last_step(&self) -> bool {
-        self.step_index == self.steps.len() - 1
-    }
-
-    fn increment_step_index(&mut self) {
-        self.step_index += 1;
     }
 }
 
