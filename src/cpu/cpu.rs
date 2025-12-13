@@ -252,7 +252,7 @@ impl Cpu {
             if self.irq_status == IrqStatus::Inactive && !self.status.interrupts_disabled {
                 self.irq_status = IrqStatus::Pending;
             }
-        } else {
+        } else if self.irq_status != IrqStatus::Active || !self.mode_state.is_branch_delay_active() {
             self.irq_status = IrqStatus::Inactive;
         }
 
@@ -544,15 +544,29 @@ impl Cpu {
             PendingZeroPageTarget => CpuAddress::from_low_high(self.pending_address_low, 0),
             ComputedTarget => self.computed_address,
             TopOfStack => mem.cpu_stack_pointer_address(),
-            InterruptVectorLow => match self.current_interrupt_vector.unwrap() {
-                InterruptType::Nmi => NMI_VECTOR_LOW,
-                InterruptType::Reset => RESET_VECTOR_LOW,
-                InterruptType::Irq => IRQ_VECTOR_LOW,
+            InterruptVectorLow => {
+                if self.mode_state.is_irq_sequence_active() {
+                    // FIXME: Hack
+                    IRQ_VECTOR_LOW
+                } else {
+                    match self.current_interrupt_vector.unwrap() {
+                        InterruptType::Nmi => NMI_VECTOR_LOW,
+                        InterruptType::Reset => RESET_VECTOR_LOW,
+                        InterruptType::Irq => IRQ_VECTOR_LOW,
+                    }
+                }
             }
-            InterruptVectorHigh => match self.current_interrupt_vector.unwrap() {
-                InterruptType::Nmi => NMI_VECTOR_HIGH,
-                InterruptType::Reset => RESET_VECTOR_HIGH,
-                InterruptType::Irq => IRQ_VECTOR_HIGH,
+            InterruptVectorHigh => {
+                if self.mode_state.is_irq_sequence_active() {
+                    // FIXME: Hack
+                    IRQ_VECTOR_HIGH
+                } else {
+                    match self.current_interrupt_vector.unwrap() {
+                        InterruptType::Nmi => NMI_VECTOR_HIGH,
+                        InterruptType::Reset => RESET_VECTOR_HIGH,
+                        InterruptType::Irq => IRQ_VECTOR_HIGH,
+                    }
+                }
             }
         }
     }

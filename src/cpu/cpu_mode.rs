@@ -103,6 +103,15 @@ impl CpuModeState {
             || matches!(self.mode, CpuMode::InterruptSequence {..})
     }
 
+    pub fn is_irq_sequence_active(&self) -> bool {
+        matches!(self.next_mode, Some(CpuMode::InterruptSequence(InterruptType::Irq)))
+            || matches!(self.mode, CpuMode::InterruptSequence(InterruptType::Irq))
+    }
+
+    pub fn is_branch_delay_active(&self) -> bool {
+        matches!(self.mode, CpuMode::Instruction(_, InstructionMode::BranchTaken | InstructionMode::BranchOops))
+    }
+
     pub fn current_step(&self) -> Step {
         match self.mode {
             CpuMode::Instruction(_, InstructionMode::Oops) => OOPS_STEP,

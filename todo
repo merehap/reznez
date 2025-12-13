@@ -31,8 +31,8 @@ FANCY NICE-TO-HAVES
 APU frequency correction
 Allow banks to be configured to pass through PPU address bits, rather than custom logic being needed (see Sachen8259).
 
-UNTESTED
-(Nothing known, but there is plenty)
+POST-RELEASE
+Rewrite CPU signals from bottom-up
 
 BUGS
 Gracefully handle bad CHR size? ((( Argus (J) [hM03][o2].nes ))) ((( Atlantis no Nazo (J) [hM03][b3].nes )))
