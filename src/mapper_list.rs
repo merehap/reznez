@@ -225,7 +225,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (47, None) => m::mapper047::Mapper047::new().supported(),
         // Taito TC0690
         (48, None) => m::mapper048::Mapper048::new().supported(),
-        (49, _) => TodoMapper,
+        (49, None) => m::mapper049::Mapper049::new().supported(),
         // N-32 conversion of Super Mario Bros. 2 (J). PCB code 761214.
         (50, None) => m::mapper050::Mapper050::new().supported(),
         (51..=54, _) => TodoMapper,
