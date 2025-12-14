@@ -225,6 +225,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (47, None) => m::mapper047::Mapper047::new().supported(),
         // Taito TC0690
         (48, None) => m::mapper048::Mapper048::new().supported(),
+        // Super HIK 4-in-1
         (49, None) => m::mapper049::Mapper049::new().supported(),
         // N-32 conversion of Super Mario Bros. 2 (J). PCB code 761214.
         (50, None) => m::mapper050::Mapper050::new().supported(),
@@ -275,7 +276,8 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (72, _) => TodoMapper,
         // VRC3
         (73, None) => m::mapper073::Mapper073::new().supported(),
-        (74, _) => TodoMapper,
+        // Waixing MMC3 clone with CHR RAM redirects
+        (74, None) =>  m::mapper074::Mapper074::new().supported(),
         // Konami VRC1
         (75, None) => m::mapper075::Mapper075::default().supported(),
         // NAMCOT-3446

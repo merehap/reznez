@@ -2,6 +2,7 @@ use std::num::NonZeroU8;
 
 use crate::cartridge::cartridge::Cartridge;
 use crate::cartridge::resolved_metadata::ResolvedMetadata;
+use crate::mapper::ChrSource;
 use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, MetaRegisterId, PrgBankRegisterId, PrgBankRegisters};
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::cpu::prg_memory::PrgMemory;
@@ -39,6 +40,8 @@ pub struct Layout {
     bank_register_overrides: ConstVec<(PrgBankRegisterId, BankNumber), 5>,
     chr_bank_register_overrides: ConstVec<(ChrBankRegisterId, BankNumber), 5>,
     chr_meta_register_overrides: ConstVec<(MetaRegisterId, ChrBankRegisterId), 5>,
+
+    default_chr_source: ChrSource,
 }
 
 impl Layout {
@@ -73,7 +76,7 @@ impl Layout {
             prg_bank_registers.set(register_id, bank_number);
         }
 
-        let mut chr_bank_registers = ChrBankRegisters::new(chr_rom_size > 0, !chr_ram.is_empty());
+        let mut chr_bank_registers = ChrBankRegisters::new(chr_rom_size > 0, !chr_ram.is_empty(), self.default_chr_source);
         for (register_id, bank_number) in self.chr_bank_register_overrides.as_iter() {
             chr_bank_registers.set(register_id, bank_number);
         }
@@ -147,6 +150,7 @@ pub struct LayoutBuilder {
     bank_register_overrides: ConstVec<(PrgBankRegisterId, BankNumber), 5>,
     chr_bank_register_overrides: ConstVec<(ChrBankRegisterId, BankNumber), 5>,
     chr_meta_register_overrides: ConstVec<(MetaRegisterId, ChrBankRegisterId), 5>,
+    default_chr_source: ChrSource,
 }
 
 impl LayoutBuilder {
@@ -181,6 +185,8 @@ impl LayoutBuilder {
             bank_register_overrides: ConstVec::new(),
             chr_bank_register_overrides: ConstVec::new(),
             chr_meta_register_overrides: ConstVec::new(),
+
+            default_chr_source: ChrSource::RomOrRam,
         }
     }
 
@@ -296,6 +302,11 @@ impl LayoutBuilder {
         self
     }
 
+    pub const fn default_chr_source(&mut self, chr_source: ChrSource) -> &mut LayoutBuilder {
+        self.default_chr_source = chr_source;
+        self
+    }
+
     pub const fn build(self) -> Layout {
         assert!(!self.prg_layouts.is_empty());
         assert!(!self.chr_layouts.is_empty());
@@ -338,6 +349,8 @@ impl LayoutBuilder {
             bank_register_overrides: self.bank_register_overrides,
             chr_bank_register_overrides: self.chr_bank_register_overrides,
             chr_meta_register_overrides: self.chr_meta_register_overrides,
+
+            default_chr_source: self.default_chr_source,
         }
     }
 }
