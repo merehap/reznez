@@ -27,6 +27,9 @@ Why does Sunsoft FME7 (mapper 69) have a holymapperel result of 0010? Mesen beha
 Detect PpuAddress changes better, then clean up MMC3 and Mapper 91 IRQ logic.
 Give "Fix Metadata" prompt when metadata doesn't match the DB (Test case: mirroring for Dragon Ball - Shen Long no Nazo, also Fighting Hero)
 
+REWRITES NEEDED
+OamAddress probably shouldn't know anything about sprite fields. Should just be a simple u8. Remove sprite 0 determination since that is a property of SecondaryOam (or PPU dot 66).
+
 FANCY NICE-TO-HAVES
 APU frequency correction
 Allow banks to be configured to pass through PPU address bits, rather than custom logic being needed (see Sachen8259).
