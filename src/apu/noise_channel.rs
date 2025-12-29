@@ -1,3 +1,5 @@
+use ux::u15;
+
 use crate::apu::apu_registers::CycleParity;
 use crate::apu::length_counter::LengthCounter;
 use crate::apu::timer::Timer;
@@ -17,7 +19,7 @@ pub struct NoiseChannel {
     timer: Timer,
     pub(super) length_counter: LengthCounter,
 
-    shift_register: u16,
+    shift_register: LinearFeedbackShiftRegister,
 }
 
 impl Default for NoiseChannel {
@@ -32,7 +34,7 @@ impl Default for NoiseChannel {
             timer: Timer::default(),
             length_counter: LengthCounter::default(),
 
-            shift_register: 0b000_0000_0000_0001,
+            shift_register: LinearFeedbackShiftRegister::new(),
         }
     }
 }
@@ -72,26 +74,40 @@ impl NoiseChannel {
         if parity == CycleParity::Put {
             let wrapped_around = self.timer.tick();
             if wrapped_around {
-                let mut feedback = self.shift_register & 1;
-                if self.mode {
-                    feedback ^= (self.shift_register & 0b100_0000) >> 6;
-                } else {
-                    feedback ^= (self.shift_register & 0b000_0010) >> 1;
-                }
-
-                feedback <<= 14;
-
-                self.shift_register >>= 1;
-                self.shift_register |= feedback;
+                let feedback_index = if self.mode { 6 } else { 1 };
+                self.shift_register.step(feedback_index);
             }
         }
     }
 
     pub(super) fn sample_volume(&self) -> f32 {
-        if self.length_counter.is_zero() || self.shift_register & 1 == 0 {
+        if self.length_counter.is_zero() || !self.shift_register.low_bit() {
             0.0
         } else {
             f32::from(self.volume_or_envelope.to_u8())
         }
+    }
+}
+
+
+pub struct LinearFeedbackShiftRegister(u15);
+
+impl LinearFeedbackShiftRegister {
+    pub fn new() -> Self {
+        Self(u15::new(0b000_0000_0000_0001))
+    }
+
+    pub fn step(&mut self, feedback_index: u8) {
+        let feedback = self.bit(0) ^ self.bit(feedback_index);
+        self.0 >>= 1;
+        self.0 |= u15::new(feedback as u16) << 14;
+    }
+
+    pub fn low_bit(&self) -> bool {
+        self.bit(0)
+    }
+
+    fn bit(&self, index: u8) -> bool {
+        u16::from(self.0 >> index) & 1 == 1
     }
 }
