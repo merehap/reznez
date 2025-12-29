@@ -247,10 +247,10 @@ pub trait Mapper {
             0x4009          => { /* Unused. */ }
             0x400A          => mem.apu_regs.triangle.write_timer_low_byte(mem.cpu_pinout.data_bus),
             0x400B          => mem.apu_regs.triangle.write_length_and_timer_high_byte(mem.cpu_pinout.data_bus),
-            0x400C          => mem.apu_regs.noise.write_control_byte(mem.cpu_pinout.data_bus),
+            0x400C          => mem.apu_regs.noise.set_control(mem.cpu_pinout.data_bus),
             0x400D          => { /* Unused. */ }
-            0x400E          => mem.apu_regs.noise.write_loop_and_period_byte(mem.cpu_pinout.data_bus),
-            0x400F          => mem.apu_regs.noise.write_length_byte(mem.cpu_pinout.data_bus),
+            0x400E          => mem.apu_regs.noise.set_loop_and_period(mem.cpu_pinout.data_bus),
+            0x400F          => mem.apu_regs.noise.set_length(mem.cpu_pinout.data_bus),
             0x4010          => mem.apu_regs.dmc.write_control_byte(&mut mem.cpu_pinout),
             0x4011          => mem.apu_regs.dmc.write_volume(mem.cpu_pinout.data_bus),
             0x4012          => mem.apu_regs.dmc.write_sample_start_address(mem.cpu_pinout.data_bus),
