@@ -71,16 +71,16 @@ impl PulseChannel {
         }
     }
 
-    pub(super) fn sample_volume(&self) -> f32 {
+    pub(super) fn sample_volume(&self) -> u8 {
         let on_duty = self.duty.is_on_at(self.sequence_index);
         let non_short_period = self.timer.period() >= 8;
         let non_zero_length = !self.length_counter.is_zero();
 
         let enabled = self.enabled && on_duty && non_short_period && non_zero_length;
         if enabled {
-            f32::from(self.volume_or_envelope.to_u8())
+            self.volume_or_envelope.to_u8()
         } else {
-            0.0
+            0
         }
     }
 }

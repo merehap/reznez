@@ -84,11 +84,11 @@ impl NoiseChannel {
         }
     }
 
-    pub(super) fn sample_volume(&self) -> f32 {
+    pub(super) fn sample_volume(&self) -> u8 {
         if self.length_counter.is_zero() || !self.shift_register.low_bit() {
-            0.0
+            0
         } else {
-            f32::from(u8::from(self.volume_or_envelope))
+            u8::from(self.volume_or_envelope)
         }
     }
 }

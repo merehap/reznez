@@ -76,11 +76,11 @@ impl TriangleChannel {
         }
     }
 
-    pub(super) fn sample_volume(&self) -> f32 {
+    pub(super) fn sample_volume(&self) -> u8 {
         if !self.length_counter.is_zero() && self.linear_counter != U7::ZERO {
-            f32::from(VOLUME_SEQUENCE[self.sequence_index])
+            VOLUME_SEQUENCE[self.sequence_index]
         } else {
-            0.0
+            0
         }
     }
 }

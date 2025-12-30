@@ -110,6 +110,7 @@ fn logger(opt: &Opt) -> Logger {
         log_ppu_steps,
         log_apu_cycles,
         log_apu_events,
+        log_apu_samples: opt.log_apu_samples,
         log_oam_addr: opt.log_oam_addr,
         log_mapper_updates: opt.log_mapper_updates,
         log_mapper_irq_counter: opt.log_mapper_irq_counter,

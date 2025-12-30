@@ -142,6 +142,9 @@ pub struct Opt {
     #[structopt(name = "logapuevents", long)]
     pub log_apu_events: bool,
 
+    #[structopt(name = "logapusamples", long)]
+    pub log_apu_samples: bool,
+
     #[structopt(name = "logoamaddr", long)]
     pub log_oam_addr: bool,
 
@@ -199,6 +202,7 @@ impl Opt {
             log_oam_addr: false,
             log_apu_cycles: false,
             log_apu_events: false,
+            log_apu_samples: false,
             log_mapper_updates: false,
             log_mapper_irq_counter: false,
             log_mapper_ram_writes: false,

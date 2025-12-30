@@ -3,7 +3,8 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use log::info;
+use log::{info, warn, log_enabled};
+use log::Level;
 use rodio::{OutputStream, Sink};
 use rodio::source::Source;
 
@@ -39,10 +40,7 @@ impl Apu {
             });
         }
 
-        Apu {
-            pulse_queue,
-            muted,
-        }
+        Apu { pulse_queue, muted }
     }
 
     pub fn mute(&mut self) {
@@ -57,18 +55,35 @@ impl Apu {
         mem.apu_regs.tick(&mut mem.cpu_pinout, &mut mem.dmc_dma, parity);
         if parity == CycleParity::Put && mem.apu_regs.clock().raw_cycle().is_multiple_of(20) {
             let mut queue = self.pulse_queue.lock().unwrap();
+            let regs = &mem.apu_regs;
+            if log_enabled!(target: "apusamples", Level::Info) {
+                fn disp(volume: u8) -> String {
+                    if volume == 0 { String::new() } else { volume.to_string() }
+                }
+
+                info!("P1: {:>2}, P2: {:>2}, T: {:>2}, N: {:>2}, D: {:>2}",
+                    disp(regs.pulse_1.sample_volume()),
+                    disp(regs.pulse_2.sample_volume()),
+                    disp(regs.triangle.sample_volume()),
+                    disp(regs.noise.sample_volume()),
+                    disp(regs.dmc.sample_volume()),
+                );
+            }
+
             if queue.len() < MAX_QUEUE_LENGTH {
-                queue.push_back(Apu::mix_samples(&mem.apu_regs));
+                queue.push_back(Apu::mix_samples(regs));
+            } else {
+                warn!("Samples dropped: maximum APU queue length exceeded. Length: {}", queue.len());
             }
         }
     }
 
     fn mix_samples(regs: &ApuRegisters) -> f32 {
-        let pulse_1 = regs.pulse_1.sample_volume();
-        let pulse_2 = regs.pulse_2.sample_volume();
-        let triangle = regs.triangle.sample_volume();
-        let noise = regs.noise.sample_volume();
-        let dmc = regs.dmc.sample_volume();
+        let pulse_1 = f32::from(regs.pulse_1.sample_volume());
+        let pulse_2 = f32::from(regs.pulse_2.sample_volume());
+        let triangle = f32::from(regs.triangle.sample_volume());
+        let noise = f32::from(regs.noise.sample_volume());
+        let dmc = f32::from(regs.dmc.sample_volume());
 
         let pulse_out = 95.88 / (8128.0 / (pulse_1 + pulse_2) + 100.0);
         let tnd_out = 159.79 / ((1.0 / (triangle / 8227.0 + noise / 12241.0 + dmc / 22368.0)) + 100.0);

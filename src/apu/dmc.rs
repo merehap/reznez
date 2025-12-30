@@ -110,11 +110,11 @@ impl Dmc {
         }
     }
 
-    pub(super) fn sample_volume(&self) -> f32 {
+    pub(super) fn sample_volume(&self) -> u8 {
         if self.output_unit.silenced {
-            0.0
+            0
         } else {
-            f32::from(u8::from(self.output_unit.volume))
+            u8::from(self.output_unit.volume)
         }
     }
 
