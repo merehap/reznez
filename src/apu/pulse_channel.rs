@@ -1,30 +1,41 @@
+use splitbits::splitbits_ux;
+use ux::{u2, u4};
+
 use crate::apu::apu_registers::CycleParity;
 use crate::apu::length_counter::LengthCounter;
 use crate::apu::frequency_timer::FrequencyTimer;
-use crate::util::integer::U4;
 use crate::util::bit_util;
 
+//                  Sweep -----> Timer
+//                    |            |
+//                    |            |
+//                    |            v
+//                    |        Sequencer   Length Counter
+//                    |            |             |
+//                    |            |             |
+//                    v            v             v
+// Envelope -------> Gate -----> Gate -------> Gate ---> (to mixer)
 #[derive(Default)]
 pub struct PulseChannel {
-    enabled: bool,
-
-    duty: Duty,
-    constant_volume: bool,
-    volume_or_envelope: U4,
-
-    frequency_timer: FrequencyTimer,
     pub(super) length_counter: LengthCounter,
 
-    sequence_index: u32,
+    enabled: bool,
+
+    constant_volume: bool,
+    volume_or_envelope: u4,
+
+    frequency_timer: FrequencyTimer,
+    sequencer: Sequencer,
 }
 
 impl PulseChannel {
     // Write $4000 or $4004
     pub fn write_control_byte(&mut self, value: u8) {
-        self.duty =                   ((value & 0b1100_0000) >> 6).into();
-        self.length_counter.start_halt((value & 0b0010_0000) != 0);
-        self.constant_volume =         (value & 0b0001_0000) != 0;
-        self.volume_or_envelope =      (value & 0b0000_1111).into();
+        let fields = splitbits_ux!(value, "ddhc eeee");
+        self.sequencer.set_duty(fields.d.into());
+        self.length_counter.start_halt(fields.h);
+        self.constant_volume = fields.c;
+        self.volume_or_envelope = fields.e;
     }
 
     // Write $4001 or $4005
@@ -44,7 +55,7 @@ impl PulseChannel {
             self.length_counter.start_reload((value & 0b1111_1000) >> 3);
         }
 
-        self.sequence_index = 0;
+        self.sequencer.reset();
         self.frequency_timer.set_period_high_and_reset_index(value & 0b0000_0111);
     }
 
@@ -62,25 +73,49 @@ impl PulseChannel {
 
     pub(super) fn tick(&mut self, parity: CycleParity) {
         if parity == CycleParity::Put {
-            let wrapped_around = self.frequency_timer.tick();
-            if wrapped_around {
-                self.sequence_index += 1;
-                self.sequence_index %= 8;
+            let triggered = self.frequency_timer.tick();
+            if triggered {
+                self.sequencer.step();
             }
         }
     }
 
     pub(super) fn sample_volume(&self) -> u8 {
-        let on_duty = self.duty.is_on_at(self.sequence_index);
+        let on_duty = self.sequencer.on_duty();
         let non_short_period = self.frequency_timer.period() >= 8;
         let non_zero_length = !self.length_counter.is_zero();
 
         let enabled = self.enabled && on_duty && non_short_period && non_zero_length;
         if enabled {
-            self.volume_or_envelope.to_u8()
+            self.volume_or_envelope.into()
         } else {
             0
         }
+    }
+}
+
+#[derive(Default)]
+pub struct Sequencer {
+    index: u32,
+    duty: Duty,
+}
+
+impl Sequencer {
+    pub fn reset(&mut self) {
+        self.index = 0;
+    }
+
+    pub fn step(&mut self) {
+        self.index += 1;
+        self.index %= 8;
+    }
+
+    pub fn on_duty(&self) -> bool {
+        bit_util::get_bit(self.duty as u8, self.index)
+    }
+
+    pub fn set_duty(&mut self, duty: Duty) {
+        self.duty = duty;
     }
 }
 
@@ -93,15 +128,9 @@ pub enum Duty {
     Negated = 0b1001_1111,
 }
 
-impl Duty {
-    fn is_on_at(self, sequence_index: u32) -> bool {
-        bit_util::get_bit(self as u8, sequence_index)
-    }
-}
-
-impl From<u8> for Duty {
-    fn from(value: u8) -> Self {
-        match value {
+impl From<u2> for Duty {
+    fn from(value: u2) -> Self {
+        match u8::from(value) {
             0 => Duty::Low,
             1 => Duty::Medium,
             2 => Duty::High,

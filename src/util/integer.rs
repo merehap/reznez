@@ -1,18 +1,3 @@
-#[derive(Clone, Copy, Default)]
-pub struct U4(u8);
-
-impl U4 {
-    pub fn to_u8(self) -> u8 {
-        self.0
-    }
-}
-
-impl From<u8> for U4 {
-    fn from(value: u8) -> Self {
-        U4(value & 0b0000_1111)
-    }
-}
-
 #[derive(PartialEq, Eq, Clone, Copy, Default)]
 pub struct U7(u8);
 
