@@ -86,16 +86,19 @@ impl PulseChannel {
     }
 
     pub(super) fn sample_volume(&self) -> u4 {
-        let on_duty = self.sequencer.on_duty();
-        let non_short_period = self.frequency_timer.period() >= 8;
-        let non_zero_length = !self.length_counter.is_zero();
-
-        let enabled = self.enabled && on_duty && non_short_period && non_zero_length;
-        if enabled {
-            self.envelope.volume()
-        } else {
+        if self.muted() {
             u4::new(0)
+        } else {
+            self.envelope.volume()
         }
+    }
+
+    fn muted(&self) -> bool {
+        let on_duty = self.sequencer.on_duty();
+        let short_period = self.frequency_timer.period() < 8;
+        let no_length_remaining = self.length_counter.is_zero();
+
+        !self.enabled || !on_duty || short_period || no_length_remaining
     }
 }
 
