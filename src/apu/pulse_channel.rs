@@ -12,7 +12,6 @@ pub struct PulseChannel {
     constant_volume: bool,
     volume_or_envelope: U4,
 
-    //sweep: Sweep,
     frequency_timer: FrequencyTimer,
     pub(super) length_counter: LengthCounter,
 
@@ -31,7 +30,7 @@ impl PulseChannel {
     // Write $4001 or $4005
     #[allow(clippy::unused_self)]
     pub fn write_sweep_byte(&mut self, _value: u8) {
-        //self.sweep = Sweep::from_u8(value);
+
     }
 
     // Write $4002 or $4006
@@ -111,41 +110,3 @@ impl From<u8> for Duty {
         }
     }
 }
-
-/*
-#[derive(Default)]
-pub struct Sweep {
-    enabled: bool,
-    period: U3,
-    period_change: PeriodChange,
-    shift_count: U3,
-}
-
-impl Sweep {
-    fn from_u8(value: u8) -> Sweep {
-        Sweep {
-            enabled:        (value & 0b1000_0000) != 0,
-            period:        ((value & 0b0111_0000) >> 4).into(),
-            period_change: ((value & 0b0000_1000) >> 3).into(),
-            shift_count:    (value & 0b0000_0111).into(),
-        }
-    }
-}
-
-#[derive(Default)]
-pub enum PeriodChange {
-    #[default]
-    Increase,
-    Decrease,
-}
-
-impl From<u8> for PeriodChange {
-    fn from(item: u8) -> Self {
-        match item {
-            0 => PeriodChange::Increase,
-            1 => PeriodChange::Decrease,
-            _ => unreachable!(),
-        }
-    }
-}
-*/
