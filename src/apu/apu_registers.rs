@@ -248,6 +248,8 @@ impl ApuRegisters {
     }
 
     fn step_envelopes(&mut self) {
+        self.pulse_1.step_envelope();
+        self.pulse_2.step_envelope();
         self.noise.step_envelope();
     }
 

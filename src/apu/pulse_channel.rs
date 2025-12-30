@@ -2,6 +2,7 @@ use splitbits::splitbits_ux;
 use ux::{u2, u4};
 
 use crate::apu::apu_registers::CycleParity;
+use crate::apu::envelope::Envelope;
 use crate::apu::length_counter::LengthCounter;
 use crate::apu::frequency_timer::FrequencyTimer;
 use crate::util::bit_util;
@@ -21,8 +22,7 @@ pub struct PulseChannel {
 
     enabled: bool,
 
-    constant_volume: bool,
-    volume_or_envelope: u4,
+    envelope: Envelope,
 
     frequency_timer: FrequencyTimer,
     sequencer: Sequencer,
@@ -34,8 +34,7 @@ impl PulseChannel {
         let fields = splitbits_ux!(value, "ddhc eeee");
         self.sequencer.set_duty(fields.d.into());
         self.length_counter.start_halt(fields.h);
-        self.constant_volume = fields.c;
-        self.volume_or_envelope = fields.e;
+        self.envelope.set_control(fields.c, fields.e);
     }
 
     // Write $4001 or $4005
@@ -53,6 +52,8 @@ impl PulseChannel {
     pub fn write_length_and_timer_high_byte(&mut self, value: u8) {
         if self.enabled {
             self.length_counter.start_reload((value & 0b1111_1000) >> 3);
+            // TODO: Does the envelope restart even if !self.enabled?
+            self.envelope.start();
         }
 
         self.sequencer.reset();
@@ -80,16 +81,20 @@ impl PulseChannel {
         }
     }
 
-    pub(super) fn sample_volume(&self) -> u8 {
+    pub(super) fn step_envelope(&mut self) {
+        self.envelope.step();
+    }
+
+    pub(super) fn sample_volume(&self) -> u4 {
         let on_duty = self.sequencer.on_duty();
         let non_short_period = self.frequency_timer.period() >= 8;
         let non_zero_length = !self.length_counter.is_zero();
 
         let enabled = self.enabled && on_duty && non_short_period && non_zero_length;
         if enabled {
-            self.volume_or_envelope.into()
+            self.envelope.volume()
         } else {
-            0
+            u4::new(0)
         }
     }
 }

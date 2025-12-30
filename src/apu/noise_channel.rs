@@ -1,5 +1,5 @@
 use splitbits::{splitbits, splitbits_named_ux};
-use ux::u15;
+use ux::{u4, u15};
 
 use crate::apu::apu_registers::CycleParity;
 use crate::apu::envelope::Envelope;
@@ -87,11 +87,11 @@ impl NoiseChannel {
         self.envelope.step();
     }
 
-    pub(super) fn sample_volume(&self) -> u8 {
+    pub(super) fn sample_volume(&self) -> u4 {
         if self.length_counter.is_zero() || !self.shift_register.low_bit() {
-            0
+            u4::new(0)
         } else {
-            u8::from(self.envelope.volume())
+            self.envelope.volume()
         }
     }
 }

@@ -62,10 +62,10 @@ impl Apu {
                 }
 
                 info!("P1: {:>2}, P2: {:>2}, T: {:>2}, N: {:>2}, D: {:>2}",
-                    disp(regs.pulse_1.sample_volume()),
-                    disp(regs.pulse_2.sample_volume()),
+                    disp(regs.pulse_1.sample_volume().into()),
+                    disp(regs.pulse_2.sample_volume().into()),
                     disp(regs.triangle.sample_volume()),
-                    disp(regs.noise.sample_volume()),
+                    disp(regs.noise.sample_volume().into()),
                     disp(regs.dmc.sample_volume()),
                 );
             }
@@ -79,10 +79,10 @@ impl Apu {
     }
 
     fn mix_samples(regs: &ApuRegisters) -> f32 {
-        let pulse_1 = f32::from(regs.pulse_1.sample_volume());
-        let pulse_2 = f32::from(regs.pulse_2.sample_volume());
+        let pulse_1 = f32::from(u8::from(regs.pulse_1.sample_volume()));
+        let pulse_2 = f32::from(u8::from(regs.pulse_2.sample_volume()));
         let triangle = f32::from(regs.triangle.sample_volume());
-        let noise = f32::from(regs.noise.sample_volume());
+        let noise = f32::from(u8::from(regs.noise.sample_volume()));
         let dmc = f32::from(regs.dmc.sample_volume());
 
         let pulse_out = 95.88 / (8128.0 / (pulse_1 + pulse_2) + 100.0);

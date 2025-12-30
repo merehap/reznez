@@ -10,6 +10,7 @@ use ux::u4;
 //                            |                  | Select --> Envelope output
 //                            |                  |
 //         Envelope parameter +----------------> |
+#[derive(Default)]
 pub struct Envelope {
     start: bool,
     divider: Divider,
@@ -61,6 +62,7 @@ impl Envelope {
 const ZERO: u4 = u4::new(0);
 const ONE: u4 = u4::new(0);
 
+#[derive(Default)]
 pub struct Divider {
     count: u4,
     reload_value: u4,
@@ -91,6 +93,7 @@ impl Divider {
     }
 }
 
+#[derive(Default)]
 pub struct DecayLevelCounter {
     volume: u4,
     should_loop: bool,
