@@ -1,4 +1,4 @@
-use splitbits::splitbits_ux;
+use splitbits::{splitbits, splitbits_ux};
 use ux::{u2, u4};
 
 use crate::apu::apu_registers::CycleParity;
@@ -30,7 +30,7 @@ pub struct PulseChannel {
 
 impl PulseChannel {
     // Write $4000 or $4004
-    pub fn write_control_byte(&mut self, value: u8) {
+    pub fn set_control(&mut self, value: u8) {
         let fields = splitbits_ux!(value, "ddhc eeee");
         self.sequencer.set_duty(fields.d.into());
         self.length_counter.start_halt(fields.h);
@@ -44,20 +44,21 @@ impl PulseChannel {
     }
 
     // Write $4002 or $4006
-    pub fn write_timer_low_byte(&mut self, value: u8) {
+    pub fn set_period_low(&mut self, value: u8) {
         self.frequency_timer.set_period_low(value);
     }
 
     // Write $4003 or $4007
-    pub fn write_length_and_timer_high_byte(&mut self, value: u8) {
+    pub fn set_length_and_period_high(&mut self, value: u8) {
+        let fields = splitbits!(value, "llll lppp");
         if self.enabled {
-            self.length_counter.start_reload((value & 0b1111_1000) >> 3);
+            self.length_counter.start_reload(fields.l);
             // TODO: Does the envelope restart even if !self.enabled?
             self.envelope.start();
         }
 
         self.sequencer.reset();
-        self.frequency_timer.set_period_high_and_reset_index(value & 0b0000_0111);
+        self.frequency_timer.set_period_high_and_reset_index(fields.p);
     }
 
     // Write 0x4015
