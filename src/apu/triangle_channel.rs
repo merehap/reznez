@@ -1,4 +1,4 @@
-use crate::apu::timer::Timer;
+use crate::apu::frequency_timer::FrequencyTimer;
 use crate::apu::length_counter::LengthCounter;
 use crate::util::integer::U7;
 
@@ -14,7 +14,7 @@ pub struct TriangleChannel {
     counter_control: bool,
     linear_counter_reload_value: U7,
     linear_counter: U7,
-    timer: Timer,
+    frequency_timer: FrequencyTimer,
     pub(super) length_counter: LengthCounter,
 
     linear_counter_reload: bool,
@@ -31,7 +31,7 @@ impl TriangleChannel {
     }
 
     pub fn write_timer_low_byte(&mut self, value: u8) {
-        self.timer.set_period_low(value);
+        self.frequency_timer.set_period_low(value);
     }
 
     // Write 0x400B
@@ -40,7 +40,7 @@ impl TriangleChannel {
             self.length_counter.start_reload((value & 0b1111_1000) >> 3);
         }
 
-        self.timer.set_period_high_and_reset_index(value & 0b0000_0111);
+        self.frequency_timer.set_period_high_and_reset_index(value & 0b0000_0111);
 
         self.linear_counter_reload = true;
     }
@@ -57,7 +57,7 @@ impl TriangleChannel {
     }
 
     pub(super) fn tick(&mut self) {
-        let wrapped_around = self.timer.tick();
+        let wrapped_around = self.frequency_timer.tick();
         if wrapped_around && !self.length_counter.is_zero() && self.linear_counter != U7::ZERO {
             self.sequence_index += 1;
             self.sequence_index %= 0x20;

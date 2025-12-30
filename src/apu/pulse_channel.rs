@@ -1,6 +1,6 @@
 use crate::apu::apu_registers::CycleParity;
 use crate::apu::length_counter::LengthCounter;
-use crate::apu::timer::Timer;
+use crate::apu::frequency_timer::FrequencyTimer;
 use crate::util::integer::U4;
 use crate::util::bit_util;
 
@@ -13,7 +13,7 @@ pub struct PulseChannel {
     volume_or_envelope: U4,
 
     //sweep: Sweep,
-    timer: Timer,
+    frequency_timer: FrequencyTimer,
     pub(super) length_counter: LengthCounter,
 
     sequence_index: u32,
@@ -36,7 +36,7 @@ impl PulseChannel {
 
     // Write $4002 or $4006
     pub fn write_timer_low_byte(&mut self, value: u8) {
-        self.timer.set_period_low(value);
+        self.frequency_timer.set_period_low(value);
     }
 
     // Write $4003 or $4007
@@ -46,7 +46,7 @@ impl PulseChannel {
         }
 
         self.sequence_index = 0;
-        self.timer.set_period_high_and_reset_index(value & 0b0000_0111);
+        self.frequency_timer.set_period_high_and_reset_index(value & 0b0000_0111);
     }
 
     // Write 0x4015
@@ -63,7 +63,7 @@ impl PulseChannel {
 
     pub(super) fn tick(&mut self, parity: CycleParity) {
         if parity == CycleParity::Put {
-            let wrapped_around = self.timer.tick();
+            let wrapped_around = self.frequency_timer.tick();
             if wrapped_around {
                 self.sequence_index += 1;
                 self.sequence_index %= 8;
@@ -73,7 +73,7 @@ impl PulseChannel {
 
     pub(super) fn sample_volume(&self) -> u8 {
         let on_duty = self.duty.is_on_at(self.sequence_index);
-        let non_short_period = self.timer.period() >= 8;
+        let non_short_period = self.frequency_timer.period() >= 8;
         let non_zero_length = !self.length_counter.is_zero();
 
         let enabled = self.enabled && on_duty && non_short_period && non_zero_length;

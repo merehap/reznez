@@ -216,30 +216,39 @@ impl ApuRegisters {
 
         match cycle {
             FIRST_STEP => {
+                self.step_envelopes();
                 self.triangle.decrement_linear_counter();
                 self.counter_suppression_cycles = 2;
             }
             SECOND_STEP => {
+                self.step_envelopes();
                 self.triangle.decrement_linear_counter();
                 self.decrement_length_counters();
                 self.counter_suppression_cycles = 2;
             }
             THIRD_STEP => {
+                self.step_envelopes();
                 self.triangle.decrement_linear_counter();
                 self.counter_suppression_cycles = 2;
             }
             FOURTH_STEP if self.clock.step_mode == StepMode::FourStep => {
+                self.step_envelopes();
                 self.triangle.decrement_linear_counter();
                 self.decrement_length_counters();
                 self.counter_suppression_cycles = 2;
             }
             FIFTH_STEP if self.clock.step_mode == StepMode::FiveStep => {
+                self.step_envelopes();
                 self.triangle.decrement_linear_counter();
                 self.decrement_length_counters();
                 self.counter_suppression_cycles = 2;
             }
             _ => { /* Do nothing. */ }
         }
+    }
+
+    fn step_envelopes(&mut self) {
+        self.noise.step_envelope();
     }
 
     fn decrement_length_counters(&mut self) {

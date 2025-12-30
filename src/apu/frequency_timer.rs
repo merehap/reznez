@@ -1,10 +1,10 @@
 #[derive(Default)]
-pub struct Timer {
+pub struct FrequencyTimer {
     period: u16,
     index: u16,
 }
 
-impl Timer {
+impl FrequencyTimer {
     pub fn period(&self) -> u16 {
         self.period
     }
