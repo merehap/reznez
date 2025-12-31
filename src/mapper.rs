@@ -236,11 +236,11 @@ pub trait Mapper {
                 _ => unreachable!(),
             }
             0x4000          => mem.apu_regs.pulse_1.set_control(mem.cpu_pinout.data_bus),
-            0x4001          => mem.apu_regs.pulse_1.write_sweep_byte(mem.cpu_pinout.data_bus),
+            0x4001          => mem.apu_regs.pulse_1.set_sweep(mem.cpu_pinout.data_bus),
             0x4002          => mem.apu_regs.pulse_1.set_period_low(mem.cpu_pinout.data_bus),
             0x4003          => mem.apu_regs.pulse_1.set_length_and_period_high(mem.cpu_pinout.data_bus),
             0x4004          => mem.apu_regs.pulse_2.set_control(mem.cpu_pinout.data_bus),
-            0x4005          => mem.apu_regs.pulse_2.write_sweep_byte(mem.cpu_pinout.data_bus),
+            0x4005          => mem.apu_regs.pulse_2.set_sweep(mem.cpu_pinout.data_bus),
             0x4006          => mem.apu_regs.pulse_2.set_period_low(mem.cpu_pinout.data_bus),
             0x4007          => mem.apu_regs.pulse_2.set_length_and_period_high(mem.cpu_pinout.data_bus),
             0x4008          => mem.apu_regs.triangle.write_control_byte(mem.cpu_pinout.data_bus),

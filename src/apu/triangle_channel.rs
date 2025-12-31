@@ -1,3 +1,5 @@
+use splitbits::splitbits_named_ux;
+
 use crate::apu::frequency_timer::FrequencyTimer;
 use crate::apu::length_counter::LengthCounter;
 use crate::util::integer::U7;
@@ -36,11 +38,12 @@ impl TriangleChannel {
 
     // Write 0x400B
     pub fn write_length_and_timer_high_byte(&mut self, value: u8) {
+        let (length, period) = splitbits_named_ux!(value, "llll lppp");
         if self.enabled {
-            self.length_counter.start_reload((value & 0b1111_1000) >> 3);
+            self.length_counter.start_reload(length);
         }
 
-        self.frequency_timer.set_period_high_and_reset_index(value & 0b0000_0111);
+        self.frequency_timer.set_period_high_and_reset_index(period);
 
         self.linear_counter_reload = true;
     }

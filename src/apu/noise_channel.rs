@@ -56,7 +56,8 @@ impl NoiseChannel {
     // Write 0x400F
     pub fn set_length(&mut self, value: u8) {
         if self.enabled {
-            self.length_counter.start_reload(value >> 3);
+            let length = splitbits_named_ux!(value, "llll l...");
+            self.length_counter.start_reload(length);
             // TODO: Does the envelope start even if !self.enabled?
             self.envelope.start();
         }
@@ -83,7 +84,7 @@ impl NoiseChannel {
         }
     }
 
-    pub(super) fn step_envelope(&mut self) {
+    pub(super) fn tick_envelope(&mut self) {
         self.envelope.step();
     }
 

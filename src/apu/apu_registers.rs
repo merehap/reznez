@@ -3,6 +3,7 @@ use std::fmt;
 use log::info;
 use splitbits::splitbits;
 
+use crate::apu::sweep::NegateBehavior;
 use crate::apu::pulse_channel::PulseChannel;
 use crate::apu::triangle_channel::TriangleChannel;
 use crate::apu::noise_channel::NoiseChannel;
@@ -12,8 +13,8 @@ use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::util::bit_util;
 
 pub struct ApuRegisters {
-    pub pulse_1: PulseChannel,
-    pub pulse_2: PulseChannel,
+    pub pulse_1: PulseChannel<{NegateBehavior::OnesComplement}>,
+    pub pulse_2: PulseChannel<{NegateBehavior::TwosComplement}>,
     pub triangle: TriangleChannel,
     pub noise: NoiseChannel,
     pub dmc: Dmc,
@@ -216,29 +217,29 @@ impl ApuRegisters {
 
         match cycle {
             FIRST_STEP => {
-                self.step_envelopes();
+                self.tick_envelopes();
                 self.triangle.decrement_linear_counter();
                 self.counter_suppression_cycles = 2;
             }
             SECOND_STEP => {
-                self.step_envelopes();
+                self.tick_envelopes();
                 self.triangle.decrement_linear_counter();
                 self.decrement_length_counters();
                 self.counter_suppression_cycles = 2;
             }
             THIRD_STEP => {
-                self.step_envelopes();
+                self.tick_envelopes();
                 self.triangle.decrement_linear_counter();
                 self.counter_suppression_cycles = 2;
             }
             FOURTH_STEP if self.clock.step_mode == StepMode::FourStep => {
-                self.step_envelopes();
+                self.tick_envelopes();
                 self.triangle.decrement_linear_counter();
                 self.decrement_length_counters();
                 self.counter_suppression_cycles = 2;
             }
             FIFTH_STEP if self.clock.step_mode == StepMode::FiveStep => {
-                self.step_envelopes();
+                self.tick_envelopes();
                 self.triangle.decrement_linear_counter();
                 self.decrement_length_counters();
                 self.counter_suppression_cycles = 2;
@@ -247,10 +248,10 @@ impl ApuRegisters {
         }
     }
 
-    fn step_envelopes(&mut self) {
-        self.pulse_1.step_envelope();
-        self.pulse_2.step_envelope();
-        self.noise.step_envelope();
+    fn tick_envelopes(&mut self) {
+        self.pulse_1.tick_envelope();
+        self.pulse_2.tick_envelope();
+        self.noise.tick_envelope();
     }
 
     fn decrement_length_counters(&mut self) {
@@ -258,6 +259,9 @@ impl ApuRegisters {
         self.pulse_2.length_counter.decrement_towards_zero();
         self.triangle.length_counter.decrement_towards_zero();
         self.noise.length_counter.decrement_towards_zero();
+
+        self.pulse_1.tick_sweep();
+        self.pulse_2.tick_sweep();
 
         info!(target: "apuevents", "Decremented length counters. P1: {}, P2: {}, T: {}, N: {}. APU Cycle: {}",
             self.pulse_1.length_counter, self.pulse_2.length_counter, self.triangle.length_counter,

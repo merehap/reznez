@@ -1,10 +1,10 @@
-use splitbits::{splitbits, splitbits_ux};
+use splitbits::{splitbits_ux, splitbits_named_ux};
 use ux::{u2, u4};
 
 use crate::apu::apu_registers::CycleParity;
 use crate::apu::envelope::Envelope;
 use crate::apu::length_counter::LengthCounter;
-use crate::apu::frequency_timer::FrequencyTimer;
+use crate::apu::sweep::{NegateBehavior, Sweep};
 use crate::util::bit_util;
 
 //                  Sweep -----> Timer
@@ -17,18 +17,17 @@ use crate::util::bit_util;
 //                    v            v             v
 // Envelope -------> Gate -----> Gate -------> Gate ---> (to mixer)
 #[derive(Default)]
-pub struct PulseChannel {
+pub struct PulseChannel<const N: NegateBehavior> {
     pub(super) length_counter: LengthCounter,
 
     enabled: bool,
 
+    sweep: Sweep<N>,
     envelope: Envelope,
-
-    frequency_timer: FrequencyTimer,
     sequencer: Sequencer,
 }
 
-impl PulseChannel {
+impl <const N: NegateBehavior> PulseChannel<N> {
     // Write $4000 or $4004
     pub fn set_control(&mut self, value: u8) {
         let fields = splitbits_ux!(value, "ddhc eeee");
@@ -38,19 +37,20 @@ impl PulseChannel {
     }
 
     // Write $4001 or $4005
-    #[allow(clippy::unused_self)]
-    pub fn write_sweep_byte(&mut self, _value: u8) {
-
+    pub fn set_sweep(&mut self, value: u8) {
+        let (enabled, period, negate, shift_count) = splitbits_named_ux!(value, "eppp nsss");
+        self.sweep.set(enabled, period, negate, shift_count);
+        // TODO: Set reload
     }
 
     // Write $4002 or $4006
     pub fn set_period_low(&mut self, value: u8) {
-        self.frequency_timer.set_period_low(value);
+        self.sweep.set_current_period_low(value);
     }
 
     // Write $4003 or $4007
     pub fn set_length_and_period_high(&mut self, value: u8) {
-        let fields = splitbits!(value, "llll lppp");
+        let fields = splitbits_ux!(value, "llll lppp");
         if self.enabled {
             self.length_counter.start_reload(fields.l);
             // TODO: Does the envelope restart even if !self.enabled?
@@ -58,7 +58,7 @@ impl PulseChannel {
         }
 
         self.sequencer.reset();
-        self.frequency_timer.set_period_high_and_reset_index(fields.p);
+        self.sweep.set_current_period_high_and_reset_index(fields.p);
     }
 
     // Write 0x4015
@@ -75,15 +75,19 @@ impl PulseChannel {
 
     pub(super) fn tick(&mut self, parity: CycleParity) {
         if parity == CycleParity::Put {
-            let triggered = self.frequency_timer.tick();
+            let triggered = self.sweep.tick_frequency_timer();
             if triggered {
                 self.sequencer.step();
             }
         }
     }
 
-    pub(super) fn step_envelope(&mut self) {
+    pub(super) fn tick_envelope(&mut self) {
         self.envelope.step();
+    }
+
+    pub(super) fn tick_sweep(&mut self) {
+        self.sweep.tick();
     }
 
     pub(super) fn sample_volume(&self) -> u4 {
@@ -95,11 +99,10 @@ impl PulseChannel {
     }
 
     fn muted(&self) -> bool {
-        let on_duty = self.sequencer.on_duty();
-        let short_period = self.frequency_timer.period() < 8;
-        let no_length_remaining = self.length_counter.is_zero();
-
-        !self.enabled || !on_duty || short_period || no_length_remaining
+        !self.enabled
+            || self.sweep.muting()
+            || self.length_counter.is_zero()
+            || !self.sequencer.on_duty()
     }
 }
 

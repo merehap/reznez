@@ -1,5 +1,7 @@
 use std::fmt;
 
+use ux::u5;
+
 const TABLE: [u8; 0x20] = [
      10, 254,  20,   2,  40,   4,  80,   6, 160,   8,  60,  10,  14,  12,  26,  14,
      12,  16,  24,  18,  48,  20,  96,  22, 192,  24,  72,  26,  16,  28,  32,  30,
@@ -22,8 +24,8 @@ impl LengthCounter {
     }
 
     // Write $4003 (pulse 1), $4007 (pulse 2), 0x400B (triangle) or 0x400F (noise).
-    pub fn start_reload(&mut self, index: u8) {
-        self.pending_count = Some(TABLE[usize::from(index)]);
+    pub fn start_reload(&mut self, index: u5) {
+        self.pending_count = Some(TABLE[usize::from(u8::from(index))]);
         self.count_decremented = false;
     }
 
