@@ -61,7 +61,9 @@ impl Apu {
                     if volume == 0 { String::new() } else { volume.to_string() }
                 }
 
-                info!("P1: {:>2}, P2: {:>2}, T: {:>2}, N: {:>2}, D: {:>2}",
+                info!("{cycle:05} ({:08}), PPU Frame: {:05}, P1: {:>2}, P2: {:>2}, T: {:>2}, N: {:>2}, D: {:>2}",
+                    mem.apu_regs.clock().raw_cycle(),
+                    mem.ppu_regs.clock().frame(),
                     disp(regs.pulse_1.sample_volume().into()),
                     disp(regs.pulse_2.sample_volume().into()),
                     disp(regs.triangle.sample_volume()),
