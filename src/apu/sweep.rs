@@ -23,6 +23,7 @@ impl <const N: NegateBehavior> Sweep<N> {
 
         self.divider.set_period(period);
         self.divider.prepare_to_reload();
+        self.update_target_period();
     }
 
     // Write $4002 or $4006
