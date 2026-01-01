@@ -244,6 +244,25 @@ impl Memory {
     }
 
     #[inline]
+    pub fn write_name_table_byte(&mut self, address: PpuAddress, value: u8) {
+        let (quadrant, index) = address.to_name_table_index();
+        match self.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
+            NameTableSource::Ciram(side) =>
+                self.ciram.write(&self.ppu_regs, side, index, value),
+            NameTableSource::Rom {..} => { /* ROM is read-only. */}
+            // FIXME: This currently ignores whether RAM writes are enabled. It shouldn't be possible to do that.
+            NameTableSource::Ram { bank_number } =>
+                self.chr_memory.work_ram_1kib_page_mut(0x400 * u32::from(bank_number.to_raw()))[index as usize] = value,
+            NameTableSource::MapperCustom { page_number, .. } => {
+                if let Some(page) = self.mapper_custom_pages[page_number as usize].to_raw_ref_mut() {
+                    // This page must be writeable.
+                    page[index as usize] = value;
+                }
+            }
+        }
+    }
+
+    #[inline]
     pub fn raw_name_table(&self, quadrant: NameTableQuadrant) -> &[u8; KIBIBYTE as usize] {
         match self.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) => self.ciram.side(side),

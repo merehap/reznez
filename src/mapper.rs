@@ -296,7 +296,7 @@ pub trait Mapper {
     fn ppu_write(&mut self, mem: &mut Memory, address: PpuAddress, value: u8) {
         match address.to_u16() {
             0x0000..=0x1FFF => mem.chr_memory.write(&mem.ppu_regs, &mut mem.ciram, &mut mem.mapper_custom_pages, address, value),
-            0x2000..=0x3EFF => self.write_name_table_byte(mem, address, value),
+            0x2000..=0x3EFF => mem.write_name_table_byte(address, value),
             0x3F00..=0x3FFF => mem.palette_ram.write(address.to_palette_ram_index(), value),
             0x4000..=0xFFFF => unreachable!(),
         }
@@ -313,25 +313,6 @@ pub trait Mapper {
         let address_changed = mem.ppu_pinout.set_data_bus(data);
         if address_changed {
             self.on_ppu_address_change(mem, mem.ppu_pinout.address());
-        }
-    }
-
-    #[inline]
-    fn write_name_table_byte(&mut self, mem: &mut Memory, address: PpuAddress, value: u8) {
-        let (quadrant, index) = address.to_name_table_index();
-        match mem.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
-            NameTableSource::Ciram(side) =>
-                mem.ciram.write(&mem.ppu_regs, side, index, value),
-            NameTableSource::Rom {..} => { /* ROM is read-only. */}
-            // FIXME: This currently ignores whether RAM writes are enabled. It shouldn't be possible to do that.
-            NameTableSource::Ram { bank_number } =>
-                mem.chr_memory.work_ram_1kib_page_mut(0x400 * u32::from(bank_number.to_raw()))[index as usize] = value,
-            NameTableSource::MapperCustom { page_number, .. } => {
-                if let Some(page) = mem.mapper_custom_pages[page_number as usize].to_raw_ref_mut() {
-                    // This page must be writeable.
-                    page[index as usize] = value;
-                }
-            }
         }
     }
 
