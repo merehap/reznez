@@ -42,7 +42,6 @@ impl <const N: NegateBehavior> PulseChannel<N> {
     pub fn set_sweep(&mut self, value: u8) {
         let (enabled, period, negate, shift_count) = splitbits_named_ux!(value, "eppp nsss");
         self.sweep.set(enabled, period, negate, shift_count);
-        // TODO: Set reload
     }
 
     // Write $4002 or $4006
@@ -76,7 +75,6 @@ impl <const N: NegateBehavior> PulseChannel<N> {
     }
 
     pub(super) fn tick(&mut self, parity: CycleParity) {
-        self.sweep.update_target_period();
         if parity == CycleParity::Put {
             let triggered = self.sweep.tick_frequency_timer();
             if triggered {

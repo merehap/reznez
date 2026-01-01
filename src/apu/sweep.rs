@@ -29,13 +29,13 @@ impl <const N: NegateBehavior> Sweep<N> {
     // Write $4002 or $4006
     pub fn set_current_period_low(&mut self, value: u8) {
         self.frequency_timer.set_period_low(value);
-        self.target_period = Some(self.frequency_timer.period().try_into().unwrap());
+        self.update_target_period();
     }
 
     // Write $4003 or $4007
     pub fn set_current_period_high_and_reset_index(&mut self, value: u3) {
         self.frequency_timer.set_period_high_and_reset_index(value);
-        self.target_period = Some(self.frequency_timer.period().try_into().unwrap());
+        self.update_target_period();
     }
 
     // Every cycle
@@ -62,6 +62,7 @@ impl <const N: NegateBehavior> Sweep<N> {
                 && divider_triggered
                 && self.shift_count > u3::new(0) {
             self.frequency_timer.set_period(u16::from(target_period));
+            self.update_target_period();
         }
     }
 
