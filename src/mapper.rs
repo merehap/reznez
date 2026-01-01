@@ -30,7 +30,6 @@ pub use crate::util::unit::{KIBIBYTE, KIBIBYTE_U16};
 
 use num_traits::FromPrimitive;
 
-use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::ciram::Ciram;
 use crate::ppu::register::ppu_registers::WriteToggle;
@@ -285,7 +284,7 @@ pub trait Mapper {
         match address.to_u16() {
             0x0000..=0x1FFF => mem.peek_chr(address),
             0x2000..=0x3EFF => self.peek_name_table_byte(mem, &mem.ciram, address),
-            0x3F00..=0x3FFF => self.peek_palette_table_byte(&mem.palette_ram, address),
+            0x3F00..=0x3FFF => mem.palette_ram.peek(address.to_palette_ram_index()),
             0x4000..=0xFFFF => unreachable!(),
         }
     }
@@ -301,7 +300,7 @@ pub trait Mapper {
         match address.to_u16() {
             0x0000..=0x1FFF => mem.chr_memory.write(&mem.ppu_regs, &mut mem.ciram, &mut mem.mapper_custom_pages, address, value),
             0x2000..=0x3EFF => self.write_name_table_byte(mem, address, value),
-            0x3F00..=0x3FFF => self.write_palette_table_byte(&mut mem.palette_ram, address, value),
+            0x3F00..=0x3FFF => mem.palette_ram.write(address.to_palette_ram_index(), value),
             0x4000..=0xFFFF => unreachable!(),
         }
     }
@@ -366,17 +365,6 @@ pub trait Mapper {
                 }
             }
         }
-    }
-
-    #[inline]
-    fn peek_palette_table_byte(&self, palette_ram: &PaletteRam, address: PpuAddress) -> PpuPeek {
-        let value = palette_ram.read(address_to_palette_ram_index(address));
-        PpuPeek::new(value, PeekSource::PaletteTable)
-    }
-
-    #[inline]
-    fn write_palette_table_byte(&self, palette_ram: &mut PaletteRam, address: PpuAddress, value: u8) {
-        palette_ram.write(address_to_palette_ram_index(address), value);
     }
 
     fn prg_rom_bank_string(&self, mem: &Memory) -> String {
@@ -476,23 +464,6 @@ fn address_to_name_table_index(address: PpuAddress) -> (NameTableQuadrant, u16) 
     let name_table_quadrant = NameTableQuadrant::from_u16(index / KIBIBYTE_U16).unwrap();
     let index = index % KIBIBYTE_U16;
     (name_table_quadrant, index)
-}
-
-fn address_to_palette_ram_index(address: PpuAddress) -> u32 {
-    const PALETTE_TABLE_START: u32 = 0x3F00;
-    const HIGH_ADDRESS_START: u32 = 0x4000;
-
-    let mut address = address.to_u32();
-    assert!(address >= PALETTE_TABLE_START);
-    assert!(address < HIGH_ADDRESS_START);
-
-    // Mirror address down.
-    address %= 0x20;
-    if matches!(address, 0x10 | 0x14 | 0x18 | 0x1C) {
-        address -= 0x10;
-    }
-
-    address
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

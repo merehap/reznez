@@ -3,7 +3,6 @@ use std::marker::ConstParamTy;
 use log::{info, log_enabled};
 use log::Level::Info;
 
-use crate::apu::apu_registers::CycleParity;
 use crate::config::CpuStepFormatting;
 use crate::cpu::cpu_mode::{CpuModeState, InterruptType};
 use crate::cpu::dmc_dma::DmcDmaAction;
@@ -129,7 +128,7 @@ impl Cpu {
         self.nmi_status == NmiStatus::Pending
     }
 
-    pub fn step_first_half(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, cycle_parity: CycleParity) -> Option<Step> {
+    pub fn step_first_half(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory) -> Option<Step> {
         if mem.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
             return None;
@@ -148,6 +147,7 @@ impl Cpu {
 
         let mut step = self.mode_state.current_step();
 
+        let cycle_parity = mem.apu_regs.clock().cycle_parity();
         mem.dmc_dma.step(step.is_read(), cycle_parity);
         match mem.dmc_dma.latest_action() {
             DmcDmaAction::DoNothing => {}

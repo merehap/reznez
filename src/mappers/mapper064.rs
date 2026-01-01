@@ -94,11 +94,11 @@ impl Mapper for Mapper064 {
             0x8000..=0x9FFF if is_even_address => self.bank_select(mem, value),
             0x8000..=0x9FFF => self.set_bank_number(mem, value),
             0xA000..=0xBFFF if is_even_address => Mapper064::set_name_table_mirroring(mem, value),
-            0xA000..=0xBFFF => {/* Do nothing. No use of these registers has been found. */}
-            0xC000..=0xDFFF if is_even_address => self.set_irq_counter_reload_value(value), 
+            0xA000..=0xBFFF => {/* Do nothing. No use of these registers has been found. */ }
+            0xC000..=0xDFFF if is_even_address => self.set_irq_counter_reload_value(value),
             0xC000..=0xDFFF => self.set_irq_reload_mode(value),
             0xE000..=0xFFFF if is_even_address => self.acknowledge_irq(mem),
-            0xE000..=0xFFFF => self.enabled_irq()
+            0xE000..=0xFFFF => self.enabled_irq(),
         }
     }
 

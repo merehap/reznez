@@ -280,7 +280,6 @@ impl Nes {
     }
 
     fn cpu_step_first_half(&mut self) -> Option<Step> {
-        let cycle_parity = self.memory.apu_regs.clock().cycle_parity();
         self.memory.increment_cpu_cycle();
 
         if log_enabled!(target: "timings", Info) {
@@ -291,7 +290,7 @@ impl Nes {
             interrupt_text = formatter::interrupts(self);
         }
 
-        let step = self.cpu.step_first_half(&mut *self.mapper, &mut self.memory, cycle_parity);
+        let step = self.cpu.step_first_half(&mut *self.mapper, &mut self.memory);
         if log_enabled!(target: "cpuinstructions", Info) &&
                 let Some((current_instruction, start_address)) = self.cpu.mode_state().new_instruction_with_address() {
 

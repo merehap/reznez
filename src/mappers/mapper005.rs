@@ -160,7 +160,7 @@ impl Mapper for Mapper005 {
                 let palette_byte = palette << 6 | palette << 4 | palette << 2 | palette;
                 PpuPeek::new(palette_byte, EXT_RAM_PEEK_SOURCE)
             }
-            0x3F00..=0x3FFF => self.peek_palette_table_byte(&mem.palette_ram, address),
+            0x3F00..=0x3FFF => mem.palette_ram.peek(address.to_palette_ram_index()),
             0x4000..=0xFFFF => unreachable!(),
         }
     }

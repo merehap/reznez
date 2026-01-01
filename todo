@@ -30,6 +30,14 @@ Give "Fix Metadata" prompt when metadata doesn't match the DB (Test case: mirror
 REWRITES NEEDED
 OamAddress probably shouldn't know anything about sprite fields. Should just be a simple u8. Remove sprite 0 determination since that is a property of SecondaryOam (or PPU dot 66).
 
+Signals-driven refactor.
+    Blocked on removing cpu_peek/cpu_read/cpu_write from Mapper
+        Blocked on making on_ppu_address_change() and on_ppu_read() signal-based
+    Blocked on removing ppu_peek/ppu_internal_read/ppu_write from Mapper
+        Blocked on making on_ppu_read() signal-based
+        Blocked on mapper 5 and 19 overriding ppu_peek
+        Blocked on mapper 19 overriding ppu_write
+
 FANCY NICE-TO-HAVES
 APU frequency correction
 Allow banks to be configured to pass through PPU address bits, rather than custom logic being needed (see Sachen8259).

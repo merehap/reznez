@@ -223,6 +223,23 @@ impl PpuAddress {
     pub fn pattern_table_side(self) -> PatternTableSide {
         splitbits_named!(self.to_u16(), "...p .... .... ....").into()
     }
+
+    pub fn to_palette_ram_index(self) -> u32 {
+        const PALETTE_TABLE_START: u32 = 0x3F00;
+        const HIGH_ADDRESS_START: u32 = 0x4000;
+
+        let mut address = self.to_u32();
+        assert!(address >= PALETTE_TABLE_START);
+        assert!(address < HIGH_ADDRESS_START);
+
+        // Mirror address down.
+        address %= 0x20;
+        if matches!(address, 0x10 | 0x14 | 0x18 | 0x1C) {
+            address -= 0x10;
+        }
+
+        address
+    }
 }
 
 impl fmt::Display for PpuAddress {
