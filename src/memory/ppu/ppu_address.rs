@@ -1,8 +1,10 @@
 use std::fmt;
 use std::marker::ConstParamTy;
 
+use num_traits::FromPrimitive;
 use splitbits::{splitbits_named, splitbits_named_into_ux, splitbits_named_ux, combinebits, replacebits};
 
+use crate::mapper::KIBIBYTE_U16;
 use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pattern_table_side::PatternTableSide;
@@ -222,6 +224,29 @@ impl PpuAddress {
 
     pub fn pattern_table_side(self) -> PatternTableSide {
         splitbits_named!(self.to_u16(), "...p .... .... ....").into()
+    }
+
+    #[inline]
+    #[rustfmt::skip]
+    pub fn to_name_table_index(self) -> (NameTableQuadrant, u16) {
+        const NAME_TABLE_START:    u16 = 0x2000;
+        const MIRROR_START:        u16 = 0x3000;
+        const PALETTE_TABLE_START: u16 = 0x3F00;
+
+        let address = self.to_u16();
+        assert!(address >= NAME_TABLE_START);
+        assert!(address < PALETTE_TABLE_START);
+
+        let mut index = address;
+        if index >= MIRROR_START {
+            index -= 0x1000;
+        }
+
+        let index = index - NAME_TABLE_START;
+
+        let name_table_quadrant = NameTableQuadrant::from_u16(index / KIBIBYTE_U16).unwrap();
+        let index = index % KIBIBYTE_U16;
+        (name_table_quadrant, index)
     }
 
     pub fn to_palette_ram_index(self) -> u32 {

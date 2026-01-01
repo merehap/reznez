@@ -28,10 +28,7 @@ pub use crate::ppu::name_table::name_table_mirroring::{NameTableMirroring, NameT
 pub use crate::ppu::pattern_table_side::PatternTableSide;
 pub use crate::util::unit::{KIBIBYTE, KIBIBYTE_U16};
 
-use num_traits::FromPrimitive;
-
-use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
-use crate::memory::ppu::ciram::Ciram;
+use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::ppu::register::ppu_registers::WriteToggle;
 
 use crate::memory::bank::bank_number::MemType;
@@ -283,7 +280,7 @@ pub trait Mapper {
     fn ppu_peek(&self, mem: &Memory, address: PpuAddress) -> PpuPeek {
         match address.to_u16() {
             0x0000..=0x1FFF => mem.peek_chr(address),
-            0x2000..=0x3EFF => self.peek_name_table_byte(mem, &mem.ciram, address),
+            0x2000..=0x3EFF => mem.peek_name_table_byte(address),
             0x3F00..=0x3FFF => mem.palette_ram.peek(address.to_palette_ram_index()),
             0x4000..=0xFFFF => unreachable!(),
         }
@@ -320,37 +317,8 @@ pub trait Mapper {
     }
 
     #[inline]
-    fn raw_name_table<'a>(
-        &'a self,
-        mem: &'a Memory,
-        ciram: &'a Ciram,
-        quadrant: NameTableQuadrant,
-    ) -> &'a [u8; KIBIBYTE as usize] {
-        match mem.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
-            NameTableSource::Ciram(side) => ciram.side(side),
-            // FIXME: Hack
-            NameTableSource::Rom { bank_number } => mem.chr_memory.rom_1kib_page(0x400 * u32::from(bank_number.to_raw())),
-            // FIXME: Hack
-            NameTableSource::Ram { bank_number } => mem.chr_memory.work_ram_1kib_page(0x400 * u32::from(bank_number.to_raw())),
-            NameTableSource::MapperCustom { page_number, .. } => mem.mapper_custom_pages[page_number as usize].to_raw_ref(),
-        }
-    }
-
-    #[inline]
-    fn peek_name_table_byte(
-        &self,
-        mem: &Memory,
-        ciram: &Ciram,
-        address: PpuAddress,
-    ) -> PpuPeek {
-        let (name_table_quadrant, index) = address_to_name_table_index(address);
-        let value = self.raw_name_table(mem, ciram, name_table_quadrant)[index as usize];
-        PpuPeek::new(value, PeekSource::from_name_table_source(mem.name_table_mirroring().name_table_source_in_quadrant(name_table_quadrant)))
-    }
-
-    #[inline]
     fn write_name_table_byte(&mut self, mem: &mut Memory, address: PpuAddress, value: u8) {
-        let (quadrant, index) = address_to_name_table_index(address);
+        let (quadrant, index) = address.to_name_table_index();
         match mem.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) =>
                 mem.ciram.write(&mem.ppu_regs, side, index, value),
@@ -441,29 +409,6 @@ pub trait Mapper {
     fn supported(self) -> LookupResult where Self: Sized, Self: 'static {
         LookupResult::Supported(Box::new(self))
     }
-}
-
-#[inline]
-#[rustfmt::skip]
-fn address_to_name_table_index(address: PpuAddress) -> (NameTableQuadrant, u16) {
-    const NAME_TABLE_START:    u16 = 0x2000;
-    const MIRROR_START:        u16 = 0x3000;
-    const PALETTE_TABLE_START: u16 = 0x3F00;
-
-    let address = address.to_u16();
-    assert!(address >= NAME_TABLE_START);
-    assert!(address < PALETTE_TABLE_START);
-
-    let mut index = address;
-    if index >= MIRROR_START {
-        index -= 0x1000;
-    }
-
-    let index = index - NAME_TABLE_START;
-
-    let name_table_quadrant = NameTableQuadrant::from_u16(index / KIBIBYTE_U16).unwrap();
-    let index = index % KIBIBYTE_U16;
-    (name_table_quadrant, index)
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]

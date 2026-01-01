@@ -153,7 +153,7 @@ impl Mapper for Mapper005 {
                 mem.chr_memory().peek_raw(raw_chr_index)
             }
             0x0000..=0x1FFF => mem.chr_memory().peek(&mem.ciram, &mem.mapper_custom_pages, address),
-            0x2000..=0x3EFF => self.peek_name_table_byte(mem, &mem.ciram, address),
+            0x2000..=0x3EFF => mem.peek_name_table_byte(address),
             0x3F00..=0x3FFF if should_substitute => {
                 let palette = Self::peek_ext_rom(mem, self.name_table_index) >> 6;
                 // The same palette is used for all 4 corners.

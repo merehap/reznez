@@ -8,8 +8,8 @@ use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::memory::cpu::stack::Stack;
-use crate::mapper::{ChrBankRegisterId, ChrMemory, CiramSide, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, PpuAddress, PrgBankRegisterId, PrgMemory, ReadResult};
-use crate::memory::ppu::chr_memory::PpuPeek;
+use crate::mapper::{ChrBankRegisterId, ChrMemory, CiramSide, KIBIBYTE, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, PpuAddress, PrgBankRegisterId, PrgMemory, ReadResult};
+use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::ppu::ppu_pinout::PpuPinout;
@@ -234,6 +234,25 @@ impl Memory {
 
     pub fn chr_memory(&self) -> &ChrMemory {
         &self.chr_memory
+    }
+
+    #[inline]
+    pub fn peek_name_table_byte(&self, address: PpuAddress) -> PpuPeek {
+        let (name_table_quadrant, index) = address.to_name_table_index();
+        let value = self.raw_name_table(name_table_quadrant)[index as usize];
+        PpuPeek::new(value, PeekSource::from_name_table_source(self.name_table_mirroring().name_table_source_in_quadrant(name_table_quadrant)))
+    }
+
+    #[inline]
+    pub fn raw_name_table(&self, quadrant: NameTableQuadrant) -> &[u8; KIBIBYTE as usize] {
+        match self.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
+            NameTableSource::Ciram(side) => self.ciram.side(side),
+            // FIXME: Hack
+            NameTableSource::Rom { bank_number } => self.chr_memory.rom_1kib_page(0x400 * u32::from(bank_number.to_raw())),
+            // FIXME: Hack
+            NameTableSource::Ram { bank_number } => self.chr_memory.work_ram_1kib_page(0x400 * u32::from(bank_number.to_raw())),
+            NameTableSource::MapperCustom { page_number, .. } => self.mapper_custom_pages[page_number as usize].to_raw_ref(),
+        }
     }
 
     pub fn set_chr_layout(&mut self, index: u8) {

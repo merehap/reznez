@@ -43,7 +43,6 @@ impl WindowRenderer for NameTableRenderer {
 
         let x = usize::from(nes.memory().ppu_regs.x_scroll().to_u8());
         let y = usize::from(nes.memory().ppu_regs.y_scroll().to_u8());
-        let mapper = nes.mapper();
         let mem = &mut nes.memory();
 
         let width = NameTableRenderer::WIDTH;
@@ -56,16 +55,17 @@ impl WindowRenderer for NameTableRenderer {
 
         self.frame.set_universal_background_rgb(mem.palette_table().universal_background_rgb());
         let background_table = PatternTable::background_side(mem);
-        NameTable::from_mem(mapper, mem, NameTableQuadrant::TopLeft)
+
+        NameTable::new(mem.raw_name_table(NameTableQuadrant::TopLeft))
             .render(&background_table, &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(1, 1, &self.frame);
-        NameTable::from_mem(mapper, mem, NameTableQuadrant::TopRight)
+        NameTable::new(mem.raw_name_table(NameTableQuadrant::TopRight))
             .render(&background_table, &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(257, 1, &self.frame);
-        NameTable::from_mem(mapper, mem, NameTableQuadrant::BottomLeft)
+        NameTable::new(mem.raw_name_table(NameTableQuadrant::BottomLeft))
             .render(&background_table, &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(1, 241, &self.frame);
-        NameTable::from_mem(mapper, mem, NameTableQuadrant::BottomRight)
+        NameTable::new(mem.raw_name_table(NameTableQuadrant::BottomRight))
             .render(&background_table, &mem.palette_table(), &mut self.frame);
         self.buffer.place_frame(257, 241, &self.frame);
 
