@@ -4,7 +4,7 @@ use crate::cpu::dmc_dma::DmcDma;
 use crate::cpu::oam_dma::OamDma;
 use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
 use crate::memory::bank::bank_number::{MemType, ReadStatus, WriteStatus};
-use crate::memory::cpu::cpu_address::CpuAddress;
+use crate::memory::cpu::cpu_address::{CpuAddress, FriendlyCpuAddress};
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::memory::cpu::prg_memory_map::PrgPageIdSlot;
@@ -417,58 +417,60 @@ impl Memory {
     pub fn cpu_write(&mut self, mapper: &mut dyn Mapper, address_bus_type: AddressBusType) {
         let addr = self.cpu_address_bus(address_bus_type);
 
-        match *addr {
-            0x0000..=0x07FF => self.cpu_internal_ram[*addr as usize] = self.cpu_pinout.data_bus,
-            0x0800..=0x1FFF => self.cpu_internal_ram[*addr as usize & 0x07FF] = self.cpu_pinout.data_bus,
-            0x2000..=0x3FFF => match *addr & 0x2007 {
-                0x2000 => self.ppu_regs.write_ctrl(self.cpu_pinout.data_bus),
-                0x2001 => self.ppu_regs.write_mask(self.cpu_pinout.data_bus),
-                0x2002 => self.ppu_regs.write_ppu_io_bus(self.cpu_pinout.data_bus),
-                0x2003 => self.ppu_regs.write_oam_addr(self.cpu_pinout.data_bus),
-                0x2004 => self.ppu_regs.write_oam_data(&mut self.oam, self.cpu_pinout.data_bus),
-                0x2005 => self.ppu_regs.write_scroll(self.cpu_pinout.data_bus),
-                0x2006 => {
-                    self.ppu_regs.write_ppu_addr(self.cpu_pinout.data_bus);
-                    if self.ppu_regs.write_toggle() == WriteToggle::FirstByte {
-                        self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
-                    }
-                }
-                0x2007 => {
-                    self.ppu_write();
-                    self.ppu_regs.write_ppu_data(self.cpu_pinout.data_bus);
+        use FriendlyCpuAddress as Addr;
+        match addr.to_friendly() {
+            Addr::CpuInternalRam(index) => self.cpu_internal_ram[index] = self.cpu_pinout.data_bus,
+
+            // PPU registers.
+            Addr::PpuControl => self.ppu_regs.write_ctrl(self.cpu_pinout.data_bus),
+            Addr::PpuMask    => self.ppu_regs.write_mask(self.cpu_pinout.data_bus),
+            Addr::PpuStatus  => self.ppu_regs.write_ppu_io_bus(self.cpu_pinout.data_bus), // Read-only
+            Addr::OamAddress => self.ppu_regs.write_oam_addr(self.cpu_pinout.data_bus),
+            Addr::OamData    => self.ppu_regs.write_oam_data(&mut self.oam, self.cpu_pinout.data_bus),
+            Addr::PpuScroll  => self.ppu_regs.write_scroll(self.cpu_pinout.data_bus),
+            Addr::PpuAddress => {
+                self.ppu_regs.write_ppu_addr(self.cpu_pinout.data_bus);
+                if self.ppu_regs.write_toggle() == WriteToggle::FirstByte {
                     self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
                 }
-                _ => unreachable!(),
             }
-            0x4000          => self.apu_regs.pulse_1.set_control(self.cpu_pinout.data_bus),
-            0x4001          => self.apu_regs.pulse_1.set_sweep(self.cpu_pinout.data_bus),
-            0x4002          => self.apu_regs.pulse_1.set_period_low(self.cpu_pinout.data_bus),
-            0x4003          => self.apu_regs.pulse_1.set_length_and_period_high(self.cpu_pinout.data_bus),
-            0x4004          => self.apu_regs.pulse_2.set_control(self.cpu_pinout.data_bus),
-            0x4005          => self.apu_regs.pulse_2.set_sweep(self.cpu_pinout.data_bus),
-            0x4006          => self.apu_regs.pulse_2.set_period_low(self.cpu_pinout.data_bus),
-            0x4007          => self.apu_regs.pulse_2.set_length_and_period_high(self.cpu_pinout.data_bus),
-            0x4008          => self.apu_regs.triangle.write_control_byte(self.cpu_pinout.data_bus),
-            0x4009          => { /* Unused. */ }
-            0x400A          => self.apu_regs.triangle.write_timer_low_byte(self.cpu_pinout.data_bus),
-            0x400B          => self.apu_regs.triangle.write_length_and_timer_high_byte(self.cpu_pinout.data_bus),
-            0x400C          => self.apu_regs.noise.set_control(self.cpu_pinout.data_bus),
-            0x400D          => { /* Unused. */ }
-            0x400E          => self.apu_regs.noise.set_loop_and_period(self.cpu_pinout.data_bus),
-            0x400F          => self.apu_regs.noise.set_length(self.cpu_pinout.data_bus),
-            0x4010          => self.apu_regs.dmc.write_control_byte(&mut self.cpu_pinout),
-            0x4011          => self.apu_regs.dmc.write_volume(self.cpu_pinout.data_bus),
-            0x4012          => self.apu_regs.dmc.write_sample_start_address(self.cpu_pinout.data_bus),
-            0x4013          => self.dmc_dma.write_sample_length(self.cpu_pinout.data_bus),
-            0x4014          => self.oam_dma.prepare_to_start(self.cpu_pinout.data_bus),
-            0x4015          => self.apu_regs.write_status_byte(&mut self.cpu_pinout, &mut self.dmc_dma),
-            0x4016          => {
+            Addr::PpuData => {
+                // FIXME: The ordering of these three statements seems wrong. Surely the address bus should be set first?
+                // This seems likely to be related to how the PPU data bus and address bus have shared bits.
+                self.ppu_write(self.ppu_regs.current_address, self.cpu_pinout.data_bus);
+                self.ppu_regs.write_ppu_data(self.cpu_pinout.data_bus);
+                self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
+            }
+
+            // APU channel registers.
+            Addr::Pulse1Control   => self.apu_regs.pulse_1.set_control(self.cpu_pinout.data_bus),
+            Addr::Pulse1Sweep     => self.apu_regs.pulse_1.set_sweep(self.cpu_pinout.data_bus),
+            Addr::Pulse1Period    => self.apu_regs.pulse_1.set_period_low(self.cpu_pinout.data_bus),
+            Addr::Pulse1Length    => self.apu_regs.pulse_1.set_length_and_period_high(self.cpu_pinout.data_bus),
+            Addr::Pulse2Control   => self.apu_regs.pulse_2.set_control(self.cpu_pinout.data_bus),
+            Addr::Pulse2Sweep     => self.apu_regs.pulse_2.set_sweep(self.cpu_pinout.data_bus),
+            Addr::Pulse2Period    => self.apu_regs.pulse_2.set_period_low(self.cpu_pinout.data_bus),
+            Addr::Pulse2Length    => self.apu_regs.pulse_2.set_length_and_period_high(self.cpu_pinout.data_bus),
+            Addr::TriangleControl => self.apu_regs.triangle.write_control_byte(self.cpu_pinout.data_bus),
+            Addr::TrianglePeriod  => self.apu_regs.triangle.write_timer_low_byte(self.cpu_pinout.data_bus),
+            Addr::TriangleLength  => self.apu_regs.triangle.write_length_and_timer_high_byte(self.cpu_pinout.data_bus),
+            Addr::NoiseControl    => self.apu_regs.noise.set_control(self.cpu_pinout.data_bus),
+            Addr::NoisePeriod     => self.apu_regs.noise.set_loop_and_period(self.cpu_pinout.data_bus),
+            Addr::NoiseLength     => self.apu_regs.noise.set_length(self.cpu_pinout.data_bus),
+            Addr::DmcControl      => self.apu_regs.dmc.write_control_byte(&mut self.cpu_pinout),
+            Addr::DmcVolume       => self.apu_regs.dmc.write_volume(self.cpu_pinout.data_bus),
+            Addr::DmcAddress      => self.apu_regs.dmc.write_sample_start_address(self.cpu_pinout.data_bus),
+            Addr::DmcLength       => self.dmc_dma.write_sample_length(self.cpu_pinout.data_bus),
+
+            // Miscellaneous registers.
+            Addr::OamDma          => self.oam_dma.prepare_to_start(self.cpu_pinout.data_bus),
+            Addr::ApuStatus       => self.apu_regs.write_status_byte(&mut self.cpu_pinout, &mut self.dmc_dma),
+            Addr::Controller2AndFrameCounter => self.apu_regs.write_frame_counter(&mut self.cpu_pinout),
+            Addr::Controller1AndStrobe => {
                 self.joypad1.change_strobe(self.cpu_pinout.data_bus);
                 self.joypad2.change_strobe(self.cpu_pinout.data_bus);
             }
-            0x4017          => self.apu_regs.write_frame_counter(&mut self.cpu_pinout),
-            0x4018..=0x401F => { /* CPU Test Mode not yet supported. */ }
-            0x4020..=0xFFFF => {
+            Addr::MapperRegisters => {
                 if matches!(*addr, 0x6000..=0xFFFF) {
                     // TODO: Verify if bus conflicts only occur for address >= 0x6000.
                     if mapper.has_bus_conflicts() {
@@ -481,6 +483,7 @@ impl Memory {
 
                 mapper.write_register(self, addr, self.cpu_pinout.data_bus);
             }
+            Addr::Unused => { /* Do nothing for unused register addresses. */ }
         }
 
         mapper.on_cpu_write(self, addr, self.cpu_pinout.data_bus);
@@ -496,9 +499,7 @@ impl Memory {
     }
 
     #[inline]
-    pub fn ppu_write(&mut self) {
-        let addr = self.ppu_regs.current_address;
-        let value = self.cpu_pinout.data_bus;
+    pub fn ppu_write(&mut self, addr: PpuAddress, value: u8) {
         match addr.to_u16() {
             0x0000..=0x1FFF => self.chr_memory.write(&self.ppu_regs, &mut self.ciram, &mut self.mapper_custom_pages, addr, value),
             0x2000..=0x3EFF => self.write_name_table_byte(addr, value),

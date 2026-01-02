@@ -201,7 +201,7 @@ pub enum FriendlyCpuAddress {
     Controller1AndStrobe,
     Controller2AndFrameCounter,
 
-    MapperRegister,
+    MapperRegisters,
 
     Unused,
 }
@@ -254,7 +254,7 @@ impl FriendlyCpuAddress {
             0x4016          => Controller1AndStrobe,
             0x4017          => Controller2AndFrameCounter,
             0x4018..=0x401F => Unused,
-            0x4020..=0xFFFF => MapperRegister,
+            0x4020..=0xFFFF => MapperRegisters,
         }
     }
 }
