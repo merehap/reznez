@@ -225,7 +225,7 @@ pub trait Mapper {
                     }
                 }
                 0x2007 => {
-                    self.ppu_write(mem, mem.ppu_regs.current_address, mem.cpu_pinout.data_bus);
+                    mem.ppu_write();
                     mem.ppu_regs.write_ppu_data(mem.cpu_pinout.data_bus);
                     self.set_ppu_address_bus(mem, mem.ppu_regs.current_address);
                 }
@@ -278,28 +278,13 @@ pub trait Mapper {
     }
 
     fn ppu_peek(&self, mem: &Memory, address: PpuAddress) -> PpuPeek {
-        match address.to_u16() {
-            0x0000..=0x1FFF => mem.peek_chr(address),
-            0x2000..=0x3EFF => mem.peek_name_table_byte(address),
-            0x3F00..=0x3FFF => mem.palette_ram.peek(address.to_palette_ram_index()),
-            0x4000..=0xFFFF => unreachable!(),
-        }
+        mem.ppu_peek(address)
     }
 
     fn ppu_internal_read(&mut self, mem: &mut Memory) -> PpuPeek {
         let result = self.ppu_peek(mem, mem.ppu_pinout.address());
         self.on_ppu_read(mem, mem.ppu_pinout.address(), result.value());
         result
-    }
-
-    #[inline]
-    fn ppu_write(&mut self, mem: &mut Memory, address: PpuAddress, value: u8) {
-        match address.to_u16() {
-            0x0000..=0x1FFF => mem.chr_memory.write(&mem.ppu_regs, &mut mem.ciram, &mut mem.mapper_custom_pages, address, value),
-            0x2000..=0x3EFF => mem.write_name_table_byte(address, value),
-            0x3F00..=0x3FFF => mem.palette_ram.write(address.to_palette_ram_index(), value),
-            0x4000..=0xFFFF => unreachable!(),
-        }
     }
 
     fn set_ppu_address_bus(&mut self, mem: &mut Memory, addr: PpuAddress) {
@@ -316,6 +301,7 @@ pub trait Mapper {
         }
     }
 
+    // TODO: Move this into Memory/Bus.
     fn prg_rom_bank_string(&self, mem: &Memory) -> String {
         let prg_memory = &mem.prg_memory();
 
@@ -357,6 +343,7 @@ pub trait Mapper {
         result
     }
 
+    // TODO: Move this into Memory/Bus.
     fn chr_rom_bank_string(&self, mem: &Memory) -> String {
         let chr_memory = &mem.chr_memory();
 

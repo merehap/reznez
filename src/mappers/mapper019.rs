@@ -1,7 +1,6 @@
 use crate::mapper::*;
 use crate::memory::bank::bank::{ChrSourceRegisterId, WriteStatusRegisterId};
 use crate::memory::memory::Memory;
-use crate::memory::ppu::chr_memory::PpuPeek;
 use crate::memory::ppu::ciram::CiramSide;
 
 const LAYOUT: Layout = Layout::builder()
@@ -128,37 +127,6 @@ impl Mapper for Mapper019 {
                     mem.set_writes_enabled(W3, false);
                 }
             }
-        }
-    }
-
-    fn ppu_peek(&self, mem: &Memory, mut address: PpuAddress) -> PpuPeek {
-        match address.to_u16() {
-            0x0000..=0x3EFF => {
-                if address.to_u16() >= 0x3000 {
-                    // Mirror down, just like normal ppu_peek.
-                    address = PpuAddress::from_u16(address.to_u16() - 0x1000);
-                }
-
-                mem.peek_chr(address)
-            }
-            0x3F00..=0x3FFF => mem.palette_ram.peek(address.to_palette_ram_index()),
-            0x4000..=0xFFFF => unreachable!(),
-        }
-    }
-
-    #[inline]
-    fn ppu_write(&mut self, mem: &mut Memory, mut address: PpuAddress, value: u8) {
-        match address.to_u16() {
-            0x0000..=0x3EFF => {
-                if address.to_u16() >= 0x3000 {
-                    // Mirror down, just like normal ppu_write.
-                    address = PpuAddress::from_u16(address.to_u16() - 0x1000);
-                }
-
-                mem.chr_memory.write(&mem.ppu_regs, &mut mem.ciram, &mut mem.mapper_custom_pages, address, value);
-            }
-            0x3F00..=0x3FFF => mem.palette_ram.write(address.to_palette_ram_index(), value),
-            0x4000..=0xFFFF => unreachable!(),
         }
     }
 

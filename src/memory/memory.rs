@@ -278,6 +278,27 @@ impl Memory {
         self.chr_memory.set_layout(index);
     }
 
+    pub fn ppu_peek(&self, address: PpuAddress) -> PpuPeek {
+        match address.to_u16() {
+            0x0000..=0x1FFF => self.peek_chr(address),
+            0x2000..=0x3EFF => self.peek_name_table_byte(address),
+            0x3F00..=0x3FFF => self.palette_ram.peek(address.to_palette_ram_index()),
+            0x4000..=0xFFFF => unreachable!(),
+        }
+    }
+
+    #[inline]
+    pub fn ppu_write(&mut self) {
+        let addr = self.ppu_regs.current_address;
+        let value = self.cpu_pinout.data_bus;
+        match addr.to_u16() {
+            0x0000..=0x1FFF => self.chr_memory.write(&self.ppu_regs, &mut self.ciram, &mut self.mapper_custom_pages, addr, value),
+            0x2000..=0x3EFF => self.write_name_table_byte(addr, value),
+            0x3F00..=0x3FFF => self.palette_ram.write(addr.to_palette_ram_index(), value),
+            0x4000..=0xFFFF => unreachable!(),
+        }
+    }
+
     pub fn peek_chr(&self, address: PpuAddress) -> PpuPeek {
         self.chr_memory.peek(&self.ciram, &self.mapper_custom_pages, address)
     }
