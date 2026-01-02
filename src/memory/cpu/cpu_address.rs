@@ -128,6 +128,10 @@ impl CpuAddress {
     pub fn is_odd(self) -> bool {
         self.0 % 2 == 1
     }
+
+    pub fn is_in_apu_register_range(self) -> bool {
+        matches!(*self, 0x4000..=0x401F)
+    }
 }
 
 impl fmt::Display for CpuAddress {

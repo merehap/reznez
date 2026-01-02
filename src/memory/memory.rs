@@ -285,41 +285,47 @@ impl Memory {
     }
 
     pub fn cpu_peek_unresolved(&self, mapper: &dyn Mapper, _address_bus_type: AddressBusType, addr: CpuAddress) -> ReadResult {
-        let normal_peek_value = match *addr {
-            0x0000..=0x07FF => ReadResult::full(self.cpu_internal_ram()[*addr as usize]),
-            0x0800..=0x1FFF => ReadResult::full(self.cpu_internal_ram()[*addr as usize & 0x07FF]),
-            0x2000..=0x3FFF => {
-                ReadResult::full(match *addr & 0x2007 {
-                    0x2000 | 0x2001 | 0x2003 | 0x2005 | 0x2006 => self.ppu_regs.peek_ppu_io_bus(),
-                    0x2002 => self.ppu_regs.peek_status(),
-                    0x2004 => self.ppu_regs.peek_oam_data(&self.oam),
-                    0x2007 => {
-                        let old_value = mapper.ppu_peek(self, self.ppu_regs.current_address).value();
-                        self.ppu_regs.peek_ppu_data(old_value)
-                    }
-                    _ => unreachable!(),
-                })
+        use FriendlyCpuAddress as Addr;
+        let normal_peek_value = match addr.to_friendly() {
+            Addr::CpuInternalRam(index) => ReadResult::full(self.cpu_internal_ram()[index]),
+            Addr::PpuStatus             => ReadResult::full(self.ppu_regs.peek_status()),
+            Addr::OamData               => ReadResult::full(self.ppu_regs.peek_oam_data(&self.oam)),
+            Addr::PpuData => {
+                let old_value = mapper.ppu_peek(self, self.ppu_regs.current_address).value();
+                ReadResult::full(self.ppu_regs.peek_ppu_data(old_value))
             }
+            Addr::PpuControl | Addr::PpuMask | Addr::OamAddress | Addr::PpuScroll | Addr::PpuAddress => {
+                // Write-only PPU registers.
+                ReadResult::full(self.ppu_regs.peek_ppu_io_bus())
+            }
+            Addr::MapperRegisters => {
+                match *addr {
+                    0x4020..=0x5FFF => mapper.peek_register(self, addr),
+                    0x6000..=0xFFFF => mapper.peek_prg(self, addr),
+                    _ => unreachable!(),
+                }
+            }
+
+            // Write-only registers and unused register addresses result in a read of Open BUS.
             // APU registers can only be read if the current address bus AND the CPU address bus are in the correct range.
-            0x4000..=0x401F => ReadResult::OPEN_BUS,
-            0x4020..=0x5FFF => mapper.peek_register(self, addr),
-            0x6000..=0xFFFF => mapper.peek_prg(self, addr),
+            _ => ReadResult::OPEN_BUS,
         };
 
         let mut should_apu_read_dominate_normal_read = false;
         let apu_peek_value = if self.apu_registers_active() {
             let addr = CpuAddress::new(0x4000 + *addr % 0x20);
-            match *addr {
-                0x4000..=0x4013 => { /* APU registers are write-only. */ ReadResult::OPEN_BUS }
-                0x4014          => { /* OAM DMA is write-only. */ ReadResult::OPEN_BUS }
-                0x4015 => {
+            use FriendlyCpuAddress as Addr;
+            match addr.to_friendly() {
+                Addr::ApuStatus => {
                     should_apu_read_dominate_normal_read = true;
                     ReadResult::partial(self.apu_regs.peek_status(&self.cpu_pinout, &self.dmc_dma).to_u8(), 0b1101_1111)
                 }
                 // TODO: Move ReadResult/mask specification into the controller.
-                0x4016          => ReadResult::partial(self.joypad1.peek_status() as u8, 0b0000_0111),
-                0x4017          => ReadResult::partial(self.joypad2.peek_status() as u8, 0b0000_0111),
-                0x4018..=0x401F => /* CPU Test Mode not yet supported. */ ReadResult::OPEN_BUS,
+                Addr::Controller1AndStrobe       => ReadResult::partial(self.joypad1.peek_status() as u8, 0b0000_0111),
+                Addr::Controller2AndFrameCounter => ReadResult::partial(self.joypad2.peek_status() as u8, 0b0000_0111),
+
+                // APU channel registers and OAM DMA are write-only. CPU Test Mode is not yet supported.
+                _ if addr.is_in_apu_register_range() => ReadResult::OPEN_BUS,
                 _ => unreachable!()
             }
         } else {
@@ -337,57 +343,59 @@ impl Memory {
     #[rustfmt::skip]
     pub fn cpu_read(&mut self, mapper: &mut dyn Mapper, address_bus_type: AddressBusType) -> u8 {
         let addr = self.cpu_address_bus(address_bus_type);
-        let normal_read_value = match *addr {
-            0x0000..=0x07FF => ReadResult::full(self.cpu_internal_ram()[*addr as usize]),
-            0x0800..=0x1FFF => ReadResult::full(self.cpu_internal_ram()[*addr as usize & 0x07FF]),
-            0x2000..=0x3FFF => {
-                ReadResult::full(match *addr & 0x2007 {
-                    0x2000 | 0x2001 | 0x2003 | 0x2005 | 0x2006 => self.ppu_regs.peek_ppu_io_bus(),
-                    0x2002 => self.ppu_regs.read_status(),
-                    0x2004 => self.ppu_regs.read_oam_data(&self.oam),
-                    0x2007 => {
-                        self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
-                        // TODO: Instead of peeking the old data, it must be available as part of some register.
-                        let old_data = mapper.ppu_peek(self, self.ppu_pinout.address()).value();
-                        let new_data = self.ppu_regs.read_ppu_data(old_data);
+        use FriendlyCpuAddress as Addr;
+        let normal_read_value = match addr.to_friendly() {
+            Addr::CpuInternalRam(index) => ReadResult::full(self.cpu_internal_ram()[index]),
+            Addr::PpuStatus             => ReadResult::full(self.ppu_regs.read_status()),
+            Addr::OamData               => ReadResult::full(self.ppu_regs.read_oam_data(&self.oam)),
+            Addr::PpuData => {
+                self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
+                // TODO: Instead of peeking the old data, it must be available as part of some register.
+                let old_data = mapper.ppu_peek(self, self.ppu_pinout.address()).value();
+                let new_data = self.ppu_regs.read_ppu_data(old_data);
 
-                        let pending_data_source = self.ppu_regs.current_address.to_pending_data_source();
-                        let buffered_data = mapper.ppu_peek(self, pending_data_source).value();
-                        mapper.on_ppu_read(self, pending_data_source, buffered_data);
-                        self.ppu_regs.set_ppu_read_buffer_and_advance(buffered_data);
-                        self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
+                let pending_data_source = self.ppu_regs.current_address.to_pending_data_source();
+                let buffered_data = mapper.ppu_peek(self, pending_data_source).value();
+                mapper.on_ppu_read(self, pending_data_source, buffered_data);
+                self.ppu_regs.set_ppu_read_buffer_and_advance(buffered_data);
+                self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
 
-                        new_data
-                    }
-                    _ => unreachable!(),
-                })
+                ReadResult::full(new_data)
             }
+            Addr::PpuControl | Addr::PpuMask | Addr::OamAddress | Addr::PpuScroll | Addr::PpuAddress => {
+                // Write-only PPU registers.
+                ReadResult::full(self.ppu_regs.peek_ppu_io_bus())
+            }
+            Addr::MapperRegisters => {
+                match *addr {
+                    0x4020..=0x5FFF => mapper.peek_register(self, addr),
+                    0x6000..=0xFFFF => mapper.peek_prg(self, addr),
+                    _ => unreachable!(),
+                }
+            }
+
+            // Write-only registers and unused register addresses result in a read of Open BUS.
             // APU registers can only be read if the current address bus AND the CPU address bus are in the correct range.
-            0x4000..=0x401F => ReadResult::OPEN_BUS,
-            0x4020..=0x5FFF => mapper.peek_register(self, addr),
-            0x6000..=0xFFFF => mapper.peek_prg(self, addr),
+            _ => ReadResult::OPEN_BUS,
         };
 
         let mut should_apu_read_dominate_normal_read = false;
         let mut should_apu_read_update_data_bus = true;
         let apu_read_value = if self.apu_registers_active() {
             let addr = CpuAddress::new(0x4000 + *addr % 0x20);
-            match *addr {
-                // Most APU registers are write-only.
-                0x4000..=0x4013 => ReadResult::OPEN_BUS,
-                // OAM DMA is write-only.
-                0x4014 => ReadResult::OPEN_BUS,
-                0x4015 => {
+            use FriendlyCpuAddress as Addr;
+            match addr.to_friendly() {
+                Addr::ApuStatus => {
                     // APU status reads only use the data bus when using a DMA address bus.
                     should_apu_read_dominate_normal_read = true;
                     should_apu_read_update_data_bus = address_bus_type != AddressBusType::Cpu;
                     ReadResult::partial(self.apu_regs.read_status(&self.cpu_pinout, &self.dmc_dma).to_u8(), 0b1101_1111)
                 }
                 // TODO: Move ReadResult/mask specification into the controller.
-                0x4016 => ReadResult::partial(self.joypad1.read_status() as u8, 0b0000_0111),
-                0x4017 => ReadResult::partial(self.joypad2.read_status() as u8, 0b0000_0111),
-                // CPU Test Mode not yet supported.
-                0x4018..=0x401F => ReadResult::OPEN_BUS,
+                Addr::Controller1AndStrobe => ReadResult::partial(self.joypad1.read_status() as u8, 0b0000_0111),
+                Addr::Controller2AndFrameCounter => ReadResult::partial(self.joypad2.read_status() as u8, 0b0000_0111),
+                // Most APU registers and OAM DMA are write-only. CPU Test Mode is not yet supported.
+                _ if addr.is_in_apu_register_range() => ReadResult::OPEN_BUS,
                 _ => unreachable!(),
             }
         } else {
