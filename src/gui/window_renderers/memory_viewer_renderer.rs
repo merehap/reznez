@@ -31,7 +31,7 @@ impl WindowRenderer for MemoryViewerRenderer {
                     .striped(true)
                     .show(ui, |ui| {
                         for mem_index in 0..=u16::MAX {
-                            let value = nes.mapper().cpu_peek(nes.memory(), AddressBusType::Cpu, CpuAddress::new(mem_index));
+                            let value = nes.memory().cpu_peek(nes.mapper(), AddressBusType::Cpu, CpuAddress::new(mem_index));
                             let _ = ui.button(format!("{value:02X}"));
                             if mem_index % 0x10 == 0x0F {
                                 ui.end_row();

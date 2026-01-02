@@ -168,36 +168,36 @@ impl Cpu {
         match step {
             Step::Read(from, _) => {
                 mem.set_cpu_address_bus(AddressBusType::Cpu, self.lookup_from_address(mem, from));
-                value = mapper.cpu_read(mem, AddressBusType::Cpu);
+                value = mem.cpu_read(mapper, AddressBusType::Cpu);
             }
             Step::ReadField(field, from, _) => {
                 mem.set_cpu_address_bus(AddressBusType::Cpu, self.lookup_from_address(mem, from));
-                value = mapper.cpu_read(mem, AddressBusType::Cpu);
+                value = mem.cpu_read(mapper, AddressBusType::Cpu);
                 self.set_field_value(field, value);
             }
             Step::Write(to, _) => {
                 mem.set_cpu_address_bus(AddressBusType::Cpu, self.lookup_to_address(mem, to));
                 value = mem.cpu_pinout.data_bus;
-                mapper.cpu_write(mem, AddressBusType::Cpu);
+                mem.cpu_write(mapper, AddressBusType::Cpu);
             }
             Step::WriteField(field, to, _) => {
                 mem.set_cpu_address_bus(AddressBusType::Cpu, self.lookup_to_address(mem, to));
                 mem.cpu_pinout.data_bus = self.field_value(mem, field);
                 value = mem.cpu_pinout.data_bus;
-                mapper.cpu_write(mem, AddressBusType::Cpu);
+                mem.cpu_write(mapper, AddressBusType::Cpu);
             }
             Step::OamRead(from, _) => {
                 mem.set_cpu_address_bus(AddressBusType::OamDma, self.lookup_from_address(mem, from));
-                value = mapper.cpu_read(mem, AddressBusType::OamDma);
+                value = mem.cpu_read(mapper, AddressBusType::OamDma);
             }
             Step::OamWrite(to, _) => {
                 mem.set_cpu_address_bus(AddressBusType::OamDma, self.lookup_to_address(mem, to));
                 value = mem.cpu_pinout.data_bus;
-                mapper.cpu_write(mem, AddressBusType::OamDma);
+                mem.cpu_write(mapper, AddressBusType::OamDma);
             }
             Step::DmcRead(from, _) => {
                 mem.set_cpu_address_bus(AddressBusType::DmcDma, self.lookup_from_address(mem, from));
-                value = mapper.cpu_read(mem, AddressBusType::DmcDma);
+                value = mem.cpu_read(mapper, AddressBusType::DmcDma);
             }
         }
 
@@ -404,7 +404,7 @@ impl Cpu {
 
                     LAS => {
                         // FIXME: Remove this. It probably won't break any tests.
-                        mapper.cpu_read(mem, AddressBusType::Cpu);
+                        mem.cpu_read(mapper, AddressBusType::Cpu);
                         let value = self.operand & mem.stack_pointer();
                         self.a = value;
                         self.x = value;

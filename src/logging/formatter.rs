@@ -27,7 +27,7 @@ impl Formatter for MinimalFormatter {
         _interrupt_text: String,
     ) -> String {
         // FIXME: This isn't the correct bus value.
-        let peek = |address| nes.mapper().cpu_peek(nes.memory(), AddressBusType::Cpu, address);
+        let peek = |address| nes.memory().cpu_peek(nes.mapper(), AddressBusType::Cpu, address);
 
         let cpu = nes.cpu();
 
@@ -114,7 +114,7 @@ impl Formatter for Nintendulator0980Formatter {
         _interrupt_text: String,
     ) -> String {
         let cpu_cycle = nes.memory().cpu_cycle();
-        let peek = |address| nes.mapper().cpu_peek(nes.memory(), AddressBusType::Cpu, address);
+        let peek = |address| nes.memory().cpu_peek(nes.mapper(), AddressBusType::Cpu, address);
 
         let cpu = nes.cpu();
 
@@ -230,8 +230,8 @@ impl Formatter for MesenFormatter {
         start_address: CpuAddress,
         _interrupt_text: String,
     ) -> String {
-        let maybe_peek = |address| nes.mapper().cpu_peek_unresolved(nes.memory(), AddressBusType::Cpu, address);
-        let peek = |address| nes.mapper().cpu_peek(nes.memory(), AddressBusType::Cpu, address);
+        let maybe_peek = |address| nes.memory().cpu_peek_unresolved(nes.mapper(), AddressBusType::Cpu, address);
+        let peek = |address| nes.memory().cpu_peek(nes.mapper(), AddressBusType::Cpu, address);
 
         let cpu = nes.cpu();
 

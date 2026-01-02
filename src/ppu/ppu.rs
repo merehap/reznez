@@ -68,7 +68,7 @@ impl Ppu {
         let tick_result = mem.ppu_regs.tick();
         if tick_result.rendering_toggled == Some(Toggle::Disable) {
             // "... when rendering is disabled, the value on the PPU address bus is the current value of the v register."
-            mapper.set_ppu_address_bus(mem, mem.ppu_regs.current_address);
+            mem.set_ppu_address_bus(mapper, mem.ppu_regs.current_address);
         }
 
         let clock = *mem.ppu_regs.clock();
@@ -96,27 +96,27 @@ impl Ppu {
         use CycleAction::*;
         match cycle_action {
             SetPatternIndexAddress =>
-                mapper.set_ppu_address_bus(mem, mem.ppu_regs.address_in_name_table()),
+                mem.set_ppu_address_bus(mapper, mem.ppu_regs.address_in_name_table()),
             SetPaletteIndexAddress =>
-                mapper.set_ppu_address_bus(mem, mem.ppu_regs.address_in_attribute_table()),
+                mem.set_ppu_address_bus(mapper, mem.ppu_regs.address_in_attribute_table()),
             SetPatternLowAddress =>
-                mapper.set_ppu_address_bus(mem, mem.ppu_regs.address_for_low_pattern_byte(self.next_tile_number)),
+                mem.set_ppu_address_bus(mapper, mem.ppu_regs.address_for_low_pattern_byte(self.next_tile_number)),
             SetPatternHighAddress =>
-                mapper.set_ppu_address_bus(mem, mem.ppu_regs.address_for_high_pattern_byte(self.next_tile_number)),
+                mem.set_ppu_address_bus(mapper, mem.ppu_regs.address_for_high_pattern_byte(self.next_tile_number)),
 
-            GetPatternIndex => self.next_tile_number = TileNumber::new(mapper.ppu_internal_read(mem).value()),
+            GetPatternIndex => self.next_tile_number = TileNumber::new(mem.ppu_internal_read(mapper).value()),
             GetPatternLowByte => {
-                let pattern_low = mapper.ppu_internal_read(mem);
+                let pattern_low = mem.ppu_internal_read(mapper);
                 if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 self.pattern_register.set_pending_low_byte(pattern_low);
             }
             GetPatternHighByte => {
-                let pattern_high = mapper.ppu_internal_read(mem);
+                let pattern_high = mem.ppu_internal_read(mapper);
                 if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 self.pattern_register.set_pending_high_byte(pattern_high);
             }
             GetPaletteIndex => {
-                let attribute_byte = mapper.ppu_internal_read(mem).value();
+                let attribute_byte = mem.ppu_internal_read(mapper).value();
                 if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
                 self.attribute_register.set_pending_palette_table_index(mem.ppu_regs.palette_table_index(attribute_byte));
             }
@@ -269,22 +269,22 @@ impl Ppu {
                 let select_high = false;
                 let addr;
                 (addr, self.sprite_visible) = self.current_sprite_pattern_address(mem, select_high);
-                mapper.set_ppu_address_bus(mem, addr);
+                mem.set_ppu_address_bus(mapper, addr);
             }
             SetSpritePatternHighAddress => {
                 let select_high = true;
                 let addr;
                 (addr, self.sprite_visible) = self.current_sprite_pattern_address(mem, select_high);
-                mapper.set_ppu_address_bus(mem, addr);
+                mem.set_ppu_address_bus(mapper, addr);
             }
             GetSpritePatternLowByte => {
-                let pattern_low = mapper.ppu_internal_read(mem);
+                let pattern_low = mem.ppu_internal_read(mapper);
                 if (mem.ppu_regs.background_enabled() || mem.ppu_regs.sprites_enabled()) && self.sprite_visible {
                     self.oam_registers.registers[self.oam_register_index].set_pattern_low(pattern_low);
                 }
             }
             GetSpritePatternHighByte => {
-                let pattern_high = mapper.ppu_internal_read(mem);
+                let pattern_high = mem.ppu_internal_read(mapper);
                 if (mem.ppu_regs.background_enabled() || mem.ppu_regs.sprites_enabled()) && self.sprite_visible {
                     self.oam_registers.registers[self.oam_register_index].set_pattern_high(pattern_high);
                 }
@@ -320,7 +320,7 @@ impl Ppu {
                     let clock = *mem.ppu_regs.clock();
                     mem.ppu_regs.start_vblank(&clock);
                     // "During VBlank ... the value on the PPU address bus is the current value of the v register."
-                    mapper.set_ppu_address_bus(mem, mem.ppu_regs.current_address);
+                    mem.set_ppu_address_bus(mapper, mem.ppu_regs.current_address);
                 }
 
                 mem.ppu_regs.suppress_vblank_active = false;

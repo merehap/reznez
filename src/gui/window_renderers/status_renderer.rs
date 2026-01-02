@@ -87,10 +87,10 @@ impl WindowRenderer for StatusRenderer {
                     ui.label(format!("{}", mem.name_table_mirroring()));
                     ui.end_row();
                     ui.label("PRG ROM banks");
-                    ui.label(nes.mapper().prg_rom_bank_string(mem));
+                    ui.label(nes.memory().prg_rom_bank_string());
                     ui.end_row();
                     ui.label("CHR ROM banks");
-                    ui.label(nes.mapper().chr_rom_bank_string(mem));
+                    ui.label(nes.memory().chr_rom_bank_string());
                 });
         });
 
