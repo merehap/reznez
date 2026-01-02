@@ -30,8 +30,8 @@ impl Mapper for CnromWithChrDisable {
         }
     }
 
-    fn has_bus_conflicts(&self) -> HasBusConflicts {
-        HasBusConflicts::Yes
+    fn has_bus_conflicts(&self) -> bool {
+        true
     }
 
     fn layout(&self) -> Layout {

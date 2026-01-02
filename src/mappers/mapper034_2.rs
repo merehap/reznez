@@ -18,8 +18,8 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper034_2;
 
 impl Mapper for Mapper034_2 {
-    fn has_bus_conflicts(&self) -> HasBusConflicts {
-        HasBusConflicts::Yes
+    fn has_bus_conflicts(&self) -> bool {
+        true
     }
 
     fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {

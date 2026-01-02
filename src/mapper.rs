@@ -62,7 +62,7 @@ pub trait Mapper {
     // Most mappers don't care about changes to the current PPU address.
     fn on_ppu_address_change(&mut self, _mem: &mut Memory, _address: PpuAddress) {}
     // Most mappers don't have bus conflicts.
-    fn has_bus_conflicts(&self) -> HasBusConflicts { HasBusConflicts::No }
+    fn has_bus_conflicts(&self) -> bool { false }
     // Used for debug screens.
     fn irq_counter_info(&self) -> Option<IrqCounterInfo> { None }
 
@@ -74,12 +74,6 @@ pub trait Mapper {
     fn supported(self) -> LookupResult where Self: Sized, Self: 'static {
         LookupResult::Supported(Box::new(self))
     }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum HasBusConflicts {
-    Yes,
-    No,
 }
 
 // This should be in mapper_list.rs instead, but we can't write the supported() method there.

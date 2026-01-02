@@ -16,11 +16,11 @@ const LAYOUT: Layout = Layout::builder()
 
 // UxROM (common usages)
 pub struct Uxrom {
-    has_bus_conflicts: HasBusConflicts,
+    has_bus_conflicts: bool,
 }
 
 impl Mapper for Uxrom {
-    fn has_bus_conflicts(&self) -> HasBusConflicts {
+    fn has_bus_conflicts(&self) -> bool {
         self.has_bus_conflicts
     }
 
@@ -38,7 +38,7 @@ impl Mapper for Uxrom {
 }
 
 impl Uxrom {
-    pub const fn new(has_bus_conflicts: HasBusConflicts) -> Uxrom {
+    pub const fn with_bus_conflicts(has_bus_conflicts: bool) -> Uxrom {
         Uxrom { has_bus_conflicts }
     }
 }

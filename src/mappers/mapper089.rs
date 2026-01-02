@@ -34,8 +34,8 @@ impl Mapper for Mapper089 {
         }
     }
 
-    fn has_bus_conflicts(&self) -> HasBusConflicts {
-        HasBusConflicts::Yes
+    fn has_bus_conflicts(&self) -> bool {
+        true
     }
 
     fn layout(&self) -> Layout {

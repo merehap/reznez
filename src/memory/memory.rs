@@ -9,7 +9,7 @@ use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::memory::cpu::prg_memory_map::PrgPageIdSlot;
 use crate::memory::cpu::stack::Stack;
-use crate::mapper::{ChrBankRegisterId, ChrMemory, CiramSide, HasBusConflicts, KIBIBYTE, Mapper, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, PpuAddress, PrgBankRegisterId, PrgMemory, ReadResult};
+use crate::mapper::{ChrBankRegisterId, ChrMemory, CiramSide, KIBIBYTE, Mapper, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, PpuAddress, PrgBankRegisterId, PrgMemory, ReadResult};
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::chr_memory_map::ChrPageId;
 use crate::memory::ppu::palette_ram::PaletteRam;
@@ -471,7 +471,7 @@ impl Memory {
             0x4020..=0xFFFF => {
                 if matches!(*addr, 0x6000..=0xFFFF) {
                     // TODO: Verify if bus conflicts only occur for address >= 0x6000.
-                    if mapper.has_bus_conflicts() == HasBusConflicts::Yes {
+                    if mapper.has_bus_conflicts() {
                         let rom_value = self.cpu_peek_unresolved(mapper, address_bus_type, addr);
                         self.cpu_pinout.data_bus = rom_value.bus_conflict(self.cpu_pinout.data_bus);
                     }

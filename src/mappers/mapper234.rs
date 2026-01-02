@@ -29,8 +29,8 @@ pub struct Mapper234 {
 }
 
 impl Mapper for Mapper234 {
-    fn has_bus_conflicts(&self) -> HasBusConflicts {
-        HasBusConflicts::Yes
+    fn has_bus_conflicts(&self) -> bool {
+        true
     }
 
     fn on_cpu_read(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {

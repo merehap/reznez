@@ -31,11 +31,11 @@ const LAYOUT: Layout = Layout::builder()
 
 // AxROM
 pub struct Axrom {
-    has_bus_conflicts: HasBusConflicts,
+    has_bus_conflicts: bool,
 }
 
 impl Mapper for Axrom {
-    fn has_bus_conflicts(&self) -> HasBusConflicts {
+    fn has_bus_conflicts(&self) -> bool {
         self.has_bus_conflicts
     }
 
@@ -57,7 +57,7 @@ impl Mapper for Axrom {
 }
 
 impl Axrom {
-    pub const fn new(has_bus_conflicts: HasBusConflicts) -> Axrom {
+    pub const fn with_bus_conflicts(has_bus_conflicts: bool) -> Axrom {
         Axrom { has_bus_conflicts }
     }
 }

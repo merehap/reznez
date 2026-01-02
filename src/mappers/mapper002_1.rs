@@ -1,4 +1,3 @@
-use crate::mapper::HasBusConflicts;
 use crate::mappers::common::uxrom::Uxrom;
 
-pub const MAPPER002_1: Uxrom = Uxrom::new(HasBusConflicts::No);
+pub const MAPPER002_1: Uxrom = Uxrom::with_bus_conflicts(false);

@@ -15,11 +15,11 @@ const LAYOUT: Layout = Layout::builder()
 
 // CNROM
 pub struct Cnrom {
-    has_bus_conflicts: HasBusConflicts,
+    has_bus_conflicts: bool,
 }
 
 impl Mapper for Cnrom {
-    fn has_bus_conflicts(&self) -> HasBusConflicts {
+    fn has_bus_conflicts(&self) -> bool {
         self.has_bus_conflicts
     }
 
@@ -37,7 +37,7 @@ impl Mapper for Cnrom {
 }
 
 impl Cnrom {
-    pub const fn new(has_bus_conflicts: HasBusConflicts) -> Cnrom {
+    pub const fn with_bus_conflicts(has_bus_conflicts: bool) -> Cnrom {
         Cnrom { has_bus_conflicts }
     }
 }
