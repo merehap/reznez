@@ -28,6 +28,10 @@ impl CpuAddress {
         (self.0 as u8, (self.0 >> 8) as u8)
     }
 
+    pub fn to_friendly(self) -> FriendlyCpuAddress {
+        FriendlyCpuAddress::from_cpu_address(self)
+    }
+
     pub fn to_mesen_string(self) -> String {
         let basic_string = &format!("${:04X}", self.0);
         match self.0 {
@@ -152,5 +156,105 @@ impl Deref for CpuAddress {
 impl DerefMut for CpuAddress {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+pub enum FriendlyCpuAddress {
+    CpuInternalRam(usize),
+
+    PpuControl,
+    PpuMask,
+    PpuStatus,
+    OamAddress,
+    OamData,
+    PpuScroll,
+    PpuAddress,
+    PpuData,
+
+    Pulse1Control,
+    Pulse1Sweep,
+    Pulse1Period,
+    Pulse1Length,
+
+    Pulse2Control,
+    Pulse2Sweep,
+    Pulse2Period,
+    Pulse2Length,
+
+    TriangleControl,
+    TrianglePeriod,
+    TriangleLength,
+
+    NoiseControl,
+    NoisePeriod,
+    NoiseLength,
+
+    DmcControl,
+    DmcVolume,
+    DmcAddress,
+    DmcLength,
+
+    OamDma,
+
+    ApuStatus,
+
+    Controller1AndStrobe,
+    Controller2AndFrameCounter,
+
+    MapperRegister,
+
+    Unused,
+}
+
+impl FriendlyCpuAddress {
+    fn from_cpu_address(addr: CpuAddress) -> Self {
+        use FriendlyCpuAddress::*;
+        match *addr {
+            0x0000..=0x1FFF => CpuInternalRam(*addr as usize & 0x07FF),
+
+            0x2000..=0x3FFF => match *addr & 0x2007 {
+                0x2000 => PpuControl,
+                0x2001 => PpuMask,
+                0x2002 => PpuStatus,
+                0x2003 => OamAddress,
+                0x2004 => OamData,
+                0x2005 => PpuScroll,
+                0x2006 => PpuAddress,
+                0x2007 => PpuData, 
+                _ => unreachable!(),
+            }
+
+            0x4000          => Pulse1Control,
+            0x4001          => Pulse1Sweep,
+            0x4002          => Pulse1Period,
+            0x4003          => Pulse1Length,
+
+            0x4004          => Pulse2Control,
+            0x4005          => Pulse2Sweep,
+            0x4006          => Pulse2Period,
+            0x4007          => Pulse2Length,
+
+            0x4008          => TriangleControl,
+            0x4009          => Unused,
+            0x400A          => TrianglePeriod,
+            0x400B          => TriangleLength,
+
+            0x400C          => NoiseControl,
+            0x400D          => Unused,
+            0x400E          => NoisePeriod,
+            0x400F          => NoiseLength,
+
+            0x4010          => DmcControl,
+            0x4011          => DmcVolume,
+            0x4012          => DmcAddress,
+            0x4013          => DmcLength,
+
+            0x4014          => OamDma,
+            0x4015          => ApuStatus,
+            0x4016          => Controller1AndStrobe,
+            0x4017          => Controller2AndFrameCounter,
+            0x4018..=0x401F => Unused,
+            0x4020..=0xFFFF => MapperRegister,
+        }
     }
 }
