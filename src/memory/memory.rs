@@ -8,7 +8,6 @@ use crate::memory::cpu::cpu_address::{CpuAddress, FriendlyCpuAddress};
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::memory::cpu::prg_memory_map::PrgPageIdSlot;
-use crate::memory::cpu::stack::Stack;
 use crate::mapper::{ChrBankRegisterId, ChrMemory, CiramSide, KIBIBYTE, Mapper, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, PpuAddress, PrgBankRegisterId, PrgMemory, ReadResult};
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::memory::ppu::chr_memory_map::ChrPageId;
@@ -90,10 +89,6 @@ impl Memory {
         }
     }
 
-    pub fn stack_pointer(&self) -> u8 {
-        self.cpu_internal_ram.stack_pointer
-    }
-
     pub fn ciram(&self) -> &Ciram {
         &self.ciram
     }
@@ -128,20 +123,6 @@ impl Memory {
 
     pub fn set_dmc_sample_buffer(&mut self, value: u8) {
         self.apu_regs.dmc.set_sample_buffer(&mut self.cpu_pinout, &mut self.dmc_dma, value);
-    }
-
-    #[inline]
-    pub fn cpu_stack(&mut self) -> Stack<'_> {
-        self.cpu_internal_ram.stack()
-    }
-
-    #[inline]
-    pub fn cpu_stack_pointer_mut(&mut self) -> &mut u8 {
-        &mut self.cpu_internal_ram.stack_pointer
-    }
-
-    pub fn cpu_stack_pointer_address(&self) -> CpuAddress {
-        CpuAddress::from_low_high(self.stack_pointer(), 0x01)
     }
 
     pub fn increment_cpu_cycle(&mut self) {

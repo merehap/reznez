@@ -24,6 +24,7 @@ pub struct Cpu {
     x: u8,
     // Y Index
     y: u8,
+    stack_pointer: u8,
     program_counter: CpuAddress,
     status: Status,
 
@@ -55,6 +56,7 @@ impl Cpu {
             y: 0,
             // The RESET sequence will set this properly.
             program_counter: CpuAddress::ZERO,
+            stack_pointer: 0x00,
             status: Status::startup(),
 
             mode_state: CpuModeState::startup(),
@@ -98,6 +100,10 @@ impl Cpu {
 
     pub fn y_index(&self) -> u8 {
         self.y
+    }
+
+    pub fn stack_pointer(&self) -> u8 {
+        self.stack_pointer
     }
 
     pub fn program_counter(&self) -> CpuAddress {
@@ -293,8 +299,8 @@ impl Cpu {
                     DEY => self.y = self.nz(self.y.wrapping_sub(1)),
                     TAX => self.x = self.nz(self.a),
                     TAY => self.y = self.nz(self.a),
-                    TSX => self.x = self.nz(mem.stack_pointer()),
-                    TXS => *mem.cpu_stack_pointer_mut() = self.x,
+                    TSX => self.x = self.nz(self.stack_pointer),
+                    TXS => self.stack_pointer = self.x,
                     TXA => self.a = self.nz(self.x),
                     TYA => self.a = self.nz(self.y),
                     PLA => self.a = self.nz(self.operand),
@@ -405,10 +411,10 @@ impl Cpu {
                     LAS => {
                         // FIXME: Remove this. It probably won't break any tests.
                         mem.cpu_read(mapper, AddressBusType::Cpu);
-                        let value = self.operand & mem.stack_pointer();
+                        let value = self.operand & self.stack_pointer;
                         self.a = value;
                         self.x = value;
-                        *mem.cpu_stack_pointer_mut() = value;
+                        self.stack_pointer = value;
                     }
                     XAA => {
                         self.a = self.nz(self.a & self.x & self.operand);
@@ -441,8 +447,8 @@ impl Cpu {
             StepAction::IncrementAddressLow => self.computed_address = mem.cpu_pinout.address_bus.offset_low(1).0,
             StepAction::IncrementOamDmaAddress => mem.oam_dma.increment_address(),
 
-            StepAction::IncrementStackPointer => mem.cpu_stack().increment_stack_pointer(),
-            StepAction::DecrementStackPointer => mem.cpu_stack().decrement_stack_pointer(),
+            StepAction::IncrementStackPointer => self.stack_pointer = self.stack_pointer.wrapping_add(1),
+            StepAction::DecrementStackPointer => self.stack_pointer = self.stack_pointer.wrapping_sub(1),
 
             StepAction::DisableInterrupts => self.status.interrupts_disabled = true,
             StepAction::SetInterruptVector => {
@@ -543,7 +549,7 @@ impl Cpu {
             PendingAddressTarget => CpuAddress::from_low_high(self.pending_address_low, self.pending_address_high),
             PendingZeroPageTarget => CpuAddress::from_low_high(self.pending_address_low, 0),
             ComputedTarget => self.computed_address,
-            TopOfStack => mem.cpu_stack_pointer_address(),
+            TopOfStack => self.stack_pointer_address(),
             InterruptVectorLow => {
                 if self.mode_state.is_irq_sequence_active() {
                     // FIXME: Hack
@@ -581,7 +587,7 @@ impl Cpu {
             PendingZeroPageTarget =>
                 CpuAddress::from_low_high(self.pending_address_low, 0),
             ComputedTarget => self.computed_address,
-            TopOfStack => mem.cpu_stack_pointer_address(),
+            TopOfStack => self.stack_pointer_address(),
             AddressTarget(address) => address,
         }
     }
@@ -629,7 +635,7 @@ impl Cpu {
                 }
                 OpCode::TAS => {
                     let sp = self.a & self.x;
-                    *mem.cpu_stack_pointer_mut() = sp;
+                    self.stack_pointer = sp;
                     self.x & mem.cpu_pinout.address_bus.high_byte()
                 }
                 op_code => todo!("{:?}", op_code),
@@ -650,6 +656,10 @@ impl Cpu {
             PendingAddressHigh => self.pending_address_high = value,
             OpRegister => panic!(),
         }
+    }
+
+    fn stack_pointer_address(&self) -> CpuAddress {
+        CpuAddress::from_low_high(self.stack_pointer(), 0x01)
     }
 
     fn adc(&mut self, value: u8) -> u8 {

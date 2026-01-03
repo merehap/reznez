@@ -123,7 +123,7 @@ impl Nes {
     }
 
     pub fn stack_pointer(&self) -> u8 {
-        self.memory.stack_pointer()
+        self.cpu.stack_pointer()
     }
 
     fn load_rom(header_db: &HeaderDb, config: &Config, cartridge: &Cartridge) -> Result<(Box<dyn Mapper>, Memory, MetadataResolver), String> {
