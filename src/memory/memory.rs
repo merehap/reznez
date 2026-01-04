@@ -523,13 +523,14 @@ impl Memory {
         let mut result = String::new();
         for prg_page_id_slot in prg_memory.current_memory_map().page_id_slots() {
             let bank_string = match prg_page_id_slot {
-                PrgPageIdSlot::Normal(prg_source_and_page_number, _, _) => {
+                PrgPageIdSlot::Normal(prg_source_and_page_number) => {
                     match prg_source_and_page_number {
                         None => "E".to_string(),
                         // FIXME: This should be bank number, not page number.
-                        Some((MemType::Rom, page_number)) => page_number.to_string(),
-                        Some((MemType::WorkRam, page_number)) => format!("W{page_number}"),
-                        Some((MemType::SaveRam, page_number)) => format!("S{page_number}"),
+                        // TODO: Add Read/Write status to the output
+                        Some((MemType::Rom(..), page_number)) => page_number.to_string(),
+                        Some((MemType::WorkRam(..), page_number)) => format!("W{page_number}"),
+                        Some((MemType::SaveRam(..), page_number)) => format!("S{page_number}"),
                     }
                 }
                 PrgPageIdSlot::Multi(_) => "M".to_string(),

@@ -308,7 +308,17 @@ pub enum WriteStatus {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum MemType {
-    Rom,
-    WorkRam,
-    SaveRam,
+    Rom(ReadStatus),
+    WorkRam(ReadStatus, WriteStatus),
+    SaveRam(ReadStatus, WriteStatus),
+}
+
+impl MemType {
+    pub fn read_status(self) -> ReadStatus {
+        match self {
+            Self::Rom(read_status) => read_status,
+            Self::WorkRam(read_status, ..) => read_status,
+            Self::SaveRam(read_status, ..) => read_status,
+        }
+    }
 }

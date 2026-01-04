@@ -96,23 +96,20 @@ impl PrgMemory {
     }
 
     pub fn peek(&self, address: CpuAddress) -> ReadResult {
-        let (prg_source_and_index, read_status, _write_status) =
-            self.memory_maps[self.layout_index as usize].index_for_address(address);
-        if read_status == ReadStatus::ReadOnlyZeros {
-            ReadResult::full(0)
-        } else {
-            match prg_source_and_index {
-                Some((MemType::Rom, index)) if read_status == ReadStatus::Enabled => {
+        let prg_source_and_index = self.memory_maps[self.layout_index as usize].index_for_address(address);
+        if let Some((mem_type, index)) = prg_source_and_index {
+            match (mem_type, mem_type.read_status()) {
+                (_                   , ReadStatus::Disabled     ) => ReadResult::OPEN_BUS,
+                (_                   , ReadStatus::ReadOnlyZeros) => ReadResult::full(0),
+                (MemType::WorkRam(..), ReadStatus::Enabled      ) => ReadResult::full(self.work_ram[index]),
+                (MemType::SaveRam(..), ReadStatus::Enabled      ) => ReadResult::full(self.save_ram[index % self.save_ram.size()]),
+                (MemType::Rom(..)    , ReadStatus::Enabled      ) => {
                     let outer_bank_start = (u32::from(self.rom_outer_bank_number) * self.rom_outer_bank_size) & (self.rom.size() - 1);
                     ReadResult::full(self.rom[outer_bank_start | index])
                 }
-                Some((MemType::WorkRam, index)) if read_status == ReadStatus::Enabled =>
-                    ReadResult::full(self.work_ram[index]),
-                Some((MemType::SaveRam, index)) if read_status == ReadStatus::Enabled =>
-                    ReadResult::full(self.save_ram[index % self.save_ram.size()]),
-                None | Some((MemType::Rom | MemType::WorkRam | MemType::SaveRam, _)) =>
-                    ReadResult::OPEN_BUS,
             }
+        } else {
+            ReadResult::OPEN_BUS
         }
     }
 
@@ -121,23 +118,20 @@ impl PrgMemory {
     }
 
     pub fn write(&mut self, address: CpuAddress, value: u8) {
-        let (prg_source_and_index, _read_status, write_status) =
-            self.memory_maps[self.layout_index as usize].index_for_address(address);
-
-        if write_status == WriteStatus::Disabled {
-            return;
-        }
-
+        let prg_source_and_index = self.memory_maps[self.layout_index as usize].index_for_address(address);
+        use MemType::*;
         match prg_source_and_index {
-            None | Some((MemType::Rom, _)) => unreachable!(),
-            Some((MemType::WorkRam, index)) => {
+            Some((WorkRam(_, WriteStatus::Enabled), index)) => {
                 self.work_ram[index] = value;
                 info!(target: "mapperramwrites", "Setting PRG [${address}]=${value:02} (Work RAM @ ${index:X})");
             }
-            Some((MemType::SaveRam, index)) => {
+            Some((SaveRam(_, WriteStatus::Enabled), index)) => {
                 let index = index % self.save_ram.size();
                 self.save_ram[index] = value;
                 info!(target: "mapperramwrites", "Setting PRG [${address}]=${value:02} (Save RAM @ ${index:X})");
+            }
+            Some((Rom {..} | WorkRam(_, WriteStatus::Disabled) | SaveRam(_, WriteStatus::Disabled), _)) | None => {
+                /* Writes to ROM, absent banks, and disabled banks do nothing. */
             }
         }
     }
@@ -163,10 +157,12 @@ impl PrgMemory {
 
     pub fn set_read_status(&mut self, id: ReadStatusRegisterId, read_status: ReadStatus) {
         self.regs.set_read_status(id, read_status);
+        self.update_page_ids();
     }
 
     pub fn set_write_status(&mut self, id: WriteStatusRegisterId, write_status: WriteStatus) {
         self.regs.set_write_status(id, write_status);
+        self.update_page_ids();
     }
 
     pub fn set_rom_ram_mode(&mut self, id: PrgSourceRegisterId, rom_ram_mode: PrgSource) {

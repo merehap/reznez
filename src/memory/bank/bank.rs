@@ -1,5 +1,7 @@
 use crate::mapper::CiramSide;
 use crate::mapper::NameTableSource;
+use crate::mapper::ReadStatus;
+use crate::mapper::WriteStatus;
 use crate::memory::bank::bank::PrgSourceRegisterId::*;
 use crate::memory::bank::bank::ChrSourceRegisterId::*;
 use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisters, PrgBankRegisterId, MetaRegisterId};
@@ -30,18 +32,6 @@ pub enum PrgSource {
     RamOrAbsent,
     WorkRamOrRom,
     SaveRam,
-}
-
-impl PrgSource {
-    fn to_mem_type(self, ram_present: bool) -> Option<MemType> {
-        match self {
-            Self::Rom => Some(MemType::Rom),
-            Self::SaveRam => Some(MemType::SaveRam),
-            Self::RamOrAbsent if !ram_present => None,
-            Self::WorkRamOrRom if !ram_present => Some(MemType::Rom),
-            Self::RamOrAbsent | Self::WorkRamOrRom => Some(MemType::WorkRam),
-        }
-    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -197,13 +187,29 @@ impl PrgBank {
         self.write_status_register_id
     }
 
+    // FIXME: Use explicit rom_read_status() and ram_read_status() providers, then simplify this accordingly.
     pub fn memory_type(self, regs: &PrgBankRegisters) -> Option<MemType> {
         let prg_source = match self.prg_source_provider {
             PrgSourceProvider::Fixed(prg_source) => prg_source,
             PrgSourceProvider::Switchable(reg_id) => Some(regs.rom_ram_mode(reg_id)),
-        };
+        }?;
 
-        prg_source.and_then(|source| source.to_mem_type(regs.cartridge_has_ram()))
+        let read_id = self.read_status_register_id.map_or(ReadStatus::Enabled, |id| regs.read_status(id));
+        let write_id = self.write_status_register_id.map_or(WriteStatus::Enabled, |id| regs.write_status(id));
+
+        // There's currently no way to set make the ROM ReadStatus of a RomRam bank switchable.
+        if self.is_rom_ram() && (prg_source == PrgSource::Rom || !regs.cartridge_has_ram()) {
+            return Some(MemType::Rom(ReadStatus::Enabled));
+        }
+
+        match prg_source {
+            PrgSource::Rom => Some(MemType::Rom(read_id)),
+            PrgSource::SaveRam => Some(MemType::SaveRam(read_id, write_id)),
+            PrgSource::RamOrAbsent if regs.cartridge_has_ram() => Some(MemType::WorkRam(read_id, write_id)),
+            PrgSource::RamOrAbsent => None,
+            PrgSource::WorkRamOrRom if regs.cartridge_has_ram() => Some(MemType::WorkRam(read_id, write_id)),
+            PrgSource::WorkRamOrRom => Some(MemType::Rom(read_id)),
+        }
     }
 }
 
