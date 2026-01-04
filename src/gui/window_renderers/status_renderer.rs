@@ -21,9 +21,9 @@ impl WindowRenderer for StatusRenderer {
             return FlowControl::CONTINUE;
         };
 
-        let clock = nes.memory().ppu_regs.clock();
-        let ppu_regs = &nes.memory().ppu_regs;
-        let mem = nes.memory();
+        let clock = nes.bus().ppu_regs.clock();
+        let ppu_regs = &nes.bus().ppu_regs;
+        let bus = nes.bus();
 
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::Grid::new("my_grid")
@@ -61,7 +61,7 @@ impl WindowRenderer for StatusRenderer {
                     ui.label(format!("{:?}", ppu_regs.base_name_table_quadrant()));
                     ui.end_row();
                     ui.label("Active Name Table");
-                    ui.label(format!("{:?}", nes.memory().ppu_regs.active_name_table_quadrant()));
+                    ui.label(format!("{:?}", nes.bus().ppu_regs.active_name_table_quadrant()));
                     ui.end_row();
                     ui.label("Background");
                     ui.label(format!(
@@ -84,13 +84,13 @@ impl WindowRenderer for StatusRenderer {
                     ui.label(format!("{:?}", nes.resolved_metadata().mapper_number));
                     ui.end_row();
                     ui.label("Name Table Mirroring");
-                    ui.label(format!("{}", mem.name_table_mirroring()));
+                    ui.label(format!("{}", bus.name_table_mirroring()));
                     ui.end_row();
                     ui.label("PRG ROM banks");
-                    ui.label(nes.memory().prg_rom_bank_string());
+                    ui.label(nes.bus().prg_rom_bank_string());
                     ui.end_row();
                     ui.label("CHR ROM banks");
-                    ui.label(nes.memory().chr_rom_bank_string());
+                    ui.label(nes.bus().chr_rom_bank_string());
                 });
         });
 

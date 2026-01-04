@@ -43,39 +43,39 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper082;
 
 impl Mapper for Mapper082 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7EEF => { /* Do nothing. */ }
-            0x7EF0 => mem.set_chr_register(C0, value & 0b1111_1110),
-            0x7EF1 => mem.set_chr_register(C1, value & 0b1111_1110),
-            0x7EF2 => mem.set_chr_register(C2, value),
-            0x7EF3 => mem.set_chr_register(C3, value),
-            0x7EF4 => mem.set_chr_register(C4, value),
-            0x7EF5 => mem.set_chr_register(C5, value),
+            0x7EF0 => bus.set_chr_register(C0, value & 0b1111_1110),
+            0x7EF1 => bus.set_chr_register(C1, value & 0b1111_1110),
+            0x7EF2 => bus.set_chr_register(C2, value),
+            0x7EF3 => bus.set_chr_register(C3, value),
+            0x7EF4 => bus.set_chr_register(C4, value),
+            0x7EF5 => bus.set_chr_register(C5, value),
             0x7EF6 => {
                 let fields = splitbits!(min=u8, value, "......lm");
-                mem.set_chr_layout(fields.l);
-                mem.set_name_table_mirroring(fields.m);
+                bus.set_chr_layout(fields.l);
+                bus.set_name_table_mirroring(fields.m);
             }
             0x7EF7 => {
                 let enabled = value == 0xCA;
-                mem.set_read_status(R0, if enabled { ReadStatus::Enabled } else { ReadStatus::ReadOnlyZeros });
-                mem.set_writes_enabled(W0, enabled);
+                bus.set_read_status(R0, if enabled { ReadStatus::Enabled } else { ReadStatus::ReadOnlyZeros });
+                bus.set_writes_enabled(W0, enabled);
             }
             0x7EF8 => {
                 let enabled = value == 0x69;
-                mem.set_read_status(R1, if enabled { ReadStatus::Enabled } else { ReadStatus::ReadOnlyZeros });
-                mem.set_writes_enabled(W1, enabled);
+                bus.set_read_status(R1, if enabled { ReadStatus::Enabled } else { ReadStatus::ReadOnlyZeros });
+                bus.set_writes_enabled(W1, enabled);
             }
             0x7EF9 => {
                 let enabled = value == 0x84;
-                mem.set_read_status(R2, if enabled { ReadStatus::Enabled } else { ReadStatus::ReadOnlyZeros });
-                mem.set_writes_enabled(W2, enabled);
+                bus.set_read_status(R2, if enabled { ReadStatus::Enabled } else { ReadStatus::ReadOnlyZeros });
+                bus.set_writes_enabled(W2, enabled);
             }
-            0x7EFA => mem.set_prg_register(P0, splitbits_named!(value, "..pppp..")),
-            0x7EFB => mem.set_prg_register(P1, splitbits_named!(value, "..pppp..")),
-            0x7EFC => mem.set_prg_register(P2, splitbits_named!(value, "..pppp..")),
+            0x7EFA => bus.set_prg_register(P0, splitbits_named!(value, "..pppp..")),
+            0x7EFB => bus.set_prg_register(P1, splitbits_named!(value, "..pppp..")),
+            0x7EFC => bus.set_prg_register(P2, splitbits_named!(value, "..pppp..")),
             0x7EFD => { /* IRQ not yet implemented. */ }
             0x7EFE => { /* IRQ not yet implemented. */ }
             0x7EFF => { /* IRQ not yet implemented. */ }

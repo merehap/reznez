@@ -49,34 +49,34 @@ pub struct Mapper083_1 {
 }
 
 impl Mapper for Mapper083_1 {
-    fn peek_register(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
-        self.cony.peek_register(mem, addr)
+    fn peek_register(&self, bus: &Bus, addr: CpuAddress) -> ReadResult {
+        self.cony.peek_register(bus, addr)
     }
 
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         if *addr & 0x8300 == 0x8100 {
             // The rest of the flags for this register are handled in Cony.
             let fields = splitbits!(value, "..r.....");
-            mem.set_reads_enabled(R0, fields.r);
+            bus.set_reads_enabled(R0, fields.r);
         } else if *addr & 0x8313 == 0x8303 {
             // P0, P1, P2, and P4 are handled in Cony.
-            mem.set_prg_register(P3, value);
+            bus.set_prg_register(P3, value);
         } else if matches!(*addr & 0x831F, 0x8310..=0x8317) {
             // Different CHR setup from submappers 0 and 2.
             match *addr & 0x831F {
-                0x8310 => mem.set_chr_register(C0, value),
-                0x8311 => mem.set_chr_register(C1, value),
-                0x8316 => mem.set_chr_register(C2, value),
-                0x8317 => mem.set_chr_register(C3, value),
+                0x8310 => bus.set_chr_register(C0, value),
+                0x8311 => bus.set_chr_register(C1, value),
+                0x8316 => bus.set_chr_register(C2, value),
+                0x8317 => bus.set_chr_register(C3, value),
                 _ => { /* Do nothing. */ }
             }
         }
 
-        self.cony.write_register(mem, addr, value);
+        self.cony.write_register(bus, addr, value);
     }
 
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        self.cony.on_end_of_cpu_cycle(mem);
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
+        self.cony.on_end_of_cpu_cycle(bus);
     }
 
     fn irq_counter_info(&self) -> Option<IrqCounterInfo> {

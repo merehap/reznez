@@ -22,13 +22,13 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper034_1;
 
 impl Mapper for Mapper034_1 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFC => { /* Do nothing. */ }
-            0x7FFD => mem.set_prg_register(P0, value),
-            0x7FFE => mem.set_chr_register(C0, value),
-            0x7FFF => mem.set_chr_register(C1, value),
+            0x7FFD => bus.set_prg_register(P0, value),
+            0x7FFE => bus.set_chr_register(C0, value),
+            0x7FFF => bus.set_chr_register(C1, value),
             0x8000..=0xFFFF => { /* Do nothing. */ }
         }
     }

@@ -29,16 +29,16 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper063_1;
 
 impl Mapper for Mapper063_1 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, _value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, _value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 let (disable_chr_writes, prg_bank, layout, mirroring) = splitbits_named!(*addr, ".... ..dp pppp pplm");
-                mem.set_writes_enabled(W0, !disable_chr_writes);
-                mem.set_prg_register(P0, prg_bank);
-                mem.set_prg_layout(layout as u8);
-                mem.set_name_table_mirroring(mirroring as u8);
+                bus.set_writes_enabled(W0, !disable_chr_writes);
+                bus.set_prg_register(P0, prg_bank);
+                bus.set_prg_layout(layout as u8);
+                bus.set_name_table_mirroring(mirroring as u8);
             }
         }
     }

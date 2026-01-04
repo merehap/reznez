@@ -187,7 +187,7 @@ pub struct Mapper209 {
 }
 
 impl Mapper for Mapper209 {
-    fn peek_register(&self, _mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_register(&self, _bus: &Bus, addr: CpuAddress) -> ReadResult {
         if matches!(*addr, 0x5000 | 0x5400 | 0x5C00) {
             todo!("Jumper Register");
         }
@@ -204,7 +204,7 @@ impl Mapper for Mapper209 {
         }
     }
 
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match (*addr & 0xF803, *addr & 0xF807, *addr & 0xF007) {
             (0x5800, _, _) => self.multiplicand = value,
             (0x5801, _, _) => {
@@ -215,59 +215,59 @@ impl Mapper for Mapper209 {
             (0x5802, _, _) => todo!("Increase accumulator"),
             (0x5803, _, _) => todo!("Reset accumulator"),
             (0x8000, _, _) => {
-                mem.set_prg_register(P0, value & 0b0111_1111);
-                mem.set_prg_register(P4, reverse_lower_seven_bits(value));
+                bus.set_prg_register(P0, value & 0b0111_1111);
+                bus.set_prg_register(P4, reverse_lower_seven_bits(value));
             }
             (0x8001, _, _) => {
-                mem.set_prg_register(P1, value & 0b0111_1111);
-                mem.set_prg_register(P5, reverse_lower_seven_bits(value));
+                bus.set_prg_register(P1, value & 0b0111_1111);
+                bus.set_prg_register(P5, reverse_lower_seven_bits(value));
             }
             (0x8002, _, _) => {
-                mem.set_prg_register(P2, value & 0b0111_1111);
-                mem.set_prg_register(P6, reverse_lower_seven_bits(value));
+                bus.set_prg_register(P2, value & 0b0111_1111);
+                bus.set_prg_register(P6, reverse_lower_seven_bits(value));
             }
             (0x8003, _, _) => {
-                mem.set_prg_register(P3, value & 0b0111_1111);
-                mem.set_prg_register(P7, reverse_lower_seven_bits(value));
-                mem.set_prg_register(P8, (value << 1) | 0b1);
-                mem.set_prg_register(P9, (value << 2) | 0b11);
-                //mem.set_prg_register(P9, reverse_lower_seven_bits(value));
+                bus.set_prg_register(P3, value & 0b0111_1111);
+                bus.set_prg_register(P7, reverse_lower_seven_bits(value));
+                bus.set_prg_register(P8, (value << 1) | 0b1);
+                bus.set_prg_register(P9, (value << 2) | 0b11);
+                //bus.set_prg_register(P9, reverse_lower_seven_bits(value));
             }
-            (_, 0x9000, _) => mem.set_chr_register_low_byte(C0, value),
-            (_, 0x9001, _) => mem.set_chr_register_low_byte(C1, value),
-            (_, 0x9002, _) => mem.set_chr_register_low_byte(C2, value),
-            (_, 0x9003, _) => mem.set_chr_register_low_byte(C3, value),
-            (_, 0x9004, _) => mem.set_chr_register_low_byte(C4, value),
-            (_, 0x9005, _) => mem.set_chr_register_low_byte(C5, value),
-            (_, 0x9006, _) => mem.set_chr_register_low_byte(C6, value),
-            (_, 0x9007, _) => mem.set_chr_register_low_byte(C7, value),
-            (_, 0xA000, _) => mem.set_chr_register_high_byte(C0, value),
-            (_, 0xA001, _) => mem.set_chr_register_high_byte(C1, value),
-            (_, 0xA002, _) => mem.set_chr_register_high_byte(C2, value),
-            (_, 0xA003, _) => mem.set_chr_register_high_byte(C3, value),
-            (_, 0xA004, _) => mem.set_chr_register_high_byte(C4, value),
-            (_, 0xA005, _) => mem.set_chr_register_high_byte(C5, value),
-            (_, 0xA006, _) => mem.set_chr_register_high_byte(C6, value),
-            (_, 0xA007, _) => mem.set_chr_register_high_byte(C7, value),
+            (_, 0x9000, _) => bus.set_chr_register_low_byte(C0, value),
+            (_, 0x9001, _) => bus.set_chr_register_low_byte(C1, value),
+            (_, 0x9002, _) => bus.set_chr_register_low_byte(C2, value),
+            (_, 0x9003, _) => bus.set_chr_register_low_byte(C3, value),
+            (_, 0x9004, _) => bus.set_chr_register_low_byte(C4, value),
+            (_, 0x9005, _) => bus.set_chr_register_low_byte(C5, value),
+            (_, 0x9006, _) => bus.set_chr_register_low_byte(C6, value),
+            (_, 0x9007, _) => bus.set_chr_register_low_byte(C7, value),
+            (_, 0xA000, _) => bus.set_chr_register_high_byte(C0, value),
+            (_, 0xA001, _) => bus.set_chr_register_high_byte(C1, value),
+            (_, 0xA002, _) => bus.set_chr_register_high_byte(C2, value),
+            (_, 0xA003, _) => bus.set_chr_register_high_byte(C3, value),
+            (_, 0xA004, _) => bus.set_chr_register_high_byte(C4, value),
+            (_, 0xA005, _) => bus.set_chr_register_high_byte(C5, value),
+            (_, 0xA006, _) => bus.set_chr_register_high_byte(C6, value),
+            (_, 0xA007, _) => bus.set_chr_register_high_byte(C7, value),
             (_, 0xB000..=0xB003, _) => {
                 let quadrant = NameTableQuadrant::ALL[usize::from(*addr & 0b11)];
                 let ciram_side = [CiramSide::Left, CiramSide::Right][usize::from(value & 1)];
                 // TODO: Determine if extended mode mirroring takes precedence over ROM name tables, or vis-a-versa.
                 if self.extended_mode_mirroring_enabled {
                     self.extended_mirroring.set_quadrant(quadrant, ciram_side);
-                    mem.set_name_table_mirroring_directly(self.extended_mirroring);
+                    bus.set_name_table_mirroring_directly(self.extended_mirroring);
                 } else {
                     let ciram_selection = (value >> 7) == 1;
                     match self.rom_name_table_mode {
                         RomNameTableMode::Disabled => { /* Do nothing. */ }
                         RomNameTableMode::SelectionsEnabled if ciram_selection == self.ciram_selection_target => {
-                            mem.set_name_table_quadrant(quadrant, ciram_side);
+                            bus.set_name_table_quadrant(quadrant, ciram_side);
                         }
                         RomNameTableMode::SelectionsEnabled | RomNameTableMode::GloballyEnabled => {
                             let bank_reg_id = [N0, N1, N2, N3][usize::from(*addr & 0b11)];
                             let name_table_source_reg_id = [NT0, NT1, NT2, NT3][usize::from(*addr & 0b11)];
-                            mem.set_chr_register_low_byte(bank_reg_id, value);
-                            mem.set_chr_source(name_table_source_reg_id, ChrSource::RomOrRam);
+                            bus.set_chr_register_low_byte(bank_reg_id, value);
+                            bus.set_chr_source(name_table_source_reg_id, ChrSource::RomOrRam);
                         }
                     }
                 }
@@ -281,8 +281,8 @@ impl Mapper for Mapper209 {
                         RomNameTableMode::SelectionsEnabled | RomNameTableMode::GloballyEnabled => {
                             let reg_id = [N0, N1, N2, N3][usize::from(*addr & 0b11)];
                             let name_table_source_reg_id = [NT0, NT1, NT2, NT3][usize::from(*addr & 0b11)];
-                            mem.set_chr_register_high_byte(reg_id, value);
-                            mem.set_chr_source(name_table_source_reg_id, ChrSource::RomOrRam);
+                            bus.set_chr_register_high_byte(reg_id, value);
+                            bus.set_chr_source(name_table_source_reg_id, ChrSource::RomOrRam);
                         }
                     }
                 }
@@ -292,7 +292,7 @@ impl Mapper for Mapper209 {
                     self.irq_counter.enable_triggering();
                 } else {
                     self.irq_counter.disable_triggering();
-                    mem.cpu_pinout.acknowledge_mapper_irq();
+                    bus.cpu_pinout.acknowledge_mapper_irq();
                 }
             }
             (_, _, 0xC001) => {
@@ -326,7 +326,7 @@ impl Mapper for Mapper209 {
             }
             (_, _, 0xC002) => {
                 self.irq_counter.disable_triggering();
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
             }
             (_, _, 0xC003) => self.irq_counter.enable_triggering(),
             (_, _, 0xC004) => self.irq_counter.set_prescaler_count(value & self.irq_xor_value),
@@ -335,8 +335,8 @@ impl Mapper for Mapper209 {
             (_, _, 0xC007) => todo!("Unknown mode"),
             (0xD000, _, _) => {
                 let fields = splitbits!(value, "prrccppp");
-                mem.prg_memory.set_layout(fields.p);
-                mem.chr_memory.set_layout(fields.c);
+                bus.prg_memory.set_layout(fields.p);
+                bus.chr_memory.set_layout(fields.c);
 
                 self.rom_name_table_mode = match fields.r {
                     0 | 2 => RomNameTableMode::Disabled,
@@ -346,10 +346,10 @@ impl Mapper for Mapper209 {
                 };
                 // TODO: Restore name tables for the SelectionsEnabled case, too?
                 if self.rom_name_table_mode == RomNameTableMode::GloballyEnabled {
-                    mem.set_chr_source(NT0, ChrSource::RomOrRam);
-                    mem.set_chr_source(NT1, ChrSource::RomOrRam);
-                    mem.set_chr_source(NT2, ChrSource::RomOrRam);
-                    mem.set_chr_source(NT3, ChrSource::RomOrRam);
+                    bus.set_chr_source(NT0, ChrSource::RomOrRam);
+                    bus.set_chr_source(NT1, ChrSource::RomOrRam);
+                    bus.set_chr_source(NT2, ChrSource::RomOrRam);
+                    bus.set_chr_source(NT3, ChrSource::RomOrRam);
                 }
             }
             (0xD001, _, _) => {
@@ -357,15 +357,15 @@ impl Mapper for Mapper209 {
                 (self.extended_mode_mirroring_enabled, mirroring) = splitbits_named!(value, "....e.mm");
 
                 if self.extended_mode_mirroring_enabled {
-                    mem.set_name_table_mirroring_directly(self.extended_mirroring);
+                    bus.set_name_table_mirroring_directly(self.extended_mirroring);
                 } else if self.rom_name_table_mode == RomNameTableMode::Disabled {
-                    mem.set_name_table_mirroring(mirroring);
+                    bus.set_name_table_mirroring(mirroring);
                 }
             }
             (0xD002, _, _) => {
                 let chr_writes_enabled;
                 (self.ciram_selection_target, chr_writes_enabled) = splitbits_named!(value, "nw......");
-                mem.set_writes_enabled(W0, chr_writes_enabled);
+                bus.set_writes_enabled(W0, chr_writes_enabled);
             }
             (0xD003, _, _) => {
                 let fields = splitbits!(value, "m.lccppc");
@@ -373,31 +373,31 @@ impl Mapper for Mapper209 {
                 self.mmc4_chr_bank_switching_mode_enabled = fields.m;
                 // TODO: If enabled, should the old values be restored? Or should it wait until the next PPU read?
                 if !self.mmc4_chr_bank_switching_mode_enabled {
-                    mem.set_chr_meta_register(M0, C0);
-                    mem.set_chr_meta_register(M1, C4);
+                    bus.set_chr_meta_register(M0, C0);
+                    bus.set_chr_meta_register(M1, C4);
                 }
 
                 assert!(!fields.l, "Large CHR outer banks are not supported yet.");
-                mem.set_chr_rom_outer_bank_number(fields.c);
-                mem.set_prg_rom_outer_bank_number(fields.p);
+                bus.set_chr_rom_outer_bank_number(fields.c);
+                bus.set_prg_rom_outer_bank_number(fields.p);
             }
             _ => { /* Do nothing. */ }
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
         if self.irq_ticked_by == IrqTickedBy::CpuCycle && self.irq_counter.tick().triggered {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
     }
 
-    fn on_cpu_write(&mut self, mem: &mut Memory, _addr: CpuAddress, _value: u8) {
+    fn on_cpu_write(&mut self, bus: &mut Bus, _addr: CpuAddress, _value: u8) {
         if self.irq_ticked_by == IrqTickedBy::CpuWrite && self.irq_counter.tick().triggered {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
     }
 
-    fn on_ppu_read(&mut self, mem: &mut Memory, address: PpuAddress, _value: u8) {
+    fn on_ppu_read(&mut self, bus: &mut Bus, address: PpuAddress, _value: u8) {
         let switched_to_right = self.pattern_table_side_detector.set_value_then_detect(address.pattern_table_side());
         let should_tick_from_switch_to_right =
             self.irq_ticked_by == IrqTickedBy::ChangedToRightSidePatternTable && switched_to_right;
@@ -405,7 +405,7 @@ impl Mapper for Mapper209 {
 
         let should_tick = should_tick_from_read || should_tick_from_switch_to_right;
         if should_tick && self.irq_counter.tick().triggered {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
 
         let (meta_id, bank_register_id) = match address.to_u16() {
@@ -417,7 +417,7 @@ impl Mapper for Mapper209 {
             _ => return,
         };
 
-        mem.set_chr_meta_register(meta_id, bank_register_id);
+        bus.set_chr_meta_register(meta_id, bank_register_id);
     }
 
     fn layout(&self) -> Layout {

@@ -47,16 +47,16 @@ pub struct Mapper167 {
 }
 
 impl Mapper for Mapper167 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x9FFF => {
-                mem.set_name_table_mirroring(value & 1);
+                bus.set_name_table_mirroring(value & 1);
                 self.left_prg_top_bit = (value << 1) & 0b0010_0000;
             }
             0xA000..=0xBFFF => {
-                mem.set_prg_layout((value >> 2) & 0b11);
+                bus.set_prg_layout((value >> 2) & 0b11);
                 self.right_prg_top_bit = (value << 1) & 0b0010_0000;
             }
             0xC000..=0xDFFF => self.left_prg_bottom_bits = value & 0b0001_1111,
@@ -66,9 +66,9 @@ impl Mapper for Mapper167 {
         let prg_left_input = self.left_prg_top_bit | self.left_prg_bottom_bits;
         let prg_right_input = self.right_prg_top_bit | self.right_prg_bottom_bits;
         let prg_bank = prg_left_input & prg_right_input;
-        mem.set_prg_register(P0, prg_bank);
-        mem.set_prg_register(P1, prg_bank & !1); // Clear bottom bit
-        mem.set_prg_register(P2, prg_bank | 1); // Set bottom bit
+        bus.set_prg_register(P0, prg_bank);
+        bus.set_prg_register(P1, prg_bank & !1); // Clear bottom bit
+        bus.set_prg_register(P2, prg_bank | 1); // Set bottom bit
     }
 
     fn layout(&self) -> Layout {

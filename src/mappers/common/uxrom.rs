@@ -24,11 +24,11 @@ impl Mapper for Uxrom {
         self.has_bus_conflicts
     }
 
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0xFFFF => mem.set_prg_register(P0, value),
+            0x8000..=0xFFFF => bus.set_prg_register(P0, value),
         }
     }
 

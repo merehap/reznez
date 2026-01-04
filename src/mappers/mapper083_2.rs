@@ -56,28 +56,28 @@ pub struct Mapper083_2 {
 }
 
 impl Mapper for Mapper083_2 {
-    fn peek_register(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
-        self.cony.peek_register(mem, addr)
+    fn peek_register(&self, bus: &Bus, addr: CpuAddress) -> ReadResult {
+        self.cony.peek_register(bus, addr)
     }
 
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         if *addr & 0x8300 == 0x8000 {
             // The p field is only shown here, not used here. It is handled in Cony.
             let fields = splitbits!(value, "wwoopppp");
-            mem.set_prg_register(P3, fields.w);
-            mem.set_prg_rom_outer_bank_number(fields.o);
-            mem.set_chr_rom_outer_bank_number(fields.o);
+            bus.set_prg_register(P3, fields.w);
+            bus.set_prg_rom_outer_bank_number(fields.o);
+            bus.set_chr_rom_outer_bank_number(fields.o);
 
         } else if matches!(*addr & 0x831F, 0x8310..=0x8317) {
             let chr_id = [C0, C1, C2, C3, C4, C5, C6, C7][usize::from(*addr & 0x831F) - 0x8310];
-            mem.set_chr_register(chr_id, value);
+            bus.set_chr_register(chr_id, value);
         }
 
-        self.cony.write_register(mem, addr, value);
+        self.cony.write_register(bus, addr, value);
     }
 
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        self.cony.on_end_of_cpu_cycle(mem);
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
+        self.cony.on_end_of_cpu_cycle(bus);
     }
 
     fn irq_counter_info(&self) -> Option<IrqCounterInfo> {

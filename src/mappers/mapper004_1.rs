@@ -56,35 +56,35 @@ pub struct Mapper004_1 {
 }
 
 impl Mapper for Mapper004_1 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         let is_even_address = addr.is_multiple_of(2);
         match (*addr, is_even_address) {
             (0x0000..=0x401F, _) => unreachable!(),
             (0x4020..=0x7FFF, _) => { /* Do nothing. */ }
             (0x8000..=0x9FFF, true ) => {
                 let fields = splitbits!(value, "cpr..bbb");
-                mem.set_chr_layout(fields.c as u8);
-                mem.set_prg_layout(fields.p as u8);
+                bus.set_chr_layout(fields.c as u8);
+                bus.set_prg_layout(fields.p as u8);
                 self.prg_ram_enabled = fields.r;
                 if !self.prg_ram_enabled {
-                    mem.set_reads_enabled(R0, false);
-                    mem.set_reads_enabled(R1, false);
-                    mem.set_writes_enabled(W0, false);
-                    mem.set_writes_enabled(W1, false);
+                    bus.set_reads_enabled(R0, false);
+                    bus.set_reads_enabled(R1, false);
+                    bus.set_writes_enabled(W0, false);
+                    bus.set_writes_enabled(W1, false);
                 }
 
                 self.selected_register_id = mmc3::BANK_NUMBER_REGISTER_IDS[fields.b as usize];
             }
             (0x8000..=0x9FFF, false) => {
                 match self.selected_register_id {
-                    RegId::Chr(cx) => mem.set_chr_register(cx, value),
-                    RegId::Prg(px) => mem.set_prg_register(px, value),
+                    RegId::Chr(cx) => bus.set_chr_register(cx, value),
+                    RegId::Prg(px) => bus.set_prg_register(px, value),
                 }
             },
             (0xA000..=0xBFFF, true ) => {
                 // Hard-coded 4-screen mirroring cannot be overridden.
-                if mem.name_table_mirroring().is_vertical() || mem.name_table_mirroring().is_horizontal() {
-                    mem.set_name_table_mirroring(value & 1);
+                if bus.name_table_mirroring().is_vertical() || bus.name_table_mirroring().is_horizontal() {
+                    bus.set_name_table_mirroring(value & 1);
                 }
             }
             (0xA000..=0xBFFF, false) => {
@@ -94,25 +94,25 @@ impl Mapper for Mapper004_1 {
                 }
 
                 let (enable_7200, writeable_7200, enable_7000, writeable_7000) = splitbits_named!(value, "ewfx ....");
-                mem.set_writes_enabled(W0, enable_7000 && writeable_7000);
-                mem.set_writes_enabled(W1, enable_7200 && writeable_7200);
+                bus.set_writes_enabled(W0, enable_7000 && writeable_7000);
+                bus.set_writes_enabled(W1, enable_7200 && writeable_7200);
 
-                mem.set_reads_enabled(R0, enable_7000);
-                mem.set_reads_enabled(R1, enable_7200);
+                bus.set_reads_enabled(R0, enable_7000);
+                bus.set_reads_enabled(R1, enable_7200);
 
                 if !enable_7000 && enable_7200  {
                     // Overwrite/ignore the value that R0 was set to above.
-                    mem.set_read_zeroes(R0);
+                    bus.set_read_zeroes(R0);
                 }
 
                 if !enable_7200 && enable_7000 {
                     // Overwrite/ignore the value that R1 was set to above.
-                    mem.set_read_zeroes(R1);
+                    bus.set_read_zeroes(R1);
                 }
             }
             (0xC000..=0xDFFF, true ) => self.irq_state.set_counter_reload_value(value),
             (0xC000..=0xDFFF, false) => self.irq_state.reload_counter(),
-            (0xE000..=0xFFFF, true ) => self.irq_state.disable(mem),
+            (0xE000..=0xFFFF, true ) => self.irq_state.disable(bus),
             (0xE000..=0xFFFF, false) => self.irq_state.enable(),
         }
     }
@@ -121,8 +121,8 @@ impl Mapper for Mapper004_1 {
         self.irq_state.decrement_suppression_cycle_count();
     }
 
-    fn on_ppu_address_change(&mut self, mem: &mut Memory, address: PpuAddress) {
-        self.irq_state.tick_counter(mem, address);
+    fn on_ppu_address_change(&mut self, bus: &mut Bus, address: PpuAddress) {
+        self.irq_state.tick_counter(bus, address);
     }
 
     fn layout(&self) -> Layout {

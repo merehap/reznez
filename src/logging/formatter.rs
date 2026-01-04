@@ -27,7 +27,7 @@ impl Formatter for MinimalFormatter {
         _interrupt_text: String,
     ) -> String {
         // FIXME: This isn't the correct bus value.
-        let peek = |address| nes.memory().cpu_peek(nes.mapper(), AddressBusType::Cpu, address);
+        let peek = |address| nes.bus().cpu_peek(nes.mapper(), AddressBusType::Cpu, address);
 
         let cpu = nes.cpu();
 
@@ -113,8 +113,8 @@ impl Formatter for Nintendulator0980Formatter {
         start_address: CpuAddress,
         _interrupt_text: String,
     ) -> String {
-        let cpu_cycle = nes.memory().cpu_cycle();
-        let peek = |address| nes.memory().cpu_peek(nes.mapper(), AddressBusType::Cpu, address);
+        let cpu_cycle = nes.bus().cpu_cycle();
+        let peek = |address| nes.bus().cpu_peek(nes.mapper(), AddressBusType::Cpu, address);
 
         let cpu = nes.cpu();
 
@@ -213,8 +213,8 @@ impl Formatter for Nintendulator0980Formatter {
             cpu.y_index(),
             cpu.status().to_register_byte() | 0b0010_0000,
             cpu.stack_pointer(),
-            nes.memory().ppu_regs.clock().cycle(),
-            nes.memory().ppu_regs.clock().scanline(),
+            nes.bus().ppu_regs.clock().cycle(),
+            nes.bus().ppu_regs.clock().scanline(),
             cpu_cycle,
         )
     }
@@ -230,8 +230,8 @@ impl Formatter for MesenFormatter {
         start_address: CpuAddress,
         _interrupt_text: String,
     ) -> String {
-        let maybe_peek = |address| nes.memory().cpu_peek_unresolved(nes.mapper(), AddressBusType::Cpu, address);
-        let peek = |address| nes.memory().cpu_peek(nes.mapper(), AddressBusType::Cpu, address);
+        let maybe_peek = |address| nes.bus().cpu_peek_unresolved(nes.mapper(), AddressBusType::Cpu, address);
+        let peek = |address| nes.bus().cpu_peek(nes.mapper(), AddressBusType::Cpu, address);
 
         let cpu = nes.cpu();
 
@@ -326,7 +326,7 @@ impl Formatter for MesenFormatter {
             }
         }
 
-        let mut scanline = nes.memory().ppu_regs.clock().scanline() as i16;
+        let mut scanline = nes.bus().ppu_regs.clock().scanline() as i16;
         if scanline == 261 {
             scanline = -1;
         }
@@ -342,20 +342,20 @@ impl Formatter for MesenFormatter {
             cpu.stack_pointer(),
             cpu.status().to_mesen_string(),
             scanline,
-            nes.memory().ppu_regs.clock().cycle(),
-            nes.memory().cpu_cycle(),
+            nes.bus().ppu_regs.clock().cycle(),
+            nes.bus().cpu_cycle(),
         )
     }
 }
 
 pub fn interrupts(nes: &Nes) -> String {
     let mut interrupts = String::new();
-    interrupts.push(if nes.memory().cpu_pinout.frame_irq_asserted() { 'F' } else {'-'});
-    interrupts.push(if nes.memory().cpu_pinout.dmc_irq_asserted() { 'D' } else {'-'});
-    interrupts.push(if nes.memory().cpu_pinout.mapper_irq_asserted() { 'M' } else {'-'});
+    interrupts.push(if nes.bus().cpu_pinout.frame_irq_asserted() { 'F' } else {'-'});
+    interrupts.push(if nes.bus().cpu_pinout.dmc_irq_asserted() { 'D' } else {'-'});
+    interrupts.push(if nes.bus().cpu_pinout.mapper_irq_asserted() { 'M' } else {'-'});
     interrupts.push(if nes.cpu().nmi_pending() { 'N' } else {'-'});
-    interrupts.push(if nes.memory().oam_dma.dma_pending() { 'O' } else {'-'});
-    interrupts.push(if nes.memory().dmc_dma.state() == DmcDmaState::Idle { '-' } else {'D'});
+    interrupts.push(if nes.bus().oam_dma.dma_pending() { 'O' } else {'-'});
+    interrupts.push(if nes.bus().dmc_dma.state() == DmcDmaState::Idle { '-' } else {'D'});
 
     interrupts
 }

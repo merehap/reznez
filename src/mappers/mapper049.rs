@@ -47,15 +47,15 @@ pub struct Mapper049 {
 }
 
 impl Mapper for Mapper049 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x6000..=0x7FFF => {
-                if mem.prg_memory.bank_registers().write_status(W0) == WriteStatus::Enabled {
+                if bus.prg_memory.bank_registers().write_status(W0) == WriteStatus::Enabled {
                     let fields = splitbits!(value, "oopp ...m");
-                    mem.set_chr_rom_outer_bank_number(fields.o);
-                    mem.set_prg_rom_outer_bank_number(fields.o);
+                    bus.set_chr_rom_outer_bank_number(fields.o);
+                    bus.set_prg_rom_outer_bank_number(fields.o);
                     log::info!("Changing outer banks to {}", fields.o);
-                    mem.set_prg_register(P2, fields.p);
+                    bus.set_prg_register(P2, fields.p);
                     self.mode = MODES[fields.m as usize];
                 }
             }
@@ -65,18 +65,18 @@ impl Mapper for Mapper049 {
                 // Do nothing, PRG bank switching for NROM mode is not delegated to MMC3.
             }
             _ => {
-                self.mmc3.write_register(mem, addr, value);
+                self.mmc3.write_register(bus, addr, value);
             }
         }
 
         // The PRG layout may have changed, either through a 0x6000 mode change, or through the MMC3.
         // Either way, fix it such that the mode setting is respected.
-        let old_prg_layout = mem.prg_memory.layout_index();
+        let old_prg_layout = bus.prg_memory.layout_index();
         let new_prg_layout = match self.mode {
             Mode::BigPrgWindow => old_prg_layout | 0b10,
             Mode::NormalMmc3 => old_prg_layout & 0b01,
         };
-        mem.set_prg_layout(new_prg_layout);
+        bus.set_prg_layout(new_prg_layout);
     }
 
     fn layout(&self) -> Layout {

@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 
 const LAYOUT: Layout = Layout::builder()
     // TODO: Verify if this is the correct max size.
@@ -38,12 +38,12 @@ pub struct Mapper040 {
 }
 
 impl Mapper for Mapper040 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x9FFF => {
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
                 self.irq_counter.disable();
             }
             0xA000..=0xBFFF => {
@@ -52,20 +52,20 @@ impl Mapper for Mapper040 {
             }
             0xC000..=0xDFFF => { /* TODO: NTDEC 2752 outer bank register. Test ROM needed. */ }
             0xE000..=0xFFFF => {
-                mem.set_prg_register(P0, value);
+                bus.set_prg_register(P0, value);
             }
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
         let tick_result = self.irq_counter.tick();
         if tick_result.triggered {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
 
         // TODO: Verify if this is correct.
         if tick_result.wrapped {
-            mem.cpu_pinout.acknowledge_mapper_irq();
+            bus.cpu_pinout.acknowledge_mapper_irq();
         }
     }
 

@@ -50,19 +50,19 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper015;
 
 impl Mapper for Mapper015 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 let prg_layout_index = (*addr & 0b11) as u8;
-                mem.set_prg_layout(prg_layout_index);
+                bus.set_prg_layout(prg_layout_index);
 
                 // FIXME: The wiki says that writes are disabled for layouts 0 and 4, but this breaks Crazy Climber.
                 // (This is broken in Mesen, too.)
                 // TODO: Determine if the wiki is wrong, or if the Crazy Climber ROM is wrong.
                 // let chr_ram_writable = matches!(prg_layout_index, 1 | 2);
-                // mem.set_writes_enabled(W0, chr_ram_writable);
+                // bus.set_writes_enabled(W0, chr_ram_writable);
 
                 let (s, mirroring, p) = splitbits_named!(min=u8, value, "smpppppp");
                 let prg_bank = if prg_layout_index == 2 {
@@ -72,10 +72,10 @@ impl Mapper for Mapper015 {
                     combinebits!("0pppppp0")
                 };
 
-                mem.set_name_table_mirroring(mirroring);
-                mem.set_prg_register(P0, prg_bank);
-                mem.set_prg_register(P1, prg_bank | 0b10);
-                mem.set_prg_register(P2, prg_bank | 0b1110);
+                bus.set_name_table_mirroring(mirroring);
+                bus.set_prg_register(P0, prg_bank);
+                bus.set_prg_register(P1, prg_bank | 0b10);
+                bus.set_prg_register(P2, prg_bank | 0b1110);
             }
         }
     }

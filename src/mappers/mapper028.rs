@@ -30,17 +30,17 @@ pub struct Mapper028 {
 
 impl Mapper for Mapper028 {
     // TODO: Probably replace this with a more standardized way of handling variably-sized outer banks.
-    fn peek_prg(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_prg(&self, bus: &Bus, addr: CpuAddress) -> ReadResult {
         if *addr < 0x8000 {
             return ReadResult::OPEN_BUS;
         }
 
         let bank_side = if *addr < 0xC000 { BankSide::Low } else { BankSide::High };
         let bank_mask = Self::bank_mask(self.action53_layout, self.prg_outer_bank_size, bank_side);
-        ReadResult::full(mem.prg_memory.peek_raw_rom(self.create_memory_index(bank_mask, addr)))
+        ReadResult::full(bus.prg_memory.peek_raw_rom(self.create_memory_index(bank_mask, addr)))
     }
 
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x4FFF => { /* Do nothing. */ }
@@ -58,16 +58,16 @@ impl Mapper for Mapper028 {
                 match self.selected_register {
                     Register::ChrBank => {
                         let (mirroring, chr_bank) = splitbits_named!(min=u8, value, "...m..cc");
-                        mem.set_chr_register(C0, chr_bank);
-                        if mem.name_table_mirroring().is_regular_one_screen() {
-                            mem.set_name_table_mirroring(mirroring);
+                        bus.set_chr_register(C0, chr_bank);
+                        if bus.name_table_mirroring().is_regular_one_screen() {
+                            bus.set_name_table_mirroring(mirroring);
                         }
                     }
                     Register::InnerPrgBank => {
                         let (mirroring, inner_bank_bits) = splitbits_named!(min=u8, value, "...mpppp");
                         self.inner_bank_bits = inner_bank_bits;
-                        if mem.name_table_mirroring().is_regular_one_screen() {
-                            mem.set_name_table_mirroring(mirroring);
+                        if bus.name_table_mirroring().is_regular_one_screen() {
+                            bus.set_name_table_mirroring(mirroring);
                         }
                     }
                     Register::Mode => {
@@ -87,7 +87,7 @@ impl Mapper for Mapper028 {
                             _ => unreachable!(),
                         };
 
-                        mem.set_name_table_mirroring(mirroring);
+                        bus.set_name_table_mirroring(mirroring);
                     }
                     Register::OuterPrgBank => {
                         self.outer_bank_bits = value;

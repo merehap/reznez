@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(80 * KIBIBYTE)
@@ -37,23 +37,23 @@ pub struct Mapper043 {
 }
 
 impl Mapper for Mapper043 {
-    fn peek_register(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_register(&self, bus: &Bus, addr: CpuAddress) -> ReadResult {
         match *addr {
             // Manually map PRG ROM bank #8 to this address range.
-            0x5000..=0x5BFF => ReadResult::full(mem.prg_memory.peek_raw_rom(64 * KIBIBYTE + addr.to_u32() - 0x5000)),
+            0x5000..=0x5BFF => ReadResult::full(bus.prg_memory.peek_raw_rom(64 * KIBIBYTE + addr.to_u32() - 0x5000)),
             // A mirror of the same 2KiB of PRG ROM above.
-            0x5C00..=0x5FFF => ReadResult::full(mem.prg_memory.peek_raw_rom(64 * KIBIBYTE + addr.to_u32() - 0x5C00)),
+            0x5C00..=0x5FFF => ReadResult::full(bus.prg_memory.peek_raw_rom(64 * KIBIBYTE + addr.to_u32() - 0x5C00)),
             _ => ReadResult::OPEN_BUS,
         }
     }
 
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         const INDEXES: [u8; 8] = [4, 3, 4, 4, 4, 7, 5, 6];
         match *addr & 0x71FF {
             0x4022 => {
                 // The bank index is scrambled for some reason.
                 let index = INDEXES[usize::from(value & 0b111)];
-                mem.set_prg_register(P0, index);
+                bus.set_prg_register(P0, index);
             }
             0x4122 | 0x8122 => {
                 if value & 1 == 1 {
@@ -62,17 +62,17 @@ impl Mapper for Mapper043 {
                     self.irq_counter.disable();
                     // It's not clear that this is correct since the counter already wraps. A ROM test of the hardware is needed.
                     self.irq_counter.force_reload();
-                    mem.cpu_pinout.acknowledge_mapper_irq();
+                    bus.cpu_pinout.acknowledge_mapper_irq();
                 }
             }
             _ => { /* Do nothing. */ }
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
         let tick_result = self.irq_counter.tick();
         if tick_result.triggered {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
 
         if tick_result.wrapped {

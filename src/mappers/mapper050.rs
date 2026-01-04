@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
@@ -35,7 +35,7 @@ pub struct Mapper050 {
 }
 
 impl Mapper for Mapper050 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr & 0x4120 {
             0x4020 => {
                 //println!("Setting PRG bank. Value: {value:b} . Address: 0x{cpu_address:04X}");
@@ -45,13 +45,13 @@ impl Mapper for Mapper050 {
                 let prg_bank2 = (value & 0x08) | ((value & 0x01) << 2) | ((value & 0x06) >> 1);
                 assert_eq!(prg_bank, prg_bank2);
 
-                mem.set_prg_register(P0, prg_bank);
+                bus.set_prg_register(P0, prg_bank);
             }
             0x4120 => {
                 if value & 1 == 1 {
                     self.irq_counter.enable();
                 } else {
-                    mem.cpu_pinout.acknowledge_mapper_irq();
+                    bus.cpu_pinout.acknowledge_mapper_irq();
                     self.irq_counter.disable();
                     // TODO: Verify if this happens immediately or if it's delayed until the next tick.
                     self.irq_counter.force_reload();
@@ -61,15 +61,15 @@ impl Mapper for Mapper050 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
         let tick_result = self.irq_counter.tick();
         if tick_result.triggered {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
 
         // TODO: Verify if this is correct.
         if tick_result.wrapped {
-            mem.cpu_pinout.acknowledge_mapper_irq();
+            bus.cpu_pinout.acknowledge_mapper_irq();
         }
     }
 

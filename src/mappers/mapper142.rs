@@ -28,7 +28,7 @@ pub struct Mapper142 {
 }
 
 impl Mapper for Mapper142 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
@@ -37,7 +37,7 @@ impl Mapper for Mapper142 {
             0xA000..=0xAFFF => self.irq_counter.set_reload_value_second_highest_nybble(u4::new(value & 0xF)),
             0xB000..=0xBFFF => self.irq_counter.set_reload_value_highest_nybble(u4::new(value & 0xF)),
             0xC000..=0xCFFF => {
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
 
                 let enabled = value != 0;
                 self.irq_counter.set_enabled(enabled);
@@ -46,7 +46,7 @@ impl Mapper for Mapper142 {
                 }
             }
             0xD000..=0xDFFF => {
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
             }
             0xE000..=0xEFFF => {
                 match value & 0b111 {
@@ -61,15 +61,15 @@ impl Mapper for Mapper142 {
             }
             0xF000..=0xFFFF => {
                 if let Some(selected_prg_bank) = self.selected_prg_bank {
-                    mem.set_prg_register(selected_prg_bank, value & 0b1111);
+                    bus.set_prg_register(selected_prg_bank, value & 0b1111);
                 }
             }
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
         if self.irq_counter.tick().triggered {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
     }
 

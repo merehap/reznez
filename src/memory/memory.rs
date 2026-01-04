@@ -27,7 +27,7 @@ pub const RESET_VECTOR_HIGH: CpuAddress  = CpuAddress::new(0xFFFD);
 pub const IRQ_VECTOR_LOW: CpuAddress     = CpuAddress::new(0xFFFE);
 pub const IRQ_VECTOR_HIGH: CpuAddress    = CpuAddress::new(0xFFFF);
 
-pub struct Memory {
+pub struct Bus {
     pub cpu_internal_ram: CpuInternalRam,
     pub ciram: Ciram,
     pub palette_ram: PaletteRam,
@@ -53,7 +53,7 @@ pub struct Memory {
     pub dip_switch: u8,
 }
 
-impl Memory {
+impl Bus {
     pub fn new(
         prg_memory: PrgMemory,
         chr_memory: ChrMemory,
@@ -61,8 +61,8 @@ impl Memory {
         ppu_clock: Clock,
         dip_switch: u8,
         system_palette: SystemPalette,
-    ) -> Memory {
-        Memory {
+    ) -> Bus {
+        Bus {
             cpu_internal_ram: CpuInternalRam::new(),
             ciram: Ciram::new(),
             palette_ram: PaletteRam::new(),

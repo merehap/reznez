@@ -9,7 +9,7 @@ use rodio::{OutputStream, Sink};
 use rodio::source::Source;
 
 use crate::apu::apu_registers::{ApuRegisters, CycleParity};
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 
 const SAMPLE_RATE: u32 = 44100;
 const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;
@@ -47,23 +47,23 @@ impl Apu {
         *self.muted.lock().unwrap() = true;
     }
 
-    pub fn step(&mut self, mem: &mut Memory) {
-        let cycle = mem.apu_regs.clock().cycle();
-        let parity = mem.apu_regs.clock().cycle_parity();
+    pub fn step(&mut self, bus: &mut Bus) {
+        let cycle = bus.apu_regs.clock().cycle();
+        let parity = bus.apu_regs.clock().cycle_parity();
         info!(target: "apucycles", "APU cycle: {cycle} ({parity})");
 
-        mem.apu_regs.tick(&mut mem.cpu_pinout, &mut mem.dmc_dma, parity);
-        if parity == CycleParity::Put && mem.apu_regs.clock().raw_cycle().is_multiple_of(20) {
+        bus.apu_regs.tick(&mut bus.cpu_pinout, &mut bus.dmc_dma, parity);
+        if parity == CycleParity::Put && bus.apu_regs.clock().raw_cycle().is_multiple_of(20) {
             let mut queue = self.pulse_queue.lock().unwrap();
-            let regs = &mem.apu_regs;
+            let regs = &bus.apu_regs;
             if log_enabled!(target: "apusamples", Level::Info) {
                 fn disp(volume: u8) -> String {
                     if volume == 0 { String::new() } else { volume.to_string() }
                 }
 
                 info!("{cycle:05} ({:08}), PPU Frame: {:05}, P1: {:>2}, P2: {:>2}, T: {:>2}, N: {:>2}, D: {:>2}",
-                    mem.apu_regs.clock().raw_cycle(),
-                    mem.ppu_regs.clock().frame(),
+                    bus.apu_regs.clock().raw_cycle(),
+                    bus.ppu_regs.clock().frame(),
                     disp(regs.pulse_1.sample_volume().into()),
                     disp(regs.pulse_2.sample_volume().into()),
                     disp(regs.triangle.sample_volume()),

@@ -1,7 +1,7 @@
 use crate::memory::bank::bank::{PrgSource, PrgSourceRegisterId};
 use crate::mapper::*;
 use crate::mappers::mmc5::frame_state::FrameState;
-use crate::memory::memory::{Memory, SmallPage};
+use crate::memory::memory::{Bus, SmallPage};
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::ppu::constants::ATTRIBUTE_START_INDEX;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
@@ -135,45 +135,45 @@ pub struct Mapper005 {
 }
 
 impl Mapper for Mapper005 {
-    fn init_mapper_params(&self, mem: &mut Memory) {
-        mem.mapper_custom_pages.push(SmallPage::new("ExtRAM".to_owned(), ReadStatus::Enabled, WriteStatus::Enabled));
-        mem.mapper_custom_pages.push(SmallPage::new("FillModeTile".to_owned(), ReadStatus::Enabled, WriteStatus::Disabled));
+    fn init_mapper_params(&self, bus: &mut Bus) {
+        bus.mapper_custom_pages.push(SmallPage::new("ExtRAM".to_owned(), ReadStatus::Enabled, WriteStatus::Enabled));
+        bus.mapper_custom_pages.push(SmallPage::new("FillModeTile".to_owned(), ReadStatus::Enabled, WriteStatus::Disabled));
     }
 
-    fn ppu_peek(&self, mem: &Memory, address: PpuAddress) -> PpuPeek {
+    fn ppu_peek(&self, bus: &Bus, address: PpuAddress) -> PpuPeek {
         let should_substitute = self.substitutions_enabled
             && self.extended_ram_mode == ExtendedRamMode::ExtendedAttributes
             && !self.frame_state.sprite_fetching();
 
         match address.to_u16() {
             0x0000..=0x1FFF if should_substitute => {
-                let lower_chr_bank_bits = Self::peek_ext_rom(mem, self.name_table_index) & 0b0011_1111;
+                let lower_chr_bank_bits = Self::peek_ext_rom(bus, self.name_table_index) & 0b0011_1111;
                 let pattern_bank = (self.upper_chr_bank_bits << 6) | lower_chr_bank_bits;
                 let raw_chr_index = 4 * KIBIBYTE * u32::from(pattern_bank) * KIBIBYTE + u32::from(address.to_u16() % 0x1000);
-                mem.chr_memory().peek_raw(raw_chr_index)
+                bus.chr_memory().peek_raw(raw_chr_index)
             }
-            0x0000..=0x1FFF => mem.chr_memory().peek(&mem.ciram, &mem.mapper_custom_pages, address),
-            0x2000..=0x3EFF => mem.peek_name_table_byte(address),
+            0x0000..=0x1FFF => bus.chr_memory().peek(&bus.ciram, &bus.mapper_custom_pages, address),
+            0x2000..=0x3EFF => bus.peek_name_table_byte(address),
             0x3F00..=0x3FFF if should_substitute => {
-                let palette = Self::peek_ext_rom(mem, self.name_table_index) >> 6;
+                let palette = Self::peek_ext_rom(bus, self.name_table_index) >> 6;
                 // The same palette is used for all 4 corners.
                 let palette_byte = palette << 6 | palette << 4 | palette << 2 | palette;
                 PpuPeek::new(palette_byte, EXT_RAM_PEEK_SOURCE)
             }
-            0x3F00..=0x3FFF => mem.palette_ram.peek(address.to_palette_ram_index()),
+            0x3F00..=0x3FFF => bus.palette_ram.peek(address.to_palette_ram_index()),
             0x4000..=0xFFFF => unreachable!(),
         }
     }
 
-    fn on_cpu_read(&mut self, mem: &mut Memory, addr: CpuAddress, _value: u8) {
+    fn on_cpu_read(&mut self, bus: &mut Bus, addr: CpuAddress, _value: u8) {
         match *addr {
             0x5204 => {
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
                 self.frame_state.acknowledge_irq();
             }
             // NMI vector low and high
             0xFFFA | 0xFFFB => {
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
                 self.frame_state.acknowledge_irq();
                 self.frame_state.force_end_frame();
             }
@@ -181,12 +181,12 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_cpu_write(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn on_cpu_write(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             // PPU Ctrl
             0x2000 => {
                 self.sprite_height = Ctrl::from_u8(value).sprite_height();
-                self.update_chr_layout(mem);
+                self.update_chr_layout(bus);
             }
             // PPU Mask
             0x2001 => {
@@ -196,14 +196,14 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_ppu_read(&mut self, mem: &mut Memory, addr: PpuAddress, _value: u8) {
+    fn on_ppu_read(&mut self, bus: &mut Bus, addr: PpuAddress, _value: u8) {
         self.frame_state.sync_frame_status(addr);
 
         // Syncing the frame status may have switched in or out of special background banking mode.
-        self.update_chr_layout(mem);
+        self.update_chr_layout(bus);
 
         if self.frame_state.irq_pending() {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
 
         if addr.is_in_name_table_proper() {
@@ -211,70 +211,70 @@ impl Mapper for Mapper005 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, _mem: &mut Memory) {
+    fn on_end_of_cpu_cycle(&mut self, _bus: &mut Bus) {
         self.frame_state.maybe_end_frame();
     }
 
-    fn peek_register(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_register(&self, bus: &Bus, addr: CpuAddress) -> ReadResult {
         match *addr {
             0x5204 => ReadResult::full(self.frame_state.to_status_byte()),
             0x5205 => ReadResult::full((u16::from(self.multiplicand) * u16::from(self.multiplier)) as u8),
             0x5206 => ReadResult::full(((u16::from(self.multiplicand) * u16::from(self.multiplier)) >> 8) as u8),
-            0x5C00..=0x5FFF => ReadResult::full(Self::peek_ext_rom(mem, *addr - 0x5C00)),
+            0x5C00..=0x5FFF => ReadResult::full(Self::peek_ext_rom(bus, *addr - 0x5C00)),
             _ => ReadResult::OPEN_BUS,
         }
     }
 
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x4FFF => { /* Do nothing. */ }
             0x5000..=0x5015 => { /* TODO: MMC5 audio */ }
             0x5016..=0x50FF => { /* Do nothing. */ }
-            0x5100 => mem.set_prg_layout(value & 0b11),
-            0x5101 => self.set_chr_layout(mem, value),
+            0x5100 => bus.set_prg_layout(value & 0b11),
+            0x5101 => self.set_chr_layout(bus, value),
             0x5102 => {
                 self.ram_enabled_1 = value & 0b11 == 0b10;
-                mem.set_writes_enabled(W1, self.ram_enabled_1 && self.ram_enabled_2);
+                bus.set_writes_enabled(W1, self.ram_enabled_1 && self.ram_enabled_2);
             }
             0x5103 => {
                 self.ram_enabled_2 = value & 0b11 == 0b01;
-                mem.set_writes_enabled(W1, self.ram_enabled_1 && self.ram_enabled_2);
+                bus.set_writes_enabled(W1, self.ram_enabled_1 && self.ram_enabled_2);
             }
-            0x5104 => self.set_extended_ram_mode(mem, value),
-            0x5105 => Self::set_name_table_mirroring(mem, value),
-            0x5106 => Self::set_fill_mode_name_table_byte(mem, value),
-            0x5107 => Self::set_fill_mode_attribute_table_byte(mem, value),
+            0x5104 => self.set_extended_ram_mode(bus, value),
+            0x5105 => Self::set_name_table_mirroring(bus, value),
+            0x5106 => Self::set_fill_mode_name_table_byte(bus, value),
+            0x5107 => Self::set_fill_mode_attribute_table_byte(bus, value),
             0x5108..=0x5112 => { /* Do nothing. */ }
-            0x5113 => Self::set_prg_bank_register(mem, P0, None, value),
-            0x5114 => Self::set_prg_bank_register(mem, P1, Some(PS0), value),
-            0x5115 => Self::set_prg_bank_register(mem, P2, Some(PS1), value),
-            0x5116 => Self::set_prg_bank_register(mem, P3, Some(PS2), value),
-            0x5117 => Self::set_prg_bank_register(mem, P4, None, value),
+            0x5113 => Self::set_prg_bank_register(bus, P0, None, value),
+            0x5114 => Self::set_prg_bank_register(bus, P1, Some(PS0), value),
+            0x5115 => Self::set_prg_bank_register(bus, P2, Some(PS1), value),
+            0x5116 => Self::set_prg_bank_register(bus, P3, Some(PS2), value),
+            0x5117 => Self::set_prg_bank_register(bus, P4, None, value),
             0x5118..=0x511F => { /* Do nothing. */ }
-            0x5120 => self.set_chr_bank_register(mem, C0, value),
-            0x5121 => self.set_chr_bank_register(mem, C1, value),
-            0x5122 => self.set_chr_bank_register(mem, C2, value),
-            0x5123 => self.set_chr_bank_register(mem, C3, value),
-            0x5124 => self.set_chr_bank_register(mem, C4, value),
-            0x5125 => self.set_chr_bank_register(mem, C5, value),
-            0x5126 => self.set_chr_bank_register(mem, C6, value),
-            0x5127 => self.set_chr_bank_register(mem, C7, value),
+            0x5120 => self.set_chr_bank_register(bus, C0, value),
+            0x5121 => self.set_chr_bank_register(bus, C1, value),
+            0x5122 => self.set_chr_bank_register(bus, C2, value),
+            0x5123 => self.set_chr_bank_register(bus, C3, value),
+            0x5124 => self.set_chr_bank_register(bus, C4, value),
+            0x5125 => self.set_chr_bank_register(bus, C5, value),
+            0x5126 => self.set_chr_bank_register(bus, C6, value),
+            0x5127 => self.set_chr_bank_register(bus, C7, value),
             0x5128 => {
                 self.tall_sprite_background_enabled = true;
-                self.set_chr_bank_register(mem, C8, value);
+                self.set_chr_bank_register(bus, C8, value);
             }
             0x5129 => {
                 self.tall_sprite_background_enabled = true;
-                self.set_chr_bank_register(mem, C9, value);
+                self.set_chr_bank_register(bus, C9, value);
             }
             0x512A => {
                 self.tall_sprite_background_enabled = true;
-                self.set_chr_bank_register(mem, C10, value);
+                self.set_chr_bank_register(bus, C10, value);
             }
             0x512B => {
                 self.tall_sprite_background_enabled = true;
-                self.set_chr_bank_register(mem, C11, value);
+                self.set_chr_bank_register(bus, C11, value);
             }
             0x512C..=0x512F => { /* Do nothing. */ }
             0x5130 => self.upper_chr_bank_bits = value & 0b11,
@@ -283,12 +283,12 @@ impl Mapper for Mapper005 {
             0x5201 => todo!("Vertical split scroll"),
             0x5202 => todo!("Vertical split bank"),
             0x5203 => self.frame_state.set_target_irq_scanline(value),
-            0x5204 => self.enable_irq(mem, value),
+            0x5204 => self.enable_irq(bus, value),
             0x5205 => self.multiplicand = value,
             0x5206 => self.multiplier = value,
             0x5207..=0x5BFF => { /* Do nothing. */ }
             // TODO: ReadWriteStatus
-            0x5C00..=0x5FFF => Self::write_ext_rom(mem, *addr - 0x5C00, value),
+            0x5C00..=0x5FFF => Self::write_ext_rom(bus, *addr - 0x5C00, value),
             0x6000..=0xFFFF => { /* Do nothing. */ }
         }
     }
@@ -326,13 +326,13 @@ impl Mapper005 {
     }
 
     // Write 0x5101
-    fn set_chr_layout(&mut self, mem: &mut Memory, value: u8) {
+    fn set_chr_layout(&mut self, bus: &mut Bus, value: u8) {
         self.chr_window_mode = CHR_WINDOW_MODES[usize::from(value & 0b11)];
-        self.update_chr_layout(mem);
+        self.update_chr_layout(bus);
     }
 
     // Write 0x5104
-    fn set_extended_ram_mode(&mut self, mem: &mut Memory, value: u8) {
+    fn set_extended_ram_mode(&mut self, bus: &mut Bus, value: u8) {
         self.extended_ram_mode = EXTENDED_RAM_MODES[usize::from(value & 0b11)];
         // FIXME: WriteOnly and ExtendedAttributes are only write-only during rendering.
         // They are supposed to cause corruption during VBlank.
@@ -341,12 +341,12 @@ impl Mapper005 {
             ExtendedRamMode::WriteOnly | ExtendedRamMode::ExtendedAttributes => (ReadStatus::ReadOnlyZeros, WriteStatus::Enabled),
             ExtendedRamMode::ReadWrite => (ReadStatus::Enabled, WriteStatus::Enabled),
         };
-        mem.mapper_custom_pages[EXT_RAM_PAGE_INDEX].set_read_status(read_status);
-        mem.mapper_custom_pages[EXT_RAM_PAGE_INDEX].set_write_status(write_status);
+        bus.mapper_custom_pages[EXT_RAM_PAGE_INDEX].set_read_status(read_status);
+        bus.mapper_custom_pages[EXT_RAM_PAGE_INDEX].set_write_status(write_status);
     }
 
     // Write 0x5105
-    fn set_name_table_mirroring(mem: &mut Memory, value: u8) {
+    fn set_name_table_mirroring(bus: &mut Bus, value: u8) {
         fn source(raw: u8) -> NameTableSource {
             match raw {
                 0 => NameTableSource::Ciram(CiramSide::Left),
@@ -358,56 +358,56 @@ impl Mapper005 {
         }
 
         let name_tables = splitbits!(value, "ddccbbaa");
-        mem.set_name_table_quadrant_to_source(NameTableQuadrant::TopLeft, source(name_tables.a));
-        mem.set_name_table_quadrant_to_source(NameTableQuadrant::TopRight, source(name_tables.b));
-        mem.set_name_table_quadrant_to_source(NameTableQuadrant::BottomLeft, source(name_tables.c));
-        mem.set_name_table_quadrant_to_source(NameTableQuadrant::BottomRight, source(name_tables.d));
+        bus.set_name_table_quadrant_to_source(NameTableQuadrant::TopLeft, source(name_tables.a));
+        bus.set_name_table_quadrant_to_source(NameTableQuadrant::TopRight, source(name_tables.b));
+        bus.set_name_table_quadrant_to_source(NameTableQuadrant::BottomLeft, source(name_tables.c));
+        bus.set_name_table_quadrant_to_source(NameTableQuadrant::BottomRight, source(name_tables.d));
     }
 
     // Write 0x5106
-    fn set_fill_mode_name_table_byte(mem: &mut Memory, value: u8) {
+    fn set_fill_mode_name_table_byte(bus: &mut Bus, value: u8) {
         // The fill mode name table byte is not writeable except for right now.
-        mem.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Enabled);
+        bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Enabled);
         // Set the fill-mode name table bytes but not the attribute table bytes.
         for i in 0..ATTRIBUTE_START_INDEX as u16 {
-            mem.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].write(i, value);
+            bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].write(i, value);
         }
 
-        mem.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Disabled);
+        bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Disabled);
     }
 
     // Write 0x5107
-    fn set_fill_mode_attribute_table_byte(mem: &mut Memory, value: u8) {
+    fn set_fill_mode_attribute_table_byte(bus: &mut Bus, value: u8) {
         // The fill mode attribute table byte is not writeable except for right now.
-        mem.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Enabled);
+        bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Enabled);
 
         let attribute = value & 0b11;
         let attribute_byte = (attribute << 6) | (attribute << 4) | (attribute << 2) | attribute;
         for i in ATTRIBUTE_START_INDEX as u16 .. 0x400 {
-            mem.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].write(i, attribute_byte);
+            bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].write(i, attribute_byte);
         }
 
-        mem.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Disabled);
+        bus.mapper_custom_pages[FILL_MODE_TILE_PAGE_INDEX].set_write_status(WriteStatus::Disabled);
     }
 
     // Write 0x5113 through 0x5117
     fn set_prg_bank_register(
-        mem: &mut Memory,
+        bus: &mut Bus,
         id: PrgBankRegisterId,
         prg_source_reg_id: Option<PrgSourceRegisterId>,
         value: u8,
     ) {
         let fields = splitbits!(value, "mppppppp");
-        mem.set_prg_register(id, fields.p);
+        bus.set_prg_register(id, fields.p);
         if let Some(prg_mode_reg_id) = prg_source_reg_id {
             let rom_ram_mode = [PrgSource::WorkRamOrRom, PrgSource::Rom][fields.m as usize];
-            mem.set_rom_ram_mode(prg_mode_reg_id, rom_ram_mode);
+            bus.set_rom_ram_mode(prg_mode_reg_id, rom_ram_mode);
         }
     }
 
-    fn set_chr_bank_register(&mut self, mem: &mut Memory, id: ChrBankRegisterId, value: u8) {
-        mem.set_chr_register(id, value);
-        self.update_chr_layout(mem);
+    fn set_chr_bank_register(&mut self, bus: &mut Bus, id: ChrBankRegisterId, value: u8) {
+        bus.set_chr_register(id, value);
+        self.update_chr_layout(bus);
     }
 
     // Write 0x5200
@@ -420,17 +420,17 @@ impl Mapper005 {
     }
 
     // Write 0x5204
-    fn enable_irq(&mut self, mem: &mut Memory, value: u8) {
+    fn enable_irq(&mut self, bus: &mut Bus, value: u8) {
         let irq_enabled = value >> 7 == 1;
         self.frame_state.set_irq_enabled(irq_enabled);
         if !irq_enabled {
-            mem.cpu_pinout.acknowledge_mapper_irq();
+            bus.cpu_pinout.acknowledge_mapper_irq();
         } else if self.frame_state.irq_pending() {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
     }
 
-    fn update_chr_layout(&mut self, mem: &mut Memory) {
+    fn update_chr_layout(&mut self, bus: &mut Bus) {
         if self.sprite_height == SpriteHeight::Normal {
             self.tall_sprite_background_enabled = false;
         }
@@ -445,15 +445,15 @@ impl Mapper005 {
             layout_index |= 0b100;
         }
 
-        mem.set_chr_layout(layout_index);
+        bus.set_chr_layout(layout_index);
     }
 
-    fn peek_ext_rom(mem: &Memory, index: u16) -> u8 {
-        mem.mapper_custom_pages[EXT_RAM_PAGE_INDEX].peek(index).resolve(0)
+    fn peek_ext_rom(bus: &Bus, index: u16) -> u8 {
+        bus.mapper_custom_pages[EXT_RAM_PAGE_INDEX].peek(index).resolve(0)
     }
 
-    fn write_ext_rom(mem: &mut Memory, index: u16, value: u8) {
-        mem.mapper_custom_pages[EXT_RAM_PAGE_INDEX].write(index, value);
+    fn write_ext_rom(bus: &mut Bus, index: u16, value: u8) {
+        bus.mapper_custom_pages[EXT_RAM_PAGE_INDEX].write(index, value);
     }
 }
 

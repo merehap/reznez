@@ -17,14 +17,14 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper087;
 
 impl Mapper for Mapper087 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         // Swap the low two bits, ignore the rest.
         let bank_number = splitbits_then_combine!(value, "......lh",
                                                         "000000hl");
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
-            0x6000..=0x7FFF => mem.set_chr_register(C0, bank_number),
+            0x6000..=0x7FFF => bus.set_chr_register(C0, bank_number),
             0x8000..=0xFFFF => { /* Do nothing. */ }
         }
     }

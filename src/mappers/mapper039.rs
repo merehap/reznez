@@ -7,8 +7,8 @@ pub struct Mapper039 {
 }
 
 impl Mapper for Mapper039 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
-        self.mapper241.write_register(mem, addr, value);
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
+        self.mapper241.write_register(bus, addr, value);
     }
 
     fn layout(&self) -> Layout {

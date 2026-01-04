@@ -2,7 +2,7 @@ use log::{info, log_enabled};
 use log::Level::Info;
 
 use crate::mapper::Mapper;
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::signal_level::SignalLevel;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
@@ -43,7 +43,7 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    pub fn new(mem: &Memory) -> Ppu {
+    pub fn new(bus: &Bus) -> Ppu {
         Ppu {
             oam_registers: OamRegisters::new(),
             oam_register_index: 0,
@@ -60,18 +60,18 @@ impl Ppu {
             frame_actions: NTSC_FRAME_ACTIONS.clone(),
 
             pattern_source_frame: Frame::new(),
-            bank_color_assigner: BankColorAssigner::new(mem),
+            bank_color_assigner: BankColorAssigner::new(bus),
         }
     }
 
-    pub fn step(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, frame: &mut Frame) {
-        let tick_result = mem.ppu_regs.tick();
+    pub fn step(&mut self, mapper: &mut dyn Mapper, bus: &mut Bus, frame: &mut Frame) {
+        let tick_result = bus.ppu_regs.tick();
         if tick_result.rendering_toggled == Some(Toggle::Disable) {
             // "... when rendering is disabled, the value on the PPU address bus is the current value of the v register."
-            mem.set_ppu_address_bus(mapper, mem.ppu_regs.current_address);
+            bus.set_ppu_address_bus(mapper, bus.ppu_regs.current_address);
         }
 
-        let clock = *mem.ppu_regs.clock();
+        let clock = *bus.ppu_regs.clock();
         if log_enabled!(target: "ppusteps", Info) {
             info!(" {clock}\t{}", self.frame_actions.format_current_cycle_actions(&clock));
         }
@@ -80,78 +80,78 @@ impl Ppu {
         let len = self.frame_actions.current_cycle_actions(&clock).len();
         for i in 0..len {
             let cycle_action = self.frame_actions.current_cycle_actions(&clock)[i];
-            self.execute_cycle_action(mapper, mem, frame, cycle_action);
+            self.execute_cycle_action(mapper, bus,frame, cycle_action);
         }
 
-        if mem.ppu_regs.can_generate_nmi() {
-            mem.cpu_pinout.nmi_signal_detector.set_value(SignalLevel::Low);
+        if bus.ppu_regs.can_generate_nmi() {
+            bus.cpu_pinout.nmi_signal_detector.set_value(SignalLevel::Low);
         } else {
-            mem.cpu_pinout.nmi_signal_detector.set_value(SignalLevel::High);
+            bus.cpu_pinout.nmi_signal_detector.set_value(SignalLevel::High);
         }
 
         mapper.on_end_of_ppu_cycle();
     }
 
-    fn execute_cycle_action(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, frame: &mut Frame, cycle_action: CycleAction) {
+    fn execute_cycle_action(&mut self, mapper: &mut dyn Mapper, bus: &mut Bus, frame: &mut Frame, cycle_action: CycleAction) {
         use CycleAction::*;
         match cycle_action {
             SetPatternIndexAddress =>
-                mem.set_ppu_address_bus(mapper, mem.ppu_regs.address_in_name_table()),
+                bus.set_ppu_address_bus(mapper, bus.ppu_regs.address_in_name_table()),
             SetPaletteIndexAddress =>
-                mem.set_ppu_address_bus(mapper, mem.ppu_regs.address_in_attribute_table()),
+                bus.set_ppu_address_bus(mapper, bus.ppu_regs.address_in_attribute_table()),
             SetPatternLowAddress =>
-                mem.set_ppu_address_bus(mapper, mem.ppu_regs.address_for_low_pattern_byte(self.next_tile_number)),
+                bus.set_ppu_address_bus(mapper, bus.ppu_regs.address_for_low_pattern_byte(self.next_tile_number)),
             SetPatternHighAddress =>
-                mem.set_ppu_address_bus(mapper, mem.ppu_regs.address_for_high_pattern_byte(self.next_tile_number)),
+                bus.set_ppu_address_bus(mapper, bus.ppu_regs.address_for_high_pattern_byte(self.next_tile_number)),
 
-            GetPatternIndex => self.next_tile_number = TileNumber::new(mem.ppu_internal_read(mapper).value()),
+            GetPatternIndex => self.next_tile_number = TileNumber::new(bus.ppu_internal_read(mapper).value()),
             GetPatternLowByte => {
-                let pattern_low = mem.ppu_internal_read(mapper);
-                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
+                let pattern_low = bus.ppu_internal_read(mapper);
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
                 self.pattern_register.set_pending_low_byte(pattern_low);
             }
             GetPatternHighByte => {
-                let pattern_high = mem.ppu_internal_read(mapper);
-                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
+                let pattern_high = bus.ppu_internal_read(mapper);
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
                 self.pattern_register.set_pending_high_byte(pattern_high);
             }
             GetPaletteIndex => {
-                let attribute_byte = mem.ppu_internal_read(mapper).value();
-                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
-                self.attribute_register.set_pending_palette_table_index(mem.ppu_regs.palette_table_index(attribute_byte));
+                let attribute_byte = bus.ppu_internal_read(mapper).value();
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                self.attribute_register.set_pending_palette_table_index(bus.ppu_regs.palette_table_index(attribute_byte));
             }
             PrepareForNextTile => {
-                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
                 self.attribute_register.prepare_next_palette_table_index();
                 self.pattern_register.load_next_palette_indexes();
             }
             PrepareForNextPixel => {
-                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
                 self.pattern_register.shift_left();
                 self.attribute_register.push_next_palette_table_index();
             }
 
             GotoNextTileColumn => {
-                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
-                mem.ppu_regs.current_address.increment_coarse_x_scroll();
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                bus.ppu_regs.current_address.increment_coarse_x_scroll();
             }
             GotoNextPixelRow => {
-                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
-                mem.ppu_regs.current_address.increment_fine_y_scroll();
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                bus.ppu_regs.current_address.increment_fine_y_scroll();
             }
             ResetTileColumn => {
-                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
-                mem.ppu_regs.reset_tile_column();
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                bus.ppu_regs.reset_tile_column();
             }
             SetPixel => {
-                let clock = *mem.ppu_regs.clock();
+                let clock = *bus.ppu_regs.clock();
                 let (pixel_column, pixel_row) = PixelIndex::try_from_clock(&clock).unwrap().to_column_row();
-                if mem.ppu_regs.background_enabled() {
-                    let palette_table = &mem.palette_table();
+                if bus.ppu_regs.background_enabled() {
+                    let palette_table = &bus.palette_table();
                     // TODO: Figure out where this goes. Maybe have frame call palette_table when displaying.
                     frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
-                    let column_in_tile = mem.ppu_regs.fine_x_scroll;
+                    let column_in_tile = bus.ppu_regs.fine_x_scroll;
                     let palette_table_index = self.attribute_register.palette_table_index(column_in_tile);
                     let palette = palette_table.background_palette(palette_table_index);
 
@@ -170,14 +170,14 @@ impl Ppu {
                     self.pattern_source_frame.set_background_pixel(pixel_column, pixel_row, bank_pixel);
                 }
 
-                if mem.ppu_regs.sprites_enabled() || mem.ppu_regs.background_enabled() {
-                    let (mut sprite_pixel, priority, is_sprite_0, ppu_peek) = self.oam_registers.step(&mem.palette_table());
+                if bus.ppu_regs.sprites_enabled() || bus.ppu_regs.background_enabled() {
+                    let (mut sprite_pixel, priority, is_sprite_0, ppu_peek) = self.oam_registers.step(&bus.palette_table());
                     // HACK: Transparent sprites on row 0 should be a natural consequence of the shifter pipeline instead.
                     if pixel_row == PixelRow::ZERO {
                         sprite_pixel = Rgbt::Transparent;
                     }
 
-                    if mem.ppu_regs.sprites_enabled() {
+                    if bus.ppu_regs.sprites_enabled() {
                         frame.set_sprite_pixel(
                             pixel_column,
                             pixel_row,
@@ -197,28 +197,28 @@ impl Ppu {
                 }
 
                 // https://wiki.nesdev.org/w/index.php?title=PPU_OAM#Sprite_zero_hits
-                if mem.ppu_regs.sprites_enabled() && mem.ppu_regs.background_enabled()
-                    && frame.pixel(mem.ppu_regs.mask(), pixel_column, pixel_row).1.hit()
+                if bus.ppu_regs.sprites_enabled() && bus.ppu_regs.background_enabled()
+                    && frame.pixel(bus.ppu_regs.mask(), pixel_column, pixel_row).1.hit()
                 {
-                    mem.ppu_regs.set_sprite0_hit();
+                    bus.ppu_regs.set_sprite0_hit();
                 }
             }
 
             MaybeCorruptOamStart => {
-                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
                 // Unclear if these are the correct cycles to trigger on.
-                let oam_addr = mem.ppu_regs.oam_addr;
-                let cycle = mem.ppu_regs.clock().cycle();
-                mem.oam.maybe_corrupt_starting_byte(oam_addr, cycle);
+                let oam_addr = bus.ppu_regs.oam_addr;
+                let cycle = bus.ppu_regs.clock().cycle();
+                bus.oam.maybe_corrupt_starting_byte(oam_addr, cycle);
             }
 
             ResetOamAddress => {
-                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
-                mem.ppu_regs.oam_addr.reset();
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                bus.ppu_regs.oam_addr.reset();
             }
 
             StartClearingSecondaryOam => {
-                info!(target: "ppustage", "{}\t\tCLEARING SECONDARY OAM", mem.ppu_regs.clock());
+                info!(target: "ppustage", "{}\t\tCLEARING SECONDARY OAM", bus.ppu_regs.clock());
                 self.sprite_evaluator.start_clearing_secondary_oam();
             }
             StartSpriteEvaluation => {
@@ -235,29 +235,29 @@ impl Ppu {
                 info!(target: "ppustage", "\t\tLoading OAM registers ended.");
             }
             ReadOamByte => {
-                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
-                self.sprite_evaluator.read_oam(mem);
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                self.sprite_evaluator.read_oam(bus);
             }
             WriteSecondaryOamByte => {
-                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
-                self.sprite_evaluator.write_secondary_oam(mem);
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
+                self.sprite_evaluator.write_secondary_oam(bus);
 
             }
             ReadSpriteY => {
-                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
                 self.current_sprite_y = SpriteY::new(self.sprite_evaluator.read_secondary_oam_and_advance());
             }
             ReadSpritePatternIndex => {
-                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
                 self.next_sprite_tile_number = TileNumber::new(self.sprite_evaluator.read_secondary_oam_and_advance());
             }
             ReadSpriteAttributes => {
-                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
                 let attributes = SpriteAttributes::from_u8(self.sprite_evaluator.read_secondary_oam_and_advance());
                 self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
-                if !mem.ppu_regs.background_enabled() && !mem.ppu_regs.sprites_enabled() { return; }
+                if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
                 let x_counter = self.sprite_evaluator.read_secondary_oam_and_advance();
                 self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
             }
@@ -268,24 +268,24 @@ impl Ppu {
             SetSpritePatternLowAddress => {
                 let select_high = false;
                 let addr;
-                (addr, self.sprite_visible) = self.current_sprite_pattern_address(mem, select_high);
-                mem.set_ppu_address_bus(mapper, addr);
+                (addr, self.sprite_visible) = self.current_sprite_pattern_address(bus, select_high);
+                bus.set_ppu_address_bus(mapper, addr);
             }
             SetSpritePatternHighAddress => {
                 let select_high = true;
                 let addr;
-                (addr, self.sprite_visible) = self.current_sprite_pattern_address(mem, select_high);
-                mem.set_ppu_address_bus(mapper, addr);
+                (addr, self.sprite_visible) = self.current_sprite_pattern_address(bus, select_high);
+                bus.set_ppu_address_bus(mapper, addr);
             }
             GetSpritePatternLowByte => {
-                let pattern_low = mem.ppu_internal_read(mapper);
-                if (mem.ppu_regs.background_enabled() || mem.ppu_regs.sprites_enabled()) && self.sprite_visible {
+                let pattern_low = bus.ppu_internal_read(mapper);
+                if (bus.ppu_regs.background_enabled() || bus.ppu_regs.sprites_enabled()) && self.sprite_visible {
                     self.oam_registers.registers[self.oam_register_index].set_pattern_low(pattern_low);
                 }
             }
             GetSpritePatternHighByte => {
-                let pattern_high = mem.ppu_internal_read(mapper);
-                if (mem.ppu_regs.background_enabled() || mem.ppu_regs.sprites_enabled()) && self.sprite_visible {
+                let pattern_high = bus.ppu_internal_read(mapper);
+                if (bus.ppu_regs.background_enabled() || bus.ppu_regs.sprites_enabled()) && self.sprite_visible {
                     self.oam_registers.registers[self.oam_register_index].set_pattern_high(pattern_high);
                 }
             }
@@ -295,52 +295,52 @@ impl Ppu {
 
             // TODO: Remove this section in favor of using EdgeDetectors.
             StartVisibleScanlines => {
-                info!(target: "ppustage", "{}\tVISIBLE SCANLINES", mem.ppu_regs.clock());
+                info!(target: "ppustage", "{}\tVISIBLE SCANLINES", bus.ppu_regs.clock());
             }
             StartPostRenderScanline => {
-                info!(target: "ppustage", "{}\tPOST-RENDER SCANLINE", mem.ppu_regs.clock());
+                info!(target: "ppustage", "{}\tPOST-RENDER SCANLINE", bus.ppu_regs.clock());
             }
             StartVblankScanlines => {
-                info!(target: "ppustage", "{}\tVBLANK SCANLINES", mem.ppu_regs.clock());
+                info!(target: "ppustage", "{}\tVBLANK SCANLINES", bus.ppu_regs.clock());
             }
             StartPreRenderScanline => {
-                info!(target: "ppustage", "{}\tPRE-RENDER SCANLINE", mem.ppu_regs.clock());
+                info!(target: "ppustage", "{}\tPRE-RENDER SCANLINE", bus.ppu_regs.clock());
             }
             StartReadingBackgroundTiles => {
-                info!(target: "ppustage", "{}\t\tREADING BACKGROUND TILES", mem.ppu_regs.clock());
+                info!(target: "ppustage", "{}\t\tREADING BACKGROUND TILES", bus.ppu_regs.clock());
             }
             StopReadingBackgroundTiles => {
-                info!(target: "ppustage", "{}\t\tENDED READING BACKGROUND TILES", mem.ppu_regs.clock());
+                info!(target: "ppustage", "{}\t\tENDED READING BACKGROUND TILES", bus.ppu_regs.clock());
             }
 
             StartVblank => {
-                if mem.ppu_regs.suppress_vblank_active {
-                    info!(target: "ppuflags", " {}\tSuppressing vblank.", mem.ppu_regs.clock());
+                if bus.ppu_regs.suppress_vblank_active {
+                    info!(target: "ppuflags", " {}\tSuppressing vblank.", bus.ppu_regs.clock());
                 } else {
-                    let clock = *mem.ppu_regs.clock();
-                    mem.ppu_regs.start_vblank(&clock);
+                    let clock = *bus.ppu_regs.clock();
+                    bus.ppu_regs.start_vblank(&clock);
                     // "During VBlank ... the value on the PPU address bus is the current value of the v register."
-                    mem.set_ppu_address_bus(mapper, mem.ppu_regs.current_address);
+                    bus.set_ppu_address_bus(mapper, bus.ppu_regs.current_address);
                 }
 
-                mem.ppu_regs.suppress_vblank_active = false;
+                bus.ppu_regs.suppress_vblank_active = false;
             }
             SetInitialScrollOffsets => {
-                if !mem.ppu_regs.background_enabled() { return; }
-                mem.ppu_regs.current_address = mem.ppu_regs.next_address;
+                if !bus.ppu_regs.background_enabled() { return; }
+                bus.ppu_regs.current_address = bus.ppu_regs.next_address;
             }
             SetInitialYScroll => {
-                if !mem.ppu_regs.background_enabled() { return; }
-                let next_address = mem.ppu_regs.next_address;
-                mem.ppu_regs.current_address.copy_y_scroll(next_address);
+                if !bus.ppu_regs.background_enabled() { return; }
+                let next_address = bus.ppu_regs.next_address;
+                bus.ppu_regs.current_address.copy_y_scroll(next_address);
             }
 
             ClearFlags => {
-                let clock = *mem.ppu_regs.clock();
-                mem.ppu_regs.stop_vblank(&clock);
-                mem.ppu_regs.clear_sprite0_hit();
-                mem.ppu_regs.clear_sprite_overflow();
-                mem.ppu_regs.clear_reset();
+                let clock = *bus.ppu_regs.clock();
+                bus.ppu_regs.stop_vblank(&clock);
+                bus.ppu_regs.clear_sprite0_hit();
+                bus.ppu_regs.clear_sprite_overflow();
+                bus.ppu_regs.clear_reset();
 
             }
         }
@@ -350,9 +350,9 @@ impl Ppu {
         &self.pattern_source_frame
     }
 
-    fn current_sprite_pattern_address(&self, mem: &Memory, select_high: bool) -> (PpuAddress, bool) {
-        let sprite_table_side = mem.ppu_regs.sprite_table_side();
-        let sprite_height = mem.ppu_regs.sprite_height();
+    fn current_sprite_pattern_address(&self, bus: &Bus, select_high: bool) -> (PpuAddress, bool) {
+        let sprite_table_side = bus.ppu_regs.sprite_table_side();
+        let sprite_height = bus.ppu_regs.sprite_height();
         let sprite_table_side = match sprite_height {
             SpriteHeight::Normal => sprite_table_side,
             SpriteHeight::Tall => self.next_sprite_tile_number.tall_sprite_pattern_table_side(),
@@ -360,7 +360,7 @@ impl Ppu {
 
         let address;
         let visible;
-        if let Some(pixel_row) = mem.ppu_regs.clock().scanline_pixel_row() {
+        if let Some(pixel_row) = bus.ppu_regs.clock().scanline_pixel_row() {
             let attributes = self.oam_registers.registers[self.oam_register_index].attributes();
             if let Some((tile_number, row_in_half, v)) = self.next_sprite_tile_number.number_and_row(
                 self.current_sprite_y,

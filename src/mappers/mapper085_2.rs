@@ -1,6 +1,6 @@
 use crate::mapper::*;
 use crate::mappers::vrc::vrc_irq_state::VrcIrqState;
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
@@ -39,34 +39,34 @@ pub struct Mapper085_2 {
 }
 
 impl Mapper for Mapper085_2 {
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        self.irq_state.step(mem);
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
+        self.irq_state.step(bus);
     }
 
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
-            0x8000 => mem.set_prg_register(P0, value & 0b0011_1111),
-            0x8010 => mem.set_prg_register(P1, value & 0b0011_1111),
-            0x9000 => mem.set_prg_register(P2, value & 0b0011_1111),
+            0x8000 => bus.set_prg_register(P0, value & 0b0011_1111),
+            0x8010 => bus.set_prg_register(P1, value & 0b0011_1111),
+            0x9000 => bus.set_prg_register(P2, value & 0b0011_1111),
             0x9010 | 0x9030 => { /* TODO: Expansion Audio */ }
-            0xA000 => mem.set_chr_register(C0, value),
-            0xA010 => mem.set_chr_register(C1, value),
-            0xB000 => mem.set_chr_register(C2, value),
-            0xB010 => mem.set_chr_register(C3, value),
-            0xC000 => mem.set_chr_register(C4, value),
-            0xC010 => mem.set_chr_register(C5, value),
-            0xD000 => mem.set_chr_register(C6, value),
-            0xD010 => mem.set_chr_register(C7, value),
+            0xA000 => bus.set_chr_register(C0, value),
+            0xA010 => bus.set_chr_register(C1, value),
+            0xB000 => bus.set_chr_register(C2, value),
+            0xB010 => bus.set_chr_register(C3, value),
+            0xC000 => bus.set_chr_register(C4, value),
+            0xC010 => bus.set_chr_register(C5, value),
+            0xD000 => bus.set_chr_register(C6, value),
+            0xD010 => bus.set_chr_register(C7, value),
             0xE000 => {
                 // TODO: Silence expansion audio
                 let fields = splitbits!(value, "ws....mm");
-                mem.set_writes_enabled(W0, fields.w);
-                mem.set_name_table_mirroring(fields.m);
+                bus.set_writes_enabled(W0, fields.w);
+                bus.set_name_table_mirroring(fields.m);
             }
             0xE010 => self.irq_state.set_reload_value(value),
-            0xF000 => self.irq_state.set_mode(mem, value),
-            0xF010 => self.irq_state.acknowledge(mem),
+            0xF000 => self.irq_state.set_mode(bus, value),
+            0xF010 => self.irq_state.acknowledge(bus),
 
             _ => { /* Do nothing. */ }
         }

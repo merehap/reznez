@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use crate::mapper::*;
 use crate::mappers::vrc::vrc_irq_state::VrcIrqState;
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
@@ -48,27 +48,27 @@ pub struct Vrc4 {
 }
 
 impl Mapper for Vrc4 {
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
-        self.irq_state.step(mem);
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
+        self.irq_state.step(bus);
     }
 
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x6000..=0x7FFF => { /* Do nothing. */ }
             // Set bank for 8000 through 9FFF (or C000 through DFFF).
-            0x8000..=0x8003 => mem.set_prg_register(P0, value & 0b0001_1111),
+            0x8000..=0x8003 => bus.set_prg_register(P0, value & 0b0001_1111),
             0x9000 => {
-                mem.set_name_table_mirroring(value & 0b11);
+                bus.set_name_table_mirroring(value & 0b11);
             }
             0x9002 => {
                 let fields = splitbits!(value, "......pe");
-                mem.set_prg_layout(fields.p as u8);
-                mem.set_reads_enabled(R0, fields.e);
-                mem.set_writes_enabled(W0, fields.e);
+                bus.set_prg_layout(fields.p as u8);
+                bus.set_reads_enabled(R0, fields.e);
+                bus.set_writes_enabled(W0, fields.e);
             }
             // Set bank for A000 through AFFF.
-            0xA000..=0xA003 => mem.set_prg_register(P1, value & 0b0001_1111),
+            0xA000..=0xA003 => bus.set_prg_register(P1, value & 0b0001_1111),
 
             // Set a CHR bank mapping.
             0xB000..=0xEFFF => {
@@ -85,14 +85,14 @@ impl Mapper for Vrc4 {
                 }
 
                 if let (Some(&register_id), Some(mask)) = (register_id, mask) {
-                    mem.set_chr_bank_register_bits(register_id, bank, mask);
+                    bus.set_chr_bank_register_bits(register_id, bank, mask);
                 }
             }
 
             0xF000 => self.irq_state.set_reload_value_low_bits(value),
             0xF001 => self.irq_state.set_reload_value_high_bits(value),
-            0xF002 => self.irq_state.set_mode(mem, value),
-            0xF003 => self.irq_state.acknowledge(mem),
+            0xF002 => self.irq_state.set_mode(bus, value),
+            0xF003 => self.irq_state.acknowledge(bus),
             0x4020..=0xFFFF => { /* All other writes do nothing. */ }
         }
     }

@@ -30,17 +30,17 @@ pub struct Mapper047 {
 }
 
 impl Mapper for Mapper047 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         if matches!(*addr, 0x6000..=0x7FFF) {
-            let regs = mem.prg_memory().bank_registers();
+            let regs = bus.prg_memory().bank_registers();
             // S0 isn't hooked up to any window, but its value is still set by MMC3 and used for this mapper.
             if regs.read_status(R0) == ReadStatus::Enabled && regs.write_status(W0) == WriteStatus::Enabled {
                 let index = value & 1;
-                mem.set_prg_rom_outer_bank_number(index);
-                mem.set_chr_rom_outer_bank_number(index);
+                bus.set_prg_rom_outer_bank_number(index);
+                bus.set_chr_rom_outer_bank_number(index);
             }
         } else {
-            self.mmc3.write_register(mem, addr, value);
+            self.mmc3.write_register(bus, addr, value);
         }
     }
 
@@ -48,8 +48,8 @@ impl Mapper for Mapper047 {
         self.mmc3.on_end_of_ppu_cycle();
     }
 
-    fn on_ppu_address_change(&mut self, mem: &mut Memory, address: PpuAddress) {
-        self.mmc3.on_ppu_address_change(mem, address);
+    fn on_ppu_address_change(&mut self, bus: &mut Bus, address: PpuAddress) {
+        self.mmc3.on_ppu_address_change(bus, address);
     }
 
     fn layout(&self) -> Layout {

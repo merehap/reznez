@@ -28,7 +28,7 @@ use crate::mapper::{IrqCounterInfo, Mapper, NameTableMirroring, PrgBankRegisterI
 use crate::mapper_list;
 use crate::memory::raw_memory::RawMemory;
 use crate::memory::bank::bank_number::{BankLocation, ChrBankRegisterId};
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 use crate::memory::signal_level::SignalLevel;
 use crate::ppu::clock::Clock;
 use crate::ppu::ppu::Ppu;
@@ -39,7 +39,7 @@ pub struct Nes {
     cpu: Cpu,
     ppu: Ppu,
     apu: Apu,
-    memory: Memory,
+    bus: Bus,
     mapper: Box<dyn Mapper>,
     resolved_metadata: ResolvedMetadata,
     metadata_resolver: MetadataResolver,
@@ -73,7 +73,7 @@ impl Nes {
             cpu: Cpu::new(&mut memory, config.starting_cpu_cycle, config.cpu_step_formatting),
             ppu: Ppu::new(&memory),
             apu: Apu::new(config.disable_audio),
-            memory,
+            bus: memory,
             mapper,
             resolved_metadata: metadata_resolver.resolve(),
             metadata_resolver,
@@ -94,8 +94,8 @@ impl Nes {
         &self.ppu
     }
 
-    pub fn memory(&self) -> &Memory {
-        &self.memory
+    pub fn bus(&self) -> &Bus {
+        &self.bus
     }
 
     pub fn mapper(&self) -> &dyn Mapper {
@@ -126,7 +126,7 @@ impl Nes {
         self.cpu.stack_pointer()
     }
 
-    fn load_rom(header_db: &HeaderDb, config: &Config, cartridge: &Cartridge) -> Result<(Box<dyn Mapper>, Memory, MetadataResolver), String> {
+    fn load_rom(header_db: &HeaderDb, config: &Config, cartridge: &Cartridge) -> Result<(Box<dyn Mapper>, Bus, MetadataResolver), String> {
         let header = cartridge.header();
         let cartridge_mapper_number = header.mapper_number().unwrap();
         let prg_rom_hash = header.prg_rom_hash().unwrap();
@@ -190,7 +190,7 @@ impl Nes {
         let (prg_memory, chr_memory, name_table_mirrorings) =
             mapper.layout().make_mapper_params(&metadata, cartridge, config.allow_saving)?;
 
-        let mut memory = Memory::new(
+        let mut memory = Bus::new(
             prg_memory, chr_memory, name_table_mirrorings,
             config.ppu_clock, config.dip_switch, config.system_palette.clone());
         mapper.init_mapper_params(&mut memory);
@@ -208,23 +208,23 @@ impl Nes {
     }
 
     pub fn set_reset_signal(&mut self) {
-        self.memory.cpu_pinout.reset.set_value(SignalLevel::Low);
+        self.bus.cpu_pinout.reset.set_value(SignalLevel::Low);
     }
 
     pub fn step_frame(&mut self) {
         loop {
-            if self.memory.cpu_pinout.reset.detect() {
+            if self.bus.cpu_pinout.reset.detect() {
                 // Complete the CPU reset, if one is in progress and nearing completion.
                 self.cpu.reset();
-                self.memory.apu_regs.reset(&mut self.memory.cpu_pinout);
-                self.memory.dmc_dma.disable_soon();
+                self.bus.apu_regs.reset(&mut self.bus.cpu_pinout);
+                self.bus.dmc_dma.disable_soon();
             }
 
             let step_result = self.step();
             if step_result.is_last_cycle_of_frame {
                 // Release the RESET button on the console after some time has passed,
                 // allowing the PPU to run for a while the RESET button was held down.
-                self.memory.cpu_pinout.reset.set_value(SignalLevel::High);
+                self.bus.cpu_pinout.reset.set_value(SignalLevel::High);
 
                 if self.cpu.mode_state().is_jammed() {
                     info!("CPU is jammed!");
@@ -265,22 +265,22 @@ impl Nes {
 
     fn apu_step(&mut self) {
         if log_enabled!(target: "timings", Info) {
-            self.snapshots.current().apu_regs(&self.memory.apu_regs);
+            self.snapshots.current().apu_regs(&self.bus.apu_regs);
         }
 
-        self.apu.step(&mut self.memory);
+        self.apu.step(&mut self.bus);
 
         if log_enabled!(target: "timings", Info) {
-            self.snapshots.current().frame_irq(&self.memory, &self.cpu);
+            self.snapshots.current().frame_irq(&self.bus, &self.cpu);
         }
 
         self.detect_changes();
 
-        self.memory.apu_regs.clock_mut().increment();
+        self.bus.apu_regs.clock_mut().increment();
     }
 
     fn cpu_step_first_half(&mut self) -> Option<Step> {
-        self.memory.increment_cpu_cycle();
+        self.bus.increment_cpu_cycle();
 
         if log_enabled!(target: "timings", Info) {
             self.snapshots.current().instruction(self.cpu.mode_state().state_label());
@@ -290,7 +290,7 @@ impl Nes {
             interrupt_text = formatter::interrupts(self);
         }
 
-        let step = self.cpu.step_first_half(&mut *self.mapper, &mut self.memory);
+        let step = self.cpu.step_first_half(&mut *self.mapper, &mut self.bus);
         if log_enabled!(target: "cpuinstructions", Info) &&
                 let Some((current_instruction, start_address)) = self.cpu.mode_state().new_instruction_with_address() {
 
@@ -303,11 +303,11 @@ impl Nes {
         }
 
         if log_enabled!(target: "timings", Info) {
-            if self.memory.apu_regs.frame_counter_write_status() == FrameCounterWriteStatus::Initialized {
+            if self.bus.apu_regs.frame_counter_write_status() == FrameCounterWriteStatus::Initialized {
                 self.snapshots.start();
             }
 
-            self.snapshots.current().cpu_cycle(self.memory.cpu_cycle());
+            self.snapshots.current().cpu_cycle(self.bus.cpu_cycle());
             self.snapshots.current().irq_status(self.cpu.irq_status());
             self.snapshots.current().nmi_status(self.cpu.nmi_status());
         }
@@ -317,18 +317,18 @@ impl Nes {
     }
 
     fn cpu_step_second_half(&mut self) {
-        self.cpu.step_second_half(&mut *self.mapper, &mut self.memory);
+        self.cpu.step_second_half(&mut *self.mapper, &mut self.bus);
         self.detect_changes();
     }
 
     fn ppu_step(&mut self) -> bool {
-        let rendering_enabled = self.memory.ppu_regs.rendering_enabled();
-        let is_last_cycle_of_frame = self.memory.ppu_regs.clock_mut().tick(rendering_enabled);
+        let rendering_enabled = self.bus.ppu_regs.rendering_enabled();
+        let is_last_cycle_of_frame = self.bus.ppu_regs.clock_mut().tick(rendering_enabled);
         if log_enabled!(target: "timings", Info) {
-            self.snapshots.current().add_ppu_position(self.memory.ppu_regs.clock());
+            self.snapshots.current().add_ppu_position(self.bus.ppu_regs.clock());
         }
 
-        self.ppu.step(&mut *self.mapper, &mut self.memory, &mut self.frame);
+        self.ppu.step(&mut *self.mapper, &mut self.bus, &mut self.frame);
 
         self.detect_changes();
 
@@ -338,26 +338,26 @@ impl Nes {
     fn detect_changes(&mut self) {
         if log_enabled!(target: "cpuflowcontrol", Info) {
             let latest = &mut self.latest_values;
-            if latest.apu_frame_irq_pending_detector.set_value_then_detect(self.memory.cpu_pinout.frame_irq_asserted()) {
-                info!("APU Frame IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
+            if latest.apu_frame_irq_pending_detector.set_value_then_detect(self.bus.cpu_pinout.frame_irq_asserted()) {
+                info!("APU Frame IRQ pending. CPU cycle: {}", self.bus.cpu_cycle());
             }
-            if latest.dmc_irq_pending_detector.set_value_then_detect(self.memory.cpu_pinout.dmc_irq_asserted()) {
-                info!("DMC IRQ pending. CPU cycle: {}", self.memory.cpu_cycle());
+            if latest.dmc_irq_pending_detector.set_value_then_detect(self.bus.cpu_pinout.dmc_irq_asserted()) {
+                info!("DMC IRQ pending. CPU cycle: {}", self.bus.cpu_cycle());
             }
             if latest.irq_status_detector.set_value_then_detect(self.cpu.irq_status()) {
-                info!("IRQ status in CPU: {:?}. Cycle: {}", self.cpu.irq_status(), self.memory.cpu_cycle());
+                info!("IRQ status in CPU: {:?}. Cycle: {}", self.cpu.irq_status(), self.bus.cpu_cycle());
             }
             if latest.nmi_status_detector.set_value_then_detect(self.cpu.nmi_status()) {
-                info!("NMI status: {:?}. Cycle: {}", self.cpu.nmi_status(), self.memory.cpu_cycle());
+                info!("NMI status: {:?}. Cycle: {}", self.cpu.nmi_status(), self.bus.cpu_cycle());
             }
             if latest.reset_status_detector.set_value_then_detect(self.cpu.reset_status()) {
-                info!("RESET status: {:?}. Cycle: {}", self.cpu.reset_status(), self.memory.cpu_cycle());
+                info!("RESET status: {:?}. Cycle: {}", self.cpu.reset_status(), self.bus.cpu_cycle());
             }
-            if latest.dmc_cpu_halt_detector.set_value_then_detect(self.memory.dmc_dma.latest_action().cpu_should_be_halted()) {
-                info!("CPU halted for DMC DMA transfer at {}.", self.memory.dmc_dma_address());
+            if latest.dmc_cpu_halt_detector.set_value_then_detect(self.bus.dmc_dma.latest_action().cpu_should_be_halted()) {
+                info!("CPU halted for DMC DMA transfer at {}.", self.bus.dmc_dma_address());
             }
-            if latest.oam_cpu_halt_detector.set_value_then_detect(self.memory.oam_dma.latest_action().cpu_should_be_halted()) {
-                info!("CPU halted for OAM DMA transfer at {}.", self.memory.oam_dma.address());
+            if latest.oam_cpu_halt_detector.set_value_then_detect(self.bus.oam_dma.latest_action().cpu_should_be_halted()) {
+                info!("CPU halted for OAM DMA transfer at {}.", self.bus.oam_dma.address());
             }
         }
 
@@ -377,10 +377,10 @@ impl Nes {
 
         if log_enabled!(target: "cpuflowcontrol", Info) || log_enabled!(target: "mapperirqcounter", Info) {
             let latest = &mut self.latest_values;
-            if latest.mapper_irq_asserted_detector.set_value_then_detect(self.memory.cpu_pinout.mapper_irq_asserted()) {
+            if latest.mapper_irq_asserted_detector.set_value_then_detect(self.bus.cpu_pinout.mapper_irq_asserted()) {
                 match latest.mapper_irq_asserted_detector.current_value() {
-                    true => info!("Mapper IRQ asserted. CPU cycle: {}", self.memory.cpu_cycle()),
-                    false => info!("Mapper IRQ acknowledged. CPU cycle: {}", self.memory.cpu_cycle()),
+                    true => info!("Mapper IRQ asserted. CPU cycle: {}", self.bus.cpu_cycle()),
+                    false => info!("Mapper IRQ acknowledged. CPU cycle: {}", self.bus.cpu_cycle()),
                 }
             }
         }
@@ -392,16 +392,16 @@ impl Nes {
             let latest = &mut self.latest_values;
             let latest_extended_cpu_mode = ExtendedCpuMode {
                 cpu_mode: self.cpu.mode_state().mode(),
-                dmc_dma_state: self.memory.dmc_dma.state(),
-                dmc_dma_action: self.memory.dmc_dma.latest_action(),
-                oam_dma_state: self.memory.oam_dma.state(),
-                oam_dma_action: self.memory.oam_dma.latest_action(),
+                dmc_dma_state: self.bus.dmc_dma.state(),
+                dmc_dma_action: self.bus.dmc_dma.latest_action(),
+                oam_dma_state: self.bus.oam_dma.state(),
+                oam_dma_action: self.bus.oam_dma.latest_action(),
             };
 
             if latest_extended_cpu_mode.coarse_change_occurred(&latest.extended_cpu_mode) {
                 latest.extended_cpu_mode = latest_extended_cpu_mode.clone();
                 info!("CPU Cycle: {:>7} *** CPU Mode = {:<11} ***",
-                    self.memory.cpu_cycle(), latest_extended_cpu_mode.to_string());
+                    self.bus.cpu_cycle(), latest_extended_cpu_mode.to_string());
             }
         }
 
@@ -409,10 +409,10 @@ impl Nes {
             let latest = &mut self.latest_values;
             let latest_extended_cpu_mode = ExtendedCpuMode {
                 cpu_mode: self.cpu.mode_state().mode(),
-                dmc_dma_state: self.memory.dmc_dma.state(),
-                dmc_dma_action: self.memory.dmc_dma.latest_action(),
-                oam_dma_state: self.memory.oam_dma.state(),
-                oam_dma_action: self.memory.oam_dma.latest_action(),
+                dmc_dma_state: self.bus.dmc_dma.state(),
+                dmc_dma_action: self.bus.dmc_dma.latest_action(),
+                oam_dma_state: self.bus.oam_dma.state(),
+                oam_dma_action: self.bus.oam_dma.latest_action(),
             };
 
             let (mode_changed, dmc_changed, oam_changed) =
@@ -450,14 +450,14 @@ impl Nes {
                         oam_dma_state == OamDmaState::Idle && oam_dma_action == OamDmaAction::DoNothing {
                     info!("");
                 } else {
-                    info!("CPU Cycle: {:>7} *** {:<11} {dmc_action} {oam_action}", self.memory.cpu_cycle(), mode);
+                    info!("CPU Cycle: {:>7} *** {:<11} {dmc_action} {oam_action}", self.bus.cpu_cycle(), mode);
                 }
             }
         }
 
         if log_enabled!(target: "mapperupdates", Info) {
-            let prg_memory = &self.memory.prg_memory;
-            let chr_memory = &self.memory.chr_memory;
+            let prg_memory = &self.bus.prg_memory;
+            let chr_memory = &self.bus.chr_memory;
             let latest = &mut self.latest_values;
 
             let prev_prg_layout_index = latest.prg_layout_index_detector.current_value();
@@ -561,11 +561,11 @@ impl Nes {
     pub fn process_gui_events(&mut self, events: &Events) {
         for (button, status) in &events.joypad1_button_statuses {
             info!("Joypad 1: button {button:?} status is {status:?}");
-            self.memory.joypad1.set_button_status(*button, *status);
+            self.bus.joypad1.set_button_status(*button, *status);
         }
 
         for (button, status) in &events.joypad2_button_statuses {
-            self.memory.joypad2.set_button_status(*button, *status);
+            self.bus.joypad2.set_button_status(*button, *status);
         }
     }
 }
@@ -598,7 +598,7 @@ struct LatestValues {
 }
 
 impl LatestValues {
-    fn new(initial_mem: &Memory) -> Self {
+    fn new(initial_bus: &Bus) -> Self {
         Self {
             apu_frame_irq_pending_detector: EdgeDetector::target_value(true),
             dmc_irq_pending_detector: EdgeDetector::target_value(true),
@@ -616,14 +616,14 @@ impl LatestValues {
             mapper_irq_triggering_enabled_detector: EdgeDetector::any_edge(),
             mapper_irq_count_detector: EdgeDetector::any_edge(),
 
-            prg_layout_index_detector: EdgeDetector::starting_value(initial_mem.prg_memory.layout_index()),
-            chr_layout_index_detector: EdgeDetector::starting_value(initial_mem.chr_memory.layout_index()),
-            prg_registers: *initial_mem.prg_memory().bank_registers().registers(),
-            chr_registers: initial_mem.chr_memory().bank_registers().registers().map(BankLocation::Index),
-            meta_registers: *initial_mem.chr_memory().bank_registers().meta_registers(),
-            name_table_mirroring: initial_mem.chr_memory().name_table_mirroring(),
-            read_statuses: *initial_mem.prg_memory().bank_registers().read_statuses(),
-            write_statuses: *initial_mem.prg_memory().bank_registers().write_statuses(),
+            prg_layout_index_detector: EdgeDetector::starting_value(initial_bus.prg_memory.layout_index()),
+            chr_layout_index_detector: EdgeDetector::starting_value(initial_bus.chr_memory.layout_index()),
+            prg_registers: *initial_bus.prg_memory().bank_registers().registers(),
+            chr_registers: initial_bus.chr_memory().bank_registers().registers().map(BankLocation::Index),
+            meta_registers: *initial_bus.chr_memory().bank_registers().meta_registers(),
+            name_table_mirroring: initial_bus.chr_memory().name_table_mirroring(),
+            read_statuses: *initial_bus.prg_memory().bank_registers().read_statuses(),
+            write_statuses: *initial_bus.prg_memory().bank_registers().write_statuses(),
         }
     }
 }
@@ -875,8 +875,8 @@ impl SnapshotBuilder {
         self.frame_counter_write_status = Some(regs.frame_counter_write_status());
     }
 
-    fn frame_irq(&mut self, mem: &Memory, cpu: &Cpu) {
-        self.frame_irq = Some(mem.cpu_pinout.frame_irq_asserted() && !cpu.status().interrupts_disabled);
+    fn frame_irq(&mut self, bus: &Bus, cpu: &Cpu) {
+        self.frame_irq = Some(bus.cpu_pinout.frame_irq_asserted() && !cpu.status().interrupts_disabled);
     }
 
     fn add_ppu_position(&mut self, clock: &Clock) {

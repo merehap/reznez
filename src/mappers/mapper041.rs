@@ -24,21 +24,21 @@ pub struct Mapper041 {
 }
 
 impl Mapper for Mapper041 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
             0x6000..=0x67FF => {
                 let fields = splitbits!(value, "........ ..mccppp");
-                mem.set_name_table_mirroring(fields.m as u8);
-                mem.set_chr_bank_register_bits(C0, (fields.c << 2).into(), 0b0000_1100);
+                bus.set_name_table_mirroring(fields.m as u8);
+                bus.set_chr_bank_register_bits(C0, (fields.c << 2).into(), 0b0000_1100);
                 self.inner_bank_select_enabled = fields.p & 0b100 != 0;
-                mem.set_prg_register(P0, fields.p);
+                bus.set_prg_register(P0, fields.p);
             }
             0x6800..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 if self.inner_bank_select_enabled {
-                    mem.set_chr_bank_register_bits(C0, value.into(), 0b0000_0011);
+                    bus.set_chr_bank_register_bits(C0, value.into(), 0b0000_0011);
                 }
             }
         }

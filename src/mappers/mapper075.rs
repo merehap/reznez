@@ -29,33 +29,33 @@ pub struct Mapper075 {
 }
 
 impl Mapper for Mapper075 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x8FFF => mem.set_prg_register(P0, value & 0b0000_1111),
+            0x8000..=0x8FFF => bus.set_prg_register(P0, value & 0b0000_1111),
             0x9000..=0x9FFF => {
                 let fields = splitbits!(min=u8, value, ".....rlm");
 
                 self.chr_right_high_bit = fields.r << 4;
                 self.chr_left_high_bit = fields.l << 4;
-                if matches!(mem.name_table_mirroring(), NameTableMirroring::VERTICAL | NameTableMirroring::HORIZONTAL) {
-                    mem.set_name_table_mirroring(fields.m);
+                if matches!(bus.name_table_mirroring(), NameTableMirroring::VERTICAL | NameTableMirroring::HORIZONTAL) {
+                    bus.set_name_table_mirroring(fields.m);
                 } else {
                     todo!("Handle four screen mirroring");
                 }
             }
-            0xA000..=0xAFFF => mem.set_prg_register(P1, value & 0b0000_1111),
+            0xA000..=0xAFFF => bus.set_prg_register(P1, value & 0b0000_1111),
             0xB000..=0xBFFF => { /* Do nothing. */ }
-            0xC000..=0xCFFF => mem.set_prg_register(P2, value & 0b0000_1111),
+            0xC000..=0xCFFF => bus.set_prg_register(P2, value & 0b0000_1111),
             0xD000..=0xDFFF => { /* Do nothing. */ }
             0xE000..=0xEFFF => {
                 let bank_number = self.chr_left_high_bit | (value & 0b0000_1111);
-                mem.set_chr_register(C0, bank_number);
+                bus.set_chr_register(C0, bank_number);
             }
             0xF000..=0xFFFF => {
                 let bank_number = self.chr_right_high_bit | (value & 0b0000_1111);
-                mem.set_chr_register(C1, bank_number);
+                bus.set_chr_register(C1, bank_number);
             }
         }
     }

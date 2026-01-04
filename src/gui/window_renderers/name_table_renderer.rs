@@ -41,9 +41,9 @@ impl WindowRenderer for NameTableRenderer {
             return;
         };
 
-        let x = usize::from(nes.memory().ppu_regs.x_scroll().to_u8());
-        let y = usize::from(nes.memory().ppu_regs.y_scroll().to_u8());
-        let mem = &mut nes.memory();
+        let x = usize::from(nes.bus().ppu_regs.x_scroll().to_u8());
+        let y = usize::from(nes.bus().ppu_regs.y_scroll().to_u8());
+        let bus = &mut nes.bus();
 
         let width = NameTableRenderer::WIDTH;
         let height = NameTableRenderer::HEIGHT;
@@ -53,20 +53,20 @@ impl WindowRenderer for NameTableRenderer {
         self.buffer.place_wrapping_vertical_line(0, 0, height, Rgb::new(255, 255, 255));
         self.buffer.place_wrapping_vertical_line(width, 0, height, Rgb::new(255, 255, 255));
 
-        self.frame.set_universal_background_rgb(mem.palette_table().universal_background_rgb());
-        let background_table = PatternTable::background_side(mem);
+        self.frame.set_universal_background_rgb(bus.palette_table().universal_background_rgb());
+        let background_table = PatternTable::background_side(bus);
 
-        NameTable::new(mem.raw_name_table(NameTableQuadrant::TopLeft))
-            .render(&background_table, &mem.palette_table(), &mut self.frame);
+        NameTable::new(bus.raw_name_table(NameTableQuadrant::TopLeft))
+            .render(&background_table, &bus.palette_table(), &mut self.frame);
         self.buffer.place_frame(1, 1, &self.frame);
-        NameTable::new(mem.raw_name_table(NameTableQuadrant::TopRight))
-            .render(&background_table, &mem.palette_table(), &mut self.frame);
+        NameTable::new(bus.raw_name_table(NameTableQuadrant::TopRight))
+            .render(&background_table, &bus.palette_table(), &mut self.frame);
         self.buffer.place_frame(257, 1, &self.frame);
-        NameTable::new(mem.raw_name_table(NameTableQuadrant::BottomLeft))
-            .render(&background_table, &mem.palette_table(), &mut self.frame);
+        NameTable::new(bus.raw_name_table(NameTableQuadrant::BottomLeft))
+            .render(&background_table, &bus.palette_table(), &mut self.frame);
         self.buffer.place_frame(1, 241, &self.frame);
-        NameTable::new(mem.raw_name_table(NameTableQuadrant::BottomRight))
-            .render(&background_table, &mem.palette_table(), &mut self.frame);
+        NameTable::new(bus.raw_name_table(NameTableQuadrant::BottomRight))
+            .render(&background_table, &bus.palette_table(), &mut self.frame);
         self.buffer.place_frame(257, 241, &self.frame);
 
         self.buffer.place_wrapping_horizontal_line(y, x, x + 257, Rgb::new(255, 0, 0));

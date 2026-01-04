@@ -41,7 +41,7 @@ pub struct Mapper001_5 {
 }
 
 impl Mapper for Mapper001_5 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         // Only writes of 0x8000 to 0xFFFF trigger shifter logic.
         if *addr < 0x8000 {
             return;
@@ -53,15 +53,15 @@ impl Mapper for Mapper001_5 {
                 0x0000..=0x7FFF => unreachable!(),
                 0x8000..=0x9FFF => {
                     let fields = splitbits!(min=u8, finished_value, "...c..mm");
-                    mem.set_chr_layout(fields.c);
-                    mem.set_name_table_mirroring(fields.m);
+                    bus.set_chr_layout(fields.c);
+                    bus.set_name_table_mirroring(fields.m);
                 }
-                0xA000..=0xBFFF => mem.set_chr_register(C0, finished_value),
-                0xC000..=0xDFFF => mem.set_chr_register(C1, finished_value),
+                0xA000..=0xBFFF => bus.set_chr_register(C0, finished_value),
+                0xC000..=0xDFFF => bus.set_chr_register(C1, finished_value),
                 0xE000..=0xFFFF => {
                     let ram_disabled = splitbits_named!(finished_value, "...d....");
-                    mem.set_reads_enabled(R0, !ram_disabled);
-                    mem.set_writes_enabled(W0, !ram_disabled);
+                    bus.set_reads_enabled(R0, !ram_disabled);
+                    bus.set_writes_enabled(W0, !ram_disabled);
                 }
             }
         }

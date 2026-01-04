@@ -25,7 +25,7 @@ pub struct Mapper036 {
 }
 
 impl Mapper for Mapper036 {
-    fn peek_register(&self, _mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_register(&self, _bus: &Bus, addr: CpuAddress) -> ReadResult {
         if *addr & 0xE100 == 0x4100 {
             ReadResult::partial(u8::from(self.rr) << 4, 0b0011_0000)
         } else {
@@ -33,11 +33,11 @@ impl Mapper for Mapper036 {
         }
     }
 
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         if *addr & 0xE200 == 0x4200 {
-            mem.set_chr_register(C0, value & 0b1111);
+            bus.set_chr_register(C0, value & 0b1111);
         } else if *addr & 0x8000 == 0x8000 {
-            mem.set_prg_register(P0, self.rr);
+            bus.set_prg_register(P0, self.rr);
         } else {
             match *addr & 0xE103 {
                 0x4100 => {

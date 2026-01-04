@@ -39,17 +39,17 @@ pub struct Mapper091_0 {
 }
 
 impl Mapper for Mapper091_0 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr & 0xF003 {
-            0x6000 => mem.set_chr_register(C0, value),
-            0x6001 => mem.set_chr_register(C1, value),
-            0x6002 => mem.set_chr_register(C2, value),
-            0x6003 => mem.set_chr_register(C3, value),
-            0x7000 => mem.set_prg_register(P0, value & 0b00001111),
-            0x7001 => mem.set_prg_register(P1, value & 0b00001111),
+            0x6000 => bus.set_chr_register(C0, value),
+            0x6001 => bus.set_chr_register(C1, value),
+            0x6002 => bus.set_chr_register(C2, value),
+            0x6003 => bus.set_chr_register(C3, value),
+            0x7000 => bus.set_prg_register(P0, value & 0b00001111),
+            0x7001 => bus.set_prg_register(P1, value & 0b00001111),
             0x7002 => {
                 self.irq_counter.disable();
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
             }
             0x7003 => {
                 self.irq_counter.enable();
@@ -57,17 +57,17 @@ impl Mapper for Mapper091_0 {
             }
             0x8000..=0x9FFF => {
                 let outer_banks = splitbits!(min=u8, *addr, ".... .... .... .pcc");
-                mem.set_prg_rom_outer_bank_number(outer_banks.p);
-                mem.set_prg_rom_outer_bank_number(outer_banks.c);
+                bus.set_prg_rom_outer_bank_number(outer_banks.p);
+                bus.set_prg_rom_outer_bank_number(outer_banks.c);
             }
             _ => { /* Do nothing. */ }
         }
     }
 
-    fn on_ppu_address_change(&mut self, mem: &mut Memory, address: PpuAddress) {
+    fn on_ppu_address_change(&mut self, bus: &mut Bus, address: PpuAddress) {
         let should_tick = self.pattern_table_transition_detector.set_value_then_detect(address.pattern_table_side());
         if should_tick && self.irq_counter.tick().triggered {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
     }
 

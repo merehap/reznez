@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 
 const LAYOUT: Layout = Layout::builder()
     // The wiki says 256KiB, but then doesn't mask down to just 4 banks.
@@ -86,31 +86,31 @@ pub struct Mapper064 {
 }
 
 impl Mapper for Mapper064 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         let is_even_address = addr.is_multiple_of(2);
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x9FFF if is_even_address => self.bank_select(mem, value),
-            0x8000..=0x9FFF => self.set_bank_number(mem, value),
-            0xA000..=0xBFFF if is_even_address => Mapper064::set_name_table_mirroring(mem, value),
+            0x8000..=0x9FFF if is_even_address => self.bank_select(bus, value),
+            0x8000..=0x9FFF => self.set_bank_number(bus, value),
+            0xA000..=0xBFFF if is_even_address => Mapper064::set_name_table_mirroring(bus, value),
             0xA000..=0xBFFF => {/* Do nothing. No use of these registers has been found. */ }
             0xC000..=0xDFFF if is_even_address => self.set_irq_counter_reload_value(value),
             0xC000..=0xDFFF => self.set_irq_reload_mode(value),
-            0xE000..=0xFFFF if is_even_address => self.acknowledge_irq(mem),
+            0xE000..=0xFFFF if is_even_address => self.acknowledge_irq(bus),
             0xE000..=0xFFFF => self.enabled_irq(),
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
         if self.irq_pending_delay_cycles > 0 {
             self.irq_pending_delay_cycles -= 1;
             if self.irq_pending_delay_cycles == 0 {
-                mem.cpu_pinout.assert_mapper_irq();
+                bus.cpu_pinout.assert_mapper_irq();
             }
         }
 
-        if self.irq_counter_reload_mode == IrqCounterReloadMode::CpuCycle && mem.cpu_cycle() % 4 == 0 {
+        if self.irq_counter_reload_mode == IrqCounterReloadMode::CpuCycle && bus.cpu_cycle() % 4 == 0 {
             self.tick_irq_counter(CPU_CYCLE_MODE_IRQ_PENDING_DELAY);
         }
     }
@@ -123,7 +123,7 @@ impl Mapper for Mapper064 {
     }
 
     // When in scanline reload mode, this is the same as MMC3's IRQ triggering except delayed a bit.
-    fn on_ppu_address_change(&mut self, _mem: &mut Memory, address: PpuAddress) {
+    fn on_ppu_address_change(&mut self, _bus: &mut Bus, address: PpuAddress) {
         if self.irq_counter_reload_mode != IrqCounterReloadMode::Scanline {
             return;
         }
@@ -175,24 +175,24 @@ impl Mapper064 {
         }
     }
 
-    fn bank_select(&mut self, mem: &mut Memory, value: u8) {
+    fn bank_select(&mut self, bus: &mut Bus, value: u8) {
         let fields = splitbits!(min=u8, value, "cpc.bbbb");
-        mem.set_chr_layout(fields.c);
-        mem.set_prg_layout(fields.p);
+        bus.set_chr_layout(fields.c);
+        bus.set_prg_layout(fields.p);
         if let Some(reg_id) = BANK_NUMBER_REGISTER_IDS[fields.b as usize] {
             self.selected_register_id = reg_id;
         }
     }
 
-    fn set_bank_number(&self, mem: &mut Memory, value: u8) {
+    fn set_bank_number(&self, bus: &mut Bus, value: u8) {
         match self.selected_register_id {
-            Chr(cx) => mem.set_chr_register(cx, value),
-            Prg(px) => mem.set_prg_register(px, value),
+            Chr(cx) => bus.set_chr_register(cx, value),
+            Prg(px) => bus.set_prg_register(px, value),
         }
     }
 
-    fn set_name_table_mirroring(mem: &mut Memory, value: u8) {
-        mem.set_name_table_mirroring(value & 1);
+    fn set_name_table_mirroring(bus: &mut Bus, value: u8) {
+        bus.set_name_table_mirroring(value & 1);
     }
 
     fn set_irq_counter_reload_value(&mut self, value: u8) {
@@ -209,9 +209,9 @@ impl Mapper064 {
         };
     }
 
-    fn acknowledge_irq(&mut self, mem: &mut Memory) {
+    fn acknowledge_irq(&mut self, bus: &mut Bus) {
         self.irq_enabled = false;
-        mem.cpu_pinout.acknowledge_mapper_irq();
+        bus.cpu_pinout.acknowledge_mapper_irq();
     }
 
     fn enabled_irq(&mut self) {

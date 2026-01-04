@@ -42,16 +42,16 @@ pub struct Mapper091_1 {
 }
 
 impl Mapper for Mapper091_1 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr & 0xF007 {
-            0x6000 => mem.set_chr_register(C0, value),
-            0x6001 => mem.set_chr_register(C1, value),
-            0x6002 => mem.set_chr_register(C2, value),
-            0x6003 => mem.set_chr_register(C3, value),
-            0x6004 => mem.set_name_table_mirroring(HORIZONTAL),
-            0x6005 => mem.set_name_table_mirroring(VERTICAL),
-            0x7000 => mem.set_prg_register(P0, value & 0b00001111),
-            0x7001 => mem.set_prg_register(P1, value & 0b00001111),
+            0x6000 => bus.set_chr_register(C0, value),
+            0x6001 => bus.set_chr_register(C1, value),
+            0x6002 => bus.set_chr_register(C2, value),
+            0x6003 => bus.set_chr_register(C3, value),
+            0x6004 => bus.set_name_table_mirroring(HORIZONTAL),
+            0x6005 => bus.set_name_table_mirroring(VERTICAL),
+            0x7000 => bus.set_prg_register(P0, value & 0b00001111),
+            0x7001 => bus.set_prg_register(P1, value & 0b00001111),
 
             0x6006 => {
                 self.irq_counter.set_reload_value_low_byte(value);
@@ -62,7 +62,7 @@ impl Mapper for Mapper091_1 {
             }
             0x7006 => {
                 self.irq_counter.disable();
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
             }
             0x7007 => {
                 self.irq_counter.enable();
@@ -71,9 +71,9 @@ impl Mapper for Mapper091_1 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
         if self.irq_counter.tick().triggered {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
     }
 

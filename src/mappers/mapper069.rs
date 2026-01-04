@@ -1,6 +1,6 @@
 use crate::mapper::*;
 use crate::memory::bank::bank::PrgSource;
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
@@ -50,13 +50,13 @@ pub struct Mapper069 {
 }
 
 impl Mapper for Mapper069 {
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
         if self.irq_counter.tick().triggered {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
     }
 
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
@@ -76,21 +76,21 @@ impl Mapper for Mapper069 {
             0xA000..=0xBFFF => {
                 match self.command {
                     Command::ChrRomBank(id) =>
-                        mem.set_chr_register(id, value),
+                        bus.set_chr_register(id, value),
                     Command::PrgRomRamBank => {
                         let fields = splitbits!(value, "empppppp");
-                        mem.set_reads_enabled(R0, fields.e);
-                        mem.set_writes_enabled(W0, fields.e);
+                        bus.set_reads_enabled(R0, fields.e);
+                        bus.set_writes_enabled(W0, fields.e);
                         let rom_ram_mode = [PrgSource::Rom, PrgSource::WorkRamOrRom][fields.m as usize];
-                        mem.set_rom_ram_mode(PS0, rom_ram_mode);
-                        mem.set_prg_register(P0, fields.p);
+                        bus.set_rom_ram_mode(PS0, rom_ram_mode);
+                        bus.set_prg_register(P0, fields.p);
                     }
                     Command::PrgRomBank(id) =>
-                        mem.set_prg_register(id, value),
+                        bus.set_prg_register(id, value),
                     Command::NameTableMirroring =>
-                        mem.set_name_table_mirroring(value & 0b11),
+                        bus.set_name_table_mirroring(value & 0b11),
                     Command::IrqControl => {
-                        mem.cpu_pinout.acknowledge_mapper_irq();
+                        bus.cpu_pinout.acknowledge_mapper_irq();
                         let (counter_counting_enabled, irq_triggering_enabled) = splitbits_named!(value, "c......i");
                         self.irq_counter.set_counting_enabled(counter_counting_enabled);
                         self.irq_counter.set_triggering_enabled(irq_triggering_enabled);

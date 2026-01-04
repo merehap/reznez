@@ -1,6 +1,6 @@
 use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::mapper::*;
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 
 const LAYOUT_WITH_SWITCHABLE_CHR_ROM: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
@@ -64,19 +64,19 @@ pub struct Mapper042 {
 }
 
 impl Mapper for Mapper042 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr & 0xE003 {
-            0x8000 => mem.set_chr_register(C0, value & 0b1111),
-            0xE000 => mem.set_prg_register(P0, value & 0b1111),
+            0x8000 => bus.set_chr_register(C0, value & 0b1111),
+            0xE000 => bus.set_prg_register(P0, value & 0b1111),
             0xE001 => {
                 let mirroring = splitbits_named!(value, "....m...");
-                mem.set_name_table_mirroring(mirroring as u8);
+                bus.set_name_table_mirroring(mirroring as u8);
             }
             0xE002 => {
                 if value & 0b0000_0010 == 0 {
                     self.irq_counter.disable();
                     self.irq_counter.force_reload();
-                    mem.cpu_pinout.acknowledge_mapper_irq();
+                    bus.cpu_pinout.acknowledge_mapper_irq();
                 } else {
                     self.irq_counter.enable();
                 }
@@ -85,14 +85,14 @@ impl Mapper for Mapper042 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
         let tick_result = self.irq_counter.tick();
         if tick_result.triggered {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
 
         if tick_result.wrapped {
-            mem.cpu_pinout.acknowledge_mapper_irq();
+            bus.cpu_pinout.acknowledge_mapper_irq();
         }
     }
 

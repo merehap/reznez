@@ -49,7 +49,7 @@ impl Gui for EguiGui {
             if world.input.update(&event) {
                 if let Some(nes) = &mut world.nes {
                     if world.input.key_pressed(KeyCode::F1) {
-                        info!("{}", nes.memory().oam);
+                        info!("{}", nes.bus().oam);
                     }
 
                     if world.input.key_pressed(KeyCode::F12) {

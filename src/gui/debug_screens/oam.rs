@@ -1,6 +1,6 @@
 use crate::gui::debug_screens::pattern_table::PatternTable;
 use crate::gui::debug_screens::sprite::Sprite;
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 use crate::ppu::pixel_index::PixelRow;
 use crate::ppu::sprite::oam::Oam;
 use crate::ppu::sprite::sprite_attributes::Priority;
@@ -43,19 +43,19 @@ impl Oam {
         })
     }
 
-    pub fn render(&self, mem: &Memory, frame: &mut Frame) {
+    pub fn render(&self, bus: &Bus, frame: &mut Frame) {
         for pixel_row in PixelRow::iter() {
-            self.render_scanline(pixel_row, mem, frame);
+            self.render_scanline(pixel_row, bus,frame);
         }
     }
 
-    pub fn render_scanline(&self, pixel_row: PixelRow, mem: &Memory, frame: &mut Frame) {
+    pub fn render_scanline(&self, pixel_row: PixelRow, bus: &Bus, frame: &mut Frame) {
         frame.clear_sprite_line(pixel_row);
 
-        let sprite_table_side = mem.ppu_regs.sprite_table_side();
-        let mut pattern_table = PatternTable::from_mem(mem, sprite_table_side);
-        let palette_table = mem.palette_table();
-        let sprite_height = mem.ppu_regs.sprite_height();
+        let sprite_table_side = bus.ppu_regs.sprite_table_side();
+        let mut pattern_table = PatternTable::from_mem(bus, sprite_table_side);
+        let palette_table = bus.palette_table();
+        let sprite_height = bus.ppu_regs.sprite_height();
 
         // FIXME: No more sprites will be found once the end of OAM is reached,
         // effectively hiding any sprites before OAM[OAMADDR].
@@ -65,7 +65,7 @@ impl Oam {
             let is_sprite_0 = i == 0;
             let sprite = sprites[i];
             if sprite_height == SpriteHeight::Tall {
-                pattern_table = PatternTable::from_mem(mem, sprite.tile_number().tall_sprite_pattern_table_side());
+                pattern_table = PatternTable::from_mem(bus, sprite.tile_number().tall_sprite_pattern_table_side());
             }
 
             sprite.render_sliver(

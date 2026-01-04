@@ -34,11 +34,11 @@ impl WindowRenderer for SpritesRenderer {
             return;
         };
 
-        let sprites = nes.memory().oam.sprites();
-        let mem = nes.memory();
+        let sprites = nes.bus().oam.sprites();
+        let bus = nes.bus();
 
         for (index, sprite) in sprites.iter().enumerate() {
-            let tile = sprite.render_normal_height(&PatternTable::sprite_side(mem), &mem.palette_table());
+            let tile = sprite.render_normal_height(&PatternTable::sprite_side(bus), &bus.palette_table());
             self.buffer.place_tile(
                 (8 + 1) * (index % 8),
                 (8 + 1) * (index / 8),

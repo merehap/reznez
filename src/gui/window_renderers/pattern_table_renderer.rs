@@ -44,18 +44,18 @@ impl WindowRenderer for PatternTableRenderer {
             return;
         };
 
-        let mem = nes.memory();
+        let bus = nes.bus();
 
         let mut offset = 0;
         for side in [PatternTableSide::Left, PatternTableSide::Right] {
-            let palette = if mem.ppu_regs.sprite_table_side() == side {
-                mem.palette_table().sprite_palette(PaletteTableIndex::Zero)
+            let palette = if bus.ppu_regs.sprite_table_side() == side {
+                bus.palette_table().sprite_palette(PaletteTableIndex::Zero)
             } else {
-                mem.palette_table()
+                bus.palette_table()
                     .background_palette(PaletteTableIndex::Zero)
             };
             for index in 0..=255 {
-                PatternTable::from_mem(mem, side).render_background_tile(
+                PatternTable::from_mem(bus, side).render_background_tile(
                     TileNumber::new(index),
                     palette,
                     &mut self.tile,

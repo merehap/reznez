@@ -29,13 +29,13 @@ const CHR_IDS: [ChrBankRegisterId; 4] = [C0, C1, C2, C3];
 pub struct Mapper190;
 
 impl Mapper for Mapper190 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF | 0xE000..=0xFFFF => { /* No regs here. */ }
-            0x8000..=0x9FFF => mem.set_prg_register(P0, value & 0b0111),
-            0xC000..=0xDFFF => mem.set_prg_register(P0, (value & 0b0111) | 0b1000),
-            0xA000..=0xBFFF => mem.set_chr_register(CHR_IDS[*addr as usize & 0b11], value),
+            0x8000..=0x9FFF => bus.set_prg_register(P0, value & 0b0111),
+            0xC000..=0xDFFF => bus.set_prg_register(P0, (value & 0b0111) | 0b1000),
+            0xA000..=0xBFFF => bus.set_chr_register(CHR_IDS[*addr as usize & 0b11], value),
         }
     }
 

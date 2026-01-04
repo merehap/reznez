@@ -64,37 +64,37 @@ pub struct Mapper004Mmc3 {
 }
 
 impl Mapper for Mapper004Mmc3 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         let is_even_address = addr.is_multiple_of(2);
         match (*addr, is_even_address) {
             (0x0000..=0x401F, _) => unreachable!(),
             (0x4020..=0x7FFF, _) => { /* Do nothing. */ }
             (0x8000..=0x9FFF, true ) => {
                 let fields = splitbits!(min=u8, value, "cp...rrr");
-                mem.set_chr_layout(fields.c);
-                mem.set_prg_layout(fields.p);
+                bus.set_chr_layout(fields.c);
+                bus.set_prg_layout(fields.p);
                 self.selected_register_id = BANK_NUMBER_REGISTER_IDS[fields.r as usize];
             }
             (0x8000..=0x9FFF, false) => {
                 match self.selected_register_id {
-                    Chr(cx) => mem.set_chr_register(cx, value),
-                    Prg(px) => mem.set_prg_register(px, value),
+                    Chr(cx) => bus.set_chr_register(cx, value),
+                    Prg(px) => bus.set_prg_register(px, value),
                 }
             }
             (0xA000..=0xBFFF, true ) => {
                 // Cartridge hard-coded 4-screen mirroring cannot be changed.
-                if mem.name_table_mirroring().is_vertical() || mem.name_table_mirroring().is_horizontal() {
-                    mem.set_name_table_mirroring(value & 1);
+                if bus.name_table_mirroring().is_vertical() || bus.name_table_mirroring().is_horizontal() {
+                    bus.set_name_table_mirroring(value & 1);
                 }
             }
             (0xA000..=0xBFFF, false) => {
                 let (enabled, disable_writes) = splitbits_named!(value, "ed......");
-                mem.set_reads_enabled(R0, enabled);
-                mem.set_writes_enabled(W0, enabled && !disable_writes);
+                bus.set_reads_enabled(R0, enabled);
+                bus.set_writes_enabled(W0, enabled && !disable_writes);
             }
             (0xC000..=0xDFFF, true ) => self.irq_state.set_counter_reload_value(value),
             (0xC000..=0xDFFF, false) => self.irq_state.reload_counter(),
-            (0xE000..=0xFFFF, true ) => self.irq_state.disable(mem),
+            (0xE000..=0xFFFF, true ) => self.irq_state.disable(bus),
             (0xE000..=0xFFFF, false) => self.irq_state.enable(),
         }
     }
@@ -103,8 +103,8 @@ impl Mapper for Mapper004Mmc3 {
         self.irq_state.decrement_suppression_cycle_count();
     }
 
-    fn on_ppu_address_change(&mut self, mem: &mut Memory, address: PpuAddress) {
-        self.irq_state.tick_counter(mem, address);
+    fn on_ppu_address_change(&mut self, bus: &mut Bus, address: PpuAddress) {
+        self.irq_state.tick_counter(bus, address);
     }
 
     fn irq_counter_info(&self) -> Option<IrqCounterInfo> {

@@ -1,7 +1,7 @@
 use std::ops::RangeInclusive;
 
 use crate::mapper::IrqCounterInfo;
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::counter::counter::{AutoTriggerWhen, ReloadDrivenCounter, CounterBuilder, ForcedReloadTiming, PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};
@@ -81,7 +81,7 @@ impl Mmc3IrqState {
         pattern_table_side_detector: EdgeDetector::pattern_table_side_detector(PatternTableSide::Left),
     };
 
-    pub fn tick_counter(&mut self, mem: &mut Memory, address: PpuAddress) {
+    pub fn tick_counter(&mut self, bus: &mut Bus, address: PpuAddress) {
         if !self.allowed_address_range.contains(&address.to_u16()) {
             return;
         }
@@ -96,7 +96,7 @@ impl Mmc3IrqState {
         }
 
         if should_tick_irq_counter && self.counter.tick().triggered {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
     }
 
@@ -115,9 +115,9 @@ impl Mmc3IrqState {
     }
 
     // Write 0xE000 (even addresses)
-    pub fn disable(&mut self, mem: &mut Memory) {
+    pub fn disable(&mut self, bus: &mut Bus) {
         self.counter.disable();
-        mem.cpu_pinout.acknowledge_mapper_irq();
+        bus.cpu_pinout.acknowledge_mapper_irq();
     }
 
     // Write 0xE001 (odd addresses)

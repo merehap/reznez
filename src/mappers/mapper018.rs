@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
@@ -45,13 +45,13 @@ pub struct Mapper018 {
 }
 
 impl Mapper for Mapper018 {
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
         // Disch: When enabled, the IRQ counter counts down every CPU cycle.
         //        When it wraps, an IRQ is generated.
         if self.irq_enabled {
             let mut new_counter = self.irq_counter & self.irq_counter_mask;
             if new_counter == 0 {
-                mem.cpu_pinout.assert_mapper_irq();
+                bus.cpu_pinout.assert_mapper_irq();
             }
 
             new_counter -= 1;
@@ -59,43 +59,43 @@ impl Mapper for Mapper018 {
         }
     }
 
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         let value = u16::from(value);
         match *addr & 0b1111_0000_0000_0011 {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
             0x6000..=0x7FFF => unreachable!(),
-            0x8000 => mem.set_prg_bank_register_bits(P0, value     , 0b0000_1111),
-            0x8001 => mem.set_prg_bank_register_bits(P0, value << 4, 0b0011_0000),
-            0x8002 => mem.set_prg_bank_register_bits(P1, value     , 0b0000_1111),
-            0x8003 => mem.set_prg_bank_register_bits(P1, value << 4, 0b0011_0000),
-            0x9000 => mem.set_prg_bank_register_bits(P2, value     , 0b0000_1111),
-            0x9001 => mem.set_prg_bank_register_bits(P2, value << 4, 0b0011_0000),
+            0x8000 => bus.set_prg_bank_register_bits(P0, value     , 0b0000_1111),
+            0x8001 => bus.set_prg_bank_register_bits(P0, value << 4, 0b0011_0000),
+            0x8002 => bus.set_prg_bank_register_bits(P1, value     , 0b0000_1111),
+            0x8003 => bus.set_prg_bank_register_bits(P1, value << 4, 0b0011_0000),
+            0x9000 => bus.set_prg_bank_register_bits(P2, value     , 0b0000_1111),
+            0x9001 => bus.set_prg_bank_register_bits(P2, value << 4, 0b0011_0000),
             0x9002 => self.work_ram_write_enabled = value & 0b0000_0010 != 0,
             0x9003 => { /* Do nothing */ }
-            0xA000 => mem.set_chr_bank_register_bits(C0, value     , 0b0000_1111),
-            0xA001 => mem.set_chr_bank_register_bits(C0, value << 4, 0b1111_0000),
-            0xA002 => mem.set_chr_bank_register_bits(C1, value     , 0b0000_1111),
-            0xA003 => mem.set_chr_bank_register_bits(C1, value << 4, 0b1111_0000),
-            0xB000 => mem.set_chr_bank_register_bits(C2, value     , 0b0000_1111),
-            0xB001 => mem.set_chr_bank_register_bits(C2, value << 4, 0b1111_0000),
-            0xB002 => mem.set_chr_bank_register_bits(C3, value     , 0b0000_1111),
-            0xB003 => mem.set_chr_bank_register_bits(C3, value << 4, 0b1111_0000),
-            0xC000 => mem.set_chr_bank_register_bits(C4, value     , 0b0000_1111),
-            0xC001 => mem.set_chr_bank_register_bits(C4, value << 4, 0b1111_0000),
-            0xC002 => mem.set_chr_bank_register_bits(C5, value     , 0b0000_1111),
-            0xC003 => mem.set_chr_bank_register_bits(C5, value << 4, 0b1111_0000),
-            0xD000 => mem.set_chr_bank_register_bits(C6, value     , 0b0000_1111),
-            0xD001 => mem.set_chr_bank_register_bits(C6, value << 4, 0b1111_0000),
-            0xD002 => mem.set_chr_bank_register_bits(C7, value     , 0b0000_1111),
-            0xD003 => mem.set_chr_bank_register_bits(C7, value << 4, 0b1111_0000),
+            0xA000 => bus.set_chr_bank_register_bits(C0, value     , 0b0000_1111),
+            0xA001 => bus.set_chr_bank_register_bits(C0, value << 4, 0b1111_0000),
+            0xA002 => bus.set_chr_bank_register_bits(C1, value     , 0b0000_1111),
+            0xA003 => bus.set_chr_bank_register_bits(C1, value << 4, 0b1111_0000),
+            0xB000 => bus.set_chr_bank_register_bits(C2, value     , 0b0000_1111),
+            0xB001 => bus.set_chr_bank_register_bits(C2, value << 4, 0b1111_0000),
+            0xB002 => bus.set_chr_bank_register_bits(C3, value     , 0b0000_1111),
+            0xB003 => bus.set_chr_bank_register_bits(C3, value << 4, 0b1111_0000),
+            0xC000 => bus.set_chr_bank_register_bits(C4, value     , 0b0000_1111),
+            0xC001 => bus.set_chr_bank_register_bits(C4, value << 4, 0b1111_0000),
+            0xC002 => bus.set_chr_bank_register_bits(C5, value     , 0b0000_1111),
+            0xC003 => bus.set_chr_bank_register_bits(C5, value << 4, 0b1111_0000),
+            0xD000 => bus.set_chr_bank_register_bits(C6, value     , 0b0000_1111),
+            0xD001 => bus.set_chr_bank_register_bits(C6, value << 4, 0b1111_0000),
+            0xD002 => bus.set_chr_bank_register_bits(C7, value     , 0b0000_1111),
+            0xD003 => bus.set_chr_bank_register_bits(C7, value << 4, 0b1111_0000),
             0xE000 => set_bits(&mut self.irq_reload_value, value      , 0b0000_0000_0000_1111),
             0xE001 => set_bits(&mut self.irq_reload_value, value <<  4, 0b0000_0000_1111_0000),
             0xE002 => set_bits(&mut self.irq_reload_value, value <<  8, 0b0000_1111_0000_0000),
             0xE003 => set_bits(&mut self.irq_reload_value, value << 12, 0b1111_0000_0000_0000),
             0xF000 => {
                 self.irq_counter = self.irq_reload_value;
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
             }
             0xF001 => {
                 if value & 0b0000_1000 != 0 {
@@ -109,9 +109,9 @@ impl Mapper for Mapper018 {
                 }
 
                 self.irq_enabled = value & 0b0000_0001 != 0;
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
             }
-            0xF002 => mem.set_name_table_mirroring(value as u8 & 0b11),
+            0xF002 => bus.set_name_table_mirroring(value as u8 & 0b11),
             0xF003 => todo!("Expansion audio."),
             _ => unreachable!(),
         }

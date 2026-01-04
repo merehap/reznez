@@ -31,7 +31,7 @@ pub struct Mapper206 {
 }
 
 impl Mapper for Mapper206 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
@@ -40,8 +40,8 @@ impl Mapper for Mapper206 {
             }
             0x8000..=0x9FFF => {
                 match self.selected_register_id {
-                    Chr(id) => mem.set_chr_register(id, value & 0b0011_1111),
-                    Prg(id) => mem.set_prg_register(id, value & 0b0000_1111),
+                    Chr(id) => bus.set_chr_register(id, value & 0b0011_1111),
+                    Prg(id) => bus.set_prg_register(id, value & 0b0000_1111),
                 }
             }
             0xA000..=0xFFFF => { /* Do nothing. */ }

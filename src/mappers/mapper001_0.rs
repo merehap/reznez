@@ -59,36 +59,36 @@ pub struct Mapper001_0 {
 }
 
 impl Mapper for Mapper001_0 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         // Only writes of 0x8000 to 0xFFFF trigger shifter logic.
         if *addr < 0x8000 {
             return;
         }
 
         match self.shift_register.shift(value) {
-            ShiftStatus::Clear => mem.set_prg_layout(3),
+            ShiftStatus::Clear => bus.set_prg_layout(3),
             ShiftStatus::Continue => { /* Do nothing additional. */ }
             ShiftStatus::Done { finished_value } => match *addr {
                 0x0000..=0x7FFF => unreachable!(),
                 0x8000..=0x9FFF => {
                     let fields = splitbits!(min=u8, finished_value, "...cppmm");
-                    mem.set_chr_layout(fields.c);
-                    mem.set_prg_layout(fields.p);
-                    mem.set_name_table_mirroring(fields.m);
+                    bus.set_chr_layout(fields.c);
+                    bus.set_prg_layout(fields.p);
+                    bus.set_name_table_mirroring(fields.m);
                 }
                 0xA000..=0xBFFF => {
-                    self.set_chr_bank_and_board_specifics(mem, C0, finished_value);
+                    self.set_chr_bank_and_board_specifics(bus, C0, finished_value);
                 }
                 0xC000..=0xDFFF => {
-                    if mem.chr_memory().layout_index() == 1 {
-                        self.set_chr_bank_and_board_specifics(mem, C1, finished_value);
+                    if bus.chr_memory().layout_index() == 1 {
+                        self.set_chr_bank_and_board_specifics(bus, C1, finished_value);
                     }
                 }
                 0xE000..=0xFFFF => {
                     let (ram_disabled, prg_bank) = splitbits_named!(finished_value, "...dpppp");
-                    mem.set_reads_enabled(R0, !ram_disabled);
-                    mem.set_writes_enabled(W0, !ram_disabled);
-                    mem.set_prg_register(P1, prg_bank);
+                    bus.set_reads_enabled(R0, !ram_disabled);
+                    bus.set_writes_enabled(W0, !ram_disabled);
+                    bus.set_prg_register(P1, prg_bank);
                 }
             }
         }
@@ -104,38 +104,38 @@ impl Mapper001_0 {
         Self { board, shift_register: ShiftRegister::default() }
     }
 
-    fn set_chr_bank_and_board_specifics(&self, mem: &mut Memory, chr_id: ChrBankRegisterId, value: u8) {
+    fn set_chr_bank_and_board_specifics(&self, bus: &mut Bus, chr_id: ChrBankRegisterId, value: u8) {
         match self.board {
             Board::SNROM => {
                 let (ram_disabled, chr_bank) = splitbits_named!(value, "...d...c");
-                mem.set_reads_enabled(R0, !ram_disabled);
-                mem.set_writes_enabled(W0, !ram_disabled);
-                mem.set_chr_register(chr_id, chr_bank as u16);
+                bus.set_reads_enabled(R0, !ram_disabled);
+                bus.set_writes_enabled(W0, !ram_disabled);
+                bus.set_chr_register(chr_id, chr_bank as u16);
             }
             Board::SUROM => {
                 let banks = splitbits!(min=u8, value, "...p...c");
-                mem.set_prg_rom_outer_bank_number(banks.p);
-                mem.set_chr_register(chr_id, banks.c);
+                bus.set_prg_rom_outer_bank_number(banks.p);
+                bus.set_chr_register(chr_id, banks.c);
             }
             Board::SOROM => {
                 let banks = splitbits!(min=u8, value, "...pr..c");
-                mem.set_prg_rom_outer_bank_number(banks.p);
-                mem.set_prg_register(P0, banks.r);
-                mem.set_chr_register(chr_id, banks.c);
+                bus.set_prg_rom_outer_bank_number(banks.p);
+                bus.set_prg_register(P0, banks.r);
+                bus.set_chr_register(chr_id, banks.c);
             }
             Board::SXROM => {
                 let banks = splitbits!(min=u8, value, "...prr.c");
-                mem.set_prg_rom_outer_bank_number(banks.p);
-                mem.set_prg_register(P0, banks.r);
-                mem.set_chr_register(chr_id, banks.c);
+                bus.set_prg_rom_outer_bank_number(banks.p);
+                bus.set_prg_register(P0, banks.r);
+                bus.set_chr_register(chr_id, banks.c);
             }
             Board::SZROM => {
                 let banks = splitbits!(min=u8, value, "...rcccc");
-                mem.set_prg_register(P0, banks.r);
-                mem.set_chr_register(chr_id, banks.c);
+                bus.set_prg_register(P0, banks.r);
+                bus.set_chr_register(chr_id, banks.c);
             }
             _ => {
-                mem.set_chr_register(chr_id, value);
+                bus.set_chr_register(chr_id, value);
             }
         }
     }

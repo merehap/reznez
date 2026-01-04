@@ -22,7 +22,7 @@ pub struct Mapper046 {
 }
 
 impl Mapper for Mapper046 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
@@ -34,9 +34,9 @@ impl Mapper for Mapper046 {
             0x8000..=0xFFFF => {
                 // TODO: replacebits
                 let prg_bank_number = self.prg_high_bits | (value & 0b0000_0001);
-                mem.set_prg_register(P0, prg_bank_number);
+                bus.set_prg_register(P0, prg_bank_number);
                 let chr_bank_number = self.chr_high_bits | ((value << 1) >> 5);
-                mem.set_chr_register(C0, chr_bank_number);
+                bus.set_chr_register(C0, chr_bank_number);
             }
         }
     }

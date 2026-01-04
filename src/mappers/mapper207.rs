@@ -16,11 +16,11 @@ pub struct Mapper207 {
 }
 
 impl Mapper for Mapper207 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
-            0x7EF0 => Self::set_mirroring_and_bank(mem, value, C0, NameTableQuadrant::TopLeft, NameTableQuadrant::TopRight),
-            0x7EF1 => Self::set_mirroring_and_bank(mem, value, C1, NameTableQuadrant::BottomLeft, NameTableQuadrant::BottomRight),
-            _ => self.mapper080.write_register(mem, addr, value),
+            0x7EF0 => Self::set_mirroring_and_bank(bus, value, C0, NameTableQuadrant::TopLeft, NameTableQuadrant::TopRight),
+            0x7EF1 => Self::set_mirroring_and_bank(bus, value, C1, NameTableQuadrant::BottomLeft, NameTableQuadrant::BottomRight),
+            _ => self.mapper080.write_register(bus, addr, value),
         }
     }
 
@@ -35,7 +35,7 @@ impl Mapper207 {
     }
 
     fn set_mirroring_and_bank(
-        mem: &mut Memory,
+        bus: &mut Bus,
         value: u8,
         chr_id: ChrBankRegisterId,
         left_quadrant: NameTableQuadrant,
@@ -43,8 +43,8 @@ impl Mapper207 {
     ) {
         let (ciram_right, chr_bank) = splitbits_named!(value, "vccc cccc");
         let ciram_side = if ciram_right { CiramSide::Right } else { CiramSide::Left };
-        mem.set_name_table_quadrant(left_quadrant, ciram_side);
-        mem.set_name_table_quadrant(right_quadrant, ciram_side);
-        mem.set_chr_register(chr_id, chr_bank);
+        bus.set_name_table_quadrant(left_quadrant, ciram_side);
+        bus.set_name_table_quadrant(right_quadrant, ciram_side);
+        bus.set_chr_register(chr_id, chr_bank);
     }
 }

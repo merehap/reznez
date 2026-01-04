@@ -35,11 +35,11 @@ pub struct Mapper037 {
 }
 
 impl Mapper for Mapper037 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         // MMC3 is still setting W0 WriteStatus to Enabled/Disabled,
         // even though this mapper substitutes in a layout that doesn't use W0.
-        if matches!(*addr, 0x6000..=0x7FFF) && mem.prg_memory.bank_registers().write_status(W0) == WriteStatus::Enabled {
-            mem.chr_memory.set_chr_rom_outer_bank_number((value >> 2) & 1);
+        if matches!(*addr, 0x6000..=0x7FFF) && bus.prg_memory.bank_registers().write_status(W0) == WriteStatus::Enabled {
+            bus.chr_memory.set_chr_rom_outer_bank_number((value >> 2) & 1);
 
             let (new_prg_outer_bank_size, new_prg_outer_bank_number) = match value & 0b111 {
                 0..=2 => ( 64 * KIBIBYTE, 0), // 0x00000 to 0x0FFFF
@@ -48,11 +48,11 @@ impl Mapper for Mapper037 {
                 7     => ( 64 * KIBIBYTE, 3), // 0x30000 to 0x3FFFF
                 _ => unimplemented!(),
             };
-            mem.prg_memory.set_prg_rom_outer_bank_size(new_prg_outer_bank_size);
-            mem.prg_memory.set_prg_rom_outer_bank_number(new_prg_outer_bank_number);
+            bus.prg_memory.set_prg_rom_outer_bank_size(new_prg_outer_bank_size);
+            bus.prg_memory.set_prg_rom_outer_bank_number(new_prg_outer_bank_number);
         }
 
-        self.mmc3.write_register(mem, addr, value);
+        self.mmc3.write_register(bus, addr, value);
     }
 
     fn layout(&self) -> Layout {

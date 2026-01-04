@@ -15,7 +15,7 @@ pub use crate::memory::bank::bank::WriteStatusRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::PrgMemory;
 pub use crate::memory::layout::Layout;
-pub use crate::memory::memory::Memory;
+pub use crate::memory::memory::Bus;
 pub use crate::memory::ppu::chr_memory::ChrMemory;
 pub use crate::memory::ppu::ppu_address::PpuAddress;
 pub use crate::memory::read_result::ReadResult;
@@ -34,41 +34,41 @@ pub trait Mapper {
     fn layout(&self) -> Layout;
 
     // Most mappers don't support peeking register values.
-    fn peek_register(&self, _mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_register(&self, _bus: &Bus, addr: CpuAddress) -> ReadResult {
         assert!(0x4020 <= *addr && *addr <= 0x5FFF);
         ReadResult::OPEN_BUS
     }
 
     // Every mapper must implement write_register.
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8);
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8);
 
     // Hack to allow Action 53 to use its own custom peeking logic.
     // TODO: Provide a proper solution for Action 53.
-    fn peek_prg(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
-        mem.prg_memory.peek(addr)
+    fn peek_prg(&self, bus: &Bus, addr: CpuAddress) -> ReadResult {
+        bus.prg_memory.peek(addr)
     }
 
     // Most mappers don't need to modify the MapperParams before ROM execution begins, but this
     // provides a relief valve for the rare settings that can't be expressed in a Layout.
-    fn init_mapper_params(&self, _mem: &mut Memory) {}
+    fn init_mapper_params(&self, _bus: &mut Bus) {}
     // Most mappers don't care about CPU cycles.
-    fn on_end_of_cpu_cycle(&mut self, _mem: &mut Memory) {}
-    fn on_cpu_read(&mut self, _mem: &mut Memory, _addr: CpuAddress, _value: u8) {}
-    fn on_cpu_write(&mut self, _mem: &mut Memory, _addr: CpuAddress, _value: u8) {}
+    fn on_end_of_cpu_cycle(&mut self, _bus: &mut Bus) {}
+    fn on_cpu_read(&mut self, _bus: &mut Bus, _addr: CpuAddress, _value: u8) {}
+    fn on_cpu_write(&mut self, _bus: &mut Bus, _addr: CpuAddress, _value: u8) {}
     // Most mappers don't care about PPU cycles.
     fn on_end_of_ppu_cycle(&mut self) {}
     // Most mappers don't trigger anything based upon ppu reads.
-    fn on_ppu_read(&mut self, _mem: &mut Memory, _address: PpuAddress, _value: u8) {}
+    fn on_ppu_read(&mut self, _bus: &mut Bus, _address: PpuAddress, _value: u8) {}
     // Most mappers don't care about changes to the current PPU address.
-    fn on_ppu_address_change(&mut self, _mem: &mut Memory, _address: PpuAddress) {}
+    fn on_ppu_address_change(&mut self, _bus: &mut Bus, _address: PpuAddress) {}
     // Most mappers don't have bus conflicts.
     fn has_bus_conflicts(&self) -> bool { false }
     // Used for debug screens.
     fn irq_counter_info(&self) -> Option<IrqCounterInfo> { None }
 
     // Hack? Only used by MMC5 for overriding. Should be a better way to do this.
-    fn ppu_peek(&self, mem: &Memory, address: PpuAddress) -> PpuPeek {
-        mem.ppu_peek(address)
+    fn ppu_peek(&self, bus: &Bus, address: PpuAddress) -> PpuPeek {
+        bus.ppu_peek(address)
     }
 
     fn supported(self) -> LookupResult where Self: Sized, Self: 'static {

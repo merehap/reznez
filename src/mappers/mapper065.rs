@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 
 const LAYOUT: Layout = Layout::builder()
     .override_prg_bank_register(P1, 1)
@@ -55,19 +55,19 @@ pub struct Mapper065 {
 }
 
 impl Mapper for Mapper065 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
 
-            0x8000 => mem.set_prg_register(P0, value),
-            0xA000 => mem.set_prg_register(P1, value),
+            0x8000 => bus.set_prg_register(P0, value),
+            0xA000 => bus.set_prg_register(P1, value),
             0xB000..=0xB007 => {
                 let reg_id = CHR_REGISTER_IDS[usize::from(*addr - 0xB000)];
-                mem.set_chr_register(reg_id, value);
+                bus.set_chr_register(reg_id, value);
             }
-            0x9000 => mem.set_prg_layout(value >> 7),
-            0x9001 => mem.set_name_table_mirroring(value >> 6),
+            0x9000 => bus.set_prg_layout(value >> 7),
+            0x9001 => bus.set_name_table_mirroring(value >> 6),
 
             0x9003 => {
                 if value >> 7 == 1 {
@@ -78,7 +78,7 @@ impl Mapper for Mapper065 {
             }
             0x9004 => {
                 self.irq_counter.force_reload();
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
             }
             0x9005 => {
                 self.irq_counter.set_reload_value_high_byte(value);
@@ -90,9 +90,9 @@ impl Mapper for Mapper065 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
         if self.irq_counter.tick().triggered {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
     }
 

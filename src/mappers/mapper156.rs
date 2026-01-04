@@ -37,27 +37,27 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper156;
 
 impl Mapper for Mapper156 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
-            0xC000 => mem.set_chr_register_low_byte(C0, value),
-            0xC001 => mem.set_chr_register_low_byte(C1, value),
-            0xC002 => mem.set_chr_register_low_byte(C2, value),
-            0xC003 => mem.set_chr_register_low_byte(C3, value),
-            0xC004 => mem.set_chr_register_high_byte(C0, value & 1),
-            0xC005 => mem.set_chr_register_high_byte(C1, value & 1),
-            0xC006 => mem.set_chr_register_high_byte(C2, value & 1),
-            0xC007 => mem.set_chr_register_high_byte(C3, value & 1),
-            0xC008 => mem.set_chr_register_low_byte(C4, value),
-            0xC009 => mem.set_chr_register_low_byte(C5, value),
-            0xC00A => mem.set_chr_register_low_byte(C6, value),
-            0xC00B => mem.set_chr_register_low_byte(C7, value),
-            0xC00C => mem.set_chr_register_high_byte(C4, value & 1),
-            0xC00D => mem.set_chr_register_high_byte(C5, value & 1),
-            0xC00E => mem.set_chr_register_high_byte(C6, value & 1),
-            0xC00F => mem.set_chr_register_high_byte(C7, value & 1),
-            0xC010 => mem.set_prg_register(P0, value & 0b1111),
-            0xC014 => mem.set_name_table_mirroring(value & 0b11),
+            0xC000 => bus.set_chr_register_low_byte(C0, value),
+            0xC001 => bus.set_chr_register_low_byte(C1, value),
+            0xC002 => bus.set_chr_register_low_byte(C2, value),
+            0xC003 => bus.set_chr_register_low_byte(C3, value),
+            0xC004 => bus.set_chr_register_high_byte(C0, value & 1),
+            0xC005 => bus.set_chr_register_high_byte(C1, value & 1),
+            0xC006 => bus.set_chr_register_high_byte(C2, value & 1),
+            0xC007 => bus.set_chr_register_high_byte(C3, value & 1),
+            0xC008 => bus.set_chr_register_low_byte(C4, value),
+            0xC009 => bus.set_chr_register_low_byte(C5, value),
+            0xC00A => bus.set_chr_register_low_byte(C6, value),
+            0xC00B => bus.set_chr_register_low_byte(C7, value),
+            0xC00C => bus.set_chr_register_high_byte(C4, value & 1),
+            0xC00D => bus.set_chr_register_high_byte(C5, value & 1),
+            0xC00E => bus.set_chr_register_high_byte(C6, value & 1),
+            0xC00F => bus.set_chr_register_high_byte(C7, value & 1),
+            0xC010 => bus.set_prg_register(P0, value & 0b1111),
+            0xC014 => bus.set_name_table_mirroring(value & 0b11),
             _ => { /* Do nothing. */}
         }
     }

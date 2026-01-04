@@ -37,18 +37,18 @@ pub struct Mapper150 {
 }
 
 impl Mapper for Mapper150 {
-    fn peek_register(&self, mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_register(&self, bus: &Bus, addr: CpuAddress) -> ReadResult {
         if *addr & 0xC101 == 0x4101 {
             let reg_value: u8 = self.regs[self.selected_reg_type as usize].into();
-            let present_bits_mask = if mem.dip_switch & 1 == 1 { 0b0000_0011 } else { 0b0000_0111 };
+            let present_bits_mask = if bus.dip_switch & 1 == 1 { 0b0000_0011 } else { 0b0000_0111 };
             return ReadResult::partial(reg_value, present_bits_mask);
         }
 
         ReadResult::OPEN_BUS
     }
 
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, mut value: u8) {
-        if mem.dip_switch & 1 == 1 {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, mut value: u8) {
+        if bus.dip_switch & 1 == 1 {
             value |= 0b1000;
         }
 
@@ -68,10 +68,10 @@ impl Mapper for Mapper150 {
                 self.regs[self.selected_reg_type as usize] = u3::new(value & 0b111);
                 match self.selected_reg_type {
                     RegisterType::Dummy0 | RegisterType::Dummy1 | RegisterType::Dummy2 | RegisterType::Dummy3 => {}
-                    RegisterType::ChrOuterBank => mem.set_chr_rom_outer_bank_number(value & 1),
-                    RegisterType::PrgBank => mem.set_prg_register(P0, value & 0b11),
-                    RegisterType::ChrInnerBank => mem.set_chr_register(C0, value & 0b11),
-                    RegisterType::NameTableMirroring => mem.set_name_table_mirroring((value >> 1) & 0b11),
+                    RegisterType::ChrOuterBank => bus.set_chr_rom_outer_bank_number(value & 1),
+                    RegisterType::PrgBank => bus.set_prg_register(P0, value & 0b11),
+                    RegisterType::ChrInnerBank => bus.set_chr_register(C0, value & 0b11),
+                    RegisterType::NameTableMirroring => bus.set_name_table_mirroring((value >> 1) & 0b11),
                 }
             }
             _ => { /* Do nothing. */ }

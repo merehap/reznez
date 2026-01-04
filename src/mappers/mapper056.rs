@@ -40,7 +40,7 @@ pub struct Mapper056 {
 }
 
 impl Mapper for Mapper056 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
@@ -49,7 +49,7 @@ impl Mapper for Mapper056 {
             0xA000..=0xAFFF => self.irq_counter.set_reload_value_second_highest_nybble(u4::new(value & 0xF)),
             0xB000..=0xBFFF => self.irq_counter.set_reload_value_highest_nybble(u4::new(value & 0xF)),
             0xC000..=0xCFFF => {
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
 
                 let enabled = value != 0;
                 self.irq_counter.set_enabled(enabled);
@@ -58,7 +58,7 @@ impl Mapper for Mapper056 {
                 }
             }
             0xD000..=0xDFFF => {
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
             }
             0xE000..=0xEFFF => {
                 match value & 0b111 {
@@ -72,7 +72,7 @@ impl Mapper for Mapper056 {
             }
             0xF000..=0xFFFF => {
                 if let Some(select_prg_bank) = self.selected_prg_bank {
-                    mem.set_prg_bank_register_bits(select_prg_bank, value.into(), 0b0000_1111);
+                    bus.set_prg_bank_register_bits(select_prg_bank, value.into(), 0b0000_1111);
                 }
             }
         }
@@ -83,11 +83,11 @@ impl Mapper for Mapper056 {
 
         // Overlapping registers in the 0xFXXX range.
         if matches!(addr & 0xFC03, 0xF000..=0xF003) && self.selected_prg_bank.is_some() {
-            mem.set_prg_bank_register_bits(prg_id, u16::from(value & 0b0001_0000), 0b1111_0000);
+            bus.set_prg_bank_register_bits(prg_id, u16::from(value & 0b0001_0000), 0b1111_0000);
         } else if addr & 0xFC00 == 0xF800 {
-            mem.set_name_table_mirroring(value & 1);
+            bus.set_name_table_mirroring(value & 1);
         } else if matches!(addr & 0xFC07, 0xFC00..=0xFC07) {
-            mem.set_chr_register(chr_id, value & 0b0111_1111);
+            bus.set_chr_register(chr_id, value & 0b0111_1111);
         }
     }
 

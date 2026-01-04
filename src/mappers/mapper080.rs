@@ -33,25 +33,25 @@ pub const CHR_LAYOUT: &[ChrWindow] = &[
 pub struct Mapper080;
 
 impl Mapper for Mapper080 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7EEF => { /* Do nothing. */ }
-            0x7EF0 => mem.set_chr_register(C0, value),
-            0x7EF1 => mem.set_chr_register(C1, value),
-            0x7EF2 => mem.set_chr_register(C2, value),
-            0x7EF3 => mem.set_chr_register(C3, value),
-            0x7EF4 => mem.set_chr_register(C4, value),
-            0x7EF5 => mem.set_chr_register(C5, value),
-            0x7EF6..=0x7EF7 => mem.set_name_table_mirroring(value & 1),
+            0x7EF0 => bus.set_chr_register(C0, value),
+            0x7EF1 => bus.set_chr_register(C1, value),
+            0x7EF2 => bus.set_chr_register(C2, value),
+            0x7EF3 => bus.set_chr_register(C3, value),
+            0x7EF4 => bus.set_chr_register(C4, value),
+            0x7EF5 => bus.set_chr_register(C5, value),
+            0x7EF6..=0x7EF7 => bus.set_name_table_mirroring(value & 1),
             0x7EF8..=0x7EF9 => {
                 let ram_enabled = value == 0xA3;
-                mem.set_reads_enabled(R0, ram_enabled);
-                mem.set_writes_enabled(W0, ram_enabled);
+                bus.set_reads_enabled(R0, ram_enabled);
+                bus.set_writes_enabled(W0, ram_enabled);
             }
-            0x7EFA..=0x7EFB => mem.set_prg_register(P0, value),
-            0x7EFC..=0x7EFD => mem.set_prg_register(P1, value),
-            0x7EFE..=0x7EFF => mem.set_prg_register(P2, value),
+            0x7EFA..=0x7EFB => bus.set_prg_register(P0, value),
+            0x7EFC..=0x7EFD => bus.set_prg_register(P1, value),
+            0x7EFE..=0x7EFF => bus.set_prg_register(P2, value),
             0x7F00..=0xFFFF => { /* Do nothing. */ }
         }
     }

@@ -1,6 +1,6 @@
 use crate::mapper::*;
 use crate::memory::bank::bank::{ChrSourceRegisterId, WriteStatusRegisterId};
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 use crate::memory::ppu::ciram::CiramSide;
 
 const LAYOUT: Layout = Layout::builder()
@@ -54,7 +54,7 @@ pub struct Mapper019 {
 }
 
 impl Mapper for Mapper019 {
-    fn peek_register(&self, _mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_register(&self, _bus: &Bus, addr: CpuAddress) -> ReadResult {
         match *addr {
             0x0000..=0x401F | 0x6000..=0xFFFF => unreachable!(),
             0x4020..=0x47FF => ReadResult::OPEN_BUS,
@@ -64,17 +64,17 @@ impl Mapper for Mapper019 {
         }
     }
 
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x47FF => { /* Do nothing. */ }
             0x4800..=0x4FFF => { /* TODO: Expansion Audio. */ }
             0x5000..=0x57FF => {
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
                 self.irq_counter.set_count_low_byte(value);
             }
             0x5800..=0x5FFF => {
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
 
                 let (irq_enable, irq_count_high_byte) = splitbits_named!(value, "eccccccc");
                 self.irq_counter.set_count_high_byte(irq_count_high_byte);
@@ -85,54 +85,54 @@ impl Mapper for Mapper019 {
                 }
             }
             0x6000..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x87FF => set_chr_register(mem, self.allow_ciram_in_low_chr,  CS0, C0,   W0, value),
-            0x8800..=0x8FFF => set_chr_register(mem, self.allow_ciram_in_low_chr,  CS1, C1,   W1, value),
-            0x9000..=0x97FF => set_chr_register(mem, self.allow_ciram_in_low_chr,  CS2, C2,   W2, value),
-            0x9800..=0x9FFF => set_chr_register(mem, self.allow_ciram_in_low_chr,  CS3, C3,   W3, value),
-            0xA000..=0xA7FF => set_chr_register(mem, self.allow_ciram_in_high_chr, CS4, C4,   W4, value),
-            0xA800..=0xAFFF => set_chr_register(mem, self.allow_ciram_in_high_chr, CS5, C5,   W5, value),
-            0xB000..=0xB7FF => set_chr_register(mem, self.allow_ciram_in_high_chr, CS6, C6,   W6, value),
-            0xB800..=0xBFFF => set_chr_register(mem, self.allow_ciram_in_high_chr, CS7, C7,   W7, value),
-            0xC000..=0xC7FF => set_chr_register(mem, true,                         NT0, C8,   W8, value),
-            0xC800..=0xCFFF => set_chr_register(mem, true,                         NT1, C9,   W9, value),
-            0xD000..=0xD7FF => set_chr_register(mem, true,                         NT2, C10, W10, value),
-            0xD800..=0xDFFF => set_chr_register(mem, true,                         NT3, C11, W11, value),
+            0x8000..=0x87FF => set_chr_register(bus, self.allow_ciram_in_low_chr,  CS0, C0,   W0, value),
+            0x8800..=0x8FFF => set_chr_register(bus, self.allow_ciram_in_low_chr,  CS1, C1,   W1, value),
+            0x9000..=0x97FF => set_chr_register(bus, self.allow_ciram_in_low_chr,  CS2, C2,   W2, value),
+            0x9800..=0x9FFF => set_chr_register(bus, self.allow_ciram_in_low_chr,  CS3, C3,   W3, value),
+            0xA000..=0xA7FF => set_chr_register(bus, self.allow_ciram_in_high_chr, CS4, C4,   W4, value),
+            0xA800..=0xAFFF => set_chr_register(bus, self.allow_ciram_in_high_chr, CS5, C5,   W5, value),
+            0xB000..=0xB7FF => set_chr_register(bus, self.allow_ciram_in_high_chr, CS6, C6,   W6, value),
+            0xB800..=0xBFFF => set_chr_register(bus, self.allow_ciram_in_high_chr, CS7, C7,   W7, value),
+            0xC000..=0xC7FF => set_chr_register(bus, true,                         NT0, C8,   W8, value),
+            0xC800..=0xCFFF => set_chr_register(bus, true,                         NT1, C9,   W9, value),
+            0xD000..=0xD7FF => set_chr_register(bus, true,                         NT2, C10, W10, value),
+            0xD800..=0xDFFF => set_chr_register(bus, true,                         NT3, C11, W11, value),
             0xE000..=0xE7FF => {
                 // TODO: Pin 22 logic
                 // TODO: Disable sound
-                mem.set_prg_register(P0, value & 0b0011_1111);
+                bus.set_prg_register(P0, value & 0b0011_1111);
             }
             0xE800..=0xEFFF => {
                 let fields = splitbits!(value, "hlpp pppp");
                 self.allow_ciram_in_high_chr = !fields.h;
                 self.allow_ciram_in_low_chr = !fields.l;
-                mem.set_prg_register(P1, fields.p);
+                bus.set_prg_register(P1, fields.p);
             }
             0xF000..=0xF7FF => {
                 // TODO: Pin 44 and PPU A12, A13
-                mem.set_prg_register(P2, value & 0b0011_1111);
+                bus.set_prg_register(P2, value & 0b0011_1111);
             }
             0xF800..=0xFFFF => {
                 let fields = splitbits!(value, "ppppabcd");
                 if fields.p == 0b0100 {
-                    mem.set_writes_enabled(W0, fields.a);
-                    mem.set_writes_enabled(W1, fields.b);
-                    mem.set_writes_enabled(W2, fields.c);
-                    mem.set_writes_enabled(W3, fields.d);
+                    bus.set_writes_enabled(W0, fields.a);
+                    bus.set_writes_enabled(W1, fields.b);
+                    bus.set_writes_enabled(W2, fields.c);
+                    bus.set_writes_enabled(W3, fields.d);
                 } else {
                     // All read-only
-                    mem.set_writes_enabled(W0, false);
-                    mem.set_writes_enabled(W1, false);
-                    mem.set_writes_enabled(W2, false);
-                    mem.set_writes_enabled(W3, false);
+                    bus.set_writes_enabled(W0, false);
+                    bus.set_writes_enabled(W1, false);
+                    bus.set_writes_enabled(W2, false);
+                    bus.set_writes_enabled(W3, false);
                 }
             }
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
         if self.irq_counter.tick().triggered {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
     }
 
@@ -146,7 +146,7 @@ impl Mapper for Mapper019 {
 }
 
 fn set_chr_register(
-    mem: &mut Memory,
+    bus: &mut Bus,
     allow_ciram_in_chr: bool,
     source_reg_id: ChrSourceRegisterId,
     bank_reg_id: ChrBankRegisterId,
@@ -156,11 +156,11 @@ fn set_chr_register(
     if allow_ciram_in_chr && value >= 0xE0 {
         let ciram_side = if value & 1 == 0 { CiramSide::Left } else { CiramSide::Right };
         // FIXME: Stop setting writes enabled/disabled? CIRAM should always have writes enabled (it should ignore status regs.)
-        mem.set_chr_bank_register_to_ciram_side(source_reg_id, ciram_side);
-        mem.set_writes_enabled(status_reg_id, true);
+        bus.set_chr_bank_register_to_ciram_side(source_reg_id, ciram_side);
+        bus.set_writes_enabled(status_reg_id, true);
     } else {
-        mem.set_chr_register(bank_reg_id, value);
-        mem.set_writes_enabled(status_reg_id, false);
+        bus.set_chr_register(bank_reg_id, value);
+        bus.set_writes_enabled(status_reg_id, false);
     }
 }
 

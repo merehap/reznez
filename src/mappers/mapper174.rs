@@ -27,15 +27,15 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper174;
 
 impl Mapper for Mapper174 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, _value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, _value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x5FFF => { /* Do nothing. */ }
             0x6000..=0xFFFF => {
                 let fields = splitbits!(min=u8, *addr, ".... .... lppp cccm");
-                mem.set_prg_layout(fields.l);
-                mem.set_prg_register(P0, if fields.l == 0 { fields.p } else { fields.p & 0b110 });
-                mem.set_name_table_mirroring(fields.m);
+                bus.set_prg_layout(fields.l);
+                bus.set_prg_register(P0, if fields.l == 0 { fields.p } else { fields.p & 0b110 });
+                bus.set_name_table_mirroring(fields.m);
             }
         }
     }

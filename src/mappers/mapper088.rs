@@ -35,7 +35,7 @@ pub struct Mapper088 {
 }
 
 impl Mapper for Mapper088 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
@@ -45,10 +45,10 @@ impl Mapper for Mapper088 {
             0x8000..=0x9FFF => {
                 match self.selected_register_id {
                     // Always use only the first 64KiB of CHR for the left pattern table.
-                    Chr(id@(C0 | C1)) => mem.set_chr_register(id, value & 0b0011_1110),
+                    Chr(id@(C0 | C1)) => bus.set_chr_register(id, value & 0b0011_1110),
                     // If it is available, use the second 64KiB half of CHR for the right pattern table.
-                    Chr(id@(C2 | C3 | C4 | C5)) => mem.set_chr_register(id, (value & 0b0011_1111) | 0b0100_0000),
-                    Prg(id@(P0 | P1)) => mem.set_prg_register(id, value & 0b0000_1111),
+                    Chr(id@(C2 | C3 | C4 | C5)) => bus.set_chr_register(id, (value & 0b0011_1111) | 0b0100_0000),
+                    Prg(id@(P0 | P1)) => bus.set_prg_register(id, value & 0b0000_1111),
                     _ => unreachable!(),
                 }
             }

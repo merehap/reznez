@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)
@@ -41,17 +41,17 @@ pub struct Mapper067 {
 }
 
 impl Mapper for Mapper067 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
-            0x8000..=0x87FF => mem.cpu_pinout.acknowledge_mapper_irq(),
-            0x8800..=0x97FF => mem.set_chr_register(C0, value & 0b0011_1111),
-            0x9800..=0xA7FF => mem.set_chr_register(C1, value & 0b0011_1111),
-            0xA800..=0xB7FF => mem.set_chr_register(C2, value & 0b0011_1111),
-            0xB800..=0xC7FF => mem.set_chr_register(C3, value & 0b0011_1111),
-            0xE800..=0xF7FF => mem.set_name_table_mirroring(value & 0b11),
-            0xF800..=0xFFFF => mem.set_prg_register(P0, value & 0b1111),
+            0x8000..=0x87FF => bus.cpu_pinout.acknowledge_mapper_irq(),
+            0x8800..=0x97FF => bus.set_chr_register(C0, value & 0b0011_1111),
+            0x9800..=0xA7FF => bus.set_chr_register(C1, value & 0b0011_1111),
+            0xA800..=0xB7FF => bus.set_chr_register(C2, value & 0b0011_1111),
+            0xB800..=0xC7FF => bus.set_chr_register(C3, value & 0b0011_1111),
+            0xE800..=0xF7FF => bus.set_name_table_mirroring(value & 0b11),
+            0xF800..=0xFFFF => bus.set_prg_register(P0, value & 0b1111),
 
             0xC800..=0xD7FF => {
                 if self.irq_load_low {
@@ -73,9 +73,9 @@ impl Mapper for Mapper067 {
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
         if self.irq_counter.tick().triggered {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
         }
     }
 

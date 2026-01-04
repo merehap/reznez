@@ -17,13 +17,13 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper086;
 
 impl Mapper for Mapper086 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x6000..=0x6FFF => {
                 let banks = splitbits!(value, ".cpp..cc");
-                mem.set_chr_register(C0, banks.c);
-                mem.set_prg_register(P0, banks.p);
+                bus.set_chr_register(C0, banks.c);
+                bus.set_prg_register(P0, banks.p);
             }
             0x7000..=0x7FFF => { /* TODO: Audio control. */ }
             _ => { /* Do nothing. */ }

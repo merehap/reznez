@@ -35,7 +35,7 @@ pub struct Mapper187 {
 }
 
 impl Mapper for Mapper187 {
-    fn peek_register(&self, _mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_register(&self, _bus: &Bus, addr: CpuAddress) -> ReadResult {
         match *addr {
             // "The actual values that are returned are unknown;
             //  The King of Fighters '96 reads from here and only expects bit 7 of the value being returned to be set."
@@ -45,11 +45,11 @@ impl Mapper for Mapper187 {
         }
     }
 
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         if *addr & 0xF001 == 0x5000 {
             if self.prg_layout_mode == PrgLayoutMode::Mmc3 {
                 // Remember what MMC3 layout was last used so we can switch back to it once NROM mode is over.
-                self.mmc3_prg_layout_index = mem.prg_memory.layout_index();
+                self.mmc3_prg_layout_index = bus.prg_memory.layout_index();
             }
 
             let fields = splitbits!(value, "n.mp pppp");
@@ -58,32 +58,32 @@ impl Mapper for Mapper187 {
                 PrgLayoutMode::Mmc3 => self.mmc3_prg_layout_index,
                 PrgLayoutMode::Nrom => fields.m as u8 + 2, // 2 is NROM128, 3 is NROM256
             };
-            mem.set_prg_layout(prg_layout_index);
-            mem.set_prg_register(P2, fields.p); // Bottom bit is ignored for NROM128, bottom two for NROM256
+            bus.set_prg_layout(prg_layout_index);
+            bus.set_prg_register(P2, fields.p); // Bottom bit is ignored for NROM128, bottom two for NROM256
 
             return;
         }
 
         // For all other registers, use normal MMC3 behavior except for PRG layout selection.
-        let prev_prg_layout_index = mem.prg_memory.layout_index();
-        self.mmc3.write_register(mem, addr, value);
+        let prev_prg_layout_index = bus.prg_memory.layout_index();
+        self.mmc3.write_register(bus, addr, value);
         if self.prg_layout_mode == PrgLayoutMode::Nrom {
             // Ignore/overwrite whatever layout MMC3 just set since we're not in MMC3 PRG layout mode.
-            mem.set_prg_layout(prev_prg_layout_index);
+            bus.set_prg_layout(prev_prg_layout_index);
         }
 
-        let (left_siders, right_siders) = if mem.chr_memory.layout_index() == 0 {
+        let (left_siders, right_siders) = if bus.chr_memory.layout_index() == 0 {
             (vec![C0, C1], vec![C2, C3, C4, C5])
         } else {
             (vec![C2, C3, C4, C5], vec![C0, C1])
         };
 
         for reg_id in left_siders {
-            mem.set_chr_bank_register_bits(reg_id, 0b0000_0000_0000_0000, 0b0000_0001_0000_0000);
+            bus.set_chr_bank_register_bits(reg_id, 0b0000_0000_0000_0000, 0b0000_0001_0000_0000);
         }
 
         for reg_id in right_siders {
-            mem.set_chr_bank_register_bits(reg_id, 0b0000_0001_0000_0000, 0b0000_0001_0000_0000);
+            bus.set_chr_bank_register_bits(reg_id, 0b0000_0001_0000_0000, 0b0000_0001_0000_0000);
         }
     }
 

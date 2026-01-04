@@ -1,7 +1,7 @@
 use splitbits::splitbits_named;
 
 use crate::counter::irq_counter_info::IrqCounterInfo;
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 
 pub struct VrcIrqState {
     enabled: bool,
@@ -27,7 +27,7 @@ impl VrcIrqState {
         }
     }
 
-    pub fn step(&mut self, mem: &mut Memory) {
+    pub fn step(&mut self, bus: &mut Bus) {
         if !self.enabled {
             return;
         }
@@ -44,7 +44,7 @@ impl VrcIrqState {
         }
 
         if self.counter == 0xFF {
-            mem.cpu_pinout.assert_mapper_irq();
+            bus.cpu_pinout.assert_mapper_irq();
             self.counter = self.counter_reload_value;
         } else {
             self.counter += 1;
@@ -63,8 +63,8 @@ impl VrcIrqState {
         self.counter_reload_value = (value & 0b0000_1111) << 4 | self.counter_reload_low_value;
     }
 
-    pub fn set_mode(&mut self, mem: &mut Memory, value: u8) {
-        mem.cpu_pinout.acknowledge_mapper_irq();
+    pub fn set_mode(&mut self, bus: &mut Bus, value: u8) {
+        bus.cpu_pinout.acknowledge_mapper_irq();
 
         let mode;
         (mode, self.enable_upon_acknowledgement, self.enabled) = splitbits_named!(value, ".....mae");
@@ -74,8 +74,8 @@ impl VrcIrqState {
         }
     }
 
-    pub fn acknowledge(&mut self, mem: &mut Memory) {
-        mem.cpu_pinout.acknowledge_mapper_irq();
+    pub fn acknowledge(&mut self, bus: &mut Bus) {
+        bus.cpu_pinout.acknowledge_mapper_irq();
         if self.enable_upon_acknowledgement {
             self.enabled = true;
         }

@@ -44,23 +44,23 @@ pub struct Mapper074 {
 }
 
 impl Mapper for Mapper074 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
             if matches!(*addr, 0x8000..=0x9FFF) && !addr.is_multiple_of(2) {
                 match self.mmc3.selected_register_id() {
                     mmc3::RegId::Chr(cx) => {
                         let source_id = CHR_SOURCE_IDS[cx as usize];
                         if value == 8 || value == 9 {
-                            mem.set_chr_source(source_id, ChrSource::WorkRam);
-                            mem.set_chr_register(cx, value - 8);
+                            bus.set_chr_source(source_id, ChrSource::WorkRam);
+                            bus.set_chr_register(cx, value - 8);
                         } else {
-                            mem.set_chr_source(source_id, ChrSource::Rom);
-                            mem.set_chr_register(cx, value);
+                            bus.set_chr_source(source_id, ChrSource::Rom);
+                            bus.set_chr_register(cx, value);
                         }
                     }
-                    mmc3::RegId::Prg(px) => mem.set_prg_register(px, value),
+                    mmc3::RegId::Prg(px) => bus.set_prg_register(px, value),
                 }
             } else {
-                self.mmc3.write_register(mem, addr, value);
+                self.mmc3.write_register(bus, addr, value);
             }
     }
 

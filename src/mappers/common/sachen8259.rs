@@ -46,7 +46,7 @@ pub struct Sachen8259 {
 }
 
 impl Mapper for Sachen8259 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr & 0xC101 {
             0x4100 => {
                 let value = value & 0b111;
@@ -65,19 +65,19 @@ impl Mapper for Sachen8259 {
             0x4101 => {
                 match self.register_value {
                     RegisterValue::Nop => {}
-                    RegisterValue::PrgBank => mem.set_prg_register(P0, value & 0b111),
-                    RegisterValue::ChrOuterBank => mem.set_chr_rom_outer_bank_number(value & 0b111),
+                    RegisterValue::PrgBank => bus.set_prg_register(P0, value & 0b111),
+                    RegisterValue::ChrOuterBank => bus.set_chr_rom_outer_bank_number(value & 0b111),
                     RegisterValue::ChrSelect(reg_id) => {
                         self.chr_inner_banks[reg_id.to_raw_chr_id() as usize] = value & 0b111;
-                        self.update_chr_banks(mem);
+                        self.update_chr_banks(bus);
                     }
                     RegisterValue::ModeSelect => {
                         let (mirroring, simple_layout) = splitbits_named!(value, ".... .mms");
-                        mem.set_chr_layout(simple_layout as u8);
+                        bus.set_chr_layout(simple_layout as u8);
                         if simple_layout {
-                            mem.set_name_table_mirroring(VERTICAL);
+                            bus.set_name_table_mirroring(VERTICAL);
                         } else {
-                            mem.set_name_table_mirroring(mirroring);
+                            bus.set_name_table_mirroring(mirroring);
                         }
                     }
                 }
@@ -111,7 +111,7 @@ impl Sachen8259 {
     }
 
     // TODO: Put this code directly into the caller.
-    fn update_chr_banks(&self, mem: &mut Memory) {
+    fn update_chr_banks(&self, bus: &mut Bus) {
         let meta_data = [
             (C0, 0, 0),
             (C1, 1, 1),
@@ -124,14 +124,14 @@ impl Sachen8259 {
         ];
 
         for (reg_id, inner_bank_number, low_bits_index) in meta_data {
-            self.update_chr_bank(mem, reg_id, inner_bank_number, low_bits_index);
+            self.update_chr_bank(bus, reg_id, inner_bank_number, low_bits_index);
         }
     }
 
-    fn update_chr_bank(&self, mem: &mut Memory, cx: ChrBankRegisterId, inner_bank_number: u8, low_bits_index: u8) {
+    fn update_chr_bank(&self, bus: &mut Bus, cx: ChrBankRegisterId, inner_bank_number: u8, low_bits_index: u8) {
         let bank = (self.chr_inner_banks[inner_bank_number as usize] << self.chr_bank_shift)
             | self.chr_bank_low_bits[low_bits_index as usize];
-        mem.set_chr_register(cx, bank);
+        bus.set_chr_register(cx, bank);
     }
 }
 

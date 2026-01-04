@@ -14,7 +14,7 @@ use crate::cpu::status::Status;
 use crate::cpu::step::*;
 use crate::mapper::Mapper;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::memory::{AddressBusType, Memory, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
+use crate::memory::memory::{AddressBusType, Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
 use crate::memory::signal_level::SignalLevel;
 
 pub struct Cpu {
@@ -47,8 +47,8 @@ pub struct Cpu {
 
 impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
-    pub fn new(memory: &mut Memory, starting_cycle: i64, step_formatting: CpuStepFormatting) -> Cpu {
-        memory.set_cpu_cycle(starting_cycle);
+    pub fn new(bus: &mut Bus, starting_cycle: i64, step_formatting: CpuStepFormatting) -> Cpu {
+        bus.set_cpu_cycle(starting_cycle);
 
         Cpu {
             a: 0,
@@ -134,8 +134,8 @@ impl Cpu {
         self.nmi_status == NmiStatus::Pending
     }
 
-    pub fn step_first_half(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory) -> Option<Step> {
-        if mem.cpu_pinout.reset.current_value() == SignalLevel::Low {
+    pub fn step_first_half(&mut self, mapper: &mut dyn Mapper, bus: &mut Bus) -> Option<Step> {
+        if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
             return None;
         }
@@ -153,17 +153,17 @@ impl Cpu {
 
         let mut step = self.mode_state.current_step();
 
-        let cycle_parity = mem.apu_regs.clock().cycle_parity();
-        mem.dmc_dma.step(step.is_read(), cycle_parity);
-        match mem.dmc_dma.latest_action() {
+        let cycle_parity = bus.apu_regs.clock().cycle_parity();
+        bus.dmc_dma.step(step.is_read(), cycle_parity);
+        match bus.dmc_dma.latest_action() {
             DmcDmaAction::DoNothing => {}
             DmcDmaAction::Halt | DmcDmaAction::Dummy | DmcDmaAction::Align => step = step.with_actions_removed(),
             DmcDmaAction::Read => step = DMC_READ_STEP,
         }
 
-        let block_oam_dma_memory_access = mem.dmc_dma.latest_action() == DmcDmaAction::Read;
-        mem.oam_dma.step(step.is_read(), cycle_parity, block_oam_dma_memory_access);
-        step = match mem.oam_dma.latest_action() {
+        let block_oam_dma_memory_access = bus.dmc_dma.latest_action() == DmcDmaAction::Read;
+        bus.oam_dma.step(step.is_read(), cycle_parity, block_oam_dma_memory_access);
+        step = match bus.oam_dma.latest_action() {
             OamDmaAction::DoNothing => step,
             OamDmaAction::Halt | OamDmaAction::Align => step.with_actions_removed(),
             OamDmaAction::Read => OAM_READ_STEP,
@@ -173,44 +173,44 @@ impl Cpu {
         let value;
         match step {
             Step::Read(from, _) => {
-                mem.set_cpu_address_bus(AddressBusType::Cpu, self.lookup_from_address(mem, from));
-                value = mem.cpu_read(mapper, AddressBusType::Cpu);
+                bus.set_cpu_address_bus(AddressBusType::Cpu, self.lookup_from_address(bus, from));
+                value = bus.cpu_read(mapper, AddressBusType::Cpu);
             }
             Step::ReadField(field, from, _) => {
-                mem.set_cpu_address_bus(AddressBusType::Cpu, self.lookup_from_address(mem, from));
-                value = mem.cpu_read(mapper, AddressBusType::Cpu);
+                bus.set_cpu_address_bus(AddressBusType::Cpu, self.lookup_from_address(bus, from));
+                value = bus.cpu_read(mapper, AddressBusType::Cpu);
                 self.set_field_value(field, value);
             }
             Step::Write(to, _) => {
-                mem.set_cpu_address_bus(AddressBusType::Cpu, self.lookup_to_address(mem, to));
-                value = mem.cpu_pinout.data_bus;
-                mem.cpu_write(mapper, AddressBusType::Cpu);
+                bus.set_cpu_address_bus(AddressBusType::Cpu, self.lookup_to_address(bus, to));
+                value = bus.cpu_pinout.data_bus;
+                bus.cpu_write(mapper, AddressBusType::Cpu);
             }
             Step::WriteField(field, to, _) => {
-                mem.set_cpu_address_bus(AddressBusType::Cpu, self.lookup_to_address(mem, to));
-                mem.cpu_pinout.data_bus = self.field_value(mem, field);
-                value = mem.cpu_pinout.data_bus;
-                mem.cpu_write(mapper, AddressBusType::Cpu);
+                bus.set_cpu_address_bus(AddressBusType::Cpu, self.lookup_to_address(bus, to));
+                bus.cpu_pinout.data_bus = self.field_value(bus, field);
+                value = bus.cpu_pinout.data_bus;
+                bus.cpu_write(mapper, AddressBusType::Cpu);
             }
             Step::OamRead(from, _) => {
-                mem.set_cpu_address_bus(AddressBusType::OamDma, self.lookup_from_address(mem, from));
-                value = mem.cpu_read(mapper, AddressBusType::OamDma);
+                bus.set_cpu_address_bus(AddressBusType::OamDma, self.lookup_from_address(bus, from));
+                value = bus.cpu_read(mapper, AddressBusType::OamDma);
             }
             Step::OamWrite(to, _) => {
-                mem.set_cpu_address_bus(AddressBusType::OamDma, self.lookup_to_address(mem, to));
-                value = mem.cpu_pinout.data_bus;
-                mem.cpu_write(mapper, AddressBusType::OamDma);
+                bus.set_cpu_address_bus(AddressBusType::OamDma, self.lookup_to_address(bus, to));
+                value = bus.cpu_pinout.data_bus;
+                bus.cpu_write(mapper, AddressBusType::OamDma);
             }
             Step::DmcRead(from, _) => {
-                mem.set_cpu_address_bus(AddressBusType::DmcDma, self.lookup_from_address(mem, from));
-                value = mem.cpu_read(mapper, AddressBusType::DmcDma);
+                bus.set_cpu_address_bus(AddressBusType::DmcDma, self.lookup_from_address(bus, from));
+                value = bus.cpu_read(mapper, AddressBusType::DmcDma);
             }
         }
 
         let formatted_step = if log_enabled!(target: "cpustep", Info) {
             match self.step_formatting {
                 CpuStepFormatting::NoData => format!("{step:?}"),
-                CpuStepFormatting::Data => step.format_with_read_write_values(mem, value),
+                CpuStepFormatting::Data => step.format_with_read_write_values(bus, value),
             }
         } else {
             String::new()
@@ -218,13 +218,13 @@ impl Cpu {
 
         let original_program_counter = self.program_counter;
         for &action in step.actions() {
-            self.execute_step_action(mapper, mem, action, value);
+            self.execute_step_action(mapper, bus,action, value);
         }
 
-        let halted = mem.dmc_dma.cpu_should_be_halted() || mem.oam_dma.cpu_should_be_halted();
+        let halted = bus.dmc_dma.cpu_should_be_halted() || bus.oam_dma.cpu_should_be_halted();
         if log_enabled!(target: "cpustep", Info) {
             let step_name = if halted { "HALTED".to_string() } else { self.mode_state.step_name() };
-            let cpu_cycle = mem.cpu_cycle();
+            let cpu_cycle = bus.cpu_cycle();
             info!("\t {step_name} PC: {original_program_counter}, Cycle: {cpu_cycle}, {formatted_step}");
         }
 
@@ -234,7 +234,7 @@ impl Cpu {
             if step.has_start_new_instruction() {
                 self.mode_state.set_current_instruction_with_address(
                     Instruction::from_code_point(value),
-                    mem.cpu_pinout.address_bus,
+                    bus.cpu_pinout.address_bus,
                 );
             }
         }
@@ -242,19 +242,19 @@ impl Cpu {
         Some(step)
     }
 
-    pub fn step_second_half(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory) {
-        if mem.cpu_pinout.reset.current_value() == SignalLevel::Low {
+    pub fn step_second_half(&mut self, mapper: &mut dyn Mapper, bus: &mut Bus) {
+        if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
             return;
         }
 
-        let edge_detected = mem.cpu_pinout.nmi_signal_detector.detect();
+        let edge_detected = bus.cpu_pinout.nmi_signal_detector.detect();
         if edge_detected {
             self.nmi_status = NmiStatus::Pending;
         }
 
         // Keep irq_pending and irq_status in sync
-        if mem.cpu_pinout.irq_asserted() {
+        if bus.cpu_pinout.irq_asserted() {
             if self.irq_status == IrqStatus::Inactive && !self.status.interrupts_disabled {
                 self.irq_status = IrqStatus::Pending;
             }
@@ -262,10 +262,10 @@ impl Cpu {
             self.irq_status = IrqStatus::Inactive;
         }
 
-        mapper.on_end_of_cpu_cycle(mem);
+        mapper.on_end_of_cpu_cycle(bus);
     }
 
-    fn execute_step_action(&mut self, mapper: &mut dyn Mapper, mem: &mut Memory, action: StepAction, value: u8) {
+    fn execute_step_action(&mut self, mapper: &mut dyn Mapper, bus: &mut Bus, action: StepAction, value: u8) {
         match action {
             StepAction::StartNextInstruction => {
                 if self.mode_state.should_suppress_next_instruction_start() {
@@ -274,13 +274,13 @@ impl Cpu {
 
                 if self.reset_status == ResetStatus::Ready {
                     self.reset_status = ResetStatus::Active;
-                    mem.cpu_pinout.data_bus = 0x00;
+                    bus.cpu_pinout.data_bus = 0x00;
                     self.mode_state.interrupt_sequence(InterruptType::Reset);
                 } else if self.nmi_status == NmiStatus::Active {
-                    mem.cpu_pinout.data_bus = 0x00;
+                    bus.cpu_pinout.data_bus = 0x00;
                     self.mode_state.interrupt_sequence(InterruptType::Nmi);
                 } else if self.irq_status == IrqStatus::Active && self.nmi_status == NmiStatus::Inactive {
-                    mem.cpu_pinout.data_bus = 0x00;
+                    bus.cpu_pinout.data_bus = 0x00;
                     self.mode_state.interrupt_sequence(InterruptType::Irq);
                 } else {
                     self.mode_state.instruction(Instruction::from_code_point(value));
@@ -410,7 +410,7 @@ impl Cpu {
 
                     LAS => {
                         // FIXME: Remove this. It probably won't break any tests.
-                        mem.cpu_read(mapper, AddressBusType::Cpu);
+                        bus.cpu_read(mapper, AddressBusType::Cpu);
                         let value = self.operand & self.stack_pointer;
                         self.a = value;
                         self.x = value;
@@ -443,9 +443,9 @@ impl Cpu {
                 }
             }
             // TODO: Make sure this isn't supposed to wrap within the same page.
-            StepAction::IncrementAddress => self.computed_address = mem.cpu_pinout.address_bus.inc(),
-            StepAction::IncrementAddressLow => self.computed_address = mem.cpu_pinout.address_bus.offset_low(1).0,
-            StepAction::IncrementOamDmaAddress => mem.oam_dma.increment_address(),
+            StepAction::IncrementAddress => self.computed_address = bus.cpu_pinout.address_bus.inc(),
+            StepAction::IncrementAddressLow => self.computed_address = bus.cpu_pinout.address_bus.offset_low(1).0,
+            StepAction::IncrementOamDmaAddress => bus.oam_dma.increment_address(),
 
             StepAction::IncrementStackPointer => self.stack_pointer = self.stack_pointer.wrapping_add(1),
             StepAction::DecrementStackPointer => self.stack_pointer = self.stack_pointer.wrapping_sub(1),
@@ -493,7 +493,7 @@ impl Cpu {
                 }
             }
 
-            StepAction::SetDmcSampleBuffer => mem.set_dmc_sample_buffer(value),
+            StepAction::SetDmcSampleBuffer => bus.set_dmc_sample_buffer(value),
 
             StepAction::XOffsetPendingAddressLow => {
                 let carry;
@@ -511,8 +511,8 @@ impl Cpu {
                     self.address_carry = 1;
                 }
             }
-            StepAction::XOffsetAddress => self.computed_address = mem.cpu_pinout.address_bus.offset_low(self.x).0,
-            StepAction::YOffsetAddress => self.computed_address = mem.cpu_pinout.address_bus.offset_low(self.y).0,
+            StepAction::XOffsetAddress => self.computed_address = bus.cpu_pinout.address_bus.offset_low(self.x).0,
+            StepAction::YOffsetAddress => self.computed_address = bus.cpu_pinout.address_bus.offset_low(self.y).0,
             StepAction::MaybeInsertOopsStep => {
                 if self.address_carry != 0 {
                     self.mode_state.oops();
@@ -525,10 +525,10 @@ impl Cpu {
             }
 
             StepAction::CopyAddressToPC => {
-                self.program_counter = mem.cpu_pinout.address_bus;
+                self.program_counter = bus.cpu_pinout.address_bus;
             }
             StepAction::AddCarryToAddress => {
-                self.computed_address = mem.cpu_pinout.address_bus.offset_high(self.address_carry);
+                self.computed_address = bus.cpu_pinout.address_bus.offset_high(self.address_carry);
                 self.address_carry = 0;
             }
             StepAction::AddCarryToPC => {
@@ -540,11 +540,11 @@ impl Cpu {
         }
     }
 
-    fn lookup_from_address(&self, mem: &Memory, from: From) -> CpuAddress {
+    fn lookup_from_address(&self, bus: &Bus, from: From) -> CpuAddress {
         use self::From::*;
         match from {
-            OamDmaAddressTarget => mem.oam_dma.address(),
-            DmcDmaAddressTarget => mem.dmc_dma_address(),
+            OamDmaAddressTarget => bus.oam_dma.address(),
+            DmcDmaAddressTarget => bus.dmc_dma_address(),
             ProgramCounterTarget => self.program_counter,
             PendingAddressTarget => CpuAddress::from_low_high(self.pending_address_low, self.pending_address_high),
             PendingZeroPageTarget => CpuAddress::from_low_high(self.pending_address_low, 0),
@@ -577,10 +577,10 @@ impl Cpu {
         }
     }
 
-    fn lookup_to_address(&self, mem: &Memory, to: To) -> CpuAddress {
+    fn lookup_to_address(&self, bus: &Bus, to: To) -> CpuAddress {
         use self::To::*;
         match to {
-            OamDmaAddressTarget => mem.oam_dma.address(),
+            OamDmaAddressTarget => bus.oam_dma.address(),
             ProgramCounterTarget => self.program_counter,
             PendingAddressTarget =>
                 CpuAddress::from_low_high(self.pending_address_low, self.pending_address_high),
@@ -592,7 +592,7 @@ impl Cpu {
         }
     }
 
-    fn field_value(&mut self, mem: &mut Memory, field: Field) -> u8 {
+    fn field_value(&mut self, bus: &mut Bus, field: Field) -> u8 {
         use Field::*;
         match field {
             ProgramCounterLowByte => self.program_counter.low_byte(),
@@ -615,28 +615,28 @@ impl Cpu {
                 OpCode::SAX => self.a & self.x,
                 // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::SHX => {
-                    let (low, high) = mem.cpu_pinout.address_bus.to_low_high();
-                    mem.cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
+                    let (low, high) = bus.cpu_pinout.address_bus.to_low_high();
+                    bus.cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
                     self.x & high
                 }
                 // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::SHY => {
-                    let (low, high) = mem.cpu_pinout.address_bus.to_low_high();
-                    mem.cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.y & high);
+                    let (low, high) = bus.cpu_pinout.address_bus.to_low_high();
+                    bus.cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.y & high);
                     self.y
                 }
                 // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::AHX => {
-                    let (low, high) = mem.cpu_pinout.address_bus.to_low_high();
+                    let (low, high) = bus.cpu_pinout.address_bus.to_low_high();
                     // This is using later revision logic.
                     // For early revision logic, use self.a & self.x & self.a
-                    mem.cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
+                    bus.cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
                     self.a & self.x & high
                 }
                 OpCode::TAS => {
                     let sp = self.a & self.x;
                     self.stack_pointer = sp;
-                    self.x & mem.cpu_pinout.address_bus.high_byte()
+                    self.x & bus.cpu_pinout.address_bus.high_byte()
                 }
                 op_code => todo!("{:?}", op_code),
             }

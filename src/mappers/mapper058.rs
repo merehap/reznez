@@ -27,16 +27,16 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper058;
 
 impl Mapper for Mapper058 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, _value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, _value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0xFFFF => {
                 let fields = splitbits!(min=u8, *addr, "........ mlcccppp");
-                mem.set_name_table_mirroring(fields.m);
-                mem.set_prg_layout(fields.l);
-                mem.set_chr_register(C0, fields.c);
-                mem.set_prg_register(P0, fields.p);
+                bus.set_name_table_mirroring(fields.m);
+                bus.set_prg_layout(fields.l);
+                bus.set_chr_register(C0, fields.c);
+                bus.set_prg_register(P0, fields.p);
             }
         }
     }

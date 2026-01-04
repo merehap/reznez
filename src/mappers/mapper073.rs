@@ -1,7 +1,7 @@
 use ux::u4;
 
 use crate::mapper::*;
-use crate::memory::memory::Memory;
+use crate::memory::memory::Bus;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
@@ -37,7 +37,7 @@ pub struct Mapper073 {
 }
 
 impl Mapper for Mapper073 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
@@ -46,7 +46,7 @@ impl Mapper for Mapper073 {
             0xA000..=0xAFFF => self.high_irq_counter.set_reload_value_lowest_nybble(u4::new(value & 0xF)),
             0xB000..=0xBFFF => self.high_irq_counter.set_reload_value_second_lowest_nybble(u4::new(value & 0xF)),
             0xC000..=0xCFFF => {
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
 
                 let (byte_mode, enabled, enabled_on_acknowledgement) = splitbits_named!(value, ".....mea");
                 self.irq_mode = if byte_mode { IrqMode::EightBit } else { IrqMode::SixteenBit };
@@ -60,26 +60,26 @@ impl Mapper for Mapper073 {
                 self.irq_enabled_on_acknowledgement = enabled_on_acknowledgement;
             }
             0xD000..=0xDFFF => {
-                mem.cpu_pinout.acknowledge_mapper_irq();
+                bus.cpu_pinout.acknowledge_mapper_irq();
                 self.low_irq_counter.set_enabled(self.irq_enabled_on_acknowledgement);
                 self.high_irq_counter.set_enabled(self.irq_enabled_on_acknowledgement);
             }
             0xE000..=0xEFFF => { /* Do nothing. */ }
-            0xF000..=0xFFFF => mem.set_prg_register(P0, value & 0b111),
+            0xF000..=0xFFFF => bus.set_prg_register(P0, value & 0b111),
         }
     }
 
-    fn on_end_of_cpu_cycle(&mut self, mem: &mut Memory) {
+    fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
         let low_triggered = self.low_irq_counter.tick().triggered;
         if low_triggered {
             match self.irq_mode {
                 IrqMode::EightBit => {
-                    mem.cpu_pinout.assert_mapper_irq();
+                    bus.cpu_pinout.assert_mapper_irq();
                 }
                 IrqMode::SixteenBit => {
                     let high_triggered = self.high_irq_counter.tick().triggered;
                     if high_triggered {
-                        mem.cpu_pinout.assert_mapper_irq();
+                        bus.cpu_pinout.assert_mapper_irq();
                     }
                 }
             }

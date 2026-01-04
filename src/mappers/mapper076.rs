@@ -30,15 +30,15 @@ pub struct Mapper076 {
 }
 
 impl Mapper for Mapper076 {
-    fn write_register(&mut self, mem: &mut Memory, addr: CpuAddress, value: u8) {
+    fn write_register(&mut self, bus: &mut Bus, addr: CpuAddress, value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0x7FFF => { /* Do nothing. */ }
             0x8000..=0x9FFF => {
                 if addr.is_multiple_of(2) {
-                    self.bank_select(mem, value);
+                    self.bank_select(bus, value);
                 } else {
-                    self.set_bank_number(mem, value);
+                    self.set_bank_number(bus, value);
                 }
             }
             0xA000..=0xFFFF => { /* Do nothing. */ }
@@ -57,17 +57,17 @@ impl Mapper076 {
         }
     }
 
-    fn bank_select(&mut self, _mem: &mut Memory, value: u8) {
+    fn bank_select(&mut self, _bus: &mut Bus, value: u8) {
         if let Some(reg_id) = BANK_NUMBER_REGISTER_IDS[(value & 0b0000_0111) as usize] {
             self.selected_register_id = reg_id;
         }
     }
 
-    fn set_bank_number(&mut self, mem: &mut Memory, value: u8) {
+    fn set_bank_number(&mut self, bus: &mut Bus, value: u8) {
         let bank_number = u16::from(value & 0b0011_1111);
         match self.selected_register_id {
-            Chr(cx) => mem.set_chr_register(cx, bank_number),
-            Prg(px) => mem.set_prg_register(px, bank_number),
+            Chr(cx) => bus.set_chr_register(cx, bank_number),
+            Prg(px) => bus.set_prg_register(px, bank_number),
         }
     }
 }

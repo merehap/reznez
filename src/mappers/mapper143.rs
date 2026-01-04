@@ -17,7 +17,7 @@ const LAYOUT: Layout = Layout::builder()
 pub struct Mapper143;
 
 impl Mapper for Mapper143 {
-    fn peek_register(&self, _mem: &Memory, addr: CpuAddress) -> ReadResult {
+    fn peek_register(&self, _bus: &Bus, addr: CpuAddress) -> ReadResult {
         if *addr & 0b1110_0001_0000_0000 == 0b0100_0001_0000_0000 {
             // A simple copy-protection measure: return the inverted low 6 bits of the address.
             ReadResult::partial(!*addr as u8, 0b0011_1111)
@@ -26,7 +26,7 @@ impl Mapper for Mapper143 {
         }
     }
 
-    fn write_register(&mut self, _mem: &mut Memory, addr: CpuAddress, _value: u8) {
+    fn write_register(&mut self, _bus: &mut Bus, addr: CpuAddress, _value: u8) {
         match *addr {
             0x0000..=0x401F => unreachable!(),
             0x4020..=0xFFFF => { /* Only NROM does nothing here. */ }

@@ -74,14 +74,14 @@ fn nestest() {
             if nes.step().step.is_some()
                     && let Some((instruction, _)) = nes.cpu().mode_state().new_instruction_with_address() {
                 current_instruction = instruction;
-                c = nes.memory().cpu_cycle();
-                ppu_cycle = nes.memory().ppu_regs.clock().cycle();
-                ppu_scanline = nes.memory().ppu_regs.clock().scanline();
+                c = nes.bus().cpu_cycle();
+                ppu_cycle = nes.bus().ppu_regs.clock().cycle();
+                ppu_scanline = nes.bus().ppu_regs.clock().scanline();
                 break;
             }
         }
 
-        let program_counter = nes.memory().cpu_address_bus(AddressBusType::Cpu);
+        let program_counter = nes.bus().cpu_address_bus(AddressBusType::Cpu);
 
         let mut a;
         let mut x;
