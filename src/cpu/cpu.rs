@@ -15,6 +15,7 @@ use crate::cpu::step::*;
 use crate::mapper::Mapper;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::bus::{AddressBusType, Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
+use crate::memory::cpu::cpu_pinout::CpuPinout;
 use crate::memory::signal_level::SignalLevel;
 
 pub struct Cpu {
@@ -47,10 +48,8 @@ pub struct Cpu {
 
 impl Cpu {
     // From https://wiki.nesdev.org/w/index.php?title=CPU_power_up_state
-    pub fn new(bus: &mut Bus, starting_cycle: i64, step_formatting: CpuStepFormatting) -> Cpu {
-        bus.set_cpu_cycle(starting_cycle);
-
-        Cpu {
+    pub fn new(step_formatting: CpuStepFormatting) -> Self {
+        Self {
             a: 0,
             x: 0,
             y: 0,
@@ -134,24 +133,24 @@ impl Cpu {
         self.nmi_status == NmiStatus::Pending
     }
 
-    pub fn step_first_half(&mut self, mapper: &mut dyn Mapper, bus: &mut Bus) -> Option<Step> {
+    pub fn step_first_half(bus: &mut Bus, mapper: &mut dyn Mapper) -> Option<Step> {
         if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
             return None;
         }
 
-        self.mode_state.clear_new_instruction();
-        if self.mode_state.is_jammed() {
+        bus.cpu.mode_state.clear_new_instruction();
+        if bus.cpu.mode_state.is_jammed() {
             return None;
         }
 
-        if self.nmi_status == NmiStatus::Pending {
-            self.nmi_status = NmiStatus::Ready;
-        } else if self.irq_status == IrqStatus::Pending && !self.status.interrupts_disabled {
-            self.irq_status = IrqStatus::Ready;
+        if bus.cpu.nmi_status == NmiStatus::Pending {
+            bus.cpu.nmi_status = NmiStatus::Ready;
+        } else if bus.cpu.irq_status == IrqStatus::Pending && !bus.cpu.status.interrupts_disabled {
+            bus.cpu.irq_status = IrqStatus::Ready;
         }
 
-        let mut step = self.mode_state.current_step();
+        let mut step = bus.cpu.mode_state.current_step();
 
         let cycle_parity = bus.apu_regs.clock().cycle_parity();
         bus.dmc_dma.step(step.is_read(), cycle_parity);
@@ -173,42 +172,42 @@ impl Cpu {
         let value;
         match step {
             Step::Read(from, _) => {
-                bus.set_cpu_address_bus(AddressBusType::Cpu, self.lookup_from_address(bus, from));
+                bus.set_cpu_address_bus(AddressBusType::Cpu, bus.cpu.lookup_from_address(bus, from));
                 value = bus.cpu_read(mapper, AddressBusType::Cpu);
             }
             Step::ReadField(field, from, _) => {
-                bus.set_cpu_address_bus(AddressBusType::Cpu, self.lookup_from_address(bus, from));
+                bus.set_cpu_address_bus(AddressBusType::Cpu, bus.cpu.lookup_from_address(bus, from));
                 value = bus.cpu_read(mapper, AddressBusType::Cpu);
-                self.set_field_value(field, value);
+                bus.cpu.set_field_value(field, value);
             }
             Step::Write(to, _) => {
-                bus.set_cpu_address_bus(AddressBusType::Cpu, self.lookup_to_address(bus, to));
+                bus.set_cpu_address_bus(AddressBusType::Cpu, bus.cpu.lookup_to_address(bus, to));
                 value = bus.cpu_pinout.data_bus;
                 bus.cpu_write(mapper, AddressBusType::Cpu);
             }
             Step::WriteField(field, to, _) => {
-                bus.set_cpu_address_bus(AddressBusType::Cpu, self.lookup_to_address(bus, to));
-                bus.cpu_pinout.data_bus = self.field_value(bus, field);
+                bus.set_cpu_address_bus(AddressBusType::Cpu, bus.cpu.lookup_to_address(bus, to));
+                bus.cpu_pinout.data_bus = bus.cpu.field_value(&mut bus.cpu_pinout, field);
                 value = bus.cpu_pinout.data_bus;
                 bus.cpu_write(mapper, AddressBusType::Cpu);
             }
             Step::OamRead(from, _) => {
-                bus.set_cpu_address_bus(AddressBusType::OamDma, self.lookup_from_address(bus, from));
+                bus.set_cpu_address_bus(AddressBusType::OamDma, bus.cpu.lookup_from_address(bus, from));
                 value = bus.cpu_read(mapper, AddressBusType::OamDma);
             }
             Step::OamWrite(to, _) => {
-                bus.set_cpu_address_bus(AddressBusType::OamDma, self.lookup_to_address(bus, to));
+                bus.set_cpu_address_bus(AddressBusType::OamDma, bus.cpu.lookup_to_address(bus, to));
                 value = bus.cpu_pinout.data_bus;
                 bus.cpu_write(mapper, AddressBusType::OamDma);
             }
             Step::DmcRead(from, _) => {
-                bus.set_cpu_address_bus(AddressBusType::DmcDma, self.lookup_from_address(bus, from));
+                bus.set_cpu_address_bus(AddressBusType::DmcDma, bus.cpu.lookup_from_address(bus, from));
                 value = bus.cpu_read(mapper, AddressBusType::DmcDma);
             }
         }
 
         let formatted_step = if log_enabled!(target: "cpustep", Info) {
-            match self.step_formatting {
+            match bus.cpu.step_formatting {
                 CpuStepFormatting::NoData => format!("{step:?}"),
                 CpuStepFormatting::Data => step.format_with_read_write_values(bus, value),
             }
@@ -216,23 +215,23 @@ impl Cpu {
             String::new()
         };
 
-        let original_program_counter = self.program_counter;
+        let original_program_counter = bus.cpu.program_counter;
         for &action in step.actions() {
-            self.execute_step_action(mapper, bus,action, value);
+            Cpu::execute_step_action(bus, action, value);
         }
 
         let halted = bus.dmc_dma.cpu_should_be_halted() || bus.oam_dma.cpu_should_be_halted();
         if log_enabled!(target: "cpustep", Info) {
-            let step_name = if halted { "HALTED".to_string() } else { self.mode_state.step_name() };
+            let step_name = if halted { "HALTED".to_string() } else { bus.cpu.mode_state.step_name() };
             let cpu_cycle = bus.cpu_cycle();
             info!("\t {step_name} PC: {original_program_counter}, Cycle: {cpu_cycle}, {formatted_step}");
         }
 
         if !halted {
-            self.mode_state.step();
+            bus.cpu.mode_state.step();
 
             if step.has_start_new_instruction() {
-                self.mode_state.set_current_instruction_with_address(
+                bus.cpu.mode_state.set_current_instruction_with_address(
                     Instruction::from_code_point(value),
                     bus.cpu_pinout.address_bus,
                 );
@@ -242,7 +241,7 @@ impl Cpu {
         Some(step)
     }
 
-    pub fn step_second_half(&mut self, mapper: &mut dyn Mapper, bus: &mut Bus) {
+    pub fn step_second_half(bus: &mut Bus, mapper: &mut dyn Mapper) {
         if bus.cpu_pinout.reset.current_value() == SignalLevel::Low {
             // The CPU doesn't do anything while the RESET button is held down.
             return;
@@ -250,185 +249,185 @@ impl Cpu {
 
         let edge_detected = bus.cpu_pinout.nmi_signal_detector.detect();
         if edge_detected {
-            self.nmi_status = NmiStatus::Pending;
+            bus.cpu.nmi_status = NmiStatus::Pending;
         }
 
         // Keep irq_pending and irq_status in sync
         if bus.cpu_pinout.irq_asserted() {
-            if self.irq_status == IrqStatus::Inactive && !self.status.interrupts_disabled {
-                self.irq_status = IrqStatus::Pending;
+            if bus.cpu.irq_status == IrqStatus::Inactive && !bus.cpu.status.interrupts_disabled {
+                bus.cpu.irq_status = IrqStatus::Pending;
             }
-        } else if self.irq_status != IrqStatus::Active || !self.mode_state.is_branch_delay_active() {
-            self.irq_status = IrqStatus::Inactive;
+        } else if bus.cpu.irq_status != IrqStatus::Active || !bus.cpu.mode_state.is_branch_delay_active() {
+            bus.cpu.irq_status = IrqStatus::Inactive;
         }
 
         mapper.on_end_of_cpu_cycle(bus);
     }
 
-    fn execute_step_action(&mut self, mapper: &mut dyn Mapper, bus: &mut Bus, action: StepAction, value: u8) {
+    fn execute_step_action(Bus { cpu, cpu_pinout, apu_regs, dmc_dma, oam_dma, .. }: &mut Bus, action: StepAction, value: u8) {
         match action {
             StepAction::StartNextInstruction => {
-                if self.mode_state.should_suppress_next_instruction_start() {
+                if cpu.mode_state.should_suppress_next_instruction_start() {
                     return;
                 }
 
-                if self.reset_status == ResetStatus::Ready {
-                    self.reset_status = ResetStatus::Active;
-                    bus.cpu_pinout.data_bus = 0x00;
-                    self.mode_state.interrupt_sequence(InterruptType::Reset);
-                } else if self.nmi_status == NmiStatus::Active {
-                    bus.cpu_pinout.data_bus = 0x00;
-                    self.mode_state.interrupt_sequence(InterruptType::Nmi);
-                } else if self.irq_status == IrqStatus::Active && self.nmi_status == NmiStatus::Inactive {
-                    bus.cpu_pinout.data_bus = 0x00;
-                    self.mode_state.interrupt_sequence(InterruptType::Irq);
+                if cpu.reset_status == ResetStatus::Ready {
+                    cpu.reset_status = ResetStatus::Active;
+                    cpu_pinout.data_bus = 0x00;
+                    cpu.mode_state.interrupt_sequence(InterruptType::Reset);
+                } else if cpu.nmi_status == NmiStatus::Active {
+                    cpu_pinout.data_bus = 0x00;
+                    cpu.mode_state.interrupt_sequence(InterruptType::Nmi);
+                } else if cpu.irq_status == IrqStatus::Active && cpu.nmi_status == NmiStatus::Inactive {
+                    cpu_pinout.data_bus = 0x00;
+                    cpu.mode_state.interrupt_sequence(InterruptType::Irq);
                 } else {
-                    self.mode_state.instruction(Instruction::from_code_point(value));
+                    cpu.mode_state.instruction(Instruction::from_code_point(value));
                 }
             }
 
             StepAction::InterpretOpCode => {}
             StepAction::ExecuteOpCode => {
-                let instruction = self.mode_state.current_instruction().unwrap();
+                let instruction = cpu.mode_state.current_instruction().unwrap();
                 use OpCode::*;
                 match instruction.op_code() {
                     // Implicit (and Accumulator) op codes.
-                    INX => self.x = self.nz(self.x.wrapping_add(1)),
-                    INY => self.y = self.nz(self.y.wrapping_add(1)),
-                    DEX => self.x = self.nz(self.x.wrapping_sub(1)),
-                    DEY => self.y = self.nz(self.y.wrapping_sub(1)),
-                    TAX => self.x = self.nz(self.a),
-                    TAY => self.y = self.nz(self.a),
-                    TSX => self.x = self.nz(self.stack_pointer),
-                    TXS => self.stack_pointer = self.x,
-                    TXA => self.a = self.nz(self.x),
-                    TYA => self.a = self.nz(self.y),
-                    PLA => self.a = self.nz(self.operand),
-                    PLP => self.status = Status::from_byte(self.operand),
-                    CLC => self.status.carry = false,
-                    SEC => self.status.carry = true,
-                    CLD => self.status.decimal = false,
-                    SED => self.status.decimal = true,
-                    CLI => self.status.interrupts_disabled = false,
-                    SEI => self.status.interrupts_disabled = true,
-                    CLV => self.status.overflow = false,
+                    INX => cpu.x = cpu.nz(cpu.x.wrapping_add(1)),
+                    INY => cpu.y = cpu.nz(cpu.y.wrapping_add(1)),
+                    DEX => cpu.x = cpu.nz(cpu.x.wrapping_sub(1)),
+                    DEY => cpu.y = cpu.nz(cpu.y.wrapping_sub(1)),
+                    TAX => cpu.x = cpu.nz(cpu.a),
+                    TAY => cpu.y = cpu.nz(cpu.a),
+                    TSX => cpu.x = cpu.nz(cpu.stack_pointer),
+                    TXS => cpu.stack_pointer = cpu.x,
+                    TXA => cpu.a = cpu.nz(cpu.x),
+                    TYA => cpu.a = cpu.nz(cpu.y),
+                    PLA => cpu.a = cpu.nz(cpu.operand),
+                    PLP => cpu.status = Status::from_byte(cpu.operand),
+                    CLC => cpu.status.carry = false,
+                    SEC => cpu.status.carry = true,
+                    CLD => cpu.status.decimal = false,
+                    SED => cpu.status.decimal = true,
+                    CLI => cpu.status.interrupts_disabled = false,
+                    SEI => cpu.status.interrupts_disabled = true,
+                    CLV => cpu.status.overflow = false,
                     NOP => { /* Do nothing. */ }
 
                     // Immediate op codes.
-                    LDA => self.a = self.nz(self.operand),
-                    LDX => self.x = self.nz(self.operand),
-                    LDY => self.y = self.nz(self.operand),
-                    CMP => self.cmp(self.operand),
-                    CPX => self.cpx(self.operand),
-                    CPY => self.cpy(self.operand),
-                    ORA => self.a = self.nz(self.a | self.operand),
-                    AND => self.a = self.nz(self.a & self.operand),
-                    EOR => self.a = self.nz(self.a ^ self.operand),
-                    ADC => self.a = self.adc(self.operand),
-                    SBC => self.a = self.sbc(self.operand),
+                    LDA => cpu.a = cpu.nz(cpu.operand),
+                    LDX => cpu.x = cpu.nz(cpu.operand),
+                    LDY => cpu.y = cpu.nz(cpu.operand),
+                    CMP => cpu.cmp(cpu.operand),
+                    CPX => cpu.cpx(cpu.operand),
+                    CPY => cpu.cpy(cpu.operand),
+                    ORA => cpu.a = cpu.nz(cpu.a | cpu.operand),
+                    AND => cpu.a = cpu.nz(cpu.a & cpu.operand),
+                    EOR => cpu.a = cpu.nz(cpu.a ^ cpu.operand),
+                    ADC => cpu.a = cpu.adc(cpu.operand),
+                    SBC => cpu.a = cpu.sbc(cpu.operand),
                     LAX => {
-                        self.a = self.operand;
-                        self.x = self.operand;
-                        self.nz(self.operand);
+                        cpu.a = cpu.operand;
+                        cpu.x = cpu.operand;
+                        cpu.nz(cpu.operand);
                     }
                     ANC => {
-                        self.a = self.nz(self.a & self.operand);
-                        self.status.carry = self.status.negative;
+                        cpu.a = cpu.nz(cpu.a & cpu.operand);
+                        cpu.status.carry = cpu.status.negative;
                     }
                     ALR => {
-                        self.a = self.nz(self.a & self.operand);
-                        Cpu::lsr(&mut self.status, &mut self.a);
+                        cpu.a = cpu.nz(cpu.a & cpu.operand);
+                        Cpu::lsr(&mut cpu.status, &mut cpu.a);
                     }
                     ARR => {
                         // TODO: What a mess.
-                        let value = (self.a & self.operand) >> 1;
-                        self.a = self.nz(value | if self.status.carry {0x80} else {0x00});
-                        self.status.carry = self.a & 0x40 != 0;
-                        self.status.overflow =
-                            (u8::from(self.status.carry) ^ ((self.a >> 5) & 0x01)) != 0;
+                        let value = (cpu.a & cpu.operand) >> 1;
+                        cpu.a = cpu.nz(value | if cpu.status.carry {0x80} else {0x00});
+                        cpu.status.carry = cpu.a & 0x40 != 0;
+                        cpu.status.overflow =
+                            (u8::from(cpu.status.carry) ^ ((cpu.a >> 5) & 0x01)) != 0;
                     }
                     AXS => {
-                        self.status.carry = self.a & self.x >= self.operand;
-                        self.x = self.nz((self.a & self.x).wrapping_sub(self.operand));
+                        cpu.status.carry = cpu.a & cpu.x >= cpu.operand;
+                        cpu.x = cpu.nz((cpu.a & cpu.x).wrapping_sub(cpu.operand));
                     }
 
                     BIT => {
-                        self.status.negative = self.operand & 0b1000_0000 != 0;
-                        self.status.overflow = self.operand & 0b0100_0000 != 0;
-                        self.status.zero = self.operand & self.a == 0;
+                        cpu.status.negative = cpu.operand & 0b1000_0000 != 0;
+                        cpu.status.overflow = cpu.operand & 0b0100_0000 != 0;
+                        cpu.status.zero = cpu.operand & cpu.a == 0;
                     }
 
                     // Write op codes.
                     STA | STX | STY | SAX | SHX | SHY | TAS | AHX => panic!("ExecuteOpCode must not be implemented for {:?}", instruction.op_code()),
 
                     // Read-Modify-Write op codes.
-                    ASL if instruction.access_mode() == AccessMode::Imp => Cpu::asl(&mut self.status, &mut self.a),
-                    ROL if instruction.access_mode() == AccessMode::Imp => Cpu::rol(&mut self.status, &mut self.a),
-                    LSR if instruction.access_mode() == AccessMode::Imp => Cpu::lsr(&mut self.status, &mut self.a),
-                    ROR if instruction.access_mode() == AccessMode::Imp => Cpu::ror(&mut self.status, &mut self.a),
-                    ASL => Cpu::asl(&mut self.status, &mut self.operand),
-                    ROL => Cpu::rol(&mut self.status, &mut self.operand),
-                    LSR => Cpu::lsr(&mut self.status, &mut self.operand),
-                    ROR => Cpu::ror(&mut self.status, &mut self.operand),
+                    ASL if instruction.access_mode() == AccessMode::Imp => Cpu::asl(&mut cpu.status, &mut cpu.a),
+                    ROL if instruction.access_mode() == AccessMode::Imp => Cpu::rol(&mut cpu.status, &mut cpu.a),
+                    LSR if instruction.access_mode() == AccessMode::Imp => Cpu::lsr(&mut cpu.status, &mut cpu.a),
+                    ROR if instruction.access_mode() == AccessMode::Imp => Cpu::ror(&mut cpu.status, &mut cpu.a),
+                    ASL => Cpu::asl(&mut cpu.status, &mut cpu.operand),
+                    ROL => Cpu::rol(&mut cpu.status, &mut cpu.operand),
+                    LSR => Cpu::lsr(&mut cpu.status, &mut cpu.operand),
+                    ROR => Cpu::ror(&mut cpu.status, &mut cpu.operand),
 
                     INC => {
-                        self.operand = self.operand.wrapping_add(1);
-                        Cpu::nz_status(&mut self.status, self.operand);
+                        cpu.operand = cpu.operand.wrapping_add(1);
+                        Cpu::nz_status(&mut cpu.status, cpu.operand);
                     }
                     DEC => {
-                        self.operand = self.operand.wrapping_sub(1);
-                        Cpu::nz_status(&mut self.status, self.operand);
+                        cpu.operand = cpu.operand.wrapping_sub(1);
+                        Cpu::nz_status(&mut cpu.status, cpu.operand);
                     }
                     SLO => {
-                        Cpu::asl(&mut self.status, &mut self.operand);
-                        self.a |= self.operand;
-                        self.nz(self.a);
+                        Cpu::asl(&mut cpu.status, &mut cpu.operand);
+                        cpu.a |= cpu.operand;
+                        cpu.nz(cpu.a);
                     }
                     SRE => {
-                        Cpu::lsr(&mut self.status, &mut self.operand);
-                        self.a ^= self.operand;
-                        self.nz(self.a);
+                        Cpu::lsr(&mut cpu.status, &mut cpu.operand);
+                        cpu.a ^= cpu.operand;
+                        cpu.nz(cpu.a);
                     }
                     RLA => {
-                        Cpu::rol(&mut self.status, &mut self.operand);
-                        self.a &= self.operand;
-                        self.nz(self.a);
+                        Cpu::rol(&mut cpu.status, &mut cpu.operand);
+                        cpu.a &= cpu.operand;
+                        cpu.nz(cpu.a);
                     },
                     RRA => {
-                        Cpu::ror(&mut self.status, &mut self.operand);
-                        self.a = self.adc(self.operand);
-                        self.nz(self.a);
+                        Cpu::ror(&mut cpu.status, &mut cpu.operand);
+                        cpu.a = cpu.adc(cpu.operand);
+                        cpu.nz(cpu.a);
                     }
                     ISC => {
-                        self.operand = self.operand.wrapping_add(1);
-                        self.a = self.sbc(self.operand);
+                        cpu.operand = cpu.operand.wrapping_add(1);
+                        cpu.a = cpu.sbc(cpu.operand);
                     }
                     DCP => {
-                        self.operand = self.operand.wrapping_sub(1);
-                        self.cmp(self.operand);
+                        cpu.operand = cpu.operand.wrapping_sub(1);
+                        cpu.cmp(cpu.operand);
                     }
 
                     LAS => {
-                        let value = self.operand & self.stack_pointer;
-                        self.a = value;
-                        self.x = value;
-                        self.stack_pointer = value;
+                        let value = cpu.operand & cpu.stack_pointer;
+                        cpu.a = value;
+                        cpu.x = value;
+                        cpu.stack_pointer = value;
                     }
                     XAA => {
-                        self.a = self.nz(self.a & self.x & self.operand);
+                        cpu.a = cpu.nz(cpu.a & cpu.x & cpu.operand);
                     }
 
                     // Relative op codes.
-                    BPL => if !self.status.negative { self.branch(); }
-                    BMI => if self.status.negative { self.branch(); }
-                    BVC => if !self.status.overflow { self.branch(); }
-                    BVS => if self.status.overflow { self.branch(); }
-                    BCC => if !self.status.carry { self.branch(); }
-                    BCS => if self.status.carry { self.branch(); }
-                    BNE => if !self.status.zero { self.branch(); }
-                    BEQ => if self.status.zero { self.branch(); }
+                    BPL => if !cpu.status.negative { cpu.branch(); }
+                    BMI => if cpu.status.negative { cpu.branch(); }
+                    BVC => if !cpu.status.overflow { cpu.branch(); }
+                    BVS => if cpu.status.overflow { cpu.branch(); }
+                    BCC => if !cpu.status.carry { cpu.branch(); }
+                    BCS => if cpu.status.carry { cpu.branch(); }
+                    BNE => if !cpu.status.zero { cpu.branch(); }
+                    BEQ => if cpu.status.zero { cpu.branch(); }
 
-                    JAM => self.mode_state.jammed(),
+                    JAM => cpu.mode_state.jammed(),
                     _ => todo!("{instruction:X?}"),
                 }
             }
@@ -436,103 +435,103 @@ impl Cpu {
             StepAction::IncrementPC => {
                 // FIXME : Rather than suppressing this here, this StepAction should have been
                 // stripped out earlier.
-                if !self.mode_state.should_suppress_next_instruction_start() && !self.mode_state.is_interrupt_sequence_active() {
-                    self.program_counter.inc();
+                if !cpu.mode_state.should_suppress_next_instruction_start() && !cpu.mode_state.is_interrupt_sequence_active() {
+                    cpu.program_counter.inc();
                 }
             }
             // TODO: Make sure this isn't supposed to wrap within the same page.
-            StepAction::IncrementAddress => self.computed_address = bus.cpu_pinout.address_bus.inc(),
-            StepAction::IncrementAddressLow => self.computed_address = bus.cpu_pinout.address_bus.offset_low(1).0,
-            StepAction::IncrementOamDmaAddress => bus.oam_dma.increment_address(),
+            StepAction::IncrementAddress => cpu.computed_address = cpu_pinout.address_bus.inc(),
+            StepAction::IncrementAddressLow => cpu.computed_address = cpu_pinout.address_bus.offset_low(1).0,
+            StepAction::IncrementOamDmaAddress => oam_dma.increment_address(),
 
-            StepAction::IncrementStackPointer => self.stack_pointer = self.stack_pointer.wrapping_add(1),
-            StepAction::DecrementStackPointer => self.stack_pointer = self.stack_pointer.wrapping_sub(1),
+            StepAction::IncrementStackPointer => cpu.stack_pointer = cpu.stack_pointer.wrapping_add(1),
+            StepAction::DecrementStackPointer => cpu.stack_pointer = cpu.stack_pointer.wrapping_sub(1),
 
-            StepAction::DisableInterrupts => self.status.interrupts_disabled = true,
+            StepAction::DisableInterrupts => cpu.status.interrupts_disabled = true,
             StepAction::SetInterruptVector => {
-                self.current_interrupt_vector =
-                    if self.reset_status != ResetStatus::Inactive {
+                cpu.current_interrupt_vector =
+                    if cpu.reset_status != ResetStatus::Inactive {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to RESET.");
                         Some(InterruptType::Reset)
-                    } else if self.nmi_status != NmiStatus::Inactive {
+                    } else if cpu.nmi_status != NmiStatus::Inactive {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to NMI.");
                         Some(InterruptType::Nmi)
-                    } else if self.irq_status != IrqStatus::Inactive {
+                    } else if cpu.irq_status != IrqStatus::Inactive {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to IRQ.");
                         Some(InterruptType::Irq)
-                    } else if let Some(instruction) = self.mode_state.current_instruction() && instruction.op_code() == OpCode::BRK {
+                    } else if let Some(instruction) = cpu.mode_state.current_instruction() && instruction.op_code() == OpCode::BRK {
                         info!(target: "cpuflowcontrol", "Setting interrupt vector to IRQ due to BRK.");
                         Some(InterruptType::Irq)
                     } else {
                         None
                     };
-                self.mode_state.interrupt_vector_set(self.current_interrupt_vector);
+                cpu.mode_state.interrupt_vector_set(cpu.current_interrupt_vector);
 
                 // Clear interrupt statuses now that the vector is set.
-                self.nmi_status = NmiStatus::Inactive;
-                self.irq_status = IrqStatus::Inactive;
-                self.reset_status = ResetStatus::Inactive;
+                cpu.nmi_status = NmiStatus::Inactive;
+                cpu.irq_status = IrqStatus::Inactive;
+                cpu.reset_status = ResetStatus::Inactive;
             }
-            StepAction::ClearInterruptVector => self.current_interrupt_vector = None,
+            StepAction::ClearInterruptVector => cpu.current_interrupt_vector = None,
             StepAction::PollInterrupts => {
-                if self.nmi_status == NmiStatus::Ready {
-                    self.nmi_status = NmiStatus::Active;
-                } else if self.irq_status == IrqStatus::Ready && !self.status.interrupts_disabled {
-                    self.irq_status = IrqStatus::Active;
+                if cpu.nmi_status == NmiStatus::Ready {
+                    cpu.nmi_status = NmiStatus::Active;
+                } else if cpu.irq_status == IrqStatus::Ready && !cpu.status.interrupts_disabled {
+                    cpu.irq_status = IrqStatus::Active;
                 }
             }
             StepAction::MaybePollInterrupts => {
-                if self.address_carry != 0 {
-                    if self.nmi_status == NmiStatus::Ready {
-                        self.nmi_status = NmiStatus::Ready;
-                    } else if self.irq_status == IrqStatus::Ready && !self.status.interrupts_disabled {
-                        self.irq_status = IrqStatus::Active;
+                if cpu.address_carry != 0 {
+                    if cpu.nmi_status == NmiStatus::Ready {
+                        cpu.nmi_status = NmiStatus::Ready;
+                    } else if cpu.irq_status == IrqStatus::Ready && !cpu.status.interrupts_disabled {
+                        cpu.irq_status = IrqStatus::Active;
                     }
                 }
             }
 
-            StepAction::SetDmcSampleBuffer => bus.set_dmc_sample_buffer(value),
+            StepAction::SetDmcSampleBuffer => apu_regs.dmc.set_sample_buffer(cpu_pinout, dmc_dma, value),
 
             StepAction::XOffsetPendingAddressLow => {
                 let carry;
-                (self.pending_address_low, carry) =
-                    self.pending_address_low.overflowing_add(self.x);
+                (cpu.pending_address_low, carry) =
+                    cpu.pending_address_low.overflowing_add(cpu.x);
                 if carry {
-                    self.address_carry = 1;
+                    cpu.address_carry = 1;
                 }
             }
             StepAction::YOffsetPendingAddressLow => {
                 let carry;
-                (self.pending_address_low, carry) =
-                    self.pending_address_low.overflowing_add(self.y);
+                (cpu.pending_address_low, carry) =
+                    cpu.pending_address_low.overflowing_add(cpu.y);
                 if carry {
-                    self.address_carry = 1;
+                    cpu.address_carry = 1;
                 }
             }
-            StepAction::XOffsetAddress => self.computed_address = bus.cpu_pinout.address_bus.offset_low(self.x).0,
-            StepAction::YOffsetAddress => self.computed_address = bus.cpu_pinout.address_bus.offset_low(self.y).0,
+            StepAction::XOffsetAddress => cpu.computed_address = cpu_pinout.address_bus.offset_low(cpu.x).0,
+            StepAction::YOffsetAddress => cpu.computed_address = cpu_pinout.address_bus.offset_low(cpu.y).0,
             StepAction::MaybeInsertOopsStep => {
-                if self.address_carry != 0 {
-                    self.mode_state.oops();
+                if cpu.address_carry != 0 {
+                    cpu.mode_state.oops();
                 }
             }
             StepAction::MaybeInsertBranchOopsStep => {
-                if self.address_carry != 0 {
-                    self.mode_state.branch_oops();
+                if cpu.address_carry != 0 {
+                    cpu.mode_state.branch_oops();
                 }
             }
 
             StepAction::CopyAddressToPC => {
-                self.program_counter = bus.cpu_pinout.address_bus;
+                cpu.program_counter = cpu_pinout.address_bus;
             }
             StepAction::AddCarryToAddress => {
-                self.computed_address = bus.cpu_pinout.address_bus.offset_high(self.address_carry);
-                self.address_carry = 0;
+                cpu.computed_address = cpu_pinout.address_bus.offset_high(cpu.address_carry);
+                cpu.address_carry = 0;
             }
             StepAction::AddCarryToPC => {
-                if self.address_carry != 0 {
-                    self.program_counter = self.program_counter.offset_high(self.address_carry);
-                    self.address_carry = 0;
+                if cpu.address_carry != 0 {
+                    cpu.program_counter = cpu.program_counter.offset_high(cpu.address_carry);
+                    cpu.address_carry = 0;
                 }
             }
         }
@@ -590,7 +589,7 @@ impl Cpu {
         }
     }
 
-    fn field_value(&mut self, bus: &mut Bus, field: Field) -> u8 {
+    fn field_value(&mut self, cpu_pinout: &mut CpuPinout, field: Field) -> u8 {
         use Field::*;
         match field {
             ProgramCounterLowByte => self.program_counter.low_byte(),
@@ -613,28 +612,28 @@ impl Cpu {
                 OpCode::SAX => self.a & self.x,
                 // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::SHX => {
-                    let (low, high) = bus.cpu_pinout.address_bus.to_low_high();
-                    bus.cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
+                    let (low, high) = cpu_pinout.address_bus.to_low_high();
+                    cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
                     self.x & high
                 }
                 // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::SHY => {
-                    let (low, high) = bus.cpu_pinout.address_bus.to_low_high();
-                    bus.cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.y & high);
+                    let (low, high) = cpu_pinout.address_bus.to_low_high();
+                    cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.y & high);
                     self.y
                 }
                 // FIXME: Calculations should be done as part of an earlier StepAction.
                 OpCode::AHX => {
-                    let (low, high) = bus.cpu_pinout.address_bus.to_low_high();
+                    let (low, high) = cpu_pinout.address_bus.to_low_high();
                     // This is using later revision logic.
                     // For early revision logic, use self.a & self.x & self.a
-                    bus.cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
+                    cpu_pinout.address_bus = CpuAddress::from_low_high(low, self.x & high);
                     self.a & self.x & high
                 }
                 OpCode::TAS => {
                     let sp = self.a & self.x;
                     self.stack_pointer = sp;
-                    self.x & bus.cpu_pinout.address_bus.high_byte()
+                    self.x & cpu_pinout.address_bus.high_byte()
                 }
                 op_code => todo!("{:?}", op_code),
             }

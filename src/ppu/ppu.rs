@@ -43,7 +43,7 @@ pub struct Ppu {
 }
 
 impl Ppu {
-    pub fn new(bus: &Bus) -> Ppu {
+    pub fn new(bank_color_assigner: BankColorAssigner) -> Ppu {
         Ppu {
             oam_registers: OamRegisters::new(),
             oam_register_index: 0,
@@ -60,11 +60,11 @@ impl Ppu {
             frame_actions: NTSC_FRAME_ACTIONS.clone(),
 
             pattern_source_frame: Frame::new(),
-            bank_color_assigner: BankColorAssigner::new(bus),
+            bank_color_assigner,
         }
     }
 
-    pub fn step(&mut self, mapper: &mut dyn Mapper, bus: &mut Bus, frame: &mut Frame) {
+    pub fn step(bus: &mut Bus, mapper: &mut dyn Mapper, frame: &mut Frame) {
         let tick_result = bus.ppu_regs.tick();
         if tick_result.rendering_toggled == Some(Toggle::Disable) {
             // "... when rendering is disabled, the value on the PPU address bus is the current value of the v register."
@@ -73,14 +73,14 @@ impl Ppu {
 
         let clock = *bus.ppu_regs.clock();
         if log_enabled!(target: "ppusteps", Info) {
-            info!(" {clock}\t{}", self.frame_actions.format_current_cycle_actions(&clock));
+            info!(" {clock}\t{}", bus.ppu.frame_actions.format_current_cycle_actions(&clock));
         }
 
         // TODO: Figure out how to eliminate duplication and the index.
-        let len = self.frame_actions.current_cycle_actions(&clock).len();
+        let len = bus.ppu.frame_actions.current_cycle_actions(&clock).len();
         for i in 0..len {
-            let cycle_action = self.frame_actions.current_cycle_actions(&clock)[i];
-            self.execute_cycle_action(mapper, bus,frame, cycle_action);
+            let cycle_action = bus.ppu.frame_actions.current_cycle_actions(&clock)[i];
+            Ppu::execute_cycle_action(bus, mapper, frame, cycle_action);
         }
 
         if bus.ppu_regs.can_generate_nmi() {
@@ -92,7 +92,7 @@ impl Ppu {
         mapper.on_end_of_ppu_cycle();
     }
 
-    fn execute_cycle_action(&mut self, mapper: &mut dyn Mapper, bus: &mut Bus, frame: &mut Frame, cycle_action: CycleAction) {
+    fn execute_cycle_action(bus: &mut Bus, mapper: &mut dyn Mapper, frame: &mut Frame, cycle_action: CycleAction) {
         use CycleAction::*;
         match cycle_action {
             SetPatternIndexAddress =>
@@ -100,35 +100,35 @@ impl Ppu {
             SetPaletteIndexAddress =>
                 bus.set_ppu_address_bus(mapper, bus.ppu_regs.address_in_attribute_table()),
             SetPatternLowAddress =>
-                bus.set_ppu_address_bus(mapper, bus.ppu_regs.address_for_low_pattern_byte(self.next_tile_number)),
+                bus.set_ppu_address_bus(mapper, bus.ppu_regs.address_for_low_pattern_byte(bus.ppu.next_tile_number)),
             SetPatternHighAddress =>
-                bus.set_ppu_address_bus(mapper, bus.ppu_regs.address_for_high_pattern_byte(self.next_tile_number)),
+                bus.set_ppu_address_bus(mapper, bus.ppu_regs.address_for_high_pattern_byte(bus.ppu.next_tile_number)),
 
-            GetPatternIndex => self.next_tile_number = TileNumber::new(bus.ppu_internal_read(mapper).value()),
+            GetPatternIndex => bus.ppu.next_tile_number = TileNumber::new(bus.ppu_internal_read(mapper).value()),
             GetPatternLowByte => {
                 let pattern_low = bus.ppu_internal_read(mapper);
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                self.pattern_register.set_pending_low_byte(pattern_low);
+                bus.ppu.pattern_register.set_pending_low_byte(pattern_low);
             }
             GetPatternHighByte => {
                 let pattern_high = bus.ppu_internal_read(mapper);
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                self.pattern_register.set_pending_high_byte(pattern_high);
+                bus.ppu.pattern_register.set_pending_high_byte(pattern_high);
             }
             GetPaletteIndex => {
                 let attribute_byte = bus.ppu_internal_read(mapper).value();
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                self.attribute_register.set_pending_palette_table_index(bus.ppu_regs.palette_table_index(attribute_byte));
+                bus.ppu.attribute_register.set_pending_palette_table_index(bus.ppu_regs.palette_table_index(attribute_byte));
             }
             PrepareForNextTile => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                self.attribute_register.prepare_next_palette_table_index();
-                self.pattern_register.load_next_palette_indexes();
+                bus.ppu.attribute_register.prepare_next_palette_table_index();
+                bus.ppu.pattern_register.load_next_palette_indexes();
             }
             PrepareForNextPixel => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                self.pattern_register.shift_left();
-                self.attribute_register.push_next_palette_table_index();
+                bus.ppu.pattern_register.shift_left();
+                bus.ppu.attribute_register.push_next_palette_table_index();
             }
 
             GotoNextTileColumn => {
@@ -152,10 +152,10 @@ impl Ppu {
                     frame.set_universal_background_rgb(palette_table.universal_background_rgb());
 
                     let column_in_tile = bus.ppu_regs.fine_x_scroll;
-                    let palette_table_index = self.attribute_register.palette_table_index(column_in_tile);
+                    let palette_table_index = bus.ppu.attribute_register.palette_table_index(column_in_tile);
                     let palette = palette_table.background_palette(palette_table_index);
 
-                    let background_pixel = self.pattern_register
+                    let background_pixel = bus.ppu.pattern_register
                         .palette_index(column_in_tile)
                         .map_or(Rgbt::Transparent, |palette_index| Rgbt::Opaque(palette[palette_index]));
 
@@ -164,14 +164,14 @@ impl Ppu {
                     let bank_pixel = if background_pixel.is_transparent() {
                         Rgbt::Transparent
                     } else {
-                        let rgb = self.bank_color_assigner.rgb_for_source(self.pattern_register.current_peek().source());
+                        let rgb = bus.ppu.bank_color_assigner.rgb_for_source(bus.ppu.pattern_register.current_peek().source());
                         Rgbt::Opaque(rgb)
                     };
-                    self.pattern_source_frame.set_background_pixel(pixel_column, pixel_row, bank_pixel);
+                    bus.ppu.pattern_source_frame.set_background_pixel(pixel_column, pixel_row, bank_pixel);
                 }
 
                 if bus.ppu_regs.sprites_enabled() || bus.ppu_regs.background_enabled() {
-                    let (mut sprite_pixel, priority, is_sprite_0, ppu_peek) = self.oam_registers.step(&bus.palette_table());
+                    let (mut sprite_pixel, priority, is_sprite_0, ppu_peek) = bus.ppu.oam_registers.step(&bus.palette_table());
                     // HACK: Transparent sprites on row 0 should be a natural consequence of the shifter pipeline instead.
                     if pixel_row == PixelRow::ZERO {
                         sprite_pixel = Rgbt::Transparent;
@@ -189,10 +189,10 @@ impl Ppu {
                         let bank_pixel = if sprite_pixel.is_transparent() {
                             Rgbt::Transparent
                         } else {
-                            let rgb = self.bank_color_assigner.rgb_for_source(ppu_peek.source());
+                            let rgb = bus.ppu.bank_color_assigner.rgb_for_source(ppu_peek.source());
                             Rgbt::Opaque(rgb)
                         };
-                        self.pattern_source_frame.set_sprite_pixel(pixel_column, pixel_row, bank_pixel, priority, false);
+                        bus.ppu.pattern_source_frame.set_sprite_pixel(pixel_column, pixel_row, bank_pixel, priority, false);
                     }
                 }
 
@@ -219,47 +219,47 @@ impl Ppu {
 
             StartClearingSecondaryOam => {
                 info!(target: "ppustage", "{}\t\tCLEARING SECONDARY OAM", bus.ppu_regs.clock());
-                self.sprite_evaluator.start_clearing_secondary_oam();
+                bus.ppu.sprite_evaluator.start_clearing_secondary_oam();
             }
             StartSpriteEvaluation => {
                 info!(target: "ppustage", "\t\tSPRITE EVALUATION");
-                self.sprite_evaluator.start_sprite_evaluation();
-                self.oam_register_index = 0;
+                bus.ppu.sprite_evaluator.start_sprite_evaluation();
+                bus.ppu.oam_register_index = 0;
             }
             StartLoadingOamRegisters => {
                 info!(target: "ppustage", "\t\tLoading OAM registers.");
-                self.sprite_evaluator.start_loading_oam_registers();
-                self.oam_registers.set_sprite_0_presence(self.sprite_evaluator.sprite_0_present());
+                bus.ppu.sprite_evaluator.start_loading_oam_registers();
+                bus.ppu.oam_registers.set_sprite_0_presence(bus.ppu.sprite_evaluator.sprite_0_present());
             }
             StopLoadingOamRegisters => {
                 info!(target: "ppustage", "\t\tLoading OAM registers ended.");
             }
             ReadOamByte => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                self.sprite_evaluator.read_oam(bus);
+                bus.ppu.sprite_evaluator.read_oam(&bus.oam, &bus.ppu_regs);
             }
             WriteSecondaryOamByte => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                self.sprite_evaluator.write_secondary_oam(bus);
+                bus.ppu.sprite_evaluator.write_secondary_oam(&mut bus.ppu_regs);
 
             }
             ReadSpriteY => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                self.current_sprite_y = SpriteY::new(self.sprite_evaluator.read_secondary_oam_and_advance());
+                bus.ppu.current_sprite_y = SpriteY::new(bus.ppu.sprite_evaluator.read_secondary_oam_and_advance());
             }
             ReadSpritePatternIndex => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                self.next_sprite_tile_number = TileNumber::new(self.sprite_evaluator.read_secondary_oam_and_advance());
+                bus.ppu.next_sprite_tile_number = TileNumber::new(bus.ppu.sprite_evaluator.read_secondary_oam_and_advance());
             }
             ReadSpriteAttributes => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                let attributes = SpriteAttributes::from_u8(self.sprite_evaluator.read_secondary_oam_and_advance());
-                self.oam_registers.registers[self.oam_register_index].set_attributes(attributes);
+                let attributes = SpriteAttributes::from_u8(bus.ppu.sprite_evaluator.read_secondary_oam_and_advance());
+                bus.ppu.oam_registers.registers[bus.ppu.oam_register_index].set_attributes(attributes);
             }
             ReadSpriteX => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                let x_counter = self.sprite_evaluator.read_secondary_oam_and_advance();
-                self.oam_registers.registers[self.oam_register_index].set_x_counter(x_counter);
+                let x_counter = bus.ppu.sprite_evaluator.read_secondary_oam_and_advance();
+                bus.ppu.oam_registers.registers[bus.ppu.oam_register_index].set_x_counter(x_counter);
             }
             DummyReadSpriteX => {
                 // TODO
@@ -268,29 +268,29 @@ impl Ppu {
             SetSpritePatternLowAddress => {
                 let select_high = false;
                 let addr;
-                (addr, self.sprite_visible) = self.current_sprite_pattern_address(bus, select_high);
+                (addr, bus.ppu.sprite_visible) = bus.ppu.current_sprite_pattern_address(bus, select_high);
                 bus.set_ppu_address_bus(mapper, addr);
             }
             SetSpritePatternHighAddress => {
                 let select_high = true;
                 let addr;
-                (addr, self.sprite_visible) = self.current_sprite_pattern_address(bus, select_high);
+                (addr, bus.ppu.sprite_visible) = bus.ppu.current_sprite_pattern_address(bus, select_high);
                 bus.set_ppu_address_bus(mapper, addr);
             }
             GetSpritePatternLowByte => {
                 let pattern_low = bus.ppu_internal_read(mapper);
-                if (bus.ppu_regs.background_enabled() || bus.ppu_regs.sprites_enabled()) && self.sprite_visible {
-                    self.oam_registers.registers[self.oam_register_index].set_pattern_low(pattern_low);
+                if (bus.ppu_regs.background_enabled() || bus.ppu_regs.sprites_enabled()) && bus.ppu.sprite_visible {
+                    bus.ppu.oam_registers.registers[bus.ppu.oam_register_index].set_pattern_low(pattern_low);
                 }
             }
             GetSpritePatternHighByte => {
                 let pattern_high = bus.ppu_internal_read(mapper);
-                if (bus.ppu_regs.background_enabled() || bus.ppu_regs.sprites_enabled()) && self.sprite_visible {
-                    self.oam_registers.registers[self.oam_register_index].set_pattern_high(pattern_high);
+                if (bus.ppu_regs.background_enabled() || bus.ppu_regs.sprites_enabled()) && bus.ppu.sprite_visible {
+                    bus.ppu.oam_registers.registers[bus.ppu.oam_register_index].set_pattern_high(pattern_high);
                 }
             }
             IncrementOamRegisterIndex => {
-                self.oam_register_index += 1;
+                bus.ppu.oam_register_index += 1;
             }
 
             // TODO: Remove this section in favor of using EdgeDetectors.

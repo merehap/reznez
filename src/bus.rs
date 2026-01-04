@@ -1,5 +1,7 @@
+use crate::apu::apu::Apu;
 use crate::apu::apu_registers::ApuRegisters;
 use crate::controller::joypad::Joypad;
+use crate::cpu::cpu::Cpu;
 use crate::cpu::dmc_dma::DmcDma;
 use crate::cpu::oam_dma::OamDma;
 use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
@@ -17,6 +19,7 @@ use crate::memory::ppu::ppu_pinout::PpuPinout;
 use crate::ppu::clock::Clock;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
+use crate::ppu::ppu::Ppu;
 use crate::ppu::register::ppu_registers::{PpuRegisters, WriteToggle};
 use crate::ppu::sprite::oam::Oam;
 
@@ -28,6 +31,10 @@ pub const IRQ_VECTOR_LOW: CpuAddress     = CpuAddress::new(0xFFFE);
 pub const IRQ_VECTOR_HIGH: CpuAddress    = CpuAddress::new(0xFFFF);
 
 pub struct Bus {
+    pub cpu: Cpu,
+    pub ppu: Ppu,
+    pub apu: Apu,
+
     pub cpu_internal_ram: CpuInternalRam,
     pub ciram: Ciram,
     pub palette_ram: PaletteRam,
@@ -54,15 +61,23 @@ pub struct Bus {
 }
 
 impl Bus {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
+        cpu: Cpu,
+        ppu: Ppu,
+        apu: Apu,
         prg_memory: PrgMemory,
         chr_memory: ChrMemory,
         name_table_mirrorings: &'static [NameTableMirroring],
+        cpu_cycle: i64,
         ppu_clock: Clock,
         dip_switch: u8,
         system_palette: SystemPalette,
-    ) -> Bus {
-        Bus {
+    ) -> Self {
+        Self {
+            cpu,
+            ppu,
+            apu,
             cpu_internal_ram: CpuInternalRam::new(),
             ciram: Ciram::new(),
             palette_ram: PaletteRam::new(),
@@ -78,7 +93,7 @@ impl Bus {
             ppu_pinout: PpuPinout::new(),
             oam_dma_address_bus: CpuAddress::ZERO,
             dmc_dma_address_bus: CpuAddress::ZERO,
-            cpu_cycle: 0,
+            cpu_cycle,
 
             prg_memory,
             chr_memory,
@@ -119,10 +134,6 @@ impl Bus {
 
     pub fn dmc_dma_address(&self) -> CpuAddress {
         self.apu_regs.dmc.dma_sample_address()
-    }
-
-    pub fn set_dmc_sample_buffer(&mut self, value: u8) {
-        self.apu_regs.dmc.set_sample_buffer(&mut self.cpu_pinout, &mut self.dmc_dma, value);
     }
 
     pub fn increment_cpu_cycle(&mut self) {

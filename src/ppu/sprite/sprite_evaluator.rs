@@ -1,5 +1,6 @@
-use crate::bus::Bus;
 use crate::ppu::pixel_index::PixelRow;
+use crate::ppu::register::ppu_registers::PpuRegisters;
+use crate::ppu::sprite::oam::Oam;
 
 use super::secondary_oam::SecondaryOam;
 
@@ -43,8 +44,8 @@ impl SpriteEvaluator {
         self.secondary_oam.reset_index();
     }
 
-    pub fn read_oam(&mut self, bus: &Bus) {
-        self.oam_data_read = bus.oam.peek(bus.ppu_regs.oam_addr);
+    pub fn read_oam(&mut self, oam: &Oam, ppu_regs: &PpuRegisters) {
+        self.oam_data_read = oam.peek(ppu_regs.oam_addr);
         if self.clear_oam {
             self.oam_data_read = 0xFF;
         }
@@ -54,7 +55,7 @@ impl SpriteEvaluator {
         self.secondary_oam.read_and_advance()
     }
 
-    pub fn write_secondary_oam(&mut self, bus: &mut Bus) {
+    pub fn write_secondary_oam(&mut self, ppu_regs: &mut PpuRegisters) {
         if self.clear_oam {
             self.secondary_oam.write(self.oam_data_read);
             self.secondary_oam.advance();
@@ -72,38 +73,38 @@ impl SpriteEvaluator {
             self.secondary_oam.write(self.oam_data_read);
         }
 
-        if !bus.ppu_regs.oam_addr.new_sprite_started() {
+        if !ppu_regs.oam_addr.new_sprite_started() {
             // The current sprite is in range, copy one more byte of its data over.
             self.secondary_oam.advance();
-            self.all_sprites_evaluated = bus.ppu_regs.oam_addr.next_field();
+            self.all_sprites_evaluated = ppu_regs.oam_addr.next_field();
             return;
         }
 
         // Check if the y coordinate is on screen.
-        if let Some(pixel_row) = bus.ppu_regs.clock().scanline_pixel_row()
+        if let Some(pixel_row) = ppu_regs.clock().scanline_pixel_row()
             && let Some(top_sprite_row) = PixelRow::try_from_u8(self.oam_data_read)
             && let Some(offset) = pixel_row.difference(top_sprite_row)
-            && offset < bus.ppu_regs.sprite_height().to_dimension()
+            && offset < ppu_regs.sprite_height().to_dimension()
         {
-            if bus.ppu_regs.oam_addr.is_at_sprite_0() {
+            if ppu_regs.oam_addr.is_at_sprite_0() {
                 self.sprite_0_present = true;
             }
 
             if self.secondary_oam.is_full() {
-                bus.ppu_regs.set_sprite_overflow();
+                ppu_regs.set_sprite_overflow();
             }
 
             self.secondary_oam.advance();
-            self.all_sprites_evaluated = bus.ppu_regs.oam_addr.next_field();
+            self.all_sprites_evaluated = ppu_regs.oam_addr.next_field();
             return;
         }
 
         if self.secondary_oam.is_full() {
             // Sprite overflow hardware bug
             // https://www.nesdev.org/wiki/PPU_sprite_evaluation#Details
-            bus.ppu_regs.oam_addr.corrupt_sprite_y_index();
+            ppu_regs.oam_addr.corrupt_sprite_y_index();
         }
 
-        self.all_sprites_evaluated = bus.ppu_regs.oam_addr.next_sprite();
+        self.all_sprites_evaluated = ppu_regs.oam_addr.next_sprite();
     }
 }

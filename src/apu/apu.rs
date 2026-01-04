@@ -47,14 +47,14 @@ impl Apu {
         *self.muted.lock().unwrap() = true;
     }
 
-    pub fn step(&mut self, bus: &mut Bus) {
+    pub fn step(bus: &mut Bus) {
         let cycle = bus.apu_regs.clock().cycle();
         let parity = bus.apu_regs.clock().cycle_parity();
         info!(target: "apucycles", "APU cycle: {cycle} ({parity})");
 
         bus.apu_regs.tick(&mut bus.cpu_pinout, &mut bus.dmc_dma, parity);
         if parity == CycleParity::Put && bus.apu_regs.clock().raw_cycle().is_multiple_of(20) {
-            let mut queue = self.pulse_queue.lock().unwrap();
+            let mut queue = bus.apu.pulse_queue.lock().unwrap();
             let regs = &bus.apu_regs;
             if log_enabled!(target: "apusamples", Level::Info) {
                 fn disp(volume: u8) -> String {
