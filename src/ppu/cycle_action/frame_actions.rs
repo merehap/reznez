@@ -2,7 +2,7 @@ use std::sync::LazyLock;
 
 use arr_macro::arr;
 
-use crate::ppu::clock::Clock;
+use crate::ppu::clock::PpuClock;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::scanline_actions::{
     ScanlineActions,
@@ -40,11 +40,11 @@ pub struct FrameActions {
 }
 
 impl FrameActions {
-    pub fn current_cycle_actions(&self, clock: &Clock) -> &[CycleAction] {
+    pub fn current_cycle_actions(&self, clock: &PpuClock) -> &[CycleAction] {
         self.all_scanline_actions[clock.scanline() as usize].actions_at_cycle(clock.cycle())
     }
 
-    pub fn format_current_cycle_actions(&self, clock: &Clock) -> String {
+    pub fn format_current_cycle_actions(&self, clock: &PpuClock) -> String {
         match self.current_cycle_actions(clock) {
             [] => String::new(),
             [first, rest @ ..] => {

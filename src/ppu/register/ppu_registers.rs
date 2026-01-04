@@ -1,7 +1,7 @@
 use log::info;
 
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
-use crate::ppu::clock::Clock;
+use crate::ppu::clock::PpuClock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::pattern_table_side::PatternTableSide;
@@ -24,7 +24,7 @@ pub struct PpuRegisters {
     pub oam_addr: OamAddress,
     ppu_read_buffer: u8,
 
-    clock: Clock,
+    clock: PpuClock,
 
     // "v"
     pub current_address: PpuAddress,
@@ -45,7 +45,7 @@ pub struct PpuRegisters {
 }
 
 impl PpuRegisters {
-    pub fn new(clock: Clock) -> PpuRegisters {
+    pub fn new(clock: PpuClock) -> PpuRegisters {
         PpuRegisters {
             ctrl: Ctrl::new(),
             mask: Mask::all_disabled(),
@@ -97,11 +97,11 @@ impl PpuRegisters {
         self.mask
     }
 
-    pub fn clock(&self) -> &Clock {
+    pub fn clock(&self) -> &PpuClock {
         &self.clock
     }
 
-    pub fn clock_mut(&mut self) -> &mut Clock {
+    pub fn clock_mut(&mut self) -> &mut PpuClock {
         &mut self.clock
     }
 
@@ -136,12 +136,12 @@ impl PpuRegisters {
         self.write_toggle
     }
 
-    pub(in crate::ppu) fn start_vblank(&mut self, clock: &Clock) {
+    pub(in crate::ppu) fn start_vblank(&mut self, clock: &PpuClock) {
         info!(target: "ppuflags", " {clock}\tStarting vblank.");
         self.status.set_vblank_active(true);
     }
 
-    pub(in crate::ppu) fn stop_vblank(&mut self, clock: &Clock) {
+    pub(in crate::ppu) fn stop_vblank(&mut self, clock: &PpuClock) {
         if self.status.vblank_active() {
             info!(target: "ppuflags", " {clock}\tStopping vblank.");
         }

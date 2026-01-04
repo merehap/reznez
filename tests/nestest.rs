@@ -15,7 +15,7 @@ use reznez::cpu::status::Status;
 use reznez::memory::cpu::cpu_address::CpuAddress;
 use reznez::bus::AddressBusType;
 use reznez::nes::Nes;
-use reznez::ppu::clock::{Clock, MAX_SCANLINE, MAX_CYCLE};
+use reznez::ppu::clock::{PpuClock, MAX_SCANLINE, MAX_CYCLE};
 use reznez::ppu::render::frame_rate::TargetFrameRate;
 use reznez::logging::logger;
 use reznez::logging::logger::Logger;
@@ -54,7 +54,7 @@ fn nestest() {
     // Nestest starts the first instruction a cycle early compared to the NES Manual and Mesen.
     config.starting_cpu_cycle = -1;
     // Nestest starts the first instruction on cycle 0, but PPU stuff happens before that.
-    config.ppu_clock = Clock::starting_at(-1, MAX_SCANLINE, MAX_CYCLE - 21);
+    config.ppu_clock = PpuClock::starting_at(-1, MAX_SCANLINE, MAX_CYCLE - 21);
 
     let cartridge = Nes::load_cartridge(&opt.rom_path.unwrap()).unwrap();
     let mut nes = Nes::new(&HeaderDb::load(), &config, &cartridge).unwrap();

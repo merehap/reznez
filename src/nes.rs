@@ -30,7 +30,7 @@ use crate::memory::raw_memory::RawMemory;
 use crate::memory::bank::bank_number::{BankLocation, ChrBankRegisterId};
 use crate::bus::Bus;
 use crate::memory::signal_level::SignalLevel;
-use crate::ppu::clock::Clock;
+use crate::ppu::clock::PpuClock;
 use crate::ppu::palette::bank_color_assigner::BankColorAssigner;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::render::frame::Frame;
@@ -878,7 +878,7 @@ impl SnapshotBuilder {
         self.frame_irq = Some(bus.cpu_pinout.frame_irq_asserted() && !bus.cpu.status().interrupts_disabled);
     }
 
-    fn add_ppu_position(&mut self, clock: &Clock) {
+    fn add_ppu_position(&mut self, clock: &PpuClock) {
         assert!(self.ppu_pos.len() < 4);
         if self.ppu_pos.len() == 3 {
             self.ppu_pos.pop_front();

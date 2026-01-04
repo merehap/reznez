@@ -83,6 +83,8 @@ pub struct Mapper064 {
     irq_counter_reload_mode: IrqCounterReloadMode,
     irq_counter_suppression_cycles: u8,
     pattern_table_side: PatternTableSide,
+
+    cycle_phase: u8,
 }
 
 impl Mapper for Mapper064 {
@@ -103,6 +105,9 @@ impl Mapper for Mapper064 {
     }
 
     fn on_end_of_cpu_cycle(&mut self, bus: &mut Bus) {
+        self.cycle_phase += 1;
+        self.cycle_phase %= 4;
+
         if self.irq_pending_delay_cycles > 0 {
             self.irq_pending_delay_cycles -= 1;
             if self.irq_pending_delay_cycles == 0 {
@@ -110,11 +115,10 @@ impl Mapper for Mapper064 {
             }
         }
 
-        if self.irq_counter_reload_mode == IrqCounterReloadMode::CpuCycle && bus.cpu_cycle() % 4 == 0 {
+        if self.irq_counter_reload_mode == IrqCounterReloadMode::CpuCycle && self.cycle_phase == 0 {
             self.tick_irq_counter(CPU_CYCLE_MODE_IRQ_PENDING_DELAY);
         }
     }
-
 
     fn on_end_of_ppu_cycle(&mut self) {
         if self.irq_counter_suppression_cycles > 0 {
@@ -172,6 +176,8 @@ impl Mapper064 {
             irq_counter_reload_mode: IrqCounterReloadMode::Scanline,
             irq_counter_suppression_cycles: 0,
             pattern_table_side: PatternTableSide::Left,
+
+            cycle_phase: 0,
         }
     }
 

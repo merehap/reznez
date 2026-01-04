@@ -6,7 +6,7 @@ pub const MAX_SCANLINE: u16 = 261;
 pub const MAX_CYCLE: u16 = 340;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Clock {
+pub struct PpuClock {
     frame: i64,
     scanline: u16,
     cycle: u16,
@@ -14,13 +14,13 @@ pub struct Clock {
     total_cycles: u64,
 }
 
-impl Clock {
-    pub fn mesen_compatible() -> Clock {
-        Clock { frame: 0, scanline: 0, cycle: 6, total_cycles: 0 }
+impl PpuClock {
+    pub fn mesen_compatible() -> PpuClock {
+        PpuClock { frame: 0, scanline: 0, cycle: 6, total_cycles: 0 }
     }
 
-    pub fn starting_at(frame: i64, scanline: u16, cycle: u16) -> Clock {
-        Clock { frame, scanline, cycle, total_cycles: 0 }
+    pub fn starting_at(frame: i64, scanline: u16, cycle: u16) -> PpuClock {
+        PpuClock { frame, scanline, cycle, total_cycles: 0 }
     }
 
     pub fn frame(&self) -> i64 {
@@ -67,7 +67,7 @@ impl Clock {
     }
 }
 
-impl fmt::Display for Clock {
+impl fmt::Display for PpuClock {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "F:{},S:{:03},C:{:03}", self.frame, self.scanline, self.cycle)
     }

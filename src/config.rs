@@ -8,13 +8,13 @@ use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::egui_gui::EguiGui;
 use crate::gui::gui::Gui;
 use crate::gui::no_gui::NoGui;
-use crate::ppu::clock::Clock;
+use crate::ppu::clock::PpuClock;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::render::frame_rate::{FrameRate, TargetFrameRate};
 
 pub struct Config {
     pub starting_cpu_cycle: i64,
-    pub ppu_clock: Clock,
+    pub ppu_clock: PpuClock,
     pub system_palette: SystemPalette,
     pub target_frame_rate: TargetFrameRate,
     pub disable_audio: bool,
@@ -30,7 +30,7 @@ impl Config {
     pub fn new(opt: &Opt) -> Config {
         let mut config = Config {
             starting_cpu_cycle: 0,
-            ppu_clock: Clock::mesen_compatible(),
+            ppu_clock: PpuClock::mesen_compatible(),
             system_palette: SystemPalette::parse(include_str!("../palettes/2C02.pal")).unwrap(),
             target_frame_rate: opt.target_frame_rate,
             disable_audio: opt.disable_audio,

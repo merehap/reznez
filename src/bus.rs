@@ -16,7 +16,7 @@ use crate::memory::ppu::chr_memory_map::ChrPageId;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::ppu::ppu_pinout::PpuPinout;
-use crate::ppu::clock::Clock;
+use crate::ppu::clock::PpuClock;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu::Ppu;
@@ -78,7 +78,7 @@ impl Bus {
         chr_memory: ChrMemory,
         name_table_mirrorings: &'static [NameTableMirroring],
         cpu_cycle: i64,
-        ppu_clock: Clock,
+        ppu_clock: PpuClock,
         dip_switch: u8,
         system_palette: SystemPalette,
     ) -> Self {
@@ -149,10 +149,6 @@ impl Bus {
 
     pub fn increment_cpu_cycle(&mut self) {
         self.cpu_cycle += 1;
-    }
-
-    pub fn set_cpu_cycle(&mut self, cycle: i64) {
-        self.cpu_cycle = cycle;
     }
 
     pub fn chr_rom_bank_count(&self) -> u16 {

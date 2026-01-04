@@ -7,7 +7,7 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use ux::u3;
 
-use crate::ppu::clock::Clock;
+use crate::ppu::clock::PpuClock;
 
 #[derive(Clone, Copy)]
 pub struct PixelIndex {
@@ -22,7 +22,7 @@ impl PixelIndex {
         PixelIndexIterator::new()
     }
 
-    pub fn try_from_clock(clock: &Clock) -> Option<PixelIndex> {
+    pub fn try_from_clock(clock: &PpuClock) -> Option<PixelIndex> {
         PixelIndex::try_from_scanline_cycle(clock.scanline(), clock.cycle())
     }
 
