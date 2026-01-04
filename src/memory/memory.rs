@@ -563,12 +563,12 @@ impl Memory {
         let chr_memory = &self.chr_memory();
 
         let mut result = String::new();
-        for (page_id, _, _) in chr_memory.current_memory_map().pattern_table_page_ids() {
+        for page_id in chr_memory.current_memory_map().pattern_table_page_ids() {
             let bank_string = match page_id {
                 ChrPageId::Rom { page_number, .. } => page_number.to_string(),
                 ChrPageId::Ram { page_number, .. } => format!("W{page_number}"),
+                ChrPageId::SaveRam {..} => "S".to_owned(),
                 ChrPageId::Ciram(side) => format!("C{side:?}"),
-                ChrPageId::SaveRam => "S".to_owned(),
                 ChrPageId::MapperCustom { page_number } => format!("M{page_number}"),
             };
 

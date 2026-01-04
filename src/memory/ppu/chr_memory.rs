@@ -119,24 +119,24 @@ impl ChrMemory {
     }
 
     pub fn peek(&self, ciram: &Ciram, mapper_custom_name_tables: &[SmallPage], address: PpuAddress) -> PpuPeek {
-        let (index, source, read_status, _write_status) = self.current_memory_map().index_for_address(address);
-        assert_eq!(read_status, ReadStatus::Enabled, "Peeking absent or disabled banks is not yet supported.");
-
+        let (index, source) = self.current_memory_map().index_for_address(address);
+        assert_eq!(index.read_status(), ReadStatus::Enabled, "Disabling reading CHR RAM isn't supported yet.");
         let value = match index {
-            ChrMemoryIndex::Rom(index) => {
+            ChrMemoryIndex::Rom(index, ..) => {
                 self.rom[(self.rom_outer_bank_number as u32 * self.rom_outer_bank_size) | (index & (self.rom_outer_bank_size - 1))]
             },
-            ChrMemoryIndex::Ram(index) => {
+            ChrMemoryIndex::Ram(index, ..) => {
                 self.ram[index % self.ram.size()]
             }
             ChrMemoryIndex::Ciram(side, index) => {
                 ciram.side(side)[index as usize]
             }
-            ChrMemoryIndex::SaveRam(_index) => todo!(),
+            ChrMemoryIndex::SaveRam(..) => todo!(),
             ChrMemoryIndex::MapperCustom { page_number, index } => {
                 mapper_custom_name_tables[page_number as usize].peek(index).resolve(0)
             }
         };
+
 
         PpuPeek { value, source }
     }
@@ -161,27 +161,27 @@ impl ChrMemory {
         address: PpuAddress,
         value: u8,
     ) {
-        let (chr_memory_index, _, _read_status, write_status) = self.current_memory_map().index_for_address(address);
-        if write_status == WriteStatus::Disabled {
-            return;
-        }
-
+        let (chr_memory_index, _) = self.current_memory_map().index_for_address(address);
         match chr_memory_index {
-            ChrMemoryIndex::Rom(_) => {}
-            ChrMemoryIndex::Ram(index) => {
+            ChrMemoryIndex::Ram(index, _, WriteStatus::Enabled) => {
                 let index = index % self.ram.size();
                 self.ram[index] = value;
                 info!(target: "mapperramwrites", "Setting CHR [${address}]=${value:02} (Work RAM @ ${index:X})");
             }
-            ChrMemoryIndex::Ciram(side, index) => {
-                ciram.write(regs, side, index, value);
-            }
-            ChrMemoryIndex::SaveRam(index) => {
+            ChrMemoryIndex::SaveRam(index, _, WriteStatus::Enabled) => {
                 info!(target: "mapperramwrites", "Setting CHR [${address}]=${value:02} (Save RAM @ ${index:X})");
                 todo!();
             }
+            ChrMemoryIndex::Ciram(side, index) => {
+                ciram.write(regs, side, index, value);
+            }
             ChrMemoryIndex::MapperCustom { page_number, index } => {
                 mapper_custom_name_tables[page_number as usize].write(index, value);
+            }
+            ChrMemoryIndex::Rom(..)
+                | ChrMemoryIndex::Ram(_, _, WriteStatus::Disabled)
+                | ChrMemoryIndex::SaveRam(_, _, WriteStatus::Disabled) => {
+                // ROM and write-disabled memory can't be written to.
             }
         }
     }
@@ -345,15 +345,15 @@ impl ChrMemory {
         [mem.page_start_index(0), mem.page_start_index(1), mem.page_start_index(2), mem.page_start_index(3)]
             .map(move |chr_index| {
                 match chr_index {
-                    ChrMemoryIndex::Rom(index) => {
+                    ChrMemoryIndex::Rom(index, ..) => {
                         let index = (u32::from(self.rom_outer_bank_number) * self.rom_outer_bank_size) | (index & (self.rom_outer_bank_size - 1));
                         self.rom.slice(index..index + 1 * KIBIBYTE)
                     }
-                    ChrMemoryIndex::Ram(index) => {
+                    ChrMemoryIndex::Ram(index, ..) => {
                         let index = index as usize;
                         RawMemorySlice::from_raw(&self.ram.as_slice()[index..index + 1 * KIBIBYTE as usize])
                     }
-                    ChrMemoryIndex::Ciram(side, _) => RawMemorySlice::from_raw(ciram.side(side)),
+                    ChrMemoryIndex::Ciram(side, ..) => RawMemorySlice::from_raw(ciram.side(side)),
                     _ => todo!(),
                 }
         })
@@ -365,15 +365,15 @@ impl ChrMemory {
         [mem.page_start_index(4), mem.page_start_index(5), mem.page_start_index(6), mem.page_start_index(7)]
             .map(move |chr_index| {
                 match chr_index {
-                    ChrMemoryIndex::Rom(index) => {
+                    ChrMemoryIndex::Rom(index, ..) => {
                         let index = (self.rom_outer_bank_number as u32 * self.rom_outer_bank_size) | (index & (self.rom_outer_bank_size - 1));
                         self.rom.slice(index..index + 1 * KIBIBYTE)
                     }
-                    ChrMemoryIndex::Ram(index) => {
+                    ChrMemoryIndex::Ram(index, ..) => {
                         let index = index as usize;
                         RawMemorySlice::from_raw(&self.ram.as_slice()[index..index + 1 * KIBIBYTE as usize])
                     }
-                    ChrMemoryIndex::Ciram(side, _) => RawMemorySlice::from_raw(ciram.side(side)),
+                    ChrMemoryIndex::Ciram(side, ..) => RawMemorySlice::from_raw(ciram.side(side)),
                     _ => todo!(),
                 }
         })
