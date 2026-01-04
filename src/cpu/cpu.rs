@@ -409,8 +409,6 @@ impl Cpu {
                     }
 
                     LAS => {
-                        // FIXME: Remove this. It probably won't break any tests.
-                        bus.cpu_read(mapper, AddressBusType::Cpu);
                         let value = self.operand & self.stack_pointer;
                         self.a = value;
                         self.x = value;
