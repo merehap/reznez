@@ -31,33 +31,41 @@ pub const IRQ_VECTOR_LOW: CpuAddress     = CpuAddress::new(0xFFFE);
 pub const IRQ_VECTOR_HIGH: CpuAddress    = CpuAddress::new(0xFFFF);
 
 pub struct Bus {
+    // Primary devices
     pub cpu: Cpu,
     pub ppu: Ppu,
     pub apu: Apu,
 
+    // Other devices
+    pub dmc_dma: DmcDma,
+    pub oam_dma: OamDma,
+    pub joypad1: Joypad,
+    pub joypad2: Joypad,
+
+    // Registers
+    pub ppu_regs: PpuRegisters,
+    pub apu_regs: ApuRegisters,
+    cpu_cycle: i64,
+
+    // Memory
     pub cpu_internal_ram: CpuInternalRam,
     pub ciram: Ciram,
     pub palette_ram: PaletteRam,
     pub oam: Oam,
-    pub joypad1: Joypad,
-    pub joypad2: Joypad,
-    pub ppu_regs: PpuRegisters,
-    pub apu_regs: ApuRegisters,
-    system_palette: SystemPalette,
-    pub dmc_dma: DmcDma,
-    pub oam_dma: OamDma,
+    pub prg_memory: PrgMemory,
+    pub chr_memory: ChrMemory,
+    pub mapper_custom_pages: Vec<SmallPage>,
+
+    // Pinouts
     pub cpu_pinout: CpuPinout,
     pub ppu_pinout: PpuPinout,
     pub oam_dma_address_bus: CpuAddress,
     pub dmc_dma_address_bus: CpuAddress,
-    cpu_cycle: i64,
 
-    pub prg_memory: PrgMemory,
-    pub chr_memory: ChrMemory,
-    pub name_table_mirrorings: &'static [NameTableMirroring],
-    pub mapper_custom_pages: Vec<SmallPage>,
-
+    // Miscellaneous
+    pub name_table_mirrorings: &'static [NameTableMirroring], // TODO: Move into ChrMemory.
     pub dip_switch: u8,
+    system_palette: SystemPalette,
 }
 
 impl Bus {
@@ -78,29 +86,32 @@ impl Bus {
             cpu,
             ppu,
             apu,
+
+            dmc_dma: DmcDma::IDLE,
+            oam_dma: OamDma::IDLE,
+            joypad1: Joypad::new(),
+            joypad2: Joypad::new(),
+
+            ppu_regs: PpuRegisters::new(ppu_clock),
+            apu_regs: ApuRegisters::new(),
+            cpu_cycle,
+
             cpu_internal_ram: CpuInternalRam::new(),
             ciram: Ciram::new(),
             palette_ram: PaletteRam::new(),
             oam: Oam::new(),
-            joypad1: Joypad::new(),
-            joypad2: Joypad::new(),
-            ppu_regs: PpuRegisters::new(ppu_clock),
-            apu_regs: ApuRegisters::new(),
-            system_palette,
-            dmc_dma: DmcDma::IDLE,
-            oam_dma: OamDma::IDLE,
+            prg_memory,
+            chr_memory,
+            mapper_custom_pages: Vec::new(),
+
             cpu_pinout: CpuPinout::new(),
             ppu_pinout: PpuPinout::new(),
             oam_dma_address_bus: CpuAddress::ZERO,
             dmc_dma_address_bus: CpuAddress::ZERO,
-            cpu_cycle,
 
-            prg_memory,
-            chr_memory,
             name_table_mirrorings,
-            mapper_custom_pages: Vec::new(),
-
             dip_switch,
+            system_palette,
         }
     }
 
