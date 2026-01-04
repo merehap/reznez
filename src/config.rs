@@ -8,7 +8,7 @@ use crate::controller::joypad::{Button, ButtonStatus};
 use crate::gui::egui_gui::EguiGui;
 use crate::gui::gui::Gui;
 use crate::gui::no_gui::NoGui;
-use crate::ppu::clock::PpuClock;
+use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::render::frame_rate::{FrameRate, TargetFrameRate};
 

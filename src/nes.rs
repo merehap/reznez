@@ -30,7 +30,7 @@ use crate::memory::raw_memory::RawMemory;
 use crate::memory::bank::bank_number::{BankLocation, ChrBankRegisterId};
 use crate::bus::Bus;
 use crate::memory::signal_level::SignalLevel;
-use crate::ppu::clock::PpuClock;
+use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::palette::bank_color_assigner::BankColorAssigner;
 use crate::ppu::ppu::Ppu;
 use crate::ppu::render::frame::Frame;

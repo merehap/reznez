@@ -1,4 +1,4 @@
-use crate::ppu::clock::MAX_SCANLINE;
+use crate::ppu::ppu_clock::MAX_SCANLINE;
 
 #[derive(Clone, Copy)]
 pub struct PpuIoBus {

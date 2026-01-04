@@ -16,7 +16,7 @@ use crate::memory::ppu::chr_memory_map::ChrPageId;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::ppu::ppu_pinout::PpuPinout;
-use crate::ppu::clock::PpuClock;
+use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::palette::palette_table::PaletteTable;
 use crate::ppu::palette::system_palette::SystemPalette;
 use crate::ppu::ppu::Ppu;

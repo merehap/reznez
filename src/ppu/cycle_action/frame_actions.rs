@@ -2,7 +2,7 @@ use std::sync::LazyLock;
 
 use arr_macro::arr;
 
-use crate::ppu::clock::PpuClock;
+use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::cycle_action::cycle_action::CycleAction;
 use crate::ppu::cycle_action::scanline_actions::{
     ScanlineActions,

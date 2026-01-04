@@ -7,7 +7,7 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use ux::u3;
 
-use crate::ppu::clock::PpuClock;
+use crate::ppu::ppu_clock::PpuClock;
 
 #[derive(Clone, Copy)]
 pub struct PixelIndex {

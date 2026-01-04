@@ -15,7 +15,7 @@ use reznez::cpu::status::Status;
 use reznez::memory::cpu::cpu_address::CpuAddress;
 use reznez::bus::AddressBusType;
 use reznez::nes::Nes;
-use reznez::ppu::clock::{PpuClock, MAX_SCANLINE, MAX_CYCLE};
+use reznez::ppu::ppu_clock::{PpuClock, MAX_SCANLINE, MAX_CYCLE};
 use reznez::ppu::render::frame_rate::TargetFrameRate;
 use reznez::logging::logger;
 use reznez::logging::logger::Logger;

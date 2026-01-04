@@ -1,7 +1,7 @@
 use log::info;
 
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
-use crate::ppu::clock::PpuClock;
+use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::pattern_table_side::PatternTableSide;
