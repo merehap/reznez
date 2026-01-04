@@ -3,7 +3,7 @@
 use crate::cpu::dmc_dma::DmcDmaState;
 use crate::cpu::instruction::{Instruction, OpCode, AccessMode};
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::memory::AddressBusType;
+use crate::bus::AddressBusType;
 use crate::nes::Nes;
 
 pub trait Formatter {

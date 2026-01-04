@@ -1,6 +1,5 @@
 use crate::mapper::*;
 use crate::memory::bank::bank::{ChrSourceRegisterId, WriteStatusRegisterId};
-use crate::memory::memory::Bus;
 use crate::memory::ppu::ciram::CiramSide;
 
 const LAYOUT: Layout = Layout::builder()

@@ -5,7 +5,7 @@ use log::{info, warn};
 use crate::mapper::{BankNumber, ChrBankRegisterId, ChrWindow, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource};
 use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, ReadStatusRegisterId, WriteStatusRegisterId};
 use crate::memory::bank::bank_number::{ChrBankRegisters, ReadStatus, WriteStatus};
-use crate::memory::memory::SmallPage;
+use crate::bus::SmallPage;
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::ppu::chr_memory_map::{ChrMemoryMap, ChrMemoryIndex};

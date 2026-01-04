@@ -1,7 +1,7 @@
 use std::ops::RangeInclusive;
 
 use crate::mapper::IrqCounterInfo;
-use crate::memory::memory::Bus;
+use crate::bus::Bus;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::counter::counter::{AutoTriggerWhen, ReloadDrivenCounter, CounterBuilder, ForcedReloadTiming, PrescalerBehaviorOnForcedReload, PrescalerTriggeredBy, WhenDisabledPrevent};

@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::memory::memory::Bus;
+use crate::bus::Bus;
 
 const LAYOUT: Layout = Layout::builder()
     .override_prg_bank_register(P1, 1)

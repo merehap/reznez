@@ -4,7 +4,7 @@
 use enum_iterator::all;
 
 use crate::mapper::PatternTableSide;
-use crate::memory::memory::Bus;
+use crate::bus::Bus;
 use crate::memory::raw_memory::RawMemorySlice;
 use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::rgbt::Rgbt;

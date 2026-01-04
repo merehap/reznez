@@ -1,6 +1,6 @@
 use crate::gui::debug_screens::pattern_table::PatternTable;
 use crate::gui::debug_screens::sprite::Sprite;
-use crate::memory::memory::Bus;
+use crate::bus::Bus;
 use crate::ppu::pixel_index::PixelRow;
 use crate::ppu::sprite::oam::Oam;
 use crate::ppu::sprite::sprite_attributes::Priority;

@@ -1,5 +1,6 @@
 pub use splitbits::{splitbits, splitbits_named, combinebits, splitbits_then_combine};
 
+pub use crate::bus::Bus;
 pub use crate::cartridge::cartridge::Cartridge;
 pub use crate::counter::counter::{ReloadDrivenCounter, DirectlySetCounter, CounterBuilder, AutoTriggerWhen, ForcedReloadTiming, WhenDisabledPrevent};
 pub use crate::counter::irq_counter_info::IrqCounterInfo;
@@ -15,7 +16,6 @@ pub use crate::memory::bank::bank::WriteStatusRegisterId::*;
 pub use crate::memory::cpu::cpu_address::CpuAddress;
 pub use crate::memory::cpu::prg_memory::PrgMemory;
 pub use crate::memory::layout::Layout;
-pub use crate::memory::memory::Bus;
 pub use crate::memory::ppu::chr_memory::ChrMemory;
 pub use crate::memory::ppu::ppu_address::PpuAddress;
 pub use crate::memory::read_result::ReadResult;

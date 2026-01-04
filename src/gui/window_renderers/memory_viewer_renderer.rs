@@ -4,7 +4,7 @@ use pixels::Pixels;
 use crate::gui::window_renderer::{FlowControl, WindowRenderer};
 use crate::gui::world::World;
 use crate::mapper::CpuAddress;
-use crate::memory::memory::AddressBusType;
+use crate::bus::AddressBusType;
 
 pub struct MemoryViewerRenderer;
 

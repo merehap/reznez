@@ -9,7 +9,7 @@ use rodio::{OutputStream, Sink};
 use rodio::source::Source;
 
 use crate::apu::apu_registers::{ApuRegisters, CycleParity};
-use crate::memory::memory::Bus;
+use crate::bus::Bus;
 
 const SAMPLE_RATE: u32 = 44100;
 const MAX_QUEUE_LENGTH: usize = 2 * SAMPLE_RATE as usize;

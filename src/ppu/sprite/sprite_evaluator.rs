@@ -1,4 +1,4 @@
-use crate::memory::memory::Bus;
+use crate::bus::Bus;
 use crate::ppu::pixel_index::PixelRow;
 
 use super::secondary_oam::SecondaryOam;

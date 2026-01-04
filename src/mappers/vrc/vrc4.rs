@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use crate::mapper::*;
 use crate::mappers::vrc::vrc_irq_state::VrcIrqState;
-use crate::memory::memory::Bus;
+use crate::bus::Bus;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(256 * KIBIBYTE)

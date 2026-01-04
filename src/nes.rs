@@ -28,7 +28,7 @@ use crate::mapper::{IrqCounterInfo, Mapper, NameTableMirroring, PrgBankRegisterI
 use crate::mapper_list;
 use crate::memory::raw_memory::RawMemory;
 use crate::memory::bank::bank_number::{BankLocation, ChrBankRegisterId};
-use crate::memory::memory::Bus;
+use crate::bus::Bus;
 use crate::memory::signal_level::SignalLevel;
 use crate::ppu::clock::Clock;
 use crate::ppu::ppu::Ppu;

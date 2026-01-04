@@ -15,6 +15,7 @@
 mod apu;
 mod analysis;
 mod assembler;
+mod bus;
 mod cartridge;
 mod config;
 mod controller;

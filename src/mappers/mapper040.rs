@@ -1,5 +1,5 @@
 use crate::mapper::*;
-use crate::memory::memory::Bus;
+use crate::bus::Bus;
 
 const LAYOUT: Layout = Layout::builder()
     // TODO: Verify if this is the correct max size.

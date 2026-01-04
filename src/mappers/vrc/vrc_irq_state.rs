@@ -1,7 +1,7 @@
 use splitbits::splitbits_named;
 
 use crate::counter::irq_counter_info::IrqCounterInfo;
-use crate::memory::memory::Bus;
+use crate::bus::Bus;
 
 pub struct VrcIrqState {
     enabled: bool,

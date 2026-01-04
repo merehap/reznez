@@ -1,6 +1,5 @@
 use crate::mapper::*;
 use crate::memory::bank::bank::PrgSource;
-use crate::memory::memory::Bus;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)

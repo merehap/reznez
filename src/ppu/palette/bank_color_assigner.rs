@@ -1,5 +1,5 @@
 use crate::mapper::CiramSide;
-use crate::memory::memory::Bus;
+use crate::bus::Bus;
 use crate::memory::ppu::chr_memory::PeekSource;
 use crate::ppu::palette::util;
 

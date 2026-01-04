@@ -2,7 +2,7 @@ use log::{info, log_enabled};
 use log::Level::Info;
 
 use crate::mapper::Mapper;
-use crate::memory::memory::Bus;
+use crate::bus::Bus;
 use crate::memory::ppu::ppu_address::PpuAddress;
 use crate::memory::signal_level::SignalLevel;
 use crate::ppu::cycle_action::cycle_action::CycleAction;

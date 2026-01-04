@@ -1,7 +1,7 @@
 use ux::u4;
 
 use crate::mapper::*;
-use crate::memory::memory::Bus;
+use crate::bus::Bus;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)

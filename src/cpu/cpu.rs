@@ -14,7 +14,7 @@ use crate::cpu::status::Status;
 use crate::cpu::step::*;
 use crate::mapper::Mapper;
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::memory::{AddressBusType, Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
+use crate::bus::{AddressBusType, Bus, IRQ_VECTOR_HIGH, IRQ_VECTOR_LOW, NMI_VECTOR_HIGH, NMI_VECTOR_LOW, RESET_VECTOR_HIGH, RESET_VECTOR_LOW};
 use crate::memory::signal_level::SignalLevel;
 
 pub struct Cpu {

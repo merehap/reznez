@@ -1,7 +1,7 @@
 use crate::memory::bank::bank::{PrgSource, PrgSourceRegisterId};
 use crate::mapper::*;
 use crate::mappers::mmc5::frame_state::FrameState;
-use crate::memory::memory::{Bus, SmallPage};
+use crate::bus::{Bus, SmallPage};
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::ppu::constants::ATTRIBUTE_START_INDEX;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;

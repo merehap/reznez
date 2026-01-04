@@ -1,6 +1,6 @@
 use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::mapper::*;
-use crate::memory::memory::Bus;
+use crate::bus::Bus;
 
 const LAYOUT_WITH_SWITCHABLE_CHR_ROM: Layout = Layout::builder()
     .prg_rom_max_size(128 * KIBIBYTE)
