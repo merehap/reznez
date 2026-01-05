@@ -65,13 +65,13 @@ impl Ppu {
     }
 
     pub fn step(bus: &mut Bus, mapper: &mut dyn Mapper, frame: &mut Frame) {
-        let tick_result = bus.ppu_regs.tick();
+        let tick_result = bus.ppu_regs.tick(bus.ppu_clock());
         if tick_result.rendering_toggled == Some(Toggle::Disable) {
             // "... when rendering is disabled, the value on the PPU address bus is the current value of the v register."
             bus.set_ppu_address_bus(mapper, bus.ppu_regs.current_address);
         }
 
-        let clock = *bus.ppu_regs.clock();
+        let clock = bus.ppu_clock();
         if log_enabled!(target: "ppusteps", Info) {
             info!(" {clock}\t{}", bus.ppu.frame_actions.format_current_cycle_actions(&clock));
         }
@@ -144,7 +144,7 @@ impl Ppu {
                 bus.ppu_regs.reset_tile_column();
             }
             SetPixel => {
-                let clock = *bus.ppu_regs.clock();
+                let clock = bus.ppu_clock();
                 let (pixel_column, pixel_row) = PixelIndex::try_from_clock(&clock).unwrap().to_column_row();
                 if bus.ppu_regs.background_enabled() {
                     let palette_table = &bus.palette_table();
@@ -208,7 +208,7 @@ impl Ppu {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
                 // Unclear if these are the correct cycles to trigger on.
                 let oam_addr = bus.ppu_regs.oam_addr;
-                let cycle = bus.ppu_regs.clock().cycle();
+                let cycle = bus.ppu_clock().cycle();
                 bus.oam.maybe_corrupt_starting_byte(oam_addr, cycle);
             }
 
@@ -218,7 +218,7 @@ impl Ppu {
             }
 
             StartClearingSecondaryOam => {
-                info!(target: "ppustage", "{}\t\tCLEARING SECONDARY OAM", bus.ppu_regs.clock());
+                info!(target: "ppustage", "{}\t\tCLEARING SECONDARY OAM", bus.ppu_clock());
                 bus.ppu.sprite_evaluator.start_clearing_secondary_oam();
             }
             StartSpriteEvaluation => {
@@ -240,8 +240,7 @@ impl Ppu {
             }
             WriteSecondaryOamByte => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                bus.ppu.sprite_evaluator.write_secondary_oam(&mut bus.ppu_regs);
-
+                bus.ppu.sprite_evaluator.write_secondary_oam(bus.ppu_clock(), &mut bus.ppu_regs);
             }
             ReadSpriteY => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
@@ -295,30 +294,29 @@ impl Ppu {
 
             // TODO: Remove this section in favor of using EdgeDetectors.
             StartVisibleScanlines => {
-                info!(target: "ppustage", "{}\tVISIBLE SCANLINES", bus.ppu_regs.clock());
+                info!(target: "ppustage", "{}\tVISIBLE SCANLINES", bus.ppu_clock());
             }
             StartPostRenderScanline => {
-                info!(target: "ppustage", "{}\tPOST-RENDER SCANLINE", bus.ppu_regs.clock());
+                info!(target: "ppustage", "{}\tPOST-RENDER SCANLINE", bus.ppu_clock());
             }
             StartVblankScanlines => {
-                info!(target: "ppustage", "{}\tVBLANK SCANLINES", bus.ppu_regs.clock());
+                info!(target: "ppustage", "{}\tVBLANK SCANLINES", bus.ppu_clock());
             }
             StartPreRenderScanline => {
-                info!(target: "ppustage", "{}\tPRE-RENDER SCANLINE", bus.ppu_regs.clock());
+                info!(target: "ppustage", "{}\tPRE-RENDER SCANLINE", bus.ppu_clock());
             }
             StartReadingBackgroundTiles => {
-                info!(target: "ppustage", "{}\t\tREADING BACKGROUND TILES", bus.ppu_regs.clock());
+                info!(target: "ppustage", "{}\t\tREADING BACKGROUND TILES", bus.ppu_clock());
             }
             StopReadingBackgroundTiles => {
-                info!(target: "ppustage", "{}\t\tENDED READING BACKGROUND TILES", bus.ppu_regs.clock());
+                info!(target: "ppustage", "{}\t\tENDED READING BACKGROUND TILES", bus.ppu_clock());
             }
 
             StartVblank => {
                 if bus.ppu_regs.suppress_vblank_active {
-                    info!(target: "ppuflags", " {}\tSuppressing vblank.", bus.ppu_regs.clock());
+                    info!(target: "ppuflags", " {}\tSuppressing vblank.", bus.ppu_clock());
                 } else {
-                    let clock = *bus.ppu_regs.clock();
-                    bus.ppu_regs.start_vblank(&clock);
+                    bus.ppu_regs.start_vblank(&bus.ppu_clock());
                     // "During VBlank ... the value on the PPU address bus is the current value of the v register."
                     bus.set_ppu_address_bus(mapper, bus.ppu_regs.current_address);
                 }
@@ -336,8 +334,7 @@ impl Ppu {
             }
 
             ClearFlags => {
-                let clock = *bus.ppu_regs.clock();
-                bus.ppu_regs.stop_vblank(&clock);
+                bus.ppu_regs.stop_vblank(&bus.ppu_clock());
                 bus.ppu_regs.clear_sprite0_hit();
                 bus.ppu_regs.clear_sprite_overflow();
                 bus.ppu_regs.clear_reset();
@@ -360,7 +357,7 @@ impl Ppu {
 
         let address;
         let visible;
-        if let Some(pixel_row) = bus.ppu_regs.clock().scanline_pixel_row() {
+        if let Some(pixel_row) = bus.ppu_clock().scanline_pixel_row() {
             let attributes = self.oam_registers.registers[self.oam_register_index].attributes();
             if let Some((tile_number, row_in_half, v)) = self.next_sprite_tile_number.number_and_row(
                 self.current_sprite_y,

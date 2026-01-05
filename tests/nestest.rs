@@ -75,8 +75,8 @@ fn nestest() {
                     && let Some((instruction, _)) = nes.cpu().mode_state().new_instruction_with_address() {
                 current_instruction = instruction;
                 c = nes.bus().cpu_cycle();
-                ppu_cycle = nes.bus().ppu_regs.clock().cycle();
-                ppu_scanline = nes.bus().ppu_regs.clock().scanline();
+                ppu_cycle = nes.bus().ppu_clock().cycle();
+                ppu_scanline = nes.bus().ppu_clock().scanline();
                 break;
             }
         }

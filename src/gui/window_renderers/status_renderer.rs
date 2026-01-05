@@ -21,7 +21,7 @@ impl WindowRenderer for StatusRenderer {
             return FlowControl::CONTINUE;
         };
 
-        let clock = nes.bus().ppu_regs.clock();
+        let clock = nes.bus().ppu_clock();
         let ppu_regs = &nes.bus().ppu_regs;
         let bus = nes.bus();
 

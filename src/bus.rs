@@ -1,9 +1,10 @@
 use crate::apu::apu::Apu;
-use crate::apu::apu_registers::ApuRegisters;
+use crate::apu::apu_registers::{ApuClock, ApuRegisters};
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::Cpu;
 use crate::cpu::dmc_dma::DmcDma;
 use crate::cpu::oam_dma::OamDma;
+use crate::master_clock::MasterClock;
 use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
 use crate::memory::bank::bank_number::{MemType, ReadStatus, WriteStatus};
 use crate::memory::cpu::cpu_address::{CpuAddress, FriendlyCpuAddress};
@@ -37,6 +38,7 @@ pub struct Bus {
     pub apu: Apu,
 
     // Other devices
+    master_clock: MasterClock,
     pub dmc_dma: DmcDma,
     pub oam_dma: OamDma,
     pub joypad1: Joypad,
@@ -45,7 +47,6 @@ pub struct Bus {
     // Registers
     pub ppu_regs: PpuRegisters,
     pub apu_regs: ApuRegisters,
-    cpu_cycle: i64,
 
     // Memory
     pub cpu_internal_ram: CpuInternalRam,
@@ -71,14 +72,13 @@ pub struct Bus {
 impl Bus {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
+        master_clock: MasterClock,
         cpu: Cpu,
         ppu: Ppu,
         apu: Apu,
         prg_memory: PrgMemory,
         chr_memory: ChrMemory,
         name_table_mirrorings: &'static [NameTableMirroring],
-        cpu_cycle: i64,
-        ppu_clock: PpuClock,
         dip_switch: u8,
         system_palette: SystemPalette,
     ) -> Self {
@@ -92,9 +92,9 @@ impl Bus {
             joypad1: Joypad::new(),
             joypad2: Joypad::new(),
 
-            ppu_regs: PpuRegisters::new(ppu_clock),
+            master_clock,
+            ppu_regs: PpuRegisters::new(),
             apu_regs: ApuRegisters::new(),
-            cpu_cycle,
 
             cpu_internal_ram: CpuInternalRam::new(),
             ciram: Ciram::new(),
@@ -119,8 +119,24 @@ impl Bus {
         &self.ciram
     }
 
+    pub fn master_clock(&self) -> &MasterClock {
+        &self.master_clock
+    }
+
+    pub(in crate) fn master_clock_mut(&mut self) -> &mut MasterClock {
+        &mut self.master_clock
+    }
+
     pub fn cpu_cycle(&self) -> i64 {
-        self.cpu_cycle
+        self.master_clock.cpu_cycle()
+    }
+
+    pub fn ppu_clock(&self) -> PpuClock {
+        self.master_clock.ppu_clock()
+    }
+
+    pub fn apu_clock(&self) -> ApuClock {
+        self.master_clock.apu_clock()
     }
 
     pub fn cpu_internal_ram(&self) -> &CpuInternalRam {
@@ -145,10 +161,6 @@ impl Bus {
 
     pub fn dmc_dma_address(&self) -> CpuAddress {
         self.apu_regs.dmc.dma_sample_address()
-    }
-
-    pub fn increment_cpu_cycle(&mut self) {
-        self.cpu_cycle += 1;
     }
 
     pub fn chr_rom_bank_count(&self) -> u16 {
@@ -345,7 +357,7 @@ impl Bus {
         use FriendlyCpuAddress as Addr;
         let normal_read_value = match addr.to_friendly() {
             Addr::CpuInternalRam(index) => ReadResult::full(self.cpu_internal_ram()[index]),
-            Addr::PpuStatus             => ReadResult::full(self.ppu_regs.read_status()),
+            Addr::PpuStatus             => ReadResult::full(self.ppu_regs.read_status(self.ppu_clock())),
             Addr::OamData               => ReadResult::full(self.ppu_regs.read_oam_data(&self.oam)),
             Addr::PpuData => {
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);

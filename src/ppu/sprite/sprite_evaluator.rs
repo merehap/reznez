@@ -1,4 +1,5 @@
 use crate::ppu::pixel_index::PixelRow;
+use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::ppu::sprite::oam::Oam;
 
@@ -55,7 +56,7 @@ impl SpriteEvaluator {
         self.secondary_oam.read_and_advance()
     }
 
-    pub fn write_secondary_oam(&mut self, ppu_regs: &mut PpuRegisters) {
+    pub fn write_secondary_oam(&mut self, clock: PpuClock, ppu_regs: &mut PpuRegisters) {
         if self.clear_oam {
             self.secondary_oam.write(self.oam_data_read);
             self.secondary_oam.advance();
@@ -81,7 +82,7 @@ impl SpriteEvaluator {
         }
 
         // Check if the y coordinate is on screen.
-        if let Some(pixel_row) = ppu_regs.clock().scanline_pixel_row()
+        if let Some(pixel_row) = clock.scanline_pixel_row()
             && let Some(top_sprite_row) = PixelRow::try_from_u8(self.oam_data_read)
             && let Some(offset) = pixel_row.difference(top_sprite_row)
             && offset < ppu_regs.sprite_height().to_dimension()

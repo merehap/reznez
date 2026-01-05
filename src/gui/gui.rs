@@ -24,7 +24,7 @@ pub fn execute_frame<F>(nes: &mut Nes, config: &Config, mut events: Events, disp
 where
     F: FnOnce(&Frame, Mask, i64),
 {
-    let frame_index = nes.bus().ppu_regs.clock().frame();
+    let frame_index = nes.bus().ppu_clock().frame();
     let start_time = SystemTime::now();
     let target_frame_rate = config.target_frame_rate;
     let intended_frame_end_time = start_time.add(frame_duration(target_frame_rate));

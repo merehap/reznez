@@ -26,6 +26,7 @@ use crate::logging::formatter;
 use crate::logging::formatter::*;
 use crate::mapper::{IrqCounterInfo, Mapper, NameTableMirroring, PrgBankRegisterId, ReadStatus, WriteStatus};
 use crate::mapper_list;
+use crate::master_clock::MasterClock;
 use crate::memory::raw_memory::RawMemory;
 use crate::memory::bank::bank_number::{BankLocation, ChrBankRegisterId};
 use crate::bus::Bus;
@@ -42,7 +43,6 @@ pub struct Nes {
     resolved_metadata: ResolvedMetadata,
     metadata_resolver: MetadataResolver,
     frame: Frame,
-    cycle: u64,
 
     log_formatter: Box<dyn Formatter>,
     snapshots: Snapshots,
@@ -73,7 +73,6 @@ impl Nes {
             resolved_metadata: metadata_resolver.resolve(),
             metadata_resolver,
             frame: Frame::new(),
-            cycle: 0,
 
             log_formatter: Box::new(MesenFormatter),
             snapshots: Snapshots::new(),
@@ -113,8 +112,8 @@ impl Nes {
         &mut self.frame
     }
 
-    pub fn cycle(&self) -> u64 {
-        self.cycle
+    pub fn master_cycle(&self) -> u64 {
+        self.bus.master_clock().master_cycle()
     }
 
     pub fn stack_pointer(&self) -> u8 {
@@ -187,11 +186,12 @@ impl Nes {
 
         let bank_color_assigner = BankColorAssigner::new(&chr_memory);
         let mut bus = Bus::new(
+            MasterClock::new(config.starting_cpu_cycle, config.ppu_clock),
             Cpu::new(config.cpu_step_formatting),
             Ppu::new(bank_color_assigner),
             Apu::new(config.disable_audio),
             prg_memory, chr_memory, name_table_mirrorings,
-            config.starting_cpu_cycle, config.ppu_clock, config.dip_switch, config.system_palette.clone());
+            config.dip_switch, config.system_palette.clone());
         mapper.init_mapper_params(&mut bus);
 
         metadata_resolver.layout_supports_prg_ram = mapper.layout().supports_prg_ram();
@@ -237,7 +237,7 @@ impl Nes {
     pub fn step(&mut self) -> StepResult {
         let mut step = None;
         let is_last_cycle_of_frame;
-        match self.cycle % 3 {
+        match self.bus.master_clock().master_cycle() % 3 {
             0 => {
                 self.apu_step();
                 step = self.cpu_step_first_half();
@@ -254,7 +254,7 @@ impl Nes {
             _ => unreachable!(),
         }
 
-        self.cycle += 1;
+        self.bus.master_clock_mut().increment_master_cycle();
 
         StepResult {
             step,
@@ -279,7 +279,7 @@ impl Nes {
     }
 
     fn cpu_step_first_half(&mut self) -> Option<Step> {
-        self.bus.increment_cpu_cycle();
+        self.bus.master_clock_mut().increment_cpu_cycle();
 
         if log_enabled!(target: "timings", Info) {
             self.snapshots.current().instruction(self.bus.cpu.mode_state().state_label());
@@ -322,9 +322,9 @@ impl Nes {
 
     fn ppu_step(&mut self) -> bool {
         let rendering_enabled = self.bus.ppu_regs.rendering_enabled();
-        let is_last_cycle_of_frame = self.bus.ppu_regs.clock_mut().tick(rendering_enabled);
+        let is_last_cycle_of_frame = self.bus.master_clock_mut().tick_ppu_clock(rendering_enabled);
         if log_enabled!(target: "timings", Info) {
-            self.snapshots.current().add_ppu_position(self.bus.ppu_regs.clock());
+            self.snapshots.current().add_ppu_position(&self.bus.master_clock().ppu_clock());
         }
 
         Ppu::step(&mut self.bus, &mut *self.mapper, &mut self.frame);
