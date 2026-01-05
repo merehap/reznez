@@ -6,7 +6,7 @@ pub struct MasterClock {
 
     cpu_cycle: i64,
     ppu_clock: PpuClock,
-    apu_clock: ApuClock,
+    pub apu_clock: ApuClock,
 }
 
 impl MasterClock {
@@ -28,12 +28,16 @@ impl MasterClock {
         self.cpu_cycle
     }
 
-    pub fn ppu_clock(&self) -> PpuClock {
-        self.ppu_clock
+    pub fn ppu_clock(&self) -> &PpuClock {
+        &self.ppu_clock
     }
 
-    pub fn apu_clock(&self) -> ApuClock {
-        self.apu_clock
+    pub fn apu_clock(&self) -> &ApuClock {
+        &self.apu_clock
+    }
+
+    pub fn apu_clock_mut(&mut self) -> &mut ApuClock {
+        &mut self.apu_clock
     }
 
     // TODO: Remove this. Stepping the master clock should do this automatically.

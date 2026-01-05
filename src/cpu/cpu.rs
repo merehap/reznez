@@ -152,7 +152,7 @@ impl Cpu {
 
         let mut step = bus.cpu.mode_state.current_step();
 
-        let cycle_parity = bus.apu_regs.clock().cycle_parity();
+        let cycle_parity = bus.apu_clock().cycle_parity();
         bus.dmc_dma.step(step.is_read(), cycle_parity);
         match bus.dmc_dma.latest_action() {
             DmcDmaAction::DoNothing => {}

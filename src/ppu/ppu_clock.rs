@@ -5,7 +5,7 @@ use crate::ppu::pixel_index::PixelRow;
 pub const MAX_SCANLINE: u16 = 261;
 pub const MAX_CYCLE: u16 = 340;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct PpuClock {
     frame: i64,
     scanline: u16,

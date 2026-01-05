@@ -30,8 +30,6 @@ pub struct ApuRegisters {
     // This is the basis of apu_test_2, motivation described here:
     // https://forums.nesdev.org/viewtopic.php?t=11174&sid=fe21b7f101cf155ca56eda5287c14c89
     counter_suppression_cycles: u8,
-
-    clock: ApuClock,
 }
 
 impl ApuRegisters {
@@ -51,36 +49,22 @@ impl ApuRegisters {
             frame_counter_write_status: FrameCounterWriteStatus::Inactive,
 
             counter_suppression_cycles: 0,
-
-            clock: ApuClock::new(),
         }
     }
 
-    pub fn reset(&mut self, cpu_pinout: &mut CpuPinout) {
+    pub fn reset(&mut self, clock: &ApuClock, cpu_pinout: &mut CpuPinout) {
         // At reset, $4015 should be cleared
         self.disable_channels();
         cpu_pinout.acknowledge_dmc_irq();
         // At reset, $4017 should should be rewritten with last value written
         self.frame_counter_write_status = FrameCounterWriteStatus::Initialized;
-        info!(target: "apuevents", "Frame IRQ acknowledged by RESET. APU Cycle: {}", self.clock.cycle());
+        info!(target: "apuevents", "Frame IRQ acknowledged by RESET. APU Cycle: {}", clock.cycle());
         cpu_pinout.acknowledge_frame_irq();
         self.frame_irq_status = false;
     }
 
-    pub fn step_mode(&self) -> StepMode {
-        self.clock.step_mode
-    }
-
     pub fn frame_counter_write_status(&self) -> FrameCounterWriteStatus {
         self.frame_counter_write_status
-    }
-
-    pub fn clock(&self) -> ApuClock {
-        self.clock
-    }
-
-    pub fn clock_mut(&mut self) -> &mut ApuClock {
-        &mut self.clock
     }
 
     pub fn peek_status(&self, cpu_pinout: &CpuPinout, dma: &DmcDma) -> Status {
@@ -96,9 +80,9 @@ impl ApuRegisters {
     }
 
     // Read 0x4015
-    pub fn read_status(&mut self, cpu_pinout: &CpuPinout, dma: &DmcDma) -> Status {
+    pub fn read_status(&mut self, clock: &ApuClock, cpu_pinout: &CpuPinout, dma: &DmcDma) -> Status {
         if cpu_pinout.frame_irq_asserted() {
-            info!(target: "apuevents", "Frame IRQ flag will be cleared during the next GET cycle due to APUStatus read. APU Cycle: {}", self.clock.cycle());
+            info!(target: "apuevents", "Frame IRQ flag will be cleared during the next GET cycle due to APUStatus read. APU Cycle: {}", clock.cycle());
         }
 
         let status = self.peek_status(cpu_pinout, dma);
@@ -108,12 +92,12 @@ impl ApuRegisters {
     }
 
     // Write 0x4015
-    pub fn write_status_byte(&mut self, cpu_pinout: &mut CpuPinout, dmc_dma: &mut DmcDma) {
+    pub fn write_status_byte(&mut self, clock: &ApuClock, cpu_pinout: &mut CpuPinout, dmc_dma: &mut DmcDma) {
         let value = cpu_pinout.data_bus;
-        info!(target: "apuevents", "APU status write: {value:05b} . APU Cycle: {}", self.clock.cycle());
+        info!(target: "apuevents", "APU status write: {value:05b} . APU Cycle: {}", clock.cycle());
 
         let enabled_channels = splitbits!(value, "...dntqp");
-        self.dmc.set_enabled(cpu_pinout, dmc_dma, self.clock.cycle_parity(), enabled_channels.d);
+        self.dmc.set_enabled(cpu_pinout, dmc_dma, clock.cycle_parity(), enabled_channels.d);
         // This applies immediately, unlike the similar flag within DMC.
         self.dmc_enabled = enabled_channels.d;
 
@@ -132,13 +116,13 @@ impl ApuRegisters {
     }
 
     // Write 0x4017
-    pub fn write_frame_counter(&mut self, cpu_pinout: &mut CpuPinout) {
+    pub fn write_frame_counter(&mut self, clock: &ApuClock, cpu_pinout: &mut CpuPinout) {
         let value = cpu_pinout.data_bus;
         use StepMode::*;
         self.pending_step_mode = if value & 0b1000_0000 == 0 { FourStep } else { FiveStep };
         self.suppress_frame_irq = value & 0b0100_0000 != 0;
         if self.suppress_frame_irq {
-            info!(target: "apuevents", "Frame IRQ acknowledged by Frame Counter write. APU Cycle: {}", self.clock.cycle());
+            info!(target: "apuevents", "Frame IRQ acknowledged by Frame Counter write. APU Cycle: {}", clock.cycle());
             cpu_pinout.acknowledge_frame_irq();
             self.frame_irq_status = false;
         }
@@ -146,14 +130,15 @@ impl ApuRegisters {
         self.frame_counter_write_status = FrameCounterWriteStatus::Initialized;
 
         info!(target: "apuevents", "Frame counter write: {:?}, Suppress IRQ: {}, Status: {:?}, APU Cycle: {}",
-            self.pending_step_mode, self.suppress_frame_irq, self.frame_counter_write_status, self.clock.cycle());
+            self.pending_step_mode, self.suppress_frame_irq, self.frame_counter_write_status, clock.cycle());
     }
 
-    pub fn tick(&mut self, cpu_pinout: &mut CpuPinout, dmc_dma: &mut DmcDma, parity: CycleParity) {
-        self.maybe_update_step_mode();
-        self.maybe_set_frame_irq_pending(cpu_pinout);
+    pub fn tick(&mut self, clock: &mut ApuClock, cpu_pinout: &mut CpuPinout, dmc_dma: &mut DmcDma) {
+        let parity = clock.cycle_parity();
+        self.maybe_update_step_mode(clock);
+        self.maybe_set_frame_irq_pending(clock, cpu_pinout);
         if parity == CycleParity::Put {
-            self.maybe_decrement_counters();
+            self.maybe_decrement_counters(clock);
         }
 
         self.apply_length_counter_pending_values();
@@ -164,8 +149,8 @@ impl ApuRegisters {
         self.dmc.tick(dmc_dma);
     }
 
-    fn maybe_update_step_mode(&mut self) {
-        let apu_cycle = self.clock.cycle();
+    fn maybe_update_step_mode(&mut self, clock: &mut ApuClock) {
+        let apu_cycle = clock.cycle();
         if self.counter_suppression_cycles > 0 {
             self.counter_suppression_cycles -= 1;
         }
@@ -177,7 +162,7 @@ impl ApuRegisters {
                 info!(target: "apuevents", "APU frame counter: Waiting for APU PUT cycle. APU Cycle: {apu_cycle}");
                 self.frame_counter_write_status = WaitingForPutCycle;
             }
-            WaitingForPutCycle if self.clock.cycle_parity() == CycleParity::Put => {
+            WaitingForPutCycle if clock.cycle_parity() == CycleParity::Put => {
                 info!(target: "apuevents", "APU frame counter: Resetting on the next APU cycle. APU Cycle: {apu_cycle}");
                 self.frame_counter_write_status = Ready;
             }
@@ -190,10 +175,10 @@ impl ApuRegisters {
                     "APU frame counter: Resetting APU cycle and setting step mode: {:?}. Skipped APU Cycle: {apu_cycle}",
                     self.pending_step_mode,
                 );
-                self.clock.reset();
-                self.clock.step_mode = self.pending_step_mode;
-                if self.clock.step_mode == StepMode::FiveStep && self.counter_suppression_cycles == 0 {
-                    self.decrement_length_counters();
+                clock.reset();
+                clock.step_mode = self.pending_step_mode;
+                if clock.step_mode == StepMode::FiveStep && self.counter_suppression_cycles == 0 {
+                    self.decrement_length_counters(clock);
                     self.counter_suppression_cycles = 2;
                 }
 
@@ -202,15 +187,15 @@ impl ApuRegisters {
         }
     }
 
-    fn maybe_decrement_counters(&mut self) {
+    fn maybe_decrement_counters(&mut self, clock: &ApuClock) {
         const FIRST_STEP  : u16 = 2 * 3728 + 1;
         const SECOND_STEP : u16 = 2 * 7456 + 1;
         const THIRD_STEP  : u16 = 2 * 11185 + 1;
         const FOURTH_STEP : u16 = 2 * 14914 + 1;
         const FIFTH_STEP  : u16 = 2 * 18640 + 1;
 
-        let cycle = self.clock.cycle();
-        match self.clock.step_mode {
+        let cycle = clock.cycle();
+        match clock.step_mode {
             StepMode::FourStep => assert!(cycle < StepMode::FOUR_STEP_FRAME_LENGTH),
             StepMode::FiveStep => assert!(cycle < StepMode::FIVE_STEP_FRAME_LENGTH),
         }
@@ -224,7 +209,7 @@ impl ApuRegisters {
             SECOND_STEP => {
                 self.tick_envelopes();
                 self.triangle.decrement_linear_counter();
-                self.decrement_length_counters();
+                self.decrement_length_counters(clock);
                 self.counter_suppression_cycles = 2;
             }
             THIRD_STEP => {
@@ -232,16 +217,16 @@ impl ApuRegisters {
                 self.triangle.decrement_linear_counter();
                 self.counter_suppression_cycles = 2;
             }
-            FOURTH_STEP if self.clock.step_mode == StepMode::FourStep => {
+            FOURTH_STEP if clock.step_mode == StepMode::FourStep => {
                 self.tick_envelopes();
                 self.triangle.decrement_linear_counter();
-                self.decrement_length_counters();
+                self.decrement_length_counters(clock);
                 self.counter_suppression_cycles = 2;
             }
-            FIFTH_STEP if self.clock.step_mode == StepMode::FiveStep => {
+            FIFTH_STEP if clock.step_mode == StepMode::FiveStep => {
                 self.tick_envelopes();
                 self.triangle.decrement_linear_counter();
-                self.decrement_length_counters();
+                self.decrement_length_counters(clock);
                 self.counter_suppression_cycles = 2;
             }
             _ => { /* Do nothing. */ }
@@ -254,7 +239,7 @@ impl ApuRegisters {
         self.noise.tick_envelope();
     }
 
-    fn decrement_length_counters(&mut self) {
+    fn decrement_length_counters(&mut self, clock: &ApuClock) {
         self.pulse_1.length_counter.decrement_towards_zero();
         self.pulse_2.length_counter.decrement_towards_zero();
         self.triangle.length_counter.decrement_towards_zero();
@@ -265,7 +250,7 @@ impl ApuRegisters {
 
         info!(target: "apuevents", "Decremented length counters. P1: {}, P2: {}, T: {}, N: {}. APU Cycle: {}",
             self.pulse_1.length_counter, self.pulse_2.length_counter, self.triangle.length_counter,
-            self.noise.length_counter, self.clock.cycle(),
+            self.noise.length_counter, clock.cycle(),
         );
     }
 
@@ -276,19 +261,19 @@ impl ApuRegisters {
         self.noise.length_counter.apply_pending_values();
     }
 
-    fn maybe_set_frame_irq_pending(&mut self, cpu_pinout: &mut CpuPinout) {
-        if self.should_acknowledge_frame_irq && self.clock.cycle_parity() == CycleParity::Get {
-            info!(target: "apuevents", "Frame IRQ acknowledged by APUSTATUS read. APU Cycle: {}", self.clock.cycle());
+    fn maybe_set_frame_irq_pending(&mut self, clock: &ApuClock, cpu_pinout: &mut CpuPinout) {
+        if self.should_acknowledge_frame_irq && clock.cycle_parity() == CycleParity::Get {
+            info!(target: "apuevents", "Frame IRQ acknowledged by APUSTATUS read. APU Cycle: {}", clock.cycle());
             cpu_pinout.acknowledge_frame_irq();
             self.frame_irq_status = false;
             self.should_acknowledge_frame_irq = false;
         }
 
-        if self.clock.step_mode == StepMode::FiveStep || self.clock.is_forced_reset_cycle() {
+        if clock.step_mode == StepMode::FiveStep || clock.is_forced_reset_cycle() {
             return;
         }
 
-        let cycle = self.clock.cycle();
+        let cycle = clock.cycle();
         let is_last_cycle = cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1 || cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 2;
         if is_last_cycle {
             self.frame_irq_status = true;
@@ -298,7 +283,7 @@ impl ApuRegisters {
 
         let is_irq_cycle = is_last_cycle || cycle == 0;
         if is_irq_cycle && !self.suppress_frame_irq {
-            info!(target: "apuevents", "Frame IRQ pending. APU Cycle: {}", self.clock.cycle());
+            info!(target: "apuevents", "Frame IRQ pending. APU Cycle: {}", clock.cycle());
             cpu_pinout.assert_frame_irq();
         }
     }
@@ -351,7 +336,6 @@ impl StepMode {
     }
 }
 
-#[derive(Clone, Copy)]
 pub struct ApuClock {
     cycle: u64,
     step_mode: StepMode,
@@ -373,7 +357,7 @@ impl ApuClock {
         self.cycle = 0;
     }
 
-    pub fn cycle_parity(self) -> CycleParity {
+    pub fn cycle_parity(&self) -> CycleParity {
         if self.cycle.is_multiple_of(2) {
             CycleParity::Get
         } else {
@@ -381,11 +365,11 @@ impl ApuClock {
         }
     }
 
-    pub fn cycle(self) -> u16 {
+    pub fn cycle(&self) -> u16 {
         u16::try_from(self.cycle % u64::from(self.step_mode.frame_length())).unwrap()
     }
 
-    pub fn raw_cycle(self) -> u64 {
+    pub fn raw_cycle(&self) -> u64 {
         // FIXME: Remove the "/ 2" and fix this on the caller's side.
         self.cycle / 2
     }

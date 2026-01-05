@@ -48,12 +48,13 @@ impl Apu {
     }
 
     pub fn step(bus: &mut Bus) {
-        let cycle = bus.apu_regs.clock().cycle();
-        let parity = bus.apu_regs.clock().cycle_parity();
+        let clock = &mut bus.master_clock.apu_clock;
+        let cycle = clock.cycle();
+        let parity = clock.cycle_parity();
         info!(target: "apucycles", "APU cycle: {cycle} ({parity})");
 
-        bus.apu_regs.tick(&mut bus.cpu_pinout, &mut bus.dmc_dma, parity);
-        if parity == CycleParity::Put && bus.apu_regs.clock().raw_cycle().is_multiple_of(20) {
+        bus.apu_regs.tick(clock, &mut bus.cpu_pinout, &mut bus.dmc_dma);
+        if parity == CycleParity::Put && bus.apu_clock().raw_cycle().is_multiple_of(20) {
             let mut queue = bus.apu.pulse_queue.lock().unwrap();
             let regs = &bus.apu_regs;
             if log_enabled!(target: "apusamples", Level::Info) {

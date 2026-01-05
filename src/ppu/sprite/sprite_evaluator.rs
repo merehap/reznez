@@ -56,7 +56,7 @@ impl SpriteEvaluator {
         self.secondary_oam.read_and_advance()
     }
 
-    pub fn write_secondary_oam(&mut self, clock: PpuClock, ppu_regs: &mut PpuRegisters) {
+    pub fn write_secondary_oam(&mut self, clock: &PpuClock, ppu_regs: &mut PpuRegisters) {
         if self.clear_oam {
             self.secondary_oam.write(self.oam_data_read);
             self.secondary_oam.advance();

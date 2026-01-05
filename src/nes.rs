@@ -10,7 +10,7 @@ use log::{info, log_enabled, warn};
 use num_traits::FromPrimitive;
 
 use crate::apu::apu::Apu;
-use crate::apu::apu_registers::{ApuRegisters, FrameCounterWriteStatus};
+use crate::apu::apu_registers::{ApuClock, ApuRegisters, FrameCounterWriteStatus};
 use crate::cartridge::cartridge::Cartridge;
 use crate::cartridge::cartridge_metadata::CartridgeMetadataBuilder;
 use crate::cartridge::header_db::HeaderDb;
@@ -186,7 +186,7 @@ impl Nes {
 
         let bank_color_assigner = BankColorAssigner::new(&chr_memory);
         let mut bus = Bus::new(
-            MasterClock::new(config.starting_cpu_cycle, config.ppu_clock),
+            MasterClock::new(config.starting_cpu_cycle, config.ppu_clock.clone()),
             Cpu::new(config.cpu_step_formatting),
             Ppu::new(bank_color_assigner),
             Apu::new(config.disable_audio),
@@ -215,7 +215,7 @@ impl Nes {
             if self.bus.cpu_pinout.reset.detect() {
                 // Complete the CPU reset, if one is in progress and nearing completion.
                 self.bus.cpu.reset();
-                self.bus.apu_regs.reset(&mut self.bus.cpu_pinout);
+                self.bus.apu_regs.reset(self.bus.master_clock.apu_clock(), &mut self.bus.cpu_pinout);
                 self.bus.dmc_dma.disable_soon();
             }
 
@@ -264,7 +264,7 @@ impl Nes {
 
     fn apu_step(&mut self) {
         if log_enabled!(target: "timings", Info) {
-            self.snapshots.current().apu_regs(&self.bus.apu_regs);
+            self.snapshots.current().apu_regs(self.bus.apu_clock(), &self.bus.apu_regs);
         }
 
         Apu::step(&mut self.bus);
@@ -275,7 +275,7 @@ impl Nes {
 
         self.detect_changes();
 
-        self.bus.apu_regs.clock_mut().increment();
+        self.bus.master_clock_mut().apu_clock_mut().increment();
     }
 
     fn cpu_step_first_half(&mut self) -> Option<Step> {
@@ -324,7 +324,7 @@ impl Nes {
         let rendering_enabled = self.bus.ppu_regs.rendering_enabled();
         let is_last_cycle_of_frame = self.bus.master_clock_mut().tick_ppu_clock(rendering_enabled);
         if log_enabled!(target: "timings", Info) {
-            self.snapshots.current().add_ppu_position(&self.bus.master_clock().ppu_clock());
+            self.snapshots.current().add_ppu_position(self.bus.master_clock().ppu_clock());
         }
 
         Ppu::step(&mut self.bus, &mut *self.mapper, &mut self.frame);
@@ -867,8 +867,7 @@ impl SnapshotBuilder {
         self.cpu_cycle = Some(value);
     }
 
-    fn apu_regs(&mut self, regs: &ApuRegisters) {
-        let clock = regs.clock();
+    fn apu_regs(&mut self, clock: &ApuClock, regs: &ApuRegisters) {
         self.apu_cycle = Some(clock.cycle());
         self.apu_parity = Some(clock.cycle_parity().to_string());
         self.frame_counter_write_status = Some(regs.frame_counter_write_status());

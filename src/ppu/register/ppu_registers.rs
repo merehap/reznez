@@ -157,13 +157,13 @@ impl PpuRegisters {
         self.reset_recently = false;
     }
 
-    pub fn tick(&mut self, clock: PpuClock) -> PpuRegistersTickResult {
+    pub fn tick(&mut self, clock: &PpuClock) -> PpuRegistersTickResult {
         self.maybe_decay_ppu_io_bus(clock);
         let rendering_toggled = self.maybe_toggle_rendering_enabled();
         PpuRegistersTickResult { rendering_toggled }
     }
 
-    fn maybe_decay_ppu_io_bus(&mut self, clock: PpuClock) {
+    fn maybe_decay_ppu_io_bus(&mut self, clock: &PpuClock) {
         if clock.cycle() == 1 {
             self.ppu_io_bus.maybe_decay();
         }
@@ -202,13 +202,13 @@ impl PpuRegisters {
     }
 
     // 0x2002
-    pub fn read_status(&mut self, clock: PpuClock) -> u8 {
+    pub fn read_status(&mut self, clock: &PpuClock) -> u8 {
         self.write_toggle = WriteToggle::FirstByte;
 
         let value = self.peek_status();
         self.ppu_io_bus.update_from_status_read(value);
 
-        self.stop_vblank(&clock);
+        self.stop_vblank(clock);
         // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
         if clock.scanline() == 241 && clock.cycle() == 0 {
             self.suppress_vblank_active = true;

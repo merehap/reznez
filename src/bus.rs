@@ -38,7 +38,7 @@ pub struct Bus {
     pub apu: Apu,
 
     // Other devices
-    master_clock: MasterClock,
+    pub master_clock: MasterClock,
     pub dmc_dma: DmcDma,
     pub oam_dma: OamDma,
     pub joypad1: Joypad,
@@ -131,11 +131,11 @@ impl Bus {
         self.master_clock.cpu_cycle()
     }
 
-    pub fn ppu_clock(&self) -> PpuClock {
+    pub fn ppu_clock(&self) -> &PpuClock {
         self.master_clock.ppu_clock()
     }
 
-    pub fn apu_clock(&self) -> ApuClock {
+    pub fn apu_clock(&self) -> &ApuClock {
         self.master_clock.apu_clock()
     }
 
@@ -357,7 +357,7 @@ impl Bus {
         use FriendlyCpuAddress as Addr;
         let normal_read_value = match addr.to_friendly() {
             Addr::CpuInternalRam(index) => ReadResult::full(self.cpu_internal_ram()[index]),
-            Addr::PpuStatus             => ReadResult::full(self.ppu_regs.read_status(self.ppu_clock())),
+            Addr::PpuStatus             => ReadResult::full(self.ppu_regs.read_status(self.master_clock.ppu_clock())),
             Addr::OamData               => ReadResult::full(self.ppu_regs.read_oam_data(&self.oam)),
             Addr::PpuData => {
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
@@ -400,7 +400,8 @@ impl Bus {
                     // APU status reads only use the data bus when using a DMA address bus.
                     should_apu_read_dominate_normal_read = true;
                     should_apu_read_update_data_bus = address_bus_type != AddressBusType::Cpu;
-                    ReadResult::partial(self.apu_regs.read_status(&self.cpu_pinout, &self.dmc_dma).to_u8(), 0b1101_1111)
+                    let status = self.apu_regs.read_status(self.master_clock.apu_clock(), &self.cpu_pinout, &self.dmc_dma);
+                    ReadResult::partial(status.to_u8(), 0b1101_1111)
                 }
                 // TODO: Move ReadResult/mask specification into the controller.
                 Addr::Controller1AndStrobe => ReadResult::partial(self.joypad1.read_status() as u8, 0b0000_0111),
@@ -483,8 +484,8 @@ impl Bus {
 
             // Miscellaneous registers.
             Addr::OamDma          => self.oam_dma.prepare_to_start(self.cpu_pinout.data_bus),
-            Addr::ApuStatus       => self.apu_regs.write_status_byte(&mut self.cpu_pinout, &mut self.dmc_dma),
-            Addr::Controller2AndFrameCounter => self.apu_regs.write_frame_counter(&mut self.cpu_pinout),
+            Addr::ApuStatus       => self.apu_regs.write_status_byte(self.master_clock.apu_clock(), &mut self.cpu_pinout, &mut self.dmc_dma),
+            Addr::Controller2AndFrameCounter => self.apu_regs.write_frame_counter(self.master_clock.apu_clock(), &mut self.cpu_pinout),
             Addr::Controller1AndStrobe => {
                 self.joypad1.change_strobe(self.cpu_pinout.data_bus);
                 self.joypad2.change_strobe(self.cpu_pinout.data_bus);
