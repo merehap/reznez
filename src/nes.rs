@@ -222,7 +222,7 @@ impl Nes {
             let step_result = self.step();
             if step_result.is_last_cycle_of_frame {
                 // Release the RESET button on the console after some time has passed,
-                // allowing the PPU to run for a while the RESET button was held down.
+                // allowing the PPU to run while the RESET button was still held down.
                 self.bus.cpu_pinout.reset.set_value(SignalLevel::High);
 
                 if self.bus.cpu.mode_state().is_jammed() {
@@ -240,15 +240,20 @@ impl Nes {
         match self.bus.master_clock().master_cycle() % 3 {
             0 => {
                 self.apu_step();
+                self.bus.master_clock_mut().apu_clock_mut().increment();
+                self.bus.master_clock_mut().increment_cpu_cycle();
                 step = self.cpu_step_first_half();
-                is_last_cycle_of_frame = self.ppu_step();
+                is_last_cycle_of_frame = self.bus.master_clock.tick_ppu_clock(self.bus.ppu_regs.rendering_enabled());
+                self.ppu_step();
             }
             1 => {
                 self.cpu_step_second_half();
-                is_last_cycle_of_frame = self.ppu_step();
+                is_last_cycle_of_frame = self.bus.master_clock.tick_ppu_clock(self.bus.ppu_regs.rendering_enabled());
+                self.ppu_step();
             }
             2 => {
-                is_last_cycle_of_frame = self.ppu_step();
+                is_last_cycle_of_frame = self.bus.master_clock.tick_ppu_clock(self.bus.ppu_regs.rendering_enabled());
+                self.ppu_step();
                 self.snapshots.start_next();
             }
             _ => unreachable!(),
@@ -256,10 +261,7 @@ impl Nes {
 
         self.bus.master_clock_mut().increment_master_cycle();
 
-        StepResult {
-            step,
-            is_last_cycle_of_frame,
-        }
+        StepResult { step, is_last_cycle_of_frame }
     }
 
     fn apu_step(&mut self) {
@@ -274,13 +276,9 @@ impl Nes {
         }
 
         self.detect_changes();
-
-        self.bus.master_clock_mut().apu_clock_mut().increment();
     }
 
     fn cpu_step_first_half(&mut self) -> Option<Step> {
-        self.bus.master_clock_mut().increment_cpu_cycle();
-
         if log_enabled!(target: "timings", Info) {
             self.snapshots.current().instruction(self.bus.cpu.mode_state().state_label());
         }
@@ -320,9 +318,7 @@ impl Nes {
         self.detect_changes();
     }
 
-    fn ppu_step(&mut self) -> bool {
-        let rendering_enabled = self.bus.ppu_regs.rendering_enabled();
-        let is_last_cycle_of_frame = self.bus.master_clock_mut().tick_ppu_clock(rendering_enabled);
+    fn ppu_step(&mut self) {
         if log_enabled!(target: "timings", Info) {
             self.snapshots.current().add_ppu_position(self.bus.master_clock().ppu_clock());
         }
@@ -330,8 +326,6 @@ impl Nes {
         Ppu::step(&mut self.bus, &mut *self.mapper, &mut self.frame);
 
         self.detect_changes();
-
-        is_last_cycle_of_frame
     }
 
     fn detect_changes(&mut self) {
