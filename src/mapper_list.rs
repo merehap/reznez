@@ -492,7 +492,13 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (212, _) => TodoMapper,
         // Duplicate
         (213, None) => m::mapper058::Mapper058.supported(),
-        (214..=231, _) => TodoMapper,
+
+        (214..=225, _) => TodoMapper,
+
+        // 76-in-1 and other multicarts
+        (226, None) => m::mapper226::Mapper226.supported(),
+
+        (227..=231, _) => TodoMapper,
 
         // Quattro submappers
         (232, None) => UnspecifiedSubmapper,
