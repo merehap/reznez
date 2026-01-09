@@ -267,7 +267,7 @@ impl Nes {
 
         self.detect_changes();
 
-        self.bus.master_clock_mut().apu_clock_mut().increment();
+        self.bus.master_clock_mut().apu_clock_mut().tick();
     }
 
     fn cpu_step_first_half(&mut self) -> Option<Step> {

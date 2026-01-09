@@ -349,7 +349,8 @@ impl ApuClock {
         }
     }
 
-    pub fn increment(&mut self) {
+    // Called every CPU cycle (not APU cycle)
+    pub fn tick(&mut self) {
         self.cycle += 1;
     }
 
@@ -365,12 +366,12 @@ impl ApuClock {
         }
     }
 
+    // CPU Cycle, not APU Cycle
     pub fn cycle(&self) -> u16 {
         u16::try_from(self.cycle % u64::from(self.step_mode.frame_length())).unwrap()
     }
 
-    pub fn raw_cycle(&self) -> u64 {
-        // FIXME: Remove the "/ 2" and fix this on the caller's side.
+    pub fn raw_apu_cycle(&self) -> u64 {
         self.cycle / 2
     }
 

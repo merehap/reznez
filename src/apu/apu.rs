@@ -54,7 +54,7 @@ impl Apu {
         info!(target: "apucycles", "APU cycle: {cycle} ({parity})");
 
         bus.apu_regs.tick(clock, &mut bus.cpu_pinout, &mut bus.dmc_dma);
-        if parity == CycleParity::Put && bus.apu_clock().raw_cycle().is_multiple_of(20) {
+        if parity == CycleParity::Put && bus.apu_clock().raw_apu_cycle().is_multiple_of(20) {
             let mut queue = bus.apu.pulse_queue.lock().unwrap();
             let regs = &bus.apu_regs;
             if log_enabled!(target: "apusamples", Level::Info) {
@@ -63,7 +63,7 @@ impl Apu {
                 }
 
                 info!("{cycle:05} ({:08}), PPU Frame: {:05}, P1: {:>2}, P2: {:>2}, T: {:>2}, N: {:>2}, D: {:>2}",
-                    bus.apu_clock().raw_cycle(),
+                    bus.apu_clock().raw_apu_cycle(),
                     bus.ppu_clock().frame(),
                     disp(regs.pulse_1.sample_volume().into()),
                     disp(regs.pulse_2.sample_volume().into()),

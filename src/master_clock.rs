@@ -2,10 +2,19 @@ use crate::apu::apu_registers::ApuClock;
 use crate::ppu::ppu_clock::PpuClock;
 
 use CycleType::*;
-const NTSC_SCHEDULE: [&[CycleType]; 3] = [
+const NTSC_SCHEDULE: [&[CycleType]; 12] = [
     &[Apu, CpuFirstHalf, Ppu],
+    &[],
+    &[],
+    &[],
     &[CpuSecondHalf, Ppu],
+    &[],
+    &[],
+    &[],
     &[Ppu],
+    &[],
+    &[],
+    &[],
 ];
 
 pub struct MasterClock {
@@ -15,7 +24,7 @@ pub struct MasterClock {
     ppu_clock: PpuClock,
     pub apu_clock: ApuClock,
 
-    schedule: [&'static [CycleType]; 3],
+    schedule: [&'static [CycleType]; 12],
 }
 
 impl MasterClock {
