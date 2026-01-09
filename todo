@@ -53,7 +53,6 @@ Arkanoid: Extra sprite.
 
 UNTESTED BY EXISTING TEST ROMS
 IRQ behavior for the vast majority of IRQ mappers
-APU parity must be unaffected by FrameCounter reset (parity must have no relation to APU cycle even/odd).
 
 FAILING TESTS
 SHX/SXA: https://forums.nesdev.org/viewtopic.php?p=297765

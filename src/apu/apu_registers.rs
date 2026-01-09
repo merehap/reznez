@@ -188,19 +188,13 @@ impl ApuRegisters {
     }
 
     fn maybe_decrement_counters(&mut self, clock: &ApuClock) {
-        const FIRST_STEP  : u16 = 2 * 3728 + 1;
-        const SECOND_STEP : u16 = 2 * 7456 + 1;
-        const THIRD_STEP  : u16 = 2 * 11185 + 1;
-        const FOURTH_STEP : u16 = 2 * 14914 + 1;
-        const FIFTH_STEP  : u16 = 2 * 18640 + 1;
+        const FIRST_STEP  : u16 = 3728;
+        const SECOND_STEP : u16 = 7456;
+        const THIRD_STEP  : u16 = 11185;
+        const FOURTH_STEP : u16 = 14914;
+        const FIFTH_STEP  : u16 = 18640;
 
-        let cycle = clock.cpu_cycle();
-        match clock.step_mode {
-            StepMode::FourStep => assert!(cycle < StepMode::FOUR_STEP_FRAME_LENGTH),
-            StepMode::FiveStep => assert!(cycle < StepMode::FIVE_STEP_FRAME_LENGTH),
-        }
-
-        match cycle {
+        match clock.apu_cycle() {
             FIRST_STEP => {
                 self.tick_envelopes();
                 self.triangle.decrement_linear_counter();
@@ -273,15 +267,15 @@ impl ApuRegisters {
             return;
         }
 
-        let cycle = clock.cpu_cycle();
-        let is_last_cycle = cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 1 || cycle == StepMode::FOUR_STEP_FRAME_LENGTH - 2;
+        let is_start_of_first_cycle = clock.apu_cycle() == 0 && clock.cycle_parity() == CycleParity::Get;
+        let is_last_cycle = clock.apu_cycle() == StepMode::FOUR_STEP_FRAME_LENGTH - 1;
         if is_last_cycle {
             self.frame_irq_status = true;
-        } else if cycle == 0 {
+        } else if is_start_of_first_cycle {
             self.frame_irq_status = !self.suppress_frame_irq;
         }
 
-        let is_irq_cycle = is_last_cycle || cycle == 0;
+        let is_irq_cycle = is_last_cycle || is_start_of_first_cycle;
         if is_irq_cycle && !self.suppress_frame_irq {
             info!(target: "apuevents", "Frame IRQ pending. APU Cycle: {}", clock.cpu_cycle());
             cpu_pinout.assert_frame_irq();
@@ -325,8 +319,8 @@ pub enum StepMode {
 }
 
 impl StepMode {
-    pub const FOUR_STEP_FRAME_LENGTH: u16 = 2 * 14915;
-    pub const FIVE_STEP_FRAME_LENGTH: u16 = 2 * 18641;
+    pub const FOUR_STEP_FRAME_LENGTH: u16 = 14915;
+    pub const FIVE_STEP_FRAME_LENGTH: u16 = 18641;
 
     pub const fn frame_length(self) -> u16 {
         match self {
@@ -337,7 +331,7 @@ impl StepMode {
 }
 
 pub struct ApuClock {
-    cycle: u64,
+    raw_cpu_cycle: u64,
     parity: CycleParity,
     step_mode: StepMode,
 }
@@ -345,7 +339,7 @@ pub struct ApuClock {
 impl ApuClock {
     pub fn new() -> Self {
         Self {
-            cycle: 0,
+            raw_cpu_cycle: 0,
             parity: CycleParity::Get,
             step_mode: StepMode::FourStep,
         }
@@ -353,12 +347,12 @@ impl ApuClock {
 
     // Called every CPU cycle (not APU cycle)
     pub fn tick(&mut self) {
-        self.cycle += 1;
+        self.raw_cpu_cycle += 1;
         self.parity.toggle();
     }
 
     pub fn reset(&mut self) {
-        self.cycle = 0;
+        self.raw_cpu_cycle = 0;
     }
 
     pub fn cycle_parity(&self) -> CycleParity {
@@ -366,15 +360,19 @@ impl ApuClock {
     }
 
     pub fn cpu_cycle(&self) -> u16 {
-        u16::try_from(self.cycle % u64::from(self.step_mode.frame_length())).unwrap()
+        u16::try_from(self.raw_cpu_cycle % u64::from(2 * self.step_mode.frame_length())).unwrap()
+    }
+
+    pub fn apu_cycle(&self) -> u16 {
+        self.cpu_cycle() / 2
     }
 
     pub fn raw_apu_cycle(&self) -> u64 {
-        self.cycle / 2
+        self.raw_cpu_cycle / 2
     }
 
     pub fn is_forced_reset_cycle(&self) -> bool {
-        self.cycle == 0
+        self.raw_cpu_cycle == 0
     }
 }
 
