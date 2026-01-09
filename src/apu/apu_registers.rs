@@ -24,7 +24,7 @@ pub struct ApuRegisters {
     frame_irq_status: bool,
     suppress_frame_irq: bool,
     should_acknowledge_frame_irq: bool,
-    frame_counter_write_status: FrameCounterWriteStatus,
+    clock_reset_status: ClockResetStatus,
 
     // Whenever a quarter or half frame signal occurs, recurrence is suppressed for 2 cycles.
     // This is the basis of apu_test_2, motivation described here:
@@ -46,7 +46,7 @@ impl ApuRegisters {
             frame_irq_status: false,
             suppress_frame_irq: false,
             should_acknowledge_frame_irq: false,
-            frame_counter_write_status: FrameCounterWriteStatus::Inactive,
+            clock_reset_status: ClockResetStatus::Inactive,
 
             counter_suppression_cycles: 0,
         }
@@ -57,14 +57,14 @@ impl ApuRegisters {
         self.disable_channels();
         cpu_pinout.acknowledge_dmc_irq();
         // At reset, $4017 should should be rewritten with last value written
-        self.frame_counter_write_status = FrameCounterWriteStatus::Initialized;
+        self.clock_reset_status.initialize();
         info!(target: "apuevents", "Frame IRQ acknowledged by RESET. APU Cycle: {}", clock.cpu_cycle());
         cpu_pinout.acknowledge_frame_irq();
         self.frame_irq_status = false;
     }
 
-    pub fn frame_counter_write_status(&self) -> FrameCounterWriteStatus {
-        self.frame_counter_write_status
+    pub fn clock_reset_status(&self) -> ClockResetStatus {
+        self.clock_reset_status
     }
 
     pub fn peek_status(&self, cpu_pinout: &CpuPinout, dma: &DmcDma) -> Status {
@@ -127,13 +127,17 @@ impl ApuRegisters {
             self.frame_irq_status = false;
         }
 
-        self.frame_counter_write_status = FrameCounterWriteStatus::Initialized;
+        self.clock_reset_status.initialize();
 
         info!(target: "apuevents", "Frame counter write: {:?}, Suppress IRQ: {}, Status: {:?}, APU Cycle: {}",
-            self.pending_step_mode, self.suppress_frame_irq, self.frame_counter_write_status, clock.cpu_cycle());
+            self.pending_step_mode, self.suppress_frame_irq, self.clock_reset_status, clock.cpu_cycle());
     }
 
     pub fn tick(&mut self, clock: &mut ApuClock, cpu_pinout: &mut CpuPinout, dmc_dma: &mut DmcDma) {
+        if self.counter_suppression_cycles > 0 {
+            self.counter_suppression_cycles -= 1;
+        }
+
         let parity = clock.cycle_parity();
         self.maybe_update_step_mode(clock);
         self.maybe_set_frame_irq_pending(clock, cpu_pinout);
@@ -151,25 +155,9 @@ impl ApuRegisters {
 
     fn maybe_update_step_mode(&mut self, clock: &mut ApuClock) {
         let apu_cycle = clock.cpu_cycle();
-        if self.counter_suppression_cycles > 0 {
-            self.counter_suppression_cycles -= 1;
-        }
-
-        use FrameCounterWriteStatus::*;
-        match self.frame_counter_write_status {
-            Inactive => { /* Do nothing. */ }
-            Initialized => {
-                info!(target: "apuevents", "APU frame counter: Waiting for APU PUT cycle. APU Cycle: {apu_cycle}");
-                self.frame_counter_write_status = WaitingForPutCycle;
-            }
-            WaitingForPutCycle if clock.cycle_parity() == CycleParity::Put => {
-                info!(target: "apuevents", "APU frame counter: Resetting on the next APU cycle. APU Cycle: {apu_cycle}");
-                self.frame_counter_write_status = Ready;
-            }
-            WaitingForPutCycle => {
-                info!(target: "apuevents", "APU frame counter: Still waiting for APU PUT cycle. APU Cycle: {apu_cycle}");
-            }
-            Ready => {
+        if clock.cycle_parity() == CycleParity::Get {
+            let is_ready = self.clock_reset_status.tick();
+            if is_ready {
                 info!(
                     target: "apuevents",
                     "APU frame counter: Resetting APU cycle and setting step mode: {:?}. Skipped APU Cycle: {apu_cycle}",
@@ -181,8 +169,6 @@ impl ApuRegisters {
                     self.decrement_length_counters(clock);
                     self.counter_suppression_cycles = 2;
                 }
-
-                self.frame_counter_write_status = Inactive;
             }
         }
     }
@@ -401,9 +387,25 @@ impl fmt::Display for CycleParity {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum FrameCounterWriteStatus {
+pub enum ClockResetStatus {
     Inactive,
-    Initialized,
-    WaitingForPutCycle,
+    Pending,
     Ready,
+}
+
+impl ClockResetStatus {
+    fn initialize(&mut self) {
+        *self = Self::Pending;
+    }
+
+    fn tick(&mut self) -> bool {
+        let is_ready = *self == Self::Ready;
+        match self {
+            Self::Inactive => { /* Stay inactive. */ }
+            Self::Pending => *self = Self::Ready,
+            Self::Ready => *self = Self::Inactive,
+        }
+
+        is_ready
+    }
 }

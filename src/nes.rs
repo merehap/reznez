@@ -10,7 +10,7 @@ use log::{info, log_enabled, warn};
 use num_traits::FromPrimitive;
 
 use crate::apu::apu::Apu;
-use crate::apu::apu_registers::{ApuClock, ApuRegisters, FrameCounterWriteStatus};
+use crate::apu::apu_registers::{ApuClock, ApuRegisters, ClockResetStatus};
 use crate::cartridge::cartridge::Cartridge;
 use crate::cartridge::cartridge_metadata::CartridgeMetadataBuilder;
 use crate::cartridge::header_db::HeaderDb;
@@ -294,7 +294,7 @@ impl Nes {
         }
 
         if log_enabled!(target: "timings", Info) {
-            if self.bus.apu_regs.frame_counter_write_status() == FrameCounterWriteStatus::Initialized {
+            if self.bus.apu_regs.clock_reset_status() == ClockResetStatus::Pending {
                 self.snapshots.start();
             }
 
@@ -775,7 +775,7 @@ impl Snapshots {
 
             append(&mut instr, &center(&snapshot.instruction.clone()), true, skip);
             append(&mut fcw_status, &center(&format!("{:?}", snapshot.frame_counter_write_status)),
-                snapshot.frame_counter_write_status != FrameCounterWriteStatus::Inactive, skip);
+                snapshot.frame_counter_write_status != ClockResetStatus::Inactive, skip);
             append(&mut nmi_status, &center(&format!("{:?}", snapshot.nmi_status)), snapshot.nmi_status != NmiStatus::Inactive, skip);
             append(&mut irq_status, &center(&format!("{:?}", snapshot.irq_status)), snapshot.irq_status != IrqStatus::Inactive, skip);
             append(&mut frame_irq, &center("Raise IRQ"), snapshot.frame_irq, skip);
@@ -830,7 +830,7 @@ struct Snapshot {
     apu_cycle: u16,
     apu_parity: String,
     instruction: String,
-    frame_counter_write_status: FrameCounterWriteStatus,
+    frame_counter_write_status: ClockResetStatus,
     frame_irq: bool,
     irq_status: IrqStatus,
     nmi_status: NmiStatus,
@@ -843,7 +843,7 @@ struct SnapshotBuilder {
     apu_cycle: Option<u16>,
     apu_parity: Option<String>,
     instruction: String,
-    frame_counter_write_status: Option<FrameCounterWriteStatus>,
+    frame_counter_write_status: Option<ClockResetStatus>,
     frame_irq: Option<bool>,
     irq_status: Option<IrqStatus>,
     nmi_status: Option<NmiStatus>,
@@ -862,7 +862,7 @@ impl SnapshotBuilder {
     fn apu_regs(&mut self, clock: &ApuClock, regs: &ApuRegisters) {
         self.apu_cycle = Some(clock.cpu_cycle());
         self.apu_parity = Some(clock.cycle_parity().to_string());
-        self.frame_counter_write_status = Some(regs.frame_counter_write_status());
+        self.frame_counter_write_status = Some(regs.clock_reset_status());
     }
 
     fn frame_irq(&mut self, bus: &Bus) {
