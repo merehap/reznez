@@ -26,7 +26,7 @@ use crate::logging::formatter;
 use crate::logging::formatter::*;
 use crate::mapper::{IrqCounterInfo, Mapper, NameTableMirroring, PrgBankRegisterId, ReadStatus, WriteStatus};
 use crate::mapper_list;
-use crate::master_clock::MasterClock;
+use crate::master_clock::{CycleType, MasterClock};
 use crate::memory::raw_memory::RawMemory;
 use crate::memory::bank::bank_number::{BankLocation, ChrBankRegisterId};
 use crate::bus::Bus;
@@ -236,30 +236,20 @@ impl Nes {
 
     pub fn step(&mut self) -> StepResult {
         let mut step = None;
-        let is_last_cycle_of_frame;
-        match self.bus.master_clock().master_cycle() % 3 {
-            0 => {
-                self.apu_step();
-                self.bus.master_clock_mut().apu_clock_mut().increment();
-                self.bus.master_clock_mut().increment_cpu_cycle();
-                step = self.cpu_step_first_half();
-                is_last_cycle_of_frame = self.bus.master_clock.tick_ppu_clock(self.bus.ppu_regs.rendering_enabled());
-                self.ppu_step();
+        let mut is_last_cycle_of_frame = false;
+        let (actions, end_reached) = self.bus.master_clock.tick();
+        for action in actions {
+            match action {
+                CycleType::Apu => self.apu_step(),
+                CycleType::CpuFirstHalf => step = self.cpu_step_first_half(),
+                CycleType::CpuSecondHalf => self.cpu_step_second_half(),
+                CycleType::Ppu => is_last_cycle_of_frame = self.ppu_step(),
             }
-            1 => {
-                self.cpu_step_second_half();
-                is_last_cycle_of_frame = self.bus.master_clock.tick_ppu_clock(self.bus.ppu_regs.rendering_enabled());
-                self.ppu_step();
-            }
-            2 => {
-                is_last_cycle_of_frame = self.bus.master_clock.tick_ppu_clock(self.bus.ppu_regs.rendering_enabled());
-                self.ppu_step();
-                self.snapshots.start_next();
-            }
-            _ => unreachable!(),
         }
 
-        self.bus.master_clock_mut().increment_master_cycle();
+        if end_reached {
+            self.snapshots.start_next();
+        }
 
         StepResult { step, is_last_cycle_of_frame }
     }
@@ -276,9 +266,13 @@ impl Nes {
         }
 
         self.detect_changes();
+
+        self.bus.master_clock_mut().apu_clock_mut().increment();
     }
 
     fn cpu_step_first_half(&mut self) -> Option<Step> {
+        self.bus.master_clock_mut().increment_cpu_cycle();
+
         if log_enabled!(target: "timings", Info) {
             self.snapshots.current().instruction(self.bus.cpu.mode_state().state_label());
         }
@@ -318,7 +312,9 @@ impl Nes {
         self.detect_changes();
     }
 
-    fn ppu_step(&mut self) {
+    fn ppu_step(&mut self) -> bool {
+        let is_last_cycle_of_frame = self.bus.master_clock.tick_ppu_clock(self.bus.ppu_regs.rendering_enabled());
+
         if log_enabled!(target: "timings", Info) {
             self.snapshots.current().add_ppu_position(self.bus.master_clock().ppu_clock());
         }
@@ -326,6 +322,8 @@ impl Nes {
         Ppu::step(&mut self.bus, &mut *self.mapper, &mut self.frame);
 
         self.detect_changes();
+
+        is_last_cycle_of_frame
     }
 
     fn detect_changes(&mut self) {
