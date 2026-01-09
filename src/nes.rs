@@ -860,7 +860,7 @@ impl SnapshotBuilder {
     }
 
     fn apu_regs(&mut self, clock: &ApuClock, regs: &ApuRegisters) {
-        self.apu_cycle = Some(clock.cycle());
+        self.apu_cycle = Some(clock.cpu_cycle());
         self.apu_parity = Some(clock.cycle_parity().to_string());
         self.frame_counter_write_status = Some(regs.frame_counter_write_status());
     }

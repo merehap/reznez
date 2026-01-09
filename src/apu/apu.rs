@@ -49,7 +49,7 @@ impl Apu {
 
     pub fn step(bus: &mut Bus) {
         let clock = &mut bus.master_clock.apu_clock;
-        let cycle = clock.cycle();
+        let cycle = clock.cpu_cycle();
         let parity = clock.cycle_parity();
         info!(target: "apucycles", "APU cycle: {cycle} ({parity})");
 
