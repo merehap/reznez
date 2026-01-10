@@ -80,6 +80,7 @@ impl <const N: NegateBehavior> PulseChannel<N> {
         }
     }
 
+    // Every quarter frame
     pub(super) fn tick_envelope(&mut self) {
         self.envelope.step();
     }

@@ -54,12 +54,12 @@ impl <const N: NegateBehavior> Sweep<N> {
         self.frequency_timer.tick()
     }
 
-    // Every APU half-frame cycle
+    // Every half-frame
     pub fn tick(&mut self) {
-        let divider_triggered = self.divider.tick();
+        self.divider.tick();
         if let Some(target_period) = self.target_period
                 && self.enabled
-                && divider_triggered
+                && self.divider.is_zero()
                 && self.shift_count > u3::new(0) {
             self.frequency_timer.set_period(u16::from(target_period));
             self.update_target_period();
@@ -85,6 +85,10 @@ pub struct Divider {
 }
 
 impl Divider {
+    pub fn is_zero(&self) -> bool {
+        self.index == u3::new(0)
+    }
+
     pub fn set_period(&mut self, period: u3) {
         self.period = period;
         self.should_reload = true;
@@ -94,20 +98,13 @@ impl Divider {
         self.should_reload = true;
     }
 
-    pub fn reload(&mut self) {
-        self.index = self.period;
-    }
-
-    pub fn tick(&mut self) -> bool {
-        self.index = self.index - u3::new(1);
-
-        let triggered = self.index == u3::new(0);
-        if triggered || self.should_reload {
+    pub fn tick(&mut self) {
+        if self.is_zero() || self.should_reload {
             self.should_reload = false;
-            self.reload();
+            self.index = self.period;
+        } else {
+            self.index = self.index - u3::new(1);
         }
-
-        triggered
     }
 }
 

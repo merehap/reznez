@@ -81,6 +81,7 @@ impl NoiseChannel {
         }
     }
 
+    // Every quarter frame
     pub(super) fn tick_envelope(&mut self) {
         self.envelope.step();
     }
