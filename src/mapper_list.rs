@@ -498,7 +498,12 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // 76-in-1 and other multicarts
         (226, None) => m::mapper226::Mapper226.supported(),
 
-        (227..=231, _) => TodoMapper,
+        (227..=228, _) => TodoMapper,
+
+        // BMC 31-IN-1
+        (229, None) => m::mapper229::Mapper229.supported(),
+
+        (230..=231, _) => TodoMapper,
 
         // Quattro submappers
         (232, None) => UnspecifiedSubmapper,
