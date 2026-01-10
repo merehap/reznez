@@ -1,5 +1,6 @@
 use crate::apu::apu::Apu;
-use crate::apu::apu_registers::{ApuClock, ApuRegisters};
+use crate::apu::apu_clock::ApuClock;
+use crate::apu::apu_registers::ApuRegisters;
 use crate::controller::joypad::Joypad;
 use crate::cpu::cpu::Cpu;
 use crate::cpu::dmc_dma::DmcDma;

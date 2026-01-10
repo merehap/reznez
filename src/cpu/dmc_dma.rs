@@ -3,7 +3,7 @@ use std::marker::ConstParamTy;
 use log::info;
 use splitbits::combinebits;
 
-use crate::apu::apu_registers::CycleParity;
+use crate::apu::apu_clock::CycleParity;
 
 pub struct DmcDma {
     puts_until_disabled: Option<u8>,

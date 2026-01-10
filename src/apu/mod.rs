@@ -1,4 +1,5 @@
 pub mod apu;
+pub mod apu_clock;
 pub mod apu_registers;
 pub mod envelope;
 pub mod sweep;

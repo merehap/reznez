@@ -1,7 +1,7 @@
 use splitbits::{splitbits, splitbits_named_ux};
 use ux::{u4, u15};
 
-use crate::apu::apu_registers::CycleParity;
+use crate::apu::apu_clock::CycleParity;
 use crate::apu::envelope::Envelope;
 use crate::apu::length_counter::LengthCounter;
 use crate::apu::frequency_timer::FrequencyTimer;

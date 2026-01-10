@@ -8,7 +8,8 @@ use log::Level;
 use rodio::{OutputStream, Sink};
 use rodio::source::Source;
 
-use crate::apu::apu_registers::{ApuRegisters, CycleParity};
+use crate::apu::apu_clock::CycleParity;
+use crate::apu::apu_registers::ApuRegisters;
 use crate::bus::Bus;
 
 const SAMPLE_RATE: u32 = 44100;

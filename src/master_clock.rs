@@ -1,4 +1,4 @@
-use crate::apu::apu_registers::ApuClock;
+use crate::apu::apu_clock::ApuClock;
 use crate::ppu::ppu_clock::PpuClock;
 
 use CycleType::*;

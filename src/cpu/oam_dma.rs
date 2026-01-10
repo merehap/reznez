@@ -1,6 +1,6 @@
 use std::marker::ConstParamTy;
 
-use crate::apu::apu_registers::CycleParity;
+use crate::apu::apu_clock::CycleParity;
 use crate::memory::cpu::cpu_address::CpuAddress;
 
 pub struct OamDma {

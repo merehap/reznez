@@ -1,7 +1,7 @@
 use splitbits::{combinebits, splitbits, splitbits_named_ux};
 use ux::u7;
 
-use crate::apu::apu_registers::CycleParity;
+use crate::apu::apu_clock::CycleParity;
 use crate::cpu::dmc_dma::DmcDma;
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::cpu_pinout::CpuPinout;

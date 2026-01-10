@@ -10,7 +10,8 @@ use log::{info, log_enabled, warn};
 use num_traits::FromPrimitive;
 
 use crate::apu::apu::Apu;
-use crate::apu::apu_registers::{ApuClock, ApuRegisters, ClockResetStatus};
+use crate::apu::apu_clock::ApuClock;
+use crate::apu::apu_registers::{ApuRegisters, ClockResetStatus};
 use crate::cartridge::cartridge::Cartridge;
 use crate::cartridge::cartridge_metadata::CartridgeMetadataBuilder;
 use crate::cartridge::header_db::HeaderDb;

@@ -1,8 +1,7 @@
-use std::fmt;
-
 use log::info;
 use splitbits::splitbits;
 
+use crate::apu::apu_clock::{ApuClock, CycleParity, StepMode};
 use crate::apu::sweep::NegateBehavior;
 use crate::apu::pulse_channel::PulseChannel;
 use crate::apu::triangle_channel::TriangleChannel;
@@ -173,8 +172,8 @@ impl ApuRegisters {
                 self.pending_step_mode,
             );
             clock.reset();
-            clock.step_mode = self.pending_step_mode;
-            if clock.step_mode == StepMode::FiveStep && self.counter_suppression_cycles == 0 {
+            clock.set_step_mode(self.pending_step_mode);
+            if clock.step_mode() == StepMode::FiveStep && self.counter_suppression_cycles == 0 {
                 self.decrement_length_counters(clock);
                 self.counter_suppression_cycles = 2;
             }
@@ -205,13 +204,13 @@ impl ApuRegisters {
                 self.triangle.decrement_linear_counter();
                 self.counter_suppression_cycles = 2;
             }
-            FOURTH_STEP if clock.step_mode == StepMode::FourStep => {
+            FOURTH_STEP if clock.step_mode() == StepMode::FourStep => {
                 self.tick_envelopes();
                 self.triangle.decrement_linear_counter();
                 self.decrement_length_counters(clock);
                 self.counter_suppression_cycles = 2;
             }
-            FIFTH_STEP if clock.step_mode == StepMode::FiveStep => {
+            FIFTH_STEP if clock.step_mode() == StepMode::FiveStep => {
                 self.tick_envelopes();
                 self.triangle.decrement_linear_counter();
                 self.decrement_length_counters(clock);
@@ -250,34 +249,16 @@ impl ApuRegisters {
     }
 
     fn maybe_set_frame_irq_pending(&mut self, clock: &ApuClock, cpu_pinout: &mut CpuPinout) {
-        if clock.step_mode == StepMode::FiveStep || clock.is_forced_reset_cycle() {
-            return;
-        }
-
-        match clock.cycle_parity() {
-            CycleParity::Get => {
-                let is_start_of_first_cycle = clock.apu_cycle() == 0;
-                let is_last_cycle = clock.apu_cycle() == StepMode::FOUR_STEP_FRAME_LENGTH - 1;
-                if is_last_cycle {
-                    self.frame_irq_status = true;
-                } else if is_start_of_first_cycle {
-                    self.frame_irq_status = !self.suppress_frame_irq;
-                }
-
-                let is_irq_cycle = is_last_cycle || is_start_of_first_cycle;
-                if is_irq_cycle && !self.suppress_frame_irq {
-                    cpu_pinout.assert_frame_irq();
-                }
+        if clock.is_in_frame_irq_window() {
+            if !self.suppress_frame_irq {
+                cpu_pinout.assert_frame_irq();
             }
-            CycleParity::Put => {
-                let is_last_cycle = clock.apu_cycle() == StepMode::FOUR_STEP_FRAME_LENGTH - 1;
-                if is_last_cycle {
-                    self.frame_irq_status = true;
-                    if !self.suppress_frame_irq {
-                        cpu_pinout.assert_frame_irq();
-                    }
-                }
-            }
+
+            self.frame_irq_status = if clock.cpu_cycle() == 0 {
+                !self.suppress_frame_irq
+            } else {
+                true
+            };
         }
     }
 }
@@ -307,110 +288,6 @@ impl Status {
                 self.pulse_1_active,
             ]
         )
-    }
-}
-
-#[derive(PartialEq, Clone, Copy, Debug, Default)]
-pub enum StepMode {
-    #[default]
-    FourStep,
-    FiveStep,
-}
-
-impl StepMode {
-    pub const FOUR_STEP_FRAME_LENGTH: u16 = 14915;
-    pub const FIVE_STEP_FRAME_LENGTH: u16 = 18641;
-
-    pub const fn frame_length(self) -> u16 {
-        match self {
-            StepMode::FourStep => StepMode::FOUR_STEP_FRAME_LENGTH,
-            StepMode::FiveStep => StepMode::FIVE_STEP_FRAME_LENGTH,
-        }
-    }
-}
-
-pub struct ApuClock {
-    total_cpu_cycles: u64,
-    cpu_cycle: u16,
-    parity: CycleParity,
-    step_mode: StepMode,
-    is_in_frame_irq_window: bool,
-    forced_reset_just_happened: bool,
-}
-
-impl ApuClock {
-    pub fn new() -> Self {
-        Self {
-            total_cpu_cycles: 0,
-            cpu_cycle: 0,
-            parity: CycleParity::Get,
-            step_mode: StepMode::FourStep,
-            is_in_frame_irq_window: false,
-            forced_reset_just_happened: true,
-        }
-    }
-
-    pub fn reset(&mut self) {
-        self.cpu_cycle = 0;
-        self.is_in_frame_irq_window = false;
-        self.forced_reset_just_happened = true;
-    }
-
-    // Called every CPU cycle (not APU cycle)
-    pub fn tick(&mut self) {
-        self.total_cpu_cycles += 1;
-        self.cpu_cycle += 1;
-        self.cpu_cycle %= 2 * self.step_mode.frame_length();
-        self.parity.toggle();
-        self.forced_reset_just_happened = false;
-    }
-
-    pub fn cycle_parity(&self) -> CycleParity {
-        self.parity
-    }
-
-    pub fn cpu_cycle(&self) -> u16 {
-        self.cpu_cycle
-    }
-
-    pub fn apu_cycle(&self) -> u16 {
-        self.cpu_cycle() / 2
-    }
-
-    pub fn raw_apu_cycle(&self) -> u64 {
-        self.total_cpu_cycles / 2
-    }
-
-    pub fn is_forced_reset_cycle(&self) -> bool {
-        self.forced_reset_just_happened
-    }
-
-    pub fn is_in_frame_irq_window(&self) -> bool {
-        self.is_in_frame_irq_window
-    }
-}
-
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum CycleParity {
-    Get,
-    Put,
-}
-
-impl CycleParity {
-    pub fn toggle(&mut self) {
-        match *self {
-            Self::Get => *self = Self::Put,
-            Self::Put => *self = Self::Get,
-        }
-    }
-}
-
-impl fmt::Display for CycleParity {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            CycleParity::Get => write!(f, "GET"),
-            CycleParity::Put => write!(f, "PUT"),
-        }
     }
 }
 
