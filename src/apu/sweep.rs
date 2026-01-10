@@ -41,13 +41,14 @@ impl <const N: NegateBehavior> Sweep<N> {
 
     // Every half-frame
     pub fn tick(&mut self) {
-        self.divider.tick();
         if let Some(target_period) = self.target_period()
                 && self.enabled
                 && self.divider.is_zero()
                 && self.shift_count > u3::new(0) {
             self.frequency_timer.set_period(u16::from(target_period));
         }
+
+        self.divider.tick();
     }
 
     pub fn muting(&self) -> bool {
