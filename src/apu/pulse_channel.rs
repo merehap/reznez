@@ -33,8 +33,6 @@ impl <const N: NegateBehavior> PulseChannel<N> {
         self.sequencer.set_duty(fields.d.into());
         self.length_counter.start_halt(fields.h);
         self.envelope.set_control(fields.c, fields.e);
-
-        self.sweep.update_target_period();
     }
 
     // Write $4001 or $4005

@@ -10,7 +10,6 @@ pub struct Sweep<const N: NegateBehavior> {
     divider: Divider,
     negate: bool,
     shift_count: u3,
-    target_period: Option<u11>,
     frequency_timer: FrequencyTimer,
 }
 
@@ -23,30 +22,16 @@ impl <const N: NegateBehavior> Sweep<N> {
 
         self.divider.set_period(period);
         self.divider.prepare_to_reload();
-        self.update_target_period();
     }
 
     // Write $4002 or $4006
     pub fn set_current_period_low(&mut self, value: u8) {
         self.frequency_timer.set_period_low(value);
-        self.update_target_period();
     }
 
     // Write $4003 or $4007
     pub fn set_current_period_high_and_reset_index(&mut self, value: u3) {
         self.frequency_timer.set_period_high_and_reset_index(value);
-        self.update_target_period();
-    }
-
-    // Every cycle
-    pub fn update_target_period(&mut self) {
-        let current_period = self.current_period();
-        let change_amount = current_period >> u8::from(self.shift_count);
-        self.target_period = if self.negate {
-            Some(current_period.checked_sub(N.magnitude(change_amount)).unwrap_or(u11::ZERO))
-        } else {
-            current_period.checked_add(change_amount)
-        };
     }
 
     // Every PUT cycle
@@ -57,23 +42,32 @@ impl <const N: NegateBehavior> Sweep<N> {
     // Every half-frame
     pub fn tick(&mut self) {
         self.divider.tick();
-        if let Some(target_period) = self.target_period
+        if let Some(target_period) = self.target_period()
                 && self.enabled
                 && self.divider.is_zero()
                 && self.shift_count > u3::new(0) {
             self.frequency_timer.set_period(u16::from(target_period));
-            self.update_target_period();
         }
     }
 
     pub fn muting(&self) -> bool {
         let short_period = self.current_period() < u11::new(8);
-        let sweep_target_overflowed = self.target_period.is_none();
+        let sweep_target_overflowed = self.target_period().is_none();
         short_period || sweep_target_overflowed
     }
 
     fn current_period(&self) -> u11 {
         self.frequency_timer.period().try_into().unwrap()
+    }
+
+    fn target_period(&self) -> Option<u11> {
+        let current_period = self.current_period();
+        let change_amount = current_period >> u8::from(self.shift_count);
+        if self.negate {
+            Some(current_period.checked_sub(N.magnitude(change_amount)).unwrap_or(u11::ZERO))
+        } else {
+            current_period.checked_add(change_amount)
+        }
     }
 }
 
