@@ -1,7 +1,6 @@
 use splitbits::{splitbits_ux, splitbits_named_ux};
 use ux::{u2, u4};
 
-use crate::apu::apu_clock::CycleParity;
 use crate::apu::envelope::Envelope;
 use crate::apu::length_counter::LengthCounter;
 use crate::apu::sweep::{NegateBehavior, Sweep};
@@ -74,12 +73,10 @@ impl <const N: NegateBehavior> PulseChannel<N> {
         !self.length_counter.is_zero()
     }
 
-    pub(super) fn tick(&mut self, parity: CycleParity) {
-        if parity == CycleParity::Put {
-            let triggered = self.sweep.tick_frequency_timer();
-            if triggered {
-                self.sequencer.step();
-            }
+    pub(super) fn tick_put(&mut self) {
+        let triggered = self.sweep.tick_frequency_timer();
+        if triggered {
+            self.sequencer.step();
         }
     }
 

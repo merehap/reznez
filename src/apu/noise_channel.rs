@@ -1,7 +1,6 @@
 use splitbits::{splitbits, splitbits_named_ux};
 use ux::{u4, u15};
 
-use crate::apu::apu_clock::CycleParity;
 use crate::apu::envelope::Envelope;
 use crate::apu::length_counter::LengthCounter;
 use crate::apu::frequency_timer::FrequencyTimer;
@@ -74,13 +73,11 @@ impl NoiseChannel {
         !self.length_counter.is_zero()
     }
 
-    pub(super) fn tick(&mut self, parity: CycleParity) {
-        if parity == CycleParity::Put {
-            let triggered = self.frequency_timer.tick();
-            if triggered {
-                let feedback_index = if self.bit_6_mode { 6 } else { 1 };
-                self.shift_register.step(feedback_index);
-            }
+    pub(super) fn tick_put(&mut self) {
+        let triggered = self.frequency_timer.tick();
+        if triggered {
+            let feedback_index = if self.bit_6_mode { 6 } else { 1 };
+            self.shift_register.step(feedback_index);
         }
     }
 

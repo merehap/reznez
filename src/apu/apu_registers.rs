@@ -1,7 +1,7 @@
 use log::info;
 use splitbits::splitbits;
 
-use crate::apu::apu_clock::{ApuClock, CycleParity, StepMode};
+use crate::apu::apu_clock::{ApuClock, StepMode};
 use crate::apu::sweep::NegateBehavior;
 use crate::apu::pulse_channel::PulseChannel;
 use crate::apu::triangle_channel::TriangleChannel;
@@ -132,33 +132,40 @@ impl ApuRegisters {
             self.pending_step_mode, self.suppress_frame_irq, self.clock_reset_status, clock.cpu_cycle());
     }
 
-    pub fn tick(&mut self, clock: &mut ApuClock, cpu_pinout: &mut CpuPinout, dmc_dma: &mut DmcDma) {
+    pub fn tick_get(&mut self, clock: &mut ApuClock, cpu_pinout: &mut CpuPinout, dmc_dma: &mut DmcDma) {
         if self.counter_suppression_cycles > 0 {
             self.counter_suppression_cycles -= 1;
         }
 
-        let parity = clock.cycle_parity();
-        if clock.cycle_parity() == CycleParity::Get {
-            self.maybe_update_step_mode(clock);
+        self.maybe_update_step_mode(clock);
 
-            if self.should_acknowledge_frame_irq {
-                info!(target: "apuevents", "Frame IRQ acknowledged by APUSTATUS read. APU Cycle: {}", clock.cpu_cycle());
-                cpu_pinout.acknowledge_frame_irq();
-                self.frame_irq_status = false;
-                self.should_acknowledge_frame_irq = false;
-            }
+        if self.should_acknowledge_frame_irq {
+            info!(target: "apuevents", "Frame IRQ acknowledged by APUSTATUS read. APU Cycle: {}", clock.cpu_cycle());
+            cpu_pinout.acknowledge_frame_irq();
+            self.frame_irq_status = false;
+            self.should_acknowledge_frame_irq = false;
         }
 
         self.maybe_set_frame_irq_pending(clock, cpu_pinout);
-        if parity == CycleParity::Put {
-            self.maybe_decrement_counters(clock);
+        self.apply_length_counter_pending_values();
+
+        self.triangle.tick();
+        self.dmc.tick(dmc_dma);
+    }
+
+    pub fn tick_put(&mut self, clock: &mut ApuClock, cpu_pinout: &mut CpuPinout, dmc_dma: &mut DmcDma) {
+        if self.counter_suppression_cycles > 0 {
+            self.counter_suppression_cycles -= 1;
         }
 
+        self.maybe_set_frame_irq_pending(clock, cpu_pinout);
+        self.maybe_decrement_counters(clock);
         self.apply_length_counter_pending_values();
-        self.pulse_1.tick(parity);
-        self.pulse_2.tick(parity);
+
+        self.pulse_1.tick_put();
+        self.pulse_2.tick_put();
+        self.noise.tick_put();
         self.triangle.tick();
-        self.noise.tick(parity);
         self.dmc.tick(dmc_dma);
     }
 
