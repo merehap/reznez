@@ -506,8 +506,8 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (232, Some(0)) => m::mapper232::Mapper232.supported(),
         // Aladdin Deck Enhancer
         (232, Some(1)) => TodoSubmapper,
-
-        (233, _) => TodoMapper,
+        // Weird Super 42-in-1
+        (233, None) => m::mapper233::Mapper233.supported(),
         // Maxi 15 multicart
         (234, None) => m::mapper234::Mapper234::default().supported(),
         (235..=238, _) => TodoMapper,

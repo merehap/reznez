@@ -187,7 +187,7 @@ pub mod mapper210_2;
 pub mod mapper226;
 
 pub mod mapper232;
-
+pub mod mapper233;
 pub mod mapper234;
 
 pub mod mapper240;
