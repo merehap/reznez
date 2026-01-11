@@ -17,6 +17,7 @@ const LAYOUT: Layout = Layout::builder()
     .build();
 
 // Similar to mapper 71.
+// TODO: Rewrite using outer banks.
 pub struct Mapper232;
 
 impl Mapper for Mapper232 {
