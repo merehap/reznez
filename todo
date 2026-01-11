@@ -29,6 +29,11 @@ Give "Fix Metadata" prompt when metadata doesn't match the DB (Test case: mirror
 
 REWRITES NEEDED
 OamAddress probably shouldn't know anything about sprite fields. Should just be a simple u8. Remove sprite 0 determination since that is a property of SecondaryOam (or PPU dot 66).
+Low-level PRG address components API.
+    PRG locations as "oooo pppp aaaa aaaa"
+    Simple case: mapper 235
+    Complex case: Action 53
+    Unify normal high-level bank handling with this low-level API? Very likely.
 
 Signals-driven refactor.
     Blocked on removing cpu_peek/cpu_read/cpu_write from Mapper
