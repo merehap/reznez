@@ -503,8 +503,10 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         // BMC 31-IN-1
         (229, None) => m::mapper229::Mapper229.supported(),
 
-        (230..=231, _) => TodoMapper,
+        (230, _) => TodoMapper,
 
+        // 20-in-1
+        (231, None) => m::mapper231::Mapper231.supported(),
         // Quattro submappers
         (232, None) => UnspecifiedSubmapper,
         // Normal behavior
