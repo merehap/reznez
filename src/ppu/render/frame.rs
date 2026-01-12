@@ -52,12 +52,12 @@ impl Frame {
     pub fn pixel(&self, mask: Mask, column: PixelColumn, row: PixelRow) -> (Rgb, Sprite0Hit) {
         use Rgbt::{Opaque, Transparent};
         let mut background_pixel = self.buffer[(column, row)];
-        if !mask.left_background_columns_enabled() && column.is_in_left_margin() {
+        if !mask.left_background_columns_enabled && column.is_in_left_margin() {
             background_pixel = Transparent;
         }
 
         let (mut sprite_pixel, sprite_priority, is_sprite0) = self.sprite_buffer[(column, row)];
-        if !mask.left_sprite_columns_enabled() && column.is_in_left_margin() {
+        if !mask.left_sprite_columns_enabled && column.is_in_left_margin() {
             sprite_pixel = Transparent;
         }
 
@@ -70,7 +70,7 @@ impl Frame {
             (Opaque(rgb), Opaque(_)  , Behind ) => rgb,
         };
 
-        if mask.greyscale_enabled() {
+        if mask.greyscale_enabled {
             rgb = rgb.to_greyscale();
         }
 

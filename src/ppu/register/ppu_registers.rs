@@ -98,11 +98,11 @@ impl PpuRegisters {
     }
 
     pub fn background_enabled(&self) -> bool {
-        self.mask.background_enabled()
+        self.mask.background_enabled
     }
 
     pub fn sprites_enabled(&self) -> bool {
-        self.mask.sprites_enabled()
+        self.mask.sprites_enabled
     }
 
     pub fn rendering_enabled(&self) -> bool {
@@ -268,7 +268,7 @@ impl PpuRegisters {
     pub fn write_mask(&mut self, value: u8) {
         self.ppu_io_bus.update_from_write(value);
         self.mask.set(value);
-        if self.rendering_enabled != (self.mask.sprites_enabled() || self.mask.background_enabled()) {
+        if self.rendering_enabled != (self.mask.sprites_enabled || self.mask.background_enabled) {
             self.rendering_toggle_state = RenderingToggleState::Pending;
         }
     }
