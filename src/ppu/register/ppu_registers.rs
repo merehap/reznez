@@ -1,3 +1,6 @@
+use std::cell::Cell;
+use std::rc::Rc;
+
 use log::info;
 
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
@@ -44,6 +47,7 @@ pub struct PpuRegisters {
 
 impl PpuRegisters {
     pub fn new() -> Self {
+        let ppu_io_bus_value = Rc::new(Cell::new(0));
         Self {
             ctrl: Ctrl::new(),
             mask: Mask::all_disabled(),
@@ -55,7 +59,7 @@ impl PpuRegisters {
             fine_x_scroll: ColumnInTile::Zero,
             next_address: PpuAddress::ZERO,
 
-            ppu_io_bus: PpuIoBus::new(),
+            ppu_io_bus: PpuIoBus::new(ppu_io_bus_value),
 
             write_toggle: WriteToggle::FirstByte,
             suppress_vblank_active: false,
@@ -66,27 +70,27 @@ impl PpuRegisters {
     }
 
     pub fn nmi_enabled(&self) -> bool {
-        self.ctrl.nmi_enabled()
+        self.ctrl.nmi_enabled
     }
 
     pub fn sprite_height(&self) -> SpriteHeight {
-        self.ctrl.sprite_height()
+        self.ctrl.sprite_height
     }
 
     pub fn background_table_side(&self) -> PatternTableSide {
-        self.ctrl.background_table_side()
+        self.ctrl.background_table_side
     }
 
     pub fn sprite_table_side(&self) -> PatternTableSide {
-        self.ctrl.sprite_table_side()
+        self.ctrl.sprite_table_side
     }
 
     pub fn current_address_increment(&self) -> AddressIncrement {
-        self.ctrl.current_address_increment()
+        self.ctrl.current_address_increment
     }
 
     pub fn base_name_table_quadrant(&self) -> NameTableQuadrant {
-        self.ctrl.base_name_table_quadrant()
+        self.ctrl.base_name_table_quadrant
     }
 
     pub fn mask(&self) -> Mask {
@@ -186,7 +190,7 @@ impl PpuRegisters {
     }
 
     pub fn can_generate_nmi(&self) -> bool {
-        self.status.vblank_active() && self.ctrl.nmi_enabled()
+        self.status.vblank_active() && self.ctrl.nmi_enabled
     }
 
     pub fn reset_recently(&self) -> bool {

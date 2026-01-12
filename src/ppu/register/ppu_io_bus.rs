@@ -11,9 +11,9 @@ pub struct PpuIoBus {
 }
 
 impl PpuIoBus {
-    pub fn new() -> PpuIoBus {
+    pub fn new(value: Rc<Cell<u8>>) -> PpuIoBus {
         PpuIoBus {
-            value: Rc::new(Cell::new(0)),
+            value,
             scanlines_until_decay: None,
             scanlines_until_unused_status_bits_decay: None,
         }

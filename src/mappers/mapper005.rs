@@ -185,7 +185,7 @@ impl Mapper for Mapper005 {
         match *addr {
             // PPU Ctrl
             0x2000 => {
-                self.sprite_height = Ctrl::from_u8(value).sprite_height();
+                self.sprite_height = Ctrl::from_u8(value).sprite_height;
                 self.update_chr_layout(bus);
             }
             // PPU Mask
