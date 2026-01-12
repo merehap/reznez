@@ -130,31 +130,31 @@ impl PpuRegisters {
 
     pub(in crate::ppu) fn start_vblank(&mut self, clock: &PpuClock) {
         info!(target: "ppuflags", " {clock}\tStarting vblank.");
-        self.status.set_vblank_active(true);
+        self.status.vblank_active = true;
     }
 
     pub(in crate::ppu) fn stop_vblank(&mut self, clock: &PpuClock) {
-        if self.status.vblank_active() {
+        if self.status.vblank_active {
             info!(target: "ppuflags", " {clock}\tStopping vblank.");
         }
 
-        self.status.set_vblank_active(false);
+        self.status.vblank_active = false;
     }
 
     pub(in crate::ppu) fn set_sprite0_hit(&mut self) {
-        self.status.set_sprite0_hit(true);
+        self.status.sprite0_hit = true;
     }
 
     pub(in crate::ppu) fn clear_sprite0_hit(&mut self) {
-        self.status.set_sprite0_hit(false);
+        self.status.sprite0_hit = false;
     }
 
     pub(in crate::ppu) fn set_sprite_overflow(&mut self) {
-        self.status.set_sprite_overflow(true);
+        self.status.sprite_overflow = true;
     }
 
     pub(in crate::ppu) fn clear_sprite_overflow(&mut self) {
-        self.status.set_sprite_overflow(false);
+        self.status.sprite_overflow = false;
     }
 
     pub(in crate::ppu) fn clear_reset(&mut self) {
@@ -190,7 +190,7 @@ impl PpuRegisters {
     }
 
     pub fn can_generate_nmi(&self) -> bool {
-        self.status.vblank_active() && self.ctrl.nmi_enabled
+        self.status.vblank_active && self.ctrl.nmi_enabled
     }
 
     pub fn reset_recently(&self) -> bool {
