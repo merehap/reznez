@@ -3,14 +3,14 @@ use splitbits::splitbits;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Mask {
-    pub greyscale_enabled: bool,
-    pub left_background_columns_enabled: bool,
-    pub left_sprite_columns_enabled: bool,
-    pub background_enabled: bool,
-    pub sprites_enabled: bool,
-    pub emphasize_red: bool,
-    pub emphasize_green: bool,
-    pub emphasize_blue: bool,
+    greyscale_enabled: bool,
+    left_background_columns_enabled: bool,
+    left_sprite_columns_enabled: bool,
+    background_enabled: bool,
+    sprites_enabled: bool,
+    emphasize_red: bool,
+    emphasize_green: bool,
+    emphasize_blue: bool,
 }
 
 impl Mask {
@@ -30,6 +30,26 @@ impl Mask {
         ((self.emphasize_blue as usize) << 2)
             | ((self.emphasize_green as usize) << 1)
             | (self.emphasize_red as usize)
+    }
+
+    pub fn greyscale_enabled(&self) -> bool {
+        self.greyscale_enabled
+    }
+
+    pub fn left_background_columns_enabled(&self) -> bool {
+        self.left_background_columns_enabled
+    }
+
+    pub fn left_sprite_columns_enabled(&self) -> bool {
+        self.left_sprite_columns_enabled
+    }
+
+    pub fn background_enabled(&self) -> bool {
+        self.background_enabled
+    }
+
+    pub fn sprites_enabled(&self) -> bool {
+        self.sprites_enabled
     }
 
     pub fn set(&mut self, value: u8) {

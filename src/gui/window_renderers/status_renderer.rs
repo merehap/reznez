@@ -73,7 +73,7 @@ impl WindowRenderer for StatusRenderer {
                     ui.label("Sprites");
                     ui.label(format!(
                         "Enabled: {}, Pattern Table: {:?} side",
-                        ppu_regs.sprites_enabled(),
+                        ppu_regs.mask().sprites_enabled(),
                         ppu_regs.sprite_table_side(),
                     ));
                     ui.end_row();
