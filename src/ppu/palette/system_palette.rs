@@ -3,7 +3,7 @@ use num_traits::FromPrimitive;
 
 use crate::ppu::palette::color::{Brightness, Color, Hue};
 use crate::ppu::palette::rgb::Rgb;
-use crate::ppu::register::registers::mask::Mask;
+use crate::ppu::register::ppu_registers::Mask;
 
 // Good enough emphasis for now.
 // Taken from https://forums.nesdev.org/viewtopic.php?p=4634

@@ -3,7 +3,7 @@ use crate::ppu::palette::palette::Palette;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::palette::rgb::Rgb;
 use crate::ppu::palette::system_palette::SystemPalette;
-use crate::ppu::register::registers::mask::Mask;
+use crate::ppu::register::ppu_registers::Mask;
 
 // TODO: Support https://wiki.nesdev.org/w/index.php?title=PPU_palettes#The_background_palette_hack
 #[derive(Debug)]

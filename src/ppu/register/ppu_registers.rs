@@ -8,7 +8,6 @@ use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::pixel_index::ColumnInTile;
 use crate::ppu::register::ppu_io_bus::PpuIoBus;
-use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::register::registers::status::Status;
 use crate::ppu::sprite::oam::Oam;
 use crate::ppu::sprite::oam_address::OamAddress;
@@ -270,10 +269,39 @@ impl PpuRegisters {
     // 0x2001
     pub fn write_mask(&mut self, value: u8) {
         self.ppu_io_bus.update_from_write(value);
-        self.mask.set(value);
+        let old_mask = self.mask;
+        let fields = splitbits!(value, "efgs blmz");
+        self.mask.emphasize_blue = fields.e;
+        self.mask.emphasize_green = fields.f;
+        self.mask.emphasize_red = fields.g;
+        self.mask.sprites_enabled = fields.s;
+        self.mask.background_enabled = fields.b;
+        self.mask.left_sprite_columns_enabled = fields.l;
+        self.mask.left_background_columns_enabled = fields.m;
+        self.mask.greyscale_enabled = fields.z;
+
         if self.rendering_enabled != (self.mask.sprites_enabled() || self.mask.background_enabled()) {
             self.rendering_toggle_state = RenderingToggleState::Pending;
         }
+
+        // TODO: Merge this into the standard, higher level change-logging.
+        log_change(old_mask.emphasize_blue, self.mask.emphasize_blue, "Blue emphasis");
+        log_change(old_mask.emphasize_green, self.mask.emphasize_green, "Green emphasis");
+        log_change(old_mask.emphasize_red, self.mask.emphasize_red, "Red emphasis");
+        log_change(old_mask.sprites_enabled, self.mask.sprites_enabled, "Sprites");
+        log_change(old_mask.background_enabled, self.mask.background_enabled, "Background");
+
+        log_change(
+            old_mask.left_sprite_columns_enabled,
+            self.mask.left_sprite_columns_enabled,
+            "Left sprite columns",
+        );
+        log_change(
+            old_mask.left_background_columns_enabled,
+            self.mask.left_background_columns_enabled,
+            "Left background columns",
+        );
+        log_change(old_mask.greyscale_enabled, self.mask.greyscale_enabled, "Greyscale");
     }
 
     pub fn write_oam_addr(&mut self, value: u8) {
@@ -420,4 +448,65 @@ pub enum ExtPinRole {
 pub enum AddressIncrement {
     Right,
     Down,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Mask {
+    greyscale_enabled: bool,
+    left_background_columns_enabled: bool,
+    left_sprite_columns_enabled: bool,
+    background_enabled: bool,
+    sprites_enabled: bool,
+    emphasize_red: bool,
+    emphasize_green: bool,
+    emphasize_blue: bool,
+}
+
+impl Mask {
+    pub fn all_disabled() -> Self {
+        Self::default()
+    }
+
+    pub fn full_screen_enabled() -> Mask {
+        Self {
+            left_background_columns_enabled: true,
+            left_sprite_columns_enabled: true,
+            .. Self::all_disabled()
+        }
+    }
+
+    pub fn emphasis_index(self) -> usize {
+        ((self.emphasize_blue as usize) << 2)
+            | ((self.emphasize_green as usize) << 1)
+            | (self.emphasize_red as usize)
+    }
+
+    pub fn greyscale_enabled(self) -> bool {
+        self.greyscale_enabled
+    }
+
+    pub fn left_background_columns_enabled(self) -> bool {
+        self.left_background_columns_enabled
+    }
+
+    pub fn left_sprite_columns_enabled(self) -> bool {
+        self.left_sprite_columns_enabled
+    }
+
+    pub fn background_enabled(self) -> bool {
+        self.background_enabled
+    }
+
+    pub fn sprites_enabled(self) -> bool {
+        self.sprites_enabled
+    }
+}
+
+fn log_change(old: bool, new: bool, message_prefix: &str) {
+    let message = match (old, new) {
+        (false, true) => format!("\t{message_prefix} enabled."),
+        (true, false) => format!("\t{message_prefix} disabled."),
+        _ => return,
+    };
+    info!(target: "ppuflags", "{message}");
 }

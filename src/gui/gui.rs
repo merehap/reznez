@@ -10,7 +10,7 @@ use log::{info, warn};
 use crate::config::Config;
 use crate::controller::joypad::{Button, ButtonStatus};
 use crate::nes::Nes;
-use crate::ppu::register::registers::mask::Mask;
+use crate::ppu::register::ppu_registers::Mask;
 use crate::ppu::render::frame::Frame;
 use crate::ppu::render::frame_rate::TargetFrameRate;
 

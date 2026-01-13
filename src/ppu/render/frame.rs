@@ -8,7 +8,7 @@ use crate::gui::debug_screens::pattern_table::Tile;
 use crate::ppu::pixel_index::{
     ColumnInTile, PixelColumn, PixelIndex, PixelRow, RowInTile,
 };
-use crate::ppu::register::registers::mask::Mask;
+use crate::ppu::register::ppu_registers::Mask;
 use crate::ppu::render::ppm::Ppm;
 use crate::ppu::sprite::sprite_attributes::Priority;
 

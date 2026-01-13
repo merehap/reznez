@@ -1,4 +1,3 @@
-pub mod mask;
 pub mod status;
 
 pub mod attribute_register;
