@@ -48,11 +48,10 @@ impl WindowRenderer for PatternTableRenderer {
 
         let mut offset = 0;
         for side in [PatternTableSide::Left, PatternTableSide::Right] {
-            let palette = if bus.ppu_regs.sprite_table_side() == side {
+            let palette = if bus.ppu_regs.sprite_table_side == side {
                 bus.palette_table().sprite_palette(PaletteTableIndex::Zero)
             } else {
-                bus.palette_table()
-                    .background_palette(PaletteTableIndex::Zero)
+                bus.palette_table().background_palette(PaletteTableIndex::Zero)
             };
             for index in 0..=255 {
                 PatternTable::from_mem(bus, side).render_background_tile(

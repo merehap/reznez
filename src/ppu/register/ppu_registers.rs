@@ -1,17 +1,13 @@
-use std::cell::Cell;
-use std::rc::Rc;
-
 use log::info;
+use splitbits::splitbits;
 
+use crate::mapper::PatternTableSide;
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
-use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::ColumnInTile;
 use crate::ppu::register::ppu_io_bus::PpuIoBus;
-use crate::ppu::register::registers::ctrl;
-use crate::ppu::register::registers::ctrl::{AddressIncrement, Ctrl};
 use crate::ppu::register::registers::mask::Mask;
 use crate::ppu::register::registers::status::Status;
 use crate::ppu::sprite::oam::Oam;
@@ -19,9 +15,16 @@ use crate::ppu::sprite::oam_address::OamAddress;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::ppu::tile_number::TileNumber;
 
-#[derive(Clone)]
 pub struct PpuRegisters {
-    ctrl: Ctrl,
+    // PPUCTRL sub-registers
+    pub nmi_enabled: bool,
+    pub ext_pin_role: ExtPinRole,
+    pub sprite_height: SpriteHeight,
+    pub background_table_side: PatternTableSide,
+    pub sprite_table_side: PatternTableSide,
+    pub current_address_increment: AddressIncrement,
+    pub base_name_table_quadrant: NameTableQuadrant,
+
     mask: Mask,
     status: Status,
     pub oam_addr: OamAddress,
@@ -47,9 +50,16 @@ pub struct PpuRegisters {
 
 impl PpuRegisters {
     pub fn new() -> Self {
-        let ppu_io_bus_value = Rc::new(Cell::new(0));
         Self {
-            ctrl: Ctrl::new(),
+            // PPUCTRL sub-registers
+            nmi_enabled: false,
+            ext_pin_role: ExtPinRole::Read,
+            sprite_height: SpriteHeight::Normal,
+            background_table_side: PatternTableSide::Left,
+            sprite_table_side: PatternTableSide::Left,
+            current_address_increment: AddressIncrement::Right,
+            base_name_table_quadrant: NameTableQuadrant::TopLeft,
+
             mask: Mask::all_disabled(),
             status: Status::new(),
             oam_addr: OamAddress::new(),
@@ -59,7 +69,7 @@ impl PpuRegisters {
             fine_x_scroll: ColumnInTile::Zero,
             next_address: PpuAddress::ZERO,
 
-            ppu_io_bus: PpuIoBus::new(ppu_io_bus_value),
+            ppu_io_bus: PpuIoBus::new(),
 
             write_toggle: WriteToggle::FirstByte,
             suppress_vblank_active: false,
@@ -69,29 +79,14 @@ impl PpuRegisters {
         }
     }
 
-    pub fn nmi_enabled(&self) -> bool {
-        self.ctrl.nmi_enabled
-    }
-
-    pub fn sprite_height(&self) -> SpriteHeight {
-        self.ctrl.sprite_height
-    }
-
-    pub fn background_table_side(&self) -> PatternTableSide {
-        self.ctrl.background_table_side
-    }
-
-    pub fn sprite_table_side(&self) -> PatternTableSide {
-        self.ctrl.sprite_table_side
-    }
-
-    pub fn current_address_increment(&self) -> AddressIncrement {
-        self.ctrl.current_address_increment
-    }
-
-    pub fn base_name_table_quadrant(&self) -> NameTableQuadrant {
-        self.ctrl.base_name_table_quadrant
-    }
+    // PPUCTRL sub-registers
+    pub fn nmi_enabled(&self) -> bool { self.nmi_enabled }
+    pub fn ext_pin_role(&self) -> ExtPinRole { self.ext_pin_role }
+    pub fn sprite_height(&self) -> SpriteHeight { self.sprite_height }
+    pub fn background_table_side(&self) -> PatternTableSide { self.background_table_side }
+    pub fn sprite_table_side(&self) -> PatternTableSide { self.sprite_table_side }
+    pub fn current_address_increment(&self) -> AddressIncrement { self.current_address_increment }
+    pub fn base_name_table_quadrant(&self) -> NameTableQuadrant { self.base_name_table_quadrant }
 
     pub fn mask(&self) -> Mask {
         self.mask
@@ -190,7 +185,7 @@ impl PpuRegisters {
     }
 
     pub fn can_generate_nmi(&self) -> bool {
-        self.status.vblank_active && self.ctrl.nmi_enabled
+        self.status.vblank_active && self.nmi_enabled
     }
 
     pub fn reset_recently(&self) -> bool {
@@ -250,7 +245,7 @@ impl PpuRegisters {
 
     pub fn set_ppu_read_buffer_and_advance(&mut self, new_buffer_data: u8) {
         self.ppu_read_buffer = new_buffer_data;
-        self.current_address.advance(self.current_address_increment());
+        self.current_address.advance(self.current_address_increment);
     }
 
     pub fn write_ppu_io_bus(&mut self, register_value: u8) {
@@ -258,10 +253,18 @@ impl PpuRegisters {
     }
 
     // 0x2000
-    pub fn write_ctrl(&mut self, value: u8) {
+    pub fn set_ctrl(&mut self, value: u8) {
+        let fields = splitbits!(value, "nehbsiqq");
+        self.nmi_enabled = fields.n;
+        self.ext_pin_role = [ExtPinRole::Read, ExtPinRole::Write][fields.e as usize];
+        self.sprite_height = [SpriteHeight::Normal, SpriteHeight::Tall][fields.h as usize];
+        self.background_table_side = [PatternTableSide::Left, PatternTableSide::Right][fields.b as usize];
+        self.sprite_table_side = [PatternTableSide::Left, PatternTableSide::Right][fields.s as usize];
+        self.current_address_increment = [AddressIncrement::Right, AddressIncrement::Down][fields.i as usize];
+        self.base_name_table_quadrant =  NameTableQuadrant::ALL[fields.q as usize];
+
+        self.next_address.set_name_table_quadrant(self.base_name_table_quadrant);
         self.ppu_io_bus.update_from_write(value);
-        self.ctrl = ctrl::Ctrl::from_u8(value);
-        self.next_address.set_name_table_quadrant(NameTableQuadrant::from_last_two_bits(value));
     }
 
     // 0x2001
@@ -312,7 +315,7 @@ impl PpuRegisters {
 
     pub fn write_ppu_data(&mut self, value: u8) {
         self.ppu_io_bus.update_from_write(value);
-        self.current_address.advance(self.current_address_increment());
+        self.current_address.advance(self.current_address_increment);
     }
 
     pub fn set_next_address_x_scroll(&mut self, value: u8) {
@@ -339,7 +342,7 @@ impl PpuRegisters {
 
     pub fn address_for_low_pattern_byte(&self, tile_number: TileNumber) -> PpuAddress {
         PpuAddress::in_pattern_table(
-            self.background_table_side(),
+            self.background_table_side,
             tile_number,
             self.current_address.fine_y_scroll(),
             false,
@@ -348,7 +351,7 @@ impl PpuRegisters {
 
     pub fn address_for_high_pattern_byte(&self, tile_number: TileNumber) -> PpuAddress {
         PpuAddress::in_pattern_table(
-            self.background_table_side(),
+            self.background_table_side,
             tile_number,
             self.current_address.y_scroll().fine(),
             true,
@@ -405,4 +408,16 @@ pub struct PpuRegistersTickResult {
 pub enum Toggle {
     Enable,
     Disable,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum ExtPinRole {
+    Read,
+    Write,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum AddressIncrement {
+    Right,
+    Down,
 }

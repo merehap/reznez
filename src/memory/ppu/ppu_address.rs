@@ -9,7 +9,7 @@ use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
-use crate::ppu::register::registers::ctrl::AddressIncrement;
+use crate::ppu::register::ppu_registers::AddressIncrement;
 use crate::ppu::tile_number::TileNumber;
 
 /*

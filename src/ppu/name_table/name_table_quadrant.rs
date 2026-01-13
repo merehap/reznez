@@ -8,7 +8,6 @@ use ux::u2;
 
 use crate::mapper::ChrBankRegisterId;
 use crate::memory::bank::bank::ChrSourceRegisterId;
-use crate::util::bit_util::get_bit;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, FromPrimitive, Specifier)]
 pub enum NameTableQuadrant {
@@ -21,15 +20,6 @@ pub enum NameTableQuadrant {
 #[rustfmt::skip]
 impl NameTableQuadrant {
     pub const ALL: [Self; 4] = [Self::TopLeft, Self::TopRight, Self::BottomLeft, Self::BottomRight];
-
-    pub fn from_last_two_bits(value: u8) -> NameTableQuadrant {
-        match (get_bit(value, 6), get_bit(value, 7)) {
-            (false, false) => NameTableQuadrant::TopLeft,
-            (false, true ) => NameTableQuadrant::TopRight,
-            (true , false) => NameTableQuadrant::BottomLeft,
-            (true , true ) => NameTableQuadrant::BottomRight,
-        }
-    }
 
     pub fn next_horizontal(self) -> NameTableQuadrant {
         use NameTableQuadrant::*;

@@ -6,7 +6,6 @@ use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
 use crate::ppu::constants::ATTRIBUTE_START_INDEX;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
-use crate::ppu::register::registers::ctrl::Ctrl;
 
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(1024 * KIBIBYTE)
@@ -185,7 +184,7 @@ impl Mapper for Mapper005 {
         match *addr {
             // PPU Ctrl
             0x2000 => {
-                self.sprite_height = Ctrl::from_u8(value).sprite_height;
+                self.sprite_height = if (value & 0b0010_0000) == 0 { SpriteHeight::Normal } else { SpriteHeight::Tall };
                 self.update_chr_layout(bus);
             }
             // PPU Mask

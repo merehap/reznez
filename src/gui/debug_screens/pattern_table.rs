@@ -42,7 +42,6 @@ impl<'a> PatternTable<'a> {
         Self::from_mem(bus, bus.ppu_regs.sprite_table_side())
     }
 
-
     pub fn render_pixel(
         &self,
         tile_number: TileNumber,
