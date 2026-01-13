@@ -201,11 +201,10 @@ impl PpuRegisters {
 
     // 0x2002
     pub fn read_status(&mut self, clock: &PpuClock) -> u8 {
-        self.write_toggle = WriteToggle::FirstByte;
-
         let value = self.peek_status();
         self.ppu_io_bus.update_from_status_read(value);
 
+        self.write_toggle = WriteToggle::FirstByte;
         self.stop_vblank(clock);
         // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
         if clock.scanline() == 241 && clock.cycle() == 0 {
@@ -253,6 +252,8 @@ impl PpuRegisters {
 
     // 0x2000
     pub fn set_ctrl(&mut self, value: u8) {
+        self.ppu_io_bus.update_from_write(value);
+
         let fields = splitbits!(value, "nehbsiqq");
         self.nmi_enabled = fields.n;
         self.ext_pin_role = [ExtPinRole::Read, ExtPinRole::Write][fields.e as usize];
@@ -263,12 +264,12 @@ impl PpuRegisters {
         self.base_name_table_quadrant =  NameTableQuadrant::ALL[fields.q as usize];
 
         self.next_address.set_name_table_quadrant(self.base_name_table_quadrant);
-        self.ppu_io_bus.update_from_write(value);
     }
 
     // 0x2001
     pub fn write_mask(&mut self, value: u8) {
         self.ppu_io_bus.update_from_write(value);
+
         let old_mask = self.mask;
         let fields = splitbits!(value, "efgs blmz");
         self.mask.emphasize_blue = fields.e;
@@ -306,29 +307,33 @@ impl PpuRegisters {
 
     pub fn write_oam_addr(&mut self, value: u8) {
         self.ppu_io_bus.update_from_write(value);
+
         self.oam_addr = OamAddress::from_u8(value);
     }
 
     pub fn write_oam_data(&mut self, oam: &mut Oam, value: u8) {
-        oam.write(self.oam_addr, value);
         self.ppu_io_bus.update_from_write(value);
-        // Advance to next sprite byte to write.
+
+        oam.write(self.oam_addr, value);
         self.oam_addr.increment();
     }
 
     // 0x2005
     pub fn write_scroll(&mut self, dimension: u8) {
+        self.ppu_io_bus.update_from_write(dimension);
+
         match self.write_toggle {
             WriteToggle::FirstByte => self.set_next_address_x_scroll(dimension),
             WriteToggle::SecondByte => self.next_address.set_y_scroll(dimension),
         }
 
         self.write_toggle.toggle();
-        self.ppu_io_bus.update_from_write(dimension);
     }
 
     // 0x2006
     pub fn write_ppu_addr(&mut self, value: u8) {
+        self.write_ppu_io_bus(value);
+
         match self.write_toggle {
             WriteToggle::FirstByte => self.next_address.set_high_byte(value),
             WriteToggle::SecondByte => {
@@ -338,11 +343,11 @@ impl PpuRegisters {
         }
 
         self.write_toggle.toggle();
-        self.write_ppu_io_bus(value);
     }
 
     pub fn write_ppu_data(&mut self, value: u8) {
         self.ppu_io_bus.update_from_write(value);
+
         self.current_address.advance(self.current_address_increment);
     }
 
