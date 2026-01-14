@@ -82,7 +82,7 @@ impl Ppu {
             Ppu::execute_cycle_action(bus, mapper, frame, cycle_action);
         }
 
-        if bus.ppu_regs.can_generate_nmi() {
+        if bus.ppu_regs.vblank_active && bus.ppu_regs.nmi_enabled() {
             bus.cpu_pinout.nmi_signal_detector.set_value(SignalLevel::Low);
         } else {
             bus.cpu_pinout.nmi_signal_detector.set_value(SignalLevel::High);
@@ -95,13 +95,27 @@ impl Ppu {
         use CycleAction::*;
         match cycle_action {
             SetPatternIndexAddress =>
-                bus.set_ppu_address_bus(mapper, bus.ppu_regs.address_in_name_table()),
+                bus.set_ppu_address_bus(mapper, bus.ppu_regs.current_address.to_name_table_address()),
             SetPaletteIndexAddress =>
-                bus.set_ppu_address_bus(mapper, bus.ppu_regs.address_in_attribute_table()),
-            SetPatternLowAddress =>
-                bus.set_ppu_address_bus(mapper, bus.ppu_regs.address_for_low_pattern_byte(bus.ppu.next_tile_number)),
-            SetPatternHighAddress =>
-                bus.set_ppu_address_bus(mapper, bus.ppu_regs.address_for_high_pattern_byte(bus.ppu.next_tile_number)),
+                bus.set_ppu_address_bus(mapper, bus.ppu_regs.current_address.to_attribute_table_address()),
+            SetPatternLowAddress => {
+                let addr = PpuAddress::in_pattern_table(
+                    bus.ppu_regs.background_table_side(),
+                    bus.ppu.next_tile_number,
+                    bus.ppu_regs.current_address.fine_y_scroll(),
+                    false,
+                );
+                bus.set_ppu_address_bus(mapper, addr);
+            }
+            SetPatternHighAddress => {
+                let addr = PpuAddress::in_pattern_table(
+                    bus.ppu_regs.background_table_side(),
+                    bus.ppu.next_tile_number,
+                    bus.ppu_regs.current_address.fine_y_scroll(),
+                    true,
+                );
+                bus.set_ppu_address_bus(mapper, addr);
+            }
 
             GetPatternIndex => bus.ppu.next_tile_number = TileNumber::new(bus.ppu_internal_read(mapper).value()),
             GetPatternLowByte => {
@@ -117,7 +131,8 @@ impl Ppu {
             GetPaletteIndex => {
                 let attribute_byte = bus.ppu_internal_read(mapper).value();
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                bus.ppu.attribute_register.set_pending_palette_table_index(bus.ppu_regs.palette_table_index(attribute_byte));
+                let index = bus.ppu_regs.current_address.to_palette_table_index(attribute_byte);
+                bus.ppu.attribute_register.set_pending_palette_table_index(index);
             }
             PrepareForNextTile => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
@@ -140,7 +155,7 @@ impl Ppu {
             }
             ResetTileColumn => {
                 if !bus.ppu_regs.background_enabled() && !bus.ppu_regs.sprites_enabled() { return; }
-                bus.ppu_regs.reset_tile_column();
+                bus.ppu_regs.current_address.set_tile_column_from(bus.ppu_regs.next_address);
             }
             SetPixel => {
                 let clock = bus.ppu_clock();

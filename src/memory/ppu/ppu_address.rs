@@ -7,6 +7,7 @@ use splitbits::{splitbits_named, splitbits_named_into_ux, splitbits_named_ux, co
 use crate::mapper::KIBIBYTE_U16;
 use crate::ppu::name_table::background_tile_index::{TileColumn, TileRow};
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
+use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::pattern_table_side::PatternTableSide;
 use crate::ppu::pixel_index::{ColumnInTile, PixelColumn, PixelRow, RowInTile};
 use crate::ppu::register::ppu_registers::AddressIncrement;
@@ -37,19 +38,27 @@ impl PpuAddress {
         }
     }
 
-    pub fn in_name_table(n: NameTableQuadrant, c: TileColumn, r: TileRow) -> PpuAddress {
+    pub fn to_name_table_address(self) -> PpuAddress {
+        let n = self.name_table_quadrant();
+        let r = self.coarse_y_scroll();
+        let c = self.coarse_x_scroll();
         PpuAddress::from_u16(combinebits!("0010 nn rrrrr ccccc"))
     }
 
-    pub fn in_attribute_table(n: NameTableQuadrant, c: TileColumn, r: TileRow) -> PpuAddress {
-        let r = r.to_u16() / 4;
-        let c = c.to_u16() / 4;
+    pub fn to_attribute_table_address(self) -> PpuAddress {
+        let n = self.name_table_quadrant();
+        let r = self.coarse_y_scroll().to_u16() >> 2;
+        let c = self.coarse_x_scroll().to_u16() >> 2;
         PpuAddress::from_u16(combinebits!("0010 nn 1111r rrccc"))
     }
 
     pub fn in_pattern_table(s: PatternTableSide, p: TileNumber, r: RowInTile, select_high: bool) -> PpuAddress {
         let h = select_high;
         PpuAddress::from_u16(combinebits!("000s pppp pppp hrrr"))
+    }
+
+    pub fn to_palette_table_index(self, attribute_byte: u8) -> PaletteTableIndex {
+        PaletteTableIndex::from_attribute_byte(attribute_byte, self.coarse_x_scroll(), self.coarse_y_scroll())
     }
 
     pub fn advance(&mut self, address_increment: AddressIncrement) {
@@ -197,6 +206,16 @@ impl PpuAddress {
 
     pub fn copy_y_scroll(&mut self, other: PpuAddress) {
         self.set_y_scroll(other.y_scroll().to_u8());
+    }
+
+    pub fn set_tile_column_from(&mut self, other: PpuAddress) {
+        // Reset coarse X scroll. For non-scrolling cartridges, this always means setting it to 0.
+        self.set_coarse_x_scroll(other.coarse_x_scroll());
+
+        // Reset the selected name table to be one on the left side (0x2000 or 0x2800).
+        let mut name_table_quadrant = self.name_table_quadrant();
+        name_table_quadrant.copy_horizontal_side_from(other.name_table_quadrant());
+        self.set_name_table_quadrant(name_table_quadrant);
     }
 
     pub fn copy_name_table_quadrant(&mut self, other: PpuAddress) {

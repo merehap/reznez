@@ -61,7 +61,7 @@ impl WindowRenderer for StatusRenderer {
                     ui.label(format!("{:?}", ppu_regs.base_name_table_quadrant()));
                     ui.end_row();
                     ui.label("Active Name Table");
-                    ui.label(format!("{:?}", nes.bus().ppu_regs.active_name_table_quadrant()));
+                    ui.label(format!("{:?}", nes.bus().ppu_regs.next_address.name_table_quadrant()));
                     ui.end_row();
                     ui.label("Background");
                     ui.label(format!(

@@ -5,13 +5,11 @@ use crate::mapper::PatternTableSide;
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
 use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
-use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::pixel_index::ColumnInTile;
 use crate::ppu::register::ppu_io_bus::PpuIoBus;
 use crate::ppu::sprite::oam::Oam;
 use crate::ppu::sprite::oam_address::OamAddress;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
-use crate::ppu::tile_number::TileNumber;
 
 pub struct PpuRegisters {
     // PPUCTRL (0x2000) sub-registers
@@ -31,7 +29,7 @@ pub struct PpuRegisters {
     rendering_toggle_state: RenderingToggleState,
 
     // PPUSTATUS (0x2002) sub-registers
-    vblank_active: bool,
+    pub vblank_active: bool,
     pub sprite0_hit: bool,
     pub sprite_overflow: bool,
 
@@ -45,7 +43,7 @@ pub struct PpuRegisters {
     pub fine_x_scroll: ColumnInTile, // "x"
 
     // PPUSCROLL (0x2005) and PPUADDR (0x2006)
-    pub(in crate::ppu) next_address: PpuAddress, // "t"
+    pub next_address: PpuAddress, // "t"
     write_toggle: WriteToggle, // "w"
 
     // PPUADDR (0x2006) and PPUDATA (0x2007)
@@ -296,14 +294,24 @@ impl PpuRegisters {
         value_read
     }
 
+    // Read 0x2007
+    pub fn set_ppu_read_buffer_and_advance(&mut self, new_buffer_data: u8) {
+        self.ppu_read_buffer = new_buffer_data;
+        self.current_address.advance(self.current_address_increment);
+    }
+
     // Write 0x2007
     pub fn write_ppu_data(&mut self, value: u8) {
         self.ppu_io_bus.update_from_write(value);
         self.current_address.advance(self.current_address_increment);
     }
 
-    pub fn active_name_table_quadrant(&self) -> NameTableQuadrant {
-        self.next_address.name_table_quadrant()
+    pub fn peek_ppu_io_bus(&self) -> u8 {
+        self.ppu_io_bus.value()
+    }
+
+    pub fn write_ppu_io_bus(&mut self, register_value: u8) {
+        self.ppu_io_bus.update_from_write(register_value);
     }
 
     pub fn x_scroll(&self) -> XScroll {
@@ -321,25 +329,13 @@ impl PpuRegisters {
         self.write_toggle
     }
 
-    pub(in crate::ppu) fn clear_reset(&mut self) {
-        self.reset_recently = false;
-    }
-
     pub fn tick(&mut self, clock: &PpuClock) -> PpuRegistersTickResult {
-        self.maybe_decay_ppu_io_bus(clock);
-        let rendering_toggled = self.maybe_toggle_rendering_enabled();
-        PpuRegistersTickResult { rendering_toggled }
-    }
-
-    fn maybe_decay_ppu_io_bus(&mut self, clock: &PpuClock) {
         if clock.cycle() == 1 {
             self.ppu_io_bus.maybe_decay();
         }
-    }
 
-    fn maybe_toggle_rendering_enabled(&mut self) -> Option<Toggle> {
         use RenderingToggleState::*;
-        match self.rendering_toggle_state {
+        let rendering_toggled = match self.rendering_toggle_state {
             Inactive => None,
             Pending => {
                 self.rendering_toggle_state = Ready;
@@ -350,81 +346,17 @@ impl PpuRegisters {
                 self.rendering_toggle_state = Inactive;
                 Some(if self.rendering_enabled { Toggle::Enable } else { Toggle::Disable })
             }
-        }
-    }
+        };
 
-    pub fn can_generate_nmi(&self) -> bool {
-        self.vblank_active && self.nmi_enabled
+        PpuRegistersTickResult { rendering_toggled }
     }
 
     pub fn reset_recently(&self) -> bool {
         self.reset_recently
     }
 
-    pub fn peek_ppu_io_bus(&self) -> u8 {
-        self.ppu_io_bus.value()
-    }
-
-    // Read 0x2007 (PPUDATA)
-    pub fn set_ppu_read_buffer_and_advance(&mut self, new_buffer_data: u8) {
-        self.ppu_read_buffer = new_buffer_data;
-        self.current_address.advance(self.current_address_increment);
-    }
-
-    pub fn write_ppu_io_bus(&mut self, register_value: u8) {
-        self.ppu_io_bus.update_from_write(register_value);
-    }
-
-    pub fn address_in_name_table(&self) -> PpuAddress {
-        PpuAddress::in_name_table(
-            self.current_address.name_table_quadrant(),
-            self.current_address.coarse_x_scroll(),
-            self.current_address.coarse_y_scroll(),
-        )
-    }
-
-    pub fn address_in_attribute_table(&self) -> PpuAddress {
-        PpuAddress::in_attribute_table(
-            self.current_address.name_table_quadrant(),
-            self.current_address.coarse_x_scroll(),
-            self.current_address.coarse_y_scroll(),
-        )
-    }
-
-    pub fn address_for_low_pattern_byte(&self, tile_number: TileNumber) -> PpuAddress {
-        PpuAddress::in_pattern_table(
-            self.background_table_side,
-            tile_number,
-            self.current_address.fine_y_scroll(),
-            false,
-        )
-    }
-
-    pub fn address_for_high_pattern_byte(&self, tile_number: TileNumber) -> PpuAddress {
-        PpuAddress::in_pattern_table(
-            self.background_table_side,
-            tile_number,
-            self.current_address.y_scroll().fine(),
-            true,
-        )
-    }
-
-    pub fn palette_table_index(&self, attribute_byte: u8) -> PaletteTableIndex {
-        PaletteTableIndex::from_attribute_byte(
-            attribute_byte,
-            self.current_address.coarse_x_scroll(),
-            self.current_address.coarse_y_scroll(),
-        )
-    }
-
-    pub fn reset_tile_column(&mut self) {
-        // Reset coarse X scroll. For non-scrolling cartridges, this always means setting it to 0.
-        self.current_address.set_coarse_x_scroll(self.next_address.coarse_x_scroll());
-
-        // Reset to the selected name table to be one on the left side (0x2000 or 0x2800).
-        let mut name_table_quadrant = self.current_address.name_table_quadrant();
-        name_table_quadrant.copy_horizontal_side_from(self.next_address.name_table_quadrant());
-        self.current_address.set_name_table_quadrant(name_table_quadrant);
+    pub(in crate::ppu) fn clear_reset(&mut self) {
+        self.reset_recently = false;
     }
 }
 
