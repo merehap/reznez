@@ -49,7 +49,7 @@ impl WindowRenderer for StatusRenderer {
                     ui.label(format!("{}", ppu_regs.x_scroll().to_u8()));
                     ui.end_row();
                     ui.label("Y Scroll");
-                    ui.label(format!("{}", ppu_regs.y_scroll().to_u8()));
+                    ui.label(format!("{}", ppu_regs.next_address.y_scroll().to_u8()));
                     ui.end_row();
                     ui.label("NMI Enabled");
                     ui.label(format!("{}", ppu_regs.nmi_enabled()));

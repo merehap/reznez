@@ -308,7 +308,7 @@ impl Bus {
             }
             Addr::PpuControl | Addr::PpuMask | Addr::OamAddress | Addr::PpuScroll | Addr::PpuAddress => {
                 // Write-only PPU registers.
-                ReadResult::full(self.ppu_regs.peek_ppu_io_bus())
+                ReadResult::full(self.ppu_regs.peek_from_write_only_register())
             }
             Addr::MapperRegisters => {
                 match *addr {
@@ -376,7 +376,7 @@ impl Bus {
             }
             Addr::PpuControl | Addr::PpuMask | Addr::OamAddress | Addr::PpuScroll | Addr::PpuAddress => {
                 // Write-only PPU registers.
-                ReadResult::full(self.ppu_regs.peek_ppu_io_bus())
+                ReadResult::full(self.ppu_regs.peek_from_write_only_register())
             }
             Addr::MapperRegisters => {
                 match *addr {
@@ -445,7 +445,7 @@ impl Bus {
             // PPU registers.
             Addr::PpuControl => self.ppu_regs.write_ctrl(self.cpu_pinout.data_bus),
             Addr::PpuMask    => self.ppu_regs.write_mask(self.cpu_pinout.data_bus),
-            Addr::PpuStatus  => self.ppu_regs.write_ppu_io_bus(self.cpu_pinout.data_bus), // Read-only
+            Addr::PpuStatus  => self.ppu_regs.write_status(self.cpu_pinout.data_bus), // Read-only
             Addr::OamAddress => self.ppu_regs.write_oam_addr(self.cpu_pinout.data_bus),
             Addr::OamData    => self.ppu_regs.write_oam_data(&mut self.oam, self.cpu_pinout.data_bus),
             Addr::PpuScroll  => self.ppu_regs.write_scroll(self.cpu_pinout.data_bus),

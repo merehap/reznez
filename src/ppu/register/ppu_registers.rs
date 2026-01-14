@@ -204,6 +204,11 @@ impl PpuRegisters {
         self.ppu_io_bus.value()
     }
 
+    // Write 0x2002 (PPUSTATUS is readonly)
+    pub fn write_status(&mut self, register_value: u8) {
+        self.ppu_io_bus.update_from_write(register_value);
+    }
+
     pub(in crate::ppu) fn start_vblank(&mut self, clock: &PpuClock) {
         info!(target: "ppuflags", " {clock}\tStarting vblank.");
         self.vblank_active = true;
@@ -306,27 +311,9 @@ impl PpuRegisters {
         self.current_address.advance(self.current_address_increment);
     }
 
-    pub fn peek_ppu_io_bus(&self) -> u8 {
+    // Write 0x2000 (PPUCTRL), 0x2001 (PPUMASK), 0x2003 (OAMADDR), 0x2005 (PPUSCROLL), 0x2006 (PPUADDR)
+    pub fn peek_from_write_only_register(&self) -> u8 {
         self.ppu_io_bus.value()
-    }
-
-    pub fn write_ppu_io_bus(&mut self, register_value: u8) {
-        self.ppu_io_bus.update_from_write(register_value);
-    }
-
-    pub fn x_scroll(&self) -> XScroll {
-        XScroll {
-            coarse: self.next_address.coarse_x_scroll(),
-            fine: self.fine_x_scroll,
-        }
-    }
-
-    pub fn y_scroll(&self) -> YScroll {
-        self.next_address.y_scroll()
-    }
-
-    pub fn write_toggle(&self) -> WriteToggle {
-        self.write_toggle
     }
 
     pub fn tick(&mut self, clock: &PpuClock) -> PpuRegistersTickResult {
@@ -349,6 +336,17 @@ impl PpuRegisters {
         };
 
         PpuRegistersTickResult { rendering_toggled }
+    }
+
+    pub fn x_scroll(&self) -> XScroll {
+        XScroll {
+            coarse: self.next_address.coarse_x_scroll(),
+            fine: self.fine_x_scroll,
+        }
+    }
+
+    pub fn write_toggle(&self) -> WriteToggle {
+        self.write_toggle
     }
 
     pub fn reset_recently(&self) -> bool {

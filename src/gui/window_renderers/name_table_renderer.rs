@@ -42,7 +42,7 @@ impl WindowRenderer for NameTableRenderer {
         };
 
         let x = usize::from(nes.bus().ppu_regs.x_scroll().to_u8());
-        let y = usize::from(nes.bus().ppu_regs.y_scroll().to_u8());
+        let y = usize::from(nes.bus().ppu_regs.next_address.y_scroll().to_u8());
         let bus = &mut nes.bus();
 
         let width = NameTableRenderer::WIDTH;
