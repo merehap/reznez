@@ -2,6 +2,8 @@ use std::fmt;
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 
+use ux::u11;
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Debug)]
 pub struct CpuAddress(u16);
 
@@ -164,7 +166,7 @@ impl DerefMut for CpuAddress {
 }
 
 pub enum FriendlyCpuAddress {
-    CpuInternalRam(usize),
+    CpuInternalRam(u11),
 
     PpuControl,
     PpuMask,
@@ -214,7 +216,7 @@ impl FriendlyCpuAddress {
     fn from_cpu_address(addr: CpuAddress) -> Self {
         use FriendlyCpuAddress::*;
         match *addr {
-            0x0000..=0x1FFF => CpuInternalRam(*addr as usize & 0x07FF),
+            0x0000..=0x1FFF => CpuInternalRam(u11::new(*addr & 0x07FF)),
 
             0x2000..=0x3FFF => match *addr & 0x2007 {
                 0x2000 => PpuControl,

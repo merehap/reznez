@@ -1,8 +1,8 @@
 use log::info;
 use splitbits::{splitbits, combinebits};
 
-use crate::mapper::PatternTableSide;
-use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
+use crate::mapper::{PatternTableSide, ReadResult};
+use crate::memory::ppu::ppu_address::{PpuAddress, XScroll};
 use crate::ppu::ppu_clock::PpuClock;
 use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::pixel_index::ColumnInTile;
@@ -181,18 +181,18 @@ impl PpuRegisters {
     }
 
     // Peek 0x2002
-    pub fn peek_status(&self) -> u8 {
+    pub fn peek_status(&self) -> ReadResult {
         let v = self.vblank_active;
         let h = self.sprite0_hit;
         let o = self.sprite_overflow;
         let b = self.ppu_io_bus.value() & 0b0001_1111;
-        combinebits!("vhobbbbb")
+        ReadResult::full(combinebits!("vhobbbbb"))
     }
 
     // Read 0x2002
-    pub fn read_status(&mut self, clock: &PpuClock) -> u8 {
+    pub fn read_status(&mut self, clock: &PpuClock) -> ReadResult {
         let value = self.peek_status();
-        self.ppu_io_bus.update_from_status_read(value);
+        self.ppu_io_bus.update_from_status_read(value.value);
 
         self.write_toggle = WriteToggle::FirstByte;
         self.stop_vblank(clock);
@@ -201,7 +201,7 @@ impl PpuRegisters {
             self.suppress_vblank_active = true;
         }
 
-        self.ppu_io_bus.value()
+        ReadResult::full(self.ppu_io_bus.value())
     }
 
     // Write 0x2002 (PPUSTATUS is readonly)
@@ -229,14 +229,14 @@ impl PpuRegisters {
     }
 
     // Peek 0x2004
-    pub fn peek_oam_data(&self, oam: &Oam) -> u8 {
-        oam.peek(self.oam_addr)
+    pub fn peek_oam_data(&self, oam: &Oam) -> ReadResult {
+        ReadResult::full(oam.peek(self.oam_addr))
     }
 
     // Read 0x2004
-    pub fn read_oam_data(&mut self, oam: &Oam) -> u8 {
+    pub fn read_oam_data(&mut self, oam: &Oam) -> ReadResult {
         let value = self.peek_oam_data(oam);
-        self.ppu_io_bus.update_from_read(value);
+        self.ppu_io_bus.update_from_read(value.value);
         value
     }
 
@@ -293,10 +293,10 @@ impl PpuRegisters {
     }
 
     // Read 0x2007
-    pub fn read_ppu_data(&mut self, old_data: u8) -> u8 {
+    pub fn read_ppu_data(&mut self, old_data: u8) -> ReadResult {
         let value_read = self.peek_ppu_data(old_data);
         self.ppu_io_bus.update_from_read(value_read);
-        value_read
+        ReadResult::full(value_read)
     }
 
     // Read 0x2007
@@ -312,8 +312,8 @@ impl PpuRegisters {
     }
 
     // Write 0x2000 (PPUCTRL), 0x2001 (PPUMASK), 0x2003 (OAMADDR), 0x2005 (PPUSCROLL), 0x2006 (PPUADDR)
-    pub fn peek_from_write_only_register(&self) -> u8 {
-        self.ppu_io_bus.value()
+    pub fn peek_from_write_only_register(&self) -> ReadResult {
+        ReadResult::full(self.ppu_io_bus.value())
     }
 
     pub fn tick(&mut self, clock: &PpuClock) -> PpuRegistersTickResult {

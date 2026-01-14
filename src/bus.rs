@@ -299,16 +299,16 @@ impl Bus {
     pub fn cpu_peek_unresolved(&self, mapper: &dyn Mapper, _address_bus_type: AddressBusType, addr: CpuAddress) -> ReadResult {
         use FriendlyCpuAddress as Addr;
         let normal_peek_value = match addr.to_friendly() {
-            Addr::CpuInternalRam(index) => ReadResult::full(self.cpu_internal_ram()[index]),
-            Addr::PpuStatus             => ReadResult::full(self.ppu_regs.peek_status()),
-            Addr::OamData               => ReadResult::full(self.ppu_regs.peek_oam_data(&self.oam)),
+            Addr::CpuInternalRam(index) => self.cpu_internal_ram().peek(index),
+            Addr::PpuStatus             => self.ppu_regs.peek_status(),
+            Addr::OamData               => self.ppu_regs.peek_oam_data(&self.oam),
             Addr::PpuData => {
                 let old_value = mapper.ppu_peek(self, self.ppu_regs.current_address).value();
                 ReadResult::full(self.ppu_regs.peek_ppu_data(old_value))
             }
             Addr::PpuControl | Addr::PpuMask | Addr::OamAddress | Addr::PpuScroll | Addr::PpuAddress => {
                 // Write-only PPU registers.
-                ReadResult::full(self.ppu_regs.peek_from_write_only_register())
+                self.ppu_regs.peek_from_write_only_register()
             }
             Addr::MapperRegisters => {
                 match *addr {
@@ -357,9 +357,9 @@ impl Bus {
         let addr = self.cpu_address_bus(address_bus_type);
         use FriendlyCpuAddress as Addr;
         let normal_read_value = match addr.to_friendly() {
-            Addr::CpuInternalRam(index) => ReadResult::full(self.cpu_internal_ram()[index]),
-            Addr::PpuStatus             => ReadResult::full(self.ppu_regs.read_status(self.master_clock.ppu_clock())),
-            Addr::OamData               => ReadResult::full(self.ppu_regs.read_oam_data(&self.oam)),
+            Addr::CpuInternalRam(index) => self.cpu_internal_ram().peek(index),
+            Addr::PpuStatus             => self.ppu_regs.read_status(self.master_clock.ppu_clock()),
+            Addr::OamData               => self.ppu_regs.read_oam_data(&self.oam),
             Addr::PpuData => {
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
                 // TODO: Instead of peeking the old data, it must be available as part of some register.
@@ -372,17 +372,16 @@ impl Bus {
                 self.ppu_regs.set_ppu_read_buffer_and_advance(buffered_data);
                 self.set_ppu_address_bus(mapper, self.ppu_regs.current_address);
 
-                ReadResult::full(new_data)
+                new_data
             }
             Addr::PpuControl | Addr::PpuMask | Addr::OamAddress | Addr::PpuScroll | Addr::PpuAddress => {
-                // Write-only PPU registers.
-                ReadResult::full(self.ppu_regs.peek_from_write_only_register())
+                self.ppu_regs.peek_from_write_only_register()
             }
             Addr::MapperRegisters => {
                 match *addr {
+                    0x0000..=0x401F => unreachable!(),
                     0x4020..=0x5FFF => mapper.peek_register(self, addr),
                     0x6000..=0xFFFF => mapper.peek_prg(self, addr),
-                    _ => unreachable!(),
                 }
             }
 
@@ -440,7 +439,7 @@ impl Bus {
 
         use FriendlyCpuAddress as Addr;
         match addr.to_friendly() {
-            Addr::CpuInternalRam(index) => self.cpu_internal_ram[index] = self.cpu_pinout.data_bus,
+            Addr::CpuInternalRam(index) => self.cpu_internal_ram.write(index, self.cpu_pinout.data_bus),
 
             // PPU registers.
             Addr::PpuControl => self.ppu_regs.write_ctrl(self.cpu_pinout.data_bus),
