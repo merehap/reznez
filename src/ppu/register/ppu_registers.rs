@@ -16,13 +16,13 @@ use crate::ppu::tile_number::TileNumber;
 
 pub struct PpuRegisters {
     // PPUCTRL sub-registers
-    pub nmi_enabled: bool,
-    pub ext_pin_role: ExtPinRole,
-    pub sprite_height: SpriteHeight,
-    pub background_table_side: PatternTableSide,
-    pub sprite_table_side: PatternTableSide,
-    pub current_address_increment: AddressIncrement,
-    pub base_name_table_quadrant: NameTableQuadrant,
+    nmi_enabled: bool,
+    ext_pin_role: ExtPinRole,
+    sprite_height: SpriteHeight,
+    background_table_side: PatternTableSide,
+    sprite_table_side: PatternTableSide,
+    current_address_increment: AddressIncrement,
+    base_name_table_quadrant: NameTableQuadrant,
 
     mask: Mask,
     status: Status,
@@ -87,21 +87,11 @@ impl PpuRegisters {
     pub fn current_address_increment(&self) -> AddressIncrement { self.current_address_increment }
     pub fn base_name_table_quadrant(&self) -> NameTableQuadrant { self.base_name_table_quadrant }
 
-    pub fn mask(&self) -> Mask {
-        self.mask
-    }
-
-    pub fn background_enabled(&self) -> bool {
-        self.mask.background_enabled()
-    }
-
-    pub fn sprites_enabled(&self) -> bool {
-        self.mask.sprites_enabled()
-    }
-
-    pub fn rendering_enabled(&self) -> bool {
-        self.rendering_enabled
-    }
+    // PPUMASK sub-registers
+    pub fn mask(&self) -> Mask { self.mask }
+    pub fn background_enabled(&self) -> bool { self.mask.background_enabled() }
+    pub fn sprites_enabled(&self) -> bool { self.mask.sprites_enabled() }
+    pub fn rendering_enabled(&self) -> bool { self.rendering_enabled }
 
     pub fn active_name_table_quadrant(&self) -> NameTableQuadrant {
         self.next_address.name_table_quadrant()
