@@ -199,7 +199,7 @@ impl Ppu {
                 if bus.ppu_regs.sprites_enabled() && bus.ppu_regs.background_enabled()
                     && frame.pixel(bus.ppu_regs.mask(), pixel_column, pixel_row).1.hit()
                 {
-                    bus.ppu_regs.set_sprite0_hit();
+                    bus.ppu_regs.sprite0_hit = true;
                 }
             }
 
@@ -334,8 +334,8 @@ impl Ppu {
 
             ClearFlags => {
                 bus.ppu_regs.stop_vblank(bus.master_clock.ppu_clock());
-                bus.ppu_regs.clear_sprite0_hit();
-                bus.ppu_regs.clear_sprite_overflow();
+                bus.ppu_regs.sprite0_hit = false;
+                bus.ppu_regs.sprite_overflow = false;
                 bus.ppu_regs.clear_reset();
 
             }

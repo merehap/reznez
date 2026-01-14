@@ -27,8 +27,8 @@ pub struct PpuRegisters {
 
     // PPUSTATUS sub-registers
     vblank_active: bool,
-    sprite0_hit: bool,
-    sprite_overflow: bool,
+    pub sprite0_hit: bool,
+    pub sprite_overflow: bool,
 
     pub oam_addr: OamAddress,
     ppu_read_buffer: u8,
@@ -181,6 +181,19 @@ impl PpuRegisters {
         self.ppu_io_bus.value()
     }
 
+    pub(in crate::ppu) fn start_vblank(&mut self, clock: &PpuClock) {
+        info!(target: "ppuflags", " {clock}\tStarting vblank.");
+        self.vblank_active = true;
+    }
+
+    pub(in crate::ppu) fn stop_vblank(&mut self, clock: &PpuClock) {
+        if self.vblank_active {
+            info!(target: "ppuflags", " {clock}\tStopping vblank.");
+        }
+
+        self.vblank_active = false;
+    }
+
     pub fn active_name_table_quadrant(&self) -> NameTableQuadrant {
         self.next_address.name_table_quadrant()
     }
@@ -198,35 +211,6 @@ impl PpuRegisters {
 
     pub fn write_toggle(&self) -> WriteToggle {
         self.write_toggle
-    }
-
-    pub(in crate::ppu) fn start_vblank(&mut self, clock: &PpuClock) {
-        info!(target: "ppuflags", " {clock}\tStarting vblank.");
-        self.vblank_active = true;
-    }
-
-    pub(in crate::ppu) fn stop_vblank(&mut self, clock: &PpuClock) {
-        if self.vblank_active {
-            info!(target: "ppuflags", " {clock}\tStopping vblank.");
-        }
-
-        self.vblank_active = false;
-    }
-
-    pub(in crate::ppu) fn set_sprite0_hit(&mut self) {
-        self.sprite0_hit = true;
-    }
-
-    pub(in crate::ppu) fn clear_sprite0_hit(&mut self) {
-        self.sprite0_hit = false;
-    }
-
-    pub(in crate::ppu) fn set_sprite_overflow(&mut self) {
-        self.sprite_overflow = true;
-    }
-
-    pub(in crate::ppu) fn clear_sprite_overflow(&mut self) {
-        self.sprite_overflow = false;
     }
 
     pub(in crate::ppu) fn clear_reset(&mut self) {
