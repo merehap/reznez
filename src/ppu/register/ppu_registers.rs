@@ -1,5 +1,5 @@
 use log::info;
-use splitbits::splitbits;
+use splitbits::{splitbits, combinebits};
 
 use crate::mapper::PatternTableSide;
 use crate::memory::ppu::ppu_address::{PpuAddress, XScroll, YScroll};
@@ -8,7 +8,6 @@ use crate::ppu::name_table::name_table_quadrant::NameTableQuadrant;
 use crate::ppu::palette::palette_table_index::PaletteTableIndex;
 use crate::ppu::pixel_index::ColumnInTile;
 use crate::ppu::register::ppu_io_bus::PpuIoBus;
-use crate::ppu::register::registers::status::Status;
 use crate::ppu::sprite::oam::Oam;
 use crate::ppu::sprite::oam_address::OamAddress;
 use crate::ppu::sprite::sprite_height::SpriteHeight;
@@ -25,7 +24,12 @@ pub struct PpuRegisters {
     base_name_table_quadrant: NameTableQuadrant,
 
     mask: Mask,
-    status: Status,
+
+    // PPUSTATUS sub-registers
+    vblank_active: bool,
+    sprite0_hit: bool,
+    sprite_overflow: bool,
+
     pub oam_addr: OamAddress,
     ppu_read_buffer: u8,
 
@@ -60,7 +64,12 @@ impl PpuRegisters {
             base_name_table_quadrant: NameTableQuadrant::TopLeft,
 
             mask: Mask::all_disabled(),
-            status: Status::new(),
+
+            // PPUSTATUS sub-registers
+            vblank_active: false,
+            sprite0_hit: false,
+            sprite_overflow: false,
+
             oam_addr: OamAddress::new(),
             ppu_read_buffer: 0,
 
@@ -87,160 +96,7 @@ impl PpuRegisters {
     pub fn current_address_increment(&self) -> AddressIncrement { self.current_address_increment }
     pub fn base_name_table_quadrant(&self) -> NameTableQuadrant { self.base_name_table_quadrant }
 
-    // PPUMASK sub-registers
-    pub fn mask(&self) -> Mask { self.mask }
-    pub fn background_enabled(&self) -> bool { self.mask.background_enabled() }
-    pub fn sprites_enabled(&self) -> bool { self.mask.sprites_enabled() }
-    pub fn rendering_enabled(&self) -> bool { self.rendering_enabled }
-
-    pub fn active_name_table_quadrant(&self) -> NameTableQuadrant {
-        self.next_address.name_table_quadrant()
-    }
-
-    pub fn x_scroll(&self) -> XScroll {
-        XScroll {
-            coarse: self.next_address.coarse_x_scroll(),
-            fine: self.fine_x_scroll,
-        }
-    }
-
-    pub fn y_scroll(&self) -> YScroll {
-        self.next_address.y_scroll()
-    }
-
-    pub fn write_toggle(&self) -> WriteToggle {
-        self.write_toggle
-    }
-
-    pub(in crate::ppu) fn start_vblank(&mut self, clock: &PpuClock) {
-        info!(target: "ppuflags", " {clock}\tStarting vblank.");
-        self.status.vblank_active = true;
-    }
-
-    pub(in crate::ppu) fn stop_vblank(&mut self, clock: &PpuClock) {
-        if self.status.vblank_active {
-            info!(target: "ppuflags", " {clock}\tStopping vblank.");
-        }
-
-        self.status.vblank_active = false;
-    }
-
-    pub(in crate::ppu) fn set_sprite0_hit(&mut self) {
-        self.status.sprite0_hit = true;
-    }
-
-    pub(in crate::ppu) fn clear_sprite0_hit(&mut self) {
-        self.status.sprite0_hit = false;
-    }
-
-    pub(in crate::ppu) fn set_sprite_overflow(&mut self) {
-        self.status.sprite_overflow = true;
-    }
-
-    pub(in crate::ppu) fn clear_sprite_overflow(&mut self) {
-        self.status.sprite_overflow = false;
-    }
-
-    pub(in crate::ppu) fn clear_reset(&mut self) {
-        self.reset_recently = false;
-    }
-
-    pub fn tick(&mut self, clock: &PpuClock) -> PpuRegistersTickResult {
-        self.maybe_decay_ppu_io_bus(clock);
-        let rendering_toggled = self.maybe_toggle_rendering_enabled();
-        PpuRegistersTickResult { rendering_toggled }
-    }
-
-    fn maybe_decay_ppu_io_bus(&mut self, clock: &PpuClock) {
-        if clock.cycle() == 1 {
-            self.ppu_io_bus.maybe_decay();
-        }
-    }
-
-    fn maybe_toggle_rendering_enabled(&mut self) -> Option<Toggle> {
-        use RenderingToggleState::*;
-        match self.rendering_toggle_state {
-            Inactive => None,
-            Pending => {
-                self.rendering_toggle_state = Ready;
-                None
-            }
-            Ready => {
-                self.rendering_enabled = !self.rendering_enabled;
-                self.rendering_toggle_state = Inactive;
-                Some(if self.rendering_enabled { Toggle::Enable } else { Toggle::Disable })
-            }
-        }
-    }
-
-    pub fn can_generate_nmi(&self) -> bool {
-        self.status.vblank_active && self.nmi_enabled
-    }
-
-    pub fn reset_recently(&self) -> bool {
-        self.reset_recently
-    }
-
-    pub fn peek_ppu_io_bus(&self) -> u8 {
-        self.ppu_io_bus.value()
-    }
-
-    pub fn peek_status(&self) -> u8 {
-        self.status.to_u8() | (self.ppu_io_bus.value() & 0b0001_1111)
-    }
-
-    // 0x2002
-    pub fn read_status(&mut self, clock: &PpuClock) -> u8 {
-        let value = self.peek_status();
-        self.ppu_io_bus.update_from_status_read(value);
-
-        self.write_toggle = WriteToggle::FirstByte;
-        self.stop_vblank(clock);
-        // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
-        if clock.scanline() == 241 && clock.cycle() == 0 {
-            self.suppress_vblank_active = true;
-        }
-
-        self.ppu_io_bus.value()
-    }
-
-    pub fn peek_oam_data(&self, oam: &Oam) -> u8 {
-        oam.peek(self.oam_addr)
-    }
-
-    pub fn read_oam_data(&mut self, oam: &Oam) -> u8 {
-        let value = self.peek_oam_data(oam);
-        self.ppu_io_bus.update_from_read(value);
-        value
-    }
-
-    pub fn peek_ppu_data(&self, old_data: u8) -> u8 {
-        if self.current_address.is_in_palette_table() {
-            // When reading palette data only, read the current data pointed to
-            // by self.current_address, not what was previously pointed to.
-            // Retain the previous ppu_io_bus values for the unused bits of palette data.
-            (self.ppu_io_bus.value() & 0b1100_0000) | (old_data & 0b0011_1111)
-        } else {
-            self.ppu_read_buffer
-        }
-    }
-
-    pub fn read_ppu_data(&mut self, old_data: u8) -> u8 {
-        let value_read = self.peek_ppu_data(old_data);
-        self.ppu_io_bus.update_from_read(value_read);
-        value_read
-    }
-
-    pub fn set_ppu_read_buffer_and_advance(&mut self, new_buffer_data: u8) {
-        self.ppu_read_buffer = new_buffer_data;
-        self.current_address.advance(self.current_address_increment);
-    }
-
-    pub fn write_ppu_io_bus(&mut self, register_value: u8) {
-        self.ppu_io_bus.update_from_write(register_value);
-    }
-
-    // 0x2000
+    // Write 0x2000
     pub fn set_ctrl(&mut self, value: u8) {
         self.ppu_io_bus.update_from_write(value);
 
@@ -255,6 +111,12 @@ impl PpuRegisters {
 
         self.next_address.set_name_table_quadrant(self.base_name_table_quadrant);
     }
+
+    // PPUMASK sub-registers
+    pub fn mask(&self) -> Mask { self.mask }
+    pub fn background_enabled(&self) -> bool { self.mask.background_enabled() }
+    pub fn sprites_enabled(&self) -> bool { self.mask.sprites_enabled() }
+    pub fn rendering_enabled(&self) -> bool { self.rendering_enabled }
 
     // 0x2001
     pub fn write_mask(&mut self, value: u8) {
@@ -293,6 +155,158 @@ impl PpuRegisters {
             "Left background columns",
         );
         log_change(old_mask.greyscale_enabled, self.mask.greyscale_enabled, "Greyscale");
+    }
+
+    // Peek 0x2002
+    pub fn peek_status(&self) -> u8 {
+        let v = self.vblank_active;
+        let h = self.sprite0_hit;
+        let o = self.sprite_overflow;
+        let b = self.ppu_io_bus.value() & 0b0001_1111;
+        combinebits!("vhobbbbb")
+    }
+
+    // Read 0x2002
+    pub fn read_status(&mut self, clock: &PpuClock) -> u8 {
+        let value = self.peek_status();
+        self.ppu_io_bus.update_from_status_read(value);
+
+        self.write_toggle = WriteToggle::FirstByte;
+        self.stop_vblank(clock);
+        // https://wiki.nesdev.org/w/index.php?title=NMI#Race_condition
+        if clock.scanline() == 241 && clock.cycle() == 0 {
+            self.suppress_vblank_active = true;
+        }
+
+        self.ppu_io_bus.value()
+    }
+
+    pub fn active_name_table_quadrant(&self) -> NameTableQuadrant {
+        self.next_address.name_table_quadrant()
+    }
+
+    pub fn x_scroll(&self) -> XScroll {
+        XScroll {
+            coarse: self.next_address.coarse_x_scroll(),
+            fine: self.fine_x_scroll,
+        }
+    }
+
+    pub fn y_scroll(&self) -> YScroll {
+        self.next_address.y_scroll()
+    }
+
+    pub fn write_toggle(&self) -> WriteToggle {
+        self.write_toggle
+    }
+
+    pub(in crate::ppu) fn start_vblank(&mut self, clock: &PpuClock) {
+        info!(target: "ppuflags", " {clock}\tStarting vblank.");
+        self.vblank_active = true;
+    }
+
+    pub(in crate::ppu) fn stop_vblank(&mut self, clock: &PpuClock) {
+        if self.vblank_active {
+            info!(target: "ppuflags", " {clock}\tStopping vblank.");
+        }
+
+        self.vblank_active = false;
+    }
+
+    pub(in crate::ppu) fn set_sprite0_hit(&mut self) {
+        self.sprite0_hit = true;
+    }
+
+    pub(in crate::ppu) fn clear_sprite0_hit(&mut self) {
+        self.sprite0_hit = false;
+    }
+
+    pub(in crate::ppu) fn set_sprite_overflow(&mut self) {
+        self.sprite_overflow = true;
+    }
+
+    pub(in crate::ppu) fn clear_sprite_overflow(&mut self) {
+        self.sprite_overflow = false;
+    }
+
+    pub(in crate::ppu) fn clear_reset(&mut self) {
+        self.reset_recently = false;
+    }
+
+    pub fn tick(&mut self, clock: &PpuClock) -> PpuRegistersTickResult {
+        self.maybe_decay_ppu_io_bus(clock);
+        let rendering_toggled = self.maybe_toggle_rendering_enabled();
+        PpuRegistersTickResult { rendering_toggled }
+    }
+
+    fn maybe_decay_ppu_io_bus(&mut self, clock: &PpuClock) {
+        if clock.cycle() == 1 {
+            self.ppu_io_bus.maybe_decay();
+        }
+    }
+
+    fn maybe_toggle_rendering_enabled(&mut self) -> Option<Toggle> {
+        use RenderingToggleState::*;
+        match self.rendering_toggle_state {
+            Inactive => None,
+            Pending => {
+                self.rendering_toggle_state = Ready;
+                None
+            }
+            Ready => {
+                self.rendering_enabled = !self.rendering_enabled;
+                self.rendering_toggle_state = Inactive;
+                Some(if self.rendering_enabled { Toggle::Enable } else { Toggle::Disable })
+            }
+        }
+    }
+
+    pub fn can_generate_nmi(&self) -> bool {
+        self.vblank_active && self.nmi_enabled
+    }
+
+    pub fn reset_recently(&self) -> bool {
+        self.reset_recently
+    }
+
+    pub fn peek_ppu_io_bus(&self) -> u8 {
+        self.ppu_io_bus.value()
+    }
+
+    pub fn peek_oam_data(&self, oam: &Oam) -> u8 {
+        oam.peek(self.oam_addr)
+    }
+
+    pub fn read_oam_data(&mut self, oam: &Oam) -> u8 {
+        let value = self.peek_oam_data(oam);
+        self.ppu_io_bus.update_from_read(value);
+        value
+    }
+
+    pub fn peek_ppu_data(&self, old_data: u8) -> u8 {
+        if self.current_address.is_in_palette_table() {
+            // When reading palette data only, read the current data pointed to
+            // by self.current_address, not what was previously pointed to.
+            // Retain the previous ppu_io_bus values for the unused bits of palette data.
+            (self.ppu_io_bus.value() & 0b1100_0000) | (old_data & 0b0011_1111)
+        } else {
+            self.ppu_read_buffer
+        }
+    }
+
+    pub fn read_ppu_data(&mut self, old_data: u8) -> u8 {
+        let value_read = self.peek_ppu_data(old_data);
+        self.ppu_io_bus.update_from_read(value_read);
+        value_read
+    }
+
+    pub fn set_ppu_read_buffer_and_advance(&mut self, new_buffer_data: u8) {
+        self.ppu_read_buffer = new_buffer_data;
+        self.current_address.advance(self.current_address_increment);
+    }
+
+    pub fn write_ppu_io_bus(&mut self, register_value: u8) {
+        self.ppu_io_bus.update_from_write(register_value);
     }
 
     pub fn write_oam_addr(&mut self, value: u8) {
