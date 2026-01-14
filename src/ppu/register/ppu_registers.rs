@@ -14,7 +14,7 @@ use crate::ppu::sprite::sprite_height::SpriteHeight;
 use crate::ppu::tile_number::TileNumber;
 
 pub struct PpuRegisters {
-    // PPUCTRL sub-registers
+    // PPUCTRL (0x2000) sub-registers
     nmi_enabled: bool,
     ext_pin_role: ExtPinRole,
     sprite_height: SpriteHeight,
@@ -23,38 +23,48 @@ pub struct PpuRegisters {
     current_address_increment: AddressIncrement,
     base_name_table_quadrant: NameTableQuadrant,
 
+    // PPUMASK (0x2001)
     mask: Mask,
 
-    // PPUSTATUS sub-registers
+    // PPUMASK (0x2001) and PPUCLOCK
+    rendering_enabled: bool,
+    rendering_toggle_state: RenderingToggleState,
+
+    // PPUSTATUS (0x2002) sub-registers
     vblank_active: bool,
     pub sprite0_hit: bool,
     pub sprite_overflow: bool,
 
-    pub oam_addr: OamAddress,
-    ppu_read_buffer: u8,
-
-    // "v"
-    pub current_address: PpuAddress,
-    // "x"
-    pub fine_x_scroll: ColumnInTile,
-    // "t"
-    pub(in crate::ppu) next_address: PpuAddress,
-
-    ppu_io_bus: PpuIoBus,
-
+    // PPUSTATUS (0x2002) and PPUCLOCK
     pub suppress_vblank_active: bool,
 
-    rendering_enabled: bool,
-    // "w"
-    write_toggle: WriteToggle,
-    rendering_toggle_state: RenderingToggleState,
+    // OAMADDR (0x2003) and OAMDATA (0x2004)
+    pub oam_addr: OamAddress,
+
+    // PPUSCROLL (0x2005)
+    pub fine_x_scroll: ColumnInTile, // "x"
+
+    // PPUSCROLL (0x2005) and PPUADDR (0x2006)
+    pub(in crate::ppu) next_address: PpuAddress, // "t"
+    write_toggle: WriteToggle, // "w"
+
+    // PPUADDR (0x2006) and PPUDATA (0x2007)
+    pub current_address: PpuAddress, // "v"
+
+    // PPUDATA (0x2007)
+    ppu_read_buffer: u8,
+
+    // Shared between all registers (0x2000 through 0x2007)
+    ppu_io_bus: PpuIoBus,
+
+    // TODO: Remove this and replace it with a clock action.
     reset_recently: bool,
 }
 
 impl PpuRegisters {
     pub fn new() -> Self {
         Self {
-            // PPUCTRL sub-registers
+            // PPUCTRL (0x2000)
             nmi_enabled: false,
             ext_pin_role: ExtPinRole::Read,
             sprite_height: SpriteHeight::Normal,
@@ -63,26 +73,41 @@ impl PpuRegisters {
             current_address_increment: AddressIncrement::Right,
             base_name_table_quadrant: NameTableQuadrant::TopLeft,
 
+            // PPUMASK (0x2001)
             mask: Mask::all_disabled(),
 
-            // PPUSTATUS sub-registers
+            // PPUMASK (0x2001) and PPUCLOCK
+            rendering_enabled: false,
+            rendering_toggle_state: RenderingToggleState::Inactive,
+
+            // PPUSTATUS (0x2002)
             vblank_active: false,
             sprite0_hit: false,
             sprite_overflow: false,
 
+            // PPUSTATUS (0x2002) and PPUCLOCK
+            suppress_vblank_active: false,
+
+            // OAMADDR (0x2003) and OAMDATA (0x2004)
             oam_addr: OamAddress::new(),
+
+            // PPUSCROLL (0x2005)
+            fine_x_scroll: ColumnInTile::Zero,
+
+            // PPUSCROLL (0x2005) and PPUADDR (0x2006)
+            next_address: PpuAddress::ZERO,
+            write_toggle: WriteToggle::FirstByte,
+
+            // PPUADDR (0x2006) and PPUDATA (0x2007)
+            current_address: PpuAddress::ZERO,
+
+            // PPUDATA (0x2007)
             ppu_read_buffer: 0,
 
-            current_address: PpuAddress::ZERO,
-            fine_x_scroll: ColumnInTile::Zero,
-            next_address: PpuAddress::ZERO,
-
+            // Shared between all registers (0x2000 through 0x2007)
             ppu_io_bus: PpuIoBus::new(),
 
-            write_toggle: WriteToggle::FirstByte,
-            suppress_vblank_active: false,
-            rendering_enabled: false,
-            rendering_toggle_state: RenderingToggleState::Inactive,
+            // TODO: Remove this and replace it with a clock action.
             reset_recently: true,
         }
     }
@@ -97,16 +122,16 @@ impl PpuRegisters {
     pub fn base_name_table_quadrant(&self) -> NameTableQuadrant { self.base_name_table_quadrant }
 
     // Write 0x2000
-    pub fn set_ctrl(&mut self, value: u8) {
+    pub fn write_ctrl(&mut self, value: u8) {
         self.ppu_io_bus.update_from_write(value);
 
-        let fields = splitbits!(value, "nehbsiqq");
+        let fields = splitbits!(value, "nehb siqq");
         self.nmi_enabled = fields.n;
-        self.ext_pin_role = [ExtPinRole::Read, ExtPinRole::Write][fields.e as usize];
-        self.sprite_height = [SpriteHeight::Normal, SpriteHeight::Tall][fields.h as usize];
-        self.background_table_side = [PatternTableSide::Left, PatternTableSide::Right][fields.b as usize];
-        self.sprite_table_side = [PatternTableSide::Left, PatternTableSide::Right][fields.s as usize];
-        self.current_address_increment = [AddressIncrement::Right, AddressIncrement::Down][fields.i as usize];
+        self.ext_pin_role              = [ExtPinRole::Read       , ExtPinRole::Write      ][fields.e as usize];
+        self.sprite_height             = [SpriteHeight::Normal   , SpriteHeight::Tall     ][fields.h as usize];
+        self.background_table_side     = [PatternTableSide::Left , PatternTableSide::Right][fields.b as usize];
+        self.sprite_table_side         = [PatternTableSide::Left , PatternTableSide::Right][fields.s as usize];
+        self.current_address_increment = [AddressIncrement::Right, AddressIncrement::Down ][fields.i as usize];
         self.base_name_table_quadrant =  NameTableQuadrant::ALL[fields.q as usize];
 
         self.next_address.set_name_table_quadrant(self.base_name_table_quadrant);
@@ -118,7 +143,7 @@ impl PpuRegisters {
     pub fn sprites_enabled(&self) -> bool { self.mask.sprites_enabled() }
     pub fn rendering_enabled(&self) -> bool { self.rendering_enabled }
 
-    // 0x2001
+    // Write 0x2001
     pub fn write_mask(&mut self, value: u8) {
         self.ppu_io_bus.update_from_write(value);
 
@@ -194,6 +219,89 @@ impl PpuRegisters {
         self.vblank_active = false;
     }
 
+    // Write 0x2003
+    pub fn write_oam_addr(&mut self, value: u8) {
+        self.ppu_io_bus.update_from_write(value);
+        self.oam_addr = OamAddress::from_u8(value);
+    }
+
+    // Peek 0x2004
+    pub fn peek_oam_data(&self, oam: &Oam) -> u8 {
+        oam.peek(self.oam_addr)
+    }
+
+    // Read 0x2004
+    pub fn read_oam_data(&mut self, oam: &Oam) -> u8 {
+        let value = self.peek_oam_data(oam);
+        self.ppu_io_bus.update_from_read(value);
+        value
+    }
+
+    // Write 0x2004
+    pub fn write_oam_data(&mut self, oam: &mut Oam, value: u8) {
+        self.ppu_io_bus.update_from_write(value);
+        oam.write(self.oam_addr, value);
+        self.oam_addr.increment();
+    }
+
+    // Write 0x2005
+    pub fn write_scroll(&mut self, dimension: u8) {
+        self.ppu_io_bus.update_from_write(dimension);
+
+        match self.write_toggle {
+            WriteToggle::FirstByte => {
+                let value = XScroll::from_u8(dimension);
+                self.fine_x_scroll = value.fine();
+                self.next_address.set_coarse_x_scroll(value.coarse());
+            }
+,
+            WriteToggle::SecondByte => {
+                self.next_address.set_y_scroll(dimension);
+            }
+        }
+
+        self.write_toggle.toggle();
+    }
+
+    // Write 0x2006
+    pub fn write_ppu_addr(&mut self, value: u8) {
+        self.ppu_io_bus.update_from_write(value);
+        match self.write_toggle {
+            WriteToggle::FirstByte => self.next_address.set_high_byte(value),
+            WriteToggle::SecondByte => {
+                self.next_address.set_low_byte(value);
+                self.current_address = self.next_address;
+            }
+        }
+
+        self.write_toggle.toggle();
+    }
+
+    // Peek 0x2007
+    pub fn peek_ppu_data(&self, old_data: u8) -> u8 {
+        if self.current_address.is_in_palette_table() {
+            // When reading palette data only, read the current data pointed to
+            // by self.current_address, not what was previously pointed to.
+            // Retain the previous ppu_io_bus values for the unused bits of palette data.
+            (self.ppu_io_bus.value() & 0b1100_0000) | (old_data & 0b0011_1111)
+        } else {
+            self.ppu_read_buffer
+        }
+    }
+
+    // Read 0x2007
+    pub fn read_ppu_data(&mut self, old_data: u8) -> u8 {
+        let value_read = self.peek_ppu_data(old_data);
+        self.ppu_io_bus.update_from_read(value_read);
+        value_read
+    }
+
+    // Write 0x2007
+    pub fn write_ppu_data(&mut self, value: u8) {
+        self.ppu_io_bus.update_from_write(value);
+        self.current_address.advance(self.current_address_increment);
+    }
+
     pub fn active_name_table_quadrant(&self) -> NameTableQuadrant {
         self.next_address.name_table_quadrant()
     }
@@ -257,33 +365,7 @@ impl PpuRegisters {
         self.ppu_io_bus.value()
     }
 
-    pub fn peek_oam_data(&self, oam: &Oam) -> u8 {
-        oam.peek(self.oam_addr)
-    }
-
-    pub fn read_oam_data(&mut self, oam: &Oam) -> u8 {
-        let value = self.peek_oam_data(oam);
-        self.ppu_io_bus.update_from_read(value);
-        value
-    }
-
-    pub fn peek_ppu_data(&self, old_data: u8) -> u8 {
-        if self.current_address.is_in_palette_table() {
-            // When reading palette data only, read the current data pointed to
-            // by self.current_address, not what was previously pointed to.
-            // Retain the previous ppu_io_bus values for the unused bits of palette data.
-            (self.ppu_io_bus.value() & 0b1100_0000) | (old_data & 0b0011_1111)
-        } else {
-            self.ppu_read_buffer
-        }
-    }
-
-    pub fn read_ppu_data(&mut self, old_data: u8) -> u8 {
-        let value_read = self.peek_ppu_data(old_data);
-        self.ppu_io_bus.update_from_read(value_read);
-        value_read
-    }
-
+    // Read 0x2007 (PPUDATA)
     pub fn set_ppu_read_buffer_and_advance(&mut self, new_buffer_data: u8) {
         self.ppu_read_buffer = new_buffer_data;
         self.current_address.advance(self.current_address_increment);
@@ -291,58 +373,6 @@ impl PpuRegisters {
 
     pub fn write_ppu_io_bus(&mut self, register_value: u8) {
         self.ppu_io_bus.update_from_write(register_value);
-    }
-
-    pub fn write_oam_addr(&mut self, value: u8) {
-        self.ppu_io_bus.update_from_write(value);
-
-        self.oam_addr = OamAddress::from_u8(value);
-    }
-
-    pub fn write_oam_data(&mut self, oam: &mut Oam, value: u8) {
-        self.ppu_io_bus.update_from_write(value);
-
-        oam.write(self.oam_addr, value);
-        self.oam_addr.increment();
-    }
-
-    // 0x2005
-    pub fn write_scroll(&mut self, dimension: u8) {
-        self.ppu_io_bus.update_from_write(dimension);
-
-        match self.write_toggle {
-            WriteToggle::FirstByte => self.set_next_address_x_scroll(dimension),
-            WriteToggle::SecondByte => self.next_address.set_y_scroll(dimension),
-        }
-
-        self.write_toggle.toggle();
-    }
-
-    // 0x2006
-    pub fn write_ppu_addr(&mut self, value: u8) {
-        self.write_ppu_io_bus(value);
-
-        match self.write_toggle {
-            WriteToggle::FirstByte => self.next_address.set_high_byte(value),
-            WriteToggle::SecondByte => {
-                self.next_address.set_low_byte(value);
-                self.current_address = self.next_address;
-            }
-        }
-
-        self.write_toggle.toggle();
-    }
-
-    pub fn write_ppu_data(&mut self, value: u8) {
-        self.ppu_io_bus.update_from_write(value);
-
-        self.current_address.advance(self.current_address_increment);
-    }
-
-    pub fn set_next_address_x_scroll(&mut self, value: u8) {
-        let value = XScroll::from_u8(value);
-        self.fine_x_scroll = value.fine();
-        self.next_address.set_coarse_x_scroll(value.coarse());
     }
 
     pub fn address_in_name_table(&self) -> PpuAddress {
