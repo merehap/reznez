@@ -329,6 +329,35 @@ impl Nes {
     }
 
     fn detect_changes(&mut self) {
+        if log_enabled!(target: "ppuflags", Info) {
+            let latest = &mut self.latest_values;
+            let mask = self.bus.ppu_regs.mask();
+            if latest.greyscale_enabled.set_value_then_detect(mask.greyscale_enabled()) {
+                info!("Greyscale enabled changed to {}", mask.greyscale_enabled());
+            }
+            if latest.left_background_columns_enabled.set_value_then_detect(mask.left_background_columns_enabled()) {
+                info!("Left background columns enabled changed to {}", mask.left_background_columns_enabled());
+            }
+            if latest.left_sprite_columns_enabled.set_value_then_detect(mask.left_sprite_columns_enabled()) {
+                info!("Left sprite columns enabled changed to {}", mask.left_sprite_columns_enabled());
+            }
+            if latest.background_enabled.set_value_then_detect(mask.background_enabled()) {
+                info!("Background enabled changed to {}", mask.background_enabled());
+            }
+            if latest.sprites_enabled.set_value_then_detect(mask.sprites_enabled()) {
+                info!("Sprites enabled changed to {}", mask.sprites_enabled());
+            }
+            if latest.emphasize_red.set_value_then_detect(mask.emphasize_red()) {
+                info!("Emphasize red enabled changed to {}", mask.emphasize_red());
+            }
+            if latest.emphasize_green.set_value_then_detect(mask.emphasize_green()) {
+                info!("Emphasize green enabled changed to {}", mask.emphasize_green());
+            }
+            if latest.emphasize_blue.set_value_then_detect(mask.emphasize_blue()) {
+                info!("Emphasize blue enabled changed to {}", mask.emphasize_blue());
+            }
+        }
+
         if log_enabled!(target: "cpuflowcontrol", Info) {
             let latest = &mut self.latest_values;
             if latest.apu_frame_irq_pending_detector.set_value_then_detect(self.bus.cpu_pinout.frame_irq_asserted()) {
@@ -564,6 +593,15 @@ impl Nes {
 }
 
 struct LatestValues {
+    greyscale_enabled: EdgeDetector<bool>,
+    left_background_columns_enabled: EdgeDetector<bool>,
+    left_sprite_columns_enabled: EdgeDetector<bool>,
+    background_enabled: EdgeDetector<bool>,
+    sprites_enabled: EdgeDetector<bool>,
+    emphasize_red: EdgeDetector<bool>,
+    emphasize_green: EdgeDetector<bool>,
+    emphasize_blue: EdgeDetector<bool>,
+
     apu_frame_irq_pending_detector: EdgeDetector<bool>,
     dmc_irq_pending_detector: EdgeDetector<bool>,
     mapper_irq_asserted_detector: EdgeDetector<bool>,
@@ -593,6 +631,15 @@ struct LatestValues {
 impl LatestValues {
     fn new(initial_bus: &Bus) -> Self {
         Self {
+            greyscale_enabled: EdgeDetector::any_edge(),
+            left_background_columns_enabled: EdgeDetector::any_edge(),
+            left_sprite_columns_enabled: EdgeDetector::any_edge(),
+            background_enabled: EdgeDetector::any_edge(),
+            sprites_enabled: EdgeDetector::any_edge(),
+            emphasize_red: EdgeDetector::any_edge(),
+            emphasize_green: EdgeDetector::any_edge(),
+            emphasize_blue: EdgeDetector::any_edge(),
+
             apu_frame_irq_pending_detector: EdgeDetector::target_value(true),
             dmc_irq_pending_detector: EdgeDetector::target_value(true),
             mapper_irq_asserted_detector: EdgeDetector::any_edge(),

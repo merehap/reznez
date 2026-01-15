@@ -139,7 +139,6 @@ impl PpuRegisters {
     pub fn write_mask(&mut self, value: u8) {
         self.ppu_io_bus.update_from_write(value);
 
-        let old_mask = self.mask;
         let fields = splitbits!(value, "efgs blmz");
         self.mask.emphasize_blue = fields.e;
         self.mask.emphasize_green = fields.f;
@@ -153,25 +152,6 @@ impl PpuRegisters {
         if self.rendering_enabled != (self.mask.sprites_enabled() || self.mask.background_enabled()) {
             self.rendering_toggle_state = RenderingToggleState::Pending;
         }
-
-        // TODO: Merge this into the standard, higher level change-logging.
-        log_change(old_mask.emphasize_blue, self.mask.emphasize_blue, "Blue emphasis");
-        log_change(old_mask.emphasize_green, self.mask.emphasize_green, "Green emphasis");
-        log_change(old_mask.emphasize_red, self.mask.emphasize_red, "Red emphasis");
-        log_change(old_mask.sprites_enabled, self.mask.sprites_enabled, "Sprites");
-        log_change(old_mask.background_enabled, self.mask.background_enabled, "Background");
-
-        log_change(
-            old_mask.left_sprite_columns_enabled,
-            self.mask.left_sprite_columns_enabled,
-            "Left sprite columns",
-        );
-        log_change(
-            old_mask.left_background_columns_enabled,
-            self.mask.left_background_columns_enabled,
-            "Left background columns",
-        );
-        log_change(old_mask.greyscale_enabled, self.mask.greyscale_enabled, "Greyscale");
     }
 
     // Peek 0x2002
@@ -417,38 +397,18 @@ impl Mask {
         }
     }
 
+    pub fn greyscale_enabled(self) -> bool { self.greyscale_enabled }
+    pub fn left_background_columns_enabled(self) -> bool { self.left_background_columns_enabled }
+    pub fn left_sprite_columns_enabled(self) -> bool { self.left_sprite_columns_enabled }
+    pub fn background_enabled(self) -> bool { self.background_enabled }
+    pub fn sprites_enabled(self) -> bool { self.sprites_enabled }
+    pub fn emphasize_red(self) -> bool { self.emphasize_red }
+    pub fn emphasize_green(self) -> bool { self.emphasize_green }
+    pub fn emphasize_blue(self) -> bool { self.emphasize_blue }
+
     pub fn emphasis_index(self) -> usize {
         ((self.emphasize_blue as usize) << 2)
             | ((self.emphasize_green as usize) << 1)
             | (self.emphasize_red as usize)
     }
-
-    pub fn greyscale_enabled(self) -> bool {
-        self.greyscale_enabled
-    }
-
-    pub fn left_background_columns_enabled(self) -> bool {
-        self.left_background_columns_enabled
-    }
-
-    pub fn left_sprite_columns_enabled(self) -> bool {
-        self.left_sprite_columns_enabled
-    }
-
-    pub fn background_enabled(self) -> bool {
-        self.background_enabled
-    }
-
-    pub fn sprites_enabled(self) -> bool {
-        self.sprites_enabled
-    }
-}
-
-fn log_change(old: bool, new: bool, message_prefix: &str) {
-    let message = match (old, new) {
-        (false, true) => format!("\t{message_prefix} enabled."),
-        (true, false) => format!("\t{message_prefix} disabled."),
-        _ => return,
-    };
-    info!(target: "ppuflags", "{message}");
 }
