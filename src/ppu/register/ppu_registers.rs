@@ -54,9 +54,6 @@ pub struct PpuRegisters {
 
     // Shared between all registers (0x2000 through 0x2007)
     ppu_io_bus: PpuIoBus,
-
-    // TODO: Remove this and replace it with a clock action.
-    reset_recently: bool,
 }
 
 impl PpuRegisters {
@@ -104,9 +101,6 @@ impl PpuRegisters {
 
             // Shared between all registers (0x2000 through 0x2007)
             ppu_io_bus: PpuIoBus::new(),
-
-            // TODO: Remove this and replace it with a clock action.
-            reset_recently: true,
         }
     }
 
@@ -350,14 +344,6 @@ impl PpuRegisters {
 
     pub fn write_toggle(&self) -> WriteToggle {
         self.write_toggle
-    }
-
-    pub fn reset_recently(&self) -> bool {
-        self.reset_recently
-    }
-
-    pub(in crate::ppu) fn clear_reset(&mut self) {
-        self.reset_recently = false;
     }
 }
 

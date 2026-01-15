@@ -218,6 +218,7 @@ impl Nes {
                 self.bus.cpu.reset();
                 self.bus.apu_regs.reset(self.bus.master_clock.apu_clock(), &mut self.bus.cpu_pinout);
                 self.bus.dmc_dma.disable_soon();
+                self.bus.ciram.disable_writes();
             }
 
             let step_result = self.step();

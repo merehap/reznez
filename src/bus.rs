@@ -173,11 +173,7 @@ impl Bus {
 
     #[inline]
     pub fn palette_table(&self) -> PaletteTable {
-        PaletteTable::new(
-            self.palette_ram.to_slice(),
-            &self.system_palette,
-            self.ppu_regs.mask(),
-        )
+        PaletteTable::new(self.palette_ram.to_slice(), &self.system_palette, self.ppu_regs.mask())
     }
 
     pub fn name_table_mirroring(&self) -> NameTableMirroring {
@@ -261,7 +257,7 @@ impl Bus {
         let (quadrant, index) = address.to_name_table_index();
         match self.name_table_mirroring().name_table_source_in_quadrant(quadrant) {
             NameTableSource::Ciram(side) =>
-                self.ciram.write(&self.ppu_regs, side, index, value),
+                self.ciram.write(side, index, value),
             NameTableSource::Rom {..} => { /* ROM is read-only. */}
             // FIXME: This currently ignores whether RAM writes are enabled. It shouldn't be possible to do that.
             NameTableSource::Ram { bank_number } =>
@@ -523,7 +519,7 @@ impl Bus {
     #[inline]
     pub fn ppu_write(&mut self, addr: PpuAddress, value: u8) {
         match addr.to_u16() {
-            0x0000..=0x1FFF => self.chr_memory.write(&self.ppu_regs, &mut self.ciram, &mut self.mapper_custom_pages, addr, value),
+            0x0000..=0x1FFF => self.chr_memory.write(&mut self.ciram, &mut self.mapper_custom_pages, addr, value),
             0x2000..=0x3EFF => self.write_name_table_byte(addr, value),
             0x3F00..=0x3FFF => self.palette_ram.write(addr.to_palette_ram_index(), value),
             0x4000..=0xFFFF => unreachable!(),

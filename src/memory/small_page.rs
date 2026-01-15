@@ -1,9 +1,11 @@
 use crate::memory::bank::bank_number::{ReadStatus, WriteStatus};
 use crate::memory::read_result::ReadResult;
 
+const KIBIBYTE: usize = 0x400;
+
 pub struct SmallPage {
     _name: String,
-    page: [u8; 0x400],
+    page: [u8; KIBIBYTE],
     read_status: ReadStatus,
     write_status: WriteStatus,
 }
@@ -12,7 +14,7 @@ impl SmallPage {
     pub fn new(name: String, read_status: ReadStatus, write_status: WriteStatus) -> Self {
         Self {
             _name: name,
-            page: [0; 0x400],
+            page: [0; KIBIBYTE],
             read_status,
             write_status,
         }
@@ -41,11 +43,11 @@ impl SmallPage {
         self.write_status = write_status;
     }
 
-    pub fn to_raw_ref(&self) -> &[u8; 0x400] {
+    pub fn to_raw_ref(&self) -> &[u8; KIBIBYTE] {
         &self.page
     }
 
-    pub fn to_raw_ref_mut(&mut self) -> Option<&mut [u8; 0x400]> {
+    pub fn to_raw_ref_mut(&mut self) -> Option<&mut [u8; KIBIBYTE]> {
         match self.write_status {
             WriteStatus::Disabled => None,
             WriteStatus::Enabled => Some(&mut self.page),

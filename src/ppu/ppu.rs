@@ -351,8 +351,10 @@ impl Ppu {
                 bus.ppu_regs.stop_vblank(bus.master_clock.ppu_clock());
                 bus.ppu_regs.sprite0_hit = false;
                 bus.ppu_regs.sprite_overflow = false;
-                bus.ppu_regs.clear_reset();
 
+                // At startup, CIRAM writes are disabled until the PPU has been running for a while.
+                // TODO: Determine the correct place to call this.
+                bus.ciram.enable_writes();
             }
         }
     }

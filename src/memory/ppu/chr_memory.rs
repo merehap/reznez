@@ -12,7 +12,6 @@ use crate::memory::ppu::ciram::Ciram;
 use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
 use crate::memory::small_page::SmallPage;
 use crate::memory::window::ChrWindowSize;
-use crate::ppu::register::ppu_registers::PpuRegisters;
 use crate::util::unit::KIBIBYTE;
 
 use super::ciram::CiramSide;
@@ -155,7 +154,6 @@ impl ChrMemory {
 
     pub fn write(
         &mut self,
-        regs: &PpuRegisters,
         ciram: &mut Ciram,
         mapper_custom_name_tables: &mut [SmallPage],
         address: PpuAddress,
@@ -173,7 +171,7 @@ impl ChrMemory {
                 todo!();
             }
             ChrMemoryIndex::Ciram(side, index) => {
-                ciram.write(regs, side, index, value);
+                ciram.write(side, index, value);
             }
             ChrMemoryIndex::MapperCustom { page_number, index } => {
                 mapper_custom_name_tables[page_number as usize].write(index, value);

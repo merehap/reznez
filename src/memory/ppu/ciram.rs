@@ -1,30 +1,46 @@
 // Clippy bug.
 #![allow(clippy::needless_borrow)]
 
-use crate::ppu::register::ppu_registers::PpuRegisters;
+use crate::mapper::WriteStatus;
 use crate::util::unit::KIBIBYTE;
 
 const CIRAM_SIZE: usize = 2 * KIBIBYTE as usize;
-const CHUNK_SIZE: usize = KIBIBYTE as usize;
+const SIDE_SIZE: usize = KIBIBYTE as usize;
 
-// Console-internal name table memory.
-pub struct Ciram(Box<[u8; CIRAM_SIZE]>);
+// Console-internal name table RAM.
+// TODO: Is CIRAM disabled again upon soft reset?
+pub struct Ciram {
+    raw: Box<[u8; CIRAM_SIZE]>,
+    write_status: WriteStatus,
+}
 
 impl Ciram {
-    pub fn new() -> Ciram {
-        Ciram(Box::new([0; CIRAM_SIZE]))
+    pub fn new() -> Self {
+        Self {
+            raw: Box::new([0; CIRAM_SIZE]),
+            // Can't write to CIRAM until the PPU has initialized a bit.
+            write_status: WriteStatus::Disabled,
+        }
     }
 
-    pub fn side(&self, side: CiramSide) -> &[u8; CHUNK_SIZE] {
+    pub fn side(&self, side: CiramSide) -> &[u8; SIDE_SIZE] {
         let start_index = side as usize;
-        self.0[start_index..start_index + CHUNK_SIZE]
+        self.raw[start_index..start_index + SIDE_SIZE]
             .try_into()
             .unwrap()
     }
 
-    pub fn write(&mut self, regs: &PpuRegisters, side: CiramSide, index: u16, value: u8) {
-        if !regs.reset_recently() {
-            self.0[usize::from(side as u16 + index)] = value;
+    pub fn enable_writes(&mut self) {
+        self.write_status = WriteStatus::Enabled;
+    }
+
+    pub fn disable_writes(&mut self) {
+        self.write_status = WriteStatus::Disabled;
+    }
+
+    pub fn write(&mut self, side: CiramSide, index: u16, value: u8) {
+        if self.write_status == WriteStatus::Enabled {
+            self.raw[usize::from(side as u16 + index)] = value;
         }
     }
 }
@@ -32,5 +48,5 @@ impl Ciram {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum CiramSide {
     Left = 0,
-    Right = CHUNK_SIZE as isize,
+    Right = SIDE_SIZE as isize,
 }
