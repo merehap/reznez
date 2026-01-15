@@ -5,4 +5,5 @@ pub mod ppu;
 pub mod raw_memory;
 pub mod read_result;
 pub mod signal_level;
+pub mod small_page;
 pub mod window;
