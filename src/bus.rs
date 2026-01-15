@@ -87,12 +87,12 @@ impl Bus {
             ppu,
             apu,
 
+            master_clock,
             dmc_dma: DmcDma::IDLE,
             oam_dma: OamDma::IDLE,
             joypad1: Joypad::new(),
             joypad2: Joypad::new(),
 
-            master_clock,
             ppu_regs: PpuRegisters::new(),
             apu_regs: ApuRegisters::new(),
 
@@ -514,6 +514,12 @@ impl Bus {
         }
     }
 
+    pub fn ppu_internal_read(&mut self, mapper: &mut dyn Mapper) -> PpuPeek {
+        let result = mapper.ppu_peek(self, self.ppu_pinout.address());
+        mapper.on_ppu_read(self, self.ppu_pinout.address(), result.value());
+        result
+    }
+
     #[inline]
     pub fn ppu_write(&mut self, addr: PpuAddress, value: u8) {
         match addr.to_u16() {
@@ -522,12 +528,6 @@ impl Bus {
             0x3F00..=0x3FFF => self.palette_ram.write(addr.to_palette_ram_index(), value),
             0x4000..=0xFFFF => unreachable!(),
         }
-    }
-
-    pub fn ppu_internal_read(&mut self, mapper: &mut dyn Mapper) -> PpuPeek {
-        let result = mapper.ppu_peek(self, self.ppu_pinout.address());
-        mapper.on_ppu_read(self, self.ppu_pinout.address(), result.value());
-        result
     }
 
     pub fn set_ppu_address_bus(&mut self, mapper: &mut dyn Mapper, addr: PpuAddress) {
