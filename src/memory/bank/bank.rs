@@ -113,7 +113,7 @@ impl PrgBank {
         write_status_register_id: None,
     };
 
-    pub const fn fixed_index(mut self, index: i16) -> Self {
+    pub const fn fixed_number(mut self, index: i16) -> Self {
         assert!(self.prg_source_provider.is_mapped(), "An ABSENT bank can't be fixed_index.");
         self.bank_number_provider = PrgBankNumberProvider::Fixed(BankNumber::from_i16(index));
         self
