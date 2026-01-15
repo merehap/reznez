@@ -104,6 +104,7 @@ impl Mapper001_0 {
         Self { board, shift_register: ShiftRegister::default() }
     }
 
+    // TODO: Split all these cases into their own files.
     fn set_chr_bank_and_board_specifics(&self, bus: &mut Bus, chr_id: ChrBankRegisterId, value: u8) {
         match self.board {
             Board::SNROM => {
@@ -113,19 +114,19 @@ impl Mapper001_0 {
                 bus.set_chr_register(chr_id, chr_bank as u16);
             }
             Board::SUROM => {
-                let banks = splitbits!(min=u8, value, "...p...c");
-                bus.set_prg_rom_outer_bank_number(banks.p);
+                let banks = splitbits!(min=u8, value, "...o...c");
+                bus.set_prg_rom_outer_bank_number(banks.o);
                 bus.set_chr_register(chr_id, banks.c);
             }
             Board::SOROM => {
-                let banks = splitbits!(min=u8, value, "...pr..c");
-                bus.set_prg_rom_outer_bank_number(banks.p);
+                let banks = splitbits!(min=u8, value, "...or..c");
+                bus.set_prg_rom_outer_bank_number(banks.o);
                 bus.set_prg_register(P0, banks.r);
                 bus.set_chr_register(chr_id, banks.c);
             }
             Board::SXROM => {
-                let banks = splitbits!(min=u8, value, "...prr.c");
-                bus.set_prg_rom_outer_bank_number(banks.p);
+                let banks = splitbits!(min=u8, value, "...orr.c");
+                bus.set_prg_rom_outer_bank_number(banks.o);
                 bus.set_prg_register(P0, banks.r);
                 bus.set_chr_register(chr_id, banks.c);
             }
