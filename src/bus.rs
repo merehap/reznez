@@ -115,32 +115,25 @@ impl Bus {
         }
     }
 
-    pub fn ciram(&self) -> &Ciram {
-        &self.ciram
-    }
+    pub fn ciram(&self) -> &Ciram { &self.ciram }
+    pub fn master_clock(&self) -> &MasterClock { &self.master_clock }
+    pub(in crate) fn master_clock_mut(&mut self) -> &mut MasterClock { &mut self.master_clock }
+    pub fn cpu_internal_ram(&self) -> &CpuInternalRam { &self.cpu_internal_ram }
+    pub fn prg_memory(&self) -> &PrgMemory { &self.prg_memory }
+    pub fn chr_memory(&self) -> &ChrMemory { &self.chr_memory }
 
-    pub fn master_clock(&self) -> &MasterClock {
-        &self.master_clock
-    }
+    // Convenience getters
+    pub fn cpu_cycle(&self) -> i64 { self.master_clock.cpu_cycle() }
+    pub fn ppu_clock(&self) -> &PpuClock { self.master_clock.ppu_clock() }
+    pub fn apu_clock(&self) -> &ApuClock { self.master_clock.apu_clock() }
+    pub fn dmc_dma_address(&self) -> CpuAddress { self.apu_regs.dmc.dma_sample_address() }
+    pub fn chr_rom_bank_count(&self) -> u16 { self.chr_memory.rom_bank_count() }
+    pub fn chr_ram_bank_count(&self) -> u16 { self.chr_memory.ram_bank_count() }
+    pub fn name_table_mirroring(&self) -> NameTableMirroring { self.chr_memory().name_table_mirroring() }
 
-    pub(in crate) fn master_clock_mut(&mut self) -> &mut MasterClock {
-        &mut self.master_clock
-    }
-
-    pub fn cpu_cycle(&self) -> i64 {
-        self.master_clock.cpu_cycle()
-    }
-
-    pub fn ppu_clock(&self) -> &PpuClock {
-        self.master_clock.ppu_clock()
-    }
-
-    pub fn apu_clock(&self) -> &ApuClock {
-        self.master_clock.apu_clock()
-    }
-
-    pub fn cpu_internal_ram(&self) -> &CpuInternalRam {
-        &self.cpu_internal_ram
+    #[inline]
+    pub fn palette_table(&self) -> PaletteTable {
+        PaletteTable::new(self.palette_ram.to_slice(), &self.system_palette, self.ppu_regs.mask())
     }
 
     pub fn cpu_address_bus(&self, address_bus_type: AddressBusType) -> CpuAddress {
@@ -157,27 +150,6 @@ impl Bus {
             AddressBusType::OamDma => self.oam_dma_address_bus = address,
             AddressBusType::DmcDma => self.dmc_dma_address_bus = address,
         }
-    }
-
-    pub fn dmc_dma_address(&self) -> CpuAddress {
-        self.apu_regs.dmc.dma_sample_address()
-    }
-
-    pub fn chr_rom_bank_count(&self) -> u16 {
-        self.chr_memory.rom_bank_count()
-    }
-
-    pub fn chr_ram_bank_count(&self) -> u16 {
-        self.chr_memory.ram_bank_count()
-    }
-
-    #[inline]
-    pub fn palette_table(&self) -> PaletteTable {
-        PaletteTable::new(self.palette_ram.to_slice(), &self.system_palette, self.ppu_regs.mask())
-    }
-
-    pub fn name_table_mirroring(&self) -> NameTableMirroring {
-        self.chr_memory().name_table_mirroring()
     }
 
     pub fn set_name_table_mirroring(&mut self, mirroring_index: u8) {
@@ -199,12 +171,12 @@ impl Bus {
         self.chr_memory.set_name_table_quadrant(quadrant, source);
     }
 
-    pub fn prg_memory(&self) -> &PrgMemory {
-        &self.prg_memory
-    }
-
     pub fn set_prg_layout(&mut self, index: u8) {
         self.prg_memory.set_layout(index);
+    }
+
+    pub fn set_chr_layout(&mut self, index: u8) {
+        self.chr_memory.set_layout(index);
     }
 
     pub fn set_prg_rom_outer_bank_number(&mut self, index: u8) {
@@ -239,10 +211,6 @@ impl Bus {
 
     pub fn set_chr_source(&mut self, id: ChrSourceRegisterId, chr_source: ChrSource) {
         self.chr_memory.set_chr_source(id, chr_source);
-    }
-
-    pub fn chr_memory(&self) -> &ChrMemory {
-        &self.chr_memory
     }
 
     #[inline]
@@ -281,10 +249,6 @@ impl Bus {
             NameTableSource::Ram { bank_number } => self.chr_memory.work_ram_1kib_page(0x400 * u32::from(bank_number.to_raw())),
             NameTableSource::MapperCustom { page_number, .. } => self.mapper_custom_pages[page_number as usize].to_raw_ref(),
         }
-    }
-
-    pub fn set_chr_layout(&mut self, index: u8) {
-        self.chr_memory.set_layout(index);
     }
 
     pub fn cpu_peek(&self, mapper: &dyn Mapper, address_bus_type: AddressBusType, addr: CpuAddress) -> u8 {
