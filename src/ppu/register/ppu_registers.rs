@@ -192,7 +192,7 @@ impl PpuRegisters {
     // Read 0x2002
     pub fn read_status(&mut self, clock: &PpuClock) -> ReadResult {
         let value = self.peek_status();
-        self.ppu_io_bus.update_from_status_read(value.value);
+        self.ppu_io_bus.update_from_status_read(value.unmasked_value());
 
         self.write_toggle = WriteToggle::FirstByte;
         self.stop_vblank(clock);
@@ -236,7 +236,7 @@ impl PpuRegisters {
     // Read 0x2004
     pub fn read_oam_data(&mut self, oam: &Oam) -> ReadResult {
         let value = self.peek_oam_data(oam);
-        self.ppu_io_bus.update_from_read(value.value);
+        self.ppu_io_bus.update_from_read(value.unmasked_value());
         value
     }
 
@@ -281,22 +281,25 @@ impl PpuRegisters {
     }
 
     // Peek 0x2007
-    pub fn peek_ppu_data(&self, old_data: u8) -> u8 {
-        if self.current_address.is_in_palette_table() {
+    pub fn peek_ppu_data(&self, old_data: u8) -> ReadResult {
+        let data = if self.current_address.is_in_palette_table() {
             // When reading palette data only, read the current data pointed to
             // by self.current_address, not what was previously pointed to.
             // Retain the previous ppu_io_bus values for the unused bits of palette data.
             (self.ppu_io_bus.value() & 0b1100_0000) | (old_data & 0b0011_1111)
         } else {
             self.ppu_read_buffer
-        }
+        };
+
+        // While the read may have had open bus bits on the PPU side (above), it doesn't on the CPU side.
+        ReadResult::full(data)
     }
 
     // Read 0x2007
     pub fn read_ppu_data(&mut self, old_data: u8) -> ReadResult {
         let value_read = self.peek_ppu_data(old_data);
-        self.ppu_io_bus.update_from_read(value_read);
-        ReadResult::full(value_read)
+        self.ppu_io_bus.update_from_read(value_read.unmasked_value());
+        value_read
     }
 
     // Read 0x2007

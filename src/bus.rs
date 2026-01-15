@@ -304,7 +304,7 @@ impl Bus {
             Addr::OamData               => self.ppu_regs.peek_oam_data(&self.oam),
             Addr::PpuData => {
                 let old_value = mapper.ppu_peek(self, self.ppu_regs.current_address).value();
-                ReadResult::full(self.ppu_regs.peek_ppu_data(old_value))
+                self.ppu_regs.peek_ppu_data(old_value)
             }
             Addr::PpuControl | Addr::PpuMask | Addr::OamAddress | Addr::PpuScroll | Addr::PpuAddress => {
                 // Write-only PPU registers.
@@ -332,9 +332,8 @@ impl Bus {
                     should_apu_read_dominate_normal_read = true;
                     self.apu_regs.peek_status(&self.cpu_pinout, &self.dmc_dma)
                 }
-                // TODO: Move ReadResult/mask specification into the controller.
-                Addr::Controller1AndStrobe       => ReadResult::partial(self.joypad1.peek_status() as u8, 0b0000_0111),
-                Addr::Controller2AndFrameCounter => ReadResult::partial(self.joypad2.peek_status() as u8, 0b0000_0111),
+                Addr::Controller1AndStrobe       => self.joypad1.peek_status(),
+                Addr::Controller2AndFrameCounter => self.joypad2.peek_status(),
 
                 // APU channel registers and OAM DMA are write-only. CPU Test Mode is not yet supported.
                 _ if addr.is_in_apu_register_range() => ReadResult::OPEN_BUS,
@@ -402,9 +401,8 @@ impl Bus {
                     should_apu_read_update_data_bus = address_bus_type != AddressBusType::Cpu;
                     self.apu_regs.read_status(self.master_clock.apu_clock(), &self.cpu_pinout, &self.dmc_dma)
                 }
-                // TODO: Move ReadResult/mask specification into the controller.
-                Addr::Controller1AndStrobe => ReadResult::partial(self.joypad1.read_status() as u8, 0b0000_0111),
-                Addr::Controller2AndFrameCounter => ReadResult::partial(self.joypad2.read_status() as u8, 0b0000_0111),
+                Addr::Controller1AndStrobe       => self.joypad1.read_status(),
+                Addr::Controller2AndFrameCounter => self.joypad2.read_status(),
                 // Most APU registers and OAM DMA are write-only. CPU Test Mode is not yet supported.
                 _ if addr.is_in_apu_register_range() => ReadResult::OPEN_BUS,
                 _ => unreachable!(),

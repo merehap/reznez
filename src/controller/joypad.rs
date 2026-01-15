@@ -3,6 +3,8 @@ use std::ops::{Index, IndexMut};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
+use crate::mapper::ReadResult;
+
 // https://wiki.nesdev.com/w/index.php/Controller_reading_code
 #[derive(Clone, Copy)]
 pub struct Joypad {
@@ -21,16 +23,19 @@ impl Joypad {
     }
 
     // Peek 0x4016 and 0x4017
-    pub fn peek_status(&self) -> ButtonStatus {
-        if let Some(selected_button) = self.selected_button {
-            self.button_statuses[selected_button]
-        } else {
-            ButtonStatus::Pressed
-        }
+    pub fn peek_status(&self) -> ReadResult {
+        let button_status = self.selected_button
+            .map_or(ButtonStatus::Pressed, |b| self.button_statuses[b]);
+        let value = match button_status {
+            ButtonStatus::Unpressed => 0b0000_0000,
+            ButtonStatus::Pressed   => 0b0000_0001,
+        };
+
+        ReadResult::partial(value, 0b0000_0111)
     }
 
     // Read 0x4016 and 0x4017
-    pub fn read_status(&mut self) -> ButtonStatus {
+    pub fn read_status(&mut self) -> ReadResult {
         let status = self.peek_status();
         if self.strobe_mode == StrobeMode::Off {
             // Advance to the next button for the next read.
@@ -115,7 +120,7 @@ impl IndexMut<Button> for ButtonStatuses {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum ButtonStatus {
     Unpressed,
     Pressed,

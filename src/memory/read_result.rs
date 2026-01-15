@@ -1,8 +1,8 @@
 // TODO: Rename to PeekResult.
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct ReadResult {
-    pub value: u8,
-    pub mask: u8,
+    value: u8,
+    mask: u8,
 }
 
 impl ReadResult {
@@ -38,20 +38,8 @@ impl ReadResult {
         (self.value & register_value & self.mask) | (register_value & !self.mask)
     }
 
-    pub fn unwrap(self) -> u8 {
+    pub fn unmasked_value(self) -> u8 {
         assert_eq!(self.mask, 0b1111_1111);
-        self.value
-    }
-
-    pub fn unwrap_or(self, value: u8) -> u8 {
-        match self.mask {
-            0b1111_1111 => self.value,
-            _ => value,
-        }
-    }
-
-    pub fn expect(self, message: &str) -> u8 {
-        assert_eq!(self.mask, 0b1111_1111, "{message}");
         self.value
     }
 }
