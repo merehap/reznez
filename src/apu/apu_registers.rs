@@ -1,5 +1,7 @@
+#![allow(clippy::many_single_char_names)]
+
 use log::info;
-use splitbits::splitbits;
+use splitbits::{combinebits, splitbits};
 
 use crate::apu::apu_clock::{ApuClock, StepMode};
 use crate::apu::sweep::NegateBehavior;
@@ -8,8 +10,8 @@ use crate::apu::triangle_channel::TriangleChannel;
 use crate::apu::noise_channel::NoiseChannel;
 use crate::apu::dmc::Dmc;
 use crate::cpu::dmc_dma::DmcDma;
+use crate::mapper::ReadResult;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
-use crate::util::bit_util;
 
 pub struct ApuRegisters {
     pub pulse_1: PulseChannel<{NegateBehavior::OnesComplement}>,
@@ -66,20 +68,20 @@ impl ApuRegisters {
         self.clock_reset_status
     }
 
-    pub fn peek_status(&self, cpu_pinout: &CpuPinout, dma: &DmcDma) -> Status {
-        Status {
-            dmc_interrupt: cpu_pinout.dmc_irq_asserted(),
-            frame_irq_status: self.frame_irq_status,
-            dmc_active: self.dmc_enabled && dma.enabled(),
-            noise_active: self.noise.active(),
-            triangle_active: self.triangle.active(),
-            pulse_2_active: self.pulse_2.active(),
-            pulse_1_active: self.pulse_1.active(),
-        }
+    // Peek 0x4015
+    pub fn peek_status(&self, cpu_pinout: &CpuPinout, dma: &DmcDma) -> ReadResult {
+        let i = cpu_pinout.dmc_irq_asserted();
+        let f = self.frame_irq_status;
+        let d = self.dmc_enabled && dma.enabled();
+        let n = self.noise.active();
+        let t = self.triangle.active();
+        let q = self.pulse_2.active();
+        let p = self.pulse_1.active();
+        ReadResult::partial(combinebits!("if0d ntqp"), 0b1101_1111)
     }
 
     // Read 0x4015
-    pub fn read_status(&mut self, clock: &ApuClock, cpu_pinout: &CpuPinout, dma: &DmcDma) -> Status {
+    pub fn read_status(&mut self, clock: &ApuClock, cpu_pinout: &CpuPinout, dma: &DmcDma) -> ReadResult {
         if cpu_pinout.frame_irq_asserted() {
             info!(target: "apuevents", "Frame IRQ flag will be cleared during the next GET cycle due to APUStatus read. APU Cycle: {}", clock.cpu_cycle());
         }
@@ -91,7 +93,7 @@ impl ApuRegisters {
     }
 
     // Write 0x4015
-    pub fn write_status_byte(&mut self, clock: &ApuClock, cpu_pinout: &mut CpuPinout, dmc_dma: &mut DmcDma) {
+    pub fn write_status(&mut self, clock: &ApuClock, cpu_pinout: &mut CpuPinout, dmc_dma: &mut DmcDma) {
         let value = cpu_pinout.data_bus;
         info!(target: "apuevents", "APU status write: {value:05b} . APU Cycle: {}", clock.cpu_cycle());
 
@@ -272,34 +274,6 @@ impl ApuRegisters {
                 true
             };
         }
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct Status {
-    dmc_interrupt: bool,
-    frame_irq_status: bool,
-    dmc_active: bool,
-    noise_active: bool,
-    triangle_active: bool,
-    pulse_2_active: bool,
-    pulse_1_active: bool,
-}
-
-impl Status {
-    pub fn to_u8(self) -> u8 {
-        bit_util::pack_bools(
-            [
-                self.dmc_interrupt,
-                self.frame_irq_status,
-                false,
-                self.dmc_active,
-                self.noise_active,
-                self.triangle_active,
-                self.pulse_2_active,
-                self.pulse_1_active,
-            ]
-        )
     }
 }
 

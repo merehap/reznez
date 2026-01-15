@@ -330,7 +330,7 @@ impl Bus {
             match addr.to_friendly() {
                 Addr::ApuStatus => {
                     should_apu_read_dominate_normal_read = true;
-                    ReadResult::partial(self.apu_regs.peek_status(&self.cpu_pinout, &self.dmc_dma).to_u8(), 0b1101_1111)
+                    self.apu_regs.peek_status(&self.cpu_pinout, &self.dmc_dma)
                 }
                 // TODO: Move ReadResult/mask specification into the controller.
                 Addr::Controller1AndStrobe       => ReadResult::partial(self.joypad1.peek_status() as u8, 0b0000_0111),
@@ -400,8 +400,7 @@ impl Bus {
                     // APU status reads only use the data bus when using a DMA address bus.
                     should_apu_read_dominate_normal_read = true;
                     should_apu_read_update_data_bus = address_bus_type != AddressBusType::Cpu;
-                    let status = self.apu_regs.read_status(self.master_clock.apu_clock(), &self.cpu_pinout, &self.dmc_dma);
-                    ReadResult::partial(status.to_u8(), 0b1101_1111)
+                    self.apu_regs.read_status(self.master_clock.apu_clock(), &self.cpu_pinout, &self.dmc_dma)
                 }
                 // TODO: Move ReadResult/mask specification into the controller.
                 Addr::Controller1AndStrobe => ReadResult::partial(self.joypad1.read_status() as u8, 0b0000_0111),
@@ -484,7 +483,7 @@ impl Bus {
 
             // Miscellaneous registers.
             Addr::OamDma          => self.oam_dma.prepare_to_start(self.cpu_pinout.data_bus),
-            Addr::ApuStatus       => self.apu_regs.write_status_byte(self.master_clock.apu_clock(), &mut self.cpu_pinout, &mut self.dmc_dma),
+            Addr::ApuStatus       => self.apu_regs.write_status(self.master_clock.apu_clock(), &mut self.cpu_pinout, &mut self.dmc_dma),
             Addr::Controller2AndFrameCounter => self.apu_regs.write_frame_counter(self.master_clock.apu_clock(), &mut self.cpu_pinout),
             Addr::Controller1AndStrobe => {
                 self.joypad1.change_strobe(self.cpu_pinout.data_bus);
