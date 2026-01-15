@@ -8,7 +8,7 @@ use crate::memory::bank::bank_number::{ChrBankRegisters, ReadStatus, WriteStatus
 use crate::bus::SmallPage;
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::ppu_address::PpuAddress;
-use crate::memory::ppu::chr_memory_map::{ChrMemoryMap, ChrMemoryIndex};
+use crate::memory::ppu::chr_memory_map::{ChrMemoryIndex, ChrMemoryMap, ChrPageId};
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::raw_memory::{RawMemory, RawMemorySlice};
 use crate::memory::window::ChrWindowSize;
@@ -377,6 +377,34 @@ impl ChrMemory {
                     _ => todo!(),
                 }
         })
+    }
+
+    pub fn chr_rom_bank_string(&self) -> String {
+        let mut result = String::new();
+        for page_id in self.current_memory_map().pattern_table_page_ids() {
+            let bank_string = match page_id {
+                ChrPageId::Rom { page_number, .. } => page_number.to_string(),
+                ChrPageId::Ram { page_number, .. } => format!("W{page_number}"),
+                ChrPageId::SaveRam {..} => "S".to_owned(),
+                ChrPageId::Ciram(side) => format!("C{side:?}"),
+                ChrPageId::MapperCustom { page_number } => format!("M{page_number}"),
+            };
+
+            let window_size = 1;
+
+            let padding_size = 5 * window_size - 2u16.saturating_sub(u16::try_from(bank_string.len()).unwrap());
+            assert!(padding_size < 100);
+            let left_padding_len = padding_size / 2;
+            let right_padding_len = padding_size - left_padding_len;
+
+            let left_padding = " ".repeat(left_padding_len as usize);
+            let right_padding = " ".repeat(right_padding_len as usize);
+
+            let segment = format!("|{left_padding}{bank_string}{right_padding}|");
+            result.push_str(&segment);
+        }
+
+        result
     }
 }
 

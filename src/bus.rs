@@ -7,14 +7,12 @@ use crate::cpu::dmc_dma::DmcDma;
 use crate::cpu::oam_dma::OamDma;
 use crate::master_clock::MasterClock;
 use crate::memory::bank::bank::{ChrSource, ChrSourceRegisterId, PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
-use crate::memory::bank::bank_number::{MemType, ReadStatus, WriteStatus};
+use crate::memory::bank::bank_number::{ReadStatus, WriteStatus};
 use crate::memory::cpu::cpu_address::{CpuAddress, FriendlyCpuAddress};
 use crate::memory::cpu::cpu_internal_ram::CpuInternalRam;
 use crate::memory::cpu::cpu_pinout::CpuPinout;
-use crate::memory::cpu::prg_memory_map::PrgPageIdSlot;
 use crate::mapper::{ChrBankRegisterId, ChrMemory, CiramSide, KIBIBYTE, Mapper, MetaRegisterId, NameTableMirroring, NameTableQuadrant, NameTableSource, PpuAddress, PrgBankRegisterId, PrgMemory, ReadResult};
 use crate::memory::ppu::chr_memory::{PeekSource, PpuPeek};
-use crate::memory::ppu::chr_memory_map::ChrPageId;
 use crate::memory::ppu::palette_ram::PaletteRam;
 use crate::memory::ppu::ciram::Ciram;
 use crate::memory::ppu::ppu_pinout::PpuPinout;
@@ -543,78 +541,6 @@ impl Bus {
         if address_changed {
             mapper.on_ppu_address_change(self, self.ppu_pinout.address());
         }
-    }
-
-    pub fn prg_rom_bank_string(&self) -> String {
-        let prg_memory = &self.prg_memory();
-
-        let mut result = String::new();
-        for prg_page_id_slot in prg_memory.current_memory_map().page_id_slots() {
-            let bank_string = match prg_page_id_slot {
-                PrgPageIdSlot::Normal(prg_source_and_page_number) => {
-                    match prg_source_and_page_number {
-                        None => "E".to_string(),
-                        // FIXME: This should be bank number, not page number.
-                        // TODO: Add Read/Write status to the output
-                        Some((MemType::Rom(..), page_number)) => page_number.to_string(),
-                        Some((MemType::WorkRam(..), page_number)) => format!("W{page_number}"),
-                        Some((MemType::SaveRam(..), page_number)) => format!("S{page_number}"),
-                    }
-                }
-                PrgPageIdSlot::Multi(_) => "M".to_string(),
-            };
-
-            let window_size = 8;
-
-            let left_padding_len;
-            let right_padding_len;
-            if window_size < 8 {
-                left_padding_len = 0;
-                right_padding_len = 0;
-            } else {
-                let padding_size = window_size - 2u16.saturating_sub(u16::try_from(bank_string.len()).unwrap());
-                left_padding_len = padding_size / 2;
-                right_padding_len = padding_size - left_padding_len;
-            }
-
-            let left_padding = " ".repeat(left_padding_len as usize);
-            let right_padding = " ".repeat(right_padding_len as usize);
-
-            let segment = format!("|{left_padding}{bank_string}{right_padding}|");
-            result.push_str(&segment);
-        }
-
-        result
-    }
-
-    pub fn chr_rom_bank_string(&self) -> String {
-        let chr_memory = &self.chr_memory();
-
-        let mut result = String::new();
-        for page_id in chr_memory.current_memory_map().pattern_table_page_ids() {
-            let bank_string = match page_id {
-                ChrPageId::Rom { page_number, .. } => page_number.to_string(),
-                ChrPageId::Ram { page_number, .. } => format!("W{page_number}"),
-                ChrPageId::SaveRam {..} => "S".to_owned(),
-                ChrPageId::Ciram(side) => format!("C{side:?}"),
-                ChrPageId::MapperCustom { page_number } => format!("M{page_number}"),
-            };
-
-            let window_size = 1;
-
-            let padding_size = 5 * window_size - 2u16.saturating_sub(u16::try_from(bank_string.len()).unwrap());
-            assert!(padding_size < 100);
-            let left_padding_len = padding_size / 2;
-            let right_padding_len = padding_size - left_padding_len;
-
-            let left_padding = " ".repeat(left_padding_len as usize);
-            let right_padding = " ".repeat(right_padding_len as usize);
-
-            let segment = format!("|{left_padding}{bank_string}{right_padding}|");
-            result.push_str(&segment);
-        }
-
-        result
     }
 
     pub fn peek_chr(&self, address: PpuAddress) -> PpuPeek {

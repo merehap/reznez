@@ -4,7 +4,7 @@ use crate::memory::bank::bank::{PrgSource, ReadStatusRegisterId, PrgSourceRegist
 use crate::memory::bank::bank_number::{MemType, PrgBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
-use crate::memory::cpu::prg_memory_map::PrgMemoryMap;
+use crate::memory::cpu::prg_memory_map::{PrgMemoryMap, PrgPageIdSlot};
 use crate::memory::layout::OuterBankLayout;
 use crate::memory::raw_memory::{RawMemory, SaveRam};
 use crate::memory::read_result::ReadResult;
@@ -217,5 +217,45 @@ impl PrgMemory {
         }
 
         panic!("No window exists at {start:?}");
+    }
+
+    pub fn prg_rom_bank_string(&self) -> String {
+        let mut result = String::new();
+        for prg_page_id_slot in self.current_memory_map().page_id_slots() {
+            let bank_string = match prg_page_id_slot {
+                PrgPageIdSlot::Normal(prg_source_and_page_number) => {
+                    match prg_source_and_page_number {
+                        None => "E".to_string(),
+                        // FIXME: This should be bank number, not page number.
+                        // TODO: Add Read/Write status to the output
+                        Some((MemType::Rom(..), page_number)) => page_number.to_string(),
+                        Some((MemType::WorkRam(..), page_number)) => format!("W{page_number}"),
+                        Some((MemType::SaveRam(..), page_number)) => format!("S{page_number}"),
+                    }
+                }
+                PrgPageIdSlot::Multi(_) => "M".to_string(),
+            };
+
+            let window_size = 8;
+
+            let left_padding_len;
+            let right_padding_len;
+            if window_size < 8 {
+                left_padding_len = 0;
+                right_padding_len = 0;
+            } else {
+                let padding_size = window_size - 2u16.saturating_sub(u16::try_from(bank_string.len()).unwrap());
+                left_padding_len = padding_size / 2;
+                right_padding_len = padding_size - left_padding_len;
+            }
+
+            let left_padding = " ".repeat(left_padding_len as usize);
+            let right_padding = " ".repeat(right_padding_len as usize);
+
+            let segment = format!("|{left_padding}{bank_string}{right_padding}|");
+            result.push_str(&segment);
+        }
+
+        result
     }
 }
