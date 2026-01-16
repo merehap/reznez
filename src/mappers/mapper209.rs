@@ -3,6 +3,7 @@ use std::num::NonZeroI8;
 use crate::mapper::*;
 use crate::util::edge_detector::EdgeDetector;
 
+// TODO Fix the 0x6000 ROM alignments now that they aren't auto-aligned.
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(2048 * KIBIBYTE)
     .prg_rom_outer_bank_size(512 * KIBIBYTE)

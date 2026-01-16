@@ -10,6 +10,93 @@ const PRG_SUB_SLOT_COUNT: usize = 64;
 const PAGE_SIZE: u16 = 8 * KIBIBYTE as u16;
 const SUB_PAGE_SIZE: u16 = PAGE_SIZE / 64;
 
+#[derive(Default)]
+pub struct AddressTemplate {
+    base_address_mask: u16,
+    base_address_bit_count: u8,
+
+    inner_bank_mask: u16,
+    inner_bank_bit_count: u8,
+    inner_bank_low_bit_index: u8,
+
+    outer_bank_mask: u16,
+    outer_bank_bit_count: u8,
+    outer_bank_low_bit_index: u8,
+}
+
+impl AddressTemplate {
+    pub const PAGE_ADDRESS_BIT_COUNT: u8 = 13;
+
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn total_bit_count(&self) -> u8 {
+        self.outer_bank_bit_count + self.inner_bank_bit_count + self.base_address_bit_count
+    }
+
+    pub fn inner_bank_bit_count(&self) -> u8 {
+        self.inner_bank_bit_count
+    }
+
+    pub fn page_bit_count(&self) -> u8 {
+        self.inner_bank_bit_count + self.base_address_bit_count.strict_sub(Self::PAGE_ADDRESS_BIT_COUNT)
+    }
+
+    pub fn pages_per_inner_bank(&self) -> u16 {
+        self.base_address_bit_count
+            .checked_sub(Self::PAGE_ADDRESS_BIT_COUNT)
+            .map_or(0, |count| 2u16.pow(count.into()))
+    }
+
+    pub fn page_count(&self) -> u16 {
+        2u16.pow(self.page_bit_count().into())
+    }
+
+    pub fn inner_bank_count(&self) -> u16 {
+        2u16.pow(self.inner_bank_bit_count.into())
+    }
+
+    pub fn set_base_address_bit_count(&mut self, bit_count: u8) {
+        self.base_address_bit_count = bit_count;
+        self.base_address_mask = (1 << bit_count) - 1;
+    }
+
+    pub fn set_inner_bank_range(&mut self, bit_count: u8, low_bit_index: u8) {
+        self.inner_bank_bit_count = bit_count;
+        self.inner_bank_mask = (1 << bit_count) - 1;
+        self.inner_bank_low_bit_index = low_bit_index;
+    }
+
+    pub fn set_outer_bank_range(&mut self, bit_count: u8, low_bit_index: u8) {
+        self.outer_bank_bit_count = bit_count;
+        self.outer_bank_mask = (1 << bit_count) - 1;
+        self.outer_bank_low_bit_index = low_bit_index;
+    }
+
+    pub fn resolve(&self, outer_bank: u16, inner_bank: u16, base_address: u16) -> u32 {
+        let effective_outer_bank = (outer_bank >> self.outer_bank_low_bit_index) & self.outer_bank_mask;
+        let outer_segment = u32::from(effective_outer_bank) << (self.inner_bank_bit_count + self.base_address_bit_count);
+
+        let effective_inner_bank = (inner_bank >> self.inner_bank_low_bit_index) & self.inner_bank_mask;
+        let inner_segment = u32::from(effective_inner_bank) << self.base_address_bit_count;
+
+        let base_address_segment = u32::from(base_address & self.base_address_mask);
+
+        outer_segment | inner_segment | base_address_segment
+    }
+}
+
+use std::fmt;
+
+impl fmt::Display for AddressTemplate {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", "o".repeat(self.outer_bank_bit_count.into()))?;
+        write!(f, "{}", "i".repeat(self.inner_bank_bit_count.into()))?;
+        write!(f, "{}", "a".repeat(self.base_address_bit_count.into()))
+    }
+}
+
 pub struct PrgMemoryMap {
     // 0x6000 through 0xFFFF
     page_mappings: [PrgMappingSlot; PRG_SLOT_COUNT],
@@ -27,7 +114,12 @@ impl PrgMemoryMap {
         regs: &PrgBankRegisters,
     ) -> Self {
 
-        let rom_pages_per_bank = rom_bank_size.page_multiple();
+        let mut rom_address_template = AddressTemplate::new();
+        rom_address_template.set_base_address_bit_count(rom_bank_size.bit_count());
+        assert_eq!(rom_size & (rom_size - 1), 0);
+        rom_address_template.set_inner_bank_range((rom_size - 1).count_ones() as u8, 0);
+
+        let rom_pages_per_bank = rom_address_template.pages_per_inner_bank();
         assert_eq!(rom_size % u32::from(PAGE_SIZE), 0);
 
         let rom_page_count: u16 = (rom_size / u32::from(PAGE_SIZE)).try_into().unwrap();

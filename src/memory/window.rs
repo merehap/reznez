@@ -170,6 +170,11 @@ impl PrgWindowSize {
         u8::try_from((self.0 % PRG_PAGE_SIZE) / PRG_SUB_PAGE_SIZE).unwrap()
     }
 
+    pub fn bit_count(self) -> u8 {
+        assert_eq!(self.0 & (self.0 - 1), 0);
+        (self.0 - 1).count_ones() as u8
+    }
+
     pub fn to_raw(self) -> u16 {
         self.0
     }
