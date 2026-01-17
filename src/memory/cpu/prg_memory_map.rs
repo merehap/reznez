@@ -62,7 +62,7 @@ impl AddressTemplate {
         self.base_address_mask = (1 << bit_count) - 1;
     }
 
-    pub fn set_inner_bank_range(&mut self, bit_count: u8, low_bit_index: u8) {
+    pub fn set_inner_bank_bit_count(&mut self, bit_count: u8, low_bit_index: u8) {
         self.inner_bank_bit_count = bit_count;
         self.inner_bank_mask = (1 << bit_count) - 1;
         self.inner_bank_low_bit_index = low_bit_index;
@@ -117,12 +117,12 @@ impl PrgMemoryMap {
         let mut rom_address_template = AddressTemplate::new();
         rom_address_template.set_base_address_bit_count(rom_bank_size.bit_count());
         assert_eq!(rom_size & (rom_size - 1), 0);
-        rom_address_template.set_inner_bank_range((rom_size - 1).count_ones() as u8, 0);
+        rom_address_template.set_inner_bank_bit_count((rom_size - 1).count_ones() as u8 - rom_bank_size.bit_count(), 0);
 
         let rom_pages_per_bank = rom_address_template.pages_per_inner_bank();
         assert_eq!(rom_size % u32::from(PAGE_SIZE), 0);
 
-        let rom_page_count: u16 = (rom_size / u32::from(PAGE_SIZE)).try_into().unwrap();
+        let rom_page_count = rom_address_template.page_count();
         let mut rom_page_number_mask = 0b1111_1111_1111_1111;
         rom_page_number_mask &= rom_page_count - 1;
 
