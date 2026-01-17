@@ -17,6 +17,7 @@ pub struct AddressTemplate {
 
     inner_bank_mask: u16,
     inner_bank_bit_count: u8,
+    inner_bank_low_bit_index: u8,
 
     base_address_mask: u16,
     base_address_bit_count: u8,
@@ -47,6 +48,7 @@ impl AddressTemplate {
 
             inner_bank_mask: create_mask(inner_bank_bit_count, inner_bank_low_bit_index),
             inner_bank_bit_count,
+            inner_bank_low_bit_index,
 
             base_address_mask: create_mask(base_address_bit_count, base_address_low_bit_index),
             base_address_bit_count,
@@ -59,6 +61,14 @@ impl AddressTemplate {
 
     pub fn inner_bank_bit_count(&self) -> u8 {
         self.inner_bank_bit_count
+    }
+
+    pub fn bank_size(&self) -> u16 {
+        2u16.pow(u32::from(self.inner_bank_bit_count + self.base_address_bit_count))
+    }
+
+    pub fn total_inner_bank_bit_count(&self) -> u8 {
+        self.inner_bank_bit_count + self.base_address_bit_count
     }
 
     pub fn page_bit_count(&self) -> u8 {
@@ -75,13 +85,21 @@ impl AddressTemplate {
         2u16.pow(self.page_bit_count().into())
     }
 
+    pub fn page_number_mask(&self) -> u16 {
+        let mut page_number_mask = 0b1111_1111_1111_1111;
+        page_number_mask &= self.page_count() - 1;
+        page_number_mask
+    }
+
     pub fn inner_bank_count(&self) -> u16 {
         2u16.pow(self.inner_bank_bit_count.into())
     }
 
-    pub fn with_big_bank(&self, bank_size_shift: u8) -> Self {
+    pub fn with_big_bank(&self, new_bank_bit_count: u8) -> Self {
+        let bank_size_shift = new_bank_bit_count.strict_sub(self.total_inner_bank_bit_count());
         let mut big_banked = self.clone();
-
+        big_banked.inner_bank_low_bit_index += bank_size_shift;
+        big_banked.inner_bank_mask = create_mask(big_banked.base_address_bit_count, big_banked.inner_bank_low_bit_index);
         big_banked
     }
 
@@ -141,8 +159,7 @@ impl PrgMemoryMap {
         assert_eq!(rom_size % u32::from(PAGE_SIZE), 0);
 
         let rom_page_count = rom_address_template.page_count();
-        let mut rom_page_number_mask = 0b1111_1111_1111_1111;
-        rom_page_number_mask &= rom_page_count - 1;
+        let rom_page_number_mask = rom_address_template.page_number_mask();
 
         let ram_page_count: u16 = ((ram_size + save_ram_size) / u32::from(PAGE_SIZE)).try_into().unwrap();
         let ram_page_number_mask = ram_page_count.saturating_sub(1);
@@ -153,6 +170,7 @@ impl PrgMemoryMap {
         let mut windows = initial_layout.windows().iter();
         while let Some(mut window) = windows.next() {
             page_offset = 0;
+            //let window_address_template = rom_address_template.with_big_bank(window.size().bit_count());
             let page_multiple = window.size().page_multiple();
             if page_multiple >= 1 {
                 let rom_page_number_mask = rom_page_number_mask & !(page_multiple - 1);
