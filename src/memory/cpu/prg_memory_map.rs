@@ -10,15 +10,13 @@ const PRG_SUB_SLOT_COUNT: usize = 64;
 const PAGE_SIZE: u16 = 8 * KIBIBYTE as u16;
 const SUB_PAGE_SIZE: u16 = PAGE_SIZE / 64;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct AddressTemplate {
     outer_bank_mask: u16,
     outer_bank_bit_count: u8,
-    outer_bank_low_bit_index: u8,
 
     inner_bank_mask: u16,
     inner_bank_bit_count: u8,
-    inner_bank_low_bit_index: u8,
 
     base_address_mask: u16,
     base_address_bit_count: u8,
@@ -32,9 +30,9 @@ impl AddressTemplate {
         // 16 KiB
         (inner_bank_total_bit_count, inner_bank_low_bit_index): (u8, u8),
         // 32 KiB
-        (mut base_address_bit_count, base_address_low): (u8, u8),
+        (mut base_address_bit_count, base_address_low_bit_index): (u8, u8),
     ) -> Self {
-        assert_eq!(base_address_low, 0);
+        assert_eq!(base_address_low_bit_index, 0);
         assert_eq!(outer_bank_total_bit_count, inner_bank_total_bit_count);
         assert_eq!(outer_bank_low_bit_index, 0);
 
@@ -44,15 +42,13 @@ impl AddressTemplate {
 
         let outer_bank_bit_count = 0;
         Self {
-            outer_bank_mask: (1 << outer_bank_bit_count) - 1,
+            outer_bank_mask: create_mask(outer_bank_bit_count, outer_bank_low_bit_index),
             outer_bank_bit_count: 0,
-            outer_bank_low_bit_index,
 
-            inner_bank_mask: (1 << inner_bank_bit_count) - 1,
+            inner_bank_mask: create_mask(inner_bank_bit_count, inner_bank_low_bit_index),
             inner_bank_bit_count,
-            inner_bank_low_bit_index,
 
-            base_address_mask: (1 << base_address_bit_count) - 1,
+            base_address_mask: create_mask(base_address_bit_count, base_address_low_bit_index),
             base_address_bit_count,
         }
     }
@@ -83,17 +79,28 @@ impl AddressTemplate {
         2u16.pow(self.inner_bank_bit_count.into())
     }
 
-    pub fn resolve(&self, outer_bank: u16, inner_bank: u16, base_address: u16) -> u32 {
-        let effective_outer_bank = (outer_bank >> self.outer_bank_low_bit_index) & self.outer_bank_mask;
-        let outer_segment = u32::from(effective_outer_bank) << (self.inner_bank_bit_count + self.base_address_bit_count);
+    pub fn with_big_bank(&self, bank_size_shift: u8) -> Self {
+        let mut big_banked = self.clone();
 
-        let effective_inner_bank = (inner_bank >> self.inner_bank_low_bit_index) & self.inner_bank_mask;
-        let inner_segment = u32::from(effective_inner_bank) << self.base_address_bit_count;
+        big_banked
+    }
+
+    pub fn resolve(&self, outer_bank: u16, inner_bank: u16, base_address: u16) -> u32 {
+        let effective_outer_bank = u32::from(outer_bank & self.outer_bank_mask);
+        let outer_segment = effective_outer_bank << (self.inner_bank_bit_count + self.base_address_bit_count);
+
+        let effective_inner_bank = u32::from(inner_bank & self.inner_bank_mask);
+        let inner_segment = effective_inner_bank << self.base_address_bit_count;
 
         let base_address_segment = u32::from(base_address & self.base_address_mask);
 
         outer_segment | inner_segment | base_address_segment
     }
+}
+
+fn create_mask(bit_count: u8, low_bit_index: u8) -> u16 {
+    assert!(bit_count >= low_bit_index);
+    ((1 << bit_count) - 1) & !((1 << low_bit_index) - 1)
 }
 
 use std::fmt;
