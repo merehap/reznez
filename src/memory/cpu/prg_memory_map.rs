@@ -31,7 +31,7 @@ const SUB_PAGE_SIZE: u16 = PAGE_SIZE / 64;
 //              |                             ROM size        (512 KiB)   |
 //              +---------------------------------------------------------+
 **/ 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct AddressTemplate {
     // Bit widths
     outer_bank_number_width: u8,
@@ -66,15 +66,15 @@ impl AddressTemplate {
 
         let outer_bank_bit_count = 0;
         let address_template = Self {
-            outer_bank_mask: create_mask(outer_bank_bit_count, outer_bank_low_bit_index).try_into().unwrap(),
             outer_bank_number_width: 0,
-
-            inner_bank_mask: create_mask(inner_bank_number_width, inner_bank_low_bit_index),
             inner_bank_number_width,
-            inner_bank_low_bit_index,
-
-            base_address_mask: create_mask(base_address_width, base_address_low_bit_index),
             base_address_width,
+
+            outer_bank_mask: create_mask(outer_bank_bit_count, outer_bank_low_bit_index).try_into().unwrap(),
+            inner_bank_mask: create_mask(inner_bank_number_width, inner_bank_low_bit_index),
+            base_address_mask: create_mask(base_address_width, base_address_low_bit_index),
+
+            inner_bank_low_bit_index,
         };
         assert!(address_template.total_width() <= 32);
 
@@ -86,7 +86,7 @@ impl AddressTemplate {
     }
 
     pub fn inner_bank_size(&self) -> u16 {
-        1 << self.base_address_width
+        1 << (self.base_address_width - self.inner_bank_low_bit_index)
     }
 
     pub fn inner_bank_count(&self) -> u16 {
@@ -126,14 +126,19 @@ impl AddressTemplate {
      * Components Before ( 8 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ I₀₀ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      * Components After  (16 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      */
-    pub fn with_bigger_bank(&self, new_base_address_bit_count: u8) -> Self {
-        let bank_size_shift = new_base_address_bit_count.strict_sub(self.base_address_width);
+    pub fn with_bigger_bank(&self, new_base_address_bit_count: u8) -> Option<Self> {
+        let bank_size_shift = new_base_address_bit_count.checked_sub(self.base_address_width)?;
 
         let mut big_banked = self.clone();
+        big_banked.inner_bank_low_bit_index += bank_size_shift;
         big_banked.base_address_width += bank_size_shift;
         big_banked.base_address_mask = create_mask(big_banked.base_address_width, 0);
         big_banked.inner_bank_mask = create_mask(big_banked.inner_bank_number_width, bank_size_shift);
-        big_banked
+        Some(big_banked)
+    }
+
+    pub fn resolve_starting_page_number(&self, raw_inner_bank_number: u16) -> u16 {
+        ((raw_inner_bank_number & self.inner_bank_mask) * u16::from(self.prg_pages_per_inner_bank())) & self.page_number_mask()
     }
 
     pub fn resolve(&self, raw_outer_number: u8, raw_inner_number: u16, address_bus_value: u16) -> AddressInfo {
@@ -203,11 +208,9 @@ impl PrgMemoryMap {
             (rom_bank_size.bit_count(), 0),
         );
 
-        let rom_pages_per_bank = rom_address_template.prg_pages_per_inner_bank();
         assert_eq!(rom_size % u32::from(PAGE_SIZE), 0);
 
         let rom_page_count = rom_address_template.prg_pages_per_outer_bank();
-        let rom_page_number_mask = rom_address_template.page_number_mask();
 
         let ram_page_count: u16 = ((ram_size + save_ram_size) / u32::from(PAGE_SIZE)).try_into().unwrap();
         let ram_page_number_mask = ram_page_count.saturating_sub(1);
@@ -220,16 +223,13 @@ impl PrgMemoryMap {
             page_offset = 0;
             let page_multiple = window.size().page_multiple();
             if page_multiple >= 1 {
-                if window.bank().is_rom() {
-                    let window_address_template = rom_address_template.with_bigger_bank(window.size().bit_count());
-                }
+                let rom_address_template = rom_address_template.with_bigger_bank(window.size().bit_count());
 
-                let rom_page_number_mask = rom_page_number_mask & !(page_multiple - 1);
                 for offset in 0..page_multiple {
                     // Mirror high pages to low ones if there isn't enough ROM.
                     page_offset = offset % rom_page_count;
                     let mapping = PrgMapping {
-                        bank: window.bank(), rom_pages_per_bank, rom_page_number_mask, ram_page_number_mask, page_offset,
+                        bank: window.bank(), rom_address_template: rom_address_template.clone(), ram_page_number_mask, page_offset,
                     };
                     page_mappings.push(PrgMappingSlot::Normal(mapping));
                 }
@@ -241,7 +241,7 @@ impl PrgMemoryMap {
             loop {
                 for sub_page_offset in 0..window.size().sub_page_multiple() {
                     let mapping = PrgMapping {
-                        bank: window.bank(), rom_pages_per_bank, rom_page_number_mask, ram_page_number_mask, page_offset,
+                        bank: window.bank(), rom_address_template: Some(rom_address_template.clone()), ram_page_number_mask, page_offset,
                     };
                     sub_page_mappings.push((mapping, sub_page_offset));
                 }
@@ -341,9 +341,8 @@ pub enum PrgMappingSlot {
 #[derive(Clone, Debug)]
 pub struct PrgMapping {
     bank: PrgBank,
-    rom_pages_per_bank: u8,
+    rom_address_template: Option<AddressTemplate>,
     page_offset: u16,
-    rom_page_number_mask: PageNumberMask,
     ram_page_number_mask: PageNumberMask,
 }
 
@@ -358,7 +357,8 @@ impl PrgMapping {
 
         match mem_type {
             MemType::Rom(_) => {
-                let page_number = ((u16::from(self.rom_pages_per_bank) * bank_number.to_raw()) & self.rom_page_number_mask) + self.page_offset;
+                let rom_address_template = self.rom_address_template.as_ref().unwrap();
+                let page_number = rom_address_template.resolve_starting_page_number(bank_number.to_raw()) + self.page_offset;
                 //println!("Page number within mapping: {page_number}. Bank Index: {}. Page offset: {}", bank_number.to_raw(), self.page_offset);
                 Some((mem_type, page_number))
             }
