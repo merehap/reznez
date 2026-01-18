@@ -11,26 +11,29 @@ const PAGE_SIZE: u16 = 8 * KIBIBYTE as u16;
 const SUB_PAGE_SIZE: u16 = PAGE_SIZE / 64;
 
 /**
-// *** EXAMPLE RESOLVED PRG ROM ADDRESS TEMPLATE ***
-// 
-//  //            +------------------------- Outer bank number (width is ``outer_bank_count()``)
-//                |
-//                |        +---------------- Inner bank number (width is ``inner_bank_count()``)
-//                |        |
-//                |        |                 Base address (width is ``inner_bank_size()``)
-//                |        |                        |
-//                v        v                        v
-// Components   O₀₁O₀₀ I₀₂I₀₁I₀₀ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
-// Full Address A₁₈A₁₇ A₁₆A₁₅A₁₄ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
-//              |      |         |  |         Page size  (always 8 KiB)   |
-//              |      |         |  +-------------------------------------|
-//              |      |         |            Inner bank size  (16 KiB)   |
-//              |      |         +----------------------------------------|
-//              |      |                      Outer bank size (128 KiB)   |
-//              |      +--------------------------------------------------|
-//              |                             ROM size        (512 KiB)   |
-//              +---------------------------------------------------------+
+ * ```text
+ * *** EXAMPLE RESOLVED PRG ROM ADDRESS TEMPLATE ***
+ *
+ *                +------------------------- Outer bank number (width is outer_bank_count())
+ *                |
+ *                |        +---------------- Inner bank number (width is inner_bank_count())
+ *                |        |
+ *                |        |                 Base address (width is inner_bank_size())
+ *                |        |                        |
+ *                v        v                        v
+ * Components   O₀₁O₀₀ I₀₂I₀₁I₀₀ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+ * Full Address A₁₈A₁₇ A₁₆A₁₅A₁₄ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+ *              |      |         |  |         Page size  (always 8 KiB)   |
+ *              |      |         |  +-------------------------------------|
+ *              |      |         |            Inner bank size  (16 KiB)   |
+ *              |      |         +----------------------------------------|
+ *              |      |                      Outer bank size (128 KiB)   |
+ *              |      +--------------------------------------------------|
+ *              |                             ROM size        (512 KiB)   |
+ *              +---------------------------------------------------------+
+ * ```
 **/ 
+
 #[derive(Clone, Debug, Default)]
 pub struct AddressTemplate {
     // Bit widths
