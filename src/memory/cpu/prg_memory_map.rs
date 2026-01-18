@@ -10,26 +10,27 @@ const PRG_SUB_SLOT_COUNT: usize = 64;
 const PAGE_SIZE: u16 = 8 * KIBIBYTE as u16;
 const SUB_PAGE_SIZE: u16 = PAGE_SIZE / 64;
 
-///*** EXAMPLE RESOLVED PRG ROM ADDRESS TEMPLATE ***
-///
-/// //            +------------------------- Outer bank number (width is Outer bank count)
-///               |
-///               |        +---------------- Inner bank number (width is Inner bank count)
-///               |        |
-///               |        |                 Base address (width is Inner bank size)
-///               |        |                        |
-///               v        v                        v
-///Components   O₀₁O₀₀ I₀₂I₀₁I₀₀ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
-///Full Address A₁₈A₁₇ A₁₆A₁₅A₁₄ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
-///             |      |         |  |         Page size  (always 8 KiB)   |
-///             |      |         |  +-------------------------------------|
-///             |      |         |            Inner bank size  (16 KiB)   |
-///             |      |         +----------------------------------------|
-///             |      |                      Outer bank size (128 KiB)   |
-///             |      +--------------------------------------------------|
-///             |                             ROM size        (512 KiB)   |
-///             +---------------------------------------------------------+
-///
+/**
+// *** EXAMPLE RESOLVED PRG ROM ADDRESS TEMPLATE ***
+// 
+//  //            +------------------------- Outer bank number (width is ``outer_bank_count()``)
+//                |
+//                |        +---------------- Inner bank number (width is ``inner_bank_count()``)
+//                |        |
+//                |        |                 Base address (width is ``inner_bank_size()``)
+//                |        |                        |
+//                v        v                        v
+// Components   O₀₁O₀₀ I₀₂I₀₁I₀₀ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+// Full Address A₁₈A₁₇ A₁₆A₁₅A₁₄ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+//              |      |         |  |         Page size  (always 8 KiB)   |
+//              |      |         |  +-------------------------------------|
+//              |      |         |            Inner bank size  (16 KiB)   |
+//              |      |         +----------------------------------------|
+//              |      |                      Outer bank size (128 KiB)   |
+//              |      +--------------------------------------------------|
+//              |                             ROM size        (512 KiB)   |
+//              +---------------------------------------------------------+
+**/ 
 #[derive(Clone, Default)]
 pub struct AddressTemplate {
     // Bit widths
@@ -49,31 +50,31 @@ impl AddressTemplate {
     pub const PRG_PAGE_SIZE: u16 = 2u16.pow(Self::PRG_PAGE_NUMBER_WIDTH as u32);
 
     pub fn new(
-        (outer_bank_total_bit_count, outer_bank_low_bit_index): (u8, u8),
+        (outer_bank_total_width, outer_bank_low_bit_index): (u8, u8),
         // 16 KiB
-        (inner_bank_total_bit_count, inner_bank_low_bit_index): (u8, u8),
+        (inner_bank_total_width, inner_bank_low_bit_index): (u8, u8),
         // 32 KiB
-        (mut base_address_bit_count, base_address_low_bit_index): (u8, u8),
+        (mut base_address_width, base_address_low_bit_index): (u8, u8),
     ) -> Self {
         assert_eq!(base_address_low_bit_index, 0);
-        assert_eq!(outer_bank_total_bit_count, inner_bank_total_bit_count);
+        assert_eq!(outer_bank_total_width, inner_bank_total_width);
         assert_eq!(outer_bank_low_bit_index, 0);
 
         // If the ROM is undersized, reduce the base address bit count, effectively mirroring the ROM until it's the right size.
-        base_address_bit_count = std::cmp::min(base_address_bit_count, inner_bank_total_bit_count);
-        let inner_bank_bit_count = inner_bank_total_bit_count - base_address_bit_count;
+        base_address_width = std::cmp::min(base_address_width, inner_bank_total_width);
+        let inner_bank_number_width = inner_bank_total_width - base_address_width;
 
         let outer_bank_bit_count = 0;
         let address_template = Self {
             outer_bank_mask: create_mask(outer_bank_bit_count, outer_bank_low_bit_index).try_into().unwrap(),
             outer_bank_number_width: 0,
 
-            inner_bank_mask: create_mask(inner_bank_bit_count, inner_bank_low_bit_index),
-            inner_bank_number_width: inner_bank_bit_count,
+            inner_bank_mask: create_mask(inner_bank_number_width, inner_bank_low_bit_index),
+            inner_bank_number_width,
             inner_bank_low_bit_index,
 
-            base_address_mask: create_mask(base_address_bit_count, base_address_low_bit_index),
-            base_address_width: base_address_bit_count,
+            base_address_mask: create_mask(base_address_width, base_address_low_bit_index),
+            base_address_width,
         };
         assert!(address_template.total_width() <= 32);
 
@@ -125,10 +126,8 @@ impl AddressTemplate {
      * Components Before ( 8 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ I₀₀ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      * Components After  (16 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      */
-    /*
-    pub fn with_big_bank(&self, new_base_address_bit_count: u8) -> Self {
-        println!("New: {new_base_address_bit_count}, Old: {}", self.base_address_width);
-        let bank_size_shift = new_base_address_bit_count.strict_sub(self.total_inner_bank_bit_count());
+    pub fn with_bigger_bank(&self, new_base_address_bit_count: u8) -> Self {
+        let bank_size_shift = new_base_address_bit_count.strict_sub(self.base_address_width);
 
         let mut big_banked = self.clone();
         big_banked.base_address_width += bank_size_shift;
@@ -136,7 +135,7 @@ impl AddressTemplate {
         big_banked.inner_bank_mask = create_mask(big_banked.inner_bank_number_width, bank_size_shift);
         big_banked
     }
-    */
+
     pub fn resolve(&self, raw_outer_number: u8, raw_inner_number: u16, address_bus_value: u16) -> AddressInfo {
         let outer_bank_number = raw_outer_number & self.outer_bank_mask;
         let shifted_outer_bank_number = u32::from(outer_bank_number) << (self.inner_bank_number_width + self.base_address_width);
@@ -154,6 +153,7 @@ impl AddressTemplate {
         }
     }
 }
+
 pub struct AddressInfo {
     pub full_address: u32,
 
@@ -165,7 +165,7 @@ pub struct AddressInfo {
 
 
 fn create_mask(bit_count: u8, low_bit_index: u8) -> u16 {
-    assert!(bit_count >= low_bit_index);
+    //assert!(bit_count >= low_bit_index, "Bit count: {bit_count}, low bit index: {low_bit_index}");
     ((1 << bit_count) - 1) & !((1 << low_bit_index) - 1)
 }
 
@@ -220,7 +220,10 @@ impl PrgMemoryMap {
             page_offset = 0;
             let page_multiple = window.size().page_multiple();
             if page_multiple >= 1 {
-                //let window_address_template = rom_address_template.with_big_bank(window.size().bit_count());
+                if window.bank().is_rom() {
+                    let window_address_template = rom_address_template.with_bigger_bank(window.size().bit_count());
+                }
+
                 let rom_page_number_mask = rom_page_number_mask & !(page_multiple - 1);
                 for offset in 0..page_multiple {
                     // Mirror high pages to low ones if there isn't enough ROM.
