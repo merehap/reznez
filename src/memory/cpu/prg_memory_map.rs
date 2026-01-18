@@ -31,6 +31,27 @@ const SUB_PAGE_SIZE: u16 = PAGE_SIZE / 64;
  *              |      +--------------------------------------------------|
  *              |                             ROM size        (512 KiB)   |
  *              +---------------------------------------------------------+
+ * 
+ * 
+ * *** EXAMPLE RESOLVED PRG ROM ADDRESS TEMPLATE WITH SUB-PAGES ***
+ *
+ *                +------------------------- Outer bank number (width is outer_bank_count())
+ *                |
+ *                |        +---------------- Inner bank number (width is inner_bank_count())
+ *                |        |
+ *                |        |                 Base address (width is inner_bank_size())
+ *                |        |                                      |
+ *                v        v                                      v
+ * Components   O₀₁O₀₀ I₀₂I₀₁I₀₀ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆ A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+ * Full Address A₁₈A₁₇ A₁₆A₁₅A₁₄ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆ A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+ *                                                        | Sub page size  |
+ *              |      |         |                        +----------------|
+ *              |      |         |            Inner bank size  (16 KiB)   |
+ *              |      |         +----------------------------------------|
+ *              |      |                      Outer bank size (128 KiB)   |
+ *              |      +--------------------------------------------------|
+ *              |                             ROM size        (512 KiB)   |
+ *              +---------------------------------------------------------+
  * ```
 **/ 
 
@@ -140,8 +161,10 @@ impl AddressTemplate {
         Some(big_banked)
     }
 
-    pub fn resolve_starting_page_number(&self, raw_inner_bank_number: u16) -> u16 {
-        ((raw_inner_bank_number & self.inner_bank_mask) * u16::from(self.prg_pages_per_inner_bank())) & self.page_number_mask()
+    pub fn resolve_page_number(&self, raw_inner_bank_number: u16, page_offset: u16) -> u16 {
+        let inner_bank_number = raw_inner_bank_number & self.inner_bank_mask;
+        let raw_page_number = inner_bank_number * u16::from(self.prg_pages_per_inner_bank()) + page_offset;
+        raw_page_number & self.page_number_mask()
     }
 
     pub fn resolve(&self, raw_outer_number: u8, raw_inner_number: u16, address_bus_value: u16) -> AddressInfo {
@@ -361,7 +384,7 @@ impl PrgMapping {
         match mem_type {
             MemType::Rom(_) => {
                 let rom_address_template = self.rom_address_template.as_ref().unwrap();
-                let page_number = rom_address_template.resolve_starting_page_number(bank_number.to_raw()) + self.page_offset;
+                let page_number = rom_address_template.resolve_page_number(bank_number.to_raw(), self.page_offset);
                 //println!("Page number within mapping: {page_number}. Bank Index: {}. Page offset: {}", bank_number.to_raw(), self.page_offset);
                 Some((mem_type, page_number))
             }
