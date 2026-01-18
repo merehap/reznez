@@ -35,23 +35,27 @@ const SUB_PAGE_SIZE: u16 = PAGE_SIZE / 64;
  * 
  * *** EXAMPLE RESOLVED PRG ROM ADDRESS TEMPLATE WITH SUB-PAGES ***
  *
- *                +------------------------- Outer bank number (width is outer_bank_count())
+ *                +--------------------------------- Outer bank number (width is outer_bank_count())
  *                |
- *                |        +---------------- Inner bank number (width is inner_bank_count())
+ *                |        +------------------------ Inner bank number (width is inner_bank_count())
  *                |        |
- *                |        |                 Base address (width is inner_bank_size())
- *                |        |                                      |
- *                v        v                                      v
- * Components   O₀₁O₀₀ I₀₂I₀₁I₀₀ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆ A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
- * Full Address A₁₈A₁₇ A₁₆A₁₅A₁₄ A₁₃A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆ A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
- *                                                        | Sub page size  |
- *              |      |         |                        +----------------|
- *              |      |         |            Inner bank size  (16 KiB)   |
- *              |      |         +----------------------------------------|
- *              |      |                      Outer bank size (128 KiB)   |
- *              |      +--------------------------------------------------|
- *              |                             ROM size        (512 KiB)   |
- *              +---------------------------------------------------------+
+ *                |        |                 +------ Sub-page number
+ *                |        |                 |
+ *                |        |                 |       Base address (width is 128 B)
+ *                |        |                 |                    |
+ *                v        v                 v                    v
+ * Components   O₀₁O₀₀ I₀₂I₀₁I₀₀ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇ A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+ * Full Address A₁₈A₁₇ A₁₆A₁₅A₁₄ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇ A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
+ *              |      |         |   |                  | Sub-page (128 B)  |
+ *              |      |         |   |                  +-------------------|
+ *              |      |         |   |        Page size  (always 8 KiB)     |
+ *              |      |         |   +--------------------------------------|
+ *              |      |         |            Inner bank size  (16 KiB)     |
+ *              |      |         +------------------------------------------|
+ *              |      |                      Outer bank size (128 KiB)     |
+ *              |      +----------------------------------------------------|
+ *              |                             ROM size        (512 KiB)     |
+ *              +-----------------------------------------------------------+
  * ```
 **/ 
 
