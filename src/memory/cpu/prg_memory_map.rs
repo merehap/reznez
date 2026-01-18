@@ -116,15 +116,8 @@ impl AddressTemplate {
         u16::try_from(self.rom_size() / u32::from(Self::PRG_PAGE_SIZE)).unwrap()
     }
 
-
-    pub fn total_inner_bank_bit_count(&self) -> u8 {
-        self.inner_bank_number_width + self.base_address_width
-    }
-
     pub fn page_number_mask(&self) -> u16 {
-        let mut page_number_mask = 0b1111_1111_1111_1111;
-        page_number_mask &= self.prg_pages_per_outer_bank() - 1;
-        page_number_mask
+        self.prg_pages_per_outer_bank() - 1
     }
 
     /**
@@ -132,6 +125,7 @@ impl AddressTemplate {
      * Components Before ( 8 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ I₀₀ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      * Components After  (16 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      */
+    /*
     pub fn with_big_bank(&self, new_base_address_bit_count: u8) -> Self {
         println!("New: {new_base_address_bit_count}, Old: {}", self.base_address_width);
         let bank_size_shift = new_base_address_bit_count.strict_sub(self.total_inner_bank_bit_count());
@@ -142,7 +136,7 @@ impl AddressTemplate {
         big_banked.inner_bank_mask = create_mask(big_banked.inner_bank_number_width, bank_size_shift);
         big_banked
     }
-
+    */
     pub fn resolve(&self, raw_outer_number: u8, raw_inner_number: u16, address_bus_value: u16) -> AddressInfo {
         let outer_bank_number = raw_outer_number & self.outer_bank_mask;
         let shifted_outer_bank_number = u32::from(outer_bank_number) << (self.inner_bank_number_width + self.base_address_width);
