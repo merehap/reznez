@@ -22,13 +22,9 @@ pub const SIMPLE_CHR_LAYOUT: &[ChrWindow] = &[
 pub const NAME_TABLE_MIRRORINGS: &[NameTableMirroring] = &[
     NameTableMirroring::VERTICAL,
     NameTableMirroring::HORIZONTAL,
-    // L R
-    // R R
     NameTableMirroring::new(
-        NameTableSource::Ciram(CiramSide::Left),
-        NameTableSource::Ciram(CiramSide::Right),
-        NameTableSource::Ciram(CiramSide::Right),
-        NameTableSource::Ciram(CiramSide::Right),
+        CiramSide::Left.to_source(),  CiramSide::Right.to_source(),
+        CiramSide::Right.to_source(), CiramSide::Right.to_source(),
     ),
     NameTableMirroring::ONE_SCREEN_LEFT_BANK,
 ];

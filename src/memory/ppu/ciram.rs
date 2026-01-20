@@ -1,7 +1,7 @@
 // Clippy bug.
 #![allow(clippy::needless_borrow)]
 
-use crate::mapper::WriteStatus;
+use crate::memory::bank::bank_number::WriteStatus;
 use crate::util::unit::KIBIBYTE;
 
 const CIRAM_SIZE: usize = 2 * KIBIBYTE as usize;

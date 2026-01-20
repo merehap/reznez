@@ -522,7 +522,10 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (240, None) => m::mapper240::Mapper240.supported(),
         // Hengedianzi (恒格电子) hard-wired mirroring, and mapper hacks (m 164, 178, 227)
         (241, None) => m::mapper241::Mapper241.supported(),
-        (242..=246, _) => TodoMapper,
+        (242, _) => TodoMapper,
+        // Sachen SA-020A
+        (243, None) => m::mapper243::Mapper243::default().supported(),
+        (244..=246, _) => TodoMapper,
         (247, _) => UnassignedMapper,
         (248..=255, _) => TodoMapper,
 

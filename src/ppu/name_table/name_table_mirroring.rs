@@ -121,3 +121,9 @@ impl fmt::Display for NameTableSource {
         write!(f, "{text}")
     }
 }
+
+impl CiramSide {
+    pub const fn to_source(self) -> NameTableSource {
+        NameTableSource::Ciram(self)
+    } 
+}

@@ -230,10 +230,8 @@ impl ChrMemory {
     pub fn name_table_mirroring(&self) -> NameTableMirroring {
         let quadrants = &self.memory_maps[0].page_mappings()[8..12];
         NameTableMirroring::new(
-            quadrants[0].to_name_table_source(&self.regs).unwrap(),
-            quadrants[1].to_name_table_source(&self.regs).unwrap(),
-            quadrants[2].to_name_table_source(&self.regs).unwrap(),
-            quadrants[3].to_name_table_source(&self.regs).unwrap(),
+            quadrants[0].to_name_table_source(&self.regs).unwrap(), quadrants[1].to_name_table_source(&self.regs).unwrap(),
+            quadrants[2].to_name_table_source(&self.regs).unwrap(), quadrants[3].to_name_table_source(&self.regs).unwrap(),
         )
     }
 

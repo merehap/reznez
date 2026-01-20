@@ -33,6 +33,7 @@ Low-level PRG address components API.
     PRG locations as "oooo pppp aaaa aaaa"
     Simple case: mapper 235
     Complex case: Action 53
+    Strange case: mapper 242
     Unify normal high-level bank handling with this low-level API? Very likely.
 
 Signals-driven refactor.

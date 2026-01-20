@@ -16,13 +16,9 @@ const LAYOUT: Layout = Layout::builder()
         ChrWindow::new(0x0000, 0x1FFF, 8 * KIBIBYTE, ChrBank::ROM_OR_RAM),
     ])
     .name_table_mirrorings(&[
-        // L L
-        // L R
         NameTableMirroring::new(
-            NameTableSource::Ciram(CiramSide::Left),
-            NameTableSource::Ciram(CiramSide::Left),
-            NameTableSource::Ciram(CiramSide::Left),
-            NameTableSource::Ciram(CiramSide::Right),
+            CiramSide::Left.to_source(), CiramSide::Left.to_source(),
+            CiramSide::Left.to_source(), CiramSide::Right.to_source(),
         ),
         NameTableMirroring::VERTICAL,
         NameTableMirroring::HORIZONTAL,
