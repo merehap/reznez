@@ -525,7 +525,9 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (242, _) => TodoMapper,
         // Sachen SA-020A
         (243, None) => m::mapper243::Mapper243::default().supported(),
-        (244..=246, _) => TodoMapper,
+        (244..=245, _) => TodoMapper,
+        // G0151-1
+        (246, None) => m::mapper246::Mapper246.supported(),
         (247, _) => UnassignedMapper,
         (248..=255, _) => TodoMapper,
 

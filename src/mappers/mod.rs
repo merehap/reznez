@@ -198,4 +198,6 @@ pub mod mapper241;
 
 pub mod mapper243;
 
+pub mod mapper246;
+
 pub mod mapper264;
