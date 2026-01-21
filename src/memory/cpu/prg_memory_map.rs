@@ -318,22 +318,22 @@ impl PrgMemoryMap {
         let offset = addr % PAGE_SIZE;
 
         match &self.page_ids[mapping_index as usize] {
-            PrgPageIdSlot::Normal(prg_source_and_page_number) => {
-                prg_source_and_page_number.map(|(prg_source, page_number)| {
-                    let index = u32::from(page_number) * PAGE_SIZE as u32 + u32::from(offset);
+            PrgPageIdSlot::Normal(page_info) => {
+                page_info.as_ref().map(|PageInfo { mem_type, page_number }| {
+                    let index = u32::from(*page_number) * PAGE_SIZE as u32 + u32::from(offset);
                     //log::info!("Normal slot. Index: {index}, Page number: {page_number}");
-                    (prg_source, index)
+                    (*mem_type, index)
                 })
             }
             PrgPageIdSlot::Multi(page_ids) => {
                 let sub_mapping_index = offset / (KIBIBYTE as u16 / 8);
-                let (prg_source_and_page_number, sub_page_offset) = page_ids[sub_mapping_index as usize];
+                let (page_info, sub_page_offset) = page_ids[sub_mapping_index as usize].clone();
                 let offset = offset % SUB_PAGE_SIZE;
-                prg_source_and_page_number.map(|(source, page_number)| {
+                page_info.map(|PageInfo { mem_type, page_number }| {
                     let index = u32::from(page_number) * PAGE_SIZE as u32 + SUB_PAGE_SIZE as u32 * sub_page_offset as u32 + u32::from(offset);
                     //log::info!("Sub slot. Index: {index:X}, Page number: {page_number:X}, Sub page: {sub_page_offset:X} Offset: {offset:X}");
                     //log::info!("    Page block: {:X}, Sub page block: {:X}", u32::from(page_number) * PAGE_SIZE as u32, SUB_PAGE_SIZE as u32 * sub_page_offset as u32);
-                    (source, index)
+                    (mem_type, index)
                 })
             }
         }
@@ -347,14 +347,14 @@ impl PrgMemoryMap {
         for i in 0..PRG_SLOT_COUNT {
             match &self.page_mappings[i] {
                 PrgMappingSlot::Normal(mapping) => {
-                    let page_id = mapping.page_id(regs);
+                    let page_id = mapping.page_info(regs);
                     self.page_ids[i] = PrgPageIdSlot::Normal(page_id);
                     //log::info!("Page ID: {:?}", self.page_ids[i]);
                 }
                 PrgMappingSlot::Multi(mappings) => {
                     let mut page_ids = Vec::new();
                     for (mapping, offset) in mappings.iter() {
-                        let page_id = mapping.page_id(regs);
+                        let page_id = mapping.page_info(regs);
                         page_ids.push((page_id, *offset));
                     }
 
@@ -383,7 +383,7 @@ pub struct PrgMapping {
 type SubPageOffset = u8;
 
 impl PrgMapping {
-    pub fn page_id(&self, regs: &PrgBankRegisters) -> Option<(MemType, PageNumber)> {
+    pub fn page_info(&self, regs: &PrgBankRegisters) -> Option<PageInfo> {
         let (Ok(bank_number), Some(page_number_space)) = (self.bank.bank_number(regs), self.bank.page_number_space(regs)) else {
             return None;
         };
@@ -392,8 +392,8 @@ impl PrgMapping {
             PageNumberSpace::Rom(read_status) => {
                 let rom_address_template = self.rom_address_template.as_ref().unwrap();
                 let page_number = rom_address_template.resolve_page_number(bank_number.to_raw(), self.page_offset);
-                //println!("Page number within mapping: {page_number}. Bank Index: {}. Page offset: {}", bank_number.to_raw(), self.page_offset);
-                Some((MemType::Rom(read_status), page_number))
+                let mem_type = MemType::Rom(read_status);
+                Some(PageInfo { mem_type, page_number })
             }
             PageNumberSpace::Ram(read_status, write_status) => {
                 let page_number = self.ram_address_template.resolve_page_number(bank_number.to_raw(), self.page_offset);
@@ -403,7 +403,7 @@ impl PrgMapping {
                     (MemType::WorkRam(read_status, write_status), page_number - regs.work_ram_start_page_number())
                 };
 
-                Some((mem_type, page_number))
+                Some(PageInfo { mem_type, page_number })
             }
         }
     }
@@ -413,10 +413,15 @@ impl PrgMapping {
 #[allow(clippy::type_complexity)]
 #[derive(Clone, Debug)]
 pub enum PrgPageIdSlot {
-    Normal(Option<MemTypeAndPageNumber>),
-    Multi(Box<[(Option<MemTypeAndPageNumber>, SubPageOffset); PRG_SUB_SLOT_COUNT]>),
+    Normal(Option<PageInfo>),
+    Multi(Box<[(Option<PageInfo>, SubPageOffset); PRG_SUB_SLOT_COUNT]>),
 }
 
 type PageNumber = u16;
 type PrgIndex = u32;
-type MemTypeAndPageNumber = (MemType, PageNumber);
+
+#[derive(Clone, Debug)]
+pub struct PageInfo {
+    pub mem_type: MemType,
+    pub page_number: PageNumber,
+}

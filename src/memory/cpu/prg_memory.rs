@@ -4,7 +4,7 @@ use crate::memory::bank::bank::{PrgSource, ReadStatusRegisterId, PrgSourceRegist
 use crate::memory::bank::bank_number::{MemType, PrgBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
-use crate::memory::cpu::prg_memory_map::{PrgMemoryMap, PrgPageIdSlot};
+use crate::memory::cpu::prg_memory_map::{PageInfo, PrgMemoryMap, PrgPageIdSlot};
 use crate::memory::layout::OuterBankLayout;
 use crate::memory::raw_memory::{RawMemory, SaveRam};
 use crate::memory::read_result::ReadResult;
@@ -227,9 +227,9 @@ impl PrgMemory {
                         None => "E".to_string(),
                         // FIXME: This should be bank number, not page number.
                         // TODO: Add Read/Write status to the output
-                        Some((MemType::Rom(..), page_number)) => page_number.to_string(),
-                        Some((MemType::WorkRam(..), page_number)) => format!("W{page_number}"),
-                        Some((MemType::SaveRam(..), page_number)) => format!("S{page_number}"),
+                        Some(PageInfo { mem_type: MemType::Rom(..), page_number }) => page_number.to_string(),
+                        Some(PageInfo { mem_type: MemType::WorkRam(..), page_number }) => format!("W{page_number}"),
+                        Some(PageInfo { mem_type: MemType::SaveRam(..), page_number }) => format!("S{page_number}"),
                     }
                 }
                 PrgPageIdSlot::Multi(_) => "M".to_string(),
