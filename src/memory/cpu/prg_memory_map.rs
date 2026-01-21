@@ -198,7 +198,6 @@ pub struct AddressInfo {
     pub base_address: u16,
 }
 
-
 fn create_mask(bit_count: u8, low_bit_index: u8) -> u16 {
     //assert!(bit_count >= low_bit_index, "Bit count: {bit_count}, low bit index: {low_bit_index}");
     ((1 << bit_count) - 1) & !((1 << low_bit_index) - 1)
@@ -226,7 +225,7 @@ impl PrgMemoryMap {
         initial_layout: PrgLayout,
         rom_size: u32,
         rom_bank_size: PrgWindowSize,
-        ram_size: u32,
+        work_ram_size: u32,
         save_ram_size: u32,
         regs: &PrgBankRegisters,
     ) -> Self {
@@ -238,12 +237,18 @@ impl PrgMemoryMap {
             (rom_bank_size.bit_count(), 0),
         );
 
+        let ram_size = work_ram_size + save_ram_size;
+        let ram_size_width = if ram_size == 0 { 0 } else { (ram_size - 1).count_ones() as u8 };
+        let ram_address_template = AddressTemplate::new(
+            (ram_size_width, 0),
+            (ram_size_width, 0),
+            // FIXME: Hack
+            (((8 * KIBIBYTE) - 1).count_ones() as u8, 0),
+        );
+
         assert_eq!(rom_size % u32::from(PAGE_SIZE), 0);
 
         let rom_page_count = rom_address_template.prg_pages_per_outer_bank();
-
-        let ram_page_count: u16 = ((ram_size + save_ram_size) / u32::from(PAGE_SIZE)).try_into().unwrap();
-        let ram_page_number_mask = ram_page_count.saturating_sub(1);
 
         let mut page_mappings = Vec::with_capacity(PRG_SLOT_COUNT);
 
@@ -259,7 +264,10 @@ impl PrgMemoryMap {
                     // Mirror high pages to low ones if there isn't enough ROM.
                     page_offset = offset % rom_page_count;
                     let mapping = PrgMapping {
-                        bank: window.bank(), rom_address_template: rom_address_template.clone(), ram_page_number_mask, page_offset,
+                        bank: window.bank(),
+                        rom_address_template: rom_address_template.clone(),
+                        ram_address_template: ram_address_template.clone(),
+                        page_offset,
                     };
                     page_mappings.push(PrgMappingSlot::Normal(mapping));
                 }
@@ -271,7 +279,10 @@ impl PrgMemoryMap {
             loop {
                 for sub_page_offset in 0..window.size().sub_page_multiple() {
                     let mapping = PrgMapping {
-                        bank: window.bank(), rom_address_template: Some(rom_address_template.clone()), ram_page_number_mask, page_offset,
+                        bank: window.bank(),
+                        rom_address_template: Some(rom_address_template.clone()),
+                        ram_address_template: ram_address_template.clone(),
+                        page_offset,
                     };
                     sub_page_mappings.push((mapping, sub_page_offset));
                 }
@@ -372,11 +383,10 @@ pub enum PrgMappingSlot {
 pub struct PrgMapping {
     bank: PrgBank,
     rom_address_template: Option<AddressTemplate>,
+    ram_address_template: AddressTemplate,
     page_offset: u16,
-    ram_page_number_mask: PageNumberMask,
 }
 
-type PageNumberMask = u16;
 type SubPageOffset = u8;
 
 impl PrgMapping {
@@ -395,7 +405,7 @@ impl PrgMapping {
             // FIXME: Pull these out into separate cases, and handle the splitting earlier?
             MemType::WorkRam(read_status_register_id, write_status_register_id)
                     | MemType::SaveRam(read_status_register_id, write_status_register_id) => {
-                let mut page_number = (bank_number.to_raw() & self.ram_page_number_mask) + self.page_offset;
+                let mut page_number = self.ram_address_template.resolve_page_number(bank_number.to_raw(), self.page_offset);
                 if page_number < save_ram_bank_count {
                     Some((MemType::SaveRam(read_status_register_id, write_status_register_id), page_number))
                 } else {
