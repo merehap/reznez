@@ -13,8 +13,8 @@ pub const LAYOUT: Layout = Layout::builder()
 
 pub const PRG_LAYOUT: &[PrgWindow] = &[
     PrgWindow::new(0x6000, 0x7EFF, 7 * KIBIBYTE + 3 * KIBIBYTE / 4, PrgBank::ABSENT),
-    PrgWindow::new(0x7F00, 0x7F7F, KIBIBYTE / 8, PrgBank::WORK_RAM.fixed_number(0).read_write_status(R0, W0)),
-    PrgWindow::new(0x7F80, 0x7FFF, KIBIBYTE / 8, PrgBank::WORK_RAM.fixed_number(0).read_write_status(R0, W0)),
+    PrgWindow::new(0x7F00, 0x7F7F, KIBIBYTE / 8, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(R0, W0)),
+    PrgWindow::new(0x7F80, 0x7FFF, KIBIBYTE / 8, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(R0, W0)),
     PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
     PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
     PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),

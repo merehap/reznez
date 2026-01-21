@@ -1,5 +1,5 @@
 use crate::memory::bank::bank::PrgBank;
-use crate::memory::bank::bank_number::{MemType, PrgBankRegisters};
+use crate::memory::bank::bank_number::{MemType, PageNumberSpace, PrgBankRegisters};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::memory::window::PrgWindowSize;
@@ -217,7 +217,6 @@ pub struct PrgMemoryMap {
     // 0x6000 through 0xFFFF
     page_mappings: [PrgMappingSlot; PRG_SLOT_COUNT],
     page_ids: [PrgPageIdSlot; PRG_SLOT_COUNT],
-    save_ram_size: u16,
 }
 
 impl PrgMemoryMap {
@@ -237,6 +236,7 @@ impl PrgMemoryMap {
             (rom_bank_size.bit_count(), 0),
         );
 
+        // When a mapper has both Work RAM and Save RAM, the bank/page numbers are shared (save ram gets the lower numbers).
         let ram_size = work_ram_size + save_ram_size;
         let ram_size_width = if ram_size == 0 { 0 } else { (ram_size - 1).count_ones() as u8 };
         let ram_address_template = AddressTemplate::new(
@@ -305,7 +305,6 @@ impl PrgMemoryMap {
         let mut memory_map = Self {
             page_mappings: page_mappings.try_into().unwrap(),
             page_ids: [const { PrgPageIdSlot::Normal(None) }; PRG_SLOT_COUNT],
-            save_ram_size: save_ram_size.try_into().unwrap(),
         };
         memory_map.update_page_ids(regs);
         memory_map
@@ -345,23 +344,17 @@ impl PrgMemoryMap {
     }
 
     pub fn update_page_ids(&mut self, regs: &PrgBankRegisters) {
-        let save_ram_bank_count = if self.save_ram_size > 0 && (self.save_ram_size as u32) < 8 * KIBIBYTE {
-            1
-        } else {
-            self.save_ram_size / (8 * KIBIBYTE as u16)
-        };
-
         for i in 0..PRG_SLOT_COUNT {
             match &self.page_mappings[i] {
                 PrgMappingSlot::Normal(mapping) => {
-                    let page_id = mapping.page_id(regs, save_ram_bank_count);
+                    let page_id = mapping.page_id(regs);
                     self.page_ids[i] = PrgPageIdSlot::Normal(page_id);
                     //log::info!("Page ID: {:?}", self.page_ids[i]);
                 }
                 PrgMappingSlot::Multi(mappings) => {
                     let mut page_ids = Vec::new();
                     for (mapping, offset) in mappings.iter() {
-                        let page_id = mapping.page_id(regs, save_ram_bank_count);
+                        let page_id = mapping.page_id(regs);
                         page_ids.push((page_id, *offset));
                     }
 
@@ -390,28 +383,27 @@ pub struct PrgMapping {
 type SubPageOffset = u8;
 
 impl PrgMapping {
-    pub fn page_id(&self, regs: &PrgBankRegisters, save_ram_bank_count: u16) -> Option<(MemType, PageNumber)> {
-        let (Ok(bank_number), Some(mem_type)) = (self.bank.bank_number(regs), self.bank.memory_type(regs)) else {
+    pub fn page_id(&self, regs: &PrgBankRegisters) -> Option<(MemType, PageNumber)> {
+        let (Ok(bank_number), Some(page_number_space)) = (self.bank.bank_number(regs), self.bank.page_number_space(regs)) else {
             return None;
         };
 
-        match mem_type {
-            MemType::Rom(_) => {
+        match page_number_space {
+            PageNumberSpace::Rom(read_status) => {
                 let rom_address_template = self.rom_address_template.as_ref().unwrap();
                 let page_number = rom_address_template.resolve_page_number(bank_number.to_raw(), self.page_offset);
                 //println!("Page number within mapping: {page_number}. Bank Index: {}. Page offset: {}", bank_number.to_raw(), self.page_offset);
-                Some((mem_type, page_number))
+                Some((MemType::Rom(read_status), page_number))
             }
-            // FIXME: Pull these out into separate cases, and handle the splitting earlier?
-            MemType::WorkRam(read_status_register_id, write_status_register_id)
-                    | MemType::SaveRam(read_status_register_id, write_status_register_id) => {
-                let mut page_number = self.ram_address_template.resolve_page_number(bank_number.to_raw(), self.page_offset);
-                if page_number < save_ram_bank_count {
-                    Some((MemType::SaveRam(read_status_register_id, write_status_register_id), page_number))
+            PageNumberSpace::Ram(read_status, write_status) => {
+                let page_number = self.ram_address_template.resolve_page_number(bank_number.to_raw(), self.page_offset);
+                let (mem_type, page_number) = if page_number < regs.work_ram_start_page_number() {
+                    (MemType::SaveRam(read_status, write_status), page_number)
                 } else {
-                    page_number -= save_ram_bank_count;
-                    Some((MemType::WorkRam(read_status_register_id, write_status_register_id), page_number))
-                }
+                    (MemType::WorkRam(read_status, write_status), page_number - regs.work_ram_start_page_number())
+                };
+
+                Some((mem_type, page_number))
             }
         }
     }

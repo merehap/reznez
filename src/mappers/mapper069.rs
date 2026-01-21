@@ -80,7 +80,7 @@ impl Mapper for Mapper069 {
                         let fields = splitbits!(value, "empppppp");
                         bus.set_reads_enabled(R0, fields.e);
                         bus.set_writes_enabled(W0, fields.e);
-                        let rom_ram_mode = [PrgSource::Rom, PrgSource::WorkRamOrRom][fields.m as usize];
+                        let rom_ram_mode = [PrgSource::Rom, PrgSource::RamOrRom][fields.m as usize];
                         bus.set_rom_ram_mode(PS0, rom_ram_mode);
                         bus.set_prg_register(P0, fields.p);
                     }

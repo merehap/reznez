@@ -39,16 +39,18 @@ pub struct PrgBankRegisters {
     write_statuses: [WriteStatus; 16],
     rom_ram_modes: [PrgSource; 12],
     cartridge_has_ram: bool,
+    work_ram_start_page_number: u16,
 }
 
 impl PrgBankRegisters {
-    pub fn new(cartridge_has_ram: bool) -> Self {
+    pub fn new(cartridge_has_ram: bool, work_ram_start_page_number: u16) -> Self {
         Self {
             registers: [BankLocation::Index(BankNumber(0)); 10],
             read_statuses: [ReadStatus::Enabled; 16],
             write_statuses: [WriteStatus::Enabled; 16],
-            rom_ram_modes: [PrgSource::WorkRamOrRom; 12],
+            rom_ram_modes: [PrgSource::RamOrRom; 12],
             cartridge_has_ram,
+            work_ram_start_page_number,
         }
     }
 
@@ -66,6 +68,10 @@ impl PrgBankRegisters {
 
     pub fn cartridge_has_ram(&self) -> bool {
         self.cartridge_has_ram
+    }
+
+    pub fn work_ram_start_page_number(&self) -> u16 {
+        self.work_ram_start_page_number
     }
 
     pub fn get(&self, id: PrgBankRegisterId) -> BankLocation {
@@ -296,7 +302,6 @@ pub enum MetaRegisterId {
 pub enum ReadStatus {
     Disabled,
     Enabled,
-    // TODO: Probably remove this and implement it within MMC5 instead.
     ReadOnlyZeros,
 }
 
@@ -321,4 +326,9 @@ impl MemType {
             Self::SaveRam(read_status, ..) => read_status,
         }
     }
+}
+
+pub enum PageNumberSpace {
+    Rom(ReadStatus),
+    Ram(ReadStatus, WriteStatus),
 }

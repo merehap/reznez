@@ -4,7 +4,7 @@ const LAYOUT: Layout = Layout::builder()
     // Oversize definition for BxROM. The actual BNROM cartridge only supports 128KiB.
     .prg_rom_max_size(8192 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::WORK_RAM),
+        PrgWindow::new(0x6000, 0x7FFF,  8 * KIBIBYTE, PrgBank::RAM_OR_ABSENT),
         PrgWindow::new(0x8000, 0xFFFF, 32 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
     ])
     .chr_rom_max_size(8 * KIBIBYTE)

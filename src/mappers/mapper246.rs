@@ -4,7 +4,7 @@ const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
         PrgWindow::new(0x6000, 0x67FF, 2 * KIBIBYTE, PrgBank::ABSENT),
-        PrgWindow::new(0x6800, 0x6FFF, 2 * KIBIBYTE, PrgBank::SAVE_RAM.fixed_number(0)),
+        PrgWindow::new(0x6800, 0x6FFF, 2 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(0)),
         PrgWindow::new(0x7000, 0x77FF, 2 * KIBIBYTE, PrgBank::ABSENT),
         PrgWindow::new(0x7800, 0x7FFF, 2 * KIBIBYTE, PrgBank::ABSENT),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),

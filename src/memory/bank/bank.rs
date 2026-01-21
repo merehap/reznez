@@ -4,8 +4,9 @@ use crate::mapper::ReadStatus;
 use crate::mapper::WriteStatus;
 use crate::memory::bank::bank::PrgSourceRegisterId::*;
 use crate::memory::bank::bank::ChrSourceRegisterId::*;
+use crate::memory::bank::bank_number::PageNumberSpace;
 use crate::memory::bank::bank_number::{BankNumber, PrgBankRegisters, PrgBankRegisterId, MetaRegisterId};
-use crate::memory::bank::bank_number::{BankLocation, MemType};
+use crate::memory::bank::bank_number::BankLocation;
 
 use super::bank_number::{ChrBankRegisterId, ChrBankRegisters};
 
@@ -30,8 +31,7 @@ pub enum PrgSource {
     Rom,
     // Work RAM or Save RAM
     RamOrAbsent,
-    WorkRamOrRom,
-    SaveRam,
+    RamOrRom,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -82,15 +82,9 @@ impl PrgBank {
         read_status_register_id: None,
         write_status_register_id: None,
     };
-    pub const WORK_RAM: PrgBank = PrgBank {
+    pub const RAM_OR_ABSENT: PrgBank = PrgBank {
         bank_number_provider: PrgBankNumberProvider::FIXED_ZERO,
         prg_source_provider: PrgSourceProvider::Fixed(Some(PrgSource::RamOrAbsent)),
-        read_status_register_id: None,
-        write_status_register_id: None,
-    };
-    pub const SAVE_RAM: PrgBank = PrgBank {
-        bank_number_provider: PrgBankNumberProvider::FIXED_ZERO,
-        prg_source_provider: PrgSourceProvider::Fixed(Some(PrgSource::SaveRam)),
         read_status_register_id: None,
         write_status_register_id: None,
     };
@@ -100,9 +94,9 @@ impl PrgBank {
         read_status_register_id: None,
         write_status_register_id: None,
     };
-    pub const RAM: PrgBank = PrgBank {
+    pub const WORK_RAM_OR_ROM: PrgBank = PrgBank {
         bank_number_provider: PrgBankNumberProvider::FIXED_ZERO,
-        prg_source_provider: PrgSourceProvider::Fixed(Some(PrgSource::WorkRamOrRom)),
+        prg_source_provider: PrgSourceProvider::Fixed(Some(PrgSource::RamOrRom)),
         read_status_register_id: None,
         write_status_register_id: None,
     };
@@ -156,7 +150,7 @@ impl PrgBank {
 
     pub fn supports_ram(self) -> bool {
         matches!(self.prg_source_provider,
-            PrgSourceProvider::Fixed(Some(PrgSource::RamOrAbsent | PrgSource::WorkRamOrRom | PrgSource::SaveRam))
+            PrgSourceProvider::Fixed(Some(PrgSource::RamOrAbsent | PrgSource::RamOrRom))
                 | PrgSourceProvider::Switchable(_))
     }
 
@@ -188,27 +182,27 @@ impl PrgBank {
     }
 
     // FIXME: Use explicit rom_read_status() and ram_read_status() providers, then simplify this accordingly.
-    pub fn memory_type(self, regs: &PrgBankRegisters) -> Option<MemType> {
+    pub fn page_number_space(self, regs: &PrgBankRegisters) -> Option<PageNumberSpace> {
         let prg_source = match self.prg_source_provider {
             PrgSourceProvider::Fixed(prg_source) => prg_source,
             PrgSourceProvider::Switchable(reg_id) => Some(regs.rom_ram_mode(reg_id)),
         }?;
 
-        let read_id = self.read_status_register_id.map_or(ReadStatus::Enabled, |id| regs.read_status(id));
-        let write_id = self.write_status_register_id.map_or(WriteStatus::Enabled, |id| regs.write_status(id));
+        let read_status = self.read_status_register_id.map_or(ReadStatus::Enabled, |id| regs.read_status(id));
+        let write_status = self.write_status_register_id.map_or(WriteStatus::Enabled, |id| regs.write_status(id));
 
         // There's currently no way to set make the ROM ReadStatus of a RomRam bank switchable.
         if self.is_rom_ram() && (prg_source == PrgSource::Rom || !regs.cartridge_has_ram()) {
-            return Some(MemType::Rom(ReadStatus::Enabled));
+            return Some(PageNumberSpace::Rom(ReadStatus::Enabled));
         }
 
         match prg_source {
-            PrgSource::Rom => Some(MemType::Rom(read_id)),
-            PrgSource::SaveRam => Some(MemType::SaveRam(read_id, write_id)),
-            PrgSource::RamOrAbsent if regs.cartridge_has_ram() => Some(MemType::WorkRam(read_id, write_id)),
-            PrgSource::RamOrAbsent => None,
-            PrgSource::WorkRamOrRom if regs.cartridge_has_ram() => Some(MemType::WorkRam(read_id, write_id)),
-            PrgSource::WorkRamOrRom => Some(MemType::Rom(read_id)),
+            PrgSource::RamOrRom | PrgSource::RamOrAbsent if regs.cartridge_has_ram() =>
+                Some(PageNumberSpace::Ram(read_status, write_status)),
+            PrgSource::Rom | PrgSource::RamOrRom =>
+                Some(PageNumberSpace::Rom(read_status)),
+            PrgSource::RamOrAbsent =>
+                None,
         }
     }
 }

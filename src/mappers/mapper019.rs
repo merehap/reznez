@@ -5,10 +5,10 @@ use crate::memory::ppu::ciram::CiramSide;
 const LAYOUT: Layout = Layout::builder()
     .prg_rom_max_size(512 * KIBIBYTE)
     .prg_layout(&[
-        PrgWindow::new(0x6000, 0x67FF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_number(0).read_write_status(R12, W12)),
-        PrgWindow::new(0x6800, 0x6FFF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_number(1).read_write_status(R13, W13)),
-        PrgWindow::new(0x7000, 0x77FF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_number(2).read_write_status(R14, W14)),
-        PrgWindow::new(0x7800, 0x7FFF, 2 * KIBIBYTE, PrgBank::WORK_RAM.fixed_number(3).read_write_status(R15, W15)),
+        PrgWindow::new(0x6000, 0x67FF, 2 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(0).read_write_status(R12, W12)),
+        PrgWindow::new(0x6800, 0x6FFF, 2 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(1).read_write_status(R13, W13)),
+        PrgWindow::new(0x7000, 0x77FF, 2 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(2).read_write_status(R14, W14)),
+        PrgWindow::new(0x7800, 0x7FFF, 2 * KIBIBYTE, PrgBank::RAM_OR_ABSENT.fixed_number(3).read_write_status(R15, W15)),
         PrgWindow::new(0x8000, 0x9FFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P0)),
         PrgWindow::new(0xA000, 0xBFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P1)),
         PrgWindow::new(0xC000, 0xDFFF, 8 * KIBIBYTE, PrgBank::ROM.switchable(P2)),
