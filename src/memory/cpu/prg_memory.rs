@@ -1,10 +1,10 @@
 use log::{info, warn};
-use crate::mapper::{BankNumber, PrgBankRegisterId};
+use crate::mapper::{BankNumber, KIBIBYTE, PrgBankRegisterId};
 use crate::memory::bank::bank::{PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
 use crate::memory::bank::bank_number::{MemType, PrgBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
-use crate::memory::cpu::prg_memory_map::{PageInfo, PrgMemoryMap, PrgPageIdSlot};
+use crate::memory::cpu::prg_memory_map::{AddressTemplate, PageInfo, PrgMemoryMap, PrgPageIdSlot};
 use crate::memory::layout::OuterBankLayout;
 use crate::memory::raw_memory::{RawMemory, SaveRam};
 use crate::memory::read_result::ReadResult;
@@ -15,7 +15,6 @@ pub struct PrgMemory {
     memory_maps: Vec<PrgMemoryMap>,
     layout_index: u8,
     rom: RawMemory,
-    rom_outer_bank_size: u32,
     rom_outer_bank_number: u8,
     work_ram: RawMemory,
     save_ram: SaveRam,
@@ -74,16 +73,34 @@ impl PrgMemory {
 
         let rom_outer_bank_count = rom_outer_bank_layout.outer_bank_count(rom.size());
         let rom_outer_bank_size = rom.size() / rom_outer_bank_count.get() as u32;
-        let memory_maps = layouts.iter().map(|initial_layout| PrgMemoryMap::new(
-            *initial_layout, rom_outer_bank_size, rom_bank_size, work_ram.size(), save_ram.size(), &regs,
-        )).collect();
+
+        assert_eq!(rom_outer_bank_size & (rom_outer_bank_size - 1), 0);
+        assert_eq!(rom_outer_bank_size % (8 * KIBIBYTE), 0);
+        let rom_address_template = AddressTemplate::new(
+            ((rom.size() - 1).count_ones() as u8, 0),
+            ((rom_outer_bank_size - 1).count_ones() as u8, 0),
+            (rom_bank_size.bit_count(), 0),
+        );
+
+        // When a mapper has both Work RAM and Save RAM, the bank/page numbers are shared (save ram gets the lower numbers).
+        let ram_size = work_ram.size() + save_ram.size();
+        let ram_size_width = if ram_size == 0 { 0 } else { (ram_size - 1).count_ones() as u8 };
+        let ram_address_template = AddressTemplate::new(
+            (ram_size_width, 0),
+            (ram_size_width, 0),
+            // FIXME: Hack
+            (((8 * KIBIBYTE) - 1).count_ones() as u8, 0),
+        );
+
+        let memory_maps = layouts.iter()
+            .map(|initial_layout| PrgMemoryMap::new(*initial_layout, &rom_address_template, &ram_address_template, &regs))
+            .collect();
 
         PrgMemory {
             layouts,
             memory_maps,
             layout_index,
             rom,
-            rom_outer_bank_size,
             rom_outer_bank_number: 0,
             work_ram,
             save_ram,
@@ -96,16 +113,13 @@ impl PrgMemory {
     }
 
     pub fn peek(&self, address: CpuAddress) -> ReadResult {
-        if let Some((mem_type, index)) = self.memory_maps[self.layout_index as usize].index_for_address(address) {
+        if let Some((mem_type, index)) = self.memory_maps[self.layout_index as usize].index_for_address(self.rom_outer_bank_number, address) {
             match (mem_type, mem_type.read_status()) {
                 (_                   , ReadStatus::Disabled     ) => ReadResult::OPEN_BUS,
                 (_                   , ReadStatus::ReadOnlyZeros) => ReadResult::full(0),
                 (MemType::WorkRam(..), ReadStatus::Enabled      ) => ReadResult::full(self.work_ram[index]),
                 (MemType::SaveRam(..), ReadStatus::Enabled      ) => ReadResult::full(self.save_ram[index % self.save_ram.size()]),
-                (MemType::Rom(..)    , ReadStatus::Enabled      ) => {
-                    let outer_bank_start = (u32::from(self.rom_outer_bank_number) * self.rom_outer_bank_size) & (self.rom.size() - 1);
-                    ReadResult::full(self.rom[outer_bank_start | index])
-                }
+                (MemType::Rom(..)    , ReadStatus::Enabled      ) => ReadResult::full(self.rom[index]),
             }
         } else {
             ReadResult::OPEN_BUS
@@ -117,7 +131,7 @@ impl PrgMemory {
     }
 
     pub fn write(&mut self, address: CpuAddress, value: u8) {
-        let prg_source_and_index = self.memory_maps[self.layout_index as usize].index_for_address(address);
+        let prg_source_and_index = self.memory_maps[self.layout_index as usize].index_for_address(self.rom_outer_bank_number, address);
         use MemType::*;
         match prg_source_and_index {
             Some((WorkRam(_, WriteStatus::Enabled), index)) => {
@@ -198,8 +212,8 @@ impl PrgMemory {
         self.rom_outer_bank_number = number;
     }
 
-    pub fn set_prg_rom_outer_bank_size(&mut self, new_size: u32) {
-        self.rom_outer_bank_size = new_size;
+    pub fn set_prg_rom_outer_bank_size(&mut self, _new_size: u32) {
+        todo!()
     }
 
     fn update_page_ids(&mut self) {

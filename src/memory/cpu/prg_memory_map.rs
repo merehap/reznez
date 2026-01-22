@@ -2,7 +2,6 @@ use crate::memory::bank::bank::PrgBank;
 use crate::memory::bank::bank_number::{MemType, PageNumberSpace, PrgBankRegisters};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
-use crate::memory::window::PrgWindowSize;
 use crate::util::unit::KIBIBYTE;
 
 const PRG_SLOT_COUNT: usize = 5;
@@ -80,26 +79,23 @@ impl AddressTemplate {
 
     pub fn new(
         (outer_bank_total_width, outer_bank_low_bit_index): (u8, u8),
-        // 16 KiB
         (inner_bank_total_width, inner_bank_low_bit_index): (u8, u8),
-        // 32 KiB
         (mut base_address_width, base_address_low_bit_index): (u8, u8),
     ) -> Self {
         assert_eq!(base_address_low_bit_index, 0);
-        assert_eq!(outer_bank_total_width, inner_bank_total_width);
         assert_eq!(outer_bank_low_bit_index, 0);
 
         // If the ROM is undersized, reduce the base address bit count, effectively mirroring the ROM until it's the right size.
         base_address_width = std::cmp::min(base_address_width, inner_bank_total_width);
         let inner_bank_number_width = inner_bank_total_width - base_address_width;
+        let outer_bank_number_width = outer_bank_total_width - inner_bank_total_width;
 
-        let outer_bank_bit_count = 0;
         let address_template = Self {
-            outer_bank_number_width: 0,
+            outer_bank_number_width,
             inner_bank_number_width,
             base_address_width,
 
-            outer_bank_mask: create_mask(outer_bank_bit_count, outer_bank_low_bit_index).try_into().unwrap(),
+            outer_bank_mask: create_mask(outer_bank_number_width, outer_bank_low_bit_index).try_into().unwrap(),
             inner_bank_mask: create_mask(inner_bank_number_width, inner_bank_low_bit_index),
             base_address_mask: create_mask(base_address_width, base_address_low_bit_index),
 
@@ -172,46 +168,22 @@ impl AddressTemplate {
         raw_page_number & self.page_number_mask()
     }
 
-    pub fn resolve_index(&self, page_number: u16, offset_in_page: u16) -> u32 {
-        u32::from(page_number) * u32::from(Self::PRG_PAGE_SIZE) + u32::from(offset_in_page)
+    pub fn resolve_index(&self, raw_outer_bank_number: u8, page_number: u16, offset_in_page: u16) -> u32 {
+        let outer_bank_start = u32::from(raw_outer_bank_number & self.outer_bank_mask) * self.outer_bank_size();
+        let page_start = u32::from(page_number) * u32::from(Self::PRG_PAGE_SIZE);
+        outer_bank_start | page_start | u32::from(offset_in_page)
     }
 
-    pub fn resolve_subpage_index(&self, page_number: u16, sub_page_offset: u8, offset_in_page: u16) -> u32 {
-        let offset_in_subpage = offset_in_page % SUB_PAGE_SIZE;
-        u32::from(page_number) * PAGE_SIZE as u32 + Self::PRG_SUB_PAGE_SIZE as u32 * sub_page_offset as u32 + u32::from(offset_in_subpage)
+    pub fn resolve_subpage_index(&self, raw_outer_bank_number: u8, page_number: u16, sub_page_offset: u8, offset_in_page: u16) -> u32 {
+        let outer_bank_start = u32::from(raw_outer_bank_number & self.outer_bank_mask) * self.outer_bank_size();
+        let page_start = u32::from(page_number) * PAGE_SIZE as u32;
+        let subpage_start = Self::PRG_SUB_PAGE_SIZE as u32 * sub_page_offset as u32;
+        let offset_in_subpage = u32::from(offset_in_page % SUB_PAGE_SIZE);
+        outer_bank_start | page_start | subpage_start | offset_in_subpage
     }
-
-    /*
-    pub fn resolve(&self, raw_outer_number: u8, raw_inner_number: u16, address_bus_value: u16) -> AddressInfo {
-        let outer_bank_number = raw_outer_number & self.outer_bank_mask;
-        let shifted_outer_bank_number = u32::from(outer_bank_number) << (self.inner_bank_number_width + self.base_address_width);
-
-        let inner_bank_number = raw_inner_number & self.inner_bank_mask;
-        let shifted_inner_bank_number = u32::from(inner_bank_number) << self.base_address_width;
-
-        let base_address = address_bus_value & self.base_address_mask;
-
-        AddressInfo {
-            full_address: shifted_outer_bank_number | shifted_inner_bank_number | u32::from(base_address),
-            outer_bank_number,
-            inner_bank_number,
-            base_address,
-        }
-    }
-    */
-}
-
-pub struct AddressInfo {
-    pub full_address: u32,
-
-    // Components of the full address.
-    pub outer_bank_number: u8,
-    pub inner_bank_number: u16,
-    pub base_address: u16,
 }
 
 fn create_mask(bit_count: u8, low_bit_index: u8) -> u16 {
-    //assert!(bit_count >= low_bit_index, "Bit count: {bit_count}, low bit index: {low_bit_index}");
     ((1 << bit_count) - 1) & !((1 << low_bit_index) - 1)
 }
 
@@ -234,32 +206,10 @@ pub struct PrgMemoryMap {
 impl PrgMemoryMap {
     pub fn new(
         initial_layout: PrgLayout,
-        rom_size: u32,
-        rom_bank_size: PrgWindowSize,
-        work_ram_size: u32,
-        save_ram_size: u32,
+        rom_address_template: &AddressTemplate,
+        ram_address_template: &AddressTemplate,
         regs: &PrgBankRegisters,
     ) -> Self {
-
-        assert_eq!(rom_size & (rom_size - 1), 0);
-        let rom_address_template = AddressTemplate::new(
-            ((rom_size - 1).count_ones() as u8, 0),
-            ((rom_size - 1).count_ones() as u8, 0),
-            (rom_bank_size.bit_count(), 0),
-        );
-
-        // When a mapper has both Work RAM and Save RAM, the bank/page numbers are shared (save ram gets the lower numbers).
-        let ram_size = work_ram_size + save_ram_size;
-        let ram_size_width = if ram_size == 0 { 0 } else { (ram_size - 1).count_ones() as u8 };
-        let ram_address_template = AddressTemplate::new(
-            (ram_size_width, 0),
-            (ram_size_width, 0),
-            // FIXME: Hack
-            (((8 * KIBIBYTE) - 1).count_ones() as u8, 0),
-        );
-
-        assert_eq!(rom_size % u32::from(PAGE_SIZE), 0);
-
         let rom_page_count = rom_address_template.prg_pages_per_outer_bank();
 
         let mut page_mappings = Vec::with_capacity(PRG_SLOT_COUNT);
@@ -322,7 +272,7 @@ impl PrgMemoryMap {
         memory_map
     }
 
-    pub fn index_for_address(&self, addr: CpuAddress) -> Option<(MemType, PrgIndex)> {
+    pub fn index_for_address(&self, rom_outer_bank_number: u8, addr: CpuAddress) -> Option<(MemType, PrgIndex)> {
         assert!(matches!(*addr, 0x6000..=0xFFFF));
 
         let addr = *addr - 0x6000;
@@ -332,14 +282,16 @@ impl PrgMemoryMap {
         match &self.page_ids[mapping_index as usize] {
             PrgPageIdSlot::Normal(page_info) => {
                 page_info.as_ref().map(|PageInfo { mem_type, page_number, address_template }| {
-                    (*mem_type, address_template.resolve_index(*page_number, offset_in_page))
+                    let outer_bank_number = if mem_type.is_rom() { rom_outer_bank_number } else { 0 };
+                    (*mem_type, address_template.resolve_index(outer_bank_number, *page_number, offset_in_page))
                 })
             }
             PrgPageIdSlot::Multi(page_infos) => {
                 let sub_mapping_index = offset_in_page / (KIBIBYTE as u16 / 8);
                 let (page_info, sub_page_offset) = page_infos[sub_mapping_index as usize].clone();
                 page_info.map(|PageInfo { mem_type, page_number, address_template }| {
-                    let index = address_template.resolve_subpage_index(page_number, sub_page_offset, offset_in_page);
+                    let outer_bank_number = if mem_type.is_rom() { rom_outer_bank_number } else { 0 };
+                    let index = address_template.resolve_subpage_index(outer_bank_number, page_number, sub_page_offset, offset_in_page);
                     (mem_type, index)
                 })
             }

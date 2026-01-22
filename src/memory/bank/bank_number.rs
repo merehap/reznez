@@ -319,6 +319,10 @@ pub enum MemType {
 }
 
 impl MemType {
+    pub fn is_rom(self) -> bool {
+        matches!(self, Self::Rom(_))
+    }
+
     pub fn read_status(self) -> ReadStatus {
         match self {
             Self::Rom(read_status) => read_status,
