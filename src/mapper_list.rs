@@ -561,6 +561,9 @@ mod tests {
     use crate::cartridge::cartridge::test_data::*;
     use crate::memory::cpu::prg_memory_map::{PageInfo, PrgPageIdSlot};
 
+    /**
+     * NROM, 32KiB PRG ROM
+     */
     #[test]
     fn unbanked() {
         test_mapper_address_template(TestParams {
@@ -579,11 +582,56 @@ mod tests {
          });
     }
 
+    /**
+     * NROM, 16KiB PRG ROM
+     */
     #[test]
     fn unbanked_undersized() {
         test_mapper_address_template(TestParams {
             mapper_number: 0,
             submapper_number: None,
+            prg_rom_size: 16 * KIBIBYTE,
+            prg_work_ram_size: 0,
+            prg_save_ram_size: 0,
+            expected: [
+                None,
+                Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+            ],
+         });
+    }
+
+    /**
+     * UNROM/UxROM, 32KiB PRG ROM
+     */
+    #[test]
+    fn banked() {
+        test_mapper_address_template(TestParams {
+            mapper_number: 2,
+            submapper_number: Some(1),
+            prg_rom_size: 64 * KIBIBYTE,
+            prg_work_ram_size: 0,
+            prg_save_ram_size: 0,
+            expected: [
+                None,
+                Some("i₀₁i₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                Some("i₀₁i₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                Some("i₀₁i₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                Some("i₀₁i₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+            ],
+         });
+    }
+
+    /**
+     * UNROM/UxROM, 16KiB PRG ROM
+     */
+    #[test]
+    fn banked_undersized() {
+        test_mapper_address_template(TestParams {
+            mapper_number: 2,
+            submapper_number: Some(1),
             prg_rom_size: 16 * KIBIBYTE,
             prg_work_ram_size: 0,
             prg_save_ram_size: 0,
