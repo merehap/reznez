@@ -216,10 +216,10 @@ pub mod test_data {
 
     pub fn prg_only_info(
         (mapper_number, submapper_number): (u16, Option<u8>),
-        (prg_rom_size, prg_work_ram_size, prg_save_ram_size): (u32, u32, u32),
+        prg_sizes: Sizes,
     ) -> (ResolvedMetadata, Cartridge) {
 
-        let header = prg_only_header((mapper_number, submapper_number), (prg_rom_size, prg_work_ram_size, prg_save_ram_size));
+        let header = prg_only_header((mapper_number, submapper_number), prg_sizes);
         let cartridge = dummy_cartridge(header.clone());
         let metadata_resolver = MetadataResolver {
             hard_coded_overrides: CartridgeMetadataBuilder::new().build(),
@@ -234,15 +234,15 @@ pub mod test_data {
 
     pub fn prg_only_header(
             (mapper_number, submapper_number): (u16, Option<u8>),
-            (prg_rom_size, prg_work_ram_size, prg_save_ram_size): (u32, u32, u32),
+            Sizes { rom_size, work_ram_size, save_ram_size }: Sizes,
         ) -> CartridgeMetadata {
 
         CartridgeMetadataBuilder::new()
             .console_type(ConsoleType::NesFamiconDendy)
             .mapper_and_submapper_number(mapper_number, submapper_number)
-            .prg_rom_size(prg_rom_size)
-            .prg_work_ram_size(prg_work_ram_size)
-            .prg_save_ram_size(prg_save_ram_size)
+            .prg_rom_size(rom_size)
+            .prg_work_ram_size(work_ram_size)
+            .prg_save_ram_size(save_ram_size)
             .chr_rom_size(0)
             .chr_work_ram_size(8 * KIBIBYTE)
             .chr_save_ram_size(0)
@@ -252,5 +252,12 @@ pub mod test_data {
             .prg_rom_hash(0)
             .chr_rom_hash(0)
             .build()
+    }
+
+    #[derive(Clone, Copy)]
+    pub struct Sizes {
+        pub rom_size: u32,
+        pub work_ram_size: u32,
+        pub save_ram_size: u32,
     }
 }

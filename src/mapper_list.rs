@@ -567,11 +567,8 @@ mod tests {
     #[test]
     fn unbanked() {
         test_mapper_address_template(TestParams {
-            mapper_number: 0,
-            submapper_number: None,
-            prg_rom_size: 32 * KIBIBYTE,
-            prg_work_ram_size: 0,
-            prg_save_ram_size: 0,
+            mapper: (0, None),
+            prg_sizes: Sizes { rom_size: 32 * KIBIBYTE, work_ram_size: 0, save_ram_size: 0 },
             expected: [
                 None,
                 Some("a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
@@ -588,11 +585,8 @@ mod tests {
     #[test]
     fn unbanked_undersized() {
         test_mapper_address_template(TestParams {
-            mapper_number: 0,
-            submapper_number: None,
-            prg_rom_size: 16 * KIBIBYTE,
-            prg_work_ram_size: 0,
-            prg_save_ram_size: 0,
+            mapper: (0, None),
+            prg_sizes: Sizes { rom_size: 16 * KIBIBYTE, work_ram_size: 0, save_ram_size: 0 },
             expected: [
                 None,
                 Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
@@ -604,16 +598,13 @@ mod tests {
     }
 
     /**
-     * UNROM/UxROM, 32KiB PRG ROM
+     * UNROM/UxROM, 64KiB PRG ROM
      */
     #[test]
     fn banked() {
         test_mapper_address_template(TestParams {
-            mapper_number: 2,
-            submapper_number: Some(1),
-            prg_rom_size: 64 * KIBIBYTE,
-            prg_work_ram_size: 0,
-            prg_save_ram_size: 0,
+            mapper: (2, Some(1)),
+            prg_sizes: Sizes { rom_size: 64 * KIBIBYTE, work_ram_size: 0, save_ram_size: 0 },
             expected: [
                 None,
                 Some("i₀₁i₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
@@ -630,11 +621,8 @@ mod tests {
     #[test]
     fn banked_undersized() {
         test_mapper_address_template(TestParams {
-            mapper_number: 2,
-            submapper_number: Some(1),
-            prg_rom_size: 16 * KIBIBYTE,
-            prg_work_ram_size: 0,
-            prg_save_ram_size: 0,
+            mapper: (2, Some(1)),
+            prg_sizes: Sizes { rom_size: 16 * KIBIBYTE, work_ram_size: 0, save_ram_size: 0 },
             expected: [
                 None,
                 Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
@@ -646,10 +634,7 @@ mod tests {
     }
 
     fn test_mapper_address_template(params: TestParams) {
-        let (metadata, cartridge) = prg_only_info(
-            (params.mapper_number, params.submapper_number),
-            (params.prg_rom_size, params.prg_work_ram_size, params.prg_save_ram_size),
-        );
+        let (metadata, cartridge) = prg_only_info(params.mapper, params.prg_sizes);
         let LookupResult::Supported(mapper) = try_lookup_mapper(&metadata) else {
             panic!("Unsupported mapper.");
         };
@@ -670,11 +655,8 @@ mod tests {
 
     #[derive(Clone, Copy)]
     struct TestParams {
-        mapper_number: u16,
-        submapper_number: Option<u8>,
-        prg_rom_size: u32,
-        prg_work_ram_size: u32,
-        prg_save_ram_size: u32,
+        mapper: (u16, Option<u8>),
+        prg_sizes: Sizes,
         expected: [Option<&'static str>; 5],
     }
 }
