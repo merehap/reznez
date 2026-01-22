@@ -16,6 +16,7 @@ pub struct PrgMemoryMap {
 }
 
 impl PrgMemoryMap {
+    // TODO: First break everything into sub page mappings, then consolidate into pages where appropriate.
     pub fn new(
         initial_layout: PrgLayout,
         rom_address_template: &AddressTemplate,
@@ -33,7 +34,6 @@ impl PrgMemoryMap {
             let page_multiple = window.size().page_multiple();
             if page_multiple >= 1 {
                 let rom_address_template = rom_address_template.with_bigger_bank(window.size().bit_count());
-
                 for offset in 0..page_multiple {
                     // Mirror high pages to low ones if there isn't enough ROM.
                     page_offset = offset % rom_page_count;

@@ -1,5 +1,7 @@
 use std::fmt;
 
+const MAX_WIDTH: u8 = 32;
+
 /**
  * ```text
  * *** EXAMPLE RESOLVED PRG ROM ADDRESS TEMPLATE ***
@@ -48,7 +50,6 @@ use std::fmt;
  *              +-----------------------------------------------------------+
  * ```
 **/ 
-
 #[derive(Clone, Debug, Default)]
 pub struct AddressTemplate {
     // Bit widths
@@ -92,7 +93,7 @@ impl AddressTemplate {
 
             inner_bank_low_bit_index,
         };
-        assert!(address_template.total_width() <= 32);
+        assert!(address_template.total_width() <= MAX_WIDTH);
 
         address_template
     }
@@ -172,16 +173,54 @@ impl AddressTemplate {
         let offset_in_subpage = u32::from(offset_in_page % Self::PRG_SUB_PAGE_SIZE);
         outer_bank_start | page_start | subpage_start | offset_in_subpage
     }
+
+    pub fn formatted(&self) -> String {
+        let mut entries = Vec::with_capacity(MAX_WIDTH.into());
+        entries.append(&mut suffix_sequence("a", 0, self.base_address_width));
+        entries.append(&mut suffix_sequence("i", self.inner_bank_low_bit_index, self.inner_bank_number_width - self.inner_bank_low_bit_index));
+        entries.append(&mut suffix_sequence("o", 0, self.outer_bank_number_width));
+
+        entries.reverse();
+        entries.concat()
+    }
 }
 
 fn create_mask(bit_count: u8, low_bit_index: u8) -> u16 {
     ((1 << bit_count) - 1) & !((1 << low_bit_index) - 1)
 }
 
+fn suffix_sequence(prefix: &str, start_index: u8, count: u8) -> Vec<String> {
+    (start_index..start_index + count)
+        .map(|i| [prefix, &to_subscript(i)].concat())
+        .collect()
+}
+
+fn to_subscript(value: u8) -> String {
+    let subscript_of = |c| {
+        match c {
+            '0' => '₀',
+            '1' => '₁',
+            '2' => '₂',
+            '3' => '₃',
+            '4' => '₄',
+            '5' => '₅',
+            '6' => '₆',
+            '7' => '₇',
+            '8' => '₈',
+            '9' => '₉',
+            _ => unreachable!(),
+        }
+    };
+
+    format!("{value:02}")
+        .to_string()
+        .chars()
+        .map(subscript_of)
+        .collect()
+}
+
 impl fmt::Display for AddressTemplate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", "o".repeat(self.outer_bank_number_width.into()))?;
-        write!(f, "{}", "i".repeat(self.inner_bank_number_width.into()))?;
-        write!(f, "{}", "a".repeat(self.base_address_width.into()))
+        write!(f, "{}", self.formatted())
     }
 }
