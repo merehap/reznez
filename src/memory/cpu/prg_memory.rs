@@ -1,10 +1,11 @@
 use log::{info, warn};
 use crate::mapper::{BankNumber, KIBIBYTE, PrgBankRegisterId};
+use crate::memory::address_template::AddressTemplate;
 use crate::memory::bank::bank::{PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
 use crate::memory::bank::bank_number::{MemType, PrgBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
-use crate::memory::cpu::prg_memory_map::{AddressTemplate, PageInfo, PrgMemoryMap, PrgPageIdSlot};
+use crate::memory::cpu::prg_memory_map::{PageInfo, PrgMemoryMap, PrgPageIdSlot};
 use crate::memory::layout::OuterBankLayout;
 use crate::memory::raw_memory::{RawMemory, SaveRam};
 use crate::memory::read_result::ReadResult;
