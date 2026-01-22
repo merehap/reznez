@@ -227,9 +227,9 @@ impl PrgMemory {
                         None => "E".to_string(),
                         // FIXME: This should be bank number, not page number.
                         // TODO: Add Read/Write status to the output
-                        Some(PageInfo { mem_type: MemType::Rom(..), page_number }) => page_number.to_string(),
-                        Some(PageInfo { mem_type: MemType::WorkRam(..), page_number }) => format!("W{page_number}"),
-                        Some(PageInfo { mem_type: MemType::SaveRam(..), page_number }) => format!("S{page_number}"),
+                        Some(PageInfo { mem_type: MemType::Rom(..), page_number, .. }) => page_number.to_string(),
+                        Some(PageInfo { mem_type: MemType::WorkRam(..), page_number, .. }) => format!("W{page_number}"),
+                        Some(PageInfo { mem_type: MemType::SaveRam(..), page_number, .. }) => format!("S{page_number}"),
                     }
                 }
                 PrgPageIdSlot::Multi(_) => "M".to_string(),

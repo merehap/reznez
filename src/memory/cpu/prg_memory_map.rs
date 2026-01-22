@@ -76,6 +76,7 @@ pub struct AddressTemplate {
 impl AddressTemplate {
     pub const PRG_PAGE_NUMBER_WIDTH: u8 = 13;
     pub const PRG_PAGE_SIZE: u16 = 2u16.pow(Self::PRG_PAGE_NUMBER_WIDTH as u32);
+    const PRG_SUB_PAGE_SIZE: u16 = Self::PRG_PAGE_SIZE / 64;
 
     pub fn new(
         (outer_bank_total_width, outer_bank_low_bit_index): (u8, u8),
@@ -171,6 +172,16 @@ impl AddressTemplate {
         raw_page_number & self.page_number_mask()
     }
 
+    pub fn resolve_index(&self, page_number: u16, offset_in_page: u16) -> u32 {
+        u32::from(page_number) * u32::from(Self::PRG_PAGE_SIZE) + u32::from(offset_in_page)
+    }
+
+    pub fn resolve_subpage_index(&self, page_number: u16, sub_page_offset: u8, offset_in_page: u16) -> u32 {
+        let offset_in_subpage = offset_in_page % SUB_PAGE_SIZE;
+        u32::from(page_number) * PAGE_SIZE as u32 + Self::PRG_SUB_PAGE_SIZE as u32 * sub_page_offset as u32 + u32::from(offset_in_subpage)
+    }
+
+    /*
     pub fn resolve(&self, raw_outer_number: u8, raw_inner_number: u16, address_bus_value: u16) -> AddressInfo {
         let outer_bank_number = raw_outer_number & self.outer_bank_mask;
         let shifted_outer_bank_number = u32::from(outer_bank_number) << (self.inner_bank_number_width + self.base_address_width);
@@ -187,6 +198,7 @@ impl AddressTemplate {
             base_address,
         }
     }
+    */
 }
 
 pub struct AddressInfo {
@@ -315,24 +327,19 @@ impl PrgMemoryMap {
 
         let addr = *addr - 0x6000;
         let mapping_index = addr / PAGE_SIZE;
-        let offset = addr % PAGE_SIZE;
+        let offset_in_page = addr % PAGE_SIZE;
 
         match &self.page_ids[mapping_index as usize] {
             PrgPageIdSlot::Normal(page_info) => {
-                page_info.as_ref().map(|PageInfo { mem_type, page_number }| {
-                    let index = u32::from(*page_number) * PAGE_SIZE as u32 + u32::from(offset);
-                    //log::info!("Normal slot. Index: {index}, Page number: {page_number}");
-                    (*mem_type, index)
+                page_info.as_ref().map(|PageInfo { mem_type, page_number, address_template }| {
+                    (*mem_type, address_template.resolve_index(*page_number, offset_in_page))
                 })
             }
-            PrgPageIdSlot::Multi(page_ids) => {
-                let sub_mapping_index = offset / (KIBIBYTE as u16 / 8);
-                let (page_info, sub_page_offset) = page_ids[sub_mapping_index as usize].clone();
-                let offset = offset % SUB_PAGE_SIZE;
-                page_info.map(|PageInfo { mem_type, page_number }| {
-                    let index = u32::from(page_number) * PAGE_SIZE as u32 + SUB_PAGE_SIZE as u32 * sub_page_offset as u32 + u32::from(offset);
-                    //log::info!("Sub slot. Index: {index:X}, Page number: {page_number:X}, Sub page: {sub_page_offset:X} Offset: {offset:X}");
-                    //log::info!("    Page block: {:X}, Sub page block: {:X}", u32::from(page_number) * PAGE_SIZE as u32, SUB_PAGE_SIZE as u32 * sub_page_offset as u32);
+            PrgPageIdSlot::Multi(page_infos) => {
+                let sub_mapping_index = offset_in_page / (KIBIBYTE as u16 / 8);
+                let (page_info, sub_page_offset) = page_infos[sub_mapping_index as usize].clone();
+                page_info.map(|PageInfo { mem_type, page_number, address_template }| {
+                    let index = address_template.resolve_subpage_index(page_number, sub_page_offset, offset_in_page);
                     (mem_type, index)
                 })
             }
@@ -393,7 +400,7 @@ impl PrgMapping {
                 let rom_address_template = self.rom_address_template.as_ref().unwrap();
                 let page_number = rom_address_template.resolve_page_number(bank_number.to_raw(), self.page_offset);
                 let mem_type = MemType::Rom(read_status);
-                Some(PageInfo { mem_type, page_number })
+                Some(PageInfo { mem_type, page_number, address_template: rom_address_template.clone() })
             }
             PageNumberSpace::Ram(read_status, write_status) => {
                 let page_number = self.ram_address_template.resolve_page_number(bank_number.to_raw(), self.page_offset);
@@ -403,7 +410,7 @@ impl PrgMapping {
                     (MemType::WorkRam(read_status, write_status), page_number - regs.work_ram_start_page_number())
                 };
 
-                Some(PageInfo { mem_type, page_number })
+                Some(PageInfo { mem_type, page_number, address_template: self.ram_address_template.clone() })
             }
         }
     }
@@ -424,4 +431,5 @@ type PrgIndex = u32;
 pub struct PageInfo {
     pub mem_type: MemType,
     pub page_number: PageNumber,
+    address_template: AddressTemplate,
 }
