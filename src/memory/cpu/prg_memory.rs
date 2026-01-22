@@ -196,6 +196,10 @@ impl PrgMemory {
         &self.memory_maps[self.layout_index as usize]
     }
 
+    pub fn memory_maps(&self) -> &[PrgMemoryMap] {
+        &self.memory_maps
+    }
+
     pub fn bank_registers(&self) -> &PrgBankRegisters {
         &self.regs
     }

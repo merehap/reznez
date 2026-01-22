@@ -193,3 +193,64 @@ pub struct PlayChoice {
     prom_data: [u8; 16],
     prom_counter_out: [u8; 16],
 }
+
+#[cfg(test)]
+pub mod test_data {
+    use crate::cartridge::resolved_metadata::{MetadataResolver, ResolvedMetadata};
+    use crate::mapper::NameTableMirroring;
+
+    use super::*;
+
+    pub fn dummy_cartridge(header: CartridgeMetadata) -> Cartridge {
+        Cartridge {
+            path: CartridgePath("DummyPath".into()),
+
+            title: "DummyTitle".into(),
+            prg_rom: RawMemory::new(header.prg_rom_size().unwrap()),
+            chr_rom: RawMemory::new(header.chr_rom_size().unwrap()),
+            trainer: None,
+
+            header,
+        }
+    }
+
+    pub fn prg_only_info(
+        (mapper_number, submapper_number): (u16, Option<u8>),
+        (prg_rom_size, prg_work_ram_size, prg_save_ram_size): (u32, u32, u32),
+    ) -> (ResolvedMetadata, Cartridge) {
+
+        let header = prg_only_header((mapper_number, submapper_number), (prg_rom_size, prg_work_ram_size, prg_save_ram_size));
+        let cartridge = dummy_cartridge(header.clone());
+        let metadata_resolver = MetadataResolver {
+            hard_coded_overrides: CartridgeMetadataBuilder::new().build(),
+            cartridge: header,
+            database: CartridgeMetadataBuilder::new().build(),
+            database_extension: CartridgeMetadataBuilder::new().build(),
+            layout_supports_prg_ram: true,
+        };
+        let metadata = metadata_resolver.resolve();
+        (metadata, cartridge)
+    }
+
+    pub fn prg_only_header(
+            (mapper_number, submapper_number): (u16, Option<u8>),
+            (prg_rom_size, prg_work_ram_size, prg_save_ram_size): (u32, u32, u32),
+        ) -> CartridgeMetadata {
+
+        CartridgeMetadataBuilder::new()
+            .console_type(ConsoleType::NesFamiconDendy)
+            .mapper_and_submapper_number(mapper_number, submapper_number)
+            .prg_rom_size(prg_rom_size)
+            .prg_work_ram_size(prg_work_ram_size)
+            .prg_save_ram_size(prg_save_ram_size)
+            .chr_rom_size(0)
+            .chr_work_ram_size(8 * KIBIBYTE)
+            .chr_save_ram_size(0)
+            .has_persistent_memory(false)
+            .name_table_mirroring(NameTableMirroring::VERTICAL)
+            .full_hash(0)
+            .prg_rom_hash(0)
+            .chr_rom_hash(0)
+            .build()
+    }
+}

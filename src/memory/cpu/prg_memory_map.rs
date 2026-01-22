@@ -178,8 +178,6 @@ impl PrgMapping {
     }
 }
 
-// FIXME
-#[allow(clippy::type_complexity)]
 #[derive(Clone, Debug)]
 pub enum PrgPageIdSlot {
     Normal(Option<PageInfo>),
@@ -193,5 +191,5 @@ type PrgIndex = u32;
 pub struct PageInfo {
     pub mem_type: MemType,
     pub page_number: PageNumber,
-    address_template: AddressTemplate,
+    pub address_template: AddressTemplate,
 }

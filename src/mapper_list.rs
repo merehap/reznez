@@ -552,3 +552,81 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (_, Some(_)) => UnassignedSubmapper,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mapper::KIBIBYTE;
+
+    use crate::cartridge::cartridge::test_data::*;
+    use crate::memory::cpu::prg_memory_map::{PageInfo, PrgPageIdSlot};
+
+    #[test]
+    fn unbanked() {
+        test_mapper_address_template(TestParams {
+            mapper_number: 0,
+            submapper_number: None,
+            prg_rom_size: 32 * KIBIBYTE,
+            prg_work_ram_size: 0,
+            prg_save_ram_size: 0,
+            expected: [
+                None,
+                Some("a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                Some("a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                Some("a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                Some("a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+            ],
+         });
+    }
+
+    #[test]
+    fn unbanked_undersized() {
+        test_mapper_address_template(TestParams {
+            mapper_number: 0,
+            submapper_number: None,
+            prg_rom_size: 16 * KIBIBYTE,
+            prg_work_ram_size: 0,
+            prg_save_ram_size: 0,
+            expected: [
+                None,
+                Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+            ],
+         });
+    }
+
+    fn test_mapper_address_template(params: TestParams) {
+        let (metadata, cartridge) = prg_only_info(
+            (params.mapper_number, params.submapper_number),
+            (params.prg_rom_size, params.prg_work_ram_size, params.prg_save_ram_size),
+        );
+        let LookupResult::Supported(mapper) = try_lookup_mapper(&metadata) else {
+            panic!("Unsupported mapper.");
+        };
+
+        let (prg_memory, _, _) = mapper.layout().make_mapper_params(&metadata, &cartridge, false).unwrap();
+        let memory_map = &prg_memory.memory_maps()[0];
+        for (slot, expected) in memory_map.page_id_slots().iter().zip(params.expected) {
+            match slot {
+                PrgPageIdSlot::Normal(None) => assert!(expected.is_none()),
+                PrgPageIdSlot::Normal(Some(PageInfo { address_template, .. })) => {
+                    let expected = expected.unwrap();
+                    assert_eq!(address_template.to_string(), expected);
+                }
+                PrgPageIdSlot::Multi(..) => todo!(),
+            }
+        }
+    }
+
+    #[derive(Clone, Copy)]
+    struct TestParams {
+        mapper_number: u16,
+        submapper_number: Option<u8>,
+        prg_rom_size: u32,
+        prg_work_ram_size: u32,
+        prg_save_ram_size: u32,
+        expected: [Option<&'static str>; 5],
+    }
+}

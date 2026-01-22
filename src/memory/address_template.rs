@@ -53,6 +53,7 @@ const MAX_WIDTH: u8 = 32;
 #[derive(Clone, Debug, Default)]
 pub struct AddressTemplate {
     // Bit widths
+    total_width: u8,
     outer_bank_number_width: u8,
     inner_bank_number_width: u8,
     base_address_width: u8,
@@ -77,12 +78,13 @@ impl AddressTemplate {
         assert_eq!(base_address_low_bit_index, 0);
         assert_eq!(outer_bank_low_bit_index, 0);
 
-        let outer_bank_number_width = outer_bank_total_width - inner_bank_total_width;
+        let outer_bank_number_width = outer_bank_total_width.strict_sub(inner_bank_total_width);
         // If the ROM is undersized, reduce the base address bit count, effectively mirroring the ROM until it's the right size.
-        base_address_width = std::cmp::min(base_address_width, inner_bank_total_width);
-        let inner_bank_number_width = inner_bank_total_width - base_address_width;
+        base_address_width = std::cmp::min(base_address_width, outer_bank_total_width);
+        let inner_bank_number_width = inner_bank_total_width.strict_sub(base_address_width);
 
         let address_template = Self {
+            total_width: outer_bank_total_width,
             outer_bank_number_width,
             inner_bank_number_width,
             base_address_width,
@@ -99,7 +101,7 @@ impl AddressTemplate {
     }
 
     pub fn total_width(&self) -> u8 {
-        self.outer_bank_number_width + self.inner_bank_number_width + self.base_address_width
+        self.total_width
     }
 
     pub fn inner_bank_size(&self) -> u16 {
@@ -144,6 +146,11 @@ impl AddressTemplate {
      * Components After  (16 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      */
     pub fn with_bigger_bank(&self, new_base_address_bit_count: u8) -> Option<Self> {
+        // Don't expand the bank size larger than the total memory size.
+        if new_base_address_bit_count > self.total_width() {
+            return Some(self.clone());
+        }
+
         let bank_size_shift = new_base_address_bit_count.checked_sub(self.base_address_width)?;
 
         let mut big_banked = self.clone();
@@ -151,6 +158,14 @@ impl AddressTemplate {
         big_banked.base_address_width += bank_size_shift;
         big_banked.base_address_mask = create_mask(big_banked.base_address_width, 0);
         big_banked.inner_bank_mask = create_mask(big_banked.inner_bank_number_width, bank_size_shift);
+
+        assert_eq!(
+            big_banked.outer_bank_number_width
+                + big_banked.inner_bank_number_width
+                + big_banked.base_address_width
+                - big_banked.inner_bank_low_bit_index,
+            big_banked.total_width()
+        );
         Some(big_banked)
     }
 
@@ -176,9 +191,13 @@ impl AddressTemplate {
 
     pub fn formatted(&self) -> String {
         let mut entries = Vec::with_capacity(MAX_WIDTH.into());
-        entries.append(&mut suffix_sequence("a", 0, self.base_address_width));
-        entries.append(&mut suffix_sequence("i", self.inner_bank_low_bit_index, self.inner_bank_number_width - self.inner_bank_low_bit_index));
-        entries.append(&mut suffix_sequence("o", 0, self.outer_bank_number_width));
+        let aw = self.base_address_width + self.inner_bank_low_bit_index;
+        let iw = self.inner_bank_number_width - self.inner_bank_low_bit_index;
+        let ow = self.outer_bank_number_width;
+        assert_eq!(aw + iw + ow, self.total_width);
+        entries.append(&mut suffix_sequence("a", 0, aw));
+        entries.append(&mut suffix_sequence("i", self.inner_bank_low_bit_index, iw));
+        entries.append(&mut suffix_sequence("o", 0, ow));
 
         entries.reverse();
         entries.concat()
