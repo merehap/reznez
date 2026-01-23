@@ -234,7 +234,7 @@ pub fn try_lookup_mapper(metadata: &ResolvedMetadata) -> LookupResult {
         (55, None) => m::mapper055::Mapper055.supported(),
         (56, None) => m::mapper056::Mapper056::new().supported(),
         (57, _) => TodoMapper,
-        // NROM-/CNROM-based multicarts
+        // NROM/CNROM-based multicarts
         (58, None) => m::mapper058::Mapper058.supported(),
         (59, _) => TodoMapper,
         (60, _) => TodoMapper,
@@ -569,12 +569,14 @@ mod tests {
         test_mapper_address_template(TestParams {
             mapper: (0, None),
             prg_sizes: Sizes { rom_size: 32 * KIBIBYTE, work_ram_size: 0, save_ram_size: 0 },
-            expected: [
-                None,
-                Some("a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
-                Some("a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
-                Some("a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
-                Some("a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+            expected: &[
+                [
+                    None,
+                    Some("a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                ]
             ],
          });
     }
@@ -587,12 +589,14 @@ mod tests {
         test_mapper_address_template(TestParams {
             mapper: (0, None),
             prg_sizes: Sizes { rom_size: 16 * KIBIBYTE, work_ram_size: 0, save_ram_size: 0 },
-            expected: [
-                None,
-                Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
-                Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
-                Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
-                Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+            expected: &[
+                [
+                    None,
+                    Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                ]
             ],
          });
     }
@@ -605,12 +609,14 @@ mod tests {
         test_mapper_address_template(TestParams {
             mapper: (2, Some(1)),
             prg_sizes: Sizes { rom_size: 64 * KIBIBYTE, work_ram_size: 0, save_ram_size: 0 },
-            expected: [
-                None,
-                Some("i₀₁i₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
-                Some("i₀₁i₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
-                Some("1₁₅1₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
-                Some("1₁₅1₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+            expected: &[
+                [
+                    None,
+                    Some("i₀₁i₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("i₀₁i₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("1₁₅1₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("1₁₅1₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                ]
             ],
          });
     }
@@ -623,12 +629,119 @@ mod tests {
         test_mapper_address_template(TestParams {
             mapper: (2, Some(1)),
             prg_sizes: Sizes { rom_size: 16 * KIBIBYTE, work_ram_size: 0, save_ram_size: 0 },
-            expected: [
-                None,
-                Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
-                Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
-                Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
-                Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+            expected: &[
+                [
+                    None,
+                    Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                ]
+            ],
+         });
+    }
+
+
+    // Irem's G-101, 256KiB PRG ROM
+    #[test]
+    fn two_layouts() {
+        test_mapper_address_template(TestParams {
+            mapper: (32, Some(0)),
+            prg_sizes: Sizes { rom_size: 256 * KIBIBYTE, work_ram_size: 0, save_ram_size: 0 },
+            expected: &[
+                [
+                    None,
+                    Some("i₀₄i₀₃i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("i₀₄i₀₃i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("1₁₇1₁₆1₁₅1₁₄0₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("1₁₇1₁₆1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                ],
+                [
+                    None,
+                    Some("1₁₇1₁₆1₁₅1₁₄0₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("i₀₄i₀₃i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("i₀₄i₀₃i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("1₁₇1₁₆1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                ],
+            ],
+         });
+    }
+
+    // NROM/CNROM-based multicarts
+    #[test]
+    fn different_bank_sizes() {
+        test_mapper_address_template(TestParams {
+            mapper: (58, None),
+            prg_sizes: Sizes { rom_size: 256 * KIBIBYTE, work_ram_size: 0, save_ram_size: 0 },
+            expected: &[
+                [
+                    None,
+                    Some("i₀₃i₀₂i₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("i₀₃i₀₂i₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("i₀₃i₀₂i₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("i₀₃i₀₂i₀₁a₁₄a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                ],
+                [
+                    None,
+                    Some("i₀₃i₀₂i₀₁i₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("i₀₃i₀₂i₀₁i₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("i₀₃i₀₂i₀₁i₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("i₀₃i₀₂i₀₁i₀₀a₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                ],
+            ],
+         });
+    }
+
+    // J.Y. Company JY830623C and YY840238C, 512KiB PRG ROM
+    #[test]
+    fn outer_bank() {
+        test_mapper_address_template(TestParams {
+            mapper: (91, Some(0)),
+            prg_sizes: Sizes { rom_size: 512 * KIBIBYTE, work_ram_size: 0, save_ram_size: 0 },
+            expected: &[
+                [
+                    None,
+                    Some("o₀₁o₀₀i₀₃i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("o₀₁o₀₀i₀₃i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("o₀₁o₀₀1₁₆1₁₅1₁₄0₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("o₀₁o₀₀1₁₆1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                ],
+            ],
+         });
+    }
+
+    // J.Y. Company JY830623C and YY840238C, 256KiB PRG ROM
+    #[test]
+    fn outer_bank_undersized() {
+        test_mapper_address_template(TestParams {
+            mapper: (91, Some(0)),
+            prg_sizes: Sizes { rom_size: 256 * KIBIBYTE, work_ram_size: 0, save_ram_size: 0 },
+            expected: &[
+                [
+                    None,
+                    Some("o₀₀i₀₃i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("o₀₀i₀₃i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("o₀₀1₁₆1₁₅1₁₄0₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("o₀₀1₁₆1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                ],
+            ],
+         });
+    }
+
+    // J.Y. Company JY830623C and YY840238C, 64KiB PRG ROM
+    #[test]
+    fn outer_bank_severely_undersized() {
+        test_mapper_address_template(TestParams {
+            mapper: (91, Some(0)),
+            prg_sizes: Sizes { rom_size: 64 * KIBIBYTE, work_ram_size: 0, save_ram_size: 0 },
+            expected: &[
+                [
+                    None,
+                    Some("i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("1₁₅1₁₄0₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                    Some("1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀"),
+                ],
             ],
          });
     }
@@ -640,15 +753,16 @@ mod tests {
         };
 
         let (prg_memory, _, _) = mapper.layout().make_mapper_params(&metadata, &cartridge, false).unwrap();
-        let memory_map = &prg_memory.memory_maps()[0];
-        for (slot, expected) in memory_map.page_id_slots().iter().zip(params.expected) {
-            match slot {
-                PrgPageIdSlot::Normal(None) => assert!(expected.is_none()),
-                PrgPageIdSlot::Normal(Some(PageInfo { address_template, .. })) => {
-                    let expected = expected.unwrap();
-                    assert_eq!(address_template.to_string(), expected);
+        for (memory_map, mem_map_expected) in prg_memory.memory_maps().iter().zip(params.expected) {
+            for (slot, slot_expected) in memory_map.page_id_slots().iter().zip(mem_map_expected) {
+                match slot {
+                    PrgPageIdSlot::Normal(None) => assert!(slot_expected.is_none()),
+                    PrgPageIdSlot::Normal(Some(PageInfo { address_template, .. })) => {
+                        let expected = slot_expected.unwrap();
+                        assert_eq!(address_template.to_string(), expected);
+                    }
+                    PrgPageIdSlot::Multi(..) => todo!(),
                 }
-                PrgPageIdSlot::Multi(..) => todo!(),
             }
         }
     }
@@ -657,6 +771,6 @@ mod tests {
     struct TestParams {
         mapper: (u16, Option<u8>),
         prg_sizes: Sizes,
-        expected: [Option<&'static str>; 5],
+        expected: &'static [[Option<&'static str>; 5]],
     }
 }

@@ -198,10 +198,10 @@ impl AddressTemplate {
 
     pub fn formatted(&self) -> String {
         let mut entries = Vec::with_capacity(MAX_WIDTH.into());
-        let aw = self.base_address_width + self.inner_bank_low_bit_index;
-        let iw = self.inner_bank_number_width - self.inner_bank_low_bit_index;
         let ow = self.outer_bank_number_width;
-        assert_eq!(aw + iw + ow, self.total_width);
+        let iw = self.inner_bank_number_width.strict_sub(self.inner_bank_low_bit_index);
+        let aw = self.base_address_width;
+        assert_eq!(ow + iw + aw, self.total_width);
         entries.append(&mut suffix_sequence("a", 0, aw));
         if let Some(fixed) = self.fixed_inner_bank_number && iw > 0 {
             let fixed = (fixed & self.inner_bank_mask) >> self.inner_bank_low_bit_index;
