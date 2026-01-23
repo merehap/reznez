@@ -1,6 +1,6 @@
 use crate::memory::address_template::AddressTemplate;
 use crate::memory::bank::bank::PrgBank;
-use crate::memory::bank::bank_number::{MemType, PageNumberSpace, PrgBankRegisters};
+use crate::memory::bank::bank_number::{BankNumber, MemType, PageNumberSpace, PrgBankRegisters};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::util::unit::KIBIBYTE;
@@ -33,7 +33,10 @@ impl PrgMemoryMap {
             page_offset = 0;
             let page_multiple = window.size().page_multiple();
             if page_multiple >= 1 {
-                let rom_address_template = rom_address_template.with_bigger_bank(window.size().bit_count());
+                let rom_address_template = rom_address_template.with_bigger_bank(
+                    window.size().bit_count(),
+                    window.bank().fixed_bank_number().map(BankNumber::to_raw),
+                );
                 for offset in 0..page_multiple {
                     // Mirror high pages to low ones if there isn't enough ROM.
                     page_offset = offset % rom_page_count;

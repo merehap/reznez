@@ -166,6 +166,10 @@ impl PrgBank {
         }
     }
 
+    pub fn fixed_bank_number(self) -> Option<BankNumber> {
+        self.bank_number_provider.fixed_bank_number()
+    }
+
     pub const fn bank_register_id(self) -> Option<PrgBankRegisterId> {
         match self.bank_number_provider {
             PrgBankNumberProvider::Fixed(_) => None,
@@ -220,6 +224,13 @@ impl PrgBankNumberProvider {
         match self {
             Self::Fixed(bank_number) => bank_number,
             Self::Switchable(register_id) => regs.get(register_id).index().unwrap(),
+        }
+    }
+
+    fn fixed_bank_number(self) -> Option<BankNumber> {
+        match self {
+            Self::Fixed(bank_number) => Some(bank_number),
+            Self::Switchable(_) => None,
         }
     }
 }

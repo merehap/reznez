@@ -63,6 +63,8 @@ pub struct AddressTemplate {
     base_address_mask: u16,
 
     inner_bank_low_bit_index: u8,
+
+    fixed_inner_bank_number: Option<u16>,
 }
 
 impl AddressTemplate {
@@ -74,6 +76,7 @@ impl AddressTemplate {
         (outer_bank_total_width, outer_bank_low_bit_index): (u8, u8),
         (inner_bank_total_width, inner_bank_low_bit_index): (u8, u8),
         (mut base_address_width, base_address_low_bit_index): (u8, u8),
+        fixed_inner_bank_number: Option<u16>,
     ) -> Self {
         assert_eq!(base_address_low_bit_index, 0);
         assert_eq!(outer_bank_low_bit_index, 0);
@@ -94,6 +97,8 @@ impl AddressTemplate {
             base_address_mask: create_mask(base_address_width, base_address_low_bit_index),
 
             inner_bank_low_bit_index,
+
+            fixed_inner_bank_number,
         };
         assert!(address_template.total_width() <= MAX_WIDTH);
 
@@ -145,15 +150,17 @@ impl AddressTemplate {
      * Components Before ( 8 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ I₀₀ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      * Components After  (16 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      */
-    pub fn with_bigger_bank(&self, new_base_address_bit_count: u8) -> Option<Self> {
+    pub fn with_bigger_bank(&self, new_base_address_bit_count: u8, fixed_inner_bank_number: Option<u16>) -> Option<Self> {
+        let mut big_banked = self.clone();
+        big_banked.fixed_inner_bank_number = fixed_inner_bank_number;
+
         // Don't expand the bank size larger than the total memory size.
         if new_base_address_bit_count > self.total_width() {
-            return Some(self.clone());
+            return Some(big_banked);
         }
 
         let bank_size_shift = new_base_address_bit_count.checked_sub(self.base_address_width)?;
 
-        let mut big_banked = self.clone();
         big_banked.inner_bank_low_bit_index += bank_size_shift;
         big_banked.base_address_width += bank_size_shift;
         big_banked.base_address_mask = create_mask(big_banked.base_address_width, 0);
@@ -196,7 +203,20 @@ impl AddressTemplate {
         let ow = self.outer_bank_number_width;
         assert_eq!(aw + iw + ow, self.total_width);
         entries.append(&mut suffix_sequence("a", 0, aw));
-        entries.append(&mut suffix_sequence("i", self.inner_bank_low_bit_index, iw));
+        if let Some(fixed) = self.fixed_inner_bank_number && iw > 0 {
+            let fixed = (fixed & self.inner_bank_mask) >> self.inner_bank_low_bit_index;
+            let width = usize::from(iw);
+            let mut fixed: Vec<_> = format!("{fixed:0>width$b}")
+                .chars()
+                .rev()
+                .enumerate()
+                .map(|(i, c)| format!("{c}{}", to_subscript(aw + i as u8)))
+                .collect();
+            entries.append(&mut fixed);
+        } else {
+            entries.append(&mut suffix_sequence("i", self.inner_bank_low_bit_index, iw));
+        }
+
         entries.append(&mut suffix_sequence("o", 0, ow));
 
         entries.reverse();

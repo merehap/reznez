@@ -81,6 +81,7 @@ impl PrgMemory {
             ((rom.size() - 1).count_ones() as u8, 0),
             ((rom_outer_bank_size - 1).count_ones() as u8, 0),
             (rom_bank_size.bit_count(), 0),
+            None,
         );
 
         // When a mapper has both Work RAM and Save RAM, the bank/page numbers are shared (save ram gets the lower numbers).
@@ -91,6 +92,7 @@ impl PrgMemory {
             (ram_size_width, 0),
             // FIXME: Hack
             (((8 * KIBIBYTE) - 1).count_ones() as u8, 0),
+            None,
         );
 
         let memory_maps = layouts.iter()
