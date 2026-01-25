@@ -18,6 +18,16 @@ impl BitTemplate {
         Self { segments }
     }
 
+    pub fn width(&self) -> u8 {
+        self.segments.iter()
+            .map(Segment::width)
+            .sum()
+    }
+
+    pub fn width_of(&self, segment_index: u8) -> u8 {
+        self.segments[segment_index as usize].width()
+    }
+
     pub fn resolve(&self, raw_values: &[u16]) -> u32 {
         let mut result = 0;
         let mut index = 0;
@@ -27,6 +37,10 @@ impl BitTemplate {
         }
 
         result
+    }
+
+    pub fn resolve_segment(&self, segment_index: u8, raw_value: u16) -> u16 {
+        self.segments[segment_index as usize].resolve(raw_value)
     }
 
     pub fn formatted(&self) -> String {
