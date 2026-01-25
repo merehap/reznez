@@ -1,6 +1,165 @@
 use std::fmt;
 
+use itertools::Itertools;
+
 const MAX_WIDTH: u8 = 32;
+
+#[derive(Clone, Debug, Default)]
+pub struct BitTemplate {
+    // Segments are stored right-to-left, the reverse of how they are rendered.
+    segments: Vec<Segment>,
+}
+
+impl BitTemplate {
+    pub fn right_to_left(raw: &[(&str, u8)]) -> Self {
+        let segments = raw.iter()
+            .map(|(label, magnitude)| Segment::named((*label).to_owned(), *magnitude))
+            .collect();
+        Self { segments }
+    }
+
+    pub fn resolve(&self, raw_values: &[u16]) -> u32 {
+        let mut result = 0;
+        let mut index = 0;
+        for (segment, &raw_value) in self.segments.iter().zip(raw_values) {
+            result += segment.resolve_shifted(raw_value, index);
+            index += segment.width();
+        }
+
+        result
+    }
+
+    pub fn formatted(&self) -> String {
+        self.segments.iter()
+            .rev()
+            .map(Segment::formatted)
+            .join("")
+    }
+
+    /**
+     * ```
+     * value == 0b1111_1111_1111_1111
+     * Before: o₀₁o₀₀i₀₃i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+     * After:  o₀₁o₀₀1₁₅1₁₄1₁₃1₁₂a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+     * ```
+     */
+    pub fn constify_segment(&mut self, segment_index: u8, value: u16) {
+        let segment_index: usize = segment_index.into();
+
+        let mut offset = 0;
+        for i in 0..segment_index {
+            offset += self.segments[i].width();
+        }
+
+        let old_segment = &self.segments[segment_index];
+        let magnitude = offset + old_segment.width();
+        let ignored_low_count = offset + old_segment.ignored_low_count();
+        self.segments[segment_index] = Segment::constant(value, magnitude, ignored_low_count);
+    }
+
+    pub fn increase_segment_magnitude(&mut self, segment_index: u8, new_magnitude: u8) {
+        let segment_index: usize = segment_index.into();
+        assert!(segment_index < self.segments.len());
+
+        let mut ignored_low_count = self.segments[segment_index].increase_magnitude_to(new_magnitude);
+
+        for segment in &mut self.segments[segment_index + 1 ..] {
+            //println!("Segment width before: {}. Segment: {}. Full: {}", segment.width(), segment.formatted());
+            let overshift = segment.increase_ignored_low_count(ignored_low_count);
+            //println!("Segment width after: {}, Overshift: {overshift}. Segment: {}. Full: {}", segment.width(), segment.formatted(), result.formatted());
+            ignored_low_count = ignored_low_count.saturating_sub(overshift);
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Segment {
+    label: Label,
+    magnitude: u8,
+    ignored_low_count: u8,
+}
+
+impl Segment {
+    pub fn named(name: String, magnitude: u8) -> Self {
+        Self {
+            label: Label::Name(name),
+            magnitude,
+            ignored_low_count: 0,
+        }
+    }
+
+    pub fn constant(value: u16, magnitude: u8, ignored_low_count: u8) -> Self {
+        assert!(magnitude.saturating_sub(ignored_low_count) <= 16);
+        Self {
+            label: Label::Constant(value),
+            magnitude,
+            ignored_low_count,
+        }
+    }
+
+    pub fn width(&self) -> u8 {
+        self.magnitude.saturating_sub(self.ignored_low_count)
+    }
+
+    pub fn ignored_low_count(&self) -> u8 {
+        self.ignored_low_count
+    }
+
+    // TODO: Cache mask.
+    pub fn resolve(&self, raw_value: u16) -> u16 {
+        let max_value = (1 << self.magnitude) - 1;
+        let ignored_low = (1 << self.ignored_low_count) - 1;
+        let mask = max_value & !ignored_low;
+        raw_value & mask
+    }
+
+    pub fn resolve_shifted(&self, raw_value: u16, shift: u8) -> u32 {
+        u32::from(self.resolve(raw_value)) << shift
+    }
+
+    pub fn formatted(&self) -> String {
+        (self.ignored_low_count..self.magnitude).rev()
+            .map(|i| [self.label_text_at(i - self.ignored_low_count), to_subscript(i)].concat())
+            .join("")
+    }
+
+    pub fn increase_magnitude_to(&mut self, magnitude: u8) -> u8 {
+        let increase_amount = magnitude.strict_sub(self.magnitude);
+        self.magnitude = magnitude;
+        increase_amount
+    }
+
+    pub fn increase_ignored_low_count(&mut self, increase_amount: u8) -> u8 {
+        let already_empty = self.width() == 0;
+        self.ignored_low_count = self.ignored_low_count.strict_add(increase_amount);
+
+        // Return the overshift (usually zero)
+        if already_empty {
+            increase_amount
+        } else {
+            self.ignored_low_count.saturating_sub(self.magnitude)
+        }
+    }
+
+    fn label_text_at(&self, index: u8) -> String {
+        match &self.label {
+            Label::Name(name) => name.to_owned(),
+            Label::Constant(constant) => ((constant >> index) & 1).to_string(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum Label {
+    Name(String),
+    Constant(u16),
+}
+
+impl Default for Label {
+    fn default() -> Self {
+        Self::Name("a".to_owned())
+    }
+}
 
 /**
  * ```text
@@ -52,6 +211,8 @@ const MAX_WIDTH: u8 = 32;
 **/ 
 #[derive(Clone, Debug, Default)]
 pub struct AddressTemplate {
+    bit_template: BitTemplate,
+
     // Bit widths
     total_width: u8,
     outer_bank_number_width: u8,
@@ -87,6 +248,12 @@ impl AddressTemplate {
         let inner_bank_number_width = inner_bank_total_width.strict_sub(base_address_width);
 
         let address_template = Self {
+            bit_template: BitTemplate::right_to_left(&[
+                ("a", base_address_width),
+                ("i", inner_bank_number_width),
+                ("o", outer_bank_number_width),
+            ]),
+
             total_width: outer_bank_total_width,
             outer_bank_number_width,
             inner_bank_number_width,
@@ -153,6 +320,9 @@ impl AddressTemplate {
     pub fn with_bigger_bank(&self, new_base_address_bit_count: u8, fixed_inner_bank_number: Option<u16>) -> Option<Self> {
         let mut big_banked = self.clone();
         big_banked.fixed_inner_bank_number = fixed_inner_bank_number;
+        if let Some(fixed_inner_bank_number) = big_banked.fixed_inner_bank_number {
+            big_banked.bit_template.constify_segment(1, fixed_inner_bank_number);
+        }
 
         // Don't expand the bank size larger than the total memory size.
         if new_base_address_bit_count > self.total_width() {
@@ -160,6 +330,7 @@ impl AddressTemplate {
         }
 
         let bank_size_shift = new_base_address_bit_count.checked_sub(self.base_address_width)?;
+        big_banked.bit_template.increase_segment_magnitude(0, new_base_address_bit_count);
 
         big_banked.inner_bank_low_bit_index += bank_size_shift;
         big_banked.base_address_width += bank_size_shift;
@@ -197,41 +368,12 @@ impl AddressTemplate {
     }
 
     pub fn formatted(&self) -> String {
-        let mut entries = Vec::with_capacity(MAX_WIDTH.into());
-        let ow = self.outer_bank_number_width;
-        let iw = self.inner_bank_number_width.strict_sub(self.inner_bank_low_bit_index);
-        let aw = self.base_address_width;
-        assert_eq!(ow + iw + aw, self.total_width);
-        entries.append(&mut suffix_sequence("a", 0, aw));
-        if let Some(fixed) = self.fixed_inner_bank_number && iw > 0 {
-            let fixed = (fixed & self.inner_bank_mask) >> self.inner_bank_low_bit_index;
-            let width = usize::from(iw);
-            let mut fixed: Vec<_> = format!("{fixed:0>width$b}")
-                .chars()
-                .rev()
-                .enumerate()
-                .map(|(i, c)| format!("{c}{}", to_subscript(aw + i as u8)))
-                .collect();
-            entries.append(&mut fixed);
-        } else {
-            entries.append(&mut suffix_sequence("i", self.inner_bank_low_bit_index, iw));
-        }
-
-        entries.append(&mut suffix_sequence("o", 0, ow));
-
-        entries.reverse();
-        entries.concat()
+        self.bit_template.formatted()
     }
 }
 
 fn create_mask(bit_count: u8, low_bit_index: u8) -> u16 {
     ((1 << bit_count) - 1) & !((1 << low_bit_index) - 1)
-}
-
-fn suffix_sequence(prefix: &str, start_index: u8, count: u8) -> Vec<String> {
-    (start_index..start_index + count)
-        .map(|i| [prefix, &to_subscript(i)].concat())
-        .collect()
 }
 
 fn to_subscript(value: u8) -> String {
