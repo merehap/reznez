@@ -51,7 +51,7 @@ impl BitTemplate {
     }
 
     /**
-     * ```
+     * ```text
      * value == 0b1111_1111_1111_1111
      * Before: o₀₁o₀₀i₀₃i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
      * After:  o₀₁o₀₀1₁₅1₁₄1₁₃1₁₂a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
@@ -78,9 +78,7 @@ impl BitTemplate {
         let mut ignored_low_count = self.segments[segment_index].increase_magnitude_to(new_magnitude);
 
         for segment in &mut self.segments[segment_index + 1 ..] {
-            //println!("Segment width before: {}. Segment: {}. Full: {}", segment.width(), segment.formatted());
             let overshift = segment.increase_ignored_low_count(ignored_low_count);
-            //println!("Segment width after: {}, Overshift: {overshift}. Segment: {}. Full: {}", segment.width(), segment.formatted(), result.formatted());
             ignored_low_count = ignored_low_count.saturating_sub(overshift);
         }
     }
@@ -121,10 +119,17 @@ impl Segment {
 
     // TODO: Cache mask.
     pub fn resolve(&self, raw_value: u16) -> u16 {
-        let max_value = (1 << self.magnitude) - 1;
-        let ignored_low = (1 << self.ignored_low_count) - 1;
-        let mask = max_value & !ignored_low;
-        raw_value & mask
+        match &self.label {
+            Label::Name(_) => {
+                let max_value = (1 << self.magnitude) - 1;
+                let ignored_low = (1 << self.ignored_low_count) - 1;
+                let mask = max_value & !ignored_low;
+                raw_value & mask
+            }
+            Label::Constant(value) => {
+                *value & ((1 << (self.magnitude.saturating_sub(self.ignored_low_count))) - 1)
+            }
+        }
     }
 
     pub fn resolve_shifted(&self, raw_value: u16, shift: u8) -> u32 {
@@ -362,7 +367,7 @@ impl AddressTemplate {
     }
 
     pub fn resolve_page_number(&self, raw_inner_bank_number: u16, page_offset: u16) -> u16 {
-        let inner_bank_number = raw_inner_bank_number & self.inner_bank_mask;
+        let inner_bank_number = self.bit_template.resolve_segment(1, raw_inner_bank_number);
         let raw_page_number = inner_bank_number * u16::from(self.prg_pages_per_inner_bank()) + page_offset;
         raw_page_number & self.page_number_mask()
     }
