@@ -78,8 +78,8 @@ impl BitTemplate {
         let mut ignored_low_count = self.segments[segment_index].increase_magnitude_to(new_magnitude);
 
         for segment in &mut self.segments[segment_index + 1 ..] {
-            let overshift = segment.increase_ignored_low_count(ignored_low_count);
-            ignored_low_count = ignored_low_count.saturating_sub(overshift);
+            ignored_low_count = segment.increase_ignored_low_count(ignored_low_count);
+            assert_eq!(ignored_low_count, 0, "Overshift occurred. Outer bank bits shouldn't be lost to large inner bank sizes.");
         }
     }
 }
@@ -179,6 +179,10 @@ impl Default for Label {
         Self::Name("a".to_owned())
     }
 }
+
+const BASE_ADDRESS_SEGMENT: u8 = 0;
+const INNER_BANK_SEGMENT: u8 = 1;
+const OUTER_BANK_SEGMENT: u8 = 2;
 
 /**
  * ```text
@@ -340,7 +344,7 @@ impl AddressTemplate {
         let mut big_banked = self.clone();
         big_banked.fixed_inner_bank_number = fixed_inner_bank_number;
         if let Some(fixed_inner_bank_number) = big_banked.fixed_inner_bank_number {
-            big_banked.bit_template.constify_segment(1, fixed_inner_bank_number);
+            big_banked.bit_template.constify_segment(INNER_BANK_SEGMENT, fixed_inner_bank_number);
         }
 
         // Don't expand the bank size larger than the total memory size.
@@ -349,7 +353,7 @@ impl AddressTemplate {
         }
 
         let bank_size_shift = new_base_address_bit_count.checked_sub(self.base_address_width)?;
-        big_banked.bit_template.increase_segment_magnitude(0, new_base_address_bit_count);
+        big_banked.bit_template.increase_segment_magnitude(BASE_ADDRESS_SEGMENT, new_base_address_bit_count);
 
         big_banked.inner_bank_low_bit_index += bank_size_shift;
         big_banked.base_address_width += bank_size_shift;
@@ -367,19 +371,21 @@ impl AddressTemplate {
     }
 
     pub fn resolve_page_number(&self, raw_inner_bank_number: u16, page_offset: u16) -> u16 {
-        let inner_bank_number = self.bit_template.resolve_segment(1, raw_inner_bank_number);
+        let inner_bank_number = self.bit_template.resolve_segment(INNER_BANK_SEGMENT, raw_inner_bank_number);
         let raw_page_number = inner_bank_number * u16::from(self.prg_pages_per_inner_bank()) + page_offset;
         raw_page_number & self.page_number_mask()
     }
 
     pub fn resolve_index(&self, raw_outer_bank_number: u8, page_number: u16, offset_in_page: u16) -> u32 {
-        let outer_bank_start = u32::from(raw_outer_bank_number & self.outer_bank_mask) * self.outer_bank_size();
+        let outer_bank_number = self.bit_template.resolve_segment(OUTER_BANK_SEGMENT, raw_outer_bank_number.into());
+        let outer_bank_start = u32::from(outer_bank_number) * self.outer_bank_size();
         let page_start = u32::from(page_number) * u32::from(Self::PRG_PAGE_SIZE);
         outer_bank_start | page_start | u32::from(offset_in_page)
     }
 
     pub fn resolve_subpage_index(&self, raw_outer_bank_number: u8, page_number: u16, sub_page_offset: u8, offset_in_page: u16) -> u32 {
-        let outer_bank_start = u32::from(raw_outer_bank_number & self.outer_bank_mask) * self.outer_bank_size();
+        let outer_bank_number = self.bit_template.resolve_segment(OUTER_BANK_SEGMENT, raw_outer_bank_number.into());
+        let outer_bank_start = u32::from(outer_bank_number) * self.outer_bank_size();
         let page_start = u32::from(page_number) * Self::PRG_PAGE_SIZE as u32;
         let subpage_start = Self::PRG_SUB_PAGE_SIZE as u32 * sub_page_offset as u32;
         let offset_in_subpage = u32::from(offset_in_page % Self::PRG_SUB_PAGE_SIZE);
