@@ -28,6 +28,10 @@ impl BitTemplate {
         self.segments[segment_index as usize].width()
     }
 
+    pub fn original_magnitude_of(&self, segment_index: u8) -> u8 {
+        self.segments[segment_index as usize].original_magnitude()
+    }
+
     pub fn resolve(&self, raw_values: &[u16]) -> u32 {
         let mut result = 0;
         let mut index = 0;
@@ -68,7 +72,7 @@ impl BitTemplate {
         let old_segment = &self.segments[segment_index];
         let magnitude = offset + old_segment.width();
         let ignored_low_count = offset + old_segment.ignored_low_count();
-        self.segments[segment_index] = Segment::constant(value, magnitude, ignored_low_count);
+        self.segments[segment_index].constify(value, magnitude, ignored_low_count);
     }
 
     pub fn increase_segment_magnitude(&mut self, segment_index: u8, new_magnitude: u8) {
@@ -87,6 +91,7 @@ impl BitTemplate {
 #[derive(Clone, Debug)]
 pub struct Segment {
     label: Label,
+    original_magnitude: u8,
     magnitude: u8,
     ignored_low_count: u8,
 }
@@ -95,18 +100,18 @@ impl Segment {
     pub fn named(name: String, magnitude: u8) -> Self {
         Self {
             label: Label::Name(name),
+            original_magnitude: magnitude,
             magnitude,
             ignored_low_count: 0,
         }
     }
 
-    pub fn constant(value: u16, magnitude: u8, ignored_low_count: u8) -> Self {
-        assert!(magnitude.saturating_sub(ignored_low_count) <= 16);
-        Self {
-            label: Label::Constant(value),
-            magnitude,
-            ignored_low_count,
-        }
+    pub fn original_magnitude(&self) -> u8 {
+        self.original_magnitude
+    }
+
+    pub fn magnitude(&self) -> u8 {
+        self.magnitude
     }
 
     pub fn width(&self) -> u8 {
@@ -158,6 +163,13 @@ impl Segment {
         } else {
             self.ignored_low_count.saturating_sub(self.magnitude)
         }
+    }
+
+    pub fn constify(&mut self, value: u16, magnitude: u8, ignored_low_count: u8) {
+        assert!(magnitude.saturating_sub(ignored_low_count) <= 16);
+        self.label = Label::Constant(value);
+        self.magnitude = magnitude;
+        self.ignored_low_count = ignored_low_count;
     }
 
     fn label_text_at(&self, index: u8) -> String {
@@ -242,7 +254,6 @@ pub struct AddressTemplate {
     inner_bank_number_width: u8,
     base_address_width: u8,
 
-    outer_bank_mask: u8,
     inner_bank_mask: u16,
     base_address_mask: u16,
 
@@ -282,7 +293,6 @@ impl AddressTemplate {
             inner_bank_number_width,
             base_address_width,
 
-            outer_bank_mask: create_mask(outer_bank_number_width, outer_bank_low_bit_index).try_into().unwrap(),
             inner_bank_mask: create_mask(inner_bank_number_width, inner_bank_low_bit_index),
             base_address_mask: create_mask(base_address_width, base_address_low_bit_index),
 
@@ -300,7 +310,7 @@ impl AddressTemplate {
     }
 
     pub fn inner_bank_size(&self) -> u16 {
-        1 << (self.base_address_width - self.inner_bank_low_bit_index)
+        1 << self.bit_template.original_magnitude_of(BASE_ADDRESS_SEGMENT)
     }
 
     pub fn inner_bank_count(&self) -> u16 {
