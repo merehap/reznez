@@ -63,16 +63,10 @@ impl BitTemplate {
      */
     pub fn constify_segment(&mut self, segment_index: u8, value: u16) {
         let segment_index: usize = segment_index.into();
-
-        let mut offset = 0;
-        for i in 0..segment_index {
-            offset += self.segments[i].width();
-        }
-
-        let old_segment = &self.segments[segment_index];
-        let magnitude = offset + old_segment.width();
-        let ignored_low_count = offset + old_segment.ignored_low_count();
-        self.segments[segment_index].constify(value, magnitude, ignored_low_count);
+        let offset: u8 = self.segments[0..segment_index].iter()
+            .map(Segment::width)
+            .sum();
+        self.segments[segment_index].constify(value, offset);
     }
 
     pub fn increase_segment_magnitude(&mut self, segment_index: u8, new_magnitude: u8) {
@@ -131,8 +125,8 @@ impl Segment {
                 let mask = max_value & !ignored_low;
                 raw_value & mask
             }
-            Label::Constant(value) => {
-                *value & ((1 << (self.magnitude.saturating_sub(self.ignored_low_count))) - 1)
+            Label::Constant { value, .. } => {
+                *value & !((1 << self.ignored_low_count) - 1)
             }
         }
     }
@@ -142,9 +136,19 @@ impl Segment {
     }
 
     pub fn formatted(&self) -> String {
-        (self.ignored_low_count..self.magnitude).rev()
-            .map(|i| [self.label_text_at(i - self.ignored_low_count), to_subscript(i)].concat())
-            .join("")
+        match self.label {
+            Label::Name(_) => {
+                (self.ignored_low_count..self.magnitude).rev()
+                    .map(|i| [self.label_text_at(i - self.ignored_low_count), to_subscript(i)].concat())
+                    .join("")
+            }
+            Label::Constant { lowest_subscript, .. } => {
+                let lowest_visible_subscript = lowest_subscript + self.ignored_low_count;
+                (lowest_visible_subscript..lowest_visible_subscript + self.width()).rev()
+                    .map(|i| [self.label_text_at(i - lowest_subscript), to_subscript(i)].concat())
+                    .join("")
+            }
+        }
     }
 
     pub fn increase_magnitude_to(&mut self, magnitude: u8) -> u8 {
@@ -165,17 +169,14 @@ impl Segment {
         }
     }
 
-    pub fn constify(&mut self, value: u16, magnitude: u8, ignored_low_count: u8) {
-        assert!(magnitude.saturating_sub(ignored_low_count) <= 16);
-        self.label = Label::Constant(value);
-        self.magnitude = magnitude;
-        self.ignored_low_count = ignored_low_count;
+    pub fn constify(&mut self, value: u16, lowest_subscript: u8 ) {
+        self.label = Label::Constant { value, lowest_subscript };
     }
 
     fn label_text_at(&self, index: u8) -> String {
         match &self.label {
             Label::Name(name) => name.to_owned(),
-            Label::Constant(constant) => ((constant >> index) & 1).to_string(),
+            Label::Constant { value, .. } => ((value >> index) & 1).to_string(),
         }
     }
 }
@@ -183,7 +184,7 @@ impl Segment {
 #[derive(Clone, Debug)]
 pub enum Label {
     Name(String),
-    Constant(u16),
+    Constant { value: u16, lowest_subscript: u8 },
 }
 
 impl Default for Label {
