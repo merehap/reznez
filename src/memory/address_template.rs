@@ -32,6 +32,10 @@ impl BitTemplate {
         self.segments[segment_index as usize].original_magnitude()
     }
 
+    pub fn magnitude_of(&self, segment_index: u8) -> u8 {
+        self.segments[segment_index as usize].magnitude()
+    }
+
     pub fn resolve(&self, raw_values: &[u16]) -> u32 {
         let mut result = 0;
         let mut index = 0;
@@ -315,11 +319,11 @@ impl AddressTemplate {
     }
 
     pub fn inner_bank_count(&self) -> u16 {
-        1 << self.inner_bank_number_width
+        1 << self.bit_template.magnitude_of(INNER_BANK_SEGMENT)
     }
 
     pub fn outer_bank_count(&self) -> u8 {
-        1 << self.outer_bank_number_width
+        1 << self.bit_template.magnitude_of(OUTER_BANK_SEGMENT)
     }
 
     pub fn outer_bank_size(&self) -> u32 {
