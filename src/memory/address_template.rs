@@ -252,18 +252,6 @@ const OUTER_BANK_SEGMENT: u8 = 2;
 #[derive(Clone, Debug, Default)]
 pub struct AddressTemplate {
     bit_template: BitTemplate,
-
-    // Bit widths
-    total_width: u8,
-    outer_bank_number_width: u8,
-    inner_bank_number_width: u8,
-    base_address_width: u8,
-
-    inner_bank_mask: u16,
-    base_address_mask: u16,
-
-    inner_bank_low_bit_index: u8,
-
     fixed_inner_bank_number: Option<u16>,
 }
 
@@ -293,16 +281,6 @@ impl AddressTemplate {
                 ("o", outer_bank_number_width),
             ]),
 
-            total_width: outer_bank_total_width,
-            outer_bank_number_width,
-            inner_bank_number_width,
-            base_address_width,
-
-            inner_bank_mask: create_mask(inner_bank_number_width, inner_bank_low_bit_index),
-            base_address_mask: create_mask(base_address_width, base_address_low_bit_index),
-
-            inner_bank_low_bit_index,
-
             fixed_inner_bank_number,
         };
         assert!(address_template.total_width() <= MAX_WIDTH);
@@ -311,7 +289,7 @@ impl AddressTemplate {
     }
 
     pub fn total_width(&self) -> u8 {
-        self.total_width
+        self.bit_template.width()
     }
 
     pub fn inner_bank_size(&self) -> u16 {
@@ -355,7 +333,7 @@ impl AddressTemplate {
      * Components Before ( 8 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ I₀₀ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      * Components After  (16 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      */
-    pub fn with_bigger_bank(&self, new_base_address_bit_count: u8, fixed_inner_bank_number: Option<u16>) -> Option<Self> {
+    pub fn with_bigger_bank(&self, mut new_base_address_bit_count: u8, fixed_inner_bank_number: Option<u16>) -> Option<Self> {
         let mut big_banked = self.clone();
         big_banked.fixed_inner_bank_number = fixed_inner_bank_number;
         if let Some(fixed_inner_bank_number) = big_banked.fixed_inner_bank_number {
@@ -363,25 +341,14 @@ impl AddressTemplate {
         }
 
         // Don't expand the bank size larger than the total memory size.
-        if new_base_address_bit_count > self.total_width() {
-            return Some(big_banked);
+        new_base_address_bit_count = std::cmp::min(new_base_address_bit_count, self.total_width());
+
+        if new_base_address_bit_count < self.bit_template.magnitude_of(BASE_ADDRESS_SEGMENT) {
+            return None;
         }
 
-        let bank_size_shift = new_base_address_bit_count.checked_sub(self.base_address_width)?;
         big_banked.bit_template.increase_segment_magnitude(BASE_ADDRESS_SEGMENT, new_base_address_bit_count);
 
-        big_banked.inner_bank_low_bit_index += bank_size_shift;
-        big_banked.base_address_width += bank_size_shift;
-        big_banked.base_address_mask = create_mask(big_banked.base_address_width, 0);
-        big_banked.inner_bank_mask = create_mask(big_banked.inner_bank_number_width, bank_size_shift);
-
-        assert_eq!(
-            big_banked.outer_bank_number_width
-                + big_banked.inner_bank_number_width
-                + big_banked.base_address_width
-                - big_banked.inner_bank_low_bit_index,
-            big_banked.total_width()
-        );
         Some(big_banked)
     }
 
@@ -410,10 +377,6 @@ impl AddressTemplate {
     pub fn formatted(&self) -> String {
         self.bit_template.formatted()
     }
-}
-
-fn create_mask(bit_count: u8, low_bit_index: u8) -> u16 {
-    ((1 << bit_count) - 1) & !((1 << low_bit_index) - 1)
 }
 
 fn to_subscript(value: u8) -> String {
