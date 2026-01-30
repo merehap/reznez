@@ -1,5 +1,6 @@
 pub mod address_template;
 pub mod bank;
+pub mod bit_template;
 pub mod cpu;
 pub mod layout;
 pub mod ppu;
