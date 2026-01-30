@@ -1,6 +1,6 @@
 use crate::memory::address_template::AddressTemplate;
 use crate::memory::bank::bank::PrgBank;
-use crate::memory::bank::bank_number::{BankNumber, MemType, PageNumberSpace, PrgBankRegisters};
+use crate::memory::bank::bank_number::{MemType, PageNumberSpace, PrgBankRegisters};
 use crate::memory::cpu::cpu_address::CpuAddress;
 use crate::memory::cpu::prg_layout::PrgLayout;
 use crate::util::unit::KIBIBYTE;
@@ -23,19 +23,11 @@ impl PrgMemoryMap {
         ram_address_template: &AddressTemplate,
         regs: &PrgBankRegisters,
     ) -> Self {
-        let rom_page_count = rom_address_template.prg_pages_per_outer_bank();
-
         let mut all_sub_page_mappings = Vec::with_capacity(PRG_SUB_SLOT_COUNT);
         let windows = initial_layout.windows().iter();
         for window in windows.clone() {
-            let rom_address_template = if window.size().page_multiple() > 0 {
-                rom_address_template.with_bigger_bank(
-                    window.size().bit_count(),
-                    window.bank().fixed_bank_number().map(BankNumber::to_raw),
-                )
-            } else {
-                Some(rom_address_template.clone())
-            };
+            let mut rom_address_template = rom_address_template.clone();
+            rom_address_template.apply_prg_window(window);
 
             let mut sub_page_mappings = Vec::new();
             for sub_page_offset in 0..window.size().to_raw() / 128 {
@@ -43,7 +35,7 @@ impl PrgMemoryMap {
                     bank: window.bank(),
                     rom_address_template: rom_address_template.clone(),
                     ram_address_template: ram_address_template.clone(),
-                    page_offset: u16::try_from(sub_page_mappings.len() / 64).unwrap() % rom_page_count,
+                    page_offset: u16::try_from(sub_page_mappings.len() / 64).unwrap() % rom_address_template.prg_pages_per_outer_bank(),
                 };
                 sub_page_mappings.push((mapping, sub_page_offset));
             }
@@ -51,10 +43,8 @@ impl PrgMemoryMap {
             all_sub_page_mappings.append(&mut sub_page_mappings);
         }
 
-        assert_eq!(all_sub_page_mappings.len(), 5 * 64);
-
-        let page_mappings: Vec<_> = all_sub_page_mappings
-            .chunks_exact(64)
+        let page_mappings: Vec<PrgMappingSlot> = all_sub_page_mappings
+            .chunks_exact(PRG_SUB_SLOT_COUNT)
             .map(|sub_mappings| {
                 let sub_mappings = sub_mappings.to_vec().try_into().unwrap();
                 let slot = PrgMappingSlot::Multi(Box::new(sub_mappings));
@@ -129,32 +119,29 @@ pub enum PrgMappingSlot {
 
 impl PrgMappingSlot {
     fn condensed(self) -> Self {
-        let mut condensed = None;
-        if let Self::Multi(small_mappings) = &self {
-            let mut same_template = true;
-            let first_rom_template = &small_mappings[0].0.rom_address_template;
-            let first_ram_template = &small_mappings[0].0.ram_address_template;
-            for small_mapping in small_mappings.iter() {
-                if small_mapping.0.rom_address_template != first_rom_template.clone()
-                        || small_mapping.0.ram_address_template != first_ram_template.clone() {
-                    same_template = false;
-                    break;
-                }
-            }
+        let Self::Multi(ref mappings) = self else {
+            // Already condensed.
+            return self;
+        };
 
-            if same_template {
-                condensed = Some(Self::Normal(small_mappings[0].0.clone()));
+        let first_mapping = mappings[0].0.clone();
+        for mapping in mappings.iter() {
+            if mapping.0.rom_address_template != first_mapping.rom_address_template
+                    || mapping.0.ram_address_template != first_mapping.ram_address_template {
+                // Can't condense: at least one of the templates doesn't match the others.
+                return self;
             }
         }
 
-        condensed.unwrap_or(self)
+        // Condense.
+        Self::Normal(first_mapping)
     }
 }
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct PrgMapping {
     bank: PrgBank,
-    rom_address_template: Option<AddressTemplate>,
+    rom_address_template: AddressTemplate,
     ram_address_template: AddressTemplate,
     page_offset: u16,
 }
@@ -169,10 +156,9 @@ impl PrgMapping {
 
         match page_number_space {
             PageNumberSpace::Rom(read_status) => {
-                let rom_address_template = self.rom_address_template.as_ref().unwrap();
-                let page_number = rom_address_template.resolve_page_number(bank_number.to_raw(), self.page_offset);
+                let page_number = self.rom_address_template.resolve_page_number(bank_number.to_raw(), self.page_offset);
                 let mem_type = MemType::Rom(read_status);
-                Some(PageInfo { mem_type, page_number, address_template: rom_address_template.clone() })
+                Some(PageInfo { mem_type, page_number, address_template: self.rom_address_template.clone() })
             }
             PageNumberSpace::Ram(read_status, write_status) => {
                 let page_number = self.ram_address_template.resolve_page_number(bank_number.to_raw(), self.page_offset);

@@ -2,6 +2,9 @@ use std::fmt;
 
 use itertools::Itertools;
 
+use crate::memory::bank::bank_number::BankNumber;
+use crate::memory::window::PrgWindow;
+
 const MAX_WIDTH: u8 = 32;
 
 #[derive(PartialEq, Eq, Clone, Debug, Default)]
@@ -333,23 +336,23 @@ impl AddressTemplate {
      * Components Before ( 8 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ I₀₀ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      * Components After  (16 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      */
-    pub fn with_bigger_bank(&self, mut new_base_address_bit_count: u8, fixed_inner_bank_number: Option<u16>) -> Option<Self> {
-        let mut big_banked = self.clone();
-        big_banked.fixed_inner_bank_number = fixed_inner_bank_number;
-        if let Some(fixed_inner_bank_number) = big_banked.fixed_inner_bank_number {
-            big_banked.bit_template.constify_segment(INNER_BANK_SEGMENT, fixed_inner_bank_number);
+    pub fn apply_prg_window(&mut self, window: &PrgWindow) {
+        if window.size().page_multiple() == 0 {
+            return;
+        }
+
+        let mut new_base_address_bit_count = window.size().bit_count();
+        let fixed_inner_bank_number = window.bank().fixed_bank_number().map(BankNumber::to_raw);
+        self.fixed_inner_bank_number = fixed_inner_bank_number;
+        if let Some(fixed_inner_bank_number) = self.fixed_inner_bank_number {
+            self.bit_template.constify_segment(INNER_BANK_SEGMENT, fixed_inner_bank_number);
         }
 
         // Don't expand the bank size larger than the total memory size.
         new_base_address_bit_count = std::cmp::min(new_base_address_bit_count, self.total_width());
-
-        if new_base_address_bit_count < self.bit_template.magnitude_of(BASE_ADDRESS_SEGMENT) {
-            return None;
+        if new_base_address_bit_count > self.bit_template.magnitude_of(BASE_ADDRESS_SEGMENT) {
+            self.bit_template.increase_segment_magnitude(BASE_ADDRESS_SEGMENT, new_base_address_bit_count);
         }
-
-        big_banked.bit_template.increase_segment_magnitude(BASE_ADDRESS_SEGMENT, new_base_address_bit_count);
-
-        Some(big_banked)
     }
 
     pub fn resolve_page_number(&self, raw_inner_bank_number: u16, page_offset: u16) -> u16 {
