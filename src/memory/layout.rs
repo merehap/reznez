@@ -9,7 +9,7 @@ use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::chr_memory::ChrMemory;
 use crate::memory::raw_memory::{RawMemory, SaveRam};
-use crate::memory::window::{PrgWindow, PrgWindowSize};
+use crate::memory::window::PrgWindow;
 use crate::ppu::name_table::name_table_mirroring::NameTableMirroring;
 use crate::util::const_vec::ConstVec;
 use crate::util::unit::KIBIBYTE;
@@ -23,7 +23,6 @@ pub struct Layout {
     prg_layout_index: u8,
     prg_layouts: ConstVec<PrgLayout, 16>,
     prg_rom_outer_bank_layout: OuterBankLayout,
-    prg_rom_bank_size_override: Option<PrgWindowSize>,
 
     chr_rom_max_size: u32,
     align_large_chr_windows: bool,
@@ -98,7 +97,6 @@ impl Layout {
             self.prg_layout_index,
             cartridge.prg_rom().clone(),
             self.prg_rom_outer_bank_layout,
-            self.prg_rom_bank_size_override,
             RawMemory::new(metadata.prg_work_ram_size),
             SaveRam::open(&cartridge.path().to_prg_save_ram_file_path(), metadata.prg_save_ram_size, allow_saving),
             prg_bank_registers,
@@ -141,7 +139,6 @@ pub struct LayoutBuilder {
     prg_layouts: ConstVec<PrgLayout, 16>,
     prg_layout_index: u8,
     prg_rom_outer_bank_layout: Option<OuterBankLayout>,
-    prg_rom_bank_size_override: Option<PrgWindowSize>,
 
     chr_rom_max_size: Option<u32>,
     chr_layouts: ConstVec<ChrLayout, 16>,
@@ -168,7 +165,6 @@ impl LayoutBuilder {
             prg_layout_index: 0,
             prg_layouts: ConstVec::new(),
             prg_rom_outer_bank_layout: None,
-            prg_rom_bank_size_override: None,
 
             chr_rom_max_size: None,
             align_large_chr_windows: true,
@@ -220,11 +216,6 @@ impl LayoutBuilder {
 
     pub const fn prg_rom_outer_bank_size(&mut self, size: u32) -> &mut Self {
         self.prg_rom_outer_bank_layout = Some(OuterBankLayout::Size(size));
-        self
-    }
-
-    pub const fn prg_rom_bank_size_override(&mut self, size: u32) -> &mut Self {
-        self.prg_rom_bank_size_override = Some(PrgWindowSize::from_raw(size));
         self
     }
 
@@ -340,7 +331,6 @@ impl LayoutBuilder {
             prg_layouts: self.prg_layouts,
             prg_layout_index: self.prg_layout_index,
             prg_rom_outer_bank_layout,
-            prg_rom_bank_size_override: self.prg_rom_bank_size_override,
 
             chr_rom_max_size: self.chr_rom_max_size.expect("chr_rom_max_size must be set"),
             chr_layouts: self.chr_layouts,

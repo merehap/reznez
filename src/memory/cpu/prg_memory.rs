@@ -9,7 +9,7 @@ use crate::memory::cpu::prg_memory_map::{PageInfo, PrgMemoryMap, PrgPageIdSlot};
 use crate::memory::layout::OuterBankLayout;
 use crate::memory::raw_memory::{RawMemory, SaveRam};
 use crate::memory::read_result::ReadResult;
-use crate::memory::window::{PrgWindow, PrgWindowSize};
+use crate::memory::window::PrgWindow;
 
 pub struct PrgMemory {
     layouts: Vec<PrgLayout>,
@@ -29,7 +29,6 @@ impl PrgMemory {
         layout_index: u8,
         rom: RawMemory,
         rom_outer_bank_layout: OuterBankLayout,
-        rom_bank_size_override: Option<PrgWindowSize>,
         mut work_ram: RawMemory,
         mut save_ram: SaveRam,
         regs: PrgBankRegisters,
@@ -53,17 +52,7 @@ impl PrgMemory {
             }
         }
 
-        let mut rom_bank_size = rom_bank_size.expect("at least one ROM window");
-        if rom_bank_size < PrgWindowSize::MIN {
-            assert!(rom_bank_size_override.is_some(),
-                "ROM window size is too small. Actual must be >= 0x{:X}, but 0x{:X} < 0x{:X}",
-                PrgWindowSize::MIN.to_raw(), rom_bank_size.to_raw(), PrgWindowSize::MIN.to_raw());
-        }
-
-        if let Some(rom_bank_size_override) = rom_bank_size_override {
-            rom_bank_size = rom_bank_size_override;
-            println!("Overriding bank size to: {rom_bank_size:?}");
-        }
+        let rom_bank_size = rom_bank_size.expect("at least one ROM window");
 
         if (!work_ram.is_empty() || !save_ram.is_empty()) && !ram_present_in_layout {
             warn!("The PRG RAM that was specified in the rom file will be ignored since it is not \
