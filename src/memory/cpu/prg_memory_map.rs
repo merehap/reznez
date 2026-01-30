@@ -16,7 +16,6 @@ pub struct PrgMemoryMap {
 }
 
 impl PrgMemoryMap {
-    // TODO: First break everything into sub page mappings, then consolidate into pages where appropriate.
     pub fn new(
         initial_layout: PrgLayout,
         rom_address_template: &AddressTemplate,

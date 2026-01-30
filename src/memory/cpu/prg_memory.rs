@@ -34,27 +34,17 @@ impl PrgMemory {
         regs: PrgBankRegisters,
     ) -> PrgMemory {
 
-        let mut rom_bank_size = None;
-        let mut ram_present_in_layout = false;
-        for layout in &layouts {
-            for window in layout.windows() {
-                if window.bank().is_rom() {
-                    if let Some(size) = rom_bank_size {
-                        rom_bank_size = Some(std::cmp::min(window.size(), size));
-                    } else {
-                        rom_bank_size = Some(window.size());
-                    }
-                }
+        let rom_bank_size = layouts.iter()
+            .flat_map(PrgLayout::windows)
+            .filter(|window| window.bank().is_rom())
+            .map(|window| window.size())
+            .reduce(std::cmp::min)
+            .expect("at least one ROM window");
+        let ram_supported_by_layout = layouts.iter()
+            .flat_map(PrgLayout::windows)
+            .any(|window| window.bank().supports_ram());
 
-                if window.bank().supports_ram() {
-                    ram_present_in_layout = true;
-                }
-            }
-        }
-
-        let rom_bank_size = rom_bank_size.expect("at least one ROM window");
-
-        if (!work_ram.is_empty() || !save_ram.is_empty()) && !ram_present_in_layout {
+        if (!work_ram.is_empty() || !save_ram.is_empty()) && !ram_supported_by_layout {
             warn!("The PRG RAM that was specified in the rom file will be ignored since it is not \
                     configured in the Layout for this mapper.");
             work_ram = RawMemory::new(0);
