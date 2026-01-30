@@ -4,7 +4,7 @@ use itertools::Itertools;
 
 const MAX_WIDTH: u8 = 32;
 
-#[derive(Clone, Debug, Default)]
+#[derive(PartialEq, Eq, Clone, Debug, Default)]
 pub struct BitTemplate {
     // Segments are stored right-to-left, the reverse of how they are rendered.
     segments: Vec<Segment>,
@@ -86,7 +86,7 @@ impl BitTemplate {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct Segment {
     label: Label,
     original_magnitude: u8,
@@ -185,7 +185,7 @@ impl Segment {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Label {
     Name(String),
     Constant { value: u16, lowest_subscript: u8 },
@@ -249,7 +249,7 @@ const OUTER_BANK_SEGMENT: u8 = 2;
  *              +-----------------------------------------------------------+
  * ```
 **/ 
-#[derive(Clone, Debug, Default)]
+#[derive(PartialEq, Eq, Clone, Debug, Default)]
 pub struct AddressTemplate {
     bit_template: BitTemplate,
     fixed_inner_bank_number: Option<u16>,
@@ -365,7 +365,7 @@ impl AddressTemplate {
         outer_bank_start | page_start | u32::from(offset_in_page)
     }
 
-    pub fn resolve_subpage_index(&self, raw_outer_bank_number: u8, page_number: u16, sub_page_offset: u8, offset_in_page: u16) -> u32 {
+    pub fn resolve_subpage_index(&self, raw_outer_bank_number: u8, page_number: u16, sub_page_offset: u16, offset_in_page: u16) -> u32 {
         let outer_bank_number = self.bit_template.resolve_segment(OUTER_BANK_SEGMENT, raw_outer_bank_number.into());
         let outer_bank_start = u32::from(outer_bank_number) * self.outer_bank_size();
         let page_start = u32::from(page_number) * Self::PRG_PAGE_SIZE as u32;

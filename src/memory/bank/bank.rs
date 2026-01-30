@@ -67,7 +67,7 @@ impl ChrSource {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct PrgBank {
     bank_number_provider: PrgBankNumberProvider,
     prg_source_provider: PrgSourceProvider,
