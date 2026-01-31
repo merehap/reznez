@@ -209,11 +209,6 @@ impl LayoutBuilder {
         self
     }
 
-    pub const fn prg_outer_bank_count(&mut self, count: u8) -> &mut Self {
-        self.prg_rom_outer_bank_layout = Some(OuterBankLayout::ExactCount(NonZeroU8::new(count).unwrap()));
-        self
-    }
-
     pub const fn prg_rom_outer_bank_size(&mut self, size: u32) -> &mut Self {
         self.prg_rom_outer_bank_layout = Some(OuterBankLayout::Size(size));
         self

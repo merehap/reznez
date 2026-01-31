@@ -68,31 +68,13 @@ impl AddressTemplate {
     pub const PRG_PAGE_SIZE: u16 = 2u16.pow(Self::PRG_PAGE_NUMBER_WIDTH as u32);
     const PRG_SUB_PAGE_SIZE: u16 = Self::PRG_PAGE_SIZE / 64;
 
-    pub fn new(
-        (outer_bank_total_width, outer_bank_low_bit_index): (u8, u8),
-        (inner_bank_total_width, inner_bank_low_bit_index): (u8, u8),
-        (mut base_address_width, base_address_low_bit_index): (u8, u8),
-        fixed_inner_bank_number: Option<u16>,
-    ) -> Self {
-        assert_eq!(base_address_low_bit_index, 0);
-        assert_eq!(outer_bank_low_bit_index, 0);
-
-        let outer_bank_number_width = outer_bank_total_width.strict_sub(inner_bank_total_width);
-        // If the ROM is undersized, reduce the base address bit count, effectively mirroring the ROM until it's the right size.
-        base_address_width = std::cmp::min(base_address_width, outer_bank_total_width);
-        let mut inner_bank_total_width = inner_bank_total_width;
-        inner_bank_total_width = std::cmp::min(inner_bank_total_width, outer_bank_total_width);
-        let inner_bank_number_width = inner_bank_total_width.strict_sub(base_address_width);
-
-        let address_template = Self {
-            bit_template: BitTemplate::right_to_left(&[
-                ("a", base_address_width),
-                ("i", inner_bank_number_width),
-                ("o", outer_bank_number_width),
-            ]),
-
-            fixed_inner_bank_number,
-        };
+    pub fn new(bank_sizes: &BankSizes) -> Self {
+        let bit_template = BitTemplate::right_to_left(&[
+            ("a", bank_sizes.inner_bank_width()),
+            ("i", bank_sizes.inner_bank_number_width()),
+            ("o", bank_sizes.outer_bank_number_width()),
+        ]);
+        let address_template = Self { bit_template, fixed_inner_bank_number: None };
         assert!(address_template.total_width() <= MAX_WIDTH);
 
         address_template
@@ -193,4 +175,51 @@ impl fmt::Display for AddressTemplate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.formatted())
     }
+}
+
+pub struct BankSizes {
+    full_size: u32,
+    outer_bank_size: u32,
+    inner_bank_size: u32,
+}
+
+impl BankSizes {
+    pub fn new(full_size: u32, mut outer_bank_size: u32, mut inner_bank_size: u32) -> Self {
+        outer_bank_size = std::cmp::min(outer_bank_size, full_size);
+        inner_bank_size = std::cmp::min(inner_bank_size, outer_bank_size);
+        Self { full_size, outer_bank_size, inner_bank_size }
+    }
+
+    pub fn full_size(&self) -> u32 { self.full_size }
+    pub fn outer_bank_size(&self) -> u32 { self.outer_bank_size }
+    pub fn inner_bank_size(&self) -> u32 { self.inner_bank_size }
+
+    pub fn full_width(&self) -> u8 {
+        size_to_width(self.full_size)
+    }
+
+    pub fn outer_bank_width(&self) -> u8 {
+        size_to_width(self.outer_bank_size)
+    }
+
+    pub fn inner_bank_width(&self) -> u8 {
+        size_to_width(self.inner_bank_size)
+    }
+
+    pub fn outer_bank_number_width(&self) -> u8 {
+        self.full_width() - self.outer_bank_width()
+    }
+
+    pub fn inner_bank_number_width(&self) -> u8 {
+        self.outer_bank_width() - self.inner_bank_width()
+    }
+}
+
+fn size_to_width(size: u32) -> u8 {
+    if size == 0 {
+        return 0;
+    }
+
+    assert_eq!(size & (size - 1), 0);
+    (size - 1).count_ones().try_into().unwrap()
 }

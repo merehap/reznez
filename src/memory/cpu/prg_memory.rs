@@ -1,6 +1,6 @@
 use log::{info, warn};
 use crate::mapper::{BankNumber, KIBIBYTE, PrgBankRegisterId};
-use crate::memory::address_template::AddressTemplate;
+use crate::memory::address_template::{AddressTemplate, BankSizes};
 use crate::memory::bank::bank::{PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
 use crate::memory::bank::bank_number::{MemType, PrgBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
@@ -34,7 +34,7 @@ impl PrgMemory {
         regs: PrgBankRegisters,
     ) -> PrgMemory {
 
-        let rom_bank_size = layouts.iter()
+        let rom_inner_bank_size = layouts.iter()
             .flat_map(PrgLayout::windows)
             .filter(|window| window.bank().is_rom())
             .map(|window| window.size())
@@ -56,23 +56,22 @@ impl PrgMemory {
 
         assert_eq!(rom_outer_bank_size & (rom_outer_bank_size - 1), 0);
         assert_eq!(rom_outer_bank_size % (8 * KIBIBYTE), 0);
-        let rom_address_template = AddressTemplate::new(
-            ((rom.size() - 1).count_ones() as u8, 0),
-            ((rom_outer_bank_size - 1).count_ones() as u8, 0),
-            (rom_bank_size.bit_count(), 0),
-            None,
-        );
+        let rom_bank_sizes = BankSizes::new(
+            rom.size(),
+            rom_outer_bank_size,
+            rom_inner_bank_size.to_raw().into());
+        let rom_address_template = AddressTemplate::new(&rom_bank_sizes);
 
         // When a mapper has both Work RAM and Save RAM, the bank/page numbers are shared (save ram gets the lower numbers).
         let ram_size = work_ram.size() + save_ram.size();
-        let ram_size_width = if ram_size == 0 { 0 } else { (ram_size - 1).count_ones() as u8 };
-        let ram_address_template = AddressTemplate::new(
-            (ram_size_width, 0),
-            (ram_size_width, 0),
-            // FIXME: Hack
-            (((8 * KIBIBYTE) - 1).count_ones() as u8, 0),
-            None,
+        // FIXME: Hack
+        let ram_inner_bank_size = if ram_size == 0 { 0 } else { 8 * KIBIBYTE };
+        let ram_bank_sizes = BankSizes::new(
+            ram_size,
+            ram_size,
+            ram_inner_bank_size,
         );
+        let ram_address_template = AddressTemplate::new(&ram_bank_sizes);
 
         let memory_maps = layouts.iter()
             .map(|initial_layout| PrgMemoryMap::new(*initial_layout, &rom_address_template, &ram_address_template, &regs))
