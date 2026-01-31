@@ -111,18 +111,17 @@ pub enum PrgMappingSlot {
 }
 
 impl PrgMappingSlot {
+    // If the ROM templates are the same for each mapping, and the RAM templates are the same for each mapping
+    // then condense all 64 128-byte mappings into a single 8 KiB mapping.
     fn new(mappings: [(PrgMapping, SubPageOffset); PRG_SUB_SLOT_COUNT]) -> Self {
         let first_mapping = mappings[0].0.clone();
-        for mapping in &mappings {
-            if mapping.0.rom_address_template != first_mapping.rom_address_template
-                    || mapping.0.ram_address_template != first_mapping.ram_address_template {
-                // Can't condense: at least one of the templates doesn't match the others.
-                return Self::Multi(Box::new(mappings));
-            }
+        let template_mismatch = mappings.iter()
+            .any(|(mapping, _)| !mapping.same_templates_as(&first_mapping));
+        if template_mismatch {
+            Self::Multi(Box::new(mappings))
+        } else {
+            Self::Normal(first_mapping)
         }
-
-        // Condense.
-        Self::Normal(first_mapping)
     }
 }
 
@@ -159,6 +158,12 @@ impl PrgMapping {
                 Some(PageInfo { mem_type, page_number, address_template: self.ram_address_template.clone() })
             }
         }
+    }
+
+    pub fn same_templates_as(&self, other: &Self) -> bool {
+        let rom_template_matches = self.rom_address_template == other.rom_address_template;
+        let ram_template_matches = self.ram_address_template == other.ram_address_template;
+        rom_template_matches || ram_template_matches
     }
 }
 
