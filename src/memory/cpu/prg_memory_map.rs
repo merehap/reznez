@@ -94,8 +94,8 @@ impl PrgMemoryMap {
             .map(|sub_page_offset| {
                 let mapping = PrgMapping {
                     bank: window.bank(),
-                    rom_address_template: AddressTemplate::new(rom_bank_sizes).apply_prg_window(window),
-                    ram_address_template: AddressTemplate::new(ram_bank_sizes).apply_prg_window(window),
+                    rom_address_template: window.address_template(rom_bank_sizes),
+                    ram_address_template: window.address_template(ram_bank_sizes),
                     page_offset: sub_page_offset / 64,
                 };
                 (mapping, sub_page_offset)

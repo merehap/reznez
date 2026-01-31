@@ -1,5 +1,6 @@
 use std::num::NonZeroU16;
 
+use crate::memory::address_template::{AddressTemplate, BankSizes};
 use crate::memory::bank::bank::PrgBank;
 use crate::memory::bank::bank_number::{ChrBankRegisters, PrgBankRegisterId};
 use crate::util::unit::KIBIBYTE;
@@ -7,8 +8,8 @@ use crate::util::unit::KIBIBYTE;
 use super::bank::bank::{ChrBank, ChrBankNumberProvider};
 use super::bank::bank_number::ChrBankRegisterId;
 
-// A Window is a range within addressable memory.
-// If the specified bank cannot fill the window, adjacent banks will be included too.
+// A PrgWindow is a range within the CPU address space.
+// If a single bank is not enough to fill the window, then subsequent banks will be included too.
 #[derive(Clone, Copy, Debug)]
 pub struct PrgWindow {
     start: PrgWindowStart,
@@ -51,6 +52,10 @@ impl PrgWindow {
         } else {
             None
         }
+    }
+
+    pub fn address_template(&self, bank_sizes: &BankSizes) -> AddressTemplate {
+        AddressTemplate::new(bank_sizes).apply_prg_window(self)
     }
 }
 
