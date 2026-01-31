@@ -80,6 +80,8 @@ impl AddressTemplate {
         let outer_bank_number_width = outer_bank_total_width.strict_sub(inner_bank_total_width);
         // If the ROM is undersized, reduce the base address bit count, effectively mirroring the ROM until it's the right size.
         base_address_width = std::cmp::min(base_address_width, outer_bank_total_width);
+        let mut inner_bank_total_width = inner_bank_total_width;
+        inner_bank_total_width = std::cmp::min(inner_bank_total_width, outer_bank_total_width);
         let inner_bank_number_width = inner_bank_total_width.strict_sub(base_address_width);
 
         let address_template = Self {
