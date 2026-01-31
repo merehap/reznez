@@ -25,17 +25,13 @@ impl PrgMemoryMap {
         let mut all_sub_page_mappings = Vec::with_capacity(PRG_SUB_SLOT_COUNT);
         let windows = initial_layout.windows().iter();
         for window in windows.clone() {
-            let mut rom_address_template = AddressTemplate::new(rom_bank_sizes);
-            rom_address_template.apply_prg_window(window);
-
             let mut sub_page_mappings = Vec::new();
             for sub_page_offset in 0..window.size().to_raw() / 128 {
-                let page_offset = u16::try_from(sub_page_mappings.len() / 64).unwrap() % rom_address_template.prg_pages_per_outer_bank();
                 let mapping = PrgMapping {
                     bank: window.bank(),
-                    rom_address_template: rom_address_template.clone(),
-                    ram_address_template: AddressTemplate::new(ram_bank_sizes),
-                    page_offset,
+                    rom_address_template: AddressTemplate::new(rom_bank_sizes).apply_prg_window(window),
+                    ram_address_template: AddressTemplate::new(ram_bank_sizes).apply_prg_window(window),
+                    page_offset: u16::try_from(sub_page_mappings.len() / 64).unwrap(),
                 };
                 sub_page_mappings.push((mapping, sub_page_offset));
             }
