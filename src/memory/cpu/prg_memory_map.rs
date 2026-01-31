@@ -1,4 +1,4 @@
-use crate::memory::address_template::AddressTemplate;
+use crate::memory::address_template::{AddressTemplate, BankSizes};
 use crate::memory::bank::bank::PrgBank;
 use crate::memory::bank::bank_number::{MemType, PageNumberSpace, PrgBankRegisters};
 use crate::memory::cpu::cpu_address::CpuAddress;
@@ -18,23 +18,24 @@ pub struct PrgMemoryMap {
 impl PrgMemoryMap {
     pub fn new(
         initial_layout: PrgLayout,
-        rom_address_template: &AddressTemplate,
-        ram_address_template: &AddressTemplate,
+        rom_bank_sizes: &BankSizes,
+        ram_bank_sizes: &BankSizes,
         regs: &PrgBankRegisters,
     ) -> Self {
         let mut all_sub_page_mappings = Vec::with_capacity(PRG_SUB_SLOT_COUNT);
         let windows = initial_layout.windows().iter();
         for window in windows.clone() {
-            let mut rom_address_template = rom_address_template.clone();
+            let mut rom_address_template = AddressTemplate::new(rom_bank_sizes);
             rom_address_template.apply_prg_window(window);
 
             let mut sub_page_mappings = Vec::new();
             for sub_page_offset in 0..window.size().to_raw() / 128 {
+                let page_offset = u16::try_from(sub_page_mappings.len() / 64).unwrap() % rom_address_template.prg_pages_per_outer_bank();
                 let mapping = PrgMapping {
                     bank: window.bank(),
                     rom_address_template: rom_address_template.clone(),
-                    ram_address_template: ram_address_template.clone(),
-                    page_offset: u16::try_from(sub_page_mappings.len() / 64).unwrap() % rom_address_template.prg_pages_per_outer_bank(),
+                    ram_address_template: AddressTemplate::new(ram_bank_sizes),
+                    page_offset,
                 };
                 sub_page_mappings.push((mapping, sub_page_offset));
             }

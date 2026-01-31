@@ -3,6 +3,7 @@ use std::fmt;
 use crate::memory::bank::bank_number::BankNumber;
 use crate::memory::bit_template::BitTemplate;
 use crate::memory::window::PrgWindow;
+use crate::util::unit::KIBIBYTE;
 
 const MAX_WIDTH: u8 = 32;
 const BASE_ADDRESS_SEGMENT: u8 = 0;
@@ -186,6 +187,7 @@ pub struct BankSizes {
 impl BankSizes {
     pub fn new(full_size: u32, mut outer_bank_size: u32, mut inner_bank_size: u32) -> Self {
         outer_bank_size = std::cmp::min(outer_bank_size, full_size);
+        assert_eq!(outer_bank_size % (8 * KIBIBYTE), 0);
         inner_bank_size = std::cmp::min(inner_bank_size, outer_bank_size);
         Self { full_size, outer_bank_size, inner_bank_size }
     }

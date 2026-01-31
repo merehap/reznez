@@ -1,6 +1,6 @@
 use log::{info, warn};
 use crate::mapper::{BankNumber, KIBIBYTE, PrgBankRegisterId};
-use crate::memory::address_template::{AddressTemplate, BankSizes};
+use crate::memory::address_template::BankSizes;
 use crate::memory::bank::bank::{PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
 use crate::memory::bank::bank_number::{MemType, PrgBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
@@ -60,21 +60,17 @@ impl PrgMemory {
             rom.size(),
             rom_outer_bank_size,
             rom_inner_bank_size.to_raw().into());
-        let rom_address_template = AddressTemplate::new(&rom_bank_sizes);
 
         // When a mapper has both Work RAM and Save RAM, the bank/page numbers are shared (save ram gets the lower numbers).
         let ram_size = work_ram.size() + save_ram.size();
-        // FIXME: Hack
-        let ram_inner_bank_size = if ram_size == 0 { 0 } else { 8 * KIBIBYTE };
         let ram_bank_sizes = BankSizes::new(
             ram_size,
             ram_size,
-            ram_inner_bank_size,
+            8 * KIBIBYTE, // FIXME: Hack
         );
-        let ram_address_template = AddressTemplate::new(&ram_bank_sizes);
 
         let memory_maps = layouts.iter()
-            .map(|initial_layout| PrgMemoryMap::new(*initial_layout, &rom_address_template, &ram_address_template, &regs))
+            .map(|initial_layout| PrgMemoryMap::new(*initial_layout, &rom_bank_sizes, &ram_bank_sizes, &regs))
             .collect();
 
         PrgMemory {
