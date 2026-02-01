@@ -55,7 +55,7 @@ impl PrgWindow {
     }
 
     pub fn address_template(&self, bank_sizes: &BankSizes) -> AddressTemplate {
-        AddressTemplate::new(bank_sizes).apply_prg_window(self)
+        AddressTemplate::prg(self, bank_sizes)
     }
 }
 

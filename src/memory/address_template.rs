@@ -69,41 +69,37 @@ impl AddressTemplate {
     pub const PRG_PAGE_SIZE: u16 = 2u16.pow(Self::PRG_PAGE_NUMBER_WIDTH as u32);
     const PRG_SUB_PAGE_SIZE: u16 = Self::PRG_PAGE_SIZE / 64;
 
-    pub fn new(bank_sizes: &BankSizes) -> Self {
-        let bit_template = BitTemplate::right_to_left(&[
-            ("a", bank_sizes.inner_bank_width()),
-            ("i", bank_sizes.inner_bank_number_width()),
-            ("o", bank_sizes.outer_bank_number_width()),
-        ]);
-        let address_template = Self { bit_template, fixed_inner_bank_number: None };
-        assert!(address_template.total_width() <= MAX_WIDTH);
-
-        address_template
-    }
-
     /**
      * PRG Address                           A₁₇A₁₆A₁₅A₁₄ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      * Components Before (8 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ I₀₀ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      * Components After (16 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      */
-    pub fn apply_prg_window(mut self, window: &PrgWindow) -> Self {
+    pub fn prg(window: &PrgWindow, bank_sizes: &BankSizes) -> Self {
+        let bit_template = BitTemplate::right_to_left(&[
+            ("a", bank_sizes.inner_bank_width()),
+            ("i", bank_sizes.inner_bank_number_width()),
+            ("o", bank_sizes.outer_bank_number_width()),
+        ]);
+        let mut address_template = Self { bit_template, fixed_inner_bank_number: None };
+        assert!(address_template.total_width() <= MAX_WIDTH);
+
         if window.size().page_multiple() == 0 {
-            return self;
+            return address_template;
         }
 
         let fixed_inner_bank_number = window.bank().fixed_bank_number().map(BankNumber::to_raw);
-        self.fixed_inner_bank_number = fixed_inner_bank_number;
-        if let Some(fixed_inner_bank_number) = self.fixed_inner_bank_number {
-            self.bit_template.constify_segment(INNER_BANK_SEGMENT, fixed_inner_bank_number);
+        address_template.fixed_inner_bank_number = fixed_inner_bank_number;
+        if let Some(fixed_inner_bank_number) = address_template.fixed_inner_bank_number {
+            address_template.bit_template.constify_segment(INNER_BANK_SEGMENT, fixed_inner_bank_number);
         }
 
         // Don't expand the bank size larger than the total memory size.
-        let new_base_address_bit_count = std::cmp::min(window.size().bit_count(), self.total_width());
-        if new_base_address_bit_count > self.bit_template.magnitude_of(BASE_ADDRESS_SEGMENT) {
-            self.bit_template.increase_segment_magnitude(BASE_ADDRESS_SEGMENT, new_base_address_bit_count);
+        let new_base_address_bit_count = std::cmp::min(window.size().bit_count(), address_template.total_width());
+        if new_base_address_bit_count > address_template.bit_template.magnitude_of(BASE_ADDRESS_SEGMENT) {
+            address_template.bit_template.increase_segment_magnitude(BASE_ADDRESS_SEGMENT, new_base_address_bit_count);
         }
 
-        self
+        address_template
     }
 
     pub fn total_width(&self) -> u8 {
