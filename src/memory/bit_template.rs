@@ -7,14 +7,7 @@ pub struct BitTemplate {
 }
 
 impl BitTemplate {
-    pub fn right_to_left(raw: &[(&str, u8)]) -> Self {
-        let segments = raw.iter()
-            .map(|(label, magnitude)| {
-                let label = (*label).to_string();
-                let label = Box::leak(Box::new(label));
-                Segment::named(label, *magnitude)
-            })
-            .collect();
+    pub fn right_to_left(segments: Vec<Segment>) -> Self {
         Self { segments }
     }
 

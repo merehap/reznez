@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::memory::bank::bank_number::BankNumber;
-use crate::memory::bit_template::BitTemplate;
+use crate::memory::bit_template::{BitTemplate, Segment};
 use crate::memory::window::PrgWindow;
 use crate::util::unit::KIBIBYTE;
 
@@ -75,10 +75,10 @@ impl AddressTemplate {
      * Components After (16 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      */
     pub fn prg(window: &PrgWindow, bank_sizes: &BankSizes) -> Self {
-        let bit_template = BitTemplate::right_to_left(&[
-            ("a", bank_sizes.inner_bank_width()),
-            ("i", bank_sizes.inner_bank_number_width()),
-            ("o", bank_sizes.outer_bank_number_width()),
+        let bit_template = BitTemplate::right_to_left(vec![
+            Segment::named("a", bank_sizes.inner_bank_width()),
+            Segment::named("i", bank_sizes.inner_bank_number_width()),
+            Segment::named("o", bank_sizes.outer_bank_number_width()),
         ]);
         let mut address_template = Self { bit_template, fixed_inner_bank_number: None };
         assert!(address_template.total_width() <= MAX_WIDTH);
