@@ -9,7 +9,11 @@ pub struct BitTemplate {
 impl BitTemplate {
     pub fn right_to_left(raw: &[(&str, u8)]) -> Self {
         let segments = raw.iter()
-            .map(|(label, magnitude)| Segment::named((*label).to_owned(), *magnitude))
+            .map(|(label, magnitude)| {
+                let label = (*label).to_string();
+                let label = Box::leak(Box::new(label));
+                Segment::named(label, *magnitude)
+            })
             .collect();
         Self { segments }
     }
@@ -91,7 +95,7 @@ pub struct Segment {
 }
 
 impl Segment {
-    pub fn named(name: String, magnitude: u8) -> Self {
+    pub const fn named(name: &'static str, magnitude: u8) -> Self {
         Self {
             label: Label::Name(name),
             original_magnitude: magnitude,
@@ -175,7 +179,7 @@ impl Segment {
 
     fn label_text_at(&self, index: u8) -> String {
         match &self.label {
-            Label::Name(name) => name.to_owned(),
+            Label::Name(name) => (*name).to_string(),
             Label::Constant { value, .. } => ((value >> index) & 1).to_string(),
         }
     }
@@ -183,13 +187,13 @@ impl Segment {
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum Label {
-    Name(String),
+    Name(&'static str),
     Constant { value: u16, lowest_subscript: u8 },
 }
 
 impl Default for Label {
     fn default() -> Self {
-        Self::Name("a".to_owned())
+        Self::Name("a")
     }
 }
 
