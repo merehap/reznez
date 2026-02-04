@@ -78,16 +78,16 @@ impl AddressTemplate {
     pub const fn prg(window: &PrgWindow, bank_sizes: &BankSizes) -> Self {
         let fixed_inner_bank_number = window.bank().fixed_bank_number().map(BankNumber::to_raw);
 
-        let address_bus_segment = Segment::named("a", bank_sizes.inner_bank_width());
+        let address_bus_segment = Segment::named('a', bank_sizes.inner_bank_width());
         let inner_bank_segment = if let Some(fixed_inner_bank_number) = fixed_inner_bank_number {
-            // o₀₁o₀₀1₁₅1₁₄1₁₃1₁₂a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+            // o₀₁o₀₀1₁₆1₁₅1₁₄1₁₃a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
             Segment::constant(fixed_inner_bank_number, bank_sizes.inner_bank_width(), bank_sizes.inner_bank_number_width(), 0)
         } else {
             // o₀₁o₀₀i₀₃i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
-            Segment::named("i", bank_sizes.inner_bank_number_width())
+            Segment::named('i', bank_sizes.inner_bank_number_width())
         };
 
-        let outer_bank_segment = Segment::named("o", bank_sizes.outer_bank_number_width());
+        let outer_bank_segment = Segment::named('o', bank_sizes.outer_bank_number_width());
 
         let mut segments = ConstVec::new();
         segments.push(address_bus_segment);

@@ -58,6 +58,30 @@ impl BitTemplate {
             .join("")
     }
 
+    pub const fn from_formatted(text: &str) -> Result<Self, &'static str> {
+        let bytes = text.as_bytes();
+        if !bytes.len().is_multiple_of(3) {
+            return Err("BitTemplate length must be a multiple of 3.");
+        }
+
+        if bytes.len() < 3 {
+            return Err("BitTemplate length must be at least 3.");
+        }
+
+        let mut segments: ConstVec<Segment, 3> = ConstVec::new();
+        let mut label = Label::from_char(bytes[0] as char);
+        let mut index = 3;
+        while index < bytes.len() {
+            if let Some(old_label) = label.extend_or_replace(bytes[index] as char) {
+                segments.push(Segment { label: old_label, original_magnitude: 0, magnitude: 0, ignored_low_count: 0 });
+            }
+
+            index += 3;
+        }
+
+        Ok(BitTemplate::right_to_left(segments))
+    }
+
     pub const fn increase_segment_magnitude(&mut self, segment_index: u8, new_magnitude: u8) {
         assert!(segment_index < self.segments.len());
 
@@ -82,7 +106,7 @@ pub struct Segment {
 }
 
 impl Segment {
-    pub const fn named(name: &'static str, magnitude: u8) -> Self {
+    pub const fn named(name: char, magnitude: u8) -> Self {
         Self {
             label: Label::Name(name),
             original_magnitude: magnitude,
@@ -183,13 +207,51 @@ impl Segment {
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Label {
-    Name(&'static str),
+    Name(char),
     Constant { value: u16, lowest_subscript: u8 },
 }
 
+impl Label {
+    const fn from_char(c: char) -> Self {
+        match c {
+            '0' => Self::Constant { value: 0, lowest_subscript: 0 },
+            '1' => Self::Constant { value: 1, lowest_subscript: 0 },
+            c => {
+                assert!(c.is_ascii_alphabetic());
+                Self::Name(c)
+            }
+        }
+    }
+
+    const fn extend_or_replace(&mut self, c: char) -> Option<Self> {
+        let new = Self::from_char(c);
+        use Label::*;
+        match (new, *self) {
+            // If both the new label and old label are Constants, then append the new bit onto the old constant.
+            (Constant { value: old_value, .. }, Constant { value: new_value, lowest_subscript }) => {
+                *self = Constant {
+                    value: (old_value << 1) | new_value,
+                    lowest_subscript
+                };
+                None
+            }
+            // If the name stayed the same, then the current Label is "extended" by doing nothing.
+            (Name(new_name), Name(old_name)) if new_name == old_name => {
+                None
+            }
+            // If the name changed, or it's a new variant, then a new Label must be made (the old one can't be extended).
+            (Name(_), Name(_) | Constant {..}) | (Constant {..}, Name(_)) => {
+                let old = std::mem::replace(self, new);
+                Some(old)
+            }
+        }
+    }
+}
+
+// TODO: Remove this? Why have a default at all?
 impl Default for Label {
     fn default() -> Self {
-        Self::Name("a")
+        Self::Name('a')
     }
 }
 
