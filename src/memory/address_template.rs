@@ -3,6 +3,7 @@ use std::fmt;
 use crate::memory::bank::bank_number::BankNumber;
 use crate::memory::bit_template::{BitTemplate, Segment};
 use crate::memory::window::PrgWindow;
+use crate::util::const_vec::ConstVec;
 use crate::util::unit::KIBIBYTE;
 
 const MAX_WIDTH: u8 = 32;
@@ -58,7 +59,7 @@ const OUTER_BANK_SEGMENT: u8 = 2;
  *              +-----------------------------------------------------------+
  * ```
 **/ 
-#[derive(PartialEq, Eq, Clone, Debug, Default)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct AddressTemplate {
     bit_template: BitTemplate,
     fixed_inner_bank_number: Option<u16>,
@@ -74,35 +75,43 @@ impl AddressTemplate {
      * Components Before (8 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ I₀₀ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      * Components After (16 KiB inner banks) O₀₁O₀₀I₀₂I₀₁ A₁₃ A₁₂A₁₁A₁₀A₀₉A₀₈A₀₇A₀₆A₀₅A₀₄A₀₃A₀₂A₀₁A₀₀
      */
-    pub fn prg(window: &PrgWindow, bank_sizes: &BankSizes) -> Self {
-        let bit_template = BitTemplate::right_to_left(vec![
-            Segment::named("a", bank_sizes.inner_bank_width()),
-            Segment::named("i", bank_sizes.inner_bank_number_width()),
-            Segment::named("o", bank_sizes.outer_bank_number_width()),
-        ]);
-        let mut address_template = Self { bit_template, fixed_inner_bank_number: None };
+    pub const fn prg(window: &PrgWindow, bank_sizes: &BankSizes) -> Self {
+        let fixed_inner_bank_number = window.bank().fixed_bank_number().map(BankNumber::to_raw);
+
+        let address_bus_segment = Segment::named("a", bank_sizes.inner_bank_width());
+        let inner_bank_segment = if let Some(fixed_inner_bank_number) = fixed_inner_bank_number {
+            // o₀₁o₀₀1₁₅1₁₄1₁₃1₁₂a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+            Segment::constant(fixed_inner_bank_number, bank_sizes.inner_bank_width(), bank_sizes.inner_bank_number_width(), 0)
+        } else {
+            // o₀₁o₀₀i₀₃i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
+            Segment::named("i", bank_sizes.inner_bank_number_width())
+        };
+
+        let outer_bank_segment = Segment::named("o", bank_sizes.outer_bank_number_width());
+
+        let mut segments = ConstVec::new();
+        segments.push(address_bus_segment);
+        segments.push(inner_bank_segment);
+        segments.push(outer_bank_segment);
+        let mut bit_template = BitTemplate::right_to_left(segments);
+
+        // Don't expand the bank size larger than the total memory size.
+        let new_base_address_bit_count = std::cmp::min(window.size().bit_count(), bit_template.width());
+        if new_base_address_bit_count > bit_template.magnitude_of(BASE_ADDRESS_SEGMENT) {
+            bit_template.increase_segment_magnitude(BASE_ADDRESS_SEGMENT, new_base_address_bit_count);
+        }
+
+        let address_template = Self { bit_template, fixed_inner_bank_number };
         assert!(address_template.total_width() <= MAX_WIDTH);
 
         if window.size().page_multiple() == 0 {
             return address_template;
         }
 
-        let fixed_inner_bank_number = window.bank().fixed_bank_number().map(BankNumber::to_raw);
-        address_template.fixed_inner_bank_number = fixed_inner_bank_number;
-        if let Some(fixed_inner_bank_number) = address_template.fixed_inner_bank_number {
-            address_template.bit_template.constify_segment(INNER_BANK_SEGMENT, fixed_inner_bank_number);
-        }
-
-        // Don't expand the bank size larger than the total memory size.
-        let new_base_address_bit_count = std::cmp::min(window.size().bit_count(), address_template.total_width());
-        if new_base_address_bit_count > address_template.bit_template.magnitude_of(BASE_ADDRESS_SEGMENT) {
-            address_template.bit_template.increase_segment_magnitude(BASE_ADDRESS_SEGMENT, new_base_address_bit_count);
-        }
-
         address_template
     }
 
-    pub fn total_width(&self) -> u8 {
+    pub const fn total_width(&self) -> u8 {
         self.bit_template.width()
     }
 
@@ -190,36 +199,36 @@ impl BankSizes {
         Self { full_size, outer_bank_size, inner_bank_size }
     }
 
-    pub fn full_size(&self) -> u32 { self.full_size }
-    pub fn outer_bank_size(&self) -> u32 { self.outer_bank_size }
-    pub fn inner_bank_size(&self) -> u32 { self.inner_bank_size }
+    pub const fn full_size(&self) -> u32 { self.full_size }
+    pub const fn outer_bank_size(&self) -> u32 { self.outer_bank_size }
+    pub const fn inner_bank_size(&self) -> u32 { self.inner_bank_size }
 
-    pub fn full_width(&self) -> u8 {
+    pub const fn full_width(&self) -> u8 {
         size_to_width(self.full_size)
     }
 
-    pub fn outer_bank_width(&self) -> u8 {
+    pub const fn outer_bank_width(&self) -> u8 {
         size_to_width(self.outer_bank_size)
     }
 
-    pub fn inner_bank_width(&self) -> u8 {
+    pub const fn inner_bank_width(&self) -> u8 {
         size_to_width(self.inner_bank_size)
     }
 
-    pub fn outer_bank_number_width(&self) -> u8 {
+    pub const fn outer_bank_number_width(&self) -> u8 {
         self.full_width() - self.outer_bank_width()
     }
 
-    pub fn inner_bank_number_width(&self) -> u8 {
+    pub const fn inner_bank_number_width(&self) -> u8 {
         self.outer_bank_width() - self.inner_bank_width()
     }
 }
 
-fn size_to_width(size: u32) -> u8 {
+const fn size_to_width(size: u32) -> u8 {
     if size == 0 {
         return 0;
     }
 
-    assert_eq!(size & (size - 1), 0);
-    (size - 1).count_ones().try_into().unwrap()
+    assert!(size.is_power_of_two());
+    (size - 1).count_ones() as u8
 }

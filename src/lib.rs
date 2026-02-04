@@ -6,6 +6,7 @@
 #![feature(generic_const_parameter_types)]
 #![feature(adt_const_params)]
 #![feature(unsized_const_params)]
+#![feature(const_cmp)]
 #![allow(incomplete_features)]
 #![allow(clippy::module_inception)]
 #![allow(clippy::new_without_default)]

@@ -1,38 +1,45 @@
 use itertools::Itertools;
 
-#[derive(PartialEq, Eq, Clone, Debug, Default)]
+use crate::util::const_vec::ConstVec;
+
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct BitTemplate {
     // Segments are stored right-to-left, the reverse of how they are rendered.
-    segments: Vec<Segment>,
+    segments: ConstVec<Segment, 3>,
 }
 
 impl BitTemplate {
-    pub fn right_to_left(segments: Vec<Segment>) -> Self {
+    pub const fn right_to_left(segments: ConstVec<Segment, 3>) -> Self {
         Self { segments }
     }
 
-    pub fn width(&self) -> u8 {
-        self.segments.iter()
-            .map(Segment::width)
-            .sum()
+    pub const fn width(&self) -> u8 {
+        let mut width = 0;
+        let mut index = 0;
+        while index < self.segments.len() {
+            width += self.segments.get(index).width();
+            index += 1;
+        }
+
+        width
     }
 
-    pub fn width_of(&self, segment_index: u8) -> u8 {
-        self.segments[segment_index as usize].width()
+    pub const fn width_of(&self, segment_index: u8) -> u8 {
+        self.segments.get(segment_index).width()
     }
 
     pub fn original_magnitude_of(&self, segment_index: u8) -> u8 {
-        self.segments[segment_index as usize].original_magnitude()
+        self.segments.get(segment_index).original_magnitude()
     }
 
-    pub fn magnitude_of(&self, segment_index: u8) -> u8 {
-        self.segments[segment_index as usize].magnitude()
+    pub const fn magnitude_of(&self, segment_index: u8) -> u8 {
+        self.segments.get(segment_index).magnitude()
     }
 
     pub fn resolve(&self, raw_values: &[u16]) -> u32 {
         let mut result = 0;
         let mut index = 0;
-        for (segment, &raw_value) in self.segments.iter().zip(raw_values) {
+        for (segment, &raw_value) in self.segments.as_iter().zip(raw_values) {
             result += segment.resolve_shifted(raw_value, index);
             index += segment.width();
         }
@@ -41,47 +48,34 @@ impl BitTemplate {
     }
 
     pub fn resolve_segment(&self, segment_index: u8, raw_value: u16) -> u16 {
-        self.segments[segment_index as usize].resolve(raw_value)
+        self.segments.get(segment_index).resolve(raw_value)
     }
 
     pub fn formatted(&self) -> String {
-        self.segments.iter()
+        self.segments.as_iter()
             .rev()
             .map(Segment::formatted)
             .join("")
     }
 
-    /**
-     * ```text
-     * value == 0b1111_1111_1111_1111
-     * Before: o₀₁o₀₀i₀₃i₀₂i₀₁i₀₀a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
-     * After:  o₀₁o₀₀1₁₅1₁₄1₁₃1₁₂a₁₂a₁₁a₁₀a₀₉a₀₈a₀₇a₀₆a₀₅a₀₄a₀₃a₀₂a₀₁a₀₀
-     * ```
-     */
-    pub fn constify_segment(&mut self, segment_index: u8, value: u16) {
-        let segment_index: usize = segment_index.into();
-        let offset: u8 = self.segments[0..segment_index].iter()
-            .map(Segment::width)
-            .sum();
-        self.segments[segment_index].constify(value, offset);
-    }
-
-    pub fn increase_segment_magnitude(&mut self, segment_index: u8, new_magnitude: u8) {
-        let segment_index: usize = segment_index.into();
+    pub const fn increase_segment_magnitude(&mut self, segment_index: u8, new_magnitude: u8) {
         assert!(segment_index < self.segments.len());
 
-        let mut ignored_low_count = self.segments[segment_index].increase_magnitude_to(new_magnitude);
+        let mut ignored_low_count = self.segments.get_mut(segment_index).increase_magnitude_to(new_magnitude);
 
-        for segment in &mut self.segments[segment_index + 1 ..] {
-            ignored_low_count = segment.increase_ignored_low_count(ignored_low_count);
-            assert_eq!(ignored_low_count, 0, "Overshift occurred. Outer bank bits shouldn't be lost to large inner bank sizes.");
+        let mut index = segment_index + 1;
+        while index < self.segments.len() {
+            ignored_low_count = self.segments.get_mut(index).increase_ignored_low_count(ignored_low_count);
+            assert!(ignored_low_count == 0, "Overshift occurred. Outer bank bits shouldn't be lost to large inner bank sizes.");
+            index += 1;
         }
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Segment {
     label: Label,
+    // TODO: Remove this, then make all Segment fields pub.
     original_magnitude: u8,
     magnitude: u8,
     ignored_low_count: u8,
@@ -97,15 +91,24 @@ impl Segment {
         }
     }
 
+    pub const fn constant(value: u16, lowest_subscript: u8, magnitude: u8, ignored_low_count: u8) -> Self {
+        Self {
+            label: Label::Constant { value, lowest_subscript },
+            original_magnitude: magnitude,
+            magnitude,
+            ignored_low_count,
+        }
+    }
+
     pub fn original_magnitude(&self) -> u8 {
         self.original_magnitude
     }
 
-    pub fn magnitude(&self) -> u8 {
+    pub const fn magnitude(&self) -> u8 {
         self.magnitude
     }
 
-    pub fn width(&self) -> u8 {
+    pub const fn width(&self) -> u8 {
         self.magnitude.saturating_sub(self.ignored_low_count)
     }
 
@@ -132,7 +135,7 @@ impl Segment {
         u32::from(self.resolve(raw_value)) << shift
     }
 
-    pub fn formatted(&self) -> String {
+    pub fn formatted(self) -> String {
         match self.label {
             Label::Name(_) => {
                 (self.ignored_low_count..self.magnitude).rev()
@@ -148,13 +151,13 @@ impl Segment {
         }
     }
 
-    pub fn increase_magnitude_to(&mut self, magnitude: u8) -> u8 {
+    pub const fn increase_magnitude_to(&mut self, magnitude: u8) -> u8 {
         let increase_amount = magnitude.strict_sub(self.magnitude);
         self.magnitude = magnitude;
         increase_amount
     }
 
-    pub fn increase_ignored_low_count(&mut self, increase_amount: u8) -> u8 {
+    pub const fn increase_ignored_low_count(&mut self, increase_amount: u8) -> u8 {
         let already_empty = self.width() == 0;
         self.ignored_low_count = self.ignored_low_count.strict_add(increase_amount);
 
@@ -178,7 +181,7 @@ impl Segment {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Label {
     Name(&'static str),
     Constant { value: u16, lowest_subscript: u8 },

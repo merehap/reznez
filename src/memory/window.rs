@@ -167,7 +167,7 @@ impl PrgWindowSize {
         Self::from_raw(size)
     }
 
-    pub fn page_multiple(self) -> u16 {
+    pub const fn page_multiple(self) -> u16 {
         self.0 / PRG_PAGE_SIZE
     }
 
@@ -175,8 +175,8 @@ impl PrgWindowSize {
         u8::try_from((self.0 % PRG_PAGE_SIZE) / PRG_SUB_PAGE_SIZE).unwrap()
     }
 
-    pub fn bit_count(self) -> u8 {
-        assert_eq!(self.0 & (self.0 - 1), 0);
+    pub const fn bit_count(self) -> u8 {
+        assert!(self.0.is_power_of_two());
         (self.0 - 1).count_ones() as u8
     }
 
