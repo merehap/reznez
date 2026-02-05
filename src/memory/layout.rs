@@ -19,7 +19,6 @@ use super::window::ChrWindow;
 
 #[derive(Clone)]
 pub struct Layout {
-    prg_rom_max_size: u32,
     prg_layout_index: u8,
     prg_layouts: PrgLayouts,
     prg_rom_outer_bank_layout: OuterBankLayout,
@@ -51,7 +50,7 @@ impl Layout {
     pub fn make_mapper_params(self, metadata: &ResolvedMetadata, cartridge: &Cartridge, allow_saving: bool)
             -> Result<(PrgMemory, ChrMemory, &'static [NameTableMirroring]), String> {
         let prg_rom_size = cartridge.prg_rom().size();
-        if prg_rom_size > self.prg_rom_max_size {
+        if prg_rom_size > self.prg_layouts.rom_max_bank_sizes().full_size() {
             return Err(format!("PRG ROM size of {}KiB is too large for this mapper.", prg_rom_size / KIBIBYTE));
         }
 
@@ -316,14 +315,17 @@ impl LayoutBuilder {
         }
 
         let fixed_name_table_mirroring = match (self.name_table_mirrorings, self.fixed_name_table_mirroring) {
-            ([_,..], None       ) => false,
-            ([]    , Some(fixed)) => fixed,
+            ([_, ..], None       ) => false,
+            ([]     , Some(fixed)) => fixed,
             _ => panic!("Must set one of name_table_mirrorings, fixed_name_table_mirroring, or complicated_name_table_mirroring"),
         };
 
+        let prg_rom_max_size = self.prg_rom_max_size.expect("prg_rom_max_size must be set");
+        let outer_bank_count = prg_rom_outer_bank_layout.outer_bank_count(prg_rom_max_size);
+        let prg_layouts = PrgLayouts::new(prg_rom_max_size, outer_bank_count.get(), self.prg_layouts);
+
         Layout {
-            prg_rom_max_size: self.prg_rom_max_size.expect("prg_rom_max_size must be set"),
-            prg_layouts: PrgLayouts::new(self.prg_layouts),
+            prg_layouts,
             prg_layout_index: self.prg_layout_index,
             prg_rom_outer_bank_layout,
 
@@ -357,15 +359,15 @@ pub enum OuterBankLayout {
 impl OuterBankLayout {
     const SINGLE_BANK: Self = Self::ExactCount(NonZeroU8::new(1).unwrap());
 
-    pub fn outer_bank_count(self, memory_size: u32) -> NonZeroU8 {
+    pub const fn outer_bank_count(self, memory_size: u32) -> NonZeroU8 {
         match self {
             Self::ExactCount(count) => count,
             Self::Size(size) => {
                 let count = if memory_size < size {
                     1
                 } else {
-                    assert_eq!(memory_size % size, 0);
-                    (memory_size / size).try_into().unwrap()
+                    assert!(memory_size.is_multiple_of(size));
+                    (memory_size / size) as u8
                 };
                 NonZeroU8::new(count).unwrap()
             }

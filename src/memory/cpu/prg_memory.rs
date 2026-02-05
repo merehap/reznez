@@ -14,7 +14,7 @@ use crate::memory::window::PrgWindow;
 pub struct PrgMemory {
     layouts: PrgLayouts,
     memory_maps: Vec<PrgMemoryMap>,
-    layout_index: u8,
+    memory_map_index: u8,
     rom: RawMemory,
     rom_outer_bank_number: u8,
     work_ram: RawMemory,
@@ -26,7 +26,7 @@ impl PrgMemory {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         layouts: PrgLayouts,
-        layout_index: u8,
+        memory_map_index: u8,
         rom: RawMemory,
         rom_outer_bank_layout: OuterBankLayout,
         mut work_ram: RawMemory,
@@ -43,7 +43,7 @@ impl PrgMemory {
         let rom_outer_bank_count = rom_outer_bank_layout.outer_bank_count(rom.size());
         let rom_outer_bank_size = rom.size() / rom_outer_bank_count.get() as u32;
 
-        let rom_bank_sizes = BankSizes::new(rom.size(), rom_outer_bank_size, layouts.rom_inner_bank_size());
+        let rom_bank_sizes = BankSizes::new(rom.size(), rom_outer_bank_size, layouts.rom_max_bank_sizes().inner_bank_size());
 
         // When a mapper has both Work RAM and Save RAM, the bank/page numbers are shared (save ram gets the lower numbers).
         let ram_size = work_ram.size() + save_ram.size();
@@ -57,7 +57,7 @@ impl PrgMemory {
         PrgMemory {
             layouts,
             memory_maps,
-            layout_index,
+            memory_map_index,
             rom,
             rom_outer_bank_number: 0,
             work_ram,
@@ -67,11 +67,11 @@ impl PrgMemory {
     }
 
     pub fn layout_index(&self) -> u8 {
-        self.layout_index
+        self.memory_map_index
     }
 
     pub fn peek(&self, address: CpuAddress) -> ReadResult {
-        if let Some((mem_type, index)) = self.memory_maps[self.layout_index as usize].index_for_address(self.rom_outer_bank_number, address) {
+        if let Some((mem_type, index)) = self.memory_maps[self.memory_map_index as usize].index_for_address(self.rom_outer_bank_number, address) {
             match (mem_type, mem_type.read_status()) {
                 (_                   , ReadStatus::Disabled     ) => ReadResult::OPEN_BUS,
                 (_                   , ReadStatus::ReadOnlyZeros) => ReadResult::full(0),
@@ -89,7 +89,7 @@ impl PrgMemory {
     }
 
     pub fn write(&mut self, address: CpuAddress, value: u8) {
-        let prg_source_and_index = self.memory_maps[self.layout_index as usize].index_for_address(self.rom_outer_bank_number, address);
+        let prg_source_and_index = self.memory_maps[self.memory_map_index as usize].index_for_address(self.rom_outer_bank_number, address);
         use MemType::*;
         match prg_source_and_index {
             Some((WorkRam(_, WriteStatus::Enabled), index)) => {
@@ -146,11 +146,11 @@ impl PrgMemory {
     }
 
     pub fn current_layout(&self) -> &PrgLayout {
-        &self.layouts[self.layout_index]
+        &self.layouts[self.memory_map_index]
     }
 
     pub fn current_memory_map(&self) -> &PrgMemoryMap {
-        &self.memory_maps[self.layout_index as usize]
+        &self.memory_maps[self.memory_map_index as usize]
     }
 
     pub fn memory_maps(&self) -> &[PrgMemoryMap] {
@@ -167,7 +167,7 @@ impl PrgMemory {
 
     pub fn set_layout(&mut self, index: u8) {
         assert!(index < self.layouts.count());
-        self.layout_index = index;
+        self.memory_map_index = index;
     }
 
     pub fn set_prg_rom_outer_bank_number(&mut self, number: u8) {

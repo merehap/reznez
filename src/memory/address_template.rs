@@ -185,6 +185,7 @@ impl fmt::Display for AddressTemplate {
     }
 }
 
+#[derive(Clone)]
 pub struct BankSizes {
     full_size: u32,
     outer_bank_size: u32,
@@ -192,9 +193,9 @@ pub struct BankSizes {
 }
 
 impl BankSizes {
-    pub fn new(full_size: u32, mut outer_bank_size: u32, mut inner_bank_size: u32) -> Self {
+    pub const fn new(full_size: u32, mut outer_bank_size: u32, mut inner_bank_size: u32) -> Self {
         outer_bank_size = std::cmp::min(outer_bank_size, full_size);
-        assert_eq!(outer_bank_size % (8 * KIBIBYTE), 0);
+        assert!(outer_bank_size.is_multiple_of(8 * KIBIBYTE));
         inner_bank_size = std::cmp::min(inner_bank_size, outer_bank_size);
         Self { full_size, outer_bank_size, inner_bank_size }
     }

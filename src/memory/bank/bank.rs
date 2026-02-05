@@ -73,6 +73,7 @@ pub struct PrgBank {
     prg_source_provider: PrgSourceProvider,
     read_status_register_id: Option<ReadStatusRegisterId>,
     write_status_register_id: Option<WriteStatusRegisterId>,
+    rom_address_template_override: Option<&'static str>,
 }
 
 impl PrgBank {
@@ -81,30 +82,35 @@ impl PrgBank {
         prg_source_provider: PrgSourceProvider::Fixed(None),
         read_status_register_id: None,
         write_status_register_id: None,
+        rom_address_template_override: None,
     };
     pub const RAM_OR_ABSENT: PrgBank = PrgBank {
         bank_number_provider: PrgBankNumberProvider::FIXED_ZERO,
         prg_source_provider: PrgSourceProvider::Fixed(Some(PrgSource::RamOrAbsent)),
         read_status_register_id: None,
         write_status_register_id: None,
+        rom_address_template_override: None,
     };
     pub const ROM: PrgBank = PrgBank {
         bank_number_provider: PrgBankNumberProvider::FIXED_ZERO,
         prg_source_provider: PrgSourceProvider::Fixed(Some(PrgSource::Rom)),
         read_status_register_id: None,
         write_status_register_id: None,
+        rom_address_template_override: None,
     };
     pub const WORK_RAM_OR_ROM: PrgBank = PrgBank {
         bank_number_provider: PrgBankNumberProvider::FIXED_ZERO,
         prg_source_provider: PrgSourceProvider::Fixed(Some(PrgSource::RamOrRom)),
         read_status_register_id: None,
         write_status_register_id: None,
+        rom_address_template_override: None,
     };
     pub const ROM_RAM: PrgBank = PrgBank {
         bank_number_provider: PrgBankNumberProvider::FIXED_ZERO,
         prg_source_provider: PrgSourceProvider::Switchable(PS0),
         read_status_register_id: None,
         write_status_register_id: None,
+        rom_address_template_override: None,
     };
 
     pub const fn fixed_number(mut self, index: i16) -> Self {

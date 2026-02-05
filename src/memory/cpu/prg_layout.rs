@@ -1,30 +1,33 @@
 use std::ops::Index;
 
+use crate::memory::address_template::BankSizes;
 use crate::memory::bank::bank_number::PrgBankRegisterId;
 use crate::memory::window::PrgWindow;
 use crate::util::const_vec::ConstVec;
-use crate::util::unit::KIBIBYTE_U16;
+use crate::util::unit::{KIBIBYTE, KIBIBYTE_U16};
 
 #[derive(Clone)]
 pub struct PrgLayouts {
+    rom_max_bank_sizes: BankSizes,
     layouts: ConstVec<PrgLayout, 16>,
 }
 
 impl PrgLayouts {
-    pub const fn new(layouts: ConstVec<PrgLayout, 16>) -> Self {
-        PrgLayouts { layouts }
-    }
-
-    pub const fn rom_inner_bank_size(&self) -> u32 {
-        let mut bank_size = self.layouts.get(0).smallest_rom_window_size() as u32;
+    #[allow(clippy::large_types_passed_by_value)]
+    pub const fn new(rom_size: u32, outer_bank_count: u8, layouts: ConstVec<PrgLayout, 16>) -> Self {
+        let mut inner_bank_size = layouts.get(0).smallest_rom_window_size() as u32;
         let mut i = 1;
-        while i < self.layouts.len() {
-            let layout_min = self.layouts.get(i).smallest_rom_window_size() as u32;
-            bank_size = std::cmp::min(bank_size, layout_min);
+        while i < layouts.len() {
+            let layout_min = layouts.get(i).smallest_rom_window_size() as u32;
+            inner_bank_size = std::cmp::min(inner_bank_size, layout_min);
             i += 1;
         }
 
-        bank_size
+        inner_bank_size = std::cmp::max(inner_bank_size, 8 * KIBIBYTE);
+
+        let outer_bank_size = outer_bank_count as u32 * inner_bank_size;
+        let rom_max_bank_sizes = BankSizes::new(rom_size, outer_bank_size, inner_bank_size);
+        PrgLayouts { rom_max_bank_sizes, layouts }
     }
 
     pub const fn ram_supported(&self) -> bool {
@@ -38,6 +41,10 @@ impl PrgLayouts {
         }
 
         false
+    }
+
+    pub fn rom_max_bank_sizes(&self) -> &BankSizes {
+        &self.rom_max_bank_sizes
     }
 
     pub fn count(&self) -> u8 {
