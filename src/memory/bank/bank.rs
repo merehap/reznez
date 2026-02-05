@@ -148,7 +148,7 @@ impl PrgBank {
         matches!(self.prg_source_provider, PrgSourceProvider::Fixed(Some(PrgSource::Rom)) | PrgSourceProvider::Switchable(_))
     }
 
-    pub fn supports_ram(self) -> bool {
+    pub const fn supports_ram(self) -> bool {
         matches!(self.prg_source_provider,
             PrgSourceProvider::Fixed(Some(PrgSource::RamOrAbsent | PrgSource::RamOrRom))
                 | PrgSourceProvider::Switchable(_))

@@ -4,7 +4,7 @@ use crate::cartridge::cartridge::Cartridge;
 use crate::cartridge::resolved_metadata::ResolvedMetadata;
 use crate::mapper::ChrSource;
 use crate::memory::bank::bank_number::{BankNumber, ChrBankRegisters, MetaRegisterId, PrgBankRegisterId, PrgBankRegisters};
-use crate::memory::cpu::prg_layout::PrgLayout;
+use crate::memory::cpu::prg_layout::{PrgLayout, PrgLayouts};
 use crate::memory::cpu::prg_memory::PrgMemory;
 use crate::memory::ppu::chr_layout::ChrLayout;
 use crate::memory::ppu::chr_memory::ChrMemory;
@@ -21,9 +21,8 @@ use super::window::ChrWindow;
 pub struct Layout {
     prg_rom_max_size: u32,
     prg_layout_index: u8,
-    prg_layouts: ConstVec<PrgLayout, 16>,
+    prg_layouts: PrgLayouts,
     prg_rom_outer_bank_layout: OuterBankLayout,
-    prg_rom_inner_bank_size: u32,
 
     chr_rom_max_size: u32,
     align_large_chr_windows: bool,
@@ -94,11 +93,10 @@ impl Layout {
         }
 
         let prg_memory = PrgMemory::new(
-            self.prg_layouts.as_iter().collect(),
+            self.prg_layouts,
             self.prg_layout_index,
             cartridge.prg_rom().clone(),
             self.prg_rom_outer_bank_layout,
-            self.prg_rom_inner_bank_size,
             RawMemory::new(metadata.prg_work_ram_size),
             SaveRam::open(&cartridge.path().to_prg_save_ram_file_path(), metadata.prg_save_ram_size, allow_saving),
             prg_bank_registers,
@@ -131,7 +129,7 @@ impl Layout {
     }
 
     pub fn supports_prg_ram(&self) -> bool {
-        self.prg_layouts.as_iter().any(|prg_layout| prg_layout.supports_ram())
+        self.prg_layouts.ram_supported()
     }
 }
 
@@ -312,14 +310,6 @@ impl LayoutBuilder {
             prg_rom_outer_bank_layout = layout;
         }
 
-        let mut prg_rom_inner_bank_size = self.prg_layouts.get(0).smallest_rom_window_size() as u32;
-        let mut i = 1;
-        while i < self.prg_layouts.len() {
-            let layout_min = self.prg_layouts.get(i).smallest_rom_window_size() as u32;
-            prg_rom_inner_bank_size = std::cmp::min(prg_rom_inner_bank_size, layout_min);
-            i += 1;
-        }
-
         let mut chr_rom_outer_bank_layout = OuterBankLayout::SINGLE_BANK;
         if let Some(layout) = self.chr_rom_outer_bank_layout {
             chr_rom_outer_bank_layout = layout;
@@ -333,10 +323,9 @@ impl LayoutBuilder {
 
         Layout {
             prg_rom_max_size: self.prg_rom_max_size.expect("prg_rom_max_size must be set"),
-            prg_layouts: self.prg_layouts,
+            prg_layouts: PrgLayouts::new(self.prg_layouts),
             prg_layout_index: self.prg_layout_index,
             prg_rom_outer_bank_layout,
-            prg_rom_inner_bank_size,
 
             chr_rom_max_size: self.chr_rom_max_size.expect("chr_rom_max_size must be set"),
             chr_layouts: self.chr_layouts,

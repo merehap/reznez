@@ -4,7 +4,7 @@ use crate::memory::address_template::BankSizes;
 use crate::memory::bank::bank::{PrgSource, ReadStatusRegisterId, PrgSourceRegisterId, WriteStatusRegisterId};
 use crate::memory::bank::bank_number::{MemType, PrgBankRegisters, ReadStatus, WriteStatus};
 use crate::memory::cpu::cpu_address::CpuAddress;
-use crate::memory::cpu::prg_layout::PrgLayout;
+use crate::memory::cpu::prg_layout::{PrgLayout, PrgLayouts};
 use crate::memory::cpu::prg_memory_map::{PageInfo, PrgMemoryMap, PrgPageIdSlot};
 use crate::memory::layout::OuterBankLayout;
 use crate::memory::raw_memory::{RawMemory, SaveRam};
@@ -12,7 +12,7 @@ use crate::memory::read_result::ReadResult;
 use crate::memory::window::PrgWindow;
 
 pub struct PrgMemory {
-    layouts: Vec<PrgLayout>,
+    layouts: PrgLayouts,
     memory_maps: Vec<PrgMemoryMap>,
     layout_index: u8,
     rom: RawMemory,
@@ -25,20 +25,15 @@ pub struct PrgMemory {
 impl PrgMemory {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        layouts: Vec<PrgLayout>,
+        layouts: PrgLayouts,
         layout_index: u8,
         rom: RawMemory,
         rom_outer_bank_layout: OuterBankLayout,
-        rom_inner_bank_size: u32,
         mut work_ram: RawMemory,
         mut save_ram: SaveRam,
         regs: PrgBankRegisters,
     ) -> PrgMemory {
-        let ram_supported_by_layout = layouts.iter()
-            .flat_map(PrgLayout::windows)
-            .any(|window| window.bank().supports_ram());
-
-        if (!work_ram.is_empty() || !save_ram.is_empty()) && !ram_supported_by_layout {
+        if !layouts.ram_supported() && (!work_ram.is_empty() || !save_ram.is_empty()) {
             warn!("The PRG RAM that was specified in the rom file will be ignored since it is not \
                     configured in the Layout for this mapper.");
             work_ram = RawMemory::new(0);
@@ -48,7 +43,7 @@ impl PrgMemory {
         let rom_outer_bank_count = rom_outer_bank_layout.outer_bank_count(rom.size());
         let rom_outer_bank_size = rom.size() / rom_outer_bank_count.get() as u32;
 
-        let rom_bank_sizes = BankSizes::new(rom.size(), rom_outer_bank_size, rom_inner_bank_size);
+        let rom_bank_sizes = BankSizes::new(rom.size(), rom_outer_bank_size, layouts.rom_inner_bank_size());
 
         // When a mapper has both Work RAM and Save RAM, the bank/page numbers are shared (save ram gets the lower numbers).
         let ram_size = work_ram.size() + save_ram.size();
@@ -56,7 +51,7 @@ impl PrgMemory {
         let ram_bank_sizes = BankSizes::new(ram_size, ram_size, 8 * KIBIBYTE);
 
         let memory_maps = layouts.iter()
-            .map(|initial_layout| PrgMemoryMap::new(*initial_layout, &rom_bank_sizes, &ram_bank_sizes, &regs))
+            .map(|initial_layout| PrgMemoryMap::new(initial_layout, &rom_bank_sizes, &ram_bank_sizes, &regs))
             .collect();
 
         PrgMemory {
@@ -151,7 +146,7 @@ impl PrgMemory {
     }
 
     pub fn current_layout(&self) -> &PrgLayout {
-        &self.layouts[usize::from(self.layout_index)]
+        &self.layouts[self.layout_index]
     }
 
     pub fn current_memory_map(&self) -> &PrgMemoryMap {
@@ -171,7 +166,7 @@ impl PrgMemory {
     }
 
     pub fn set_layout(&mut self, index: u8) {
-        assert!(usize::from(index) < self.layouts.len());
+        assert!(index < self.layouts.count());
         self.layout_index = index;
     }
 
