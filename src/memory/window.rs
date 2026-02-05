@@ -180,7 +180,7 @@ impl PrgWindowSize {
         (self.0 - 1).count_ones() as u8
     }
 
-    pub fn to_raw(self) -> u16 {
+    pub const fn to_raw(self) -> u16 {
         self.0
     }
 }

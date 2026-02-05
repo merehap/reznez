@@ -144,7 +144,7 @@ impl PrgBank {
         self
     }
 
-    pub fn is_rom(self) -> bool {
+    pub const fn is_rom(self) -> bool {
         matches!(self.prg_source_provider, PrgSourceProvider::Fixed(Some(PrgSource::Rom)) | PrgSourceProvider::Switchable(_))
     }
 

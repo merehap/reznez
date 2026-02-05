@@ -29,17 +29,11 @@ impl PrgMemory {
         layout_index: u8,
         rom: RawMemory,
         rom_outer_bank_layout: OuterBankLayout,
+        rom_inner_bank_size: u32,
         mut work_ram: RawMemory,
         mut save_ram: SaveRam,
         regs: PrgBankRegisters,
     ) -> PrgMemory {
-
-        let rom_inner_bank_size = layouts.iter()
-            .flat_map(PrgLayout::windows)
-            .filter(|window| window.bank().is_rom())
-            .map(|window| window.size())
-            .reduce(std::cmp::min)
-            .expect("at least one ROM window");
         let ram_supported_by_layout = layouts.iter()
             .flat_map(PrgLayout::windows)
             .any(|window| window.bank().supports_ram());
@@ -54,20 +48,12 @@ impl PrgMemory {
         let rom_outer_bank_count = rom_outer_bank_layout.outer_bank_count(rom.size());
         let rom_outer_bank_size = rom.size() / rom_outer_bank_count.get() as u32;
 
-        assert_eq!(rom_outer_bank_size & (rom_outer_bank_size - 1), 0);
-        assert_eq!(rom_outer_bank_size % (8 * KIBIBYTE), 0);
-        let rom_bank_sizes = BankSizes::new(
-            rom.size(),
-            rom_outer_bank_size,
-            rom_inner_bank_size.to_raw().into());
+        let rom_bank_sizes = BankSizes::new(rom.size(), rom_outer_bank_size, rom_inner_bank_size);
 
         // When a mapper has both Work RAM and Save RAM, the bank/page numbers are shared (save ram gets the lower numbers).
         let ram_size = work_ram.size() + save_ram.size();
-        let ram_bank_sizes = BankSizes::new(
-            ram_size,
-            ram_size,
-            8 * KIBIBYTE, // FIXME: Hack
-        );
+        // FIXME: Hard-coded RAM bank size.
+        let ram_bank_sizes = BankSizes::new(ram_size, ram_size, 8 * KIBIBYTE);
 
         let memory_maps = layouts.iter()
             .map(|initial_layout| PrgMemoryMap::new(*initial_layout, &rom_bank_sizes, &ram_bank_sizes, &regs))
